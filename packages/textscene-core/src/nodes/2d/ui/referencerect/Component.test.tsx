@@ -3,17 +3,17 @@
  * the unfilled `draw_rect` of `scene/main/canvas_item.cpp`.
  * `borderGeometry.test.ts` checks the exact quads.
  */
-import { useEffect } from 'react';
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ReferenceRectProperties } from './types';
-import { SelectionProvider, useSelection } from '../../../../r3f/contexts/SelectionContext';
+import { SelectionProvider } from '../../../../r3f/contexts/SelectionContext';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { ReferenceRect } from './Component';
+import { SelectSeeder } from '../../../../r3f/testing/SelectSeeder';
 
 const RECT = { x: 0, y: 0, w: 100, h: 50 };
 
@@ -25,14 +25,6 @@ function refRectNode(properties: Partial<ReferenceRectProperties> = {}, path = '
     properties: { name: 'MyRect', ...properties } as ReferenceRectProperties,
   };
   return { ...emptySolveNode(), path, node };
-}
-
-function SelectSeeder({ path }: { path: string | null }) {
-  const { setSelectedNodePath } = useSelection();
-  useEffect(() => {
-    setSelectedNodePath(path);
-  }, [path, setSelectedNodePath]);
-  return null;
 }
 
 describe('<ReferenceRect> (isolated painter contract)', () => {

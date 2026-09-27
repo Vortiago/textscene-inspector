@@ -2,7 +2,6 @@
  * <Path3D> draws a selection-gated white polyline gizmo from its Curve3D, and
  * degrades to nothing when the curve is absent.
  */
-import { useEffect } from 'react';
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnInternalResource } from '../../../parser/types';
@@ -10,7 +9,8 @@ import { Path3D } from './Component';
 import { parsePath3D } from './parser';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import { SelectionProvider, useSelection } from '../../../r3f/contexts/SelectionContext';
+import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
+import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
 
 // Straight 3-point path: (0,0,0) → (10,0,0) → (10,10,0), zero tangents.
 const CURVE: TscnInternalResource = {
@@ -30,14 +30,6 @@ function pathNode(name = 'MyPath', props: Record<string, string> = {}): TscnNode
     children: [],
     properties: parsePath3D({ type: 'node', attributes: { type: 'Path3D', name } }, props),
   };
-}
-
-function SelectSeeder({ path }: { path: string | null }) {
-  const { setSelectedNodePath } = useSelection();
-  useEffect(() => {
-    setSelectedNodePath(path);
-  }, [path, setSelectedNodePath]);
-  return null;
 }
 
 async function renderPath(
@@ -75,6 +67,14 @@ describe('<Path3D>', () => {
 
   it('draws nothing when the curve SubResource is not found (edge)', async () => {
     const renderer = await renderPath('MyPath', { curve: 'SubResource("Missing")' }, []);
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
+  });
+
+  // `point_count` resizes the list after `_data` loads (curve.cpp:1448-1464), so a
+  // count of 1 leaves a single point and no span to draw.
+  it('draws nothing when point_count truncates the curve to one point (edge)', async () => {
+    const truncated: TscnInternalResource = { ...CURVE, data: { ...CURVE.data, point_count: '1' } };
+    const renderer = await renderPath('MyPath', { curve: 'SubResource("Curve3D_1")' }, [truncated]);
     expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 });

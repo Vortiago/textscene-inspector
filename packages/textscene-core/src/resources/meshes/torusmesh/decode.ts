@@ -5,15 +5,19 @@
  * or refuses them at surface build (:2232-2241), so that lives in `build.ts`.
  */
 
-import { floatOr } from '../../../parser/valueParsers';
-import { countAtLeast } from '../meshCounts';
+import { floatOr, settableIntOr } from '../../../parser/valueParsers';
 import type { TorusMeshProperties } from './types';
 
 export function decodeTorusMesh(properties: Record<string, string>): TorusMeshProperties {
   return {
     innerRadius: floatOr(properties.inner_radius, 0.5, 'TorusMesh innerRadius'),
     outerRadius: floatOr(properties.outer_radius, 1.0, 'TorusMesh outerRadius'),
-    rings: countAtLeast(properties.rings, 3, 64, 'TorusMesh rings'),
-    ringSegments: countAtLeast(properties.ring_segments, 3, 32, 'TorusMesh ringSegments'),
+    rings: settableIntOr(properties.rings, 64, { min: 3 }, 'TorusMesh rings'),
+    ringSegments: settableIntOr(
+      properties.ring_segments,
+      32,
+      { min: 3 },
+      'TorusMesh ringSegments'
+    ),
   };
 }

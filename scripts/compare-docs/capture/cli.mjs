@@ -2,32 +2,11 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { PLAN } from './paths.mjs';
+import { parseCaptureFlags } from '../captureFlags.mjs';
 
+/** The shared side and `--only` flags, plus `--force`, which re-renders an image that exists. */
 export function parseArgs(argv) {
-  const args = { godot: false, ours: false, only: null, force: false };
-  for (let i = 0; i < argv.length; i++) {
-    switch (argv[i]) {
-      case '--godot':
-        args.godot = true;
-        break;
-      case '--ours':
-        args.ours = true;
-        break;
-      case '--force':
-        args.force = true;
-        break;
-      case '--only':
-        args.only = argv[++i];
-        break;
-      default:
-        throw new Error(`Unknown flag ${argv[i]}`);
-    }
-  }
-  if (!args.godot && !args.ours) {
-    args.godot = true;
-    args.ours = true;
-  }
-  return args;
+  return parseCaptureFlags(argv, ['force']);
 }
 
 export function loadPlan(only) {

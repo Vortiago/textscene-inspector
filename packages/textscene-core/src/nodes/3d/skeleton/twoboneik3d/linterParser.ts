@@ -12,6 +12,8 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { v } from '../../../../linter/validators/index.js';
+import { settingCount } from '../shared/settingCount.js';
+import { declaredLeafResolver } from '../../../../godot/index.js';
 import {
   BONE_DIRECTION,
   SECONDARY_DIRECTION,
@@ -22,7 +24,7 @@ const UNKNOWN_SETTING_CODE = 'INVALID_SETTING_KEY';
 /** Error code for a `settings/…` key addressing a negative setting. */
 const NEGATIVE_SETTING_INDEX_CODE = 'INVALID_SETTING_INDEX';
 
-function negativeIndexMessage(index: number): string {
+function negativeIndexMessage(index: string): string {
   return (
     `Setting index ${index} must be non-negative. TwoBoneIK3D::_set opens with ` +
     'ERR_FAIL_INDEX_V(which, settings.size(), false) (two_bone_ik_3d.cpp:39), so the ' +
@@ -89,6 +91,9 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   'end_bone/length': v.float('end_bone/length', { min: 0, hinted: 'two_bone_ik_3d.cpp:153' }),
 };
 
+/** For the rules: `what = path.get_slicec('/', 2)` (two_bone_ik_3d.cpp:38). */
+export const resolveTwoBoneSettingLeaf = declaredLeafResolver(Object.keys(SETTING_LEAVES));
+
 /** The whole `settings/<i>/…` family, flat and nested leaves alike. */
 const settingValidator = indexedFamilyValidator({
   // `_set` reads the index with a bare `to_int` and no `is_valid_int` gate (two_bone_ik_3d.cpp:37),
@@ -111,10 +116,9 @@ const settingValidator = indexedFamilyValidator({
 
 validatorRegistry.registerAll('TwoBoneIK3D', {
   // two_bone_ik_3d.cpp:506, ADD_ARRAY_COUNT on this class, since IKModifier3D never calls the
-  // macro. PROPERTY_HINT_NONE, and no ceiling. TwoBoneIK3D::set_setting_count
-  // (two_bone_ik_3d.h:267) forwards to `_set_setting_count<T>`, which opens with
-  // ERR_FAIL_COND(p_count < 0) (ik_modifier_3d.h:98): a negative count is an error.
-  setting_count: v.strictInt('setting_count', { min: 0, enforced: 'ik_modifier_3d.h:98' }),
+  // macro. TwoBoneIK3D::set_setting_count (two_bone_ik_3d.h:267) forwards to IKModifier3D's
+  // `_set_setting_count<T>`.
+  setting_count: settingCount('IKModifier3D'),
 
   // A plain wildcard, not `settings/#/*`: the registry's glued-index matcher routes a single leaf
   // segment only, and two of the 14 leaves take two segments (two_bone_ik_3d.cpp:152-153).

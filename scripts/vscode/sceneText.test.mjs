@@ -45,6 +45,15 @@ describe('blankSceneText', () => {
     expect(result.source).toBe('text = ""\nhorizontal_alignment = 1\n');
   });
 
+  it('blanks a value whose backslash escapes a raw newline', () => {
+    const source = 'text = "line\\\nnext"\nhorizontal_alignment = 1\n';
+
+    const result = blankSceneText(source);
+
+    expect(result.replacements).toBe(1);
+    expect(result.source).toBe('text = ""\nhorizontal_alignment = 1\n');
+  });
+
   it('ignores a text substring that is not its own assignment', () => {
     const source = 'autowrap_mode = 3\ntooltip_text = "keep me"\n';
 

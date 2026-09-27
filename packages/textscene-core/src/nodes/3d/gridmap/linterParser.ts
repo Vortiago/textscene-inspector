@@ -7,7 +7,7 @@
 import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, layerBitmask, propertyError, v } from '../../../linter/validators/index.js';
-import { ARRAY_LITERAL_RE, packedArrayCallAnywhere, resourceRef } from '../../../godot/index.js';
+import { ARRAY_LITERAL_RE, resourceRef } from '../../../godot/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string.js';
 import { badIntElement } from '../../../linter/validators/v/packedArrays.js';
@@ -17,9 +17,9 @@ import {
   storedNotWritten,
   unrepresentableInt,
 } from '../../../linter/validators/intSlot.js';
+import { CELLS_FIELD_RE } from './cellData.js';
 
 const DICT_LITERAL_RE = /^\{[\s\S]*\}$/;
-const CELLS_RE = new RegExp(`"cells"\\s*:\\s*${packedArrayCallAnywhere('PackedInt32Array').source}`);
 
 /**
  * `data`: `{ "cells": PackedInt32Array(key_lo, key_hi, cell, …) }`
@@ -37,7 +37,7 @@ const dataValidator: PropertyValidator = accepts((key, value, line) => {
       'INVALID_DATA_FORMAT'
     );
   }
-  const cellsMatch = CELLS_RE.exec(trimmed);
+  const cellsMatch = CELLS_FIELD_RE.exec(trimmed);
   // `d.has("cells")` (grid_map.cpp:67) guards the branch, so a Dictionary without
   // the key loads untouched. GridMap's writer always includes it.
   if (!cellsMatch) return null;

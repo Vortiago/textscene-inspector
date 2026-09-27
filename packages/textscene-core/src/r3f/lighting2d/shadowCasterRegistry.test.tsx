@@ -71,6 +71,19 @@ describe('createShadowCasterRegistry', () => {
     expect(registry.casters()).toHaveLength(2);
   });
 
+  it('hands back the same snapshot until an add or a withdrawal, so a frame allocates none', () => {
+    const registry = createShadowCasterRegistry();
+    const withdraw = registry.add(caster(new THREE.Group()));
+    const snapshot = registry.casters();
+    expect(registry.casters()).toBe(snapshot);
+
+    withdraw();
+    const afterWithdrawal = registry.casters();
+    expect(afterWithdrawal).not.toBe(snapshot);
+    expect(afterWithdrawal).toEqual([]);
+    expect(registry.casters()).toBe(afterWithdrawal);
+  });
+
   it('notifies and then stops notifying subscribers', () => {
     const registry = createShadowCasterRegistry();
     const listener = vi.fn();

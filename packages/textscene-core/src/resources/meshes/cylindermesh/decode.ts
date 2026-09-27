@@ -5,8 +5,8 @@
  * guard (:1300-1339), so a cone (`top_radius = 0`) is legal.
  */
 
-import { floatOr } from '../../../parser/valueParsers';
-import { countAtLeast, flooredCount } from '../meshCounts';
+import { floatOr, settableIntOr } from '../../../parser/valueParsers';
+import { flooredCount } from '../meshCounts';
 import type { CylinderMeshProperties } from './types';
 import { boolSlotValue } from '../../../godot/index.js';
 
@@ -21,7 +21,7 @@ export function decodeCylinderMesh(properties: Record<string, string>): Cylinder
       64,
       'CylinderMesh radial_segments'
     ),
-    rings: countAtLeast(properties.rings, 0, 4, 'CylinderMesh rings'),
+    rings: settableIntOr(properties.rings, 4, { min: 0 }, 'CylinderMesh rings'),
     capTop: boolSlotValue(properties.cap_top) !== false,
     capBottom: boolSlotValue(properties.cap_bottom) !== false,
   };

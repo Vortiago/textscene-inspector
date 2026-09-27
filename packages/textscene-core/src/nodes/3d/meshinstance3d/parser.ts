@@ -4,11 +4,11 @@ import type { ParsedHeading } from '../../../parser/utils';
 import type { MeshInstance3DProperties } from './types';
 import { parseNode3D } from '../../base/node3d/parser';
 import { parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParsers';
-import { indexedKeyRegex, toIntIndex } from '../../../godot/index.js';
+import { indexedKeyRegex, stringToInt } from '../../../godot/index.js';
 
 /**
- * `_set` reads the index with a bare `get_slicec('/', 1).to_int()`
- * (mesh_instance_3d.cpp:66), so {@link toIntIndex} decides the number: `+2` is
+ * `_set` reads the index with a bare `get_slicec('/', 1).to_int()` into an `int`
+ * (mesh_instance_3d.cpp:66), so {@link stringToInt} decides the number: `+2` is
  * surface 2, `abc` is surface 0. Unanchored: `get_slicec` ignores the rest
  * (ustring.cpp:941-964), so `surface_material_override/0/extra` names surface 0.
  */
@@ -30,11 +30,11 @@ export function parseMeshInstance3D(
   for (const [key, value] of Object.entries(properties)) {
     const indexedMatch = SURFACE_OVERRIDE_KEY_RE.exec(key);
     if (!indexedMatch) continue;
-    const surfaceIndex = toIntIndex(indexedMatch[1]!);
+    const surfaceIndex = stringToInt(indexedMatch[1]!);
     // `if (idx >= surface_override_materials.size() || idx < 0) return false`
     // (mesh_instance_3d.cpp:68). Only the sign is knowable here: the renderer resolves
     // the surface count from the mesh.
-    if (!(surfaceIndex >= 0)) continue;
+    if (surfaceIndex < 0) continue;
     surfaceMaterialOverrides.set(surfaceIndex, value);
   }
 

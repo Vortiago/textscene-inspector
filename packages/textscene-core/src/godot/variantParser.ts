@@ -7,6 +7,7 @@
  * Every pattern below derives from one body string per literal, so no copy can diverge on padding.
  */
 import { TSCN_FLOAT_PATTERN_SOURCE } from './number.js';
+import { STRING_LITERAL_SOURCE } from './string.js';
 
 const WS = '\\s*';
 
@@ -65,12 +66,39 @@ export function compositeCallPrefix(...typeNames: readonly string[]): RegExp {
   return new RegExp(`^${WS}(?:${typeNames.join('|')})${WS}\\(`);
 }
 
+/** A `TypeName(…)` call inside a larger value, the body captured up to the first `)`. */
+function callBody(typeName: string): string {
+  return `${typeName}${WS}\\(([^)]*)\\)`;
+}
+
 /**
  * The same call anywhere in a larger value. `[1]` is the body, which stops at the first `)`. Pass `global` for a
  * repeated scan: a `g`-flagged RegExp carries `lastIndex`, so each caller needs its own instance.
  */
 export function packedArrayCallAnywhere(typeName: string, global = false): RegExp {
-  return new RegExp(`${typeName}${WS}\\(([^)]*)\\)`, global ? 'g' : '');
+  return new RegExp(callBody(typeName), global ? 'g' : '');
+}
+
+/**
+ * A Dictionary field whose value is one `TypeName(…)` call, `[1]` the body up to the first `)`:
+ * the constructor spelling the writer emits. A packed read such as `d["cells"]` (grid_map.cpp:67)
+ * also converts `[…]` and `Array[T]([…])` (variant.cpp:2094-2098), which this does not match:
+ * `dictPackedField` (`packedArrayFields.ts`) reads all three.
+ */
+export function dictCallField(key: string, typeName: string): RegExp {
+  return new RegExp(`"${key}"${WS}:${WS}${callBody(typeName)}`);
+}
+
+/**
+ * A Dictionary field whose value is a `PackedByteArray(…)` call, `[1]` the base64 text the writer
+ * quotes for a non-empty array (variant_parser.cpp:2410-2413). The quoted body is optional, so the
+ * key's first call decides, as in {@link dictCallField}: `[1]` is undefined for an empty call and
+ * for the compat list of bytes. Base64 holds no `"` or `)`, so the body ends where that one does.
+ */
+export function dictBase64Field(key: string): RegExp {
+  return new RegExp(
+    `"${key}"${WS}:${WS}PackedByteArray${WS}\\((?:${WS}"([^")]*)"${WS}\\))?`
+  );
 }
 
 /**
@@ -84,6 +112,15 @@ export function dictNumberField(key: string, global = false): RegExp {
     `"${key}"${WS}:${WS}(${TSCN_FLOAT_PATTERN_SOURCE})${WS}(?=[,}])`,
     global ? 'g' : ''
   );
+}
+
+/**
+ * A field of a serialised Dictionary whose value is one string literal, `[1]` the literal with its
+ * quotes and any `&` (StringName) or `@` sigil, for the caller's unquote to strip. The value runs
+ * to its `,`/`}`, as in {@link dictNumberField}, so `"a" "b"` matches nothing instead of reading `a`.
+ */
+export function dictStringField(key: string): RegExp {
+  return new RegExp(`"${key}"${WS}:${WS}([&@]?${STRING_LITERAL_SOURCE})${WS}(?=[,}])`);
 }
 
 /**

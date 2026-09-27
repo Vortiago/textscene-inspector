@@ -1,14 +1,30 @@
 /**
- * Pure `Diagnostic[]` grouping per gutter line, and the problem-count badge. No
- * React or WebGL: the testable seam under the linter gutter (`r3f-main.tsx`).
+ * Pure `Diagnostic[]` grouping for the Source pane: per gutter line, and the file-level section
+ * for a diagnostic that names no line. It also builds the problem-count badge. No React or
+ * WebGL: the testable seam under `r3f-main.tsx`.
  */
-import { SEVERITY_ORDER, flooredSeverity, type Diagnostic, type Severity } from '@textscene/core/linter';
+import {
+  SEVERITY_ORDER,
+  diagnosticLine,
+  flooredSeverity,
+  type Diagnostic,
+  type Severity,
+} from '@textscene/core/linter';
 
-/** One gutter row's worth of diagnostics: the line's highest severity, and every message on it, in encounter order. */
-export interface LineDiagnostics {
-  line: number;
+/** Diagnostics shown together: their highest severity, and every message, in encounter order. */
+export interface DiagnosticGroup {
   severity: Severity;
   messages: string[];
+}
+
+/**
+ * The two homes of the badge's findings. Every diagnostic lands in exactly one, so the badge
+ * counts only what the pane can show.
+ */
+interface GroupedDiagnostics {
+  byLine: Map<number, DiagnosticGroup>;
+  /** The diagnostics that name no gutter row, or `null` when there is none. */
+  fileLevel: DiagnosticGroup | null;
 }
 
 /**
@@ -32,28 +48,37 @@ function atLeastAsSevere(a: Severity, b: Severity): boolean {
   return SEVERITY_ORDER[a] <= SEVERITY_ORDER[b];
 }
 
+/** Adds one diagnostic to `group`, which keeps the higher severity. */
+function addTo(group: DiagnosticGroup, severity: Severity, message: string): void {
+  group.messages.push(message);
+  if (atLeastAsSevere(severity, group.severity)) group.severity = severity;
+}
+
 /**
- * Groups diagnostics by `location.line`: the line's highest severity and every
- * message in the given order. A diagnostic with no `location.line` marks no row,
- * so it is skipped rather than given a synthetic line.
+ * Groups diagnostics by `location.line`, each line with its highest severity and every message
+ * in the given order. A diagnostic that names no row of the buffer's `lineCount` goes to the
+ * file-level group, never onto a synthetic line: a dot on line 1 would claim that line is at
+ * fault. A line past the end is one a lint of older text named, before lines were deleted.
  */
-export function groupDiagnosticsByLine(diagnostics: readonly Diagnostic[]): Map<number, LineDiagnostics> {
-  const byLine = new Map<number, LineDiagnostics>();
+export function groupDiagnostics(
+  diagnostics: readonly Diagnostic[],
+  lineCount: number
+): GroupedDiagnostics {
+  const byLine = new Map<number, DiagnosticGroup>();
+  let fileLevel: DiagnosticGroup | null = null;
   for (const d of diagnostics) {
-    const line = d.location?.line;
-    if (line === undefined) continue;
     const severity = flooredSeverity(d.severity);
-    const existing = byLine.get(line);
-    if (!existing) {
-      byLine.set(line, { line, severity, messages: [d.message] });
+    const line = diagnosticLine(d);
+    if (line === undefined || line > lineCount) {
+      if (fileLevel) addTo(fileLevel, severity, d.message);
+      else fileLevel = { severity, messages: [d.message] };
       continue;
     }
-    existing.messages.push(d.message);
-    if (atLeastAsSevere(severity, existing.severity)) {
-      existing.severity = severity;
-    }
+    const existing = byLine.get(line);
+    if (existing) addTo(existing, severity, d.message);
+    else byLine.set(line, { severity, messages: [d.message] });
   }
-  return byLine;
+  return { byLine, fileLevel };
 }
 
 /** Diagnostic counts by severity and a total: the toggle badge's input. */

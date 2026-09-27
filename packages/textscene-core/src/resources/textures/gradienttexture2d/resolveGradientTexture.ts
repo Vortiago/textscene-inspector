@@ -21,7 +21,10 @@ export function resolveGradientTexture2D(
   return resolveProceduralSubResource(ref, internalResources, 'GradientTexture2D', rasterize);
 }
 
-/** Texture properties and the table their `gradient` reference resolves in, to pixels. */
+/**
+ * Texture properties and the table their `gradient` reference resolves in, to pixels. Null with no
+ * gradient.
+ */
 function rasterize(
   properties: Record<string, string>,
   resources: readonly TscnInternalResource[]

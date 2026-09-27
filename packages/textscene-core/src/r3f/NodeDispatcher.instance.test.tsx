@@ -9,9 +9,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene, TscnInternalResource } from '../parser/types';
 import { NodeDispatcher } from './NodeDispatcher';
 import * as mergeInstanceRootModule from '../resources/mergeInstanceRoot';
-import { SelectionProvider } from './contexts/SelectionContext';
-import { SceneResourcesProvider } from './SceneResourcesContext';
-import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
+import { SceneStack } from './testing/SceneStack';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../resources/ResourceLoader';
 
@@ -61,16 +59,9 @@ async function renderTree(
   externalResources: TscnScene['externalResources']
 ) {
   return ReactThreeTestRenderer.create(
-    <ResourceLoaderProvider loader={loader}>
-      <SceneResourcesProvider
-        internalResources={[]}
-        externalResources={externalResources}
-      >
-        <SelectionProvider>
-          <NodeDispatcher nodes={nodes} />
-        </SelectionProvider>
-      </SceneResourcesProvider>
-    </ResourceLoaderProvider>
+    <SceneStack loader={loader} scene={{ internalResources: [], externalResources }}>
+      <NodeDispatcher nodes={nodes} />
+    </SceneStack>
   );
 }
 
@@ -294,20 +285,19 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     };
 
     const renderer = await ReactThreeTestRenderer.create(
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider
-          internalResources={[
+      <SceneStack
+        loader={fake.loader}
+        scene={{
+          internalResources: [
             { id: 'Box_1', type: 'BoxMesh', data: { id: 'Box_1', size: 'Vector3(1, 1, 1)' } },
-          ]}
-          externalResources={[
+          ],
+          externalResources: [
             { id: 'inner_ref', path: 'res://inner.tscn', type: 'PackedScene' },
-          ]}
-        >
-          <SelectionProvider>
-            <NodeDispatcher nodes={[parentNode]} />
-          </SelectionProvider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
+          ],
+        }}
+      >
+        <NodeDispatcher nodes={[parentNode]} />
+      </SceneStack>
     );
 
     const meshes = renderer.scene.findAllByType('Mesh');
@@ -558,20 +548,13 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
 
     function Harness({ tick }: { tick: number }) {
       return (
-        <ResourceLoaderProvider loader={fake.loader}>
-          <SceneResourcesProvider
-            internalResources={internalResources}
-            externalResources={externalResources}
-          >
-            <SelectionProvider>
-              {/* An unrelated state value forced into the tree so the whole
-                  subtree re-renders without any of the instance's own inputs
-                  (node/scenePath/loadedScene/externalResources) changing. */}
-              <group userData={{ tick }} />
-              <NodeDispatcher nodes={[instancingNode]} />
-            </SelectionProvider>
-          </SceneResourcesProvider>
-        </ResourceLoaderProvider>
+        <SceneStack loader={fake.loader} scene={{ internalResources, externalResources }}>
+          {/* An unrelated state value forced into the tree so the whole
+              subtree re-renders without any of the instance's own inputs
+              (node/scenePath/loadedScene/externalResources) changing. */}
+          <group userData={{ tick }} />
+          <NodeDispatcher nodes={[instancingNode]} />
+        </SceneStack>
       );
     }
 

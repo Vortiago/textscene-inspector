@@ -8,7 +8,14 @@
 import { keyShapeError } from './propertyError.js';
 import { accepts } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
-import { IS_VALID_INT_RE, toIntIndex, type IndexParse } from '../../godot/index.js';
+import {
+  IS_VALID_INT_RE,
+  declaredLeafResolver,
+  stringToInt,
+  type IndexParse,
+  type LeafResolver,
+} from '../../godot/index.js';
+import { negativeIndexError } from '../reportedIndices.js';
 
 /**
  * The `is_valid_int` gate, the one cite this file owns since every `PropertyListHelper` family
@@ -59,8 +66,11 @@ export interface IndexedFamilyOptions {
   negativeIndex?: {
     /** `file:line` of the guard that refuses it. Pass a literal, not a variable. */
     cite: string;
-    /** Message for the rejected index, so each class keeps its own wording. */
-    message: (index: number) => string;
+    /**
+     * Message for the rejected index, so each class keeps its own wording. It receives the index
+     * as `writtenIndex` spells it: the key's text, and what Godot stores where they differ.
+     */
+    message: (index: string) => string;
     /** Error code for the negative-index branch. */
     code: string;
   };
@@ -81,39 +91,24 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
     keyShapeError(key, line, `Unknown ${describes} property: "${key}"`, unknownCode);
 
   /**
-   * The leaf names whose branch reads a segment below itself: `end_bone`, since
-   * `end_bone/direction` is declared beside it. Such a branch returns false for
-   * an option it does not know (two_bone_ik_3d.cpp:69), so only a terminal
-   * branch swallows a tail.
+   * Godot refuses to resolve a negative index under either parse, so `_set` treats the key as
+   * unrecognised and the write never lands. The index is the one Godot stores: `to_int` reads
+   * `settings/a-1/…` as -1, and the `int` keeps the low 32 bits, so `4294967296` is 0.
    */
-  const readsDeeper = new Set<string>();
-  for (const name of Object.keys(leaves)) {
-    for (let cut = name.indexOf('/'); cut >= 0; cut = name.indexOf('/', cut + 1)) {
-      readsDeeper.add(name.slice(0, cut));
-    }
-  }
+  const refuseNegative = negativeIndex
+    ? (indexText: string, key: string, line: number) =>
+        negativeIndexError(indexText, key, line, negativeIndex.message, negativeIndex.code)
+    : (indexText: string, key: string, line: number) =>
+        stringToInt(indexText) < 0 ? unknown(key, line) : null;
 
   /**
-   * The declared leaf a hand-rolled `_set` reaches for. `get_slicec('/', n)` ignores what follows
-   * its segment, so `settings/0/root_bone/extra` calls `set_root_bone` (bone_twist_disperser_3d.cpp:37-40).
-   * Cutting from the right keeps a two-segment leaf at its own depth
-   * (`settings/<i>/<where>/<what>`, convert_transform_modifier_3d.cpp:37-40).
+   * The leaf a key reaches: {@link declaredLeafResolver} for a hand-rolled `_set`, and the exact
+   * leaf for `PropertyListHelper`, whose last-`/` cut (property_list_helper.cpp:47) makes a tail
+   * fail `is_valid_int`. hasOwnProperty, so `toString` cannot resolve an inherited function.
    */
-  const declaredLeaf = (leafName: string): string => {
-    if (Object.prototype.hasOwnProperty.call(leaves, leafName)) return leafName;
-    let candidate = leafName;
-    for (;;) {
-      // `PropertyListHelper` cuts at the last `/` too (property_list_helper.cpp:47),
-      // but there a trailing segment fails `is_valid_int`, and that family
-      // reports the whole remainder unknown.
-      const cut = candidate.lastIndexOf('/');
-      if (cut < 0) return leafName;
-      candidate = candidate.slice(0, cut);
-      if (Object.prototype.hasOwnProperty.call(leaves, candidate) && !readsDeeper.has(candidate)) {
-        return candidate;
-      }
-    }
-  };
+  const resolveLeaf: LeafResolver = gatesOnValidInt
+    ? (leafName) => (Object.prototype.hasOwnProperty.call(leaves, leafName) ? leafName : null)
+    : declaredLeafResolver(Object.keys(leaves));
 
   const validator = accepts((key, value, line) => {
     // The first `/` past the prefix ends the index, and the rest is the leaf: a
@@ -121,40 +116,26 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
     // (`property_list_helper.cpp:47`), as `TwoBoneIK3D`'s
     // `settings/<i>/end_bone/direction` does.
     const slash = key.indexOf('/', prefix.length);
-    const indexText = slash < 0 ? '' : key.slice(prefix.length, slash);
-    const leafName = slash < 0 ? '' : key.slice(slash + 1);
-    if (!key.startsWith(prefix) || indexText === '' || leafName === '') {
-      return unknown(key, line);
-    }
+    if (!key.startsWith(prefix) || slash < 0) return unknown(key, line);
+    const indexText = key.slice(prefix.length, slash);
+    const leafName = key.slice(slash + 1);
+    if (leafName === '') return unknown(key, line);
 
-    // A class that gates on `is_valid_int` has no index at all for text the
-    // regex rejects, so the key is unrecognised before an index is ever read.
+    // A class that gates on `is_valid_int` has no index at all for text the regex rejects, the empty
+    // text included, so the key is unrecognised before an index is ever read. Under `to_int` an
+    // empty index is element 0 (`ustring.cpp:2304-2305`).
     if (gatesOnValidInt && !IS_VALID_INT_RE.test(indexText)) return unknown(key, line);
-    // The index Godot resolves: `to_int` skips non-digits rather than stopping
-    // at them and flips the sign on a `-` seen while the total is still 0
-    // (ustring.cpp:2303-2311), so `settings/a-1/…` resolves to -1 rather than
-    // to no index at all.
-    const index = toIntIndex(indexText);
-    if (index < 0) {
-      // Godot refuses to resolve a negative index under either parse, so
-      // `_set` treats the key as unrecognised and the write never lands.
-      if (!negativeIndex) return unknown(key, line);
-      return keyShapeError(key, line, negativeIndex.message(index), negativeIndex.code);
-    }
-    // A non-negative index resolves to some setting and the write lands, so only
-    // the leaf can still be refused. Past 2^53 a clean spelling keeps its sign. NaN
-    // reaches here only for text `IS_VALID_INT_RE` rejects whose digit run overruns 2^53.
-    const resolved = gatesOnValidInt ? leafName : declaredLeaf(leafName);
-    // hasOwnProperty, so a leaf named `toString` cannot resolve an inherited
-    // function and get called as a validator.
-    if (!Object.prototype.hasOwnProperty.call(leaves, resolved)) return unknown(key, line);
-    const leaf = leaves[resolved];
-    if (!leaf) return unknown(key, line);
+    const negative = refuseNegative(indexText, key, line);
+    if (negative) return negative;
+    // A non-negative index resolves to some setting and the write lands, so only the leaf can
+    // still be refused.
+    const resolved = resolveLeaf(leafName);
+    if (resolved === null) return unknown(key, line);
     // A leaf whose own path carries an index is a nested family (`ChainIK3D`'s
     // `settings/<i>/joints/<j>/bone`, chain_ik_3d.cpp), matched by its slice's own regex through
-    // {@link toIntIndex}. Absorbing one needs a sub-path that ends in an index
+    // {@link stringToInt}. Absorbing one needs a sub-path that ends in an index
     // (`SpringBoneSimulator3D`'s `collisions/<j>`) and a `negativeIndex` per index position.
-    return leaf(key, value, line);
+    return leaves[resolved]!(key, value, line);
   }, opts.accepts ?? describes);
 
   const cites = [

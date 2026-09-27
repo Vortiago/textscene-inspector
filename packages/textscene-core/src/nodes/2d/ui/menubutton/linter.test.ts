@@ -3,7 +3,7 @@
  * imports every slice and fails on a sibling's broken file. Format checks live in linterParser.test.ts.
  */
 
-import { describe, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { node, scene, expectDiagnostic, expectNoDiagnostic } from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
@@ -50,6 +50,15 @@ describe('MenuButton semantic rules', () => {
       scene(node('MenuButton', { item_count: 1, 'popup/item_+2/text': '"Autosave"' })),
       { ruleName: RULE, severity: 'error', contains: ['2'] }
     );
+  });
+
+  // `int index = ….to_int()` (property_list_helper.cpp:57) keeps the low 32 bits.
+  it('names what Godot stores beside a wrapping index past the count', () => {
+    const diagnostic = expectDiagnostic(
+      scene(node('MenuButton', { item_count: 2, 'popup/item_4294967298/text': '"x"' })),
+      { ruleName: RULE, severity: 'error' }
+    );
+    expect(diagnostic.message).toContain('index(es) 4294967298 (stored as 2) fall outside');
   });
 
   it('leaves a negative index to the per-property validator', () => {

@@ -12,9 +12,11 @@ import { boneConstraintBaseLeaves } from '../boneconstraint3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { v } from '../../../../linter/validators/index.js';
+import { settingCount } from '../shared/settingCount.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { BONE_AXIS } from '../skeletonmodifier3d/linterParser.js';
 import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
+import { declaredLeafResolver } from '../../../../godot/index.js';
 
 /**
  * The five leaves AimModifier3D itself pushes (aim_modifier_3d.cpp:91-95). `primary_rotation_axis`
@@ -39,12 +41,19 @@ const AIM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   relative: v.boolean('relative'),
 };
 
+/**
+ * Every leaf under the prefix. `_get_property_list` calls `BoneConstraint3D::get_property_list`
+ * first (aim_modifier_3d.cpp:85), so it also carries the base's seven leaves
+ * (bone_constraint_3d.cpp:102-108). They route to the base, which owns their bounds.
+ */
+const SETTING_LEAVES = { ...AIM_LEAVES, ...boneConstraintBaseLeaves() };
+
+/** For the rule: `what = path.get_slicec('/', 2)` (aim_modifier_3d.cpp:39). */
+export const resolveAimSettingLeaf = declaredLeafResolver(Object.keys(SETTING_LEAVES));
+
 const settingValidator = indexedFamilyValidator({
   prefix: 'settings/',
-  // `_get_property_list` calls `BoneConstraint3D::get_property_list` first (aim_modifier_3d.cpp:85),
-  // so the prefix also carries the base's seven leaves (bone_constraint_3d.cpp:102-108). They route
-  // to the base, which owns their bounds.
-  leaves: { ...AIM_LEAVES, ...boneConstraintBaseLeaves() },
+  leaves: SETTING_LEAVES,
   unknownCode: 'INVALID_SETTING_KEY',
   describes: 'setting',
   // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()`
@@ -65,11 +74,9 @@ const settingValidator = indexedFamilyValidator({
 settingValidator.leaves = Object.values(AIM_LEAVES);
 
 validatorRegistry.registerAll('AimModifier3D', {
-  // aim_modifier_3d.cpp:190, ADD_ARRAY_COUNT (PROPERTY_HINT_NONE, so no
-  // ceiling). The setter is BoneConstraint3D::set_setting_count, whose
-  // ERR_FAIL_COND(p_count < 0) (bone_constraint_3d.cpp:131) refuses the write
-  // outright: a delegated setter carries the delegate's guard.
-  setting_count: v.int('setting_count', { min: 0, enforced: 'bone_constraint_3d.cpp:131' }),
+  // aim_modifier_3d.cpp:190, ADD_ARRAY_COUNT on this class. The setter is
+  // BoneConstraint3D::set_setting_count: a delegated setter carries the delegate's guard.
+  setting_count: settingCount('BoneConstraint3D'),
 
   // `itos(i)` glues the index to the prefix as `PropertyListHelper` does, so the glued-index
   // matcher reads `settings/0/forward_axis`.

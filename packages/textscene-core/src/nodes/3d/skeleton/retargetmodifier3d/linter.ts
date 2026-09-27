@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
-import { isTypeUnknowable } from '../../../../linter/parentType.js';
+import { hasChildOfType } from '../../../../linter/childType.js';
 
 const RULE_NAME = 'retargetmodifier3d-no-child-skeleton';
 
@@ -17,14 +17,10 @@ function checkRetargetModifier3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
   const children = node.children;
 
-  // A child whose type this file does not state (an instance, an index= override, or a heading with
-  // no identifier) could be the Skeleton3D. The linter does not open another file, so the rule
-  // stays quiet.
-  if (children.some(isTypeUnknowable)) return [];
   // `_update_child_skeletons` (retarget_modifier_3d.cpp:175-191) keeps only the direct children
-  // `Object::cast_to<Skeleton3D>` accepts (:180), so a deeper skeleton is never collected and
-  // `_process_modification` retargets nothing.
-  if (children.some((child) => descendsFrom(child.type, 'Skeleton3D'))) return [];
+  // `Object::cast_to<Skeleton3D>` accepts (:180), so a deeper skeleton is never collected. A child
+  // whose class lives elsewhere may be one, so it silences the rule.
+  if (hasChildOfType(node, ['Skeleton3D'])) return [];
 
   const what =
     children.length === 0

@@ -5,6 +5,7 @@
  * forward through `resolveForwardedContent`, and the unconditional `replace` of an upload.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { sequencedError, type SequencedError } from './errorSequence';
 import { resolveForwardedContent } from './sourceGate';
 import { FIXTURE_STORAGE_KEY } from './useFixtureSelection';
 
@@ -35,8 +36,12 @@ export interface UseSceneSourceResult {
   forwardedContent: string;
   /** True while a fixture fetch is in flight. */
   isFetching: boolean;
-  /** Non-null when the last fetch failed; cleared on the next edit. */
-  loadError: string | null;
+  /**
+   * Non-null when the last fetch failed. An edit, a new load, `replace` or `clearRender` clears
+   * it. Each failure takes a new `sequence` when the fetch rejects, a retry with the same message
+   * too, so the banner orders it against an upload error.
+   */
+  loadError: SequencedError | null;
   /**
    * The fixture file the rendered content came from: '' for an upload, a blanked render,
    * or a fetch still in flight. The selected `fixtureFile` runs ahead of it for the whole
@@ -81,7 +86,7 @@ export function useSceneSource({
   const [forwardedContent, setForwardedContent] = useState<string>('');
   const [renderedFixtureFile, setRenderedFixtureFile] = useState<string>('');
   const [isFetching, setIsFetching] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<SequencedError | null>(null);
   // Bumped by `reload` to re-run the fetch effect at an unchanged fixtureFile.
   const [reloadNonce, setReloadNonce] = useState(0);
 
@@ -164,7 +169,7 @@ export function useSceneSource({
       .catch((err: unknown) => {
         if (cancelled || editedSinceLoadRef.current) return;
         const message = err instanceof Error ? err.message : String(err);
-        setLoadError(message);
+        setLoadError(sequencedError(message));
         setBuffer('');
         // forwardedContent stays: a failed fetch holds the last valid render.
       })

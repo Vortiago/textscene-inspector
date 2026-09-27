@@ -36,6 +36,11 @@ export interface CameraControlContextValue {
   frame2D: Frame2DRequest | null;
   requestFrame2D: (view: { center: { x: number; y: number }; zoom: number }) => void;
   /**
+   * True the first time a stage claims `requestId`, false after. The request
+   * outlives a stage that unmounts, so a remount must not replay it.
+   */
+  claimFrame2D: (requestId: number) => boolean;
+  /**
    * Frames the camera back to its initial state. Does nothing until a canvas
    * registers a reset handler.
    */
@@ -91,6 +96,8 @@ export function CameraControlProvider({
   const [activeCameraPath, setActiveCameraPath] = useState<string | null>(initialActiveCameraPath);
   const [frame2D, setFrame2D] = useState<Frame2DRequest | null>(null);
   const frame2DIdRef = useRef(0);
+  /** Written only by `claimFrame2D`. Request ids start at 1, so 0 claims nothing. */
+  const claimedFrame2DIdRef = useRef(0);
 
   const switchToCamera = useCallback((path: string) => {
     setActiveCameraPath(path);
@@ -103,6 +110,12 @@ export function CameraControlProvider({
     },
     []
   );
+
+  const claimFrame2D = useCallback((requestId: number) => {
+    if (requestId <= claimedFrame2DIdRef.current) return false;
+    claimedFrame2DIdRef.current = requestId;
+    return true;
+  }, []);
 
   const returnToFreeView = useCallback(() => {
     setActiveCameraPath(null);
@@ -126,6 +139,7 @@ export function CameraControlProvider({
       returnToFreeView,
       frame2D,
       requestFrame2D,
+      claimFrame2D,
       resetCamera,
       registerResetHandler,
       takeScreenshot,
@@ -137,6 +151,7 @@ export function CameraControlProvider({
       returnToFreeView,
       frame2D,
       requestFrame2D,
+      claimFrame2D,
       resetCamera,
       registerResetHandler,
       takeScreenshot,

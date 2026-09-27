@@ -8,9 +8,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene } from '../../../parser/types';
 import { NodeDispatcher } from '../../NodeDispatcher';
-import { SelectionProvider } from '../../contexts/SelectionContext';
-import { SceneResourcesProvider } from '../../SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
+import { SceneStack } from '../../testing/SceneStack';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { GLB_SCENE_ROOT_TYPE } from './Component';
@@ -76,25 +74,24 @@ function makeTownNode(materialRef: string): TscnNode {
 
 async function render(loader: ResourceLoader, materialRef: string) {
   return ReactThreeTestRenderer.create(
-    <ResourceLoaderProvider loader={loader}>
-      <SceneResourcesProvider
-        internalResources={[
+    <SceneStack
+      loader={loader}
+      scene={{
+        internalResources: [
           {
             id: 'Mat_road',
             type: 'StandardMaterial3D',
             data: { albedo_color: 'Color(0, 1, 0, 1)', roughness: '0.25' },
           },
-        ]}
-        externalResources={[
+        ],
+        externalResources: [
           { id: 'glb_1', path: GLB_PATH, type: 'PackedScene' },
           { id: 'tres_1', path: TRES_PATH, type: 'Material' },
-        ]}
-      >
-        <SelectionProvider>
-          <NodeDispatcher nodes={[makeTownNode(materialRef)]} />
-        </SelectionProvider>
-      </SceneResourcesProvider>
-    </ResourceLoaderProvider>
+        ],
+      }}
+    >
+      <NodeDispatcher nodes={[makeTownNode(materialRef)]} />
+    </SceneStack>
   );
 }
 

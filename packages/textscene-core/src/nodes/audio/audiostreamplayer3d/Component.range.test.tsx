@@ -4,24 +4,15 @@
  * || max_distance > 0`, at `unit_size x soft_multiplier[model]` clamped by `max_distance`. The
  * multipliers: INVERSE_DISTANCE 12, INVERSE_SQUARE 4, LOGARITHMIC 3.25, DISABLED 10000.
  */
-import { useEffect } from 'react';
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AudioStreamPlayer3D } from './Component';
 import { parseAudioStreamPlayer3D } from './parser';
-import { SelectionProvider, useSelection } from '../../../r3f/contexts/SelectionContext';
+import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import type { TscnNode } from '../../../parser/types';
-
-/** The gizmo is selection-gated; seed the selection to the node's own path. */
-function SelectSeeder({ path }: { path: string }) {
-  const { setSelectedNodePath } = useSelection();
-  useEffect(() => {
-    setSelectedNodePath(path);
-  }, [path, setSelectedNodePath]);
-  return null;
-}
+import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
 
 const heading = { type: 'node', attributes: { name: 'Audio', type: 'AudioStreamPlayer3D' } };
 

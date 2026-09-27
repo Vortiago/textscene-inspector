@@ -14,6 +14,7 @@ import {
   type PropertyValidator,
 } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
+import { settingCount } from '../shared/settingCount.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { boneConstraintBaseLeaves } from '../boneconstraint3d/linterParser.js';
 
@@ -107,10 +108,9 @@ const settingsValidator = indexedFamilyValidator({
 settingsValidator.leaves = Object.values(OWN_LEAVES);
 
 validatorRegistry.registerAll('CopyTransformModifier3D', {
-  // copy_transform_modifier_3d.cpp:358, ADD_ARRAY_COUNT (no hint string), this class's own, since
-  // BoneConstraint3D binds none. Its setter, the base's `set_setting_count`, opens
-  // `ERR_FAIL_COND(p_count < 0)` (bone_constraint_3d.cpp:131), so the floor is enforced. No ceiling.
-  setting_count: v.int('setting_count', { min: 0, enforced: 'bone_constraint_3d.cpp:131' }),
+  // copy_transform_modifier_3d.cpp:358, ADD_ARRAY_COUNT, this class's own, since
+  // BoneConstraint3D binds none. Its setter is the base's `set_setting_count`.
+  setting_count: settingCount('BoneConstraint3D'),
 
   'settings/#/*': settingsValidator,
 });

@@ -32,7 +32,8 @@ function animation(track: Partial<GodotTrack>): GodotAnimation {
 }
 
 function interpolationOf(track: Partial<GodotTrack>) {
-  const clip = buildClip(animation(track));
+  // The path is irrelevant to interpolation, so the NodePath stands in for the scene path.
+  const clip = buildClip(animation(track), (targetPath) => targetPath);
   return (clip.tracks[0] as unknown as { getInterpolation(): number }).getInterpolation();
 }
 

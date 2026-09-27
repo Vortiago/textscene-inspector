@@ -1,8 +1,7 @@
 /** Shared "does this body have a shape provider?" check for the physics linters. */
 
 import type { TscnNode } from '../../parser/types.js';
-import { isTypeOpaque } from '../parentType.js';
-import { descendsFrom } from '../../godot/nodeBaseTypes.js';
+import { hasChildOfType } from '../childType.js';
 
 /**
  * The node types that give a `CollisionObject` its shapes: each calls
@@ -22,14 +21,7 @@ export function collisionShapeTypes(dim: '2D' | '3D'): readonly string[] {
  */
 export function hasCollisionShapeChild(node: TscnNode, dim: '2D' | '3D'): boolean {
   // The set `collisionShapeTypesPhrase` names, so no warning offers a type this ignores.
-  const providers = collisionShapeTypes(dim);
-  // An opaque child counts: an `instance=` or override heading, or an uncatalogued
-  // GDExtension provider, has its class elsewhere, and a missed warning beats a
-  // false one, the same call `resolveNodePath` makes. `descendsFrom`, since a
-  // subclass inherits `CollisionShape2D::_notification`.
-  return node.children.some(
-    (child) => isTypeOpaque(child) || providers.some((type) => descendsFrom(child.type, type))
-  );
+  return hasChildOfType(node, collisionShapeTypes(dim));
 }
 
 /** `CollisionShape2D or CollisionPolygon2D`, for a diagnostic message. */

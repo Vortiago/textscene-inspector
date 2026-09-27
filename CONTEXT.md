@@ -79,13 +79,14 @@ It reports every syntax and format error as a `ParseError` with line and column.
 _Avoid_: "validator" (reserve for property validators).
 
 **ParseObserver** (`parser/TscnParserCore.ts`):
-The optional hook **seam** (`onError`, `onSectionStart`, `onProperty`) on the single shared scanning loop.
+The optional hook **seam** (`onError`, `onSectionStart`, `onProperty`, `onSectionBuilt`) on the single shared scanning loop.
 Lenient parsing passes no observer, so recovery behaviour is byte-identical. Strict parsing passes an observer that collects `ParseError`s, runs the heading checks and dispatches property validators. One loop, two adapters.
 _Avoid_: "callback API", "strict mode flag".
 
 **Value decoder** (`parser/valueParsers.ts`):
 The lenient parser's shared primitives for reading a raw property string into a typed scalar or vector.
-`intOr`, `floatOr`, `boolOr`, `enumOr` and `vec2Or` take a fallback and always return. `parseOptionalInt`, `parseOptionalFloat` and `parseOptionalVector2` return `undefined` when the property is absent. The grammar is shared, but the absent/error contract may **fork** per slice: `floatOr` and `intOr` warn then fall back for a scalar with a concrete default, `parseOptionalFloat` and `parseOptionalVector2` return `undefined` for an optional property, and `vec2Or` and `parseColor` keep slice-specific fallbacks. `parseVector2` and `parseVector3` (`parser/vectors.ts`) and the canonical `parseColor` (`utils/colorParser.ts`) all use `FLOAT_PATTERN_SOURCE`, the one float regex. It accepts scientific notation (`1e-05`, which Godot emits) and rejects malformed components outright. One-off structured literals (`Vector2i`, `Rect2`, `frame_coords`) stay in their slice, as do slice-specific fallbacks.
+`intOr`, `floatOr`, `boolOr`, `enumOr` and `vec2Or` take a fallback and always return. `parseOptionalInt`, `parseOptionalFloat` and `parseOptionalVector2` return `undefined` when the property is absent. The grammar is shared, but the absent/error contract may **fork** per slice: `floatOr` and `intOr` warn then fall back for a scalar with a concrete default, `parseOptionalFloat` and `parseOptionalVector2` return `undefined` for an optional property, and `vec2Or` and `parseColor` keep slice-specific fallbacks. `parseVector2` and `parseVector3` (`parser/vectors.ts`) and the canonical `parseColor` (`utils/colorParser.ts`) all use `FLOAT_PATTERN_SOURCE`, the one float regex. It accepts scientific notation (`1e-05`, which Godot emits) and rejects malformed components outright.
+`vec2iOr` and `parseOptionalVector2i` read a `Vector2i` slot, `frame_coords` included, through `storedVector2i` (`godot/intSlots.ts`), which the SpriteFrames replay shares. `parseOptionalRect2` reads a `Rect2`. A literal that only one slice reads stays in that slice, as Node2D's `Transform2D` and an animation keyframe's Variant composites do.
 The renderer's grammar is finite by choice. `inf`, `-inf`, `inf_neg` and `nan` are legal TSCN literals. A component that reaches three.js as `Infinity` renders NaN geometry, so the decoders treat one like a malformed value. The linter reads Godot's full tokenizer grammar instead, through `TSCN_FLOAT_PATTERN_SOURCE` (`godot/number.ts`, re-exported by `linter/validators/commonValidators.ts`), which adds those four spellings.
 _Avoid_: re-declaring per-node `intOr` or `floatOr` copies. "validator" (that is the strict-linter path). `FLOAT_PATTERN_SOURCE` in a validator (it refuses literals Godot writes).
 
@@ -93,6 +94,7 @@ _Avoid_: re-declaring per-node `intOr` or `floatOr` copies. "validator" (that is
 
 **Diagnostic**:
 One linter finding: a **Severity**, a message, the node it concerns, the name of the check that produced it and, usually, a line and column.
+A rule's finding sits on its node's heading, and a refused value on its property's line. A finding with no line is about the whole file.
 Parse-phase findings share the `strict-parser` name.
 _Avoid_: "error" for a diagnostic of unknown severity. "issue" (ambiguous with the tracker).
 
@@ -365,7 +367,7 @@ _Avoid_: "default node".
 
 **Source pane**:
 The web previewer's editable `.tscn` text view, a left sibling of the preview shell, never inside it.
-It holds the single editable buffer, fed three ways: fixture select, file upload, or direct paste and typing. That buffer is the source of truth for the **Linter**, surfaced as gutter markers with a hover popover. It is also the source for the shell's rendered scene, gated on a clean **Lenient parser** result (**Hold-last-valid**). Edits are ephemeral and leave the browser only through a "Download .tscn" export. Nothing is written back to disk. A browser reload resets silently. An in-app one-click scene replacement (fixture palette, ⤢ open-sub-scene, scene-replacing drop or upload) of an edited buffer confirms before discarding (ADR-0020).
+It holds the single editable buffer, fed three ways: fixture select, file upload, or direct paste and typing. That buffer is the source of truth for the **Linter**, shown as gutter markers with a hover popover and a file-level section. It is also the source for the shell's rendered scene, gated on a clean **Lenient parser** result (**Hold-last-valid**). Edits are ephemeral and leave the browser only through a "Download .tscn" export. Nothing is written back to disk. A browser reload resets silently. An in-app one-click scene replacement (fixture palette, ⤢ open-sub-scene, scene-replacing drop or upload) of an edited buffer confirms before discarding (ADR-0020).
 _Avoid_: "code editor", "Monaco", "CodeMirror" (it is a bare `<textarea>` with no editor library). Conflating it with the **SceneTreeViewer** panel or with the VS Code extension's own text editor.
 
 **Host (app)**:
@@ -469,8 +471,8 @@ It is listed in the clip selector like any animation but skipped when the **Anim
 _Avoid_: treating `RESET` as an ordinary playable clip.
 
 **Animation root** (`root_node`):
-The THREE object a clip's **Track** NodePaths resolve against and the **AnimationPlayer**'s mixer is rooted on. Default `..`, the player's parent node.
-`THREE.PropertyBinding` resolves a Track's target by name through the dispatcher's unnamed pickable wrappers. The named, transform-bearing object the binding finds is the one the mixer overrides.
+The scene node a clip's **Track** NodePaths resolve from. Default `..`, the player's parent node.
+Each Track resolves to a scene path with Godot's `get_node` walk. That path resolves to the exact object the dispatcher registered there: the named, transform-bearing group inside its wrapper. The mixer roots on the scene the player hangs in, not on the Animation root (ADR-0011).
 _Avoid_: "target root".
 
 **GLB-embedded clip**:
@@ -511,7 +513,7 @@ _Avoid_: mounting the **AnimationTree driver** this way (it owns no clips, so it
 - The three registries (**NodeRegistry**, **NodeComponentRegistry**, **ControlComponentRegistry**) are keyed by the same `typeName` but kept separate to preserve the **React-free linter boundary**.
 - A unified **vertical slice** exposes its behaviour through three **slice entry points**, one per registry domain.
 - **Label3D** and **Label** / **RichTextLabel** share one shaping engine and one bundled font, but not one painter. The painter that draws a run follows the path Godot's own text server takes for it. Label3D's stroked outline is a real contour that a distance field cannot encode, so it rasterises to a `CanvasTexture`. 2D Control text draws the same font from the vendored Open Sans MSDF atlas as glyph-quad geometry (ADR-0040).
-- An **AnimationPlayer** references one **Animation library** through `libraries/`. The library's **GodotAnimation**s carry **Track**s. The **Animation transport** plays them by building a `THREE.AnimationClip` and driving a `THREE.AnimationMixer` rooted at the **Animation root** (ADR-0011).
+- An **AnimationPlayer** references one **Animation library** through `libraries/`. The library's **GodotAnimation**s carry **Track**s. The **Animation transport** plays them by building a `THREE.AnimationClip` and driving a `THREE.AnimationMixer` rooted on the scene the player hangs in (ADR-0011).
 - An **AnimationTree driver** owns no clips. It evaluates its `tree_root` at the authored `parameters/*` into a **blend program**. It drives the **AnimationPlayer** or **GLB animation driver** that its `anim_player` resolves to, found through the **AnimationDriverRegistry** (ADR-0019).
 - A **sub-viewport** publishes its render target into the **ViewportTextureRegistry**. A **viewport surface** or a `ViewportTexture` consumer resolves it back by node path. The parent's **NodeDispatcher** and **ControlCanvasWalker** both stop at the boundary, so only its surface dispatches the subtree, exactly once (ADR-0033).
 - Both **Host (app)**s mount the same preview shell. They differ in the resource-loading adapter and in how source text arrives: **Save-driven refresh** from disk in VS Code, and the live-typed **Source pane** buffer under **Hold-last-valid** in the web. **Progressive fill-in** is shared.

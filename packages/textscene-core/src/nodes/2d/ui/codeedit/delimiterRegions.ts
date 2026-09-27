@@ -10,6 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { passesDelimiterGuards, splitDelimiterEntry } from './delimiterEntry.js';
 import { isGodotSymbol } from './symbolChars.js';
 
 /** `CodeEdit::DelimiterType` (`code_edit.h`). */
@@ -38,11 +39,9 @@ export function buildDelimiters(
   const add = (entries: readonly string[], type: DelimiterType): void => {
     for (const entry of entries) {
       if (entry.length === 0) continue;
-      const space = entry.indexOf(' ');
-      const startKey = space === -1 ? entry : entry.slice(0, space);
-      const endKey = space === -1 ? '' : entry.slice(space + 1).split(' ')[0]!;
-      if (startKey.length === 0) continue;
-      if (![...startKey, ...endKey].every(isGodotSymbol)) continue;
+      const keys = splitDelimiterEntry(entry);
+      if (!passesDelimiterGuards(keys)) continue;
+      const { startKey, endKey } = keys;
       let at = 0;
       let duplicate = false;
       for (const existing of out) {

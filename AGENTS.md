@@ -41,6 +41,9 @@ Godot `.tscn` parser, linter and renderer (react-three-fiber over three.js). pnp
   project-viewport rectangle at zoom 1, chrome hidden, Godot's own clear colour) instead
   of the default 3D one, so a Control's golden and its `comparison.md` describe the same
   picture.
+  CI skips the golden run on a pull request whose every changed file matches
+  `scripts/ci/visualScope.mjs`. A file the harness or the web build reads never goes on
+  that list.
 - Changed the webview CSP, its bundle or asset loading, or the text pipeline:
   `pnpm test:vscode:csp`. It drives a real desktop VS Code, opens a Control fixture
   through the extension's own preview command and reads the canvas back over CDP. It

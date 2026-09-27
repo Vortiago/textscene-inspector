@@ -7,7 +7,7 @@
 import { useEffect } from 'react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { SelectionProvider, useSelection } from './contexts/SelectionContext';
+import { SelectionProvider } from './contexts/SelectionContext';
 import { HierarchyProvider } from './contexts/HierarchyContext';
 import { CameraControlProvider, useCameraControl } from './contexts/CameraControlContext';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph';
@@ -21,6 +21,7 @@ import { frameSceneBounds } from './frameSceneBounds.js';
 // Exported from TscnCanvas for direct unit mounting: CameraFit needs
 // `useThree`, so it can only be exercised inside a test-renderer tree.
 import { CameraFit } from './TscnCanvas';
+import { SelectSeeder } from './testing/SelectSeeder';
 
 const frameSceneBoundsMock = frameSceneBounds as ReturnType<typeof vi.fn>;
 
@@ -28,20 +29,11 @@ function makeGraph() {
   return createSceneGraphFromTscnScene({ nodes: [] });
 }
 
-/** Drives the SelectionContext's selectedNodePath from inside the renderer. */
-function Selector({ path }: { path: string | null }) {
-  const { setSelectedNodePath } = useSelection();
-  useEffect(() => {
-    setSelectedNodePath(path);
-  }, [path, setSelectedNodePath]);
-  return null;
-}
-
 function tree(graph: ReturnType<typeof makeGraph>, path: string | null) {
   return (
     <HierarchyProvider value={{ sceneGraph: graph, panelId: 'test' }}>
       <SelectionProvider>
-        <Selector path={path} />
+        <SelectSeeder path={path} />
         <CameraFit />
       </SelectionProvider>
     </HierarchyProvider>
@@ -116,7 +108,7 @@ describe('CameraFit ignores selection changes', () => {
           <SelectionProvider>
             <CameraControlProvider>
               <ActivateAuthoredCamera />
-              <Selector path={path} />
+              <SelectSeeder path={path} />
               <CameraFit />
             </CameraControlProvider>
           </SelectionProvider>

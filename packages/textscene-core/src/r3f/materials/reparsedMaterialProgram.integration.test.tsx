@@ -8,9 +8,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer, { type ReactThreeTest } from '@react-three/test-renderer';
 import { NodeDispatcher } from '../NodeDispatcher';
-import { SelectionProvider } from '../contexts/SelectionContext';
-import { SceneResourcesProvider } from '../SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
+import { SceneStack } from '../testing/SceneStack';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../../resources/ResourceLoader';
 import { TscnParser } from '../../parser/TscnParser';
@@ -24,16 +22,9 @@ const SPRITE_TEXTURE = 'res://textures/sprite.png';
 function treeFor(tscn: string, loader: ResourceLoader) {
   const scene = new TscnParser().parse(tscn);
   return (
-    <ResourceLoaderProvider loader={loader}>
-      <SceneResourcesProvider
-        internalResources={scene.internalResources}
-        externalResources={scene.externalResources}
-      >
-        <SelectionProvider>
-          <NodeDispatcher nodes={scene.nodes} />
-        </SelectionProvider>
-      </SceneResourcesProvider>
-    </ResourceLoaderProvider>
+    <SceneStack loader={loader} scene={scene}>
+      <NodeDispatcher nodes={scene.nodes} />
+    </SceneStack>
   );
 }
 

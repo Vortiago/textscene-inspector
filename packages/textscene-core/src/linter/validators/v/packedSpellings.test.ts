@@ -69,3 +69,44 @@ describe('a PackedFloat32Array slot', () => {
     expect(f('[0, oops]')?.severity).toBe('error');
   });
 });
+
+describe('a PackedStringArray slot', () => {
+  const filters = v.packedStringArray('filters', '"*.png"');
+  const at = (value: string) => filters('filters', value, 1);
+
+  it('accepts all three spellings, empty included', () => {
+    expect(at('PackedStringArray("*.png", "*.jpg")')).toBeNull();
+    expect(at('Array[String](["*.png"])')).toBeNull();
+    expect(at('["*.png"]')).toBeNull();
+    expect(at('PackedStringArray()')).toBeNull();
+  });
+
+  it('accepts one trailing comma in each spelling', () => {
+    // The packed loop closes on `)` after a comma (variant_parser.cpp:1522-1525), and
+    // `_parse_array` on `]` (:1658-1660).
+    expect(at('PackedStringArray("*.png",)')).toBeNull();
+    expect(at('Array[String](["*.png",])')).toBeNull();
+    expect(at('["*.png",]')).toBeNull();
+  });
+
+  it('accepts a backslash that escapes a raw newline', () => {
+    expect(at('PackedStringArray("a\\\nb")')).toBeNull();
+  });
+
+  it('reports a non-string element under the format code', () => {
+    const error = at('PackedStringArray("*.png", 5)');
+    expect(error?.code).toBe('INVALID_FILTERS_FORMAT');
+    expect(error?.message).toContain('non-string');
+  });
+
+  it.each(['PackedStringArray(,)', '["*.png",,]', '[&"*.png"]'])(
+    'reports a list the tokenizer refuses or a StringName element: %s',
+    (value) => {
+      expect(at(value)?.code).toBe('INVALID_FILTERS_FORMAT');
+    }
+  );
+
+  it('reports a value that is no array at all, naming the example', () => {
+    expect(at('"*.png"')?.message).toContain('PackedStringArray("*.png")');
+  });
+});

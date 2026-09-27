@@ -24,6 +24,8 @@ export interface MockWebview {
 export interface MockPanel {
   webview: MockWebview;
   title: string;
+  /** The panel's column, as a real `WebviewPanel` reports it. Unset, the panel is in none. */
+  viewColumn?: number;
   reveal: ReturnType<typeof vi.fn>;
   dispose: ReturnType<typeof vi.fn>;
   onDidDispose: ReturnType<typeof vi.fn>;

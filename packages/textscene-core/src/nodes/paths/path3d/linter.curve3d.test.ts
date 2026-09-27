@@ -64,12 +64,12 @@ describe('curve3d-loadable', () => {
   });
 
   it('rejects a points array that is not a whole number of control points', () => {
-    // Nine floats per point: in.xyz, out.xyz, position.xyz. Ten is a truncated point.
+    // Nine floats per point: in.xyz, out.xyz, position.xyz. Twelve are four vectors, a truncated point.
     const errors = curveErrors(
-      lint('"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),\n"tilts": PackedFloat32Array(0)')
+      lint('"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),\n"tilts": PackedFloat32Array(0)')
     );
     expect(errors).toHaveLength(1);
-    expect(errors[0]!.message).toContain('nine floats');
+    expect(errors[0]!.message).toContain('9 floats each');
   });
 
   it('rejects fewer tilts than control points, which Godot reads past the end of', () => {
@@ -107,6 +107,33 @@ describe('curve3d-loadable', () => {
     expect(curveErrors(lint(`${bareSix()},\n"tilts": [0]`)).map((d) => d.message)).toEqual([
       expect.stringContaining('1 tilt values for 2 control points'),
     ]);
+  });
+
+  describe('an id the file declares twice', () => {
+    /** A Path3D scene whose `curve` names `Shared`, with `blocks` declaring it. */
+    function lintSharedId(...blocks: string[]) {
+      return new Linter().lint(`[gd_scene format=3]
+
+${blocks.join('\n\n')}
+
+[node name="Path3D" type="Path3D"]
+curve = SubResource("Shared")
+`);
+    }
+
+    const TILTLESS_CURVE3D = `[sub_resource type="Curve3D" id="Shared"]\n_data = {\n${POINTS}\n}`;
+    const SOUND_CURVE3D = `[sub_resource type="Curve3D" id="Shared"]\n_data = {\n${POINTS},\n"tilts": PackedFloat32Array(0, 0)\n}`;
+
+    it('checks the first Curve3D under the id when another type holds it first', () => {
+      const errors = curveErrors(lintSharedId('[sub_resource type="Curve" id="Shared"]', TILTLESS_CURVE3D));
+      expect(errors).toHaveLength(1);
+      expect(errors[0]!.message).toContain('tilts');
+    });
+
+    it('checks only the first of two Curve3D declarations under the id', () => {
+      expect(curveErrors(lintSharedId(SOUND_CURVE3D, TILTLESS_CURVE3D))).toEqual([]);
+      expect(curveErrors(lintSharedId(TILTLESS_CURVE3D, SOUND_CURVE3D))).toHaveLength(1);
+    });
   });
 
   it('stays quiet when the curve reference points at no resource in this scene', () => {

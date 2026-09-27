@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { Curve3DControlPoint } from '../../../../resources/shapes/curve3d';
+import type { Curve3DControlPoint } from '../../../../resources/curves/curve3d/index.js';
 import { identityTransform3D } from '../../../../utils/transform';
 import type { Transform3D } from '../../../base/node3d/types';
 import { csgPolygon3DGeometry, csgPolygon3DGeometryKey } from './csgGeometry';

@@ -7,18 +7,13 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene, TscnInternalResource } from '../parser/types';
 import { NodeDispatcher } from './NodeDispatcher';
-import {
-  SelectionProvider,
-  useOptionalSelection,
-  type SelectionContextValue,
-} from './contexts/SelectionContext';
+import { useOptionalSelection, type SelectionContextValue } from './contexts/SelectionContext';
 import {
   AnimationTransportProvider,
   useAnimationTransport,
   type AnimationTransport,
 } from './contexts/AnimationTransportContext';
-import { SceneResourcesProvider } from './SceneResourcesContext';
-import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
+import { SceneStack } from './testing/SceneStack';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import { AnimationProcessMode, MethodCallMode } from '../nodes/animation/animationplayer/types';
 
@@ -125,19 +120,18 @@ describe('instanced AnimationPlayer — selection-driven tab via the collapsed p
     ];
 
     await ReactThreeTestRenderer.create(
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider
-          internalResources={[]}
-          externalResources={[{ id: 'coin', path: 'res://coin/coin.tscn', type: 'PackedScene' }]}
-        >
-          <SelectionProvider>
-            <AnimationTransportProvider>
-              <Capture />
-              <NodeDispatcher nodes={nodes} />
-            </AnimationTransportProvider>
-          </SelectionProvider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
+      <SceneStack
+        loader={fake.loader}
+        scene={{
+          internalResources: [],
+          externalResources: [{ id: 'coin', path: 'res://coin/coin.tscn', type: 'PackedScene' }],
+        }}
+      >
+        <AnimationTransportProvider>
+          <Capture />
+          <NodeDispatcher nodes={nodes} />
+        </AnimationTransportProvider>
+      </SceneStack>
     );
 
     // Nothing selected → no player registered → tab hidden.

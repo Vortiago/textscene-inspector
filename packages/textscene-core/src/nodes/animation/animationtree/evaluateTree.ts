@@ -5,7 +5,8 @@
  * a clip on several paths sums their weights, and a clip whose weight rounds to zero is dropped.
  */
 
-import { stripStringName, type AnimNode } from './treeResources';
+import type { AnimNode } from './treeResources';
+import { unquoteLiteral } from '../../../parser/utils';
 import { parseGodotFloat } from '../../../godot/number.js';
 
 export interface ClipWeight {
@@ -112,7 +113,7 @@ function numberParam(
 
 function stringParam(params: Record<string, string>, key: string): string | null {
   const raw = params[key];
-  return raw === undefined ? null : stripStringName(raw);
+  return raw === undefined ? null : unquoteLiteral(raw.trim());
 }
 
 function clamp01(n: number): number {

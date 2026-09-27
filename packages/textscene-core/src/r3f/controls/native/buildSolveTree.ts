@@ -20,6 +20,7 @@ import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/index.
 import { projectLayoutDirectionEnv } from '../../../parser/projectSettingsParser';
 import { joinPath } from '../../../utils/nodePath';
 import {
+  findExtResource,
   findSubResource,
   parseResourceReference,
   resolveExtAtlasTexturePath,
@@ -43,7 +44,9 @@ import { liveChildGroups, type CachedSceneSource, type SceneScope } from '../../
 import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
 import { controlSolverRegistry, type ChildVisibilityFn } from './solverRegistry';
-import type { Affine2D, SkippedAncestors, SolveNode, ThemedIconRef } from './solveTree';
+import type { SkippedAncestors, SolveNode, ThemedIconRef } from './solveTree';
+import { multiplyTransform2D } from '../../../godot/transform2d.js';
+import { node2DLocalTransform } from '../../node2dTransform';
 import { multiplyModulate, WHITE_MODULATE } from '../../canvasItemModulate';
 import {
   allocatePaintRange,
@@ -218,45 +221,6 @@ interface ForestResult {
   pendingFonts: string[];
 }
 
-// --- Skipped-ancestor CanvasItem transform ------------------------------------
-
-/**
- * `Transform2D::operator*` (`core/math/transform_2d.cpp:198-217`): `local` first,
- * then `parent`. A `null` parent is the identity, for a chain's first ancestor.
- */
-export function composeAncestorAffine(parent: Affine2D | null, local: Affine2D): Affine2D {
-  if (!parent) return local;
-  return {
-    a: parent.a * local.a + parent.c * local.b,
-    b: parent.b * local.a + parent.d * local.b,
-    c: parent.a * local.c + parent.c * local.d,
-    d: parent.b * local.c + parent.d * local.d,
-    tx: parent.a * local.tx + parent.c * local.ty + parent.tx,
-    ty: parent.b * local.tx + parent.d * local.ty + parent.ty,
-  };
-}
-
-/**
- * A Node2D's local `Transform2D(rot, scale, skew, pos)`
- * (`core/math/transform_2d.h:249-254`, `set_rotation_scale_and_skew`). The defaults
- * repeat `nodes/base/node2d/parser.ts`'s: a hand-built bag may skip that parser.
- */
-export function node2DAncestorAffine(props: Node2DProperties): Affine2D {
-  const position = props.position ?? { x: 0, y: 0 };
-  const rotation = props.rotation ?? 0;
-  const scale = props.scale ?? { x: 1, y: 1 };
-  const skew = props.skew ?? 0;
-  return {
-    a: Math.cos(rotation) * scale.x,
-    b: Math.sin(rotation) * scale.x,
-    // `0 - v`, not `-v`: a zero rotation/skew must stay +0, never -0.
-    c: 0 - Math.sin(rotation + skew) * scale.y,
-    d: Math.cos(rotation + skew) * scale.y,
-    tx: position.x,
-    ty: position.y,
-  };
-}
-
 /**
  * Whether `Object::cast_to<CanvasItem>` accepts this non-Control node, as
  * `CanvasItem::get_parent_item()` tests (`canvas_item.cpp:565-571`). Node2D is the
@@ -288,8 +252,10 @@ export function nextSkippedAncestors(
 ): SkippedAncestors | null {
   if (!isCanvasItem(collapsed)) return null;
   const props = collapsed.properties as Node2DProperties;
+  const local = node2DLocalTransform(props);
   return {
-    transform: composeAncestorAffine(previous?.transform ?? null, node2DAncestorAffine(props)),
+    // `local` first, then the ancestors above it, as `get_global_transform()` composes.
+    transform: previous ? multiplyTransform2D(previous.transform, local) : local,
     // `_cull_canvas_item` folds each item's `modulate` into what its children
     // inherit (`renderer_canvas_cull.cpp`); `self_modulate` stays own-pixel.
     modulate: multiplyModulate(previous?.modulate ?? WHITE_MODULATE, props.modulate ?? WHITE_MODULATE),
@@ -360,7 +326,7 @@ function buildForest(
     if (!parsed) return null;
 
     if (parsed.type === 'ExtResource') {
-      const path = ext.find((r) => r.id === parsed.id)?.path;
+      const path = findExtResource(ext, parsed.id)?.path;
       if (!path) return null;
       const cached = themeCache.getCached(path);
       if (cached === undefined) {
@@ -583,7 +549,7 @@ function buildForest(
         // found" for an unregistered address and caches the failure. A raw `res://`
         // instance has none to register, and is still requested.
         const parsed = node.instance ? parseResourceReference(node.instance) : null;
-        const entry = parsed?.type === 'ExtResource' ? ext.find((r) => r.id === parsed.id) : undefined;
+        const entry = parsed?.type === 'ExtResource' ? findExtResource(ext, parsed.id) : undefined;
         // One path can be reached both ways in a single walk; an ExtResource already
         // recorded for it is never overwritten by a raw-path node's absent one.
         if (!pendingScenes.get(scenePath)?.ext) {

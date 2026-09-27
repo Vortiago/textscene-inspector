@@ -59,6 +59,65 @@ describe('ValidatorRegistry', () => {
       expect(registry.findValidator('MeshInstance3D', 'light_energy')).toBeNull();
       expect(registry.findValidator('DirectionalLight3D', 'mesh')).toBeNull();
     });
+
+    it('registers a table given as several parts', () => {
+      const meshValidator: PropertyValidator = () => null;
+      const shadowValidator: PropertyValidator = () => null;
+
+      registry.registerAll('MeshInstance3D', { mesh: meshValidator }, { cast_shadow: shadowValidator });
+
+      expect(registry.findValidator('MeshInstance3D', 'mesh')).toBe(meshValidator);
+      expect(registry.findValidator('MeshInstance3D', 'cast_shadow')).toBe(shadowValidator);
+    });
+
+    it('throws on a key two parts of one call both declare, naming the type and the key', () => {
+      const mockValidator: PropertyValidator = () => null;
+
+      expect(() =>
+        registry.registerAll('MeshInstance3D', { mesh: mockValidator }, { mesh: mockValidator })
+      ).toThrow("MeshInstance3D already declares 'mesh'");
+    });
+
+    it('throws on a key an earlier call for the same type declares', () => {
+      const first: PropertyValidator = () => null;
+      registry.registerAll('MeshInstance3D', { mesh: first });
+
+      expect(() => registry.registerAll('MeshInstance3D', { mesh: () => null })).toThrow(
+        "MeshInstance3D already declares 'mesh'"
+      );
+      expect(registry.findValidator('MeshInstance3D', 'mesh')).toBe(first);
+    });
+
+    it('registers nothing from a refused call', () => {
+      const mockValidator: PropertyValidator = () => null;
+
+      expect(() =>
+        registry.registerAll(
+          'MeshInstance3D',
+          { cast_shadow: mockValidator },
+          { mesh: mockValidator },
+          { mesh: mockValidator }
+        )
+      ).toThrow();
+      expect(registry.getOwnKeys('MeshInstance3D')).toEqual([]);
+    });
+
+    it('accepts a key named like an Object.prototype member, declared once', () => {
+      const mockValidator: PropertyValidator = () => null;
+
+      registry.registerAll('MeshInstance3D', { toString: mockValidator }, { constructor: mockValidator });
+
+      expect(registry.getOwnKeys('MeshInstance3D').sort()).toEqual(['constructor', 'toString']);
+    });
+
+    it('lets two types declare the same key', () => {
+      const mockValidator: PropertyValidator = () => null;
+
+      registry.registerAll('MeshInstance3D', { visible: mockValidator });
+      registry.registerAll('DirectionalLight3D', { visible: mockValidator });
+
+      expect(registry.getOwnKeys('DirectionalLight3D')).toEqual(['visible']);
+    });
   });
 
   describe('getOwnKeys', () => {

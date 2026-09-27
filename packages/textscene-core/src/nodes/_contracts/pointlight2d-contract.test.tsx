@@ -6,45 +6,23 @@
  */
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 
 import { TscnParser } from '../../parser/TscnParser';
-import type { TscnScene, TscnNode } from '../../parser/types';
+import type { TscnNode } from '../../parser/types';
+import { fixturesDir, flatten, repoRoot } from '../../parser/testing/parserKit';
 import { nodeRegistry } from '../../core/NodeRegistry';
 import { Linter } from '../../linter/Linter';
 import { nodeComponentRegistry } from '../../r3f/NodeComponentRegistry';
 import { NodeDispatcher } from '../../r3f/NodeDispatcher';
-import { CanvasWorkspaceProvider } from '../../r3f/contexts/CanvasWorkspaceContext';
-import { SelectionProvider } from '../../r3f/contexts/SelectionContext';
-import { SceneResourcesProvider } from '../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { godotColorToLinear } from '../../r3f/godotColor';
 import { CanvasLighting2DProvider, LIGHT_LAYER } from '../../r3f/lighting2d/CanvasLighting2D';
+import { SceneStack } from '../../r3f/testing/SceneStack';
 import '../../r3f/nodes'; // side-effect: registers every node's r3f component
 import '../../linter/index'; // side-effect: registers every node's linter validators
-
-function repoRoot(): string {
-  let dir = dirname(fileURLToPath(import.meta.url));
-  for (let i = 0; i < 12; i += 1) {
-    if (existsSync(resolve(dir, 'pnpm-workspace.yaml'))) return dir;
-    dir = dirname(dir);
-  }
-  throw new Error('repo root (pnpm-workspace.yaml) not found above this test');
-}
-
-function flatten(scene: TscnScene): TscnNode[] {
-  const out: TscnNode[] = [];
-  const walk = (n: TscnNode): void => {
-    out.push(n);
-    n.children.forEach(walk);
-  };
-  scene.nodes.forEach(walk);
-  return out;
-}
 
 function parseLightNode(tscn: string): TscnNode {
   const light = flatten(new TscnParser().parse(tscn)).find((n) => n.type === 'PointLight2D');
@@ -72,23 +50,14 @@ async function renderScene(tscn: string) {
   (tex as unknown as { image: { width: number; height: number } }).image = { width: 64, height: 64 };
   fake.textures.seed('res://light.png', tex);
   const renderer = await ReactThreeTestRenderer.create(
-    <CanvasWorkspaceProvider workspace="2d">
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider
-          internalResources={scene.internalResources}
-          externalResources={scene.externalResources}
-        >
-          <SelectionProvider>
-            {/* The light's camera layer is its cull-mask class's layer, and only
-                the provider assigns one. Mounted here so the quad these pins
-                look for lands where the real 2D stage puts it. */}
-            <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
-              <NodeDispatcher nodes={scene.nodes} />
-            </CanvasLighting2DProvider>
-          </SelectionProvider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    </CanvasWorkspaceProvider>
+    <SceneStack workspace="2d" loader={fake.loader} scene={scene}>
+      {/* The light's camera layer is its cull-mask class's layer, and only
+          the provider assigns one. Mounted here so the quad these pins
+          look for lands where the real 2D stage puts it. */}
+      <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
+        <NodeDispatcher nodes={scene.nodes} />
+      </CanvasLighting2DProvider>
+    </SceneStack>
   );
   await new Promise<void>((r) => setTimeout(r, 10));
   return renderer;
@@ -258,7 +227,7 @@ enabled = false
   });
 
   it('ships a fixture containing a PointLight2D that the linter passes', () => {
-    const dir = resolve(repoRoot(), 'scenes/fixtures');
+    const dir = fixturesDir();
     const withLight = readdirSync(dir)
       .filter((f) => f.endsWith('.tscn'))
       .filter((f) => readFileSync(resolve(dir, f), 'utf8').includes('type="PointLight2D"'));

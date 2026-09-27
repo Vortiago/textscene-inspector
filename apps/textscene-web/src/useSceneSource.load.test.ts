@@ -109,7 +109,7 @@ describe('fixture load — fetch failure', () => {
     rerender({ fixtureFile: 'other-fixture.tscn' });
 
     await waitFor(() => {
-      expect(result.current.loadError).toContain('Failed to load fixture');
+      expect(result.current.loadError?.message).toContain('Failed to load fixture');
     });
 
     // Buffer cleared on failure…

@@ -12,6 +12,7 @@ import {
   packedElementType,
   readerLimitedInt,
   splitTopLevel,
+  stringLiteralBodies,
   type IntWidth,
 } from '../../../godot/index.js';
 import { compositeSpellings } from '../../../godot/variantConversion.js';
@@ -272,5 +273,30 @@ export const packedArrayCombinators = {
    */
   packedFloat32Array(name: string, example: string): PropertyValidator {
     return packedTupleArray(name, 'PackedFloat32Array', 1, 'PackedFloat32Array(x, y, …)', example);
+  },
+
+  /**
+   * `PackedStringArray("a", …)`, or `Array[String](["a"])` and `["a"]`, which `can_convert_strict`
+   * converts (variant.cpp:467-473). Format-only: each element must be one TK_STRING
+   * (variant_parser.cpp:1526-1529), one trailing comma loads ({@link stringLiteralBodies}), and an
+   * empty list is legal. `example` is one quoted element.
+   */
+  packedStringArray(name: string, example: string): PropertyValidator {
+    const code = formatCode(name);
+    const forms = packedArrayForms('PackedStringArray');
+    return shape((key, value, line) => {
+      const parsed = packedArrayBody(forms, value);
+      if (parsed === null) {
+        return propertyError(
+          key,
+          line,
+          `Property '${name}' must be an array of quoted strings like PackedStringArray(${example}), ` +
+            `Array[String]([${example}]) or [${example}], got: ${value}`,
+          code
+        );
+      }
+      if (stringLiteralBodies(parsed.body) !== null) return null;
+      return propertyError(key, line, `Property '${name}' contains a non-string element: ${value}`, code);
+    }, 'string array (PackedStringArray(…), Array[String]([…]) or […])');
   },
 };

@@ -10,7 +10,7 @@ import { layerBitmask, v } from '../../linter/validators/index.js';
 import type { PropertyValidator } from '../../linter/ValidatorRegistry.js';
 
 /** Why an index below zero never names a layer, per family. */
-const droppedNegative = (noun: string, cite: string) => (index: number) =>
+const droppedNegative = (noun: string, cite: string) => (index: string) =>
   `${noun} index ${index} must be non-negative. TileSet::_set fails ` +
   `ERR_FAIL_COND_V(index < 0, false) (${cite}) before the layer is reached, so the ` +
   'write never lands';

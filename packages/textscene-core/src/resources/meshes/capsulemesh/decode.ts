@@ -6,8 +6,8 @@
  */
 
 import { warn } from '../../../logger';
-import { parseOptionalFloat } from '../../../parser/valueParsers';
-import { countAtLeast, flooredCount } from '../meshCounts';
+import { parseOptionalFloat, settableIntOr } from '../../../parser/valueParsers';
+import { flooredCount } from '../meshCounts';
 import type { CapsuleMeshProperties } from './types';
 
 /** An authored value the setter would receive, or undefined when absent/unreadable. */
@@ -43,6 +43,7 @@ export function decodeCapsuleMesh(properties: Record<string, string>): CapsuleMe
     radius,
     height,
     radialSegments: flooredCount(properties.radial_segments, 4, 64, 'CapsuleMesh radialSegments'),
-    rings: countAtLeast(properties.rings, 0, 8, 'CapsuleMesh rings'),
+    // `set_rings` ERR_FAILs below 0 (:684), so a negative count keeps the default.
+    rings: settableIntOr(properties.rings, 8, { min: 0 }, 'CapsuleMesh rings'),
   };
 }

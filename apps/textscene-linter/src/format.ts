@@ -1,6 +1,11 @@
 /** Pure output formatting for the TSCN linter CLI (no I/O). */
 
-import { flooredSeverity, type Diagnostic, type Severity } from '@textscene/core/linter';
+import {
+  diagnosticLine,
+  flooredSeverity,
+  type Diagnostic,
+  type Severity,
+} from '@textscene/core/linter';
 import type { FileDiagnostics } from './lint';
 
 /**
@@ -73,10 +78,13 @@ export function toJsonFindings(files: FileDiagnostics[]): JsonFinding[] {
     }
 
     for (const diagnostic of file.diagnostics) {
+      // The line as the web gutter and VS Code read it, so a finding they show as about the whole
+      // file gets no `line=` here either, and a column without its line means nothing.
+      const line = diagnosticLine(diagnostic) ?? null;
       findings.push({
         file: file.filePath,
-        line: diagnostic.location?.line ?? null,
-        column: diagnostic.location?.column ?? null,
+        line,
+        column: line === null ? null : (diagnostic.location?.column ?? null),
         // Floored: `severity` is declared as the closed union, and this is the
         // one output a CI tool switches on rather than reads.
         severity: flooredSeverity(diagnostic.severity),

@@ -94,7 +94,12 @@ export class TscnPreviewPanel {
         vscode.window.showErrorMessage(msg.message);
       },
       jumpToNode: (msg) => {
-        void jumpToNodeDefinition(this._currentResource, msg.nodeName, msg.parent);
+        void jumpToNodeDefinition(
+          this._currentResource,
+          msg.nodeName,
+          msg.parent,
+          this._panel.viewColumn
+        );
       },
       loadResource: (msg) => {
         void this._handleLoadResource(msg.path, msg.resourceType, msg.requestId);

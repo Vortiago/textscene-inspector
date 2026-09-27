@@ -9,13 +9,10 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 
 import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
-import { CanvasWorkspaceProvider } from '../../../r3f/contexts/CanvasWorkspaceContext';
-import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
-import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';
 import { ViewportTextureProvider } from '../../../r3f/contexts/ViewportTextureContext';
+import { SceneStack } from '../../../r3f/testing/SceneStack';
 
 import '../../../r3f/nodes/index';
 
@@ -23,20 +20,11 @@ async function renderScene(source: string, workspace: '2d' | '3d' = '3d') {
   const parsed = new TscnParser().parse(source);
   const fake = createFakeResourceLoader();
   return ReactThreeTestRenderer.create(
-    <CanvasWorkspaceProvider workspace={workspace}>
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider
-          internalResources={parsed.internalResources}
-          externalResources={parsed.externalResources}
-        >
-          <SelectionProvider>
-            <ViewportTextureProvider>
-              <NodeDispatcher nodes={parsed.nodes} />
-            </ViewportTextureProvider>
-          </SelectionProvider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    </CanvasWorkspaceProvider>
+    <SceneStack workspace={workspace} loader={fake.loader} scene={parsed}>
+      <ViewportTextureProvider>
+        <NodeDispatcher nodes={parsed.nodes} />
+      </ViewportTextureProvider>
+    </SceneStack>
   );
 }
 

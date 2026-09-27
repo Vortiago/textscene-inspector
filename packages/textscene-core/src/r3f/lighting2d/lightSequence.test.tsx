@@ -10,10 +10,6 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 
 import { TscnParser } from '../../parser/TscnParser';
 import { NodeDispatcher } from '../NodeDispatcher';
-import { CanvasWorkspaceProvider } from '../contexts/CanvasWorkspaceContext';
-import { SelectionProvider } from '../contexts/SelectionContext';
-import { SceneResourcesProvider } from '../SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { CanvasLighting2DProvider } from './CanvasLighting2D';
 import { litQuadRenderOrder } from './ShadowVolumeMask';
@@ -22,6 +18,7 @@ import { CanvasLightSequenceProvider, useLightSequence } from './useLightSequenc
 import { HierarchyProvider } from '../contexts/HierarchyContext';
 import { NodePathProvider } from '../contexts/NodePathContext';
 import { createSceneGraphFromTscnScene } from '../../core/SceneGraph';
+import { SceneStack } from '../testing/SceneStack';
 import '../nodes'; // side-effect: registers every node's r3f component
 
 const COOKIE = 'res://light.png';
@@ -37,20 +34,11 @@ ${body}`;
   fake.textures.seed(COOKIE, cookie as never);
 
   const renderer = await ReactThreeTestRenderer.create(
-    <CanvasWorkspaceProvider workspace="2d">
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider
-          internalResources={parsed.internalResources}
-          externalResources={parsed.externalResources}
-        >
-          <SelectionProvider>
-            <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
-              <NodeDispatcher nodes={parsed.nodes} />
-            </CanvasLighting2DProvider>
-          </SelectionProvider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    </CanvasWorkspaceProvider>
+    <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
+      <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
+        <NodeDispatcher nodes={parsed.nodes} />
+      </CanvasLighting2DProvider>
+    </SceneStack>
   );
   await new Promise<void>((resolve) => setTimeout(resolve, 10));
   return renderer;

@@ -7,8 +7,6 @@
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AnimationPlayer } from './Component';
-import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import {
   AnimatedValueProvider,
@@ -20,11 +18,11 @@ import {
   type AnimationTransport,
 } from '../../../r3f/contexts/AnimationTransportContext';
 import {
-  SelectionProvider,
   useOptionalSelection,
   type SelectionContextValue,
 } from '../../../r3f/contexts/SelectionContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
+import { SceneStack } from '../../../r3f/testing/SceneStack';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { AnimationPlayerProperties } from './types';
 import { AnimationProcessMode, MethodCallMode } from './types';
@@ -92,26 +90,22 @@ async function mount() {
   const fake = createFakeResourceLoader();
   probedModulate = null;
   return ReactThreeTestRenderer.create(
-    <ResourceLoaderProvider loader={fake.loader}>
-      <SceneResourcesProvider internalResources={INTERNAL} externalResources={[]}>
-        <AnimatedValueProvider>
-          <SelectionProvider>
-            <AnimationTransportProvider>
-              <Capture />
-              {/* A named ancestor so the player's root_node (`..`) resolves. */}
-              <group name="Holder">
-                <NodePathProvider path={DECAL_PATH}>
-                  <ModulateProbe />
-                </NodePathProvider>
-                <NodePathProvider path={AP_PATH}>
-                  <AnimationPlayer node={makeAP()} />
-                </NodePathProvider>
-              </group>
-            </AnimationTransportProvider>
-          </SelectionProvider>
-        </AnimatedValueProvider>
-      </SceneResourcesProvider>
-    </ResourceLoaderProvider>
+    <SceneStack loader={fake.loader} scene={{ internalResources: INTERNAL, externalResources: [] }}>
+      <AnimatedValueProvider>
+        <AnimationTransportProvider>
+          <Capture />
+          {/* A named ancestor so the player's root_node (`..`) resolves. */}
+          <group name="Holder">
+            <NodePathProvider path={DECAL_PATH}>
+              <ModulateProbe />
+            </NodePathProvider>
+            <NodePathProvider path={AP_PATH}>
+              <AnimationPlayer node={makeAP()} />
+            </NodePathProvider>
+          </group>
+        </AnimationTransportProvider>
+      </AnimatedValueProvider>
+    </SceneStack>
   );
 }
 

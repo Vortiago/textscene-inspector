@@ -67,9 +67,13 @@ describe('AnimatedSprite3D semantic rule', () => {
 
   describe('dangling sprite_frames', () => {
     // Not this rule's arm: `danglingResources.ts` resolves every registered
-    // resource slot, and `sprite_frames` is one (linterParser.ts).
+    // resource slot, and `sprite_frames` is one (linterParser.ts). The scene is
+    // hand-built, so no scan recorded its lines.
     const dangling = (declared: string[]) =>
-      danglingResourceDiagnostics(context({ sprite_frames: 'SubResource("frames_1")' }, declared).scene);
+      danglingResourceDiagnostics(
+        context({ sprite_frames: 'SubResource("frames_1")' }, declared).scene,
+        new Map()
+      );
 
     it('errors when the reference names an id the file never declares', () => {
       expect(dangling([])).toContainEqual(

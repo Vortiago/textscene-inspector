@@ -7,9 +7,9 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join } from 'node:path';
 import { stripComments } from '@textscene/dev-kit';
-import { atLeast, srcRoot, walk } from './testing/ruleNameScrape.js';
+import { atLeast, srcLabel, srcRoot, walk } from './testing/ruleNameScrape.js';
 import { SEVERITIES, type Severity } from './types.js';
 
 const isTestFile = (name: string) => /\.test\.tsx?$/.test(name);
@@ -201,8 +201,6 @@ const assertedTiers = (body: string): string[] => {
  */
 const SELF = 'linter/testTitleTier.guard.test.ts';
 
-const label = (file: string): string => relative(srcRoot, file).replaceAll('\\', '/');
-
 /**
  * Scope is `it` and `test` blocks under this package's `src`: a `describe` may
  * cover children that disagree, a negative assertion naming no severity asserts
@@ -210,7 +208,7 @@ const label = (file: string): string => relative(srcRoot, file).replaceAll('\\',
  * `LintRule` fixture is skipped, since its `severity:` is the value under test.
  */
 const allBlocks = (): Block[] => {
-  const files = atLeast(walk(srcRoot, isTestFile), 500, 'test files').map(label);
+  const files = atLeast(walk(srcRoot, isTestFile), 500, 'test files').map(srcLabel);
   // A renamed file drops silently out of an exclusion by path, and the pins
   // below would then be scanned as subjects.
   expect(files).toContain(SELF);

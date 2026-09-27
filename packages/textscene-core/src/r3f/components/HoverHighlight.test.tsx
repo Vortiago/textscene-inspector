@@ -3,19 +3,17 @@
  * `THREE.BoxHelper` to the canvas scene. A seeder drives the path through a real
  * SelectionProvider around `TscnSceneContents`.
  */
-import { useEffect } from 'react';
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../parser/types';
 import { TscnSceneContents } from '../TscnCanvas';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
-import {
-  SelectionProvider,
-  useSelection,
-} from '../contexts/SelectionContext';
+import { SelectionProvider } from '../contexts/SelectionContext';
 import { createSceneGraphFromTscnScene } from '../../core/SceneGraph';
 import type { MeshInstance3DProperties } from '../../nodes/3d/meshinstance3d/types';
+import { HoverSeeder } from '../testing/HoverSeeder';
+import { SelectSeeder } from '../testing/SelectSeeder';
 
 import '../nodes/index';
 
@@ -29,21 +27,6 @@ function makeMeshInstance(name: string): TscnNode {
     surfaceMaterialOverrides: new Map(),
   };
   return { name, type: 'MeshInstance3D', children: [], properties: props };
-}
-
-function StateSeeder({
-  hoverPath,
-  selectPath,
-}: {
-  hoverPath?: string | null;
-  selectPath?: string | null;
-}) {
-  const { hoverStore, setSelectedNodePath } = useSelection();
-  useEffect(() => {
-    if (hoverPath !== undefined) hoverStore.set(hoverPath);
-    if (selectPath !== undefined) setSelectedNodePath(selectPath);
-  }, [hoverPath, selectPath, hoverStore, setSelectedNodePath]);
-  return null;
 }
 
 function findHelpers(scene: THREE.Scene): THREE.BoxHelper[] {
@@ -91,7 +74,7 @@ describe('<HoverHighlight> (WI-UX-10)', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
         <SelectionProvider>
-          <StateSeeder hoverPath="Cube" />
+          <HoverSeeder path="Cube" />
           <TscnSceneContents />
         </SelectionProvider>
       </HierarchyProvider>,
@@ -116,7 +99,7 @@ describe('<HoverHighlight> (WI-UX-10)', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
         <SelectionProvider>
-          <StateSeeder hoverPath="Root/Alpha" />
+          <HoverSeeder path="Root/Alpha" />
           <TscnSceneContents />
         </SelectionProvider>
       </HierarchyProvider>,
@@ -130,7 +113,7 @@ describe('<HoverHighlight> (WI-UX-10)', () => {
     await renderer.update(
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
         <SelectionProvider>
-          <StateSeeder hoverPath="Root/Beta" />
+          <HoverSeeder path="Root/Beta" />
           <TscnSceneContents />
         </SelectionProvider>
       </HierarchyProvider>,
@@ -150,7 +133,7 @@ describe('<HoverHighlight> (WI-UX-10)', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
         <SelectionProvider>
-          <StateSeeder hoverPath="Cube" />
+          <HoverSeeder path="Cube" />
           <TscnSceneContents />
         </SelectionProvider>
       </HierarchyProvider>,
@@ -162,7 +145,7 @@ describe('<HoverHighlight> (WI-UX-10)', () => {
     await renderer.update(
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
         <SelectionProvider>
-          <StateSeeder hoverPath={null} />
+          <HoverSeeder path={null} />
           <TscnSceneContents />
         </SelectionProvider>
       </HierarchyProvider>,
@@ -181,7 +164,8 @@ describe('<HoverHighlight> (WI-UX-10)', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
         <SelectionProvider>
-          <StateSeeder hoverPath="Cube" selectPath="Cube" />
+          <HoverSeeder path="Cube" />
+          <SelectSeeder path="Cube" />
           <TscnSceneContents />
         </SelectionProvider>
       </HierarchyProvider>,

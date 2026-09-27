@@ -68,8 +68,8 @@ export function buildParticleGeometry(
       const cx = corner.cx * cellWidth;
       const cy = corner.cy * cellHeight;
       // Transform2D: columns[0] * x + columns[1] * y + columns[2].
-      const gx = transform.ax * cx + transform.bx * cy + transform.ox;
-      const gy = transform.ay * cx + transform.by * cy + transform.oy;
+      const gx = transform.a * cx + transform.c * cy + transform.tx;
+      const gy = transform.b * cx + transform.d * cy + transform.ty;
 
       const v = (i * 4 + c) * 3;
       positions[v] = gx;

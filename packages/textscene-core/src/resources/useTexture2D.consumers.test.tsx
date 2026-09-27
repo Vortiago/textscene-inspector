@@ -9,10 +9,6 @@ import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnInternalResource, TscnNode } from '../parser/types';
-import { SceneResourcesProvider } from '../r3f/SceneResourcesContext';
-import { SelectionProvider } from '../r3f/contexts/SelectionContext';
-import { CanvasWorkspaceProvider } from '../r3f/contexts/CanvasWorkspaceContext';
-import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
 import { painterEnv } from '../r3f/controls/native/testing/painterProps';
 import { solveNode as emptySolveNode } from '../r3f/controls/native/testing/solveNode';
@@ -28,6 +24,7 @@ import { TextureRect } from '../nodes/2d/ui/texturerect/Component';
 import { parseTextureRect } from '../nodes/2d/ui/texturerect/parser';
 import { Button } from '../nodes/2d/ui/button/Component';
 import { parseButton } from '../nodes/2d/ui/button/parser';
+import { SceneStack } from '../r3f/testing/SceneStack';
 
 /**
  * The radial cookie the 2D fixtures carry: opaque `Color(0.1, 0.6, 0.9)` at the
@@ -60,15 +57,14 @@ const INLINE_REF = 'SubResource("GradientTexture2D_1")';
 
 function provide(children: ReactNode, workspace?: '2d') {
   const fake = createFakeResourceLoader();
-  const tree = (
-    <ResourceLoaderProvider loader={fake.loader}>
-      <SceneResourcesProvider internalResources={GRADIENT_RESOURCES} externalResources={[]}>
-        <SelectionProvider>{children}</SelectionProvider>
-      </SceneResourcesProvider>
-    </ResourceLoaderProvider>
-  );
   return ReactThreeTestRenderer.create(
-    workspace ? <CanvasWorkspaceProvider workspace={workspace}>{tree}</CanvasWorkspaceProvider> : tree
+    <SceneStack
+      workspace={workspace}
+      loader={fake.loader}
+      scene={{ internalResources: GRADIENT_RESOURCES, externalResources: [] }}
+    >
+      {children}
+    </SceneStack>
   );
 }
 

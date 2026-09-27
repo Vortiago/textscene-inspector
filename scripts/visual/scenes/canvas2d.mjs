@@ -486,4 +486,6 @@ export const CANVAS_2D_SCENES = [
   { name: 'code-edit-delimiters', file: 'unit-code-edit-delimiters.tscn', mode: '2d' },
   // A Button label that wraps.
   { name: 'button-autowrap', file: 'unit-button-autowrap.tscn', mode: '2d' },
+  // A Polygon2D below a plain Node below a hidden Node2D: its visibility comes from the Window.
+  { name: 'canvas-root-visibility', file: 'unit-canvas-root-visibility.tscn', mode: '2d' },
 ];

@@ -1,5 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { IS_VALID_INT_RE, literalText, splitTopLevel, stringToInt, toIntIndex , stringToFloat, simplifyResPath} from './string.js';
+import {
+  IS_VALID_INT_RE,
+  literalText,
+  simplifyResPath,
+  splitTopLevel,
+  STRING_LITERAL_RE,
+  STRING_LITERAL_SOURCE,
+  stringLiteralBodies,
+  stringToFloat,
+  stringToInt,
+} from './string.js';
 
 describe('literalText', () => {
   it.each([
@@ -31,6 +41,32 @@ describe('literalText', () => {
 
   it('trims a value that was never quoted and leaves the rest', () => {
     expect(literalText('  default  ')).toBe('default');
+  });
+});
+
+describe('STRING_LITERAL_SOURCE', () => {
+  const firstLiteral = (text: string) => new RegExp(STRING_LITERAL_SOURCE).exec(text)?.[0];
+
+  it('matches a plain string literal whole', () => {
+    expect(firstLiteral('"idle"')).toBe('"idle"');
+    expect(firstLiteral('""')).toBe('""');
+  });
+
+  it('runs past an escaped quote to the next unescaped one', () => {
+    expect(firstLiteral('"Say \\"hi\\"", "next"')).toBe('"Say \\"hi\\""');
+  });
+
+  it('ends at a quote that follows an escaped backslash', () => {
+    expect(firstLiteral('"a\\\\", "b"')).toBe('"a\\\\"');
+  });
+
+  it('takes a backslash before a raw newline as one escape', () => {
+    expect(firstLiteral('"a\\\nb"')).toBe('"a\\\nb"');
+  });
+
+  it('matches nothing in a string that never closes', () => {
+    expect(firstLiteral('"never closes')).toBeUndefined();
+    expect(firstLiteral('"a\\"')).toBeUndefined();
   });
 });
 
@@ -99,6 +135,42 @@ describe('splitTopLevel', () => {
   });
 });
 
+describe('STRING_LITERAL_RE', () => {
+  it('accepts a value that is one whole literal', () => {
+    expect(STRING_LITERAL_RE.test('"a\\"b"')).toBe(true);
+  });
+
+  it('rejects a literal with anything outside it', () => {
+    expect(STRING_LITERAL_RE.test('"a" "b"')).toBe(false);
+    expect(STRING_LITERAL_RE.test('&"a"')).toBe(false);
+  });
+});
+
+describe('stringLiteralBodies', () => {
+  it('returns each body with its escapes as written', () => {
+    expect(stringLiteralBodies('"a, b", "\\"q\\""')).toEqual(['a, b', '\\"q\\"']);
+  });
+
+  it('returns no bodies for an empty list', () => {
+    expect(stringLiteralBodies('')).toEqual([]);
+  });
+
+  it('takes one trailing comma', () => {
+    expect(stringLiteralBodies('"a",')).toEqual(['a']);
+  });
+
+  it('takes a backslash before a raw newline as one escape', () => {
+    expect(stringLiteralBodies('"a\\\nb", "c"')).toEqual(['a\\\nb', 'c']);
+  });
+
+  it.each([',', '"a",,', ',"a"', '"a", 5', '"a" "b"', '&"a"', '"never closes'])(
+    'rejects a list with an element that is not one literal: %s',
+    (list) => {
+      expect(stringLiteralBodies(list)).toBeNull();
+    }
+  );
+});
+
 describe('simplifyResPath', () => {
   /**
    * Godot rebuilds the part after a `scheme://` drive from its non-empty parts (`core/string/ustring.cpp:4152-4210`).
@@ -164,6 +236,11 @@ describe('stringToInt', () => {
     expect(stringToInt('42')).toBe(42);
     expect(stringToInt('-42')).toBe(-42);
     expect(stringToInt('007')).toBe(7);
+    expect(stringToInt('+7')).toBe(7);
+  });
+
+  it('reads `-0` as the one zero the engine holds', () => {
+    expect(Object.is(stringToInt('-0'), 0)).toBe(true);
   });
 
   // `_to_int` has no early exit for a character it cannot use: it skips it and
@@ -207,57 +284,107 @@ describe('stringToInt', () => {
   it('reads an empty string as 0', () => {
     expect(stringToInt('')).toBe(0);
   });
-
-  it('holds every value a JS integer spells exactly', () => {
-    expect(stringToInt('9007199254740991')).toBe(Number.MAX_SAFE_INTEGER);
-    expect(stringToInt('-9007199254740991')).toBe(Number.MIN_SAFE_INTEGER);
-  });
-
-  // Past 2^53 the double is not the int64 the text states, and the
-  // engine's own saturation (ustring.cpp:2283-2284) is further out still.
-  it.each(['9007199254740993', '-9007199254740993', '9223372036854775808', '-99999999999999999999'])(
-    'refuses a value no double spells: %s',
-    (raw) => {
-      expect(stringToInt(raw)).toBeNaN();
-    }
-  );
 });
 
-describe('toIntIndex', () => {
-  // A hand-rolled `_set` reads its family's index with a bare
-  // `path.get_slicec('/', 1).to_int()` (chain_ik_3d.cpp:37,
-  // bone_twist_disperser_3d.cpp:37, spring_bone_simulator_3d.cpp:42), so the
-  // index it acts on is whatever `to_int` resolves.
+/**
+ * The `int` an index lands in (`property_list_helper.cpp:57`) keeps the low 32 bits of the int64
+ * `to_int()` returns. Each expected value comes from the engine rule, worked by hand.
+ */
+describe('stringToInt narrowed into an int', () => {
   it.each([
-    ['x', 0],
-    ['a1b2', 12],
-    ['a-1', -1],
-    ['-0-1', 1],
-    ['12.9', 12],
-  ])('resolves a non-integer spelling the way to_int does: %s', (raw, expected) => {
-    expect(toIntIndex(raw)).toBe(expected);
+    ['4294967296', 0],
+    ['4294967297', 1],
+    ['2147483647', 2147483647],
+    ['2147483648', -2147483648],
+    ['-2147483648', -2147483648],
+    ['-2147483649', 2147483647],
+  ])('keeps the low 32 bits of %s', (raw, expected) => {
+    expect(stringToInt(raw)).toBe(expected);
   });
+
+  // `if (unlikely(digits > 18))` (ustring.cpp:2282) tests from the 20th digit, and the overflow
+  // returns INT64_MAX or INT64_MIN (:2283-2284). INT64_MAX keeps 0xFFFFFFFF, which is -1, and
+  // INT64_MIN keeps 0.
+  it.each([
+    ['99999999999999999999', -1],
+    ['9999999999999999999999', -1],
+    ['-99999999999999999999', 0],
+    ['-9999999999999999999999', 0],
+    ['a99999999999999999999', -1],
+  ])('saturates a run of 20 or more digits: %s', (raw, expected) => {
+    expect(stringToInt(raw)).toBe(expected);
+  });
+
+  // No test runs at the 19th digit, so `int64_t(integer)` (:2297) wraps a 19-digit value past
+  // INT64_MAX: `9999999999999999999` is -8446744073709551617, whose low 32 bits are -1981284353.
+  // Negated through `integer * uint64_t(-1)` (:2299), it is +8446744073709551617.
+  it.each([
+    ['9999999999999999999', -1981284353],
+    ['-9999999999999999999', 1981284353],
+    ['9223372036854775808', 0],
+    ['-9223372036854775809', -1],
+  ])('wraps a 19-digit value past INT64_MAX rather than saturating it: %s', (raw, expected) => {
+    expect(stringToInt(raw)).toBe(expected);
+  });
+
+  // The overflow test at the 20th digit compares against `INT64_MAX / 10` and the last digit
+  // (:2283): `7` still fits a positive value, and `8` a negative one.
+  it.each([
+    ['09223372036854775807', -1],
+    ['09223372036854775808', -1],
+    ['-09223372036854775808', 0],
+    ['-09223372036854775809', 0],
+  ])('reads INT64_MAX and INT64_MIN at the overflow boundary: %s', (raw, expected) => {
+    expect(stringToInt(raw)).toBe(expected);
+  });
+
+  // `uint8_t digits` (:2275) wraps to 0 after 255 digits, so 19 digits go untested and the
+  // `uint64_t` total wraps modulo 2^64: 250 zeros and 25 nines leave (10^25 - 1) mod 2^64,
+  // 1590897978359414783, whose low 32 bits are 1241513983.
+  it('follows the digit counter past its uint8 wrap', () => {
+    expect(stringToInt(`${'0'.repeat(250)}${'9'.repeat(25)}`)).toBe(1241513983);
+  });
+});
+
+/** `skeleton_3d.cpp:82` stores the index in a `uint32_t which`. */
+describe('stringToInt narrowed into a uint32_t', () => {
+  it.each([
+    ['-1', 4294967295],
+    ['a-1', 4294967295],
+    ['4294967296', 0],
+    ['2147483648', 2147483648],
+    ['9999999999999999999', 2313682943],
+    ['99999999999999999999', 4294967295],
+    ['-99999999999999999999', 0],
+  ])('keeps the low 32 bits of %s unsigned', (raw, expected) => {
+    expect(stringToInt(raw, 'uint32')).toBe(expected);
+  });
+});
+
+/**
+ * The reader is total: whatever the text, the result is an integer the slot holds. A rule may then
+ * skip a negative index with `index < 0`, as no NaN can reach the comparison.
+ */
+describe('stringToInt is total over its slot', () => {
+  const pieces = ['', '0', '7', '9', '-', '+', 'x', '.', '/', ' '];
+  const spellings = [
+    ...pieces.flatMap((a) => pieces.flatMap((b) => pieces.map((c) => `${a}${b}${c}`))),
+    ...[18, 19, 20, 21, 64, 300].flatMap((length) => [
+      '9'.repeat(length),
+      `-${'9'.repeat(length)}`,
+      `a-${'8'.repeat(length)}`,
+      `${'0'.repeat(length)}1`,
+    ]),
+  ];
 
   it.each([
-    ['0', 0],
-    ['+7', 7],
-    ['007', 7],
-    ['-3', -3],
-  ])('reads a clean is_valid_int spelling as itself: %s', (raw, expected) => {
-    expect(toIntIndex(raw)).toBe(expected);
-  });
-
-  // Past 2^53 no double is the int64 the text states, so this is not an
-  // exactness claim: the sign is the only thing a negative-index guard asks,
-  // and it survives here where `stringToInt` gives up.
-  it('keeps the sign of an integer no double spells', () => {
-    expect(toIntIndex('-9223372036854775808')).toBeLessThan(0);
-    expect(toIntIndex('9223372036854775807')).toBeGreaterThan(0);
-  });
-
-  // Neither reader can name it: `is_valid_int` refuses the spelling and
-  // `stringToInt` refuses the magnitude, so every comparison stays false.
-  it('reads text that is neither as NaN', () => {
-    expect(toIntIndex('a-9223372036854775808')).toBeNaN();
+    ['int32', -2147483648, 2147483647],
+    ['uint32', 0, 4294967295],
+  ] as const)('returns a %s for every spelling', (width, low, high) => {
+    const outside = spellings.filter((text) => {
+      const value = stringToInt(text, width);
+      return !Number.isSafeInteger(value) || value < low || value > high || Object.is(value, -0);
+    });
+    expect(outside).toEqual([]);
   });
 });

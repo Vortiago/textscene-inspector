@@ -3,19 +3,16 @@
  * the dispatcher registered for it. The tests mount `TscnSceneContents` with
  * a SelectionProvider and a HierarchyProvider.
  */
-import { useEffect } from 'react';
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../parser/types';
 import { TscnSceneContents } from '../TscnCanvas';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
-import {
-  SelectionProvider,
-  useSelection,
-} from '../contexts/SelectionContext';
+import { SelectionProvider } from '../contexts/SelectionContext';
 import { createSceneGraphFromTscnScene } from '../../core/SceneGraph';
 import type { MeshInstance3DProperties } from '../../nodes/3d/meshinstance3d/types';
+import { SelectSeeder } from '../testing/SelectSeeder';
 
 import '../nodes/index';
 
@@ -30,14 +27,6 @@ function makeMeshInstance(name: string, mesh?: string): TscnNode {
     ...(mesh ? { mesh } : {}),
   };
   return { name, type: 'MeshInstance3D', children: [], properties: props };
-}
-
-function SelectSeeder({ path }: { path: string | null }) {
-  const { setSelectedNodePath } = useSelection();
-  useEffect(() => {
-    setSelectedNodePath(path);
-  }, [path, setSelectedNodePath]);
-  return null;
 }
 
 function findBoxHelper(scene: THREE.Scene): THREE.BoxHelper | null {

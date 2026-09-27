@@ -11,6 +11,8 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Linter } from './Linter.js';
 import { isGodotTextResourcePath } from '../godot/index.js';
+import { parseHeading } from '../parser/utils.js';
+import { FILE_DIAGNOSTIC_NAMES } from './fileDiagnostics.js';
 import type { Diagnostic } from './types.js';
 import './index.js';
 
@@ -193,6 +195,31 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
       }
     }
     expect(stale).toEqual([]);
+  });
+
+  it('puts every diagnostic on a line, and a rule diagnostic on the heading of the node it names', () => {
+    // A host marks a line only where a diagnostic names one, so a finding with none
+    // is shown as one about the whole file. No finding here is about the whole file.
+    const misplaced: string[] = [];
+    let checkedRuleDiagnostics = 0;
+    for (const file of tscnFiles(fixturesDir)) {
+      const text = readFileSync(join(fixturesDir, file), 'utf8').split(/\r?\n/);
+      for (const d of diagnosticsFor(fixturesDir, file)) {
+        const line = d.location?.line;
+        if (line === undefined) {
+          misplaced.push(`${file}: ${d.ruleName} carries no line`);
+          continue;
+        }
+        if (FILE_DIAGNOSTIC_NAMES.has(d.ruleName)) continue;
+        checkedRuleDiagnostics++;
+        const heading = parseHeading(text[line - 1] ?? '');
+        if (heading?.type !== 'node' || (heading.attributes.name ?? '') !== d.nodeName) {
+          misplaced.push(`${file}:${line}: ${d.ruleName} names '${d.nodeName}', and this is not its heading`);
+        }
+      }
+    }
+    expect(misplaced).toEqual([]);
+    expect(checkedRuleDiagnostics).toBeGreaterThan(0);
   });
 
   it('pins how many negative fixtures there are, so the list cannot empty itself', () => {

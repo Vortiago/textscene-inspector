@@ -4,35 +4,25 @@
  * and tree passthrough.
  */
 
-import { useEffect, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AudioStreamPlayer3D } from './Component';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import {
-  SelectionProvider,
-  useSelection,
-} from '../../../r3f/contexts/SelectionContext';
+import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
 import type { TscnNode } from '../../../parser/types';
 import type { AudioStreamPlayer3DProperties } from './types';
 import {
   AttenuationModel,
   DopplerTracking,
 } from './types';
+import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
 
 /**
  * The speaker and range gizmos are selection-gated, so the scaffolding places the component in a
  * NodePathProvider and sets `selectedNodePath` to the same path through SelectionProvider.
  */
-function SelectSeeder({ path }: { path: string }) {
-  const { setSelectedNodePath } = useSelection();
-  useEffect(() => {
-    setSelectedNodePath(path);
-  }, [path, setSelectedNodePath]);
-  return null;
-}
-
 function withSelectedAudio(path: string, children: ReactNode): ReactNode {
   return (
     <SelectionProvider>

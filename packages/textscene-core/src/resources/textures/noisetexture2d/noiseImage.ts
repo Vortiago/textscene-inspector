@@ -56,6 +56,14 @@ export function noiseImage(
 }
 
 /**
+ * How much larger than the output `_get_seamless_image` generates its source on one axis:
+ * the blend fraction of the size, at least one pixel (noise.cpp:36-37).
+ */
+export function seamlessSkirt(size: number, blendSkirt: number): number {
+  return Math.max(1, Math.trunc(size * blendSkirt));
+}
+
+/**
  * `Noise::_get_seamless_image` and `_generate_seamless_image` (noise.cpp:33-51,
  * noise.h:84-200), grayscale: generate a skirt larger, swap quadrants, and blend
  * the skirt over both seams with a smoothstep alpha. Indices follow `img_buff`,
@@ -69,8 +77,8 @@ export function seamlessNoiseImage(
   normalize: boolean,
   blendSkirt: number
 ): Uint8Array {
-  const skirtWidth = Math.max(1, Math.trunc(width * blendSkirt));
-  const skirtHeight = Math.max(1, Math.trunc(height * blendSkirt));
+  const skirtWidth = seamlessSkirt(width, blendSkirt);
+  const skirtHeight = seamlessSkirt(height, blendSkirt);
   const srcWidth = width + skirtWidth;
   const srcHeight = height + skirtHeight;
   const src = noiseImage(sample, srcWidth, srcHeight, invert, normalize);

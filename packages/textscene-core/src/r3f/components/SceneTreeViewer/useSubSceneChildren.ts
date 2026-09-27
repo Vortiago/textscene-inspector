@@ -6,7 +6,11 @@
 import { useMemo } from 'react';
 import type { TscnNode, TscnScene, TscnExternalResource } from '../../../parser/types';
 import { useResource, useResourceLoader } from '../../../resources/useResource';
-import { resolveInstancePath, parseResourceReference } from '../../../resources/SubResourceResolver';
+import {
+  findExtResource,
+  parseResourceReference,
+  resolveInstancePath,
+} from '../../../resources/SubResourceResolver';
 
 /**
  * The sub-scene's root nodes with its own `externalResources`, so a nested
@@ -32,7 +36,7 @@ export function useSubSceneChildren(
   if (loader && scenePath && node.instance) {
     const parsed = parseResourceReference(node.instance);
     if (parsed && parsed.type === 'ExtResource') {
-      const ext = externalResources.find((r) => r.id === parsed.id);
+      const ext = findExtResource(externalResources, parsed.id);
       if (ext) loader.register({ id: ext.id, path: ext.path, type: ext.type });
     }
   }

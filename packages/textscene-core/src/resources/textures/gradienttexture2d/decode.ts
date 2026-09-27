@@ -6,15 +6,20 @@
  */
 
 import type { Color } from '../../../utils/colorParser';
-import { enumOr, intOr, vec2Or } from '../../../parser/valueParsers';
+import { enumOr, settableIntOr, vec2Or, type SetterRange } from '../../../parser/valueParsers';
 import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
-import { packedArrayBody, packedArrayForms, boolSlotValue} from '../../../godot/index.js';
+import {
+  GRADIENT_TEXTURE_MAX_SIZE,
+  packedArrayBody,
+  packedArrayForms,
+  boolSlotValue,
+} from '../../../godot/index.js';
 import {
   floatElements,
   packedTupleNumbers,
-  PACKED_COLOR_ARRAY_SPELLINGS,
+  PACKED_COLOR_ARRAY,
 } from '../../shapes/packedArray';
 import {
   GradientFill,
@@ -48,7 +53,7 @@ export function parsePackedFloat32Array(value: string): number[] {
  * (`resources/shapes/packedArray.ts`), and a distinct name keeps the two contracts apart.
  */
 export function parseColorStops(value: string): Color[] {
-  const nums = packedTupleNumbers(value, 'PackedColorArray', PACKED_COLOR_ARRAY_SPELLINGS, 4);
+  const nums = packedTupleNumbers(value, PACKED_COLOR_ARRAY);
   const colors: Color[] = [];
   for (let i = 0; i + 3 < nums.length; i += 4) {
     colors.push({ r: nums[i]!, g: nums[i + 1]!, b: nums[i + 2]!, a: nums[i + 3]! });
@@ -117,14 +122,33 @@ export function gradientFromResource(parsed: ParsedResource): Gradient | null {
   return decodeGradient(parsed.properties);
 }
 
+/** `width = 64` and `height = 64` (`gradient_texture.h:92-93`). */
+const DEFAULT_TEXTURE_SIZE = 64;
+
+/**
+ * `set_width` and `set_height` refuse an axis outside 1 to `GRADIENT_TEXTURE_MAX_SIZE`
+ * (`gradient_texture.cpp:324`, `:335`).
+ */
+const TEXTURE_SIZE_RANGE: SetterRange = { min: 1, max: GRADIENT_TEXTURE_MAX_SIZE };
+
 /**
  * A `GradientTexture2D` sub-resource. The caller resolves the `gradient` ref.
  * Defaults: 64×64, linear fill, from (0,0) to (1,0), no repeat, LDR.
  */
 export function decodeGradientTexture2D(data: Record<string, string>): GradientTexture2D {
   return {
-    width: Math.max(1, intOr(data.width, 64, 'GradientTexture2D.width')),
-    height: Math.max(1, intOr(data.height, 64, 'GradientTexture2D.height')),
+    width: settableIntOr(
+      data.width,
+      DEFAULT_TEXTURE_SIZE,
+      TEXTURE_SIZE_RANGE,
+      'GradientTexture2D.width'
+    ),
+    height: settableIntOr(
+      data.height,
+      DEFAULT_TEXTURE_SIZE,
+      TEXTURE_SIZE_RANGE,
+      'GradientTexture2D.height'
+    ),
     fill: enumOr(
       data.fill,
       GradientFill.Linear,

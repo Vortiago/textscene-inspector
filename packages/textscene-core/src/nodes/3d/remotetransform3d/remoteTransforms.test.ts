@@ -202,6 +202,51 @@ update_rotation = false
     expect(props.position.x).toBeCloseTo(120, 4);
     expect(props.rotation).toBeCloseTo(0.5, 4);
   });
+
+  it('zeroes the y scale of a relay whose global axes are parallel, as get_scale() does', () => {
+    // The parent's zero y scale lays both of the rotated relay's axes on x: a zero determinant,
+    // a non-zero y column. `SIGN(0)` is 0 (typedefs.h:123-126), so the target collapses too.
+    const content = `[gd_scene format=3]
+[node name="Root" type="Node2D"]
+[node name="Target" type="Sprite2D" parent="."]
+[node name="Flat" type="Node2D" parent="."]
+scale = Vector2(1, 0)
+[node name="Relay" type="RemoteTransform2D" parent="Flat"]
+rotation = 0.5
+remote_path = NodePath("../../Target")
+`;
+    const props = targetNode2D(content, 'Root/Target');
+    expect(props.scale.x).toBeCloseTo(Math.cos(0.5), 12);
+    expect(props.scale.y).toBe(0);
+  });
+});
+
+describe('applyRemoteTransforms (2D) under a transformed parent', () => {
+  it('re-expresses the relay pose in the rotated, scaled parent space and keeps the skew', () => {
+    // Parent maps local (x, y) to (100 - 2y, 2x), so the relay's global (100, 50) is the
+    // local (25, 0), its rotation 0 is -PI/2 and its scale 1 is 0.5 there. RemoteTransform2D
+    // pushes position, rotation and scale only, so the target's own skew survives.
+    const content = `[gd_scene format=3]
+[node name="Root" type="Node2D"]
+[node name="Parent" type="Node2D" parent="."]
+position = Vector2(100, 0)
+rotation = 1.5707963267948966
+scale = Vector2(2, 2)
+[node name="Target" type="Sprite2D" parent="Parent"]
+position = Vector2(7, 7)
+skew = 0.3
+[node name="Relay" type="RemoteTransform2D" parent="."]
+position = Vector2(100, 50)
+remote_path = NodePath("../Parent/Target")
+`;
+    const props = targetNode2D(content, 'Root/Parent/Target');
+    expect(props.position.x).toBeCloseTo(25, 9);
+    expect(props.position.y).toBeCloseTo(0, 9);
+    expect(props.rotation).toBeCloseTo(-Math.PI / 2, 9);
+    expect(props.scale.x).toBeCloseTo(0.5, 9);
+    expect(props.scale.y).toBeCloseTo(0.5, 9);
+    expect(props.skew).toBeCloseTo(0.3, 12);
+  });
 });
 
 describe('the %Name table this module builds inline', () => {

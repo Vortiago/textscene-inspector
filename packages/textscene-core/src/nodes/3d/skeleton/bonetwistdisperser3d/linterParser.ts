@@ -10,8 +10,10 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { accepts, keyShapeError, v } from '../../../../linter/validators/index.js';
+import { settingCount } from '../shared/settingCount.js';
 import { BONE_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
-import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
+import { indexedKeyRegex } from '../../../../godot/index.js';
+import { negativeIndexError } from '../../../../linter/reportedIndices.js';
 
 /**
  * `BoneTwistDisperser3D::DisperseMode`, bone_twist_disperser_3d.h:41-45, in the
@@ -31,7 +33,7 @@ const NEGATIVE_SETTING_INDEX_CODE = 'INVALID_SETTING_INDEX';
 /** Error code for a `settings/<i>/joints/…` key addressing a negative joint. */
 const NEGATIVE_JOINT_INDEX_CODE = 'INVALID_JOINT_INDEX';
 
-function negativeSettingMessage(index: number): string {
+function negativeSettingMessage(index: string): string {
   return (
     `Setting index ${index} must be non-negative. BoneTwistDisperser3D::_set opens with ` +
     'ERR_FAIL_INDEX_V(which, settings.size(), false) (bone_twist_disperser_3d.cpp:39), so ' +
@@ -39,7 +41,7 @@ function negativeSettingMessage(index: number): string {
   );
 }
 
-function negativeJointMessage(index: number): string {
+function negativeJointMessage(index: string): string {
   return (
     `Joint index ${index} must be non-negative. set_joint_twist_amount guards with ` +
     'ERR_FAIL_INDEX(p_joint, joints.size()) (bone_twist_disperser_3d.cpp:502), so the ' +
@@ -183,23 +185,6 @@ const flatFamily = indexedFamilyValidator({
 const JOINT_KEY_RE = indexedKeyRegex('^settings/(#)/joints/(#)/([^/]+)(?:/.*)?$', 'to_int');
 
 /**
- * The negative-index error for an index `to_int` resolves below zero, read as `_set` reads it
- * (:37, :66): `a-1` is -1 (ustring.cpp:2291-2292), and the `ERR_FAIL_INDEX_V` beside each parse
- * refuses it. A NaN index, a spelling neither reader can name, fails the comparison and passes.
- */
-function negativeIndexError(
-  indexText: string,
-  key: string,
-  line: number,
-  message: (index: number) => string,
-  code: string
-) {
-  const index = toIntIndex(indexText);
-  if (index < 0) return keyShapeError(key, line, message(index), code);
-  return null;
-}
-
-/**
  * The whole `settings/` family. The nested `joints/<j>/<leaf>` shape is handled here, and everything
  * else goes to `flatFamily`, which owns the index parse, the negative-index refusal and the
  * unknown-leaf message for the common shape.
@@ -211,6 +196,8 @@ const settingValidator = accepts((key, value, line) => {
   const unknown = () =>
     keyShapeError(key, line, `Unknown setting property: "${key}"`, UNKNOWN_SETTING_CODE);
 
+  // `_set` reads each index with a bare `to_int` (:37, :66), and the `ERR_FAIL_INDEX_V` beside each
+  // parse refuses a negative one.
   const negativeSetting = negativeIndexError(
     match[1] ?? '',
     key,
@@ -250,14 +237,8 @@ validatorRegistry.registerAll('BoneTwistDisperser3D', {
   // and altering nothing, so format is the only constraint.
   mutable_bone_axes: v.boolean('mutable_bone_axes'),
 
-  // bone_twist_disperser_3d.cpp:561, ADD_ARRAY_COUNT: a serialised INT through `add_property` with
-  // `PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_ARRAY` (class_db.cpp:1492, class_db.h:475), no hint.
-  // set_setting_count opens with ERR_FAIL_COND(p_count < 0) (:650), so the floor is enforced. There
-  // is no ceiling.
-  setting_count: v.strictInt('setting_count', {
-    min: 0,
-    enforced: 'bone_twist_disperser_3d.cpp:650',
-  }),
+  // bone_twist_disperser_3d.cpp:561, ADD_ARRAY_COUNT. The class defines its own set_setting_count.
+  setting_count: settingCount('BoneTwistDisperser3D'),
 
   // The plain wildcard, not `settings/#/*`: `matchesIndexedKey` routes a single leaf segment, so
   // it would never deliver `settings/0/joints/0/twist_amount`.

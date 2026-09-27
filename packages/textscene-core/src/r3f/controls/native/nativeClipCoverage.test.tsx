@@ -17,12 +17,9 @@ import { StyleBoxQuad } from './StyleBoxQuad';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { Rect2 } from './rect';
 import { ControlCanvasLayer } from './ControlCanvasLayer';
-import { CanvasWorkspaceProvider } from '../../contexts/CanvasWorkspaceContext';
-import { SelectionProvider } from '../../contexts/SelectionContext';
-import { SceneResourcesProvider } from '../../SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';
+import { SceneStack } from '../../testing/SceneStack';
 
 import '../../nodes/index';
 import '../index';
@@ -131,18 +128,9 @@ async function meshesOf(tscn: string): Promise<THREE.Mesh[]> {
   const parsed = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
   const renderer = await ReactThreeTestRenderer.create(
-    <CanvasWorkspaceProvider workspace="2d">
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider
-          internalResources={parsed.internalResources}
-          externalResources={parsed.externalResources}
-        >
-          <SelectionProvider>
-            <ControlCanvasLayer nodes={parsed.nodes} />
-          </SelectionProvider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    </CanvasWorkspaceProvider>
+    <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
+      <ControlCanvasLayer nodes={parsed.nodes} />
+    </SceneStack>
   );
   await new Promise<void>((r) => setTimeout(r, 20));
   const first = (renderer.scene as unknown as { children?: Array<{ instance?: THREE.Object3D }> })

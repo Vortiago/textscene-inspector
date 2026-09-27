@@ -54,6 +54,11 @@ describe('indexedFamilyValidator', () => {
     it('rejects a key that does not carry the prefix', () => {
       expect(family('other_0/text', '"hi"', 1)?.code).toBe('INVALID_ITEM');
     });
+
+    it('rejects an empty index, which is_valid_int refuses', () => {
+      // `property_list_helper.cpp:53-55`: an empty string is not a valid int, so no index resolves.
+      expect(family('item_/text', '"hi"', 1)?.code).toBe('INVALID_ITEM');
+    });
   });
 
   describe('a nested leaf', () => {
@@ -163,6 +168,14 @@ describe('indexedFamilyValidator', () => {
     it('still rejects a key with no index segment at all', () => {
       expect(family('settings/relative', 'true', 1)?.code).toBe('INVALID_SETTING');
     });
+
+    it('applies an empty index to element 0, as "".to_int() does', () => {
+      // `get_slicec('/', 1)` of `settings//relative` is empty, and `to_int` returns 0 for an empty
+      // string (ustring.cpp:2304-2305), so `set_relative(0, …)` runs.
+      expect(family('settings//relative', 'true', 1)).toBeNull();
+      expect(leaf.calls).toContain('settings//relative');
+      expect(family('settings//made_up', 'true', 1)?.code).toBe('INVALID_SETTING');
+    });
   });
 
   describe('the negative-index branch', () => {
@@ -183,6 +196,28 @@ describe('indexedFamilyValidator', () => {
       const error = family('settings/-1/apply/axis', '1', 1);
       expect(error?.code).toBe('INVALID_SETTING_INDEX');
       expect(error?.message).toContain('index -1 is refused');
+    });
+
+    // `int index = ….to_int()` (property_list_helper.cpp:57) keeps the low 32 bits.
+    it('reports an index the int narrows below zero, naming what it stores', () => {
+      const error = family('settings/2147483648/apply/axis', '1', 1);
+      expect(error?.code).toBe('INVALID_SETTING_INDEX');
+      expect(error?.message).toContain('index 2147483648 (stored as -2147483648) is refused');
+    });
+
+    it('lets an index that wraps past 32 bits to element 0 through', () => {
+      expect(family('settings/4294967296/apply/axis', '1', 1)).toBeNull();
+    });
+
+    // INT64_MIN (ustring.cpp:2284) keeps 0 in its low 32 bits.
+    it('lets an index that saturates to INT64_MIN through to element 0', () => {
+      expect(family('settings/-9999999999999999999999/apply/axis', '1', 1)).toBeNull();
+    });
+
+    // INT64_MAX (ustring.cpp:2283-2284) keeps -1.
+    it('reports an index that saturates to INT64_MAX, naming it as written', () => {
+      const error = family('settings/9999999999999999999999/apply/axis', '1', 1);
+      expect(error?.message).toContain('index 9999999999999999999999 (stored as -1) is refused');
     });
 
     it('is an ENFORCED grounding naming both guards, since either drops the write', () => {

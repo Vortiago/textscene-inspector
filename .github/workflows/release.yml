@@ -36,8 +36,9 @@ jobs:
       - name: Pack Linter Tarball
         run: cd apps/textscene-linter && pnpm pack
 
-      - name: Build Web Previewer
-        run: pnpm --filter @textscene/web-previewer build
+      # The public edition, as on GitHub Pages: no built-in scenes and no parity gallery.
+      - name: Build and check the web previewer
+        run: pnpm build:pages
 
       - name: Archive Web Previewer Dist
         run: tar -czf web-dist.tar.gz -C apps/textscene-web dist

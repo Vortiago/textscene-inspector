@@ -1,5 +1,7 @@
 /** `String`'s parsing behaviour, as the engine defines it. */
 
+import { toInt32, toUint32 } from './intWidth.js';
+
 /**
  * The spelling `String::is_valid_int()` accepts: an optional sign, then digits. `[+-]?`, not `-?`: Godot reads a leading `+`.
  * Not `to_int()`, which skips non-digits (`ustring.cpp:2267-2301`, {@link stringToInt}): the parse a class uses decides
@@ -8,6 +10,13 @@
  */
 export const IS_VALID_INT_SOURCE = String.raw`[+-]?\d+`;
 export const IS_VALID_INT_RE = new RegExp(`^${IS_VALID_INT_SOURCE}$`);
+
+/**
+ * One `"…"` string literal as the tokenizer scans it: `\` takes the next character, whatever it is,
+ * and the next unescaped `"` ends the string (`variant_parser.cpp:276-290`). A source with no
+ * capture group, so a caller embeds it in its own pattern.
+ */
+export const STRING_LITERAL_SOURCE = String.raw`"(?:[^"\\]|\\[\s\S])*"`;
 
 /**
  * The text inside a serialised `String`, `StringName` or `NodePath` literal. Godot 4 writes a bare StringName with `&` and
@@ -59,66 +68,101 @@ export function splitTopLevel(body: string): string[] {
 }
 
 /**
- * Drops the empty element a trailing comma leaves. `_parse_array` (variant_parser.cpp:1643-1677) checks for `TK_BRACKET_CLOSE`
- * before it demands another value (:1658-1662, before the `need_comma` branch at :1663), so `[1, 2,]` holds 2 elements.
- * Only one trailing empty is a trailing comma: an interior `,,` fails `parse_value` (:1664-1665), so that `.tscn` is invalid.
- * Every bracket-array validator needs this, or it rejects a comma Godot accepts.
+ * Drops the empty element a trailing comma leaves. `_parse_array` returns on `]` before it asks
+ * for a comma or a value (variant_parser.cpp:1658-1662), so `[1, 2,]` holds 2 elements. Only one
+ * trailing empty counts: an interior `,,` fails `parse_value` (:1673-1676). Every bracket-array
+ * validator needs this, or it rejects a comma Godot accepts.
  */
 export function dropTrailingComma(parts: string[]): string[] {
   return parts.length > 1 && parts[parts.length - 1] === '' ? parts.slice(0, -1) : parts;
 }
 
+/** A value that is exactly one `"…"` literal and nothing else. No `g` flag: `.test()` stays stateless. */
+export const STRING_LITERAL_RE = new RegExp(`^${STRING_LITERAL_SOURCE}$`);
+
 /**
- * The largest magnitude a JS number spells exactly. It is tighter than the engine's bound, where `_to_int` saturates at
- * INT64_MAX / INT64_MIN (`ustring.cpp:2283-2284`): a value that reaches that is long past exact, so this refuses it first.
+ * The body of each `"…"` element of a comma list, escapes still as written, or null when any
+ * element is not one whole literal. An empty list is `[]`. One trailing comma is legal, as in
+ * `_parse_array`: the `PackedStringArray(…)` loop also closes on it (variant_parser.cpp:1522-1525).
  */
-const TO_INT_SAFE = BigInt(Number.MAX_SAFE_INTEGER);
+export function stringLiteralBodies(list: string): string[] | null {
+  const bodies: string[] = [];
+  for (const element of dropTrailingComma(splitTopLevel(list))) {
+    if (!STRING_LITERAL_RE.test(element)) return null;
+    bodies.push(element.slice(1, -1));
+  }
+  return bodies;
+}
 
 const ZERO = '0'.charCodeAt(0);
-const MINUS = '-'.charCodeAt(0);
+const SEVEN = '7'.charCodeAt(0);
+const EIGHT = '8'.charCodeAt(0);
 const NINE = '9'.charCodeAt(0);
+const MINUS = '-'.charCodeAt(0);
+
+const INT64_MAX = (1n << 63n) - 1n;
+const INT64_MIN = -(1n << 63n);
+/** `INT64_MAX / 10`, the bound `_to_int`'s overflow test compares against (`ustring.cpp:2283`). */
+const INT64_MAX_TENTH = INT64_MAX / 10n;
+/** `_to_int` tests for overflow only past 18 digits (`if (unlikely(digits > 18))`, `:2282`). */
+const UNCHECKED_DIGITS = 18;
+/** The digit count is a `uint8_t digits` (`:2275`), so `++digits` wraps to 0 after 255. */
+const DIGIT_COUNT_MASK = 0xff;
 
 /**
- * `String::to_int()` (`ustring.cpp:2303-2311`), Godot's other integer parse, which turns text that looks unreadable into a
- * number: it skips a character it cannot use (`:2280-2293`), so `"x"` is 0 and `"a1b2"` is 12. Never substitute
- * {@link IS_VALID_INT_RE} for it, or the reverse. `NaN` outside {@link TO_INT_SAFE}: the engine holds an int64 this reader
- * cannot name, and NaN keeps every comparison false.
+ * `String::to_int()` (`ustring.cpp:2303-2311`) as the int64 it returns. It skips a character it
+ * cannot use (`:2280-2293`), so `"x"` is 0 and `"a1b2"` is 12, and it stops at the first `.`.
  */
-export function stringToInt(text: string): number {
+function stringToInt64(text: string): bigint {
   // `if (length() == 0) return 0` (`:2304-2306`).
-  if (text.length === 0) return 0;
-  // The scan stops at the first `.` (`:2308`): `"12.9"` is 12 with no float read.
+  if (text.length === 0) return 0n;
   const dot = text.indexOf('.');
   const to = dot >= 0 ? dot : text.length;
   let integer = 0n;
+  let digits = 0;
   let positive = true;
   for (let i = 0; i < to; i++) {
     const code = text.charCodeAt(i);
     if (code >= ZERO && code <= NINE) {
-      integer = integer * 10n + BigInt(code - ZERO);
-      // Returning here rather than at the end also keeps a pathological run of
-      // digits from growing a BigInt nobody will read.
-      if (integer > TO_INT_SAFE) return NaN;
+      if (digits > UNCHECKED_DIGITS) {
+        const overflow =
+          integer > INT64_MAX_TENTH ||
+          (integer === INT64_MAX_TENTH && (positive ? code > SEVEN : code > EIGHT));
+        if (overflow) return positive ? INT64_MAX : INT64_MIN;
+      }
+      // `uint64_t integer` (`:2274`): while the wrapped count is 18 or less nothing is tested, and
+      // the product wraps modulo 2^64 as the engine's does.
+      integer = BigInt.asUintN(64, integer * 10n + BigInt(code - ZERO));
+      digits = (digits + 1) & DIGIT_COUNT_MASK;
     } else if (integer === 0n && code === MINUS) {
       // A flip, not a leading-sign rule (`:2291-2292`): `"a-1"` is -1, `"--1"` is 1 and `"1-2"` is 12.
       positive = !positive;
     }
   }
-  // Negated as a BigInt, not as a double: `-Number(0n)` is `-0`, and the engine
-  // holds one zero.
-  return Number(positive ? integer : -integer);
+  // `int64_t(integer)` and `int64_t(integer * uint64_t(-1))` (`:2296-2300`) wrap modulo 2^64, so a
+  // 19-digit value past INT64_MAX, which the overflow test never sees, comes back negative.
+  return BigInt.asIntN(64, positive ? integer : -integer);
 }
 
+/** A clean spelling of at most 15 digits: `to_int` reads its value, which a double holds. */
+const EXACT_DOUBLE_INT_RE = /^[+-]?\d{1,15}$/;
+
 /**
- * The index a hand-rolled `_set` reads between a property path's prefix and the next `/`: a bare `get_slicec('/', n).to_int()`
- * with no validity gate (`chain_ik_3d.cpp:37`, `bone_twist_disperser_3d.cpp:37`, `spring_bone_simulator_3d.cpp:42`), so
- * {@link stringToInt} is the reader and `settings/a-1/…` is index -1. A class that gates on `String::is_valid_int()` first (`PropertyListHelper::_get_property`,
- * `property_list_helper.cpp:53-55`) has no index for such text, so it tests {@link IS_VALID_INT_RE} itself.
+ * `String::to_int()` as the `int` or `uint32_t` a caller stores it in. Each indexed `_set` does
+ * `int which = ….to_int()` (`property_list_helper.cpp:57`, `bone_twist_disperser_3d.cpp:37`), and
+ * `skeleton_3d.cpp:82` a `uint32_t`. The narrowing keeps the low 32 bits, so `4294967296` is 0 and
+ * `2147483648` is -2147483648. Always a safe integer, never NaN.
  */
-export function toIntIndex(text: string): number {
-  // `Number` keeps the sign past 2^53, where {@link stringToInt} gives NaN. It is not exact there, but the sign is all
-  // the `ERR_FAIL_INDEX_V` guard asks. Text that is neither reads NaN, so every comparison against it stays false.
-  return IS_VALID_INT_RE.test(text) ? Number(text) : stringToInt(text);
+export function stringToInt(text: string, width: 'int32' | 'uint32' = 'int32'): number {
+  if (EXACT_DOUBLE_INT_RE.test(text)) {
+    // Both narrowings are exact below 2^53, and each maps `-0` to the engine's one zero.
+    const value = Number(text);
+    return width === 'int32' ? toInt32(value) : toUint32(value);
+  }
+  // int64 to `int` is implementation-defined before C++20: GCC, at `-std=gnu++17`
+  // (SConstruct:891), keeps it modulo 2^32. To `uint32_t` it is modular by the standard.
+  const value = stringToInt64(text);
+  return Number(width === 'int32' ? BigInt.asIntN(32, value) : BigInt.asUintN(32, value));
 }
 
 /**

@@ -2,11 +2,18 @@ import { copyFileSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FLATTENED_CORPUS_ROOTS } from '../../../scripts/corpusRoots.mjs';
+import { isPublicSiteBuild } from './siteEdition.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const scenesRoot = join(__dirname, '../../../scenes');
 const fixturesSource = join(scenesRoot, 'fixtures');
 const fixturesTarget = join(__dirname, '../public/fixtures');
+
+// The public edition's build reads no public/ (vite.config.ts), so a mirror is wasted work.
+if (isPublicSiteBuild()) {
+  console.log('Public site edition: no fixtures mirrored');
+  process.exit(0);
+}
 
 // Cloudflare Pages rejects a deployment holding a file over 25 MiB, such as an
 // uncompressed .hdr sky in the godot demos. Such a file is not copied, and the

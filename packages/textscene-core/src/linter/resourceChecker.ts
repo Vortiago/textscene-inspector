@@ -1,11 +1,16 @@
 /**
  * Resource-reference questions the semantic linter rules ask. Every answer comes
- * from `parseResourceReference` and `findSubResource`, not a local regex, so a
- * reference cannot resolve for the renderer and read as missing to a rule.
+ * from `parseResourceReference`, `findSubResource` and `findExtResource`, not a
+ * local regex or scan, so a reference cannot resolve for the renderer and read as
+ * missing to a rule.
  */
 
 import type { TscnScene } from '../parser/types.js';
-import { findSubResource, parseResourceReference } from '../resources/SubResourceResolver.js';
+import {
+  findExtResource,
+  findSubResource,
+  parseResourceReference,
+} from '../resources/SubResourceResolver.js';
 import { isNilLiteral } from '../godot/index.js';
 
 /**
@@ -56,7 +61,7 @@ export type ResourceSlot =
 
 /**
  * Resolve a raw property value against the scene's resource tables, once. The
- * rules branch on this scan, and {@link checkResourceExists} derives from it.
+ * rules branch on this answer, and {@link checkResourceExists} derives from it.
  *
  * @param scene - the parsed scene the reference is resolved against.
  * @param resourceRef - a raw property value, such as `SubResource("Box_1")`.
@@ -72,7 +77,7 @@ export function resolveResourceSlot(
   const declared =
     parsed.type === 'SubResource'
       ? findSubResource(scene.internalResources ?? [], parsed.id)
-      : scene.externalResources?.find((r) => r.id === parsed.id);
+      : findExtResource(scene.externalResources ?? [], parsed.id);
   return declared ? { kind: 'resolved', type: declared.type } : { kind: 'dangling' };
 }
 

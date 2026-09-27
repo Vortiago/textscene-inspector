@@ -136,14 +136,21 @@ function scanHeadingValue(str: string, pos: number): { value: string; nextPos: n
 }
 
 /**
- * Drop a literal's `&` or `@` sigil and surrounding quotes, when it is quoted at both
- * ends by two distinct quotes. Anything else passes through.
+ * Whether `value` is one `"…"` string with nothing after it. `scanQuoted`, not
+ * `endsWith('"')`: in `"a\"` the trailing quote is escaped, so the string never closes.
  */
-function stripQuotes(value: string): string {
+function isWholeString(value: string): boolean {
+  return value[0] === '"' && scanQuoted(value, 0) === value.length;
+}
+
+/**
+ * The text inside a value that is one whole string literal, escapes still as written:
+ * `"…"`, or the StringName jacket `&"…"` and its 3.x spelling `@"…"`
+ * (`variant_parser.cpp:263-265`). Null for any other value.
+ */
+function stringLiteralBody(value: string): string | null {
   const bare = value.startsWith('&') || value.startsWith('@') ? value.slice(1) : value;
-  return bare.length >= 2 && bare.startsWith('"') && bare.endsWith('"')
-    ? bare.slice(1, -1)
-    : value;
+  return isWholeString(bare) ? bare.slice(1, -1) : null;
 }
 
 /**
@@ -156,10 +163,9 @@ function unquoteHeadingValue(value: string): string {
   // is what says so: `name` has to stay falsy for the strict parser to go on
   // reporting it missing.
   if (value === '"') return '';
-  // `scanQuoted`, not `endsWith('"')`: in `"a\"b\"` the trailing quote is escaped
-  // and the string never closes. The value was captured with the same scanner, so
-  // the two agree on where the string ends.
-  if (value[0] !== '"' || scanQuoted(value, 0) !== value.length) return value;
+  // The value was captured with the same scanner, so the two agree on where the
+  // string ends.
+  if (!isWholeString(value)) return value;
   const inner = value.slice(1, -1);
   return inner.includes('\\') ? inner.replace(/\\"/g, '"') : inner;
 }
@@ -354,18 +360,16 @@ const ESCAPE_MAP: Record<string, string> = {
 };
 
 /**
- * Strip a value's quotes, and the `&"…"` jacket a STRING slot converts from, and decode
- * escapes as the tokenizer does: `\b \t \n \f \r`, `\uXXXX` and `\UXXXXXX`, and any
- * other escaped character to itself (`variant_parser.cpp:350-351`). An unquoted value
- * passes through.
+ * A string's text with its escapes decoded as the tokenizer does: `\b \t \n \f \r`,
+ * `\uXXXX` and `\UXXXXXX`, and any other escaped character to itself
+ * (`variant_parser.cpp:350-351`).
  */
-export function unquoteString(value: string): string {
-  const unquoted = stripQuotes(value);
-  if (!unquoted.includes('\\')) return unquoted;
+function decodeEscapes(text: string): string {
+  if (!text.includes('\\')) return text;
   // One left-to-right pass, so `\\u1234` is `\` plus literal `u1234`. A `\u` without
   // four hex digits stays as written: the tokenizer's `case 'u'` errors there rather
   // than passing the character through.
-  return unquoted.replace(
+  return text.replace(
     /\\(u[0-9a-fA-F]{4}|U[0-9a-fA-F]{6}|[^uU])/g,
     (_match, seq: string) => {
       if (seq[0] === 'u' || seq[0] === 'U') {
@@ -377,6 +381,26 @@ export function unquoteString(value: string): string {
       return ESCAPE_MAP[seq] ?? seq;
     },
   );
+}
+
+/**
+ * A value as a STRING slot reads it: the quotes and any `&"…"` jacket come off, and the
+ * escapes decode. A value that is not one whole string literal is read as a string's
+ * text already out of its quotes, so its escapes still decode: an array element or a
+ * dictionary key arrives here without them.
+ */
+export function unquoteString(value: string): string {
+  return decodeEscapes(stringLiteralBody(value) ?? value);
+}
+
+/**
+ * The text of a value that is one whole string literal, read as {@link unquoteString}
+ * reads it. Any other value (a number, a bool, a Dictionary, a constructor or an unclosed
+ * string) comes back verbatim, since the escapes inside it belong to its own literals.
+ */
+export function unquoteLiteral(value: string): string {
+  const body = stringLiteralBody(value);
+  return body === null ? value : decodeEscapes(body);
 }
 
 /**

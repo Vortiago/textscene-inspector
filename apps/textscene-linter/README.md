@@ -70,6 +70,10 @@ machine-readable.
   }
   ```
 
+  A rule's finding gives the line of its node's heading, and a dangling
+  resource reference the line of its property. `line` and `column` are `null`
+  only for a finding about the whole file, such as `file-read-error`.
+
   ```bash
   node apps/textscene-linter/dist/cli.js --format json scenes/ > lint-results.json
   ```

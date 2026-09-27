@@ -4,7 +4,7 @@
  * finds no start keys and never fires, and nothing reports it.
  */
 
-import { packedArrayLiteral } from '../../../../godot/index.js';
+import { packedArrayLiteral, stringLiteralBodies } from '../../../../godot/index.js';
 import { unquoteString } from '../../../../parser/utils.js';
 
 /**
@@ -49,24 +49,15 @@ export function arrayBody(value: string, forms: readonly RegExp[]): string | und
   return undefined;
 }
 
-const PACKED_STRING_ARRAY_BODY_RE = /^"(?:[^"\\]|\\[\s\S])*"(?:\s*,\s*"(?:[^"\\]|\\[\s\S])*")*$/;
-const QUOTED_ELEMENT_CAPTURE_RE = /"((?:[^"\\]|\\[\s\S])*)"/g;
-
 /**
  * Any of the three string-array spellings as raw (unescaped) elements, or `null` if malformed.
- * The element grammar mirrors `variant_parser.cpp:1500-1533`, which requires each element to be
- * a TK_STRING token. No `v.ts` combinator covers this shape, as with `FileDialog.filters`.
+ * Each element must be one TK_STRING token (`variant_parser.cpp:1526-1529`), with one trailing
+ * comma allowed and `[,]` or an interior `,,` malformed ({@link stringLiteralBodies}).
  */
 export function parsePackedStringArray(value: string): string[] | null {
   const body = arrayBody(value, STRING_ARRAY_FORMS);
   if (body === undefined) return null;
-  if (body === '') return [];
-  if (!PACKED_STRING_ARRAY_BODY_RE.test(body)) return null;
-  const elements: string[] = [];
-  for (const m of body.matchAll(QUOTED_ELEMENT_CAPTURE_RE)) {
-    // `unquoteString`, not a `\\(.)` collapse: the tokenizer resolves `\\uXXXX` and
-    // `\\n`, `\\r`, `\\t` before any setter runs, so `\\u00ab` is one code point, not `u00ab`.
-    elements.push(unquoteString(m[1] ?? ''));
-  }
-  return elements;
+  // `unquoteString`, not a `\\(.)` collapse: the tokenizer resolves `\\uXXXX` and
+  // `\\n`, `\\r`, `\\t` before any setter runs, so `\\u00ab` is one code point, not `u00ab`.
+  return stringLiteralBodies(body)?.map(unquoteString) ?? null;
 }

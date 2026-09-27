@@ -6,6 +6,7 @@
  */
 import { warn } from '@textscene/core';
 import { fixtures as baseFixtures, type Fixture } from './fixtures';
+import { IS_PUBLIC_SITE } from './siteEdition';
 
 /**
  * The games corpus is deploy-only: `pnpm build:deploy` sets the flag, and
@@ -35,4 +36,5 @@ const corpusFixtures: Fixture[] = Object.entries(corpusModules).flatMap(([path, 
   return m.corpusFixtures;
 });
 
-export const fixtures: Fixture[] = [...baseFixtures, ...corpusFixtures];
+// The public edition lists nothing, and Rollup then drops every manifest from its bundle.
+export const fixtures: Fixture[] = IS_PUBLIC_SITE ? [] : [...baseFixtures, ...corpusFixtures];

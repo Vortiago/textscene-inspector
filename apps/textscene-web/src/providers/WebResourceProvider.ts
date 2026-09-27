@@ -4,7 +4,21 @@ import { isBinaryResourceType, info, warn } from '@textscene/core';
 import type { ResourceProvider } from '@textscene/core';
 import { fixtureUrlForRes } from '../corpusRoot';
 
+export interface WebResourceProviderOptions {
+  /**
+   * Whether the site serves the `/fixtures/` mirror. Without it, a missing res:// path goes
+   * to the upload prompt with no request, which could only 404.
+   */
+  hasFixturesMirror?: boolean;
+}
+
 export class WebResourceProvider implements ResourceProvider {
+  private readonly hasFixturesMirror: boolean;
+
+  constructor({ hasFixturesMirror = true }: WebResourceProviderOptions = {}) {
+    this.hasFixturesMirror = hasFixturesMirror;
+  }
+
   /** Uploaded files, keyed per corpus root by {@link uploadKey}. */
   private uploadedFiles: Map<string, File> = new Map();
   /**
@@ -62,7 +76,7 @@ export class WebResourceProvider implements ResourceProvider {
       return isBinaryResourceType(type, path) ? uploadedFile.arrayBuffer() : uploadedFile.text();
     }
 
-    if (path.startsWith('res://')) {
+    if (this.hasFixturesMirror && path.startsWith('res://')) {
       try {
         // Convert Godot path to fixture path under the active corpus root.
         const fixtureUrl = fixtureUrlForRes(path, this.resourceRoot);

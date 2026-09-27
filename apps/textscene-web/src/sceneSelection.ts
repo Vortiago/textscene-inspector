@@ -7,6 +7,7 @@
 
 import type { ViewportSelectorOption } from '@textscene/core';
 import { fixtures } from './fixturesAll';
+import { IS_PUBLIC_SITE } from './siteEdition';
 
 /** The `<ViewportSelector>` value while no fixture is active, on an uploaded .tscn. */
 export const NO_FIXTURE = '';
@@ -14,13 +15,14 @@ export const NO_FIXTURE = '';
 /**
  * The first-visit default: a fixture with no `ext_resource` lines, so the first paint shows
  * a clean scene rather than missing-file warnings. The fallbacks keep the app off an
- * undefined fixture.
+ * undefined fixture. The public edition opens on no scene, and its bundle names none.
  */
-export const DEFAULT_FIXTURE =
-  fixtures.find((f) => f.file === 'unit-plane-mesh.tscn')?.file ??
-  fixtures.find((f) => f.file === 'integration-all-primitives.tscn')?.file ??
-  fixtures[0]?.file ??
-  '';
+export const DEFAULT_FIXTURE = IS_PUBLIC_SITE
+  ? NO_FIXTURE
+  : (fixtures.find((f) => f.file === 'unit-plane-mesh.tscn')?.file ??
+    fixtures.find((f) => f.file === 'integration-all-primitives.tscn')?.file ??
+    fixtures[0]?.file ??
+    NO_FIXTURE);
 
 /**
  * The scene palette's option list. On an upload the `value` is `''`, and a native `<select>`

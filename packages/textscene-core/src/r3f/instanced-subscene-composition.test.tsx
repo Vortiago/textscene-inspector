@@ -8,9 +8,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene, TscnInternalResource } from '../parser/types';
 import { NodeDispatcher } from './NodeDispatcher';
-import { SelectionProvider } from './contexts/SelectionContext';
-import { SceneResourcesProvider } from './SceneResourcesContext';
-import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
+import { SceneStack } from './testing/SceneStack';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../resources/ResourceLoader';
 
@@ -78,16 +76,15 @@ async function renderFrame(
   ref: { id: string; path: string }
 ) {
   return ReactThreeTestRenderer.create(
-    <ResourceLoaderProvider loader={loader}>
-      <SceneResourcesProvider
-        internalResources={[]}
-        externalResources={[{ id: ref.id, path: ref.path, type: 'PackedScene' }]}
-      >
-        <SelectionProvider>
-          <NodeDispatcher nodes={[node]} />
-        </SelectionProvider>
-      </SceneResourcesProvider>
-    </ResourceLoaderProvider>
+    <SceneStack
+      loader={loader}
+      scene={{
+        internalResources: [],
+        externalResources: [{ id: ref.id, path: ref.path, type: 'PackedScene' }],
+      }}
+    >
+      <NodeDispatcher nodes={[node]} />
+    </SceneStack>
   );
 }
 

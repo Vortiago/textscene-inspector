@@ -14,16 +14,20 @@ export function downloadFilename(uploadedTscnName: string | null, fixtureFile: s
 export function downloadTscn(buffer: string, filename: string): void {
   const blob = new Blob([buffer], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  // In the document for the click, the form every engine follows: only Chromium
+  // reliably downloads through a detached anchor.
+  document.body.append(anchor);
   try {
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = filename;
     anchor.click();
   } finally {
-    // On a later task: `click()` only schedules the navigation, so a synchronous
-    // revoke can beat the fetch and lose the download. In a `finally`, because a
-    // host that refuses the synthetic click otherwise pins the buffer in the blob
-    // store for the life of the tab.
+    anchor.remove();
+    // On a later task: `click()` only schedules the download, so a synchronous
+    // revoke can beat the fetch and lose it. In a `finally`, because a host that
+    // refuses the synthetic click otherwise pins the buffer in the blob store for
+    // the life of the tab.
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 }

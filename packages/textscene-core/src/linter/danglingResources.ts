@@ -5,10 +5,11 @@
  * So the fact lives here once, and the registry says which keys are slots (`createResourceReferenceValidator` marks them).
  */
 
-import type { TscnNode, TscnScene } from '../parser/types.js';
-import type { Diagnostic } from './types.js';
+import type { TscnInternalResource, TscnNode, TscnScene } from '../parser/types.js';
+import type { Diagnostic, SourceLines } from './types.js';
 import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
 import { armDiagnostic } from './ruleArms.js';
+import { propertyLocation } from './sourceLocation.js';
 import { validatorRegistry, type PropertyValidator } from './ValidatorRegistry.js';
 import { isResourceSlotValidator } from './validators/resourceValidators.js';
 import { resourceRef } from '../godot/index.js';
@@ -17,6 +18,15 @@ import { resourceRef } from '../godot/index.js';
 interface Declared {
   readonly ext: ReadonlySet<string>;
   readonly int: ReadonlySet<string>;
+}
+
+/** One section whose body the sweep reads: a node, or a sub-resource named by its `id=`. */
+interface Owner {
+  /** What the scan built from the section, the key into `SourceLines`. */
+  readonly built: TscnNode | TscnInternalResource;
+  readonly name: string;
+  readonly type: string;
+  readonly properties: Record<string, unknown>;
 }
 
 /**
@@ -32,14 +42,13 @@ function isResourceSlot(declaration: PropertyValidator, key: string, value: stri
 }
 
 function sweep(
-  ownerType: string,
-  owner: { name: string; type: string },
-  properties: Record<string, unknown>,
+  owner: Owner,
   declared: Declared,
   declaredLater: ReadonlySet<string>,
+  lines: SourceLines,
   into: Diagnostic[]
 ): void {
-  for (const [key, value] of Object.entries(properties)) {
+  for (const [key, value] of Object.entries(owner.properties)) {
     if (typeof value !== 'string') continue;
     const ref = resourceRef(value.trim());
     // Not a well-formed reference: its format is the strict parser's diagnostic, and a second error naming a
@@ -47,7 +56,7 @@ function sweep(
     if (ref === null) continue;
     const table = ref.kind === 'SubResource' ? declared.int : declared.ext;
     if (table.has(ref.id)) continue;
-    const declaration = validatorRegistry.declarationFor(ownerType, key);
+    const declaration = validatorRegistry.declarationFor(owner.type, key);
     if (!declaration || !isResourceSlot(declaration, key, value)) continue;
     const where =
       ref.kind === 'SubResource' && declaredLater.has(ref.id)
@@ -57,13 +66,15 @@ function sweep(
       armDiagnostic(
         FILE_DIAGNOSTICS.danglingResourceReference,
         owner,
-        `Property '${key}' references ${value.trim()}, ${where}. Godot fails to load the scene.`
+        `Property '${key}' references ${value.trim()}, ${where}. Godot fails to load the scene.`,
+        propertyLocation(lines, owner.built, key)
       )
     );
   }
 }
 
-export function danglingResourceDiagnostics(scene: TscnScene): Diagnostic[] {
+/** Each dangling reference, on the line of the property that holds it. */
+export function danglingResourceDiagnostics(scene: TscnScene, lines: SourceLines): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const ext = new Set((scene.externalResources ?? []).map((r) => r.id));
   const int = new Set<string>();
@@ -75,13 +86,15 @@ export function danglingResourceDiagnostics(scene: TscnScene): Diagnostic[] {
     int.add(resource.id);
     // `id` sits in `data` beside the properties (`parseInternalResource`).
     const { id: _id, ...properties } = resource.data;
-    sweep(resource.type, { name: resource.id, type: resource.type }, properties, { ext, int }, all, diagnostics);
+    const owner: Owner = { built: resource, name: resource.id, type: resource.type, properties };
+    sweep(owner, { ext, int }, all, lines, diagnostics);
   }
 
   const declared: Declared = { ext, int };
   const none: ReadonlySet<string> = new Set();
   const visit = (node: TscnNode): void => {
-    sweep(node.type, node, node.properties as Record<string, unknown>, declared, none, diagnostics);
+    const properties = node.properties as Record<string, unknown>;
+    sweep({ built: node, name: node.name, type: node.type, properties }, declared, none, lines, diagnostics);
     for (const child of node.children) visit(child);
   };
   for (const node of scene.nodes) visit(node);

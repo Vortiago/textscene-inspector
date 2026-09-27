@@ -130,8 +130,8 @@ validatorRegistry.registerAll('Window', {
   ),
   // At or below 0 errors: set_content_scale_factor (window.cpp:1772-1776) only does
   // `ERR_FAIL_COND(p_factor <= 0)` (:1774). The hint's [0.5, 8.0] (window.cpp:3466)
-  // warns on both sides. The floor to >= 1 under INTEGER stretch in
-  // `_update_viewport_size` (window.cpp:1240-1247) is a side effect, not a bound.
+  // warns on both sides. The floor to a whole number >= 1 under INTEGER stretch
+  // (window.cpp:1240-1247) depends on a sibling key, so linter.ts reports it.
   content_scale_factor: v.float('content_scale_factor', {
     enforcedMin: { at: 0, exclusive: true },
     min: 0.5,
@@ -150,7 +150,7 @@ validatorRegistry.registerAll('Window', {
   // Godot serialises this StringName as `&"..."`, but the variant text parser also
   // accepts a plain `"..."`, which the setter casts, as the shared `busValidator` does.
   theme_type_variation: v.stringName('theme_type_variation'),
-
-  // Shared with Control: Godot emits this family from both, identically.
-  ...THEME_OVERRIDE_VALIDATORS,
-});
+},
+// Shared with Control: Godot emits this family from both, identically.
+THEME_OVERRIDE_VALIDATORS,
+);

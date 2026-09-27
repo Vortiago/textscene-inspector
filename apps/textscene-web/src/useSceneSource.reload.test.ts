@@ -17,6 +17,7 @@ import { useSceneSource } from './useSceneSource';
 import {
   FIXTURE_TSCN,
   UPLOADED_TSCN,
+  mockFetchFail,
   mockFetchOk,
 } from './useSceneSource.testkit';
 
@@ -89,6 +90,29 @@ describe('reload — refetch at an unchanged fixtureFile', () => {
     await waitFor(() => {
       expect(onBeforeSwap).toHaveBeenCalledWith('unit-plane-mesh.tscn');
     });
+  });
+
+  it('reports a retry that fails the same way as a new failure', async () => {
+    globalThis.fetch = mockFetchFail();
+
+    const { result } = renderHook(() =>
+      useSceneSource({ fixtureFile: 'unit-plane-mesh.tscn', uploadedTscnName: null })
+    );
+    await waitFor(() => {
+      expect(result.current.loadError).toBeTruthy();
+    });
+    const firstFailure = result.current.loadError;
+
+    await act(async () => {
+      result.current.reload();
+    });
+
+    // The banner orders its channels by failure, so an equal message must not read as the same one.
+    await waitFor(() => {
+      expect(result.current.loadError).not.toBeNull();
+      expect(result.current.loadError).not.toBe(firstFailure);
+    });
+    expect(result.current.loadError?.message).toBe(firstFailure?.message);
   });
 
   it('is a no-op for the render when there is no fixture selected', async () => {

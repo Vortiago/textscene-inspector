@@ -2,6 +2,7 @@
 
 import type { TscnNode } from '../parser/types.js';
 import { nodePathLiteral } from '../godot/index.js';
+import { descendsFrom } from '../godot/nodeBaseTypes.js';
 import { cachedUniqueNameClaims, type uniqueNameClaims } from '../utils/uniqueNames.js';
 
 /**
@@ -18,7 +19,10 @@ export function isValidProperties(props: unknown): props is Record<string, strin
  * against a tree pays one O(N) walk, and each later one is O(1) or O(matches).
  */
 interface SceneIndex {
-  /** node -> its parent, or `null` for a root. Absent key = node not in this tree. */
+  /**
+   * node -> its parent, or `null` for a root. Absent key = node not in this tree. Keys are in
+   * the order the walk reached them: depth-first, Godot tree order.
+   */
   parentOf: Map<TscnNode, TscnNode | null>;
   /** Nodes that have an ancestor (not themselves) with `instance` set. */
   underInstanceAncestor: Set<TscnNode>;
@@ -94,6 +98,27 @@ const NO_MATCHES: readonly TscnNode[] = Object.freeze([]);
  */
 export function nodesOfType(roots: TscnNode[], type: string): readonly TscnNode[] {
   return getSceneIndex(roots).nodesByType.get(type) ?? NO_MATCHES;
+}
+
+/**
+ * Every node whose class is `base` or inherits it, in depth-first order, frozen, off the same
+ * cached index: {@link nodesOfType} by ancestry, for a rule that asks what a node is rather than
+ * what it is named. A class the catalog does not know inherits nothing. Each call walks the tree
+ * once, so a rule that asks per node caches the answer per tree, as the audio checks do.
+ */
+export function nodesDescendingFrom(roots: TscnNode[], base: string): readonly TscnNode[] {
+  const index = getSceneIndex(roots);
+  // One ancestry test per distinct class, not per node: a scene repeats its classes.
+  const heirClasses = new Set<string>();
+  for (const type of index.nodesByType.keys()) {
+    if (descendsFrom(type, base)) heirClasses.add(type);
+  }
+  if (heirClasses.size === 0) return NO_MATCHES;
+  const heirs: TscnNode[] = [];
+  for (const node of index.parentOf.keys()) {
+    if (heirClasses.has(node.type)) heirs.push(node);
+  }
+  return Object.freeze(heirs);
 }
 
 /** How many nodes of `type` the scene contains, off the same cached index. */

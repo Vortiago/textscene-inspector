@@ -4,8 +4,9 @@
  * drag-to-pan. The native Control canvas mounts inside `<World2DCanvas>`,
  * which has its own suites; this one only covers the stage chrome around it.
  */
+import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, type RenderResult } from '@testing-library/react';
 
 /**
  * Renders of the stubbed world canvas. A delta of 0 across an event shows the
@@ -36,6 +37,24 @@ vi.mock('./World2DCanvas', () => ({
   },
 }));
 
+/**
+ * The project viewport the stage reads, Godot's default until a test moves it. A move
+ * stands in for `project.godot` resolving after the scene opened.
+ */
+const projectViewport = vi.hoisted(() => ({ size: { width: 1152, height: 648 } }));
+
+vi.mock('../../contexts/ProjectSettingsContext', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../contexts/ProjectSettingsContext')>();
+  return {
+    ...actual,
+    useProjectSettings: () => ({
+      settings: null,
+      themeScale: 1,
+      viewportSize: projectViewport.size,
+    }),
+  };
+});
+
 import { Canvas2DStage } from './Canvas2DStage';
 import {
   CameraControlProvider,
@@ -65,7 +84,10 @@ afterEach(() => {
   // Read once at mount, so a leaked value silently changes the next test's
   // opening view.
   window.localStorage.removeItem(FIT_ON_OPEN_2D_STORAGE_KEY);
+  projectViewport.size = { width: 1152, height: 648 };
 });
+
+const SCENE_PATH = 'res://level.tscn';
 
 function makeNode(name: string): TscnNode {
   return { name, type: 'Control', properties: {}, children: [] } as unknown as TscnNode;
@@ -73,7 +95,12 @@ function makeNode(name: string): TscnNode {
 
 function renderStage(nodes: TscnNode[] = []) {
   const utils = render(
-    <Canvas2DStage nodes={nodes} internalResources={[]} externalResources={[]} />
+    <Canvas2DStage
+      nodes={nodes}
+      internalResources={[]}
+      externalResources={[]}
+      scenePath={SCENE_PATH}
+    />
   );
   const stage = screen.getByLabelText('2D canvas');
   // The frame is the dimension badge's parent: module-class hashing makes a
@@ -116,6 +143,19 @@ function touch(
   if (phase === 'down') fireEvent.pointerDown(target, init);
   else if (phase === 'move') fireEvent.pointerMove(target, init);
   else fireEvent.pointerUp(target, init);
+}
+
+/** A button that drives the context the Cameras panel uses: frame (300, 200) at zoom 2. */
+function FrameProbe() {
+  const cam = useCameraControl();
+  return (
+    <button
+      type="button"
+      onClick={() => cam.requestFrame2D({ center: { x: 300, y: 200 }, zoom: 2 })}
+    >
+      frame camera
+    </button>
+  );
 }
 
 describe('<Canvas2DStage>', () => {
@@ -362,22 +402,15 @@ describe('<Canvas2DStage>', () => {
   });
 
   it('frames a 2D camera view on request: centers the view point at the requested zoom', () => {
-    // Probe button drives the context the Cameras panel uses.
-    function FrameProbe() {
-      const cam = useCameraControl();
-      return (
-        <button
-          type="button"
-          onClick={() => cam.requestFrame2D({ center: { x: 300, y: 200 }, zoom: 2 })}
-        >
-          frame camera
-        </button>
-      );
-    }
     render(
       <CameraControlProvider>
         <FrameProbe />
-        <Canvas2DStage nodes={[]} internalResources={[]} externalResources={[]} />
+        <Canvas2DStage
+          nodes={[]}
+          internalResources={[]}
+          externalResources={[]}
+          scenePath={SCENE_PATH}
+        />
       </CameraControlProvider>
     );
     const stage = screen.getByLabelText('2D canvas');
@@ -440,7 +473,12 @@ describe('<Canvas2DStage>', () => {
 
   it('renders the capture frame regardless of scene content — the parity-capture contract', () => {
     render(
-      <Canvas2DStage nodes={[makeNode('A')]} internalResources={[]} externalResources={[]} />
+      <Canvas2DStage
+        nodes={[makeNode('A')]}
+        internalResources={[]}
+        externalResources={[]}
+        scenePath={SCENE_PATH}
+      />
     );
     // The capture frame is the parity-capture contract
     // (`scripts/godot-ref/capture-ours.mjs`). Nothing draws into it.
@@ -458,5 +496,234 @@ describe('<Canvas2DStage>', () => {
     // zoom = min((1208-56)/1152, (704-56)/648) = 1 → centred at (28, 28).
     expect(zoomLabel()).toBe('100%');
     expect(frame.style.transform).toBe('translate(28px, 28px) scale(1)');
+  });
+});
+
+describe('<Canvas2DStage> fit on open: load time', () => {
+  /** The stage as the viewport area mounts it, with the props a rerender changes. */
+  function stageAt(scenePath: string, nodes: TscnNode[] = []) {
+    return (
+      <CameraControlProvider>
+        <FrameProbe />
+        <Canvas2DStage
+          nodes={nodes}
+          internalResources={[]}
+          externalResources={[]}
+          scenePath={scenePath}
+        />
+      </CameraControlProvider>
+    );
+  }
+
+  /** The same tree in the 3D workspace: the stage unmounts and the provider stays. */
+  function withoutStage() {
+    return (
+      <CameraControlProvider>
+        <FrameProbe />
+      </CameraControlProvider>
+    );
+  }
+
+  /**
+   * The Cameras panel's look-through: one click requests a framing and switches to 2D,
+   * so the stage mounts in the render that carries the new request.
+   */
+  function LookThrough2DHost() {
+    const cam = useCameraControl();
+    const [is2D, setIs2D] = useState(false);
+    function lookThrough() {
+      cam.requestFrame2D({ center: { x: 300, y: 200 }, zoom: 2 });
+      setIs2D(true);
+    }
+    return (
+      <>
+        <button type="button" onClick={lookThrough}>
+          look through
+        </button>
+        {is2D && (
+          <Canvas2DStage
+            nodes={[]}
+            internalResources={[]}
+            externalResources={[]}
+            scenePath={SCENE_PATH}
+          />
+        )}
+      </>
+    );
+  }
+
+  /** `project.godot` resolves after the scene opened, and its provider re-renders. */
+  function projectViewportResolves(rerender: RenderResult['rerender'], scenePath = SCENE_PATH) {
+    projectViewport.size = { width: 744, height: 544 };
+    rerender(stageAt(scenePath));
+  }
+
+  /** With the stage at 800x600, a 744x544 viewport fits at zoom 1, 28 px in on each side. */
+  const FITTED_LATE = 'translate(28px, 28px) scale(1)';
+
+  const frameTransform = () => screen.getByTestId('canvas-2d-frame').style.transform;
+  const stageElement = () => screen.getByLabelText('2D canvas');
+
+  function dragPan() {
+    fireEvent.pointerDown(stageElement(), { button: 0, clientX: 10, clientY: 20, pointerId: 1 });
+    fireEvent.pointerMove(stageElement(), { clientX: 45, clientY: 80, pointerId: 1 });
+    fireEvent.pointerUp(stageElement(), { clientX: 45, clientY: 80, pointerId: 1 });
+  }
+
+  it('refits to a project viewport that resolves after the scene opens', () => {
+    sizeEveryElement(800, 600);
+    const { rerender } = render(stageAt(SCENE_PATH));
+
+    projectViewportResolves(rerender);
+
+    expect(frameTransform()).toBe(FITTED_LATE);
+  });
+
+  it('keeps a drag pan made before the project viewport resolves', () => {
+    sizeEveryElement(800, 600);
+    const { rerender } = render(stageAt(SCENE_PATH));
+    dragPan();
+    const panned = frameTransform();
+
+    projectViewportResolves(rerender);
+
+    expect(frameTransform()).toBe(panned);
+  });
+
+  it('keeps a wheel zoom made before the project viewport resolves', () => {
+    sizeEveryElement(800, 600);
+    const { rerender } = render(stageAt(SCENE_PATH));
+    wheelAt(stageElement(), { deltaY: -100, clientX: 400, clientY: 300 });
+    const zoomed = frameTransform();
+
+    projectViewportResolves(rerender);
+
+    expect(frameTransform()).toBe(zoomed);
+  });
+
+  it('keeps a zoom button click made before the project viewport resolves', () => {
+    sizeEveryElement(800, 600);
+    const { rerender } = render(stageAt(SCENE_PATH));
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+    const zoomed = frameTransform();
+
+    projectViewportResolves(rerender);
+
+    expect(frameTransform()).toBe(zoomed);
+  });
+
+  it('keeps a one-finger pan made before the project viewport resolves', () => {
+    sizeEveryElement(800, 600);
+    const { rerender } = render(stageAt(SCENE_PATH));
+    touch(stageElement(), 'down', 1, 10, 10);
+    touch(stageElement(), 'move', 1, 10, 10);
+    touch(stageElement(), 'move', 1, 60, 40);
+    touch(stageElement(), 'up', 1, 60, 40);
+    const panned = frameTransform();
+
+    projectViewportResolves(rerender);
+
+    expect(frameTransform()).toBe(panned);
+  });
+
+  it('keeps a pinch zoom made before the project viewport resolves', () => {
+    sizeEveryElement(800, 600);
+    const { rerender } = render(stageAt(SCENE_PATH));
+    touch(stageElement(), 'down', 1, 380, 300);
+    touch(stageElement(), 'down', 2, 420, 300);
+    touch(stageElement(), 'move', 1, 380, 300);
+    touch(stageElement(), 'move', 2, 420, 300);
+    touch(stageElement(), 'move', 1, 320, 300);
+    touch(stageElement(), 'move', 2, 480, 300);
+    touch(stageElement(), 'up', 1, 320, 300);
+    touch(stageElement(), 'up', 2, 480, 300);
+    const pinched = frameTransform();
+
+    projectViewportResolves(rerender);
+
+    expect(frameTransform()).toBe(pinched);
+  });
+
+  it('keeps a Camera2D framing made before the project viewport resolves', () => {
+    sizeEveryElement(800, 600);
+    const { rerender } = render(stageAt(SCENE_PATH));
+    fireEvent.click(screen.getByRole('button', { name: 'frame camera' }));
+    // pan = stage/2 − center·zoom → (400 − 600, 300 − 400).
+    expect(frameTransform()).toBe('translate(-200px, -100px) scale(2)');
+
+    projectViewportResolves(rerender);
+
+    expect(frameTransform()).toBe('translate(-200px, -100px) scale(2)');
+  });
+
+  it('keeps the scene open across an edit, so a later project viewport keeps the pan', () => {
+    sizeEveryElement(800, 600);
+    const { rerender } = render(stageAt(SCENE_PATH));
+    dragPan();
+    const panned = frameTransform();
+
+    rerender(stageAt(SCENE_PATH, [makeNode('Edited')]));
+    projectViewportResolves(rerender);
+
+    expect(frameTransform()).toBe(panned);
+  });
+
+  it('fits a newly opened scene after the user moved the view of the last one', () => {
+    sizeEveryElement(800, 600);
+    const { rerender } = render(stageAt(SCENE_PATH));
+    const fitted = frameTransform();
+    dragPan();
+    expect(frameTransform()).not.toBe(fitted);
+
+    rerender(stageAt('res://other.tscn'));
+
+    expect(frameTransform()).toBe(fitted);
+  });
+
+  it('refits to the project viewport of a newly opened scene that resolves late', () => {
+    sizeEveryElement(800, 600);
+    const { rerender } = render(stageAt(SCENE_PATH));
+    dragPan();
+    rerender(stageAt('res://other.tscn'));
+
+    projectViewportResolves(rerender, 'res://other.tscn');
+
+    expect(frameTransform()).toBe(FITTED_LATE);
+  });
+
+  it('does not replay an old Camera2D framing on a remount, so a late viewport refits', () => {
+    sizeEveryElement(800, 600);
+    const { rerender } = render(stageAt(SCENE_PATH));
+    fireEvent.click(screen.getByRole('button', { name: 'frame camera' }));
+    rerender(withoutStage());
+
+    rerender(stageAt('res://other.tscn'));
+    projectViewportResolves(rerender, 'res://other.tscn');
+
+    expect(frameTransform()).toBe(FITTED_LATE);
+  });
+
+  it('applies a Camera2D framing requested in the click that mounts the stage', () => {
+    sizeEveryElement(800, 600);
+    render(
+      <CameraControlProvider>
+        <LookThrough2DHost />
+      </CameraControlProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'look through' }));
+
+    // pan = stage/2 − center·zoom → (400 − 600, 300 − 400).
+    expect(frameTransform()).toBe('translate(-200px, -100px) scale(2)');
+  });
+
+  it('leaves a pinned view where it opened when the project viewport resolves', () => {
+    window.localStorage.setItem(FIT_ON_OPEN_2D_STORAGE_KEY, 'false');
+    sizeEveryElement(800, 600);
+    const { rerender } = render(stageAt(SCENE_PATH));
+
+    projectViewportResolves(rerender);
+
+    expect(frameTransform()).toBe('translate(0px, 0px) scale(1)');
   });
 });

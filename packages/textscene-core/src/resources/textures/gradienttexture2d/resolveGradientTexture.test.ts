@@ -54,6 +54,18 @@ describe('resolveGradientTexture2D', () => {
     expect(again!.texture).toBe(resolved!.texture);
   });
 
+  it('rasterises a width Godot refuses at its 64 default, without throwing', () => {
+    const [gradient, texture] = coinResources;
+    const resources: TscnInternalResource[] = [
+      gradient!,
+      { ...texture!, id: 'GradientTexture2D_wide', data: { ...texture!.data, width: '100000' } },
+    ];
+
+    const resolved = resolveGradientTexture2D('SubResource("GradientTexture2D_wide")', resources);
+
+    expect(resolved!.texture.image.width).toBe(64);
+  });
+
   it('returns null for an ExtResource reference (async image path)', () => {
     expect(resolveGradientTexture2D('ExtResource("3")', coinResources)).toBeNull();
   });

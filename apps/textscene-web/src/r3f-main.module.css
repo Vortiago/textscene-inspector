@@ -292,6 +292,8 @@
 }
 
 .sourcePaneHeader {
+  /* The containing block of the file-level popover, which spans it. */
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -335,6 +337,10 @@
   display: flex;
   flex: 1;
   min-height: 0;
+  /* It clips the gutter rows scrolled out of view, not the gutter itself: a row's
+     popover must reach over the textarea. The container sizes that popover's width. */
+  overflow: hidden;
+  container-type: inline-size;
 }
 
 .sourceTextarea {
@@ -359,10 +365,10 @@
 }
 
 /* ── Linter gutter ───────────────────────────────────────────────────── */
+/* No overflow clip here: a 20px clip hides every row's popover. `.sourceBody` clips. */
 .gutter {
   flex: 0 0 auto;
   width: 20px;
-  overflow: hidden;
   background: var(--tsi-bg-elevated);
   border-right: 1px solid var(--tsi-border);
   /* Match the textarea's own top padding so line 1 lines up with row 1. */
@@ -382,7 +388,7 @@
   justify-content: center;
 }
 
-.gutterDot {
+.severityDot {
   width: 7px;
   height: 7px;
   flex: 0 0 auto;
@@ -405,14 +411,10 @@
   background: #4f8fd6;
 }
 
-.gutterPopover {
-  position: absolute;
-  top: 0;
-  left: 100%;
-  z-index: 60;
-  min-width: 12rem;
-  max-width: 22rem;
-  margin-left: 4px;
+/* The look of every problem popover: a gutter row's and the file-level section's. A list
+   taller than its cap scrolls. */
+.problemPopover {
+  overflow-y: auto;
   padding: var(--tsi-space-2);
   background: var(--tsi-bg-panel);
   border: 1px solid var(--tsi-border-strong);
@@ -422,6 +424,75 @@
   font-size: var(--tsi-font-sm);
   line-height: 1.4;
   white-space: normal;
+}
+
+/* Beside the row, over the textarea. The 4px gap is transparent padding, not a margin, so the
+   pointer crosses it inside the row and the row stays hovered while the list scrolls. */
+.gutterPopover {
+  position: absolute;
+  z-index: 60;
+  top: 0;
+  left: 100%;
+  padding-left: 4px;
+}
+
+/* A row in the lower half of the visible gutter opens its popover upward, bottom edge to bottom
+   edge. `gutterPopover.ts` decides it and caps the height, since `.sourceBody` clips the rest. */
+.gutterPopoverUp {
+  top: auto;
+  bottom: 0;
+}
+
+/* 100cqw is `.sourceBody`'s width, and 32px is the 20px gutter, the 4px gap and 8px spare, so
+   the popover fits across the pane. */
+.gutterPopoverBody {
+  min-width: min(12rem, calc(100cqw - 32px));
+  max-width: min(22rem, calc(100cqw - 32px));
+}
+
+/* ── File-level section: the findings no line holds ──────────────────── */
+.fileProblems {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tsi-space-1);
+  /* Keeps it beside the title, and the download button at the far end. */
+  margin-right: auto;
+  padding: 2px var(--tsi-space-2);
+  background: transparent;
+  border: 1px solid var(--tsi-border);
+  border-radius: var(--tsi-radius-sm);
+  color: var(--tsi-fg-default);
+  font: inherit;
+  font-size: var(--tsi-font-xs);
+  cursor: default;
+}
+
+.fileProblems:hover,
+.fileProblems:focus-visible {
+  background: var(--tsi-bg-hover);
+  border-color: var(--tsi-border-strong);
+}
+
+.fileProblems:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--tsi-focus-ring);
+}
+
+.fileProblemsCount {
+  font-weight: 700;
+}
+
+/* Below the header and across it, inside the pane. The 60vh cap leaves the pane room below it.
+   Focus holds the popover open while a longer list scrolls. */
+.fileProblemsPopover {
+  position: absolute;
+  z-index: 60;
+  top: 100%;
+  left: var(--tsi-space-2);
+  right: var(--tsi-space-2);
+  max-width: 22rem;
+  max-height: 60vh;
+  margin-top: 2px;
 }
 
 /* ── Problem-count badge on the source-pane toggle ───────────────────── */

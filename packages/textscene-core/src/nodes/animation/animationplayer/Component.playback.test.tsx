@@ -20,6 +20,12 @@ import {
   type SelectionContextValue,
 } from '../../../r3f/contexts/SelectionContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
+import { RegisteredNode } from '../../../r3f/testing/RegisteredNode';
+import {
+  AnimationDriverProvider,
+  useAnimationDriver,
+  type AnimationDriverEntry,
+} from '../../../r3f/contexts/AnimationDriverContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { AnimationPlayerProperties } from './types';
 import { AnimationProcessMode, MethodCallMode } from './types';
@@ -87,9 +93,11 @@ afterEach(async () => {
 
 let transport: AnimationTransport;
 let selection: SelectionContextValue | null;
+let driver: AnimationDriverEntry | null;
 function Capture() {
   transport = useAnimationTransport();
   selection = useOptionalSelection();
+  driver = useAnimationDriver(AP_PATH);
   return null;
 }
 
@@ -111,16 +119,20 @@ async function mountScene(
     <SceneResourcesProvider internalResources={internal}>
       <SelectionProvider>
         <AnimationTransportProvider>
-          <Capture />
-          <group name="Root">
-            <NodePathProvider path={AP_PATH}>
-              <AnimationPlayer node={makeAP(apProps)} />
-            </NodePathProvider>
-            <mesh name="Target">
-              <boxGeometry args={[1, 1, 1]} />
-              <meshBasicMaterial />
-            </mesh>
-          </group>
+          <AnimationDriverProvider>
+            <Capture />
+            <group name="Root">
+              <NodePathProvider path={AP_PATH}>
+                <AnimationPlayer node={makeAP(apProps)} />
+              </NodePathProvider>
+              <RegisteredNode path="Root/Target">
+                <mesh name="Target">
+                  <boxGeometry args={[1, 1, 1]} />
+                  <meshBasicMaterial />
+                </mesh>
+              </RegisteredNode>
+            </group>
+          </AnimationDriverProvider>
         </AnimationTransportProvider>
       </SelectionProvider>
     </SceneResourcesProvider>
@@ -236,12 +248,12 @@ describe('AnimationPlayer playback (E)', () => {
     expect(target.quaternion.angleTo(expected)).toBeLessThan(1e-3);
   });
 
-  it('reorders rotation targets to YXZ even while never selected (ADR-0019 registry consumers)', async () => {
-    // An AnimationTree can play this player's published clips on the same root
-    // without the player ever being active, so the orientation-preserving
-    // reorder must not be gated on selection.
+  it('reorders rotation targets to YXZ when an AnimationTree binds its clips, never selected (ADR-0019)', async () => {
+    // An AnimationTree plays this player's published clips through the entry's `bind`, without
+    // the player ever being active, so the orientation-preserving reorder lives in `bind`.
     const renderer = await mountScene({}, ROT_INTERNAL, { select: null });
     const target = renderer.scene.findByProps({ name: 'Target' }).instance as THREE.Object3D;
+    driver!.bind();
     expect(target.rotation.order).toBe('YXZ');
     await renderer.unmount();
   });

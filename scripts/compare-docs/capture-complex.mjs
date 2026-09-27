@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
 import { renderReference } from '../godot-ref/run.mjs';
+import { parseCaptureFlags } from './captureFlags.mjs';
 import {
   assertPortFree,
   createCaptureContext,
@@ -107,20 +108,6 @@ export const COMPLEX_SCENES = [
   },
 ];
 
-function parseArgs(argv) {
-  const args = { godot: false, ours: false, only: null };
-  for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === '--godot') args.godot = true;
-    else if (argv[i] === '--ours') args.ours = true;
-    else if (argv[i] === '--only') args.only = argv[++i];
-  }
-  if (!args.godot && !args.ours) {
-    args.godot = true;
-    args.ours = true;
-  }
-  return args;
-}
-
 async function captureGodot(scenes) {
   mkdirSync(IMAGES, { recursive: true });
   for (const c of scenes) {
@@ -191,7 +178,7 @@ async function captureOurs(scenes) {
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2));
+  const args = parseCaptureFlags(process.argv.slice(2));
   const scenes = args.only
     ? COMPLEX_SCENES.filter((c) => c.slug.includes(args.only))
     : COMPLEX_SCENES;

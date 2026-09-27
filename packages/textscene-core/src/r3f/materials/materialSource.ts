@@ -7,7 +7,7 @@
 
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { warn } from '../../logger';
-import { parseResourceReference } from '../../resources/SubResourceResolver';
+import { findExtResource, parseResourceReference } from '../../resources/SubResourceResolver';
 import { findSubResource } from '../SceneResourcesContext';
 
 export type MaterialSource =
@@ -44,7 +44,7 @@ export function resolveMaterialSource(
     return { kind: 'scene', resource };
   }
 
-  const ext = externalResources.find((r) => r.id === parsed.id);
+  const ext = findExtResource(externalResources, parsed.id);
   // Only a `.tres` is a material document, which is exactly what the pipeline
   // that would load it accepts (`standardmaterial3d/loadMaterial.ts`'s
   // `isMaterialPath`). Minting an address it must refuse buys a guaranteed-failed

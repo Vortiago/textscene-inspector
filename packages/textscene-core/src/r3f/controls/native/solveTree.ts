@@ -11,6 +11,7 @@ import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { Vec2 } from './rect';
 import type { PaintRange } from '../../canvasPaintOrder';
 import type { StyleBoxFlatData } from './styleBoxFlat';
+import type { Transform2DColumns } from '../../../godot/transform2d.js';
 
 /**
  * One resolved, unloaded theme icon: the raw Texture2D-valued ref plus the scope
@@ -23,20 +24,6 @@ export interface ThemedIconRef {
 }
 
 /**
- * A 2D affine transform in Godot's `Transform2D` layout (`core/math/transform_2d.h`),
- * +Y down: `x' = a*x + c*y + tx`, `y' = b*x + d*y + ty`. Never decomposed, since
- * composed ancestors can shear, which rotation and scale cannot represent.
- */
-export interface Affine2D {
-  a: number;
-  b: number;
-  c: number;
-  d: number;
-  tx: number;
-  ty: number;
-}
-
-/**
  * The accumulated `CanvasItem` state of the non-Control ancestors a promoted
  * Control was walked past: the facets `_render_canvas_item_tree` re-seeds for a
  * canvas root (`renderer_canvas_cull.cpp:70-83`), as one value because one break resets all.
@@ -46,8 +33,11 @@ export interface Affine2D {
 // native painter reads `CanvasItemMaterialContext`) and the texture sampler
 // (`Node2DProperties` does not parse `texture_filter`/`texture_repeat`).
 export interface SkippedAncestors {
-  /** Composed `Transform2D`, outermost first (`transform_2d.cpp:198-217`). */
-  transform: Affine2D;
+  /**
+   * Composed `Transform2D`, outermost first (`transform_2d.cpp:198-218`). Never decomposed:
+   * composed ancestors can shear, which rotation and scale cannot represent.
+   */
+  transform: Transform2DColumns;
   /** Componentwise product of each skipped ancestor's `modulate`; `self_modulate` never propagates (`renderer_canvas_cull.cpp`). */
   modulate: ControlColor;
   /**

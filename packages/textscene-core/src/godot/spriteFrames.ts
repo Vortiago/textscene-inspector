@@ -5,9 +5,7 @@
  * parsers and the linter share this, so they cannot disagree about which frame a body loads on.
  */
 
-import { parseGodotInt } from './int.js';
-import { slotTupleRegex } from './number.js';
-import { compositeTypeName, isConvertedSpelling } from './variantConversion.js';
+import { parseGodotInt, storedVector2i } from './int.js';
 
 export type FrameKey = 'frame' | 'frame_coords';
 
@@ -42,20 +40,6 @@ export interface SpriteFrameState {
 /** `get_frame_coords()`: the stored frame as (column, row) on the stored grid (sprite_2d.cpp:319). */
 export function frameCoords(state: SpriteFrameState): { x: number; y: number } {
   return { x: state.frame % state.hframes, y: Math.trunc(state.frame / state.hframes) };
-}
-
-const VECTOR2I_RE = slotTupleRegex('Vector2i', 2);
-
-/** Both components as the `Vector2i` slot stores them, or `null` for one it cannot. */
-function readCoords(raw: string): { x: number; y: number } | null {
-  const match = VECTOR2I_RE.exec(raw.trim());
-  if (!match) return null;
-  // A `Vector2(...)` in a Vector2i slot holds doubles: both take the double branch.
-  const converted = isConvertedSpelling('Vector2i', compositeTypeName(raw));
-  const x = parseGodotInt(match[1]!, 'int32', converted);
-  const y = parseGodotInt(match[2]!, 'int32', converted);
-  if (x === null || y === null || Number.isNaN(x) || Number.isNaN(y)) return null;
-  return { x, y };
 }
 
 export function replaySpriteFrames(properties: Record<string, string>): SpriteFrameState {
@@ -120,8 +104,8 @@ export function replaySpriteFrames(properties: Record<string, string>): SpriteFr
       if (!refused) land(write, frame);
     } else if (key === 'frame_coords') {
       // `set_frame_coords`: ERR_FAIL_INDEX per component, then `set_frame`.
-      const coords = readCoords(raw);
-      if (!coords) continue;
+      const coords = storedVector2i(raw);
+      if (typeof coords === 'string') continue;
       const write: FrameWrite = {
         key, index, coords, authored: coords.y * state.hframes + coords.x,
         hframes: state.hframes, vframes: state.vframes,

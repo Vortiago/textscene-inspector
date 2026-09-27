@@ -6,6 +6,7 @@
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
+import { unquoteLiteral } from '../../../parser/utils';
 import { findSubResource } from '../../../resources/SubResourceResolver';
 import {
   ARRAY_LITERAL_RE,
@@ -134,7 +135,7 @@ function resolveInnerNode(
 ): AnimNode | null {
   switch (resource.type) {
     case 'AnimationNodeAnimation': {
-      const clip = stripStringName(asString(resource.data['animation']) ?? '');
+      const clip = unquoteLiteral((asString(resource.data['animation']) ?? '').trim());
       return clip.length > 0 ? { kind: 'animation', clip } : null;
     }
     case 'AnimationNodeBlend2':
@@ -186,11 +187,14 @@ function resolveBlendTree(
   return rootName === undefined ? null : resolveLocal(rootName, new Set());
 }
 
-/** `nodes/<name>/node = SubResource("id")` → `name → id` (quoted keys allowed). */
+/**
+ * `nodes/<name>/node = SubResource("id")` → `name → id`. A quoted key reads as the tokenizer reads
+ * it, escapes decoded, so a name holding `"` matches the `&"…"` token that wires it.
+ */
 function parseBlendTreeNodes(data: Record<string, unknown>): Map<string, string> {
   const out = new Map<string, string>();
   for (const [rawKey, rawValue] of Object.entries(data)) {
-    const key = unquoteKey(rawKey);
+    const key = unquoteLiteral(rawKey);
     const match = /^nodes\/(.+)\/node$/.exec(key);
     if (!match || match[1] === undefined) continue;
     const id = extractSubResourceId(asString(rawValue) ?? '');
@@ -213,12 +217,12 @@ function parseConnections(raw: string): Map<string, string> {
   const tokens = dropTrailingComma(splitTopLevel(body[1]!));
   const out = new Map<string, string>();
   for (let i = 0; i + 2 < tokens.length; i += 3) {
-    const to = stripStringName(tokens[i]!);
+    const to = unquoteLiteral(tokens[i]!);
     // `connect_node`'s port is an int slot (animation_blend_tree.cpp:1766), read like every int
     // slot, including a string, which `Variant::_to_int` routes through `String::to_int()`
     // (variant.h:372). An unreadable `"0"` would drop the triple and leave the tree with no root.
-    const port = ruleInt(stripStringName(tokens[i + 1]!));
-    const from = stripStringName(tokens[i + 2]!);
+    const port = ruleInt(unquoteLiteral(tokens[i + 1]!));
+    const from = unquoteLiteral(tokens[i + 2]!);
     if (port === null) continue;
     out.set(`${to}:${port}`, from);
   }
@@ -239,7 +243,7 @@ function resolveStateMachine(
 ): AnimNode | null {
   const states: StateMachineNode['states'] = [];
   for (const [rawKey, rawValue] of Object.entries(resource.data)) {
-    const match = /^states\/(.+)\/node$/.exec(unquoteKey(rawKey));
+    const match = /^states\/(.+)\/node$/.exec(unquoteLiteral(rawKey));
     if (!match || match[1] === undefined) continue;
     const subId = extractSubResourceId(asString(rawValue) ?? '');
     const node = subId === null ? null : resolveNodeById(subId, resources, visiting);
@@ -267,21 +271,10 @@ function pickStartState(
   const body = arrayLiteralBody(transitions);
   const tokens = body === null ? [] : dropTrailingComma(splitTopLevel(body));
   for (let i = 0; i + 2 < tokens.length; i += 3) {
-    const from = stripStringName(tokens[i]!);
-    if (from === 'Start') return stripStringName(tokens[i + 1]!);
+    const from = unquoteLiteral(tokens[i]!);
+    if (from === 'Start') return unquoteLiteral(tokens[i + 1]!);
   }
   return states[0]?.name ?? null;
-}
-
-/** Strip surrounding double-quotes from a property key (spaced keys are quoted). */
-function unquoteKey(key: string): string {
-  return key.startsWith('"') && key.endsWith('"') ? key.slice(1, -1) : key;
-}
-
-/** Strip a Godot StringName literal `&"name"` (or plain `"name"`) to `name`. */
-export function stripStringName(raw: string): string {
-  const match = /^&?"([^"]*)"$/.exec(raw.trim());
-  return match?.[1] ?? raw.trim();
 }
 
 function asString(value: unknown): string | undefined {

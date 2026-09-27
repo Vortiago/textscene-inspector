@@ -6,17 +6,16 @@
 
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
-import { listIndices } from '../../../../linter/reportedIndices.js';
+import { indicesPastCount, listWrittenIndices } from '../../../../linter/reportedIndices.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
-import { indexedKeyRegex } from '../../../../godot/index.js';
 
 /**
- * A `tab_<idx>/` key. The required index keeps the `tab_` scalars (`tab_alignment`,
- * `tab_count`) out, since none carries a `/`. TabBar's `PropertyListHelper`
- * (tab_bar.cpp) gates on `String::is_valid_int()` (property_list_helper.cpp:53).
+ * The family's prefix. The `tab_` scalars (`tab_alignment`, `tab_count`) carry no `/`, so they
+ * name no index. TabBar's `PropertyListHelper` (tab_bar.cpp) gates the index on
+ * `String::is_valid_int()` (property_list_helper.cpp:53).
  */
-const TAB_KEY_RE = indexedKeyRegex('^tab_(#)/', 'is_valid_int');
+const TAB_PREFIX = 'tab_';
 
 function checkTabBar(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -62,17 +61,10 @@ function checkTabBar(context: RuleContext): Diagnostic[] {
   // index at or past the length getter (property_list_helper.cpp:58), here `get_tab_count`
   // (tab_bar.cpp:2189). Only TabContainer enables out-of-bounds assign (tab_container.cpp:1294).
   // Godot's saver never writes this: `tabs.resize(p_count)` (tab_bar.cpp:755) keeps both in step.
-  const offending = new Set<number>();
-  for (const key of Object.keys(props)) {
-    const match = TAB_KEY_RE.exec(key);
-    if (!match) continue;
-    const index = Number(match[1]);
-    // A negative index is linterParser.ts's error (property_list_helper.cpp:58).
-    if (index >= 0 && index >= count) offending.add(index);
-  }
+  const offending = indicesPastCount(props, TAB_PREFIX, 'is_valid_int', count);
 
   if (offending.size > 0) {
-    const indices = listIndices([...offending].sort((a, b) => a - b));
+    const indices = listWrittenIndices(offending);
     diagnostics.push({
       severity: 'error',
       message:

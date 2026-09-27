@@ -9,9 +9,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene } from '../../../parser/types';
 import { NodeDispatcher } from '../../NodeDispatcher';
-import { SelectionProvider } from '../../contexts/SelectionContext';
-import { SceneResourcesProvider } from '../../SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
+import { SceneStack } from '../../testing/SceneStack';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { GLB_SCENE_ROOT_TYPE } from './Component';
@@ -117,16 +115,15 @@ function makeHallwayLampNode(): TscnNode {
 
 async function renderHallwayLamp(loader: ResourceLoader) {
   return ReactThreeTestRenderer.create(
-    <ResourceLoaderProvider loader={loader}>
-      <SceneResourcesProvider
-        internalResources={[]}
-        externalResources={[{ id: 'lamp_1', path: LAMP_TSCN, type: 'PackedScene' }]}
-      >
-        <SelectionProvider>
-          <NodeDispatcher nodes={[makeHallwayLampNode()]} />
-        </SelectionProvider>
-      </SceneResourcesProvider>
-    </ResourceLoaderProvider>
+    <SceneStack
+      loader={loader}
+      scene={{
+        internalResources: [],
+        externalResources: [{ id: 'lamp_1', path: LAMP_TSCN, type: 'PackedScene' }],
+      }}
+    >
+      <NodeDispatcher nodes={[makeHallwayLampNode()]} />
+    </SceneStack>
   );
 }
 

@@ -8,21 +8,17 @@ import { propertyError } from '../propertyError.js';
 import { createBooleanValidator } from '../commonValidators.js';
 import { formatCode } from './codes.js';
 import { shape } from './grounding.js';
-import { ARRAY_LITERAL_RE, TYPED_WRAPPER_RE } from '../../../godot/index.js';
+import { ARRAY_LITERAL_RE, STRING_LITERAL_SOURCE, TYPED_WRAPPER_RE } from '../../../godot/index.js';
 import { arrayLiteralBody } from '../../../godot/variantParser.js';
 import { unquoteString } from '../../../parser/utils.js';
 import { valueCode } from './codes.js';
 
 /**
- * One TSCN string literal as a STRING slot takes it: an optional `&` or `@`
- * jacket (`TK_STRING_NAME`, `variant_parser.cpp:263-265`), an escape-aware quoted
- * body, and nothing after it. A raw newline is harmless: StrictTscnParser skips
- * multiline properties before any validator sees them.
+ * One TSCN string literal as a STRING or STRING_NAME slot takes it: an optional `&`
+ * jacket or its 3.x spelling `@`, kept under `#ifndef DISABLE_DEPRECATED`
+ * (`TK_STRING_NAME`, `variant_parser.cpp:262-265`), then one literal and nothing after it.
  */
-const QUOTED_RE = /^[&@]?"(?:[^"\\]|\\[\s\S])*"$/;
-// The same jackets as QUOTED_RE: `case '@':` falls through to the StringName
-// case under `#ifndef DISABLE_DEPRECATED` (variant_parser.cpp:262-265).
-const STRING_NAME_RE = /^[&@]?"(?:[^"\\]|\\[\s\S])*"$/;
+const JACKETED_STRING_RE = new RegExp(`^[&@]?${STRING_LITERAL_SOURCE}$`);
 
 export const scalarCombinators = {
   /** Boolean (`'true'` | `'false'`). */
@@ -40,7 +36,7 @@ export const scalarCombinators = {
     // `text = &"Hello"` stores `Hello`.
     const code = formatCode(name);
     return shape((key, value, line) => {
-      if (!QUOTED_RE.test(value)) {
+      if (!JACKETED_STRING_RE.test(value)) {
         return propertyError(key, line, `Property '${name}' must be a quoted string, got: ${value}`, code);
       }
       return null;
@@ -54,7 +50,7 @@ export const scalarCombinators = {
   stringName(name: string): PropertyValidator {
     const code = formatCode(name);
     return shape((key, value, line) => {
-      if (!STRING_NAME_RE.test(value)) {
+      if (!JACKETED_STRING_RE.test(value)) {
         return propertyError(
           key,
           line,
@@ -79,7 +75,7 @@ export const scalarCombinators = {
     const format = formatCode(name);
     const code = valueCode(name);
     const validator: PropertyValidator = (key, value, line) => {
-      if (!QUOTED_RE.test(value)) {
+      if (!JACKETED_STRING_RE.test(value)) {
         return propertyError(
           key,
           line,

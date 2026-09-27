@@ -4,9 +4,12 @@
  * report one value twice.
  */
 
-import type { TscnNode, TscnScene } from '../../parser/types.js';
-import { extractNodePath, isValidProperties } from '../../linter/linterUtils.js';
-import { descendsFrom } from '../../godot/nodeBaseTypes.js';
+import type { TscnInternalResource, TscnNode, TscnScene } from '../../parser/types.js';
+import {
+  extractNodePath,
+  isValidProperties,
+  nodesDescendingFrom,
+} from '../../linter/linterUtils.js';
 import { resolveNodePath } from '../../linter/nodePathResolve.js';
 import { extractLibraries } from '../animation/animationplayer/parser.js';
 import { resolveAudioTrackPaths } from '../animation/animationplayer/animationResolver.js';
@@ -18,7 +21,35 @@ import { resolveAudioTrackPaths } from '../animation/animationplayer/animationRe
  * that cannot be resolved confidently counts as not driven: a missed warning beats a wrong one.
  */
 export function isDrivenByAnimationAudioTrack(scene: TscnScene, node: TscnNode): boolean {
-  for (const mixer of collectMixers(scene.nodes)) {
+  return audioTrackTargets(scene).has(node);
+}
+
+/**
+ * Keyed by the roots array, beside the resource table the tracks were read from: the answer reads
+ * the tree and the animations and nothing else. Written only by `audioTrackTargets`. A rule asks
+ * once per player, and a resolution per call repeats every animation parse.
+ */
+const audioTargetsByTree = new WeakMap<
+  TscnNode[],
+  { internalResources: readonly TscnInternalResource[]; targets: ReadonlySet<TscnNode> }
+>();
+
+function audioTrackTargets(scene: TscnScene): ReadonlySet<TscnNode> {
+  const cached = audioTargetsByTree.get(scene.nodes);
+  if (cached && cached.internalResources === scene.internalResources) return cached.targets;
+  const targets = resolveAudioTrackTargets(scene);
+  audioTargetsByTree.set(scene.nodes, { internalResources: scene.internalResources, targets });
+  return targets;
+}
+
+/**
+ * Every node some mixer's audio track resolves to. Every AnimationMixer heir counts, not
+ * AnimationPlayer by name: `_update_caches`, `libraries` and `root_node` are AnimationMixer's, so
+ * an AnimationTree drives an audio track as a player does.
+ */
+function resolveAudioTrackTargets(scene: TscnScene): Set<TscnNode> {
+  const targets = new Set<TscnNode>();
+  for (const mixer of nodesDescendingFrom(scene.nodes, 'AnimationMixer')) {
     if (!isValidProperties(mixer.properties)) continue;
     const props = mixer.properties as Record<string, string>;
     // `root_node` defaults to `NodePath("..")` (scene_string_names.h:129), the mixer's parent,
@@ -35,27 +66,8 @@ export function isDrivenByAnimationAudioTrack(scene: TscnScene, node: TscnNode):
     // from `get_node_or_null(root_node)` (animation_mixer.cpp:661).
     for (const rawPath of resolveAudioTrackPaths(libraries, scene.internalResources)) {
       const target = resolveNodePath(scene, mixerRoot.node, rawPath);
-      if (target.status === 'found' && target.node === node) return true;
+      if (target.status === 'found') targets.add(target.node);
     }
   }
-  return false;
+  return targets;
 }
-
-/**
- * Every AnimationMixer heir in the scene tree (depth-first). The whole chain, not AnimationPlayer
- * by name: `_update_caches`, `libraries` and `root_node` are AnimationMixer's, so an AnimationTree
- * drives an audio track as a player does.
- */
-function collectMixers(nodes: readonly TscnNode[]): TscnNode[] {
-  const out: TscnNode[] = [];
-  const walk = (list: readonly TscnNode[]): void => {
-    for (const n of list) {
-      if (descendsFrom(n.type, 'AnimationMixer')) out.push(n);
-      walk(n.children);
-    }
-  };
-  walk(nodes);
-  return out;
-}
-
-

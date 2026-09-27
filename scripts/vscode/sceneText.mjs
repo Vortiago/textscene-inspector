@@ -6,11 +6,11 @@
  */
 
 /**
- * A quoted `.tscn` string value: no bare `"`, backslash escapes allowed
- * through. Anchored per-line to a `text = ` assignment so a `text` substring
- * inside some other value is never touched.
+ * A `text = "…"` assignment, anchored per line so a `text` substring inside another
+ * value is never touched. `\` takes the next character, a raw newline too
+ * (`variant_parser.cpp:276-290`): core's `STRING_LITERAL_SOURCE`, copied since this runs unbuilt.
  */
-const TEXT_ASSIGNMENT = /^(\s*text = )"(?:[^"\\]|\\.)*"/gm;
+const TEXT_ASSIGNMENT = /^(\s*text = )"(?:[^"\\]|\\[\s\S])*"/gm;
 
 /**
  * Empties every `text = "…"` assignment.

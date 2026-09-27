@@ -8,20 +8,37 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
-import { listIndices } from '../../../../linter/reportedIndices.js';
+import { listWrittenIndices } from '../../../../linter/reportedIndices.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
-import { indexedElements, indexedKeyRegex, toIntIndex, boolSlotValue} from '../../../../godot/index.js';
+import {
+  boolSlotValue,
+  declaredLeafResolver,
+  firstSegment,
+  indexedElements,
+  indexedKeyRegex,
+  stringToInt,
+} from '../../../../godot/index.js';
+import { SETTING_LEAVES } from './settingLeaves.js';
 
 /**
  * Any `settings/<i>/…` leaf, whatever its depth. Every index position here (the setting, the joint,
  * the collision) is read with a bare `path.get_slicec('/', n).to_int()` and no validity gate
- * (spring_bone_simulator_3d.cpp:42, :122, :143, :147), so {@link toIntIndex} turns the whole
- * segment into a number.
+ * (spring_bone_simulator_3d.cpp:42, :122, :143, :147), so {@link stringToInt} reads the whole
+ * segment as the `int` Godot stores.
  */
 const SETTING_KEY_RE = indexedKeyRegex('^settings/(#)/(.+)$', 'to_int');
-/** `<leaf>` below a joint index, for the individual-mode check. */
-const JOINT_KEY_RE = indexedKeyRegex('^joints/#/(.+)$', 'to_int');
+/**
+ * The segment below a joint index, for the individual-mode check. `prop = get_slicec('/', 4)`
+ * (:123) reads that segment alone, so `joints/0/radius/extra` reaches set_joint_radius.
+ */
+const JOINT_KEY_RE = indexedKeyRegex('^joints/#/([^/]+)', 'to_int');
+
+/**
+ * The `settings/<i>/<leaf>` leaf a key reaches through a tail `_set` ignores:
+ * `individual_config/extra` is `individual_config` (:73), and `radius/extra` reaches none (:85).
+ */
+const resolveSettingLeaf = declaredLeafResolver(Object.keys(SETTING_LEAVES));
 
 /**
  * The first segment below the setting index for every leaf of the shared block, the list
@@ -55,28 +72,26 @@ const JOINT_CONFIG_LEAVES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Leaves that land only while `enable_all_child_collisions` is false: set_collision_path
- * (:1150-1152) and set_collision_count (:1181-1183) return when it is true.
+ * The `what` segments that land only while `enable_all_child_collisions` is false:
+ * set_collision_path (:1150-1152) and set_collision_count (:1181-1183) return when it is true.
+ * Neither branch reads an option below `what` (:146-150), so a tail reaches the setter, and a
+ * missing collision index is `"".to_int()`, collision 0.
  */
-const EXPLICIT_COLLISION_RE = indexedKeyRegex('^collisions/#$|^collision_count$', 'to_int');
+const EXPLICIT_COLLISION_SEGMENTS: ReadonlySet<string> = new Set(['collisions', 'collision_count']);
 /**
- * Leaves that land only while `enable_all_child_collisions` is true: set_exclude_collision_path
- * (:1094-1096) and set_exclude_collision_count (:1125-1127) return when it is false.
+ * The `what` segments that land only while `enable_all_child_collisions` is true:
+ * set_exclude_collision_path (:1094-1096) and set_exclude_collision_count (:1125-1127) return
+ * when it is false.
  */
-const EXCLUDE_COLLISION_RE = indexedKeyRegex(
-  '^exclude_collisions/#$|^exclude_collision_count$',
-  'to_int'
-);
+const EXCLUDE_COLLISION_SEGMENTS: ReadonlySet<string> = new Set([
+  'exclude_collisions',
+  'exclude_collision_count',
+]);
 
 /** A `.tscn` boolean, or the C++ default when the key is absent. */
 function readBool(raw: string | undefined, fallback: boolean): boolean {
   if (raw === undefined) return fallback;
   return boolSlotValue(raw) === true;
-}
-
-/** `indices` as `0, 2, 5`, ascending, for a message. */
-function list(indices: Set<number>): string {
-  return listIndices([...indices].sort((a, b) => a - b));
 }
 
 function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
@@ -93,28 +108,34 @@ function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
   // against; each is already its own validator's diagnostic.
   if (count === null) return diagnostics;
 
-  const outOfRange = new Set<number>();
-  const sharedIgnored = new Set<number>();
-  const jointIgnored = new Set<number>();
-  const collisionIgnored = new Set<number>();
-  const excludeIgnored = new Set<number>();
+  // Keyed by each index text as the file writes it, to the setting it resolves to.
+  const outOfRange = new Map<string, number>();
+  const sharedIgnored = new Map<string, number>();
+  const jointIgnored = new Map<string, number>();
+  const collisionIgnored = new Map<string, number>();
+  const excludeIgnored = new Map<string, number>();
 
   // Grouped by the setting `_set` resolves each key to, so `settings/00/…` and `settings/0/…` are
   // one setting and every leaf finds the siblings written beside it under either spelling.
-  const settings = indexedElements(rawProps, 'settings/', 'to_int');
+  const settings = indexedElements(rawProps, 'settings/', 'to_int', resolveSettingLeaf);
 
   for (const key of Object.keys(rawProps)) {
     const indexed = SETTING_KEY_RE.exec(key);
     if (!indexed) continue;
+    const indexText = indexed[1]!;
     const leaf = indexed[2]!;
-    const index = toIntIndex(indexed[1]!);
-    // A negative index is the validator's error, against the same
-    // ERR_FAIL_INDEX_V; reporting it again here would double up on one defect.
-    if (!(index >= 0)) continue;
+    const index = stringToInt(indexText);
+    // A negative index is the validator's error, against the same ERR_FAIL_INDEX_V, and reporting
+    // it again here would double up on one defect.
+    if (index < 0) continue;
     // `_set` opens with `ERR_FAIL_INDEX_V(which, (int)settings.size(), false)` (:44), and only
     // `set_setting_count` (:840) resizes `settings`, so every leaf at or past the count is dropped
     // on load.
-    if (index >= count) outOfRange.add(index);
+    if (index >= count) {
+      outOfRange.set(indexText, index);
+      // The refusal comes first, so no leaf here reaches the mode-gated setters below.
+      continue;
+    }
 
     const siblings = settings.get(index);
     const individual = readBool(siblings?.get('individual_config'), false);
@@ -122,24 +143,34 @@ function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
     // key makes the exclusion list the live one.
     const allChildCollisions = readBool(siblings?.get('enable_all_child_collisions'), true);
 
-    // Matching the shared block on the first segment covers `radius/value` and
-    // `radius/damping_curve` at once, as the engine's own `split[2]` test does.
+    // `what = get_slicec('/', 2)` (:43), the segment every branch of `_set` tests.
+    const what = firstSegment(leaf);
     const joint = JOINT_KEY_RE.exec(leaf);
     if (joint) {
-      if (!individual && JOINT_CONFIG_LEAVES.has(joint[1]!)) jointIgnored.add(index);
-    } else if (individual && SHARED_CONFIG_SEGMENTS.has(leaf.split('/')[0]!)) {
-      sharedIgnored.add(index);
+      if (!individual && JOINT_CONFIG_LEAVES.has(joint[1]!)) jointIgnored.set(indexText, index);
+    } else if (
+      individual &&
+      SHARED_CONFIG_SEGMENTS.has(what) &&
+      // Only a key that reaches a setter meets its mode gate. `_set` refuses `radius/extra`
+      // first (:85), and the validator reports it unknown.
+      resolveSettingLeaf(leaf) !== null
+    ) {
+      sharedIgnored.set(indexText, index);
     }
 
-    if (allChildCollisions && EXPLICIT_COLLISION_RE.test(leaf)) collisionIgnored.add(index);
-    if (!allChildCollisions && EXCLUDE_COLLISION_RE.test(leaf)) excludeIgnored.add(index);
+    if (allChildCollisions && EXPLICIT_COLLISION_SEGMENTS.has(what)) {
+      collisionIgnored.set(indexText, index);
+    }
+    if (!allChildCollisions && EXCLUDE_COLLISION_SEGMENTS.has(what)) {
+      excludeIgnored.set(indexText, index);
+    }
   }
 
   if (outOfRange.size > 0) {
     diagnostics.push({
       severity: 'error',
       message:
-        `SpringBoneSimulator3D setting index(es) ${list(outOfRange)} fall outside ` +
+        `SpringBoneSimulator3D setting index(es) ${listWrittenIndices(outOfRange)} fall outside ` +
         `setting_count (${count}). SpringBoneSimulator3D::_set opens with ` +
         'ERR_FAIL_INDEX_V(which, settings.size(), false) (spring_bone_simulator_3d.cpp:44), ' +
         'so no setter runs and these settings/<i>/… values are silently dropped on load.',
@@ -153,7 +184,7 @@ function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
     diagnostics.push({
       severity: 'error',
       message:
-        `SpringBoneSimulator3D setting(s) ${list(sharedIgnored)} carry the shared ` +
+        `SpringBoneSimulator3D setting(s) ${listWrittenIndices(sharedIgnored)} carry the shared ` +
         'rotation_axis/radius/stiffness/drag/gravity block while individual_config is true. ' +
         'set_radius and its siblings return before assigning whenever the config is ' +
         'individual (spring_bone_simulator_3d.cpp:644), so the values are dropped and the ' +
@@ -168,7 +199,7 @@ function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
     diagnostics.push({
       severity: 'error',
       message:
-        `SpringBoneSimulator3D setting(s) ${list(jointIgnored)} tune ` +
+        `SpringBoneSimulator3D setting(s) ${listWrittenIndices(jointIgnored)} tune ` +
         'settings/<i>/joints/<j>/… while individual_config is false. set_joint_radius and ' +
         'its siblings return before assigning unless the config is individual ' +
         '(spring_bone_simulator_3d.cpp:914), and _update_joints then overwrites the joint ' +
@@ -183,7 +214,7 @@ function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
     diagnostics.push({
       severity: 'error',
       message:
-        `SpringBoneSimulator3D setting(s) ${list(collisionIgnored)} carry an explicit ` +
+        `SpringBoneSimulator3D setting(s) ${listWrittenIndices(collisionIgnored)} carry an explicit ` +
         'collision list while enable_all_child_collisions is true (its default, ' +
         'spring_bone_simulator_3d.h:145). set_collision_path returns before storing the ' +
         'path in that state (spring_bone_simulator_3d.cpp:1150-1152), so the list is ' +
@@ -198,7 +229,7 @@ function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
     diagnostics.push({
       severity: 'error',
       message:
-        `SpringBoneSimulator3D setting(s) ${list(excludeIgnored)} carry an exclude ` +
+        `SpringBoneSimulator3D setting(s) ${listWrittenIndices(excludeIgnored)} carry an exclude ` +
         'collision list while enable_all_child_collisions is false. ' +
         'set_exclude_collision_path returns before storing the path in that state ' +
         '(spring_bone_simulator_3d.cpp:1094-1096), so the exclusions are dropped and only ' +

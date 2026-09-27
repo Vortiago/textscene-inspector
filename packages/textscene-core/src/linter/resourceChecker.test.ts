@@ -5,8 +5,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { checkResourceExists } from './resourceChecker.js';
-import type { TscnScene, TscnExternalResource } from '../parser/types.js';
+import { checkResourceExists, resolveResourceSlot } from './resourceChecker.js';
+import type { TscnScene, TscnExternalResource, TscnInternalResource } from '../parser/types.js';
+import { countedTable } from '../resources/testing/countedTable.js';
 
 describe('checkResourceExists', () => {
   describe('SubResource validation', () => {
@@ -184,6 +185,40 @@ describe('checkResourceExists', () => {
       expect(checkResourceExists(scene, 'ExtResource("material_1")')).toBe(true);
       expect(checkResourceExists(scene, 'ExtResource("scene_1")')).toBe(true);
       expect(checkResourceExists(scene, 'ExtResource("nonexistent")')).toBe(false);
+    });
+  });
+
+  describe('lookup cost', () => {
+    // One rule call per matching node resolves one reference each, so a scan per
+    // call would cost O(references x resources) on every lint.
+    it('resolves every reference after the first from the id maps, reading no table entry', () => {
+      const external = countedTable<TscnExternalResource>([
+        { id: 'texture_1', type: 'Texture2D', path: 'res://textures/texture.png' },
+      ]);
+      const internal = countedTable<TscnInternalResource>([
+        { id: 'Box_1', type: 'BoxMesh', data: {} },
+      ]);
+      const scene: TscnScene = {
+        nodes: [],
+        externalResources: external.table,
+        internalResources: internal.table,
+      };
+      expect(resolveResourceSlot(scene, 'ExtResource("texture_1")')).toEqual({
+        kind: 'resolved',
+        type: 'Texture2D',
+      });
+      expect(resolveResourceSlot(scene, 'SubResource("Box_1")')).toEqual({
+        kind: 'resolved',
+        type: 'BoxMesh',
+      });
+      const readsAfterIndexing = external.entryReads() + internal.entryReads();
+
+      for (let i = 0; i < 100; i += 1) {
+        checkResourceExists(scene, 'ExtResource("texture_1")');
+        checkResourceExists(scene, 'SubResource("Box_1")');
+        checkResourceExists(scene, 'SubResource("Missing_1")');
+      }
+      expect(external.entryReads() + internal.entryReads()).toBe(readsAfterIndexing);
     });
   });
 });

@@ -15,20 +15,18 @@ out/
 
 # Test configuration
 tsconfig.test.json
+tsconfig.unit-tests.json
 vitest.config.ts
 
 # Node modules
 node_modules/
 
-# Build artifacts (except dist which we need)
+# Build artifacts. vsce applies the last matching line, so a later `!dist/` would
+# ship these metafiles again: scripts/check-bundle-size.mjs is their only reader.
 *.log
 *.vsix
-# esbuild metafiles — consumed only by scripts/check-bundle-size.mjs (#215)
 dist/*.meta.json
 
 # Development files
 .vscode/
 .gitignore
-
-# Only include what's needed for the extension
-!dist/

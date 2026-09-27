@@ -8,13 +8,9 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { stripComments } from '@textscene/dev-kit';
-import { relative } from 'node:path';
-import { allSourceFiles, srcRoot } from './testing/ruleNameScrape.js';
+import { allSourceFiles, srcLabel } from './testing/ruleNameScrape.js';
 import { makeFloatTupleRegex } from './validators/floatTupleValidator.js';
 import { slotTupleRegex, variantTupleRegex } from '../godot/number.js';
-
-/** A file's `src/`-relative path, the form every list below is written in. */
-const label = (file: string): string => relative(srcRoot, file).replaceAll('\\', '/');
 
 /** Every composite Godot writes as `TypeName(a, b, …)`. */
 const COMPOSITES = [
@@ -115,7 +111,7 @@ const REBUILDS_SCALAR_GRAMMAR = /new RegExp\([^)]*FLOAT_PATTERN_SOURCE/;
  * stays in the population.
  */
 const PACKED_ARRAY_READERS =
-  /\b(?:packedArrayLiteral|packedArrayCallAnywhere|packedArrayForms|packedArrayBody)\(/;
+  /\b(?:packedArrayLiteral|packedArrayCallAnywhere|dictCallField|packedArrayForms|packedArrayBody)\(/;
 /**
  * `parseInt` only: `parseFloat` is right for a packed float element the finite grammar
  * matched (`resources/shapes/packedArray.ts`). An int element goes through
@@ -137,6 +133,14 @@ const REFERENCE_LITERAL_NAME = /(?:SubResource|ExtResource|NodePath)\s*\(/;
  */
 const MEMBERSHIP_TEST =
   /\.(?:includes|startsWith|endsWith|indexOf|lastIndexOf)\(\s*(['"`])((?:[^\\]|\\.)*?)\1/g;
+
+/**
+ * A Dictionary key glued by hand onto a constructor call, `"cells"\\s*:\\s*${…}` or
+ * `"aabb"\s*:\s*AABB\(`: a second reader of what `dictCallField` builds, and one that can
+ * drop the padding the tokenizer discards before the `(`. A key read of a string, array or
+ * bool value is another grammar and does not match.
+ */
+const HAND_GLUED_CALL_FIELD = /\\{1,2}s\*:\\{1,2}s\*(?:\$\{|[A-Z]\w*\\{1,2}\()/;
 
 /** The offending call text, or `null` when the source spells no reference this way. */
 function membershipTestedReference(source: string): string | null {
@@ -227,7 +231,7 @@ describe('Godot composite literal grammar', () => {
   // a docblock's opening and closing delimiters pair into false regexes around prose.
   const files = allSourceFiles().map((file) => {
     const src = readFileSync(file, 'utf8');
-    return { rel: label(file), src, bare: stripComments(src) };
+    return { rel: srcLabel(file), src, bare: stripComments(src) };
   });
 
   it('is spelled by the two canonical builders, never by a regex literal', () => {
@@ -317,6 +321,40 @@ describe('Godot composite literal grammar', () => {
     expect(membershipTestedReference("value.startsWith('Color(')")).toBeNull();
   });
 
+  it('builds the Vector2i slot grammar once, inside storedVector2i', () => {
+    // A `Vector2(...)` spelling takes the double branch, a measured rule every copy must
+    // repeat, so the renderer's decoders and the SpriteFrames replay share one reader.
+    const builders = files
+      .filter(({ bare }) => /\bslotTupleRegex\(\s*['"]Vector2i['"]/.test(bare))
+      .map(({ rel }) => rel);
+    expect(builders).toEqual(['godot/intSlots.ts']);
+  });
+
+  it('reads a Dictionary field that holds a constructor call through dictCallField', () => {
+    // `godot/` is the complement: `dictCallField` and `dictPackedField` are built there.
+    const population = files.filter(({ rel }) => !rel.startsWith('godot/'));
+    expect(population.length).toBeGreaterThan(1000);
+
+    const offenders = population
+      .filter(({ bare }) => HAND_GLUED_CALL_FIELD.test(bare))
+      .map(({ rel }) => rel)
+      .sort();
+    expect(offenders).toEqual([]);
+  });
+
+  // The detector's own edges: each way a key glues onto a call, and the key reads of
+  // other value kinds that must stay legal.
+  it('tells a hand-glued call field from a key read of another value kind', () => {
+    expect(HAND_GLUED_CALL_FIELD.test('`"cells"\\\\s*:\\\\s*${call.source}`')).toBe(true);
+    expect(HAND_GLUED_CALL_FIELD.test('`"${key}"\\\\s*:\\\\s*${type}\\\\(`')).toBe(true);
+    expect(HAND_GLUED_CALL_FIELD.test('`"${key}"\\\\s*:\\\\s*PackedByteArray\\\\(`')).toBe(true);
+    expect(HAND_GLUED_CALL_FIELD.test('/"aabb"\\s*:\\s*AABB\\(/')).toBe(true);
+
+    expect(HAND_GLUED_CALL_FIELD.test('/"name"\\s*:\\s*"([^"]*)"/')).toBe(false);
+    expect(HAND_GLUED_CALL_FIELD.test('/"frames"\\s*:\\s*\\[/')).toBe(false);
+    expect(HAND_GLUED_CALL_FIELD.test('/"loop"\\s*:\\s*(true|false)/')).toBe(false);
+  });
+
   it('reads a packed INT element through the shared reader, never parseInt', () => {
     const population = files.filter(({ bare }) => PACKED_ARRAY_READERS.test(bare));
     // Anti-vacuity: the population is builder-derived, so a rename that stopped
@@ -343,8 +381,9 @@ describe('Godot composite literal grammar', () => {
     );
     // Anti-vacuity: the population is scraped, so a rename could empty it. Source text
     // has to ask: only a whole token in `[2^31, 2^32-1]` tells the branches apart, and a
-    // `.` or `e` token already takes the double branch.
-    expect(population.length).toBeGreaterThan(3);
+    // `.` or `e` token already takes the double branch. The floor is the linter's two tuple
+    // modules and `storedVector2i`, the one renderer-side reader.
+    expect(population.length).toBeGreaterThanOrEqual(3);
 
     const offenders: string[] = [];
     for (const { rel, bare } of population) {

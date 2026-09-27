@@ -1,3 +1,8 @@
+/**
+ * Readers for Godot's packed array slots, THREE-free: a flat float body, the three spellings
+ * of a packed tuple slot, and the nested index arrays of a polygon list.
+ */
+
 import {
   packedArrayBody,
   packedArrayCallAnywhere,
@@ -10,9 +15,19 @@ import {
 } from '../../godot/index.js';
 import { arrayLiteralBody } from '../../godot/variantParser.js';
 
-const PACKED_VECTOR3_ARRAY_FORMS = packedArrayForms('PackedVector3Array');
-const PACKED_VECTOR2_ARRAY_FORMS = packedArrayForms('PackedVector2Array');
-const PACKED_COLOR_ARRAY_FORMS = packedArrayForms('PackedColorArray');
+/**
+ * A packed array of fixed-size tuples, named once: its type, the three spellings its slot
+ * takes, and the components in each element.
+ */
+interface PackedTupleType {
+  readonly typeName: string;
+  readonly forms: readonly RegExp[];
+  readonly groupSize: number;
+}
+
+function packedTupleType(typeName: string, groupSize: number): PackedTupleType {
+  return { typeName, forms: packedArrayForms(typeName), groupSize };
+}
 
 /**
  * Elements of a packed float body as Godot's tokenizer reads them, so `1.2.3`,
@@ -31,37 +46,19 @@ export function floatElements(inner: string, wrapper: string, value: string): nu
 }
 
 /**
- * A packed tuple slot in any of its three spellings, as the packed constructor's
- * flat components. The bare and typed bodies hold one `Vector2(…)` / `Vector3(…)` /
- * `Color(…)` per top-level comma, read at the slot's arity. Another arity throws
- * rather than add a short vertex: Godot makes no such conversion.
+ * A packed tuple slot in any of its three spellings, as the constructor's flat components at
+ * double precision, so `Gradient`'s `0.6` stays `0.6`. The bare and typed bodies hold one element
+ * per top-level comma, and another group size throws rather than add a short vertex: Godot makes
+ * no such conversion.
  */
-function packedTupleFloats(
-  value: string,
-  wrapper: string,
-  forms: readonly RegExp[],
-  groupSize: number
-): Float32Array {
-  return new Float32Array(packedTupleNumbers(value, wrapper, forms, groupSize));
-}
-
-/**
- * The same read at double precision, for a caller grouping components into
- * typed values: `Gradient`'s colour stops must not round the `.tres`'s `0.6` to
- * float32's `0.6000000238418579`. Geometry callers take the `Float32Array`.
- */
-export function packedTupleNumbers(
-  value: string,
-  wrapper: string,
-  forms: readonly RegExp[],
-  groupSize: number
-): number[] {
+export function packedTupleNumbers(value: string, type: PackedTupleType): number[] {
+  const { typeName, forms, groupSize } = type;
   const matched = packedArrayBody(forms, value);
-  if (!matched) throw new Error(`Invalid ${wrapper} format: ${value}`);
+  if (!matched) throw new Error(`Invalid ${typeName} format: ${value}`);
   if (matched.body === '') return [];
-  if (matched.flat) return floatElements(matched.body, wrapper, value);
+  if (matched.flat) return floatElements(matched.body, typeName, value);
 
-  const elementRe = packedArrayLiteral(packedElementType(wrapper));
+  const elementRe = packedArrayLiteral(packedElementType(typeName));
   const out: number[] = [];
   for (const part of splitTopLevel(matched.body)) {
     // A trailing comma leaves one empty part, and Godot's array reader closes on
@@ -69,31 +66,30 @@ export function packedTupleNumbers(
     // so it is no element. The validator skips it the same way.
     if (part === '') continue;
     const element = elementRe.exec(part);
-    if (!element) throw new Error(`Invalid ${wrapper} format: ${value}`);
-    const components = floatElements(element[1]!, wrapper, value);
-    if (components.length !== groupSize) throw new Error(`Invalid ${wrapper} format: ${value}`);
+    if (!element) throw new Error(`Invalid ${typeName} format: ${value}`);
+    const components = floatElements(element[1]!, typeName, value);
+    if (components.length !== groupSize) throw new Error(`Invalid ${typeName} format: ${value}`);
     out.push(...components);
   }
   return out;
 }
 
-/** The forms of a `PackedColorArray` slot, for a caller grouping its components itself. */
-export const PACKED_COLOR_ARRAY_SPELLINGS = PACKED_COLOR_ARRAY_FORMS;
-
-/** Parse a Godot `PackedVector3Array` slot into a flat Float32Array. */
-export function parsePackedVector3Array(value: string): Float32Array {
-  return packedTupleFloats(value, 'PackedVector3Array', PACKED_VECTOR3_ARRAY_FORMS, 3);
+/** The float32 reader of one packed tuple type, the precision geometry callers take. */
+function float32Reader(type: PackedTupleType): (value: string) => Float32Array {
+  return (value) => new Float32Array(packedTupleNumbers(value, type));
 }
 
-/** Parse a Godot `PackedVector2Array` slot into a flat Float32Array. */
-export function parsePackedVector2Array(value: string): Float32Array {
-  return packedTupleFloats(value, 'PackedVector2Array', PACKED_VECTOR2_ARRAY_FORMS, 2);
-}
+/** `PackedColorArray`, for a caller that groups its components itself. */
+export const PACKED_COLOR_ARRAY = packedTupleType('PackedColorArray', 4);
 
-/** Parse a Godot `PackedColorArray` slot into a flat Float32Array. */
-export function parsePackedColorArray(value: string): Float32Array {
-  return packedTupleFloats(value, 'PackedColorArray', PACKED_COLOR_ARRAY_FORMS, 4);
-}
+/** A Godot `PackedVector3Array` slot as flat components. */
+export const parsePackedVector3Array = float32Reader(packedTupleType('PackedVector3Array', 3));
+
+/** A Godot `PackedVector2Array` slot as flat components. */
+export const parsePackedVector2Array = float32Reader(packedTupleType('PackedVector2Array', 2));
+
+/** A Godot `PackedColorArray` slot as flat components. */
+export const parsePackedColorArray = float32Reader(PACKED_COLOR_ARRAY);
 
 /** One `[...]` group nested inside an outer array, its body captured. */
 const BARE_INNER_ARRAY_RE = /\[([^[\]]*)\]/g;

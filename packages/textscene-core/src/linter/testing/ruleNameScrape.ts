@@ -6,7 +6,7 @@
  */
 
 import { readdirSync, readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /** `.../src/linter`: this module sits one level below it, in `testing/`. */
@@ -42,6 +42,9 @@ export const ruleFiles = (): string[] => atLeast(walk(nodesRoot, 'linter.ts'), 1
 
 /** `.../src`: the whole package, not one subtree of it. */
 export const srcRoot = resolve(linterDir, '..');
+
+/** A file's `src/`-relative path with `/` separators on every platform, the form every guard reports. */
+export const srcLabel = (file: string): string => relative(srcRoot, file).replaceAll('\\', '/');
 
 /** A source module, as opposed to a test: the population a scrape reads. */
 const isSourceModule = (name: string) => /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name);

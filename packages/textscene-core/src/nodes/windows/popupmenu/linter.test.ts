@@ -121,6 +121,27 @@ describe('PopupMenu semantic rules', () => {
   });
 });
 
+describe('PopupMenu index spelling in the message', () => {
+  // `int index = ….to_int()` (property_list_helper.cpp:57) keeps the low 32 bits.
+  it('names what Godot stores beside a wrapping index past the count', () => {
+    const diagnostic = expectDiagnostic(
+      scene(node('PopupMenu', { item_count: 2, 'item_4294967298/text': '"x"' })),
+      { ruleName: 'popupmenu-item-index-out-of-range', severity: 'error' }
+    );
+    expect(diagnostic.message).toContain(
+      'index(es) 4294967298 (stored as 2) fall outside item_count (2)'
+    );
+  });
+
+  it('names a zero-padded index as written, beside the plain spelling of another item', () => {
+    const diagnostic = expectDiagnostic(
+      scene(node('PopupMenu', { item_count: 1, 'item_004/text': '"a"', 'item_2/text': '"b"' })),
+      { ruleName: 'popupmenu-item-index-out-of-range' }
+    );
+    expect(diagnostic.message).toContain('index(es) 2, 004 fall outside');
+  });
+});
+
 describe('PopupMenu index grammar', () => {
   it('errors on a `+`-signed index past item_count', () => {
     // `is_valid_int` skips ONE leading sign, `+` as readily as `-`

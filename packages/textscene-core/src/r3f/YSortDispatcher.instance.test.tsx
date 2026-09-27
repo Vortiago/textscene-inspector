@@ -7,12 +7,9 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { NodeDispatcher } from './NodeDispatcher';
-import { CanvasWorkspaceProvider } from './contexts/CanvasWorkspaceContext';
-import { SelectionProvider } from './contexts/SelectionContext';
-import { SceneResourcesProvider } from './SceneResourcesContext';
-import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../parser/TscnParser';
+import { SceneStack } from './testing/SceneStack';
 
 import './nodes/index';
 
@@ -54,18 +51,9 @@ async function render(ySort: boolean) {
   const scene = new TscnParser().parse(mainTscn(ySort));
 
   const renderer = await ReactThreeTestRenderer.create(
-    <CanvasWorkspaceProvider workspace="2d">
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider
-          internalResources={scene.internalResources}
-          externalResources={scene.externalResources}
-        >
-          <SelectionProvider>
-            <NodeDispatcher nodes={scene.nodes} />
-          </SelectionProvider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    </CanvasWorkspaceProvider>
+    <SceneStack workspace="2d" loader={fake.loader} scene={scene}>
+      <NodeDispatcher nodes={scene.nodes} />
+    </SceneStack>
   );
   await new Promise<void>((r) => setTimeout(r, 10));
   return renderer;

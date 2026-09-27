@@ -4,30 +4,17 @@
  * Controls resolve in. The rendering half is gated in the browser (ADR-0024).
  */
 import { describe, expect, it } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { TscnParser } from '../../../parser/TscnParser';
 import type { TscnScene } from '../../../parser/types';
+import { repoRoot } from '../../../parser/testing/parserKit';
 import { collectControlRasterViewports, type SceneScopeSource } from './controlRasterViewports';
 import '../../../r3f/nodes/index';
 
 function parse(source: string): TscnScene {
   return new TscnParser().parse(source);
-}
-
-/**
- * Walked up from this file, never `process.cwd()`: the suite runs from the repo
- * root under `pnpm test:unit` and from the package dir under
- * `pnpm --filter @textscene/core test`.
- */
-function repoRoot(): string {
-  let dir = import.meta.dirname;
-  for (let i = 0; i < 12; i += 1) {
-    if (existsSync(resolve(dir, 'pnpm-workspace.yaml'))) return dir;
-    dir = resolve(dir, '..');
-  }
-  throw new Error('repo root (pnpm-workspace.yaml) not found above this test');
 }
 
 /** A scene cache answering for exactly the paths in `scenes`. */

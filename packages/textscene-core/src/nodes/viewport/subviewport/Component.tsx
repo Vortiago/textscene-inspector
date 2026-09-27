@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { createPortal, useThree } from '@react-three/fiber';
 import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
+import { WorldRootProvider } from '../../../r3f/parentSpaceScope';
 import * as THREE from 'three';
 
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
@@ -33,6 +34,7 @@ import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { useViewportContentKind } from './useViewportContentKind';
 import { usePublishViewportPass } from './usePublishViewportPass';
 import type { SubViewportProperties } from './types';
+import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 
 /**
  * Registered with neither `canvasItem` nor `container`, so `PlainNode` passes it
@@ -81,16 +83,14 @@ interface OffscreenViewportProps extends NodeComponentProps {
 }
 
 /**
- * WebGL2's common `MAX_TEXTURE_SIZE`, per axis. Godot floors a viewport at 2
- * (`viewport.cpp:1120`, `p_size.maxi(2)`) and leaves the ceiling to the GPU driver,
- * but a file Godot opens can hand `THREE.WebGLRenderTarget` a 2000000000-pixel axis.
+ * The render target's axis. Godot floors a viewport at 2 (`viewport.cpp:1120`,
+ * `p_size.maxi(2)`) and leaves the ceiling to the GPU driver, but a file Godot
+ * opens can hand `THREE.WebGLRenderTarget` a 2000000000-pixel axis.
  */
-const MAX_VIEWPORT_EXTENT = 16384;
-
 export function allocatableExtent(raw: number): number {
   const rounded = Math.round(raw);
   if (!Number.isFinite(rounded)) return 2;
-  return Math.min(MAX_VIEWPORT_EXTENT, Math.max(2, rounded));
+  return Math.min(MAX_TEXTURE_EXTENT, Math.max(2, rounded));
 }
 
 /**
@@ -226,9 +226,12 @@ function OffscreenViewport({
   // The portal declares the workspace its content needs, not the host's, which
   // could drop it. The portal scene is detached, so no host CanvasItem transform
   // reaches it and a canvas root inside cancels nothing (`canvasRootScope.tsx`).
+  // It is the world a node inside escapes to, too (`parentSpaceScope.tsx`).
   return createPortal(
     <CanvasWorkspaceProvider workspace={kind === '3d' ? '3d' : '2d'}>
-      <CanvasSpaceProvider value={null}>{children}</CanvasSpaceProvider>
+      <WorldRootProvider value={portalScene}>
+        <CanvasSpaceProvider value={null}>{children}</CanvasSpaceProvider>
+      </WorldRootProvider>
     </CanvasWorkspaceProvider>,
     portalScene
   );

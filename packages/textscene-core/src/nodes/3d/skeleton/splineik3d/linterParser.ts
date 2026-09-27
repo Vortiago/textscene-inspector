@@ -8,10 +8,11 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { v } from '../../../../linter/validators/v.js';
+import { settingCount } from '../shared/settingCount.js';
 // Declare only SplineIK3D's own members, the ones doc/classes/SplineIK3D.xml lists without
 // `overrides=`. The NODE_BASE_TYPES base-walk delivers every key from ChainIK3D up, and
 // re-declaring one shadows it and duplicates the rule.
-import '../chainik3d/linterParser.js';
+import { chainIkSubclassSettings } from '../chainik3d/linterParser.js';
 
 /**
  * The four leaves SplineIK3D adds to the inherited `settings/<i>/` family, keyed as
@@ -37,10 +38,10 @@ const OWN_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   tilt_fade_out: v.strictInt('tilt_fade_out', { min: -1, hinted: 'spline_ik_3d.cpp:86' }),
 };
 
-/** Whether the key's last path segment is one of the four leaves declared here. */
-function ownsLeaf(key: string): boolean {
-  return Object.prototype.hasOwnProperty.call(OWN_LEAVES, key.slice(key.lastIndexOf('/') + 1));
-}
+/** `what = path.get_slicec('/', 2)` (spline_ik_3d.cpp:38). */
+const { resolveLeaf: resolveSplineSettingLeaf, ownsKey: ownsLeaf } =
+  chainIkSubclassSettings(OWN_LEAVES);
+export { resolveSplineSettingLeaf };
 
 /**
  * The four own leaves and the negative-index guard. Reached only for a key whose leaf is one of the
@@ -85,14 +86,13 @@ settingsFamily.grounding = ownFamily.grounding;
 settingsFamily.leaves = ownFamily.leaves;
 
 validatorRegistry.registerAll('SplineIK3D', {
-  // spline_ik_3d.cpp:185, ADD_ARRAY_COUNT with PROPERTY_HINT_NONE (class_db.cpp:1492): no hint and
-  // no ceiling. ChainIK3D binds no property, so each subclass declares the count
-  // (iterate_ik_3d.cpp:398 too). The floor is `ERR_FAIL_COND(p_count < 0)` in `_set_setting_count`
-  // (ik_modifier_3d.h:98), which set_setting_count (spline_ik_3d.h:163) calls.
-  setting_count: v.strictNonNegativeInt('setting_count', { enforced: 'ik_modifier_3d.h:98' }),
+  // spline_ik_3d.cpp:185, ADD_ARRAY_COUNT. ChainIK3D binds no property, so each subclass declares
+  // the count (iterate_ik_3d.cpp:398 too). set_setting_count (spline_ik_3d.h:163) forwards to
+  // IKModifier3D's `_set_setting_count<T>`.
+  setting_count: settingCount('IKModifier3D'),
 
-  // `settings/#/*` matches a single leaf segment (`ValidatorRegistry.matchesIndexedKey`), so
-  // `end_bone/direction`, `end_bone/length` and the nested `joints/<j>/` block skip this dispatcher
-  // and reach ChainIK3D through the base-walk.
+  // `settings/#/*` routes every depth below the index (`wildcardIndex.ts`), so `end_bone/direction`,
+  // `end_bone/length` and the nested `joints/<j>/` block reach this dispatcher, which hands them to
+  // ChainIK3D.
   'settings/#/*': settingsFamily,
 });

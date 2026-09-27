@@ -8,9 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { VECTOR3_REGEX } from '../../../linter/validators/vectorValidators.js';
-import { tupleComponent } from '../../../linter/validators/commonValidators.js';
-import { slotComponents, slotComponentsAltered } from '../../../godot/int.js';
+import { matchVector3 } from '../../../linter/validators/vectorValidators.js';
 import { isEqualApprox } from '../../../godot/index.js';
 import type { Vector3 } from '../../../parser/vectors.js';
 
@@ -26,17 +24,7 @@ const DEFAULT_POSITION: Vector3 = { x: 0, y: 0, z: 0 };
 function readPosition(properties: Record<string, string>, key: string): Vector3 | null {
   const raw = properties[key];
   if (raw === undefined) return DEFAULT_POSITION;
-  const trimmed = raw.trim();
-  const match = VECTOR3_REGEX.exec(trimmed);
-  if (!match) return null;
-  const captures = [match[1], match[2], match[3]];
-  // Withheld, not NaN: the engine stores a number, but not the one written, and
-  // `_to_int`'s float branch is undefined behaviour (variant.h:369-370).
-  if (slotComponentsAltered(trimmed, 'Vector3', captures)) return null;
-  // `slotComponents`: VECTOR3_REGEX admits the `Vector3i(...)` spelling Godot
-  // converts, whose arguments are narrowed to int32 before the widening.
-  const [x, y, z] = slotComponents(trimmed, 'Vector3', captures, tupleComponent);
-  return { x: x!, y: y!, z: z! };
+  return matchVector3(raw);
 }
 
 /** `Vector3::is_equal_approx` (core/math/vector3.cpp:141-143): each component by `isEqualApprox`. */

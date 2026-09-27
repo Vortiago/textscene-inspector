@@ -63,6 +63,7 @@ export function applyToneMapping(
   const custom = mapping === THREE.CustomToneMapping;
 
   if (custom) {
+    keyProgramsOnToneMappingChunk();
     // The white normalisation is a constant per environment, so it is baked
     // into the chunk rather than plumbed through as a uniform every material
     // would have to declare.
@@ -88,6 +89,46 @@ export function applyToneMapping(
     if (gl.toneMappingExposure !== previousExposure) gl.toneMappingExposure = previousExposure;
     if (changed) markMaterialsDirty(scene);
   };
+}
+
+/**
+ * The program-key term for the curve three would compile into `material` now, and empty for a
+ * material that is not tone-mapped, which never compiles the chunk. three 0.186.0 keys a program on
+ * the `renderer.toneMapping` enum (`WebGLPrograms.js:490`) and reads the chunk only at compile
+ * (`WebGLProgram.js:775`), so without this term two curves share one program.
+ */
+export function toneMappingProgramKey(material: Pick<THREE.Material, 'toneMapped'>): string {
+  if (!material.toneMapped) return '';
+  return `,toneMappingChunk:${chunkId(THREE.ShaderChunk[TONEMAP_CHUNK])}`;
+}
+
+const threeCustomProgramCacheKey = THREE.Material.prototype.customProgramCacheKey;
+
+/**
+ * Adds `toneMappingProgramKey` to three's own key, so a material marked dirty compiles the new
+ * curve. On the prototype, as the renderer's own background materials are reachable no other way.
+ * A material with its own `customProgramCacheKey` shadows this, so it appends this key itself
+ * (`materialProgramInputs.ts`).
+ */
+function keyProgramsOnToneMappingChunk(): void {
+  THREE.Material.prototype.customProgramCacheKey = customProgramCacheKeyWithChunk;
+}
+
+function customProgramCacheKeyWithChunk(this: THREE.Material): string {
+  return threeCustomProgramCacheKey.call(this) + toneMappingProgramKey(this);
+}
+
+/** Written only by `chunkId`. Never cleared, since a session installs a handful of curves. */
+const chunkIds = new Map<string, number>();
+
+/** A short stand-in for a chunk text in a program key. Equal texts get equal ids. */
+function chunkId(chunk: string): number {
+  let id = chunkIds.get(chunk);
+  if (id === undefined) {
+    id = chunkIds.size;
+    chunkIds.set(chunk, id);
+  }
+  return id;
 }
 
 function markMaterialsDirty(scene: THREE.Object3D | undefined): void {

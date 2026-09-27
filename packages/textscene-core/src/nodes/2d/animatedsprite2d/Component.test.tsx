@@ -19,11 +19,11 @@ import {
   type AnimationTransport,
 } from '../../../r3f/contexts/AnimationTransportContext';
 import {
-  SelectionProvider,
   useOptionalSelection,
   type SelectionContextValue,
 } from '../../../r3f/contexts/SelectionContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
+import { SceneStack } from '../../../r3f/testing/SceneStack';
 import type { TscnNode } from '../../../parser/types';
 
 const heading = { type: 'node', attributes: { type: 'AnimatedSprite2D', name: 'A' } };
@@ -127,24 +127,23 @@ describe('AnimatedSprite2D playback (transport-driven)', () => {
       }),
     };
     return ReactThreeTestRenderer.create(
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider
-          internalResources={[{ id: 'sf', type: 'SpriteFrames', data: { animations: FRAMES_2, id: 'sf' } }]}
-          externalResources={[
+      <SceneStack
+        loader={fake.loader}
+        scene={{
+          internalResources: [{ id: 'sf', type: 'SpriteFrames', data: { animations: FRAMES_2, id: 'sf' } }],
+          externalResources: [
             { id: '2', type: 'Texture2D', path: 'res://f0.png' },
             { id: '3', type: 'Texture2D', path: 'res://f1.png' },
-          ]}
-        >
-          <SelectionProvider>
-            <AnimationTransportProvider>
-              <Capture />
-              <NodePathProvider path={SPRITE_PATH}>
-                <AnimatedSprite2D node={node} />
-              </NodePathProvider>
-            </AnimationTransportProvider>
-          </SelectionProvider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
+          ],
+        }}
+      >
+        <AnimationTransportProvider>
+          <Capture />
+          <NodePathProvider path={SPRITE_PATH}>
+            <AnimatedSprite2D node={node} />
+          </NodePathProvider>
+        </AnimationTransportProvider>
+      </SceneStack>
     );
   }
 

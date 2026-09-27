@@ -8,8 +8,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene } from '../../../parser/types';
 import { NodeDispatcher } from '../../NodeDispatcher';
-import { SceneResourcesProvider } from '../../SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
+import { SceneStack } from '../../testing/SceneStack';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import {
@@ -17,11 +16,7 @@ import {
   useAnimationTransport,
   type AnimationTransport,
 } from '../../contexts/AnimationTransportContext';
-import {
-  SelectionProvider,
-  useOptionalSelection,
-  type SelectionContextValue,
-} from '../../contexts/SelectionContext';
+import { useOptionalSelection, type SelectionContextValue } from '../../contexts/SelectionContext';
 import { GLB_SCENE_ROOT_TYPE } from './Component';
 import { initGlbModules } from '../../../resources/processing/glbProcessing';
 
@@ -90,19 +85,18 @@ function Capture() {
 describe('GLB driver — selection path through the real dispatcher', () => {
   it('populates the transport when the GLB AnimationPlayer row (Player/player/AnimationPlayer) is selected', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ResourceLoaderProvider loader={makeLoader()}>
-        <SceneResourcesProvider
-          internalResources={[]}
-          externalResources={[{ id: 'glb_1', path: GLB_PATH, type: 'PackedScene' }]}
-        >
-          <SelectionProvider>
-            <AnimationTransportProvider>
-              <Capture />
-              <NodeDispatcher nodes={[makeHostNode()]} />
-            </AnimationTransportProvider>
-          </SelectionProvider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
+      <SceneStack
+        loader={makeLoader()}
+        scene={{
+          internalResources: [],
+          externalResources: [{ id: 'glb_1', path: GLB_PATH, type: 'PackedScene' }],
+        }}
+      >
+        <AnimationTransportProvider>
+          <Capture />
+          <NodeDispatcher nodes={[makeHostNode()]} />
+        </AnimationTransportProvider>
+      </SceneStack>
     );
 
     // Nothing selected → no driver registered.

@@ -7,9 +7,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { relative } from 'node:path';
 import { stripComments } from '@textscene/dev-kit';
-import { atLeast, srcRoot, walk } from './testing/ruleNameScrape.js';
+import { atLeast, srcLabel, srcRoot, walk } from './testing/ruleNameScrape.js';
 
 /** The module the discipline belongs to, and the class that defines it. */
 const OWNERS = ['linter/registryPopulation.ts', 'linter/ValidatorRegistry.ts'];
@@ -52,8 +51,6 @@ const everyFile = (): string[] =>
 const namesBothHalves = ({ body }: { body: string }): boolean =>
   body.includes('registeredTypes') && body.includes('declarationFor');
 
-const label = (file: string): string => relative(srcRoot, file).replaceAll('\\', '/');
-
 /** Every identifier any arm below asks about. */
 const TELLS = ['typesWithRegistrations', 'getTypesWithRemovals', 'registeredTypes', 'declarationFor', 'getOwnKeys', 'findValidator'];
 
@@ -68,7 +65,7 @@ function scanned(): { at: string; body: string }[] {
   for (const file of everyFile()) {
     const raw = readFileSync(file, 'utf8');
     if (!TELLS.some((tell) => raw.includes(tell))) continue;
-    out.push({ at: label(file), body: stripComments(raw) });
+    out.push({ at: srcLabel(file), body: stripComments(raw) });
   }
   return out;
 }

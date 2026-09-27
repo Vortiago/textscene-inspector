@@ -5,6 +5,7 @@
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { repoRoot } from '../../parser/testing/parserKit';
 
 export interface SourceFile {
   /** Absolute. */
@@ -26,13 +27,10 @@ const SKIPPED_DIRECTORIES = new Set([
   '.vscode-test',
 ]);
 
-const REPO_ROOT = join(import.meta.dirname, '../../../../..');
+const REPO_ROOT = repoRoot();
 
 /** Repo-relative, so an offender reads the way it would be typed into an editor. */
 export const repoPath = (file: string): string => relative(REPO_ROOT, file);
-
-/** One of the repo's top-level source trees, absolute. */
-export const repoRoot = (...segments: string[]): string => join(REPO_ROOT, ...segments);
 
 /** A line whose match is prose. Covers a block body, a `//` line and a `/*` opener. */
 export function isCommentLine(line: string): boolean {

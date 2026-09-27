@@ -3,14 +3,14 @@
  * only while this node is the SelectionContext's selected node, and the node
  * still positions its children regardless of selection.
  */
-import { useEffect } from 'react';
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../parser/types';
 import { Marker2D } from './Component';
 import { parseMarker2D } from './parser';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import { SelectionProvider, useSelection } from '../../../r3f/contexts/SelectionContext';
+import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
+import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
 
 function markerNode(name = 'MyMarker', props: Record<string, string> = {}): TscnNode {
   return {
@@ -19,14 +19,6 @@ function markerNode(name = 'MyMarker', props: Record<string, string> = {}): Tscn
     children: [],
     properties: parseMarker2D({ type: 'node', attributes: { type: 'Marker2D', name } }, props),
   };
-}
-
-function SelectSeeder({ path }: { path: string | null }) {
-  const { setSelectedNodePath } = useSelection();
-  useEffect(() => {
-    setSelectedNodePath(path);
-  }, [path, setSelectedNodePath]);
-  return null;
 }
 
 async function renderMarker(selectedPath: string | null, props: Record<string, string> = {}) {

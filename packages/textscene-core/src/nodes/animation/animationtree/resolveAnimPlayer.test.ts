@@ -42,6 +42,10 @@ describe('resolveAnimPlayerPath', () => {
     expect(resolveAnimPlayerPath('Tree', 'NodePath("../Foo")')).toBeNull();
   });
 
+  it('returns null for an absolute path, which measures from the live SceneTree', () => {
+    expect(resolveAnimPlayerPath('Root/Tree', 'NodePath("/root/Root/Player")')).toBeNull();
+  });
+
   it('returns null for a non-NodePath value', () => {
     expect(resolveAnimPlayerPath('Root/Tree', 'garbage')).toBeNull();
   });

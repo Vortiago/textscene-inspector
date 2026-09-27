@@ -1,7 +1,7 @@
 /**
  * The shadow-copy meta-guard's comparison: which keys a type re-declares while
  * its base chain already carries them. Both halves read the live registry, since
- * a key from a `...spread` in `registerAll` has no `key:` line to scrape. It runs
+ * a key from a shared group passed to `registerAll` has no `key:` line to scrape. It runs
  * over a scratch registry, to prove the guard fires, and over the real one.
  */
 

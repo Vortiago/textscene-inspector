@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { heading } from '../../../parser/testing/parserKit';
 import { parseCPUParticles2D } from './parser';
 import {
-  IDENTITY_AFFINE,
   MAX_SIM_STEPS,
   particleExpired,
   restartStep,
@@ -11,6 +10,7 @@ import {
   type ParticleSimInput,
 } from './simulate';
 import { CPUParticles2DParam, type CPUParticles2DProperties } from './types';
+import { TRANSFORM2D_IDENTITY, transform2DFromParts } from '../../../godot/transform2d.js';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
 import { GradientInterpolationMode } from '../../../resources/textures/gradienttexture2d/types';
 import { CurveTangentMode, type Curve } from '../../../resources/curves/curve/types';
@@ -33,7 +33,7 @@ function input(overrides: Partial<ParticleSimInput> = {}): ParticleSimInput {
     curves: NO_CURVES,
     colorRamp: null,
     colorInitialRamp: null,
-    emissionTransform: IDENTITY_AFFINE,
+    emissionTransform: TRANSFORM2D_IDENTITY,
     ...overrides,
   };
 }
@@ -128,7 +128,7 @@ describe('particleExpired (cpu_particles_2d.cpp:971 `p.time > p.lifetime`)', () 
 describe('a restarting particle’s partial first step (comb vs. bar)', () => {
   // Particle i restarts at i/100. At the first step (time = 1/30) only i=0..3
   // restart, each with local_delta = time - i/100, and a restarting particle
-  // spawns at the origin, so ox is exactly `120 * local_delta`.
+  // spawns at the origin, so tx is exactly `120 * local_delta`.
   const streamProps = {
     amount: '100',
     lifetime: '1.0',
@@ -143,15 +143,15 @@ describe('a restarting particle’s partial first step (comb vs. bar)', () => {
 
   it('spreads the newest particles across the frame (fract_delta default true — a solid bar)', () => {
     const pose = simulateFrozenPose(input({ props: props(streamProps) }));
-    const oxOf = (index: number) => pose.find((p) => p.index === index)!.transform.ox;
+    const txOf = (index: number) => pose.find((p) => p.index === index)!.transform.tx;
 
-    expect(oxOf(0)).toBeCloseTo(4.0, 6);
-    expect(oxOf(1)).toBeCloseTo(2.8, 6);
-    expect(oxOf(2)).toBeCloseTo(1.6, 6);
-    expect(oxOf(3)).toBeCloseTo(0.4, 6);
+    expect(txOf(0)).toBeCloseTo(4.0, 6);
+    expect(txOf(1)).toBeCloseTo(2.8, 6);
+    expect(txOf(2)).toBeCloseTo(1.6, 6);
+    expect(txOf(3)).toBeCloseTo(0.4, 6);
     // Every y stays 0: direction is pure +X and spread is 0.
     for (const index of [0, 1, 2, 3]) {
-      expect(pose.find((p) => p.index === index)!.transform.oy).toBeCloseTo(0, 6);
+      expect(pose.find((p) => p.index === index)!.transform.ty).toBeCloseTo(0, 6);
     }
   });
 
@@ -159,14 +159,14 @@ describe('a restarting particle’s partial first step (comb vs. bar)', () => {
     const pose = simulateFrozenPose(
       input({ props: props({ ...streamProps, fract_delta: 'false' }) })
     );
-    const oxOf = (index: number) => pose.find((p) => p.index === index)!.transform.ox;
+    const txOf = (index: number) => pose.find((p) => p.index === index)!.transform.tx;
 
     // Every particle that restarted this step gets the whole frame's motion, so
     // all land at the same displacement.
-    expect(oxOf(0)).toBeCloseTo(4.0, 6);
-    expect(oxOf(1)).toBeCloseTo(4.0, 6);
-    expect(oxOf(2)).toBeCloseTo(4.0, 6);
-    expect(oxOf(3)).toBeCloseTo(4.0, 6);
+    expect(txOf(0)).toBeCloseTo(4.0, 6);
+    expect(txOf(1)).toBeCloseTo(4.0, 6);
+    expect(txOf(2)).toBeCloseTo(4.0, 6);
+    expect(txOf(3)).toBeCloseTo(4.0, 6);
   });
 });
 
@@ -277,10 +277,10 @@ describe('simulateFrozenPose', () => {
     );
     expect(pose.length).toBeGreaterThan(0);
     for (const particle of pose) {
-      expect(Math.hypot(particle.transform.ox, particle.transform.oy)).toBeLessThanOrEqual(10.001);
+      expect(Math.hypot(particle.transform.tx, particle.transform.ty)).toBeLessThanOrEqual(10.001);
     }
     // A filled disc puts some particles well inside, and a surface ring would not.
-    expect(pose.some((p) => Math.hypot(p.transform.ox, p.transform.oy) < 7)).toBe(true);
+    expect(pose.some((p) => Math.hypot(p.transform.tx, p.transform.ty) < 7)).toBe(true);
   });
 
   it('places a SphereSurface emission on a shell, never at the centre', () => {
@@ -296,7 +296,7 @@ describe('simulateFrozenPose', () => {
       })
     );
     for (const particle of pose) {
-      expect(Math.hypot(particle.transform.ox, particle.transform.oy)).toBeLessThanOrEqual(10.001);
+      expect(Math.hypot(particle.transform.tx, particle.transform.ty)).toBeLessThanOrEqual(10.001);
     }
   });
 
@@ -314,8 +314,8 @@ describe('simulateFrozenPose', () => {
     );
     expect(pose.length).toBeGreaterThan(0);
     for (const particle of pose) {
-      expect(Math.abs(particle.transform.ox)).toBeLessThanOrEqual(20.001);
-      expect(Math.abs(particle.transform.oy)).toBeLessThanOrEqual(5.001);
+      expect(Math.abs(particle.transform.tx)).toBeLessThanOrEqual(20.001);
+      expect(Math.abs(particle.transform.ty)).toBeLessThanOrEqual(5.001);
     }
   });
 
@@ -339,8 +339,8 @@ describe('simulateFrozenPose', () => {
     );
     expect(pose.length).toBeGreaterThan(0);
     const first = pose.find((p) => p.index === 0)!;
-    expect(first.transform.ox).toBeCloseTo(45.2, 1);
-    expect(first.transform.oy).toBeCloseTo(9.5, 1);
+    expect(first.transform.tx).toBeCloseTo(45.2, 1);
+    expect(first.transform.ty).toBeCloseTo(9.5, 1);
   });
 
   it('keeps a Point emission at the origin on its birth frame', () => {
@@ -355,8 +355,8 @@ describe('simulateFrozenPose', () => {
       })
     );
     for (const particle of pose) {
-      expect(particle.transform.ox).toBeCloseTo(0, 6);
-      expect(particle.transform.oy).toBeCloseTo(0, 6);
+      expect(particle.transform.tx).toBeCloseTo(0, 6);
+      expect(particle.transform.ty).toBeCloseTo(0, 6);
     }
   });
 
@@ -368,7 +368,7 @@ describe('simulateFrozenPose', () => {
       input({ props: props({ amount: '8', gravity: 'Vector2(0, -400)', explosiveness: '1' }) })
     );
     const meanY = (pose: typeof falling) =>
-      pose.reduce((sum, p) => sum + p.transform.oy, 0) / pose.length;
+      pose.reduce((sum, p) => sum + p.transform.ty, 0) / pose.length;
     expect(meanY(falling)).toBeGreaterThan(0);
     expect(meanY(rising)).toBeLessThan(0);
   });
@@ -388,8 +388,8 @@ describe('simulateFrozenPose', () => {
       })
     );
     for (const particle of pose) {
-      expect(particle.transform.ox).toBeGreaterThan(0);
-      expect(particle.transform.oy).toBeCloseTo(0, 6);
+      expect(particle.transform.tx).toBeGreaterThan(0);
+      expect(particle.transform.ty).toBeCloseTo(0, 6);
     }
   });
 
@@ -398,8 +398,8 @@ describe('simulateFrozenPose', () => {
       input({ props: props({ amount: '4', scale_amount_min: '3', scale_amount_max: '3' }) })
     );
     for (const particle of pose) {
-      expect(Math.hypot(particle.transform.ax, particle.transform.ay)).toBeCloseTo(3, 5);
-      expect(Math.hypot(particle.transform.bx, particle.transform.by)).toBeCloseTo(3, 5);
+      expect(Math.hypot(particle.transform.a, particle.transform.b)).toBeCloseTo(3, 5);
+      expect(Math.hypot(particle.transform.c, particle.transform.d)).toBeCloseTo(3, 5);
     }
   });
 
@@ -434,7 +434,7 @@ describe('simulateFrozenPose', () => {
     );
     // A steady-state emitter holds particles at every age, so the curve must
     // give a range of quad sizes.
-    const sizes = pose.map((p) => Math.hypot(p.transform.ax, p.transform.ay));
+    const sizes = pose.map((p) => Math.hypot(p.transform.a, p.transform.b));
     expect(Math.max(...sizes) - Math.min(...sizes)).toBeGreaterThan(0.2);
   });
 
@@ -504,30 +504,47 @@ describe('simulateFrozenPose', () => {
     );
     for (const particle of pose) {
       // Y column points along +X (the velocity). X column is its orthogonal.
-      expect(particle.transform.bx).toBeCloseTo(1, 4);
-      expect(particle.transform.by).toBeCloseTo(0, 4);
+      expect(particle.transform.c).toBeCloseTo(1, 4);
+      expect(particle.transform.d).toBeCloseTo(0, 4);
     }
   });
 
   it('undoes the emitter transform when `local_coords` is false', () => {
     // A doubled emitter scale must not double the particle quads: Godot draws a
     // global-coords emitter with an identity canvas transform.
-    const emissionTransform = { ax: 2, ay: 0, bx: 0, by: 2, ox: 0, oy: 0 };
+    const emissionTransform = { a: 2, b: 0, c: 0, d: 2, tx: 0, ty: 0 };
     const global = simulateFrozenPose(
       input({ props: props({ amount: '4', local_coords: 'false' }), emissionTransform })
     );
     for (const particle of global) {
-      expect(Math.hypot(particle.transform.ax, particle.transform.ay)).toBeCloseTo(0.5, 5);
+      expect(Math.hypot(particle.transform.a, particle.transform.b)).toBeCloseTo(0.5, 5);
     }
   });
 
+  it('settles a global-coords emitter to the same bits, through the shared product', () => {
+    // The pose this emitter gives with `multiplyTransform2D` and the inverse in their current
+    // order of operations. A reordered sum moves the last bits of every particle.
+    const emissionTransform = transform2DFromParts(0.7, { x: 2, y: 0.5 }, 0.3, { x: 13.5, y: -7.25 });
+    const pose = simulateFrozenPose(
+      input({ props: props({ amount: '12', local_coords: 'false' }), emissionTransform })
+    );
+    expect(pose.find((particle) => particle.index === 0)!.transform).toEqual({
+      a: 0.28278115199109793,
+      b: -1.3486717917104292,
+      c: 0.4404055504977479,
+      d: 1.6011995689278613,
+      tx: 194.69840048004875,
+      ty: 707.8725383166859,
+    });
+  });
+
   it('leaves the quad in node space when `local_coords` is true', () => {
-    const emissionTransform = { ax: 2, ay: 0, bx: 0, by: 2, ox: 0, oy: 0 };
+    const emissionTransform = { a: 2, b: 0, c: 0, d: 2, tx: 0, ty: 0 };
     const local = simulateFrozenPose(
       input({ props: props({ amount: '4', local_coords: 'true' }), emissionTransform })
     );
     for (const particle of local) {
-      expect(Math.hypot(particle.transform.ax, particle.transform.ay)).toBeCloseTo(1, 5);
+      expect(Math.hypot(particle.transform.a, particle.transform.b)).toBeCloseTo(1, 5);
     }
   });
 
@@ -540,13 +557,13 @@ describe('simulateFrozenPose', () => {
   });
 
   it('survives a degenerate emitter transform without producing NaN (error path)', () => {
-    const singular = { ax: 0, ay: 0, bx: 0, by: 0, ox: 5, oy: 5 };
+    const singular = { a: 0, b: 0, c: 0, d: 0, tx: 5, ty: 5 };
     const pose = simulateFrozenPose(
       input({ props: props({ amount: '4' }), emissionTransform: singular })
     );
     for (const particle of pose) {
-      expect(Number.isFinite(particle.transform.ox)).toBe(true);
-      expect(Number.isFinite(particle.transform.ax)).toBe(true);
+      expect(Number.isFinite(particle.transform.tx)).toBe(true);
+      expect(Number.isFinite(particle.transform.a)).toBe(true);
     }
   });
 });

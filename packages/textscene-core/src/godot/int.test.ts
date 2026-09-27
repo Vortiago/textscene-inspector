@@ -7,7 +7,14 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { parseGodotInt, ruleInt, slotComponents, slotComponentsAltered, storedInt } from './int.js';
+import {
+  parseGodotInt,
+  ruleInt,
+  slotComponents,
+  slotComponentsAltered,
+  storedInt,
+  storedVector2i,
+} from './int.js';
 
 describe('an INT-typed literal', () => {
   // `token_text.as_int()` (variant_parser.cpp:489) yields an int64, and
@@ -193,5 +200,32 @@ describe('slotComponentsAltered — a composite in a FLOAT slot', () => {
     // No conversion is declared between these, so the literal is a format
     // error the caller reports, never a narrowed component.
     expect(slotComponentsAltered('Transform2D(inf, 0)', 'Transform2D', ['inf', '0'])).toBe(false);
+  });
+});
+
+describe('storedVector2i — a Vector2i slot literal', () => {
+  it('stores the pair the canonical spelling states, truncating a float token', () => {
+    expect(storedVector2i('Vector2i(600, 400)')).toEqual({ x: 600, y: 400 });
+    // `_parse_construct<int32_t>` takes any number token and truncates it.
+    expect(storedVector2i('Vector2i(2e1, 1.9)')).toEqual({ x: 20, y: 1 });
+  });
+
+  it('takes the padding the tokenizer discards (variant_parser.cpp:415-417)', () => {
+    expect(storedVector2i('  Vector2i ( -3 , 4 ) ')).toEqual({ x: -3, y: 4 });
+  });
+
+  it('reads a converted Vector2 spelling through the double branch', () => {
+    // Measured on 4.6.3: the Vector2 spelling of these digits has no int32 to land on, where the
+    // Vector2i spelling wraps an int64 to (-1, 64).
+    expect(storedVector2i('Vector2(1920, 1080)')).toEqual({ x: 1920, y: 1080 });
+    expect(storedVector2i('Vector2(4294967295, 64)')).toBe('unstorable');
+    expect(storedVector2i('Vector2i(4294967295, 64)')).toEqual({ x: -1, y: 64 });
+  });
+
+  it('refuses text no Vector2i slot takes', () => {
+    expect(storedVector2i('Color(1, 1, 1, 1)')).toBe('malformed');
+    expect(storedVector2i('Vector2i(1)')).toBe('malformed');
+    expect(storedVector2i('Vector2i(inf, 0)')).toBe('malformed');
+    expect(storedVector2i('')).toBe('malformed');
   });
 });

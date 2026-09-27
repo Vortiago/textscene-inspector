@@ -11,7 +11,32 @@ import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 import { decodeLegacyTileData } from '../shared/tileData.js';
 import { TILE_MAP_DATA_FORMAT_DEFAULT, formatWhenApplied, tileDataValidator } from './tileDataSlots.js';
 import { tileMapLayerVector } from '../shared/layerVector';
+import { visitIndexedKeys } from '../../../../godot/index.js';
 import { ySortDiagnostics } from './ySortRules.js';
+
+/** One `layer_<i>/tile_data` write, the key as the file writes it. */
+interface TileDataWrite {
+  key: string;
+  value: string;
+  /** The layer `_set` resolves the key to (`property_list_helper.cpp:130-131`). */
+  layer: number;
+  /** The `format` in effect at the key's line (`tileDataSlots.ts`). */
+  format: number;
+}
+
+/**
+ * Every `layer_<i>/tile_data` write, in file order. Two spellings of one layer (`layer_1/…` and
+ * `layer_+1/…`) are two writes, each read under the `format` in effect at its own line, because
+ * Godot applies properties in file order. A layer the engine never builds carries none.
+ */
+function tileDataWrites(rawProps: Record<string, string>): TileDataWrite[] {
+  const writes: TileDataWrite[] = [];
+  visitIndexedKeys(rawProps, 'layer_', 'is_valid_int', (key, _indexText, layer, leaf, value) => {
+    if (leaf !== 'tile_data') return;
+    writes.push({ key, value, layer, format: formatWhenApplied(rawProps, key) });
+  });
+  return writes;
+}
 
 function checkTileMap(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -23,14 +48,6 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
   // (:1014-1021) and grown to the highest index written (:701-710). A gap layer
   // is not y-sorted, at z_index 0, and takes part in the comparison below.
   const layers = tileMapLayerVector(rawProps);
-  // Keyed by the resolved index, so a layer the engine never builds carries no
-  // tile data here either, and the key a message names is the one the loaded
-  // layer answers to.
-  const layerData: Array<[string, string]> = [];
-  for (const [index, leaves] of layers) {
-    const tileData = leaves.get('tile_data');
-    if (tileData !== undefined) layerData.push([`layer_${index}/tile_data`, tileData]);
-  }
   // tile_map.cpp:843: unconditional, on every TileMap whatever its configuration.
   diagnostics.push({
     severity: 'warning',
@@ -42,7 +59,37 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
 
   diagnostics.push(...ySortDiagnostics(node, rawProps, layers));
 
-  if (layerData.length > 0 && resourceSlotIsEmpty(rawProps.tile_set)) {
+  // The key whose tile data each layer holds after every write, in file order. A refused write
+  // returns before `layers[p_layer]->clear()` (tile_map.cpp:81), so the layer keeps the data an
+  // earlier write loaded.
+  const loadedFrom = new Map<number, string>();
+  const refused: string[] = [];
+  for (const { key, value, layer, format } of tileDataWrites(rawProps)) {
+    if (format !== TILE_MAP_DATA_FORMAT_DEFAULT) {
+      // tile_map.cpp:71 refuses any but the newest format when DISABLE_DEPRECATED is unset, as
+      // in every stock build. Only a `format` above the key reaches here, so the raw literal is
+      // the one applied.
+      const kept = loadedFrom.get(layer);
+      const leaves = kept === undefined ? 'empty' : `with the tile data of '${kept}'`;
+      refused.push(`'${key}' (format = ${rawProps.format}) leaves layer ${layer} ${leaves}`);
+      continue;
+    }
+    // Phase 1 has already refused a malformed shape, so only a value it accepted is decoded.
+    if (tileDataValidator(key, value, 0) !== null) continue;
+    if (decodeLegacyTileData(value, format) === null) {
+      diagnostics.push({
+        severity: 'error',
+        message: `'${key}' is not a decodable PackedInt32Array of cell triplets (${key.replace('/tile_data', '')}).`,
+        nodeName: node.name,
+        nodeType: node.type,
+        ruleName: 'tilemap-invalid-tile-data',
+      });
+      continue;
+    }
+    loadedFrom.set(layer, key);
+  }
+
+  if (loadedFrom.size > 0 && resourceSlotIsEmpty(rawProps.tile_set)) {
     diagnostics.push({
       severity: 'info',
       message: `TileMap has tile data but no 'tile_set' — its tiles cannot render.`,
@@ -52,34 +99,11 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // Each layer decodes under the `format` in effect when its key applies (file
-  // order, tileDataSlots.ts). tile_map.cpp:71 refuses any but the newest format
-  // when DISABLE_DEPRECATED is unset, as in every stock build, so the layer's
-  // tile data drops whole.
-  const refused: string[] = [];
-  for (const [key, value] of layerData) {
-    const format = formatWhenApplied(rawProps, key);
-    if (format !== TILE_MAP_DATA_FORMAT_DEFAULT) {
-      // Only a `format` above the key reaches here, so the raw literal is the one applied.
-      refused.push(`'${key}' (format = ${rawProps.format})`);
-    } else if (tileDataValidator(key, value, 0) === null && decodeLegacyTileData(value, format) === null) {
-      // Phase 1 has already refused the shape; only a value it accepted can
-      // still fail the triplet decode.
-      diagnostics.push({
-        severity: 'error',
-        message: `'${key}' is not a decodable PackedInt32Array of cell triplets (${key.replace('/tile_data', '')}).`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'tilemap-invalid-tile-data',
-      });
-    }
-  }
   if (refused.length > 0) {
     diagnostics.push({
       severity: 'error',
       message:
-        `TileMap loads ${refused.join(', ')} under a Godot 3 tile data format. ` +
-        `Godot refuses the tile data outright, so the layer loads empty.`,
+        `TileMap refuses Godot 3 tile data outright (tile_map.cpp:71): ${refused.join('; ')}.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'tilemap-unsupported-format',

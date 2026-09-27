@@ -7,22 +7,23 @@
 // The `settings/*` dispatcher hands every key it does not own to ChainIK3D, and a tier loads only
 // when imported. CCDIK3D, FABRIK3D and JacobianIK3D import only this file, so without this line
 // ChainIK3D would register only with SplineIK3D loaded, and its bounds would vanish for all three.
-import '../chainik3d/linterParser.js';
+import { chainIkSubclassSettings } from '../chainik3d/linterParser.js';
 import { validatorRegistry, type PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
-import { keyShapeError } from '../../../../linter/validators/propertyError.js';
 import { accepts, v } from '../../../../linter/validators/v.js';
+import { settingCount } from '../shared/settingCount.js';
 import {
   ROTATION_AXIS,
   SECONDARY_DIRECTION,
 } from '../skeletonmodifier3d/linterParser.js';
-import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
+import { declaredLeafResolver, indexedKeyRegex } from '../../../../godot/index.js';
+import { negativeIndexError } from '../../../../linter/reportedIndices.js';
 
 /**
  * Why a negative setting index is refused, shared by both levels of the family
  * so the two report the same thing.
  */
-const negativeSettingIndex = (index: number): string =>
+const negativeSettingIndex = (index: string): string =>
   `Setting index ${index} must be non-negative; IterateIK3D::_set fails the index check (iterate_ik_3d.cpp:39) before reaching the property, so the write never lands`;
 
 
@@ -76,6 +77,11 @@ const settingLeafValidator = indexedFamilyValidator({
  * `get_slicec(...).to_int()` and no gate (:37, :44), so a non-digit spelling still lands.
  */
 const JOINT_KEY = indexedKeyRegex('^settings/(#)/joints/#/(.+)$', 'to_int');
+/** `prop = get_slicec('/', 4)` (:45), and `limitation` reads `opt` below itself (:51). */
+const resolveJointLeaf = declaredLeafResolver(Object.keys(JOINT_LEAVES));
+/** `what = get_slicec('/', 2)` (:38). */
+const { resolveLeaf: resolveIterateSettingLeaf, ownsKey } = chainIkSubclassSettings(SETTING_LEAVES);
+export { resolveIterateSettingLeaf };
 
 /**
  * `settings/…` on IterateIK3D, half of a family: `_get_property_list` pushes its own leaves, then
@@ -86,23 +92,22 @@ const JOINT_KEY = indexedKeyRegex('^settings/(#)/joints/#/(.+)$', 'to_int');
 const settingsValidator = accepts((key, value, line) => {
   const joint = JOINT_KEY.exec(key);
   if (joint) {
-    const leafName = joint[2]!;
-    if (Object.prototype.hasOwnProperty.call(JOINT_LEAVES, leafName)) {
+    const leafName = resolveJointLeaf(joint[2]!);
+    if (leafName !== null) {
       // The joint index is deliberately unchecked: each leaf's ERR_FAIL_INDEX
       // sits in its own setter, so there is no single line to cite, and the
       // setting index below already covers what `_set` refuses uniformly.
-      const settingIndex = toIntIndex(joint[1]!);
-      if (settingIndex < 0) {
-        return keyShapeError(
-          key,
-          line,
-          negativeSettingIndex(settingIndex),
-          'INVALID_SETTING_INDEX'
-        );
-      }
+      const negative = negativeIndexError(
+        joint[1]!,
+        key,
+        line,
+        negativeSettingIndex,
+        'INVALID_SETTING_INDEX'
+      );
+      if (negative) return negative;
       return JOINT_LEAVES[leafName]!(key, value, line);
     }
-  } else if (key.endsWith('/target_node')) {
+  } else if (ownsKey(key)) {
     return settingLeafValidator(key, value, line);
   }
 
@@ -142,10 +147,9 @@ validatorRegistry.registerAll('IterateIK3D', {
   // (iterate_ik_3d.cpp:193) is a bare assignment.
   deterministic: v.boolean('deterministic'),
 
-  // iterate_ik_3d.cpp:398, ADD_ARRAY_COUNT, a serialised INT (class_db.cpp:1492) with
-  // PROPERTY_HINT_NONE. IterateIK3D::set_setting_count (iterate_ik_3d.h:287) forwards to
-  // `_set_setting_count`, which opens `ERR_FAIL_COND(p_count < 0)` (ik_modifier_3d.h:98): an error.
-  setting_count: v.int('setting_count', { min: 0, enforced: 'ik_modifier_3d.h:98' }),
+  // iterate_ik_3d.cpp:398, ADD_ARRAY_COUNT. IterateIK3D::set_setting_count (iterate_ik_3d.h:287)
+  // forwards to IKModifier3D's `_set_setting_count`.
+  setting_count: settingCount('IKModifier3D'),
 
   'settings/*': settingsValidator,
 });

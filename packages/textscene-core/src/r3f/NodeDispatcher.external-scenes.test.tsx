@@ -10,9 +10,7 @@ import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene, TscnInternalResource } from '../parser/types';
 import { NodeDispatcher } from './NodeDispatcher';
-import { SelectionProvider } from './contexts/SelectionContext';
-import { SceneResourcesProvider } from './SceneResourcesContext';
-import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
+import { SceneStack } from './testing/SceneStack';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../resources/ResourceLoader';
 import { TscnParser } from '../parser/TscnParser';
@@ -57,13 +55,9 @@ async function renderTree(
   externalResources: TscnScene['externalResources'] = []
 ) {
   return ReactThreeTestRenderer.create(
-    <ResourceLoaderProvider loader={loader}>
-      <SceneResourcesProvider internalResources={[]} externalResources={externalResources}>
-        <SelectionProvider>
-          <NodeDispatcher nodes={nodes} />
-        </SelectionProvider>
-      </SceneResourcesProvider>
-    </ResourceLoaderProvider>
+    <SceneStack loader={loader} scene={{ internalResources: [], externalResources }}>
+      <NodeDispatcher nodes={nodes} />
+    </SceneStack>
   );
 }
 
@@ -204,16 +198,9 @@ instance = ExtResource("1_cube")
       const mainScene = parser.parse(mainSceneContent);
 
       const renderer = await ReactThreeTestRenderer.create(
-        <ResourceLoaderProvider loader={fake.loader}>
-          <SceneResourcesProvider
-            internalResources={mainScene.internalResources}
-            externalResources={mainScene.externalResources}
-          >
-            <SelectionProvider>
-              <NodeDispatcher nodes={mainScene.nodes} />
-            </SelectionProvider>
-          </SceneResourcesProvider>
-        </ResourceLoaderProvider>
+        <SceneStack loader={fake.loader} scene={mainScene}>
+          <NodeDispatcher nodes={mainScene.nodes} />
+        </SceneStack>
       );
 
       // The merged ChildInstance node, with the root's Node3D type, holds the instance

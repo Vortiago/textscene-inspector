@@ -5,6 +5,8 @@
  * Test files are out of scope: they build materials to drive an assertion.
  */
 import { describe, expect, it } from 'vitest';
+import { resolve } from 'node:path';
+import { repoRoot } from '../parser/testing/parserKit';
 import type { JsxTag } from './testing/sourceScan';
 import {
   callSites,
@@ -12,14 +14,13 @@ import {
   jsxTags,
   offendingLines,
   repoPath,
-  repoRoot,
   walkSources,
 } from './testing/sourceScan';
 
 /** The whole repo's own source. `scripts/` counts: it renders too. */
 const SCANNED_ROOTS = ['apps', 'packages', 'scripts'];
 const SOURCES = walkSources(
-  SCANNED_ROOTS.map((dir) => repoRoot(dir)),
+  SCANNED_ROOTS.map((dir) => resolve(repoRoot(), dir)),
   isProductionSource
 );
 
@@ -149,6 +150,8 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the accumulator seed quad: fixed shaders, one uniform, one material per accumulator',
   'packages/textscene-core/src/r3f/materials/ExternalMaterialSlot.tsx':
     'the `.tres` arrival: the resource pipeline hands over a material constructed complete and never writes to it again, and a re-resolve replaces the whole object',
+  'packages/textscene-core/src/r3f/parentSpaceScope.tsx':
+    'mounts the world root, a bare Object3D that R3F adds as a child and never routes to a material slot',
   'packages/textscene-core/src/r3f/preview/PreviewLighting.tsx':
     "mounts the preview sun's aim target — an empty Object3D, added as a child",
 };

@@ -173,6 +173,34 @@ describe('WebResourceProvider', () => {
     });
   });
 
+  describe('loadResource - without a fixtures mirror', () => {
+    beforeEach(() => {
+      provider = new WebResourceProvider({ hasFixturesMirror: false });
+    });
+
+    it('serves an uploaded file', async () => {
+      provider.addUploadedFile('res://door.tscn', new File(['[gd_scene]'], 'door.tscn'));
+
+      await expect(provider.loadResource('res://door.tscn', 'PackedScene')).resolves.toBe(
+        '[gd_scene]'
+      );
+    });
+
+    it('rejects a missing res:// path without a request', async () => {
+      await expect(provider.loadResource('res://door.tscn', 'PackedScene')).rejects.toThrow(
+        'Resource not found: res://door.tscn'
+      );
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('rejects a path without the res:// prefix', async () => {
+      await expect(provider.loadResource('door.tscn', 'PackedScene')).rejects.toThrow(
+        'Resource not found: door.tscn'
+      );
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+  });
+
   describe('addUploadedFile', () => {
     // State change: File added and loadable
     it('should add file so it can be loaded by path', async () => {

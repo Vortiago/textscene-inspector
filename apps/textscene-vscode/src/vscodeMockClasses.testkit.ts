@@ -110,6 +110,11 @@ export const MockDiagnosticSeverity = {
   Hint: 3
 } as const;
 
+/** `vscode.TabInputText`: the input of a tab that shows a text document. */
+export class MockTabInputText {
+  constructor(public readonly uri: any) {}
+}
+
 export const MockViewColumn = {
   One: 1,
   Two: 2,

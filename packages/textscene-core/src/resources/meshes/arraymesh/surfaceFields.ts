@@ -8,8 +8,14 @@
 
 import { warn } from '../../../logger.js';
 import { parseGodotFloat } from '../../../godot/number.js';
-import { dictNumberField } from '../../../godot/variantParser.js';
+import {
+  dictBase64Field,
+  dictCallField,
+  dictNumberField,
+  dictStringField,
+} from '../../../godot/variantParser.js';
 import { parseGodotInt } from '../../../godot/int.js';
+import { unquoteString } from '../../../parser/utils.js';
 
 /** A surface's declared `AABB(px, py, pz, sx, sy, sz)`: a compressed surface's position scale. */
 export interface SurfaceAabb {
@@ -51,7 +57,7 @@ function readFloatTuple(
   type: string,
   count: number
 ): number[] | undefined {
-  const match = new RegExp(`"${key}"\\s*:\\s*${type}\\(([^)]*)\\)`).exec(block);
+  const match = dictCallField(key, type).exec(block);
   if (!match) return undefined;
   // `parseGodotFloat`, not `Number`: the latter reads `0x10` as 16 and an empty
   // component as 0, neither of which Godot's tokenizer accepts, so a malformed
@@ -75,9 +81,15 @@ export function readUvScale(block: string): [number, number] | undefined {
   return n ? [n[0]!, n[1]!] : undefined;
 }
 
+const NAME_RE = dictStringField('name');
+
+/**
+ * A surface's `"name"`, its escapes decoded. Godot writes a String (`mesh.h:314`), and a
+ * hand-written StringName converts to the same text.
+ */
 export function readName(block: string): string | undefined {
-  const match = /"name"\s*:\s*"([^"]*)"/.exec(block);
-  return match?.[1];
+  const literal = NAME_RE.exec(block)?.[1];
+  return literal === undefined ? undefined : unquoteString(literal);
 }
 
 /** A surface's raw `"material"` value, whichever reference form it holds. */
@@ -85,18 +97,42 @@ export function readMaterialRef(block: string): string | undefined {
   return /"material"\s*:\s*([^,\n}]+)/.exec(block)?.[1]?.trim();
 }
 
+/** Written only by `base64Field`. Never cleared: a mesh reads a fixed handful of keys. */
+const BASE64_FIELDS = new Map<string, RegExp>();
+
+/** The `key` field's pattern, built once per key rather than once per surface. */
+function base64Field(key: string): RegExp {
+  let field = BASE64_FIELDS.get(key);
+  if (!field) {
+    field = dictBase64Field(key);
+    BASE64_FIELDS.set(key, field);
+  }
+  return field;
+}
+
 /**
- * Extract the base64 payload of a `"<key>": PackedByteArray("…")` field.
- * A corrupt payload makes `atob` throw, which would fail the whole mesh. An
- * empty buffer instead lets the caller drop just this surface.
+ * Extract the base64 payload of a `"<key>": PackedByteArray("…")` field. Its compat form, a
+ * comma list of bytes, is not read. A corrupt payload makes `atob` throw, which would fail the
+ * whole mesh. An empty buffer instead lets the caller drop just this surface.
  */
 export function readPackedBytes(block: string, key: string): Uint8Array {
-  const match = new RegExp(`"${key}"\\s*:\\s*PackedByteArray\\("([^"]*)"\\)`).exec(block);
-  if (!match) return new Uint8Array(0);
+  const base64 = base64Field(key).exec(block)?.[1];
+  if (base64 === undefined) return new Uint8Array(0);
   try {
-    return Uint8Array.from(atob(match[1]!), (c) => c.charCodeAt(0));
+    return binaryStringBytes(atob(base64));
   } catch {
     warn(`[ArrayMesh] ${key} is not valid base64 — ignoring the payload`);
     return new Uint8Array(0);
   }
+}
+
+/**
+ * The bytes of an `atob` result, one char code (0 to 255) each. A plain loop into a preallocated
+ * array, not `Uint8Array.from` with a mapper: that calls the mapper per character, over 20 times
+ * slower on a 4 MB payload.
+ */
+function binaryStringBytes(binary: string): Uint8Array {
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
 }

@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { buildParticleGeometry } from './particleGeometry';
-import { IDENTITY_AFFINE, type RenderedParticle } from './simulate';
+import type { RenderedParticle } from './simulate';
+import { TRANSFORM2D_IDENTITY } from '../../../godot/transform2d.js';
 
 function particle(overrides: Partial<RenderedParticle> = {}): RenderedParticle {
   return {
-    transform: { ...IDENTITY_AFFINE },
+    transform: { ...TRANSFORM2D_IDENTITY },
     color: { r: 1, g: 1, b: 1, a: 1 },
     anim: 0,
     age: 0,
@@ -34,7 +35,7 @@ describe('buildParticleGeometry', () => {
 
   it('negates Y so a Godot +Y-down origin lands below the axis in three space', () => {
     const geometry = buildParticleGeometry(
-      [particle({ transform: { ...IDENTITY_AFFINE, ox: 3, oy: 7 } })],
+      [particle({ transform: { ...TRANSFORM2D_IDENTITY, tx: 3, ty: 7 } })],
       2,
       2
     )!;
@@ -56,7 +57,7 @@ describe('buildParticleGeometry', () => {
   });
 
   it('applies the particle basis, so a rotated quad is no longer axis-aligned', () => {
-    const rotated = { ax: 0, ay: 1, bx: -1, by: 0, ox: 0, oy: 0 };
+    const rotated = { a: 0, b: 1, c: -1, d: 0, tx: 0, ty: 0 };
     const geometry = buildParticleGeometry([particle({ transform: rotated })], 10, 2)!;
     const position = geometry.getAttribute('position');
     const xs = Array.from({ length: 4 }, (_, i) => position.getX(i));
@@ -89,8 +90,8 @@ describe('buildParticleGeometry', () => {
   it('keeps pose order, which is what draw_order decides', () => {
     const geometry = buildParticleGeometry(
       [
-        particle({ transform: { ...IDENTITY_AFFINE, ox: 0 } }),
-        particle({ transform: { ...IDENTITY_AFFINE, ox: 100 } }),
+        particle({ transform: { ...TRANSFORM2D_IDENTITY, tx: 0 } }),
+        particle({ transform: { ...TRANSFORM2D_IDENTITY, tx: 100 } }),
       ],
       2,
       2

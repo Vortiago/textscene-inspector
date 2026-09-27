@@ -10,6 +10,7 @@
 import '../skeletonmodifier3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
+import { settingCount } from '../shared/settingCount.js';
 // settingLeaves, jointLeaves, nonZeroVector3 and settingsDispatch hold the `settings/<i>/…` family.
 import { settingsValidator } from './settingsDispatch.js';
 
@@ -22,13 +23,8 @@ validatorRegistry.registerAll('SpringBoneSimulator3D', {
   // :1337, Variant::BOOL with no hint. set_mutable_bone_axes (:1220) assigns.
   mutable_bone_axes: v.boolean('mutable_bone_axes'),
 
-  // :1338, ADD_ARRAY_COUNT, a serialised INT property (class_db.cpp:1492) with PROPERTY_HINT_NONE,
-  // so no hint bounds it. set_setting_count opens with ERR_FAIL_COND(p_count < 0) (:841), so a
-  // negative count is an error.
-  setting_count: v.strictInt('setting_count', {
-    min: 0,
-    enforced: 'spring_bone_simulator_3d.cpp:841',
-  }),
+  // :1338, ADD_ARRAY_COUNT. The class defines its own set_setting_count.
+  setting_count: settingCount('SpringBoneSimulator3D'),
 
   // `_set` reads the setting index with a bare `get_slicec('/', 1).to_int()` (:42) and no
   // `is_valid_int()` gate, and `_to_int` skips non-digits (ustring.cpp:2268-2298), so

@@ -31,4 +31,8 @@ Strict parsing format-checks these `RetargetModifier3D` properties, plus 2 inher
 | `valid-retargetmodifier3d-child-skeleton` (type-family match) | `retargetmodifier3d-no-child-skeleton` | warning |
 <!-- lint:end -->
 
+The `retargetmodifier3d-no-child-skeleton` rule stays silent when a child's class lives
+elsewhere. An `instance=` node, or a class the pinned catalog does not list, may be a
+Skeleton3D.
+
 RetargetModifier3D registers `parseNode3D` directly, so `profile`, `use_global_pose` and `enable` are never read by the lenient parser. A malformed value is dropped rather than substituted, and an `enable` bit past the three the inspector lists is only a warning on the strict side.
