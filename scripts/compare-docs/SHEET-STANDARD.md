@@ -57,8 +57,11 @@ the gallery lays out the Godot-versus-previewer pair.
 
 A sheet has three sections: the intro under the `#` heading, `## Linting`, and
 `## Known limitations`. A sectioned sheet (below) adds one per feature, and nothing
-else. A sheet carries no hand-kept property table, no pixel-by-pixel comparison
-and no explanation of how the engine works.
+else. A sheet carries no hand-kept property table, no pixel measurement and no
+explanation of how the engine works. A pixel measurement is a probe point, a colour
+reading, an error figure such as `3/255` or a count of differing pixels. It goes
+stale with every capture, so it belongs in the pull request. `sheets.test.mjs`
+rejects one.
 
 ## Known limitations
 
@@ -175,7 +178,7 @@ a claim about the node and is machine-checked against the registration.
   relative path is wrong from a slice, wrong in the gallery, and broken on the
   deployed site.
 - **Shared causes.** `docs/comparison/README.md` explains a divergence that spans
-  sheets (the RemoteTransform relay limits) once. Report your own measured pixels
+  sheets (the RemoteTransform relay limits) once. Say what your own images show
   and point at it.
 
 One sheet kind carries no `## Linting` block: the `complex-*` whole-scene
@@ -237,8 +240,8 @@ Never write, in any form:
   old render to a new one is history by definition.
 - **Dates, commits, agent or packet names, issue or WI numbers.**
 
-If a divergence is **open**, state it in the present tense with its measured
-numbers. If it is **closed**, delete the row. A fixed divergence is not a
+If a divergence is **open**, state it in the present tense as what a viewer
+sees. If it is **closed**, delete the row. A fixed divergence is not a
 divergence, and a row "closed with numbers" is a changelog entry.
 
 History lives in git, the ADRs and the issue.

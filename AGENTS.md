@@ -69,7 +69,8 @@ Godot `.tscn` parser, linter and renderer (react-three-fiber over three.js). pnp
   dependency, not a missing variable. CI sets `bundled`, so that is the configuration the
   gate is verified under.
 - Parity questions: `pnpm ref:godot <scene.tscn> [--camera x,y,z] [--probe x,y]` renders
-  through real Godot 4.6 and prints exact pixels. Measure, never derive. It needs local
+  through real Godot 4.6 and prints exact pixels. Measure, never derive. A measurement
+  goes in the pull request, never in a comparison sheet. It needs local
   `godot` and `xvfb-run`, so it is a tool, not a gate. It injects the editor preview
   sun/environment per Godot's yield rule (ADR-0025). `--no-previews` gives runtime
   semantics.
