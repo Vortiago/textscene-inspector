@@ -2,7 +2,7 @@
   "name": "textscene-inspector",
   "displayName": "TextScene Inspector — Godot .tscn Preview",
   "description": "Live 3D preview of Godot .tscn scene files in VS Code — no Godot install required. Renders meshes, PBR materials, lights and cameras via three.js, with a scene-tree inspector and a .tscn linter.",
-  "version": "0.9.0",
+  "version": "1.0.0",
   "publisher": "vortiago",
   "keywords": [
     "godot",

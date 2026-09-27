@@ -1,6 +1,6 @@
 {
   "name": "@textscene/linter",
-  "version": "0.9.0",
+  "version": "1.0.0",
   "description": "CLI linter for .tscn files",
   "type": "module",
   "bin": {

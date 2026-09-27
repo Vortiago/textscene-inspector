@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-09-27
+
 ### Added
 - `.tscn` syntax highlighting: a TextMate grammar for section headings, property keys, strings, numbers, booleans, and Godot's typed-literal constructors (`SubResource(...)`, `Color(...)`, `Vector3(...)`, `PackedFloat32Array(...)` and so on), including nested arrays and dictionaries.
 - Settings: `textscene.defaultViewportMode` (starting viewport for new previews: `auto` matches the Godot editor, or force `2D`/`3D`), `textscene.diagnostics.enabled` (toggle Problems-panel linting), and `textscene.diagnostics.lintDebounceMs` (re-lint debounce timing).

@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-09-27
+
 ### Added
 - Published to npm as `@textscene/linter`: `npm install --global @textscene/linter`
   gives the `tscn-lint` command.
