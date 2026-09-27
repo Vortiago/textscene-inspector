@@ -1,7 +1,7 @@
 /**
  * Whole-scene composition and projection: integration scenes, sub-scene
  * instancing, physics bodies and their collision gizmos, decals, texture
- * filtering and curve-following.
+ * filtering, curve-following and where a Node3D's parent link ends.
  */
 
 export const SCENE_COMPOSITION_SCENES = [
@@ -50,4 +50,10 @@ export const SCENE_COMPOSITION_SCENES = [
   // A BoxMesh PathFollow3D at progress_ratio 0.5 along its Path3D. The curve
   // gizmo is selection-gated (ADR-0018), so this pins the follower's placement.
   { name: 'pathfollow3d-follow', file: 'unit-pathfollow-3d.tscn' },
+  // Where a Node3D's parent link ends (ADR-0008): a plain Node between two
+  // Node3Ds drops the transform, and a hidden one no longer hides; top_level
+  // drops the transform alone. Each box lands beside the grey reference.
+  { name: 'node3d-plain-node-transform', file: 'unit-node3d-plain-node-transform.tscn' },
+  { name: 'node3d-plain-node-visibility', file: 'unit-node3d-plain-node-visibility.tscn' },
+  { name: 'node3d-top-level', file: 'unit-node3d-top-level.tscn' },
 ];

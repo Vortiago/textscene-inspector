@@ -7,7 +7,8 @@
 import { useEffect, useRef, type MutableRefObject } from 'react';
 import { AnimationMixer, type AnimationAction, type AnimationClip, type Object3D } from 'three';
 import { useAnimationTransport } from '../contexts/AnimationTransportContext';
-import { useRegisterDriver } from '../contexts/AnimationDriverContext';
+import { useRegisterDriver, type BoundClips } from '../contexts/AnimationDriverContext';
+import { useRebindKey } from './useRebindKey';
 
 export interface UseAnimationDriverMountParams {
   /**
@@ -16,8 +17,13 @@ export interface UseAnimationDriverMountParams {
    * is active and clips are available.
    */
   object: Object3D | null;
-  /** Ready-to-play clips the driver owns (built by the caller). */
+  /** The clips the driver owns (built by the caller), for their names and durations. */
   clips: AnimationClip[];
+  /**
+   * Binds `clips` to the objects they move. The mixer build calls it, and so does an AnimationTree
+   * that plays these clips, so both bind against the scene as it stands then.
+   */
+  bind: () => BoundClips;
   /** This driver's node path in the scene tree; null outside a NodePathProvider. */
   nodePath: string | null;
   /**
@@ -40,10 +46,10 @@ export interface UseAnimationDriverMountParams {
   /** Clip name → duration in seconds, for the transport's scrubber. */
   durations: Record<string, number>;
   /**
-   * Called once when the mixer is built, with the object it is rooted on:
+   * Called once when the mixer is built, with the objects the bound clips move:
    * the driver takes its pose snapshot here, after all mixer state is ready.
    */
-  onMixerBuilt: (object: Object3D) => void;
+  onMixerBuilt: (targets: Object3D[]) => void;
   /**
    * Restores the authored pose from the `onMixerBuilt` snapshot on teardown.
    * It runs after `stopAllAction`, so it wins over THREE's own binding restore.
@@ -61,7 +67,7 @@ export interface UseAnimationDriverMountResult {
 export function useAnimationDriverMount(
   params: UseAnimationDriverMountParams
 ): UseAnimationDriverMountResult {
-  const { object, clips, nodePath, isActive, autoplay, durations, onMixerBuilt, restore } = params;
+  const { object, clips, bind, nodePath, isActive, autoplay, durations, onMixerBuilt, restore } = params;
   const buildMixer = params.buildMixer ?? isActive;
 
   const transport = useAnimationTransport();
@@ -69,6 +75,9 @@ export function useAnimationDriverMount(
 
   const mixerRef = useRef<AnimationMixer | null>(null);
   const actionsRef = useRef<Map<string, AnimationAction>>(new Map());
+  /** Written only by the mixer build below: the binding it plays, until teardown. */
+  const boundRef = useRef<BoundClips | null>(null);
+  const rebindKey = useRebindKey(boundRef);
 
   // Registered while selected, even with zero clips, so the Animation tab shows
   // "no animations" for an instanced driver outside the parse-time flattenedNodes.
@@ -82,33 +91,37 @@ export function useAnimationDriverMount(
   // whose `anim_player` resolves here can root its blended mixer.
   useEffect(() => {
     if (!object || clips.length === 0 || nodePath === null) return;
-    return registerDriver(nodePath, { object, clips });
-  }, [object, clips, nodePath, registerDriver]);
+    return registerDriver(nodePath, { object, clips, bind });
+  }, [object, clips, bind, nodePath, registerDriver]);
 
-  // Built only while the driver would use one and is loaded (ADR-0012). The
+  // Built only while the driver would use one and is loaded (ADR-0012), and again when a load
+  // mounts a target the binding missed. The
   // teardown stops, then restores, so the driver's snapshot wins over THREE's
   // own binding restore.
   useEffect(() => {
     if (!buildMixer || !object || clips.length === 0) return;
 
     const mixer = new AnimationMixer(object);
+    const bound = bind();
+    boundRef.current = bound;
     const actions = new Map<string, AnimationAction>();
-    for (const clip of clips) {
+    for (const clip of bound.clips) {
       actions.set(clip.name, mixer.clipAction(clip));
     }
 
     mixerRef.current = mixer;
     actionsRef.current = actions;
 
-    onMixerBuilt(object);
+    onMixerBuilt(bound.targets);
 
     return () => {
       mixer.stopAllAction();
       restore();
       mixerRef.current = null;
       actionsRef.current = new Map();
+      boundRef.current = null;
     };
-  }, [buildMixer, object, clips, onMixerBuilt, restore]);
+  }, [buildMixer, object, clips, bind, onMixerBuilt, restore, rebindKey]);
 
   return { mixerRef, actionsRef };
 }

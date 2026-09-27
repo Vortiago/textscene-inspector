@@ -1,0 +1,83 @@
+/**
+ * Exact binding for an animation's transform tracks. A clip template names each track by its
+ * target's scene path (`Root/Right/Arm.position`). Binding renames it to that object's `uuid`, which
+ * `PropertyBinding.findNode` matches anywhere below the mixer root. Two same-named nodes never
+ * collide, and a path through a missing node binds nothing, as Godot's `get_node` does.
+ */
+
+import { AnimationClip, type KeyframeTrack, type Object3D } from 'three';
+import { warn } from '../../logger';
+
+/** A node name never holds a `.` (`godot/nodeName.ts`), so the first one ends the path. */
+export function splitTrackName(name: string): { path: string; property: string } {
+  const dot = name.indexOf('.');
+  return { path: name.slice(0, dot), property: name.slice(dot) };
+}
+
+/** Every scene path the clips' tracks name, once each, in first-seen order. */
+export function trackTargetPaths(clips: readonly AnimationClip[]): string[] {
+  const paths = new Set<string>();
+  for (const clip of clips) for (const track of clip.tracks) paths.add(splitTrackName(track.name).path);
+  return [...paths];
+}
+
+/**
+ * The nearest object named `name` below `object`, breadth first. It never enters a registered
+ * wrapper: that is another node, which answers to its own path.
+ */
+function namedBelow(object: Object3D, name: string, wrappers: ReadonlySet<Object3D>): Object3D | null {
+  // Indexed, not `shift`: shifting re-copies the queue on every visit.
+  const queue = [...object.children];
+  for (let i = 0; i < queue.length; i++) {
+    const next = queue[i]!;
+    if (wrappers.has(next)) continue;
+    if (next.name === name) return next;
+    queue.push(...next.children);
+  }
+  return null;
+}
+
+/**
+ * Finds the object a transform track at a scene path drives: the named group inside the wrapper
+ * the dispatcher registered for that path. It reaches content that no path registers, such as a
+ * glTF scene, from the longest registered prefix, one name for each remaining segment. `null` when
+ * nothing matches. It reads the registry once, so one finder serves every path of a bind.
+ */
+export function trackTargetFinder(
+  nodeObjects: ReadonlyMap<string, Object3D>
+): (path: string) => Object3D | null {
+  const wrappers = new Set(nodeObjects.values());
+  return (path) => {
+    const segments = path.split('/');
+    for (let depth = segments.length; depth > 0; depth--) {
+      const wrapper = nodeObjects.get(segments.slice(0, depth).join('/'));
+      if (!wrapper) continue;
+      let target = namedBelow(wrapper, segments[depth - 1]!, wrappers);
+      for (const segment of segments.slice(depth)) {
+        if (!target) return null;
+        target = namedBelow(target, segment, wrappers);
+      }
+      return target;
+    }
+    return null;
+  };
+}
+
+/**
+ * The clip with each track renamed to its target's uuid. A track whose path has no target is
+ * dropped with a warning, so the rest of the clip still plays.
+ */
+export function bindClip(clip: AnimationClip, targets: ReadonlyMap<string, Object3D>): AnimationClip {
+  const tracks = clip.tracks.flatMap((track): KeyframeTrack[] => {
+    const { path, property } = splitTrackName(track.name);
+    const target = targets.get(path);
+    if (!target) {
+      warn(`[AnimationPlayer] "${clip.name}": no node at "${path}", so its ${property} track binds nothing`);
+      return [];
+    }
+    const renamed = track.clone();
+    renamed.name = `${target.uuid}${property}`;
+    return [renamed];
+  });
+  return new AnimationClip(clip.name, clip.duration, tracks, clip.blendMode);
+}
