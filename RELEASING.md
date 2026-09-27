@@ -117,24 +117,29 @@ proves that this workflow may publish as `vortiago`. Nothing is hosted on Azure.
    `textscene-marketplace`.
 6. Give the identity the **Reader** role on the subscription (**Access control
    (IAM)**).
-7. Record the identity's **Client ID**, and the **Tenant ID** and
-   **Subscription ID**.
-8. On the identity, open **Federated credentials** and add a credential.
-9. Select the scenario **GitHub Actions deploying Azure resources**.
-10. Enter the organisation `Vortiago`, the repository `textscene-inspector`,
-    the entity type **Environment** and the environment `release`. The subject
-    becomes `repo:Vortiago/textscene-inspector:environment:release`.
-11. In GitHub, open **Settings → Secrets and variables → Actions →
+7. Record the **Client ID** and the **Subscription ID** from the identity's
+   **Overview** page. Do not use its **Object (principal) ID**.
+8. Record the **Tenant ID** from **Microsoft Entra ID → Overview**.
+9. On the identity, open **Federated credentials** and add a credential.
+10. Select the scenario **GitHub Actions deploying Azure resources**.
+11. Enter the organisation `Vortiago` with the organisation ID `1761895`, the
+    repository `textscene-inspector` with the repository ID `1083105066`, the
+    entity type **Environment** and the environment `release`. The subject
+    becomes `repo:Vortiago@1761895/textscene-inspector@1083105066:environment:release`.
+12. In the repository's GitHub OpenID Connect (OIDC) settings, opt in to
+    immutable subject claims. GitHub sends the subject with the IDs only to
+    repositories created after 2026-07-15, and this one is older.
+13. In GitHub, open **Settings → Secrets and variables → Actions →
     Variables**.
-12. Add the repository variables `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` and
+14. Add the repository variables `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` and
     `AZURE_SUBSCRIPTION_ID`. They are identifiers, not secrets.
-13. Run the **Marketplace identity** workflow from **Actions**, on `main`.
-14. Copy the member ID from the run summary. The last step fails at this point,
+15. Run the **Marketplace identity** workflow from **Actions**, on `main`.
+16. Copy the member ID from the run summary. The last step fails at this point,
     because the identity is not a publisher member yet.
-15. On the Marketplace management page, open the `vortiago` publisher and
+17. On the Marketplace management page, open the `vortiago` publisher and
     select **Members**.
-16. Add the member ID with the **Contributor** role.
-17. Run **Marketplace identity** again. The last step now passes.
+18. Add the member ID with the **Contributor** role.
+19. Run **Marketplace identity** again. The last step now passes.
 
 The first `vscode-v` release creates the extension listing. No step before it
 is needed.
