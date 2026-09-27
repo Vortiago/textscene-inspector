@@ -6,15 +6,12 @@ scenes from the text file with three.js. You can click, orbit and inspect
 every node. Works in desktop VS Code and in VS Code for
 the Web (vscode.dev).
 
-## Why it is different
+## Highlights
 
-- 🧊 **A real 3D viewport**, not a node tree. The official godot-tools
-  "Scene Preview" is a tree view; this draws the scene.
-- 🚫 **No Godot install, no editor cache.** It renders straight from the
-  `.tscn` text. Thumbnail extensions depend on Godot's cache.
-- 🔎 **Inspect as you go:** scene-tree viewer, node property panel,
-  click-to-select in the viewport, jump-to-definition, hot-reload on save.
-- ✅ **Built-in `.tscn` linter** to catch malformed scenes.
+- **See the scene, not only the tree.** An interactive 3D and 2D viewport.
+- **No Godot install needed.** It renders straight from the `.tscn` text.
+- **Inspect as you go.** Scene tree, node properties and jump to source.
+- **Built-in linter.** Problems in `.tscn` files show in the Problems panel.
 
 ## What it does not do
 
