@@ -1,7 +1,7 @@
 {
   "name": "textscene-inspector",
-  "displayName": "TextScene Inspector — Godot .tscn Preview",
-  "description": "Live 3D preview of Godot .tscn scene files in VS Code — no Godot install required. Renders meshes, PBR materials, lights and cameras via three.js, with a scene-tree inspector and a .tscn linter.",
+  "displayName": "TextScene Inspector: Godot .tscn Preview",
+  "description": "Preview Godot .tscn scenes in 3D and 2D inside VS Code, without a Godot install. Renders meshes, PBR materials, lights and cameras with three.js, and adds a scene tree, an inspector and a .tscn linter.",
   "version": "1.0.0",
   "publisher": "vortiago",
   "keywords": [
@@ -116,7 +116,7 @@
             "Always open new previews in the 3D viewport."
           ],
           "default": "auto",
-          "description": "Viewport mode a newly-opened preview starts in. \"auto\" mirrors the Godot editor (a CanvasItem root opens 2D, a Node3D root opens 3D); an explicit mode overrides that for every newly-opened preview, though the viewport toolbar's 2D/3D toggle still works per-panel afterward. Already-open preview panels are unaffected until reopened."
+          "description": "The viewport a new preview opens in. \"auto\" follows the Godot editor: a CanvasItem root opens in 2D, and a Node3D root in 3D. \"2D\" and \"3D\" force that viewport. The 2D/3D toggle in each preview still works, and open previews keep their viewport until you reopen them."
         },
         "textscene.diagnostics.enabled": {
           "type": "boolean",

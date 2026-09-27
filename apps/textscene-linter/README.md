@@ -1,47 +1,49 @@
 # @textscene/linter
 
-Command-line linter for Godot's text formats, `.tscn` scenes and `.tres`
-resources, built on `@textscene/core/linter`. It runs two phases: strict
-parsing (`StrictTscnParser` catches syntax and format errors with line and
-column), then semantic lint rules (missing resources, invalid references,
-property constraints).
+`tscn-lint` checks Godot's text formats, `.tscn` scenes and `.tres` resources,
+without a Godot install. It runs in two phases:
+
+1. Strict parsing finds syntax and format errors, with line and column.
+2. Semantic rules find missing resources, invalid references and property
+   values that Godot refuses or changes.
 
 Godot has no text-scene linter of its own. This one covers every valid text
-scene file, not only what a previewer draws, so coverage tracks what the engine
-serialises. A
-property is worth validating because Godot writes it and reads it back, not
-because a renderer consumes it. Every diagnostic is grounded in a line of
-Godot's own source. Its severity (error, warning or info) follows what the
-engine does with the value (ADR-0032, defined under **Severity** in the root
-`CONTEXT.md`). A clean run means the file is sound. A diagnostic never fires on
-a scene Godot opens without complaint.
+scene file, not only what a previewer draws. A property is worth checking
+because Godot writes it and reads it back. Every diagnostic is grounded in a
+line of Godot's own source. Its severity (error, warning or info) follows what
+the engine does with the value
+([ADR-0032](https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md)).
+A clean run means the file is sound. A diagnostic never fires on a scene that
+Godot opens without complaint.
 
-## Install / Build
+## Install
 
-From the repo root:
+Requires Node.js 24 or later.
 
 ```bash
-pnpm install
-pnpm --filter @textscene/linter build
+npm install --global @textscene/linter
 ```
 
-This bundles `src/cli.ts` to `dist/cli.js`. The `tscn-lint` bin, and
-`pnpm lint:tscn` at the repo root, wrap it.
+Or run it once without installing:
+
+```bash
+npx @textscene/linter scenes/
+```
 
 ## Usage
 
 ```bash
-# Single file
-node apps/textscene-linter/dist/cli.js scenes/fixtures/unit-plane-mesh.tscn
+# One file
+tscn-lint scenes/main.tscn
 
-# Multiple files through a shell glob
-node apps/textscene-linter/dist/cli.js scenes/fixtures/*.tscn scenes/isometric/*.tscn
+# Several files through a shell glob
+tscn-lint scenes/*.tscn levels/*.tscn
 
-# Directory argument: recurses into every .tscn and .tres file underneath
-node apps/textscene-linter/dist/cli.js scenes/
+# A directory: checks every .tscn and .tres file underneath
+tscn-lint scenes/
 
-# Plain output (no ANSI colors), for example for CI logs
-node apps/textscene-linter/dist/cli.js --no-color scenes/fixtures/example-hallway-mockup.tscn
+# Plain output without ANSI colours, for example for CI logs
+tscn-lint --no-color scenes/
 ```
 
 Diagnostics print to stdout in every format. In `text` format a read failure
@@ -75,7 +77,7 @@ machine-readable.
   only for a finding about the whole file, such as `file-read-error`.
 
   ```bash
-  node apps/textscene-linter/dist/cli.js --format json scenes/ > lint-results.json
+  tscn-lint --format json scenes/ > lint-results.json
   ```
 
 - `github`: one [GitHub Actions workflow-command annotation](https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-an-error-message)
@@ -84,7 +86,7 @@ machine-readable.
   inline on the diff:
 
   ```bash
-  node apps/textscene-linter/dist/cli.js --format github scenes/
+  tscn-lint --format github scenes/
   ```
 
   It is auto-detected when `$GITHUB_ACTIONS=true` (inside a GitHub Actions
@@ -100,7 +102,19 @@ machine-readable.
 Warnings do not fail the run. Only errors and unreadable files do. The exit
 code contract is identical across all three output formats.
 
-## Architecture notes
+## Build from source
+
+From the root of the [repository](https://github.com/Vortiago/textscene-inspector):
+
+```bash
+pnpm install
+pnpm --filter @textscene/linter build
+```
+
+This bundles `src/cli.ts` to `dist/cli.js`. The `tscn-lint` bin and
+`pnpm lint:tscn` at the repository root run it.
+
+## Architecture notes (contributors)
 
 - **React- and THREE-free bundle**: the linter entry point
   (`packages/textscene-core/src/linter/index.ts`) imports each node slice's

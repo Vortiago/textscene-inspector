@@ -68,8 +68,9 @@ Beyond the node set:
 
 **VS Code extension**: desktop and web (vscode.dev) entry points, scene
 outline, go-to-definition on `SubResource` and `ExtResource` ids within the
-file, and hot reload on save. It is not yet published to the Marketplace.
-Build it from source (below).
+file, and hot reload on save. Install it from the
+[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=vortiago.textscene-inspector),
+or build it from source (below).
 
 **Web previewer**: an "Open .tscn" picker with a <kbd>Ctrl/Cmd+K</kbd> scene
 palette, and drag-and-drop multi-file upload (drop a scene and its textures in
@@ -85,7 +86,9 @@ that name no line. It builds in two editions:
   `&camera=<node path>` (for example `&camera=Root/Camera3D`) to open looking
   through a scene's own Camera3D.
 
-**CLI linter**: `pnpm lint:tscn <files>`, after `pnpm build:linter`.
+**CLI linter**: `npm install --global @textscene/linter` gives the `tscn-lint`
+command ([npm](https://www.npmjs.com/package/@textscene/linter)). In this
+repository, run `pnpm lint:tscn <files>` after `pnpm build:linter`.
 
 ## Quick start
 

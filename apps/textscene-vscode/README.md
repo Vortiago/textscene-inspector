@@ -2,8 +2,8 @@
 
 **See your Godot `.tscn` scenes in 3D without opening the Godot editor.**
 Renders meshes, PBR materials, lights, cameras, environments and instanced
-scenes from the text file with three.js, and lets you click, orbit and
-inspect every node. Works in desktop VS Code and in VS Code for
+scenes from the text file with three.js. You can click, orbit and inspect
+every node. Works in desktop VS Code and in VS Code for
 the Web (vscode.dev).
 
 ## Why it is different
@@ -16,12 +16,12 @@ the Web (vscode.dev).
   click-to-select in the viewport, jump-to-definition, hot-reload on save.
 - ✅ **Built-in `.tscn` linter** to catch malformed scenes.
 
-## What it is *not*
+## What it does not do
 
-A drop-in replacement for the Godot editor. Rendering is an
-*approximation* of Godot's renderer (custom shaders and some advanced
-material and lighting features may differ). Use it for inspection and
-review, not pixel-exact validation.
+It does not replace the Godot editor. The rendering approximates Godot's
+renderer, and custom shaders and some advanced material and lighting features
+can look different. Use it to inspect and review scenes, not to check them
+pixel for pixel.
 
 ## Usage
 
@@ -38,7 +38,7 @@ review, not pixel-exact validation.
 - 2D/3D viewport toggle for scenes containing Control or Node2D content (UI, sprites). The `textscene.defaultViewportMode` setting controls which mode a *new* preview starts in: `auto` (default) matches the Godot editor's own rule, and `2D` or `3D` forces every new preview into that mode.
 
 ### Editor integration
-- **Syntax highlighting** for `.tscn` files: section headings, property keys, strings, numbers, and Godot's typed-literal constructors (`SubResource(...)`, `Color(...)`, `Vector3(...)` and so on) are colored instead of plain text.
+- **Syntax highlighting** for `.tscn` files: section headings, property keys, strings, numbers, and Godot's typed-literal constructors (`SubResource(...)`, `Color(...)`, `Vector3(...)` and so on) are coloured instead of plain text.
 - **Outline view**: document symbols for nodes and resources in `.tscn` files.
 - **Go to Definition** on `SubResource(...)` and `ExtResource(...)` references.
 - **`res://` document links**: `res://relative/path` references are clickable, opening the referenced file.
@@ -46,11 +46,11 @@ review, not pixel-exact validation.
 - **Hot reload**: the preview refreshes when you save the scene, or any sub-scene, texture or material it references.
 
 ### Resource resolution
-`res://` paths resolve from the workspace root, so project-relative textures, materials, GLB meshes, and instanced sub-scenes (`PackedScene`) load the way they do in Godot.
+`res://` paths resolve from the workspace root, so project-relative textures, materials, GLB meshes, and instanced sub-scenes (`PackedScene`) load as they do in Godot.
 
 ## Supported nodes
 
-Every instantiable node type of Godot 4.6.3 is parsed and lint-checked, each as a self-contained slice. These render:
+The extension reads and lints every node type that Godot 4.6.3 can create. These node types also render:
 
 | Category | Nodes |
 | --- | --- |

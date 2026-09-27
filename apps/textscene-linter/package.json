@@ -1,7 +1,7 @@
 {
   "name": "@textscene/linter",
   "version": "1.0.0",
-  "description": "CLI linter for .tscn files",
+  "description": "Command-line linter for Godot .tscn scenes and .tres resources, with every check grounded in the Godot source.",
   "type": "module",
   "bin": {
     "tscn-lint": "./bin/tscn-lint.js"
@@ -25,7 +25,9 @@
     "type-check:tests": "tsc --noEmit"
   },
   "keywords": [
+    "godot",
     "tscn",
+    "tres",
     "linter",
     "validator",
     "cli"

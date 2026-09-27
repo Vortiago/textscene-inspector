@@ -3,7 +3,7 @@
 All notable changes to the TextScene Inspector extension are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-0.9.0 is the first tracked release.
+1.0.0 is the first published release. 0.9.0 was tracked here but never published.
 
 ## [Unreleased]
 
@@ -22,7 +22,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - "TextScene: Open Preview to the Side" command for `.tscn` files, with an editor-title button, rendering the scene in an interactive viewport.
-- One preview panel per file; the viewport camera position survives edits and reloads.
+- One preview panel per file. The viewport camera position survives edits and reloads.
 - Scene-tree and inspector panels beside the viewport: click objects in the 3D view to select them in the tree, double-click a node to jump to its line in the source.
 - 2D/3D viewport toggle for scenes with Control or Node2D content (UI overlays, sprites).
 - Outline view (document symbols) for `.tscn` files: nodes and resources at a glance.
