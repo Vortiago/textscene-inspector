@@ -8,6 +8,7 @@
 export {
   CMP_EPSILON,
   basisDeterminant,
+  bezierInterpolate,
   clamp,
   degToRad,
   isZeroApprox,

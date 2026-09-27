@@ -1,64 +1,47 @@
 /**
  * Curve3D decode: `_data = { "points": PackedVector3Array(...), "tilts": ... }`, nine
  * floats per point (`in.xyz, out.xyz, position.xyz`, handles relative to the
- * position), to control points and a tessellated polyline. `tilts` is ignored. No
- * THREE: Godot 3D space is right-handed Y-up, as three.js is.
+ * position), to control points and a tessellated polyline. `tilts` must be present but is
+ * not read. No THREE: Godot 3D space is right-handed Y-up, as three.js is.
  */
 
+import type { TscnInternalResource } from '../../../parser/types';
 import { parsePackedVector3Array } from '../../shapes/packedArray';
+import { bezierInterpolate } from '../../../godot/index.js';
+import { CURVE3D_DATA } from '../shared/bezierData';
+import { decodeBezierCurve, resolveBezierCurve, type BezierCurveReader } from '../shared/bezierCurve';
 import type {
   Curve3DControlPoint,
   Curve3DSample,
   Curve3DSampler,
 } from './types';
-import { dictPackedField } from '../../../godot/packedArrayFields.js';
 
-const FLOATS_PER_POINT = 9;
+const CURVE3D: BezierCurveReader<Curve3DControlPoint> = {
+  format: CURVE3D_DATA,
+  parse: parsePackedVector3Array,
+  pointAt: (flat, base) => ({
+    in: { x: flat[base + 0]!, y: flat[base + 1]!, z: flat[base + 2]! },
+    out: { x: flat[base + 3]!, y: flat[base + 4]!, z: flat[base + 5]! },
+    position: { x: flat[base + 6]!, y: flat[base + 7]!, z: flat[base + 8]! },
+  }),
+  origin: () => ({
+    in: { x: 0, y: 0, z: 0 },
+    out: { x: 0, y: 0, z: 0 },
+    position: { x: 0, y: 0, z: 0 },
+  }),
+};
 
-/**
- * Parse a Curve3D `_data` value into control points. Accepts the raw TSCN string
- * (`{ "points": PackedVector3Array(...), … }`) or, defensively, an object with a
- * `points` string. A trailing partial point is dropped. Returns `[]` for
- * missing/empty/malformed input.
- */
-export function parseCurve3DPoints(dataValue: unknown): Curve3DControlPoint[] {
-  const literal = extractPointsLiteral(dataValue);
-  if (!literal) return [];
-
-  let flat: Float32Array;
-  try {
-    flat = parsePackedVector3Array(literal);
-  } catch {
-    return [];
-  }
-
-  const count = Math.floor(flat.length / FLOATS_PER_POINT);
-  const points: Curve3DControlPoint[] = [];
-  for (let i = 0; i < count; i++) {
-    const b = i * FLOATS_PER_POINT;
-    points.push({
-      in: { x: flat[b + 0]!, y: flat[b + 1]!, z: flat[b + 2]! },
-      out: { x: flat[b + 3]!, y: flat[b + 4]!, z: flat[b + 5]! },
-      position: { x: flat[b + 6]!, y: flat[b + 7]!, z: flat[b + 8]! },
-    });
-  }
-  return points;
+/** The control points of a Curve3D resource body, as Godot loads them. */
+export function decodeCurve3D(data: Readonly<Record<string, unknown>>): Curve3DControlPoint[] {
+  return decodeBezierCurve(data, CURVE3D);
 }
 
-/** Built once: a non-global instance carries no `lastIndex`, so it is safe to share. */
-const POINTS_FIELD_RE = dictPackedField('points', 'PackedVector3Array');
-
-/**
- * The `points` value out of a `_data` string or object, in whichever of the
- * three spellings `parsePackedVector3Array` takes.
- */
-function extractPointsLiteral(dataValue: unknown): string | null {
-  if (typeof dataValue === 'string') return POINTS_FIELD_RE.exec(dataValue)?.[1] ?? null;
-  if (dataValue && typeof dataValue === 'object') {
-    const points = (dataValue as { points?: unknown }).points;
-    return typeof points === 'string' ? points : null;
-  }
-  return null;
+/** The control points of the Curve3D a `SubResource("id")` value names, or none. */
+export function resolveCurve3D(
+  ref: string | undefined,
+  internalResources: readonly TscnInternalResource[]
+): Curve3DControlPoint[] {
+  return resolveBezierCurve(ref, internalResources, CURVE3D);
 }
 
 /**
@@ -149,14 +132,9 @@ function appendSpan(
   for (let s = 1; s <= steps; s++) {
     const t = s / steps;
     flat.push(
-      cubic(p0.x, p1.x, p2.x, p3.x, t),
-      cubic(p0.y, p1.y, p2.y, p3.y, t),
-      cubic(p0.z, p1.z, p2.z, p3.z, t)
+      bezierInterpolate(p0.x, p1.x, p2.x, p3.x, t),
+      bezierInterpolate(p0.y, p1.y, p2.y, p3.y, t),
+      bezierInterpolate(p0.z, p1.z, p2.z, p3.z, t)
     );
   }
-}
-
-function cubic(a: number, b: number, c: number, d: number, t: number): number {
-  const u = 1 - t;
-  return u * u * u * a + 3 * u * u * t * b + 3 * u * t * t * c + t * t * t * d;
 }
