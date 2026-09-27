@@ -1,8 +1,8 @@
 /**
  * End-to-end AnimationTree: parses the `unit-animation-tree-*` fixtures through the TscnParser and
- * mounts AnimationPlayer and AnimationTree wired as production does. AnimationPlayer registers as
- * a driver at its NodePath and AnimationTree resolves `anim_player` to it, so nothing moves unless
- * both the `tree_root` and the `anim_player` resolution work.
+ * mounts them through NodeDispatcher, as production does. AnimationPlayer registers as a driver at
+ * its NodePath and AnimationTree resolves `anim_player` to it, so nothing moves unless the
+ * `tree_root`, the `anim_player` resolution and the track binding all work.
  */
 import { describe, expect, it } from 'vitest';
 import { resolve } from 'node:path';
@@ -11,21 +11,22 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../../../parser/TscnParser';
 import { fixturesDir, flatten } from '../../../parser/testing/parserKit';
 import type { TscnNode, TscnScene } from '../../../parser/types';
-import { AnimationPlayer } from '../animationplayer/Component';
-import { AnimationTree } from './Component';
-import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
+import * as THREE from 'three';
+import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
+import { SceneStack } from '../../../r3f/testing/SceneStack';
+import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import {
   AnimationTransportProvider,
   useAnimationTransport,
   type AnimationTransport,
 } from '../../../r3f/contexts/AnimationTransportContext';
 import {
-  SelectionProvider,
   useOptionalSelection,
   type SelectionContextValue,
 } from '../../../r3f/contexts/SelectionContext';
-import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { AnimationDriverProvider } from '../../../r3f/contexts/AnimationDriverContext';
+
+import '../../../r3f/nodes/index';
 
 function parseFixture(file: string): TscnScene {
   const f = resolve(fixturesDir(), file);
@@ -39,7 +40,6 @@ function findByType(scene: TscnScene, type: string): TscnNode {
   return found;
 }
 
-const AP_PATH = 'Scene/AnimationPlayer';
 const AT_PATH = 'Scene/AnimationTree';
 
 let transport: AnimationTransport;
@@ -54,41 +54,41 @@ async function setSelection(path: string | null) {
   await ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath(path));
 }
 
-/** Mounts the real parsed AnimationPlayer + AnimationTree wired as production does. */
-async function mountFixture(file: string, { select = AT_PATH }: { select?: string | null } = {}) {
-  const scene = parseFixture(file);
-  const playerNode = findByType(scene, 'AnimationPlayer');
-  const treeNode = findByType(scene, 'AnimationTree');
-
+/** Mounts the parsed scene through the dispatcher, as production does. */
+async function mountScene(
+  scene: TscnScene,
+  { select = AT_PATH, fake = createFakeResourceLoader() }: MountOptions = {}
+) {
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneResourcesProvider internalResources={scene.internalResources}>
-      <SelectionProvider>
-        <AnimationTransportProvider>
-          <AnimationDriverProvider>
-            <Capture />
-            <group name="Scene">
-              <NodePathProvider path={AP_PATH}>
-                <AnimationPlayer node={playerNode} />
-              </NodePathProvider>
-              <NodePathProvider path={AT_PATH}>
-                <AnimationTree node={treeNode} />
-              </NodePathProvider>
-              <mesh name="Mesh">
-                <boxGeometry args={[1, 1, 1]} />
-                <meshBasicMaterial />
-              </mesh>
-            </group>
-          </AnimationDriverProvider>
-        </AnimationTransportProvider>
-      </SelectionProvider>
-    </SceneResourcesProvider>
+    <SceneStack workspace="3d" loader={fake.loader} scene={scene}>
+      <AnimationTransportProvider>
+        <AnimationDriverProvider>
+          <Capture />
+          <NodeDispatcher nodes={scene.nodes} />
+        </AnimationDriverProvider>
+      </AnimationTransportProvider>
+    </SceneStack>
   );
   await setSelection(select);
   return renderer;
 }
 
+interface MountOptions {
+  select?: string | null;
+  fake?: ReturnType<typeof createFakeResourceLoader>;
+}
+
+async function mountFixture(file: string, options: MountOptions = {}) {
+  return mountScene(parseFixture(file), options);
+}
+
+/** The Mesh node's own group: the first object named after it. */
 function meshY(renderer: Awaited<ReturnType<typeof mountFixture>>): number {
-  return renderer.scene.findByProps({ name: 'Mesh' }).instance.position.y;
+  let root = (renderer.scene as unknown as { children: Array<{ instance: THREE.Object3D }> }).children[0]!.instance;
+  while (root.parent) root = root.parent;
+  const mesh = root.getObjectByName('Mesh');
+  if (!mesh) throw new Error('the Mesh node mounted nothing');
+  return mesh.position.y;
 }
 
 describe('AnimationTree integration — unit-animation-tree-state-machine.tscn', () => {
@@ -139,6 +139,40 @@ describe('AnimationTree integration — unit-animation-tree-stateless.tscn', () 
   it('never registers a transport entry, even when selected', async () => {
     const renderer = await mountFixture('unit-animation-tree-stateless.tscn');
     expect(transport.hasPlayer).toBe(false);
+    await renderer.unmount();
+  });
+});
+
+describe('AnimationTree integration — a target that mounts after the tree binds', () => {
+  const HOLDER_SCENE = `[gd_scene format=3]
+
+[node name="HolderRoot" type="Node3D"]
+
+[node name="Mesh" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+`;
+
+  /** The state-machine fixture with its Mesh moved into a sub-scene instance, `Holder`. */
+  function heldMeshScene(): TscnScene {
+    const source = readFileSync(resolve(fixturesDir(), 'unit-animation-tree-state-machine.tscn'), 'utf8')
+      .replace(/^(\[gd_scene[^\n]*\]\n)/, '$1\n[ext_resource type="PackedScene" path="res://holder.tscn" id="1_holder"]\n')
+      .replaceAll('NodePath("Mesh:', 'NodePath("Holder/Mesh:')
+      .replace(
+        /\[node name="Mesh" type="MeshInstance3D" parent="\."\]\n[^[]*/,
+        '[node name="Holder" parent="." instance=ExtResource("1_holder")]\n\n'
+      );
+    return new TscnParser().parse(source);
+  }
+
+  it('drives the target once the sub-scene holding it loads', async () => {
+    const fake = createFakeResourceLoader();
+    const renderer = await mountScene(heldMeshScene(), { fake });
+    await ReactThreeTestRenderer.act(async () => {
+      fake.scenes._resolve('res://holder.tscn', new TscnParser().parse(HOLDER_SCENE));
+    });
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await renderer.advanceFrames(1, 0.25);
+    expect(meshY(renderer)).toBeGreaterThan(0.5);
     await renderer.unmount();
   });
 });

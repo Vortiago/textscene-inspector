@@ -112,4 +112,14 @@ describe('IterateIK3D index grammar', () => {
     const content = scene('CCDIK3D', 'setting_count = 1\nsettings/x0/target_node = NodePath("../../Target")\n');
     expect(warningsOf(new Linter().lint(content))).toEqual([]);
   });
+
+  it('credits a target written with a tail, which _set ignores', () => {
+    // `what = path.get_slicec('/', 2)` (iterate_ik_3d.cpp:38) is `target_node`, so
+    // set_target_node runs on `settings/0/target_node/extra`.
+    const content = scene(
+      'CCDIK3D',
+      'setting_count = 1\nsettings/0/target_node/extra = NodePath("../../Target")\n'
+    );
+    expect(warningsOf(new Linter().lint(content))).toEqual([]);
+  });
 });

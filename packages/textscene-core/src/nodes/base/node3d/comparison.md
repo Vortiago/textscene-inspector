@@ -43,8 +43,4 @@ Strict parsing format-checks these `Node3D` properties, plus 10 inherited from N
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
-The lenient parser reads exactly two properties, `transform` and `visible`. A malformed `transform` warns and falls back to the identity, and `visible` resolves through plain string equality with no warning. `position`, `rotation`, `scale`, `basis`, `quaternion` and the `global_*` fields are never read, so only the composite `Transform3D` literal places a node.
-
-## Known limitations
-
-- **Approximated** `top_level = true` is not honoured. Every node nests in its parent's group, so the parent transform is always inherited.
+The lenient parser reads exactly three properties: `transform`, `visible` and `top_level`. A malformed `transform` warns and falls back to the identity. `visible` and `top_level` resolve through Godot's bool conversion with no warning. A spelling that does not convert leaves `visible` true and `top_level` false. The lenient parser never reads `position`, `rotation`, `scale`, `basis`, `quaternion` or the `global_*` fields, so only the composite `Transform3D` literal places a node.

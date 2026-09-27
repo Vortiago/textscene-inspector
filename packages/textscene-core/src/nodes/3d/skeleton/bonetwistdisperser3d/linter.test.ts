@@ -321,4 +321,29 @@ describe('BoneTwistDisperser3D index grammar', () => {
       }
     );
   });
+
+  it('reads a joint amount and joint_count through a tail, which _set ignores', () => {
+    // `prop = path.get_slicec('/', 4)` (bone_twist_disperser_3d.cpp:67) is `twist_amount`, and
+    // `what` is `joint_count` (:38, :63), so both reach their setters.
+    expectDiagnostic(
+      scene(
+        node('BoneTwistDisperser3D', {
+          setting_count: 1,
+          'settings/0/joint_count/extra': 1,
+          'settings/0/joints/1/twist_amount/extra': 0.5,
+        })
+      ),
+      { ruleName: 'bonetwistdisperser3d-joint-index-out-of-range', contains: ['0/1'] }
+    );
+    expectNoDiagnostic(
+      scene(
+        node('BoneTwistDisperser3D', {
+          setting_count: 1,
+          'settings/0/joint_count/extra': 2,
+          'settings/0/joints/1/twist_amount': 0.5,
+        })
+      ),
+      { ruleName: 'bonetwistdisperser3d-joint-index-out-of-range' }
+    );
+  });
 });

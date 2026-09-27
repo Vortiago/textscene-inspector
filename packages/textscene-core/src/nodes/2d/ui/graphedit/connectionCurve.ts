@@ -9,6 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { bezierInterpolate } from '../../../../godot/index.js';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 
 /** `MAX_CONNECTION_LINE_CURVE_TESSELATION_STAGES` (`graph_edit.cpp:54`). */
@@ -36,16 +37,6 @@ export function connectionControlPoints(from: Vec2, to: Vec2, curvature: number)
     p2: { x: to.x - cpOffset, y: to.y },
     p3: to,
   };
-}
-
-/** `Math::bezier_interpolate` (`core/math/math_funcs.h`), one component. */
-function bezierInterpolate(p0: number, p1: number, p2: number, p3: number, t: number): number {
-  const omt = 1 - t;
-  const omt2 = omt * omt;
-  const omt3 = omt2 * omt;
-  const t2 = t * t;
-  const t3 = t2 * t;
-  return p0 * omt3 + 3 * p1 * omt2 * t + 3 * p2 * omt * t2 + p3 * t3;
 }
 
 function bezierPoint(cp: ConnectionCurveControlPoints, t: number): Vec2 {

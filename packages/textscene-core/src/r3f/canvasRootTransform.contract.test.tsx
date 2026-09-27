@@ -65,8 +65,9 @@ const RECT = 'polygon = PackedVector2Array(0, 0, 160, 0, 160, 80, 0, 80)';
 
 // The root is culled from the canvas transform, white and at z 0
 // (`servers/rendering/renderer_canvas_cull.cpp:70-83`). Visibility still reaches a
-// top_level child (`canvas_item.cpp:102-108`), so a root stays nested in the
-// rendered tree and cancels its ancestors' transform.
+// top_level child (`canvas_item.cpp:102-108`), so that root stays nested in the
+// rendered tree and cancels its ancestors' transform. A root below a non-CanvasItem
+// escapes its ancestors instead (`parentSpaceScope.contract.test.tsx`).
 describe('a canvas root draws in canvas space', () => {
   it('drops the transform above a broken CanvasItem chain', async () => {
     const root = await renderWorld(`[gd_scene format=3]

@@ -38,12 +38,18 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
   const prevClipRef = useRef<string | null>(null);
   const prevTimeRef = useRef<number>(0);
   const prevReconfigureKeyRef = useRef<unknown>(undefined);
+  /** Written only by the frame below: the mixer it last drove. */
+  const prevMixerRef = useRef<AnimationMixer | null>(null);
 
   useFrame((_, delta) => {
     const { playState, selectedClip, transportTime, mixerRef, actionsRef } = params;
     const speedScale = params.speedScale ?? 1;
     const mixer = mixerRef.current;
     if (!mixer) return;
+    // A rebuilt mixer, such as one that bound a late target, holds fresh actions at time 0 with
+    // nothing configured, so it resumes from the transport as a clip switch would.
+    const mixerRebuilt = prevMixerRef.current !== null && mixer !== prevMixerRef.current;
+    prevMixerRef.current = mixer;
     const action = selectedClip ? actionsRef.current.get(selectedClip) ?? null : null;
 
     // Clip switch: stop the previous action so only one drives at a time.
@@ -56,7 +62,7 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
     // Reconfigure on a clip switch or a reconfigureKey change, without
     // restarting the running action.
     const reconfigureChanged = !Object.is(params.reconfigureKey, prevReconfigureKeyRef.current);
-    if ((clipChanged || reconfigureChanged) && action && selectedClip) {
+    if ((clipChanged || reconfigureChanged || mixerRebuilt) && action && selectedClip) {
       params.configureAction(action, selectedClip);
     }
     prevReconfigureKeyRef.current = params.reconfigureKey;
@@ -64,7 +70,8 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
     const step = stepPlayback({
       prevState: prevStateRef.current,
       state: playState,
-      prevTime: prevTimeRef.current,
+      // NaN differs from every time, so a paused rebuild samples its new action once.
+      prevTime: mixerRebuilt ? Number.NaN : prevTimeRef.current,
       transportTime,
       liveTime: action?.time ?? null,
       clipChanged,
@@ -78,6 +85,7 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
       case 'ensure-playing': {
         if (action && !action.isRunning()) {
           startAction(action);
+          if (mixerRebuilt) action.time = transportTime;
         }
         mixer.update(delta * speedScale);
         if (action) params.reportTime(action.time);

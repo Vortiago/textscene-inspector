@@ -6,7 +6,6 @@
  */
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource, TscnNode, TscnScene } from '../../../parser/types';
@@ -18,7 +17,8 @@ import type { ResourceProvider } from '../../../resources/ResourceProvider';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { countedTable } from '../../../resources/testing/countedTable';
 import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext';
-import { SelectionProvider, useSelection } from '../../contexts/SelectionContext';
+import { SelectionProvider } from '../../contexts/SelectionContext';
+import { HiddenSeeder } from '../../testing/HiddenSeeder';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { FontResource } from '../../../resources/fonts/font/types';
 import { resolveSceneFontMetrics } from './text/sceneFontLoader';
@@ -61,15 +61,6 @@ function scene(
 
 function instanceOf(name: string, id: string, type = 'Node'): TscnNode {
   return node(name, type, { instance: `ExtResource("${id}")` });
-}
-
-/** Seeds `SelectionContext.hiddenNodePaths` from inside the provider. */
-function HiddenPathSeeder({ paths }: { paths: readonly string[] }) {
-  const { toggleHidden } = useSelection();
-  useEffect(() => {
-    for (const p of paths) toggleHidden(p);
-  }, [paths, toggleHidden]);
-  return null;
 }
 
 function wrapperFor(loader: ReturnType<typeof createFakeResourceLoader>['loader']) {
@@ -875,7 +866,7 @@ anchors_preset = 15
         wrapper: ({ children }) => (
           <ResourceLoaderProvider loader={loader.loader}>
             <SelectionProvider>
-              <HiddenPathSeeder paths={['Root/Panel']} />
+              <HiddenSeeder paths={['Root/Panel']} />
               {children}
             </SelectionProvider>
           </ResourceLoaderProvider>
@@ -1494,7 +1485,7 @@ custom_minimum_size = Vector2(0, 40)
         wrapper: ({ children }) => (
           <ResourceLoaderProvider loader={loader.loader}>
             <SelectionProvider>
-              <HiddenPathSeeder paths={hidden} />
+              <HiddenSeeder paths={hidden} />
               {children}
             </SelectionProvider>
           </ResourceLoaderProvider>
@@ -1513,7 +1504,7 @@ custom_minimum_size = Vector2(0, 40)
         wrapper: ({ children }) => (
           <ResourceLoaderProvider loader={loader.loader}>
             <SelectionProvider>
-              <HiddenPathSeeder paths={['Root/Column/Second']} />
+              <HiddenSeeder paths={['Root/Column/Second']} />
               {children}
             </SelectionProvider>
           </ResourceLoaderProvider>
@@ -1543,7 +1534,7 @@ anchors_preset = 15
         wrapper: ({ children }) => (
           <ResourceLoaderProvider loader={loader.loader}>
             <SelectionProvider>
-              <HiddenPathSeeder paths={['Root/Holder']} />
+              <HiddenSeeder paths={['Root/Holder']} />
               {children}
             </SelectionProvider>
           </ResourceLoaderProvider>
@@ -1920,7 +1911,7 @@ describe('useBuildSolveTree — a container that writes its children’s `visibl
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []), {
       wrapper: ({ children }: { children: ReactNode }) => (
         <SelectionProvider>
-          <HiddenPathSeeder paths={['FC/Contents']} />
+          <HiddenSeeder paths={['FC/Contents']} />
           {children}
         </SelectionProvider>
       ),
