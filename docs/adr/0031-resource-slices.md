@@ -59,7 +59,7 @@ missing-resources row).
 ## Amendments
 
 - **Naming**: a property-bag decoder is `decode<Type>`. Leaf value scanners
-  (`tessellateCurve3D`, `parseCurve3DPoints`, `parseAtlasRegion`) keep `parse*` names,
+  (`parsePackedVector2Array`, `parsePackedVector3Array`) keep `parse*` names,
   because they read one literal, not a bag.
 - **Bus tags are the cached-artifact kinds** (`texture` `material` `scene` `glb`
   `resource` `arraymesh` `font` `theme`). Many Godot-text types share the generic

@@ -33,7 +33,7 @@
  */
 
 import type { Curve, CurvePoint } from './types';
-import { CMP_EPSILON } from '../../../godot/index.js';
+import { CMP_EPSILON, bezierInterpolate } from '../../../godot/index.js';
 
 
 /**
@@ -101,18 +101,3 @@ function sampleLocalNoCheck(
   return bezierInterpolate(a.position.y, yac, ybc, b.position.y, t);
 }
 
-/** `Math::bezier_interpolate`: the scalar cubic Bézier. */
-function bezierInterpolate(
-  start: number,
-  control1: number,
-  control2: number,
-  end: number,
-  t: number
-): number {
-  const omt = 1 - t;
-  const omt2 = omt * omt;
-  const omt3 = omt2 * omt;
-  const t2 = t * t;
-  const t3 = t2 * t;
-  return start * omt3 + control1 * omt2 * t * 3 + control2 * omt * t2 * 3 + end * t3;
-}
