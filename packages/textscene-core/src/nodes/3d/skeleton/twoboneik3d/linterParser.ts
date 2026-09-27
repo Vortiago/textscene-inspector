@@ -13,6 +13,7 @@ import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js'
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { v } from '../../../../linter/validators/index.js';
 import { settingCount } from '../shared/settingCount.js';
+import { declaredLeafResolver } from '../../../../godot/index.js';
 import {
   BONE_DIRECTION,
   SECONDARY_DIRECTION,
@@ -89,6 +90,9 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // and no is_finite guard, so a negative length loads and runs: a warning.
   'end_bone/length': v.float('end_bone/length', { min: 0, hinted: 'two_bone_ik_3d.cpp:153' }),
 };
+
+/** For the rules: `what = path.get_slicec('/', 2)` (two_bone_ik_3d.cpp:38). */
+export const resolveTwoBoneSettingLeaf = declaredLeafResolver(Object.keys(SETTING_LEAVES));
 
 /** The whole `settings/<i>/…` family, flat and nested leaves alike. */
 const settingValidator = indexedFamilyValidator({

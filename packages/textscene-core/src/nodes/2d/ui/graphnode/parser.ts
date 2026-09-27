@@ -17,8 +17,11 @@ import { indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
 import type { GraphNodeProperties, GraphNodeSlot } from './types';
 import { parseGraphElement } from '../graphelement/parser';
 
-/** `graph_node.cpp:45`: bare `str.get_slicec('/', 1).to_int()`, no validity gate. */
-const SLOT_KEY_RE = indexedKeyRegex('^slot/(#)/(.+)$', 'to_int');
+/**
+ * `graph_node.cpp:45-46`: a bare `str.get_slicec('/', 1).to_int()`, no validity gate, then
+ * `get_slicec('/', 2)` as the property name, so a tail below it never reaches the comparison.
+ */
+const SLOT_KEY_RE = indexedKeyRegex('^slot/(#)/([^/]*)', 'to_int');
 
 /**
  * `Slot`'s own class defaults (`graph_node.h:41-52`): also what

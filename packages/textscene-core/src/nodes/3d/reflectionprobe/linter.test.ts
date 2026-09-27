@@ -9,7 +9,7 @@ import { StrictTscnParser } from '../../../linter/StrictTscnParser';
 import { ruleRegistry } from '../../../linter/RuleRegistry';
 import type { Diagnostic, RuleContext } from '../../../linter/types';
 import './linterParser';
-import { reflectionProbeAmbientModeRule } from './linter';
+import { reflectionProbeValidationRule } from './linter';
 
 /** Diagnostics the rule reports for a `[node type="ReflectionProbe"]` carrying `properties`. */
 function checkProbe(properties: string): Diagnostic[] {
@@ -23,13 +23,13 @@ ${properties}`;
   const node = scene?.nodes[0]?.children[0];
   expect(node?.type, 'the fixture text must yield a ReflectionProbe node').toBe('ReflectionProbe');
   const context: RuleContext = { scene: scene!, node: node!, properties: node!.properties };
-  return reflectionProbeAmbientModeRule.check(context);
+  return reflectionProbeValidationRule.check(context);
 }
 
 describe('ReflectionProbe semantic rules', () => {
   it('registers the rule so the linter actually runs it', () => {
     expect(ruleRegistry.getRulesForNodeType('ReflectionProbe').map((rule) => rule.meta.name)).toContain(
-      'valid-reflectionprobe-ambient-mode'
+      'valid-reflectionprobe-properties'
     );
   });
 
@@ -63,5 +63,60 @@ describe('ReflectionProbe semantic rules', () => {
 
   it('is silent on a probe that sets no ambient properties at all', () => {
     expect(checkProbe('intensity = 0.5\n')).toEqual([]);
+  });
+});
+
+/**
+ * Both setters clamp each `origin_offset` axis to `half_size - 0.01` against the size in
+ * effect when the line is read (reflection_probe.cpp:102-110, :123-131). `set_size` floors
+ * `half_size` at 0.01 and `set_origin_offset` does not. Values measured on 4.6.3.
+ */
+describe('ReflectionProbe origin_offset clamped by size', () => {
+  it('warns that an offset outside the size loads clamped, keeping each sign', () => {
+    expect(checkProbe('size = Vector3(2, 2, 2)\norigin_offset = Vector3(5, 0, -5)\n')).toEqual([
+      expect.objectContaining({
+        severity: 'warning',
+        ruleName: 'reflectionprobe-origin-offset-clamped',
+        message: expect.stringMatching(/Vector3\(5, 0, -5\) loads as Vector3\(0\.99, 0, -0\.99\)/),
+      }),
+    ]);
+  });
+
+  it('clamps an offset listed before size against the default size', () => {
+    const diagnostics = checkProbe('origin_offset = Vector3(15, 0, 0)\nsize = Vector3(40, 40, 40)\n');
+    expect(diagnostics.map((d) => d.message)).toEqual([expect.stringContaining('loads as Vector3(9.99, 0, 0)')]);
+  });
+
+  it('flips the sign against a zero size, since set_origin_offset has no 0.01 floor', () => {
+    const diagnostics = checkProbe('size = Vector3(0, 2, 2)\norigin_offset = Vector3(1, 0, 0)\n');
+    expect(diagnostics.map((d) => d.message)).toEqual([expect.stringContaining('loads as Vector3(-0.01, 0, 0)')]);
+  });
+
+  it('clamps to float residue when a zero size comes after the offset', () => {
+    const diagnostics = checkProbe('origin_offset = Vector3(1, 0, 0)\nsize = Vector3(0, 2, 2)\n');
+    expect(diagnostics.map((d) => d.message)).toEqual([expect.stringContaining('loads as Vector3(-2.2351741e-10, 0, 0)')]);
+  });
+
+  it('checks the offset against the default size when size is absent', () => {
+    expect(checkProbe('origin_offset = Vector3(12, 0, 0)\n')).toHaveLength(1);
+    expect(checkProbe('origin_offset = Vector3(9, 0, 0)\n')).toEqual([]);
+  });
+
+  it('says nothing for an offset the clamp returns unchanged in float storage', () => {
+    expect(checkProbe('size = Vector3(2, 2, 2)\norigin_offset = Vector3(0.99, 0, 0)\n')).toEqual([]);
+  });
+
+  it('says nothing for an offset inside the size, or no offset at all', () => {
+    expect(checkProbe('size = Vector3(2, 2, 2)\norigin_offset = Vector3(0.5, -0.5, 0)\n')).toEqual([]);
+    expect(checkProbe('size = Vector3(0, 0, 0)\n')).toEqual([]);
+  });
+
+  it('says nothing for a nan component, which no comparison clamps', () => {
+    expect(checkProbe('size = Vector3(2, 2, 2)\norigin_offset = Vector3(nan, 0, 0)\n')).toEqual([]);
+  });
+
+  it('says nothing about a malformed vector, which the format validator reports', () => {
+    expect(checkProbe('size = Vector3(2, 2, 2)\norigin_offset = Vector3(5, 0)\n')).toEqual([]);
+    expect(checkProbe('size = Vector3(2, 2)\norigin_offset = Vector3(5, 0, 0)\n')).toEqual([]);
   });
 });

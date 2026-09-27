@@ -145,4 +145,16 @@ item/2/mesh_cast_shadow = "nope"
     expect(model.get(1)!.castShadow).toBe(ShadowCastingSetting.ON);
     expect(model.get(2)!.castShadow).toBe(ShadowCastingSetting.ON);
   });
+
+  it('reads an empty item index as item 0, as "".to_int() does', () => {
+    // `get_slicec('/', 1).to_int()` (mesh_library.cpp:40) of an empty segment is 0 (ustring.cpp:2304-2305).
+    const tres = `[gd_resource type="MeshLibrary" format=3]
+
+[resource]
+item//name = "Zero"
+`;
+    const model = meshLibraryFromTres(parseTresFile(tres), 'res://tiles.tres');
+
+    expect(model.get(0)!.name).toBe('Zero');
+  });
 });

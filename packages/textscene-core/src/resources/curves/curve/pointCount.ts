@@ -4,15 +4,9 @@
  */
 
 import { clamp } from '../../../godot/index.js';
+import { MAX_PADDED_POINTS } from '../shared/pointCount';
 import { curveIndex } from './sample';
 import { CurveTangentMode, type Curve, type CurvePoint } from './types';
-
-/**
- * A previewer must not hang a tab. Godot has no such cap (`point_count` is an
- * unbounded int), but each padded point is seated in order, so a count in the
- * millions is quadratic work before the first paint.
- */
-export const MAX_PADDED_POINTS = 4096;
 
 /**
  * The point list at the declared count, as `Curve::set_point_count` (curve.cpp:41-57).

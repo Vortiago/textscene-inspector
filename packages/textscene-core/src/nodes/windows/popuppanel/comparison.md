@@ -20,6 +20,8 @@ Strict parsing format-checks the inherited set (45 inherited from Window, 47 inh
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | info |
+|  | `window-size-clamped-by-limits` | warning |
+|  | `window-content-scale-factor-floored` | warning |
 <!-- lint:end -->
 
 PopupPanel declares no property of its own. The lenient parser registers the plain `Node` reader. A negative inherited `size` component or an unquoted `title` is never read, substituted or reported on the lenient path.

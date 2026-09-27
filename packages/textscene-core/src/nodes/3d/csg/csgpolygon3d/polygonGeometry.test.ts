@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { tessellateCurve3D, type Curve3DControlPoint } from '../../../../resources/shapes/curve3d';
+import { tessellateCurve3D, type Curve3DControlPoint } from '../../../../resources/curves/curve3d/index.js';
 import { buildCsgPolygonGeometry, PathRotation, PolygonMode, type CsgPolygonSpec } from './polygonGeometry';
 
 const BASE: CsgPolygonSpec = {
