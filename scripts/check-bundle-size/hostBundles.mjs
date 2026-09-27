@@ -2,7 +2,7 @@
  * The extension host (`src/extension.ts`, bundled as `dist/extension.js` for desktop VS Code and
  * `dist/extension.web.js` for vscode.dev) imports only React-free `@textscene/core` subpaths
  * (`/parser`, `/linter`, `/logger`, targeted resource utils), never the root barrel: its React and
- * CSS side effects defeat tree-shaking and grow the host about 4x (ARCHITECTURE.md, "Bundle Size Target").
+ * CSS side effects defeat tree-shaking and grow the host about 4x (ARCHITECTURE.md, "Bundle size").
  */
 
 import { existsSync, readFileSync, statSync } from 'node:fs';
@@ -74,7 +74,7 @@ export function checkHostBundles() {
       );
       console.error(
         '[bundle-size] the extension host must import only React-free @textscene/core ' +
-          'subpaths (parser/linter/logger) — see ARCHITECTURE.md "Bundle Size Target".'
+          'subpaths (parser/linter/logger) — see ARCHITECTURE.md "Bundle size".'
       );
       ok = false;
     } else {

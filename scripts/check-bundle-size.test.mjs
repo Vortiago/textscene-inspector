@@ -2,7 +2,7 @@
  * Tests the token scan and the metafile check behind the extension host-bundle guard:
  * `dist/extension.js` and `dist/extension.web.js` must never contain `react` or `three`. A host
  * file that reaches the root `@textscene/core` barrel, not the React-free `/parser`, `/linter`
- * and `/logger` subpaths, grows the bundle about 4x (ARCHITECTURE.md, "Bundle Size Target").
+ * and `/logger` subpaths, grows the bundle about 4x (ARCHITECTURE.md, "Bundle size").
  */
 import { describe, expect, it } from 'vitest';
 import { findForbiddenHostInputs, findHostBundleViolations } from './check-bundle-size/hostBundles.mjs';
