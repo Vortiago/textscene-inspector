@@ -73,8 +73,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          # A first release has no earlier tag, and generated notes would then list every
-          # pull request ever merged.
+          # Without an earlier tag, generated notes would list every merged pull request.
           generate_release_notes: ${{ needs.validate.outputs.previous_tag != '' }}
           body: ${{ needs.validate.outputs.previous_tag == '' && 'First public release.' || '' }}
           previous_tag: ${{ needs.validate.outputs.previous_tag }}
@@ -118,17 +117,15 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          # A first release has no earlier tag, and generated notes would then list every
-          # pull request ever merged.
+          # Without an earlier tag, generated notes would list every merged pull request.
           generate_release_notes: ${{ needs.validate.outputs.previous_tag != '' }}
           body: ${{ needs.validate.outputs.previous_tag == '' && 'First public release.' || '' }}
           previous_tag: ${{ needs.validate.outputs.previous_tag }}
           make_latest: false
           files: apps/textscene-linter/*.tgz
 
-  # Each registry is its own job, so "Re-run failed jobs" retries only the one that failed,
-  # and each publish skips a version the registry already holds. The publish jobs install
-  # no workspace dependencies: an install script would run beside the OIDC token.
+  # One job per registry, so a re-run retries only the failed one. No workspace install
+  # here: an install script would run beside the OIDC token.
 
   npm:
     name: Publish the linter to npm
@@ -178,8 +175,7 @@ jobs:
         with:
           name: vscode-extension
 
-      # Microsoft Entra ID through a federated managed identity. The Marketplace's Azure
-      # DevOps PATs are global PATs, which Azure DevOps retires on 2026-12-01.
+      # Entra ID, not a PAT: Azure DevOps retires the global PATs the Marketplace needs on 2026-12-01.
       - uses: azure/login@v3
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
@@ -201,8 +197,7 @@ jobs:
     env:
       VERSION: ${{ needs.validate.outputs.version }}
     steps:
-      # Optional: skipped, not failed, without the secret. A secret cannot appear in `if:`,
-      # so a step output carries whether it is set.
+      # Skipped without the secret. A secret cannot appear in `if:`, so a step output carries it.
       - name: Detect the Open VSX token
         id: token
         env:

@@ -86,9 +86,9 @@ that name no line. It builds in two editions:
   `&camera=<node path>` (for example `&camera=Root/Camera3D`) to open looking
   through a scene's own Camera3D.
 
-**CLI linter**: `npm install --global @textscene/linter` gives the `tscn-lint`
-command ([npm](https://www.npmjs.com/package/@textscene/linter)). In this
-repository, run `pnpm lint:tscn <files>` after `pnpm build:linter`.
+**CLI linter**: [`npm install --global @textscene/linter`](https://www.npmjs.com/package/@textscene/linter),
+then `tscn-lint <files>`. In this repository: `pnpm build:linter`, then
+`pnpm lint:tscn <files>`.
 
 ## Quick start
 
@@ -210,7 +210,7 @@ library, which keeps them at feature parity.
 - [docs/user-guide-vscode.md](./docs/user-guide-vscode.md): VS Code extension guide
 - [ARCHITECTURE.md](./ARCHITECTURE.md): project structure and patterns
 - [REFERENCES.md](./REFERENCES.md): Godot and three.js documentation links
-- [RELEASING.md](./RELEASING.md): the release workflow, and the one-time npm and Marketplace setup
+- [RELEASING.md](./RELEASING.md): how to release
 - [CONTRIBUTING.md](./CONTRIBUTING.md): issues, gates and pull requests
 - [GitHub issues](https://github.com/Vortiago/textscene-inspector/issues): roadmap and open work
 

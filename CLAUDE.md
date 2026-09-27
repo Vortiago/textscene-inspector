@@ -11,7 +11,7 @@ there, never here.
 - ARCHITECTURE.md: two-parser design, resource pipeline, linter bundle isolation,
   project structure. Read it before structural work.
 - REFERENCES.md: doc links, Context7 library IDs.
-- RELEASING.md: tag-driven release to npm and the VS Code Marketplace, one-time registry setup.
+- RELEASING.md: how to release a package.
 - docs/adr/: decisions. Respect them in the areas they govern.
 
 ## Work items = GitHub issues

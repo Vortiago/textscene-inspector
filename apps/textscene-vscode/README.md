@@ -1,10 +1,7 @@
 # TextScene Inspector: Godot .tscn preview for VS Code
 
-**See your Godot `.tscn` scenes in 3D without opening the Godot editor.**
-Renders meshes, PBR materials, lights, cameras, environments and instanced
-scenes from the text file with three.js. You can click, orbit and inspect
-every node. Works in desktop VS Code and in VS Code for
-the Web (vscode.dev).
+See your Godot `.tscn` scenes in 3D and 2D without the Godot editor. Works in
+desktop VS Code and in vscode.dev.
 
 ## Highlights
 
@@ -13,63 +10,54 @@ the Web (vscode.dev).
 - **Inspect as you go.** Scene tree, node properties and jump to source.
 - **Built-in linter.** Problems in `.tscn` files show in the Problems panel.
 
-## What it does not do
-
-It does not replace the Godot editor. The rendering approximates Godot's
-renderer, and custom shaders and some advanced material and lighting features
-can look different. Use it to inspect and review scenes, not to check them
-pixel for pixel.
+The rendering approximates Godot's. Custom shaders and some advanced material
+and lighting features can look different.
 
 ## Usage
 
-1. Open a folder containing `.tscn` files (a Godot project root works best, so `res://` paths resolve).
+1. Open a folder with `.tscn` files. A Godot project root resolves `res://` paths.
 2. Open a `.tscn` file.
-3. Run **TextScene: Open Preview to the Side** from the Command Palette, the editor title bar, the editor/Explorer context menu, or the `ctrl+k v` (`cmd+k v` on macOS) keybinding.
+3. Run **TextScene: Open Preview to the Side**, or press `ctrl+k v` (`cmd+k v` on macOS).
 
 ## Features
 
-### Interactive scene preview
-- Navigate the viewport as you would in Godot's 3D editor: middle-drag orbits, Shift+middle-drag pans, Ctrl+middle-drag and the wheel zoom, right-drag freelooks (with WASD/QE flying while held), Numpad 1/3/7 snap to the front/right/top face (Ctrl for the opposite one), Numpad 5 toggles orthographic, and F frames the selection. Alt+left-drag orbits for a mouse or trackpad without a middle button. The camera position survives edits and reloads.
-- On a **trackpad**, Shift+two-finger scroll pans and pinch zooms. On a **tablet**, one finger (or a stylus) orbits, a tap selects, two fingers pan and pinch zooms. Press **?**, or click the summary pill over the viewport, for the full list on whichever device you are using.
-- Scene-tree and inspector panels beside the viewport: click an object in the 3D view to select it in the tree, inspect its parsed properties, and double-click a node to jump to its line in the source.
-- 2D/3D viewport toggle for scenes containing Control or Node2D content (UI, sprites). The `textscene.defaultViewportMode` setting controls which mode a *new* preview starts in: `auto` (default) matches the Godot editor's own rule, and `2D` or `3D` forces every new preview into that mode.
+- **Godot's viewport controls:** middle-drag orbits, Shift+middle-drag pans, the
+  wheel zooms, right-drag flies with WASD/QE, Numpad 1/3/7 snap the view,
+  Numpad 5 toggles orthographic, and F frames the selection. Alt+left-drag
+  orbits without a middle button. Press **?** for the trackpad and tablet
+  controls.
+- **Scene tree and inspector:** click an object to select it, and double-click
+  a node to jump to its line.
+- **2D/3D toggle** for scenes with Control or Node2D content.
+- **Editor support:** syntax highlighting, outline, Go to Definition on
+  `SubResource(...)` and `ExtResource(...)`, and clickable `res://` links.
+- **Live lint** in the Problems panel.
+- **Hot reload** when you save the scene or anything it references.
 
-### Editor integration
-- **Syntax highlighting** for `.tscn` files: section headings, property keys, strings, numbers, and Godot's typed-literal constructors (`SubResource(...)`, `Color(...)`, `Vector3(...)` and so on) are coloured instead of plain text.
-- **Outline view**: document symbols for nodes and resources in `.tscn` files.
-- **Go to Definition** on `SubResource(...)` and `ExtResource(...)` references.
-- **`res://` document links**: `res://relative/path` references are clickable, opening the referenced file.
-- **Problems panel diagnostics**: open `.tscn` files are linted live, reporting both syntax errors and semantic rule violations. Toggle with `textscene.diagnostics.enabled`, or tune re-lint timing with `textscene.diagnostics.lintDebounceMs`.
-- **Hot reload**: the preview refreshes when you save the scene, or any sub-scene, texture or material it references.
+## Settings
 
-### Resource resolution
-`res://` paths resolve from the workspace root, so project-relative textures, materials, GLB meshes, and instanced sub-scenes (`PackedScene`) load as they do in Godot.
+| Setting | Default | Effect |
+| --- | --- | --- |
+| `textscene.defaultViewportMode` | `auto` | The viewport a new preview opens in: `auto`, `2D` or `3D`. |
+| `textscene.diagnostics.enabled` | `true` | Lint open `.tscn` files. |
+| `textscene.diagnostics.lintDebounceMs` | `300` | Delay before a re-lint, in milliseconds. |
 
 ## Supported nodes
 
-The extension reads and lints every node type that Godot 4.6.3 can create. These node types also render:
+Every node type in Godot 4.6.3 is read and linted. These also render:
 
 | Category | Nodes |
 | --- | --- |
-| Meshes | MeshInstance3D with Box, Sphere, Cylinder, Plane, Capsule, Torus, Prism and Quad primitives; CSG nodes with union, intersection and subtraction; external GLB meshes |
-| Lights & environment | DirectionalLight3D, OmniLight3D and SpotLight3D (with shadows), AreaLight3D (no shadows), WorldEnvironment (ambient, fog, background), Camera3D |
-| Materials | StandardMaterial3D PBR: albedo, metallic, roughness, normal, emission, AO, UV transforms, transparency, external textures |
-| Physics | StaticBody3D, RigidBody3D, CharacterBody3D, Area3D and their 2D counterparts, with CollisionShape gizmos |
-| 2D & UI | Node2D, Sprite2D, AnimatedSprite2D, Polygon2D, Line2D, TileMapLayer, Camera2D, Label3D, Sprite3D, and Control nodes drawn in the WebGL canvas |
-| Non-visual | Audio, timer and other nodes that draw nothing stay in the tree, and a spatial one still positions its children |
+| Meshes | MeshInstance3D primitives, CSG nodes, GLB meshes |
+| Lights and environment | DirectionalLight3D, OmniLight3D, SpotLight3D, AreaLight3D, WorldEnvironment, Camera3D |
+| Materials | StandardMaterial3D PBR, with external textures |
+| Physics | 3D and 2D bodies and areas, with CollisionShape gizmos |
+| 2D and UI | Node2D, Sprite2D, AnimatedSprite2D, Polygon2D, Line2D, TileMapLayer, Camera2D, Label3D, Sprite3D, Control nodes |
 
-An unrecognised node type stays in the scene tree, so its children still render.
-
-## Requirements
-
-- VS Code 1.85 or later (desktop or vscode.dev).
-- No Godot installation required: the extension parses and renders `.tscn` files on its own.
+Nodes that draw nothing stay in the tree, and their children still render.
 
 ## More
 
-- Source, issues, and full project documentation: [github.com/Vortiago/textscene-inspector](https://github.com/Vortiago/textscene-inspector)
-- The same rendering core powers a standalone [web previewer](https://github.com/Vortiago/textscene-inspector/tree/main/apps/textscene-web) and a [CLI linter](https://github.com/Vortiago/textscene-inspector/tree/main/apps/textscene-linter).
-
-## License
-
-[MIT](https://github.com/Vortiago/textscene-inspector/blob/main/LICENSE)
+- Source and issues: [github.com/Vortiago/textscene-inspector](https://github.com/Vortiago/textscene-inspector)
+- Also available: a [web previewer](https://github.com/Vortiago/textscene-inspector/tree/main/apps/textscene-web) and a [CLI linter](https://www.npmjs.com/package/@textscene/linter).
+- License: [MIT](https://github.com/Vortiago/textscene-inspector/blob/main/LICENSE)

@@ -1,8 +1,7 @@
 name: Marketplace identity
 
-# Run by hand. It logs in as the release job's managed identity, prints the member ID the
-# Marketplace publisher needs, then checks that the identity can publish as `vortiago`.
-# The check fails until the ID is a Contributor member of the publisher (RELEASING.md).
+# Run by hand: prints the member ID to add to the `vortiago` Marketplace publisher as a
+# Contributor, then checks that the identity can publish. The check fails until then.
 on: workflow_dispatch
 
 permissions:
