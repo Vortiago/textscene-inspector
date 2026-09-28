@@ -258,6 +258,25 @@ describe('comparison sheets', () => {
     expect(bad).toEqual([]);
   });
 
+  it('carries no pixel measurement', () => {
+    // A sheet says what a viewer sees. Probe points, colour readings and error
+    // figures go stale with every capture and belong in the pull request.
+    const MEASUREMENT = [
+      /--probe/,
+      /rgb\(\s*\d/,
+      /\[\d{1,3}, \d{1,3}, \d{1,3}\]/,
+      /\d+(\.\d+)?\/255/,
+      /mean (per-pixel )?(max-)?channel/,
+      /\bx \d+\.\.\d+/,
+    ];
+    const bad = sheets
+      .flatMap((s) =>
+        MEASUREMENT.filter((re) => re.test(s.body)).map((re) => `${s.label}: ${re.source}`)
+      )
+      .sort();
+    expect(bad).toEqual([]);
+  });
+
   it('deep-links only fixtures that exist', () => {
     // `fixture:` becomes a `?fixture=` link into the live previewer; a renamed
     // scene leaves the sheet pointing at nothing.

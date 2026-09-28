@@ -175,7 +175,7 @@ _Avoid_: "boundary" (overloaded with bounded contexts). Introducing a seam nothi
 
 **Depth**:
 How much behaviour a caller or test can exercise per unit of interface it has to learn.
-A module is deep when a large amount of behaviour sits behind a small interface. Deepening moves logic scattered across callers behind one interface, so change, bugs and tests concentrate in one place. ARCHITECTURE.md tracks deepening candidates.
+A module is deep when a large amount of behaviour sits behind a small interface. Deepening moves logic scattered across callers behind one interface, so change, bugs and tests concentrate in one place.
 _Avoid_: bare "depth" for a dependency-chain distance or a test suite's size (qualify those). Measuring depth as implementation lines over interface lines.
 
 **Conformance guard**:
