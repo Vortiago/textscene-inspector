@@ -116,7 +116,7 @@ generated `## Linting` block with hand-written lenient-parser prose below it, an
 `## Known limitations` (tagged bullets, one per real divergence, omitted when
 there is none). A sheet with several visually distinct features splits into `##`
 sections, each with one fixture and one `<!-- compare: … -->` marker. There is no
-property table, no pixel-by-pixel comparison and no engine explanation. The sheet
+property table, no pixel measurement and no engine explanation. The sheet
 is the home for a limitation. Never link a separate file.
 
 Corpus counts never justify an omission. "No fixture covers this property" is a

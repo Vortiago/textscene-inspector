@@ -1,8 +1,9 @@
 /**
  * Captures the VS Code previewer screenshots, the only writer of `docs/screenshots/vscode/`: the
- * two showcase shots and every image `docs/user-guide-vscode.md` embeds. It launches the extension
- * dev-host on a throwaway copy of the fixtures and drives the workbench, so our previewer is the
- * subject of every shot. Build the extension first: --extensionDevelopmentPath loads its bundles.
+ * two showcase shots and every VS Code screenshot point in `docs/user-flows.md`. It launches the
+ * extension dev-host on a throwaway copy of the fixtures and drives the workbench, so our previewer
+ * is the subject of every shot. Build the extension first: --extensionDevelopmentPath loads its
+ * bundles.
  *
  * @example
  *   pnpm --filter textscene-inspector build

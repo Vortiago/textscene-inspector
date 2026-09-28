@@ -85,7 +85,7 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
 
 /**
  * Fixtures that must produce an error, from the one file that lists them: files Godot refuses to load, which the
- * app-shell and extension suites open as a user would (`docs/user-guide-web.md` walks through the parse-error banner).
+ * app-shell and extension suites open as a user would (`docs/user-flows.md` WEB-10 walks through the parse-error banner).
  * `lint-staged.config.mjs` reads the same JSON to skip them in the pre-commit hook, so "must error" and "do not lint"
  * agree. A linter red test does not belong here: assert the validator or the rule directly.
  */

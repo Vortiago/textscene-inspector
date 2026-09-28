@@ -1,76 +1,34 @@
-# External Resource Test Fixtures
+# External resource fixtures
 
-Scenes in `scenes/fixtures/` that exercise external-resource loading
-(`[ext_resource]`) and sub-scene instancing. Every path below is a real
-`res://` path resolved against `scenes/fixtures/` itself. The directory is the
-namespace, so a reference resolves in Godot, in the web previewer's copy of
-that directory and in VS Code with that folder open, or in none of them.
+The scenes in `scenes/fixtures/` that test `[ext_resource]` loading and sub-scene instancing. Each `res://` path resolves against `scenes/fixtures/`.
 
-## Obvious pass/fail scenes (start here)
+## Pass or fail at a glance
 
-### `integration-external-only.tscn`
-**What you should see:** one blue cube floating in space.
-- Parent scene: no geometry at all, just a light and an external scene reference
-- External scene: `res://child_cube.tscn`
-- **Result:** a blue cube = working; an empty viewport = external scenes not loading.
-
-### `integration-external-separation.tscn`
-**What you should see:** a big red box on the left, a small red sphere on the right.
-- Parent scene: the box, authored inline
-- External scene: `res://child_sphere.tscn`
-- **Result:** both = working; only the box = external scenes not instantiating.
-
-### `integration-three-cubes.tscn`
-**What you should see:** three blue cubes in a horizontal row.
-- Parent scene: no geometry, three instances of `res://child_cube.tscn`
-- **Result:** tests instancing and caching (one scene, three instances).
-
-## Building blocks
-
-### `child_cube.tscn` / `child_sphere.tscn`
-Standalone one-mesh scenes. Each loads on its own, and every instancing fixture
-above references them.
-
-### `integration-parent-child-scene.tscn`
-A single external `PackedScene` reference plus locally authored geometry.
-
-### `integration-multiple-externals.tscn`
-Three references, one of them a repeat of `res://child_cube.tscn`. It pins that a
-scene referenced twice is loaded once and instanced twice.
-
-### `integration-instanced-subscene.tscn`
-Two instances of `res://unit-instance-child.tscn`, whose roots collapse into the
-parent (ADR-0013). Carries a visual golden.
-
-## Deliberately missing references
-
-These scenes show what an unresolvable reference looks like, so their targets
-are kept out of every `res://` root, in `scenes/upload-payloads/`:
-
-| Scene | Reference it cannot resolve | Payload |
+| Scene | Pass | Fail |
 | --- | --- | --- |
-| `test-missing-material.tscn` | `res://materials/test.tres` | `upload-payloads/test.tres` |
-| `test-missing-external-scene.tscn` | `res://subscenes/child.tscn` | `upload-payloads/child.tscn` |
-| `unit-external-texture.tscn` | `res://textures/test_texture.png` | none |
+| `integration-external-only.tscn` | One blue cube | An empty viewport |
+| `integration-external-separation.tscn` | A red box and a red sphere | Only the box |
+| `integration-three-cubes.tscn` | Three blue cubes in a row | Fewer than three |
 
-`upload-payloads/test-bright-red.tres` and `test-bright-magenta.tres` are
-unreferenced by design: they are stand-in albedo materials to drop in when
-checking that a supplied material actually reaches the mesh.
+## Other instancing scenes
 
-## Testing in the web previewer
-
-1. `pnpm --filter @textscene/web-previewer dev`
-2. Pick a scene from the **Integration - External Scenes** or
-   **Integration - Multi-Node** category.
-3. For a missing-resource scene, drag the matching file from
-   `scenes/upload-payloads/` onto the previewer. The previewer matches files to
-   missing `res://` paths by basename (`src/multiFileUpload.ts`), so the folder
-   layout there does not matter.
-
-## Path resolution
-
-| Host | `res://child_cube.tscn` resolves to |
+| Scene | Tests |
 | --- | --- |
-| Web previewer | `/fixtures/child_cube.tscn` (the copy of `scenes/fixtures/`) |
-| VS Code | `<workspace root>/child_cube.tscn` |
-| `pnpm ref:godot` | `scenes/fixtures/child_cube.tscn` (staged as the project root) |
+| `child_cube.tscn`, `child_sphere.tscn` | One-mesh scenes that the others instance |
+| `integration-parent-child-scene.tscn` | One `PackedScene` beside local geometry |
+| `integration-multiple-externals.tscn` | A scene referenced twice loads once |
+| `integration-instanced-subscene.tscn` | Instanced roots collapse into the parent (ADR-0013). It has a golden image. |
+
+## Missing on purpose
+
+These references resolve nowhere. The files are in `scenes/upload-payloads/`, outside every root.
+
+| Scene | Missing reference | File to upload |
+| --- | --- | --- |
+| `test-missing-material.tscn` | `res://materials/test.tres` | `test.tres` |
+| `test-missing-external-scene.tscn` | `res://subscenes/child.tscn` | `child.tscn` |
+| `unit-external-texture.tscn` | `res://textures/test_texture.png` | None |
+
+`test-bright-red.tres` and `test-bright-magenta.tres` in `upload-payloads/` are spare albedo materials. Upload one to check that a material reaches the mesh.
+
+To test an upload in the web previewer, drag the file onto the page. The previewer matches a file to a missing path by its name (`src/multiFileUpload.ts`).
