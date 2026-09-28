@@ -1,7 +1,7 @@
 /**
  * The viewport's input bindings as data, for the help pill and panel. A row
- * with a `trigger` is held to its resolver by `bindings.test.ts`. The prose in
- * `docs/user-guide-web.md` and the VS Code README is not covered.
+ * with a `trigger` is held to its resolver by `bindings.test.ts`. This panel is
+ * the only list of the bindings: the docs point to it and repeat none.
  */
 import type { NavMode, NavModifiers } from '../../godotEditorCursor.js';
 

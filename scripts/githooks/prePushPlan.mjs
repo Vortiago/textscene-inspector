@@ -3,9 +3,12 @@
  * so the pre-push hook runs only what the change can break. A change to the toolchain runs the full gate.
  */
 
-/** A file whose change can break any check, so the push runs the full `pnpm validate`. */
+/**
+ * A file whose change can break any check, so the push runs the full `pnpm validate`. A workflow
+ * file is not one: no local check reads it, and CI runs it on the pull request.
+ */
 const TOOLCHAIN =
-  /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|eslint\.config\.js|lint-staged\.config\.mjs|vitest\.(?:config|shared)\.ts|githooks\/.*|\.github\/workflows\/.*)$|(?:^|\/)(?:package\.json|tsconfig[^/]*\.json|vitest\.config\.ts)$/;
+  /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|eslint\.config\.js|lint-staged\.config\.mjs|vitest\.(?:config|shared)\.ts|githooks\/.*)$|(?:^|\/)(?:package\.json|tsconfig[^/]*\.json|vitest\.config\.ts)$/;
 
 const CODE = /\.(?:ts|tsx|js|mjs|cjs|css)$/;
 const TYPED = /\.(?:ts|tsx)$/;

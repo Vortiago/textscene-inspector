@@ -16,7 +16,7 @@ merged quad mesh holding a frozen pose.
 <!-- compare: image=unit-cpuparticles2d-emission-shapes status=done fixture=unit-cpuparticles2d-emission-shapes.tscn -->
 
 Point, Sphere, Sphere Surface and Rectangle side by side. With `use_fixed_seed` and
-`preprocess` set, every particle lands within half a pixel of Godot's.
+`preprocess` set, every particle lands where Godot's does.
 
 ## Curves
 <!-- compare: image=unit-cpuparticles2d-curves status=done fixture=unit-cpuparticles2d-curves.tscn -->
@@ -43,21 +43,6 @@ one: **one `lifetime`**, where a continuous emitter reaches steady state, halved
 for a `one_shot` burst so it is caught mid-flight. This fixture's lifetime is
 `0.95 s`, and both images show that instant. The Godot image comes from
 `pnpm ref:godot … --particles 0.95`.
-
-The flag is needed because the game and the editor disagree. `godot --path` runs
-the game, where a paused emitter sits at frame 0. The editor animates it, since
-`CPUParticles2D`'s ENTER_TREE arm is a bare `set_process_internal(emitting)` with
-no `is_editor_hint` guard. The previewer mirrors the editor, so the reference
-moves to match it. The previewer does not bend its pose to the game's frame 0,
-because that is a picture the editor never shows. `request_particles_process` is Godot's own API for spending a
-named number of seconds inside one frame, through the same loop as `preprocess`.
-Deleting a fixture's `preprocess` line and passing the same number to
-`--particles` renders **byte-identical** pixels, so the substituted window equals
-a `preprocess` of that length.
-
-The substituted window is therefore a settle: whole `fixed_fps` steps,
-`speed_scale` held at 1, the last step overshooting. `0.95 s` at 30 fps is 28.5
-steps, so both sides take 29 and land at `0.9667 s`.
 
 ## emitting = false
 <!-- compare: image=unit-cpuparticles2d-not-emitting status=done fixture=unit-cpuparticles2d-not-emitting.tscn -->
