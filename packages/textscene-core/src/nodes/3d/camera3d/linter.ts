@@ -4,10 +4,13 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
+import type { TscnNode } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../linter/linterUtils.js';
+import { isValidProperties, nodesDescendingFrom } from '../../../linter/linterUtils.js';
+import { viewportScopeCounter, viewportScopeOf } from '../../../linter/viewportScope.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
+import { boolSlotValue } from '../../../godot/index.js';
 
 /** `Camera3D::ProjectionType` (camera_3d.h:45-47). */
 const PROJECTION_PERSPECTIVE = 0;
@@ -30,9 +33,31 @@ function projectionMode(raw: string | undefined): number {
     : PROJECTION_PERSPECTIVE;
 }
 
+/**
+ * Whether this camera claims the viewport's current-camera slot. `current` defaults
+ * false (camera_3d.h:63) and Camera3D has no `enabled`, so an authored true is the
+ * only claim: a plain camera entering an empty viewport takes the slot as
+ * first_camera (camera_3d.cpp:189-192) and cycling one in with `make_current()` is
+ * documented usage. Unreadable properties state no claim.
+ */
+function cameraClaimsCurrent(node: TscnNode): boolean {
+  if (!isValidProperties(node.properties)) return false;
+  return boolSlotValue(node.properties.current) === true;
+}
+
+/**
+ * Cameras claiming `current` that share `scope`'s viewport. The family joins, since
+ * the slot set takes any Camera3D subclass: `XRCamera3D` inherits the ENTER_WORLD
+ * handler that joins it (camera_3d.cpp:186). A type the catalog does not know joins
+ * nothing here, the same no-guess rule as the scope walk.
+ */
+const countCurrentCamerasInScope = viewportScopeCounter((roots) =>
+  nodesDescendingFrom(roots, 'Camera3D').filter(cameraClaimsCurrent)
+);
+
 function checkCamera3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
-  const { node } = context;
+  const { node, scene } = context;
 
 
   if (!isValidProperties(node.properties)) {
@@ -40,6 +65,22 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
   }
 
   const rawProps = node.properties as Record<string, string>;
+
+  // After the properties guard, unlike the Camera2D rule: here an unreadable body
+  // states no claim, so it can neither contend for the slot nor join a tally.
+  if (cameraClaimsCurrent(node)) {
+    const scope = viewportScopeOf(scene, node);
+    const claiming = scope === undefined ? 0 : countCurrentCamerasInScope(scene, scope);
+    if (claiming > 1) {
+      diagnostics.push({
+        severity: 'info',
+        message: `${node.type} 'current' contention: ${claiming} cameras claim the current-camera slot of one viewport. Only one holds it: the last one entered wins, and the others silently lose it (viewport.cpp:4578), so only one of them draws.`,
+        nodeName: node.name,
+        nodeType: node.type,
+        ruleName: 'camera3d-multiple-current',
+      });
+    }
+  }
 
   // `fov` gets no presence check. Godot defaults it to 75 (camera_3d.h:68) and
   // omits defaults when serialising, and camera3d/parser.ts defaults it the
@@ -94,9 +135,18 @@ const camera3DValidationRule: LintRule = {
   meta: {
     name: 'valid-camera3d-properties',
     description:
-      "Validates the Camera3D near/far clipping-plane pair per projection mode, which neither plane's own bound can express",
+      "Validates the Camera3D near/far clipping-plane pair per projection mode, which neither plane's own bound can express, and reports cameras that contend for one viewport's current-camera slot",
     category: 'validation',
     emits: [
+      {
+        ruleName: 'camera3d-multiple-current',
+        severity: 'info',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'camera_3d.cpp:190',
+          unused: 'the earlier camera loses the slot to the last entered current one and is never drawn',
+        },
+      },
       {
         ruleName: 'camera3d-invalid-clipping-planes',
         severity: 'error',

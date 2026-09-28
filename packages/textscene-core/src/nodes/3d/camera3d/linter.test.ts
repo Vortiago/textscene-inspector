@@ -7,6 +7,8 @@ import {
   node,
   scene,
   lint,
+  instanced,
+  packedScene,
   expectClean,
   expectDiagnostic,
   expectNoDiagnostic,
@@ -368,6 +370,256 @@ describe('Camera3D Linter', () => {
           scene(node('Camera3D', { projection: 0, fov, near: 0.1, far: 100.0 })),
           { prop: 'field of view' }
         );
+      });
+    });
+    describe('multiple current cameras', () => {
+      // `current` is the 3D claim flag and defaults false (camera_3d.h:63), so only an
+      // authored `current = true` enters the contention. The slot is one per viewport
+      // (viewport.cpp:4597-4600) and a second claim silently takes it (:4565-4594).
+
+      it('reports when two cameras claim the same viewport slot', () => {
+        expectDiagnostic(
+          scene(
+            node('Node3D', {}, { name: 'Root' }),
+            node('Camera3D', { current: true }, { name: 'Camera1', parent: '.' }),
+            node('Camera3D', { current: true }, { name: 'Camera2', parent: '.' })
+          ),
+          {
+            ruleName: 'camera3d-multiple-current',
+            severity: 'info',
+            nodeType: 'Camera3D',
+            contains: ['Camera3D', 'current', '2'],
+          }
+        );
+      });
+
+      // The split_screen shape: one current camera per SubViewport. Each holds its own
+      // viewport's slot, so neither displaces the other.
+      it('reports nothing across a SubViewport boundary, which has its own camera slot', () => {
+        expectNoDiagnostic(
+          scene(
+            node('Node3D', {}, { name: 'Root' }),
+            node('Camera3D', { current: true }, { name: 'MainCamera', parent: '.' }),
+            node('SubViewport', {}, { name: 'Inset', parent: '.' }),
+            node('Camera3D', { current: true }, { name: 'InsetCamera', parent: 'Inset' })
+          ),
+          { ruleName: 'camera3d-multiple-current' }
+        );
+      });
+
+      it('reports nothing across a Window boundary, a Viewport like any other', () => {
+        expectNoDiagnostic(
+          scene(
+            node('Node3D', {}, { name: 'Root' }),
+            node('Camera3D', { current: true }, { name: 'MainCamera', parent: '.' }),
+            node('Window', {}, { name: 'Overlay', parent: '.' }),
+            node('Camera3D', { current: true }, { name: 'OverlayCamera', parent: 'Overlay' })
+          ),
+          { ruleName: 'camera3d-multiple-current' }
+        );
+      });
+
+      // ConfirmationDialog -> AcceptDialog -> Window -> Viewport: the scope comes off
+      // the base chain, so a subclass three hops down scopes its cameras on its own.
+      it('reports nothing across a ConfirmationDialog, three hops below Viewport', () => {
+        expectNoDiagnostic(
+          scene(
+            node('Node3D', {}, { name: 'Root' }),
+            node('Camera3D', { current: true }, { name: 'MainCamera', parent: '.' }),
+            node('ConfirmationDialog', {}, { name: 'Dialog', parent: '.' }),
+            node('Camera3D', { current: true }, { name: 'DialogCamera', parent: 'Dialog' })
+          ),
+          { ruleName: 'camera3d-multiple-current' }
+        );
+      });
+
+      it('reports for two cameras inside the SAME SubViewport', () => {
+        expectDiagnostic(
+          scene(
+            node('Node3D', {}, { name: 'Root' }),
+            node('SubViewport', {}, { name: 'Inset', parent: '.' }),
+            node('Camera3D', { current: true }, { name: 'CameraA', parent: 'Inset' }),
+            node('Camera3D', { current: true }, { name: 'CameraB', parent: 'Inset' })
+          ),
+          { ruleName: 'camera3d-multiple-current', severity: 'info' }
+        );
+      });
+
+      it('reports for two cameras inside the SAME ConfirmationDialog', () => {
+        expectDiagnostic(
+          scene(
+            node('Node3D', {}, { name: 'Root' }),
+            node('ConfirmationDialog', {}, { name: 'Dialog', parent: '.' }),
+            node('Camera3D', { current: true }, { name: 'CameraA', parent: 'Dialog' }),
+            node('Camera3D', { current: true }, { name: 'CameraB', parent: 'Dialog' })
+          ),
+          { ruleName: 'camera3d-multiple-current', severity: 'info' }
+        );
+      });
+
+      // A plain camera never claims the slot, and cycling one in with `make_current()`
+      // is documented usage, so it stays out of the tally.
+      it('reports nothing when only one of two cameras claims current', () => {
+        expectNoDiagnostic(
+          scene(
+            node('Node3D', {}, { name: 'Root' }),
+            node('Camera3D', { current: true }, { name: 'Camera1', parent: '.' }),
+            node('Camera3D', {}, { name: 'Camera2', parent: '.' })
+          ),
+          { ruleName: 'camera3d-multiple-current' }
+        );
+      });
+
+      // The instanced ancestor may itself be a Viewport, so the camera under it joins a
+      // slot this file cannot name: it contends with nothing here.
+      it('reports nothing when one current camera hangs under an instanced ancestor', () => {
+        expectNoDiagnostic(
+          scene(
+            packedScene,
+            node('Node3D', {}, { name: 'Root' }),
+            node('Camera3D', { current: true }, { name: 'MainCamera', parent: '.' }),
+            instanced('Instance', { parent: '.' }),
+            node('Camera3D', { current: true }, { name: 'HiddenCamera', parent: 'Instance' })
+          ),
+          { ruleName: 'camera3d-multiple-current' }
+        );
+      });
+
+      // Each SubViewport holds its own slot, so a nested one scopes apart from the one
+      // that contains it: the outer and inner current cameras never meet.
+      it('reports nothing for current cameras in an outer and an inner SubViewport', () => {
+        expectNoDiagnostic(
+          scene(
+            node('Node3D', {}, { name: 'Root' }),
+            node('SubViewport', {}, { name: 'Outer', parent: '.' }),
+            node('Camera3D', { current: true }, { name: 'OuterCamera', parent: 'Outer' }),
+            node('SubViewport', {}, { name: 'Inner', parent: 'Outer' }),
+            node('Camera3D', { current: true }, { name: 'InnerCamera', parent: 'Outer/Inner' })
+          ),
+          { ruleName: 'camera3d-multiple-current' }
+        );
+      });
+
+      it('reports nothing for a current camera in a SubViewport under an instanced ancestor', () => {
+        expectNoDiagnostic(
+          scene(
+            packedScene,
+            node('Node3D', {}, { name: 'Root' }),
+            node('Camera3D', { current: true }, { name: 'MainCamera', parent: '.' }),
+            instanced('Instance', { parent: '.' }),
+            node('SubViewport', {}, { name: 'Inset', parent: 'Instance' }),
+            node('Camera3D', { current: true }, { name: 'InsetCamera', parent: 'Instance/Inset' })
+          ),
+          { ruleName: 'camera3d-multiple-current' }
+        );
+      });
+
+      it('reports nothing for a current camera in a SubViewport under an uncatalogued ancestor', () => {
+        expectNoDiagnostic(
+          scene(
+            node('Node3D', {}, { name: 'Root' }),
+            node('Camera3D', { current: true }, { name: 'MainCamera', parent: '.' }),
+            node('JBody3D', {}, { name: 'Body', parent: '.' }),
+            node('SubViewport', {}, { name: 'Inset', parent: 'Body' }),
+            node('Camera3D', { current: true }, { name: 'InsetCamera', parent: 'Body/Inset' })
+          ),
+          { ruleName: 'camera3d-multiple-current' }
+        );
+      });
+
+      // A GDExtension camera may or may not subclass Camera3D, and the catalog cannot
+      // say, so its claim joins no tally: the same no-guess rule as the scope walk.
+      it('never counts a current claim from an uncatalogued camera-like type', () => {
+        expectNoDiagnostic(
+          scene(
+            node('Node3D', {}, { name: 'Root' }),
+            node('Camera3D', { current: true }, { name: 'Camera', parent: '.' }),
+            node('PhantomCamera3D', { current: true }, { name: 'Phantom', parent: '.' })
+          ),
+          { ruleName: 'camera3d-multiple-current' }
+        );
+      });
+
+      // XRCamera3D inherits Camera3D's ENTER_WORLD handler (camera_3d.cpp:186-192), so a
+      // current XR camera joins the same per-viewport set.
+      it('reports a Camera3D and an XRCamera3D both current in one viewport', () => {
+        expectDiagnostic(
+          scene(
+            node('Node3D', {}, { name: 'Root' }),
+            node('Camera3D', { current: true }, { name: 'Camera', parent: '.' }),
+            node('XRCamera3D', { current: true }, { name: 'XRCamera', parent: '.' })
+          ),
+          {
+            ruleName: 'camera3d-multiple-current',
+            severity: 'info',
+            nodeType: 'XRCamera3D',
+            contains: ['XRCamera3D'],
+          }
+        );
+      });
+
+      it('reports two bare XRCamera3D nodes both current', () => {
+        expectDiagnostic(
+          scene(
+            node('Node3D', {}, { name: 'Root' }),
+            node('XRCamera3D', { current: true }, { name: 'XRCamera1', parent: '.' }),
+            node('XRCamera3D', { current: true }, { name: 'XRCamera2', parent: '.' })
+          ),
+          { ruleName: 'camera3d-multiple-current', severity: 'info', nodeType: 'XRCamera3D' }
+        );
+      });
+
+      it.each([
+        ['current = false', { current: false }],
+        ['no current key', {}],
+        ['an unreadable current', { current: '"yes"' }],
+      ])('never counts a claim from %s', (_label, props) => {
+        expectNoDiagnostic(
+          scene(
+            node('Node3D', {}, { name: 'Root' }),
+            node('Camera3D', { ...props, near: 0.1 }, { name: 'Camera1', parent: '.' }),
+            node('Camera3D', { ...props, near: 0.1 }, { name: 'Camera2', parent: '.' })
+          ),
+          { ruleName: 'camera3d-multiple-current' }
+        );
+      });
+
+      // Godot boolises a number with `!is_zero` (variant.h), so `current = 1` claims
+      // exactly as `true` does.
+      it('counts a numeric current = 1 as a claim', () => {
+        expectDiagnostic(
+          scene(
+            node('Node3D', {}, { name: 'Root' }),
+            node('Camera3D', { current: 1 }, { name: 'Camera1', parent: '.' }),
+            node('Camera3D', { current: 1 }, { name: 'Camera2', parent: '.' })
+          ),
+          { ruleName: 'camera3d-multiple-current', severity: 'info' }
+        );
+      });
+
+      it('names the claimant count for three current cameras', () => {
+        expectDiagnostic(
+          scene(
+            node('Node3D', {}, { name: 'Root' }),
+            node('Camera3D', { current: true }, { name: 'Camera1', parent: '.' }),
+            node('Camera3D', { current: true }, { name: 'Camera2', parent: '.' }),
+            node('Camera3D', { current: true }, { name: 'Camera3', parent: '.' })
+          ),
+          { ruleName: 'camera3d-multiple-current', severity: 'info', contains: ['3 cameras'] }
+        );
+      });
+
+      // Each contending camera reports: the slot is lost by every holder but the last,
+      // so the author sees the claim on each node that needs changing.
+      it('reports on every contending camera, not just one', () => {
+        const claims = lint(
+          scene(
+            node('Node3D', {}, { name: 'Root' }),
+            node('Camera3D', { current: true }, { name: 'Camera1', parent: '.' }),
+            node('Camera3D', { current: true }, { name: 'Camera2', parent: '.' })
+          )
+        ).filter((d) => d.ruleName === 'camera3d-multiple-current');
+        expect(claims.map((d) => d.nodeName).sort()).toEqual(['Camera1', 'Camera2']);
       });
     });
   });
