@@ -16,7 +16,7 @@ A `ProceduralSkyMaterial` under `background_mode = BG_SKY`. The gradient, and th
 ## Tone mapping
 <!-- compare: image=unit-tonemap-agx-shadow status=done fixture=unit-tonemap-agx-shadow.tscn -->
 
-`tonemap_mode = AGX`. Godot 4.6's AgX curve, its own white and its contrast are ported, so the lit grass and the crushed shadow match to within 2/255. The residual is GPU float precision.
+`tonemap_mode = AGX`. The lit grass and the crushed shadow match Godot.
 
 ## Ambient light + sky reflection
 <!-- compare: image=unit-stage-ambient-ibl status=limitation fixture=unit-stage-ambient-ibl.tscn -->
@@ -30,7 +30,7 @@ A `ProceduralSkyMaterial` under `background_mode = BG_SKY`. The gradient, and th
 
 The preview environment enables glow, which blooms the emissive sphere. Both engines draw the same tight halo and leave the ground untouched. The bright pass, the seven-level pyramid and all five blend modes are ported from Godot's shaders.
 
-- **Approximated** The pyramid blurs with a 13-tap downsample and a 9-tap tent upsample rather than Godot's gaussian, so a bare glow buffer (REPLACE) sits 0.1% off.
+- **Approximated** The pyramid blurs with a 13-tap downsample and a 9-tap tent upsample rather than Godot's gaussian, so a bare glow buffer (REPLACE) differs slightly.
 - **Approximated** `glow_map` is not resolved, so a scene supplying one gets unmodulated glow.
 
 ## Linting

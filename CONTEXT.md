@@ -128,6 +128,11 @@ The rule that existence checks (node names, NodePath targets) never assume visib
 A reference that crosses an `instance=` boundary stays silent rather than false-positive. The linter reads the static text of one file, never the composed **Live scene tree**.
 _Avoid_: "fixing" the silence by resolving instance internals (the linter must stay file-local and React-free).
 
+**Viewport scope**:
+The nearest Viewport ancestor of a node, or null for the scene's own viewport: the per-viewport state (the current-camera slot) a node participates in.
+An unknowable scope, an ancestor whose type comes from another scene or that the catalog does not know (a GDExtension class), never pools the node into any scope.
+_Avoid_: scoping a per-viewport contention rule to the whole scene (two split-screen cameras do not contend).
+
 ### Code organisation
 
 **Vertical slice**:
@@ -170,7 +175,7 @@ _Avoid_: "boundary" (overloaded with bounded contexts). Introducing a seam nothi
 
 **Depth**:
 How much behaviour a caller or test can exercise per unit of interface it has to learn.
-A module is deep when a large amount of behaviour sits behind a small interface. Deepening moves logic scattered across callers behind one interface, so change, bugs and tests concentrate in one place. ARCHITECTURE.md tracks deepening candidates.
+A module is deep when a large amount of behaviour sits behind a small interface. Deepening moves logic scattered across callers behind one interface, so change, bugs and tests concentrate in one place.
 _Avoid_: bare "depth" for a dependency-chain distance or a test suite's size (qualify those). Measuring depth as implementation lines over interface lines.
 
 **Conformance guard**:

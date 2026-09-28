@@ -1,61 +1,34 @@
 # @textscene/linter
 
-Command-line linter for Godot's text formats, `.tscn` scenes and `.tres`
-resources, built on `@textscene/core/linter`. It runs two phases: strict
-parsing (`StrictTscnParser` catches syntax and format errors with line and
-column), then semantic lint rules (missing resources, invalid references,
-property constraints).
+`tscn-lint` checks Godot `.tscn` scenes and `.tres` resources, without a Godot
+install. It reports syntax errors with line and column, then missing
+resources, invalid references and property values that Godot refuses or
+changes. Every check is grounded in Godot's own source
+([ADR-0032](https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md)).
 
-Godot has no text-scene linter of its own. This one covers every valid text
-scene file, not only what a previewer draws, so coverage tracks what the engine
-serialises. A
-property is worth validating because Godot writes it and reads it back, not
-because a renderer consumes it. Every diagnostic is grounded in a line of
-Godot's own source. Its severity (error, warning or info) follows what the
-engine does with the value (ADR-0032, defined under **Severity** in the root
-`CONTEXT.md`). A clean run means the file is sound. A diagnostic never fires on
-a scene Godot opens without complaint.
+## Install
 
-## Install / Build
-
-From the repo root:
+Requires Node.js 24 or later.
 
 ```bash
-pnpm install
-pnpm --filter @textscene/linter build
+npm install --global @textscene/linter
 ```
 
-This bundles `src/cli.ts` to `dist/cli.js`. The `tscn-lint` bin, and
-`pnpm lint:tscn` at the repo root, wrap it.
+Or run it once: `npx @textscene/linter scenes/`
 
 ## Usage
 
 ```bash
-# Single file
-node apps/textscene-linter/dist/cli.js scenes/fixtures/unit-plane-mesh.tscn
-
-# Multiple files through a shell glob
-node apps/textscene-linter/dist/cli.js scenes/fixtures/*.tscn scenes/isometric/*.tscn
-
-# Directory argument: recurses into every .tscn and .tres file underneath
-node apps/textscene-linter/dist/cli.js scenes/
-
-# Plain output (no ANSI colors), for example for CI logs
-node apps/textscene-linter/dist/cli.js --no-color scenes/fixtures/example-hallway-mockup.tscn
+tscn-lint scenes/main.tscn            # one file
+tscn-lint scenes/*.tscn levels/*.tscn # several files
+tscn-lint scenes/                     # every .tscn and .tres file underneath
+tscn-lint --no-color scenes/          # no ANSI colours
 ```
 
-Diagnostics print to stdout in every format. In `text` format a read failure
-(missing file, permissions) prints to stderr. In the `json` and `github`
-formats it prints as a finding or annotation, so the output stays
-machine-readable.
+## Output formats (`--format`)
 
-### Output formats (`--format`)
-
-- `text` (default): coloured, human-readable, streamed per file. `--no-color`
-  disables ANSI codes.
-- `json`: a single pretty-printed JSON array of findings, one object per
-  diagnostic, plus one synthetic `file-read-error` finding per unreadable
-  file. Each is shaped as:
+- `text` (default): coloured, streamed per file.
+- `json`: one JSON array with one finding per diagnostic:
 
   ```json
   {
@@ -70,45 +43,27 @@ machine-readable.
   }
   ```
 
-  A rule's finding gives the line of its node's heading, and a dangling
-  resource reference the line of its property. `line` and `column` are `null`
-  only for a finding about the whole file, such as `file-read-error`.
-
-  ```bash
-  node apps/textscene-linter/dist/cli.js --format json scenes/ > lint-results.json
-  ```
-
-- `github`: one [GitHub Actions workflow-command annotation](https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-an-error-message)
-  per finding (`::error file=...,line=...,col=...::message`, `::warning
-  ...` for warnings, `::notice ...` for info), so CI surfaces lint results
-  inline on the diff:
-
-  ```bash
-  node apps/textscene-linter/dist/cli.js --format github scenes/
-  ```
-
-  It is auto-detected when `$GITHUB_ACTIONS=true` (inside a GitHub Actions
-  job) and `--format` is not passed. Pass `--format text` to opt back into
-  human-readable output there.
+  `line` and `column` are `null` for a finding about the whole file, such as
+  `file-read-error`.
+- `github`: GitHub Actions annotations on the diff. It is the default when
+  `$GITHUB_ACTIONS=true`.
 
 ## Exit codes
 
-- `0`: all files clean, or only warning and info diagnostics
-- `1`: at least one error-severity diagnostic, or a file could not be read
-- `2`: an unrecognised `--format` value
+| Code | Meaning |
+| --- | --- |
+| `0` | No errors. Warnings and info do not fail the run. |
+| `1` | An error, or a file that could not be read. |
+| `2` | An unknown `--format` value. |
 
-Warnings do not fail the run. Only errors and unreadable files do. The exit
-code contract is identical across all three output formats.
+## Build from source
 
-## Architecture notes
+From the repository root:
 
-- **React- and THREE-free bundle**: the linter entry point
-  (`packages/textscene-core/src/linter/index.ts`) imports each node slice's
-  `index.linter.ts` (linter parser and rules only) and each resource slice's
-  validators. It never imports a slice `index.ts` or `index.r3f.ts`, which pull
-  in a renderer. `packages/textscene-core/src/linter/reactFree.test.ts` and
-  this package's `src/reactFree.test.ts` guard it.
-- **Where rules live**: each node slice registers its lint rules through
-  `ruleRegistry` in its `linter.ts`, wired by the slice's `index.linter.ts`
-  (for example `packages/textscene-core/src/nodes/base/node3d/index.linter.ts`).
-  The entry point imports them all to trigger registration.
+```bash
+pnpm install
+pnpm --filter @textscene/linter build
+```
+
+The bundle has no React or three.js. `ARCHITECTURE.md` in the repository
+describes how the linter imports each node slice.
