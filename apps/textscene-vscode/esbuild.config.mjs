@@ -55,10 +55,9 @@ const extensionWebOptions = {
 };
 
 /**
- * This build only produces `dist/webview/`. The initial-paint budget gate
- * (main + 200 KB gzipped) lives in `scripts/check-bundle-size.mjs`, run by the
- * root `check:bundle-size` script. ARCHITECTURE.md, "Bundle Size Target", has
- * the numbers and why the gate is informational.
+ * This build only produces `dist/webview/`. The initial-load budget gate lives in
+ * `scripts/check-bundle-size/webviewBudget.mjs`, run by the root `check:bundle-size`
+ * script. ARCHITECTURE.md, "Bundle size", says what keeps the closure small.
  *
  * @type {esbuild.BuildOptions}
  */

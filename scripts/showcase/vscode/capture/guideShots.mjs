@@ -1,7 +1,8 @@
 /**
- * The shot recipes behind `docs/user-guide-vscode.md`. Each key is an image the guide embeds, and
- * each `run` leaves the workbench in the state its caption claims. A recipe starts from
- * `closeAllEditors`, since an editor left from the previous shot adds a .tscn pane to the image.
+ * The shot recipes behind the VS Code screenshot points in `docs/user-flows.md`. Each key is one
+ * point, and each `run` leaves the workbench in the state that point describes. A recipe starts
+ * from `closeAllEditors`, since an editor left from the previous shot adds a .tscn pane to the
+ * image.
  */
 
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';

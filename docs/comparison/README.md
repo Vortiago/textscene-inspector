@@ -36,27 +36,6 @@ error does not withhold the tree, so a file reports its parse errors and the
 semantic findings under them together. A pre-current format header is the one
 exception. It reports a single `legacy-format-version` info and nothing else.
 
-## Why 2D colour matches, and what breaks it
-
-Godot writes authored 2D colour straight to the framebuffer. Only the 3D pass is
-tonemapped, never the canvas pipeline. The previewer's 2D stage mounts its own
-`<Canvas>` (`r3f/components/Canvas2DStage/World2DCanvas.tsx`), and
-react-three-fiber's default for one of those is
-
-```js
-gl.toneMapping = flat ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
-```
-
-Without `flat`, ACES runs over the whole 2D stage: it compresses bright values
-and lifts saturated fills toward grey. The stage passes `flat`, and the 2D
-sheets land on Godot almost exactly. Measured mean channel error over the whole
-frame: Sprite2D 0.03, Line2D 0.03, TileMap 0.06, AnimatedSprite2D 0.06,
-RemoteTransform2D 0.05, PathFollow2D 0.00, CanvasModulate 0.43, TileMapLayer
-0.37, Polygon2D 0.79.
-
-This is not the ADR-0025 preview environment. Only `r3f/TscnCanvas.tsx` mounts
-`<PreviewLighting>`, never the 2D stage, so a 2D-workspace capture never sees it.
-
 ## What a RemoteTransform relay does not reproduce
 
 `RemoteTransform2D` and `RemoteTransform3D` share one implementation and one set
@@ -67,8 +46,7 @@ static enter-tree effect, not a per-frame drive. Three cases are not fully
 reproduced:
 
 - **`use_global_coordinates = false`** is a no-op on a static load. Only the
-  default global-coordinate drive repositions the target (measured against
-  Godot 4.6.3).
+  default global-coordinate drive repositions the target.
 - **A cross-instance `remote_path`**, one crossing into or out of an instanced
   sub-scene, stays unresolved. In-scene resolution, the common case, works.
 - **Relay chains** resolve in document (pre-order) order. A feedback loop is not

@@ -92,7 +92,7 @@ The lenient parser never rejects. Each field falls back to Godot's default throu
 - **Approximated** `ALPHA_HASH` is alpha-blended rather than dithered, so it joins the transparent pass. The depth write still follows Godot's.
 - **Shader missing** `alpha_antialiasing_mode` is read for the pass decision, but the cutout edge reads hard rather than coverage-blended.
 - **Shader missing** `proximity_fade_*` and `distance_fade_*` decide the pass but are not rendered, so the surface stays at full opacity.
-- **Shader missing** `diffuse_mode` is always Lambert where Godot defaults to Burley, so a rough sphere reads about 5/255 darker at the grazing silhouette.
+- **Shader missing** `diffuse_mode` is always Lambert where Godot defaults to Burley, so a rough sphere is slightly darker at the silhouette.
 - **Shader missing** `metallic_specular` has no effect. three fixes dielectric F0 at 0.04.
 - **Approximated** Godot measures V from the image top and three from the bottom, so a non-integer `uv1_scale.y` or a non-zero `uv1_offset.y` shifts V differently.
 - **Approximated** Under `uv1_world_triplanar`, `uv1_offset` is in world units and is not converted.
