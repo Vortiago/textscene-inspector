@@ -19,6 +19,7 @@ import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { useAnimationDriver, type BoundClips } from '../../../r3f/contexts/AnimationDriverContext';
 import { useRebindKey } from '../../../r3f/animation/useRebindKey';
+import { useUniqueNamePaths } from '../../../r3f/useUniqueNames';
 import { stepPlayback } from '../../../r3f/animation/stepPlayback';
 import { startAction, seekAction } from '../../../r3f/animation/actionHelpers';
 import { snapshotPose, restoreSnapshot } from '../../../r3f/animation/poseSnapshot';
@@ -62,9 +63,13 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
   }, [properties.tree_root, properties.parameters, internalResources]);
 
   // Resolve `anim_player` to a node path and look up the driver there.
+  const treeNames = useUniqueNamePaths(nodePath);
   const targetPath = useMemo(
-    () => (nodePath === null ? null : resolveAnimPlayerPath(nodePath, properties.anim_player)),
-    [nodePath, properties.anim_player]
+    () =>
+      nodePath === null
+        ? null
+        : resolveAnimPlayerPath(nodePath, properties.anim_player, treeNames),
+    [nodePath, properties.anim_player, treeNames]
   );
   const driver = useAnimationDriver(targetPath);
 

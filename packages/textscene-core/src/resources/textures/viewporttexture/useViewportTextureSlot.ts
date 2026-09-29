@@ -13,10 +13,8 @@ import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver.js';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext.js';
 import { useViewportPassCycle } from '../../../r3f/contexts/ViewportPassRegistryContext.js';
-import {
-  useUniqueNamePaths,
-  useViewportTexture,
-} from '../../../r3f/contexts/ViewportTextureContext.js';
+import { useViewportTexture } from '../../../r3f/contexts/ViewportTextureContext.js';
+import { useUniqueNamePaths } from '../../../r3f/useUniqueNames.js';
 import {
   resolveViewportTexturePath,
   viewportTextureRegistryKey,
@@ -126,7 +124,7 @@ export function useViewportTextureSlot(
     }
     // Dedup on the spelling in a ref, not on effect deps: `uniquePaths` is a fresh
     // object per re-parse. The marker clears once the name is claimed, so a renamed
-    // claimant warns again, as the publisher's `viewportTextureUniqueNameKey` does.
+    // claimant warns again.
     const spelling = `${consumerPath}\u0000${viewportPath}`;
     if (reported.current === spelling) return;
     reported.current = spelling;
