@@ -11,6 +11,7 @@ import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { cameraLookingAt, drawColourGroup } from '../../../r3f/testing/threePasses';
 
 const INTERNALS: TscnInternalResource[] = [
   {
@@ -115,5 +116,56 @@ describe('MeshInstance3D — material_overlay', () => {
     // still receives, because Godot lights it like any surface.
     expect(drawn[1]!.castShadow).toBe(false);
     expect(drawn[1]!.receiveShadow).toBe(true);
+  });
+});
+
+/**
+ * The overlay is its own material pass, so its own `billboard_mode` decides
+ * whether it turns, whatever the surface under it does.
+ */
+describe('MeshInstance3D — material_overlay billboard_mode', () => {
+  const BILLBOARD_INTERNALS: TscnInternalResource[] = [
+    ...INTERNALS,
+    { id: 'Mat_facing', type: 'StandardMaterial3D', data: { billboard_mode: '1' } },
+  ];
+  const camera = cameraLookingAt({ x: 4, y: 3, z: 12 });
+  /** A quarter-turn about Y, which a billboard must replace and every other pose keeps. */
+  const YAWED = {
+    basis_x: { x: 0, y: 0, z: 1 },
+    basis_y: { x: 0, y: 1, z: 0 },
+    basis_z: { x: -1, y: 0, z: 0 },
+    origin: { x: 3, y: 0, z: 0 },
+  };
+
+  async function overlayOf(properties: Partial<MeshInstance3DProperties>): Promise<THREE.Mesh> {
+    const renderer = await ReactThreeTestRenderer.create(
+      <SceneResourcesProvider internalResources={BILLBOARD_INTERNALS}>
+        <MeshInstance3D node={makeNode({ ...properties, transform: YAWED })} />
+      </SceneResourcesProvider>
+    );
+    const [base, overlay] = meshes(renderer);
+    base!.updateMatrixWorld(true);
+    return overlay!;
+  }
+
+  function rotationOf(matrix: THREE.Matrix4): THREE.Quaternion {
+    const rotation = new THREE.Quaternion();
+    matrix.decompose(new THREE.Vector3(), rotation, new THREE.Vector3());
+    return rotation;
+  }
+
+  it('turns an overlay whose material billboards', async () => {
+    const overlay = await overlayOf({ materialOverlay: 'SubResource("Mat_facing")' });
+    const drawn = drawColourGroup(overlay, camera, 0, (s) => s.matrixWorld);
+    expect(rotationOf(drawn).angleTo(rotationOf(camera.matrixWorld))).toBeCloseTo(0, 5);
+  });
+
+  it('keeps an overlay whose material does not billboard in the node pose', async () => {
+    const overlay = await overlayOf({
+      materialOverride: 'SubResource("Mat_facing")',
+      materialOverlay: 'SubResource("Mat_overlay")',
+    });
+    const drawn = drawColourGroup(overlay, camera, 0, (s) => s.matrixWorld);
+    expect(drawn.equals(overlay.matrixWorld)).toBe(true);
   });
 });

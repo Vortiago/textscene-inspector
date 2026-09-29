@@ -11,6 +11,7 @@ import {
   GODOT_DEFAULT_METALLIC,
   GODOT_DEFAULT_ROUGHNESS,
 } from '../../../r3f/materials/godotDefaultMaterial';
+import { BillboardMode } from '../../../godot/billboard';
 import { resolveEmission } from './emission';
 import type {
   MaterialBlendState,
@@ -105,6 +106,27 @@ function materialBlendProps(scalars: StandardMaterial3DScalars): MaterialBlendSt
   return props;
 }
 
+/** Where a derived material records its `billboard_mode`, for the draw hooks to read per surface. */
+const BILLBOARD_MODE_KEY = 'godotBillboardMode';
+
+/**
+ * `billboard_mode` on `userData`, not a material prop: Godot applies it in the vertex
+ * shader, and here the draw hooks apply it per draw group (`r3f/surfaceDrawHooks.ts`).
+ * A fresh object per bag, since the `.tres` loader writes its own keys into it.
+ */
+function billboardUserData(scalars: StandardMaterial3DScalars): Record<string, number> {
+  return { [BILLBOARD_MODE_KEY]: scalars.billboardMode };
+}
+
+/**
+ * The `billboard_mode` a material was derived with. DISABLED for Godot's default
+ * surface and for any material this derivation did not build.
+ */
+export function billboardModeOf(material: THREE.Material): number {
+  const mode: unknown = material.userData[BILLBOARD_MODE_KEY];
+  return typeof mode === 'number' ? mode : BillboardMode.DISABLED;
+}
+
 /**
  * Derive the material this decoded StandardMaterial3D describes.
  *
@@ -142,6 +164,7 @@ export function standardMaterialBag(
         depthWrite: scalars.depthWrite,
         depthTest: scalars.depthTest,
         side: scalars.side,
+        userData: billboardUserData(scalars),
         ...blend,
       },
     };
@@ -178,6 +201,7 @@ export function standardMaterialBag(
     // and its depth is in world units. Inert without a heightmap (scale 0, no map).
     displacementMap: slot('heightmap_texture'),
     displacementScale: scalars.heightmapScale,
+    userData: billboardUserData(scalars),
     ...blend,
   };
 

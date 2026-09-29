@@ -5,7 +5,9 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { standardMaterialBag } from './materialBag';
+import { billboardModeOf, standardMaterialBag } from './materialBag';
+import { buildStandardMaterial } from './build';
+import { BillboardMode } from '../../../godot/billboard';
 import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextureSlots } from './types';
 
@@ -154,5 +156,28 @@ describe('standardMaterialBag — no material at all', () => {
     expect(props.roughness).toBe(0.8);
     expect(props.metalness).toBe(0.2);
     expect(props.side).toBe(THREE.FrontSide);
+  });
+});
+
+describe('standardMaterialBag — billboard_mode', () => {
+  it('carries the mode on the material, where each draw group reads it', () => {
+    const built = buildStandardMaterial(parseStandardMaterial3DScalars({ billboard_mode: '2' }));
+    expect(billboardModeOf(built)).toBe(BillboardMode.FIXED_Y);
+  });
+
+  it('reads DISABLED from a material that sets no billboard_mode', () => {
+    expect(billboardModeOf(buildStandardMaterial(parseStandardMaterial3DScalars({})))).toBe(
+      BillboardMode.DISABLED
+    );
+  });
+
+  it('reads DISABLED from Godot’s default surface and from a foreign material', () => {
+    expect(billboardModeOf(buildStandardMaterial(null))).toBe(BillboardMode.DISABLED);
+    expect(billboardModeOf(new THREE.MeshBasicMaterial())).toBe(BillboardMode.DISABLED);
+  });
+
+  it('gives each bag its own userData, as the .tres loader writes into it', () => {
+    const scalars = parseStandardMaterial3DScalars({ billboard_mode: '1' });
+    expect(standardMaterialBag(scalars).props.userData).not.toBe(standardMaterialBag(scalars).props.userData);
   });
 });

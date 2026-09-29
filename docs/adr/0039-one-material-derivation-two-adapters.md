@@ -117,7 +117,7 @@ uniform, geometry or object state that a mounted material may change freely.
 | `cull_mode` | program input | `side`, which reaches the program as the `doubleSided`/`flipSided` pair (`WebGLPrograms.js:369-370`). Godot's enum names the faces discarded, and three's names those kept, mapped once in `scalars.ts`. |
 | `diffuse_mode` | unimplemented | three has one diffuse BRDF. Nothing in the repo reads the property. |
 | `specular_mode` | unimplemented | As above. |
-| `billboard_mode` | neither | A vertex-shader term in Godot. Here it never reaches a material: `useBillboard` rotates the object per frame on the CPU, off `materialScalars.billboardMode`. |
+| `billboard_mode` | neither | A vertex-shader term in Godot. Here it is no program input: the derivation records it on the material's `userData`, and `r3f/surfaceDrawHooks.ts` swaps the world matrix around each draw group whose material billboards, per surface as Godot's shader does. |
 | `detail_blend_mode` | unimplemented | With the detail layer. |
 | `roughness_channel` | unimplemented | A stated parity limitation: Godot reads the channel named by `roughness_texture_channel`/`metallic_texture_channel` (default RED). three's `roughnessMap`/`metalnessMap` read fixed G/B (`SurfaceMaterialSlot.tsx`). |
 | `emission_op` | uniform | Resolved on the CPU into `emissive` + `emissiveIntensity` (`emission.ts`), and only where a texture is known to have landed: the operator is unobservable without one. |
@@ -164,7 +164,7 @@ Carried:
 - `FLAG_UV1_USE_TRIPLANAR` / `FLAG_UV1_USE_WORLD_TRIPLANAR` → one `triplanar` scalar
   folded into the per-surface UV transform, with its own recorded `uv1_offset`
   limitation (`SurfaceMaterialSlot.tsx`).
-- `FLAG_BILLBOARD_KEEP_SCALE` → the CPU billboard, like `billboard_mode`.
+- `FLAG_BILLBOARD_KEEP_SCALE` → not read. The draw-time billboard always keeps the model scale.
 
 The other bits are unimplemented here. `FLAG_FIXED_SIZE` is one of them: the
 Sprite3D/Label3D path in the scope note below honours it, not this derivation.

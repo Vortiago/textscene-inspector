@@ -43,15 +43,13 @@ import {
 } from '../../../r3f/materials/SurfaceMaterialSlot';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
-import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
 import { shadowCastingEffects } from '../../../r3f/shadowCasting';
+import { surfaceDrawHooks, type SurfaceDrawHooks } from '../../../r3f/surfaceDrawHooks';
+import { ShadowCastingSetting } from '../../../resources/meshlibrary/types';
 
 /** Literal-only, so each key is constant and none of these ever remounts. */
 const PLACEHOLDER_MATERIAL = materialProgramInputs({ props: { color: 'magenta' } });
-const SHADOWS_ONLY_MATERIAL = materialProgramInputs({
-  props: { attach: 'material', colorWrite: false, depthWrite: false },
-});
 const UNRESOLVED_MESH_MATERIAL = wireGizmoProgram(0xff00ff);
 
 export function MeshInstance3D({ node, children }: NodeComponentProps) {
@@ -133,22 +131,14 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   // missing-file placeholder rather than sampling the unwritten target.
   const materialUnresolved = firstMissingPath !== null || viewportCyclic;
 
-  // A material's `billboard_mode` turns the whole mesh to face the camera, as Godot's
-  // shader does. The hook no-ops for DISABLED or absent. The ref lands on whichever
-  // `<mesh>` MeshShell renders.
+  // The ref lands on whichever `<mesh>` MeshShell renders, for the overlay to share.
   const meshRef = useRef<THREE.Mesh | null>(null);
-  // Known gap: a billboarded mesh's children inherit its rotation here. In Godot the
-  // billboard is a surface-only shader effect, so its children do not.
-  useBillboard(meshRef, materialScalars?.billboardMode);
 
   // Mode 2 (DOUBLE_SIDED) reaches three's depth material per mesh. Mode 3 (SHADOWS_ONLY)
   // hides the mesh from the colour buffer while it keeps casting: MeshShell says why
-  // that is not `visible = false`.
+  // that is not `visible = false`. A surface's billboard and its blend mode's shadow
+  // exclusion are per surface in Godot, so the draw hooks read each group's material.
   const shadowFlags = shadowCastingEffects(properties.castShadow);
-  // Godot excludes an additive, subtractive or multiply surface from the shadow pass.
-  const blendTransparent =
-    !!materialScalars && materialScalars.blending !== THREE.NormalBlending;
-  const castShadow = shadowFlags.castShadow && !blendTransparent;
   const visible = properties.visible !== false;
 
   const shellProps = {
@@ -158,9 +148,9 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     rotation,
     scale,
     visible,
-    castShadow,
+    castShadow: shadowFlags.castShadow,
     shadowsOnly: shadowFlags.shadowsOnly,
-    onBeforeShadow: shadowFlags.onBeforeShadow,
+    drawHooks: surfaceDrawHooks(shadowFlags),
     godotLayers: properties.layers,
     subtree: children,
     overlay: overlaySource ? (
@@ -249,6 +239,12 @@ const MATERIAL_OVERLAY_RENDER_ORDER = 1;
 const NO_RAYCAST: THREE.Object3D['raycast'] = () => {};
 
 /**
+ * The overlay casts nothing of its own, so only its colour hooks mount, and its own
+ * material decides its billboard: Godot draws it as a separate pass over the surface.
+ */
+const OVERLAY_DRAW_HOOKS = surfaceDrawHooks(shadowCastingEffects(ShadowCastingSetting.OFF));
+
+/**
  * `material_overlay`'s draw: the base mesh's geometry a second time, with the
  * overlay material. A separate mesh, not a material array entry: Godot's
  * overlay covers every surface (`_geometry_instance_add_surface` runs per
@@ -284,6 +280,8 @@ function MaterialOverlayMesh({
       // measures; a coincident second hit would report the same node twice.
       raycast={NO_RAYCAST}
       receiveShadow
+      onBeforeRender={OVERLAY_DRAW_HOOKS.onBeforeRender}
+      onAfterRender={OVERLAY_DRAW_HOOKS.onAfterRender}
     >
       <SurfaceMaterialSlot source={source} />
     </mesh>
@@ -292,7 +290,7 @@ function MaterialOverlayMesh({
 
 interface MeshShellProps {
   name: string;
-  /** Ref to the underlying THREE.Mesh, so `useBillboard` can turn it per frame. */
+  /** Ref to the underlying THREE.Mesh, whose geometry the overlay draws again. */
   meshRef: RefObject<THREE.Mesh | null>;
   position: [number, number, number];
   rotation: [number, number, number];
@@ -301,8 +299,8 @@ interface MeshShellProps {
   castShadow: boolean;
   /** `cast_shadow = SHADOWS_ONLY` (3): cast, but draw nothing. */
   shadowsOnly: boolean;
-  /** `cast_shadow = DOUBLE_SIDED` (2) reaches the depth material through this. */
-  onBeforeShadow: THREE.Object3D['onBeforeShadow'];
+  /** The per-surface draw state three holds per object: billboard, shadow pass, SHADOWS_ONLY. */
+  drawHooks: SurfaceDrawHooks;
   /** `layers`: the VisualInstance3D render mask a Decal's `cull_mask` filters on. */
   godotLayers: number | undefined;
   /** The dispatched scene-tree subtree parented under this MeshInstance3D. */
@@ -327,7 +325,7 @@ function MeshShell({
   visible,
   castShadow,
   shadowsOnly,
-  onBeforeShadow,
+  drawHooks,
   godotLayers,
   subtree,
   overlay,
@@ -342,10 +340,13 @@ function MeshShell({
       scale={scale}
       visible={visible}
       castShadow={castShadow}
-      // three fires this per mesh per light, after `getDepthMaterial` has set the side
-      // (`WebGLShadowMap.js:477,535,549`): the only per-mesh reach into a depth material
-      // three shares across objects.
-      onBeforeShadow={onBeforeShadow}
+      // three fires these per draw group, the shadow pair after `getDepthMaterial` has
+      // set the side (`WebGLShadowMap.js:477,535,549`): the only per-surface reach into
+      // a draw of an object whose materials and depth material three shares.
+      onBeforeRender={drawHooks.onBeforeRender}
+      onAfterRender={drawHooks.onAfterRender}
+      onBeforeShadow={drawHooks.onBeforeShadow}
+      onAfterShadow={drawHooks.onAfterShadow}
       receiveShadow
       // Godot's `layers`, for `Decal.cull_mask`. Set on every branch, placeholders
       // included, so a decal's receiver test never depends on load order.
@@ -354,14 +355,9 @@ function MeshShell({
       {children}
       {/* SHADOWS_ONLY casts and keeps its descendants. `visible = false` would skip
           the shadow pass and the subtree in `WebGLShadowMap.renderObject`, and
-          `material.visible` gates the depth material too. `getDepthMaterial` never
-          copies `colorWrite`, so this material, attached last, hides only colour. */}
-      {shadowsOnly && (
-        <meshBasicMaterial key={SHADOWS_ONLY_MATERIAL.key} {...SHADOWS_ONLY_MATERIAL.props} />
-      )}
-      {/* Inside this mesh, so the overlay inherits the billboard transform. Skipped
-          under SHADOWS_ONLY: the base's `colorWrite: false` material would not
-          suppress a second mesh's colour. */}
+          `material.visible` gates the depth material too. So `drawHooks` switch off
+          each colour draw's writes instead, and the overlay, a second mesh, is left
+          out. */}
       {!shadowsOnly && overlay}
       {subtree}
     </mesh>

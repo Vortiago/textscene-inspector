@@ -25,6 +25,7 @@ import {
 import type { Label3DProperties } from '../../nodes/3d/label3d/types';
 import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from '../../nodes/3d/label3d/types';
 import { inlineTwoSurfaceMesh } from '../../nodes/3d/meshinstance3d/testing/twoSurfaceMesh';
+import { cameraLookingAt, drawColourGroup, writesAnything } from '../testing/threePasses';
 
 function sub(type: string, id: string, data: Record<string, string | undefined> = {}): TscnInternalResource {
   return {
@@ -121,13 +122,13 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       </SceneResourcesProvider>
     );
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-    const material = mesh.material as THREE.Material;
     expect(mesh.castShadow).toBe(true);
     // Not `visible = false`: three's shadow pass skips an invisible object and
-    // its subtree. Suppressing the colour write keeps both, as
+    // its subtree. Suppressing each colour draw's writes keeps both, as
     // meshinstance3d/Component.shadows-only.test.tsx shows.
     expect(mesh.visible).toBe(true);
-    expect(material.colorWrite).toBe(false);
+    const camera = cameraLookingAt({ x: 0, y: 0, z: 5 });
+    expect(drawColourGroup(mesh, camera, 0, (s) => writesAnything(s.material))).toBe(false);
   });
 
   it('audit slot 38a — ao_texture loaded → material.aoMap is a THREE.Texture', async () => {

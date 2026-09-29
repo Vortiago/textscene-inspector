@@ -25,7 +25,8 @@ export interface ShadowCastingEffects {
 type ShadowHookObject = { material?: THREE.Material | THREE.Material[] };
 type ShadowHookGroup = { materialIndex?: number } | null;
 
-function drawnMaterial(object: unknown, group: unknown): THREE.Material | undefined {
+/** The material three draws for `group` of `object`, from inside a shadow hook. */
+export function drawnMaterial(object: unknown, group: unknown): THREE.Material | undefined {
   const material = (object as ShadowHookObject | null)?.material;
   if (!Array.isArray(material)) return material;
   return material[(group as ShadowHookGroup)?.materialIndex ?? 0];
