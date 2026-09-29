@@ -29,7 +29,9 @@ export const UNIQUE_NODE_PREFIX = '%';
 /**
  * Walks `relative` from `base` as `Node::get_node_or_null` walks a NodePath (node.cpp:1912-1949),
  * over the names the constructor kept ({@link nodePathWalkNames}): an extra slash adds nothing
- * and a `:subname` addresses a property. The first `floor` segments spell the scene root.
+ * and a `:subname` addresses a property. The first `floor` segments spell the scene root, so a
+ * `..` below them is null. Without `exists`, a missing name folds away under a later `..`, as
+ * Godot's walk never does.
  */
 function walk(
   base: readonly string[],
@@ -64,32 +66,6 @@ function walk(
 }
 
 /**
- * The segments `relative` reaches from the node at `base`, whose first segment names the scene
- * root, or null when the walk reaches nothing. `uniquePaths` maps `%Name` to its claiming path,
- * spelt as `base` is.
- */
-export function walkFromNodePath(
-  base: readonly string[],
-  relative: string,
-  uniquePaths?: ReadonlyMap<string, string>
-): string[] | null {
-  return walk(base, relative, 1, uniquePaths);
-}
-
-/**
- * The segments `relative` reaches from the scene root, spelt without the root's own name (the root
- * is no segments), or null when the walk reaches nothing. `exists` is the child lookup at each
- * descent. Without it a missing name folds away under a later `..`, as Godot's walk never does.
- */
-export function walkFromSceneRoot(
-  relative: string,
-  uniquePaths?: ReadonlyMap<string, string>,
-  exists?: (path: string) => boolean
-): string[] | null {
-  return walk([], relative, 0, uniquePaths, exists);
-}
-
-/**
  * A relative node path resolved against the base node itself, not its parent, so `"Child"` is a
  * child and `"../Sibling"` a sibling. The base path's first segment is the scene root, the floor:
  * null when the path walks above it. An absolute path measures from the live SceneTree root
@@ -101,7 +77,7 @@ export function resolveRelativePath(
   uniquePaths?: ReadonlyMap<string, string>
 ): string | null {
   if (relative.startsWith('/')) return null;
-  return walkFromNodePath(basePath.split('/'), relative, uniquePaths)?.join('/') ?? null;
+  return walk(basePath.split('/'), relative, 1, uniquePaths)?.join('/') ?? null;
 }
 
 /**
@@ -130,7 +106,7 @@ export function resolveParentPath(
   // (resource_format_text.cpp:2018), yet on 4.7.2 the loader seats `parent="%Player"` under its
   // claimant and warns only when nothing claims it.
   if (!parentPath || parentPath.startsWith('/')) return null;
-  return walkFromSceneRoot(parentPath, tree?.uniquePaths, tree?.exists)?.join('/') ?? null;
+  return walk([], parentPath, 0, tree?.uniquePaths, tree?.exists)?.join('/') ?? null;
 }
 
 /**

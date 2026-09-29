@@ -6,8 +6,6 @@ import {
   resolveParentPath,
   resolveRelativePath,
   unclaimedUniqueNames,
-  walkFromNodePath,
-  walkFromSceneRoot,
 } from './nodePath.js';
 
 describe('nodePathNames', () => {
@@ -46,77 +44,26 @@ describe('nodePathNames', () => {
   });
 });
 
-describe('walkFromNodePath', () => {
-  const base = ['Root', 'Player'];
-
-  it('walks from the base node itself, so a bare name is its child', () => {
-    expect(walkFromNodePath(base, 'Arm')).toEqual(['Root', 'Player', 'Arm']);
-  });
-
-  it('steps up with `..` and stays with `.`', () => {
-    expect(walkFromNodePath(base, './../Arm')).toEqual(['Root', 'Arm']);
-  });
-
-  it('reaches the first segment of the base, which is the scene root', () => {
-    expect(walkFromNodePath(base, '..')).toEqual(['Root']);
-  });
-
-  it('returns null for a `..` above the scene root', () => {
-    // `!current->data.parent` returns nullptr (node.cpp:1919-1922).
-    expect(walkFromNodePath(base, '../..')).toBeNull();
-  });
-
-  it('drops a :subname, which addresses a property and not a node', () => {
-    expect(walkFromNodePath(base, 'Arm:position')).toEqual(['Root', 'Player', 'Arm']);
-  });
-
-  it('restarts at the claimed path for a %Name, so a later `..` steps up from there', () => {
-    const claims = new Map([['%Hud', 'Root/Ui/Hud']]);
-    expect(walkFromNodePath(base, '%Hud/..', claims)).toEqual(['Root', 'Ui']);
-  });
-
-  it('returns null for a %Name nothing claims', () => {
-    expect(walkFromNodePath(base, '%Absent', new Map())).toBeNull();
-  });
-
-  it('does not change the base it was given', () => {
-    const segments = ['Root', 'Player'];
-    walkFromNodePath(segments, '../Arm');
-    expect(segments).toEqual(['Root', 'Player']);
-  });
-});
-
-describe('walkFromSceneRoot', () => {
-  it('spells the scene root as no segments', () => {
-    expect(walkFromSceneRoot('.')).toEqual([]);
-  });
-
-  it('descends from the root without naming it', () => {
-    expect(walkFromSceneRoot('Mid/Leaf')).toEqual(['Mid', 'Leaf']);
-  });
-
-  it('returns null for a `..` above the root', () => {
-    expect(walkFromSceneRoot('../Mid')).toBeNull();
-  });
-
-  it('stops at a descent the tree does not hold, so a later `..` never runs', () => {
-    // `children.getptr(name)` misses and returns nullptr (node.cpp:1941-1946).
-    const exists = (path: string) => path === 'Mid';
-    expect(walkFromSceneRoot('Missing/../Mid', undefined, exists)).toBeNull();
-  });
-
-  it('folds past a missing name when the caller holds no tree', () => {
-    expect(walkFromSceneRoot('Missing/../Mid')).toEqual(['Mid']);
-  });
-
-  it('jumps a %Name to the path claiming it', () => {
-    expect(walkFromSceneRoot('%Hud', new Map([['%Hud', 'Mid/Leaf']]))).toEqual(['Mid', 'Leaf']);
-  });
-});
-
 describe('resolveRelativePath', () => {
   it('walks from the base node itself', () => {
     expect(resolveRelativePath('Root/Player', '../Arm')).toBe('Root/Arm');
+  });
+
+  it('stays with `.` and steps up with `..`', () => {
+    expect(resolveRelativePath('Root/Player', './../Arm')).toBe('Root/Arm');
+  });
+
+  it('reaches the scene root, the first segment of the base path', () => {
+    expect(resolveRelativePath('Root/Player', '..')).toBe('Root');
+  });
+
+  it('refuses a `..` above the scene root', () => {
+    // `!current->data.parent` returns nullptr (node.cpp:1919-1922).
+    expect(resolveRelativePath('Root/Player', '../..')).toBeNull();
+  });
+
+  it('drops a :subname, which addresses a property and not a node', () => {
+    expect(resolveRelativePath('Root/Player', 'Arm:position')).toBe('Root/Player/Arm');
   });
 
   it('reaches nothing for an absolute path, which measures from the live SceneTree', () => {
@@ -186,6 +133,10 @@ describe('resolveParentPath', () => {
   it('resolves the scene root to the empty path', () => {
     // Paths here omit the root's own name, so the root is the empty path: `SCENE_ROOT_PATH`.
     expect(resolveParentPath('.', inTree)).toBe('');
+  });
+
+  it('descends from the root without naming it', () => {
+    expect(resolveParentPath('Mid/Leaf', inTree)).toBe('Mid/Leaf');
   });
 
   it.each([['Mid'], ['./Mid'], ['Mid/'], ['Mid//'], ['./Mid/.'], ['Mid:position']])(
