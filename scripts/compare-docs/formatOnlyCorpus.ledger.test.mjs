@@ -62,7 +62,7 @@ describe('validators that cite no grounding, against the literals Godot stores',
     });
 
   it('reaches the population it claims, Resource rows included', () => {
-    // Measured at 1277 when the ledger landed. A floor, since a lost capture or
+    // Measured at 1225 when the ledger landed. A floor, since a lost capture or
     // an unbuilt barrel shrinks the population and turns the ledger green.
     expect(subjects().length).toBeGreaterThan(1200);
     const labels = new Set(subjects().map((row) => row.label));
