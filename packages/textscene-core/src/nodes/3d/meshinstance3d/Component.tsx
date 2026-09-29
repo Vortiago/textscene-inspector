@@ -44,8 +44,8 @@ import {
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
-import { shadowCastingEffects } from '../../../r3f/shadowCasting';
-import { surfaceDrawHooks, type SurfaceDrawHooks } from '../../../r3f/surfaceDrawHooks';
+import { shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
+import { surfaceDrawHooks } from '../../../r3f/surfaceDrawHooks';
 import { ShadowCastingSetting } from '../../../resources/meshlibrary/types';
 
 /** Literal-only, so each key is constant and none of these ever remounts. */
@@ -148,9 +148,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     rotation,
     scale,
     visible,
-    castShadow: shadowFlags.castShadow,
-    shadowsOnly: shadowFlags.shadowsOnly,
-    drawHooks: surfaceDrawHooks(shadowFlags),
+    shadow: shadowFlags,
     godotLayers: properties.layers,
     subtree: children,
     overlay: overlaySource ? (
@@ -296,11 +294,11 @@ interface MeshShellProps {
   rotation: [number, number, number];
   scale: [number, number, number];
   visible: boolean;
-  castShadow: boolean;
-  /** `cast_shadow = SHADOWS_ONLY` (3): cast, but draw nothing. */
-  shadowsOnly: boolean;
-  /** The per-surface draw state three holds per object: billboard, shadow pass, SHADOWS_ONLY. */
-  drawHooks: SurfaceDrawHooks;
+  /**
+   * `cast_shadow`, and through `surfaceDrawHooks` the per-surface draw state three holds
+   * per object: billboard, shadow pass, SHADOWS_ONLY.
+   */
+  shadow: ShadowCastingEffects;
   /** `layers`: the VisualInstance3D render mask a Decal's `cull_mask` filters on. */
   godotLayers: number | undefined;
   /** The dispatched scene-tree subtree parented under this MeshInstance3D. */
@@ -323,14 +321,13 @@ function MeshShell({
   rotation,
   scale,
   visible,
-  castShadow,
-  shadowsOnly,
-  drawHooks,
+  shadow,
   godotLayers,
   subtree,
   overlay,
   children,
 }: MeshShellProps) {
+  const drawHooks = surfaceDrawHooks(shadow);
   return (
     <mesh
       ref={meshRef}
@@ -339,7 +336,7 @@ function MeshShell({
       rotation={rotation}
       scale={scale}
       visible={visible}
-      castShadow={castShadow}
+      castShadow={shadow.castShadow}
       // three fires these per draw group, the shadow pair after `getDepthMaterial` has
       // set the side (`WebGLShadowMap.js:477,535,549`): the only per-surface reach into
       // a draw of an object whose materials and depth material three shares.
@@ -358,7 +355,7 @@ function MeshShell({
           `material.visible` gates the depth material too. So `drawHooks` switch off
           each colour draw's writes instead, and the overlay, a second mesh, is left
           out. */}
-      {!shadowsOnly && overlay}
+      {!shadow.shadowsOnly && overlay}
       {subtree}
     </mesh>
   );

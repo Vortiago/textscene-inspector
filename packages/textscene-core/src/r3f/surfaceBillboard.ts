@@ -15,6 +15,7 @@ const axisY = new THREE.Vector3();
 const axisZ = new THREE.Vector3();
 const cameraX = new THREE.Vector3();
 const cameraZ = new THREE.Vector3();
+const modelScale = new THREE.Vector3();
 
 /**
  * Write the billboarded world matrix into `target`. The model keeps its per-axis scale,
@@ -33,13 +34,13 @@ export function billboardWorldMatrix(
 ): boolean {
   switch (mode) {
     case BillboardMode.ENABLED:
-      camera.extractBasis(axisX, axisY, axisZ);
-      break;
     case BillboardMode.PARTICLES:
       camera.extractBasis(axisX, axisY, axisZ);
-      axisX.normalize();
-      axisY.normalize();
-      axisZ.normalize();
+      if (mode === BillboardMode.PARTICLES) {
+        axisX.normalize();
+        axisY.normalize();
+        axisZ.normalize();
+      }
       break;
     case BillboardMode.FIXED_Y:
       if (!fixedYBasis(camera)) return false;
@@ -48,10 +49,12 @@ export function billboardWorldMatrix(
       return false;
   }
 
+  // `length(MODEL_MATRIX[i].xyz)` per axis, the keep-scale factors.
+  modelScale.setFromMatrixScale(model);
   target.makeBasis(
-    axisX.multiplyScalar(axisLength(model, 0)),
-    axisY.multiplyScalar(axisLength(model, 1)),
-    axisZ.multiplyScalar(axisLength(model, 2))
+    axisX.multiplyScalar(modelScale.x),
+    axisY.multiplyScalar(modelScale.y),
+    axisZ.multiplyScalar(modelScale.z)
   );
   target.copyPosition(model);
   return true;
@@ -72,11 +75,4 @@ function fixedYBasis(camera: THREE.Matrix4): boolean {
   axisY.copy(WORLD_UP);
   axisZ.normalize();
   return true;
-}
-
-/** `length(MODEL_MATRIX[i].xyz)`, the keep-scale factor for one axis. */
-function axisLength(model: THREE.Matrix4, index: 0 | 1 | 2): number {
-  const e = model.elements;
-  const offset = index * 4;
-  return Math.hypot(e[offset]!, e[offset + 1]!, e[offset + 2]!);
 }

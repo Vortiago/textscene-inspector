@@ -6,6 +6,7 @@
  */
 
 import * as THREE from 'three';
+import { drawnMaterial } from '../shadowCasting';
 
 /** What a probe sees between a draw's before-hook and its after-hook. */
 export interface DrawState {
@@ -25,10 +26,9 @@ function groupAt(mesh: THREE.Mesh, groupIndex: number): THREE.Group | null {
   return mesh.geometry.groups[groupIndex] as unknown as THREE.Group;
 }
 
+/** The material three draws for that group, by the rule the shadow hooks read. */
 function materialAt(mesh: THREE.Mesh, groupIndex: number): THREE.Material {
-  const material = mesh.material;
-  if (!Array.isArray(material)) return material;
-  return material[mesh.geometry.groups[groupIndex]!.materialIndex ?? 0]!;
+  return drawnMaterial(mesh, groupAt(mesh, groupIndex))!;
 }
 
 function snapshot(mesh: THREE.Mesh, material: THREE.Material): DrawState {
@@ -105,4 +105,15 @@ export function cameraLookingAt(
   camera.lookAt(target.x, target.y, target.z);
   camera.updateMatrixWorld(true);
   return camera;
+}
+
+/** The angle in radians between the rotations of two world matrices, their scale set aside. */
+export function rotationAngle(a: THREE.Matrix4, b: THREE.Matrix4): number {
+  return rotationOf(a).angleTo(rotationOf(b));
+}
+
+function rotationOf(matrix: THREE.Matrix4): THREE.Quaternion {
+  const rotation = new THREE.Quaternion();
+  matrix.decompose(new THREE.Vector3(), rotation, new THREE.Vector3());
+  return rotation;
 }

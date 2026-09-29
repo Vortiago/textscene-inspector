@@ -18,19 +18,11 @@ import type {
   TscnInternalResource,
   TscnNode,
 } from '../../../parser/types';
-import type { Transform3D } from '../../base/node3d/types';
 import type { MeshInstance3DProperties } from './types';
 import { findMesh, instanceAs } from '../testing/reactThreeTestInstance';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
-import { cameraLookingAt, drawColourGroup } from '../../../r3f/testing/threePasses';
-
-/** Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 3, 0, 0): a quarter-turn about Y. */
-const YAWED: Transform3D = {
-  basis_x: { x: 0, y: 0, z: 1 },
-  basis_y: { x: 0, y: 1, z: 0 },
-  basis_z: { x: -1, y: 0, z: 0 },
-  origin: { x: 3, y: 0, z: 0 },
-};
+import { YAWED } from './testing/yawedTransform';
+import { cameraLookingAt, drawColourGroup, rotationAngle } from '../../../r3f/testing/threePasses';
 
 const BILLBOARD_TRES = 'res://billboard.tres';
 const EXTERNALS: readonly TscnExternalResource[] = [
@@ -48,7 +40,7 @@ function meshNode(properties: Partial<MeshInstance3DProperties>): TscnNode {
     name: 'GlowSprite',
     transform: YAWED,
     mesh: 'SubResource("Quad")',
-    surfaceMaterialOverrides: new Map(),
+    surfaceMaterialOverrides: new Map([[0, 'SubResource("Mat")']]),
     ...properties,
   };
   return { name: props.name, type: 'MeshInstance3D', children: [], properties: props };
@@ -86,14 +78,8 @@ async function renderMesh(
   return { mesh, child };
 }
 
-function rotationOf(matrix: THREE.Matrix4): THREE.Quaternion {
-  const rotation = new THREE.Quaternion();
-  matrix.decompose(new THREE.Vector3(), rotation, new THREE.Vector3());
-  return rotation;
-}
-
 function facesCamera(drawn: THREE.Matrix4): boolean {
-  return rotationOf(drawn).angleTo(rotationOf(camera.matrixWorld)) < 1e-5;
+  return rotationAngle(drawn, camera.matrixWorld) < 1e-5;
 }
 
 const withSceneMaterial = (data: Record<string, string>) =>
@@ -102,7 +88,7 @@ const withSceneMaterial = (data: Record<string, string>) =>
 describe('<MeshInstance3D> material billboard_mode', () => {
   it('draws the authored pose when the material sets no billboard_mode', async () => {
     const { mesh } = await renderMesh(
-      meshNode({ surfaceMaterialOverrides: new Map([[0, 'SubResource("Mat")']]) }),
+      meshNode({}),
       withSceneMaterial({})
     );
     const drawn = drawColourGroup(mesh, camera, 0, (s) => s.matrixWorld);
@@ -111,7 +97,7 @@ describe('<MeshInstance3D> material billboard_mode', () => {
 
   it('draws facing the camera when the material sets billboard_mode = 1 (ENABLED)', async () => {
     const { mesh } = await renderMesh(
-      meshNode({ surfaceMaterialOverrides: new Map([[0, 'SubResource("Mat")']]) }),
+      meshNode({}),
       withSceneMaterial({ billboard_mode: '1' })
     );
     expect(facesCamera(drawColourGroup(mesh, camera, 0, (s) => s.matrixWorld))).toBe(true);
@@ -119,7 +105,7 @@ describe('<MeshInstance3D> material billboard_mode', () => {
 
   it('draws with world up kept when the material sets billboard_mode = 2 (FIXED_Y)', async () => {
     const { mesh } = await renderMesh(
-      meshNode({ surfaceMaterialOverrides: new Map([[0, 'SubResource("Mat")']]) }),
+      meshNode({}),
       withSceneMaterial({ billboard_mode: '2' })
     );
     const drawn = drawColourGroup(mesh, camera, 0, (s) => s.matrixWorld);
@@ -141,7 +127,7 @@ describe('<MeshInstance3D> material billboard_mode', () => {
   it('keeps the node and its children in the authored pose', async () => {
     // Godot's billboard is a surface-shader term, so no transform above or below it moves.
     const { mesh, child } = await renderMesh(
-      meshNode({ surfaceMaterialOverrides: new Map([[0, 'SubResource("Mat")']]) }),
+      meshNode({}),
       withSceneMaterial({ billboard_mode: '1' })
     );
     expect(Math.abs(mesh.quaternion.y)).toBeGreaterThan(0.5);
@@ -151,11 +137,14 @@ describe('<MeshInstance3D> material billboard_mode', () => {
 
 describe('<MeshInstance3D> billboard_mode per ArrayMesh surface', () => {
   async function twoSurfaces(): Promise<THREE.Mesh> {
-    const { mesh } = await renderMesh(meshNode({ mesh: 'SubResource("Mesh_2")' }), [
-      inlineTwoSurfaceMesh('Mesh_2', ['Plain', 'Facing']),
-      sub('StandardMaterial3D', 'Plain', {}),
-      sub('StandardMaterial3D', 'Facing', { billboard_mode: '1' }),
-    ]);
+    const { mesh } = await renderMesh(
+      meshNode({ mesh: 'SubResource("Mesh_2")', surfaceMaterialOverrides: new Map() }),
+      [
+        inlineTwoSurfaceMesh('Mesh_2', ['Plain', 'Facing']),
+        sub('StandardMaterial3D', 'Plain'),
+        sub('StandardMaterial3D', 'Facing', { billboard_mode: '1' }),
+      ]
+    );
     return mesh;
   }
 
@@ -175,7 +164,7 @@ describe('<MeshInstance3D> billboard_mode per ArrayMesh surface', () => {
         mesh: 'SubResource("Mesh_2")',
         surfaceMaterialOverrides: new Map([[0, 'ExtResource("1_ext")']]),
       }),
-      [inlineTwoSurfaceMesh('Mesh_2', ['Plain', 'Plain']), sub('StandardMaterial3D', 'Plain', {})]
+      [inlineTwoSurfaceMesh('Mesh_2', ['Plain', 'Plain']), sub('StandardMaterial3D', 'Plain')]
     );
     expect(facesCamera(drawColourGroup(mesh, camera, 0, (s) => s.matrixWorld))).toBe(true);
     expect(drawColourGroup(mesh, camera, 1, (s) => s.matrixWorld).equals(mesh.matrixWorld)).toBe(true);

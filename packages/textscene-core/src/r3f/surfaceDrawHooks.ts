@@ -12,7 +12,10 @@ import { billboardModeOf } from '../resources/materials/standardmaterial3d/mater
 import { billboardWorldMatrix } from './surfaceBillboard';
 import { drawnMaterial, type ShadowCastingEffects } from './shadowCasting';
 
-/** The four `Object3D` hooks, spread onto a `<mesh>` as props. */
+/**
+ * The four `Object3D` hooks, mounted on a `<mesh>` one prop each: the material factory
+ * guard rejects a spread on a mesh, since a spread names nothing it carries.
+ */
 export interface SurfaceDrawHooks {
   onBeforeRender: THREE.Object3D['onBeforeRender'];
   onAfterRender: THREE.Object3D['onAfterRender'];

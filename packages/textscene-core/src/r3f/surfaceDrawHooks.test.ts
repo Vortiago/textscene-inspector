@@ -9,6 +9,7 @@ import {
   cameraLookingAt,
   drawColourGroup,
   drawShadowGroup,
+  rotationAngle,
   writesAnything,
 } from './testing/threePasses';
 
@@ -45,14 +46,8 @@ function surfacesMesh(castShadow: number | undefined = ShadowCastingSetting.ON):
 const camera = cameraLookingAt({ x: 4, y: 3, z: 12 });
 const shadowCamera = cameraLookingAt({ x: -8, y: 20, z: 1 });
 
-function basisOf(matrix: THREE.Matrix4): THREE.Quaternion {
-  const rotation = new THREE.Quaternion();
-  matrix.decompose(new THREE.Vector3(), rotation, new THREE.Vector3());
-  return rotation;
-}
-
 function expectSameRotation(actual: THREE.Matrix4, expected: THREE.Matrix4) {
-  expect(basisOf(actual).angleTo(basisOf(expected))).toBeCloseTo(0, 5);
+  expect(rotationAngle(actual, expected)).toBeCloseTo(0, 5);
 }
 
 describe('surfaceDrawHooks — colour pass billboard', () => {
