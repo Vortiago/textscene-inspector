@@ -424,7 +424,7 @@ function useBoundMapUpload(texture: THREE.Texture | undefined): THREE.Texture | 
   return useTiledUpload(texture ?? null, releaseBoundTexture) ?? undefined;
 }
 
-/** Same, for a texture this module allocated itself rather than through the binding. */
+/** Disposes a texture this module allocated itself, which no binding releases, once it is replaced or the slot unmounts. */
 function useDisposeTexture(texture: THREE.Texture | undefined): void {
   useEffect(() => {
     const own = texture;

@@ -118,7 +118,6 @@ export function TextureButton({ solveNode, tint, rect, renderOrder }: NativeCont
     return cloned;
   }, [rawTexture, draw, sampler.filter, sampler.repeat, props.flipH, props.flipV]);
 
-  // Uploaded in bands where large, and disposed once it no longer draws.
   const drawnTexture = useUploadedClone(preparedTexture);
 
   if (!draw || !drawnTexture) return null;

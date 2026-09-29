@@ -15,7 +15,7 @@ vi.mock('../Canvas2DStage/Canvas2DStage', () => ({
 
 import { TscnPreviewShell } from './TscnPreviewShell';
 import { beginTextureWork } from '../../../resources/textures/textureWork';
-import { TEXTURE_WORK_STATUS_TESTID } from './TextureWorkStatus';
+import { TEXTURE_WORK_STATUS_TESTID } from './textureWorkStatusTestId';
 
 const SCENE = `[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n`;
 

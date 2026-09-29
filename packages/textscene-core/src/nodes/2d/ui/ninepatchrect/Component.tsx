@@ -115,7 +115,6 @@ export function NinePatchRect({ solveNode, tint, rect, renderOrder }: NativeCont
     cloned.needsUpdate = true;
     return cloned;
   }, [rawTexture, geometry, sampler.filter]);
-  // Uploaded in bands where large, and disposed once it no longer draws.
   const drawnTexture = useUploadedClone(preparedTexture);
 
   const clippingPlanes = useControlClipPlanes();

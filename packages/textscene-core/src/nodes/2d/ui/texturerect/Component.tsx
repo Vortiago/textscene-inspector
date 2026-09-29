@@ -101,7 +101,6 @@ export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeContro
     return cloned;
   }, [rawTexture, draw, sampler.filter, sampler.repeat, props.flipH, props.flipV]);
 
-  // Uploaded in bands where large, and disposed once it no longer draws.
   const drawnTexture = useUploadedClone(preparedTexture);
 
   if (!draw || !drawnTexture) return null;

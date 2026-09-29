@@ -7,8 +7,6 @@ import { usePendingTextureWork } from '../../../resources/usePendingTextureWork.
 import styles from './TscnPreviewShell.module.css';
 import { TEXTURE_WORK_STATUS_TESTID } from './textureWorkStatusTestId.js';
 
-export { TEXTURE_WORK_STATUS_TESTID };
-
 export function TextureWorkStatus() {
   if (usePendingTextureWork() === 0) return null;
   return (

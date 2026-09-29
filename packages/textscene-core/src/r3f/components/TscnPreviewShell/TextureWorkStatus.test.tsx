@@ -8,7 +8,8 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { act, render, screen } from '@testing-library/react';
 import { beginTextureWork } from '../../../resources/textures/textureWork';
-import { TEXTURE_WORK_STATUS_TESTID, TextureWorkStatus } from './TextureWorkStatus';
+import { TextureWorkStatus } from './TextureWorkStatus';
+import { TEXTURE_WORK_STATUS_TESTID } from './textureWorkStatusTestId';
 
 describe('<TextureWorkStatus>', () => {
   it('is absent while no texture work is pending', () => {

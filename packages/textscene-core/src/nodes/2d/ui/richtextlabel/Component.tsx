@@ -80,7 +80,6 @@ function RichTextImage({
     return cloned;
   }, [rawTexture, spec.region]);
 
-  // Uploaded in bands where large, and disposed once it no longer draws.
   const drawnTexture = useUploadedClone(preparedTexture);
 
   if (!rawTexture || !drawnTexture) return null;

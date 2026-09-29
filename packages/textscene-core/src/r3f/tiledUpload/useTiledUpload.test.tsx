@@ -105,6 +105,32 @@ describe('useTiledUpload', () => {
     expect(result.current).toBe(texture);
   });
 
+  it('passes a new texture through with no render of its own', () => {
+    const retire = vi.fn();
+    let renders = 0;
+    const { rerender } = renderHook(
+      ({ texture }) => {
+        renders += 1;
+        return useTiledUpload(texture, retire);
+      },
+      { initialProps: { texture: named('a') } }
+    );
+    rerender({ texture: named('b') });
+
+    expect(renders).toBe(2);
+  });
+
+  it('settles when the caller builds a new texture every render', () => {
+    const retire = vi.fn();
+    let renders = 0;
+    renderHook(() => {
+      renders += 1;
+      return useTiledUpload(named('fresh'), retire);
+    });
+
+    expect(renders).toBe(1);
+  });
+
   it('retires a passed-through texture as soon as it is replaced', () => {
     const retire = vi.fn();
     const first = named('first');

@@ -21,14 +21,13 @@ export function useTiledUpload<T extends THREE.Texture>(
 ): T | null {
   const queue = useContext(TiledUploadContext);
   const isTiled = texture !== null && queue !== null && queue.needsTiling(texture);
-  /** The newest texture whose upload finished, or that needed none. */
+  /** The newest tiled texture whose upload finished. Set only there, so a pass-through never renders twice. */
   const [uploaded, setUploaded] = useState<T | null>(null);
+  /** Written after each commit: what the hook showed, kept while a tiled texture uploads. */
+  const lastShown = useRef<T | null>(null);
 
   useEffect(() => {
-    if (!texture || !queue || !queue.needsTiling(texture)) {
-      setUploaded(texture);
-      return undefined;
-    }
+    if (!isTiled || !texture || !queue) return undefined;
     const upload = queue.enqueue(texture);
     const endWork = beginTextureWork();
     let current = true;
@@ -41,9 +40,12 @@ export function useTiledUpload<T extends THREE.Texture>(
       upload.cancel();
       endWork();
     };
-  }, [texture, queue]);
+  }, [texture, queue, isTiled]);
 
-  const shown = texture === null ? null : isTiled ? uploaded : texture;
+  const shown = !isTiled ? texture : uploaded === texture ? texture : lastShown.current;
+  useEffect(() => {
+    lastShown.current = shown;
+  });
   useRetired([texture, shown], retire);
   return shown;
 }
@@ -68,9 +70,7 @@ function disposeTexture(texture: THREE.Texture): void {
 function useRetired<T>(live: readonly (T | null)[], retire: (texture: T) => void): void {
   /** Written after each commit: every texture given and not yet retired. */
   const held = useRef(new Set<T>());
-  const latestRetire = useRef(retire);
   useEffect(() => {
-    latestRetire.current = retire;
     const stillLive = new Set(live);
     for (const texture of held.current) {
       if (stillLive.has(texture)) continue;
@@ -82,8 +82,10 @@ function useRetired<T>(live: readonly (T | null)[], retire: (texture: T) => void
   useEffect(() => {
     const textures = held.current;
     return () => {
-      textures.forEach((texture) => latestRetire.current(texture));
+      textures.forEach((texture) => retire(texture));
       textures.clear();
     };
+    // Every caller passes a module-level `retire`, so the first one is the last one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }

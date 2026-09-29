@@ -73,6 +73,17 @@ afterEach(async () => {
 });
 
 describe('resolveProceduralSubResourceAsync', () => {
+  it('plans each sub-resource once per parse, however many consumers look it up', () => {
+    const counted = vi.fn(plan);
+    const resources = scene('1');
+    resolveProceduralSubResourceAsync('SubResource("tex")', resources, 'FakeTexture', counted);
+    resolveProceduralSubResourceAsync('SubResource("tex")', resources, 'FakeTexture', counted);
+    expect(counted).toHaveBeenCalledTimes(1);
+
+    resolveProceduralSubResourceAsync('SubResource("tex")', scene('1'), 'FakeTexture', counted);
+    expect(counted).toHaveBeenCalledTimes(2);
+  });
+
   it('is pending for an unbuilt texture, then ready with the built texture', async () => {
     const { runner, runs } = fakeRunner();
     const resources = scene('1');
@@ -137,18 +148,8 @@ describe('resolveProceduralSubResourceAsync', () => {
     expect(pendingTextureWork()).toBe(1);
     runs[0]?.resolve(output());
     await handle.settled;
-    await settle();
 
     expect(pendingTextureWork()).toBe(0);
-  });
-
-  it('still counts the build inside a holder callback on settled, so the holder can take the work over', async () => {
-    const { runner, runs } = fakeRunner();
-    const handle = pendingLookup(scene('1')).start(runner);
-    const countInCallback = handle.settled.then(() => pendingTextureWork());
-    runs[0]?.resolve(output());
-
-    expect(await countInCallback).toBe(1);
   });
 
   it('stops counting an aborted build', async () => {

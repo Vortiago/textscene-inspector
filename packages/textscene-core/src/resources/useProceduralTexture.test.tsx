@@ -88,7 +88,7 @@ describe('useProceduralTexture', () => {
       useProceduralTexture('SubResource("GradientTexture2D_a")', resources)
     );
 
-    expect(result.current).toMatchObject({ claimed: true, pending: false });
+    expect(result.current).toMatchObject({ claimed: true });
     expect(result.current.texture).toBeInstanceOf(THREE.DataTexture);
     expect((result.current.texture as THREE.DataTexture).image.width).toBe(8);
   });
@@ -121,7 +121,7 @@ describe('useProceduralTexture', () => {
       const { result, unmount } = renderHook(() =>
         useProceduralTexture(ref, resources)
       );
-      expect(result.current, `ref: ${ref}`).toEqual({ texture: null, claimed: false, pending: false });
+      expect(result.current, `ref: ${ref}`).toEqual({ texture: null, claimed: false });
       unmount();
     }
 
@@ -267,12 +267,12 @@ function renderSlots(runner: JobRunner, resources: TscnInternalResource[], stric
 }
 
 describe('useProceduralTextures with a NoiseTexture2D', () => {
-  it('claims the slot and reports it pending until the build lands', () => {
+  it('claims the slot and draws nothing in it until the build lands', () => {
     const { runner } = fakeJobRunner();
     const { result } = renderSlots(runner, noiseScene(1));
 
-    expect(result.current[0]).toEqual({ texture: null, claimed: true, pending: true });
-    expect(result.current[1]?.pending).toBe(false);
+    expect(result.current[0]).toEqual({ texture: null, claimed: true });
+    expect(result.current[1]?.texture).toBeInstanceOf(THREE.Texture);
   });
 
   it('counts a pending build as a pending load on the loader', async () => {
@@ -290,7 +290,6 @@ describe('useProceduralTextures with a NoiseTexture2D', () => {
     runs[0]?.complete();
     await flush();
 
-    expect(result.current[0]?.pending).toBe(false);
     expect(result.current[0]?.texture).toBeInstanceOf(THREE.DataTexture);
     expect(loader.pendingResourceCount).toBe(0);
   });
@@ -335,7 +334,7 @@ describe('useProceduralTextures with a NoiseTexture2D', () => {
 
     rerender({ scene: noiseScene(2) });
     await flush();
-    expect(result.current[0]).toEqual({ texture: before, claimed: true, pending: true });
+    expect(result.current[0]).toEqual({ texture: before, claimed: true });
 
     runs[1]?.complete();
     await flush();
@@ -353,7 +352,7 @@ describe('useProceduralTextures with a NoiseTexture2D', () => {
     const built = result.current[0]?.texture;
 
     rerender({ scene: noiseScene(1) });
-    expect(result.current[0]).toEqual({ texture: built, claimed: true, pending: false });
+    expect(result.current[0]).toEqual({ texture: built, claimed: true });
     expect(runs).toHaveLength(1);
   });
 
@@ -401,7 +400,7 @@ describe('useProceduralTextures with a NoiseTexture2D', () => {
     runs[0]?.reject(new RangeError('Array buffer allocation failed'));
     await flush();
 
-    expect(result.current[0]).toEqual({ texture: null, claimed: true, pending: false });
+    expect(result.current[0]).toEqual({ texture: null, claimed: true });
     expect(runs).toHaveLength(1);
     warn.mockRestore();
   });

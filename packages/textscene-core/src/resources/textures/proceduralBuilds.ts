@@ -9,8 +9,8 @@ import type * as THREE from 'three';
 import type { TscnInternalResource } from '../../parser/types';
 import type { WorkerJobRunner } from '../../workers/WorkerJobRunner';
 import type { WorkerJobInput, WorkerJobName, WorkerJobOutput } from '../../workers/jobs';
-import { findSubResource, parseResourceReference } from '../SubResourceResolver';
 import { unlessAllocationFails } from './pixelAllocation';
+import { allocationLabel, findTypedSubResource } from './resolveProceduralSubResource';
 import { cachedProceduralTexture, cacheProceduralTexture } from './proceduralTextureCache';
 import { beginTextureWork } from './textureWork';
 
@@ -59,18 +59,33 @@ export function resolveProceduralSubResourceAsync(
     resources: readonly TscnInternalResource[]
   ) => ProceduralBuildPlan | null
 ): ProceduralTextureLookup | null {
-  const parsed = parseResourceReference(ref ?? '');
-  if (!parsed || parsed.type !== 'SubResource') return null;
-  const resource = findSubResource(internalResources, parsed.id);
-  if (!resource || resource.type !== typeName) return null;
-  const build = plan(resource.data as Record<string, string>, internalResources);
+  const resource = findTypedSubResource(ref, internalResources, typeName);
+  if (!resource) return null;
+  const build = plannedBuild(resource, internalResources, plan);
   if (!build) return null;
 
   const key = build.contentKey;
   const texture = cachedProceduralTexture(key);
   if (texture) return { status: 'ready', texture, key };
-  const label = `[${typeName}] sub-resource "${parsed.id}"`;
+  const label = allocationLabel(typeName, resource.id);
   return { status: 'pending', key, start: (runner) => joinBuild(key, build, label, runner) };
+}
+
+/**
+ * Written by `plannedBuild`, once per parse and sub-resource. Each consumer of a texture
+ * looks it up on every parse, and a plan decodes the resource and serialises its input.
+ */
+const plansByParse = new WeakMap<readonly TscnInternalResource[], Map<TscnInternalResource, ProceduralBuildPlan | null>>();
+
+function plannedBuild(
+  resource: TscnInternalResource,
+  internalResources: readonly TscnInternalResource[],
+  plan: (properties: Record<string, string>, resources: readonly TscnInternalResource[]) => ProceduralBuildPlan | null
+): ProceduralBuildPlan | null {
+  let plans = plansByParse.get(internalResources);
+  if (!plans) plansByParse.set(internalResources, (plans = new Map()));
+  if (!plans.has(resource)) plans.set(resource, plan(resource.data as Record<string, string>, internalResources));
+  return plans.get(resource) ?? null;
 }
 
 function joinBuild(
@@ -119,9 +134,7 @@ function startBuild(key: string, plan: ProceduralBuildPlan, label: string, runne
   builds.set(key, build);
   const finish = () => {
     if (builds.get(key) === build) builds.delete(key);
-    // One microtask later: a holder's callback on `settled`, queued ahead of this one,
-    // takes the work over first, so the count never reads zero between the two.
-    queueMicrotask(endWork);
+    endWork();
   };
   settled.then(finish, finish);
   return build;

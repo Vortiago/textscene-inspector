@@ -98,31 +98,27 @@ export class TiledUploadQueue {
   private start(texture: THREE.Texture, key: string): QueuedUpload {
     const { data, width, height } = texture.image as { data: Uint8Array; width: number; height: number };
     const entry: QueuedUpload = {
-      texture,
       source: new THREE.DataTexture(data, width, height, texture.format as THREE.PixelFormat, texture.type),
       key,
-      nextRow: 0,
-      wantsMipmaps: texture.generateMipmaps,
       waiters: [],
+      ...this.allocate(texture),
     };
-    this.allocate(entry, texture);
     this.queue.push(entry);
     return entry;
   }
 
-  /** Points `entry` at `texture`'s GPU storage, allocated empty, and restarts it at row 0. */
-  private allocate(entry: QueuedUpload, texture: THREE.Texture): void {
+  /** Allocates `texture`'s storage empty, and gives the fields that start its rows at 0. */
+  private allocate(texture: THREE.Texture): Pick<QueuedUpload, 'texture' | 'nextRow' | 'wantsMipmaps'> {
     texture.source.dataReady = false;
     try {
       this.renderer.initTexture(texture);
     } finally {
       texture.source.dataReady = true;
     }
-    entry.texture = texture;
-    entry.nextRow = 0;
-    entry.wantsMipmaps = texture.generateMipmaps;
+    const wantsMipmaps = texture.generateMipmaps;
     // three generates mipmaps after every copy, so they wait for the last band.
     texture.generateMipmaps = false;
+    return { texture, nextRow: 0, wantsMipmaps };
   }
 
   private join(entry: QueuedUpload, texture: THREE.Texture): TiledUpload {
@@ -137,6 +133,7 @@ export class TiledUploadQueue {
 
   /** Copies bands until `budgetMs` is spent, and always at least one. */
   tick(budgetMs: number): void {
+    if (this.queue.length === 0) return;
     const startedAt = this.now();
     do {
       const entry = this.queue[0];
@@ -184,6 +181,6 @@ export class TiledUploadQueue {
     }
     // The texture it filled is about to be disposed, which frees that GPU storage, so
     // the rows start again in storage a remaining consumer's texture owns.
-    this.allocate(entry, next.texture);
+    Object.assign(entry, this.allocate(next.texture));
   }
 }

@@ -44,28 +44,28 @@ export function TscnSceneContents() {
 
   return (
     <TiledUploadDriver>
-        {/* Godot's editor preview sun and environment, each mounted only while the
-            scene has no DirectionalLight3D or WorldEnvironment of its own (ADR-0025).
-            Godot adds neither at runtime. This previewer takes the editor's rule. */}
-        <PreviewLighting />
-        {isEmpty && <EmptySceneIndicator />}
-        {!isEmpty && <ContentGroundGrid />}
-        {nodes && rootScene && (
-          <SceneResourcesProvider
-            internalResources={rootScene.internalResources}
-            externalResources={rootScene.externalResources}
-          >
-            <NodeDispatcher nodes={nodes} />
-          </SceneResourcesProvider>
-        )}
-        <ControlRasterLayer
-          nodes={nodes ?? []}
-          internalResources={rootScene?.internalResources ?? []}
-          externalResources={rootScene?.externalResources ?? []}
-        />
-        <ViewportPassOrchestrator />
-        <SelectionHighlight />
-        <HoverHighlight />
+      {/* Godot's editor preview sun and environment, each mounted only while the
+          scene has no DirectionalLight3D or WorldEnvironment of its own (ADR-0025).
+          Godot adds neither at runtime. This previewer takes the editor's rule. */}
+      <PreviewLighting />
+      {isEmpty && <EmptySceneIndicator />}
+      {!isEmpty && <ContentGroundGrid />}
+      {nodes && rootScene && (
+        <SceneResourcesProvider
+          internalResources={rootScene.internalResources}
+          externalResources={rootScene.externalResources}
+        >
+          <NodeDispatcher nodes={nodes} />
+        </SceneResourcesProvider>
+      )}
+      <ControlRasterLayer
+        nodes={nodes ?? []}
+        internalResources={rootScene?.internalResources ?? []}
+        externalResources={rootScene?.externalResources ?? []}
+      />
+      <ViewportPassOrchestrator />
+      <SelectionHighlight />
+      <HoverHighlight />
     </TiledUploadDriver>
   );
 }

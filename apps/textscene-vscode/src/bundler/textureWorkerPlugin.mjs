@@ -20,7 +20,7 @@ export function textureWorkerPlugin({ minify }) {
   return {
     name: 'texture-worker-source',
     setup(build) {
-      build.onResolve({ filter: /^virtual:texture-worker-source$/ }, (args) => ({
+      build.onResolve({ filter: new RegExp(`^${TEXTURE_WORKER_MODULE}$`) }, (args) => ({
         path: args.path,
         namespace: NAMESPACE,
       }));

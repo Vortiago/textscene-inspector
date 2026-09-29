@@ -77,7 +77,6 @@ function useLayerTexture(
     cloned.minFilter = mag;
     return cloned;
   }, [decoded, filter]);
-  // Uploaded in bands where large, and disposed once it no longer draws.
   return useUploadedClone(layer);
 }
 
@@ -87,14 +86,14 @@ function useCroppedTexture(
   region: { x: number; y: number; w: number; h: number } | undefined,
   textureSize: Vec2 | null
 ): THREE.Texture | null {
-  // Keyed on the numbers: the caller builds `region` and `textureSize` afresh each render, and
-  // a new clone per render would restart its upload, which sets state, which renders again.
-  const repeatX = region && textureSize ? region.w / textureSize.x : null;
-  const repeatY = region && textureSize ? region.h / textureSize.y : null;
-  const offsetX = region && textureSize ? region.x / textureSize.x : null;
-  const offsetY = region && textureSize ? 1 - (region.y + region.h) / textureSize.y : null;
+  // Keyed on the numbers: the caller builds `region` and `textureSize` afresh each
+  // render, and a clone per render would upload the texture again each time.
+  const crop = region && textureSize ? cropWindow(region, textureSize) : null;
+  const [repeatX, repeatY, offsetX, offsetY] = crop ?? [];
   const cropped = useMemo(() => {
-    if (!texture || repeatX === null || repeatY === null || offsetX === null || offsetY === null) return null;
+    if (!texture || repeatX === undefined || repeatY === undefined || offsetX === undefined || offsetY === undefined) {
+      return null;
+    }
     const cloned = texture.clone();
     cloned.wrapS = THREE.ClampToEdgeWrapping;
     cloned.wrapT = THREE.ClampToEdgeWrapping;
@@ -104,6 +103,19 @@ function useCroppedTexture(
     return cloned;
   }, [texture, repeatX, repeatY, offsetX, offsetY]);
   return useUploadedClone(cropped);
+}
+
+/** `region`'s UV window in `textureSize`, as repeat x, repeat y, offset x, offset y. */
+function cropWindow(
+  region: { x: number; y: number; w: number; h: number },
+  textureSize: Vec2
+): [number, number, number, number] {
+  return [
+    region.w / textureSize.x,
+    region.h / textureSize.y,
+    region.x / textureSize.x,
+    1 - (region.y + region.h) / textureSize.y,
+  ];
 }
 
 export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {

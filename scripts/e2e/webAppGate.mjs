@@ -10,8 +10,6 @@ import { inkStats } from '../vscode/pixels.mjs';
 import {
   assertPortFree,
   ensureWebBuilt,
-  findCanvas,
-  gotoFixture,
   killPreviewGroup,
   readViewportMode,
   settleCanvas,
@@ -21,7 +19,7 @@ import {
 import { installViewMatrixProbe, matricesEqual, formatMatrix } from './cameraProbe.mjs';
 import { arraysEqual, describeNodePathMismatch, expandAllTreeRows, readOutlinerPaths, selectOutlinerNode } from './outliner.mjs';
 import { findRowValue, readInspectorPanel } from './inspector.mjs';
-import { attachDiagnostics } from './pageDiagnostics.mjs';
+import { openFixture } from './openFixture.mjs';
 import { longTasksDuringTextureWork } from './textureWorkProbe.mjs';
 import {
   checkLongTasks,
@@ -65,15 +63,11 @@ const INK_FLOOR_2D = 4000;
 const INK_FLOOR_LARGE_TEXTURE = 20000;
 
 async function run3DScenario(browser, baseUrl) {
-  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
-  // Registered before any navigation, so it is present for the first paint.
-  await context.addInitScript(installViewMatrixProbe);
-  const page = await context.newPage();
-  const diagnostics = attachDiagnostics(page);
-
-  await gotoFixture(page, baseUrl, FIXTURE_3D);
-  const { canvas, reason: canvasReason } = await findCanvas(page);
-  if (canvasReason) throw new Error(`[3D] ${canvasReason}`);
+  const { context, page, canvas, diagnostics } = await openFixture(browser, baseUrl, {
+    fixture: FIXTURE_3D,
+    label: '3D',
+    initScripts: [[installViewMatrixProbe, undefined]],
+  });
 
   const settled = await settleCanvas(page, canvas);
   const dims = await canvas.evaluate((el) => ({ width: el.width, height: el.height }));
@@ -110,13 +104,7 @@ async function run3DScenario(browser, baseUrl) {
 }
 
 async function run2DScenario(browser, baseUrl) {
-  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
-  const page = await context.newPage();
-  const diagnostics = attachDiagnostics(page);
-
-  await gotoFixture(page, baseUrl, FIXTURE_2D);
-  const { canvas, reason: canvasReason } = await findCanvas(page);
-  if (canvasReason) throw new Error(`[2D] ${canvasReason}`);
+  const { context, page, canvas, diagnostics } = await openFixture(browser, baseUrl, { fixture: FIXTURE_2D, label: '2D' });
 
   const settled = await settleCanvas(page, canvas);
   const dims = await canvas.evaluate((el) => ({ width: el.width, height: el.height }));

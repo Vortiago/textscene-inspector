@@ -11,8 +11,6 @@ import { resolveGradientTexture2D } from './gradienttexture2d/resolveGradientTex
 import { resolveNoiseTexture2D } from './noisetexture2d/resolveNoiseTexture.js';
 import type { ProceduralTextureLookup } from './proceduralBuilds.js';
 
-export type { ProceduralTextureLookup } from './proceduralBuilds.js';
-
 export function resolveProceduralTexture(
   ref: string | undefined,
   internalResources: readonly TscnInternalResource[]

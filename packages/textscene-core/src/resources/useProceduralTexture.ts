@@ -26,8 +26,6 @@ export interface ProceduralSlot {
   texture: THREE.Texture | null;
   /** The reference names a procedural texture, so no path resolver should look for it. */
   claimed: boolean;
-  /** A build for this slot is still running. */
-  pending: boolean;
 }
 
 interface Shown {
@@ -35,7 +33,7 @@ interface Shown {
   key: string;
 }
 
-const UNCLAIMED: ProceduralSlot = { texture: null, claimed: false, pending: false };
+const UNCLAIMED: ProceduralSlot = { texture: null, claimed: false };
 
 /**
  * The procedural texture a `SubResource` ref names, held resident while the caller is mounted.
@@ -89,17 +87,6 @@ export function useProceduralTextures(
     lastShown.current = shown;
   });
 
-  /**
-   * Written when a build lands. Each end keeps the texture work counted until the commit
-   * that shows the texture, where a draw site's upload takes the work over.
-   */
-  const handoffs = useRef<(() => void)[]>([]);
-  useEffect(() => {
-    handoffs.current.forEach((end) => end());
-    handoffs.current = [];
-  }, [landed, failedKeys]);
-  useEffect(() => () => handoffs.current.forEach((end) => end()), []);
-
   const runner = useResourceLoader()?.jobRunner ?? inThreadJobRunner;
   useEffect(() => {
     let current = true;
@@ -108,7 +95,6 @@ export function useProceduralTextures(
       handle.settled.then(
         (texture) => {
           if (!current) return;
-          handoffs.current.push(beginTextureWork());
           // Null while this effect still holds the build means it could not be allocated.
           if (texture) setLanded((prev) => landOne(prev, lookups, build.key, texture));
           else setFailedKeys((keys) => new Set(keys).add(build.key));
@@ -126,6 +112,7 @@ export function useProceduralTextures(
   }, [builds, lookups, runner]);
 
   usePendingWhile(builds.length > 0);
+  useTextureWorkWhile(builds.length > 0);
   useProceduralTexturePins([
     ...shown.flatMap((entry) => (entry ? [entry.key] : [])),
     ...builds.map((build) => build.key),
@@ -134,8 +121,16 @@ export function useProceduralTextures(
   return lookups.map((lookup, slot) => ({
     texture: shown[slot]?.texture ?? null,
     claimed: lookup !== null,
-    pending: lookup !== null && builds.some((build) => build.key === lookup.key),
   }));
+}
+
+/**
+ * Counts texture work while `isWorking`. A landed build leaves `builds` in the commit that
+ * shows its texture, where a draw site's upload starts, so the two effects run in one flush
+ * and the count never reads zero between them.
+ */
+function useTextureWorkWhile(isWorking: boolean): void {
+  useEffect(() => (isWorking ? beginTextureWork() : undefined), [isWorking]);
 }
 
 interface Landed {

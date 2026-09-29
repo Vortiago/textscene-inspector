@@ -5,14 +5,12 @@
  * with a control that shows the probe can see a long task.
  */
 import {
-  findCanvas,
-  gotoFixture,
   settleCanvas,
   TEXTURE_WORK_STATUS_TESTID,
   TEXTURE_WORK_WAIT_MS,
 } from '../visual/previewServer.mjs';
 import { launchGpuCompositedBrowser } from '../showcase/browser.mjs';
-import { attachDiagnostics } from './pageDiagnostics.mjs';
+import { openFixture } from './openFixture.mjs';
 import {
   installTextureWorkProbe,
   installWorkerBlock,
@@ -29,25 +27,21 @@ export const DELAY_FIXTURE = 'unit-noisetexture2d.tscn';
 export const LARGE_FIXTURE = 'unit-noisetexture2d-4096-seamless.tscn';
 
 /** How long the delayed arm holds the build back: far past the settle gate's first shot at 1.2 s. */
-export const WORKER_DELAY_MS = 6000;
+const WORKER_DELAY_MS = 6000;
 /** The Long Tasks API's own threshold, and the issue's limit for a responsive tab. */
-export const LONG_TASK_LIMIT_MS = 50;
+const LONG_TASK_LIMIT_MS = 50;
 
-async function openFixture(browser, baseUrl, fixture, initScripts) {
-  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
-  await context.addInitScript(installTextureWorkProbe, TEXTURE_WORK_STATUS_TESTID);
-  for (const [script, argument] of initScripts) await context.addInitScript(script, argument);
-  const page = await context.newPage();
-  const diagnostics = attachDiagnostics(page);
-  await gotoFixture(page, baseUrl, fixture);
-  const { canvas, reason } = await findCanvas(page);
-  if (reason) throw new Error(`[texture] ${fixture}: ${reason}`);
-  return { context, page, canvas, diagnostics };
+function openProbedFixture(browser, baseUrl, fixture, initScripts) {
+  return openFixture(browser, baseUrl, {
+    fixture,
+    label: 'texture',
+    initScripts: [[installTextureWorkProbe, TEXTURE_WORK_STATUS_TESTID], ...initScripts],
+  });
 }
 
 async function captureSettled(browser, baseUrl, { delayWorker, waitForTextureWork }) {
   const initScripts = delayWorker ? [[installWorkerDelay, WORKER_DELAY_MS]] : [];
-  const { context, page, canvas } = await openFixture(browser, baseUrl, DELAY_FIXTURE, initScripts);
+  const { context, page, canvas } = await openProbedFixture(browser, baseUrl, DELAY_FIXTURE, initScripts);
   const startedAt = Date.now();
   const { buffer, reason } = await settleCanvas(page, canvas, { waitForTextureWork });
   const settledMs = Date.now() - startedAt;
@@ -89,7 +83,7 @@ export async function runLongTaskArms(baseUrl) {
  */
 async function runLongTaskScenario(browser, baseUrl, { blockWorker }) {
   const initScripts = blockWorker ? [[installWorkerBlock, undefined]] : [];
-  const { context, page, canvas, diagnostics } = await openFixture(browser, baseUrl, LARGE_FIXTURE, initScripts);
+  const { context, page, canvas, diagnostics } = await openProbedFixture(browser, baseUrl, LARGE_FIXTURE, initScripts);
   await page.waitForFunction(
     () => {
       const probe = window.__textureWorkProbe;

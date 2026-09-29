@@ -292,7 +292,6 @@ function StyleBoxTextureMesh({ texture, rect, tint, renderOrder, clippingPlanes 
     cloned.needsUpdate = true;
     return cloned;
   }, [rawTexture, geometry]);
-  // Uploaded in bands where large, and disposed once it no longer draws.
   const drawnTexture = useUploadedClone(preparedTexture);
 
   // The last `canvas_item_add_nine_patch` argument, `modulate_color`
