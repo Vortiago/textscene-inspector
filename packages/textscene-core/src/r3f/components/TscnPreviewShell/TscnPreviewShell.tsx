@@ -20,6 +20,7 @@ import { EscapeDeselect } from './EscapeDeselect.js';
 import { SceneChangeResetter } from './SceneChangeResetter.js';
 import { WorkspaceAutoSelect } from './WorkspaceAutoSelect.js';
 import { SceneStats } from './SceneStats.js';
+import { TextureWorkStatus } from './TextureWorkStatus.js';
 import { MasterDetailHandle, CollapsedDock } from './DockChrome.js';
 import { HelpLink } from './HelpLink.js';
 import { AnimationTabWatcher } from './AnimationTabWatcher.js';
@@ -112,6 +113,7 @@ export function TscnPreviewShell({
           <span className={styles.brand}>TextScene Inspector</span>
           {toolbar && <div className={styles.topToolbar}>{toolbar}</div>}
           <div className={styles.topSpacer} />
+          <TextureWorkStatus />
           <SceneStats />
           <HelpLink />
         </header>
