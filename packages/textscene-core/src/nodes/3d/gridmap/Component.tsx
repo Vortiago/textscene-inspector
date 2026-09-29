@@ -5,18 +5,16 @@
  * mesh, since most library tiles are single-surface.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
 import { useResource } from '../../../resources/useResource';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { useMeshLibraryModel } from '../../../r3f/useMeshLibraryModel';
-import {
-  GODOT_DEFAULT_ALBEDO,
-  GODOT_DEFAULT_METALLIC,
-  GODOT_DEFAULT_ROUGHNESS,
-} from '../../../r3f/materials/godotDefaultMaterial';
+import type { MaterialSource } from '../../../r3f/materials/materialSource';
+import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
+import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import type { MeshLibraryItem } from '../../../resources/meshlibrary/types';
 import type { Transform3D } from '../../base/node3d/types';
 import type { Vector3 } from '../../../parser/vectors';
@@ -29,24 +27,12 @@ import { shadowCastingEffects } from '../../../r3f/shadowCasting';
 const PLACEHOLDER_CELL_MATERIAL = wireGizmoProgram(0x4488cc);
 
 /**
- * Godot's default 3D material, for a tile whose ArrayMesh declares no material
- * or whose material is still loading: a MeshLibrary item has none of its own.
- * Module-level, shared and never disposed.
- */
-const DEFAULT_TILE_MATERIAL = new THREE.MeshStandardMaterial({
-  color: GODOT_DEFAULT_ALBEDO,
-  metalness: GODOT_DEFAULT_METALLIC,
-  roughness: GODOT_DEFAULT_ROUGHNESS,
-});
-
-/**
  * A SHADOWS_ONLY tile's material: it writes neither colour nor depth.
  * `visible = false` would also stop the tile casting, since three's
- * `WebGLShadowMap.renderObject` returns on it. Shared and never disposed.
+ * `WebGLShadowMap.renderObject` returns on it.
  */
-const SHADOWS_ONLY_TILE_MATERIAL = new THREE.MeshBasicMaterial({
-  colorWrite: false,
-  depthWrite: false,
+const SHADOWS_ONLY_TILE_MATERIAL = materialProgramInputs({
+  props: { colorWrite: false, depthWrite: false },
 });
 
 /** Godot Transform3D (basis rows + origin) → THREE.Matrix4. */
@@ -128,9 +114,12 @@ interface GridMapItemProps {
 /** All cells sharing one MeshLibrary item, batched into a single InstancedMesh. */
 function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
   const meshResult = useResource<ArrayMeshResource>(item?.meshPath ?? '', 'arraymesh');
-  // The surface material path only becomes known once the ArrayMesh resolves.
-  const materialPath = meshResult.value?.materialPaths[0] ?? '';
-  const materialResult = useResource<THREE.Material>(materialPath, 'material');
+  // The surface material address only becomes known once the ArrayMesh resolves.
+  const materialPath = meshResult.value?.materialPaths[0] ?? null;
+  const material = useMemo(
+    (): MaterialSource | undefined => (materialPath ? { kind: 'file', path: materialPath } : undefined),
+    [materialPath]
+  );
 
   // `cellCenter` is compared by identity: the parser hands back one shared
   // frozen instance for the all-centered default, so re-parsing an unchanged
@@ -144,43 +133,47 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
   // the library (`modules/gridmap/grid_map.cpp:799-800`).
   const shadow = shadowCastingEffects(item?.castShadow);
 
-  const instanced = useMemo(() => {
-    const geometry = meshResult.value?.geometry;
-    if (!geometry) return null;
-    // The resource pipeline owns the cached ArrayMesh and a resolved material.
-    // The shared default stands in when none is loaded.
-    const material = shadow.shadowsOnly
-      ? SHADOWS_ONLY_TILE_MATERIAL
-      : (materialPath && materialResult.value) || DEFAULT_TILE_MATERIAL;
-    const mesh = new THREE.InstancedMesh(geometry, material, matrices.length);
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const geometry = meshResult.value?.geometry;
+  useLayoutEffect(() => {
+    const mesh = meshRef.current;
+    if (!mesh) return;
     matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
     mesh.instanceMatrix.needsUpdate = true;
-    mesh.castShadow = shadow.castShadow;
-    mesh.receiveShadow = true;
-    // DOUBLE_SIDED reaches three's shared depth material here, per mesh per
-    // light (`WebGLShadowMap.js:477,535,549`).
-    mesh.onBeforeShadow = shadow.onBeforeShadow;
-    return mesh;
-  }, [meshResult.value, materialPath, materialResult.value, matrices, shadow]);
+  }, [matrices, geometry]);
 
-  // InstancedMesh.dispose() frees only its own instanceMatrix buffer, and leaves
-  // the geometry and material the resource pipeline owns.
-  useEffect(() => {
-    if (!instanced) return;
-    return () => instanced.dispose();
-  }, [instanced]);
-
-  if (instanced) {
-    return <primitive object={instanced} />;
+  if (!geometry) {
+    // A pending or missing item draws cell-sized wireframe boxes.
+    return (
+      <>
+        {matrices.map((m, i) => (
+          <PlaceholderCell key={i} matrix={m} cellSize={cellSize} />
+        ))}
+      </>
+    );
   }
 
-  // A pending or missing item draws cell-sized wireframe boxes.
+  // Keyed on the count: three sizes the instance buffer at construction. The resource
+  // pipeline owns the geometry, which R3F leaves alone since it arrives through `args`.
+  // DOUBLE_SIDED reaches three's shared depth material through `onBeforeShadow`, per
+  // mesh per light (`WebGLShadowMap.js:477,535,549`).
   return (
-    <>
-      {matrices.map((m, i) => (
-        <PlaceholderCell key={i} matrix={m} cellSize={cellSize} />
-      ))}
-    </>
+    <instancedMesh
+      key={matrices.length}
+      ref={meshRef}
+      args={[geometry, undefined, matrices.length]}
+      castShadow={shadow.castShadow}
+      receiveShadow
+      onBeforeShadow={shadow.onBeforeShadow}
+    >
+      {shadow.shadowsOnly ? (
+        <meshBasicMaterial key={SHADOWS_ONLY_TILE_MATERIAL.key} {...SHADOWS_ONLY_TILE_MATERIAL.props} />
+      ) : (
+        // A tile whose ArrayMesh declares no material, or whose material still loads,
+        // draws Godot's default one: a MeshLibrary item has no material of its own.
+        <SurfaceMaterialSlot source={material} />
+      )}
+    </instancedMesh>
   );
 }
 

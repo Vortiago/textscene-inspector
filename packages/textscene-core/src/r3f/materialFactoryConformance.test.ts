@@ -128,8 +128,6 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     'mounts a THREE CameraHelper — an Object3D, which R3F adds as a child and never routes to a material slot',
   'packages/textscene-core/src/nodes/3d/csg/CsgPrimitive.tsx':
     'spreads the shared Node3D transform bag onto a `<group>`, which has no material slot',
-  'packages/textscene-core/src/nodes/3d/gridmap/Component.tsx':
-    'mounts the built InstancedMesh — an Object3D, added as a child; its tile material is mounted on the mesh itself',
   'packages/textscene-core/src/nodes/3d/lights/shared/lightHelpers.tsx':
     'mounts a THREE light helper — an Object3D, added as a child',
   'packages/textscene-core/src/nodes/3d/lights/shared/lightShared.tsx':
@@ -169,8 +167,6 @@ export function materialConstructorLines(source: string): number[] {
 const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/nodes/3d/decal/Component.tsx':
     'rebuilt by the effect that rebuilds the projection meshes; the only later write is `opacity`, which no program parameter reads',
-  'packages/textscene-core/src/nodes/3d/gridmap/Component.tsx':
-    'module-constant fallback tile material, literal-only, never mutated and never disposed',
   'packages/textscene-core/src/r3f/controls/native/text/canvasTextPainter.ts':
     'one material per built text run, replaced and disposed together with its geometry; its single `defines` write happens before the material has ever been rendered',
   'packages/textscene-core/src/r3f/controls/native/text/msdfMaterial.ts':
@@ -257,8 +253,6 @@ const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
 const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/nodes/3d/decal/Component.tsx':
     'the projection meshes and the material they carry are built by one effect and replaced together, so neither can outlive an input the other was built from',
-  'packages/textscene-core/src/nodes/3d/gridmap/Component.tsx':
-    'the tile material is either the literal-only module constant or one the resource pipeline handed over complete, and the InstancedMesh is rebuilt whenever either moves',
   'packages/textscene-core/src/r3f/environment/GodotToneMapEffect.ts':
     'the screen quad: its pass materials have their shaders fixed at construction, and it is disposed with the effect',
   'packages/textscene-core/src/resources/sky/build.ts':
@@ -533,10 +527,10 @@ describe('Material factory conformance', () => {
     expect(CONSTRUCTOR_SITES.flatMap(({ lines }) => lines).length).toBeGreaterThanOrEqual(10);
     expect(ASSIGNMENT_SITES.flatMap(({ lines }) => lines).length).toBeGreaterThanOrEqual(5);
     expect(HOST_TAG_COUNT).toBeGreaterThanOrEqual(350);
-    // Only these mesh-likes have a site in the tree. The unit cases above
-    // hold up the other classes in the arity table.
+    // Only a plain Mesh has a site in the tree. The unit cases above hold up the
+    // other classes in the arity table.
     const liveMeshes = new Set(MESH_ARGUMENT_SITES.flatMap(({ mounts }) => mounts.map((m) => m.mesh)));
-    for (const mesh of ['Mesh', 'InstancedMesh']) expect(liveMeshes.has(mesh), mesh).toBe(true);
+    expect(liveMeshes.has('Mesh'), 'Mesh').toBe(true);
     // And each off-tag shape separately, against the live tree: they share one
     // scan, so a floor over the total would let two of the three go silent.
     const liveShapes = new Set(OFF_TAG_SITES.flatMap(({ mounts }) => mounts.map((m) => m.shape)));

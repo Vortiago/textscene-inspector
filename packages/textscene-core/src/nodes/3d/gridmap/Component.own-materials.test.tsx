@@ -11,7 +11,9 @@ import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import { parseGridMap } from './parser';
 import { GridMap } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
+import { act } from 'react';
 import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../index';
+import { fakeTiledUploads } from '../../../r3f/tiledUpload/fakeTiledUploads.testkit';
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
 
 const LIBRARY_PATH = 'res://stage/tiles.tres';
@@ -108,5 +110,64 @@ describe('<GridMap> tile with the ArrayMesh’s own surface material', () => {
     // Straight off the sub-resource body: Color(0, 1, 0, 1) and roughness 0.25.
     expect(material.color.getHex()).toBe(0x00ff00);
     expect(material.roughness).toBe(0.25);
+  });
+});
+
+/** The same tile, its material now carrying a map written in the tile mesh's own file. */
+const TEXTURED_TILE_MESH_TRES = TILE_MESH_TRES.replace(
+  '[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_floor"]',
+  `[sub_resource type="Gradient" id="Gradient_g"]
+colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)
+
+[sub_resource type="GradientTexture2D" id="Ramp"]
+gradient = SubResource("Gradient_g")
+width = 8
+height = 4
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_floor"]
+albedo_texture = SubResource("Ramp")`
+);
+
+describe('<GridMap> tile material textures', () => {
+  it('uploads the tile material\'s map in bands, as every other material slot does', async () => {
+    const files = new Map([
+      [LIBRARY_PATH, LIBRARY_TRES],
+      [TILE_MESH_PATH, TEXTURED_TILE_MESH_TRES],
+    ]);
+    const provider: ResourceProvider = { loadResource: async (path) => files.get(path) ?? null };
+    const loader = new ResourceLoader(new FileEventBus(provider));
+    loader.setProvider(provider);
+    const uploads = fakeTiledUploads();
+
+    const tree = (
+      <ResourceLoaderProvider loader={loader}>
+        <SceneResourcesProvider internalResources={[]} externalResources={EXT}>
+          <uploads.wrapper>
+            <GridMap node={gridMapNode()} />
+          </uploads.wrapper>
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    const renderer = await ReactThreeTestRenderer.create(tree);
+    for (let i = 0; i < 12; i++) {
+      await new Promise<void>((r) => setTimeout(r, 20));
+      await renderer.update(tree);
+    }
+    const tileMaterial = () => {
+      const tile = renderer.scene
+        .findAllByType('Mesh')
+        .map((m) => m.instance)
+        .find((o): o is THREE.InstancedMesh => o instanceof THREE.InstancedMesh);
+      return tile?.material as THREE.MeshStandardMaterial | undefined;
+    };
+
+    expect(tileMaterial()?.map).toBeNull();
+    expect(uploads.pending).toHaveLength(1);
+
+    await act(async () => {
+      uploads.pending.forEach((upload) => upload.finish(true));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(tileMaterial()?.map).toBeInstanceOf(THREE.Texture);
   });
 });
