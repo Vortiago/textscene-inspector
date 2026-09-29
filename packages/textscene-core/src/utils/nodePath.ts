@@ -20,6 +20,7 @@ export function getAncestorPaths(nodePath: string): string[] {
 
 /**
  * The key the scene root occupies in a path-to-node map. Paths here are measured from the root,
- * so its own name is not one of their segments and it sits at the empty path.
+ * so its own name is not one of their segments and it sits at the empty path. `resolveParentPath`
+ * in `godot/nodePath.ts` spells the root the same way and cannot import this.
  */
 export const SCENE_ROOT_PATH = '';

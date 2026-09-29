@@ -6,8 +6,8 @@ import type { NodeOrigin, TscnNode } from './types';
 import { SCENE_ROOT_PATH, joinPath } from '../utils/nodePath.js';
 import { isUniqueNameInOwner } from '../utils/uniqueNames.js';
 import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/packedScene.js';
+import { UNIQUE_NODE_PREFIX, resolveParentPath, type ParentPathTree } from '../godot/nodePath.js';
 import { isTypeUnknowable } from './typeUnknowable.js';
-import { resolveParentPath, type ParentPathTree, UNIQUE_NODE_PREFIX } from '../godot/nodePath.js';
 
 /**
  * The tree from the flat node list, by parent path. Paths are relative to the root:

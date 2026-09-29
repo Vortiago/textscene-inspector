@@ -29,8 +29,7 @@ export const UNIQUE_NODE_PREFIX = '%';
 /**
  * Walks `relative` from `base` as `Node::get_node_or_null` walks a NodePath (node.cpp:1912-1949),
  * over the names the constructor kept ({@link nodePathWalkNames}): an extra slash adds nothing
- * and a `:subname` addresses a property. The first `floor` segments spell the scene root. Without
- * `exists`, the answer is the wider folded one.
+ * and a `:subname` addresses a property. The first `floor` segments spell the scene root.
  */
 function walk(
   base: readonly string[],
@@ -93,8 +92,8 @@ export function walkFromSceneRoot(
 /**
  * A relative node path resolved against the base node itself, not its parent, so `"Child"` is a
  * child and `"../Sibling"` a sibling. The base path's first segment is the scene root, the floor:
- * null when the path walks above it. An absolute path measures from the SceneTree root
- * (node.cpp:1903-1909), which a preview has no counterpart for, so it reaches nothing.
+ * null when the path walks above it. An absolute path measures from the live SceneTree root
+ * (node.cpp:1903-1909), which a scene file alone cannot reach, so it reaches nothing.
  */
 export function resolveRelativePath(
   basePath: string,
@@ -106,7 +105,7 @@ export function resolveRelativePath(
 }
 
 /**
- * What a caller holding the scene knows for `resolveParentPath`. Without it, the answer is the
+ * The two tables Godot's walk reads for `resolveParentPath`. Without them, the answer is the
  * wider folded one: it resolves `Missing/../Real`, which `get_node_or_null` refuses at `Missing`.
  */
 export interface ParentPathTree {
@@ -135,9 +134,8 @@ export function resolveParentPath(
 }
 
 /**
- * A raw `NodePath("…")` literal on the node at `basePath` as an absolute path in the parsed tree,
- * or null when it addresses no other node. Every scene-wide pass that follows a NodePath shares
- * it: RemoteTransform3D/2D's `remote_path` and CSGPolygon3D's `path_node`.
+ * A raw `NodePath("…")` property value on the node at `basePath`, resolved against that node as
+ * `get_node_or_null` resolves it, or null when it addresses no other node in the scene.
  *
  * @param uniquePaths `%Name` to its claiming path, from `uniqueNameClaims` over the same tree.
  *   Without it a `%Name` is null: `%` is invalid in a node name (ustring.cpp:5071), so a child
