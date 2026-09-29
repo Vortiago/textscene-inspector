@@ -117,6 +117,10 @@ describe('<TscnPreviewShell> narrow layout: the stylesheet', () => {
     expect(compact).toMatch(/\.brand,\s*\.statChips,\s*\.topSpacer\s*\{[^}]*display:\s*none/);
   });
 
+  it('keeps the help link right-aligned in the compact block, toolbar or none', () => {
+    expect(block(COMPACT_LAYOUT_QUERY)).toMatch(/\.helpLink\s*\{[^}]*margin-left:\s*auto/);
+  });
+
   it('preserves the side-by-side desktop layout outside the media queries', () => {
     const desktop = stripMediaBlocks(CSS_SOURCE);
     expect(desktop).toMatch(/\.columns\s*\{[^}]*display:\s*flex/);

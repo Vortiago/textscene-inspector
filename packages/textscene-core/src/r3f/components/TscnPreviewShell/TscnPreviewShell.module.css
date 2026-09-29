@@ -658,6 +658,11 @@
   .topToolbar::-webkit-scrollbar {
     display: none;
   }
+
+  /* Right-aligned without the spacer, also when the host passes no toolbar. */
+  .helpLink {
+    margin-left: auto;
+  }
 }
 
 /* A phone in landscape keeps the side dock, capped so the viewport keeps most of the width. */
