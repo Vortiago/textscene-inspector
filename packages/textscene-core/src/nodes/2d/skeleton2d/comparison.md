@@ -21,7 +21,7 @@ Strict parsing format-checks these `Skeleton2D` properties, plus 12 inherited fr
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `modification_stack` | null, SubResource("id") or ExtResource("id") |  |
+| `modification_stack` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

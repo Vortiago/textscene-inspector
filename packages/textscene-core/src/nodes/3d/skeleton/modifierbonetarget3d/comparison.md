@@ -20,7 +20,7 @@ Strict parsing format-checks these `ModifierBoneTarget3D` properties, plus 2 inh
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `bone` | integer >= -1 | error below |
-| `bone_name` | quoted string, or the &"…" StringName jacket |  |
+| `bone_name` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

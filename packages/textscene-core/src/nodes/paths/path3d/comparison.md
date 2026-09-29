@@ -18,8 +18,8 @@ Strict parsing format-checks these `Path3D` properties, plus 17 inherited from N
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `curve` | null, SubResource("id") or ExtResource("id") |  |
-| `debug_custom_color` | Color(r, g, b, a) |  |
+| `curve` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `debug_custom_color` | Color(r, g, b, a), or the colour string or int it converts |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

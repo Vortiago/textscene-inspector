@@ -1,8 +1,9 @@
 /**
  * Which jackets and escapes a STRING slot takes. `variant_parser.cpp:263-265`
- * tokenizes `&"…"` and `@"…"` as one StringName, a strict source for STRING
- * (`variant.cpp:582-587`, gated by `binder_common.h:175`). There is no `^`
- * token, so `^"…"` stays a format error.
+ * tokenizes `&"…"` and `@"…"` as one StringName, and `:920-939` reads
+ * `NodePath("…")`. Both are strict sources for STRING (`variant.cpp:582-589`,
+ * gated by `binder_common.h:175`). There is no `^` token, so `^"…"` stays a
+ * format error.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -23,6 +24,18 @@ describe('v.quotedString', () => {
     expect(v.quotedString('text')('text', '&Hello', 1)).not.toBeNull();
     expect(v.quotedString('text')('text', '^"Hello"', 1)).not.toBeNull();
   });
+
+  it('accepts a NodePath literal, which the slot converts to its text', () => {
+    expect(v.quotedString('text')('text', 'NodePath("Hello")', 1)).toBeNull();
+    expect(v.quotedString('text')('text', 'NodePath("")', 1)).toBeNull();
+  });
+});
+
+describe('v.stringName', () => {
+  it('refuses a NodePath literal, since STRING_NAME converts only from STRING', () => {
+    // `variant.cpp:738-744`: `case STRING_NAME: valid[] = { STRING, NIL }`.
+    expect(v.stringName('animation')('animation', 'NodePath("walk")', 1)?.severity).toBe('error');
+  });
 });
 
 describe('v.singleCharacter', () => {
@@ -30,6 +43,12 @@ describe('v.singleCharacter', () => {
     const validator = v.singleCharacter('secret_character', { enforced: CUT });
     expect(validator('secret_character', '&"*"', 1)).toBeNull();
     expect(validator('secret_character', '&"**"', 1)?.message).toContain('2 characters');
+  });
+
+  it('counts the character inside a NodePath literal, which converts to its text', () => {
+    const validator = v.singleCharacter('secret_character', { enforced: CUT });
+    expect(validator('secret_character', 'NodePath("*")', 1)).toBeNull();
+    expect(validator('secret_character', 'NodePath("**")', 1)?.message).toContain('2 characters');
   });
 
   // `variant_parser.cpp:299-300`: `case 'b': res = 8` is one character, and

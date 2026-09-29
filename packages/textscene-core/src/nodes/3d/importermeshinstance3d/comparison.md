@@ -21,9 +21,9 @@ Strict parsing format-checks these `ImporterMeshInstance3D` properties, plus 17 
 | --- | --- | --- |
 | `cast_shadow` | enum 0-3 (OFF/ON/DOUBLE_SIDED/SHADOWS_ONLY) | warning |
 | `layer_mask` | 32-bit layer mask (layers 1-32) |  |
-| `mesh` | null, SubResource("id") or ExtResource("id") |  |
+| `mesh` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `skeleton_path` | NodePath("path/to/node") |  |
-| `skin` | null, SubResource("id") or ExtResource("id") |  |
+| `skin` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `visibility_range_begin` | float >= 0 | warning below |
 | `visibility_range_begin_margin` | float >= 0 | warning below |
 | `visibility_range_end` | float >= 0 | warning below |

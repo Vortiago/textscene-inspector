@@ -87,7 +87,7 @@ describe('AnimationTree Linter', () => {
       it('should reject invalid tree_root format', () => {
         expectDiagnostic(scene(node('AnimationTree', { tree_root: '"BlendTree_1"' })), {
           prop: 'tree_root',
-          contains: ['tree_root', 'SubResource("id") or ExtResource("id")'],
+          contains: ['tree_root', 'SubResource("id"), ExtResource("id") or Resource("path")'],
         });
       });
 

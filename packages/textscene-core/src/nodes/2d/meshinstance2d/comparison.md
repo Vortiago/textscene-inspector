@@ -20,8 +20,8 @@ Strict parsing format-checks these `MeshInstance2D` properties, plus 12 inherite
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `mesh` | null, SubResource("id") or ExtResource("id") |  |
-| `texture` | null, SubResource("id") or ExtResource("id") |  |
+| `mesh` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `texture` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

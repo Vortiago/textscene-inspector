@@ -103,6 +103,11 @@ A per-property format or range check that runs during strict parsing, dispatched
 Its **Severity** comes from what the engine does. A malformed value, or a bound the setter enforces, is an error. A bound only the property's editor hint states is a warning (`linter/validators/v/grounding.ts`). What makes a check a validator is that it judges one property's value in isolation. That is the sorting principle for where a new check goes.
 _Avoid_: deciding a validator's severity per property rather than from the engine. "validator" for the parser-side **Value decoder**s.
 
+**Format-only validator**:
+A **Validator** that cites nothing for its refusals, because it refuses only text the tokenizer cannot read, or a whole value of a type the slot does not convert.
+It is marked `formatOnly`. The `formatOnlyCorpus` ledger runs it over literals Godot stores in its slot, and it may not error on one.
+_Avoid_: `formatOnly` on a refusal of a value the setter receives, an element inside a container included. That refusal cites its `file:line` as a `grounding`.
+
 **Lint rule** (semantic check):
 A per-node-type check that runs on the parsed scene and matches its node type exactly, with no base-type inheritance.
 It is the home for conditions no single property's value settles. Its **Severity** is fixed by the engine (ADR-0032), never chosen.

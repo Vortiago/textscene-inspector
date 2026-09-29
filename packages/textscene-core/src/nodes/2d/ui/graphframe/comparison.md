@@ -27,9 +27,9 @@ Strict parsing format-checks these `GraphFrame` properties, plus 6 inherited fro
 | `autoshrink_enabled` | true or false |  |
 | `autoshrink_margin` | integer 0-128 | warning |
 | `drag_margin` | integer 0-128 | warning |
-| `tint_color` | Color(r, g, b, a) |  |
+| `tint_color` | Color(r, g, b, a), or the colour string or int it converts |  |
 | `tint_color_enabled` | true or false |  |
-| `title` | quoted string, or the &"…" StringName jacket |  |
+| `title` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -380,6 +380,39 @@ describe('Control Linter', () => {
         { prop: 'accessibility_controls_nodes' }
       );
     });
+
+    // `Array::assign` converts each untyped element with `can_convert_strict`
+    // (array.cpp:252-266), and NODE_PATH converts from STRING (variant.cpp:746-752).
+    it('accepts a bare string element, which assign() converts to a NodePath', () => {
+      expectClean(scene(node('Control', { accessibility_labeled_by_nodes: '["../A", NodePath("../B")]' })));
+    });
+
+    // array.cpp:267-274: a typed source converts element by element when its type does.
+    it('accepts an Array[String] wrapper, which assign() converts', () => {
+      expectClean(scene(node('Control', { accessibility_flow_to_nodes: 'Array[String](["../A"])' })));
+    });
+
+    const nodePathArray = () => validatorRegistry.declarationFor('Control', 'accessibility_controls_nodes')!;
+
+    // NIL, STRING_NAME and INT are no strict source for NODE_PATH, so assign()
+    // fails (array.cpp:260-261) and the setter stores an empty array.
+    it.each(['[null]', '[&"../A"]', '[1]'])('errors on the element %s, which assign() refuses', (value) => {
+      const report = nodePathArray()('accessibility_controls_nodes', value, 1);
+      expect(report?.severity).toBe('error');
+      expect(report?.message).toContain('array.cpp:260-261');
+    });
+
+    it('errors on a wrapper whose element type does not convert', () => {
+      // array.cpp:275-277: "Cannot assign contents of Array[StringName] to Array[NodePath]".
+      const report = nodePathArray()('accessibility_controls_nodes', 'Array[StringName]([])', 1);
+      expect(report?.severity).toBe('error');
+      expect(report?.message).toContain('array.cpp:275-277');
+    });
+
+    it('cites both assign() refusals instead of claiming format-only', () => {
+      expect(nodePathArray().grounding).toEqual({ kind: 'enforced', cite: 'array.cpp:260-261, array.cpp:275-277' });
+      expect(nodePathArray().formatOnly).toBeUndefined();
+    });
   });
 
   describe('NodePath("") accepted for every NodePath-typed key', () => {

@@ -20,7 +20,7 @@ Strict parsing format-checks these `StaticBody2D` properties, plus 5 inherited f
 | --- | --- | --- |
 | `constant_angular_velocity` | float |  |
 | `constant_linear_velocity` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
-| `physics_material_override` | null, SubResource("id") or ExtResource("id") |  |
+| `physics_material_override` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

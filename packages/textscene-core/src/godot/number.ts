@@ -14,6 +14,13 @@ import { compositeSpellings } from './variantConversion.js';
 export const FLOAT_PATTERN_SOURCE = String.raw`-?\d+(?:\.\d*)?(?:[eE][-+]?\d*)?`;
 
 /**
+ * A whole value that `get_token` reads as an INT: digits after an optional `-`, with no `.` or
+ * exponent, either of which makes it a FLOAT (`variant_parser.cpp:420-451`, `:486-489`). A
+ * slot type that converts from INT and not FLOAT, such as COLOR, needs the difference.
+ */
+export const INT_TOKEN_RE = /^-?\d+$/;
+
+/**
  * The anchored form, for a whole string that must be one finite number. Here, because
  * `godotLiteralGrammar.guard` refuses a scalar grammar outside this directory. The header's
  * `format=` reads it, a Variant number into an `int` (`resource_format_text.cpp:1140`).

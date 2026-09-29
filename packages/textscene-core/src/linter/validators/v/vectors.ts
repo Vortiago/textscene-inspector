@@ -8,7 +8,7 @@ import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
 import { ruleInt, tupleComponent } from '../commonValidators.js';
 import { slotComponents, slotComponentsAltered } from '../../../godot/int.js';
-import { markIntSlot, truncatedComponent } from '../intSlot.js';
+import { convertedSpelling, markIntSlot, truncatedComponent } from '../intSlot.js';
 import { floatTupleValidator, makeFloatTupleRegex } from '../floatTupleValidator.js';
 import {
   VECTOR3_REGEX,
@@ -19,8 +19,13 @@ import {
   createVector3Validator,
 } from '../vectorValidators.js';
 import { compositeTypeName, isConvertedSpelling } from '../../../godot/variantConversion.js';
+import { INT_TOKEN_RE, isColorString, STRING_LITERAL_RE } from '../../../godot/index.js';
+import { unquoteString } from '../../../parser/utils.js';
 import { formatCode, numericRange, valueCode } from './codes.js';
 import { accepts, endSeverity, ground, shape, type Grounding } from './grounding.js';
+
+/** `Color::named` fails on an unknown name and yields `Color()`. */
+const UNNAMED_COLOR = 'color.cpp:396-402';
 
 // The component grammar Godot's parser takes, not `-?\d+`:
 // `_parse_construct<int32_t>` (variant_parser.cpp:577-592) accepts any number
@@ -279,12 +284,34 @@ export const vectorCombinators = {
     return shape(createTransform3DValidator(name, formatCode(name)), 'Transform3D(12 floats)');
   },
 
-  /** `Color(r, g, b, a)` format. */
+  /**
+   * `Color(r, g, b, a)`, or a string or INT literal. COLOR converts both
+   * (`variant.cpp:712-719`): `Variant::operator Color` reads an INT as RGBA hex
+   * and a string as HTML hex or a colour name (`variant.cpp:1986-1996`). The slot
+   * stores a Color, so a re-save rewrites the line, the converted-spelling warning.
+   * A string that is neither fails `Color::named`, which stores black: an error.
+   */
   color(name: string): PropertyValidator {
-    return shape(
-      floatTupleValidator(name, 'Color', 4, 'Color with 4 numbers like Color(1, 1, 1, 1)', formatCode(name)),
-      'Color(r, g, b, a)'
-    );
+    const code = formatCode(name);
+    const tuple = floatTupleValidator(name, 'Color', 4, 'Color with 4 numbers like Color(1, 1, 1, 1)', code);
+    const validator: PropertyValidator = (key, value, line) => {
+      const trimmed = value.trim();
+      if (INT_TOKEN_RE.test(trimmed)) {
+        return convertedSpelling(name, key, value, line, code, 'the Color it encodes', true);
+      }
+      if (!STRING_LITERAL_RE.test(trimmed)) return tuple(key, value, line);
+      if (isColorString(unquoteString(trimmed))) {
+        return convertedSpelling(name, key, value, line, code, 'the Color it names', true);
+      }
+      return propertyError(
+        key,
+        line,
+        `Property '${name}' is the string ${trimmed}, which is no HTML colour or colour name, so Godot stores black (${UNNAMED_COLOR})`,
+        valueCode(name)
+      );
+    };
+    validator.grounding = { kind: 'enforced', cite: UNNAMED_COLOR };
+    return accepts(validator, 'Color(r, g, b, a), or the colour string or int it converts');
   },
 
   /** `AABB(x, y, z, w, h, d)` format. */

@@ -19,7 +19,7 @@ Strict parsing format-checks these `CollisionPolygon3D` properties, plus 17 inhe
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `debug_color` | Color(r, g, b, a) |  |
+| `debug_color` | Color(r, g, b, a), or the colour string or int it converts |  |
 | `debug_fill` | true or false |  |
 | `depth` | float |  |
 | `disabled` | true or false |  |

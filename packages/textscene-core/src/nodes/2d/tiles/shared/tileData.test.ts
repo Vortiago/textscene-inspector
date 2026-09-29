@@ -42,6 +42,21 @@ describe('decodeTileMapData', () => {
     ]);
   });
 
+  // PACKED_BYTE_ARRAY converts from ARRAY (variant.cpp:772-778), so the setter
+  // receives the same bytes.
+  it('decodes the bare array spelling the slot converts', () => {
+    expect(decodeTileMapData('[0, 0, 9, 0, 11, 0, 2, 0, 1, 0, 0, 0, 5, 0]')).toEqual([
+      { coords: { x: 9, y: 11 }, sourceId: 2, atlasCoords: { x: 1, y: 0 }, alternativeId: 5 },
+    ]);
+  });
+
+  // `set_tile_map_data_from_array` clears the layer on empty data
+  // (tile_map_layer.cpp:3216-3218), before the header check.
+  it.each(['PackedByteArray()', 'PackedByteArray("")', '[]'])('decodes the empty %s to no cells, silently', (value) => {
+    expect(decodeTileMapData(value)).toEqual([]);
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
   it('returns null and warns on corrupt data (truncated record, bad numbers, bad base64, unknown version)', () => {
     // 2-byte header + 13 bytes: not a whole 12-byte record.
     expect(decodeTileMapData(`PackedByteArray(${new Array(15).fill(0).join(', ')})`)).toBeNull();

@@ -24,18 +24,18 @@ Strict parsing format-checks these `Label` properties, plus 53 inherited from Co
 | `autowrap_mode` | enum 0-3 (AUTOWRAP_OFF/AUTOWRAP_ARBITRARY/AUTOWRAP_WORD/AUTOWRAP_WORD_SMART) | warning |
 | `autowrap_trim_flags` | bit mask of BREAK_TRIM_INDENT (32) \| BREAK_TRIM_START_EDGE_SPACES (64) \| BREAK_TRIM_END_EDGE_SPACES (128) |  |
 | `clip_text` | true or false |  |
-| `ellipsis_char` | quoted string (or the &"…" StringName jacket), at most one character |  |
+| `ellipsis_char` | quoted string (or the &"…" StringName or NodePath("…") it converts), at most one character |  |
 | `horizontal_alignment` | enum 0-3 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT/HORIZONTAL_ALIGNMENT_FILL) | error |
 | `justification_flags` | bit mask of JUSTIFICATION_KASHIDA (1) \| JUSTIFICATION_WORD_BOUND (2) \| JUSTIFICATION_AFTER_LAST_TAB (8) \| JUSTIFICATION_SKIP_LAST_LINE (32) \| JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) \| JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128) |  |
-| `label_settings` | null, SubResource("id") or ExtResource("id") |  |
-| `language` | quoted string, or the &"…" StringName jacket |  |
+| `label_settings` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `language` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 | `lines_skipped` | integer 0-999 | error below, warning above |
 | `max_lines_visible` | integer -1-999 | warning |
-| `paragraph_separator` | quoted string, or the &"…" StringName jacket |  |
+| `paragraph_separator` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 | `structured_text_bidi_override` | enum 0-6 (STRUCTURED_TEXT_DEFAULT/STRUCTURED_TEXT_URI/STRUCTURED_TEXT_FILE/STRUCTURED_TEXT_EMAIL/STRUCTURED_TEXT_LIST/STRUCTURED_TEXT_GDSCRIPT/STRUCTURED_TEXT_CUSTOM) | warning |
-| `structured_text_bidi_override_options` | Array literal ([...]) |  |
+| `structured_text_bidi_override_options` | Array literal ([...] or Array[T]([...])) |  |
 | `tab_stops` | PackedFloat32Array(x, y, …) |  |
-| `text` | quoted string, or the &"…" StringName jacket |  |
+| `text` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 | `text_direction` | enum 0-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) | error below -1, warning below 0, error above 3 |
 | `text_overrun_behavior` | enum 0-6 (OVERRUN_NO_TRIMMING/OVERRUN_TRIM_CHAR/OVERRUN_TRIM_WORD/OVERRUN_TRIM_ELLIPSIS/OVERRUN_TRIM_WORD_ELLIPSIS/OVERRUN_TRIM_ELLIPSIS_FORCE/OVERRUN_TRIM_WORD_ELLIPSIS_FORCE) | warning |
 | `uppercase` | true or false |  |

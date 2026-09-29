@@ -208,7 +208,8 @@ color = Color(0.4, 0.6, 0.9, 1)
   it('registers a linter validator that REJECTS an invalid color', () => {
     // No validator → an invalid color passes silently and NO gate catches it. Delta
     // isolates the validator from any baseline errors.
-    expect(lintErrorCount(tintScene('color = 3'))).toBeGreaterThan(
+    // A float, since COLOR converts from STRING and INT only (variant.cpp:712-719).
+    expect(lintErrorCount(tintScene('color = 1.5'))).toBeGreaterThan(
       lintErrorCount(tintScene('color = Color(1, 1, 1, 1)'))
     );
   });

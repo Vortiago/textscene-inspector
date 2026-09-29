@@ -19,10 +19,10 @@ Strict parsing format-checks these `MeshInstance3D` properties, plus 18 inherite
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `blend_shapes/*` | float -1-1 | warning |
-| `mesh` | null, SubResource("id") or ExtResource("id") |  |
+| `mesh` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `skeleton` | NodePath("path/to/node") |  |
-| `skin` | null, SubResource("id") or ExtResource("id") |  |
-| `surface_material_override/*` | null, SubResource("id") or ExtResource("id") |  |
+| `skin` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `surface_material_override/*` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -22,7 +22,7 @@ Strict parsing format-checks these `AnimationTree` properties, plus 13 inherited
 | `anim_player` | NodePath("path/to/node") |  |
 | `parameters/*` | any Variant — the type comes from the live AnimationNode graph, not the .tscn |  |
 | `process_callback` | enum 0-2 (PHYSICS/IDLE/MANUAL) | warning |
-| `tree_root` | null, SubResource("id") or ExtResource("id") |  |
+| `tree_root` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -21,7 +21,7 @@ Strict parsing format-checks these `OccluderInstance3D` properties, plus 1 inher
 | --- | --- | --- |
 | `bake_mask` | 32-bit layer mask (layers 1-32) |  |
 | `bake_simplification_distance` | float 0-2 | error below, warning above |
-| `occluder` | null, SubResource("id") or ExtResource("id") |  |
+| `occluder` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

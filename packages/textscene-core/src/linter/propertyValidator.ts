@@ -39,9 +39,11 @@ export type PropertyValidator = ((
 
   /**
    * True when this validator rejects only values that never reach the property,
-   * which need no citation: unreadable text, or a type `can_convert_strict`
-   * refuses (`variant.cpp:536-830`) and `PackedScene` then ignores
-   * (`packed_scene.cpp:492`). A value Godot converts is accepted.
+   * which need no citation: unreadable text, or a whole value of a type
+   * `can_convert_strict` refuses (`variant.cpp:536-830`), which `PackedScene`
+   * ignores (`packed_scene.cpp:492`). A value Godot converts is accepted. A
+   * refusal of a value the setter receives, a container element included, is a
+   * `grounding` instead. `formatOnlyCorpus.ledger.test.mjs` measures the claim.
    */
   formatOnly?: boolean;
 

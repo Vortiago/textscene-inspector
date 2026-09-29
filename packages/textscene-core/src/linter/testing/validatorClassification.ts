@@ -41,6 +41,19 @@ export function isUnclassified(v: PropertyValidator): boolean {
 }
 
 /**
+ * A validator that claims both tags: `formatOnly` says its refusals need no
+ * cite, and `grounding` cites a refusal of a value the setter receives.
+ */
+export function claimsBothTiers(v: PropertyValidator): boolean {
+  return v.formatOnly === true && v.grounding !== undefined;
+}
+
+/** Every validator claiming both tags, by label, over the live registry or `roots`. */
+export function formatOnlyAndGrounded(roots?: readonly Root[]): string[] {
+  return everyValidatorLabel(claimsBothTiers, { roots });
+}
+
+/**
  * An `accepts` string that states a numeric range: `float 0-1`, `integer >= 0`,
  * `enum 0-3 (…)`. A bare `float` or a `Vector3(x, y, z)` states none.
  */

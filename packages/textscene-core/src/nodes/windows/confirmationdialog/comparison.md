@@ -18,7 +18,7 @@ Strict parsing format-checks these `ConfirmationDialog` properties, plus 5 inher
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `cancel_button_text` | quoted string, or the &"…" StringName jacket |  |
+| `cancel_button_text` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -6,7 +6,7 @@
  */
 
 import { warn } from '../../../../logger';
-import { packedArrayLiteral } from '../../../../godot/index.js';
+import { ARRAY_LITERAL_RE, packedArrayLiteral } from '../../../../godot/index.js';
 import { parseGodotInt } from '../../../../godot/int.js';
 
 export interface Vec2i {
@@ -35,12 +35,19 @@ const QUOTED_BASE64_RE = /^"([A-Za-z0-9+/]*={0,2})"$/;
  * Why Godot's text parser would refuse this `tile_map_data` literal. A fault is a
  * whole-file `ERR_PARSE_ERROR` (variant_parser.cpp:618-622), so the validator
  * reports it and the tile-data rule skips the literal rather than report twice.
+ * A bare `[…]` of bytes is a literal too: PACKED_BYTE_ARRAY converts from ARRAY
+ * (variant.cpp:772-778). Its body is decimal only, since a quoted element would
+ * convert through `String::to_int` and is no base64 body.
  */
 export function readTileMapDataLiteral(
   value: string
 ): { fault: 'not-a-literal' } | { fault: 'invalid-base64' | null; body: string } {
-  const match = PACKED_BYTE_ARRAY_RE.exec(value.trim());
-  if (!match) return { fault: 'not-a-literal' };
+  const trimmed = value.trim();
+  const match = PACKED_BYTE_ARRAY_RE.exec(trimmed);
+  if (!match) {
+    const bare = ARRAY_LITERAL_RE.exec(trimmed)?.[1]!.trim();
+    return bare === undefined || bare.startsWith('"') ? { fault: 'not-a-literal' } : { fault: null, body: bare };
+  }
   const body = match[1]!.trim();
   if (body.startsWith('"') && !QUOTED_BASE64_RE.test(body)) {
     return { fault: 'invalid-base64', body };
@@ -55,11 +62,14 @@ const HEADER_BYTES = 2;
 const FORMAT_VERSION = 0;
 
 export function decodeTileMapData(value: string): PlacedCell[] | null {
-  const m = PACKED_BYTE_ARRAY_RE.exec(value);
-  if (!m) return null;
+  const literal = readTileMapDataLiteral(value);
+  if (literal.fault === 'not-a-literal') return null;
 
-  const bytes = decodeBytes(m[1]!.trim());
+  const bytes = decodeBytes(literal.body);
   if (!bytes) return null;
+  // `set_tile_map_data_from_array` clears the layer on empty data, before it
+  // reads a header (tile_map_layer.cpp:3216-3218).
+  if (bytes.length === 0) return [];
   if (bytes.length < HEADER_BYTES || (bytes.length - HEADER_BYTES) % CELL_BYTES !== 0) {
     warn(`[TileMapLayer] tile_map_data truncated (${bytes.length} bytes) — ignoring tile data`);
     return null;

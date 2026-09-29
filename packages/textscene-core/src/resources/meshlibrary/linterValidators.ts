@@ -28,7 +28,7 @@ function shapePairs(): PropertyValidator {
   // `_set` forwards to `_set_item_shapes(int, const Array &)` (mesh_library.cpp:78,
   // :316), which takes an Array of any element type, so `Array[T]([…])` loads
   // here as readily as the bare literal Godot writes.
-  const literal = v.arrayLiteral('shapes', { anyElementType: true });
+  const literal = v.arrayLiteral('shapes');
   const validator: PropertyValidator = (key, value, line) => {
     const malformed = literal(key, value, line);
     if (malformed) return malformed;

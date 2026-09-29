@@ -18,7 +18,7 @@ Strict parsing format-checks these `CSGBox3D` properties, plus 1 inherited from 
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `material` | null, SubResource("id") or ExtResource("id") |  |
+| `material` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `size` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 
 | Rule | Reports | Severity |
