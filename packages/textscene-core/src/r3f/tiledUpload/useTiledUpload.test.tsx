@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { act, renderHook } from '@testing-library/react';
 import { pendingTextureWork } from '../../resources/textures/textureWork';
 import { fakeTiledUploads, type FakeUpload } from './fakeTiledUploads.testkit';
-import { useTiledUpload } from './useTiledUpload';
+import { useTiledUpload, useUploadedClone } from './useTiledUpload';
 
 function named(name: string): THREE.Texture {
   const texture = new THREE.Texture();
@@ -148,5 +148,34 @@ describe('useTiledUpload', () => {
 
     expect(result.current).toBeNull();
     expect(retire).toHaveBeenCalledWith(first);
+  });
+});
+
+describe('useUploadedClone', () => {
+  it('draws a consumer\'s own clone and disposes it once replaced', () => {
+    const first = named('first');
+    const dispose = vi.spyOn(first, 'dispose');
+    const { result, rerender } = renderHook(({ texture }) => useUploadedClone(texture), {
+      initialProps: { texture: first },
+    });
+    expect(result.current).toBe(first);
+
+    rerender({ texture: named('second') });
+    expect(dispose).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps drawing the previous clone while a large new one uploads', async () => {
+    const { pending, wrapper } = fakeTiledUploads();
+    const first = named('first');
+    const { result, rerender } = renderHook(({ texture }) => useUploadedClone(texture), {
+      initialProps: { texture: first },
+      wrapper,
+    });
+    await finish(pending[0]);
+    const dispose = vi.spyOn(first, 'dispose');
+
+    rerender({ texture: named('second') });
+    expect(result.current).toBe(first);
+    expect(dispose).not.toHaveBeenCalled();
   });
 });

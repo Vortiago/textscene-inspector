@@ -145,6 +145,86 @@ describe('TiledUploadQueue', () => {
   });
 });
 
+describe('TiledUploadQueue with textures three already shares', () => {
+  it('uploads nothing for a clone of a texture it finished uploading', async () => {
+    const { renderer, copies, allocations, now } = fakeRenderer();
+    const queue = new TiledUploadQueue(renderer, now);
+    const texture = dataTexture(4096, 300);
+    const first = queue.enqueue(texture);
+    queue.tick(1000);
+    await first.done;
+    const before = { copies: copies.length, allocations: allocations.length };
+
+    const again = queue.enqueue(texture.clone());
+    expect(await again.done).toBe(true);
+    expect(copies.length).toBe(before.copies);
+    expect(allocations.length).toBe(before.allocations);
+  });
+
+  it('runs one upload for two matching clones that arrive while it is in flight', async () => {
+    const { renderer, copies, allocations, now } = fakeRenderer();
+    const queue = new TiledUploadQueue(renderer, now);
+    const texture = dataTexture(4096, 300);
+    const first = queue.enqueue(texture);
+    const second = queue.enqueue(texture.clone());
+    queue.tick(1000);
+
+    expect(await first.done).toBe(true);
+    expect(await second.done).toBe(true);
+    expect(allocations).toHaveLength(1);
+    expect(copies).toHaveLength(3);
+  });
+
+  it('keeps a shared upload going while one of its holders remains', async () => {
+    const { renderer, copies, now } = fakeRenderer();
+    const queue = new TiledUploadQueue(renderer, now);
+    const texture = dataTexture(4096, 300);
+    const first = queue.enqueue(texture);
+    const second = queue.enqueue(texture.clone());
+    first.cancel();
+    queue.tick(1000);
+
+    expect(await first.done).toBe(false);
+    expect(await second.done).toBe(true);
+    expect(copies).toHaveLength(3);
+  });
+
+  it('moves a shared upload onto a remaining texture when the one it started on leaves', async () => {
+    // The texture it started on is about to be disposed, which frees its GPU storage.
+    const { renderer, copies, allocations, now } = fakeRenderer();
+    const queue = new TiledUploadQueue(renderer, now);
+    const texture = dataTexture(4096, 300);
+    const clone = texture.clone();
+    const first = queue.enqueue(texture);
+    const second = queue.enqueue(clone);
+    queue.tick(0);
+    first.cancel();
+    queue.tick(1000);
+
+    expect(await second.done).toBe(true);
+    expect(allocations.map((allocation) => allocation.texture)).toEqual([texture, clone]);
+    const onClone = copies.filter(({ destination }) => destination === clone);
+    expect(onClone.map(({ fromRow, toRow }) => [fromRow, toRow])).toEqual([
+      [0, 128],
+      [128, 256],
+      [256, 300],
+    ]);
+  });
+
+  it('uploads again once every texture that shared the upload is disposed', async () => {
+    const { renderer, allocations, now } = fakeRenderer();
+    const queue = new TiledUploadQueue(renderer, now);
+    const texture = dataTexture(4096, 300);
+    const first = queue.enqueue(texture);
+    queue.tick(1000);
+    await first.done;
+    texture.dispose();
+
+    queue.enqueue(texture.clone());
+    expect(allocations).toHaveLength(2);
+  });
+});
+
 describe('TiledUploadQueue.needsTiling', () => {
   const { renderer, now } = fakeRenderer();
   const queue = new TiledUploadQueue(renderer, now);

@@ -11,6 +11,7 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { composeFrameTexture, frameSizePx, spriteWrapMode } from '../../../r3f/spriteFrame';
+import { useUploadedClone } from '../../../r3f/tiledUpload/useTiledUpload';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { alphaCutSurface } from '../../../r3f/godotAlphaCut';
@@ -57,7 +58,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // The shared `r3f/spriteFrame` module (Sprite2D and Sprite3D) clones the texture and windows the
   // UVs to the region or frame. Flip mirrors through UV negation, where 2D mirrors through mesh
   // scale: negate the repeat and shift the offset to the opposite edge.
-  const displayedTexture = useMemo(() => {
+  const composedTexture = useMemo(() => {
     // The wrap mode is derived, not fixed: `sprite_3d.cpp:163` reads it off the frame's own UV
     // corners, so only an overrunning window tiles. SRGBColorSpace: Godot's 3D pipeline decodes
     // sRGB in hardware before filtering (`canvas2DTextureDecode.ts`), so the clone keeps the cache
@@ -78,9 +79,10 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     }
     return cloned;
   }, [sourceTexture, properties]);
-  // `composeFrameTexture` hands back a clone, never the loader's cached entry, so
-  // the clone is this component's to release; the shared source is left alone.
-  useEffect(() => () => displayedTexture?.dispose(), [displayedTexture]);
+  // `composeFrameTexture` hands back a clone, never the loader's cached entry, so the
+  // clone is this component's: `useUploadedClone` uploads it and disposes it once it no
+  // longer draws, and the shared source is left alone.
+  const displayedTexture = useUploadedClone(composedTexture ?? null);
 
   // Quad sizing: pixel_size × the frame's pixel dimensions (1×1 fallback
   // before the image loads keeps the placeholder at expected scale).

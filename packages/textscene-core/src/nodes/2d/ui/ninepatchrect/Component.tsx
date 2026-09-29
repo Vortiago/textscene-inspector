@@ -22,6 +22,7 @@ import {
 } from '../../../../r3f/controls/native/ninePatchGeometry';
 import { resolveNinePatchFilter } from './nativeSolver';
 import type { NinePatchRectProperties } from './types';
+import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
 
 const FILTER: Record<'nearest' | 'linear', THREE.MagnificationTextureFilter> = {
   nearest: THREE.NearestFilter,
@@ -114,16 +115,17 @@ export function NinePatchRect({ solveNode, tint, rect, renderOrder }: NativeCont
     cloned.needsUpdate = true;
     return cloned;
   }, [rawTexture, geometry, sampler.filter]);
-  useEffect(() => () => preparedTexture?.dispose(), [preparedTexture]);
+  // Uploaded in bands where large, and disposed once it no longer draws.
+  const drawnTexture = useUploadedClone(preparedTexture);
 
   const clippingPlanes = useControlClipPlanes();
-  const decodeDefines = useCanvasDecodeDefines(preparedTexture);
+  const decodeDefines = useCanvasDecodeDefines(drawnTexture);
 
-  if (!geometry || !preparedTexture) return null;
+  if (!geometry || !drawnTexture) return null;
 
   const program = materialProgramInputs({
     props: {
-      map: preparedTexture,
+      map: drawnTexture,
       color: tint.color,
       opacity: tint.opacity,
       transparent: true,

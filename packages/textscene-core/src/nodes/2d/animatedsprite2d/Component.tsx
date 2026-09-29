@@ -13,6 +13,7 @@ import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { canvasItemBlendState } from '../../../resources/materials/canvasitemmaterial/renderer';
 import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmaterial/types';
 import { composeFrameTexture, frameSizePx, type SpriteFrameProps } from '../../../r3f/spriteFrame';
+import { useUploadedClone } from '../../../r3f/tiledUpload/useTiledUpload';
 import { useCanvasDecodeDefines } from '../../../r3f/canvas2DTextureDecode';
 import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
@@ -163,15 +164,15 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
     resolved?.subResources ?? NO_INTERNAL_RESOURCES
   );
 
-  // composeFrameTexture clones per frame, as sampler state is per consumer. The
-  // prior clone is disposed on advance and unmount, so playback leaks no GPU texture.
-  // NoColorSpace: the 2D canvas's filter blends undecoded sRGB bytes
+  // composeFrameTexture clones per frame, as sampler state is per consumer, and
+  // `useUploadedClone` disposes each clone once it no longer draws, so playback leaks no
+  // GPU texture. NoColorSpace: the 2D canvas's filter blends undecoded sRGB bytes
   // (`canvas2DTextureDecode.ts`), and `useCanvasDecodeDefines` decodes the sample.
-  const displayedTexture = useMemo(
+  const composedTexture = useMemo(
     () => composeFrameTexture(frameTexture ?? undefined, WHOLE_FRAME, 'clamp', THREE.NoColorSpace),
     [frameTexture]
   );
-  useEffect(() => () => displayedTexture?.dispose(), [displayedTexture]);
+  const displayedTexture = useUploadedClone(composedTexture ?? null);
   const decodeDefines = useCanvasDecodeDefines(displayedTexture);
   const { width, height } = useMemo(
     () => frameSizePx(frameTexture ?? undefined, WHOLE_FRAME),

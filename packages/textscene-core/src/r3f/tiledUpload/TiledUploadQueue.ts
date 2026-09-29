@@ -7,6 +7,7 @@
  */
 
 import * as THREE from 'three';
+import { GpuResidency, residencyKey } from './gpuResidency';
 
 /** The part of `THREE.WebGLRenderer` the queue uses, so a test can stand in for one. */
 export interface UploadRenderer {
@@ -19,7 +20,7 @@ export interface UploadRenderer {
   ): void;
 }
 
-/** A texture's place in the queue. */
+/** A consumer's place in the queue. A texture whose upload was cancelled must not be drawn. */
 export interface TiledUpload {
   /** True once every row is on the GPU; false when the upload was cancelled first. */
   done: Promise<boolean>;
@@ -39,18 +40,28 @@ export function bandRows(width: number): number {
   return Math.max(1, Math.floor(BAND_BYTES / (width * RGBA_BYTES)));
 }
 
+/** One consumer waiting on an upload. */
+interface Waiter {
+  texture: THREE.Texture;
+  finish: (uploaded: boolean) => void;
+}
+
 interface QueuedUpload {
   texture: THREE.Texture;
   /** A texture over the same pixels that three never uploads, so each copy reads the CPU bytes. */
   source: THREE.DataTexture;
+  /** three's cache key for `texture`, taken before the mipmap flag is cleared for the bands. */
+  key: string;
   nextRow: number;
   wantsMipmaps: boolean;
-  finish: (uploaded: boolean) => void;
+  /** Every consumer of this GPU texture: the one that started it, and matching clones that joined. */
+  waiters: Waiter[];
 }
 
 export class TiledUploadQueue {
   /** Written by `enqueue`, `tick` and a cancel. The head is the upload in progress. */
   private readonly queue: QueuedUpload[] = [];
+  private readonly residency = new GpuResidency();
 
   constructor(
     private readonly renderer: UploadRenderer,
@@ -66,34 +77,62 @@ export class TiledUploadQueue {
   }
 
   /**
+   * Gets `texture` onto the GPU in bands. A clone that matches a GPU texture three
+   * already has, or one already uploading, shares it instead of starting another.
+   */
+  enqueue(texture: THREE.Texture): TiledUpload {
+    if (this.residency.isResident(texture)) {
+      this.residency.hold(texture);
+      return { done: Promise.resolve(true), cancel: () => {} };
+    }
+    const key = residencyKey(texture);
+    const inFlight = this.queue.find((entry) => entry.texture.source === texture.source && entry.key === key);
+    return this.join(inFlight ?? this.start(texture, key), texture);
+  }
+
+  /**
    * Allocates `texture` empty now, and queues its rows. The allocation clears
    * `dataReady` for one synchronous call only: the source is shared with every clone
    * of the texture, and nothing else can upload in between.
    */
-  enqueue(texture: THREE.Texture): TiledUpload {
+  private start(texture: THREE.Texture, key: string): QueuedUpload {
     const { data, width, height } = texture.image as { data: Uint8Array; width: number; height: number };
+    const entry: QueuedUpload = {
+      texture,
+      source: new THREE.DataTexture(data, width, height, texture.format as THREE.PixelFormat, texture.type),
+      key,
+      nextRow: 0,
+      wantsMipmaps: texture.generateMipmaps,
+      waiters: [],
+    };
+    this.allocate(entry, texture);
+    this.queue.push(entry);
+    return entry;
+  }
+
+  /** Points `entry` at `texture`'s GPU storage, allocated empty, and restarts it at row 0. */
+  private allocate(entry: QueuedUpload, texture: THREE.Texture): void {
     texture.source.dataReady = false;
     try {
       this.renderer.initTexture(texture);
     } finally {
       texture.source.dataReady = true;
     }
+    entry.texture = texture;
+    entry.nextRow = 0;
+    entry.wantsMipmaps = texture.generateMipmaps;
+    // three generates mipmaps after every copy, so they wait for the last band.
+    texture.generateMipmaps = false;
+  }
 
+  private join(entry: QueuedUpload, texture: THREE.Texture): TiledUpload {
     let finish: (uploaded: boolean) => void = () => {};
     const done = new Promise<boolean>((resolve) => {
       finish = resolve;
     });
-    const entry: QueuedUpload = {
-      texture,
-      source: new THREE.DataTexture(data, width, height, texture.format as THREE.PixelFormat, texture.type),
-      nextRow: 0,
-      wantsMipmaps: texture.generateMipmaps,
-      finish,
-    };
-    // three generates mipmaps after every copy, so they wait for the last band.
-    texture.generateMipmaps = false;
-    this.queue.push(entry);
-    return { done, cancel: () => this.cancel(entry) };
+    const waiter: Waiter = { texture, finish };
+    entry.waiters.push(waiter);
+    return { done, cancel: () => this.leave(entry, waiter) };
   }
 
   /** Copies bands until `budgetMs` is spent, and always at least one. */
@@ -119,17 +158,32 @@ export class TiledUploadQueue {
       new THREE.Vector2(0, fromRow)
     );
     entry.nextRow = toRow;
-    if (isLast) this.settle(entry, true);
+    if (isLast) this.complete(entry);
   }
 
-  private cancel(entry: QueuedUpload): void {
-    if (!this.queue.includes(entry)) return;
-    entry.texture.generateMipmaps = entry.wantsMipmaps;
-    this.settle(entry, false);
-  }
-
-  private settle(entry: QueuedUpload, uploaded: boolean): void {
+  private complete(entry: QueuedUpload): void {
     this.queue.splice(this.queue.indexOf(entry), 1);
-    entry.finish(uploaded);
+    for (const { texture, finish } of entry.waiters) {
+      this.residency.hold(texture);
+      finish(true);
+    }
+  }
+
+  /** One consumer stops waiting. The upload stops only when none is left. */
+  private leave(entry: QueuedUpload, waiter: Waiter): void {
+    const index = entry.waiters.indexOf(waiter);
+    if (index < 0 || !this.queue.includes(entry)) return;
+    entry.waiters.splice(index, 1);
+    waiter.finish(false);
+    const [next] = entry.waiters;
+    if (next && waiter.texture !== entry.texture) return;
+    entry.texture.generateMipmaps = entry.wantsMipmaps;
+    if (!next) {
+      this.queue.splice(this.queue.indexOf(entry), 1);
+      return;
+    }
+    // The texture it filled is about to be disposed, which frees that GPU storage, so
+    // the rows start again in storage a remaining consumer's texture owns.
+    this.allocate(entry, next.texture);
   }
 }

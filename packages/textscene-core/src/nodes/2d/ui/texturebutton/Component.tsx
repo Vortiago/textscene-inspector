@@ -5,7 +5,7 @@
  * and `useInheritedTextureSampler` resolves the sampler. The walker owns the transform.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -22,6 +22,7 @@ import {
   type TextureButtonSlot,
 } from './nativeSolver';
 import type { TextureButtonProperties } from './types';
+import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
 
 const FILTER: Record<'nearest' | 'linear', THREE.MagnificationTextureFilter> = {
   nearest: THREE.NearestFilter,
@@ -117,9 +118,10 @@ export function TextureButton({ solveNode, tint, rect, renderOrder }: NativeCont
     return cloned;
   }, [rawTexture, draw, sampler.filter, sampler.repeat, props.flipH, props.flipV]);
 
-  useEffect(() => () => preparedTexture?.dispose(), [preparedTexture]);
+  // Uploaded in bands where large, and disposed once it no longer draws.
+  const drawnTexture = useUploadedClone(preparedTexture);
 
-  if (!draw || !preparedTexture) return null;
+  if (!draw || !drawnTexture) return null;
 
   return (
     <CanvasItemGroup position={[draw.offset.x, -draw.offset.y, 0]}>
@@ -129,7 +131,7 @@ export function TextureButton({ solveNode, tint, rect, renderOrder }: NativeCont
         height={draw.size.y}
         color={tint.color}
         opacity={tint.opacity}
-        map={preparedTexture}
+        map={drawnTexture}
       />
     </CanvasItemGroup>
   );

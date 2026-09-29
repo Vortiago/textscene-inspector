@@ -5,7 +5,7 @@
  * flips the texture too, as in Godot, where 3D negates the UV.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
@@ -13,6 +13,7 @@ import { canvasItemBlendState, type CanvasItemBlendState } from '../../../resour
 import type { CanvasItemLightingProps } from '../../../r3f/lighting2d/useCanvasItemLighting';
 import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmaterial/types';
 import { composeFrameTexture, frameSizePx } from '../../../r3f/spriteFrame';
+import { useUploadedClone } from '../../../r3f/tiledUpload/useTiledUpload';
 import { useCanvasDecodeDefines } from '../../../r3f/canvas2DTextureDecode';
 import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
@@ -64,11 +65,11 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
     // and QuadMesh decodes the filtered sample through `useCanvasDecodeDefines`.
     return composeFrameTexture(sourceTexture ?? undefined, frameProps, 'clamp', THREE.NoColorSpace);
   }, [sourceTexture, props, animatedFrame]);
-  // composeFrameTexture clones the texture per frame, so dispose the prior clone
-  // when the frame advances and on unmount, or playback leaks one per keyframe.
-  useEffect(() => () => composedTexture?.dispose(), [composedTexture]);
+  // composeFrameTexture clones the texture per frame. `useUploadedClone` uploads a large
+  // clone in bands and disposes each one once it no longer draws, so playback leaks none.
+  const drawnTexture = useUploadedClone(composedTexture ?? null);
 
-  const displayedTexture = viewportTexture ?? composedTexture;
+  const displayedTexture = viewportTexture ?? drawnTexture;
   // A ViewportTexture keeps its publisher's colour space, not the NoColorSpace
   // retag, so this resolves to `undefined` for it.
   const decodeDefines = useCanvasDecodeDefines(displayedTexture);

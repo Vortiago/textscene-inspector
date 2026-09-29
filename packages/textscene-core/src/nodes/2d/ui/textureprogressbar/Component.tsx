@@ -5,7 +5,7 @@
  * visibility, children and transform.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -37,6 +37,7 @@ import { TexturedFillMesh } from './TexturedFillMesh';
 import type { ControlColor } from '../control/types';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { TextureProgressBarProperties } from './types';
+import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
 
 const WHITE: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
 const ZERO: Vec2 = { x: 0, y: 0 };
@@ -67,7 +68,7 @@ function useLayerTexture(
 ): THREE.Texture | null {
   const { texture: raw } = useTexture2D(ref, externalResources, internalResources);
   const decoded = useCanvas2DTexture(raw);
-  return useMemo(() => {
+  const layer = useMemo(() => {
     if (!decoded) return null;
     const cloned = decoded.clone();
     pinNoColorSpace(cloned);
@@ -76,6 +77,8 @@ function useLayerTexture(
     cloned.minFilter = mag;
     return cloned;
   }, [decoded, filter]);
+  // Uploaded in bands where large, and disposed once it no longer draws.
+  return useUploadedClone(layer);
 }
 
 /** `Texture2D::get_rect_region`'s cropped clone: identity except the UV window (`linearFill.ts`). */
@@ -84,18 +87,23 @@ function useCroppedTexture(
   region: { x: number; y: number; w: number; h: number } | undefined,
   textureSize: Vec2 | null
 ): THREE.Texture | null {
+  // Keyed on the numbers: the caller builds `region` and `textureSize` afresh each render, and
+  // a new clone per render would restart its upload, which sets state, which renders again.
+  const repeatX = region && textureSize ? region.w / textureSize.x : null;
+  const repeatY = region && textureSize ? region.h / textureSize.y : null;
+  const offsetX = region && textureSize ? region.x / textureSize.x : null;
+  const offsetY = region && textureSize ? 1 - (region.y + region.h) / textureSize.y : null;
   const cropped = useMemo(() => {
-    if (!texture || !region || !textureSize) return null;
+    if (!texture || repeatX === null || repeatY === null || offsetX === null || offsetY === null) return null;
     const cloned = texture.clone();
     cloned.wrapS = THREE.ClampToEdgeWrapping;
     cloned.wrapT = THREE.ClampToEdgeWrapping;
-    cloned.repeat.set(region.w / textureSize.x, region.h / textureSize.y);
-    cloned.offset.set(region.x / textureSize.x, 1 - (region.y + region.h) / textureSize.y);
+    cloned.repeat.set(repeatX, repeatY);
+    cloned.offset.set(offsetX, offsetY);
     cloned.needsUpdate = true;
     return cloned;
-  }, [texture, region, textureSize]);
-  useEffect(() => () => cropped?.dispose(), [cropped]);
-  return cropped;
+  }, [texture, repeatX, repeatY, offsetX, offsetY]);
+  return useUploadedClone(cropped);
 }
 
 export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {

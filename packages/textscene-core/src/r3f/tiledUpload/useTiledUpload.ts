@@ -49,6 +49,19 @@ export function useTiledUpload<T extends THREE.Texture>(
 }
 
 /**
+ * A consumer's own texture clone as it draws: uploaded in bands where large, and
+ * disposed once it no longer draws. Every component that clones a texture to draw
+ * it goes through here (`drawnCloneGuard.test.ts`).
+ */
+export function useUploadedClone<T extends THREE.Texture>(clone: T | null): T | null {
+  return useTiledUpload(clone, disposeTexture);
+}
+
+function disposeTexture(texture: THREE.Texture): void {
+  texture.dispose();
+}
+
+/**
  * Calls `retire` once for each texture that leaves `live`, and for every texture
  * still held on unmount.
  */

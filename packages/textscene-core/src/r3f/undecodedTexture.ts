@@ -7,7 +7,7 @@
 import { useMemo } from 'react';
 import type * as THREE from 'three';
 import { pinNoColorSpace } from '../resources/textures/applyTextureState';
-import { useTiledUpload } from './tiledUpload/useTiledUpload';
+import { useUploadedClone } from './tiledUpload/useTiledUpload';
 
 // Re-exported for the 2D consumers. It lives beside the shared texture applier,
 // which the material path also needs.
@@ -30,9 +30,5 @@ export function useUndecodedTexture(
     clone.needsUpdate = true;
     return clone;
   }, [texture]);
-  return useTiledUpload(cloned, disposeClone);
-}
-
-function disposeClone(clone: THREE.Texture): void {
-  clone.dispose();
+  return useUploadedClone(cloned);
 }

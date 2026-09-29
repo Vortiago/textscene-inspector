@@ -5,7 +5,7 @@
  * walker owns the transform, and `index.r3f.ts` registers the minimum size.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import * as THREE from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -16,6 +16,7 @@ import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSam
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { textureRectDraw, resolveTextureRectFilter, resolveTextureRectRepeat, applyFlip } from './nativeSolver';
 import type { TextureRectProperties } from './types';
+import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
 
 const FILTER: Record<'nearest' | 'linear', THREE.MagnificationTextureFilter> = {
   nearest: THREE.NearestFilter,
@@ -100,9 +101,10 @@ export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeContro
     return cloned;
   }, [rawTexture, draw, sampler.filter, sampler.repeat, props.flipH, props.flipV]);
 
-  useEffect(() => () => preparedTexture?.dispose(), [preparedTexture]);
+  // Uploaded in bands where large, and disposed once it no longer draws.
+  const drawnTexture = useUploadedClone(preparedTexture);
 
-  if (!draw || !preparedTexture) return null;
+  if (!draw || !drawnTexture) return null;
 
   return (
     <CanvasItemGroup position={[draw.offset.x, -draw.offset.y, 0]}>
@@ -112,7 +114,7 @@ export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeContro
         height={draw.size.y}
         color={tint.color}
         opacity={tint.opacity}
-        map={preparedTexture}
+        map={drawnTexture}
       />
     </CanvasItemGroup>
   );

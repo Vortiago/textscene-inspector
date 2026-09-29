@@ -54,18 +54,22 @@ function solveNode(n: TscnNode): SolveNode {
 
 const RECT: Rect2 = { x: 0, y: 0, w: 64, h: 16 };
 
-async function render(
-  properties: Partial<TextureProgressBarProperties>,
-  tint?: NativeControlComponentProps['tint'],
-  rect: Rect2 = RECT
-) {
+function seededLoader() {
   const fake = createFakeResourceLoader();
   fake.textures.seed(UNDER, fakeTexture(64, 16));
   fake.textures.seed(PROGRESS, fakeTexture(64, 16));
   fake.textures.seed(OVER, fakeTexture(64, 16));
+  return fake.loader;
+}
 
-  return ReactThreeTestRenderer.create(
-    <ResourceLoaderProvider loader={fake.loader}>
+function bar(
+  loader: ReturnType<typeof seededLoader>,
+  properties: Partial<TextureProgressBarProperties>,
+  tint?: NativeControlComponentProps['tint'],
+  rect: Rect2 = RECT
+) {
+  return (
+    <ResourceLoaderProvider loader={loader}>
       <SceneResourcesProvider internalResources={[]} externalResources={SCOPE.externalResources}>
         <TextureProgressBar
           {...painterEnv()}
@@ -77,6 +81,14 @@ async function render(
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
+}
+
+async function render(
+  properties: Partial<TextureProgressBarProperties>,
+  tint?: NativeControlComponentProps['tint'],
+  rect: Rect2 = RECT
+) {
+  return ReactThreeTestRenderer.create(bar(seededLoader(), properties, tint, rect));
 }
 
 describe('<TextureProgressBar>', () => {
@@ -135,6 +147,18 @@ describe('<TextureProgressBar>', () => {
     for (const mesh of renderer.scene.findAllByType('Mesh')) {
       expect(mesh.instance.renderOrder).toBe(0);
     }
+  });
+
+  it('keeps drawing the same cropped progress texture when it re-renders with the same values', async () => {
+    const loader = seededLoader();
+    const properties = { textureProgress: 'ExtResource("2")', fillMode: 0, value: 50 };
+    const renderer = await ReactThreeTestRenderer.create(bar(loader, properties));
+    const mapOf = () =>
+      ((renderer.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial).map;
+    const before = mapOf();
+    await renderer.update(bar(loader, { ...properties }, undefined, { ...RECT }));
+    expect(before).not.toBeNull();
+    expect(mapOf()).toBe(before);
   });
 
   it('composes tint_under onto the walker tint, in linear space, for the under layer', async () => {
