@@ -2,6 +2,8 @@
 
 - Status: Accepted. **Supersedes ADR-0003.** **Supersedes ADR-0024** by consequence (its
   gate, `verify:2d`, retires with the DOM overlay it covered).
+- Amended by ADR-0042: the webview CSP now grants `worker-src blob:`. The MSDF finding
+  below stands, because runtime MSDF generation also needs `connect-src`, which stays closed.
 - Amends ADR-0006 (the 2D workspace's UI layer moves inside the canvas instead of on top
   of it).
 - Related: ADR-0002 (three separate registries, unaffected: the render-domain registry

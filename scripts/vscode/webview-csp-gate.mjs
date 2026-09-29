@@ -17,9 +17,9 @@ import { blankSceneText } from './sceneText.mjs';
 
 /**
  * The Control fixture whose only ink is text. The preview CSP (`webviewHtml.ts`)
- * is `default-src 'none'` with no `connect-src`, `worker-src` or `font-src`, so
- * glyphs come from a vendored MSDF atlas riding `img-src … data:`, not a font
- * library that fetches a font and spawns a blob-URL worker (ADR-0037).
+ * is `default-src 'none'` with no `connect-src` or `font-src`, so glyphs come
+ * from a vendored MSDF atlas riding `img-src … data:`, not a font library that
+ * fetches a font (ADR-0037).
  */
 const FIXTURE = 'scenes/fixtures/unit-label-2d.tscn';
 
@@ -30,6 +30,12 @@ const FIXTURE = 'scenes/fixtures/unit-label-2d.tscn';
  * count to zero on any display.
  */
 const INK_FLOOR = 100;
+
+/**
+ * Runs inside the with-text frame: a blob-URL worker must start and answer under
+ * the preview CSP (ADR-0042), since procedural textures build in one.
+ */
+const BLOB_WORKER_PROBE = path.join(REPO_ROOT, 'scripts/vscode/probes/blobWorkerProbe.mjs');
 
 const OUT_ROOT = path.join(REPO_ROOT, 'scripts/vscode/output/csp-gate');
 const BASE_PORT = 9464;
@@ -175,7 +181,7 @@ async function main() {
   // asked for, so an empty canvas fails the first and a canvas that paints
   // chrome or a background fails the second.
   const runs = [
-    { label: 'with-text', scene: withText },
+    { label: 'with-text', scene: withText, evalFile: BLOB_WORKER_PROBE },
     { label: 'without-text', scene: withoutText },
   ];
 
@@ -209,6 +215,7 @@ async function main() {
       screenshots: true,
       headed: opts.headed,
       keepOpen: 0,
+      evalFile: run.evalFile,
       verbose: opts.verbose,
       log: (message) => console.log(`[gate:${run.label}] ${message}`),
     });
@@ -222,6 +229,12 @@ async function main() {
       'Something else built this package concurrently (pnpm validate?); re-run alone.'
   );
   for (const run of runs) checkRun(gate, run.label, reports[run.label]);
+
+  const workerProbe = reports['with-text'].evalResult;
+  gate.check(
+    workerProbe?.ok === true,
+    `[with-text] a blob-URL worker did not answer inside the preview: ${brief(workerProbe)}`
+  );
 
   const withInk = reports['with-text'].canvasReadback;
   const withoutInk = reports['without-text'].canvasReadback;

@@ -132,10 +132,10 @@ throws means a detached or navigating frame.
 ## The CSP
 
 `apps/textscene-vscode/src/webview/webviewHtml.ts` is the single source of truth.
-It grants `style-src`, `script-src` (nonce + `cspSource`) and
-`img-src cspSource blob: data:` on a `default-src 'none'` base. The base denies
-everything else: no `connect-src` (no fetch, XHR or WebSocket, for `data:` and
-`blob:` URLs too), no `worker-src` (no blob-URL worker), no `font-src` (no CSS
+It grants `style-src`, `script-src` (nonce + `cspSource`),
+`img-src cspSource blob: data:` and `worker-src blob:` (ADR-0042) on a
+`default-src 'none'` base. The base denies everything else: no `connect-src` (no
+fetch, XHR or WebSocket, for `data:` and `blob:` URLs too), no `font-src` (no CSS
 `@font-face`). So everything the webview loads ships inside the bundle. The
 MSDF glyph atlas arrives as a `data:` URI under `img-src data:`.
 

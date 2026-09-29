@@ -57,14 +57,15 @@ export function generateWebviewHtml(options: WebviewHtmlOptions): string {
 
   // Dynamic `import()` of the ESM chunks needs `<script type="module">`, and
   // `script-src` permits `${cspSource}` for the chunk URIs beside the nonce'd
-  // entry. Chunk imports inherit the entry's module context.
+  // entry. Chunk imports inherit the entry's module context. `worker-src blob:`
+  // admits only workers built from the bundle's own code (ADR-0042).
   return `
     <!DOCTYPE html>
     <html lang="en">
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' ${cspSource}; img-src ${cspSource} blob: data:;">
+      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' ${cspSource}; img-src ${cspSource} blob: data:; worker-src blob:;">
       <title>TextScene Inspector</title>
       ${cssLink}
       <style>
