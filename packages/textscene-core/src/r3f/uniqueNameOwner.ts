@@ -1,8 +1,9 @@
 /**
- * The owner whose `%Name` table a rendered node resolves against, and that table composed over
- * instanced content. Each instance root has a table of its own, which an outer consumer never sees
+ * The owner whose `%Name` table a rendered node resolves against, that table composed over
+ * instanced content, and the local scene a local-to-scene resource on the node measures from.
+ * Each instance root has a table of its own, which an outer consumer never sees
  * (`uniqueNameOwner.md`). Pure: it walks the composed live tree over a cache snapshot, like
- * `liveSceneTree.ts`, and the React hook supplies reactivity.
+ * `liveSceneTree.ts`, and the React hooks supply reactivity.
  */
 
 import type { SceneScope, TscnNode } from '../parser/types.js';
@@ -138,6 +139,32 @@ export function claimOwnerOf(
   const file = node.overridesExistingNode && owner.parent ? owner.parent : owner;
   if (node.owner === '.') return file;
   return walkTo(joinPath(file.path, node.owner), roots, ctx).into;
+}
+
+/**
+ * The local scene a local-to-scene resource on the node at `path` is set up against, and so the
+ * node its NodePaths measure from: the node itself when it is an instance, else its owner
+ * (packed_scene.cpp:707). A scene's own root is its own owner, so the outer root is itself. An
+ * explicit `owner=` takes no part: a new node's properties land (:438) before its owner is set
+ * (:566-568), so Godot reads no owner and falls back to the file root, and an override keeps
+ * the sub-scene owner it already has.
+ */
+export function localSceneOf(
+  path: string,
+  roots: readonly TscnNode[],
+  ctx: LiveTreeContext
+): ClaimOwner {
+  return walkTo(path, roots, ctx).into;
+}
+
+/**
+ * The `%Name` table a walk from the local scene root reads: its own table, else its owner's
+ * (node.cpp:1930-1938). Only an instance root has an owner, so the outer root's is its own.
+ */
+export function localSceneClaims(scene: ClaimOwner): ReadonlyMap<string, UniqueNameClaim> {
+  const own = ownerClaims(scene);
+  if (!scene.parent) return own;
+  return new Map([...ownerClaims(scene.parent), ...own]);
 }
 
 function cachedSubRoots(

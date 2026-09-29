@@ -14,7 +14,7 @@ import { resolveSubResourceRef } from '../../SubResourceResolver.js';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext.js';
 import { useViewportPassCycle } from '../../../r3f/contexts/ViewportPassRegistryContext.js';
 import { useViewportTexture } from '../../../r3f/contexts/ViewportTextureContext.js';
-import { useUniqueNamePaths } from '../../../r3f/useUniqueNames.js';
+import { useLocalScene } from '../../../r3f/useUniqueNames.js';
 import {
   resolveViewportTexturePath,
   viewportTextureRegistryKey,
@@ -100,18 +100,17 @@ export function useViewportTextureSlot(
     resource?.type === VIEWPORT_TEXTURE_TYPE
       ? resolveViewportTexturePath((resource.data as { viewport_path?: string }).viewport_path)
       : null;
-  // The owner's table: a `%Name` inside an instanced sub-scene is claimed on its
-  // root (node.cpp:1930-1938). Only for a ViewportTexture slot, since every
-  // texture slot calls this and the owner walk is per node.
-  const uniquePaths = useUniqueNamePaths(viewportPath === null ? null : consumerPath);
   // `viewport_path` counts from the local scene root: `_setup_local_to_scene` calls
   // `p_loc_scene->get_node_or_null(path)`, `PROPERTY_USAGE_NODE_PATH_FROM_SCENE_ROOT`.
   // The constructor calls `set_local_to_scene(true)`, so a `.tscn` need not write
-  // `resource_local_to_scene`.
+  // `resource_local_to_scene`. Only for a ViewportTexture slot, since every texture
+  // slot calls this and the owner walk is per node.
+  const localScene = useLocalScene(viewportPath === null ? null : consumerPath);
+  const uniquePaths = localScene?.uniquePaths;
   const key =
     viewportPath === null
       ? null
-      : viewportTextureRegistryKey(consumerPath, viewportPath, uniquePaths);
+      : viewportTextureRegistryKey(localScene?.path ?? null, viewportPath, uniquePaths);
   // In an effect, not the render body: a module-level set written during render
   // is impure, survives every scene switch and grows without bound.
   const reported = useRef<string | undefined>(undefined);
@@ -122,8 +121,8 @@ export function useViewportTextureSlot(
       reported.current = undefined;
       return;
     }
-    // Dedup on the spelling in a ref, not on effect deps: `uniquePaths` is a fresh
-    // object per re-parse. The marker clears once the name is claimed, so a renamed
+    // Dedup on the spelling in a ref, not on effect deps: any change to the table
+    // re-runs the effect. The marker clears once the name is claimed, so a renamed
     // claimant warns again.
     const spelling = `${consumerPath}\u0000${viewportPath}`;
     if (reported.current === spelling) return;
