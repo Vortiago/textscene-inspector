@@ -133,7 +133,17 @@ const DEFAULT_CANVAS_LAYER_VALUE = 1;
  * `instance=` node, whose sub-scene roots arrive once the PackedScene loads.
  */
 function reservesRoom(node: TscnNode): boolean {
-  return node.type === 'TileMapLayer' || node.type === 'TileMap' || node.instance !== undefined;
+  return node.type === 'TileMapLayer' || node.instance !== undefined;
+}
+
+/**
+ * How many values the internal children Godot adds at the front of `node` take:
+ * one per TileMap layer, each added with `INTERNAL_MODE_FRONT` (`tile_map.cpp:279`).
+ * Their draw indices come before every authored child's (`node.h:585-600`).
+ */
+export function internalFrontRoom(node: TscnNode): number {
+  if (node.type !== 'TileMap') return 0;
+  return (node.properties as { layers?: readonly unknown[] }).layers?.length ?? 0;
 }
 
 /**
@@ -142,7 +152,7 @@ function reservesRoom(node: TscnNode): boolean {
  * be a second definition the two walks could disagree on.
  */
 export function paintRangeSize(node: TscnNode): number {
-  let size = reservesRoom(node) ? DYNAMIC_CHILD_RESERVE : 1;
+  let size = (reservesRoom(node) ? DYNAMIC_CHILD_RESERVE : 1) + internalFrontRoom(node);
   for (const child of node.children) size += paintRangeSize(child);
   // A canvas root nested under this item draws after its whole subtree, from
   // room held at the end of its run.
@@ -262,6 +272,8 @@ export function canvasRootRanges(
 export interface AllocatedPaintRange {
   /** The sequence the parent itself draws at. */
   self: number;
+  /** The run the parent's internal front children draw from (`internalFrontRoom`). */
+  front: PaintRange;
   /** One range per child, positionally matching the `children` passed in. */
   children: PaintRange[];
   /**
@@ -278,21 +290,33 @@ function drawsBehindParent(node: TscnNode): boolean {
   return props.show_behind_parent === true || props.showBehindParent === true;
 }
 
+/** How a parent's own children split its range. */
+export interface PaintRangeLayout {
+  /** `y_sort_enabled`: the children are re-packed in sort order after the parent. */
+  sortsChildren?: boolean;
+  /** Values the parent's internal front children take (`internalFrontRoom`). */
+  frontRoom?: number;
+}
+
 /**
  * Splits `range` between its node and the children, in draw order.
  * `_cull_canvas_item` (lines 477-490) visits the `show_behind_parent` children,
- * then the node, then the other children, each group in authored order.
+ * then the node, then the other children, each group in index order. Internal
+ * front children have the lowest indices, so they draw first of the others.
  */
 export function allocatePaintRange(
   range: PaintRange,
   children: readonly TscnNode[],
-  sortsChildren = false
+  { sortsChildren = false, frontRoom = 0 }: PaintRangeLayout = {}
 ): AllocatedPaintRange {
   // A `y_sort_enabled` parent takes `_collect_ysort_children` instead, so it has
   // no behind split. With one, its sequence moves past `range.base` and the
   // y-sort pass overruns into the next sibling's range.
   const behind = children.map((child) => !sortsChildren && drawsBehindParent(child));
-  const sizes = fitToRange(children.map(paintRangeSize), range.size);
+  // Fitted with the children, since a squeezed range shrinks the front as well.
+  const fitted = fitToRange([frontRoom, ...children.map(paintRangeSize)], range.size);
+  const frontSize = frontRoom > 0 ? fitted[0]! : 0;
+  const sizes = fitted.slice(1);
   const end = range.base + range.size;
 
   let cursor = range.base;
@@ -311,15 +335,25 @@ export function allocatePaintRange(
   }
   const self = Math.min(cursor, Math.max(range.base, end - 1));
   cursor = self + 1;
+  const front = take(frontSize);
   for (let i = 0; i < children.length; i++) {
     if (behind[i]) continue;
     allocated[i] = take(sizes[i]!);
   }
   return {
     self,
+    front,
     children: allocated,
     tail: { base: Math.min(cursor, end), size: Math.max(0, end - cursor) },
   };
+}
+
+/** `allocatePaintRange` for `node`'s own children, with the layout the node declares. */
+export function allocateNodePaintRange(range: PaintRange, node: TscnNode): AllocatedPaintRange {
+  return allocatePaintRange(range, node.children, {
+    sortsChildren: (node.properties as { y_sort_enabled?: boolean }).y_sort_enabled === true,
+    frontRoom: internalFrontRoom(node),
+  });
 }
 
 /**

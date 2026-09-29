@@ -16,7 +16,7 @@ import { TileSetModels, tileSetRefsOf } from './ySortTileSetModels.js';
 import { LiftedAncestors, liftedPath } from './LiftedAncestors.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import {
-  allocatePaintRange,
+  allocateNodePaintRange,
   isTopLevelItem,
   packPaintRanges,
   paintRangeSize,
@@ -69,10 +69,7 @@ function SortedChildren({
   // The sorted items draw after this node's own sequence, as Godot appends the
   // y-sorted node before descending (`_collect_ysort_children`).
   const paintRange = usePaintRange();
-  const allocated = useMemo(
-    () => allocatePaintRange(paintRange, node.children, true),
-    [paintRange, node.children]
-  );
+  const allocated = useMemo(() => allocateNodePaintRange(paintRange, node), [paintRange, node]);
   const ownSequence = allocated.self;
   const layerRank = useLayerRank(useCanvasLayerIndex());
   // A top_level child is no `child_item` of this node, so the sort skipped it

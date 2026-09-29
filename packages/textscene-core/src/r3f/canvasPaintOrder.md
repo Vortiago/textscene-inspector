@@ -31,3 +31,9 @@ A node owns the contiguous range `[base, base + size)`, and its descendants are 
 it, so a y-sort pass re-packs its own range alone. A canvas root (`isCanvasRoot`) draws at its
 pre-order rank among the canvas's roots instead, from the end of the enclosing root's range
 (`canvasRootRanges`).
+
+Godot adds some children itself, in no `.tscn` child list. A TileMap adds one TileMapLayer
+per layer with `INTERNAL_MODE_FRONT` (`scene/2d/tile_map.cpp:279`), and `get_index()` gives
+those the lowest draw indices (`scene/main/node.h:585-600`). `internalFrontRoom` counts them,
+and `allocatePaintRange` gives them the `front` run, between the node and its authored
+children. So an authored child of a TileMap draws over its layers at an equal `z_final`.
