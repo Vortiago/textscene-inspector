@@ -16,9 +16,23 @@ export const SWIFTSHADER_GL_ARGS = [
 ];
 
 export function launchShowcaseBrowser() {
+  return launchWithArgs(SWIFTSHADER_GL_ARGS);
+}
+
+/**
+ * The same SwiftShader WebGL, composited in the GPU process as a browser with a GPU does. The
+ * default software compositor reads the canvas back every frame and makes the main thread wait
+ * for all queued GPU work, so it shows GPU time as main-thread long tasks (ADR-0042). ANGLE's
+ * SwiftShader backend also rasterises differently, so a golden never uses this launch.
+ */
+export function launchGpuCompositedBrowser() {
+  return launchWithArgs([...SWIFTSHADER_GL_ARGS, '--use-angle=swiftshader']);
+}
+
+function launchWithArgs(args) {
   return chromium.launch({
     channel: process.env.SHOWCASE_CHANNEL === 'bundled' ? undefined : process.env.SHOWCASE_CHANNEL || 'chrome',
     headless: true,
-    args: SWIFTSHADER_GL_ARGS,
+    args,
   });
 }

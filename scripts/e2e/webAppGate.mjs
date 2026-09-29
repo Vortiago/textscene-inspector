@@ -21,6 +21,16 @@ import {
 import { installViewMatrixProbe, matricesEqual, formatMatrix } from './cameraProbe.mjs';
 import { arraysEqual, describeNodePathMismatch, expandAllTreeRows, readOutlinerPaths, selectOutlinerNode } from './outliner.mjs';
 import { findRowValue, readInspectorPanel } from './inspector.mjs';
+import { attachDiagnostics } from './pageDiagnostics.mjs';
+import { longTasksDuringTextureWork } from './textureWorkProbe.mjs';
+import {
+  checkLongTasks,
+  checkSettleControl,
+  DELAY_FIXTURE,
+  LARGE_FIXTURE,
+  runLongTaskArms,
+  runSettleControl,
+} from './textureWorkScenarios.mjs';
 
 /* global window */
 // `window` exists only in the browser that runs the `page.evaluate` calls.
@@ -51,21 +61,8 @@ const SELECT_SETTLE_MS = 400;
 // display, so the floor only clears noise.
 const INK_FLOOR_3D = 20000;
 const INK_FLOOR_2D = 4000;
-
-/** Console errors, uncaught page errors and failed requests. The app is offline, so all stay empty. */
-function attachDiagnostics(page) {
-  const consoleErrors = [];
-  const pageErrors = [];
-  const failedRequests = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') consoleErrors.push(message.text());
-  });
-  page.on('pageerror', (error) => pageErrors.push(String(error)));
-  page.on('requestfailed', (request) => {
-    failedRequests.push({ url: request.url(), failure: request.failure()?.errorText });
-  });
-  return { consoleErrors, pageErrors, failedRequests };
-}
+// The 4096x4096 noise field, drawn at 1/8 scale, fills a 512x512 square: most of it is ink.
+const INK_FLOOR_LARGE_TEXTURE = 20000;
 
 async function run3DScenario(browser, baseUrl) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
@@ -211,6 +208,12 @@ async function main() {
     console.log(`[gate] 2D scenario: ${FIXTURE_2D}`);
     const twoD = await run2DScenario(browser, baseUrl);
 
+    console.log(`[gate] texture settle control: ${DELAY_FIXTURE}`);
+    const settleControl = await runSettleControl(browser, baseUrl);
+
+    console.log(`[gate] long tasks: ${LARGE_FIXTURE}, with the worker and with it blocked`);
+    const { withWorker, blocked } = await runLongTaskArms(baseUrl);
+
     checkSizedCanvas(gate, '[3D]', threeD.dims);
     checkInk(gate, '[3D]', threeD.ink, INK_FLOOR_3D);
     checkStage(gate, '[3D]', threeD.stage, '3d');
@@ -261,6 +264,10 @@ async function main() {
     checkStage(gate, '[2D]', twoD.stage, '2d');
     checkDiagnostics(gate, '[2D]', twoD.diagnostics);
 
+    checkSettleControl(gate, settleControl);
+    checkLongTasks(gate, withWorker, blocked, inkStats, INK_FLOOR_LARGE_TEXTURE);
+    checkDiagnostics(gate, '[long tasks]', withWorker.diagnostics);
+
     console.log('\n[gate] measurements');
     console.log(
       `  3D  canvas=${threeD.dims.width}x${threeD.dims.height} ink=${threeD.ink?.inkPixels} ` +
@@ -268,6 +275,17 @@ async function main() {
     );
     console.log(
       `  2D  canvas=${twoD.dims.width}x${twoD.dims.height} ink=${twoD.ink?.inkPixels} stage=${twoD.stage}`
+    );
+    console.log(
+      `  texture settle  baseline=${settleControl.baseline.settledMs}ms delayed=${settleControl.delayed.settledMs}ms ` +
+        `unwaited=${settleControl.unwaited.settledMs}ms workers=${settleControl.delayed.workers}`
+    );
+    // The Long Tasks API reports only tasks over 50 ms, so 0 means it saw none in the window.
+    const longestInWindow = (probe) =>
+      Math.max(0, ...(longTasksDuringTextureWork(probe, 0) ?? []).map((task) => task.duration));
+    console.log(
+      `  long tasks in the texture window  worker: replies=${withWorker.probe.replies} ` +
+        `longest=${longestInWindow(withWorker.probe)}ms | blocked: longest=${longestInWindow(blocked.probe)}ms`
     );
   } finally {
     if (browser) await browser.close().catch(() => {});

@@ -63,6 +63,21 @@ a blob-URL worker. In Chromium 141, under a copy of the webview CSP:
 - **The gate proves it at the real origin.** `pnpm test:vscode:csp` runs the probe inside
   the real VS Code webview and requires the echo, zero CSP violations and zero requests
   outside the local resource origin.
+- **The web gate measures long tasks in a GPU-composited browser.** `pnpm test:e2e:web`
+  opens a 4096x4096 seamless texture and requires no main-thread task over 50 ms. It
+  counts each task that starts between the first attach and the last detach of the
+  texture work status. The task that attaches the status mounts the scene and only
+  queues the build. The default headless launch composites in software: it reads the
+  canvas back every frame, and the main thread waits for all queued GPU work. Two costs
+  of the GPU process then show as main-thread tasks:
+  - a 50–69 ms clear of the empty level. WebGL's robust resource initialisation clears
+    the whole level before the first band writes to it.
+  - a 30–38 ms first draw that samples the texture.
+
+  Those two arms run with `--use-angle=swiftshader`, which composites in the GPU
+  process, as a browser with a GPU does. The goldens keep the default launch, because
+  that backend rasterises differently (up to 59/255 on `material-metallic`). A control
+  arm blocks the worker and must see a long task, so the probe proves it can see one.
 - **A CSP regression cannot hide behind the fallback.** The in-thread fallback still
   draws correct pixels, so the pixels alone cannot show that the worker is gone. The
   gate asserts that the worker answered.
