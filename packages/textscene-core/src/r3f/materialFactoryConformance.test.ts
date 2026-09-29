@@ -129,7 +129,7 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/nodes/3d/csg/CsgPrimitive.tsx':
     'spreads the shared Node3D transform bag onto a `<group>`, which has no material slot',
   'packages/textscene-core/src/nodes/3d/gridmap/Component.tsx':
-    'mounts the built InstancedMesh — an Object3D, added as a child; its tile material is mounted on the mesh itself',
+    'mounts the built tile meshes — Object3Ds, added as children; the tile material is mounted on each mesh itself',
   'packages/textscene-core/src/nodes/3d/lights/shared/lightHelpers.tsx':
     'mounts a THREE light helper — an Object3D, added as a child',
   'packages/textscene-core/src/nodes/3d/lights/shared/lightShared.tsx':

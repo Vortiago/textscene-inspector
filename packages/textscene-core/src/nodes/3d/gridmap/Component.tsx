@@ -1,8 +1,8 @@
 /**
  * <GridMap> instances each MeshLibrary item's ArrayMesh at its populated cells,
- * one THREE.InstancedMesh per item. An unresolved mesh draws a cell-sized
- * wireframe box. The item's primary surface material covers the whole instanced
- * mesh, since most library tiles are single-surface.
+ * one THREE.InstancedMesh per item, or one mesh per cell when its material
+ * billboards. An unresolved mesh draws a cell-sized wireframe box. The item's
+ * primary surface material covers every cell, since most tiles are single-surface.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -24,6 +24,8 @@ import type { GridMapProperties } from './types';
 import { decodeGridMapCells, ORTHO_BASES, type GridMapCell } from './cellData';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { shadowCastingEffects } from '../../../r3f/shadowCasting';
+import { billboardOf } from '../../../resources/materials/standardmaterial3d/materialBag';
+import { BillboardMode } from '../../../godot/billboard';
 
 /** Literal-only, so the key is constant and a placeholder cell never remounts. */
 const PLACEHOLDER_CELL_MATERIAL = wireGizmoProgram(0x4488cc);
@@ -134,38 +136,41 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
   // the library (`modules/gridmap/grid_map.cpp:799-800`).
   const shadow = shadowCastingEffects(item?.castShadow);
 
-  const instanced = useMemo(() => {
+  const tiles = useMemo(() => {
     const geometry = meshResult.value?.geometry;
     if (!geometry) return null;
     // The resource pipeline owns the cached ArrayMesh and a resolved material.
     // The shared default stands in when none is loaded.
     const material = (materialPath && materialResult.value) || DEFAULT_TILE_MATERIAL;
-    const mesh = new THREE.InstancedMesh(geometry, material, matrices.length);
-    matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
-    mesh.instanceMatrix.needsUpdate = true;
-    mesh.receiveShadow = true;
-    return mesh;
+    return buildTiles(geometry, material, matrices);
   }, [meshResult.value, materialPath, materialResult.value, matrices]);
 
   // InstancedMesh.dispose() frees only its own instanceMatrix buffer, and leaves
-  // the geometry and material the resource pipeline owns.
+  // the geometry and material the resource pipeline owns. A plain Mesh owns nothing.
   useEffect(() => {
-    if (!instanced) return;
-    return () => instanced.dispose();
-  }, [instanced]);
+    if (!tiles) return;
+    return () => {
+      for (const tile of tiles) if (tile instanceof THREE.InstancedMesh) tile.dispose();
+    };
+  }, [tiles]);
 
-  if (instanced) {
+  if (tiles) {
     // Props, apart from the build, so a `cast_shadow` edit swaps hooks rather than
     // rebuilding every cell.
     return (
-      <primitive
-        object={instanced}
-        castShadow={shadow.castShadow}
-        onBeforeRender={shadow.onBeforeRender}
-        onAfterRender={shadow.onAfterRender}
-        onBeforeShadow={shadow.onBeforeShadow}
-        onAfterShadow={shadow.onAfterShadow}
-      />
+      <>
+        {tiles.map((tile) => (
+          <primitive
+            key={tile.uuid}
+            object={tile}
+            castShadow={shadow.castShadow}
+            onBeforeRender={shadow.onBeforeRender}
+            onAfterRender={shadow.onAfterRender}
+            onBeforeShadow={shadow.onBeforeShadow}
+            onAfterShadow={shadow.onAfterShadow}
+          />
+        ))}
+      </>
     );
   }
 
@@ -177,6 +182,43 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
       ))}
     </>
   );
+}
+
+/**
+ * Godot billboards each MultiMesh instance about its own origin, since its shader turns
+ * `model_matrix * instance` (`scene_forward_clustered.glsl:338-342`). three multiplies
+ * `instanceMatrix` after the `modelMatrix` a draw hook can move, so a billboarded tile
+ * draws as its own mesh and every other item stays one batch.
+ */
+function buildTiles(
+  geometry: THREE.BufferGeometry,
+  material: THREE.Material,
+  matrices: THREE.Matrix4[]
+): THREE.Mesh[] {
+  if (billboardOf(material).mode === BillboardMode.BILLBOARD_DISABLED) {
+    return [batchedTiles(geometry, material, matrices)];
+  }
+  return matrices.map((matrix) => cellTile(geometry, material, matrix));
+}
+
+function batchedTiles(
+  geometry: THREE.BufferGeometry,
+  material: THREE.Material,
+  matrices: THREE.Matrix4[]
+): THREE.InstancedMesh {
+  const mesh = new THREE.InstancedMesh(geometry, material, matrices.length);
+  matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+function cellTile(geometry: THREE.BufferGeometry, material: THREE.Material, matrix: THREE.Matrix4): THREE.Mesh {
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.matrixAutoUpdate = false;
+  mesh.matrix.copy(matrix);
+  mesh.receiveShadow = true;
+  return mesh;
 }
 
 function PlaceholderCell({ matrix, cellSize }: { matrix: THREE.Matrix4; cellSize: Vector3 }) {
