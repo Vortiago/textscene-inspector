@@ -11,6 +11,7 @@ import type * as THREE from 'three';
 import type { TscnInternalResource } from '../parser/types.js';
 import { inThreadJobRunner } from '../workers/WorkerJobRunner.js';
 import { usePendingWhile } from './usePendingWhile.js';
+import { beginTextureWork } from './textures/textureWork.js';
 import { useResourceLoader } from './useResource.js';
 import type { ProceduralTextureLookup } from './textures/proceduralBuilds.js';
 import { resolveProceduralTexture } from './textures/resolveProceduralTexture.js';
@@ -88,6 +89,17 @@ export function useProceduralTextures(
     lastShown.current = shown;
   });
 
+  /**
+   * Written when a build lands. Each end keeps the texture work counted until the commit
+   * that shows the texture, where a draw site's upload takes the work over.
+   */
+  const handoffs = useRef<(() => void)[]>([]);
+  useEffect(() => {
+    handoffs.current.forEach((end) => end());
+    handoffs.current = [];
+  }, [landed, failedKeys]);
+  useEffect(() => () => handoffs.current.forEach((end) => end()), []);
+
   const runner = useResourceLoader()?.jobRunner ?? inThreadJobRunner;
   useEffect(() => {
     let current = true;
@@ -96,6 +108,7 @@ export function useProceduralTextures(
       handle.settled.then(
         (texture) => {
           if (!current) return;
+          handoffs.current.push(beginTextureWork());
           // Null while this effect still holds the build means it could not be allocated.
           if (texture) setLanded((prev) => landOne(prev, lookups, build.key, texture));
           else setFailedKeys((keys) => new Set(keys).add(build.key));

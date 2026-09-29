@@ -102,27 +102,28 @@ function joinBuild(
 function startBuild(key: string, plan: ProceduralBuildPlan, label: string, runner: JobRunner): Build {
   const controller = new AbortController();
   const endWork = beginTextureWork();
-  const settled = runner
-    .run(plan.job, plan.input, controller.signal)
-    .then(
-      (output) => {
-        const texture = plan.wrap(output);
-        cacheProceduralTexture(key, texture);
-        return texture;
-      },
-      (error: unknown) => {
-        if (controller.signal.aborted) return null;
-        return unlessAllocationFails(label, () => {
-          throw error;
-        });
-      }
-    )
-    .finally(() => {
-      if (builds.get(key) === build) builds.delete(key);
-      endWork();
-    });
+  const settled = runner.run(plan.job, plan.input, controller.signal).then(
+    (output) => {
+      const texture = plan.wrap(output);
+      cacheProceduralTexture(key, texture);
+      return texture;
+    },
+    (error: unknown) => {
+      if (controller.signal.aborted) return null;
+      return unlessAllocationFails(label, () => {
+        throw error;
+      });
+    }
+  );
   const build: Build = { holders: 0, settled, controller };
   builds.set(key, build);
+  const finish = () => {
+    if (builds.get(key) === build) builds.delete(key);
+    // One microtask later: a holder's callback on `settled`, queued ahead of this one,
+    // takes the work over first, so the count never reads zero between the two.
+    queueMicrotask(endWork);
+  };
+  settled.then(finish, finish);
   return build;
 }
 

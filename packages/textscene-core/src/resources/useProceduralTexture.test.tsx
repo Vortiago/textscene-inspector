@@ -6,7 +6,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { Component, StrictMode, type ReactNode } from 'react';
+import { Component, StrictMode, useLayoutEffect, type ReactNode } from 'react';
 import { act, render, renderHook } from '@testing-library/react';
 import type { TscnInternalResource } from '../parser/types';
 import { fakeJobRunner } from '../workers/fakeJobRunner.testkit';
@@ -14,6 +14,7 @@ import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import type { ResourceLoader } from './ResourceLoader';
 import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
 import { abortProceduralBuilds, type JobRunner } from './textures/proceduralBuilds';
+import { pendingTextureWork, subscribeTextureWork } from './textures/textureWork';
 import {
   useProceduralTexture,
   useProceduralTexturePins,
@@ -292,6 +293,35 @@ describe('useProceduralTextures with a NoiseTexture2D', () => {
     expect(result.current[0]?.pending).toBe(false);
     expect(result.current[0]?.texture).toBeInstanceOf(THREE.DataTexture);
     expect(loader.pendingResourceCount).toBe(0);
+  });
+
+  it('keeps the texture work counted until the commit that shows the built texture', async () => {
+    const { runner, runs } = fakeJobRunner();
+    const { wrapper } = withRunner(runner);
+    // Marked at commit, in a layout effect: `result.current` updates later, in a passive effect.
+    let isShown = false;
+    renderHook(
+      () => {
+        const slots = useProceduralTextures([NOISE], noiseScene(1));
+        useLayoutEffect(() => {
+          isShown = slots[0]?.texture instanceof THREE.DataTexture;
+        });
+        return slots;
+      },
+      { wrapper }
+    );
+    await flush();
+    const countsBeforeShown: number[] = [];
+    const unsubscribe = subscribeTextureWork(() => {
+      if (!isShown) countsBeforeShown.push(pendingTextureWork());
+    });
+    runs[0]?.complete();
+    await flush();
+    unsubscribe();
+
+    expect(isShown).toBe(true);
+    expect(countsBeforeShown).not.toContain(0);
+    expect(pendingTextureWork()).toBe(0);
   });
 
   it('keeps the old texture through an edit, then swaps and unpins it', async () => {

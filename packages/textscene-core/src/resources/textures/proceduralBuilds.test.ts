@@ -137,8 +137,18 @@ describe('resolveProceduralSubResourceAsync', () => {
     expect(pendingTextureWork()).toBe(1);
     runs[0]?.resolve(output());
     await handle.settled;
+    await settle();
 
     expect(pendingTextureWork()).toBe(0);
+  });
+
+  it('still counts the build inside a holder callback on settled, so the holder can take the work over', async () => {
+    const { runner, runs } = fakeRunner();
+    const handle = pendingLookup(scene('1')).start(runner);
+    const countInCallback = handle.settled.then(() => pendingTextureWork());
+    runs[0]?.resolve(output());
+
+    expect(await countInCallback).toBe(1);
   });
 
   it('stops counting an aborted build', async () => {
