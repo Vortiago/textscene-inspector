@@ -13,10 +13,8 @@ import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver.js';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext.js';
 import { useViewportPassCycle } from '../../../r3f/contexts/ViewportPassRegistryContext.js';
-import {
-  useUniqueNamePaths,
-  useViewportTexture,
-} from '../../../r3f/contexts/ViewportTextureContext.js';
+import { useViewportTexture } from '../../../r3f/contexts/ViewportTextureContext.js';
+import { useUniqueNamePaths } from '../../../r3f/useUniqueNames.js';
 import {
   resolveViewportTexturePath,
   viewportTextureRegistryKey,

@@ -5,10 +5,10 @@
 import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.js';
-import type { TscnNode } from '../../parser/types.js';
-import { HierarchyProvider } from './HierarchyContext.js';
-import { useUniqueNameClaims, useUniqueNamePaths } from './ViewportTextureContext.js';
+import { createSceneGraphFromTscnScene } from '../core/SceneGraph.js';
+import type { TscnNode } from '../parser/types.js';
+import { HierarchyProvider } from './contexts/HierarchyContext.js';
+import { useUniqueNameClaims, useUniqueNamePaths } from './useUniqueNames.js';
 
 function node(name: string, flagged = false, children: TscnNode[] = []): TscnNode {
   return {

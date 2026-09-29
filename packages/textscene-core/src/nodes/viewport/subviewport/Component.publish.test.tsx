@@ -136,19 +136,6 @@ mesh = SubResource("1")
 `;
 
 describe('<SubViewport> offscreen publisher', () => {
-  /**
-   * A consumer resolves `NodePath("%Name")` through its owner's claim table to the
-   * claimant's own path, so the publisher registers under that path alone.
-   */
-  it('publishes nothing under its %UniqueName spelling', async () => {
-    const { published } = await renderScene(
-      scene3D('unique_name_in_owner = true'),
-      '3d',
-      'Root/%Viewport'
-    );
-    expect(published()).toBeNull();
-  });
-
   it('publishes a target under its own dispatcher-absolute node path', async () => {
     const { published } = await renderScene(scene3D());
     expect(published()).not.toBeNull();

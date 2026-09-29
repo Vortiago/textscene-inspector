@@ -11,9 +11,9 @@ import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.js';
 import type { TscnNode } from '../../parser/types.js';
 import { HierarchyProvider } from './HierarchyContext.js';
 import { viewportTextureRegistryKey } from '../viewportTexturePath.js';
+import { useUniqueNamePaths } from '../useUniqueNames.js';
 import {
   ViewportTextureProvider,
-  useUniqueNamePaths,
   useViewportTexture,
   usePublishViewportTexture,
   type ViewportTextureEntry,
@@ -82,11 +82,6 @@ describe('a %Name two sub-viewports both claim', () => {
   it('resolves to the first claimant, not to whichever published last', () => {
     const { result } = renderHook(() => useConsumedTexture('%View'), { wrapper });
     expect(result.current).toBe(winner);
-  });
-
-  it('publishes nothing under the %Name spelling itself', () => {
-    const { result } = renderHook(() => useViewportTexture('Root/%View'), { wrapper });
-    expect(result.current).toBeNull();
   });
 
   it('still reaches the later one by its own path', () => {

@@ -33,7 +33,7 @@ import {
   trackTargetPaths,
 } from '../../../r3f/animation/trackTargets';
 import { useAnimatedValueRegistry } from '../../../r3f/contexts/AnimatedValueContext';
-import { useUniqueNamePaths } from '../../../r3f/contexts/ViewportTextureContext';
+import { useUniqueNamePaths } from '../../../r3f/useUniqueNames';
 import { resolveAnimations } from './animationResolver';
 import { resolveAnimationRootPath, resolveTrackScenePath } from './animationRoot';
 import { buildClip, loopSettingsFor } from './clipBuilder';

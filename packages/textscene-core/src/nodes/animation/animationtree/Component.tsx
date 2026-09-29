@@ -19,7 +19,7 @@ import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { useAnimationDriver, type BoundClips } from '../../../r3f/contexts/AnimationDriverContext';
 import { useRebindKey } from '../../../r3f/animation/useRebindKey';
-import { useUniqueNamePaths } from '../../../r3f/contexts/ViewportTextureContext';
+import { useUniqueNamePaths } from '../../../r3f/useUniqueNames';
 import { stepPlayback } from '../../../r3f/animation/stepPlayback';
 import { startAction, seekAction } from '../../../r3f/animation/actionHelpers';
 import { snapshotPose, restoreSnapshot } from '../../../r3f/animation/poseSnapshot';
