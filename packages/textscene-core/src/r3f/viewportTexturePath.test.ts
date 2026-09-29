@@ -1,5 +1,5 @@
 /**
- * `viewport_path` counts from the **local scene root**, while a `<SubViewport>`
+ * `viewport_path` counts from the texture's **local scene root**, while a `<SubViewport>`
  * publishes under its dispatcher-absolute path (`NodeDispatcher` starts each top-level
  * node at `path={node.name}`). `viewportTextureRegistryKey` converts one to the other.
  */
@@ -8,37 +8,31 @@ import { describe, expect, it } from 'vitest';
 import { viewportTextureRegistryKey } from './viewportTexturePath';
 
 describe('viewportTextureRegistryKey', () => {
-  /** The consumer's dispatcher path starts at the scene root, so its first segment is the root's name. */
-  it('rebases a root-relative viewport path onto the consumer scene root', () => {
-    expect(viewportTextureRegistryKey('Root/Screen', 'SubViewport')).toBe('Root/SubViewport');
+  it('rebases a root-relative viewport path onto the local scene root', () => {
+    expect(viewportTextureRegistryKey('Root', 'SubViewport')).toBe('Root/SubViewport');
   });
 
   it('rebases a nested viewport path', () => {
-    expect(viewportTextureRegistryKey('Match/UI/Minimap', 'FogOfWar/CombinedViewport')).toBe(
+    expect(viewportTextureRegistryKey('Match', 'FogOfWar/CombinedViewport')).toBe(
       'Match/FogOfWar/CombinedViewport'
     );
   });
 
-  /** A consumer that is the root (a single-node scene) still rebases onto itself. */
-  it('handles a consumer at the scene root', () => {
-    expect(viewportTextureRegistryKey('Root', 'SubViewport')).toBe('Root/SubViewport');
-  });
-
   /**
-   * Outside a `NodePathProvider` there is no scene root to rebase against, so
-   * the texture resolves to nothing rather than to a wrong key.
+   * With no local scene root there is nothing to rebase against, so the texture
+   * resolves to nothing rather than to a wrong key.
    */
-  it('returns null without a consumer path', () => {
+  it('returns null without a local scene root', () => {
     expect(viewportTextureRegistryKey(null, 'SubViewport')).toBeNull();
   });
 
   it('returns null for an empty viewport path', () => {
-    expect(viewportTextureRegistryKey('Root/Screen', '')).toBeNull();
+    expect(viewportTextureRegistryKey('Root', '')).toBeNull();
   });
 
   /** `/root/…` measures from the live SceneTree, which a static parse does not model. */
   it('returns null for an absolute path', () => {
-    expect(viewportTextureRegistryKey('Root/Screen', '/root/Main/SubViewport')).toBeNull();
+    expect(viewportTextureRegistryKey('Root', '/root/Main/SubViewport')).toBeNull();
   });
 
   /**
@@ -52,11 +46,11 @@ describe('viewportTextureRegistryKey', () => {
     ['Hud//View', 'Root/Hud/View'],
     ['SubViewport:size', 'Root/SubViewport'],
   ])('walks %s to the node it names', (viewportPath, key) => {
-    expect(viewportTextureRegistryKey('Root/Screen', viewportPath)).toBe(key);
+    expect(viewportTextureRegistryKey('Root', viewportPath)).toBe(key);
   });
 
   it('returns null for a `..` above the scene root', () => {
-    expect(viewportTextureRegistryKey('Root/Screen', '..')).toBeNull();
+    expect(viewportTextureRegistryKey('Root', '..')).toBeNull();
   });
 
   /**
@@ -70,13 +64,13 @@ describe('viewportTextureRegistryKey', () => {
     ]);
 
     it('descends from the claimant for a compound path', () => {
-      expect(viewportTextureRegistryKey('Root/Screen', '%Hud/CombinedViewport', claimed)).toBe(
+      expect(viewportTextureRegistryKey('Root', '%Hud/CombinedViewport', claimed)).toBe(
         'Root/UI/Hud/CombinedViewport'
       );
     });
 
     it('resolves a bare %Name to the claimant, where the viewport publishes its real path', () => {
-      expect(viewportTextureRegistryKey('Root/Screen', '%View', claimed)).toBe(
+      expect(viewportTextureRegistryKey('Root', '%View', claimed)).toBe(
         'Root/UI/Hud/CombinedViewport'
       );
     });
@@ -87,12 +81,12 @@ describe('viewportTextureRegistryKey', () => {
      * sub-scene's `%Inner`.
      */
     it('resolves to nothing for a %Name the table has no entry for', () => {
-      expect(viewportTextureRegistryKey('Root/Screen', '%Inner', claimed)).toBeNull();
+      expect(viewportTextureRegistryKey('Root', '%Inner', claimed)).toBeNull();
     });
 
     /** With no table, a `%Name` addresses nothing, as a name the table lacks does. */
     it('resolves to nothing for a %Name with no table at all', () => {
-      expect(viewportTextureRegistryKey('Root/Screen', '%View')).toBeNull();
+      expect(viewportTextureRegistryKey('Root', '%View')).toBeNull();
     });
   });
 });

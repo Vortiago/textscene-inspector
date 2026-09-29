@@ -11,7 +11,7 @@ import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.js';
 import type { TscnNode } from '../../parser/types.js';
 import { HierarchyProvider } from './HierarchyContext.js';
 import { viewportTextureRegistryKey } from '../viewportTexturePath.js';
-import { useUniqueNamePaths } from '../useUniqueNames.js';
+import { useLocalScene } from '../useUniqueNames.js';
 import {
   ViewportTextureProvider,
   useViewportTexture,
@@ -74,8 +74,10 @@ function wrapper({ children }: { children: ReactNode }) {
 
 /** The texture a consumer at `Root/Ui` reaches through `viewport_path`, as a texture slot walks it. */
 function useConsumedTexture(viewportPath: string): ViewportTextureEntry | null {
-  const uniquePaths = useUniqueNamePaths('Root/Ui');
-  return useViewportTexture(viewportTextureRegistryKey('Root/Ui', viewportPath, uniquePaths));
+  const localScene = useLocalScene('Root/Ui');
+  return useViewportTexture(
+    viewportTextureRegistryKey(localScene?.path ?? null, viewportPath, localScene?.uniquePaths)
+  );
 }
 
 describe('a %Name two sub-viewports both claim', () => {
