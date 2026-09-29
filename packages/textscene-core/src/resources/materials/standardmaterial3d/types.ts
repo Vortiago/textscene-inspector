@@ -181,7 +181,7 @@ export interface StandardMaterial3DData {
   billboardMode: number;
   /**
    * `billboard_keep_scale`. Godot's default (false) drops the model scale while
-   * billboarding. The draw-time billboard does not read it and always keeps the scale.
+   * billboarding (`material.cpp:1274-1281`). It rides the built material's `userData`.
    */
   billboardKeepScale: boolean;
   /** `anisotropy` magnitude (0..1), gated on `anisotropy_enabled`. */

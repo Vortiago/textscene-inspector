@@ -97,5 +97,4 @@ The lenient parser never rejects. Each field falls back to Godot's default throu
 - **Approximated** Godot measures V from the image top and three from the bottom, so a non-integer `uv1_scale.y` or a non-zero `uv1_offset.y` shifts V differently.
 - **Approximated** Under `uv1_world_triplanar`, `uv1_offset` is in world units and is not converted.
 - **Approximated** Triplanar tiling density is exact on planar meshes only. Curved and GLB geometry fall back to their own UVs, and a `.tres` material tiles by UV.
-- **Approximated** `billboard_keep_scale = false` is not honoured, so a billboarded surface keeps the model scale.
 - **Approximated** A patterned texture on a SphereMesh lands rotated, because Godot winds sphere UVs at a different phase than three.

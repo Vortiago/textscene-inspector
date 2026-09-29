@@ -164,7 +164,8 @@ Carried:
 - `FLAG_UV1_USE_TRIPLANAR` / `FLAG_UV1_USE_WORLD_TRIPLANAR` → one `triplanar` scalar
   folded into the per-surface UV transform, with its own recorded `uv1_offset`
   limitation (`SurfaceMaterialSlot.tsx`).
-- `FLAG_BILLBOARD_KEEP_SCALE` → not read. The draw-time billboard always keeps the model scale.
+- `FLAG_BILLBOARD_KEEP_SCALE` → `userData`, beside the billboard mode. The draw-time
+  billboard (`surfaceBillboard.ts`) keeps the model scale only when it is set.
 
 The other bits are unimplemented here. `FLAG_FIXED_SIZE` is one of them: the
 Sprite3D/Label3D path in the scope note below honours it, not this derivation.

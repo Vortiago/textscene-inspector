@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { billboardModeOf, castsShadowOf, standardMaterialBag } from './materialBag';
+import { billboardOf, castsShadowOf, standardMaterialBag } from './materialBag';
 import { buildStandardMaterial } from './build';
 import { standardMaterial } from './testing/standardMaterial';
 import { BillboardMode } from '../../../godot/billboard';
@@ -163,18 +163,27 @@ describe('standardMaterialBag — no material at all', () => {
 describe('standardMaterialBag — billboard_mode', () => {
   it('carries the mode on the material, where each draw group reads it', () => {
     const built = standardMaterial({ billboard_mode: '2' });
-    expect(billboardModeOf(built)).toBe(BillboardMode.BILLBOARD_FIXED_Y);
+    expect(billboardOf(built).mode).toBe(BillboardMode.BILLBOARD_FIXED_Y);
+  });
+
+  it('carries billboard_keep_scale beside the mode', () => {
+    expect(billboardOf(standardMaterial({ billboard_mode: '1', billboard_keep_scale: 'true' })).keepScale).toBe(true);
+  });
+
+  it('reads Godot’s default, no keep_scale, from a material that sets none', () => {
+    expect(billboardOf(standardMaterial({ billboard_mode: '1' })).keepScale).toBe(false);
+    expect(billboardOf(new THREE.MeshBasicMaterial()).keepScale).toBe(false);
   });
 
   it('reads DISABLED from a material that sets no billboard_mode', () => {
-    expect(billboardModeOf(standardMaterial({}))).toBe(
+    expect(billboardOf(standardMaterial({})).mode).toBe(
       BillboardMode.BILLBOARD_DISABLED
     );
   });
 
   it('reads DISABLED from Godot’s default surface and from a foreign material', () => {
-    expect(billboardModeOf(buildStandardMaterial(null))).toBe(BillboardMode.BILLBOARD_DISABLED);
-    expect(billboardModeOf(new THREE.MeshBasicMaterial())).toBe(BillboardMode.BILLBOARD_DISABLED);
+    expect(billboardOf(buildStandardMaterial(null)).mode).toBe(BillboardMode.BILLBOARD_DISABLED);
+    expect(billboardOf(new THREE.MeshBasicMaterial()).mode).toBe(BillboardMode.BILLBOARD_DISABLED);
   });
 
   it('gives each bag its own userData, as the .tres loader writes into it', () => {

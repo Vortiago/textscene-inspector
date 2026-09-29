@@ -169,3 +169,36 @@ describe('<MeshInstance3D> billboard_mode per ArrayMesh surface', () => {
     expect(drawColourGroup(mesh, camera, 1, (s) => s.matrixWorld).equals(mesh.matrixWorld)).toBe(true);
   });
 });
+
+describe('<MeshInstance3D> billboard_keep_scale', () => {
+  /** The yawed pose, scaled ×2 on every axis. */
+  const SCALED: typeof YAWED = {
+    basis_x: { x: 0, y: 0, z: 2 },
+    basis_y: { x: 0, y: 2, z: 0 },
+    basis_z: { x: -2, y: 0, z: 0 },
+    origin: { x: 3, y: 0, z: 0 },
+  };
+
+  async function drawnScale(materialData: Record<string, string>): Promise<THREE.Vector3> {
+    const { mesh } = await renderMesh(
+      meshNode({ transform: SCALED }),
+      withSceneMaterial({ billboard_mode: '1', ...materialData })
+    );
+    const drawn = drawColourGroup(mesh, camera, 0, (s) => s.matrixWorld);
+    return new THREE.Vector3().setFromMatrixScale(drawn);
+  }
+
+  it('draws at unit scale by default, as Godot drops the model scale', async () => {
+    const scale = await drawnScale({});
+    expect(scale.x).toBeCloseTo(1, 5);
+    expect(scale.y).toBeCloseTo(1, 5);
+    expect(scale.z).toBeCloseTo(1, 5);
+  });
+
+  it('keeps the node scale when the material sets billboard_keep_scale', async () => {
+    const scale = await drawnScale({ billboard_keep_scale: 'true' });
+    expect(scale.x).toBeCloseTo(2, 5);
+    expect(scale.y).toBeCloseTo(2, 5);
+    expect(scale.z).toBeCloseTo(2, 5);
+  });
+});

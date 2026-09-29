@@ -7,10 +7,7 @@
 
 import * as THREE from 'three';
 import { BillboardMode } from '../godot/billboard';
-import {
-  billboardModeOf,
-  castsShadowOf,
-} from '../resources/materials/standardmaterial3d/materialBag';
+import { billboardOf, castsShadowOf } from '../resources/materials/standardmaterial3d/materialBag';
 import { billboardWorldMatrix } from './surfaceBillboard';
 
 /** The four `Object3D` hooks, one prop each: the material factory guard rejects a spread. */
@@ -91,9 +88,11 @@ function pose(
   // three multiplies `instanceMatrix` after `modelMatrix`, so a swapped matrix would turn
   // every instance about the batch origin. Godot's per-instance billboard needs a shader.
   if ((object as THREE.InstancedMesh).isInstancedMesh) return false;
-  const mode = billboardModeOf(material);
-  const camera = mode === BillboardMode.BILLBOARD_PARTICLES ? passCamera : mainCamera;
-  if (!billboardWorldMatrix(billboarded, object.matrixWorld, camera.matrixWorld, mode)) return false;
+  const billboard = billboardOf(material);
+  const camera = billboard.mode === BillboardMode.BILLBOARD_PARTICLES ? passCamera : mainCamera;
+  if (!billboardWorldMatrix(billboarded, object.matrixWorld, camera.matrixWorld, billboard)) {
+    return false;
+  }
   posed = object;
   posedMatrixWorld.copy(object.matrixWorld);
   object.matrixWorld.copy(billboarded);

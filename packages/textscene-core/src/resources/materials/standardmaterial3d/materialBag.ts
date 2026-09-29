@@ -108,6 +108,7 @@ function materialBlendProps(scalars: StandardMaterial3DScalars): MaterialBlendSt
 
 /** Where a derived material records the surface state the draw hooks read per draw group. */
 const BILLBOARD_MODE_KEY = 'godotBillboardMode';
+const BILLBOARD_KEEP_SCALE_KEY = 'godotBillboardKeepScale';
 const CASTS_SHADOW_KEY = 'godotCastsShadow';
 
 /**
@@ -117,16 +118,29 @@ const CASTS_SHADOW_KEY = 'godotCastsShadow';
  * per bag, since the `.tres` loader writes its own keys into it.
  */
 function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unknown> {
-  return { [BILLBOARD_MODE_KEY]: scalars.billboardMode, [CASTS_SHADOW_KEY]: scalars.castsShadow };
+  return {
+    [BILLBOARD_MODE_KEY]: scalars.billboardMode,
+    [BILLBOARD_KEEP_SCALE_KEY]: scalars.billboardKeepScale,
+    [CASTS_SHADOW_KEY]: scalars.castsShadow,
+  };
+}
+
+/** A surface's billboard: `billboard_mode` and `billboard_keep_scale`. */
+export interface SurfaceBillboard {
+  mode: number;
+  keepScale: boolean;
 }
 
 /**
- * The `billboard_mode` a material was derived with. DISABLED for Godot's default
- * surface and for any material this derivation did not build.
+ * The billboard a material was derived with. DISABLED, without keep-scale, for Godot's
+ * default surface and for any material this derivation did not build.
  */
-export function billboardModeOf(material: THREE.Material): number {
+export function billboardOf(material: THREE.Material): SurfaceBillboard {
   const mode: unknown = material.userData[BILLBOARD_MODE_KEY];
-  return typeof mode === 'number' ? mode : BillboardMode.BILLBOARD_DISABLED;
+  return {
+    mode: typeof mode === 'number' ? mode : BillboardMode.BILLBOARD_DISABLED,
+    keepScale: material.userData[BILLBOARD_KEEP_SCALE_KEY] === true,
+  };
 }
 
 /**

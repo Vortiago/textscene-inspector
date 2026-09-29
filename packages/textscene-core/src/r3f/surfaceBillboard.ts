@@ -6,6 +6,7 @@
 
 import * as THREE from 'three';
 import { BillboardMode } from '../godot/billboard';
+import type { SurfaceBillboard } from '../resources/materials/standardmaterial3d/materialBag';
 
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
 
@@ -18,8 +19,8 @@ const cameraZ = new THREE.Vector3();
 const modelScale = new THREE.Vector3();
 
 /**
- * Write the billboarded world matrix into `target`. The model keeps its per-axis scale,
- * as `billboard_keep_scale` asks: the previewer does not model the default, which drops it.
+ * Write the billboarded world matrix into `target`. The model's per-axis scale survives
+ * only under `billboard_keep_scale` (`material.cpp:1274-1281`); Godot's default drops it.
  *
  * @param camera - the main camera's world matrix for ENABLED and FIXED_Y, and the pass
  *   camera's for PARTICLES, which reads `INV_VIEW_MATRIX` rather than `MAIN_CAM_INV_VIEW_MATRIX`
@@ -30,8 +31,9 @@ export function billboardWorldMatrix(
   target: THREE.Matrix4,
   model: THREE.Matrix4,
   camera: THREE.Matrix4,
-  mode: number
+  billboard: SurfaceBillboard
 ): boolean {
+  const { mode } = billboard;
   switch (mode) {
     case BillboardMode.BILLBOARD_ENABLED:
     case BillboardMode.BILLBOARD_PARTICLES:
@@ -50,7 +52,8 @@ export function billboardWorldMatrix(
   }
 
   // `length(MODEL_MATRIX[i].xyz)` per axis, the keep-scale factors.
-  modelScale.setFromMatrixScale(model);
+  if (billboard.keepScale) modelScale.setFromMatrixScale(model);
+  else modelScale.set(1, 1, 1);
   target.makeBasis(
     axisX.multiplyScalar(modelScale.x),
     axisY.multiplyScalar(modelScale.y),
