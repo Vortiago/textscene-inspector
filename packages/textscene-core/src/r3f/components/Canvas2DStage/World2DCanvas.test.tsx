@@ -17,6 +17,7 @@ vi.mock('../../controls/index.js', () => ({
 }));
 
 import { World2DContents } from './World2DCanvas';
+import { TiledUploadQueue } from '../../tiledUpload/TiledUploadQueue';
 
 const SOURCE = readFileSync(join(import.meta.dirname, 'World2DCanvas.tsx'), 'utf8');
 
@@ -63,5 +64,21 @@ describe('World2DContents native-controls mount seam', () => {
       </SelectionProvider>
     );
     expect(rendered.scene.findAllByProps({ name: 'native-controls-stub' })).toHaveLength(1);
+  });
+});
+
+describe('World2DContents tiled uploads', () => {
+  it('drives a tiled upload queue every frame, so large textures upload in bands', async () => {
+    const tick = vi.spyOn(TiledUploadQueue.prototype, 'tick');
+    const rendered = await ReactThreeTestRenderer.create(
+      <SelectionProvider>
+        <World2DContents nodes={[]} internalResources={[]} externalResources={[]} pan={{ x: 0, y: 0 }} zoom={1} />
+      </SelectionProvider>
+    );
+    tick.mockClear();
+    await rendered.advanceFrames(2, 16);
+
+    expect(tick).toHaveBeenCalledTimes(2);
+    tick.mockRestore();
   });
 });

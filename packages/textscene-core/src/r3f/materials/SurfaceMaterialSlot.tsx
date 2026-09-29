@@ -10,6 +10,7 @@ import type { TscnExternalResource, TscnInternalResource } from '../../parser/ty
 import { findExtResource, parseResourceReference } from '../../resources/SubResourceResolver';
 import { useViewportTextureSlot } from '../../resources/textures/viewporttexture/useViewportTextureSlot';
 import { useProceduralTextures, type ProceduralSlot } from '../../resources/useProceduralTexture';
+import { useTiledUpload } from '../tiledUpload/useTiledUpload';
 import { useResource } from '../../resources/useResource';
 import { useSceneResources } from '../SceneResourcesContext';
 import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
@@ -255,13 +256,15 @@ export function useMaterialTextures(
   // slot resolves, freeing still-bound textures that three then re-uploads.
   useDisposeTexture(repackedFlowmap);
   useDisposeTexture(anisotropyClone);
-  useReleaseBoundTexture(albedoMap);
-  useReleaseBoundTexture(normalMap);
-  useReleaseBoundTexture(roughnessMap);
-  useReleaseBoundTexture(metalnessMap);
-  useReleaseBoundTexture(emissiveMap);
-  useReleaseBoundTexture(aoMap);
-  useReleaseBoundTexture(displacementMap);
+  // Each map draws once it is on the GPU: a large one uploads in bands, and its
+  // slot keeps the map it had meanwhile. The hook releases each map it stops drawing.
+  const albedoDrawn = useBoundMapUpload(albedoMap);
+  const normalDrawn = useBoundMapUpload(normalMap);
+  const roughnessDrawn = useBoundMapUpload(roughnessMap);
+  const metalnessDrawn = useBoundMapUpload(metalnessMap);
+  const emissiveDrawn = useBoundMapUpload(emissiveMap);
+  const aoDrawn = useBoundMapUpload(aoMap);
+  const displacementDrawn = useBoundMapUpload(displacementMap);
 
   const firstMissingPath = useMemo(() => {
     for (const slot of TEXTURE_SLOTS) {
@@ -274,23 +277,23 @@ export function useMaterialTextures(
 
   const maps = useMemo(
     (): MaterialTextureMaps => ({
-      albedoMap,
-      normalMap,
-      roughnessMap,
-      metalnessMap,
-      emissiveMap,
-      aoMap,
-      displacementMap,
+      albedoMap: albedoDrawn,
+      normalMap: normalDrawn,
+      roughnessMap: roughnessDrawn,
+      metalnessMap: metalnessDrawn,
+      emissiveMap: emissiveDrawn,
+      aoMap: aoDrawn,
+      displacementMap: displacementDrawn,
       anisotropyMap,
     }),
     [
-      albedoMap,
-      normalMap,
-      roughnessMap,
-      metalnessMap,
-      emissiveMap,
-      aoMap,
-      displacementMap,
+      albedoDrawn,
+      normalDrawn,
+      roughnessDrawn,
+      metalnessDrawn,
+      emissiveDrawn,
+      aoDrawn,
+      displacementDrawn,
       anisotropyMap,
     ]
   );
@@ -416,12 +419,9 @@ function effectiveSlot(
   return procedural ? { value: procedural } : asyncSlot;
 }
 
-/** Frees one binding-owned texture clone when that texture changes, and only then. */
-function useReleaseBoundTexture(texture: THREE.Texture | undefined): void {
-  useEffect(() => {
-    const own = texture;
-    return () => releaseBoundTexture(own);
-  }, [texture]);
+/** One bound map as it draws: uploaded in bands where large, released once it no longer draws. */
+function useBoundMapUpload(texture: THREE.Texture | undefined): THREE.Texture | undefined {
+  return useTiledUpload(texture ?? null, releaseBoundTexture) ?? undefined;
 }
 
 /** Same, for a texture this module allocated itself rather than through the binding. */

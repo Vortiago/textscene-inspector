@@ -39,6 +39,15 @@ The webview CSP gains `worker-src blob:` and nothing else.
   worker fails to start. The fallback is the synchronous build that existed before, so
   it gives the same bytes.
 
+**A large texture uploads in bands, at the site that draws it.** A built texture still
+reaches the GPU in one `texImage2D`, which took 34–435 ms for 4096² RGBA in headless
+Chromium. So `r3f/tiledUpload/` allocates the storage empty and fills it in row bands,
+within 8 ms a frame. The bytes read back identical to three's whole upload, at the base
+level and through the mip chain. The tiling wraps the exact texture a consumer draws,
+because three uploads each clone separately when its sampler or colour-space settings
+differ, and the 2D canvas and the 3D material slots each draw such a clone. A slot keeps
+drawing its previous texture until the new one is on the GPU.
+
 ## Measurement
 
 The in-frame probe `scripts/vscode/probes/blobWorkerProbe.mjs` echoes one number through
@@ -57,5 +66,8 @@ a blob-URL worker. In Chromium 141, under a copy of the webview CSP:
 - **A CSP regression cannot hide behind the fallback.** The in-thread fallback still
   draws correct pixels, so the pixels alone cannot show that the worker is gone. The
   gate asserts that the worker answered.
+- **A `.tres` material's own texture uploads whole.** `loadMaterial` builds that material
+  outside React, where no draw site wraps its maps, so three uploads such a texture in one
+  call on its first draw.
 - **Runtime MSDF generation stays closed.** It needs `connect-src` for its font fetch,
   which this ADR does not open.

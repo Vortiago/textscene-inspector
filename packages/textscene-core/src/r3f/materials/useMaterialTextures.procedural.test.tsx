@@ -16,6 +16,7 @@ import { clearProceduralTextureCache } from '../../resources/textures/procedural
 import { fakeJobRunner } from '../../workers/fakeJobRunner.testkit';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { useMaterialTextures } from './SurfaceMaterialSlot';
+import { fakeTiledUploads } from '../tiledUpload/fakeTiledUploads.testkit';
 
 function scene(seed: number): TscnInternalResource[] {
   return [
@@ -46,7 +47,7 @@ async function flush(): Promise<void> {
   });
 }
 
-function renderMaterial() {
+function renderMaterial(tiles = false) {
   const { runner, runs } = fakeJobRunner();
   const fake = createFakeResourceLoader();
   const loader = Object.assign(fake.loader, { jobRunner: runner }) as ResourceLoader;
@@ -54,18 +55,22 @@ function renderMaterial() {
   fake.textures.setRequestImpl((path) => requested.push(path));
   // The wrapper sees no hook props, so an edit swaps this and re-renders.
   let resources = scene(1);
+  const uploads = fakeTiledUploads();
   const hook = renderHook(() => useMaterialTextures(SCALARS), {
-    wrapper: ({ children }: { children: ReactNode }) => (
-      <ResourceLoaderProvider loader={loader}>
-        <SceneResourcesProvider internalResources={resources}>{children}</SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    ),
+    wrapper: ({ children }: { children: ReactNode }) => {
+      const tree = (
+        <ResourceLoaderProvider loader={loader}>
+          <SceneResourcesProvider internalResources={resources}>{children}</SceneResourcesProvider>
+        </ResourceLoaderProvider>
+      );
+      return tiles ? <uploads.wrapper>{tree}</uploads.wrapper> : tree;
+    },
   });
   const edit = (seed: number) => {
     resources = scene(seed);
     hook.rerender();
   };
-  return { ...hook, runs, requested, edit };
+  return { ...hook, runs, requested, edit, uploads: uploads.pending };
 }
 
 afterEach(() => {
@@ -106,5 +111,32 @@ describe('useMaterialTextures with procedural slots', () => {
     runs[1]?.complete();
     await flush();
     expect(result.current.maps.albedoMap?.image).not.toBe(before);
+  });
+
+  it('keeps drawing the old noise map while the new one uploads in bands', async () => {
+    const { result, runs, edit, uploads } = renderMaterial(true);
+    await flush();
+    runs[0]?.complete();
+    await flush();
+    expect(result.current.maps.albedoMap).toBeUndefined();
+    expect(uploads.length).toBeGreaterThan(0);
+    await act(async () => {
+      uploads.forEach((upload) => upload.finish(true));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const before = result.current.maps.albedoMap;
+    expect(before).toBeDefined();
+
+    edit(2);
+    await flush();
+    runs[1]?.complete();
+    await flush();
+    expect(result.current.maps.albedoMap).toBe(before);
+
+    await act(async () => {
+      uploads.forEach((upload) => upload.finish(true));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(result.current.maps.albedoMap).not.toBe(before);
   });
 });
