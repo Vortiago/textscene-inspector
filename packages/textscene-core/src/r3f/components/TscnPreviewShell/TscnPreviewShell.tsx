@@ -2,6 +2,8 @@
  * The composition root of one preview panel: the canvas beside one right
  * Split Dock (ADR-0007), the scene tree over a tabbed detail pane. There is no
  * left rail, since the VS Code webview already sits right of the activity bar.
+ * A narrow panel turns the dock into a bottom sheet that shows one half at a time
+ * (ADR-0042).
  */
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import {
@@ -20,7 +22,14 @@ import { EscapeDeselect } from './EscapeDeselect.js';
 import { SceneChangeResetter } from './SceneChangeResetter.js';
 import { WorkspaceAutoSelect } from './WorkspaceAutoSelect.js';
 import { SceneStats } from './SceneStats.js';
-import { MasterDetailHandle, CollapsedDock } from './DockChrome.js';
+import {
+  CollapsedDock,
+  isNarrowPane,
+  isSheetShare,
+  MasterDetailHandle,
+  NarrowPaneSwitcher,
+  SheetHandle,
+} from './DockChrome.js';
 import { HelpLink } from './HelpLink.js';
 import { AnimationTabWatcher } from './AnimationTabWatcher.js';
 import { DetailTabs, type DetailTab } from './DetailTabs.js';
@@ -69,6 +78,9 @@ export function TscnPreviewShell({
   const [dockWidth, setDockWidth] = usePersistedState('tsi.dockWidth', 320, isFiniteNumber);
   const [dockCollapsed, setDockCollapsed] = usePersistedState('tsi.dockCollapsed', false, isBoolean);
   const [treeShare, setTreeShare] = usePersistedState('tsi.treeShare', 0.46, isFiniteNumber);
+  // The narrow layout's own geometry: the sheet's share of the column, and the half it shows.
+  const [sheetShare, setSheetShare] = usePersistedState('tsi.sheetShare', 0.45, isSheetShare);
+  const [narrowPane, setNarrowPane] = usePersistedState('tsi.narrowPane', 'tree', isNarrowPane);
   const [activeTab, setActiveTab] = useState<DetailTab>('inspector');
 
   // ADR-0012: the Animation tab exists only while an AnimationPlayer is selected.
@@ -144,9 +156,21 @@ export function TscnPreviewShell({
               />
               <section
                 className={styles.dock}
-                style={{ '--tsi-dock-basis': `${dockWidth}px` } as CSSProperties}
+                style={
+                  {
+                    '--tsi-dock-basis': `${dockWidth}px`,
+                    '--tsi-sheet-basis': `${sheetShare * 100}%`,
+                  } as CSSProperties
+                }
                 aria-label="Scene and Inspector"
+                data-narrow-pane={narrowPane}
               >
+                <SheetHandle value={sheetShare} setValue={setSheetShare} />
+                <NarrowPaneSwitcher
+                  pane={narrowPane}
+                  setPane={setNarrowPane}
+                  onCollapse={() => setDockCollapsed(true)}
+                />
                 <SceneTreePane
                   sceneGraph={sceneGraph}
                   error={error}

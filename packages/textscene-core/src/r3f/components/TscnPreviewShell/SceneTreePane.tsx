@@ -1,6 +1,6 @@
 /** The Split Dock's master pane (ADR-0007): the scene tree and its header. */
 
-import { lazy, Suspense, type ReactNode } from 'react';
+import { lazy, Suspense, type CSSProperties, type ReactNode } from 'react';
 import type { SceneGraph } from '../../../core/SceneGraph.js';
 import type { TscnNode } from '../../../parser/types.js';
 import { SceneNodeCount } from './SceneStats.js';
@@ -56,7 +56,7 @@ export function SceneTreePane({
   }
 
   return (
-    <div className={styles.masterPane} style={{ flexGrow: treeShare }}>
+    <div className={styles.masterPane} style={{ '--tsi-pane-grow': treeShare } as CSSProperties}>
       <div className={styles.dockHeader}>
         <span className={styles.dockTitle}>Scene Tree</span>
         <SceneNodeCount />

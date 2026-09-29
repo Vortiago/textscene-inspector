@@ -127,6 +127,29 @@ describe('<ViewportControlsHelp>', () => {
     expect(block('.panel')).toContain('pointer-events: auto');
   });
 
+  it('carries the touch summary beside the pointer one, for the stylesheet to choose', () => {
+    render(<ViewportControlsHelp mode="3D" />);
+    const hint = screen.getByTestId('viewport-controls-hint');
+    expect(hint.textContent).toContain(controlsFor('3D').touchSummary);
+    const css = readFileSync(
+      path.join(import.meta.dirname, 'ViewportControlsHelp.module.css'),
+      'utf8'
+    );
+    expect(/^\.touchSummary\s*\{[^}]*display:\s*none/m.test(css)).toBe(true);
+    const coarse = css.slice(css.indexOf('@media (pointer: coarse)'));
+    expect(coarse).toMatch(/\.pointerSummary\s*\{[^}]*display:\s*none/);
+    expect(coarse).toMatch(/\.touchSummary\s*\{[^}]*display:\s*inline/);
+  });
+
+  it('bounds the pill to the viewport, so a narrow one ellipsises the summary', () => {
+    const css = readFileSync(
+      path.join(import.meta.dirname, 'ViewportControlsHelp.module.css'),
+      'utf8'
+    );
+    expect(/\.hint\s*\{[^}]*max-width:\s*100%/.exec(css)).not.toBeNull();
+    expect(/\.summary\s*\{[^}]*min-width:\s*0/.exec(css)).not.toBeNull();
+  });
+
   it('sits clear of the toolbar overlay, which grows leftward and outranks it', () => {
     // Bottom-left is the one free corner: a wrapped toolbar covers the top edge,
     // and bottom-centre holds the 2D hint and the zoom HUD.
@@ -150,6 +173,14 @@ describe('<ViewportControlsHelp>', () => {
 });
 
 describe('controlsFor', () => {
+  it('gives a touch summary that names no mouse-only input', () => {
+    for (const mode of ['2D', '3D'] as const) {
+      const { touchSummary } = controlsFor(mode);
+      expect(touchSummary).toMatch(/pinch = zoom/);
+      expect(touchSummary).not.toMatch(/wheel|middle|shift/);
+    }
+  });
+
   it('gives every binding a unique input WITHIN its device, so panel keys cannot collide', () => {
     // A label may repeat across devices, since each group's list scopes its React keys.
     for (const mode of ['2D', '3D'] as const) {

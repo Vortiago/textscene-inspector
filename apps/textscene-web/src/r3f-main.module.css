@@ -3,6 +3,14 @@
  * TscnPreviewShell.module.css declares in :root. A "scene chip" opens a command palette
  * that opens a .tscn from disk or switches the built-in dev fixtures.
  */
+/* The whole app: the Source pane beside the shell. It fills `#app`, whose height styles.css sets. */
+.appRoot {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
 .toolbar {
   position: relative;
   display: inline-flex;
@@ -281,13 +289,14 @@
 
 /* ── Source pane ─────────────────────────────────────────────────────────── */
 .sourcePane {
+  width: var(--source-pane-width, 320px);
+  min-width: 0;
   overflow: hidden;
   background: var(--tsi-bg-panel);
   border-right: 1px solid var(--tsi-border);
   display: flex;
   flex-direction: column;
-  /* Hold the set or dragged width: the flex row must not squeeze the pane below the
-     inline width. */
+  /* Hold the set or dragged width: the flex row must not squeeze the pane below it. */
   flex-shrink: 0;
 }
 
@@ -566,4 +575,71 @@
   font-weight: 600;
   text-align: center;
   pointer-events: none;
+}
+
+/*
+ * The compact chrome (ADR-0042). The Source pane covers the preview below the shell's top
+ * bar, where its toggle stays reachable. The palette is fixed, since the top bar's toolbar
+ * scrolls and would clip it. The query text is COMPACT_LAYOUT_QUERY in @textscene/core.
+ */
+@media (max-width: 768px), (max-height: 500px) and (pointer: coarse) {
+  .sourcePane {
+    position: absolute;
+    top: var(--tsi-top-bar-height);
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 30;
+    width: auto;
+    border-right: none;
+  }
+
+  /* `.wideLabel` is the part of a toolbar label that only a wide top bar has room for. */
+  .sourceSplitter,
+  .wideLabel {
+    display: none;
+  }
+
+  /* iOS zooms the page on focus of a field whose text is under 16px. */
+  .sourceTextarea {
+    font-size: 16px;
+  }
+
+  .palette {
+    position: fixed;
+    top: calc(var(--tsi-top-bar-height) + 6px);
+    right: var(--tsi-space-2);
+    left: var(--tsi-space-2);
+    width: auto;
+    max-width: none;
+  }
+
+  .sceneChip {
+    max-width: 11rem;
+  }
+
+  .sceneName {
+    max-width: 7rem;
+  }
+
+  .errorMessage {
+    max-width: 12rem;
+  }
+}
+
+/* Touch targets. A mouse is a fine pointer and keeps the dense sizing. */
+@media (pointer: coarse) {
+  .openButton,
+  .sceneChip,
+  .downloadButton {
+    min-height: 36px;
+  }
+
+  /* The row keeps its 18px line height, so the hit area grows sideways and the dot stays 7px. */
+  .severityDot {
+    width: 18px;
+    height: 18px;
+    padding: 5.5px;
+    background-clip: content-box;
+  }
 }

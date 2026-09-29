@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * `pnpm test:e2e:web`: the gate for the web app's outliner, inspector, mode
- * switching and load health, through `?fixture=` in the real running app. It
+ * switching, phone layout and load health, through `?fixture=` in the real running app. It
  * observes from outside (`cameraProbe.mjs`, DOM shape), so no production file
  * carries a test hook.
  */
@@ -21,6 +21,8 @@ import {
 import { installViewMatrixProbe, matricesEqual, formatMatrix } from './cameraProbe.mjs';
 import { arraysEqual, describeNodePathMismatch, expandAllTreeRows, readOutlinerPaths, selectOutlinerNode } from './outliner.mjs';
 import { findRowValue, readInspectorPanel } from './inspector.mjs';
+import { attachDiagnostics, checkDiagnostics } from './diagnostics.mjs';
+import { checkPhoneLayout, runPhoneScenario } from './phoneScenario.mjs';
 
 /* global window */
 // `window` exists only in the browser that runs the `page.evaluate` calls.
@@ -51,21 +53,6 @@ const SELECT_SETTLE_MS = 400;
 // display, so the floor only clears noise.
 const INK_FLOOR_3D = 20000;
 const INK_FLOOR_2D = 4000;
-
-/** Console errors, uncaught page errors and failed requests. The app is offline, so all stay empty. */
-function attachDiagnostics(page) {
-  const consoleErrors = [];
-  const pageErrors = [];
-  const failedRequests = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') consoleErrors.push(message.text());
-  });
-  page.on('pageerror', (error) => pageErrors.push(String(error)));
-  page.on('requestfailed', (request) => {
-    failedRequests.push({ url: request.url(), failure: request.failure()?.errorText });
-  });
-  return { consoleErrors, pageErrors, failedRequests };
-}
 
 async function run3DScenario(browser, baseUrl) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
@@ -178,22 +165,6 @@ function checkStage(gate, label, actual, expected) {
   gate.check(actual === expected, `${label} opened in the "${actual}" workspace, expected "${expected}"`);
 }
 
-function checkDiagnostics(gate, label, diagnostics) {
-  gate.check(
-    diagnostics.consoleErrors.length === 0,
-    `${label} ${diagnostics.consoleErrors.length} console error(s): ${diagnostics.consoleErrors.slice(0, 3).join(' | ')}`
-  );
-  gate.check(
-    diagnostics.pageErrors.length === 0,
-    `${label} ${diagnostics.pageErrors.length} uncaught page error(s): ${diagnostics.pageErrors.slice(0, 3).join(' | ')}`
-  );
-  gate.check(
-    diagnostics.failedRequests.length === 0,
-    `${label} ${diagnostics.failedRequests.length} failed request(s): ` +
-      diagnostics.failedRequests.slice(0, 3).map((r) => `${r.failure} ${r.url}`).join(' | ')
-  );
-}
-
 async function main() {
   ensureWebBuilt(console.log);
   await assertPortFree(PORT, 'E2E_WEB_PORT');
@@ -210,6 +181,9 @@ async function main() {
 
     console.log(`[gate] 2D scenario: ${FIXTURE_2D}`);
     const twoD = await run2DScenario(browser, baseUrl);
+
+    console.log(`[gate] phone scenario: ${FIXTURE_3D}`);
+    const phone = await runPhoneScenario(browser, baseUrl, { fixture: FIXTURE_3D, selectPath: SELECT_A });
 
     checkSizedCanvas(gate, '[3D]', threeD.dims);
     checkInk(gate, '[3D]', threeD.ink, INK_FLOOR_3D);
@@ -261,6 +235,8 @@ async function main() {
     checkStage(gate, '[2D]', twoD.stage, '2d');
     checkDiagnostics(gate, '[2D]', twoD.diagnostics);
 
+    checkPhoneLayout(gate, phone, { expectedPaths: EXPECTED_3D_PATHS, selectName: 'Title' });
+
     console.log('\n[gate] measurements');
     console.log(
       `  3D  canvas=${threeD.dims.width}x${threeD.dims.height} ink=${threeD.ink?.inkPixels} ` +
@@ -268,6 +244,11 @@ async function main() {
     );
     console.log(
       `  2D  canvas=${twoD.dims.width}x${twoD.dims.height} ink=${twoD.ink?.inkPixels} stage=${twoD.stage}`
+    );
+    console.log(
+      `  phone  canvas=${phone.canvasBox?.width}x${phone.canvasBox?.height} ` +
+        `sheet=${phone.dockBox?.width}x${phone.dockBox?.height} ` +
+        `collapsed-canvas=${phone.collapsedCanvasBox?.width}x${phone.collapsedCanvasBox?.height}`
     );
   } finally {
     if (browser) await browser.close().catch(() => {});
