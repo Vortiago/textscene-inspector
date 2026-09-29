@@ -48,7 +48,9 @@ Godot `.tscn` parser, linter and renderer (react-three-fiber over three.js). pnp
   `pnpm test:vscode:csp`. It drives a real desktop VS Code, opens a Control fixture
   through the extension's own preview command and reads the canvas back over CDP. It
   requires ink with text, exactly 0 ink with every label emptied, and zero CSP violations
-  or network attempts inside the preview frame. Linux/Xvfb. CI runs it there.
+  or network attempts inside the preview frame. A third run opens a NoiseTexture2D and
+  requires that a job worker replied and that the texture drew. Linux/Xvfb. CI runs it
+  there.
 - Changed the web previewer's outliner, inspector, mode switching, or camera/selection
   wiring: `pnpm test:e2e:web`. It drives the real built app in a headless browser
   (`scripts/e2e/webAppGate.mjs`) and asserts:

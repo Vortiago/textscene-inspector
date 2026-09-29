@@ -370,6 +370,8 @@ async function stabilizeCanvas(frame, { timeoutMs, intervalMs }) {
  * @property {boolean} headed          use the ambient DISPLAY instead of xvfb-run
  * @property {number} keepOpen         hold VS Code open after capture (debugging)
  * @property {string} [evalFile]       ES module whose default export runs in-frame
+ * @property {[Function, unknown][]} [initScripts] `[script, argument]` pairs installed
+ *   before the webview exists, so each runs in the preview frame ahead of the app
  * @property {boolean} verbose         stream VS Code stdout/stderr
  * @property {Record<string, unknown>} [settings] extra user settings to seed
  *   the throwaway profile with, for callers that need a layout the palette
@@ -398,6 +400,7 @@ export async function driveScene(options) {
     headed,
     keepOpen,
     evalFile,
+    initScripts = [],
     verbose,
     settings,
     log: emit = () => {},
@@ -503,6 +506,7 @@ export async function driveScene(options) {
       });
     }, preserveBuffer);
     report.preserveDrawingBuffer = preserveBuffer;
+    for (const [script, argument] of initScripts) await page.addInitScript(script, argument);
 
     if (prepareLayout) {
       // The Chat/Copilot auxiliary bar is open on a fresh profile and takes

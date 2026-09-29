@@ -46,9 +46,10 @@ If the question is "did text paint under the CSP", use the gate: it answers in o
 
 ## The gate
 
-`pnpm test:vscode:csp` drives two scenes, one launch each: `unit-label-2d.tscn`
-as committed, and a text-free twin. The gate derives the twin at run time by
-emptying every `text = "…"`, so it cannot drift from the fixture.
+`pnpm test:vscode:csp` drives three scenes, one launch each: `unit-label-2d.tscn`
+as committed, a text-free twin, and `unit-noisetexture2d.tscn`. The gate derives
+the twin at run time by emptying every `text = "…"`, so it cannot drift from the
+fixture.
 
 Each run must show:
 - The preview opened through the contributed command.
@@ -56,7 +57,9 @@ Each run must show:
 - A settled canvas: two byte-identical readbacks in a row, in place of a fixed sleep.
 - Zero CSP violations, failed requests and console errors **in the webview frame**.
 
-Across the pair, ink is ≥ 100 with text and exactly 0 without. On VS Code 1.131.0, Linux and Xvfb, the gate measures a 235x357 canvas with 252 ink with text and 0 without, identical across runs, and the webview's only request host is `file+.vscode-resource.vscode-cdn.net`. The canvas scales with the virtual display, so the floor of 100 sits far below 252. The failure it guards takes ink to 0 on any display.
+In the noise run, a job worker started and replied inside the webview, the texture work status cleared, and ink is ≥ 1000 (ADR-0042). The in-thread fallback draws the same pixels, so only the reply shows the worker ran.
+
+Across the label pair, ink is ≥ 100 with text and exactly 0 without. On VS Code 1.131.0, Linux and Xvfb, the gate measures a 235x357 canvas with 252 ink with text and 0 without, identical across runs, and the webview's only request host is `file+.vscode-resource.vscode-cdn.net`. The canvas scales with the virtual display, so the floor of 100 sits far below 252. The failure it guards takes ink to 0 on any display.
 
 Assert on `report.webview`, the slice filtered to the webview frame, never on `report.cspViolations`. Page-wide counts are never zero, because VS Code's startup adds a marketplace 404 and `main.vscode-cdn.net`.
 

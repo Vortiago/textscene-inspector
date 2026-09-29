@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * End-to-end gate (`pnpm test:vscode:csp`): Control text paints inside the real
- * VS Code webview, under the production CSP, with nothing fetched. Linux/Xvfb
+ * End-to-end gate (`pnpm test:vscode:csp`): Control text and a worker-built noise
+ * texture paint inside the real VS Code webview, under the production CSP, with
+ * nothing fetched. Linux/Xvfb
  * only: see the CI notes in `.github/workflows/ci.yml`.
  */
 import { spawnSync } from 'node:child_process';
@@ -14,6 +15,8 @@ import {
   resolveVscodeBinary,
 } from './driveScene.mjs';
 import { blankSceneText } from './sceneText.mjs';
+import { installTextureWorkProbe } from '../e2e/textureWorkProbe.mjs';
+import { TEXTURE_WORK_STATUS_TESTID } from '../visual/preview/appContract.mjs';
 
 /**
  * The Control fixture whose only ink is text. The preview CSP (`webviewHtml.ts`)
@@ -37,6 +40,22 @@ const INK_FLOOR = 100;
  */
 const BLOB_WORKER_PROBE = path.join(REPO_ROOT, 'scripts/vscode/probes/blobWorkerProbe.mjs');
 
+/**
+ * The 256x256 noise golden's scene. Its texture builds as a job in the preview's own
+ * blob-URL worker, and the scene has no other ink.
+ */
+const NOISE_FIXTURE = 'scenes/fixtures/unit-noisetexture2d.tscn';
+
+/**
+ * Ink floor for the noise scene. Before its texture lands the scene draws nothing, as
+ * the text-free label scene reads zero, so any floor above zero shows the texture drew.
+ * This one stays far below the sprite's share of even the smallest canvas.
+ */
+const NOISE_INK_FLOOR = 1000;
+
+/** Reads back, in the noise frame, the workers and replies `installTextureWorkProbe` counted. */
+const TEXTURE_WORK_READOUT = path.join(REPO_ROOT, 'scripts/vscode/probes/textureWorkReadout.mjs');
+
 const OUT_ROOT = path.join(REPO_ROOT, 'scripts/vscode/output/csp-gate');
 const BASE_PORT = 9464;
 
@@ -54,9 +73,9 @@ function parseArgs(argv) {
 }
 
 /**
- * Lays out the throwaway workspace the two runs open: the fixture verbatim and
- * its text-free twin, side by side so both resolve `res://` against the same
- * folder.
+ * Lays out the throwaway workspace the runs open: the label fixture verbatim, its
+ * text-free twin and the noise fixture, side by side so all resolve `res://`
+ * against the same folder.
  */
 function prepareScenes() {
   const workspace = path.join(OUT_ROOT, 'workspace');
@@ -77,7 +96,10 @@ function prepareScenes() {
   const withoutText = path.join(workspace, 'blanked.tscn');
   writeFileSync(withoutText, blanked);
 
-  return { workspace, withText, withoutText, replacements };
+  const noise = path.join(workspace, path.basename(NOISE_FIXTURE));
+  copyFileSync(path.join(REPO_ROOT, NOISE_FIXTURE), noise);
+
+  return { workspace, withText, withoutText, noise, replacements };
 }
 
 class GateFailures {
@@ -171,7 +193,7 @@ async function main() {
   // A build between the two runs gives them different code, which the pair
   // cannot survive, so the bundle's mtime must stay unchanged.
   const bundleStamp = statSync(bundle).mtimeMs;
-  const { workspace, withText, withoutText, replacements } = prepareScenes();
+  const { workspace, withText, withoutText, noise, replacements } = prepareScenes();
   console.log(`[gate] VS Code:   ${binary}`);
   console.log(`[gate] workspace: ${workspace}`);
   console.log(`[gate] control:   blanked ${replacements} text assignment(s)`);
@@ -179,10 +201,17 @@ async function main() {
   // One launch each. The label fixture must paint at least INK_FLOOR ink pixels,
   // and its text-free twin exactly zero. They differ only in whether a glyph is
   // asked for, so an empty canvas fails the first and a canvas that paints
-  // chrome or a background fails the second.
+  // chrome or a background fails the second. The noise run must draw a texture
+  // that one of the preview's own blob-URL workers built.
   const runs = [
     { label: 'with-text', scene: withText, evalFile: BLOB_WORKER_PROBE },
     { label: 'without-text', scene: withoutText },
+    {
+      label: 'noise',
+      scene: noise,
+      evalFile: TEXTURE_WORK_READOUT,
+      initScripts: [[installTextureWorkProbe, TEXTURE_WORK_STATUS_TESTID]],
+    },
   ];
 
   const reports = {};
@@ -216,6 +245,7 @@ async function main() {
       headed: opts.headed,
       keepOpen: 0,
       evalFile: run.evalFile,
+      initScripts: run.initScripts,
       verbose: opts.verbose,
       log: (message) => console.log(`[gate:${run.label}] ${message}`),
     });
@@ -250,6 +280,22 @@ async function main() {
       'counted for the text scene is not attributable to text'
   );
 
+  // The in-thread fallback draws the same pixels, so only the reply shows the worker ran.
+  const noiseReport = reports.noise;
+  const textureWork = noiseReport.evalResult;
+  gate.check(
+    textureWork?.workers > 0 && textureWork?.replies > 0,
+    `[noise] no job worker answered inside the preview, so the texture built on the main ` +
+      `thread: ${brief(textureWork)}`
+  );
+  gate.check(noiseReport.textureWorkCleared === true, '[noise] the texture work status never cleared');
+  const noiseInk = noiseReport.canvasReadback;
+  gate.check(
+    noiseInk.inkPixels >= NOISE_INK_FLOOR,
+    `[noise] only ${noiseInk.inkPixels} ink pixels on a ${noiseInk.width}x${noiseInk.height} ` +
+      `canvas, floor is ${NOISE_INK_FLOOR}: the noise texture did not draw`
+  );
+
   console.log('\n[gate] canvas readback');
   console.log(
     `  with-text     ${withInk.width}x${withInk.height}  ink=${withInk.inkPixels}` +
@@ -258,6 +304,10 @@ async function main() {
   console.log(
     `  without-text  ${withoutInk.width}x${withoutInk.height}  ink=${withoutInk.inkPixels}` +
       `  opaque=${withoutInk.nonTransparentPixels}`
+  );
+  console.log(
+    `  noise         ${noiseInk.width}x${noiseInk.height}  ink=${noiseInk.inkPixels}` +
+      `  workers=${textureWork?.workers}  replies=${textureWork?.replies}`
   );
   for (const run of runs) {
     const webview = reports[run.label].webview;
@@ -276,7 +326,10 @@ async function main() {
     process.exitCode = 1;
     return;
   }
-  console.log('\n[gate] PASSED — glyphs paint in the real webview, offline, under the real CSP');
+  console.log(
+    '\n[gate] PASSED — glyphs and a worker-built texture paint in the real webview, offline, ' +
+      'under the real CSP'
+  );
 }
 
 await main();
