@@ -32,13 +32,15 @@ const captured: {
   logAdapter?: CapturedLogAdapter;
   provideFile?: ReturnType<typeof vi.fn>;
   pipelineProvider?: unknown;
+  pipelineOptions?: { createWorker?: unknown };
 } = {};
 
 // A synthetic mock, no `importActual`: the real `<TscnPreviewShell>` pulls in
 // three.js/r3f, which happy-dom cannot run without a WebGL context.
 vi.mock('@textscene/core', () => ({
-  createResourcePipeline: vi.fn((provider: unknown) => {
+  createResourcePipeline: vi.fn((provider: unknown, options?: { createWorker?: unknown }) => {
     captured.pipelineProvider = provider;
+    captured.pipelineOptions = options;
     captured.provideFile = vi.fn();
     return { loader: { provideFile: captured.provideFile } };
   }),
@@ -166,6 +168,12 @@ describe('mountR3FWebview', () => {
 
     expect(captured.shellProps?.content).toBe('');
     expect(captured.shellProps?.panelId).toMatch(/^vscode-/);
+  });
+
+  it('gives the resource pipeline a job worker factory, so textures build off the main thread', async () => {
+    await mountFresh();
+
+    expect(typeof captured.pipelineOptions?.createWorker).toBe('function');
   });
 });
 

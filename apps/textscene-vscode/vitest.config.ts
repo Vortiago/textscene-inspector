@@ -1,4 +1,5 @@
 import { availableParallelism } from 'node:os';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 import { sourceResolve } from '../../vitest.shared';
 
@@ -6,6 +7,15 @@ export default defineConfig({
   // Resolve @textscene/core to its TS source so a fresh checkout tests without
   // building core's dist first. See vitest.shared.ts (sourceResolve).
   ...sourceResolve,
+  resolve: {
+    ...sourceResolve.resolve,
+    // Only the esbuild webview build embeds the real worker (src/bundler/textureWorkerPlugin.mjs).
+    alias: {
+      'virtual:texture-worker-source': fileURLToPath(
+        new URL('./src/webview/textureWorkerSource.stub.ts', import.meta.url)
+      ),
+    },
+  },
   test: {
     name: 'textscene-inspector',
     environment: 'node',
