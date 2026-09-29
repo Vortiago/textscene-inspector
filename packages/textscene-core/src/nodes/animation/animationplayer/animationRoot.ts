@@ -5,7 +5,7 @@
  * owner's unique-name table.
  */
 
-import { resolveRelativePath } from '../../../utils/nodePath';
+import { resolveRelativePath } from '../../../godot/nodePath';
 import { extractNodePathInner } from './animationResolver';
 
 /**

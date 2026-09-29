@@ -21,7 +21,7 @@ import {
   resolveViewportTexturePath,
   viewportTextureRegistryKey,
 } from '../../../r3f/viewportTexturePath.js';
-import { unclaimedUniqueNames } from '../../../utils/nodePath.js';
+import { unclaimedUniqueNames } from '../../../godot/nodePath.js';
 import { warn } from '../../../logger.js';
 import { VIEWPORT_TEXTURE_TYPE } from './types.js';
 

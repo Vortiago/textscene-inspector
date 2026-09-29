@@ -3,14 +3,10 @@
  */
 
 import type { NodeOrigin, TscnNode } from './types';
-import {
-  SCENE_ROOT_PATH,
-  joinPath,
-  resolveParentPath,
-  type ParentPathTree,
-} from '../utils/nodePath.js';
-import { UNIQUE_NODE_PREFIX, isUniqueNameInOwner } from '../utils/uniqueNames.js';
+import { SCENE_ROOT_PATH, joinPath } from '../utils/nodePath.js';
+import { isUniqueNameInOwner } from '../utils/uniqueNames.js';
 import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/packedScene.js';
+import { UNIQUE_NODE_PREFIX, resolveParentPath, type ParentPathTree } from '../godot/nodePath.js';
 import { isTypeUnknowable } from './typeUnknowable.js';
 
 /**

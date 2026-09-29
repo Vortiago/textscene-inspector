@@ -9,8 +9,9 @@ import * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types.js';
 import type { Node3DProperties } from '../../../nodes/base/node3d/types.js';
 import type { Node2DProperties, Vector2 } from '../../../nodes/base/node2d/types.js';
-import { joinPath, resolveNodePathLiteral } from '../../../utils/nodePath.js';
-import { UNIQUE_NODE_PREFIX, isUniqueNameInOwner } from '../../../utils/uniqueNames.js';
+import { joinPath } from '../../../utils/nodePath.js';
+import { isUniqueNameInOwner } from '../../../utils/uniqueNames.js';
+import { UNIQUE_NODE_PREFIX, resolveNodePathLiteral } from '../../../godot/nodePath.js';
 import { globalMatrix3D, matrixToTransform3D } from '../../../r3f/nodeTreeTransforms.js';
 import { node2DLocalTransform } from '../../../r3f/node2dTransform.js';
 import {
