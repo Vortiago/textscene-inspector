@@ -18,16 +18,9 @@ describe('viewportTextureRegistryKey', () => {
     );
   });
 
-  /** Inside an instanced sub-scene, the local scene is the instance (packed_scene.cpp:706). */
-  it('rebases onto a local scene root that is an instance, not the outer root', () => {
-    expect(viewportTextureRegistryKey('Root/Monitor', 'SubViewport')).toBe(
-      'Root/Monitor/SubViewport'
-    );
-  });
-
   /**
-   * Outside a `NodePathProvider` there is no scene root to rebase against, so
-   * the texture resolves to nothing rather than to a wrong key.
+   * With no local scene root there is nothing to rebase against, so the texture
+   * resolves to nothing rather than to a wrong key.
    */
   it('returns null without a local scene root', () => {
     expect(viewportTextureRegistryKey(null, 'SubViewport')).toBeNull();

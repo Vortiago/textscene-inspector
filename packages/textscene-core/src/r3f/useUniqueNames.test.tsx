@@ -12,7 +12,6 @@ import type { TscnNode } from '../parser/types.js';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader.js';
 import { HierarchyProvider } from './contexts/HierarchyContext.js';
-import { viewportTextureRegistryKey } from './viewportTexturePath.js';
 import { useLocalScene, useUniqueNameClaims, useUniqueNamePaths } from './useUniqueNames.js';
 
 function node(name: string, flagged = false, children: TscnNode[] = []): TscnNode {
@@ -90,7 +89,7 @@ describe('useLocalScene', () => {
   it('gives an outer node the outer root and its claim table', () => {
     const { result } = renderHook(() => useLocalScene('Root/Hud'), { wrapper });
     expect(result.current?.path).toBe('Root');
-    expect(result.current?.uniquePaths.get('%Hud')).toBe('Root/Hud');
+    expect(result.current?.uniquePaths?.get('%Hud')).toBe('Root/Hud');
   });
 
   it('keeps the same object across rerenders of one scene', () => {
@@ -105,12 +104,13 @@ describe('useLocalScene', () => {
     expect(result.current).toBeUndefined();
   });
 
-  it('is undefined outside a hierarchy', () => {
+  it('is the outer root with no claim table outside a hierarchy', () => {
+    // With no scene tree there is no owner to walk to, so the outer root is all there is.
     const { result } = renderHook(() => useLocalScene('Root/Hud'));
-    expect(result.current).toBeUndefined();
+    expect(result.current).toEqual({ path: 'Root', uniquePaths: undefined });
   });
 
-  it('puts a texture inside an instanced sub-scene beside the SubViewport it names', () => {
+  it('is the instance for a node inside a loaded instanced sub-scene', () => {
     const host = new TscnParser().parse(`[gd_scene format=3]
 [ext_resource type="PackedScene" path="res://screen.tscn" id="1"]
 
@@ -137,8 +137,5 @@ describe('useLocalScene', () => {
       ),
     });
     expect(result.current?.path).toBe('Root/Monitor');
-    expect(viewportTextureRegistryKey(result.current!.path, 'SubViewport')).toBe(
-      'Root/Monitor/SubViewport'
-    );
   });
 });

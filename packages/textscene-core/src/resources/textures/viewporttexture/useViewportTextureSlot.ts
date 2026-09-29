@@ -107,12 +107,10 @@ export function useViewportTextureSlot(
   // slot calls this and the owner walk is per node.
   const localScene = useLocalScene(viewportPath === null ? null : consumerPath);
   const uniquePaths = localScene?.uniquePaths;
-  // With no scene tree there is no owner to walk to, so the outer root is all there is.
-  const localRootPath = localScene?.path ?? consumerPath?.split('/')[0] ?? null;
   const key =
     viewportPath === null
       ? null
-      : viewportTextureRegistryKey(localRootPath, viewportPath, uniquePaths);
+      : viewportTextureRegistryKey(localScene?.path ?? null, viewportPath, uniquePaths);
   // In an effect, not the render body: a module-level set written during render
   // is impure, survives every scene switch and grows without bound.
   const reported = useRef<string | undefined>(undefined);
@@ -123,8 +121,8 @@ export function useViewportTextureSlot(
       reported.current = undefined;
       return;
     }
-    // Dedup on the spelling in a ref, not on effect deps: the table is rebuilt when a
-    // claim changes. The marker clears once the name is claimed, so a renamed
+    // Dedup on the spelling in a ref, not on effect deps: any change to the table
+    // re-runs the effect. The marker clears once the name is claimed, so a renamed
     // claimant warns again.
     const spelling = `${consumerPath}\u0000${viewportPath}`;
     if (reported.current === spelling) return;

@@ -133,7 +133,15 @@ export function claimOwnerOf(
   roots: readonly TscnNode[],
   ctx: LiveTreeContext
 ): ClaimOwner {
-  const { owner, node } = walkTo(path, roots, ctx);
+  return claimOwnerFrom(walkTo(path, roots, ctx), roots, ctx);
+}
+
+/** {@link claimOwnerOf} for a node the caller has already walked to. */
+function claimOwnerFrom(
+  { owner, node }: Walk,
+  roots: readonly TscnNode[],
+  ctx: LiveTreeContext
+): ClaimOwner {
   if (node?.owner === undefined) return owner;
   // The file an override heading is in is one above the instance that owns it.
   const file = node.overridesExistingNode && owner.parent ? owner.parent : owner;
@@ -151,8 +159,8 @@ export function localSceneOf(
   roots: readonly TscnNode[],
   ctx: LiveTreeContext
 ): ClaimOwner {
-  const { owner, into } = walkTo(path, roots, ctx);
-  return into !== owner ? into : claimOwnerOf(path, roots, ctx);
+  const walk = walkTo(path, roots, ctx);
+  return walk.into !== walk.owner ? walk.into : claimOwnerFrom(walk, roots, ctx);
 }
 
 function cachedSubRoots(

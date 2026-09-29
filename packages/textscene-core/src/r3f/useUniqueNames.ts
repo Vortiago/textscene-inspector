@@ -70,15 +70,19 @@ export function useUniqueNamePaths(path: string | null): ReadonlyMap<string, str
   return useStablePaths(useMemo(() => claims && uniqueNameLivePaths(claims), [claims]));
 }
 
-/** A local scene: the live path of its root, and the `%Name` table a walk from that root reads. */
+/**
+ * A local scene: the live path of its root, and the `%Name` table a walk from that root reads.
+ * With no scene tree there is no table, so a `%Name` addresses nothing.
+ */
 export interface LocalScene {
   readonly path: string;
-  readonly uniquePaths: ReadonlyMap<string, string>;
+  readonly uniquePaths?: ReadonlyMap<string, string>;
 }
 
 /**
  * The local scene of the node at `path` ({@link localSceneOf}), which a local-to-scene
- * resource's NodePaths measure from, or undefined with no path or no scene.
+ * resource's NodePaths measure from, or undefined with no path. With no scene tree there is no
+ * owner to walk to, so the outer root, the first segment of `path`, is all there is.
  */
 export function useLocalScene(path: string | null): LocalScene | undefined {
   const live = useLiveTree(path);
@@ -86,12 +90,15 @@ export function useLocalScene(path: string | null): LocalScene | undefined {
     () => (live && path ? localSceneOf(path, live.roots, live.ctx) : undefined),
     [live, path]
   );
+  // Keyed on the table, not the owner: the outer root's table is one cached object, while
+  // the walk builds a fresh owner on every load tick.
+  const claims = useMemo(() => owner && ownerClaims(owner), [owner]);
   const uniquePaths = useStablePaths(
-    useMemo(() => owner && uniqueNameLivePaths(ownerClaims(owner)), [owner])
+    useMemo(() => claims && uniqueNameLivePaths(claims), [claims])
   );
-  const rootPath = owner?.path;
+  const rootPath = owner?.path ?? path?.split('/')[0];
   return useMemo(
-    () => (rootPath === undefined || !uniquePaths ? undefined : { path: rootPath, uniquePaths }),
+    () => (rootPath ? { path: rootPath, uniquePaths } : undefined),
     [rootPath, uniquePaths]
   );
 }
