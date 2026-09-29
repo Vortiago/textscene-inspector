@@ -8,9 +8,8 @@ import * as THREE from 'three';
 import { useEffect, useMemo } from 'react';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { findExtResource, parseResourceReference } from '../../resources/SubResourceResolver';
-import { resolveProceduralTexture } from '../../resources/textures/resolveProceduralTexture';
 import { useViewportTextureSlot } from '../../resources/textures/viewporttexture/useViewportTextureSlot';
-import { useProceduralTexturePins } from '../../resources/useProceduralTexture';
+import { useProceduralTextures, type ProceduralSlot } from '../../resources/useProceduralTexture';
 import { useResource } from '../../resources/useResource';
 import { useSceneResources } from '../SceneResourcesContext';
 import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
@@ -125,14 +124,14 @@ export function useMaterialTextures(
     ]
   );
 
-  // A procedural slot (`SubResource(GradientTexture2D)`) is fully described in
-  // the scene, so it rasterises here. The procedural cache owns and shares it,
-  // so it is pinned against eviction rather than disposed.
-  const { textures: proceduralTextures, keys: proceduralKeys } = useMemo(
-    () => resolveProceduralTextures(references, internalResources),
-    [references, internalResources]
+  // A procedural slot (`SubResource(GradientTexture2D)`, `SubResource(NoiseTexture2D)`) is
+  // fully described in the scene, so it resolves here: a gradient at once, a noise texture
+  // when its build lands. The procedural cache owns and shares it, and the hook pins it.
+  const proceduralSlots = useProceduralTextures(
+    TEXTURE_SLOTS.map((slot) => textureSlotReference(references, slot)),
+    internalResources
   );
-  useProceduralTexturePins(proceduralKeys);
+  const proceduralTextures = proceduralTexturesBySlot(proceduralSlots);
 
   // The per-material half of every binding: UV transform, sampler filter and
   // wrapping. The per-slot half (which slots decode sRGB) is `bindSlotTexture`'s.
@@ -374,33 +373,24 @@ function collectTextureRequests(
   return out;
 }
 
-interface ProceduralTextureSlots {
-  textures: Partial<Record<TextureSlot, THREE.Texture>>;
-  /** Cache keys for exactly the slots that resolved, so none is pinned in vain. */
-  keys: string[];
+function textureSlotReference(
+  references: TextureSlotReferences | undefined,
+  slot: TextureSlot
+): string | undefined {
+  const raw = references?.[slot];
+  return typeof raw === 'string' ? raw : undefined;
 }
 
-/**
- * Rasterise every slot referencing an inline procedural texture, collecting the
- * cache keys those same slots must pin. One walk yields both: a second walk
- * deriving keys on its own is free to disagree about which refs are procedural.
- */
-function resolveProceduralTextures(
-  references: TextureSlotReferences | undefined,
-  internalResources: readonly TscnInternalResource[]
-): ProceduralTextureSlots {
-  const out: ProceduralTextureSlots = { textures: {}, keys: [] };
-  if (!references) return out;
-  for (const slot of TEXTURE_SLOTS) {
-    const raw = references[slot];
-    if (typeof raw !== 'string') continue;
-    const resolved = resolveProceduralTexture(raw, internalResources);
-    if (resolved) {
-      out.textures[slot] = resolved.texture;
-      out.keys.push(resolved.key);
-    }
-  }
-  return out;
+/** The hook's results, indexed like `TEXTURE_SLOTS`, keyed by slot name. */
+function proceduralTexturesBySlot(
+  slots: readonly ProceduralSlot[]
+): Partial<Record<TextureSlot, THREE.Texture>> {
+  const textures: Partial<Record<TextureSlot, THREE.Texture>> = {};
+  TEXTURE_SLOTS.forEach((slot, index) => {
+    const texture = slots[index]?.texture;
+    if (texture) textures[slot] = texture;
+  });
+  return textures;
 }
 
 /**
@@ -418,10 +408,7 @@ function transformedTexture(
   return bindSlotTexture(value, slot, state);
 }
 
-/**
- * A synchronously-resolved procedural texture takes precedence over the async
- * slot for the same map.
- */
+/** A procedural texture takes precedence over the file-loaded slot for the same map. */
 function effectiveSlot(
   procedural: THREE.Texture | undefined,
   asyncSlot: { value: THREE.Texture | undefined } | null

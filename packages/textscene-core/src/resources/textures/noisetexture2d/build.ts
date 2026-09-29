@@ -7,11 +7,8 @@
 import * as THREE from 'three';
 import { IMAGE_MAX_PIXELS } from '../../../godot/index.js';
 import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
-import type { Gradient } from '../gradienttexture2d/types';
-import type { FastNoiseLiteData } from '../../noise/fastnoiselite/types';
 import type { NoiseTexture2DData } from './types';
 import { seamlessSkirt } from './noiseImage';
-import { noiseTexture2DPixels } from './pixels';
 
 export { grayToRgba, modulateWithGradient } from './gradientModulation';
 export { noiseSampler } from './noiseGenerator';
@@ -35,20 +32,6 @@ export function noiseTextureFits({
   const sourceWidth = width + seamlessSkirt(width, seamlessBlendSkirt);
   const sourceHeight = height + seamlessSkirt(height, seamlessBlendSkirt);
   return sourceWidth * sourceHeight <= IMAGE_MAX_PIXELS;
-}
-
-/**
- * The whole pipeline as a `THREE.DataTexture`. Null for a size {@link noiseTextureFits}
- * refuses, so the previewer draws no texture. A size the tab cannot allocate throws
- * `RangeError`, which the shared resolver catches.
- */
-export function rasterizeNoiseTexture2D(
-  tex: NoiseTexture2DData,
-  noise: FastNoiseLiteData,
-  colorRamp: Gradient | null
-): THREE.DataTexture | null {
-  if (!noiseTextureFits(tex)) return null;
-  return noiseDataTexture(noiseTexture2DPixels({ tex, noise, colorRamp }), tex);
 }
 
 /** Bottom-up `pixels` as the texture Godot's import flags describe for `tex`. */

@@ -52,10 +52,7 @@ export const NOISE_PIXEL_CASES: readonly NoisePixelCase[] = [
   noiseCase('normal map over a ramp', { as_normal_map: 'true' }, RAMP),
 ];
 
-/**
- * SHA-256 of each case's bottom-up RGBA bytes, taken from the synchronous build
- * before it moved off the main thread.
- */
+/** SHA-256 of each case's bottom-up RGBA bytes: the bytes Godot's pipeline order gives. */
 export const PINNED_PIXEL_HASHES: Readonly<Record<string, string>> = {
   plain: '9ffc20780ebeca805ac9071bff38106902bad800bcbdc514f8eda1261f489393',
   'plain inverted': '12824c1681f8db9b0c876ac4a2c026fd94cb3036ecead7ebaaa513d39839cd3b',

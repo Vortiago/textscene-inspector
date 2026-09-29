@@ -4,6 +4,8 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import type { TscnInternalResource } from '../../parser/types';
+import { WorkerJobRunner } from '../../workers/WorkerJobRunner';
+import { abortProceduralBuilds } from './proceduralBuilds';
 import { clearProceduralTextureCache } from './proceduralTextureCache';
 import { resolveProceduralTexture } from './resolveProceduralTexture';
 
@@ -33,27 +35,37 @@ const RESOURCES: TscnInternalResource[] = [
 ];
 
 afterEach(() => {
+  abortProceduralBuilds();
   clearProceduralTextureCache();
 });
 
 describe('resolveProceduralTexture', () => {
-  it('resolves a GradientTexture2D', () => {
-    const resolved = resolveProceduralTexture('SubResource("GradientTexture2D_a")', RESOURCES)!;
+  it('resolves a GradientTexture2D, ready at once', () => {
+    const resolved = resolveProceduralTexture('SubResource("GradientTexture2D_a")', RESOURCES);
+    if (resolved?.status !== 'ready') throw new Error(`expected a ready gradient, got ${resolved?.status}`);
     expect((resolved.texture.image as { width: number }).width).toBe(8);
     expect(resolved.key).toContain('GradientTexture2D_a');
   });
 
-  it('resolves a NoiseTexture2D', () => {
-    const resolved = resolveProceduralTexture('SubResource("NoiseTexture2D_a")', RESOURCES)!;
-    expect((resolved.texture.image as { width: number }).width).toBe(8);
-    expect(resolved.key).toContain('NoiseTexture2D_a');
+  it('resolves a NoiseTexture2D as a build, ready once it lands', async () => {
+    const pending = resolveProceduralTexture('SubResource("NoiseTexture2D_a")', RESOURCES);
+    if (pending?.status !== 'pending') throw new Error(`expected a pending noise build, got ${pending?.status}`);
+    const handle = pending.start(new WorkerJobRunner());
+    const texture = await handle.settled;
+    handle.release();
+
+    expect(resolveProceduralTexture('SubResource("NoiseTexture2D_a")', RESOURCES)).toEqual({
+      status: 'ready',
+      texture,
+      key: pending.key,
+    });
+    expect((texture?.image as { width: number }).width).toBe(8);
   });
 
-  it('gives the two slices different textures and keys', () => {
-    const gradient = resolveProceduralTexture('SubResource("GradientTexture2D_a")', RESOURCES)!;
-    const noise = resolveProceduralTexture('SubResource("NoiseTexture2D_a")', RESOURCES)!;
-    expect(noise.texture).not.toBe(gradient.texture);
-    expect(noise.key).not.toBe(gradient.key);
+  it('gives the two slices different keys', () => {
+    const gradient = resolveProceduralTexture('SubResource("GradientTexture2D_a")', RESOURCES);
+    const noise = resolveProceduralTexture('SubResource("NoiseTexture2D_a")', RESOURCES);
+    expect(noise?.key).not.toBe(gradient?.key);
   });
 
   it('declines every non-procedural reference form', () => {
@@ -64,9 +76,9 @@ describe('resolveProceduralTexture', () => {
     expect(resolveProceduralTexture('SubResource("missing")', RESOURCES)).toBeNull();
   });
 
-  it('hands back the cached texture on a second call (one rasterisation)', () => {
-    const first = resolveProceduralTexture('SubResource("NoiseTexture2D_a")', RESOURCES)!;
-    const second = resolveProceduralTexture('SubResource("NoiseTexture2D_a")', RESOURCES)!;
-    expect(second.texture).toBe(first.texture);
+  it('hands back the cached gradient on a second call (one rasterisation)', () => {
+    const first = resolveProceduralTexture('SubResource("GradientTexture2D_a")', RESOURCES);
+    const second = resolveProceduralTexture('SubResource("GradientTexture2D_a")', RESOURCES);
+    expect(first?.status === 'ready' && second?.status === 'ready' && second.texture === first.texture).toBe(true);
   });
 });

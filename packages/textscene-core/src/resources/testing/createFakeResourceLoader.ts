@@ -15,6 +15,7 @@ import { runClearCachesSequence } from '../clearCachesSequence';
 import type { ArrayMeshResource } from '../processors/createArrayMeshProcessor';
 import type { FontResource } from '../fonts/font/types';
 import type { ThemeResource } from '../styles/theme/types';
+import { WorkerJobRunner } from '../../workers/WorkerJobRunner';
 
 export interface FakeProcessor<T> {
   /** Backing cache: `undefined` = never requested, `null` = failed or sentinel miss, value = loaded. */
@@ -59,6 +60,8 @@ export interface FakeResourceLoader {
   readonly arrayMeshes: FakeProcessor<ArrayMeshResource>;
   readonly fonts: FakeProcessor<FontResource>;
   readonly themes: FakeProcessor<ThemeResource>;
+  /** A real runner with no worker, so jobs run in-thread with the real bytes. */
+  readonly jobRunner: WorkerJobRunner;
   /** Every ExtResource passed to `loader.register`, in call order. */
   readonly registerCalls: ExtResource[];
 }
@@ -146,9 +149,12 @@ export function createFakeResourceLoader(): FakeResourceLoader {
   };
   const all = Object.values(byType);
 
+  const jobRunner = new WorkerJobRunner();
+
   const loader = {
     // The one accessor `useResource` reads a processor through, keyed by bus.
     processor: (type: ResourceType) => byType[type],
+    jobRunner,
     eventBus,
     metadata,
     textures,
@@ -234,6 +240,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     arrayMeshes,
     fonts,
     themes,
+    jobRunner,
     registerCalls,
   };
 }

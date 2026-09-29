@@ -4,12 +4,15 @@
  * mesh's own `.tres` is requested by the same `request(path)` call as a
  * standalone material file, so nothing above this line knows the difference.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { FileEventBus } from '../FileEventBus';
 import { ResourceEventBus } from '../ResourceEventBus';
 import type { ResourceProvider } from '../ResourceProvider';
 import { createMaterialProcessor } from './createMaterialProcessor';
+import { fakeJobRunner } from '../../workers/fakeJobRunner.testkit';
+import { abortProceduralBuilds } from '../textures/proceduralBuilds';
+import { clearProceduralTextureCache } from '../textures/proceduralTextureCache';
 
 /** Shaped like scenes/demos/3d/truck_town/vehicles/meshes/wheel.tres. */
 const WHEEL_TRES = [
@@ -94,4 +97,35 @@ describe('createMaterialProcessor', () => {
 
     expect(await again).toBe(first);
   });
+
+  it('builds a material\'s NoiseTexture2D on the job runner it was given', async () => {
+    const noiseMaterial = [
+      '[gd_resource type="StandardMaterial3D" format=3]',
+      '[sub_resource type="FastNoiseLite" id="FastNoiseLite_a"]',
+      '[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_a"]',
+      'width = 4',
+      'height = 4',
+      'noise = SubResource("FastNoiseLite_a")',
+      '[resource]',
+      'albedo_texture = SubResource("NoiseTexture2D_a")',
+      '',
+    ].join('\n');
+    const provider = new MapProvider(new Map([['res://materials/noise.tres', noiseMaterial]]));
+    const eventBus = new ResourceEventBus();
+    const { runner, runs } = fakeJobRunner();
+    const processor = createMaterialProcessor(new FileEventBus(provider), eventBus, undefined, runner);
+
+    const loaded = eventBus.once<THREE.Material>('material', 'loaded', 'res://materials/noise.tres', 2000);
+    processor.request('res://materials/noise.tres');
+    await vi.waitFor(() => expect(runs).toHaveLength(1));
+    runs[0]?.complete();
+
+    const material = (await loaded) as THREE.MeshStandardMaterial;
+    expect(material.map).toBeInstanceOf(THREE.DataTexture);
+  });
+});
+
+afterEach(() => {
+  abortProceduralBuilds();
+  clearProceduralTextureCache();
 });

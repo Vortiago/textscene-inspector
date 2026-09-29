@@ -4,10 +4,13 @@
  * headers. Decoding belongs to `decode.ts`, which `arrivalParity.test.ts` covers.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import * as logger from '../../../logger';
 import { resolveGradientTexture2D } from '../../textures/gradienttexture2d/resolveGradientTexture';
+import { abortProceduralBuilds } from '../../textures/proceduralBuilds';
+import { clearProceduralTextureCache } from '../../textures/proceduralTextureCache';
+import { fakeJobRunner } from '../../../workers/fakeJobRunner.testkit';
 import {
   createMaterialFromContent,
   isMaterialPath,
@@ -348,16 +351,16 @@ describe('createMaterialFromContent texture-slot resolution', () => {
   });
 
   it('skips a SubResource naming a type with no rasteriser', async () => {
-    // An albedo naming a NoiseTexture2D in the same file. Nothing rasterises those,
+    // An albedo naming a PlaceholderTexture2D in the same file. Nothing rasterises those,
     // so the slot stays empty, and no file is fetched for a reference that names none.
     const loadTexture = vi.fn().mockResolvedValue(loadedTexture());
     const material = (await createMaterialFromContent(
       [
         '[gd_resource type="StandardMaterial3D" format=3]',
-        '[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_a"]',
-        'width = 64',
+        '[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_a"]',
+        'size = Vector2(64, 64)',
         '[resource]',
-        'albedo_texture = SubResource("NoiseTexture2D_a")',
+        'albedo_texture = SubResource("PlaceholderTexture2D_a")',
         '',
       ].join('\n'),
       loadTexture
@@ -484,5 +487,72 @@ describe('createMaterialFromContent with a procedural texture in its own .tres',
     );
     expect(material.userData['textsceneProceduralKeys']).toBeUndefined();
     releaseProceduralTextures(material);
+  });
+});
+
+/**
+ * A material `.tres` with its own NoiseTexture2D, which builds as a worker job. The
+ * material waits for the build, as it waits for an image file, and borrows the result.
+ */
+describe('createMaterialFromContent with a NoiseTexture2D in its own .tres', () => {
+  const NOISE_MATERIAL = [
+    '[gd_resource type="StandardMaterial3D" format=3]',
+    '',
+    '[sub_resource type="FastNoiseLite" id="FastNoiseLite_a"]',
+    'frequency = 0.05',
+    '',
+    '[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_a"]',
+    'width = 8',
+    'height = 8',
+    'noise = SubResource("FastNoiseLite_a")',
+    '',
+    '[resource]',
+    'albedo_texture = SubResource("NoiseTexture2D_a")',
+    '',
+  ].join('\n');
+
+  afterEach(() => {
+    abortProceduralBuilds();
+    clearProceduralTextureCache();
+  });
+
+  it('builds with the noise texture on the albedo slot, with no runner given', async () => {
+    const material = (await createMaterialFromContent(NOISE_MATERIAL)) as THREE.MeshStandardMaterial;
+
+    expect(material.map).toBeInstanceOf(THREE.DataTexture);
+    expect((material.map?.image as { width: number }).width).toBe(8);
+    expect(material.userData['textsceneProceduralKeys']).toHaveLength(1);
+  });
+
+  it('runs the build on the runner it is given', async () => {
+    const { runner, runs } = fakeJobRunner();
+    const building = createMaterialFromContent(NOISE_MATERIAL, undefined, undefined, runner);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(runs).toHaveLength(1);
+    runs[0]?.complete();
+
+    const material = (await building) as THREE.MeshStandardMaterial;
+    expect(material.map).toBeInstanceOf(THREE.DataTexture);
+  });
+
+  it('leaves the slot empty when the pixels cannot be allocated', async () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const { runner, runs } = fakeJobRunner();
+    const building = createMaterialFromContent(NOISE_MATERIAL, undefined, undefined, runner);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    runs[0]?.reject(new RangeError('Array buffer allocation failed'));
+
+    const material = (await building) as THREE.MeshStandardMaterial;
+    expect(material.map).toBeNull();
+    warn.mockRestore();
+  });
+
+  it('fails the material on any other build failure', async () => {
+    const { runner, runs } = fakeJobRunner();
+    const building = createMaterialFromContent(NOISE_MATERIAL, undefined, undefined, runner);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    runs[0]?.reject(new TypeError('bad noise input'));
+
+    await expect(building).rejects.toBeInstanceOf(TypeError);
   });
 });

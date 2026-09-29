@@ -196,3 +196,6 @@ export class WorkerJobRunner {
     this.pump();
   }
 }
+
+/** A runner with no worker, for a caller outside any host: its jobs run on the main thread. */
+export const inThreadJobRunner = new WorkerJobRunner();
