@@ -8,8 +8,7 @@
 import type { TscnNode, TscnScene } from '../parser/types.js';
 import { isUnderInstance, sceneUniqueClaims } from './linterUtils.js';
 import { isTypeUnknowable, parentIdentity } from './parentType.js';
-import { UNIQUE_NODE_PREFIX } from '../utils/uniqueNames.js';
-import { nodePathWalkNames } from '../godot/nodePath.js';
+import { nodePathWalkNames, UNIQUE_NODE_PREFIX } from '../godot/nodePath.js';
 
 /**
  * What resolving a NodePath against the authored tree can say. `unknowable` is the

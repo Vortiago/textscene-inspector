@@ -9,7 +9,6 @@ import type { SceneScope, TscnNode } from '../parser/types.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { joinPath } from '../utils/nodePath.js';
 import {
-  UNIQUE_NODE_PREFIX,
   cachedUniqueNameClaims,
   cachedUniqueNameOwnership,
   type UniqueNameClaim,
@@ -20,6 +19,7 @@ import {
   type LiveChildGroup,
   type LiveTreeContext,
 } from './liveSceneTree.js';
+import { UNIQUE_NODE_PREFIX } from '../godot/nodePath.js';
 
 export interface ClaimOwner {
   /** Live path of the node this owner's root renders at. */

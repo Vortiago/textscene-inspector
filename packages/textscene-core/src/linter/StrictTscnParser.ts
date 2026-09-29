@@ -9,10 +9,11 @@ import type { ParseError, SectionLines, StrictParseResult } from './types.js';
 import { TscnParserCore } from '../parser/TscnParserCore.js';
 import type { ParseObserver } from '../parser/TscnParserCore.js';
 import { isPropertyOverrideHeading, type ParsedHeading } from '../parser/utils.js';
-import { SCENE_ROOT_PATH, getAncestorPaths, joinPath, resolveParentPath } from '../utils/nodePath.js';
+import { SCENE_ROOT_PATH, getAncestorPaths, joinPath } from '../utils/nodePath.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { ownsNilMessage } from './propertyValidator.js';
 import { INSTANCE_PLACEHOLDER_TYPE, isNilLiteral } from '../godot/index.js';
+import { resolveParentPath } from '../godot/nodePath.js';
 
 /**
  * A TscnNode built without NodeRegistry, so without three.js. `properties` and `rawProperties` are the same bag, as the

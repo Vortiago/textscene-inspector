@@ -6,12 +6,8 @@
 
 import { parseNodePathLiteral } from '../parser/valueParsers.js';
 import type { TscnNode } from '../parser/types.js';
-import { resolveRelativePath } from '../utils/nodePath.js';
-import {
-  UNIQUE_NODE_PREFIX,
-  isUniqueNameInOwner,
-  type UniqueNameClaim,
-} from '../utils/uniqueNames.js';
+import { isUniqueNameInOwner, type UniqueNameClaim } from '../utils/uniqueNames.js';
+import { resolveRelativePath, UNIQUE_NODE_PREFIX } from '../godot/nodePath.js';
 
 /**
  * `NodePath("FogOfWar/CombinedViewport")` to `'FogOfWar/CombinedViewport'`. Null, for
