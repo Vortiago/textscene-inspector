@@ -54,6 +54,23 @@ describe('viewportTextureRegistryKey', () => {
   });
 
   /**
+   * `get_node_or_null` walks the path (viewport.cpp:198), so a spelling that walks to the same
+   * node gives the same key. A text join gives a key that no viewport publishes.
+   */
+  it.each([
+    ['./SubViewport', 'Root/SubViewport'],
+    ['Frame/../SubViewport', 'Root/SubViewport'],
+    ['Hud//View', 'Root/Hud/View'],
+    ['SubViewport:size', 'Root/SubViewport'],
+  ])('walks %s to the node it names', (viewportPath, key) => {
+    expect(viewportTextureRegistryKey('Root/Screen', viewportPath)).toBe(key);
+  });
+
+  it('returns null for a `..` above the scene root', () => {
+    expect(viewportTextureRegistryKey('Root/Screen', '..')).toBeNull();
+  });
+
+  /**
    * `%Name` is a jump: `get_node_or_null` looks the name up in the owner's claim
    * table and descends from the claimant. A literal `Root/%Hud/CombinedViewport`
    * join is a key nothing registers.
@@ -86,8 +103,12 @@ describe('viewportTextureRegistryKey', () => {
     });
 
     /** Outside the shell there is no tree, so the alias is all there is. */
-    it('falls back to the literal join with no table at all', () => {
+    it('resolves a bare %Name to its alias key with no table at all', () => {
       expect(viewportTextureRegistryKey('Root/Screen', '%View')).toBe('Root/%View');
+    });
+
+    it('walks to the alias key with no table at all', () => {
+      expect(viewportTextureRegistryKey('Root/Screen', './%View')).toBe('Root/%View');
     });
   });
 });

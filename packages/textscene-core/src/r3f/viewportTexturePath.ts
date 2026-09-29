@@ -7,23 +7,22 @@
 import { parseNodePathLiteral } from '../parser/valueParsers.js';
 import type { TscnNode } from '../parser/types.js';
 import { isUniqueNameInOwner, type UniqueNameClaim } from '../utils/uniqueNames.js';
-import { UNIQUE_NODE_PREFIX, resolveRelativePath } from '../godot/nodePath.js';
+import { UNIQUE_NODE_PREFIX, nodePathWalkNames, resolveRelativePath } from '../godot/nodePath.js';
 
 /**
  * `NodePath("FogOfWar/CombinedViewport")` to `'FogOfWar/CombinedViewport'`. Null, for
  * "this texture names no viewport", on an absent value, another literal or an empty path.
  */
 export function resolveViewportTexturePath(value: string | undefined): string | null {
-  const path = parseNodePathLiteral(value);
-  if (path === null || path === '') return null;
-  return path;
+  return parseNodePathLiteral(value) || null;
 }
 
 /**
  * Rebase a root-relative `viewport_path` onto the dispatcher-absolute key a
  * `<SubViewport>` publishes under: `NodePath("SubViewport")` means `Root/SubViewport`,
- * and the consumer path's first segment is that root. Null with no consumer path,
- * no viewport path, or an absolute `/root/…` one, which a static parse does not model.
+ * and the consumer path's first segment is that root. The path is walked as
+ * `get_node_or_null` walks it (viewport.cpp:198). Null with no consumer path, no
+ * viewport path, an absolute `/root/…` one, or a walk that reaches nothing.
  */
 export function viewportTextureRegistryKey(
   consumerPath: string | null,
@@ -33,17 +32,21 @@ export function viewportTextureRegistryKey(
   if (!consumerPath || viewportPath === '') return null;
   const root = consumerPath.split('/')[0];
   if (!root) return null;
-  // `NodePath(".")` names the viewport itself: the scene root here, not a child.
-  if (viewportPath === '.') return root;
-  if (viewportPath.startsWith('/')) return null;
-  // A `%Name` segment is a jump through the consumer's owner's claim table
-  // (`uniqueNameLivePaths`). A name it lacks addresses nothing (node.cpp:1930-1938),
-  // never the literal join, which could hit another owner's alias. Without a table,
-  // the literal join is all there is.
-  if (uniquePaths && viewportPath.includes(UNIQUE_NODE_PREFIX)) {
-    return resolveRelativePath(root, viewportPath, uniquePaths);
+  return resolveRelativePath(root, viewportPath, uniquePaths ?? aliasClaims(root, viewportPath));
+}
+
+/**
+ * Without the consumer's claim table, each `%Name` in the path jumps to the alias key
+ * its claimant publishes under ({@link viewportTextureUniqueNameKey}). With a table, a
+ * name it lacks addresses nothing (node.cpp:1930-1938), since the alias could belong
+ * to a sub-viewport under another owner.
+ */
+function aliasClaims(root: string, viewportPath: string): ReadonlyMap<string, string> {
+  const aliases = new Map<string, string>();
+  for (const name of nodePathWalkNames(viewportPath)) {
+    if (name.startsWith(UNIQUE_NODE_PREFIX)) aliases.set(name, `${root}/${name}`);
   }
-  return `${root}/${viewportPath}`;
+  return aliases;
 }
 
 /**
