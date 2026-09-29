@@ -69,7 +69,8 @@ describe('GraphEdit strict validators', () => {
 
   it('classifies every validator as format-only or grounded, and cites a real line', () => {
     // `boundGrounding.test.ts` covers this repo-wide through the barrel. The hand-rolled
-    // validators here are `shape`d, and the bounded ones cite a `graph_edit.cpp:<line>`.
+    // validators here are `shape`d. The bounded ones cite a `graph_edit.cpp:<line>`, and
+    // `connections` cites the `Array::assign` that refuses another element type.
     const unclassified = validatorRegistry.getOwnKeys('GraphEdit').filter((property) => {
       const validator = validatorRegistry.declarationFor('GraphEdit', property)!;
       return !validator.formatOnly && !validator.grounding;
@@ -92,6 +93,7 @@ describe('GraphEdit strict validators', () => {
       },
       // Two guards on one setter: the finite check at :2466 and the std::abs rewrite at :2465.
       zoom_step: { kind: 'enforced', cite: 'graph_edit.cpp:2466, graph_edit.cpp:2465' },
+      connections: { kind: 'enforced', cite: 'array.cpp:275-277' },
     });
   });
 

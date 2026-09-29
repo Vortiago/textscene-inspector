@@ -58,22 +58,22 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `amount` | integer 1-1000000 | error below, warning above |
-| `angle_curve` | null, SubResource("id") or ExtResource("id") |  |
+| `angle_curve` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `angle_max` | float |  |
 | `angle_min` | float |  |
-| `angular_velocity_curve` | null, SubResource("id") or ExtResource("id") |  |
+| `angular_velocity_curve` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `angular_velocity_max` | float |  |
 | `angular_velocity_min` | float |  |
-| `anim_offset_curve` | null, SubResource("id") or ExtResource("id") |  |
+| `anim_offset_curve` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `anim_offset_max` | float 0-1 | warning |
 | `anim_offset_min` | float 0-1 | warning |
-| `anim_speed_curve` | null, SubResource("id") or ExtResource("id") |  |
+| `anim_speed_curve` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `anim_speed_max` | float |  |
 | `anim_speed_min` | float |  |
-| `color` | Color(r, g, b, a) |  |
-| `color_initial_ramp` | null, SubResource("id") or ExtResource("id") |  |
-| `color_ramp` | null, SubResource("id") or ExtResource("id") |  |
-| `damping_curve` | null, SubResource("id") or ExtResource("id") |  |
+| `color` | Color(r, g, b, a), or the colour string or int it converts |  |
+| `color_initial_ramp` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `color_ramp` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `damping_curve` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `damping_max` | float >= 0 | warning below |
 | `damping_min` | float >= 0 | warning below |
 | `direction` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
@@ -91,40 +91,40 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 | `fixed_fps` | integer 0-1000 | warning |
 | `fract_delta` | true or false |  |
 | `gravity` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
-| `hue_variation_curve` | null, SubResource("id") or ExtResource("id") |  |
+| `hue_variation_curve` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `hue_variation_max` | float -1-1 | warning |
 | `hue_variation_min` | float -1-1 | warning |
 | `initial_velocity_max` | float >= 0 | warning below |
 | `initial_velocity_min` | float >= 0 | warning below |
 | `lifetime` | float >= 0.01 | error at or below 0, warning below 0.01 |
 | `lifetime_randomness` | float 0-1 | warning |
-| `linear_accel_curve` | null, SubResource("id") or ExtResource("id") |  |
+| `linear_accel_curve` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `linear_accel_max` | float |  |
 | `linear_accel_min` | float |  |
 | `local_coords` | true or false |  |
 | `one_shot` | true or false |  |
-| `orbit_velocity_curve` | null, SubResource("id") or ExtResource("id") |  |
+| `orbit_velocity_curve` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `orbit_velocity_max` | float |  |
 | `orbit_velocity_min` | float |  |
 | `particle_flag_align_y` | true or false |  |
 | `preprocess` | float >= 0 | warning below |
-| `radial_accel_curve` | null, SubResource("id") or ExtResource("id") |  |
+| `radial_accel_curve` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `radial_accel_max` | float |  |
 | `radial_accel_min` | float |  |
 | `randomness` | float 0-1 | warning |
-| `scale_amount_curve` | null, SubResource("id") or ExtResource("id") |  |
+| `scale_amount_curve` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `scale_amount_max` | float >= 0 | warning below |
 | `scale_amount_min` | float >= 0 | warning below |
-| `scale_curve_x` | null, SubResource("id") or ExtResource("id") |  |
-| `scale_curve_y` | null, SubResource("id") or ExtResource("id") |  |
+| `scale_curve_x` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `scale_curve_y` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `seed` | integer 0-4294967295 | warning |
 | `speed_scale` | float 0-64 | warning |
 | `split_scale` | true or false |  |
 | `spread` | float 0-180 | warning |
-| `tangential_accel_curve` | null, SubResource("id") or ExtResource("id") |  |
+| `tangential_accel_curve` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `tangential_accel_max` | float |  |
 | `tangential_accel_min` | float |  |
-| `texture` | null, SubResource("id") or ExtResource("id") |  |
+| `texture` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `use_fixed_seed` | true or false |  |
 
 | Rule | Reports | Severity |

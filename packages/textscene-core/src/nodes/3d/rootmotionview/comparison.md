@@ -21,7 +21,7 @@ Strict parsing format-checks these `RootMotionView` properties, plus 1 inherited
 | --- | --- | --- |
 | `animation_path` | NodePath("path/to/node") |  |
 | `cell_size` | float >= 0.1 | warning below |
-| `color` | Color(r, g, b, a) |  |
+| `color` | Color(r, g, b, a), or the colour string or int it converts |  |
 | `radius` | float >= 0.1 | warning below |
 | `zero_y` | true or false |  |
 

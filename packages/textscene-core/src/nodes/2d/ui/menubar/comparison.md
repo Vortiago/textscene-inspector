@@ -22,7 +22,7 @@ Strict parsing format-checks these `MenuBar` properties, plus 53 inherited from 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `flat` | true or false |  |
-| `language` | quoted string, or the &"…" StringName jacket |  |
+| `language` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 | `prefer_global_menu` | true or false |  |
 | `start_index` | integer |  |
 | `switch_on_hover` | true or false |  |

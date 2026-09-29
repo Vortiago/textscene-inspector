@@ -28,7 +28,7 @@ Strict parsing format-checks these `AnimatedSprite2D` properties, plus 12 inheri
 | `frame_progress` | float |  |
 | `offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `speed_scale` | float |  |
-| `sprite_frames` | null, SubResource("id") or ExtResource("id") |  |
+| `sprite_frames` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `playing` | **not available on this type** |  |
 
 | Rule | Reports | Severity |

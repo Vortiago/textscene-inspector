@@ -87,9 +87,11 @@ export {
   type LayoutDirectionEnv,
 } from './control.js';
 export { isLocaleRightToLeft, RTL_LANGUAGE_CODES } from './textServer.js';
+export { isColorString } from './color.js';
 export {
   allFinite,
   FLOAT_PATTERN_SOURCE,
+  INT_TOKEN_RE,
   TSCN_FLOAT_PATTERN_SOURCE,
   TSCN_FLOAT_RE,
   slotTupleRegex,
@@ -120,6 +122,9 @@ export {
   compositeCallPrefix,
   dictCallField,
   isNilLiteral,
+  JACKETED_STRING_RE,
+  variantShape,
+  type VariantShape,
   packedArrayCallAnywhere,
   packedArrayLiteral,
   nodePathLiteral,
@@ -130,6 +135,7 @@ export {
   type ResourceRef,
   dictSubResourceEntries,
   keyedResourceRefReader,
+  isPathResourceLiteral,
   resourceRef,
   subResourceRefAnywhere,
 } from './resourceRef.js';

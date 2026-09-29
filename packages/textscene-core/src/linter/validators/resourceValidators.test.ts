@@ -53,6 +53,20 @@ describe('a resource slot holding an integer index', () => {
     expect(validator('texture', 'SubResource(3)', 1)).toBeNull();
   });
 
+  it('accepts a Resource("path") literal, which the text loader loads by path', () => {
+    expect(validator('texture', 'Resource("res://icon.png")', 1)).toBeNull();
+    expect(validator('texture', 'Resource("res://icon.png", "uid://b3x")', 1)).toBeNull();
+  });
+
+  it('refuses a Resource(…) the parser cannot read', () => {
+    expect(validator('texture', 'Resource(1)', 1)?.severity).toBe('error');
+  });
+
+  it('lints a scene holding a Resource("path") slot clean', () => {
+    const content = scene(node('Sprite2D', { texture: 'Resource("res://icon.png")' }));
+    expect(lint(content)).toEqual([]);
+  });
+
   it('resolves an ext-resource declared with an unquoted header id', () => {
     const content = scene(
       '[ext_resource type="Texture2D" path="res://a.png" id=1]',

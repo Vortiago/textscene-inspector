@@ -22,17 +22,17 @@ Strict parsing format-checks these `Line2D` properties, plus 12 inherited from N
 | `antialiased` | true or false |  |
 | `begin_cap_mode` | enum 0-2 (NONE/BOX/ROUND) | warning |
 | `closed` | true or false |  |
-| `default_color` | Color(r, g, b, a) |  |
+| `default_color` | Color(r, g, b, a), or the colour string or int it converts |  |
 | `end_cap_mode` | enum 0-2 (NONE/BOX/ROUND) | warning |
-| `gradient` | null, SubResource("id") or ExtResource("id") |  |
+| `gradient` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `joint_mode` | enum 0-2 (SHARP/BEVEL/ROUND) | warning |
 | `points` | PackedVector2Array(x, y, …) |  |
 | `round_precision` | integer 1-32 | error below, warning above |
 | `sharp_limit` | float >= 0 | error below 0 |
-| `texture` | null, SubResource("id") or ExtResource("id") |  |
+| `texture` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `texture_mode` | enum 0-2 (NONE/TILE/STRETCH) | warning |
 | `width` | float >= 0 | error below 0 |
-| `width_curve` | null, SubResource("id") or ExtResource("id") |  |
+| `width_curve` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

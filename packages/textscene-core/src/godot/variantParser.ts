@@ -6,8 +6,9 @@
  * to be `(` (`:1089-1093`), so `SubResource ( "id" )` loads like the tight form. Only a hand-edited file carries the spaces.
  * Every pattern below derives from one body string per literal, so no copy can diverge on padding.
  */
-import { TSCN_FLOAT_PATTERN_SOURCE } from './number.js';
+import { TSCN_FLOAT_PATTERN_SOURCE, TSCN_FLOAT_RE } from './number.js';
 import { STRING_LITERAL_SOURCE } from './string.js';
+import { boolLiteralAsNumber } from './variantBool.js';
 
 const WS = '\\s*';
 
@@ -220,4 +221,32 @@ export function packedArrayBody(
     if (match) return { flat: i === 0, body: match[1]!.trim() };
   }
   return null;
+}
+
+/** What {@link variantShape} names. `call` is any `Name(…)` constructor or reference. */
+export type VariantShape = 'call' | 'string' | 'number' | 'bool' | 'nil' | 'array' | 'dictionary';
+
+/**
+ * One TSCN string literal as a STRING or STRING_NAME slot takes it: an optional `&` jacket or its 3.x spelling `@`, kept
+ * under `#ifndef DISABLE_DEPRECATED` (`TK_STRING_NAME`, `variant_parser.cpp:262-265`), then one literal and nothing after it.
+ */
+export const JACKETED_STRING_RE = new RegExp(`^[&@]?${STRING_LITERAL_SOURCE}$`);
+
+const CALL_RE = /^[A-Za-z_]\w*\s*\([\s\S]*\)$/;
+const DICTIONARY_RE = /^\{[\s\S]*\}$/;
+
+/**
+ * The Variant a whole value opens with its first token, its closing bracket matched, or null when `parse_value`
+ * refuses it: a bare identifier it has no branch for (variant_parser.cpp:1619), or an unclosed bracket (:1648-1651).
+ * The contents are not read, so a caller that must know an element is readable in full asks a grammar for its type.
+ */
+export function variantShape(raw: string): VariantShape | null {
+  const text = raw.trim();
+  if (boolLiteralAsNumber(text) !== undefined) return 'bool';
+  if (isNilLiteral(text)) return 'nil';
+  if (TSCN_FLOAT_RE.test(text)) return 'number';
+  if (JACKETED_STRING_RE.test(text)) return 'string';
+  if (TYPED_OR_BARE_ARRAY_RE.test(text)) return 'array';
+  if (DICTIONARY_RE.test(text)) return 'dictionary';
+  return CALL_RE.test(text) ? 'call' : null;
 }

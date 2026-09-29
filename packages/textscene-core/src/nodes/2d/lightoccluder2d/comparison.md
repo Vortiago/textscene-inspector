@@ -52,7 +52,7 @@ Strict parsing format-checks these `LightOccluder2D` properties, plus 12 inherit
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `occluder` | null, SubResource("id") or ExtResource("id") |  |
+| `occluder` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `occluder_light_mask` | 32-bit layer mask (layers 1-32) |  |
 | `sdf_collision` | true or false |  |
 

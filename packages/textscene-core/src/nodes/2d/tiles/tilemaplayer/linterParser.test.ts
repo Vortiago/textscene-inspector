@@ -64,6 +64,11 @@ tile_set = NotARef(1)
       expect(check('tile_map_data', 'PackedByteArray()')).toBeNull();
     });
 
+    // variant.cpp:772-778: PACKED_BYTE_ARRAY converts from ARRAY.
+    it.each(['[]', '[0, 0]'])('accepts the bare array %s, which the slot converts', (value) => {
+      expect(check('tile_map_data', value)).toBeNull();
+    });
+
     it('accepts the exact decimal-byte value scenes/fixtures/unit-tile-map-layer-hexagon.tscn writes', () => {
       // resource_format_text.cpp writes decimal bytes when the file's
       // PackedByteArrays stay under the 64-byte compat threshold.

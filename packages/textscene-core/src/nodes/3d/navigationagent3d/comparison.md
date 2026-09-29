@@ -24,7 +24,7 @@ Strict parsing format-checks these `NavigationAgent3D` properties, plus 10 inher
 | `avoidance_mask` | 32-bit layer mask (layers 1-32) |  |
 | `avoidance_priority` | float 0-1 | error |
 | `debug_enabled` | true or false |  |
-| `debug_path_custom_color` | Color(r, g, b, a) |  |
+| `debug_path_custom_color` | Color(r, g, b, a), or the colour string or int it converts |  |
 | `debug_path_custom_point_size` | float >= 0 | error below |
 | `debug_use_custom` | true or false |  |
 | `height` | float >= 0.01 | error below 0, warning below 0.01 |

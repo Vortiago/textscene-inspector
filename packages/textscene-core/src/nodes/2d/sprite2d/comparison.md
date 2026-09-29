@@ -29,7 +29,7 @@ Strict parsing format-checks these `Sprite2D` properties, plus 12 inherited from
 | `region_enabled` | true or false |  |
 | `region_filter_clip_enabled` | true or false |  |
 | `region_rect` | Rect2(x, y, w, h), or the Rect2i spelling Godot converts |  |
-| `texture` | null, SubResource("id") or ExtResource("id") |  |
+| `texture` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `vframes` | integer 1-16384 | error below, warning above |
 
 | Rule | Reports | Severity |

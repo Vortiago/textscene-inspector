@@ -21,17 +21,17 @@ Strict parsing format-checks these `LightmapGI` properties, plus 1 inherited fro
 | `bias` | float >= 0.00001 | error below |
 | `bounce_indirect_energy` | float 0-2 | error below, warning above |
 | `bounces` | integer 0-16 | error below 0, error above 16 |
-| `camera_attributes` | null, SubResource("id") or ExtResource("id") |  |
+| `camera_attributes` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `denoiser_range` | integer 1-20 | warning |
 | `denoiser_strength` | float >= 0.001 | warning below |
 | `directional` | true or false |  |
-| `environment_custom_color` | Color(r, g, b, a) |  |
+| `environment_custom_color` | Color(r, g, b, a), or the colour string or int it converts |  |
 | `environment_custom_energy` | float 0-64 | warning |
-| `environment_custom_sky` | null, SubResource("id") or ExtResource("id") |  |
+| `environment_custom_sky` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `environment_mode` | enum 0-3 (DISABLED/SCENE/CUSTOM_SKY/CUSTOM_COLOR) | warning |
 | `generate_probes_subdiv` | enum 0-4 (DISABLED/SUBDIV_4/SUBDIV_8/SUBDIV_16/SUBDIV_32) | warning |
 | `interior` | true or false |  |
-| `light_data` | null, SubResource("id") or ExtResource("id") |  |
+| `light_data` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `max_texture_size` | integer 2048-16384 | error |
 | `quality` | enum 0-3 (LOW/MEDIUM/HIGH/ULTRA) | warning |
 | `shadowmask_mode` | enum 0-2 (NONE/REPLACE/OVERLAY) | warning |

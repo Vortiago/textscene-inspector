@@ -28,7 +28,7 @@ Strict parsing format-checks these `TileMapLayer` properties, plus 12 inherited 
 | `physics_quadrant_size` | integer >= 1 | error below |
 | `rendering_quadrant_size` | integer >= 1 | error below |
 | `tile_map_data` | PackedByteArray(…) int array of bytes, or a base64-quoted PackedByteArray("…") (decoded by the tilemaplayer-invalid-tile-data rule) |  |
-| `tile_set` | null, SubResource("id") or ExtResource("id") |  |
+| `tile_set` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `use_kinematic_bodies` | true or false |  |
 | `x_draw_order_reversed` | true or false |  |
 | `y_sort_origin` | integer |  |

@@ -50,7 +50,7 @@ Strict parsing format-checks these `ColorPicker` properties, plus 1 inherited fr
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `can_add_swatches` | true or false |  |
-| `color` | Color(r, g, b, a) |  |
+| `color` | Color(r, g, b, a), or the colour string or int it converts |  |
 | `color_mode` | enum 0-3 (MODE_RGB/MODE_HSV/MODE_LINEAR/MODE_OKHSL) | error |
 | `color_modes_visible` | true or false |  |
 | `deferred_mode` | true or false |  |

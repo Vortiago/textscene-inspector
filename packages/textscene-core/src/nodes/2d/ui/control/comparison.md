@@ -34,13 +34,13 @@ Strict parsing format-checks these `Control` properties, plus 16 inherited from 
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `accessibility_controls_nodes` | Array[NodePath]([NodePath("path"), …]) or [NodePath("path"), …] |  |
-| `accessibility_described_by_nodes` | Array[NodePath]([NodePath("path"), …]) or [NodePath("path"), …] |  |
-| `accessibility_description` | quoted string, or the &"…" StringName jacket |  |
-| `accessibility_flow_to_nodes` | Array[NodePath]([NodePath("path"), …]) or [NodePath("path"), …] |  |
-| `accessibility_labeled_by_nodes` | Array[NodePath]([NodePath("path"), …]) or [NodePath("path"), …] |  |
+| `accessibility_controls_nodes` | Array[NodePath]([NodePath("path"), …]) or [NodePath("path") or "path", …] |  |
+| `accessibility_described_by_nodes` | Array[NodePath]([NodePath("path"), …]) or [NodePath("path") or "path", …] |  |
+| `accessibility_description` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
+| `accessibility_flow_to_nodes` | Array[NodePath]([NodePath("path"), …]) or [NodePath("path") or "path", …] |  |
+| `accessibility_labeled_by_nodes` | Array[NodePath]([NodePath("path"), …]) or [NodePath("path") or "path", …] |  |
 | `accessibility_live` | enum 0-2 (OFF/POLITE/ASSERTIVE) | warning |
-| `accessibility_name` | quoted string, or the &"…" StringName jacket |  |
+| `accessibility_name` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 | `anchor_bottom` | float |  |
 | `anchor_left` | float |  |
 | `anchor_right` | float |  |
@@ -77,16 +77,16 @@ Strict parsing format-checks these `Control` properties, plus 16 inherited from 
 | `size_flags_horizontal` | bit mask of SIZE_FILL (1) \| SIZE_EXPAND (2) \| SIZE_SHRINK_CENTER (4) \| SIZE_SHRINK_END (8) |  |
 | `size_flags_stretch_ratio` | float >= 0 | warning below |
 | `size_flags_vertical` | bit mask of SIZE_FILL (1) \| SIZE_EXPAND (2) \| SIZE_SHRINK_CENTER (4) \| SIZE_SHRINK_END (8) |  |
-| `theme` | null, SubResource("id") or ExtResource("id") |  |
-| `theme_override_colors/*` | Color(r, g, b, a) |  |
+| `theme` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `theme_override_colors/*` | Color(r, g, b, a), or the colour string or int it converts |  |
 | `theme_override_constants/*` | integer -16384-16384 | warning |
 | `theme_override_font_sizes/*` | integer >= 1 | warning below |
-| `theme_override_fonts/*` | null, SubResource("id") or ExtResource("id") |  |
-| `theme_override_icons/*` | null, SubResource("id") or ExtResource("id") |  |
-| `theme_override_styles/*` | null, SubResource("id") or ExtResource("id") |  |
+| `theme_override_fonts/*` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `theme_override_icons/*` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `theme_override_styles/*` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `theme_type_variation` | quoted string or &"name" |  |
 | `tooltip_auto_translate_mode` | enum 0-2 (INHERIT/ALWAYS/DISABLED) | warning |
-| `tooltip_text` | quoted string, or the &"…" StringName jacket |  |
+| `tooltip_text` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

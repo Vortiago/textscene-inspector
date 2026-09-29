@@ -25,10 +25,10 @@ Strict parsing format-checks these `FoldableContainer` properties, plus 53 inher
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `foldable_group` | null, SubResource("id") or ExtResource("id") |  |
+| `foldable_group` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `folded` | true or false |  |
-| `language` | quoted string, or the &"…" StringName jacket |  |
-| `title` | quoted string, or the &"…" StringName jacket |  |
+| `language` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
+| `title` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 | `title_alignment` | enum 0-2 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT) | error |
 | `title_position` | enum 0-1 (POSITION_TOP/POSITION_BOTTOM) | error |
 | `title_text_direction` | enum 0-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) | error |

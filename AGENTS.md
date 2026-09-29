@@ -227,17 +227,26 @@ fail on a mis-shaped slice.
 - That grounding is declared, not inferred. Every validator carries one of three
   markers:
   - `formatOnly`: it rejects only values that never reach the property (unreadable text,
-    or a type `can_convert_strict` refuses), so no per-property citation exists.
+    or a whole value of a type `can_convert_strict` refuses), so no per-property
+    citation exists. A refusal of a value the setter receives is a `grounding`, and
+    that includes an element inside a container.
   - `grounding`: it rejects a real value, and names the `file:line`.
   - `intSlot`: it reads an INT slot, so `_to_int` itself is the authority and the
     citation is always `variant.h:360-377`. `intSlot` also records the slot's `width`,
     since `4294967296` is unstorable in an int32 slot and exact in an int64 one.
 
   The `v` DSL sets one. A hand-rolled validator must say which. `boundGrounding` fails
-  on one that says none, and `intSlot` counts only for a validator that carries no
-  bounds of its own. Every `RangeArm` carries a required `cite`, checked by
-  `rangeAdvisoryGrounding`. Both guards exist because a check that sees only the DSL
-  misses a hand-rolled validator that rejects legal scenes.
+  on one that says none, or that claims both `formatOnly` and `grounding`. `intSlot`
+  counts only for a validator that carries no bounds of its own. Every `RangeArm`
+  carries a required `cite`, checked by `rangeAdvisoryGrounding`. Both guards exist
+  because a check that sees only the DSL misses a hand-rolled validator that rejects
+  legal scenes.
+  A validator that cites no `grounding` is measured, not trusted.
+  `scripts/compare-docs/formatOnlyCorpus.ledger.test.mjs` runs it over the literals Godot
+  stores in its slot's Variant type, and it may not error on one. The literals are a
+  hand-cited corpus (`formatOnlyCorpus.data.mjs`), keyed by the ClassDB capture's type,
+  or by the setter's own type where `SETTER_TYPES` names one. When you find a spelling
+  Godot loads that the corpus lacks, add it there with its `variant_parser.cpp` cite.
 - Advisory linter conditions are warnings, not errors. An error rule on a condition that
   an existing positive fixture carries breaks fixtureLint.
 - Web tests run under happy-dom: no CSS cascade and no layout, so never assert rendered

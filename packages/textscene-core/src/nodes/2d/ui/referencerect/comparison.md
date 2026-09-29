@@ -20,7 +20,7 @@ Strict parsing format-checks these `ReferenceRect` properties, plus 53 inherited
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `border_color` | Color(r, g, b, a) |  |
+| `border_color` | Color(r, g, b, a), or the colour string or int it converts |  |
 | `border_width` | float >= 0 | error below |
 | `editor_only` | true or false |  |
 

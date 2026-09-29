@@ -38,7 +38,7 @@ Strict parsing format-checks these `ItemList` properties, plus 53 inherited from
 | `icon_scale` | float |  |
 | `item_#/*` | item_<index>/<leaf> (see item_list.cpp, PropertyListHelper-backed) |  |
 | `item_count` | integer >= 0 | error below |
-| `items` | Array literal ([...]) |  |
+| `items` | Array literal ([...] or Array[T]([...])) |  |
 | `max_columns` | integer >= 0 | error below |
 | `max_text_lines` | integer >= 1 | error below |
 | `same_column_width` | true or false |  |

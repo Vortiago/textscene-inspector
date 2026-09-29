@@ -134,9 +134,9 @@ const PROXY_LEVELS: Readonly<Record<string, PropertyValidator>> = {
   // `_set` gates on the Variant type alone (`p_value.get_type() != Variant::ARRAY`,
   // tile_set.cpp:3971), and a typed Array is `Variant::ARRAY`, so
   // `Array[int]([0, 4, 2, 4])` loads as the bare literal does.
-  source_level: v.arrayLiteral('source_level', { anyElementType: true }),
-  coords_level: v.arrayLiteral('coords_level', { anyElementType: true }),
-  alternative_level: v.arrayLiteral('alternative_level', { anyElementType: true }),
+  source_level: v.arrayLiteral('source_level'),
+  coords_level: v.arrayLiteral('coords_level'),
+  alternative_level: v.arrayLiteral('alternative_level'),
 };
 
 /**

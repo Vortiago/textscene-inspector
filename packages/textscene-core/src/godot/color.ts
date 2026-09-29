@@ -1,0 +1,52 @@
+/**
+ * The strings a COLOR slot converts. `Color(const String &)` reads HTML hex when
+ * `html_is_valid` passes, and a colour name otherwise (`color.h:274-280`).
+ */
+
+/**
+ * `named_colors[]` (`color_names.inc:49-196`), with the underscores
+ * `find_named_color` removes from each key (`color.cpp:418-424`).
+ */
+const NAMED_COLORS: ReadonlySet<string> = new Set([
+  'ALICEBLUE', 'ANTIQUEWHITE', 'AQUA', 'AQUAMARINE', 'AZURE', 'BEIGE', 'BISQUE', 'BLACK',
+  'BLANCHEDALMOND', 'BLUE', 'BLUEVIOLET', 'BROWN', 'BURLYWOOD', 'CADETBLUE', 'CHARTREUSE',
+  'CHOCOLATE', 'CORAL', 'CORNFLOWERBLUE', 'CORNSILK', 'CRIMSON', 'CYAN', 'DARKBLUE', 'DARKCYAN',
+  'DARKGOLDENROD', 'DARKGRAY', 'DARKGREEN', 'DARKKHAKI', 'DARKMAGENTA', 'DARKOLIVEGREEN',
+  'DARKORANGE', 'DARKORCHID', 'DARKRED', 'DARKSALMON', 'DARKSEAGREEN', 'DARKSLATEBLUE',
+  'DARKSLATEGRAY', 'DARKTURQUOISE', 'DARKVIOLET', 'DEEPPINK', 'DEEPSKYBLUE', 'DIMGRAY',
+  'DODGERBLUE', 'FIREBRICK', 'FLORALWHITE', 'FORESTGREEN', 'FUCHSIA', 'GAINSBORO', 'GHOSTWHITE',
+  'GOLD', 'GOLDENROD', 'GRAY', 'GREEN', 'GREENYELLOW', 'HONEYDEW', 'HOTPINK', 'INDIANRED',
+  'INDIGO', 'IVORY', 'KHAKI', 'LAVENDER', 'LAVENDERBLUSH', 'LAWNGREEN', 'LEMONCHIFFON',
+  'LIGHTBLUE', 'LIGHTCORAL', 'LIGHTCYAN', 'LIGHTGOLDENROD', 'LIGHTGRAY', 'LIGHTGREEN', 'LIGHTPINK',
+  'LIGHTSALMON', 'LIGHTSEAGREEN', 'LIGHTSKYBLUE', 'LIGHTSLATEGRAY', 'LIGHTSTEELBLUE',
+  'LIGHTYELLOW', 'LIME', 'LIMEGREEN', 'LINEN', 'MAGENTA', 'MAROON', 'MEDIUMAQUAMARINE',
+  'MEDIUMBLUE', 'MEDIUMORCHID', 'MEDIUMPURPLE', 'MEDIUMSEAGREEN', 'MEDIUMSLATEBLUE',
+  'MEDIUMSPRINGGREEN', 'MEDIUMTURQUOISE', 'MEDIUMVIOLETRED', 'MIDNIGHTBLUE', 'MINTCREAM',
+  'MISTYROSE', 'MOCCASIN', 'NAVAJOWHITE', 'NAVYBLUE', 'OLDLACE', 'OLIVE', 'OLIVEDRAB', 'ORANGE',
+  'ORANGERED', 'ORCHID', 'PALEGOLDENROD', 'PALEGREEN', 'PALETURQUOISE', 'PALEVIOLETRED',
+  'PAPAYAWHIP', 'PEACHPUFF', 'PERU', 'PINK', 'PLUM', 'POWDERBLUE', 'PURPLE', 'REBECCAPURPLE',
+  'RED', 'ROSYBROWN', 'ROYALBLUE', 'SADDLEBROWN', 'SALMON', 'SANDYBROWN', 'SEAGREEN', 'SEASHELL',
+  'SIENNA', 'SILVER', 'SKYBLUE', 'SLATEBLUE', 'SLATEGRAY', 'SNOW', 'SPRINGGREEN', 'STEELBLUE',
+  'TAN', 'TEAL', 'THISTLE', 'TOMATO', 'TRANSPARENT', 'TURQUOISE', 'VIOLET', 'WEBGRAY', 'WEBGREEN',
+  'WEBMAROON', 'WEBPURPLE', 'WHEAT', 'WHITE', 'WHITESMOKE', 'YELLOW', 'YELLOWGREEN',
+]);
+
+/** How many names `color_names.inc` holds, for a test that the table is whole. */
+export const NAMED_COLOR_COUNT = NAMED_COLORS.size;
+
+/** `Color::html_is_valid`: an optional `#`, then 3, 4, 6 or 8 hex digits (`color.cpp:372-394`). */
+const HTML_COLOR_RE = /^#?(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+
+/** `find_named_color`'s normalisation: drop ` -_'.`, then upper-case (`color.cpp:413-416`). */
+function normalisedColorName(text: string): string {
+  return text.replace(/[ \-_'.]/g, '').toUpperCase();
+}
+
+/**
+ * Whether `Color(const String &)` reads this decoded string as a colour. When it
+ * does not, `Color::named` fails with `ERR_FAIL_V_MSG` and yields `Color()`
+ * (`color.cpp:396-402`), so the slot stores black rather than what the file says.
+ */
+export function isColorString(text: string): boolean {
+  return HTML_COLOR_RE.test(text) || NAMED_COLORS.has(normalisedColorName(text));
+}
