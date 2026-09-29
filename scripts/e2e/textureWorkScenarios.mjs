@@ -28,7 +28,7 @@ export const LARGE_FIXTURE = 'unit-noisetexture2d-4096-seamless.tscn';
 
 /** How long the delayed arm holds the build back: far past the settle gate's first shot at 1.2 s. */
 const WORKER_DELAY_MS = 6000;
-/** The Long Tasks API's own threshold, and the issue's limit for a responsive tab. */
+/** The Long Tasks API's own threshold, and the limit for a responsive tab. */
 const LONG_TASK_LIMIT_MS = 50;
 
 function openProbedFixture(browser, baseUrl, fixture, initScripts) {

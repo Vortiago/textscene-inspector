@@ -146,33 +146,88 @@ describe('TiledUploadQueue', () => {
 });
 
 describe('TiledUploadQueue with textures three already shares', () => {
-  it('uploads nothing for a clone of a texture it finished uploading', async () => {
-    const { renderer, copies, allocations, now } = fakeRenderer();
+  it('copies no row for a clone of a texture it finished uploading', async () => {
+    const { renderer, copies, now } = fakeRenderer();
     const queue = new TiledUploadQueue(renderer, now);
     const texture = dataTexture(4096, 300);
     const first = queue.enqueue(texture);
     queue.tick(1000);
     await first.done;
-    const before = { copies: copies.length, allocations: allocations.length };
+    const copiesBefore = copies.length;
 
     const again = queue.enqueue(texture.clone());
     expect(await again.done).toBe(true);
-    expect(copies.length).toBe(before.copies);
-    expect(allocations.length).toBe(before.allocations);
+    expect(copies.length).toBe(copiesBefore);
+  });
+
+  it('binds a late clone to the resident storage with its data flag cleared', async () => {
+    // The clone bumped the source version, so a draw would otherwise upload it whole.
+    const { renderer, allocations, now } = fakeRenderer();
+    const queue = new TiledUploadQueue(renderer, now);
+    const texture = dataTexture(4096, 300);
+    const first = queue.enqueue(texture);
+    queue.tick(1000);
+    await first.done;
+
+    const clone = texture.clone();
+    queue.enqueue(clone);
+    expect(allocations.at(-1)).toEqual({ texture: clone, dataReady: false });
+    expect(clone.source.dataReady).toBe(true);
   });
 
   it('runs one upload for two matching clones that arrive while it is in flight', async () => {
     const { renderer, copies, allocations, now } = fakeRenderer();
     const queue = new TiledUploadQueue(renderer, now);
     const texture = dataTexture(4096, 300);
+    const clone = texture.clone();
     const first = queue.enqueue(texture);
-    const second = queue.enqueue(texture.clone());
+    const second = queue.enqueue(clone);
+    queue.tick(1000);
+
+    expect(await first.done).toBe(true);
+    expect(await second.done).toBe(true);
+    expect(copies).toHaveLength(3);
+    expect(copies.every(({ destination }) => destination === texture)).toBe(true);
+    // The clone joins the filled storage once the rows are in, without a copy of its own.
+    expect(allocations).toEqual([
+      { texture, dataReady: false },
+      { texture: clone, dataReady: false },
+    ]);
+  });
+
+  it('joins the upload a texture is already in, although its mipmap flag is cleared meanwhile', async () => {
+    const { renderer, copies, allocations, now } = fakeRenderer();
+    const queue = new TiledUploadQueue(renderer, now);
+    const texture = dataTexture(4096, 300);
+    texture.generateMipmaps = true;
+    const first = queue.enqueue(texture);
+    const second = queue.enqueue(texture);
     queue.tick(1000);
 
     expect(await first.done).toBe(true);
     expect(await second.done).toBe(true);
     expect(allocations).toHaveLength(1);
     expect(copies).toHaveLength(3);
+    expect(texture.generateMipmaps).toBe(true);
+  });
+
+  it('keeps its rows when one of two consumers of the same texture leaves', async () => {
+    const { renderer, copies, allocations, now } = fakeRenderer();
+    const queue = new TiledUploadQueue(renderer, now);
+    const texture = dataTexture(4096, 300);
+    const first = queue.enqueue(texture);
+    const second = queue.enqueue(texture);
+    queue.tick(0);
+    first.cancel();
+    queue.tick(1000);
+
+    expect(await second.done).toBe(true);
+    expect(allocations).toHaveLength(1);
+    expect(copies.map(({ fromRow, toRow }) => [fromRow, toRow])).toEqual([
+      [0, 128],
+      [128, 256],
+      [256, 300],
+    ]);
   });
 
   it('keeps a shared upload going while one of its holders remains', async () => {

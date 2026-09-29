@@ -116,6 +116,20 @@ describe('resolveProceduralSubResourceAsync', () => {
     expect(runs).toHaveLength(1);
   });
 
+  it('hands a holder that starts after the build landed the cached texture, without a second run', async () => {
+    const { runner, runs } = fakeRunner();
+    const early = pendingLookup(scene('1'));
+    const late = pendingLookup(scene('1'));
+    const handle = early.start(runner);
+    runs[0]?.resolve(output());
+    const built = await handle.settled;
+    await settle();
+
+    const lateHandle = late.start(runner);
+    expect(await lateHandle.settled).toBe(built);
+    expect(runs).toHaveLength(1);
+  });
+
   it('builds again when the content changes', () => {
     expect(pendingLookup(scene('1')).key).not.toBe(pendingLookup(scene('2')).key);
   });

@@ -82,19 +82,21 @@ export class TiledUploadQueue {
    */
   enqueue(texture: THREE.Texture): TiledUpload {
     if (this.residency.isResident(texture)) {
+      // `Texture.copy` bumps the shared source's version, so a clone that three first
+      // meets at a draw gets the whole image uploaded again, in one call.
+      this.initWithoutData(texture);
       this.residency.hold(texture);
       return { done: Promise.resolve(true), cancel: () => {} };
     }
     const key = residencyKey(texture);
-    const inFlight = this.queue.find((entry) => entry.texture.source === texture.source && entry.key === key);
+    // By identity too: the texture an upload fills has its mipmap flag cleared, so its key no longer matches.
+    const inFlight = this.queue.find(
+      (entry) => entry.texture === texture || (entry.texture.source === texture.source && entry.key === key)
+    );
     return this.join(inFlight ?? this.start(texture, key), texture);
   }
 
-  /**
-   * Allocates `texture` empty now, and queues its rows. The allocation clears
-   * `dataReady` for one synchronous call only: the source is shared with every clone
-   * of the texture, and nothing else can upload in between.
-   */
+  /** Allocates `texture` empty now, and queues its rows. */
   private start(texture: THREE.Texture, key: string): QueuedUpload {
     const { data, width, height } = texture.image as { data: Uint8Array; width: number; height: number };
     const entry: QueuedUpload = {
@@ -109,16 +111,26 @@ export class TiledUploadQueue {
 
   /** Allocates `texture`'s storage empty, and gives the fields that start its rows at 0. */
   private allocate(texture: THREE.Texture): Pick<QueuedUpload, 'texture' | 'nextRow' | 'wantsMipmaps'> {
+    this.initWithoutData(texture);
+    const wantsMipmaps = texture.generateMipmaps;
+    // three generates mipmaps after every copy, so they wait for the last band.
+    texture.generateMipmaps = false;
+    return { texture, nextRow: 0, wantsMipmaps };
+  }
+
+  /**
+   * three's own init of `texture`, with `dataReady` cleared for that one synchronous
+   * call: it allocates GPU storage, or binds the storage its pair already has, and
+   * copies no pixels. The source is shared with every clone of the texture, and
+   * nothing else can upload in between.
+   */
+  private initWithoutData(texture: THREE.Texture): void {
     texture.source.dataReady = false;
     try {
       this.renderer.initTexture(texture);
     } finally {
       texture.source.dataReady = true;
     }
-    const wantsMipmaps = texture.generateMipmaps;
-    // three generates mipmaps after every copy, so they wait for the last band.
-    texture.generateMipmaps = false;
-    return { texture, nextRow: 0, wantsMipmaps };
   }
 
   private join(entry: QueuedUpload, texture: THREE.Texture): TiledUpload {
@@ -161,6 +173,7 @@ export class TiledUploadQueue {
   private complete(entry: QueuedUpload): void {
     this.queue.splice(this.queue.indexOf(entry), 1);
     for (const { texture, finish } of entry.waiters) {
+      if (texture !== entry.texture) this.initWithoutData(texture);
       this.residency.hold(texture);
       finish(true);
     }
@@ -172,9 +185,10 @@ export class TiledUploadQueue {
     if (index < 0 || !this.queue.includes(entry)) return;
     entry.waiters.splice(index, 1);
     waiter.finish(false);
-    const [next] = entry.waiters;
-    if (next && waiter.texture !== entry.texture) return;
+    // The rows go on while a remaining consumer draws the texture they fill.
+    if (entry.waiters.some(({ texture }) => texture === entry.texture)) return;
     entry.texture.generateMipmaps = entry.wantsMipmaps;
+    const [next] = entry.waiters;
     if (!next) {
       this.queue.splice(this.queue.indexOf(entry), 1);
       return;

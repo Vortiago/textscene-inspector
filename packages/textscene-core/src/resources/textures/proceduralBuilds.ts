@@ -94,7 +94,12 @@ function joinBuild(
   label: string,
   runner: JobRunner
 ): ProceduralBuildHandle {
-  const build = builds.get(key) ?? startBuild(key, plan, label, runner);
+  const inFlight = builds.get(key);
+  // A build can land between a holder's lookup and its start. A second run would
+  // repeat the work and replace the cached texture that other holders draw.
+  const landed = inFlight ? undefined : cachedProceduralTexture(key);
+  if (landed) return { settled: Promise.resolve(landed), release: () => {} };
+  const build = inFlight ?? startBuild(key, plan, label, runner);
   build.holders += 1;
   let released = false;
   return {
