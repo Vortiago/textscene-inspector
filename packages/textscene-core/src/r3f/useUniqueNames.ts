@@ -12,7 +12,7 @@ import {
   type UniqueNameClaim,
 } from '../utils/uniqueNames.js';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
-import { claimOwnerOf, localSceneOf, ownerClaims } from './uniqueNameOwner.js';
+import { claimOwnerOf, localSceneClaims, localSceneOf, ownerClaims } from './uniqueNameOwner.js';
 import { liveTreeContext, useLiveTreeVersion } from './useLiveSceneTree.js';
 
 /**
@@ -71,8 +71,9 @@ export function useUniqueNamePaths(path: string | null): ReadonlyMap<string, str
 }
 
 /**
- * A local scene: the live path of its root, and the `%Name` table a walk from that root reads.
- * With no scene tree there is no table, so a `%Name` addresses nothing.
+ * A local scene: the live path of its root, and the `%Name` table a walk from that root reads
+ * ({@link localSceneClaims}). With no scene tree there is no table, so a `%Name` addresses
+ * nothing.
  */
 export interface LocalScene {
   readonly path: string;
@@ -92,7 +93,7 @@ export function useLocalScene(path: string | null): LocalScene | undefined {
   );
   // Keyed on the table, not the owner: the outer root's table is one cached object, while
   // the walk builds a fresh owner on every load tick.
-  const claims = useMemo(() => owner && ownerClaims(owner), [owner]);
+  const claims = useMemo(() => owner && localSceneClaims(owner), [owner]);
   const uniquePaths = useStablePaths(
     useMemo(() => claims && uniqueNameLivePaths(claims), [claims])
   );

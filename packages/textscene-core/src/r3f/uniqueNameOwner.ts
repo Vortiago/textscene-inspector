@@ -133,15 +133,7 @@ export function claimOwnerOf(
   roots: readonly TscnNode[],
   ctx: LiveTreeContext
 ): ClaimOwner {
-  return claimOwnerFrom(walkTo(path, roots, ctx), roots, ctx);
-}
-
-/** {@link claimOwnerOf} for a node the caller has already walked to. */
-function claimOwnerFrom(
-  { owner, node }: Walk,
-  roots: readonly TscnNode[],
-  ctx: LiveTreeContext
-): ClaimOwner {
+  const { owner, node } = walkTo(path, roots, ctx);
   if (node?.owner === undefined) return owner;
   // The file an override heading is in is one above the instance that owns it.
   const file = node.overridesExistingNode && owner.parent ? owner.parent : owner;
@@ -152,15 +144,27 @@ function claimOwnerFrom(
 /**
  * The local scene a local-to-scene resource on the node at `path` is set up against, and so the
  * node its NodePaths measure from: the node itself when it is an instance, else its owner
- * (packed_scene.cpp:706). A scene's own root is its own owner, so the outer root is itself.
+ * (packed_scene.cpp:707). A scene's own root is its own owner, so the outer root is itself. An
+ * explicit `owner=` takes no part: a new node's properties land (:438) before its owner is set
+ * (:566-568), so Godot reads no owner and falls back to the file root, and an override keeps
+ * the sub-scene owner it already has.
  */
 export function localSceneOf(
   path: string,
   roots: readonly TscnNode[],
   ctx: LiveTreeContext
 ): ClaimOwner {
-  const walk = walkTo(path, roots, ctx);
-  return walk.into !== walk.owner ? walk.into : claimOwnerFrom(walk, roots, ctx);
+  return walkTo(path, roots, ctx).into;
+}
+
+/**
+ * The `%Name` table a walk from the local scene root reads: its own table, else its owner's
+ * (node.cpp:1930-1938). Only an instance root has an owner, so the outer root's is its own.
+ */
+export function localSceneClaims(scene: ClaimOwner): ReadonlyMap<string, UniqueNameClaim> {
+  const own = ownerClaims(scene);
+  if (!scene.parent) return own;
+  return new Map([...ownerClaims(scene.parent), ...own]);
 }
 
 function cachedSubRoots(
