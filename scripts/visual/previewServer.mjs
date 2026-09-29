@@ -26,6 +26,8 @@ export {
   SETTLE_INTERVAL_MS,
   SETTLE_MAX_ATTEMPTS,
   SETTLE_SIM_SECONDS,
+  TEXTURE_WORK_STATUS_TESTID,
+  TEXTURE_WORK_WAIT_MS,
   VIEWPORT,
   VIEWPORT_MODE_STORAGE_KEY,
 } from './preview/appContract.mjs';
@@ -41,5 +43,6 @@ export {
   gotoFixture,
   isUniformImage,
   settleCanvas,
+  textureWorkCleared,
   writeCaptureImage,
 } from './preview/capture.mjs';

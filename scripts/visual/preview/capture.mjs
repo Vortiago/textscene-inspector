@@ -9,6 +9,8 @@ import {
   SETTLE_INTERVAL_MS,
   SETTLE_MAX_ATTEMPTS,
   SETTLE_SIM_SECONDS,
+  TEXTURE_WORK_STATUS_TESTID,
+  TEXTURE_WORK_WAIT_MS,
 } from './appContract.mjs';
 import { findCanvas2DFrame } from './viewportProbes.mjs';
 import { writeFileSync } from 'node:fs';
@@ -79,14 +81,15 @@ export async function findCaptureTarget(page, { canvas2D = false } = {}) {
 }
 
 /**
- * Screenshots the canvas once two consecutive captures are byte-identical. A scene that never
- * settles returns a reason instead of a frame, so flakiness is rejected here, not absorbed by a
- * tolerance downstream.
+ * Screenshots the canvas once two consecutive captures are byte-identical, and never while
+ * the texture work status is on the page. A scene that never settles returns a reason
+ * instead of a frame, so flakiness is rejected here, not absorbed by a tolerance downstream.
+ * `waitForTextureWork: false` exists only for the control that proves the wait matters.
  */
 export async function settleCanvas(
   page,
   canvas,
-  { screenshotTimeout, simSeconds = SETTLE_SIM_SECONDS } = {}
+  { screenshotTimeout, simSeconds = SETTLE_SIM_SECONDS, waitForTextureWork = true } = {}
 ) {
   if (simSeconds !== 0) {
     throw new Error(
@@ -99,10 +102,22 @@ export async function settleCanvas(
   // A whole game world under SwiftShader can take longer to rasterise one frame than Playwright's
   // default action timeout. A per-scene raise keeps an ordinary scene's hang quick to report.
   const shot = () => canvas.screenshot(screenshotTimeout ? { timeout: screenshotTimeout } : {});
+  const textureWork = page.getByTestId(TEXTURE_WORK_STATUS_TESTID);
+  const pendingReason = `texture work still pending after ${TEXTURE_WORK_WAIT_MS}ms`;
   await page.waitForTimeout(SETTLE_INITIAL_MS);
+  if (waitForTextureWork && !(await textureWorkCleared(textureWork))) {
+    return { buffer: null, reason: pendingReason };
+  }
   let prev = await shot();
   for (let attempt = 0; attempt < SETTLE_MAX_ATTEMPTS; attempt++) {
     await page.waitForTimeout(SETTLE_INTERVAL_MS);
+    // Work that started since the last shot means that shot is not a candidate: wait it
+    // out, then start the comparison again from a fresh frame.
+    if (waitForTextureWork && (await textureWork.count()) > 0) {
+      if (!(await textureWorkCleared(textureWork))) return { buffer: null, reason: pendingReason };
+      prev = await shot();
+      continue;
+    }
     const cur = await shot();
     if (cur.equals(prev)) return { buffer: cur, reason: null };
     prev = cur;
@@ -113,6 +128,20 @@ export async function settleCanvas(
       SETTLE_MAX_ATTEMPTS * SETTLE_INTERVAL_MS
     }ms all differed`,
   };
+}
+
+/**
+ * True once the texture work status is detached; false when it outlives
+ * `TEXTURE_WORK_WAIT_MS`. `status` is its locator, in the page or in a webview frame.
+ */
+export async function textureWorkCleared(status) {
+  try {
+    await status.waitFor({ state: 'detached', timeout: TEXTURE_WORK_WAIT_MS });
+    return true;
+  } catch {
+    // Playwright's timeout is the answer here, not a failure to report.
+    return false;
+  }
 }
 
 /** Every pixel the same RGBA: a dead GL context or an unrendered scene, never a real frame. */

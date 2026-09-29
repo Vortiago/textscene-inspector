@@ -16,6 +16,8 @@ import { chromium } from 'playwright';
 import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
 import { inkStats } from './pixels.mjs';
 import { THROWAWAY_USER_SETTINGS } from './userSettings.mjs';
+import { TEXTURE_WORK_STATUS_TESTID } from '../visual/preview/appContract.mjs';
+import { textureWorkCleared } from '../visual/preview/capture.mjs';
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 export const EXTENSION_DIR = path.join(REPO_ROOT, 'apps/textscene-vscode');
@@ -545,6 +547,10 @@ export async function driveScene(options) {
       // webview and land in the screenshot.
       await palette(page, 'Notifications: Clear All Notifications');
     }
+
+    // A texture still building or uploading would settle as a stable, wrong frame.
+    report.textureWorkCleared = await textureWorkCleared(frame.getByTestId(TEXTURE_WORK_STATUS_TESTID));
+    emit(`texture work ${report.textureWorkCleared ? 'cleared' : 'NEVER cleared'}`);
 
     if (preserveBuffer) {
       const settled = await stabilizeCanvas(frame, { timeoutMs: 60_000, intervalMs: 500 });

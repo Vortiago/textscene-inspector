@@ -19,6 +19,7 @@ import {
   startPreview,
   writeCaptureImage,
   SETTLE_SIM_SECONDS,
+  TEXTURE_WORK_STATUS_TESTID,
 } from './previewServer.mjs';
 import { bootstrapScript } from '../godot-ref/run.mjs';
 
@@ -43,10 +44,16 @@ function inkedPng(width = 8, height = 8) {
   return PNG.sync.write(png);
 }
 
+/**
+ * A texture work status that is never on the page: what every scene without a large
+ * procedural texture shows the harness.
+ */
+const NO_TEXTURE_WORK = { waitFor: async () => {}, count: async () => 0 };
+
 /** A Playwright page/element pair reduced to what `settleCanvas` touches. */
-function stubCanvas(shots) {
+function stubCanvas(shots, status = NO_TEXTURE_WORK) {
   let i = 0;
-  const page = { waitForTimeout: async () => {} };
+  const page = { waitForTimeout: async () => {}, getByTestId: () => status };
   const canvas = {
     calls: [],
     screenshot: async (options) => {
@@ -69,7 +76,7 @@ describe('settleCanvas', () => {
     // Every capture differs, so nothing is a measurement, and the harness says so instead of
     // returning the last frame.
     let n = 0;
-    const page = { waitForTimeout: async () => {} };
+    const page = { waitForTimeout: async () => {}, getByTestId: () => NO_TEXTURE_WORK };
     const canvas = { screenshot: async () => Buffer.from(String(n++)) };
     const { buffer, reason } = await settleCanvas(page, canvas);
     expect(buffer).toBeNull();
@@ -86,6 +93,73 @@ describe('settleCanvas', () => {
     const bare = stubCanvas(['y', 'y']);
     await settleCanvas(bare.page, bare.canvas);
     expect(bare.canvas.calls.at(-1)).toEqual({});
+  });
+
+  it('takes no shot until the texture work status has detached', async () => {
+    const events = [];
+    const status = {
+      waitFor: async ({ state }) => {
+        events.push(`wait ${state}`);
+      },
+      count: async () => 0,
+    };
+    const { page, canvas } = stubCanvas(['x', 'x'], status);
+    const screenshot = canvas.screenshot;
+    canvas.screenshot = async (options) => {
+      events.push('shot');
+      return screenshot(options);
+    };
+    await settleCanvas(page, canvas);
+
+    expect(events[0]).toBe('wait detached');
+    expect(events.slice(1).every((event) => event === 'shot')).toBe(true);
+  });
+
+  it('asks for the texture work status by the id the shell renders', async () => {
+    const asked = [];
+    const { page, canvas } = stubCanvas(['x', 'x']);
+    page.getByTestId = (id) => {
+      asked.push(id);
+      return NO_TEXTURE_WORK;
+    };
+    await settleCanvas(page, canvas);
+    expect(new Set(asked)).toEqual(new Set([TEXTURE_WORK_STATUS_TESTID]));
+  });
+
+  it('restarts the comparison when texture work comes back between two shots', async () => {
+    // The status returns once after the first shot: 'a' then 'b' spans a texture landing,
+    // so neither is compared with a frame from the other side of it.
+    let checks = 0;
+    const status = { waitFor: async () => {}, count: async () => (checks++ === 0 ? 1 : 0) };
+    const { page, canvas } = stubCanvas(['a', 'a', 'b', 'b'], status);
+    const { buffer } = await settleCanvas(page, canvas);
+    expect(buffer.toString()).toBe('b');
+  });
+
+  it('reports texture work that never ends rather than returning a frame', async () => {
+    const status = {
+      waitFor: async () => {
+        throw new Error('Timeout exceeded');
+      },
+      count: async () => 1,
+    };
+    const { page, canvas } = stubCanvas(['x', 'x'], status);
+    const { buffer, reason } = await settleCanvas(page, canvas);
+    expect(buffer).toBeNull();
+    expect(reason).toMatch(/texture work still pending/);
+    expect(canvas.calls).toHaveLength(0);
+  });
+
+  it('can skip the texture work wait, for the control that proves the wait matters', async () => {
+    const status = {
+      waitFor: async () => {
+        throw new Error('the wait was not skipped');
+      },
+      count: async () => 1,
+    };
+    const { page, canvas } = stubCanvas(['x', 'x'], status);
+    const { reason } = await settleCanvas(page, canvas, { waitForTextureWork: false });
+    expect(reason).toBeNull();
   });
 
   /**
@@ -105,6 +179,15 @@ describe('settleCanvas', () => {
  * One settle number for both harnesses. With a second copy each side would stay deterministic
  * while capturing a different moment, and every later comparison would fail to notice.
  */
+describe('the texture work status id is shared, not duplicated', () => {
+  it('matches the id the shell renders', async () => {
+    const { TEXTURE_WORK_STATUS_TESTID: shellId } = await import(
+      '../../packages/textscene-core/src/r3f/components/TscnPreviewShell/textureWorkStatusTestId.ts'
+    );
+    expect(TEXTURE_WORK_STATUS_TESTID).toBe(shellId);
+  });
+});
+
 describe('the settle contract is shared, not duplicated', () => {
   const godotScript = (simSeconds) =>
     bootstrapScript({

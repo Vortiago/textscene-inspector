@@ -5,9 +5,9 @@
  */
 import { usePendingTextureWork } from '../../../resources/usePendingTextureWork.js';
 import styles from './TscnPreviewShell.module.css';
+import { TEXTURE_WORK_STATUS_TESTID } from './textureWorkStatusTestId.js';
 
-/** The status element's test id, which the capture harnesses read from outside the app. */
-export const TEXTURE_WORK_STATUS_TESTID = 'texture-work-status';
+export { TEXTURE_WORK_STATUS_TESTID };
 
 export function TextureWorkStatus() {
   if (usePendingTextureWork() === 0) return null;
