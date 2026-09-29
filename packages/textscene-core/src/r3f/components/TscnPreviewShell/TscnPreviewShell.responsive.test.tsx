@@ -14,8 +14,10 @@ vi.mock('../../TscnCanvas', () => ({
   TscnSceneContents: () => null,
 }));
 
+import { extractMediaBlock, mediaQueries, stripMediaBlocks } from '../../testing/cssSource';
 import { TscnPreviewShell } from './TscnPreviewShell';
 import { COMPACT_LAYOUT_QUERY, NARROW_LAYOUT_QUERY } from './narrowLayout';
+import styles from './TscnPreviewShell.module.css';
 
 const MINIMAL_TSCN = `[gd_scene load_steps=1 format=3]
 
@@ -29,16 +31,11 @@ const SPLITTER_CSS_SOURCE = readFileSync(
 );
 const LANDSCAPE_PHONE_QUERY = '(max-height: 500px) and (pointer: coarse)';
 
-function narrowBlock(): string {
-  const block = extractMediaBlock(CSS_SOURCE, NARROW_LAYOUT_QUERY);
-  expect(block).not.toBeNull();
-  return block!;
-}
-
-function compactBlock(): string {
-  const block = extractMediaBlock(CSS_SOURCE, COMPACT_LAYOUT_QUERY);
-  expect(block).not.toBeNull();
-  return block!;
+/** The shell stylesheet's `@media <query>` block, which must exist. */
+function block(query: string): string {
+  const body = extractMediaBlock(CSS_SOURCE, query);
+  expect(body, `an @media ${query} block`).not.toBeNull();
+  return body!;
 }
 
 function dockElement(container: HTMLElement): HTMLElement {
@@ -59,56 +56,53 @@ describe('<TscnPreviewShell> narrow layout: the stylesheet', () => {
   it('keys every width-bounded @media block on the queries narrowLayout.ts exports', () => {
     const widthQueries = mediaQueries(CSS_SOURCE).filter((q) => q.includes('width'));
     expect(widthQueries.sort()).toEqual([COMPACT_LAYOUT_QUERY, NARROW_LAYOUT_QUERY].sort());
-    expect(mediaQueries(SPLITTER_CSS_SOURCE).filter((q) => q.includes('width'))).toEqual([
-      NARROW_LAYOUT_QUERY,
-    ]);
   });
 
   it('switches .columns to a vertical stack inside the narrow block', () => {
-    expect(narrowBlock()).toMatch(/\.columns\s*\{[^}]*flex-direction:\s*column/);
+    expect(block(NARROW_LAYOUT_QUERY)).toMatch(/\.columns\s*\{[^}]*flex-direction:\s*column/);
   });
 
-  it('hides the column splitter inside the same narrow block', () => {
-    const block = extractMediaBlock(SPLITTER_CSS_SOURCE, NARROW_LAYOUT_QUERY);
-    expect(block).toMatch(/\.splitter\s*\{[^}]*display:\s*none/);
+  it('leaves the splitter free of any layout query, since the shell hides it', () => {
+    expect(mediaQueries(SPLITTER_CSS_SOURCE).filter((q) => q.includes('width'))).toEqual([]);
   });
 
   it('gives the sheet a definite, draggable share of the stack', () => {
-    const block = narrowBlock();
-    expect(block).not.toMatch(/\.dock\s*\{[^}]*display:\s*none/);
-    expect(block).toMatch(/\.dock\s*\{[^}]*width:\s*100%/);
+    const narrow = block(NARROW_LAYOUT_QUERY);
+    expect(narrow).not.toMatch(/\.dock\s*\{[^}]*display:\s*none/);
+    expect(narrow).toMatch(/\.dock\s*\{[^}]*width:\s*100%/);
     // Definite, not content-measured: `auto` resolves to 8px here.
-    expect(block).toMatch(/\.dock\s*\{[^}]*flex-basis:\s*var\(--tsi-sheet-basis,\s*\d+(\.\d+)?%\)/);
-    expect(block).not.toMatch(/\.dock\s*\{[^}]*flex-basis:\s*auto/);
+    expect(narrow).toMatch(/\.dock\s*\{[^}]*flex-basis:\s*var\(--tsi-sheet-basis,\s*\d+(\.\d+)?%\)/);
+    expect(narrow).not.toMatch(/\.dock\s*\{[^}]*flex-basis:\s*auto/);
   });
 
   it('shows one half of the dock at a time, chosen by data-narrow-pane', () => {
-    const block = narrowBlock();
-    const hidden = /([^{}]*)\{\s*display:\s*none;?\s*\}/.exec(block);
+    const narrow = block(NARROW_LAYOUT_QUERY);
+    const hidden = /([^{}]*)\{\s*display:\s*none;?\s*\}/.exec(narrow);
     expect(hidden).not.toBeNull();
     const selectors = hidden![1];
     expect(selectors).toContain(".dock[data-narrow-pane='tree'] .detailPane");
     expect(selectors).toContain(".dock[data-narrow-pane='details'] .masterPane");
     expect(selectors).toContain('.masterDetailHandle');
+    expect(selectors).toContain('.wideOnly');
     // The shown pane takes the whole sheet, not its desktop share of it.
-    expect(block).toMatch(/\.masterPane,\s*\.detailPane\s*\{[^}]*flex-grow:\s*1;/);
+    expect(narrow).toMatch(/\.masterPane,\s*\.detailPane\s*\{[^}]*flex-grow:\s*1;/);
   });
 
   it('shows the narrow-only parts inside the narrow block and nowhere else', () => {
     expect(stripMediaBlocks(CSS_SOURCE)).toMatch(/\.narrowOnly\s*\{\s*display:\s*none;?\s*\}/);
-    const block = narrowBlock();
-    expect(block).toMatch(/\.sheetHandle\s*\{[^}]*display:\s*block/);
-    expect(block).toMatch(/\.narrowSwitcher\s*\{[^}]*display:\s*flex/);
-    // Outside a media block the parts own no `display`, so `.narrowOnly` hides them.
+    const narrow = block(NARROW_LAYOUT_QUERY);
+    expect(narrow).toMatch(/\.sheetHandle\s*\{[^}]*display:\s*block/);
+    expect(narrow).toMatch(/\.narrowSwitcher\s*\{[^}]*display:\s*flex/);
+    // Outside a media block no rule gives the parts a `display`, so `.narrowOnly` hides them.
     const desktop = stripMediaBlocks(CSS_SOURCE);
-    expect(desktop).not.toMatch(/\.sheetHandle\s*\{/);
-    expect(desktop).not.toMatch(/\.narrowSwitcher\s*\{/);
+    expect(desktop).not.toMatch(/\.sheetHandle[^{]*\{[^}]*display:/);
+    expect(desktop).not.toMatch(/\.narrowSwitcher[^{]*\{[^}]*display:/);
   });
 
   it('lays the collapsed sheet out as a horizontal bar inside the narrow block', () => {
-    const block = narrowBlock();
-    expect(block).toMatch(/\.collapsedDock\s*\{[^}]*flex-direction:\s*row/);
-    expect(block).toMatch(/\.collapsedTitle\s*\{[^}]*writing-mode:\s*horizontal-tb/);
+    const narrow = block(NARROW_LAYOUT_QUERY);
+    expect(narrow).toMatch(/\.collapsedDock\s*\{[^}]*flex-direction:\s*row/);
+    expect(narrow).toMatch(/\.collapsedTitle\s*\{[^}]*writing-mode:\s*horizontal-tb/);
   });
 
   it('keeps the sheet out of a short panel, which keeps the side dock', () => {
@@ -118,9 +112,9 @@ describe('<TscnPreviewShell> narrow layout: the stylesheet', () => {
   });
 
   it('scrolls the host toolbar instead of clipping it in the compact block', () => {
-    const block = compactBlock();
-    expect(block).toMatch(/\.topToolbar\s*\{[^}]*overflow-x:\s*auto/);
-    expect(block).toMatch(/\.brand,\s*\.statChips,\s*\.topSpacer\s*\{[^}]*display:\s*none/);
+    const compact = block(COMPACT_LAYOUT_QUERY);
+    expect(compact).toMatch(/\.topToolbar\s*\{[^}]*overflow-x:\s*auto/);
+    expect(compact).toMatch(/\.brand,\s*\.statChips,\s*\.topSpacer\s*\{[^}]*display:\s*none/);
   });
 
   it('preserves the side-by-side desktop layout outside the media queries', () => {
@@ -162,6 +156,14 @@ describe('<TscnPreviewShell> narrow layout: the markup', () => {
     ) as HTMLElement[];
     expect(panes.map((el) => el.style.getPropertyValue('--tsi-pane-grow'))).toEqual(['0.46', '0.54']);
     for (const pane of panes) expect(pane.style.flexGrow).toBe('');
+  });
+
+  it('marks the desktop-only controls wide-only, so the narrow block hides them', () => {
+    render(<TscnPreviewShell panelId="p-wide" content={MINIMAL_TSCN} />);
+    const splitter = screen.getByRole('separator', { name: 'Resize the side panel' });
+    expect(splitter.className.split(' ')).toContain(styles.wideOnly);
+    const treeCollapse = screen.getByLabelText('Collapse the side panel');
+    expect(treeCollapse.className.split(' ')).toContain(styles.wideOnly);
   });
 
   it('shows the tree half first', () => {
@@ -209,46 +211,3 @@ describe('<TscnPreviewShell> narrow layout: the markup', () => {
     expect(screen.queryByRole('tab', { name: 'Scene' })).toBeNull();
   });
 });
-
-/** The query text of every `@media` rule in `source`, in order. */
-function mediaQueries(source: string): string[] {
-  return Array.from(source.matchAll(/@media\s*([^{]+?)\s*\{/g), (m) => m[1]!);
-}
-
-/** The body of the `@media <query>` block, or null when there is none. */
-function extractMediaBlock(source: string, query: string): string | null {
-  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = new RegExp(`@media\\s*${escaped}\\s*\\{`).exec(source);
-  if (!match) return null;
-
-  let depth = 1;
-  let i = match.index + match[0].length;
-  const start = i;
-  while (i < source.length && depth > 0) {
-    const ch = source[i];
-    if (ch === '{') depth += 1;
-    else if (ch === '}') depth -= 1;
-    i += 1;
-  }
-  if (depth !== 0) return null;
-  return source.slice(start, i - 1);
-}
-
-/** `source` without its `@media` blocks: the desktop-layer rules only. */
-function stripMediaBlocks(source: string): string {
-  let out = source;
-  for (;;) {
-    const start = /@media[^{]*\{/.exec(out);
-    if (!start) break;
-    let depth = 1;
-    let i = start.index + start[0].length;
-    while (i < out.length && depth > 0) {
-      const ch = out[i];
-      if (ch === '{') depth += 1;
-      else if (ch === '}') depth -= 1;
-      i += 1;
-    }
-    out = out.slice(0, start.index) + out.slice(i);
-  }
-  return out;
-}

@@ -8,6 +8,7 @@ import {
   NarrowPaneSwitcher,
   SheetHandle,
 } from './DockChrome';
+import styles from './TscnPreviewShell.module.css';
 
 /** Gives `el` a layout box, since happy-dom lays nothing out. */
 function stubBox(el: Element, top: number, height: number) {
@@ -58,9 +59,11 @@ describe('MasterDetailHandle', () => {
 describe('SheetHandle', () => {
   function renderInColumns(setValue: (v: number) => void, height = 800) {
     render(
-      <div data-testid="columns">
+      <div data-testid="columns" className={styles.columns}>
         <section>
-          <SheetHandle value={0.45} setValue={setValue} />
+          <div>
+            <SheetHandle value={0.45} setValue={setValue} />
+          </div>
         </section>
       </div>
     );
@@ -81,6 +84,14 @@ describe('SheetHandle', () => {
     expect(setValue).toHaveBeenLastCalledWith(0.85);
     drag(handle, 2000);
     expect(setValue).toHaveBeenLastCalledWith(0.25);
+  });
+
+  it('measures the column once per drag, not once per move', () => {
+    const handle = renderInColumns(() => {});
+    const columns = screen.getByTestId('columns');
+    const measure = vi.spyOn(columns, 'getBoundingClientRect');
+    drag(handle, 100, 200, 300);
+    expect(measure).toHaveBeenCalledTimes(1);
   });
 
   it('reports nothing while the column has no height', () => {

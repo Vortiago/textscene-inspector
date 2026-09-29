@@ -286,6 +286,11 @@
 /* The detail pane's tab strip (ADR-0007). */
 .paneTabs {
   display: flex;
+}
+
+/* The narrow switcher is a tab strip too. Its `display` stays with `.narrowOnly`. */
+.paneTabs,
+.narrowSwitcher {
   align-items: stretch;
   flex-shrink: 0;
   background: var(--tsi-bg-elevated);
@@ -516,7 +521,8 @@
 }
 
 /* The narrow layout's own parts. They render in every layout, so a resize never remounts
-   the dock, and only the narrow block below shows them. */
+   the dock, and only the narrow block below shows them. `.wideOnly` is the mirror: the
+   narrow block hides it. */
 .narrowOnly {
   display: none;
 }
@@ -546,7 +552,7 @@
 
   /* One half of the dock at a time: the switcher picks it, so the tree handle goes. */
   .masterDetailHandle,
-  .masterPane .collapseButton,
+  .wideOnly,
   .dock[data-narrow-pane='tree'] .detailPane,
   .dock[data-narrow-pane='details'] .masterPane {
     display: none;
@@ -588,10 +594,6 @@
 
   .narrowSwitcher {
     display: flex;
-    align-items: stretch;
-    flex-shrink: 0;
-    background: var(--tsi-bg-elevated);
-    border-bottom: 1px solid var(--tsi-border);
   }
 
   .narrowTabs {
@@ -622,10 +624,6 @@
 
   .collapsedTitle {
     writing-mode: horizontal-tb;
-  }
-
-  .collapsedDock .wideOnly {
-    display: none;
   }
 
   .collapsedDock .narrowOnly {

@@ -53,7 +53,6 @@ export {
 // The shell's narrow-layout queries, so a host's own chrome switches at the same width.
 export {
   COMPACT_LAYOUT_QUERY,
-  NARROW_LAYOUT_QUERY,
   isCompactLayout,
 } from './components/TscnPreviewShell/narrowLayout.js';
 

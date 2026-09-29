@@ -585,10 +585,7 @@
 @media (max-width: 768px), (max-height: 500px) and (pointer: coarse) {
   .sourcePane {
     position: absolute;
-    top: var(--tsi-top-bar-height);
-    right: 0;
-    bottom: 0;
-    left: 0;
+    inset: var(--tsi-top-bar-height) 0 0;
     z-index: 30;
     width: auto;
     border-right: none;

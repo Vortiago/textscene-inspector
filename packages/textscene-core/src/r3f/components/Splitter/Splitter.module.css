@@ -19,11 +19,3 @@
 .splitter:active {
   background: var(--tsi-accent);
 }
-
-/* In stack mode the columns flow vertically, so the col-resize handle hides. The query
-   text is NARROW_LAYOUT_QUERY in TscnPreviewShell/narrowLayout.ts. */
-@media (max-width: 768px) and (min-height: 501px) {
-  .splitter {
-    display: none;
-  }
-}

@@ -82,6 +82,7 @@ export function TscnPreviewShell({
   const [sheetShare, setSheetShare] = usePersistedState('tsi.sheetShare', 0.45, isSheetShare);
   const [narrowPane, setNarrowPane] = usePersistedState('tsi.narrowPane', 'tree', isNarrowPane);
   const [activeTab, setActiveTab] = useState<DetailTab>('inspector');
+  const collapseDock = () => setDockCollapsed(true);
 
   // ADR-0012: the Animation tab exists only while an AnimationPlayer is selected.
   // A selected player focuses the tab.
@@ -153,6 +154,7 @@ export function TscnPreviewShell({
                 setWidth={setDockWidth}
                 invert
                 label="Resize the side panel"
+                className={styles.wideOnly}
               />
               <section
                 className={styles.dock}
@@ -169,13 +171,13 @@ export function TscnPreviewShell({
                 <NarrowPaneSwitcher
                   pane={narrowPane}
                   setPane={setNarrowPane}
-                  onCollapse={() => setDockCollapsed(true)}
+                  onCollapse={collapseDock}
                 />
                 <SceneTreePane
                   sceneGraph={sceneGraph}
                   error={error}
                   treeShare={treeShare}
-                  onCollapse={() => setDockCollapsed(true)}
+                  onCollapse={collapseDock}
                   onNodeReveal={onNodeReveal}
                   onOpenSubScene={onOpenSubScene}
                 />

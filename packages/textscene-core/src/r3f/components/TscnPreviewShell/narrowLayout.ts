@@ -19,8 +19,7 @@ export const COMPACT_LAYOUT_QUERY = '(max-width: 768px), (max-height: 500px) and
 /** Whether the compact chrome applies now. False where `matchMedia` is missing or throws. */
 export function isCompactLayout(): boolean {
   try {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
-    return window.matchMedia(COMPACT_LAYOUT_QUERY).matches;
+    return typeof window !== 'undefined' && window.matchMedia?.(COMPACT_LAYOUT_QUERY).matches === true;
   } catch {
     return false;
   }

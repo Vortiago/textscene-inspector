@@ -5,17 +5,20 @@
  */
 import { findCanvas, gotoFixture, settleCanvas } from '../visual/previewServer.mjs';
 import { attachDiagnostics, checkDiagnostics } from './diagnostics.mjs';
-import { expandAllTreeRows, readOutlinerPaths, selectOutlinerNode } from './outliner.mjs';
+import {
+  arraysEqual,
+  describeNodePathMismatch,
+  expandAllTreeRows,
+  readOutlinerPaths,
+  selectOutlinerNode,
+} from './outliner.mjs';
 import { readInspectorPanel } from './inspector.mjs';
 
 /* global document */
-// `document` exists only in the browser that runs the `page.evaluate` callback.
+// `document` exists only in the browser that runs the `page.evaluate` callbacks.
 
 // A common phone in portrait, taller than the sheet's 501px floor and under its 768px width.
 const PHONE_VIEWPORT = { width: 390, height: 844 };
-
-// A tap re-renders synchronously off React state, as a selection does in the desktop scenario.
-const TAP_SETTLE_MS = 400;
 
 const DOCK = 'section[aria-label="Scene and Inspector"]';
 
@@ -56,17 +59,24 @@ export async function runPhoneScenario(browser, baseUrl, { fixture, selectPath }
   await selectOutlinerNode(page, selectPath);
 
   await page.getByRole('tab', { name: 'Details' }).tap();
-  await page.waitForTimeout(TAP_SETTLE_MS);
+  await page.locator(`${DOCK}[data-narrow-pane="details"]`).waitFor();
   const detailsHalf = { tree: await treeRowVisible(page), inspector: await inspectorVisible(page) };
   const inspector = await readInspectorPanel(page);
 
   await page.getByLabel('Collapse the scene panel').tap();
-  await page.waitForTimeout(TAP_SETTLE_MS);
+  await page.getByLabel('Show the side panel').waitFor();
+  // The canvas follows its box a frame later. A timeout still measures: the check reports it.
+  await page
+    .waitForFunction(
+      (before) => document.querySelector('canvas').getBoundingClientRect().height > before,
+      canvasBox.height
+    )
+    .catch(() => {});
   const collapsedCanvasBox = await canvas.boundingBox();
   const collapsedBarBox = await page.getByLabel('Show the side panel').boundingBox();
 
   await page.getByLabel('Show the side panel').tap();
-  await page.waitForTimeout(TAP_SETTLE_MS);
+  await page.locator(DOCK).waitFor();
   const reopenedDockBox = await page.locator(DOCK).boundingBox();
 
   await context.close();
@@ -118,10 +128,14 @@ export function checkPhoneLayout(gate, phone, { expectedPaths, selectName }) {
     );
   }
 
-  gate.check(
-    phone.paths.join(',') === expectedPaths.join(','),
-    `${label} the Scene half lists [${phone.paths.join(', ')}], expected [${expectedPaths.join(', ')}]`
-  );
+  if (!arraysEqual(expectedPaths, phone.paths)) {
+    const { missing, extra } = describeNodePathMismatch(expectedPaths, phone.paths);
+    gate.check(
+      false,
+      `${label} the Scene half lists [${phone.paths.join(', ')}], expected [${expectedPaths.join(', ')}] ` +
+        `(missing: [${missing.join(', ')}], extra: [${extra.join(', ')}])`
+    );
+  }
   gate.check(
     phone.sceneHalf.tree && !phone.sceneHalf.inspector,
     `${label} the Scene half shows tree=${phone.sceneHalf.tree} inspector=${phone.sceneHalf.inspector}, ` +

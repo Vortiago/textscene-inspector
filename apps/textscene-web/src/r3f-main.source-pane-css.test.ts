@@ -38,7 +38,7 @@ describe('source pane CSS', () => {
   it('covers the preview below the top bar in the compact layout', () => {
     const block = mediaBlock(COMPACT_LAYOUT_QUERY);
     expect(block).toMatch(/\.sourcePane\s*\{[^}]*position:\s*absolute/);
-    expect(block).toMatch(/\.sourcePane\s*\{[^}]*top:\s*var\(--tsi-top-bar-height\)/);
+    expect(block).toMatch(/\.sourcePane\s*\{[^}]*inset:\s*var\(--tsi-top-bar-height\) 0 0/);
     expect(block).toMatch(/\.sourcePane\s*\{[^}]*width:\s*auto/);
     expect(block).toMatch(/\.sourceSplitter,\s*\.wideLabel\s*\{[^}]*display:\s*none/);
   });

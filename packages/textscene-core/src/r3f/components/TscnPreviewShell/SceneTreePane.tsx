@@ -63,7 +63,7 @@ export function SceneTreePane({
         <span className={styles.dockSpacer} />
         <button
           type="button"
-          className={styles.collapseButton}
+          className={`${styles.collapseButton} ${styles.wideOnly}`}
           onClick={onCollapse}
           title="Collapse the side panel"
           aria-label="Collapse the side panel"

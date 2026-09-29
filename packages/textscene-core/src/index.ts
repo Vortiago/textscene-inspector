@@ -59,7 +59,6 @@ export {
   TscnPreviewShell,
   type TscnPreviewShellProps,
   COMPACT_LAYOUT_QUERY,
-  NARROW_LAYOUT_QUERY,
   isCompactLayout,
   useViewportSelection,
   type UseViewportSelectionOptions,

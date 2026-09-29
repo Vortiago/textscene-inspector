@@ -28,20 +28,31 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 /**
- * A vertical drag that reports the pointer's height fraction (0 at the top) of the element
- * `containerOf` picks. Pointer capture, not window listeners, so an unmount mid-drag leaks
- * no listener and sets no value on an unmounted component.
+ * A horizontal separator whose vertical drag reports the pointer's height fraction (0 at the
+ * top) of the element `containerOf` picks. Pointer capture, not window listeners, so an
+ * unmount mid-drag leaks no listener and sets no value on an unmounted component.
  */
-function useFractionDrag(
-  containerOf: (handle: HTMLElement) => Element | null | undefined,
-  onFraction: (fractionFromTop: number) => void
-) {
-  const ref = useRef<HTMLDivElement>(null);
-  const dragging = useRef(false);
+function FractionHandle({
+  containerOf,
+  onFraction,
+  value,
+  className,
+  label,
+}: {
+  containerOf: (handle: HTMLElement) => Element | null | undefined;
+  onFraction: (fractionFromTop: number) => void;
+  value: number;
+  className: string | undefined;
+  label: string;
+}) {
+  // The container's box, read once at pointerdown: the drag resizes what sits inside it, and
+  // a read per move would force a layout after each custom-property write.
+  const dragBox = useRef<DOMRect | null>(null);
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     e.preventDefault();
-    dragging.current = true;
+    const box = containerOf(e.currentTarget)?.getBoundingClientRect();
+    dragBox.current = box && box.height > 0 ? box : null;
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {
@@ -49,16 +60,13 @@ function useFractionDrag(
     }
   };
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (!dragging.current || !ref.current) return;
-    const container = containerOf(ref.current);
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    if (rect.height <= 0) return;
-    onFraction((e.clientY - rect.top) / rect.height);
+    const box = dragBox.current;
+    if (!box) return;
+    onFraction((e.clientY - box.top) / box.height);
   };
   const endDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (!dragging.current) return;
-    dragging.current = false;
+    if (!dragBox.current) return;
+    dragBox.current = null;
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch {
@@ -66,7 +74,20 @@ function useFractionDrag(
     }
   };
 
-  return { ref, onPointerDown, onPointerMove, onPointerUp: endDrag, onPointerCancel: endDrag };
+  // Named handlers, not a spread: a JSX spread under r3f/ fails the material-factory guard.
+  return (
+    <div
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+      className={className}
+      role="separator"
+      aria-orientation="horizontal"
+      aria-label={label}
+      aria-valuenow={Math.round(value * 100)}
+    />
+  );
 }
 
 /**
@@ -80,31 +101,21 @@ export function MasterDetailHandle({
   value: number;
   setValue: (v: number) => void;
 }) {
-  const drag = useFractionDrag(
-    (handle) => handle.parentElement,
-    (fraction) => setValue(clamp(fraction, TREE_SHARE_MIN, TREE_SHARE_MAX))
-  );
-
   return (
-    <div
-      ref={drag.ref}
-      onPointerDown={drag.onPointerDown}
-      onPointerMove={drag.onPointerMove}
-      onPointerUp={drag.onPointerUp}
-      onPointerCancel={drag.onPointerCancel}
+    <FractionHandle
+      containerOf={(handle) => handle.parentElement}
+      onFraction={(fraction) => setValue(clamp(fraction, TREE_SHARE_MIN, TREE_SHARE_MAX))}
+      value={value}
       className={styles.masterDetailHandle}
-      role="separator"
-      aria-orientation="horizontal"
-      aria-label="Resize the tree and detail sections"
-      aria-valuenow={Math.round(value * 100)}
+      label="Resize the tree and detail sections"
     />
   );
 }
 
 /**
  * The narrow layout's grabber on top of the bottom sheet. `value` is the sheet's fraction
- * of the column under the top bar, so a drag upwards grows it. It sits inside the dock and
- * measures the dock's parent, the column that the viewport and the sheet share.
+ * of the column under the top bar, so a drag upwards grows it. It measures that column,
+ * which the viewport and the sheet share.
  */
 export function SheetHandle({
   value,
@@ -113,26 +124,21 @@ export function SheetHandle({
   value: number;
   setValue: (v: number) => void;
 }) {
-  const drag = useFractionDrag(
-    (handle) => handle.parentElement?.parentElement,
-    (fraction) => setValue(clamp(1 - fraction, SHEET_SHARE_MIN, SHEET_SHARE_MAX))
-  );
-
   return (
-    <div
-      ref={drag.ref}
-      onPointerDown={drag.onPointerDown}
-      onPointerMove={drag.onPointerMove}
-      onPointerUp={drag.onPointerUp}
-      onPointerCancel={drag.onPointerCancel}
+    <FractionHandle
+      containerOf={(handle) => handle.closest(`.${styles.columns}`)}
+      onFraction={(fraction) => setValue(clamp(1 - fraction, SHEET_SHARE_MIN, SHEET_SHARE_MAX))}
+      value={value}
       className={`${styles.narrowOnly} ${styles.sheetHandle}`}
-      role="separator"
-      aria-orientation="horizontal"
-      aria-label="Resize the scene panel"
-      aria-valuenow={Math.round(value * 100)}
+      label="Resize the scene panel"
     />
   );
 }
+
+const NARROW_TABS: ReadonlyArray<[NarrowPane, string]> = [
+  ['tree', 'Scene'],
+  ['details', 'Details'],
+];
 
 /** The narrow layout's Scene | Details switch, with the sheet's collapse button. */
 export function NarrowPaneSwitcher({
@@ -144,14 +150,10 @@ export function NarrowPaneSwitcher({
   setPane: (pane: NarrowPane) => void;
   onCollapse: () => void;
 }) {
-  const tabs: Array<[NarrowPane, string]> = [
-    ['tree', 'Scene'],
-    ['details', 'Details'],
-  ];
   return (
     <div className={`${styles.narrowOnly} ${styles.narrowSwitcher}`}>
       <div className={styles.narrowTabs} role="tablist" aria-label="Scene panels">
-        {tabs.map(([id, label]) => (
+        {NARROW_TABS.map(([id, label]) => (
           <button
             key={id}
             type="button"
