@@ -130,7 +130,7 @@ describe('v.resourceReference / v.nodePath / v.color', () => {
     // refuses a spelling rather than a value, so it owes no citation.
     const validator = v.resourceReference('mesh');
     expect(validator.formatOnly).toBe(true);
-    expect(validator.accepts).toBe('null, SubResource("id") or ExtResource("id")');
+    expect(validator.accepts).toBe('null, SubResource("id"), ExtResource("id") or Resource("path")');
   });
 
   it('nodePath accepts NodePath("…")', () => {
@@ -155,6 +155,31 @@ describe('v.resourceReference / v.nodePath / v.color', () => {
   it('color rejects 3-component', () => {
     const err = v.color('light_color')('light_color', 'Color(1, 0, 0)', 1);
     expect(err!.message).toContain('4 numbers');
+  });
+
+  // `variant.cpp:712-719`: COLOR converts from STRING and INT, which
+  // `Variant::operator Color` reads as HTML or a name, and as RGBA hex
+  // (`variant.cpp:1986-1996`). The stored Color is not what the file says.
+  it.each(['"ff0000"', '"red"', '4294967295', '-1'])('color converts %s, with the converted-spelling warning', (value) => {
+    const report = v.color('modulate')('modulate', value, 1);
+    expect(report?.severity).toBe('warning');
+    expect(report?.message).toContain('which this slot converts');
+  });
+
+  it.each(['1.5', '1e3', '&"red"', 'true'])('color refuses %s, which COLOR does not convert', (value) => {
+    expect(v.color('modulate')('modulate', value, 1)?.severity).toBe('error');
+  });
+
+  // `Color::named` fails with ERR_FAIL_V_MSG and yields `Color()` (color.cpp:396-402).
+  it('color errors on a string that is no colour, which the slot stores as black', () => {
+    const report = v.color('modulate')('modulate', '"not a color"', 1);
+    expect(report?.severity).toBe('error');
+    expect(report?.message).toContain('color.cpp:396-402');
+  });
+
+  it('color cites that refusal instead of claiming format-only', () => {
+    expect(v.color('modulate').grounding).toEqual({ kind: 'enforced', cite: 'color.cpp:396-402' });
+    expect(v.color('modulate').formatOnly).toBeUndefined();
   });
 });
 

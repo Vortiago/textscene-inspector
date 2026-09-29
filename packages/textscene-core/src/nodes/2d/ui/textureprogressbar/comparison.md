@@ -31,13 +31,13 @@ Strict parsing format-checks these `TextureProgressBar` properties, plus 9 inher
 | `stretch_margin_left` | integer 0-16384 | warning |
 | `stretch_margin_right` | integer 0-16384 | warning |
 | `stretch_margin_top` | integer 0-16384 | warning |
-| `texture_over` | null, SubResource("id") or ExtResource("id") |  |
-| `texture_progress` | null, SubResource("id") or ExtResource("id") |  |
+| `texture_over` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `texture_progress` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `texture_progress_offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
-| `texture_under` | null, SubResource("id") or ExtResource("id") |  |
-| `tint_over` | Color(r, g, b, a) |  |
-| `tint_progress` | Color(r, g, b, a) |  |
-| `tint_under` | Color(r, g, b, a) |  |
+| `texture_under` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `tint_over` | Color(r, g, b, a), or the colour string or int it converts |  |
+| `tint_progress` | Color(r, g, b, a), or the colour string or int it converts |  |
+| `tint_under` | Color(r, g, b, a), or the colour string or int it converts |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

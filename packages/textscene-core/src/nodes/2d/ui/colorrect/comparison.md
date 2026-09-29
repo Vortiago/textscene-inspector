@@ -18,7 +18,7 @@ Strict parsing format-checks these `ColorRect` properties, plus 53 inherited fro
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `color` | Color(r, g, b, a) |  |
+| `color` | Color(r, g, b, a), or the colour string or int it converts |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

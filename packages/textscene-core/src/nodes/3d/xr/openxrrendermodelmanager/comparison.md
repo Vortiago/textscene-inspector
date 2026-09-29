@@ -19,7 +19,7 @@ Strict parsing format-checks these `OpenXRRenderModelManager` properties, plus 1
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `make_local_to_pose` | quoted string, or the &"…" StringName jacket |  |
+| `make_local_to_pose` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 | `tracker` | enum 0-3 (Any/None set/Left Hand/Right Hand) | warning |
 
 | Rule | Reports | Severity |

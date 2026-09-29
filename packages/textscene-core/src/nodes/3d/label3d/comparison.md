@@ -28,24 +28,24 @@ Strict parsing format-checks these `Label3D` properties, plus 18 inherited from 
 | `billboard` | enum 0-2 (DISABLED/ENABLED/FIXED_Y) | error |
 | `double_sided` | true or false |  |
 | `fixed_size` | true or false |  |
-| `font` | null, SubResource("id") or ExtResource("id") |  |
+| `font` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `font_size` | integer >= 1 | warning below |
 | `horizontal_alignment` | enum 0-3 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT/HORIZONTAL_ALIGNMENT_FILL) | error |
 | `justification_flags` | bit mask of JUSTIFICATION_KASHIDA (1) \| JUSTIFICATION_WORD_BOUND (2) \| JUSTIFICATION_AFTER_LAST_TAB (8) \| JUSTIFICATION_SKIP_LAST_LINE (32) \| JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) \| JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128) |  |
-| `language` | quoted string, or the &"…" StringName jacket |  |
+| `language` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 | `line_spacing` | float |  |
-| `modulate` | Color(r, g, b, a) |  |
+| `modulate` | Color(r, g, b, a), or the colour string or int it converts |  |
 | `no_depth_test` | true or false |  |
 | `offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
-| `outline_modulate` | Color(r, g, b, a) |  |
+| `outline_modulate` | Color(r, g, b, a), or the colour string or int it converts |  |
 | `outline_render_priority` | integer -128-127 | error |
 | `outline_size` | integer 0-127 | warning |
 | `pixel_size` | float 0.0001-128 | warning |
 | `render_priority` | integer -128-127 | error |
 | `shaded` | true or false |  |
 | `structured_text_bidi_override` | enum 0-6 (STRUCTURED_TEXT_DEFAULT/STRUCTURED_TEXT_URI/STRUCTURED_TEXT_FILE/STRUCTURED_TEXT_EMAIL/STRUCTURED_TEXT_LIST/STRUCTURED_TEXT_GDSCRIPT/STRUCTURED_TEXT_CUSTOM) | warning |
-| `structured_text_bidi_override_options` | Array literal ([...]) |  |
-| `text` | quoted string, or the &"…" StringName jacket |  |
+| `structured_text_bidi_override_options` | Array literal ([...] or Array[T]([...])) |  |
+| `text` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 | `text_direction` | enum 0-2 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL) | error below -1, warning below 0, warning above 2, error above 3 |
 | `texture_filter` | enum 0-5 (NEAREST/LINEAR/NEAREST_WITH_MIPMAPS/LINEAR_WITH_MIPMAPS/NEAREST_WITH_MIPMAPS_ANISOTROPIC/LINEAR_WITH_MIPMAPS_ANISOTROPIC) | warning |
 | `uppercase` | true or false |  |

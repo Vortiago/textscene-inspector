@@ -10,6 +10,8 @@ import { validatorRegistry } from './ValidatorRegistry.js';
 import { v } from './validators/v.js';
 import type { PropertyValidator } from './ValidatorRegistry.js';
 import {
+  claimsBothTiers,
+  formatOnlyAndGrounded,
   isUnclassified,
   rangeWithoutTiers,
   staleUngroundable,
@@ -57,10 +59,33 @@ describe('bound grounding', () => {
     expect(staleUngroundable()).toEqual([]);
   });
 
+  it('never declares a validator both format-only and grounded', () => {
+    // `formatOnly` says nothing needs a cite, and `grounding` cites a refusal
+    // of a value that reaches the setter. One validator cannot mean both, and
+    // the `formatOnlyCorpus` ledger skips a grounded one.
+    expect(formatOnlyAndGrounded()).toEqual([]);
+  });
+
   it('gives every grounded bound a source citation', () => {
     // `enforced` without a `file:line` is the unverifiable claim an invented threshold makes. The floor rides on the
     // walk (2000 validators examined, none uncited): a separate key count could pass while the walk examined nothing.
     expect(everyValidatorLabel(citesNoEngineLocation, { atLeast: 2000 })).toEqual([]);
+  });
+});
+
+describe('the format-only and grounded exclusion bites', () => {
+  it('reports a validator carrying both tags, by its label', () => {
+    const both: PropertyValidator = Object.assign(() => null, {
+      formatOnly: true,
+      grounding: { kind: 'enforced' as const, cite: 'node.cpp:1' },
+    });
+    expect(claimsBothTiers(both)).toBe(true);
+    expect(formatOnlyAndGrounded([{ label: 'Scratch.both', validator: both }])).toEqual(['Scratch.both']);
+  });
+
+  it('passes a validator carrying one tag', () => {
+    expect(claimsBothTiers(v.boolean('flat'))).toBe(false);
+    expect(claimsBothTiers(v.float('fov', { min: 1, max: 179, enforced: 'camera_3d.cpp:725' }))).toBe(false);
   });
 });
 
@@ -81,7 +106,6 @@ describe('the classification guard bites', () => {
   it('passes a shape combinator, which rejects only malformed input', () => {
     for (const validator of [
       v.boolean('flat'),
-      v.color('modulate'),
       v.aabb('visibility_aabb'),
       v.nodePath('remote_path'),
       v.quotedString('text'),

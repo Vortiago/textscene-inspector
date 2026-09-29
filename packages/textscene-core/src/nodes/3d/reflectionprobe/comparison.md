@@ -18,7 +18,7 @@ Strict parsing format-checks these `ReflectionProbe` properties, plus 1 inherite
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `ambient_color` | Color(r, g, b, a) |  |
+| `ambient_color` | Color(r, g, b, a), or the colour string or int it converts |  |
 | `ambient_color_energy` | float 0-16 | warning |
 | `ambient_mode` | enum 0-2 (AMBIENT_DISABLED/AMBIENT_ENVIRONMENT/AMBIENT_COLOR) | warning |
 | `blend_distance` | float >= 0 | warning below |

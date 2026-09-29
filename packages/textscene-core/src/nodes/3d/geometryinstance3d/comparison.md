@@ -27,8 +27,8 @@ Strict parsing format-checks these `GeometryInstance3D` properties, plus 1 inher
 | `ignore_occlusion_culling` | true or false |  |
 | `instance_shader_parameters/*` | any Variant — the type comes from the attached shader's uniform declarations, not the .tscn |  |
 | `lod_bias` | float 0.001-128 | error below 0, warning below 0.001, warning above 128 |
-| `material_overlay` | null, SubResource("id") or ExtResource("id") |  |
-| `material_override` | null, SubResource("id") or ExtResource("id") |  |
+| `material_overlay` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `material_override` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `sorting_offset` | float |  |
 | `sorting_use_aabb_center` | true or false |  |
 | `transparency` | float 0-1 | error |

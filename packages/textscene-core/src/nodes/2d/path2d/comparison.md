@@ -21,7 +21,7 @@ Strict parsing format-checks these `Path2D` properties, plus 12 inherited from N
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `curve` | null, SubResource("id") or ExtResource("id") |  |
+| `curve` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

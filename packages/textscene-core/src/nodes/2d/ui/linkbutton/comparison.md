@@ -20,15 +20,15 @@ Strict parsing format-checks these `LinkButton` properties, plus 10 inherited fr
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `ellipsis_char` | quoted string (or the &"…" StringName jacket), at most one character |  |
-| `language` | quoted string, or the &"…" StringName jacket |  |
+| `ellipsis_char` | quoted string (or the &"…" StringName or NodePath("…") it converts), at most one character |  |
+| `language` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 | `structured_text_bidi_override` | enum 0-6 (STRUCTURED_TEXT_DEFAULT/STRUCTURED_TEXT_URI/STRUCTURED_TEXT_FILE/STRUCTURED_TEXT_EMAIL/STRUCTURED_TEXT_LIST/STRUCTURED_TEXT_GDSCRIPT/STRUCTURED_TEXT_CUSTOM) | warning |
-| `structured_text_bidi_override_options` | Array literal ([...]) |  |
-| `text` | quoted string, or the &"…" StringName jacket |  |
+| `structured_text_bidi_override_options` | Array literal ([...] or Array[T]([...])) |  |
+| `text` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 | `text_direction` | enum 0-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) | error below -1, warning below 0, error above 3 |
 | `text_overrun_behavior` | enum 0-6 (OVERRUN_NO_TRIMMING/OVERRUN_TRIM_CHAR/OVERRUN_TRIM_WORD/OVERRUN_TRIM_ELLIPSIS/OVERRUN_TRIM_WORD_ELLIPSIS/OVERRUN_TRIM_ELLIPSIS_FORCE/OVERRUN_TRIM_WORD_ELLIPSIS_FORCE) | warning |
 | `underline` | enum 0-2 (UNDERLINE_MODE_ALWAYS/UNDERLINE_MODE_ON_HOVER/UNDERLINE_MODE_NEVER) | warning |
-| `uri` | quoted string, or the &"…" StringName jacket |  |
+| `uri` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

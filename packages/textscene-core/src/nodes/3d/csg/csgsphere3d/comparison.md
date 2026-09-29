@@ -18,7 +18,7 @@ Strict parsing format-checks these `CSGSphere3D` properties, plus 1 inherited fr
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `material` | null, SubResource("id") or ExtResource("id") |  |
+| `material` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `radial_segments` | integer 4-100 | error below, warning above |
 | `radius` | float 0.001-100 | error at or below 0, warning below 0.001, warning above 100 |
 | `rings` | integer 1-100 | error below, warning above |

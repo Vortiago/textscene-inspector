@@ -41,17 +41,17 @@ Strict parsing format-checks these `Environment` properties, plus 2 inherited fr
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `adjustment_brightness` | float >= 0 | warning below |
-| `adjustment_color_correction` | null, SubResource("id") or ExtResource("id") |  |
+| `adjustment_color_correction` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `adjustment_contrast` | float |  |
 | `adjustment_enabled` | true or false |  |
 | `adjustment_saturation` | float |  |
-| `ambient_light_color` | Color(r, g, b, a) |  |
+| `ambient_light_color` | Color(r, g, b, a), or the colour string or int it converts |  |
 | `ambient_light_energy` | float 0-16 | warning |
 | `ambient_light_sky_contribution` | float 0-1 | error |
 | `ambient_light_source` | enum 0-3 (BG/DISABLED/COLOR/SKY) | warning |
 | `background_camera_feed_id` | integer 1-10 | warning |
 | `background_canvas_max_layer` | integer -1000-1000 | warning |
-| `background_color` | Color(r, g, b, a) |  |
+| `background_color` | Color(r, g, b, a), or the colour string or int it converts |  |
 | `background_energy_multiplier` | float 0-16 | warning |
 | `background_intensity` | float 0-100000 | warning |
 | `background_mode` | enum 0-5 (BG_CLEAR_COLOR/BG_COLOR/BG_SKY/BG_CANVAS/BG_KEEP/BG_CAMERA_FEED) | warning |
@@ -63,7 +63,7 @@ Strict parsing format-checks these `Environment` properties, plus 2 inherited fr
 | `fog_enabled` | true or false |  |
 | `fog_height` | float |  |
 | `fog_height_density` | float |  |
-| `fog_light_color` | Color(r, g, b, a) |  |
+| `fog_light_color` | Color(r, g, b, a), or the colour string or int it converts |  |
 | `fog_light_energy` | float >= 0 | warning below |
 | `fog_mode` | enum 0-1 (EXPONENTIAL/DEPTH) | warning |
 | `fog_sky_affect` | float 0-1 | warning |
@@ -76,7 +76,7 @@ Strict parsing format-checks these `Environment` properties, plus 2 inherited fr
 | `glow_hdr_threshold` | float 0-4 | warning |
 | `glow_intensity` | float 0-8 | warning |
 | `glow_levels/*` | float >= 0 | warning below |
-| `glow_map` | null, SubResource("id") or ExtResource("id") |  |
+| `glow_map` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `glow_map_strength` | float 0-1 | warning |
 | `glow_mix` | float 0-1 | warning |
 | `glow_normalized` | true or false |  |
@@ -92,7 +92,7 @@ Strict parsing format-checks these `Environment` properties, plus 2 inherited fr
 | `sdfgi_read_sky_light` | true or false |  |
 | `sdfgi_use_occlusion` | true or false |  |
 | `sdfgi_y_scale` | enum 0-2 (Y_SCALE_50_PERCENT/Y_SCALE_75_PERCENT/Y_SCALE_100_PERCENT) | warning |
-| `sky` | null, SubResource("id") or ExtResource("id") |  |
+| `sky` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `sky_custom_fov` | float 0-180 | warning |
 | `sky_rotation` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `ssao_ao_channel_affect` | float 0-1 | warning |
@@ -119,12 +119,12 @@ Strict parsing format-checks these `Environment` properties, plus 2 inherited fr
 | `tonemap_exposure` | float >= 0 | warning below |
 | `tonemap_mode` | enum 0-4 (LINEAR/REINHARDT/FILMIC/ACES/AGX) | warning |
 | `tonemap_white` | float >= 1 | warning below |
-| `volumetric_fog_albedo` | Color(r, g, b, a) |  |
+| `volumetric_fog_albedo` | Color(r, g, b, a), or the colour string or int it converts |  |
 | `volumetric_fog_ambient_inject` | float 0-16 | warning |
 | `volumetric_fog_anisotropy` | float -0.9-0.9 | warning |
 | `volumetric_fog_density` | float >= 0 | warning below |
 | `volumetric_fog_detail_spread` | float 0.5-6 | error |
-| `volumetric_fog_emission` | Color(r, g, b, a) |  |
+| `volumetric_fog_emission` | Color(r, g, b, a), or the colour string or int it converts |  |
 | `volumetric_fog_emission_energy` | float >= 0 | warning below |
 | `volumetric_fog_enabled` | true or false |  |
 | `volumetric_fog_gi_inject` | float 0-16 | warning |

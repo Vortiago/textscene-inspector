@@ -87,10 +87,11 @@ validatorRegistry.registerAll('GraphEdit', {
   // graph_edit.cpp:3082: bare BOOL.
   connection_lines_antialiased: v.boolean('connection_lines_antialiased'),
   // graph_edit.cpp:3083: ARRAY, but the getter returns TypedArray<Dictionary> (graph_edit.h:355),
-  // so the save carries the wrapper. A bare `[…]` loads too (core/variant/typed_array.h:43-50).
-  // set_connections (graph_edit.cpp:2533-2543) default-constructs a missing key, so no element
-  // grammar is checked.
-  connections: v.arrayLiteral('connections', { typedAs: 'Dictionary' }),
+  // so the save carries the wrapper. A bare `[…]` loads too (core/variant/typed_array.h:43-49).
+  // set_connections (graph_edit.cpp:2533) takes `TypedArray<Dictionary>`, whose `assign` fails on
+  // another typed array, since nothing converts strictly to DICTIONARY (array.cpp:275-277).
+  // It default-constructs a missing key, so no element grammar is checked.
+  connections: v.arrayLiteral('connections', { typedAs: 'Dictionary', enforced: 'array.cpp:275-277' }),
 
   // "Zoom" group, graph_edit.cpp:3085-3089, all PROPERTY_HINT_NONE. graph_edit.cpp:3086:
   // set_zoom_custom CLAMPs to [zoom_min, zoom_max] (graph_edit.cpp:2434), and the result

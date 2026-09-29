@@ -18,7 +18,7 @@ Strict parsing format-checks these `MultiMeshInstance3D` properties, plus 18 inh
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `multimesh` | null, SubResource("id") or ExtResource("id") |  |
+| `multimesh` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

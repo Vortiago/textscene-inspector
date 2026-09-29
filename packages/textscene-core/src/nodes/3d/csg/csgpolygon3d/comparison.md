@@ -35,7 +35,7 @@ Strict parsing format-checks these `CSGPolygon3D` properties, plus 1 inherited f
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `depth` | float >= 0.01 | error below 0.001, warning below 0.01 |
-| `material` | null, SubResource("id") or ExtResource("id") |  |
+| `material` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `mode` | enum 0-2 (DEPTH/SPIN/PATH) | warning |
 | `path_continuous_u` | true or false |  |
 | `path_interval` | float >= 0.01 | warning below |

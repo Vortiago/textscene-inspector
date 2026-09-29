@@ -61,6 +61,12 @@ describe('TileMapLayer lint rules', () => {
     expect(onTileData[0]?.message).toContain('base64');
   });
 
+  // tile_map_layer.cpp:3216-3218: empty data clears the layer, no error.
+  it.each(['PackedByteArray()', '[]'])('stays silent on the empty tile data %s', (data) => {
+    const diagnostics = lint(scene(`tile_set = SubResource("TileSet_a")\ntile_map_data = ${data}`, TILESET_RESOURCES));
+    expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+  });
+
   it('stays silent on a TileMapLayer with no tile data at all', () => {
     const diagnostics = lint(scene(`tile_set = SubResource("TileSet_a")`, TILESET_RESOURCES));
     expect(diagnostics.filter((d) => d.ruleName?.startsWith('tilemaplayer'))).toEqual([]);

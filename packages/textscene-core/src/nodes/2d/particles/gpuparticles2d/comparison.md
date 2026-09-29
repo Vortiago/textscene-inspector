@@ -34,12 +34,12 @@ Strict parsing format-checks these `GPUParticles2D` properties, plus 12 inherite
 | `local_coords` | true or false |  |
 | `one_shot` | true or false |  |
 | `preprocess` | float >= 0 | warning below |
-| `process_material` | null, SubResource("id") or ExtResource("id") |  |
+| `process_material` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `randomness` | float 0-1 | warning |
 | `seed` | integer 0-4294967295 | warning |
 | `speed_scale` | float 0-64 | warning |
 | `sub_emitter` | NodePath("path/to/node") |  |
-| `texture` | null, SubResource("id") or ExtResource("id") |  |
+| `texture` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `trail_enabled` | true or false |  |
 | `trail_lifetime` | float >= 0.01 | error below 0.00999, warning below 0.01 |
 | `trail_section_subdivisions` | integer 1-1024 | error |

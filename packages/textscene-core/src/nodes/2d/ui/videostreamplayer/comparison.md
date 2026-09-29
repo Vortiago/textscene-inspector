@@ -26,7 +26,7 @@ Strict parsing format-checks these `VideoStreamPlayer` properties, plus 53 inher
 | `loop` | true or false |  |
 | `paused` | true or false |  |
 | `speed_scale` | float >= 0 | error below |
-| `stream` | null, SubResource("id") or ExtResource("id") |  |
+| `stream` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `volume_db` | float -80-24 | error below, warning above |
 
 | Rule | Reports | Severity |

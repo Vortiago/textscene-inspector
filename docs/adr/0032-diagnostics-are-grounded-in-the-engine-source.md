@@ -166,10 +166,13 @@ can reject a value with nothing behind it.
 
 **Each validator declares its kind.** A `PropertyValidator` carries one of three tags.
 `formatOnly` rejects only values that never reach the property: text the tokeniser
-refuses, or a type that `can_convert_strict` (`variant.cpp:536-830`) does not convert
-into the slot, which `PackedScene` then drops silently at `packed_scene.cpp:492`, so no
-citation is possible or needed. `grounding` rejects a real value, and names the
-`file:line` that says so. `intSlot` reads an INT slot, where the authority is the
+refuses, or a whole value of a type that `can_convert_strict` (`variant.cpp:536-830`)
+does not convert into the slot, which `PackedScene` then drops silently at
+`packed_scene.cpp:492`, so no citation is possible or needed. `grounding` rejects a real
+value, and names the `file:line` that says so. A value the setter receives is a real
+value, and so is an element inside a container. `Array::assign` refusing an element
+(`array.cpp:260-261`) or a hint naming the element type is a `grounding`, never
+`formatOnly`. No validator carries both tags. `intSlot` reads an INT slot, where the authority is the
 conversion itself, so the citation is always `variant.h:360-377`. The `v` DSL sets one by
 construction: each combinator is either a `shape(…)` or takes a `Grounding`, and
 `markIntSlot` adds the third. A hand-rolled validator carries none until its author
@@ -186,6 +189,15 @@ The guard counts hand-rolled validators, not only those built through the DSL. A
 keyed on the DSL alone reads zero while a hand-rolled validator ships an invented bound.
 For example, `set_visibility_aabb` assigns a negative extent unaltered, so a hand-rolled
 `GPUParticles3D.visibility_aabb` validator that rejects one ships an invented bound.
+
+**A format-only claim is measured.** `boundGrounding` can only read the tag, so
+`formatOnlyCorpus.ledger.test.mjs` tests what the tag claims. It runs every validator
+that cites no `grounding` over a hand-cited corpus of literals Godot reads and stores
+(`scripts/compare-docs/formatOnlyCorpus.data.mjs`). The corpus is keyed by the Variant
+type the ClassDB capture records, or by the setter's own type where `SETTER_TYPES` names
+one. A literal stored as written may draw no diagnostic. A converted literal may draw the
+converted-spelling warning, and no error. The corpus is data written at authoring time,
+because no test may read the Godot checkout.
 
 **Each advisory threshold carries a `cite`.** `RangeArm.cite` is required, so the
 compiler rejects an uncited arm. `rangeAdvisoryGrounding.test.ts` then checks that the

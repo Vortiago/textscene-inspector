@@ -2,7 +2,7 @@
 
 import type { ParseError } from '../../linter/types.js';
 import { propertyError } from './propertyError.js';
-import { isNilLiteral, nodePathLiteral, resourceRef } from '../../godot/index.js';
+import { isNilLiteral, isPathResourceLiteral, nodePathLiteral, resourceRef } from '../../godot/index.js';
 
 /**
  * Every resource-reference validator, so a sweep can ask whether a registered
@@ -17,7 +17,7 @@ export function isResourceSlotValidator(validator: object): boolean {
   return RESOURCE_SLOT_VALIDATORS.has(validator);
 }
 
-/** A validator for `SubResource("id")`, `ExtResource("id")` or `null`. */
+/** A validator for `SubResource("id")`, `ExtResource("id")`, `Resource("path")` or `null`. */
 export function createResourceReferenceValidator(
   propertyName: string,
   errorCode: string = 'INVALID_REFERENCE'
@@ -27,8 +27,8 @@ export function createResourceReferenceValidator(
     // one: `variant_parser.cpp:699` parses `null` and `nil` to `Variant()`,
     // `can_convert_strict` allows NIL -> OBJECT (variant.cpp:543), and a `Ref<T>`
     // setter takes an invalid Ref. Whether the slot should be filled is a rule's question.
-    if (!isNilLiteral(value) && resourceRef(value) === null) {
-      return propertyError(key, line, `Property '${propertyName}' must be a resource reference like SubResource("id") or ExtResource("id"), or null, got: "${value}"`, errorCode);
+    if (!isNilLiteral(value) && resourceRef(value) === null && !isPathResourceLiteral(value)) {
+      return propertyError(key, line, `Property '${propertyName}' must be a resource reference like SubResource("id"), ExtResource("id") or Resource("path"), or null, got: "${value}"`, errorCode);
     }
     return null;
   };

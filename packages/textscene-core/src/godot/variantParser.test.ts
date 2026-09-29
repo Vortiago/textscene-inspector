@@ -15,6 +15,7 @@ import {
   isNilLiteral,
   nodePathLiteral,
   packedArrayCallAnywhere,
+  variantShape,
 } from './variantParser.js';
 
 describe('nodePathLiteral', () => {
@@ -206,5 +207,31 @@ describe('dictStringField', () => {
     expect(name.exec('{ "surface_name": 1, "names": "a" }')).toBeNull();
     expect(name.exec('{ "name": 1 }')).toBeNull();
     expect(name.exec('{ "name": "a" "b" }')).toBeNull();
+  });
+});
+
+describe('variantShape', () => {
+  it.each([
+    ['PackedVector2Array(0, 0)', 'call'],
+    ['Vector2 ( 1, 2 )', 'call'],
+    ['"a"', 'string'],
+    ['&"a"', 'string'],
+    ['1.5', 'number'],
+    ['-2', 'number'],
+    ['inf', 'number'],
+    ['true', 'bool'],
+    ['null', 'nil'],
+    ['[1]', 'array'],
+    ['Array[int]([1])', 'array'],
+    ['{}', 'dictionary'],
+    ['{"a": 1}', 'dictionary'],
+  ] as const)('names %s a %s', (text, shape) => {
+    expect(variantShape(text)).toBe(shape);
+  });
+
+  // `parse_value` refuses a bare identifier it has no branch for
+  // (variant_parser.cpp:1619), and an array it opens must close (:1648-1651).
+  it.each(['foo', 'Vector2(1, 2', '"unterminated', '[1', '', '1 2'])('names no Variant for %j', (text) => {
+    expect(variantShape(text)).toBeNull();
   });
 });

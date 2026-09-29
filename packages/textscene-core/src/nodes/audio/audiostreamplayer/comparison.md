@@ -26,7 +26,7 @@ Strict parsing format-checks these `AudioStreamPlayer` properties, plus 10 inher
 | `pitch_scale` | float >= 0.01 | error at or below 0, warning below 0.01 |
 | `playback_type` | enum 0-2 (DEFAULT/STREAM/SAMPLE) | warning |
 | `playing` | true or false |  |
-| `stream` | null, SubResource("id") or ExtResource("id") |  |
+| `stream` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `stream_paused` | true or false |  |
 | `volume_db` | float -80-24 | warning |
 

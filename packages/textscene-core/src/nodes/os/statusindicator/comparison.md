@@ -19,9 +19,9 @@ Strict parsing format-checks these `StatusIndicator` properties, plus 10 inherit
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `icon` | null, SubResource("id") or ExtResource("id") |  |
+| `icon` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `menu` | NodePath("path/to/node") |  |
-| `tooltip` | quoted string, or the &"…" StringName jacket |  |
+| `tooltip` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 | `visible` | true or false |  |
 
 | Rule | Reports | Severity |

@@ -21,13 +21,13 @@ Strict parsing format-checks these `TouchScreenButton` properties, plus 12 inher
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `action` | quoted string or &"name" |  |
-| `bitmask` | null, SubResource("id") or ExtResource("id") |  |
+| `bitmask` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `passby_press` | true or false |  |
-| `shape` | null, SubResource("id") or ExtResource("id") |  |
+| `shape` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `shape_centered` | true or false |  |
 | `shape_visible` | true or false |  |
-| `texture_normal` | null, SubResource("id") or ExtResource("id") |  |
-| `texture_pressed` | null, SubResource("id") or ExtResource("id") |  |
+| `texture_normal` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `texture_pressed` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `visibility_mode` | enum 0-1 (ALWAYS/TOUCHSCREEN_ONLY) | warning |
 
 | Rule | Reports | Severity |
