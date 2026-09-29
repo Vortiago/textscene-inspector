@@ -36,24 +36,27 @@ export function viewportTextureRegistryKey(
 }
 
 /**
- * Without the consumer's claim table, each `%Name` in the path jumps to the alias key
- * its claimant publishes under ({@link viewportTextureUniqueNameKey}). With a table, a
- * name it lacks addresses nothing (node.cpp:1930-1938), since the alias could belong
- * to a sub-viewport under another owner.
+ * The claim table a consumer with none walks against: each `%Name` in the path jumps to
+ * the alias key its claimant publishes under ({@link viewportTextureUniqueNameKey}).
  */
 function aliasClaims(root: string, viewportPath: string): ReadonlyMap<string, string> {
   const aliases = new Map<string, string>();
   for (const name of nodePathWalkNames(viewportPath)) {
-    if (name.startsWith(UNIQUE_NODE_PREFIX)) aliases.set(name, `${root}/${name}`);
+    if (name.startsWith(UNIQUE_NODE_PREFIX)) aliases.set(name, uniqueNameAliasKey(root, name));
   }
   return aliases;
+}
+
+/** The registry key a claimed `%Name` publishes under beside its own path. */
+function uniqueNameAliasKey(root: string, uniqueName: string): string {
+  return `${root}/${uniqueName}`;
 }
 
 /**
  * The second key a claimed unique name publishes under, or null. `NodePath("%Name")`
  * resolves with `get_node_or_null` (viewport.cpp:198), so it spells the same viewport:
- * the alias serves a consumer with no claim table, which joins the literal to the
- * root. A consumer with a table resolves the jump to the publisher's own path.
+ * the alias serves a consumer with no claim table, whose walk jumps each `%Name` to it.
+ * A consumer with a table resolves the jump to the publisher's own path.
  */
 export function viewportTextureUniqueNameKey(
   node: TscnNode,
@@ -69,5 +72,5 @@ export function viewportTextureUniqueNameKey(
   const winner = claims?.get(key);
   if (winner !== undefined && winner.livePath !== path) return null;
   const root = path.split('/')[0];
-  return root ? `${root}/${key}` : null;
+  return root ? uniqueNameAliasKey(root, key) : null;
 }

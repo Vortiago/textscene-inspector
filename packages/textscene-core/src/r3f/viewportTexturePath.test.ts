@@ -40,24 +40,17 @@ describe('viewportTextureRegistryKey', () => {
     expect(viewportTextureRegistryKey('Root/Screen', '')).toBeNull();
   });
 
-  /** `NodePath(".")` names the viewport itself: a literal `Root/.` join is a key nothing publishes. */
-  it('resolves a self-referencing "." to the scene root itself', () => {
-    expect(viewportTextureRegistryKey('Root/Screen', '.')).toBe('Root');
-  });
-
-  /**
-   * `/root/…` measures from the live SceneTree, which a static parse does not model:
-   * a join is a key nothing publishes, and could resolve as a relative descent.
-   */
+  /** `/root/…` measures from the live SceneTree, which a static parse does not model. */
   it('returns null for an absolute path', () => {
     expect(viewportTextureRegistryKey('Root/Screen', '/root/Main/SubViewport')).toBeNull();
   });
 
   /**
    * `get_node_or_null` walks the path (viewport.cpp:198), so a spelling that walks to the same
-   * node gives the same key. A text join gives a key that no viewport publishes.
+   * node gives the same key. `.` names the scene root itself.
    */
   it.each([
+    ['.', 'Root'],
     ['./SubViewport', 'Root/SubViewport'],
     ['Frame/../SubViewport', 'Root/SubViewport'],
     ['Hud//View', 'Root/Hud/View'],
@@ -72,8 +65,7 @@ describe('viewportTextureRegistryKey', () => {
 
   /**
    * `%Name` is a jump: `get_node_or_null` looks the name up in the owner's claim
-   * table and descends from the claimant. A literal `Root/%Hud/CombinedViewport`
-   * join is a key nothing registers.
+   * table and descends from the claimant.
    */
   describe('a %Name segment', () => {
     const claimed: ReadonlyMap<string, string> = new Map([
@@ -95,20 +87,16 @@ describe('viewportTextureRegistryKey', () => {
 
     /**
      * The table is the consumer's owner's, and a name it lacks addresses nothing
-     * (node.cpp:1930-1938). The literal join would hit the alias of a sub-viewport
-     * under another owner, such as an instanced sub-scene's `%Inner`.
+     * (node.cpp:1930-1938). Its alias key could belong to a sub-viewport under another
+     * owner, such as an instanced sub-scene's `%Inner`.
      */
     it('resolves to nothing for a %Name the table has no entry for', () => {
       expect(viewportTextureRegistryKey('Root/Screen', '%Inner', claimed)).toBeNull();
     });
 
-    /** Outside the shell there is no tree, so the alias is all there is. */
-    it('resolves a bare %Name to its alias key with no table at all', () => {
-      expect(viewportTextureRegistryKey('Root/Screen', '%View')).toBe('Root/%View');
-    });
-
-    it('walks to the alias key with no table at all', () => {
-      expect(viewportTextureRegistryKey('Root/Screen', './%View')).toBe('Root/%View');
+    /** A host that mounts nodes outside the shell has no tree, so the alias is all there is. */
+    it.each([['%View'], ['./%View']])('walks %s to its alias key with no table at all', (path) => {
+      expect(viewportTextureRegistryKey('Root/Screen', path)).toBe('Root/%View');
     });
   });
 });

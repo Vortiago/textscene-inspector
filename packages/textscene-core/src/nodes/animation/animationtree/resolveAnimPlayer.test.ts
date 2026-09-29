@@ -50,7 +50,15 @@ describe('resolveAnimPlayerPath', () => {
     expect(resolveAnimPlayerPath('Root/Tree', 'garbage')).toBeNull();
   });
 
-  it('returns null for a %Name segment, which no claim table here can resolve', () => {
+  it('jumps a %Name segment through the claim table of the tree', () => {
+    // `get_node_or_null` looks a `%` name up in the owner's table (node.cpp:1930-1938).
+    const claims = new Map([['%Hud', 'Root/Ui/Hud']]);
+    expect(resolveAnimPlayerPath('Root/Tree', 'NodePath("%Hud/Player")', claims)).toBe(
+      'Root/Ui/Hud/Player'
+    );
+  });
+
+  it('returns null for a %Name segment without a claim table', () => {
     // `get_node_or_null` looks a `%` name up in the owner's table (node.cpp:1930-1938). With no
     // owner there is no table, and `%` is an invalid node-name character (ustring.cpp:5071), so
     // an ordinary child of that name would be a path no node can occupy.
