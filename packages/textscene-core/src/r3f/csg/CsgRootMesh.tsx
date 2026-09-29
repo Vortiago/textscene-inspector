@@ -17,7 +17,6 @@ import { evaluateCsgPlan, type CsgEvaluation } from './evaluateCsgPlan';
 import { getCachedEvaluation, setCachedEvaluation } from './csgEvaluationCache';
 import { loadCsgModule, type CsgModule } from './csgModule';
 import type { ShadowCastingEffects } from '../shadowCasting';
-import { CSG_SHADOWS_ONLY_MATERIAL } from './csgShadowsOnlyMaterial';
 
 export interface CsgRootMeshProps {
   plan: CsgPlan;
@@ -101,26 +100,19 @@ export function CsgRootMesh({ plan, shadow, fallback, children }: CsgRootMeshPro
       {drawable && (
         <mesh
           castShadow={shadow.castShadow}
+          onBeforeRender={shadow.onBeforeRender}
+          onAfterRender={shadow.onAfterRender}
           onBeforeShadow={shadow.onBeforeShadow}
+          onAfterShadow={shadow.onAfterShadow}
           receiveShadow
           geometry={evaluation!.geometry as THREE.BufferGeometry}
         >
-          {/* SHADOWS_ONLY draws no colour, so no surface material mounts: one would leave
-              this substitution resting on r3f's attach order, which a later slot remount
-              (an external `.tres` landing, a program key moving) undoes. */}
-          {shadow.shadowsOnly ? (
-            <meshBasicMaterial
-              key={CSG_SHADOWS_ONLY_MATERIAL.key}
-              {...CSG_SHADOWS_ONLY_MATERIAL.props}
-            />
-          ) : (
-            surfaces.map((surface, index) => {
-              // A single-surface mesh keeps the singular attach key, so `mesh.material`
-              // stays one material rather than a length-1 array.
-              const attach = surfaces.length > 1 ? `material-${index}` : 'material';
-              return <SurfaceMaterialSlot key={index} source={surface} attach={attach} />;
-            })
-          )}
+          {surfaces.map((surface, index) => {
+            // A single-surface mesh keeps the singular attach key, so `mesh.material`
+            // stays one material rather than a length-1 array.
+            const attach = surfaces.length > 1 ? `material-${index}` : 'material';
+            return <SurfaceMaterialSlot key={index} source={surface} attach={attach} />;
+          })}
         </mesh>
       )}
       {/*

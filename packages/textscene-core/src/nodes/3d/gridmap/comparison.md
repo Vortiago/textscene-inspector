@@ -46,3 +46,4 @@ Strict parsing format-checks these `GridMap` properties, plus 17 inherited from 
 
 - **Approximated** A tile whose mesh declares no material gets the previewer's neutral grey placeholder, which reads a few values darker than Godot's.
 - **Approximated** `cell_scale` is not parsed, so a map that sets it renders every tile at the wrong size.
+- **Approximated** A tile whose material sets `billboard_mode` keeps its authored pose, since the tiles draw as one batch that no single turn can billboard.

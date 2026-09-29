@@ -7,21 +7,11 @@
 import type { Node3DProperties } from '../../base/node3d/types';
 import type { Color } from '../../../utils/colorParser';
 import type { Vector2 } from '../../../parser/vectors';
+import { BillboardMode } from '../../../godot/billboard';
 
-/**
- * Billboard modes for Sprite3D. Same enum as Label3D (both inherit from
- * BaseMaterial3D.BillboardMode in Godot).
- */
-export enum BillboardMode {
-  /** Billboard disabled: the sprite keeps its own orientation. */
-  BILLBOARD_DISABLED = 0,
-  /** Billboard enabled: the sprite always faces the camera. */
-  BILLBOARD_ENABLED = 1,
-  /** Billboard on the Y axis only: the sprite rotates around Y to face the camera. */
-  BILLBOARD_FIXED_Y = 2,
-  /** Particles billboard mode (not supported in Sprite3D itself). */
-  BILLBOARD_PARTICLES = 3,
-}
+/** Godot's `BaseMaterial3D.BillboardMode`, shared with every billboarding type. */
+export { BillboardMode };
+
 
 /**
  * Alpha-cut modes. Controls how transparent regions of the texture are

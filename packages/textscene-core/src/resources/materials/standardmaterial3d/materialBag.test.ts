@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { billboardModeOf, standardMaterialBag } from './materialBag';
+import { billboardModeOf, castsShadowOf, standardMaterialBag } from './materialBag';
 import { buildStandardMaterial } from './build';
 import { BillboardMode } from '../../../godot/billboard';
 import { parseStandardMaterial3DScalars } from './scalars';
@@ -162,22 +162,38 @@ describe('standardMaterialBag — no material at all', () => {
 describe('standardMaterialBag — billboard_mode', () => {
   it('carries the mode on the material, where each draw group reads it', () => {
     const built = buildStandardMaterial(parseStandardMaterial3DScalars({ billboard_mode: '2' }));
-    expect(billboardModeOf(built)).toBe(BillboardMode.FIXED_Y);
+    expect(billboardModeOf(built)).toBe(BillboardMode.BILLBOARD_FIXED_Y);
   });
 
   it('reads DISABLED from a material that sets no billboard_mode', () => {
     expect(billboardModeOf(buildStandardMaterial(parseStandardMaterial3DScalars({})))).toBe(
-      BillboardMode.DISABLED
+      BillboardMode.BILLBOARD_DISABLED
     );
   });
 
   it('reads DISABLED from Godot’s default surface and from a foreign material', () => {
-    expect(billboardModeOf(buildStandardMaterial(null))).toBe(BillboardMode.DISABLED);
-    expect(billboardModeOf(new THREE.MeshBasicMaterial())).toBe(BillboardMode.DISABLED);
+    expect(billboardModeOf(buildStandardMaterial(null))).toBe(BillboardMode.BILLBOARD_DISABLED);
+    expect(billboardModeOf(new THREE.MeshBasicMaterial())).toBe(BillboardMode.BILLBOARD_DISABLED);
   });
 
   it('gives each bag its own userData, as the .tres loader writes into it', () => {
     const scalars = parseStandardMaterial3DScalars({ billboard_mode: '1' });
     expect(standardMaterialBag(scalars).props.userData).not.toBe(standardMaterialBag(scalars).props.userData);
+  });
+});
+
+describe('standardMaterialBag — shadow-pass membership', () => {
+  it('carries the decoded membership on the material, where each draw group reads it', () => {
+    const built = buildStandardMaterial(parseStandardMaterial3DScalars({ transparency: '1' }));
+    expect(castsShadowOf(built)).toBe(false);
+  });
+
+  it('casts from an opaque material', () => {
+    expect(castsShadowOf(buildStandardMaterial(parseStandardMaterial3DScalars({})))).toBe(true);
+  });
+
+  it('casts from Godot’s default surface and from a foreign material', () => {
+    expect(castsShadowOf(buildStandardMaterial(null))).toBe(true);
+    expect(castsShadowOf(new THREE.MeshBasicMaterial())).toBe(true);
   });
 });

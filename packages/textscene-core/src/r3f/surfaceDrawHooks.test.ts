@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { surfaceDrawHooks } from './surfaceDrawHooks';
-import { shadowCastingEffects } from './shadowCasting';
+import { applyShadowCasting, shadowCastingEffects } from './shadowCasting';
 import { ShadowCastingSetting } from '../resources/meshlibrary/types';
 import { buildStandardMaterial } from '../resources/materials/standardmaterial3d/build';
 import { parseStandardMaterial3DScalars } from '../resources/materials/standardmaterial3d/scalars';
@@ -21,6 +20,8 @@ const OPAQUE = 0;
 const ADDITIVE = 1;
 const BILLBOARD = 2;
 const PARTICLE_BILLBOARD = 3;
+const ALPHA_BLENDED = 4;
+const DEPTH_PRE_PASS = 5;
 
 /**
  * One draw group per surface kind, each with its own material, and a yawed,
@@ -28,15 +29,17 @@ const PARTICLE_BILLBOARD = 3;
  */
 function surfacesMesh(castShadow: number | undefined = ShadowCastingSetting.ON): THREE.Mesh {
   const geometry = new THREE.BufferGeometry();
-  for (let i = 0; i < 4; i++) geometry.addGroup(i * 6, 6, i);
-  const mesh = new THREE.Mesh(geometry, [
+  const materials = [
     material(),
-    material({ transparency: '1', blend_mode: '1' }),
+    material({ blend_mode: '1' }),
     material({ billboard_mode: '1' }),
     material({ billboard_mode: '3' }),
-  ]);
-  const hooks = surfaceDrawHooks(shadowCastingEffects(castShadow));
-  Object.assign(mesh, hooks);
+    material({ transparency: '1' }),
+    material({ transparency: '4' }),
+  ];
+  materials.forEach((_material, i) => geometry.addGroup(i * 6, 6, i));
+  const mesh = new THREE.Mesh(geometry, materials);
+  applyShadowCasting(mesh, shadowCastingEffects(castShadow));
   mesh.position.set(5, 6, 7);
   mesh.rotation.set(0, Math.PI / 2, 0);
   mesh.updateMatrixWorld(true);
@@ -100,10 +103,20 @@ describe('surfaceDrawHooks — shadow pass billboard', () => {
   });
 });
 
-describe('surfaceDrawHooks — shadow pass blend exclusion', () => {
-  it('draws nothing into the shadow map for a blended group', () => {
+describe('surfaceDrawHooks — shadow pass alpha-pass exclusion', () => {
+  it('draws nothing into the shadow map for a non-MIX blend mode', () => {
     const mesh = surfacesMesh();
     expect(drawShadowGroup(mesh, camera, shadowCamera, ADDITIVE, (s) => writesAnything(s.depthMaterial!))).toBe(false);
+  });
+
+  it('draws nothing into the shadow map for an alpha-blended group', () => {
+    const mesh = surfacesMesh();
+    expect(drawShadowGroup(mesh, camera, shadowCamera, ALPHA_BLENDED, (s) => writesAnything(s.depthMaterial!))).toBe(false);
+  });
+
+  it('draws a depth-prepass group, which Godot keeps in the shadow pass', () => {
+    const mesh = surfacesMesh();
+    expect(drawShadowGroup(mesh, camera, shadowCamera, DEPTH_PRE_PASS, (s) => writesAnything(s.depthMaterial!))).toBe(true);
   });
 
   it('draws an opaque group of the same mesh', () => {
@@ -155,9 +168,24 @@ describe('surfaceDrawHooks — cast_shadow', () => {
   });
 });
 
+describe('surfaceDrawHooks — instanced meshes', () => {
+  it('leaves an InstancedMesh in its own pose, which would billboard about the batch origin', () => {
+    // three multiplies `instanceMatrix` after `modelMatrix`, so one swapped matrix
+    // would turn every instance about the batch origin, not each about its own.
+    const instanced = new THREE.InstancedMesh(new THREE.BufferGeometry(), material({ billboard_mode: '1' }), 2);
+    applyShadowCasting(instanced, shadowCastingEffects(ShadowCastingSetting.ON));
+    instanced.position.set(5, 6, 7);
+    instanced.updateMatrixWorld(true);
+    const drawn = drawColourGroup(instanced, camera, 0, (s) => s.matrixWorld);
+    expect(drawn.equals(instanced.matrixWorld)).toBe(true);
+  });
+});
+
 describe('surfaceDrawHooks — identity', () => {
   it('returns the same hooks for the same cast_shadow, so a mesh prop never churns', () => {
-    const effects = shadowCastingEffects(ShadowCastingSetting.ON);
-    expect(surfaceDrawHooks(effects)).toBe(surfaceDrawHooks(effects));
+    const first = shadowCastingEffects(ShadowCastingSetting.ON);
+    const second = shadowCastingEffects(ShadowCastingSetting.ON);
+    expect(second.onBeforeRender).toBe(first.onBeforeRender);
+    expect(second.onBeforeShadow).toBe(first.onBeforeShadow);
   });
 });

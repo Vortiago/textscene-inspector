@@ -25,7 +25,7 @@ import {
 import type { Label3DProperties } from '../../nodes/3d/label3d/types';
 import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from '../../nodes/3d/label3d/types';
 import { inlineTwoSurfaceMesh } from '../../nodes/3d/meshinstance3d/testing/twoSurfaceMesh';
-import { cameraLookingAt, drawColourGroup, writesAnything } from '../testing/threePasses';
+import { cameraLookingAt, depthSideOf, drawColourGroup, writesAnything } from '../testing/threePasses';
 
 function sub(type: string, id: string, data: Record<string, string | undefined> = {}): TscnInternalResource {
   return {
@@ -92,15 +92,8 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
 
     // `cast_shadow` is GeometryInstance3D state, never material state
     // (`servers/rendering/renderer_scene_cull.cpp:732`), so it lands on the
-    // depth material three built for this mesh: `getDepthMaterial` assigns the
-    // side, then the per-object hook runs (`WebGLShadowMap.js:477,535,549`).
-    const depthMaterial = new THREE.MeshDepthMaterial();
-    depthMaterial.side = material.shadowSide ?? THREE.BackSide;
-    mesh.onBeforeShadow(
-      null as never, new THREE.Scene(), null as never, null as never,
-      mesh.geometry, depthMaterial, null as never
-    );
-    expect(depthMaterial.side).toBe(THREE.DoubleSide);
+    // depth material three built for this mesh, not on the material.
+    expect(depthSideOf(mesh)).toBe(THREE.DoubleSide);
     expect(material.shadowSide).toBeNull();
   });
 

@@ -23,7 +23,7 @@ import type { Vector3 } from '../../../parser/vectors';
 import type { GridMapProperties } from './types';
 import { decodeGridMapCells, ORTHO_BASES, type GridMapCell } from './cellData';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
-import { shadowCastingEffects } from '../../../r3f/shadowCasting';
+import { applyShadowCasting, shadowCastingEffects } from '../../../r3f/shadowCasting';
 
 /** Literal-only, so the key is constant and a placeholder cell never remounts. */
 const PLACEHOLDER_CELL_MATERIAL = wireGizmoProgram(0x4488cc);
@@ -37,16 +37,6 @@ const DEFAULT_TILE_MATERIAL = new THREE.MeshStandardMaterial({
   color: GODOT_DEFAULT_ALBEDO,
   metalness: GODOT_DEFAULT_METALLIC,
   roughness: GODOT_DEFAULT_ROUGHNESS,
-});
-
-/**
- * A SHADOWS_ONLY tile's material: it writes neither colour nor depth.
- * `visible = false` would also stop the tile casting, since three's
- * `WebGLShadowMap.renderObject` returns on it. Shared and never disposed.
- */
-const SHADOWS_ONLY_TILE_MATERIAL = new THREE.MeshBasicMaterial({
-  colorWrite: false,
-  depthWrite: false,
 });
 
 /** Godot Transform3D (basis rows + origin) → THREE.Matrix4. */
@@ -149,17 +139,14 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
     if (!geometry) return null;
     // The resource pipeline owns the cached ArrayMesh and a resolved material.
     // The shared default stands in when none is loaded.
-    const material = shadow.shadowsOnly
-      ? SHADOWS_ONLY_TILE_MATERIAL
-      : (materialPath && materialResult.value) || DEFAULT_TILE_MATERIAL;
+    const material = (materialPath && materialResult.value) || DEFAULT_TILE_MATERIAL;
     const mesh = new THREE.InstancedMesh(geometry, material, matrices.length);
     matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
     mesh.instanceMatrix.needsUpdate = true;
-    mesh.castShadow = shadow.castShadow;
     mesh.receiveShadow = true;
-    // DOUBLE_SIDED reaches three's shared depth material here, per mesh per
-    // light (`WebGLShadowMap.js:477,535,549`).
-    mesh.onBeforeShadow = shadow.onBeforeShadow;
+    // The tile's `cast_shadow` and its surface's own shadow-pass membership reach
+    // three per draw (`WebGLShadowMap.js:477,535,549`), as for every GeometryInstance3D.
+    applyShadowCasting(mesh, shadow);
     return mesh;
   }, [meshResult.value, materialPath, materialResult.value, matrices, shadow]);
 

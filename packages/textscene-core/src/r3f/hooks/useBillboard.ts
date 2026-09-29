@@ -17,9 +17,9 @@ export function useBillboard(
 ): void {
   useFrame(({ camera }) => {
     const object = ref.current;
-    if (!object || mode === undefined || mode === BillboardMode.DISABLED) return;
+    if (!object || mode === undefined || mode === BillboardMode.BILLBOARD_DISABLED) return;
     // FIXED_Y pins world +Y as the up basis, so only the yaw turns.
-    if (mode === BillboardMode.FIXED_Y) {
+    if (mode === BillboardMode.BILLBOARD_FIXED_Y) {
       const cp = camera.position;
       const op = object.position;
       object.rotation.set(0, Math.atan2(cp.x - op.x, cp.z - op.z), 0);

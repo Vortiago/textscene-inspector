@@ -2,18 +2,11 @@
 
 import type { Node3DProperties } from '../../base/node3d/types';
 import type { Color } from '../../../utils/colorParser';
+import { BillboardMode } from '../../../godot/billboard';
 
-/** Label3D billboard modes: Godot's `BaseMaterial3D.BillboardMode`. */
-export enum BillboardMode {
-  /** Text faces forward. */
-  BILLBOARD_DISABLED = 0,
-  /** Text always faces the camera. */
-  BILLBOARD_ENABLED = 1,
-  /** Text rotates around Y to face the camera. */
-  BILLBOARD_FIXED_Y = 2,
-  /** Particles mode: not supported in Label3D. */
-  BILLBOARD_PARTICLES = 3,
-}
+/** Godot's `BaseMaterial3D.BillboardMode`, shared with every billboarding type. */
+export { BillboardMode };
+
 
 export interface Label3DProperties extends Node3DProperties {
   text: string;

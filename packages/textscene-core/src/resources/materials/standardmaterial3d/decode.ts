@@ -143,6 +143,8 @@ export function decodeStandardMaterial3D(
   // dithered discard. three has no stochastic clip, and fully opaque is further
   // from Godot's look than blending. The depth write keeps the exact opaque-pass one.
   const transparent = alphaPass || transparency === Transparency.ALPHA_HASH;
+  const castsShadow =
+    !alphaPass || drawsDepthInAlphaPass(properties, transparency, depthDrawMode, depthTest);
 
   const normalScale = floatOr(properties['normal_scale'], 1, CONTEXT);
 
@@ -167,6 +169,7 @@ export function decodeStandardMaterial3D(
     uv1Offset: vec2FromVector3(properties['uv1_offset'], { x: 0, y: 0 }),
     transparency,
     transparent,
+    castsShadow,
     // `alpha_scissor_threshold` hint is "0,1,0.001". 0 means "no cutout" to three,
     // which every non-scissor mode wants.
     alphaTest:
@@ -265,6 +268,25 @@ function rendersInAlphaPass(properties: Record<string, string>, inputs: PassInpu
     depthDrawMode === DepthDrawMode.DISABLED ||
     !depthTest
   );
+}
+
+/**
+ * Godot's `ShaderData::uses_depth_in_alpha_pass()` (`scene_shader_forward_clustered.h:289-293`).
+ * `depth_prepass_alpha` is emitted for ALPHA_DEPTH_PRE_PASS alone (`material.cpp:898`), and
+ * `uses_alpha_antialiasing` only under a cutout mode (`material.cpp:1843`).
+ */
+function drawsDepthInAlphaPass(
+  properties: Record<string, string>,
+  transparency: Transparency,
+  depthDrawMode: DepthDrawMode,
+  depthTest: boolean
+): boolean {
+  const usesDepthPrepassAlpha = transparency === Transparency.ALPHA_DEPTH_PRE_PASS;
+  const usesAlphaAntialiasing =
+    intOr(properties['alpha_antialiasing_mode'], 0, CONTEXT) !== 0 &&
+    (transparency === Transparency.ALPHA_SCISSOR || transparency === Transparency.ALPHA_HASH);
+  const noDepthDraw = depthDrawMode === DepthDrawMode.DISABLED;
+  return (usesDepthPrepassAlpha || usesAlphaAntialiasing) && !(noDepthDraw || !depthTest);
 }
 
 /**

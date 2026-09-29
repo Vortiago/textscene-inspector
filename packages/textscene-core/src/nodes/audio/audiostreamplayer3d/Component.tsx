@@ -102,7 +102,7 @@ const RANGE_CIRCLE_SEGMENTS = 64;
  */
 function RangeCircle({ radius }: RangeCircleProps) {
   const groupRef = useRef<THREE.Object3D | null>(null);
-  useBillboard(groupRef, BillboardMode.ENABLED);
+  useBillboard(groupRef, BillboardMode.BILLBOARD_ENABLED);
 
   const positions = useMemo(() => {
     const verts = new Float32Array(RANGE_CIRCLE_SEGMENTS * 6);

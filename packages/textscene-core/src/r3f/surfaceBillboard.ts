@@ -33,16 +33,16 @@ export function billboardWorldMatrix(
   mode: number
 ): boolean {
   switch (mode) {
-    case BillboardMode.ENABLED:
-    case BillboardMode.PARTICLES:
+    case BillboardMode.BILLBOARD_ENABLED:
+    case BillboardMode.BILLBOARD_PARTICLES:
       camera.extractBasis(axisX, axisY, axisZ);
-      if (mode === BillboardMode.PARTICLES) {
+      if (mode === BillboardMode.BILLBOARD_PARTICLES) {
         axisX.normalize();
         axisY.normalize();
         axisZ.normalize();
       }
       break;
-    case BillboardMode.FIXED_Y:
+    case BillboardMode.BILLBOARD_FIXED_Y:
       if (!fixedYBasis(camera)) return false;
       break;
     default:

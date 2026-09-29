@@ -1,7 +1,7 @@
 /**
- * Godot keeps an additive, subtractive or multiply surface out of the shadow pass,
- * so a glow sprite drops no solid silhouette. The decision is per surface
- * (`render_forward_clustered.cpp:4078-4088` sets `FLAG_PASS_SHADOW` per surface),
+ * Godot keeps a surface in its alpha pass out of the shadow pass unless it draws depth
+ * there, so a glow sprite or a glass pane drops no solid silhouette. The decision is per
+ * surface (`render_forward_clustered.cpp:4078-4088` sets `FLAG_PASS_SHADOW` per surface),
  * and a `.tres` material and a `[sub_resource]` arrive the same way.
  */
 import { describe, expect, it } from 'vitest';
@@ -38,6 +38,8 @@ const INTERNALS: readonly TscnInternalResource[] = [
   { id: 'Box_1', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)' } },
   { id: 'Additive', type: 'StandardMaterial3D', data: ADDITIVE },
   { id: 'Opaque', type: 'StandardMaterial3D', data: {} },
+  { id: 'Glass', type: 'StandardMaterial3D', data: { transparency: '1' } },
+  { id: 'PrePass', type: 'StandardMaterial3D', data: { transparency: '4' } },
   inlineTwoSurfaceMesh('Mixed', ['Opaque', 'Additive']),
   inlineTwoSurfaceMesh('Plain', ['Opaque', 'Opaque']),
 ];
@@ -78,7 +80,7 @@ function castsFrom(mesh: THREE.Mesh, groupIndex: number): boolean {
   );
 }
 
-describe('<MeshInstance3D> blend-mode shadow exclusion on a primitive mesh', () => {
+describe('<MeshInstance3D> shadow-pass exclusion on a primitive mesh', () => {
   it('casts nothing from a [sub_resource] additive material, even with cast_shadow ON', async () => {
     const mesh = await renderMesh(makeNode({ materialOverride: 'SubResource("Additive")' }));
     expect(castsFrom(mesh, 0)).toBe(false);
@@ -96,13 +98,23 @@ describe('<MeshInstance3D> blend-mode shadow exclusion on a primitive mesh', () 
     expect(castsFrom(mesh, 0)).toBe(false);
   });
 
+  it('casts nothing from an alpha-blended MIX material', async () => {
+    const mesh = await renderMesh(makeNode({ materialOverride: 'SubResource("Glass")' }));
+    expect(castsFrom(mesh, 0)).toBe(false);
+  });
+
+  it('casts from ALPHA_DEPTH_PRE_PASS, which draws depth in the alpha pass', async () => {
+    const mesh = await renderMesh(makeNode({ materialOverride: 'SubResource("PrePass")' }));
+    expect(castsFrom(mesh, 0)).toBe(true);
+  });
+
   it('casts from an opaque material', async () => {
     const mesh = await renderMesh(makeNode({ materialOverride: 'SubResource("Opaque")' }));
     expect(castsFrom(mesh, 0)).toBe(true);
   });
 });
 
-describe('<MeshInstance3D> blend-mode shadow exclusion per ArrayMesh surface', () => {
+describe('<MeshInstance3D> shadow-pass exclusion per ArrayMesh surface', () => {
   it('casts from the opaque surface of a mixed mesh', async () => {
     const mesh = await renderMesh(makeNode({ mesh: 'SubResource("Mixed")' }));
     expect(castsFrom(mesh, 0)).toBe(true);
@@ -125,7 +137,7 @@ describe('<MeshInstance3D> blend-mode shadow exclusion per ArrayMesh surface', (
   });
 });
 
-describe('<MeshInstance3D> blend-mode shadow exclusion under SHADOWS_ONLY', () => {
+describe('<MeshInstance3D> shadow-pass exclusion under SHADOWS_ONLY', () => {
   it('casts nothing from an additive surface', async () => {
     // SHADOWS_ONLY hides the colour draw. It never adds a surface to the shadow pass.
     const mesh = await renderMesh(

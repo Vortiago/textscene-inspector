@@ -1,16 +1,18 @@
 /**
  * Godot surface state that three holds per object, applied per draw group instead: a
- * billboarding material's pose, a blended surface's absence from the shadow pass, and
- * SHADOWS_ONLY's hidden colour draw. three calls a before-hook and its after-hook around
- * each group's draw (`WebGLRenderer.js:2158-2183`, `WebGLShadowMap.js:540-548`), with
- * that group's material, so one mesh can mix surfaces the way Godot does.
+ * billboarding material's pose, the shadow pass's surface list, and SHADOWS_ONLY's hidden
+ * colour draw. three calls a before-hook and its after-hook around each group's draw
+ * (`WebGLRenderer.js:2158-2183`, `WebGLShadowMap.js:540-548`), with that group's
+ * material, so one mesh can mix surfaces the way Godot does.
  */
 
 import * as THREE from 'three';
 import { BillboardMode } from '../godot/billboard';
-import { billboardModeOf } from '../resources/materials/standardmaterial3d/materialBag';
+import {
+  billboardModeOf,
+  castsShadowOf,
+} from '../resources/materials/standardmaterial3d/materialBag';
 import { billboardWorldMatrix } from './surfaceBillboard';
-import { drawnMaterial, type ShadowCastingEffects } from './shadowCasting';
 
 /**
  * The four `Object3D` hooks, mounted on a `<mesh>` one prop each: the material factory
@@ -21,6 +23,29 @@ export interface SurfaceDrawHooks {
   onAfterRender: THREE.Object3D['onAfterRender'];
   onBeforeShadow: THREE.Object3D['onBeforeShadow'];
   onAfterShadow: THREE.Object3D['onAfterShadow'];
+}
+
+/** What one `cast_shadow` value changes in a draw (`shadowCasting.ts` holds the four). */
+export interface CastRule {
+  /** SHADOWS_ONLY: the colour pass draws nothing. */
+  shadowsOnly: boolean;
+  /** Sets three's shared depth material's side for the surface `material` draws. */
+  shadowSide: (depthMaterial: THREE.Material, material: THREE.Material) => void;
+}
+
+/**
+ * three passes the object as the second `onBeforeShadow` argument
+ * (`WebGLShadowMap.js:535,549`) and the geometry group as the last, but types
+ * them `Scene` and `Group`. Narrow to what this file reads.
+ */
+type ShadowHookObject = { material?: THREE.Material | THREE.Material[] };
+type ShadowHookGroup = { materialIndex?: number } | null;
+
+/** The material three draws for `group` of `object`, from inside a shadow hook. */
+export function drawnMaterial(object: unknown, group: unknown): THREE.Material | undefined {
+  const material = (object as ShadowHookObject | null)?.material;
+  if (!Array.isArray(material)) return material;
+  return material[(group as ShadowHookGroup)?.materialIndex ?? 0];
 }
 
 /**
@@ -39,15 +64,6 @@ let mutedDepthWrite = true;
 const billboarded = new THREE.Matrix4();
 
 /**
- * Godot keeps an additive, subtractive or multiply surface out of the shadow pass
- * (`render_forward_clustered.cpp:4078-4088`). MIX is three's `NormalBlending`
- * (`blendState.ts`), and every other mode is not.
- */
-function isExcludedFromShadowPass(material: THREE.Material): boolean {
-  return material.blending !== THREE.NormalBlending;
-}
-
-/**
  * Switch off every write for this draw. On the material itself: a `.tres` material and
  * three's depth material are shared, which the after-hook's restore makes safe.
  */
@@ -63,7 +79,7 @@ function mute(material: THREE.Material): void {
  * Give this draw the billboarded pose of `material`'s mode. three uploads `matrixWorld`
  * as `modelMatrix` and `modelViewMatrix` beside it, so both move and both come back.
  *
- * @returns whether the material billboards, so the caller knows the pose moved
+ * @returns whether the pose moved
  */
 function pose(
   object: THREE.Object3D,
@@ -71,8 +87,11 @@ function pose(
   mainCamera: THREE.Camera,
   passCamera: THREE.Camera
 ): boolean {
+  // three multiplies `instanceMatrix` after `modelMatrix`, so a swapped matrix would turn
+  // every instance about the batch origin. Godot's per-instance billboard needs a shader.
+  if ((object as THREE.InstancedMesh).isInstancedMesh) return false;
   const mode = billboardModeOf(material);
-  const camera = mode === BillboardMode.PARTICLES ? passCamera : mainCamera;
+  const camera = mode === BillboardMode.BILLBOARD_PARTICLES ? passCamera : mainCamera;
   if (!billboardWorldMatrix(billboarded, object.matrixWorld, camera.matrixWorld, mode)) return false;
   posed = object;
   posedMatrixWorld.copy(object.matrixWorld);
@@ -94,11 +113,11 @@ function closeDraw(): void {
   }
 }
 
-function hooksFor(effects: ShadowCastingEffects): SurfaceDrawHooks {
+export function surfaceDrawHooks(rule: CastRule): SurfaceDrawHooks {
   return Object.freeze({
     // three recomputes `modelViewMatrix` from `matrixWorld` after this hook (`:2160`).
     onBeforeRender(this: THREE.Object3D, _renderer, _scene, camera, _geometry, material) {
-      if (effects.shadowsOnly) mute(material);
+      if (rule.shadowsOnly) mute(material);
       else pose(this, material, camera, camera);
     },
     onAfterRender: closeDraw,
@@ -107,18 +126,20 @@ function hooksFor(effects: ShadowCastingEffects): SurfaceDrawHooks {
     // stays the billboard's, as `MAIN_CAM_INV_VIEW_MATRIX` is on a shadow pass.
     onBeforeShadow(
       this: THREE.Object3D,
-      renderer,
+      _renderer,
       object,
       camera,
       shadowCamera,
-      geometry,
+      _geometry,
       depthMaterial,
       group
     ) {
-      effects.onBeforeShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, group);
       const material = drawnMaterial(object, group);
       if (!material) return;
-      if (isExcludedFromShadowPass(material)) {
+      rule.shadowSide(depthMaterial, material);
+      // Godot's render list leaves such a surface out (`render_forward_clustered.cpp:4078-4088`).
+      // three's cannot, so its draw writes nothing.
+      if (!castsShadowOf(material)) {
         mute(depthMaterial);
         return;
       }
@@ -128,16 +149,4 @@ function hooksFor(effects: ShadowCastingEffects): SurfaceDrawHooks {
     },
     onAfterShadow: closeDraw,
   } satisfies SurfaceDrawHooks);
-}
-
-/** One frozen set per `cast_shadow` value, so a mesh prop never churns. */
-const HOOKS = new Map<ShadowCastingEffects, SurfaceDrawHooks>();
-
-export function surfaceDrawHooks(effects: ShadowCastingEffects): SurfaceDrawHooks {
-  let hooks = HOOKS.get(effects);
-  if (!hooks) {
-    hooks = hooksFor(effects);
-    HOOKS.set(effects, hooks);
-  }
-  return hooks;
 }

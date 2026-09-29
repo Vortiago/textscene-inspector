@@ -45,7 +45,6 @@ import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
 import { shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
-import { surfaceDrawHooks } from '../../../r3f/surfaceDrawHooks';
 import { ShadowCastingSetting } from '../../../resources/meshlibrary/types';
 
 /** Literal-only, so each key is constant and none of these ever remounts. */
@@ -240,7 +239,7 @@ const NO_RAYCAST: THREE.Object3D['raycast'] = () => {};
  * The overlay casts nothing of its own, so only its colour hooks mount, and its own
  * material decides its billboard: Godot draws it as a separate pass over the surface.
  */
-const OVERLAY_DRAW_HOOKS = surfaceDrawHooks(shadowCastingEffects(ShadowCastingSetting.OFF));
+const OVERLAY_DRAW_HOOKS = shadowCastingEffects(ShadowCastingSetting.OFF);
 
 /**
  * `material_overlay`'s draw: the base mesh's geometry a second time, with the
@@ -294,10 +293,7 @@ interface MeshShellProps {
   rotation: [number, number, number];
   scale: [number, number, number];
   visible: boolean;
-  /**
-   * `cast_shadow`, and through `surfaceDrawHooks` the per-surface draw state three holds
-   * per object: billboard, shadow pass, SHADOWS_ONLY.
-   */
+  /** `cast_shadow`, with the per-surface draw hooks: billboard, shadow pass, SHADOWS_ONLY. */
   shadow: ShadowCastingEffects;
   /** `layers`: the VisualInstance3D render mask a Decal's `cull_mask` filters on. */
   godotLayers: number | undefined;
@@ -327,7 +323,6 @@ function MeshShell({
   overlay,
   children,
 }: MeshShellProps) {
-  const drawHooks = surfaceDrawHooks(shadow);
   return (
     <mesh
       ref={meshRef}
@@ -340,10 +335,10 @@ function MeshShell({
       // three fires these per draw group, the shadow pair after `getDepthMaterial` has
       // set the side (`WebGLShadowMap.js:477,535,549`): the only per-surface reach into
       // a draw of an object whose materials and depth material three shares.
-      onBeforeRender={drawHooks.onBeforeRender}
-      onAfterRender={drawHooks.onAfterRender}
-      onBeforeShadow={drawHooks.onBeforeShadow}
-      onAfterShadow={drawHooks.onAfterShadow}
+      onBeforeRender={shadow.onBeforeRender}
+      onAfterRender={shadow.onAfterRender}
+      onBeforeShadow={shadow.onBeforeShadow}
+      onAfterShadow={shadow.onAfterShadow}
       receiveShadow
       // Godot's `layers`, for `Decal.cull_mask`. Set on every branch, placeholders
       // included, so a decal's receiver test never depends on load order.
@@ -352,7 +347,7 @@ function MeshShell({
       {children}
       {/* SHADOWS_ONLY casts and keeps its descendants. `visible = false` would skip
           the shadow pass and the subtree in `WebGLShadowMap.renderObject`, and
-          `material.visible` gates the depth material too. So `drawHooks` switch off
+          `material.visible` gates the depth material too. So the `shadow` hooks switch off
           each colour draw's writes instead, and the overlay, a second mesh, is left
           out. */}
       {!shadow.shadowsOnly && overlay}

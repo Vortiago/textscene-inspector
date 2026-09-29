@@ -2,93 +2,50 @@
  * `cast_shadow` to its three-side effects. It is GeometryInstance3D state
  * (`servers/rendering/renderer_scene_cull.cpp:732`), never material state, since a
  * `.tres` material is shared. `RS::ShadowCastingSetting` has four values
- * (`servers/rendering/rendering_server.h:1494-1499`) and `castShadow` is a boolean.
+ * (`servers/rendering/rendering_server.h:1494-1499`) and `castShadow` is a boolean,
+ * so the rest reaches three through the per-surface draw hooks (`surfaceDrawHooks.ts`).
  */
 
 import * as THREE from 'three';
 import { ShadowCastingSetting } from '../resources/meshlibrary/types';
+import { surfaceDrawHooks, type CastRule, type SurfaceDrawHooks } from './surfaceDrawHooks';
 
-export interface ShadowCastingEffects {
+/** What every GeometryInstance3D consumer mounts: `castShadow` and the four draw hooks. */
+export interface ShadowCastingEffects extends SurfaceDrawHooks {
   /** `Object3D.castShadow`. */
   castShadow: boolean;
-  /** SHADOWS_ONLY: casts, and the caller keeps it out of the colour buffer. */
+  /** SHADOWS_ONLY: casts, and the hooks keep it out of the colour pass. */
   shadowsOnly: boolean;
-  /** `Object3D.onBeforeShadow`: the per-mesh reach into three's depth material. */
-  onBeforeShadow: THREE.Object3D['onBeforeShadow'];
-}
-
-/**
- * three passes the object as the second `onBeforeShadow` argument
- * (`WebGLShadowMap.js:535,549`) and the geometry group as the last, but types
- * them `Scene` and `Group`. Narrow to what this file reads.
- */
-type ShadowHookObject = { material?: THREE.Material | THREE.Material[] };
-type ShadowHookGroup = { materialIndex?: number } | null;
-
-/** The material three draws for `group` of `object`, from inside a shadow hook. */
-export function drawnMaterial(object: unknown, group: unknown): THREE.Material | undefined {
-  const material = (object as ShadowHookObject | null)?.material;
-  if (!Array.isArray(material)) return material;
-  return material[(group as ShadowHookGroup)?.materialIndex ?? 0];
 }
 
 /**
  * Godot's shadow pass keeps the material's own cull unless it uses double-sided
  * shadows (`render_forward_clustered.cpp:395-411`). three flips FrontSide↔BackSide
  * for the depth material against acne (`WebGLShadowMap.js:51`, applied at `:477`),
- * and every value undoes that.
+ * and every value undoes that. `shadowSide` is three's own per-material override.
  */
-const castWithMaterialCull: THREE.Object3D['onBeforeShadow'] = (
-  _renderer,
-  object,
-  _camera,
-  _shadowCamera,
-  _geometry,
-  depthMaterial,
-  group
-) => {
-  const material = drawnMaterial(object, group);
-  // `shadowSide` is three's own per-material override; leave it winning.
-  if (material) depthMaterial.side = material.shadowSide ?? material.side;
-};
+function materialCull(depthMaterial: THREE.Material, material: THREE.Material): void {
+  depthMaterial.side = material.shadowSide ?? material.side;
+}
 
 /**
  * DOUBLE_SIDED sets `cast_double_sided_shadows`, which drops the shadow pass's
  * cull. Safe on three's shared depth material: `getDepthMaterial` reassigns `side`
  * per object before the hook (`WebGLShadowMap.js:477`), so nothing leaks.
  */
-const castDoubleSidedShadow: THREE.Object3D['onBeforeShadow'] = (
-  _renderer,
-  _scene,
-  _camera,
-  _shadowCamera,
-  _geometry,
-  depthMaterial
-) => {
+function bothFaces(depthMaterial: THREE.Material): void {
   depthMaterial.side = THREE.DoubleSide;
-};
+}
 
-// One frozen result per value: an unstable object would churn the mesh prop.
-const OFF: ShadowCastingEffects = Object.freeze({
-  castShadow: false,
-  shadowsOnly: false,
-  onBeforeShadow: castWithMaterialCull,
-});
-const ON: ShadowCastingEffects = Object.freeze({
-  castShadow: true,
-  shadowsOnly: false,
-  onBeforeShadow: castWithMaterialCull,
-});
-const DOUBLE_SIDED: ShadowCastingEffects = Object.freeze({
-  castShadow: true,
-  shadowsOnly: false,
-  onBeforeShadow: castDoubleSidedShadow,
-});
-const SHADOWS_ONLY: ShadowCastingEffects = Object.freeze({
-  castShadow: true,
-  shadowsOnly: true,
-  onBeforeShadow: castWithMaterialCull,
-});
+function castEffects(castShadow: boolean, rule: CastRule): ShadowCastingEffects {
+  return Object.freeze({ castShadow, shadowsOnly: rule.shadowsOnly, ...surfaceDrawHooks(rule) });
+}
+
+// One frozen result per value: an unstable object would churn the mesh props.
+const OFF = castEffects(false, { shadowsOnly: false, shadowSide: materialCull });
+const ON = castEffects(true, { shadowsOnly: false, shadowSide: materialCull });
+const DOUBLE_SIDED = castEffects(true, { shadowsOnly: false, shadowSide: bothFaces });
+const SHADOWS_ONLY = castEffects(true, { shadowsOnly: true, shadowSide: materialCull });
 
 /** Absent or unrecognised `cast_shadow` is Godot's default, ON. */
 export function shadowCastingEffects(value: number | undefined): ShadowCastingEffects {
@@ -102,4 +59,13 @@ export function shadowCastingEffects(value: number | undefined): ShadowCastingEf
     default:
       return ON;
   }
+}
+
+/** The JSX props, applied to an object built outside JSX, such as GridMap's InstancedMesh. */
+export function applyShadowCasting(object: THREE.Object3D, effects: ShadowCastingEffects): void {
+  object.castShadow = effects.castShadow;
+  object.onBeforeRender = effects.onBeforeRender;
+  object.onAfterRender = effects.onAfterRender;
+  object.onBeforeShadow = effects.onBeforeShadow;
+  object.onAfterShadow = effects.onAfterShadow;
 }

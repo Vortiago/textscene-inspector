@@ -1,30 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { shadowCastingEffects } from './shadowCasting';
+import { applyShadowCasting, shadowCastingEffects } from './shadowCasting';
+import { depthSideOf } from './testing/threePasses';
 import { ShadowCastingSetting } from '../resources/meshlibrary/types';
 
-/**
- * three's shadow pass, reproduced: `getDepthMaterial` assigns the flipped side
- * (`WebGLShadowMap.js:51,477`), then the per-object hook runs. three passes the
- * object second (`WebGLShadowMap.js:535,549`), which its own typing calls a
- * `Scene`.
- */
+/** A mesh with one surface of `materialSide`, carrying the hooks of `value`. */
+function meshCasting(value: number | undefined, materialSide: THREE.Side): THREE.Mesh {
+  const mesh = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial({ side: materialSide }));
+  applyShadowCasting(mesh, shadowCastingEffects(value));
+  mesh.updateMatrixWorld(true);
+  return mesh;
+}
+
 function depthSideAfterPass(value: number | undefined, materialSide: THREE.Side): THREE.Side {
-  const flip: Record<number, THREE.Side> = {
-    [THREE.FrontSide]: THREE.BackSide,
-    [THREE.BackSide]: THREE.FrontSide,
-    [THREE.DoubleSide]: THREE.DoubleSide,
-  };
-  const material = new THREE.MeshStandardMaterial({ side: materialSide });
-  const depthMaterial = new THREE.MeshDepthMaterial();
-  depthMaterial.side = material.shadowSide ?? flip[material.side as number]!;
-  const mesh = new THREE.Mesh(new THREE.BufferGeometry(), material);
-  Object.assign(mesh, { onBeforeShadow: shadowCastingEffects(value).onBeforeShadow });
-  mesh.onBeforeShadow(
-    null as never, mesh as never, null as never, null as never,
-    mesh.geometry, depthMaterial, null as never
-  );
-  return depthMaterial.side;
+  return depthSideOf(meshCasting(value, materialSide));
 }
 
 describe('shadowCastingEffects', () => {
@@ -89,15 +78,9 @@ describe('shadowCastingEffects', () => {
     // `cast_shadow` is GeometryInstance3D state, not material state
     // (`servers/rendering/renderer_scene_cull.cpp:732`), and a `.tres` material
     // is shared by every node referencing it.
-    const material = new THREE.MeshStandardMaterial();
-    const mesh = new THREE.Mesh(new THREE.BufferGeometry(), material);
-    Object.assign(mesh, {
-      onBeforeShadow: shadowCastingEffects(ShadowCastingSetting.DOUBLE_SIDED).onBeforeShadow,
-    });
-    mesh.onBeforeShadow(
-      null as never, new THREE.Scene(), null as never, null as never,
-      mesh.geometry, new THREE.MeshDepthMaterial(), null as never
-    );
+    const mesh = meshCasting(ShadowCastingSetting.DOUBLE_SIDED, THREE.FrontSide);
+    const material = mesh.material as THREE.Material;
+    depthSideOf(mesh);
     expect(material.shadowSide).toBeNull();
   });
 

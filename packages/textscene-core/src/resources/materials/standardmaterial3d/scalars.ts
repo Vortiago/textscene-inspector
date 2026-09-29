@@ -41,6 +41,7 @@ export function standardMaterial3DScalars(
     uv1Scale: data.uv1Scale,
     uv1Offset: data.uv1Offset,
     transparent: data.transparent,
+    castsShadow: data.castsShadow,
     alphaTest: data.alphaTest,
     depthWrite: data.depthWrite,
     depthTest: data.depthTest,

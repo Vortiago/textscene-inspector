@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { drawnMaterial } from '../shadowCasting';
+import { drawnMaterial } from '../surfaceDrawHooks';
 
 /** What a probe sees between a draw's before-hook and its after-hook. */
 export interface DrawState {
@@ -116,4 +116,13 @@ function rotationOf(matrix: THREE.Matrix4): THREE.Quaternion {
   const rotation = new THREE.Quaternion();
   matrix.decompose(new THREE.Vector3(), rotation, new THREE.Vector3());
   return rotation;
+}
+
+/** A fixed main camera and light camera, for a probe whose answer no pose changes. */
+const PROBE_CAMERA = cameraLookingAt({ x: 0, y: 0, z: 10 });
+const PROBE_SHADOW_CAMERA = cameraLookingAt({ x: 0, y: 10, z: 0.1 });
+
+/** The side three's depth material takes for the mesh's first draw group, after its hooks. */
+export function depthSideOf(mesh: THREE.Mesh): THREE.Side {
+  return drawShadowGroup(mesh, PROBE_CAMERA, PROBE_SHADOW_CAMERA, 0, (s) => s.depthMaterial!.side);
 }

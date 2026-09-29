@@ -28,7 +28,7 @@ describe('billboardWorldMatrix — ENABLED', () => {
 
   it('takes the camera basis as the model basis', () => {
     const target = new THREE.Matrix4();
-    expect(billboardWorldMatrix(target, yawedScaledModel(), camera.matrixWorld, BillboardMode.ENABLED)).toBe(true);
+    expect(billboardWorldMatrix(target, yawedScaledModel(), camera.matrixWorld, BillboardMode.BILLBOARD_ENABLED)).toBe(true);
     for (const i of [0, 1, 2] as const) {
       expectVectorClose(column(target, i).normalize(), column(camera.matrixWorld, i).normalize());
     }
@@ -36,13 +36,13 @@ describe('billboardWorldMatrix — ENABLED', () => {
 
   it('keeps the model origin', () => {
     const target = new THREE.Matrix4();
-    billboardWorldMatrix(target, yawedScaledModel(), camera.matrixWorld, BillboardMode.ENABLED);
+    billboardWorldMatrix(target, yawedScaledModel(), camera.matrixWorld, BillboardMode.BILLBOARD_ENABLED);
     expectVectorClose(column(target, 3), new THREE.Vector3(5, 6, 7));
   });
 
   it('keeps the model scale per axis, as billboard_keep_scale does', () => {
     const target = new THREE.Matrix4();
-    billboardWorldMatrix(target, yawedScaledModel(), camera.matrixWorld, BillboardMode.ENABLED);
+    billboardWorldMatrix(target, yawedScaledModel(), camera.matrixWorld, BillboardMode.BILLBOARD_ENABLED);
     expect(column(target, 0).length()).toBeCloseTo(2, 6);
     expect(column(target, 1).length()).toBeCloseTo(3, 6);
     expect(column(target, 2).length()).toBeCloseTo(4, 6);
@@ -53,7 +53,7 @@ describe('billboardWorldMatrix — FIXED_Y', () => {
   it('keeps world up as the Y axis and turns X and Z toward the camera plane', () => {
     const camera = cameraLookingAt({ x: 4, y: 3, z: 12 });
     const target = new THREE.Matrix4();
-    expect(billboardWorldMatrix(target, yawedScaledModel(), camera.matrixWorld, BillboardMode.FIXED_Y)).toBe(true);
+    expect(billboardWorldMatrix(target, yawedScaledModel(), camera.matrixWorld, BillboardMode.BILLBOARD_FIXED_Y)).toBe(true);
 
     const up = new THREE.Vector3(0, 1, 0);
     const cameraX = column(camera.matrixWorld, 0);
@@ -72,7 +72,7 @@ describe('billboardWorldMatrix — FIXED_Y', () => {
       new THREE.Vector3(0, 1, 0)
     );
     const target = new THREE.Matrix4().makeScale(9, 9, 9);
-    expect(billboardWorldMatrix(target, yawedScaledModel(), lookingDown, BillboardMode.FIXED_Y)).toBe(false);
+    expect(billboardWorldMatrix(target, yawedScaledModel(), lookingDown, BillboardMode.BILLBOARD_FIXED_Y)).toBe(false);
     expect(target.equals(new THREE.Matrix4().makeScale(9, 9, 9))).toBe(true);
   });
 });
@@ -83,8 +83,8 @@ describe('billboardWorldMatrix — PARTICLES', () => {
     const cameraWorld = new THREE.Matrix4().makeScale(2, 2, 2);
     const particles = new THREE.Matrix4();
     const enabled = new THREE.Matrix4();
-    billboardWorldMatrix(particles, new THREE.Matrix4(), cameraWorld, BillboardMode.PARTICLES);
-    billboardWorldMatrix(enabled, new THREE.Matrix4(), cameraWorld, BillboardMode.ENABLED);
+    billboardWorldMatrix(particles, new THREE.Matrix4(), cameraWorld, BillboardMode.BILLBOARD_PARTICLES);
+    billboardWorldMatrix(enabled, new THREE.Matrix4(), cameraWorld, BillboardMode.BILLBOARD_ENABLED);
     expect(column(particles, 0).length()).toBeCloseTo(1, 6);
     expect(column(enabled, 0).length()).toBeCloseTo(2, 6);
   });
@@ -94,7 +94,7 @@ describe('billboardWorldMatrix — DISABLED', () => {
   it('reports no billboard and leaves the target alone', () => {
     const camera = cameraLookingAt({ x: 4, y: 3, z: 12 });
     const target = new THREE.Matrix4().makeScale(9, 9, 9);
-    expect(billboardWorldMatrix(target, yawedScaledModel(), camera.matrixWorld, BillboardMode.DISABLED)).toBe(false);
+    expect(billboardWorldMatrix(target, yawedScaledModel(), camera.matrixWorld, BillboardMode.BILLBOARD_DISABLED)).toBe(false);
     expect(target.equals(new THREE.Matrix4().makeScale(9, 9, 9))).toBe(true);
   });
 

@@ -12,6 +12,18 @@ import { GridMap } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../index';
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
+import { buildStandardMaterial } from '../../../resources/materials/standardmaterial3d/build';
+import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars';
+import {
+  cameraLookingAt,
+  drawColourGroup,
+  depthSideOf,
+  drawShadowGroup,
+  writesAnything,
+} from '../../../r3f/testing/threePasses';
+
+const camera = cameraLookingAt({ x: 4, y: 3, z: 12 });
+const shadowCamera = cameraLookingAt({ x: -8, y: 20, z: 1 });
 
 const LIBRARY_PATH = 'res://stage/tiles.tres';
 const TILE_MESH_PATH = 'res://stage/meshes/bare.tres';
@@ -98,22 +110,6 @@ async function renderTile(castShadowLine: string): Promise<THREE.InstancedMesh> 
   return instanced[0]!;
 }
 
-/** three's shadow pass: the side, then the per-object hook (`WebGLShadowMap.js:477,535,549`). */
-function depthSideAfterPass(mesh: THREE.Object3D, material: THREE.Material): THREE.Side {
-  const flip: Record<number, THREE.Side> = {
-    [THREE.FrontSide]: THREE.BackSide,
-    [THREE.BackSide]: THREE.FrontSide,
-    [THREE.DoubleSide]: THREE.DoubleSide,
-  };
-  const depthMaterial = new THREE.MeshDepthMaterial();
-  depthMaterial.side = material.shadowSide ?? flip[material.side as number]!;
-  mesh.onBeforeShadow(
-    null as never, new THREE.Scene(), null as never, null as never,
-    new THREE.BufferGeometry(), depthMaterial, null as never
-  );
-  return depthMaterial.side;
-}
-
 describe('<GridMap> per-tile mesh_cast_shadow', () => {
   it('casts by default, as Godot does with the key absent', async () => {
     const tile = await renderTile('');
@@ -128,19 +124,40 @@ describe('<GridMap> per-tile mesh_cast_shadow', () => {
   it('DOUBLE_SIDED draws both faces into the depth pass', async () => {
     const tile = await renderTile('item/0/mesh_cast_shadow = 2');
     expect(tile.castShadow).toBe(true);
-    expect(depthSideAfterPass(tile, tile.material as THREE.Material)).toBe(THREE.DoubleSide);
+    expect(depthSideOf(tile)).toBe(THREE.DoubleSide);
   });
 
-  it('leaves three’s flip alone for every other value', async () => {
-    // `render_forward_clustered.cpp:395-411`: only DOUBLE_SIDED drops the cull.
+  it('keeps the tile material’s own cull for every other value', async () => {
+    // `render_forward_clustered.cpp:395-411`: only DOUBLE_SIDED drops the cull, and
+    // every other value undoes three's acne flip (`WebGLShadowMap.js:51`).
     const tile = await renderTile('item/0/mesh_cast_shadow = 1');
-    expect(depthSideAfterPass(tile, tile.material as THREE.Material)).toBe(THREE.BackSide);
+    expect(depthSideOf(tile)).toBe(THREE.FrontSide);
   });
 
-  it('SHADOWS_ONLY casts but writes no colour', async () => {
+  it('SHADOWS_ONLY casts but draws no colour', async () => {
     const tile = await renderTile('item/0/mesh_cast_shadow = 3');
     expect(tile.castShadow).toBe(true);
-    expect((tile.material as THREE.Material).colorWrite).toBe(false);
+    expect(drawColourGroup(tile, camera, 0, (s) => writesAnything(s.material))).toBe(false);
+  });
+
+  it('SHADOWS_ONLY keeps the tile material, so the shadow pass reads its own state', async () => {
+    const tile = await renderTile('item/0/mesh_cast_shadow = 3');
+    expect((tile.material as THREE.Material).colorWrite).toBe(true);
+  });
+
+  it('casts nothing from a tile whose material leaves the shadow pass', async () => {
+    // Godot's per-surface FLAG_PASS_SHADOW (`render_forward_clustered.cpp:4078-4088`)
+    // applies to a GridMap's tiles as to any GeometryInstance3D surface.
+    const tile = await renderTile('');
+    tile.material = buildStandardMaterial(parseStandardMaterial3DScalars({ transparency: '1' }));
+    expect(drawShadowGroup(tile, camera, shadowCamera, 0, (s) => writesAnything(s.depthMaterial!))).toBe(false);
+  });
+
+  it('never billboards a tile batch, which would turn about the GridMap origin', async () => {
+    const tile = await renderTile('');
+    tile.material = buildStandardMaterial(parseStandardMaterial3DScalars({ billboard_mode: '1' }));
+    tile.updateMatrixWorld(true);
+    expect(drawColourGroup(tile, camera, 0, (s) => s.matrixWorld).equals(tile.matrixWorld)).toBe(true);
   });
 
   it('never writes the tile’s setting onto the shared tile material', async () => {

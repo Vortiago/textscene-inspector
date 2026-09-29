@@ -106,16 +106,18 @@ function materialBlendProps(scalars: StandardMaterial3DScalars): MaterialBlendSt
   return props;
 }
 
-/** Where a derived material records its `billboard_mode`, for the draw hooks to read per surface. */
+/** Where a derived material records the surface state the draw hooks read per draw group. */
 const BILLBOARD_MODE_KEY = 'godotBillboardMode';
+const CASTS_SHADOW_KEY = 'godotCastsShadow';
 
 /**
- * `billboard_mode` on `userData`, not a material prop: Godot applies it in the vertex
- * shader, and here the draw hooks apply it per draw group (`r3f/surfaceDrawHooks.ts`).
- * A fresh object per bag, since the `.tres` loader writes its own keys into it.
+ * `billboard_mode` and shadow-pass membership on `userData`, not as material props:
+ * Godot decides both per surface, in the vertex shader and in the render list, and here
+ * the draw hooks apply both per draw group (`r3f/surfaceDrawHooks.ts`). A fresh object
+ * per bag, since the `.tres` loader writes its own keys into it.
  */
-function billboardUserData(scalars: StandardMaterial3DScalars): Record<string, number> {
-  return { [BILLBOARD_MODE_KEY]: scalars.billboardMode };
+function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unknown> {
+  return { [BILLBOARD_MODE_KEY]: scalars.billboardMode, [CASTS_SHADOW_KEY]: scalars.castsShadow };
 }
 
 /**
@@ -124,7 +126,15 @@ function billboardUserData(scalars: StandardMaterial3DScalars): Record<string, n
  */
 export function billboardModeOf(material: THREE.Material): number {
   const mode: unknown = material.userData[BILLBOARD_MODE_KEY];
-  return typeof mode === 'number' ? mode : BillboardMode.DISABLED;
+  return typeof mode === 'number' ? mode : BillboardMode.BILLBOARD_DISABLED;
+}
+
+/**
+ * Whether a material's surface joins Godot's shadow pass. True for Godot's default
+ * surface, which is opaque, and for any material this derivation did not build.
+ */
+export function castsShadowOf(material: THREE.Material): boolean {
+  return material.userData[CASTS_SHADOW_KEY] !== false;
 }
 
 /**
@@ -164,7 +174,7 @@ export function standardMaterialBag(
         depthWrite: scalars.depthWrite,
         depthTest: scalars.depthTest,
         side: scalars.side,
-        userData: billboardUserData(scalars),
+        userData: surfaceUserData(scalars),
         ...blend,
       },
     };
@@ -201,7 +211,7 @@ export function standardMaterialBag(
     // and its depth is in world units. Inert without a heightmap (scale 0, no map).
     displacementMap: slot('heightmap_texture'),
     displacementScale: scalars.heightmapScale,
-    userData: billboardUserData(scalars),
+    userData: surfaceUserData(scalars),
     ...blend,
   };
 
