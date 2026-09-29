@@ -10,6 +10,7 @@ import type * as THREE from 'three';
 import type { SceneScope, TscnNode, TscnScene } from '../parser/types.js';
 import { joinPath } from '../utils/nodePath.js';
 import {
+  allocateNodePaintRange,
   allocatePaintRange,
   canvasRootRanges,
   isCanvasLayerType,
@@ -204,17 +205,9 @@ function PlainNode({
   const { hiddenNodePaths, registerNodeObject, unregisterNodeObject } = useSelection();
   const workspace = useCanvasWorkspace();
   const paintRange = usePaintRange();
-  // Before the early returns, for rules-of-hooks. Memoized: `allocatePaintRange`
+  // Before the early returns, for rules-of-hooks. Memoized: `allocateNodePaintRange`
   // walks each child's whole subtree, which on every render is quadratic in depth.
-  const allocated = useMemo(
-    () =>
-      allocatePaintRange(
-        paintRange,
-        node.children,
-        (node.properties as { y_sort_enabled?: boolean }).y_sort_enabled === true
-      ),
-    [paintRange, node.children, node.properties]
-  );
+  const allocated = useMemo(() => allocateNodePaintRange(paintRange, node), [paintRange, node]);
   const isHidden = hiddenNodePaths.has(path);
   const inheritedCanvasRoots = useCanvasRootRanges();
   // A CanvasLayer is a canvas of its own, so the roots below it are indexed by
@@ -391,9 +384,9 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // gives each root a run of its own, as an authored child gets.
   const injectedRanges = useMemo(
     () =>
-      allocatePaintRange(allocatePaintRange(paintRange, shallow.children).tail, loadedScene?.nodes ?? [])
+      allocatePaintRange(allocateNodePaintRange(paintRange, shallow).tail, loadedScene?.nodes ?? [])
         .children,
-    [paintRange, shallow.children, loadedScene?.nodes]
+    [paintRange, shallow, loadedScene?.nodes]
   );
 
   // Unresolvable ref or failed load: keep the node visible with a magenta

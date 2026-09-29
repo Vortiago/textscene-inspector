@@ -40,10 +40,18 @@ polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
 ${order === 'background-first' ? background + '\n' + sprite : sprite + '\n' + background}`;
 }
 
-/** Render world content and Controls together, exactly as `World2DContents` mounts them. */
-async function renderWorld(tscn: string): Promise<THREE.Object3D | null> {
+/**
+ * Render world content and Controls together, exactly as `World2DContents` mounts them.
+ * Each path in `texturePaths` resolves to a 32x32 texture.
+ */
+async function renderWorld(tscn: string, texturePaths: readonly string[] = []): Promise<THREE.Object3D | null> {
   const parsed = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
+  for (const path of texturePaths) {
+    const texture = new THREE.Texture();
+    (texture as unknown as { image: { width: number; height: number } }).image = { width: 32, height: 32 };
+    fake.textures.seed(path, texture);
+  }
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
       <NodeDispatcher nodes={parsed.nodes} />
@@ -94,6 +102,44 @@ function drawnMeshUnder(root: THREE.Object3D | null, name: string): THREE.Object
   if (!found) throw new Error(`node "${name}" drew no mesh`);
   return found;
 }
+
+/** Every mesh under the named node that is not also under `excluded`. */
+function meshesUnderExcept(root: THREE.Object3D | null, name: string, excluded: THREE.Object3D): THREE.Object3D[] {
+  const found: THREE.Object3D[] = [];
+  root?.traverse((o) => {
+    if (o.name !== name) return;
+    o.traverse((d) => {
+      if ((d as THREE.Mesh).isMesh && d !== excluded) found.push(d);
+    });
+  });
+  return found;
+}
+
+const TILES_TEXTURE = 'res://tiles.png';
+
+/** A TileMap with one tile on layer 0 and an authored Polygon2D child, both at z_final 0. */
+const TILE_MAP_WITH_CHILD = `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="${TILES_TEXTURE}" id="1"]
+
+[sub_resource type="TileSetAtlasSource" id="atlas"]
+texture = ExtResource("1")
+texture_region_size = Vector2i(16, 16)
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="set"]
+sources/0 = SubResource("atlas")
+
+[node name="Root" type="Node2D"]
+
+[node name="Map" type="TileMap" parent="."]
+tile_set = SubResource("set")
+format = 2
+layer_0/tile_data = PackedInt32Array(0, 0, 0)
+
+[node name="Marker" type="Polygon2D" parent="Map"]
+polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
+`;
 
 describe('2D canvas paint order — a Control sorts in tree order with its Node2D siblings', () => {
   it('RED: a ColorRect authored FIRST paints behind a later Polygon2D sibling', async () => {
@@ -170,6 +216,20 @@ polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
     expect(
       compareKeys(paintKey(drawnMeshUnder(root, 'Detached')), paintKey(drawnMeshUnder(root, 'Ball')))
     ).toBeGreaterThan(0);
+  });
+
+  it('a TileMap child draws over the TileMap\'s layers', async () => {
+    // The layers are internal children added at the front
+    // (`tile_map.cpp:279`), so their draw indices come before every authored
+    // child's (`node.h:585-600`) and `_cull_canvas_item` draws them first.
+    const root = await renderWorld(TILE_MAP_WITH_CHILD, [TILES_TEXTURE]);
+    const marker = drawnMeshUnder(root, 'Marker');
+    const tiles = meshesUnderExcept(root, 'Map', marker);
+
+    expect(tiles.length).toBeGreaterThan(0);
+    for (const tile of tiles) {
+      expect(compareKeys(paintKey(tile), paintKey(marker))).toBeLessThan(0);
+    }
   });
 
   it('a ColorRect authored LAST paints over an earlier Polygon2D sibling', async () => {

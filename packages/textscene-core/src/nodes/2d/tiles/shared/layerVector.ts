@@ -33,9 +33,9 @@ const LAYER_LEAVES: ReadonlySet<string> = new Set(LAYER_LEAF_NAMES);
 
 /**
  * How far the gap fill goes. Godot's limit is memory: one `layer_2000000000/…`
- * key would build two billion layers. 64 layers already spend the per-layer
- * draw-order budget in one z_index step (TILE_LAYER_STEP = Z_INDEX_STEP / 64), so
- * past it only the written layers are kept, in order.
+ * key would build two billion layers. A gap layer holds no cells and draws
+ * nothing, so past the ceiling only the written layers are kept, in order, and
+ * the draw order of the written layers is the same.
  */
 const LAYER_FILL_CEILING = 64;
 
