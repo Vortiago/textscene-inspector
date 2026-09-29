@@ -245,7 +245,8 @@ describe('TiledUploadQueue with textures three already shares', () => {
   });
 
   it('moves a shared upload onto a remaining texture when the one it started on leaves', async () => {
-    // The texture it started on is about to be disposed, which frees its GPU storage.
+    // The remaining clone has the same cache key, so its init binds the storage the rows
+    // already fill, and three keeps that storage while any texture bound to it lives.
     const { renderer, copies, allocations, now } = fakeRenderer();
     const queue = new TiledUploadQueue(renderer, now);
     const texture = dataTexture(4096, 300);
@@ -258,11 +259,10 @@ describe('TiledUploadQueue with textures three already shares', () => {
 
     expect(await second.done).toBe(true);
     expect(allocations.map((allocation) => allocation.texture)).toEqual([texture, clone]);
-    const onClone = copies.filter(({ destination }) => destination === clone);
-    expect(onClone.map(({ fromRow, toRow }) => [fromRow, toRow])).toEqual([
-      [0, 128],
-      [128, 256],
-      [256, 300],
+    expect(copies.map(({ destination, fromRow, toRow }) => [destination, fromRow, toRow])).toEqual([
+      [texture, 0, 128],
+      [clone, 128, 256],
+      [clone, 256, 300],
     ]);
   });
 

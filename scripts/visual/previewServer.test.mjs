@@ -136,18 +136,34 @@ describe('settleCanvas', () => {
     expect(buffer.toString()).toBe('b');
   });
 
-  it('reports texture work that never ends rather than returning a frame', async () => {
-    const status = {
+  /** A status whose wait fails with `error`, as Playwright's locator rejects. */
+  function failingStatus(error) {
+    return {
       waitFor: async () => {
-        throw new Error('Timeout exceeded');
+        throw error;
       },
       count: async () => 1,
     };
-    const { page, canvas } = stubCanvas(['x', 'x'], status);
+  }
+
+  /** Playwright's own timeout: an `Error` named `TimeoutError`. */
+  function timeoutError() {
+    const error = new Error('Timeout 120000ms exceeded');
+    error.name = 'TimeoutError';
+    return error;
+  }
+
+  it('reports texture work that never ends rather than returning a frame', async () => {
+    const { page, canvas } = stubCanvas(['x', 'x'], failingStatus(timeoutError()));
     const { buffer, reason } = await settleCanvas(page, canvas);
     expect(buffer).toBeNull();
     expect(reason).toMatch(/texture work still pending/);
     expect(canvas.calls).toHaveLength(0);
+  });
+
+  it('throws when the texture work wait fails for a reason other than its timeout', async () => {
+    const { page, canvas } = stubCanvas(['x', 'x'], failingStatus(new Error('Target page has been closed')));
+    await expect(settleCanvas(page, canvas)).rejects.toThrow(/texture work status.*Target page has been closed/);
   });
 
   it('can skip the texture work wait, for the control that proves the wait matters', async () => {

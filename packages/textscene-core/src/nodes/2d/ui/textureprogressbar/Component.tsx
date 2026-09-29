@@ -15,7 +15,7 @@ import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D } from '../../../../resources/useTexture2D';
-import { pinNoColorSpace, useCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
+import { undecodedClone } from '../../../../r3f/undecodedTexture';
 import { rangeRatio } from '../shared/range';
 import { controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';
 import { ninePatchGeometry, NINE_PATCH_STRETCH } from '../../../../r3f/controls/native/ninePatchGeometry';
@@ -67,16 +67,19 @@ function useLayerTexture(
   filter: 'nearest' | 'linear'
 ): THREE.Texture | null {
   const { texture: raw } = useTexture2D(ref, externalResources, internalResources);
-  const decoded = useCanvas2DTexture(raw);
+  // One clone from the shared texture, not a clone of `useCanvas2DTexture`'s: that one
+  // would upload a whole GPU copy that never draws, under its own sampler settings.
   const layer = useMemo(() => {
-    if (!decoded) return null;
-    const cloned = decoded.clone();
-    pinNoColorSpace(cloned);
+    if (!raw) return null;
+    const cloned = undecodedClone(raw);
+    // The canvas default, as `useCanvas2DTexture` sets it (`scene/main/viewport.h:420`).
+    cloned.wrapS = THREE.ClampToEdgeWrapping;
+    cloned.wrapT = THREE.ClampToEdgeWrapping;
     const mag = FILTER[filter];
     cloned.magFilter = mag;
     cloned.minFilter = mag;
     return cloned;
-  }, [decoded, filter]);
+  }, [raw, filter]);
   return useUploadedClone(layer);
 }
 

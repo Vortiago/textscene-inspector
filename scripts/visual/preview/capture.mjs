@@ -138,9 +138,10 @@ export async function textureWorkCleared(status) {
   try {
     await status.waitFor({ state: 'detached', timeout: TEXTURE_WORK_WAIT_MS });
     return true;
-  } catch {
-    // Playwright's timeout is the answer here, not a failure to report.
-    return false;
+  } catch (error) {
+    // Playwright's timeout is the answer here. A closed page or a crashed tab is not.
+    if (error?.name === 'TimeoutError') return false;
+    throw new Error(`waiting for the texture work status to detach: ${error}`, { cause: error });
   }
 }
 

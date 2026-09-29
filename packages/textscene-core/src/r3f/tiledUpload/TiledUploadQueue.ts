@@ -102,6 +102,7 @@ export class TiledUploadQueue {
     const entry: QueuedUpload = {
       source: new THREE.DataTexture(data, width, height, texture.format as THREE.PixelFormat, texture.type),
       key,
+      nextRow: 0,
       waiters: [],
       ...this.allocate(texture),
     };
@@ -109,13 +110,13 @@ export class TiledUploadQueue {
     return entry;
   }
 
-  /** Allocates `texture`'s storage empty, and gives the fields that start its rows at 0. */
-  private allocate(texture: THREE.Texture): Pick<QueuedUpload, 'texture' | 'nextRow' | 'wantsMipmaps'> {
+  /** Allocates `texture`'s storage empty, or binds the storage its pair already has, for the rows to fill. */
+  private allocate(texture: THREE.Texture): Pick<QueuedUpload, 'texture' | 'wantsMipmaps'> {
     this.initWithoutData(texture);
     const wantsMipmaps = texture.generateMipmaps;
     // three generates mipmaps after every copy, so they wait for the last band.
     texture.generateMipmaps = false;
-    return { texture, nextRow: 0, wantsMipmaps };
+    return { texture, wantsMipmaps };
   }
 
   /**
@@ -193,8 +194,8 @@ export class TiledUploadQueue {
       this.queue.splice(this.queue.indexOf(entry), 1);
       return;
     }
-    // The texture it filled is about to be disposed, which frees that GPU storage, so
-    // the rows start again in storage a remaining consumer's texture owns.
+    // A remaining texture has the same cache key, so its init binds the storage already
+    // filled before the leaving texture's dispose can free it, and the rows carry on.
     Object.assign(entry, this.allocate(next.texture));
   }
 }

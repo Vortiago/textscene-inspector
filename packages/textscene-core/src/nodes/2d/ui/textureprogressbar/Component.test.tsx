@@ -161,6 +161,20 @@ describe('<TextureProgressBar>', () => {
     expect(mapOf()).toBe(before);
   });
 
+  it('draws the under layer as one undecoded, clamped clone of the loaded texture', async () => {
+    const fake = createFakeResourceLoader();
+    const shared = fakeTexture(64, 16);
+    fake.textures.seed(UNDER, shared);
+    const renderer = await ReactThreeTestRenderer.create(bar(fake.loader, { textureUnder: 'ExtResource("1")' }));
+    const map = ((renderer.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial)
+      .map!;
+
+    expect(map).not.toBe(shared);
+    expect(map.source).toBe(shared.source);
+    expect(map.colorSpace).toBe(THREE.NoColorSpace);
+    expect([map.wrapS, map.wrapT]).toEqual([THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping]);
+  });
+
   it('composes tint_under onto the walker tint, in linear space, for the under layer', async () => {
     const untinted = await render({ textureUnder: 'ExtResource("1")' });
     const tinted = await render(

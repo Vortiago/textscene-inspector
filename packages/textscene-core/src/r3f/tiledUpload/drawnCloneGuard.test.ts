@@ -14,7 +14,7 @@ const SRC = path.resolve(import.meta.dirname, '../..');
 const CLONE_HELPERS = new Set(['r3f/spriteFrame.ts', 'resources/textures/applyTextureState.ts']);
 
 /** A texture clone: a `.clone()` on a texture-named value, or a call to a clone helper. */
-const DRAWN_CLONE = /\b(?:\w*[Tt]exture|decoded)\.clone\(\)|\bcomposeFrameTexture\(/;
+const DRAWN_CLONE = /\b(?:\w*[Tt]exture|decoded)\.clone\(\)|\b(?:composeFrameTexture|undecodedClone)\(/;
 const ROUTED = /\buseUploadedClone\(|\buseTiledUpload\(/;
 
 function sourceFiles(dir: string): string[] {

@@ -23,12 +23,18 @@ export { pinNoColorSpace };
 export function useUndecodedTexture(
   texture: THREE.Texture | null | undefined
 ): THREE.Texture | null {
-  const cloned = useMemo(() => {
-    if (!texture) return null;
-    const clone = texture.clone();
-    pinNoColorSpace(clone);
-    clone.needsUpdate = true;
-    return clone;
-  }, [texture]);
+  const cloned = useMemo(() => (texture ? undecodedClone(texture) : null), [texture]);
   return useUploadedClone(cloned);
+}
+
+/**
+ * A `NoColorSpace` clone of `texture`, sharing its `Source`. A caller that changes its
+ * sampler does so before the clone reaches `useUploadedClone`: a change after the upload
+ * moves three's cache key, and three uploads the whole image again at the next draw.
+ */
+export function undecodedClone(texture: THREE.Texture): THREE.Texture {
+  const clone = texture.clone();
+  pinNoColorSpace(clone);
+  clone.needsUpdate = true;
+  return clone;
 }
