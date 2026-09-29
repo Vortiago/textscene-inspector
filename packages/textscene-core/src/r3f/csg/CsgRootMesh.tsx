@@ -84,9 +84,9 @@ export function CsgRootMesh({ plan, shadow, fallback, children }: CsgRootMeshPro
     [status, plan.absorbedPaths, plan.invisiblePaths]
   );
 
-  // Resolve each output surface to a material slot. One component per slot keeps
-  // ExternalMaterialSlot's useResource call one-per-component, so rules of hooks holds
-  // for any surface count.
+  // Resolve each output surface to a material slot. One component per slot keeps each
+  // slot's `useResource` calls one set per component, so rules of hooks holds for any
+  // surface count.
   const surfaces = useMemo((): Array<MaterialSource | undefined> => {
     if (!evaluation) return [];
     return evaluation.surfaceSlots.map((planSurface) =>

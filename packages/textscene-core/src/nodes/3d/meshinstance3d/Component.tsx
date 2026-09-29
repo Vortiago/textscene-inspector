@@ -30,15 +30,15 @@ import { findExtResource, parseResourceReference } from '../../../resources/SubR
 import { useResource } from '../../../resources/useResource';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { MeshGeometry } from './meshGeometry';
-import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars';
 import { warn } from '../../../logger';
 import { decodeSceneArrayMesh } from '../../../resources/meshes/arraymesh/decode';
 import { buildArrayMeshGeometry } from '../../../resources/meshes/arraymesh/build';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
-import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlot';
+import { useMaterial } from '../../../r3f/materials/useMaterial';
 import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
 import {
   SurfaceMaterialSlot,
+  useMaterialScalars,
   useMaterialTextures,
 } from '../../../r3f/materials/SurfaceMaterialSlot';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
@@ -91,10 +91,9 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     () => resolvePrimitiveMaterialSource(properties, internalResources, externalResources),
     [properties, internalResources, externalResources]
   );
-  // Surface 0's material only when it lives in the scene, since this component resolves
-  // its scalars and textures itself. A `.tres` material reads as absent here:
-  // `<ExternalMaterialSlot>` builds it whole through the material pipeline.
-  const materialSubResource = primarySource?.kind === 'scene' ? primarySource.resource : undefined;
+  // Surface 0's material, whichever file it lives in: this component resolves its scalars
+  // and textures itself, for the placeholder, billboard and shadow decisions below.
+  const primaryMaterial = useMaterial(primarySource);
 
   // The same two overrides for an ArrayMesh. Its surfaces are draw groups indexed by the
   // mesh's own surface numbering, so they cannot use the per-slot collapse above, but
@@ -111,21 +110,14 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     [properties.materialOverlay, internalResources, externalResources]
   );
 
-  const materialScalars = useMemo(
-    () =>
-      materialSubResource
-        ? parseStandardMaterial3DScalars(
-            materialSubResource.data as Record<string, string>
-          )
-        : null,
-    [materialSubResource]
-  );
+  const materialScalars = useMaterialScalars(primaryMaterial);
 
   // The per-surface texture chain, called as a hook rather than mounted as
   // `<SurfaceMaterialSlot>`: an unresolvable texture diverts the whole mesh below, and
   // mounting the component as well would bind and dispose every slot twice.
   const { maps, firstMissingPath, viewportCyclic } = useMaterialTextures(
     materialScalars,
+    primaryMaterial,
     meshResource
   );
 
@@ -226,14 +218,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   return (
     <MeshShell {...shellProps}>
       {geometryElement}
-      {primarySource?.kind === 'path' ? (
-        <ExternalMaterialSlot path={primarySource.path} />
-      ) : (
-        <StandardMaterialSlot
-          scalars={materialScalars}
-          {...maps}
-        />
-      )}
+      <StandardMaterialSlot scalars={materialScalars} {...maps} />
     </MeshShell>
   );
 }
@@ -392,7 +377,7 @@ function ArrayMeshSurfaces({
 }: {
   mesh: ArrayMeshResource;
   /** A scene mesh's own `[sub_resource]` materials, already resolved: no path names them. */
-  sceneMaterials?: readonly (TscnInternalResource | undefined)[];
+  sceneMaterials?: readonly (MaterialSource | undefined)[];
   overrides: MeshOverrides;
 }) {
   const groupCount = Math.max(mesh.materialPaths.length, 1);
@@ -402,12 +387,9 @@ function ArrayMeshSurfaces({
       <primitive object={mesh.geometry} attach="geometry" />
       {Array.from({ length: groupCount }, (_unused, i) => {
         const attach = multiSurface ? `material-${i}` : 'material';
-        const scene = sceneMaterials?.[i];
-        const own: MaterialSource | undefined = scene
-          ? { kind: 'scene', resource: scene }
-          : mesh.materialPaths[i]
-            ? { kind: 'path', path: mesh.materialPaths[i]! }
-            : undefined;
+        const materialPath = mesh.materialPaths[i];
+        const own: MaterialSource | undefined =
+          sceneMaterials?.[i] ?? (materialPath ? { kind: 'file', path: materialPath } : undefined);
         const source = effectiveMaterialSource(overrides, mesh.surfaceIndices[i] ?? i, own);
         return <SurfaceMaterialSlot key={`surf-${i}`} source={source} attach={attach} />;
       })}
@@ -483,11 +465,13 @@ function useSceneArrayMeshGeometry(
         },
         // Resolved here, not in the decoder: only the renderer holds the scene's
         // resources, and no path reaches a scene's materials.
-        sceneMaterials: mesh.surfaces.map((s) =>
-          s.materialSubResourceId === undefined
-            ? undefined
-            : findSubResource(internalResources, s.materialSubResourceId)
-        ),
+        sceneMaterials: mesh.surfaces.map((s): MaterialSource | undefined => {
+          if (s.materialSubResourceId === undefined) return undefined;
+          const material = findSubResource(internalResources, s.materialSubResourceId);
+          return material
+            ? { kind: 'inline', material: { resource: material, internalResources, externalResources } }
+            : undefined;
+        }),
       };
     } catch (error) {
       warn(
@@ -507,7 +491,7 @@ function useSceneArrayMeshGeometry(
 interface SceneArrayMesh {
   resource: ArrayMeshResource;
   /** Per surface, the scene's own material sub-resource, when it names one. */
-  sceneMaterials: readonly (TscnInternalResource | undefined)[];
+  sceneMaterials: readonly (MaterialSource | undefined)[];
 }
 
 function resolveMeshSubResource(

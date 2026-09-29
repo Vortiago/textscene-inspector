@@ -3,6 +3,7 @@
  * or a `[sub_resource]` of the overriding scene. Godot treats both alike
  * (`MeshInstance3D::set_surface_override_material` takes a `Ref<Material>`).
  */
+import { parseTresFile } from '../../../parser/parsedResource';
 import { beforeAll, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -113,11 +114,13 @@ function seeded() {
 describe('GLBSceneRoot — surface_material_override on a GLB-internal mesh', () => {
   it('applies a material that arrived as an ExtResource .tres', async () => {
     const fake = seeded();
-    const loaded = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-    fake.materials.seed(TRES_PATH, loaded);
+    fake.resources.seed(
+      TRES_PATH,
+      parseTresFile('[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\nalbedo_color = Color(1, 0, 0, 1)\n')
+    );
 
     const renderer = await render(fake.loader, 'ExtResource("tres_1")');
-    expect(roadMaterial(renderer)).toBe(loaded);
+    expect(roadMaterial(renderer).color.getHex()).toBe(0xff0000);
   });
 
   it('applies a material that arrived as a [sub_resource] of the scene', async () => {

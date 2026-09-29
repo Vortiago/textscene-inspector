@@ -12,7 +12,6 @@ import { useViewportTextureSlot } from '../../resources/textures/viewporttexture
 import { useProceduralTextures, type ProceduralSlot } from '../../resources/useProceduralTexture';
 import { useTiledUpload } from '../tiledUpload/useTiledUpload';
 import { useResource } from '../../resources/useResource';
-import { useSceneResources } from '../SceneResourcesContext';
 import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
 import type {
   StandardMaterial3DScalars,
@@ -29,8 +28,8 @@ import { GODOT_TEXTURE_FILTER_DEFAULT } from '../../resources/textures/godotText
 import { repackAnisotropyFlowmap } from '../../resources/textures/repackFlowmap';
 import { triplanarPlaneScale } from '../../nodes/3d/meshinstance3d/triplanarScale';
 import { StandardMaterialSlot } from './StandardMaterialSlot';
-import { ExternalMaterialSlot } from './ExternalMaterialSlot';
-import type { MaterialSource } from './materialSource';
+import type { MaterialResource, MaterialSource } from './materialSource';
+import { useMaterial } from './useMaterial';
 import type { MaterialTextureMaps } from './materialTextureMaps';
 
 export type { MaterialTextureMaps };
@@ -52,17 +51,24 @@ export interface ResolvedMaterialTextures {
   viewportCyclic: boolean;
 }
 
+/** The resource tables a material's references resolve in: its owning file's. */
+export type MaterialTables = Pick<MaterialResource, 'internalResources' | 'externalResources'>;
+
+const NO_TABLES: MaterialTables = { internalResources: [], externalResources: [] };
+
 /**
- * Resolve every texture slot of one scene-local StandardMaterial3D, from gated
- * references through loads, precedence and binding to the eight three maps. A
- * triplanar material tiles per world unit, so `triplanarMesh` folds in a PlaneMesh's
- * size. CSG and GridMap pass nothing and get the material's own `uv1_scale`.
+ * Resolve every texture slot of one StandardMaterial3D, from gated references through
+ * loads, precedence and binding to the eight three maps. Each reference resolves in
+ * `tables`, the material's own file, whichever file that is. A triplanar material tiles
+ * per world unit, so `triplanarMesh` folds in a PlaneMesh's size. CSG and GridMap pass
+ * nothing and get the material's own `uv1_scale`.
  */
 export function useMaterialTextures(
   scalars: StandardMaterial3DScalars | null,
+  tables: MaterialTables | null,
   triplanarMesh?: TscnInternalResource
 ): ResolvedMaterialTextures {
-  const { internalResources, externalResources } = useSceneResources();
+  const { internalResources, externalResources } = tables ?? NO_TABLES;
 
   // The decode's gated table, never the raw property bag: Godot declares and
   // samples a gated slot's sampler only inside its `if (features[…])` branch
@@ -311,46 +317,23 @@ export interface SurfaceMaterialSlotProps {
 }
 
 /**
- * One surface's material slot: a scene `[sub_resource]`, resolved here with its
- * textures, or a `.tres` that `<ExternalMaterialSlot>` gets whole from the
- * material pipeline. The engine cannot tell the two apart, so neither can a surface.
+ * One surface's material slot, textures and all, whichever file the material came from.
+ * A surface with no usable material draws Godot's default one, which
+ * `<StandardMaterialSlot>` builds from null scalars (ADR-0041).
  */
 export function SurfaceMaterialSlot({ source, attach, triplanarMesh }: SurfaceMaterialSlotProps) {
-  if (source?.kind === 'path') {
-    return <ExternalMaterialSlot path={source.path} attach={attach} />;
-  }
-  // `'default'` and an absent source reach the same slot: a surface with no
-  // usable material draws Godot's default one, and `SceneMaterialSlot` builds
-  // exactly that from a null resource (ADR-0041).
-  return (
-    <SceneMaterialSlot
-      resource={source?.kind === 'scene' ? source.resource : undefined}
-      attach={attach}
-      triplanarMesh={triplanarMesh}
-    />
-  );
+  const material = useMaterial(source);
+  const scalars = useMaterialScalars(material);
+  const { maps } = useMaterialTextures(scalars, material, triplanarMesh);
+  return <StandardMaterialSlot scalars={scalars} attach={attach} {...maps} />;
 }
 
-interface SceneMaterialSlotProps {
-  /** A scene-local StandardMaterial3D, or undefined for an unpopulated slot. */
-  resource: TscnInternalResource | undefined;
-  attach?: string;
-  triplanarMesh?: TscnInternalResource;
-}
-
-/**
- * A scene-local material rendered with its textures resolved. Split from
- * `SurfaceMaterialSlot` so the branch above calls no hook conditionally.
- */
-function SceneMaterialSlot({ resource, attach, triplanarMesh }: SceneMaterialSlotProps) {
-  const scalars = useMemo(
-    () =>
-      resource ? parseStandardMaterial3DScalars(resource.data as Record<string, string>) : null,
+/** The decoded scalars of `material`, or null for Godot's default surface. */
+export function useMaterialScalars(material: MaterialResource | null): StandardMaterial3DScalars | null {
+  const resource = material?.resource;
+  return useMemo(
+    () => (resource ? parseStandardMaterial3DScalars(resource.data as Record<string, string>) : null),
     [resource]
-  );
-  const { maps } = useMaterialTextures(scalars, triplanarMesh);
-  return (
-    <StandardMaterialSlot scalars={scalars} attach={attach} {...maps} />
   );
 }
 

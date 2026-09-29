@@ -14,7 +14,6 @@ import { createFakeResourceLoader } from '../../resources/testing/createFakeReso
 import { abortProceduralBuilds } from '../../resources/textures/proceduralBuilds';
 import { clearProceduralTextureCache } from '../../resources/textures/proceduralTextureCache';
 import { fakeJobRunner } from '../../workers/fakeJobRunner.testkit';
-import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { useMaterialTextures } from './SurfaceMaterialSlot';
 import { fakeTiledUploads } from '../tiledUpload/fakeTiledUploads.testkit';
 
@@ -53,19 +52,19 @@ function renderMaterial(tiles = false) {
   const loader = Object.assign(fake.loader, { jobRunner: runner }) as ResourceLoader;
   const requested: string[] = [];
   fake.textures.setRequestImpl((path) => requested.push(path));
-  // The wrapper sees no hook props, so an edit swaps this and re-renders.
+  // The hook reads this on each render, so an edit swaps it and re-renders.
   let resources = scene(1);
   const uploads = fakeTiledUploads();
-  const hook = renderHook(() => useMaterialTextures(SCALARS), {
-    wrapper: ({ children }: { children: ReactNode }) => {
-      const tree = (
-        <ResourceLoaderProvider loader={loader}>
-          <SceneResourcesProvider internalResources={resources}>{children}</SceneResourcesProvider>
-        </ResourceLoaderProvider>
-      );
-      return tiles ? <uploads.wrapper>{tree}</uploads.wrapper> : tree;
-    },
-  });
+  // The material's own tables, as `useMaterial` hands them over, whatever its file.
+  const hook = renderHook(
+    () => useMaterialTextures(SCALARS, { internalResources: resources, externalResources: [] }),
+    {
+      wrapper: ({ children }: { children: ReactNode }) => {
+        const tree = <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>;
+        return tiles ? <uploads.wrapper>{tree}</uploads.wrapper> : tree;
+      },
+    }
+  );
   const edit = (seed: number) => {
     resources = scene(seed);
     hook.rerender();

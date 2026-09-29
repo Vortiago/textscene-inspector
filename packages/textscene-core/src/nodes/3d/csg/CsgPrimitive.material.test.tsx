@@ -3,6 +3,7 @@
  * since the node holds only a `Ref<Material>`. Every CSG golden fixture declares its material
  * inline, so this test alone gates the external arrival.
  */
+import { parseTresFile } from '../../../parser/parsedResource';
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -42,9 +43,12 @@ function makeNode(material: string | undefined): TscnNode {
   return { name: 'Box', type: 'CSGBox3D', children: [], properties };
 }
 
-async function render(material: string | undefined, seed?: THREE.Material) {
+/** A `.tres` StandardMaterial3D whose albedo is pure blue. */
+const BLUE_TRES = '[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\nalbedo_color = Color(0, 0, 1, 1)\n';
+
+async function render(material: string | undefined, tresText?: string) {
   const fake = createFakeResourceLoader();
-  if (seed) fake.materials.seed('res://blue_material.tres', seed);
+  if (tresText) fake.resources.seed('res://blue_material.tres', parseTresFile(tresText));
   const albedo = new THREE.Texture();
   albedo.needsUpdate = false;
   fake.textures.seed(ALBEDO_PATH, albedo);
@@ -64,9 +68,8 @@ function materialOf(renderer: Awaited<ReturnType<typeof render>>) {
 
 describe('<CsgPrimitive> material resolution', () => {
   it('loads a StandardMaterial3D from an ExtResource .tres', async () => {
-    const loaded = new THREE.MeshStandardMaterial({ color: 0x5ab7ff });
-    const renderer = await render('ExtResource("1_blue")', loaded);
-    expect(materialOf(renderer)).toBe(loaded);
+    const renderer = await render('ExtResource("1_blue")', BLUE_TRES);
+    expect(materialOf(renderer).color.getHex()).toBe(0x0000ff);
   });
 
   it('resolves an inline material\'s texture slots, as a mesh surface does', async () => {
