@@ -16,7 +16,11 @@ import {
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { drawnSources } from '../../../../r3f/drawnSources';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
-import { allocatePaintRange, canvasRenderOrder } from '../../../../r3f/canvasPaintOrder';
+import {
+  allocateNodePaintRange,
+  canvasRenderOrder,
+  packPaintRanges,
+} from '../../../../r3f/canvasPaintOrder';
 import { useLayerRank, usePaintRange } from '../../../../r3f/contexts/PaintOrderContext';
 import {
   accumulateCanvasItemZ,
@@ -38,13 +42,13 @@ export function TileMap({ node, children }: NodeComponentProps) {
   const layerRank = useLayerRank(useCanvasLayerIndex());
   const ownZFinal = accumulateCanvasItemZ(useEffectiveZ(), props);
   const paintRange = usePaintRange();
-  // Layer sequences come from the run `reservesRoom` holds back for them
-  // (`canvasPaintOrder.ts`). The layers are internal children in Godot, in no
-  // `.tscn` child list, so no authored child can claim these values.
-  const layerSequences = useMemo(
-    () => allocatePaintRange(paintRange, node.children).tail.base,
-    [paintRange, node.children]
-  );
+  // The layers are internal front children in Godot, in no `.tscn` child list,
+  // so they draw from the `front` run, between this node and its authored
+  // children. Packed, so a squeezed run clamps them inside it.
+  const layerSequences = useMemo(() => {
+    const { front } = allocateNodePaintRange(paintRange, node);
+    return packPaintRanges(front, props.layers.map(() => 1), front.base).map((run) => run.base);
+  }, [paintRange, node, props.layers]);
 
   // Stable (layer × source) partition: parsed layers never change identity,
   // so the batched geometries survive unrelated re-renders.
@@ -81,7 +85,7 @@ export function TileMap({ node, children }: NodeComponentProps) {
         // A layer is a child CanvasItem with `z_as_relative` at its default, so
         // its `z_index` accumulates onto the TileMap's own `z_final`.
         zFinal: accumulateCanvasItemZ(ownZFinal, { z_index: entries[0]!.layer.zIndex }),
-        sequence: layerSequences + layerIndex,
+        sequence: layerSequences[layerIndex]!,
       }),
     }));
   }, [meshEntries, layerRank, ownZFinal, layerSequences]);

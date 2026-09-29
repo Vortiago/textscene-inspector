@@ -6,7 +6,12 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { nearestGroupOrder } from '../../../../r3f/testing/paintOrder';
-import { PAINT_SEQUENCE_STRIDE } from '../../../../r3f/canvasPaintOrder';
+import {
+  PAINT_SEQUENCE_STRIDE,
+  WHOLE_CANVAS_RANGE,
+  type PaintRange,
+} from '../../../../r3f/canvasPaintOrder';
+import { PaintRangeProvider } from '../../../../r3f/contexts/PaintOrderContext';
 import { parseTileMap } from './parser';
 import { TileMap } from './Component';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
@@ -36,7 +41,7 @@ function makeNode(raw: Record<string, string>): TscnNode {
   };
 }
 
-async function render(node: TscnNode) {
+async function render(node: TscnNode, paintRange: PaintRange = WHOLE_CANVAS_RANGE) {
   const fake = createFakeResourceLoader();
   const tex = new THREE.Texture();
   (tex as unknown as { image: { width: number; height: number } }).image = { width: 32, height: 32 };
@@ -44,7 +49,9 @@ async function render(node: TscnNode) {
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider internalResources={internals} externalResources={externals}>
-        <TileMap node={node} />
+        <PaintRangeProvider value={paintRange}>
+          <TileMap node={node} />
+        </PaintRangeProvider>
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
@@ -75,6 +82,28 @@ describe('TileMap render parity', () => {
     // what lets it interleave with the TileMap's siblings rather than only with
     // the other layers. A rank shared across one canvas item cannot express it.
     expect(zBucket(layer1!)).toBe(zBucket(layer0!) + 1);
+  });
+
+  it('keeps every layer inside a paint range too small to give each its own value', async () => {
+    // A layer past the range's end would draw inside the next sibling's range.
+    const range = { base: 100, size: 2 };
+    const r = await render(
+      makeNode({
+        'layer_0/tile_data': 'PackedInt32Array(0, 0, 0)',
+        'layer_1/tile_data': 'PackedInt32Array(1, 0, 0)',
+        'layer_2/tile_data': 'PackedInt32Array(2, 0, 0)',
+      }),
+      range
+    );
+
+    const sequences = r.scene
+      .findAllByType('Mesh')
+      .map((m) => nearestGroupOrder(m.instance as THREE.Object3D) % PAINT_SEQUENCE_STRIDE);
+    expect(sequences).toHaveLength(3);
+    for (const sequence of sequences) {
+      expect(sequence).toBeGreaterThanOrEqual(range.base);
+      expect(sequence).toBeLessThan(range.base + range.size);
+    }
   });
 
   it('renders an empty group for a TileMap with a tile_set but zero layers', async () => {

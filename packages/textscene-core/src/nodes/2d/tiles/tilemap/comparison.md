@@ -50,7 +50,7 @@ passes through as the raw reference string, so a dangling reference draws no til
 
 - **Approximated** Cells batch one mesh per atlas source, so cells from different
   sources in one layer are not interleaved per cell. Sources draw in appearance order,
-  each nudged in z.
+  each at its own mesh `renderOrder` inside the layer's draw position.
 - **Approximated** Y-sort is computed once for the static scene. A Y change driven by an
   AnimationPlayer is not re-sorted.
 - **Resource gap** Scene-collection sources are skipped with a warning, animated tiles
