@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { applyShadowCasting, shadowCastingEffects } from './shadowCasting';
-import { depthSideOf } from './testing/threePasses';
+import { castsFrom, depthSideOf, drawsColour } from './testing/threePasses';
 import { ShadowCastingSetting } from '../resources/meshlibrary/types';
 
 /** A mesh with one surface of `materialSide`, carrying the hooks of `value`. */
@@ -19,40 +19,37 @@ function depthSideAfterPass(value: number | undefined, materialSide: THREE.Side)
 describe('shadowCastingEffects', () => {
   it('defaults an absent cast_shadow to ON', () => {
     // class_geometryinstance3d: cast_shadow defaults to SHADOW_CASTING_SETTING_ON.
-    expect(shadowCastingEffects(undefined)).toMatchObject({ castShadow: true, shadowsOnly: false });
+    expect(shadowCastingEffects(undefined)).toBe(shadowCastingEffects(ShadowCastingSetting.ON));
   });
 
-  it('OFF stops the mesh casting at all', () => {
-    expect(shadowCastingEffects(ShadowCastingSetting.OFF)).toMatchObject({
-      castShadow: false,
-      shadowsOnly: false,
-    });
+  it('OFF stops the mesh casting, and it still draws', () => {
+    const mesh = meshCasting(ShadowCastingSetting.OFF, THREE.FrontSide);
+    expect(mesh.castShadow).toBe(false);
+    expect(drawsColour(mesh)).toBe(true);
   });
 
   it('ON casts and draws', () => {
-    expect(shadowCastingEffects(ShadowCastingSetting.ON)).toMatchObject({
-      castShadow: true,
-      shadowsOnly: false,
-    });
+    const mesh = meshCasting(ShadowCastingSetting.ON, THREE.FrontSide);
+    expect(castsFrom(mesh)).toBe(true);
+    expect(drawsColour(mesh)).toBe(true);
   });
 
   it('DOUBLE_SIDED casts and draws', () => {
-    expect(shadowCastingEffects(ShadowCastingSetting.DOUBLE_SIDED)).toMatchObject({
-      castShadow: true,
-      shadowsOnly: false,
-    });
+    const mesh = meshCasting(ShadowCastingSetting.DOUBLE_SIDED, THREE.FrontSide);
+    expect(castsFrom(mesh)).toBe(true);
+    expect(drawsColour(mesh)).toBe(true);
   });
 
-  it('SHADOWS_ONLY casts but is kept out of the colour pass', () => {
-    expect(shadowCastingEffects(ShadowCastingSetting.SHADOWS_ONLY)).toMatchObject({
-      castShadow: true,
-      shadowsOnly: true,
-    });
+  it('SHADOWS_ONLY casts but draws nothing in the colour pass', () => {
+    const mesh = meshCasting(ShadowCastingSetting.SHADOWS_ONLY, THREE.FrontSide);
+    expect(castsFrom(mesh)).toBe(true);
+    expect(drawsColour(mesh)).toBe(false);
   });
 
   it('treats an unknown ordinal as ON', () => {
-    expect(shadowCastingEffects(9)).toMatchObject({ castShadow: true, shadowsOnly: false });
+    expect(shadowCastingEffects(9)).toBe(shadowCastingEffects(ShadowCastingSetting.ON));
   });
+
 
   it('only DOUBLE_SIDED forces the depth pass to both faces', () => {
     expect(depthSideAfterPass(ShadowCastingSetting.DOUBLE_SIDED, THREE.FrontSide)).toBe(

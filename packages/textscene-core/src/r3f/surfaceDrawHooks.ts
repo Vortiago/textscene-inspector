@@ -1,9 +1,8 @@
 /**
- * Godot surface state that three holds per object, applied per draw group instead: a
- * billboarding material's pose, the shadow pass's surface list, and SHADOWS_ONLY's hidden
- * colour draw. three calls a before-hook and its after-hook around each group's draw
- * (`WebGLRenderer.js:2158-2183`, `WebGLShadowMap.js:540-548`), with that group's
- * material, so one mesh can mix surfaces the way Godot does.
+ * Godot surface state that three holds per object, applied per draw group: a billboard's
+ * pose, shadow-pass membership and SHADOWS_ONLY. three calls each before-hook and its
+ * after-hook around one group's draw, with that group's material (`WebGLRenderer.js:2158-2183`,
+ * `WebGLShadowMap.js:540-548`), so one mesh can mix surfaces the way Godot does.
  */
 
 import * as THREE from 'three';
@@ -14,10 +13,7 @@ import {
 } from '../resources/materials/standardmaterial3d/materialBag';
 import { billboardWorldMatrix } from './surfaceBillboard';
 
-/**
- * The four `Object3D` hooks, mounted on a `<mesh>` one prop each: the material factory
- * guard rejects a spread on a mesh, since a spread names nothing it carries.
- */
+/** The four `Object3D` hooks, one prop each: the material factory guard rejects a spread. */
 export interface SurfaceDrawHooks {
   onBeforeRender: THREE.Object3D['onBeforeRender'];
   onAfterRender: THREE.Object3D['onAfterRender'];
@@ -27,8 +23,13 @@ export interface SurfaceDrawHooks {
 
 /** What one `cast_shadow` value changes in a draw (`shadowCasting.ts` holds the four). */
 export interface CastRule {
-  /** SHADOWS_ONLY: the colour pass draws nothing. */
-  shadowsOnly: boolean;
+  /** One colour-pass draw of `material`: `poseColourDraw` or `skipColourDraw`. */
+  colourDraw: (
+    object: THREE.Object3D,
+    geometry: THREE.BufferGeometry,
+    material: THREE.Material,
+    camera: THREE.Camera
+  ) => void;
   /** Sets three's shared depth material's side for the surface `material` draws. */
   shadowSide: (depthMaterial: THREE.Material, material: THREE.Material) => void;
 }
@@ -56,23 +57,21 @@ export function drawnMaterial(object: unknown, group: unknown): THREE.Material |
 let posed: THREE.Object3D | null = null;
 const posedMatrixWorld = new THREE.Matrix4();
 const posedModelView = new THREE.Matrix4();
-let muted: THREE.Material | null = null;
-let mutedColorWrite = true;
-let mutedDepthWrite = true;
+let skipped: THREE.BufferGeometry | null = null;
+let skippedCount = Infinity;
 
 /** Scratch for the billboarded matrix, overwritten by every draw. */
 const billboarded = new THREE.Matrix4();
 
 /**
- * Switch off every write for this draw. On the material itself: a `.tres` material and
- * three's depth material are shared, which the after-hook's restore makes safe.
+ * Make this draw draw nothing: an empty `drawRange` gives the GPU zero elements
+ * (`WebGLRenderer.js:1223-1250`). On the geometry, which a clone or an overlay shares,
+ * so the after-hook puts the count back before any other draw.
  */
-function mute(material: THREE.Material): void {
-  muted = material;
-  mutedColorWrite = material.colorWrite;
-  mutedDepthWrite = material.depthWrite;
-  material.colorWrite = false;
-  material.depthWrite = false;
+function skip(geometry: THREE.BufferGeometry): void {
+  skipped = geometry;
+  skippedCount = geometry.drawRange.count;
+  geometry.drawRange.count = 0;
 }
 
 /**
@@ -101,10 +100,9 @@ function pose(
 }
 
 function closeDraw(): void {
-  if (muted) {
-    muted.colorWrite = mutedColorWrite;
-    muted.depthWrite = mutedDepthWrite;
-    muted = null;
+  if (skipped) {
+    skipped.drawRange.count = skippedCount;
+    skipped = null;
   }
   if (posed) {
     posed.matrixWorld.copy(posedMatrixWorld);
@@ -113,12 +111,21 @@ function closeDraw(): void {
   }
 }
 
+/** A drawing colour pass: the surface billboards if its material says so. */
+export const poseColourDraw: CastRule['colourDraw'] = (object, _geometry, material, camera) => {
+  pose(object, material, camera, camera);
+};
+
+/** SHADOWS_ONLY's colour pass: the surface draws nothing, and still casts. */
+export const skipColourDraw: CastRule['colourDraw'] = (_object, geometry) => {
+  skip(geometry);
+};
+
 export function surfaceDrawHooks(rule: CastRule): SurfaceDrawHooks {
   return Object.freeze({
     // three recomputes `modelViewMatrix` from `matrixWorld` after this hook (`:2160`).
-    onBeforeRender(this: THREE.Object3D, _renderer, _scene, camera, _geometry, material) {
-      if (rule.shadowsOnly) mute(material);
-      else pose(this, material, camera, camera);
+    onBeforeRender(this: THREE.Object3D, _renderer, _scene, camera, geometry, material) {
+      rule.colourDraw(this, geometry, material, camera);
     },
     onAfterRender: closeDraw,
     // three sets `modelViewMatrix` once per object before its group loop
@@ -130,7 +137,7 @@ export function surfaceDrawHooks(rule: CastRule): SurfaceDrawHooks {
       object,
       camera,
       shadowCamera,
-      _geometry,
+      geometry,
       depthMaterial,
       group
     ) {
@@ -138,9 +145,8 @@ export function surfaceDrawHooks(rule: CastRule): SurfaceDrawHooks {
       if (!material) return;
       rule.shadowSide(depthMaterial, material);
       // Godot's render list leaves such a surface out (`render_forward_clustered.cpp:4078-4088`).
-      // three's cannot, so its draw writes nothing.
       if (!castsShadowOf(material)) {
-        mute(depthMaterial);
+        skip(geometry);
         return;
       }
       if (pose(this, material, camera, shadowCamera)) {

@@ -7,7 +7,6 @@ import { BillboardMode } from '../../../godot/billboard';
 /** Godot's `BaseMaterial3D.BillboardMode`, shared with every billboarding type. */
 export { BillboardMode };
 
-
 export interface Label3DProperties extends Node3DProperties {
   text: string;
 

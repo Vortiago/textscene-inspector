@@ -1,21 +1,23 @@
 /**
- * `cast_shadow` to its three-side effects. It is GeometryInstance3D state
- * (`servers/rendering/renderer_scene_cull.cpp:732`), never material state, since a
- * `.tres` material is shared. `RS::ShadowCastingSetting` has four values
- * (`servers/rendering/rendering_server.h:1494-1499`) and `castShadow` is a boolean,
- * so the rest reaches three through the per-surface draw hooks (`surfaceDrawHooks.ts`).
+ * `cast_shadow`, GeometryInstance3D state (`renderer_scene_cull.cpp:732`) and never material
+ * state, since a `.tres` material is shared. Its four values (`rendering_server.h:1494-1499`)
+ * outgrow three's boolean `castShadow`, so the rest rides the per-surface draw hooks.
  */
 
 import * as THREE from 'three';
 import { ShadowCastingSetting } from '../resources/meshlibrary/types';
-import { surfaceDrawHooks, type CastRule, type SurfaceDrawHooks } from './surfaceDrawHooks';
+import {
+  poseColourDraw,
+  skipColourDraw,
+  surfaceDrawHooks,
+  type CastRule,
+  type SurfaceDrawHooks,
+} from './surfaceDrawHooks';
 
 /** What every GeometryInstance3D consumer mounts: `castShadow` and the four draw hooks. */
 export interface ShadowCastingEffects extends SurfaceDrawHooks {
   /** `Object3D.castShadow`. */
   castShadow: boolean;
-  /** SHADOWS_ONLY: casts, and the hooks keep it out of the colour pass. */
-  shadowsOnly: boolean;
 }
 
 /**
@@ -38,14 +40,14 @@ function bothFaces(depthMaterial: THREE.Material): void {
 }
 
 function castEffects(castShadow: boolean, rule: CastRule): ShadowCastingEffects {
-  return Object.freeze({ castShadow, shadowsOnly: rule.shadowsOnly, ...surfaceDrawHooks(rule) });
+  return Object.freeze({ castShadow, ...surfaceDrawHooks(rule) });
 }
 
 // One frozen result per value: an unstable object would churn the mesh props.
-const OFF = castEffects(false, { shadowsOnly: false, shadowSide: materialCull });
-const ON = castEffects(true, { shadowsOnly: false, shadowSide: materialCull });
-const DOUBLE_SIDED = castEffects(true, { shadowsOnly: false, shadowSide: bothFaces });
-const SHADOWS_ONLY = castEffects(true, { shadowsOnly: true, shadowSide: materialCull });
+const OFF = castEffects(false, { colourDraw: poseColourDraw, shadowSide: materialCull });
+const ON = castEffects(true, { colourDraw: poseColourDraw, shadowSide: materialCull });
+const DOUBLE_SIDED = castEffects(true, { colourDraw: poseColourDraw, shadowSide: bothFaces });
+const SHADOWS_ONLY = castEffects(true, { colourDraw: skipColourDraw, shadowSide: materialCull });
 
 /** Absent or unrecognised `cast_shadow` is Godot's default, ON. */
 export function shadowCastingEffects(value: number | undefined): ShadowCastingEffects {

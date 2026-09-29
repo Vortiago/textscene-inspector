@@ -216,6 +216,14 @@ describe('decodeStandardMaterial3D — shadow-pass membership', () => {
 });
 
 describe('decodeStandardMaterial3D — depth state', () => {
+  it('writes depth for an alpha-antialiased cutout, which Godot draws in its depth prepass', () => {
+    // `uses_depth_in_alpha_pass()` (`scene_shader_forward_clustered.h:289-293`) is true for
+    // it, as for ALPHA_DEPTH_PRE_PASS, so the colour pass sees the depth it wrote.
+    const data = decodeStandardMaterial3D({ transparency: '2', alpha_antialiasing_mode: '1' });
+    expect(data.transparent).toBe(true);
+    expect(data.depthWrite).toBe(true);
+  });
+
   it('defaults to OPAQUE_ONLY, which writes depth outside the alpha pass', () => {
     const data = decodeStandardMaterial3D({});
     expect(data.depthDrawMode).toBe(DepthDrawMode.OPAQUE_ONLY);

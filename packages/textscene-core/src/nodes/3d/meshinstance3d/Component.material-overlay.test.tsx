@@ -11,7 +11,7 @@ import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
-import { cameraLookingAt, drawColourGroup, rotationAngle } from '../../../r3f/testing/threePasses';
+import { drawColourGroup, expectSameRotation, TEST_CAMERA } from '../../../r3f/testing/threePasses';
 import { YAWED } from './testing/yawedTransform';
 
 const INTERNALS: TscnInternalResource[] = [
@@ -129,7 +129,7 @@ describe('MeshInstance3D — material_overlay billboard_mode', () => {
     ...INTERNALS,
     { id: 'Mat_facing', type: 'StandardMaterial3D', data: { billboard_mode: '1' } },
   ];
-  const camera = cameraLookingAt({ x: 4, y: 3, z: 12 });
+  const camera = TEST_CAMERA;
 
   async function overlayOf(properties: Partial<MeshInstance3DProperties>): Promise<THREE.Mesh> {
     const renderer = await ReactThreeTestRenderer.create(
@@ -145,7 +145,7 @@ describe('MeshInstance3D — material_overlay billboard_mode', () => {
   it('turns an overlay whose material billboards', async () => {
     const overlay = await overlayOf({ materialOverlay: 'SubResource("Mat_facing")' });
     const drawn = drawColourGroup(overlay, camera, 0, (s) => s.matrixWorld);
-    expect(rotationAngle(drawn, camera.matrixWorld)).toBeCloseTo(0, 5);
+    expectSameRotation(drawn, camera.matrixWorld);
   });
 
   it('keeps an overlay whose material does not billboard in the node pose', async () => {

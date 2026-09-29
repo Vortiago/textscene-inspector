@@ -5,6 +5,8 @@
  */
 
 import * as THREE from 'three';
+import { applyShadowCasting, shadowCastingEffects } from '../../../r3f/shadowCasting';
+import { ShadowCastingSetting } from '../../meshlibrary/types';
 
 interface GlbModules {
   GLTFLoader: typeof import('three/addons/loaders/GLTFLoader.js')['GLTFLoader'];
@@ -141,9 +143,9 @@ export function cloneWithMaterials(mesh: THREE.Object3D): THREE.Object3D {
   cloned.traverse((node) => {
     if (node instanceof THREE.Mesh) {
       // Godot's glTF import mounts every surface as a MeshInstance3D that casts
-      // (SHADOW_CASTING_SETTING_ON) and always receives shadows. three defaults both
-      // to false, which leaves a GLB instance outside the shadow pass.
-      node.castShadow = true;
+      // (SHADOW_CASTING_SETTING_ON) and always receives shadows. three defaults both to
+      // false. The hooks let a surface override's own billboard and shadow pass apply.
+      applyShadowCasting(node, shadowCastingEffects(ShadowCastingSetting.ON));
       node.receiveShadow = true;
     }
   });

@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { billboardModeOf, castsShadowOf, standardMaterialBag } from './materialBag';
 import { buildStandardMaterial } from './build';
+import { standardMaterial } from './testing/standardMaterial';
 import { BillboardMode } from '../../../godot/billboard';
 import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextureSlots } from './types';
@@ -161,12 +162,12 @@ describe('standardMaterialBag — no material at all', () => {
 
 describe('standardMaterialBag — billboard_mode', () => {
   it('carries the mode on the material, where each draw group reads it', () => {
-    const built = buildStandardMaterial(parseStandardMaterial3DScalars({ billboard_mode: '2' }));
+    const built = standardMaterial({ billboard_mode: '2' });
     expect(billboardModeOf(built)).toBe(BillboardMode.BILLBOARD_FIXED_Y);
   });
 
   it('reads DISABLED from a material that sets no billboard_mode', () => {
-    expect(billboardModeOf(buildStandardMaterial(parseStandardMaterial3DScalars({})))).toBe(
+    expect(billboardModeOf(standardMaterial({}))).toBe(
       BillboardMode.BILLBOARD_DISABLED
     );
   });
@@ -184,12 +185,12 @@ describe('standardMaterialBag — billboard_mode', () => {
 
 describe('standardMaterialBag — shadow-pass membership', () => {
   it('carries the decoded membership on the material, where each draw group reads it', () => {
-    const built = buildStandardMaterial(parseStandardMaterial3DScalars({ transparency: '1' }));
+    const built = standardMaterial({ transparency: '1' });
     expect(castsShadowOf(built)).toBe(false);
   });
 
   it('casts from an opaque material', () => {
-    expect(castsShadowOf(buildStandardMaterial(parseStandardMaterial3DScalars({})))).toBe(true);
+    expect(castsShadowOf(standardMaterial({}))).toBe(true);
   });
 
   it('casts from Godot’s default surface and from a foreign material', () => {

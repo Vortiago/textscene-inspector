@@ -12,18 +12,14 @@ import { GridMap } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../index';
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
-import { buildStandardMaterial } from '../../../resources/materials/standardmaterial3d/build';
-import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars';
+import { standardMaterial } from '../../../resources/materials/standardmaterial3d/testing/standardMaterial';
 import {
-  cameraLookingAt,
-  drawColourGroup,
+  castsFrom,
   depthSideOf,
-  drawShadowGroup,
-  writesAnything,
+  drawColourGroup,
+  drawsColour,
+  TEST_CAMERA,
 } from '../../../r3f/testing/threePasses';
-
-const camera = cameraLookingAt({ x: 4, y: 3, z: 12 });
-const shadowCamera = cameraLookingAt({ x: -8, y: 20, z: 1 });
 
 const LIBRARY_PATH = 'res://stage/tiles.tres';
 const TILE_MESH_PATH = 'res://stage/meshes/bare.tres';
@@ -137,7 +133,7 @@ describe('<GridMap> per-tile mesh_cast_shadow', () => {
   it('SHADOWS_ONLY casts but draws no colour', async () => {
     const tile = await renderTile('item/0/mesh_cast_shadow = 3');
     expect(tile.castShadow).toBe(true);
-    expect(drawColourGroup(tile, camera, 0, (s) => writesAnything(s.material))).toBe(false);
+    expect(drawsColour(tile)).toBe(false);
   });
 
   it('SHADOWS_ONLY keeps the tile material, so the shadow pass reads its own state', async () => {
@@ -149,15 +145,15 @@ describe('<GridMap> per-tile mesh_cast_shadow', () => {
     // Godot's per-surface FLAG_PASS_SHADOW (`render_forward_clustered.cpp:4078-4088`)
     // applies to a GridMap's tiles as to any GeometryInstance3D surface.
     const tile = await renderTile('');
-    tile.material = buildStandardMaterial(parseStandardMaterial3DScalars({ transparency: '1' }));
-    expect(drawShadowGroup(tile, camera, shadowCamera, 0, (s) => writesAnything(s.depthMaterial!))).toBe(false);
+    tile.material = standardMaterial({ transparency: '1' });
+    expect(castsFrom(tile)).toBe(false);
   });
 
   it('never billboards a tile batch, which would turn about the GridMap origin', async () => {
     const tile = await renderTile('');
-    tile.material = buildStandardMaterial(parseStandardMaterial3DScalars({ billboard_mode: '1' }));
+    tile.material = standardMaterial({ billboard_mode: '1' });
     tile.updateMatrixWorld(true);
-    expect(drawColourGroup(tile, camera, 0, (s) => s.matrixWorld).equals(tile.matrixWorld)).toBe(true);
+    expect(drawColourGroup(tile, TEST_CAMERA, 0, (s) => s.matrixWorld).equals(tile.matrixWorld)).toBe(true);
   });
 
   it('never writes the tile’s setting onto the shared tile material', async () => {

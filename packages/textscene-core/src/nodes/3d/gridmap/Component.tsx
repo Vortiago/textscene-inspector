@@ -5,7 +5,7 @@
  * mesh, since most library tiles are single-surface.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useLayoutEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
@@ -144,11 +144,14 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
     matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
     mesh.instanceMatrix.needsUpdate = true;
     mesh.receiveShadow = true;
-    // The tile's `cast_shadow` and its surface's own shadow-pass membership reach
-    // three per draw (`WebGLShadowMap.js:477,535,549`), as for every GeometryInstance3D.
-    applyShadowCasting(mesh, shadow);
     return mesh;
-  }, [meshResult.value, materialPath, materialResult.value, matrices, shadow]);
+  }, [meshResult.value, materialPath, materialResult.value, matrices]);
+
+  // Apart from the build, so a `cast_shadow` edit swaps hooks rather than rebuilding every
+  // cell. Layout, so the hooks land before the batch's first frame.
+  useLayoutEffect(() => {
+    if (instanced) applyShadowCasting(instanced, shadow);
+  }, [instanced, shadow]);
 
   // InstancedMesh.dispose() frees only its own instanceMatrix buffer, and leaves
   // the geometry and material the resource pipeline owns.

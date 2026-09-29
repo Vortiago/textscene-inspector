@@ -11,8 +11,7 @@ import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { buildStandardMaterial } from '../../../resources/materials/standardmaterial3d/build';
-import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars';
+import { standardMaterial } from '../../../resources/materials/standardmaterial3d/testing/standardMaterial';
 import type {
   TscnExternalResource,
   TscnInternalResource,
@@ -21,12 +20,7 @@ import type {
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
-import {
-  cameraLookingAt,
-  drawColourGroup,
-  drawShadowGroup,
-  writesAnything,
-} from '../../../r3f/testing/threePasses';
+import { castsFrom, drawsColour } from '../../../r3f/testing/threePasses';
 
 const ADDITIVE = { transparency: '1', blend_mode: '1', shading_mode: '0' };
 const ADDITIVE_TRES = 'res://glow.tres';
@@ -44,9 +38,6 @@ const INTERNALS: readonly TscnInternalResource[] = [
   inlineTwoSurfaceMesh('Plain', ['Opaque', 'Opaque']),
 ];
 
-const camera = cameraLookingAt({ x: 4, y: 3, z: 12 });
-const shadowCamera = cameraLookingAt({ x: -8, y: 20, z: 1 });
-
 function makeNode(properties: Partial<MeshInstance3DProperties>): TscnNode {
   const full: MeshInstance3DProperties = {
     name: 'Glow',
@@ -60,7 +51,7 @@ function makeNode(properties: Partial<MeshInstance3DProperties>): TscnNode {
 
 async function renderMesh(node: TscnNode): Promise<THREE.Mesh> {
   const fake = createFakeResourceLoader();
-  fake.materials.seed(ADDITIVE_TRES, buildStandardMaterial(parseStandardMaterial3DScalars(ADDITIVE)));
+  fake.materials.seed(ADDITIVE_TRES, standardMaterial(ADDITIVE));
   const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider internalResources={INTERNALS} externalResources={EXTERNALS}>
@@ -73,51 +64,44 @@ async function renderMesh(node: TscnNode): Promise<THREE.Mesh> {
   return mesh;
 }
 
-function castsFrom(mesh: THREE.Mesh, groupIndex: number): boolean {
-  if (!mesh.castShadow) return false;
-  return drawShadowGroup(mesh, camera, shadowCamera, groupIndex, (s) =>
-    writesAnything(s.depthMaterial!)
-  );
-}
-
 describe('<MeshInstance3D> shadow-pass exclusion on a primitive mesh', () => {
   it('casts nothing from a [sub_resource] additive material, even with cast_shadow ON', async () => {
     const mesh = await renderMesh(makeNode({ materialOverride: 'SubResource("Additive")' }));
-    expect(castsFrom(mesh, 0)).toBe(false);
+    expect(castsFrom(mesh)).toBe(false);
   });
 
   it('casts nothing from an ExtResource .tres additive material', async () => {
     const mesh = await renderMesh(makeNode({ materialOverride: 'ExtResource("1_ext")' }));
-    expect(castsFrom(mesh, 0)).toBe(false);
+    expect(castsFrom(mesh)).toBe(false);
   });
 
   it('casts nothing from a .tres additive surface_material_override/0', async () => {
     const mesh = await renderMesh(
       makeNode({ surfaceMaterialOverrides: new Map([[0, 'ExtResource("1_ext")']]) })
     );
-    expect(castsFrom(mesh, 0)).toBe(false);
+    expect(castsFrom(mesh)).toBe(false);
   });
 
   it('casts nothing from an alpha-blended MIX material', async () => {
     const mesh = await renderMesh(makeNode({ materialOverride: 'SubResource("Glass")' }));
-    expect(castsFrom(mesh, 0)).toBe(false);
+    expect(castsFrom(mesh)).toBe(false);
   });
 
   it('casts from ALPHA_DEPTH_PRE_PASS, which draws depth in the alpha pass', async () => {
     const mesh = await renderMesh(makeNode({ materialOverride: 'SubResource("PrePass")' }));
-    expect(castsFrom(mesh, 0)).toBe(true);
+    expect(castsFrom(mesh)).toBe(true);
   });
 
   it('casts from an opaque material', async () => {
     const mesh = await renderMesh(makeNode({ materialOverride: 'SubResource("Opaque")' }));
-    expect(castsFrom(mesh, 0)).toBe(true);
+    expect(castsFrom(mesh)).toBe(true);
   });
 });
 
 describe('<MeshInstance3D> shadow-pass exclusion per ArrayMesh surface', () => {
   it('casts from the opaque surface of a mixed mesh', async () => {
     const mesh = await renderMesh(makeNode({ mesh: 'SubResource("Mixed")' }));
-    expect(castsFrom(mesh, 0)).toBe(true);
+    expect(castsFrom(mesh)).toBe(true);
   });
 
   it('casts nothing from the additive surface of the same mesh', async () => {
@@ -132,7 +116,7 @@ describe('<MeshInstance3D> shadow-pass exclusion per ArrayMesh surface', () => {
         surfaceMaterialOverrides: new Map([[1, 'ExtResource("1_ext")']]),
       })
     );
-    expect(castsFrom(mesh, 0)).toBe(true);
+    expect(castsFrom(mesh)).toBe(true);
     expect(castsFrom(mesh, 1)).toBe(false);
   });
 });
@@ -143,13 +127,13 @@ describe('<MeshInstance3D> shadow-pass exclusion under SHADOWS_ONLY', () => {
     const mesh = await renderMesh(
       makeNode({ castShadow: 3, materialOverride: 'ExtResource("1_ext")' })
     );
-    expect(castsFrom(mesh, 0)).toBe(false);
+    expect(castsFrom(mesh)).toBe(false);
   });
 
   it('draws the additive surface in no colour pass either', async () => {
     const mesh = await renderMesh(
       makeNode({ castShadow: 3, materialOverride: 'ExtResource("1_ext")' })
     );
-    expect(drawColourGroup(mesh, camera, 0, (s) => writesAnything(s.material))).toBe(false);
+    expect(drawsColour(mesh)).toBe(false);
   });
 });

@@ -2,19 +2,16 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { applyShadowCasting, shadowCastingEffects } from './shadowCasting';
 import { ShadowCastingSetting } from '../resources/meshlibrary/types';
-import { buildStandardMaterial } from '../resources/materials/standardmaterial3d/build';
-import { parseStandardMaterial3DScalars } from '../resources/materials/standardmaterial3d/scalars';
+import { standardMaterial as material } from '../resources/materials/standardmaterial3d/testing/standardMaterial';
 import {
-  cameraLookingAt,
+  castsFrom,
   drawColourGroup,
+  drawsColour,
   drawShadowGroup,
-  rotationAngle,
-  writesAnything,
+  expectSameRotation,
+  TEST_CAMERA as camera,
+  TEST_SHADOW_CAMERA as shadowCamera,
 } from './testing/threePasses';
-
-function material(properties: Record<string, string> = {}): THREE.Material {
-  return buildStandardMaterial(parseStandardMaterial3DScalars(properties));
-}
 
 const OPAQUE = 0;
 const ADDITIVE = 1;
@@ -44,13 +41,6 @@ function surfacesMesh(castShadow: number | undefined = ShadowCastingSetting.ON):
   mesh.rotation.set(0, Math.PI / 2, 0);
   mesh.updateMatrixWorld(true);
   return mesh;
-}
-
-const camera = cameraLookingAt({ x: 4, y: 3, z: 12 });
-const shadowCamera = cameraLookingAt({ x: -8, y: 20, z: 1 });
-
-function expectSameRotation(actual: THREE.Matrix4, expected: THREE.Matrix4) {
-  expect(rotationAngle(actual, expected)).toBeCloseTo(0, 5);
 }
 
 describe('surfaceDrawHooks — colour pass billboard', () => {
@@ -106,29 +96,29 @@ describe('surfaceDrawHooks — shadow pass billboard', () => {
 describe('surfaceDrawHooks — shadow pass alpha-pass exclusion', () => {
   it('draws nothing into the shadow map for a non-MIX blend mode', () => {
     const mesh = surfacesMesh();
-    expect(drawShadowGroup(mesh, camera, shadowCamera, ADDITIVE, (s) => writesAnything(s.depthMaterial!))).toBe(false);
+    expect(castsFrom(mesh, ADDITIVE)).toBe(false);
   });
 
   it('draws nothing into the shadow map for an alpha-blended group', () => {
     const mesh = surfacesMesh();
-    expect(drawShadowGroup(mesh, camera, shadowCamera, ALPHA_BLENDED, (s) => writesAnything(s.depthMaterial!))).toBe(false);
+    expect(castsFrom(mesh, ALPHA_BLENDED)).toBe(false);
   });
 
   it('draws a depth-prepass group, which Godot keeps in the shadow pass', () => {
     const mesh = surfacesMesh();
-    expect(drawShadowGroup(mesh, camera, shadowCamera, DEPTH_PRE_PASS, (s) => writesAnything(s.depthMaterial!))).toBe(true);
+    expect(castsFrom(mesh, DEPTH_PRE_PASS)).toBe(true);
   });
 
   it('draws an opaque group of the same mesh', () => {
     const mesh = surfacesMesh();
-    expect(drawShadowGroup(mesh, camera, shadowCamera, OPAQUE, (s) => writesAnything(s.depthMaterial!))).toBe(true);
+    expect(castsFrom(mesh, OPAQUE)).toBe(true);
   });
 
-  it('hands three its shared depth material back writable', () => {
+  it('hands the shared geometry back with its draw range', () => {
     const mesh = surfacesMesh();
-    const depth = drawShadowGroup(mesh, camera, shadowCamera, ADDITIVE, (s) => s.depthMaterial!);
-    expect(depth.colorWrite).toBe(true);
-    expect(depth.depthWrite).toBe(true);
+    const count = mesh.geometry.drawRange.count;
+    castsFrom(mesh, ADDITIVE);
+    expect(mesh.geometry.drawRange.count).toBe(count);
   });
 });
 
@@ -147,24 +137,24 @@ describe('surfaceDrawHooks — cast_shadow', () => {
 
   it('SHADOWS_ONLY draws nothing in the colour pass', () => {
     const mesh = surfacesMesh(ShadowCastingSetting.SHADOWS_ONLY);
-    expect(drawColourGroup(mesh, camera, OPAQUE, (s) => writesAnything(s.material))).toBe(false);
+    expect(drawsColour(mesh, OPAQUE)).toBe(false);
   });
 
-  it('SHADOWS_ONLY hands the shared surface material back unchanged', () => {
+  it('SHADOWS_ONLY hands the shared geometry back with its draw range', () => {
     const mesh = surfacesMesh(ShadowCastingSetting.SHADOWS_ONLY);
-    const drawn = drawColourGroup(mesh, camera, OPAQUE, (s) => s.material);
-    expect(drawn.colorWrite).toBe(true);
-    expect(drawn.depthWrite).toBe(true);
+    const count = mesh.geometry.drawRange.count;
+    drawsColour(mesh, OPAQUE);
+    expect(mesh.geometry.drawRange.count).toBe(count);
   });
 
   it('SHADOWS_ONLY still casts from an opaque group', () => {
     const mesh = surfacesMesh(ShadowCastingSetting.SHADOWS_ONLY);
-    expect(drawShadowGroup(mesh, camera, shadowCamera, OPAQUE, (s) => writesAnything(s.depthMaterial!))).toBe(true);
+    expect(castsFrom(mesh, OPAQUE)).toBe(true);
   });
 
   it('ON draws the colour pass', () => {
     const mesh = surfacesMesh(ShadowCastingSetting.ON);
-    expect(drawColourGroup(mesh, camera, OPAQUE, (s) => writesAnything(s.material))).toBe(true);
+    expect(drawsColour(mesh, OPAQUE)).toBe(true);
   });
 });
 

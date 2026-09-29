@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { billboardWorldMatrix } from './surfaceBillboard';
 import { BillboardMode } from '../godot/billboard';
-import { cameraLookingAt } from './testing/threePasses';
+import { TEST_CAMERA } from './testing/threePasses';
 
 /** A model yawed a quarter turn, scaled (2, 3, 4), at (5, 6, 7). */
 function yawedScaledModel(): THREE.Matrix4 {
@@ -24,7 +24,7 @@ function expectVectorClose(actual: THREE.Vector3, expected: THREE.Vector3) {
 }
 
 describe('billboardWorldMatrix — ENABLED', () => {
-  const camera = cameraLookingAt({ x: 4, y: 3, z: 12 });
+  const camera = TEST_CAMERA;
 
   it('takes the camera basis as the model basis', () => {
     const target = new THREE.Matrix4();
@@ -51,7 +51,7 @@ describe('billboardWorldMatrix — ENABLED', () => {
 
 describe('billboardWorldMatrix — FIXED_Y', () => {
   it('keeps world up as the Y axis and turns X and Z toward the camera plane', () => {
-    const camera = cameraLookingAt({ x: 4, y: 3, z: 12 });
+    const camera = TEST_CAMERA;
     const target = new THREE.Matrix4();
     expect(billboardWorldMatrix(target, yawedScaledModel(), camera.matrixWorld, BillboardMode.BILLBOARD_FIXED_Y)).toBe(true);
 
@@ -92,14 +92,14 @@ describe('billboardWorldMatrix — PARTICLES', () => {
 
 describe('billboardWorldMatrix — DISABLED', () => {
   it('reports no billboard and leaves the target alone', () => {
-    const camera = cameraLookingAt({ x: 4, y: 3, z: 12 });
+    const camera = TEST_CAMERA;
     const target = new THREE.Matrix4().makeScale(9, 9, 9);
     expect(billboardWorldMatrix(target, yawedScaledModel(), camera.matrixWorld, BillboardMode.BILLBOARD_DISABLED)).toBe(false);
     expect(target.equals(new THREE.Matrix4().makeScale(9, 9, 9))).toBe(true);
   });
 
   it('treats a mode outside the enum as DISABLED', () => {
-    const camera = cameraLookingAt({ x: 4, y: 3, z: 12 });
+    const camera = TEST_CAMERA;
     expect(billboardWorldMatrix(new THREE.Matrix4(), yawedScaledModel(), camera.matrixWorld, 7)).toBe(false);
   });
 });

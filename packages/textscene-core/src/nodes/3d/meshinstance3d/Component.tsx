@@ -45,7 +45,6 @@ import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
 import { shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
-import { ShadowCastingSetting } from '../../../resources/meshlibrary/types';
 
 /** Literal-only, so each key is constant and none of these ever remounts. */
 const PLACEHOLDER_MATERIAL = materialProgramInputs({ props: { color: 'magenta' } });
@@ -133,11 +132,9 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   // The ref lands on whichever `<mesh>` MeshShell renders, for the overlay to share.
   const meshRef = useRef<THREE.Mesh | null>(null);
 
-  // Mode 2 (DOUBLE_SIDED) reaches three's depth material per mesh. Mode 3 (SHADOWS_ONLY)
-  // hides the mesh from the colour buffer while it keeps casting: MeshShell says why
-  // that is not `visible = false`. A surface's billboard and its blend mode's shadow
-  // exclusion are per surface in Godot, so the draw hooks read each group's material.
-  const shadowFlags = shadowCastingEffects(properties.castShadow);
+  // `cast_shadow` and each surface's billboard and shadow-pass membership reach three per
+  // draw group, through hooks that read that group's material.
+  const shadow = shadowCastingEffects(properties.castShadow);
   const visible = properties.visible !== false;
 
   const shellProps = {
@@ -147,11 +144,11 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     rotation,
     scale,
     visible,
-    shadow: shadowFlags,
+    shadow,
     godotLayers: properties.layers,
     subtree: children,
     overlay: overlaySource ? (
-      <MaterialOverlayMesh meshRef={meshRef} source={overlaySource} />
+      <MaterialOverlayMesh meshRef={meshRef} source={overlaySource} shadow={shadow} />
     ) : null,
   };
 
@@ -236,12 +233,6 @@ const MATERIAL_OVERLAY_RENDER_ORDER = 1;
 const NO_RAYCAST: THREE.Object3D['raycast'] = () => {};
 
 /**
- * The overlay casts nothing of its own, so only its colour hooks mount, and its own
- * material decides its billboard: Godot draws it as a separate pass over the surface.
- */
-const OVERLAY_DRAW_HOOKS = shadowCastingEffects(ShadowCastingSetting.OFF);
-
-/**
  * `material_overlay`'s draw: the base mesh's geometry a second time, with the
  * overlay material. A separate mesh, not a material array entry: Godot's
  * overlay covers every surface (`_geometry_instance_add_surface` runs per
@@ -250,9 +241,15 @@ const OVERLAY_DRAW_HOOKS = shadowCastingEffects(ShadowCastingSetting.OFF);
 function MaterialOverlayMesh({
   meshRef,
   source,
+  shadow,
 }: {
   meshRef: RefObject<THREE.Mesh | null>;
   source: MaterialSource;
+  /**
+   * The base mesh's hooks. The overlay casts nothing of its own, so only the colour pair
+   * mounts: its own material decides its billboard, and SHADOWS_ONLY skips its draw too.
+   */
+  shadow: ShadowCastingEffects;
 }) {
   // Read back off the base mesh rather than built again, so all four geometry branches
   // share one component and the two meshes share one geometry.
@@ -277,8 +274,8 @@ function MaterialOverlayMesh({
       // measures; a coincident second hit would report the same node twice.
       raycast={NO_RAYCAST}
       receiveShadow
-      onBeforeRender={OVERLAY_DRAW_HOOKS.onBeforeRender}
-      onAfterRender={OVERLAY_DRAW_HOOKS.onAfterRender}
+      onBeforeRender={shadow.onBeforeRender}
+      onAfterRender={shadow.onAfterRender}
     >
       <SurfaceMaterialSlot source={source} />
     </mesh>
@@ -345,12 +342,9 @@ function MeshShell({
       userData={visualLayersUserData(godotLayers)}
     >
       {children}
-      {/* SHADOWS_ONLY casts and keeps its descendants. `visible = false` would skip
-          the shadow pass and the subtree in `WebGLShadowMap.renderObject`, and
-          `material.visible` gates the depth material too. So the `shadow` hooks switch off
-          each colour draw's writes instead, and the overlay, a second mesh, is left
-          out. */}
-      {!shadow.shadowsOnly && overlay}
+      {/* Not `visible = false` for SHADOWS_ONLY: `WebGLShadowMap.renderObject` would skip
+          the shadow pass and the subtree. The hooks skip each colour draw instead. */}
+      {overlay}
       {subtree}
     </mesh>
   );

@@ -1,9 +1,7 @@
 /**
- * A whole-node billboard, applied per frame to an Object3D, for the slices whose node owns
- * `billboard` (Sprite3D, Label3D, the AudioStreamPlayer3D gizmo). A material's
- * `billboard_mode` is per surface instead (`r3f/surfaceDrawHooks.ts`). PARTICLES (3) is a
- * flipbook mode Sprite3D refuses (`ERR_FAIL_INDEX(p_mode, 3)` in sprite_3d.cpp), so it is
- * read as ENABLED, as the parsers clamp it.
+ * A whole-node billboard, applied per frame, for the nodes that own `billboard`: Sprite3D,
+ * Label3D and the AudioStreamPlayer3D gizmo. A material's `billboard_mode` is per surface
+ * instead (`surfaceDrawHooks.ts`). SpriteBase3D refuses PARTICLES, so it reads as ENABLED.
  */
 
 import { useFrame } from '@react-three/fiber';

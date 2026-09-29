@@ -23,24 +23,7 @@ import { findMesh } from '../testing/reactThreeTestInstance';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnInternalResource } from '../../../parser/types';
-import {
-  cameraLookingAt,
-  drawColourGroup,
-  depthSideOf,
-  drawShadowGroup,
-  writesAnything,
-} from '../../../r3f/testing/threePasses';
-
-const camera = cameraLookingAt({ x: 4, y: 3, z: 12 });
-const shadowCamera = cameraLookingAt({ x: -8, y: 20, z: 1 });
-
-function drawsColour(mesh: THREE.Mesh): boolean {
-  return drawColourGroup(mesh, camera, 0, (s) => writesAnything(s.material));
-}
-
-function castsFrom(mesh: THREE.Mesh): boolean {
-  return drawShadowGroup(mesh, camera, shadowCamera, 0, (s) => writesAnything(s.depthMaterial!));
-}
+import { castsFrom, depthSideOf, drawsColour } from '../../../r3f/testing/threePasses';
 
 function parseBox(properties: Record<string, string>): CSGBox3DProperties {
   return parseCSGBox3D(heading('CSGBox3D', { name: 'Box' }), properties);

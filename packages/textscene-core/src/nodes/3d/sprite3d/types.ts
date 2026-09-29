@@ -12,7 +12,6 @@ import { BillboardMode } from '../../../godot/billboard';
 /** Godot's `BaseMaterial3D.BillboardMode`, shared with every billboarding type. */
 export { BillboardMode };
 
-
 /**
  * Alpha-cut modes. Controls how transparent regions of the texture are
  * handled with respect to depth writes.

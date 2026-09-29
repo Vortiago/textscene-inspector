@@ -11,8 +11,7 @@ import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { buildStandardMaterial } from '../../../resources/materials/standardmaterial3d/build';
-import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars';
+import { standardMaterial } from '../../../resources/materials/standardmaterial3d/testing/standardMaterial';
 import type {
   TscnExternalResource,
   TscnInternalResource,
@@ -22,14 +21,14 @@ import type { MeshInstance3DProperties } from './types';
 import { findMesh, instanceAs } from '../testing/reactThreeTestInstance';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
 import { YAWED } from './testing/yawedTransform';
-import { cameraLookingAt, drawColourGroup, rotationAngle } from '../../../r3f/testing/threePasses';
+import { drawColourGroup, rotationAngle, TEST_CAMERA } from '../../../r3f/testing/threePasses';
 
 const BILLBOARD_TRES = 'res://billboard.tres';
 const EXTERNALS: readonly TscnExternalResource[] = [
   { id: '1_ext', path: BILLBOARD_TRES, type: 'StandardMaterial3D' },
 ];
 
-const camera = cameraLookingAt({ x: 4, y: 3, z: 12 });
+const camera = TEST_CAMERA;
 
 function sub(type: string, id: string, data: Record<string, string> = {}): TscnInternalResource {
   return { id, type, data };
@@ -53,7 +52,7 @@ async function renderMesh(
   const fake = createFakeResourceLoader();
   fake.materials.seed(
     BILLBOARD_TRES,
-    buildStandardMaterial(parseStandardMaterial3DScalars({ billboard_mode: '1' }))
+    standardMaterial({ billboard_mode: '1' })
   );
   const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>

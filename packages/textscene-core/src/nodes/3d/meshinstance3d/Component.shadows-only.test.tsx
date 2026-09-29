@@ -11,9 +11,7 @@ import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
-import { cameraLookingAt, drawColourGroup, writesAnything } from '../../../r3f/testing/threePasses';
-
-const camera = cameraLookingAt({ x: 4, y: 3, z: 12 });
+import { drawsColour } from '../../../r3f/testing/threePasses';
 
 const BOX: TscnInternalResource = {
   id: 'Box_1',
@@ -73,7 +71,7 @@ describe('<MeshInstance3D> cast_shadow = SHADOWS_ONLY', () => {
 
   it('writes neither colour nor depth, so the mesh itself draws nothing', async () => {
     const mesh = meshOf(await render({ castShadow: 3 }));
-    expect(drawColourGroup(mesh, camera, 0, (s) => writesAnything(s.material))).toBe(false);
+    expect(drawsColour(mesh)).toBe(false);
   });
 
   it('keeps the surface material attached, so the shadow pass reads its blend mode', async () => {
@@ -89,7 +87,7 @@ describe('<MeshInstance3D> cast_shadow = SHADOWS_ONLY', () => {
 
   it('leaves an ordinary mesh drawing normally', async () => {
     const mesh = meshOf(await render({ castShadow: 1 }));
-    expect(drawColourGroup(mesh, camera, 0, (s) => writesAnything(s.material))).toBe(true);
+    expect(drawsColour(mesh)).toBe(true);
     expect(mesh.visible).toBe(true);
   });
 
