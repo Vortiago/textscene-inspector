@@ -14,7 +14,6 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { TscnNode } from '../../parser/types.js';
 import { useResourceLoader } from '../../resources/useResource.js';
 import {
   cachedUniqueNameClaims,
@@ -23,7 +22,6 @@ import {
 } from '../../utils/uniqueNames.js';
 import { claimOwnerOf, ownerClaims } from '../uniqueNameOwner.js';
 import { liveTreeContext, useLiveTreeVersion } from '../useLiveSceneTree.js';
-import { viewportTextureUniqueNameKey } from '../viewportTexturePath.js';
 import { useOptionalHierarchy } from './HierarchyContext.js';
 import type * as THREE from 'three';
 
@@ -100,27 +98,13 @@ export function useUniqueNamePaths(path: string | null): ReadonlyMap<string, str
 }
 
 /**
- * Publishes `entry` at `path`, and at its `%UniqueName` spelling when it claims
- * one: the two keys a `viewport_path` can use. One hook serves every publisher,
- * so a consumer never knows which host produced its target.
+ * Publishes `entry` at `path`, the one key a `viewport_path` walks to: a consumer
+ * resolves a `%Name` through its claim table to the claimant's own path. One hook
+ * serves every publisher, so a consumer never knows which host produced its target.
  */
-export function usePublishViewportTexture(
-  node: TscnNode,
-  path: string,
-  entry: ViewportTextureEntry
-): void {
+export function usePublishViewportTexture(path: string, entry: ViewportTextureEntry): void {
   const register = useRegisterViewportTexture();
-  const claims = useUniqueNameClaims(path);
-  // The derived key, not the node, so a re-parse that changes node identity
-  // without changing the spelling does not withdraw and republish the target.
-  const alias = viewportTextureUniqueNameKey(node, path, claims);
-  useEffect(() => {
-    const withdraw = [register(path, entry)];
-    if (alias) withdraw.push(register(alias, entry));
-    return () => {
-      for (const fn of withdraw) fn();
-    };
-  }, [register, path, alias, entry]);
+  useEffect(() => register(path, entry), [register, path, entry]);
 }
 
 /** The target published at `path`, or null. */

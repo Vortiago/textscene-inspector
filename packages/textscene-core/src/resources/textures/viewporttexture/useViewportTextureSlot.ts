@@ -126,7 +126,7 @@ export function useViewportTextureSlot(
     }
     // Dedup on the spelling in a ref, not on effect deps: `uniquePaths` is a fresh
     // object per re-parse. The marker clears once the name is claimed, so a renamed
-    // claimant warns again, as the publisher's `viewportTextureUniqueNameKey` does.
+    // claimant warns again.
     const spelling = `${consumerPath}\u0000${viewportPath}`;
     if (reported.current === spelling) return;
     reported.current = spelling;

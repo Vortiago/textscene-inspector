@@ -137,33 +137,15 @@ mesh = SubResource("1")
 
 describe('<SubViewport> offscreen publisher', () => {
   /**
-   * `viewport_path` resolves through `get_node_or_null` (viewport.cpp:198), so
-   * `NodePath("%Name")` names the same viewport by its unique name. The consumer
-   * builds its key from the literal, so the publisher answers to both
-   * spellings.
+   * A consumer resolves `NodePath("%Name")` through its owner's claim table to the
+   * claimant's own path, so the publisher registers under that path alone.
    */
-  it('also publishes under its %UniqueName spelling', async () => {
+  it('publishes nothing under its %UniqueName spelling', async () => {
     const { published } = await renderScene(
       scene3D('unique_name_in_owner = true'),
       '3d',
       'Root/%Viewport'
     );
-    expect(published()).not.toBeNull();
-  });
-
-  it('publishes no %UniqueName key when the node claims no unique name', async () => {
-    const { published } = await renderScene(scene3D(), '3d', 'Root/%Viewport');
-    expect(published()).toBeNull();
-  });
-
-  it('withdraws the %UniqueName key when the publisher unmounts', async () => {
-    const { published, removeScene } = await renderScene(
-      scene3D('unique_name_in_owner = true'),
-      '3d',
-      'Root/%Viewport'
-    );
-    expect(published()).not.toBeNull();
-    await removeScene();
     expect(published()).toBeNull();
   });
 
