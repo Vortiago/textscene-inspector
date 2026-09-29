@@ -1,7 +1,7 @@
 /**
- * The `%Name` claim tables a node resolves a NodePath against, read from the live scene tree:
- * every hook that walks a `%Name` segment (ViewportTexture slots, AnimationPlayer, AnimationTree)
- * takes its table from here.
+ * The owners a node resolves a NodePath against, read from the live scene tree: the `%Name`
+ * claim table every hook that walks a `%Name` segment takes (ViewportTexture slots,
+ * AnimationPlayer, AnimationTree), and a ViewportTexture's local scene.
  */
 
 import { useMemo } from 'react';
@@ -12,8 +12,36 @@ import {
   type UniqueNameClaim,
 } from '../utils/uniqueNames.js';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
-import { claimOwnerOf, ownerClaims } from './uniqueNameOwner.js';
+import { claimOwnerOf, localSceneOf, ownerClaims } from './uniqueNameOwner.js';
 import { liveTreeContext, useLiveTreeVersion } from './useLiveSceneTree.js';
+
+/**
+ * The live tree, or null with no scene. With a path it re-reads on each load tick, since a
+ * sub-scene node's owner is known only after the load.
+ */
+function useLiveTree(path?: string | null) {
+  const graph = useOptionalHierarchy()?.sceneGraph;
+  const loader = useResourceLoader();
+  const version = useLiveTreeVersion(path ? loader : null);
+  // `version` is the cache-buster for the loader's scene cache, which the
+  // owner walk reads and which is mutated outside React.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => liveTreeContext(graph, loader), [graph, loader, version]);
+}
+
+/**
+ * `paths` under one identity while its entries stay the same, since a sub-scene owner's
+ * table is rebuilt on every load.
+ */
+function useStablePaths(
+  paths: ReadonlyMap<string, string> | undefined
+): ReadonlyMap<string, string> | undefined {
+  const signature = useMemo(() => (paths ? JSON.stringify([...paths]) : null), [paths]);
+  return useMemo(
+    () => (signature === null ? undefined : new Map<string, string>(JSON.parse(signature))),
+    [signature]
+  );
+}
 
 /**
  * The `%Name` table the node at `path` resolves against, or undefined with no
@@ -24,36 +52,46 @@ import { liveTreeContext, useLiveTreeVersion } from './useLiveSceneTree.js';
 export function useUniqueNameClaims(
   path?: string | null
 ): ReadonlyMap<string, UniqueNameClaim> | undefined {
-  const graph = useOptionalHierarchy()?.sceneGraph;
-  const loader = useResourceLoader();
-  const version = useLiveTreeVersion(path ? loader : null);
+  const live = useLiveTree(path);
   return useMemo(() => {
-    const live = liveTreeContext(graph, loader);
     if (!live) return undefined;
-    // Without a path, the outer root's table, one shared object per tree. A
-    // path re-derives on the version tick, since a sub-scene node's owner is
-    // known only after the load.
+    // Without a path, the outer root's table, one shared object per tree.
     if (!path) return cachedUniqueNameClaims(live.roots);
     return ownerClaims(claimOwnerOf(path, live.roots, live.ctx));
-    // `version` is the cache-buster for the loader's scene cache, which the
-    // owner walk reads and which is mutated outside React.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [graph, loader, version, path]);
+  }, [live, path]);
 }
 
 /**
  * The `%Name` table the node at `path` resolves against, as the live paths the dispatcher
- * registers: the composed render tree spells a path as a claim's `livePath`. A rebuilt table with
- * the same entries keeps the old map, since a sub-scene owner's table is rebuilt on every load.
+ * registers: the composed render tree spells a path as a claim's `livePath`.
  */
 export function useUniqueNamePaths(path: string | null): ReadonlyMap<string, string> | undefined {
   const claims = useUniqueNameClaims(path);
-  const signature = useMemo(
-    () => (claims ? JSON.stringify([...uniqueNameLivePaths(claims)]) : null),
-    [claims]
+  return useStablePaths(useMemo(() => claims && uniqueNameLivePaths(claims), [claims]));
+}
+
+/** A local scene: the live path of its root, and the `%Name` table a walk from that root reads. */
+export interface LocalScene {
+  readonly path: string;
+  readonly uniquePaths: ReadonlyMap<string, string>;
+}
+
+/**
+ * The local scene of the node at `path` ({@link localSceneOf}), which a local-to-scene
+ * resource's NodePaths measure from, or undefined with no path or no scene.
+ */
+export function useLocalScene(path: string | null): LocalScene | undefined {
+  const live = useLiveTree(path);
+  const owner = useMemo(
+    () => (live && path ? localSceneOf(path, live.roots, live.ctx) : undefined),
+    [live, path]
   );
+  const uniquePaths = useStablePaths(
+    useMemo(() => owner && uniqueNameLivePaths(ownerClaims(owner)), [owner])
+  );
+  const rootPath = owner?.path;
   return useMemo(
-    () => (signature === null ? undefined : new Map<string, string>(JSON.parse(signature))),
-    [signature]
+    () => (rootPath === undefined || !uniquePaths ? undefined : { path: rootPath, uniquePaths }),
+    [rootPath, uniquePaths]
   );
 }

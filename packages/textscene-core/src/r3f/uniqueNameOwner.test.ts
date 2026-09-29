@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser.js';
 import type { TscnScene } from '../parser/types.js';
 import type { LiveTreeContext } from './liveSceneTree.js';
-import { claimOwnerOf, ownerClaims } from './uniqueNameOwner.js';
+import { claimOwnerOf, localSceneOf, ownerClaims } from './uniqueNameOwner.js';
 
 const main = new TscnParser().parse(`[gd_scene format=3]
 [ext_resource type="PackedScene" path="res://hud.tscn" id="1"]
@@ -117,6 +117,42 @@ describe('claimOwnerOf', () => {
   it('falls back to the outer root while the sub-scene has not loaded', () => {
     const unloaded: LiveTreeContext = { ...ctx, sceneCache: { getCached: () => undefined } };
     expect(claimOwnerOf('Root/HudInstance/Sprite', main.nodes, unloaded).parent).toBeUndefined();
+  });
+});
+
+/**
+ * `make_local_resource` sets a local-to-scene resource up against the node itself when it is its
+ * scene's root or an instance, else against its owner (packed_scene.cpp:706).
+ */
+describe('localSceneOf', () => {
+  const localRoot = (path: string) => localSceneOf(path, main.nodes, ctx).path;
+
+  it('is the outer root for an outer node', () => {
+    expect(localRoot('Root/Screen')).toBe('Root');
+  });
+
+  it('is the outer root for the outer root itself', () => {
+    expect(localRoot('Root')).toBe('Root');
+  });
+
+  it('is the instance for a node inside it', () => {
+    expect(localRoot('Root/HudInstance/Sprite')).toBe('Root/HudInstance');
+  });
+
+  it('is the instance node itself, not the file its heading is in', () => {
+    expect(localRoot('Root/HudInstance')).toBe('Root/HudInstance');
+  });
+
+  it('is the instance for an override heading inside it', () => {
+    expect(localRoot('Root/HudInstance/Panel/Hit')).toBe('Root/HudInstance');
+  });
+
+  it('is the outer root for a node the outer file adds under the instance', () => {
+    expect(localRoot('Root/HudInstance/Extra')).toBe('Root');
+  });
+
+  it('is the innermost instance for a node inside nested instances', () => {
+    expect(localRoot('Root/HudInstance/Widget/Face')).toBe('Root/HudInstance/Widget');
   });
 });
 

@@ -1,8 +1,9 @@
 /**
- * The owner whose `%Name` table a rendered node resolves against, and that table composed over
- * instanced content. Each instance root has a table of its own, which an outer consumer never sees
+ * The owner whose `%Name` table a rendered node resolves against, that table composed over
+ * instanced content, and the local scene a local-to-scene resource on the node measures from.
+ * Each instance root has a table of its own, which an outer consumer never sees
  * (`uniqueNameOwner.md`). Pure: it walks the composed live tree over a cache snapshot, like
- * `liveSceneTree.ts`, and the React hook supplies reactivity.
+ * `liveSceneTree.ts`, and the React hooks supply reactivity.
  */
 
 import type { SceneScope, TscnNode } from '../parser/types.js';
@@ -138,6 +139,20 @@ export function claimOwnerOf(
   const file = node.overridesExistingNode && owner.parent ? owner.parent : owner;
   if (node.owner === '.') return file;
   return walkTo(joinPath(file.path, node.owner), roots, ctx).into;
+}
+
+/**
+ * The local scene a local-to-scene resource on the node at `path` is set up against, and so the
+ * node its NodePaths measure from: the node itself when it is an instance, else its owner
+ * (packed_scene.cpp:706). A scene's own root is its own owner, so the outer root is itself.
+ */
+export function localSceneOf(
+  path: string,
+  roots: readonly TscnNode[],
+  ctx: LiveTreeContext
+): ClaimOwner {
+  const { owner, into } = walkTo(path, roots, ctx);
+  return into !== owner ? into : claimOwnerOf(path, roots, ctx);
 }
 
 function cachedSubRoots(
