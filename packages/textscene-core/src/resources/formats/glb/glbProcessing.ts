@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 import { applyShadowCasting, shadowCastingEffects } from '../../../r3f/shadowCasting';
-import { ShadowCastingSetting } from '../../meshlibrary/types';
+import { ShadowCastingSetting } from '../../../godot/rendering';
 
 interface GlbModules {
   GLTFLoader: typeof import('three/addons/loaders/GLTFLoader.js')['GLTFLoader'];

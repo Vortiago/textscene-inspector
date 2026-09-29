@@ -330,7 +330,7 @@ function MeshShell({
       visible={visible}
       castShadow={shadow.castShadow}
       // three fires these per draw group, the shadow pair after `getDepthMaterial` has
-      // set the side (`WebGLShadowMap.js:477,535,549`): the only per-surface reach into
+      // set the side (`WebGLShadowMap.js:488,546,560`): the only per-surface reach into
       // a draw of an object whose materials and depth material three shares.
       onBeforeRender={shadow.onBeforeRender}
       onAfterRender={shadow.onAfterRender}

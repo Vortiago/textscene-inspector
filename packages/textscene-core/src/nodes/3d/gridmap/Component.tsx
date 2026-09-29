@@ -5,7 +5,7 @@
  * mesh, since most library tiles are single-surface.
  */
 
-import { useEffect, useLayoutEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
@@ -23,7 +23,7 @@ import type { Vector3 } from '../../../parser/vectors';
 import type { GridMapProperties } from './types';
 import { decodeGridMapCells, ORTHO_BASES, type GridMapCell } from './cellData';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
-import { applyShadowCasting, shadowCastingEffects } from '../../../r3f/shadowCasting';
+import { shadowCastingEffects } from '../../../r3f/shadowCasting';
 
 /** Literal-only, so the key is constant and a placeholder cell never remounts. */
 const PLACEHOLDER_CELL_MATERIAL = wireGizmoProgram(0x4488cc);
@@ -147,12 +147,6 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
     return mesh;
   }, [meshResult.value, materialPath, materialResult.value, matrices]);
 
-  // Apart from the build, so a `cast_shadow` edit swaps hooks rather than rebuilding every
-  // cell. Layout, so the hooks land before the batch's first frame.
-  useLayoutEffect(() => {
-    if (instanced) applyShadowCasting(instanced, shadow);
-  }, [instanced, shadow]);
-
   // InstancedMesh.dispose() frees only its own instanceMatrix buffer, and leaves
   // the geometry and material the resource pipeline owns.
   useEffect(() => {
@@ -161,7 +155,18 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
   }, [instanced]);
 
   if (instanced) {
-    return <primitive object={instanced} />;
+    // Props, apart from the build, so a `cast_shadow` edit swaps hooks rather than
+    // rebuilding every cell.
+    return (
+      <primitive
+        object={instanced}
+        castShadow={shadow.castShadow}
+        onBeforeRender={shadow.onBeforeRender}
+        onAfterRender={shadow.onAfterRender}
+        onBeforeShadow={shadow.onBeforeShadow}
+        onAfterShadow={shadow.onAfterShadow}
+      />
+    );
   }
 
   // A pending or missing item draws cell-sized wireframe boxes.

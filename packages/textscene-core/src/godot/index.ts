@@ -62,6 +62,7 @@ export {
   CANVAS_ITEM_Z_MAX,
   CANVAS_LAYER_MIN,
   CANVAS_LAYER_MAX,
+  ShadowCastingSetting,
 } from './rendering.js';
 export {
   CPU_PARTICLES_PARAMS,

@@ -58,6 +58,15 @@ describe('surfaceDrawHooks — colour pass billboard', () => {
     expect(mesh.matrixWorld.equals(before)).toBe(true);
   });
 
+  it('leaves the model-view three computed for the draw, not a stale one from before it', () => {
+    // three recomputes `modelViewMatrix` after the before-hook (`WebGLRenderer.js:2160`)
+    // and `normalMatrix` from it, so the pair must stay as the draw left them.
+    const mesh = surfacesMesh();
+    mesh.modelViewMatrix.makeScale(9, 9, 9);
+    const drawn = drawColourGroup(mesh, camera, BILLBOARD, (s) => s.modelViewMatrix);
+    expect(mesh.modelViewMatrix.equals(drawn)).toBe(true);
+  });
+
   it('leaves a group whose material does not billboard in the object pose', () => {
     const mesh = surfacesMesh();
     const drawn = drawColourGroup(mesh, camera, OPAQUE, (s) => s.matrixWorld);

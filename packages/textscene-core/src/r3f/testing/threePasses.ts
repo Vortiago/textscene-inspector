@@ -1,7 +1,7 @@
 /**
  * three's per-group draw hooks, replayed without a GL context: the colour pass as
  * `WebGLRenderer.renderObject` runs it (`WebGLRenderer.js:2158-2183`) and the shadow pass
- * as `WebGLShadowMap.renderObject` does (`WebGLShadowMap.js:526-560`). The GL draw becomes
+ * as `WebGLShadowMap.renderObject` does (`WebGLShadowMap.js:518-570`). The GL draw becomes
  * a probe, which reads the state three would use at that instant.
  */
 

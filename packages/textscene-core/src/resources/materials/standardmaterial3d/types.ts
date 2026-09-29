@@ -175,14 +175,13 @@ export interface StandardMaterial3DData {
    */
   heightmapScale: number;
   /**
-   * `billboard_mode`: 0 DISABLED, 1 ENABLED, 2 FIXED_Y, 3 PARTICLES. Fed
-   * straight to `useBillboard`, the same hook Label3D/Sprite3D drive.
+   * `billboard_mode`: 0 DISABLED, 1 ENABLED, 2 FIXED_Y, 3 PARTICLES. The derived
+   * material carries it on `userData`, and `r3f/surfaceDrawHooks.ts` poses each draw.
    */
   billboardMode: number;
   /**
-   * `billboard_keep_scale`. Godot's default (false) normalises the model scale
-   * away while billboarding. `useBillboard` rewrites only rotation, so the
-   * previewer's billboard always keeps the authored scale.
+   * `billboard_keep_scale`. Godot's default (false) drops the model scale while
+   * billboarding. The draw-time billboard does not read it and always keeps the scale.
    */
   billboardKeepScale: boolean;
   /** `anisotropy` magnitude (0..1), gated on `anisotropy_enabled`. */

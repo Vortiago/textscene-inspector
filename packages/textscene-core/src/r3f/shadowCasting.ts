@@ -5,7 +5,7 @@
  */
 
 import * as THREE from 'three';
-import { ShadowCastingSetting } from '../resources/meshlibrary/types';
+import { ShadowCastingSetting } from '../godot/rendering';
 import {
   poseColourDraw,
   skipColourDraw,
@@ -23,7 +23,7 @@ export interface ShadowCastingEffects extends SurfaceDrawHooks {
 /**
  * Godot's shadow pass keeps the material's own cull unless it uses double-sided
  * shadows (`render_forward_clustered.cpp:395-411`). three flips FrontSide↔BackSide
- * for the depth material against acne (`WebGLShadowMap.js:51`, applied at `:477`),
+ * for the depth material against acne (`WebGLShadowMap.js:51`, applied at `:488`),
  * and every value undoes that. `shadowSide` is three's own per-material override.
  */
 function materialCull(depthMaterial: THREE.Material, material: THREE.Material): void {
@@ -33,7 +33,7 @@ function materialCull(depthMaterial: THREE.Material, material: THREE.Material): 
 /**
  * DOUBLE_SIDED sets `cast_double_sided_shadows`, which drops the shadow pass's
  * cull. Safe on three's shared depth material: `getDepthMaterial` reassigns `side`
- * per object before the hook (`WebGLShadowMap.js:477`), so nothing leaks.
+ * per object before the hook (`WebGLShadowMap.js:484-488`), so nothing leaks.
  */
 function bothFaces(depthMaterial: THREE.Material): void {
   depthMaterial.side = THREE.DoubleSide;

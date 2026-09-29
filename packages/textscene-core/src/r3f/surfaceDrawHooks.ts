@@ -2,7 +2,7 @@
  * Godot surface state that three holds per object, applied per draw group: a billboard's
  * pose, shadow-pass membership and SHADOWS_ONLY. three calls each before-hook and its
  * after-hook around one group's draw, with that group's material (`WebGLRenderer.js:2158-2183`,
- * `WebGLShadowMap.js:540-548`), so one mesh can mix surfaces the way Godot does.
+ * `WebGLShadowMap.js:546-564`), so one mesh can mix surfaces the way Godot does.
  */
 
 import * as THREE from 'three';
@@ -36,7 +36,7 @@ export interface CastRule {
 
 /**
  * three passes the object as the second `onBeforeShadow` argument
- * (`WebGLShadowMap.js:535,549`) and the geometry group as the last, but types
+ * (`WebGLShadowMap.js:546,560`) and the geometry group as the last, but types
  * them `Scene` and `Group`. Narrow to what this file reads.
  */
 type ShadowHookObject = { material?: THREE.Material | THREE.Material[] };
@@ -56,7 +56,9 @@ export function drawnMaterial(object: unknown, group: unknown): THREE.Material |
  */
 let posed: THREE.Object3D | null = null;
 const posedMatrixWorld = new THREE.Matrix4();
-const posedModelView = new THREE.Matrix4();
+/** Set only by a shadow draw, whose model-view three computed once for every group. */
+let viewed: THREE.Object3D | null = null;
+const viewedModelView = new THREE.Matrix4();
 let skipped: THREE.BufferGeometry | null = null;
 let skippedCount = Infinity;
 
@@ -76,7 +78,7 @@ function skip(geometry: THREE.BufferGeometry): void {
 
 /**
  * Give this draw the billboarded pose of `material`'s mode. three uploads `matrixWorld`
- * as `modelMatrix` and `modelViewMatrix` beside it, so both move and both come back.
+ * as `modelMatrix`, so it moves for this draw and comes back after it.
  *
  * @returns whether the pose moved
  */
@@ -94,7 +96,6 @@ function pose(
   if (!billboardWorldMatrix(billboarded, object.matrixWorld, camera.matrixWorld, mode)) return false;
   posed = object;
   posedMatrixWorld.copy(object.matrixWorld);
-  posedModelView.copy(object.modelViewMatrix);
   object.matrixWorld.copy(billboarded);
   return true;
 }
@@ -106,8 +107,11 @@ function closeDraw(): void {
   }
   if (posed) {
     posed.matrixWorld.copy(posedMatrixWorld);
-    posed.modelViewMatrix.copy(posedModelView);
     posed = null;
+  }
+  if (viewed) {
+    viewed.modelViewMatrix.copy(viewedModelView);
+    viewed = null;
   }
 }
 
@@ -122,7 +126,7 @@ export const skipColourDraw: CastRule['colourDraw'] = (_object, geometry) => {
 };
 
 export function surfaceDrawHooks(rule: CastRule): SurfaceDrawHooks {
-  return Object.freeze({
+  return {
     // three recomputes `modelViewMatrix` from `matrixWorld` after this hook (`:2160`).
     onBeforeRender(this: THREE.Object3D, _renderer, _scene, camera, geometry, material) {
       rule.colourDraw(this, geometry, material, camera);
@@ -132,7 +136,6 @@ export function surfaceDrawHooks(rule: CastRule): SurfaceDrawHooks {
     // (`WebGLShadowMap.js:528`), so a moved pose recomputes it here. The main camera
     // stays the billboard's, as `MAIN_CAM_INV_VIEW_MATRIX` is on a shadow pass.
     onBeforeShadow(
-      this: THREE.Object3D,
       _renderer,
       object,
       camera,
@@ -149,10 +152,14 @@ export function surfaceDrawHooks(rule: CastRule): SurfaceDrawHooks {
         skip(geometry);
         return;
       }
-      if (pose(this, material, camera, shadowCamera)) {
-        this.modelViewMatrix.multiplyMatrices(shadowCamera.matrixWorldInverse, this.matrixWorld);
+      // three passes the object itself here, typed as the scene.
+      const drawn = object as unknown as THREE.Object3D;
+      if (pose(drawn, material, camera, shadowCamera)) {
+        viewed = drawn;
+        viewedModelView.copy(drawn.modelViewMatrix);
+        drawn.modelViewMatrix.multiplyMatrices(shadowCamera.matrixWorldInverse, drawn.matrixWorld);
       }
     },
     onAfterShadow: closeDraw,
-  } satisfies SurfaceDrawHooks);
+  };
 }
