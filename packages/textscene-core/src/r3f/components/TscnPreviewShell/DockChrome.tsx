@@ -87,7 +87,11 @@ export function MasterDetailHandle({
 
   return (
     <div
-      {...drag}
+      ref={drag.ref}
+      onPointerDown={drag.onPointerDown}
+      onPointerMove={drag.onPointerMove}
+      onPointerUp={drag.onPointerUp}
+      onPointerCancel={drag.onPointerCancel}
       className={styles.masterDetailHandle}
       role="separator"
       aria-orientation="horizontal"
@@ -116,7 +120,11 @@ export function SheetHandle({
 
   return (
     <div
-      {...drag}
+      ref={drag.ref}
+      onPointerDown={drag.onPointerDown}
+      onPointerMove={drag.onPointerMove}
+      onPointerUp={drag.onPointerUp}
+      onPointerCancel={drag.onPointerCancel}
       className={`${styles.narrowOnly} ${styles.sheetHandle}`}
       role="separator"
       aria-orientation="horizontal"
