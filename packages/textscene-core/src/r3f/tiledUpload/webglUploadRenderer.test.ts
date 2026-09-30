@@ -60,6 +60,18 @@ describe('webglUploadRenderer', () => {
     expect((pixels as Uint8Array).buffer).toBe(data.buffer);
   });
 
+  it('writes a flipped texture\'s band at its mirrored rows, where the whole-image flip puts them', () => {
+    const { renderer, gl } = fakeThreeRenderer();
+    const texture = dataTexture(8, 6);
+    texture.flipY = true;
+    webglUploadRenderer(renderer).writeRows(texture, 1, 3);
+
+    const [, , , y, , rows, , , pixels] = gl.texSubImage2D.mock.calls[0]!;
+    expect([y, rows]).toEqual([3, 2]);
+    const data = texture.image.data as Uint8Array;
+    expect(pixels).toEqual(data.subarray(1 * 8 * 4, 3 * 8 * 4));
+  });
+
   it('writes into the storage three allocated for the texture, on unit 0', () => {
     const { renderer, state, handle } = fakeThreeRenderer();
     webglUploadRenderer(renderer).writeRows(dataTexture(8, 6), 0, 1);
