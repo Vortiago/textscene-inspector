@@ -1,8 +1,10 @@
 /** The linting engine for TSCN files: strict parsing, then the semantic rules. */
 
 import type { TscnScene, TscnNode } from '../parser/types.js';
+import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { orphanDiagnostics } from './orphanDiagnostics.js';
 import { danglingResourceDiagnostics } from './danglingResources.js';
+import { unimportableGltfDiagnostics } from './unimportableGltf.js';
 import {
   SEVERITY_ORDER,
   flooredSeverity,
@@ -10,6 +12,7 @@ import {
   type RuleContext,
   type ParseError,
   type SourceLines,
+  type StrictParseResult,
 } from './types.js';
 import { ruleRegistry } from './RuleRegistry.js';
 import { StrictTscnParser } from './StrictTscnParser.js';
@@ -37,13 +40,37 @@ export class Linter {
    * @returns Array of diagnostics (parse errors + rule violations)
    */
   lint(content: string): Diagnostic[] {
+    return this.sortDiagnostics(this.lintFile(content).diagnostics);
+  }
+
+  /**
+   * `lint`, plus the diagnostics of the rules that read the files `content` uses, through `provider`: a host's view of the
+   * Godot project the file sits in. A file the provider cannot deliver adds no diagnostic.
+   *
+   * @param content - Raw TSCN file content
+   * @param provider - Loads a `res://` path of the file's project
+   * @returns The diagnostics of `lint` and the cross-file ones, sorted together
+   */
+  async lintProject(content: string, provider: ResourceProvider): Promise<Diagnostic[]> {
+    const { diagnostics, parsed } = this.lintFile(content);
+    if (parsed?.scene) {
+      for (const d of await unimportableGltfDiagnostics(parsed.scene, parsed.lines, provider)) diagnostics.push(d);
+    }
+    return this.sortDiagnostics(diagnostics);
+  }
+
+  /**
+   * The unsorted diagnostics of `content` alone, and the strict parse they came from. No parse for a legacy-format
+   * file, which is declined whole.
+   */
+  private lintFile(content: string): { diagnostics: Diagnostic[]; parsed?: StrictParseResult } {
     const diagnostics: Diagnostic[] = [];
 
     // Phase 0: the file's own format version. These rules are written against
     // the format Godot writes today, so an older one is declined whole rather
     // than reported against a grammar it predates.
     const legacy = this.legacyFormatDiagnostic(content);
-    if (legacy) return [legacy];
+    if (legacy) return { diagnostics: [legacy] };
 
     // Phase 1: strict parsing.
     const parseResult = this.parser.parse(content);
@@ -62,7 +89,7 @@ export class Linter {
       for (const d of this.lintScene(scene, lines)) diagnostics.push(d);
     }
 
-    return this.sortDiagnostics(diagnostics);
+    return { diagnostics, parsed: parseResult };
   }
 
   /**

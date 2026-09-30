@@ -11,6 +11,13 @@ const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = resolve(packageDir, '../..');
 const cliPath = join(packageDir, 'dist', 'cli.js');
 const cleanFixture = join(repoRoot, 'scenes', 'fixtures', 'unit-box-mesh.tscn');
+const gltfFixture = join(
+  repoRoot,
+  'scenes',
+  'fixtures',
+  'gltf-unsupported-required-extension',
+  'edge-gltf-unsupported-required-extension.tscn'
+);
 
 const BAD_TSCN = `[gd_scene format=3]
 
@@ -138,6 +145,14 @@ describe('CLI end-to-end', () => {
     expect(result.stdout).toContain(nestedCleanPath);
     expect(result.stdout).toContain(nestedBadPath);
     expect(result.stdout).toContain('(strict-parser)');
+  });
+
+  it("reads a scene's glTF dependency under its project.godot and exits 1 on one Godot refuses", () => {
+    const result = runCli(['--no-color', gltfFixture]);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain('(gltf-required-extension-unsupported)');
+    expect(result.stdout).toContain('EXT_mesh_gpu_instancing');
   });
 
   it('emits ANSI colors by default', () => {

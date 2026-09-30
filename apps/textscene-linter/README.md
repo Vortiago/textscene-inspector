@@ -25,6 +25,14 @@ tscn-lint scenes/                     # every .tscn and .tres file underneath
 tscn-lint --no-color scenes/          # no ANSI colours
 ```
 
+## Project files
+
+When the scene's own directory, or a directory above it, holds
+`project.godot`, `tscn-lint` resolves `res://` paths from there. It then also
+reads each `.glb` and `.gltf` file the scene uses, and reports one that requires
+a glTF extension Godot's importer does not support. Godot fails to load such a
+scene. `tscn-lint` checks a scene outside every Godot project alone.
+
 ## Output formats (`--format`)
 
 - `text` (default): coloured, streamed per file.

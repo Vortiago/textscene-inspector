@@ -10,7 +10,7 @@ import type { ResourceEventBus } from '../ResourceEventBus';
 import type { ResourceProvider } from '../ResourceProvider';
 import { TscnParser } from '../../parser/TscnParser';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
-import { isGLBPath } from '../formats/glb/glbProcessing';
+import { isGltfPath } from '../../godot/gltf';
 
 /**
  * The `[gd_scene]` tag after any leading `;` comment and blank lines, which Godot
@@ -71,7 +71,7 @@ export function createSceneProcessor({
       // A PackedScene can be a `.tscn` text file or a `.glb` / `.gltf` binary, and
       // one scene can reference both. The provider returns text or an ArrayBuffer,
       // so the registered path's extension decides how to make a TscnScene.
-      if (isGLBPath(metadata.path)) {
+      if (isGltfPath(metadata.path)) {
         if (!(content instanceof ArrayBuffer)) {
           throw new Error(
             `GLB/GLTF must be binary content, got ${typeof content}: ${metadata.path}`

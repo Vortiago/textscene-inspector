@@ -72,7 +72,14 @@ export {
 } from './cpuParticles.js';
 export { formatReal, storedReal } from './real.js';
 export { BillboardMode } from './billboard.js';
-export { GODOT_GLTF_EXTENSIONS, unsupportedRequiredGltfExtensions } from './gltf.js';
+export {
+  GODOT_GLTF_EXTENSIONS,
+  gltfRefusalMessage,
+  isGltfPath,
+  readGltfRequiredExtensions,
+  requiredGltfExtensions,
+  unsupportedRequiredGltfExtensions,
+} from './gltf.js';
 export { GRADIENT_TEXTURE_MAX_SIZE, IMAGE_MAX_PIXELS } from './texture.js';
 export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX, CLIP_CHILDREN_MODES } from './canvasItem.js';
 export {
@@ -135,6 +142,7 @@ export {
 } from './variantParser.js';
 export {
   EXT_RESOURCE_CALL_ANYWHERE_RE,
+  extResourceIdsIn,
   type ResourceRef,
   dictSubResourceEntries,
   keyedResourceRefReader,

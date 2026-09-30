@@ -21,7 +21,7 @@ Each `.tscn` file can have its own preview.
 
 ## Editor features
 
-- **Problems panel:** the linter checks each open `.tscn` file.
+- **Problems panel:** the linter checks each open `.tscn` file. Inside a workspace folder, it also reports a `.glb` or `.gltf` file the scene uses that Godot's importer refuses.
 - **Outline:** the scene tree of the file. Click an entry to jump to its line.
 - **`res://` links:** Ctrl-click (Cmd-click on macOS) a path to open the file.
 - **Go to Definition** on `SubResource("id")` and `ExtResource("id")`.

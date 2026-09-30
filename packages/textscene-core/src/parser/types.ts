@@ -134,6 +134,9 @@ export interface TscnInternalResource {
   data: Record<string, unknown>;
 }
 
+/** What the scan builds from one section: the object a strict consumer files the section's lines under. */
+export type BuiltSection = TscnNode | TscnInternalResource | TscnExternalResource;
+
 /** Alias used by the immutable SceneGraph and dependency-tracking helpers. */
 export type ExtResource = TscnExternalResource;
 /** Alias used by the immutable SceneGraph and dependency-tracking helpers. */

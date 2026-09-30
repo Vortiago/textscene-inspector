@@ -89,6 +89,16 @@ export const FILE_DIAGNOSTICS = {
     ruleName: 'dangling-resource-reference',
     grounding: { kind: 'engine', at: 'resource_format_text.cpp:113' },
   },
+  /**
+   * A used `[ext_resource]` whose `.glb`/`.gltf` requires a glTF extension outside Godot's importer set. The import
+   * refuses the file (`gltf_document.cpp:7197-7202`), and the text loader aborts the scene where a value names the
+   * resource (`resource_format_text.cpp:145-151`). The one row that reads another file, so only `lintProject` reports it.
+   */
+  unimportableGltf: {
+    severity: 'error',
+    ruleName: 'gltf-required-extension-unsupported',
+    grounding: { kind: 'engine', at: 'gltf_document.cpp:7197-7202' },
+  },
 } as const satisfies Record<string, RuleArm>;
 
 /**

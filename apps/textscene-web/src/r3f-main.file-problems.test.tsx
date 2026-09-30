@@ -21,6 +21,11 @@ vi.mock('@textscene/core/linter', async () => {
     lint(content: string): Diagnostic[] {
       return scripted.get(content) ?? [];
     }
+
+    /** The pane reads the scene's dependencies too. The script names none, so both lints agree. */
+    async lintProject(content: string): Promise<Diagnostic[]> {
+      return this.lint(content);
+    }
   }
   return { ...real, Linter };
 });

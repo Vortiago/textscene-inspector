@@ -56,6 +56,13 @@ each node's registered component. Components load files through `useResource`.
 `Linter` then runs the semantic rules over the tree. The whole path imports no React and no
 three.js, so the CLI and the VS Code extension host can bundle it alone.
 
+`Linter.lint` reads only the scene. `Linter.lintProject` also reads the files the scene uses,
+through the host's `ResourceProvider`. It reports a used `.glb` or `.gltf` that requires a
+glTF extension Godot's importer does not support, because Godot then fails to load the scene. The CLI
+and the VS Code extension root their providers at the nearest `project.godot` through
+`resources/resPath.ts`, and the web previewer at its corpus root. The CLI lints a scene
+outside every project with `lint` alone.
+
 ## Vertical slices and registries
 
 Each node type is one folder, `nodes/<category>/<type>/`. The folder holds the parser, the
@@ -99,8 +106,9 @@ The parsers differ in one place, the `NodeCreator`. The lenient one stores each 
 properties in `properties`. The strict one stores the raw strings there. Both store the raw
 strings in `rawProperties`, so code shared by both paths reads that field.
 
-The strict parser also returns `SourceLines`: the line of each heading and property. The
-`Linter` uses it to put a rule's diagnostic on the right line.
+The strict parser also returns `SourceLines`: the line of each `[ext_resource]`,
+`[sub_resource]` and `[node]` heading, and of each property. The `Linter` uses it to put a
+rule's diagnostic on the right line.
 
 ## Rendering
 

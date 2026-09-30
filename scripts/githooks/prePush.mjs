@@ -10,6 +10,12 @@ import { readFileSync } from 'node:fs';
 import process from 'node:process';
 import { planChecks } from './prePushPlan.mjs';
 
+/** The scenes that exist to error, which `fixtureLint.test.ts` asserts do and `lint:tscn` must skip. */
+function negativeFixtures() {
+  const list = JSON.parse(readFileSync('scenes/fixtures/negative-fixtures.json', 'utf8'));
+  return new Set(list.files);
+}
+
 /** Git writes this sha for a ref that does not exist on one side of the push. */
 const NO_SHA = /^0+$/;
 
@@ -64,7 +70,7 @@ function run(command) {
 
 function main() {
   const files = process.env.FULL_VALIDATE === '1' ? undefined : pushedFiles(readFileSync(0, 'utf8'));
-  const plan = files === undefined ? [['pnpm', 'validate']] : planChecks(files);
+  const plan = files === undefined ? [['pnpm', 'validate']] : planChecks({ ...files, negativeFixtures: negativeFixtures() });
   if (plan.length === 0) console.log('pre-push: no check applies to these files. CI runs the full gate.');
   for (const command of plan) {
     const status = run(command);

@@ -13,7 +13,6 @@ import {
   disposeClonedMaterials,
   gltfResourceDir,
   initGlbModules,
-  isGLBPath,
 } from './glbProcessing';
 // Statically, so the identity check below is immune to the `vi.resetModules()` calls in
 // this file: a dynamic import after a reset yields a fresh instance.
@@ -115,38 +114,6 @@ describe('gltfResourceDir', () => {
 
   it('yields empty for a bare filename', () => {
     expect(gltfResourceDir('model.glb')).toBe('');
-  });
-});
-
-describe('isGLBPath', () => {
-  it('matches .glb and .gltf extensions', () => {
-    expect(isGLBPath('model.glb')).toBe(true);
-    expect(isGLBPath('model.gltf')).toBe(true);
-    expect(isGLBPath('res://meshes/rock.glb')).toBe(true);
-  });
-
-  it('is case-insensitive on the extension', () => {
-    expect(isGLBPath('MODEL.GLB')).toBe(true);
-    expect(isGLBPath('Model.GlTf')).toBe(true);
-  });
-
-  it('rejects other extensions and near-misses', () => {
-    expect(isGLBPath('model.obj')).toBe(false);
-    expect(isGLBPath('model.glbx')).toBe(false);
-    expect(isGLBPath('glb.png')).toBe(false);
-    expect(isGLBPath('model.gltf.import')).toBe(false);
-    expect(isGLBPath('')).toBe(false);
-  });
-
-  it('does not match when a query string trails the extension (current contract)', () => {
-    // split('.').pop() yields "glb?v=2", which is not a recognised extension.
-    expect(isGLBPath('model.glb?v=2')).toBe(false);
-  });
-
-  it('treats a bare extensionless "glb" segment as a match (current contract quirk)', () => {
-    // "glb".split('.').pop() is "glb" itself; a directory path is not.
-    expect(isGLBPath('glb')).toBe(true);
-    expect(isGLBPath('some/dir/glb')).toBe(false);
   });
 });
 
@@ -412,7 +379,6 @@ describe('processing/ re-export shim', () => {
     // throw its not-initialised guard in production.
     expect(processingShim.initGlbModules).toBe(initGlbModules);
     expect(processingShim.cloneWithMaterials).toBe(cloneWithMaterials);
-    expect(processingShim.isGLBPath).toBe(isGLBPath);
     expect(processingShim.disposeClonedMaterials).toBe(disposeClonedMaterials);
   });
 });

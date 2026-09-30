@@ -4,6 +4,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
+import type { ResourceProvider } from '@textscene/core/linter';
 import { useSourceDiagnostics } from './useSourceDiagnostics';
 import { DEBOUNCE_MS } from './useSceneSource';
 
@@ -67,5 +68,78 @@ describe('useSourceDiagnostics', () => {
 
     expect(result.current.fileDiagnostics).toBeNull();
     expect(result.current.problemBadge).toBeNull();
+  });
+});
+
+/** A GLB whose one JSON chunk requires `required`: all the glTF import verdict reads. */
+function glbRequiring(required: string): ArrayBuffer {
+  const json = new TextEncoder().encode(JSON.stringify({ asset: { version: '2.0' }, extensionsRequired: [required] }));
+  const file = new Uint8Array(20 + json.length);
+  const view = new DataView(file.buffer);
+  view.setUint32(0, 0x46546c67, true);
+  view.setUint32(4, 2, true);
+  view.setUint32(8, file.length, true);
+  view.setUint32(12, json.length, true);
+  view.setUint32(16, 0x4e4f534a, true);
+  file.set(json, 20);
+  return file.buffer;
+}
+
+/** A scene whose `Tree` node instances `res://tree.glb`, declared on line 3. */
+const USES_TREE_GLB = [
+  '[gd_scene format=3]',
+  '',
+  '[ext_resource type="PackedScene" path="res://tree.glb" id="1_tree"]',
+  '',
+  '[node name="Root" type="Node3D"]',
+  '',
+  '[node name="Tree" parent="." instance=ExtResource("1_tree")]',
+].join('\n');
+
+/** A provider whose every read waits until the test releases it. */
+function heldProvider() {
+  const pending: Array<() => void> = [];
+  const provider: ResourceProvider = {
+    loadResource: () =>
+      new Promise((resolve) => pending.push(() => resolve(glbRequiring('EXT_mesh_gpu_instancing')))),
+  };
+  return { provider, pending };
+}
+
+describe('useSourceDiagnostics with a resource provider', () => {
+  it("adds a refused glTF on its ext_resource heading once the scene's dependencies are read", async () => {
+    const { provider, pending } = heldProvider();
+    const { result } = renderHook(() => useSourceDiagnostics(USES_TREE_GLB, provider));
+    act(() => {
+      vi.advanceTimersByTime(DEBOUNCE_MS);
+    });
+
+    expect(result.current.diagnosticsByLine.has(3)).toBe(false);
+    await act(async () => {
+      for (const release of pending.splice(0)) release();
+      await vi.runAllTimersAsync();
+    });
+
+    expect(result.current.diagnosticsByLine.get(3)?.severity).toBe('error');
+  });
+
+  it('drops the result of a lint whose buffer has changed since', async () => {
+    const { provider, pending } = heldProvider();
+    const { result, rerender } = renderHook(({ text }) => useSourceDiagnostics(text, provider), {
+      initialProps: { text: USES_TREE_GLB },
+    });
+    act(() => {
+      vi.advanceTimersByTime(DEBOUNCE_MS);
+    });
+    const releaseStale = pending.shift()!;
+
+    rerender({ text: WITH_BAD_LAST_LINE });
+    await act(async () => {
+      releaseStale();
+      await vi.runAllTimersAsync();
+    });
+
+    expect(result.current.diagnosticsByLine.has(3)).toBe(false);
+    expect(result.current.diagnosticsByLine.has(4)).toBe(true);
   });
 });

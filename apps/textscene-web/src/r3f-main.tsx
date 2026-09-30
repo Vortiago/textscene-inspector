@@ -111,7 +111,7 @@ export function R3FApp() {
   }, []);
 
   const { diagnosticsByLine, fileDiagnostics, problemBadge, lineCount } =
-    useSourceDiagnostics(buffer);
+    useSourceDiagnostics(buffer, provider);
   const [gutterScrollTop, setGutterScrollTop] = useState(0);
 
   const options = useMemo(() => fixtureOptions(uploadedTscnName), [uploadedTscnName]);

@@ -13,8 +13,8 @@ import {
   forEachSurfaceMaterial,
   tagImportMaterial,
   gltfResourceDir,
-  isGLBPath,
 } from '../formats/glb/glbProcessing';
+import { isGltfPath } from '../../godot/gltf';
 import { applyRootScale } from '../formats/glb/rootScale';
 import type { GltfExtensionRules } from '../formats/glb/types';
 import { stampVisualLayers } from '../../r3f/visualLayers';
@@ -146,7 +146,7 @@ export function createGLBProcessor(
     fileEventBus,
     eventBus,
     resourceType: 'glb',
-    shouldProcess: (path, data) => isGLBPath(path) && data instanceof ArrayBuffer,
+    shouldProcess: (path, data) => isGltfPath(path) && data instanceof ArrayBuffer,
     process: async (path, data) => {
       // Text .gltf resolves external buffers/images against its own res://
       // directory through the bus's LoadingManager (host-mapped URLs).

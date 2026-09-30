@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import {
   EXT_RESOURCE_CALL_ANYWHERE_RE,
   dictSubResourceEntries,
+  extResourceIdsIn,
   isPathResourceLiteral,
   keyedResourceRefReader,
   resourceRef,
@@ -199,5 +200,35 @@ describe('the ExtResource discriminator', () => {
     const value = 'ExtResource("1_abc")';
     expect(EXT_RESOURCE_CALL_ANYWHERE_RE.test(value)).toBe(true);
     expect(EXT_RESOURCE_CALL_ANYWHERE_RE.test(value)).toBe(true);
+  });
+});
+
+describe('extResourceIdsIn', () => {
+  it('reads the id of a whole-value reference', () => {
+    expect(extResourceIdsIn('ExtResource("1_glb")')).toEqual(['1_glb']);
+  });
+
+  it('reads every reference inside a container, in order, padded and integer ids included', () => {
+    expect(extResourceIdsIn('[ExtResource("a"), { "k": ExtResource ( "b" ) }, ExtResource(3)]')).toEqual([
+      'a',
+      'b',
+      '3',
+    ]);
+  });
+
+  it('skips a reference spelled inside a string, which the loader never resolves', () => {
+    expect(extResourceIdsIn('["ExtResource(\\"a\\")", &"ExtResource(\\"b\\")", ExtResource("c")]')).toEqual(['c']);
+  });
+
+  it('keeps reading after a string that ends in an escaped backslash', () => {
+    expect(extResourceIdsIn('["dir\\\\", ExtResource("a")]')).toEqual(['a']);
+  });
+
+  it('skips a SubResource and a malformed call', () => {
+    expect(extResourceIdsIn('[SubResource("a"), ExtResource(), MyExtResource("b")]')).toEqual([]);
+  });
+
+  it('gives an empty list for a value with no reference', () => {
+    expect(extResourceIdsIn('Vector3(1, 2, 3)')).toEqual([]);
   });
 });

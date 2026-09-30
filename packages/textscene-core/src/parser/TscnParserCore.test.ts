@@ -563,7 +563,7 @@ frames = SubResource("sf")
     });
 
     describe('onSectionBuilt', () => {
-      it('hands over each built node and sub-resource with its heading line, the objects the scene holds', () => {
+      it('hands over each built ext-resource, sub-resource and node with its heading line, the objects the scene holds', () => {
         const content = `[gd_scene load_steps=2 format=3]
 
 [ext_resource type="Texture2D" path="res://icon.png" id="1"]
@@ -581,13 +581,15 @@ size = Vector3(1, 2, 3)
 
         const root = scene.nodes[0]!;
         expect(onSectionBuilt.mock.calls).toEqual([
+          [scene.externalResources[0], 3],
           [scene.internalResources[0], 5],
           [root, 8],
           [root.children[0], 10],
         ]);
         // Identity, not equality: the call hands over the objects a reader of the scene holds.
-        expect(onSectionBuilt.mock.calls[1]![0]).toBe(root);
-        expect(onSectionBuilt.mock.calls[0]![0]).toBe(scene.internalResources[0]);
+        expect(onSectionBuilt.mock.calls[0]![0]).toBe(scene.externalResources[0]);
+        expect(onSectionBuilt.mock.calls[1]![0]).toBe(scene.internalResources[0]);
+        expect(onSectionBuilt.mock.calls[2]![0]).toBe(root);
       });
 
       it("fires after the section's last property, a multi-line one included", () => {
@@ -609,8 +611,6 @@ second"
 
       it('never fires for a section that builds nothing, or for a node the creator declines', () => {
         const content = `[gd_resource type="Environment" format=3]
-
-[ext_resource type="Texture2D" path="res://icon.png" id="1"]
 
 [resource]
 background_mode = 1

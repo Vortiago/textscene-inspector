@@ -12,6 +12,7 @@ import type {
   TscnExternalResource,
   TscnInternalResource,
   NodeOrigin,
+  BuiltSection,
 } from './types.js';
 import {
   parseHeading,
@@ -76,11 +77,11 @@ export interface ParseObserver {
   /** A property value completed. */
   onProperty?(property: ParsedProperty): void;
   /**
-   * A `[node]` or `[sub_resource]` section closed, and the scan built `built` from it. `line` is
-   * its heading's line. It fires after the section's last `onProperty`, so an observer can file
-   * what it collected under the object.
+   * An `[ext_resource]`, `[sub_resource]` or `[node]` section closed, and the scan built `built`
+   * from it. `line` is its heading's line. It fires after the section's last `onProperty`, so an
+   * observer can file what it collected under the object.
    */
-  onSectionBuilt?(built: TscnNode | TscnInternalResource, line: number): void;
+  onSectionBuilt?(built: BuiltSection, line: number): void;
 }
 
 /**
@@ -146,6 +147,7 @@ export class TscnParserCore {
         const resource = parseExternalResource(currentHeading);
         if (resource) {
           externalResources.push(resource);
+          observer?.onSectionBuilt?.(resource, currentHeadingLine);
         }
       } else if (currentSection === 'sub_resource') {
         const resource = parseInternalResource(currentHeading, currentProperties);

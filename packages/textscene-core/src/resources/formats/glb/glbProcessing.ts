@@ -43,11 +43,6 @@ export function initGlbModules(): Promise<GlbModules> {
 
 // Synchronous helpers, with no addons, safe in the initial bundle.
 
-export function isGLBPath(path: string): boolean {
-  const ext = path.split('.').pop()?.toLowerCase();
-  return ext === 'glb' || ext === 'gltf';
-}
-
 /**
  * The directory a glTF's relative dependencies (external .bin buffers, image files)
  * resolve against: `res://stage/model.gltf` → `res://stage/`.

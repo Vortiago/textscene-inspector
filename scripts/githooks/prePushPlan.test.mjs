@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { planChecks } from './prePushPlan.mjs';
 
-const plan = (changed, deleted = []) => planChecks({ changed, deleted }).map((command) => command.join(' '));
+const plan = (changed, deleted = [], negativeFixtures = new Set()) =>
+  planChecks({ changed, deleted, negativeFixtures }).map((command) => command.join(' '));
 
 describe('planChecks', () => {
   it('runs nothing for files no check reads', () => {
@@ -38,6 +39,19 @@ describe('planChecks', () => {
 
   it('lints a changed scene with the built linter', () => {
     expect(plan(['scenes/fixtures/unit-a.tscn'])).toEqual(['pnpm build:linter', 'pnpm lint:tscn scenes/fixtures/unit-a.tscn']);
+  });
+
+  it('skips a negative fixture, which exists to error', () => {
+    const negative = new Set(['edge-a.tscn']);
+    expect(plan(['scenes/fixtures/nested/edge-a.tscn'], [], negative)).toEqual([]);
+  });
+
+  it('lints the other scenes of a push that also changes a negative fixture', () => {
+    const negative = new Set(['edge-a.tscn']);
+    expect(plan(['scenes/fixtures/edge-a.tscn', 'scenes/fixtures/unit-a.tscn'], [], negative)).toEqual([
+      'pnpm build:linter',
+      'pnpm lint:tscn scenes/fixtures/unit-a.tscn',
+    ]);
   });
 
   it('builds core before the generated-docs checks when nothing else built it', () => {

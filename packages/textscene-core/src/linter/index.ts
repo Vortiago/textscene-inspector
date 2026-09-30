@@ -299,3 +299,5 @@ export type {
   SourceLines,
 } from './types.js';
 export type { PropertyValidator } from './ValidatorRegistry.js';
+// The seam `Linter.lintProject` reads a scene's dependencies through, so a host needs no second import to type one.
+export type { ResourceProvider } from '../resources/ResourceProvider.js';

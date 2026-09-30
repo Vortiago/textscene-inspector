@@ -49,6 +49,18 @@ size = Vector3(1, 2, 3)
     expect(lines.get(box)).toEqual({ heading: 3, properties: new Map([['size', 4]]) });
   });
 
+  it('records an ext-resource heading under the object the scene holds', () => {
+    const { lines, scene } = parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://tree.glb" id="1_tree"]
+
+[node name="Root" type="Node3D"]
+`);
+    const tree = scene!.externalResources[0]!;
+
+    expect(lines.get(tree)).toEqual({ heading: 3, properties: new Map() });
+  });
+
   it('keeps the line of a property whose value the validators refuse', () => {
     // A refused value still sits in the bag, and the rules still read it.
     const { errors, lines, root } = parse(`[gd_scene format=3]
@@ -116,10 +128,8 @@ z_index = 3
     expect(lines.get(root)?.properties.get('z_index')).toBe(7);
   });
 
-  it('records nothing for a section that builds no node or sub-resource', () => {
+  it('records nothing for the header or a [resource] body, which build no section object', () => {
     const { lines } = new StrictTscnParser().parse(`[gd_resource type="Environment" format=3]
-
-[ext_resource type="Texture2D" path="res://icon.png" id="1"]
 
 [resource]
 background_mode = 1

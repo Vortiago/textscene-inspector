@@ -4,45 +4,24 @@ import * as vscode from 'vscode';
 import { isBinaryResourceType, stripResPrefix } from '@textscene/core/resources/resourceProviderUtils';
 import { info, error } from '@textscene/core/logger';
 import type { ResourceProvider } from '@textscene/core/resources/ResourceProvider';
+import { comparablePath, isWithinRoot, normalizeRelativePath } from '@textscene/core/resources/resPath';
 import { findGodotProjectRoot } from '../findGodotProjectRoot';
-
-/** Normalize an fsPath for use as a served-resources map key: forward slashes, lowercased. */
-function normalizeFsPath(fsPath: string): string {
-  return fsPath.replace(/\\/g, '/').toLowerCase();
-}
-
-/**
- * Whether a normalized path is the root or sits under it. A bare `startsWith`
- * admits `res://../proj-secrets/key.pem` out of a `/home/u/proj` workspace, so the
- * separator makes the boundary. A root that already ends in one (`/`, `c:/`)
- * gains no second.
- */
-function isWithinRoot(rootNormalized: string, candidateNormalized: string): boolean {
-  if (candidateNormalized === rootNormalized) return true;
-  const prefix = rootNormalized.endsWith('/') ? rootNormalized : `${rootNormalized}/`;
-  return candidateNormalized.startsWith(prefix);
-}
 
 export class VSCodeResourceProvider implements ResourceProvider {
   private projectRoot: vscode.Uri | null = null;
 
   /**
-   * Normalized fsPath -> the exact `res://` string a `loadResource` call resolved
+   * Comparable fsPath -> the exact `res://` string a `loadResource` call resolved
    * it to. Recorded on resolution, before the read, so a resource not on disk yet
    * is still recorded and a later `onDidCreate` recovers it through
    * `getServedResPath`.
    */
   private servedResources = new Map<string, string>();
 
-  /** `workspaceRoot`, normalized once in the constructor for every resolution. */
-  private readonly workspaceRootNormalized: string;
-
   constructor(
     private workspaceRoot: vscode.Uri,
     private documentUri: vscode.Uri
-  ) {
-    this.workspaceRootNormalized = normalizeFsPath(workspaceRoot.fsPath);
-  }
+  ) {}
 
   async loadResource(resourcePath: string, type: string): Promise<string | ArrayBuffer> {
     info(`[VSCodeResourceProvider] Loading ${type}: ${resourcePath}`);
@@ -52,7 +31,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
     try {
       const fsPath = await this.resolveGodotPath(resourcePath);
       info(`[VSCodeResourceProvider] Resolved to: ${fsPath.fsPath}`);
-      this.servedResources.set(normalizeFsPath(fsPath.fsPath), resourcePath);
+      this.servedResources.set(comparablePath(fsPath.fsPath), resourcePath);
       return await this.readContent(fsPath, resourcePath, type);
     } catch (primaryError) {
       info(`[VSCodeResourceProvider] Primary resolution failed:`, primaryError);
@@ -65,10 +44,8 @@ export class VSCodeResourceProvider implements ResourceProvider {
 
         info(`[VSCodeResourceProvider] Trying fallback path: ${fallbackPath.fsPath}`);
 
-        const fallbackPathNormalized = normalizeFsPath(fallbackPath.fsPath);
-
-        if (isWithinRoot(this.workspaceRootNormalized, fallbackPathNormalized)) {
-          this.servedResources.set(normalizeFsPath(fallbackPath.fsPath), resourcePath);
+        if (isWithinRoot(this.workspaceRoot.fsPath, fallbackPath.fsPath)) {
+          this.servedResources.set(comparablePath(fallbackPath.fsPath), resourcePath);
           return await this.readContent(fallbackPath, resourcePath, type);
         }
       } catch (fallbackError) {
@@ -113,7 +90,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
    * casing.
    */
   getServedResPath(fileUri: vscode.Uri): string | null {
-    return this.servedResources.get(normalizeFsPath(fileUri.fsPath)) ?? null;
+    return this.servedResources.get(comparablePath(fileUri.fsPath)) ?? null;
   }
 
   /**
@@ -134,18 +111,18 @@ export class VSCodeResourceProvider implements ResourceProvider {
 
   /**
    * Resolves a `res://` path against the project root into a VS Code Uri, and
-   * refuses one outside the workspace, which blocks path traversal.
+   * refuses one that climbs out of the project root or lands outside the
+   * workspace, which blocks path traversal.
    */
   private async resolveGodotPath(godotPath: string): Promise<vscode.Uri> {
-    const relativePath = stripResPrefix(godotPath);
+    const relativePath = normalizeRelativePath(stripResPrefix(godotPath));
+    if (relativePath === null) {
+      throw new Error(`Path traversal detected: ${godotPath} climbs out of the project root`);
+    }
 
-    const projectRoot = await this.findProjectRoot();
+    const resolvedUri = vscode.Uri.joinPath(await this.findProjectRoot(), relativePath);
 
-    const resolvedUri = vscode.Uri.joinPath(projectRoot, relativePath);
-
-    const resolvedPathNormalized = normalizeFsPath(resolvedUri.fsPath);
-
-    if (!isWithinRoot(this.workspaceRootNormalized, resolvedPathNormalized)) {
+    if (!isWithinRoot(this.workspaceRoot.fsPath, resolvedUri.fsPath)) {
       throw new Error(
         `Path traversal detected: ${godotPath} resolves outside workspace bounds`
       );

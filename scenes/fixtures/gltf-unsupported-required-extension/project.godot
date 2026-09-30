@@ -1,0 +1,12 @@
+; This folder is a res:// root of its own. The scene's fault is in the .glb it
+; instances, and the linter reads that file only under a project.godot. A
+; project.godot at scenes/fixtures would apply to every other fixture there, so
+; this one is in a sub-folder.
+
+config_version=5
+
+[application]
+
+config/name="Unsupported required glTF extension"
+run/main_scene="res://edge-gltf-unsupported-required-extension.tscn"
+config/features=PackedStringArray("4.6")

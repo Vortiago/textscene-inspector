@@ -4,7 +4,8 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { Linter, type Diagnostic } from '@textscene/core/linter';
+import { Linter, type Diagnostic, type ResourceProvider } from '@textscene/core/linter';
+import { error as logError } from '@textscene/core/logger';
 import {
   groupDiagnostics,
   summarizeDiagnostics,
@@ -29,16 +30,32 @@ export interface SourceDiagnostics {
   lineCount: number;
 }
 
-export function useSourceDiagnostics(buffer: string): SourceDiagnostics {
+/**
+ * @param provider - The scene's resources, read for the diagnostics its dependencies add. Without
+ *   one, the buffer is linted alone.
+ */
+export function useSourceDiagnostics(buffer: string, provider?: ResourceProvider): SourceDiagnostics {
   // Debounced like the render forward but outside its gate: a buffer that fails to render is
-  // still linted, and the gutter tells the user why.
+  // still linted, and the gutter tells the user why. The buffer's own diagnostics show at once,
+  // and the cross-file lint replaces them only while the buffer it read is still the pane's.
   const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([]);
   useEffect(() => {
+    let isCurrent = true;
     const timer = setTimeout(() => {
       setDiagnostics(linter.lint(buffer));
+      if (!provider) return;
+      linter
+        .lintProject(buffer, provider)
+        .then((withDependencies) => {
+          if (isCurrent) setDiagnostics(withDependencies);
+        })
+        .catch((reason: unknown) => logError('[SourceDiagnostics] Cross-file lint failed:', reason));
     }, DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [buffer]);
+    return () => {
+      isCurrent = false;
+      clearTimeout(timer);
+    };
+  }, [buffer, provider]);
 
   // Counts newlines rather than `buffer.split('\n').length`, which builds an array of every
   // line on each keystroke.

@@ -2,50 +2,45 @@
  * Walks up from a document's directory for `project.godot`, and falls back to the
  * workspace root, since Godot's `res://` is always project-root-relative. The
  * preview's `VSCodeResourceProvider` and `TscnDocumentLinkProvider` share it, so
- * both agree on where a `res://` path points.
+ * both agree on where a `res://` path points. The walk itself is core's
+ * `findProjectRoot`, which the CLI shares.
  */
 
 import * as vscode from 'vscode';
+import { comparablePath, findProjectRoot } from '@textscene/core/resources/resPath';
 
-function normalizeFsPath(fsPath: string): string {
-  return fsPath.replace(/\\/g, '/').toLowerCase();
+/** How many directories `dir` lies above `from`, an ancestor of it. */
+function levelsAbove(from: string, dir: string): number {
+  const depth = (path: string) => comparablePath(path).split('/').filter(Boolean).length;
+  return depth(from) - depth(dir);
 }
 
 /**
- * Whether a normalized path sits strictly under the root. The separator makes it
- * a boundary: a bare `startsWith` walks `/home/u/proj-other` as if it were inside
- * `/home/u/proj`. A root that already ends in one gains no second.
+ * The Uri of `dir`, an ancestor of `start` named by its path. Reached through
+ * `joinPath`, never `Uri.file`, so a virtual workspace keeps its scheme.
  */
-function isUnderRoot(rootNormalized: string, candidateNormalized: string): boolean {
-  const prefix = rootNormalized.endsWith('/') ? rootNormalized : `${rootNormalized}/`;
-  return candidateNormalized.startsWith(prefix);
+function ancestorUri(start: vscode.Uri, dir: string): vscode.Uri {
+  const levels = levelsAbove(start.fsPath, dir);
+  return levels === 0 ? start : vscode.Uri.joinPath(start, ...Array<string>(levels).fill('..'));
+}
+
+async function exists(uri: vscode.Uri): Promise<boolean> {
+  try {
+    await vscode.workspace.fs.stat(uri);
+    return true;
+  } catch {
+    // `stat` rejects for a missing file, which is the answer.
+    return false;
+  }
 }
 
 export async function findGodotProjectRoot(
   workspaceRoot: vscode.Uri,
   documentUri: vscode.Uri
 ): Promise<vscode.Uri> {
-  const workspaceRootNormalized = normalizeFsPath(workspaceRoot.fsPath);
-  let currentDir = vscode.Uri.joinPath(documentUri, '..');
-
-  while (true) {
-    const currentPathNormalized = normalizeFsPath(currentDir.fsPath);
-    const projectFile = vscode.Uri.joinPath(currentDir, 'project.godot');
-
-    try {
-      await vscode.workspace.fs.stat(projectFile);
-      return currentDir;
-    } catch {
-      // Not found here: keep searching upward.
-    }
-
-    if (
-      currentPathNormalized === workspaceRootNormalized ||
-      !isUnderRoot(workspaceRootNormalized, currentPathNormalized)
-    ) {
-      return workspaceRoot;
-    }
-
-    currentDir = vscode.Uri.joinPath(currentDir, '..');
-  }
+  const documentDir = vscode.Uri.joinPath(documentUri, '..');
+  const root = await findProjectRoot(documentDir.fsPath, workspaceRoot.fsPath, (dir) =>
+    exists(vscode.Uri.joinPath(ancestorUri(documentDir, dir), 'project.godot'))
+  );
+  return root === null ? workspaceRoot : ancestorUri(documentDir, root);
 }

@@ -18,11 +18,15 @@ const SCENE = /\.(?:tscn|tres)$/;
 const GENERATED_DOCS_INPUT = /(?:^|\/)comparison\.md$|^docs\/comparison\//;
 const VENDORED = /^\.claude\/(?:skills\/conventional-commits\/|rules\/|agents\/ste-review\.md$)/;
 
+/** A path's last segment, which is how `negative-fixtures.json` names a fixture. */
+const basename = (path) => path.slice(path.lastIndexOf('/') + 1);
+
 /**
  * The commands, in order, for a push that changes `changed` (paths that still exist) and deletes
  * `deleted`. Each command is an argv array. An empty list means the push needs no check.
+ * `negativeFixtures` holds the basenames of the scenes that exist to error, which the plan does not lint.
  */
-export function planChecks({ changed, deleted }) {
+export function planChecks({ changed, deleted, negativeFixtures = new Set() }) {
   const all = [...changed, ...deleted];
   if (all.some((path) => TOOLCHAIN.test(path))) return [['pnpm', 'validate']];
 
@@ -35,7 +39,7 @@ export function planChecks({ changed, deleted }) {
   if (linted.length > 0) plan.push(['npx', 'eslint', ...linted]);
   if (code.length > 0) plan.push(['pnpm', 'exec', 'vitest', 'related', '--run', ...code]);
 
-  const scenes = changed.filter((path) => SCENE.test(path));
+  const scenes = changed.filter((path) => SCENE.test(path) && !negativeFixtures.has(basename(path)));
   if (scenes.length > 0) plan.push(['pnpm', 'build:linter'], ['pnpm', 'lint:tscn', ...scenes]);
 
   if (all.some((path) => GENERATED_DOCS_INPUT.test(path))) {

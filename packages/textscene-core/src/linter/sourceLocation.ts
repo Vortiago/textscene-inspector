@@ -1,10 +1,10 @@
 /**
- * The `location` of a diagnostic about a node or one of its properties, read from the strict
+ * The `location` of a diagnostic about a section or one of its properties, read from the strict
  * parse's line table. A rule reaches its subject through the tree, which carries no lines.
  * Column 1, since the whole line is the subject.
  */
 
-import type { TscnInternalResource, TscnNode } from '../parser/types.js';
+import type { BuiltSection } from '../parser/types.js';
 import type { Diagnostic, SourceLines } from './types.js';
 
 type Location = NonNullable<Diagnostic['location']>;
@@ -15,7 +15,7 @@ type Location = NonNullable<Diagnostic['location']>;
  */
 export function headingLocation(
   lines: SourceLines,
-  owner: TscnNode | TscnInternalResource
+  owner: BuiltSection
 ): Location | undefined {
   const section = lines.get(owner);
   return section && { line: section.heading, column: 1 };
@@ -27,7 +27,7 @@ export function headingLocation(
  */
 export function propertyLocation(
   lines: SourceLines,
-  owner: TscnNode | TscnInternalResource,
+  owner: BuiltSection,
   key: string
 ): Location | undefined {
   const line = lines.get(owner)?.properties.get(key);
