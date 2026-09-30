@@ -14,7 +14,7 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
-import { wallQuadSurfaces } from '../../../resources/testing/wallQuadSurface';
+import { wallQuadSurfaces } from '../../../resources/testing/arrayMeshSurfaces';
 import type {
   TscnExternalResource,
   TscnInternalResource,

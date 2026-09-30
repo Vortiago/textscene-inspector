@@ -17,7 +17,7 @@ import type { ResourceProvider } from '../../../resources/ResourceProvider';
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { materialInstanceAs } from '../testing/reactThreeTestInstance';
-import { wallQuadSurfaces } from '../../../resources/testing/wallQuadSurface';
+import { headlightsSurface, wallQuadSurfaces } from '../../../resources/testing/arrayMeshSurfaces';
 
 const WALL_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://bett1yahcwe25"]
 
@@ -30,17 +30,7 @@ blend_shape_mode = 0
 const COMPRESSED_TRES = `[gd_resource type="ArrayMesh" format=4]
 
 [resource]
-_surfaces = [{
-"aabb": AABB(0.416992, 0.114807, 1.339844, 0.102539, 0.06988499, 0.023437023),
-"format": 34896613383,
-"index_count": 6,
-"index_data": PackedByteArray("AAABAAIAAAADAAEA"),
-"name": "headlights",
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 4,
-"vertex_data": PackedByteArray("//8B71UVpsQAAEkKqeqmxC4l//8AAKbEj/0AAP//psTYje2P2I3tj9iN7Y/Yje2P")
-}]
+_surfaces = [${headlightsSurface({ name: 'headlights' })}]
 blend_shape_mode = 0
 `;
 

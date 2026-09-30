@@ -17,7 +17,7 @@ import type {
   TscnNode,
 } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
-import { wallQuadSurface } from '../../../resources/testing/wallQuadSurface';
+import { wallQuadSurface } from '../../../resources/testing/arrayMeshSurfaces';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
 
 const MESH_PATH = 'res://stage/meshes/wheel.tres';

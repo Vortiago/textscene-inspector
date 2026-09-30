@@ -12,7 +12,7 @@ import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../../index';
 import type { ResourceProvider } from '../../../../resources/ResourceProvider';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
-import { wallQuadSurfaces } from '../../../../resources/testing/wallQuadSurface';
+import { wallQuadSurfaces } from '../../../../resources/testing/arrayMeshSurfaces';
 
 const LIBRARY_PATH = 'res://stage/tiles.tres';
 const TILE_MESH_PATH = 'res://stage/meshes/tile.tres';

@@ -6,7 +6,7 @@
  */
 
 import type { TscnInternalResource } from '../../../../parser/types';
-import { wallQuadSurfaces } from '../../../../resources/testing/wallQuadSurface';
+import { wallQuadSurfaces } from '../../../../resources/testing/arrayMeshSurfaces';
 
 /**
  * A `[sub_resource type="ArrayMesh"]` with two wall quads, each owning the
