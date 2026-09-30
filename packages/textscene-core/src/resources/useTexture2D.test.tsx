@@ -127,6 +127,9 @@ texture = SubResource("t")
   it('still resolves a plain image reference through the async loader', async () => {
     const fake = createFakeResourceLoader();
     const tex = new THREE.Texture();
+    // Shaped like the loader's hand-over (ADR-0044): sRGB-tagged at three's clamp
+    // default, which is what the light's clamp bind shares untouched.
+    tex.colorSpace = THREE.SRGBColorSpace;
     (tex as unknown as { image: { width: number; height: number } }).image = {
       width: 8,
       height: 8,

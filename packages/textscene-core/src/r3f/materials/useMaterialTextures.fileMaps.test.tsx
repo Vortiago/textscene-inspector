@@ -51,6 +51,22 @@ describe('useMaterialTextures with file slots', () => {
     expect(result.current.maps.normalMap?.source).toBe(loaded.source);
   });
 
+  it('tiles a clamped file on a source-shared Repeat clone for a default material', () => {
+    // The loader hands clamp and a default material asks for Repeat (ADR-0044),
+    // so the slot binds a clone and the shared entry keeps the loader's wrapping.
+    const { result, textures } = renderMaterial();
+    const loaded = new THREE.DataTexture(new Uint8Array(4), 1, 1);
+    act(() => textures._resolve(NORMAL_PATH, loaded));
+
+    const map = result.current.maps.normalMap!;
+    expect(map).not.toBe(loaded);
+    expect(map.source).toBe(loaded.source);
+    expect(map.wrapS).toBe(THREE.RepeatWrapping);
+    expect(map.wrapT).toBe(THREE.RepeatWrapping);
+    expect(loaded.wrapS).toBe(THREE.ClampToEdgeWrapping);
+    expect(loaded.wrapT).toBe(THREE.ClampToEdgeWrapping);
+  });
+
   it('leaves the slot empty and names the file once it fails', () => {
     const { result, textures } = renderMaterial();
     act(() => textures._fail(NORMAL_PATH, 'not found'));

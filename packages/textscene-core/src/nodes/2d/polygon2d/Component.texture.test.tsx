@@ -30,9 +30,9 @@ function node(rawProps: Record<string, string>): TscnNode {
 
 function loadedTexture(): THREE.Texture {
   const tex = new THREE.Texture();
-  // The real loader hands out REPEAT wrapping, which a 3D material inherits
-  // (`FLAG_USE_TEXTURE_REPEAT`, `scene/resources/material.cpp:4005`). three's
-  // clamp default here would let the canvas-side clamp below pass unexercised.
+  // Seeded with Repeat on purpose. A file-loaded entry is clamp, but a producer
+  // can hand over Repeat, so `useCanvas2DTexture` forces clamp. Seeding the
+  // opposite wrapping proves the clamp below is forced, not inherited.
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
   (tex as unknown as { image: { width: number; height: number } }).image = {

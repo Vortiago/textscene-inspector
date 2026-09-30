@@ -54,11 +54,18 @@ describe('texture_filter integration — shared textures', () => {
     expect(shared.anisotropy).toBe(1);
   });
 
-  it('hands back the shared texture itself when the filter is unauthored', () => {
-    // Godot's default is three's default state, so an ordinary material must not
-    // clone.
+  it('clones to the stated Repeat default even when the filter is unauthored', () => {
+    // The consumer states the wrapping, not the loader. The loader hands out a
+    // clamp entry and a default material asks for Repeat, so the map is a Repeat
+    // clone that shares the source. The shared entry stays clamp for 2D.
     const shared = loadedTexture();
-    expect(build({}, { albedo_texture: shared }).map).toBe(shared);
+    const material = build({}, { albedo_texture: shared });
+
+    expect(material.map).not.toBe(shared);
+    expect(material.map!.source).toBe(shared.source);
+    expect(material.map!.wrapS).toBe(THREE.RepeatWrapping);
+    expect(material.map!.wrapT).toBe(THREE.RepeatWrapping);
+    expect(shared.wrapS).toBe(THREE.ClampToEdgeWrapping);
   });
 
   it('clones once when a material diverges on both filter and UV scale', () => {
