@@ -17,7 +17,7 @@ const arms = {
     ruleName: 'button-group-without-toggle-mode',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'groupWithoutToggleMode'>;
+} as const satisfies RuleArms<string>;
 
 /**
  * Subclasses whose constructor sets toggle_mode (check_box.cpp:172, check_button.cpp:171,

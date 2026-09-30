@@ -22,7 +22,7 @@ const arms = {
     ruleName: 'physicalbone3d-joint-constraint-wrong-joint-type',
     grounding: { kind: 'engine', at: 'physical_bone_3d.cpp:724' },
   },
-} as const satisfies RuleArms<'constraintWithoutJoint' | 'constraintWrongJointType'>;
+} as const satisfies RuleArms<string>;
 
 /**
  * `joint_constraints/*` writes, judged against the JointData live when each line applies.

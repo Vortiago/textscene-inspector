@@ -26,7 +26,7 @@ const arms = {
       unused: 'the authored offset never becomes the stored scroll position',
     },
   },
-} as const satisfies RuleArms<'zoomMinAboveMax' | 'scrollOffsetDiscarded'>;
+} as const satisfies RuleArms<string>;
 
 /**
  * Error tier (ADR-0032): `set_zoom_min` refuses `p_zoom_min > zoom_max` (scene/gui/graph_edit.cpp:2479-2480)

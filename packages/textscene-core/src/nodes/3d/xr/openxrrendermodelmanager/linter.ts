@@ -24,7 +24,7 @@ const arms = {
     ruleName: 'openxrrendermodelmanager-parent-not-xrorigin3d',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'trackerRequiredForLocalPose' | 'parentNotXROrigin3D'>;
+} as const satisfies RuleArms<string>;
 
 /** The two `tracker` values that search only the DIRECT parent (cpp:203). */
 const RENDER_MODEL_TRACKER_ANY = 0;

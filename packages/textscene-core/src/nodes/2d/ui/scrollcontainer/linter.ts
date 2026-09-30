@@ -19,7 +19,7 @@ const arms = {
     ruleName: 'scrollcontainer-not-single-child',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'notSingleChild'>;
+} as const satisfies RuleArms<string>;
 
 /**
  * `as_sortable_control(child, VISIBLE)` is non-null, per container.cpp:143-155:

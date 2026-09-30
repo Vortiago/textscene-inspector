@@ -21,7 +21,7 @@ const arms = {
     ruleName: 'aimmodifier3d-parallel-rotation-axes',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'parallelRotationAxes'>;
+} as const satisfies RuleArms<string>;
 
 const SETTING_PREFIX = 'settings/';
 

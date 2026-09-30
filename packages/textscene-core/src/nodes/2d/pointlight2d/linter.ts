@@ -35,7 +35,7 @@ const arms = {
       unused: 'the inclusive layer test can never pass, so the light reaches no canvas',
     },
   },
-} as const satisfies RuleArms<'requiresTexture' | 'invertedZRange' | 'invertedLayerRange'>;
+} as const satisfies RuleArms<string>;
 
 /**
  * One light window: its keys, their Godot defaults, and what an inverted window reaches. Godot

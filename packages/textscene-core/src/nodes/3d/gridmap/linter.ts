@@ -18,7 +18,7 @@ const arms = {
       unused: 'every cell is skipped while the library is null, so the map draws nothing',
     },
   },
-} as const satisfies RuleArms<'missingMeshLibrary'>;
+} as const satisfies RuleArms<string>;
 
 function checkGridMap(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];

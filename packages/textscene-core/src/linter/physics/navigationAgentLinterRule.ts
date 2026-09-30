@@ -20,7 +20,7 @@ export function makeNavigationAgentLinterRule(dim: PhysicsDim): LintRule {
       ruleName: `navigationagent${suffix}-parent-not-node${suffix}`,
       grounding: { kind: 'configuration-warning' },
     },
-  } as const satisfies RuleArms<'parentNotNode'>;
+  } as const satisfies RuleArms<string>;
 
   function check(context: RuleContext): Diagnostic[] {
     const { node, scene } = context;

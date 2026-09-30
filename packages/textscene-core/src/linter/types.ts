@@ -18,13 +18,6 @@ export type Severity = 'error' | 'warning' | 'info';
 export const SEVERITY_ORDER: Record<Severity, number> = { error: 0, warning: 1, info: 2 };
 
 /**
- * The severity names as data, for a guard that builds them into a regex
- * alternation. Derived here, not in each guard: a list written out at a match
- * site still compiles, and misses a severity added later.
- */
-export const SEVERITIES = Object.keys(SEVERITY_ORDER) as Severity[];
-
-/**
  * Whether a string is one of the three tiers: the test every reader needs
  * before it indexes a table by severity. The sort, the CLI formatter, the
  * VS Code squiggle map and the web gutter all share it.
@@ -209,6 +202,13 @@ export type EmitGrounding =
       readonly because: string;
     };
 
+/** The severity and rule name a diagnostic reports, and the grounding that fixes the severity. */
+export interface RuleArm {
+  readonly severity: Severity;
+  readonly ruleName: string;
+  readonly grounding: EmitGrounding;
+}
+
 /**
  * The severity a grounding fixes, or `undefined` where only the cited line can
  * decide: an `engine` arm errors when the setter refuses or alters, and warns
@@ -267,7 +267,7 @@ export interface RuleMeta {
    * each sheet's Linting chapter from this list. `armEmits` derives it from the
    * arms `check` reports through (`ruleArms.ts`), so it cannot disagree with them.
    */
-  emits?: ReadonlyArray<{ ruleName: string; severity: Severity; grounding: EmitGrounding }>;
+  emits?: ReadonlyArray<RuleArm>;
   /**
    * `file:line` of the engine guard that confines this rule to one exact class,
    * as `container.cpp:210`'s `get_class() == "Container"` does. Without it,

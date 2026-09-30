@@ -16,7 +16,7 @@ const arms = {
     ruleName: 'parallaxlayer-outside-parallaxbackground',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'outsideParallaxBackground'>;
+} as const satisfies RuleArms<string>;
 
 function checkParallaxLayer(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;

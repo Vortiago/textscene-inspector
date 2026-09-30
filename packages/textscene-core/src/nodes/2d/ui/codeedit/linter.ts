@@ -19,7 +19,7 @@ const arms = {
     ruleName: 'codeedit-delimiter-start-key-collision',
     grounding: { kind: 'engine', at: 'code_edit.cpp:3436' },
   },
-} as const satisfies RuleArms<'delimiterStartKeyCollision'>;
+} as const satisfies RuleArms<string>;
 
 /**
  * The start key of each element `_add_delimiter` would store, split as `_set_delimiters` does. An

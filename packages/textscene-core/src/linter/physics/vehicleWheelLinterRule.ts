@@ -20,7 +20,7 @@ export function makeVehicleWheelLinterRule(dim: PhysicsDim): LintRule {
       ruleName: `${prefix}-not-under-vehicle-body`,
       grounding: { kind: 'configuration-warning' },
     },
-  } as const satisfies RuleArms<'notUnderVehicleBody'>;
+  } as const satisfies RuleArms<string>;
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];

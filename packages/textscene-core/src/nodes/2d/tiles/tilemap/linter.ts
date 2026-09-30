@@ -41,9 +41,7 @@ const arms = {
     ruleName: 'tilemap-invalid-tile-data',
     grounding: { kind: 'engine', at: 'tile_map.cpp:79' },
   },
-} as const satisfies RuleArms<
-  'deprecated' | keyof typeof ySortArms | 'requiresTileset' | 'unsupportedFormat' | 'invalidTileData'
->;
+} as const satisfies RuleArms<string>;
 
 /** One `layer_<i>/tile_data` write, the key as the file writes it. */
 interface TileDataWrite {

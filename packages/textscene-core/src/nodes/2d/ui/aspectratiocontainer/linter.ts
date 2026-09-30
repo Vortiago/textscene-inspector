@@ -23,7 +23,7 @@ const arms = {
       unused: 'the sort pass skips the child instead of positioning it',
     },
   },
-} as const satisfies RuleArms<'unsupportedExpandMode'>;
+} as const satisfies RuleArms<string>;
 
 // texture_rect.h:39-45 TextureRect::ExpandMode: EXPAND_KEEP_SIZE=0,
 // EXPAND_IGNORE_SIZE=1, EXPAND_FIT_WIDTH=2, EXPAND_FIT_WIDTH_PROPORTIONAL=3,

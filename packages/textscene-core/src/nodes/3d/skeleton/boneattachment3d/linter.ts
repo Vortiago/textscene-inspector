@@ -25,7 +25,7 @@ const arms = {
     ruleName: 'boneattachment3d-external-skeleton-unset',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'parentNotSkeleton3D' | 'externalSkeletonUnset'>;
+} as const satisfies RuleArms<string>;
 
 // `bone_idx == -1` (cpp:74-76) is Godot's third warning and gets no rule: -1 is the serialised
 // default, so an unbound attachment's file carries no `bone_idx` line to flag.

@@ -32,7 +32,7 @@ const arms = {
     },
   },
   ...paramMinAboveMaxArms('cpuparticles2d', 'cpu_particles_2d.cpp:352-376'),
-} as const satisfies RuleArms<'nondeterministicEmissionShape' | 'fractDeltaIgnored' | 'paramMinAboveMax'>;
+} as const satisfies RuleArms<string>;
 
 /**
  * The EMISSION_SHAPE_* ordinals (enum at `cpu_particles_2d.cpp:1586`) placed by

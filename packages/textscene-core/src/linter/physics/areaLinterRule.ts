@@ -41,7 +41,7 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
         unused: 'collides_with returns false for every layer, so monitoring detects nothing',
       },
     },
-  } as const satisfies RuleArms<'detectsNothing' | 'monitoringZeroMask'>;
+  } as const satisfies RuleArms<string>;
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];

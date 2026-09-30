@@ -21,7 +21,7 @@ const arms = {
       unused: 'play_basic returns an empty playback, so autoplay produces no sound',
     },
   },
-} as const satisfies RuleArms<'autoplayWithoutStream'>;
+} as const satisfies RuleArms<string>;
 
 /**
  * Validate AudioStreamPlayer2D semantic rules

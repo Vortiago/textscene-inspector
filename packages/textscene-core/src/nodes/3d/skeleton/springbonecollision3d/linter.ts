@@ -17,7 +17,7 @@ const arms = {
     ruleName: 'springbonecollision3d-outside-springbonesimulator3d',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'outsideSimulator'>;
+} as const satisfies RuleArms<string>;
 
 function checkSpringBoneCollision3D(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;

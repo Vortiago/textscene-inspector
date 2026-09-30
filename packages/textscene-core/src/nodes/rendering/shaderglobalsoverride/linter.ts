@@ -16,7 +16,7 @@ const arms = {
     ruleName: 'shaderglobalsoverride-multiple-in-scene',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'multipleInScene'>;
+} as const satisfies RuleArms<string>;
 
 function checkShaderGlobalsOverride(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;

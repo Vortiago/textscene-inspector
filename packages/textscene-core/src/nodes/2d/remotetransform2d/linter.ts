@@ -18,7 +18,7 @@ const arms = {
     ruleName: 'remotetransform2d-invalid-remote-path',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'invalidRemotePath'>;
+} as const satisfies RuleArms<string>;
 
 function warn(node: RuleContext['node'], detail: string): Diagnostic[] {
   return [

@@ -42,11 +42,11 @@ export function spriteFrameArms(prefix: string, at: FrameSetterCites) {
       ruleName: `${prefix}-frame-remapped`,
       grounding: { kind: 'engine', at: at.remap },
     },
-  } as const satisfies RuleArms<'frameRange' | 'frameCoordsRange' | 'frameRemapped'>;
+  } as const satisfies RuleArms<string>;
   return arms;
 }
 
-export type SpriteFrameArms = ReturnType<typeof spriteFrameArms>;
+type SpriteFrameArms = ReturnType<typeof spriteFrameArms>;
 
 /** Every diagnostic the frame keys earn, each through one of `arms`. */
 export function spriteFrameDiagnostics(

@@ -20,7 +20,7 @@ const arms = {
     ruleName: 'label-autowrap-needs-custom-minimum-size',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'autowrapNeedsMinimumSize'>;
+} as const satisfies RuleArms<string>;
 
 // label.cpp:44/1435, TextServer::AutowrapMode: OFF=0, ARBITRARY=1, WORD=2, WORD_SMART=3.
 const AUTOWRAP_OFF = 0;

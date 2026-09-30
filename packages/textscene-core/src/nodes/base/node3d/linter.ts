@@ -31,7 +31,7 @@ const arms = {
     ruleName: 'valid-node3d-visibility',
     grounding: { kind: 'engine', at: 'node_3d.cpp:1312' },
   },
-} as const satisfies RuleArms<'visibilityParent'>;
+} as const satisfies RuleArms<string>;
 
 /** Validates the Node3D semantic rules: `visibility_parent` names an existing node. */
 function checkNode3D(context: RuleContext): Diagnostic[] {

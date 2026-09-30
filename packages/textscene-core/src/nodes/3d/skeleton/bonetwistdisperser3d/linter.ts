@@ -25,7 +25,7 @@ const arms = {
     ruleName: 'bonetwistdisperser3d-joint-index-out-of-range',
     grounding: { kind: 'engine', at: 'bone_twist_disperser_3d.cpp:502' },
   },
-} as const satisfies RuleArms<'settingIndexOutOfRange' | 'jointIndexOutOfRange'>;
+} as const satisfies RuleArms<string>;
 
 /**
  * Any `settings/<i>/…` leaf, with the index text captured. `_set` reads both index positions with a

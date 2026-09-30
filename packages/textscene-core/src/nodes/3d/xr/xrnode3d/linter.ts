@@ -23,7 +23,7 @@ const arms = {
     ruleName: 'xrnode3d-no-pose-set',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'parentNotOrigin' | 'noPose'>;
+} as const satisfies RuleArms<string>;
 
 // Not modelled: "No tracker name is set" fires only at `tracker`'s default `&""`
 // (doc/classes/XRNode3D.xml), which Godot omits, and a missing key is not a defect. The

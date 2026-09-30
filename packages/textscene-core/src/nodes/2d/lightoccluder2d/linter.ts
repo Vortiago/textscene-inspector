@@ -17,7 +17,7 @@ const arms = {
     ruleName: 'lightoccluder2d-requires-occluder',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'missingOccluder'>;
+} as const satisfies RuleArms<string>;
 
 function checkLightOccluder2D(context: RuleContext): Diagnostic[] {
   const { node } = context;

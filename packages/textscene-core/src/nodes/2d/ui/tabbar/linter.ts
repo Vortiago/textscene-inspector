@@ -22,7 +22,7 @@ const arms = {
     ruleName: 'tabbar-tab-index-out-of-range',
     grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
   },
-} as const satisfies RuleArms<'currentTabOutOfRange' | 'tabIndexOutOfRange'>;
+} as const satisfies RuleArms<string>;
 
 /**
  * The family's prefix. The `tab_` scalars (`tab_alignment`, `tab_count`) carry no `/`, so they

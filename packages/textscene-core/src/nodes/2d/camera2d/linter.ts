@@ -58,13 +58,7 @@ const arms = {
       unused: 'a zero step leaves lerp_angle at the angle it started from',
     },
   },
-} as const satisfies RuleArms<
-  | 'multipleEnabled'
-  | 'invertedHorizontalLimits'
-  | 'invertedVerticalLimits'
-  | 'zeroSmoothingSpeed'
-  | 'zeroRotationSmoothingSpeed'
->;
+} as const satisfies RuleArms<string>;
 
 /** Enabled unless the key says otherwise: `enabled` defaults true (camera_2d.h:67). */
 function cameraIsEnabled(node: TscnNode): boolean {

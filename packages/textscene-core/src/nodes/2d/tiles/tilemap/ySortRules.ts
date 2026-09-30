@@ -30,7 +30,7 @@ export const ySortArms = {
     ruleName: 'tilemap-node-y-sort-without-layer',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'ySortZIndexConflict' | 'layerYSortWithoutNode' | 'nodeYSortWithoutLayer'>;
+} as const satisfies RuleArms<string>;
 
 export function ySortDiagnostics(
   node: TscnNode,

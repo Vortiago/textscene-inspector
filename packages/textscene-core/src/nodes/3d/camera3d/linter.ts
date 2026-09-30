@@ -37,7 +37,7 @@ const arms = {
     // `Condition "p_far <= p_near" is true` once per frame. Neither error form applies.
     grounding: { kind: 'engine', at: 'projection.cpp:263' },
   },
-} as const satisfies RuleArms<'multipleCurrent' | 'invalidClippingPlanes' | 'zeroDepthRange'>;
+} as const satisfies RuleArms<string>;
 
 /** `Camera3D::ProjectionType` (camera_3d.h:45-47). */
 const PROJECTION_PERSPECTIVE = 0;

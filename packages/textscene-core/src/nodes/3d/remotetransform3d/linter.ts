@@ -18,7 +18,7 @@ const arms = {
     ruleName: 'remotetransform3d-invalid-remote-path',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'invalidRemotePath'>;
+} as const satisfies RuleArms<string>;
 
 function checkRemoteTransform3D(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;

@@ -15,7 +15,7 @@ const arms = {
     ruleName: 'container-no-script',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'noScript'>;
+} as const satisfies RuleArms<string>;
 
 function checkContainer(context: RuleContext): Diagnostic[] {
   const { node } = context;

@@ -6,8 +6,8 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { stripComments } from '@textscene/dev-kit';
 import { armEmits, reportArm, type RuleArm, type RuleArms } from './ruleArms.js';
-import { allSourceFiles, atLeast, srcRoot } from './testing/ruleNameScrape.js';
-import { balancedGroup, topLevelParts } from './testing/sourceScan.js';
+import { allSourceFiles, atLeast, srcLabel } from './testing/ruleNameScrape.js';
+import { balancedGroup, topLevelParts } from './testing/bracketScan.js';
 import type { Diagnostic } from './types.js';
 import type { TscnNode } from '../parser/types.js';
 
@@ -136,7 +136,7 @@ describe('an arm table', () => {
       for (const key of keys) {
         const ref = new RegExp(String.raw`\b${escapeRe(binding)}\.${escapeRe(key)}\b`);
         const reported = scope.some((f) => reportCallArgs(f).some((args) => ref.test(args)));
-        if (!reported) unreported.push(`${file.slice(srcRoot.length + 1)}: ${binding}.${key}`);
+        if (!reported) unreported.push(`${srcLabel(file)}: ${binding}.${key}`);
       }
     }
     expect(unreported.sort()).toEqual([]);

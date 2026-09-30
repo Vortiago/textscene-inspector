@@ -17,11 +17,11 @@ export function projectorArms(rulePrefix: string) {
       ruleName: `${rulePrefix}-projector-without-shadow`,
       grounding: { kind: 'configuration-warning' },
     },
-  } as const satisfies RuleArms<'projectorWithoutShadow'>;
+  } as const satisfies RuleArms<string>;
   return arms;
 }
 
-export type ProjectorArms = ReturnType<typeof projectorArms>;
+type ProjectorArms = ReturnType<typeof projectorArms>;
 
 /**
  * "Projector texture only works with shadows active." (light_3d.cpp:623-625, :659-661):

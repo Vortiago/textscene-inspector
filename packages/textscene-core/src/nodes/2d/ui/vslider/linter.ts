@@ -16,7 +16,7 @@ const arms = {
     ruleName: 'vslider-property-order',
     grounding: { kind: 'engine', at: 'range.cpp:106' },
   },
-} as const satisfies RuleArms<'propertyOrder'>;
+} as const satisfies RuleArms<string>;
 
 function checkVSliderPropertyOrder(context: RuleContext): Diagnostic[] {
   const { node } = context;

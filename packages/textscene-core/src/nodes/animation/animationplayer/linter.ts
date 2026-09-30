@@ -35,7 +35,7 @@ const arms = {
       unused: 'processing is gated on active, so autoplay and current_animation never advance',
     },
   },
-} as const satisfies RuleArms<'autoplayMissing' | 'currentAnimationMissing' | 'inactive'>;
+} as const satisfies RuleArms<string>;
 
 /**
  * Validate AnimationPlayer semantic rules

@@ -15,7 +15,7 @@ const arms = {
     ruleName: 'voxelgi-missing-data',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'missingData'>;
+} as const satisfies RuleArms<string>;
 
 function checkVoxelGI(context: RuleContext): Diagnostic[] {
   const { node } = context;

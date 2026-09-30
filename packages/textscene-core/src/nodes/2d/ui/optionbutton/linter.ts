@@ -17,7 +17,7 @@ const arms = {
     ruleName: 'optionbutton-selected-out-of-range',
     grounding: { kind: 'engine', at: 'option_button.cpp:436' },
   },
-} as const satisfies RuleArms<'selectedOutOfRange'>;
+} as const satisfies RuleArms<string>;
 
 function checkOptionButtonSelected(context: RuleContext): Diagnostic[] {
   const { node } = context;

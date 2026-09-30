@@ -34,9 +34,7 @@ const arms = {
       unused: 'region_rect is read only inside this branch; the else uses the texture size',
     },
   },
-} as const satisfies RuleArms<
-  'requiresTexture' | 'frameRange' | 'frameCoordsRange' | 'frameRemapped' | 'regionConfiguration'
->;
+} as const satisfies RuleArms<string>;
 
 /** Checks the Sprite2D semantic rules. */
 function checkSprite2D(context: RuleContext): Diagnostic[] {

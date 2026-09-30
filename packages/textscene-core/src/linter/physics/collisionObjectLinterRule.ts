@@ -22,7 +22,7 @@ export function makeCollisionObjectLinterRule(dim: PhysicsDim): LintRule {
       ruleName: `${prefix}-needs-collision-shape`,
       grounding: { kind: 'configuration-warning' },
     },
-  } as const satisfies RuleArms<'needsCollisionShape'>;
+  } as const satisfies RuleArms<string>;
 
   function check(context: RuleContext): Diagnostic[] {
     const { node } = context;

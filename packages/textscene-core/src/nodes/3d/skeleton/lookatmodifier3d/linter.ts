@@ -19,7 +19,7 @@ const arms = {
     ruleName: 'lookatmodifier3d-parallel-rotation-axes',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'parallelRotationAxes'>;
+} as const satisfies RuleArms<string>;
 
 // look_at_modifier_3d.h:52-53, the field initialisers: a key a scene omits
 // carries these, and the pair is not parallel (BONE_AXIS_PLUS_Z maps to AXIS_Z,

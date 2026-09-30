@@ -30,11 +30,7 @@ const arms = {
     ruleName: 'openxrcompositionlayer-hole-punch-sort-order',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<
-  | 'parentNotXROrigin3D'
-  | 'nonOrthonormalTransform'
-  | 'holePunchSortOrder'
->;
+} as const satisfies RuleArms<string>;
 
 // Not modelled: set_layer_viewport's ERR_FAIL_COND_MSG when `use_android_surface` is true (:303-305).
 // `layer_viewport` is declared at :151, before `use_android_surface` at :152, so a saved file sets it

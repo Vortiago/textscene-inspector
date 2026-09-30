@@ -20,7 +20,7 @@ const arms = {
       unused: 'the world shape never enters the branch that reads the extents',
     },
   },
-} as const satisfies RuleArms<'sizeIgnoredForWorldShape'>;
+} as const satisfies RuleArms<string>;
 
 /** `RS::FogVolumeShape::FOG_VOLUME_SHAPE_WORLD`, fog_volume.cpp:47's 5th enum value. */
 const FOG_VOLUME_SHAPE_WORLD = 4;

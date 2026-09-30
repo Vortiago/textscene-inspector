@@ -28,7 +28,7 @@ const arms = {
       unused: 'the group-enable toggle gates the whole emission_angle group',
     },
   },
-} as const satisfies RuleArms<'emissionAngleNotEnabled' | 'emissionFilterNotEnabled'>;
+} as const satisfies RuleArms<string>;
 
 /**
  * Validate AudioStreamPlayer3D semantic rules

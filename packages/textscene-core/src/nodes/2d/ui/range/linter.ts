@@ -19,7 +19,7 @@ const arms = {
     ruleName: 'range-exp-edit-negative-min',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'maxBelowMin' | 'expEditNegativeMin'>;
+} as const satisfies RuleArms<string>;
 
 function checkRangeBounds(context: RuleContext): Diagnostic[] {
   const { node } = context;

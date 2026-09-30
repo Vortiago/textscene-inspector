@@ -22,7 +22,7 @@ const arms = {
     ruleName: 'converttransformmodifier3d-range-outside-mode-hint',
     grounding: { kind: 'engine', at: 'convert_transform_modifier_3d.cpp:143' },
   },
-} as const satisfies RuleArms<'rangeOutsideModeHint'>;
+} as const satisfies RuleArms<string>;
 
 /**
  * Any `settings/<i>/…` key, its index and the path below it captured. `_set` reads the index with a

@@ -18,7 +18,7 @@ const arms = {
     ruleName: 'collisionobject3d-non-uniform-scale',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'nonUniformScale'>;
+} as const satisfies RuleArms<string>;
 
 function checkCollisionObject3DScale(context: RuleContext): Diagnostic[] {
   const { node } = context;

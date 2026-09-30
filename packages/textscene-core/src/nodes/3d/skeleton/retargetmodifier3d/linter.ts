@@ -17,7 +17,7 @@ const arms = {
     ruleName: 'retargetmodifier3d-no-child-skeleton',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'noChildSkeleton'>;
+} as const satisfies RuleArms<string>;
 
 function checkRetargetModifier3D(context: RuleContext): Diagnostic[] {
   const { node } = context;

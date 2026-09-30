@@ -4,13 +4,14 @@
  * its statement, and the scan skips an ambiguous claim rather than guess.
  */
 
-import { SEVERITIES } from '../types.js';
+import { SEVERITY_ORDER, type Severity } from '../types.js';
 import { afterBalanced } from './testBlocks.js';
 
 /**
  * The tier names, spelled for a regex and read off the shared roster, so a new
  * tier reaches every matcher below and not only the table tsc checks.
  */
+const SEVERITIES = Object.keys(SEVERITY_ORDER) as Severity[];
 const TIER_NAMES = SEVERITIES.join('|');
 const TIER_NAMES_CAPITALISED = SEVERITIES.map((t) => t[0]!.toUpperCase() + t.slice(1)).join('|');
 

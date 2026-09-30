@@ -37,7 +37,7 @@ export function makeVehicleBodyLinterRule(dim: PhysicsDim): LintRule {
         unused: 'with no wheels the suspension and traction pass returns before applying anything',
       },
     },
-  } as const satisfies RuleArms<'needsWheels'>;
+  } as const satisfies RuleArms<string>;
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];

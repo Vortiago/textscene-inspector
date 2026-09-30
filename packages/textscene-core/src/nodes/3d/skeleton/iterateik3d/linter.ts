@@ -21,7 +21,7 @@ const arms = {
     ruleName: 'iterateik3d-setting-missing-target-node',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'settingMissingTargetNode'>;
+} as const satisfies RuleArms<string>;
 
 function checkIterateIK3D(context: RuleContext): Diagnostic[] {
   const { node } = context;

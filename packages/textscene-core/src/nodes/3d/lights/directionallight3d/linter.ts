@@ -18,7 +18,7 @@ const arms = {
       unused: 'the cascade loop reads only the first split offsets for the chosen mode',
     },
   },
-} as const satisfies RuleArms<'unusedSplits'>;
+} as const satisfies RuleArms<string>;
 
 /**
  * Shadow mode against the split fields the inspector still shows. The hint

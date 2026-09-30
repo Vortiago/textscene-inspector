@@ -20,7 +20,7 @@ const arms = {
     grounding: { kind: 'configuration-warning' },
   },
   ...projectorArms('spotlight3d'),
-} as const satisfies RuleArms<'shadowAngleTooWide' | 'projectorWithoutShadow'>;
+} as const satisfies RuleArms<string>;
 
 /**
  * No range advisory: the validators hold the `spot_range`, `spot_angle` and

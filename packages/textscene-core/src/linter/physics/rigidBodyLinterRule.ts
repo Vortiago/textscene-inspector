@@ -70,7 +70,7 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
       ruleName: `${prefix}-scale-overridden-at-runtime`,
       grounding: { kind: 'configuration-warning' },
     },
-  } as const satisfies RuleArms<'maxContactsWithoutMonitor' | 'scaleOverriddenAtRuntime'>;
+  } as const satisfies RuleArms<string>;
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];

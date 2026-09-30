@@ -19,7 +19,7 @@ const arms = {
     ruleName: 'itemlist-item-index-out-of-range',
     grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
   },
-} as const satisfies RuleArms<'itemIndexOutOfRange'>;
+} as const satisfies RuleArms<string>;
 
 /**
  * The family's prefix. ItemList serves it through a `PropertyListHelper` (item_list.cpp), whose

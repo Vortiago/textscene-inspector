@@ -23,7 +23,7 @@ const arms = {
       because: 'this previewer decodes only text .tscn/.tres, never a binary .scn/.res payload',
     },
   },
-} as const satisfies RuleArms<'binaryReference'>;
+} as const satisfies RuleArms<string>;
 
 function checkBinaryResourceReferences(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];

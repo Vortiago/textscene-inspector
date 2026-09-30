@@ -1,7 +1,7 @@
 /** The source scanners on synthetic text, independent of any file they read. */
 
 import { describe, expect, it } from 'vitest';
-import { balancedGroup, topLevelParts } from './sourceScan.js';
+import { balancedGroup, topLevelParts } from './bracketScan.js';
 
 describe('topLevelParts and balancedGroup', () => {
   it('splits on top-level commas only', () => {

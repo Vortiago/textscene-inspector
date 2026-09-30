@@ -48,12 +48,7 @@ const arms = {
       unused: 'processing is gated on active, so the blend tree never advances',
     },
   },
-} as const satisfies RuleArms<
-  | 'missingTreeRoot'
-  | 'animPlayerNotFound'
-  | 'animPlayerWrongType'
-  | 'inactive'
->;
+} as const satisfies RuleArms<string>;
 
 /**
  * Validate AnimationTree semantic rules

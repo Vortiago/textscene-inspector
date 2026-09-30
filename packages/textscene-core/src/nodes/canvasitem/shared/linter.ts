@@ -21,7 +21,7 @@ const arms = {
     ruleName: 'canvasitem-ancestor-is-canvasgroup',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'ancestorClipsChildren' | 'ancestorIsCanvasGroup'>;
+} as const satisfies RuleArms<string>;
 
 function checkCanvasItemClipAncestry(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;

@@ -18,7 +18,7 @@ const arms = {
     ruleName: 'popupmenu-item-index-out-of-range',
     grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
   },
-} as const satisfies RuleArms<'itemIndexOutOfRange'>;
+} as const satisfies RuleArms<string>;
 
 /**
  * The family's prefix. It is a `PropertyListHelper` one

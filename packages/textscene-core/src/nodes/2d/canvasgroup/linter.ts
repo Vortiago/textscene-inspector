@@ -21,7 +21,7 @@ const arms = {
     ruleName: 'canvasgroup-nested-in-canvasgroup',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'ancestorClipsChildren' | 'nestedInCanvasGroup'>;
+} as const satisfies RuleArms<string>;
 
 function checkCanvasGroup(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];

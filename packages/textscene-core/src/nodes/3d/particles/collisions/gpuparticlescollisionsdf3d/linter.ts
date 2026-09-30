@@ -18,7 +18,7 @@ const arms = {
     ruleName: 'gpuparticlescollisionsdf3d-empty-bake-mask',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'emptyBakeMask'>;
+} as const satisfies RuleArms<string>;
 
 function checkGPUParticlesCollisionSDF3D(context: RuleContext): Diagnostic[] {
   const { node } = context;

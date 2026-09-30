@@ -17,7 +17,7 @@ const arms = {
     ruleName: 'springbonecollisioncapsule3d-radius-exceeds-half-height',
     grounding: { kind: 'engine', at: 'spring_bone_collision_capsule_3d.cpp:38' },
   },
-} as const satisfies RuleArms<'radiusExceedsHalfHeight'>;
+} as const satisfies RuleArms<string>;
 
 function checkSpringBoneCollisionCapsule3D(context: RuleContext): Diagnostic[] {
   const { node } = context;

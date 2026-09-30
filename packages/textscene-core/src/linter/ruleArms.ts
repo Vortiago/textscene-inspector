@@ -5,15 +5,10 @@
  * refuses a diagnostic built any other way.
  */
 
-import type { Diagnostic, EmitGrounding, RuleMeta, Severity } from './types.js';
+import type { Diagnostic, RuleArm, RuleMeta } from './types.js';
 import type { TscnNode } from '../parser/types.js';
 
-/** The severity and rule name a diagnostic reports, and the grounding that fixes the severity. */
-export interface RuleArm {
-  readonly severity: Severity;
-  readonly ruleName: string;
-  readonly grounding: EmitGrounding;
-}
+export type { RuleArm } from './types.js';
 
 /**
  * Arms an instance may or may not carry, in declaration order. A record, not an

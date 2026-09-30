@@ -22,7 +22,7 @@ export function makeNavigationRegionLinterRule(dim: PhysicsDim): LintRule {
       ruleName: `navigationregion${dimSuffix(dim)}-requires-${property.replace(/_/g, '-')}`,
       grounding: { kind: 'configuration-warning' },
     },
-  } as const satisfies RuleArms<'missingResource'>;
+  } as const satisfies RuleArms<string>;
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];

@@ -16,7 +16,7 @@ const arms = {
     ruleName: 'timer-low-wait-time',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'lowWaitTime'>;
+} as const satisfies RuleArms<string>;
 
 const LOW_WAIT_TIME_THRESHOLD = 0.05 - CMP_EPSILON;
 

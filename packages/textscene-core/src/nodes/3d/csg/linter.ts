@@ -31,7 +31,7 @@ const arms = {
       unused: 'the build returns an empty brush, so the shape contributes no geometry',
     },
   },
-} as const satisfies RuleArms<'missingMesh' | 'insufficientPoints'>;
+} as const satisfies RuleArms<string>;
 
 // A `CSGMesh3D` with no mesh and a `CSGPolygon3D` under 3 points build zero faces on their own
 // (`csg_shape.cpp`'s `_build_brush()` overrides). The other types carry no check: a non-positive

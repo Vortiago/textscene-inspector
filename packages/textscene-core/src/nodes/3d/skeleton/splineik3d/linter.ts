@@ -20,7 +20,7 @@ const arms = {
     ruleName: 'splineik3d-setting-without-path-3d',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'settingWithoutPath3D'>;
+} as const satisfies RuleArms<string>;
 
 /** `NodePath("")` and a bare `""`, the two spellings of the unset path. */
 function isUnsetPath(raw: string): boolean {

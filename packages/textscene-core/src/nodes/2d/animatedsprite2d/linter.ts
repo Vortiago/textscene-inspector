@@ -25,11 +25,7 @@ const arms = {
     ruleName: 'animatedsprite2d-frame-no-spriteframes',
     grounding: { kind: 'engine', at: 'animated_sprite_2d.cpp:360' },
   },
-} as const satisfies RuleArms<
-  | 'missingSpriteFrames'
-  | 'animationWithoutSpriteFrames'
-  | 'frameWithoutSpriteFrames'
->;
+} as const satisfies RuleArms<string>;
 
 /**
  * The SpriteFrames reference in effect when Godot replays `key`: properties apply

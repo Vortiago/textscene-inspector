@@ -35,11 +35,7 @@ const arms = {
     ruleName: 'twoboneik3d-setting-missing-target-node',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<
-  | 'settingIndexOutOfRange'
-  | 'poleDirectionVectorIgnored'
-  | 'settingMissingTargetNode'
->;
+} as const satisfies RuleArms<string>;
 
 /**
  * Any `settings/<i>/…` key, its index and the path below it captured. `_set` reads the index with a

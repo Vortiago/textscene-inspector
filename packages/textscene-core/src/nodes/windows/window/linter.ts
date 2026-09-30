@@ -35,11 +35,7 @@ const arms = {
     ruleName: 'window-content-scale-factor-floored',
     grounding: { kind: 'engine', at: 'window.cpp:1240-1247' },
   },
-} as const satisfies RuleArms<
-  | 'maxSizeBelowMinSize'
-  | 'sizeClampedByLimits'
-  | 'contentScaleFactorFloored'
->;
+} as const satisfies RuleArms<string>;
 
 /** window.h:105,126: `size = Size2i(DEFAULT_WINDOW_SIZE, DEFAULT_WINDOW_SIZE)`, 100. */
 const DEFAULT_SIZE: Size = { x: 100, y: 100 };

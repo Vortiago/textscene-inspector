@@ -16,7 +16,7 @@ const arms = {
     ruleName: 'xrcamera3d-parent-not-xrorigin3d',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'parentNotOrigin'>;
+} as const satisfies RuleArms<string>;
 
 function checkXRCamera3DParent(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;

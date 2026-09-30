@@ -18,7 +18,7 @@ const arms = {
     grounding: { kind: 'configuration-warning' },
   },
   ...paramMinAboveMaxArms('cpuparticles3d', 'cpu_particles_3d.cpp:293-313'),
-} as const satisfies RuleArms<'requiresMesh' | 'paramMinAboveMax'>;
+} as const satisfies RuleArms<string>;
 
 // `set_mesh` (cpu_particles_3d.cpp:183-192) nulls the multimesh's RID, so nothing
 // renders, whatever the member doc says about spheres.

@@ -17,7 +17,7 @@ const arms = {
     ruleName: 'light3d-non-unit-scale',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'nonUnitScale'>;
+} as const satisfies RuleArms<string>;
 
 function checkLight3DScale(context: RuleContext): Diagnostic[] {
   const { node } = context;

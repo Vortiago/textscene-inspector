@@ -16,7 +16,7 @@ const arms = {
     ruleName: 'hslider-property-order',
     grounding: { kind: 'engine', at: 'range.cpp:106' },
   },
-} as const satisfies RuleArms<'propertyOrder'>;
+} as const satisfies RuleArms<string>;
 
 function checkHSliderPropertyOrder(context: RuleContext): Diagnostic[] {
   const { node } = context;

@@ -27,7 +27,7 @@ const arms = {
     ruleName: 'joint-same-body',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'notConnected' | 'sameBody'>;
+} as const satisfies RuleArms<string>;
 
 /** `'2D'` or `'3D'` for a joint type, or undefined when it is not a joint. */
 function jointDim(nodeType: string): '2D' | '3D' | undefined {

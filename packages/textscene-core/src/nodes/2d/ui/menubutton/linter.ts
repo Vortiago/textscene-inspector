@@ -19,7 +19,7 @@ const arms = {
     ruleName: 'menubutton-item-index-out-of-range',
     grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
   },
-} as const satisfies RuleArms<'itemIndexOutOfRange'>;
+} as const satisfies RuleArms<string>;
 
 /**
  * The family prefix is `popup/item_` (menu_button.cpp:213) and the count key is the bare `item_count`

@@ -17,7 +17,7 @@ const arms = {
     ruleName: 'multiplayerspawner-spawn-path-dangling',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'spawnPathDangling'>;
+} as const satisfies RuleArms<string>;
 
 function checkMultiplayerSpawner(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;

@@ -17,7 +17,7 @@ const arms = {
     ruleName: 'gpuparticles2d-missing-process-material',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'missingProcessMaterial'>;
+} as const satisfies RuleArms<string>;
 
 function checkGPUParticles2D(context: RuleContext): Diagnostic[] {
   const { node } = context;

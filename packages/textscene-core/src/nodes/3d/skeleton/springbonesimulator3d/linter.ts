@@ -43,12 +43,7 @@ const arms = {
     ruleName: 'springbonesimulator3d-collision-list-ignored',
     grounding: { kind: 'engine', at: 'spring_bone_simulator_3d.cpp:1150' },
   },
-} as const satisfies RuleArms<
-  | 'settingIndexOutOfRange'
-  | 'sharedConfigIgnored'
-  | 'jointConfigIgnored'
-  | 'collisionListIgnored'
->;
+} as const satisfies RuleArms<string>;
 
 /**
  * Any `settings/<i>/…` leaf, whatever its depth. Every index position here (the setting, the joint,

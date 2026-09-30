@@ -18,7 +18,7 @@ const arms = {
     ruleName: 'valid-softbody3d-mesh',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'missingMesh'>;
+} as const satisfies RuleArms<string>;
 
 function checkSoftBody3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];

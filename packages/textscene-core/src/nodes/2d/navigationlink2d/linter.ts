@@ -18,7 +18,7 @@ const arms = {
     ruleName: 'navigationlink2d-coincident-endpoints',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'coincidentEndpoints'>;
+} as const satisfies RuleArms<string>;
 
 interface Vec2 {
   x: number;

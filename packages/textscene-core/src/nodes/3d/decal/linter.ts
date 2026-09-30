@@ -27,7 +27,7 @@ const arms = {
     ruleName: 'decal-empty-cull-mask',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'requiresTexture' | 'normalOrmWithoutAlbedo' | 'emptyCullMask'>;
+} as const satisfies RuleArms<string>;
 
 const TEXTURE_PROPS = [
   'texture_albedo',

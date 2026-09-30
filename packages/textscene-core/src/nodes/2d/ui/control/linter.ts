@@ -23,7 +23,7 @@ const arms = {
     ruleName: 'control-property-order',
     grounding: { kind: 'engine', at: 'control.cpp:991' },
   },
-} as const satisfies RuleArms<'tooltipIgnored' | 'propertyOrder'>;
+} as const satisfies RuleArms<string>;
 
 /**
  * The keys `_set_anchors_layout_preset` (`scene/gui/control.cpp:982-1032`) overwrites through

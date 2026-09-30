@@ -37,12 +37,7 @@ const arms = {
     ruleName: 'pathfollow2d-progress-ratio-ignored',
     grounding: { kind: 'engine', at: 'path_2d.cpp:472' },
   },
-} as const satisfies RuleArms<
-  | 'noParent'
-  | 'invalidParent'
-  | 'negativeProgress'
-  | 'progressRatioIgnored'
->;
+} as const satisfies RuleArms<string>;
 
 function checkPathFollow2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];

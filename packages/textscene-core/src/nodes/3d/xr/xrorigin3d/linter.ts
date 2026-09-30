@@ -22,7 +22,7 @@ const arms = {
     ruleName: 'xrorigin3d-unsupported-scale',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'missingCameraChild' | 'unsupportedScale'>;
+} as const satisfies RuleArms<string>;
 
 function checkXROrigin3D(context: RuleContext): Diagnostic[] {
   const { node } = context;

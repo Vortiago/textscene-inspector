@@ -17,11 +17,11 @@ export function paramMinAboveMaxArms(rulePrefix: string, setterAt: string) {
       ruleName: `${rulePrefix}-param-min-above-max`,
       grounding: { kind: 'engine', at: setterAt },
     },
-  } as const satisfies RuleArms<'paramMinAboveMax'>;
+  } as const satisfies RuleArms<string>;
   return arms;
 }
 
-export type ParamMinAboveMaxArms = ReturnType<typeof paramMinAboveMaxArms>;
+type ParamMinAboveMaxArms = ReturnType<typeof paramMinAboveMaxArms>;
 
 export function paramMinAboveMaxDiagnostics(
   node: TscnNode,

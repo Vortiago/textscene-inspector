@@ -31,7 +31,7 @@ const arms = {
     ruleName: 'bone2d-missing-rest-pose',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'chainDoesNotTerminate' | 'invalidParent' | 'missingRestPose'>;
+} as const satisfies RuleArms<string>;
 
 type AncestryVerdict =
   /** A Skeleton2D was found, through zero-or-more Bone2D links. */

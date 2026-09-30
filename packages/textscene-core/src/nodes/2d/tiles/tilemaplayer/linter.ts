@@ -25,7 +25,7 @@ const arms = {
     ruleName: 'tilemaplayer-invalid-tile-data',
     grounding: { kind: 'engine', at: 'tile_map_layer.cpp:3239' },
   },
-} as const satisfies RuleArms<'missingTileSet' | 'invalidTileData'>;
+} as const satisfies RuleArms<string>;
 
 function checkTileMapLayer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];

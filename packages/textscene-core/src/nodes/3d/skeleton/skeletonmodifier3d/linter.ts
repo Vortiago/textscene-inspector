@@ -17,7 +17,7 @@ const arms = {
     ruleName: 'skeletonmodifier3d-parent-not-skeleton3d',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'parentNotSkeleton3D'>;
+} as const satisfies RuleArms<string>;
 
 function checkSkeletonModifier3D(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;

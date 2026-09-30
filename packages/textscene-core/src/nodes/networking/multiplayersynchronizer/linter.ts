@@ -17,7 +17,7 @@ const arms = {
     ruleName: 'multiplayersynchronizer-root-path-dangling',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'rootPathDangling'>;
+} as const satisfies RuleArms<string>;
 
 function checkMultiplayerSynchronizer(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;

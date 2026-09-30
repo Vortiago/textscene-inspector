@@ -30,7 +30,7 @@ const arms = {
     ruleName: 'physicalbone2d-missing-joint-child',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'missingSkeletonParent' | 'missingBoneIndex' | 'missingJointChild'>;
+} as const satisfies RuleArms<string>;
 
 /** What `_find_skeleton_parent()` would settle on, read off this file alone. */
 type SkeletonAncestry = 'found' | 'absent' | 'unknowable';

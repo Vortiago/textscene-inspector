@@ -29,7 +29,7 @@ const arms = {
     ruleName: 'reflectionprobe-origin-offset-clamped',
     grounding: { kind: 'engine', at: 'reflection_probe.cpp:99-131' },
   },
-} as const satisfies RuleArms<'ambientColorNoEffect' | 'originOffsetClamped'>;
+} as const satisfies RuleArms<string>;
 
 /** reflection_probe.h:44-48 enum AmbientMode; AMBIENT_COLOR is the last value. */
 const AMBIENT_COLOR = 2;

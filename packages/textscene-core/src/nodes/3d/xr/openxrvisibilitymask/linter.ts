@@ -20,7 +20,7 @@ const arms = {
     ruleName: 'openxrvisibilitymask-parent-not-xrcamera3d',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'parentNotXRCamera3D'>;
+} as const satisfies RuleArms<string>;
 
 function checkOpenXRVisibilityMask(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;

@@ -22,7 +22,7 @@ const arms = {
     ruleName: 'single-worldenvironment',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'requiresEnvironment' | 'notFirstInGroup'>;
+} as const satisfies RuleArms<string>;
 
 /**
  * The three first-wins groups, one per resource slot. `_notification` gates each `add_to_group` on

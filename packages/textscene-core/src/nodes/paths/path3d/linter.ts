@@ -34,7 +34,7 @@ const arms = {
     ruleName: 'curve3d-loadable',
     grounding: { kind: 'engine', at: 'curve.cpp:2279' },
   },
-} as const satisfies RuleArms<'missingCurve' | 'unloadableCurve'>;
+} as const satisfies RuleArms<string>;
 
 // "tilts" converts through the Variant (curve.cpp:2291), so it takes the three
 // spellings `packedArrayForms` lists.

@@ -49,13 +49,7 @@ const arms = {
       unused: 'the cast to GPUParticles3D fails, so no sub-emitter is set',
     },
   },
-} as const satisfies RuleArms<
-  | 'missingProcessMaterial'
-  | 'noDrawPassMesh'
-  | 'subEmitterNotFound'
-  | 'subEmitterSelf'
-  | 'subEmitterWrongType'
->;
+} as const satisfies RuleArms<string>;
 
 /** One key per draw pass; `MAX_DRAW_PASSES = 4` (gpu_particles_3d.h:56). */
 const DRAW_PASS_KEYS = ['draw_pass_1', 'draw_pass_2', 'draw_pass_3', 'draw_pass_4'] as const;

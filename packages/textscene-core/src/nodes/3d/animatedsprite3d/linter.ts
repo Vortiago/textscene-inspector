@@ -21,7 +21,7 @@ const arms = {
     ruleName: 'animatedsprite3d-animation-no-spriteframes',
     grounding: { kind: 'engine', at: 'sprite_3d.cpp:1441' },
   },
-} as const satisfies RuleArms<'requiresSpriteFrames' | 'animationWithoutSpriteFrames'>;
+} as const satisfies RuleArms<string>;
 
 function checkAnimatedSprite3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];

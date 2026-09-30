@@ -18,7 +18,7 @@ const arms = {
     ruleName: 'graph-element-selected-not-selectable',
     grounding: { kind: 'engine', at: 'graph_element.cpp:207' },
   },
-} as const satisfies RuleArms<'selectedNotSelectable'>;
+} as const satisfies RuleArms<string>;
 
 // Either load order ends unselected: `selectable` first makes the later
 // `selected = true` a no-op, and `selected` first is undone by the

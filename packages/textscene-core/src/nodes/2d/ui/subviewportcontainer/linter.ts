@@ -23,7 +23,7 @@ const arms = {
     ruleName: 'subviewportcontainer-non-arrow-cursor',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'noViewport' | 'nonArrowCursor'>;
+} as const satisfies RuleArms<string>;
 
 function checkSubViewportContainer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];

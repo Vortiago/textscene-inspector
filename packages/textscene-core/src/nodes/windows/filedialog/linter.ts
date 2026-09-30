@@ -19,7 +19,7 @@ const arms = {
     ruleName: 'filedialog-option-index-out-of-range',
     grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
   },
-} as const satisfies RuleArms<'optionIndexOutOfRange'>;
+} as const satisfies RuleArms<string>;
 
 /**
  * FileDialog serves the family through a `PropertyListHelper` (file_dialog.cpp),

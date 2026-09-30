@@ -34,9 +34,7 @@ const arms = {
       unused: 'region_rect is read only inside this branch',
     },
   },
-} as const satisfies RuleArms<
-  'requiresTexture' | 'frameRange' | 'frameCoordsRange' | 'frameRemapped' | 'regionConfiguration'
->;
+} as const satisfies RuleArms<string>;
 
 function checkSprite3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];

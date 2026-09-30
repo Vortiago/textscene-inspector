@@ -32,7 +32,7 @@ const arms = {
     ruleName: 'curve2d-loadable',
     grounding: { kind: 'engine', at: 'curve.cpp:1239' },
   },
-} as const satisfies RuleArms<'missingCurve' | 'unloadableCurve'>;
+} as const satisfies RuleArms<string>;
 
 function checkPath2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];

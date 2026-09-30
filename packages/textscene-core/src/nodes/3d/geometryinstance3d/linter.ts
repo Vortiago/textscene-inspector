@@ -29,7 +29,7 @@ const arms = {
     ruleName: 'geometryinstance3d-visibility-range-end-fade-without-margin',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'endBeforeBegin' | 'beginFadeWithoutMargin' | 'endFadeWithoutMargin'>;
+} as const satisfies RuleArms<string>;
 
 const FADE_SELF = 1;
 const FADE_DEPENDENCIES = 2;

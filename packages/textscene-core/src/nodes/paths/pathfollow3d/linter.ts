@@ -45,13 +45,7 @@ const arms = {
     ruleName: 'pathfollow3d-oriented-mode-requires-up-vector',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<
-  | 'noParent'
-  | 'invalidParent'
-  | 'negativeProgress'
-  | 'progressRatioIgnored'
-  | 'orientedModeWithoutUpVector'
->;
+} as const satisfies RuleArms<string>;
 
 /** `PathFollow3D::ROTATION_ORIENTED` (path_3d.h), the mode that needs up vectors. */
 const ROTATION_ORIENTED = 4;

@@ -19,7 +19,7 @@ const arms = {
     ruleName: 'navigationlink3d-start-position-equals-end-position',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'startEqualsEnd'>;
+} as const satisfies RuleArms<string>;
 
 /**
  * navigation_link_3d.h:43-44 declares both fields with no initializer, and the constructor

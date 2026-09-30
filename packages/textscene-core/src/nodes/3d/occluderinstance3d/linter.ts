@@ -22,7 +22,7 @@ const arms = {
     ruleName: 'occluderinstance3d-missing-occluder',
     grounding: { kind: 'configuration-warning' },
   },
-} as const satisfies RuleArms<'emptyBakeMask' | 'missingOccluder'>;
+} as const satisfies RuleArms<string>;
 
 // Not ported: the `use_occlusion_culling` project setting needs `project.godot`. The
 // occluder vertex-count warnings need the referenced resource, usually an external

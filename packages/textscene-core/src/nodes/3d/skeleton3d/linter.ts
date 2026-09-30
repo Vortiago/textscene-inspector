@@ -41,13 +41,7 @@ const arms = {
     ruleName: 'skeleton3d-duplicate-bone-name',
     grounding: { kind: 'engine', at: 'skeleton_3d.cpp:606' },
   },
-} as const satisfies RuleArms<
-  | 'debugMode'
-  | 'deprecatedFeature'
-  | 'deprecatedBonePose'
-  | 'boneNameOrder'
-  | 'duplicateBoneName'
->;
+} as const satisfies RuleArms<string>;
 
 /**
  * `bones/<i>/pose` and `bones/<i>/bound_children`, the two 3.x arms
