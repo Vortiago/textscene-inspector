@@ -4,7 +4,8 @@
  * on commit (`colorMaps.includes(key)`, `events-*.js`), so an R3F bump can break it.
  */
 import { describe, expect, it } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
+import { fakeTiledUploads } from './tiledUpload/fakeTiledUploads.testkit';
 import * as THREE from 'three';
 import { pinNoColorSpace, useCanvas2DTexture, useCanvasDecodeDefines } from './canvas2DTextureDecode';
 
@@ -71,6 +72,26 @@ describe('useCanvas2DTexture', () => {
     const firstClone = result.current;
     rerender({ tex: second });
     expect(result.current).not.toBe(firstClone);
+  });
+});
+
+describe('useCanvas2DTexture in a canvas', () => {
+  it('clamps the clone before its upload, and draws it unchanged once uploaded', async () => {
+    const { pending, wrapper } = fakeTiledUploads();
+    const source = makeTexture();
+    source.name = 'large';
+    source.wrapS = source.wrapT = THREE.RepeatWrapping;
+    const { result } = renderHook(() => useCanvas2DTexture(source), { wrapper });
+
+    const [upload] = pending;
+    expect(upload?.texture.wrapS).toBe(THREE.ClampToEdgeWrapping);
+    expect(upload?.texture.wrapT).toBe(THREE.ClampToEdgeWrapping);
+    // A change after the upload would move three's cache key, or its version, and upload it whole.
+    const versionAtUpload = upload?.texture.version;
+    await act(async () => upload?.finish(true));
+
+    expect(result.current).toBe(upload?.texture);
+    expect(result.current?.version).toBe(versionAtUpload);
   });
 });
 

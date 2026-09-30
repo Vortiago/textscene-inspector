@@ -13,6 +13,8 @@
     resolves, because an unregistered family rasterises a system font silently.
   - The scale-invariance consequence holds for scene fonts only ("the 2D parity capture
     renders at zoom 1"). It does not cover a 3D billboard. ADR-0040 states that trade.
+- Amended by ADR-0042: the webview CSP now grants `worker-src blob:`. The MSDF finding
+  below stands, because runtime MSDF generation also needs `connect-src`, which stays closed.
 - Related: ADR-0037 (Control nodes render natively in the canvas: this is how that
   decision's text is drawn), ADR-0026 (comparison sheets live in their slice: the
   measured limitation below is recorded there too).

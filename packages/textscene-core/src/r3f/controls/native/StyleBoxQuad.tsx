@@ -27,6 +27,7 @@ import { materialProgramInputs, type ProgramInjection } from '../../materialProg
 import { pinNoColorSpace, useCanvasDecodeDefines } from '../../canvas2DTextureDecode';
 import { useGodotLinearColor } from '../../godotColor';
 import { useTexture2D } from '../../../resources/useTexture2D';
+import { useUploadedClone } from '../../tiledUpload/useTiledUpload';
 
 export interface StyleBoxQuadProps {
   styleBox: ResolvedStyleBox;
@@ -291,19 +292,19 @@ function StyleBoxTextureMesh({ texture, rect, tint, renderOrder, clippingPlanes 
     cloned.needsUpdate = true;
     return cloned;
   }, [rawTexture, geometry]);
-  useEffect(() => () => preparedTexture?.dispose(), [preparedTexture]);
+  const drawnTexture = useUploadedClone(preparedTexture);
 
   // The last `canvas_item_add_nine_patch` argument, `modulate_color`
   // (`style_box_texture.cpp:183`), times the owner's accumulated modulate.
   const combinedTint = useMemo(() => multiplyModulate(tint, texture.modulateColor), [tint, texture.modulateColor]);
   const linearColor = useGodotLinearColor(combinedTint);
-  const decodeDefines = useCanvasDecodeDefines(preparedTexture);
+  const decodeDefines = useCanvasDecodeDefines(drawnTexture);
 
-  if (!geometry || !preparedTexture) return null;
+  if (!geometry || !drawnTexture) return null;
 
   const program = materialProgramInputs({
     props: {
-      map: preparedTexture,
+      map: drawnTexture,
       color: linearColor,
       opacity: combinedTint.a,
       transparent: true,

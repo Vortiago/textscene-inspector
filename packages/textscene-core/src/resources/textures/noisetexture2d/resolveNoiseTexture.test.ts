@@ -2,11 +2,15 @@
  * Resolving a NoiseTexture2D from `scenes/demos/3d/procedural_materials/materials/ice.tres`:
  * a seamless ramped albedo and an `as_normal_map` normal texture, each naming
  * sub-resources of that file. Sizes shrink from 1024x1024, about a second per
- * texture, since the pipeline is the same at any size.
+ * texture, since the pipeline is the same at any size. The build runs as a worker
+ * job, here through the in-thread runner, which runs the same job.
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { parseTresFile } from '../../../parser/parsedResource';
+import type { TscnInternalResource } from '../../../parser/types';
+import { WorkerJobRunner } from '../../../workers/WorkerJobRunner';
+import { abortProceduralBuilds } from '../proceduralBuilds';
 import { clearProceduralTextureCache } from '../proceduralTextureCache';
 import { resolveNoiseTexture2D } from './resolveNoiseTexture';
 
@@ -49,32 +53,47 @@ normal_texture = SubResource("NoiseTexture2D_gyhec")
 `;
 
 const ice = parseTresFile(ICE);
+const runner = new WorkerJobRunner();
+
+const ALBEDO = 'SubResource("NoiseTexture2D_m8iqd")';
+const NORMAL = 'SubResource("NoiseTexture2D_gyhec")';
+
+/** Builds the texture `ref` names, and its cache key. */
+async function built(ref: string, resources: readonly TscnInternalResource[] = ice.subResources) {
+  const lookup = resolveNoiseTexture2D(ref, resources);
+  if (lookup?.status !== 'pending') throw new Error(`expected a pending build, got ${lookup?.status}`);
+  const handle = lookup.start(runner);
+  const texture = await handle.settled;
+  handle.release();
+  if (!(texture instanceof THREE.DataTexture)) throw new Error('expected the build to give a DataTexture');
+  return { texture, key: lookup.key };
+}
 
 afterEach(() => {
+  abortProceduralBuilds();
   clearProceduralTextureCache();
 });
 
 describe('resolveNoiseTexture2D — the ice.tres shape', () => {
-  it('resolves the albedo slot to a rasterised, ramp-coloured texture', () => {
-    const resolved = resolveNoiseTexture2D('SubResource("NoiseTexture2D_m8iqd")', ice.subResources)!;
-    expect(resolved.texture).toBeInstanceOf(THREE.DataTexture);
-    expect(resolved.texture.image.width).toBe(32);
-    expect(resolved.texture.colorSpace).toBe(THREE.SRGBColorSpace);
+  it('builds the albedo slot as a ramp-coloured texture', async () => {
+    const { texture } = await built(ALBEDO);
+    expect(texture.image.width).toBe(32);
+    expect(texture.colorSpace).toBe(THREE.SRGBColorSpace);
 
     // The ramp runs pale blue to white, so blue is the strongest channel and
     // nothing is near black.
-    const data = resolved.texture.image.data as Uint8Array;
+    const data = texture.image.data as Uint8Array;
     for (let i = 0; i < data.length; i += 4) {
       expect(data[i + 2]).toBeGreaterThanOrEqual(data[i]!);
       expect(data[i]).toBeGreaterThan(100);
     }
   });
 
-  it('resolves the normal slot to a non-sRGB normal map', () => {
-    const resolved = resolveNoiseTexture2D('SubResource("NoiseTexture2D_gyhec")', ice.subResources)!;
-    expect(resolved.texture.colorSpace).toBe(THREE.NoColorSpace);
+  it('builds the normal slot as a non-sRGB normal map', async () => {
+    const { texture } = await built(NORMAL);
+    expect(texture.colorSpace).toBe(THREE.NoColorSpace);
 
-    const data = resolved.texture.image.data as Uint8Array;
+    const data = texture.image.data as Uint8Array;
     for (let i = 0; i < data.length; i += 4) {
       // Unit normals packed around the midpoint, +Z dominant for a height field.
       const [nx = 0, ny = 0, nz = 0] = [data[i]!, data[i + 1]!, data[i + 2]!].map((v) => v / 127.5 - 1);
@@ -83,20 +102,38 @@ describe('resolveNoiseTexture2D — the ice.tres shape', () => {
     }
   });
 
-  it('gives the two slots different pixels — each has its own generator', () => {
-    const albedo = resolveNoiseTexture2D('SubResource("NoiseTexture2D_m8iqd")', ice.subResources)!;
-    const normal = resolveNoiseTexture2D('SubResource("NoiseTexture2D_gyhec")', ice.subResources)!;
+  it('gives the two slots different pixels — each has its own generator', async () => {
+    const albedo = await built(ALBEDO);
+    const normal = await built(NORMAL);
     expect(albedo.key).not.toBe(normal.key);
     expect([...(albedo.texture.image.data as Uint8Array)]).not.toEqual([
       ...(normal.texture.image.data as Uint8Array),
     ]);
   });
 
-  it('rasterises once per sub-resource and hands the same texture back', () => {
-    const first = resolveNoiseTexture2D('SubResource("NoiseTexture2D_m8iqd")', ice.subResources)!;
-    const second = resolveNoiseTexture2D('SubResource("NoiseTexture2D_m8iqd")', ice.subResources)!;
-    expect(second.texture).toBe(first.texture);
-    expect(second.key).toBe(first.key);
+  it('is ready with the same texture once built', async () => {
+    const { texture, key } = await built(ALBEDO);
+    expect(resolveNoiseTexture2D(ALBEDO, ice.subResources)).toEqual({ status: 'ready', texture, key });
+  });
+
+  it('reuses the texture after a re-parse of an unchanged file', async () => {
+    const { texture } = await built(ALBEDO);
+    const reparsed = resolveNoiseTexture2D(ALBEDO, parseTresFile(ICE).subResources);
+    expect(reparsed?.status === 'ready' && reparsed.texture).toBe(texture);
+  });
+
+  it('builds again after an edit to its noise', () => {
+    const edited = parseTresFile(ICE.replace('frequency = 0.003\nfractal_type = 2\nfractal_lacunarity = 2.5', 'frequency = 0.004\nfractal_type = 2\nfractal_lacunarity = 2.5'));
+    const before = resolveNoiseTexture2D(ALBEDO, ice.subResources);
+    const after = resolveNoiseTexture2D(ALBEDO, edited.subResources);
+    expect(after?.key).not.toBe(before?.key);
+  });
+
+  it('keys on content, not on the sub-resource id', () => {
+    const renamed = parseTresFile(ICE.replaceAll('NoiseTexture2D_m8iqd', 'NoiseTexture2D_renamed'));
+    expect(resolveNoiseTexture2D('SubResource("NoiseTexture2D_renamed")', renamed.subResources)?.key).toBe(
+      resolveNoiseTexture2D(ALBEDO, ice.subResources)?.key
+    );
   });
 
   it('declines every reference that is not an inline NoiseTexture2D', () => {
@@ -127,7 +164,7 @@ noise = SubResource("missing")
     expect(resolveNoiseTexture2D('SubResource("dangling")', broken.subResources)).toBeNull();
   });
 
-  it("resolves a texture wider than the previewer's texture ceiling to no texture", () => {
+  it("declines a texture wider than the previewer's texture ceiling, before any build", () => {
     const oversized = parseTresFile(`[gd_resource type="StandardMaterial3D" format=3]
 
 [sub_resource type="FastNoiseLite" id="n"]

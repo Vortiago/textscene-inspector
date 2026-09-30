@@ -23,6 +23,7 @@ import { EDITOR_CAMERA_FOV, editorCameraPosition } from './godotEditorCamera.js'
 import { ViewportPassOrchestrator } from './contexts/ViewportPassRegistryContext.js';
 import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterLayer.js';
 import { installGodotDiffuse } from './godotDiffuse.js';
+import { TiledUploadDriver } from './tiledUpload/TiledUploadDriver.js';
 import styles from './TscnCanvas.module.css';
 
 // At import, before any program compiles: a program reads three's chunks only when it compiles.
@@ -42,7 +43,7 @@ export function TscnSceneContents() {
   const isEmpty = nodes === null || nodes.length === 0;
 
   return (
-    <>
+    <TiledUploadDriver>
       {/* Godot's editor preview sun and environment, each mounted only while the
           scene has no DirectionalLight3D or WorldEnvironment of its own (ADR-0025).
           Godot adds neither at runtime. This previewer takes the editor's rule. */}
@@ -65,7 +66,7 @@ export function TscnSceneContents() {
       <ViewportPassOrchestrator />
       <SelectionHighlight />
       <HoverHighlight />
-    </>
+    </TiledUploadDriver>
   );
 }
 

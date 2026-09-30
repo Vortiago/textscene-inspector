@@ -7,7 +7,6 @@ import { useCallback, useMemo, useRef, useState, type ChangeEvent, type CSSPrope
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import {
-  createResourcePipeline,
   resourceFilePath,
   ResourceLoaderProvider,
   TscnPreviewShell,
@@ -15,7 +14,7 @@ import {
 import { fixtures } from './fixturesAll';
 import { corpusRootFor, resToFixtureFile, fixtureFileToRes } from './corpusRoot';
 import { useCorpusRoot } from './useCorpusRoot';
-import { WebResourceProvider } from './providers/WebResourceProvider';
+import { createWebPipeline } from './webPipeline';
 import { SourceGutter } from './SourceGutter';
 import { FileProblems } from './FileProblems';
 import { useSceneSource } from './useSceneSource';
@@ -50,12 +49,9 @@ export function R3FApp() {
   // `?camera=<node path>` deep-link: look through a scene Camera3D on open.
   const initialActiveCameraPath = useCameraDeepLink();
 
-  // One provider, bus and loader for the app's lifetime, so an uploaded texture survives a
-  // fixture switch.
-  const pipeline = useMemo(
-    () => createResourcePipeline(new WebResourceProvider({ hasFixturesMirror: HAS_FIXTURES_MIRROR })),
-    []
-  );
+  // One provider, bus, loader and job worker for the app's lifetime, so an uploaded
+  // texture survives a fixture switch.
+  const pipeline = useMemo(() => createWebPipeline({ hasFixturesMirror: HAS_FIXTURES_MIRROR }), []);
   const { provider, loader } = pipeline;
 
   // Each vendored demo project keeps its own res:// namespace. The root switches at the

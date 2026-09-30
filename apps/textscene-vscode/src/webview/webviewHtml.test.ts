@@ -1,6 +1,7 @@
 /**
- * Tests for generateWebviewHtml's `initialConfig`: a JSON global the webview reads
- * once at mount, before `r3f-webview-main.tsx` renders `<TscnPreviewShell>`.
+ * Tests for generateWebviewHtml: its Content-Security-Policy, and `initialConfig`,
+ * a JSON global the webview reads once at mount, before `r3f-webview-main.tsx`
+ * renders `<TscnPreviewShell>`.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -54,5 +55,30 @@ describe('generateWebviewHtml', () => {
     // makes that sequence unreachable regardless of ">".
     expect(html).not.toContain('</script><script>evil()</script>');
     expect(html).toContain('\\u003c/script>\\u003cscript>evil()\\u003c/script>');
+  });
+});
+
+describe('generateWebviewHtml CSP', () => {
+  function csp(): string {
+    const match = /http-equiv="Content-Security-Policy" content="([^"]*)"/.exec(
+      generateWebviewHtml(BASE_OPTIONS)
+    );
+    if (!match?.[1]) throw new Error('expected a Content-Security-Policy meta tag, found none');
+    return match[1];
+  }
+
+  it('denies everything it does not name', () => {
+    expect(csp().startsWith("default-src 'none';")).toBe(true);
+  });
+
+  it('lets a blob-URL worker start, where procedural textures build (ADR-0042)', () => {
+    expect(csp()).toContain('worker-src blob:;');
+  });
+
+  it('opens no fetch, font or frame source, so a worker still loads nothing remote', () => {
+    const policy = csp();
+    expect(policy).not.toContain('connect-src');
+    expect(policy).not.toContain('font-src');
+    expect(policy).not.toContain('child-src');
   });
 });

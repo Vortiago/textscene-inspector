@@ -5,7 +5,7 @@
  * visibility, children and transform.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -15,7 +15,7 @@ import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D } from '../../../../resources/useTexture2D';
-import { pinNoColorSpace, useCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
+import { undecodedClone } from '../../../../r3f/undecodedTexture';
 import { rangeRatio } from '../shared/range';
 import { controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';
 import { ninePatchGeometry, NINE_PATCH_STRETCH } from '../../../../r3f/controls/native/ninePatchGeometry';
@@ -37,6 +37,7 @@ import { TexturedFillMesh } from './TexturedFillMesh';
 import type { ControlColor } from '../control/types';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { TextureProgressBarProperties } from './types';
+import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
 
 const WHITE: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
 const ZERO: Vec2 = { x: 0, y: 0 };
@@ -66,16 +67,20 @@ function useLayerTexture(
   filter: 'nearest' | 'linear'
 ): THREE.Texture | null {
   const { texture: raw } = useTexture2D(ref, externalResources, internalResources);
-  const decoded = useCanvas2DTexture(raw);
-  return useMemo(() => {
-    if (!decoded) return null;
-    const cloned = decoded.clone();
-    pinNoColorSpace(cloned);
+  // One clone from the shared texture, not a clone of `useCanvas2DTexture`'s: that one
+  // would upload a whole GPU copy that never draws, under its own sampler settings.
+  const layer = useMemo(() => {
+    if (!raw) return null;
+    const cloned = undecodedClone(raw);
+    // The canvas default, as `useCanvas2DTexture` sets it (`scene/main/viewport.h:420`).
+    cloned.wrapS = THREE.ClampToEdgeWrapping;
+    cloned.wrapT = THREE.ClampToEdgeWrapping;
     const mag = FILTER[filter];
     cloned.magFilter = mag;
     cloned.minFilter = mag;
     return cloned;
-  }, [decoded, filter]);
+  }, [raw, filter]);
+  return useUploadedClone(layer);
 }
 
 /** `Texture2D::get_rect_region`'s cropped clone: identity except the UV window (`linearFill.ts`). */
@@ -84,18 +89,36 @@ function useCroppedTexture(
   region: { x: number; y: number; w: number; h: number } | undefined,
   textureSize: Vec2 | null
 ): THREE.Texture | null {
+  // Keyed on the numbers: the caller builds `region` and `textureSize` afresh each
+  // render, and a clone per render would upload the texture again each time.
+  const crop = region && textureSize ? cropWindow(region, textureSize) : null;
+  const [repeatX, repeatY, offsetX, offsetY] = crop ?? [];
   const cropped = useMemo(() => {
-    if (!texture || !region || !textureSize) return null;
+    if (!texture || repeatX === undefined || repeatY === undefined || offsetX === undefined || offsetY === undefined) {
+      return null;
+    }
     const cloned = texture.clone();
     cloned.wrapS = THREE.ClampToEdgeWrapping;
     cloned.wrapT = THREE.ClampToEdgeWrapping;
-    cloned.repeat.set(region.w / textureSize.x, region.h / textureSize.y);
-    cloned.offset.set(region.x / textureSize.x, 1 - (region.y + region.h) / textureSize.y);
+    cloned.repeat.set(repeatX, repeatY);
+    cloned.offset.set(offsetX, offsetY);
     cloned.needsUpdate = true;
     return cloned;
-  }, [texture, region, textureSize]);
-  useEffect(() => () => cropped?.dispose(), [cropped]);
-  return cropped;
+  }, [texture, repeatX, repeatY, offsetX, offsetY]);
+  return useUploadedClone(cropped);
+}
+
+/** `region`'s UV window in `textureSize`, as repeat x, repeat y, offset x, offset y. */
+function cropWindow(
+  region: { x: number; y: number; w: number; h: number },
+  textureSize: Vec2
+): [number, number, number, number] {
+  return [
+    region.w / textureSize.x,
+    region.h / textureSize.y,
+    region.x / textureSize.x,
+    1 - (region.y + region.h) / textureSize.y,
+  ];
 }
 
 export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {

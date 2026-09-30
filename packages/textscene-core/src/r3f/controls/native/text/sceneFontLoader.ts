@@ -71,7 +71,7 @@ function warnUnresolvable(font: FontResource, nodePath: string): void {
 }
 
 /**
- * The CSP-validated door (`default-src 'none'`, no `connect-src`, `font-src` or `worker-src`):
+ * The CSP-validated door (`default-src 'none'`, no `connect-src` or `font-src`):
  * bytes in hand go to `new FontFace` and `document.fonts.add`, with no fetch of any URL, no worker,
  * eval or WASM. Resolves to `undefined` with no `FontFace`, and rejects only on bytes that are not
  * a font, so `bytes` is a thunk that does not decode where there is no door.

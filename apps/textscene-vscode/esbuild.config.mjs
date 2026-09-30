@@ -7,6 +7,7 @@ import * as esbuild from 'esbuild';
 import { rm, writeFile } from 'node:fs/promises';
 import cssModulesPlugin from 'esbuild-css-modules-plugin';
 import { globSync } from 'glob';
+import { textureWorkerPlugin } from './src/bundler/textureWorkerPlugin.mjs';
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
@@ -87,6 +88,8 @@ const webviewOptions = {
       inject: false,
       emitDeclarationFile: true,
     }),
+    // The job worker, as one script string the webview starts from a blob URL.
+    textureWorkerPlugin({ minify: production }),
   ],
   loader: {
     '.css': 'css',

@@ -9,6 +9,8 @@ import * as THREE from 'three';
 import { warn } from '../../../logger';
 import { parseTresFile, type ParsedResource } from '../../../parser/parsedResource';
 import { findSubResource, resolveExtResourcePath } from '../../SubResourceResolver';
+import { inThreadJobRunner } from '../../../workers/WorkerJobRunner';
+import type { JobRunner } from '../../textures/proceduralBuilds';
 import { resolveProceduralTexture } from '../../textures/resolveProceduralTexture';
 import {
   pinProceduralTexture,
@@ -61,11 +63,14 @@ export function isMaterialPath(path: string): boolean {
  *   whose texture slots should stay empty
  * @param subResourceId - build this `[sub_resource id="…"]` instead of the
  *   file's own `[resource]` body
+ * @param jobRunner - builds a procedural texture that runs as a worker job; the
+ *   default runs it on the main thread
  */
 export async function createMaterialFromContent(
   content: string,
   loadTexture?: TextureLoaderFn,
-  subResourceId?: string
+  subResourceId?: string,
+  jobRunner: JobRunner = inThreadJobRunner
 ): Promise<THREE.Material> {
   // Throws when the [gd_resource] header is absent or typeless.
   const parsed = parseTresFile(content);
@@ -84,7 +89,7 @@ export async function createMaterialFromContent(
   const { textures, proceduralKeys } = await resolveTextureSlots(
     scalars.textureSlots,
     parsed,
-    loadTexture
+    { loadTexture, jobRunner }
   );
   let material: THREE.Material;
   try {
@@ -153,15 +158,21 @@ interface ResolvedSlots {
   proceduralKeys: string[];
 }
 
+interface TextureSources {
+  loadTexture: TextureLoaderFn | undefined;
+  jobRunner: JobRunner;
+}
+
 /**
  * Fill every slot the decode kept, resolving against the owning file's tables. An
- * `ExtResource` image goes through the injected loader, all slots in parallel. A
- * `SubResource` of a type with no rasteriser, or a dangling id, leaves its slot empty.
+ * `ExtResource` image goes through the injected loader and a procedural build through
+ * the job runner, all slots in parallel. A `SubResource` of a type with no rasteriser,
+ * a dangling id, or a build that cannot allocate leaves its slot empty.
  */
 async function resolveTextureSlots(
   slots: Readonly<Partial<Record<TextureSlot, string>>>,
   parsed: ParsedResource,
-  loadTexture: TextureLoaderFn | undefined
+  { loadTexture, jobRunner }: TextureSources
 ): Promise<ResolvedSlots> {
   const textures: ResolvedTextureSlots = {};
   const proceduralKeys: string[] = [];
@@ -172,14 +183,21 @@ async function resolveTextureSlots(
     if (reference === undefined) continue;
 
     // A procedural `SubResource`, such as a GradientTexture2D, rasterises from the file
-    // in hand, as it resolves to no file path.
+    // in hand, as it resolves to no file path. A NoiseTexture2D builds as a job.
     const procedural = resolveProceduralTexture(reference, parsed.subResources);
     if (procedural) {
       // Pinned per slot as it resolves: a later slot can insert into the same LRU and
-      // evict an earlier one nothing holds yet.
+      // evict an earlier one nothing holds yet. A pending key is pinned before it lands.
       pinProceduralTexture(procedural.key);
       proceduralKeys.push(procedural.key);
-      textures[slot] = procedural.texture;
+      if (procedural.status === 'ready') {
+        textures[slot] = procedural.texture;
+        continue;
+      }
+      const build = procedural.start(jobRunner);
+      requests.push(
+        build.settled.finally(() => build.release()).then((texture) => [slot, texture])
+      );
       continue;
     }
 
@@ -189,7 +207,15 @@ async function resolveTextureSlots(
     requests.push(loadTexture(path).then((texture) => [slot, texture]));
   }
 
-  for (const [slot, texture] of await Promise.all(requests)) textures[slot] = texture;
+  let loaded: [TextureSlot, THREE.Texture | null][];
+  try {
+    loaded = await Promise.all(requests);
+  } catch (error) {
+    // No material will hold these pins, so nothing would ever hand them back.
+    proceduralKeys.forEach(unpinProceduralTexture);
+    throw error;
+  }
+  for (const [slot, texture] of loaded) textures[slot] = texture;
   return { textures, proceduralKeys };
 }
 

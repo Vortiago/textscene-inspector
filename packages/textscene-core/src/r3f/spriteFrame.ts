@@ -3,6 +3,10 @@
  * Sprite2D and Sprite3D. Godot's SpriteBase takes a base rect (the region when
  * `region_enabled`, else the full texture) and then subdivides it by the frame
  * grid, so region and frames compose.
+ *
+ * The sampler clone and the frame's UV window are separate on purpose. three keys a
+ * GPU texture by source and sampler state, never by offset or repeat, so a frame
+ * change moves the window on the clone already drawn and uploads nothing.
  */
 
 import * as THREE from 'three';
@@ -41,14 +45,14 @@ export interface SpriteFrameProps {
 }
 
 /**
- * Clone the loaded texture and window its UVs to the current frame, or undefined
- * before it loads. `useResource` shares one texture per path, so an in-place edit
- * clobbers other sprites. `colorSpace` is required like `wrap`: Sprite2D passes
- * NoColorSpace and Sprite3D SRGBColorSpace (`r3f/canvas2DTextureDecode.ts`).
+ * Clone the loaded texture with the sprite's sampler state, or undefined before it
+ * loads. `useResource` shares one texture per path, so an in-place edit clobbers
+ * other sprites. `colorSpace` is required like `wrap`: Sprite2D passes NoColorSpace
+ * and Sprite3D SRGBColorSpace (`r3f/canvas2DTextureDecode.ts`). The frame's UVs are
+ * not set here: `useUvWindow` sets them on the clone that draws.
  */
-export function composeFrameTexture(
+export function spriteSamplerClone(
   texture: THREE.Texture | undefined,
-  props: SpriteFrameProps,
   wrap: SpriteWrapMode,
   colorSpace: THREE.ColorSpace
 ): THREE.Texture | undefined {
@@ -65,11 +69,25 @@ export function composeFrameTexture(
   }
   cloned.wrapS = WRAP[wrap];
   cloned.wrapT = WRAP[wrap];
-
-  windowFrameUv(cloned, props);
-
   cloned.needsUpdate = true;
   return cloned;
+}
+
+/** A frame's UV window: the texture region a sprite quad samples. */
+export interface UvWindow {
+  offset: THREE.Vector2;
+  repeat: THREE.Vector2;
+}
+
+/** The current frame's UV window over `texture`, from the full-image window. */
+export function frameUvWindow(texture: THREE.Texture | undefined, props: SpriteFrameProps): UvWindow {
+  const uv: FrameWindow = {
+    offset: new THREE.Vector2(0, 0),
+    repeat: new THREE.Vector2(1, 1),
+    image: texture?.image,
+  };
+  windowFrameUv(uv, props);
+  return { offset: uv.offset, repeat: uv.repeat };
 }
 
 /**
@@ -94,14 +112,8 @@ export function frameSizePx(
   return { width: pxW / H, height: pxH / V };
 }
 
-/**
- * The offset/repeat pair the frame math writes, and the image it reads.
- * `THREE.Texture` satisfies it, so `spriteWrapMode()` runs the same helpers over
- * a throwaway window rather than a second copy that could drift.
- */
-interface UvWindow {
-  offset: THREE.Vector2;
-  repeat: THREE.Vector2;
+/** The window the frame math writes, and the image whose dimensions it reads. */
+interface FrameWindow extends UvWindow {
   /** `unknown`, as three types it, narrowed where the dimensions are read. */
   image: unknown;
 }
@@ -116,20 +128,15 @@ export function spriteWrapMode(
   props: SpriteFrameProps
 ): SpriteWrapMode {
   if (!texture) return 'clamp';
-  const window: UvWindow = {
-    offset: new THREE.Vector2(0, 0),
-    repeat: new THREE.Vector2(1, 1),
-    image: texture.image,
-  };
-  windowFrameUv(window, props);
+  const uv = frameUvWindow(texture, props);
   const outside = (min: number, size: number): boolean => min < 0 || min + size > 1;
-  return outside(window.offset.x, window.repeat.x) || outside(window.offset.y, window.repeat.y)
+  return outside(uv.offset.x, uv.repeat.x) || outside(uv.offset.y, uv.repeat.y)
     ? 'repeat'
     : 'clamp';
 }
 
-/** The region-then-frame-grid composition, on anything carrying a UV window. */
-function windowFrameUv(target: UvWindow, props: SpriteFrameProps): void {
+/** The region-then-frame-grid composition, over an identity window. */
+function windowFrameUv(target: FrameWindow, props: SpriteFrameProps): void {
   if (props.region_enabled && props.region_rect) {
     applyRegionRect(target, props.region_rect);
   }
@@ -138,7 +145,7 @@ function windowFrameUv(target: UvWindow, props: SpriteFrameProps): void {
   }
 }
 
-function applySpritesheetUV(texture: UvWindow, props: SpriteFrameProps): void {
+function applySpritesheetUV(texture: FrameWindow, props: SpriteFrameProps): void {
   const H = Math.max(1, props.hframes);
   const V = Math.max(1, props.vframes);
 
@@ -152,7 +159,7 @@ function applySpritesheetUV(texture: UvWindow, props: SpriteFrameProps): void {
     row = Math.floor(props.frame / H);
   }
 
-  // Compose over the base UV already on the texture: identity (full image) or
+  // Compose over the base window: identity (full image) or
   // the region rect applied above. Multiplying keeps region + frames additive.
   const baseRepeatX = texture.repeat.x;
   const baseRepeatY = texture.repeat.y;
@@ -168,7 +175,7 @@ function applySpritesheetUV(texture: UvWindow, props: SpriteFrameProps): void {
 }
 
 function applyRegionRect(
-  texture: UvWindow,
+  texture: FrameWindow,
   rect: { x: number; y: number; width: number; height: number }
 ): void {
   const image = texture.image as { width?: number; height?: number } | undefined;
