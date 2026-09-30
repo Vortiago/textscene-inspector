@@ -21,7 +21,7 @@ export interface GlbHierarchyNode {
 
 /** Map a THREE.Object3D.type onto a Godot-ish display type. */
 export function glbDisplayType(threeType: string): string {
-  if (threeType === 'Mesh' || threeType === 'SkinnedMesh' || threeType === 'InstancedMesh') {
+  if (threeType === 'Mesh' || threeType === 'SkinnedMesh') {
     return 'Mesh';
   }
   if (threeType === 'Bone') return 'Bone';

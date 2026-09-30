@@ -85,9 +85,6 @@ function pose(
   mainCamera: THREE.Camera,
   passCamera: THREE.Camera
 ): boolean {
-  // three multiplies `instanceMatrix` after `modelMatrix`, so a swapped matrix would turn
-  // every instance about the batch origin. GridMap draws a billboarded tile as its own mesh.
-  if ((object as THREE.InstancedMesh).isInstancedMesh) return false;
   const billboard = billboardOf(material);
   const camera = billboard.mode === BillboardMode.BILLBOARD_PARTICLES ? passCamera : mainCamera;
   if (!billboardWorldMatrix(billboarded, object.matrixWorld, camera.matrixWorld, billboard)) {
