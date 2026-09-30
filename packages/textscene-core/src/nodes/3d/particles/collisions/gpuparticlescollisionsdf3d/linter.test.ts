@@ -6,14 +6,11 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../../../linter/Linter';
+import { reportsOf } from '../../../../../linter/testing/tierLists';
 import './linterParser';
 import './linter';
 
 const RULE = 'gpuparticlescollisionsdf3d-empty-bake-mask';
-
-function warningsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.ruleName === RULE);
-}
 
 describe('GPUParticlesCollisionSDF3D bake-mask rule', () => {
   let linter: Linter;
@@ -30,7 +27,7 @@ describe('GPUParticlesCollisionSDF3D bake-mask rule', () => {
 [node name="Collider" type="GPUParticlesCollisionSDF3D" parent="."]
 size = Vector3(2, 2, 2)
 `;
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toEqual([]);
   });
 
   it('stays quiet when bake_mask has at least one bit set', () => {
@@ -41,7 +38,7 @@ size = Vector3(2, 2, 2)
 [node name="Collider" type="GPUParticlesCollisionSDF3D" parent="."]
 bake_mask = 3
 `;
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toEqual([]);
   });
 
   it('warns when bake_mask is explicitly 0', () => {
@@ -52,7 +49,7 @@ bake_mask = 3
 [node name="Collider" type="GPUParticlesCollisionSDF3D" parent="."]
 bake_mask = 0
 `;
-    const warnings = warningsOf(linter.lint(content));
+    const warnings = reportsOf(linter.lint(content), RULE, 'warning');
     expect(warnings).toHaveLength(1);
     expect(warnings[0]!.severity).toBe('warning');
     expect(warnings[0]!.message).toContain('Bake Mask');
@@ -65,6 +62,6 @@ bake_mask = 0
 
 [node name="Collider" type="GPUParticlesCollisionBox3D" parent="."]
 `;
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toEqual([]);
   });
 });

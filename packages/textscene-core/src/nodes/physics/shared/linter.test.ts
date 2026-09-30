@@ -7,13 +7,10 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';
+import { reportsOf } from '../../../linter/testing/tierLists';
 import './linter';
 
 const RULE = 'collisionobject3d-non-uniform-scale';
-
-function warningsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.ruleName === RULE);
-}
 
 /** A bare node of `type`, under a plain Node3D root, with the given transform. */
 function scene(type: string, transform: string): string {
@@ -36,7 +33,7 @@ describe('CollisionObject3D non-uniform-scale rule', () => {
   });
 
   it('stays silent on a uniform scale', () => {
-    expect(warningsOf(linter.lint(scene('Area3D', UNIFORM)))).toEqual([]);
+    expect(reportsOf(linter.lint(scene('Area3D', UNIFORM)), RULE, 'warning')).toEqual([]);
   });
 
   it('stays silent with no transform at all', () => {
@@ -45,7 +42,7 @@ describe('CollisionObject3D non-uniform-scale rule', () => {
 [node name="Root" type="Node3D"]
 
 [node name="MyArea3D" type="Area3D" parent="."]`;
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toEqual([]);
   });
 
   // Every concrete CollisionObject3D descendant this repo registers:
@@ -63,13 +60,13 @@ describe('CollisionObject3D non-uniform-scale rule', () => {
 
   for (const type of reachedTypes) {
     it(`warns on ${type}'s own non-uniform scale`, () => {
-      const warnings = warningsOf(linter.lint(scene(type, NON_UNIFORM)));
+      const warnings = reportsOf(linter.lint(scene(type, NON_UNIFORM)), RULE, 'warning');
       expect(warnings).toHaveLength(1);
       expect(warnings[0]!.severity).toBe('warning');
     });
   }
 
   it('leaves an unrelated Node3D alone even when non-uniformly scaled', () => {
-    expect(warningsOf(linter.lint(scene('MeshInstance3D', NON_UNIFORM)))).toEqual([]);
+    expect(reportsOf(linter.lint(scene('MeshInstance3D', NON_UNIFORM)), RULE, 'warning')).toEqual([]);
   });
 });

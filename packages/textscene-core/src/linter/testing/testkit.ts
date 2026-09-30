@@ -6,6 +6,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { Linter } from '../Linter.js';
+import { ruleRegistry } from '../RuleRegistry.js';
+import { FILE_DIAGNOSTICS, STRICT_PARSER_RULE_NAME } from '../fileDiagnostics.js';
 import type { Diagnostic, Severity } from '../types.js';
 
 /** A property value: rendered verbatim if a string, else `String(value)`. */
@@ -112,7 +114,7 @@ export interface DiagnosticExpectation {
   prop?: string;
   /** Find the diagnostic with this exact rule name. */
   ruleName?: string;
-  /** Assert the found diagnostic's severity. */
+  /** Assert the found diagnostic's severity or, in a negative, the tier none may have. */
   severity?: Severity;
   /** Assert the found diagnostic's node type. */
   nodeType?: string;
@@ -188,14 +190,48 @@ function expectEveryHeadingPlaced(diagnostics: Diagnostic[]): void {
   expect(stranded).toEqual([]);
 }
 
-/** Assert no diagnostic matching `where` is present (other diagnostics may exist). */
+/** Every tier `ruleName` is declared to report at, by a rule's `emits` or a file diagnostic. */
+function declaredTiers(ruleName: string): Severity[] {
+  const arms = [
+    ...ruleRegistry.getRules().flatMap(rule => rule.meta.emits ?? []),
+    ...Object.values(FILE_DIAGNOSTICS),
+  ];
+  return arms.filter(arm => arm.ruleName === ruleName).map(arm => arm.severity);
+}
+
+/**
+ * Refuse a negative at a tier nothing can report, since it passes for any
+ * behaviour. A format failure always errors, so `error` needs no rule. Another
+ * tier needs the rule named, because a message substring does not say whose tier applies.
+ */
+function expectTierReachable(ruleName: string | undefined, severity: Severity): void {
+  if (ruleName === undefined || ruleName === STRICT_PARSER_RULE_NAME) {
+    expect(severity, `a negative at ${severity} must name the rule that reports it`).toBe('error');
+    return;
+  }
+  expect(
+    declaredTiers(ruleName),
+    `'${ruleName}' declares no ${severity} arm, so a negative at ${severity} cannot fail`
+  ).toContain(severity);
+}
+
+/**
+ * Assert no diagnostic matching `where` is present (other diagnostics may exist).
+ * With a `severity`, "none at that tier", once the tier is shown reachable.
+ */
 export function expectNoDiagnostic(content: string, where: DiagnosticExpectation): void {
   const diagnostics = lint(content);
   expectEveryHeadingPlaced(diagnostics);
-  // On the identity fields only. A negative quantifier over a family is the
-  // stronger claim, and narrowing it by the asserted fields would turn "no
-  // diagnostic for this property" into "none at that tier".
-  expect(candidates(diagnostics, where).map(describe1)).toEqual([]);
+  const { severity } = where;
+  if (severity !== undefined) expectTierReachable(where.ruleName, severity);
+  // On the identity fields only, plus a severity the caller names. A negative
+  // quantifier over a family is the stronger claim, and narrowing it by the
+  // other asserted fields would turn "no diagnostic for this property" into
+  // "none with that node type".
+  const present = candidates(diagnostics, where).filter(
+    d => severity === undefined || d.severity === severity
+  );
+  expect(present.map(describe1)).toEqual([]);
 }
 
 /**
@@ -204,15 +240,7 @@ export function expectNoDiagnostic(content: string, where: DiagnosticExpectation
  * such as `{ ruleName: 'strict-parser' }` for "no strict-parser format errors".
  */
 export function expectNoErrors(content: string, where: DiagnosticExpectation = {}): void {
-  const diagnostics = lint(content);
-  expectEveryHeadingPlaced(diagnostics);
-  const errors = diagnostics.filter(
-    d =>
-      d.severity === 'error' &&
-      (where.prop === undefined || d.message.includes(where.prop)) &&
-      (where.ruleName === undefined || d.ruleName === where.ruleName)
-  );
-  expect(errors).toHaveLength(0);
+  expectNoDiagnostic(content, { prop: where.prop, ruleName: where.ruleName, severity: 'error' });
 }
 
 /** Assert at least one diagnostic of the given severity is present. */

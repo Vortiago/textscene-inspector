@@ -5,14 +5,11 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../../linter/Linter';
+import { reportsOf } from '../../../../linter/testing/tierLists';
 import './linterParser';
 import './linter';
 
 const RULE = 'springbonecollision3d-outside-springbonesimulator3d';
-
-function warningsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.ruleName === RULE);
-}
 
 describe('SpringBoneCollision3D parent rule', () => {
   let linter: Linter;
@@ -28,7 +25,7 @@ describe('SpringBoneCollision3D parent rule', () => {
 
 [node name="Collision" type="SpringBoneCollision3D" parent="."]
 `;
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toEqual([]);
   });
 
   it('warns for a collision under any other typed parent', () => {
@@ -38,7 +35,7 @@ describe('SpringBoneCollision3D parent rule', () => {
 
 [node name="Collision" type="SpringBoneCollision3D" parent="."]
 `;
-    const warnings = warningsOf(linter.lint(content));
+    const warnings = reportsOf(linter.lint(content), RULE, 'warning');
     expect(warnings).toHaveLength(1);
     expect(warnings[0]!.severity).toBe('warning');
     expect(warnings[0]!.message).toContain('Node3D');
@@ -49,7 +46,7 @@ describe('SpringBoneCollision3D parent rule', () => {
 
 [node name="Collision" type="SpringBoneCollision3D"]
 `;
-    const warnings = warningsOf(linter.lint(content));
+    const warnings = reportsOf(linter.lint(content), RULE, 'warning');
     expect(warnings).toHaveLength(1);
     expect(warnings[0]!.message).toContain('scene root');
   });
@@ -65,7 +62,7 @@ describe('SpringBoneCollision3D parent rule', () => {
 
 [node name="Extra" type="SpringBoneCollision3D" parent="Sim"]
 `;
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toEqual([]);
   });
 
   it('does not warn about nodes that are not SpringBoneCollision3D', () => {
@@ -75,6 +72,6 @@ describe('SpringBoneCollision3D parent rule', () => {
 
 [node name="Sim" type="SpringBoneSimulator3D" parent="."]
 `;
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toEqual([]);
   });
 });

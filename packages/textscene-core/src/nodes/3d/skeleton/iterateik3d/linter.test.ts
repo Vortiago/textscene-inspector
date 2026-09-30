@@ -7,6 +7,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../../linter/Linter';
 import { readFixture } from '../../../../linter/testing/fixtureCheck';
+import { reportsOf } from '../../../../linter/testing/tierLists';
 import './linter';
 import './linterParser';
 import '../ccdik3d/linterParser';
@@ -14,10 +15,6 @@ import '../fabrik3d/linterParser';
 import '../jacobianik3d/linterParser';
 
 const RULE = 'iterateik3d-setting-missing-target-node';
-
-function warningsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.ruleName === RULE);
-}
 
 /** A node of `type`, under a Skeleton3D (SkeletonModifier3D's own placement rule). */
 function scene(type: string, properties: string): string {
@@ -45,14 +42,14 @@ describe('IterateIK3D target-node rule', () => {
   });
 
   it('stays clean on a bare node, whose settings array is empty', () => {
-    expect(warningsOf(linter.lint(scene('CCDIK3D', '')))).toEqual([]);
-    expect(warningsOf(linter.lint(scene('CCDIK3D', 'setting_count = 0\n')))).toEqual([]);
+    expect(reportsOf(linter.lint(scene('CCDIK3D', '')), RULE, 'warning')).toEqual([]);
+    expect(reportsOf(linter.lint(scene('CCDIK3D', 'setting_count = 0\n')), RULE, 'warning')).toEqual([]);
   });
 
   for (const type of REACHED_TYPES) {
     it(`warns on ${type} when a setting has no target_node key at all`, () => {
       const content = scene(type, 'setting_count = 1\nsettings/0/max_iterations = 5\n');
-      const warnings = warningsOf(linter.lint(content));
+      const warnings = reportsOf(linter.lint(content), RULE, 'warning');
       expect(warnings).toHaveLength(1);
       expect(warnings[0]!.severity).toBe('warning');
       expect(warnings[0]!.message).toContain('setting(s) 0');
@@ -61,7 +58,7 @@ describe('IterateIK3D target-node rule', () => {
 
   it('warns on an explicitly empty NodePath, the same unset value as absence', () => {
     const content = scene('FABRIK3D', 'setting_count = 1\nsettings/0/target_node = NodePath("")\n');
-    expect(warningsOf(linter.lint(content))).toHaveLength(1);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toHaveLength(1);
   });
 
   it('accepts a setting whose target_node resolves', () => {
@@ -69,7 +66,7 @@ describe('IterateIK3D target-node rule', () => {
       'FABRIK3D',
       'setting_count = 1\nsettings/0/target_node = NodePath("../../Target")\n'
     );
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toEqual([]);
   });
 
   it('names every setting missing a target, not just the first', () => {
@@ -77,14 +74,14 @@ describe('IterateIK3D target-node rule', () => {
       'FABRIK3D',
       'setting_count = 3\nsettings/1/target_node = NodePath("../../Target")\n'
     );
-    const warnings = warningsOf(linter.lint(content));
+    const warnings = reportsOf(linter.lint(content), RULE, 'warning');
     expect(warnings).toHaveLength(1);
     expect(warnings[0]!.message).toContain('0, 2');
   });
 
   it('allocates nothing for a count it cannot read, leaving that to the validator', () => {
-    expect(warningsOf(linter.lint(scene('CCDIK3D', 'setting_count = -2\n')))).toEqual([]);
-    expect(warningsOf(linter.lint(scene('CCDIK3D', 'setting_count = many\n')))).toEqual([]);
+    expect(reportsOf(linter.lint(scene('CCDIK3D', 'setting_count = -2\n')), RULE, 'warning')).toEqual([]);
+    expect(reportsOf(linter.lint(scene('CCDIK3D', 'setting_count = many\n')), RULE, 'warning')).toEqual([]);
   });
 
   it('leaves other SkeletonModifier3D types alone', () => {
@@ -96,11 +93,11 @@ describe('IterateIK3D target-node rule', () => {
 
 [node name="MySkeletonModifier3D" type="SkeletonModifier3D" parent="Skeleton3D"]
 `;
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toEqual([]);
   });
 
   it('leaves the committed CCDIK3D fixture clean (no settings at all)', () => {
-    expect(warningsOf(linter.lint(readFixture('unit-ccdik-3d.tscn')))).toEqual([]);
+    expect(reportsOf(linter.lint(readFixture('unit-ccdik-3d.tscn')), RULE, 'warning')).toEqual([]);
   });
 });
 
@@ -110,7 +107,7 @@ describe('IterateIK3D index grammar', () => {
     // (iterate_ik_3d.cpp:37), and `to_int` skips a character it cannot use (ustring.cpp:2280-2293),
     // so `settings/x0/target_node` sets setting 0's target.
     const content = scene('CCDIK3D', 'setting_count = 1\nsettings/x0/target_node = NodePath("../../Target")\n');
-    expect(warningsOf(new Linter().lint(content))).toEqual([]);
+    expect(reportsOf(new Linter().lint(content), RULE, 'warning')).toEqual([]);
   });
 
   it('credits a target written with a tail, which _set ignores', () => {
@@ -120,6 +117,6 @@ describe('IterateIK3D index grammar', () => {
       'CCDIK3D',
       'setting_count = 1\nsettings/0/target_node/extra = NodePath("../../Target")\n'
     );
-    expect(warningsOf(new Linter().lint(content))).toEqual([]);
+    expect(reportsOf(new Linter().lint(content), RULE, 'warning')).toEqual([]);
   });
 });

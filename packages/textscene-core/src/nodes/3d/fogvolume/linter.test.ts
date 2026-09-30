@@ -39,9 +39,9 @@ describe('FogVolume size-ignored-for-World rule', () => {
   });
 
   it('never raises an ERROR for the combination — Godot accepts and stores both (severity contract)', () => {
-    expectNoErrors(scene(node('FogVolume', { shape: 4, size: 'Vector3(4, 3, 4)' }, { name: 'F' })), {
-      ruleName: 'fogvolume-size-ignored-for-world-shape',
-    });
+    // The whole scene, not the rule: the rule declares only an info arm, so
+    // "no error from it" could never fail.
+    expectNoErrors(scene(node('FogVolume', { shape: 4, size: 'Vector3(4, 3, 4)' }, { name: 'F' })));
   });
 
   it('stays silent when shape is World but size is not authored (edge case)', () => {

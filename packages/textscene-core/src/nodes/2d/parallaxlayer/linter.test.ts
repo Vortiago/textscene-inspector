@@ -4,14 +4,11 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';
+import { reportsOf } from '../../../linter/testing/tierLists';
 import './linterParser';
 import './linter';
 
 const RULE = 'parallaxlayer-outside-parallaxbackground';
-
-function warningsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.ruleName === RULE);
-}
 
 describe('ParallaxLayer parent rule', () => {
   let linter: Linter;
@@ -28,7 +25,7 @@ describe('ParallaxLayer parent rule', () => {
 [node name="Sky" type="ParallaxLayer" parent="."]
 motion_scale = Vector2(0.5, 1)
 `;
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toEqual([]);
   });
 
   it('warns for a layer under any other typed parent', () => {
@@ -38,7 +35,7 @@ motion_scale = Vector2(0.5, 1)
 
 [node name="Sky" type="ParallaxLayer" parent="."]
 `;
-    const warnings = warningsOf(linter.lint(content));
+    const warnings = reportsOf(linter.lint(content), RULE, 'warning');
     expect(warnings).toHaveLength(1);
     expect(warnings[0]!.severity).toBe('warning');
     expect(warnings[0]!.message).toContain('Node2D');
@@ -49,7 +46,7 @@ motion_scale = Vector2(0.5, 1)
 
 [node name="Sky" type="ParallaxLayer"]
 `;
-    const warnings = warningsOf(linter.lint(content));
+    const warnings = reportsOf(linter.lint(content), RULE, 'warning');
     expect(warnings).toHaveLength(1);
     expect(warnings[0]!.message).toContain('scene root');
   });
@@ -66,7 +63,7 @@ motion_scale = Vector2(0.5, 1)
 
 [node name="Extra" type="ParallaxLayer" parent="BG"]
 `;
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toEqual([]);
   });
 
   it('does not warn about nodes that are not ParallaxLayers', () => {
@@ -76,6 +73,6 @@ motion_scale = Vector2(0.5, 1)
 
 [node name="Sprite" type="Sprite2D" parent="."]
 `;
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toEqual([]);
   });
 });

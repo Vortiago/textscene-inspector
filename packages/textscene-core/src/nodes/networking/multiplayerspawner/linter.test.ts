@@ -8,10 +8,13 @@ import { describe, expect, it } from 'vitest';
 import { StrictTscnParser } from '../../../linter/StrictTscnParser';
 import { readFixture } from '../../../linter/testing/fixtureCheck';
 import { multiplayerSpawnerSpawnPathRule } from './linter';
+import { reportsOf } from '../../../linter/testing/tierLists';
 import './linterParser';
 
+const RULE = 'multiplayerspawner-spawn-path-dangling';
+
 /** Every diagnostic the rule reports for the MultiplayerSpawner in `content`. */
-function warningsFor(content: string) {
+function diagnosticsFor(content: string) {
   const { scene } = new StrictTscnParser().parse(content);
   if (!scene) throw new Error('fixture failed to parse');
   const node = scene.nodes[0]?.children.find((child) => child.type === 'MultiplayerSpawner');
@@ -33,19 +36,19 @@ ${body}
 
 describe('MultiplayerSpawner spawn_path rule', () => {
   it('stays silent when spawn_path is absent (default-omitted: default is empty)', () => {
-    expect(warningsFor(scene(''))).toEqual([]);
+    expect(reportsOf(diagnosticsFor(scene('')), RULE, 'warning')).toEqual([]);
   });
 
   it('stays silent on an explicit empty NodePath, same as the default', () => {
-    expect(warningsFor(scene('spawn_path = NodePath("")\n'))).toEqual([]);
+    expect(reportsOf(diagnosticsFor(scene('spawn_path = NodePath("")\n')), RULE, 'warning')).toEqual([]);
   });
 
   it('stays silent when spawn_path resolves to a real node', () => {
-    expect(warningsFor(scene('spawn_path = NodePath("SpawnRoot")\n'))).toEqual([]);
+    expect(reportsOf(diagnosticsFor(scene('spawn_path = NodePath("SpawnRoot")\n')), RULE, 'warning')).toEqual([]);
   });
 
   it('warns when spawn_path names no node in this file', () => {
-    const warnings = warningsFor(scene('spawn_path = NodePath("NoSuchNode")\n'));
+    const warnings = reportsOf(diagnosticsFor(scene('spawn_path = NodePath("NoSuchNode")\n')), RULE, 'warning');
     expect(warnings).toHaveLength(1);
     expect(warnings[0]?.severity).toBe('warning');
     expect(warnings[0]?.ruleName).toBe('multiplayerspawner-spawn-path-dangling');
@@ -56,7 +59,7 @@ describe('MultiplayerSpawner spawn_path rule', () => {
   // child named Elsewhere (node.cpp:1941). Root has only the Spawner, so
   // `has_node` is false (multiplayer_spawner.cpp:91) and Godot warns too.
   it('warns on a relative path whose next segment names no child', () => {
-    const warnings = warningsFor(scene('spawn_path = NodePath("../Elsewhere")\n'));
+    const warnings = reportsOf(diagnosticsFor(scene('spawn_path = NodePath("../Elsewhere")\n')), RULE, 'warning');
     expect(warnings).toHaveLength(1);
     expect(warnings[0]?.message).toContain('Elsewhere');
   });
@@ -75,12 +78,12 @@ spawn_path = NodePath("../Level/Spawns")
 
 [node name="Level" parent="." instance=ExtResource("1_level")]
 `;
-    expect(warningsFor(content)).toEqual([]);
+    expect(reportsOf(diagnosticsFor(content), RULE, 'warning')).toEqual([]);
   });
 
   it('leaves the committed fixture warning-free', () => {
     // expectFixtureClean runs validators only; rules never reach it. This is
     // the half of the fixture's "zero warnings" claim nothing else checks.
-    expect(warningsFor(readFixture('unit-multiplayer-spawner.tscn'))).toEqual([]);
+    expect(reportsOf(diagnosticsFor(readFixture('unit-multiplayer-spawner.tscn')), RULE, 'warning')).toEqual([]);
   });
 });

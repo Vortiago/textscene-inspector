@@ -6,25 +6,37 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../linter/types.js';
 import { ruleRegistry } from '../../linter/RuleRegistry.js';
+import { armEmits, reportArm, type RuleArms } from '../../linter/ruleArms.js';
 import { resourceRef } from '../../godot/index.js';
 import { findExtResource } from '../../resources/SubResourceResolver.js';
 
 const BINARY_RESOURCE_RE = /\.(scn|res)$/i;
+
+/** One arm, so a heading with no type reports `<unknown>` as every other diagnostic does. */
+const arms = {
+  binaryReference: {
+    severity: 'info',
+    ruleName: 'binary-resource-reference',
+    grounding: {
+      kind: 'no-engine-counterpart',
+      scope: 'previewer-limitation',
+      because: 'this previewer decodes only text .tscn/.tres, never a binary .scn/.res payload',
+    },
+  },
+} as const satisfies RuleArms<'binaryReference'>;
 
 function checkBinaryResourceReferences(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
   const flag = (property: string, path: string) => {
-    diagnostics.push({
-      severity: 'info',
-      message:
-        `'${property}' references a binary Godot resource (${path}) — ` +
-        `the previewer only loads text resources (.tscn/.tres), so this content shows as missing.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'binary-resource-reference',
-    });
+    reportArm(
+      diagnostics,
+      arms.binaryReference,
+      node,
+      `'${property}' references a binary Godot resource (${path}) — ` +
+        `the previewer only loads text resources (.tscn/.tres), so this content shows as missing.`
+    );
   };
 
   const pathForRef = (ref: string): string | null => {
@@ -52,17 +64,7 @@ const binaryResourceRule: LintRule = {
     name: 'binary-resource-reference',
     description: 'Flags references to binary Godot resources (.scn/.res) the previewer cannot load',
     category: 'validation',
-    emits: [
-      {
-        ruleName: 'binary-resource-reference',
-        severity: 'info',
-        grounding: {
-          kind: 'no-engine-counterpart',
-          scope: 'previewer-limitation',
-          because: 'this previewer decodes only text .tscn/.tres, never a binary .scn/.res payload',
-        },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkBinaryResourceReferences,
 };

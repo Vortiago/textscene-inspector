@@ -8,13 +8,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../../linter/Linter';
 import { readFixture } from '../../../../linter/testing/fixtureCheck';
+import { reportsOf } from '../../../../linter/testing/tierLists';
 import './linter';
 
 const RULE = 'skeletonmodifier3d-parent-not-skeleton3d';
-
-function warningsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.ruleName === RULE);
-}
 
 /** A bare node of `type`, parented as given (`'.'` = child of Root, omitted = root itself). */
 function scene(type: string, parent?: string): string {
@@ -61,7 +58,7 @@ describe('SkeletonModifier3D parent rule', () => {
 
   for (const type of REACHED_TYPES) {
     it(`warns when ${type}'s direct parent is not a Skeleton3D`, () => {
-      const warnings = warningsOf(linter.lint(scene(type, '.')));
+      const warnings = reportsOf(linter.lint(scene(type, '.')), RULE, 'warning');
       expect(warnings).toHaveLength(1);
       expect(warnings[0]!.severity).toBe('warning');
       expect(warnings[0]!.nodeType).toBe(type);
@@ -76,12 +73,12 @@ describe('SkeletonModifier3D parent rule', () => {
 
 [node name="My${type}" type="${type}" parent="Skeleton3D"]
 `;
-      expect(warningsOf(linter.lint(content))).toEqual([]);
+      expect(reportsOf(linter.lint(content), RULE, 'warning')).toEqual([]);
     });
   }
 
   it('warns at the scene root too — cast_to<Skeleton3D>(nullptr) is null, same as a wrong-typed parent', () => {
-    const warnings = warningsOf(linter.lint(scene('SkeletonModifier3D')));
+    const warnings = reportsOf(linter.lint(scene('SkeletonModifier3D')), RULE, 'warning');
     expect(warnings).toHaveLength(1);
   });
 
@@ -96,7 +93,7 @@ describe('SkeletonModifier3D parent rule', () => {
 
 [node name="MyAimModifier3D" type="AimModifier3D" parent="Skeleton3D/Group"]
 `;
-    expect(warningsOf(linter.lint(content))).toHaveLength(1);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toHaveLength(1);
   });
 
   it('stays quiet when the parent type is unknowable (instanced, untyped)', () => {
@@ -108,7 +105,7 @@ describe('SkeletonModifier3D parent rule', () => {
 
 [node name="MyLookAtModifier3D" type="LookAtModifier3D" parent="Instanced"]
 `;
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toEqual([]);
   });
 
   it('leaves an unrelated Node3D alone', () => {
@@ -118,14 +115,14 @@ describe('SkeletonModifier3D parent rule', () => {
 
 [node name="Plain" type="Node3D" parent="."]
 `;
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toEqual([]);
   });
 
   it('leaves the committed CCDIK3D fixture clean (already under Skeleton3D)', () => {
-    expect(warningsOf(linter.lint(readFixture('unit-ccdik-3d.tscn')))).toEqual([]);
+    expect(reportsOf(linter.lint(readFixture('unit-ccdik-3d.tscn')), RULE, 'warning')).toEqual([]);
   });
 
   it('leaves the committed retarget-modifier fixture clean (already under Skeleton3D)', () => {
-    expect(warningsOf(linter.lint(readFixture('unit-retarget-modifier-3d.tscn')))).toEqual([]);
+    expect(reportsOf(linter.lint(readFixture('unit-retarget-modifier-3d.tscn')), RULE, 'warning')).toEqual([]);
   });
 });

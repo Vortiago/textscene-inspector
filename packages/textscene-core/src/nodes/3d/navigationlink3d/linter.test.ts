@@ -6,6 +6,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';
 import { readFixture } from '../../../linter/testing/fixtureCheck';
+import { reportsOf } from '../../../linter/testing/tierLists';
 // Node's all-nodes rule and Node3D's type-family matcher both reach NavigationLink3D,
 // so the fixture's "no diagnostics" claim needs them loaded too.
 import '../../node/linter';
@@ -14,10 +15,6 @@ import './linterParser';
 import './linter';
 
 const RULE = 'navigationlink3d-start-position-equals-end-position';
-
-function warningsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.ruleName === RULE);
-}
 
 function scene(properties: string): string {
   return `[gd_scene format=3]
@@ -43,47 +40,51 @@ describe('NavigationLink3D position rule', () => {
 
   it('stays quiet when start and end are distinct points', () => {
     expect(
-      warningsOf(linter.lint(scene('start_position = Vector3(0, 0, 0)\nend_position = Vector3(2, 0, 0)\n')))
+      reportsOf(
+        linter.lint(scene('start_position = Vector3(0, 0, 0)\nend_position = Vector3(2, 0, 0)\n')),
+        RULE,
+        'warning'
+      )
     ).toEqual([]);
   });
 
   it('warns when start and end are the same point', () => {
-    const warnings = warningsOf(
+    const warnings = reportsOf(
       linter.lint(scene('start_position = Vector3(1, 2, 3)\nend_position = Vector3(1, 2, 3)\n'))
-    );
+    , RULE, 'warning');
     expect(warnings).toHaveLength(1);
     expect(warnings[0]!.severity).toBe('warning');
     expect(warnings[0]!.nodeName).toBe('Link');
   });
 
   it('warns on a bare node with neither position written: both resolve to the shared Vector3(0, 0, 0) default, and get_configuration_warnings() compares unconditionally', () => {
-    expect(warningsOf(linter.lint(scene('')))).toHaveLength(1);
+    expect(reportsOf(linter.lint(scene('')), RULE, 'warning')).toHaveLength(1);
   });
 
   it('warns when only end_position is written, leaving start_position at its zero default', () => {
-    expect(warningsOf(linter.lint(scene('end_position = Vector3(0, 0, 0)\n')))).toHaveLength(1);
+    expect(reportsOf(linter.lint(scene('end_position = Vector3(0, 0, 0)\n')), RULE, 'warning')).toHaveLength(1);
   });
 
   it('stays quiet when only end_position moves it off the shared default', () => {
-    expect(warningsOf(linter.lint(scene('end_position = Vector3(3, 0, 0)\n')))).toEqual([]);
+    expect(reportsOf(linter.lint(scene('end_position = Vector3(3, 0, 0)\n')), RULE, 'warning')).toEqual([]);
   });
 
   it('treats near-equal points within tolerance as equal, matching Math::is_equal_approx', () => {
     // CMP_EPSILON = 1e-5; a component difference of 1e-6 is well inside it.
     expect(
-      warningsOf(
+      reportsOf(
         linter.lint(
           scene('start_position = Vector3(1, 1, 1)\nend_position = Vector3(1.000001, 1, 1)\n')
         )
-      )
+      , RULE, 'warning')
     ).toHaveLength(1);
   });
 
   it('stays quiet on a component difference outside tolerance', () => {
     expect(
-      warningsOf(
+      reportsOf(
         linter.lint(scene('start_position = Vector3(1, 1, 1)\nend_position = Vector3(1.01, 1, 1)\n'))
-      )
+      , RULE, 'warning')
     ).toEqual([]);
   });
 
@@ -91,19 +92,31 @@ describe('NavigationLink3D position rule', () => {
     // Math::is_equal_approx checks `p_left == p_right` before the tolerance
     // math, so two infinities of the same sign compare equal.
     expect(
-      warningsOf(linter.lint(scene('start_position = Vector3(inf, 0, 0)\nend_position = Vector3(inf, 0, 0)\n')))
+      reportsOf(
+        linter.lint(scene('start_position = Vector3(inf, 0, 0)\nend_position = Vector3(inf, 0, 0)\n')),
+        RULE,
+        'warning'
+      )
     ).toHaveLength(1);
   });
 
   it('stays quiet on nan, which trips no comparison', () => {
     expect(
-      warningsOf(linter.lint(scene('start_position = Vector3(nan, 0, 0)\nend_position = Vector3(nan, 0, 0)\n')))
+      reportsOf(
+        linter.lint(scene('start_position = Vector3(nan, 0, 0)\nend_position = Vector3(nan, 0, 0)\n')),
+        RULE,
+        'warning'
+      )
     ).toEqual([]);
   });
 
   it('ignores an unreadable value rather than guessing at it', () => {
     expect(
-      warningsOf(linter.lint(scene('start_position = "not-a-vector"\nend_position = Vector3(0, 0, 0)\n')))
+      reportsOf(
+        linter.lint(scene('start_position = "not-a-vector"\nend_position = Vector3(0, 0, 0)\n')),
+        RULE,
+        'warning'
+      )
     ).toEqual([]);
   });
 });
