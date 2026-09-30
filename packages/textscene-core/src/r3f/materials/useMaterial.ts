@@ -15,12 +15,24 @@ import type { MaterialResource, MaterialSource } from './materialSource';
 
 const NO_FILE: { filePath: string; subResourceId?: string } = { filePath: '' };
 
-/**
- * The material `source` names, or null for Godot's default surface: no source, a file
- * still loading or missing, or a type this previewer does not build. A ShaderMaterial
- * is declined with a warning (ADR-0041).
- */
-export function useMaterial(source: MaterialSource | undefined): MaterialResource | null {
+/** What a material source loads to. */
+export type LoadedMaterial =
+  /** A StandardMaterial3D to draw. */
+  | { status: 'ready'; material: MaterialResource }
+  /** A material type this previewer does not build: Godot's default 3D surface (ADR-0041). */
+  | { status: 'declined'; type: string }
+  /** No source, a file still loading or missing: nothing replaces what the surface had. */
+  | { status: 'absent' };
+
+const ABSENT: LoadedMaterial = { status: 'absent' };
+
+/** The material to draw, or null for Godot's default surface. */
+export function readyMaterial(loaded: LoadedMaterial): MaterialResource | null {
+  return loaded.status === 'ready' ? loaded.material : null;
+}
+
+/** What `source` loads to. A ShaderMaterial is declined with a warning (ADR-0041). */
+export function useMaterial(source: MaterialSource | undefined): LoadedMaterial {
   const { filePath, subResourceId } =
     source?.kind === 'file' ? parseSubResourcePath(source.path) : NO_FILE;
   // Called with '' for an inline source, to keep the hook count stable.
@@ -32,24 +44,29 @@ export function useMaterial(source: MaterialSource | undefined): MaterialResourc
   const inlineResource = inline?.resource;
   const inlineInternal = inline?.internalResources;
   const inlineExternal = inline?.externalResources;
-  const loaded = useMemo((): MaterialResource | null => {
+  const loaded = useMemo((): LoadedMaterial => {
     if (inlineResource && inlineInternal && inlineExternal) {
-      return { resource: inlineResource, internalResources: inlineInternal, externalResources: inlineExternal };
+      return ready({ resource: inlineResource, internalResources: inlineInternal, externalResources: inlineExternal });
     }
-    if (!filePath || !file) return null;
+    if (!filePath || !file) return ABSENT;
     const resource = materialBody(file, filePath, subResourceId);
-    if (!resource) return null;
-    return { resource, internalResources: file.subResources, externalResources: file.extResources };
+    if (!resource) return ABSENT;
+    return ready({ resource, internalResources: file.subResources, externalResources: file.extResources });
   }, [inlineResource, inlineInternal, inlineExternal, file, filePath, subResourceId]);
 
-  const type = loaded?.resource.type;
   useEffect(() => {
-    if (type === 'ShaderMaterial') {
+    if (loaded.status === 'declined' && loaded.type === 'ShaderMaterial') {
       warn("[material] ShaderMaterial is not compiled — rendering Godot's default 3D surface.");
     }
-  }, [loaded, type]);
+  }, [loaded]);
 
-  return type === 'StandardMaterial3D' ? loaded : null;
+  return loaded;
+}
+
+/** Ready for a StandardMaterial3D, declined for any other type. */
+function ready(material: MaterialResource): LoadedMaterial {
+  const { type } = material.resource;
+  return type === 'StandardMaterial3D' ? { status: 'ready', material } : { status: 'declined', type };
 }
 
 /** The `[resource]` body, or the named `[sub_resource]`, of a parsed `.tres`. */

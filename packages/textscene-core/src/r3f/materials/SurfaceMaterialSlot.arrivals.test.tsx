@@ -1,7 +1,7 @@
 /**
  * One material, three arrivals: written in the scene, a whole `.tres`, and a
  * `[sub_resource]` inside one. The slot draws each the same way, resolves each texture in
- * the material's own file, and uploads each map in bands.
+ * the material's own file, and uploads each map in bands into the program it linked first.
  */
 import { act } from 'react';
 import { describe, expect, it } from 'vitest';
@@ -14,6 +14,7 @@ import { createFakeResourceLoader } from '../../resources/testing/createFakeReso
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { fakeTiledUploads } from '../tiledUpload/fakeTiledUploads.testkit';
 import type { MaterialSource } from './materialSource';
+import { pendingMapStandIn } from './pendingMapStandIn';
 import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
 
 const TRES_PATH = 'res://painted.tres';
@@ -110,11 +111,20 @@ describe('<SurfaceMaterialSlot> across arrivals', () => {
 
   it.each(Object.entries(ARRIVALS))('uploads the %s material\'s map in bands before drawing it', async (_name, source) => {
     const { material, uploads } = await renderSlot(source);
-    expect(material().map).toBeNull();
+    expect(material().map).toBe(pendingMapStandIn('albedo_texture'));
     expect(uploads).toHaveLength(1);
 
     await finishUploads(uploads);
+    expect(material().map).not.toBe(pendingMapStandIn('albedo_texture'));
     expect(material().map).toBeInstanceOf(THREE.Texture);
+  });
+
+  it.each(Object.entries(ARRIVALS))('keeps the %s material, and so its program, when the map lands', async (_name, source) => {
+    const { material, uploads } = await renderSlot(source);
+    const linked = material();
+
+    await finishUploads(uploads);
+    expect(material()).toBe(linked);
   });
 
   it('resolves a .tres material\'s map in the .tres, not in the scene with the same id', async () => {

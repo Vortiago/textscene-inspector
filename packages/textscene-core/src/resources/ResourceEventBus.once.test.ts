@@ -36,11 +36,11 @@ describe('ResourceEventBus.once (live promise bridge)', () => {
   });
 
   it('rejects with a synthesized default error when failed fires without an error payload', async () => {
-    const promise = bus.once<string>('material', 'loaded', 'mat1');
+    const promise = bus.once<string>('arraymesh', 'loaded', 'mat1');
 
-    bus.emit('material', 'failed', 'mat1');
+    bus.emit('arraymesh', 'failed', 'mat1');
 
-    await expect(promise).rejects.toThrow('Resource material:mat1 failed to load');
+    await expect(promise).rejects.toThrow('Resource arraymesh:mat1 failed to load');
   });
 
   it('waiting specifically for the failed event resolves (does not reject) with the error payload', async () => {

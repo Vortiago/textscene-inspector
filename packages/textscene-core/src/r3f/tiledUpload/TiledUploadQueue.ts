@@ -8,16 +8,16 @@
 
 import * as THREE from 'three';
 import { GpuResidency, residencyKey } from './gpuResidency';
+import { UNPACED, type UploadPacer } from './gpuPacer';
 
-/** The part of `THREE.WebGLRenderer` the queue uses, so a test can stand in for one. */
+/** What the queue asks of the GPU, so a test can stand in for it (`webglUploadRenderer.ts`). */
 export interface UploadRenderer {
+  /** three's own init, which allocates the texture's storage. */
   initTexture(texture: THREE.Texture): void;
-  copyTextureToTexture(
-    source: THREE.Texture,
-    destination: THREE.Texture,
-    sourceRegion: THREE.Box2,
-    destinationPosition: THREE.Vector2
-  ): void;
+  /** Writes rows `[fromRow, toRow)` of `texture`'s own bytes into its storage. */
+  writeRows(texture: THREE.Texture, fromRow: number, toRow: number): void;
+  /** Builds the mip chain from the filled base level. */
+  generateMipmaps(texture: THREE.Texture): void;
 }
 
 /** A consumer's place in the queue. A texture whose upload was cancelled must not be drawn. */
@@ -33,7 +33,8 @@ export interface TiledUpload {
  */
 const BAND_BYTES = 2 * 1024 * 1024;
 
-const RGBA_BYTES = 4;
+/** The only layout the queue tiles: 8-bit RGBA, as every procedural build writes. */
+export const RGBA_BYTES = 4;
 
 /** Rows per band for a texture `width` pixels wide, at least one. */
 export function bandRows(width: number): number {
@@ -47,13 +48,13 @@ interface Waiter {
 }
 
 interface QueuedUpload {
+  /** The texture whose storage the rows fill. */
   texture: THREE.Texture;
-  /** A texture over the same pixels that three never uploads, so each copy reads the CPU bytes. */
-  source: THREE.DataTexture;
-  /** three's cache key for `texture`, taken before the mipmap flag is cleared for the bands. */
+  /** three's cache key for `texture`, so a matching clone joins this upload. */
   key: string;
+  width: number;
+  height: number;
   nextRow: number;
-  wantsMipmaps: boolean;
   /** Every consumer of this GPU texture: the one that started it, and matching clones that joined. */
   waiters: Waiter[];
 }
@@ -65,13 +66,15 @@ export class TiledUploadQueue {
 
   constructor(
     private readonly renderer: UploadRenderer,
-    private readonly now: () => number = () => performance.now()
+    private readonly now: () => number = () => performance.now(),
+    private readonly pacer: UploadPacer = UNPACED
   ) {}
 
   /** Whether three's own whole upload would carry more than one band. */
   needsTiling(texture: THREE.Texture): boolean {
     const image = texture.image as { data?: unknown; width?: number; height?: number } | null;
-    if (!image || !ArrayBuffer.isView(image.data)) return false;
+    if (!image || !(image.data instanceof Uint8Array)) return false;
+    if (texture.format !== THREE.RGBAFormat || texture.type !== THREE.UnsignedByteType) return false;
     const { width = 0, height = 0 } = image;
     return height > bandRows(width);
   }
@@ -89,34 +92,19 @@ export class TiledUploadQueue {
       return { done: Promise.resolve(true), cancel: () => {} };
     }
     const key = residencyKey(texture);
-    // By identity too: the texture an upload fills has its mipmap flag cleared, so its key no longer matches.
     const inFlight = this.queue.find(
-      (entry) => entry.texture === texture || (entry.texture.source === texture.source && entry.key === key)
+      (entry) => entry.texture.source === texture.source && entry.key === key
     );
     return this.join(inFlight ?? this.start(texture, key), texture);
   }
 
   /** Allocates `texture` empty now, and queues its rows. */
   private start(texture: THREE.Texture, key: string): QueuedUpload {
-    const { data, width, height } = texture.image as { data: Uint8Array; width: number; height: number };
-    const entry: QueuedUpload = {
-      source: new THREE.DataTexture(data, width, height, texture.format as THREE.PixelFormat, texture.type),
-      key,
-      nextRow: 0,
-      waiters: [],
-      ...this.allocate(texture),
-    };
+    const { width, height } = texture.image as { width: number; height: number };
+    this.initWithoutData(texture);
+    const entry: QueuedUpload = { texture, key, width, height, nextRow: 0, waiters: [] };
     this.queue.push(entry);
     return entry;
-  }
-
-  /** Allocates `texture`'s storage empty, or binds the storage its pair already has, for the rows to fill. */
-  private allocate(texture: THREE.Texture): Pick<QueuedUpload, 'texture' | 'wantsMipmaps'> {
-    this.initWithoutData(texture);
-    const wantsMipmaps = texture.generateMipmaps;
-    // three generates mipmaps after every copy, so they wait for the last band.
-    texture.generateMipmaps = false;
-    return { texture, wantsMipmaps };
   }
 
   /**
@@ -144,31 +132,35 @@ export class TiledUploadQueue {
     return { done, cancel: () => this.leave(entry, waiter) };
   }
 
-  /** Copies bands until `budgetMs` is spent, and always at least one. */
-  tick(budgetMs: number): void {
-    if (this.queue.length === 0) return;
+  /**
+   * Copies bands until `budgetMs` is spent or the pacer's allowance is used, and at
+   * least one when the pacer allows any. Returns how many it copied.
+   */
+  tick(budgetMs: number): number {
+    if (this.queue.length === 0) return 0;
+    const allowance = this.pacer.allowance();
     const startedAt = this.now();
-    do {
+    let copied = 0;
+    while (copied < allowance) {
       const entry = this.queue[0];
-      if (!entry) return;
+      if (!entry) break;
       this.copyBand(entry);
-    } while (this.now() - startedAt < budgetMs);
+      copied++;
+      if (this.now() - startedAt >= budgetMs) break;
+    }
+    if (copied > 0) this.pacer.markIssued(copied);
+    return copied;
   }
 
   private copyBand(entry: QueuedUpload): void {
-    const { width, height } = entry.source.image;
+    const { width, height, texture } = entry;
     const fromRow = entry.nextRow;
     const toRow = Math.min(height, fromRow + bandRows(width));
-    const isLast = toRow === height;
-    if (isLast) entry.texture.generateMipmaps = entry.wantsMipmaps;
-    this.renderer.copyTextureToTexture(
-      entry.source,
-      entry.texture,
-      new THREE.Box2(new THREE.Vector2(0, fromRow), new THREE.Vector2(width, toRow)),
-      new THREE.Vector2(0, fromRow)
-    );
+    this.renderer.writeRows(texture, fromRow, toRow);
     entry.nextRow = toRow;
-    if (isLast) this.complete(entry);
+    if (toRow < height) return;
+    if (texture.generateMipmaps) this.renderer.generateMipmaps(texture);
+    this.complete(entry);
   }
 
   private complete(entry: QueuedUpload): void {
@@ -188,7 +180,6 @@ export class TiledUploadQueue {
     waiter.finish(false);
     // The rows go on while a remaining consumer draws the texture they fill.
     if (entry.waiters.some(({ texture }) => texture === entry.texture)) return;
-    entry.texture.generateMipmaps = entry.wantsMipmaps;
     const [next] = entry.waiters;
     if (!next) {
       this.queue.splice(this.queue.indexOf(entry), 1);
@@ -196,6 +187,7 @@ export class TiledUploadQueue {
     }
     // A remaining texture has the same cache key, so its init binds the storage already
     // filled before the leaving texture's dispose can free it, and the rows carry on.
-    Object.assign(entry, this.allocate(next.texture));
+    this.initWithoutData(next.texture);
+    entry.texture = next.texture;
   }
 }

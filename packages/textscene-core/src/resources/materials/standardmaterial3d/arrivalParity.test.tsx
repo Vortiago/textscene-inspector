@@ -1,8 +1,8 @@
 /**
- * Acceptance: one material text, three arrival paths, one material state. The paths are
- * a scene `[sub_resource]` through `<StandardMaterialSlot>`, a standalone `.tres` through
- * `build.ts`, and a mesh `.tres`'s `[sub_resource]` by Sub-resource path. A bag guard covers
- * every derived prop, and a mounted snapshot per adapter covers R3F's commit.
+ * Acceptance: one material text, three arrivals, one material state. The arrivals are a scene
+ * `[sub_resource]`, a standalone `.tres`, and a mesh `.tres`'s `[sub_resource]` by Sub-resource
+ * path, each through `<SurfaceMaterialSlot>`. A bag guard covers every derived prop for both
+ * adapters, the JSX slot and `materialFromBag`, and a mounted snapshot covers R3F's commit.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -13,18 +13,25 @@ import {
   StandardMaterialSlot,
   type StandardMaterialSlotProps,
 } from '../../../r3f/materials/StandardMaterialSlot';
+import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
+import type { MaterialSource } from '../../../r3f/materials/materialSource';
+import { parseTresFile } from '../../../parser/parsedResource';
+import { ResourceLoaderProvider } from '../../ResourceLoaderContext';
+import { createFakeResourceLoader } from '../../testing/createFakeResourceLoader';
 import { resolveExtResourcePath } from '../../SubResourceResolver';
 import type { TscnExternalResource } from '../../../parser/types';
-import { buildStandardMaterial } from './build';
+import { materialFromBag } from './build';
+import { buildMaterial } from './buildMaterial.testkit';
 import { standardMaterialBag, type StandardMaterialClass } from './materialBag';
 import { bindSlotTexture, materialTextureState } from './textureBinding';
-import { createMaterialFromContent } from './loadMaterial';
 import { parseStandardMaterial3DScalars } from './scalars';
 import { TEXTURE_SLOTS, type ResolvedTextureSlots, type TextureSlot } from './types';
 
 interface ParityCase {
   name: string;
   properties: Record<string, string>;
+  /** The material's type, StandardMaterial3D unless said otherwise. */
+  resourceType?: string;
   /** `[ext_resource]` headers the property text references. */
   extResources?: TscnExternalResource[];
 }
@@ -313,7 +320,41 @@ function textureFor(path: string): THREE.Texture {
   }
   return texture;
 }
-const loadTexture = async (path: string): Promise<THREE.Texture | null> => textureFor(path);
+const STANDALONE_PATH = 'res://materials/standalone.tres';
+const MESH_PATH = 'res://meshes/carrier.tres';
+
+type Arrival = 'inline' | '.tres' | '.tres::sub';
+
+/**
+ * The material through `<SurfaceMaterialSlot>` from one arrival. The loader serves each
+ * `.tres` and the one shared texture per path, as the real caches do.
+ */
+async function renderArrival(testCase: ParityCase, arrival: Arrival): Promise<THREE.Material> {
+  const fake = createFakeResourceLoader();
+  for (const ext of testCase.extResources ?? []) fake.textures.seed(ext.path, textureFor(ext.path));
+  fake.resources.seed(STANDALONE_PATH, parseTresFile(standaloneTres(testCase)));
+  fake.resources.seed(MESH_PATH, parseTresFile(meshTresCarryingIt(testCase)));
+  const sources: Record<Arrival, MaterialSource> = {
+    inline: {
+      kind: 'inline',
+      material: {
+        resource: { id: 'Mat_inline', type: testCase.resourceType ?? 'StandardMaterial3D', data: testCase.properties },
+        internalResources: [],
+        externalResources: testCase.extResources ?? [],
+      },
+    },
+    '.tres': { kind: 'file', path: STANDALONE_PATH },
+    '.tres::sub': { kind: 'file', path: `${MESH_PATH}::Mat_surface` },
+  };
+  const renderer = await ReactThreeTestRenderer.create(
+    <ResourceLoaderProvider loader={fake.loader}>
+      <mesh>
+        <SurfaceMaterialSlot source={sources[arrival]} />
+      </mesh>
+    </ResourceLoaderProvider>
+  );
+  return (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material;
+}
 
 function propertyLines(properties: Record<string, string>): string[] {
   return Object.entries(properties).map(([key, value]) => `${key} = ${value}`);
@@ -328,7 +369,7 @@ function extResourceLines(extResources: TscnExternalResource[]): string[] {
 /** The material as its own `.tres` file. */
 function standaloneTres(testCase: ParityCase): string {
   return [
-    '[gd_resource type="StandardMaterial3D" format=3]',
+    `[gd_resource type="${testCase.resourceType ?? 'StandardMaterial3D'}" format=3]`,
     '',
     ...extResourceLines(testCase.extResources ?? []),
     '',
@@ -345,7 +386,7 @@ function meshTresCarryingIt(testCase: ParityCase): string {
     '',
     ...extResourceLines(testCase.extResources ?? []),
     '',
-    '[sub_resource type="StandardMaterial3D" id="Mat_surface"]',
+    `[sub_resource type="${testCase.resourceType ?? 'StandardMaterial3D'}" id="Mat_surface"]`,
     ...propertyLines(testCase.properties),
     '',
     '[resource]',
@@ -371,6 +412,19 @@ function inlineTextures(testCase: ParityCase): ResolvedTextureSlots {
     resolved[slot] = bindSlotTexture(textureFor(path), slot, state);
   }
   return resolved;
+}
+
+/** The loader's shared textures per slot, unbound, as the imperative adapter receives them. */
+function rawTextures(testCase: ParityCase): ResolvedTextureSlots {
+  const scalars = parseStandardMaterial3DScalars(testCase.properties);
+  const raw: ResolvedTextureSlots = {};
+  for (const slot of TEXTURE_SLOTS) {
+    const reference = scalars.textureSlots[slot];
+    if (reference === undefined) continue;
+    const path = resolveExtResourcePath(reference, testCase.extResources ?? []);
+    if (path !== null) raw[slot] = textureFor(path);
+  }
+  return raw;
 }
 
 interface MaterialSnapshot {
@@ -550,26 +604,14 @@ describe('StandardMaterial3D arrival parity', () => {
         expect(parseStandardMaterial3DScalars(fromFile.properties)).toEqual(inline);
       });
 
-      it('builds the same material state from a standalone .tres as from inline text', async () => {
-        const inline = buildStandardMaterial(
-          parseStandardMaterial3DScalars(testCase.properties),
-          inlineTextures(testCase)
-        );
-        const fromTres = await createMaterialFromContent(standaloneTres(testCase), loadTexture);
-        expect(snapshot(fromTres)).toEqual(snapshot(inline));
+      it('draws the same material state from a standalone .tres as from the scene', async () => {
+        const inline = await renderArrival(testCase, 'inline');
+        expect(snapshot(await renderArrival(testCase, '.tres'))).toEqual(snapshot(inline));
       });
 
-      it('builds the same material state from a [sub_resource] of another .tres', async () => {
-        const inline = buildStandardMaterial(
-          parseStandardMaterial3DScalars(testCase.properties),
-          inlineTextures(testCase)
-        );
-        const fromSub = await createMaterialFromContent(
-          meshTresCarryingIt(testCase),
-          loadTexture,
-          'Mat_surface'
-        );
-        expect(snapshot(fromSub)).toEqual(snapshot(inline));
+      it('draws the same material state from a [sub_resource] of another .tres', async () => {
+        const inline = await renderArrival(testCase, 'inline');
+        expect(snapshot(await renderArrival(testCase, '.tres::sub'))).toEqual(snapshot(inline));
       });
 
     });
@@ -595,7 +637,7 @@ describe('StandardMaterial3D arrival parity', () => {
         const textures = inlineTextures(testCase);
         const scalars = parseStandardMaterial3DScalars(testCase.properties);
         const bag = standardMaterialBag(scalars, textures);
-        const material = buildStandardMaterial(scalars, textures);
+        const material = materialFromBag(bag);
         expect(material.type).toBe(TYPE_FOR[bag.materialClass]);
         const held = material as unknown as Record<string, unknown>;
         const applied: Record<string, unknown> = {};
@@ -622,11 +664,13 @@ describe('StandardMaterial3D arrival parity', () => {
     // A bag guard is blind to what R3F's commit does to a texture after the bag: the
     // sRGB it reasserts on colour-map props, and the sampler state a clone carries.
     it('the reactive adapter lands on the state the imperative one builds', async () => {
-      const fromTres = await createMaterialFromContent(
-        standaloneTres(EVERY_SLOT_TRANSFORMED),
-        loadTexture
+      const imperative = materialFromBag(
+        standardMaterialBag(
+          parseStandardMaterial3DScalars(EVERY_SLOT_TRANSFORMED.properties),
+          inlineTextures(EVERY_SLOT_TRANSFORMED)
+        )
       );
-      expect(snapshot(await renderThroughSlot(EVERY_SLOT_TRANSFORMED))).toEqual(snapshot(fromTres));
+      expect(snapshot(await renderThroughSlot(EVERY_SLOT_TRANSFORMED))).toEqual(snapshot(imperative));
     });
 
     it('passes an anisotropy flowmap through to the physical material', async () => {
@@ -667,18 +711,20 @@ describe('StandardMaterial3D arrival parity', () => {
       return out;
     }
 
-    it('through the imperative adapter, from a standalone .tres', async () => {
-      const material = await createMaterialFromContent(standaloneTres(EVERY_SLOT), loadTexture);
+    it('through the imperative adapter', () => {
+      const material = buildMaterial(
+        parseStandardMaterial3DScalars(EVERY_SLOT.properties),
+        rawTextures(EVERY_SLOT)
+      );
       expect(colorSpaces(material)).toEqual(EXPECTED);
     });
 
-    it('through the imperative adapter, from a [sub_resource] of another .tres', async () => {
-      const material = await createMaterialFromContent(
-        meshTresCarryingIt(EVERY_SLOT),
-        loadTexture,
-        'Mat_surface'
-      );
-      expect(colorSpaces(material)).toEqual(EXPECTED);
+    it('through the slot, from a standalone .tres', async () => {
+      expect(colorSpaces(await renderArrival(EVERY_SLOT, '.tres'))).toEqual(EXPECTED);
+    });
+
+    it('through the slot, from a [sub_resource] of another .tres', async () => {
+      expect(colorSpaces(await renderArrival(EVERY_SLOT, '.tres::sub'))).toEqual(EXPECTED);
     });
 
     it('through the reactive JSX slot', async () => {
@@ -698,7 +744,8 @@ describe('StandardMaterial3D arrival parity', () => {
     it('leaves the loader’s shared cache entries on their own tag', async () => {
       // Every retag is on a clone: one path's roughness binding must not turn
       // another consumer's albedo into raw bytes.
-      await createMaterialFromContent(standaloneTres(EVERY_SLOT), loadTexture);
+      buildMaterial(parseStandardMaterial3DScalars(EVERY_SLOT.properties), rawTextures(EVERY_SLOT));
+      await renderArrival(EVERY_SLOT, '.tres');
       await renderThroughSlot(EVERY_SLOT);
       for (const path of [ALBEDO, NORMAL, EMISSION]) {
         expect(textureFor(path).colorSpace).toBe(THREE.SRGBColorSpace);
@@ -716,8 +763,8 @@ describe('StandardMaterial3D arrival parity', () => {
         exercised.add(slot);
       }
     }
-    // `anisotropy_flowmap` is the exception: the `.tres` path cannot repack it, so the
-    // reactive adapter's pass-through is asserted on its own.
+    // `anisotropy_flowmap` is the exception: its repack reads the pixels, so its
+    // pass-through is asserted on its own.
     expect([...TEXTURE_SLOTS].filter((slot) => !exercised.has(slot))).toEqual([
       'anisotropy_flowmap',
     ]);
@@ -741,28 +788,24 @@ describe('uncompiled ShaderMaterial arrival parity', () => {
     };
   }
 
+  const SHADER: ParityCase = { name: 'ShaderMaterial', resourceType: 'ShaderMaterial', properties: {} };
+
   it('the .tres arrival lands on the surface the scene arrival renders', async () => {
-    const fromTres = await createMaterialFromContent(
-      '[gd_resource type="ShaderMaterial" format=3]\n\n[resource]\n'
-    );
-    // The scene arrival: `resolveMaterialSource` declines the sub-resource, so
-    // the slot mounts with no scalars: the derivation's "no material" input.
-    const fromScene = buildStandardMaterial(null);
-    expect(surfaceOf(fromTres)).toEqual(surfaceOf(fromScene));
+    const fromTres = await renderArrival(SHADER, '.tres');
+    expect(surfaceOf(fromTres)).toEqual(surfaceOf(await renderArrival(SHADER, 'inline')));
+    expect(surfaceOf(await renderArrival(SHADER, '.tres::sub'))).toEqual(surfaceOf(fromTres));
   });
 
   it('that surface is Godot’s default 3D shader, not a default StandardMaterial3D', async () => {
     // A default-constructed StandardMaterial3D is white and fully rough, a different
     // surface that would look like a material that rendered.
-    const shader = surfaceOf(await createMaterialFromContent(
-      '[gd_resource type="ShaderMaterial" format=3]\n\n[resource]\n'
-    ));
+    const shader = surfaceOf(await renderArrival(SHADER, '.tres'));
     expect(shader.albedoLinear.r).toBeCloseTo(0.6, 5);
     expect(shader.roughness).toBeCloseTo(0.8, 5);
     expect(shader.metalness).toBeCloseTo(0.2, 5);
 
     const defaultConstructed = surfaceOf(
-      buildStandardMaterial(parseStandardMaterial3DScalars({}))
+      buildMaterial(parseStandardMaterial3DScalars({}))
     );
     expect(defaultConstructed.albedoLinear.r).not.toBeCloseTo(0.6, 2);
   });
@@ -773,7 +816,7 @@ describe('uncompiled ShaderMaterial arrival parity', () => {
     );
     const mounted = renderer.scene.findAllByType('MeshStandardMaterial')[0];
     expect(mounted).toBeDefined();
-    const built = surfaceOf(buildStandardMaterial(null));
+    const built = surfaceOf(buildMaterial(null));
     expect((mounted!.props as { roughness: number }).roughness).toBeCloseTo(built.roughness, 5);
     expect((mounted!.props as { metalness: number }).metalness).toBeCloseTo(built.metalness, 5);
   });

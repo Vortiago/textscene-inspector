@@ -121,7 +121,7 @@ describe('useProceduralTexture', () => {
       const { result, unmount } = renderHook(() =>
         useProceduralTexture(ref, resources)
       );
-      expect(result.current, `ref: ${ref}`).toEqual({ texture: null, claimed: false });
+      expect(result.current, `ref: ${ref}`).toEqual({ texture: null, claimed: false, building: false });
       unmount();
     }
 
@@ -271,7 +271,8 @@ describe('useProceduralTextures with a NoiseTexture2D', () => {
     const { runner } = fakeJobRunner();
     const { result } = renderSlots(runner, noiseScene(1));
 
-    expect(result.current[0]).toEqual({ texture: null, claimed: true });
+    expect(result.current[0]).toEqual({ texture: null, claimed: true, building: true });
+    expect(result.current[1]).toMatchObject({ claimed: true, building: false });
     expect(result.current[1]?.texture).toBeInstanceOf(THREE.Texture);
   });
 
@@ -334,7 +335,7 @@ describe('useProceduralTextures with a NoiseTexture2D', () => {
 
     rerender({ scene: noiseScene(2) });
     await flush();
-    expect(result.current[0]).toEqual({ texture: before, claimed: true });
+    expect(result.current[0]).toEqual({ texture: before, claimed: true, building: true });
 
     runs[1]?.complete();
     await flush();
@@ -352,7 +353,7 @@ describe('useProceduralTextures with a NoiseTexture2D', () => {
     const built = result.current[0]?.texture;
 
     rerender({ scene: noiseScene(1) });
-    expect(result.current[0]).toEqual({ texture: built, claimed: true });
+    expect(result.current[0]).toEqual({ texture: built, claimed: true, building: false });
     expect(runs).toHaveLength(1);
   });
 
@@ -400,7 +401,7 @@ describe('useProceduralTextures with a NoiseTexture2D', () => {
     runs[0]?.reject(new RangeError('Array buffer allocation failed'));
     await flush();
 
-    expect(result.current[0]).toEqual({ texture: null, claimed: true });
+    expect(result.current[0]).toEqual({ texture: null, claimed: true, building: false });
     expect(runs).toHaveLength(1);
     warn.mockRestore();
   });

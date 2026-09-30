@@ -1,7 +1,7 @@
 /**
  * A StandardMaterial3D slot that names an inline procedural texture: a gradient
- * binds at once, a noise texture binds when its build lands and keeps its old map
- * through an edit. Neither asks the file pipeline for anything.
+ * binds at once, a noise texture binds a stand-in until its build lands and keeps its
+ * old map through an edit. Neither asks the file pipeline for anything.
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import type { ReactNode } from 'react';
@@ -14,6 +14,7 @@ import { createFakeResourceLoader } from '../../resources/testing/createFakeReso
 import { abortProceduralBuilds } from '../../resources/textures/proceduralBuilds';
 import { clearProceduralTextureCache } from '../../resources/textures/proceduralTextureCache';
 import { fakeJobRunner } from '../../workers/fakeJobRunner.testkit';
+import { pendingMapStandIn } from './pendingMapStandIn';
 import { useMaterialTextures } from './SurfaceMaterialSlot';
 import { fakeTiledUploads } from '../tiledUpload/fakeTiledUploads.testkit';
 
@@ -78,11 +79,11 @@ afterEach(() => {
 });
 
 describe('useMaterialTextures with procedural slots', () => {
-  it('binds a gradient at once and leaves a building noise slot empty', () => {
+  it('binds a gradient at once and a stand-in in a building noise slot', () => {
     const { result, requested } = renderMaterial();
 
     expect(result.current.maps.emissiveMap).toBeDefined();
-    expect(result.current.maps.albedoMap).toBeUndefined();
+    expect(result.current.maps.albedoMap).toBe(pendingMapStandIn('albedo_texture'));
     expect(result.current.firstMissingPath).toBeNull();
     expect(requested).toEqual([]);
   });
@@ -117,7 +118,7 @@ describe('useMaterialTextures with procedural slots', () => {
     await flush();
     runs[0]?.complete();
     await flush();
-    expect(result.current.maps.albedoMap).toBeUndefined();
+    expect(result.current.maps.albedoMap).toBe(pendingMapStandIn('albedo_texture'));
     expect(uploads.length).toBeGreaterThan(0);
     await act(async () => {
       uploads.forEach((upload) => upload.finish(true));
@@ -137,5 +138,14 @@ describe('useMaterialTextures with procedural slots', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
     expect(result.current.maps.albedoMap).not.toBe(before);
+  });
+
+  it('leaves the slot empty once a build cannot be allocated', async () => {
+    const { result, runs } = renderMaterial();
+    await flush();
+    runs[0]?.reject(new RangeError('Array buffer allocation failed'));
+    await flush();
+
+    expect(result.current.maps.albedoMap).toBeUndefined();
   });
 });

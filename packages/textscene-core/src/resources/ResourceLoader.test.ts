@@ -125,42 +125,36 @@ describe('ResourceLoader (loader-level gaps)', () => {
       // Bytes belong to a file, so a **Sub-resource path** names its owning file.
       // Routing the address would miss the metadata, fan out to the wrong processors,
       // and skip the file-level clear that announces `invalidated` to its addresses.
-      const matSpy = vi.spyOn(loader.materials, 'request');
       const resSpy = vi.spyOn(loader.resources, 'request');
       const fileCacheSpy = vi.spyOn(fileEventBus, 'clearCache');
 
       loader.provideFile('res://meshes/wheel.tres::StandardMaterial3D_x');
 
       expect(fileCacheSpy).toHaveBeenCalledWith('res://meshes/wheel.tres');
-      expect(matSpy).toHaveBeenCalledWith('res://meshes/wheel.tres');
       expect(resSpy).toHaveBeenCalledWith('res://meshes/wheel.tres');
     });
 
-    it('fans out to texture + material processors when the path has no registered metadata', () => {
+    it('re-requests through the texture processor when the path has no registered metadata', () => {
       const texSpy = vi.spyOn(loader.textures, 'request');
-      const matSpy = vi.spyOn(loader.materials, 'request');
       const sceneSpy = vi.spyOn(loader.scenes, 'request');
       const glbSpy = vi.spyOn(loader.glbMeshes, 'request');
 
       loader.provideFile('res://mystery.png');
 
       expect(texSpy).toHaveBeenCalledWith('res://mystery.png');
-      expect(matSpy).toHaveBeenCalledWith('res://mystery.png');
       expect(sceneSpy).not.toHaveBeenCalled();
       expect(glbSpy).not.toHaveBeenCalled();
     });
 
-    it('fans an unregistered .tres out to all three .tres processors (material + generic resource + font)', () => {
+    it('fans an unregistered .tres out to every .tres processor (generic resource + font)', () => {
       // A raw `res://…tres` reference, such as an undeclared tile_set path, must reach
       // every .tres-capable processor, or a late upload of the wrong kind never resolves.
-      const matSpy = vi.spyOn(loader.materials, 'request');
       const resSpy = vi.spyOn(loader.resources, 'request');
       const fontSpy = vi.spyOn(loader.fonts, 'request');
       const texSpy = vi.spyOn(loader.textures, 'request');
 
       loader.provideFile('res://tileset/tiles.tres');
 
-      expect(matSpy).toHaveBeenCalledWith('res://tileset/tiles.tres');
       expect(resSpy).toHaveBeenCalledWith('res://tileset/tiles.tres');
       expect(fontSpy).toHaveBeenCalledWith('res://tileset/tiles.tres');
       expect(texSpy).not.toHaveBeenCalled();
@@ -246,10 +240,23 @@ describe('ResourceLoader (loader-level gaps)', () => {
       const onResourceNeeded = vi.fn();
       loader.setOnResourceNeeded(onResourceNeeded);
 
-      loader.eventBus.emit('material', 'failed', matMeta.path);
+      loader.eventBus.emit('resource', 'failed', matMeta.path);
 
       expect(onResourceNeeded).toHaveBeenCalledWith(
         expect.objectContaining({ error: 'Unknown error' })
+      );
+    });
+
+    it('names a failed material .tres by its slice\'s label, though it fails on the resource bus', () => {
+      const matMeta: ExtResource = { id: '7_mat', path: 'res://materials/y.tres', type: 'StandardMaterial3D' };
+      loader.register(matMeta);
+      const onResourceNeeded = vi.fn();
+      loader.setOnResourceNeeded(onResourceNeeded);
+
+      loader.eventBus.emit('resource', 'failed', matMeta.path, new Error('gone'));
+
+      expect(onResourceNeeded).toHaveBeenCalledWith(
+        expect.objectContaining({ referencedBy: 'Node using material 7_mat' })
       );
     });
 

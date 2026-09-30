@@ -12,6 +12,7 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { findMesh } from '../testing/reactThreeTestInstance';
+import { pendingMapStandIn } from '../../../r3f/materials/pendingMapStandIn';
 import type {
   TscnExternalResource,
   TscnInternalResource,
@@ -307,9 +308,9 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
       </ResourceLoaderProvider>
     );
 
-    // First render: useResource still pending; material has no map.
+    // First render: useResource still pending, so the slot holds the stand-in.
     const matBefore = findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
-    expect(matBefore.map).toBeNull();
+    expect(matBefore.map).toBe(pendingMapStandIn('albedo_texture'));
 
     // The file pipeline emits `loaded` once createTextureFromBuffer has decoded the file.
     const tex = makeTexture();
@@ -318,6 +319,6 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
     });
 
     const matAfter = findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
-    expect(matAfter.map).toBeInstanceOf(THREE.Texture);
+    expect(matAfter.map?.source).toBe(tex.source);
   });
 });

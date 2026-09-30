@@ -34,7 +34,7 @@ import { warn } from '../../../logger';
 import { decodeSceneArrayMesh } from '../../../resources/meshes/arraymesh/decode';
 import { buildArrayMeshGeometry } from '../../../resources/meshes/arraymesh/build';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
-import { useMaterial } from '../../../r3f/materials/useMaterial';
+import { readyMaterial, useMaterial } from '../../../r3f/materials/useMaterial';
 import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
 import {
   SurfaceMaterialSlot,
@@ -93,7 +93,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   );
   // Surface 0's material, whichever file it lives in: this component resolves its scalars
   // and textures itself, for the placeholder, billboard and shadow decisions below.
-  const primaryMaterial = useMaterial(primarySource);
+  const primaryMaterial = readyMaterial(useMaterial(primarySource));
 
   // The same two overrides for an ArrayMesh. Its surfaces are draw groups indexed by the
   // mesh's own surface numbering, so they cannot use the per-slot collapse above, but

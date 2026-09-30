@@ -998,6 +998,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Noisetexture2d 4096 Tres",
+    "file": "unit-noisetexture2d-4096-tres.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Noisetexture2d Normal",
     "file": "unit-noisetexture2d-normal.tscn",
     "category": "Other"

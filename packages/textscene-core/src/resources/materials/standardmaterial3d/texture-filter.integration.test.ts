@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { buildStandardMaterial } from './build';
+import { buildMaterial } from './buildMaterial.testkit';
 import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextureSlots } from './types';
 import { GODOT_ANISOTROPY_MAX } from '../../textures/godotTextureFilter';
@@ -16,7 +16,7 @@ function build(
   properties: Record<string, string>,
   textures: ResolvedTextureSlots
 ): THREE.MeshStandardMaterial {
-  return buildStandardMaterial(
+  return buildMaterial(
     parseStandardMaterial3DScalars(properties),
     textures
   ) as THREE.MeshStandardMaterial;

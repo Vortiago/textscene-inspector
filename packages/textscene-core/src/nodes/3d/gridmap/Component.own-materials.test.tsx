@@ -14,6 +14,7 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { act } from 'react';
 import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../index';
 import { fakeTiledUploads } from '../../../r3f/tiledUpload/fakeTiledUploads.testkit';
+import { pendingMapStandIn } from '../../../r3f/materials/pendingMapStandIn';
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
 
 const LIBRARY_PATH = 'res://stage/tiles.tres';
@@ -161,7 +162,7 @@ describe('<GridMap> tile material textures', () => {
       return tile?.material as THREE.MeshStandardMaterial | undefined;
     };
 
-    expect(tileMaterial()?.map).toBeNull();
+    expect(tileMaterial()?.map).toBe(pendingMapStandIn('albedo_texture'));
     expect(uploads.pending).toHaveLength(1);
 
     await act(async () => {
@@ -169,5 +170,6 @@ describe('<GridMap> tile material textures', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
     expect(tileMaterial()?.map).toBeInstanceOf(THREE.Texture);
+    expect(tileMaterial()?.map).not.toBe(pendingMapStandIn('albedo_texture'));
   });
 });

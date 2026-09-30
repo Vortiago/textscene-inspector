@@ -2,17 +2,17 @@
  * UV transforms over a SHARED texture, through the imperative material path.
  *
  * Several materials legitimately sample one image with different `uv1_scale`:
- * `buildStandardMaterial` must clone per material so their repeats cannot
+ * `buildMaterial` must clone per material so their repeats cannot
  * clobber each other, and must never write to the loader's cached source.
  */
 
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { buildStandardMaterial } from './build';
+import { buildMaterial } from './buildMaterial.testkit';
 import { parseStandardMaterial3DScalars } from './scalars';
 
 function withScale(scale: number, texture: THREE.Texture): THREE.MeshStandardMaterial {
-  return buildStandardMaterial(
+  return buildMaterial(
     parseStandardMaterial3DScalars({ uv1_scale: `Vector3(${scale}, ${scale}, 1)` }),
     { albedo_texture: texture }
   ) as THREE.MeshStandardMaterial;

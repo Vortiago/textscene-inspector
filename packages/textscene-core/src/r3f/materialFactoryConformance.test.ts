@@ -240,10 +240,8 @@ export function meshArgumentMounts(source: string): MeshArgumentMount[] {
 const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/r3f/environment/GodotToneMapEffect.ts':
     'swaps the screen quad between the three pass materials, each built with its shaders fixed at construction, so only uniforms ever move',
-  'packages/textscene-core/src/r3f/internal/glb-scene-root/GlbSurfaceMaterialOverride.tsx':
-    'the `.tres` arrival for a mesh inside a GLB: the resource pipeline hands over a material constructed complete, a re-resolve replaces the whole object, and unmount puts the loader’s own material back',
   'packages/textscene-core/src/resources/formats/glb/glbProcessing.ts':
-    'the GLB slot writer: `cloneWithMaterials` gives each clone its own copy of the loader’s materials, and `forEachSurfaceMaterial` is the setter the import sidecar’s external materials are baked into the template through — neither is React state, both are rebuilt whole on re-parse, so there is no mount to key',
+    'the GLB slot writer: `cloneWithMaterials` gives each clone its own copy of the loader’s materials, and `forEachSurfaceMaterial` hands a material override the setter for each surface of a loaded GLB, which is not React state, so there is no mount to key',
 };
 
 /**
@@ -525,7 +523,7 @@ describe('Material factory conformance', () => {
     // A regex or reader that stopped matching would read as "no offenders".
     expect(TAGS.flatMap(({ tags }) => tags).length).toBeGreaterThanOrEqual(30);
     expect(CONSTRUCTOR_SITES.flatMap(({ lines }) => lines).length).toBeGreaterThanOrEqual(10);
-    expect(ASSIGNMENT_SITES.flatMap(({ lines }) => lines).length).toBeGreaterThanOrEqual(5);
+    expect(ASSIGNMENT_SITES.flatMap(({ lines }) => lines).length).toBeGreaterThanOrEqual(4);
     expect(HOST_TAG_COUNT).toBeGreaterThanOrEqual(350);
     // Only a plain Mesh has a site in the tree. The unit cases above hold up the
     // other classes in the arity table.

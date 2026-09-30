@@ -1,11 +1,11 @@
 /**
- * `buildStandardMaterial`, the imperative adapter's contract. Inputs are raw Godot
+ * `buildMaterial`, the imperative adapter's contract. Inputs are raw Godot
  * property strings, so decode and build run together, as in the resource pipeline.
  */
 
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { buildStandardMaterial } from './build';
+import { buildMaterial } from './buildMaterial.testkit';
 import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextureSlots } from './types';
 
@@ -13,7 +13,7 @@ function build(
   properties: Record<string, string>,
   textures?: ResolvedTextureSlots
 ): THREE.MeshStandardMaterial {
-  return buildStandardMaterial(
+  return buildMaterial(
     parseStandardMaterial3DScalars(properties),
     textures
   ) as THREE.MeshStandardMaterial;
@@ -41,7 +41,7 @@ function expectBoundRaw(map: THREE.Texture | null | undefined, from: THREE.Textu
   expect(map!.colorSpace).toBe(THREE.NoColorSpace);
 }
 
-describe('buildStandardMaterial — scalar base', () => {
+describe('the imperative adapter — scalar base', () => {
   it('creates a MeshStandardMaterial', () => {
     expect(build({ albedo_color: 'Color(1, 0, 0, 1)' })).toBeInstanceOf(THREE.MeshStandardMaterial);
   });
@@ -170,7 +170,7 @@ describe('buildStandardMaterial — scalar base', () => {
   });
 });
 
-describe('buildStandardMaterial — alpha pass and depth state', () => {
+describe('the imperative adapter — alpha pass and depth state', () => {
   it('carries a blend-mode-only alpha pass onto the material', () => {
     // `blend_mode_uses_blend_alpha`: an additive material renders in Godot's
     // alpha pass with no `transparency` authored, and under the default
@@ -184,7 +184,7 @@ describe('buildStandardMaterial — alpha pass and depth state', () => {
   it('keeps a refractive surface opaque and depth-writing', () => {
     // Godot's refraction branch forces `ALPHA = 1.0` and `DEPTH_DRAW_ALWAYS`, so
     // the authored albedo alpha does not fade it.
-    const material = buildStandardMaterial(
+    const material = buildMaterial(
       parseStandardMaterial3DScalars({
         transparency: '1',
         albedo_color: 'Color(0.42, 0.51, 0.62, 0.627451)',
@@ -210,7 +210,7 @@ describe('buildStandardMaterial — alpha pass and depth state', () => {
   });
 });
 
-describe('buildStandardMaterial — cull_mode', () => {
+describe('the imperative adapter — cull_mode', () => {
   it('maps Godot CULL_BACK (default) to FrontSide', () => {
     expect(build({}).side).toBe(THREE.FrontSide);
     expect(build({ cull_mode: '0' }).side).toBe(THREE.FrontSide);
@@ -222,22 +222,22 @@ describe('buildStandardMaterial — cull_mode', () => {
   });
 });
 
-describe('buildStandardMaterial — shading_mode', () => {
+describe('the imperative adapter — shading_mode', () => {
   it('renders shading_mode 0 (UNSHADED) as a MeshBasicMaterial', () => {
-    const material = buildStandardMaterial(parseStandardMaterial3DScalars({ shading_mode: '0' }));
+    const material = buildMaterial(parseStandardMaterial3DScalars({ shading_mode: '0' }));
     expect(material).toBeInstanceOf(THREE.MeshBasicMaterial);
   });
 
   it('keeps the albedo map on the unshaded material', () => {
     const texture = loadedTexture();
-    const material = buildStandardMaterial(parseStandardMaterial3DScalars({ shading_mode: '0' }), {
+    const material = buildMaterial(parseStandardMaterial3DScalars({ shading_mode: '0' }), {
       albedo_texture: texture,
     }) as THREE.MeshBasicMaterial;
     expect(material.map).toBe(texture);
   });
 
   it('drops emission on the unshaded material (Godot never reads it there)', () => {
-    const material = buildStandardMaterial(
+    const material = buildMaterial(
       parseStandardMaterial3DScalars({
         shading_mode: '0',
         emission_enabled: 'true',
@@ -248,9 +248,9 @@ describe('buildStandardMaterial — shading_mode', () => {
   });
 });
 
-describe('buildStandardMaterial — physical-only features', () => {
+describe('the imperative adapter — physical-only features', () => {
   it('upgrades to MeshPhysicalMaterial for clearcoat', () => {
-    const material = buildStandardMaterial(
+    const material = buildMaterial(
       parseStandardMaterial3DScalars({ clearcoat_enabled: 'true' })
     ) as THREE.MeshPhysicalMaterial;
     expect(material).toBeInstanceOf(THREE.MeshPhysicalMaterial);
@@ -259,7 +259,7 @@ describe('buildStandardMaterial — physical-only features', () => {
   });
 
   it('maps rim to sheen and rim_tint to a sheen colour', () => {
-    const material = buildStandardMaterial(
+    const material = buildMaterial(
       parseStandardMaterial3DScalars({
         rim_enabled: 'true',
         rim: '0.5',
@@ -274,7 +274,7 @@ describe('buildStandardMaterial — physical-only features', () => {
   });
 
   it('maps refraction to transmission + thickness', () => {
-    const material = buildStandardMaterial(
+    const material = buildMaterial(
       parseStandardMaterial3DScalars({ refraction_enabled: 'true', refraction_scale: '0.2' })
     ) as THREE.MeshPhysicalMaterial;
     expect(material.transmission).toBe(1);
@@ -282,7 +282,7 @@ describe('buildStandardMaterial — physical-only features', () => {
   });
 
   it('maps a negative anisotropy to full strength turned 90°', () => {
-    const material = buildStandardMaterial(
+    const material = buildMaterial(
       parseStandardMaterial3DScalars({ anisotropy_enabled: 'true', anisotropy: '-0.75' })
     ) as THREE.MeshPhysicalMaterial;
     expect(material.anisotropy).toBeCloseTo(0.75, 5);
@@ -291,14 +291,14 @@ describe('buildStandardMaterial — physical-only features', () => {
 
   it('stays a MeshStandardMaterial when every physical flag is off', () => {
     expect(
-      buildStandardMaterial(
+      buildMaterial(
         parseStandardMaterial3DScalars({ clearcoat: '1', rim: '1', anisotropy: '1' })
       )
     ).toBeInstanceOf(THREE.MeshStandardMaterial);
   });
 });
 
-describe('buildStandardMaterial — blend modes', () => {
+describe('the imperative adapter — blend modes', () => {
   it('leaves the default MIX on NormalBlending', () => {
     expect(build({}).blending).toBe(THREE.NormalBlending);
   });
@@ -338,7 +338,7 @@ describe('buildStandardMaterial — blend modes', () => {
   });
 });
 
-describe('buildStandardMaterial — texture slots', () => {
+describe('the imperative adapter — texture slots', () => {
   it('applies the albedo map', () => {
     const texture = loadedTexture();
     expect(build({}, { albedo_texture: texture }).map).toBe(texture);
@@ -362,7 +362,7 @@ describe('buildStandardMaterial — texture slots', () => {
     expect(scalars.textureSlots).toEqual({});
     expectBoundRaw(
       (
-        buildStandardMaterial(scalars, {
+        buildMaterial(scalars, {
           normal_texture: texture,
         }) as THREE.MeshStandardMaterial
       ).normalMap,
@@ -438,7 +438,7 @@ describe('buildStandardMaterial — texture slots', () => {
     // `anisotropyMap`, on MeshPhysicalMaterial alone. The loader declines to fetch one,
     // but a caller holding a repacked flowmap gets it applied like every other slot.
     const texture = loadedTexture();
-    const material = buildStandardMaterial(
+    const material = buildMaterial(
       parseStandardMaterial3DScalars({ anisotropy_enabled: 'true', anisotropy: '0.6' }),
       { anisotropy_flowmap: texture }
     ) as THREE.MeshPhysicalMaterial;
@@ -446,7 +446,7 @@ describe('buildStandardMaterial — texture slots', () => {
   });
 });
 
-describe('buildStandardMaterial — UV transform (uv1_scale / uv1_offset)', () => {
+describe('the imperative adapter — UV transform (uv1_scale / uv1_offset)', () => {
   it('maps uv1_scale straight onto a cloned texture’s repeat', () => {
     const texture = loadedTexture();
     const material = build({ uv1_scale: 'Vector3(0.5, 0.5, 0.5)' }, { albedo_texture: texture });
@@ -585,7 +585,7 @@ describe('buildStandardMaterial — UV transform (uv1_scale / uv1_offset)', () =
   });
 });
 
-describe('buildStandardMaterial — vertex colours', () => {
+describe('the imperative adapter — vertex colours', () => {
   /** three declares the slot on ShaderMaterial only, so its type is not on the base. */
   function colorDefault(material: THREE.Material): number[] | undefined {
     return (material as { defaultAttributeValues?: Record<string, number[]> })

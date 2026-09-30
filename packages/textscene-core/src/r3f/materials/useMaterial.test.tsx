@@ -12,7 +12,7 @@ import type { TscnExternalResource, TscnInternalResource } from '../../parser/ty
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import type { MaterialSource } from './materialSource';
-import { useMaterial } from './useMaterial';
+import { readyMaterial, useMaterial } from './useMaterial';
 
 const TRES_PATH = 'res://materials/paint.tres';
 
@@ -60,7 +60,10 @@ describe('useMaterial', () => {
     const source = inline('Mat_body');
     const { result } = renderMaterial(source);
 
-    expect(result.current).toEqual(source.kind === 'inline' ? source.material : null);
+    expect(result.current).toEqual({
+      status: 'ready',
+      material: source.kind === 'inline' ? source.material : null,
+    });
   });
 
   it('keeps one material across renders that rebuild an equal source', () => {
@@ -73,19 +76,21 @@ describe('useMaterial', () => {
     rerender();
 
     expect(result.current).toBe(first);
+    expect(first.status).toBe('ready');
   });
 
   it('reads a whole .tres as its [resource] body and the file\'s own tables', () => {
     const { result, fake } = renderMaterial({ kind: 'file', path: TRES_PATH }, { [TRES_PATH]: PAINT_TRES });
     const parsed = fake.resources.getCached(TRES_PATH)!;
+    const loaded = readyMaterial(result.current);
 
-    expect(result.current?.resource).toEqual({
+    expect(loaded?.resource).toEqual({
       id: TRES_PATH,
       type: 'StandardMaterial3D',
       data: { albedo_color: 'Color(1, 0, 0, 1)', albedo_texture: 'ExtResource("1_grain")' },
     });
-    expect(result.current?.internalResources).toBe(parsed.subResources);
-    expect(result.current?.externalResources).toBe(parsed.extResources);
+    expect(loaded?.internalResources).toBe(parsed.subResources);
+    expect(loaded?.externalResources).toBe(parsed.extResources);
   });
 
   it('reads a sub-resource address as that [sub_resource], with its file\'s tables', () => {
@@ -95,29 +100,36 @@ describe('useMaterial', () => {
     );
     const parsed = fake.resources.getCached(TRES_PATH)!;
 
-    expect(result.current?.resource).toBe(parsed.subResources[0]);
-    expect(result.current?.internalResources).toBe(parsed.subResources);
+    expect(readyMaterial(result.current)?.resource).toBe(parsed.subResources[0]);
+    expect(readyMaterial(result.current)?.internalResources).toBe(parsed.subResources);
   });
 
-  it('answers null while the file loads, then the material', () => {
+  it('answers absent while the file loads, then the material', () => {
     const { result, fake } = renderMaterial({ kind: 'file', path: TRES_PATH });
-    expect(result.current).toBeNull();
+    expect(result.current).toEqual({ status: 'absent' });
 
     act(() => fake.resources._resolve(TRES_PATH, parseTresFile(PAINT_TRES)));
-    expect(result.current?.resource.type).toBe('StandardMaterial3D');
+    expect(readyMaterial(result.current)?.resource.type).toBe('StandardMaterial3D');
   });
 
-  it('answers null, the default surface, for a sub-resource the file does not declare', () => {
+  it('answers absent for a file that fails to load, so nothing replaces what the surface had', () => {
+    const { result, fake } = renderMaterial({ kind: 'file', path: TRES_PATH });
+    act(() => fake.resources._fail(TRES_PATH, 'not found'));
+
+    expect(result.current).toEqual({ status: 'absent' });
+  });
+
+  it('answers absent for a sub-resource the file does not declare', () => {
     const { result } = renderMaterial({ kind: 'file', path: `${TRES_PATH}::Missing` }, { [TRES_PATH]: PAINT_TRES });
 
-    expect(result.current).toBeNull();
+    expect(result.current).toEqual({ status: 'absent' });
   });
 
-  it('answers null for a material type it does not build, from either arrival', () => {
+  it('declines a material type it does not build: Godot\'s default surface', () => {
     const orm = PAINT_TRES.replace('type="StandardMaterial3D" load_steps', 'type="ORMMaterial3D" load_steps');
     const { result } = renderMaterial({ kind: 'file', path: TRES_PATH }, { [TRES_PATH]: orm });
 
-    expect(result.current).toBeNull();
+    expect(result.current).toEqual({ status: 'declined', type: 'ORMMaterial3D' });
   });
 
   it('declines a ShaderMaterial with one warning, from either arrival', () => {
@@ -126,15 +138,15 @@ describe('useMaterial', () => {
     const shaderTres = PAINT_TRES.replace('type="StandardMaterial3D" load_steps', 'type="ShaderMaterial" load_steps');
     const fromFile = renderMaterial({ kind: 'file', path: TRES_PATH }, { [TRES_PATH]: shaderTres });
 
-    expect(fromScene.result.current).toBeNull();
-    expect(fromFile.result.current).toBeNull();
+    expect(fromScene.result.current).toEqual({ status: 'declined', type: 'ShaderMaterial' });
+    expect(fromFile.result.current).toEqual({ status: 'declined', type: 'ShaderMaterial' });
     expect(warn).toHaveBeenCalledTimes(2);
     expect(warn.mock.calls.every(([message]) => String(message).includes('ShaderMaterial'))).toBe(true);
   });
 
-  it('answers null for no source at all', () => {
+  it('answers absent for no source at all', () => {
     const { result } = renderMaterial(undefined);
 
-    expect(result.current).toBeNull();
+    expect(result.current).toEqual({ status: 'absent' });
   });
 });

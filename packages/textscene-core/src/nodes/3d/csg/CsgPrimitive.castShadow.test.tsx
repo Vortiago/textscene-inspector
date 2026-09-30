@@ -22,6 +22,7 @@ import type { CSGBox3DProperties } from './csgbox3d/types';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { parseTresFile } from '../../../parser/parsedResource';
 
 /** three's shadow pass: the side, then the per-object hook (`WebGLShadowMap.js:477,535,549`). */
 function depthSideAfterPass(mesh: THREE.Mesh): THREE.Side {
@@ -168,15 +169,17 @@ describe('CSG cast_shadow', () => {
     );
     const renderer = await ReactThreeTestRenderer.create(tree);
 
-    const arrived = new THREE.MeshStandardMaterial({ color: 0xff0000 });
     await ReactThreeTestRenderer.act(async () => {
-      fake.materials.seed('res://paint.tres', arrived);
+      fake.resources._resolve(
+        'res://paint.tres',
+        parseTresFile('[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\nalbedo_color = Color(1, 0, 0, 1)\n')
+      );
       await renderer.update(tree);
     });
 
     const mesh = findMesh(renderer.scene) as unknown as THREE.Mesh;
     const material = (Array.isArray(mesh.material) ? mesh.material[0]! : mesh.material)!;
-    expect(material).not.toBe(arrived);
+    expect((material as THREE.MeshStandardMaterial).color?.getHex()).not.toBe(0xff0000);
     expect(material.colorWrite).toBe(false);
   });
 });

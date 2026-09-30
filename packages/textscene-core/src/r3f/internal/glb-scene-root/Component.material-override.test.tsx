@@ -14,6 +14,7 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { GLB_SCENE_ROOT_TYPE } from './Component';
 import { initGlbModules } from '../../../resources/processing/glbProcessing';
+import { tagImportMaterial } from '../../../resources/formats/glb/glbProcessing';
 
 import '../../nodes/index';
 
@@ -26,13 +27,13 @@ const TRES_PATH = 'res://assets/road.tres';
 /** The glTF's own material: what survives when an override is dropped. */
 const GLTF_COLOR = 0x123456;
 
-function makeFakeGlb(): THREE.Object3D {
+/** `importPath` tags the road's material as the GLB processor does for an import sidecar remap. */
+function makeFakeGlb(importPath?: string): THREE.Object3D {
   const root = new THREE.Group();
   root.name = 'Scene';
-  const mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1, 1),
-    new THREE.MeshStandardMaterial({ color: GLTF_COLOR })
-  );
+  const material = new THREE.MeshStandardMaterial({ color: GLTF_COLOR });
+  if (importPath) tagImportMaterial(material, importPath);
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), material);
   mesh.name = 'road';
   root.add(mesh);
   return root;
@@ -53,13 +54,13 @@ function makeSynthesisedGlbScene(): TscnScene {
   };
 }
 
-/** The instancing node, with one override child carrying only a material. */
-function makeTownNode(materialRef: string): TscnNode {
+/** The instancing node, with one override child carrying only a material, or none without a ref. */
+function makeTownNode(materialRef: string | undefined): TscnNode {
   return {
     name: 'town',
     type: 'Node3D',
     instance: 'ExtResource("glb_1")',
-    children: [
+    children: materialRef === undefined ? [] : [
       {
         name: 'road',
         type: 'Node',
@@ -73,7 +74,7 @@ function makeTownNode(materialRef: string): TscnNode {
   };
 }
 
-async function render(loader: ResourceLoader, materialRef: string) {
+async function render(loader: ResourceLoader, materialRef: string | undefined) {
   return ReactThreeTestRenderer.create(
     <SceneStack
       loader={loader}
@@ -104,12 +105,14 @@ function roadMaterial(
   return (mesh!.instance as THREE.Mesh).material as THREE.MeshStandardMaterial;
 }
 
-function seeded() {
+function seeded(importPath?: string) {
   const fake = createFakeResourceLoader();
   fake.scenes.seed(GLB_PATH, makeSynthesisedGlbScene());
-  fake.glbMeshes.seed(GLB_PATH, makeFakeGlb());
+  fake.glbMeshes.seed(GLB_PATH, makeFakeGlb(importPath));
   return fake;
 }
+
+const RED_TRES = '[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\nalbedo_color = Color(1, 0, 0, 1)\n';
 
 describe('GLBSceneRoot — surface_material_override on a GLB-internal mesh', () => {
   it('applies a material that arrived as an ExtResource .tres', async () => {
@@ -138,8 +141,42 @@ describe('GLBSceneRoot — surface_material_override on a GLB-internal mesh', ()
     expect(material.roughness).toBeCloseTo(0.25, 5);
   });
 
+  it('keeps the glTF material while a .tres override still loads', async () => {
+    const renderer = await render(seeded().loader, 'ExtResource("tres_1")');
+    expect(roadMaterial(renderer).color.getHex()).toBe(GLTF_COLOR);
+  });
+
   it('leaves the glTF material alone when the reference names nothing', async () => {
     const renderer = await render(seeded().loader, 'SubResource("Mat_absent")');
     expect(roadMaterial(renderer).color.getHex()).toBe(GLTF_COLOR);
+  });
+});
+
+/**
+ * An import sidecar's material remap: the processor tags the surface with its `.tres`, and the
+ * scene root draws that material through the one material path.
+ */
+describe('GLBSceneRoot — import sidecar material remap', () => {
+  it('draws the .tres the sidecar remaps a surface to', async () => {
+    const fake = seeded(TRES_PATH);
+    fake.resources.seed(TRES_PATH, parseTresFile(RED_TRES));
+
+    const renderer = await render(fake.loader, undefined);
+    expect(roadMaterial(renderer).color.getHex()).toBe(0xff0000);
+  });
+
+  it('keeps the glTF material while the remapped .tres still loads', async () => {
+    const renderer = await render(seeded(TRES_PATH).loader, undefined);
+    expect(roadMaterial(renderer).color.getHex()).toBe(GLTF_COLOR);
+  });
+
+  it('lets a surface_material_override win over the sidecar remap', async () => {
+    const fake = seeded(TRES_PATH);
+    fake.resources.seed(TRES_PATH, parseTresFile(RED_TRES));
+
+    const renderer = await render(fake.loader, 'SubResource("Mat_road")');
+    const linear = roadMaterial(renderer).color.getRGB({ r: 0, g: 0, b: 0 } as THREE.Color, THREE.LinearSRGBColorSpace);
+    expect(linear.g).toBeCloseTo(1, 5);
+    expect(linear.r).toBeCloseTo(0, 5);
   });
 });
