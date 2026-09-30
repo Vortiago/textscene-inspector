@@ -8,7 +8,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { AnimationMixer, LoopOnce, LoopPingPong, LoopRepeat, Object3D, type AnimationClip } from 'three';
 import * as logger from '../../../logger';
 import { bindClip } from '../../../r3f/animation/trackTargets';
-import { resolveRelativePath } from '../../../utils/nodePath';
+import { resolveRelativePath } from '../../../godot/nodePath';
 import { buildClip, loopSettingsFor } from './clipBuilder';
 import { resolveAnimations, type GodotAnimation, type GodotTrack } from './animationResolver';
 import type { TscnInternalResource } from '../../../parser/types';

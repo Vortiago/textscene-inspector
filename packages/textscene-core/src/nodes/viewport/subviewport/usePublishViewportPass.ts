@@ -40,9 +40,7 @@ export function usePublishViewportPass({
     () => ({ texture, size: { x: width, y: height } }),
     [texture, width, height]
   );
-  // Through the shared publisher, which also registers the `%UniqueName`
-  // spelling a `viewport_path` may name this viewport by (node.cpp:1930-1938).
-  usePublishViewportTexture(node, path, entry);
+  usePublishViewportTexture(path, entry);
 
   const dependsOn = useMemo(() => collectNestedViewportPaths(node, path), [node, path]);
   useEffect(

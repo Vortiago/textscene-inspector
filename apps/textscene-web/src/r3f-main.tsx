@@ -3,7 +3,7 @@
  * `<ResourceLoaderProvider>`, so node components load resources with `useResource()`.
  * The shell's `<MissingResourcesPanel>` takes one upload per missing path.
  */
-import { useCallback, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useCallback, useMemo, useRef, useState, type ChangeEvent, type CSSProperties } from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import {
@@ -201,7 +201,7 @@ export function R3FApp() {
     <ResourceLoaderProvider loader={loader}>
       <div
         data-testid="app-root"
-        style={{ width: '100vw', height: '100vh', display: 'flex', position: 'relative' }}
+        className={styles.appRoot}
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -219,7 +219,7 @@ export function R3FApp() {
             <div
               data-testid="source-pane"
               className={styles.sourcePane}
-              style={{ width: sourcePane.width, minWidth: 0 }}
+              style={{ '--source-pane-width': `${sourcePane.width}px` } as CSSProperties}
             >
               <div className={styles.sourcePaneHeader}>
                 <span className={styles.sourcePaneTitle}>Source</span>
@@ -324,9 +324,6 @@ export function R3FApp() {
 
 export function mountR3F(container: HTMLElement): void {
   container.innerHTML = '';
-  container.style.display = 'block';
-  container.style.width = '100vw';
-  container.style.height = '100vh';
 
   const root = createRoot(container);
   root.render(<R3FApp />);

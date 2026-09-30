@@ -7,8 +7,16 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import { extractMediaBlock, stripMediaBlocks } from '../../testing/cssSource';
 import { ViewportControlsHelp } from './ViewportControlsHelp';
 import { controlsFor } from './bindings';
+
+const CSS = readFileSync(path.join(import.meta.dirname, 'ViewportControlsHelp.module.css'), 'utf8');
+
+/** The first rule whose selector is `selector`, braces included, or '' when there is none. */
+function rule(selector: string): string {
+  return new RegExp(`\\${selector}\\s*\\{[^}]*\\}`).exec(CSS)?.[0] ?? '';
+}
 
 function open(mode: '2D' | '3D' = '3D') {
   const utils = render(<ViewportControlsHelp mode={mode} />);
@@ -116,25 +124,30 @@ describe('<ViewportControlsHelp>', () => {
   it('lets viewport drags through everywhere except the pill and the panel', () => {
     // The root is a full-width box over a draggable canvas, so it takes
     // `pointer-events: none` and only the two interactive children take `auto`.
-    const css = readFileSync(
-      path.join(import.meta.dirname, 'ViewportControlsHelp.module.css'),
-      'utf8'
-    );
-    const block = (selector: string) =>
-      new RegExp(`\\${selector}\\s*\\{[^}]*\\}`).exec(css)?.[0] ?? '';
-    expect(block('.root')).toContain('pointer-events: none');
-    expect(block('.hint')).toContain('pointer-events: auto');
-    expect(block('.panel')).toContain('pointer-events: auto');
+    expect(rule('.root')).toContain('pointer-events: none');
+    expect(rule('.hint')).toContain('pointer-events: auto');
+    expect(rule('.panel')).toContain('pointer-events: auto');
+  });
+
+  it('carries the touch summary beside the pointer one, for the stylesheet to choose', () => {
+    render(<ViewportControlsHelp mode="3D" />);
+    const hint = screen.getByTestId('viewport-controls-hint');
+    expect(hint.textContent).toContain(controlsFor('3D').touchSummary);
+    expect(stripMediaBlocks(CSS)).toMatch(/\.touchSummary\s*\{[^}]*display:\s*none/);
+    const coarse = extractMediaBlock(CSS, '(pointer: coarse)');
+    expect(coarse).toMatch(/\.pointerSummary\s*\{[^}]*display:\s*none/);
+    expect(coarse).toMatch(/\.touchSummary\s*\{[^}]*display:\s*inline/);
+  });
+
+  it('bounds the pill to the viewport, so a narrow one ellipsises the summary', () => {
+    expect(rule('.hint')).toMatch(/max-width:\s*100%/);
+    expect(rule('.summary')).toMatch(/min-width:\s*0/);
   });
 
   it('sits clear of the toolbar overlay, which grows leftward and outranks it', () => {
     // Bottom-left is the one free corner: a wrapped toolbar covers the top edge,
     // and bottom-centre holds the 2D hint and the zoom HUD.
-    const css = readFileSync(
-      path.join(import.meta.dirname, 'ViewportControlsHelp.module.css'),
-      'utf8'
-    );
-    const root = /\.root\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
+    const root = rule('.root');
     expect(root).toContain('bottom:');
     expect(root).toContain('left:');
     expect(root).not.toContain('top:');
@@ -150,6 +163,14 @@ describe('<ViewportControlsHelp>', () => {
 });
 
 describe('controlsFor', () => {
+  it('gives a touch summary that names no mouse-only input', () => {
+    for (const mode of ['2D', '3D'] as const) {
+      const { touchSummary } = controlsFor(mode);
+      expect(touchSummary).toMatch(/pinch = zoom/);
+      expect(touchSummary).not.toMatch(/wheel|middle|shift/);
+    }
+  });
+
   it('gives every binding a unique input WITHIN its device, so panel keys cannot collide', () => {
     // A label may repeat across devices, since each group's list scopes its React keys.
     for (const mode of ['2D', '3D'] as const) {

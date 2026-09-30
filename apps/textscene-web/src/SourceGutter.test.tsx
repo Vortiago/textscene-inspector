@@ -94,6 +94,21 @@ describe('SourceGutter popover', () => {
     expect(popover(2)).toBeNull();
   });
 
+  it('opens on a tap that gives no focus, as Safari taps a button', () => {
+    renderGutter();
+    const dot = screen.getByTestId('gutter-dot-2');
+    vi.spyOn(dot, 'focus').mockImplementation(() => {});
+    fireEvent.click(dot);
+    expect(popover(2)?.textContent).toBe('near the top');
+  });
+
+  it('places a tapped popover against the row, not the dot', () => {
+    stubLayout();
+    renderGutter();
+    fireEvent.click(screen.getByTestId('gutter-dot-21'));
+    expect(popover(21)!.parentElement!.className).toMatch(/gutterPopoverUp/);
+  });
+
   it('gives a row with no diagnostic no dot and no hover target', () => {
     renderGutter();
     expect(screen.queryByTestId('gutter-row-1')).toBeNull();

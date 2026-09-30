@@ -343,3 +343,22 @@
 .children {
   margin-left: 0;
 }
+
+/* Touch targets. A mouse in either host is a fine pointer and keeps the dense sizing. */
+@media (pointer: coarse) {
+  .header {
+    min-height: 36px;
+  }
+
+  .iconBtn {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/* Without hover the glyphs never brighten, so they start at full opacity. */
+@media (hover: none) {
+  .glyphs {
+    opacity: 1;
+  }
+}
