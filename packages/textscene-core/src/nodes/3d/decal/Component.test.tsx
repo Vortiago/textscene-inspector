@@ -177,6 +177,41 @@ describe('<Decal>', () => {
     expect(map).toBe(entry);
   });
 
+  it('samples a raw-tagged producer as sRGB, as Godot samples the albedo', async () => {
+    // `texture_albedo` is a `source_color`, so the projection samples it as sRGB
+    // whatever the producer tagged (a NoiseTexture2D baked `as_normal_map` arrives
+    // NoColorSpace). The retag lands on the clone; the shared entry keeps its own tag.
+    const producer = makeTexture();
+    const renderer = await render({
+      node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: producer }],
+      children: <Receiver />,
+    });
+    const map = (projections(renderer)[0]!.material as THREE.MeshStandardMaterial).map!;
+    expect(map.colorSpace).toBe(THREE.SRGBColorSpace);
+    expect(producer.colorSpace).toBe(THREE.NoColorSpace);
+  });
+
+  it('never disposes the shared cache entry when the projection unmounts', async () => {
+    // The projection borrows the entry, so its cleanup may free only a bind-time
+    // clone. An unconditional dispose of the map would free the cache entry every
+    // other consumer is still sampling.
+    const entry = makeSrgbTexture(THREE.ClampToEdgeWrapping);
+    let disposed = false;
+    entry.addEventListener('dispose', () => {
+      disposed = true;
+    });
+    const renderer = await render({
+      node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: entry }],
+      children: <Receiver />,
+    });
+    await renderer.unmount();
+    expect(disposed).toBe(false);
+  });
+
   it('projects onto a receiver whose render layers the cull_mask admits', async () => {
     const renderer = await render({
       node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),

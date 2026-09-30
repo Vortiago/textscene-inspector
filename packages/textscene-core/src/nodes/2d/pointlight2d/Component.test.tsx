@@ -199,6 +199,29 @@ describe('PointLight2D Component', () => {
     expect(cookie.wrapT).toBe(THREE.ClampToEdgeWrapping);
   });
 
+  it('samples a raw-tagged producer cookie as sRGB, as Godot samples canvas items', async () => {
+    // The cookie is a `source_color`, so the light samples it as sRGB whatever the
+    // producer tagged. The retag lands on the clone; the shared entry keeps its own tag.
+    const raw = new THREE.Texture();
+    const cookie = lightMaterial(await render(node(), raw)).uniforms.uCookie!.value as THREE.Texture;
+    expect(cookie.colorSpace).toBe(THREE.SRGBColorSpace);
+    expect(raw.colorSpace).toBe(THREE.NoColorSpace);
+  });
+
+  it('never disposes the shared cache entry when the light unmounts', async () => {
+    // The cookie borrows the entry when it already clamps, so the cleanup may free
+    // only a bind-time clone. An unconditional dispose of the cookie would free the
+    // cache entry every other consumer is still sampling.
+    const entry = await createTextureFromBuffer(new ArrayBuffer(8), 'image/png');
+    let disposed = false;
+    entry.addEventListener('dispose', () => {
+      disposed = true;
+    });
+    const r = await render(node(), entry);
+    await r.unmount();
+    expect(disposed).toBe(false);
+  });
+
   it('shows missing resource placeholder when no texture resolves', async () => {
     // No texture property, so the placeholder shows.
     const r = await render(node({ texture: 'ExtResource("missing")' }));
