@@ -11,6 +11,7 @@ import { createResourceProcessor, type ResourceProcessor } from '../createResour
 import {
   createGLBMesh,
   forEachSurfaceMaterial,
+  tagImportMaterial,
   gltfResourceDir,
   isGLBPath,
 } from '../formats/glb/glbProcessing';
@@ -28,8 +29,6 @@ import {
 } from '../../parser/importParser';
 import * as logger from '../../logger';
 
-/** Loads a material by its `res://` path, or null when it cannot be had. */
-export type MaterialLoaderFn = (path: string) => Promise<THREE.Material | null>;
 
 /**
  * Dispose of a GLB mesh and all its resources. Unlike a per-consumer clone
@@ -54,8 +53,7 @@ function disposeGLBMesh(mesh: THREE.Object3D): void {
 async function applyImportSidecar(
   object: THREE.Object3D,
   path: string,
-  fileEventBus: FileEventBus | undefined,
-  loadMaterial: MaterialLoaderFn
+  fileEventBus: FileEventBus | undefined
 ): Promise<void> {
   if (!fileEventBus) return;
 
@@ -65,7 +63,7 @@ async function applyImportSidecar(
   const parsed = parseImportFile(raw);
   applySidecarRootScale(object, path, parsed);
   applySidecarNodeLayers(object, path, parsed);
-  await applySidecarMaterials(object, path, parsed, loadMaterial);
+  tagSidecarMaterials(object, path, parsed);
 }
 
 /** `nodes/root_scale`, applied to the asset the way `nodes/apply_root_scale` asks. */
@@ -114,55 +112,25 @@ function applySidecarNodeLayers(
 /**
  * `_subresources`' external materials, matched to surfaces by glTF material name:
  * Godot's `mat->get_meta("import_id", mat->get_name())` key
- * (`editor/import/3d/resource_importer_scene.cpp:1583`). An unresolvable `.tres` keeps
- * the glTF's own material, as Godot's null `external_mat` branch does (`:1622-1636`).
+ * (`editor/import/3d/resource_importer_scene.cpp:1583`). Each matched surface is tagged
+ * with its `.tres` address and keeps the glTF's own material, which an unresolvable
+ * `.tres` leaves in place, as Godot's null `external_mat` branch does (`:1622-1636`).
  */
-async function applySidecarMaterials(
-  object: THREE.Object3D,
-  path: string,
-  parsed: ParsedImportFile | null,
-  loadMaterial: MaterialLoaderFn
-): Promise<void> {
+function tagSidecarMaterials(object: THREE.Object3D, path: string, parsed: ParsedImportFile | null): void {
   const remaps = importExternalMaterials(parsed);
   if (remaps.size === 0) return;
 
-  // One traversal: the visitor already hands over each slot's setter, so keeping them is
-  // what makes a second walk after the awaits unnecessary.
-  const slots: { material: THREE.Material; assign: (m: THREE.Material) => void }[] = [];
-  const wanted = new Map<string, string>();
-  forEachSurfaceMaterial(object, (material, assign) => {
+  const tagged = new Map<string, string>();
+  forEachSurfaceMaterial(object, (material) => {
     const external = remaps.get(material.name);
     if (external === undefined) return;
-    wanted.set(material.name, external);
-    slots.push({ material, assign });
+    tagImportMaterial(material, external);
+    tagged.set(material.name, external);
   });
-  if (slots.length === 0) return;
-
-  const built = new Map<string, THREE.Material>();
-  await Promise.all(
-    [...wanted].map(async ([name, external]) => {
-      const material = await loadMaterial(external);
-      // Cloned: the material processor caches the original, and `disposeGLBMesh`
-      // frees whatever sits on the template's surfaces.
-      if (material) built.set(name, material.clone());
-      else logger.warn(`[GLBProcessor] ${path}: external material ${external} did not load`);
-    })
-  );
-  if (built.size === 0) return;
-
-  const replaced = new Set<THREE.Material>();
-  for (const slot of slots) {
-    const external = built.get(slot.material.name);
-    if (!external) continue;
-    replaced.add(slot.material);
-    slot.assign(external);
-  }
-  // Nothing else can reference these: every surface carrying the name was just reassigned.
-  for (const material of replaced) material.dispose();
-
+  if (tagged.size === 0) return;
   logger.info(
     `[GLBProcessor] ${path}: import sidecar external materials ` +
-      [...built.keys()].map((name) => `${name} -> ${wanted.get(name)}`).join(', ')
+      [...tagged].map(([name, external]) => `${name} -> ${external}`).join(', ')
   );
 }
 
@@ -172,7 +140,6 @@ async function applySidecarMaterials(
 export function createGLBProcessor(
   fileEventBus: FileEventBus | undefined,
   eventBus: ResourceEventBus,
-  loadMaterial: MaterialLoaderFn,
   extensionRules?: GltfExtensionRules
 ): ResourceProcessor<THREE.Object3D> {
   return createResourceProcessor({
@@ -188,7 +155,7 @@ export function createGLBProcessor(
         manager: eventBus.getThreeManager(),
         extensionRules,
       });
-      await applyImportSidecar(object, path, fileEventBus, loadMaterial);
+      await applyImportSidecar(object, path, fileEventBus);
       return object;
     },
     dispose: disposeGLBMesh,

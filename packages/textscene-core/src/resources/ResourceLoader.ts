@@ -11,7 +11,6 @@ import type { ResourceProvider } from './ResourceProvider';
 import { ResourceEventBus, type ResourceType } from './ResourceEventBus';
 import { MetadataStore } from './MetadataStore';
 import { createTextureProcessor } from './processors/createTextureProcessor';
-import { createMaterialProcessor } from './processors/createMaterialProcessor';
 import { createGLBProcessor } from './processors/createGLBProcessor';
 import { createSceneProcessor } from './processors/createSceneProcessor';
 import { createTresResourceProcessor } from './processors/createTresResourceProcessor';
@@ -54,7 +53,6 @@ export class ResourceLoader {
   readonly jobRunner: WorkerJobRunner;
   readonly eventBus: ResourceEventBus;
   readonly textures: ResourceProcessor<THREE.Texture>;
-  readonly materials: ResourceProcessor<THREE.Material>;
   readonly glbMeshes: ResourceProcessor<THREE.Object3D>;
   readonly scenes: ResourceProcessor<TscnScene>;
   /** Generic .tres files (TileSet) parsed as ParsedResource. */
@@ -136,22 +134,11 @@ export class ResourceLoader {
     this.eventBus = new ResourceEventBus();
     this.metadata = new MetadataStore();
 
-    // Texture processor first: materials need it for inline texture refs.
     this.textures = createTextureProcessor(fileEventBus, this.eventBus);
 
-    const loadTexture = (path: string): Promise<THREE.Texture | null> =>
-      this.peerLoad(this.textures, 'texture', path);
-
-    this.materials = createMaterialProcessor(fileEventBus, this.eventBus, loadTexture, this.jobRunner);
-
-    // A GLB's **Import sidecar** can repoint a glTF material at an external `.tres`,
-    // which resolves through the material processor.
-    this.glbMeshes = createGLBProcessor(
-      fileEventBus,
-      this.eventBus,
-      (path) => this.peerLoad(this.materials, 'material', path),
-      options.gltfExtensions
-    );
+    // A GLB's **Import sidecar** can repoint a glTF material at an external `.tres`. The
+    // processor tags the surface, and the scene root draws that `.tres` like any material.
+    this.glbMeshes = createGLBProcessor(fileEventBus, this.eventBus, options.gltfExtensions);
 
     // PackedScene loads directly (`loadDirectly`). The id-to-path translation reads the
     // shared MetadataStore.
@@ -179,7 +166,6 @@ export class ResourceLoader {
 
     this.processors = new Map<ResourceType, ResourceProcessor<unknown>>([
       ['texture', this.textures as ResourceProcessor<unknown>],
-      ['material', this.materials as ResourceProcessor<unknown>],
       ['glb', this.glbMeshes as ResourceProcessor<unknown>],
       ['scene', this.scenes as ResourceProcessor<unknown>],
       ['resource', this.resources as ResourceProcessor<unknown>],
@@ -203,7 +189,6 @@ export class ResourceLoader {
   private setupFailureCallbacks(): void {
     const labels: Record<ResourceType, string> = {
       texture: 'Material using texture',
-      material: 'Node using material',
       scene: 'Node instance of scene',
       glb: 'Node using GLB mesh',
       resource: 'Resource',
@@ -217,10 +202,13 @@ export class ResourceLoader {
         if (!this.onResourceNeeded) return;
         const resource = this.metadata.get(pathOrId);
         if (!resource) return;
+        // A slice's own label names the consumer: a material `.tres` fails on the
+        // resource bus, which every other `.tres` shares.
+        const label = resourceSliceRegistry.byTypeName(resource.type)?.failureLabel ?? labels[type];
         const result = this.onResourceNeeded({
           path: resource.path,
           type: resource.type,
-          referencedBy: `${labels[type]} ${resource.id}`,
+          referencedBy: `${label} ${resource.id}`,
           error: error?.message || 'Unknown error',
         });
         if (result && typeof result.catch === 'function') {
@@ -356,7 +344,6 @@ export class ResourceLoader {
     } else if (path.endsWith('.tres')) {
       // Unregistered .tres, such as a raw `tile_set` path: every .tres processor gets
       // the re-request, and each subscriber hears only its own bus slot.
-      this.materials.request(path);
       this.resources.request(path);
       this.fonts.request(path);
       this.themes.request(path);
@@ -364,7 +351,6 @@ export class ResourceLoader {
       // Unknown type: only the processor that can read the content produces a result.
       // The other fails silently into its cache, unseen by subscribers of its bus slot.
       this.textures.request(path);
-      this.materials.request(path);
     }
   }
 }

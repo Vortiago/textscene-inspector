@@ -5,8 +5,8 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { billboardOf, castsShadowOf, standardMaterialBag } from './materialBag';
-import { buildStandardMaterial } from './build';
+import { billboardOf, castsShadowOf, standardMaterialBag, surfaceBillboard } from './materialBag';
+import { materialFromBag } from './build';
 import { standardMaterial } from './testing/standardMaterial';
 import { BillboardMode } from '../../../godot/billboard';
 import { parseStandardMaterial3DScalars } from './scalars';
@@ -199,8 +199,17 @@ describe('standardMaterialBag — billboard_mode', () => {
   });
 
   it('reads DISABLED from Godot’s default surface and from a foreign material', () => {
-    expect(billboardOf(buildStandardMaterial(null)).mode).toBe(BillboardMode.BILLBOARD_DISABLED);
+    expect(billboardOf(materialFromBag(standardMaterialBag(null))).mode).toBe(BillboardMode.BILLBOARD_DISABLED);
     expect(billboardOf(new THREE.MeshBasicMaterial()).mode).toBe(BillboardMode.BILLBOARD_DISABLED);
+  });
+
+  it('reads the same billboard from the scalars as from the material built from them', () => {
+    const scalars = parseStandardMaterial3DScalars({ billboard_mode: '2', billboard_keep_scale: 'true' });
+    expect(surfaceBillboard(scalars)).toEqual(billboardOf(materialFromBag(standardMaterialBag(scalars))));
+  });
+
+  it('reads DISABLED from no scalars, which is Godot’s default surface', () => {
+    expect(surfaceBillboard(null)).toBe(billboardOf(new THREE.MeshBasicMaterial()));
   });
 
   it('gives each bag its own userData, as the .tres loader writes into it', () => {
@@ -220,7 +229,7 @@ describe('standardMaterialBag — shadow-pass membership', () => {
   });
 
   it('casts from Godot’s default surface and from a foreign material', () => {
-    expect(castsShadowOf(buildStandardMaterial(null))).toBe(true);
+    expect(castsShadowOf(materialFromBag(standardMaterialBag(null)))).toBe(true);
     expect(castsShadowOf(new THREE.MeshBasicMaterial())).toBe(true);
   });
 });

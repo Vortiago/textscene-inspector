@@ -13,7 +13,6 @@
  */
 export type ResourceBusType =
   | 'texture'
-  | 'material'
   | 'scene'
   | 'glb'
   | 'resource'

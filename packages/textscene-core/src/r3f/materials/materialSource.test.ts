@@ -1,10 +1,9 @@
 /**
- * The resolution step alone: which of the two arrivals a material reference names,
- * and when it names neither. The materialBag and meshinstance3d material tests cover
- * what the resolved material looks like.
+ * The resolution step alone: where a material reference points, and when it points
+ * at nothing. `useMaterial.test.tsx` covers what loads from each source, and the
+ * materialBag and meshinstance3d material tests cover what the material looks like.
  */
-import { describe, expect, it, vi } from 'vitest';
-import * as logger from '../../logger';
+import { describe, expect, it } from 'vitest';
 import { resolveMaterialSource } from './materialSource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 
@@ -25,16 +24,16 @@ const EXTERNAL: TscnExternalResource[] = [
 ];
 
 describe('resolveMaterialSource', () => {
-  it('resolves a SubResource to the scene material it names', () => {
+  it('resolves a SubResource to the material it names, with the tables it resolves in', () => {
     expect(resolveMaterialSource('SubResource("Mat_body")', INTERNAL, EXTERNAL)).toEqual({
-      kind: 'scene',
-      resource: INTERNAL[0],
+      kind: 'inline',
+      material: { resource: INTERNAL[0], internalResources: INTERNAL, externalResources: EXTERNAL },
     });
   });
 
-  it('resolves an ExtResource to the .tres path the pipeline loads', () => {
+  it('resolves an ExtResource to the .tres file the loader reads', () => {
     expect(resolveMaterialSource('ExtResource("4")', INTERNAL, EXTERNAL)).toEqual({
-      kind: 'path',
+      kind: 'file',
       path: 'res://materials/paint.tres',
     });
   });
@@ -52,34 +51,16 @@ describe('resolveMaterialSource', () => {
     expect(resolveMaterialSource('ExtResource("99")', INTERNAL, EXTERNAL)).toBeUndefined();
   });
 
-  it('answers with the default surface for a Material it cannot build', () => {
+  it('fills the slot for a Material it cannot build, and leaves it empty for a non-material', () => {
     // A ShaderMaterial is a material and the slot holding it was filled, so the
     // surface is Godot's default one rather than whatever the mesh already wore
-    // (ADR-0041). A sub-resource that is no material at all leaves the slot
-    // empty instead.
+    // (ADR-0041). `useMaterial` answers with that default. A sub-resource that is
+    // no material at all leaves the slot empty instead.
     expect(resolveMaterialSource('SubResource("Shader_fx")', INTERNAL, EXTERNAL)).toEqual({
-      kind: 'default',
+      kind: 'inline',
+      material: { resource: INTERNAL[2], internalResources: INTERNAL, externalResources: EXTERNAL },
     });
     expect(resolveMaterialSource('SubResource("Mesh_box")', INTERNAL, EXTERNAL)).toBeUndefined();
-  });
-
-  it('says so when it declines a shader, as the .tres arrival does', () => {
-    // Both arrivals draw Godot's default surface, so the warning is the only
-    // sign a shader was skipped, and both arrivals give it.
-    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
-    try {
-      resolveMaterialSource('SubResource("Shader_fx")', INTERNAL, EXTERNAL);
-      expect(warn).toHaveBeenCalledTimes(1);
-      expect(warn.mock.calls[0]?.[0]).toContain('ShaderMaterial');
-
-      // A sub-resource that is not a material names a defect in the scene, not
-      // a missing capability, so nothing is reported.
-      warn.mockClear();
-      resolveMaterialSource('SubResource("Mesh_box")', INTERNAL, EXTERNAL);
-      expect(warn).not.toHaveBeenCalled();
-    } finally {
-      warn.mockRestore();
-    }
   });
 
   it('returns undefined for an ExtResource that is not a .tres document', () => {
@@ -105,8 +86,8 @@ describe('resolveMaterialSource', () => {
     // A lookup, not a validator: every property survives to the decode, which is
     // the one place that decides what a value means.
     const resolved = resolveMaterialSource('SubResource("Mat_odd")', INTERNAL, EXTERNAL);
-    expect(resolved).toEqual({ kind: 'scene', resource: INTERNAL[1] });
-    expect((resolved as { resource: TscnInternalResource }).resource.data).toEqual({
+    expect(resolved?.kind === 'inline' && resolved.material.resource).toBe(INTERNAL[1]);
+    expect(INTERNAL[1]?.data).toEqual({
       metallic: '0.75',
       metallic_specular: 'garbage-not-a-number',
       some_future_key: 'x',

@@ -1,15 +1,17 @@
 /**
- * The GLB processor honours an **Import sidecar**'s `_subresources` material remaps.
+ * The GLB processor reads an **Import sidecar**'s `_subresources` material remaps.
  * `scenes/demos/3d/ragdoll_physics/characters/mannequiny.glb.import` repoints each
  * base-colourless glTF material at a `res://materials/*.tres`, so without the remap
- * the mannequins render white where Godot draws them blue.
+ * the mannequins render white where Godot draws them blue. The processor tags each
+ * remapped surface with its `.tres` address, and the scene root draws that material
+ * through the one material path (`Component.import-material.test.tsx`).
  */
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { FileEventBus } from '../FileEventBus';
 import { ResourceEventBus } from '../ResourceEventBus';
 import { createGLBProcessor } from './createGLBProcessor';
-import { initGlbModules } from '../formats/glb/glbProcessing';
+import { importMaterialPath, initGlbModules } from '../formats/glb/glbProcessing';
 import { triangleGlb } from '../formats/glb/testing/triangleGlb';
 import { isMesh } from '../../r3f/testing/threeNarrow';
 
@@ -42,35 +44,21 @@ function gltfWithNamedMaterial(name: string): ArrayBuffer {
   });
 }
 
-interface Harness {
-  root: THREE.Object3D;
-  external: THREE.MeshStandardMaterial;
-  loadMaterial: ReturnType<typeof vi.fn>;
-  clearTemplate: () => void;
-}
-
-/** Drive the processor the way the loader does, with a stub material peer-loader. */
+/** Drive the processor the way the loader does. */
 async function loadWith(
   files: Record<string, string>,
-  options: { materialName?: string; failMaterial?: boolean } = {}
-): Promise<Harness> {
+  options: { materialName?: string } = {}
+): Promise<THREE.Object3D> {
   const asset = gltfWithNamedMaterial(options.materialName ?? GLTF_MATERIAL);
   const fileEventBus = new FileEventBus({
     loadResource: vi.fn(async (path: string) => (path === GLTF_PATH ? asset : (files[path] ?? null))),
   });
   const eventBus = new ResourceEventBus();
-  const external = new THREE.MeshStandardMaterial({ color: 0x2585fa });
-  const loadMaterial = vi.fn(async () => (options.failMaterial ? null : external));
-  const processor = createGLBProcessor(fileEventBus, eventBus, loadMaterial);
+  const processor = createGLBProcessor(fileEventBus, eventBus);
 
   const loaded = eventBus.once<THREE.Object3D>('glb', 'loaded', GLTF_PATH, 5000);
   processor.request(GLTF_PATH);
-  return {
-    root: await loaded,
-    external,
-    loadMaterial,
-    clearTemplate: () => processor.clearCache(),
-  };
+  return loaded;
 }
 
 /** The material on the asset's one surface. */
@@ -87,41 +75,22 @@ describe('createGLBProcessor — import sidecar external materials', () => {
     await initGlbModules();
   });
 
-  it('replaces the glTF material with the sidecar’s external .tres', async () => {
-    const { root, loadMaterial } = await loadWith({ [`${GLTF_PATH}.import`]: SIDECAR });
-    expect(loadMaterial).toHaveBeenCalledWith(BLUE_PATH);
-    expect(surfaceMaterial(root).color.getHex()).toBe(0x2585fa);
+  it('tags the remapped surface with the sidecar\'s external .tres, and keeps the glTF material', async () => {
+    const root = await loadWith({ [`${GLTF_PATH}.import`]: SIDECAR });
+    const material = surfaceMaterial(root);
+
+    expect(importMaterialPath(material)).toBe(BLUE_PATH);
+    // glTF's default `baseColorFactor` is [1,1,1,1]: the surface keeps it until the .tres draws.
+    expect(material.color.getHex()).toBe(0xffffff);
   });
 
-  it('keeps the glTF material when no sidecar exists', async () => {
-    const { root, loadMaterial } = await loadWith({});
-    expect(loadMaterial).not.toHaveBeenCalled();
-    // glTF's default `baseColorFactor` is [1,1,1,1].
-    expect(surfaceMaterial(root).color.getHex()).toBe(0xffffff);
+  it('tags nothing when no sidecar exists', async () => {
+    const root = await loadWith({});
+    expect(importMaterialPath(surfaceMaterial(root))).toBeUndefined();
   });
 
   it('leaves a surface whose material name the sidecar does not remap', async () => {
-    const { root, loadMaterial } = await loadWith(
-      { [`${GLTF_PATH}.import`]: SIDECAR },
-      { materialName: 'Negro_COLOR_0' }
-    );
-    expect(loadMaterial).not.toHaveBeenCalled();
-    expect(surfaceMaterial(root).color.getHex()).toBe(0xffffff);
-  });
-
-  it('keeps the glTF material when the external .tres cannot be loaded', async () => {
-    const { root } = await loadWith({ [`${GLTF_PATH}.import`]: SIDECAR }, { failMaterial: true });
-    expect(surfaceMaterial(root).color.getHex()).toBe(0xffffff);
-  });
-
-  it('leaves the shared external material alive when the template is disposed', async () => {
-    // The material processor owns and caches it, so the template must not free it.
-    const { root, external, clearTemplate } = await loadWith({ [`${GLTF_PATH}.import`]: SIDECAR });
-    const disposed = vi.fn();
-    external.addEventListener('dispose', disposed);
-    expect(surfaceMaterial(root)).not.toBe(external);
-
-    clearTemplate();
-    expect(disposed).not.toHaveBeenCalled();
+    const root = await loadWith({ [`${GLTF_PATH}.import`]: SIDECAR }, { materialName: 'Negro_COLOR_0' });
+    expect(importMaterialPath(surfaceMaterial(root))).toBeUndefined();
   });
 });

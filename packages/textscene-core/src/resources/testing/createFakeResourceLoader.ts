@@ -53,7 +53,6 @@ export interface FakeResourceLoader {
   readonly eventBus: ResourceEventBus;
   readonly metadata: MetadataStore;
   readonly textures: FakeProcessor<THREE.Texture>;
-  readonly materials: FakeProcessor<THREE.Material>;
   readonly glbMeshes: FakeProcessor<THREE.Object3D>;
   readonly scenes: FakeProcessor<TscnScene>;
   readonly resources: FakeProcessor<ParsedResource>;
@@ -128,7 +127,6 @@ export function createFakeResourceLoader(): FakeResourceLoader {
   const eventBus = new ResourceEventBus();
   const metadata = new MetadataStore();
   const textures = makeFakeProcessor<THREE.Texture>(eventBus, 'texture');
-  const materials = makeFakeProcessor<THREE.Material>(eventBus, 'material');
   const glbMeshes = makeFakeProcessor<THREE.Object3D>(eventBus, 'glb');
   const scenes = makeFakeProcessor<TscnScene>(eventBus, 'scene');
   const resources = makeFakeProcessor<ParsedResource>(eventBus, 'resource');
@@ -139,7 +137,6 @@ export function createFakeResourceLoader(): FakeResourceLoader {
 
   const byType: Record<ResourceType, FakeProcessor<unknown>> = {
     texture: textures,
-    material: materials,
     glb: glbMeshes,
     scene: scenes,
     resource: resources,
@@ -158,7 +155,6 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     eventBus,
     metadata,
     textures,
-    materials,
     glbMeshes,
     scenes,
     resources,
@@ -180,13 +176,11 @@ export function createFakeResourceLoader(): FakeResourceLoader {
       if (busType) {
         byType[busType].request(path);
       } else if (path.endsWith('.tres')) {
-        materials.request(path);
         resources.request(path);
         fonts.request(path);
         themes.request(path);
       } else {
         textures.request(path);
-        materials.request(path);
       }
     },
     clear(): void {
@@ -233,7 +227,6 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     eventBus,
     metadata,
     textures,
-    materials,
     glbMeshes,
     scenes,
     resources,

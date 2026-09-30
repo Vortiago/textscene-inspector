@@ -56,6 +56,11 @@ bands still occupy memory shared with the GPU process until the GPU consumes the
 write blocked for 60 ms at about 14 MiB outstanding. So at most 8 MiB is on its way at
 once, measured with a fence per frame.
 
+**A material slot binds a stand-in while its map arrives.** three bakes each slot's
+presence into the program, so a map that lands in an empty slot relinks the material:
+539–838 ms under SwiftShader, which offers no parallel shader compile. A neutral 1x1
+texture fills the slot meanwhile, so the map swaps in on the program already linked.
+
 ## Measurement
 
 The in-frame probe `scripts/vscode/probes/blobWorkerProbe.mjs` echoes one number through
@@ -82,15 +87,20 @@ a blob-URL worker. In Chromium 141, under a copy of the webview CSP:
     the whole level before the first band writes to it.
   - a 30–38 ms first draw that samples the texture.
 
-  Those two arms run with `--use-angle=swiftshader`, which composites in the GPU
+  Those arms run with `--use-angle=swiftshader`, which composites in the GPU
   process, as a browser with a GPU does. The goldens keep the default launch, because
   that backend rasterises differently (up to 59/255 on `material-metallic`). A control
   arm blocks the worker and must see a long task, so the probe proves it can see one.
+- **The same texture in a `.tres` material on a 3D mesh has its own arm.** It counts
+  from the worker's first reply until the status clears. The material arrives in the
+  same moment its build starts, and its first program link (57–106 ms) is the material
+  showing, not the texture. A control arm stalls the reply task and must see a long task
+  in that window.
 - **A CSP regression cannot hide behind the fallback.** The in-thread fallback still
   draws correct pixels, so the pixels alone cannot show that the worker is gone. The
   gate asserts that the worker answered.
-- **A `.tres` material's own texture uploads whole.** `loadMaterial` builds that material
-  outside React, where no draw site wraps its maps, so three uploads such a texture in one
-  call on its first draw.
+- **Every material's maps upload in bands, whatever file the material is in.** A `.tres`
+  material, a GridMap tile's material and a GLB import remap render through the same
+  material slot as a scene's own material, so each map crosses the same draw site.
 - **Runtime MSDF generation stays closed.** It needs `connect-src` for its font fetch,
   which this ADR does not open.
