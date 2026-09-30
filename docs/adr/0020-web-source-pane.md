@@ -23,7 +23,7 @@ Constraints:
 
 ## Decision
 
-Add an editable **Source pane** (see CONTEXT.md) to the **web app only**, as a left sibling
+Add an editable **Source pane** (see GLOSSARY.md) to the **web app only**, as a left sibling
 that wraps `<TscnPreviewShell>`. The specifics and the rejected options:
 
 1. **Web-app sibling, not a shell column.** The web app owns the buffer and renders the pane
