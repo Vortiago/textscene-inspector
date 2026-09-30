@@ -18,12 +18,8 @@ describe('isWebviewUrl', () => {
     expect(isWebviewUrl('https://a.vscode-resource.vscode-cdn.net.example.com/icon.png')).toBe(false);
   });
 
-  it('refuses a console message with no location URL', () => {
-    expect(isWebviewUrl(undefined)).toBe(false);
-  });
-
-  it('refuses an empty URL and one that does not parse', () => {
-    expect(isWebviewUrl('')).toBe(false);
-    expect(isWebviewUrl('not a url')).toBe(false);
+  // `undefined` is a console message with no location.
+  it.each([undefined, '', 'not a url'])('refuses %j, which is not a URL', (url) => {
+    expect(isWebviewUrl(url)).toBe(false);
   });
 });

@@ -15,7 +15,3 @@ packages/textscene-core/src/r3f/controls/native/text/openSans*.ts
 scripts/compare-docs/*.json
 docs/comparison/index.html
 pnpm-lock.yaml
-
-# Scratch areas the linter skips too.
-.spike/
-docs/probes/

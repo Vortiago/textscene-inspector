@@ -203,9 +203,9 @@ const LOCAL_RESOURCE_HOST_SUFFIX = '.vscode-resource.vscode-cdn.net';
  * worker intercepts, so despite the hostname no network is involved.
  */
 export function isWebviewUrl(url) {
-  if (!url) return false;
-  if (url.startsWith('vscode-webview://')) return true;
-  return URL.canParse(url) && new URL(url).hostname.endsWith(LOCAL_RESOURCE_HOST_SUFFIX);
+  if (!URL.canParse(url)) return false;
+  const { protocol, hostname } = new URL(url);
+  return protocol === 'vscode-webview:' || hostname.endsWith(LOCAL_RESOURCE_HOST_SUFFIX);
 }
 
 /** Bucket key `requestHosts` uses: the host for http(s), else the scheme. */

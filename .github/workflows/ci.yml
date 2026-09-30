@@ -46,8 +46,9 @@ jobs:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
 
-      - run: pnpm lint
+      # First: it needs no build and fails in seconds.
       - run: pnpm format:check
+      - run: pnpm lint
       - run: pnpm type-check
 
       # The test projects resolve @textscene/core through its emitted declarations, and the
