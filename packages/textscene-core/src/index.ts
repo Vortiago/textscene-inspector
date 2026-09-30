@@ -78,7 +78,8 @@ export {
   ResourceLoaderProvider,
 } from './resources/ResourceLoaderContext';
 export type { ResourceLoaderProviderProps } from './resources/ResourceLoaderContext';
-export { ResourceLoader } from './resources/ResourceLoader';
+export { ResourceLoader, type ResourceLoaderOptions } from './resources/ResourceLoader';
+export type { GltfExtensionRules } from './resources/formats/glb/types';
 export { FileEventBus } from './resources/FileEventBus';
 export type { FileData, FileLoadedHandler, FileFailedHandler } from './resources/FileEventBus';
 export { createResourcePipeline } from './resources/createResourcePipeline';

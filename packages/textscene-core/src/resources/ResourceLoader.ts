@@ -21,6 +21,7 @@ import { createThemeProcessor } from './processors/createThemeProcessor';
 import { runClearCachesSequence } from './clearCachesSequence';
 import { resourceFilePath } from './subResourcePath';
 import type { FontResource } from './fonts/font/types';
+import type { GltfExtensionRules } from './formats/glb/types';
 import type { ThemeResource } from './styles/theme/types';
 import { resourceSliceRegistry } from './sliceRegistration';
 import './sliceRegistrations.js';
@@ -37,6 +38,11 @@ import * as logger from '../logger';
 export function busTypeFor(resourceType: string | undefined): ResourceType | null {
   if (!resourceType) return null;
   return resourceSliceRegistry.busTypeFor(resourceType);
+}
+
+export interface ResourceLoaderOptions {
+  /** Which glTF extensions a GLB loads with. Defaults to `godot-importer`. */
+  gltfExtensions?: GltfExtensionRules;
 }
 
 export class ResourceLoader {
@@ -119,7 +125,7 @@ export class ResourceLoader {
     }
   }
 
-  constructor(fileEventBus?: FileEventBus) {
+  constructor(fileEventBus?: FileEventBus, { gltfExtensions = 'godot-importer' }: ResourceLoaderOptions = {}) {
     this._fileEventBus = fileEventBus || null;
     this.eventBus = new ResourceEventBus();
     this.metadata = new MetadataStore();
@@ -134,8 +140,11 @@ export class ResourceLoader {
 
     // A GLB's **Import sidecar** can repoint a glTF material at an external `.tres`,
     // which resolves through the material processor.
-    this.glbMeshes = createGLBProcessor(fileEventBus, this.eventBus, (path) =>
-      this.peerLoad(this.materials, 'material', path)
+    this.glbMeshes = createGLBProcessor(
+      fileEventBus,
+      this.eventBus,
+      (path) => this.peerLoad(this.materials, 'material', path),
+      gltfExtensions
     );
 
     // PackedScene loads directly (`loadDirectly`). The id-to-path translation reads the

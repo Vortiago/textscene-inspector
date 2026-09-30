@@ -4,7 +4,7 @@
  * order is an invariant, owned here so every host builds the same pipeline.
  */
 import { FileEventBus } from './FileEventBus';
-import { ResourceLoader } from './ResourceLoader';
+import { ResourceLoader, type ResourceLoaderOptions } from './ResourceLoader';
 import type { ResourceProvider } from './ResourceProvider';
 
 export interface ResourcePipeline<P extends ResourceProvider = ResourceProvider> {
@@ -14,10 +14,11 @@ export interface ResourcePipeline<P extends ResourceProvider = ResourceProvider>
 }
 
 export function createResourcePipeline<P extends ResourceProvider>(
-  provider: P
+  provider: P,
+  options?: ResourceLoaderOptions
 ): ResourcePipeline<P> {
   const bus = new FileEventBus(provider);
-  const loader = new ResourceLoader(bus);
+  const loader = new ResourceLoader(bus, options);
   loader.setProvider(provider);
   return { provider, loader };
 }

@@ -18,13 +18,24 @@ export interface TriangleGlb {
   instanced?: boolean;
   /** The node's own translation. */
   translation?: [number, number, number];
+  /** A glTF material definition for the triangle's one primitive. */
+  material?: Record<string, unknown>;
+  /** The node's `extras`, which three copies onto `userData`. */
+  extras?: Record<string, unknown>;
 }
 
 function vec3Accessor(bufferView: number, values: number[]) {
   return { bufferView, componentType: 5126, count: values.length / 3, type: 'VEC3' };
 }
 
-function gltfJson({ extensionsUsed, extensionsRequired, instanced, translation }: TriangleGlb) {
+function gltfJson({
+  extensionsUsed,
+  extensionsRequired,
+  instanced,
+  translation,
+  material,
+  extras,
+}: TriangleGlb) {
   const floatBytes = TRIANGLE.length * 4;
   return {
     asset: { version: '2.0' },
@@ -37,12 +48,14 @@ function gltfJson({ extensionsUsed, extensionsRequired, instanced, translation }
         name: 'Triangle',
         mesh: 0,
         ...(translation ? { translation } : {}),
+        ...(extras ? { extras } : {}),
         ...(instanced
           ? { extensions: { EXT_mesh_gpu_instancing: { attributes: { TRANSLATION: 1 } } } }
           : {}),
       },
     ],
-    meshes: [{ primitives: [{ attributes: { POSITION: 0 } }] }],
+    meshes: [{ primitives: [{ attributes: { POSITION: 0 }, ...(material ? { material: 0 } : {}) }] }],
+    ...(material ? { materials: [material] } : {}),
     accessors: [
       { ...vec3Accessor(0, TRIANGLE), min: [0, 0, 0], max: [1, 1, 0] },
       vec3Accessor(1, INSTANCE_OFFSETS),

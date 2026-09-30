@@ -7,8 +7,8 @@
 import * as THREE from 'three';
 import { applyShadowCasting, shadowCastingEffects } from '../../../r3f/shadowCasting';
 import { ShadowCastingSetting } from '../../../godot/rendering';
-import { unsupportedRequiredGltfExtensions } from '../../../godot/gltf';
-import type { GLTFLoader, GLTFLoaderPlugin, GLTFParser } from 'three/addons/loaders/GLTFLoader.js';
+import { withExtensionRules } from './extensionRules';
+import type { GltfExtensionRules } from './types';
 
 interface GlbModules {
   GLTFLoader: typeof import('three/addons/loaders/GLTFLoader.js')['GLTFLoader'];
@@ -101,45 +101,25 @@ export function disposeClonedMaterials(object: THREE.Object3D): void {
 
 // Functions that require the lazy-loaded addons.
 
-/**
- * three reads EXT_mesh_gpu_instancing and Godot skips it, so the node imports once at its own
- * transform. three keys its plugins by name (`GLTFLoader.js:498`), so this hook-less plugin,
- * registered after three's own, replaces it.
- */
-const skipInstancing = (): GLTFLoaderPlugin => ({ name: 'EXT_mesh_gpu_instancing' });
-
-/** Refuses the file before three reads it, as Godot's importer does (`gltf_document.cpp:7197-7202`). */
-function refuseUnsupportedRequired(parser: GLTFParser): GLTFLoaderPlugin {
-  return {
-    name: 'GODOT_required_extensions',
-    beforeRoot: async () => {
-      const required = (parser.json as { extensionsRequired?: string[] }).extensionsRequired ?? [];
-      const [unsupported] = unsupportedRequiredGltfExtensions(required);
-      if (unsupported !== undefined) {
-        throw new Error(`glTF: required extension '${unsupported}' is not supported by Godot's importer`);
-      }
-    },
-  };
+export interface GlbLoadOptions {
+  /**
+   * The `res://` directory a text .gltf's buffers and images resolve against. `manager`,
+   * the bus's LoadingManager, lets the host map those URLs onto fetchable ones. A host with
+   * no mapping fails the load, which shows the missing-resource placeholder.
+   */
+  resourcePath?: string;
+  manager?: THREE.LoadingManager;
+  /** Defaults to `godot-importer`. */
+  extensionRules?: GltfExtensionRules;
 }
 
-/** Make `loader` read extensions as Godot's glTF importer does, and no others it would skip. */
-function readAsGodot(loader: GLTFLoader): GLTFLoader {
-  return loader.register(skipInstancing).register(refuseUnsupportedRequired);
-}
-
-/**
- * Create a THREE.Object3D from GLB/GLTF data. A text .gltf references buffers and images
- * relative to `resourcePath`, its res:// directory, and `manager` (the bus's
- * LoadingManager) lets the host map those URLs onto fetchable ones. A host with no
- * mapping fails the load, which shows the missing-resource placeholder.
- */
+/** Create a THREE.Object3D from GLB/GLTF data. */
 export async function createGLBMesh(
   data: ArrayBuffer,
-  resourcePath = '',
-  manager?: THREE.LoadingManager
+  { resourcePath = '', manager, extensionRules = 'godot-importer' }: GlbLoadOptions = {}
 ): Promise<THREE.Object3D> {
   const { GLTFLoader } = await initGlbModules();
-  const loader = readAsGodot(new GLTFLoader(manager));
+  const loader = withExtensionRules(new GLTFLoader(manager), extensionRules);
   const gltf = await loader.parseAsync(data, resourcePath);
   // GLTFLoader returns embedded clips on `gltf.animations`. The scene's `.animations`
   // is where GLBSceneRoot plays them from and where `cloneWithMaterials` copies them.
