@@ -381,13 +381,14 @@ describe('AudioStreamPlayer3D Linter', () => {
     });
 
     it('should handle multiple validation errors', () => {
-      const diagnostics = lint(bare({ pitch_scale: 0, unit_size: -5.0, max_polyphony: 0 }));
+      const content = bare({ pitch_scale: 0, unit_size: -5.0, max_polyphony: 0 });
+      const diagnostics = lint(content);
       // pitch_scale and max_polyphony are refused by the engine, so they error;
       // unit_size = -5 only warns (audio_stream_player_3d.cpp:569 is a bare
       // assignment).
       expect(diagnostics.some(d => d.severity === 'error' && d.message.includes('pitch_scale'))).toBe(true);
       expect(diagnostics.some(d => d.severity === 'error' && d.message.includes('max_polyphony'))).toBe(true);
-      expect(diagnostics.some(d => d.severity === 'error' && d.message.includes('unit_size'))).toBe(false);
+      expectNoErrors(content, { prop: 'unit_size' });
     });
 
     it('should handle scientific notation in numeric values', () => {
