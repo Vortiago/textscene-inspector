@@ -14,13 +14,17 @@ export const MATERIAL_SCENES = [
   { name: 'material-features', file: 'integration-material-features.tscn' },
   // StandardMaterial3D `billboard_mode = ENABLED` on a QuadMesh: the left quad
   // turns to face the camera while the DISABLED right quad foreshortens at the
-  // editor orbit. The only golden with mesh billboarding. Sprite edges
-  // antialias against the ground.
+  // editor orbit. The only golden that pairs a billboard with a DISABLED quad.
+  // Sprite edges antialias against the ground.
   { name: 'material-billboard', file: 'unit-material-billboard.tscn' },
   // An additive, unshaded, billboarded QuadMesh with a radial GradientTexture2D
   // reads as a soft gold ring beside a metallic, emissive body. Pins the
   // additive billboard gradient glow. Additive edges are AA-sensitive.
   { name: 'coin-glow', file: 'unit-coin-glow.tscn' },
+  // A GridMap tile whose material billboards, in three cells along X: each
+  // square faces the camera about its own cell. The only GridMap golden whose
+  // tiles billboard.
+  { name: 'grid-map-billboard', file: 'unit-grid-map-billboard.tscn' },
 
   // The noise rasterisation pipeline on a Sprite2D: seeded FastNoiseLite
   // ridged fBm → normalise → seamless blend skirt → Gradient ramp. These two are

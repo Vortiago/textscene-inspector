@@ -1,0 +1,22 @@
+[gd_resource type="ArrayMesh" load_steps=2 format=4 uid="uid://unitgridmapbillboardtile"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_facing"]
+shading_mode = 0
+albedo_color = Color(0.95, 0.55, 0.15, 1)
+billboard_mode = 1
+
+[resource]
+resource_name = "facing_quad"
+_surfaces = [{
+"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
+"attribute_data": PackedByteArray("AAAAAAAAgD4AAIA+AACAPgAAgD8AAAAAAABAPwAAAAA="),
+"format": 34359742487,
+"index_count": 6,
+"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
+"material": SubResource("StandardMaterial3D_facing"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA//3//f////7//f/9/////v/9//3////+//3//f////78=")
+}]
+blend_shape_mode = 0
