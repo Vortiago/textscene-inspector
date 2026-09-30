@@ -5,6 +5,8 @@
  * with a control that shows the probe can see a long task.
  */
 import {
+  installStyle,
+  paintedOutChromeCss,
   settleCanvas,
   TEXTURE_WORK_STATUS_TESTID,
   TEXTURE_WORK_WAIT_MS,
@@ -40,7 +42,10 @@ function openProbedFixture(browser, baseUrl, fixture, initScripts) {
 }
 
 async function captureSettled(browser, baseUrl, { delayWorker, waitForTextureWork }) {
-  const initScripts = delayWorker ? [[installWorkerDelay, WORKER_DELAY_MS]] : [];
+  // The toolbar floats over the canvas, and its rounded corners rasterise one step apart
+  // between runs, so the captures compare the scene only, as the goldens do.
+  const initScripts = [[installStyle, paintedOutChromeCss({ canvas2D: false })]];
+  if (delayWorker) initScripts.push([installWorkerDelay, WORKER_DELAY_MS]);
   const { context, page, canvas } = await openProbedFixture(browser, baseUrl, DELAY_FIXTURE, initScripts);
   const startedAt = Date.now();
   const { buffer, reason } = await settleCanvas(page, canvas, { waitForTextureWork });

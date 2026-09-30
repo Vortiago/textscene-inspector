@@ -31,7 +31,12 @@ export {
   VIEWPORT,
   VIEWPORT_MODE_STORAGE_KEY,
 } from './preview/appContract.mjs';
-export { createCaptureContext, warmUpGLContext } from './preview/captureContext.mjs';
+export {
+  createCaptureContext,
+  installStyle,
+  paintedOutChromeCss,
+  warmUpGLContext,
+} from './preview/captureContext.mjs';
 export {
   findCanvas2DFrame,
   readViewportMode,
