@@ -14,6 +14,14 @@ function projectsAt(...dirs: string[]): (dir: string) => Promise<boolean> {
 }
 
 describe('comparablePath', () => {
+  it('trims trailing slashes in linear time, however many slashes the path holds', () => {
+    // A backtracking `/\/+$/` spends about 3 s on this path, which a host passes unchecked.
+    const manySlashes = `${'/'.repeat(100_000)}a`;
+    const startedAt = performance.now();
+    expect(comparablePath(`${manySlashes}///`)).toBe(manySlashes);
+    expect(performance.now() - startedAt).toBeLessThan(500);
+  });
+
   it('turns backslashes into forward slashes and lowers the case', () => {
     expect(comparablePath('C:\\Users\\Me\\Proj')).toBe('c:/users/me/proj');
   });

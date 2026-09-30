@@ -7,10 +7,19 @@
 const RES_SCHEME = 'res://';
 const PROJECT_FILE = 'project.godot';
 
+/**
+ * `path` without its trailing slashes. A loop, not `/\/+$/`: that regex backtracks quadratically on a
+ * path with many slashes that do not end it, and a host hands this any path it is given.
+ */
+function withoutTrailingSlashes(path: string): string {
+  let end = path.length;
+  while (end > 0 && path[end - 1] === '/') end--;
+  return path.slice(0, end);
+}
+
 /** `path` with forward slashes and no trailing one, unless it is a filesystem root such as `/` or `c:/`. */
 function forwardSlashes(path: string): string {
-  const slashed = path.replace(/\\/g, '/');
-  const trimmed = slashed.replace(/\/+$/, '');
+  const trimmed = withoutTrailingSlashes(path.replace(/\\/g, '/'));
   return trimmed === '' || /^[A-Za-z]:$/.test(trimmed) ? `${trimmed}/` : trimmed;
 }
 
