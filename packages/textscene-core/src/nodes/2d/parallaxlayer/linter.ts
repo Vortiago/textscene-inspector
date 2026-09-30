@@ -7,7 +7,16 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
+import { armDiagnostic, armEmits, type RuleArms } from '../../../linter/ruleArms.js';
 import { parentTypeVerdict, placementPhrase } from '../../../linter/parentType.js';
+
+const arms = {
+  outsideParallaxBackground: {
+    severity: 'warning',
+    ruleName: 'parallaxlayer-outside-parallaxbackground',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<'outsideParallaxBackground'>;
 
 function checkParallaxLayer(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
@@ -16,13 +25,11 @@ function checkParallaxLayer(context: RuleContext): Diagnostic[] {
   if (verdict.kind === 'satisfied' || verdict.kind === 'unknowable') return [];
 
   return [
-    {
-      severity: 'warning',
-      message: `ParallaxLayer '${node.name}' is ${placementPhrase(verdict)}. ParallaxLayer only works as a direct child of a ParallaxBackground; elsewhere its motion_scale, motion_offset and motion_mirroring have no effect.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'parallaxlayer-outside-parallaxbackground',
-    },
+    armDiagnostic(
+      arms.outsideParallaxBackground,
+      node,
+      `ParallaxLayer '${node.name}' is ${placementPhrase(verdict)}. ParallaxLayer only works as a direct child of a ParallaxBackground; elsewhere its motion_scale, motion_offset and motion_mirroring have no effect.`
+    ),
   ];
 }
 
@@ -33,7 +40,7 @@ const parallaxLayerParentRule: LintRule = {
       'Warns when a ParallaxLayer is not a direct child of a ParallaxBackground, where Godot never applies its motion properties',
     category: 'validation',
     applicableNodeTypes: ['ParallaxLayer'],
-    emits: [{ ruleName: 'parallaxlayer-outside-parallaxbackground', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: armEmits(arms),
   },
   check: checkParallaxLayer,
 };

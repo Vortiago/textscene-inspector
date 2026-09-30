@@ -7,11 +7,30 @@
 
 import type { Diagnostic } from '../../../../linter/types.js';
 import type { TscnNode } from '../../../../parser/types.js';
+import { reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../../godot/index.js';
 import type { tileMapLayerVector } from '../shared/layerVector';
 
 type Layer = ReturnType<typeof tileMapLayerVector>[number];
+
+export const ySortArms = {
+  ySortZIndexConflict: {
+    severity: 'warning',
+    ruleName: 'tilemap-y-sort-z-index-conflict',
+    grounding: { kind: 'configuration-warning' },
+  },
+  layerYSortWithoutNode: {
+    severity: 'warning',
+    ruleName: 'tilemap-layer-y-sort-without-node',
+    grounding: { kind: 'configuration-warning' },
+  },
+  nodeYSortWithoutLayer: {
+    severity: 'warning',
+    ruleName: 'tilemap-node-y-sort-without-layer',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<'ySortZIndexConflict' | 'layerYSortWithoutNode' | 'nodeYSortWithoutLayer'>;
 
 export function ySortDiagnostics(
   node: TscnNode,
@@ -19,7 +38,6 @@ export function ySortDiagnostics(
   layers: readonly Layer[]
 ): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
-  const at = { nodeName: node.name, nodeType: node.type };
   // A layer reads through the `layer_<i>/` group (tile_map.cpp:1028-1035). A layer with
   // neither key counts at its defaults, `y_sort_enabled` false and `z_index` 0, as the
   // engine's `Layer0` does before an author touches it.
@@ -40,34 +58,33 @@ export function ySortDiagnostics(
     })
   ) {
     // :856
-    diagnostics.push({
-      severity: 'warning',
-      message: `TileMap '${node.name}' has a Y-sorted layer sharing a Z-index with a non-Y-sorted layer. The non-Y-sorted layer will be Y-sorted as a whole alongside tiles from the Y-sorted layer.`,
-      ...at,
-      ruleName: 'tilemap-y-sort-z-index-conflict',
-    });
+    reportArm(
+      diagnostics,
+      ySortArms.ySortZIndexConflict,
+      node,
+      `TileMap '${node.name}' has a Y-sorted layer sharing a Z-index with a non-Y-sorted layer. The non-Y-sorted layer will be Y-sorted as a whole alongside tiles from the Y-sorted layer.`
+    );
   }
 
   // tile_map.cpp:860-882
   if (!nodeYSorted) {
     if (layers.some(isLayerYSorted)) {
       // :865
-      diagnostics.push({
-        severity: 'warning',
-        message: `TileMap '${node.name}' has a layer with y_sort_enabled, but y_sort_enabled is not set on the TileMap node itself.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'tilemap-layer-y-sort-without-node',
-      });
+      reportArm(
+        diagnostics,
+        ySortArms.layerYSortWithoutNode,
+        node,
+        `TileMap '${node.name}' has a layer with y_sort_enabled, but y_sort_enabled is not set on the TileMap node itself.`
+      );
     }
   } else if (!layers.some(isLayerYSorted)) {
     // :879
-    diagnostics.push({
-      severity: 'warning',
-      message: `TileMap '${node.name}' has y_sort_enabled set, but no layer has y_sort_enabled.`,
-      ...at,
-      ruleName: 'tilemap-node-y-sort-without-layer',
-    });
+    reportArm(
+      diagnostics,
+      ySortArms.nodeYSortWithoutLayer,
+      node,
+      `TileMap '${node.name}' has y_sort_enabled set, but no layer has y_sort_enabled.`
+    );
   }
 
   return diagnostics;

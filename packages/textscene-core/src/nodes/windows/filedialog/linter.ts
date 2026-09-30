@@ -11,6 +11,15 @@ import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../linter/validators/commonValidators.js';
 import { indicesPastCount, listWrittenIndices } from '../../../linter/reportedIndices.js';
+import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+
+const arms = {
+  optionIndexOutOfRange: {
+    severity: 'error',
+    ruleName: 'filedialog-option-index-out-of-range',
+    grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
+  },
+} as const satisfies RuleArms<'optionIndexOutOfRange'>;
 
 /**
  * FileDialog serves the family through a `PropertyListHelper` (file_dialog.cpp),
@@ -45,17 +54,15 @@ function checkFileDialog(context: RuleContext): Diagnostic[] {
   // the leaves (object.h, `_get_property_listv`) and `options.resize(p_count)`
   // keeps them in step, so only a hand edit reaches here.
   const indices = listWrittenIndices(offending);
-  diagnostics.push({
-    severity: 'error',
-    message:
-      `FileDialog option index(es) ${indices} fall outside option_count (${count}). ` +
+  reportArm(
+    diagnostics,
+    arms.optionIndexOutOfRange,
+    node,
+    `FileDialog option index(es) ${indices} fall outside option_count (${count}). ` +
       `PropertyListHelper::_get_property (property_list_helper.cpp:58) returns null for ` +
       'an index >= the array length, so FileDialog never calls the ' +
-      "matching setter and these option_<N>/… values are silently dropped on load.",
-    nodeName: node.name,
-    nodeType: node.type,
-    ruleName: 'filedialog-option-index-out-of-range',
-  });
+      "matching setter and these option_<N>/… values are silently dropped on load."
+  );
 
   return diagnostics;
 }
@@ -66,13 +73,7 @@ const fileDialogValidationRule: LintRule = {
     description: "Validates FileDialog's dynamic option_<N>/… indices stay within option_count",
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'FileDialog'),
-    emits: [
-      {
-        ruleName: 'filedialog-option-index-out-of-range',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkFileDialog,
 };

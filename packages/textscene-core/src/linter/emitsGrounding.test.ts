@@ -148,17 +148,6 @@ describe('emit grounding', () => {
       .sort();
     expect(malformed).toEqual([]);
   });
-
-  it('writes no bracket into an emits string, which would break the emits scrape', () => {
-    // `ruleCoverage.test.ts` finds the end of an `emits: [ … ]` array by
-    // counting brackets. A `[` or `]` inside a `because:` desyncs that count and
-    // silently deletes real diagnostics from its scrape - the guard would then
-    // pass because it cannot see what it checks.
-    const bracketed = all
-      .filter((e) => /[[\]]/.test(resolve(e, census)) || /[[\]]/.test(e.ruleName))
-      .map((e) => `${e.rule}: ${e.ruleName}`);
-    expect(bracketed.sort()).toEqual([]);
-  });
 });
 
 describe('the grounding guard bites', () => {

@@ -9,9 +9,15 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { hasChildOfType } from '../../../../linter/childType.js';
+import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
 
-const RULE_NAME = 'retargetmodifier3d-no-child-skeleton';
-
+const arms = {
+  noChildSkeleton: {
+    severity: 'warning',
+    ruleName: 'retargetmodifier3d-no-child-skeleton',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<'noChildSkeleton'>;
 
 function checkRetargetModifier3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -28,13 +34,11 @@ function checkRetargetModifier3D(context: RuleContext): Diagnostic[] {
       : `has only ${children.map((child) => child.type).join(', ')} as children`;
 
   return [
-    {
-      severity: 'warning',
-      message: `RetargetModifier3D '${node.name}' ${what}. It retargets the parent skeleton's pose onto Skeleton3D nodes placed directly beneath it, so with none there it collects no target and modifies nothing.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: RULE_NAME,
-    },
+    armDiagnostic(
+      arms.noChildSkeleton,
+      node,
+      `RetargetModifier3D '${node.name}' ${what}. It retargets the parent skeleton's pose onto Skeleton3D nodes placed directly beneath it, so with none there it collects no target and modifies nothing.`
+    ),
   ];
 }
 
@@ -45,7 +49,7 @@ const retargetModifier3DChildSkeletonRule: LintRule = {
       'Warns when a RetargetModifier3D has no direct child Skeleton3D to retarget onto, the state Godot itself reports as "There is no child Skeleton3D!"',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'RetargetModifier3D'),
-    emits: [{ ruleName: RULE_NAME, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: armEmits(arms),
   },
   check: checkRetargetModifier3D,
 };

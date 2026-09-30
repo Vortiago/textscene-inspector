@@ -13,8 +13,15 @@ import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { listIndices, unsatisfiedIndices } from '../../../../linter/reportedIndices.js';
 import { indexedElements } from '../../../../godot/index.js';
 import { resolveIterateSettingLeaf } from './linterParser.js';
+import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
 
-const RULE_NAME = 'iterateik3d-setting-missing-target-node';
+const arms = {
+  settingMissingTargetNode: {
+    severity: 'warning',
+    ruleName: 'iterateik3d-setting-missing-target-node',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<'settingMissingTargetNode'>;
 
 function checkIterateIK3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -47,16 +54,13 @@ function checkIterateIK3D(context: RuleContext): Diagnostic[] {
   if (total === 0) return [];
 
   return [
-    {
-      severity: 'warning',
-      message:
-        `${node.type} '${node.name}' setting(s) ${listIndices(missing, total)} have no target_node. ` +
+    armDiagnostic(
+      arms.settingMissingTargetNode,
+      node,
+      `${node.type} '${node.name}' setting(s) ${listIndices(missing, total)} have no target_node. ` +
         "IterateIK3D resolves 'settings/<i>/target_node' during IK solving and skips a setting " +
-        'with none (iterate_ik_3d.cpp:511), so this chain of bones is never posed.',
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: RULE_NAME,
-    },
+        'with none (iterate_ik_3d.cpp:511), so this chain of bones is never posed.'
+    ),
   ];
 }
 
@@ -67,7 +71,7 @@ const iterateIK3DTargetRule: LintRule = {
       'Warns when an IterateIK3D-family setting names no target_node, the configuration Godot itself flags and then skips',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'IterateIK3D'),
-    emits: [{ ruleName: RULE_NAME, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: armEmits(arms),
   },
   check: checkIterateIK3D,
 };

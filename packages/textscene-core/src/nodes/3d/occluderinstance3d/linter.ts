@@ -9,6 +9,20 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
+import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+
+const arms = {
+  emptyBakeMask: {
+    severity: 'warning',
+    ruleName: 'occluderinstance3d-empty-bake-mask',
+    grounding: { kind: 'configuration-warning' },
+  },
+  missingOccluder: {
+    severity: 'warning',
+    ruleName: 'occluderinstance3d-missing-occluder',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<'emptyBakeMask' | 'missingOccluder'>;
 
 // Not ported: the `use_occlusion_culling` project setting needs `project.godot`. The
 // occluder vertex-count warnings need the referenced resource, usually an external
@@ -25,25 +39,23 @@ function checkOccluderInstance3D(context: RuleContext): Diagnostic[] {
   // layers), so only an explicit `bake_mask = 0` fires. The setter takes uint32_t
   // (occluder_instance_3d.h:196).
   if (rawProps.bake_mask !== undefined && ruleInt(rawProps.bake_mask, null, 'uint32') === 0) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `OccluderInstance3D '${node.name}' has a Bake Mask with no bits enabled, so baking will not produce any occluder mesh for it. Enable at least one bit in the Bake Mask property.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'occluderinstance3d-empty-bake-mask',
-    });
+    reportArm(
+      diagnostics,
+      arms.emptyBakeMask,
+      node,
+      `OccluderInstance3D '${node.name}' has a Bake Mask with no bits enabled, so baking will not produce any occluder mesh for it. Enable at least one bit in the Bake Mask property.`
+    );
   }
 
   // occluder_instance_3d.cpp:704-705. A node with no Occluder is valid, since a script
   // may assign one or the node is a bake target, but it culls nothing until then.
   if (resourceSlotIsEmpty(rawProps.occluder)) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `OccluderInstance3D '${node.name}' has no 'occluder', so it performs no occlusion culling until one is assigned.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'occluderinstance3d-missing-occluder',
-    });
+    reportArm(
+      diagnostics,
+      arms.missingOccluder,
+      node,
+      `OccluderInstance3D '${node.name}' has no 'occluder', so it performs no occlusion culling until one is assigned.`
+    );
   }
 
   return diagnostics;
@@ -56,10 +68,7 @@ const occluderInstance3DConfigurationWarningsRule: LintRule = {
       "Ports OccluderInstance3D's own get_configuration_warnings: an empty Bake Mask or a missing Occluder resource",
     category: 'validation',
     applicableNodeTypes: ['OccluderInstance3D'],
-    emits: [
-      { ruleName: 'occluderinstance3d-empty-bake-mask', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      { ruleName: 'occluderinstance3d-missing-occluder', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-    ],
+    emits: armEmits(arms),
   },
   check: checkOccluderInstance3D,
 };

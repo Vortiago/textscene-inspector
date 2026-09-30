@@ -9,6 +9,15 @@ import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
+
+const arms = {
+  selectedOutOfRange: {
+    severity: 'warning',
+    ruleName: 'optionbutton-selected-out-of-range',
+    grounding: { kind: 'engine', at: 'option_button.cpp:436' },
+  },
+} as const satisfies RuleArms<'selectedOutOfRange'>;
 
 function checkOptionButtonSelected(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -29,13 +38,11 @@ function checkOptionButtonSelected(context: RuleContext): Diagnostic[] {
   if (selected < itemCount) return [];
 
   return [
-    {
-      severity: 'warning',
-      message: `OptionButton '${node.name}' sets 'selected' = ${selected} but declares only ${itemCount} item(s) (item_count). Depending on the order these two properties appear in the file, Godot either silently drops this selection (option_button.cpp:436-441) or assigns it to the internal current index with no bounds check at all (option_button.cpp:329-334); neither selects the intended item.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'optionbutton-selected-out-of-range',
-    },
+    armDiagnostic(
+      arms.selectedOutOfRange,
+      node,
+      `OptionButton '${node.name}' sets 'selected' = ${selected} but declares only ${itemCount} item(s) (item_count). Depending on the order these two properties appear in the file, Godot either silently drops this selection (option_button.cpp:436-441) or assigns it to the internal current index with no bounds check at all (option_button.cpp:329-334); neither selects the intended item.`
+    ),
   ];
 }
 
@@ -45,13 +52,7 @@ const optionButtonSelectedRule: LintRule = {
     description: "Flags an OptionButton 'selected' index that item_count never provides",
     category: 'validation',
     applicableNodeTypes: ['OptionButton'],
-    emits: [
-      {
-        ruleName: 'optionbutton-selected-out-of-range',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'option_button.cpp:436' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkOptionButtonSelected,
 };

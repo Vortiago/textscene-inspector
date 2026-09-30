@@ -85,7 +85,14 @@ describe('${typeName} shared validators', () => {
 
 import type { Diagnostic, LintRule, RuleContext } from '${toSrc}linter/types.js';
 import { ruleRegistry } from '${toSrc}linter/RuleRegistry.js';
+import { armEmits, type RuleArms } from '${toSrc}linter/ruleArms.js';
 import { descendsFrom } from '${toSrc}godot/nodeBaseTypes.js';
+
+/**
+ * One arm per diagnostic \`check\` reports, each with its grounding (ADR-0032).
+ * \`check\` reports through \`reportArm(diagnostics, arms.<key>, node, message)\`.
+ */
+const arms = {} as const satisfies RuleArms<never>;
 
 function check${typeName}(context: RuleContext): Diagnostic[] {
   // No applicability check here: RuleRegistry has already filtered by the
@@ -102,7 +109,7 @@ const ${typeName[0].toLowerCase() + typeName.slice(1)}ValidationRule: LintRule =
     description: 'TBD',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, '${typeName}'),
-    emits: [],
+    emits: armEmits(arms),
   },
   check: check${typeName},
 };

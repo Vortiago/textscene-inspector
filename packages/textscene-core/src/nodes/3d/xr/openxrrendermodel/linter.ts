@@ -8,8 +8,15 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
+import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
 
-const PARENT_RULE = 'openxrrendermodel-parent-not-origin-or-manager';
+const arms = {
+  parentNotOriginOrManager: {
+    severity: 'warning',
+    ruleName: 'openxrrendermodel-parent-not-origin-or-manager',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<'parentNotOriginOrManager'>;
 
 // Godot dereferences `get_parent()` with no guard, so a scene-root node crashes its check. This rule
 // warns at the root instead, as OpenXRVisibilityMask and BoneAttachment3D do.
@@ -26,13 +33,11 @@ function checkOpenXRRenderModelParent(context: RuleContext): Diagnostic[] {
 
   const where = placementPhrase(originVerdict);
   return [
-    {
-      severity: 'warning',
-      message: `OpenXRRenderModel '${node.name}' is ${where}. Godot expects it to be a child of either an XROrigin3D or an OpenXRRenderModelManager node.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: PARENT_RULE,
-    },
+    armDiagnostic(
+      arms.parentNotOriginOrManager,
+      node,
+      `OpenXRRenderModel '${node.name}' is ${where}. Godot expects it to be a child of either an XROrigin3D or an OpenXRRenderModelManager node.`
+    ),
   ];
 }
 
@@ -43,7 +48,7 @@ const openXRRenderModelParentRule: LintRule = {
       "Warns when an OpenXRRenderModel's parent is neither an XROrigin3D nor an OpenXRRenderModelManager, Godot's own configuration warning for this node",
     category: 'validation',
     applicableNodeTypes: ['OpenXRRenderModel'],
-    emits: [{ ruleName: PARENT_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: armEmits(arms),
   },
   check: checkOpenXRRenderModelParent,
 };

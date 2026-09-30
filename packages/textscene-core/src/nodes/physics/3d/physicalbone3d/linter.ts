@@ -8,7 +8,21 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import type { TscnNode } from '../../../../parser/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { JOINT_DATA, jointConstraintOwners, type JointType } from './jointConstraints.js';
+
+const arms = {
+  constraintWithoutJoint: {
+    severity: 'error',
+    ruleName: 'physicalbone3d-joint-constraint-without-joint',
+    grounding: { kind: 'engine', at: 'physical_bone_3d.cpp:715' },
+  },
+  constraintWrongJointType: {
+    severity: 'error',
+    ruleName: 'physicalbone3d-joint-constraint-wrong-joint-type',
+    grounding: { kind: 'engine', at: 'physical_bone_3d.cpp:724' },
+  },
+} as const satisfies RuleArms<'constraintWithoutJoint' | 'constraintWrongJointType'>;
 
 /**
  * `joint_constraints/*` writes, judged against the JointData live when each line applies.
@@ -18,7 +32,6 @@ import { JOINT_DATA, jointConstraintOwners, type JointType } from './jointConstr
  */
 function jointConstraintDiagnostics(node: TscnNode, rawProps: Record<string, string>): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
-  const at = { nodeName: node.name, nodeType: node.type };
   // `undefined` once a `joint_type` no rule can read has applied: unknowable from there.
   let live: JointType | null | undefined = null;
   let seenJointType = false;
@@ -35,22 +48,21 @@ function jointConstraintDiagnostics(node: TscnNode, rawProps: Record<string, str
     if (owners === null) continue;
     if (live === null) {
       const below = !seenJointType && rawProps.joint_type !== undefined;
-      diagnostics.push({
-        ...at,
-        severity: 'error',
-        ruleName: 'physicalbone3d-joint-constraint-without-joint',
-        message:
-          `'${key}' is written while joint_type is NONE, so no JointData receives it and the write is dropped (physical_bone_3d.cpp:715).` +
-          (below ? ` Godot applies properties in file order; move 'joint_type' above it.` : ''),
-      });
+      reportArm(
+        diagnostics,
+        arms.constraintWithoutJoint,
+        node,
+        `'${key}' is written while joint_type is NONE, so no JointData receives it and the write is dropped (physical_bone_3d.cpp:715).` +
+          (below ? ` Godot applies properties in file order; move 'joint_type' above it.` : '')
+      );
     } else if (!owners.has(live)) {
       const data = JOINT_DATA[live];
-      diagnostics.push({
-        ...at,
-        severity: 'error',
-        ruleName: 'physicalbone3d-joint-constraint-wrong-joint-type',
-        message: `'${key}' is not a ${data.name} property (joint_type = ${live}); its _set has no arm for it and returns false (${data.refusedAt}), so the write is dropped.`,
-      });
+      reportArm(
+        diagnostics,
+        arms.constraintWrongJointType,
+        node,
+        `'${key}' is not a ${data.name} property (joint_type = ${live}); its _set has no arm for it and returns false (${data.refusedAt}), so the write is dropped.`
+      );
     }
   }
   return diagnostics;
@@ -67,18 +79,7 @@ const physicalBone3DValidationRule: LintRule = {
     description: 'Warns when a PhysicalBone3D has no CollisionShape3D or CollisionPolygon3D descendant, and errors on joint_constraints writes the live JointData drops',
     category: 'validation',
     applicableNodeTypes: ['PhysicalBone3D'],
-    emits: [
-      {
-        ruleName: 'physicalbone3d-joint-constraint-without-joint',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'physical_bone_3d.cpp:715' },
-      },
-      {
-        ruleName: 'physicalbone3d-joint-constraint-wrong-joint-type',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'physical_bone_3d.cpp:724' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkPhysicalBone3D,
 };

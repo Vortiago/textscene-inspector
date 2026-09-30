@@ -7,10 +7,19 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
+import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { indicesPastCount, listWrittenIndices } from '../../../../linter/reportedIndices.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
+
+const arms = {
+  itemIndexOutOfRange: {
+    severity: 'error',
+    ruleName: 'itemlist-item-index-out-of-range',
+    grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
+  },
+} as const satisfies RuleArms<'itemIndexOutOfRange'>;
 
 /**
  * The family's prefix. ItemList serves it through a `PropertyListHelper` (item_list.cpp), whose
@@ -46,17 +55,15 @@ function checkItemList(context: RuleContext): Diagnostic[] {
   // false for that index (property_list_helper.cpp:166-175), so no `set_item_*` setter
   // runs and nothing is logged: the silently dropped write ADR-0032 grounds on.
   const indices = listWrittenIndices(offending);
-  diagnostics.push({
-    severity: 'error',
-    message:
-      `ItemList item index(es) ${indices} fall outside item_count (${count}). ` +
+  reportArm(
+    diagnostics,
+    arms.itemIndexOutOfRange,
+    node,
+    `ItemList item index(es) ${indices} fall outside item_count (${count}). ` +
       'PropertyListHelper::_get_property (property_list_helper.cpp:58) returns null for ' +
       'an index >= the array length, so ItemList never calls the matching setter and ' +
-      'these item_<N>/… values are silently dropped on load.',
-    nodeName: node.name,
-    nodeType: node.type,
-    ruleName: 'itemlist-item-index-out-of-range',
-  });
+      'these item_<N>/… values are silently dropped on load.'
+  );
 
   return diagnostics;
 }
@@ -67,13 +74,7 @@ const itemListValidationRule: LintRule = {
     description: "Validates ItemList's dynamic item_<N>/… indices stay within item_count",
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'ItemList'),
-    emits: [
-      {
-        ruleName: 'itemlist-item-index-out-of-range',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkItemList,
 };

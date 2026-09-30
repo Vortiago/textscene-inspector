@@ -5,6 +5,7 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
+import { armEmits, reportArm, type RuleArms } from '../ruleArms.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { parentTypeVerdict } from '../parentType.js';
@@ -13,6 +14,13 @@ export function makeVehicleWheelLinterRule(dim: PhysicsDim): LintRule {
   const type = `VehicleWheel${dim}`;
   const bodyType = `VehicleBody${dim}`;
   const prefix = `vehiclewheel${dimSuffix(dim)}`;
+  const arms = {
+    notUnderVehicleBody: {
+      severity: 'warning',
+      ruleName: `${prefix}-not-under-vehicle-body`,
+      grounding: { kind: 'configuration-warning' },
+    },
+  } as const satisfies RuleArms<'notUnderVehicleBody'>;
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
@@ -26,13 +34,12 @@ export function makeVehicleWheelLinterRule(dim: PhysicsDim): LintRule {
     // `unknowable` stays silent, as in nodes/2d/parallaxlayer/linter.ts and
     // physics/joints/shared/linter.ts. `root` still warns.
     if (placement.kind === 'root' || placement.kind === 'mismatch') {
-      diagnostics.push({
-        severity: 'warning',
-        message: `${type} '${node.name}' is not a direct child of a ${bodyType}. Godot only attaches wheels that are direct children of the vehicle body; this wheel will do nothing.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: `${prefix}-not-under-vehicle-body`,
-      });
+      reportArm(
+        diagnostics,
+        arms.notUnderVehicleBody,
+        node,
+        `${type} '${node.name}' is not a direct child of a ${bodyType}. Godot only attaches wheels that are direct children of the vehicle body; this wheel will do nothing.`
+      );
     }
 
     // No check between damping_relaxation and damping_compression: both are
@@ -48,13 +55,7 @@ export function makeVehicleWheelLinterRule(dim: PhysicsDim): LintRule {
       description: `Validates ${type} placement under a ${bodyType}`,
       category: 'validation',
       applicableNodeTypes: [type],
-      emits: [
-        {
-          ruleName: `${prefix}-not-under-vehicle-body`,
-          severity: 'warning',
-          grounding: { kind: 'configuration-warning' },
-        },
-      ],
+      emits: armEmits(arms),
     },
     check,
   };

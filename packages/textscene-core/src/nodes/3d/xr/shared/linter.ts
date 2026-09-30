@@ -12,10 +12,29 @@ import { isExplicitlyHidden, parentTypeVerdict, placementPhrase } from '../../..
 import { isOrthonormalTransform } from '../../../../linter/transformBasis.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../../godot/index.js';
+import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
-const PARENT_RULE = 'openxrcompositionlayer-parent-not-xrorigin3d';
-const ORTHONORMAL_RULE = 'openxrcompositionlayer-non-orthonormal-transform';
-const HOLE_PUNCH_RULE = 'openxrcompositionlayer-hole-punch-sort-order';
+const arms = {
+  parentNotXROrigin3D: {
+    severity: 'warning',
+    ruleName: 'openxrcompositionlayer-parent-not-xrorigin3d',
+    grounding: { kind: 'configuration-warning' },
+  },
+  nonOrthonormalTransform: {
+    severity: 'warning',
+    ruleName: 'openxrcompositionlayer-non-orthonormal-transform',
+    grounding: { kind: 'configuration-warning' },
+  },
+  holePunchSortOrder: {
+    severity: 'warning',
+    ruleName: 'openxrcompositionlayer-hole-punch-sort-order',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<
+  | 'parentNotXROrigin3D'
+  | 'nonOrthonormalTransform'
+  | 'holePunchSortOrder'
+>;
 
 // Not modelled: set_layer_viewport's ERR_FAIL_COND_MSG when `use_android_surface` is true (:303-305).
 // `layer_viewport` is declared at :151, before `use_android_surface` at :152, so a saved file sets it
@@ -36,13 +55,12 @@ function checkOpenXRCompositionLayer(context: RuleContext): Diagnostic[] {
     const verdict = parentTypeVerdict(scene, node, 'XROrigin3D');
     if (verdict.kind === 'mismatch' || verdict.kind === 'root') {
       const where = placementPhrase(verdict);
-      diagnostics.push({
-        severity: 'warning',
-        message: `${node.type} '${node.name}' is ${where}. OpenXR composition layers must have an XROrigin3D node as their parent, the same configuration warning Godot's own editor reports.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: PARENT_RULE,
-      });
+      reportArm(
+        diagnostics,
+        arms.parentNotXROrigin3D,
+        node,
+        `${node.type} '${node.name}' is ${where}. OpenXR composition layers must have an XROrigin3D node as their parent, the same configuration warning Godot's own editor reports.`
+      );
     }
   }
 
@@ -52,13 +70,12 @@ function checkOpenXRCompositionLayer(context: RuleContext): Diagnostic[] {
   if (properties.transform !== undefined) {
     const orthonormal = isOrthonormalTransform(properties.transform);
     if (orthonormal === false) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `${node.type} '${node.name}' has a non-orthonormalized transform (scale or shearing). OpenXR composition layers must have orthonormalized transforms, the same configuration warning Godot's own editor reports.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: ORTHONORMAL_RULE,
-      });
+      reportArm(
+        diagnostics,
+        arms.nonOrthonormalTransform,
+        node,
+        `${node.type} '${node.name}' has a non-orthonormalized transform (scale or shearing). OpenXR composition layers must have orthonormalized transforms, the same configuration warning Godot's own editor reports.`
+      );
     }
   }
 
@@ -70,13 +87,12 @@ function checkOpenXRCompositionLayer(context: RuleContext): Diagnostic[] {
   const sortOrder =
     ruleInt(properties.sort_order, 1);
   if (holePunchEnabled && sortOrder !== null && sortOrder >= 0) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `${node.type} '${node.name}' has enable_hole_punch on with sort_order ${sortOrder} (>= 0). Hole punching won't work as expected unless the sort order is less than zero, the same configuration warning Godot's own editor reports.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: HOLE_PUNCH_RULE,
-    });
+    reportArm(
+      diagnostics,
+      arms.holePunchSortOrder,
+      node,
+      `${node.type} '${node.name}' has enable_hole_punch on with sort_order ${sortOrder} (>= 0). Hole punching won't work as expected unless the sort order is less than zero, the same configuration warning Godot's own editor reports.`
+    );
   }
 
   return diagnostics;
@@ -89,11 +105,7 @@ const openXRCompositionLayerValidationRule: LintRule = {
       "Godot's three OpenXRCompositionLayer configuration warnings: parent must be XROrigin3D, transform must be orthonormal, and hole punching needs a negative sort order",
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'OpenXRCompositionLayer'),
-    emits: [
-      { ruleName: PARENT_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      { ruleName: ORTHONORMAL_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      { ruleName: HOLE_PUNCH_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
-    ],
+    emits: armEmits(arms),
   },
   check: checkOpenXRCompositionLayer,
 };

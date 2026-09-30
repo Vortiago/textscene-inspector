@@ -7,6 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
+import { armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
 import { rangeAdvisories, type RangeArm } from '../../../../linter/rangeAdvisory.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
@@ -15,7 +16,13 @@ import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { firstSegment, indexedElements, indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
 import { resolveConvertSettingLeaf } from './linterParser.js';
 
-const RULE_NAME = 'converttransformmodifier3d-range-outside-mode-hint';
+const arms = {
+  rangeOutsideModeHint: {
+    severity: 'warning',
+    ruleName: 'converttransformmodifier3d-range-outside-mode-hint',
+    grounding: { kind: 'engine', at: 'convert_transform_modifier_3d.cpp:143' },
+  },
+} as const satisfies RuleArms<'rangeOutsideModeHint'>;
 
 /**
  * Any `settings/<i>/…` key, its index and the path below it captured. `_set` reads the index with a
@@ -51,14 +58,12 @@ function rotationArms(key: string): RangeArm[] {
     'The setter assigns the value unaltered, so it loads and runs; only the inspector cannot reach it.';
   return [
     {
-      ruleName: RULE_NAME,
       over: ROTATION_LIMIT,
       cite: 'convert_transform_modifier_3d.cpp:34',
       message: (value) =>
         `ConvertTransformModifier3D ${key} is ${value}, above the PI radians its transform_mode of Rotation permits: ${explain}`,
     },
     {
-      ruleName: RULE_NAME,
       under: -ROTATION_LIMIT,
       cite: 'convert_transform_modifier_3d.cpp:34',
       message: (value) =>
@@ -74,7 +79,6 @@ function rotationArms(key: string): RangeArm[] {
 function scaleArms(key: string): RangeArm[] {
   return [
     {
-      ruleName: RULE_NAME,
       under: 0,
       cite: 'convert_transform_modifier_3d.cpp:35',
       message: (value) =>
@@ -118,7 +122,7 @@ function checkConvertTransformModifier3D(context: RuleContext): Diagnostic[] {
 
   // The `CLAMP` at :405 applies to the interpolated result during processing, not the stored
   // property, so it grounds no error.
-  return rangeAdvisories(node, table);
+  return rangeAdvisories(node, table, arms.rangeOutsideModeHint);
 }
 
 const convertTransformModifier3DValidationRule: LintRule = {
@@ -128,13 +132,7 @@ const convertTransformModifier3DValidationRule: LintRule = {
       "Validates each ConvertTransformModifier3D settings/<i>/ range against the PROPERTY_HINT_RANGE its sibling transform_mode selects",
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'ConvertTransformModifier3D'),
-    emits: [
-      {
-        ruleName: RULE_NAME,
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'convert_transform_modifier_3d.cpp:143' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkConvertTransformModifier3D,
 };

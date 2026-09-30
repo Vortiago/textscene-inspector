@@ -8,6 +8,15 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { rangeOrderHazard } from '../shared/rangeLinter.js';
+import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
+
+const arms = {
+  propertyOrder: {
+    severity: 'warning',
+    ruleName: 'vslider-property-order',
+    grounding: { kind: 'engine', at: 'range.cpp:106' },
+  },
+} as const satisfies RuleArms<'propertyOrder'>;
 
 function checkVSliderPropertyOrder(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -17,20 +26,17 @@ function checkVSliderPropertyOrder(context: RuleContext): Diagnostic[] {
   if (!laterTriggers) return [];
 
   return [
-    {
-      severity: 'warning',
-      message:
-        `'value' is authored before ${laterTriggers.join(', ')} on ${node.name}. Godot applies a ` +
+    armDiagnostic(
+      arms.propertyOrder,
+      node,
+      `'value' is authored before ${laterTriggers.join(', ')} on ${node.name}. Godot applies a ` +
         `node's properties in the order the file lists them (SceneState::instantiate, ` +
         `scene/resources/packed_scene.cpp), and Range::set_min/set_max/set_page each re-clamp ` +
         `'value' against whatever bounds exist at that moment (scene/gui/range.cpp:211-266) — so ` +
         `'value' can be silently clamped against stale (default) bounds, and a later ` +
         `min_value/max_value/page line cannot recover the original intent. Move 'value' after ` +
-        `${laterTriggers.join(', ')}.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'vslider-property-order',
-    },
+        `${laterTriggers.join(', ')}.`
+    ),
   ];
 }
 
@@ -42,13 +48,7 @@ const vSliderPropertyOrderRule: LintRule = {
       'setters silently re-clamp against.',
     category: 'validation',
     applicableNodeTypes: ['VSlider'],
-    emits: [
-      {
-        ruleName: 'vslider-property-order',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'range.cpp:106' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkVSliderPropertyOrder,
 };

@@ -9,6 +9,15 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
+import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
+
+const arms = {
+  outsideSimulator: {
+    severity: 'warning',
+    ruleName: 'springbonecollision3d-outside-springbonesimulator3d',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<'outsideSimulator'>;
 
 function checkSpringBoneCollision3D(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
@@ -19,13 +28,11 @@ function checkSpringBoneCollision3D(context: RuleContext): Diagnostic[] {
   if (verdict.kind === 'satisfied' || verdict.kind === 'unknowable') return [];
 
   return [
-    {
-      severity: 'warning',
-      message: `SpringBoneCollision3D '${node.name}' is ${placementPhrase(verdict)}. SpringBoneCollision3D only has an effect as a child of a SpringBoneSimulator3D; elsewhere it is never consulted and collides with nothing.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'springbonecollision3d-outside-springbonesimulator3d',
-    },
+    armDiagnostic(
+      arms.outsideSimulator,
+      node,
+      `SpringBoneCollision3D '${node.name}' is ${placementPhrase(verdict)}. SpringBoneCollision3D only has an effect as a child of a SpringBoneSimulator3D; elsewhere it is never consulted and collides with nothing.`
+    ),
   ];
 }
 
@@ -36,7 +43,7 @@ const springBoneCollision3DParentRule: LintRule = {
       'Warns when a SpringBoneCollision3D is not a direct child of a SpringBoneSimulator3D, where Godot never consults it',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'SpringBoneCollision3D'),
-    emits: [{ ruleName: 'springbonecollision3d-outside-springbonesimulator3d', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: armEmits(arms),
   },
   check: checkSpringBoneCollision3D,
 };

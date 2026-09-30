@@ -13,6 +13,45 @@ import { hiddenOrUnknowableInTree, parentTypeVerdict, placementPhrase } from '..
 import { resolveSubResourceRef } from '../../../resources/SubResourceResolver.js';
 import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../godot/index.js';
+import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+
+const arms = {
+  noParent: {
+    severity: 'warning',
+    ruleName: 'pathfollow3d-no-parent',
+    grounding: { kind: 'configuration-warning' },
+  },
+  invalidParent: {
+    severity: 'warning',
+    ruleName: 'pathfollow3d-invalid-parent',
+    grounding: { kind: 'configuration-warning' },
+  },
+  negativeProgress: {
+    severity: 'info',
+    ruleName: 'pathfollow3d-negative-progress',
+    grounding: {
+      kind: 'engine-inert',
+      at: 'curve.cpp:2024',
+      unused: 'the sampler clamps the offset, so travel before the start moves nothing',
+    },
+  },
+  progressRatioIgnored: {
+    severity: 'error',
+    ruleName: 'pathfollow3d-progress-ratio-ignored',
+    grounding: { kind: 'engine', at: 'path_3d.cpp:503' },
+  },
+  orientedModeWithoutUpVector: {
+    severity: 'warning',
+    ruleName: 'pathfollow3d-oriented-mode-requires-up-vector',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<
+  | 'noParent'
+  | 'invalidParent'
+  | 'negativeProgress'
+  | 'progressRatioIgnored'
+  | 'orientedModeWithoutUpVector'
+>;
 
 /** `PathFollow3D::ROTATION_ORIENTED` (path_3d.h), the mode that needs up vectors. */
 const ROTATION_ORIENTED = 4;
@@ -51,21 +90,19 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
   const placement = parentTypeVerdict(scene, node, 'Path3D');
   if (!gated) {
     if (placement.kind === 'root') {
-      diagnostics.push({
-        severity: 'warning',
-        message: `PathFollow3D '${node.name}' is the scene root. It only works as a direct child of a Path3D node, and follows nothing here.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'pathfollow3d-no-parent',
-      });
+      reportArm(
+        diagnostics,
+        arms.noParent,
+        node,
+        `PathFollow3D '${node.name}' is the scene root. It only works as a direct child of a Path3D node, and follows nothing here.`
+      );
     } else if (placement.kind === 'mismatch') {
-      diagnostics.push({
-        severity: 'warning',
-        message: `PathFollow3D '${node.name}' is ${placementPhrase(placement)}. It only works as a direct child of a Path3D node, and follows nothing here.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'pathfollow3d-invalid-parent',
-      });
+      reportArm(
+        diagnostics,
+        arms.invalidParent,
+        node,
+        `PathFollow3D '${node.name}' is ${placementPhrase(placement)}. It only works as a direct child of a Path3D node, and follows nothing here.`
+      );
     }
   }
 
@@ -78,13 +115,12 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
     // (path_3d.cpp:450), so a non-finite one never lands and this rule has
     // nothing to say about the travel it would have asked for.
     if (progress !== null && Number.isFinite(progress) && progress < 0) {
-      diagnostics.push({
-        severity: 'info',
-        message: `PathFollow3D 'progress' is negative (${progress}). Godot keeps the value, but clamps it when sampling the curve, so the follower sits at the start of the path.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'pathfollow3d-negative-progress',
-      });
+      reportArm(
+        diagnostics,
+        arms.negativeProgress,
+        node,
+        `PathFollow3D 'progress' is negative (${progress}). Godot keeps the value, but clamps it when sampling the curve, so the follower sits at the start of the path.`
+      );
     }
   }
 
@@ -93,13 +129,12 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
   // So `set_progress` stores the raw value, and `set_progress_ratio` (path_3d.cpp:503), missing its
   // parent, drops every authored ratio: the check is unconditional, whatever the value.
   if (rawProps.progress_ratio !== undefined) {
-    diagnostics.push({
-      severity: 'error',
-      message: `PathFollow3D 'progress_ratio' is set. A scene file cannot carry it: the setter needs a Path3D parent that is already in the tree, and properties are applied before the node is parented, so Godot drops it. Use 'progress' instead.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'pathfollow3d-progress-ratio-ignored',
-    });
+    reportArm(
+      diagnostics,
+      arms.progressRatioIgnored,
+      node,
+      `PathFollow3D 'progress_ratio' is set. A scene file cannot carry it: the setter needs a Path3D parent that is already in the tree, and properties are applied before the node is parented, so Godot drops it. Use 'progress' instead.`
+    );
   }
 
   // path_3d.cpp:362: all three conjuncts, not only the mode. The curve must be
@@ -110,13 +145,12 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
     placement.kind === 'satisfied' &&
     parentCurveDisablesUpVector(scene, placement.parent)
   ) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `PathFollow3D '${node.name}' uses ROTATION_ORIENTED, but its parent Path3D's Curve3D sets 'up_vector_enabled = false'. Godot needs up vectors for that mode.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'pathfollow3d-oriented-mode-requires-up-vector',
-    });
+    reportArm(
+      diagnostics,
+      arms.orientedModeWithoutUpVector,
+      node,
+      `PathFollow3D '${node.name}' uses ROTATION_ORIENTED, but its parent Path3D's Curve3D sets 'up_vector_enabled = false'. Godot needs up vectors for that mode.`
+    );
   }
 
   return diagnostics;
@@ -128,25 +162,7 @@ const pathFollow3DValidationRule: LintRule = {
     description: 'Validates PathFollow3D parent relationship, progress values, and rotation mode requirements',
     category: 'validation',
     applicableNodeTypes: ['PathFollow3D'],
-    emits: [
-      { ruleName: 'pathfollow3d-no-parent', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      { ruleName: 'pathfollow3d-invalid-parent', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      {
-        ruleName: 'pathfollow3d-negative-progress',
-        severity: 'info',
-        grounding: {
-          kind: 'engine-inert',
-          at: 'curve.cpp:2024',
-          unused: 'the sampler clamps the offset, so travel before the start moves nothing',
-        },
-      },
-      {
-        ruleName: 'pathfollow3d-progress-ratio-ignored',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'path_3d.cpp:503' },
-      },
-      { ruleName: 'pathfollow3d-oriented-mode-requires-up-vector', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-    ],
+    emits: armEmits(arms),
   },
   check: checkPathFollow3D,
 };

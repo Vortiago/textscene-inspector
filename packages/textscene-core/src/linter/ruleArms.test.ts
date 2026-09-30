@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { stripComments } from '@textscene/dev-kit';
 import { armEmits, reportArm, type RuleArm, type RuleArms } from './ruleArms.js';
 import { allSourceFiles, atLeast, srcRoot } from './testing/ruleNameScrape.js';
-import { balancedGroup, topLevelParts } from './testing/emitsReach.js';
+import { balancedGroup, topLevelParts } from './testing/sourceScan.js';
 import type { Diagnostic } from './types.js';
 import type { TscnNode } from '../parser/types.js';
 
@@ -58,16 +58,17 @@ describe('reportArm', () => {
 });
 
 /**
- * Every arm a table declares is reported somewhere. `ruleCoverage.emits.test.ts`
- * misses this for `armEmits`, since `stripEmits` does not reach an arm table.
- * A table is found by the type it claims, annotation or `satisfies`, with or
- * without `as const`: matching one spelling leaves the others unguarded.
+ * Every arm a table declares needs a report site, because `armEmits` lists each
+ * arm whether or not `check` reaches it. The test finds a table by the type it
+ * claims, annotation or `satisfies`, with or without `as const`: matching one
+ * spelling leaves the others unguarded.
  */
 const OBJECT_LITERAL = /(export\s+)?const\s+([A-Za-z_$][\w$]*)\s*(?::([^=]*?))?=\s*\{/g;
 /** The contract, in either place TypeScript lets it be stated. */
 const ARM_CONTRACT = /RuleArms<|Record<\s*string\s*,\s*RuleArm\s*>/;
 const SATISFIES_TAIL = /^\s*(?:as\s+const\s+)?satisfies\s+([^;]*)/;
-const REPORT_CALL = /\b(?:report|reportArm|armDiagnostic)\s*\(/g;
+/** A call that reports through the arm it receives, `rangeAdvisories` included. */
+const REPORT_CALL = /\b(?:report|reportArm|armDiagnostic|rangeAdvisories)\s*\(/g;
 
 interface ArmTable {
   readonly file: string;
@@ -121,7 +122,7 @@ function armTables(): ArmTable[] {
       tables.push({ file, binding: match[2]!, exported: match[1] !== undefined, keys: keysIn(body) });
     }
   }
-  return atLeast(tables, 6, 'armTables');
+  return atLeast(tables, 110, 'armTables');
 }
 
 describe('an arm table', () => {

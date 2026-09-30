@@ -7,9 +7,18 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
+import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { boolSlotValue } from '../../../../godot/index.js';
+
+const arms = {
+  selectedNotSelectable: {
+    severity: 'error',
+    ruleName: 'graph-element-selected-not-selectable',
+    grounding: { kind: 'engine', at: 'graph_element.cpp:207' },
+  },
+} as const satisfies RuleArms<'selectedNotSelectable'>;
 
 // Either load order ends unselected: `selectable` first makes the later
 // `selected = true` a no-op, and `selected` first is undone by the
@@ -26,17 +35,14 @@ function checkSelectedRequiresSelectable(context: RuleContext): Diagnostic[] {
   if (boolSlotValue(selectableRaw) !== false || boolSlotValue(selectedRaw) !== true) return [];
 
   return [
-    {
-      severity: 'error',
-      message:
-        "GraphElement has 'selected = true' alongside 'selectable = false'. Godot's " +
+    armDiagnostic(
+      arms.selectedNotSelectable,
+      node,
+      "GraphElement has 'selected = true' alongside 'selectable = false'. Godot's " +
         'GraphElement::set_selectable forces set_selected(false) whenever selectable ' +
         'becomes false, regardless of load order, so this element always loads ' +
-        'deselected — the authored selected value never takes effect.',
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'graph-element-selected-not-selectable',
-    },
+        'deselected — the authored selected value never takes effect.'
+    ),
   ];
 }
 
@@ -48,13 +54,7 @@ const selectedRequiresSelectableRule: LintRule = {
       'always forces the element back to deselected regardless of load order',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'GraphElement'),
-    emits: [
-      {
-        ruleName: 'graph-element-selected-not-selectable',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'graph_element.cpp:207' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkSelectedRequiresSelectable,
 };

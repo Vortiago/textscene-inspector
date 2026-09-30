@@ -10,6 +10,20 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { hasChildOfType } from '../../../../linter/childType.js';
 import { CURSOR_ARROW, CURSOR_MAX } from '../../../../godot/control.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+
+const arms = {
+  noViewport: {
+    severity: 'warning',
+    ruleName: 'subviewportcontainer-no-viewport',
+    grounding: { kind: 'configuration-warning' },
+  },
+  nonArrowCursor: {
+    severity: 'warning',
+    ruleName: 'subviewportcontainer-non-arrow-cursor',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<'noViewport' | 'nonArrowCursor'>;
 
 function checkSubViewportContainer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -18,14 +32,12 @@ function checkSubViewportContainer(context: RuleContext): Diagnostic[] {
   // `cast_to<SubViewport>` (subviewport_container.cpp:274), so a subclass counts, and a
   // child whose class lives elsewhere may be one (instance-opaque linting, CONTEXT.md).
   if (!hasChildOfType(node, ['SubViewport'])) {
-    diagnostics.push({
-      severity: 'warning',
-      message:
-        "SubViewportContainer has no SubViewport child, so it displays nothing. Add a SubViewport beneath it, or use a plain Container.",
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'subviewportcontainer-no-viewport',
-    });
+    reportArm(
+      diagnostics,
+      arms.noViewport,
+      node,
+      "SubViewportContainer has no SubViewport child, so it displays nothing. Add a SubViewport beneath it, or use a plain Container."
+    );
   }
 
   const props = isValidProperties(node.properties) ? node.properties : {};
@@ -40,13 +52,12 @@ function checkSubViewportContainer(context: RuleContext): Diagnostic[] {
     const cursor = ruleInt(cursorRaw);
     const isShape = cursor !== null && cursor >= 0 && cursor < CURSOR_MAX;
     if (isShape && cursor !== CURSOR_ARROW) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `SubViewportContainer '${node.name}' sets 'mouse_default_cursor_shape' away from Arrow, but it has no effect on this node. Consider leaving it at its initial value.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'subviewportcontainer-non-arrow-cursor',
-      });
+      reportArm(
+        diagnostics,
+        arms.nonArrowCursor,
+        node,
+        `SubViewportContainer '${node.name}' sets 'mouse_default_cursor_shape' away from Arrow, but it has no effect on this node. Consider leaving it at its initial value.`
+      );
     }
   }
 
@@ -60,10 +71,7 @@ const subViewportContainerRule: LintRule = {
       'Flags a SubViewportContainer with no SubViewport child, or a mouse_default_cursor_shape override that has no effect',
     category: 'validation',
     applicableNodeTypes: ['SubViewportContainer'],
-    emits: [
-      { ruleName: 'subviewportcontainer-no-viewport', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      { ruleName: 'subviewportcontainer-non-arrow-cursor', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-    ],
+    emits: armEmits(arms),
   },
   check: checkSubViewportContainer,
 };

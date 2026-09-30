@@ -9,35 +9,79 @@ import { isValidProperties } from '../../../linter/linterUtils.js';
 import { POINT_LIGHT_2D_RANGE_DEFAULTS } from './types.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
+import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
-/**
- * Godot tests both windows inclusively (`_record_item_commands` in
- * drivers/gles3/rasterizer_canvas_gles3.cpp for z, `_draw_viewport` in
- * servers/rendering/renderer_viewport.cpp for the layer). Light2D's setters only
- * assign, so `min > max` reaches nothing yet costs its pass: advisory.
- */
-const WINDOWS = [
-  {
-    min: 'range_z_min',
-    max: 'range_z_max',
-    minDefault: POINT_LIGHT_2D_RANGE_DEFAULTS.zMin,
-    maxDefault: POINT_LIGHT_2D_RANGE_DEFAULTS.zMax,
-    // The tier sits beside the name so `emitsScrape` pairs them: a table row
-    // whose `ruleName` has no severity above it scrapes as the default warning.
+const arms = {
+  requiresTexture: {
+    severity: 'warning',
+    ruleName: 'pointlight2d-requires-texture',
+    grounding: { kind: 'configuration-warning' },
+  },
+  invertedZRange: {
     severity: 'info',
     ruleName: 'pointlight2d-inverted-z-range',
-    reaches: 'no item at any z_index',
+    grounding: {
+      kind: 'engine-inert',
+      at: 'rasterizer_canvas_gles3.cpp:849',
+      unused: 'the inclusive z test can never pass, so the light reaches no item',
+    },
   },
-  {
-    min: 'range_layer_min',
-    max: 'range_layer_max',
-    minDefault: POINT_LIGHT_2D_RANGE_DEFAULTS.layerMin,
-    maxDefault: POINT_LIGHT_2D_RANGE_DEFAULTS.layerMax,
+  invertedLayerRange: {
     severity: 'info',
     ruleName: 'pointlight2d-inverted-layer-range',
-    reaches: 'no canvas at any layer',
+    grounding: {
+      kind: 'engine-inert',
+      at: 'renderer_viewport.cpp:672',
+      unused: 'the inclusive layer test can never pass, so the light reaches no canvas',
+    },
   },
-] as const;
+} as const satisfies RuleArms<'requiresTexture' | 'invertedZRange' | 'invertedLayerRange'>;
+
+/**
+ * One light window: its keys, their Godot defaults, and what an inverted window reaches. Godot
+ * tests both inclusively (`_record_item_commands` in rasterizer_canvas_gles3.cpp for z,
+ * `_draw_viewport` in renderer_viewport.cpp for the layer), and Light2D's setters only assign, so
+ * an inverted window reaches nothing but still costs its pass, which makes it an advisory.
+ */
+interface LightWindow {
+  readonly min: string;
+  readonly max: string;
+  readonly minDefault: number;
+  readonly maxDefault: number;
+  readonly reaches: string;
+}
+
+const Z_WINDOW: LightWindow = {
+  min: 'range_z_min',
+  max: 'range_z_max',
+  minDefault: POINT_LIGHT_2D_RANGE_DEFAULTS.zMin,
+  maxDefault: POINT_LIGHT_2D_RANGE_DEFAULTS.zMax,
+  reaches: 'no item at any z_index',
+};
+
+const LAYER_WINDOW: LightWindow = {
+  min: 'range_layer_min',
+  max: 'range_layer_max',
+  minDefault: POINT_LIGHT_2D_RANGE_DEFAULTS.layerMin,
+  maxDefault: POINT_LIGHT_2D_RANGE_DEFAULTS.layerMax,
+  reaches: 'no canvas at any layer',
+};
+
+/**
+ * The message for an inverted `window`, or null when it is not inverted. An absent
+ * half takes Godot's default: `range_z_max = -2000` alone is already empty against
+ * the default `range_z_min` of -1024.
+ */
+function invertedWindowMessage(props: Record<string, string>, window: LightWindow): string | null {
+  const min = ruleInt(props[window.min], window.minDefault);
+  const max = ruleInt(props[window.max], window.maxDefault);
+  if (min === null || max === null || min <= max) return null;
+  return (
+    `PointLight2D '${window.min}' (${min}) is above '${window.max}' (${max}). ` +
+    `Godot tests the window inclusively and does not swap the bounds, so this ` +
+    `light reaches ${window.reaches}.`
+  );
+}
 
 function checkPointLight2D(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -50,35 +94,20 @@ function checkPointLight2D(context: RuleContext): Diagnostic[] {
   // exact message when `texture` is null. Absence is Godot's serialised form for
   // an unset `Ref`, so absence is the trigger.
   if (resourceSlotIsEmpty(props.texture)) {
-    diagnostics.push({
-      severity: 'warning',
-      message:
-        "PointLight2D has no 'texture': Godot's own editor warning is " +
+    reportArm(
+      diagnostics,
+      arms.requiresTexture,
+      node,
+      "PointLight2D has no 'texture': Godot's own editor warning is " +
         '"A texture with the shape of the light must be supplied to the ' +
-        '\'Texture\' property."',
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'pointlight2d-requires-texture',
-    });
+        '\'Texture\' property."'
+    );
   }
 
-  // An absent half takes Godot's default: `range_z_max = -2000` alone is already
-  // empty against the default `range_z_min` of -1024.
-  for (const window of WINDOWS) {
-    const min = ruleInt(props[window.min], window.minDefault);
-    const max = ruleInt(props[window.max], window.maxDefault);
-    if (min === null || max === null || min <= max) continue;
-    diagnostics.push({
-      severity: window.severity,
-      message:
-        `PointLight2D '${window.min}' (${min}) is above '${window.max}' (${max}). ` +
-        `Godot tests the window inclusively and does not swap the bounds, so this ` +
-        `light reaches ${window.reaches}.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: window.ruleName,
-    });
-  }
+  const zMessage = invertedWindowMessage(props, Z_WINDOW);
+  if (zMessage) reportArm(diagnostics, arms.invertedZRange, node, zMessage);
+  const layerMessage = invertedWindowMessage(props, LAYER_WINDOW);
+  if (layerMessage) reportArm(diagnostics, arms.invertedLayerRange, node, layerMessage);
   return diagnostics;
 }
 
@@ -89,27 +118,7 @@ const pointLight2DValidationRule: LintRule = {
       "Validates PointLight2D has a texture, and that its z and layer range windows don't invert",
     category: 'validation',
     applicableNodeTypes: ['PointLight2D'],
-    emits: [
-      { ruleName: 'pointlight2d-requires-texture', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      {
-        ruleName: 'pointlight2d-inverted-z-range',
-        severity: 'info',
-        grounding: {
-          kind: 'engine-inert',
-          at: 'rasterizer_canvas_gles3.cpp:849',
-          unused: 'the inclusive z test can never pass, so the light reaches no item',
-        },
-      },
-      {
-        ruleName: 'pointlight2d-inverted-layer-range',
-        severity: 'info',
-        grounding: {
-          kind: 'engine-inert',
-          at: 'renderer_viewport.cpp:672',
-          unused: 'the inclusive layer test can never pass, so the light reaches no canvas',
-        },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkPointLight2D,
 };

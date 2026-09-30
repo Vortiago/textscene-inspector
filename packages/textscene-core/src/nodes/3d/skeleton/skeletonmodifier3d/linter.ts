@@ -9,8 +9,15 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
+import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
 
-const RULE_NAME = 'skeletonmodifier3d-parent-not-skeleton3d';
+const arms = {
+  parentNotSkeleton3D: {
+    severity: 'warning',
+    ruleName: 'skeletonmodifier3d-parent-not-skeleton3d',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<'parentNotSkeleton3D'>;
 
 function checkSkeletonModifier3D(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
@@ -21,13 +28,11 @@ function checkSkeletonModifier3D(context: RuleContext): Diagnostic[] {
 
   const where = placementPhrase(verdict);
   return [
-    {
-      severity: 'warning',
-      message: `${node.type} '${node.name}' is ${where}. SkeletonModifier3D must be a direct child of Skeleton3D to resolve one; without it, this modifier does nothing.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: RULE_NAME,
-    },
+    armDiagnostic(
+      arms.parentNotSkeleton3D,
+      node,
+      `${node.type} '${node.name}' is ${where}. SkeletonModifier3D must be a direct child of Skeleton3D to resolve one; without it, this modifier does nothing.`
+    ),
   ];
 }
 
@@ -40,7 +45,7 @@ const skeletonModifier3DParentRule: LintRule = {
     // Every descendant inherits the check unchanged: none overrides `get_configuration_warnings`
     // without calling the base.
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'SkeletonModifier3D'),
-    emits: [{ ruleName: RULE_NAME, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: armEmits(arms),
   },
   check: checkSkeletonModifier3D,
 };

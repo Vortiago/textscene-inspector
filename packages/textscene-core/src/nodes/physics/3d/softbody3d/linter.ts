@@ -10,6 +10,15 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
+import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+
+const arms = {
+  missingMesh: {
+    severity: 'warning',
+    ruleName: 'valid-softbody3d-mesh',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<'missingMesh'>;
 
 function checkSoftBody3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -20,13 +29,12 @@ function checkSoftBody3D(context: RuleContext): Diagnostic[] {
   const rawProps = node.properties as Record<string, string>;
 
   if (resourceSlotIsEmpty(rawProps.mesh)) {
-    diagnostics.push({
-      severity: 'warning',
-      message: 'This body will be ignored until you set a mesh.',
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'valid-softbody3d-mesh',
-    });
+    reportArm(
+      diagnostics,
+      arms.missingMesh,
+      node,
+      'This body will be ignored until you set a mesh.'
+    );
   }
 
   return diagnostics;
@@ -38,7 +46,7 @@ const softBody3DValidationRule: LintRule = {
     description: 'Warns when a SoftBody3D has no mesh set, matching Godot\'s own configuration warning',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'SoftBody3D'),
-    emits: [{ ruleName: 'valid-softbody3d-mesh', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: armEmits(arms),
   },
   check: checkSoftBody3D,
 };

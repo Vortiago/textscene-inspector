@@ -11,6 +11,19 @@ import { isValidProperties } from '../../../linter/linterUtils.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { isDrivenByAnimationAudioTrack } from '../sharedLinterChecks.js';
 import { boolSlotValue } from '../../../godot/index.js';
+import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+
+const arms = {
+  autoplayWithoutStream: {
+    severity: 'info',
+    ruleName: 'audiostreamplayer-autoplay-without-stream',
+    grounding: {
+      kind: 'engine-inert',
+      at: 'audio_stream_player_internal.cpp:139',
+      unused: 'play_basic returns an empty playback, so autoplay produces no sound',
+    },
+  },
+} as const satisfies RuleArms<'autoplayWithoutStream'>;
 
 function checkAudioStreamPlayer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -31,13 +44,12 @@ function checkAudioStreamPlayer(context: RuleContext): Diagnostic[] {
     resourceSlotIsEmpty(rawProps.stream) &&
     !isDrivenByAnimationAudioTrack(scene, node)
   ) {
-    diagnostics.push({
-      severity: 'info',
-      message: `Autoplay is enabled but no stream is set. The player will have no audio source.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'audiostreamplayer-autoplay-without-stream',
-    });
+    reportArm(
+      diagnostics,
+      arms.autoplayWithoutStream,
+      node,
+      `Autoplay is enabled but no stream is set. The player will have no audio source.`
+    );
   }
 
   return diagnostics;
@@ -50,17 +62,7 @@ const audioStreamPlayerValidationRule: LintRule = {
       'Validates AudioStreamPlayer property values and logical consistency (non-positional node)',
     category: 'validation',
     applicableNodeTypes: ['AudioStreamPlayer'],
-    emits: [
-      {
-        ruleName: 'audiostreamplayer-autoplay-without-stream',
-        severity: 'info',
-        grounding: {
-          kind: 'engine-inert',
-          at: 'audio_stream_player_internal.cpp:139',
-          unused: 'play_basic returns an empty playback, so autoplay produces no sound',
-        },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkAudioStreamPlayer,
 };

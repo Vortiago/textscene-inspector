@@ -7,10 +7,17 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
+import { armDiagnostic, armEmits, type RuleArms } from '../../../linter/ruleArms.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 
-const RULE_NAME = 'lightoccluder2d-requires-occluder';
+const arms = {
+  missingOccluder: {
+    severity: 'warning',
+    ruleName: 'lightoccluder2d-requires-occluder',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<'missingOccluder'>;
 
 function checkLightOccluder2D(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -18,13 +25,11 @@ function checkLightOccluder2D(context: RuleContext): Diagnostic[] {
   if (!resourceSlotIsEmpty(node.properties.occluder)) return [];
 
   return [
-    {
-      severity: 'warning',
-      message: `LightOccluder2D '${node.name}' has no occluder polygon set. An occluder polygon must be set (or drawn) for this occluder to take effect.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: RULE_NAME,
-    },
+    armDiagnostic(
+      arms.missingOccluder,
+      node,
+      `LightOccluder2D '${node.name}' has no occluder polygon set. An occluder polygon must be set (or drawn) for this occluder to take effect.`
+    ),
   ];
 }
 
@@ -34,7 +39,7 @@ const lightOccluder2DRequiresOccluderRule: LintRule = {
     description: 'Warns when a LightOccluder2D has no occluder polygon resource set',
     category: 'validation',
     applicableNodeTypes: ['LightOccluder2D'],
-    emits: [{ ruleName: RULE_NAME, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: armEmits(arms),
   },
   check: checkLightOccluder2D,
 };

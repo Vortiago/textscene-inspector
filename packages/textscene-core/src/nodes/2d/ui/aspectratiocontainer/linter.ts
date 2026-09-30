@@ -7,10 +7,23 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
+import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { hiddenOrUnknowableInTree } from '../../../../linter/parentType.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../../godot/index.js';
+
+const arms = {
+  unsupportedExpandMode: {
+    severity: 'info',
+    ruleName: 'aspectratiocontainer-unsupported-texturerect-expand-mode',
+    grounding: {
+      kind: 'engine-inert',
+      at: 'aspect_ratio_container.cpp:113',
+      unused: 'the sort pass skips the child instead of positioning it',
+    },
+  },
+} as const satisfies RuleArms<'unsupportedExpandMode'>;
 
 // texture_rect.h:39-45 TextureRect::ExpandMode: EXPAND_KEEP_SIZE=0,
 // EXPAND_IGNORE_SIZE=1, EXPAND_FIT_WIDTH=2, EXPAND_FIT_WIDTH_PROPORTIONAL=3,
@@ -36,13 +49,12 @@ function checkAspectRatioContainer(context: RuleContext): Diagnostic[] {
     const expandMode = ruleInt(raw);
     if (expandMode === null || !UNSUPPORTED_EXPAND_MODES.has(expandMode)) continue;
 
-    diagnostics.push({
-      severity: 'info',
-      message: `TextureRect '${child.name}' has expand_mode ${expandMode}, a proportional mode AspectRatioContainer does not support: Godot's own sort skips positioning it ("Proportional TextureRect is currently not supported inside AspectRatioContainer"). Use a non-proportional expand_mode or a plain Container.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'aspectratiocontainer-unsupported-texturerect-expand-mode',
-    });
+    reportArm(
+      diagnostics,
+      arms.unsupportedExpandMode,
+      node,
+      `TextureRect '${child.name}' has expand_mode ${expandMode}, a proportional mode AspectRatioContainer does not support: Godot's own sort skips positioning it ("Proportional TextureRect is currently not supported inside AspectRatioContainer"). Use a non-proportional expand_mode or a plain Container.`
+    );
   }
 
   return diagnostics;
@@ -55,17 +67,7 @@ const aspectRatioContainerRule: LintRule = {
       'Flags a direct TextureRect child whose proportional expand_mode AspectRatioContainer skips positioning at runtime',
     category: 'validation',
     applicableNodeTypes: ['AspectRatioContainer'],
-    emits: [
-      {
-        ruleName: 'aspectratiocontainer-unsupported-texturerect-expand-mode',
-        severity: 'info',
-        grounding: {
-          kind: 'engine-inert',
-          at: 'aspect_ratio_container.cpp:113',
-          unused: 'the sort pass skips the child instead of positioning it',
-        },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkAspectRatioContainer,
 };

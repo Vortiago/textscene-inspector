@@ -9,9 +9,20 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isExplicitlyHidden } from '../../../../linter/parentType.js';
 import { hasChildOfType } from '../../../../linter/childType.js';
 import { hasNonUnitScale3D } from '../../../../linter/transformBasis.js';
+import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
-const CAMERA_CHILD_RULE = 'xrorigin3d-missing-camera-child';
-const SCALE_RULE = 'xrorigin3d-unsupported-scale';
+const arms = {
+  missingCameraChild: {
+    severity: 'warning',
+    ruleName: 'xrorigin3d-missing-camera-child',
+    grounding: { kind: 'configuration-warning' },
+  },
+  unsupportedScale: {
+    severity: 'warning',
+    ruleName: 'xrorigin3d-unsupported-scale',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<'missingCameraChild' | 'unsupportedScale'>;
 
 function checkXROrigin3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -25,26 +36,24 @@ function checkXROrigin3D(context: RuleContext): Diagnostic[] {
   // `get_child(i)` cast to `XRCamera3D` (xr_nodes.cpp:687-693). A child whose class lives
   // elsewhere may be one, so it keeps the rule quiet.
   if (!hasChildOfType(node, ['XRCamera3D'])) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `XROrigin3D '${node.name}' has no XRCamera3D child. XROrigin3D requires an XRCamera3D child node, the same configuration warning Godot's own editor reports.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: CAMERA_CHILD_RULE,
-    });
+    reportArm(
+      diagnostics,
+      arms.missingCameraChild,
+      node,
+      `XROrigin3D '${node.name}' has no XRCamera3D child. XROrigin3D requires an XRCamera3D child node, the same configuration warning Godot's own editor reports.`
+    );
   }
 
   // `!get_scale().is_equal_approx(Vector3(1, 1, 1))` (xr_nodes.cpp:698), which signs all three axes by
   // the determinant (core/math/basis.cpp:297-321). It reads the `transform` Basis, since
   // `position`/`rotation`/`scale` are `PROPERTY_USAGE_EDITOR`-only (node_3d.cpp:1526-1531).
   if (hasNonUnitScale3D(properties.transform)) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `XROrigin3D '${node.name}' has a non-identity scale. Changing the scale on the XROrigin3D node is not supported, change the World Scale (world_scale) instead — the same configuration warning Godot's own editor reports.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: SCALE_RULE,
-    });
+    reportArm(
+      diagnostics,
+      arms.unsupportedScale,
+      node,
+      `XROrigin3D '${node.name}' has a non-identity scale. Changing the scale on the XROrigin3D node is not supported, change the World Scale (world_scale) instead — the same configuration warning Godot's own editor reports.`
+    );
   }
 
   return diagnostics;
@@ -57,10 +66,7 @@ const xrOrigin3DValidationRule: LintRule = {
       "Mirrors two of XROrigin3D::get_configuration_warnings' checks: a required XRCamera3D child, and an unsupported non-identity scale",
     category: 'validation',
     applicableNodeTypes: ['XROrigin3D'],
-    emits: [
-      { ruleName: CAMERA_CHILD_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      { ruleName: SCALE_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
-    ],
+    emits: armEmits(arms),
   },
   check: checkXROrigin3D,
 };

@@ -11,6 +11,15 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { isTypeUnknowable } from '../../../../linter/parentType.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { boolSlotValue } from '../../../../godot/index.js';
+import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
+
+const arms = {
+  notSingleChild: {
+    severity: 'warning',
+    ruleName: 'scrollcontainer-not-single-child',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<'notSingleChild'>;
 
 /**
  * `as_sortable_control(child, VISIBLE)` is non-null, per container.cpp:143-155:
@@ -37,13 +46,11 @@ function checkScrollContainer(context: RuleContext): Diagnostic[] {
   if (sortableCount === 1) return [];
 
   return [
-    {
-      severity: 'warning',
-      message: `ScrollContainer '${node.name}' has ${sortableCount} sortable child controls; it is intended to work with exactly one. Use a container as the single child (VBoxContainer, HBoxContainer, …), or a single Control with its custom minimum size set manually.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'scrollcontainer-not-single-child',
-    },
+    armDiagnostic(
+      arms.notSingleChild,
+      node,
+      `ScrollContainer '${node.name}' has ${sortableCount} sortable child controls; it is intended to work with exactly one. Use a container as the single child (VBoxContainer, HBoxContainer, …), or a single Control with its custom minimum size set manually.`
+    ),
   ];
 }
 
@@ -54,7 +61,7 @@ const scrollContainerRule: LintRule = {
       'Flags a ScrollContainer that does not have exactly one sortable Control child',
     category: 'validation',
     applicableNodeTypes: ['ScrollContainer'],
-    emits: [{ ruleName: 'scrollcontainer-not-single-child', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: armEmits(arms),
   },
   check: checkScrollContainer,
 };

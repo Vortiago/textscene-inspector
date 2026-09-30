@@ -12,9 +12,20 @@ import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
 import { resolveNodePath } from '../../../../linter/nodePathResolve.js';
 import { boolSlotValue } from '../../../../godot/index.js';
+import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
 
-const PARENT_RULE = 'boneattachment3d-parent-not-skeleton3d';
-const EXTERNAL_RULE = 'boneattachment3d-external-skeleton-unset';
+const arms = {
+  parentNotSkeleton3D: {
+    severity: 'warning',
+    ruleName: 'boneattachment3d-parent-not-skeleton3d',
+    grounding: { kind: 'configuration-warning' },
+  },
+  externalSkeletonUnset: {
+    severity: 'warning',
+    ruleName: 'boneattachment3d-external-skeleton-unset',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<'parentNotSkeleton3D' | 'externalSkeletonUnset'>;
 
 // `bone_idx == -1` (cpp:74-76) is Godot's third warning and gets no rule: -1 is the serialised
 // default, so an unbound attachment's file carries no `bone_idx` line to flag.
@@ -40,13 +51,11 @@ function checkBoneAttachment3D(context: RuleContext): Diagnostic[] {
           ? 'names no node reachable from this one'
           : `points at a ${target.node.type}, not a Skeleton3D`;
       return [
-        {
-          severity: 'warning',
-          message: `BoneAttachment3D '${node.name}' has use_external_skeleton on, but external_skeleton NodePath("${path}") ${because}, so the skeleton cache stays empty and it relays no bone transform.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: EXTERNAL_RULE,
-        },
+        armDiagnostic(
+          arms.externalSkeletonUnset,
+          node,
+          `BoneAttachment3D '${node.name}' has use_external_skeleton on, but external_skeleton NodePath("${path}") ${because}, so the skeleton cache stays empty and it relays no bone transform.`
+        ),
       ];
     }
     // An empty path inherits a parent BoneAttachment3D's external skeleton
@@ -56,13 +65,11 @@ function checkBoneAttachment3D(context: RuleContext): Diagnostic[] {
     if (inherited.kind === 'satisfied' || inherited.kind === 'unknowable') return [];
 
     return [
-      {
-        severity: 'warning',
-        message: `BoneAttachment3D '${node.name}' has use_external_skeleton on but no external_skeleton path, so it resolves no skeleton and relays no bone transform. Set external_skeleton, or turn the flag off and parent it to a Skeleton3D.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: EXTERNAL_RULE,
-      },
+      armDiagnostic(
+        arms.externalSkeletonUnset,
+        node,
+        `BoneAttachment3D '${node.name}' has use_external_skeleton on but no external_skeleton path, so it resolves no skeleton and relays no bone transform. Set external_skeleton, or turn the flag off and parent it to a Skeleton3D.`
+      ),
     ];
   }
 
@@ -72,13 +79,11 @@ function checkBoneAttachment3D(context: RuleContext): Diagnostic[] {
 
   const where = placementPhrase(attached);
   return [
-    {
-      severity: 'warning',
-      message: `BoneAttachment3D '${node.name}' is ${where}. Without use_external_skeleton it attaches to its direct parent only, so it resolves no skeleton and relays no bone transform.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: PARENT_RULE,
-    },
+    armDiagnostic(
+      arms.parentNotSkeleton3D,
+      node,
+      `BoneAttachment3D '${node.name}' is ${where}. Without use_external_skeleton it attaches to its direct parent only, so it resolves no skeleton and relays no bone transform.`
+    ),
   ];
 }
 
@@ -89,10 +94,7 @@ const boneAttachment3DSkeletonRule: LintRule = {
       'Warns when a BoneAttachment3D can resolve no Skeleton3D (neither a Skeleton3D parent nor an external_skeleton path) and so relays nothing',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'BoneAttachment3D'),
-    emits: [
-      { ruleName: PARENT_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      { ruleName: EXTERNAL_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
-    ],
+    emits: armEmits(arms),
   },
   check: checkBoneAttachment3D,
 };

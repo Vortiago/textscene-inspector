@@ -5,8 +5,31 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
+import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { heldResource } from '../../../linter/resourceChecker.js';
 import { DEFAULT_ANIMATION_NAME, literalText, ruleInt } from '../../../godot/index.js';
+
+const arms = {
+  missingSpriteFrames: {
+    severity: 'warning',
+    ruleName: 'animatedsprite2d-requires-spriteframes',
+    grounding: { kind: 'configuration-warning' },
+  },
+  animationWithoutSpriteFrames: {
+    severity: 'error',
+    ruleName: 'animatedsprite2d-animation-no-spriteframes',
+    grounding: { kind: 'engine', at: 'animated_sprite_2d.cpp:563' },
+  },
+  frameWithoutSpriteFrames: {
+    severity: 'error',
+    ruleName: 'animatedsprite2d-frame-no-spriteframes',
+    grounding: { kind: 'engine', at: 'animated_sprite_2d.cpp:360' },
+  },
+} as const satisfies RuleArms<
+  | 'missingSpriteFrames'
+  | 'animationWithoutSpriteFrames'
+  | 'frameWithoutSpriteFrames'
+>;
 
 /**
  * The SpriteFrames reference in effect when Godot replays `key`: properties apply
@@ -31,13 +54,12 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
   const rawProps = node.properties as unknown as Record<string, string>;
 
   if (heldResource(rawProps.sprite_frames) === undefined) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `AnimatedSprite2D requires a 'sprite_frames' property. AnimatedSprite2D cannot play animations without a SpriteFrames resource.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'animatedsprite2d-requires-spriteframes',
-    });
+    reportArm(
+      diagnostics,
+      arms.missingSpriteFrames,
+      node,
+      `AnimatedSprite2D requires a 'sprite_frames' property. AnimatedSprite2D cannot play animations without a SpriteFrames resource.`
+    );
   }
 
   // `set_animation` clears the name and ERR_FAIL_MSGs whenever the SpriteFrames
@@ -52,13 +74,12 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
     literalText(rawProps.animation) !== DEFAULT_ANIMATION_NAME &&
     spriteFramesWhenApplied(rawProps, 'animation') === undefined
   ) {
-    diagnostics.push({
-      severity: 'error',
-      message: `Property 'animation' is set to "${literalText(rawProps.animation)}" with no 'sprite_frames' in effect at that line. Godot clears 'animation', so the authored name never applies.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'animatedsprite2d-animation-no-spriteframes',
-    });
+    reportArm(
+      diagnostics,
+      arms.animationWithoutSpriteFrames,
+      node,
+      `Property 'animation' is set to "${literalText(rawProps.animation)}" with no 'sprite_frames' in effect at that line. Godot clears 'animation', so the authored name never applies.`
+    );
   }
 
   // With a null SpriteFrames, `set_frame_and_progress` drops every frame
@@ -67,13 +88,12 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
   // a negative frame, and 0 is the value the node holds anyway.
   const frame = ruleInt(rawProps.frame);
   if (frame !== null && frame > 0 && spriteFramesWhenApplied(rawProps, 'frame') === undefined) {
-    diagnostics.push({
-      severity: 'error',
-      message: `Property 'frame' is set to ${frame} with no 'sprite_frames' in effect at that line. Godot drops the write, so the node loads on frame 0.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'animatedsprite2d-frame-no-spriteframes',
-    });
+    reportArm(
+      diagnostics,
+      arms.frameWithoutSpriteFrames,
+      node,
+      `Property 'frame' is set to ${frame} with no 'sprite_frames' in effect at that line. Godot drops the write, so the node loads on frame 0.`
+    );
   }
 
   // `speed_scale` and `frame_progress` get no diagnostic: both are
@@ -90,19 +110,7 @@ const animatedSprite2DValidationRule: LintRule = {
     description: 'Validates AnimatedSprite2D sprite_frames presence and animation references',
     category: 'validation',
     applicableNodeTypes: ['AnimatedSprite2D'],
-    emits: [
-      { ruleName: 'animatedsprite2d-requires-spriteframes', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      {
-        ruleName: 'animatedsprite2d-animation-no-spriteframes',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'animated_sprite_2d.cpp:563' },
-      },
-      {
-        ruleName: 'animatedsprite2d-frame-no-spriteframes',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'animated_sprite_2d.cpp:360' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkAnimatedSprite2D,
 };

@@ -10,8 +10,15 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { extractNodePath } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
+import { armDiagnostic, armEmits, type RuleArms } from '../../../linter/ruleArms.js';
 
-const RULE_NAME = 'remotetransform3d-invalid-remote-path';
+const arms = {
+  invalidRemotePath: {
+    severity: 'warning',
+    ruleName: 'remotetransform3d-invalid-remote-path',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<'invalidRemotePath'>;
 
 function checkRemoteTransform3D(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
@@ -22,13 +29,11 @@ function checkRemoteTransform3D(context: RuleContext): Diagnostic[] {
   // Absent key, or an explicit empty NodePath(""): both are `NodePath()`, the default and the trigger.
   if (!path) {
     return [
-      {
-        severity: 'warning',
-        message: `RemoteTransform3D '${node.name}' has no Remote Path set. The Remote Path property must point to a valid Node3D or Node3D-derived node to work.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: RULE_NAME,
-      },
+      armDiagnostic(
+        arms.invalidRemotePath,
+        node,
+        `RemoteTransform3D '${node.name}' has no Remote Path set. The Remote Path property must point to a valid Node3D or Node3D-derived node to work.`
+      ),
     ];
   }
 
@@ -38,26 +43,22 @@ function checkRemoteTransform3D(context: RuleContext): Diagnostic[] {
 
   if (target.status === 'missing') {
     return [
-      {
-        severity: 'warning',
-        message: `RemoteTransform3D '${node.name}' has remote_path set to NodePath("${path}"), which names no node in this file. The Remote Path property must point to a valid Node3D or Node3D-derived node to work.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: RULE_NAME,
-      },
+      armDiagnostic(
+        arms.invalidRemotePath,
+        node,
+        `RemoteTransform3D '${node.name}' has remote_path set to NodePath("${path}"), which names no node in this file. The Remote Path property must point to a valid Node3D or Node3D-derived node to work.`
+      ),
     ];
   }
 
   // `descendsFrom` is reflexive (nodeBaseTypes.ts), so it also answers the exact-match case.
   if (target.status === 'found' && !descendsFrom(target.node.type, 'Node3D')) {
     return [
-      {
-        severity: 'warning',
-        message: `RemoteTransform3D '${node.name}' has remote_path pointing to a ${target.node.type} node, but the Remote Path property must point to a valid Node3D or Node3D-derived node to work.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: RULE_NAME,
-      },
+      armDiagnostic(
+        arms.invalidRemotePath,
+        node,
+        `RemoteTransform3D '${node.name}' has remote_path pointing to a ${target.node.type} node, but the Remote Path property must point to a valid Node3D or Node3D-derived node to work.`
+      ),
     ];
   }
 
@@ -71,7 +72,7 @@ const remoteTransform3DValidationRule: LintRule = {
       "Mirrors RemoteTransform3D::get_configuration_warnings' remote_path check: absent, dangling, or not a Node3D",
     category: 'validation',
     applicableNodeTypes: ['RemoteTransform3D'],
-    emits: [{ ruleName: RULE_NAME, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: armEmits(arms),
   },
   check: checkRemoteTransform3D,
 };

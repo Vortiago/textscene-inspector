@@ -6,6 +6,19 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+
+const arms = {
+  unusedSplits: {
+    severity: 'info',
+    ruleName: 'directionallight3d-unused-splits',
+    grounding: {
+      kind: 'engine-inert',
+      at: 'renderer_scene_cull.cpp:2175',
+      unused: 'the cascade loop reads only the first split offsets for the chosen mode',
+    },
+  },
+} as const satisfies RuleArms<'unusedSplits'>;
 
 /**
  * Shadow mode against the split fields the inspector still shows. The hint
@@ -39,26 +52,24 @@ function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
     // ORTHOGONAL (0) uses no splits.
     if (shadowMode === 0) {
       if (split1 || split2 || split3) {
-        diagnostics.push({
-          severity: 'info',
-          message: `Shadow mode is ORTHOGONAL (0), but split properties are set. Splits are ignored in ORTHOGONAL mode.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'directionallight3d-unused-splits',
-        });
+        reportArm(
+          diagnostics,
+          arms.unusedSplits,
+          node,
+          `Shadow mode is ORTHOGONAL (0), but split properties are set. Splits are ignored in ORTHOGONAL mode.`
+        );
       }
     }
 
     // PARALLEL_2_SPLITS (1) uses only split_1.
     if (shadowMode === 1) {
       if (split2 || split3) {
-        diagnostics.push({
-          severity: 'info',
-          message: `Shadow mode is PARALLEL_2_SPLITS (1), but split_2 or split_3 are set. Only split_1 is used in 2-split mode.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'directionallight3d-unused-splits',
-        });
+        reportArm(
+          diagnostics,
+          arms.unusedSplits,
+          node,
+          `Shadow mode is PARALLEL_2_SPLITS (1), but split_2 or split_3 are set. Only split_1 is used in 2-split mode.`
+        );
       }
     }
   }
@@ -72,17 +83,7 @@ const directionalLight3DValidationRule: LintRule = {
     description: 'Validates DirectionalLight3D property values and shadow mode consistency',
     category: 'validation',
     applicableNodeTypes: ['DirectionalLight3D'],
-    emits: [
-      {
-        ruleName: 'directionallight3d-unused-splits',
-        severity: 'info',
-        grounding: {
-          kind: 'engine-inert',
-          at: 'renderer_scene_cull.cpp:2175',
-          unused: 'the cascade loop reads only the first split offsets for the chosen mode',
-        },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkDirectionalLight3D,
 };

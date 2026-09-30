@@ -9,6 +9,51 @@ import { isValidProperties, extractNodePath } from '../../../linter/linterUtils.
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 import { boolSlotValue } from '../../../godot/index.js';
 import { heldResource } from '../../../linter/resourceChecker.js';
+import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+
+const arms = {
+  missingTreeRoot: {
+    severity: 'warning',
+    ruleName: 'animationtree-missing-tree-root',
+    grounding: { kind: 'configuration-warning' },
+  },
+  animPlayerNotFound: {
+    severity: 'warning',
+    ruleName: 'animationtree-anim-player-not-found',
+    grounding: {
+      kind: 'no-engine-counterpart',
+      scope: 'dangling-reference',
+      because: 'the path names a node the file never declares',
+    },
+  },
+  animPlayerWrongType: {
+    severity: 'info',
+    ruleName: 'animationtree-anim-player-wrong-type',
+    // Not animation_tree.cpp:1020: that ADD_PROPERTY's
+    // PROPERTY_HINT_NODE_PATH_VALID_TYPES filters the inspector's node
+    // picker and constrains no stored value. set_animation_player
+    // (:845-856) bare-assigns any path; the type is consulted only here.
+    grounding: {
+      kind: 'engine-inert',
+      at: 'animation_tree.cpp:875-876',
+      unused: 'the cast to AnimationPlayer yields null and the whole setup block is skipped, so the tree binds to no player and plays nothing',
+    },
+  },
+  inactive: {
+    severity: 'info',
+    ruleName: 'animationtree-inactive',
+    grounding: {
+      kind: 'engine-inert',
+      at: 'animation_mixer.cpp:446',
+      unused: 'processing is gated on active, so the blend tree never advances',
+    },
+  },
+} as const satisfies RuleArms<
+  | 'missingTreeRoot'
+  | 'animPlayerNotFound'
+  | 'animPlayerWrongType'
+  | 'inactive'
+>;
 
 /**
  * Validate AnimationTree semantic rules
@@ -27,13 +72,12 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
   // An AnimationTree without a tree_root does nothing. A cleared slot
   // (`tree_root = null`) counts as absent.
   if (heldResource(rawProps.tree_root) === undefined) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `AnimationTree 'tree_root' is not set. AnimationTree requires a root animation node (AnimationNodeBlendTree or AnimationNodeStateMachine) to function.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'animationtree-missing-tree-root',
-    });
+    reportArm(
+      diagnostics,
+      arms.missingTreeRoot,
+      node,
+      `AnimationTree 'tree_root' is not set. AnimationTree requires a root animation node (AnimationNodeBlendTree or AnimationNodeStateMachine) to function.`
+    );
   }
 
   // An absent `anim_player` gets no diagnostic: set_animation_player treats the
@@ -49,21 +93,19 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
       const target = resolveNodePath(scene, node, path);
 
       if (target.status === 'missing') {
-        diagnostics.push({
-          severity: 'warning',
-          message: `AnimationTree 'anim_player' references path "${path}" which may not exist in the scene. Ensure the AnimationPlayer node is properly defined.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'animationtree-anim-player-not-found',
-        });
+        reportArm(
+          diagnostics,
+          arms.animPlayerNotFound,
+          node,
+          `AnimationTree 'anim_player' references path "${path}" which may not exist in the scene. Ensure the AnimationPlayer node is properly defined.`
+        );
       } else if (target.status === 'found' && target.node.type !== 'AnimationPlayer') {
-        diagnostics.push({
-          severity: 'info',
-          message: `AnimationTree 'anim_player' references node "${path}" which is of type "${target.node.type}", not AnimationPlayer. AnimationTree requires an AnimationPlayer node.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'animationtree-anim-player-wrong-type',
-        });
+        reportArm(
+          diagnostics,
+          arms.animPlayerWrongType,
+          node,
+          `AnimationTree 'anim_player' references node "${path}" which is of type "${target.node.type}", not AnimationPlayer. AnimationTree requires an AnimationPlayer node.`
+        );
       }
     }
   }
@@ -73,13 +115,12 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
   // `animationtree-missing-tree-root` carries. The wording follows the `TOOLS_ENABLED`-only
   // `get_editor_error_message()` (animation_tree.cpp:995-997), shown inside the blend-tree editor.
   if (boolSlotValue(rawProps.active) === false) {
-    diagnostics.push({
-      severity: 'info',
-      message: `AnimationTree 'active' is set to false. The AnimationTree will not process animations until this is set to true at runtime.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'animationtree-inactive',
-    });
+    reportArm(
+      diagnostics,
+      arms.inactive,
+      node,
+      `AnimationTree 'active' is set to false. The AnimationTree will not process animations until this is set to true at runtime.`
+    );
   }
 
   // root_motion_track and advance_expression_base_node get no diagnostic.
@@ -99,40 +140,7 @@ const animationTreeValidationRule: LintRule = {
     description: 'Validates AnimationTree property values, resource references, and configuration dependencies',
     category: 'validation',
     applicableNodeTypes: ['AnimationTree'],
-    emits: [
-      { ruleName: 'animationtree-missing-tree-root', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      {
-        ruleName: 'animationtree-anim-player-not-found',
-        severity: 'warning',
-        grounding: {
-          kind: 'no-engine-counterpart',
-          scope: 'dangling-reference',
-          because: 'the path names a node the file never declares',
-        },
-      },
-      {
-        ruleName: 'animationtree-anim-player-wrong-type',
-        severity: 'info',
-        // Not animation_tree.cpp:1020: that ADD_PROPERTY's
-        // PROPERTY_HINT_NODE_PATH_VALID_TYPES filters the inspector's node
-        // picker and constrains no stored value. set_animation_player
-        // (:845-856) bare-assigns any path; the type is consulted only here.
-        grounding: {
-          kind: 'engine-inert',
-          at: 'animation_tree.cpp:875-876',
-          unused: 'the cast to AnimationPlayer yields null and the whole setup block is skipped, so the tree binds to no player and plays nothing',
-        },
-      },
-      {
-        ruleName: 'animationtree-inactive',
-        severity: 'info',
-        grounding: {
-          kind: 'engine-inert',
-          at: 'animation_mixer.cpp:446',
-          unused: 'processing is gated on active, so the blend tree never advances',
-        },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkAnimationTree,
 };

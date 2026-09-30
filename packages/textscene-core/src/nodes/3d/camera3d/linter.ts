@@ -11,6 +11,33 @@ import { viewportScopeCounter, viewportScopeOf } from '../../../linter/viewportS
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../godot/index.js';
+import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+
+const arms = {
+  multipleCurrent: {
+    severity: 'info',
+    ruleName: 'camera3d-multiple-current',
+    grounding: {
+      kind: 'engine-inert',
+      at: 'camera_3d.cpp:190',
+      unused: 'the earlier camera loses the slot to the last entered current one and is never drawn',
+    },
+  },
+  invalidClippingPlanes: {
+    severity: 'error',
+    ruleName: 'camera3d-invalid-clipping-planes',
+    // ERR_FAIL_COND(p_far <= p_near), reached only by the frustum mode.
+    grounding: { kind: 'engine', at: 'projection.cpp:367' },
+  },
+  zeroDepthRange: {
+    severity: 'warning',
+    ruleName: 'camera3d-zero-depth-range',
+    // The perspective early return on `deltaZ == 0` drops the write in silence and leaves
+    // both properties stored: a 4.6.3 render prints nothing, where the frustum pair prints
+    // `Condition "p_far <= p_near" is true` once per frame. Neither error form applies.
+    grounding: { kind: 'engine', at: 'projection.cpp:263' },
+  },
+} as const satisfies RuleArms<'multipleCurrent' | 'invalidClippingPlanes' | 'zeroDepthRange'>;
 
 /** `Camera3D::ProjectionType` (camera_3d.h:45-47). */
 const PROJECTION_PERSPECTIVE = 0;
@@ -59,7 +86,6 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-
   if (!isValidProperties(node.properties)) {
     return diagnostics;
   }
@@ -72,13 +98,12 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
     const scope = viewportScopeOf(scene, node);
     const claiming = scope === undefined ? 0 : countCurrentCamerasInScope(scene, scope);
     if (claiming > 1) {
-      diagnostics.push({
-        severity: 'info',
-        message: `${node.type} 'current' contention: ${claiming} cameras claim the current-camera slot of one viewport. Only one holds it: the last one entered wins, and the others silently lose it (viewport.cpp:4578), so only one of them draws.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'camera3d-multiple-current',
-      });
+      reportArm(
+        diagnostics,
+        arms.multipleCurrent,
+        node,
+        `${node.type} 'current' contention: ${claiming} cameras claim the current-camera slot of one viewport. Only one holds it: the last one entered wins, and the others silently lose it (viewport.cpp:4578), so only one of them draws.`
+      );
     }
   }
 
@@ -102,26 +127,24 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
     // and `far == near`. A `nan` plane needs no guard: every comparison below is false for it,
     // as the C++ ones are.
     if (mode === PROJECTION_FRUSTUM && far <= near) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Camera3D 'near' clipping plane (${near}) must be below 'far' (${far}). Under the frustum projection Godot refuses the pair outright when 'far' is not greater than 'near', so no projection is built from it.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'camera3d-invalid-clipping-planes',
-      });
+      reportArm(
+        diagnostics,
+        arms.invalidClippingPlanes,
+        node,
+        `Camera3D 'near' clipping plane (${near}) must be below 'far' (${far}). Under the frustum projection Godot refuses the pair outright when 'far' is not greater than 'near', so no projection is built from it.`
+      );
     }
     // Perspective: projection.cpp:263 returns when deltaZ (`far - near`, projection.cpp:260) is
     // zero, before `set_identity()` at :268. Not `near === far`: two infinities give nan and do
     // not return early. `near > far` leaves deltaZ negative, so the matrix is written with depth
     // inverted.
     if (mode === PROJECTION_PERSPECTIVE && far - near === 0) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `Camera3D 'near' and 'far' clipping planes are both ${near}. Under the perspective projection Godot returns on the zero depth range before it writes the matrix, so the pair is dropped and no projection is built from it.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'camera3d-zero-depth-range',
-      });
+      reportArm(
+        diagnostics,
+        arms.zeroDepthRange,
+        node,
+        `Camera3D 'near' and 'far' clipping planes are both ${near}. Under the perspective projection Godot returns on the zero depth range before it writes the matrix, so the pair is dropped and no projection is built from it.`
+      );
     }
     // Orthogonal: projection.cpp:344 has no guard and divides by `zfar - znear` at :351, storing
     // inf. Nothing is refused, clamped or dropped, no hint end is crossed, and Camera3D declares
@@ -137,31 +160,7 @@ const camera3DValidationRule: LintRule = {
     description:
       "Validates the Camera3D near/far clipping-plane pair per projection mode, which neither plane's own bound can express, and reports cameras that contend for one viewport's current-camera slot",
     category: 'validation',
-    emits: [
-      {
-        ruleName: 'camera3d-multiple-current',
-        severity: 'info',
-        grounding: {
-          kind: 'engine-inert',
-          at: 'camera_3d.cpp:190',
-          unused: 'the earlier camera loses the slot to the last entered current one and is never drawn',
-        },
-      },
-      {
-        ruleName: 'camera3d-invalid-clipping-planes',
-        severity: 'error',
-        // ERR_FAIL_COND(p_far <= p_near), reached only by the frustum mode.
-        grounding: { kind: 'engine', at: 'projection.cpp:367' },
-      },
-      {
-        ruleName: 'camera3d-zero-depth-range',
-        severity: 'warning',
-        // The perspective early return on `deltaZ == 0` drops the write in silence and leaves
-        // both properties stored: a 4.6.3 render prints nothing, where the frustum pair prints
-        // `Condition "p_far <= p_near" is true` once per frame. Neither error form applies.
-        grounding: { kind: 'engine', at: 'projection.cpp:263' },
-      },
-    ],
+    emits: armEmits(arms),
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Camera3D'),
   },
   check: checkCamera3D,

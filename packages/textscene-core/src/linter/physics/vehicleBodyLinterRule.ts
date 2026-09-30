@@ -6,6 +6,7 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
+import { armEmits, reportArm, type RuleArms } from '../ruleArms.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { hasChildOfType } from '../childType.js';
@@ -26,6 +27,17 @@ export function makeVehicleBodyLinterRule(dim: PhysicsDim): LintRule {
   const type = `VehicleBody${dim}`;
   const wheelType = `VehicleWheel${dim}`;
   const prefix = `vehiclebody${dimSuffix(dim)}`;
+  const arms = {
+    needsWheels: {
+      severity: 'info',
+      ruleName: `${prefix}-needs-wheels`,
+      grounding: {
+        kind: 'engine-inert',
+        at: NO_WHEELS_AT,
+        unused: 'with no wheels the suspension and traction pass returns before applying anything',
+      },
+    },
+  } as const satisfies RuleArms<'needsWheels'>;
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
@@ -35,13 +47,12 @@ export function makeVehicleBodyLinterRule(dim: PhysicsDim): LintRule {
     // plain RigidBody3D. VehicleWheel3D registers in NOTIFICATION_ENTER_TREE through
     // `cast_to<VehicleBody3D>(get_parent())`, so a nested wheel is never attached.
     if (!hasChildOfType(node, [wheelType])) {
-      diagnostics.push({
-        severity: 'info',
-        message: `${type} '${node.name}' has no direct ${wheelType} children. A vehicle body is driven by its wheels, and Godot only attaches wheels that are its immediate children; without them engine_force and steering have no effect.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: `${prefix}-needs-wheels`,
-      });
+      reportArm(
+        diagnostics,
+        arms.needsWheels,
+        node,
+        `${type} '${node.name}' has no direct ${wheelType} children. A vehicle body is driven by its wheels, and Godot only attaches wheels that are its immediate children; without them engine_force and steering have no effect.`
+      );
     }
 
     return diagnostics;
@@ -53,17 +64,7 @@ export function makeVehicleBodyLinterRule(dim: PhysicsDim): LintRule {
       description: `Validates that a ${type} has wheels`,
       category: 'validation',
       applicableNodeTypes: [type],
-      emits: [
-        {
-          ruleName: `${prefix}-needs-wheels`,
-          severity: 'info',
-          grounding: {
-            kind: 'engine-inert',
-            at: NO_WHEELS_AT,
-            unused: 'with no wheels the suspension and traction pass returns before applying anything',
-          },
-        },
-      ],
+      emits: armEmits(arms),
     },
     check,
   };

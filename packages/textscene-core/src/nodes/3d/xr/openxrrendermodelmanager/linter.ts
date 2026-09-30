@@ -11,9 +11,20 @@ import { parentTypeVerdict, type ParentVerdict } from '../../../../linter/parent
 import type { TscnNode, TscnScene } from '../../../../parser/types.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { literalText } from '../../../../godot/index.js';
+import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
-const TRACKER_RULE = 'openxrrendermodelmanager-tracker-required-for-local-pose';
-const PARENT_RULE = 'openxrrendermodelmanager-parent-not-xrorigin3d';
+const arms = {
+  trackerRequiredForLocalPose: {
+    severity: 'warning',
+    ruleName: 'openxrrendermodelmanager-tracker-required-for-local-pose',
+    grounding: { kind: 'configuration-warning' },
+  },
+  parentNotXROrigin3D: {
+    severity: 'warning',
+    ruleName: 'openxrrendermodelmanager-parent-not-xrorigin3d',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<'trackerRequiredForLocalPose' | 'parentNotXROrigin3D'>;
 
 /** The two `tracker` values that search only the DIRECT parent (cpp:203). */
 const RENDER_MODEL_TRACKER_ANY = 0;
@@ -59,13 +70,12 @@ function checkOpenXRRenderModelManager(context: RuleContext): Diagnostic[] {
     // slot converts, come off before the length is read.
     const hasPose = rawPose !== undefined && literalText(rawPose) !== '';
     if (hasPose) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `OpenXRRenderModelManager '${node.name}' sets make_local_to_pose without picking a hand tracker (tracker is Any or None set), so Godot never resolves a pose to make render models local to.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: TRACKER_RULE,
-      });
+      reportArm(
+        diagnostics,
+        arms.trackerRequiredForLocalPose,
+        node,
+        `OpenXRRenderModelManager '${node.name}' sets make_local_to_pose without picking a hand tracker (tracker is Any or None set), so Godot never resolves a pose to make render models local to.`
+      );
     }
   }
 
@@ -74,13 +84,12 @@ function checkOpenXRRenderModelManager(context: RuleContext): Diagnostic[] {
     : ancestorHasXROrigin3D(scene, node);
 
   if (verdict.kind !== 'satisfied' && verdict.kind !== 'unknowable') {
-    diagnostics.push({
-      severity: 'warning',
-      message: `OpenXRRenderModelManager '${node.name}' has no XROrigin3D ${directParentOnly ? 'parent' : 'ancestor'}, so Godot manages no render models for it.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: PARENT_RULE,
-    });
+    reportArm(
+      diagnostics,
+      arms.parentNotXROrigin3D,
+      node,
+      `OpenXRRenderModelManager '${node.name}' has no XROrigin3D ${directParentOnly ? 'parent' : 'ancestor'}, so Godot manages no render models for it.`
+    );
   }
 
   return diagnostics;
@@ -93,10 +102,7 @@ const openXRRenderModelManagerRule: LintRule = {
       "Warns on OpenXRRenderModelManager's two checkable configuration warnings: make_local_to_pose set without a tracker, and no XROrigin3D reachable",
     category: 'validation',
     applicableNodeTypes: ['OpenXRRenderModelManager'],
-    emits: [
-      { ruleName: TRACKER_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      { ruleName: PARENT_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
-    ],
+    emits: armEmits(arms),
   },
   check: checkOpenXRRenderModelManager,
 };

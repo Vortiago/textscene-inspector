@@ -1,18 +1,20 @@
 /**
  * The shared **Range advisory** combinator: a warning, never an error, when one
  * numeric property leaves a plausible band. It owns presence, parse, NaN guard and
- * direction, so each rule is a table of **arms**. Error and cross-field checks stay
- * hand-written (CONTEXT.md, "Range advisory").
+ * direction, so each rule is a table of threshold arms that reports through one
+ * warning **Rule arm** (CONTEXT.md, "Range advisory").
  */
 
 import type { Diagnostic } from './types.js';
 import type { TscnNode } from '../parser/types.js';
 import { isValidProperties } from './linterUtils.js';
+import { reportArm, type RuleArm } from './ruleArms.js';
 import { parseGodotFloat } from './validators/commonValidators.js';
 
+/** The rule arm a table reports through. ADR-0032 grounds a hint in the warning tier. */
+export type WarningArm = RuleArm & { readonly severity: 'warning' };
+
 interface ArmBase {
-  /** Rule name carried on the emitted diagnostic (may be shared across a property's arms). */
-  ruleName: string;
   /** Build the warning message from the parsed numeric value. */
   message: (value: number) => string;
   /**
@@ -41,16 +43,16 @@ export type RangeArm = OverArm | UnderArm;
 export type RangeAdvisoryTable = Record<string, RangeArm[]>;
 
 /**
- * Emit a `'warning'` **Diagnostic** for every arm the node's properties trip.
- * Returns `[]` when the node carries no valid properties; skips absent or
- * non-numeric properties silently.
+ * Report a **Diagnostic** through `arm` for every threshold arm the node's
+ * properties trip. Returns `[]` when the node carries no valid properties. Skips
+ * absent or non-numeric properties silently.
  */
-export function rangeAdvisories(node: TscnNode, table: RangeAdvisoryTable): Diagnostic[] {
+export function rangeAdvisories(node: TscnNode, table: RangeAdvisoryTable, arm: WarningArm): Diagnostic[] {
   if (!isValidProperties(node.properties)) return [];
   const props = node.properties as Record<string, string>;
 
   const diagnostics: Diagnostic[] = [];
-  for (const [property, arms] of Object.entries(table)) {
+  for (const [property, ranges] of Object.entries(table)) {
     const raw = props[property];
     if (raw === undefined) continue;
     // `parseGodotFloat`, not `parseFloat`: `inf` is a value above every bound,
@@ -59,20 +61,12 @@ export function rangeAdvisories(node: TscnNode, table: RangeAdvisoryTable): Diag
     const value = parseGodotFloat(raw);
     if (value === null) continue;
 
-    for (const arm of arms) {
+    for (const range of ranges) {
       const tripped =
-        'over' in arm
-          ? value > arm.over
-          : value < arm.under && (arm.floor === undefined || value > arm.floor);
-      if (tripped) {
-        diagnostics.push({
-          severity: 'warning',
-          message: arm.message(value),
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: arm.ruleName,
-        });
-      }
+        'over' in range
+          ? value > range.over
+          : value < range.under && (range.floor === undefined || value > range.floor);
+      if (tripped) reportArm(diagnostics, arm, node, range.message(value));
     }
   }
   return diagnostics;

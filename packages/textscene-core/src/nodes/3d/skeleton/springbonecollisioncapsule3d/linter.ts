@@ -9,6 +9,15 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
+import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
+
+const arms = {
+  radiusExceedsHalfHeight: {
+    severity: 'error',
+    ruleName: 'springbonecollisioncapsule3d-radius-exceeds-half-height',
+    grounding: { kind: 'engine', at: 'spring_bone_collision_capsule_3d.cpp:38' },
+  },
+} as const satisfies RuleArms<'radiusExceedsHalfHeight'>;
 
 function checkSpringBoneCollisionCapsule3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -33,14 +42,12 @@ function checkSpringBoneCollisionCapsule3D(context: RuleContext): Diagnostic[] {
   if (!(radius > height * 0.5)) return [];
 
   return [
-    {
-      severity: 'error',
+    armDiagnostic(
+      arms.radiusExceedsHalfHeight,
+      node,
       // The literals as written, not the parsed numbers, so `inf` reads as `inf`.
-      message: `SpringBoneCollisionCapsule3D '${node.name}' sets radius ${rawRadius.trim()} on height ${rawHeight.trim()}. Godot keeps a capsule's radius at or below half its height, so loading this scene rewrites one of the two and the shape will not be the one written.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'springbonecollisioncapsule3d-radius-exceeds-half-height',
-    },
+      `SpringBoneCollisionCapsule3D '${node.name}' sets radius ${rawRadius.trim()} on height ${rawHeight.trim()}. Godot keeps a capsule's radius at or below half its height, so loading this scene rewrites one of the two and the shape will not be the one written.`
+    ),
   ];
 }
 
@@ -51,13 +58,7 @@ const springBoneCollisionCapsule3DShapeRule: LintRule = {
       "Reports a SpringBoneCollisionCapsule3D whose radius exceeds half its height, since Godot silently rewrites one of the two on load",
     category: 'validation',
     applicableNodeTypes: ['SpringBoneCollisionCapsule3D'],
-    emits: [
-      {
-        ruleName: 'springbonecollisioncapsule3d-radius-exceeds-half-height',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'spring_bone_collision_capsule_3d.cpp:38' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkSpringBoneCollisionCapsule3D,
 };

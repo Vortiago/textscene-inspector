@@ -12,8 +12,15 @@ import {
   parentTypeVerdict,
   placementPhrase,
 } from '../../../../linter/parentType.js';
+import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
 
-const PARENT_RULE = 'openxrvisibilitymask-parent-not-xrcamera3d';
+const arms = {
+  parentNotXRCamera3D: {
+    severity: 'warning',
+    ruleName: 'openxrvisibilitymask-parent-not-xrcamera3d',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<'parentNotXRCamera3D'>;
 
 function checkOpenXRVisibilityMask(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
@@ -30,13 +37,11 @@ function checkOpenXRVisibilityMask(context: RuleContext): Diagnostic[] {
 
   const where = placementPhrase(verdict);
   return [
-    {
-      severity: 'warning',
-      message: `OpenXRVisibilityMask '${node.name}' is ${where}. OpenXR visibility mask must have an XRCamera3D node as their parent, the same configuration warning Godot's own editor reports.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: PARENT_RULE,
-    },
+    armDiagnostic(
+      arms.parentNotXRCamera3D,
+      node,
+      `OpenXRVisibilityMask '${node.name}' is ${where}. OpenXR visibility mask must have an XRCamera3D node as their parent, the same configuration warning Godot's own editor reports.`
+    ),
   ];
 }
 
@@ -47,7 +52,7 @@ const openXRVisibilityMaskParentRule: LintRule = {
       "Warns when a visible OpenXRVisibilityMask is not a direct child of an XRCamera3D, Godot's own configuration warning for this node",
     category: 'validation',
     applicableNodeTypes: ['OpenXRVisibilityMask'],
-    emits: [{ ruleName: PARENT_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: armEmits(arms),
   },
   check: checkOpenXRVisibilityMask,
 };

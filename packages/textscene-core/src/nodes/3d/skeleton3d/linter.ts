@@ -9,6 +9,45 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { indexedKeyRegex, boolSlotValue} from '../../../godot/index.js';
 import { boneNameFindings } from './boneNameOrder.js';
 import { writtenIndex } from '../../../linter/reportedIndices.js';
+import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+
+const arms = {
+  debugMode: {
+    severity: 'info',
+    ruleName: 'skeleton3d-debug-mode',
+    grounding: {
+      kind: 'engine-inert',
+      at: 'skeleton_3d.cpp:551',
+      unused: 'show_rest_only disables every bone, so no authored pose is applied',
+    },
+  },
+  deprecatedFeature: {
+    severity: 'warning',
+    ruleName: 'skeleton3d-deprecated-feature',
+    grounding: { kind: 'engine', at: 'skeleton_3d.cpp:71' },
+  },
+  deprecatedBonePose: {
+    severity: 'warning',
+    ruleName: 'skeleton3d-deprecated-bone-pose',
+    grounding: { kind: 'engine', at: 'skeleton_3d.cpp:108' },
+  },
+  boneNameOrder: {
+    severity: 'error',
+    ruleName: 'skeleton3d-bone-name-order',
+    grounding: { kind: 'engine', at: 'skeleton_3d.cpp:85' },
+  },
+  duplicateBoneName: {
+    severity: 'error',
+    ruleName: 'skeleton3d-duplicate-bone-name',
+    grounding: { kind: 'engine', at: 'skeleton_3d.cpp:606' },
+  },
+} as const satisfies RuleArms<
+  | 'debugMode'
+  | 'deprecatedFeature'
+  | 'deprecatedBonePose'
+  | 'boneNameOrder'
+  | 'duplicateBoneName'
+>;
 
 /**
  * `bones/<i>/pose` and `bones/<i>/bound_children`, the two 3.x arms
@@ -38,23 +77,21 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
   // a rule here.
 
   if (boolSlotValue(rawProps.show_rest_only) === true) {
-    diagnostics.push({
-      severity: 'info',
-      message: `show_rest_only is enabled. Skeleton is in debugging mode with bones forced to rest pose. Animations are disabled.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'skeleton3d-debug-mode',
-    });
+    reportArm(
+      diagnostics,
+      arms.debugMode,
+      node,
+      `show_rest_only is enabled. Skeleton is in debugging mode with bones forced to rest pose. Animations are disabled.`
+    );
   }
 
   if (boolSlotValue(rawProps.animate_physical_bones) === true) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `animate_physical_bones is enabled. This is a deprecated feature for ragdoll physics. Consider using the new SkeletonModifier3D system instead.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'skeleton3d-deprecated-feature',
-    });
+    reportArm(
+      diagnostics,
+      arms.deprecatedFeature,
+      node,
+      `animate_physical_bones is enabled. This is a deprecated feature for ragdoll physics. Consider using the new SkeletonModifier3D system instead.`
+    );
   }
 
   // skeleton_3d.cpp:108-110 fires WARN_DEPRECATED_MSG before recomputing the
@@ -62,33 +99,30 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
   // and a converted skeleton carries one for every bone.
   const deprecated = Object.keys(rawProps).filter((key) => DEPRECATED_POSE_KEY.test(key));
   if (deprecated.length > 0) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `${deprecated.length === 1 ? `'${deprecated[0]}' uses` : `${deprecated.length} bone keys such as '${deprecated[0]}' use`} the old 3.x pose format, which is deprecated and loads slower. Re-import or re-save the scene.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'skeleton3d-deprecated-bone-pose',
-    });
+    reportArm(
+      diagnostics,
+      arms.deprecatedBonePose,
+      node,
+      `${deprecated.length === 1 ? `'${deprecated[0]}' uses` : `${deprecated.length} bone keys such as '${deprecated[0]}' use`} the old 3.x pose format, which is deprecated and loads slower. Re-import or re-save the scene.`
+    );
   }
 
   for (const finding of boneNameFindings(rawProps)) {
-    diagnostics.push(
-      finding.kind === 'order'
-        ? {
-            severity: 'error',
-            message: `'${finding.key}' names bone ${writtenIndex(finding.indexText, finding.index)}, but only ${finding.expected} bone${finding.expected === 1 ? '' : 's'} exist${finding.expected === 1 ? 's' : ''} by this line. Godot adds a bone only when the index equals the current count, so it drops this write.`,
-            nodeName: node.name,
-            nodeType: node.type,
-            ruleName: 'skeleton3d-bone-name-order',
-          }
-        : {
-            severity: 'error',
-            message: `'${finding.key}' reuses the bone name "${finding.name}", already held by bone ${finding.heldBy}. Godot refuses a duplicate name and never adds this bone.`,
-            nodeName: node.name,
-            nodeType: node.type,
-            ruleName: 'skeleton3d-duplicate-bone-name',
-          }
-    );
+    if (finding.kind === 'order') {
+      reportArm(
+        diagnostics,
+        arms.boneNameOrder,
+        node,
+        `'${finding.key}' names bone ${writtenIndex(finding.indexText, finding.index)}, but only ${finding.expected} bone${finding.expected === 1 ? '' : 's'} exist${finding.expected === 1 ? 's' : ''} by this line. Godot adds a bone only when the index equals the current count, so it drops this write.`
+      );
+    } else {
+      reportArm(
+        diagnostics,
+        arms.duplicateBoneName,
+        node,
+        `'${finding.key}' reuses the bone name "${finding.name}", already held by bone ${finding.heldBy}. Godot refuses a duplicate name and never adds this bone.`
+      );
+    }
   }
 
   return diagnostics;
@@ -100,37 +134,7 @@ const skeleton3DValidationRule: LintRule = {
     description: 'Validates Skeleton3D debug flags, deprecated features and bone-name writes',
     category: 'validation',
     applicableNodeTypes: ['Skeleton3D'],
-    emits: [
-      {
-        ruleName: 'skeleton3d-debug-mode',
-        severity: 'info',
-        grounding: {
-          kind: 'engine-inert',
-          at: 'skeleton_3d.cpp:551',
-          unused: 'show_rest_only disables every bone, so no authored pose is applied',
-        },
-      },
-      {
-        ruleName: 'skeleton3d-deprecated-feature',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'skeleton_3d.cpp:71' },
-      },
-      {
-        ruleName: 'skeleton3d-deprecated-bone-pose',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'skeleton_3d.cpp:108' },
-      },
-      {
-        ruleName: 'skeleton3d-bone-name-order',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'skeleton_3d.cpp:85' },
-      },
-      {
-        ruleName: 'skeleton3d-duplicate-bone-name',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'skeleton_3d.cpp:606' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkSkeleton3D,
 };

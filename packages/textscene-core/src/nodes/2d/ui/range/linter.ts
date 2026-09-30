@@ -6,6 +6,20 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../../godot/index.js';
+import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+
+const arms = {
+  maxBelowMin: {
+    severity: 'error',
+    ruleName: 'range-max-below-min',
+    grounding: { kind: 'engine', at: 'range.cpp:229' },
+  },
+  expEditNegativeMin: {
+    severity: 'warning',
+    ruleName: 'range-exp-edit-negative-min',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<'maxBelowMin' | 'expEditNegativeMin'>;
 
 function checkRangeBounds(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -26,13 +40,12 @@ function checkRangeBounds(context: RuleContext): Diagnostic[] {
     // The MAX() at range.cpp:217 does not collapse a nan pair, so `nan` has
     // no single point to report.
     if (min !== null && max !== null && !Number.isNaN(min) && !Number.isNaN(max) && max < min) {
-      diagnostics.push({
-        severity: 'error',
-        message: `${node.type} '${node.name}' has 'max_value = ${maxRaw}' below 'min_value = ${minRaw}'. Godot's Range::set_max clamps max_value up to min_value rather than honouring the inverted pair, so the range collapses to a single point at ${minRaw} instead of spanning what's authored.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'range-max-below-min',
-      });
+      reportArm(
+        diagnostics,
+        arms.maxBelowMin,
+        node,
+        `${node.type} '${node.name}' has 'max_value = ${maxRaw}' below 'min_value = ${minRaw}'. Godot's Range::set_max clamps max_value up to min_value rather than honouring the inverted pair, so the range collapses to a single point at ${minRaw} instead of spanning what's authored.`
+      );
     }
   }
 
@@ -42,13 +55,12 @@ function checkRangeBounds(context: RuleContext): Diagnostic[] {
   if (boolSlotValue(props.exp_edit) === true && minRaw !== undefined) {
     const min = parseGodotFloat(minRaw);
     if (min !== null && !Number.isNaN(min) && min < 0) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `${node.type} '${node.name}' has 'exp_edit' enabled with 'min_value = ${minRaw}'. Exp Edit requires Min Value to be greater than or equal to 0.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'range-exp-edit-negative-min',
-      });
+      reportArm(
+        diagnostics,
+        arms.expEditNegativeMin,
+        node,
+        `${node.type} '${node.name}' has 'exp_edit' enabled with 'min_value = ${minRaw}'. Exp Edit requires Min Value to be greater than or equal to 0.`
+      );
     }
   }
 
@@ -62,14 +74,7 @@ const rangeBoundsRule: LintRule = {
       'Flags a Range whose max_value is authored below min_value, or whose Exp Edit is enabled with a negative min_value',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Range'),
-    emits: [
-      {
-        ruleName: 'range-max-below-min',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'range.cpp:229' },
-      },
-      { ruleName: 'range-exp-edit-negative-min', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-    ],
+    emits: armEmits(arms),
   },
   check: checkRangeBounds,
 };

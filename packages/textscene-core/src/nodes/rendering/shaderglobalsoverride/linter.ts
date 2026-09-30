@@ -8,6 +8,15 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { countNodesOfType, firstNodeOfType } from '../../../linter/linterUtils.js';
+import { armDiagnostic, armEmits, type RuleArms } from '../../../linter/ruleArms.js';
+
+const arms = {
+  multipleInScene: {
+    severity: 'warning',
+    ruleName: 'shaderglobalsoverride-multiple-in-scene',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<'multipleInScene'>;
 
 function checkShaderGlobalsOverride(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
@@ -20,13 +29,11 @@ function checkShaderGlobalsOverride(context: RuleContext): Diagnostic[] {
   if (node === firstNodeOfType(scene.nodes, 'ShaderGlobalsOverride')) return [];
 
   return [
-    {
-      severity: 'warning',
-      message: `ShaderGlobalsOverride '${node.name}' is not the first in the scene, so Godot leaves it inactive and it overrides nothing (shader_globals_override.cpp:282). ${total} are declared here; only the first to enter the tree activates.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'shaderglobalsoverride-multiple-in-scene',
-    },
+    armDiagnostic(
+      arms.multipleInScene,
+      node,
+      `ShaderGlobalsOverride '${node.name}' is not the first in the scene, so Godot leaves it inactive and it overrides nothing (shader_globals_override.cpp:282). ${total} are declared here; only the first to enter the tree activates.`
+    ),
   ];
 }
 
@@ -37,7 +44,7 @@ const shaderGlobalsOverrideValidationRule: LintRule = {
       'Warns on every ShaderGlobalsOverride but the first in the scene, which are the ones Godot leaves inactive',
     category: 'validation',
     applicableNodeTypes: ['ShaderGlobalsOverride'],
-    emits: [{ ruleName: 'shaderglobalsoverride-multiple-in-scene', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: armEmits(arms),
   },
   check: checkShaderGlobalsOverride,
 };

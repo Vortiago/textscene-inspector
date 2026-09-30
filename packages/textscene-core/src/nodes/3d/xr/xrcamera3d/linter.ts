@@ -8,8 +8,15 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isExplicitlyHidden, parentTypeVerdict } from '../../../../linter/parentType.js';
+import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
 
-const PARENT_RULE = 'xrcamera3d-parent-not-xrorigin3d';
+const arms = {
+  parentNotOrigin: {
+    severity: 'warning',
+    ruleName: 'xrcamera3d-parent-not-xrorigin3d',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<'parentNotOrigin'>;
 
 function checkXRCamera3DParent(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
@@ -26,13 +33,11 @@ function checkXRCamera3DParent(context: RuleContext): Diagnostic[] {
   if (verdict.kind !== 'mismatch') return [];
 
   return [
-    {
-      severity: 'warning',
-      message: `XRCamera3D '${node.name}' is a child of a ${verdict.parent.type} node. XRCamera3D may not function as expected without an XROrigin3D node as its parent, the same configuration warning Godot's own editor reports.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: PARENT_RULE,
-    },
+    armDiagnostic(
+      arms.parentNotOrigin,
+      node,
+      `XRCamera3D '${node.name}' is a child of a ${verdict.parent.type} node. XRCamera3D may not function as expected without an XROrigin3D node as its parent, the same configuration warning Godot's own editor reports.`
+    ),
   ];
 }
 
@@ -43,7 +48,7 @@ const xrCamera3DParentRule: LintRule = {
       "Warns when a visible XRCamera3D has a parent that is not an XROrigin3D, Godot's own configuration warning for this node",
     category: 'validation',
     applicableNodeTypes: ['XRCamera3D'],
-    emits: [{ ruleName: PARENT_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: armEmits(arms),
   },
   check: checkXRCamera3DParent,
 };

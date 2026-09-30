@@ -1,17 +1,14 @@
 /**
- * One reported diagnostic, declared once, so a parameterised factory derives
- * both the `push` in `check` and its `emits` from one arm. No guard sees the two
- * disagree, since a sibling's name satisfies the wildcard cross-check, so an
- * instance that reports a name its `emits` omits is unrepresentable.
+ * A **Rule arm**: one diagnostic a rule can report, declared once, so `check`
+ * reports through it and `armEmits` derives `emits` from it. A rule therefore
+ * cannot report a name or a severity its `emits` omits. The ESLint rule-arm guard
+ * refuses a diagnostic built any other way.
  */
 
 import type { Diagnostic, EmitGrounding, RuleMeta, Severity } from './types.js';
 import type { TscnNode } from '../parser/types.js';
 
-/**
- * `severity` first: `emitsScrape` pairs the two by source order, so the reverse
- * spelling mispairs (see `RuleMeta.emits`).
- */
+/** The severity and rule name a diagnostic reports, and the grounding that fixes the severity. */
 export interface RuleArm {
   readonly severity: Severity;
   readonly ruleName: string;

@@ -13,6 +13,33 @@ import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { parseGodotFloat } from '../../../godot/number.js';
 import { formatReal, storedReal } from '../../../godot/real.js';
 import type { Vector2 as Size } from '../../../parser/vectors.js';
+import { armDiagnostic, armEmits, type RuleArms } from '../../../linter/ruleArms.js';
+
+const arms = {
+  maxSizeBelowMinSize: {
+    severity: 'info',
+    ruleName: 'window-max-size-below-min-size',
+    grounding: {
+      kind: 'engine-inert',
+      at: 'window.cpp:473',
+      unused: 'the size fails this validity test, so the rendering server maximum is used instead',
+    },
+  },
+  sizeClampedByLimits: {
+    severity: 'warning',
+    ruleName: 'window-size-clamped-by-limits',
+    grounding: { kind: 'engine', at: 'window.cpp:1190-1196' },
+  },
+  contentScaleFactorFloored: {
+    severity: 'warning',
+    ruleName: 'window-content-scale-factor-floored',
+    grounding: { kind: 'engine', at: 'window.cpp:1240-1247' },
+  },
+} as const satisfies RuleArms<
+  | 'maxSizeBelowMinSize'
+  | 'sizeClampedByLimits'
+  | 'contentScaleFactorFloored'
+>;
 
 /** window.h:105,126: `size = Size2i(DEFAULT_WINDOW_SIZE, DEFAULT_WINDOW_SIZE)`, 100. */
 const DEFAULT_SIZE: Size = { x: 100, y: 100 };
@@ -39,13 +66,11 @@ function checkMaxBelowMin(node: RuleContext['node'], rawProps: Record<string, st
   const storedMax = floorAtZero(maxSize);
   if (!isMaxSizeSet(storedMax) || validMaxSize(floorAtZero(minSize), storedMax)) return [];
   return [
-    {
-      severity: 'info',
-      message: `Window 'max_size' (${formatSize(maxSize)}) is smaller than 'min_size' (${formatSize(minSize)}) in at least one dimension. Godot ignores max_size entirely in this case.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'window-max-size-below-min-size',
-    },
+    armDiagnostic(
+      arms.maxSizeBelowMinSize,
+      node,
+      `Window 'max_size' (${formatSize(maxSize)}) is smaller than 'min_size' (${formatSize(minSize)}) in at least one dimension. Godot ignores max_size entirely in this case.`
+    ),
   ];
 }
 
@@ -107,13 +132,11 @@ function checkSizeClamped(node: RuleContext['node'], rawProps: Record<string, st
   // is not reported twice.
   if (sameSize(loaded, floorAtZero(written))) return [];
   return [
-    {
-      severity: 'warning',
-      message: `Window 'size' ${formatSize(written)} loads as ${formatSize(loaded)}: Godot raises it to 'min_size' and caps it at a valid 'max_size', one line at a time in the order the file lists them.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'window-size-clamped-by-limits',
-    },
+    armDiagnostic(
+      arms.sizeClampedByLimits,
+      node,
+      `Window 'size' ${formatSize(written)} loads as ${formatSize(loaded)}: Godot raises it to 'min_size' and caps it at a valid 'max_size', one line at a time in the order the file lists them.`
+    ),
   ];
 }
 
@@ -128,13 +151,11 @@ function checkContentScaleFloored(node: RuleContext['node'], rawProps: Record<st
   const loaded = Math.max(Math.floor(stored), 1);
   if (loaded === stored) return [];
   return [
-    {
-      severity: 'warning',
-      message: `Window 'content_scale_factor' ${formatReal(stored)} loads as ${loaded}: 'content_scale_stretch' INTEGER (1) floors it to a whole number of at least 1.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'window-content-scale-factor-floored',
-    },
+    armDiagnostic(
+      arms.contentScaleFactorFloored,
+      node,
+      `Window 'content_scale_factor' ${formatReal(stored)} loads as ${loaded}: 'content_scale_stretch' INTEGER (1) floors it to a whole number of at least 1.`
+    ),
   ];
 }
 
@@ -155,27 +176,7 @@ const windowValidationRule: LintRule = {
     description: "Validates Window's size, size limits and content scale factor against each other",
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Window'),
-    emits: [
-      {
-        ruleName: 'window-max-size-below-min-size',
-        severity: 'info',
-        grounding: {
-          kind: 'engine-inert',
-          at: 'window.cpp:473',
-          unused: 'the size fails this validity test, so the rendering server maximum is used instead',
-        },
-      },
-      {
-        ruleName: 'window-size-clamped-by-limits',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'window.cpp:1190-1196' },
-      },
-      {
-        ruleName: 'window-content-scale-factor-floored',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'window.cpp:1240-1247' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkWindow,
 };

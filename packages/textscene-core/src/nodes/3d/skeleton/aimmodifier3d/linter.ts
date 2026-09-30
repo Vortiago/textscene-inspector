@@ -13,6 +13,15 @@ import { resolveAimSettingLeaf } from './linterParser.js';
 import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
 import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { indexedElements, boolSlotValue} from '../../../../godot/index.js';
+import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+
+const arms = {
+  parallelRotationAxes: {
+    severity: 'warning',
+    ruleName: 'aimmodifier3d-parallel-rotation-axes',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<'parallelRotationAxes'>;
 
 const SETTING_PREFIX = 'settings/';
 
@@ -74,13 +83,12 @@ function checkAimModifier3D(context: RuleContext): Diagnostic[] {
 
     const forwardLabel = BONE_AXIS[forwardAxis] ?? String(forwardAxis);
     const primaryLabel = VECTOR3_AXIS[primaryAxis] ?? String(primaryAxis);
-    diagnostics.push({
-      severity: 'warning',
-      message: `AimModifier3D '${node.name}' setting ${index} aims along ${forwardLabel} and rotates primarily about ${primaryLabel}, the same axis. With use_euler enabled Godot reports "Forward axis and primary rotation axis must not be parallel in setting ${index}", and the projection it aims with is degenerate. Choose a primary_rotation_axis perpendicular to forward_axis.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'aimmodifier3d-parallel-rotation-axes',
-    });
+    reportArm(
+      diagnostics,
+      arms.parallelRotationAxes,
+      node,
+      `AimModifier3D '${node.name}' setting ${index} aims along ${forwardLabel} and rotates primarily about ${primaryLabel}, the same axis. With use_euler enabled Godot reports "Forward axis and primary rotation axis must not be parallel in setting ${index}", and the projection it aims with is degenerate. Choose a primary_rotation_axis perpendicular to forward_axis.`
+    );
   }
 
   return diagnostics;
@@ -93,7 +101,7 @@ const aimModifier3DAxisRule: LintRule = {
       "Warns when a euler setting's forward axis is parallel to its primary rotation axis, the configuration Godot's own AimModifier3D warning refuses",
     category: 'validation',
     applicableNodeTypes: ['AimModifier3D'],
-    emits: [{ ruleName: 'aimmodifier3d-parallel-rotation-axes', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: armEmits(arms),
   },
   check: checkAimModifier3D,
 };

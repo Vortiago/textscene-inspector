@@ -7,6 +7,28 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { boolSlotValue } from '../../../godot/index.js';
+import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+
+const arms = {
+  emissionAngleNotEnabled: {
+    severity: 'info',
+    ruleName: 'audiostreamplayer3d-emission-angle-not-enabled',
+    grounding: {
+      kind: 'engine-inert',
+      at: 'audio_stream_player_3d.cpp:898',
+      unused: 'the group-enable toggle gates the whole emission_angle group',
+    },
+  },
+  emissionFilterNotEnabled: {
+    severity: 'info',
+    ruleName: 'audiostreamplayer3d-emission-filter-not-enabled',
+    grounding: {
+      kind: 'engine-inert',
+      at: 'audio_stream_player_3d.cpp:898',
+      unused: 'the group-enable toggle gates the whole emission_angle group',
+    },
+  },
+} as const satisfies RuleArms<'emissionAngleNotEnabled' | 'emissionFilterNotEnabled'>;
 
 /**
  * Validate AudioStreamPlayer3D semantic rules
@@ -27,24 +49,22 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
 
   // emission_angle_degrees without emission_angle_enabled.
   if (rawProps.emission_angle_degrees !== undefined && boolSlotValue(rawProps.emission_angle_enabled) !== true) {
-    diagnostics.push({
-      severity: 'info',
-      message: `Property 'emission_angle_degrees' is set but 'emission_angle_enabled' is not true. The emission angle will have no effect.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'audiostreamplayer3d-emission-angle-not-enabled',
-    });
+    reportArm(
+      diagnostics,
+      arms.emissionAngleNotEnabled,
+      node,
+      `Property 'emission_angle_degrees' is set but 'emission_angle_enabled' is not true. The emission angle will have no effect.`
+    );
   }
 
   // emission_angle_filter_attenuation_db without emission_angle_enabled.
   if (rawProps.emission_angle_filter_attenuation_db !== undefined && boolSlotValue(rawProps.emission_angle_enabled) !== true) {
-    diagnostics.push({
-      severity: 'info',
-      message: `Property 'emission_angle_filter_attenuation_db' is set but 'emission_angle_enabled' is not true. The filter will have no effect.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'audiostreamplayer3d-emission-filter-not-enabled',
-    });
+    reportArm(
+      diagnostics,
+      arms.emissionFilterNotEnabled,
+      node,
+      `Property 'emission_angle_filter_attenuation_db' is set but 'emission_angle_enabled' is not true. The filter will have no effect.`
+    );
   }
 
   return diagnostics;
@@ -59,26 +79,7 @@ const audioStreamPlayer3DValidationRule: LintRule = {
     description: 'Validates AudioStreamPlayer3D property values and logical consistency',
     category: 'validation',
     applicableNodeTypes: ['AudioStreamPlayer3D'],
-    emits: [
-      {
-        ruleName: 'audiostreamplayer3d-emission-angle-not-enabled',
-        severity: 'info',
-        grounding: {
-          kind: 'engine-inert',
-          at: 'audio_stream_player_3d.cpp:898',
-          unused: 'the group-enable toggle gates the whole emission_angle group',
-        },
-      },
-      {
-        ruleName: 'audiostreamplayer3d-emission-filter-not-enabled',
-        severity: 'info',
-        grounding: {
-          kind: 'engine-inert',
-          at: 'audio_stream_player_3d.cpp:898',
-          unused: 'the group-enable toggle gates the whole emission_angle group',
-        },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkAudioStreamPlayer3D,
 };

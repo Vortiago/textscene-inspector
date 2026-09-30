@@ -9,6 +9,20 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { heldResource } from '../../../linter/resourceChecker.js';
 import { firstNodeOfType, isValidProperties } from '../../../linter/linterUtils.js';
 import { parseResourceReference } from '../../../resources/SubResourceResolver.js';
+import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+
+const arms = {
+  requiresEnvironment: {
+    severity: 'warning',
+    ruleName: 'worldenvironment-requires-environment',
+    grounding: { kind: 'configuration-warning' },
+  },
+  notFirstInGroup: {
+    severity: 'warning',
+    ruleName: 'single-worldenvironment',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<'requiresEnvironment' | 'notFirstInGroup'>;
 
 /**
  * The three first-wins groups, one per resource slot. `_notification` gates each `add_to_group` on
@@ -59,13 +73,12 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
     heldResource(rawProps.environment) === undefined &&
     heldResource(rawProps.camera_attributes) === undefined
   ) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `WorldEnvironment has neither an 'environment' nor a 'camera_attributes' resource, so it has no visible effect.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'worldenvironment-requires-environment',
-    });
+    reportArm(
+      diagnostics,
+      arms.requiresEnvironment,
+      node,
+      `WorldEnvironment has neither an 'environment' nor a 'camera_attributes' resource, so it has no visible effect.`
+    );
   }
 
   // world_environment.cpp:195-205 warns when `<slot>.is_valid()` and the world holds another node's
@@ -86,13 +99,12 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
     // `!=` on a `Ref` is instance identity: two nodes naming one `ExtResource` share an instance,
     // and `SubResource("e")` is `SubResource( "e" )`, so compare resource ids, not the raw text.
     if (resourceRefId(held) === winningId) continue;
-    diagnostics.push({
-      severity: 'warning',
-      message: `WorldEnvironment '${node.name}' is not the first in the scene to declare '${key}', and the resource it names is not the one that first node declares, so Godot ignores it. ${GROUP_WARNING[key]}`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'single-worldenvironment',
-    });
+    reportArm(
+      diagnostics,
+      arms.notFirstInGroup,
+      node,
+      `WorldEnvironment '${node.name}' is not the first in the scene to declare '${key}', and the resource it names is not the one that first node declares, so Godot ignores it. ${GROUP_WARNING[key]}`
+    );
   }
 
   return diagnostics;
@@ -104,14 +116,7 @@ const worldEnvironmentValidationRule: LintRule = {
     description: 'Validates WorldEnvironment resource presence and which WorldEnvironment wins each first-wins group',
     category: 'validation',
     applicableNodeTypes: ['WorldEnvironment'],
-    emits: [
-      { ruleName: 'worldenvironment-requires-environment', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      {
-        ruleName: 'single-worldenvironment',
-        severity: 'warning',
-        grounding: { kind: 'configuration-warning' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkWorldEnvironment,
 };

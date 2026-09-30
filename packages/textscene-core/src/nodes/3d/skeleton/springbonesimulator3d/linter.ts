@@ -20,6 +20,35 @@ import {
   stringToInt,
 } from '../../../../godot/index.js';
 import { SETTING_LEAVES } from './settingLeaves.js';
+import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+
+const arms = {
+  settingIndexOutOfRange: {
+    severity: 'error',
+    ruleName: 'springbonesimulator3d-setting-index-out-of-range',
+    grounding: { kind: 'engine', at: 'spring_bone_simulator_3d.cpp:44' },
+  },
+  sharedConfigIgnored: {
+    severity: 'error',
+    ruleName: 'springbonesimulator3d-shared-config-ignored',
+    grounding: { kind: 'engine', at: 'spring_bone_simulator_3d.cpp:644' },
+  },
+  jointConfigIgnored: {
+    severity: 'error',
+    ruleName: 'springbonesimulator3d-joint-config-ignored',
+    grounding: { kind: 'engine', at: 'spring_bone_simulator_3d.cpp:914' },
+  },
+  collisionListIgnored: {
+    severity: 'error',
+    ruleName: 'springbonesimulator3d-collision-list-ignored',
+    grounding: { kind: 'engine', at: 'spring_bone_simulator_3d.cpp:1150' },
+  },
+} as const satisfies RuleArms<
+  | 'settingIndexOutOfRange'
+  | 'sharedConfigIgnored'
+  | 'jointConfigIgnored'
+  | 'collisionListIgnored'
+>;
 
 /**
  * Any `settings/<i>/…` leaf, whatever its depth. Every index position here (the setting, the joint,
@@ -167,77 +196,67 @@ function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
   }
 
   if (outOfRange.size > 0) {
-    diagnostics.push({
-      severity: 'error',
-      message:
-        `SpringBoneSimulator3D setting index(es) ${listWrittenIndices(outOfRange)} fall outside ` +
+    reportArm(
+      diagnostics,
+      arms.settingIndexOutOfRange,
+      node,
+      `SpringBoneSimulator3D setting index(es) ${listWrittenIndices(outOfRange)} fall outside ` +
         `setting_count (${count}). SpringBoneSimulator3D::_set opens with ` +
         'ERR_FAIL_INDEX_V(which, settings.size(), false) (spring_bone_simulator_3d.cpp:44), ' +
-        'so no setter runs and these settings/<i>/… values are silently dropped on load.',
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'springbonesimulator3d-setting-index-out-of-range',
-    });
+        'so no setter runs and these settings/<i>/… values are silently dropped on load.'
+    );
   }
 
   if (sharedIgnored.size > 0) {
-    diagnostics.push({
-      severity: 'error',
-      message:
-        `SpringBoneSimulator3D setting(s) ${listWrittenIndices(sharedIgnored)} carry the shared ` +
+    reportArm(
+      diagnostics,
+      arms.sharedConfigIgnored,
+      node,
+      `SpringBoneSimulator3D setting(s) ${listWrittenIndices(sharedIgnored)} carry the shared ` +
         'rotation_axis/radius/stiffness/drag/gravity block while individual_config is true. ' +
         'set_radius and its siblings return before assigning whenever the config is ' +
         'individual (spring_bone_simulator_3d.cpp:644), so the values are dropped and the ' +
-        'settings/<i>/joints/<j>/… block drives the chain instead.',
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'springbonesimulator3d-shared-config-ignored',
-    });
+        'settings/<i>/joints/<j>/… block drives the chain instead.'
+    );
   }
 
   if (jointIgnored.size > 0) {
-    diagnostics.push({
-      severity: 'error',
-      message:
-        `SpringBoneSimulator3D setting(s) ${listWrittenIndices(jointIgnored)} tune ` +
+    reportArm(
+      diagnostics,
+      arms.jointConfigIgnored,
+      node,
+      `SpringBoneSimulator3D setting(s) ${listWrittenIndices(jointIgnored)} tune ` +
         'settings/<i>/joints/<j>/… while individual_config is false. set_joint_radius and ' +
         'its siblings return before assigning unless the config is individual ' +
         '(spring_bone_simulator_3d.cpp:914), and _update_joints then overwrites the joint ' +
-        'list from the shared block, so these values never reach the simulation.',
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'springbonesimulator3d-joint-config-ignored',
-    });
+        'list from the shared block, so these values never reach the simulation.'
+    );
   }
 
   if (collisionIgnored.size > 0) {
-    diagnostics.push({
-      severity: 'error',
-      message:
-        `SpringBoneSimulator3D setting(s) ${listWrittenIndices(collisionIgnored)} carry an explicit ` +
+    reportArm(
+      diagnostics,
+      arms.collisionListIgnored,
+      node,
+      `SpringBoneSimulator3D setting(s) ${listWrittenIndices(collisionIgnored)} carry an explicit ` +
         'collision list while enable_all_child_collisions is true (its default, ' +
         'spring_bone_simulator_3d.h:145). set_collision_path returns before storing the ' +
         'path in that state (spring_bone_simulator_3d.cpp:1150-1152), so the list is ' +
-        'dropped; set exclude_collisions instead, or turn the flag off.',
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'springbonesimulator3d-collision-list-ignored',
-    });
+        'dropped; set exclude_collisions instead, or turn the flag off.'
+    );
   }
 
   if (excludeIgnored.size > 0) {
-    diagnostics.push({
-      severity: 'error',
-      message:
-        `SpringBoneSimulator3D setting(s) ${listWrittenIndices(excludeIgnored)} carry an exclude ` +
+    reportArm(
+      diagnostics,
+      arms.collisionListIgnored,
+      node,
+      `SpringBoneSimulator3D setting(s) ${listWrittenIndices(excludeIgnored)} carry an exclude ` +
         'collision list while enable_all_child_collisions is false. ' +
         'set_exclude_collision_path returns before storing the path in that state ' +
         '(spring_bone_simulator_3d.cpp:1094-1096), so the exclusions are dropped and only ' +
-        'the explicit collisions list is consulted.',
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'springbonesimulator3d-collision-list-ignored',
-    });
+        'the explicit collisions list is consulted.'
+    );
   }
 
   return diagnostics;
@@ -252,28 +271,7 @@ const springBoneSimulator3DValidationRule: LintRule = {
       'enable_all_child_collisions',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'SpringBoneSimulator3D'),
-    emits: [
-      {
-        ruleName: 'springbonesimulator3d-setting-index-out-of-range',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'spring_bone_simulator_3d.cpp:44' },
-      },
-      {
-        ruleName: 'springbonesimulator3d-shared-config-ignored',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'spring_bone_simulator_3d.cpp:644' },
-      },
-      {
-        ruleName: 'springbonesimulator3d-joint-config-ignored',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'spring_bone_simulator_3d.cpp:914' },
-      },
-      {
-        ruleName: 'springbonesimulator3d-collision-list-ignored',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'spring_bone_simulator_3d.cpp:1150' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkSpringBoneSimulator3D,
 };

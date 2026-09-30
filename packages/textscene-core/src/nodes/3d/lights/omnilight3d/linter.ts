@@ -4,7 +4,10 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { projectorWithoutShadowDiagnostic } from '../shared/linterChecks.js';
+import { armEmits } from '../../../../linter/ruleArms.js';
+import { projectorArms, projectorWithoutShadowDiagnostic } from '../shared/linterChecks.js';
+
+const arms = projectorArms('omnilight3d');
 
 /**
  * light_3d.cpp:623-625: `light_projector` set while `shadow_enabled` is not true.
@@ -14,7 +17,7 @@ import { projectorWithoutShadowDiagnostic } from '../shared/linterChecks.js';
 function checkOmniLight3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
 
-  const projectorDiagnostic = projectorWithoutShadowDiagnostic(node, 'omnilight3d');
+  const projectorDiagnostic = projectorWithoutShadowDiagnostic(node, arms);
   return projectorDiagnostic ? [projectorDiagnostic] : [];
 }
 
@@ -24,9 +27,7 @@ const omniLight3DValidationRule: LintRule = {
     description: 'Validates OmniLight3D property values against the ranges the editor accepts',
     category: 'validation',
     applicableNodeTypes: ['OmniLight3D'],
-    emits: [
-      { ruleName: 'omnilight3d-projector-without-shadow', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-    ],
+    emits: armEmits(arms),
   },
   check: checkOmniLight3D,
 };

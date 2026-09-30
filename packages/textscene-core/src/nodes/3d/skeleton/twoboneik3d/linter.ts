@@ -17,6 +17,29 @@ import {
 } from '../../../../linter/reportedIndices.js';
 import { indexedElements, indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
 import { resolveTwoBoneSettingLeaf } from './linterParser.js';
+import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+
+const arms = {
+  settingIndexOutOfRange: {
+    severity: 'error',
+    ruleName: 'twoboneik3d-setting-index-out-of-range',
+    grounding: { kind: 'engine', at: 'two_bone_ik_3d.cpp:39' },
+  },
+  poleDirectionVectorIgnored: {
+    severity: 'error',
+    ruleName: 'twoboneik3d-pole-direction-vector-ignored',
+    grounding: { kind: 'engine', at: 'two_bone_ik_3d.cpp:446' },
+  },
+  settingMissingTargetNode: {
+    severity: 'warning',
+    ruleName: 'twoboneik3d-setting-missing-target-node',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<
+  | 'settingIndexOutOfRange'
+  | 'poleDirectionVectorIgnored'
+  | 'settingMissingTargetNode'
+>;
 
 /**
  * Any `settings/<i>/…` key, its index and the path below it captured. `_set` reads the index with a
@@ -99,45 +122,39 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
 
   if (outOfRange.size > 0) {
     const indices = listWrittenIndices(outOfRange);
-    diagnostics.push({
-      severity: 'error',
-      message:
-        `TwoBoneIK3D setting index(es) ${indices} fall outside setting_count (${count}). ` +
+    reportArm(
+      diagnostics,
+      arms.settingIndexOutOfRange,
+      node,
+      `TwoBoneIK3D setting index(es) ${indices} fall outside setting_count (${count}). ` +
         'TwoBoneIK3D::_set opens with ERR_FAIL_INDEX_V(which, settings.size(), false) ' +
         '(two_bone_ik_3d.cpp:39), so no setter runs and these settings/<i>/… values are ' +
-        'silently dropped on load.',
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'twoboneik3d-setting-index-out-of-range',
-    });
+        'silently dropped on load.'
+    );
   }
 
   if (missingTargets.total > 0) {
     const indices = listIndices(missingTargets.listed, missingTargets.total);
-    diagnostics.push({
-      severity: 'warning',
-      message:
-        `TwoBoneIK3D setting(s) ${indices} have no target_node. TwoBoneIK3D must have a target ` +
-        'to work (two_bone_ik_3d.cpp:196).',
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'twoboneik3d-setting-missing-target-node',
-    });
+    reportArm(
+      diagnostics,
+      arms.settingMissingTargetNode,
+      node,
+      `TwoBoneIK3D setting(s) ${indices} have no target_node. TwoBoneIK3D must have a target ` +
+        'to work (two_bone_ik_3d.cpp:196).'
+    );
   }
 
   if (ignoredVectors.size > 0) {
     const indices = listWrittenIndices(ignoredVectors);
-    diagnostics.push({
-      severity: 'error',
-      message:
-        `TwoBoneIK3D setting(s) ${indices} set pole_direction_vector while pole_direction is ` +
+    reportArm(
+      diagnostics,
+      arms.poleDirectionVectorIgnored,
+      node,
+      `TwoBoneIK3D setting(s) ${indices} set pole_direction_vector while pole_direction is ` +
         'not Custom (7). set_pole_direction_vector returns before assigning unless the ' +
         'direction is SECONDARY_DIRECTION_CUSTOM (two_bone_ik_3d.cpp:446), so the vector is ' +
-        'dropped and get_pole_direction_vector keeps returning the axis the enum names.',
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'twoboneik3d-pole-direction-vector-ignored',
-    });
+        'dropped and get_pole_direction_vector keeps returning the axis the enum names.'
+    );
   }
 
   return diagnostics;
@@ -150,19 +167,7 @@ const twoBoneIK3DValidationRule: LintRule = {
       "Validates TwoBoneIK3D's settings/<i>/… indices against setting_count and its pole direction vector against pole_direction",
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'TwoBoneIK3D'),
-    emits: [
-      {
-        ruleName: 'twoboneik3d-setting-index-out-of-range',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'two_bone_ik_3d.cpp:39' },
-      },
-      {
-        ruleName: 'twoboneik3d-pole-direction-vector-ignored',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'two_bone_ik_3d.cpp:446' },
-      },
-      { ruleName: 'twoboneik3d-setting-missing-target-node', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-    ],
+    emits: armEmits(arms),
   },
   check: checkTwoBoneIK3D,
 };

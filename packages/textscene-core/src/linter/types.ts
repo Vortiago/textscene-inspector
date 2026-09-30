@@ -18,9 +18,9 @@ export type Severity = 'error' | 'warning' | 'info';
 export const SEVERITY_ORDER: Record<Severity, number> = { error: 0, warning: 1, info: 2 };
 
 /**
- * The tier names as data, for the scrapes that build a severity alternation
- * into a regex. Derived here, not in each scraper: a tier spelled out at a
- * match site compiles and silently drops out of that scraper's population.
+ * The severity names as data, for a guard that builds them into a regex
+ * alternation. Derived here, not in each guard: a list written out at a match
+ * site still compiles, and misses a severity added later.
  */
 export const SEVERITIES = Object.keys(SEVERITY_ORDER) as Severity[];
 
@@ -262,13 +262,11 @@ export interface RuleMeta {
    */
   applicableNodeTypeMatcher?: (nodeType: string) => boolean;
   /**
-   * Every `ruleName`/`severity` pair `check` can emit, with its `EmitGrounding`.
-   * One rule can report under many `ruleName`s, and each sheet's Linting chapter
-   * is generated from this list. `ruleCoverage.test.ts` holds it to the literals
-   * in the file, except for factories that interpolate a `ruleName`.
+   * Every `ruleName`/`severity` pair `check` can report, with its `EmitGrounding`.
+   * One rule can report under many `ruleName`s, and the sheet generator builds
+   * each sheet's Linting chapter from this list. `armEmits` derives it from the
+   * arms `check` reports through (`ruleArms.ts`), so it cannot disagree with them.
    */
-  // Put `severity:` before `ruleName:` in every diagnostic object literal: the
-  // coverage guard pairs the two by source order, and it strips `emits` first.
   emits?: ReadonlyArray<{ ruleName: string; severity: Severity; grounding: EmitGrounding }>;
   /**
    * `file:line` of the engine guard that confines this rule to one exact class,

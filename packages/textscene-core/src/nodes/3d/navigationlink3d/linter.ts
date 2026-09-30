@@ -11,6 +11,15 @@ import { isValidProperties } from '../../../linter/linterUtils.js';
 import { matchVector3 } from '../../../linter/validators/vectorValidators.js';
 import { isEqualApprox } from '../../../godot/index.js';
 import type { Vector3 } from '../../../parser/vectors.js';
+import { armDiagnostic, armEmits, type RuleArms } from '../../../linter/ruleArms.js';
+
+const arms = {
+  startEqualsEnd: {
+    severity: 'warning',
+    ruleName: 'navigationlink3d-start-position-equals-end-position',
+    grounding: { kind: 'configuration-warning' },
+  },
+} as const satisfies RuleArms<'startEqualsEnd'>;
 
 /**
  * navigation_link_3d.h:43-44 declares both fields with no initializer, and the constructor
@@ -45,13 +54,11 @@ function checkNavigationLink3D(context: RuleContext): Diagnostic[] {
   if (!vector3EqualApprox(start, end)) return [];
 
   return [
-    {
-      severity: 'warning',
-      message: `NavigationLink3D '${node.name}' has 'start_position' and 'end_position' at the same point. Godot's own editor flags this: a link needs its two ends apart to route anything through.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'navigationlink3d-start-position-equals-end-position',
-    },
+    armDiagnostic(
+      arms.startEqualsEnd,
+      node,
+      `NavigationLink3D '${node.name}' has 'start_position' and 'end_position' at the same point. Godot's own editor flags this: a link needs its two ends apart to route anything through.`
+    ),
   ];
 }
 
@@ -62,9 +69,7 @@ const navigationLink3DPositionRule: LintRule = {
       "Warns when a NavigationLink3D's start_position and end_position are the same point, which Godot's own editor also flags",
     category: 'validation',
     applicableNodeTypes: ['NavigationLink3D'],
-    emits: [
-      { ruleName: 'navigationlink3d-start-position-equals-end-position', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-    ],
+    emits: armEmits(arms),
   },
   check: checkNavigationLink3D,
 };
