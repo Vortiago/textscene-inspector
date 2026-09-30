@@ -51,9 +51,9 @@ function catalogChain(typeName, fallback = []) {
 /**
  * Path from `sliceDir` to the linterParser that registers the nearest registering Godot ancestor,
  * so a test that imports only `./linterParser` sees inherited keys. Chaining to `base/node3d` past
- * a `RigidBody3D` parent would skip its validators. A scan for the parent's `registerAll` call
- * also finds an abstract tier (`physics/shared`). With no registering ancestor, it returns the
- * `--base` slice.
+ * a `RigidBody3D` parent would skip its validators. A scan for each ancestor's `registerAll` or
+ * `registerUnavailable` call also finds an abstract tier (`physics/shared`). With no registering
+ * ancestor, it returns the `--base` slice.
  */
 export function parentLinterParser(typeName, parentType, sliceDir, fallback) {
   /**

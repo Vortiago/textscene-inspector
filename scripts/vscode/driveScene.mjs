@@ -198,9 +198,9 @@ const LOCAL_RESOURCE_HOST_SUFFIX = '.vscode-resource.vscode-cdn.net';
 
 /**
  * Whether a URL belongs to the preview webview rather than the workbench.
- * Webview content comes from VS Code's local resource origin
- * (`<scheme>+<authority>.vscode-resource.vscode-cdn.net`), which a service
- * worker intercepts, so despite the hostname no network is involved.
+ * Webview frames load from the `vscode-webview:` scheme, and their content from
+ * VS Code's local resource origin (`<scheme>+<authority>.vscode-resource.vscode-cdn.net`),
+ * which a service worker intercepts, so despite the hostname no network is involved.
  */
 export function isWebviewUrl(url) {
   if (!URL.canParse(url)) return false;
@@ -449,9 +449,7 @@ export async function driveScene(options) {
     // `vscode-resource`/`data:` there means the preview reached the network.
     page.on('request', (request) => {
       const frameUrl = request.frame()?.url();
-      const bucket = frameUrl?.startsWith('vscode-webview://')
-        ? report.requestHosts.webview
-        : report.requestHosts.workbench;
+      const bucket = isWebviewUrl(frameUrl) ? report.requestHosts.webview : report.requestHosts.workbench;
       const key = requestBucketKey(request.url());
       bucket[key] = (bucket[key] ?? 0) + 1;
     });
@@ -462,7 +460,7 @@ export async function driveScene(options) {
         method: request.method(),
         failure: request.failure()?.errorText,
         frameUrl,
-        origin: frameUrl?.startsWith('vscode-webview://') ? 'webview' : 'workbench',
+        origin: isWebviewUrl(frameUrl) ? 'webview' : 'workbench',
       });
     });
 

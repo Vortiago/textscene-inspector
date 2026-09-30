@@ -23,7 +23,6 @@ export default [
       '**/.claude/',
       '**/.tmp/',
       '.spike/',
-      'docs/probes/',
       // Vendored third-party source (minified); linted upstream, not here.
       'scripts/compare-docs/vendor/',
       // Generated MSDF font atlas: the base64 PNG and per-glyph
