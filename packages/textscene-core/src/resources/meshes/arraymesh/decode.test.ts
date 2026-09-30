@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as logger from '../../../logger';
 import { decodeArrayMesh } from './decode';
+import { headlightsSurface, truncatedSurface, wallQuadSurfaces } from '../../testing/arrayMeshSurfaces';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
@@ -26,19 +27,7 @@ const WALL_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://bett1yahcwe
 
 [resource]
 resource_name = "tiles_wall"
-_surfaces = [{
-"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
-"attribute_data": PackedByteArray("AAAAAAAAgD4AAIA+AACAPgAAgD4AAAAAAAAAAAAAAAA="),
-"format": 34359742487,
-"index_count": 6,
-"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
-"material": ExtResource("1_a5mma"),
-"name": "tile_material",
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 4,
-"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA//3//f////7//f/9/////v/9//3////+//3//f////78=")
-}]
+_surfaces = ${wallQuadSurfaces({ material: 'ExtResource("1_a5mma")', name: 'tile_material' })}
 blend_shape_mode = 0
 `;
 
@@ -214,7 +203,7 @@ const INDEXED_MATERIAL_TRES = OWN_MATERIAL_TRES.replace(
   '"material": SubResource(3),'
 ).replace('id="StandardMaterial3D_shvqh"', 'id=3');
 
-/** Two surfaces (the wall quad twice) with distinct materials a/b. */
+/** Two quads with the wall quad's positions but their own UVs, and distinct materials a/b. */
 const TWO_SURFACE_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://two"]
 
 [ext_resource type="Material" path="res://a.tres" id="1_a"]
@@ -244,25 +233,13 @@ blend_shape_mode = 0
 `;
 
 /**
- * scenes/demos/3d/truck_town/vehicles/meshes/truck_cab.tres, the `headlights` surface
- * verbatim. format 34896613383 = VERTEX|NORMAL|TANGENT|INDEX + ARRAY_FLAG_COMPRESS_ATTRIBUTES
- * + ARRAY_FLAG_FORMAT_VERSION_2, 12 B/vertex: an 8 B position record, then a 4 B normal
- * region. Expected values are Godot 4.6.3's own ArrayMesh.surface_get_arrays() for these bytes.
+ * truck_cab.tres's `headlights` surface alone. Expected values are Godot 4.6.3's own
+ * ArrayMesh.surface_get_arrays() for these bytes.
  */
 const COMPRESSED_TRES = `[gd_resource type="ArrayMesh" format=4]
 
 [resource]
-_surfaces = [{
-"aabb": AABB(0.416992, 0.114807, 1.339844, 0.102539, 0.06988499, 0.023437023),
-"format": 34896613383,
-"index_count": 6,
-"index_data": PackedByteArray("AAABAAIAAAADAAEA"),
-"name": "headlights",
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 4,
-"vertex_data": PackedByteArray("//8B71UVpsQAAEkKqeqmxC4l//8AAKbEj/0AAP//psTYje2P2I3tj9iN7Y/Yje2P")
-}]
+_surfaces = [${headlightsSurface({ name: 'headlights' })}]
 blend_shape_mode = 0
 `;
 
@@ -481,24 +458,11 @@ _surfaces = [{
 blend_shape_mode = 0
 `;
 
-/**
- * A surface that declares 4 vertices but carries only 2 vertices' worth of
- * `vertex_data`. format 4097 = VERTEX|INDEX, so positions are all there is.
- */
+/** The truncated surface alone: 4 vertices declared, 2 vertices' worth of `vertex_data`. */
 const TRUNCATED_TRES = `[gd_resource type="ArrayMesh" format=4]
 
 [resource]
-_surfaces = [{
-"aabb": AABB(-1, -1, 1, 2, 2, 0),
-"format": 4097,
-"index_count": 3,
-"index_data": PackedByteArray("AAABAAIA"),
-"name": "truncated",
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 4,
-"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/")
-}]
+_surfaces = [${truncatedSurface({ name: 'truncated' })}]
 `;
 
 /** Same shape, full length, but vertex 0's x is a float32 NaN bit pattern. */
@@ -521,34 +485,14 @@ _surfaces = [{
 /** The wall quad followed by the truncated surface, in one `_surfaces` array. */
 const GOOD_THEN_BAD_TRES = WALL_TRES.replace(
   '}]\nblend_shape_mode = 0',
-  `}, {
-"aabb": AABB(-1, -1, 1, 2, 2, 0),
-"format": 4097,
-"index_count": 3,
-"index_data": PackedByteArray("AAABAAIA"),
-"name": "truncated",
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 4,
-"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/")
-}]
+  `}, ${truncatedSurface({ name: 'truncated' })}]
 blend_shape_mode = 0`
 );
 
 /** The mirror image: the UNREADABLE surface first, so the survivor is Godot's surface 1. */
 const BAD_THEN_GOOD_TRES = WALL_TRES.replace(
   '_surfaces = [{',
-  `_surfaces = [{
-"aabb": AABB(-1, -1, 1, 2, 2, 0),
-"format": 4097,
-"index_count": 3,
-"index_data": PackedByteArray("AAABAAIA"),
-"name": "truncated",
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 4,
-"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/")
-}, {`
+  `_surfaces = [${truncatedSurface({ name: 'truncated' })}, {`
 );
 
 describe('undecodable surfaces', () => {

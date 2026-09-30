@@ -7,24 +7,14 @@ import * as THREE from 'three';
 import { decodeArrayMesh } from './decode';
 import type { ArrayMeshData } from './types';
 import { buildArrayMeshGeometry } from './build';
+import { headlightsSurface, wallQuadSurfaces } from '../../testing/arrayMeshSurfaces';
 
 const WALL_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://bett1yahcwe25"]
 
 [ext_resource type="Material" path="res://stage/tile_material.tres" id="1_a5mma"]
 
 [resource]
-_surfaces = [{
-"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
-"attribute_data": PackedByteArray("AAAAAAAAgD4AAIA+AACAPgAAgD4AAAAAAAAAAAAAAAA="),
-"format": 34359742487,
-"index_count": 6,
-"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
-"material": ExtResource("1_a5mma"),
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 4,
-"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA//3//f////7//f/9/////v/9//3////+//3//f////78=")
-}]
+_surfaces = ${wallQuadSurfaces({ material: 'ExtResource("1_a5mma")' })}
 blend_shape_mode = 0
 `;
 
@@ -36,17 +26,7 @@ blend_shape_mode = 0
  */
 const MIXED_LAYOUT_TRES = WALL_TRES.replace(
   '}]\nblend_shape_mode = 0',
-  `}, {
-"aabb": AABB(0.416992, 0.114807, 1.339844, 0.102539, 0.06988499, 0.023437023),
-"format": 34896613383,
-"index_count": 6,
-"index_data": PackedByteArray("AAABAAIAAAADAAEA"),
-"name": "headlights",
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 4,
-"vertex_data": PackedByteArray("//8B71UVpsQAAEkKqeqmxC4l//8AAKbEj/0AAP//psTYje2P2I3tj9iN7Y/Yje2P")
-}]
+  `}, ${headlightsSurface({ name: 'headlights' })}]
 blend_shape_mode = 0`
 );
 
