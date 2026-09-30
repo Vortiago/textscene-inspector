@@ -176,11 +176,25 @@ describe('PointLight2D Component', () => {
   });
 
   it('samples a loader-produced cookie clamped', async () => {
-    // The light binds the shared entry directly, so it inherits the loader's
-    // clamp (ADR-0042). Godot's light texture clamps too, and a loader default
-    // of Repeat would tile a cookie's edge texels past its quad.
+    // The light states clamp (ADR-0042), so a clamp-tagged loader cookie is shared
+    // and reaches the sampler clamped. Godot's light texture clamps too, and a
+    // Repeat producer would tile a cookie's edge texels past its quad.
     const entry = await createTextureFromBuffer(new ArrayBuffer(8), 'image/png');
     const cookie = lightMaterial(await render(node(), entry)).uniforms.uCookie!.value as THREE.Texture;
+    expect(cookie.wrapS).toBe(THREE.ClampToEdgeWrapping);
+    expect(cookie.wrapT).toBe(THREE.ClampToEdgeWrapping);
+  });
+
+  it('binds a Repeat-wrapped producer cookie clamped (Godot clamps the light texture)', async () => {
+    // Godot resolves a canvas item's DEFAULT repeat to the viewport's DISABLED
+    // default (viewport.h:419-420, viewport.cpp:4009, renderer_canvas_render_rd.cpp:2344),
+    // and the light-texture tap uses that item sampler (canvas.glsl:774-782). A
+    // Repeat producer must not tile the cookie past its quad, so the light states clamp.
+    const producer = new THREE.Texture();
+    producer.colorSpace = THREE.SRGBColorSpace;
+    producer.wrapS = THREE.RepeatWrapping;
+    producer.wrapT = THREE.RepeatWrapping;
+    const cookie = lightMaterial(await render(node(), producer)).uniforms.uCookie!.value as THREE.Texture;
     expect(cookie.wrapS).toBe(THREE.ClampToEdgeWrapping);
     expect(cookie.wrapT).toBe(THREE.ClampToEdgeWrapping);
   });

@@ -105,6 +105,17 @@ describe('bindSlotTexture — colour space per Godot texture slot', () => {
     expect(bindSlotTexture(procedural, 'normal_texture', DEFAULTS)).toBe(procedural);
   });
 
+  it('shares a clamped entry when the material authors repeat off', () => {
+    // `texture_repeat = false` clears `FLAG_USE_TEXTURE_REPEAT`
+    // (`material.cpp:4005`), so the sampler loses `repeat_enable` and the clamped
+    // arrival is exactly what the slot wants: shared, not cloned.
+    const procedural = new THREE.Texture();
+    const noRepeat = materialTextureState(
+      parseStandardMaterial3DScalars({ texture_repeat: 'false' })
+    );
+    expect(bindSlotTexture(procedural, 'normal_texture', noRepeat)).toBe(procedural);
+  });
+
   it('carries the material state and the colour space in ONE clone', () => {
     const shared = loaded();
     const scalars = parseStandardMaterial3DScalars({ uv1_scale: 'Vector3(3, 2, 1)' });

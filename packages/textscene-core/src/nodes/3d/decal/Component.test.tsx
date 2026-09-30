@@ -30,6 +30,19 @@ function makeTexture(width = 64, height = 64): THREE.Texture {
   return t;
 }
 
+/**
+ * A file-texture-shaped entry as the loader hands it over: sRGB-tagged, wrapping
+ * set by the caller. Godot samples a decal's albedo as sRGB, so a shared entry
+ * the binding can reuse must already carry that space.
+ */
+function makeSrgbTexture(wrap: THREE.Wrapping, width = 64, height = 64): THREE.Texture {
+  const t = makeTexture(width, height);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = wrap;
+  t.wrapT = wrap;
+  return t;
+}
+
 function makeNode(props: Record<string, string> = {}, name = NODE_NAME): TscnNode {
   return {
     name,
@@ -131,6 +144,37 @@ describe('<Decal>', () => {
       cached: [{ path: TEXTURE_PATH, texture: makeTexture() }],
     });
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
+  it('binds a Repeat-wrapped producer texture clamped (Godot samples the clamped atlas)', async () => {
+    // The projection borrows the shared cache entry, so a producer that tiles would
+    // tile the decal too. Godot blits the atlas with REPEAT_DISABLED
+    // (copy_effects.cpp:592) and discards fragments outside the box
+    // (scene_forward_clustered.glsl:1585-1587), so the consumer states clamp.
+    const renderer = await render({
+      node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: makeSrgbTexture(THREE.RepeatWrapping) }],
+      children: <Receiver />,
+    });
+    const map = (projections(renderer)[0]!.material as THREE.MeshStandardMaterial).map!;
+    expect(map.wrapS).toBe(THREE.ClampToEdgeWrapping);
+    expect(map.wrapT).toBe(THREE.ClampToEdgeWrapping);
+  });
+
+  it('shares an already clamped entry, not a clone', async () => {
+    // The clamp declaration must not force a clone when the entry already clamps:
+    // textures are shared by identity, and a needless copy would be disposed with
+    // the material while the cache still hands the entry to other consumers.
+    const entry = makeSrgbTexture(THREE.ClampToEdgeWrapping);
+    const renderer = await render({
+      node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: entry }],
+      children: <Receiver />,
+    });
+    const map = (projections(renderer)[0]!.material as THREE.MeshStandardMaterial).map!;
+    expect(map).toBe(entry);
   });
 
   it('projects onto a receiver whose render layers the cull_mask admits', async () => {

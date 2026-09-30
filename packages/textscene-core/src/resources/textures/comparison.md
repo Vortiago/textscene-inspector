@@ -20,6 +20,10 @@ A procedural gradient baked to a texture, here a radial white-to-transparent glo
 
 A Texture2D that wraps an image with optional normal and specular maps. The sprite renders identically to the sibling that references the image directly, in both engines.
 
+## NoiseTexture2D
+
+A field baked from a FastNoiseLite, most often as a normal map. A `seamless` bake wraps its opposite edges and tiles. A plain one clamps, so UVs past the tile smear its edge texels. Under a StandardMaterial3D both tile, because `texture_repeat` defaults on (`material.cpp:4005`) and the sampler hint adds `repeat_enable` (`material.cpp:760-765`).
+
 ## Linting
 
 <!-- lint:begin Texture2D -->

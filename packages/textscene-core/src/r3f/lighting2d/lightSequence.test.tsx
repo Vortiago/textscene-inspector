@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 
 import { TscnParser } from '../../parser/TscnParser';
@@ -30,8 +31,7 @@ async function render(body: string) {
 ${body}`;
   const parsed = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
-  const cookie = new THREEStub();
-  fake.textures.seed(COOKIE, cookie as never);
+  fake.textures.seed(COOKIE, cookieTexture());
 
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
@@ -44,10 +44,15 @@ ${body}`;
   return renderer;
 }
 
-/** A stand-in texture with the `image` dimensions the quad reads. */
-class THREEStub {
-  image = { width: 64, height: 64 };
-  isTexture = true;
+/**
+ * A cookie shaped like the loader's hand-over (ADR-0042): sRGB-tagged, clamp-wrapped,
+ * with the `image` dimensions the quad reads, so the light's clamp bind shares it.
+ */
+function cookieTexture(): THREE.Texture {
+  const texture = new THREE.Texture();
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.image = { width: 64, height: 64 };
+  return texture;
 }
 
 function lamp(name: string, parent = '.', extra = ''): string {
