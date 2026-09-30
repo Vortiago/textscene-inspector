@@ -21,6 +21,7 @@ import { PreviewLighting } from './preview/PreviewLighting.js';
 import { frameSceneBounds, type OrbitLike } from './frameSceneBounds.js';
 import { EDITOR_CAMERA_FOV, editorCameraPosition } from './godotEditorCamera.js';
 import { ViewportPassOrchestrator } from './contexts/ViewportPassRegistryContext.js';
+import { DirectionalShadowFitter } from './directionalShadow/DirectionalShadowFitter.js';
 import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterLayer.js';
 import { installGodotDiffuse } from './godotDiffuse.js';
 import { TiledUploadDriver } from './tiledUpload/TiledUploadDriver.js';
@@ -64,6 +65,7 @@ export function TscnSceneContents() {
         externalResources={rootScene?.externalResources ?? []}
       />
       <ViewportPassOrchestrator />
+      <DirectionalShadowFitter />
       <SelectionHighlight />
       <HoverHighlight />
     </TiledUploadDriver>

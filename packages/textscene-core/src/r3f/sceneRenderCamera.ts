@@ -41,7 +41,7 @@ export function observeSceneCamera(
       const camera = args[2];
       for (const fn of installed.observers) fn(camera);
     };
-    // Chained, not replaced: several ParallaxBackgrounds can share one scene.
+    // Chained, not replaced: several ParallaxBackgrounds and the shadow fitter share one scene.
     scene.onBeforeRender = chained;
   }
 

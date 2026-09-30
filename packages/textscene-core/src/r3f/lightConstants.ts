@@ -8,45 +8,24 @@
  */
 export const LIGHT_INTENSITY_SCALE = Math.PI;
 
-/** Godot's shadow bias is positive, and three's is negative. */
-export const SHADOW_BIAS_SCALE = 0.01;
-
 /**
- * How far behind a directional light its shadow camera starts, and the frustum half-extent.
- * Godot's directional shadow ignores the node's position, so a light at the origin must still
- * reach its casters. A negative near plane does it, as moving the light would move its helper,
- * selection box and F-to-frame. Shared with the preview sun, so the two cannot drift.
- */
-export const DIRECTIONAL_SHADOW_NEAR = -30;
-export const DIRECTIONAL_SHADOW_FRUSTUM_HALF = 20;
-
-/** Soft-shadow radius: a higher value is softer and costs more. */
-export const SHADOW_RADIUS_DEFAULT = 4;
-
-/**
- * Shadow-map resolution for every casting light. three's default 512 looks blocky next to Godot.
- * 2048 gives ~0.02-unit texels over the directional light's 40-unit frustum and stays cheap for
- * one headless frame.
+ * Shadow-map resolution for an omni or spot light. three's default 512 looks blocky next to Godot.
+ * 2048 stays cheap for one headless frame. A directional light takes Godot's own atlas size
+ * instead (`godot/directionalShadow.ts`), since its map spans the whole fitted view.
  */
 export const SHADOW_MAP_SIZE = 2048;
 
 /**
- * A constant depth bias detaches the shadow from the caster's base ("peter-panning"). The 2048
- * map needs far less bias against acne than a 512 map, so these are about a fifth of the 512
- * values, and SHADOW_NORMAL_BIAS suppresses the acne.
+ * The preview sun's depth bias, in normalised depth over Godot's own depth range for the map.
+ * A constant depth bias detaches the shadow from the caster's base ("peter-panning"), so this
+ * stays small and the normal bias suppresses the acne.
  */
-export const DEFAULT_SHADOW_BIAS = {
-  /** SpotLight default. */
-  SPOT: -0.0004,
-  /** DirectionalLight default (lower bias for parallel rays). */
-  DIRECTIONAL: -0.0001,
-  /** OmniLight default (middle ground for omnidirectional). */
-  OMNI: -0.0002,
-} as const;
+export const PREVIEW_SUN_DEPTH_BIAS = -0.0001;
 
 /**
  * Receiver offset along the normal, in world units, before the shadow lookup. Unlike a depth bias
  * it suppresses acne on lit slopes without detaching the shadow, as Godot's shadows touch their
- * casters. Shared by every casting light and the preview sun.
+ * casters. Shared by the omni and spot lights. A directional light counts its normal bias in
+ * texels, as Godot does (`r3f/directionalShadow/`).
  */
 export const SHADOW_NORMAL_BIAS = 0.04;

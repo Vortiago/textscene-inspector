@@ -12,6 +12,7 @@ import {
   isEqualApprox,
   sign,
   smoothstep,
+  snapped,
 } from './math.js';
 
 describe('CMP_EPSILON', () => {
@@ -123,5 +124,26 @@ describe('bezierInterpolate', () => {
 
   it('is linear when the handles sit a third of the way along a straight span (edge case)', () => {
     expect(bezierInterpolate(0, 10, 20, 30, 0.25)).toBeCloseTo(7.5, 12);
+  });
+});
+
+describe('snapped', () => {
+  it('rounds to the nearest multiple of the step', () => {
+    expect(snapped(7.4, 2)).toBe(8);
+    expect(snapped(6.9, 2)).toBe(6);
+  });
+
+  it('breaks a tie upwards, negative values included (edge case)', () => {
+    // floor(-1.5 + 0.5) = -1, where a round half away from zero gives -2.
+    expect(snapped(-3, 2)).toBe(-2);
+    expect(snapped(3, 2)).toBe(4);
+  });
+
+  it('returns the value unchanged for a zero step', () => {
+    expect(snapped(1.2345, 0)).toBe(1.2345);
+  });
+
+  it('passes nan through (error case)', () => {
+    expect(snapped(Number.NaN, 1)).toBeNaN();
   });
 });

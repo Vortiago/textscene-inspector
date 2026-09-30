@@ -18,6 +18,7 @@ import {
   useCanvasWorkspace,
 } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
+import { useDirectionalShadowFit } from '../../../r3f/directionalShadow/DirectionalShadowFitter';
 import { Node } from '../../node/Component';
 import {
   applyOrthoFrame,
@@ -131,6 +132,8 @@ function OffscreenViewport({
   );
 
   useEffect(() => () => target.dispose(), [target]);
+  // An own world renders its lights only through this pass, so it fits them itself.
+  useDirectionalShadowFit(portalScene);
 
   // A persistent camera for 2D-world content. Godot draws a viewport's canvas
   // through its canvas transform, the identity until a Camera2D in the subtree

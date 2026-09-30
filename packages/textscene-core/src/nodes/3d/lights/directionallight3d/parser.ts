@@ -18,5 +18,6 @@ export function parseDirectionalLight3D(
     ...baseLightProps,
     directional_shadow_mode: parseOptionalInt(properties.directional_shadow_mode),
     directional_shadow_max_distance: parseOptionalFloat(properties.directional_shadow_max_distance),
+    directional_shadow_pancake_size: parseOptionalFloat(properties.directional_shadow_pancake_size),
   };
 }

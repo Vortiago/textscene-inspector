@@ -6,6 +6,7 @@ import type { TscnNode } from '../../../../parser/types';
 import type { DirectionalLight3DProperties } from './types';
 import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
+import { readDirectionalShadowDeclaration } from '../../../../r3f/directionalShadow/declaration';
 
 function makeNode(overrides: Partial<DirectionalLight3DProperties> = {}): TscnNode {
   const props: DirectionalLight3DProperties = {
@@ -32,13 +33,13 @@ describe('<DirectionalLight3D>', () => {
     expect(instanceAs<THREE.DirectionalLight>(light).intensity).toBe(2 * LIGHT_INTENSITY_SCALE);
   });
 
-  it('maps shadow_bias through Godot’s own normalized-depth arithmetic', async () => {
+  it('declares shadow_bias through Godot’s own normalised-depth arithmetic', async () => {
     // 0.5 / 100 * soft_shadow_scale(2) = 0.01, negated for three's compare.
     const renderer = await ReactThreeTestRenderer.create(
       <DirectionalLight3D node={makeNode({ shadow_enabled: true, shadow_bias: 0.5 })} />
     );
-    const light = renderer.scene.findByType('DirectionalLight');
-    expect(instanceAs<THREE.DirectionalLight>(light).shadow.bias).toBeCloseTo(-0.01, 12);
+    const light = instanceAs<THREE.DirectionalLight>(renderer.scene.findByType('DirectionalLight'));
+    expect(readDirectionalShadowDeclaration(light)?.depthBias).toBeCloseTo(-0.01, 12);
   });
 
   it('defaults an absent shadow_bias to Godot’s own default', async () => {
@@ -46,8 +47,8 @@ describe('<DirectionalLight3D>', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <DirectionalLight3D node={makeNode({ shadow_enabled: true })} />
     );
-    const light = renderer.scene.findByType('DirectionalLight');
-    expect(instanceAs<THREE.DirectionalLight>(light).shadow.bias).toBeCloseTo(-0.002, 12);
+    const light = instanceAs<THREE.DirectionalLight>(renderer.scene.findByType('DirectionalLight'));
+    expect(readDirectionalShadowDeclaration(light)?.depthBias).toBeCloseTo(-0.002, 12);
   });
 
   it('parses light_color hex', async () => {
@@ -82,32 +83,58 @@ describe('<DirectionalLight3D>', () => {
   });
 });
 
-describe('<DirectionalLight3D> shadow frustum', () => {
-  it('sits back from the node so a light at the origin still casts shadows', async () => {
-    // three's shadow camera sits at the light's position, but Godot's
-    // directional shadow ignores the node's position. A light at the origin, the
-    // default, would put every caster behind its near plane.
+describe('<DirectionalLight3D> shadow declaration', () => {
+  it('declares the authored max distance and pancake size', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <DirectionalLight3D
-        node={{
-          name: 'Sun',
-          type: 'DirectionalLight3D',
-          children: [],
-          properties: {
-            name: 'Sun',
-            light_color: 'Color(1, 1, 1, 1)',
-            light_energy: 1,
-            shadow_enabled: true,
-          } satisfies DirectionalLight3DProperties,
-        }}
+        node={makeNode({
+          shadow_enabled: true,
+          directional_shadow_max_distance: 80,
+          directional_shadow_pancake_size: 5,
+          shadow_normal_bias: 1.5,
+        })}
       />
     );
-    const light = renderer.scene.findByType('DirectionalLight').instance as THREE.DirectionalLight;
-    // The reach comes from a negative near plane, not from moving the light:
-    // its helper, the selection box and F-to-frame stay at the node, as Godot
-    // draws them.
+    const light = instanceAs<THREE.DirectionalLight>(renderer.scene.findByType('DirectionalLight'));
+    expect(readDirectionalShadowDeclaration(light)).toMatchObject({
+      maxDistance: 80,
+      pancakeSize: 5,
+      normalBias: 1.5,
+    });
+  });
+
+  it('declares Godot’s defaults for an absent max distance, pancake size and normal bias', async () => {
+    // `light_3d.cpp:600`, `:487` and `:603`.
+    const renderer = await ReactThreeTestRenderer.create(
+      <DirectionalLight3D node={makeNode({ shadow_enabled: true })} />
+    );
+    const light = instanceAs<THREE.DirectionalLight>(renderer.scene.findByType('DirectionalLight'));
+    expect(readDirectionalShadowDeclaration(light)).toMatchObject({
+      maxDistance: 100,
+      pancakeSize: 20,
+      normalBias: 2,
+    });
+  });
+
+  it('draws into a map of Godot’s default directional shadow size', async () => {
+    // `rendering_server.cpp:3704`.
+    const renderer = await ReactThreeTestRenderer.create(
+      <DirectionalLight3D node={makeNode({ shadow_enabled: true })} />
+    );
+    const light = instanceAs<THREE.DirectionalLight>(renderer.scene.findByType('DirectionalLight'));
+    expect(light.shadow.mapSize.toArray()).toEqual([4096, 4096]);
+  });
+
+  it('leaves the shadow camera to the scene fitter, and the light at its node', async () => {
+    // The node's position plays no part in Godot's directional shadow, and the
+    // helper, selection box and F-to-frame stay at the node.
+    const renderer = await ReactThreeTestRenderer.create(
+      <DirectionalLight3D node={makeNode({ shadow_enabled: true })} />
+    );
+    const light = instanceAs<THREE.DirectionalLight>(renderer.scene.findByType('DirectionalLight'));
+    const untouched = new THREE.DirectionalLight().shadow.camera;
     expect(light.position.length()).toBe(0);
-    expect(light.shadow.camera.near).toBeLessThan(0);
-    expect(light.shadow.camera.far).toBeGreaterThan(0);
+    expect(light.shadow.camera.left).toBe(untouched.left);
+    expect(light.shadow.camera.near).toBe(untouched.near);
   });
 });

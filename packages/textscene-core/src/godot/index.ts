@@ -16,6 +16,7 @@ export {
   lerp,
   sign,
   smoothstep,
+  snapped,
 } from './math.js';
 export {
   TRANSFORM2D_IDENTITY,
@@ -73,6 +74,18 @@ export {
 export { formatReal, storedReal } from './real.js';
 export { BillboardMode } from './billboard.js';
 export { GODOT_GLTF_EXTENSIONS, unsupportedRequiredGltfExtensions } from './gltf.js';
+export {
+  DIRECTIONAL_SHADOW_MAX_DISTANCE_DEFAULT,
+  DIRECTIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
+  DIRECTIONAL_SHADOW_PANCAKE_SIZE_DEFAULT,
+  DIRECTIONAL_SHADOW_SIZE_DEFAULT,
+  type DirectionalShadowSlice,
+  directionalShadowSlice,
+  directionalShadowSnapStep,
+  directionalShadowTexelSize,
+  pancakesCasters,
+  texelPaddedRadius,
+} from './directionalShadow.js';
 export { GRADIENT_TEXTURE_MAX_SIZE, IMAGE_MAX_PIXELS } from './texture.js';
 export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX, CLIP_CHILDREN_MODES } from './canvasItem.js';
 export {

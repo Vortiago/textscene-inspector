@@ -10,4 +10,7 @@ export interface DirectionalLight3DProperties extends Node3DProperties, BaseLigh
 
   /** Maximum shadow distance (optional) */
   directional_shadow_max_distance?: number;
+
+  /** How far the shadow's near plane sits towards the light past the view (optional). */
+  directional_shadow_pancake_size?: number;
 }

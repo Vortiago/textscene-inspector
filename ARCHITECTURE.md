@@ -138,6 +138,12 @@ separate pass (ADR-0030).
 orchestrator, which runs them in dependency order from a single `useFrame`
 (`ViewportPassRegistryContext.tsx`).
 
+**Directional shadows.** As in Godot, the renderer owns a directional light's shadow box, and
+the light does not. A light only declares its shadow parameters on `userData`.
+`<DirectionalShadowFitter>` hooks each render of the scene (`scene.onBeforeRender`) and fits
+each declared light's shadow camera to that render's camera. A SubViewport with its own world
+hooks that world the same way (`r3f/directionalShadow/directionalShadow.md`).
+
 **Axis conventions.** Godot and three.js disagree in three places. Each is converted where
 Godot data becomes a three.js object, never in a parser:
 

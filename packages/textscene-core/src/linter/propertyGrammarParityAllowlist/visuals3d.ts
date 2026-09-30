@@ -57,7 +57,6 @@ export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     linterOnly: [
       // Shadow-cascade and sky tuning the parser does not read.
       'directional_shadow_blend_splits', 'directional_shadow_fade_start',
-      'directional_shadow_pancake_size',
       'directional_shadow_split_1', 'directional_shadow_split_2', 'directional_shadow_split_3',
       'sky_mode',
     ],

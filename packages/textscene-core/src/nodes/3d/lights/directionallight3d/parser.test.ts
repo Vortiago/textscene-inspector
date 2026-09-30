@@ -21,6 +21,7 @@ describe('DirectionalLight3D Parser', () => {
       expect(result.shadow_blur).toBeUndefined();
       expect(result.directional_shadow_mode).toBeUndefined();
       expect(result.directional_shadow_max_distance).toBeUndefined();
+      expect(result.directional_shadow_pancake_size).toBeUndefined();
     });
 
     it('should parse DirectionalLight3D with all properties', () => {
@@ -35,6 +36,7 @@ describe('DirectionalLight3D Parser', () => {
         shadow_blur: '2',
         directional_shadow_mode: '2',
         directional_shadow_max_distance: '100.0',
+        directional_shadow_pancake_size: '0.0',
       };
 
       const result = parseDirectionalLight3D(h, properties);
@@ -48,6 +50,7 @@ describe('DirectionalLight3D Parser', () => {
       expect(result.shadow_blur).toBe(2);
       expect(result.directional_shadow_mode).toBe(2);
       expect(result.directional_shadow_max_distance).toBe(100.0);
+      expect(result.directional_shadow_pancake_size).toBe(0);
     });
 
     it('should parse shadow_enabled as false when not "true"', () => {
@@ -153,6 +156,12 @@ describe('DirectionalLight3D Parser', () => {
       const h = heading('DirectionalLight3D', { name: 'Light', parent: '.' });
       const result = parseDirectionalLight3D(h, { shadow_blur: 'invalid' });
       expect(result.shadow_blur).toBeUndefined();
+    });
+
+    it('should be undefined for invalid directional_shadow_pancake_size', () => {
+      const h = heading('DirectionalLight3D', { name: 'Light', parent: '.' });
+      const result = parseDirectionalLight3D(h, { directional_shadow_pancake_size: 'deep' });
+      expect(result.directional_shadow_pancake_size).toBeUndefined();
     });
 
     it('should be undefined for invalid directional_shadow_mode', () => {
