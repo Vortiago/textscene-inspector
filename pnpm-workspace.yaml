@@ -65,6 +65,10 @@ catalog:
   # ESLint plugins
   eslint-plugin-react-hooks: ^7.1
 
+  # Formatting (prettier.config.mjs). Exact: a patch release can change the output, and
+  # `pnpm format:check` fails on every file it reflows.
+  prettier: 3.9.9
+
   # Font baking (scripts/fonts/bake-metrics.mjs) — devDependencies
   # of the repo root only, never shipped: fontkit reads hhea/OS-2/hmtx from
   # the vendored TTF/OTF (it does not decompress woff2 itself), wawoff2

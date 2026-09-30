@@ -22,6 +22,9 @@ Godot `.tscn` parser, linter and renderer (react-three-fiber over three.js). pnp
 - Per package: `pnpm --filter @textscene/web-previewer type-check` / `test`.
 - `npx eslint <changed files>`. CI runs `eslint .`. Unused imports and variables pass
   vitest and tsc but fail CI.
+- `pnpm format:check` runs Prettier over the repository, in `validate` and in CI. `pnpm format`
+  fixes a failure, and the pre-commit hook formats the staged files. `.prettierignore` names what
+  Prettier skips: markdown, vendored files and generated output.
 - Changed `.tscn` fixtures: `pnpm build:linter && pnpm lint:tscn <files>`.
 - Changed a linter rule or validator: `pnpm lint:scenes`, in `validate` and in CI. It
   sweeps `scenes/demos` and `scenes/isometric` and fails on any error. The directory

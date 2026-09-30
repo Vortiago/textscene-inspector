@@ -47,6 +47,7 @@ jobs:
       - uses: ./.github/actions/setup
 
       - run: pnpm lint
+      - run: pnpm format:check
       - run: pnpm type-check
 
       # The test projects resolve @textscene/core through its emitted declarations, and the

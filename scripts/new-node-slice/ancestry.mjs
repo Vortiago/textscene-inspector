@@ -33,9 +33,9 @@ function specifier(sliceDir, dir) {
   return rel.startsWith('.') ? rel : `./${rel}`;
 }
 
-/** The one directory whose `basename` holds any of `needles`, if exactly one does. */
-function soleOwner(basename, needles) {
-  const found = slicesNamed(basename).filter(({ src }) => needles.some((n) => src.includes(n)));
+/** The one directory whose `basename` matches `pattern`, if exactly one does. */
+function soleOwner(basename, pattern) {
+  const found = slicesNamed(basename).filter(({ src }) => pattern.test(src));
   return found.length === 1 ? found[0].dir : undefined;
 }
 
@@ -58,9 +58,10 @@ export function parentLinterParser(typeName, parentType, sliceDir, fallback) {
   /**
    * Directory of the linterParser that registers anything for `<type>`. `registerUnavailable`
    * counts: `HBoxContainer`, which only fixes the orientation `BoxContainer` exposes, calls only it.
+   * Prettier puts the type on its own line when the call does not fit on one.
    */
   const ownerOf = (type) =>
-    soleOwner('linterParser.ts', [`registerAll('${type}'`, `registerUnavailable('${type}'`]);
+    soleOwner('linterParser.ts', new RegExp(`\\b(?:registerAll|registerUnavailable)\\(\\s*'${type}'`));
 
   // `PhysicsBody3D` and `Button` bind nothing and own no slice, so the immediate parent alone
   // would skip the tier above them.
@@ -81,7 +82,13 @@ function importSourceOf(src, local) {
   for (const [, names, from] of src.matchAll(/import\s+(?:type\s+)?\{([^}]*)\}\s*from\s*'([^']+)'/g)) {
     const bound = names
       .split(',')
-      .map((n) => n.trim().replace(/^type\s+/, '').split(/\s+as\s+/).at(-1))
+      .map((n) =>
+        n
+          .trim()
+          .replace(/^type\s+/, '')
+          .split(/\s+as\s+/)
+          .at(-1)
+      )
       .filter(Boolean);
     if (bound.includes(local)) return from;
   }
@@ -130,5 +137,5 @@ export function parentParser(typeName, sliceDir, fallback) {
 
 /** Directory of the slice whose parser.ts exports `parse<Type>`, if one does. */
 export function ownerOfParser(type) {
-  return soleOwner('parser.ts', [`export function parse${type}(`]);
+  return soleOwner('parser.ts', new RegExp(`\\bexport function parse${type}\\(`));
 }

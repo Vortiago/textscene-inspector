@@ -1,0 +1,21 @@
+# Prettier also reads .gitignore, so build output and caches are out already.
+
+# Prose: the sheets carry generated `lint:begin` sections, and the docs follow the STE rules
+# line by line, which a rewrap would undo.
+*.md
+
+# Vendored: the Godot demo projects and third-party code.
+scenes/
+scripts/compare-docs/vendor/
+
+# Generated: each generator's `--check` compares its output byte for byte.
+*.generated.ts
+apps/textscene-web/src/fixtures.ts
+packages/textscene-core/src/r3f/controls/native/text/openSans*.ts
+scripts/compare-docs/*.json
+docs/comparison/index.html
+pnpm-lock.yaml
+
+# Scratch areas the linter skips too.
+.spike/
+docs/probes/
