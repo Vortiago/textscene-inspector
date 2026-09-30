@@ -51,7 +51,6 @@ describe('IterateIK3D target-node rule', () => {
       const content = scene(type, 'setting_count = 1\nsettings/0/max_iterations = 5\n');
       const warnings = reportsOf(linter.lint(content), RULE, 'warning');
       expect(warnings).toHaveLength(1);
-      expect(warnings[0]!.severity).toBe('warning');
       expect(warnings[0]!.message).toContain('setting(s) 0');
     });
   }

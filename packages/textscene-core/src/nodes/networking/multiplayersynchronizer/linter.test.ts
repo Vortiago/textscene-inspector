@@ -50,8 +50,6 @@ describe('MultiplayerSynchronizer root_path rule', () => {
   it('warns when root_path names no node in this file', () => {
     const warnings = reportsOf(diagnosticsFor(scene('root_path = NodePath("NoSuchNode")\n')), RULE, 'warning');
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]?.severity).toBe('warning');
-    expect(warnings[0]?.ruleName).toBe('multiplayersynchronizer-root-path-dangling');
     expect(warnings[0]?.message).toContain('NoSuchNode');
   });
 

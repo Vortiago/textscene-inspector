@@ -5,12 +5,16 @@
  */
 
 import { expect } from 'vitest';
+import type { STRICT_PARSER_RULE_NAME } from '../fileDiagnostics.js';
 import type { Diagnostic, Severity } from '../types.js';
 
-/** The diagnostics at `tier`, narrowed to `ruleName` when one is given. */
+/**
+ * The diagnostics at `tier`, narrowed to the validators' when asked. Any other
+ * rule goes through `reportsOf`, which checks its tier instead of filtering on it.
+ */
 const atTier =
   (tier: Severity) =>
-  (diagnostics: readonly Diagnostic[], ruleName?: string): Diagnostic[] =>
+  (diagnostics: readonly Diagnostic[], ruleName?: typeof STRICT_PARSER_RULE_NAME): Diagnostic[] =>
     diagnostics.filter(
       (d) => d.severity === tier && (ruleName === undefined || d.ruleName === ruleName)
     );

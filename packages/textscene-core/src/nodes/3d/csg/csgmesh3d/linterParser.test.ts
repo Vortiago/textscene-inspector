@@ -5,10 +5,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../../linter/Linter';
 import { errorsOf, warningsOf } from '../../../../linter/testing/tierLists';
+// Phase-1 errors only: the references below are format cases, and a declared id is not the question.
+import { STRICT_PARSER_RULE_NAME } from '../../../../linter/fileDiagnostics';
 import './linterParser';
-
-/** Phase-1 errors only: the references below are format cases, and a declared id is not the question. */
-const PHASE_1 = 'strict-parser';
 
 function scene(body: string): string {
   return `[gd_scene format=3]\n\n[node name="M" type="CSGMesh3D"]\n${body}\n`;
@@ -25,13 +24,13 @@ describe('CSGMesh3D strict validators', () => {
     const content = scene(
       ['mesh = SubResource("BoxMesh_1")', 'material = SubResource("StandardMaterial3D_1")', 'operation = 2'].join('\n')
     );
-    expect(errorsOf(linter.lint(content), PHASE_1)).toEqual([]);
+    expect(errorsOf(linter.lint(content), STRICT_PARSER_RULE_NAME)).toEqual([]);
   });
 
   it('passes a CSGMesh3D with no mesh at all', () => {
     // Godot builds an empty brush rather than erroring, so neither do we.
     const content = scene('transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)');
-    expect(errorsOf(linter.lint(content), PHASE_1)).toEqual([]);
+    expect(errorsOf(linter.lint(content), STRICT_PARSER_RULE_NAME)).toEqual([]);
   });
 
   it.each([
@@ -39,7 +38,7 @@ describe('CSGMesh3D strict validators', () => {
     ['material = "not-a-resource"', 'material'],
     ['flip_faces = perhaps', 'flip_faces'],
   ])('rejects %s', (line, property) => {
-    const errors = errorsOf(linter.lint(scene(line)), PHASE_1);
+    const errors = errorsOf(linter.lint(scene(line)), STRICT_PARSER_RULE_NAME);
     expect(errors.length).toBeGreaterThan(0);
     expect(errors.some((e) => e.message.includes(property))).toBe(true);
   });
@@ -48,13 +47,13 @@ describe('CSGMesh3D strict validators', () => {
     // csg_shape.cpp:1040 hints the enum but set_operation:933-937 is a bare
     // assignment, so out-of-range is a warning, not an error (ADR-0032).
     const content = scene('operation = 5');
-    expect(errorsOf(linter.lint(content), PHASE_1)).toEqual([]);
+    expect(errorsOf(linter.lint(content), STRICT_PARSER_RULE_NAME)).toEqual([]);
     const warnings = warningsOf(linter.lint(content));
     expect(warnings.some((w) => w.message.includes('operation'))).toBe(true);
   });
 
   it('rejects a malformed transform via the inherited Node3D validator', () => {
-    const errors = errorsOf(linter.lint(scene('transform = Transform3D(nope)')), PHASE_1);
+    const errors = errorsOf(linter.lint(scene('transform = Transform3D(nope)')), STRICT_PARSER_RULE_NAME);
     expect(errors.length).toBeGreaterThan(0);
     expect(errors[0]!.message).toContain('transform');
   });

@@ -53,7 +53,6 @@ settings/0/tilt_fade_in = 2
 `);
     const warnings = reportsOf(linter.lint(content), RULE, 'warning');
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]!.severity).toBe('warning');
     expect(warnings[0]!.message).toContain('setting 0');
   });
 

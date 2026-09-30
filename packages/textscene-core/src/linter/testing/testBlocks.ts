@@ -4,7 +4,10 @@
  * it over every test file in well under a second.
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { stripComments } from '@textscene/dev-kit';
+import { atLeast, srcLabel, srcRoot, walk } from './ruleNameScrape.js';
 
 /**
  * Where a block begins. The lookbehind keeps a method call out: `\b` holds
@@ -106,4 +109,23 @@ export function blocksIn(file: string, source: string): Block[] {
     blocks.push({ file, line, title: s.title, body });
   }
   return blocks;
+}
+
+const isTestFile = (name: string) => /\.test\.tsx?$/.test(name);
+
+/**
+ * The blocks of every test file under this package's `src` except `guard`, the
+ * caller, whose pins spell blocks as data. A renamed guard would drop silently
+ * out of an exclusion by path, so a `guard` the walk does not find throws.
+ */
+export function everyTestBlockExcept(guard: string): Block[] {
+  const files = atLeast(walk(srcRoot, isTestFile), 500, 'test files').map(srcLabel);
+  if (!files.includes(guard)) throw new Error(`expected ${guard} among the test files`);
+  return atLeast(
+    files
+      .filter((file) => file !== guard)
+      .flatMap((file) => blocksIn(file, readFileSync(join(srcRoot, file), 'utf8'))),
+    5000,
+    'test blocks'
+  );
 }

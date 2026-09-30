@@ -53,7 +53,6 @@ describe('NavigationLink3D position rule', () => {
       linter.lint(scene('start_position = Vector3(1, 2, 3)\nend_position = Vector3(1, 2, 3)\n'))
     , RULE, 'warning');
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]!.severity).toBe('warning');
     expect(warnings[0]!.nodeName).toBe('Link');
   });
 

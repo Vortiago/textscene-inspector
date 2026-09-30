@@ -62,7 +62,6 @@ describe('CollisionObject3D non-uniform-scale rule', () => {
     it(`warns on ${type}'s own non-uniform scale`, () => {
       const warnings = reportsOf(linter.lint(scene(type, NON_UNIFORM)), RULE, 'warning');
       expect(warnings).toHaveLength(1);
-      expect(warnings[0]!.severity).toBe('warning');
     });
   }
 

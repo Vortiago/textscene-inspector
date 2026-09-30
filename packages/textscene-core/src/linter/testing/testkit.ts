@@ -6,8 +6,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { Linter } from '../Linter.js';
-import { ruleRegistry } from '../RuleRegistry.js';
 import { FILE_DIAGNOSTICS, STRICT_PARSER_RULE_NAME } from '../fileDiagnostics.js';
+import { declaredArms } from './declaredArms.js';
 import type { Diagnostic, Severity } from '../types.js';
 
 /** A property value: rendered verbatim if a string, else `String(value)`. */
@@ -176,12 +176,12 @@ export function expectDiagnostic(content: string, where: DiagnosticExpectation):
  * node. {@link node} omits `parent=` unless asked, which strands a second
  * heading, and a first heading's path resolves against `.`, not the root's name.
  */
-const STRANDED_RULES = [
-  'node-without-parent',
-  'unresolved-parent-path',
-  'empty-parent-path',
-  'root-declares-parent',
-];
+const STRANDED_RULES: readonly string[] = [
+  FILE_DIAGNOSTICS.nodeWithoutParent,
+  FILE_DIAGNOSTICS.unresolvedParentPath,
+  FILE_DIAGNOSTICS.emptyParentPath,
+  FILE_DIAGNOSTICS.rootDeclaresParent,
+].map(arm => arm.ruleName);
 
 function expectEveryHeadingPlaced(diagnostics: Diagnostic[]): void {
   const stranded = diagnostics
@@ -190,13 +190,11 @@ function expectEveryHeadingPlaced(diagnostics: Diagnostic[]): void {
   expect(stranded).toEqual([]);
 }
 
-/** Every tier that a rule's `emits` or a file diagnostic declares for `ruleName`. */
+/** Every tier that a declared arm gives `ruleName`. */
 function declaredTiers(ruleName: string): Severity[] {
-  const arms = [
-    ...ruleRegistry.getRules().flatMap(rule => rule.meta.emits ?? []),
-    ...Object.values(FILE_DIAGNOSTICS),
-  ];
-  return arms.filter(arm => arm.ruleName === ruleName).map(arm => arm.severity);
+  return declaredArms()
+    .filter(arm => arm.ruleName === ruleName)
+    .map(arm => arm.severity);
 }
 
 /**
@@ -206,7 +204,10 @@ function declaredTiers(ruleName: string): Severity[] {
  */
 function expectTierReachable(ruleName: string | undefined, severity: Severity): void {
   if (ruleName === undefined || ruleName === STRICT_PARSER_RULE_NAME) {
-    expect(severity, `a negative at ${severity} must name the rule that reports it`).toBe('error');
+    expect(
+      severity,
+      `only error is reachable without a declared arm; name the rule that reports ${severity}`
+    ).toBe('error');
     return;
   }
   expect(

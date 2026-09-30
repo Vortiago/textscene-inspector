@@ -40,7 +40,6 @@ describe('RetargetModifier3D child-skeleton rule', () => {
   it('warns when the modifier has no children at all', () => {
     const warnings = reportsOf(linter.lint(scene('')), RULE, 'warning');
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]!.severity).toBe('warning');
     expect(warnings[0]!.nodeName).toBe('Retarget');
     expect(warnings[0]!.message).toContain('Skeleton3D');
   });

@@ -60,7 +60,6 @@ describe('SkeletonModifier3D parent rule', () => {
     it(`warns when ${type}'s direct parent is not a Skeleton3D`, () => {
       const warnings = reportsOf(linter.lint(scene(type, '.')), RULE, 'warning');
       expect(warnings).toHaveLength(1);
-      expect(warnings[0]!.severity).toBe('warning');
       expect(warnings[0]!.nodeType).toBe(type);
     });
 

@@ -45,27 +45,21 @@ ${body}`;
 
 describe('LookAtModifier3D parallel-axis rule', () => {
   it('accepts perpendicular axes', () => {
-    expect(
-      reportsOf(diagnosticsFor(
-        scene(`forward_axis = 4
+    const content = scene(`forward_axis = 4
 primary_rotation_axis = 1
-`)
-      ), RULE, 'warning')
-    ).toEqual([]);
+`);
+    expect(reportsOf(diagnosticsFor(content), RULE, 'warning')).toEqual([]);
   });
 
   it('warns when the forward axis resolves to the primary rotation axis', () => {
     // +X (BoneAxis 0) maps to Vector3::AXIS_X (0), which is what
     // primary_rotation_axis is set to: the pairing get_configuration_warnings
     // (look_at_modifier_3d.cpp:72) refuses.
-    const warnings = reportsOf(diagnosticsFor(
-      scene(`forward_axis = 0
+    const content = scene(`forward_axis = 0
 primary_rotation_axis = 0
-`)
-    ), RULE, 'warning');
+`);
+    const warnings = reportsOf(diagnosticsFor(content), RULE, 'warning');
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]?.severity).toBe('warning');
-    expect(warnings[0]?.ruleName).toBe('lookatmodifier3d-parallel-rotation-axes');
     expect(warnings[0]?.message).toContain('+X');
     expect(warnings[0]?.message).toContain('X');
   });
@@ -74,26 +68,20 @@ primary_rotation_axis = 0
     // get_axis_from_bone_axis (skeleton_modifier_3d.cpp:244-260) folds -Z (5)
     // onto AXIS_Z (2) exactly as it folds +Z (4), so a scene that flips the
     // sign has not escaped the condition.
-    expect(
-      reportsOf(diagnosticsFor(
-        scene(`forward_axis = 5
+    const content = scene(`forward_axis = 5
 primary_rotation_axis = 2
-`)
-      ), RULE, 'warning')
-    ).toHaveLength(1);
+`);
+    expect(reportsOf(diagnosticsFor(content), RULE, 'warning')).toHaveLength(1);
   });
 
   it.each([
     ['+Y forward against Y primary', '2', '1'],
     ['-Y forward against Y primary', '3', '1'],
   ])('warns for %s', (_label, forward, primary) => {
-    expect(
-      reportsOf(diagnosticsFor(
-        scene(`forward_axis = ${forward}
+    const content = scene(`forward_axis = ${forward}
 primary_rotation_axis = ${primary}
-`)
-      ), RULE, 'warning')
-    ).toHaveLength(1);
+`);
+    expect(reportsOf(diagnosticsFor(content), RULE, 'warning')).toHaveLength(1);
   });
 
   it('stays silent when the scene omits both keys', () => {
@@ -116,25 +104,19 @@ primary_rotation_axis = ${primary}
     // with AXIS_X, so a value outside 0-5 compares as X rather than as nothing.
     // The bad value is the validator's to report, and the rule still models what
     // Godot would compare.
-    expect(
-      reportsOf(diagnosticsFor(
-        scene(`forward_axis = 9
+    const content = scene(`forward_axis = 9
 primary_rotation_axis = 0
-`)
-      ), RULE, 'warning')
-    ).toHaveLength(1);
+`);
+    expect(reportsOf(diagnosticsFor(content), RULE, 'warning')).toHaveLength(1);
   });
 
   it('ignores a malformed axis instead of suppressing itself', () => {
     // A non-numeric value falls back to the engine default, so the rule reports
     // the pairing that default produces rather than silently passing.
-    expect(
-      reportsOf(diagnosticsFor(
-        scene(`forward_axis = sideways
+    const content = scene(`forward_axis = sideways
 primary_rotation_axis = 1
-`)
-      ), RULE, 'warning')
-    ).toEqual([]);
+`);
+    expect(reportsOf(diagnosticsFor(content), RULE, 'warning')).toEqual([]);
   });
 
   it('leaves the committed fixture warning-free', () => {

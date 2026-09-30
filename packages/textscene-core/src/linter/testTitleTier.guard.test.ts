@@ -6,14 +6,10 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { atLeast, srcLabel, srcRoot, walk } from './testing/ruleNameScrape.js';
-import { blocksIn, type Block } from './testing/testBlocks.js';
+import { atLeast } from './testing/ruleNameScrape.js';
+import { blocksIn, everyTestBlockExcept, type Block } from './testing/testBlocks.js';
 import { assertedTiers } from './testing/tierClaims.js';
 import type { Severity } from './types.js';
-
-const isTestFile = (name: string) => /\.test\.tsx?$/.test(name);
 
 /** Every tier word, and the prose that claims it. Total over `Severity`. */
 const TIER_WORDS: Record<Severity, RegExp> = {
@@ -34,19 +30,7 @@ const SELF = 'linter/testTitleTier.guard.test.ts';
  * no tier, and the host apps sit outside the walk. A block that builds a
  * `LintRule` fixture is skipped, since its `severity:` is the value under test.
  */
-const allBlocks = (): Block[] => {
-  const files = atLeast(walk(srcRoot, isTestFile), 500, 'test files').map(srcLabel);
-  // A renamed file drops silently out of an exclusion by path, and the pins
-  // below would then be scanned as subjects.
-  expect(files).toContain(SELF);
-  return atLeast(
-    files
-      .filter((file) => file !== SELF)
-      .flatMap((file) => blocksIn(file, readFileSync(join(srcRoot, file), 'utf8'))),
-    5000,
-    'test blocks'
-  );
-};
+const allBlocks = (): Block[] => everyTestBlockExcept(SELF);
 
 describe('test titles name the tier they assert', () => {
   it('never claims a tier the block does not assert', () => {

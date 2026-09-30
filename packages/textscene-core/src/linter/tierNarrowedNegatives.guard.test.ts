@@ -5,32 +5,22 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { atLeast, srcLabel, srcRoot, walk } from './testing/ruleNameScrape.js';
-import { blocksIn } from './testing/testBlocks.js';
+import { blocksIn, everyTestBlockExcept, type Block } from './testing/testBlocks.js';
 import { tierNarrowedNegatives } from './testing/tierClaims.js';
 
 /** This file, excluded by path: its pins spell the refused shapes as data. */
 const SELF = 'linter/tierNarrowedNegatives.guard.test.ts';
 
-const isTestFile = (name: string) => /\.test\.tsx?$/.test(name);
-
-/** The hand-written negatives in `source`, each as `file:line` and its statement. */
-function offendersIn(file: string, source: string): string[] {
-  return blocksIn(file, source).flatMap((block) =>
-    tierNarrowedNegatives(block.body).map((statement) => `${file}:${block.line} ${statement.trim()}`)
+/** The hand-written negatives in `blocks`, each as `file:line` and its statement. */
+function offendersIn(blocks: Block[]): string[] {
+  return blocks.flatMap((block) =>
+    tierNarrowedNegatives(block.body).map((statement) => `${block.file}:${block.line} ${statement.trim()}`)
   );
 }
 
 describe('negatives narrowed to a tier go through the test kit', () => {
   it('finds none spelled by hand', () => {
-    const files = atLeast(walk(srcRoot, isTestFile), 500, 'test files').map(srcLabel);
-    expect(files).toContain(SELF);
-    const offenders = files
-      .filter((file) => file !== SELF)
-      .flatMap((file) => offendersIn(file, readFileSync(join(srcRoot, file), 'utf8')));
-    expect(offenders).toEqual([]);
+    expect(offendersIn(everyTestBlockExcept(SELF))).toEqual([]);
   });
 
   it('reads the three shapes a hand-written one takes', () => {

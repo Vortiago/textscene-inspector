@@ -45,28 +45,24 @@ ${body}`;
 
 describe('AimModifier3D parallel-axis rule', () => {
   it('accepts a euler setting whose axes are perpendicular', () => {
-    const warnings = reportsOf(diagnosticsFor(
-      scene(`setting_count = 1
+    const content = scene(`setting_count = 1
 settings/0/forward_axis = 4
 settings/0/use_euler = true
 settings/0/primary_rotation_axis = 1
-`)
-    ), RULE, 'warning');
+`);
+    const warnings = reportsOf(diagnosticsFor(content), RULE, 'warning');
     expect(warnings).toEqual([]);
   });
 
   it('warns when the forward axis resolves to the primary rotation axis', () => {
     // +Z (4) maps to AXIS_Z (2) at skeleton_modifier_3d.cpp:255.
-    const warnings = reportsOf(diagnosticsFor(
-      scene(`setting_count = 1
+    const content = scene(`setting_count = 1
 settings/0/forward_axis = 4
 settings/0/use_euler = true
 settings/0/primary_rotation_axis = 2
-`)
-    ), RULE, 'warning');
+`);
+    const warnings = reportsOf(diagnosticsFor(content), RULE, 'warning');
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]!.severity).toBe('warning');
-    expect(warnings[0]!.ruleName).toBe('aimmodifier3d-parallel-rotation-axes');
     expect(warnings[0]!.message).toContain('setting 0');
     expect(warnings[0]!.message).toContain('+Z');
   });
@@ -74,95 +70,87 @@ settings/0/primary_rotation_axis = 2
   it('treats a negative bone axis as the same axis Godot pairs with it', () => {
     // -Z (5) also maps to AXIS_Z: the switch pairs PLUS and MINUS of each axis
     // (skeleton_modifier_3d.cpp:255-257).
-    const warnings = reportsOf(diagnosticsFor(
-      scene(`setting_count = 1
+    const content = scene(`setting_count = 1
 settings/0/forward_axis = 5
 settings/0/use_euler = true
 settings/0/primary_rotation_axis = 2
-`)
-    ), RULE, 'warning');
+`);
+    const warnings = reportsOf(diagnosticsFor(content), RULE, 'warning');
     expect(warnings).toHaveLength(1);
   });
 
   it('stays quiet without use_euler, where neither axis is consulted', () => {
-    const warnings = reportsOf(diagnosticsFor(
-      scene(`setting_count = 1
+    const content = scene(`setting_count = 1
 settings/0/forward_axis = 4
 settings/0/primary_rotation_axis = 2
-`)
-    ), RULE, 'warning');
+`);
+    const warnings = reportsOf(diagnosticsFor(content), RULE, 'warning');
     expect(warnings).toEqual([]);
   });
 
   it('stays quiet on the engine defaults, which are not parallel', () => {
     // forward_axis defaults to +Y (AXIS_Y) and primary_rotation_axis to AXIS_X
     // (aim_modifier_3d.h:40-42), so a setting that only enables euler is fine.
-    const warnings = reportsOf(diagnosticsFor(
-      scene(`setting_count = 1
+    const content = scene(`setting_count = 1
 settings/0/use_euler = true
-`)
-    ), RULE, 'warning');
+`);
+    const warnings = reportsOf(diagnosticsFor(content), RULE, 'warning');
     expect(warnings).toEqual([]);
   });
 
   it('warns when only one of the two keys is written and the default matches it', () => {
     // primary_rotation_axis absent, so AXIS_X. Forward -X (1) resolves to AXIS_X.
-    const warnings = reportsOf(diagnosticsFor(
-      scene(`setting_count = 1
+    const content = scene(`setting_count = 1
 settings/0/forward_axis = 1
 settings/0/use_euler = true
-`)
-    ), RULE, 'warning');
+`);
+    const warnings = reportsOf(diagnosticsFor(content), RULE, 'warning');
     expect(warnings).toHaveLength(1);
     expect(warnings[0]!.message).toContain('-X');
   });
 
   it('reports each offending setting separately', () => {
-    const warnings = reportsOf(diagnosticsFor(
-      scene(`setting_count = 2
+    const content = scene(`setting_count = 2
 settings/0/forward_axis = 0
 settings/0/use_euler = true
 settings/1/forward_axis = 2
 settings/1/use_euler = true
 settings/1/primary_rotation_axis = 1
-`)
-    ), RULE, 'warning');
+`);
+    const warnings = reportsOf(diagnosticsFor(content), RULE, 'warning');
     expect(warnings.map((w) => w.message.includes('setting 0'))).toEqual([true, false]);
     expect(warnings).toHaveLength(2);
   });
 
   it('ignores a setting past setting_count, whose keys never load', () => {
     // aim_modifier_3d.cpp:40 refuses an index at or past settings.size().
-    const warnings = reportsOf(diagnosticsFor(
-      scene(`setting_count = 1
+    const content = scene(`setting_count = 1
 settings/1/forward_axis = 0
 settings/1/use_euler = true
 settings/1/primary_rotation_axis = 0
-`)
-    ), RULE, 'warning');
+`);
+    const warnings = reportsOf(diagnosticsFor(content), RULE, 'warning');
     expect(warnings).toEqual([]);
   });
 
   it('ignores every setting when setting_count is absent, since none exist', () => {
-    const warnings = reportsOf(diagnosticsFor(
-      scene(`settings/0/forward_axis = 0
+    const content = scene(`settings/0/forward_axis = 0
 settings/0/use_euler = true
 settings/0/primary_rotation_axis = 0
-`)
-    ), RULE, 'warning');
+`);
+    const warnings = reportsOf(diagnosticsFor(content), RULE, 'warning');
     expect(warnings).toEqual([]);
   });
 
   it('falls back to the engine default when an axis value is malformed', () => {
     // The format is the validator's to report, and the rule must not read NaN and
     // silently stop checking. Default forward +Y is not parallel to X.
-    const warnings = reportsOf(diagnosticsFor(
-      scene(`setting_count = 1
+    const content = scene(`setting_count = 1
 settings/0/forward_axis = sideways
 settings/0/use_euler = true
 settings/0/primary_rotation_axis = 0
-`)
-    ), RULE, 'warning');
+`);
+    const warnings = reportsOf(diagnosticsFor(content), RULE, 'warning');
     expect(warnings).toEqual([]);
   });
 
@@ -178,26 +166,24 @@ describe('AimModifier3D index grammar', () => {
     // `_set` reads the index with `path.get_slicec('/', 1).to_int()` (aim_modifier_3d.cpp:38), and
     // `to_int` skips what it cannot use (ustring.cpp:2280-2293), so each `settings/x/…` key lands on
     // setting 0. +Z (4) maps to AXIS_Z (2), the parallel pair aim_modifier_3d.cpp:102 warns about.
-    const warnings = reportsOf(diagnosticsFor(
-      scene(`setting_count = 1
+    const content = scene(`setting_count = 1
 settings/x/forward_axis = 4
 settings/x/use_euler = true
 settings/x/primary_rotation_axis = 2
-`)
-    ), RULE, 'warning');
+`);
+    const warnings = reportsOf(diagnosticsFor(content), RULE, 'warning');
     expect(warnings).toHaveLength(1);
   });
 
   it('reads a sibling written with a tail, which _set ignores', () => {
     // `what = path.get_slicec('/', 2)` (aim_modifier_3d.cpp:39) is `use_euler`, so the tail
     // below it never reaches the comparison and set_use_euler runs.
-    const warnings = reportsOf(diagnosticsFor(
-      scene(`setting_count = 1
+    const content = scene(`setting_count = 1
 settings/0/forward_axis = 4
 settings/0/use_euler/extra = true
 settings/0/primary_rotation_axis = 2
-`)
-    ), RULE, 'warning');
+`);
+    const warnings = reportsOf(diagnosticsFor(content), RULE, 'warning');
     expect(warnings).toHaveLength(1);
   });
 });

@@ -50,8 +50,6 @@ describe('MultiplayerSpawner spawn_path rule', () => {
   it('warns when spawn_path names no node in this file', () => {
     const warnings = reportsOf(diagnosticsFor(scene('spawn_path = NodePath("NoSuchNode")\n')), RULE, 'warning');
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]?.severity).toBe('warning');
-    expect(warnings[0]?.ruleName).toBe('multiplayerspawner-spawn-path-dangling');
     expect(warnings[0]?.message).toContain('NoSuchNode');
   });
 

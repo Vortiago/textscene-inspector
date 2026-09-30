@@ -41,8 +41,6 @@ describe('RemoteTransform3D remote_path rule', () => {
   it('warns when remote_path is absent (remote_transform_3d.h:38 default is NodePath())', () => {
     const warnings = reportsOf(diagnosticsFor(scene('')), RULE, 'warning');
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]?.severity).toBe('warning');
-    expect(warnings[0]?.ruleName).toBe('remotetransform3d-invalid-remote-path');
   });
 
   it('warns on an explicit empty NodePath, same as the default', () => {

@@ -46,7 +46,6 @@ describe('NavigationAgent3D parent rule', () => {
 `;
     const warnings = reportsOf(linter.lint(content), RULE, 'warning');
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]!.severity).toBe('warning');
     expect(warnings[0]!.message).toContain('Node3D');
   });
 

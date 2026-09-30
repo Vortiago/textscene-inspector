@@ -30,20 +30,18 @@ const TIER_ANCHOR_RE = /\b(?:severit(?:y|ies)|expect(?:Severity|Rejected))|(?<=\
 const TIER_HELPER_RE = new RegExp(`\\bexpect(${TIER_NAMES_CAPITALISED})\\s*\\(`, 'g');
 
 /**
- * A list helper whose name carries the tier: `errorsOf(…)`, `warningsOf(…)`
- * (`tierLists.ts`). Neither anchor above reaches one.
+ * A `tierLists.ts` helper, which carries its tier in its name (`errorsOf(…)`,
+ * `warningsOf(…)`) or as its last argument (`reportsOf(…, 'warning')`). Neither
+ * anchor above reaches one.
  */
-const TIER_LIST_RE = new RegExp(`\\b(${TIER_NAMES})sOf\\s*\\(`, 'g');
-
-/** `tierLists.ts`'s `reportsOf(diagnostics, ruleName, tier)`, whose tier is its last argument. */
-const REPORTS_OF_RE = /\breportsOf\s*\(/g;
+const TIER_LIST_RE = new RegExp(`\\b(?:(${TIER_NAMES})sOf|reportsOf)\\s*\\(`, 'g');
 const LAST_ARGUMENT_TIER_RE = new RegExp(`'(${TIER_NAMES})'\\s*\\)$`);
 
-/** The tier the `reportsOf(` call at `index` names, or null when it names none as a literal. */
-function reportsOfTier(body: string, index: number): string | null {
-  const close = afterBalanced(body, body.indexOf('(', index));
+/** The tier literal ending the call that opens at `callOpen`, or null when it ends in none. */
+function lastArgumentTier(body: string, callOpen: number): string | null {
+  const close = afterBalanced(body, callOpen);
   if (close < 0) return null;
-  return LAST_ARGUMENT_TIER_RE.exec(body.slice(index, close))?.[1] ?? null;
+  return LAST_ARGUMENT_TIER_RE.exec(body.slice(callOpen, close))?.[1] ?? null;
 }
 
 /**
@@ -150,10 +148,7 @@ export const assertedTiers = (body: string): string[] => {
     body.slice(index, index + CLAIM_REACH).split(';')[0]!;
   for (const m of body.matchAll(TIER_HELPER_RE)) tiers.add(m[1]!.toLowerCase());
   for (const m of body.matchAll(TIER_LIST_RE)) {
-    if (isListAssertedNonEmpty(body, m.index, claimAt(m.index))) tiers.add(m[1]!);
-  }
-  for (const m of body.matchAll(REPORTS_OF_RE)) {
-    const tier = reportsOfTier(body, m.index);
+    const tier = m[1] ?? lastArgumentTier(body, m.index + m[0].length - 1);
     if (tier !== null && isListAssertedNonEmpty(body, m.index, claimAt(m.index))) tiers.add(tier);
   }
   for (const anchor of body.matchAll(TIER_ANCHOR_RE)) {
