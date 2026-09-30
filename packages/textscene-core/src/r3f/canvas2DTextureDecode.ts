@@ -67,7 +67,7 @@ export interface Canvas2DMap {
 
 /**
  * The retag and its decode together: half-applied, the material never decodes its
- * raw sRGB bytes. `composeFrameTexture` and `useIconTexture`, whose icons have their
+ * raw sRGB bytes. `spriteSamplerClone` and `useIconTexture`, whose icons have their
  * own loader, tag by another route and call `useCanvasDecodeDefines` alone.
  */
 export function useCanvas2DMap(texture: THREE.Texture | null | undefined): Canvas2DMap {
