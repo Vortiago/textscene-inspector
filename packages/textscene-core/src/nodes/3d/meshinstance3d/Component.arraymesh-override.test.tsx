@@ -17,29 +17,28 @@ import type {
   TscnNode,
 } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { wallQuadSurface } from '../../../resources/testing/wallQuadSurface';
 
 const MESH_PATH = 'res://stage/meshes/wheel.tres';
 const OVERRIDE_MATERIAL_PATH = 'res://stage/materials/paint.tres';
 
-/** A quad's worth of surface bytes: the four vertices every surface here uses. */
-const QUAD_BODY = `"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
-"attribute_data": PackedByteArray("AAAAAAAAgD4AAIA+AACAPgAAgD4AAAAAAAAAAAAAAAA="),
-"format": 34359742487,
-"index_count": 6,
-"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 4,
-"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA//3//f////7//f/9/////v/9//3////+//3//f////78=")`;
+const RED_SURFACE = wallQuadSurface({
+  material: 'SubResource("StandardMaterial3D_red")',
+  name: 'red_surface',
+});
+const BLUE_SURFACE = wallQuadSurface({
+  material: 'SubResource("StandardMaterial3D_blue")',
+  name: 'blue_surface',
+});
 
-/** Surface 0's positions truncated to 4 bytes: undecodable, so the decoder drops it. */
-const BROKEN_QUAD_BODY = QUAD_BODY.replace(
+/** The red surface with its positions truncated to 4 bytes: undecodable, so the decoder drops it. */
+const BROKEN_RED_SURFACE = RED_SURFACE.replace(
   /"vertex_data": PackedByteArray\("[^"]*"\)/,
   '"vertex_data": PackedByteArray("AAAA")'
 );
 
 /** Two surfaces, red then blue, each naming a `[sub_resource]` of the mesh's own `.tres`. */
-function twoSurfaceTres(firstBody = QUAD_BODY): string {
+function twoSurfaceTres(firstSurface = RED_SURFACE): string {
   return `[gd_resource type="ArrayMesh" format=4 uid="uid://overridemats"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_red"]
@@ -49,29 +48,16 @@ albedo_color = Color(1, 0, 0, 1)
 albedo_color = Color(0, 0, 1, 1)
 
 [resource]
-_surfaces = [{
-${firstBody},
-"material": SubResource("StandardMaterial3D_red"),
-"name": "red_surface"
-}, {
-${QUAD_BODY},
-"material": SubResource("StandardMaterial3D_blue"),
-"name": "blue_surface"
-}]
+_surfaces = [${firstSurface}, ${BLUE_SURFACE}]
 blend_shape_mode = 0
 `;
 }
 
 /** The same two surfaces as `_surfaces` bytes only, for a mesh inlined in a `.tscn`. */
-const INLINE_TWO_SURFACES = `[{
-${QUAD_BODY},
-"material": SubResource("Mat_red"),
-"name": "red_surface"
-}, {
-${QUAD_BODY},
-"material": SubResource("Mat_blue"),
-"name": "blue_surface"
-}]`;
+const INLINE_TWO_SURFACES = `[${[
+  wallQuadSurface({ material: 'SubResource("Mat_red")', name: 'red_surface' }),
+  wallQuadSurface({ material: 'SubResource("Mat_blue")', name: 'blue_surface' }),
+].join(', ')}]`;
 
 const OVERRIDE_MATERIAL_TRES = `[gd_resource type="StandardMaterial3D" format=3]
 
@@ -209,7 +195,7 @@ describe('<MeshInstance3D> ArrayMesh material overrides', () => {
   it('indexes overrides by the original surface index when a surface is dropped', async () => {
     // Surface 0 is undecodable, so the one draw group is Godot's surface 1. The
     // override index is Godot's original surface index, not the compacted group.
-    const loader = makeLoader({ [MESH_PATH]: twoSurfaceTres(BROKEN_QUAD_BODY) });
+    const loader = makeLoader({ [MESH_PATH]: twoSurfaceTres(BROKEN_RED_SURFACE) });
     const materials = await renderSettled(
       loader,
       makeNode({ mesh: 'ExtResource("1")', overrides: { 1: 'SubResource("Mat_green")' } }),

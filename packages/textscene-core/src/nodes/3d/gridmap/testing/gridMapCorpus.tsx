@@ -12,6 +12,7 @@ import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../../index';
 import type { ResourceProvider } from '../../../../resources/ResourceProvider';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
+import { wallQuadSurface } from '../../../../resources/testing/wallQuadSurface';
 
 const LIBRARY_PATH = 'res://stage/tiles.tres';
 const TILE_MESH_PATH = 'res://stage/meshes/tile.tres';
@@ -30,8 +31,9 @@ ${itemLines}
 }
 
 /**
- * The tile quad. Its surface declares a `[sub_resource]` StandardMaterial3D
- * with `materialLines` as its body, or no `"material"` key when that is null.
+ * The wall quad as the tile mesh. Its surface declares a `[sub_resource]`
+ * StandardMaterial3D with `materialLines` as its body, or no `"material"` key
+ * when that is null.
  * `subResources` goes before it, for a material that names them.
  */
 function tileMesh(materialLines: string | null, subResources: string): string {
@@ -39,23 +41,14 @@ function tileMesh(materialLines: string | null, subResources: string): string {
     materialLines === null
       ? ''
       : `${subResources}[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tile"]\n${materialLines}\n\n`;
-  const materialKey =
-    materialLines === null ? '' : `"material": SubResource("StandardMaterial3D_tile"),\n`;
+  const surface = wallQuadSurface({
+    material: materialLines === null ? undefined : 'SubResource("StandardMaterial3D_tile")',
+    name: 'tile',
+  });
   return `[gd_resource type="ArrayMesh" format=4]
 
 ${material}[resource]
-_surfaces = [{
-"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
-"attribute_data": PackedByteArray("AAAAAAAAgD4AAIA+AACAPgAAgD4AAAAAAAAAAAAAAAA="),
-"format": 34359742487,
-"index_count": 6,
-"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
-${materialKey}"name": "tile",
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 4,
-"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA//3//f////7//f/9/////v/9//3////+//3//f////78=")
-}]
+_surfaces = [${surface}]
 blend_shape_mode = 0
 `;
 }

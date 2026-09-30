@@ -7,24 +7,14 @@ import * as THREE from 'three';
 import { decodeArrayMesh } from './decode';
 import type { ArrayMeshData } from './types';
 import { buildArrayMeshGeometry } from './build';
+import { wallQuadSurface } from '../../testing/wallQuadSurface';
 
 const WALL_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://bett1yahcwe25"]
 
 [ext_resource type="Material" path="res://stage/tile_material.tres" id="1_a5mma"]
 
 [resource]
-_surfaces = [{
-"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
-"attribute_data": PackedByteArray("AAAAAAAAgD4AAIA+AACAPgAAgD4AAAAAAAAAAAAAAAA="),
-"format": 34359742487,
-"index_count": 6,
-"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
-"material": ExtResource("1_a5mma"),
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 4,
-"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA//3//f////7//f/9/////v/9//3////+//3//f////78=")
-}]
+_surfaces = [${wallQuadSurface({ material: 'ExtResource("1_a5mma")' })}]
 blend_shape_mode = 0
 `;
 

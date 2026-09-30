@@ -1,7 +1,8 @@
 /**
  * A MeshInstance3D whose `mesh` is an ExtResource to an ArrayMesh `.tres` renders
  * the decoded BufferGeometry. The geometry is injected into the `arrayMeshes` cache,
- * so these tests assert the component wiring; arrayMeshDecode.test.ts covers the decode.
+ * so these tests assert the component wiring. `resources/meshes/arraymesh/decode.test.ts`
+ * covers the decode.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -16,21 +17,12 @@ import type { ResourceProvider } from '../../../resources/ResourceProvider';
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { materialInstanceAs } from '../testing/reactThreeTestInstance';
+import { wallQuadSurface } from '../../../resources/testing/wallQuadSurface';
 
 const WALL_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://bett1yahcwe25"]
 
 [resource]
-_surfaces = [{
-"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
-"attribute_data": PackedByteArray("AAAAAAAAgD4AAIA+AACAPgAAgD4AAAAAAAAAAAAAAAA="),
-"format": 34359742487,
-"index_count": 6,
-"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 4,
-"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA//3//f////7//f/9/////v/9//3////+//3//f////78=")
-}]
+_surfaces = [${wallQuadSurface()}]
 blend_shape_mode = 0
 `;
 
@@ -56,18 +48,7 @@ blend_shape_mode = 0
  * The `_surfaces` value of an ArrayMesh a `.tscn` declares inline: the wall
  * quad's bytes, without the file wrapper, as `trailer_truck.tscn` writes its body.
  */
-const INLINE_SURFACES = `[{
-"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
-"attribute_data": PackedByteArray("AAAAAAAAgD4AAIA+AACAPgAAgD4AAAAAAAAAAAAAAAA="),
-"format": 34359742487,
-"index_count": 6,
-"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
-"name": "inline",
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 4,
-"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA//3//f////7//f/9/////v/9//3////+//3//f////78=")
-}]`;
+const INLINE_SURFACES = `[${wallQuadSurface({ name: 'inline' })}]`;
 
 function inlineMeshNode(subResourceId: string): TscnNode {
   return {
@@ -245,7 +226,9 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
             {
               id: 'ArrayMesh_inline',
               type: 'ArrayMesh',
-              data: { _surfaces: INLINE_SURFACES.replace('"name": "inline",', '"material": SubResource("Mat_blue"),\n"name": "inline",') },
+              data: {
+                _surfaces: `[${wallQuadSurface({ material: 'SubResource("Mat_blue")', name: 'inline' })}]`,
+              },
             },
             {
               id: 'Mat_blue',
@@ -341,31 +324,10 @@ metallic = 1.0
 
 [resource]
 resource_name = "meshes_wheel"
-_surfaces = [{
-"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
-"attribute_data": PackedByteArray("AAAAAAAAgD4AAIA+AACAPgAAgD4AAAAAAAAAAAAAAAA="),
-"format": 34359742487,
-"index_count": 6,
-"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
-"material": SubResource("StandardMaterial3D_tire"),
-"name": "tire",
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 4,
-"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA//3//f////7//f/9/////v/9//3////+//3//f////78=")
-}, {
-"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
-"attribute_data": PackedByteArray("AAAAAAAAgD4AAIA+AACAPgAAgD4AAAAAAAAAAAAAAAA="),
-"format": 34359742487,
-"index_count": 6,
-"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
-"material": SubResource("StandardMaterial3D_chrome"),
-"name": "chrome",
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 4,
-"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA//3//f////7//f/9/////v/9//3////+//3//f////78=")
-}]
+_surfaces = [${[
+  wallQuadSurface({ material: 'SubResource("StandardMaterial3D_tire")', name: 'tire' }),
+  wallQuadSurface({ material: 'SubResource("StandardMaterial3D_chrome")', name: 'chrome' }),
+].join(', ')}]
 blend_shape_mode = 0
 `;
 
