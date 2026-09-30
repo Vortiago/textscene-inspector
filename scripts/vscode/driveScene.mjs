@@ -193,6 +193,9 @@ async function findWorkbenchPage(browser, timeoutMs) {
   throw new Error('No workbench page appeared over CDP');
 }
 
+/** VS Code's local resource origin, as the last labels of a webview resource's hostname. */
+const LOCAL_RESOURCE_HOST_SUFFIX = '.vscode-resource.vscode-cdn.net';
+
 /**
  * Whether a URL belongs to the preview webview rather than the workbench.
  * Webview content comes from VS Code's local resource origin
@@ -201,7 +204,8 @@ async function findWorkbenchPage(browser, timeoutMs) {
  */
 export function isWebviewUrl(url) {
   if (!url) return false;
-  return url.startsWith('vscode-webview://') || url.includes('.vscode-resource.vscode-cdn.net');
+  if (url.startsWith('vscode-webview://')) return true;
+  return URL.canParse(url) && new URL(url).hostname.endsWith(LOCAL_RESOURCE_HOST_SUFFIX);
 }
 
 /** Bucket key `requestHosts` uses: the host for http(s), else the scheme. */
@@ -218,7 +222,7 @@ function requestBucketKey(url) {
  */
 export function isOfflineWebviewOrigin(key) {
   return (
-    key.endsWith('.vscode-resource.vscode-cdn.net') ||
+    key.endsWith(LOCAL_RESOURCE_HOST_SUFFIX) ||
     ['data', 'blob', 'file', 'vscode-webview', 'vscode-file'].includes(key)
   );
 }

@@ -15,9 +15,10 @@ import { isGLBPath } from '../formats/glb/glbProcessing';
 /**
  * The `[gd_scene]` tag after any leading `;` comment and blank lines, which Godot
  * and the top-level parser both allow, so a scene that renders at top level also
- * loads when instanced. Anything else up front (HTML 404, stray text) fails.
+ * loads when instanced. Anything else up front (HTML 404, stray text) fails. A comment
+ * stops before `\r`, so each line has one reading and the match stays linear.
  */
-const SCENE_HEADER = /^(?:[ \t]*(?:;[^\n]*)?\r?\n)*[ \t]*\[gd_scene/;
+const SCENE_HEADER = /^(?:[ \t]*(?:;[^\r\n]*)?\r?\n)*[ \t]*\[gd_scene/;
 
 export interface SceneProcessorOptions {
   eventBus: ResourceEventBus;

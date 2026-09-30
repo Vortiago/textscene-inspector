@@ -177,6 +177,25 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
       expect(error.message).toMatch(/not a text scene/i);
     });
 
+    it('refuses a run of CRLF comment lines in linear time', async () => {
+      // A `;` comment that may swallow the `\r` before its `\n` gives the header
+      // pattern two ways to read each line, so its time doubled with each line: about
+      // a second at this length. The linear reading takes well under a millisecond.
+      const commentLines = 28;
+      const refused = new Promise<Error | undefined>((resolve) =>
+        eventBus.on<Error>('scene', 'failed', (_id, error) => resolve(error))
+      );
+      mockProvider.loadResource = vi.fn().mockResolvedValue(';\r\n'.repeat(commentLines) + 'x');
+      registerMetadata('s', { id: 's', path: 'res://scenes/x.tscn', type: 'PackedScene' });
+
+      const startedAt = performance.now();
+      processor.request('s');
+      const error = await refused;
+
+      expect(error?.message).toMatch(/not a text scene/i);
+      expect(performance.now() - startedAt).toBeLessThan(100);
+    });
+
     it('emits failed for previously failed scenes from cache', async () => {
       mockProvider.loadResource = vi.fn().mockRejectedValue(new Error('Initial fail'));
       registerMetadata('scene1', { id: 'scene1', path: 'res://scenes/room.tscn', type: 'PackedScene' });

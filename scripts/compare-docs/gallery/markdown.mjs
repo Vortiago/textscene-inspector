@@ -10,7 +10,9 @@ import { isDivider, splitRow } from '../markdownTable.mjs';
 import { REPO_ROOT } from '../sheetSources.mjs';
 import { NOTES_TYPE } from './vocabulary.mjs';
 
-export const escapeHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+/** Text safe inside an element and inside a double-quoted attribute, where the panels also write it. */
+export const escapeHtml = (s) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 /**
  * `ADR-0025` in sheet prose becomes an absolute link to the decision record.
