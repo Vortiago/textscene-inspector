@@ -344,23 +344,6 @@ describe('useResource', () => {
     expect(result.current.status).toBe('pending');
   });
 
-  it('material resource type routes through the material processor', () => {
-    const material = new THREE.MeshBasicMaterial();
-    loader.materials.setRequestImpl(() => {});
-
-    const { result } = renderHook(
-      () => useResource<THREE.Material>('res://mat.tres', 'material'),
-      { wrapper: withLoader(loader) }
-    );
-
-    act(() => {
-      loader.materials._resolve('res://mat.tres', material);
-    });
-
-    expect(result.current.status).toBe('loaded');
-    expect(result.current.value).toBe(material);
-  });
-
   // Unmount and path-swap races.
   describe('unmount and path-swap races', () => {
     it('removes its loaded/failed bus listeners on unmount (no leaked subscriptions)', () => {

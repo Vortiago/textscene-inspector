@@ -1,6 +1,6 @@
 /**
- * One rasterised texture per scene and sub-resource, shared, bounded and
- * disposed. Many nodes share one gradient, and each raster costs
+ * One rasterised texture per scene and sub-resource, or per content for a
+ * texture built off the main thread, shared, bounded and disposed. Many nodes share one gradient, and each raster costs
  * `width x height x 4` bytes and an upload. The cache owns the lifetime through
  * an `LRUCache`: consumers borrow and never dispose.
  */
@@ -63,6 +63,16 @@ export function proceduralTextureKey(
   subResourceId: string
 ): string {
   return `${sceneToken(internalResources)}:${subResourceId}`;
+}
+
+/** The texture cached under `key`, for a build keyed on its content rather than its scene. */
+export function cachedProceduralTexture(key: string): THREE.Texture | undefined {
+  return cache.get(key);
+}
+
+/** Caches a texture built under a content key. The cache owns it from now on. */
+export function cacheProceduralTexture(key: string, texture: THREE.Texture): void {
+  cache.set(key, texture);
 }
 
 /** Hold `key` resident for as long as a consumer is mounted. */

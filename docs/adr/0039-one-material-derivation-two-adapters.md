@@ -108,8 +108,8 @@ uniform, geometry or object state that a mounted material may change freely.
 | --- | --- | --- |
 | `texture_filter` | uniform | Sampler state on the `THREE.Texture`, per texture and per slot (`textureBinding.ts`), which is why a shared cached texture is cloned, not retagged. Not a program term in three. |
 | `detail_uv` | unimplemented | No detail layer exists. The detail slots are absent from `TEXTURE_SLOTS` on purpose. |
-| `transparency` | split | Its `transparent` half is a program input, a term of three's `opaque` composite (`WebGLPrograms.js:262`), and keyed. Its `alphaTest` half is a program input that three self-heals on the `> 0` crossing (`Material.js:494-502`), so it is not one of this codebase's. Both, plus `depthWrite`, come from `rendersInAlphaPass` (`decode.ts:174,207`), the transcription of `ShaderData::uses_alpha_pass` that decides which pass the surface lands in. |
-| `alpha_antialiasing_mode` | program input, indirectly | Read only by `rendersInAlphaPass`, so it reaches three only through `transparent` (`decode.ts:174`) and `depthWrite` (`:207`). three's own `alphaToCoverage`, a keyed program input, is never set from it, so alpha-to-coverage itself is unimplemented here. |
+| `transparency` | split | Its `transparent` half is a program input, a term of three's `opaque` composite (`WebGLPrograms.js:262`), and keyed. Its `alphaTest` half is a program input that three self-heals on the `> 0` crossing (`Material.js:494-502`), so it is not one of this codebase's. Both, plus `depthWrite`, come from `alphaPassMembership` (`decode.ts:145,180`), the transcription of `ShaderData::uses_alpha_pass` and `uses_depth_in_alpha_pass` that decides which passes the surface lands in, the shadow pass included (`castsShadow`). |
+| `alpha_antialiasing_mode` | program input, indirectly | Read only by `alphaPassMembership`, so it reaches three only through `transparent` (`decode.ts:145`), `depthWrite` (`:180`) and the shadow-pass membership. three's own `alphaToCoverage`, a keyed program input, is never set from it, so alpha-to-coverage itself is unimplemented here. |
 | `shading_mode` | program input | The strongest one here: it selects the material class (`'basic'` for SHADING_MODE_UNSHADED), and React remounts across an element-type change whatever the key says. |
 | `blend_mode` | program input, through `opaque` only | The five modes reach three's program identity only as the `blending === NormalBlending` term of `opaque`. The factors themselves are per-draw GL state (`blendState.ts`). See the uniform-versus-key rule below. |
 | `depth_draw_mode` | uniform | `depthWrite`, per-draw state. `godotDepthWrite` (`decode.ts`) resolves the mode against the pass. |
@@ -117,17 +117,17 @@ uniform, geometry or object state that a mounted material may change freely.
 | `cull_mode` | program input | `side`, which reaches the program as the `doubleSided`/`flipSided` pair (`WebGLPrograms.js:369-370`). Godot's enum names the faces discarded, and three's names those kept, mapped once in `scalars.ts`. |
 | `diffuse_mode` | unimplemented | three has one diffuse BRDF. Nothing in the repo reads the property. |
 | `specular_mode` | unimplemented | As above. |
-| `billboard_mode` | neither | A vertex-shader term in Godot. Here it never reaches a material: `useBillboard` rotates the object per frame on the CPU, off `materialScalars.billboardMode`. |
+| `billboard_mode` | neither | A vertex-shader term in Godot. Here it is no program input: the derivation records it on the material's `userData`, and `r3f/surfaceDrawHooks.ts` swaps the world matrix around each draw group whose material billboards, per surface as Godot's shader does. |
 | `detail_blend_mode` | unimplemented | With the detail layer. |
 | `roughness_channel` | unimplemented | A stated parity limitation: Godot reads the channel named by `roughness_texture_channel`/`metallic_texture_channel` (default RED). three's `roughnessMap`/`metalnessMap` read fixed G/B (`SurfaceMaterialSlot.tsx`). |
 | `emission_op` | uniform | Resolved on the CPU into `emissive` + `emissiveIntensity` (`emission.ts`), and only where a texture is known to have landed: the operator is unobservable without one. |
-| `distance_fade` | program input, indirectly | `distance_fade_mode` is decoded and read only by `rendersInAlphaPass`: PIXEL_ALPHA puts the surface in the alpha pass. The fade itself is unimplemented. |
+| `distance_fade` | program input, indirectly | `distance_fade_mode` is decoded and read only by `alphaPassMembership`: PIXEL_ALPHA puts the surface in the alpha pass. The fade itself is unimplemented. |
 | `stencil_mode`, `stencil_flags`, `stencil_compare`, `stencil_reference` | unimplemented | Nothing in the repo reads any of them. |
 | `feature_mask` (13 bits) | see below | |
 | `flags` (25 bits) | see below | |
 | booleans: `deep_parallax` | unimplemented | Godot's is texture-space parallax. The heightmap slot here drives three's `displacementMap`, that is real vertex displacement, which is a stated parity limitation of its own and not this bit. |
 | booleans: `grow` | unimplemented | |
-| booleans: `proximity_fade` | program input, indirectly | Decoded for `rendersInAlphaPass` only. The fade itself is unimplemented. |
+| booleans: `proximity_fade` | program input, indirectly | Decoded for `alphaPassMembership` only. The fade itself is unimplemented. |
 | booleans: `orm` | non-goal | See below. |
 | booleans: `invalid_key` | n/a | Not a derived term: `_compute_key` never sets it, and `BaseMaterial3D`'s constructor sets it to 1 (`material.cpp:4007`) so the first `_update_shader` cannot match. A "no key computed yet" sentinel, with nothing to port. |
 
@@ -159,12 +159,13 @@ Carried:
 - `FLAG_DISABLE_DEPTH_TEST` → `depthTest`, per-draw state.
 - `FLAG_USE_TEXTURE_REPEAT` → `wrapS`/`wrapT` (`applyTextureState.ts:144`), sampler
   state like `texture_filter`.
-- `FLAG_USE_SHADOW_TO_OPACITY` → read by `rendersInAlphaPass` only, so it reaches the
+- `FLAG_USE_SHADOW_TO_OPACITY` → read by `alphaPassMembership` only, so it reaches the
   program indirectly, and its shading effect is unimplemented.
 - `FLAG_UV1_USE_TRIPLANAR` / `FLAG_UV1_USE_WORLD_TRIPLANAR` → one `triplanar` scalar
   folded into the per-surface UV transform, with its own recorded `uv1_offset`
   limitation (`SurfaceMaterialSlot.tsx`).
-- `FLAG_BILLBOARD_KEEP_SCALE` → the CPU billboard, like `billboard_mode`.
+- `FLAG_BILLBOARD_KEEP_SCALE` → `userData`, beside the billboard mode. The draw-time
+  billboard (`surfaceBillboard.ts`) keeps the model scale only when it is set.
 
 The other bits are unimplemented here. `FLAG_FIXED_SIZE` is one of them: the
 Sprite3D/Label3D path in the scope note below honours it, not this derivation.

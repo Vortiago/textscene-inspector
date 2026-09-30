@@ -13,11 +13,12 @@ import {
   noiseImage,
   noiseSampler,
   noiseTextureFits,
-  rasterizeNoiseTexture2D,
+  noiseDataTexture,
   seamlessNoiseImage,
   seamlessSkirt,
 } from './build';
 import { decodeNoiseTexture2D } from './decode';
+import { noiseTexture2DPixels } from './pixels';
 import type { NoiseTexture2DData } from './types';
 import { decodeFastNoiseLite } from '../../noise/fastnoiselite/decode';
 import type { FastNoiseLiteData } from '../../noise/fastnoiselite/types';
@@ -190,18 +191,16 @@ describe('bumpMapToNormalMap', () => {
   });
 });
 
-describe('rasterizeNoiseTexture2D', () => {
+describe('noiseTexture2DPixels in a noiseDataTexture', () => {
   const noise = decodeFastNoiseLite({ frequency: '0.05' });
 
-  /** A texture within the ceilings, which always rasterises. */
+  /** The pixels a worker job computes, wrapped as the main thread wraps them. */
   function rasterized(
     tex: NoiseTexture2DData,
     fastNoise: FastNoiseLiteData,
     colorRamp: Gradient | null
   ): THREE.DataTexture {
-    const texture = rasterizeNoiseTexture2D(tex, fastNoise, colorRamp);
-    if (!texture) throw new Error(`expected a texture for ${tex.width}x${tex.height}, got null`);
-    return texture;
+    return noiseDataTexture(noiseTexture2DPixels({ tex, noise: fastNoise, colorRamp }), tex);
   }
 
   it('produces a DataTexture of the declared size', () => {
@@ -281,26 +280,6 @@ describe('rasterizeNoiseTexture2D', () => {
     expect([...a]).not.toEqual([...b]);
   });
 
-  it("draws a texture whose axis sits exactly at the previewer's texture ceiling", () => {
-    const texture = rasterized(
-      decodeNoiseTexture2D({ width: String(MAX_TEXTURE_EXTENT), height: '1' }),
-      noise,
-      null
-    );
-    expect(texture.image.width).toBe(MAX_TEXTURE_EXTENT);
-  });
-
-  it('draws no texture, and allocates nothing, for an int32-sized axis Godot opens', () => {
-    // The hint is `1,2048,1,or_greater`, so the inspector accepts this width.
-    const tex = decodeNoiseTexture2D({ width: '2147483647', height: '512' });
-    expect(rasterizeNoiseTexture2D(tex, noise, null)).toBeNull();
-  });
-
-  it('draws no texture for a seamless one whose skirted source Godot cannot build', () => {
-    const side = String(MAX_TEXTURE_EXTENT);
-    const tex = decodeNoiseTexture2D({ width: side, height: side, seamless: 'true' });
-    expect(rasterizeNoiseTexture2D(tex, noise, null)).toBeNull();
-  });
 });
 
 describe('noiseTextureFits', () => {
@@ -329,6 +308,11 @@ describe('noiseTextureFits', () => {
     expect(noiseTextureFits(plain(MAX_TEXTURE_EXTENT, 1))).toBe(true);
     expect(noiseTextureFits(plain(MAX_TEXTURE_EXTENT + 1, 1))).toBe(false);
     expect(noiseTextureFits(plain(1, MAX_TEXTURE_EXTENT + 1))).toBe(false);
+  });
+
+  it('refuses an int32-sized axis that Godot opens, before anything allocates', () => {
+    // The hint is `1,2048,1,or_greater`, so the inspector accepts this width.
+    expect(noiseTextureFits(plain(2147483647, 512))).toBe(false);
   });
 
   it("fits a plain texture at the previewer's texture ceiling on both axes", () => {

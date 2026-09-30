@@ -125,7 +125,8 @@ export function Toolbar({
         aria-expanded={paneVisible}
         title="Toggle the source pane"
       >
-        {paneVisible ? 'Hide' : 'Show'} Source
+        <span className={styles.wideLabel}>{paneVisible ? 'Hide ' : 'Show '}</span>
+        Source
         {problemBadge && (
           <span className={styles.problemBadge} data-testid="problem-badge">
             {problemBadge}
@@ -143,7 +144,8 @@ export function Toolbar({
         <span className={styles.openIcon} aria-hidden>
           ⤓
         </span>
-        Open <code className={styles.openExt}>.tscn</code>
+        Open
+        <code className={`${styles.openExt} ${styles.wideLabel}`}>.tscn</code>
       </button>
       <button
         type="button"
@@ -179,11 +181,12 @@ export function Toolbar({
           target="_blank"
           rel="noopener"
           title="Open the Godot ⇄ ours render-comparison gallery"
+          aria-label="Parity"
         >
           <span className={styles.openIcon} aria-hidden>
             ⇄
           </span>
-          Parity
+          <span className={styles.wideLabel}>Parity</span>
         </a>
       )}
 

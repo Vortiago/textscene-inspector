@@ -98,9 +98,10 @@ validatorRegistry.registerAll('RichTextLabel', {
 
   // Markup (ADD_GROUP "Markup", "", rich_text_label.cpp:7772-7775).
   // rich_text_label.cpp:7773: PROPERTY_HINT_ARRAY_TYPE "RichTextEffect", written
-  // as `Array[RichTextEffect]([...])`. set_effects (rich_text_label.cpp:7465-7468)
-  // is a bare assignment (`custom_effects = Array(p_effects);`).
-  custom_effects: v.arrayLiteral('custom_effects', { typedAs: 'RichTextEffect' }),
+  // as `Array[RichTextEffect]([...])`. set_effects (rich_text_label.cpp:7464-7466)
+  // assigns into the untyped `Array custom_effects` (rich_text_label.h:588), so
+  // another element type stores and only the hint refuses it.
+  custom_effects: v.arrayLiteral('custom_effects', { typedAs: 'RichTextEffect', hinted: 'rich_text_label.cpp:7773' }),
   // rich_text_label.cpp:7774: bare BOOL, no hint. set_meta_underline
   // (rich_text_label.cpp:5155-5162) is an unconditional assignment.
   meta_underlined: v.boolean('meta_underlined'),

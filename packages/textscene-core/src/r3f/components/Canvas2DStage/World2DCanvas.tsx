@@ -21,6 +21,7 @@ import { CanvasLighting2DProvider } from '../../lighting2d/CanvasLighting2D.js';
 import { canvasModulateColor } from '../../canvasModulate.js';
 import { ViewportPassOrchestrator } from '../../contexts/ViewportPassRegistryContext.js';
 import { ControlRasterLayer } from '../../../nodes/viewport/subviewport/ControlRasterLayer.js';
+import { TiledUploadDriver } from '../../tiledUpload/TiledUploadDriver.js';
 
 // Through the controls barrel, whose side-effect imports register every Control
 // type: the component file alone registers none. Lazy, so the registrations stay
@@ -60,32 +61,34 @@ export function World2DContents({
 }: World2DCanvasProps) {
   const canvasModulate = useMemo(() => canvasModulateColor(nodes), [nodes]);
   return (
-    <CanvasWorkspaceProvider workspace="2d">
-      <SceneResourcesProvider
-        internalResources={internalResources}
-        externalResources={externalResources}
-      >
-        <CameraRig pan={pan} zoom={zoom} />
-        {/* The light accumulator starts from the canvas tint, the same pure
-            function of `nodes` the dispatcher publishes to the items. */}
-        <CanvasLighting2DProvider canvasModulate={canvasModulate}>
-          <NodeDispatcher nodes={nodes} />
-          {/* `null`: the R3F reconciler's tree has no host for a `<div>` fallback.
-              Inside the lighting provider, so a 2D light reaches a Control. */}
-          <Suspense fallback={null}>
-            <ControlCanvasLayer nodes={nodes} />
-          </Suspense>
-          {/* A `ViewportTexture` consumer may sample its target whoever draws
-              the on-screen Controls. */}
-          <ControlRasterLayer
-            nodes={nodes}
-            internalResources={internalResources}
-            externalResources={externalResources}
-          />
-        </CanvasLighting2DProvider>
-      </SceneResourcesProvider>
-      <ViewportPassOrchestrator />
-    </CanvasWorkspaceProvider>
+    <TiledUploadDriver>
+      <CanvasWorkspaceProvider workspace="2d">
+        <SceneResourcesProvider
+          internalResources={internalResources}
+          externalResources={externalResources}
+        >
+          <CameraRig pan={pan} zoom={zoom} />
+          {/* The light accumulator starts from the canvas tint, the same pure
+              function of `nodes` the dispatcher publishes to the items. */}
+          <CanvasLighting2DProvider canvasModulate={canvasModulate}>
+            <NodeDispatcher nodes={nodes} />
+            {/* `null`: the R3F reconciler's tree has no host for a `<div>` fallback.
+                Inside the lighting provider, so a 2D light reaches a Control. */}
+            <Suspense fallback={null}>
+              <ControlCanvasLayer nodes={nodes} />
+            </Suspense>
+            {/* A `ViewportTexture` consumer may sample its target whoever draws
+                the on-screen Controls. */}
+            <ControlRasterLayer
+              nodes={nodes}
+              internalResources={internalResources}
+              externalResources={externalResources}
+            />
+          </CanvasLighting2DProvider>
+        </SceneResourcesProvider>
+        <ViewportPassOrchestrator />
+      </CanvasWorkspaceProvider>
+    </TiledUploadDriver>
   );
 }
 

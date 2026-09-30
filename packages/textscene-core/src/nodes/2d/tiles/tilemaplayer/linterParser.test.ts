@@ -5,11 +5,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../../linter/Linter';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
+import { errorsOf } from '../../../../linter/testing/tierLists';
 import './linterParser';
-
-function errorsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.severity === 'error');
-}
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -62,6 +59,11 @@ tile_set = NotARef(1)
   describe('tile_map_data — PACKED_BYTE_ARRAY, PROPERTY_HINT_NONE (tile_map_layer.cpp:2267)', () => {
     it('accepts an empty PackedByteArray, the zero-cell spelling', () => {
       expect(check('tile_map_data', 'PackedByteArray()')).toBeNull();
+    });
+
+    // variant.cpp:772-778: PACKED_BYTE_ARRAY converts from ARRAY.
+    it.each(['[]', '[0, 0]'])('accepts the bare array %s, which the slot converts', (value) => {
+      expect(check('tile_map_data', value)).toBeNull();
     });
 
     it('accepts the exact decimal-byte value scenes/fixtures/unit-tile-map-layer-hexagon.tscn writes', () => {

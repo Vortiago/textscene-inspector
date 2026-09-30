@@ -108,6 +108,12 @@ export const SourceGutter = memo(function SourceGutter({
               <button
                 type="button"
                 tabIndex={-1}
+                // Opens on a tap too: Safari never focuses a tapped button, so `onFocus` alone
+                // leaves a touch screen without the popover.
+                onClick={(e) => {
+                  e.currentTarget.focus();
+                  show(line, e.currentTarget.parentElement ?? e.currentTarget);
+                }}
                 className={severityDotClass(entry.severity)}
                 data-testid={`gutter-dot-${line}`}
                 aria-label={`Line ${line}: ${entry.messages.join('; ')}`}

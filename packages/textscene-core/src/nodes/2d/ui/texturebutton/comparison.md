@@ -25,12 +25,12 @@ Strict parsing format-checks these `TextureButton` properties, plus 10 inherited
 | `flip_v` | true or false |  |
 | `ignore_texture_size` | true or false |  |
 | `stretch_mode` | enum 0-6 (STRETCH_SCALE/STRETCH_TILE/STRETCH_KEEP/STRETCH_KEEP_CENTERED/STRETCH_KEEP_ASPECT/STRETCH_KEEP_ASPECT_CENTERED/STRETCH_KEEP_ASPECT_COVERED) | warning |
-| `texture_click_mask` | null, SubResource("id") or ExtResource("id") |  |
-| `texture_disabled` | null, SubResource("id") or ExtResource("id") |  |
-| `texture_focused` | null, SubResource("id") or ExtResource("id") |  |
-| `texture_hover` | null, SubResource("id") or ExtResource("id") |  |
-| `texture_normal` | null, SubResource("id") or ExtResource("id") |  |
-| `texture_pressed` | null, SubResource("id") or ExtResource("id") |  |
+| `texture_click_mask` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `texture_disabled` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `texture_focused` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `texture_hover` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `texture_normal` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `texture_pressed` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

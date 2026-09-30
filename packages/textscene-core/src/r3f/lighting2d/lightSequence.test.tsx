@@ -45,7 +45,7 @@ ${body}`;
 }
 
 /**
- * A cookie shaped like the loader's hand-over (ADR-0042): sRGB-tagged, clamp-wrapped,
+ * A cookie shaped like the loader's hand-over (ADR-0044): sRGB-tagged, clamp-wrapped,
  * with the `image` dimensions the quad reads, so the light's clamp bind shares it.
  */
 function cookieTexture(): THREE.Texture {

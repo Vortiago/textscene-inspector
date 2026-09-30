@@ -59,6 +59,22 @@ export function resourceRef(raw: string): ResourceRef | null {
   return { kind: match[1] as ResourceRef['kind'], id: refId(match[2], match[3]) };
 }
 
+/** `Resource("…")` with one quoted argument, or two: `[1]` and `[2]`. */
+const PATH_RESOURCE_RE = new RegExp(`^Resource${WS}\\(${WS}"([^"]*)"(?:${WS},${WS}"([^"]*)")?${WS}\\)$`);
+
+/**
+ * Whether a whole value is `Resource("path")`. The text loader sets no `rp.func`, so the parser's
+ * generic branch loads it by path (`variant_parser.cpp:1123-1185`). A second argument pairs one
+ * `uid://` with one path and refuses two of either (`:1141-1152`). Whether the path loads is a rule's question.
+ */
+export function isPathResourceLiteral(raw: string): boolean {
+  const match = PATH_RESOURCE_RE.exec(raw);
+  if (!match) return false;
+  const second = match[2];
+  if (second === undefined) return true;
+  return match[1]!.startsWith('uid://') !== second.startsWith('uid://');
+}
+
 /** The id of the first `SubResource(…)` anywhere in `text`, or null. */
 export function subResourceRefAnywhere(text: string): string | null {
   const match = SUB_RESOURCE_REF_ANYWHERE_RE.exec(text);

@@ -18,8 +18,8 @@ Strict parsing format-checks these `Window` properties, plus 47 inherited from V
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `accessibility_description` | quoted string, or the &"…" StringName jacket |  |
-| `accessibility_name` | quoted string, or the &"…" StringName jacket |  |
+| `accessibility_description` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
+| `accessibility_name` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 | `always_on_top` | true or false |  |
 | `borderless` | true or false |  |
 | `content_scale_aspect` | enum 0-4 (IGNORE/KEEP/KEEP_WIDTH/KEEP_HEIGHT/EXPAND) | warning |
@@ -47,15 +47,15 @@ Strict parsing format-checks these `Window` properties, plus 47 inherited from V
 | `position` | Vector2i(x, y), or the Vector2 spelling Godot converts |  |
 | `sharp_corners` | true or false |  |
 | `size` | Vector2i(x, y), both >= 0, or the Vector2 spelling Godot converts | error below |
-| `theme` | null, SubResource("id") or ExtResource("id") |  |
-| `theme_override_colors/*` | Color(r, g, b, a) |  |
+| `theme` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `theme_override_colors/*` | Color(r, g, b, a), or the colour string or int it converts |  |
 | `theme_override_constants/*` | integer -16384-16384 | warning |
 | `theme_override_font_sizes/*` | integer >= 1 | warning below |
-| `theme_override_fonts/*` | null, SubResource("id") or ExtResource("id") |  |
-| `theme_override_icons/*` | null, SubResource("id") or ExtResource("id") |  |
-| `theme_override_styles/*` | null, SubResource("id") or ExtResource("id") |  |
+| `theme_override_fonts/*` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `theme_override_icons/*` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `theme_override_styles/*` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `theme_type_variation` | quoted string or &"name" |  |
-| `title` | quoted string, or the &"…" StringName jacket |  |
+| `title` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 | `transient` | true or false |  |
 | `transient_to_focused` | true or false |  |
 | `transparent` | true or false |  |

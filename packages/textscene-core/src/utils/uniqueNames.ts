@@ -7,9 +7,7 @@
 
 import type { TscnNode } from '../parser/types.js';
 import { boolSlotValue } from '../godot/index.js';
-
-/** `UNIQUE_NODE_PREFIX` (string_name.h:36). */
-export const UNIQUE_NODE_PREFIX = '%';
+import { UNIQUE_NODE_PREFIX } from '../godot/nodePath.js';
 
 /** The node a `%Name` addresses, with the two spellings of the path that reaches it. */
 export interface UniqueNameClaim {

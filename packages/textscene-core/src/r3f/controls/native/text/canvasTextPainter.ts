@@ -4,7 +4,7 @@
  * where FreeType semantics are needed, such as Label3D's stroked outline. It runs
  * for `TextLayoutResult.fontMetrics.kind === 'canvas'`.
  */
-// One raster and one quad: a per-glyph atlas needs a worker, which the CSP forbids
+// One raster and one quad: a per-glyph atlas needs a font fetch, which the CSP forbids
 // (`bake-metrics.mjs`), while canvas-2D calls pass it. Each glyph draws at the pen
 // `x` `textLayout.ts` computed, so a whole-string `fillText` cannot re-shape it
 // with the ligatures or kerning the measurer folded in (`runtimeFontMetrics.ts`).

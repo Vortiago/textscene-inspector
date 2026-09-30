@@ -1,10 +1,11 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnSceneContents } from './TscnCanvas';
 import { frameSceneBounds } from './frameSceneBounds';
+import { TiledUploadQueue } from './tiledUpload/TiledUploadQueue';
 
 describe('the canvas container CSS', () => {
   it('claims every touch gesture, so touch navigation gets pointermove at all', () => {
@@ -68,5 +69,17 @@ describe('frameSceneBounds — near plane', () => {
     frameSceneBounds(sceneWithBox(0.5), cam, null);
     expect(cam.near).toBeCloseTo(0.01, 6);
     expect(cam.near).toBeLessThan(cam.position.length());
+  });
+});
+
+describe('<TscnSceneContents> tiled uploads', () => {
+  it('drives a tiled upload queue every frame, so large textures upload in bands', async () => {
+    const tick = vi.spyOn(TiledUploadQueue.prototype, 'tick');
+    const renderer = await ReactThreeTestRenderer.create(<TscnSceneContents />);
+    tick.mockClear();
+    await renderer.advanceFrames(2, 16);
+
+    expect(tick).toHaveBeenCalledTimes(2);
+    tick.mockRestore();
   });
 });

@@ -132,7 +132,7 @@ export function decodeStandardMaterial3D(
         DEPTH_DRAW_MODES,
         `${CONTEXT}.depth_draw_mode`
       );
-  const alphaPass = rendersInAlphaPass(properties, {
+  const { alphaPass, depthInAlphaPass } = alphaPassMembership(properties, {
     transparency,
     blendMode,
     refractionEnabled,
@@ -143,6 +143,8 @@ export function decodeStandardMaterial3D(
   // dithered discard. three has no stochastic clip, and fully opaque is further
   // from Godot's look than blending. The depth write keeps the exact opaque-pass one.
   const transparent = alphaPass || transparency === Transparency.ALPHA_HASH;
+  // Godot's `FLAG_PASS_SHADOW` (`render_forward_clustered.cpp:4078-4088`).
+  const castsShadow = !alphaPass || depthInAlphaPass;
 
   const normalScale = floatOr(properties['normal_scale'], 1, CONTEXT);
 
@@ -167,6 +169,7 @@ export function decodeStandardMaterial3D(
     uv1Offset: vec2FromVector3(properties['uv1_offset'], { x: 0, y: 0 }),
     transparency,
     transparent,
+    castsShadow,
     // `alpha_scissor_threshold` hint is "0,1,0.001". 0 means "no cutout" to three,
     // which every non-scissor mode wants.
     alphaTest:
@@ -174,7 +177,7 @@ export function decodeStandardMaterial3D(
         ? clamp01(floatOr(properties['alpha_scissor_threshold'], 0.5, CONTEXT))
         : 0,
     depthDrawMode,
-    depthWrite: godotDepthWrite(alphaPass, transparency, depthDrawMode, depthTest),
+    depthWrite: godotDepthWrite(alphaPass, depthInAlphaPass, depthDrawMode, depthTest),
     depthTest,
     blendMode,
     cullMode: enumOr(
@@ -222,21 +225,27 @@ interface PassInputs {
   depthTest: boolean;
 }
 
+/** Where Godot draws a surface: its alpha pass, and whether it draws depth there too. */
+interface AlphaPassMembership {
+  alphaPass: boolean;
+  depthInAlphaPass: boolean;
+}
+
 /**
- * Godot's `ShaderData::uses_alpha_pass()`
- * (`servers/rendering/renderer_rd/forward_clustered/scene_shader_forward_clustered.h`), in
- * its own variable names so the two diff line by line. The flags are what
- * `BaseMaterial3D::_update_shader` emits, so `transparency` alone never decides it.
+ * Godot's `ShaderData::uses_alpha_pass()` and `uses_depth_in_alpha_pass()`
+ * (`scene_shader_forward_clustered.h:279-293`), in its own variable names so the two diff
+ * line by line. The flags are what `BaseMaterial3D::_update_shader` emits, so
+ * `transparency` alone never decides either.
  */
-function rendersInAlphaPass(properties: Record<string, string>, inputs: PassInputs): boolean {
+function alphaPassMembership(
+  properties: Record<string, string>,
+  inputs: PassInputs
+): AlphaPassMembership {
   const { transparency, blendMode, refractionEnabled, depthDrawMode, depthTest } = inputs;
 
   const proximityFade = boolOr(properties['proximity_fade_enabled'], false, CONTEXT);
   const distanceFadeMode = intOr(properties['distance_fade_mode'], 0, CONTEXT);
   const shadowToOpacity = boolOr(properties['shadow_to_opacity'], false, CONTEXT);
-  // `alpha_antialiasing_mode != OFF`, honoured only with a cutout mode, re-admits the
-  // cutout to the alpha pass (alpha-to-coverage).
-  const alphaAntialiasing = intOr(properties['alpha_antialiasing_mode'], 0, CONTEXT) !== 0;
 
   // The shader writes ALPHA: for a transparency mode, for refraction (`ALPHA = 1.0`),
   // and for the fades and `shadow_to_opacity`, which share one `else if`.
@@ -249,22 +258,29 @@ function rendersInAlphaPass(properties: Record<string, string>, inputs: PassInpu
   // The two cutout modes discard instead of blending, so they stay opaque.
   const usesAlphaClip =
     transparency === Transparency.ALPHA_SCISSOR || transparency === Transparency.ALPHA_HASH;
+  // `ALPHA_ANTIALIASING_EDGE` is written only under a cutout mode (`material.cpp:1843`),
+  // where it re-admits the cutout to the alpha pass (alpha-to-coverage).
+  const usesAlphaAntialiasing =
+    usesAlphaClip && intOr(properties['alpha_antialiasing_mode'], 0, CONTEXT) !== 0;
+  // `depth_prepass_alpha` is emitted for ALPHA_DEPTH_PRE_PASS alone (`material.cpp:898`).
+  const usesDepthPrepassAlpha = transparency === Transparency.ALPHA_DEPTH_PRE_PASS;
 
   // Refraction samples `screen_texture`, and refraction or proximity fade samples
   // `depth_texture`.
   const hasReadScreenAlpha = refractionEnabled || proximityFade;
   const hasBaseAlpha =
-    (usesAlpha && (!usesAlphaClip || alphaAntialiasing)) || hasReadScreenAlpha;
+    (usesAlpha && (!usesAlphaClip || usesAlphaAntialiasing)) || hasReadScreenAlpha;
   // `uses_blend_alpha` is true for ADD, SUB, MUL and PREMULT_ALPHA, which puts an
   // additive material in the alpha pass whatever its `transparency` says.
   const hasAlpha = hasBaseAlpha || blendMode !== BlendMode.MIX;
+  const noDepthDraw = depthDrawMode === DepthDrawMode.DISABLED;
+  const noDepthTest = !depthTest;
 
-  return (
-    hasAlpha ||
-    hasReadScreenAlpha ||
-    depthDrawMode === DepthDrawMode.DISABLED ||
-    !depthTest
-  );
+  return {
+    alphaPass: hasAlpha || hasReadScreenAlpha || noDepthDraw || noDepthTest,
+    depthInAlphaPass:
+      (usesDepthPrepassAlpha || usesAlphaAntialiasing) && !(noDepthDraw || noDepthTest),
+  };
 }
 
 /**
@@ -274,15 +290,15 @@ function rendersInAlphaPass(properties: Record<string, string>, inputs: PassInpu
  */
 function godotDepthWrite(
   alphaPass: boolean,
-  transparency: Transparency,
+  depthInAlphaPass: boolean,
   depthDrawMode: DepthDrawMode,
   depthTest: boolean
 ): boolean {
   if (!depthTest || depthDrawMode === DepthDrawMode.DISABLED) return false;
   if (!alphaPass) return true;
-  // Its colour pipeline writes no depth, but `uses_depth_in_alpha_pass()` puts it in
-  // the depth prepass, which a single-pass renderer spells as writing depth.
-  if (transparency === Transparency.ALPHA_DEPTH_PRE_PASS) return true;
+  // Its colour pipeline writes no depth, but the depth prepass does, which a single-pass
+  // renderer spells as writing depth.
+  if (depthInAlphaPass) return true;
   return depthDrawMode !== DepthDrawMode.OPAQUE_ONLY;
 }
 

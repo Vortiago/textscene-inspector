@@ -1,10 +1,11 @@
 /**
  * Wire a host `ResourceProvider` into the resource pipeline: a `FileEventBus` over the
  * provider, a `ResourceLoader` over the bus, then `loader.setProvider(provider)`. The
- * order is an invariant, owned here so every host builds the same pipeline.
+ * order is an invariant, owned here so every host builds the same pipeline. A host
+ * that can start a job worker passes `createWorker` (ADR-0042).
  */
 import { FileEventBus } from './FileEventBus';
-import { ResourceLoader } from './ResourceLoader';
+import { ResourceLoader, type ResourceLoaderOptions } from './ResourceLoader';
 import type { ResourceProvider } from './ResourceProvider';
 
 export interface ResourcePipeline<P extends ResourceProvider = ResourceProvider> {
@@ -14,10 +15,11 @@ export interface ResourcePipeline<P extends ResourceProvider = ResourceProvider>
 }
 
 export function createResourcePipeline<P extends ResourceProvider>(
-  provider: P
+  provider: P,
+  options: ResourceLoaderOptions = {}
 ): ResourcePipeline<P> {
   const bus = new FileEventBus(provider);
-  const loader = new ResourceLoader(bus);
+  const loader = new ResourceLoader(bus, options);
   loader.setProvider(provider);
   return { provider, loader };
 }

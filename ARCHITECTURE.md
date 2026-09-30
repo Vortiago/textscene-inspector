@@ -188,6 +188,55 @@ that writes `::`.
 **Clones.** A three.js object has one parent, so a cached Object3D is cloned for each consumer.
 Textures and materials are shared.
 
+### Materials
+
+A material reaches a surface through one path, whatever file it is in.
+
+- `resolveMaterialSource` names where the material is: one the scene holds, or a `.tres`
+  address, either a whole file or `file.tres::SubId`.
+- `useMaterial` loads either into the material body and the resource tables its references
+  resolve in, which are its own file's. A `.tres` comes through the cached `.tres` parse on
+  the resource bus. A ShaderMaterial or an unsupported type is declined as Godot's default
+  surface (ADR-0041).
+- `SurfaceMaterialSlot` renders the result for MeshInstance3D surfaces, CSG and GridMap
+  tiles. A GLB surface override takes the same result through `materialFromBag`, since a
+  GLB mesh has no R3F element. Each map resolves in the material's own tables and draws
+  through the tiled upload.
+- **Stand-in maps.** While a map loads, builds or uploads, its slot binds a neutral 1x1
+  texture (`pendingMapStandIn.ts`). three bakes each slot's presence into the program, so
+  the map then swaps in on the program already linked, with no relink.
+- A GLB **Import sidecar** remap tags the surface with its `.tres` address, and the scene
+  root draws that material through the same path.
+
+### Procedural textures
+
+A NoiseTexture2D builds as a job, off the main thread (ADR-0042).
+
+- **Jobs.** A job is a pure function in `workers/jobs.ts`, with its input and its output
+  typed. The pixels return as a transferred buffer. `WorkerJobRunner` runs each job in one
+  lazy worker, in order. When a host gives no worker, or the worker fails to start, the
+  runner logs one warning and runs the same job on the main thread, with the same bytes.
+- **The runner.** The host passes `createWorker` to `createResourcePipeline`, and the
+  `ResourceLoader` owns the runner. A hook reads it through `useResourceLoader()`.
+- **Pending and declined.** `resolveProceduralTexture` answers `ready`, `pending` or null.
+  Null means the previewer draws nothing, as Godot draws nothing past the size limits.
+  `pending` carries a `start(runner)`.
+- **Content keys.** A build is keyed on its input, so an edit that leaves the texture
+  unchanged reuses it. Two slots with one key share one build. The last holder that lets
+  go aborts the build in a microtask, so a StrictMode remount does not cancel it.
+- **Keep-old.** `useProceduralTextures` keeps a slot's previous texture until the new one
+  lands, as Godot keeps the old image while `noise_thread` runs.
+- **Tiled upload.** A texture larger than one 2 MiB band reaches the GPU in bands, a few
+  each frame (`r3f/tiledUpload/`). The upload wraps the exact texture a consumer draws,
+  because three uploads each clone with its own sampler settings separately. Every
+  component that clones a texture to draw it goes through `useUploadedClone`.
+  - Each band is one `texSubImage2D` over its own rows, and it reads no GPU state back
+    (`webglUploadRenderer.ts`). A read waits for every command already queued.
+  - At most 8 MiB of bands are on their way to the GPU at once. Each frame's bands wait
+    behind a fence, and leave that window once the GPU has passed it (`gpuPacer.ts`).
+- **Status.** `textureWork.ts` counts the builds and uploads in flight. The shell shows
+  "Building textures…" while the count is above zero, and a capture waits for it to clear.
+
 ## The preview shell
 
 `TscnPreviewShell` is the UI both hosts use. It is the Split Dock (ADR-0007): the viewport,
@@ -219,6 +268,11 @@ the Outline and the Problems panel. The preview is a webview running the shared 
 refreshes on save, and a file watcher sends dependency changes to `provideFile` (ADR-0021).
 The canvas is not remounted, so the camera stays where it is.
 
+**Job workers.** Each host starts its job worker from one self-contained script, built
+from `@textscene/core/worker`. The web app imports it with Vite's `?worker&inline`. The VS
+Code webview gets it as a string from an esbuild plugin (`apps/textscene-vscode/src/bundler/textureWorkerPlugin.mjs`)
+and starts it from a `blob:` URL, the only worker source its CSP allows (`worker-src blob:`).
+
 **Web.** The web app adds the Source pane (ADR-0020). An edit reaches the shell only when the
 lenient parser accepts it, so a half-typed file keeps the last good render. The pane lints the
 buffer separately, so a file that does not render still shows its problems.
@@ -235,6 +289,8 @@ These rules keep the design in shape. A test or a script fails when one breaks.
 | Every registered type has a Godot base chain | `baseChainCompleteness.test.ts` |
 | A resource slice has the slice shape | `resourceSliceConformance`, `resourceSliceIsolation` |
 | The raw properties agree between parsers | `parser/rawPropertyParity.test.ts` |
+| The worker's import closure holds no React, three.js or `.tsx` | `workers/workerClosure.test.ts` |
+| Every drawn texture clone goes through the tiled upload | `r3f/tiledUpload/drawnCloneGuard.test.ts` |
 | The VS Code host bundles hold no React or three.js | `scripts/check-bundle-size/hostBundles.mjs` |
 | The webview's initial bundle stays under its budget | `scripts/check-bundle-size/webviewBudget.mjs` |
 

@@ -1,52 +1,68 @@
 /**
  * Base Control strict validators. Registered once under `'Control'`, they reach every
  * Control subclass through the ValidatorRegistry base-walk (godot/nodeBaseTypes.ts).
- * They reject only malformed literals, so a real Godot scene of any UI type passes.
+ * They reject malformed literals, and cite each value Godot reads but refuses or alters.
  */
 
 import '../../../canvasitem/shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
-import { hintedBitField, v, shape, propertyError } from '../../../../linter/validators/index.js';
+import { accepts, hintedBitField, v, propertyError } from '../../../../linter/validators/index.js';
 import { THEME_OVERRIDE_VALIDATORS } from '../../../../linter/validators/themeOverrides.js';
 import {
-  ARRAY_LITERAL_RE,
+  arrayLiteralBody,
   CURSOR_MAX,
   CURSOR_SHAPES,
   dropTrailingComma,
-  NODE_PATH_LITERAL_RE,
+  nodePathLiteral,
   splitTopLevel,
+  TYPED_WRAPPER_RE,
 } from '../../../../godot/index.js';
 
 /**
  * The four `accessibility_*_nodes` properties (control.cpp:4313-4316) have `TypedArray<NodePath>`
  * getters, so they serialise as `Array[NodePath]([…])` (`core/variant/variant_parser.cpp:2341-2344`).
- * A bare `[NodePath(…), …]` loads too: `TypedArray(const Array&)` calls `assign()`
- * (`core/variant/typed_array.h:43-46`).
+ * The setters (control.cpp:2203-2247) take `TypedArray<NodePath>`, whose constructor calls `assign()`
+ * (`core/variant/typed_array.h:43-49`). It converts an untyped element, or an `Array[String]`, through
+ * `can_convert_strict` (array.cpp:252-274), and NODE_PATH converts from STRING alone (variant.cpp:746-752).
+ * Anything else fails the whole `assign()`, so the setter stores an empty array: an enforced error.
  */
+const NODE_PATH_ARRAY_REFUSALS = { element: 'array.cpp:260-261', wrapper: 'array.cpp:275-277' };
+
+/** The wrapper element types `assign()` converts into NodePath. */
+const NODE_PATH_SOURCES = new Set(['NodePath', 'String']);
+
 function nodePathArray(name: string): PropertyValidator {
-  // The setters (control.cpp:2203-2247) have no ERR_FAIL, so this checks the shape only: an empty
-  // array is legal, and each element is a `NodePath("…")` literal, the empty path included.
-  const code = `INVALID_${name.toUpperCase()}_FORMAT`;
-  const reject = (key: string, line: number, value: string) =>
-    propertyError(
-      key,
-      line,
-      `Property '${name}' must be Array[NodePath]([NodePath("path"), …]) or [NodePath("path"), …], got: ${value}`,
-      code
-    );
-  return shape((key, value, line) => {
-    const trimmed = value.trim();
-    const typed = /^Array\s*\[\s*NodePath\s*\]\s*\(\s*\[([\s\S]*)\]\s*\)$/.exec(trimmed);
-    const match = typed ?? ARRAY_LITERAL_RE.exec(trimmed);
-    if (!match) return reject(key, line, value);
-    const body = match[1]!.trim();
-    if (body === '') return null;
-    for (const element of dropTrailingComma(splitTopLevel(body))) {
-      if (!NODE_PATH_LITERAL_RE.test(element)) return reject(key, line, value);
+  const upper = name.toUpperCase();
+  const refuse = (key: string, line: number, message: string, cite: string) =>
+    propertyError(key, line, `Property '${name}' ${message} (${cite})`, `INVALID_${upper}_VALUE`);
+  const validator: PropertyValidator = (key, value, line) => {
+    const body = arrayLiteralBody(value);
+    if (body === null) {
+      return propertyError(
+        key,
+        line,
+        `Property '${name}' must be Array[NodePath]([NodePath("path"), …]) or [NodePath("path"), …], got: ${value}`,
+        `INVALID_${upper}_FORMAT`
+      );
+    }
+    const wrapped = TYPED_WRAPPER_RE.exec(value.trim())?.[1]!.trim();
+    if (wrapped !== undefined && !NODE_PATH_SOURCES.has(wrapped)) {
+      return refuse(key, line, `holds NodePaths, and Array[${wrapped}] does not convert to them`, NODE_PATH_ARRAY_REFUSALS.wrapper);
+    }
+    if (body.trim() === '') return null;
+    for (const element of dropTrailingComma(splitTopLevel(body.trim()))) {
+      if (nodePathLiteral(element) === null) {
+        return refuse(key, line, `holds NodePaths, and ${element.trim()} does not convert to one`, NODE_PATH_ARRAY_REFUSALS.element);
+      }
     }
     return null;
-  }, 'Array[NodePath]([NodePath("path"), …]) or [NodePath("path"), …]');
+  };
+  validator.grounding = {
+    kind: 'enforced',
+    cite: `${NODE_PATH_ARRAY_REFUSALS.element}, ${NODE_PATH_ARRAY_REFUSALS.wrapper}`,
+  };
+  return accepts(validator, 'Array[NodePath]([NodePath("path"), …]) or [NodePath("path") or "path", …]');
 }
 
 /**

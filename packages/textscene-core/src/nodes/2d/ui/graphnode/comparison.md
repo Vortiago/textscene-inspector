@@ -24,7 +24,7 @@ Strict parsing format-checks these `GraphNode` properties, plus 6 inherited from
 | `ignore_invalid_connection_type` | true or false |  |
 | `slot/*` | slot |  |
 | `slots_focus_mode` | enum 1-3 (Click/All/Accessibility) | error |
-| `title` | quoted string, or the &"…" StringName jacket |  |
+| `title` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

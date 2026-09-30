@@ -11,6 +11,7 @@ import {
   GODOT_DEFAULT_METALLIC,
   GODOT_DEFAULT_ROUGHNESS,
 } from '../../../r3f/materials/godotDefaultMaterial';
+import { BillboardMode } from '../../../godot/billboard';
 import { resolveEmission } from './emission';
 import type {
   MaterialBlendState,
@@ -105,6 +106,68 @@ function materialBlendProps(scalars: StandardMaterial3DScalars): MaterialBlendSt
   return props;
 }
 
+/** Where a derived material records the surface state the draw hooks read per draw group. */
+const BILLBOARD_KEY = 'godotBillboard';
+const CASTS_SHADOW_KEY = 'godotCastsShadow';
+
+/**
+ * `billboard_mode` and shadow-pass membership on `userData`, not as material props:
+ * Godot decides both per surface, in the vertex shader and in the render list, and here
+ * the draw hooks apply both per draw group (`r3f/surfaceDrawHooks.ts`). A fresh object
+ * per bag, since the `.tres` loader writes its own keys into it.
+ */
+function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unknown> {
+  return {
+    [BILLBOARD_KEY]: surfaceBillboard(scalars),
+    [CASTS_SHADOW_KEY]: scalars.castsShadow,
+  };
+}
+
+/** A surface's billboard: `billboard_mode` and `billboard_keep_scale`. */
+export interface SurfaceBillboard {
+  readonly mode: number;
+  readonly keepScale: boolean;
+}
+
+/** The billboard of Godot's default surface and of any material this derivation did not build. */
+const NO_BILLBOARD: SurfaceBillboard = Object.freeze({
+  mode: BillboardMode.BILLBOARD_DISABLED,
+  keepScale: false,
+});
+
+/**
+ * The modes `_update_shader` writes a billboard for (`material.cpp:1260-1335`). Any other
+ * value draws as DISABLED, so it must not unbatch a GridMap item either.
+ */
+const BILLBOARDING_MODES: ReadonlySet<number> = new Set([
+  BillboardMode.BILLBOARD_ENABLED,
+  BillboardMode.BILLBOARD_FIXED_Y,
+  BillboardMode.BILLBOARD_PARTICLES,
+]);
+
+/**
+ * The billboard `scalars` describe, null being Godot's default surface. Built once per
+ * bag, so the draw hooks read it every draw group without allocating.
+ */
+export function surfaceBillboard(scalars: StandardMaterial3DScalars | null): SurfaceBillboard {
+  if (!scalars || !BILLBOARDING_MODES.has(scalars.billboardMode)) return NO_BILLBOARD;
+  return { mode: scalars.billboardMode, keepScale: scalars.billboardKeepScale };
+}
+
+/** The billboard a material was derived with. */
+export function billboardOf(material: THREE.Material): SurfaceBillboard {
+  const billboard = material.userData[BILLBOARD_KEY] as SurfaceBillboard | undefined;
+  return billboard ?? NO_BILLBOARD;
+}
+
+/**
+ * Whether a material's surface joins Godot's shadow pass. True for Godot's default
+ * surface, which is opaque, and for any material this derivation did not build.
+ */
+export function castsShadowOf(material: THREE.Material): boolean {
+  return material.userData[CASTS_SHADOW_KEY] !== false;
+}
+
 /**
  * Derive the material this decoded StandardMaterial3D describes.
  *
@@ -142,6 +205,7 @@ export function standardMaterialBag(
         depthWrite: scalars.depthWrite,
         depthTest: scalars.depthTest,
         side: scalars.side,
+        userData: surfaceUserData(scalars),
         ...blend,
       },
     };
@@ -178,6 +242,7 @@ export function standardMaterialBag(
     // and its depth is in world units. Inert without a heightmap (scale 0, no map).
     displacementMap: slot('heightmap_texture'),
     displacementScale: scalars.heightmapScale,
+    userData: surfaceUserData(scalars),
     ...blend,
   };
 

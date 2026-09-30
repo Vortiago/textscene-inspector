@@ -30,28 +30,24 @@ import { findExtResource, parseResourceReference } from '../../../resources/SubR
 import { useResource } from '../../../resources/useResource';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { MeshGeometry } from './meshGeometry';
-import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars';
 import { warn } from '../../../logger';
 import { decodeSceneArrayMesh } from '../../../resources/meshes/arraymesh/decode';
 import { buildArrayMeshGeometry } from '../../../resources/meshes/arraymesh/build';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
-import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlot';
+import { readyMaterial, useMaterial } from '../../../r3f/materials/useMaterial';
 import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
 import {
   SurfaceMaterialSlot,
+  useMaterialScalars,
   useMaterialTextures,
 } from '../../../r3f/materials/SurfaceMaterialSlot';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
-import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
-import { shadowCastingEffects } from '../../../r3f/shadowCasting';
+import { shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
 
 /** Literal-only, so each key is constant and none of these ever remounts. */
 const PLACEHOLDER_MATERIAL = materialProgramInputs({ props: { color: 'magenta' } });
-const SHADOWS_ONLY_MATERIAL = materialProgramInputs({
-  props: { attach: 'material', colorWrite: false, depthWrite: false },
-});
 const UNRESOLVED_MESH_MATERIAL = wireGizmoProgram(0xff00ff);
 
 export function MeshInstance3D({ node, children }: NodeComponentProps) {
@@ -91,10 +87,9 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     () => resolvePrimitiveMaterialSource(properties, internalResources, externalResources),
     [properties, internalResources, externalResources]
   );
-  // Surface 0's material only when it lives in the scene, since this component resolves
-  // its scalars and textures itself. A `.tres` material reads as absent here:
-  // `<ExternalMaterialSlot>` builds it whole through the material pipeline.
-  const materialSubResource = primarySource?.kind === 'scene' ? primarySource.resource : undefined;
+  // Surface 0's material, whichever file it lives in: this component resolves its scalars
+  // and textures itself, for the placeholder, billboard and shadow decisions below.
+  const primaryMaterial = readyMaterial(useMaterial(primarySource));
 
   // The same two overrides for an ArrayMesh. Its surfaces are draw groups indexed by the
   // mesh's own surface numbering, so they cannot use the per-slot collapse above, but
@@ -111,21 +106,14 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     [properties.materialOverlay, internalResources, externalResources]
   );
 
-  const materialScalars = useMemo(
-    () =>
-      materialSubResource
-        ? parseStandardMaterial3DScalars(
-            materialSubResource.data as Record<string, string>
-          )
-        : null,
-    [materialSubResource]
-  );
+  const materialScalars = useMaterialScalars(primaryMaterial);
 
   // The per-surface texture chain, called as a hook rather than mounted as
   // `<SurfaceMaterialSlot>`: an unresolvable texture diverts the whole mesh below, and
   // mounting the component as well would bind and dispose every slot twice.
   const { maps, firstMissingPath, viewportCyclic } = useMaterialTextures(
     materialScalars,
+    primaryMaterial,
     meshResource
   );
 
@@ -133,22 +121,12 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   // missing-file placeholder rather than sampling the unwritten target.
   const materialUnresolved = firstMissingPath !== null || viewportCyclic;
 
-  // A material's `billboard_mode` turns the whole mesh to face the camera, as Godot's
-  // shader does. The hook no-ops for DISABLED or absent. The ref lands on whichever
-  // `<mesh>` MeshShell renders.
+  // The ref lands on whichever `<mesh>` MeshShell renders, for the overlay to share.
   const meshRef = useRef<THREE.Mesh | null>(null);
-  // Known gap: a billboarded mesh's children inherit its rotation here. In Godot the
-  // billboard is a surface-only shader effect, so its children do not.
-  useBillboard(meshRef, materialScalars?.billboardMode);
 
-  // Mode 2 (DOUBLE_SIDED) reaches three's depth material per mesh. Mode 3 (SHADOWS_ONLY)
-  // hides the mesh from the colour buffer while it keeps casting: MeshShell says why
-  // that is not `visible = false`.
-  const shadowFlags = shadowCastingEffects(properties.castShadow);
-  // Godot excludes an additive, subtractive or multiply surface from the shadow pass.
-  const blendTransparent =
-    !!materialScalars && materialScalars.blending !== THREE.NormalBlending;
-  const castShadow = shadowFlags.castShadow && !blendTransparent;
+  // `cast_shadow` and each surface's billboard and shadow-pass membership reach three per
+  // draw group, through hooks that read that group's material.
+  const shadow = shadowCastingEffects(properties.castShadow);
   const visible = properties.visible !== false;
 
   const shellProps = {
@@ -158,13 +136,11 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     rotation,
     scale,
     visible,
-    castShadow,
-    shadowsOnly: shadowFlags.shadowsOnly,
-    onBeforeShadow: shadowFlags.onBeforeShadow,
+    shadow,
     godotLayers: properties.layers,
     subtree: children,
     overlay: overlaySource ? (
-      <MaterialOverlayMesh meshRef={meshRef} source={overlaySource} />
+      <MaterialOverlayMesh meshRef={meshRef} source={overlaySource} shadow={shadow} />
     ) : null,
   };
 
@@ -226,14 +202,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   return (
     <MeshShell {...shellProps}>
       {geometryElement}
-      {primarySource?.kind === 'path' ? (
-        <ExternalMaterialSlot path={primarySource.path} />
-      ) : (
-        <StandardMaterialSlot
-          scalars={materialScalars}
-          {...maps}
-        />
-      )}
+      <StandardMaterialSlot scalars={materialScalars} {...maps} />
     </MeshShell>
   );
 }
@@ -257,9 +226,15 @@ const NO_RAYCAST: THREE.Object3D['raycast'] = () => {};
 function MaterialOverlayMesh({
   meshRef,
   source,
+  shadow,
 }: {
   meshRef: RefObject<THREE.Mesh | null>;
   source: MaterialSource;
+  /**
+   * The base mesh's hooks. The overlay casts nothing of its own, so only the colour pair
+   * mounts: its own material decides its billboard, and SHADOWS_ONLY skips its draw too.
+   */
+  shadow: ShadowCastingEffects;
 }) {
   // Read back off the base mesh rather than built again, so all four geometry branches
   // share one component and the two meshes share one geometry.
@@ -284,6 +259,8 @@ function MaterialOverlayMesh({
       // measures; a coincident second hit would report the same node twice.
       raycast={NO_RAYCAST}
       receiveShadow
+      onBeforeRender={shadow.onBeforeRender}
+      onAfterRender={shadow.onAfterRender}
     >
       <SurfaceMaterialSlot source={source} />
     </mesh>
@@ -292,17 +269,14 @@ function MaterialOverlayMesh({
 
 interface MeshShellProps {
   name: string;
-  /** Ref to the underlying THREE.Mesh, so `useBillboard` can turn it per frame. */
+  /** Ref to the underlying THREE.Mesh, whose geometry the overlay draws again. */
   meshRef: RefObject<THREE.Mesh | null>;
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
   visible: boolean;
-  castShadow: boolean;
-  /** `cast_shadow = SHADOWS_ONLY` (3): cast, but draw nothing. */
-  shadowsOnly: boolean;
-  /** `cast_shadow = DOUBLE_SIDED` (2) reaches the depth material through this. */
-  onBeforeShadow: THREE.Object3D['onBeforeShadow'];
+  /** `cast_shadow`, with the per-surface draw hooks: billboard, shadow pass, SHADOWS_ONLY. */
+  shadow: ShadowCastingEffects;
   /** `layers`: the VisualInstance3D render mask a Decal's `cull_mask` filters on. */
   godotLayers: number | undefined;
   /** The dispatched scene-tree subtree parented under this MeshInstance3D. */
@@ -325,9 +299,7 @@ function MeshShell({
   rotation,
   scale,
   visible,
-  castShadow,
-  shadowsOnly,
-  onBeforeShadow,
+  shadow,
   godotLayers,
   subtree,
   overlay,
@@ -341,28 +313,23 @@ function MeshShell({
       rotation={rotation}
       scale={scale}
       visible={visible}
-      castShadow={castShadow}
-      // three fires this per mesh per light, after `getDepthMaterial` has set the side
-      // (`WebGLShadowMap.js:477,535,549`): the only per-mesh reach into a depth material
-      // three shares across objects.
-      onBeforeShadow={onBeforeShadow}
+      castShadow={shadow.castShadow}
+      // three fires these per draw group, the shadow pair after `getDepthMaterial` has
+      // set the side (`WebGLShadowMap.js:488,546,560`): the only per-surface reach into
+      // a draw of an object whose materials and depth material three shares.
+      onBeforeRender={shadow.onBeforeRender}
+      onAfterRender={shadow.onAfterRender}
+      onBeforeShadow={shadow.onBeforeShadow}
+      onAfterShadow={shadow.onAfterShadow}
       receiveShadow
       // Godot's `layers`, for `Decal.cull_mask`. Set on every branch, placeholders
       // included, so a decal's receiver test never depends on load order.
       userData={visualLayersUserData(godotLayers)}
     >
       {children}
-      {/* SHADOWS_ONLY casts and keeps its descendants. `visible = false` would skip
-          the shadow pass and the subtree in `WebGLShadowMap.renderObject`, and
-          `material.visible` gates the depth material too. `getDepthMaterial` never
-          copies `colorWrite`, so this material, attached last, hides only colour. */}
-      {shadowsOnly && (
-        <meshBasicMaterial key={SHADOWS_ONLY_MATERIAL.key} {...SHADOWS_ONLY_MATERIAL.props} />
-      )}
-      {/* Inside this mesh, so the overlay inherits the billboard transform. Skipped
-          under SHADOWS_ONLY: the base's `colorWrite: false` material would not
-          suppress a second mesh's colour. */}
-      {!shadowsOnly && overlay}
+      {/* Not `visible = false` for SHADOWS_ONLY: `WebGLShadowMap.renderObject` would skip
+          the shadow pass and the subtree. The hooks skip each colour draw instead. */}
+      {overlay}
       {subtree}
     </mesh>
   );
@@ -392,7 +359,7 @@ function ArrayMeshSurfaces({
 }: {
   mesh: ArrayMeshResource;
   /** A scene mesh's own `[sub_resource]` materials, already resolved: no path names them. */
-  sceneMaterials?: readonly (TscnInternalResource | undefined)[];
+  sceneMaterials?: readonly (MaterialSource | undefined)[];
   overrides: MeshOverrides;
 }) {
   const groupCount = Math.max(mesh.materialPaths.length, 1);
@@ -402,12 +369,9 @@ function ArrayMeshSurfaces({
       <primitive object={mesh.geometry} attach="geometry" />
       {Array.from({ length: groupCount }, (_unused, i) => {
         const attach = multiSurface ? `material-${i}` : 'material';
-        const scene = sceneMaterials?.[i];
-        const own: MaterialSource | undefined = scene
-          ? { kind: 'scene', resource: scene }
-          : mesh.materialPaths[i]
-            ? { kind: 'path', path: mesh.materialPaths[i]! }
-            : undefined;
+        const materialPath = mesh.materialPaths[i];
+        const own: MaterialSource | undefined =
+          sceneMaterials?.[i] ?? (materialPath ? { kind: 'file', path: materialPath } : undefined);
         const source = effectiveMaterialSource(overrides, mesh.surfaceIndices[i] ?? i, own);
         return <SurfaceMaterialSlot key={`surf-${i}`} source={source} attach={attach} />;
       })}
@@ -483,11 +447,13 @@ function useSceneArrayMeshGeometry(
         },
         // Resolved here, not in the decoder: only the renderer holds the scene's
         // resources, and no path reaches a scene's materials.
-        sceneMaterials: mesh.surfaces.map((s) =>
-          s.materialSubResourceId === undefined
-            ? undefined
-            : findSubResource(internalResources, s.materialSubResourceId)
-        ),
+        sceneMaterials: mesh.surfaces.map((s): MaterialSource | undefined => {
+          if (s.materialSubResourceId === undefined) return undefined;
+          const material = findSubResource(internalResources, s.materialSubResourceId);
+          return material
+            ? { kind: 'inline', material: { resource: material, internalResources, externalResources } }
+            : undefined;
+        }),
       };
     } catch (error) {
       warn(
@@ -507,7 +473,7 @@ function useSceneArrayMeshGeometry(
 interface SceneArrayMesh {
   resource: ArrayMeshResource;
   /** Per surface, the scene's own material sub-resource, when it names one. */
-  sceneMaterials: readonly (TscnInternalResource | undefined)[];
+  sceneMaterials: readonly (MaterialSource | undefined)[];
 }
 
 function resolveMeshSubResource(

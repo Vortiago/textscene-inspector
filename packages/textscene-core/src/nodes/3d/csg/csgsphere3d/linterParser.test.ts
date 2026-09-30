@@ -4,15 +4,8 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../../linter/Linter';
+import { errorsOf, warningsOf } from '../../../../linter/testing/tierLists';
 import './linterParser';
-
-function errorsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.severity === 'error');
-}
-
-function warningsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.severity === 'warning');
-}
 
 function scene(body: string): string {
   return `[gd_scene format=3]\n\n[node name="Sphere" type="CSGSphere3D"]\n${body}\n`;

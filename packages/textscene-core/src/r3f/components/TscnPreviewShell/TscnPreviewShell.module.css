@@ -77,6 +77,9 @@
   --tsi-font-sm:       0.75rem;      /* tree button, section title */
   --tsi-font-md:       0.8125rem;    /* default body */
   --tsi-font-lg:       1rem;         /* node-details title */
+
+  /* The top bar's height, which the web app's Source overlay starts below. */
+  --tsi-top-bar-height: 2.75rem;
 }
 
 .shell {
@@ -98,7 +101,7 @@
   gap: var(--tsi-space-3);
   /* A definite height, so a stretched nested toolbar cannot drive a circular
      auto-height. */
-  height: 2.75rem;
+  height: var(--tsi-top-bar-height);
   padding: 0 var(--tsi-space-3);
   border-bottom: 1px solid var(--tsi-border);
   background: var(--tsi-bg-panel);
@@ -140,11 +143,13 @@
   overflow: hidden;
 }
 
-/* `flex-basis: 0`, so the inline flex-grow values set the proportion. */
+/* `flex-basis: 0`, so the tree share the panes set inline gives the proportion. A custom
+   property, not an inline `flex-grow`, so the narrow layout can give one pane all of it. */
 .masterPane,
 .detailPane {
   display: flex;
   flex-direction: column;
+  flex-grow: var(--tsi-pane-grow, 1);
   flex-basis: 0;
   min-height: 0;
   overflow: hidden;
@@ -281,6 +286,11 @@
 /* The detail pane's tab strip (ADR-0007). */
 .paneTabs {
   display: flex;
+}
+
+/* The narrow switcher is a tab strip too. Its `display` stays with `.narrowOnly`. */
+.paneTabs,
+.narrowSwitcher {
   align-items: stretch;
   flex-shrink: 0;
   background: var(--tsi-bg-elevated);
@@ -510,12 +520,20 @@
   overflow-wrap: break-word;
 }
 
+/* The narrow layout's own parts. They render in every layout, so a resize never remounts
+   the dock, and only the narrow block below shows them. `.wideOnly` is the mirror: the
+   narrow block hides it. */
+.narrowOnly {
+  display: none;
+}
+
 /*
- * At ≤768px the viewport and dock stack. The dock's basis is a definite
- * percentage: `auto` resolves to 8px, since the dock's panes are
- * `flex-basis: 0` and the viewport's flex-grow takes the column.
+ * A narrow, tall panel stacks the viewport over a bottom sheet (ADR-0042). The sheet's
+ * basis is a definite percentage: `auto` resolves to 8px, since the dock's panes are
+ * `flex-basis: 0` and the viewport's flex-grow takes the column. The query text is
+ * NARROW_LAYOUT_QUERY in narrowLayout.ts.
  */
-@media (max-width: 768px) {
+@media (max-width: 768px) and (min-height: 501px) {
   .columns {
     flex-direction: column;
   }
@@ -526,9 +544,150 @@
   }
 
   .dock {
-    flex-basis: 45%;
+    flex-basis: var(--tsi-sheet-basis, 45%);
     width: 100%;
     border-left: none;
     border-top: 1px solid var(--tsi-border);
+  }
+
+  /* One half of the dock at a time: the switcher picks it, so the tree handle goes. */
+  .masterDetailHandle,
+  .wideOnly,
+  .dock[data-narrow-pane='tree'] .detailPane,
+  .dock[data-narrow-pane='details'] .masterPane {
+    display: none;
+  }
+
+  .masterPane,
+  .detailPane {
+    flex-grow: 1;
+  }
+
+  .masterPane {
+    border-bottom: none;
+  }
+
+  .sheetHandle {
+    display: block;
+    position: relative;
+    flex: 0 0 14px;
+    cursor: row-resize;
+    touch-action: none;
+    background: var(--tsi-bg-elevated);
+  }
+
+  .sheetHandle::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--tsi-border-strong);
+    transform: translate(-50%, -50%);
+  }
+
+  .sheetHandle:hover::after {
+    background: var(--tsi-accent);
+  }
+
+  .narrowSwitcher {
+    display: flex;
+  }
+
+  .narrowTabs {
+    display: flex;
+    flex: 1;
+  }
+
+  .narrowTabs .paneTab {
+    flex: 1;
+  }
+
+  .narrowSwitcher .collapseButton {
+    padding: 0 var(--tsi-space-3);
+  }
+
+  /* The collapsed sheet is a bar under the viewport, with horizontal text. */
+  .collapsedDock {
+    flex: 0 0 var(--tsi-top-bar-height);
+    flex-direction: row;
+    justify-content: center;
+    padding: 0 var(--tsi-space-3);
+  }
+
+  .collapsedDock[data-side='right'] {
+    border-left: none;
+    border-top: 1px solid var(--tsi-border);
+  }
+
+  .collapsedTitle {
+    writing-mode: horizontal-tb;
+  }
+
+  .collapsedDock .narrowOnly {
+    display: inline;
+  }
+}
+
+/*
+ * The compact chrome, for a narrow panel and for a phone in landscape. The host toolbar
+ * scrolls sideways, since a clipped toolbar hides its buttons. The node count stays in the
+ * tree header. The query text is COMPACT_LAYOUT_QUERY in narrowLayout.ts.
+ */
+@media (max-width: 768px), (max-height: 500px) and (pointer: coarse) {
+  .topBar {
+    gap: var(--tsi-space-2);
+    padding: 0 var(--tsi-space-2);
+  }
+
+  .brand,
+  .statChips,
+  .topSpacer {
+    display: none;
+  }
+
+  .topToolbar {
+    flex: 1 1 auto;
+    height: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .topToolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Right-aligned without the spacer, also when the host passes no toolbar. */
+  .helpLink {
+    margin-left: auto;
+  }
+}
+
+/* A phone in landscape keeps the side dock, capped so the viewport keeps most of the width. */
+@media (max-height: 500px) and (pointer: coarse) {
+  .dock {
+    max-width: 45%;
+  }
+}
+
+/* Touch targets. A mouse in either host is a fine pointer and keeps the dense sizing. */
+@media (pointer: coarse) {
+  .paneTab {
+    min-height: 40px;
+  }
+
+  .collapseButton {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .masterDetailHandle {
+    flex-basis: 14px;
+  }
+
+  .sheetHandle {
+    flex-basis: 24px;
   }
 }

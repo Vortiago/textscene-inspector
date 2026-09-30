@@ -128,26 +128,6 @@
   box-shadow: 0 0 0 2px var(--tsi-focus-ring);
   border-radius: var(--tsi-radius-sm);
 }
-.displayMenu {
-  position: relative;
-}
-
-.displayPopover {
-  position: absolute;
-  top: calc(100% + var(--tsi-space-1));
-  right: 0;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--tsi-space-1);
-  white-space: nowrap;
-  padding: var(--tsi-space-2);
-  border: 1px solid var(--tsi-border);
-  border-radius: var(--tsi-radius-md);
-  background: var(--tsi-bg-elevated);
-  box-shadow: var(--tsi-shadow-popover);
-}
 
 /* The display toggles' popover. Anchored under the button and to its right
    edge, since the toolbar itself is right-anchored in the viewport. */
@@ -170,4 +150,14 @@
   border-radius: var(--tsi-radius-md);
   background: var(--tsi-bg-elevated);
   box-shadow: var(--tsi-shadow-popover);
+}
+
+/* Touch targets. A mouse in either host is a fine pointer and keeps the dense sizing. */
+@media (pointer: coarse) {
+  .resetButton,
+  .displayButton,
+  .segmentButton,
+  .checkbox {
+    min-height: 36px;
+  }
 }

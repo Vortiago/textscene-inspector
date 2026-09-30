@@ -48,7 +48,9 @@ Godot `.tscn` parser, linter and renderer (react-three-fiber over three.js). pnp
   `pnpm test:vscode:csp`. It drives a real desktop VS Code, opens a Control fixture
   through the extension's own preview command and reads the canvas back over CDP. It
   requires ink with text, exactly 0 ink with every label emptied, and zero CSP violations
-  or network attempts inside the preview frame. Linux/Xvfb. CI runs it there.
+  or network attempts inside the preview frame. A third run opens a NoiseTexture2D and
+  requires that a job worker replied and that the texture drew. Linux/Xvfb. CI runs it
+  there.
 - Changed the web previewer's outliner, inspector, mode switching, or camera/selection
   wiring: `pnpm test:e2e:web`. It drives the real built app in a headless browser
   (`scripts/e2e/webAppGate.mjs`) and asserts:
@@ -57,7 +59,11 @@ Godot `.tscn` parser, linter and renderer (react-three-fiber over three.js). pnp
   - the outliner's node paths and the inspector's displayed property values;
   - a 2D/3D fixture opens in the matching workspace with a correctly sized canvas,
     checked separately from its ink count;
-  - zero console errors, pageerrors or failed requests on load.
+  - zero console errors, pageerrors or failed requests on load;
+  - a capture waits for a procedural texture still building. A control delays the build
+    and shows the capture would differ without the wait;
+  - a 4096x4096 NoiseTexture2D builds and uploads with no main-thread task over 50 ms. A
+    control blocks the worker and must see one (ADR-0042).
 
   It observes entirely from outside the app (`context.addInitScript` patching
   `WebGL(2)RenderingContext.prototype`, the same mechanism `scripts/vscode/driveScene.mjs`
@@ -227,17 +233,26 @@ fail on a mis-shaped slice.
 - That grounding is declared, not inferred. Every validator carries one of three
   markers:
   - `formatOnly`: it rejects only values that never reach the property (unreadable text,
-    or a type `can_convert_strict` refuses), so no per-property citation exists.
+    or a whole value of a type `can_convert_strict` refuses), so no per-property
+    citation exists. A refusal of a value the setter receives is a `grounding`, and
+    that includes an element inside a container.
   - `grounding`: it rejects a real value, and names the `file:line`.
   - `intSlot`: it reads an INT slot, so `_to_int` itself is the authority and the
     citation is always `variant.h:360-377`. `intSlot` also records the slot's `width`,
     since `4294967296` is unstorable in an int32 slot and exact in an int64 one.
 
   The `v` DSL sets one. A hand-rolled validator must say which. `boundGrounding` fails
-  on one that says none, and `intSlot` counts only for a validator that carries no
-  bounds of its own. Every `RangeArm` carries a required `cite`, checked by
-  `rangeAdvisoryGrounding`. Both guards exist because a check that sees only the DSL
-  misses a hand-rolled validator that rejects legal scenes.
+  on one that says none, or that claims both `formatOnly` and `grounding`. `intSlot`
+  counts only for a validator that carries no bounds of its own. Every `RangeArm`
+  carries a required `cite`, checked by `rangeAdvisoryGrounding`. Both guards exist
+  because a check that sees only the DSL misses a hand-rolled validator that rejects
+  legal scenes.
+  A validator that cites no `grounding` is measured, not trusted.
+  `scripts/compare-docs/formatOnlyCorpus.ledger.test.mjs` runs it over the literals Godot
+  stores in its slot's Variant type, and it may not error on one. The literals are a
+  hand-cited corpus (`formatOnlyCorpus.data.mjs`), keyed by the ClassDB capture's type,
+  or by the setter's own type where `SETTER_TYPES` names one. When you find a spelling
+  Godot loads that the corpus lacks, add it there with its `variant_parser.cpp` cite.
 - Advisory linter conditions are warnings, not errors. An error rule on a condition that
   an existing positive fixture carries breaks fixtureLint.
 - Web tests run under happy-dom: no CSS cascade and no layout, so never assert rendered

@@ -40,7 +40,7 @@ export interface SkyEnvironmentInput {
 
 /**
  * The panorama as the sky shader samples it. `PANORAMA_SKY_FRAGMENT_SHADER`
- * wraps u with `fract(atan(...))`, so it states Repeat (ADR-0042). The result is
+ * wraps u with `fract(atan(...))`, so it states Repeat (ADR-0044). The result is
  * a clone only when the arrival diverges, and `releaseBoundTexture` frees it
  * only then. Returns null for a sky with no panorama.
  */

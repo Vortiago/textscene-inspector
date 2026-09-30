@@ -30,7 +30,7 @@ Strict parsing format-checks these `RichTextLabel` properties, plus 53 inherited
 | `hint_underlined` | true or false |  |
 | `horizontal_alignment` | enum 0-3 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT/HORIZONTAL_ALIGNMENT_FILL) | error |
 | `justification_flags` | bit mask of JUSTIFICATION_KASHIDA (1) \| JUSTIFICATION_WORD_BOUND (2) \| JUSTIFICATION_AFTER_LAST_TAB (8) \| JUSTIFICATION_SKIP_LAST_LINE (32) \| JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) \| JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128) |  |
-| `language` | quoted string, or the &"…" StringName jacket |  |
+| `language` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 | `meta_underlined` | true or false |  |
 | `progress_bar_delay` | integer |  |
 | `scroll_active` | true or false |  |
@@ -39,10 +39,10 @@ Strict parsing format-checks these `RichTextLabel` properties, plus 53 inherited
 | `selection_enabled` | true or false |  |
 | `shortcut_keys_enabled` | true or false |  |
 | `structured_text_bidi_override` | enum 0-6 (STRUCTURED_TEXT_DEFAULT/STRUCTURED_TEXT_URI/STRUCTURED_TEXT_FILE/STRUCTURED_TEXT_EMAIL/STRUCTURED_TEXT_LIST/STRUCTURED_TEXT_GDSCRIPT/STRUCTURED_TEXT_CUSTOM) | warning |
-| `structured_text_bidi_override_options` | Array literal ([...]) |  |
+| `structured_text_bidi_override_options` | Array literal ([...] or Array[T]([...])) |  |
 | `tab_size` | integer 0-24 | warning |
 | `tab_stops` | PackedFloat32Array(x, y, …) |  |
-| `text` | quoted string, or the &"…" StringName jacket |  |
+| `text` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 | `text_direction` | enum 0-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) | error below -1, warning below 0, error above 3 |
 | `threaded` | true or false |  |
 | `vertical_alignment` | enum 0-3 (VERTICAL_ALIGNMENT_TOP/VERTICAL_ALIGNMENT_CENTER/VERTICAL_ALIGNMENT_BOTTOM/VERTICAL_ALIGNMENT_FILL) | error |

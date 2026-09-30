@@ -1,7 +1,7 @@
 /** The Source pane's persisted geometry, and the splitter drag that changes it. */
 
-import { useCallback, useEffect, useRef, type MouseEvent as ReactMouseEvent } from 'react';
-import { usePersistedState } from '@textscene/core';
+import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { isCompactLayout, usePersistedState } from '@textscene/core';
 
 const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
 
@@ -11,7 +11,15 @@ export interface SourcePaneState {
   width: number;
 }
 
-const DEFAULT_SOURCE_PANE_STATE: SourcePaneState = { visible: true, width: 320 };
+const DEFAULT_SOURCE_PANE_WIDTH = 320;
+
+/**
+ * Shown on a first visit, except in the compact layout, where the pane covers the preview
+ * (ADR-0042). A stored choice wins either way.
+ */
+function defaultSourcePaneState(): SourcePaneState {
+  return { visible: !isCompactLayout(), width: DEFAULT_SOURCE_PANE_WIDTH };
+}
 
 /** Reject a persisted shape with any missing or invalid field, in favour of the default. */
 function isSourcePaneState(value: unknown): value is SourcePaneState {
@@ -32,12 +40,13 @@ export interface SourcePaneControl {
 }
 
 export function useSourcePane(): SourcePaneControl {
+  const [initialDefault] = useState(defaultSourcePaneState);
   // Debounced, not a `useEffect` write per change: that puts a synchronous
   // `localStorage.setItem` on every splitter `mousemove`, inside the drag's frame budget.
   // The trailing write flushes on unmount and pagehide.
   const [sourcePane, setSourcePane] = usePersistedState(
     SOURCE_PANE_STORAGE_KEY,
-    DEFAULT_SOURCE_PANE_STATE,
+    initialDefault,
     isSourcePaneState
   );
 

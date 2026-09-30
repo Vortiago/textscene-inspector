@@ -1,53 +1,32 @@
 /**
  * <GridMap> instances each MeshLibrary item's ArrayMesh at its populated cells,
- * one THREE.InstancedMesh per item. An unresolved mesh draws a cell-sized
- * wireframe box. The item's primary surface material covers the whole instanced
- * mesh, since most library tiles are single-surface.
+ * one THREE.InstancedMesh per item, or one mesh per cell when its material
+ * billboards. An unresolved mesh draws a cell-sized wireframe box. The item's
+ * primary surface material covers every cell, since most tiles are single-surface.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
 import { useResource } from '../../../resources/useResource';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { useMeshLibraryModel } from '../../../r3f/useMeshLibraryModel';
-import {
-  GODOT_DEFAULT_ALBEDO,
-  GODOT_DEFAULT_METALLIC,
-  GODOT_DEFAULT_ROUGHNESS,
-} from '../../../r3f/materials/godotDefaultMaterial';
+import type { MaterialSource } from '../../../r3f/materials/materialSource';
+import { SurfaceMaterialSlot, useMaterialScalars } from '../../../r3f/materials/SurfaceMaterialSlot';
+import { readyMaterial, useMaterial } from '../../../r3f/materials/useMaterial';
+import { surfaceBillboard } from '../../../resources/materials/standardmaterial3d/materialBag';
 import type { MeshLibraryItem } from '../../../resources/meshlibrary/types';
 import type { Transform3D } from '../../base/node3d/types';
 import type { Vector3 } from '../../../parser/vectors';
 import type { GridMapProperties } from './types';
 import { decodeGridMapCells, ORTHO_BASES, type GridMapCell } from './cellData';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
-import { shadowCastingEffects } from '../../../r3f/shadowCasting';
+import { shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
+import { drawsAsOneBatch } from '../../../r3f/surfaceDrawHooks';
 
 /** Literal-only, so the key is constant and a placeholder cell never remounts. */
 const PLACEHOLDER_CELL_MATERIAL = wireGizmoProgram(0x4488cc);
-
-/**
- * Godot's default 3D material, for a tile whose ArrayMesh declares no material
- * or whose material is still loading: a MeshLibrary item has none of its own.
- * Module-level, shared and never disposed.
- */
-const DEFAULT_TILE_MATERIAL = new THREE.MeshStandardMaterial({
-  color: GODOT_DEFAULT_ALBEDO,
-  metalness: GODOT_DEFAULT_METALLIC,
-  roughness: GODOT_DEFAULT_ROUGHNESS,
-});
-
-/**
- * A SHADOWS_ONLY tile's material: it writes neither colour nor depth.
- * `visible = false` would also stop the tile casting, since three's
- * `WebGLShadowMap.renderObject` returns on it. Shared and never disposed.
- */
-const SHADOWS_ONLY_TILE_MATERIAL = new THREE.MeshBasicMaterial({
-  colorWrite: false,
-  depthWrite: false,
-});
 
 /** Godot Transform3D (basis rows + origin) → THREE.Matrix4. */
 function transform3DToMatrix4(t: Transform3D): THREE.Matrix4 {
@@ -125,12 +104,15 @@ interface GridMapItemProps {
   cellCenter: GridMapProperties['cellCenter'];
 }
 
-/** All cells sharing one MeshLibrary item, batched into a single InstancedMesh. */
+/** All cells sharing one MeshLibrary item: one batch, or one tile per cell when it billboards. */
 function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
   const meshResult = useResource<ArrayMeshResource>(item?.meshPath ?? '', 'arraymesh');
-  // The surface material path only becomes known once the ArrayMesh resolves.
-  const materialPath = meshResult.value?.materialPaths[0] ?? '';
-  const materialResult = useResource<THREE.Material>(materialPath, 'material');
+  // The surface material address only becomes known once the ArrayMesh resolves.
+  const materialPath = meshResult.value?.materialPaths[0] ?? null;
+  const material = useMemo(
+    (): MaterialSource | undefined => (materialPath ? { kind: 'file', path: materialPath } : undefined),
+    [materialPath]
+  );
 
   // `cellCenter` is compared by identity: the parser hands back one shared
   // frozen instance for the all-centered default, so re-parsing an unchanged
@@ -144,43 +126,90 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
   // the library (`modules/gridmap/grid_map.cpp:799-800`).
   const shadow = shadowCastingEffects(item?.castShadow);
 
-  const instanced = useMemo(() => {
-    const geometry = meshResult.value?.geometry;
-    if (!geometry) return null;
-    // The resource pipeline owns the cached ArrayMesh and a resolved material.
-    // The shared default stands in when none is loaded.
-    const material = shadow.shadowsOnly
-      ? SHADOWS_ONLY_TILE_MATERIAL
-      : (materialPath && materialResult.value) || DEFAULT_TILE_MATERIAL;
-    const mesh = new THREE.InstancedMesh(geometry, material, matrices.length);
-    matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
-    mesh.instanceMatrix.needsUpdate = true;
-    mesh.castShadow = shadow.castShadow;
-    mesh.receiveShadow = true;
-    // DOUBLE_SIDED reaches three's shared depth material here, per mesh per
-    // light (`WebGLShadowMap.js:477,535,549`).
-    mesh.onBeforeShadow = shadow.onBeforeShadow;
-    return mesh;
-  }, [meshResult.value, materialPath, materialResult.value, matrices, shadow]);
+  const geometry = meshResult.value?.geometry;
+  // Decided from the decoded material, since the drawn one exists only inside a slot.
+  const scalars = useMaterialScalars(readyMaterial(useMaterial(material)));
+  const batched = drawsAsOneBatch(surfaceBillboard(scalars));
 
-  // InstancedMesh.dispose() frees only its own instanceMatrix buffer, and leaves
-  // the geometry and material the resource pipeline owns.
-  useEffect(() => {
-    if (!instanced) return;
-    return () => instanced.dispose();
-  }, [instanced]);
-
-  if (instanced) {
-    return <primitive object={instanced} />;
+  if (!geometry) {
+    // A pending or missing item draws cell-sized wireframe boxes.
+    return (
+      <>
+        {matrices.map((m, i) => (
+          <PlaceholderCell key={i} matrix={m} cellSize={cellSize} />
+        ))}
+      </>
+    );
   }
-
-  // A pending or missing item draws cell-sized wireframe boxes.
+  if (batched) return <BatchedTiles geometry={geometry} material={material} matrices={matrices} shadow={shadow} />;
   return (
     <>
       {matrices.map((m, i) => (
-        <PlaceholderCell key={i} matrix={m} cellSize={cellSize} />
+        <CellTile key={i} geometry={geometry} material={material} matrix={m} shadow={shadow} />
       ))}
     </>
+  );
+}
+
+interface TileProps {
+  geometry: THREE.BufferGeometry;
+  /** Absent while the ArrayMesh loads or when it declares none: Godot's default surface. */
+  material: MaterialSource | undefined;
+  shadow: ShadowCastingEffects;
+}
+
+/**
+ * Every cell as one InstancedMesh, keyed on the count: three sizes the instance buffer at
+ * construction. The resource pipeline owns the geometry, which R3F leaves alone since it
+ * arrives through `args`. The shadow hooks carry DOUBLE_SIDED and SHADOWS_ONLY per draw
+ * (`r3f/surfaceDrawHooks.ts`).
+ */
+function BatchedTiles({ geometry, material, matrices, shadow }: TileProps & { matrices: THREE.Matrix4[] }) {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(() => {
+    const mesh = meshRef.current;
+    if (!mesh) return;
+    matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
+    mesh.instanceMatrix.needsUpdate = true;
+  }, [matrices, geometry]);
+
+  return (
+    <instancedMesh
+      key={matrices.length}
+      ref={meshRef}
+      args={[geometry, undefined, matrices.length]}
+      castShadow={shadow.castShadow}
+      receiveShadow
+      onBeforeRender={shadow.onBeforeRender}
+      onAfterRender={shadow.onAfterRender}
+      onBeforeShadow={shadow.onBeforeShadow}
+      onAfterShadow={shadow.onAfterShadow}
+    >
+      <SurfaceMaterialSlot source={material} />
+    </instancedMesh>
+  );
+}
+
+/**
+ * One cell of a billboarding item, so its tile turns about its own cell as in Godot
+ * (`drawsAsOneBatch` says why a batch cannot). Each cell mounts its own slot, since a
+ * material element attaches to one parent. Every such material shares one program.
+ */
+function CellTile({ geometry, material, matrix, shadow }: TileProps & { matrix: THREE.Matrix4 }) {
+  return (
+    <mesh
+      args={[geometry]}
+      matrix={matrix}
+      matrixAutoUpdate={false}
+      castShadow={shadow.castShadow}
+      receiveShadow
+      onBeforeRender={shadow.onBeforeRender}
+      onAfterRender={shadow.onAfterRender}
+      onBeforeShadow={shadow.onBeforeShadow}
+      onAfterShadow={shadow.onAfterShadow}
+    >
+      <SurfaceMaterialSlot source={material} />
+    </mesh>
   );
 }
 

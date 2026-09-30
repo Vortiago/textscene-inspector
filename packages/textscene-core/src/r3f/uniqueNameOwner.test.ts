@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser.js';
 import type { TscnScene } from '../parser/types.js';
 import type { LiveTreeContext } from './liveSceneTree.js';
-import { claimOwnerOf, ownerClaims } from './uniqueNameOwner.js';
+import { claimOwnerOf, localSceneClaims, localSceneOf, ownerClaims } from './uniqueNameOwner.js';
 
 const main = new TscnParser().parse(`[gd_scene format=3]
 [ext_resource type="PackedScene" path="res://hud.tscn" id="1"]
@@ -120,6 +120,69 @@ describe('claimOwnerOf', () => {
   });
 });
 
+/**
+ * `make_local_resource` sets a local-to-scene resource up against the node itself when it is its
+ * scene's root or an instance, else against its owner (packed_scene.cpp:707).
+ */
+describe('localSceneOf', () => {
+  const localRoot = (path: string) => localSceneOf(path, main.nodes, ctx).path;
+
+  it('is the outer root for an outer node', () => {
+    expect(localRoot('Root/Screen')).toBe('Root');
+  });
+
+  it('is the outer root for the outer root itself', () => {
+    expect(localRoot('Root')).toBe('Root');
+  });
+
+  it('is the instance for a node inside it', () => {
+    expect(localRoot('Root/HudInstance/Sprite')).toBe('Root/HudInstance');
+  });
+
+  it('is the instance node itself, not the file its heading is in', () => {
+    expect(localRoot('Root/HudInstance')).toBe('Root/HudInstance');
+  });
+
+  it('is the instance for an override heading inside it', () => {
+    expect(localRoot('Root/HudInstance/Panel/Hit')).toBe('Root/HudInstance');
+  });
+
+  it('is the outer root for a node the outer file adds under the instance', () => {
+    expect(localRoot('Root/HudInstance/Extra')).toBe('Root');
+  });
+
+  it('is the innermost instance for a node inside nested instances', () => {
+    expect(localRoot('Root/HudInstance/Widget/Face')).toBe('Root/HudInstance/Widget');
+  });
+});
+
+/** `get_node` from the local scene root reads its own table, else its owner's (node.cpp:1930-1938). */
+describe('localSceneClaims', () => {
+  const claimsFrom = (path: string) => localSceneClaims(localSceneOf(path, main.nodes, ctx));
+
+  it('is the shared outer table for the outer root', () => {
+    expect(claimsFrom('Root/Screen')).toBe(ownerClaims(ownerOf('Root/Screen')));
+  });
+
+  it('reads an instance root\u2019s own claims', () => {
+    expect(claimsFrom('Root/HudInstance/Sprite').get('%Panel')?.livePath).toBe(
+      'Root/HudInstance/Panel'
+    );
+  });
+
+  it('falls back to the table of the instance\u2019s owner', () => {
+    expect(claimsFrom('Root/HudInstance/Sprite').get('%Extra')?.livePath).toBe(
+      'Root/HudInstance/Extra'
+    );
+  });
+
+  it('stops at the owner: a nested instance does not reach the outer table', () => {
+    const table = claimsFrom('Root/HudInstance/Widget/Face');
+    expect(table.get('%Panel')?.livePath).toBe('Root/HudInstance/Panel');
+    expect(table.has('%Extra')).toBe(false);
+  });
+});
+
 describe('ownerClaims', () => {
   it('is the shared outer table for the outer root', () => {
     const table = ownerClaims(ownerOf('Root/Screen'));
@@ -187,6 +250,11 @@ unique_name_in_owner = true
     );
     expect(ownerClaims(own('Root/HudInstance/Sprite')).has('%Face')).toBe(false);
     expect(ownerClaims(own('Root/Lamp')).has('%Face')).toBe(false);
+  });
+
+  /** A new node's properties land (packed_scene.cpp:438) before its owner is set (:566-568). */
+  it('measures a local scene from the file root, not an explicit owner=', () => {
+    expect(localSceneOf('Root/Lamp', nested.nodes, nestedCtx).path).toBe('Root');
   });
 
   it('gives a consumer with an explicit owner= that owner\u2019s table', () => {

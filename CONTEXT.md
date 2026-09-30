@@ -103,6 +103,11 @@ A per-property format or range check that runs during strict parsing, dispatched
 Its **Severity** comes from what the engine does. A malformed value, or a bound the setter enforces, is an error. A bound only the property's editor hint states is a warning (`linter/validators/v/grounding.ts`). What makes a check a validator is that it judges one property's value in isolation. That is the sorting principle for where a new check goes.
 _Avoid_: deciding a validator's severity per property rather than from the engine. "validator" for the parser-side **Value decoder**s.
 
+**Format-only validator**:
+A **Validator** that cites nothing for its refusals, because it refuses only text the tokenizer cannot read, or a whole value of a type the slot does not convert.
+It is marked `formatOnly`. The `formatOnlyCorpus` ledger runs it over literals Godot stores in its slot, and it may not error on one.
+_Avoid_: `formatOnly` on a refusal of a value the setter receives, an element inside a container included. That refusal cites its `file:line` as a `grounding`.
+
 **Lint rule** (semantic check):
 A per-node-type check that runs on the parsed scene and matches its node type exactly, with no base-type inheritance.
 It is the home for conditions no single property's value settles. Its **Severity** is fixed by the engine (ADR-0032), never chosen.
@@ -360,7 +365,7 @@ _Avoid_: re-inlining region or frames maths in a sprite slice (hand-syncing lets
 
 **Stated-consumer-default wrapping**:
 The rule that a shared texture's wrapping is chosen by each consumer at bind time, never by the loader.
-The loader (`textureProcessing.ts`) leaves wrapping at three's clamp-to-edge default, because one cached entry serves both a 3D material (Godot's `BaseMaterial3D` constructs with `FLAG_USE_TEXTURE_REPEAT`, so it tiles) and a 2D canvas item (whose `texture_repeat` resolves to the viewport's DISABLED default, so it clamps). `applyTextureState` reads the material's `texture_repeat` and makes the divergence bidirectional: a default material tiles a clamped arrival on a source-shared clone, and `repeat = false` on a tiled entry clamps it back. The panorama sky, sampled with `fract(atan(...))` so u must wrap, states Repeat through the same rule and frees its clone after the cube render. A consumer that binds the shared entry directly (`Decal`, `PointLight2D`) inherits clamp, which is what Godot draws for it.
+The loader (`textureProcessing.ts`) leaves wrapping at three's clamp-to-edge default, because one cached entry serves both a 3D material (Godot's `BaseMaterial3D` constructs with `FLAG_USE_TEXTURE_REPEAT`, so it tiles) and a 2D canvas item (whose `texture_repeat` resolves to the viewport's DISABLED default, so it clamps). `applyTextureState` reads the material's `texture_repeat` and makes the divergence bidirectional: a default material tiles a clamped arrival on a source-shared clone, and `repeat = false` on a tiled entry clamps it back. The panorama sky, sampled with `fract(atan(...))` so u must wrap, states Repeat through the same rule and frees its clone after the cube render. `Decal` and `PointLight2D` state clamp through the same rule, which is what Godot draws for them.
 _Avoid_: setting wrapping in the loader, which cannot know which consumer asks. "The texture repeats" as a property of the image, when it belongs to each consumer's sampler. Mutating a shared cache entry's wrapping in place.
 
 **Synthetic render type**:

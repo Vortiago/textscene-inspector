@@ -176,7 +176,7 @@ describe('PointLight2D Component', () => {
   });
 
   it('samples a loader-produced cookie clamped', async () => {
-    // The light states clamp (ADR-0042), so a clamp-tagged loader cookie is shared
+    // The light states clamp (ADR-0044), so a clamp-tagged loader cookie is shared
     // and reaches the sampler clamped. Godot's light texture clamps too, and a
     // Repeat producer would tile a cookie's edge texels past its quad.
     const entry = await createTextureFromBuffer(new ArrayBuffer(8), 'image/png');

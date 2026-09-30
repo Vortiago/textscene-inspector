@@ -45,7 +45,7 @@ export async function createTextureFromBuffer(
           // Wrapping stays at three's clamp-to-edge default. One entry is cached
           // per path and shared, and Godot gives it two opposite defaults:
           // `BaseMaterial3D` tiles (`FLAG_USE_TEXTURE_REPEAT`) and a `CanvasItem`
-          // clamps. Each consumer states its own at bind time (ADR-0042).
+          // clamps. Each consumer states its own at bind time (ADR-0044).
           resolve(loadedTexture);
         },
         undefined,

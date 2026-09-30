@@ -8,6 +8,7 @@ import { describe, it, expect } from 'vitest';
 import type { TscnNode } from '../parser/types';
 import {
   PAINT_SEQUENCE_STRIDE,
+  allocateNodePaintRange,
   allocatePaintRange,
   canvasRenderOrder,
   canvasRootRanges,
@@ -19,6 +20,13 @@ import {
 
 function node(name: string, type: string, children: TscnNode[] = [], properties = {}): TscnNode {
   return { name, type, properties, children } as unknown as TscnNode;
+}
+
+/** A parsed TileMap holding `layerCount` layers, as `parseTileMap` shapes it. */
+function tileMap(layerCount: number, children: TscnNode[] = []): TscnNode {
+  return node('Map', 'TileMap', children, {
+    layers: Array.from({ length: layerCount }, (_, index) => ({ index })),
+  });
 }
 
 describe('canvasRenderOrder', () => {
@@ -113,6 +121,13 @@ describe('paintRangeSize', () => {
     // A y-sorted TileMapLayer draws one group per tile row, interleaved with its
     // siblings, and the row count is known only once the tileset loads.
     expect(paintRangeSize(node('Tiles', 'TileMapLayer'))).toBeGreaterThan(1000);
+  });
+
+  it('counts one value per TileMap layer, however many layers there are', () => {
+    // Each layer is an internal child CanvasItem (`tile_map.cpp:279`), so it
+    // needs a value of its own. A fixed reserve runs out past its size.
+    const children = [node('Marker', 'Sprite2D')];
+    expect(paintRangeSize(tileMap(5000, children))).toBe(1 + 5000 + 1);
   });
 });
 
@@ -232,7 +247,7 @@ describe('allocatePaintRange', () => {
       node('Front', 'Sprite2D'),
     ];
     const range = { base: 10, size: paintRangeSize(node('P', 'Node2D', children)) };
-    const sorted = allocatePaintRange(range, children, true);
+    const sorted = allocatePaintRange(range, children, { sortsChildren: true });
 
     expect(sorted.self).toBe(range.base);
     // The whole re-pack, in any order, still fits after it.
@@ -285,6 +300,35 @@ describe('allocatePaintRange', () => {
     }
     expect(allocated.children[0]!.base).toBeLessThanOrEqual(allocated.children[1]!.base);
     expect(allocated.children[1]!.base).toBeLessThanOrEqual(allocated.children[2]!.base);
+  });
+
+  it('puts a TileMap\'s layers after the TileMap and before its authored children', () => {
+    // `add_child(new_layer, false, INTERNAL_MODE_FRONT)` (`tile_map.cpp:279`)
+    // gives the layers draw indices 0..L-1 (`node.h:585-600`), so every authored
+    // child draws after them.
+    const map = tileMap(3, [node('Marker', 'Sprite2D')]);
+    const allocated = allocateNodePaintRange(WHOLE_CANVAS_RANGE, map);
+
+    expect(allocated.front).toEqual({ base: allocated.self + 1, size: 3 });
+    expect(allocated.children[0]!.base).toBe(allocated.front.base + allocated.front.size);
+  });
+
+  it('keeps a TileMap\'s layers inside a range too small for them', () => {
+    // A squeezed range cannot give each layer its own value, but an overrun
+    // would draw a layer inside the next sibling's range.
+    const range = { base: 10, size: 4 };
+    const allocated = allocateNodePaintRange(range, tileMap(5000, [node('Marker', 'Sprite2D')]));
+
+    const end = range.base + range.size;
+    expect(allocated.front.base).toBeGreaterThan(allocated.self);
+    expect(allocated.front.base + allocated.front.size).toBeLessThanOrEqual(end);
+    expect(allocated.children[0]!.base + allocated.children[0]!.size).toBeLessThanOrEqual(end);
+  });
+
+  it('gives a node with no internal children an empty front', () => {
+    const allocated = allocateNodePaintRange(WHOLE_CANVAS_RANGE, node('P', 'Node2D', [node('A', 'Sprite2D')]));
+    expect(allocated.front.size).toBe(0);
+    expect(allocated.children[0]!.base).toBe(allocated.self + 1);
   });
 
   it('keeps every child inside the range it was given', () => {

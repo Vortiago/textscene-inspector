@@ -44,6 +44,8 @@ describe('buildGlbHierarchy', () => {
   it('maps THREE types to Godot-ish display types', () => {
     expect(glbDisplayType('Mesh')).toBe('Mesh');
     expect(glbDisplayType('SkinnedMesh')).toBe('Mesh');
+    // An instanced glTF node loads as an InstancedMesh under `three-loader`.
+    expect(glbDisplayType('InstancedMesh')).toBe('Mesh');
     expect(glbDisplayType('Bone')).toBe('Bone');
     expect(glbDisplayType('Group')).toBe('Node3D');
     expect(glbDisplayType('PerspectiveCamera')).toBe('Camera3D');

@@ -5,14 +5,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
+import { errorsOf, warningsOf } from '../../../linter/testing/tierLists';
 import './linterParser';
-
-/** The diagnostics of one severity: the error and warning tiers are asserted apart. */
-const ofSeverity = (severity: 'error' | 'warning') => (diagnostics: ReturnType<Linter['lint']>) =>
-  diagnostics.filter((d) => d.severity === severity);
-
-const errorsOf = ofSeverity('error');
-const warningsOf = ofSeverity('warning');
 
 describe('Polygon2D strict validators', () => {
   let linter: Linter;
@@ -107,8 +101,18 @@ polygons = [PackedInt32Array(0, 1, 2, 3), PackedInt32Array(4, 5, 6, 7)]
       expect(errors[0]!.message).toContain('polygons');
     });
 
-    it('rejects a polygons entry that is not PackedInt32Array', () => {
+    // `set_polygons` stores any element (polygon_2d.cpp:435-437). Only the
+    // PROPERTY_HINT_TYPE_STRING "PackedInt32Array" (:720) names the type.
+    it('warns on a polygons entry of another Variant type, which the setter stores', () => {
       const content = `[gd_scene format=3]\n\n[node name="P" type="Polygon2D"]\npolygons = [PackedVector2Array(0, 0)]\n`;
+      const diagnostics = linter.lint(content);
+      expect(errorsOf(diagnostics)).toEqual([]);
+      const warning = diagnostics.find((d) => d.severity === 'warning' && d.message.includes('polygons'));
+      expect(warning?.message).toContain('polygon_2d.cpp:720');
+    });
+
+    it('rejects a polygons entry the tokenizer cannot read', () => {
+      const content = `[gd_scene format=3]\n\n[node name="P" type="Polygon2D"]\npolygons = [foo]\n`;
       const errors = errorsOf(linter.lint(content));
       expect(errors.length).toBeGreaterThan(0);
       expect(errors[0]!.message).toContain('polygons');

@@ -53,8 +53,16 @@ export async function createCaptureContext(
       [VIEWPORT_MODE_STORAGE_KEY, JSON.stringify('2D')]
     );
   }
-  // Viewport chrome that floats over the canvas in both modes, and so would composite into every
-  // capture.
+  await context.addInitScript(installStyle, paintedOutChromeCss({ canvas2D }));
+  return context;
+}
+
+/**
+ * The style that paints the app's chrome out of a capture. Viewport chrome floats over the
+ * canvas in both modes, and `canvas.screenshot()` composites any DOM over the canvas, so it
+ * goes from every capture. `canvas2D` also paints out the 2D stage.
+ */
+export function paintedOutChromeCss({ canvas2D }) {
   const hidden = ['viewport-toolbar-overlay', 'viewport-controls-help'];
   let css = '';
   if (canvas2D) {
@@ -68,18 +76,21 @@ export async function createCaptureContext(
       `[data-testid="${CANVAS_2D_TESTIDS.stage}"]{background-image:none !important;` +
       `background-color:${CANVAS_2D_CAPTURE.background} !important}`;
   }
-  css += `${hidden.map((id) => `[data-testid="${id}"]`).join(',')}{display:none !important}`;
-  // The <style> goes in <head> once it exists: at document-start the parser drops it.
-  await context.addInitScript((rules) => {
-    const add = () => {
-      const style = document.createElement('style');
-      style.textContent = rules;
-      document.head.appendChild(style);
-    };
-    if (document.head) add();
-    else document.addEventListener('DOMContentLoaded', add, { once: true });
-  }, css);
-  return context;
+  return css + `${hidden.map((id) => `[data-testid="${id}"]`).join(',')}{display:none !important}`;
+}
+
+/**
+ * An init script that adds `rules` as a <style>. It goes in <head> once that exists: at
+ * document-start the parser drops it.
+ */
+export function installStyle(rules) {
+  const add = () => {
+    const style = document.createElement('style');
+    style.textContent = rules;
+    document.head.appendChild(style);
+  };
+  if (document.head) add();
+  else document.addEventListener('DOMContentLoaded', add, { once: true });
 }
 
 /**

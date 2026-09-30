@@ -75,8 +75,9 @@ export function accepts(validator: PropertyValidator, description: string): Prop
 
 /**
  * `accepts`, plus the declaration that this validator rejects nothing but
- * malformed input. Every combinator, bespoke ones included, is a `shape` or
- * carries a `Grounding`, and `boundGrounding.test.ts` fails on one that is neither.
+ * malformed input: text the tokenizer refuses, or a whole value the slot never
+ * converts. Every combinator, bespoke ones included, is a `shape` or carries a
+ * `Grounding`, and `boundGrounding.test.ts` fails on one that is neither.
  */
 export function shape(validator: PropertyValidator, description: string): PropertyValidator {
   validator.formatOnly = true;

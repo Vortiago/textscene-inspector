@@ -4,15 +4,17 @@
 // resolves an inherited key only when this line imports the ancestor.
 import '../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { accepts, propertyError, shape, v } from '../../../linter/validators/index.js';
+import { accepts, propertyError, v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import type { ParseError } from '../../../linter/types.js';
-import { ARRAY_LITERAL_RE, dropTrailingComma, packedArrayLiteral, splitTopLevel } from '../../../godot/index.js';
+import { ARRAY_LITERAL_RE, dropTrailingComma, packedArrayLiteral, splitTopLevel, variantShape } from '../../../godot/index.js';
 import { arrayLiteralBody } from '../../../godot/variantParser.js';
 import { markIntSlot } from '../../../linter/validators/intSlot.js';
 import { badIntElement } from '../../../linter/validators/v/packedArrays.js';
 
 const PACKED_INT32_ELEMENT_RE = packedArrayLiteral('PackedInt32Array');
+/** ARRAY with PROPERTY_HINT_TYPE_STRING "PackedInt32Array", an inspector hint. */
+const POLYGONS_HINT = 'polygon_2d.cpp:720';
 const BARE_INT_ARRAY_ELEMENT_RE = ARRAY_LITERAL_RE;
 
 /**
@@ -22,9 +24,9 @@ const BARE_INT_ARRAY_ELEMENT_RE = ARRAY_LITERAL_RE;
  */
 function polygonsValidator(): PropertyValidator {
   const code = 'INVALID_POLYGONS_FORMAT';
-  // `shape` first for the `accepts` tag, then `markIntSlot`: the index lists are
-  // an INT slot, so this rejects a literal Godot's own tokenizer reads.
-  return markIntSlot(shape((key, value, line) => {
+  // `markIntSlot`: the index lists are an INT slot, so this rejects a literal
+  // Godot's own tokenizer reads. The element type is the hint's, cited below.
+  const validator = markIntSlot(accepts((key, value, line) => {
     // `Array[PackedInt32Array]([…])` is an Array too, and the setter only
     // assigns (polygon_2d.cpp:720, :435-437), so the typed spelling loads.
     const outer = arrayLiteralBody(value);
@@ -53,11 +55,22 @@ function polygonsValidator(): PropertyValidator {
       const bare = packed ? null : BARE_INT_ARRAY_ELEMENT_RE.exec(entry);
       const el = packed ?? bare;
       if (!el) {
+        if (variantShape(entry) === null) {
+          return propertyError(
+            key,
+            line,
+            `Property 'polygons' entry "${entry}" is no value Godot reads; write PackedInt32Array(…) or a bare [i0, i1, …]`,
+            code
+          );
+        }
+        // Stored as written, since the setter assigns bare. Only the hint names
+        // the element type, so an entry of another type warns.
         return propertyError(
           key,
           line,
-          `Property 'polygons' entry "${entry}" must be PackedInt32Array(…) or a bare [i0, i1, …], got: "${entry}"`,
-          code
+          `Property 'polygons' entry "${entry}" is not the PackedInt32Array index list the hint names (${POLYGONS_HINT})`,
+          'INVALID_POLYGONS_VALUE',
+          'warning'
         );
       }
       const inner = el[1]!.trim();
@@ -79,6 +92,8 @@ function polygonsValidator(): PropertyValidator {
     }
     return truncated;
   }, 'Array of PackedInt32Array(i0, i1, …) or bare [i0, i1, …] index lists'));
+  validator.grounding = { kind: 'hinted', cite: POLYGONS_HINT };
+  return validator;
 }
 
 /**

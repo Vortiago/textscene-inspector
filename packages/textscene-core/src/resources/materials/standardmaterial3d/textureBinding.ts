@@ -1,8 +1,8 @@
 /**
  * Binding a texture to a StandardMaterial3D slot, the one place that knows what a Godot
  * slot needs of its texture: its colour space, and when a shared cache entry must clone.
- * `<StandardMaterialSlot>` and `build.ts` both cross it. It value-imports `three`, so
- * `index.ts` never reaches it (ADR-0031).
+ * `SurfaceMaterialSlot` crosses it, for `<StandardMaterialSlot>` and the GLB override. It
+ * value-imports `three`, so `index.ts` never reaches it (ADR-0031).
  */
 
 import * as THREE from 'three';
@@ -31,6 +31,11 @@ const SLOT_COLOR_SPACE: Readonly<Record<TextureSlot, THREE.ColorSpace>> = {
   anisotropy_flowmap: THREE.NoColorSpace,
 };
 
+/** The colour space `slot`'s sampler reads in, whatever texture it binds. */
+export function slotColorSpace(slot: TextureSlot): THREE.ColorSpace {
+  return SLOT_COLOR_SPACE[slot];
+}
+
 /**
  * The per-material half of a binding, which a caller can adjust apart from the per-slot
  * decision, as a triplanar material folds the mesh size into the tiling scale. Only an
@@ -57,7 +62,7 @@ export function bindSlotTexture(
   slot: TextureSlot,
   material: MaterialTextureState
 ): THREE.Texture {
-  return applyTextureState(texture, { ...material, colorSpace: SLOT_COLOR_SPACE[slot] });
+  return applyTextureState(texture, { ...material, colorSpace: slotColorSpace(slot) });
 }
 
 /**
@@ -67,17 +72,4 @@ export function bindSlotTexture(
  */
 export function releaseBoundTexture(texture: THREE.Texture | null | undefined): void {
   if (texture && isMaterialOwnedTexture(texture)) texture.dispose();
-}
-
-/**
- * Release every texture a binding produced for this material. It leaves the
- * material itself, and any procedural pin it holds, to the caller.
- */
-export function releaseOwnedTextures(material: THREE.Material): void {
-  // Walk the material's own values rather than a hand-listed set of slot names:
-  // three assigns every map in its constructor, so this cannot go stale the day
-  // a new one is wired, and the ownership tag is the real discriminator anyway.
-  for (const value of Object.values(material)) {
-    if (value instanceof THREE.Texture) releaseBoundTexture(value);
-  }
 }

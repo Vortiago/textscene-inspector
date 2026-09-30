@@ -6,7 +6,8 @@
  */
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import { pinNoColorSpace, useUndecodedTexture } from './undecodedTexture';
+import { useUploadedClone } from './tiledUpload/useTiledUpload';
+import { pinNoColorSpace, undecodedClone } from './undecodedTexture';
 
 // Re-exported for the 2D consumers. It lives in `undecodedTexture.ts`, since 3D
 // material data maps need it too.
@@ -22,19 +23,19 @@ export function useCanvas2DTexture(texture: THREE.Texture | null | undefined): T
   // The cache tags every texture `SRGBColorSpace` (`textureProcessing.ts`), which
   // WebGL uploads as `SRGB8_ALPHA8` (`WebGLTextures.js`), decoding before the filter.
   // A consumer that overrides the sampler, such as a tiled `TextureRect`, clones again.
-  const undecoded = useUndecodedTexture(texture);
-  return useMemo(() => {
-    if (!undecoded) return null;
+  const undecoded = useMemo(() => {
+    if (!texture) return null;
+    const clone = undecodedClone(texture);
     // A canvas item's `texture_repeat` resolves to the viewport default, disabled
     // (`scene/main/viewport.h:420`, `scene/main/viewport.cpp:4009`,
     // `scene/main/canvas_item.cpp:1686-1694`). A file-loaded entry arrives clamped
-    // (ADR-0042), but a producer can hand over Repeat, such as a seamless
+    // (ADR-0044), but a producer can hand over Repeat, such as a seamless
     // `NoiseTexture2D`. So the clamp is stated here, not inherited.
-    undecoded.wrapS = THREE.ClampToEdgeWrapping;
-    undecoded.wrapT = THREE.ClampToEdgeWrapping;
-    undecoded.needsUpdate = true;
-    return undecoded;
-  }, [undecoded]);
+    clone.wrapS = THREE.ClampToEdgeWrapping;
+    clone.wrapT = THREE.ClampToEdgeWrapping;
+    return clone;
+  }, [texture]);
+  return useUploadedClone(undecoded);
 }
 
 /**
@@ -67,7 +68,7 @@ export interface Canvas2DMap {
 
 /**
  * The retag and its decode together: half-applied, the material never decodes its
- * raw sRGB bytes. `composeFrameTexture` and `useIconTexture`, whose icons have their
+ * raw sRGB bytes. `spriteSamplerClone` and `useIconTexture`, whose icons have their
  * own loader, tag by another route and call `useCanvasDecodeDefines` alone.
  */
 export function useCanvas2DMap(texture: THREE.Texture | null | undefined): Canvas2DMap {

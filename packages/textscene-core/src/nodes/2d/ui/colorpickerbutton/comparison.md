@@ -21,7 +21,7 @@ Strict parsing format-checks these `ColorPickerButton` properties, plus 13 inher
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `color` | Color(r, g, b, a) |  |
+| `color` | Color(r, g, b, a), or the colour string or int it converts |  |
 | `edit_alpha` | true or false |  |
 | `edit_intensity` | true or false |  |
 

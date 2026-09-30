@@ -6,6 +6,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Linter } from '../../../linter/Linter';
 import { node, scene as sceneOf, expectDiagnostic, expectNoDiagnostic } from '../../../linter/testing/testkit';
+import { errorsOf } from '../../../linter/testing/tierLists';
 import './linterParser';
 import './linter';
 
@@ -117,9 +118,6 @@ describe('CPUParticles2D strict validators', () => {
     linter = new Linter();
   });
 
-  const errorsOf = (content: string) =>
-    linter.lint(content).filter((d) => d.severity === 'error');
-
   it('passes a fully specified emitter', () => {
     const content = scene(
       [
@@ -153,11 +151,11 @@ describe('CPUParticles2D strict validators', () => {
       '[node name="Root"',
       '[sub_resource type="Curve" id="1"]\n\n[sub_resource type="Gradient" id="2"]\n\n[node name="Root"'
     );
-    expect(errorsOf(content)).toEqual([]);
+    expect(errorsOf(linter.lint(content))).toEqual([]);
   });
 
   it('rejects `amount = 0`, which Godot itself refuses', () => {
-    const errors = errorsOf(scene('amount = 0\n'));
+    const errors = errorsOf(linter.lint(scene('amount = 0\n')));
     expect(errors.length).toBeGreaterThan(0);
     expect(errors[0]!.message).toContain('amount');
   });
@@ -167,7 +165,7 @@ describe('CPUParticles2D strict validators', () => {
     // (cpu_particles_2d.cpp:98-100) assigns unconditionally: hint-only, so out of
     // range is a warning, not an error.
     const diagnostics = linter.lint(scene('explosiveness = 4.0\n'));
-    expect(errorsOf(scene('explosiveness = 4.0\n'))).toEqual([]);
+    expect(errorsOf(linter.lint(scene('explosiveness = 4.0\n')))).toEqual([]);
     const warning = diagnostics.find((d) => d.message.includes('explosiveness'));
     expect(warning?.severity).toBe('warning');
   });
@@ -176,19 +174,19 @@ describe('CPUParticles2D strict validators', () => {
     // cpu_particles_2d.cpp:1598 hints "0,180,0.01" but set_spread
     // (cpu_particles_2d.cpp:344-348) assigns unconditionally: hint-only.
     const diagnostics = linter.lint(scene('spread = 400.0\n'));
-    expect(errorsOf(scene('spread = 400.0\n'))).toEqual([]);
+    expect(errorsOf(linter.lint(scene('spread = 400.0\n')))).toEqual([]);
     const warning = diagnostics.find((d) => d.message.includes('spread'));
     expect(warning?.severity).toBe('warning');
   });
 
   it('rejects an emission_shape outside the enum', () => {
-    const errors = errorsOf(scene('emission_shape = 9\n'));
+    const errors = errorsOf(linter.lint(scene('emission_shape = 9\n')));
     expect(errors.length).toBeGreaterThan(0);
     expect(errors[0]!.message).toContain('emission_shape');
   });
 
   it('rejects a malformed gravity vector', () => {
-    const errors = errorsOf(scene('gravity = Vector2(0)\n'));
+    const errors = errorsOf(linter.lint(scene('gravity = Vector2(0)\n')));
     expect(errors.length).toBeGreaterThan(0);
     expect(errors[0]!.message).toContain('gravity');
   });
@@ -196,21 +194,21 @@ describe('CPUParticles2D strict validators', () => {
   it('accepts the nonsense `draw_order` the Godot platformer demo ships', () => {
     // Godot's setter takes any int and reads anything but 1 as Index, so an
     // error here would fail a scene the engine opens without complaint.
-    expect(errorsOf(scene('draw_order = 215832976\n'))).toEqual([]);
+    expect(errorsOf(linter.lint(scene('draw_order = 215832976\n')))).toEqual([]);
   });
 
   it('accepts a negative emission_ring_radius (cpu_particles_2d.cpp:1593 has no hint at all)', () => {
     // set_emission_ring_radius (cpu_particles_2d.cpp:531-533) assigns
     // unconditionally, and Godot places no bound on the property.
-    expect(errorsOf(scene('emission_ring_radius = -5.0\n'))).toEqual([]);
+    expect(errorsOf(linter.lint(scene('emission_ring_radius = -5.0\n')))).toEqual([]);
   });
 
   it('accepts a negative emission_ring_inner_radius (cpu_particles_2d.cpp:1592 has no hint at all)', () => {
-    expect(errorsOf(scene('emission_ring_inner_radius = -5.0\n'))).toEqual([]);
+    expect(errorsOf(linter.lint(scene('emission_ring_inner_radius = -5.0\n')))).toEqual([]);
   });
 
   it('still rejects `amount = 0` as an error (enforced: cpu_particles_2d.cpp:67)', () => {
-    const errors = errorsOf(scene('amount = 0\n'));
+    const errors = errorsOf(linter.lint(scene('amount = 0\n')));
     expect(errors.length).toBeGreaterThan(0);
   });
 });

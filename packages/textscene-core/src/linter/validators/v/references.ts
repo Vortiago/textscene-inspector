@@ -8,8 +8,8 @@ import { isNilLiteral } from '../../../godot/index.js';
 
 export const referenceCombinators = {
   /**
-   * `SubResource("id")`, `ExtResource("id")` or `null`, which loads into every
-   * resource slot: `variant_parser.cpp:699` reads it as `Variant()`, and
+   * `SubResource("id")`, `ExtResource("id")`, `Resource("path")` or `null`, which
+   * loads into every resource slot: `variant_parser.cpp:699` reads it as `Variant()`, and
    * `can_convert_strict` allows `NIL -> OBJECT` (variant.cpp:543). Whether a slot
    * should be filled is a semantic rule's question.
    */
@@ -18,7 +18,7 @@ export const referenceCombinators = {
     // validator and its cite. None is known.
     return shape(
       createResourceReferenceValidator(name, formatCode(name, 'REFERENCE')),
-      'null, SubResource("id") or ExtResource("id")'
+      'null, SubResource("id"), ExtResource("id") or Resource("path")'
     );
   },
 

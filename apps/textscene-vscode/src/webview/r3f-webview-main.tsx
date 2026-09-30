@@ -15,6 +15,7 @@ import {
 import type { TscnNode } from '@textscene/core';
 import { isHostToWebviewMessage, type WebviewToHostMessage } from '../protocol';
 import { WebviewResourceProvider } from './WebviewResourceProvider';
+import { textureWorkerFactory } from './createTextureWorker';
 import { readInitialConfig, resolveInitialViewportMode } from './initialConfig';
 
 // Read once at module load: `webviewHtml.ts` embeds `window.__TEXTSCENE_CONFIG__`
@@ -57,9 +58,13 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
   const [content, setContent] = useState<string>('');
 
   // The host answers the provider's `loadResource` posts with the file bytes.
-  // FileEventBus and ResourceLoader sit between it and `useResource`.
+  // FileEventBus and ResourceLoader sit between it and `useResource`. Procedural
+  // textures build in the blob-URL job worker (ADR-0042).
   const loader = useMemo(
-    () => createResourcePipeline(new WebviewResourceProvider(vscode)).loader,
+    () =>
+      createResourcePipeline(new WebviewResourceProvider(vscode), {
+        createWorker: textureWorkerFactory(),
+      }).loader,
     [vscode]
   );
 

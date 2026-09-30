@@ -24,12 +24,12 @@ Strict parsing format-checks these `BaseButton` properties, plus 53 inherited fr
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `action_mode` | enum 0-1 (ACTION_MODE_BUTTON_PRESS/ACTION_MODE_BUTTON_RELEASE) | warning |
-| `button_group` | null, SubResource("id") or ExtResource("id") |  |
+| `button_group` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `button_mask` | integer |  |
 | `button_pressed` | true or false |  |
 | `disabled` | true or false |  |
 | `keep_pressed_outside` | true or false |  |
-| `shortcut` | null, SubResource("id") or ExtResource("id") |  |
+| `shortcut` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `shortcut_feedback` | true or false |  |
 | `shortcut_in_tooltip` | true or false |  |
 | `toggle_mode` | true or false |  |

@@ -18,9 +18,9 @@ Strict parsing format-checks these `WorldEnvironment` properties, plus 10 inheri
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `camera_attributes` | null, SubResource("id") or ExtResource("id") |  |
-| `compositor` | null, SubResource("id") or ExtResource("id") |  |
-| `environment` | null, SubResource("id") or ExtResource("id") |  |
+| `camera_attributes` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `compositor` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `environment` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -22,7 +22,7 @@ Strict parsing format-checks these `Polygon2D` properties, plus 12 inherited fro
 | --- | --- | --- |
 | `antialiased` | true or false |  |
 | `bones` | Array literal [bone_path, PackedFloat32Array(weights), …] |  |
-| `color` | Color(r, g, b, a) |  |
+| `color` | Color(r, g, b, a), or the colour string or int it converts |  |
 | `internal_vertex_count` | integer 0-1000 | warning |
 | `invert_border` | float 0.1-16384 | warning |
 | `invert_enabled` | true or false |  |
@@ -30,7 +30,7 @@ Strict parsing format-checks these `Polygon2D` properties, plus 12 inherited fro
 | `polygon` | PackedVector2Array(x, y, …) |  |
 | `polygons` | Array of PackedInt32Array(i0, i1, …) or bare [i0, i1, …] index lists |  |
 | `skeleton` | NodePath("path/to/node") |  |
-| `texture` | null, SubResource("id") or ExtResource("id") |  |
+| `texture` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `texture_offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `texture_rotation` | float |  |
 | `texture_scale` | Vector2(x, y), or the Vector2i spelling Godot converts |  |

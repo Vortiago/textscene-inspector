@@ -128,8 +128,6 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     'mounts a THREE CameraHelper — an Object3D, which R3F adds as a child and never routes to a material slot',
   'packages/textscene-core/src/nodes/3d/csg/CsgPrimitive.tsx':
     'spreads the shared Node3D transform bag onto a `<group>`, which has no material slot',
-  'packages/textscene-core/src/nodes/3d/gridmap/Component.tsx':
-    'mounts the built InstancedMesh — an Object3D, added as a child; its tile material is mounted on the mesh itself',
   'packages/textscene-core/src/nodes/3d/lights/shared/lightHelpers.tsx':
     'mounts a THREE light helper — an Object3D, added as a child',
   'packages/textscene-core/src/nodes/3d/lights/shared/lightShared.tsx':
@@ -148,8 +146,6 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     'mounts the per-consumer GLB Object3D clone; the surfaces inside it keep the materials the loader gave them',
   'packages/textscene-core/src/r3f/lighting2d/lightSeedQuad.tsx':
     'the accumulator seed quad: fixed shaders, one uniform, one material per accumulator',
-  'packages/textscene-core/src/r3f/materials/ExternalMaterialSlot.tsx':
-    'the `.tres` arrival: the resource pipeline hands over a material constructed complete and never writes to it again, and a re-resolve replaces the whole object',
   'packages/textscene-core/src/r3f/parentSpaceScope.tsx':
     'mounts the world root, a bare Object3D that R3F adds as a child and never routes to a material slot',
   'packages/textscene-core/src/r3f/preview/PreviewLighting.tsx':
@@ -171,8 +167,6 @@ export function materialConstructorLines(source: string): number[] {
 const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/nodes/3d/decal/Component.tsx':
     'rebuilt by the effect that rebuilds the projection meshes; the only later write is `opacity`, which no program parameter reads',
-  'packages/textscene-core/src/nodes/3d/gridmap/Component.tsx':
-    'module-constant fallback tile material, literal-only, never mutated and never disposed',
   'packages/textscene-core/src/r3f/controls/native/text/canvasTextPainter.ts':
     'one material per built text run, replaced and disposed together with its geometry; its single `defines` write happens before the material has ever been rendered',
   'packages/textscene-core/src/r3f/controls/native/text/msdfMaterial.ts':
@@ -183,6 +177,8 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the glow pyramid passes: shaders fixed at construction, only uniforms move, disposed with the effect',
   'packages/textscene-core/src/r3f/lighting2d/lightSeedQuad.tsx':
     'the accumulator seed quad: fixed shaders, one uniform, one instance per accumulator',
+  'packages/textscene-core/src/r3f/testing/threePasses.ts':
+    "a test stand-in for three's shared `_depthMaterial`, read by a probe and never rendered, so never compiled",
   'packages/textscene-core/src/r3f/lighting2d/lightQuad.ts':
     'one material per light per parameter set, memoised on every input including the shadow `defines` and disposed on replacement',
   'packages/textscene-core/src/resources/sky/build.ts':
@@ -246,10 +242,8 @@ export function meshArgumentMounts(source: string): MeshArgumentMount[] {
 const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/r3f/environment/GodotToneMapEffect.ts':
     'swaps the screen quad between the three pass materials, each built with its shaders fixed at construction, so only uniforms ever move',
-  'packages/textscene-core/src/r3f/internal/glb-scene-root/GlbSurfaceMaterialOverride.tsx':
-    'the `.tres` arrival for a mesh inside a GLB: the resource pipeline hands over a material constructed complete, a re-resolve replaces the whole object, and unmount puts the loader’s own material back',
   'packages/textscene-core/src/resources/formats/glb/glbProcessing.ts':
-    'the GLB slot writer: `cloneWithMaterials` gives each clone its own copy of the loader’s materials, and `forEachSurfaceMaterial` is the setter the import sidecar’s external materials are baked into the template through — neither is React state, both are rebuilt whole on re-parse, so there is no mount to key',
+    'the GLB slot writer: `cloneWithMaterials` gives each clone its own copy of the loader’s materials, and `forEachSurfaceMaterial` hands a material override the setter for each surface of a loaded GLB, which is not React state, so there is no mount to key',
 };
 
 /**
@@ -259,8 +253,6 @@ const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
 const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/nodes/3d/decal/Component.tsx':
     'the projection meshes and the material they carry are built by one effect and replaced together, so neither can outlive an input the other was built from',
-  'packages/textscene-core/src/nodes/3d/gridmap/Component.tsx':
-    'the tile material is either the literal-only module constant or one the resource pipeline handed over complete, and the InstancedMesh is rebuilt whenever either moves',
   'packages/textscene-core/src/r3f/environment/GodotToneMapEffect.ts':
     'the screen quad: its pass materials have their shaders fixed at construction, and it is disposed with the effect',
   'packages/textscene-core/src/resources/sky/build.ts':
@@ -533,12 +525,12 @@ describe('Material factory conformance', () => {
     // A regex or reader that stopped matching would read as "no offenders".
     expect(TAGS.flatMap(({ tags }) => tags).length).toBeGreaterThanOrEqual(30);
     expect(CONSTRUCTOR_SITES.flatMap(({ lines }) => lines).length).toBeGreaterThanOrEqual(10);
-    expect(ASSIGNMENT_SITES.flatMap(({ lines }) => lines).length).toBeGreaterThanOrEqual(5);
+    expect(ASSIGNMENT_SITES.flatMap(({ lines }) => lines).length).toBeGreaterThanOrEqual(4);
     expect(HOST_TAG_COUNT).toBeGreaterThanOrEqual(350);
-    // Only these mesh-likes have a site in the tree. The unit cases above
-    // hold up the other classes in the arity table.
+    // Only a plain Mesh has a site in the tree. The unit cases above hold up the
+    // other classes in the arity table.
     const liveMeshes = new Set(MESH_ARGUMENT_SITES.flatMap(({ mounts }) => mounts.map((m) => m.mesh)));
-    for (const mesh of ['Mesh', 'InstancedMesh']) expect(liveMeshes.has(mesh), mesh).toBe(true);
+    expect(liveMeshes.has('Mesh'), 'Mesh').toBe(true);
     // And each off-tag shape separately, against the live tree: they share one
     // scan, so a floor over the total would let two of the three go silent.
     const liveShapes = new Set(OFF_TAG_SITES.flatMap(({ mounts }) => mounts.map((m) => m.shape)));

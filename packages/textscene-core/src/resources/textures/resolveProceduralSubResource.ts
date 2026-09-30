@@ -36,19 +36,34 @@ export function resolveProceduralSubResource<T extends THREE.Texture>(
     resources: readonly TscnInternalResource[]
   ) => T | null
 ): ProceduralTextureResolution<T> | null {
-  const parsed = parseResourceReference(ref ?? '');
-  if (!parsed || parsed.type !== 'SubResource') return null;
+  const resource = findTypedSubResource(ref, internalResources, typeName);
+  if (!resource) return null;
 
   // The cache holds plain THREE.Texture, but a given sub-resource id has one
   // type, so whatever it holds under this key came out of this same rasterize.
-  const texture = proceduralTexture(internalResources, parsed.id, () => {
-    const resource = findSubResource(internalResources, parsed.id);
-    if (!resource || resource.type !== typeName) return null;
-    return unlessAllocationFails(`[${typeName}] sub-resource "${parsed.id}"`, () =>
+  const texture = proceduralTexture(internalResources, resource.id, () =>
+    unlessAllocationFails(allocationLabel(typeName, resource.id), () =>
       rasterize(resource.data as Record<string, string>, internalResources)
-    );
-  }) as T | null;
+    )
+  ) as T | null;
   if (!texture) return null;
 
-  return { texture, key: proceduralTextureKey(internalResources, parsed.id) };
+  return { texture, key: proceduralTextureKey(internalResources, resource.id) };
+}
+
+/** The inline `[sub_resource]` of `typeName` that `ref` names. Null for every other reference form. */
+export function findTypedSubResource(
+  ref: string | undefined,
+  internalResources: readonly TscnInternalResource[],
+  typeName: string
+): TscnInternalResource | null {
+  const parsed = parseResourceReference(ref ?? '');
+  if (!parsed || parsed.type !== 'SubResource') return null;
+  const resource = findSubResource(internalResources, parsed.id);
+  return resource?.type === typeName ? resource : null;
+}
+
+/** How an allocation failure names the sub-resource it could not build. */
+export function allocationLabel(typeName: string, id: string): string {
+  return `[${typeName}] sub-resource "${id}"`;
 }

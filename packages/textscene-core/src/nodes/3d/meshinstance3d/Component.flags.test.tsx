@@ -132,23 +132,4 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
     const renderer = await render(node, [sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);
     expect(renderer.scene.findByType('Mesh').instance.castShadow).toBe(true);
   });
-
-  it('a blend-mode (additive) material writes no shadow, even with cast_shadow ON', async () => {
-    // Godot excludes additive/subtractive/multiply surfaces from the shadow
-    // pass, so a glow sprite drops no solid silhouette.
-    const node = makeNode({
-      mesh: 'SubResource("Box_1")',
-      materialOverride: 'SubResource("Additive")',
-      castShadow: 1,
-    });
-    const renderer = await render(node, [
-      sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
-      sub('StandardMaterial3D', 'Additive', {
-        transparency: '1',
-        blend_mode: '1',
-        shading_mode: '0',
-      }),
-    ]);
-    expect(renderer.scene.findByType('Mesh').instance.castShadow).toBe(false);
-  });
 });

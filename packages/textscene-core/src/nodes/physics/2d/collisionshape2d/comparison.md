@@ -19,11 +19,11 @@ Strict parsing format-checks these `CollisionShape2D` properties, plus 12 inheri
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `debug_color` | Color(r, g, b, a) |  |
+| `debug_color` | Color(r, g, b, a), or the colour string or int it converts |  |
 | `disabled` | true or false |  |
 | `one_way_collision` | true or false |  |
 | `one_way_collision_margin` | float 0-128 | warning |
-| `shape` | null, SubResource("id") or ExtResource("id") |  |
+| `shape` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

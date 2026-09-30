@@ -5,14 +5,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../../linter/Linter';
 import { readFixture } from '../../../../linter/testing/fixtureCheck';
+import { reportsOf } from '../../../../linter/testing/tierLists';
 import './linterParser';
 import './linter';
 
 const RULE = 'retargetmodifier3d-no-child-skeleton';
-
-function warningsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.ruleName === RULE);
-}
 
 /** A source skeleton with the modifier under it, and whatever children follow. */
 function scene(children: string): string {
@@ -37,13 +34,12 @@ describe('RetargetModifier3D child-skeleton rule', () => {
     const content = scene(`
 [node name="Target" type="Skeleton3D" parent="Skeleton3D/Retarget"]
 `);
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toEqual([]);
   });
 
   it('warns when the modifier has no children at all', () => {
-    const warnings = warningsOf(linter.lint(scene('')));
+    const warnings = reportsOf(linter.lint(scene('')), RULE, 'warning');
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]!.severity).toBe('warning');
     expect(warnings[0]!.nodeName).toBe('Retarget');
     expect(warnings[0]!.message).toContain('Skeleton3D');
   });
@@ -52,7 +48,7 @@ describe('RetargetModifier3D child-skeleton rule', () => {
     const content = scene(`
 [node name="Marker" type="Marker3D" parent="Skeleton3D/Retarget"]
 `);
-    expect(warningsOf(linter.lint(content))).toHaveLength(1);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toHaveLength(1);
   });
 
   it('warns when the only Skeleton3D is a grandchild', () => {
@@ -64,7 +60,7 @@ describe('RetargetModifier3D child-skeleton rule', () => {
 
 [node name="Target" type="Skeleton3D" parent="Skeleton3D/Retarget/Holder"]
 `);
-    expect(warningsOf(linter.lint(content))).toHaveLength(1);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toHaveLength(1);
   });
 
   it('stays quiet when a child is an untyped instance whose type it cannot know', () => {
@@ -80,7 +76,7 @@ describe('RetargetModifier3D child-skeleton rule', () => {
 
 [node name="Target" parent="Skeleton3D/Retarget" instance=ExtResource("1")]
 `;
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toEqual([]);
   });
 
   it('stays quiet when a child is a class the pinned catalog does not know', () => {
@@ -88,7 +84,7 @@ describe('RetargetModifier3D child-skeleton rule', () => {
     const content = scene(`
 [node name="Target" type="MyExtensionSkeleton3D" parent="Skeleton3D/Retarget"]
 `);
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toEqual([]);
   });
 
   it('leaves the slice fixture clean', () => {
@@ -106,6 +102,6 @@ describe('RetargetModifier3D child-skeleton rule', () => {
 
 [node name="Skeleton3D" type="Skeleton3D" parent="."]
 `;
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toEqual([]);
   });
 });

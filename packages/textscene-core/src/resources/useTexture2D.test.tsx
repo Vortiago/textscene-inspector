@@ -5,7 +5,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { extResourceAtlasTextureSize, inlineTexture2DSize, useTexture2D } from './useTexture2D';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
@@ -14,6 +14,10 @@ import { TscnParser } from '../parser/TscnParser';
 import { NodeDispatcher } from '../r3f/NodeDispatcher';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
+import type { ResourceLoader } from './ResourceLoader';
+import { fakeJobRunner } from '../workers/fakeJobRunner.testkit';
+import { abortProceduralBuilds, type JobRunner } from './textures/proceduralBuilds';
+import { clearProceduralTextureCache } from './textures/proceduralTextureCache';
 import { SceneStack } from '../r3f/testing/SceneStack';
 
 import '../r3f/nodes/index';
@@ -123,7 +127,7 @@ texture = SubResource("t")
   it('still resolves a plain image reference through the async loader', async () => {
     const fake = createFakeResourceLoader();
     const tex = new THREE.Texture();
-    // Shaped like the loader's hand-over (ADR-0042): sRGB-tagged at three's clamp
+    // Shaped like the loader's hand-over (ADR-0044): sRGB-tagged at three's clamp
     // default, which is what the light's clamp bind shares untouched.
     tex.colorSpace = THREE.SRGBColorSpace;
     (tex as unknown as { image: { width: number; height: number } }).image = {
@@ -273,6 +277,80 @@ describe('useTexture2D — reference forms', () => {
 
     expect(result.current.texture).toBeNull();
     expect(result.current.missing).toBe(false);
+  });
+});
+
+describe('useTexture2D — a NoiseTexture2D that builds as a job', () => {
+  const noiseResources: TscnInternalResource[] = [
+    { id: 'FastNoiseLite_a', type: 'FastNoiseLite', data: { frequency: '0.05' } },
+    {
+      id: 'NoiseTexture2D_a',
+      type: 'NoiseTexture2D',
+      data: { noise: 'SubResource("FastNoiseLite_a")', width: '16', height: '16' },
+    },
+    {
+      id: 'AtlasTexture_cell',
+      type: 'AtlasTexture',
+      data: { atlas: 'SubResource("NoiseTexture2D_a")', region: 'Rect2(0, 0, 8, 8)' },
+    },
+  ];
+
+  function withRunner(runner: JobRunner) {
+    const fake = createFakeResourceLoader();
+    const loader = Object.assign(fake.loader, { jobRunner: runner }) as ResourceLoader;
+    const requested: string[] = [];
+    fake.textures.setRequestImpl((path) => requested.push(path));
+    function Wrapper({ children }: { children: ReactNode }) {
+      return <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>;
+    }
+    return { Wrapper, requested };
+  }
+
+  afterEach(() => {
+    abortProceduralBuilds();
+    clearProceduralTextureCache();
+  });
+
+  it('is not missing, and asks the file pipeline for nothing, while it builds', () => {
+    const { runner } = fakeJobRunner();
+    const { Wrapper, requested } = withRunner(runner);
+    const { result } = renderHook(
+      () => useTexture2D('SubResource("NoiseTexture2D_a")', [], noiseResources),
+      { wrapper: Wrapper }
+    );
+
+    expect(result.current).toEqual({ texture: null, missing: false });
+    expect(requested).toEqual([]);
+  });
+
+  it('gives the built texture once the build lands', async () => {
+    const { runner, runs } = fakeJobRunner();
+    const { Wrapper } = withRunner(runner);
+    const { result } = renderHook(
+      () => useTexture2D('SubResource("NoiseTexture2D_a")', [], noiseResources),
+      { wrapper: Wrapper }
+    );
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    await act(async () => {
+      runs[0]?.complete();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.texture).toBeInstanceOf(THREE.DataTexture);
+    expect(result.current.missing).toBe(false);
+  });
+
+  it('does not report an atlas over a sheet still building as missing', () => {
+    const { runner } = fakeJobRunner();
+    const { Wrapper } = withRunner(runner);
+    const { result } = renderHook(
+      () => useTexture2D('SubResource("AtlasTexture_cell")', [], noiseResources),
+      { wrapper: Wrapper }
+    );
+
+    expect(result.current).toEqual({ texture: null, missing: false });
   });
 });
 

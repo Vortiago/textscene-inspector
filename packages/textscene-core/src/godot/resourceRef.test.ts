@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import {
   EXT_RESOURCE_CALL_ANYWHERE_RE,
   dictSubResourceEntries,
+  isPathResourceLiteral,
   keyedResourceRefReader,
   resourceRef,
   subResourceRefAnywhere,
@@ -72,6 +73,38 @@ describe('resourceRef', () => {
   // No `g` flag, so `.exec()` carries no `lastIndex` between callers.
   it('is stateless across calls', () => {
     for (let i = 0; i < 3; i++) expect(resourceRef('SubResource("a")')).not.toBeNull();
+  });
+});
+
+// The text loader sets no `rp.func`, so `Resource(…)` takes the generic branch
+// (`variant_parser.cpp:1123-1185`) and loads by path.
+describe('isPathResourceLiteral', () => {
+  it.each([
+    'Resource("res://a.tres")',
+    'Resource ( "res://a.tres" )',
+    'Resource("uid://b3x")',
+    'Resource("res://a.tres", "uid://b3x")',
+    'Resource("uid://b3x", "res://a.tres")',
+  ])('reads %s', (raw) => {
+    expect(isPathResourceLiteral(raw)).toBe(true);
+  });
+
+  it('refuses the two-argument spellings the parser refuses', () => {
+    // `variant_parser.cpp:1141-1152`: one uid and one path, never two of either.
+    expect(isPathResourceLiteral('Resource("uid://a", "uid://b")')).toBe(false);
+    expect(isPathResourceLiteral('Resource("res://a.tres", "res://b.tres")')).toBe(false);
+  });
+
+  it('refuses an argument that is not a string', () => {
+    // `variant_parser.cpp:1183`: "Expected string as argument for Resource()".
+    expect(isPathResourceLiteral('Resource()')).toBe(false);
+    expect(isPathResourceLiteral('Resource(1)')).toBe(false);
+    expect(isPathResourceLiteral('Resource("res://a.tres", 2)')).toBe(false);
+  });
+
+  it('is a whole value, and neither reference kind', () => {
+    expect(isPathResourceLiteral('[Resource("res://a.tres")]')).toBe(false);
+    expect(isPathResourceLiteral('ExtResource("1")')).toBe(false);
   });
 });
 

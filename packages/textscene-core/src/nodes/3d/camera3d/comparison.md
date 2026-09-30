@@ -18,12 +18,12 @@ Strict parsing format-checks these `Camera3D` properties, plus 17 inherited from
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `attributes` | null, SubResource("id") or ExtResource("id") |  |
-| `compositor` | null, SubResource("id") or ExtResource("id") |  |
+| `attributes` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `compositor` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `cull_mask` | 32-bit layer mask (layers 1-32) |  |
 | `current` | true or false |  |
 | `doppler_tracking` | enum 0-2 (DISABLED/IDLE_STEP/PHYSICS_STEP) | warning |
-| `environment` | null, SubResource("id") or ExtResource("id") |  |
+| `environment` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `far` | float >= 0.01 | warning below |
 | `fov` | float 1-179 | error |
 | `frustum_offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |

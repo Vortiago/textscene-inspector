@@ -34,6 +34,7 @@ import type { TscnNode } from '../../../parser/types';
 import { useSceneResources } from '../../SceneResourcesContext';
 import { resolveMaterialSource } from '../../materials/materialSource';
 import { GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
+import { forEachSurfaceMaterial, importMaterialPath } from '../../../resources/formats/glb/glbProcessing';
 import { boolSlotValue } from '../../../godot/index.js';
 
 /** Reserved for a synthesised GLB root: no `.tscn` declares it, and the linter never sees it. */
@@ -65,6 +66,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
 
   // A `surface_material_override/0` needs an ExtResource resolved and a `.tres` loaded, which
   // the synchronous mutation above cannot do, so each one mounts its own slot component.
+  const importMaterials = useGlbImportMaterials(object);
   const materialOverrides = useGlbMaterialOverrides(object, entries, overrides);
 
   // Registers each GLB object under the tree's relPath scheme, so the SceneTreeViewer can select
@@ -188,10 +190,40 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   // useResource clones the Object3D per consumer, so the value mounts directly.
   return (
     <primitive object={object}>
+      {importMaterials}
       {materialOverrides}
       {children}
     </primitive>
   );
+}
+
+/**
+ * One `<GlbSurfaceMaterialOverride>` per `.tres` an **Import sidecar** remaps a surface to, over
+ * the surfaces the GLB processor tagged with it. A node's own override takes precedence: its
+ * material carries no tag, so a remap never replaces it.
+ */
+function useGlbImportMaterials(object: THREE.Object3D | undefined): ReactNode {
+  return useMemo(() => {
+    if (!object) return null;
+    const paths = new Set<string>();
+    forEachSurfaceMaterial(object, (material) => {
+      const path = importMaterialPath(material);
+      if (path) paths.add(path);
+    });
+    if (paths.size === 0) return null;
+    return (
+      <>
+        {[...paths].map((path) => (
+          <GlbSurfaceMaterialOverride
+            key={`import:${path}`}
+            target={object}
+            source={{ kind: 'file', path }}
+            replaces={(material) => importMaterialPath(material) === path}
+          />
+        ))}
+      </>
+    );
+  }, [object]);
 }
 
 /**

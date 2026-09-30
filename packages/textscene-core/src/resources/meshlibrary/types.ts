@@ -6,14 +6,10 @@
  */
 
 import type { Transform3D } from '../../nodes/base/node3d/types';
+import { ShadowCastingSetting } from '../../godot/rendering';
 
-/** Godot `RS::ShadowCastingSetting` (`servers/rendering/rendering_server.h:1494-1499`). */
-export enum ShadowCastingSetting {
-  OFF = 0,
-  ON = 1,
-  DOUBLE_SIDED = 2,
-  SHADOWS_ONLY = 3,
-}
+/** Godot's `RS::ShadowCastingSetting`, shared with every GeometryInstance3D. */
+export { ShadowCastingSetting };
 
 export interface MeshLibraryItem {
   id: number;

@@ -6,12 +6,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { ruleRegistry } from './RuleRegistry.js';
 import { WARNINGS } from './configurationWarningCensus.js';
-import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
-import { severityFixedBy, type EmitGrounding, type Severity } from './types.js';
+import { severityFixedBy, type EmitGrounding } from './types.js';
 import './index.js'; // side-effect: every slice registers its rules
 import { ENGINE_CITE_RE } from './testing/engineCite.js';
+import { declaredArms, type DeclaredArm } from './testing/declaredArms.js';
 
 /** Every emitted `ruleName` a census row claims, with the row's `file.cpp:line`. */
 function censusCitations(): Map<string, string[]> {
@@ -27,26 +26,6 @@ function censusCitations(): Map<string, string[]> {
   return out;
 }
 
-interface Entry {
-  readonly rule: string;
-  readonly ruleName: string;
-  readonly severity: Severity;
-  readonly grounding: EmitGrounding;
-}
-
-/**
- * Every emits entry in the live registry, tagged with its rule, plus the file-level diagnostics no rule can own.
- * `Linter` stamps those directly, so they reach no `RuleMeta.emits`, but they carry the same shape and are checked alike.
- */
-function entries(): Entry[] {
-  return [
-    ...ruleRegistry
-      .getRules()
-      .flatMap((r) => (r.meta.emits ?? []).map((e) => ({ rule: r.meta.name, ...e }))),
-    ...Object.values(FILE_DIAGNOSTICS).map((d) => ({ rule: 'Linter', ...d })),
-  ];
-}
-
 /**
  * The `file.cpp:line` behind one entry, or a reason there is none.
  *
@@ -54,7 +33,7 @@ function entries(): Entry[] {
  * carries no citation of its own, and reading it here is what proves the row it
  * points at is real.
  */
-function resolve(entry: Entry, census: Map<string, string[]>): string {
+function resolve(entry: DeclaredArm, census: Map<string, string[]>): string {
   switch (entry.grounding.kind) {
     case 'engine':
       return entry.grounding.at;
@@ -69,7 +48,7 @@ function resolve(entry: Entry, census: Map<string, string[]>): string {
 
 describe('emit grounding', () => {
   const census = censusCitations();
-  const all = entries();
+  const all = declaredArms();
 
   it('sweeps the whole registry, not an empty set', () => {
     // A guard that silently matches nothing passes everything below it. The
@@ -184,7 +163,7 @@ describe('emit grounding', () => {
 
 describe('the grounding guard bites', () => {
   const census = new Map<string, string[]>([['ported-thing', ['some_node.cpp:12']]]);
-  const entry = (grounding: EmitGrounding, ruleName = 'x-y'): Entry => ({
+  const entry = (grounding: EmitGrounding, ruleName = 'x-y'): DeclaredArm => ({
     rule: 'valid-x',
     ruleName,
     severity: 'warning',

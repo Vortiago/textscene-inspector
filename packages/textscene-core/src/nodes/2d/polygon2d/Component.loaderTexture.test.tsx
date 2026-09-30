@@ -1,6 +1,6 @@
 /**
  * One texture from the real loader, bound by a canvas consumer and by a 3D
- * material (ADR-0042). The canvas samples it clamped, a default
+ * material (ADR-0044). The canvas samples it clamped, a default
  * `StandardMaterial3D` samples it tiled, and the shared entry keeps the wrapping
  * the loader gave it.
  *
@@ -17,7 +17,7 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { createTextureFromBuffer } from '../../../resources/formats/image/textureProcessing';
-import { buildStandardMaterial } from '../../../resources/materials/standardmaterial3d/build';
+import { buildMaterial } from '../../../resources/materials/standardmaterial3d/buildMaterial.testkit';
 import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars';
 import type { ParsedHeading } from '../../../parser/utils';
 import type { TscnNode } from '../../../parser/types';
@@ -82,7 +82,7 @@ describe('one loader texture, two consumers', () => {
     expect(canvas.wrapS).toBe(THREE.ClampToEdgeWrapping);
     expect(canvas.wrapT).toBe(THREE.ClampToEdgeWrapping);
 
-    const material = buildStandardMaterial(parseStandardMaterial3DScalars({}), {
+    const material = buildMaterial(parseStandardMaterial3DScalars({}), {
       albedo_texture: entry,
     }) as THREE.MeshStandardMaterial;
     expect(material.map).not.toBe(entry);

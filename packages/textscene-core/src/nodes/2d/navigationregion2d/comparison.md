@@ -24,7 +24,7 @@ Strict parsing format-checks these `NavigationRegion2D` properties, plus 12 inhe
 | `enabled` | true or false |  |
 | `enter_cost` | float >= 0 | error below |
 | `navigation_layers` | 32-bit layer mask (layers 1-32) |  |
-| `navigation_polygon` | null, SubResource("id") or ExtResource("id") |  |
+| `navigation_polygon` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `travel_cost` | float >= 0 | error below |
 | `use_edge_connections` | true or false |  |
 

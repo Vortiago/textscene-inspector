@@ -37,7 +37,7 @@ export interface MaterialTextureState {
    * Godot `BaseMaterial3D.texture_repeat`, default true
    * (`flags[FLAG_USE_TEXTURE_REPEAT] = true`, `repeat_enable` on the sampler).
    * three defaults to clamp-to-edge, which smears UVs outside 0..1 into stripes.
-   * The loader leaves wrapping at that clamp default (ADR-0042), so this field is
+   * The loader leaves wrapping at that clamp default (ADR-0044), so this field is
    * the binding's only source of Repeat.
    * Omitted means Godot's default.
    */
@@ -86,7 +86,7 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
 
   const filterState = godotTextureFilterState(state.filter);
   const uvDiverges = state.uv !== undefined && !isIdentity(state.uv);
-  // A producer may hand over either wrapping (ADR-0042), so the wanted wrapping
+  // A producer may hand over either wrapping (ADR-0044), so the wanted wrapping
   // is compared with what the texture carries. Only a texture already wrapped as
   // the binding wants stays shared.
   const wrapping = state.repeat === false ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;

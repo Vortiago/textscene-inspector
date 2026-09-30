@@ -62,6 +62,7 @@ export {
   CANVAS_ITEM_Z_MAX,
   CANVAS_LAYER_MIN,
   CANVAS_LAYER_MAX,
+  ShadowCastingSetting,
 } from './rendering.js';
 export {
   CPU_PARTICLES_PARAMS,
@@ -70,6 +71,8 @@ export {
   crossedParamRanges,
 } from './cpuParticles.js';
 export { formatReal, storedReal } from './real.js';
+export { BillboardMode } from './billboard.js';
+export { GODOT_GLTF_EXTENSIONS, unsupportedRequiredGltfExtensions } from './gltf.js';
 export { GRADIENT_TEXTURE_MAX_SIZE, IMAGE_MAX_PIXELS } from './texture.js';
 export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX, CLIP_CHILDREN_MODES } from './canvasItem.js';
 export {
@@ -87,9 +90,11 @@ export {
   type LayoutDirectionEnv,
 } from './control.js';
 export { isLocaleRightToLeft, RTL_LANGUAGE_CODES } from './textServer.js';
+export { isColorString } from './color.js';
 export {
   allFinite,
   FLOAT_PATTERN_SOURCE,
+  INT_TOKEN_RE,
   TSCN_FLOAT_PATTERN_SOURCE,
   TSCN_FLOAT_RE,
   slotTupleRegex,
@@ -120,6 +125,9 @@ export {
   compositeCallPrefix,
   dictCallField,
   isNilLiteral,
+  JACKETED_STRING_RE,
+  variantShape,
+  type VariantShape,
   packedArrayCallAnywhere,
   packedArrayLiteral,
   nodePathLiteral,
@@ -130,6 +138,7 @@ export {
   type ResourceRef,
   dictSubResourceEntries,
   keyedResourceRefReader,
+  isPathResourceLiteral,
   resourceRef,
   subResourceRefAnywhere,
 } from './resourceRef.js';

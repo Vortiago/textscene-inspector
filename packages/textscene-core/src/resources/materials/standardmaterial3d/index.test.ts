@@ -19,13 +19,13 @@ import { resourceSliceRegistry } from '../../sliceRegistration';
 const here = dirname(fileURLToPath(import.meta.url));
 
 describe('standardmaterial3d slice registration', () => {
-  it('claims StandardMaterial3D on the material bus', () => {
+  it('claims StandardMaterial3D on the resource bus, which `useMaterial` reads', () => {
     const registration = resourceSliceRegistry.byTypeName('StandardMaterial3D');
     expect(registration).not.toBeNull();
     expect(registration).toMatchObject({
       slice: 'standardmaterial3d',
       kind: 'godot-text',
-      busType: 'material',
+      busType: 'resource',
       failureLabel: 'Node using material',
     });
     expect(registration!.typeNames).toContain('StandardMaterial3D');
@@ -39,9 +39,9 @@ describe('standardmaterial3d slice registration', () => {
     );
   });
 
-  it('routes both claimed types to the material bus', () => {
-    expect(resourceSliceRegistry.busTypeFor('StandardMaterial3D')).toBe('material');
-    expect(resourceSliceRegistry.busTypeFor('ShaderMaterial')).toBe('material');
+  it('routes both claimed types to the resource bus, so a reload reaches every material slot', () => {
+    expect(resourceSliceRegistry.busTypeFor('StandardMaterial3D')).toBe('resource');
+    expect(resourceSliceRegistry.busTypeFor('ShaderMaterial')).toBe('resource');
   });
 
   it('claims no file extension', () => {

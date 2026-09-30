@@ -16,8 +16,8 @@ import type { CsgPlan } from './csgPlan';
 import { evaluateCsgPlan, type CsgEvaluation } from './evaluateCsgPlan';
 import { getCachedEvaluation, setCachedEvaluation } from './csgEvaluationCache';
 import { loadCsgModule, type CsgModule } from './csgModule';
+import { usePendingWhile } from '../../resources/usePendingWhile';
 import type { ShadowCastingEffects } from '../shadowCasting';
-import { CSG_SHADOWS_ONLY_MATERIAL } from './csgShadowsOnlyMaterial';
 
 export interface CsgRootMeshProps {
   plan: CsgPlan;
@@ -78,15 +78,18 @@ export function CsgRootMesh({ plan, shadow, fallback, children }: CsgRootMeshPro
       : evaluation === null
         ? 'failed'
         : 'ready';
+  // The library is a lazy chunk outside the resource bus. Counting it as pending lets the
+  // camera's settle-fit frame the evaluated result, whenever the chunk lands.
+  usePendingWhile(status === 'pending');
 
   const subtree = useMemo(
     () => ({ status, absorbedPaths: plan.absorbedPaths, invisiblePaths: plan.invisiblePaths }),
     [status, plan.absorbedPaths, plan.invisiblePaths]
   );
 
-  // Resolve each output surface to a material slot. One component per slot keeps
-  // ExternalMaterialSlot's useResource call one-per-component, so rules of hooks holds
-  // for any surface count.
+  // Resolve each output surface to a material slot. One component per slot keeps each
+  // slot's `useResource` calls one set per component, so rules of hooks holds for any
+  // surface count.
   const surfaces = useMemo((): Array<MaterialSource | undefined> => {
     if (!evaluation) return [];
     return evaluation.surfaceSlots.map((planSurface) =>
@@ -101,26 +104,19 @@ export function CsgRootMesh({ plan, shadow, fallback, children }: CsgRootMeshPro
       {drawable && (
         <mesh
           castShadow={shadow.castShadow}
+          onBeforeRender={shadow.onBeforeRender}
+          onAfterRender={shadow.onAfterRender}
           onBeforeShadow={shadow.onBeforeShadow}
+          onAfterShadow={shadow.onAfterShadow}
           receiveShadow
           geometry={evaluation!.geometry as THREE.BufferGeometry}
         >
-          {/* SHADOWS_ONLY draws no colour, so no surface material mounts: one would leave
-              this substitution resting on r3f's attach order, which a later slot remount
-              (an external `.tres` landing, a program key moving) undoes. */}
-          {shadow.shadowsOnly ? (
-            <meshBasicMaterial
-              key={CSG_SHADOWS_ONLY_MATERIAL.key}
-              {...CSG_SHADOWS_ONLY_MATERIAL.props}
-            />
-          ) : (
-            surfaces.map((surface, index) => {
-              // A single-surface mesh keeps the singular attach key, so `mesh.material`
-              // stays one material rather than a length-1 array.
-              const attach = surfaces.length > 1 ? `material-${index}` : 'material';
-              return <SurfaceMaterialSlot key={index} source={surface} attach={attach} />;
-            })
-          )}
+          {surfaces.map((surface, index) => {
+            // A single-surface mesh keeps the singular attach key, so `mesh.material`
+            // stays one material rather than a length-1 array.
+            const attach = surfaces.length > 1 ? `material-${index}` : 'material';
+            return <SurfaceMaterialSlot key={index} source={surface} attach={attach} />;
+          })}
         </mesh>
       )}
       {/*

@@ -10,7 +10,9 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
-import { composeFrameTexture, frameSizePx, spriteWrapMode } from '../../../r3f/spriteFrame';
+import { frameSizePx, frameUvWindow, spriteSamplerClone, spriteWrapMode } from '../../../r3f/spriteFrame';
+import { useUploadedClone } from '../../../r3f/tiledUpload/useTiledUpload';
+import { useUvWindow } from '../../../r3f/useUvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { alphaCutSurface } from '../../../r3f/godotAlphaCut';
@@ -54,33 +56,39 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     internalResources
   );
 
-  // The shared `r3f/spriteFrame` module (Sprite2D and Sprite3D) clones the texture and windows the
-  // UVs to the region or frame. Flip mirrors through UV negation, where 2D mirrors through mesh
-  // scale: negate the repeat and shift the offset to the opposite edge.
-  const displayedTexture = useMemo(() => {
-    // The wrap mode is derived, not fixed: `sprite_3d.cpp:163` reads it off the frame's own UV
-    // corners, so only an overrunning window tiles. SRGBColorSpace: Godot's 3D pipeline decodes
-    // sRGB in hardware before filtering (`canvas2DTextureDecode.ts`), so the clone keeps the cache
-    // entry's colour space, not the 2D canvas's `NoColorSpace` retag.
-    const wrap = spriteWrapMode(sourceTexture ?? undefined, properties);
-    const cloned = composeFrameTexture(sourceTexture ?? undefined, properties, wrap, THREE.SRGBColorSpace);
-    if (!cloned) return undefined;
+  // The wrap mode is derived, not fixed: `sprite_3d.cpp:163` reads it off the frame's own UV
+  // corners, so only an overrunning window tiles.
+  const wrap = spriteWrapMode(sourceTexture ?? undefined, properties);
+  const textureFilter = properties.texture_filter;
+  // The shared `r3f/spriteFrame` module (Sprite2D and Sprite3D) clones the texture with its
+  // sampler state. SRGBColorSpace: Godot's 3D pipeline decodes sRGB in hardware before filtering
+  // (`canvas2DTextureDecode.ts`), so the clone keeps the cache entry's colour space, not the 2D
+  // canvas's `NoColorSpace` retag.
+  const samplerClone = useMemo(() => {
+    const cloned = spriteSamplerClone(sourceTexture ?? undefined, wrap, THREE.SRGBColorSpace);
     // Sprite3D's texture is a node property, not a material slot, so the node's
     // own `texture_filter` (`material.cpp:3055`) lands on this clone.
-    applyTextureFilterState(cloned, godotTextureFilterState(properties.texture_filter));
+    if (cloned) applyTextureFilterState(cloned, godotTextureFilterState(textureFilter));
+    return cloned;
+  }, [sourceTexture, wrap, textureFilter]);
+  // The clone is this component's, never the loader's cached entry: `useUploadedClone`
+  // uploads it once and disposes it once it no longer draws. A frame change keeps it.
+  const displayedTexture = useUploadedClone(samplerClone ?? null);
+  // Flip mirrors through UV negation, where 2D mirrors through mesh scale: negate the
+  // repeat and shift the offset to the opposite edge.
+  const frameWindow = useMemo(() => {
+    const uv = frameUvWindow(sourceTexture ?? undefined, properties);
     if (properties.flip_h) {
-      cloned.offset.x += cloned.repeat.x;
-      cloned.repeat.x = -cloned.repeat.x;
+      uv.offset.x += uv.repeat.x;
+      uv.repeat.x = -uv.repeat.x;
     }
     if (properties.flip_v) {
-      cloned.offset.y += cloned.repeat.y;
-      cloned.repeat.y = -cloned.repeat.y;
+      uv.offset.y += uv.repeat.y;
+      uv.repeat.y = -uv.repeat.y;
     }
-    return cloned;
+    return uv;
   }, [sourceTexture, properties]);
-  // `composeFrameTexture` hands back a clone, never the loader's cached entry, so
-  // the clone is this component's to release; the shared source is left alone.
-  useEffect(() => () => displayedTexture?.dispose(), [displayedTexture]);
+  useUvWindow(displayedTexture, frameWindow);
 
   // Quad sizing: pixel_size × the frame's pixel dimensions (1×1 fallback
   // before the image loads keeps the placeholder at expected scale).

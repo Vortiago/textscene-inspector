@@ -60,7 +60,7 @@ for (let cp = LATIN1_SUPPLEMENT_START; cp <= LATIN1_SUPPLEMENT_END; cp++) {
 for (const cp of EXTRA_CODEPOINTS) CHARSET.push(String.fromCodePoint(cp));
 
 // A pre-baked atlas, not a runtime font such as troika-three-text: the webview
-// CSP has no `worker-src blob:` or `connect-src`, and grants `img-src ... data:`.
+// CSP has no `connect-src` for the font fetch, and grants `img-src ... data:`.
 // Baked above any Godot theme default size (16), so glyph edges keep MSDF
 // resolution when magnified for headings.
 const ATLAS_FONT_SIZE = 42;

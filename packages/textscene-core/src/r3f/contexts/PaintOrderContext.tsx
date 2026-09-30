@@ -6,7 +6,7 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../../parser/types';
 import {
-  allocatePaintRange,
+  allocateNodePaintRange,
   canvasRenderOrder,
   layerRankOf,
   layerRanks,
@@ -80,10 +80,6 @@ export function LayerRanksProvider({
 export function useCanvasItemRenderOrder(node: TscnNode, effectiveZ: number): number {
   const range = usePaintRange();
   const layerRank = useLayerRank(useCanvasLayerIndex());
-  const sortsChildren = (node.properties as { y_sort_enabled?: boolean }).y_sort_enabled === true;
-  const sequence = useMemo(
-    () => allocatePaintRange(range, node.children, sortsChildren).self,
-    [range, node.children, sortsChildren]
-  );
+  const sequence = useMemo(() => allocateNodePaintRange(range, node).self, [range, node]);
   return canvasRenderOrder({ layerRank, zFinal: effectiveZ, sequence });
 }

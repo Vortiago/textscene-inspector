@@ -22,12 +22,12 @@ Strict parsing format-checks these `GPUParticles3D` properties, plus 18 inherite
 | `amount_ratio` | float 0-1 | warning |
 | `collision_base_size` | float >= 0 | warning below |
 | `draw_order` | enum 0-3 (INDEX/LIFETIME/REVERSE_LIFETIME/VIEW_DEPTH) | warning |
-| `draw_pass_1` | null, SubResource("id") or ExtResource("id") |  |
-| `draw_pass_2` | null, SubResource("id") or ExtResource("id") |  |
-| `draw_pass_3` | null, SubResource("id") or ExtResource("id") |  |
-| `draw_pass_4` | null, SubResource("id") or ExtResource("id") |  |
+| `draw_pass_1` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `draw_pass_2` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `draw_pass_3` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `draw_pass_4` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `draw_passes` | integer 1-4 | error below, warning above |
-| `draw_skin` | null, SubResource("id") or ExtResource("id") |  |
+| `draw_skin` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `emitting` | true or false |  |
 | `explosiveness` | float 0-1 | warning |
 | `fixed_fps` | integer 0-1000 | warning |
@@ -38,7 +38,7 @@ Strict parsing format-checks these `GPUParticles3D` properties, plus 18 inherite
 | `local_coords` | true or false |  |
 | `one_shot` | true or false |  |
 | `preprocess` | float >= 0 | warning below |
-| `process_material` | null, SubResource("id") or ExtResource("id") |  |
+| `process_material` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `randomness` | float 0-1 | warning |
 | `seed` | integer 0-4294967295 | warning |
 | `speed_scale` | float 0-64 | warning |

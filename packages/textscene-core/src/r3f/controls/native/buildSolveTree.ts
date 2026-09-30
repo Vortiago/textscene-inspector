@@ -51,6 +51,7 @@ import { multiplyModulate, WHITE_MODULATE } from '../../canvasItemModulate';
 import {
   allocatePaintRange,
   canvasRootRanges,
+  internalFrontRoom,
   isCanvasLayerType,
   isTopLevelItem,
   WHOLE_CANVAS_RANGE,
@@ -599,7 +600,10 @@ function buildForest(
       // walk makes the same split.
       const injected = (origin: string) => origin === 'subscene' || origin === 'glb';
       const inlineChildren = groups.filter((g) => !injected(g.origin)).flatMap((g) => g.children);
-      const allocated = allocatePaintRange(paintRange, inlineChildren, sortsChildren(collapsed));
+      const allocated = allocatePaintRange(paintRange, inlineChildren, {
+        sortsChildren: sortsChildren(collapsed),
+        frontRoom: internalFrontRoom(collapsed),
+      });
       const injectedRanges = allocatePaintRange(
         allocated.tail,
         groups.filter((g) => injected(g.origin)).flatMap((g) => g.children)
