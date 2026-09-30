@@ -285,6 +285,7 @@ export { registeredTypes } from './registryPopulation.js';
 export { ruleRegistry } from './RuleRegistry.js';
 export { SEVERITY_ORDER, flooredSeverity, isSeverity } from './types.js';
 export { diagnosticLine } from './diagnosticLine.js';
+export { mergeDiagnostics, sortDiagnostics } from './mergeDiagnostics.js';
 
 // Re-export types
 export type {

@@ -3,7 +3,7 @@
  * `<ResourceLoaderProvider>`, so node components load resources with `useResource()`.
  * The shell's `<MissingResourcesPanel>` takes one upload per missing path.
  */
-import { useCallback, useMemo, useRef, useState, type ChangeEvent, type CSSProperties } from 'react';
+import { useCallback, useMemo, useReducer, useRef, useState, type ChangeEvent, type CSSProperties } from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import {
@@ -110,8 +110,11 @@ export function R3FApp() {
     missingPathsRef.current = new Set([...paths].map(resourceFilePath));
   }, []);
 
+  // Counts uploads and removals, so the Source pane lints the unchanged buffer again: a
+  // cross-file rule may read the file that changed.
+  const [uploadRevision, bumpUploadRevision] = useReducer((count: number) => count + 1, 0);
   const { diagnosticsByLine, fileDiagnostics, problemBadge, lineCount } =
-    useSourceDiagnostics(buffer, provider);
+    useSourceDiagnostics(buffer, provider, uploadRevision);
   const [gutterScrollTop, setGutterScrollTop] = useState(0);
 
   const options = useMemo(() => fixtureOptions(uploadedTscnName), [uploadedTscnName]);
@@ -152,6 +155,7 @@ export function R3FApp() {
   function handleResourceUpload(path: string, file: File) {
     provider.addUploadedFile(path, file);
     loader.provideFile(path);
+    bumpUploadRevision();
   }
 
   const handleFilesUpload = createFileIngest({
@@ -180,6 +184,7 @@ export function R3FApp() {
     // reappears. Without it `useResource` keeps its cached `loaded` value.
     provider.removeUploadedFile(path);
     loader.provideFile(path);
+    bumpUploadRevision();
   }
 
   function handleDownloadTscn() {

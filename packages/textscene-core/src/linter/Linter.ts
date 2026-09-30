@@ -5,9 +5,9 @@ import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { orphanDiagnostics } from './orphanDiagnostics.js';
 import { danglingResourceDiagnostics } from './danglingResources.js';
 import { unimportableGltfDiagnostics, usedGltfResources } from './unimportableGltf.js';
+import { GltfVerdicts } from './gltfVerdicts.js';
+import { sortDiagnostics } from './mergeDiagnostics.js';
 import {
-  SEVERITY_ORDER,
-  flooredSeverity,
   type Diagnostic,
   type RuleContext,
   type ParseError,
@@ -33,6 +33,8 @@ function onHeading(diagnostic: Diagnostic, heading: Diagnostic['location']): Dia
 
 export class Linter {
   private parser = new StrictTscnParser();
+  /** What each used glTF file refuses, per provider, for the linter's lifetime. */
+  private readonly gltfVerdicts = new GltfVerdicts();
 
   /**
    * Lint TSCN file content in two phases: strict parsing (syntax and format errors), then the semantic rules.
@@ -41,27 +43,25 @@ export class Linter {
    * @returns Array of diagnostics (parse errors + rule violations)
    */
   lint(content: string): Diagnostic[] {
-    return this.sortDiagnostics(this.lintFile(content).diagnostics);
+    return sortDiagnostics(this.lintFile(content).diagnostics);
   }
 
   /**
    * `lint`, plus the diagnostics of the rules that read the files `content` uses, through `provider`: a host's view of the
    * Godot project the file sits in. One strict parse serves both. A file the provider cannot deliver adds no diagnostic.
+   * A host shows `mergeDiagnostics(diagnostics, await dependencies)`.
    *
    * @param content - Raw TSCN file content
    * @param provider - Loads a `res://` path of the file's project
-   * @returns The diagnostics of `lint` at once, and the cross-file ones merged in once read
+   * @returns The diagnostics of `lint` at once, and the cross-file ones alone once read
    */
   lintProject(content: string, provider: ResourceProvider): ProjectLintResult {
     const { diagnostics, parsed } = this.lintFile(content);
-    const local = this.sortDiagnostics(diagnostics);
+    const local = sortDiagnostics(diagnostics);
     const gltfResources = parsed?.scene ? usedGltfResources(parsed.scene) : [];
-    if (!parsed || gltfResources.length === 0) return { diagnostics: local, withDependencies: null };
+    if (!parsed || gltfResources.length === 0) return { diagnostics: local, dependencies: null };
 
-    const withDependencies = this.gltfDiagnostics(gltfResources, parsed.lines, provider).then((found) =>
-      this.sortDiagnostics(local.concat(found))
-    );
-    return { diagnostics: local, withDependencies };
+    return { diagnostics: local, dependencies: this.gltfDiagnostics(gltfResources, parsed.lines, provider) };
   }
 
   /**
@@ -75,7 +75,7 @@ export class Linter {
     provider: ResourceProvider
   ): Promise<Diagnostic[]> {
     try {
-      return await unimportableGltfDiagnostics(resources, lines, provider);
+      return sortDiagnostics(await unimportableGltfDiagnostics(resources, lines, provider, this.gltfVerdicts));
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       const rule = FILE_DIAGNOSTICS.unimportableGltf.ruleName;
@@ -217,15 +217,5 @@ export class Linter {
     for (const child of node.children) {
       this.lintNode(scene, child, lines, diagnostics);
     }
-  }
-
-  /**
-   * Sort diagnostics by severity, errors first, an unranked tier floored to `info`. A bare index gives `undefined` for
-   * a severity outside the union, and the `NaN` difference reads as "equal", leaving the order undecided.
-   */
-  private sortDiagnostics(diagnostics: Diagnostic[]): Diagnostic[] {
-    return diagnostics.sort(
-      (a, b) => SEVERITY_ORDER[flooredSeverity(a.severity)] - SEVERITY_ORDER[flooredSeverity(b.severity)]
-    );
   }
 }

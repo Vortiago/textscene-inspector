@@ -31,7 +31,10 @@ When the scene's own directory, or a directory above it, holds
 `project.godot`, `tscn-lint` resolves `res://` paths from there. It then also
 reads each `.glb` and `.gltf` file the scene uses, and reports one that requires
 a glTF extension Godot's importer does not support. Godot fails to load such a
-scene. `tscn-lint` checks a scene outside every Godot project alone.
+scene. The report is an error when the project enables no editor plugin and
+loads no GDExtension. It is a warning when the project has one, because a plugin
+can add support for the extension. `tscn-lint` checks a scene outside every
+Godot project alone.
 
 ## Output formats (`--format`)
 

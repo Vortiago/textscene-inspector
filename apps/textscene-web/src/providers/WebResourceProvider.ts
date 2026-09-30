@@ -22,6 +22,13 @@ export class WebResourceProvider implements ResourceProvider {
   /** Uploaded files, keyed per corpus root by {@link uploadKey}. */
   private uploadedFiles: Map<string, File> = new Map();
   /**
+   * Each upload's serial, keyed like `uploadedFiles`. Written by `addUploadedFile` from
+   * `uploadCount`, deleted with its file. A serial, not the file's `lastModified` and
+   * `size`: two different files can share both.
+   */
+  private uploadSerials: Map<string, number> = new Map();
+  private uploadCount = 0;
+  /**
    * Public-fixtures subtree the active scene's res:// namespace maps onto: '' for
    * the fixtures root (unit fixtures, examples, the flattened isometric corpus),
    * or a demo project's own root, such as 'demos/2d/platformer', so paths never collide.
@@ -48,7 +55,9 @@ export class WebResourceProvider implements ResourceProvider {
    * @param file - The uploaded File object
    */
   addUploadedFile(path: string, file: File): void {
-    this.uploadedFiles.set(this.uploadKey(path), file);
+    const key = this.uploadKey(path);
+    this.uploadedFiles.set(key, file);
+    this.uploadSerials.set(key, ++this.uploadCount);
   }
 
   /**
@@ -63,10 +72,21 @@ export class WebResourceProvider implements ResourceProvider {
     for (const key of this.uploadedFiles.keys()) {
       if (key.endsWith(suffix)) {
         this.uploadedFiles.delete(key);
+        this.uploadSerials.delete(key);
         removed = true;
       }
     }
     return removed;
+  }
+
+  /**
+   * Which file `loadResource` would read, with no read: an upload by its serial, else the
+   * mirror's file under the active corpus root. The mirror is the static site, which never
+   * changes under a running page.
+   */
+  async stamp(path: string): Promise<string> {
+    const serial = this.uploadSerials.get(this.uploadKey(path));
+    return serial === undefined ? `mirror:${this.resourceRoot}` : `upload:${serial}`;
   }
 
   async loadResource(path: string, type: string): Promise<string | ArrayBuffer> {

@@ -268,4 +268,40 @@ describe('WebResourceProvider', () => {
       expect(global.fetch).toHaveBeenCalledWith('/fixtures/texture.png');
     });
   });
+
+  describe('stamp', () => {
+    it('stamps an uploaded file, and a new upload at the same path differently', async () => {
+      provider.addUploadedFile('res://tree.glb', new File(['a'], 'tree.glb'));
+      const first = await provider.stamp('res://tree.glb');
+      provider.addUploadedFile('res://tree.glb', new File(['a'], 'tree.glb'));
+
+      expect(first).not.toBeNull();
+      expect(await provider.stamp('res://tree.glb')).not.toBe(first);
+    });
+
+    it('changes the stamp when an upload is removed and the path falls back to the mirror', async () => {
+      provider.addUploadedFile('res://tree.glb', new File(['a'], 'tree.glb'));
+      const uploaded = await provider.stamp('res://tree.glb');
+      provider.removeUploadedFile('res://tree.glb');
+
+      expect(await provider.stamp('res://tree.glb')).not.toBe(uploaded);
+    });
+
+    it('stamps a mirrored file by the corpus root it resolves under, and fetches nothing', async () => {
+      const atRoot = await provider.stamp('res://tree.glb');
+      provider.setResourceRoot('demos/3d/truck_town');
+
+      expect(await provider.stamp('res://tree.glb')).not.toBe(atRoot);
+      expect(await provider.stamp('res://tree.glb')).toBe(await provider.stamp('res://tree.glb'));
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('stamps an upload only under the corpus root it was added in', async () => {
+      provider.addUploadedFile('res://tree.glb', new File(['a'], 'tree.glb'));
+      const uploaded = await provider.stamp('res://tree.glb');
+      provider.setResourceRoot('demos/3d/truck_town');
+
+      expect(await provider.stamp('res://tree.glb')).not.toBe(uploaded);
+    });
+  });
 });

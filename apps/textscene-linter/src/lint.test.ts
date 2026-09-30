@@ -274,6 +274,24 @@ describe('cross-file rules', () => {
     expect(files[0]!.diagnostics.map((d) => d.ruleName)).toContain('gltf-required-extension-unsupported');
   });
 
+  it('warns, and passes the run, where the project enables an editor plugin that may support the extension', async () => {
+    const pluginProject = join(projectDir, 'plugged');
+    mkdirSync(pluginProject);
+    writeFileSync(
+      join(pluginProject, 'project.godot'),
+      '[editor_plugins]\n\nenabled=PackedStringArray("res://addons/gltf/plugin.cfg")\n'
+    );
+    copyFileSync(INSTANCED_TREE, join(pluginProject, 'tree.glb'));
+    writeFileSync(join(pluginProject, 'level.tscn'), USES_TREE_GLB);
+
+    const { exitCode, files } = await collectFileDiagnostics([join(pluginProject, 'level.tscn')]);
+
+    expect(exitCode).toBe(0);
+    expect(files[0]!.diagnostics.map((d) => [d.severity, d.ruleName])).toEqual([
+      ['warning', 'gltf-required-extension-maybe-unsupported'],
+    ]);
+  });
+
   it('reads no dependency for a scene outside any Godot project', async () => {
     const { exitCode, files } = await collectFileDiagnostics([join(projectDir, 'loose.tscn')]);
 

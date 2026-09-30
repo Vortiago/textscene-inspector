@@ -142,10 +142,11 @@ export interface ProjectLintResult {
   /** The diagnostics of the file alone, sorted, as `Linter.lint` returns them. */
   diagnostics: Diagnostic[];
   /**
-   * `diagnostics` and those of the files the scene uses, sorted together. Null when the scene uses no file a rule
-   * reads, so a host publishes once.
+   * Only the diagnostics of the rules that read the files the scene uses, sorted. `mergeDiagnostics` joins them to
+   * `diagnostics`. Null when the scene uses no file a rule reads, so a host publishes once and drops the cross-file
+   * diagnostics of an earlier lint.
    */
-  withDependencies: Promise<Diagnostic[]> | null;
+  dependencies: Promise<Diagnostic[]> | null;
 }
 
 /** Context provided to lint rules during execution. */

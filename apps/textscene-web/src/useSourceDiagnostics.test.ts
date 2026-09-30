@@ -94,14 +94,30 @@ const USES_TREE_GLB = [
   '[node name="Tree" parent="." instance=ExtResource("1_tree")]',
 ].join('\n');
 
-/** A provider whose every read waits until the test releases it. */
+/** A provider whose every read of the GLB waits until the test releases it. It holds no other file. */
 function heldProvider() {
   const pending: Array<() => void> = [];
   const provider: ResourceProvider = {
-    loadResource: () =>
-      new Promise((resolve) => pending.push(() => resolve(INSTANCED_TREE))),
+    loadResource: (path) =>
+      path === 'res://tree.glb'
+        ? new Promise((resolve) => pending.push(() => resolve(INSTANCED_TREE)))
+        : Promise.resolve(null),
   };
   return { provider, pending };
+}
+
+/** Releases every held read, then lets the lint's promises settle. */
+async function releaseAll(pending: Array<() => void>): Promise<void> {
+  await act(async () => {
+    for (const release of pending.splice(0)) release();
+    await vi.runAllTimersAsync();
+  });
+}
+
+function debounce(): void {
+  act(() => {
+    vi.advanceTimersByTime(DEBOUNCE_MS);
+  });
 }
 
 describe('useSourceDiagnostics with a resource provider', () => {
@@ -139,5 +155,58 @@ describe('useSourceDiagnostics with a resource provider', () => {
 
     expect(result.current.diagnosticsByLine.has(3)).toBe(false);
     expect(result.current.diagnosticsByLine.has(4)).toBe(true);
+  });
+
+  it("keeps the refused glTF on its heading while an edit's read is pending", async () => {
+    const { provider, pending } = heldProvider();
+    const { result, rerender } = renderHook(({ text }) => useSourceDiagnostics(text, provider), {
+      initialProps: { text: USES_TREE_GLB },
+    });
+    debounce();
+    await releaseAll(pending);
+    expect(result.current.diagnosticsByLine.get(3)?.severity).toBe('error');
+
+    rerender({ text: `${USES_TREE_GLB}\n` });
+    debounce();
+
+    expect(pending).toHaveLength(1);
+    expect(result.current.diagnosticsByLine.get(3)?.severity).toBe('error');
+    await releaseAll(pending);
+    expect(result.current.diagnosticsByLine.get(3)?.messages).toHaveLength(1);
+  });
+
+  it('drops the refused glTF once an edit leaves the buffer with no glTF to read', async () => {
+    const { provider, pending } = heldProvider();
+    const { result, rerender } = renderHook(({ text }) => useSourceDiagnostics(text, provider), {
+      initialProps: { text: USES_TREE_GLB },
+    });
+    debounce();
+    await releaseAll(pending);
+
+    rerender({ text: LAST_LINE_DELETED });
+    debounce();
+
+    expect(result.current.diagnosticsByLine.has(3)).toBe(false);
+    expect(result.current.problemBadge).toBeNull();
+  });
+
+  it("re-lints the unchanged buffer when the project's files change", async () => {
+    let tree: ArrayBuffer | null = null;
+    const loadResource = vi.fn(async (path: string) => (path === 'res://tree.glb' ? tree : null));
+    const provider: ResourceProvider = { loadResource };
+    const { result, rerender } = renderHook(
+      ({ revision }) => useSourceDiagnostics(USES_TREE_GLB, provider, revision),
+      { initialProps: { revision: 0 } }
+    );
+    debounce();
+    await releaseAll([]);
+    expect(result.current.diagnosticsByLine.has(3)).toBe(false);
+
+    tree = INSTANCED_TREE;
+    rerender({ revision: 1 });
+    debounce();
+    await releaseAll([]);
+
+    expect(result.current.diagnosticsByLine.get(3)?.severity).toBe('error');
   });
 });

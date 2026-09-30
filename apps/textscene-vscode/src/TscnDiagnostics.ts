@@ -1,8 +1,9 @@
 /**
  * Surfaces core Linter diagnostics for open `.tscn` and `.tres` documents. It publishes
- * a document's own diagnostics at once, and again with those of the files the scene
- * uses once they are read. It imports `@textscene/core/linter`, never the root index,
- * to stay renderer-free.
+ * a document's own diagnostics at once, beside the cross-file ones of its last lint,
+ * and again once the files the scene uses are read. A change on disk to a file the
+ * cross-file rules read re-lints the open documents of its workspace folder. It imports
+ * `@textscene/core/linter`, never the root index, to stay renderer-free.
  */
 
 import * as vscode from 'vscode';
@@ -10,6 +11,7 @@ import {
   Linter,
   diagnosticLine,
   flooredSeverity,
+  mergeDiagnostics,
   type Diagnostic as TscnLintDiagnostic,
 } from '@textscene/core/linter';
 import { isGodotTextResourcePath } from '@textscene/core/godot';
@@ -18,6 +20,18 @@ import { LintResourceProvider } from './LintResourceProvider';
 
 /** Fallback when `textscene.diagnostics.lintDebounceMs` is unset. */
 export const DEFAULT_LINT_DEBOUNCE_MS = 300;
+
+/**
+ * The files the cross-file rules read besides the scene: a glTF (either case, since the importer
+ * matches case-insensitively and a watcher glob does not), the project file and the GDExtension
+ * list, in the hidden data directory or the plain one.
+ */
+const PROJECT_FILE_PATTERN = '**/project.godot';
+const DEPENDENCY_FILE_PATTERNS = [
+  '**/*.{glb,gltf,GLB,GLTF}',
+  PROJECT_FILE_PATTERN,
+  '**/{.godot,godot}/extension_list.cfg',
+] as const;
 
 interface DiagnosticsConfig {
   enabled: boolean;
@@ -125,9 +139,17 @@ export class TscnDiagnostics implements vscode.Disposable {
   private readonly _latestRequests = new Map<string, symbol>();
   /**
    * The linter's project view per document URI, so its project-root walk runs once.
-   * Written by `_providerFor`, deleted on close and cleared on disable and dispose.
+   * Written by `_providerFor`, deleted on close and on a change to its folder's
+   * `project.godot`, and cleared on disable and dispose.
    */
   private readonly _providers = new Map<string, LintResourceProvider>();
+  /**
+   * The cross-file diagnostics of each document's last lint that read a file, shown
+   * beside the file-local ones while the next read is pending, so they do not vanish
+   * on each edit. Written when a read lands, deleted when a lint reads no file, on
+   * close, and cleared on disable and dispose.
+   */
+  private readonly _crossFile = new Map<string, TscnLintDiagnostic[]>();
   private _enabled: boolean;
   private _debounceMs: number;
 
@@ -147,6 +169,7 @@ export class TscnDiagnostics implements vscode.Disposable {
       vscode.workspace.onDidCloseTextDocument((document) => this._clearDocument(document)),
       vscode.workspace.onDidChangeConfiguration((event) => this._onConfigurationChanged(event))
     );
+    for (const pattern of DEPENDENCY_FILE_PATTERNS) this._watchDependencyFiles(pattern);
 
     // Lint everything already open at activation, unless diagnostics are off.
     if (this._enabled) {
@@ -157,9 +180,9 @@ export class TscnDiagnostics implements vscode.Disposable {
   }
 
   /**
-   * Lint a document immediately and publish its diagnostics, then publish them again
-   * with the ones its dependencies add, unless a newer request has overtaken this one.
-   * No-op while diagnostics are disabled.
+   * Lint a document immediately and publish its diagnostics with the cross-file ones of
+   * its last lint, then again with the fresh cross-file ones, unless a newer request has
+   * overtaken this one. No-op while diagnostics are disabled.
    */
   public lintDocument(document: vscode.TextDocument): void {
     if (!isTscnDocument(document) || !this._enabled) {
@@ -171,18 +194,56 @@ export class TscnDiagnostics implements vscode.Disposable {
     this._latestRequests.set(key, request);
     const text = document.getText();
     const provider = this._providerFor(document);
-    if (!provider) {
-      this._publish(document, this._linter.lint(text));
+    const { diagnostics, dependencies } = provider
+      ? this._linter.lintProject(text, provider)
+      : { diagnostics: this._linter.lint(text), dependencies: null };
+    if (!dependencies) {
+      this._crossFile.delete(key);
+      this._publish(document, diagnostics);
       return;
     }
 
-    const { diagnostics, withDependencies } = this._linter.lintProject(text, provider);
-    this._publish(document, diagnostics);
-    withDependencies
-      ?.then((merged) => {
-        if (this._latestRequests.get(key) === request) this._publish(document, merged);
+    this._publish(document, mergeDiagnostics(diagnostics, this._crossFile.get(key) ?? []));
+    dependencies
+      .then((crossFile) => {
+        if (this._latestRequests.get(key) !== request) return;
+        this._crossFile.set(key, crossFile);
+        this._publish(document, mergeDiagnostics(diagnostics, crossFile));
       })
       .catch((reason: unknown) => logError('[TscnDiagnostics] Cross-file lint failed:', reason));
+  }
+
+  /** Re-lints the open documents of a folder whenever a file matching `pattern` is created, changed or deleted. */
+  private _watchDependencyFiles(pattern: string): void {
+    const watcher = vscode.workspace.createFileSystemWatcher(pattern);
+    const onChange = (uri: vscode.Uri) => this._onDependencyFileChanged(uri, pattern === PROJECT_FILE_PATTERN);
+    this._disposables.push(
+      watcher,
+      watcher.onDidCreate(onChange),
+      watcher.onDidChange(onChange),
+      watcher.onDidDelete(onChange)
+    );
+  }
+
+  /**
+   * Schedules a lint of each open document in `uri`'s workspace folder, debounced like an
+   * edit. A changed `project.godot` may move a document's project root, so the folder's
+   * providers go too, and their verdicts with them.
+   */
+  private _onDependencyFileChanged(uri: vscode.Uri, isProjectFile: boolean): void {
+    const folder = vscode.workspace.getWorkspaceFolder(uri);
+    if (!folder) return;
+    const folderKey = folder.uri.toString();
+    if (isProjectFile) {
+      for (const [key, provider] of this._providers) {
+        if (provider.workspaceRoot.toString() === folderKey) this._providers.delete(key);
+      }
+    }
+    for (const document of vscode.workspace.textDocuments) {
+      if (vscode.workspace.getWorkspaceFolder(document.uri)?.uri.toString() === folderKey) {
+        this._scheduleLint(document);
+      }
+    }
   }
 
   private _publish(document: vscode.TextDocument, diagnostics: readonly TscnLintDiagnostic[]): void {
@@ -247,6 +308,7 @@ export class TscnDiagnostics implements vscode.Disposable {
       this._debounceTimers.clear();
       this._latestRequests.clear();
       this._providers.clear();
+      this._crossFile.clear();
       this._collection.clear();
       return;
     }
@@ -267,6 +329,7 @@ export class TscnDiagnostics implements vscode.Disposable {
     }
     this._latestRequests.delete(key);
     this._providers.delete(key);
+    this._crossFile.delete(key);
     this._collection.delete(document.uri);
   }
 
@@ -277,6 +340,7 @@ export class TscnDiagnostics implements vscode.Disposable {
     this._debounceTimers.clear();
     this._latestRequests.clear();
     this._providers.clear();
+    this._crossFile.clear();
 
     while (this._disposables.length) {
       this._disposables.pop()?.dispose();

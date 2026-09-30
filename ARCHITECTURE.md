@@ -59,9 +59,21 @@ three.js, so the CLI and the VS Code extension host can bundle it alone.
 `Linter.lint` reads only the scene. `Linter.lintProject` also reads the files the scene uses,
 through the host's `ResourceProvider`. It reports a used `.glb` or `.gltf` that requires a
 glTF extension Godot's importer does not support, because Godot then fails to load the scene.
+The report is an error when the project enables no editor plugin and loads no GDExtension, and
+a warning when one of them can register a `GLTFDocumentExtension` that supports the extension.
 One strict parse serves both parts. `lintProject` returns the scene's own diagnostics at once,
-and a promise of the merged list only when the scene uses a `res://` glTF, so a host publishes
-twice only then. A throw inside the cross-file rule becomes a `rule-crashed` diagnostic.
+and a promise of the cross-file diagnostics alone only when the scene uses a `res://` glTF, so
+a host publishes twice only then. Each host and the CLI join the two lists with
+`mergeDiagnostics`. While a new read is pending, a host shows the new file-local diagnostics
+beside the cross-file ones of its last lint, so a finding does not vanish on each edit. A throw
+inside the cross-file rule becomes a `rule-crashed` diagnostic.
+
+The `Linter` keeps the verdict of each glTF file it reads, per provider, under the stamp the
+provider's optional `stamp` gives: a file's modification time and size in the CLI and VS Code,
+an upload serial or the corpus root on the web. It reads a file again only when its stamp
+changes, and every time for a provider with no `stamp`. VS Code re-lints the open scenes of a
+workspace folder when a glTF file, `project.godot` or the GDExtension list in it changes. The
+web previewer re-lints the Source pane after each upload or removal.
 
 The CLI and the VS Code extension root their linter providers at the nearest `project.godot`
 through `resources/resPath.ts`, and the web previewer at its corpus root. Both linter

@@ -3,7 +3,7 @@
 import { readdirSync, statSync } from 'fs';
 import { readFile } from 'fs/promises';
 import { join, resolve } from 'path';
-import { Linter, type Diagnostic } from '@textscene/core/linter';
+import { Linter, mergeDiagnostics, type Diagnostic } from '@textscene/core/linter';
 import { isGodotTextResourcePath } from '@textscene/core/godot';
 import { formatDiagnostics, formatError } from './format';
 import { projectProviderFor } from './projectProvider';
@@ -99,6 +99,12 @@ function collectTscnFiles(dir: string, found: string[] = []): string[] {
 }
 
 /**
+ * One linter for the process, so the glTF verdicts it keeps per provider serve every scene of a run. It carries no
+ * other state between calls.
+ */
+const linter = new Linter();
+
+/**
  * Reads and lints a single TSCN file, returning raw diagnostics with no
  * presentation applied. For a file inside a Godot project, it also reads the
  * files the scene uses from that project. Read failures (missing file,
@@ -110,10 +116,9 @@ export async function lintFileDiagnostics(filePath: string): Promise<FileDiagnos
     const content = await readFile(absolutePath, 'utf-8');
     const provider = await projectProviderFor(absolutePath);
 
-    const linter = new Linter();
     if (!provider) return { filePath, diagnostics: linter.lint(content) };
-    const { diagnostics, withDependencies } = linter.lintProject(content, provider);
-    return { filePath, diagnostics: (await withDependencies) ?? diagnostics };
+    const { diagnostics, dependencies } = linter.lintProject(content, provider);
+    return { filePath, diagnostics: mergeDiagnostics(diagnostics, (await dependencies) ?? []) };
   } catch (error) {
     return {
       filePath,

@@ -11,6 +11,7 @@ import type {
   TscnNode,
   TscnExternalResource,
   TscnInternalResource,
+  TscnMainResource,
   NodeOrigin,
   BuiltSection,
 } from './types.js';
@@ -77,8 +78,8 @@ export interface ParseObserver {
   /** A property value completed. */
   onProperty?(property: ParsedProperty): void;
   /**
-   * An `[ext_resource]`, `[sub_resource]` or `[node]` section closed, and the scan built `built`
-   * from it. `line` is its heading's line. It fires after the section's last `onProperty`, so an
+   * An `[ext_resource]`, `[sub_resource]`, `[node]` or `[resource]` section closed, and the scan
+   * built `built` from it. `line` is its heading's line. It fires after the section's last `onProperty`, so an
    * observer can file what it collected under the object.
    */
   onSectionBuilt?(built: BuiltSection, line: number): void;
@@ -108,6 +109,9 @@ export class TscnParserCore {
     const origins: NodeOrigin[] = [];
     const externalResources: TscnExternalResource[] = [];
     const internalResources: TscnInternalResource[] = [];
+    // One per file: the loader refuses any tag after the `[resource]` body
+    // (`resource_format_text.cpp:837-841`), so a later one is a corrupt file, and the last one read stays.
+    let mainResource: TscnMainResource | undefined;
 
     let currentSection: SectionType = 'none';
     let currentHeading: ParsedHeading | null = null;
@@ -155,6 +159,9 @@ export class TscnParserCore {
           internalResources.push(resource);
           observer?.onSectionBuilt?.(resource, currentHeadingLine);
         }
+      } else if (currentSection === 'resource') {
+        mainResource = { type: headerResourceType ?? '', data: currentProperties };
+        observer?.onSectionBuilt?.(mainResource, currentHeadingLine);
       }
 
       currentHeading = null;
@@ -321,6 +328,7 @@ export class TscnParserCore {
       ...(orphanedNodes.length > 0 ? { orphanedNodes } : {}),
       ...(rootWithParent ? { rootWithParent } : {}),
       ...(emptyParents.length > 0 ? { emptyParentHeadings: emptyParents } : {}),
+      ...(mainResource ? { mainResource } : {}),
     };
   }
 

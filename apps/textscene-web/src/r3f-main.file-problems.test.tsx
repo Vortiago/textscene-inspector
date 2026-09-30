@@ -24,7 +24,7 @@ vi.mock('@textscene/core/linter', async () => {
 
     /** The pane reads the scene's dependencies too. The script names none, so there is no second lint. */
     lintProject(content: string): ProjectLintResult {
-      return { diagnostics: this.lint(content), withDependencies: null };
+      return { diagnostics: this.lint(content), dependencies: null };
     }
   }
   return { ...real, Linter };

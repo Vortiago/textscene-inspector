@@ -7,4 +7,10 @@ export interface ResourceProvider {
    * @returns Resource content as string (text files) or ArrayBuffer (binary files), or null if not found
    */
   loadResource(path: string, type?: string): Promise<string | ArrayBuffer | null>;
+  /**
+   * A cheap version stamp of the file at `path`, such as its modification time and size, that changes whenever its
+   * content does. The linter keeps what it read from a file under it and reads the file again only when it changes.
+   * Null for a file the host cannot stamp, which the linter then reads. A provider without it is read every time.
+   */
+  stamp?(path: string): Promise<string | null>;
 }

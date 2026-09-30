@@ -59,6 +59,19 @@ albedo_texture = ExtResource("2_tex")
     ).toEqual(['1_tree']);
   });
 
+  it("reads a reference inside a .tres file's [resource] body", () => {
+    // The body's values parse through the same `_parse_ext_resource` callback (`resource_format_text.cpp:774`, `:1191`).
+    expect(
+      used(`[gd_resource type="MeshLibrary" format=3]
+
+[ext_resource type="PackedScene" path="res://tree.glb" id="1_tree"]
+
+[resource]
+item/0/mesh = ExtResource("1_tree")
+`)
+    ).toEqual(['1_tree']);
+  });
+
   it('gives an empty set for a declaration no value names', () => {
     expect(
       used(`${HEADER}

@@ -11,6 +11,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Linter } from './Linter.js';
+import { mergeDiagnostics } from './mergeDiagnostics.js';
 import { isGodotTextResourcePath } from '../godot/index.js';
 import { parseHeading } from '../parser/utils.js';
 import { findProjectRoot, parentDir, projectFileIn, resolveResPath } from '../resources/resPath.js';
@@ -154,8 +155,8 @@ async function fixture(path: string): Promise<Fixture> {
 async function lintFixture({ path, provider }: Fixture): Promise<Diagnostic[]> {
   const content = readFileSync(path, 'utf8');
   if (!provider) return new Linter().lint(content);
-  const { diagnostics, withDependencies } = new Linter().lintProject(content, provider);
-  return (await withDependencies) ?? diagnostics;
+  const { diagnostics, dependencies } = new Linter().lintProject(content, provider);
+  return mergeDiagnostics(diagnostics, (await dependencies) ?? []);
 }
 
 /** Diagnostics for every fixture, keyed by its name. Written once, in `beforeAll`, before the checks read them. */

@@ -1,20 +1,18 @@
 /**
- * One error per used `[ext_resource]` whose glTF file Godot's importer refuses. A file that requires an extension
+ * One diagnostic per used `[ext_resource]` whose glTF file Godot's importer refuses. A file that requires an extension
  * outside the importer's set never imports (`gltf_document.cpp:7197-7202`), so its resource never loads, and the text
  * loader aborts the whole scene with `ERR_FILE_MISSING_DEPENDENCIES` where a value names it
- * (`resource_format_text.cpp:145-151`, with `abort_on_missing_resource = true` at `resource_loader.cpp:1566`).
+ * (`resource_format_text.cpp:145-151`, with `abort_on_missing_resource = true` at `resource_loader.cpp:1566`). It is an
+ * error where nothing in the project can add an extension, and a warning where an editor plugin or a GDExtension can.
  */
 
 import type { TscnExternalResource, TscnScene } from '../parser/types.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
-import {
-  gltfRefusalMessage,
-  isGltfPath,
-  readGltfRequiredExtensions,
-  unsupportedRequiredGltfExtensions,
-} from '../godot/index.js';
+import { gltfRefusalMessage, isGltfPath } from '../godot/index.js';
 import type { Diagnostic, SourceLines } from './types.js';
 import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
+import type { GltfVerdicts } from './gltfVerdicts.js';
+import { projectMayExtendGltfImport } from './projectPlugins.js';
 import { armDiagnostic } from './ruleArms.js';
 import { headingLocation } from './sourceLocation.js';
 import { usedExtResourceIds } from './usedExtResources.js';
@@ -38,37 +36,41 @@ export function usedGltfResources(scene: TscnScene): TscnExternalResource[] {
   return readable.filter((resource) => used.has(resource.id));
 }
 
-/**
- * The required extensions of `resource`'s file that Godot refuses. Empty for a file the provider does not hold or
- * cannot read, and for JSON Godot cannot parse: those are the missing-resource path, not this rule's claim. A rejection
- * counts as a miss, since the VS Code and web providers throw for a missing file where the contract says null.
- */
-async function refusedExtensions(provider: ResourceProvider, resource: TscnExternalResource): Promise<string[]> {
-  const data = await provider.loadResource(resource.path, resource.type).catch(() => null);
-  if (data === null) return [];
-  return unsupportedRequiredGltfExtensions(readGltfRequiredExtensions(data));
+interface Refusal {
+  readonly resource: TscnExternalResource;
+  readonly unsupported: readonly string[];
 }
 
-function refusal(resource: TscnExternalResource, unsupported: readonly string[], lines: SourceLines): Diagnostic {
+function refusalDiagnostic({ resource, unsupported }: Refusal, lines: SourceLines, mayBeExtended: boolean): Diagnostic {
+  const refused = `ExtResource("${resource.id}") loads ${resource.path}, whose ${gltfRefusalMessage(unsupported)}.`;
+  const outcome = mayBeExtended
+    ? ' Unless an editor plugin or a GDExtension of this project registers a GLTFDocumentExtension that supports it, ' +
+      'the import fails, and Godot fails to load the scene.'
+    : ' The project enables no editor plugin and loads no GDExtension, so nothing can add it. ' +
+      'The import fails, so Godot fails to load the scene.';
   return armDiagnostic(
-    FILE_DIAGNOSTICS.unimportableGltf,
+    mayBeExtended ? FILE_DIAGNOSTICS.unimportableGltfUnlessPlugin : FILE_DIAGNOSTICS.unimportableGltf,
     { name: resource.id, type: resource.type },
-    `ExtResource("${resource.id}") loads ${resource.path}, whose ${gltfRefusalMessage(unsupported)}. ` +
-      'The import fails, so Godot fails to load the scene.',
+    refused + outcome,
     headingLocation(lines, resource)
   );
 }
 
-/** Each of `resources` whose glTF Godot refuses to import, on its `[ext_resource]` heading, read through `provider`. */
+/**
+ * Each of `resources` whose glTF Godot refuses to import, on its `[ext_resource]` heading, read through `provider`.
+ * The project's plugin files are read only when a file is refused.
+ */
 export async function unimportableGltfDiagnostics(
   resources: readonly TscnExternalResource[],
   lines: SourceLines,
-  provider: ResourceProvider
+  provider: ResourceProvider,
+  verdicts: GltfVerdicts
 ): Promise<Diagnostic[]> {
-  const verdicts = await Promise.all(
-    resources.map(async (resource) => ({ resource, unsupported: await refusedExtensions(provider, resource) }))
+  const found = await Promise.all(
+    resources.map(async (resource) => ({ resource, unsupported: await verdicts.refused(provider, resource) }))
   );
-  return verdicts
-    .filter(({ unsupported }) => unsupported.length > 0)
-    .map(({ resource, unsupported }) => refusal(resource, unsupported, lines));
+  const refusals = found.filter(({ unsupported }) => unsupported.length > 0);
+  if (refusals.length === 0) return [];
+  const mayBeExtended = await projectMayExtendGltfImport(provider);
+  return refusals.map((refusal) => refusalDiagnostic(refusal, lines, mayBeExtended));
 }

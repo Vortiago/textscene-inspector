@@ -1,6 +1,6 @@
 /** The CLI's view of a scene's Godot project: the files under the nearest `project.godot`, read from disk. */
 
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -57,5 +57,40 @@ describe('projectProviderFor', () => {
   it('refuses a path that is not res://', async () => {
     const provider = await projectProviderFor(scenePath);
     expect(await provider!.loadResource(join(tempDir, 'secret.txt'), 'TextFile')).toBeNull();
+  });
+
+  it('hands back one provider for every scene of a project, so its verdicts serve the whole run', async () => {
+    const other = join(projectDir, 'scenes', 'level.tscn');
+    expect(await projectProviderFor(other)).toBe(await projectProviderFor(scenePath));
+  });
+});
+
+describe('projectProviderFor stamp', () => {
+  it("stamps a file with its modification time and size", async () => {
+    const provider = await projectProviderFor(scenePath);
+    const file = join(projectDir, 'models', 'tree.glb');
+    const { mtimeMs, size } = statSync(file);
+
+    expect(await provider!.stamp!('res://models/tree.glb')).toBe(`${mtimeMs}:${size}`);
+  });
+
+  it('changes when the file is rewritten', async () => {
+    const provider = await projectProviderFor(scenePath);
+    const file = join(projectDir, 'models', 'stamped.glb');
+    writeFileSync(file, new Uint8Array([1]));
+    const before = await provider!.stamp!('res://models/stamped.glb');
+    writeFileSync(file, new Uint8Array([1, 2]));
+
+    expect(await provider!.stamp!('res://models/stamped.glb')).not.toBe(before);
+  });
+
+  it('gives null for a file the project does not hold', async () => {
+    const provider = await projectProviderFor(scenePath);
+    expect(await provider!.stamp!('res://models/missing.glb')).toBeNull();
+  });
+
+  it('gives null for a path that escapes the project root', async () => {
+    const provider = await projectProviderFor(scenePath);
+    expect(await provider!.stamp!('res://../secret.txt')).toBeNull();
   });
 });

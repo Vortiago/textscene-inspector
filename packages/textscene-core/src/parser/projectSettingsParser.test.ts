@@ -9,6 +9,8 @@ import {
   DEFAULT_THEME_SCALE,
   DEFAULT_VIEWPORT_HEIGHT,
   DEFAULT_VIEWPORT_WIDTH,
+  enabledEditorPlugins,
+  extensionListPath,
   parseProjectSettings,
   projectLayoutDirectionEnv,
   projectThemeScale,
@@ -290,5 +292,44 @@ describe('projectLayoutDirectionEnv — the settings are engine slots, not text'
         'internationalization/rendering/root_node_layout_direction': 'nonsense',
       }).rootRtl
     ).toBe(false);
+  });
+});
+
+describe('enabledEditorPlugins', () => {
+  it('lists each plugin the [editor_plugins] section enables', () => {
+    const settings = parseProjectSettings(
+      '[editor_plugins]\n\nenabled=PackedStringArray("res://addons/a/plugin.cfg", "res://addons/b/plugin.cfg")\n'
+    );
+    expect(enabledEditorPlugins(settings)).toEqual(['res://addons/a/plugin.cfg', 'res://addons/b/plugin.cfg']);
+  });
+
+  it('reads a bare array, which the setting converts to its PackedStringArray', () => {
+    const settings = parseProjectSettings('[editor_plugins]\nenabled=["res://addons/a/plugin.cfg"]\n');
+    expect(enabledEditorPlugins(settings)).toEqual(['res://addons/a/plugin.cfg']);
+  });
+
+  it('is empty for an empty list', () => {
+    expect(enabledEditorPlugins(parseProjectSettings('[editor_plugins]\nenabled=PackedStringArray()\n'))).toEqual([]);
+  });
+
+  it('is empty for a project that enables none, and for no project file', () => {
+    expect(enabledEditorPlugins(parseProjectSettings('config_version=5\n'))).toEqual([]);
+    expect(enabledEditorPlugins(null)).toEqual([]);
+  });
+
+  it('is empty for a value it cannot read as a list of strings', () => {
+    expect(enabledEditorPlugins(parseProjectSettings('[editor_plugins]\nenabled=42\n'))).toEqual([]);
+  });
+});
+
+describe('extensionListPath', () => {
+  it('is under res://.godot by default', () => {
+    expect(extensionListPath(null)).toBe('res://.godot/extension_list.cfg');
+    expect(extensionListPath(parseProjectSettings('config_version=5\n'))).toBe('res://.godot/extension_list.cfg');
+  });
+
+  it('is under res://godot when the project turns the hidden data directory off', () => {
+    const settings = parseProjectSettings('[application]\nconfig/use_hidden_project_data_directory=false\n');
+    expect(extensionListPath(settings)).toBe('res://godot/extension_list.cfg');
   });
 });

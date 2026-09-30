@@ -14,21 +14,18 @@ import { isBinaryResourceType } from '@textscene/core/resources/resourceProvider
 import { findEnclosingGodotProject } from './findGodotProjectRoot';
 
 export class LintResourceProvider implements ResourceProvider {
-  /** Written by the first `loadResource`, so the walk runs once for the provider's lifetime. */
+  /** Written by the first `loadResource` or `stamp`, so the walk runs once for the provider's lifetime. */
   private projectRoot: Promise<vscode.Uri | null> | null = null;
 
   constructor(
-    private readonly workspaceRoot: vscode.Uri,
+    /** The workspace folder the document sits in, which bounds the walk. */
+    readonly workspaceRoot: vscode.Uri,
     private readonly documentUri: vscode.Uri
   ) {}
 
   async loadResource(resPath: string, type = ''): Promise<string | ArrayBuffer | null> {
-    const relative = resRelativePath(resPath);
-    if (relative === null) return null;
-    this.projectRoot ??= findEnclosingGodotProject(this.workspaceRoot, this.documentUri);
-    const root = await this.projectRoot;
-    if (root === null) return null;
-    const file = vscode.Uri.joinPath(root, relative);
+    const file = await this.fileOf(resPath);
+    if (file === null) return null;
     let bytes: Uint8Array;
     try {
       bytes = await vscode.workspace.fs.readFile(file);
@@ -39,5 +36,27 @@ export class LintResourceProvider implements ResourceProvider {
     if (!isBinaryResourceType(type, resPath)) return new TextDecoder('utf-8').decode(bytes);
     // A copy, not `bytes.buffer`: a view may sit inside a larger buffer.
     return new Uint8Array(bytes).buffer;
+  }
+
+  /** The file's modification time and size, one `stat`, so the linter reads an unchanged file once. */
+  async stamp(resPath: string): Promise<string | null> {
+    const file = await this.fileOf(resPath);
+    if (file === null) return null;
+    try {
+      const { mtime, size } = await vscode.workspace.fs.stat(file);
+      return `${mtime}:${size}`;
+    } catch {
+      // A file with no stamp is read, and the read answers a missing one with null.
+      return null;
+    }
+  }
+
+  /** The workspace file `resPath` names, or null for a path outside the project or a document in none. */
+  private async fileOf(resPath: string): Promise<vscode.Uri | null> {
+    const relative = resRelativePath(resPath);
+    if (relative === null) return null;
+    this.projectRoot ??= findEnclosingGodotProject(this.workspaceRoot, this.documentUri);
+    const root = await this.projectRoot;
+    return root === null ? null : vscode.Uri.joinPath(root, relative);
   }
 }

@@ -144,6 +144,30 @@ cast_shadow = 1
         data: { id: 'mesh_1' },
       });
     });
+
+    it("keeps a .tres file's [resource] body, typed by its header", () => {
+      const content = `[gd_resource type="MeshLibrary" format=3]
+
+[ext_resource type="PackedScene" path="res://tree.glb" id="1_tree"]
+
+[resource]
+item/0/name = "Tree"
+item/0/mesh = ExtResource("1_tree")
+`;
+
+      const scene = parser.parse(content, () => null);
+
+      expect(scene.mainResource).toEqual({
+        type: 'MeshLibrary',
+        data: { 'item/0/name': '"Tree"', 'item/0/mesh': 'ExtResource("1_tree")' },
+      });
+    });
+
+    it('leaves the main resource absent for a scene, which has no [resource] body', () => {
+      const scene = parser.parse('[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n', () => null);
+
+      expect(scene).not.toHaveProperty('mainResource');
+    });
   });
 
   describe('scene tree building', () => {
@@ -592,6 +616,20 @@ size = Vector3(1, 2, 3)
         expect(onSectionBuilt.mock.calls[2]![0]).toBe(root);
       });
 
+      it("hands over a .tres file's [resource] body with its heading line, the object the scene holds", () => {
+        const content = `[gd_resource type="Environment" format=3]
+
+[resource]
+background_mode = 1
+`;
+        const onSectionBuilt = vi.fn<NonNullable<ParseObserver['onSectionBuilt']>>();
+
+        const scene = parser.parse(content, () => null, { onSectionBuilt });
+
+        expect(onSectionBuilt.mock.calls).toEqual([[scene.mainResource, 3]]);
+        expect(onSectionBuilt.mock.calls[0]![0]).toBe(scene.mainResource);
+      });
+
       it("fires after the section's last property, a multi-line one included", () => {
         const content = `[node name="Title" type="Label"]
 text = "first
@@ -603,17 +641,16 @@ second"
         parser.parse(content, simpleCreator, {
           onSectionStart: (heading) => events.push(`start ${heading.attributes.name}`),
           onProperty: ({ key }) => events.push(`property ${key}`),
-          onSectionBuilt: (built) => events.push(`built ${'name' in built ? built.name : built.id}`),
+          onSectionBuilt: (built) => events.push(`built ${'name' in built ? built.name : built.type}`),
         });
 
         expect(events).toEqual(['start Title', 'property text', 'built Title', 'start Next', 'built Next']);
       });
 
       it('never fires for a section that builds nothing, or for a node the creator declines', () => {
-        const content = `[gd_resource type="Environment" format=3]
+        const content = `[gd_scene format=3]
 
-[resource]
-background_mode = 1
+[editable path="Declined"]
 
 [node name="Declined" type="Node3D"]
 `;

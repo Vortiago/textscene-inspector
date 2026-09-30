@@ -128,14 +128,15 @@ z_index = 3
     expect(lines.get(root)?.properties.get('z_index')).toBe(7);
   });
 
-  it('records nothing for the header or a [resource] body, which build no section object', () => {
-    const { lines } = new StrictTscnParser().parse(`[gd_resource type="Environment" format=3]
+  it("files a [resource] body's heading and property lines under the scene's main resource, and nothing for the header", () => {
+    const { lines, scene } = new StrictTscnParser().parse(`[gd_resource type="Environment" format=3]
 
 [resource]
 background_mode = 1
 `);
 
-    expect(lines.size).toBe(0);
+    expect(lines.size).toBe(1);
+    expect(lines.get(scene!.mainResource!)).toEqual({ heading: 3, properties: new Map([['background_mode', 4]]) });
   });
 
   it('holds exactly one entry for every node of the tree', () => {

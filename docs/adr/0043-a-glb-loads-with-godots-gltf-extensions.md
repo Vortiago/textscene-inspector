@@ -52,3 +52,8 @@ richer picture. No host exposes the switch yet.
   the texture's own `source`.
 - Upgrading three cannot widen what a model shows under `godot-importer`: the filter
   names what Godot reads, not what three reads.
+- The linter reports a used glTF file that requires an extension outside Godot's set. An
+  editor plugin or a GDExtension can register a `GLTFDocumentExtension` that adds the
+  extension (`gltf_document.cpp:6798-6804`), and the linter cannot see which extensions
+  such code adds. So the report is an error only when the project enables no editor plugin
+  and loads no GDExtension, and a warning when it does.

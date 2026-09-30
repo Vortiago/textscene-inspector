@@ -23,12 +23,14 @@ function addNodeIds(node: TscnNode, into: Set<string>): void {
 }
 
 /**
- * Every `[ext_resource]` id a node heading's `instance=`, a node's value or a sub-resource's value names. An orphaned node
- * counts: Godot loads it, re-parented to the root (`packed_scene.cpp:208-215`).
+ * Every `[ext_resource]` id a node heading's `instance=`, a node's value, a sub-resource's value or a `.tres` file's
+ * `[resource]` value names. The `[resource]` body parses through the same callback (`resource_format_text.cpp:774`,
+ * `:1191`). An orphaned node counts: Godot loads it, re-parented to the root (`packed_scene.cpp:208-215`).
  */
 export function usedExtResourceIds(scene: TscnScene): Set<string> {
   const ids = new Set<string>();
   for (const resource of scene.internalResources) addIdsIn(Object.values(resource.data), ids);
+  if (scene.mainResource) addIdsIn(Object.values(scene.mainResource.data), ids);
   for (const node of scene.nodes) addNodeIds(node, ids);
   for (const { node } of scene.orphanedNodes ?? []) addNodeIds(node, ids);
   return ids;

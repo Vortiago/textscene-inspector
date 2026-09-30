@@ -52,6 +52,11 @@ export interface TscnScene {
    * fields above: such a heading has no `node.parent`, so it is seated, not stranded.
    */
   emptyParentHeadings?: readonly NodeOrigin[];
+  /**
+   * A `.tres` file's own `[resource]` body. Absent in a `.tscn`, where the loader refuses the tag
+   * (`resource_format_text.cpp:723-728`).
+   */
+  mainResource?: TscnMainResource;
   /** Event-based resource loader, used by SceneGraph helpers. */
   resourceLoader?: ResourceLoader;
 }
@@ -134,8 +139,19 @@ export interface TscnInternalResource {
   data: Record<string, unknown>;
 }
 
+/**
+ * A `.tres` file's `[resource]` body. It has no id and no `type=`: the loader builds the class the
+ * `[gd_resource]` header names (`resource_format_text.cpp:741`). `data` holds the raw values, keyed
+ * as the scan stores them.
+ */
+export interface TscnMainResource {
+  /** The header's `type=`, or empty where it declares none. */
+  type: string;
+  data: Record<string, string>;
+}
+
 /** What the scan builds from one section: the object a strict consumer files the section's lines under. */
-export type BuiltSection = TscnNode | TscnInternalResource | TscnExternalResource;
+export type BuiltSection = TscnNode | TscnInternalResource | TscnExternalResource | TscnMainResource;
 
 /** Alias used by the immutable SceneGraph and dependency-tracking helpers. */
 export type ExtResource = TscnExternalResource;

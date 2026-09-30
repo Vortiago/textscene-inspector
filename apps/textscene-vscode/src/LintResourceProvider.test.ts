@@ -95,3 +95,48 @@ describe('LintResourceProvider', () => {
     expect(vscode.workspace.fs.stat).toHaveBeenCalledTimes(walked);
   });
 });
+
+describe('LintResourceProvider stamp', () => {
+  /** A stat of a file on the mocked disk, with the modification time and size of its bytes. */
+  function statOnDisk(uri: vscode.Uri) {
+    return onDisk(uri).then((bytes) => ({ type: 1, ctime: 0, mtime: 1_700_000_000_000, size: bytes.length }));
+  }
+
+  beforeEach(() => {
+    (vscode.workspace.fs.stat as Mock).mockImplementation(statOnDisk);
+  });
+
+  it("stamps a file under the project root with its modification time and size", async () => {
+    expect(await providerForLevel().stamp('res://models/tree.glb')).toBe('1700000000000:4');
+  });
+
+  it('reads no byte of the file', async () => {
+    await providerForLevel().stamp('res://models/tree.glb');
+    expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
+  });
+
+  it('gives null for a file the project does not hold', async () => {
+    expect(await providerForLevel().stamp('res://models/missing.glb')).toBeNull();
+  });
+
+  it('gives null for a path that escapes the project root, or is not res://', async () => {
+    const provider = providerForLevel();
+    expect(await provider.stamp('res://../secret.txt')).toBeNull();
+    expect(await provider.stamp('/workspace/secret.txt')).toBeNull();
+  });
+
+  it('gives null for a document in no Godot project', async () => {
+    const outside = new LintResourceProvider(createMockUri('/workspace'), createMockUri('/workspace/loose/level.tscn'));
+    expect(await outside.stamp('res://game/models/tree.glb')).toBeNull();
+  });
+
+  it('shares the project-root walk with loadResource', async () => {
+    const provider = providerForLevel();
+    await provider.loadResource('res://models/tree.glb', 'PackedScene');
+    const walked = (vscode.workspace.fs.stat as Mock).mock.calls.length;
+
+    await provider.stamp('res://models/tree.glb');
+
+    expect(vscode.workspace.fs.stat).toHaveBeenCalledTimes(walked + 1);
+  });
+});

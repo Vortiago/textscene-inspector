@@ -3,7 +3,7 @@
  * disk. A scene with none has no `res://` root, so it gets no provider and the cross-file rules stay silent.
  */
 
-import { access, readFile } from 'fs/promises';
+import { access, readFile, stat } from 'fs/promises';
 import { dirname, resolve } from 'path';
 import type { ResourceProvider } from '@textscene/core/linter';
 import { findProjectRoot, parentDir, projectFileIn, resolveResPath } from '@textscene/core/resources/resPath';
@@ -34,9 +34,23 @@ function hasProjectFile(dir: string): Promise<boolean> {
   return answer;
 }
 
-/** A provider over the project at `root`. It returns null for a path outside it or a file it does not hold. */
+/**
+ * A provider over the project at `root`. It returns null for a path outside it or a file it does not hold. Its stamp is
+ * the file's modification time and size, one `stat`, so the linter reads an unchanged file once per run.
+ */
 function fileProvider(root: string): ResourceProvider {
   return {
+    async stamp(resPath: string) {
+      const file = resolveResPath(root, resPath);
+      if (file === null) return null;
+      try {
+        const { mtimeMs, size } = await stat(file);
+        return `${mtimeMs}:${size}`;
+      } catch {
+        // A file with no stamp is read, and the read answers a missing one with null.
+        return null;
+      }
+    },
     async loadResource(resPath: string, type = '') {
       const file = resolveResPath(root, resPath);
       if (file === null) return null;
@@ -54,9 +68,21 @@ function fileProvider(root: string): ResourceProvider {
   };
 }
 
+/**
+ * Each project root's provider, written by `projectProviderFor` and never cleared: the linter keeps its glTF verdicts
+ * per provider, so one provider per root lets every scene of a run share them.
+ */
+const providerByRoot = new Map<string, ResourceProvider>();
+
 /** The provider for the project `scenePath` belongs to, or null when no ancestor directory holds `project.godot`. */
 export async function projectProviderFor(scenePath: string): Promise<ResourceProvider | null> {
   // No stop directory: the CLI has no workspace to bound the walk, so it climbs to the filesystem root.
   const root = await findProjectRoot(dirname(resolve(scenePath)), parentDir, () => false, hasProjectFile);
-  return root === null ? null : fileProvider(root);
+  if (root === null) return null;
+  let provider = providerByRoot.get(root);
+  if (provider === undefined) {
+    provider = fileProvider(root);
+    providerByRoot.set(root, provider);
+  }
+  return provider;
 }

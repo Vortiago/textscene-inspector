@@ -1,8 +1,8 @@
 /**
  * Parses a whole `.tres`: a `.tscn` without `[node]` sections, with a `[gd_resource]`
  * header and one `[resource]` body. Rides TscnParserCore. A ParseObserver captures the
- * header type and `[resource]` properties the core drops. Values stay raw strings for
- * consumers such as the TileSet resolver to decode.
+ * header type, which the core keeps only on a `[resource]` body. Values stay raw strings
+ * for consumers such as the TileSet resolver to decode.
  */
 
 import { TscnParserCore, type ParseObserver } from './TscnParserCore.js';
@@ -20,22 +20,10 @@ export interface ParsedResource {
 /** Throws when the content has no [gd_resource] header (not a .tres file). */
 export function parseTresFile(content: string): ParsedResource {
   let resourceType: string | null = null;
-  let inResourceSection = false;
-  const properties: Record<string, string> = {};
 
   const observer: ParseObserver = {
     onSectionStart(heading) {
-      if (heading.type === 'gd_resource') {
-        resourceType = heading.attributes.type ?? null;
-        inResourceSection = false;
-      } else {
-        inResourceSection = heading.type === 'resource';
-      }
-    },
-    onProperty({ stored }) {
-      // The bag holds what the setter writes, as the scanner's own bags do.
-      if (!inResourceSection) return;
-      properties[stored.key] = stored.value;
+      if (heading.type === 'gd_resource') resourceType = heading.attributes.type ?? null;
     },
   };
 
@@ -47,7 +35,7 @@ export function parseTresFile(content: string): ParsedResource {
 
   return {
     resourceType,
-    properties,
+    properties: scene.mainResource?.data ?? {},
     extResources: scene.externalResources,
     subResources: scene.internalResources,
   };

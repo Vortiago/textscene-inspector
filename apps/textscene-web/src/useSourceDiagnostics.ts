@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { Linter, type Diagnostic, type ResourceProvider } from '@textscene/core/linter';
+import { Linter, mergeDiagnostics, type Diagnostic, type ResourceProvider } from '@textscene/core/linter';
 import { error as logError } from '@textscene/core/logger';
 import {
   groupDiagnostics,
@@ -32,20 +32,32 @@ export interface SourceDiagnostics {
 
 /**
  * @param provider - The scene's resources, read for the diagnostics its dependencies add.
+ * @param filesRevision - Changes whenever a file the provider holds changes, such as an upload,
+ *   so the unchanged buffer is linted again against it.
  */
-export function useSourceDiagnostics(buffer: string, provider: ResourceProvider): SourceDiagnostics {
+export function useSourceDiagnostics(
+  buffer: string,
+  provider: ResourceProvider,
+  filesRevision = 0
+): SourceDiagnostics {
   // Debounced like the render forward but outside its gate: a buffer that fails to render is
   // still linted, and the gutter tells the user why. The buffer's own diagnostics show at once,
-  // and the cross-file lint replaces them only while the buffer it read is still the pane's.
-  const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([]);
+  // beside the cross-file ones of the last lint that read a file, so they do not vanish on each
+  // edit. The fresh cross-file ones replace those only while the buffer they read is the pane's.
+  const [local, setLocal] = useState<Diagnostic[]>([]);
+  const [crossFile, setCrossFile] = useState<Diagnostic[]>([]);
   useEffect(() => {
     let isCurrent = true;
     const timer = setTimeout(() => {
-      const { diagnostics: local, withDependencies } = linter.lintProject(buffer, provider);
-      setDiagnostics(local);
-      withDependencies
-        ?.then((merged) => {
-          if (isCurrent) setDiagnostics(merged);
+      const { diagnostics: fileLocal, dependencies } = linter.lintProject(buffer, provider);
+      setLocal(fileLocal);
+      if (!dependencies) {
+        setCrossFile([]);
+        return;
+      }
+      dependencies
+        .then((found) => {
+          if (isCurrent) setCrossFile(found);
         })
         .catch((reason: unknown) => logError('[SourceDiagnostics] Cross-file lint failed:', reason));
     }, DEBOUNCE_MS);
@@ -53,7 +65,8 @@ export function useSourceDiagnostics(buffer: string, provider: ResourceProvider)
       isCurrent = false;
       clearTimeout(timer);
     };
-  }, [buffer, provider]);
+  }, [buffer, provider, filesRevision]);
+  const diagnostics = useMemo(() => mergeDiagnostics(local, crossFile), [local, crossFile]);
 
   // Counts newlines rather than `buffer.split('\n').length`, which builds an array of every
   // line on each keystroke.
