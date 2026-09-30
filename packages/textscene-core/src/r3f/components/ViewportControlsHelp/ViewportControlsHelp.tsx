@@ -18,7 +18,7 @@ export function ViewportControlsHelp({ mode }: ViewportControlsHelpProps) {
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
   const rootRef = useDismissable<HTMLDivElement>(open, close);
-  const { summary, groups } = controlsFor(mode);
+  const { summary, touchSummary, groups } = controlsFor(mode);
 
   // `role="dialog"` promises focus inside it. Focus returns to the pill on close.
   const panelRef = useRef<HTMLDivElement>(null);
@@ -46,7 +46,9 @@ export function ViewportControlsHelp({ mode }: ViewportControlsHelpProps) {
         title="Show every viewport control (?)"
         data-testid="viewport-controls-hint"
       >
-        <span className={styles.summary}>{summary}</span>
+        {/* Both, so the stylesheet shows the one for the pointer without a matchMedia listener. */}
+        <span className={`${styles.summary} ${styles.pointerSummary}`}>{summary}</span>
+        <span className={`${styles.summary} ${styles.touchSummary}`}>{touchSummary}</span>
         <span className={styles.badge} aria-hidden>
           ?
         </span>

@@ -58,6 +58,8 @@ export {
   type ViewportSelectorOption,
   TscnPreviewShell,
   type TscnPreviewShellProps,
+  COMPACT_LAYOUT_QUERY,
+  isCompactLayout,
   useViewportSelection,
   type UseViewportSelectionOptions,
   type UseViewportSelectionResult,

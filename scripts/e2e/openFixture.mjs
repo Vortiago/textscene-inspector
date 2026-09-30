@@ -1,6 +1,6 @@
 /** Opens one fixture in a fresh browser context, the way every web gate scenario starts. */
 import { findCanvas, gotoFixture, VIEWPORT } from '../visual/previewServer.mjs';
-import { attachDiagnostics } from './pageDiagnostics.mjs';
+import { attachDiagnostics } from './diagnostics.mjs';
 
 /**
  * Installs each `[script, argument]` pair before the first navigation, so a probe sees the

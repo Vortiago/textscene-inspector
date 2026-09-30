@@ -110,7 +110,8 @@ Utilities:
 - `utils/colorParser.ts`: parses the Godot Color format.
 - `utils/transform.ts`: parses and decomposes a Transform3D.
 - `r3f/lightConstants.ts`: light constants (render side only).
-- `utils/nodePath.ts`: scene-tree node path helpers.
+- `utils/nodePath.ts`: joins and lists the path keys of this codebase's node maps.
+- `godot/nodePath.ts`: Godot's NodePath walk. Resolve a path with `resolveRelativePath`, `resolveNodePathLiteral` or `resolveParentPath`, never with a new `..` or `%Name` loop.
 - `src/godot/`: engine facts (constants, tolerances, grammar). Look there before you declare a constant.
 
 ### Troubleshooting

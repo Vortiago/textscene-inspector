@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * `pnpm test:e2e:web`: the gate for the web app's outliner, inspector, mode
- * switching and load health, through `?fixture=` in the real running app. It
+ * switching, phone layout and load health, through `?fixture=` in the real running app. It
  * observes from outside (`cameraProbe.mjs`, DOM shape), so no production file
  * carries a test hook.
  */
@@ -29,6 +29,8 @@ import {
   runLongTaskArms,
   runSettleControl,
 } from './textureWorkScenarios.mjs';
+import { checkDiagnostics } from './diagnostics.mjs';
+import { checkPhoneLayout, runPhoneScenario } from './phoneScenario.mjs';
 
 /* global window */
 // `window` exists only in the browser that runs the `page.evaluate` calls.
@@ -163,22 +165,6 @@ function checkStage(gate, label, actual, expected) {
   gate.check(actual === expected, `${label} opened in the "${actual}" workspace, expected "${expected}"`);
 }
 
-function checkDiagnostics(gate, label, diagnostics) {
-  gate.check(
-    diagnostics.consoleErrors.length === 0,
-    `${label} ${diagnostics.consoleErrors.length} console error(s): ${diagnostics.consoleErrors.slice(0, 3).join(' | ')}`
-  );
-  gate.check(
-    diagnostics.pageErrors.length === 0,
-    `${label} ${diagnostics.pageErrors.length} uncaught page error(s): ${diagnostics.pageErrors.slice(0, 3).join(' | ')}`
-  );
-  gate.check(
-    diagnostics.failedRequests.length === 0,
-    `${label} ${diagnostics.failedRequests.length} failed request(s): ` +
-      diagnostics.failedRequests.slice(0, 3).map((r) => `${r.failure} ${r.url}`).join(' | ')
-  );
-}
-
 async function main() {
   ensureWebBuilt(console.log);
   await assertPortFree(PORT, 'E2E_WEB_PORT');
@@ -201,6 +187,9 @@ async function main() {
 
     console.log(`[gate] long tasks: ${LARGE_FIXTURE}, with the worker and with it blocked`);
     const { withWorker, blocked } = await runLongTaskArms(baseUrl);
+
+    console.log(`[gate] phone scenario: ${FIXTURE_3D}`);
+    const phone = await runPhoneScenario(browser, baseUrl, { fixture: FIXTURE_3D, selectPath: SELECT_A });
 
     checkSizedCanvas(gate, '[3D]', threeD.dims);
     checkInk(gate, '[3D]', threeD.ink, INK_FLOOR_3D);
@@ -255,6 +244,7 @@ async function main() {
     checkSettleControl(gate, settleControl);
     checkLongTasks(gate, withWorker, blocked, inkStats, INK_FLOOR_LARGE_TEXTURE);
     checkDiagnostics(gate, '[long tasks]', withWorker.diagnostics);
+    checkPhoneLayout(gate, phone, { expectedPaths: EXPECTED_3D_PATHS, selectName: 'Title' });
 
     console.log('\n[gate] measurements');
     console.log(
@@ -274,6 +264,11 @@ async function main() {
     console.log(
       `  long tasks in the texture window  worker: replies=${withWorker.probe.replies} ` +
         `longest=${longestInWindow(withWorker.probe)}ms | blocked: longest=${longestInWindow(blocked.probe)}ms`
+    );
+    console.log(
+      `  phone  canvas=${phone.canvasBox?.width}x${phone.canvasBox?.height} ` +
+        `sheet=${phone.dockBox?.width}x${phone.dockBox?.height} ` +
+        `collapsed-canvas=${phone.collapsedCanvasBox?.width}x${phone.collapsedCanvasBox?.height}`
     );
   } finally {
     if (browser) await browser.close().catch(() => {});

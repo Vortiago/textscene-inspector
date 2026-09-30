@@ -1,7 +1,7 @@
 /**
  * Two `<SubViewport>`s claim one `%Name`. `_acquire_unique_name_in_owner` keeps
- * the first claimant and clears the later node's flag (node.cpp:2225-2231), so
- * only the first publishes `Root/%View`.
+ * the first claimant and clears the later node's flag (node.cpp:2225-2231), so a
+ * consumer's `NodePath("%View")` walks through its claim table to the first one.
  */
 import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';
@@ -10,6 +10,8 @@ import type * as THREE from 'three';
 import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.js';
 import type { TscnNode } from '../../parser/types.js';
 import { HierarchyProvider } from './HierarchyContext.js';
+import { viewportTextureRegistryKey } from '../viewportTexturePath.js';
+import { useLocalScene } from '../useUniqueNames.js';
 import {
   ViewportTextureProvider,
   useViewportTexture,
@@ -53,8 +55,8 @@ const entry = (id: string): ViewportTextureEntry => ({
 const winner = entry('ui');
 const loser = entry('hud');
 
-function Publisher({ n, path, e }: { n: TscnNode; path: string; e: ViewportTextureEntry }) {
-  usePublishViewportTexture(n, path, e);
+function Publisher({ path, e }: { path: string; e: ViewportTextureEntry }) {
+  usePublishViewportTexture(path, e);
   return null;
 }
 
@@ -62,17 +64,25 @@ function wrapper({ children }: { children: ReactNode }) {
   return (
     <HierarchyProvider value={{ sceneGraph: graph, panelId: 'panel' }}>
       <ViewportTextureProvider>
-        <Publisher n={first} path="Root/Ui/View" e={winner} />
-        <Publisher n={second} path="Root/Hud/View" e={loser} />
+        <Publisher path="Root/Ui/View" e={winner} />
+        <Publisher path="Root/Hud/View" e={loser} />
         {children}
       </ViewportTextureProvider>
     </HierarchyProvider>
   );
 }
 
+/** The texture a consumer at `Root/Ui` reaches through `viewport_path`, as a texture slot walks it. */
+function useConsumedTexture(viewportPath: string): ViewportTextureEntry | null {
+  const localScene = useLocalScene('Root/Ui');
+  return useViewportTexture(
+    viewportTextureRegistryKey(localScene?.path ?? null, viewportPath, localScene?.uniquePaths)
+  );
+}
+
 describe('a %Name two sub-viewports both claim', () => {
   it('resolves to the first claimant, not to whichever published last', () => {
-    const { result } = renderHook(() => useViewportTexture('Root/%View'), { wrapper });
+    const { result } = renderHook(() => useConsumedTexture('%View'), { wrapper });
     expect(result.current).toBe(winner);
   });
 
