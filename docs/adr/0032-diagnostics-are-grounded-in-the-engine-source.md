@@ -212,8 +212,8 @@ A ported `get_configuration_warnings()` row is a **warning**. An `engine-inert` 
 scopes that describe the file, not the engine (`dangling-reference`,
 `unresolvable-path`, `file-integrity`), are **warnings**. Only the `engine` kind is left
 to its cite, since a refusal and a hint sit on the same kind. `emitsGrounding.test.ts`
-holds each declared severity to that map, and `ruleCoverage.emits.test.ts` holds each
-literal push site to the severity its rule declares.
+holds each declared severity to that map. A rule reports only through its declared arms
+(`linter/ruleArms.ts`), so a report cannot carry a severity its rule does not declare.
 
 **A bound cites each end separately when the ends differ.** `enforced` and `hinted` each
 take `{ min, max }`, because a floor with an `ERR_FAIL_COND` and a ceiling with only a

@@ -46,8 +46,9 @@ that span sheets. A sheet reports its own measured pixels and points there.
 **A rule declares what it reports.** `RuleMeta` has
 `emits: ReadonlyArray<{ ruleName, severity }>`, because `meta.name` is the registry key,
 while the names users see and suppress are string literals inside `check`.
-`valid-camera2d-properties` reports under five of them. `ruleCoverage.test.ts` holds the
-declaration to the source.
+`valid-camera2d-properties` reports under five of them. `check` reports only through the
+rule's arms (`linter/ruleArms.ts`), and `armEmits` derives the declaration from the same
+arms, so the two cannot disagree.
 
 ## Consequences
 
@@ -78,13 +79,12 @@ Two more consequences:
 artefact that ignores the slice convention, and co-location is what makes the
 lenient-parser prose cheap to write and to verify.
 
-**Scrape rule names statically instead of declaring `emits`.** Rejected, though the guard
-beside `emits` does scrape. The two do different jobs. A scrape can list names, but the
-`rangeAdvisories` tables and the physics factories build theirs by interpolation in
+**Scrape rule names statically instead of declaring `emits`.** Rejected. A scrape can list
+names, but the shared helpers and the physics factories build theirs by interpolation in
 another file. To attribute a name to the rule that reports it needs an import-closure
-walk and template matching. A test can afford that. The generator cannot do it, and it
-gives nothing at runtime. `emits` is the declaration the registry serves live, and the
-scrape only keeps it honest.
+walk and template matching. The generator cannot do that walk, and a scrape gives
+nothing at runtime. `emits` is the declaration the registry serves live, and the arms
+keep it equal to what `check` reports.
 
 **Summarise the unsupported nodes in prose.** Rejected. The generated Godot docs link is
 the summary, and it cannot rot.
