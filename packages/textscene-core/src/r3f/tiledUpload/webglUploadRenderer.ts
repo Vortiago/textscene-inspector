@@ -44,7 +44,7 @@ export function webglUploadRenderer(renderer: THREE.WebGLRenderer): UploadRender
         gl.TEXTURE_2D,
         0,
         0,
-        fromRow,
+        levelRow(texture, fromRow, toRow),
         width,
         toRow - fromRow,
         gl.RGBA,
@@ -57,4 +57,14 @@ export function webglUploadRenderer(renderer: THREE.WebGLRenderer): UploadRender
       gl.generateMipmap(gl.TEXTURE_2D);
     },
   };
+}
+
+/**
+ * The level row a band of rows `[fromRow, toRow)` starts at. `UNPACK_FLIP_Y_WEBGL` flips a
+ * typed-array band within its own rectangle only, so a flipped texture's band goes to the
+ * mirrored rows, where the whole-image upload would put it.
+ */
+function levelRow(texture: THREE.Texture, fromRow: number, toRow: number): number {
+  const { height } = texture.image as { height: number };
+  return texture.flipY ? height - toRow : fromRow;
 }
