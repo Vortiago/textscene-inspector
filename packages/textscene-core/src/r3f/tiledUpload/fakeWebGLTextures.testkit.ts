@@ -10,7 +10,7 @@ import { residencyKey } from './gpuResidency';
 import type { UploadRenderer } from './TiledUploadQueue';
 
 export interface FakeStorage {
-  /** How many rows each copy wrote, row by row: 0 for a row never written. */
+  /** How many times each row was written: 0 for a row never written. */
   writesPerRow: number[];
   usedTimes: number;
   isDeleted: boolean;
@@ -20,7 +20,7 @@ export function fakeWebGLTextures(): {
   renderer: UploadRenderer;
   /** The storage `texture` is bound to, or undefined before its init or after its dispose. */
   storageOf(texture: THREE.Texture): FakeStorage | undefined;
-  /** Every row every copy wrote, across all storages. */
+  /** Every row written, across all storages. */
   rowsCopied(): number;
 } {
   const cache = new WeakMap<THREE.Texture['source'], Map<string, FakeStorage>>();
@@ -60,15 +60,15 @@ export function fakeWebGLTextures(): {
       storage.usedTimes += 1;
       bound.set(texture, storage);
     },
-    copyTextureToTexture: (_source, destination, region, position) => {
-      const storage = bound.get(destination);
-      if (!storage) throw new Error(`copy into a texture with no storage: ${destination.uuid}`);
-      const rows = region.max.y - region.min.y;
-      for (let row = position.y; row < position.y + rows; row += 1) {
+    writeRows: (texture, fromRow, toRow) => {
+      const storage = bound.get(texture);
+      if (!storage) throw new Error(`rows written into a texture with no storage: ${texture.uuid}`);
+      for (let row = fromRow; row < toRow; row += 1) {
         storage.writesPerRow[row] = (storage.writesPerRow[row] ?? 0) + 1;
       }
-      rowsCopied += rows;
+      rowsCopied += toRow - fromRow;
     },
+    generateMipmaps: () => {},
   };
   return { renderer, storageOf: (texture) => bound.get(texture), rowsCopied: () => rowsCopied };
 }

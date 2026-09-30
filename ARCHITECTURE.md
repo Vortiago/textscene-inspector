@@ -210,6 +210,10 @@ A NoiseTexture2D builds as a job, off the main thread (ADR-0042).
   each frame (`r3f/tiledUpload/`). The upload wraps the exact texture a consumer draws,
   because three uploads each clone with its own sampler settings separately. Every
   component that clones a texture to draw it goes through `useUploadedClone`.
+  - Each band is one `texSubImage2D` over its own rows, and it reads no GPU state back
+    (`webglUploadRenderer.ts`). A read waits for every command already queued.
+  - At most 8 MiB of bands are on their way to the GPU at once. Each frame's bands wait
+    behind a fence, and leave that window once the GPU has passed it (`gpuPacer.ts`).
 - **Status.** `textureWork.ts` counts the builds and uploads in flight. The shell shows
   "Building textures…" while the count is above zero, and a capture waits for it to clear.
 

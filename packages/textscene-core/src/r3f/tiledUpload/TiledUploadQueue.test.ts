@@ -8,37 +8,48 @@ import * as THREE from 'three';
 import { bandRows, TiledUploadQueue, type UploadRenderer } from './TiledUploadQueue';
 
 interface Copy {
-  source: THREE.Texture;
   destination: THREE.Texture;
   fromRow: number;
   toRow: number;
-  atRow: number;
-  mipmapsOn: boolean;
 }
 
-/** A renderer that records calls, and a clock that each copy advances by `msPerCopy`. */
+/** A renderer that records calls, and a clock that each band write advances by `msPerCopy`. */
 function fakeRenderer(msPerCopy = 1) {
   let clock = 0;
   const copies: Copy[] = [];
   const allocations: { texture: THREE.Texture; dataReady: boolean }[] = [];
+  /** Every write and mipmap generation, in call order. */
+  const calls: string[] = [];
   const renderer: UploadRenderer = {
     initTexture: (texture) => {
       allocations.push({ texture, dataReady: texture.source.dataReady });
     },
-    copyTextureToTexture: (source, destination, region, position) => {
-      const box = region as THREE.Box2;
-      copies.push({
-        source,
-        destination,
-        fromRow: box.min.y,
-        toRow: box.max.y,
-        atRow: (position as THREE.Vector2).y,
-        mipmapsOn: destination.generateMipmaps,
-      });
+    writeRows: (texture, fromRow, toRow) => {
+      copies.push({ destination: texture, fromRow, toRow });
+      calls.push(`rows ${fromRow}-${toRow}`);
       clock += msPerCopy;
     },
+    generateMipmaps: () => {
+      calls.push('mipmaps');
+    },
   };
-  return { renderer, copies, allocations, now: () => clock };
+  return { renderer, copies, allocations, calls, now: () => clock };
+}
+
+/** A pacer that allows a fixed number of bands a frame and records each frame's count. */
+function fakePacer(bands: number) {
+  const pacer = {
+    issued: [] as number[],
+    bands,
+    allow: (next: number) => {
+      pacer.bands = next;
+    },
+    allowance: () => pacer.bands,
+    markIssued: (copied: number) => {
+      pacer.issued.push(copied);
+    },
+  };
+  return pacer;
 }
 
 function dataTexture(width: number, height: number): THREE.DataTexture {
@@ -75,15 +86,12 @@ describe('TiledUploadQueue', () => {
     queue.tick(1000);
     await upload.done;
 
-    expect(copies.map(({ fromRow, toRow, atRow }) => [fromRow, toRow, atRow])).toEqual([
-      [0, 128, 0],
-      [128, 256, 128],
-      [256, 300, 256],
+    expect(copies.map(({ fromRow, toRow }) => [fromRow, toRow])).toEqual([
+      [0, 128],
+      [128, 256],
+      [256, 300],
     ]);
     expect(copies.every(({ destination }) => destination === texture)).toBe(true);
-    // The source shares the pixels but is never uploaded itself.
-    expect((copies[0]?.source.image as { data: Uint8Array } | undefined)?.data).toBe(texture.image.data);
-    expect(copies[0]?.source).not.toBe(texture);
   });
 
   it('stops a frame once its budget is spent, and carries on next frame', () => {
@@ -96,6 +104,40 @@ describe('TiledUploadQueue', () => {
     expect(copies).toHaveLength(4);
   });
 
+  it('copies no more bands than the pacer allows, and says how many it copied', () => {
+    const { renderer, copies, now } = fakeRenderer();
+    const pacer = fakePacer(2);
+    const queue = new TiledUploadQueue(renderer, now, pacer);
+    queue.enqueue(dataTexture(4096, 128 * 5));
+
+    expect(queue.tick(1000)).toBe(2);
+    expect(copies).toHaveLength(2);
+    pacer.allow(10);
+    expect(queue.tick(1000)).toBe(3);
+    expect(queue.tick(1000)).toBe(0);
+  });
+
+  it('copies nothing in a frame the pacer holds back', () => {
+    const { renderer, copies, now } = fakeRenderer();
+    const queue = new TiledUploadQueue(renderer, now, fakePacer(0));
+    queue.enqueue(dataTexture(4096, 128 * 2));
+
+    expect(queue.tick(1000)).toBe(0);
+    expect(copies).toHaveLength(0);
+  });
+
+  it('tells the pacer how many bands each frame copied', () => {
+    const { renderer, now } = fakeRenderer();
+    const pacer = fakePacer(2);
+    const queue = new TiledUploadQueue(renderer, now, pacer);
+    queue.enqueue(dataTexture(4096, 128 * 3));
+
+    queue.tick(1000);
+    queue.tick(1000);
+    queue.tick(1000);
+    expect(pacer.issued).toEqual([2, 1]);
+  });
+
   it('uploads at least one band a frame, however small the budget', () => {
     const { renderer, copies, now } = fakeRenderer(10);
     const queue = new TiledUploadQueue(renderer, now);
@@ -104,8 +146,8 @@ describe('TiledUploadQueue', () => {
     expect(copies).toHaveLength(1);
   });
 
-  it('generates mipmaps once, on the last band, for a texture that wants them', async () => {
-    const { renderer, copies, now } = fakeRenderer();
+  it('generates mipmaps once, after the last band, for a texture that wants them', async () => {
+    const { renderer, calls, now } = fakeRenderer();
     const texture = dataTexture(4096, 300);
     texture.generateMipmaps = true;
     const queue = new TiledUploadQueue(renderer, now);
@@ -113,12 +155,23 @@ describe('TiledUploadQueue', () => {
     queue.tick(1000);
     await upload.done;
 
-    expect(copies.map(({ mipmapsOn }) => mipmapsOn)).toEqual([false, false, true]);
-    expect(texture.generateMipmaps).toBe(true);
+    expect(calls).toEqual(['rows 0-128', 'rows 128-256', 'rows 256-300', 'mipmaps']);
+  });
+
+  it('generates no mipmaps for a texture that wants none', async () => {
+    const { renderer, calls, now } = fakeRenderer();
+    const texture = dataTexture(4096, 300);
+    texture.generateMipmaps = false;
+    const queue = new TiledUploadQueue(renderer, now);
+    const upload = queue.enqueue(texture);
+    queue.tick(1000);
+    await upload.done;
+
+    expect(calls).not.toContain('mipmaps');
   });
 
   it('makes no further copies after a cancel, and settles as not uploaded', async () => {
-    const { renderer, copies, now } = fakeRenderer(3);
+    const { renderer, copies, calls, now } = fakeRenderer(3);
     const texture = dataTexture(4096, 128 * 4);
     texture.generateMipmaps = true;
     const queue = new TiledUploadQueue(renderer, now);
@@ -129,7 +182,7 @@ describe('TiledUploadQueue', () => {
 
     expect(copies).toHaveLength(1);
     expect(await upload.done).toBe(false);
-    expect(texture.generateMipmaps).toBe(true);
+    expect(calls).not.toContain('mipmaps');
   });
 
   it('serves two textures in the order they arrived', async () => {
@@ -195,7 +248,7 @@ describe('TiledUploadQueue with textures three already shares', () => {
     ]);
   });
 
-  it('joins the upload a texture is already in, although its mipmap flag is cleared meanwhile', async () => {
+  it('joins the upload a texture is already in', async () => {
     const { renderer, copies, allocations, now } = fakeRenderer();
     const queue = new TiledUploadQueue(renderer, now);
     const texture = dataTexture(4096, 300);
@@ -208,7 +261,6 @@ describe('TiledUploadQueue with textures three already shares', () => {
     expect(await second.done).toBe(true);
     expect(allocations).toHaveLength(1);
     expect(copies).toHaveLength(3);
-    expect(texture.generateMipmaps).toBe(true);
   });
 
   it('keeps its rows when one of two consumers of the same texture leaves', async () => {
@@ -290,6 +342,14 @@ describe('TiledUploadQueue.needsTiling', () => {
 
   it('leaves a texture of one band or less to three', () => {
     expect(queue.needsTiling(dataTexture(4096, 128))).toBe(false);
+  });
+
+  it('leaves a texture that is not 8-bit RGBA to three', () => {
+    const floats = new THREE.DataTexture(new Float32Array(4096 * 256 * 4), 4096, 256, THREE.RGBAFormat, THREE.FloatType);
+    const red = new THREE.DataTexture(new Uint8Array(4096 * 1024), 4096, 1024, THREE.RedFormat);
+
+    expect(queue.needsTiling(floats)).toBe(false);
+    expect(queue.needsTiling(red)).toBe(false);
   });
 
   it('leaves an image-backed texture to three', () => {

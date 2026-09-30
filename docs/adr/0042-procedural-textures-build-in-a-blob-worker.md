@@ -48,6 +48,14 @@ because three uploads each clone separately when its sampler or colour-space set
 differ, and the 2D canvas and the 3D material slots each draw such a clone. A slot keeps
 drawing its previous texture until the new one is on the GPU.
 
+**A band never waits for the GPU.** Under SwiftShader the GPU of a 3D scene runs about a
+second behind the main thread, so any call that reads GPU state back blocks for 120–230 ms.
+three's `copyTextureToTexture` reads the unpack state once, so each band is instead one
+`texSubImage2D` over its own rows, with the unpack state set through three's cache. The
+bands still occupy memory shared with the GPU process until the GPU consumes them, and a
+write blocked for 60 ms at about 14 MiB outstanding. So at most 8 MiB is on its way at
+once, measured with a fence per frame.
+
 ## Measurement
 
 The in-frame probe `scripts/vscode/probes/blobWorkerProbe.mjs` echoes one number through
