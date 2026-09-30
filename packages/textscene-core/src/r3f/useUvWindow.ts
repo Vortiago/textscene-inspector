@@ -12,10 +12,10 @@ import type { UvWindow } from './spriteFrame';
  * clone uploads: that one shows the new window over its own pixels. Layout, not
  * passive: the window is set before the frame that first draws the texture.
  */
-export function useUvWindow(texture: THREE.Texture | null, window: UvWindow): void {
+export function useUvWindow(texture: THREE.Texture | null, uvWindow: UvWindow): void {
   useLayoutEffect(() => {
     if (!texture) return;
-    texture.offset.copy(window.offset);
-    texture.repeat.copy(window.repeat);
-  }, [texture, window]);
+    texture.offset.copy(uvWindow.offset);
+    texture.repeat.copy(uvWindow.repeat);
+  }, [texture, uvWindow]);
 }
