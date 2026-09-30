@@ -22,10 +22,15 @@ const SHARED_MODULE = 'packages/textscene-core/src/resources/testing/arrayMeshSu
 const SHARED_SURFACES = [wallQuadSurface(), headlightsSurface(), truncatedSurface()];
 
 /**
- * A literal surface: one dictionary with a `format` and a `vertex_data`, and no interpolation.
+ * A literal surface: one dictionary with a `format` and a `vertex_data`. A `${…}` inside it is
+ * one more key, such as an optional `"material"`, so a copy that interpolates one is still caught.
  * A dictionary without `format` is variant-parser input, not a mesh layout.
  */
-const SURFACE_RE = /\{[^{}$]*"format": \d+[^{}$]*"vertex_data": PackedByteArray\("[^"]*"\)[^{}$]*\}/g;
+const SURFACE_BODY = String.raw`(?:[^{}$]|\$\{[^{}]*\})*`;
+const SURFACE_RE = new RegExp(
+  String.raw`\{${SURFACE_BODY}"format": \d+${SURFACE_BODY}"vertex_data": PackedByteArray\("[^"]*"\)${SURFACE_BODY}\}`,
+  'g'
+);
 const BLOB_RE = /"(\w+)": PackedByteArray\("([^"]*)"\)/g;
 
 /** A surface's bytes: every `PackedByteArray` entry, sorted by key. Material and name are not bytes. */
@@ -58,6 +63,12 @@ function holdersByBytes(): Map<string, string[]> {
 describe('ArrayMesh surface bytes have one source', () => {
   it('reads every shared surface as a surface, so the sweep cannot pass vacuously', () => {
     expect(bytesOfSurfacesIn(SHARED_SURFACES.join('\n')).size).toBe(SHARED_SURFACES.length);
+  });
+
+  it('reads a copy that interpolates a key as a surface', () => {
+    const copy = wallQuadSurface({ name: 'n' }).replace('"name"', '${materialKey}"name"');
+
+    expect(bytesOfSurfacesIn(copy)).toEqual(new Set([surfaceBytes(wallQuadSurface())]));
   });
 
   it('keys a surface by its bytes alone, so material and name do not hide a copy', () => {
