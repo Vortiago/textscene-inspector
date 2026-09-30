@@ -21,9 +21,13 @@ Use `gh` where it exists. In a cloud session, use the `mcp__github__*` tools ins
 ## 2. Claim it
 
 1. Add the `in-progress` label to the issue.
-2. Read the issue body and every comment. The implementation notes and the testing
+2. Rename the session to `#<n>: <what the issue fixes>`, so that the session list
+   tells one issue from another. In a cloud session, use `set_session_title` from
+   the `claude-code-remote` tools. In a terminal session, ask the user to run
+   `/rename`.
+3. Read the issue body and every comment. The implementation notes and the testing
    strategy are there.
-3. Read the ADRs and the `comparison.md` sheets in the area the issue touches.
+4. Read the ADRs and the `comparison.md` sheets in the area the issue touches.
 
 ## 3. Agree the scope
 
