@@ -1,5 +1,5 @@
 /**
- * The two **solve handoff** mechanisms (CONTEXT.md, "Solve handoff"): a
+ * The two **solve handoff** mechanisms (GLOSSARY.md, "Solve handoff"): a
  * **share** (one computation both the solver and the painter call) and a
  * **channel** (a value the solver seals and the painter opens).
  */

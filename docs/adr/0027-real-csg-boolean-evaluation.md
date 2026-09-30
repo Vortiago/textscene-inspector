@@ -61,7 +61,7 @@ raycaster skips invisible objects. One addition gives both behaviours.
 **Degradation ladder.** `pending` while the chunk loads (the root shows its own solid).
 `failed` if the chunk or the evaluator fails: each contributor un-prunes and draws
 itself. That last rung is the ADR-0004 behaviour, so the term **CSG-as-primitive** stays
-in `CONTEXT.md`. It names the fallback, not the design.
+in `GLOSSARY.md`. It names the fallback, not the design.
 
 ## Considered and rejected
 

@@ -5,6 +5,44 @@ Godot `.tscn` parser, linter and renderer (react-three-fiber over three.js). pnp
 (web previewer), `apps/textscene-vscode` (VS Code extension), `apps/textscene-linter`
 (CLI linter, React- and THREE-free).
 
+## Docs
+
+- README.md: status, install, scripts.
+- ARCHITECTURE.md: two-parser design, resource pipeline, linter bundle isolation,
+  project structure. Read it before structural work.
+- GLOSSARY.md: the domain terms. Use them exactly.
+- REFERENCES.md: doc links, Context7 library IDs.
+- RELEASING.md: how to release a package.
+- docs/adr/: decisions. Respect them in the areas they govern.
+
+## Work items = GitHub issues
+
+- `gh issue list` lists them. Old `WI-*` ids stay in some titles.
+- Do one issue at a time. The user picks it.
+- `gh issue view <n>` has the implementation notes and testing strategy.
+- Reference the issue from the PR with `Closes #<n>`.
+- Never start the next item on your own.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in this repo's GitHub Issues, through the `gh` CLI. See
+`docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See
+`docs/agents/domain.md`.
+
+## Policies
+
+- Full scope at full quality: never trim, skip tests, or defer for perceived
+  time, token or context pressure. Never mention such limits.
+- No time estimates. Report complexity only (simple / moderate / complex).
+- Claude Code: `.claude/hooks/check-no-verify.mjs` blocks `git commit --no-verify` and `-n`,
+  so the pre-commit checks always run.
+
 ## Gates (repo root)
 
 - `pnpm type-check:all` builds `@textscene/core` first. Run it once in a fresh worktree
@@ -186,7 +224,7 @@ fail on a mis-shaped slice.
   both current (one 4.6.3 saver writes either, per file), and a header that declares no
   format is current too, so none of them is bounded.
 - Every property bound is grounded in the engine source, in one of three bound tiers
-  (ADR-0032, defined under **Severity** in CONTEXT.md). Cite the `file:line` beside each
+  (ADR-0032, defined under **Severity** in GLOSSARY.md). Cite the `file:line` beside each
   bound. A constant named `EXTREME_*`, `LARGE_*` or `*_RECOMMENDED` without one is a
   defect.
   - **error**: the setter refuses or alters the value (`ERR_FAIL*`, a clamp, a mask that

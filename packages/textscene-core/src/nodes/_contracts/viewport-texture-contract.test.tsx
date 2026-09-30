@@ -1,6 +1,6 @@
 /**
  * ViewportTextureRegistry contract: the seam between a `<SubViewport>` publishing a `WebGLRenderTarget`
- * and its consumers, one shape for all content. Like **AnimationDriverRegistry** (CONTEXT.md), a
+ * and its consumers, one shape for all content. Like **AnimationDriverRegistry** (GLOSSARY.md), a
  * `nodePath → entry` lookup: a stable register function, so a publisher's effect does not re-fire,
  * and a reactive map, so a consumer re-renders when its target appears.
  */
