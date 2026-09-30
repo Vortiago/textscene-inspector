@@ -41,7 +41,7 @@ export function busTypeFor(resourceType: string | undefined): ResourceType | nul
 }
 
 export interface ResourceLoaderOptions {
-  /** Which glTF extensions a GLB loads with. Defaults to `godot-importer`. */
+  /** Which glTF extensions a GLB loads with. Absent means `createGLBMesh`'s default. */
   gltfExtensions?: GltfExtensionRules;
 }
 
@@ -125,7 +125,7 @@ export class ResourceLoader {
     }
   }
 
-  constructor(fileEventBus?: FileEventBus, { gltfExtensions = 'godot-importer' }: ResourceLoaderOptions = {}) {
+  constructor(fileEventBus?: FileEventBus, { gltfExtensions }: ResourceLoaderOptions = {}) {
     this._fileEventBus = fileEventBus || null;
     this.eventBus = new ResourceEventBus();
     this.metadata = new MetadataStore();

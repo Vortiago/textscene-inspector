@@ -10,11 +10,12 @@ const BIN_CHUNK = 0x004e4942;
 /** One float32 VEC3 per vertex, and one per instance for the instancing extension. */
 const TRIANGLE = [0, 0, 0, 1, 0, 0, 0, 1, 0];
 const INSTANCE_OFFSETS = [0, 0, 0, 5, 0, 0, 10, 0, 0];
+const INSTANCING = 'EXT_mesh_gpu_instancing';
 
 export interface TriangleGlb {
   extensionsUsed?: string[];
   extensionsRequired?: string[];
-  /** Gives the node three instances through EXT_mesh_gpu_instancing. */
+  /** Gives the node three instances through EXT_mesh_gpu_instancing, which it lists as used. */
   instanced?: boolean;
   /** The node's own translation. */
   translation?: [number, number, number];
@@ -28,6 +29,11 @@ function vec3Accessor(bufferView: number, values: number[]) {
   return { bufferView, componentType: 5126, count: values.length / 3, type: 'VEC3' };
 }
 
+/** A file must list every extension it uses, so an instanced node adds its own. */
+function usedExtensions(listed: string[] = [], instanced = false): string[] {
+  return instanced && !listed.includes(INSTANCING) ? [...listed, INSTANCING] : listed;
+}
+
 function gltfJson({
   extensionsUsed,
   extensionsRequired,
@@ -39,7 +45,7 @@ function gltfJson({
   const floatBytes = TRIANGLE.length * 4;
   return {
     asset: { version: '2.0' },
-    ...(extensionsUsed ? { extensionsUsed } : {}),
+    ...(extensionsUsed || instanced ? { extensionsUsed: usedExtensions(extensionsUsed, instanced) } : {}),
     ...(extensionsRequired ? { extensionsRequired } : {}),
     scene: 0,
     scenes: [{ nodes: [0] }],
@@ -50,7 +56,7 @@ function gltfJson({
         ...(translation ? { translation } : {}),
         ...(extras ? { extras } : {}),
         ...(instanced
-          ? { extensions: { EXT_mesh_gpu_instancing: { attributes: { TRANSLATION: 1 } } } }
+          ? { extensions: { [INSTANCING]: { attributes: { TRANSLATION: 1 } } } }
           : {}),
       },
     ],

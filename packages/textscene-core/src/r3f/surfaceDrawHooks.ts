@@ -85,6 +85,9 @@ function pose(
   mainCamera: THREE.Camera,
   passCamera: THREE.Camera
 ): boolean {
+  // A batch that `drawsAsOneBatch` refused, such as a GLB instanced under `three-loader`,
+  // keeps its pose rather than turning about its origin.
+  if ((object as THREE.InstancedMesh).isInstancedMesh) return false;
   const billboard = billboardOf(material);
   const camera = billboard.mode === BillboardMode.BILLBOARD_PARTICLES ? passCamera : mainCamera;
   if (!billboardWorldMatrix(billboarded, object.matrixWorld, camera.matrixWorld, billboard)) {
@@ -94,6 +97,15 @@ function pose(
   posedMatrixWorld.copy(object.matrixWorld);
   object.matrixWorld.copy(billboarded);
   return true;
+}
+
+/**
+ * Whether one InstancedMesh can draw every instance of `material`'s surface. Godot billboards
+ * each instance about its own origin (`scene_forward_clustered.glsl:338-342`), but three
+ * multiplies `instanceMatrix` after the `modelMatrix` a draw hook moves, so a billboard cannot.
+ */
+export function drawsAsOneBatch(material: THREE.Material): boolean {
+  return billboardOf(material).mode === BillboardMode.BILLBOARD_DISABLED;
 }
 
 function closeDraw(): void {

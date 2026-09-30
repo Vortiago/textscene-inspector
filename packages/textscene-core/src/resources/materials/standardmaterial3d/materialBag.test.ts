@@ -181,6 +181,11 @@ describe('standardMaterialBag — billboard_mode', () => {
     );
   });
 
+  it('hands back one shared billboard for every surface that does not billboard', () => {
+    // The draw hooks read it every draw group, so a non-billboard read must not allocate.
+    expect(billboardOf(standardMaterial({}))).toBe(billboardOf(new THREE.MeshBasicMaterial()));
+  });
+
   it('reads DISABLED from Godot’s default surface and from a foreign material', () => {
     expect(billboardOf(buildStandardMaterial(null)).mode).toBe(BillboardMode.BILLBOARD_DISABLED);
     expect(billboardOf(new THREE.MeshBasicMaterial()).mode).toBe(BillboardMode.BILLBOARD_DISABLED);

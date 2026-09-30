@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { applyShadowCasting, shadowCastingEffects } from './shadowCasting';
+import { drawsAsOneBatch } from './surfaceDrawHooks';
 import { ShadowCastingSetting } from '../resources/meshlibrary/types';
 import { standardMaterial as material } from '../resources/materials/standardmaterial3d/testing/standardMaterial';
 import {
@@ -164,6 +165,29 @@ describe('surfaceDrawHooks — cast_shadow', () => {
   it('ON draws the colour pass', () => {
     const mesh = surfacesMesh(ShadowCastingSetting.ON);
     expect(drawsColour(mesh, OPAQUE)).toBe(true);
+  });
+});
+
+describe('surfaceDrawHooks — instanced meshes', () => {
+  it('leaves an InstancedMesh in its own pose, which would billboard about the batch origin', () => {
+    // three multiplies `instanceMatrix` after `modelMatrix`, so one swapped matrix
+    // would turn every instance about the batch origin, not each about its own.
+    const instanced = new THREE.InstancedMesh(new THREE.BufferGeometry(), material({ billboard_mode: '1' }), 2);
+    applyShadowCasting(instanced, shadowCastingEffects(ShadowCastingSetting.ON));
+    instanced.position.set(5, 6, 7);
+    instanced.updateMatrixWorld(true);
+    const drawn = drawColourGroup(instanced, camera, 0, (s) => s.matrixWorld);
+    expect(drawn.equals(instanced.matrixWorld)).toBe(true);
+  });
+});
+
+describe('drawsAsOneBatch', () => {
+  it('batches a surface that does not billboard', () => {
+    expect(drawsAsOneBatch(material({}))).toBe(true);
+  });
+
+  it('refuses a surface that billboards, which must turn about each instance', () => {
+    expect(drawsAsOneBatch(material({ billboard_mode: '2' }))).toBe(false);
   });
 });
 

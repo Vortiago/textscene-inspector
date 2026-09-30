@@ -18,7 +18,7 @@ const isRecord = (value: unknown): value is JsonRecord =>
  * three's plugins read an extension only where an object carries it, so each one then skips.
  * `extras` is the author's own data, which Godot keeps as metadata, so it stays as written.
  */
-export function dropUnimportedExtensions(value: unknown): void {
+function dropUnimportedExtensions(value: unknown): void {
   if (Array.isArray(value)) {
     for (const item of value) dropUnimportedExtensions(item);
     return;

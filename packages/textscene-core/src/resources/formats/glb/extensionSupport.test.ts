@@ -8,17 +8,17 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { createGLBMesh } from './glbProcessing';
 import { triangleGlb } from './testing/triangleGlb';
+import { isMesh } from '../../../r3f/testing/threeNarrow';
 
 function meshesOf(root: THREE.Object3D): THREE.Mesh[] {
   const meshes: THREE.Mesh[] = [];
   root.traverse((node) => {
-    if ((node as THREE.Mesh).isMesh) meshes.push(node as THREE.Mesh);
+    if (isMesh(node)) meshes.push(node);
   });
   return meshes;
 }
 
-const instancedGlb = () =>
-  triangleGlb({ extensionsUsed: ['EXT_mesh_gpu_instancing'], instanced: true });
+const instancedGlb = () => triangleGlb({ instanced: true });
 
 const requiringGlb = (name: string) =>
   triangleGlb({ extensionsUsed: [name], extensionsRequired: [name] });
@@ -55,11 +55,7 @@ describe('createGLBMesh under Godot’s importer rules (the default)', () => {
 
   it('draws that node at its own transform', async () => {
     const root = await createGLBMesh(
-      triangleGlb({
-        extensionsUsed: ['EXT_mesh_gpu_instancing'],
-        instanced: true,
-        translation: [2, 3, 4],
-      })
+      triangleGlb({ instanced: true, translation: [2, 3, 4] })
     );
     root.updateMatrixWorld(true);
     const position = new THREE.Vector3().setFromMatrixPosition(meshesOf(root)[0]!.matrixWorld);
@@ -89,11 +85,7 @@ describe('createGLBMesh under Godot’s importer rules (the default)', () => {
   it('refuses a file that requires EXT_mesh_gpu_instancing, naming it', async () => {
     await expect(
       createGLBMesh(
-        triangleGlb({
-          extensionsUsed: ['EXT_mesh_gpu_instancing'],
-          extensionsRequired: ['EXT_mesh_gpu_instancing'],
-          instanced: true,
-        })
+        triangleGlb({ extensionsRequired: ['EXT_mesh_gpu_instancing'], instanced: true })
       )
     ).rejects.toThrow(/required extension 'EXT_mesh_gpu_instancing' is not supported/);
   });

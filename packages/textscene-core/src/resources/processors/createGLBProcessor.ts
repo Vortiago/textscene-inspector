@@ -173,7 +173,7 @@ export function createGLBProcessor(
   fileEventBus: FileEventBus | undefined,
   eventBus: ResourceEventBus,
   loadMaterial: MaterialLoaderFn,
-  extensionRules: GltfExtensionRules = 'godot-importer'
+  extensionRules?: GltfExtensionRules
 ): ResourceProcessor<THREE.Object3D> {
   return createResourceProcessor({
     fileEventBus,

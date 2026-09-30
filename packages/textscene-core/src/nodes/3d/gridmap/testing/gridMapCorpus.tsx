@@ -10,6 +10,7 @@ import { GridMap } from '../Component';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../../index';
 import type { ResourceProvider } from '../../../../resources/ResourceProvider';
+import { instanceAs } from '../../testing/reactThreeTestInstance';
 
 const LIBRARY_PATH = 'res://stage/tiles.tres';
 const TILE_MESH_PATH = 'res://stage/meshes/tile.tres';
@@ -114,7 +115,7 @@ export async function renderGridMapTiles({
     await new Promise<void>((r) => setTimeout(r, 20));
     await renderer.update(tree);
   }
-  const tiles = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
+  const tiles = renderer.scene.findAllByType('Mesh').map((m) => instanceAs<THREE.Mesh>(m));
   // No frame has run, so the world matrices are brought up to date from the root.
   let root: THREE.Object3D | undefined = tiles[0];
   while (root?.parent) root = root.parent;

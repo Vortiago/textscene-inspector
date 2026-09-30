@@ -10,6 +10,8 @@ import { FileEventBus } from '../FileEventBus';
 import { ResourceEventBus } from '../ResourceEventBus';
 import { createGLBProcessor } from './createGLBProcessor';
 import { initGlbModules } from '../formats/glb/glbProcessing';
+import { triangleGlb } from '../formats/glb/testing/triangleGlb';
+import { isMesh } from '../../r3f/testing/threeNarrow';
 
 const GLTF_PATH = 'res://characters/mannequiny.gltf';
 const BLUE_PATH = 'res://materials/blue.tres';
@@ -35,32 +37,9 @@ _subresources={
 
 /** A one-triangle glTF whose single surface uses a named, colourless material. */
 function gltfWithNamedMaterial(name: string): ArrayBuffer {
-  const gltf = {
-    asset: { version: '2.0' },
-    scene: 0,
-    scenes: [{ nodes: [0] }],
-    nodes: [{ name: 'body', mesh: 0 }],
-    meshes: [{ name: 'body', primitives: [{ attributes: { POSITION: 0 }, material: 0 }] }],
-    materials: [{ name, pbrMetallicRoughness: { metallicFactor: 0.1, roughnessFactor: 0.4 } }],
-    accessors: [
-      {
-        bufferView: 0,
-        componentType: 5126,
-        count: 3,
-        type: 'VEC3',
-        min: [0, 0, 0],
-        max: [1, 1, 0],
-      },
-    ],
-    bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: 36 }],
-    buffers: [
-      {
-        byteLength: 36,
-        uri: 'data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAA',
-      },
-    ],
-  };
-  return new TextEncoder().encode(JSON.stringify(gltf)).buffer as ArrayBuffer;
+  return triangleGlb({
+    material: { name, pbrMetallicRoughness: { metallicFactor: 0.1, roughnessFactor: 0.4 } },
+  });
 }
 
 interface Harness {
@@ -98,7 +77,7 @@ async function loadWith(
 function surfaceMaterial(root: THREE.Object3D): THREE.MeshStandardMaterial {
   let found: THREE.Material | undefined;
   root.traverse((node) => {
-    if ((node as THREE.Mesh).isMesh) found = (node as THREE.Mesh).material as THREE.Material;
+    if (isMesh(node)) found = node.material as THREE.Material;
   });
   return found as THREE.MeshStandardMaterial;
 }

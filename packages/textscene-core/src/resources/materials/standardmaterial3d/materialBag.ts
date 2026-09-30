@@ -107,8 +107,7 @@ function materialBlendProps(scalars: StandardMaterial3DScalars): MaterialBlendSt
 }
 
 /** Where a derived material records the surface state the draw hooks read per draw group. */
-const BILLBOARD_MODE_KEY = 'godotBillboardMode';
-const BILLBOARD_KEEP_SCALE_KEY = 'godotBillboardKeepScale';
+const BILLBOARD_KEY = 'godotBillboard';
 const CASTS_SHADOW_KEY = 'godotCastsShadow';
 
 /**
@@ -119,28 +118,33 @@ const CASTS_SHADOW_KEY = 'godotCastsShadow';
  */
 function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unknown> {
   return {
-    [BILLBOARD_MODE_KEY]: scalars.billboardMode,
-    [BILLBOARD_KEEP_SCALE_KEY]: scalars.billboardKeepScale,
+    [BILLBOARD_KEY]: surfaceBillboard(scalars),
     [CASTS_SHADOW_KEY]: scalars.castsShadow,
   };
 }
 
 /** A surface's billboard: `billboard_mode` and `billboard_keep_scale`. */
 export interface SurfaceBillboard {
-  mode: number;
-  keepScale: boolean;
+  readonly mode: number;
+  readonly keepScale: boolean;
 }
 
-/**
- * The billboard a material was derived with. DISABLED, without keep-scale, for Godot's
- * default surface and for any material this derivation did not build.
- */
+/** The billboard of Godot's default surface and of any material this derivation did not build. */
+const NO_BILLBOARD: SurfaceBillboard = Object.freeze({
+  mode: BillboardMode.BILLBOARD_DISABLED,
+  keepScale: false,
+});
+
+/** Built once per bag, so the draw hooks read it every draw group without allocating. */
+function surfaceBillboard(scalars: StandardMaterial3DScalars): SurfaceBillboard {
+  if (scalars.billboardMode === BillboardMode.BILLBOARD_DISABLED) return NO_BILLBOARD;
+  return { mode: scalars.billboardMode, keepScale: scalars.billboardKeepScale };
+}
+
+/** The billboard a material was derived with. */
 export function billboardOf(material: THREE.Material): SurfaceBillboard {
-  const mode: unknown = material.userData[BILLBOARD_MODE_KEY];
-  return {
-    mode: typeof mode === 'number' ? mode : BillboardMode.BILLBOARD_DISABLED,
-    keepScale: material.userData[BILLBOARD_KEEP_SCALE_KEY] === true,
-  };
+  const billboard = material.userData[BILLBOARD_KEY] as SurfaceBillboard | undefined;
+  return billboard ?? NO_BILLBOARD;
 }
 
 /**

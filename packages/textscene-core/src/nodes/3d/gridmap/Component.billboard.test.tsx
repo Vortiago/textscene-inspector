@@ -22,6 +22,12 @@ const DOUBLED = 'item/0/mesh_transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 
 
 const drawnMatrix = (tile: THREE.Mesh) => drawColourGroup(tile, TEST_CAMERA, 0, (s) => s.matrixWorld);
 
+/** The drawn per-axis scale, to five decimal places. */
+function drawnScale(tile: THREE.Mesh): number[] {
+  const scale = new THREE.Vector3().setFromMatrixScale(drawnMatrix(tile));
+  return scale.toArray().map((v) => Number(v.toFixed(5)));
+}
+
 function drawnPositions(tiles: THREE.Mesh[]): number[][] {
   return tiles
     .map((tile) => new THREE.Vector3().setFromMatrixPosition(drawnMatrix(tile)).toArray())
@@ -45,8 +51,7 @@ describe('<GridMap> tile material billboard_mode', () => {
 
   it('drops the tile’s mesh_transform scale by default', async () => {
     const [tile] = await renderGridMapTiles({ materialLines: BILLBOARD, itemLines: DOUBLED });
-    const scale = new THREE.Vector3().setFromMatrixScale(drawnMatrix(tile!));
-    expect(scale.toArray().map((v) => Number(v.toFixed(5)))).toEqual([1, 1, 1]);
+    expect(drawnScale(tile!)).toEqual([1, 1, 1]);
   });
 
   it('keeps the tile’s mesh_transform scale under billboard_keep_scale', async () => {
@@ -54,8 +59,7 @@ describe('<GridMap> tile material billboard_mode', () => {
       materialLines: `${BILLBOARD}\nbillboard_keep_scale = true`,
       itemLines: DOUBLED,
     });
-    const scale = new THREE.Vector3().setFromMatrixScale(drawnMatrix(tile!));
-    expect(scale.toArray().map((v) => Number(v.toFixed(5)))).toEqual([2, 2, 2]);
+    expect(drawnScale(tile!)).toEqual([2, 2, 2]);
   });
 
   it('casts from every billboarded tile by default', async () => {

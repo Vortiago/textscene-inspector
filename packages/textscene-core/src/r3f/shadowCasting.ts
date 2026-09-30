@@ -63,7 +63,7 @@ export function shadowCastingEffects(value: number | undefined): ShadowCastingEf
   }
 }
 
-/** The JSX props, applied to an object built outside JSX, such as GridMap's InstancedMesh. */
+/** The JSX props, applied to an object built outside JSX, such as a GLB's meshes. */
 export function applyShadowCasting(object: THREE.Object3D, effects: ShadowCastingEffects): void {
   object.castShadow = effects.castShadow;
   object.onBeforeRender = effects.onBeforeRender;

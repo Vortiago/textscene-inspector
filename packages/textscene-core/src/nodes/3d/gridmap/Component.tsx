@@ -24,8 +24,7 @@ import type { GridMapProperties } from './types';
 import { decodeGridMapCells, ORTHO_BASES, type GridMapCell } from './cellData';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { shadowCastingEffects } from '../../../r3f/shadowCasting';
-import { billboardOf } from '../../../resources/materials/standardmaterial3d/materialBag';
-import { BillboardMode } from '../../../godot/billboard';
+import { drawsAsOneBatch } from '../../../r3f/surfaceDrawHooks';
 
 /** Literal-only, so the key is constant and a placeholder cell never remounts. */
 const PLACEHOLDER_CELL_MATERIAL = wireGizmoProgram(0x4488cc);
@@ -185,17 +184,15 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
 }
 
 /**
- * Godot billboards each MultiMesh instance about its own origin, since its shader turns
- * `model_matrix * instance` (`scene_forward_clustered.glsl:338-342`). three multiplies
- * `instanceMatrix` after the `modelMatrix` a draw hook can move, so a billboarded tile
- * draws as its own mesh and every other item stays one batch.
+ * The item's cells as one InstancedMesh, or as one mesh per cell where `drawsAsOneBatch`
+ * refuses the material, so each billboarded tile turns about its own cell as in Godot.
  */
 function buildTiles(
   geometry: THREE.BufferGeometry,
   material: THREE.Material,
   matrices: THREE.Matrix4[]
 ): THREE.Mesh[] {
-  if (billboardOf(material).mode === BillboardMode.BILLBOARD_DISABLED) {
+  if (drawsAsOneBatch(material)) {
     return [batchedTiles(geometry, material, matrices)];
   }
   return matrices.map((matrix) => cellTile(geometry, material, matrix));
