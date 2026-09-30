@@ -61,4 +61,12 @@ describe('TiledUploadDriver', () => {
 
     expect(allowance).toHaveBeenCalledTimes(2);
   });
+
+  it('releases its GPU fences when the canvas unmounts', async () => {
+    const dispose = vi.spyOn(GpuPacer.prototype, 'dispose');
+    const renderer = await ReactThreeTestRenderer.create(<TiledUploadDriver>{null}</TiledUploadDriver>);
+    await renderer.unmount();
+
+    expect(dispose).toHaveBeenCalledTimes(1);
+  });
 });

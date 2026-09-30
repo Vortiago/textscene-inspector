@@ -11,6 +11,8 @@
 /** A marker behind the commands issued so far. `isDone` never waits for the GPU. */
 export interface GpuFence {
   isDone(): boolean;
+  /** Frees the marker, passed or not. A disposed fence reads as done. */
+  dispose(): void;
 }
 
 /** What the tiled upload asks before a frame's bands, and tells once it has written them. */
@@ -51,12 +53,22 @@ export class GpuPacer implements UploadPacer {
     this.inFlight.push({ fence: this.fence(), bands });
   }
 
+  /** Frees every fence still on its way, as the canvas that issued them goes. */
+  dispose(): void {
+    this.release(this.inFlight.length);
+  }
+
   /** The GPU runs commands in order, so a passed fence has passed every earlier one too. */
   private dropPassed(): void {
     for (let index = this.inFlight.length - 1; index >= 0; index--) {
       if (!this.inFlight[index]!.fence.isDone()) continue;
-      this.inFlight.splice(0, index + 1);
+      this.release(index + 1);
       return;
     }
+  }
+
+  /** Frees the oldest `count` frames' fences and forgets them. */
+  private release(count: number): void {
+    for (const { fence } of this.inFlight.splice(0, count)) fence.dispose();
   }
 }
