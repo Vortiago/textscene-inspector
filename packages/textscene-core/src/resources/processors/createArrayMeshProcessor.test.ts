@@ -7,12 +7,12 @@ import * as THREE from 'three';
 import { ResourceEventBus } from '../ResourceEventBus';
 import type { FileEventBus, FileData } from '../FileEventBus';
 import { createArrayMeshProcessor, type ArrayMeshResource } from './createArrayMeshProcessor';
-import { wallQuadSurface } from '../testing/wallQuadSurface';
+import { wallQuadSurfaces } from '../testing/wallQuadSurface';
 
 const WALL_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://bett1yahcwe25"]
 
 [resource]
-_surfaces = [${wallQuadSurface()}]
+_surfaces = ${wallQuadSurfaces({})}
 blend_shape_mode = 0
 `;
 

@@ -5,57 +5,48 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync } from 'node:fs';
-import { dirname, relative, resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { wallQuadSurface } from './wallQuadSurface';
+import { repoPath, walkSources } from '../../r3f/testing/sourceScan';
+import { repoRoot } from '../../parser/testing/parserKit';
+import {
+  WALL_QUAD_ATTRIBUTE_DATA,
+  WALL_QUAD_VERTEX_DATA,
+  wallQuadSurface,
+  wallQuadSurfaces,
+} from './wallQuadSurface';
 
-const here = dirname(fileURLToPath(import.meta.url)); // .../src/resources/testing
-const srcRoot = resolve(here, '../..');
-const SHARED_MODULE = 'resources/testing/wallQuadSurface.ts';
-
-/** Every `.ts` and `.tsx` file under `src/`, as a path relative to it. */
-function sourceFiles(dir: string = srcRoot): string[] {
-  const found: string[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const path = resolve(dir, entry.name);
-    if (entry.isDirectory()) found.push(...sourceFiles(path));
-    else if (/\.tsx?$/.test(entry.name)) found.push(relative(srcRoot, path));
-  }
-  return found.sort();
-}
-
-/**
- * The base64 of the quad's `attribute_data` and `vertex_data`. A file holds the quad only when it
- * holds both: the decode suite's other-UV variants share its `vertex_data` and are other meshes.
- */
-function quadBlobs(): string[] {
-  const surface = wallQuadSurface();
-  return ['attribute_data', 'vertex_data'].map((key) => {
-    const match = new RegExp(`"${key}": PackedByteArray\\("([^"]+)"\\)`).exec(surface);
-    if (!match) throw new Error(`expected a ${key} entry, got ${surface}`);
-    return match[1]!;
-  });
-}
-
-function holdsQuad(file: string): boolean {
-  const source = readFileSync(resolve(srcRoot, file), 'utf8');
-  return quadBlobs().every((blob) => source.includes(blob));
-}
+const SRC_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+const SHARED_MODULE = 'packages/textscene-core/src/resources/testing/wallQuadSurface.ts';
+const WALL_TRES = resolve(repoRoot(), 'scenes/demos/3d/platformer/stage/meshes/wall.tres');
 
 describe('the wall quad has one source', () => {
+  const sources = walkSources([SRC_ROOT], (name) => /\.tsx?$/.test(name));
+
   it('finds the shared module in the sweep, so the sweep cannot pass vacuously', () => {
-    expect(sourceFiles()).toContain(SHARED_MODULE);
+    expect(sources.map(({ file }) => repoPath(file))).toContain(SHARED_MODULE);
   });
 
+  // Both blobs: the decode suite's other-UV variants share the `vertex_data` and are other meshes.
   it('holds the quad bytes in the shared module and in no other source', () => {
-    expect(sourceFiles().filter(holdsQuad)).toEqual([SHARED_MODULE]);
+    const holders = sources.filter(
+      ({ source }) => source.includes(WALL_QUAD_ATTRIBUTE_DATA) && source.includes(WALL_QUAD_VERTEX_DATA)
+    );
+
+    expect(holders.map(({ file }) => repoPath(file))).toEqual([SHARED_MODULE]);
+  });
+
+  it('matches the surface wall.tres itself writes', () => {
+    const surface = wallQuadSurface({ material: 'ExtResource("1_a5mma")', name: 'tile_material' });
+
+    expect(readFileSync(WALL_TRES, 'utf8')).toContain(surface);
   });
 });
 
 describe('wallQuadSurface', () => {
   it('writes the bare surface with no material and no name', () => {
-    const surface = wallQuadSurface();
+    const surface = wallQuadSurface({ material: null, name: null });
 
     expect(surface).not.toContain('"material"');
     expect(surface).not.toContain('"name"');
@@ -71,9 +62,16 @@ describe('wallQuadSurface', () => {
 
   it('opens and closes the surface as one dictionary', () => {
     const surface = wallQuadSurface({ name: 'tile' });
-    const [, vertexData] = quadBlobs();
 
     expect(surface.startsWith('{\n"aabb"')).toBe(true);
-    expect(surface.endsWith(`"vertex_data": PackedByteArray("${vertexData}")\n}`)).toBe(true);
+    expect(surface.endsWith(`"vertex_data": PackedByteArray("${WALL_QUAD_VERTEX_DATA}")\n}`)).toBe(true);
+  });
+});
+
+describe('wallQuadSurfaces', () => {
+  it('joins one surface per entry into a _surfaces array, in order', () => {
+    expect(wallQuadSurfaces({ name: 'a' }, { name: 'b' })).toBe(
+      `[${wallQuadSurface({ name: 'a' })}, ${wallQuadSurface({ name: 'b' })}]`
+    );
   });
 });

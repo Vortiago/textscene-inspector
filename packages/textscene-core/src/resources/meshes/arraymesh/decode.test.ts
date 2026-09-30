@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as logger from '../../../logger';
 import { decodeArrayMesh } from './decode';
-import { wallQuadSurface } from '../../testing/wallQuadSurface';
+import { wallQuadSurfaces } from '../../testing/wallQuadSurface';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
@@ -27,7 +27,7 @@ const WALL_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://bett1yahcwe
 
 [resource]
 resource_name = "tiles_wall"
-_surfaces = [${wallQuadSurface({ material: 'ExtResource("1_a5mma")', name: 'tile_material' })}]
+_surfaces = ${wallQuadSurfaces({ material: 'ExtResource("1_a5mma")', name: 'tile_material' })}
 blend_shape_mode = 0
 `;
 

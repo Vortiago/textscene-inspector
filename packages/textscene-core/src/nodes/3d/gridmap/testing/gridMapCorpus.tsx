@@ -12,7 +12,7 @@ import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../../index';
 import type { ResourceProvider } from '../../../../resources/ResourceProvider';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
-import { wallQuadSurface } from '../../../../resources/testing/wallQuadSurface';
+import { wallQuadSurfaces } from '../../../../resources/testing/wallQuadSurface';
 
 const LIBRARY_PATH = 'res://stage/tiles.tres';
 const TILE_MESH_PATH = 'res://stage/meshes/tile.tres';
@@ -41,14 +41,14 @@ function tileMesh(materialLines: string | null, subResources: string): string {
     materialLines === null
       ? ''
       : `${subResources}[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tile"]\n${materialLines}\n\n`;
-  const surface = wallQuadSurface({
-    material: materialLines === null ? undefined : 'SubResource("StandardMaterial3D_tile")',
+  const surfaces = wallQuadSurfaces({
+    material: materialLines === null ? null : 'SubResource("StandardMaterial3D_tile")',
     name: 'tile',
   });
   return `[gd_resource type="ArrayMesh" format=4]
 
 ${material}[resource]
-_surfaces = [${surface}]
+_surfaces = ${surfaces}
 blend_shape_mode = 0
 `;
 }

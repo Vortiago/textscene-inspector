@@ -18,6 +18,7 @@ import type {
 } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { wallQuadSurface } from '../../../resources/testing/wallQuadSurface';
+import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
 
 const MESH_PATH = 'res://stage/meshes/wheel.tres';
 const OVERRIDE_MATERIAL_PATH = 'res://stage/materials/paint.tres';
@@ -52,12 +53,6 @@ _surfaces = [${firstSurface}, ${BLUE_SURFACE}]
 blend_shape_mode = 0
 `;
 }
-
-/** The same two surfaces as `_surfaces` bytes only, for a mesh inlined in a `.tscn`. */
-const INLINE_TWO_SURFACES = `[${[
-  wallQuadSurface({ material: 'SubResource("Mat_red")', name: 'red_surface' }),
-  wallQuadSurface({ material: 'SubResource("Mat_blue")', name: 'blue_surface' }),
-].join(', ')}]`;
 
 const OVERRIDE_MATERIAL_TRES = `[gd_resource type="StandardMaterial3D" format=3]
 
@@ -232,7 +227,7 @@ describe('<MeshInstance3D> ArrayMesh material overrides', () => {
       }),
       [
         ...SCENE_MATERIALS,
-        { id: 'ArrayMesh_inline', type: 'ArrayMesh', data: { _surfaces: INLINE_TWO_SURFACES } },
+        inlineTwoSurfaceMesh('ArrayMesh_inline', ['Mat_red', 'Mat_blue']),
       ]
     );
 

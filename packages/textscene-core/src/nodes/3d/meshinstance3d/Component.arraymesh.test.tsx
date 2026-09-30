@@ -17,12 +17,12 @@ import type { ResourceProvider } from '../../../resources/ResourceProvider';
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { materialInstanceAs } from '../testing/reactThreeTestInstance';
-import { wallQuadSurface } from '../../../resources/testing/wallQuadSurface';
+import { wallQuadSurfaces } from '../../../resources/testing/wallQuadSurface';
 
 const WALL_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://bett1yahcwe25"]
 
 [resource]
-_surfaces = [${wallQuadSurface()}]
+_surfaces = ${wallQuadSurfaces({})}
 blend_shape_mode = 0
 `;
 
@@ -48,7 +48,7 @@ blend_shape_mode = 0
  * The `_surfaces` value of an ArrayMesh a `.tscn` declares inline: the wall
  * quad's bytes, without the file wrapper, as `trailer_truck.tscn` writes its body.
  */
-const INLINE_SURFACES = `[${wallQuadSurface({ name: 'inline' })}]`;
+const INLINE_SURFACES = wallQuadSurfaces({ name: 'inline' });
 
 function inlineMeshNode(subResourceId: string): TscnNode {
   return {
@@ -227,7 +227,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
               id: 'ArrayMesh_inline',
               type: 'ArrayMesh',
               data: {
-                _surfaces: `[${wallQuadSurface({ material: 'SubResource("Mat_blue")', name: 'inline' })}]`,
+                _surfaces: wallQuadSurfaces({ material: 'SubResource("Mat_blue")', name: 'inline' }),
               },
             },
             {
@@ -324,10 +324,10 @@ metallic = 1.0
 
 [resource]
 resource_name = "meshes_wheel"
-_surfaces = [${[
-  wallQuadSurface({ material: 'SubResource("StandardMaterial3D_tire")', name: 'tire' }),
-  wallQuadSurface({ material: 'SubResource("StandardMaterial3D_chrome")', name: 'chrome' }),
-].join(', ')}]
+_surfaces = ${wallQuadSurfaces(
+  { material: 'SubResource("StandardMaterial3D_tire")', name: 'tire' },
+  { material: 'SubResource("StandardMaterial3D_chrome")', name: 'chrome' }
+)}
 blend_shape_mode = 0
 `;
 

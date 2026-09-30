@@ -6,7 +6,7 @@
  */
 
 import type { TscnInternalResource } from '../../../../parser/types';
-import { wallQuadSurface } from '../../../../resources/testing/wallQuadSurface';
+import { wallQuadSurfaces } from '../../../../resources/testing/wallQuadSurface';
 
 /**
  * A `[sub_resource type="ArrayMesh"]` with two wall quads, each owning the
@@ -16,15 +16,13 @@ export function inlineTwoSurfaceMesh(
   id: string,
   surfaceMaterialIds: readonly (string | null)[] = [null, null]
 ): TscnInternalResource {
-  const surfaces = surfaceMaterialIds
-    .map((materialId, i) =>
-      wallQuadSurface({
-        material: materialId ? `SubResource("${materialId}")` : undefined,
-        name: `surface_${i}`,
-      })
-    )
-    .join(', ');
-  return { id, type: 'ArrayMesh', data: { _surfaces: `[${surfaces}]` } };
+  const surfaces = wallQuadSurfaces(
+    ...surfaceMaterialIds.map((materialId, i) => ({
+      material: materialId === null ? null : `SubResource("${materialId}")`,
+      name: `surface_${i}`,
+    }))
+  );
+  return { id, type: 'ArrayMesh', data: { _surfaces: surfaces } };
 }
 
 /**

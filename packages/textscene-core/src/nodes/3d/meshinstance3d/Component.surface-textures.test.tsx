@@ -14,7 +14,7 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
-import { wallQuadSurface } from '../../../resources/testing/wallQuadSurface';
+import { wallQuadSurfaces } from '../../../resources/testing/wallQuadSurface';
 import type {
   TscnExternalResource,
   TscnInternalResource,
@@ -126,7 +126,7 @@ describe('inline ArrayMesh surfaces resolve their scene material\'s textures', (
         id: 'Mesh_1',
         type: 'ArrayMesh',
         data: {
-          _surfaces: `[${wallQuadSurface({ material: 'SubResource("Mat_tex")', name: 's0' })}]`,
+          _surfaces: wallQuadSurfaces({ material: 'SubResource("Mat_tex")', name: 's0' }),
         },
       },
       {
