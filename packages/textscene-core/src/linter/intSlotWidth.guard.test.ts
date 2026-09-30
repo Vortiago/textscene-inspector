@@ -25,11 +25,18 @@ const WIDTH_ARGUMENT = /^['"](uint8|int32|uint32|int64)['"]$/;
 
 /**
  * The property bags a slice reads a raw value out of: `properties` (lenient parser),
- * `props` and `rawProps` (rules) and `data` (a resource decoder). A `[...]` subscript
- * is not matched: its key is a variable, so no cross-check is possible.
+ * `props` and `rawProps` (rules) and `data` (a resource decoder), by dot or by quoted
+ * subscript. A `[key]` subscript is not matched: its key is a variable, so no
+ * cross-check is possible.
  */
 const PROPERTY_READ =
-  /^\s*(?:[\w.?![\]]*\.)?(?:properties|props|rawProps|rawProperties|data)\??\.(\w+)\b/;
+  /^\s*(?:[\w.?![\]]*\.)?(?:properties|props|rawProps|rawProperties|data)(?:\??\.(\w+)\b|\[\s*['"](\w+)['"]\s*\])/;
+
+/** The key a property read names, or `undefined` when `expression` is not one. */
+function readKey(expression: string): string | undefined {
+  const match = PROPERTY_READ.exec(expression);
+  return match ? (match[1] ?? match[2]) : undefined;
+}
 
 /** A call site's read of one property, as the guard compares it. */
 interface IntRead {
@@ -108,7 +115,7 @@ function widthTakingReaders(files: readonly string[]): string[] {
 function localBindings(source: string): Map<string, string | null> {
   const bound = new Map<string, string | null>();
   for (const match of source.matchAll(/\b(?:const|let|var)\s+(\w+)\s*(?::[^=;\n]+)?=\s*([^;]+);/g)) {
-    const key = PROPERTY_READ.exec(match[2]!)?.[1];
+    const key = readKey(match[2]!);
     if (key === undefined) continue;
     const name = match[1]!;
     const seen = bound.get(name);
@@ -129,7 +136,7 @@ export function intReadsIn(source: string, label: string, readers: readonly stri
     const first = args[0] ?? '';
     // Anything else (a subscript, a parameter, an expression) names no slot,
     // so there is no second declaration to disagree with.
-    const key = PROPERTY_READ.exec(first)?.[1] ?? (/^\w+$/.test(first) ? bound.get(first) : undefined);
+    const key = readKey(first) ?? (/^\w+$/.test(first) ? bound.get(first) : undefined);
     if (key === undefined || key === null) continue;
     const width = args
       .map((arg) => WIDTH_ARGUMENT.exec(arg)?.[1] as IntWidth | undefined)
@@ -278,6 +285,7 @@ describe('an int slot is read at the width its validator declares', () => {
       'const raw = rawProps.collision_mask;',
       'const f = ruleInt(raw);',
       "// intOr(properties.commented, 0, 'uint32')",
+      "const g = intOr(properties['emission_operator'], 0, CONTEXT);",
     ].join('\n');
     expect(intReadsIn(source, 'f.ts', ['intOr', 'parseOptionalInt', 'ruleInt'])).toEqual([
       { where: 'f.ts:1', reader: 'intOr', key: 'light_mask', width: 'int32' },
@@ -286,6 +294,8 @@ describe('an int slot is read at the width its validator declares', () => {
       { where: 'f.ts:7', reader: 'intOr', key: 'amount', width: 'int32' },
       // One hop through a local: the binding names the slot, the call does not.
       { where: 'f.ts:10', reader: 'ruleInt', key: 'collision_mask', width: 'int32' },
+      // A quoted subscript names its key as plainly as a dot does.
+      { where: 'f.ts:12', reader: 'intOr', key: 'emission_operator', width: 'int32' },
     ]);
   });
 
@@ -338,7 +348,9 @@ describe('an int slot is read at the width its validator declares', () => {
   });
 
   it('sweeps the whole tree, so a clean run is not an empty one', () => {
-    expect(treeVerdicts.checked).toBeGreaterThan(80);
+    // Above the 197 reads the dot-only match reached: a regression to it has to
+    // fail rather than look thorough.
+    expect(treeVerdicts.checked).toBeGreaterThan(197);
   });
 
   it('reads every int slot at the width its validator declares', () => {
