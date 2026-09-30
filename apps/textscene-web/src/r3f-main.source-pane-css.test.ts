@@ -6,6 +6,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { COMPACT_LAYOUT_QUERY } from '@textscene/core';
 
 const css = readFileSync(join(import.meta.dirname, 'r3f-main.module.css'), 'utf8');
 
@@ -16,9 +17,43 @@ function declarations(name: string): string {
   return match![1]!.replace(/\/\*[\s\S]*?\*\//g, '');
 }
 
+/** The body of the `@media <query>` block, whose rules are one level deep. */
+function mediaBlock(query: string): string {
+  const start = css.indexOf(`@media ${query} {`);
+  expect(start, `an @media ${query} block`).toBeGreaterThanOrEqual(0);
+  const end = css.indexOf('\n}', start);
+  return css.slice(start, end);
+}
+
 describe('source pane CSS', () => {
   it('.sourcePane declares flex-shrink:0 so the flex row cannot squeeze it below its set width', () => {
     expect(declarations('sourcePane')).toMatch(/flex-shrink:\s*0/);
+  });
+
+  it('.sourcePane reads its width from the custom property the splitter sets', () => {
+    expect(declarations('sourcePane')).toMatch(/width:\s*var\(--source-pane-width,\s*320px\)/);
+    expect(css).not.toMatch(/!important/);
+  });
+
+  it('covers the preview below the top bar in the compact layout', () => {
+    const block = mediaBlock(COMPACT_LAYOUT_QUERY);
+    expect(block).toMatch(/\.sourcePane\s*\{[^}]*position:\s*absolute/);
+    expect(block).toMatch(/\.sourcePane\s*\{[^}]*inset:\s*var\(--tsi-top-bar-height\) 0 0/);
+    expect(block).toMatch(/\.sourcePane\s*\{[^}]*width:\s*auto/);
+    expect(block).toMatch(/\.sourceSplitter,\s*\.wideLabel\s*\{[^}]*display:\s*none/);
+  });
+
+  it('keeps the source text at 16px in the compact layout, so iOS does not zoom on focus', () => {
+    expect(mediaBlock(COMPACT_LAYOUT_QUERY)).toMatch(/\.sourceTextarea\s*\{[^}]*font-size:\s*16px/);
+  });
+
+  it('fixes the scene palette in the compact layout, since the scrolling toolbar would clip it', () => {
+    expect(mediaBlock(COMPACT_LAYOUT_QUERY)).toMatch(/\.palette\s*\{[^}]*position:\s*fixed/);
+  });
+
+  it('widens the gutter dot hit area on a coarse pointer and keeps the painted dot round', () => {
+    const block = mediaBlock('(pointer: coarse)');
+    expect(block).toMatch(/\.severityDot\s*\{[^}]*background-clip:\s*content-box/);
   });
 
   it('.gutter clips nothing, since a 20px clip hides every row popover', () => {

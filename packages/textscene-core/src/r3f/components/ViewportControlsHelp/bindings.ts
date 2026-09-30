@@ -43,6 +43,8 @@ export interface BindingGroup {
 export interface ControlsHelp {
   /** The three bindings worth reading at a glance, for the pill. */
   readonly summary: string;
+  /** The pill on a touch screen, from the Touch group, since it has no wheel or middle button. */
+  readonly touchSummary: string;
   readonly groups: readonly BindingGroup[];
 }
 
@@ -52,6 +54,7 @@ export interface ControlsHelp {
 // slot. Godot's editor has no touch scheme.
 const CONTROLS_3D: ControlsHelp = {
   summary: 'middle-drag = orbit · shift+wheel = pan · wheel = zoom',
+  touchSummary: 'drag = orbit · two fingers = pan · pinch = zoom',
   groups: [
     {
       device: 'Mouse',
@@ -178,6 +181,7 @@ const CONTROLS_3D: ControlsHelp = {
 
 const CONTROLS_2D: ControlsHelp = {
   summary: 'drag = pan · wheel = zoom · pinch = zoom',
+  touchSummary: 'drag = pan · pinch = zoom',
   groups: [
     {
       device: 'Mouse',

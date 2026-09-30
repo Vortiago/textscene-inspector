@@ -14,9 +14,19 @@ export interface SplitterProps {
   max?: number;
   invert?: boolean;
   label: string;
+  /** Joined onto the handle's own class, so the host decides where it shows. */
+  className?: string;
 }
 
-export function Splitter({ width, setWidth, min = 180, max = 560, invert = false, label }: SplitterProps) {
+export function Splitter({
+  width,
+  setWidth,
+  min = 180,
+  max = 560,
+  invert = false,
+  label,
+  className,
+}: SplitterProps) {
   const drag = useRef({ startX: 0, startW: 0, active: false });
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -53,7 +63,7 @@ export function Splitter({ width, setWidth, min = 180, max = 560, invert = false
       role="separator"
       aria-orientation="vertical"
       aria-label={label}
-      className={styles.splitter}
+      className={className ? `${styles.splitter} ${className}` : styles.splitter}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}
