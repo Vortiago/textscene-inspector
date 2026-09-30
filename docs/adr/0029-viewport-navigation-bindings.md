@@ -96,7 +96,7 @@ modifier a tablet cannot supply, and pan is the gesture users want most.
 
 - The two viewports disagree about what zoom is: a CSS scale factor in 2D, an orbit
   radius in 3D. They agree about where a wheel zoom goes: both anchor to the pointer (see
-  the amendment). CONTEXT.md lists this in its flagged ambiguities. Touch **pinch**
+  the amendment). GLOSSARY.md lists this in its flagged ambiguities. Touch **pinch**
   differs: 2D anchors it to the fingers' midpoint, and 3D scales about the focus point.
 - Wheel deltas must be normalised before use, by zoom and by pan, in **both** viewports.
   One notch is 100px in Chrome but 3 lines in Firefox. `wheelDeltaPixels` /
