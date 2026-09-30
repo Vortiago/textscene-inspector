@@ -69,12 +69,7 @@ export function jointWedge(
   return triangle(corner, a, b);
 }
 
-function miterTip(
-  corner: Point,
-  nIn: Point,
-  nOut: Point,
-  halfWidth: number
-): Point | null {
+function miterTip(corner: Point, nIn: Point, nOut: Point, halfWidth: number): Point | null {
   // The miter direction bisects the two outer normals.
   const bx = nIn.x + nOut.x;
   const by = nIn.y + nOut.y;

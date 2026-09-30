@@ -104,9 +104,7 @@ export function decodeArrayMesh(content: string, selfPath: string): ArrayMeshDat
         ? parsed.resourceType
         : findSubResource(parsed.subResources, subResourceId)?.type;
     if (addressed !== 'ArrayMesh') {
-      throw new Error(
-        `${selfPath} is a ${addressed ?? 'missing resource'}, not an ArrayMesh`
-      );
+      throw new Error(`${selfPath} is a ${addressed ?? 'missing resource'}, not an ArrayMesh`);
     }
     return { surfaces: [] };
   }
@@ -137,8 +135,7 @@ export function decodeSceneArrayMesh(
   // pairing them by position gives a material to the wrong surface.
   return decodeSurfaces(surfacesRaw, `SubResource("${resource.id}")`, (block) => {
     const raw = readMaterialRef(block);
-    const materialPath =
-      resolveRefToResourcePath(raw, extById, '', REJECT_SUB_RESOURCES) ?? undefined;
+    const materialPath = resolveRefToResourcePath(raw, extById, '', REJECT_SUB_RESOURCES) ?? undefined;
     if (materialPath !== undefined) return { materialPath };
     // The scene-local id, since no path can express it.
     const ref = parseResourceReference(raw ?? '');
@@ -152,9 +149,7 @@ export function decodeSceneArrayMesh(
  * resolves to the nearer scene. A plain `new Map` is last-wins and would hand
  * back the parent's resource.
  */
-function extResourcePathsById(
-  resources: readonly TscnExternalResource[]
-): ReadonlyMap<string, string> {
+function extResourcePathsById(resources: readonly TscnExternalResource[]): ReadonlyMap<string, string> {
   const byId = new Map<string, string>();
   for (const r of resources) if (!byId.has(r.id)) byId.set(r.id, r.path);
   return byId;
@@ -182,9 +177,7 @@ function decodeSurfaces(
     // A LINES/POINTS/STRIP surface read as triangles fabricates faces. `readInt`
     // defaults an absent key to 0, and Godot always writes `primitive` for a
     // saved surface, so only a declared non-triangle value skips it.
-    const primitive = block.includes('"primitive"')
-      ? readInt(block, 'primitive')
-      : PRIMITIVE_TRIANGLES;
+    const primitive = block.includes('"primitive"') ? readInt(block, 'primitive') : PRIMITIVE_TRIANGLES;
     if (primitive !== PRIMITIVE_TRIANGLES) {
       nonTriangle++;
       const name = readName(block);
@@ -251,9 +244,7 @@ function decodeSurfaces(
     // Naming the non-triangle count keeps a LINES-only mesh from reading as a
     // byte defect: nothing was corrupt, the geometry just is not triangles.
     const reason = nonTriangle > 0 ? ` (${nonTriangle} skipped as non-triangle)` : '';
-    throw new Error(
-      `ArrayMesh ${label}: none of its ${declared} surface(s) could be decoded${reason}`
-    );
+    throw new Error(`ArrayMesh ${label}: none of its ${declared} surface(s) could be decoded${reason}`);
   }
   return { surfaces };
 }

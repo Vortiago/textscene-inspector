@@ -27,14 +27,10 @@ function rows() {
     if (!byCategory.has(category)) byCategory.set(category, []);
     const href = relative(dirname(INDEX), file).replaceAll('\\', '/');
     const renders = (sheet.meta.renders_as ?? '').trim();
-    byCategory.get(category).push(
-      `- [${sheet.meta.type}](${href})${renders ? `: ${renders}` : ''}`
-    );
+    byCategory.get(category).push(`- [${sheet.meta.type}](${href})${renders ? `: ${renders}` : ''}`);
   }
   const out = [];
-  const seen = [...byCategory.keys()].sort(
-    (a, b) => CATEGORY_ORDER.indexOf(a) - CATEGORY_ORDER.indexOf(b)
-  );
+  const seen = [...byCategory.keys()].sort((a, b) => CATEGORY_ORDER.indexOf(a) - CATEGORY_ORDER.indexOf(b));
   for (const category of seen) {
     out.push(`## ${category}`, '');
     out.push(...byCategory.get(category).sort((a, b) => a.localeCompare(b)));

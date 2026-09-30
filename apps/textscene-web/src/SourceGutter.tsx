@@ -54,20 +54,13 @@ function GutterPopover({ line, messages, placement }: GutterPopoverProps) {
  * its full N-row list on every unrelated `R3FApp` render (every keystroke,
  * every scroll) even when none of its own props changed.
  */
-export const SourceGutter = memo(function SourceGutter({
-  lineCount,
-  byLine,
-  scrollTop,
-}: SourceGutterProps) {
+export const SourceGutter = memo(function SourceGutter({ lineCount, byLine, scrollTop }: SourceGutterProps) {
   const gutterRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState<OpenPopover | null>(null);
   // A lint that drops the open row's finding renders that row without its handlers, so no leave
   // event would ever close it, and the popover would come back with the next finding there.
   if (open && !byLine.has(open.line)) setOpen(null);
-  const lines = useMemo(
-    () => Array.from({ length: Math.max(lineCount, 1) }, (_, i) => i + 1),
-    [lineCount]
-  );
+  const lines = useMemo(() => Array.from({ length: Math.max(lineCount, 1) }, (_, i) => i + 1), [lineCount]);
 
   /** Opens `line`'s popover, placed against the gutter's visible height as it is now. */
   function show(line: number, row: HTMLElement) {
@@ -118,9 +111,7 @@ export const SourceGutter = memo(function SourceGutter({
                 data-testid={`gutter-dot-${line}`}
                 aria-label={`Line ${line}: ${entry.messages.join('; ')}`}
               />
-              {isOpen && (
-                <GutterPopover line={line} messages={entry.messages} placement={open.placement} />
-              )}
+              {isOpen && <GutterPopover line={line} messages={entry.messages} placement={open.placement} />}
             </div>
           );
         })}

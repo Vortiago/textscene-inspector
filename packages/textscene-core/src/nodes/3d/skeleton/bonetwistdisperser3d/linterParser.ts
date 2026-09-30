@@ -193,8 +193,7 @@ const settingValidator = accepts((key, value, line) => {
   const match = JOINT_KEY_RE.exec(key);
   if (!match) return flatFamily(key, value, line);
 
-  const unknown = () =>
-    keyShapeError(key, line, `Unknown setting property: "${key}"`, UNKNOWN_SETTING_CODE);
+  const unknown = () => keyShapeError(key, line, `Unknown setting property: "${key}"`, UNKNOWN_SETTING_CODE);
 
   // `_set` reads each index with a bare `to_int` (:37, :66), and the `ERR_FAIL_INDEX_V` beside each
   // parse refuses a negative one.

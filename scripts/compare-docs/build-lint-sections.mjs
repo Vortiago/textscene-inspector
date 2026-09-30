@@ -9,12 +9,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  LINT_EXEMPT_CATEGORIES,
-  collectSheetFiles,
-  parseFrontmatter,
-  sheetLabel,
-} from './sheetSources.mjs';
+import { LINT_EXEMPT_CATEGORIES, collectSheetFiles, parseFrontmatter, sheetLabel } from './sheetSources.mjs';
 import { loadClassBaseTypes, loadCoreLinter } from './loadCoreLinter.mjs';
 import { coverageFor, renderCoverage } from './lintCoverage.mjs';
 import { requireFreshDist } from '../distFreshness.mjs';

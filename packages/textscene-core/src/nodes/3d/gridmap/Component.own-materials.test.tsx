@@ -35,7 +35,7 @@ height = 4
 `;
 
 describe('<GridMap> tile material textures', () => {
-  it('uploads the tile material\'s map in bands, as every other material slot does', async () => {
+  it("uploads the tile material's map in bands, as every other material slot does", async () => {
     const uploads = fakeTiledUploads();
     const gridMap = await mountGridMap({
       subResources: RAMP,
@@ -43,8 +43,8 @@ describe('<GridMap> tile material textures', () => {
       wrapper: uploads.wrapper,
     });
     const tileMaterial = () =>
-      gridMap.tiles().find((o): o is THREE.InstancedMesh => o instanceof THREE.InstancedMesh)
-        ?.material as THREE.MeshStandardMaterial | undefined;
+      gridMap.tiles().find((o): o is THREE.InstancedMesh => o instanceof THREE.InstancedMesh)?.material as
+        THREE.MeshStandardMaterial | undefined;
 
     expect(tileMaterial()?.map).toBe(pendingMapStandIn('albedo_texture'));
     expect(uploads.pending).toHaveLength(1);

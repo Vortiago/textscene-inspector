@@ -52,8 +52,7 @@ export function collectSheetFiles() {
 }
 
 /** A sheet path as the short, repo-relative label used in error messages. */
-export const sheetLabel = (file) =>
-  file.startsWith(REPO_ROOT) ? file.slice(REPO_ROOT.length + 1) : file;
+export const sheetLabel = (file) => (file.startsWith(REPO_ROOT) ? file.slice(REPO_ROOT.length + 1) : file);
 
 /**
  * Splits `--- key: value ---` frontmatter from the body, or `null` if absent,
@@ -100,9 +99,7 @@ export const compareMarkerAttrs = (attrs) =>
 
 /** Every `<!-- compare: image=… status=… fixture=… -->` marker in a sheet body. */
 export function parseCompareMarkers(body) {
-  return [...body.matchAll(new RegExp(COMPARE_MARKER_PATTERN, 'g'))].map((m) =>
-    compareMarkerAttrs(m[1])
-  );
+  return [...body.matchAll(new RegExp(COMPARE_MARKER_PATTERN, 'g'))].map((m) => compareMarkerAttrs(m[1]));
 }
 
 /**

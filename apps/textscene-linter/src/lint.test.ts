@@ -173,21 +173,29 @@ describe('lintFileDiagnostics', () => {
     const result = lintFileDiagnostics(errorPath);
 
     expect(result.readError).toBeUndefined();
-    expect(result.diagnostics.some((d) => d.severity === 'error' && d.ruleName === 'strict-parser')).toBe(true);
+    expect(result.diagnostics.some((d) => d.severity === 'error' && d.ruleName === 'strict-parser')).toBe(
+      true
+    );
   });
 
   it('returns raw warning-severity diagnostics for a warnings-only file', () => {
     const result = lintFileDiagnostics(warningPath);
 
     expect(result.readError).toBeUndefined();
-    expect(result.diagnostics.some((d) => d.severity === 'warning' && d.ruleName === 'collisionshape2d-requires-shape')).toBe(true);
+    expect(
+      result.diagnostics.some(
+        (d) => d.severity === 'warning' && d.ruleName === 'collisionshape2d-requires-shape'
+      )
+    ).toBe(true);
   });
 
   it('returns raw info-severity diagnostics, which never count as errors', () => {
     const result = lintFileDiagnostics(infoPath);
 
     expect(result.readError).toBeUndefined();
-    expect(result.diagnostics.some((d) => d.severity === 'info' && d.ruleName === 'csgmesh3d-requires-mesh')).toBe(true);
+    expect(
+      result.diagnostics.some((d) => d.severity === 'info' && d.ruleName === 'csgmesh3d-requires-mesh')
+    ).toBe(true);
     expect(collectFileDiagnostics([infoPath]).exitCode).toBe(0);
   });
 

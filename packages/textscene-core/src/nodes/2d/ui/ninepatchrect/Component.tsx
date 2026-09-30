@@ -64,7 +64,8 @@ export function NinePatchRect({ solveNode, tint, rect, renderOrder }: NativeCont
     const region = props.regionRect;
     // `region_rect != Rect2()` (`renderer_canvas_render_rd.cpp`'s nine-patch batch setup): an all-zero
     // region, the parsed default too, means the whole texture, not a zero-size crop.
-    const regionSet = region !== undefined && (region.x !== 0 || region.y !== 0 || region.width !== 0 || region.height !== 0);
+    const regionSet =
+      region !== undefined && (region.x !== 0 || region.y !== 0 || region.width !== 0 || region.height !== 0);
     const regionOffset = regionSet ? { x: region!.x, y: region!.y } : { x: 0, y: 0 };
     const regionSize = regionSet ? { x: region!.width, y: region!.height } : textureSize;
 

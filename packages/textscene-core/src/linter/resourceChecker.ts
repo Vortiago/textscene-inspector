@@ -66,10 +66,7 @@ export type ResourceSlot =
  * @param scene - the parsed scene the reference is resolved against.
  * @param resourceRef - a raw property value, such as `SubResource("Box_1")`.
  */
-export function resolveResourceSlot(
-  scene: TscnScene,
-  resourceRef: string | undefined
-): ResourceSlot {
+export function resolveResourceSlot(scene: TscnScene, resourceRef: string | undefined): ResourceSlot {
   const held = heldResource(resourceRef);
   if (held === undefined) return { kind: 'empty' };
   const parsed = parseResourceReference(held);

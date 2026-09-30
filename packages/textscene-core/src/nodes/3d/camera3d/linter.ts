@@ -28,9 +28,7 @@ const FAR_DEFAULT = 4000.0;
  */
 function projectionMode(raw: string | undefined): number {
   const mode = ruleInt(raw, null);
-  return mode === PROJECTION_ORTHOGONAL || mode === PROJECTION_FRUSTUM
-    ? mode
-    : PROJECTION_PERSPECTIVE;
+  return mode === PROJECTION_ORTHOGONAL || mode === PROJECTION_FRUSTUM ? mode : PROJECTION_PERSPECTIVE;
 }
 
 /**
@@ -58,7 +56,6 @@ const countCurrentCamerasInScope = viewportScopeCounter((roots) =>
 function checkCamera3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
-
 
   if (!isValidProperties(node.properties)) {
     return diagnostics;

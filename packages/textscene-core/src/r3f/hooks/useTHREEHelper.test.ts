@@ -11,7 +11,9 @@ function makeStubHelper(): THREE.Object3D & { update: () => void; updateCount: n
   const obj = new THREE.Object3D() as THREE.Object3D & { update: () => void; updateCount: number };
   obj.matrixAutoUpdate = false;
   obj.updateCount = 0;
-  obj.update = function () { this.updateCount += 1; };
+  obj.update = function () {
+    this.updateCount += 1;
+  };
   return obj;
 }
 

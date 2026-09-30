@@ -178,7 +178,7 @@ describe('useTiledUpload', () => {
 });
 
 describe('useUploadedClone', () => {
-  it('draws a consumer\'s own clone and disposes it once replaced', () => {
+  it("draws a consumer's own clone and disposes it once replaced", () => {
     const first = named('first');
     const dispose = vi.spyOn(first, 'dispose');
     const { result, rerender } = renderHook(({ texture }) => useUploadedClone(texture), {

@@ -55,9 +55,7 @@ describe('<TscnPreviewShell>', () => {
   it('still renders without crashing on invalid TSCN content', () => {
     // The lenient parser mostly returns an empty scene for an invalid body. The
     // shell must not crash either way.
-    expect(() =>
-      render(<TscnPreviewShell panelId="p1" content={INVALID_TSCN} />)
-    ).not.toThrow();
+    expect(() => render(<TscnPreviewShell panelId="p1" content={INVALID_TSCN} />)).not.toThrow();
     // Either an error banner or an empty tree passes.
     const banner = screen.queryByRole('alert');
     const emptyMsg = screen.queryByText(/No nodes to display|Loading scene/i);
@@ -109,13 +107,7 @@ describe('<TscnPreviewShell>', () => {
 
   it('fires onNodeReveal with the slash-joined path on double click', async () => {
     const onNodeReveal = vi.fn();
-    render(
-      <TscnPreviewShell
-        panelId="p1"
-        content={MINIMAL_TSCN}
-        onNodeReveal={onNodeReveal}
-      />
-    );
+    render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} onNodeReveal={onNodeReveal} />);
 
     // findByText awaits the loaded SceneTreeViewer.
     const rootRow = await screen.findByText('Root');
@@ -149,9 +141,7 @@ describe('<TscnPreviewShell>', () => {
     // re-parses but keeps the <TscnCanvas> fiber, so the canvas stays the same
     // DOM node and the camera state survives.
     const updated = MINIMAL_TSCN.replace('Root', 'Root_changed');
-    const { rerender } = render(
-      <TscnPreviewShell panelId="hot-reload" content={MINIMAL_TSCN} />
-    );
+    const { rerender } = render(<TscnPreviewShell panelId="hot-reload" content={MINIMAL_TSCN} />);
     const stubBefore = screen.getByTestId('canvas-stub');
 
     rerender(<TscnPreviewShell panelId="hot-reload" content={updated} />);

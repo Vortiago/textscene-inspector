@@ -45,7 +45,12 @@ function node(props: Partial<ItemListProperties> = {}): SolveNode {
   return {
     ...solveNode(),
     path: 'IL',
-    node: { name: 'IL', type: 'ItemList', children: [], properties: { name: 'IL', items: [], ...props } as ItemListProperties },
+    node: {
+      name: 'IL',
+      type: 'ItemList',
+      children: [],
+      properties: { name: 'IL', items: [], ...props } as ItemListProperties,
+    },
   };
 }
 
@@ -84,7 +89,12 @@ describe('itemListAutowrapMode', () => {
 });
 
 describe('shapeItemListText — overrun trim (item_list.h:131 default OVERRUN_TRIM_ELLIPSIS)', () => {
-  const baseInput = { fontSizePx: 16, fontMetrics: OPEN_SANS_FONT_METRICS, iconMode: ICON_MODE_LEFT, maxTextLines: 1 };
+  const baseInput = {
+    fontSizePx: 16,
+    fontMetrics: OPEN_SANS_FONT_METRICS,
+    iconMode: ICON_MODE_LEFT,
+    maxTextLines: 1,
+  };
 
   it('trims to fixedColumnWidth by default, appending an ellipsis (matches text_overrun.test.ts derivation)', () => {
     const layout = shapeItemListText({ ...baseInput, text: 'AAAAAAAAAAAA', fixedColumnWidth: 100 });
@@ -97,7 +107,12 @@ describe('shapeItemListText — overrun trim (item_list.h:131 default OVERRUN_TR
   });
 
   it('OVERRUN_NO_TRIMMING (0) leaves the text untrimmed even with a fixedColumnWidth', () => {
-    const layout = shapeItemListText({ ...baseInput, text: 'AAAAAAAAAAAA', fixedColumnWidth: 100, overrunBehavior: 0 });
+    const layout = shapeItemListText({
+      ...baseInput,
+      text: 'AAAAAAAAAAAA',
+      fixedColumnWidth: 100,
+      overrunBehavior: 0,
+    });
     expect(layout!.lines[0]!.text).toBe('AAAAAAAAAAAA');
   });
 });
@@ -143,7 +158,15 @@ describe('itemContentMinSize / itemMinimumSize', () => {
 
   it('LEFT icon mode: icon width + text width, max of the two heights (happy path)', () => {
     const content = itemContentMinSize(
-      { hasIcon: true, iconSize: { x: 16, y: 16 }, hasText: true, textSize: { x: 40, y: 20 }, iconMode: ICON_MODE_LEFT, maxTextLines: 1, fixedColumnWidth: 0 },
+      {
+        hasIcon: true,
+        iconSize: { x: 16, y: 16 },
+        hasText: true,
+        textSize: { x: 40, y: 20 },
+        iconMode: ICON_MODE_LEFT,
+        maxTextLines: 1,
+        fixedColumnWidth: 0,
+      },
       theme
     );
     // x = 16(icon) + 4(icon_margin) + 40(text) = 60; y = max(16, 20) = 20.
@@ -152,7 +175,15 @@ describe('itemContentMinSize / itemMinimumSize', () => {
 
   it('TOP icon mode: max of icon/text width, summed heights plus line_separation*max_text_lines (error path)', () => {
     const content = itemContentMinSize(
-      { hasIcon: true, iconSize: { x: 16, y: 16 }, hasText: true, textSize: { x: 40, y: 20 }, iconMode: ICON_MODE_TOP, maxTextLines: 2, fixedColumnWidth: 0 },
+      {
+        hasIcon: true,
+        iconSize: { x: 16, y: 16 },
+        hasText: true,
+        textSize: { x: 40, y: 20 },
+        iconMode: ICON_MODE_TOP,
+        maxTextLines: 2,
+        fixedColumnWidth: 0,
+      },
       theme
     );
     // x = max(16, 40) = 40; y = 16(icon) + 4(icon_margin) + 20(text) + 2(line_separation)*2 = 44.
@@ -161,7 +192,15 @@ describe('itemContentMinSize / itemMinimumSize', () => {
 
   it('fixed_column_width overrides the computed width outright (edge case)', () => {
     const content = itemContentMinSize(
-      { hasIcon: false, iconSize: { x: 0, y: 0 }, hasText: true, textSize: { x: 40, y: 20 }, iconMode: ICON_MODE_LEFT, maxTextLines: 1, fixedColumnWidth: 96 },
+      {
+        hasIcon: false,
+        iconSize: { x: 0, y: 0 },
+        hasText: true,
+        textSize: { x: 40, y: 20 },
+        iconMode: ICON_MODE_LEFT,
+        maxTextLines: 1,
+        fixedColumnWidth: 96,
+      },
       theme
     );
     expect(content.x).toBe(96);
@@ -169,7 +208,15 @@ describe('itemContentMinSize / itemMinimumSize', () => {
 
   it('itemMinimumSize adds h/v separation on top of the content size', () => {
     const min = itemMinimumSize(
-      { hasIcon: false, iconSize: { x: 0, y: 0 }, hasText: true, textSize: { x: 10, y: 10 }, iconMode: ICON_MODE_LEFT, maxTextLines: 1, fixedColumnWidth: 0 },
+      {
+        hasIcon: false,
+        iconSize: { x: 0, y: 0 },
+        hasText: true,
+        textSize: { x: 10, y: 10 },
+        iconMode: ICON_MODE_LEFT,
+        maxTextLines: 1,
+        fixedColumnWidth: 0,
+      },
       theme
     );
     expect(min).toEqual({ x: 14, y: 14 });
@@ -243,7 +290,10 @@ describe('packItemListRows', () => {
 
   it('same_column_width stretches every item to the widest one, plus h_separation', () => {
     const result = packItemListRows({
-      itemSizes: [{ x: 20, y: 10 }, { x: 30, y: 10 }],
+      itemSizes: [
+        { x: 20, y: 10 },
+        { x: 30, y: 10 },
+      ],
       maxColumnWidth: 30,
       sameColumnWidth: true,
       maxColumns: 2,

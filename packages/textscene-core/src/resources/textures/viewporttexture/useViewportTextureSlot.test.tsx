@@ -73,11 +73,7 @@ function mount(slotRef: string | undefined, consumerPath: string | null, publish
   render(
     <ViewportTextureProvider>
       {publishAt ? <Publisher path={publishAt} texture={texture} /> : null}
-      {consumerPath === null ? (
-        consumer
-      ) : (
-        <NodePathProvider path={consumerPath}>{consumer}</NodePathProvider>
-      )}
+      {consumerPath === null ? consumer : <NodePathProvider path={consumerPath}>{consumer}</NodePathProvider>}
     </ViewportTextureProvider>
   );
   return {
@@ -136,11 +132,7 @@ describe('useViewportTextureSlot', () => {
   });
 
   it('returns null when the named viewport is not the one that published', () => {
-    const { resolved } = mount(
-      'SubResource("ViewportTexture_1")',
-      'Root/Screen',
-      'Root/OtherViewport'
-    );
+    const { resolved } = mount('SubResource("ViewportTexture_1")', 'Root/Screen', 'Root/OtherViewport');
     expect(resolved()).toBeNull();
   });
 
@@ -209,7 +201,10 @@ describe('useViewportTextureSlot', () => {
     /** Registers `Root/SubViewport` into a two-node cycle with `Root/Other`. */
     function CyclicRegistration() {
       const register = useRegisterViewportPass();
-      useEffect(() => register('Root/Other', { dependsOn: ['Root/SubViewport'], render: () => {} }), [register]);
+      useEffect(
+        () => register('Root/Other', { dependsOn: ['Root/SubViewport'], render: () => {} }),
+        [register]
+      );
       useEffect(
         () => register('Root/SubViewport', { dependsOn: ['Root/Other'], render: () => {} }),
         [register]

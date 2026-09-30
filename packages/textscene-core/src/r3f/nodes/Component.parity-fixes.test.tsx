@@ -12,18 +12,17 @@ import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
-import type {
-  TscnInternalResource,
-  TscnNode,
-} from '../../parser/types';
+import type { TscnInternalResource, TscnNode } from '../../parser/types';
 import type { MeshInstance3DProperties } from '../../nodes/3d/meshinstance3d/types';
 import type { Camera3DProperties } from '../../nodes/3d/camera3d/types';
-import {
-  ProjectionMode,
-  KeepAspectMode,
-} from '../../nodes/3d/camera3d/types';
+import { ProjectionMode, KeepAspectMode } from '../../nodes/3d/camera3d/types';
 import type { Label3DProperties } from '../../nodes/3d/label3d/types';
-import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from '../../nodes/3d/label3d/types';
+import {
+  AlphaCutMode,
+  BillboardMode,
+  HorizontalAlignment,
+  TextureFilter,
+} from '../../nodes/3d/label3d/types';
 import { inlineTwoSurfaceMesh } from '../../nodes/3d/meshinstance3d/testing/twoSurfaceMesh';
 import { depthSideOf, drawsColour } from '../testing/threePasses';
 
@@ -56,10 +55,7 @@ async function renderMesh(
 ) {
   return ReactThreeTestRenderer.create(
     <SceneResourcesProvider
-      internalResources={[
-        sub(meshType, 'Mesh_1', meshData),
-        sub('StandardMaterial3D', 'Mat', matData),
-      ]}
+      internalResources={[sub(meshType, 'Mesh_1', meshData), sub('StandardMaterial3D', 'Mat', matData)]}
     >
       <MeshInstance3D
         node={makeMeshNode({ mesh: 'SubResource("Mesh_1")', materialOverride: 'SubResource("Mat")' })}
@@ -148,16 +144,16 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     );
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshStandardMaterial;
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshStandardMaterial;
     expect(mat.aoMap).toBeInstanceOf(THREE.Texture);
   });
 
   it('audit slot 60 — PlaneMesh flip_faces=true → geometry mirrored on X axis (matrix has negative det)', async () => {
-    const renderer = await renderMesh(
-      { albedo_color: 'Color(1, 1, 1, 1)' },
-      'PlaneMesh',
-      { size: 'Vector2(2, 2)', flip_faces: 'true' }
-    );
+    const renderer = await renderMesh({ albedo_color: 'Color(1, 1, 1, 1)' }, 'PlaneMesh', {
+      size: 'Vector2(2, 2)',
+      flip_faces: 'true',
+    });
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const geom = mesh.geometry;
     // After geometry.scale(-1, 1, 1), the position attribute's X values
@@ -169,11 +165,9 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
 
   it('audit slot 60 — PlaneMesh flip_faces=false (default) → first-vertex X is negative (unflipped)', async () => {
     // Sanity check that the default path is unchanged.
-    const renderer = await renderMesh(
-      { albedo_color: 'Color(1, 1, 1, 1)' },
-      'PlaneMesh',
-      { size: 'Vector2(2, 2)' }
-    );
+    const renderer = await renderMesh({ albedo_color: 'Color(1, 1, 1, 1)' }, 'PlaneMesh', {
+      size: 'Vector2(2, 2)',
+    });
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const pos = mesh.geometry.attributes.position!;
     expect(pos.getX(0)).toBeLessThan(0);
@@ -183,11 +177,9 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     // primitive_meshes.cpp PrismMesh::_create_mesh_array: a triangular XY
     // cross-section, apex on top at X set by left_to_right (0.5 centres it),
     // extruded along Z to fill the size box exactly.
-    const renderer = await renderMesh(
-      { albedo_color: 'Color(1, 1, 1, 1)' },
-      'PrismMesh',
-      { size: 'Vector3(2, 2, 2)' }
-    );
+    const renderer = await renderMesh({ albedo_color: 'Color(1, 1, 1, 1)' }, 'PrismMesh', {
+      size: 'Vector3(2, 2, 2)',
+    });
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const pos = mesh.geometry.attributes.position!;
     let minX = Infinity;

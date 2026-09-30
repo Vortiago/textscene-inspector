@@ -80,12 +80,8 @@ describe('glowParamsFor', () => {
 
   it('blends after the tone curve only for SOFTLIGHT', () => {
     expect(blendsAfterToneMapping(glowOn())).toBe(false);
-    expect(
-      blendsAfterToneMapping(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }))
-    ).toBe(true);
-    expect(
-      blendsAfterToneMapping(glowOn({ glow_blend_mode: String(GlowBlendMode.ADDITIVE) }))
-    ).toBe(false);
+    expect(blendsAfterToneMapping(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }))).toBe(true);
+    expect(blendsAfterToneMapping(glowOn({ glow_blend_mode: String(GlowBlendMode.ADDITIVE) }))).toBe(false);
   });
 
   it('clamps hostile values rather than passing NaN or negatives to a shader', () => {
@@ -112,9 +108,7 @@ describe('glowNeedsEveryPixel', () => {
   });
 
   it('is true for REPLACE and MIX, which rewrite every pixel even with a black glow', () => {
-    expect(glowNeedsEveryPixel(glowOn({ glow_blend_mode: String(GlowBlendMode.REPLACE) }))).toBe(
-      true
-    );
+    expect(glowNeedsEveryPixel(glowOn({ glow_blend_mode: String(GlowBlendMode.REPLACE) }))).toBe(true);
     expect(glowNeedsEveryPixel(glowOn({ glow_blend_mode: String(GlowBlendMode.MIX) }))).toBe(true);
   });
 
@@ -138,10 +132,7 @@ describe('unexposedBrightPassThreshold', () => {
     // `glow_hdr_threshold`, so at exposure 1.8 a colour peaking at 0.8 does cross a
     // threshold of 1.0. Anything measuring unexposed colour has to be held to the
     // lower bar or it disagrees with the shader about what blooms.
-    expect(unexposedBrightPassThreshold(glowOn({ tonemap_exposure: '1.8' }))).toBeCloseTo(
-      1 / 1.8,
-      6
-    );
+    expect(unexposedBrightPassThreshold(glowOn({ tonemap_exposure: '1.8' }))).toBeCloseTo(1 / 1.8, 6);
     expect(unexposedBrightPassThreshold(glowOn())).toBeCloseTo(1, 6);
     expect(
       unexposedBrightPassThreshold(glowOn({ glow_hdr_threshold: '2', tonemap_exposure: '4' }))
@@ -149,12 +140,8 @@ describe('unexposedBrightPassThreshold', () => {
   });
 
   it('survives a zero or negative exposure rather than dividing by it', () => {
-    expect(
-      Number.isFinite(unexposedBrightPassThreshold(glowOn({ tonemap_exposure: '0' })))
-    ).toBe(true);
-    expect(
-      Number.isFinite(unexposedBrightPassThreshold(glowOn({ tonemap_exposure: '-2' })))
-    ).toBe(true);
+    expect(Number.isFinite(unexposedBrightPassThreshold(glowOn({ tonemap_exposure: '0' })))).toBe(true);
+    expect(Number.isFinite(unexposedBrightPassThreshold(glowOn({ tonemap_exposure: '-2' })))).toBe(true);
   });
 });
 
@@ -255,10 +242,7 @@ describe('blendGlsl', () => {
   });
 
   it('MIX lerps against the same factor it folded into the intensity', () => {
-    const glsl = blendGlsl(
-      glowOn({ glow_blend_mode: String(GlowBlendMode.MIX), glow_mix: '0.25' }),
-      1
-    );
+    const glsl = blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.MIX), glow_mix: '0.25' }), 1);
     expect(glsl).toContain('color * (1.0 - 0.25) + glow');
   });
 
@@ -270,7 +254,7 @@ describe('blendGlsl', () => {
     expect(blendGlsl(params, 1)).toContain('color * (1.0 - 1.0) + glow');
   });
 
-  it('uses Godot\'s D() coefficients, not the Photoshop soft-light variant', () => {
+  it("uses Godot's D() coefficients, not the Photoshop soft-light variant", () => {
     // `apply_glow`'s SOFTLIGHT branch, verbatim from tonemap.glsl:
     //   color.r + glow.r * ((color.r <= 0.25
     //     ? ((16.0 * color.r - 12.0) * color.r + 4.0) * color.r
@@ -294,7 +278,7 @@ describe('blendGlsl', () => {
     }
   });
 
-  it('clamps the glow per Godot\'s own per-mode bounds', () => {
+  it("clamps the glow per Godot's own per-mode bounds", () => {
     // SOFTLIGHT clamps to [0,1]; SCREEN clamps to [0,white]. Godot's comments say
     // both exist because a negative light can drive the buffer below zero.
     expect(blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }), 4)).toContain(
@@ -304,12 +288,8 @@ describe('blendGlsl', () => {
       'clamp(glow, 0.0, 4.0)'
     );
     // ADDITIVE and REPLACE clamp nothing at all in Godot.
-    expect(blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.ADDITIVE) }), 4)).not.toContain(
-      'clamp('
-    );
-    expect(blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.REPLACE) }), 4)).not.toContain(
-      'clamp('
-    );
+    expect(blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.ADDITIVE) }), 4)).not.toContain('clamp(');
+    expect(blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.REPLACE) }), 4)).not.toContain('clamp(');
   });
 
   it('falls back to ADDITIVE for a blend mode outside the enum', () => {

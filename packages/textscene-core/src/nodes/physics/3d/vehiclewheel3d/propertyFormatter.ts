@@ -10,11 +10,8 @@ import { formatNode3DProperties } from '../../../base/node3d/propertyFormatter';
 import { VEHICLE_WHEEL_3D_DEFAULTS as DEFAULTS } from './types';
 import type { VehicleWheel3DProperties } from './types';
 
-export function formatVehicleWheel3DProperties(
-  properties: VehicleWheel3DProperties
-): PropertySection[] {
-  const num = (value: number | undefined, fallback: number): string =>
-    String(value ?? fallback);
+export function formatVehicleWheel3DProperties(properties: VehicleWheel3DProperties): PropertySection[] {
+  const num = (value: number | undefined, fallback: number): string => String(value ?? fallback);
 
   const drive: PropertyItem[] = [
     { label: 'Traction', value: String(properties.use_as_traction ?? DEFAULTS.use_as_traction) },
@@ -37,7 +34,10 @@ export function formatVehicleWheel3DProperties(
         { label: 'Radius', value: num(properties.wheel_radius, DEFAULTS.wheel_radius) },
         { label: 'Rest Length', value: num(properties.wheel_rest_length, DEFAULTS.wheel_rest_length) },
         { label: 'Friction Slip', value: num(properties.wheel_friction_slip, DEFAULTS.wheel_friction_slip) },
-        { label: 'Roll Influence', value: num(properties.wheel_roll_influence, DEFAULTS.wheel_roll_influence) },
+        {
+          label: 'Roll Influence',
+          value: num(properties.wheel_roll_influence, DEFAULTS.wheel_roll_influence),
+        },
       ],
     },
     {
@@ -46,8 +46,14 @@ export function formatVehicleWheel3DProperties(
         { label: 'Stiffness', value: num(properties.suspension_stiffness, DEFAULTS.suspension_stiffness) },
         { label: 'Travel', value: num(properties.suspension_travel, DEFAULTS.suspension_travel) },
         { label: 'Max Force', value: num(properties.suspension_max_force, DEFAULTS.suspension_max_force) },
-        { label: 'Damping Compression', value: num(properties.damping_compression, DEFAULTS.damping_compression) },
-        { label: 'Damping Relaxation', value: num(properties.damping_relaxation, DEFAULTS.damping_relaxation) },
+        {
+          label: 'Damping Compression',
+          value: num(properties.damping_compression, DEFAULTS.damping_compression),
+        },
+        {
+          label: 'Damping Relaxation',
+          value: num(properties.damping_relaxation, DEFAULTS.damping_relaxation),
+        },
       ],
     },
     { title: 'Drive', items: drive },

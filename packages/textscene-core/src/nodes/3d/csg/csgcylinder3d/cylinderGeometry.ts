@@ -66,11 +66,7 @@ export function buildCsgCylinderGeometry(spec: CsgCylinderSpec): THREE.BufferGeo
   const mulY = height * 0.5;
   let face = 0;
 
-  const put = (
-    p: [number, number, number][],
-    u: [number, number][],
-    isSmooth: boolean
-  ): void => {
+  const put = (p: [number, number, number][], u: [number, number][], isSmooth: boolean): void => {
     for (let j = 0; j < 3; j++) {
       positions[face * 9 + j * 3] = p[j]![0] * mulX;
       positions[face * 9 + j * 3 + 1] = p[j]![1] * mulY;

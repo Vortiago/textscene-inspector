@@ -25,10 +25,7 @@ export function skyMaterialRef(
   return typeof ref === 'string' ? ref : undefined;
 }
 
-export function decodeSkyMaterial(
-  type: string,
-  data: Record<string, string>
-): SkyProperties | null {
+export function decodeSkyMaterial(type: string, data: Record<string, string>): SkyProperties | null {
   switch (type) {
     case 'ProceduralSkyMaterial':
       return {
@@ -40,11 +37,7 @@ export function decodeSkyMaterial(
         ground_bottom_color: colorOr(data.ground_bottom_color, rgb(0.2, 0.169, 0.133)),
         ground_horizon_color: colorOr(data.ground_horizon_color, rgb(0.6463, 0.6558, 0.6708)),
         ground_curve: floatOr(data.ground_curve, 0.02, 'ground_curve'),
-        ground_energy_multiplier: floatOr(
-          data.ground_energy_multiplier,
-          1,
-          'ground_energy_multiplier'
-        ),
+        ground_energy_multiplier: floatOr(data.ground_energy_multiplier, 1, 'ground_energy_multiplier'),
         sun_angle_max: floatOr(data.sun_angle_max, 30, 'sun_angle_max'),
         sun_curve: floatOr(data.sun_curve, 0.15, 'sun_curve'),
         energy_multiplier: floatOr(data.energy_multiplier, 1, 'energy_multiplier'),

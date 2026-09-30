@@ -48,13 +48,17 @@ describe('ReflectionProbe semantic rules', () => {
   });
 
   it('reports twice when both ambient_color and ambient_color_energy are set under a non-COLOR mode', () => {
-    const diagnostics = checkProbe('ambient_mode = 1\nambient_color = Color(1, 0, 0, 1)\nambient_color_energy = 2.0\n');
+    const diagnostics = checkProbe(
+      'ambient_mode = 1\nambient_color = Color(1, 0, 0, 1)\nambient_color_energy = 2.0\n'
+    );
     expect(diagnostics).toHaveLength(2);
     expect(diagnostics.every((d) => d.severity === 'info')).toBe(true);
   });
 
   it('is silent when ambient_mode is AMBIENT_COLOR', () => {
-    expect(checkProbe('ambient_mode = 2\nambient_color = Color(1, 0, 0, 1)\nambient_color_energy = 2.0\n')).toEqual([]);
+    expect(
+      checkProbe('ambient_mode = 2\nambient_color = Color(1, 0, 0, 1)\nambient_color_energy = 2.0\n')
+    ).toEqual([]);
   });
 
   it('is silent when neither ambient_color nor ambient_color_energy is set', () => {
@@ -84,17 +88,23 @@ describe('ReflectionProbe origin_offset clamped by size', () => {
 
   it('clamps an offset listed before size against the default size', () => {
     const diagnostics = checkProbe('origin_offset = Vector3(15, 0, 0)\nsize = Vector3(40, 40, 40)\n');
-    expect(diagnostics.map((d) => d.message)).toEqual([expect.stringContaining('loads as Vector3(9.99, 0, 0)')]);
+    expect(diagnostics.map((d) => d.message)).toEqual([
+      expect.stringContaining('loads as Vector3(9.99, 0, 0)'),
+    ]);
   });
 
   it('flips the sign against a zero size, since set_origin_offset has no 0.01 floor', () => {
     const diagnostics = checkProbe('size = Vector3(0, 2, 2)\norigin_offset = Vector3(1, 0, 0)\n');
-    expect(diagnostics.map((d) => d.message)).toEqual([expect.stringContaining('loads as Vector3(-0.01, 0, 0)')]);
+    expect(diagnostics.map((d) => d.message)).toEqual([
+      expect.stringContaining('loads as Vector3(-0.01, 0, 0)'),
+    ]);
   });
 
   it('clamps to float residue when a zero size comes after the offset', () => {
     const diagnostics = checkProbe('origin_offset = Vector3(1, 0, 0)\nsize = Vector3(0, 2, 2)\n');
-    expect(diagnostics.map((d) => d.message)).toEqual([expect.stringContaining('loads as Vector3(-2.2351741e-10, 0, 0)')]);
+    expect(diagnostics.map((d) => d.message)).toEqual([
+      expect.stringContaining('loads as Vector3(-2.2351741e-10, 0, 0)'),
+    ]);
   });
 
   it('checks the offset against the default size when size is absent', () => {

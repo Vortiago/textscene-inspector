@@ -62,7 +62,10 @@ export const guiWarnings: Readonly<Record<string, readonly WarningRow[]>> = {
     {
       at: 'menu_button.cpp:232',
       says: 'no popup menu assigned',
-      verdict: { declined: 'editor-only', because: 'whole override inside #ifdef TOOLS_ENABLED, menu_button.cpp:229,235' },
+      verdict: {
+        declined: 'editor-only',
+        because: 'whole override inside #ifdef TOOLS_ENABLED, menu_button.cpp:229,235',
+      },
     },
   ],
 

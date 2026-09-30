@@ -11,11 +11,7 @@ import { join } from 'node:path';
 import { baseChain } from '../godot/nodeBaseTypes.js';
 import { ASYMMETRY_ALLOWLIST, type AsymmetryEntry } from './propertyGrammarParityAllowlist.js';
 import { checkParity, collectSlices, getFullValidatorKeys } from './testing/propertyGrammarParityCheck.js';
-import {
-  extractNodeType,
-  findLinterParserDirs,
-  nodesRoot,
-} from './testing/propertyGrammarParityScan.js';
+import { extractNodeType, findLinterParserDirs, nodesRoot } from './testing/propertyGrammarParityScan.js';
 import './index.js';
 
 /** One slice as the staleness scan sees it: the type it speaks for, and the keys its parser reads. */
@@ -36,12 +32,7 @@ interface StaleScanInput {
  * world as arguments, so the seeded partial-closure cases settle `.every()`
  * versus `.some()`, not the tree's content.
  */
-function findStaleEntries({
-  allowlist,
-  slices,
-  baseChainOf,
-  validatorKeysOf,
-}: StaleScanInput): string[] {
+function findStaleEntries({ allowlist, slices, baseChainOf, validatorKeysOf }: StaleScanInput): string[] {
   const staleSections: string[] = [];
   // An entry answers for its own slice and every slice below it: a base class
   // reuses the base parser, has no parser.ts, and is absent from `collectSlices`.
@@ -75,7 +66,9 @@ function findStaleEntries({
     }
     for (const key of entry.linterOnly ?? []) {
       if (readEverywhere(key)) {
-        staleSections.push(`${nodeType}.linterOnly['${key}']: now read by the parser — remove from allowlist`);
+        staleSections.push(
+          `${nodeType}.linterOnly['${key}']: now read by the parser — remove from allowlist`
+        );
       }
     }
     for (const key of entry.renderGap ?? []) {
@@ -217,11 +210,7 @@ describe('property-grammar parity guard', () => {
         ...getFullValidatorKeys(nodeType),
         ...(collectSlices().find((s) => s.nodeType === nodeType)?.parserProps ?? []),
       ]);
-      const listed = [
-        ...(entry.parserOnly ?? []),
-        ...(entry.linterOnly ?? []),
-        ...(entry.renderGap ?? []),
-      ];
+      const listed = [...(entry.parserOnly ?? []), ...(entry.linterOnly ?? []), ...(entry.renderGap ?? [])];
       for (const key of listed) {
         if (key.includes('*') || key.includes('#')) continue;
         if (!declared.has(key)) unknown.push(`${nodeType}.${key}`);

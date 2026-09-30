@@ -10,5 +10,7 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 // as siblings. The walker also owns `visible === false`. `tint.own` is raw
 // sRGB, and `<StyleBoxQuad>` multiplies it into both the bg and border colour.
 export function Panel({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
-  return <PanelChrome solveNode={solveNode} tint={tint} rect={rect} theme={theme} renderOrder={renderOrder} />;
+  return (
+    <PanelChrome solveNode={solveNode} tint={tint} rect={rect} theme={theme} renderOrder={renderOrder} />
+  );
 }

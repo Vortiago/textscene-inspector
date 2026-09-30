@@ -57,7 +57,9 @@ export function collectTargets() {
       }
     }
   }
-  return [...byImage.entries()].map(([image, t]) => ({ image, ...t })).sort((a, b) => a.image.localeCompare(b.image));
+  return [...byImage.entries()]
+    .map(([image, t]) => ({ image, ...t }))
+    .sort((a, b) => a.image.localeCompare(b.image));
 }
 
 // The Godot-side scene path for a sheet's `fixture` value, the ours-side

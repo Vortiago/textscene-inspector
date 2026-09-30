@@ -4,12 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  declaredLeafResolver,
-  firstSegment,
-  indexedElements,
-  visitIndexedKeys,
-} from './indexedKey.js';
+import { declaredLeafResolver, firstSegment, indexedElements, visitIndexedKeys } from './indexedKey.js';
 
 /** A class that declares no leaf, so every leaf keeps its own text. */
 const NO_DECLARED_LEAVES = declaredLeafResolver([]);
@@ -59,9 +54,7 @@ describe('visitIndexedKeys', () => {
 
   // `to_int` saturates at INT64_MAX (ustring.cpp:2283-2284), whose low 32 bits are -1.
   it('visits no index that saturates to INT64_MAX', () => {
-    expect(visits({ 'item_9999999999999999999999/text': '"a"' }, 'item_', 'is_valid_int')).toEqual(
-      []
-    );
+    expect(visits({ 'item_9999999999999999999999/text': '"a"' }, 'item_', 'is_valid_int')).toEqual([]);
   });
 
   // INT64_MIN keeps 0 in its low 32 bits, so the write lands on element 0.
@@ -119,8 +112,7 @@ describe('indexedElements', () => {
     // `ERR_FAIL_INDEX_V` beside the parse.
     expect(indexedElements({ 'item_-1/text': '"Open"' }, 'item_', 'is_valid_int').size).toBe(0);
     expect(
-      indexedElements({ 'settings/a-1/bone': '"A"' }, 'settings/', 'to_int', NO_DECLARED_LEAVES)
-        .size
+      indexedElements({ 'settings/a-1/bone': '"A"' }, 'settings/', 'to_int', NO_DECLARED_LEAVES).size
     ).toBe(0);
   });
 
@@ -148,12 +140,7 @@ describe('indexedElements', () => {
 
   it('seats an empty index on element 0 under to_int, as "".to_int() does', () => {
     // `to_int` returns 0 for an empty string (ustring.cpp:2304-2305).
-    const elements = indexedElements(
-      { 'settings//bone': '"A"' },
-      'settings/',
-      'to_int',
-      NO_DECLARED_LEAVES
-    );
+    const elements = indexedElements({ 'settings//bone': '"A"' }, 'settings/', 'to_int', NO_DECLARED_LEAVES);
     expect(elements.get(0)?.get('bone')).toBe('"A"');
   });
 
@@ -175,19 +162,14 @@ describe('indexedElements', () => {
     // `_get_property` rsplits at the last `/` and gates everything above it on
     // `is_valid_int` (property_list_helper.cpp:47-53), so the index text here is
     // `9/tile_data` and no layer 9 is ever built.
-    expect([...indexedElements({ 'layer_9/tile_data/x': '1' }, 'layer_', 'is_valid_int')]).toEqual(
-      []
-    );
+    expect([...indexedElements({ 'layer_9/tile_data/x': '1' }, 'layer_', 'is_valid_int')]).toEqual([]);
   });
 
   it('still nests a to_int family, whose leaf is everything below the index', () => {
     expect([
-      ...indexedElements(
-        { 'settings/0/joints/1/bone': '2' },
-        'settings/',
-        'to_int',
-        NO_DECLARED_LEAVES
-      ).get(0)!,
+      ...indexedElements({ 'settings/0/joints/1/bone': '2' }, 'settings/', 'to_int', NO_DECLARED_LEAVES).get(
+        0
+      )!,
     ]).toEqual([['joints/1/bone', '2']]);
   });
 
@@ -207,12 +189,7 @@ describe('indexedElements', () => {
   it('answers undefined for a prototype-named leaf nothing wrote', () => {
     // On an object literal `leaves.constructor` and `leaves.toString` answer with a function out
     // of a value typed as a string.
-    const elements = indexedElements(
-      { 'settings/0/bone': '"A"' },
-      'settings/',
-      'to_int',
-      NO_DECLARED_LEAVES
-    );
+    const elements = indexedElements({ 'settings/0/bone': '"A"' }, 'settings/', 'to_int', NO_DECLARED_LEAVES);
     const leaves = elements.get(0)!;
     for (const name of ['constructor', 'toString', 'valueOf', 'hasOwnProperty', '__proto__']) {
       expect(leaves.get(name)).toBeUndefined();
@@ -223,12 +200,7 @@ describe('indexedElements', () => {
 describe('declaredLeafResolver', () => {
   // SpringBoneSimulator3D's shape: `end_bone` reads an option below itself
   // (spring_bone_simulator_3d.cpp:52-62), and `radius` is declared only through its options.
-  const resolve = declaredLeafResolver([
-    'root_bone',
-    'end_bone',
-    'end_bone/direction',
-    'radius/value',
-  ]);
+  const resolve = declaredLeafResolver(['root_bone', 'end_bone', 'end_bone/direction', 'radius/value']);
 
   it('resolves a declared leaf to itself', () => {
     expect(resolve('root_bone')).toBe('root_bone');
@@ -306,12 +278,7 @@ describe('indexedElements with a leaf resolver', () => {
   });
 
   it('keeps the text of a leaf that resolves to nothing', () => {
-    const elements = indexedElements(
-      { 'settings/0/joints/0/radius': '0.5' },
-      'settings/',
-      'to_int',
-      resolve
-    );
+    const elements = indexedElements({ 'settings/0/joints/0/radius': '0.5' }, 'settings/', 'to_int', resolve);
     expect(elements.get(0)?.get('joints/0/radius')).toBe('0.5');
   });
 

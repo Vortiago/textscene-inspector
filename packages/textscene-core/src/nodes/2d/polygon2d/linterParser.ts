@@ -7,7 +7,13 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import type { ParseError } from '../../../linter/types.js';
-import { ARRAY_LITERAL_RE, dropTrailingComma, packedArrayLiteral, splitTopLevel, variantShape } from '../../../godot/index.js';
+import {
+  ARRAY_LITERAL_RE,
+  dropTrailingComma,
+  packedArrayLiteral,
+  splitTopLevel,
+  variantShape,
+} from '../../../godot/index.js';
 import { arrayLiteralBody } from '../../../godot/variantParser.js';
 import { markIntSlot } from '../../../linter/validators/intSlot.js';
 import { badIntElement } from '../../../linter/validators/v/packedArrays.js';
@@ -26,72 +32,74 @@ function polygonsValidator(): PropertyValidator {
   const code = 'INVALID_POLYGONS_FORMAT';
   // `markIntSlot`: the index lists are an INT slot, so this rejects a literal
   // Godot's own tokenizer reads. The element type is the hint's, cited below.
-  const validator = markIntSlot(accepts((key, value, line) => {
-    // `Array[PackedInt32Array]([…])` is an Array too, and the setter only
-    // assigns (polygon_2d.cpp:720, :435-437), so the typed spelling loads.
-    const outer = arrayLiteralBody(value);
-    if (outer === null) {
-      return propertyError(
-        key,
-        line,
-        `Property 'polygons' must be an Array of PackedInt32Array(…) index lists like [PackedInt32Array(0, 1, 2)], got: "${value}"`,
-        code
-      );
-    }
-    const body = outer.trim();
-    if (body === '') return null;
-    /** The first fractional element seen, held back until every entry is scanned. */
-    let truncated: ParseError | null = null;
-    for (const entry of dropTrailingComma(splitTopLevel(body))) {
-      // `null` is a legal untyped Array element: `set_polygons` stores it
-      // (polygon_2d.cpp:435-437), and `_draw` reads an empty `Vector<int>` and
-      // skips it at `ic < 3` (:328-330).
-      if (entry.trim() === 'null') continue;
-      // A bare `[0, 1, 2]` element is equivalent: `_draw` casts each element to
-      // `Vector<int>` (polygon_2d.cpp:328), variant.cpp's `can_convert_strict`
-      // allows ARRAY, and `_convert_array_from_variant` (variant.cpp:2092-2130)
-      // copies each int faithfully.
-      const packed = PACKED_INT32_ELEMENT_RE.exec(entry);
-      const bare = packed ? null : BARE_INT_ARRAY_ELEMENT_RE.exec(entry);
-      const el = packed ?? bare;
-      if (!el) {
-        if (variantShape(entry) === null) {
-          return propertyError(
-            key,
-            line,
-            `Property 'polygons' entry "${entry}" is no value Godot reads; write PackedInt32Array(…) or a bare [i0, i1, …]`,
-            code
-          );
-        }
-        // Stored as written, since the setter assigns bare. Only the hint names
-        // the element type, so an entry of another type warns.
+  const validator = markIntSlot(
+    accepts((key, value, line) => {
+      // `Array[PackedInt32Array]([…])` is an Array too, and the setter only
+      // assigns (polygon_2d.cpp:720, :435-437), so the typed spelling loads.
+      const outer = arrayLiteralBody(value);
+      if (outer === null) {
         return propertyError(
           key,
           line,
-          `Property 'polygons' entry "${entry}" is not the PackedInt32Array index list the hint names (${POLYGONS_HINT})`,
-          'INVALID_POLYGONS_VALUE',
-          'warning'
+          `Property 'polygons' must be an Array of PackedInt32Array(…) index lists like [PackedInt32Array(0, 1, 2)], got: "${value}"`,
+          code
         );
       }
-      const inner = el[1]!.trim();
-      if (inner === '') continue;
-      // `_parse_construct` (variant_parser.cpp:552-596) demands a value after each
-      // comma (:562-565, :571), so `PackedInt32Array(…)` refuses a trailing comma
-      // that a bare `[…]`, the bracket grammar, allows.
-      const indices = bare ? dropTrailingComma(inner.split(',')) : inner.split(',');
-      // One pass: unreadable by the tokenizer, or read and then narrowed
-      // away (_parse_construct<int32_t>, variant_parser.cpp:1428-1430).
-      const bad = badIntElement('polygons', key, line, indices, {
+      const body = outer.trim();
+      if (body === '') return null;
+      /** The first fractional element seen, held back until every entry is scanned. */
+      let truncated: ParseError | null = null;
+      for (const entry of dropTrailingComma(splitTopLevel(body))) {
+        // `null` is a legal untyped Array element: `set_polygons` stores it
+        // (polygon_2d.cpp:435-437), and `_draw` reads an empty `Vector<int>` and
+        // skips it at `ic < 3` (:328-330).
+        if (entry.trim() === 'null') continue;
+        // A bare `[0, 1, 2]` element is equivalent: `_draw` casts each element to
+        // `Vector<int>` (polygon_2d.cpp:328), variant.cpp's `can_convert_strict`
+        // allows ARRAY, and `_convert_array_from_variant` (variant.cpp:2092-2130)
+        // copies each int faithfully.
+        const packed = PACKED_INT32_ELEMENT_RE.exec(entry);
+        const bare = packed ? null : BARE_INT_ARRAY_ELEMENT_RE.exec(entry);
+        const el = packed ?? bare;
+        if (!el) {
+          if (variantShape(entry) === null) {
+            return propertyError(
+              key,
+              line,
+              `Property 'polygons' entry "${entry}" is no value Godot reads; write PackedInt32Array(…) or a bare [i0, i1, …]`,
+              code
+            );
+          }
+          // Stored as written, since the setter assigns bare. Only the hint names
+          // the element type, so an entry of another type warns.
+          return propertyError(
+            key,
+            line,
+            `Property 'polygons' entry "${entry}" is not the PackedInt32Array index list the hint names (${POLYGONS_HINT})`,
+            'INVALID_POLYGONS_VALUE',
+            'warning'
+          );
+        }
+        const inner = el[1]!.trim();
+        if (inner === '') continue;
+        // `_parse_construct` (variant_parser.cpp:552-596) demands a value after each
+        // comma (:562-565, :571), so `PackedInt32Array(…)` refuses a trailing comma
+        // that a bare `[…]`, the bracket grammar, allows.
+        const indices = bare ? dropTrailingComma(inner.split(',')) : inner.split(',');
+        // One pass: unreadable by the tokenizer, or read and then narrowed
+        // away (_parse_construct<int32_t>, variant_parser.cpp:1428-1430).
+        const bad = badIntElement('polygons', key, line, indices, {
           format: code,
           value: 'INVALID_POLYGONS_VALUE',
-      });
-      if (bad.error !== null) return bad.error;
-      // Remembered, not returned: a later entry may be unreadable, and that
-      // error outranks this warning.
-      truncated ??= bad.truncated;
-    }
-    return truncated;
-  }, 'Array of PackedInt32Array(i0, i1, …) or bare [i0, i1, …] index lists'));
+        });
+        if (bad.error !== null) return bad.error;
+        // Remembered, not returned: a later entry may be unreadable, and that
+        // error outranks this warning.
+        truncated ??= bad.truncated;
+      }
+      return truncated;
+    }, 'Array of PackedInt32Array(i0, i1, …) or bare [i0, i1, …] index lists')
+  );
   validator.grounding = { kind: 'hinted', cite: POLYGONS_HINT };
   return validator;
 }

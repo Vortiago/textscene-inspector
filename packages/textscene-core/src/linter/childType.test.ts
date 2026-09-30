@@ -58,11 +58,13 @@ describe('the one direct-child type test', () => {
 
   it('detects a hand-rolled copy in the `.some` and the loop spelling', () => {
     expect(
-      isHandRolled('!node.children.some((child) => isTypeOpaque(child) || descendsFrom(child.type, wheelType))')
+      isHandRolled(
+        '!node.children.some((child) => isTypeOpaque(child) || descendsFrom(child.type, wheelType))'
+      )
     ).toBe(true);
-    expect(isHandRolled("if (children.some((c) =>\n  descendsFrom(c.type, 'Joint2D'))) return 'present';")).toBe(
-      true
-    );
+    expect(
+      isHandRolled("if (children.some((c) =>\n  descendsFrom(c.type, 'Joint2D'))) return 'present';")
+    ).toBe(true);
     const loop = [
       'for (const child of node.children) {',
       '  if (isTypeUnknowable(child)) continue;',

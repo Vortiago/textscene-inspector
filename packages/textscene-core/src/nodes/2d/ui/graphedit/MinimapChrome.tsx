@@ -69,7 +69,15 @@ interface MinimapConnectionsProps {
  * one band, so the draw count does not grow with the graph. The points and colours come from
  * `minimapConnections.ts`, and the stroke from `polylineStroke.ts` (`:1870-1883`, `:1611`).
  */
-function MinimapConnections({ connections, transform, bounds, curvature, antialiased, lineTint, renderOrder }: MinimapConnectionsProps) {
+function MinimapConnections({
+  connections,
+  transform,
+  bounds,
+  curvature,
+  antialiased,
+  lineTint,
+  renderOrder,
+}: MinimapConnectionsProps) {
   const clippingPlanes = useControlClipPlanes();
   const geometry = useMemo(() => {
     const positions: number[] = [];
@@ -170,7 +178,8 @@ export function GraphEditMinimapChrome({
 
   // `default_theme.cpp:1342`: make_flat_stylebox(Color(0.24, 0.24, 0.24), 0, 0, 0, 0).
   const panelStyle = useMemo(
-    () => flatBox({ r: 0.24, g: 0.24, b: 0.24, a: 1 }, theme.cornerRadius, 0, { r: 0.8, g: 0.8, b: 0.8, a: 1 }),
+    () =>
+      flatBox({ r: 0.24, g: 0.24, b: 0.24, a: 1 }, theme.cornerRadius, 0, { r: 0.8, g: 0.8, b: 0.8, a: 1 }),
     [theme.cornerRadius]
   );
   // `default_theme.cpp:1343-1345`: make_flat_stylebox(Color(0.65, 0.65, 0.65, 0.2), 0, 0, 0, 0, 0),
@@ -183,7 +192,9 @@ export function GraphEditMinimapChrome({
   const nodeCornerRadius = Math.round(2 * scale);
 
   const resizerTexture = useNodeIcon(icons.resizer, GRAPH_EDIT_MINIMAP_RESIZER_ICON);
-  const resizerColor = useGodotLinearColor(useMemo(() => multiplyModulate(modulated, RESIZER_COLOR), [modulated]));
+  const resizerColor = useGodotLinearColor(
+    useMemo(() => multiplyModulate(modulated, RESIZER_COLOR), [modulated])
+  );
   const resizerOpacity = modulated.a * RESIZER_COLOR.a;
 
   const cameraRect = minimapCameraRect(transform, bounds, scrollOffset, graphEditSize);

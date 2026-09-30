@@ -126,11 +126,7 @@ if (watch) {
   const extensionContext = await esbuild.context(extensionOptions);
   const extensionWebContext = await esbuild.context(extensionWebOptions);
   const webviewContext = await esbuild.context(webviewOptions);
-  await Promise.all([
-    extensionContext.watch(),
-    extensionWebContext.watch(),
-    webviewContext.watch(),
-  ]);
+  await Promise.all([extensionContext.watch(), extensionWebContext.watch(), webviewContext.watch()]);
   console.log('Watching for changes...');
 } else {
   const builds = [

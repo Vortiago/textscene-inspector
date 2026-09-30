@@ -92,7 +92,7 @@ describe('SpinBox strict validators', () => {
       expect(check('prefix', '"$"')).toBeNull();
     });
 
-    it('accepts an empty quoted string, SpinBox.xml\'s own default for prefix', () => {
+    it("accepts an empty quoted string, SpinBox.xml's own default for prefix", () => {
       expect(check('prefix', '""')).toBeNull();
     });
 
@@ -107,7 +107,7 @@ describe('SpinBox strict validators', () => {
       expect(check('suffix', '"kg"')).toBeNull();
     });
 
-    it('accepts an empty quoted string, SpinBox.xml\'s own default for suffix', () => {
+    it("accepts an empty quoted string, SpinBox.xml's own default for suffix", () => {
       expect(check('suffix', '""')).toBeNull();
     });
 

@@ -5,13 +5,7 @@
  * register does nothing and the lookup gives null.
  */
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 import type * as THREE from 'three';
 
 /** A driver's clips bound to the scene as it stands, ready for a mixer on the entry's object. */
@@ -41,8 +35,7 @@ const EMPTY_DRIVERS: ReadonlyMap<string, AnimationDriverEntry> = new Map();
 const RegisterDriverContext = createContext<RegisterDriver>(NO_OP_REGISTER);
 RegisterDriverContext.displayName = 'RegisterDriverContext';
 
-const DriversContext =
-  createContext<ReadonlyMap<string, AnimationDriverEntry>>(EMPTY_DRIVERS);
+const DriversContext = createContext<ReadonlyMap<string, AnimationDriverEntry>>(EMPTY_DRIVERS);
 DriversContext.displayName = 'AnimationDriversContext';
 
 /** Stable, so a publishing driver's effect does not re-fire on every map change. */
@@ -53,13 +46,11 @@ export function useRegisterDriver(): RegisterDriver {
 /** Reactive, so an AnimationTree re-renders when its target appears. */
 export function useAnimationDriver(path: string | null): AnimationDriverEntry | null {
   const drivers = useContext(DriversContext);
-  return path === null ? null : drivers.get(path) ?? null;
+  return path === null ? null : (drivers.get(path) ?? null);
 }
 
 export function AnimationDriverProvider({ children }: { children: ReactNode }) {
-  const [drivers, setDrivers] = useState<ReadonlyMap<string, AnimationDriverEntry>>(
-    () => new Map()
-  );
+  const [drivers, setDrivers] = useState<ReadonlyMap<string, AnimationDriverEntry>>(() => new Map());
 
   const registerDriver = useCallback<RegisterDriver>((path, entry) => {
     setDrivers((prev) => {

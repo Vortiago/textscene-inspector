@@ -31,7 +31,10 @@ function checkCPUParticles3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
   const rawProps = node.properties;
   if (!isValidProperties(rawProps)) return [];
-  return [...checkMissingMesh(node, rawProps), ...paramMinAboveMaxDiagnostics(node, rawProps, 'cpuparticles3d')];
+  return [
+    ...checkMissingMesh(node, rawProps),
+    ...paramMinAboveMaxDiagnostics(node, rawProps, 'cpuparticles3d'),
+  ];
 }
 
 const cpuParticles3DValidationRule: LintRule = {
@@ -42,7 +45,11 @@ const cpuParticles3DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['CPUParticles3D'],
     emits: [
-      { ruleName: 'cpuparticles3d-requires-mesh', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'cpuparticles3d-requires-mesh',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
       {
         ruleName: 'cpuparticles3d-param-min-above-max',
         severity: 'warning',

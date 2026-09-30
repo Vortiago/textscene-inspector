@@ -5,11 +5,7 @@
  */
 
 import type { PropertySection } from '../../../core/NodeRegistry';
-import {
-  AttenuationModel,
-  type AudioStreamPlayer3DProperties,
-  DopplerTracking,
-} from './types';
+import { AttenuationModel, type AudioStreamPlayer3DProperties, DopplerTracking } from './types';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
 import { audioStreamSection } from '../audioStreamSection';
 
@@ -36,9 +32,7 @@ export function formatAudioStreamPlayer3DProperties(
       { label: 'Unit Size', value: properties.unit_size.toFixed(2) },
       {
         label: 'Max Distance',
-        value: properties.max_distance === 0
-          ? 'Unlimited'
-          : properties.max_distance.toFixed(2),
+        value: properties.max_distance === 0 ? 'Unlimited' : properties.max_distance.toFixed(2),
       },
       { label: 'Filter Cutoff (Hz)', value: properties.attenuation_filter_cutoff_hz.toFixed(0) },
       { label: 'Filter Strength (dB)', value: properties.attenuation_filter_db.toFixed(2) },
@@ -74,19 +68,28 @@ export function formatAudioStreamPlayer3DProperties(
 
 function attenuationName(mode: AttenuationModel): string {
   switch (mode) {
-    case AttenuationModel.ATTENUATION_INVERSE_DISTANCE: return 'Inverse Distance';
-    case AttenuationModel.ATTENUATION_INVERSE_SQUARE_DISTANCE: return 'Inverse Square';
-    case AttenuationModel.ATTENUATION_LOGARITHMIC: return 'Logarithmic';
-    case AttenuationModel.ATTENUATION_DISABLED: return 'Disabled';
-    default: return 'Unknown';
+    case AttenuationModel.ATTENUATION_INVERSE_DISTANCE:
+      return 'Inverse Distance';
+    case AttenuationModel.ATTENUATION_INVERSE_SQUARE_DISTANCE:
+      return 'Inverse Square';
+    case AttenuationModel.ATTENUATION_LOGARITHMIC:
+      return 'Logarithmic';
+    case AttenuationModel.ATTENUATION_DISABLED:
+      return 'Disabled';
+    default:
+      return 'Unknown';
   }
 }
 
 function dopplerName(mode: DopplerTracking): string {
   switch (mode) {
-    case DopplerTracking.DOPPLER_TRACKING_DISABLED: return 'Disabled';
-    case DopplerTracking.DOPPLER_TRACKING_IDLE_STEP: return 'Idle Step';
-    case DopplerTracking.DOPPLER_TRACKING_PHYSICS_STEP: return 'Physics Step';
-    default: return 'Unknown';
+    case DopplerTracking.DOPPLER_TRACKING_DISABLED:
+      return 'Disabled';
+    case DopplerTracking.DOPPLER_TRACKING_IDLE_STEP:
+      return 'Idle Step';
+    case DopplerTracking.DOPPLER_TRACKING_PHYSICS_STEP:
+      return 'Physics Step';
+    default:
+      return 'Unknown';
   }
 }

@@ -55,8 +55,7 @@ function makeTscnDocument(content: string, fsPath = '/workspace/scene.tscn'): vs
     getText: () => content,
     lineCount: lines.length,
     lineAt: (lineOrPosition: number | vscode.Position) => {
-      const line =
-        typeof lineOrPosition === 'number' ? lineOrPosition : lineOrPosition.line;
+      const line = typeof lineOrPosition === 'number' ? lineOrPosition : lineOrPosition.line;
       return { text: lines[line] ?? '' };
     },
   } as unknown as vscode.TextDocument;
@@ -100,10 +99,7 @@ describe('toVsCodeDiagnostic', () => {
 
   describe('location mapping', () => {
     it('converts 1-based line/column to 0-based range spanning to end of line', () => {
-      const result = toVsCodeDiagnostic(
-        makeCoreDiagnostic({ location: { line: 2, column: 3 } }),
-        doc
-      );
+      const result = toVsCodeDiagnostic(makeCoreDiagnostic({ location: { line: 2, column: 3 } }), doc);
 
       expect(result.range.start.line).toBe(1);
       expect(result.range.start.character).toBe(2);
@@ -121,20 +117,14 @@ describe('toVsCodeDiagnostic', () => {
     });
 
     it('falls back to a zero range at line 0 when location has no line', () => {
-      const result = toVsCodeDiagnostic(
-        makeCoreDiagnostic({ location: { column: 5 } }),
-        doc
-      );
+      const result = toVsCodeDiagnostic(makeCoreDiagnostic({ location: { column: 5 } }), doc);
 
       expect(result.range.start.line).toBe(0);
       expect(result.range.start.character).toBe(0);
     });
 
     it('starts at column 0 when location has a line but no column', () => {
-      const result = toVsCodeDiagnostic(
-        makeCoreDiagnostic({ location: { line: 3 } }),
-        doc
-      );
+      const result = toVsCodeDiagnostic(makeCoreDiagnostic({ location: { line: 3 } }), doc);
 
       expect(result.range.start.line).toBe(2);
       expect(result.range.start.character).toBe(0);
@@ -142,29 +132,20 @@ describe('toVsCodeDiagnostic', () => {
     });
 
     it('clamps out-of-range lines to the last document line', () => {
-      const result = toVsCodeDiagnostic(
-        makeCoreDiagnostic({ location: { line: 999, column: 1 } }),
-        doc
-      );
+      const result = toVsCodeDiagnostic(makeCoreDiagnostic({ location: { line: 999, column: 1 } }), doc);
 
       expect(result.range.start.line).toBe(2);
     });
 
     it('clamps out-of-range columns to the line length', () => {
-      const result = toVsCodeDiagnostic(
-        makeCoreDiagnostic({ location: { line: 3, column: 999 } }),
-        doc
-      );
+      const result = toVsCodeDiagnostic(makeCoreDiagnostic({ location: { line: 3, column: 999 } }), doc);
 
       expect(result.range.start.character).toBe('third'.length);
       expect(result.range.end.character).toBe('third'.length);
     });
 
     it('clamps column zero to the start of its line', () => {
-      const result = toVsCodeDiagnostic(
-        makeCoreDiagnostic({ location: { line: 2, column: 0 } }),
-        doc
-      );
+      const result = toVsCodeDiagnostic(makeCoreDiagnostic({ location: { line: 2, column: 0 } }), doc);
 
       expect(result.range.start.line).toBe(1);
       expect(result.range.start.character).toBe(0);
@@ -185,10 +166,7 @@ describe('toVsCodeDiagnostic', () => {
 
   describe('metadata', () => {
     it('sets the rule name as code and tscn-lint as source', () => {
-      const result = toVsCodeDiagnostic(
-        makeCoreDiagnostic({ ruleName: 'valid-node3d-visibility' }),
-        doc
-      );
+      const result = toVsCodeDiagnostic(makeCoreDiagnostic({ ruleName: 'valid-node3d-visibility' }), doc);
 
       expect(result.code).toBe('valid-node3d-visibility');
       expect(result.source).toBe('tscn-lint');
@@ -214,9 +192,7 @@ describe('TscnDiagnostics', () => {
 
   it('lints already-open .tscn documents on construction', () => {
     const document = makeTscnDocument(INVALID_TSCN);
-    (vscode.workspace as unknown as { textDocuments: vscode.TextDocument[] }).textDocuments = [
-      document,
-    ];
+    (vscode.workspace as unknown as { textDocuments: vscode.TextDocument[] }).textDocuments = [document];
 
     const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
 
@@ -299,23 +275,22 @@ describe('TscnDiagnostics', () => {
   it.each([
     ['.tres', '/workspace/material.tres', VALID_TRES],
     ['.tscn', '/workspace/scene.tscn', VALID_TSCN],
-  ])('publishes for a %s document whose language association was overridden', (
-    _extension,
-    fsPath,
-    content
-  ) => {
-    const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
-    const document = {
-      ...makeTscnDocument(content, fsPath),
-      languageId: 'plaintext',
-      fileName: fsPath,
-    } as unknown as vscode.TextDocument;
+  ])(
+    'publishes for a %s document whose language association was overridden',
+    (_extension, fsPath, content) => {
+      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+      const document = {
+        ...makeTscnDocument(content, fsPath),
+        languageId: 'plaintext',
+        fileName: fsPath,
+      } as unknown as vscode.TextDocument;
 
-    diagnostics.lintDocument(document);
+      diagnostics.lintDocument(document);
 
-    expect(collection.set).toHaveBeenCalledWith(document.uri, expect.any(Array));
-    diagnostics.dispose();
-  });
+      expect(collection.set).toHaveBeenCalledWith(document.uri, expect.any(Array));
+      diagnostics.dispose();
+    }
+  );
 
   it('re-lints on open and on save via workspace events', () => {
     let openHandler: ((document: vscode.TextDocument) => void) | undefined;
@@ -343,17 +318,13 @@ describe('TscnDiagnostics', () => {
   it('debounces change events (~300ms) into a single lint', () => {
     vi.useFakeTimers();
     try {
-      let changeHandler:
-        | ((event: { document: vscode.TextDocument }) => void)
-        | undefined;
+      let changeHandler: ((event: { document: vscode.TextDocument }) => void) | undefined;
       (vscode.workspace.onDidChangeTextDocument as Mock).mockImplementation((handler) => {
         changeHandler = handler;
         return { dispose: vi.fn() };
       });
 
-      const diagnostics = new TscnDiagnostics(
-        collection as unknown as vscode.DiagnosticCollection
-      );
+      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
       const document = makeTscnDocument(VALID_TSCN);
 
       changeHandler!({ document });
@@ -375,9 +346,7 @@ describe('TscnDiagnostics', () => {
   it('clears diagnostics and pending lints when a document closes', () => {
     vi.useFakeTimers();
     try {
-      let changeHandler:
-        | ((event: { document: vscode.TextDocument }) => void)
-        | undefined;
+      let changeHandler: ((event: { document: vscode.TextDocument }) => void) | undefined;
       let closeHandler: ((document: vscode.TextDocument) => void) | undefined;
       (vscode.workspace.onDidChangeTextDocument as Mock).mockImplementation((handler) => {
         changeHandler = handler;
@@ -388,9 +357,7 @@ describe('TscnDiagnostics', () => {
         return { dispose: vi.fn() };
       });
 
-      const diagnostics = new TscnDiagnostics(
-        collection as unknown as vscode.DiagnosticCollection
-      );
+      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
       const document = makeTscnDocument(VALID_TSCN);
 
       changeHandler!({ document });
@@ -413,9 +380,7 @@ describe('TscnDiagnostics', () => {
       const disposeSpies = [vi.fn(), vi.fn(), vi.fn(), vi.fn()];
       let spyIndex = 0;
       const nextDisposable = () => ({ dispose: disposeSpies[spyIndex++]! });
-      let changeHandler:
-        | ((event: { document: vscode.TextDocument }) => void)
-        | undefined;
+      let changeHandler: ((event: { document: vscode.TextDocument }) => void) | undefined;
       (vscode.workspace.onDidOpenTextDocument as Mock).mockImplementation(() => nextDisposable());
       (vscode.workspace.onDidSaveTextDocument as Mock).mockImplementation(() => nextDisposable());
       (vscode.workspace.onDidChangeTextDocument as Mock).mockImplementation((handler) => {
@@ -424,9 +389,7 @@ describe('TscnDiagnostics', () => {
       });
       (vscode.workspace.onDidCloseTextDocument as Mock).mockImplementation(() => nextDisposable());
 
-      const diagnostics = new TscnDiagnostics(
-        collection as unknown as vscode.DiagnosticCollection
-      );
+      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
       changeHandler!({ document: makeTscnDocument(VALID_TSCN) });
 
       diagnostics.dispose();
@@ -460,9 +423,7 @@ describe('TscnDiagnostics', () => {
     it('does not lint already-open documents on construction when diagnostics.enabled is false', () => {
       mockDiagnosticsConfig({ enabled: false });
       const document = makeTscnDocument(VALID_TSCN);
-      (vscode.workspace as unknown as { textDocuments: vscode.TextDocument[] }).textDocuments = [
-        document,
-      ];
+      (vscode.workspace as unknown as { textDocuments: vscode.TextDocument[] }).textDocuments = [document];
 
       const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
 
@@ -495,9 +456,7 @@ describe('TscnDiagnostics', () => {
           return { dispose: vi.fn() };
         });
 
-        const diagnostics = new TscnDiagnostics(
-          collection as unknown as vscode.DiagnosticCollection
-        );
+        const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
         const document = makeTscnDocument(VALID_TSCN);
 
         changeHandler!({ document });
@@ -528,9 +487,7 @@ describe('TscnDiagnostics', () => {
           return { dispose: vi.fn() };
         });
 
-        const diagnostics = new TscnDiagnostics(
-          collection as unknown as vscode.DiagnosticCollection
-        );
+        const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
         const document = makeTscnDocument(VALID_TSCN);
         changeHandler!({ document });
 
@@ -556,9 +513,7 @@ describe('TscnDiagnostics', () => {
         return { dispose: vi.fn() };
       });
       const document = makeTscnDocument(VALID_TSCN);
-      (vscode.workspace as unknown as { textDocuments: vscode.TextDocument[] }).textDocuments = [
-        document,
-      ];
+      (vscode.workspace as unknown as { textDocuments: vscode.TextDocument[] }).textDocuments = [document];
 
       const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
       expect(collection.set).not.toHaveBeenCalled();

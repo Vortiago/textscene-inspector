@@ -35,9 +35,7 @@ describe('PopupMenu strict validators', () => {
       expect(check('hide_on_item_selection', 'false')).toBeNull();
     });
     it('rejects anything else', () => {
-      expect(check('hide_on_item_selection', 'maybe')?.code).toBe(
-        'INVALID_HIDE_ON_ITEM_SELECTION_FORMAT'
-      );
+      expect(check('hide_on_item_selection', 'maybe')?.code).toBe('INVALID_HIDE_ON_ITEM_SELECTION_FORMAT');
     });
   });
 
@@ -107,9 +105,7 @@ describe('PopupMenu strict validators', () => {
       expect(check('submenu_popup_delay', '5')).toBeNull();
     });
     it('rejects a non-numeric value', () => {
-      expect(check('submenu_popup_delay', 'soon')?.code).toBe(
-        'INVALID_SUBMENU_POPUP_DELAY_FORMAT'
-      );
+      expect(check('submenu_popup_delay', 'soon')?.code).toBe('INVALID_SUBMENU_POPUP_DELAY_FORMAT');
     });
     it('rejects 0 and below as an error: set_submenu_popup_delay clamps it to 0.01 (popup_menu.cpp:3041-3042)', () => {
       const atZero = check('submenu_popup_delay', '0');

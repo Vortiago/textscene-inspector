@@ -119,13 +119,9 @@ validatorRegistry.registerAll('Viewport', {
   // 4.7.2: viewport.cpp:4101 `ERR_FAIL_INDEX(p_filter,
   // DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_MAX)`, MAX = 5 (viewport.h:191-198).
   // 4.6.3 stops one lower, without PARENT_NODE.
-  canvas_item_default_texture_filter: v.enumInt(
-    'canvas_item_default_texture_filter',
-    0,
-    4,
-    TEXTURE_FILTER,
-    { enforced: 'viewport.cpp:4101' }
-  ),
+  canvas_item_default_texture_filter: v.enumInt('canvas_item_default_texture_filter', 0, 4, TEXTURE_FILTER, {
+    enforced: 'viewport.cpp:4101',
+  }),
 
   // Top-level bools, viewport.cpp:5154-5163. Bare assigns, no format beyond
   // true/false.
@@ -204,13 +200,9 @@ validatorRegistry.registerAll('Viewport', {
 
   // 4.7.2: viewport.cpp:4184 `ERR_FAIL_INDEX(p_repeat,
   // DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_MAX)`, MAX = 4 (viewport.h:200-206).
-  canvas_item_default_texture_repeat: v.enumInt(
-    'canvas_item_default_texture_repeat',
-    0,
-    3,
-    TEXTURE_REPEAT,
-    { enforced: 'viewport.cpp:4184' }
-  ),
+  canvas_item_default_texture_repeat: v.enumInt('canvas_item_default_texture_repeat', 0, 3, TEXTURE_REPEAT, {
+    enforced: 'viewport.cpp:4184',
+  }),
 
   // "Audio Listener" group, viewport.cpp:5193. Bare bool assign, same shape as
   // audio_listener_enable_2d above.
@@ -276,7 +268,10 @@ validatorRegistry.registerAll('Viewport', {
   // viewport.cpp:5218, PROPERTY_HINT_LAYERS_2D_RENDER: a UI-control hint, so
   // out-of-range is a warning, never an error. set_canvas_cull_mask
   // (viewport.cpp:4242-4246) bare-assigns.
-  canvas_cull_mask: layerBitmask('canvas_cull_mask', { hinted: 'viewport.cpp:5218', width: 'uint32' /* viewport.h:717 */ }),
+  canvas_cull_mask: layerBitmask('canvas_cull_mask', {
+    hinted: 'viewport.cpp:5218',
+    width: 'uint32' /* viewport.h:717 */,
+  }),
 
   oversampling: v.boolean('oversampling'),
   // viewport.cpp:5221 hints RANGE "0,16,0.0001,or_greater": `or_greater` opens

@@ -5,8 +5,20 @@ import type { FontLoaderFn, FontResource } from '../../fonts/font/types';
 
 const NO_OP_LOADER: FontLoaderFn = async () => null;
 
-const FONT_A: FontResource = { kind: 'file', bytes: new ArrayBuffer(1), mimeType: 'font/ttf', fallbacks: [], properties: {} };
-const FONT_B: FontResource = { kind: 'file', bytes: new ArrayBuffer(1), mimeType: 'font/otf', fallbacks: [], properties: {} };
+const FONT_A: FontResource = {
+  kind: 'file',
+  bytes: new ArrayBuffer(1),
+  mimeType: 'font/ttf',
+  fallbacks: [],
+  properties: {},
+};
+const FONT_B: FontResource = {
+  kind: 'file',
+  bytes: new ArrayBuffer(1),
+  mimeType: 'font/otf',
+  fallbacks: [],
+  properties: {},
+};
 
 const THEME_TRES = [
   '[gd_resource type="Theme" load_steps=2 format=3]',
@@ -50,7 +62,6 @@ describe('resolveThemeResource', () => {
     const resource = await resolveThemeResource(addresses, NO_OP_LOADER);
     expect(resource.icons?.CheckBox?.checked).toBe('ExtResource("1")');
   });
-
 
   it('resolves default_font and every <Type>/fonts/<name> address through loadFont', async () => {
     const loadFont = vi.fn(async (address: string) =>
@@ -153,7 +164,8 @@ describe('createThemeResourceFromContent', () => {
   });
 
   it('throws when a named sub-resource is not a Theme', async () => {
-    const tres = '[gd_resource type="Resource" format=3]\n\n[sub_resource type="StyleBoxFlat" id="1"]\n\n[resource]\n';
+    const tres =
+      '[gd_resource type="Resource" format=3]\n\n[sub_resource type="StyleBoxFlat" id="1"]\n\n[resource]\n';
     await expect(createThemeResourceFromContent('res://x.tres', tres, NO_OP_LOADER, '1')).rejects.toThrow(
       'Not a Theme resource: StyleBoxFlat'
     );

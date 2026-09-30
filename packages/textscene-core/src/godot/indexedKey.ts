@@ -49,8 +49,7 @@ export function visitIndexedKeys(
     // The split follows the parse. `PropertyListHelper` does `rsplit("/", true, 1)`
     // (`property_list_helper.cpp:47`), so the leaf is one segment. A hand-rolled `_set` counts
     // `get_slicec('/', n)` from the left, so a nested family's leaf (`joints/1/bone`) is the rest.
-    const slash =
-      indexParse === 'is_valid_int' ? key.lastIndexOf('/') : key.indexOf('/', prefix.length);
+    const slash = indexParse === 'is_valid_int' ? key.lastIndexOf('/') : key.indexOf('/', prefix.length);
     if (slash < prefix.length) continue;
     const indexText = key.slice(prefix.length, slash);
     const leaf = key.slice(slash + 1);

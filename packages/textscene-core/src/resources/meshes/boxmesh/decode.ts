@@ -12,9 +12,7 @@ export function decodeBoxMesh(properties: Record<string, string>): BoxMeshProper
     try {
       size = parseVector3(properties.size);
     } catch (error) {
-      warn(
-        `Failed to parse BoxMesh size: ${error instanceof Error ? error.message : String(error)}`
-      );
+      warn(`Failed to parse BoxMesh size: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

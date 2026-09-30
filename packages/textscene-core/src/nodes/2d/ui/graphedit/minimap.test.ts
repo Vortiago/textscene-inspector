@@ -28,7 +28,7 @@ function props(p: Partial<GraphEditProperties> = {}): GraphEditProperties {
 }
 
 describe('isMinimapEnabled (graph_edit.cpp:2799-2810)', () => {
-  it('defaults to enabled — the constructor seeds the button off the MEMBER show_grid, not the scene\'s', () => {
+  it("defaults to enabled — the constructor seeds the button off the MEMBER show_grid, not the scene's", () => {
     // graph_edit.cpp:3311 `minimap_button->set_pressed(show_grid)` runs before
     // any property is applied, so `show_grid = false` in the file never reaches it.
     expect(isMinimapEnabled(props())).toBe(true);
@@ -42,7 +42,7 @@ describe('isMinimapEnabled (graph_edit.cpp:2799-2810)', () => {
 });
 
 describe('minimapOpacity (graph_edit.cpp:2786-2792)', () => {
-  it('is 0.65 by default — the constructor\'s own modulate alpha (graph_edit.cpp:3327)', () => {
+  it("is 0.65 by default — the constructor's own modulate alpha (graph_edit.cpp:3327)", () => {
     expect(minimapOpacity(props())).toBe(GRAPH_EDIT_MINIMAP_DEFAULT_OPACITY);
     expect(GRAPH_EDIT_MINIMAP_DEFAULT_OPACITY).toBe(0.65);
   });
@@ -59,7 +59,7 @@ describe('minimapRect (graph_edit.cpp:2770-2780)', () => {
     expect(minimapRect({ x: 400, y: 320 }, props())).toEqual({ x: 148, y: 148, w: 240, h: 160 });
   });
 
-  it('floors each axis at the minimap\'s own custom_minimum_size of 50 (graph_edit.cpp:3332)', () => {
+  it("floors each axis at the minimap's own custom_minimum_size of 50 (graph_edit.cpp:3332)", () => {
     // `set_size(30, 200)` is raised to (50, 200) by Control::set_size
     // (control.cpp:1496-1503) before the offsets are read back (:2772).
     expect(minimapRect({ x: 400, y: 320 }, props({ minimapSize: { x: 30, y: 200 } }))).toEqual({
@@ -75,22 +75,20 @@ describe('graphScrollBounds (graph_edit.cpp:472-493)', () => {
   it('merges each element rect into a DEFAULT Rect2, so the graph origin is always inside', () => {
     // Rect2().merge(Rect2(40,56,120,64)) = Rect2(0,0,160,120) (rect2.h:165-180),
     // then position -= size, size += size*2 with size = (400,320).
-    const bounds = graphScrollBounds(
-      [{ positionOffset: { x: 40, y: 56 }, size: { x: 120, y: 64 } }],
-      1,
-      { x: 400, y: 320 }
-    );
+    const bounds = graphScrollBounds([{ positionOffset: { x: 40, y: 56 }, size: { x: 120, y: 64 } }], 1, {
+      x: 400,
+      y: 320,
+    });
     expect(bounds.min).toEqual({ x: -400, y: -320 });
     expect(bounds.max).toEqual({ x: 560, y: 440 });
   });
 
   it('scales each element rect by zoom before merging', () => {
     // Rect2(80,112,240,128) at zoom 2 -> merged (0,0,320,240); ±size (400,320).
-    const bounds = graphScrollBounds(
-      [{ positionOffset: { x: 40, y: 56 }, size: { x: 120, y: 64 } }],
-      2,
-      { x: 400, y: 320 }
-    );
+    const bounds = graphScrollBounds([{ positionOffset: { x: 40, y: 56 }, size: { x: 120, y: 64 } }], 2, {
+      x: 400,
+      y: 320,
+    });
     expect(bounds.min).toEqual({ x: -400, y: -320 });
     expect(bounds.max).toEqual({ x: 720, y: 560 });
   });
@@ -171,7 +169,12 @@ describe('graphEditElements', () => {
     return {
       ...emptySolveNode(),
       path: 'G',
-      node: { name: 'G', type: 'GraphEdit', children: [], properties: { name: 'G', connections: [] } as never },
+      node: {
+        name: 'G',
+        type: 'GraphEdit',
+        children: [],
+        properties: { name: 'G', connections: [] } as never,
+      },
       children,
     };
   }

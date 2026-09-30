@@ -20,10 +20,7 @@ import {
   useAnimationTransport,
   type AnimationTransport,
 } from '../../../r3f/contexts/AnimationTransportContext';
-import {
-  useOptionalSelection,
-  type SelectionContextValue,
-} from '../../../r3f/contexts/SelectionContext';
+import { useOptionalSelection, type SelectionContextValue } from '../../../r3f/contexts/SelectionContext';
 import { AnimationDriverProvider } from '../../../r3f/contexts/AnimationDriverContext';
 
 import '../../../r3f/nodes/index';
@@ -84,7 +81,8 @@ async function mountFixture(file: string, options: MountOptions = {}) {
 
 /** The Mesh node's own group: the first object named after it. */
 function meshY(renderer: Awaited<ReturnType<typeof mountFixture>>): number {
-  let root = (renderer.scene as unknown as { children: Array<{ instance: THREE.Object3D }> }).children[0]!.instance;
+  let root = (renderer.scene as unknown as { children: Array<{ instance: THREE.Object3D }> }).children[0]!
+    .instance;
   while (root.parent) root = root.parent;
   const mesh = root.getObjectByName('Mesh');
   if (!mesh) throw new Error('the Mesh node mounted nothing');
@@ -155,7 +153,10 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
   /** The state-machine fixture with its Mesh moved into a sub-scene instance, `Holder`. */
   function heldMeshScene(): TscnScene {
     const source = readFileSync(resolve(fixturesDir(), 'unit-animation-tree-state-machine.tscn'), 'utf8')
-      .replace(/^(\[gd_scene[^\n]*\]\n)/, '$1\n[ext_resource type="PackedScene" path="res://holder.tscn" id="1_holder"]\n')
+      .replace(
+        /^(\[gd_scene[^\n]*\]\n)/,
+        '$1\n[ext_resource type="PackedScene" path="res://holder.tscn" id="1_holder"]\n'
+      )
       .replaceAll('NodePath("Mesh:', 'NodePath("Holder/Mesh:')
       .replace(
         /\[node name="Mesh" type="MeshInstance3D" parent="\."\]\n[^[]*/,

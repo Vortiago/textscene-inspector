@@ -55,7 +55,12 @@ export interface FitLineResult {
  * `adv_remain` whole-pixel carry (`:5662-5671`) is not ported: `gl.advance = new_advance` runs
  * before `adv_remain += (new_advance - gl.advance)`, so the carry is always zero.
  */
-export function fitLineToWidth(line: TextLineLayout, widthPx: number, flags: JustificationFlag, options: FitLineOptions): FitLineResult {
+export function fitLineToWidth(
+  line: TextLineLayout,
+  widthPx: number,
+  flags: JustificationFlag,
+  options: FitLineOptions
+): FitLineResult {
   const glyphs = line.glyphs;
   if (glyphs.length === 0) return { line, fitWidthMinimumReached: false };
 

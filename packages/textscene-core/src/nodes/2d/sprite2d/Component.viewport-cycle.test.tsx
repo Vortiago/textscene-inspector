@@ -55,10 +55,7 @@ function spriteNode(): TscnNode {
 /** Publishes an entry at `path`, so the test can prove a cyclic target's stale texture is never sampled. */
 function Publisher({ path, texture }: { path: string; texture: THREE.Texture }) {
   const register = useRegisterViewportTexture();
-  useEffect(
-    () => register(path, { texture, size: { x: 64, y: 64 } }),
-    [register, path, texture]
-  );
+  useEffect(() => register(path, { texture, size: { x: 64, y: 64 } }), [register, path, texture]);
   return null;
 }
 
@@ -66,10 +63,7 @@ function Publisher({ path, texture }: { path: string; texture: THREE.Texture }) 
 function CyclicRegistration() {
   const register = useRegisterViewportPass();
   useEffect(() => register('Root/Other', { dependsOn: ['Root/SubViewport'], render: () => {} }), [register]);
-  useEffect(
-    () => register('Root/SubViewport', { dependsOn: ['Root/Other'], render: () => {} }),
-    [register]
-  );
+  useEffect(() => register('Root/SubViewport', { dependsOn: ['Root/Other'], render: () => {} }), [register]);
   return null;
 }
 
@@ -95,7 +89,7 @@ async function renderCyclicSprite() {
 }
 
 describe('<Sprite2D> ViewportTexture cycle fallback', () => {
-  it('never samples the cyclic target\'s published-but-unwritten texture', async () => {
+  it("never samples the cyclic target's published-but-unwritten texture", async () => {
     const { renderer, publishedTexture } = await renderCyclicSprite();
     const sampling = renderer.scene
       .findAll(() => true)

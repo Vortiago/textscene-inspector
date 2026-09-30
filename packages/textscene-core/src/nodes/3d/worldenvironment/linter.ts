@@ -80,9 +80,10 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
     // group. That scoping is not modelled.
     const first = firstNodeOfType(scene.nodes, 'WorldEnvironment', (n) => declaresSlot(n, key));
     if (node === first) continue;
-    const winningId = first && isValidProperties(first.properties)
-      ? resourceRefId(heldResource(first.properties[key]))
-      : undefined;
+    const winningId =
+      first && isValidProperties(first.properties)
+        ? resourceRefId(heldResource(first.properties[key]))
+        : undefined;
     // `!=` on a `Ref` is instance identity: two nodes naming one `ExtResource` share an instance,
     // and `SubResource("e")` is `SubResource( "e" )`, so compare resource ids, not the raw text.
     if (resourceRefId(held) === winningId) continue;
@@ -101,11 +102,16 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
 const worldEnvironmentValidationRule: LintRule = {
   meta: {
     name: 'valid-worldenvironment',
-    description: 'Validates WorldEnvironment resource presence and which WorldEnvironment wins each first-wins group',
+    description:
+      'Validates WorldEnvironment resource presence and which WorldEnvironment wins each first-wins group',
     category: 'validation',
     applicableNodeTypes: ['WorldEnvironment'],
     emits: [
-      { ruleName: 'worldenvironment-requires-environment', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'worldenvironment-requires-environment',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
       {
         ruleName: 'single-worldenvironment',
         severity: 'warning',

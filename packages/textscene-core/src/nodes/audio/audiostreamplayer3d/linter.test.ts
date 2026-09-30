@@ -205,7 +205,7 @@ describe('AudioStreamPlayer3D Linter', () => {
           prop: 'area_mask',
           valid: [0, 1, 100, 1048575, 2000000, 2147483648, 4294967295],
           invalid: [
-{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
+            { value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
           ],
         },
         {
@@ -345,7 +345,7 @@ describe('AudioStreamPlayer3D Linter', () => {
       });
 
       it.each([0.01, 0.3, 1.2, 3.0])('says nothing about pitch_scale %s', (pitchScale) => {
-        const pitchWarning = lint(withStream({ pitch_scale: pitchScale })).find(d =>
+        const pitchWarning = lint(withStream({ pitch_scale: pitchScale })).find((d) =>
           d.message.includes('pitch_scale')
         );
         expect(pitchWarning).toBeUndefined();
@@ -386,8 +386,10 @@ describe('AudioStreamPlayer3D Linter', () => {
       // pitch_scale and max_polyphony are refused by the engine, so they error;
       // unit_size = -5 only warns (audio_stream_player_3d.cpp:569 is a bare
       // assignment).
-      expect(diagnostics.some(d => d.severity === 'error' && d.message.includes('pitch_scale'))).toBe(true);
-      expect(diagnostics.some(d => d.severity === 'error' && d.message.includes('max_polyphony'))).toBe(true);
+      expect(diagnostics.some((d) => d.severity === 'error' && d.message.includes('pitch_scale'))).toBe(true);
+      expect(diagnostics.some((d) => d.severity === 'error' && d.message.includes('max_polyphony'))).toBe(
+        true
+      );
       expectNoErrors(content, { prop: 'unit_size' });
     });
 
@@ -406,7 +408,7 @@ describe('AudioStreamPlayer3D Linter', () => {
       const diagnostics = lint(withStream({ volume_db: -90, pitch_scale: 0.005 }));
       // Both sit below their hints.
       expect(diagnostics).toHaveLength(2);
-      expect(diagnostics.every(d => d.severity === 'warning')).toBe(true);
+      expect(diagnostics.every((d) => d.severity === 'warning')).toBe(true);
     });
 
     it('should handle SubResource references', () => {
@@ -432,12 +434,12 @@ describe('AudioStreamPlayer3D Linter', () => {
       );
       // volume_db's and pitch_scale's warnings are their validators', so both
       // arrive as `strict-parser`.
-      expect(diagnostics.map(d => d.ruleName).sort()).toEqual([
+      expect(diagnostics.map((d) => d.ruleName).sort()).toEqual([
         'audiostreamplayer3d-emission-angle-not-enabled',
         'strict-parser',
         'strict-parser',
       ]);
-      expect(diagnostics.every(d => d.severity !== 'error')).toBe(true);
+      expect(diagnostics.every((d) => d.severity !== 'error')).toBe(true);
     });
   });
 });

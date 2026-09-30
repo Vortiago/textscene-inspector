@@ -129,7 +129,9 @@ export function radialFillGeometry(
 ): RadialFillGeometry | null {
   const direction = mode === FILL_COUNTER_CLOCKWISE ? -1 : 1;
   const start =
-    mode === FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE ? radInitAngleDegrees / 360 - val / 2 : radInitAngleDegrees / 360;
+    mode === FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE
+      ? radInitAngleDegrees / 360 - val / 2
+      : radInitAngleDegrees / 360;
   const end = start + direction * val;
   const from = Math.min(start, end);
   const to = Math.max(start, end);

@@ -95,12 +95,21 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
 const gpuParticles3DValidationRule: LintRule = {
   meta: {
     name: 'valid-gpuparticles3d-resources',
-    description: 'Validates GPUParticles3D process material and draw-pass mesh presence, and sub-emitter paths',
+    description:
+      'Validates GPUParticles3D process material and draw-pass mesh presence, and sub-emitter paths',
     category: 'validation',
     applicableNodeTypes: ['GPUParticles3D'],
     emits: [
-      { ruleName: 'gpuparticles3d-missing-process-material', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      { ruleName: 'gpuparticles3d-no-draw-pass-mesh', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'gpuparticles3d-missing-process-material',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
+      {
+        ruleName: 'gpuparticles3d-no-draw-pass-mesh',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
       {
         ruleName: 'valid-gpuparticles3d-sub-emitter',
         severity: 'info',

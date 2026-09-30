@@ -31,7 +31,14 @@ function toStrokeColor(c: ControlColor): RGBA {
   return { r: c.r, g: c.g, b: c.b, a: c.a };
 }
 
-export function ConnectionLine({ connection, curvature, lineWidth, rimColor, tintOwn, renderOrder }: ConnectionLineProps) {
+export function ConnectionLine({
+  connection,
+  curvature,
+  lineWidth,
+  rimColor,
+  tintOwn,
+  renderOrder,
+}: ConnectionLineProps) {
   // A raw mesh, so it applies the clip planes itself (`nativeClipCoverage.test.tsx`).
   const clippingPlanes = useControlClipPlanes();
   const geometry = useMemo(() => {

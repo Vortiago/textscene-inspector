@@ -69,12 +69,22 @@ validatorRegistry.registerAll('ReflectionProbe', {
 
   // reflection_probe.cpp:269/270, PROPERTY_HINT_LAYERS_3D_RENDER: a 32-checkbox widget,
   // not a range. set_cull_mask and set_reflection_mask (:169-185) are bare assignments.
-  cull_mask: layerBitmask('cull_mask', { hinted: 'reflection_probe.cpp:269', width: 'uint32' /* reflection_probe.h:117 */ }),
-  reflection_mask: layerBitmask('reflection_mask', { hinted: 'reflection_probe.cpp:270', width: 'uint32' /* reflection_probe.h:120 */ }),
+  cull_mask: layerBitmask('cull_mask', {
+    hinted: 'reflection_probe.cpp:269',
+    width: 'uint32' /* reflection_probe.h:117 */,
+  }),
+  reflection_mask: layerBitmask('reflection_mask', {
+    hinted: 'reflection_probe.cpp:270',
+    width: 'uint32' /* reflection_probe.h:120 */,
+  }),
 
   // reflection_probe.cpp:271, PROPERTY_HINT_RANGE "0,1024,0.1". set_mesh_lod_threshold
   // (:90-93) is a bare assignment, so both ends are hinted only.
-  mesh_lod_threshold: v.float('mesh_lod_threshold', { min: 0, max: 1024, hinted: 'reflection_probe.cpp:271' }),
+  mesh_lod_threshold: v.float('mesh_lod_threshold', {
+    min: 0,
+    max: 1024,
+    hinted: 'reflection_probe.cpp:271',
+  }),
 
   // reflection_probe.cpp:274, PROPERTY_HINT_ENUM. set_ambient_mode (:52-56) stores the
   // value unchecked, so out-of-range warns.
@@ -87,5 +97,9 @@ validatorRegistry.registerAll('ReflectionProbe', {
   // reflection_probe.cpp:276, PROPERTY_HINT_RANGE "0,16,0.01".
   // set_ambient_color_energy (:67-70) is a bare assignment, so both ends are
   // hinted only.
-  ambient_color_energy: v.float('ambient_color_energy', { min: 0, max: 16, hinted: 'reflection_probe.cpp:276' }),
+  ambient_color_energy: v.float('ambient_color_energy', {
+    min: 0,
+    max: 16,
+    hinted: 'reflection_probe.cpp:276',
+  }),
 });

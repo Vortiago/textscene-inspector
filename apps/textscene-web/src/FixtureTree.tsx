@@ -62,16 +62,7 @@ interface BranchProps {
   onSelect: (file: string) => void;
 }
 
-function Branch({
-  node,
-  path,
-  depth,
-  expanded,
-  searching,
-  selectedFile,
-  onToggle,
-  onSelect,
-}: BranchProps) {
+function Branch({ node, path, depth, expanded, searching, selectedFile, onToggle, onSelect }: BranchProps) {
   const isOpen = searching || expanded.has(path);
   return (
     <li role="treeitem" aria-expanded={isOpen}>

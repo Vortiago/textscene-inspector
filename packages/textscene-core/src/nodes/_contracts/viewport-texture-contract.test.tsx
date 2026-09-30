@@ -27,14 +27,17 @@ function entry(): ViewportTextureEntry {
 /** Publishes `value` at `path` for as long as it is mounted. */
 function Publisher({ path, value }: { path: string; value: ViewportTextureEntry }) {
   const registerViewportTexture = useRegisterViewportTexture();
-  useEffect(
-    () => registerViewportTexture(path, value),
-    [registerViewportTexture, path, value]
-  );
+  useEffect(() => registerViewportTexture(path, value), [registerViewportTexture, path, value]);
   return null;
 }
 
-function Consumer({ path, onResolve }: { path: string; onResolve: (e: ViewportTextureEntry | null) => void }) {
+function Consumer({
+  path,
+  onResolve,
+}: {
+  path: string;
+  onResolve: (e: ViewportTextureEntry | null) => void;
+}) {
   const resolved = useViewportTexture(path);
   onResolve(resolved);
   return null;

@@ -31,9 +31,7 @@ describe('a boolean slot given a number', () => {
 
 describe('a numeric slot given a boolean', () => {
   it('reads it as 1/0 rather than reporting a format error', () => {
-    expect(v.int('hframes', { min: 1, max: 16384 })('hframes', 'true', 1)?.severity).not.toBe(
-      'error'
-    );
+    expect(v.int('hframes', { min: 1, max: 16384 })('hframes', 'true', 1)?.severity).not.toBe('error');
     expect(v.float('rotation')('rotation', 'false', 1)?.severity).not.toBe('error');
   });
 
@@ -41,9 +39,7 @@ describe('a numeric slot given a boolean', () => {
     // `false` reads as 0, which is below this slot's floor, so the bound still
     // decides, exactly as it would for a written `0`.
     const bounded = v.int('hframes', { min: 1, max: 16384 });
-    expect(bounded('hframes', 'false', 1)?.severity).toBe(
-      bounded('hframes', '0', 1)?.severity
-    );
+    expect(bounded('hframes', 'false', 1)?.severity).toBe(bounded('hframes', '0', 1)?.severity);
   });
 });
 
@@ -62,7 +58,13 @@ describe('every int reader, given a boolean', () => {
   // in nothing but the conversion: `positiveInt` refuses the 0 that `false`
   // reads as, and bit 1 is outside the trim mask.
   const readers: readonly Reader[] = [
-    ['enum', v.enumInt('cast_shadow', 0, 3, { 0: 'OFF', 1: 'ON', 2: 'DOUBLE', 3: 'SHADOWS' }), 'cast_shadow', 'true', '1'],
+    [
+      'enum',
+      v.enumInt('cast_shadow', 0, 3, { 0: 'OFF', 1: 'ON', 2: 'DOUBLE', 3: 'SHADOWS' }),
+      'cast_shadow',
+      'true',
+      '1',
+    ],
     ['positive-int', v.positiveInt('columns'), 'columns', 'true', '1'],
     ['strictInt', v.strictInt('frame'), 'frame', 'true', '1'],
     ['lenientInt', v.lenientInt('frame'), 'frame', 'true', '1'],

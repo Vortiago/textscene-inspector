@@ -51,12 +51,7 @@ export function readInt(block: string, key: string): number {
  * Undefined when absent, short or unparseable, so the surface degrades rather
  * than decoding against a partly-read scale.
  */
-function readFloatTuple(
-  block: string,
-  key: string,
-  type: string,
-  count: number
-): number[] | undefined {
+function readFloatTuple(block: string, key: string, type: string, count: number): number[] | undefined {
   const match = dictCallField(key, type).exec(block);
   if (!match) return undefined;
   // `parseGodotFloat`, not `Number`: the latter reads `0x10` as 16 and an empty

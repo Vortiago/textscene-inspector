@@ -13,8 +13,7 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
   // What an area pair does with the two monitor flags: detection needs the
   // monitoring side's callback and the detected side's `monitorable`. Each
   // dimension has its own copy of the pair, so one literal cannot serve both.
-  const monitorFlagsCite =
-    dim === '2D' ? 'godot_area_pair_2d.cpp:134' : 'godot_area_pair_3d.cpp:135';
+  const monitorFlagsCite = dim === '2D' ? 'godot_area_pair_2d.cpp:134' : 'godot_area_pair_3d.cpp:135';
   // The mask test that decides whether an area sees a body at all:
   // `area->collides_with(body)`, the body's collision_layer against the area's
   // collision_mask. Jolt states the same rule at jolt_area_3d.cpp:451.

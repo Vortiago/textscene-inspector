@@ -262,9 +262,7 @@ describe('log adapter', () => {
     captured.logAdapter?.[level]('hello', 1, { two: 2 });
 
     const logMessages = postedMessages(vscodeApi).filter((m) => m.type === 'log');
-    expect(logMessages).toEqual([
-      { type: 'log', level, message: 'hello', args: [1, { two: 2 }] },
-    ]);
+    expect(logMessages).toEqual([{ type: 'log', level, message: 'hello', args: [1, { two: 2 }] }]);
   });
 });
 

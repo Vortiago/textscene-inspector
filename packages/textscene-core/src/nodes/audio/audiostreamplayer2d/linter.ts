@@ -17,7 +17,6 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-
   if (!isValidProperties(node.properties)) {
     return diagnostics;
   }

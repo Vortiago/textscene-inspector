@@ -67,9 +67,7 @@ export const REQUIRED_BUILD_OUTPUTS = ['dist/extension.js', 'dist/webview/webvie
 export function assertExtensionBuilt() {
   for (const built of REQUIRED_BUILD_OUTPUTS) {
     if (!existsSync(path.join(EXTENSION_DIR, built))) {
-      throw new Error(
-        `Missing ${built}. Run \`pnpm --filter textscene-inspector build\` first.`
-      );
+      throw new Error(`Missing ${built}. Run \`pnpm --filter textscene-inspector build\` first.`);
     }
   }
 }
@@ -116,9 +114,7 @@ function launchVscode({ binary, scene, workspace, userDataDir, port, headed, ver
   // GL needs 24-bit depth. The geometry also sizes the VS Code window and every
   // screenshot. `--server-args=` is one argv element with no shell, so its
   // spaces are safe.
-  const args = useXvfb
-    ? ['-a', '--server-args=-screen 0 1920x1080x24', binary, ...codeArgs]
-    : codeArgs;
+  const args = useXvfb ? ['-a', '--server-args=-screen 0 1920x1080x24', binary, ...codeArgs] : codeArgs;
 
   const child = spawn(command, args, {
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -499,9 +495,7 @@ export async function driveScene(options) {
           blockedURI: event.blockedURI,
           source: event.sourceFile,
         });
-        console.error(
-          `[csp-violation] ${event.effectiveDirective} blocked ${event.blockedURI}`
-        );
+        console.error(`[csp-violation] ${event.effectiveDirective} blocked ${event.blockedURI}`);
       });
     }, preserveBuffer);
     report.preserveDrawingBuffer = preserveBuffer;
@@ -644,12 +638,8 @@ export function summarizeWebview(report) {
   return {
     cspViolations: report.cspViolations.filter((entry) => entry.origin === 'webview'),
     failedRequests: report.failedRequests.filter((entry) => entry.origin === 'webview'),
-    consoleErrors: report.console.filter(
-      (entry) => entry.origin === 'webview' && entry.type === 'error'
-    ),
+    consoleErrors: report.console.filter((entry) => entry.origin === 'webview' && entry.type === 'error'),
     requestHosts: report.requestHosts.webview,
-    offendingHosts: Object.keys(report.requestHosts.webview).filter(
-      (key) => !isOfflineWebviewOrigin(key)
-    ),
+    offendingHosts: Object.keys(report.requestHosts.webview).filter((key) => !isOfflineWebviewOrigin(key)),
   };
 }

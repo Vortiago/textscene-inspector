@@ -27,9 +27,7 @@ export async function cropFrames(framesDir, { x, y, w, h }) {
 }
 
 export async function encodeGif(framesDir, outPath) {
-  const files = (await readdir(framesDir))
-    .filter((f) => /^frame_\d+\.png$/.test(f))
-    .sort();
+  const files = (await readdir(framesDir)).filter((f) => /^frame_\d+\.png$/.test(f)).sort();
   const gif = GIFEncoder();
   for (const f of files) {
     const png = PNG.sync.read(readFileSync(join(framesDir, f)));

@@ -169,8 +169,7 @@ describe('Godot indexed-key grammar', () => {
    */
   it('the key-grammar extractor recognises a key, and leaves a value grammar alone', () => {
     expect(handRolledKeyGrammar(String.raw`const RE = /^layer_(\d+)\/(.+)$/;`)).not.toBeNull();
-    expect(handRolledKeyGrammar(String.raw`const RE = new RegExp('^item/(\\d+)/name$');`)).not
-      .toBeNull();
+    expect(handRolledKeyGrammar(String.raw`const RE = new RegExp('^item/(\\d+)/name$');`)).not.toBeNull();
     expect(handRolledKeyGrammar(String.raw`const RE = /^\d+$/;`)).toBeNull();
     expect(handRolledKeyGrammar(String.raw`const RE = /\.(cpp|h|glsl):\d+/;`)).toBeNull();
   });
@@ -182,10 +181,8 @@ describe('Godot indexed-key grammar', () => {
    * composed shape, and this says so first.
    */
   it('recognises a wildcard index segment, and leaves a generic path helper alone', () => {
-    expect(handRolledKeyGrammar(String.raw`const RE = /^settings\/([^/]+)\/joints\/(.+)$/;`))
-      .not.toBeNull();
-    expect(handRolledKeyGrammar(String.raw`const RE = new RegExp('^item/([^/]+)/name$');`)).not
-      .toBeNull();
+    expect(handRolledKeyGrammar(String.raw`const RE = /^settings\/([^/]+)\/joints\/(.+)$/;`)).not.toBeNull();
+    expect(handRolledKeyGrammar(String.raw`const RE = new RegExp('^item/([^/]+)/name$');`)).not.toBeNull();
     // Names no family segment: a first-segment stripper, not an index grammar.
     expect(handRolledKeyGrammar(String.raw`const RE = /^[^/]+\//;`)).toBeNull();
     // The composed spelling this guard wants, exactly as a slice writes it.
@@ -221,9 +218,7 @@ describe('Godot indexed-key grammar', () => {
     expect(readsIndexRaw(`${shape}const index = parseInt(match[1], 10);`)).toBe(true);
     expect(readsIndexRaw(`${shape}const index = stringToInt(match[1]!);`)).toBe(false);
     // A comment naming the reader is not a call to it.
-    expect(readsIndexRaw(`${shape}// never Number(match[1])\nconst i = stringToInt(t);`)).toBe(
-      false
-    );
+    expect(readsIndexRaw(`${shape}// never Number(match[1])\nconst i = stringToInt(t);`)).toBe(false);
   });
 
   /**

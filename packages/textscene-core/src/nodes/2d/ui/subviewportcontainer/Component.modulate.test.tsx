@@ -80,11 +80,16 @@ describe('<SubViewportContainer> modulate / self_modulate', () => {
     const root: SolveNode = {
       ...solveNode(),
       path: 'Booth',
-      node: node('Booth', 'SubViewportContainer', {
-        anchorsPreset: 15,
-        modulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 },
-        selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 },
-      }, [node('View', 'SubViewport', { size: { x: 200, y: 150 }, transparent_bg: false })]),
+      node: node(
+        'Booth',
+        'SubViewportContainer',
+        {
+          anchorsPreset: 15,
+          modulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 },
+          selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 },
+        },
+        [node('View', 'SubViewport', { size: { x: 200, y: 150 }, transparent_bg: false })]
+      ),
     };
 
     const renderer = await ReactThreeTestRenderer.create(

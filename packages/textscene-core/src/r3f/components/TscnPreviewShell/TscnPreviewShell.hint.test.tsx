@@ -66,9 +66,7 @@ describe('<TscnPreviewShell> 2D discoverability hint (ADR-0006)', () => {
     render(<TscnPreviewShell panelId="hint-d" content={MIXED_HUD_SCENE} />);
     const hint = await screen.findByRole('button', { name: /switch to 2D/i });
     fireEvent.click(hint);
-    await waitFor(() =>
-      expect(screen.queryByRole('button', { name: /switch to 2D/i })).toBeNull()
-    );
+    await waitFor(() => expect(screen.queryByRole('button', { name: /switch to 2D/i })).toBeNull());
     expect(screen.getByTestId('canvas-2d')).toBeTruthy();
   });
 

@@ -25,15 +25,27 @@ export function killStaleHost(udMarker) {
     // List first, then signal from node: `pkill -f <marker>` would match its own shell, whose
     // command line holds the marker, and kill the caller. By the signal, that shell has exited
     // and its pid fails with ESRCH.
-    const matched = execSync(`pgrep -f -- ${JSON.stringify(udMarker)} || true`, { stdio: ['ignore', 'pipe', 'ignore'] })
-      .toString().trim().split('\n').filter(Boolean).map(Number);
+    const matched = execSync(`pgrep -f -- ${JSON.stringify(udMarker)} || true`, {
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+      .toString()
+      .trim()
+      .split('\n')
+      .filter(Boolean)
+      .map(Number);
     for (const pid of matched) {
       if (pid === process.pid || pid === process.ppid) continue;
       // SIGKILL, like the Windows -Force above: the dev-host's Electron main catches SIGTERM and
       // shuts down slowly under xvfb, so a plain signal leaks orphans.
-      try { process.kill(pid, 'SIGKILL'); } catch { /* already gone */ }
+      try {
+        process.kill(pid, 'SIGKILL');
+      } catch {
+        /* already gone */
+      }
     }
-  } catch { /* nothing matched */ }
+  } catch {
+    /* nothing matched */
+  }
 }
 
 /**
@@ -45,8 +57,12 @@ export function killPortOrphan(port) {
   if (IS_WIN) return; // No /proc to confirm the re-parenting on.
   let holders;
   try {
-    holders = execSync(`ss -ltnpH 'sport = :${port}' 2>/dev/null || true`, { stdio: ['ignore', 'pipe', 'ignore'] }).toString();
-  } catch { return; }
+    holders = execSync(`ss -ltnpH 'sport = :${port}' 2>/dev/null || true`, {
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).toString();
+  } catch {
+    return;
+  }
   for (const [, pid] of holders.matchAll(/pid=(\d+)/g)) {
     try {
       const status = readFileSync(`/proc/${pid}/status`, 'utf8');
@@ -54,7 +70,9 @@ export function killPortOrphan(port) {
       const name = /^Name:\s*(.+)$/m.exec(status)?.[1] ?? '?';
       console.log(`[vscode] freeing port ${port} from orphaned ${name} (pid ${pid})`);
       process.kill(Number(pid), 'SIGKILL');
-    } catch { /* gone, or not ours to read */ }
+    } catch {
+      /* gone, or not ours to read */
+    }
   }
 }
 
@@ -76,13 +94,20 @@ export function killProcessTree(proc) {
     // which has no user-data-dir marker, and xvfb-run's cleanup trap does not fire on a killed parent.
     if (IS_WIN) proc.kill();
     else if (proc.pid) process.kill(-proc.pid, 'SIGKILL'); // No pid means the launch never started.
-  } catch { /* already gone */ }
+  } catch {
+    /* already gone */
+  }
 }
 
 /** Remove the throwaway user-data-dir, retrying while a dying host still holds a lock. */
 export async function rmRetry(dir) {
   for (let i = 0; i < 12; i++) {
-    try { rmSync(dir, { recursive: true, force: true }); return; } catch { /* Locked: the host is dying */ }
+    try {
+      rmSync(dir, { recursive: true, force: true });
+      return;
+    } catch {
+      /* Locked: the host is dying */
+    }
     await sleep(500);
   }
 }
@@ -118,9 +143,14 @@ function cachedVscode() {
 function codeOnPath() {
   try {
     const probe = IS_WIN ? 'where code.exe 2>NUL & where code.cmd 2>NUL' : 'command -v code';
-    const out = execSync(probe, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim().split(/\r?\n/)[0];
+    const out = execSync(probe, { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim()
+      .split(/\r?\n/)[0];
     return out || null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 /** Resolves a VS Code binary: $VSCODE_BIN, then PATH (not headless), the shared cache, a download. */
@@ -141,7 +171,12 @@ async function resolveVscodeBin() {
 
 export async function waitCDP() {
   for (let i = 0; i < 90; i++) {
-    try { const r = await fetch(`http://localhost:${PORT}/json/version`); if (r.ok) return; } catch { /* not up yet */ }
+    try {
+      const r = await fetch(`http://localhost:${PORT}/json/version`);
+      if (r.ok) return;
+    } catch {
+      /* not up yet */
+    }
     await sleep(1000);
   }
   throw new Error('CDP never came up');
@@ -153,8 +188,11 @@ function buildLaunchCommand(bin, viaPath) {
     `--extensionDevelopmentPath=${EXT}`,
     `--user-data-dir=${UD}`,
     `--remote-debugging-port=${PORT}`,
-    '--new-window', '--disable-workspace-trust', '--disable-updates',
-    '--skip-welcome', '--skip-release-notes',
+    '--new-window',
+    '--disable-workspace-trust',
+    '--disable-updates',
+    '--skip-welcome',
+    '--skip-release-notes',
   ];
   if (IS_LINUX) {
     // The cached chrome-sandbox is not setuid, so @vscode/test-electron passes these sandbox flags

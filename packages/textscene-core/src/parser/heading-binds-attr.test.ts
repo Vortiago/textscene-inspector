@@ -12,32 +12,20 @@ describe('parseHeading captures the space-after-= binds attribute', () => {
   it('captures binds as Godot writes it', () => {
     // scene/resources/resource_format_text.cpp: f->store_string(" binds= " + vars)
     const result = parseHeading(
-      '[connection signal="ready" from="Child" to="." method="_on_my_sig" binds= [7, "hi"]]',
+      '[connection signal="ready" from="Child" to="." method="_on_my_sig" binds= [7, "hi"]]'
     );
     expect(result).not.toBeNull();
     expect(result!.attributes.binds).toBe('[7, "hi"]');
-    expect(Object.keys(result!.attributes).sort()).toEqual([
-      'binds',
-      'from',
-      'method',
-      'signal',
-      'to',
-    ]);
+    expect(Object.keys(result!.attributes).sort()).toEqual(['binds', 'from', 'method', 'signal', 'to']);
   });
 
   it('does not let a bind element containing "=" fabricate a key', () => {
     const result = parseHeading(
-      '[connection signal="pressed" from="B" to="." method="_on_p" binds= ["x=1"]]',
+      '[connection signal="pressed" from="B" to="." method="_on_p" binds= ["x=1"]]'
     );
     expect(result).not.toBeNull();
     expect(result!.attributes.binds).toBe('["x=1"]');
-    expect(Object.keys(result!.attributes).sort()).toEqual([
-      'binds',
-      'from',
-      'method',
-      'signal',
-      'to',
-    ]);
+    expect(Object.keys(result!.attributes).sort()).toEqual(['binds', 'from', 'method', 'signal', 'to']);
   });
 
   it('keeps a following attribute separate from the bracketed value', () => {

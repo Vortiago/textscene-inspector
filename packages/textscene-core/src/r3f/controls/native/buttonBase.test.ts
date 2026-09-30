@@ -55,7 +55,10 @@ describe('resolveButtonDrawState', () => {
 });
 
 describe('pickButtonStyleBox', () => {
-  const defaults = { normal: styleBox({ bgColor: { r: 1, g: 0, b: 0, a: 1 } }), disabled: styleBox({ bgColor: { r: 0, g: 1, b: 0, a: 1 } }) };
+  const defaults = {
+    normal: styleBox({ bgColor: { r: 1, g: 0, b: 0, a: 1 } }),
+    disabled: styleBox({ bgColor: { r: 0, g: 1, b: 0, a: 1 } }),
+  };
 
   it('prefers a resolved theme_override_styles entry over the default-theme struct', () => {
     const override = styleBox({ bgColor: { r: 0, g: 0, b: 1, a: 1 } });
@@ -72,15 +75,21 @@ describe('pickButtonStyleBox', () => {
   it('prefers the <state>_mirrored key under RTL', () => {
     const mirrored = styleBox({ bgColor: { r: 0, g: 0, b: 1, a: 1 } });
     const plain = styleBox({ bgColor: { r: 1, g: 1, b: 0, a: 1 } });
-    expect(pickButtonStyleBox({ normal: plain, normal_mirrored: mirrored }, defaults, 'normal', true)).toBe(mirrored);
+    expect(pickButtonStyleBox({ normal: plain, normal_mirrored: mirrored }, defaults, 'normal', true)).toBe(
+      mirrored
+    );
     expect(pickButtonStyleBox({ disabled_mirrored: mirrored }, defaults, 'disabled', true)).toBe(mirrored);
   });
 
   it('ignores the <state>_mirrored key under LTR', () => {
     const mirrored = styleBox({ bgColor: { r: 0, g: 0, b: 1, a: 1 } });
     const plain = styleBox({ bgColor: { r: 1, g: 1, b: 0, a: 1 } });
-    expect(pickButtonStyleBox({ normal: plain, normal_mirrored: mirrored }, defaults, 'normal', false)).toBe(plain);
-    expect(pickButtonStyleBox({ normal_mirrored: mirrored }, defaults, 'normal', false)).toBe(defaults.normal);
+    expect(pickButtonStyleBox({ normal: plain, normal_mirrored: mirrored }, defaults, 'normal', false)).toBe(
+      plain
+    );
+    expect(pickButtonStyleBox({ normal_mirrored: mirrored }, defaults, 'normal', false)).toBe(
+      defaults.normal
+    );
   });
 
   it('falls through to the plain key under RTL when nothing resolved a mirrored one', () => {
@@ -97,7 +106,10 @@ describe('tintStyleBox', () => {
   });
 
   it('multiplies BOTH bgColor and borderColor by the tint, in raw sRGB (no linear conversion here)', () => {
-    const box = styleBox({ bgColor: { r: 0.8, g: 0.4, b: 0.2, a: 1 }, borderColor: { r: 1, g: 1, b: 1, a: 1 } });
+    const box = styleBox({
+      bgColor: { r: 0.8, g: 0.4, b: 0.2, a: 1 },
+      borderColor: { r: 1, g: 1, b: 1, a: 1 },
+    });
     const tinted = tintStyleBox(box, { r: 0.5, g: 0.5, b: 0.5, a: 0.5 });
     expect(tinted.bgColor).toEqual({ r: 0.4, g: 0.2, b: 0.1, a: 0.5 });
     expect(tinted.borderColor).toEqual({ r: 0.5, g: 0.5, b: 0.5, a: 0.5 });
@@ -278,14 +290,20 @@ describe('layoutButtonContent — vertical_icon_alignment', () => {
   };
 
   it('TOP: icon sits at the style margin; text is pushed down by the reserved icon height', () => {
-    const { icon, text } = layoutButtonContent({ ...WITH_ICON, verticalIconAlignment: VERTICAL_ALIGNMENT_TOP });
+    const { icon, text } = layoutButtonContent({
+      ...WITH_ICON,
+      verticalIconAlignment: VERTICAL_ALIGNMENT_TOP,
+    });
     expect(icon).toEqual({ rect: { x: 4, y: 4, w: 16, h: 16 } });
     // drawableHeight = 24-16=8; base y=(8-26)/2+4=-5; TOP adds (24-8)=16 -> 11; + origin.
     expect(text!.offset.y).toBeCloseTo(11, 10);
   });
 
   it('BOTTOM: icon sits flush at the bottom; text does NOT get the extra TOP-only shift', () => {
-    const { icon, text } = layoutButtonContent({ ...WITH_ICON, verticalIconAlignment: VERTICAL_ALIGNMENT_BOTTOM });
+    const { icon, text } = layoutButtonContent({
+      ...WITH_ICON,
+      verticalIconAlignment: VERTICAL_ALIGNMENT_BOTTOM,
+    });
     expect(icon).toEqual({ rect: { x: 4, y: 12, w: 16, h: 16 } });
     // Same reduced drawableHeight (8) and base y (-5), but no TOP bonus shift.
     expect(text!.offset.y).toBeCloseTo(-5, 10);
@@ -366,12 +384,20 @@ describe('layoutButtonContent — RTL swaps the text alignment side', () => {
   });
 
   it('lays RIGHT-aligned text out flush at the style margin', () => {
-    const { text } = layoutButtonContent({ ...BASE_INPUT, rtl: true, textAlignment: HORIZONTAL_ALIGNMENT_RIGHT });
+    const { text } = layoutButtonContent({
+      ...BASE_INPUT,
+      rtl: true,
+      textAlignment: HORIZONTAL_ALIGNMENT_RIGHT,
+    });
     expect(text!.offset.x).toBe(4);
   });
 
   it('leaves CENTER-aligned text where LTR puts it', () => {
-    const { text } = layoutButtonContent({ ...BASE_INPUT, rtl: true, textAlignment: HORIZONTAL_ALIGNMENT_CENTER });
+    const { text } = layoutButtonContent({
+      ...BASE_INPUT,
+      rtl: true,
+      textAlignment: HORIZONTAL_ALIGNMENT_CENTER,
+    });
     expect(text!.offset.x).toBe(35);
   });
 });

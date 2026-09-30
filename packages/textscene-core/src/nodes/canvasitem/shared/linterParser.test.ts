@@ -32,22 +32,16 @@ const CANVAS_ITEM_KEYS = [
 
 describe('CanvasItem shared validators', () => {
   it('registers the whole set under the abstract CanvasItem key', () => {
-    expect(validatorRegistry.getOwnKeys('CanvasItem').sort()).toEqual(
-      [...CANVAS_ITEM_KEYS].sort()
-    );
+    expect(validatorRegistry.getOwnKeys('CanvasItem').sort()).toEqual([...CANVAS_ITEM_KEYS].sort());
   });
 
   it.each(['Node2D', 'Control'])('delivers every CanvasItem key to %s', (nodeType) => {
-    const missing = CANVAS_ITEM_KEYS.filter(
-      (key) => !validatorRegistry.findValidator(nodeType, key)
-    );
+    const missing = CANVAS_ITEM_KEYS.filter((key) => !validatorRegistry.findValidator(nodeType, key));
     expect(missing).toEqual([]);
   });
 
   it.each(['Sprite2D', 'Label'])('reaches the %s leaf through the base-walk', (nodeType) => {
-    const missing = CANVAS_ITEM_KEYS.filter(
-      (key) => !validatorRegistry.findValidator(nodeType, key)
-    );
+    const missing = CANVAS_ITEM_KEYS.filter((key) => !validatorRegistry.findValidator(nodeType, key));
     expect(missing).toEqual([]);
   });
 

@@ -124,14 +124,11 @@ describe('applyTextureState', () => {
       expect(applyTextureState(target.texture, state({}))).toBe(target.texture);
       // The same holds for the UV transform.
       expect(
-        applyTextureState(
-          target.texture,
-          state({ uv: { scale: { x: 4, y: 4 }, offset: { x: 0, y: 0 } } })
-        )
+        applyTextureState(target.texture, state({ uv: { scale: { x: 4, y: 4 }, offset: { x: 0, y: 0 } } }))
       ).toBe(target.texture);
     });
 
-    it('does not clone merely because the source diverges from Godot\'s default', () => {
+    it("does not clone merely because the source diverges from Godot's default", () => {
       // An unauthored `texture_filter` means "no opinion", not "force row 3".
       const texture = new THREE.Texture();
       texture.minFilter = THREE.LinearFilter;

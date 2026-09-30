@@ -33,7 +33,6 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-
   if (!isValidProperties(node.properties)) {
     return diagnostics;
   }
@@ -125,12 +124,21 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
 const pathFollow3DValidationRule: LintRule = {
   meta: {
     name: 'valid-pathfollow3d',
-    description: 'Validates PathFollow3D parent relationship, progress values, and rotation mode requirements',
+    description:
+      'Validates PathFollow3D parent relationship, progress values, and rotation mode requirements',
     category: 'validation',
     applicableNodeTypes: ['PathFollow3D'],
     emits: [
-      { ruleName: 'pathfollow3d-no-parent', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      { ruleName: 'pathfollow3d-invalid-parent', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'pathfollow3d-no-parent',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
+      {
+        ruleName: 'pathfollow3d-invalid-parent',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
       {
         ruleName: 'pathfollow3d-negative-progress',
         severity: 'info',
@@ -145,7 +153,11 @@ const pathFollow3DValidationRule: LintRule = {
         severity: 'error',
         grounding: { kind: 'engine', at: 'path_3d.cpp:503' },
       },
-      { ruleName: 'pathfollow3d-oriented-mode-requires-up-vector', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'pathfollow3d-oriented-mode-requires-up-vector',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
     ],
   },
   check: checkPathFollow3D,

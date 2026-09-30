@@ -7,10 +7,7 @@ import { parseNode } from '../../node/parser';
 import { parseOptionalBool, parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParsers';
 import type { TimerProperties } from './types';
 
-export function parseTimer(
-  heading: ParsedHeading,
-  properties: Record<string, string>
-): TimerProperties {
+export function parseTimer(heading: ParsedHeading, properties: Record<string, string>): TimerProperties {
   const baseProperties = parseNode(heading, properties);
   const result: TimerProperties = { ...baseProperties };
 

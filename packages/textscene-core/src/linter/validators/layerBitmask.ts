@@ -20,10 +20,7 @@ import type { PropertyValidator } from '../ValidatorRegistry.js';
  *   rides on it: it is what a reader checks the "32 layers" claim against.
  * @param width - the setter's C++ parameter type, cited per call site.
  */
-export function layerBitmask(
-  name: string,
-  opts: Grounding & { width: IntWidth }
-): PropertyValidator {
+export function layerBitmask(name: string, opts: Grounding & { width: IntWidth }): PropertyValidator {
   // The width is required, not inferred: `slotWidth` reads int32 for a slot with
   // no ceiling and would refuse `Camera3D.cull_mask = 3e9`. `set_visibility_layer`
   // takes `uint32_t` (`canvas_item.h:288`), as `set_layer_mask` does (`visual_instance_3d.h:72-73`),

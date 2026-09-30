@@ -66,7 +66,9 @@ describe('curve3d-loadable', () => {
   it('rejects a points array that is not a whole number of control points', () => {
     // Nine floats per point: in.xyz, out.xyz, position.xyz. Twelve are four vectors, a truncated point.
     const errors = curveErrors(
-      lint('"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),\n"tilts": PackedFloat32Array(0)')
+      lint(
+        '"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),\n"tilts": PackedFloat32Array(0)'
+      )
     );
     expect(errors).toHaveLength(1);
     expect(errors[0]!.message).toContain('9 floats each');
@@ -81,9 +83,7 @@ describe('curve3d-loadable', () => {
   // `_set_data`'s fill loop runs `for (i < points.size())` and only ever reads
   // `rt[i]` inside it (curve.cpp:2294-2298), so surplus tilts are never touched.
   it('accepts MORE tilts than control points, which Godot simply ignores', () => {
-    expect(
-      curveErrors(lint(`${POINTS},\n"tilts": PackedFloat32Array(0, 0, 0, 0)`))
-    ).toEqual([]);
+    expect(curveErrors(lint(`${POINTS},\n"tilts": PackedFloat32Array(0, 0, 0, 0)`))).toEqual([]);
   });
 
   // `curve.cpp:2282` `PackedVector3Array rp = p_data["points"]` is a Variant

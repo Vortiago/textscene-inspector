@@ -59,7 +59,13 @@ export function ColorPickerButton(props: NativeControlComponentProps) {
             renderOrder={renderOrder}
             themed={solveNode.icons.bg}
           />
-          <ControlQuad width={swatch.w} height={swatch.h} color={swatchColor} opacity={filled.a} renderOrder={renderOrder} />
+          <ControlQuad
+            width={swatch.w}
+            height={swatch.h}
+            color={swatchColor}
+            opacity={filled.a}
+            renderOrder={renderOrder}
+          />
         </CanvasItemGroup>
       )}
       {overbright && (

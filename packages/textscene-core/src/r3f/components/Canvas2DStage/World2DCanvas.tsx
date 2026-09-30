@@ -8,11 +8,7 @@
 import { lazy, Suspense, useLayoutEffect, useMemo } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import type { OrthographicCamera } from 'three';
-import type {
-  TscnNode,
-  TscnExternalResource,
-  TscnInternalResource,
-} from '../../../parser/types.js';
+import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../parser/types.js';
 import { CanvasWorkspaceProvider } from '../../contexts/CanvasWorkspaceContext.js';
 import { SceneResourcesProvider } from '../../SceneResourcesContext.js';
 import { NodeDispatcher } from '../../NodeDispatcher.js';
@@ -63,10 +59,7 @@ export function World2DContents({
   return (
     <TiledUploadDriver>
       <CanvasWorkspaceProvider workspace="2d">
-        <SceneResourcesProvider
-          internalResources={internalResources}
-          externalResources={externalResources}
-        >
+        <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
           <CameraRig pan={pan} zoom={zoom} />
           {/* The light accumulator starts from the canvas tint, the same pure
               function of `nodes` the dispatcher publishes to the items. */}

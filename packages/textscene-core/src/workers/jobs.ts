@@ -4,10 +4,7 @@
  * functions, so both paths give the same bytes (ADR-0042).
  */
 
-import {
-  noiseTexture2DPixels,
-  type NoiseTexture2DInput,
-} from '../resources/textures/noisetexture2d/pixels';
+import { noiseTexture2DPixels, type NoiseTexture2DInput } from '../resources/textures/noisetexture2d/pixels';
 
 export interface WorkerJob<Input, Output> {
   run(input: Input): Output;

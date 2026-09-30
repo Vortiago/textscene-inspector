@@ -74,12 +74,22 @@ describe('SplitContainer at vertical=X matches its fixed-axis sibling', () => {
   it('vertical=true produces the SAME child rects as VSplitContainer given the same children', () => {
     const viewport: Rect2 = { x: 0, y: 0, w: 100, h: 200 };
     const splitSolved = solveControlTree(
-      [splitRoot('SplitContainer', true, [expandChild('A', 'sizeFlagsVertical'), expandChild('B', 'sizeFlagsVertical')])],
+      [
+        splitRoot('SplitContainer', true, [
+          expandChild('A', 'sizeFlagsVertical'),
+          expandChild('B', 'sizeFlagsVertical'),
+        ]),
+      ],
       viewport,
       createSolveContext(THEME)
     );
     const vsplitSolved = solveControlTree(
-      [splitRoot('VSplitContainer', undefined, [expandChild('A', 'sizeFlagsVertical'), expandChild('B', 'sizeFlagsVertical')])],
+      [
+        splitRoot('VSplitContainer', undefined, [
+          expandChild('A', 'sizeFlagsVertical'),
+          expandChild('B', 'sizeFlagsVertical'),
+        ]),
+      ],
       viewport,
       createSolveContext(THEME)
     );
@@ -91,12 +101,22 @@ describe('SplitContainer at vertical=X matches its fixed-axis sibling', () => {
   it('vertical=false (or absent) produces the SAME child rects as HSplitContainer given the same children', () => {
     const viewport: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
     const splitSolved = solveControlTree(
-      [splitRoot('SplitContainer', undefined, [expandChild('A', 'sizeFlagsHorizontal'), expandChild('B', 'sizeFlagsHorizontal')])],
+      [
+        splitRoot('SplitContainer', undefined, [
+          expandChild('A', 'sizeFlagsHorizontal'),
+          expandChild('B', 'sizeFlagsHorizontal'),
+        ]),
+      ],
       viewport,
       createSolveContext(THEME)
     );
     const hsplitSolved = solveControlTree(
-      [splitRoot('HSplitContainer', undefined, [expandChild('A', 'sizeFlagsHorizontal'), expandChild('B', 'sizeFlagsHorizontal')])],
+      [
+        splitRoot('HSplitContainer', undefined, [
+          expandChild('A', 'sizeFlagsHorizontal'),
+          expandChild('B', 'sizeFlagsHorizontal'),
+        ]),
+      ],
       viewport,
       createSolveContext(THEME)
     );

@@ -71,12 +71,16 @@ function defaultStyles(theme: NativeTheme) {
   // `graphn_sb_titlebar_selected = graphnode_normal->duplicate()` then
   // `set_bg_color(...)`: clones the panel's own margins, not the titlebar's.
   const titlebarSelected = flatBox({ r: 1.0, g: 0.625, b: 0.625, a: 0.6 }, panelMargin, theme.cornerRadius);
-  const titlebar = flatBox(lightened(theme.styleFill.normal, 0.3), {
-    left: theme.contentMargin,
-    top: theme.contentMargin,
-    right: theme.contentMargin,
-    bottom: theme.contentMargin,
-  }, theme.cornerRadius);
+  const titlebar = flatBox(
+    lightened(theme.styleFill.normal, 0.3),
+    {
+      left: theme.contentMargin,
+      top: theme.contentMargin,
+      right: theme.contentMargin,
+      bottom: theme.contentMargin,
+    },
+    theme.cornerRadius
+  );
   // `make_empty_stylebox(0, 0, 0, 0)`: draws nothing, zero margin.
   const slot = flatBox({ r: 0, g: 0, b: 0, a: 0 }, ZERO_MARGIN, 0);
   return { panel, panelSelected: panel, titlebar, titlebarSelected, slot };
@@ -127,7 +131,12 @@ export function graphNodeEffectiveSlot(slots: Map<number, GraphNodeSlot>, rawInd
 
 export function graphNodeTitleTextMin(n: SolveNode, theme: NativeTheme): Vec2 {
   const props = n.node.properties as GraphNodeProperties;
-  const fontTheme = resolveTitleFontTheme(n, GRAPH_NODE_TITLE_VARIATION, theme.fontSize, GRAPH_NODE_TITLE_DEFAULT_COLOR);
+  const fontTheme = resolveTitleFontTheme(
+    n,
+    GRAPH_NODE_TITLE_VARIATION,
+    theme.fontSize,
+    GRAPH_NODE_TITLE_DEFAULT_COLOR
+  );
   return titleTextMinimumSize(props.title ?? '', fontTheme);
 }
 

@@ -26,7 +26,12 @@ const scopeCache = new WeakMap<ShareNode, ThemeResolutionScope>();
 function scopeFor(n: ShareNode): ThemeResolutionScope {
   const cached = scopeCache.get(n);
   if (cached) return cached;
-  const scope = themeResolutionScope(n.node.type, controlProps(n).themeTypeVariation, n.themeChain, n.projectTheme);
+  const scope = themeResolutionScope(
+    n.node.type,
+    controlProps(n).themeTypeVariation,
+    n.themeChain,
+    n.projectTheme
+  );
   scopeCache.set(n, scope);
   return scope;
 }

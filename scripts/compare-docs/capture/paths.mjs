@@ -12,8 +12,7 @@ export const PLAN = join(here, '../plan.json');
 export { REPO_ROOT };
 export const IMAGES = IMAGES_DIR;
 
-export const imagePath = (fixture, side) =>
-  join(IMAGES, `${fixture.replace(/\.tscn$/, '')}-${side}.png`);
+export const imagePath = (fixture, side) => join(IMAGES, `${fixture.replace(/\.tscn$/, '')}-${side}.png`);
 
 /**
  * Where a reference render's workspace is recorded, beside its image. The image

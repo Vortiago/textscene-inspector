@@ -85,22 +85,16 @@ describe('AreaLight3D Linter', () => {
     // the inherited Light3D validator reports it.
     describe('light energy warnings', () => {
       it('warns rather than errors on negative light_energy', () => {
-        const diagnostics = lint(
-          scene(node('AreaLight3D', { light_energy: -0.005, area_range: 2.0 }))
+        const diagnostics = lint(scene(node('AreaLight3D', { light_energy: -0.005, area_range: 2.0 })));
+        expect(diagnostics.some((d) => d.severity === 'warning' && d.message.includes('light_energy'))).toBe(
+          true
         );
-        expect(
-          diagnostics.some(
-            d => d.severity === 'warning' && d.message.includes('light_energy')
-          )
-        ).toBe(true);
-        expect(diagnostics.some(d => d.severity === 'error')).toBe(false);
+        expect(diagnostics.some((d) => d.severity === 'error')).toBe(false);
       });
 
       it.each([0, 0.005, 1.5, 150])('says nothing about light_energy %s', (energy) => {
-        const diagnostics = lint(
-          scene(node('AreaLight3D', { light_energy: energy, area_range: 2.0 }))
-        );
-        expect(diagnostics.some(d => d.severity === 'warning')).toBe(false);
+        const diagnostics = lint(scene(node('AreaLight3D', { light_energy: energy, area_range: 2.0 })));
+        expect(diagnostics.some((d) => d.severity === 'warning')).toBe(false);
       });
     });
 

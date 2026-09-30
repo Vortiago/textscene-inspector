@@ -69,7 +69,12 @@ function makeNode(materialId: string, name = 'Mesh'): TscnNode {
   };
 }
 
-function tree(node: TscnNode, internal: TscnInternalResource[], external: TscnExternalResource[], loader: ResourceLoader) {
+function tree(
+  node: TscnNode,
+  internal: TscnInternalResource[],
+  external: TscnExternalResource[],
+  loader: ResourceLoader
+) {
   return (
     <ResourceLoaderProvider loader={loader}>
       <SceneResourcesProvider internalResources={internal} externalResources={external}>
@@ -84,7 +89,11 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     const loader = makeLoader();
     const internal: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
-      { id: 'mat', type: 'StandardMaterial3D', data: { id: 'mat', anisotropy_enabled: 'true', anisotropy: '0.8' } as Record<string, string> },
+      {
+        id: 'mat',
+        type: 'StandardMaterial3D',
+        data: { id: 'mat', anisotropy_enabled: 'true', anisotropy: '0.8' } as Record<string, string>,
+      },
     ];
 
     const renderer = await ReactThreeTestRenderer.create(tree(makeNode('mat'), internal, [], loader));
@@ -101,7 +110,11 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     const loader = makeLoader();
     const internal: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
-      { id: 'mat', type: 'StandardMaterial3D', data: { id: 'mat', anisotropy_enabled: 'true', anisotropy: '-0.8' } as Record<string, string> },
+      {
+        id: 'mat',
+        type: 'StandardMaterial3D',
+        data: { id: 'mat', anisotropy_enabled: 'true', anisotropy: '-0.8' } as Record<string, string>,
+      },
     ];
 
     const renderer = await ReactThreeTestRenderer.create(tree(makeNode('mat'), internal, [], loader));
@@ -120,7 +133,11 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     const loader = makeLoader();
     const internal: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
-      { id: 'mat', type: 'StandardMaterial3D', data: { id: 'mat', roughness: '0.4' } as Record<string, string> },
+      {
+        id: 'mat',
+        type: 'StandardMaterial3D',
+        data: { id: 'mat', roughness: '0.4' } as Record<string, string>,
+      },
     ];
 
     const renderer = await ReactThreeTestRenderer.create(tree(makeNode('mat'), internal, [], loader));

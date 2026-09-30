@@ -185,4 +185,3 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
     </group>
   );
 }
-

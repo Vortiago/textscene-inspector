@@ -10,11 +10,7 @@ import { Node2D } from '../../base/node2d/Component';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import {
-  resolveCurve2D,
-  tessellateCurve2D,
-  type Curve2DSampler,
-} from '../../../resources/curves/curve2d';
+import { resolveCurve2D, tessellateCurve2D, type Curve2DSampler } from '../../../resources/curves/curve2d';
 import { Path2DCurveProvider } from '../../../r3f/contexts/Path2DCurveContext';
 import type { Path2DProperties } from './types';
 

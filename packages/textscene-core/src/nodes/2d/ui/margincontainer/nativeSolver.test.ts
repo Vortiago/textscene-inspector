@@ -14,9 +14,7 @@ import { marginContainerMinimumSize, marginContainerLayout } from './nativeSolve
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 /** `marginContainerLayout`'s `rects` half only (`ContainerLayoutResult` says why the union exists). */
-function asMap(
-  result: ReadonlyMap<string, Rect2> | ContainerLayoutResult
-): ReadonlyMap<string, Rect2> {
+function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
   return 'rects' in result ? result.rects : result;
 }
 
@@ -67,7 +65,11 @@ describe('marginContainerMinimumSize', () => {
 
   it('takes the componentwise max across multiple children, ignoring size flags (margin_container.cpp:44-50)', () => {
     const a = leaf('A', { customMinimumSize: { x: 30, y: 80 } });
-    const b = leaf('B', { customMinimumSize: { x: 90, y: 20 }, sizeFlagsHorizontal: 4, sizeFlagsVertical: 8 });
+    const b = leaf('B', {
+      customMinimumSize: { x: 90, y: 20 },
+      sizeFlagsHorizontal: 4,
+      sizeFlagsVertical: 8,
+    });
     const n = container('M', {}, [a, b]);
     // No theme_override_constants: default_theme.cpp:1252-1255 sets all four margins to 0, unscaled, so
     // the container's minimum is the componentwise max of its children.
@@ -92,7 +94,9 @@ describe('marginContainerLayout', () => {
       { themeOverrideConstants: { margin_left: 32, margin_top: 16, margin_right: 32, margin_bottom: 16 } },
       [child]
     );
-    const rects = asMap(marginContainerLayout(n, [{ node: child, minSize: { x: 500, y: 500 } }], viewport, ctx()));
+    const rects = asMap(
+      marginContainerLayout(n, [{ node: child, minSize: { x: 500, y: 500 } }], viewport, ctx())
+    );
     // FILL ignores the child's minimum size: the shrink branch that reads `minsize` is inside
     // `if (!FILL)` (container.cpp:103,114), so a larger minimum still yields the padded box.
     expect(rects.get('Leaf')).toEqual({ x: 32, y: 16, w: 1088, h: 616 });
@@ -109,13 +113,15 @@ describe('marginContainerLayout', () => {
       { themeOverrideConstants: { margin_left: 50, margin_top: 50, margin_right: 50, margin_bottom: 50 } },
       [child]
     );
-    const rects = asMap(marginContainerLayout(n, [{ node: child, minSize: { x: 101, y: 61 } }], viewport, ctx()));
+    const rects = asMap(
+      marginContainerLayout(n, [{ node: child, minSize: { x: 101, y: 61 } }], viewport, ctx())
+    );
     // Padded box: (50,50,1052,548). Horizontal: floor((1052-101)/2) = 475, so x = 525. Vertical:
     // SHRINK_END offsets by the whole remainder, 548-61 = 487, so y = 537.
     expect(rects.get('Leaf')).toEqual({ x: 525, y: 537, w: 101, h: 61 });
   });
 
-  it("claws an EXPAND-without-FILL child back to its minimum, pinned to the begin edge — oracle: Leaf rect=[20,20,80,40]", () => {
+  it('claws an EXPAND-without-FILL child back to its minimum, pinned to the begin edge — oracle: Leaf rect=[20,20,80,40]', () => {
     // size_flags = 2 (SIZE_EXPAND only). `fit_child_in_rect` tests only the SIZE_FILL bit
     // (container.cpp:103,114), so this child shrinks like SIZE_SHRINK_BEGIN on both axes. BoxContainer
     // looks main-axis-only because it pre-sizes its main axis first, and MarginContainer pre-sizes nothing.
@@ -129,7 +135,9 @@ describe('marginContainerLayout', () => {
       { themeOverrideConstants: { margin_left: 20, margin_top: 20, margin_right: 20, margin_bottom: 20 } },
       [child]
     );
-    const rects = asMap(marginContainerLayout(n, [{ node: child, minSize: { x: 80, y: 40 } }], viewport, ctx()));
+    const rects = asMap(
+      marginContainerLayout(n, [{ node: child, minSize: { x: 80, y: 40 } }], viewport, ctx())
+    );
     expect(rects.get('Leaf')).toEqual({ x: 20, y: 20, w: 80, h: 40 });
   });
 
@@ -145,7 +153,9 @@ describe('marginContainerLayout', () => {
       [child]
     );
     const nestedContentRect = { x: 514, y: 267, w: 124, h: 113 };
-    const rects = asMap(marginContainerLayout(n, [{ node: child, minSize: { x: 84, y: 53 } }], nestedContentRect, ctx()));
+    const rects = asMap(
+      marginContainerLayout(n, [{ node: child, minSize: { x: 84, y: 53 } }], nestedContentRect, ctx())
+    );
     expect(rects.get('Leaf')).toEqual({ x: 10, y: 20, w: 84, h: 53 });
   });
 
@@ -161,7 +171,12 @@ describe('marginContainerLayout', () => {
     // 100.6 - 5 - 5 = 90.6 -> 90, as narrowing the rect first would give, so the height uses a
     // fraction that survives the margins: 60.4 - 10 = 50.4.
     const rects = asMap(
-      marginContainerLayout(n, [{ node: child, minSize: { x: 0, y: 0 } }], { x: 0, y: 0, w: 100.6, h: 60.4 }, ctx())
+      marginContainerLayout(
+        n,
+        [{ node: child, minSize: { x: 0, y: 0 } }],
+        { x: 0, y: 0, w: 100.6, h: 60.4 },
+        ctx()
+      )
     );
     expect(rects.get('Leaf')).toEqual({ x: 5, y: 5, w: 90, h: 50 });
   });
@@ -173,7 +188,9 @@ describe('marginContainerLayout', () => {
       { themeOverrideConstants: { margin_left: 5, margin_top: 5, margin_right: 5, margin_bottom: 5 } },
       [child]
     );
-    const rects = asMap(marginContainerLayout(n, [{ node: child, minSize: { x: 10, y: 10 } }], viewport, ctx()));
+    const rects = asMap(
+      marginContainerLayout(n, [{ node: child, minSize: { x: 10, y: 10 } }], viewport, ctx())
+    );
     expect(rects.has('Hidden')).toBe(false);
   });
 });
@@ -184,11 +201,20 @@ describe('marginContainerLayout under RTL', () => {
     // `Container::fit_child_in_rect`, which reads it.
     const child = leaf('C', { customMinimumSize: { x: 20, y: 10 }, sizeFlagsHorizontal: 0 });
     const n = {
-      ...container('M', { themeOverrideConstants: { margin_left: 0, margin_top: 0, margin_right: 0, margin_bottom: 0 } }, [child]),
+      ...container(
+        'M',
+        { themeOverrideConstants: { margin_left: 0, margin_top: 0, margin_right: 0, margin_bottom: 0 } },
+        [child]
+      ),
       rtl: true,
     };
     const rects = asMap(
-      marginContainerLayout(n, [{ node: child, minSize: { x: 20, y: 10 } }], { x: 0, y: 0, w: 100, h: 50 }, ctx())
+      marginContainerLayout(
+        n,
+        [{ node: child, minSize: { x: 20, y: 10 } }],
+        { x: 0, y: 0, w: 100, h: 50 },
+        ctx()
+      )
     );
     expect(rects.get('C')).toEqual({ x: 80, y: 0, w: 20, h: 50 });
   });

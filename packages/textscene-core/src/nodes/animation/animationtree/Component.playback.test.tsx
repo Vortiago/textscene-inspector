@@ -4,38 +4,31 @@
  * driver's object with weighted actions. It drives only while selected and active.
  */
 
-import { useEffect } from "react";
-import { describe, expect, it } from "vitest";
-import * as THREE from "three";
-import ReactThreeTestRenderer from "@react-three/test-renderer";
-import { AnimationTree } from "./Component";
-import type { AnimationTreeProperties } from "./types";
-import {
-  AnimationTreeProcessMode,
-  CallbackModeDiscrete,
-  CallbackModeMethod,
-} from "./types";
-import type { TscnNode, TscnInternalResource } from "../../../parser/types";
-import { SceneResourcesProvider } from "../../../r3f/SceneResourcesContext";
+import { useEffect } from 'react';
+import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
+import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { AnimationTree } from './Component';
+import type { AnimationTreeProperties } from './types';
+import { AnimationTreeProcessMode, CallbackModeDiscrete, CallbackModeMethod } from './types';
+import type { TscnNode, TscnInternalResource } from '../../../parser/types';
+import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import {
   AnimationTransportProvider,
   useAnimationTransport,
   type AnimationTransport,
-} from "../../../r3f/contexts/AnimationTransportContext";
+} from '../../../r3f/contexts/AnimationTransportContext';
 import {
   SelectionProvider,
   useOptionalSelection,
   type SelectionContextValue,
-} from "../../../r3f/contexts/SelectionContext";
-import { NodePathProvider } from "../../../r3f/contexts/NodePathContext";
-import {
-  AnimationDriverProvider,
-  useRegisterDriver,
-} from "../../../r3f/contexts/AnimationDriverContext";
-import { subtreeObjects } from "../../../r3f/animation/poseSnapshot";
+} from '../../../r3f/contexts/SelectionContext';
+import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
+import { AnimationDriverProvider, useRegisterDriver } from '../../../r3f/contexts/AnimationDriverContext';
+import { subtreeObjects } from '../../../r3f/animation/poseSnapshot';
 
-const TREE_PATH = "Root/Tree";
-const DRIVER_PATH = "Root/Player";
+const TREE_PATH = 'Root/Tree';
+const DRIVER_PATH = 'Root/Player';
 
 /** Driver object: a root group with a movable child, plus two opposing clips. */
 function makeDriver(): {
@@ -43,76 +36,65 @@ function makeDriver(): {
   clips: THREE.AnimationClip[];
 } {
   const object = new THREE.Group();
-  object.name = "DriverRoot";
+  object.name = 'DriverRoot';
   const mover = new THREE.Object3D();
-  mover.name = "Mover";
+  mover.name = 'Mover';
   object.add(mover);
   // 'left' drives Mover.x 0 -> -10 over 1s; 'right' drives 0 -> +10.
-  const left = new THREE.AnimationClip("left", 1, [
-    new THREE.VectorKeyframeTrack(
-      "Mover.position",
-      [0, 1],
-      [0, 0, 0, -10, 0, 0],
-    ),
+  const left = new THREE.AnimationClip('left', 1, [
+    new THREE.VectorKeyframeTrack('Mover.position', [0, 1], [0, 0, 0, -10, 0, 0]),
   ]);
-  const right = new THREE.AnimationClip("right", 1, [
-    new THREE.VectorKeyframeTrack(
-      "Mover.position",
-      [0, 1],
-      [0, 0, 0, 10, 0, 0],
-    ),
+  const right = new THREE.AnimationClip('right', 1, [
+    new THREE.VectorKeyframeTrack('Mover.position', [0, 1], [0, 0, 0, 10, 0, 0]),
   ]);
   return { object, clips: [left, right] };
 }
 
 function moverX(object: THREE.Object3D): number {
-  const mover = object.getObjectByName("Mover");
-  if (!mover) throw new Error("Mover not found");
+  const mover = object.getObjectByName('Mover');
+  if (!mover) throw new Error('Mover not found');
   return mover.position.x;
 }
 
 // A Blend2(in0='left', in1='right') BlendTree, blendable through parameters/mix/blend_amount.
 const RESOURCES: TscnInternalResource[] = [
   {
-    id: "left",
-    type: "AnimationNodeAnimation",
+    id: 'left',
+    type: 'AnimationNodeAnimation',
     data: { animation: '&"left"' },
   },
   {
-    id: "right",
-    type: "AnimationNodeAnimation",
+    id: 'right',
+    type: 'AnimationNodeAnimation',
     data: { animation: '&"right"' },
   },
-  { id: "blend", type: "AnimationNodeBlend2", data: {} },
-  { id: "ts", type: "AnimationNodeTimeScale", data: {} },
+  { id: 'blend', type: 'AnimationNodeBlend2', data: {} },
+  { id: 'ts', type: 'AnimationNodeTimeScale', data: {} },
   {
-    id: "tree",
-    type: "AnimationNodeBlendTree",
+    id: 'tree',
+    type: 'AnimationNodeBlendTree',
     data: {
-      "nodes/a/node": 'SubResource("left")',
-      "nodes/b/node": 'SubResource("right")',
-      "nodes/mix/node": 'SubResource("blend")',
-      node_connections:
-        '[&"output", 0, &"mix", &"mix", 0, &"a", &"mix", 1, &"b"]',
+      'nodes/a/node': 'SubResource("left")',
+      'nodes/b/node': 'SubResource("right")',
+      'nodes/mix/node': 'SubResource("blend")',
+      node_connections: '[&"output", 0, &"mix", &"mix", 0, &"a", &"mix", 1, &"b"]',
     },
   },
   // A timescale variant feeding the 'right' clip, wired output -> scale -> right.
   {
-    id: "tree_ts",
-    type: "AnimationNodeBlendTree",
+    id: 'tree_ts',
+    type: 'AnimationNodeBlendTree',
     data: {
-      "nodes/b/node": 'SubResource("right")',
-      "nodes/scale/node": 'SubResource("ts")',
+      'nodes/b/node': 'SubResource("right")',
+      'nodes/scale/node': 'SubResource("ts")',
       node_connections: '[&"output", 0, &"scale", &"scale", 0, &"b"]',
     },
   },
 ];
 
-function makeTreeNode(
-  overrides: Partial<AnimationTreeProperties> = {},
-): TscnNode {
+function makeTreeNode(overrides: Partial<AnimationTreeProperties> = {}): TscnNode {
   const props: AnimationTreeProperties = {
-    name: "Tree",
+    name: 'Tree',
     active: true,
     tree_root: 'SubResource("tree")',
     parameters: {},
@@ -131,8 +113,8 @@ function makeTreeNode(
     ...overrides,
   };
   return {
-    name: "Tree",
-    type: "AnimationTree",
+    name: 'Tree',
+    type: 'AnimationTree',
     children: [],
     properties: props,
   };
@@ -146,13 +128,7 @@ function Capture() {
   return null;
 }
 
-function RegisterDriver({
-  object,
-  clips,
-}: {
-  object: THREE.Object3D;
-  clips: THREE.AnimationClip[];
-}) {
+function RegisterDriver({ object, clips }: { object: THREE.Object3D; clips: THREE.AnimationClip[] }) {
   const registerDriver = useRegisterDriver();
   // glTF-style ready-made clips, bound by name, as GLBSceneRoot publishes them.
   useEffect(
@@ -166,21 +142,19 @@ function RegisterDriver({
           isStale: () => false,
         }),
       }),
-    [registerDriver, object, clips],
+    [registerDriver, object, clips]
   );
   return null;
 }
 
 async function setSelection(path: string | null) {
-  await ReactThreeTestRenderer.act(async () =>
-    selection?.setSelectedNodePath(path),
-  );
+  await ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath(path));
 }
 
 async function mountTree(
   driver: { object: THREE.Object3D; clips: THREE.AnimationClip[] },
   node: TscnNode,
-  { select = TREE_PATH }: { select?: string | null } = {},
+  { select = TREE_PATH }: { select?: string | null } = {}
 ) {
   const renderer = await ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={RESOURCES}>
@@ -197,14 +171,14 @@ async function mountTree(
           </AnimationDriverProvider>
         </AnimationTransportProvider>
       </SelectionProvider>
-    </SceneResourcesProvider>,
+    </SceneResourcesProvider>
   );
   await setSelection(select);
   return renderer;
 }
 
-describe("AnimationTree — transport registration", () => {
-  it("shows the Animation tab only while selected and active", async () => {
+describe('AnimationTree — transport registration', () => {
+  it('shows the Animation tab only while selected and active', async () => {
     const driver = makeDriver();
     const renderer = await mountTree(driver, makeTreeNode(), { select: null });
     expect(transport.hasPlayer).toBe(false);
@@ -214,7 +188,7 @@ describe("AnimationTree — transport registration", () => {
     await renderer.unmount();
   });
 
-  it("does not register when active is false, even if selected", async () => {
+  it('does not register when active is false, even if selected', async () => {
     const driver = makeDriver();
     const renderer = await mountTree(driver, makeTreeNode({ active: false }), {
       select: TREE_PATH,
@@ -224,22 +198,19 @@ describe("AnimationTree — transport registration", () => {
   });
 });
 
-describe("AnimationTree — weighted blend playback", () => {
-  it("drives the resolved driver with a weighted blend of two clips", async () => {
+describe('AnimationTree — weighted blend playback', () => {
+  it('drives the resolved driver with a weighted blend of two clips', async () => {
     const driver = makeDriver();
     // blend_amount 0.75 -> left weight 0.25, right weight 0.75 (total 1).
     // At t=0.5: left=-5, right=5; weighted blend -> 0.25*(-5) + 0.75*(5) = 2.5.
-    const renderer = await mountTree(
-      driver,
-      makeTreeNode({ parameters: { "mix/blend_amount": "0.75" } }),
-    );
+    const renderer = await mountTree(driver, makeTreeNode({ parameters: { 'mix/blend_amount': '0.75' } }));
     await ReactThreeTestRenderer.act(async () => transport.play());
     await renderer.advanceFrames(1, 0.5);
     expect(moverX(driver.object)).toBeCloseTo(2.5, 0);
     await renderer.unmount();
   });
 
-  it("plays only input 0 at the default blend_amount (full left)", async () => {
+  it('plays only input 0 at the default blend_amount (full left)', async () => {
     const driver = makeDriver();
     const renderer = await mountTree(driver, makeTreeNode());
     await ReactThreeTestRenderer.act(async () => transport.play());
@@ -248,14 +219,11 @@ describe("AnimationTree — weighted blend playback", () => {
     await renderer.unmount();
   });
 
-  it("preserves blend weights when paused and seeked (not over-blended)", async () => {
+  it('preserves blend weights when paused and seeked (not over-blended)', async () => {
     const driver = makeDriver();
     // Stopped → pause → seek (no prior playing frame). Weights must be applied:
     // at t=0.5 the 0.25/0.75 blend gives 2.5, not the unweighted average 0.
-    const renderer = await mountTree(
-      driver,
-      makeTreeNode({ parameters: { "mix/blend_amount": "0.75" } }),
-    );
+    const renderer = await mountTree(driver, makeTreeNode({ parameters: { 'mix/blend_amount': '0.75' } }));
     await ReactThreeTestRenderer.act(async () => transport.pause());
     await ReactThreeTestRenderer.act(async () => transport.seek(0.5));
     await renderer.advanceFrames(1, 0);
@@ -263,14 +231,14 @@ describe("AnimationTree — weighted blend playback", () => {
     await renderer.unmount();
   });
 
-  it("honors TimeScale — scale 2 advances twice as far in the same wall time", async () => {
+  it('honors TimeScale — scale 2 advances twice as far in the same wall time', async () => {
     const driver = makeDriver();
     const renderer = await mountTree(
       driver,
       makeTreeNode({
         tree_root: 'SubResource("tree_ts")',
-        parameters: { "scale/scale": "2" },
-      }),
+        parameters: { 'scale/scale': '2' },
+      })
     );
     await ReactThreeTestRenderer.act(async () => transport.play());
     await renderer.advanceFrames(1, 0.25); // 0.25s wall * scale 2 -> clip t=0.5 -> x=5
@@ -278,7 +246,7 @@ describe("AnimationTree — weighted blend playback", () => {
     await renderer.unmount();
   });
 
-  it("scales the advance rate by the preview playbackSpeed multiplier (#224)", async () => {
+  it('scales the advance rate by the preview playbackSpeed multiplier (#224)', async () => {
     const driver = makeDriver();
     const renderer = await mountTree(driver, makeTreeNode());
     await ReactThreeTestRenderer.act(async () => transport.setPlaybackSpeed(2));
@@ -289,8 +257,8 @@ describe("AnimationTree — weighted blend playback", () => {
   });
 });
 
-describe("AnimationTree — gating and restore", () => {
-  it("does not move the driver while stopped", async () => {
+describe('AnimationTree — gating and restore', () => {
+  it('does not move the driver while stopped', async () => {
     const driver = makeDriver();
     const renderer = await mountTree(driver, makeTreeNode());
     await renderer.advanceFrames(2, 0.5);
@@ -298,7 +266,7 @@ describe("AnimationTree — gating and restore", () => {
     await renderer.unmount();
   });
 
-  it("does not move the driver when inactive even if played", async () => {
+  it('does not move the driver when inactive even if played', async () => {
     const driver = makeDriver();
     const renderer = await mountTree(driver, makeTreeNode({ active: false }));
     await ReactThreeTestRenderer.act(async () => transport.play());
@@ -307,7 +275,7 @@ describe("AnimationTree — gating and restore", () => {
     await renderer.unmount();
   });
 
-  it("restores the authored pose on stop", async () => {
+  it('restores the authored pose on stop', async () => {
     const driver = makeDriver();
     const renderer = await mountTree(driver, makeTreeNode());
     await ReactThreeTestRenderer.act(async () => transport.play());
@@ -319,13 +287,13 @@ describe("AnimationTree — gating and restore", () => {
     await renderer.unmount();
   });
 
-  it("restores the authored pose when it loses selection mid-playback", async () => {
+  it('restores the authored pose when it loses selection mid-playback', async () => {
     const driver = makeDriver();
     const renderer = await mountTree(driver, makeTreeNode());
     await ReactThreeTestRenderer.act(async () => transport.play());
     await renderer.advanceFrames(1, 0.5);
     expect(Math.abs(moverX(driver.object))).toBeGreaterThan(1);
-    await setSelection("Root/Elsewhere");
+    await setSelection('Root/Elsewhere');
     await renderer.advanceFrames(1, 0);
     expect(moverX(driver.object)).toBeCloseTo(0);
     await renderer.unmount();

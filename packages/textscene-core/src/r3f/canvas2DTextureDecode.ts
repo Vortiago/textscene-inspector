@@ -51,10 +51,7 @@ const DECODE_DEFINES: Readonly<Record<string, string>> = { DECODE_VIDEO_TEXTURE:
 export function useCanvasDecodeDefines(
   texture: THREE.Texture | null | undefined
 ): Record<string, string> | undefined {
-  return useMemo(
-    () => (texture?.colorSpace === THREE.NoColorSpace ? DECODE_DEFINES : undefined),
-    [texture]
-  );
+  return useMemo(() => (texture?.colorSpace === THREE.NoColorSpace ? DECODE_DEFINES : undefined), [texture]);
 }
 
 /** A 2D-canvas `map` and the `defines` that decode it, as one value. */

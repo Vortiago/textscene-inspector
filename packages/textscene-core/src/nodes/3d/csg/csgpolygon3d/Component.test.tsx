@@ -10,10 +10,7 @@ import { CSGPolygon3D } from './index.r3f';
 import type { CSGPolygon3DProperties, CSGPolygon3DResolvedPath } from './types';
 import { findMesh } from '../../testing/reactThreeTestInstance';
 
-function makeNode(
-  overrides: Record<string, string> = {},
-  resolvedPath?: CSGPolygon3DResolvedPath
-): TscnNode {
+function makeNode(overrides: Record<string, string> = {}, resolvedPath?: CSGPolygon3DResolvedPath): TscnNode {
   const properties = parseCSGPolygon3D(
     { type: 'node', attributes: { type: 'CSGPolygon3D', name: 'Poly' } },
     overrides
@@ -80,13 +77,16 @@ describe('<CSGPolygon3D>', () => {
   it('sweeps along the curve once the path pass has supplied it', async () => {
     const geom = geometryOf(
       await render(
-        makeNode({ mode: '2', path_rotation: '0', path_interval: '1', path_local: 'true' }, {
-          curvePoints: [
-            { in: zero, out: zero, position: { x: 0, y: 0, z: 0 } },
-            { in: zero, out: zero, position: { x: 0, y: 0, z: -4 } },
-          ],
-          baseTransform: null,
-        })
+        makeNode(
+          { mode: '2', path_rotation: '0', path_interval: '1', path_local: 'true' },
+          {
+            curvePoints: [
+              { in: zero, out: zero, position: { x: 0, y: 0, z: 0 } },
+              { in: zero, out: zero, position: { x: 0, y: 0, z: -4 } },
+            ],
+            baseTransform: null,
+          }
+        )
       )
     );
     geom.computeBoundingBox();
@@ -99,10 +99,9 @@ describe('<CSGPolygon3D>', () => {
       type: 'StandardMaterial3D',
       data: { albedo_color: 'Color(0.65, 0.6, 0.5, 1)' },
     };
-    const renderer = await render(
-      makeNode({ material: 'SubResource("StandardMaterial3D_poly")' }),
-      [material]
-    );
+    const renderer = await render(makeNode({ material: 'SubResource("StandardMaterial3D_poly")' }), [
+      material,
+    ]);
     const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
       .material as THREE.MeshStandardMaterial;
     expect(mat.color.r).toBeGreaterThan(0);
@@ -126,9 +125,7 @@ describe('<CSGPolygon3D>', () => {
         </CSGPolygon3D>
       </SceneResourcesProvider>
     );
-    expect(
-      renderer.scene.find((n) => (n.instance as THREE.Object3D).name === 'injected-child')
-    ).toBeTruthy();
+    expect(renderer.scene.find((n) => (n.instance as THREE.Object3D).name === 'injected-child')).toBeTruthy();
   });
 
   it('renders empty geometry without throwing on a malformed polygon', async () => {

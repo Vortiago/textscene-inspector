@@ -109,25 +109,31 @@ describe('<SurfaceMaterialSlot> across arrivals', () => {
     expect(material().roughness).toBeCloseTo(0.25, 5);
   });
 
-  it.each(Object.entries(ARRIVALS))('uploads the %s material\'s map in bands before drawing it', async (_name, source) => {
-    const { material, uploads } = await renderSlot(source);
-    expect(material().map).toBe(pendingMapStandIn('albedo_texture'));
-    expect(uploads).toHaveLength(1);
+  it.each(Object.entries(ARRIVALS))(
+    "uploads the %s material's map in bands before drawing it",
+    async (_name, source) => {
+      const { material, uploads } = await renderSlot(source);
+      expect(material().map).toBe(pendingMapStandIn('albedo_texture'));
+      expect(uploads).toHaveLength(1);
 
-    await finishUploads(uploads);
-    expect(material().map).not.toBe(pendingMapStandIn('albedo_texture'));
-    expect(material().map).toBeInstanceOf(THREE.Texture);
-  });
+      await finishUploads(uploads);
+      expect(material().map).not.toBe(pendingMapStandIn('albedo_texture'));
+      expect(material().map).toBeInstanceOf(THREE.Texture);
+    }
+  );
 
-  it.each(Object.entries(ARRIVALS))('keeps the %s material, and so its program, when the map lands', async (_name, source) => {
-    const { material, uploads } = await renderSlot(source);
-    const linked = material();
+  it.each(Object.entries(ARRIVALS))(
+    'keeps the %s material, and so its program, when the map lands',
+    async (_name, source) => {
+      const { material, uploads } = await renderSlot(source);
+      const linked = material();
 
-    await finishUploads(uploads);
-    expect(material()).toBe(linked);
-  });
+      await finishUploads(uploads);
+      expect(material()).toBe(linked);
+    }
+  );
 
-  it('resolves a .tres material\'s map in the .tres, not in the scene with the same id', async () => {
+  it("resolves a .tres material's map in the .tres, not in the scene with the same id", async () => {
     const fromFile = await renderSlot(ARRIVALS['.tres']!);
     const fromScene = await renderSlot(ARRIVALS.inline!);
     await finishUploads(fromFile.uploads);

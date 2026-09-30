@@ -4,7 +4,14 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { node, scene, expectClean, expectDiagnostic, expectNoDiagnostic, expectNoErrors } from '../../../../linter/testing/testkit';
+import {
+  node,
+  scene,
+  expectClean,
+  expectDiagnostic,
+  expectNoDiagnostic,
+  expectNoErrors,
+} from '../../../../linter/testing/testkit';
 import { CURSOR_MAX, CURSOR_SHAPES } from '../../../../godot/control';
 import './linterParser';
 import './linter';
@@ -31,10 +38,9 @@ describe('SubViewportContainer cursor shape — only a shape the node can hold',
   it('says nothing about a non-finite or out-of-enum cursor', () => {
     // `Control::CursorShape` runs 0-16 (control.h:100-119). A value outside it is no shape at all.
     for (const shape of ['inf', 'nan', '99', '2e1']) {
-      expectNoDiagnostic(
-        scene(node('SubViewportContainer', { mouse_default_cursor_shape: shape })),
-        { ruleName: 'subviewportcontainer-non-arrow-cursor' }
-      );
+      expectNoDiagnostic(scene(node('SubViewportContainer', { mouse_default_cursor_shape: shape })), {
+        ruleName: 'subviewportcontainer-non-arrow-cursor',
+      });
     }
   });
 

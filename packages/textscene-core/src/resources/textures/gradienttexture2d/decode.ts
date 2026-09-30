@@ -16,11 +16,7 @@ import {
   packedArrayForms,
   boolSlotValue,
 } from '../../../godot/index.js';
-import {
-  floatElements,
-  packedTupleNumbers,
-  PACKED_COLOR_ARRAY,
-} from '../../shapes/packedArray';
+import { floatElements, packedTupleNumbers, PACKED_COLOR_ARRAY } from '../../shapes/packedArray';
 import {
   GradientFill,
   GradientInterpolationMode,
@@ -73,11 +69,7 @@ export function decodeGradient(data: Record<string, string>): Gradient {
   const count = offsets ? Math.min(offsets.length, colors.length) : colors.length;
   const stops: GradientColorStop[] = [];
   for (let i = 0; i < count; i++) {
-    const offset = offsets
-      ? offsets[i]!
-      : count > 1
-        ? i / (count - 1)
-        : 0;
+    const offset = offsets ? offsets[i]! : count > 1 ? i / (count - 1) : 0;
     stops.push({ offset, color: colors[i]! });
   }
   // Godot sorts points by offset before sampling. A stable sort keeps equal
@@ -89,11 +81,7 @@ export function decodeGradient(data: Record<string, string>): Gradient {
     interpolationMode: enumOr(
       data.interpolation_mode,
       GradientInterpolationMode.Linear,
-      [
-        GradientInterpolationMode.Linear,
-        GradientInterpolationMode.Constant,
-        GradientInterpolationMode.Cubic,
-      ],
+      [GradientInterpolationMode.Linear, GradientInterpolationMode.Constant, GradientInterpolationMode.Cubic],
       'Gradient.interpolation_mode'
     ),
   };
@@ -137,18 +125,8 @@ const TEXTURE_SIZE_RANGE: SetterRange = { min: 1, max: GRADIENT_TEXTURE_MAX_SIZE
  */
 export function decodeGradientTexture2D(data: Record<string, string>): GradientTexture2D {
   return {
-    width: settableIntOr(
-      data.width,
-      DEFAULT_TEXTURE_SIZE,
-      TEXTURE_SIZE_RANGE,
-      'GradientTexture2D.width'
-    ),
-    height: settableIntOr(
-      data.height,
-      DEFAULT_TEXTURE_SIZE,
-      TEXTURE_SIZE_RANGE,
-      'GradientTexture2D.height'
-    ),
+    width: settableIntOr(data.width, DEFAULT_TEXTURE_SIZE, TEXTURE_SIZE_RANGE, 'GradientTexture2D.width'),
+    height: settableIntOr(data.height, DEFAULT_TEXTURE_SIZE, TEXTURE_SIZE_RANGE, 'GradientTexture2D.height'),
     fill: enumOr(
       data.fill,
       GradientFill.Linear,

@@ -34,7 +34,10 @@ async function render(raw: Record<string, string> = {}) {
   fake.textures.seed(TEX, tex);
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
-      <SceneResourcesProvider internalResources={[]} externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}>
+      <SceneResourcesProvider
+        internalResources={[]}
+        externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}
+      >
         <Sprite3D node={node(raw)} />
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
@@ -49,10 +52,18 @@ describe('Sprite3D parser parity', () => {
   });
   it('parses flip_h/flip_v/centered/double_sided/transparent', () => {
     const p = parseSprite3D(heading, {
-      flip_h: 'true', flip_v: 'true', centered: 'false', double_sided: 'false', transparent: 'false',
+      flip_h: 'true',
+      flip_v: 'true',
+      centered: 'false',
+      double_sided: 'false',
+      transparent: 'false',
     });
     expect([p.flip_h, p.flip_v, p.centered, p.double_sided, p.transparent]).toEqual([
-      true, true, false, false, false,
+      true,
+      true,
+      false,
+      false,
+      false,
     ]);
   });
 });
@@ -171,7 +182,7 @@ describe('Sprite3D material-property parity', () => {
     expect(material.map).toBeTruthy();
   });
 
-  it('shaded uses the sprite material\'s own metallic and roughness', async () => {
+  it("shaded uses the sprite material's own metallic and roughness", async () => {
     // `material_set_param(material, "metallic", 0.0)` / `"roughness", 1.0`
     // (`sprite_3d.cpp:721-722`).
     const r = await render({ shaded: 'true' });
@@ -192,10 +203,7 @@ describe('Sprite3D material-property parity', () => {
     // Row 5: Godot's anisotropy ceiling, `GODOT_ANISOTROPY_MAX`.
     const r = await render({ texture_filter: '5' });
     const map = (findMesh(r.scene).material as THREE.MeshBasicMaterial).map!;
-    expect([map.magFilter, map.minFilter]).toEqual([
-      THREE.LinearFilter,
-      THREE.LinearMipmapLinearFilter,
-    ]);
+    expect([map.magFilter, map.minFilter]).toEqual([THREE.LinearFilter, THREE.LinearMipmapLinearFilter]);
     expect([map.generateMipmaps, map.anisotropy]).toEqual([true, GODOT_ANISOTROPY_MAX]);
   });
 });

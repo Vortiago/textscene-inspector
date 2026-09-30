@@ -57,7 +57,10 @@ async function renderIsolated(raw: Record<string, string> = {}, rect: Rect2, opt
 
   const tree = (
     <ResourceLoaderProvider loader={fake.loader}>
-      <SceneResourcesProvider internalResources={[]} externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}>
+      <SceneResourcesProvider
+        internalResources={[]}
+        externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}
+      >
         <NinePatchRect
           {...painterEnv()}
           {...(options.tint ? { tint: options.tint } : {})}
@@ -81,7 +84,12 @@ describe('<NinePatchRect> resolves its texture in its OWN scene scope', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider internalResources={[]} externalResources={[]}>
-          <NinePatchRect {...painterEnv()} solveNode={own} rect={{ x: 0, y: 0, w: 40, h: 30 }} renderOrder={0} />
+          <NinePatchRect
+            {...painterEnv()}
+            solveNode={own}
+            rect={{ x: 0, y: 0, w: 40, h: 30 }}
+            renderOrder={0}
+          />
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     );
@@ -133,44 +141,46 @@ describe('<NinePatchRect> (isolated painter contract)', () => {
 
   it('maps texture_filter NEAREST (1) to THREE.NearestFilter', async () => {
     const renderer = await renderIsolated({ texture_filter: '1' }, { x: 0, y: 0, w: 40, h: 30 });
-    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
     expect(material.map!.magFilter).toBe(THREE.NearestFilter);
     expect(material.map!.minFilter).toBe(THREE.NearestFilter);
   });
 
   it('an absent texture_filter (PARENT_NODE) resolves to LinearFilter, the CanvasItem root default', async () => {
     const renderer = await renderIsolated({}, { x: 0, y: 0, w: 40, h: 30 });
-    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
     expect(material.map!.magFilter).toBe(THREE.LinearFilter);
   });
 
   it('every UV stays clamped, never repeat-wrapped', async () => {
     const renderer = await renderIsolated({ axis_stretch_horizontal: '1' }, { x: 0, y: 0, w: 40, h: 30 });
-    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
     expect(material.map!.wrapS).toBe(THREE.ClampToEdgeWrapping);
     expect(material.map!.wrapT).toBe(THREE.ClampToEdgeWrapping);
   });
 
-  it(
-    'draws the walker-composed tint AS-IS — NinePatchRect has no base colour of its own to fold in',
-    async () => {
-      const renderer = await renderIsolated(
-        {},
-        { x: 0, y: 0, w: 10, h: 10 },
-        { tint: painterTint({ r: 0.5, g: 0.25, b: 0.5, a: 0.5 }) }
-      );
-      const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
-      const expected = new THREE.Color().setRGB(0.5, 0.25, 0.5, THREE.SRGBColorSpace);
-      expect(material.color.r).toBeCloseTo(expected.r);
-      expect(material.color.g).toBeCloseTo(expected.g);
-      expect(material.color.b).toBeCloseTo(expected.b);
-      expect(material.opacity).toBeCloseTo(0.5);
-    }
-  );
+  it('draws the walker-composed tint AS-IS — NinePatchRect has no base colour of its own to fold in', async () => {
+    const renderer = await renderIsolated(
+      {},
+      { x: 0, y: 0, w: 10, h: 10 },
+      { tint: painterTint({ r: 0.5, g: 0.25, b: 0.5, a: 0.5 }) }
+    );
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
+    const expected = new THREE.Color().setRGB(0.5, 0.25, 0.5, THREE.SRGBColorSpace);
+    expect(material.color.r).toBeCloseTo(expected.r);
+    expect(material.color.g).toBeCloseTo(expected.g);
+    expect(material.color.b).toBeCloseTo(expected.b);
+    expect(material.opacity).toBeCloseTo(0.5);
+  });
 
   it('is transparent, double-sided and does not write depth (2D canvas-item convention)', async () => {
     const renderer = await renderIsolated({}, { x: 0, y: 0, w: 40, h: 30 });
-    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
     expect(material.transparent).toBe(true);
     expect(material.depthWrite).toBe(false);
     expect(material.side).toBe(THREE.DoubleSide);

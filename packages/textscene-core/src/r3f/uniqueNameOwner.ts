@@ -15,12 +15,7 @@ import {
   cachedUniqueNameOwnership,
   type UniqueNameClaim,
 } from '../utils/uniqueNames.js';
-import {
-  liveChildGroups,
-  rootScope,
-  type LiveChildGroup,
-  type LiveTreeContext,
-} from './liveSceneTree.js';
+import { liveChildGroups, rootScope, type LiveChildGroup, type LiveTreeContext } from './liveSceneTree.js';
 
 export interface ClaimOwner {
   /** Live path of the node this owner's root renders at. */
@@ -46,9 +41,7 @@ function composedPath(owner: ClaimOwner, fileLivePath: string): string {
 }
 
 function ownsInsideInstance(owner: ClaimOwner, livePath: string): boolean {
-  return cachedUniqueNameOwnership(owner.roots).ownedInsideInstances.has(
-    fileLocalPath(owner, livePath)
-  );
+  return cachedUniqueNameOwnership(owner.roots).ownedInsideInstances.has(fileLocalPath(owner, livePath));
 }
 
 interface Candidate {
@@ -128,11 +121,7 @@ function walkTo(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext):
  * (resource_format_text.cpp:264-265). An explicit `owner=` replaces that: `"."` is
  * that file's root, anything else the node at that root-relative path.
  */
-export function claimOwnerOf(
-  path: string,
-  roots: readonly TscnNode[],
-  ctx: LiveTreeContext
-): ClaimOwner {
+export function claimOwnerOf(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext): ClaimOwner {
   const { owner, node } = walkTo(path, roots, ctx);
   if (node?.owner === undefined) return owner;
   // The file an override heading is in is one above the instance that owns it.
@@ -149,11 +138,7 @@ export function claimOwnerOf(
  * (:566-568), so Godot reads no owner and falls back to the file root, and an override keeps
  * the sub-scene owner it already has.
  */
-export function localSceneOf(
-  path: string,
-  roots: readonly TscnNode[],
-  ctx: LiveTreeContext
-): ClaimOwner {
+export function localSceneOf(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext): ClaimOwner {
   return walkTo(path, roots, ctx).into;
 }
 

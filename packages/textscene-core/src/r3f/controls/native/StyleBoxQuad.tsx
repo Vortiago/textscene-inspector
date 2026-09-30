@@ -296,7 +296,10 @@ function StyleBoxTextureMesh({ texture, rect, tint, renderOrder, clippingPlanes 
 
   // The last `canvas_item_add_nine_patch` argument, `modulate_color`
   // (`style_box_texture.cpp:183`), times the owner's accumulated modulate.
-  const combinedTint = useMemo(() => multiplyModulate(tint, texture.modulateColor), [tint, texture.modulateColor]);
+  const combinedTint = useMemo(
+    () => multiplyModulate(tint, texture.modulateColor),
+    [tint, texture.modulateColor]
+  );
   const linearColor = useGodotLinearColor(combinedTint);
   const decodeDefines = useCanvasDecodeDefines(drawnTexture);
 

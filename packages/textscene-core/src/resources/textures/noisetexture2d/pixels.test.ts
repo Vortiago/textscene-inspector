@@ -14,12 +14,13 @@ function sha256(bytes: Uint8Array): string {
 
 describe('NoiseTexture2D pixels', () => {
   it('pins a hash for every case', () => {
-    expect(Object.keys(PINNED_PIXEL_HASHES).sort()).toEqual(
-      NOISE_PIXEL_CASES.map((c) => c.name).sort()
-    );
+    expect(Object.keys(PINNED_PIXEL_HASHES).sort()).toEqual(NOISE_PIXEL_CASES.map((c) => c.name).sort());
   });
 
-  it.each(NOISE_PIXEL_CASES)('computes the pinned bytes without THREE for $name', ({ name, tex, noise, colorRamp }) => {
-    expect(sha256(noiseTexture2DPixels({ tex, noise, colorRamp }))).toBe(PINNED_PIXEL_HASHES[name]);
-  });
+  it.each(NOISE_PIXEL_CASES)(
+    'computes the pinned bytes without THREE for $name',
+    ({ name, tex, noise, colorRamp }) => {
+      expect(sha256(noiseTexture2DPixels({ tex, noise, colorRamp }))).toBe(PINNED_PIXEL_HASHES[name]);
+    }
+  );
 });

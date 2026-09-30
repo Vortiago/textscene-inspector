@@ -19,10 +19,20 @@ const inertia2d: PropertyValidator = (key, value, line) => {
   // format error on one reports a value the engine accepts.
   const num = parseGodotFloat(value);
   if (num === null) {
-    return propertyError(key, line, `Property 'inertia' must be a number, got: "${value}". In 2D, inertia is a scalar value.`, 'INVALID_INERTIA_FORMAT');
+    return propertyError(
+      key,
+      line,
+      `Property 'inertia' must be a number, got: "${value}". In 2D, inertia is a scalar value.`,
+      'INVALID_INERTIA_FORMAT'
+    );
   }
   if (num < 0) {
-    return propertyError(key, line, `Property 'inertia' must be >= 0, got: ${num}. Use 0 for automatic calculation.`, 'INVALID_INERTIA_VALUE');
+    return propertyError(
+      key,
+      line,
+      `Property 'inertia' must be >= 0, got: ${num}. Use 0 for automatic calculation.`,
+      'INVALID_INERTIA_VALUE'
+    );
   }
   return null;
 };

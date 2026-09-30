@@ -236,18 +236,17 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
   });
 
   it('returns nothing for an empty tree rather than throwing', () => {
-    expect(collectControlRasterViewports([], NO_SCENES, {
-      internalResources: [],
-      externalResources: [],
-    })).toEqual([]);
+    expect(
+      collectControlRasterViewports([], NO_SCENES, {
+        internalResources: [],
+        externalResources: [],
+      })
+    ).toEqual([]);
   });
 
   it('claims the committed `gui_panel_3d` demo — the scene this path exists for', () => {
     const scene = parse(
-      readFileSync(
-        resolve(repoRoot(), 'scenes/demos/viewport/gui_in_3d/gui_panel_3d.tscn'),
-        'utf8'
-      )
+      readFileSync(resolve(repoRoot(), 'scenes/demos/viewport/gui_in_3d/gui_panel_3d.tscn'), 'utf8')
     );
     const found = collect(scene);
     expect(found.map((v) => v.path)).toEqual(['GUIPanel3D/SubViewport']);

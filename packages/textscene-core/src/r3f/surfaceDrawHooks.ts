@@ -147,15 +147,7 @@ export function surfaceDrawHooks(rule: CastRule): SurfaceDrawHooks {
     // three sets `modelViewMatrix` once per object before its group loop
     // (`WebGLShadowMap.js:528`), so a moved pose recomputes it here. The main camera
     // stays the billboard's, as `MAIN_CAM_INV_VIEW_MATRIX` is on a shadow pass.
-    onBeforeShadow(
-      _renderer,
-      object,
-      camera,
-      shadowCamera,
-      geometry,
-      depthMaterial,
-      group
-    ) {
+    onBeforeShadow(_renderer, object, camera, shadowCamera, geometry, depthMaterial, group) {
       const material = drawnMaterial(object, group);
       if (!material) return;
       rule.shadowSide(depthMaterial, material);

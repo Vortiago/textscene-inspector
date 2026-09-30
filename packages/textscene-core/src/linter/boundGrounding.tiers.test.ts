@@ -79,12 +79,9 @@ describe('per-end grounding', () => {
 
   it('reports a hinted violation as a warning through those combinators too', () => {
     expect(v.nonNegativeFloat('n', { hinted: 'b.cpp:2' })('n', '-1', 1)?.severity).toBe('warning');
-    expect(v.positiveInt('i', undefined, { hinted: 'd.cpp:4' })('i', '0', 1)?.severity).toBe(
-      'warning'
-    );
+    expect(v.positiveInt('i', undefined, { hinted: 'd.cpp:4' })('i', '0', 1)?.severity).toBe('warning');
     expect(
-      v.boundedVector3('vec', { min: 0, hinted: 'f.cpp:6' })('vec', 'Vector3(-1, 0, 0)', 1)
-        ?.severity
+      v.boundedVector3('vec', { min: 0, hinted: 'f.cpp:6' })('vec', 'Vector3(-1, 0, 0)', 1)?.severity
     ).toBe('warning');
   });
 
@@ -162,7 +159,7 @@ describe('per-end grounding', () => {
   });
 });
 
-describe('an end no value can reach reports at the setter\'s tier', () => {
+describe("an end no value can reach reports at the setter's tier", () => {
   it('holds for every bounded validator in the live registry', () => {
     // `endSeverity` derives its own answer, so this second file checks it: a hint end at or inside a setter end
     // describes an empty band, since the setter refuses first, so the end reports the setter's `error`.
@@ -189,7 +186,7 @@ describe('an end no value can reach reports at the setter\'s tier', () => {
     expect(wrong).toEqual([]);
   });
 
-  it('bites: a setter end coinciding with the hint\'s leaves no band to warn in', () => {
+  it("bites: a setter end coinciding with the hint's leaves no band to warn in", () => {
     const coinciding = v.float('aspect_ratio', {
       min: 0,
       max: 100,

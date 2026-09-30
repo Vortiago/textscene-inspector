@@ -17,9 +17,7 @@ export async function expandAllTreeRows(page, { maxRounds = 60 } = {}) {
 
 /** Every row in the DOM, in document order, without collapsed rows' children. */
 export async function readOutlinerPaths(page) {
-  return page.$$eval('[data-node-path]', (nodes) =>
-    nodes.map((node) => node.getAttribute('data-node-path'))
-  );
+  return page.$$eval('[data-node-path]', (nodes) => nodes.map((node) => node.getAttribute('data-node-path')));
 }
 
 /** Clicks a row by its exact node path, as a user selects in the tree. */

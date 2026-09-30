@@ -10,8 +10,7 @@ import { isDivider, splitRow } from '../markdownTable.mjs';
 import { REPO_ROOT } from '../sheetSources.mjs';
 import { NOTES_TYPE } from './vocabulary.mjs';
 
-export const escapeHtml = (s) =>
-  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+export const escapeHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 /**
  * `ADR-0025` in sheet prose becomes an absolute link to the decision record.
@@ -122,9 +121,16 @@ function renderTable(rows) {
   const cells = splitRow;
   const body = rows.filter((r) => !isDivider(r.trim()));
   const [head, ...rest] = body;
-  const th = cells(head).map((c) => `<th>${inline(c)}</th>`).join('');
+  const th = cells(head)
+    .map((c) => `<th>${inline(c)}</th>`)
+    .join('');
   const trs = rest
-    .map((r) => `<tr>${cells(r).map((c) => `<td>${inline(c)}</td>`).join('')}</tr>`)
+    .map(
+      (r) =>
+        `<tr>${cells(r)
+          .map((c) => `<td>${inline(c)}</td>`)
+          .join('')}</tr>`
+    )
     .join('');
   return `<div class="tablewrap"><table><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table></div>`;
 }

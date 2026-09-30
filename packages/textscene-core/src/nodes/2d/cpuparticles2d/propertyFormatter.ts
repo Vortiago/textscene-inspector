@@ -29,10 +29,7 @@ const DRAW_ORDER_LABELS: Record<number, string> = {
   [CPUParticles2DDrawOrder.Lifetime]: 'Lifetime',
 };
 
-
-export function formatCPUParticles2DProperties(
-  props: CPUParticles2DProperties
-): PropertySection[] {
+export function formatCPUParticles2DProperties(props: CPUParticles2DProperties): PropertySection[] {
   const sections: PropertySection[] = [
     {
       title: 'Particles',
@@ -91,9 +88,7 @@ export function formatCPUParticles2DProperties(
   return sections;
 }
 
-function emissionShapeItems(
-  props: CPUParticles2DProperties
-): Array<{ label: string; value: string }> {
+function emissionShapeItems(props: CPUParticles2DProperties): Array<{ label: string; value: string }> {
   switch (props.emission_shape) {
     case CPUParticles2DEmissionShape.Sphere:
     case CPUParticles2DEmissionShape.SphereSurface:
@@ -115,9 +110,7 @@ function emissionShapeItems(
   }
 }
 
-function formatParams(
-  props: CPUParticles2DProperties
-): Array<{ label: string; value: string }> {
+function formatParams(props: CPUParticles2DProperties): Array<{ label: string; value: string }> {
   const items: Array<{ label: string; value: string }> = [];
   for (let i = 0; i < PARAM_SLOTS.length; i++) {
     const slot = props.params[i];

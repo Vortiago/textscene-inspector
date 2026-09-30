@@ -9,7 +9,10 @@ import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { controlSolverRegistry, type ContainerLayoutFn } from '../../../../r3f/controls/native/solverRegistry';
+import {
+  controlSolverRegistry,
+  type ContainerLayoutFn,
+} from '../../../../r3f/controls/native/solverRegistry';
 import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanvasWalker';
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { Control } from './Component';
@@ -38,7 +41,9 @@ interface WrapperInstance {
   scale: { x: number; y: number; z: number };
 }
 
-function allGroups(scene: { findAllByType: (t: string) => { instance: WrapperInstance }[] }): WrapperInstance[] {
+function allGroups(scene: {
+  findAllByType: (t: string) => { instance: WrapperInstance }[];
+}): WrapperInstance[] {
   return scene.findAllByType('Group').map((g) => g.instance);
 }
 

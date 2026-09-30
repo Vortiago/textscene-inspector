@@ -2,7 +2,14 @@
  * Tests the PathFollow2D rules: the parent must be a Path2D, and the progress checks.
  */
 import { describe, it, expect } from 'vitest';
-import { node, scene, lint, expectDiagnostic, expectNoDiagnostic, expectNoErrors } from '../../../linter/testing/testkit';
+import {
+  node,
+  scene,
+  lint,
+  expectDiagnostic,
+  expectNoDiagnostic,
+  expectNoErrors,
+} from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
@@ -25,17 +32,11 @@ progress = 50.0
   // path_2d.cpp:385 is a get_configuration_warnings() entry, so it is advisory
   // (ADR-0032), the same tier as the Path3D sibling.
   it('warns when the parent is not a Path2D', () => {
-    expectDiagnostic(
-      scene(
-        node('Node2D', {}, { name: 'Root' }),
-        node('PathFollow2D', {}, { parent: '.' })
-      ),
-      {
-        ruleName: 'pathfollow2d-invalid-parent',
-        severity: 'warning',
-        contains: ['a child of a Node2D node', 'direct child of a Path2D'],
-      }
-    );
+    expectDiagnostic(scene(node('Node2D', {}, { name: 'Root' }), node('PathFollow2D', {}, { parent: '.' })), {
+      ruleName: 'pathfollow2d-invalid-parent',
+      severity: 'warning',
+      contains: ['a child of a Node2D node', 'direct child of a Path2D'],
+    });
   });
 
   it('warns when PathFollow2D is at the scene root (no parent)', () => {
@@ -65,7 +66,10 @@ progress = 50.0
   describe('the visibility gate', () => {
     it('stays quiet when the node itself is hidden', () => {
       expectNoDiagnostic(
-        scene(node('Node2D', {}, { name: 'Root' }), node('PathFollow2D', { visible: false }, { parent: '.' })),
+        scene(
+          node('Node2D', {}, { name: 'Root' }),
+          node('PathFollow2D', { visible: false }, { parent: '.' })
+        ),
         { ruleName: 'pathfollow2d-invalid-parent' }
       );
     });
@@ -103,34 +107,30 @@ progress = 50.0
     // The range is beside the point. `set_progress_ratio` opens with
     // ERR_FAIL_NULL_MSG(path) (path_2d.cpp:472) and `path` is bound on
     // enter-tree, after the loader applies properties, so 0.5 drops as 1.5 does.
-    expectDiagnostic(
-      scene(node('Path2D'), node('PathFollow2D', { progress_ratio: 0.5 }, { parent: '.' })),
-      { ruleName: 'pathfollow2d-progress-ratio-ignored', severity: 'error' }
-    );
+    expectDiagnostic(scene(node('Path2D'), node('PathFollow2D', { progress_ratio: 0.5 }, { parent: '.' })), {
+      ruleName: 'pathfollow2d-progress-ratio-ignored',
+      severity: 'error',
+    });
   });
 
   it('errors on an out-of-range progress_ratio under the same rule', () => {
-    expectDiagnostic(
-      scene(node('Path2D'), node('PathFollow2D', { progress_ratio: 1.5 }, { parent: '.' })),
-      { ruleName: 'pathfollow2d-progress-ratio-ignored', severity: 'error' }
-    );
+    expectDiagnostic(scene(node('Path2D'), node('PathFollow2D', { progress_ratio: 1.5 }, { parent: '.' })), {
+      ruleName: 'pathfollow2d-progress-ratio-ignored',
+      severity: 'error',
+    });
   });
 
   it('still errors when progress is authored alongside it, since progress wins', () => {
     expectDiagnostic(
-      scene(
-        node('Path2D'),
-        node('PathFollow2D', { progress: 50.0, progress_ratio: 0.5 }, { parent: '.' })
-      ),
+      scene(node('Path2D'), node('PathFollow2D', { progress: 50.0, progress_ratio: 0.5 }, { parent: '.' })),
       { ruleName: 'pathfollow2d-progress-ratio-ignored', severity: 'error' }
     );
   });
 
   it('says nothing about progress_ratio when the file never mentions it', () => {
-    expectNoDiagnostic(
-      scene(node('Path2D'), node('PathFollow2D', { progress: 50.0 }, { parent: '.' })),
-      { ruleName: 'pathfollow2d-progress-ratio-ignored' }
-    );
+    expectNoDiagnostic(scene(node('Path2D'), node('PathFollow2D', { progress: 50.0 }, { parent: '.' })), {
+      ruleName: 'pathfollow2d-progress-ratio-ignored',
+    });
   });
 
   it('stays silent on a non-finite progress, which the setter refuses outright', () => {
@@ -146,10 +146,10 @@ progress = 50.0
   });
 
   it('still reports on a negative progress spelled with an exponent', () => {
-    expectDiagnostic(
-      scene(node('Path2D'), node('PathFollow2D', { progress: '-2e1' }, { parent: '.' })),
-      { ruleName: 'pathfollow2d-negative-progress', severity: 'info' }
-    );
+    expectDiagnostic(scene(node('Path2D'), node('PathFollow2D', { progress: '-2e1' }, { parent: '.' })), {
+      ruleName: 'pathfollow2d-negative-progress',
+      severity: 'info',
+    });
   });
 
   it('accepts the gamepiece.tscn shape: PathFollow2D with loop=false under a curveless Path2D', () => {

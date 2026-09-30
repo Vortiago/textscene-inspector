@@ -29,7 +29,6 @@ import {
 } from '../../parser/importParser';
 import * as logger from '../../logger';
 
-
 /**
  * Dispose of a GLB mesh and all its resources. Unlike a per-consumer clone
  * (whose geometry is shared with this template, see
@@ -67,11 +66,7 @@ async function applyImportSidecar(
 }
 
 /** `nodes/root_scale`, applied to the asset the way `nodes/apply_root_scale` asks. */
-function applySidecarRootScale(
-  object: THREE.Object3D,
-  path: string,
-  parsed: ParsedImportFile | null
-): void {
+function applySidecarRootScale(object: THREE.Object3D, path: string, parsed: ParsedImportFile | null): void {
   const rootScale = importRootScale(parsed);
   if (!rootScale) return;
 
@@ -88,11 +83,7 @@ function applySidecarRootScale(
  * sanitized into three's spelling first. No nearest-ancestor fallback: a mask belongs
  * to one mesh instance, and an ancestor would stamp every sibling under it.
  */
-function applySidecarNodeLayers(
-  object: THREE.Object3D,
-  path: string,
-  parsed: ParsedImportFile | null
-): void {
+function applySidecarNodeLayers(object: THREE.Object3D, path: string, parsed: ParsedImportFile | null): void {
   const masks = importNodeLayers(parsed);
   if (masks.size === 0) return;
 

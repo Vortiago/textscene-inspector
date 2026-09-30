@@ -13,12 +13,7 @@ import { controlComponentRegistry } from '../index';
  * band and a modulate scope. `ScrollContainer` and `GraphEdit` publish clip planes, as both set
  * `clip_contents`. A chrome-only painter does not wrap, so the walker places its children as siblings.
  */
-const WRAPS_CHILDREN = new Set([
-  'CanvasLayer',
-  'ParallaxBackground',
-  'ScrollContainer',
-  'GraphEdit',
-]);
+const WRAPS_CHILDREN = new Set(['CanvasLayer', 'ParallaxBackground', 'ScrollContainer', 'GraphEdit']);
 
 describe('wrapsChildren ↔ ControlComponentRegistry drift guard', () => {
   it('every scope-establishing type declares it on its real registration', () => {

@@ -30,7 +30,7 @@ interface WrapperInstance {
 
 function findWrappingGroup(
   scene: { findAllByType: (t: string) => { instance: WrapperInstance }[] },
-  nodeName: string,
+  nodeName: string
 ): WrapperInstance | null {
   // The dispatcher's wrapper sits above the Component's own named group.
   const named = scene
@@ -43,16 +43,13 @@ function findWrappingGroup(
 
 describe('<NodeDispatcher> visibility wire-up (WI-UX-1)', () => {
   it('sets visible=false on the wrapping group when its path is hidden', async () => {
-    const nodes: TscnNode[] = [
-      makeNode('Alpha', 'Node3D'),
-      makeNode('Beta', 'Node3D'),
-    ];
+    const nodes: TscnNode[] = [makeNode('Alpha', 'Node3D'), makeNode('Beta', 'Node3D')];
 
     const renderer = await ReactThreeTestRenderer.create(
       <SelectionProvider>
         <HiddenSeeder paths={['Alpha']} />
         <NodeDispatcher nodes={nodes} />
-      </SelectionProvider>,
+      </SelectionProvider>
     );
 
     const alphaWrapper = findWrappingGroup(renderer.scene, 'Alpha');
@@ -65,15 +62,13 @@ describe('<NodeDispatcher> visibility wire-up (WI-UX-1)', () => {
   });
 
   it('hides descendant geometry when an ancestor is hidden (THREE short-circuits)', async () => {
-    const nodes: TscnNode[] = [
-      makeNode('Parent', 'Node3D', [makeNode('Child', 'Node3D')]),
-    ];
+    const nodes: TscnNode[] = [makeNode('Parent', 'Node3D', [makeNode('Child', 'Node3D')])];
 
     const renderer = await ReactThreeTestRenderer.create(
       <SelectionProvider>
         <HiddenSeeder paths={['Parent']} />
         <NodeDispatcher nodes={nodes} />
-      </SelectionProvider>,
+      </SelectionProvider>
     );
 
     const parentWrapper = findWrappingGroup(renderer.scene, 'Parent');
@@ -88,14 +83,12 @@ describe('<NodeDispatcher> visibility wire-up (WI-UX-1)', () => {
   });
 
   it('leaves all wrappers visible by default when no paths are hidden', async () => {
-    const nodes: TscnNode[] = [
-      makeNode('Solo', 'Node3D'),
-    ];
+    const nodes: TscnNode[] = [makeNode('Solo', 'Node3D')];
 
     const renderer = await ReactThreeTestRenderer.create(
       <SelectionProvider>
         <NodeDispatcher nodes={nodes} />
-      </SelectionProvider>,
+      </SelectionProvider>
     );
 
     const soloWrapper = findWrappingGroup(renderer.scene, 'Solo');

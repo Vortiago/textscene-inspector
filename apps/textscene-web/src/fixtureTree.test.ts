@@ -51,8 +51,18 @@ describe('buildFixtureTree', () => {
 describe('filterFixtureTree', () => {
   const fx: Fixture[] = [
     { name: 'Box Mesh', file: 'unit-box.tscn', category: 'Unit - Meshes' },
-    { name: 'x', file: 'demos/3d/platformer/coin/coin.tscn', category: 'Godot Demos - 3D', root: 'demos/3d/platformer' },
-    { name: 'y', file: 'demos/3d/platformer/enemy/enemy.tscn', category: 'Godot Demos - 3D', root: 'demos/3d/platformer' },
+    {
+      name: 'x',
+      file: 'demos/3d/platformer/coin/coin.tscn',
+      category: 'Godot Demos - 3D',
+      root: 'demos/3d/platformer',
+    },
+    {
+      name: 'y',
+      file: 'demos/3d/platformer/enemy/enemy.tscn',
+      category: 'Godot Demos - 3D',
+      root: 'demos/3d/platformer',
+    },
   ];
   const tree = buildFixtureTree(fx);
 

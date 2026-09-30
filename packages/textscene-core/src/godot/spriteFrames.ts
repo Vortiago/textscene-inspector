@@ -97,7 +97,11 @@ export function replaySpriteFrames(properties: Record<string, string>): SpriteFr
       if (frame === null || Number.isNaN(frame)) continue;
       const refused = frame < 0 || frame >= state.hframes * state.vframes;
       const write: FrameWrite = {
-        key, index, authored: frame, hframes: state.hframes, vframes: state.vframes,
+        key,
+        index,
+        authored: frame,
+        hframes: state.hframes,
+        vframes: state.vframes,
         refused: { x: refused, y: false },
       };
       state.writes.push(write);
@@ -107,8 +111,12 @@ export function replaySpriteFrames(properties: Record<string, string>): SpriteFr
       const coords = storedVector2i(raw);
       if (typeof coords === 'string') continue;
       const write: FrameWrite = {
-        key, index, coords, authored: coords.y * state.hframes + coords.x,
-        hframes: state.hframes, vframes: state.vframes,
+        key,
+        index,
+        coords,
+        authored: coords.y * state.hframes + coords.x,
+        hframes: state.hframes,
+        vframes: state.vframes,
         refused: {
           x: coords.x < 0 || coords.x >= state.hframes,
           y: coords.y < 0 || coords.y >= state.vframes,

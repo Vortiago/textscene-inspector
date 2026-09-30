@@ -18,7 +18,7 @@ function check(nodeType: string, property: string, value: string) {
 }
 
 describe('AnimationMixer strict validators', () => {
-  it('owns both the property-list families and AnimationMixer\'s ordinary members', () => {
+  it("owns both the property-list families and AnimationMixer's ordinary members", () => {
     // Three keys arrive through the property-list route no ADD_PROPERTY sweep sees. The other ten
     // are ordinary ADD_PROPERTY members (animation_mixer.cpp:2458-2473), registered here so the
     // base-walk gives AnimationPlayer and AnimationTree the same set.
@@ -94,7 +94,9 @@ describe('AnimationMixer strict validators', () => {
     });
 
     it('accepts a SubResource reference for a named library', () => {
-      expect(check('AnimationMixer', 'libraries/combat', 'SubResource("AnimationLibrary_combat")')).toBeNull();
+      expect(
+        check('AnimationMixer', 'libraries/combat', 'SubResource("AnimationLibrary_combat")')
+      ).toBeNull();
     });
 
     it('accepts an ExtResource reference', () => {
@@ -116,7 +118,7 @@ describe('AnimationMixer strict validators', () => {
       expect(check('AnimationMixer', 'audio_max_polyphony', '127')).toBeNull();
     });
 
-    it("warns on the band the setter allows and the hint at :2468 does not, 0 and 128", () => {
+    it('warns on the band the setter allows and the hint at :2468 does not, 0 and 128', () => {
       expect(check('AnimationMixer', 'audio_max_polyphony', '0')?.severity).toBe('warning');
       expect(check('AnimationMixer', 'audio_max_polyphony', '128')?.severity).toBe('warning');
     });

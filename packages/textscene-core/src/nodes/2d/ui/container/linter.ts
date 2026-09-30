@@ -38,7 +38,9 @@ const containerScriptRule: LintRule = {
     // only the exact class warns, and `applicableNodeTypeMatcher` would be wrong here.
     exactClassByDesign: 'container.cpp:210',
     applicableNodeTypes: ['Container'],
-    emits: [{ ruleName: 'container-no-script', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: [
+      { ruleName: 'container-no-script', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+    ],
   },
   check: checkContainer,
 };

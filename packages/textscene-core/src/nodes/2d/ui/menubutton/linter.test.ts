@@ -46,10 +46,11 @@ describe('MenuButton semantic rules', () => {
   it('errors on a `+`-signed index past item_count', () => {
     // `is_valid_int` skips one leading sign, `+` as readily as `-` (ustring.cpp:4752), so
     // `popup/item_+2/text` resolves to item 2.
-    expectDiagnostic(
-      scene(node('MenuButton', { item_count: 1, 'popup/item_+2/text': '"Autosave"' })),
-      { ruleName: RULE, severity: 'error', contains: ['2'] }
-    );
+    expectDiagnostic(scene(node('MenuButton', { item_count: 1, 'popup/item_+2/text': '"Autosave"' })), {
+      ruleName: RULE,
+      severity: 'error',
+      contains: ['2'],
+    });
   });
 
   // `int index = ….to_int()` (property_list_helper.cpp:57) keeps the low 32 bits.
@@ -64,10 +65,9 @@ describe('MenuButton semantic rules', () => {
   it('leaves a negative index to the per-property validator', () => {
     // The family dispatcher in linterParser.ts already errors on a negative
     // index, so reporting it here too would double the diagnostic.
-    expectNoDiagnostic(
-      scene(node('MenuButton', { item_count: 2, 'popup/item_-1/text': '"Open"' })),
-      { ruleName: RULE }
-    );
+    expectNoDiagnostic(scene(node('MenuButton', { item_count: 2, 'popup/item_-1/text': '"Open"' })), {
+      ruleName: RULE,
+    });
   });
 
   it('stays silent while every index is inside item_count', () => {
@@ -84,10 +84,9 @@ describe('MenuButton semantic rules', () => {
   });
 
   it('says nothing about a malformed item_count, which has its own validator', () => {
-    expectNoDiagnostic(
-      scene(node('MenuButton', { item_count: 'two', 'popup/item_9/text': '"Nine"' })),
-      { ruleName: RULE }
-    );
+    expectNoDiagnostic(scene(node('MenuButton', { item_count: 'two', 'popup/item_9/text': '"Nine"' })), {
+      ruleName: RULE,
+    });
   });
 
   it('never reads a bare item_<N>/ key, which MenuButton does not expose', () => {

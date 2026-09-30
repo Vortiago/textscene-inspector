@@ -3,7 +3,14 @@
  * `lastTagValue`, `resolveBBColor` and `parseImgTag`.
  */
 import { describe, expect, it } from 'vitest';
-import { IMAGE_OBJECT_CHAR, hasOpenTag, lastTagValue, parseBBCodeRuns, parseImgTag, resolveBBColor } from './bbcode';
+import {
+  IMAGE_OBJECT_CHAR,
+  hasOpenTag,
+  lastTagValue,
+  parseBBCodeRuns,
+  parseImgTag,
+  resolveBBColor,
+} from './bbcode';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 const CENTER_CENTER = { imagePoint: 'center', textPoint: 'center' } as const;
@@ -41,16 +48,14 @@ describe('parseBBCodeRuns', () => {
     ]);
   });
 
-  it('carries a [name=value] tag\'s value, preserving internal spaces', () => {
+  it("carries a [name=value] tag's value, preserving internal spaces", () => {
     const runs = parseBBCodeRuns('[color=Color(1, 0, 0, 1)]x[/color]');
     expect(runs).toEqual([{ text: 'x', tags: [{ name: 'color', value: 'Color(1, 0, 0, 1)' }] }]);
   });
 
   it('stacks nested tags outermost-first', () => {
     const runs = parseBBCodeRuns('[b][i]x[/i][/b]');
-    expect(runs).toEqual([
-      { text: 'x', tags: [{ name: 'b' }, { name: 'i' }] },
-    ]);
+    expect(runs).toEqual([{ text: 'x', tags: [{ name: 'b' }, { name: 'i' }] }]);
   });
 
   it('drops a tag Godot RECOGNISES but this painter does not style, keeping it on the stack and keeping the inner text', () => {
@@ -150,9 +155,7 @@ describe('parseBBCodeRuns', () => {
     });
 
     it('still opens [p] and [img], which DO push (`:5746`, `:5992`)', () => {
-      expect(parseBBCodeRuns('[p]x[/p]')).toEqual([
-        { text: 'x', tags: [{ name: 'p', value: undefined }] },
-      ]);
+      expect(parseBBCodeRuns('[p]x[/p]')).toEqual([{ text: 'x', tags: [{ name: 'p', value: undefined }] }]);
     });
   });
 
@@ -212,7 +215,9 @@ describe('parseImgTag', () => {
   it('the value form and the width=/height= options are mutually exclusive — a present value form leaves the options unread even when both are written', () => {
     // `"top".to_int()` is 0 (`String::to_int` skips non-digits), so width and
     // height stay 0 rather than falling through to `width=`.
-    expect(parseImgTag('img=top width=999', 'a.png')).toEqual(img('a.png', { alignment: { imagePoint: 'top', textPoint: 'top' } }));
+    expect(parseImgTag('img=top width=999', 'a.png')).toEqual(
+      img('a.png', { alignment: { imagePoint: 'top', textPoint: 'top' } })
+    );
   });
 
   it('reads tooltip=/pad= only from the options form', () => {
@@ -248,11 +253,17 @@ describe('parseImgTag', () => {
   describe('alignment', () => {
     it('a single subtag sets a full preset — image point and text point together (`:6001-6010`)', () => {
       expect(parseImgTag('img=top', 'a.png').alignment).toEqual({ imagePoint: 'top', textPoint: 'top' });
-      expect(parseImgTag('img=bottom', 'a.png').alignment).toEqual({ imagePoint: 'bottom', textPoint: 'bottom' });
+      expect(parseImgTag('img=bottom', 'a.png').alignment).toEqual({
+        imagePoint: 'bottom',
+        textPoint: 'bottom',
+      });
     });
 
     it('a two-piece subtag sets each axis independently', () => {
-      expect(parseImgTag('img=top,bottom', 'a.png').alignment).toEqual({ imagePoint: 'top', textPoint: 'bottom' });
+      expect(parseImgTag('img=top,bottom', 'a.png').alignment).toEqual({
+        imagePoint: 'top',
+        textPoint: 'bottom',
+      });
     });
 
     it('a matched image-point piece resets text-point to top unless the second piece also matches — Godot assigns (not ORs) the image bits, zeroing the text bits as a side effect', () => {
@@ -260,11 +271,17 @@ describe('parseImgTag', () => {
     });
 
     it("an unmatched image-point piece leaves text-point BOTTOM for 'baseline' — the default CENTER text field (0b01) OR'd with BASELINE's own field (0b10) is 0b11, Godot's own BOTTOM value, a real engine quirk this ports bit-for-bit", () => {
-      expect(parseImgTag('img=xyz,baseline', 'a.png').alignment).toEqual({ imagePoint: 'center', textPoint: 'bottom' });
+      expect(parseImgTag('img=xyz,baseline', 'a.png').alignment).toEqual({
+        imagePoint: 'center',
+        textPoint: 'bottom',
+      });
     });
 
     it('reads align= from the options form, using the same subtag grammar', () => {
-      expect(parseImgTag('img align=bottom,center', 'a.png').alignment).toEqual({ imagePoint: 'bottom', textPoint: 'center' });
+      expect(parseImgTag('img align=bottom,center', 'a.png').alignment).toEqual({
+        imagePoint: 'bottom',
+        textPoint: 'center',
+      });
     });
 
     it('align= is unread once the value form is present, same mutual exclusivity as width/height', () => {
@@ -284,12 +301,8 @@ describe('hasOpenTag', () => {
 });
 
 describe('lastTagValue', () => {
-  it('returns the innermost (last) matching tag\'s value', () => {
-    const tags = [
-      { name: 'color', value: 'red' },
-      { name: 'b' },
-      { name: 'color', value: 'blue' },
-    ];
+  it("returns the innermost (last) matching tag's value", () => {
+    const tags = [{ name: 'color', value: 'red' }, { name: 'b' }, { name: 'color', value: 'blue' }];
     expect(lastTagValue(tags, 'color')).toBe('blue');
   });
 
@@ -342,7 +355,7 @@ describe('resolveBBColor', () => {
     expect(resolveBBColor('Dark Orange', FALLBACK)).toEqual({ r: 1, g: 0x8c / 255, b: 0, a: 1 });
   });
 
-  it('falls back for an unrecognised name (Color::from_string\'s own fallback contract, color.cpp:450-456), not white', () => {
+  it("falls back for an unrecognised name (Color::from_string's own fallback contract, color.cpp:450-456), not white", () => {
     expect(resolveBBColor('not-a-real-color-name', FALLBACK)).toEqual(FALLBACK);
   });
 });

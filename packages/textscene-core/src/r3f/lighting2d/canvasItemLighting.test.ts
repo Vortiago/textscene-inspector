@@ -75,7 +75,7 @@ describe('canvasItemLightingProps', () => {
     expect(shader.fragmentShader).not.toMatch(/for\s*\(/);
   });
 
-  it('binds the caller\'s uniform OBJECTS, so later values reach the GPU', () => {
+  it("binds the caller's uniform OBJECTS, so later values reach the GPU", () => {
     // three captures what onBeforeCompile assigns at first compile and R3F never sets
     // material.needsUpdate, so a rebuilt uniform object is stranded: the identity is the contract.
     const { shader, shared } = compile(CanvasItemLightMode.NORMAL);
@@ -112,7 +112,7 @@ describe('canvasItemLightingProps', () => {
     expect(CANVAS_MODULATE_FLOOR).toBeLessThanOrEqual(1 / 255);
   });
 
-  it('clamps in Godot\'s space before handing the fragment back to three', () => {
+  it("clamps in Godot's space before handing the fragment back to three", () => {
     // Godot's framebuffer clamps after the light is multiplied into the albedo, which is why the
     // accumulation is unclamped half-float. The shadow_color term joins inside that clamp and
     // outside the albedo multiply, where `light_shadow_compute` puts it.

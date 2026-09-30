@@ -30,7 +30,12 @@ import {
   titlebarGeometry,
 } from '../graphelement/graphTitlebar';
 import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
-import { GRAPH_PORT_ICON, GRAPH_PORT_ICON_SIZE, RESIZER_SE_ICON, RESIZER_SE_ICON_SIZE } from '../graphelement/graphIcons';
+import {
+  GRAPH_PORT_ICON,
+  GRAPH_PORT_ICON_SIZE,
+  RESIZER_SE_ICON,
+  RESIZER_SE_ICON_SIZE,
+} from '../graphelement/graphIcons';
 import type { ControlColor } from '../control/types';
 import {
   GRAPH_NODE_TITLE_DEFAULT_COLOR,
@@ -79,7 +84,14 @@ function GraphNodePort({ solveNode, iconRef, slotColor, tintOwn, x, y, renderOrd
 
   return (
     <CanvasItemGroup position={[x - size.x / 2, -(y - size.y / 2), 0]}>
-      <ControlQuad width={size.x} height={size.y} color={color} opacity={opacity} map={texture} renderOrder={renderOrder} />
+      <ControlQuad
+        width={size.x}
+        height={size.y}
+        color={color}
+        opacity={opacity}
+        map={texture}
+        renderOrder={renderOrder}
+      />
     </CanvasItemGroup>
   );
 }
@@ -89,7 +101,14 @@ function portHOffsetOf(constants: SolveNode['constants']): number {
   return constants.port_h_offset ?? 0;
 }
 
-export function GraphNode({ solveNode, tint, rect, theme, renderOrder, childRects }: NativeControlComponentProps) {
+export function GraphNode({
+  solveNode,
+  tint,
+  rect,
+  theme,
+  renderOrder,
+  childRects,
+}: NativeControlComponentProps) {
   const props = painterView<GraphNodeProperties>(solveNode);
   // `<TextRun>` builds its own material, so it takes the ambient planes as a
   // prop rather than reading them (`nativeClipCoverage.test.tsx`'s own doc).
@@ -113,14 +132,29 @@ export function GraphNode({ solveNode, tint, rect, theme, renderOrder, childRect
 
   const title = props.title ?? '';
   const fontTheme = useMemo(
-    () => resolveTitleFontTheme(solveNode, GRAPH_NODE_TITLE_VARIATION, theme.fontSize, GRAPH_NODE_TITLE_DEFAULT_COLOR),
+    () =>
+      resolveTitleFontTheme(
+        solveNode,
+        GRAPH_NODE_TITLE_VARIATION,
+        theme.fontSize,
+        GRAPH_NODE_TITLE_DEFAULT_COLOR
+      ),
     [solveNode, theme.fontSize]
   );
-  const titleLayout = useMemo(() => (title.length > 0 ? shapeTitleText(title, fontTheme) : null), [title, fontTheme]);
+  const titleLayout = useMemo(
+    () => (title.length > 0 ? shapeTitleText(title, fontTheme) : null),
+    [title, fontTheme]
+  );
   const titlePlacements = useMemo(
     () =>
       titleLayout
-        ? layoutLabelLines(titleLayout, titlebarBand.contentRect.w, titlebarBand.contentRect.h, undefined, undefined)
+        ? layoutLabelLines(
+            titleLayout,
+            titlebarBand.contentRect.w,
+            titlebarBand.contentRect.h,
+            undefined,
+            undefined
+          )
         : [],
     [titleLayout, titlebarBand.contentRect.w, titlebarBand.contentRect.h]
   );
@@ -144,7 +178,10 @@ export function GraphNode({ solveNode, tint, rect, theme, renderOrder, childRect
   );
   const portHOffset = portHOffsetOf(solveNode.constants);
 
-  const titleTintColor = useMemo(() => multiplyModulate(tint.own, fontTheme.color), [tint.own, fontTheme.color]);
+  const titleTintColor = useMemo(
+    () => multiplyModulate(tint.own, fontTheme.color),
+    [tint.own, fontTheme.color]
+  );
 
   const resizerTexture = useNodeIcon(
     props.resizable === true ? solveNode.icons.resizer : undefined,
@@ -162,13 +199,22 @@ export function GraphNode({ solveNode, tint, rect, theme, renderOrder, childRect
       <CanvasItemGroup position={[bodyRect.x, -bodyRect.y, 0]}>
         <StyleBoxQuad styleBox={panelStyle} color={tint.own} rect={bodyRect} renderOrder={renderOrder} />
       </CanvasItemGroup>
-      <StyleBoxQuad styleBox={titlebarStyle} color={tint.own} rect={titlebarBand.rect} renderOrder={renderOrder} />
+      <StyleBoxQuad
+        styleBox={titlebarStyle}
+        color={tint.own}
+        rect={titlebarBand.rect}
+        renderOrder={renderOrder}
+      />
 
       {titleLayout &&
         titlePlacements.map((placement, i) => (
           <CanvasItemGroup
             key={i}
-            position={[titlebarBand.contentRect.x + placement.x, -(titlebarBand.contentRect.y + placement.y), 0]}
+            position={[
+              titlebarBand.contentRect.x + placement.x,
+              -(titlebarBand.contentRect.y + placement.y),
+              0,
+            ]}
           >
             <TextRun
               layout={titleLineLayouts[i]!}
@@ -184,7 +230,12 @@ export function GraphNode({ solveNode, tint, rect, theme, renderOrder, childRect
         <Fragment key={row.rawIndex}>
           {row.styleboxRect && (
             <CanvasItemGroup position={[row.styleboxRect.x, -row.styleboxRect.y, 0]}>
-              <StyleBoxQuad styleBox={styles.slot} color={tint.own} rect={row.styleboxRect} renderOrder={renderOrder} />
+              <StyleBoxQuad
+                styleBox={styles.slot}
+                color={tint.own}
+                rect={row.styleboxRect}
+                renderOrder={renderOrder}
+              />
             </CanvasItemGroup>
           )}
           {row.slot.leftEnabled && (

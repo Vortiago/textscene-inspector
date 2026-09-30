@@ -15,12 +15,7 @@ vi.mock('./sourceGate', () => ({
 }));
 
 import { useSceneSource } from './useSceneSource';
-import {
-  FIXTURE_TSCN,
-  deferred,
-  mockFetchOk,
-  mockFetchFail,
-} from './useSceneSource.testkit';
+import { FIXTURE_TSCN, deferred, mockFetchOk, mockFetchFail } from './useSceneSource.testkit';
 
 beforeEach(() => {
   try {
@@ -78,14 +73,10 @@ describe('fixture load — happy path', () => {
   it('stores the fixture key in localStorage on successful load', async () => {
     globalThis.fetch = mockFetchOk(FIXTURE_TSCN);
 
-    renderHook(() =>
-      useSceneSource({ fixtureFile: 'unit-plane-mesh.tscn', uploadedTscnName: null })
-    );
+    renderHook(() => useSceneSource({ fixtureFile: 'unit-plane-mesh.tscn', uploadedTscnName: null }));
 
     await waitFor(() => {
-      expect(globalThis.localStorage.getItem('tscn-web-r3f-fixture')).toBe(
-        'unit-plane-mesh.tscn'
-      );
+      expect(globalThis.localStorage.getItem('tscn-web-r3f-fixture')).toBe('unit-plane-mesh.tscn');
     });
   });
 });
@@ -95,8 +86,7 @@ describe('fixture load — fetch failure', () => {
     // First load succeeds to establish a valid forwardedContent baseline.
     globalThis.fetch = mockFetchOk(FIXTURE_TSCN);
     const { result, rerender } = renderHook(
-      ({ fixtureFile }: { fixtureFile: string }) =>
-        useSceneSource({ fixtureFile, uploadedTscnName: null }),
+      ({ fixtureFile }: { fixtureFile: string }) => useSceneSource({ fixtureFile, uploadedTscnName: null }),
       { initialProps: { fixtureFile: 'unit-plane-mesh.tscn' } }
     );
 
@@ -135,9 +125,7 @@ describe('fixture load — fetch failure', () => {
 
 describe('empty state — no fixtureFile and no uploadedTscnName', () => {
   it('starts with empty buffer and forwardedContent when fixtureFile is empty', () => {
-    const { result } = renderHook(() =>
-      useSceneSource({ fixtureFile: '', uploadedTscnName: null })
-    );
+    const { result } = renderHook(() => useSceneSource({ fixtureFile: '', uploadedTscnName: null }));
 
     expect(result.current.buffer).toBe('');
     expect(result.current.forwardedContent).toBe('');

@@ -46,9 +46,7 @@ describe('<OmniLight3D>', () => {
   });
 
   it('maps omni_range to distance', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <OmniLight3D node={makeNode({ omni_range: 12 })} />
-    );
+    const renderer = await ReactThreeTestRenderer.create(<OmniLight3D node={makeNode({ omni_range: 12 })} />);
     const light = renderer.scene.findByType('PointLight');
     expect(instanceAs<THREE.PointLight>(light).distance).toBe(12);
   });
@@ -71,15 +69,17 @@ describe('<OmniLight3D>', () => {
 
   it('places light at the transform origin', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <OmniLight3D node={makeNode({
-        name: 'Pos',
-        transform: {
-          basis_x: { x: 1, y: 0, z: 0 },
-          basis_y: { x: 0, y: 1, z: 0 },
-          basis_z: { x: 0, y: 0, z: 1 },
-          origin: { x: 3, y: 4, z: 5 },
-        },
-      })} />
+      <OmniLight3D
+        node={makeNode({
+          name: 'Pos',
+          transform: {
+            basis_x: { x: 1, y: 0, z: 0 },
+            basis_y: { x: 0, y: 1, z: 0 },
+            basis_z: { x: 0, y: 0, z: 1 },
+            origin: { x: 3, y: 4, z: 5 },
+          },
+        })}
+      />
     );
     const light = renderer.scene.findByProps({ name: 'Pos' });
     expect(light.instance.position.x).toBe(3);

@@ -28,18 +28,16 @@ function params(overrides: Partial<Record<CPUParticles2DParam, string>> = {}): P
 
 describe('resolveParticleCurves', () => {
   it('decodes the Curve a parameter slot names (happy path)', () => {
-    const curves = resolveParticleCurves(
-      params({ [CPUParticles2DParam.Scale]: 'SubResource("4")' }),
-      [CURVE]
-    );
+    const curves = resolveParticleCurves(params({ [CPUParticles2DParam.Scale]: 'SubResource("4")' }), [
+      CURVE,
+    ]);
     expect(curves[CPUParticles2DParam.Scale]?.points).toHaveLength(2);
   });
 
   it('leaves every unreferenced slot null and keeps the array full length', () => {
-    const curves = resolveParticleCurves(
-      params({ [CPUParticles2DParam.Scale]: 'SubResource("4")' }),
-      [CURVE]
-    );
+    const curves = resolveParticleCurves(params({ [CPUParticles2DParam.Scale]: 'SubResource("4")' }), [
+      CURVE,
+    ]);
     expect(curves).toHaveLength(CPU_PARTICLES_2D_PARAM_COUNT);
     expect(curves.filter((c) => c !== null)).toHaveLength(1);
   });

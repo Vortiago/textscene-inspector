@@ -10,19 +10,10 @@ import { page } from './page.mjs';
 import { BLANK_PANEL, renderPanels } from './panels.mjs';
 import { imageSrc, loadCatalog, loadLintCoverage, loadSharedNotes } from './sources.mjs';
 import { parseSections } from './sheetParsing.mjs';
-import {
-  CATEGORY_ORDER,
-  DEFAULT_STATUS,
-  NOTES_TYPE,
-  STATUS_ORDER,
-  rollupStatus,
-} from './vocabulary.mjs';
+import { CATEGORY_ORDER, DEFAULT_STATUS, NOTES_TYPE, STATUS_ORDER, rollupStatus } from './vocabulary.mjs';
 
 /** One hand-authored sheet as a panel, with its images and rolled-up status resolved. */
-function sheetPanel(
-  { meta, body },
-  { catalogByType, groupFor, inlineImages, missing, orphanedMarkers }
-) {
+function sheetPanel({ meta, body }, { catalogByType, groupFor, inlineImages, missing, orphanedMarkers }) {
   const { intro, sections, trailing, orphaned } = parseSections(body);
   for (const marker of orphaned) {
     orphanedMarkers.push(`${meta.type}: orphaned compare marker ${marker}`);
@@ -103,8 +94,7 @@ export function build(sheets, inlineImages, fragment) {
   );
   // A node's functional group: from the catalog when it is a Godot node,
   // otherwise its own category (resources and complex scenes group by category).
-  const groupFor = (type, category, metaGroup) =>
-    catalogByType.get(type)?.group ?? metaGroup ?? category;
+  const groupFor = (type, category, metaGroup) => catalogByType.get(type)?.group ?? metaGroup ?? category;
   const sheetNodes = sheets.map((sheet) =>
     sheetPanel(sheet, { catalogByType, groupFor, inlineImages, missing, orphanedMarkers })
   );

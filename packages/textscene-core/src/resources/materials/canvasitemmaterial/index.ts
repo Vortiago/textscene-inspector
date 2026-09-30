@@ -15,8 +15,4 @@ registerResourceSlice({
 });
 
 export { decodeCanvasItemMaterial } from './decode';
-export {
-  CanvasItemBlendMode,
-  CanvasItemLightMode,
-  type CanvasItemMaterialProperties,
-} from './types';
+export { CanvasItemBlendMode, CanvasItemLightMode, type CanvasItemMaterialProperties } from './types';

@@ -1,12 +1,7 @@
 /** Sprite3D property formatter: formats sprite properties for the details panel. */
 
 import type { PropertySection } from '../../../core/NodeRegistry';
-import {
-  AlphaCutMode,
-  AxisMode,
-  BillboardMode,
-  type Sprite3DProperties,
-} from './types';
+import { AlphaCutMode, AxisMode, BillboardMode, type Sprite3DProperties } from './types';
 import { formatColorRgba } from '../../../utils/colorParser';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
 
@@ -70,29 +65,43 @@ export function formatSprite3DProperties(properties: Sprite3DProperties): Proper
 
 function billboardName(mode: BillboardMode): string {
   switch (mode) {
-    case BillboardMode.BILLBOARD_DISABLED: return 'Disabled';
-    case BillboardMode.BILLBOARD_ENABLED: return 'Enabled';
-    case BillboardMode.BILLBOARD_FIXED_Y: return 'Y-Axis Only';
-    case BillboardMode.BILLBOARD_PARTICLES: return 'Particles (Unsupported)';
-    default: return 'Unknown';
+    case BillboardMode.BILLBOARD_DISABLED:
+      return 'Disabled';
+    case BillboardMode.BILLBOARD_ENABLED:
+      return 'Enabled';
+    case BillboardMode.BILLBOARD_FIXED_Y:
+      return 'Y-Axis Only';
+    case BillboardMode.BILLBOARD_PARTICLES:
+      return 'Particles (Unsupported)';
+    default:
+      return 'Unknown';
   }
 }
 
 function alphaCutName(mode: AlphaCutMode): string {
   switch (mode) {
-    case AlphaCutMode.ALPHA_CUT_DISABLED: return 'Disabled';
-    case AlphaCutMode.ALPHA_CUT_DISCARD: return 'Discard';
-    case AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS: return 'Opaque Prepass';
-    case AlphaCutMode.ALPHA_CUT_HASH: return 'Alpha Hash';
-    default: return 'Unknown';
+    case AlphaCutMode.ALPHA_CUT_DISABLED:
+      return 'Disabled';
+    case AlphaCutMode.ALPHA_CUT_DISCARD:
+      return 'Discard';
+    case AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS:
+      return 'Opaque Prepass';
+    case AlphaCutMode.ALPHA_CUT_HASH:
+      return 'Alpha Hash';
+    default:
+      return 'Unknown';
   }
 }
 
 function axisName(axis: AxisMode): string {
   switch (axis) {
-    case AxisMode.AXIS_X: return 'X';
-    case AxisMode.AXIS_Y: return 'Y';
-    case AxisMode.AXIS_Z: return 'Z';
-    default: return 'Unknown';
+    case AxisMode.AXIS_X:
+      return 'X';
+    case AxisMode.AXIS_Y:
+      return 'Y';
+    case AxisMode.AXIS_Z:
+      return 'Z';
+    default:
+      return 'Unknown';
   }
 }

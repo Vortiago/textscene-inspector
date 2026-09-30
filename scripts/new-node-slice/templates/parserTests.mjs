@@ -3,7 +3,9 @@
  * one edge case per base, plus the lenient-parser round trip.
  */
 
-export const NODE3D_PARSER_TEST_CASES = (typeName) => `  it('parses name, parent, and transform (happy path)', () => {
+export const NODE3D_PARSER_TEST_CASES = (
+  typeName
+) => `  it('parses name, parent, and transform (happy path)', () => {
     const result = parse${typeName}(
       heading('${typeName}', { name: 'My${typeName}', parent: '.' }),
       { transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 3, 4)' }
@@ -29,7 +31,9 @@ export const NODE3D_PARSER_TEST_CASES = (typeName) => `  it('parses name, parent
     expect(result.transform).toBeUndefined();
   });`;
 
-export const CONTROL_PARSER_TEST_CASES = (typeName) => `  it('parses name, parent, and the anchor/offset layout (happy path)', () => {
+export const CONTROL_PARSER_TEST_CASES = (
+  typeName
+) => `  it('parses name, parent, and the anchor/offset layout (happy path)', () => {
     const result = parse${typeName}(
       heading('${typeName}', { name: 'My${typeName}', parent: '.' }),
       { anchor_right: '1.0', offset_left: '8', offset_right: '-8' }
@@ -55,7 +59,9 @@ export const CONTROL_PARSER_TEST_CASES = (typeName) => `  it('parses name, paren
     expect(result.anchorRight).toBeUndefined();
   });`;
 
-export const NODE2D_PARSER_TEST_CASES = (typeName) => `  it('parses name, parent, and the 2D transform (happy path)', () => {
+export const NODE2D_PARSER_TEST_CASES = (
+  typeName
+) => `  it('parses name, parent, and the 2D transform (happy path)', () => {
     const result = parse${typeName}(
       heading('${typeName}', { name: 'My${typeName}', parent: '.' }),
       { position: 'Vector2(10, 20)', rotation: '0.5' }

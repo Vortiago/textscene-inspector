@@ -13,7 +13,7 @@ import {
 } from './types';
 
 describe('decodeFastNoiseLite', () => {
-  it('applies Godot\'s constructor defaults to an empty resource', () => {
+  it("applies Godot's constructor defaults to an empty resource", () => {
     // fastnoise_lite.h:97-124. A `.tres` omits most properties, so a wrong
     // default is a wrong generator.
     expect(decodeFastNoiseLite({})).toEqual({
@@ -123,5 +123,4 @@ describe('decodeFastNoiseLite', () => {
     expect(decoded.fractalOctaves).toBe(5);
     expect(decoded.offset).toEqual({ x: 0, y: 0, z: 0 });
   });
-
 });

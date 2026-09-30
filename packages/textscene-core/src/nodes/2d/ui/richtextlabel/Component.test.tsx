@@ -19,16 +19,30 @@ import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFont
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
-import { BOLD_DISTANCE_BIAS, ITALIC_SKEW, RICH_TEXT_LABEL_UNDERLINE_ALPHA, richTextLabelMinimumSize } from './nativeSolver';
+import {
+  BOLD_DISTANCE_BIAS,
+  ITALIC_SKEW,
+  RICH_TEXT_LABEL_UNDERLINE_ALPHA,
+  richTextLabelMinimumSize,
+} from './nativeSolver';
 import { RichTextLabel } from './Component';
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
 
-function solveNode(path: string, properties: Record<string, unknown>, overrides: Partial<SolveNode> = {}): SolveNode {
+function solveNode(
+  path: string,
+  properties: Record<string, unknown>,
+  overrides: Partial<SolveNode> = {}
+): SolveNode {
   const name = path.split('/').pop()!;
-  const tscnNode: TscnNode = { name, type: 'RichTextLabel', children: [], properties: { name, ...properties } };
+  const tscnNode: TscnNode = {
+    name,
+    type: 'RichTextLabel',
+    children: [],
+    properties: { name, ...properties },
+  };
   return { ...emptySolveNode(), path, node: tscnNode, ...overrides };
 }
 
@@ -69,7 +83,7 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
     for (const mesh of meshes) expect(mesh.renderOrder).toBe(5);
   });
 
-  it('a [b] run\'s material carries BOLD_DISTANCE_BIAS; a plain run in the same text carries 0', async () => {
+  it("a [b] run's material carries BOLD_DISTANCE_BIAS; a plain run in the same text carries 0", async () => {
     const renderer = await render({ text: 'plain [b]bold[/b]', bbcodeEnabled: true });
     const materials = meshesOf(renderer).map((m) => m.material as THREE.ShaderMaterial);
     const biases = materials.map((m) => m.uniforms.uDistanceBias!.value as number);
@@ -105,7 +119,7 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
     }
   );
 
-  it('an [i] run\'s geometry is sheared relative to an otherwise-identical plain run (skew, not a material uniform)', async () => {
+  it("an [i] run's geometry is sheared relative to an otherwise-identical plain run (skew, not a material uniform)", async () => {
     const plain = await render({ text: 'AB', bbcodeEnabled: false });
     const italic = await render({ text: '[i]AB[/i]', bbcodeEnabled: true });
     const plainPos = (meshesOf(plain)[0]!.geometry as THREE.BufferGeometry).getAttribute('position');
@@ -131,7 +145,7 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
 
   it(
     "the underline stroke's material carries the run's own colour (ControlQuad's meshBasicMaterial, sRGB-space " +
-      "same as every other native chrome quad) at RICH_TEXT_LABEL_UNDERLINE_ALPHA times its opacity " +
+      'same as every other native chrome quad) at RICH_TEXT_LABEL_UNDERLINE_ALPHA times its opacity ' +
       "(default_theme.cpp:1231's underline_alpha=50, rich_text_label.cpp:1237), same RGB as the text",
     async () => {
       const renderer = await render({ text: '[color=#e0a030][u]AB[/u][/color]', bbcodeEnabled: true });
@@ -278,7 +292,9 @@ describe('<RichTextLabel> — scene-font (canvas-kind FontMetrics) text path', (
   }
 
   function canvasMeshes(renderer: Awaited<ReturnType<typeof render>>): THREE.Mesh[] {
-    return meshesOf(renderer).filter((m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.CanvasTexture);
+    return meshesOf(renderer).filter(
+      (m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.CanvasTexture
+    );
   }
 
   it('paints each run through the canvas rasteriser — ONE quad per run, not one per glyph, and no MSDF material', async () => {
@@ -286,7 +302,9 @@ describe('<RichTextLabel> — scene-font (canvas-kind FontMetrics) text path', (
     const meshes = canvasMeshes(renderer);
     expect(meshes).toHaveLength(1);
     expect(meshes[0]!.geometry.getAttribute('position').count).toBe(4);
-    expect(meshesOf(renderer).every((m) => (m.material as THREE.ShaderMaterial).uniforms === undefined)).toBe(true);
+    expect(meshesOf(renderer).every((m) => (m.material as THREE.ShaderMaterial).uniforms === undefined)).toBe(
+      true
+    );
   });
 
   it('steps line N down by exactly one linePitchPx from its own box top, with nothing added to line 0', async () => {
@@ -353,7 +371,9 @@ describe('<RichTextLabel> — [img]', () => {
   }
 
   function imageMeshOf(renderer: Awaited<ReturnType<typeof renderImage>>): THREE.Mesh {
-    const mesh = renderer.scene.findAllByType('Mesh').find((m) => materialOf(m.instance as THREE.Mesh).type === 'MeshBasicMaterial');
+    const mesh = renderer.scene
+      .findAllByType('Mesh')
+      .find((m) => materialOf(m.instance as THREE.Mesh).type === 'MeshBasicMaterial');
     return mesh!.instance as THREE.Mesh;
   }
 
@@ -362,7 +382,7 @@ describe('<RichTextLabel> — [img]', () => {
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
-  it('draws an unauthored (natural-size) [img] at the texture\'s own size, once buildSolveTree.ts carries it on textureSlots', async () => {
+  it("draws an unauthored (natural-size) [img] at the texture's own size, once buildSolveTree.ts carries it on textureSlots", async () => {
     const renderer = await renderImage(`[img]${IMG}[/img]`, [64, 64], undefined, {
       textureSlots: { [IMG]: { x: 64, y: 64 } },
     });
@@ -372,7 +392,7 @@ describe('<RichTextLabel> — [img]', () => {
     expect(geometry.parameters.height).toBe(64);
   });
 
-  it('draws a quad sized to the authored width×height, regardless of the texture\'s own natural size', async () => {
+  it("draws a quad sized to the authored width×height, regardless of the texture's own natural size", async () => {
     const renderer = await renderImage(`[img=40x20]${IMG}[/img]`, [64, 64]);
     const mesh = imageMeshOf(renderer);
     const geometry = mesh.geometry as THREE.PlaneGeometry;
@@ -380,7 +400,7 @@ describe('<RichTextLabel> — [img]', () => {
     expect(geometry.parameters.height).toBe(20);
   });
 
-  it("draws it at its natural size when the value form is a lone width and only a REGION is also present (aspect from the region, not the texture)", async () => {
+  it('draws it at its natural size when the value form is a lone width and only a REGION is also present (aspect from the region, not the texture)', async () => {
     const renderer = await renderImage(`[img=40 region=0,0,80,40]${IMG}[/img]`, [64, 64]);
     const mesh = imageMeshOf(renderer);
     const geometry = mesh.geometry as THREE.PlaneGeometry;
@@ -414,7 +434,10 @@ describe('<RichTextLabel> — [img]', () => {
           <RichTextLabel
             {...painterEnv()}
             tint={painterTint({ r: 0.5, g: 0.5, b: 0.5, a: 1 })}
-            solveNode={solveNode('RTL', { text: `[img=10x10 color=#e0a030]${IMG}[/img]`, bbcodeEnabled: true })}
+            solveNode={solveNode('RTL', {
+              text: `[img=10x10 color=#e0a030]${IMG}[/img]`,
+              bbcodeEnabled: true,
+            })}
             rect={{ x: 0, y: 0, w: 300, h: 200 }}
             renderOrder={5}
           />
@@ -428,7 +451,7 @@ describe('<RichTextLabel> — [img]', () => {
     expect(mat.color.b).toBeCloseTo(expected.b, 5);
   });
 
-  it('windows region= as a UV crop, normalised against the LOADED texture\'s own pixel size', async () => {
+  it("windows region= as a UV crop, normalised against the LOADED texture's own pixel size", async () => {
     const renderer = await renderImage(`[img=20x10 region=8,4,16,8]${IMG}[/img]`, [64, 32]);
     const map = imageMeshOf(renderer).material as THREE.MeshBasicMaterial;
     const texture = map.map!;

@@ -24,7 +24,6 @@ import type { GodotAnimation, GodotKeyframe, GodotTrack } from './animationResol
 import { warn } from '../../../logger';
 import { degToRad } from '../../../godot/math.js';
 
-
 export interface LoopSettings {
   loop: AnimationActionLoopStyles;
   repetitions: number;
@@ -150,7 +149,13 @@ function rotationTracks(
   if (typeof first === 'number') {
     // 2D scalar rotation about Z, negated to match node2dTransform's
     // diag(1,-1,1) conjugation (Godot 2D rotation is clockwise / +Y-down).
-    return [new NumberKeyframeTrack(`${prefix}.rotation[z]`, times, keys.map((k) => 0 - map(k.value as number)))];
+    return [
+      new NumberKeyframeTrack(
+        `${prefix}.rotation[z]`,
+        times,
+        keys.map((k) => 0 - map(k.value as number))
+      ),
+    ];
   }
 
   if (Array.isArray(first) && first.length === 3) {

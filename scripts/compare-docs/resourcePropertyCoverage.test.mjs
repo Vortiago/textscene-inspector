@@ -61,14 +61,7 @@ describe('resource property coverage', { timeout: 60_000 }, () => {
     const covered = coveredClasses(registeredTypes('declaring'), bases);
     // Named, since the scope derives from what is registered: deleting a
     // registration shrinks the count instead of failing it.
-    for (const cls of [
-      'BaseMaterial3D',
-      'Material',
-      'Resource',
-      'Environment',
-      'PrimitiveMesh',
-      'Mesh',
-    ]) {
+    for (const cls of ['BaseMaterial3D', 'Material', 'Resource', 'Environment', 'PrimitiveMesh', 'Mesh']) {
       expect([...covered]).toContain(cls);
     }
     // Resource is in as an ancestor, and its other subtrees stay out with it.

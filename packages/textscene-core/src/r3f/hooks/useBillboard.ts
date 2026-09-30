@@ -9,10 +9,7 @@ import type * as THREE from 'three';
 import type { RefObject } from 'react';
 import { BillboardMode } from '../../godot/billboard';
 
-export function useBillboard(
-  ref: RefObject<THREE.Object3D | null>,
-  mode: number | undefined
-): void {
+export function useBillboard(ref: RefObject<THREE.Object3D | null>, mode: number | undefined): void {
   useFrame(({ camera }) => {
     const object = ref.current;
     if (!object || mode === undefined || mode === BillboardMode.BILLBOARD_DISABLED) return;

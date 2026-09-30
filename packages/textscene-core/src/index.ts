@@ -75,10 +75,7 @@ export {
 export { useResource, useResourceLoader, resolveResourcePath } from './resources/useResource';
 export type { ResourceResult, ResourceStatus } from './resources/useResource';
 export type { ResourceBusType } from './resources/sliceRegistration';
-export {
-  ResourceLoaderContext,
-  ResourceLoaderProvider,
-} from './resources/ResourceLoaderContext';
+export { ResourceLoaderContext, ResourceLoaderProvider } from './resources/ResourceLoaderContext';
 export type { ResourceLoaderProviderProps } from './resources/ResourceLoaderContext';
 export { ResourceLoader } from './resources/ResourceLoader';
 export type { GltfExtensionRules } from './resources/formats/glb/types';

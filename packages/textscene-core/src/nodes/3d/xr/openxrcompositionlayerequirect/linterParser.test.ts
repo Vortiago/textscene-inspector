@@ -123,7 +123,7 @@ describe('OpenXRCompositionLayerEquirect strict validators', () => {
       expect(check('upper_vertical_angle', '2')?.severity).toBe('error');
       expect(check('lower_vertical_angle', '3.2')?.severity).toBe('error');
     });
-    it('errors just past PI/2 — the ceiling is the predicate\'s literal, with no epsilon widening it', () => {
+    it("errors just past PI/2 — the ceiling is the predicate's literal, with no epsilon widening it", () => {
       expect(check('upper_vertical_angle', '1.5709')?.severity).toBe('error');
       expect(check('lower_vertical_angle', '1.5709')?.severity).toBe('error');
     });
@@ -134,10 +134,7 @@ describe('OpenXRCompositionLayerEquirect strict validators', () => {
     it.each(['upper_vertical_angle', 'lower_vertical_angle'])(
       'holds %s entirely in the enforced slots, leaving both open hint ends of `bounds` open',
       (property) => {
-        const validator = validatorRegistry.declarationFor(
-          'OpenXRCompositionLayerEquirect',
-          property
-        );
+        const validator = validatorRegistry.declarationFor('OpenXRCompositionLayerEquirect', property);
         expect(validator?.bounds).toEqual({
           enforcedMin: { at: 0, exclusive: true },
           enforcedMax: { at: Math.PI / 2 },

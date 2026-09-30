@@ -39,11 +39,7 @@ export function NavigationRegion3D({ node, children }: NodeComponentProps) {
   const { showNavigation } = useViewportMode();
 
   // A NavigationMesh is as often an inline `[sub_resource]` as a `.tres`.
-  const resource = useSubOrExtResource(
-    properties.navigationMesh,
-    internalResources,
-    externalResources
-  );
+  const resource = useSubOrExtResource(properties.navigationMesh, internalResources, externalResources);
 
   const overlay = useMemo(() => {
     const navmesh = resource ? decodeNavigationMesh(resource.data) : null;

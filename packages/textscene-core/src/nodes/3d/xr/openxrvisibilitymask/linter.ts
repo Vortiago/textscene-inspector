@@ -7,11 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import {
-  isExplicitlyHidden,
-  parentTypeVerdict,
-  placementPhrase,
-} from '../../../../linter/parentType.js';
+import { isExplicitlyHidden, parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
 
 const PARENT_RULE = 'openxrvisibilitymask-parent-not-xrcamera3d';
 

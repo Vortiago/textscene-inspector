@@ -100,7 +100,11 @@ export function scrollBarTrackRect(size: Vec2): Rect2 {
  * `style_v_scrollbar` pad only the cross axis (`default_theme.cpp:543-544`), so the grabber starts
  * at its offset and spans the bar across.
  */
-export function scrollBarGrabberRect(vertical: boolean, size: Vec2, grabber: ScrollBarGrabberGeometry): Rect2 {
+export function scrollBarGrabberRect(
+  vertical: boolean,
+  size: Vec2,
+  grabber: ScrollBarGrabberGeometry
+): Rect2 {
   if (vertical) {
     return { x: 0, y: grabber.offset, w: size.x, h: grabber.size };
   }

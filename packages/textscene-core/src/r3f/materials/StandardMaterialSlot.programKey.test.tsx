@@ -28,8 +28,7 @@ async function rebuilds(
   afterMaps: Maps = beforeMaps
 ): Promise<boolean> {
   const renderer = await ReactThreeTestRenderer.create(slot(before, beforeMaps));
-  const materialOf = () =>
-    (renderer.scene.findByType('Mesh').instance as unknown as THREE.Mesh).material;
+  const materialOf = () => (renderer.scene.findByType('Mesh').instance as unknown as THREE.Mesh).material;
   const first = materialOf();
   await renderer.update(slot(after, afterMaps));
   return materialOf() !== first;
@@ -88,10 +87,8 @@ describe('<StandardMaterialSlot> rebuilds when a baked program parameter moves',
     // The real hazard `HAS_ANISOTROPYMAP` (`:147`) describes: the physical
     // branch is already up, `anisotropy > 0`, and the flowmap resolves late.
     const anisotropic = { anisotropy_enabled: 'true', anisotropy: '0.5' };
-    expect(await rebuilds(anisotropic, anisotropic, {}, { anisotropyMap: new THREE.Texture() }))
-      .toBe(true);
+    expect(await rebuilds(anisotropic, anisotropic, {}, { anisotropyMap: new THREE.Texture() })).toBe(true);
   });
-
 
   it('unshaded (MeshBasicMaterial) keys the same composite', async () => {
     const unshaded = { shading_mode: '0' };

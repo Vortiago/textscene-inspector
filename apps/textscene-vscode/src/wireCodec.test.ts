@@ -5,11 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  encodeResourceResponse,
-  decodeResourceResponse,
-  type WireResourcePayload,
-} from './wireCodec';
+import { encodeResourceResponse, decodeResourceResponse, type WireResourcePayload } from './wireCodec';
 
 describe('wireCodec — text resources', () => {
   it('encodes a plain text string as isBinary:false with the original content', () => {

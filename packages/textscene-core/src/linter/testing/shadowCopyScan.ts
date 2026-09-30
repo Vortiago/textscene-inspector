@@ -12,8 +12,10 @@ import { registeredTypes } from '../registryPopulation.js';
 export function ownKeyRegistrations(
   registry: ValidatorRegistry
 ): Array<{ nodeType: string; keys: string[] }> {
-  return registeredTypes('declaring', registry)
-    .map((nodeType) => ({ nodeType, keys: registry.getOwnKeys(nodeType) }));
+  return registeredTypes('declaring', registry).map((nodeType) => ({
+    nodeType,
+    keys: registry.getOwnKeys(nodeType),
+  }));
 }
 
 /**

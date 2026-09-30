@@ -10,12 +10,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
 
-const TEXTURE_PROPS = [
-  'texture_albedo',
-  'texture_normal',
-  'texture_orm',
-  'texture_emission',
-] as const;
+const TEXTURE_PROPS = ['texture_albedo', 'texture_normal', 'texture_orm', 'texture_emission'] as const;
 
 function checkDecal(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -28,8 +23,7 @@ function checkDecal(context: RuleContext): Diagnostic[] {
   if (TEXTURE_PROPS.every((prop) => resourceSlotIsEmpty(rawProps[prop]))) {
     diagnostics.push({
       severity: 'warning',
-      message:
-        "Decal has no texture (e.g. 'texture_albedo'). It will project nothing and is not visible.",
+      message: "Decal has no texture (e.g. 'texture_albedo'). It will project nothing and is not visible.",
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'decal-requires-texture',
@@ -39,8 +33,7 @@ function checkDecal(context: RuleContext): Diagnostic[] {
   // decal.cpp:188: a Normal/ORM map blends onto the Albedo texture's alpha
   // channel, so it does nothing without one.
   if (
-    (!resourceSlotIsEmpty(rawProps.texture_normal) ||
-      !resourceSlotIsEmpty(rawProps.texture_orm)) &&
+    (!resourceSlotIsEmpty(rawProps.texture_normal) || !resourceSlotIsEmpty(rawProps.texture_orm)) &&
     resourceSlotIsEmpty(rawProps.texture_albedo)
   ) {
     diagnostics.push({
@@ -74,12 +67,24 @@ const decalValidationRule: LintRule = {
   meta: {
     name: 'valid-decal-resources',
     description:
-      'Three of Decal\'s get_configuration_warnings checks: at least one texture, Normal/ORM without Albedo, and an empty Cull Mask',
+      "Three of Decal's get_configuration_warnings checks: at least one texture, Normal/ORM without Albedo, and an empty Cull Mask",
     category: 'validation',
     emits: [
-      { ruleName: 'decal-requires-texture', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      { ruleName: 'decal-normal-orm-without-albedo', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      { ruleName: 'decal-empty-cull-mask', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'decal-requires-texture',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
+      {
+        ruleName: 'decal-normal-orm-without-albedo',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
+      {
+        ruleName: 'decal-empty-cull-mask',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
     ],
     applicableNodeTypes: ['Decal'],
   },

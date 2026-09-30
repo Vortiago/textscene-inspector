@@ -6,23 +6,17 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  parsePackedColorArray,
-  parsePackedVector2Array,
-  parsePackedVector3Array,
-} from './packedArray';
+import { parsePackedColorArray, parsePackedVector2Array, parsePackedVector3Array } from './packedArray';
 
 describe('parsePackedVector2Array', () => {
   it('reads the bare array spelling', () => {
-    expect(Array.from(parsePackedVector2Array('[Vector2(0, 0), Vector2(5, 5)]'))).toEqual([
-      0, 0, 5, 5,
-    ]);
+    expect(Array.from(parsePackedVector2Array('[Vector2(0, 0), Vector2(5, 5)]'))).toEqual([0, 0, 5, 5]);
   });
 
   it('reads the typed Array[Vector2] spelling', () => {
-    expect(
-      Array.from(parsePackedVector2Array('Array[Vector2]([Vector2(1, 2), Vector2(3, 4)])'))
-    ).toEqual([1, 2, 3, 4]);
+    expect(Array.from(parsePackedVector2Array('Array[Vector2]([Vector2(1, 2), Vector2(3, 4)])'))).toEqual([
+      1, 2, 3, 4,
+    ]);
   });
 
   it('reads an empty bare array as no vertices', () => {
@@ -31,18 +25,12 @@ describe('parsePackedVector2Array', () => {
   });
 
   it('takes the trailing comma Godot loads as no extra element', () => {
-    expect(Array.from(parsePackedVector2Array('[Vector2(0, 0), Vector2(1, 0),]'))).toEqual([
-      0, 0, 1, 0,
-    ]);
+    expect(Array.from(parsePackedVector2Array('[Vector2(0, 0), Vector2(1, 0),]'))).toEqual([0, 0, 1, 0]);
   });
 
   it('throws on an element of the wrong arity, a conversion Godot does not make', () => {
-    expect(() => parsePackedVector2Array('[Vector3(0, 0, 0)]')).toThrow(
-      'Invalid PackedVector2Array format'
-    );
-    expect(() => parsePackedVector2Array('[Vector2(0, 0, 0)]')).toThrow(
-      'Invalid PackedVector2Array format'
-    );
+    expect(() => parsePackedVector2Array('[Vector3(0, 0, 0)]')).toThrow('Invalid PackedVector2Array format');
+    expect(() => parsePackedVector2Array('[Vector2(0, 0, 0)]')).toThrow('Invalid PackedVector2Array format');
   });
 
   it('throws on an element component the tokenizer refuses', () => {
@@ -58,9 +46,7 @@ describe('parsePackedVector2Array', () => {
   });
 
   it('throws on a value no spelling matches', () => {
-    expect(() => parsePackedVector2Array('Vector2(0, 0)')).toThrow(
-      'Invalid PackedVector2Array format'
-    );
+    expect(() => parsePackedVector2Array('Vector2(0, 0)')).toThrow('Invalid PackedVector2Array format');
   });
 });
 
@@ -72,9 +58,7 @@ describe('parsePackedVector3Array', () => {
   });
 
   it('reads the typed Array[Vector3] spelling', () => {
-    expect(Array.from(parsePackedVector3Array('Array[Vector3]([Vector3(1, 2, 3)])'))).toEqual([
-      1, 2, 3,
-    ]);
+    expect(Array.from(parsePackedVector3Array('Array[Vector3]([Vector3(1, 2, 3)])'))).toEqual([1, 2, 3]);
   });
 
   it('throws on a value no spelling matches', () => {
@@ -98,8 +82,6 @@ describe('parsePackedColorArray', () => {
   });
 
   it('throws on a value no spelling matches', () => {
-    expect(() => parsePackedColorArray('Color(1, 1, 1, 1)')).toThrow(
-      'Invalid PackedColorArray format'
-    );
+    expect(() => parsePackedColorArray('Color(1, 1, 1, 1)')).toThrow('Invalid PackedColorArray format');
   });
 });

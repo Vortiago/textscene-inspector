@@ -9,12 +9,12 @@ import { findNodeHeadingLine } from './nodeHeadingResolver';
 
 export class TscnDocumentSymbolProvider implements vscode.DocumentSymbolProvider {
   private readonly nodeTypeToSymbolKind: Record<string, vscode.SymbolKind> = {
-    'MeshInstance3D': vscode.SymbolKind.Class,
-    'Camera3D': vscode.SymbolKind.Struct,
-    'SpotLight3D': vscode.SymbolKind.Object,
-    'DirectionalLight3D': vscode.SymbolKind.Object,
-    'OmniLight3D': vscode.SymbolKind.Object,
-    'Node3D': vscode.SymbolKind.Module,
+    MeshInstance3D: vscode.SymbolKind.Class,
+    Camera3D: vscode.SymbolKind.Struct,
+    SpotLight3D: vscode.SymbolKind.Object,
+    DirectionalLight3D: vscode.SymbolKind.Object,
+    OmniLight3D: vscode.SymbolKind.Object,
+    Node3D: vscode.SymbolKind.Module,
   };
 
   provideDocumentSymbols(
@@ -29,39 +29,28 @@ export class TscnDocumentSymbolProvider implements vscode.DocumentSymbolProvider
         return [];
       }
 
-      return parsed.nodes.map(node =>
-        this.convertNodeToSymbol(node, document)
-      );
+      return parsed.nodes.map((node) => this.convertNodeToSymbol(node, document));
     } catch (err) {
       error('Error providing document symbols:', err);
       return [];
     }
   }
 
-  private convertNodeToSymbol(
-    node: TscnNode,
-    document: vscode.TextDocument
-  ): vscode.DocumentSymbol {
-    const { range, selectionRange } = this.findNodeRange(
-      document,
-      node.name,
-      node.parent
-    );
+  private convertNodeToSymbol(node: TscnNode, document: vscode.TextDocument): vscode.DocumentSymbol {
+    const { range, selectionRange } = this.findNodeRange(document, node.name, node.parent);
 
     const symbolKind = this.getSymbolKind(node.type);
 
     const symbol = new vscode.DocumentSymbol(
       node.name,
-      node.type,           // detail
+      node.type, // detail
       symbolKind,
       range,
       selectionRange
     );
 
     if (node.children && node.children.length > 0) {
-      symbol.children = node.children.map(child =>
-        this.convertNodeToSymbol(child, document)
-      );
+      symbol.children = node.children.map((child) => this.convertNodeToSymbol(child, document));
     }
 
     return symbol;
@@ -95,31 +84,19 @@ export class TscnDocumentSymbolProvider implements vscode.DocumentSymbolProvider
     }
 
     // The selection range is the heading line.
-    const selectionRange = new vscode.Range(
-      startLine,
-      0,
-      startLine,
-      lines[startLine]!.length
-    );
+    const selectionRange = new vscode.Range(startLine, 0, startLine, lines[startLine]!.length);
 
     // The full range runs to the next node or resource heading, or EOF.
     let endLine = lines.length - 1;
     for (let i = startLine + 1; i < lines.length; i++) {
       const line = lines[i]!;
-      if (line.startsWith('[node ') ||
-          line.startsWith('[sub_resource') ||
-          line.startsWith('[ext_resource')) {
+      if (line.startsWith('[node ') || line.startsWith('[sub_resource') || line.startsWith('[ext_resource')) {
         endLine = i - 1;
         break;
       }
     }
 
-    const range = new vscode.Range(
-      startLine,
-      0,
-      endLine,
-      lines[endLine]?.length ?? 0
-    );
+    const range = new vscode.Range(startLine, 0, endLine, lines[endLine]?.length ?? 0);
 
     return { range, selectionRange };
   }

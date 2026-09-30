@@ -11,18 +11,9 @@ import { Sprite3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import type {
-  TscnExternalResource,
-  TscnNode,
-} from '../../../parser/types';
+import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import type { Sprite3DProperties } from './types';
-import {
-  AlphaCutMode,
-  AxisMode,
-  BillboardMode,
-  AlphaAntiAliasing,
-  TextureFilterMode,
-} from './types';
+import { AlphaCutMode, AxisMode, BillboardMode, AlphaAntiAliasing, TextureFilterMode } from './types';
 import { findMesh, instanceAs } from '../testing/reactThreeTestInstance';
 
 const TEXTURE_PATH = 'res://textures/sprite.png';

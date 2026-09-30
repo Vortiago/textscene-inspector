@@ -275,7 +275,7 @@ describe('TabContainer strict validators', () => {
       expect(error?.code).toBe('INVALID_TABCONTAINER_TAB_INDEX');
     });
 
-    it('does not shadow TabBar\'s own tab_<i>/* family (a separate PropertyListHelper instance)', () => {
+    it("does not shadow TabBar's own tab_<i>/* family (a separate PropertyListHelper instance)", () => {
       // TabBar accepts `tooltip`; TabContainer does not.
       expect(validatorRegistry.findValidator('TabBar', 'tab_0/tooltip')).not.toBeNull();
     });

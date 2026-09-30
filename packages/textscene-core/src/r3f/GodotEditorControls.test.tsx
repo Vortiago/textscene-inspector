@@ -264,9 +264,7 @@ describe('<GodotEditorControls> wheel navigation', () => {
     const camera = get().camera;
     const radius = camera.position.distanceTo(controls.target);
 
-    element.dispatchEvent(
-      wheelEvent({ deltaY: -100, offsetX: size.width / 2, offsetY: size.height / 2 })
-    );
+    element.dispatchEvent(wheelEvent({ deltaY: -100, offsetX: size.width / 2, offsetY: size.height / 2 }));
 
     expect(camera.position.distanceTo(controls.target)).toBeLessThan(radius);
     expect(controls.target.length()).toBeCloseTo(0, 9);
@@ -442,9 +440,7 @@ describe('<GodotEditorControls> keyboard', () => {
     expect(controls.isOrthographic).toBe(true);
     // The frustum is sized to what the perspective camera saw at the focus point.
     const expectedHeight =
-      2 *
-      position.distanceTo(controls.target) *
-      Math.tan(((perspective.fov / 2) * Math.PI) / 180);
+      2 * position.distanceTo(controls.target) * Math.tan(((perspective.fov / 2) * Math.PI) / 180);
     expect(ortho.top - ortho.bottom).toBeCloseTo(expectedHeight, 6);
 
     await pressKey('Numpad5');
@@ -498,9 +494,7 @@ async function flyForward(shiftKey: boolean): Promise<number> {
   const camera = get().camera;
   const before = camera.position.clone();
   if (shiftKey) window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ShiftLeft', shiftKey }));
-  element.dispatchEvent(
-    new PointerEvent('pointerdown', { pointerId: 1, button: 2, clientX: 0, clientY: 0 })
-  );
+  element.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, button: 2, clientX: 0, clientY: 0 }));
   window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW', shiftKey }));
   await renderer.advanceFrames(2, 16);
   return camera.position.distanceTo(before);
@@ -550,9 +544,7 @@ describe('EditorControlsHandle framing contract', () => {
 
     controls.reset();
 
-    expect(camera.position.distanceTo(new THREE.Vector3(...editorCameraPosition()))).toBeLessThan(
-      1e-6
-    );
+    expect(camera.position.distanceTo(new THREE.Vector3(...editorCameraPosition()))).toBeLessThan(1e-6);
     expect(controls.target.length()).toBe(0);
   });
 

@@ -42,7 +42,9 @@ describe('<AreaLight3D>', () => {
   });
 
   it('defaults to width=1, height=1 when area_size is absent', async () => {
-    const renderer = await ReactThreeTestRenderer.create(<AreaLight3D node={makeNode({ area_size: undefined })} />);
+    const renderer = await ReactThreeTestRenderer.create(
+      <AreaLight3D node={makeNode({ area_size: undefined })} />
+    );
     const light = renderer.scene.findByType('RectAreaLight');
     expect(instanceAs<THREE.RectAreaLight>(light).width).toBe(1);
     expect(instanceAs<THREE.RectAreaLight>(light).height).toBe(1);
@@ -78,15 +80,17 @@ describe('<AreaLight3D>', () => {
 
   it('places light at the transform origin', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <AreaLight3D node={makeNode({
-        name: 'Pos',
-        transform: {
-          basis_x: { x: 1, y: 0, z: 0 },
-          basis_y: { x: 0, y: 1, z: 0 },
-          basis_z: { x: 0, y: 0, z: 1 },
-          origin: { x: 3, y: 4, z: 5 },
-        },
-      })} />
+      <AreaLight3D
+        node={makeNode({
+          name: 'Pos',
+          transform: {
+            basis_x: { x: 1, y: 0, z: 0 },
+            basis_y: { x: 0, y: 1, z: 0 },
+            basis_z: { x: 0, y: 0, z: 1 },
+            origin: { x: 3, y: 4, z: 5 },
+          },
+        })}
+      />
     );
     const group = renderer.scene.findByProps({ name: 'Pos' });
     expect(group.instance.position.x).toBe(3);

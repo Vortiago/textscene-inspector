@@ -35,10 +35,7 @@ export function node2dGroupProps(t: Node2DLocalTransform, z = 0): Node2DGroupPro
   const skew = t.skew ?? 0;
   if (skew === 0) return { position, rotation, scale };
 
-  const matrix = threeMatrixFromTransform2D(
-    transform2DFromParts(t.rotation, t.scale, skew, t.position),
-    z
-  );
+  const matrix = threeMatrixFromTransform2D(transform2DFromParts(t.rotation, t.scale, skew, t.position), z);
   return { position, rotation, scale, matrix };
 }
 
@@ -62,11 +59,23 @@ export function node2DLocalTransform(parts: Partial<Node2DLocalTransform>): Tran
  */
 export function threeMatrixFromTransform2D(t: Transform2DColumns, z = 0): THREE.Matrix4 {
   return new THREE.Matrix4().set(
-    t.a, -t.c, 0, t.tx,
+    t.a,
+    -t.c,
+    0,
+    t.tx,
     // `0 - ty` (not `-ty`) so a zero origin stays +0, as in `node2dGroupProps`.
-    -t.b, t.d, 0, 0 - t.ty,
-    0, 0, 1, z,
-    0, 0, 0, 1
+    -t.b,
+    t.d,
+    0,
+    0 - t.ty,
+    0,
+    0,
+    1,
+    z,
+    0,
+    0,
+    0,
+    1
   );
 }
 

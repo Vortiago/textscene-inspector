@@ -44,8 +44,8 @@ const dataValidator: PropertyValidator = accepts((key, value, line) => {
   const body = cellsMatch[1]!.trim();
   const cells = body === '' ? [] : splitTopLevel(body);
   const bad = badIntElement('data', key, line, cells, {
-      format: 'INVALID_DATA_CELLS_FORMAT',
-      value: 'INVALID_DATA_CELLS_VALUE',
+    format: 'INVALID_DATA_CELLS_FORMAT',
+    value: 'INVALID_DATA_CELLS_VALUE',
   });
   if (bad.error !== null) return bad.error;
   const count = cells.length;
@@ -122,7 +122,12 @@ const cellOctantSizeValidator: PropertyValidator = accepts((key, value, line) =>
     );
   }
   const unfit = unrepresentableInt(
-    'cell_octant_size', key, value, line, 'INVALID_CELL_OCTANT_SIZE_VALUE', parsed
+    'cell_octant_size',
+    key,
+    value,
+    line,
+    'INVALID_CELL_OCTANT_SIZE_VALUE',
+    parsed
   );
   if (unfit) return unfit;
   if (parsed === 0) {
@@ -143,9 +148,7 @@ const cellOctantSizeValidator: PropertyValidator = accepts((key, value, line) =>
     );
   }
   // Last, after both bounds: an out-of-range value has a diagnostic of its own.
-  return storedNotWritten(
-    'cell_octant_size', key, value, line, 'INVALID_CELL_OCTANT_SIZE_VALUE', read
-  );
+  return storedNotWritten('cell_octant_size', key, value, line, 'INVALID_CELL_OCTANT_SIZE_VALUE', read);
 }, 'integer, nonzero, 1-1024 hinted');
 // An INT slot, hand-rolled: it already refuses an unstorable literal above.
 markIntSlot(cellOctantSizeValidator);
@@ -173,10 +176,16 @@ validatorRegistry.registerAll('GridMap', {
   cell_scale: v.float('cell_scale'),
   // grid_map.cpp:1260: PROPERTY_HINT_LAYERS_3D_PHYSICS. set_collision_layer
   // (:162-165) is a bare assignment.
-  collision_layer: layerBitmask('collision_layer', { hinted: 'grid_map.cpp:1260', width: 'uint32' /* grid_map.h:245 */ }),
+  collision_layer: layerBitmask('collision_layer', {
+    hinted: 'grid_map.cpp:1260',
+    width: 'uint32' /* grid_map.h:245 */,
+  }),
   // grid_map.cpp:1261: PROPERTY_HINT_LAYERS_3D_PHYSICS. set_collision_mask
   // (:171-174) is a bare assignment.
-  collision_mask: layerBitmask('collision_mask', { hinted: 'grid_map.cpp:1261', width: 'uint32' /* grid_map.h:248 */ }),
+  collision_mask: layerBitmask('collision_mask', {
+    hinted: 'grid_map.cpp:1261',
+    width: 'uint32' /* grid_map.h:248 */,
+  }),
   // grid_map.cpp:1262: plain FLOAT, no hint. set_collision_priority
   // (:210-213) is a bare assignment: nothing to bound.
   collision_priority: v.float('collision_priority'),

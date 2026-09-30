@@ -55,9 +55,7 @@ describe('<TscnPreviewShell> workspace auto-select (Godot parity)', () => {
   });
 
   it('re-derives the workspace when the scene switches', async () => {
-    const { rerender } = render(
-      <TscnPreviewShell panelId="auto-e" content={THREED_SCENE} />
-    );
+    const { rerender } = render(<TscnPreviewShell panelId="auto-e" content={THREED_SCENE} />);
     expect(await screen.findByTestId('canvas-3d')).toBeTruthy();
 
     rerender(<TscnPreviewShell panelId="auto-e" content={SPRITE_SCENE} />);

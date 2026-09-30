@@ -139,9 +139,7 @@ describe('Godot configuration-warning coverage', () => {
     // The identities, not a count: pinning the `at` values shows a gap that became a rule, a gap re-typed to a
     // decline, and one row fixed while another is added, each as a diff here.
     const outstanding = Object.entries(WARNINGS)
-      .flatMap(([cls, rows]) =>
-        rows.filter((r) => 'unimplemented' in r.verdict).map((r) => `${cls} ${r.at}`)
-      )
+      .flatMap(([cls, rows]) => rows.filter((r) => 'unimplemented' in r.verdict).map((r) => `${cls} ${r.at}`))
       .sort();
     expect(outstanding).toEqual(UNIMPLEMENTED_ROWS);
   });
@@ -151,7 +149,8 @@ describe('Godot configuration-warning coverage', () => {
     // rule reproduces it, and only a hidden-node case in the slice's own test
     // can see it stop reproducing. The column is the record of who owes one.
     const fileByMetaName = new Map<string, string>();
-    for (const file of ruleFiles()) for (const name of declaredRuleNames(file)) fileByMetaName.set(name, file);
+    for (const file of ruleFiles())
+      for (const name of declaredRuleNames(file)) fileByMetaName.set(name, file);
     const owing: string[] = [];
     for (const [declaring, rows] of Object.entries(WARNINGS)) {
       for (const row of rows) {
@@ -159,7 +158,8 @@ describe('Godot configuration-warning coverage', () => {
         for (const rule of rulesEmitting(row.verdict.rule)) {
           const file = fileByMetaName.get(rule.meta.name);
           const test = file ? join(dirname(file), 'linter.test.ts') : undefined;
-          const covered = test && existsSync(test) && /visible\s*[:=]\s*false/.test(readFileSync(test, 'utf8'));
+          const covered =
+            test && existsSync(test) && /visible\s*[:=]\s*false/.test(readFileSync(test, 'utf8'));
           if (!covered) owing.push(`${declaring} ${row.at} → ${rule.meta.name} (${row.gate})`);
         }
       }

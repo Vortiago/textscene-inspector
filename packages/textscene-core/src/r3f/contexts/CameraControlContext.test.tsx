@@ -6,11 +6,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { act, render, renderHook } from '@testing-library/react';
-import {
-  CameraControlProvider,
-  useCameraControl,
-  useOptionalCameraControl,
-} from './CameraControlContext';
+import { CameraControlProvider, useCameraControl, useOptionalCameraControl } from './CameraControlContext';
 
 function wrapper({ children }: { children: ReactNode }) {
   return <CameraControlProvider>{children}</CameraControlProvider>;
@@ -35,9 +31,7 @@ describe('CameraControlContext', () => {
   it('seeds activeCameraPath from initialActiveCameraPath (?camera= deep-link)', () => {
     const { result } = renderHook(() => useCameraControl(), {
       wrapper: ({ children }) => (
-        <CameraControlProvider initialActiveCameraPath="Root/Camera3D">
-          {children}
-        </CameraControlProvider>
+        <CameraControlProvider initialActiveCameraPath="Root/Camera3D">{children}</CameraControlProvider>
       ),
     });
     // The canvas looks through this camera on open without any user action.
@@ -64,17 +58,14 @@ describe('CameraControlContext', () => {
       return null;
     }
 
-    const { result } = renderHook(
-      () => useCameraControl(),
-      {
-        wrapper: ({ children }) => (
-          <CameraControlProvider>
-            <ResetHandlerRegistrar />
-            {children}
-          </CameraControlProvider>
-        ),
-      }
-    );
+    const { result } = renderHook(() => useCameraControl(), {
+      wrapper: ({ children }) => (
+        <CameraControlProvider>
+          <ResetHandlerRegistrar />
+          {children}
+        </CameraControlProvider>
+      ),
+    });
 
     expect(handler).not.toHaveBeenCalled();
 
@@ -220,7 +211,7 @@ describe('CameraControlContext', () => {
 });
 
 describe('CameraControlContext — screenshot (#224)', () => {
-  it('takeScreenshot() returns the registered handler\'s result', () => {
+  it("takeScreenshot() returns the registered handler's result", () => {
     const handler = vi.fn(() => 'data:image/png;base64,AAA');
 
     function ScreenshotHandlerRegistrar() {

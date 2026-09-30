@@ -56,9 +56,7 @@ export function createSceneProcessor({
         throw new Error(`Scene metadata not found: ${idOrPath}`);
       }
       if (metadata.type && metadata.type !== 'PackedScene') {
-        throw new Error(
-          `Not a PackedScene resource: ${idOrPath} (type: ${metadata.type})`
-        );
+        throw new Error(`Not a PackedScene resource: ${idOrPath} (type: ${metadata.type})`);
       }
       const provider = getProvider();
       if (!provider) {
@@ -73,9 +71,7 @@ export function createSceneProcessor({
       // so the registered path's extension decides how to make a TscnScene.
       if (isGLBPath(metadata.path)) {
         if (!(content instanceof ArrayBuffer)) {
-          throw new Error(
-            `GLB/GLTF must be binary content, got ${typeof content}: ${metadata.path}`
-          );
+          throw new Error(`GLB/GLTF must be binary content, got ${typeof content}: ${metadata.path}`);
         }
         return synthesiseGLBScene(metadata.path);
       }

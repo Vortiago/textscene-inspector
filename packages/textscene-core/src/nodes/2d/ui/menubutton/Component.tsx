@@ -51,10 +51,7 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme }: Native
   const { fontSizePx, color: baseFontColor } = menuButtonTextTheme(solveNode, props, state, { theme });
   // `tint.own` goes raw to `<StyleBoxQuad>`'s `color` and multiplies each font and icon colour before
   // its one sRGB-to-linear conversion, as Button's painter does.
-  const tintedFontColor = useMemo(
-    () => tintColor(baseFontColor, tint.own),
-    [baseFontColor, tint.own]
-  );
+  const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
   // The solve-handoff share the minimum-size solver also reads, as in Button's painter.
   const layout: TextLayoutResult | null = menuButtonLabelShape(solveNode, theme);
@@ -73,10 +70,7 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme }: Native
   }, [props.icon, iconTexture]);
 
   const baseIconColor = buttonIconColor(solveNode.colors, state);
-  const tintedIconColorSrgb = useMemo(
-    () => tintColor(baseIconColor, tint.own),
-    [baseIconColor, tint.own]
-  );
+  const tintedIconColorSrgb = useMemo(() => tintColor(baseIconColor, tint.own), [baseIconColor, tint.own]);
   const iconLinearColor = useGodotLinearColor(tintedIconColorSrgb);
 
   // Content layout: icon and text placement within the solved rect
@@ -117,7 +111,9 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme }: Native
 
   return (
     <>
-      {!props.flat && <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />}
+      {!props.flat && (
+        <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
+      )}
       {content.icon && iconTexture && (
         <CanvasItemGroup position={[content.icon.rect.x, -content.icon.rect.y, 0]}>
           <ControlQuad

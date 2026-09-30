@@ -132,7 +132,18 @@ function scanTheme<T>(
     rest[key] = value;
   }
 
-  return { defaultFont, defaultFontSize, fonts, fontSizes, styles, icons, colors, constants, typeVariations, properties: rest };
+  return {
+    defaultFont,
+    defaultFontSize,
+    fonts,
+    fontSizes,
+    styles,
+    icons,
+    colors,
+    constants,
+    typeVariations,
+    properties: rest,
+  };
 }
 
 /**

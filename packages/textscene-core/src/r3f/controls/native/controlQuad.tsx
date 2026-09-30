@@ -24,14 +24,7 @@ export interface ControlQuadProps {
   renderOrder: number;
 }
 
-export function ControlQuad({
-  width,
-  height,
-  color,
-  opacity,
-  map = null,
-  renderOrder,
-}: ControlQuadProps) {
+export function ControlQuad({ width, height, color, opacity, map = null, renderOrder }: ControlQuadProps) {
   const clippingPlanes = useControlClipPlanes();
   // A `NoColorSpace`-retagged canvas texture gets the post-filter decode, and a
   // SubViewport target, which keeps its own colour space, does not.

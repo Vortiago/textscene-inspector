@@ -34,18 +34,34 @@ const MULTI_FONT_TRES = [
 
 describe('createFontResourceFromContent', () => {
   it('resolves the whole file when no subResourceId is given', async () => {
-    const base: FontResource = { kind: 'file', bytes: new ArrayBuffer(1), mimeType: 'font/otf', fallbacks: [], properties: {} };
+    const base: FontResource = {
+      kind: 'file',
+      bytes: new ArrayBuffer(1),
+      mimeType: 'font/otf',
+      fallbacks: [],
+      properties: {},
+    };
     const loadFont: FontLoaderFn = async (address) =>
       address === 'res://theme/fonts/montserrat_extra_bold.otf' ? base : null;
 
-    const resource = await createFontResourceFromContent('res://theme/fonts/montserrat_16.tres', MONTSERRAT_TRES, loadFont);
+    const resource = await createFontResourceFromContent(
+      'res://theme/fonts/montserrat_16.tres',
+      MONTSERRAT_TRES,
+      loadFont
+    );
 
     expect(resource.kind).toBe('file');
     expect((resource as { fallbacks: FontResource[] }).fallbacks).toEqual([base]);
   });
 
   it('resolves a named FontFile sub-resource inside a shared fonts-library .tres', async () => {
-    const base: FontResource = { kind: 'file', bytes: new ArrayBuffer(1), mimeType: 'font/otf', fallbacks: [], properties: {} };
+    const base: FontResource = {
+      kind: 'file',
+      bytes: new ArrayBuffer(1),
+      mimeType: 'font/otf',
+      fallbacks: [],
+      properties: {},
+    };
     const loadFont: FontLoaderFn = async (address) =>
       address === 'res://theme/fonts/montserrat_extra_bold.otf' ? base : null;
 
@@ -56,7 +72,13 @@ describe('createFontResourceFromContent', () => {
       '1'
     );
 
-    expect(resource).toEqual({ kind: 'file', bytes: undefined, mimeType: undefined, fallbacks: [base], properties: { msdf_size: '128' } });
+    expect(resource).toEqual({
+      kind: 'file',
+      bytes: undefined,
+      mimeType: undefined,
+      fallbacks: [base],
+      properties: { msdf_size: '128' },
+    });
   });
 
   it('throws for an unknown sub-resource id', async () => {

@@ -6,16 +6,9 @@
 
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import {
-  createTestPanel,
-  getExtensionUri,
-  waitForMessage,
-} from '../helpers/panelHelpers';
+import { createTestPanel, getExtensionUri, waitForMessage } from '../helpers/panelHelpers';
 import { getFixturePath } from '../helpers/fixtureHelpers';
-import {
-  assertPanelActive,
-  assertFullReloadSent,
-} from '../helpers/assertionHelpers';
+import { assertPanelActive, assertFullReloadSent } from '../helpers/assertionHelpers';
 import type { LoadTscnMessage } from '../../../protocol';
 
 suite('Message Passing Tests', () => {
@@ -61,11 +54,7 @@ suite('Message Passing Tests', () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     const loadsBefore = sentMessages.filter((m) => m.type === 'loadTscn');
-    assert.strictEqual(
-      loadsBefore.length,
-      0,
-      'loadTscn must not fire before webviewReady',
-    );
+    assert.strictEqual(loadsBefore.length, 0, 'loadTscn must not fire before webviewReady');
 
     triggerMessage({ type: 'webviewReady' });
 
@@ -95,13 +84,8 @@ suite('Message Passing Tests', () => {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     const openEditors = vscode.window.visibleTextEditors;
-    const tscnEditor = openEditors.find(
-      (e) => e.document.uri.fsPath === fixturePath.fsPath,
-    );
-    assert.ok(
-      tscnEditor,
-      'TSCN file should be open in an editor after jumpToNode',
-    );
+    const tscnEditor = openEditors.find((e) => e.document.uri.fsPath === fixturePath.fsPath);
+    assert.ok(tscnEditor, 'TSCN file should be open in an editor after jumpToNode');
   });
 
   test('Should handle loadResource message from webview', async function () {
@@ -128,12 +112,9 @@ suite('Message Passing Tests', () => {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     const responseMessage = sentMessages.find(
-      (m) => m.type === 'resourceLoaded' || m.type === 'resourceLoadError',
+      (m) => m.type === 'resourceLoaded' || m.type === 'resourceLoadError'
     );
-    assert.ok(
-      responseMessage,
-      'Should send resourceLoaded or resourceLoadError message',
-    );
+    assert.ok(responseMessage, 'Should send resourceLoaded or resourceLoadError message');
   });
 
   test('Should handle resourceNeeded message from webview', async function () {
@@ -201,22 +182,14 @@ suite('Message Passing Tests', () => {
 
     // A different scene's text passes the content-diff guard in _loadTscnContent,
     // so a fresh loadTscn carries the new file's text as read off disk.
-    const expected = new TextDecoder().decode(
-      await vscode.workspace.fs.readFile(otherPath),
-    );
+    const expected = new TextDecoder().decode(await vscode.workspace.fs.readFile(otherPath));
 
     panel.update(otherPath);
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    const loadsAfter = sentMessages.filter(
-      (m): m is LoadTscnMessage => m.type === 'loadTscn',
-    );
+    const loadsAfter = sentMessages.filter((m): m is LoadTscnMessage => m.type === 'loadTscn');
     assert.strictEqual(loadsAfter.length, 2, 'A second loadTscn fires for the new scene');
-    assert.strictEqual(
-      loadsAfter[1]!.content,
-      expected,
-      "The new loadTscn carries the second scene's text",
-    );
+    assert.strictEqual(loadsAfter[1]!.content, expected, "The new loadTscn carries the second scene's text");
   });
 
   test('Should handle unknown message types gracefully', async function () {
@@ -234,9 +207,7 @@ suite('Message Passing Tests', () => {
 
     // An unknown type has no dispatch-table entry, and dispatchWebviewMessage
     // ignores it.
-    assert.doesNotThrow(() =>
-      triggerMessage({ type: 'unknownMessageType', data: 'test data' })
-    );
+    assert.doesNotThrow(() => triggerMessage({ type: 'unknownMessageType', data: 'test data' }));
 
     assertPanelActive(panel);
   });

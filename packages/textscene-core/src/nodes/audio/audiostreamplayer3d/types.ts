@@ -25,9 +25,7 @@ export enum DopplerTracking {
   DOPPLER_TRACKING_PHYSICS_STEP = 2,
 }
 
-export interface AudioStreamPlayer3DProperties
-  extends Node3DProperties,
-    AudioStreamBaseProperties {
+export interface AudioStreamPlayer3DProperties extends Node3DProperties, AudioStreamBaseProperties {
   /** Attenuation model (default: INVERSE_DISTANCE). */
   attenuation_model: AttenuationModel;
 

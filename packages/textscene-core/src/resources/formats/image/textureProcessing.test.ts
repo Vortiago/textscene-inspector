@@ -7,11 +7,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import {
-  createTextureFromBuffer,
-  getMimeType,
-  isTexturePath,
-} from './textureProcessing';
+import { createTextureFromBuffer, getMimeType, isTexturePath } from './textureProcessing';
 
 const fakeLoader = vi.hoisted(() => ({
   mode: 'success' as 'success' | 'error',
@@ -140,9 +136,7 @@ describe('createTextureFromBuffer', () => {
 
   it('rejects with the decode-failure contract message on loader error', async () => {
     fakeLoader.mode = 'error';
-    await expect(createTextureFromBuffer(data, 'image/png')).rejects.toThrow(
-      'Failed to decode texture'
-    );
+    await expect(createTextureFromBuffer(data, 'image/png')).rejects.toThrow('Failed to decode texture');
   });
 
   it('revokes the blob URL even when decoding fails', async () => {

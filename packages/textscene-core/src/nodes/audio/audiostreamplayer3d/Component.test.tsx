@@ -13,10 +13,7 @@ import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
 import type { TscnNode } from '../../../parser/types';
 import type { AudioStreamPlayer3DProperties } from './types';
-import {
-  AttenuationModel,
-  DopplerTracking,
-} from './types';
+import { AttenuationModel, DopplerTracking } from './types';
 import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
 
 /**
@@ -99,10 +96,7 @@ describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
 
   it('renders the range circle scaled by the attenuation model when selected (WI-UX-14)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      withSelectedAudio(
-        'Audio',
-        <AudioStreamPlayer3D node={makeNode({ unit_size: 25 })} />
-      )
+      withSelectedAudio('Audio', <AudioStreamPlayer3D node={makeNode({ unit_size: 25 })} />)
     );
     const group = renderer.scene.findAllByType('Group').find((g) => {
       const ud = g.instance.userData as { isAudioRangeSphere?: boolean };
@@ -126,15 +120,17 @@ describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
 
   it('positions the gizmo group at transform.origin', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <AudioStreamPlayer3D node={makeNode({
-        name: 'Positioned',
-        transform: {
-          basis_x: { x: 1, y: 0, z: 0 },
-          basis_y: { x: 0, y: 1, z: 0 },
-          basis_z: { x: 0, y: 0, z: 1 },
-          origin: { x: 4, y: 1, z: -2 },
-        },
-      })} />
+      <AudioStreamPlayer3D
+        node={makeNode({
+          name: 'Positioned',
+          transform: {
+            basis_x: { x: 1, y: 0, z: 0 },
+            basis_y: { x: 0, y: 1, z: 0 },
+            basis_z: { x: 0, y: 0, z: 1 },
+            origin: { x: 4, y: 1, z: -2 },
+          },
+        })}
+      />
     );
     const group = renderer.scene.findByProps({ name: 'Positioned' });
     expect(group.instance.position.x).toBe(4);

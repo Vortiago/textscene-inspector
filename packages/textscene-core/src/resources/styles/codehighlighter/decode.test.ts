@@ -55,8 +55,7 @@ describe('decodeCodeHighlighter', () => {
 
   it('orders color_regions longest-startKey-first (add_color_region, syntax_highlighter.cpp:490-516)', () => {
     const data = decodeCodeHighlighter({
-      color_regions:
-        '{\n"\\" \\"": Color(1, 0, 0, 1),\n"\\"\\"\\" \\"\\"\\"": Color(0, 1, 0, 1)\n}',
+      color_regions: '{\n"\\" \\"": Color(1, 0, 0, 1),\n"\\"\\"\\" \\"\\"\\"": Color(0, 1, 0, 1)\n}',
     });
     expect(data.colorRegions.map((r) => r.startKey)).toEqual(['"""', '"']);
   });

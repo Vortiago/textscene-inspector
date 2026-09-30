@@ -129,7 +129,7 @@ describe('buildArrayMeshGeometry', () => {
     expect(geo.groups).toHaveLength(2);
   });
 
-  it('merges multiple surfaces, re-basing each surface\'s indices and grouping them', () => {
+  it("merges multiple surfaces, re-basing each surface's indices and grouping them", () => {
     const data: ArrayMeshData = {
       surfaces: [triangle(), triangle({ materialPath: 'res://b.tres' })],
     };

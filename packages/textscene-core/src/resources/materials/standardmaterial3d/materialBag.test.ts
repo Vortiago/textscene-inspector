@@ -131,10 +131,7 @@ describe('standardMaterialBag — texture slots', () => {
     // `anisotropyMap` exists on MeshPhysicalMaterial alone.
     const off = bag({}, { anisotropy_flowmap: texture });
     expect(off.props).not.toHaveProperty('anisotropyMap');
-    const on = bag(
-      { anisotropy_enabled: 'true', anisotropy: '0.5' },
-      { anisotropy_flowmap: texture }
-    );
+    const on = bag({ anisotropy_enabled: 'true', anisotropy: '0.5' }, { anisotropy_flowmap: texture });
     expect((on.props as THREE.MeshPhysicalMaterialParameters).anisotropyMap).toBe(texture);
   });
 
@@ -167,7 +164,9 @@ describe('standardMaterialBag — billboard_mode', () => {
   });
 
   it('carries billboard_keep_scale beside the mode', () => {
-    expect(billboardOf(standardMaterial({ billboard_mode: '1', billboard_keep_scale: 'true' })).keepScale).toBe(true);
+    expect(
+      billboardOf(standardMaterial({ billboard_mode: '1', billboard_keep_scale: 'true' })).keepScale
+    ).toBe(true);
   });
 
   it('reads Godot’s default, no keep_scale, from a material that sets none', () => {
@@ -176,9 +175,7 @@ describe('standardMaterialBag — billboard_mode', () => {
   });
 
   it('reads DISABLED from a material that sets no billboard_mode', () => {
-    expect(billboardOf(standardMaterial({})).mode).toBe(
-      BillboardMode.BILLBOARD_DISABLED
-    );
+    expect(billboardOf(standardMaterial({})).mode).toBe(BillboardMode.BILLBOARD_DISABLED);
   });
 
   it('hands back one shared billboard for every surface that does not billboard', () => {
@@ -199,7 +196,9 @@ describe('standardMaterialBag — billboard_mode', () => {
   });
 
   it('reads DISABLED from Godot’s default surface and from a foreign material', () => {
-    expect(billboardOf(materialFromBag(standardMaterialBag(null))).mode).toBe(BillboardMode.BILLBOARD_DISABLED);
+    expect(billboardOf(materialFromBag(standardMaterialBag(null))).mode).toBe(
+      BillboardMode.BILLBOARD_DISABLED
+    );
     expect(billboardOf(new THREE.MeshBasicMaterial()).mode).toBe(BillboardMode.BILLBOARD_DISABLED);
   });
 

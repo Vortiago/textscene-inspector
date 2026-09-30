@@ -37,7 +37,7 @@ function boundUniforms(props: ReturnType<typeof useCanvasItemLighting>) {
 }
 
 describe('useCanvasItemLighting', () => {
-  it('returns the SAME props object when an item\'s light_mode changes', () => {
+  it("returns the SAME props object when an item's light_mode changes", () => {
     const { result, rerender } = renderHook(
       ({ mode }: { mode: CanvasItemLightMode }) => useCanvasItemLighting(material(mode)),
       { initialProps: { mode: CanvasItemLightMode.NORMAL } }

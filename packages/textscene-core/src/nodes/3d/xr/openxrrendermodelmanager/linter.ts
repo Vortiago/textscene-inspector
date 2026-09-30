@@ -49,8 +49,7 @@ function checkOpenXRRenderModelManager(context: RuleContext): Diagnostic[] {
   // `make_local_to_pose` beside them is a reachable state, even with no `tracker` key. LEFT_HAND(2)
   // and RIGHT_HAND(3) search every ancestor.
   const tracker = readTracker(properties);
-  const directParentOnly =
-    tracker === RENDER_MODEL_TRACKER_ANY || tracker === RENDER_MODEL_TRACKER_NONE_SET;
+  const directParentOnly = tracker === RENDER_MODEL_TRACKER_ANY || tracker === RENDER_MODEL_TRACKER_NONE_SET;
 
   if (directParentOnly) {
     const rawPose = properties.make_local_to_pose;

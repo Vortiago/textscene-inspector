@@ -67,8 +67,8 @@ describe('targetsBeforeLatestTrigger', () => {
   });
 
   it('ignores a target key that is not authored at all', () => {
-    expect(
-      targetsBeforeLatestTrigger(bag('anchors_preset'), ['offset_left'], ['anchors_preset'])
-    ).toEqual([]);
+    expect(targetsBeforeLatestTrigger(bag('anchors_preset'), ['offset_left'], ['anchors_preset'])).toEqual(
+      []
+    );
   });
 });

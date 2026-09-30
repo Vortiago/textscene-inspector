@@ -24,10 +24,9 @@ const scene = (...blocks: string[]) => sceneOf(TEXTURE, ...blocks);
 describe('PointLight2D z-range — a non-finite bound is not a bound', () => {
   it('says nothing, and never prints NaN', () => {
     for (const spelling of ['inf', 'nan', 'inf_neg']) {
-      expectNoDiagnostic(
-        scene(node('PointLight2D', { range_z_min: spelling, range_z_max: 1024 })),
-        { ruleName: 'pointlight2d-inverted-z-range' }
-      );
+      expectNoDiagnostic(scene(node('PointLight2D', { range_z_min: spelling, range_z_max: 1024 })), {
+        ruleName: 'pointlight2d-inverted-z-range',
+      });
     }
   });
 });
@@ -48,14 +47,11 @@ describe('PointLight2D linter', () => {
   });
 
   it('reports when the z window is inverted', () => {
-    expectDiagnostic(
-      scene(node('PointLight2D', { ...WITH_TEXTURE, range_z_min: 5, range_z_max: 4 })),
-      {
-        ruleName: 'pointlight2d-inverted-z-range',
-        severity: 'info',
-        contains: ['range_z_min', 'range_z_max'],
-      }
-    );
+    expectDiagnostic(scene(node('PointLight2D', { ...WITH_TEXTURE, range_z_min: 5, range_z_max: 4 })), {
+      ruleName: 'pointlight2d-inverted-z-range',
+      severity: 'info',
+      contains: ['range_z_min', 'range_z_max'],
+    });
   });
 
   it('reports when the layer window is inverted', () => {
@@ -100,10 +96,9 @@ describe('PointLight2D linter', () => {
       ),
       { ruleName: 'pointlight2d-inverted-layer-range' }
     );
-    expectNoDiagnostic(
-      scene(node('PointLight2D', { ...WITH_TEXTURE, range_z_min: 3, range_z_max: 3 })),
-      { ruleName: 'pointlight2d-inverted-z-range' }
-    );
+    expectNoDiagnostic(scene(node('PointLight2D', { ...WITH_TEXTURE, range_z_min: 3, range_z_max: 3 })), {
+      ruleName: 'pointlight2d-inverted-z-range',
+    });
   });
 
   it('says nothing about ranges on a light that authors no window at all', () => {
@@ -124,11 +119,7 @@ describe('PointLight2D linter', () => {
   });
 
   it('ignores a malformed bound, which the validators already report', () => {
-    const diagnostics = lint(
-      scene(node('PointLight2D', { ...WITH_TEXTURE, range_z_min: '"five"' }))
-    );
-    expect(
-      diagnostics.filter((d) => d.ruleName === 'pointlight2d-inverted-z-range')
-    ).toEqual([]);
+    const diagnostics = lint(scene(node('PointLight2D', { ...WITH_TEXTURE, range_z_min: '"five"' })));
+    expect(diagnostics.filter((d) => d.ruleName === 'pointlight2d-inverted-z-range')).toEqual([]);
   });
 });

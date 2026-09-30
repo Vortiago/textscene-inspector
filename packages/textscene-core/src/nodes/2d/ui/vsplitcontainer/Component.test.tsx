@@ -48,7 +48,12 @@ describe('<VSplitContainer>', () => {
   it('renders nothing under the default theme', async () => {
     const node = split({}, bothExpandChildren());
     const renderer = await ReactThreeTestRenderer.create(
-      <VSplitContainer {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 120, h: 300 }} renderOrder={0} />
+      <VSplitContainer
+        {...painterEnv()}
+        solveNode={node}
+        rect={{ x: 0, y: 0, w: 120, h: 300 }}
+        renderOrder={0}
+      />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });
@@ -59,7 +64,12 @@ describe('<VSplitContainer>', () => {
       solveNode('Bottom', 'ColorRect', { sizeFlagsHorizontal: EXPAND_FILL }),
     ]);
     const renderer = await ReactThreeTestRenderer.create(
-      <VSplitContainer {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 120, h: 300 }} renderOrder={0} />
+      <VSplitContainer
+        {...painterEnv()}
+        solveNode={node}
+        rect={{ x: 0, y: 0, w: 120, h: 300 }}
+        renderOrder={0}
+      />
     );
     // Neither counts as expanding on the vertical axis -> rest position 0.
     const group = renderer.scene.findByType('Group');
@@ -71,7 +81,12 @@ describe('<VSplitContainer>', () => {
   it('draws exactly one 48x8 textured quad, centred on the computed row split, once autohide is overridden', async () => {
     const node = split({ themeOverrideConstants: { autohide: 0 } }, bothExpandChildren());
     const renderer = await ReactThreeTestRenderer.create(
-      <VSplitContainer {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 120, h: 300 }} renderOrder={0} />
+      <VSplitContainer
+        {...painterEnv()}
+        solveNode={node}
+        rect={{ x: 0, y: 0, w: 120, h: 300 }}
+        renderOrder={0}
+      />
     );
 
     const meshes = renderer.scene.findAllByType('Mesh');
@@ -92,7 +107,12 @@ describe('<VSplitContainer>', () => {
   it('renders nothing with fewer than two sortable children, even with autohide overridden', async () => {
     const node = split({ themeOverrideConstants: { autohide: 0 } }, [solveNode('Only', 'ColorRect', {})]);
     const renderer = await ReactThreeTestRenderer.create(
-      <VSplitContainer {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 120, h: 300 }} renderOrder={0} />
+      <VSplitContainer
+        {...painterEnv()}
+        solveNode={node}
+        rect={{ x: 0, y: 0, w: 120, h: 300 }}
+        renderOrder={0}
+      />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });

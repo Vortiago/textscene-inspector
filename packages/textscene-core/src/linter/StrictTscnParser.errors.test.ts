@@ -78,7 +78,7 @@ visible = true
       const result = parser.parse(content);
 
       expect(result.errors.length).toBeGreaterThan(0);
-      result.errors.forEach(error => {
+      result.errors.forEach((error) => {
         expect(error.column).toBe(1);
       });
     });

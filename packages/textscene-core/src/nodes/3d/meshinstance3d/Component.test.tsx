@@ -34,10 +34,7 @@ function meshSubResource(
   };
 }
 
-async function render(
-  node: TscnNode,
-  internalResources: TscnInternalResource[] = []
-) {
+async function render(node: TscnNode, internalResources: TscnInternalResource[] = []) {
   return ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={internalResources}>
       <MeshInstance3D node={node} />
@@ -84,7 +81,9 @@ describe('<MeshInstance3D>', () => {
       const renderer = await render(node, [resource]);
       const mesh = findMesh(renderer.scene);
       expect(mesh.geometry.type).toBe('BoxGeometry');
-      const params = (mesh.geometry as unknown as { parameters: { width: number; height: number; depth: number } }).parameters;
+      const params = (
+        mesh.geometry as unknown as { parameters: { width: number; height: number; depth: number } }
+      ).parameters;
       expect(params.width).toBe(2);
       expect(params.height).toBe(3);
       expect(params.depth).toBe(4);
@@ -167,7 +166,7 @@ describe('<MeshInstance3D>', () => {
       expect(geometry.parameters.tube).toBe(0.5);
     });
 
-    it('renders Godot\'s triangular prism for PrismMesh', async () => {
+    it("renders Godot's triangular prism for PrismMesh", async () => {
       const node = makeNode({ mesh: 'SubResource("Pri_1")' });
       const resource = meshSubResource('PrismMesh', 'Pri_1', { size: 'Vector3(2, 2, 2)' });
       const renderer = await render(node, [resource]);
@@ -239,10 +238,7 @@ describe('<MeshInstance3D>', () => {
       // Godot binds a hardcoded shader for an unmaterialed mesh, `ALBEDO = vec3(0.6);
       // ROUGHNESS = 0.8; METALLIC = 0.2;`, not a default StandardMaterial3D, so it is
       // mid-grey and slightly metallic.
-      const linear = material.color.getRGB(
-        { r: 0, g: 0, b: 0 } as THREE.Color,
-        THREE.LinearSRGBColorSpace
-      );
+      const linear = material.color.getRGB({ r: 0, g: 0, b: 0 } as THREE.Color, THREE.LinearSRGBColorSpace);
       expect(linear.r).toBeCloseTo(0.6, 5);
       expect(material.metalness).toBe(0.2);
       expect(material.roughness).toBe(0.8);

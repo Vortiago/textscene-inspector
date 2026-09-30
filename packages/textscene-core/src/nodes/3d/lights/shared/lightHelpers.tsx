@@ -23,18 +23,16 @@ const POINT_HELPER_SIZE = 0.25;
  * once the light's ref resolves, and `usePrimitiveHelper` updates and disposes
  * it. No ref or a closed gate tears down whatever was mounted.
  */
-function LightGizmoCommon<L extends THREE.Light, H extends THREE.Object3D & { update?: () => void; dispose?: () => void }>(
-  props: { lightRef: RefObject<L | null>; make: (light: L) => H }
-) {
+function LightGizmoCommon<
+  L extends THREE.Light,
+  H extends THREE.Object3D & { update?: () => void; dispose?: () => void },
+>(props: { lightRef: RefObject<L | null>; make: (light: L) => H }) {
   const visible = useGizmoVisible();
-  const helper = usePrimitiveHelper<H>(
-    () => {
-      if (!visible) return null;
-      const light = props.lightRef.current;
-      return light ? props.make(light) : null;
-    },
-    [props.lightRef, visible]
-  );
+  const helper = usePrimitiveHelper<H>(() => {
+    if (!visible) return null;
+    const light = props.lightRef.current;
+    return light ? props.make(light) : null;
+  }, [props.lightRef, visible]);
   return helper ? <primitive object={helper} /> : null;
 }
 
@@ -79,9 +77,6 @@ interface SpotGizmoProps {
 
 export function SpotLightGizmo({ lightRef }: SpotGizmoProps) {
   return (
-    <LightGizmoCommon
-      lightRef={lightRef}
-      make={(light) => new THREE.SpotLightHelper(light, HELPER_COLOR)}
-    />
+    <LightGizmoCommon lightRef={lightRef} make={(light) => new THREE.SpotLightHelper(light, HELPER_COLOR)} />
   );
 }

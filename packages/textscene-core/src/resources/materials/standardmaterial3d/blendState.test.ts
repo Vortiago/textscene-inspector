@@ -6,11 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import {
-  GODOT_BLEND_ATTACHMENTS,
-  godotBlendState,
-  type GodotBlendAttachment,
-} from './blendState';
+import { GODOT_BLEND_ATTACHMENTS, godotBlendState, type GodotBlendAttachment } from './blendState';
 import { BlendMode } from './types';
 
 describe('GODOT_BLEND_ATTACHMENTS', () => {

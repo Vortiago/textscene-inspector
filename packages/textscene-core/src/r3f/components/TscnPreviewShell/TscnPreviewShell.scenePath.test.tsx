@@ -41,8 +41,7 @@ function shellAt(rootScenePath: string, content: string) {
   );
 }
 
-const stageScenePath = () =>
-  screen.getByTestId('stage-2d-stub').getAttribute('data-scene-path');
+const stageScenePath = () => screen.getByTestId('stage-2d-stub').getAttribute('data-scene-path');
 
 describe('<TscnPreviewShell> scene path to the 2D stage', () => {
   it('hands the stage the path the host opened the scene under', async () => {

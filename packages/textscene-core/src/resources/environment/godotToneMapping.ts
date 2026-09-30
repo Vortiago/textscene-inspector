@@ -105,10 +105,7 @@ export function toneMappingWhiteParam(mode: number, white: number): number {
  * hook, so each curve multiplies it in first, which is also where Godot puts
  * `tonemap_exposure`.
  */
-export function toneMappingShaderChunk(
-  mode: number,
-  agxContrast = DEFAULT_AGX_CONTRAST
-): string {
+export function toneMappingShaderChunk(mode: number, agxContrast = DEFAULT_AGX_CONTRAST): string {
   const body = (CURVES[mode] ?? LINEAR_CURVE)(agxContrast);
   return /* glsl */ `
 uniform float toneMappingExposure;

@@ -19,9 +19,12 @@ afterEach(() => {
 
 describe('decodeCapsuleMesh', () => {
   it('honours a well-formed capsule', () => {
-    expect(decodeCapsuleMesh({ radius: '1', height: '5', radial_segments: '16', rings: '4' })).toEqual(
-      { radius: 1, height: 5, radialSegments: 16, rings: 4 }
-    );
+    expect(decodeCapsuleMesh({ radius: '1', height: '5', radial_segments: '16', rings: '4' })).toEqual({
+      radius: 1,
+      height: 5,
+      radialSegments: 16,
+      rings: 4,
+    });
   });
 
   // Defaults: `primitive_meshes.h:130-133`.

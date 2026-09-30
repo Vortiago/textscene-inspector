@@ -36,15 +36,11 @@ const TYPE_SHORTHAND: Record<string, string> = {
 function getTypeBadgeClass(type: string): string {
   // hasOwn: `type` comes from the file, and a prototype member is not nullish,
   // so `??` would let a function through as a className.
-  return (Object.hasOwn(TYPE_BADGE_CLASS, type) ? TYPE_BADGE_CLASS[type] : undefined) ??
-    styles.typeUnknown!;
+  return (Object.hasOwn(TYPE_BADGE_CLASS, type) ? TYPE_BADGE_CLASS[type] : undefined) ?? styles.typeUnknown!;
 }
 
 function getTypeShorthand(type: string): string {
-  return (
-    (Object.hasOwn(TYPE_SHORTHAND, type) ? TYPE_SHORTHAND[type] : undefined) ??
-    type.substring(0, 4)
-  );
+  return (Object.hasOwn(TYPE_SHORTHAND, type) ? TYPE_SHORTHAND[type] : undefined) ?? type.substring(0, 4);
 }
 
 function hasTransform(node: TscnNode): boolean {
@@ -93,9 +89,7 @@ function TreeNodeImpl({
   isDefaultFocusable = false,
 }: TreeNodeProps) {
   const nodePath = joinPath(parentPath, node.name);
-  const scenePath = node.instance
-    ? resolveInstancePath(node.instance, externalResources)
-    : null;
+  const scenePath = node.instance ? resolveInstancePath(node.instance, externalResources) : null;
   const instanceScenePath = onOpenSubScene ? scenePath : null;
 
   // Null for a non-instance row or while the sub-scene loads. The hook
@@ -131,11 +125,7 @@ function TreeNodeImpl({
   // `keyPrefix` is the group's origin, so an inline child that shares a name with
   // a sub-scene root does not trip React's duplicate-key warning. `childRes` is
   // the scope the child resolves its own instance ref against.
-  const renderChildRow = (
-    child: TscnNode,
-    keyPrefix: string,
-    childRes: readonly TscnExternalResource[]
-  ) => (
+  const renderChildRow = (child: TscnNode, keyPrefix: string, childRes: readonly TscnExternalResource[]) => (
     <TreeNode
       key={`${keyPrefix}:${child.name}`}
       node={child}
@@ -150,13 +140,8 @@ function TreeNodeImpl({
     />
   );
 
-  const {
-    selectedNodePath,
-    expandedNodePaths,
-    setSelectedNodePath,
-    hoverStore,
-    toggleExpandedNodePath,
-  } = useSelection();
+  const { selectedNodePath, expandedNodePaths, setSelectedNodePath, hoverStore, toggleExpandedNodePath } =
+    useSelection();
 
   const isExpanded = expandedNodePaths.has(nodePath);
   const isSelected = selectedNodePath === nodePath;
@@ -227,10 +212,7 @@ function TreeNodeImpl({
           <span className={styles.expandSpacer}>•</span>
         )}
 
-        <span
-          className={`${styles.typeBadge} ${getTypeBadgeClass(effective.type)}`}
-          title={effective.type}
-        >
+        <span className={`${styles.typeBadge} ${getTypeBadgeClass(effective.type)}`} title={effective.type}>
           {getTypeShorthand(effective.type)}
         </span>
 
@@ -253,10 +235,7 @@ function TreeNodeImpl({
           )}
 
           {node.instance && (
-            <span
-              className={styles.instanceIcon}
-              title={`External scene: ${node.instance}`}
-            >
+            <span className={styles.instanceIcon} title={`External scene: ${node.instance}`}>
               📦
             </span>
           )}

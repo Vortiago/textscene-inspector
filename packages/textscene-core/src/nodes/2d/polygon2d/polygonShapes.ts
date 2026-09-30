@@ -40,7 +40,10 @@ export function polygonRings(
     // so their own UVs, as in Godot.
     const ring = trimInternal(allIndices, all.length, internalVertexCount);
     if (ring.length < MIN_RING) return { points: all, outlines: [], hole: null };
-    const bounds = grownBounds(ring.map((i) => all[i]!), invertBorder);
+    const bounds = grownBounds(
+      ring.map((i) => all[i]!),
+      invertBorder
+    );
     const points = [...all, ...bounds];
     const boundsIndices = bounds.map((_, i) => all.length + i);
     return { points, outlines: [boundsIndices], hole: ring };

@@ -57,19 +57,13 @@ describe('polygonToSegments', () => {
   });
 
   it('closed 4-pt square → 4 segments (8 positions)', () => {
-    const pts = [
-      0, 0, 16, 0,
-      16, 16, 0, 16,
-    ];
+    const pts = [0, 0, 16, 0, 16, 16, 0, 16];
     const out = polygonToSegments(pts, true);
     expect(out!.length).toBe(24); // 4 segments * 2 * 3
   });
 
   it('open 4-pt chain → 3 segments (6 positions)', () => {
-    const pts = [
-      0, 0, 16, 0,
-      16, 16, 0, 16,
-    ];
+    const pts = [0, 0, 16, 0, 16, 16, 0, 16];
     const out = polygonToSegments(pts, false);
     expect(out!.length).toBe(18); // 3 segments * 2 * 3
   });

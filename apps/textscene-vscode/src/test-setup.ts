@@ -88,7 +88,12 @@ export const vscode: {
   Diagnostic: typeof MockDiagnostic;
   DiagnosticSeverity: typeof MockDiagnosticSeverity;
   ViewColumn: { One: number; Two: number; Three: number; Active: number; Beside: number };
-  TextEditorRevealType: { Default: number; InCenter: number; InCenterIfOutsideViewport: number; AtTop: number };
+  TextEditorRevealType: {
+    Default: number;
+    InCenter: number;
+    InCenterIfOutsideViewport: number;
+    AtTop: number;
+  };
   SymbolKind: Record<string, number>;
 } = {
   Uri: mockUri,

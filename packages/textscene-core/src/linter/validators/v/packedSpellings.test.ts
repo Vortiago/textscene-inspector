@@ -29,7 +29,7 @@ describe('a PackedVector2Array slot', () => {
     expect(at('Array[Vector2]([])')).toBeNull();
   });
 
-  it('accepts the convertible element spelling, at the slot\'s own arity', () => {
+  it("accepts the convertible element spelling, at the slot's own arity", () => {
     // `Variant::operator Vector2()` reads a Vector2i verbatim
     // (`variant.cpp:1751-1756`), and `_convert_array` runs it per element
     // (`variant.cpp:2082-2091`), so this is a file Godot opens.

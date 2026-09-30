@@ -109,9 +109,7 @@ describe('MultiplayerSpawner strict validators', () => {
   it('accepts an empty and a populated _spawnable_scenes array', () => {
     expect(check('_spawnable_scenes', 'PackedStringArray()')).toBeNull();
     expect(check('_spawnable_scenes', 'PackedStringArray("res://enemy.tscn")')).toBeNull();
-    expect(
-      check('_spawnable_scenes', 'PackedStringArray("res://enemy.tscn", "uid://abc123")')
-    ).toBeNull();
+    expect(check('_spawnable_scenes', 'PackedStringArray("res://enemy.tscn", "uid://abc123")')).toBeNull();
     expect(check('_spawnable_scenes', 'not-a-packed-array')).not.toBeNull();
   });
 

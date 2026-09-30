@@ -23,10 +23,7 @@ const DEFAULT_SIZE: Vector3 = { x: 2, y: 2, z: 2 };
  */
 export const DECAL_DEFAULT_CULL_MASK = 0xfffff;
 
-export function parseDecal(
-  heading: ParsedHeading,
-  properties: Record<string, string>
-): DecalProperties {
+export function parseDecal(heading: ParsedHeading, properties: Record<string, string>): DecalProperties {
   const baseProperties = parseNode3D(heading, properties);
 
   let size: Vector3 = { ...DEFAULT_SIZE };

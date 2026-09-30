@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { svSquareBaseLayer, svSquareHueLayer, hueStripGeometry, horizontalStripGeometry, linearizeStops } from './svGradient';
+import {
+  svSquareBaseLayer,
+  svSquareHueLayer,
+  hueStripGeometry,
+  horizontalStripGeometry,
+  linearizeStops,
+} from './svGradient';
 
 describe('linearizeStops', () => {
   // core/math/color.h:192-198, Color::srgb_to_linear: c < 0.04045 ? c/12.92 : pow((c+0.055)/1.055, 2.4).
@@ -12,7 +18,10 @@ describe('linearizeStops', () => {
   });
 
   it('is 0 at 0 and preserves stop order/count', () => {
-    const stops = linearizeStops([{ r: 0, g: 0, b: 0, a: 1 }, { r: 1, g: 1, b: 1, a: 1 }]);
+    const stops = linearizeStops([
+      { r: 0, g: 0, b: 0, a: 1 },
+      { r: 1, g: 1, b: 1, a: 1 },
+    ]);
     expect(stops).toHaveLength(2);
     expect(stops[0]).toEqual({ r: 0, g: 0, b: 0, a: 1 });
   });

@@ -49,7 +49,8 @@ export const giAndEnvironmentWarnings: Readonly<Record<string, readonly WarningR
       says: 'needs volumetric fog enabled in the Environment to be visible',
       verdict: {
         declined: 'runtime-only',
-        because: "reads the live Viewport's World3D Environment, get_viewport()->find_world_3d()->get_environment(), fog_volume.cpp:123",
+        because:
+          "reads the live Viewport's World3D Environment, get_viewport()->find_world_3d()->get_environment(), fog_volume.cpp:123",
       },
     },
   ],
@@ -58,7 +59,10 @@ export const giAndEnvironmentWarnings: Readonly<Record<string, readonly WarningR
     {
       at: 'lightmap_gi.cpp:1808',
       says: "GPU doesn't support the RenderingDevice backends lightmap baking needs",
-      verdict: { declined: 'runtime-only', because: 'DisplayServer::can_create_rendering_device(), lightmap_gi.cpp:1807' },
+      verdict: {
+        declined: 'runtime-only',
+        because: 'DisplayServer::can_create_rendering_device(), lightmap_gi.cpp:1807',
+      },
     },
     {
       at: 'lightmap_gi.cpp:1813',
@@ -71,12 +75,20 @@ export const giAndEnvironmentWarnings: Readonly<Record<string, readonly WarningR
     {
       at: 'lightmap_gi.cpp:1817',
       says: 'lightmaps cannot be baked on this platform',
-      verdict: { declined: 'runtime-only', because: 'OS::get_name(), an #ifdef ANDROID_ENABLED/APPLE_EMBEDDED_ENABLED branch, lightmap_gi.cpp:1816' },
+      verdict: {
+        declined: 'runtime-only',
+        because:
+          'OS::get_name(), an #ifdef ANDROID_ENABLED/APPLE_EMBEDDED_ENABLED branch, lightmap_gi.cpp:1816',
+      },
     },
     {
       at: 'lightmap_gi.cpp:1819',
       says: 'the lightmapper_rd module was disabled at compile-time',
-      verdict: { declined: 'runtime-only', because: 'compile-time #else branch when MODULE_LIGHTMAPPER_RD_ENABLED is unset, lightmap_gi.cpp:1806' },
+      verdict: {
+        declined: 'runtime-only',
+        because:
+          'compile-time #else branch when MODULE_LIGHTMAPPER_RD_ENABLED is unset, lightmap_gi.cpp:1806',
+      },
     },
   ],
 
@@ -86,7 +98,8 @@ export const giAndEnvironmentWarnings: Readonly<Record<string, readonly WarningR
       says: 'occlusion culling is disabled in the Project Settings',
       verdict: {
         declined: 'runtime-only',
-        because: 'GLOBAL_GET_CACHED("rendering/occlusion_culling/use_occlusion_culling"), occluder_instance_3d.cpp:696',
+        because:
+          'GLOBAL_GET_CACHED("rendering/occlusion_culling/use_occlusion_culling"), occluder_instance_3d.cpp:696',
       },
     },
     {
@@ -151,7 +164,8 @@ export const giAndEnvironmentWarnings: Readonly<Record<string, readonly WarningR
       says: 'only one WorldEnvironment is allowed per scene',
       verdict: {
         declined: 'runtime-only',
-        because: "reads the live Viewport's World3D CameraAttributes, get_viewport()->find_world_3d()->get_camera_attributes(), world_environment.cpp:199",
+        because:
+          "reads the live Viewport's World3D CameraAttributes, get_viewport()->find_world_3d()->get_camera_attributes(), world_environment.cpp:199",
       },
     },
     {
@@ -159,7 +173,8 @@ export const giAndEnvironmentWarnings: Readonly<Record<string, readonly WarningR
       says: 'only the first Compositor has an effect in a scene',
       verdict: {
         declined: 'runtime-only',
-        because: "reads the live Viewport's World3D Compositor, get_viewport()->find_world_3d()->get_compositor(), world_environment.cpp:203",
+        because:
+          "reads the live Viewport's World3D Compositor, get_viewport()->find_world_3d()->get_compositor(), world_environment.cpp:203",
       },
     },
   ],

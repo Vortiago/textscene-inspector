@@ -117,9 +117,7 @@ function applyRelay3D(
   const targetGlobal = globalMatrix3D(targetPath, nodeByPath);
   const desired = composeSelected3D(targetGlobal, relayGlobal, flags);
   const parentPath = parentPathOf(targetPath);
-  const parentGlobal = parentPath
-    ? globalMatrix3D(parentPath, nodeByPath)
-    : new THREE.Matrix4();
+  const parentGlobal = parentPath ? globalMatrix3D(parentPath, nodeByPath) : new THREE.Matrix4();
   const newLocal = parentGlobal.clone().invert().multiply(desired);
 
   (target.properties as Node3DProperties).transform = matrixToTransform3D(newLocal);
@@ -130,11 +128,7 @@ function applyRelay3D(
  * global space, as the 2D path is too. This matches Godot exactly when the target's parent has no
  * rotation or scale. Under a rotated or scaled parent, Godot's `set_rotation`/`set_scale` quirk diverges.
  */
-function composeSelected3D(
-  base: THREE.Matrix4,
-  source: THREE.Matrix4,
-  flags: RemoteFlags
-): THREE.Matrix4 {
+function composeSelected3D(base: THREE.Matrix4, source: THREE.Matrix4, flags: RemoteFlags): THREE.Matrix4 {
   if (flags.updatePosition && flags.updateRotation && flags.updateScale) {
     return source.clone();
   }
@@ -220,7 +214,11 @@ function composeSelected2D(
  * Godot Transform2D decomposition into position, rotation (`get_rotation`, `transform_2d.cpp:82-84`)
  * and scale. Skew is dropped.
  */
-function decomposeTransform2D(m: Transform2DColumns): { position: Vector2; rotation: number; scale: Vector2 } {
+function decomposeTransform2D(m: Transform2DColumns): {
+  position: Vector2;
+  rotation: number;
+  scale: Vector2;
+} {
   return {
     position: { x: m.tx, y: m.ty },
     rotation: Math.atan2(m.b, m.a),

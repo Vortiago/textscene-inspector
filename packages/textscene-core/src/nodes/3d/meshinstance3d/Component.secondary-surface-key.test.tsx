@@ -25,10 +25,7 @@ function makeNode(): TscnNode {
 }
 
 /** Whether surface 1 got a different THREE.Material after the edit. */
-async function rebuilds(
-  before: Record<string, string>,
-  after: Record<string, string>
-): Promise<boolean> {
+async function rebuilds(before: Record<string, string>, after: Record<string, string>): Promise<boolean> {
   const tree = (data: Record<string, string>) => {
     const resources: TscnInternalResource[] = [
       inlineTwoSurfaceMesh('Mesh_1'),

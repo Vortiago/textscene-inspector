@@ -14,24 +14,17 @@ import { fixtureUrlForGltfUri } from './corpusRoot';
  * subtree. Module-private: without the cache clear `applyCorpusRoot` pairs it with, the caches
  * would hold the corpus being left.
  */
-function switchCorpusRoot(
-  pipeline: ResourcePipeline<WebResourceProvider>,
-  resourceRoot: string
-): void {
+function switchCorpusRoot(pipeline: ResourcePipeline<WebResourceProvider>, resourceRoot: string): void {
   const { provider, loader } = pipeline;
   provider.setResourceRoot(resourceRoot);
-  loader.eventBus.getThreeManager().setURLModifier(
-    (url: string) => fixtureUrlForGltfUri(url, resourceRoot)
-  );
+  loader.eventBus.getThreeManager().setURLModifier((url: string) => fixtureUrlForGltfUri(url, resourceRoot));
 }
 
 /**
  * Returns `applyCorpusRoot(root)`, the idempotent switch: routing, and a cache clear on a real
  * change.
  */
-export function useCorpusRoot(
-  pipeline: ResourcePipeline<WebResourceProvider>
-): (root: string) => void {
+export function useCorpusRoot(pipeline: ResourcePipeline<WebResourceProvider>): (root: string) => void {
   // The root of the last swap. Null until the first one, which routes without clearing:
   // nothing has loaded yet to go stale.
   const appliedRootRef = useRef<string | null>(null);

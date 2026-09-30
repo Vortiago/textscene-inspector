@@ -42,13 +42,10 @@ export function slotColorSpace(slot: TextureSlot): THREE.ColorSpace {
  * authored filter passes: comparing against Godot's default would clone every texture
  * whose sampler state differs from it.
  */
-export function materialTextureState(
-  scalars: StandardMaterial3DScalars
-): MaterialTextureState {
+export function materialTextureState(scalars: StandardMaterial3DScalars): MaterialTextureState {
   return {
     uv: { scale: scalars.uv1Scale, offset: scalars.uv1Offset },
-    filter:
-      scalars.textureFilter === GODOT_TEXTURE_FILTER_DEFAULT ? undefined : scalars.textureFilter,
+    filter: scalars.textureFilter === GODOT_TEXTURE_FILTER_DEFAULT ? undefined : scalars.textureFilter,
     repeat: scalars.textureRepeat,
   };
 }

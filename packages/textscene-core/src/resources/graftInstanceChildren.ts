@@ -118,4 +118,3 @@ function attach(parent: TscnNode, child: TscnNode): TscnNode {
   };
   return { ...parent, children };
 }
-

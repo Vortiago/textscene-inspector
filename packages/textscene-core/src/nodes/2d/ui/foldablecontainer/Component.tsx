@@ -14,7 +14,11 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { shapedTextSizeWidthPx, soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
-import { OverrunBehavior, overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
+import {
+  OverrunBehavior,
+  overrunFlagsForBehavior,
+  trimLineToWidth,
+} from '../../../../r3f/controls/native/text/textOverrun';
 import {
   HORIZONTAL_ALIGNMENT_CENTER,
   HORIZONTAL_ALIGNMENT_LEFT,
@@ -47,7 +51,13 @@ function actualTitleAlignment(alignment: number, rtl: boolean): number {
   return alignment;
 }
 
-export function FoldableContainer({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
+export function FoldableContainer({
+  solveNode,
+  tint,
+  rect,
+  renderOrder,
+  theme,
+}: NativeControlComponentProps) {
   const props = painterView<FoldableContainerProperties>(solveNode);
   // The solve handoff: the solver sizes the container from this same title shape.
   const title = foldableContainerTitleShape(solveNode, theme);
@@ -135,7 +145,12 @@ export function FoldableContainer({ solveNode, tint, rect, renderOrder, theme }:
       {/* `StyleBoxQuad` reads only the size of its rect,
           so the group supplies the offset. */}
       <CanvasItemGroup position={[titleRect.x, -titleRect.y, 0]}>
-        <StyleBoxQuad styleBox={title.titleStyle} color={tint.own} rect={titleRect} renderOrder={renderOrder} />
+        <StyleBoxQuad
+          styleBox={title.titleStyle}
+          color={tint.own}
+          rect={titleRect}
+          renderOrder={renderOrder}
+        />
       </CanvasItemGroup>
       <CanvasItemGroup position={[titleRect.x + iconPos.x, -(titleRect.y + iconPos.y), 0]}>
         <ControlQuad
@@ -160,7 +175,12 @@ export function FoldableContainer({ solveNode, tint, rect, renderOrder, theme }:
       )}
       {!title.folded && (
         <CanvasItemGroup position={[panelRect.x, -panelRect.y, 0]}>
-          <StyleBoxQuad styleBox={title.panelStyle} color={tint.own} rect={panelRect} renderOrder={renderOrder} />
+          <StyleBoxQuad
+            styleBox={title.panelStyle}
+            color={tint.own}
+            rect={panelRect}
+            renderOrder={renderOrder}
+          />
         </CanvasItemGroup>
       )}
     </>

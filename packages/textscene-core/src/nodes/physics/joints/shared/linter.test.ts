@@ -5,7 +5,13 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { expectClean, expectDiagnostic, expectNoDiagnostic, node, scene } from '../../../../linter/testing/testkit.js';
+import {
+  expectClean,
+  expectDiagnostic,
+  expectNoDiagnostic,
+  node,
+  scene,
+} from '../../../../linter/testing/testkit.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { jointValidationRule } from './linter.js';
 import '../../../../linter/index.js';
@@ -20,9 +26,7 @@ describe('joint dead-configuration rule', () => {
   it('registers ONE rule for the whole family, not one per joint type', () => {
     // Every leaf in both dimensions shares it. The dimension changes only a
     // noun in the message, which `check` derives from the node's own type.
-    expect(ruleRegistry.getRules().find((r) => r.meta.name === 'valid-joint')).toBe(
-      jointValidationRule
-    );
+    expect(ruleRegistry.getRules().find((r) => r.meta.name === 'valid-joint')).toBe(jointValidationRule);
   });
 
   it.each([...LEAVES_2D, ...LEAVES_3D])('reaches the %s leaf through the matcher', (type) => {

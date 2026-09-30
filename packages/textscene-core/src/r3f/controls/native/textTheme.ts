@@ -43,7 +43,12 @@ export function resolveTextTheme(
   defaults: TextThemeDefaults
 ): ResolvedTextTheme {
   return {
-    fontSizePx: resolveNodeFontSizePx(n, keys.sizeKey, props.themeOverrideFontSizes?.[keys.sizeKey], defaults.fontSizePx),
+    fontSizePx: resolveNodeFontSizePx(
+      n,
+      keys.sizeKey,
+      props.themeOverrideFontSizes?.[keys.sizeKey],
+      defaults.fontSizePx
+    ),
     color: n.colors[keys.colorKey] ?? defaults.color,
   };
 }

@@ -39,8 +39,7 @@ describe('tileDrawInfo', () => {
       transpose: false,
     });
     expect(
-      tileDrawInfo(source, { x: 0, y: 0 }, TILE_TRANSFORM_TRANSPOSE | TILE_TRANSFORM_FLIP_H)
-        .orientation
+      tileDrawInfo(source, { x: 0, y: 0 }, TILE_TRANSFORM_TRANSPOSE | TILE_TRANSFORM_FLIP_H).orientation
     ).toEqual({ flipH: true, flipV: false, transpose: true });
   });
 

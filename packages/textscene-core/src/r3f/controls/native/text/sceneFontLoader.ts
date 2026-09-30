@@ -8,7 +8,11 @@ import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { createOpenSansCanvasFontMetrics } from './openSansCanvasFontMetrics';
 import { OPEN_SANS_WOFF2_BASE64 } from './openSansFontBytes';
 import { parseSfntScalars, type SfntScalars } from './sfntTables';
-import { createRuntimeFontMetrics, type CanvasFontMetrics, type DesignUnitWidthFn } from './runtimeFontMetrics';
+import {
+  createRuntimeFontMetrics,
+  type CanvasFontMetrics,
+  type DesignUnitWidthFn,
+} from './runtimeFontMetrics';
 import { resolveFontFileBytes } from './sceneFontResolution';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
@@ -52,7 +56,8 @@ function notifySceneFontMetricsSettled(): void {
   for (const listener of settledListeners) listener();
 }
 
-type CacheEntry = { status: 'pending'; promise: Promise<FontMetrics> } | { status: 'settled'; metrics: FontMetrics };
+type CacheEntry =
+  { status: 'pending'; promise: Promise<FontMetrics> } | { status: 'settled'; metrics: FontMetrics };
 
 /** Keyed by the resolved leaf `FontFileResource`, so nodes that share a font share one load. A `WeakMap` frees the entry of an evicted resource. */
 const metricsCache = new WeakMap<FontFileResource, CacheEntry>();
@@ -67,7 +72,9 @@ function warnUnresolvable(font: FontResource, nodePath: string): void {
     font.kind === 'system'
       ? `a SystemFont (OS family names: ${font.fontNames.join(', ') || '(none)'}) -- this previewer has no access to the user's system fonts`
       : 'no FontFile in its fallback chain carries loadable bytes';
-  logger.warn(`[SceneFont] Node "${nodePath}": font resource is unresolvable (${reason}). Falling back to the bundled default font.`);
+  logger.warn(
+    `[SceneFont] Node "${nodePath}": font resource is unresolvable (${reason}). Falling back to the bundled default font.`
+  );
 }
 
 /**
@@ -78,7 +85,10 @@ function warnUnresolvable(font: FontResource, nodePath: string): void {
  */
 async function registerFontFace(family: string, bytes: () => ArrayBuffer): Promise<Document | undefined> {
   // Read lazily: a non-DOM environment answers `undefined`, and a late `document.fonts` is still seen.
-  const { FontFace: FontFaceCtor, document: doc } = globalThis as { FontFace?: typeof FontFace; document?: Document };
+  const { FontFace: FontFaceCtor, document: doc } = globalThis as {
+    FontFace?: typeof FontFace;
+    document?: Document;
+  };
   if (!FontFaceCtor || !doc?.fonts) return undefined;
   const face = new FontFaceCtor(family, bytes());
   await face.load();
@@ -95,7 +105,9 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Ca
   const family = `tscn-scene-font-${++familyCounter}`;
   const doc = await registerFontFace(family, () => bytes);
   if (!doc) {
-    logger.warn(`[SceneFont] Node "${nodePath}": no FontFace/document.fonts in this environment; falling back to the bundled default font.`);
+    logger.warn(
+      `[SceneFont] Node "${nodePath}": no FontFace/document.fonts in this environment; falling back to the bundled default font.`
+    );
     throw new Error('FontFace unavailable');
   }
 
@@ -106,7 +118,9 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Ca
   if (!ctx) {
     // Unreachable in a supported browser, but a real fallback that warns, unlike the `IS_VITEST`
     // skip, which never reaches this function.
-    logger.warn(`[SceneFont] Node "${nodePath}": no 2D canvas context available; falling back to the bundled default font.`);
+    logger.warn(
+      `[SceneFont] Node "${nodePath}": no 2D canvas context available; falling back to the bundled default font.`
+    );
     throw new Error('CanvasRenderingContext2D unavailable');
   }
 
@@ -209,13 +223,17 @@ async function registerBundledFont(): Promise<CanvasFontMetrics | undefined> {
   try {
     const doc = await registerFontFace(BUNDLED_FAMILY, decodeBundledWoff2);
     if (!doc) {
-      logger.warn('[BundledFont] No FontFace/document.fonts in this environment; the bundled canvas-rasterised font is unavailable.');
+      logger.warn(
+        '[BundledFont] No FontFace/document.fonts in this environment; the bundled canvas-rasterised font is unavailable.'
+      );
       return undefined;
     }
     bundledMetrics = createOpenSansCanvasFontMetrics(BUNDLED_FAMILY);
     return bundledMetrics;
   } catch (err: unknown) {
-    logger.warn(`[BundledFont] Failed to register the bundled font (${err instanceof Error ? err.message : String(err)}).`);
+    logger.warn(
+      `[BundledFont] Failed to register the bundled font (${err instanceof Error ? err.message : String(err)}).`
+    );
     return undefined;
   } finally {
     // Notifies on any settle, as the scene arm does, so a consumer that peeked re-renders once.

@@ -113,10 +113,7 @@ describe('FileDialog strict validators', () => {
 
     it('accepts multiple quoted filters, commas inside a filter string included', () => {
       expect(
-        check(
-          'filters',
-          'PackedStringArray("*.png,*.jpg,*.jpeg;Image Files;image/png,image/jpeg", "*.tscn")'
-        )
+        check('filters', 'PackedStringArray("*.png,*.jpg,*.jpeg;Image Files;image/png,image/jpeg", "*.tscn")')
       ).toBeNull();
     });
 

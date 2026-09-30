@@ -3,7 +3,7 @@ import { commentSpans, stripComments } from './commentSpans';
 
 describe('commentSpans', () => {
   it('finds block and line comments with their offsets', () => {
-    const src = "const a = 1; // trailing\n/* block\nspans lines */\nconst b = 2;";
+    const src = 'const a = 1; // trailing\n/* block\nspans lines */\nconst b = 2;';
     const spans = commentSpans(src);
     expect(spans.map((s) => s.text)).toEqual(['// trailing', '/* block\nspans lines */']);
     expect(spans[0]!.index).toBe(src.indexOf('// trailing'));
@@ -29,7 +29,7 @@ describe('commentSpans', () => {
 
 describe('stripComments', () => {
   it('blanks comments while preserving length and newlines', () => {
-    const src = "keep(); /* gone\nstill gone */ also(); // gone";
+    const src = 'keep(); /* gone\nstill gone */ also(); // gone';
     const out = stripComments(src);
     expect(out.length).toBe(src.length);
     expect(out.split('\n').length).toBe(src.split('\n').length);
@@ -101,20 +101,14 @@ describe('literals are not comments', () => {
   it('does not start a regex scan at a self-closing JSX tag', () => {
     // `} />` is the close tag's twin: the `/` follows the `}` of the last expression attribute,
     // and a regex reading consumes the rest of the line, trailing comment included.
-    expect(commentSpans('const el = <Foo bar={1} />; // note').map((s) => s.text)).toEqual([
-      '// note',
-    ]);
-    expect(commentSpans('<Foo style={{a:1}} />; /* blk */').map((s) => s.text)).toEqual([
-      '/* blk */',
-    ]);
+    expect(commentSpans('const el = <Foo bar={1} />; // note').map((s) => s.text)).toEqual(['// note']);
+    expect(commentSpans('<Foo style={{a:1}} />; /* blk */').map((s) => s.text)).toEqual(['/* blk */']);
   });
 
   it('still reads a division and a JSX expression child as code, not as a regex', () => {
     // The counterpart to the two above: dropping `}` must not stop the lexer
     // seeing the comment after an ordinary expression.
-    expect(commentSpans('const el = <div>{x}</div>; // note').map((s) => s.text)).toEqual([
-      '// note',
-    ]);
+    expect(commentSpans('const el = <div>{x}</div>; // note').map((s) => s.text)).toEqual(['// note']);
     expect(commentSpans('arr[0] / 2; // note').map((s) => s.text)).toEqual(['// note']);
   });
 

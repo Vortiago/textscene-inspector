@@ -101,10 +101,7 @@ export function readIntSlot(value: string, max?: number | null, width?: IntWidth
  * sweeps by tag, not by `accepts` prose, which `layerBitmask` overwrites. `width`
  * is the slot's C++ type, since `4294967296` is unstorable in int32 and exact in int64.
  */
-export function markIntSlot<T extends PropertyValidator>(
-  validator: T,
-  width: IntWidth = 'int32'
-): T {
+export function markIntSlot<T extends PropertyValidator>(validator: T, width: IntWidth = 'int32'): T {
   // Never format-only: `inf` reads (`variant_parser.cpp:701-707`) and is altered
   // on the write.
   delete validator.formatOnly;
@@ -160,7 +157,12 @@ export function storedNotWritten(
   // The BOOL arm first: `true` reads as a whole 1, so the fractional test below
   // returns null past it and the conversion would go unreported.
   const converted = convertedSpelling(
-    propertyName, key, value, line, errorCodeValue, String(stored),
+    propertyName,
+    key,
+    value,
+    line,
+    errorCodeValue,
+    String(stored),
     boolLiteralAsNumber(value) !== undefined
   );
   if (converted) return converted;

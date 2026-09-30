@@ -102,11 +102,35 @@ interface ItemListRowProps {
  * site: React forbids a varying hook count. `tint` multiplies the font and icon
  * colour before the one sRGB-to-linear conversion.
  */
-function ItemListRow({ geometry, origin, tint, renderOrder, clippingPlanes, fontSizePx, resources }: ItemListRowProps) {
-  const { item, disabled, hasIcon, iconDraw, textLayout, textX, textY, iconX, textWidthPx, iconMode, rect, textColor } =
-    geometry;
+function ItemListRow({
+  geometry,
+  origin,
+  tint,
+  renderOrder,
+  clippingPlanes,
+  fontSizePx,
+  resources,
+}: ItemListRowProps) {
+  const {
+    item,
+    disabled,
+    hasIcon,
+    iconDraw,
+    textLayout,
+    textX,
+    textY,
+    iconX,
+    textWidthPx,
+    iconMode,
+    rect,
+    textColor,
+  } = geometry;
 
-  const { texture: iconSource } = useTexture2D(item.icon, resources.externalResources, resources.internalResources);
+  const { texture: iconSource } = useTexture2D(
+    item.icon,
+    resources.externalResources,
+    resources.internalResources
+  );
   const iconTexture = useCanvas2DTexture(iconSource);
 
   const iconColorSrgb = useMemo(() => tintColor(itemIconColor(disabled), tint), [disabled, tint]);
@@ -198,7 +222,15 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
       const text = item.text ?? '';
       const hasText = text.length > 0;
       const textLayout = hasText
-        ? shapeItemListText({ text, fontSizePx, fontMetrics, iconMode, maxTextLines, fixedColumnWidth, overrunBehavior: props.textOverrunBehavior })
+        ? shapeItemListText({
+            text,
+            fontSizePx,
+            fontMetrics,
+            iconMode,
+            maxTextLines,
+            fixedColumnWidth,
+            overrunBehavior: props.textOverrunBehavior,
+          })
         : null;
       const textSize = textLayout
         ? { x: shapedTextSizeWidthPx(textLayout.widthPx), y: textLayout.heightPx }
@@ -206,7 +238,18 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
 
       return { item, disabled, hasIcon, iconSize, hasText, textSize, textLayout };
     });
-  }, [items, fontSizePx, fontMetrics, iconMode, maxTextLines, fixedColumnWidth, iconScale, props.fixedIconSize, props.textOverrunBehavior, solveNode]);
+  }, [
+    items,
+    fontSizePx,
+    fontMetrics,
+    iconMode,
+    maxTextLines,
+    fixedColumnWidth,
+    iconScale,
+    props.fixedIconSize,
+    props.textOverrunBehavior,
+    solveNode,
+  ]);
 
   const itemSizes = useMemo(
     () =>
@@ -243,14 +286,28 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
         hSeparation,
         availableHeight: Math.max(0, rect.h - panelMargin.y),
       }),
-    [itemSizes, maxColumnWidth, props.sameColumnWidth, props.maxColumns, contentWidth, rect.h, panelMargin.y, wraparoundItems, props.autoWidth, hSeparation]
+    [
+      itemSizes,
+      maxColumnWidth,
+      props.sameColumnWidth,
+      props.maxColumns,
+      contentWidth,
+      rect.h,
+      panelMargin.y,
+      wraparoundItems,
+      props.autoWidth,
+      hSeparation,
+    ]
   );
 
   const guideLines = useMemo(
     () => itemListGuideLines(iconMode, packed.separators, contentWidth),
     [iconMode, packed.separators, contentWidth]
   );
-  const guideColorSrgb = useMemo(() => tintColor(itemListGuideColor(solveNode), tint.own), [solveNode, tint.own]);
+  const guideColorSrgb = useMemo(
+    () => tintColor(itemListGuideColor(solveNode), tint.own),
+    [solveNode, tint.own]
+  );
   const guideColorLinear = useGodotLinearColor(guideColorSrgb);
 
   // `base_ofs = theme_cache.panel_style->get_offset()` (`item_list.cpp:1429`):
@@ -320,14 +377,31 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
           textLayout: r.textLayout,
           textX: textBoxX + rightAlign - rowOriginX,
           textY: textOffset.y,
-          iconX: iconDraw.rect ? itemListMirrorX(rowOriginX + iconDraw.rect.x, iconDraw.rect.w, rect.w, rtl) - rowOriginX : 0,
+          iconX: iconDraw.rect
+            ? itemListMirrorX(rowOriginX + iconDraw.rect.x, iconDraw.rect.w, rect.w, rtl) - rowOriginX
+            : 0,
           textWidthPx,
           iconMode,
           rect: packedRect,
           textColor: itemTextColor(baseFontColor, r.disabled),
         };
       }),
-    [rows, packed, iconMode, fixedIconSizeSet, hSeparation, vSeparation, iconMargin, solveNode, baseFontColor, origin.x, rect.w, contentWidth, wraparoundItems, rtl]
+    [
+      rows,
+      packed,
+      iconMode,
+      fixedIconSizeSet,
+      hSeparation,
+      vSeparation,
+      iconMargin,
+      solveNode,
+      baseFontColor,
+      origin.x,
+      rect.w,
+      contentWidth,
+      wraparoundItems,
+      rtl,
+    ]
   );
 
   return (

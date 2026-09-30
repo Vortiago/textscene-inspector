@@ -65,7 +65,10 @@ async function renderIsolated(raw: Record<string, string> = {}, rect: Rect2, opt
 
   const tree = (
     <ResourceLoaderProvider loader={fake.loader}>
-      <SceneResourcesProvider internalResources={[]} externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}>
+      <SceneResourcesProvider
+        internalResources={[]}
+        externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}
+      >
         <TextureRect
           {...painterEnv()}
           {...(options.tint ? { tint: options.tint } : {})}
@@ -89,10 +92,13 @@ describe('<TextureRect> resolves its texture in its OWN scene scope', () => {
     const fake = createFakeResourceLoader();
     fake.textures.seed(TEX, fakeTexture());
     const node = textureRectNode();
-    const own = { ...solveNode(node), resources: {
-      externalResources: [{ id: '1', type: 'Texture2D', path: TEX }],
-      internalResources: [],
-    } };
+    const own = {
+      ...solveNode(node),
+      resources: {
+        externalResources: [{ id: '1', type: 'Texture2D', path: TEX }],
+        internalResources: [],
+      },
+    };
 
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={fake.loader}>
@@ -124,7 +130,10 @@ describe('<TextureRect> (isolated painter contract)', () => {
 
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider internalResources={[]} externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}>
+        <SceneResourcesProvider
+          internalResources={[]}
+          externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}
+        >
           <TextureRect
             {...painterEnv()}
             solveNode={solveNode(node)}
@@ -173,32 +182,37 @@ describe('<TextureRect> (isolated painter contract)', () => {
 
   it('maps texture_filter NEAREST (1) to THREE.NearestFilter', async () => {
     const renderer = await renderIsolated({ texture_filter: '1' }, { x: 0, y: 0, w: 64, h: 32 });
-    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
     expect(material.map!.magFilter).toBe(THREE.NearestFilter);
     expect(material.map!.minFilter).toBe(THREE.NearestFilter);
   });
 
   it('an absent texture_filter (PARENT_NODE) resolves to LinearFilter, the CanvasItem root default', async () => {
     const renderer = await renderIsolated({}, { x: 0, y: 0, w: 64, h: 32 });
-    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
     expect(material.map!.magFilter).toBe(THREE.LinearFilter);
   });
 
   it('maps texture_repeat ENABLED (2) to THREE.RepeatWrapping', async () => {
     const renderer = await renderIsolated({ texture_repeat: '2' }, { x: 0, y: 0, w: 64, h: 32 });
-    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
     expect(material.map!.wrapS).toBe(THREE.RepeatWrapping);
   });
 
   it('an absent texture_repeat (PARENT_NODE) resolves to ClampToEdgeWrapping, the CanvasItem root default', async () => {
     const renderer = await renderIsolated({}, { x: 0, y: 0, w: 64, h: 32 });
-    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
     expect(material.map!.wrapS).toBe(THREE.ClampToEdgeWrapping);
   });
 
   it('flip_h mirrors the UV in place (negative repeat.x, offset shifted to compensate)', async () => {
     const renderer = await renderIsolated({ flip_h: 'true' }, { x: 0, y: 0, w: 300, h: 100 });
-    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
     expect(material.map!.repeat.x).toBeCloseTo(-1);
     expect(material.map!.offset.x).toBeCloseTo(1);
   });
@@ -208,34 +222,34 @@ describe('<TextureRect> (isolated painter contract)', () => {
       { stretch_mode: '1', flip_h: 'true' },
       { x: 0, y: 0, w: 300, h: 100 }
     );
-    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
     // tile repeat = 300/320 = 0.9375, mirrored: repeat -0.9375, offset 0.9375.
     expect(material.map!.repeat.x).toBeCloseTo(-0.9375);
     expect(material.map!.offset.x).toBeCloseTo(0.9375);
     expect(material.map!.wrapS).toBe(THREE.RepeatWrapping);
   });
 
-  it(
-    'draws the walker-composed tint AS-IS — TextureRect has no base colour of its own to fold in',
-    async () => {
-      const renderer = await renderIsolated(
-        {},
-        { x: 0, y: 0, w: 10, h: 10 },
-        // The walker's own product: inherited(.5,.5,.5,.5) x self_modulate(1,.5,1,1).
-        { tint: painterTint({ r: 0.5, g: 0.25, b: 0.5, a: 0.5 }) }
-      );
-      const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
-      const expected = new THREE.Color().setRGB(0.5, 0.25, 0.5, THREE.SRGBColorSpace);
-      expect(material.color.r).toBeCloseTo(expected.r);
-      expect(material.color.g).toBeCloseTo(expected.g);
-      expect(material.color.b).toBeCloseTo(expected.b);
-      expect(material.opacity).toBeCloseTo(0.5);
-    }
-  );
+  it('draws the walker-composed tint AS-IS — TextureRect has no base colour of its own to fold in', async () => {
+    const renderer = await renderIsolated(
+      {},
+      { x: 0, y: 0, w: 10, h: 10 },
+      // The walker's own product: inherited(.5,.5,.5,.5) x self_modulate(1,.5,1,1).
+      { tint: painterTint({ r: 0.5, g: 0.25, b: 0.5, a: 0.5 }) }
+    );
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
+    const expected = new THREE.Color().setRGB(0.5, 0.25, 0.5, THREE.SRGBColorSpace);
+    expect(material.color.r).toBeCloseTo(expected.r);
+    expect(material.color.g).toBeCloseTo(expected.g);
+    expect(material.color.b).toBeCloseTo(expected.b);
+    expect(material.opacity).toBeCloseTo(0.5);
+  });
 
   it('is transparent, double-sided and does not write depth (2D canvas-item convention)', async () => {
     const renderer = await renderIsolated({}, { x: 0, y: 0, w: 64, h: 32 });
-    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
     expect(material.transparent).toBe(true);
     expect(material.depthWrite).toBe(false);
     expect(material.side).toBe(THREE.DoubleSide);
@@ -267,8 +281,17 @@ describe('<TextureRect> registered through <ControlCanvasWalker> (end-to-end wal
 
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider internalResources={[]} externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}>
-          <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+        <SceneResourcesProvider
+          internalResources={[]}
+          externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}
+        >
+          <ControlCanvasWalker
+            tree={[root]}
+            generation={0}
+            viewport={VIEWPORT}
+            theme={THEME}
+            measurer={null}
+          />
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     );
@@ -282,7 +305,7 @@ describe('<TextureRect> registered through <ControlCanvasWalker> (end-to-end wal
     controlComponentRegistry.clear();
   });
 
-  it("inherits texture_filter from the nearest ancestor that names one, past a PARENT_NODE ancestor in between", async () => {
+  it('inherits texture_filter from the nearest ancestor that names one, past a PARENT_NODE ancestor in between', async () => {
     controlComponentRegistry.register({ typeName: 'TextureRect', Component: TextureRect });
     controlSolverRegistry.clear();
     const fake = createFakeResourceLoader();
@@ -323,7 +346,10 @@ describe('<TextureRect> registered through <ControlCanvasWalker> (end-to-end wal
 
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider internalResources={[]} externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}>
+        <SceneResourcesProvider
+          internalResources={[]}
+          externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}
+        >
           <ControlCanvasWalker
             tree={[grandparent]}
             generation={0}
@@ -335,7 +361,8 @@ describe('<TextureRect> registered through <ControlCanvasWalker> (end-to-end wal
       </ResourceLoaderProvider>
     );
 
-    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
     expect(material.map!.magFilter).toBe(THREE.NearestFilter);
     expect(material.map!.minFilter).toBe(THREE.NearestFilter);
     expect(material.map!.wrapS).toBe(THREE.RepeatWrapping);

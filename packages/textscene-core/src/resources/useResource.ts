@@ -74,7 +74,11 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
     const clonePerConsumer = resourceSliceRegistry.clonesPerConsumer(type);
     const access = loader.processor<T>(type);
     if (!access) {
-      setResult({ value: undefined, status: 'unavailable', error: `No processor serves resource bus '${type}'.` });
+      setResult({
+        value: undefined,
+        status: 'unavailable',
+        error: `No processor serves resource bus '${type}'.`,
+      });
       return;
     }
 
@@ -82,8 +86,7 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
     // safe: an unpin to zero does not dispose, so the remount re-pins the cached entry.
     access.pin(path);
 
-    const isCurrent = () =>
-      currentRef.current.path === path && currentRef.current.type === type;
+    const isCurrent = () => currentRef.current.path === path && currentRef.current.type === type;
 
     // Materials only: the geometry is shared with the template and the sibling clones.
     const disposePreviousClone = () => {
@@ -211,10 +214,7 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
  * The `res://` path for a raw property string: a `res://` path unchanged, or the path of an
  * `ExtResource("id")`. Null for an unknown id or any other form.
  */
-export function resolveResourcePath(
-  scene: TscnScene,
-  idOrPath: string
-): string | null {
+export function resolveResourcePath(scene: TscnScene, idOrPath: string): string | null {
   if (idOrPath.startsWith('res://')) {
     return idOrPath;
   }

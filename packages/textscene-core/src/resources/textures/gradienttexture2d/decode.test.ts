@@ -14,9 +14,7 @@ import { GRADIENT_TEXTURE_MAX_SIZE } from '../../../godot/index.js';
 
 describe('parsePackedFloat32Array', () => {
   it('parses a comma-separated float run', () => {
-    expect(parsePackedFloat32Array('PackedFloat32Array(0, 0.642276, 1)')).toEqual([
-      0, 0.642276, 1,
-    ]);
+    expect(parsePackedFloat32Array('PackedFloat32Array(0, 0.642276, 1)')).toEqual([0, 0.642276, 1]);
   });
 
   it('reads the typed and bare spellings the slot converts', () => {
@@ -58,9 +56,7 @@ describe('parsePackedFloat32Array', () => {
 
 describe('parseColorStops', () => {
   it('groups the flat run into RGBA quadruples', () => {
-    const colors = parseColorStops(
-      'PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0.180392, 1, 1, 1, 0)'
-    );
+    const colors = parseColorStops('PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0.180392, 1, 1, 1, 0)');
     expect(colors).toEqual([
       { r: 1, g: 1, b: 1, a: 1 },
       { r: 1, g: 1, b: 1, a: 0.180392 },
@@ -77,9 +73,7 @@ describe('parseColorStops', () => {
       { r: 0, g: 0, b: 1, a: 1 },
     ];
     expect(parseColorStops('[Color(1, 0, 0, 1), Color(0, 0, 1, 1)]')).toEqual(expected);
-    expect(
-      parseColorStops('Array[Color]([Color(1, 0, 0, 1), Color(0, 0, 1, 1)])')
-    ).toEqual(expected);
+    expect(parseColorStops('Array[Color]([Color(1, 0, 0, 1), Color(0, 0, 1, 1)])')).toEqual(expected);
     expect(parseColorStops('[]')).toEqual([]);
   });
 

@@ -19,9 +19,7 @@ export enum PlaybackType {
   SAMPLE = 2,
 }
 
-export interface AudioStreamPlayer2DProperties
-  extends Node2DProperties,
-    AudioStreamBaseProperties {
+export interface AudioStreamPlayer2DProperties extends Node2DProperties, AudioStreamBaseProperties {
   /** Maximum distance the audio can be heard, in pixels (default: 2000). */
   max_distance: number;
 

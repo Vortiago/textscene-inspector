@@ -29,18 +29,14 @@ horizontal_alignment = 1
   it('rejoins a multi-line Label text into one unquoted value', () => {
     const scene = new TscnParser().parse(MULTILINE);
     const title = find(scene.nodes, 'Title');
-    expect((title?.properties as Record<string, unknown> | undefined)?.text).toBe(
-      'Field Notes\nVolume Two'
-    );
+    expect((title?.properties as Record<string, unknown> | undefined)?.text).toBe('Field Notes\nVolume Two');
   });
 
   it('keeps parsing the property that follows the multi-line string', () => {
     const scene = new TscnParser().parse(MULTILINE);
     const title = find(scene.nodes, 'Title');
     // horizontal_alignment sits after the closing quote line, outside the string.
-    expect(
-      (title?.properties as Record<string, unknown> | undefined)?.horizontalAlignment
-    ).toBe(1);
+    expect((title?.properties as Record<string, unknown> | undefined)?.horizontalAlignment).toBe(1);
   });
 
   it('joins a CRLF multi-line string without leaving stray carriage returns', () => {
@@ -48,9 +44,7 @@ horizontal_alignment = 1
     const crlf = MULTILINE.replace(/\n/g, '\r\n');
     const scene = new TscnParser().parse(crlf);
     const title = find(scene.nodes, 'Title');
-    expect((title?.properties as Record<string, unknown> | undefined)?.text).toBe(
-      'Field Notes\nVolume Two'
-    );
+    expect((title?.properties as Record<string, unknown> | undefined)?.text).toBe('Field Notes\nVolume Two');
   });
 
   it('decodes escape sequences in single-line strings (\\n → newline)', () => {
@@ -58,9 +52,7 @@ horizontal_alignment = 1
       `[gd_scene format=3]\n\n[node name="B" type="Button"]\ntext = "OK\\nCancel"\n`
     );
     const button = find(scene.nodes, 'B');
-    expect((button?.properties as Record<string, unknown> | undefined)?.text).toBe(
-      'OK\nCancel'
-    );
+    expect((button?.properties as Record<string, unknown> | undefined)?.text).toBe('OK\nCancel');
   });
 
   it('leaves single-line strings untouched', () => {
@@ -68,9 +60,7 @@ horizontal_alignment = 1
       `[gd_scene format=3]\n\n[node name="L" type="Label"]\ntext = "Just one line"\n`
     );
     const label = find(scene.nodes, 'L');
-    expect((label?.properties as Record<string, unknown> | undefined)?.text).toBe(
-      'Just one line'
-    );
+    expect((label?.properties as Record<string, unknown> | undefined)?.text).toBe('Just one line');
   });
 
   it('salvages an unclosed string that runs into the next node (no swallow)', () => {
@@ -109,9 +99,7 @@ horizontal_alignment = 1
     it('still parses the property after the BBCode multi-line string', () => {
       const scene = new TscnParser().parse(BBCODE);
       const title = find(scene.nodes, 'Title');
-      expect(
-        (title?.properties as Record<string, unknown> | undefined)?.horizontalAlignment
-      ).toBe(1);
+      expect((title?.properties as Record<string, unknown> | undefined)?.horizontalAlignment).toBe(1);
     });
   });
 });

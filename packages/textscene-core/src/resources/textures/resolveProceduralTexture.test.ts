@@ -49,7 +49,8 @@ describe('resolveProceduralTexture', () => {
 
   it('resolves a NoiseTexture2D as a build, ready once it lands', async () => {
     const pending = resolveProceduralTexture('SubResource("NoiseTexture2D_a")', RESOURCES);
-    if (pending?.status !== 'pending') throw new Error(`expected a pending noise build, got ${pending?.status}`);
+    if (pending?.status !== 'pending')
+      throw new Error(`expected a pending noise build, got ${pending?.status}`);
     const handle = pending.start(new WorkerJobRunner());
     const texture = await handle.settled;
     handle.release();
@@ -79,6 +80,8 @@ describe('resolveProceduralTexture', () => {
   it('hands back the cached gradient on a second call (one rasterisation)', () => {
     const first = resolveProceduralTexture('SubResource("GradientTexture2D_a")', RESOURCES);
     const second = resolveProceduralTexture('SubResource("GradientTexture2D_a")', RESOURCES);
-    expect(first?.status === 'ready' && second?.status === 'ready' && second.texture === first.texture).toBe(true);
+    expect(first?.status === 'ready' && second?.status === 'ready' && second.texture === first.texture).toBe(
+      true
+    );
   });
 });

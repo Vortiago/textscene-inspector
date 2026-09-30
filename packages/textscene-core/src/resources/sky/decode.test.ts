@@ -111,9 +111,7 @@ describe('skyMaterialRef — the Sky indirection', () => {
   });
 
   it('follows the external form identically — Godot does not distinguish them', () => {
-    expect(skyMaterialRef('Sky', { sky_material: 'ExtResource("2_abc")' })).toBe(
-      'ExtResource("2_abc")'
-    );
+    expect(skyMaterialRef('Sky', { sky_material: 'ExtResource("2_abc")' })).toBe('ExtResource("2_abc")');
   });
 
   it('is undefined for a Sky that sets no material (edge case)', () => {

@@ -17,9 +17,7 @@ describe('decodeConcavePolygonShape3D', () => {
   });
 
   it('degrades to empty data (no throw) on malformed data', () => {
-    expect(() =>
-      decodeConcavePolygonShape3D({ data: 'PackedVector3Array(0, 0, nope)' })
-    ).not.toThrow();
+    expect(() => decodeConcavePolygonShape3D({ data: 'PackedVector3Array(0, 0, nope)' })).not.toThrow();
     expect(decodeConcavePolygonShape3D({ data: 'not-an-array' }).data.length).toBe(0);
   });
 });

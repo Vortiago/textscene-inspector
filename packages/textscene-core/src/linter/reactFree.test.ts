@@ -8,12 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  walkImportClosure,
-  bareSpecifiers,
-  tsxFiles,
-  FRAMEWORK_BARE_RE,
-} from '@textscene/dev-kit';
+import { walkImportClosure, bareSpecifiers, tsxFiles, FRAMEWORK_BARE_RE } from '@textscene/dev-kit';
 
 const here = dirname(fileURLToPath(import.meta.url)); // .../src/linter
 const srcRoot = resolve(here, '..'); // .../src

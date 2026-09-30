@@ -65,10 +65,10 @@ describe('BoneTwistDisperser3D semantic rules', () => {
   it('treats an absent setting_count as zero, which is its default', () => {
     // `LocalVector<BoneTwistDisperser3DSetting *> settings` starts empty
     // (bone_twist_disperser_3d.h:86), so nothing is addressable.
-    expectDiagnostic(
-      scene(node('BoneTwistDisperser3D', { 'settings/0/twist_from_rest': true })),
-      { ruleName: 'bonetwistdisperser3d-setting-index-out-of-range', severity: 'error' }
-    );
+    expectDiagnostic(scene(node('BoneTwistDisperser3D', { 'settings/0/twist_from_rest': true })), {
+      ruleName: 'bonetwistdisperser3d-setting-index-out-of-range',
+      severity: 'error',
+    });
   });
 
   it('lists every out-of-range setting index once, in order', () => {
@@ -275,9 +275,7 @@ describe('BoneTwistDisperser3D count and index reads', () => {
       'settings/4294967296/joints/0/twist_amount': 0.5,
     };
     expect(ruleFindings(props)).toEqual([]);
-    const errors = lint(scene(node('BoneTwistDisperser3D', props))).filter(
-      (d) => d.severity === 'error'
-    );
+    const errors = lint(scene(node('BoneTwistDisperser3D', props))).filter((d) => d.severity === 'error');
     expect(errors).toEqual([]);
   });
 

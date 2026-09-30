@@ -6,12 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  bareSpecifiers,
-  FRAMEWORK_BARE_RE,
-  tsxFiles,
-  walkImportClosure,
-} from '@textscene/dev-kit';
+import { bareSpecifiers, FRAMEWORK_BARE_RE, tsxFiles, walkImportClosure } from '@textscene/dev-kit';
 
 const here = dirname(fileURLToPath(import.meta.url));
 // The subpath entry a host's worker script imports, `@textscene/core/worker`.

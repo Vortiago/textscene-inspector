@@ -14,9 +14,7 @@ export interface DeclaredArm extends RuleArm {
 
 export function declaredArms(): DeclaredArm[] {
   return [
-    ...ruleRegistry
-      .getRules()
-      .flatMap((r) => (r.meta.emits ?? []).map((e) => ({ rule: r.meta.name, ...e }))),
+    ...ruleRegistry.getRules().flatMap((r) => (r.meta.emits ?? []).map((e) => ({ rule: r.meta.name, ...e }))),
     ...Object.values(FILE_DIAGNOSTICS).map((d) => ({ rule: 'Linter', ...d })),
   ];
 }

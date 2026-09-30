@@ -47,8 +47,8 @@ function concreteDescendants(type: string): string[] {
 const validatedRows = ROWS.filter((row): row is RouteRow & { verdict: { validated: true } } =>
   isValidated(row.verdict)
 );
-const unimplementedRows = ROWS.filter(
-  (row): row is RouteRow & { verdict: { unimplemented: string } } => isUnimplemented(row.verdict)
+const unimplementedRows = ROWS.filter((row): row is RouteRow & { verdict: { unimplemented: string } } =>
+  isUnimplemented(row.verdict)
 );
 
 describe('property-list route coverage', () => {

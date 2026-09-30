@@ -335,10 +335,7 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
       await new Promise((r) => setTimeout(r, 20));
 
       expect(mockProvider.loadResource).toHaveBeenCalledWith('res://scenes/raw.tscn', 'PackedScene');
-      expect(mockProvider.loadResource).toHaveBeenCalledWith(
-        'res://scenes/typeless.tscn',
-        'PackedScene'
-      );
+      expect(mockProvider.loadResource).toHaveBeenCalledWith('res://scenes/typeless.tscn', 'PackedScene');
     });
   });
 
@@ -385,9 +382,11 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
 
   describe('clearCache during loading', () => {
     it('clears inflight set when clearCache called while loading', async () => {
-      mockProvider.loadResource = vi.fn().mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve(VALID_TSCN_CONTENT), 100))
-      );
+      mockProvider.loadResource = vi
+        .fn()
+        .mockImplementation(
+          () => new Promise((resolve) => setTimeout(() => resolve(VALID_TSCN_CONTENT), 100))
+        );
       registerMetadata('scene1', { id: 'scene1', path: 'res://scenes/room.tscn', type: 'PackedScene' });
 
       processor.request('scene1');
@@ -458,7 +457,9 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
       // also load when instanced, not only a file with the tag on line 1.
       mockProvider.loadResource = vi
         .fn()
-        .mockResolvedValue('; a documentation header\n; second line\n\n[gd_scene format=3]\n\n[node name="A" type="Node3D"]\n');
+        .mockResolvedValue(
+          '; a documentation header\n; second line\n\n[gd_scene format=3]\n\n[node name="A" type="Node3D"]\n'
+        );
       registerMetadata('scene1', { id: 'scene1', path: 'res://scenes/room.tscn', type: 'PackedScene' });
 
       const loadedHandler = vi.fn();
@@ -504,9 +505,7 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
       expect(root.name).toBe('chest');
       // The GLB path is carried verbatim on the synthesised node's
       // properties so the consumer can load it through useResource.
-      expect((root.properties as Record<string, unknown>).glbPath).toBe(
-        'res://models/chest.glb'
-      );
+      expect((root.properties as Record<string, unknown>).glbPath).toBe('res://models/chest.glb');
       // No children and no resource refs on a synthesised scene: the GLB
       // hierarchy lives inside the THREE.Object3D returned by the
       // GLBMesh processor.

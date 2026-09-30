@@ -111,9 +111,7 @@ export function renderCoverage(type, coverage) {
     if (v.declaredOn === type || v.unavailable) continue;
     inheritedBy.set(v.declaredOn, (inheritedBy.get(v.declaredOn) ?? 0) + 1);
   }
-  const inheritedNote = [...inheritedBy]
-    .map(([base, n]) => `${n} inherited from ${base}`)
-    .join(', ');
+  const inheritedNote = [...inheritedBy].map(([base, n]) => `${n} inherited from ${base}`).join(', ');
 
   if (validators.length === 0) {
     lines.push(
@@ -134,8 +132,7 @@ export function renderCoverage(type, coverage) {
     const refusalNote =
       (shadowed.length
         ? ` \`${type}\` also REFUSES ${keys(shadowed)}, which its base declares but this class cannot carry.`
-        : '') +
-      (outright.length ? ` \`${type}\` also REFUSES ${keys(outright)} outright.` : '');
+        : '') + (outright.length ? ` \`${type}\` also REFUSES ${keys(outright)} outright.` : '');
     lines.push(
       `Strict parsing format-checks ${scope}. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).${refusalNote}`
     );
@@ -177,11 +174,7 @@ export function renderCoverage(type, coverage) {
       severitiesByName.get(e.ruleName).push(e.severity);
     }
     [...severitiesByName].forEach(([ruleName, severities], i) => {
-      ruleRows.push([
-        i === 0 ? `\`${rule.name}\`${scope}` : '',
-        `\`${ruleName}\``,
-        severities.join(', '),
-      ]);
+      ruleRows.push([i === 0 ? `\`${rule.name}\`${scope}` : '', `\`${ruleName}\``, severities.join(', ')]);
     });
   }
   lines.push(...tableLines(['Rule', 'Reports', 'Severity'], ruleRows));

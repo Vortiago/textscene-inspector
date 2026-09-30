@@ -8,19 +8,13 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AnimationPlayer } from './Component';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import {
-  AnimatedValueProvider,
-  useAnimatedValue,
-} from '../../../r3f/contexts/AnimatedValueContext';
+import { AnimatedValueProvider, useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
 import {
   AnimationTransportProvider,
   useAnimationTransport,
   type AnimationTransport,
 } from '../../../r3f/contexts/AnimationTransportContext';
-import {
-  useOptionalSelection,
-  type SelectionContextValue,
-} from '../../../r3f/contexts/SelectionContext';
+import { useOptionalSelection, type SelectionContextValue } from '../../../r3f/contexts/SelectionContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';

@@ -97,7 +97,14 @@ describe('resolveAnchors — the layout_mode gate (control.cpp:990-993)', () => 
 
 describe('resolveAnchors — explicit anchor_* win', () => {
   it('an authored quartet overrides what the preset would imply', () => {
-    const p = props({ anchorsPreset: 15, layoutMode: 1, anchorLeft: 0.25, anchorTop: 0.25, anchorRight: 0.75, anchorBottom: 0.75 });
+    const p = props({
+      anchorsPreset: 15,
+      layoutMode: 1,
+      anchorLeft: 0.25,
+      anchorTop: 0.25,
+      anchorRight: 0.75,
+      anchorBottom: 0.75,
+    });
     expect(resolveAnchors(p)).toEqual([0.25, 0.25, 0.75, 0.75]);
   });
 
@@ -166,13 +173,17 @@ describe('resolveOffsets — the offsets side effect (control.cpp:1007-1029 → 
   for (const [preset, expected] of Object.entries(presetOffsets)) {
     for (const layoutMode of GATED_IN) {
       it(`preset ${preset} under layout_mode ${layoutMode} writes ${JSON.stringify(expected)}`, () => {
-        expect(resolveOffsets(props({ anchorsPreset: Number(preset), layoutMode }), () => MIN)).toEqual(expected);
+        expect(resolveOffsets(props({ anchorsPreset: Number(preset), layoutMode }), () => MIN)).toEqual(
+          expected
+        );
       });
     }
   }
 
   it('uses (0, 0) for a wide preset whose type contributes no minimum of its own', () => {
-    expect(resolveOffsets(props({ anchorsPreset: 11, layoutMode: 1 }), () => ({ x: 0, y: 0 }))).toEqual([0, 0, 0, 0]);
+    expect(resolveOffsets(props({ anchorsPreset: 11, layoutMode: 1 }), () => ({ x: 0, y: 0 }))).toEqual([
+      0, 0, 0, 0,
+    ]);
   });
 });
 
@@ -180,7 +191,14 @@ describe('resolveOffsets — authored offset_* win over the side effect', () => 
   const MIN = { x: 30, y: 12 };
 
   it('an authored quartet overrides every side the preset would have written', () => {
-    const p = props({ anchorsPreset: 11, layoutMode: 1, offsetLeft: -100, offsetTop: 5, offsetRight: -10, offsetBottom: 40 });
+    const p = props({
+      anchorsPreset: 11,
+      layoutMode: 1,
+      offsetLeft: -100,
+      offsetTop: 5,
+      offsetRight: -10,
+      offsetBottom: 40,
+    });
     expect(resolveOffsets(p, () => MIN)).toEqual([-100, 5, -10, 40]);
   });
 
@@ -188,11 +206,15 @@ describe('resolveOffsets — authored offset_* win over the side effect', () => 
     // `offset_*` are serialised after `anchors_preset` (control.cpp's ADD_PROPERTY
     // order), so each authored side lands on top of what the preset wrote and
     // the unauthored ones keep it.
-    expect(resolveOffsets(props({ anchorsPreset: 11, layoutMode: 1, offsetTop: 7 }), () => MIN)).toEqual([-30, 7, 0, 0]);
+    expect(resolveOffsets(props({ anchorsPreset: 11, layoutMode: 1, offsetTop: 7 }), () => MIN)).toEqual([
+      -30, 7, 0, 0,
+    ]);
   });
 
   it('an authored offset of 0 is not mistaken for "unset"', () => {
-    expect(resolveOffsets(props({ anchorsPreset: 11, layoutMode: 1, offsetLeft: 0 }), () => MIN)).toEqual([0, 0, 0, 0]);
+    expect(resolveOffsets(props({ anchorsPreset: 11, layoutMode: 1, offsetLeft: 0 }), () => MIN)).toEqual([
+      0, 0, 0, 0,
+    ]);
   });
 
   it('reads the PRESET’s anchors, not an authored anchor_* that overrides them later', () => {
@@ -217,12 +239,20 @@ describe('resolveOffsets — the same gate as the anchors half', () => {
   });
 
   it('writes nothing when layout_mode is absent entirely, leaving authored offsets alone', () => {
-    const p = props({ anchorsPreset: 11, offsetLeft: 40, offsetTop: 40, offsetRight: 240, offsetBottom: 160 });
+    const p = props({
+      anchorsPreset: 11,
+      offsetLeft: 40,
+      offsetTop: 40,
+      offsetRight: 240,
+      offsetBottom: 160,
+    });
     expect(resolveOffsets(p, () => MIN)).toEqual([40, 40, 240, 160]);
   });
 
   it('writes nothing for the custom-anchors sentinel -1', () => {
-    expect(resolveOffsets(props({ anchorsPreset: -1, layoutMode: 1, offsetLeft: 12 }), () => MIN)).toEqual([12, 0, 0, 0]);
+    expect(resolveOffsets(props({ anchorsPreset: -1, layoutMode: 1, offsetLeft: 12 }), () => MIN)).toEqual([
+      12, 0, 0, 0,
+    ]);
   });
 
   it('writes nothing for an out-of-range preset', () => {
@@ -337,7 +367,14 @@ describe('resolveControlLayout — no reliable order falls back to resolveAnchor
   const MIN = { x: 30, y: 12 };
 
   it('an authored offset AFTER the preset (in the fallback sense) survives, matching resolveOffsets directly', () => {
-    const p = props({ anchorsPreset: 15, layoutMode: 1, offsetLeft: 40, offsetTop: 40, offsetRight: 240, offsetBottom: 160 });
+    const p = props({
+      anchorsPreset: 15,
+      layoutMode: 1,
+      offsetLeft: 40,
+      offsetTop: 40,
+      offsetRight: 240,
+      offsetBottom: 160,
+    });
     const result = resolveControlLayout(p, undefined, () => MIN);
     expect(result.anchors).toEqual(resolveAnchors(p));
     expect(result.offsets).toEqual(resolveOffsets(p, () => MIN));
@@ -352,24 +389,66 @@ describe('resolveControlLayout — file-order simulation (ADR-0035, Option B)', 
   // later `offset_*` line (`Control::set_offset`, control.cpp:798-805) overwrites
   // the preset, and the preset overwrites an earlier one.
   it('offsets authored BEFORE anchors_preset=15 are wiped to the preset default', () => {
-    const p = props({ anchorsPreset: 15, layoutMode: 1, offsetLeft: 40, offsetTop: 40, offsetRight: 240, offsetBottom: 160 });
-    const orderedKeys = ['layout_mode', 'offset_left', 'offset_top', 'offset_right', 'offset_bottom', 'anchors_preset'];
+    const p = props({
+      anchorsPreset: 15,
+      layoutMode: 1,
+      offsetLeft: 40,
+      offsetTop: 40,
+      offsetRight: 240,
+      offsetBottom: 160,
+    });
+    const orderedKeys = [
+      'layout_mode',
+      'offset_left',
+      'offset_top',
+      'offset_right',
+      'offset_bottom',
+      'anchors_preset',
+    ];
     const result = resolveControlLayout(p, orderedKeys, () => ({ x: 0, y: 0 }));
     expect(result.anchors).toEqual([0, 0, 1, 1]);
     expect(result.offsets).toEqual([0, 0, 0, 0]);
   });
 
   it('offsets authored AFTER anchors_preset=15 survive', () => {
-    const p = props({ anchorsPreset: 15, layoutMode: 1, offsetLeft: 40, offsetTop: 40, offsetRight: 240, offsetBottom: 160 });
-    const orderedKeys = ['layout_mode', 'anchors_preset', 'offset_left', 'offset_top', 'offset_right', 'offset_bottom'];
+    const p = props({
+      anchorsPreset: 15,
+      layoutMode: 1,
+      offsetLeft: 40,
+      offsetTop: 40,
+      offsetRight: 240,
+      offsetBottom: 160,
+    });
+    const orderedKeys = [
+      'layout_mode',
+      'anchors_preset',
+      'offset_left',
+      'offset_top',
+      'offset_right',
+      'offset_bottom',
+    ];
     const result = resolveControlLayout(p, orderedKeys, () => ({ x: 0, y: 0 }));
     expect(result.anchors).toEqual([0, 0, 1, 1]);
     expect(result.offsets).toEqual([40, 40, 240, 160]);
   });
 
   it('anchors_preset authored BEFORE layout_mode does nothing at all — the gate reads stale state (control.cpp:991-993)', () => {
-    const p = props({ anchorsPreset: 15, layoutMode: 1, offsetLeft: 40, offsetTop: 40, offsetRight: 240, offsetBottom: 160 });
-    const orderedKeys = ['anchors_preset', 'layout_mode', 'offset_left', 'offset_top', 'offset_right', 'offset_bottom'];
+    const p = props({
+      anchorsPreset: 15,
+      layoutMode: 1,
+      offsetLeft: 40,
+      offsetTop: 40,
+      offsetRight: 240,
+      offsetBottom: 160,
+    });
+    const orderedKeys = [
+      'anchors_preset',
+      'layout_mode',
+      'offset_left',
+      'offset_top',
+      'offset_right',
+      'offset_bottom',
+    ];
     const result = resolveControlLayout(p, orderedKeys, () => ({ x: 0, y: 0 }));
     // The preset never ran (gate was still closed when it fired), so anchors
     // and grow direction stay at the struct default and the offsets, authored
@@ -443,7 +522,14 @@ describe('resolveControlLayout — file-order simulation (ADR-0035, Option B)', 
       offsetBottom: 160,
       growHorizontal: 0,
     });
-    const orderedKeys = ['offset_left', 'offset_top', 'offset_right', 'offset_bottom', 'grow_horizontal', 'layout_mode'];
+    const orderedKeys = [
+      'offset_left',
+      'offset_top',
+      'offset_right',
+      'offset_bottom',
+      'grow_horizontal',
+      'layout_mode',
+    ];
     const result = resolveControlLayout(p, orderedKeys, () => ({ x: 0, y: 0 }));
     expect(result.anchors).toEqual([0, 0, 0, 0]);
     // `PRESET_MODE_KEEP_SIZE` keeps `get_size()`, and `_size_changed` wrote this

@@ -76,5 +76,4 @@ describe('<SceneTreeViewer> WI-C — GLB internal hierarchy', () => {
     expect(row!.textContent).toContain('▶'); // It has children, so it expands.
     expect(screen.queryByText(/not implemented/i)).toBeNull();
   });
-
 });

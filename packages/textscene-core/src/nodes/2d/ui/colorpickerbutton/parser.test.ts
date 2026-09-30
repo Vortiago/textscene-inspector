@@ -3,7 +3,7 @@ import { parseColorPickerButton } from './parser';
 import { heading } from '../../../../parser/testing/parserKit';
 
 describe('parseColorPickerButton', () => {
-  it('maps color alongside Button\'s own text/icon properties', () => {
+  it("maps color alongside Button's own text/icon properties", () => {
     const p = parseColorPickerButton(heading('ColorPickerButton', { name: 'Swatch' }), {
       color: 'Color(0.8, 0.3, 0.5, 0.6)',
       text: '"Pick"',

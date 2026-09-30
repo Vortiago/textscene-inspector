@@ -33,7 +33,18 @@ export function parseTransform3D(transformString: string): Transform3D {
     throw new Error(`Non-finite Transform3D: ${transformString}`);
   }
   const [bx_x, bx_y, bx_z, by_x, by_y, by_z, bz_x, bz_y, bz_z, o_x, o_y, o_z] = components as [
-    number, number, number, number, number, number, number, number, number, number, number, number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
   ];
 
   return {
@@ -50,9 +61,7 @@ export function parseTransform3D(transformString: string): Transform3D {
  * (`transform.threeEquivalence.test.ts`) while the parser layer imports no `three` value
  * (reactFree.test.ts, webExtensionSafe.test.ts).
  */
-export function decomposeTransform3D(
-  transform: Transform3D
-): DecomposedTransform {
+export function decomposeTransform3D(transform: Transform3D): DecomposedTransform {
   const { basis_x, basis_y, basis_z, origin } = transform;
 
   const position = { x: origin.x, y: origin.y, z: origin.z };
@@ -75,15 +84,9 @@ export function decomposeTransform3D(
   if (det !== 0) {
     // Godot stores Basis as `Vector3 rows[3]`, so basis_x, basis_y and basis_z are rows, and each
     // axis scale is a column's length.
-    sx = Math.sqrt(
-      basis_x.x * basis_x.x + basis_y.x * basis_y.x + basis_z.x * basis_z.x
-    );
-    sy = Math.sqrt(
-      basis_x.y * basis_x.y + basis_y.y * basis_y.y + basis_z.y * basis_z.y
-    );
-    sz = Math.sqrt(
-      basis_x.z * basis_x.z + basis_y.z * basis_y.z + basis_z.z * basis_z.z
-    );
+    sx = Math.sqrt(basis_x.x * basis_x.x + basis_y.x * basis_y.x + basis_z.x * basis_z.x);
+    sy = Math.sqrt(basis_x.y * basis_x.y + basis_y.y * basis_y.y + basis_z.y * basis_z.y);
+    sz = Math.sqrt(basis_x.z * basis_x.z + basis_y.z * basis_y.z + basis_z.z * basis_z.z);
     // A reflection folds its sign into scale.x, as three.js does.
     if (det < 0) sx = -sx;
 

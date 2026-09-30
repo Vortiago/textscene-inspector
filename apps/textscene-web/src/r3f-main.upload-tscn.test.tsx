@@ -7,9 +7,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 
 // happy-dom cannot provide the WebGL `<Canvas>` that `<TscnCanvas>` mounts, so it is a stub.
 vi.mock('@textscene/core', async () => {
-  const real = await vi.importActual<typeof import('@textscene/core')>(
-    '@textscene/core'
-  );
+  const real = await vi.importActual<typeof import('@textscene/core')>('@textscene/core');
   return {
     ...real,
     TscnCanvas: () => null,
@@ -30,7 +28,8 @@ beforeEach(() => {
   // Any valid TSCN for the default fixture, so the shell settles before the upload.
   globalThis.fetch = vi.fn().mockResolvedValue({
     ok: true,
-    text: () => Promise.resolve('[gd_scene load_steps=1 format=3]\n\n[node name="FixtureRoot" type="Node3D"]\n'),
+    text: () =>
+      Promise.resolve('[gd_scene load_steps=1 format=3]\n\n[node name="FixtureRoot" type="Node3D"]\n'),
   } as unknown as Response) as unknown as typeof fetch;
 });
 

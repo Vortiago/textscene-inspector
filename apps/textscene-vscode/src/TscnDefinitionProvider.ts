@@ -15,11 +15,7 @@ export class TscnDefinitionProvider implements vscode.DefinitionProvider {
       return null;
     }
 
-    const definition = this.findResourceDefinition(
-      document,
-      resource.type,
-      resource.id
-    );
+    const definition = this.findResourceDefinition(document, resource.type, resource.id);
 
     return definition;
   }
@@ -67,8 +63,7 @@ export class TscnDefinitionProvider implements vscode.DefinitionProvider {
     const text = document.getText();
     const lines = text.split('\n');
 
-    const headingPrefix =
-      resourceType === 'SubResource' ? '[sub_resource' : '[ext_resource';
+    const headingPrefix = resourceType === 'SubResource' ? '[sub_resource' : '[ext_resource';
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]!;
@@ -88,10 +83,7 @@ export class TscnDefinitionProvider implements vscode.DefinitionProvider {
       const definitionId = idMatch[1];
 
       if (definitionId === resourceId) {
-        const range = new vscode.Range(
-          new vscode.Position(i, 0),
-          new vscode.Position(i, line.length)
-        );
+        const range = new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length));
 
         return new vscode.Location(document.uri, range);
       }

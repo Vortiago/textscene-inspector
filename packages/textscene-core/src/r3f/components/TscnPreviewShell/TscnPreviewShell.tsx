@@ -69,10 +69,7 @@ export function TscnPreviewShell({
 }: TscnPreviewShellProps) {
   const { sceneGraph, error } = useParsedScene(content, rootScenePath);
 
-  const hierarchyValue = useMemo(
-    () => ({ sceneGraph, panelId }),
-    [sceneGraph, panelId]
-  );
+  const hierarchyValue = useMemo(() => ({ sceneGraph, panelId }), [sceneGraph, panelId]);
 
   // `treeShare` is the tree's fraction of the dock height (0..1). The dock
   // layout persists across sessions, a VS Code webview being a browser too.
@@ -115,9 +112,7 @@ export function TscnPreviewShell({
   return withProviders(
     <>
       {/* A host-forced mode turns auto-select off, or the root's claim overrides it. */}
-      {initialViewportMode === undefined && (
-        <WorkspaceAutoSelect sceneGraph={sceneGraph} />
-      )}
+      {initialViewportMode === undefined && <WorkspaceAutoSelect sceneGraph={sceneGraph} />}
       <SceneChangeResetter sceneGraph={sceneGraph} />
       <AnimationTabWatcher onVisibleChange={setAnimationTabVisible} />
       <EscapeDeselect />
@@ -170,11 +165,7 @@ export function TscnPreviewShell({
                 data-narrow-pane={narrowPane}
               >
                 <SheetHandle value={sheetShare} setValue={setSheetShare} />
-                <NarrowPaneSwitcher
-                  pane={narrowPane}
-                  setPane={setNarrowPane}
-                  onCollapse={collapseDock}
-                />
+                <NarrowPaneSwitcher pane={narrowPane} setPane={setNarrowPane} onCollapse={collapseDock} />
                 <SceneTreePane
                   sceneGraph={sceneGraph}
                   error={error}

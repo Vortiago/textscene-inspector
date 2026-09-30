@@ -136,7 +136,7 @@ describe('PointLight2D Component', () => {
     expect(geom.parameters.height).toBeCloseTo(128, 5); // 64 * 2
   });
 
-  it('offsets the quad by `offset`, with Godot\'s Y pointing down', async () => {
+  it("offsets the quad by `offset`, with Godot's Y pointing down", async () => {
     const r = await render(node({ offset: 'Vector2(10, 4)' }));
     expect(lightMesh(r)!.position.x).toBeCloseTo(10, 5);
     expect(lightMesh(r)!.position.y).toBeCloseTo(-4, 5);
@@ -149,7 +149,7 @@ describe('PointLight2D Component', () => {
     const mat = lightMaterial(await render(node({ color: 'Color(0.5, 0.5, 0.5, 1)' })));
     const color = mat.uniforms.uColor!.value as THREE.Vector3;
     expect(color.x).toBeCloseTo(0.5, 5);
-    expect(color.x).not.toBeCloseTo(0.2140, 3); // godotColorToLinear(0.5)
+    expect(color.x).not.toBeCloseTo(0.214, 3); // godotColorToLinear(0.5)
   });
 
   it('carries energy as its own multiplier rather than folding it into the colour', async () => {

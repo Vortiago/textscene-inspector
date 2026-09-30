@@ -86,10 +86,7 @@ export function parallaxViewFraming(
  * negate it, clamp it into the limits (so they are screen-space bounds), negate
  * back. A limit pair applies only when `begin < end` on that axis, as in Godot.
  */
-export function parallaxScroll(
-  props: ParallaxScrollProperties,
-  view: ParallaxViewFraming
-): ParallaxScroll {
+export function parallaxScroll(props: ParallaxScrollProperties, view: ParallaxViewFraming): ParallaxScroll {
   // `_camera_moved` reads the inverse of `get_camera_transform()`: basis `zoom`,
   // origin `-zoom * view_top_left`. Godot's scroll scale is the mean of both zoom
   // axes. This reads one, as `camera2DView` frames on `zoom.x` alone, so the
@@ -179,10 +176,7 @@ export function parallaxLayerDelta(
  * twice, at 0 and `+repeat_size`, not tiled (ParallaxLayer.xml agrees). The
  * unmirrored copy comes last: `registerNodeObject` keeps a path's last writer.
  */
-export function parallaxMirrorOffsets(
-  mirroring: Vector2,
-  originScale: Vector2
-): readonly Vector2[] {
+export function parallaxMirrorOffsets(mirroring: Vector2, originScale: Vector2): readonly Vector2[] {
   // `_update_mirroring` hands the server `mirroring * orig_scale`.
   const dx = mirroring.x * originScale.x;
   const dy = mirroring.y * originScale.y;

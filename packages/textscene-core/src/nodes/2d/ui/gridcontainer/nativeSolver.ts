@@ -25,8 +25,6 @@ import { SIZE_EXPAND, SIZE_FILL, fitChildInRect, hasFlag, isSortableControl } fr
 /** `Control` defaults both axes to `SIZE_FILL` (`control.h:229-230`, flags at `control.h:79-85`). A parser that overrides a flag, as Label's `v_size_flags`, bakes it into the parsed properties. */
 const DEFAULT_SIZE_FLAGS = SIZE_FILL;
 
-
-
 function props(n: SolveNode): ControlProperties {
   return n.node.properties as ControlProperties;
 }
@@ -38,7 +36,6 @@ function hFlagsOf(n: SolveNode): number {
 function vFlagsOf(n: SolveNode): number {
   return props(n).sizeFlagsVertical ?? DEFAULT_SIZE_FLAGS;
 }
-
 
 function columnsOf(n: SolveNode): number {
   return Math.max(1, (n.node.properties as GridContainerProperties).columns ?? 1);
@@ -94,15 +91,17 @@ controlSolverRegistry.registerMinimumSize('GridContainer', gridContainerMinimumS
 
 // --- fit_child_in_rect + the universal minimum-size floor ---------------------
 
-
-
 /**
  * Evicts the expanded column or row with the largest minimum until an equal
  * share of `remaining` fits each survivor (`grid_container.cpp:100-119`/`:121-140`).
  * A tie keeps the lowest index, as the C++ RBSet's ascending order, `front()` and
  * a strict `>` do.
  */
-function evictUnfittable(expanded: Set<number>, minOf: ReadonlyMap<number, number>, remaining: number): number {
+function evictUnfittable(
+  expanded: Set<number>,
+  minOf: ReadonlyMap<number, number>,
+  remaining: number
+): number {
   let space = remaining;
   let canFit = false;
 
@@ -125,7 +124,11 @@ function evictUnfittable(expanded: Set<number>, minOf: ReadonlyMap<number, numbe
 }
 
 /** How many of the leading `usedCount` expanded indices absorb one extra pixel of `remainingPixel` (`grid_container.cpp:162-182`). Returns the count, not a set: every index below it gets +1. */
-function remainingPixelIndex(expanded: ReadonlySet<number>, usedCount: number, remainingPixel: number): number {
+function remainingPixelIndex(
+  expanded: ReadonlySet<number>,
+  usedCount: number,
+  remainingPixel: number
+): number {
   let index = 0;
   let remaining = remainingPixel;
   for (let i = 0; i < usedCount; i++) {
@@ -222,13 +225,13 @@ export const gridContainerLayout: ContainerLayoutFn = (n, children, contentRect,
       colOfs = rtl ? contentRect.w : 0;
       if (row > 0) {
         const prevRow = row - 1;
-        rowOfs += (rowExpanded.has(prevRow) ? rowExpand : rowMinH.get(prevRow) ?? 0) + vSep;
+        rowOfs += (rowExpanded.has(prevRow) ? rowExpand : (rowMinH.get(prevRow) ?? 0)) + vSep;
         if (rowExpanded.has(prevRow) && prevRow < rowRemainingPixelIndex) rowOfs += 1;
       }
     }
 
-    let w = colExpanded.has(col) ? colExpand : colMinW.get(col) ?? 0;
-    let h = rowExpanded.has(row) ? rowExpand : rowMinH.get(row) ?? 0;
+    let w = colExpanded.has(col) ? colExpand : (colMinW.get(col) ?? 0);
+    let h = rowExpanded.has(row) ? rowExpand : (rowMinH.get(row) ?? 0);
     if (colExpanded.has(col) && col < colRemainingPixelIndex) w += 1;
     if (rowExpanded.has(row) && row < rowRemainingPixelIndex) h += 1;
 

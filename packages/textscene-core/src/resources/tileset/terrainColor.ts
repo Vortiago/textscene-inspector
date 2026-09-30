@@ -5,7 +5,13 @@
  * `makeFloatTupleRegex`, and the family's index reads next door need one.
  */
 
-import { accepts, makeFloatTupleRegex, propertyError, tupleComponent, v } from '../../linter/validators/index.js';
+import {
+  accepts,
+  makeFloatTupleRegex,
+  propertyError,
+  tupleComponent,
+  v,
+} from '../../linter/validators/index.js';
 import type { PropertyValidator } from '../../linter/ValidatorRegistry.js';
 
 const COLOR_RE = makeFloatTupleRegex('Color', 4);

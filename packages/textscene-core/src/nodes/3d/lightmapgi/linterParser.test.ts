@@ -153,7 +153,7 @@ describe('LightmapGI strict validators', () => {
       expectError(check('bounces', '-1'), 'must be non-negative');
     });
 
-    it('rejects past the true ceiling of 16, which the hint\'s or_greater does not actually open', () => {
+    it("rejects past the true ceiling of 16, which the hint's or_greater does not actually open", () => {
       expectError(check('bounces', '17'), 'must be at most 16', 'Godot does not store this value');
     });
 
@@ -169,7 +169,10 @@ describe('LightmapGI strict validators', () => {
     it('warns that a fractional value is truncated, never refusing it', () => {
       // `Variant::_to_int` (variant.h:369-370) converts rather than refusing,
       // so the file loads, with 5 where it says 5.9.
-      expectWarning(check('bounces', '5.9'), 'is an integer slot, so Godot drops the fractional part of "5.9" and stores 5.');
+      expectWarning(
+        check('bounces', '5.9'),
+        'is an integer slot, so Godot drops the fractional part of "5.9" and stores 5.'
+      );
     });
   });
 
@@ -200,13 +203,13 @@ describe('LightmapGI strict validators', () => {
   });
 
   describe('shadowmask_mode', () => {
-    it('accepts every value this property\'s own hint lists (0-2)', () => {
+    it("accepts every value this property's own hint lists (0-2)", () => {
       expect(check('shadowmask_mode', '0')).toBeNull();
       expect(check('shadowmask_mode', '1')).toBeNull();
       expect(check('shadowmask_mode', '2')).toBeNull();
     });
 
-    it('warns on 3 — ShadowmaskMode::SHADOWMASK_MODE_ONLY exists on the enum type (lightmap_gi.h:50) but this property\'s own hint (cpp:1925) offers only 3 labels', () => {
+    it("warns on 3 — ShadowmaskMode::SHADOWMASK_MODE_ONLY exists on the enum type (lightmap_gi.h:50) but this property's own hint (cpp:1925) offers only 3 labels", () => {
       expectWarning(check('shadowmask_mode', '3'), 'must be 0-2');
     });
 
@@ -285,7 +288,10 @@ describe('LightmapGI strict validators', () => {
     });
 
     it('warns that a fractional value is truncated, never refusing it', () => {
-      expectWarning(check('denoiser_range', '15.9'), 'is an integer slot, so Godot drops the fractional part of "15.9" and stores 15.');
+      expectWarning(
+        check('denoiser_range', '15.9'),
+        'is an integer slot, so Godot drops the fractional part of "15.9" and stores 15.'
+      );
     });
   });
 
@@ -348,7 +354,10 @@ describe('LightmapGI strict validators', () => {
     });
 
     it('warns that a fractional value in range is truncated, never refusing it', () => {
-      expectWarning(check('max_texture_size', '8192.7'), 'is an integer slot, so Godot drops the fractional part of "8192.7" and stores 8192.');
+      expectWarning(
+        check('max_texture_size', '8192.7'),
+        'is an integer slot, so Godot drops the fractional part of "8192.7" and stores 8192.'
+      );
     });
   });
 

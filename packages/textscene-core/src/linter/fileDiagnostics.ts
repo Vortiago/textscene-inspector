@@ -19,8 +19,7 @@ export const FILE_DIAGNOSTICS = {
     grounding: {
       kind: 'no-engine-counterpart',
       scope: 'previewer-limitation',
-      because:
-        'the engine reads the file; the rules are written against the format it writes today',
+      because: 'the engine reads the file; the rules are written against the format it writes today',
     },
   },
   /**

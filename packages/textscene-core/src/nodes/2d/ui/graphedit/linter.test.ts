@@ -18,7 +18,7 @@ function diagnose(body: string): Diagnostic[] {
     `[gd_scene format=3]\n\n[node name="Root" type="Control"]\n\n` +
     `[node name="MyGraphEdit" type="GraphEdit" parent="."]\n${body}`;
   const { scene } = new StrictTscnParser().parse(content);
-  if (!scene) throw new Error("fixture failed to parse");
+  if (!scene) throw new Error('fixture failed to parse');
   const node = scene.nodes[0]?.children[0] as TscnNode;
   expect(node.type).toBe('GraphEdit');
   const context: RuleContext = { scene, node, properties: node.properties };
@@ -85,8 +85,7 @@ describe('GraphEdit zoom-limit rule', () => {
   it('is offered only to GraphEdit nodes', () => {
     // The registry filters by type, not `check`: linter/types.ts forbids a rule to test
     // its own node type again. So `getRulesForNodeType` is the seam for other types.
-    const named = (type: string) =>
-      ruleRegistry.getRulesForNodeType(type).map((rule) => rule.meta.name);
+    const named = (type: string) => ruleRegistry.getRulesForNodeType(type).map((rule) => rule.meta.name);
     expect(named('GraphEdit')).toContain('valid-graphedit-properties');
     expect(named('Control')).not.toContain('valid-graphedit-properties');
     expect(named('GraphNode')).not.toContain('valid-graphedit-properties');
@@ -94,8 +93,7 @@ describe('GraphEdit zoom-limit rule', () => {
 });
 
 /** The rect `offset_left = 8 … offset_bottom = 328` gives: 400 by 320. */
-const SIZED_400_320 =
-  'offset_left = 8.0\noffset_top = 8.0\noffset_right = 408.0\noffset_bottom = 328.0\n';
+const SIZED_400_320 = 'offset_left = 8.0\noffset_top = 8.0\noffset_right = 408.0\noffset_bottom = 328.0\n';
 
 describe('GraphEdit scroll_offset rule', () => {
   it('reports a positive authored offset, naming what Godot stores instead', () => {
@@ -106,7 +104,7 @@ describe('GraphEdit scroll_offset rule', () => {
     const diagnostics = diagnose(`${SIZED_400_320}scroll_offset = Vector2(32, 16)\n`);
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0]!.ruleName).toBe('graphedit-scroll-offset-discarded');
-    expect(diagnostics[0]!.message).toContain("scroll_offset = Vector2(32, 16)");
+    expect(diagnostics[0]!.message).toContain('scroll_offset = Vector2(32, 16)');
     expect(diagnostics[0]!.message).toContain('Vector2(-400, -320)');
   });
 

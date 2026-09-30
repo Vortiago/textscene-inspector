@@ -166,9 +166,7 @@ describe('#175 optional scalars — fall to undefined on garbage, never NaN', ()
   it('shadow_blur / shadow_normal_bias: garbage stays undefined', () => {
     expect(parseBaseLightProperties({ shadow_blur: 'invalid' }).shadow_blur).toBeUndefined();
     const h = heading('DirectionalLight3D', { name: 'Sun', parent: '.' });
-    expect(
-      parseDirectionalLight3D(h, { shadow_normal_bias: 'abc' }).shadow_normal_bias
-    ).toBeUndefined();
+    expect(parseDirectionalLight3D(h, { shadow_normal_bias: 'abc' }).shadow_normal_bias).toBeUndefined();
   });
 
   it('meshinstance visibility_range_begin: garbage stays undefined, never NaN', () => {

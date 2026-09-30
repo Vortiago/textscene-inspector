@@ -123,7 +123,12 @@ function isSymbolChar(ch: string): boolean {
  * an empty or non-symbol key and a duplicate `startKey`. It inserts after every
  * strictly longer `startKey`, so equal lengths end up in reverse dictionary order.
  */
-function addColorRegion(regions: CodeHighlighterColorRegion[], startKey: string, endKey: string, color: Color): void {
+function addColorRegion(
+  regions: CodeHighlighterColorRegion[],
+  startKey: string,
+  endKey: string,
+  color: Color
+): void {
   if (startKey === '') return;
   for (const ch of startKey) if (!isSymbolChar(ch)) return;
   for (const ch of endKey) if (!isSymbolChar(ch)) return;

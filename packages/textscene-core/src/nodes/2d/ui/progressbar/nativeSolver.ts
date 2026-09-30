@@ -54,7 +54,10 @@ function reconstructThemeScale(theme: Pick<NativeTheme, 'fontSize'>): number {
 }
 
 /** `make_flat_stylebox` (`default_theme.cpp:57-70`) at ProgressBar's own margin/corner-radius literals. */
-function progressBarFlatStyleBox(bgColor: ControlColor, theme: Pick<NativeTheme, 'fontSize'>): StyleBoxFlatData {
+function progressBarFlatStyleBox(
+  bgColor: ControlColor,
+  theme: Pick<NativeTheme, 'fontSize'>
+): StyleBoxFlatData {
   const scale = reconstructThemeScale(theme);
   const margin = Math.round(PROGRESS_BAR_STYLE_MARGIN * scale);
   const cornerRadius = Math.round(PROGRESS_BAR_CORNER_RADIUS * scale);
@@ -66,7 +69,12 @@ function progressBarFlatStyleBox(bgColor: ControlColor, theme: Pick<NativeTheme,
     bgColor,
     borderColor: DEFAULT_BORDER_COLOR,
     borderWidth: ZERO_SIDES,
-    cornerRadius: { topLeft: cornerRadius, topRight: cornerRadius, bottomRight: cornerRadius, bottomLeft: cornerRadius },
+    cornerRadius: {
+      topLeft: cornerRadius,
+      topRight: cornerRadius,
+      bottomRight: cornerRadius,
+      bottomLeft: cornerRadius,
+    },
     expandMargin: ZERO_SIDES,
     contentMargin: { left: margin, top: margin, right: margin, bottom: margin },
     drawCenter: true,
@@ -112,7 +120,10 @@ export function progressBarTextTheme(
   props: ProgressBarProperties,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
-  const defaults: TextThemeDefaults = { fontSizePx: ctx.theme.fontSize, color: PROGRESS_BAR_DEFAULT_FONT_COLOR };
+  const defaults: TextThemeDefaults = {
+    fontSizePx: ctx.theme.fontSize,
+    color: PROGRESS_BAR_DEFAULT_FONT_COLOR,
+  };
   return resolveTextTheme(n, props, PROGRESS_BAR_THEME_KEYS, defaults);
 }
 

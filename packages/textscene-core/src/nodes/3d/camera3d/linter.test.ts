@@ -22,14 +22,18 @@ describe('Camera3D Linter', () => {
     it('should pass validation for valid Camera3D properties with perspective projection', () => {
       expectClean(
         scene(
-          node('Camera3D', {
-            projection: 0,
-            fov: 75.0,
-            near: 0.1,
-            far: 100.0,
-            keep_aspect: 0,
-            cull_mask: 1048575,
-          }, { name: 'Camera' })
+          node(
+            'Camera3D',
+            {
+              projection: 0,
+              fov: 75.0,
+              near: 0.1,
+              far: 100.0,
+              keep_aspect: 0,
+              cull_mask: 1048575,
+            },
+            { name: 'Camera' }
+          )
         )
       );
     });
@@ -37,13 +41,17 @@ describe('Camera3D Linter', () => {
     it('should pass validation for valid Camera3D properties with orthogonal projection', () => {
       expectClean(
         scene(
-          node('Camera3D', {
-            projection: 1,
-            size: 10.0,
-            near: 0.1,
-            far: 100.0,
-            keep_aspect: 1,
-          }, { name: 'Camera' })
+          node(
+            'Camera3D',
+            {
+              projection: 1,
+              size: 10.0,
+              near: 0.1,
+              far: 100.0,
+              keep_aspect: 1,
+            },
+            { name: 'Camera' }
+          )
         )
       );
     });
@@ -93,10 +101,7 @@ describe('Camera3D Linter', () => {
           prop: 'frustum_offset',
           valid: ['Vector2(0.5, -0.3)', 'Vector2(1.5e-2, -3.2e1)'],
           with: { projection: 2 },
-          invalid: [
-            { value: '(0.5, -0.3)', contains: ['Vector2'] },
-            { value: 'Vector2(0.5, -0.3, 1.0)' },
-          ],
+          invalid: [{ value: '(0.5, -0.3)', contains: ['Vector2'] }, { value: 'Vector2(0.5, -0.3, 1.0)' }],
         },
         {
           // camera_3d.cpp:736 is a bare assignment, so the hint at :685
@@ -146,9 +151,7 @@ describe('Camera3D Linter', () => {
         {
           prop: 'cull_mask',
           valid: [1, 100, 1048575, 0, 2000000, 2147483648, 4294967295],
-          invalid: [
-
-          ],
+          invalid: [],
         },
         {
           prop: 'doppler_tracking',
@@ -185,24 +188,19 @@ describe('Camera3D Linter', () => {
       });
 
       it('should NOT error when size is missing for ORTHOGONAL projection (Godot defaults to 1.0)', () => {
-        expectNoDiagnostic(
-          scene(node('Camera3D', { projection: 1, near: 0.1, far: 100.0 })),
-          { prop: 'size' }
-        );
+        expectNoDiagnostic(scene(node('Camera3D', { projection: 1, near: 0.1, far: 100.0 })), {
+          prop: 'size',
+        });
       });
 
       it('should not error when fov is present for default (PERSPECTIVE) projection', () => {
-        expectNoDiagnostic(
-          scene(node('Camera3D', { fov: 75.0, near: 0.1, far: 100.0 })),
-          { prop: 'fov' }
-        );
+        expectNoDiagnostic(scene(node('Camera3D', { fov: 75.0, near: 0.1, far: 100.0 })), { prop: 'fov' });
       });
 
       it('should not error when size is present for ORTHOGONAL projection', () => {
-        expectNoDiagnostic(
-          scene(node('Camera3D', { projection: 1, size: 10.0, near: 0.1, far: 100.0 })),
-          { prop: 'size' }
-        );
+        expectNoDiagnostic(scene(node('Camera3D', { projection: 1, size: 10.0, near: 0.1, far: 100.0 })), {
+          prop: 'size',
+        });
       });
     });
 
@@ -214,36 +212,29 @@ describe('Camera3D Linter', () => {
       const clipping = (content: string) =>
         lint(content).filter(
           (d) =>
-            d.ruleName === 'camera3d-invalid-clipping-planes' ||
-            d.ruleName === 'camera3d-zero-depth-range'
+            d.ruleName === 'camera3d-invalid-clipping-planes' || d.ruleName === 'camera3d-zero-depth-range'
         );
 
       it('should error when near > far under the frustum projection', () => {
-        expectDiagnostic(
-          scene(node('Camera3D', { projection: 2, size: 1.0, near: 100.0, far: 50.0 })),
-          {
-            prop: 'clipping',
-            severity: 'error',
-            nodeType: 'Camera3D',
-            ruleName: 'camera3d-invalid-clipping-planes',
-            contains: ['near', 'far', '100', '50', 'frustum'],
-          }
-        );
+        expectDiagnostic(scene(node('Camera3D', { projection: 2, size: 1.0, near: 100.0, far: 50.0 })), {
+          prop: 'clipping',
+          severity: 'error',
+          nodeType: 'Camera3D',
+          ruleName: 'camera3d-invalid-clipping-planes',
+          contains: ['near', 'far', '100', '50', 'frustum'],
+        });
       });
 
       it('should error when near equals far under the frustum projection', () => {
         // One ERR_FAIL_COND (projection.cpp:367) covers both cells, so frustum reports one reason.
         // 4.6.3 prints that condition once per frame on such a scene.
-        expectDiagnostic(
-          scene(node('Camera3D', { projection: 2, size: 1.0, near: 100.0, far: 100.0 })),
-          {
-            prop: 'clipping',
-            severity: 'error',
-            nodeType: 'Camera3D',
-            ruleName: 'camera3d-invalid-clipping-planes',
-            contains: ['frustum', '100'],
-          }
-        );
+        expectDiagnostic(scene(node('Camera3D', { projection: 2, size: 1.0, near: 100.0, far: 100.0 })), {
+          prop: 'clipping',
+          severity: 'error',
+          nodeType: 'Camera3D',
+          ruleName: 'camera3d-invalid-clipping-planes',
+          contains: ['frustum', '100'],
+        });
       });
 
       it('should not error when near < far', () => {
@@ -259,9 +250,7 @@ describe('Camera3D Linter', () => {
         ['orthogonal', { projection: 1, size: 10.0 }],
       ])('stays silent on near > far under %s', (_label, props) => {
         // deltaZ is non-zero, so the matrix is written and merely inverted.
-        expect(clipping(scene(node('Camera3D', { ...props, near: 100.0, far: 50.0 })))).toHaveLength(
-          0
-        );
+        expect(clipping(scene(node('Camera3D', { ...props, near: 100.0, far: 50.0 })))).toHaveLength(0);
       });
 
       it.each([
@@ -302,23 +291,18 @@ describe('Camera3D Linter', () => {
       });
 
       it('errors on near == far == inf under frustum, where inf <= inf still fails', () => {
-        expectDiagnostic(
-          scene(node('Camera3D', { projection: 2, size: 1.0, near: 'inf', far: 'inf' })),
-          {
-            prop: 'clipping',
-            severity: 'error',
-            ruleName: 'camera3d-invalid-clipping-planes',
-          }
-        );
+        expectDiagnostic(scene(node('Camera3D', { projection: 2, size: 1.0, near: 'inf', far: 'inf' })), {
+          prop: 'clipping',
+          severity: 'error',
+          ruleName: 'camera3d-invalid-clipping-planes',
+        });
       });
 
       it.each([
         ['frustum', { projection: 2, size: 1.0 }],
         ['perspective', { projection: 0, fov: 75.0 }],
       ])('stays silent on a nan plane under %s, where every comparison is false', (_l, props) => {
-        expect(
-          clipping(scene(node('Camera3D', { ...props, near: 'nan', far: 'nan' })))
-        ).toHaveLength(0);
+        expect(clipping(scene(node('Camera3D', { ...props, near: 'nan', far: 'nan' })))).toHaveLength(0);
       });
 
       // An absent plane is Godot's default, not an absent value: camera_3d.h:72
@@ -356,9 +340,7 @@ describe('Camera3D Linter', () => {
         ['near written, far defaulted', { near: 0.1 }],
         ['far written, near defaulted', { far: 1000.0 }],
       ])('stays silent when the defaults keep the range open: %s', (_label, props) => {
-        expect(clipping(scene(node('Camera3D', { projection: 0, fov: 75.0, ...props })))).toHaveLength(
-          0
-        );
+        expect(clipping(scene(node('Camera3D', { projection: 0, fov: 75.0, ...props })))).toHaveLength(0);
       });
     });
 
@@ -366,10 +348,9 @@ describe('Camera3D Linter', () => {
       // camera_3d.cpp:725 ERR_FAILs outside 1-179 and the hint at :682 states the
       // same bounds, so the only fov diagnostic is that error, with no warning band.
       it.each([1, 10, 45, 75, 90, 150, 179])('says nothing about fov %s', (fov) => {
-        expectNoDiagnostic(
-          scene(node('Camera3D', { projection: 0, fov, near: 0.1, far: 100.0 })),
-          { prop: 'field of view' }
-        );
+        expectNoDiagnostic(scene(node('Camera3D', { projection: 0, fov, near: 0.1, far: 100.0 })), {
+          prop: 'field of view',
+        });
       });
     });
     describe('multiple current cameras', () => {
@@ -669,8 +650,8 @@ describe('Camera3D Linter', () => {
       // doppler_tracking = 5 are all warnings: their setters are bare
       // assignments (camera_3d.cpp:736/:746/:586-591/:597-605).
       expect(diagnostics.length).toBeGreaterThan(3);
-      expect(diagnostics.some(d => d.message.includes('projection'))).toBe(true);
-      expect(diagnostics.some(d => d.message.includes('fov'))).toBe(true);
+      expect(diagnostics.some((d) => d.message.includes('projection'))).toBe(true);
+      expect(diagnostics.some((d) => d.message.includes('fov'))).toBe(true);
     });
 
     it('should handle scientific notation in numeric values', () => {
@@ -690,19 +671,15 @@ describe('Camera3D Linter', () => {
 
     it('should validate mixed warnings and errors', () => {
       // Only warnings: values below their hints.
-      let diagnostics = lint(
-        scene(node('Camera3D', { projection: 0, fov: 10, near: 0.0005, far: 0.005 }))
-      );
+      let diagnostics = lint(scene(node('Camera3D', { projection: 0, fov: 10, near: 0.0005, far: 0.005 })));
       expect(diagnostics.length).toBeGreaterThan(0);
-      const hasWarnings = diagnostics.some(d => d.severity === 'warning');
+      const hasWarnings = diagnostics.some((d) => d.severity === 'warning');
       expect(hasWarnings).toBe(true);
 
       // Errors from invalid values.
-      diagnostics = lint(
-        scene(node('Camera3D', { projection: 5, fov: 200, near: -0.1 }))
-      );
+      diagnostics = lint(scene(node('Camera3D', { projection: 5, fov: 200, near: -0.1 })));
       expect(diagnostics.length).toBeGreaterThan(0);
-      const hasErrors = diagnostics.some(d => d.severity === 'error');
+      const hasErrors = diagnostics.some((d) => d.severity === 'error');
       expect(hasErrors).toBe(true);
     });
 
@@ -710,10 +687,9 @@ describe('Camera3D Linter', () => {
       // camera_3d.cpp:725 accepts exactly 1 and 179.
       const boundaryValues = [1, 179];
       for (const fov of boundaryValues) {
-        expectNoDiagnostic(
-          scene(node('Camera3D', { projection: 0, fov, near: 0.1, far: 100.0 })),
-          { prop: 'fov' }
-        );
+        expectNoDiagnostic(scene(node('Camera3D', { projection: 0, fov, near: 0.1, far: 100.0 })), {
+          prop: 'fov',
+        });
       }
     });
 
@@ -732,25 +708,23 @@ describe('Camera3D Linter', () => {
     });
 
     it('should handle extreme combinations', () => {
-      const diagnostics = lint(
-        scene(node('Camera3D', { projection: 0, fov: 10, near: 0.0005, far: 0.005 }))
-      );
+      const diagnostics = lint(scene(node('Camera3D', { projection: 0, fov: 10, near: 0.0005, far: 0.005 })));
       // Both clipping planes sit below their hinted floors; fov 10 is legal and
       // silent, and the pair itself is ordered so the cross-field rule says
       // nothing.
-      expect(diagnostics.map(d => d.message).sort()).toEqual([
+      expect(diagnostics.map((d) => d.message).sort()).toEqual([
         "Property 'far' must be >= 0.01, got: 0.005",
         "Property 'near' must be >= 0.001, got: 0.0005",
       ]);
-      expect(diagnostics.every(d => d.severity === 'warning')).toBe(true);
+      expect(diagnostics.every((d) => d.severity === 'warning')).toBe(true);
     });
 
     it('should handle clipping planes at exact boundary (near = far boundary)', () => {
       // `<=`, not `<`: projection.cpp:367 is `ERR_FAIL_COND(p_far <= p_near)`.
-      expectDiagnostic(
-        scene(node('Camera3D', { projection: 2, size: 1.0, near: 0.1, far: 0.1 })),
-        { prop: 'clipping', severity: 'error' }
-      );
+      expectDiagnostic(scene(node('Camera3D', { projection: 2, size: 1.0, near: 0.1, far: 0.1 })), {
+        prop: 'clipping',
+        severity: 'error',
+      });
     });
 
     it('should handle orthogonal projection with all properties', () => {

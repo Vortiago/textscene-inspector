@@ -13,10 +13,7 @@ import { searchAncestors } from './parentType.js';
  * may be an instanced Viewport, and pooling its cameras into the outer scope is
  * the false positive this scoping prevents.
  */
-export function viewportScopeOf(
-  scene: TscnScene,
-  node: TscnNode
-): TscnNode | null | undefined {
+export function viewportScopeOf(scene: TscnScene, node: TscnNode): TscnNode | null | undefined {
   // The slot is `get_viewport()`'s, for 2D (camera_2d.cpp:342) and 3D (camera_3d.cpp:186)
   // alike: the 2D group is `"__cameras_" + itos(vp.get_id())` (camera_2d.cpp:349) and
   // `make_current` gates on `!viewport->get_camera_2d()` (:354, viewport.h:764).

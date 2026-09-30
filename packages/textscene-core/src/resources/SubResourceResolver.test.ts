@@ -50,18 +50,14 @@ describe('parseResourceReference', () => {
 
 describe('resolveInstancePath', () => {
   it('resolves an ExtResource id to its registered path', () => {
-    expect(resolveInstancePath('ExtResource("1_cube")', externalResources)).toBe(
-      'res://child_cube.tscn'
-    );
+    expect(resolveInstancePath('ExtResource("1_cube")', externalResources)).toBe('res://child_cube.tscn');
     expect(resolveInstancePath('ExtResource("2_frame")', externalResources)).toBe(
       'res://props/PhotoFrame.tscn'
     );
   });
 
   it('passes a raw res:// path through unchanged', () => {
-    expect(resolveInstancePath('res://standalone.tscn', externalResources)).toBe(
-      'res://standalone.tscn'
-    );
+    expect(resolveInstancePath('res://standalone.tscn', externalResources)).toBe('res://standalone.tscn');
     // res:// short-circuits before the registry, so an empty list is fine.
     expect(resolveInstancePath('res://standalone.tscn', [])).toBe('res://standalone.tscn');
   });
@@ -136,16 +132,12 @@ describe('unwrapCanvasTextureRef', () => {
 
   it('passes a reference that is not a wrapper straight through', () => {
     expect(unwrapCanvasTextureRef('res://icon.png', internals)).toBe('res://icon.png');
-    expect(unwrapCanvasTextureRef('SubResource("Gradient_1")', internals)).toBe(
-      'SubResource("Gradient_1")'
-    );
+    expect(unwrapCanvasTextureRef('SubResource("Gradient_1")', internals)).toBe('SubResource("Gradient_1")');
   });
 
   it('peels a chain of wrappers to the first reference that is not one', () => {
     // Three levels: only a third distinguishes a fixed point from a count of two.
-    expect(unwrapCanvasTextureRef('SubResource("CanvasTexture_outer")', internals)).toBe(
-      'ExtResource("5")'
-    );
+    expect(unwrapCanvasTextureRef('SubResource("CanvasTexture_outer")', internals)).toBe('ExtResource("5")');
   });
 
   it('is idempotent, so a caller can apply it to an already-peeled reference', () => {
@@ -160,7 +152,7 @@ describe('unwrapCanvasTextureRef', () => {
   });
 });
 
-describe('resolveExtAtlasTexturePath — the declared type is the SLOT\'s', () => {
+describe("resolveExtAtlasTexturePath — the declared type is the SLOT's", () => {
   /**
    * Godot writes an `[ext_resource]`'s `type=` from the property slot, not the
    * target's class: an AtlasTexture in a `texture` slot is `type="Texture2D"`. So

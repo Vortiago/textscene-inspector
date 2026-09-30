@@ -135,11 +135,7 @@ export function canFoldLine(ctx: FoldContext, line: number, lineFoldingEnabled: 
 
   const startIndent = getIndentLevel(ctx.lines[line] ?? '', ctx.tabSize);
   for (let i = line + 1; i < ctx.lines.length; i++) {
-    if (
-      isInString(ctx, i) !== -1 ||
-      isInComment(ctx, i) !== -1 ||
-      (ctx.lines[i] ?? '').trim().length === 0
-    ) {
+    if (isInString(ctx, i) !== -1 || isInComment(ctx, i) !== -1 || (ctx.lines[i] ?? '').trim().length === 0) {
       continue;
     }
     return getIndentLevel(ctx.lines[i] ?? '', ctx.tabSize) > startIndent;

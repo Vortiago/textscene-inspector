@@ -13,12 +13,7 @@ import { camera2DView, type Camera2DTag } from '../../2d/camera2d/cameraView';
  * which a non-`transparent_bg` target clears to. The 0.3 is sRGB: Godot measures
  * rgb(77, 77, 77). `new THREE.Color(0.3, 0.3, 0.3)` sets linear 0.3, about rgb(149).
  */
-export const DEFAULT_CLEAR_COLOR = new THREE.Color().setRGB(
-  0.3,
-  0.3,
-  0.3,
-  THREE.SRGBColorSpace
-);
+export const DEFAULT_CLEAR_COLOR = new THREE.Color().setRGB(0.3, 0.3, 0.3, THREE.SRGBColorSpace);
 
 /**
  * The offscreen pass's render target, carrying the storage and the tonemap
@@ -108,10 +103,7 @@ export function renderToOffscreenTarget(
  * shared-world source holds every viewport's cameras. `scene/3d/camera_3d.cpp`'s
  * `_camera_3d_set` overwrites, so the last `current` wins, or else the first.
  */
-export function selectViewportCamera(
-  root: THREE.Object3D,
-  viewportPath: string
-): THREE.Camera | null {
+export function selectViewportCamera(root: THREE.Object3D, viewportPath: string): THREE.Camera | null {
   const prefix = `${viewportPath}/`;
   let first: THREE.Camera | null = null;
   let lastCurrent: THREE.Camera | null = null;

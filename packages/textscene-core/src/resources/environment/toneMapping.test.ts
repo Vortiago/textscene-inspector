@@ -134,9 +134,7 @@ describe('applyToneMapping', () => {
   it('bakes the white normalisation in as a valid GLSL float literal', () => {
     applyToneMapping(fakeRenderer(), { mode: 1, exposure: 1, white: 2 });
     // `4` alone is an int in GLSL and fails to compile against a float const.
-    expect(THREE.ShaderChunk.tonemapping_pars_fragment).toMatch(
-      /const float godotToneMapWhite = 4\.0;/
-    );
+    expect(THREE.ShaderChunk.tonemapping_pars_fragment).toMatch(/const float godotToneMapWhite = 4\.0;/);
     THREE.ShaderChunk.tonemapping_pars_fragment = ORIGINAL_CHUNK;
   });
 
@@ -145,9 +143,7 @@ describe('applyToneMapping', () => {
     const restore = applyToneMapping(gl, { mode: 4, exposure: 1 });
     expect(gl.toneMapping).toBe(THREE.CustomToneMapping);
     // white defaults to 1, which Godot floors to 2.0 for AgX.
-    expect(THREE.ShaderChunk.tonemapping_pars_fragment).toMatch(
-      /const float godotToneMapWhite = 2\.0;/
-    );
+    expect(THREE.ShaderChunk.tonemapping_pars_fragment).toMatch(/const float godotToneMapWhite = 2\.0;/);
     expect(THREE.ShaderChunk.tonemapping_pars_fragment).toMatch(/awp_crossover_point = 0\.18/);
     restore();
     expect(THREE.ShaderChunk.tonemapping_pars_fragment).toBe(ORIGINAL_CHUNK);
@@ -267,9 +263,7 @@ describe('applyToneMapping program keys', () => {
 
   it('re-keys a sky background material, which the renderer owns and no scene holds', () => {
     const { vertexShader, fragmentShader } = THREE.ShaderLib.backgroundCube!;
-    const { filmic, agx } = keysAcrossSwap(
-      new THREE.ShaderMaterial({ vertexShader, fragmentShader })
-    );
+    const { filmic, agx } = keysAcrossSwap(new THREE.ShaderMaterial({ vertexShader, fragmentShader }));
     expect(agx[0]).not.toBe(filmic[0]);
   });
 

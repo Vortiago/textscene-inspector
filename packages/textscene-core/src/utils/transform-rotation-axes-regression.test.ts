@@ -60,8 +60,7 @@ describe('hallway rotation/scale decompose — regression suite', () => {
   describe('ShortCorridor/LongWall — Ry(180°) with Z-scale=5.25', () => {
     // rows: r0=(-1,0,-7.93e-07) r1=(0,1,0) r2=(1.51e-07,0,-5.25) origin=(4.25,0,3.5)
     // X-col≈-X, Y-col=+Y, Z-col≈-Z(len 5.25) => Ry(180°) with scale.z=5.25.
-    const LONG_WALL =
-      'Transform3D(-1, 0, -7.92728e-07, 0, 1, 0, 1.509958e-07, 0, -5.25, 4.25, 0, 3.5)';
+    const LONG_WALL = 'Transform3D(-1, 0, -7.92728e-07, 0, 1, 0, 1.509958e-07, 0, -5.25, 4.25, 0, 3.5)';
 
     it('captures the 5.25 stretch in scale.z (not in rotation) at origin (4.25, 0, 3.5)', () => {
       const d = decomposeTransform3D(parseTransform3D(LONG_WALL));
@@ -102,8 +101,7 @@ describe('hallway rotation/scale decompose — regression suite', () => {
     // rows: r0=(-4.37e-08, 1, 0) r1=(-1, -4.37e-08, 0) r2=(0,0,1) origin=(0.125,3.95,0)
     // X-col≈-Y, Y-col≈+X => Rz(θ) with X->-Y, Y->+X means θ=-90°, euler.z=-π/2.
     // A transpose/column-major regression would instead give X->+Y (euler.z=+π/2).
-    const CROWN_MOLDING =
-      'Transform3D(-4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0, 0, 1, 0.125, 3.95, 0)';
+    const CROWN_MOLDING = 'Transform3D(-4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0, 0, 1, 0.125, 3.95, 0)';
 
     it('decomposes to pure Rz(-90°) with unit scale at origin (0.125, 3.95, 0)', () => {
       const d = decomposeTransform3D(parseTransform3D(CROWN_MOLDING));

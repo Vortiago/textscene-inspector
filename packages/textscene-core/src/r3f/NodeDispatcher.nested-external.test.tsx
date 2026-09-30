@@ -85,9 +85,7 @@ function makeMiddleScene(): TscnScene {
       }),
     ],
     externalResources: [{ id: '1_leaf', path: 'res://test-nested-leaf.tscn', type: 'PackedScene' }],
-    internalResources: [
-      { id: 'BoxMesh_1', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)' } },
-    ],
+    internalResources: [{ id: 'BoxMesh_1', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)' } }],
   };
 }
 
@@ -126,9 +124,7 @@ function makeTopScene(): TscnScene {
       }),
     ],
     externalResources: [{ id: '1_middle', path: 'res://test-nested-middle.tscn', type: 'PackedScene' }],
-    internalResources: [
-      { id: 'CylinderMesh_1', type: 'CylinderMesh', data: { height: '2.0' } },
-    ],
+    internalResources: [{ id: 'CylinderMesh_1', type: 'CylinderMesh', data: { height: '2.0' } }],
   };
 }
 
@@ -140,10 +136,7 @@ async function renderTopScene(
   const externalResources = extraExternalResources ?? topScene.externalResources;
 
   return ReactThreeTestRenderer.create(
-    <SceneStack
-      loader={loader}
-      scene={{ internalResources: topScene.internalResources, externalResources }}
-    >
+    <SceneStack loader={loader} scene={{ internalResources: topScene.internalResources, externalResources }}>
       <NodeDispatcher nodes={topScene.nodes} />
     </SceneStack>
   );

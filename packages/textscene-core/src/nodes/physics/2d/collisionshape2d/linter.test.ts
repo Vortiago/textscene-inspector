@@ -50,7 +50,11 @@ describe('CollisionShape2D Linter', () => {
         scene(
           sub('CircleShape2D', 'circle_shape'),
           staticBody,
-          node('CollisionShape2D', { shape: 'SubResource("circle_shape")' }, { name: 'Collision', parent: '.' })
+          node(
+            'CollisionShape2D',
+            { shape: 'SubResource("circle_shape")' },
+            { name: 'Collision', parent: '.' }
+          )
         )
       );
     });
@@ -97,7 +101,12 @@ describe('CollisionShape2D Linter', () => {
           prop: 'one_way_collision',
           valid: [true, false],
           invalid: [
-            { value: 1, ruleName: 'strict-parser', severity: 'warning', contains: ['one_way_collision', 'converts'] },
+            {
+              value: 1,
+              ruleName: 'strict-parser',
+              severity: 'warning',
+              contains: ['one_way_collision', 'converts'],
+            },
           ],
         },
         {
@@ -139,7 +148,7 @@ describe('CollisionShape2D Linter', () => {
           ],
         },
       ]
-      );
+    );
   });
 
   describe('Semantic Validation (Required Properties)', () => {
@@ -172,7 +181,11 @@ describe('CollisionShape2D Linter', () => {
     it('should detect non-existent shape resource', () => {
       const content = scene(
         staticBody,
-        node('CollisionShape2D', { shape: 'SubResource("nonexistent")' }, { name: 'MissingResource', parent: '.' })
+        node(
+          'CollisionShape2D',
+          { shape: 'SubResource("nonexistent")' },
+          { name: 'MissingResource', parent: '.' }
+        )
       );
       const resourceError = expectDiagnostic(content, {
         ruleName: 'dangling-resource-reference',
@@ -204,7 +217,11 @@ describe('CollisionShape2D Linter', () => {
         scene(
           sub('CircleShape2D', 'circle_1'),
           staticBody,
-          node('CollisionShape2D', { shape: 'SubResource("circle_1")' }, { name: 'ValidResource', parent: '.' })
+          node(
+            'CollisionShape2D',
+            { shape: 'SubResource("circle_1")' },
+            { name: 'ValidResource', parent: '.' }
+          )
         )
       );
     });
@@ -325,7 +342,11 @@ shape = SubResource("capsule_shape")
         node('Node2D', {}, { name: 'Root' }),
         instanced('Body', { parent: '.' }),
         override('Inner', 0, { parent: 'Body' }),
-        node('CollisionShape2D', { shape: 'SubResource("shape_1")' }, { name: 'Collision', parent: 'Body/Inner' })
+        node(
+          'CollisionShape2D',
+          { shape: 'SubResource("shape_1")' },
+          { name: 'Collision', parent: 'Body/Inner' }
+        )
       );
       expectNoDiagnostic(instancedParent, { ruleName: 'collisionshape2d-invalid-parent' });
       expectNoDiagnostic(overrideParent, { ruleName: 'collisionshape2d-invalid-parent' });
@@ -360,7 +381,11 @@ shape = SubResource("capsule_shape")
       const content = scene(
         rectShape,
         staticBody,
-        node('CollisionShape2D', { shape: 'SubResource("shape_1")', one_way_collision: false, one_way_collision_margin: 1.5 }, { name: 'UnusedMargin', parent: '.' })
+        node(
+          'CollisionShape2D',
+          { shape: 'SubResource("shape_1")', one_way_collision: false, one_way_collision_margin: 1.5 },
+          { name: 'UnusedMargin', parent: '.' }
+        )
       );
       const marginWarning = expectDiagnostic(content, {
         ruleName: 'collisionshape2d-unused-one-way-margin',
@@ -375,7 +400,11 @@ shape = SubResource("capsule_shape")
       const content = scene(
         rectShape,
         staticBody,
-        node('CollisionShape2D', { shape: 'SubResource("shape_1")', one_way_collision_margin: 2.0 }, { name: 'UnusedMarginDefault', parent: '.' })
+        node(
+          'CollisionShape2D',
+          { shape: 'SubResource("shape_1")', one_way_collision_margin: 2.0 },
+          { name: 'UnusedMarginDefault', parent: '.' }
+        )
       );
       expectDiagnostic(content, {
         ruleName: 'collisionshape2d-unused-one-way-margin',
@@ -388,7 +417,11 @@ shape = SubResource("capsule_shape")
         scene(
           rectShape,
           staticBody,
-          node('CollisionShape2D', { shape: 'SubResource("shape_1")', one_way_collision: true, one_way_collision_margin: 1.5 }, { name: 'ValidOneWay', parent: '.' })
+          node(
+            'CollisionShape2D',
+            { shape: 'SubResource("shape_1")', one_way_collision: true, one_way_collision_margin: 1.5 },
+            { name: 'ValidOneWay', parent: '.' }
+          )
         )
       );
     });
@@ -397,7 +430,11 @@ shape = SubResource("capsule_shape")
       const content = scene(
         rectShape,
         staticBody,
-        node('CollisionShape2D', { shape: 'SubResource("shape_1")', one_way_collision: false, one_way_collision_margin: 0.0 }, { name: 'ZeroMarginOk', parent: '.' })
+        node(
+          'CollisionShape2D',
+          { shape: 'SubResource("shape_1")', one_way_collision: false, one_way_collision_margin: 0.0 },
+          { name: 'ZeroMarginOk', parent: '.' }
+        )
       );
       expectNoDiagnostic(content, { ruleName: 'collisionshape2d-unused-one-way-margin' });
     });
@@ -408,7 +445,11 @@ shape = SubResource("capsule_shape")
       const content = scene(
         rectShape,
         node('Area2D', {}, { name: 'Trigger' }),
-        node('CollisionShape2D', { shape: 'SubResource("shape_1")', one_way_collision: true }, { name: 'Collision', parent: '.' })
+        node(
+          'CollisionShape2D',
+          { shape: 'SubResource("shape_1")', one_way_collision: true },
+          { name: 'Collision', parent: '.' }
+        )
       );
       const diagnostic = expectDiagnostic(content, {
         ruleName: 'collisionshape2d-one-way-ignored-under-area2d',
@@ -435,7 +476,11 @@ shape = SubResource("capsule_shape")
         scene(
           rectShape,
           staticBody,
-          node('CollisionShape2D', { shape: 'SubResource("shape_1")', one_way_collision: true }, { name: 'Collision', parent: '.' })
+          node(
+            'CollisionShape2D',
+            { shape: 'SubResource("shape_1")', one_way_collision: true },
+            { name: 'Collision', parent: '.' }
+          )
         ),
         { ruleName: 'collisionshape2d-one-way-ignored-under-area2d' }
       );
@@ -471,7 +516,11 @@ shape = SubResource("capsule_shape")
 
     it('says nothing for a RectangleShape2D', () => {
       expectNoDiagnostic(
-        scene(rectShape, staticBody, node('CollisionShape2D', { shape: 'SubResource("shape_1")' }, { name: 'Collision', parent: '.' })),
+        scene(
+          rectShape,
+          staticBody,
+          node('CollisionShape2D', { shape: 'SubResource("shape_1")' }, { name: 'Collision', parent: '.' })
+        ),
         { ruleName: 'collisionshape2d-polygon-shape-limited-editing' }
       );
     });
@@ -503,9 +552,11 @@ shape = SubResource("capsule_shape")
       const diagnostics = lint(content);
       // Missing shape (error), invalid parent (warning), invalid disabled format (error).
       expect(diagnostics.length).toBeGreaterThanOrEqual(1);
-      const hasShapeError = diagnostics.some(d => d.message.includes('missing required property'));
-      const hasParentWarning = diagnostics.some(d => d.message.includes('invalid-parent') || d.message.includes('should be a child'));
-      const hasDisabledError = diagnostics.some(d => d.message.includes('disabled'));
+      const hasShapeError = diagnostics.some((d) => d.message.includes('missing required property'));
+      const hasParentWarning = diagnostics.some(
+        (d) => d.message.includes('invalid-parent') || d.message.includes('should be a child')
+      );
+      const hasDisabledError = diagnostics.some((d) => d.message.includes('disabled'));
       expect(hasShapeError || hasParentWarning || hasDisabledError).toBe(true);
     });
 
@@ -514,7 +565,11 @@ shape = SubResource("capsule_shape")
         rectShape,
         node('Node2D', {}, { name: 'Root' }),
         node('StaticBody2D', {}, { name: 'StaticBody', parent: '.' }),
-        node('CollisionShape2D', { shape: 'SubResource("shape_1")' }, { name: 'NestedCollision', parent: 'StaticBody' })
+        node(
+          'CollisionShape2D',
+          { shape: 'SubResource("shape_1")' },
+          { name: 'NestedCollision', parent: 'StaticBody' }
+        )
       );
       expectClean(content);
     });
@@ -524,7 +579,11 @@ shape = SubResource("capsule_shape")
         scene(
           sub('SegmentShape2D', 'segment'),
           staticBody,
-          node('CollisionShape2D', { shape: 'SubResource("segment")' }, { name: 'MinimalCollision', parent: '.' })
+          node(
+            'CollisionShape2D',
+            { shape: 'SubResource("segment")' },
+            { name: 'MinimalCollision', parent: '.' }
+          )
         )
       );
     });
@@ -561,7 +620,11 @@ shape = SubResource("segment")
         scene(
           rectShape,
           staticBody,
-          node('CollisionShape2D', { shape: 'SubResource("shape_1")', disabled: true }, { name: 'DisabledCollision', parent: '.' })
+          node(
+            'CollisionShape2D',
+            { shape: 'SubResource("shape_1")', disabled: true },
+            { name: 'DisabledCollision', parent: '.' }
+          )
         )
       );
     });
@@ -579,7 +642,15 @@ shape = SubResource("segment")
         scene(
           sub('RectangleShape2D', 'platform_shape'),
           node('StaticBody2D', {}, { name: 'Platform' }),
-          node('CollisionShape2D', { shape: 'SubResource("platform_shape")', one_way_collision: true, one_way_collision_margin: 1.0 }, { name: 'PlatformCollision', parent: '.' })
+          node(
+            'CollisionShape2D',
+            {
+              shape: 'SubResource("platform_shape")',
+              one_way_collision: true,
+              one_way_collision_margin: 1.0,
+            },
+            { name: 'PlatformCollision', parent: '.' }
+          )
         )
       );
     });

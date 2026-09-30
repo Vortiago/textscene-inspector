@@ -15,11 +15,7 @@ const node = (name: string, overrides: Partial<TscnNode> = {}): TscnNode => ({
   ...overrides,
 });
 
-const scene = (
-  path: string,
-  nodes: TscnNode[],
-  externalResources: ExtResource[] = []
-): ParsedScene => ({
+const scene = (path: string, nodes: TscnNode[], externalResources: ExtResource[] = []): ParsedScene => ({
   path,
   nodes,
   externalScenes: [],

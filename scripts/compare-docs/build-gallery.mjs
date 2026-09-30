@@ -51,9 +51,7 @@ function main() {
   for (let i = 0; i < sheets.length; i++) {
     const { type } = sheets[i].meta;
     if (seen.has(type)) {
-      throw new Error(
-        `Duplicate sheet type "${type}": ${seen.get(type)} and ${sheetLabel(files[i])}`
-      );
+      throw new Error(`Duplicate sheet type "${type}": ${seen.get(type)} and ${sheetLabel(files[i])}`);
     }
     seen.set(type, sheetLabel(files[i]));
   }

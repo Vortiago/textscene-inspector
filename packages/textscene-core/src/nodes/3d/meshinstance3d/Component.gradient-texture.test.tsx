@@ -19,10 +19,7 @@ import type { MeshInstance3DProperties } from './types';
 const traffic = vi.hoisted(() => ({ pinned: [] as string[], unpinned: [] as string[] }));
 
 vi.mock('../../../resources/textures/proceduralTextureCache', async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import('../../../resources/textures/proceduralTextureCache')
-    >();
+  const actual = await importOriginal<typeof import('../../../resources/textures/proceduralTextureCache')>();
   return {
     ...actual,
     pinProceduralTexture: (key: string) => {
@@ -117,8 +114,7 @@ describe('<MeshInstance3D> GradientTexture2D albedo (coin glow)', () => {
     );
 
     const basic = renderer.scene.findAllByType('MeshBasicMaterial')[0]?.instance as
-      | THREE.MeshBasicMaterial
-      | undefined;
+      THREE.MeshBasicMaterial | undefined;
     expect(basic).toBeDefined();
     // The gradient DataTexture is on the map, resolved without any async load.
     expect(basic!.map).toBeInstanceOf(THREE.DataTexture);
@@ -171,10 +167,7 @@ describe('<MeshInstance3D> procedural texture pins', () => {
   async function renderMixed() {
     return ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={makeLoader()}>
-        <SceneResourcesProvider
-          internalResources={mixedSlotResources}
-          externalResources={[]}
-        >
+        <SceneResourcesProvider internalResources={mixedSlotResources} externalResources={[]}>
           <MeshInstance3D node={mixedNode()} />
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
@@ -186,9 +179,7 @@ describe('<MeshInstance3D> procedural texture pins', () => {
 
     // Keys are `sceneToken:subResourceId`; the token belongs to the array the
     // provider assembled, so the sub-resource half is what identifies the pin.
-    expect(traffic.pinned.map((key) => key.split(':')[1])).toEqual([
-      'GradientTexture2D_qhu5r',
-    ]);
+    expect(traffic.pinned.map((key) => key.split(':')[1])).toEqual(['GradientTexture2D_qhu5r']);
   });
 
   it('releases the pin when the node unmounts', async () => {

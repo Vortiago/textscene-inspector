@@ -30,7 +30,7 @@ export function createMockUri(fsPath: string): vscode.Uri {
     fragment: '',
     with: vi.fn(),
     toString: () => `file://${normalizedPath}`,
-    toJSON: () => ({ fsPath, path: normalizedPath, scheme: 'file' })
+    toJSON: () => ({ fsPath, path: normalizedPath, scheme: 'file' }),
   } as unknown as vscode.Uri;
 }
 
@@ -56,7 +56,7 @@ export function createMockDiagnosticCollection(name = 'mock'): {
     get: vi.fn(),
     has: vi.fn(),
     forEach: vi.fn(),
-    dispose: vi.fn()
+    dispose: vi.fn(),
   };
 }
 
@@ -72,16 +72,16 @@ export const mockUri = {
   parse: vi.fn((value: string) => {
     const fsPath = value.replace('file://', '');
     return createMockUri(fsPath);
-  })
+  }),
 };
 
 export const mockCommands: any = {
-  registerCommand: vi.fn()
+  registerCommand: vi.fn(),
 };
 
 export const mockLanguages: any = {
   registerDocumentSymbolProvider: vi.fn(),
   registerDefinitionProvider: vi.fn(),
   registerDocumentLinkProvider: vi.fn(),
-  createDiagnosticCollection: vi.fn((name: string) => createMockDiagnosticCollection(name))
+  createDiagnosticCollection: vi.fn((name: string) => createMockDiagnosticCollection(name)),
 };

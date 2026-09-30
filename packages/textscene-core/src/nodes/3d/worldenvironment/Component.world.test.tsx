@@ -84,9 +84,7 @@ describe('WorldEnvironment (assertions 81–89)', () => {
     ]);
     const lights = renderer.scene.findAllByType('AmbientLight');
     expect(lights.length).toBe(1);
-    expect(instanceAs<THREE.AmbientLight>(lights[0]!).color.getHexString()).toBe(
-      '666666'
-    );
+    expect(instanceAs<THREE.AmbientLight>(lights[0]!).color.getHexString()).toBe('666666');
   });
 
   it('#85 ambient_light_energy → ambient light intensity matches', async () => {

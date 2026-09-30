@@ -321,7 +321,7 @@ describe('MeshInstance3D Parser', () => {
 
       // `begins_with("surface_material_override/")` (mesh_instance_3d.cpp:65) never sees this one.
       const result = parseMeshInstance3D(h, {
-        'surface_material_override': 'SubResource("Material_invalid")',
+        surface_material_override: 'SubResource("Material_invalid")',
       });
 
       expect(result.surfaceMaterialOverrides.size).toBe(0);

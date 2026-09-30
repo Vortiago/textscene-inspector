@@ -38,17 +38,13 @@ describe('<SpotLight3D>', () => {
   });
 
   it('converts spot_angle from degrees to radians', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <SpotLight3D node={makeNode({ spot_angle: 90 })} />
-    );
+    const renderer = await ReactThreeTestRenderer.create(<SpotLight3D node={makeNode({ spot_angle: 90 })} />);
     const light = renderer.scene.findByType('SpotLight');
     expect(instanceAs<THREE.SpotLight>(light).angle).toBeCloseTo(Math.PI / 2, 5);
   });
 
   it('maps spot_range to distance', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <SpotLight3D node={makeNode({ spot_range: 25 })} />
-    );
+    const renderer = await ReactThreeTestRenderer.create(<SpotLight3D node={makeNode({ spot_range: 25 })} />);
     const light = renderer.scene.findByType('SpotLight');
     expect(instanceAs<THREE.SpotLight>(light).distance).toBe(25);
   });
@@ -61,9 +57,7 @@ describe('<SpotLight3D>', () => {
   });
 
   it('overrides default penumbra when supplied', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <SpotLight3D node={makeNode({ penumbra: 0.5 })} />
-    );
+    const renderer = await ReactThreeTestRenderer.create(<SpotLight3D node={makeNode({ penumbra: 0.5 })} />);
     const light = renderer.scene.findByType('SpotLight');
     expect(instanceAs<THREE.SpotLight>(light).penumbra).toBe(0.5);
   });

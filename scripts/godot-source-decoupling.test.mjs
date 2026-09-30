@@ -155,9 +155,7 @@ describe('Godot source stays a reading aid, not a dependency', () => {
   });
 
   it('reports every checkout shape, whatever the tag, and no citation', () => {
-    expect(hitFiles(checkoutHits(new Set(), CHECKOUT_CONTROLS))).toEqual(
-      expectedHits(CHECKOUT_CONTROLS)
-    );
+    expect(hitFiles(checkoutHits(new Set(), CHECKOUT_CONTROLS))).toEqual(expectedHits(CHECKOUT_CONTROLS));
   });
 
   it('reports every environment spelling, and leaves prose and the binary alone', () => {

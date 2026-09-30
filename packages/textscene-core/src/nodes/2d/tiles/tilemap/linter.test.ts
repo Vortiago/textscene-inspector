@@ -77,10 +77,10 @@ describe('TileMap lint rules', () => {
 
   describe('Y-sort / Z-index consistency (tile_map.cpp:850-882)', () => {
     it('warns when a Y-sorted layer shares a Z-index with a non-Y-sorted layer', () => {
-      expectDiagnostic(
-        scene(`layer_0/y_sort_enabled = true\nlayer_1/name = "Other"`),
-        { ruleName: 'tilemap-y-sort-z-index-conflict', severity: 'warning' }
-      );
+      expectDiagnostic(scene(`layer_0/y_sort_enabled = true\nlayer_1/name = "Other"`), {
+        ruleName: 'tilemap-y-sort-z-index-conflict',
+        severity: 'warning',
+      });
     });
 
     // No `layer_0/…` key at all, yet the loaded node still has Layer0: the

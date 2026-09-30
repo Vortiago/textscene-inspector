@@ -22,7 +22,14 @@ import {
 } from '../shared/splitContainerSolver';
 import { splitOffsetsOf, type SplitContainerProperties } from '../shared/splitContainer';
 
-export function HSplitContainer({ solveNode, tint, rect, theme, renderOrder, meta }: NativeControlComponentProps) {
+export function HSplitContainer({
+  solveNode,
+  tint,
+  rect,
+  theme,
+  renderOrder,
+  meta,
+}: NativeControlComponentProps) {
   const props = painterView<SplitContainerProperties>(solveNode);
 
   // `_resort` hides each dragger below two valid children (`split_container.cpp:714-724`),
@@ -33,7 +40,10 @@ export function HSplitContainer({ solveNode, tint, rect, theme, renderOrder, met
   const drawsGrabber =
     sortable.length >= 2 && isSplitGrabberVisible(props, solveNode.constants, theme.widgets.splitContainer);
   const themeKey = splitGrabberThemeKey(solveNode.node.type, false);
-  const texture = useNodeIcon(drawsGrabber ? solveNode.icons[themeKey] : undefined, drawsGrabber ? SPLIT_CONTAINER_ICONS.hsplitter : null);
+  const texture = useNodeIcon(
+    drawsGrabber ? solveNode.icons[themeKey] : undefined,
+    drawsGrabber ? SPLIT_CONTAINER_ICONS.hsplitter : null
+  );
 
   if (!drawsGrabber || !texture) {
     return null;

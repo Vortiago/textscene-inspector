@@ -20,9 +20,7 @@ export { pinNoColorSpace };
  * bands and the previous one draws meanwhile. Each clone is disposed once it no longer
  * draws. `null` while there is nothing to show.
  */
-export function useUndecodedTexture(
-  texture: THREE.Texture | null | undefined
-): THREE.Texture | null {
+export function useUndecodedTexture(texture: THREE.Texture | null | undefined): THREE.Texture | null {
   const cloned = useMemo(() => (texture ? undecodedClone(texture) : null), [texture]);
   return useUploadedClone(cloned);
 }

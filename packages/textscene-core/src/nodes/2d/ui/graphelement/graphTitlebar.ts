@@ -76,10 +76,7 @@ export function shapeTitleText(text: string, fontTheme: TitlebarFontTheme): Text
 }
 
 /** The shaped title's own minimum size: `Label::get_minimum_size`'s OFF branch (`label.cpp:992-996`), empty-text short-circuit included. */
-export function titleTextMinimumSize(
-  text: string,
-  fontTheme: TitlebarFontTheme
-): { x: number; y: number } {
+export function titleTextMinimumSize(text: string, fontTheme: TitlebarFontTheme): { x: number; y: number } {
   if (text.length === 0) {
     // `label.cpp:239-241`: `Size2(1, get_line_height())`: `get_line_height()`
     // with no shaped lines returns `font->get_height(font_size)`, no

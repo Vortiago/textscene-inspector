@@ -41,4 +41,3 @@ export function CsgSubtreeProvider({ value, children }: CsgSubtreeProviderProps)
 export function useCsgSubtree(): CsgSubtreeValue | null {
   return useContext(CsgSubtreeContext);
 }
-

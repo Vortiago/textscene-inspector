@@ -14,10 +14,7 @@ describe('<GridMap> tile whose ArrayMesh declares no material', () => {
 
   it('paints it with Godot’s default material', async () => {
     const material = (await renderInstancedTile()).material as THREE.MeshStandardMaterial;
-    const rgb = material.color.getRGB(
-      { r: 0, g: 0, b: 0 } as THREE.Color,
-      THREE.LinearSRGBColorSpace
-    );
+    const rgb = material.color.getRGB({ r: 0, g: 0, b: 0 } as THREE.Color, THREE.LinearSRGBColorSpace);
     expect(rgb.r).toBeCloseTo(0.6, 5);
     expect(rgb.g).toBeCloseTo(0.6, 5);
     expect(rgb.b).toBeCloseTo(0.6, 5);

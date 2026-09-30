@@ -116,7 +116,10 @@ function RichTextImage({
 
 export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<RichTextLabelProperties>(solveNode);
-  const textTheme = useMemo(() => richTextLabelTextTheme(solveNode, props, { theme }), [solveNode, props, theme]);
+  const textTheme = useMemo(
+    () => richTextLabelTextTheme(solveNode, props, { theme }),
+    [solveNode, props, theme]
+  );
 
   const clippingPlanes = useControlClipPlanes();
 
@@ -149,7 +152,17 @@ export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: Nat
         tabStopsPx: richTextTabStopsPx(props.tabStopsPx, props.tabSize, fontMetrics, textTheme.fontSizePx),
         autowrapTrimFlags: props.autowrapTrimFlags,
       }),
-    [plainText, textTheme.fontSizePx, rect.w, autowrapMode, fontSizePxAt, fontMetrics, props.tabStopsPx, props.tabSize, props.autowrapTrimFlags]
+    [
+      plainText,
+      textTheme.fontSizePx,
+      rect.w,
+      autowrapMode,
+      fontSizePxAt,
+      fontMetrics,
+      props.tabStopsPx,
+      props.tabSize,
+      props.autowrapTrimFlags,
+    ]
   );
 
   // The alignment property and the `[center]`/`[right]`/`[left]`/`[fill]` tags
@@ -173,8 +186,16 @@ export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: Nat
         const y = placement.lineTopPx;
         if (placement.image) {
           return (
-            <CanvasItemGroup key={index} position={[placement.lineOffsetXPx + placement.image.xPx, -(y + placement.image.yPx), 0]}>
-              <RichTextImage placement={placement.image} tint={tint.own} resources={solveNode.resources} renderOrder={renderOrder} />
+            <CanvasItemGroup
+              key={index}
+              position={[placement.lineOffsetXPx + placement.image.xPx, -(y + placement.image.yPx), 0]}
+            >
+              <RichTextImage
+                placement={placement.image}
+                tint={tint.own}
+                resources={solveNode.resources}
+                renderOrder={renderOrder}
+              />
             </CanvasItemGroup>
           );
         }
@@ -184,7 +205,11 @@ export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: Nat
         // `[u]` is a stroke on the line's baseline with the paragraph's metrics,
         // snapped to whole pixel rows, at `underline_alpha` times the opacity.
         const underline = placement.underline
-          ? underlineRectPx(placement.layout.lines[0]!.glyphs, placement.layout.baselineOffsetPx, underlineMetrics)
+          ? underlineRectPx(
+              placement.layout.lines[0]!.glyphs,
+              placement.layout.baselineOffsetPx,
+              underlineMetrics
+            )
           : null;
         return (
           <CanvasItemGroup key={index} position={[placement.lineOffsetXPx, -y, 0]}>

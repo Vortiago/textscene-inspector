@@ -10,11 +10,7 @@ import { parsePackedVector3Array } from '../../shapes/packedArray';
 import { bezierInterpolate } from '../../../godot/index.js';
 import { CURVE3D_DATA } from '../shared/bezierData';
 import { decodeBezierCurve, resolveBezierCurve, type BezierCurveReader } from '../shared/bezierCurve';
-import type {
-  Curve3DControlPoint,
-  Curve3DSample,
-  Curve3DSampler,
-} from './types';
+import type { Curve3DControlPoint, Curve3DSample, Curve3DSampler } from './types';
 
 const CURVE3D: BezierCurveReader<Curve3DControlPoint> = {
   format: CURVE3D_DATA,
@@ -50,10 +46,7 @@ export function resolveCurve3D(
  * `segmentsPerSpan` cubic-Bézier steps. Degenerate input (0 or 1 points) yields
  * a zero-length sampler that still reports the lone point's position.
  */
-export function tessellateCurve3D(
-  points: Curve3DControlPoint[],
-  segmentsPerSpan = 16
-): Curve3DSampler {
+export function tessellateCurve3D(points: Curve3DControlPoint[], segmentsPerSpan = 16): Curve3DSampler {
   const flat: number[] = [];
   if (points.length > 0) {
     const first = points[0]!.position;
@@ -118,8 +111,7 @@ function appendSpan(
   segmentsPerSpan: number
 ): void {
   const straight =
-    a.out.x === 0 && a.out.y === 0 && a.out.z === 0 &&
-    b.in.x === 0 && b.in.y === 0 && b.in.z === 0;
+    a.out.x === 0 && a.out.y === 0 && a.out.z === 0 && b.in.x === 0 && b.in.y === 0 && b.in.z === 0;
   if (straight) {
     flat.push(b.position.x, b.position.y, b.position.z);
     return;

@@ -20,10 +20,7 @@ function horizontalFloor(s = 4): THREE.Mesh {
   // Two triangles, non-indexed.
   geometry.setAttribute(
     'position',
-    new THREE.Float32BufferAttribute(
-      [-s, 0, -s, s, 0, -s, s, 0, s, -s, 0, -s, s, 0, s, -s, 0, s],
-      3
-    )
+    new THREE.Float32BufferAttribute([-s, 0, -s, s, 0, -s, s, 0, s, -s, 0, -s, s, 0, s, -s, 0, s], 3)
   );
   geometry.setAttribute(
     'normal',

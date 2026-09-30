@@ -37,9 +37,7 @@ const SCENE_WITH_TEXTURE = `[gd_scene load_steps=2 format=3]
 /** A vendored demo fixture, whose corpus root differs from the base ('') one. */
 const DEMO = fixtures.find((f) => f.root) as (typeof fixtures)[number];
 
-const DEMO_LEAF = flattenLeaves(buildFixtureTree(fixtures)).find(
-  (l) => l.file === DEMO.file
-) as Leaf;
+const DEMO_LEAF = flattenLeaves(buildFixtureTree(fixtures)).find((l) => l.file === DEMO.file) as Leaf;
 
 function resetPersistence(path = '/') {
   try {
@@ -104,9 +102,9 @@ describe('Corpus-scoped uploads — app-shell wiring', () => {
 
     // The uploaded scene lives in the base ('') corpus; its companion file
     // must be visible there, not stranded under the demo root.
-    await expect(
-      provider.loadResource('res://textures/player.png', 'Texture2D')
-    ).resolves.toBeInstanceOf(ArrayBuffer);
+    await expect(provider.loadResource('res://textures/player.png', 'Texture2D')).resolves.toBeInstanceOf(
+      ArrayBuffer
+    );
   });
 
   it('switching to a demo fixture stops serving the uploaded scene corpus upload', async () => {
@@ -115,9 +113,9 @@ describe('Corpus-scoped uploads — app-shell wiring', () => {
     await waitForScene('StubRoot');
 
     const provider = await uploadSceneWithTexture();
-    await expect(
-      provider.loadResource('res://textures/player.png', 'Texture2D')
-    ).resolves.toBeInstanceOf(ArrayBuffer);
+    await expect(provider.loadResource('res://textures/player.png', 'Texture2D')).resolves.toBeInstanceOf(
+      ArrayBuffer
+    );
 
     // Switch to a vendored demo through the scene palette.
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
@@ -129,9 +127,9 @@ describe('Corpus-scoped uploads — app-shell wiring', () => {
     await waitForScene('DemoRoot');
 
     // The base-corpus upload must not bleed into the demo corpus.
-    await expect(
-      provider.loadResource('res://textures/player.png', 'Texture2D')
-    ).rejects.toThrow('Resource not found');
+    await expect(provider.loadResource('res://textures/player.png', 'Texture2D')).rejects.toThrow(
+      'Resource not found'
+    );
   });
 
   // The active **Corpus root** decides which file `res://project.godot` maps onto, so the

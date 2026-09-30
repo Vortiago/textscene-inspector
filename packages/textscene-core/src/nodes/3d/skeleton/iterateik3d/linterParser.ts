@@ -12,10 +12,7 @@ import { validatorRegistry, type PropertyValidator } from '../../../../linter/Va
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { accepts, v } from '../../../../linter/validators/v.js';
 import { settingCount } from '../shared/settingCount.js';
-import {
-  ROTATION_AXIS,
-  SECONDARY_DIRECTION,
-} from '../skeletonmodifier3d/linterParser.js';
+import { ROTATION_AXIS, SECONDARY_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
 import { declaredLeafResolver, indexedKeyRegex } from '../../../../godot/index.js';
 import { negativeIndexError } from '../../../../linter/reportedIndices.js';
 
@@ -25,7 +22,6 @@ import { negativeIndexError } from '../../../../linter/reportedIndices.js';
  */
 const negativeSettingIndex = (index: string): string =>
   `Setting index ${index} must be non-negative; IterateIK3D::_set fails the index check (iterate_ik_3d.cpp:39) before reaching the property, so the write never lands`;
-
 
 /**
  * `settings/<i>/joints/<j>/…`, pushed at iterate_ik_3d.cpp:120-125, keyed by everything after the

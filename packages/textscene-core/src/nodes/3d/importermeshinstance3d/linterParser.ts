@@ -28,7 +28,10 @@ validatorRegistry.registerAll('ImporterMeshInstance3D', {
   // importer_mesh_instance_3d.cpp:167, PROPERTY_HINT_LAYERS_3D_RENDER.
   // set_layer_mask (:76-78) is a bare uint32 assignment, so a bit outside the
   // 32-bit widget the hint renders is only ever a warning.
-  layer_mask: layerBitmask('layer_mask', { hinted: 'importer_mesh_instance_3d.cpp:167', width: 'uint32' /* importer_mesh_instance_3d.h:70 */ }),
+  layer_mask: layerBitmask('layer_mask', {
+    hinted: 'importer_mesh_instance_3d.cpp:167',
+    width: 'uint32' /* importer_mesh_instance_3d.h:70 */,
+  }),
   // importer_mesh_instance_3d.cpp:169, PROPERTY_HINT_ENUM "Off,On,Double-Sided,
   // Shadows Only". set_cast_shadows_setting (:80-82) is a bare assignment.
   cast_shadow: v.enumInt('cast_shadow', 0, 3, CAST_SHADOW, {
@@ -57,11 +60,7 @@ validatorRegistry.registerAll('ImporterMeshInstance3D', {
   }),
   // importer_mesh_instance_3d.cpp:176, PROPERTY_HINT_ENUM "Disabled,Self,
   // Dependencies". set_visibility_range_fade_mode (:124-127) is a bare assignment.
-  visibility_range_fade_mode: v.enumInt(
-    'visibility_range_fade_mode',
-    0,
-    2,
-    VISIBILITY_RANGE_FADE_MODE,
-    { hinted: 'importer_mesh_instance_3d.cpp:176' }
-  ),
+  visibility_range_fade_mode: v.enumInt('visibility_range_fade_mode', 0, 2, VISIBILITY_RANGE_FADE_MODE, {
+    hinted: 'importer_mesh_instance_3d.cpp:176',
+  }),
 });

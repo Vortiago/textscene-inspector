@@ -31,7 +31,12 @@ import type { TextLayoutResult } from '../../../../r3f/controls/native/text/text
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { ControlColor } from '../control/types';
-import { BUTTON_DEFAULT_FONT_COLOR, BUTTON_THEME_FONT_KEY, BUTTON_THEME_KEYS, buttonIconColor } from '../button/nativeSolver';
+import {
+  BUTTON_DEFAULT_FONT_COLOR,
+  BUTTON_THEME_FONT_KEY,
+  BUTTON_THEME_KEYS,
+  buttonIconColor,
+} from '../button/nativeSolver';
 import type { MenuButtonProperties } from './types';
 
 // Re-exported for Component.tsx. MenuButton registers no `icon_*_color`, so `Theme::get_color`'s
@@ -80,9 +85,7 @@ export const menuButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   const hasText = (props.text ?? '').length > 0;
   const layout: TextLayoutResult | null = ctx.measureText ? menuButtonLabelShape(n, ctx.theme) : null;
-  const textSize = layout
-    ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
-    : { x: 0, y: 0 };
+  const textSize = layout ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx } : { x: 0, y: 0 };
 
   let width = textSize.x;
   let height = textSize.y;

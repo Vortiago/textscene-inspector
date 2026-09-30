@@ -95,7 +95,11 @@ async function advanceFrameWithStubbedGl(
   }
 }
 
-async function mount(scene: TscnScene, seen: (ViewportTextureEntry | null)[] = [], path = 'Root/SubViewport') {
+async function mount(
+  scene: TscnScene,
+  seen: (ViewportTextureEntry | null)[] = [],
+  path = 'Root/SubViewport'
+) {
   const renderer = await ReactThreeTestRenderer.create(
     <ViewportTextureProvider>
       <ViewportPassProvider>
@@ -123,7 +127,7 @@ describe('<ControlRasterPasses>', () => {
    * canvas items after its tonemap pass, so this target holds ordinary sRGB
    * values with no curve and no `isXRRenderTarget` pre-tonemap tag.
    */
-  it('publishes a target tagged sRGB, without the 3D/2D pass\'s isXRRenderTarget tag', async () => {
+  it("publishes a target tagged sRGB, without the 3D/2D pass's isXRRenderTarget tag", async () => {
     const seen: (ViewportTextureEntry | null)[] = [];
     await mount(parse(GUI_SCENE), seen);
     const texture = seen.at(-1)!.texture;

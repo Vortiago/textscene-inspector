@@ -33,7 +33,11 @@ function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): Read
 }
 
 function page(name: string, props: Partial<ControlProperties> = {}): SolveNode {
-  return { ...solveNode(), path: name, node: { name, type: 'Control', children: [], properties: { name, ...props } as ControlProperties } };
+  return {
+    ...solveNode(),
+    path: name,
+    node: { name, type: 'Control', children: [], properties: { name, ...props } as ControlProperties },
+  };
 }
 
 /** A `theme_override_styles/tabbar_background` carrying `TABBAR_MARGIN`, everything else the default-theme panel's. */
@@ -51,7 +55,12 @@ function tabContainer(
     ...solveNode(),
     ...(styleBoxes ? { styleBoxes } : {}),
     path: name,
-    node: { name, type: 'TabContainer', children: [], properties: { name, ...props } as TabContainerProperties },
+    node: {
+      name,
+      type: 'TabContainer',
+      children: [],
+      properties: { name, ...props } as TabContainerProperties,
+    },
     children,
   };
 }
@@ -103,7 +112,10 @@ describe('deriveTabContainerTabs', () => {
         z: [],
       },
     };
-    const tabs = deriveTabContainerTabs({ children: [page('General'), promoted, page('Advanced')] }, undefined);
+    const tabs = deriveTabContainerTabs(
+      { children: [page('General'), promoted, page('Advanced')] },
+      undefined
+    );
     expect(tabs.map((t) => t.title)).toEqual(['General', 'Advanced']);
   });
 
@@ -116,19 +128,33 @@ describe('tabBarRect', () => {
   const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
 
   it('LEFT alignment insets the bar by side_margin on the left only', () => {
-    expect(tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_LEFT, 8, NO_TABBAR_MARGIN, false)).toEqual({ x: 8, y: 0, w: 192, h: 24 });
+    expect(tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_LEFT, 8, NO_TABBAR_MARGIN, false)).toEqual({
+      x: 8,
+      y: 0,
+      w: 192,
+      h: 24,
+    });
   });
 
   it('CENTER alignment spans the full width, no inset', () => {
-    expect(tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_CENTER, 8, NO_TABBAR_MARGIN, false)).toEqual({ x: 0, y: 0, w: 200, h: 24 });
+    expect(tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_CENTER, 8, NO_TABBAR_MARGIN, false)).toEqual(
+      { x: 0, y: 0, w: 200, h: 24 }
+    );
   });
 
   it('RIGHT alignment insets the bar by side_margin on the right only', () => {
-    expect(tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_RIGHT, 8, NO_TABBAR_MARGIN, false)).toEqual({ x: 0, y: 0, w: 192, h: 24 });
+    expect(tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_RIGHT, 8, NO_TABBAR_MARGIN, false)).toEqual({
+      x: 0,
+      y: 0,
+      w: 192,
+      h: 24,
+    });
   });
 
-  it('BOTTOM position places the strip at the container\'s own bottom edge', () => {
-    expect(tabBarRect(RECT, 24, TABS_POSITION_BOTTOM, TAB_ALIGNMENT_LEFT, 8, NO_TABBAR_MARGIN, false)).toEqual({ x: 8, y: 76, w: 192, h: 24 });
+  it("BOTTOM position places the strip at the container's own bottom edge", () => {
+    expect(
+      tabBarRect(RECT, 24, TABS_POSITION_BOTTOM, TAB_ALIGNMENT_LEFT, 8, NO_TABBAR_MARGIN, false)
+    ).toEqual({ x: 8, y: 76, w: 192, h: 24 });
   });
 });
 
@@ -175,8 +201,14 @@ describe('tabContainerMinimumSize', () => {
 
   it('never widens for tab_alignment CENTER (side_margin only applies to LEFT/RIGHT, tab_container.cpp:1039)', () => {
     const p = page('Only');
-    const centered = tabContainerMinimumSize(tabContainer('T', { tabsVisible: true, tabAlignment: TAB_ALIGNMENT_CENTER }, [p]), ctx());
-    const left = tabContainerMinimumSize(tabContainer('T', { tabsVisible: true, tabAlignment: TAB_ALIGNMENT_LEFT }, [p]), ctx());
+    const centered = tabContainerMinimumSize(
+      tabContainer('T', { tabsVisible: true, tabAlignment: TAB_ALIGNMENT_CENTER }, [p]),
+      ctx()
+    );
+    const left = tabContainerMinimumSize(
+      tabContainer('T', { tabsVisible: true, tabAlignment: TAB_ALIGNMENT_LEFT }, [p]),
+      ctx()
+    );
     expect(left.x).toBeGreaterThan(centered.x);
   });
 });
@@ -186,7 +218,17 @@ describe('tabContainerLayout', () => {
     const current = page('Current');
     const hidden = page('Hidden', { visible: false });
     const n = tabContainer('T', { tabsVisible: true, tabsPosition: TABS_POSITION_TOP }, [current, hidden]);
-    const rects = asMap(tabContainerLayout(n, [{ node: current, minSize: { x: 0, y: 0 } }, { node: hidden, minSize: { x: 0, y: 0 } }], { x: 0, y: 0, w: 200, h: 100 }, ctx()));
+    const rects = asMap(
+      tabContainerLayout(
+        n,
+        [
+          { node: current, minSize: { x: 0, y: 0 } },
+          { node: hidden, minSize: { x: 0, y: 0 } },
+        ],
+        { x: 0, y: 0, w: 200, h: 100 },
+        ctx()
+      )
+    );
     expect(rects.get('Current')).toEqual(rects.get('Hidden'));
     // The content rect starts below wherever the (non-zero) tab strip ends.
     expect(rects.get('Current')!.y).toBeGreaterThan(0);
@@ -195,7 +237,9 @@ describe('tabContainerLayout', () => {
   it('tabs_visible=false gives the page the WHOLE rect — no header inset at all', () => {
     const p = page('Only');
     const n = tabContainer('T', { tabsVisible: false }, [p]);
-    const rects = asMap(tabContainerLayout(n, [{ node: p, minSize: { x: 0, y: 0 } }], { x: 0, y: 0, w: 200, h: 100 }, ctx()));
+    const rects = asMap(
+      tabContainerLayout(n, [{ node: p, minSize: { x: 0, y: 0 } }], { x: 0, y: 0, w: 200, h: 100 }, ctx())
+    );
     expect(rects.get('Only')).toEqual({ x: 0, y: 0, w: 200, h: 100 });
   });
 
@@ -253,7 +297,9 @@ describe('tabBarRect with an authored tabbar_background margin', () => {
   it('leaves a CENTER-aligned bar in the same place either way (the swap and the mirror cancel)', () => {
     const ltr = tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_CENTER, 8, TABBAR_MARGIN, false);
     expect(ltr).toEqual({ x: 10, y: 5, w: 360, h: 24 });
-    expect(tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_CENTER, 8, TABBAR_MARGIN, true)).toEqual(ltr);
+    expect(tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_CENTER, 8, TABBAR_MARGIN, true)).toEqual(
+      ltr
+    );
   });
 
   it('moves a RIGHT-aligned bar\u2019s side_margin to the leading edge under RTL (tab_container.cpp:438-453)', () => {
@@ -292,9 +338,10 @@ describe('the tabbar style margins reach the minimum size and the page band', ()
   it("adds all four of the tabbar style's margins to the minimum size (tab_container.cpp:1032-1033)", () => {
     const p = page('Only', { customMinimumSize: { x: 10, y: 10 } });
     const bare = tabContainerMinimumSize(tabContainer('T', { tabsVisible: true }, [p]), ctx());
-    const margined = 
-      tabContainerMinimumSize(tabContainer('T', { tabsVisible: true }, [p], tabbarBackgroundStyleBoxes()), ctx())
-    ;
+    const margined = tabContainerMinimumSize(
+      tabContainer('T', { tabsVisible: true }, [p], tabbarBackgroundStyleBoxes()),
+      ctx()
+    );
     expect(margined.x - bare.x).toBe(TABBAR_MARGIN.left + TABBAR_MARGIN.right);
     expect(margined.y - bare.y).toBe(TABBAR_MARGIN.top + TABBAR_MARGIN.bottom);
   });
@@ -303,9 +350,16 @@ describe('the tabbar style margins reach the minimum size and the page band', ()
     const p = page('Only');
     const child = [{ node: p, minSize: { x: 0, y: 0 } }];
     const rect: Rect2 = { x: 0, y: 0, w: 200, h: 200 };
-    const bare = asMap(tabContainerLayout(tabContainer('T', { tabsVisible: true }, [p]), child, rect, ctx())).get('Only')!;
+    const bare = asMap(
+      tabContainerLayout(tabContainer('T', { tabsVisible: true }, [p]), child, rect, ctx())
+    ).get('Only')!;
     const margined = asMap(
-      tabContainerLayout(tabContainer('T', { tabsVisible: true }, [p], tabbarBackgroundStyleBoxes()), child, rect, ctx())
+      tabContainerLayout(
+        tabContainer('T', { tabsVisible: true }, [p], tabbarBackgroundStyleBoxes()),
+        child,
+        rect,
+        ctx()
+      )
     ).get('Only')!;
     expect(margined.y - bare.y).toBe(TABBAR_MARGIN.top + TABBAR_MARGIN.bottom);
     expect(bare.h - margined.h).toBe(TABBAR_MARGIN.top + TABBAR_MARGIN.bottom);
@@ -316,7 +370,12 @@ describe('the tabbar style margins reach the minimum size and the page band', ()
     const child = [{ node: p, minSize: { x: 0, y: 0 } }];
     const rect: Rect2 = { x: 0, y: 0, w: 200, h: 200 };
     const rects = asMap(
-      tabContainerLayout(tabContainer('T', { tabsVisible: false }, [p], tabbarBackgroundStyleBoxes()), child, rect, ctx())
+      tabContainerLayout(
+        tabContainer('T', { tabsVisible: false }, [p], tabbarBackgroundStyleBoxes()),
+        child,
+        rect,
+        ctx()
+      )
     );
     expect(rects.get('Only')).toEqual(rect);
   });
@@ -325,13 +384,17 @@ describe('the tabbar style margins reach the minimum size and the page band', ()
 describe('the page band under RTL', () => {
   /** A `theme_override_styles/panel` whose left and right content margins differ. */
   function panelStyleBoxes(): SolveNode['styleBoxes'] {
-    return { panel: { ...nativeTheme(1).widgets.panel, contentMargin: { left: 6, top: 3, right: 26, bottom: 3 } } };
+    return {
+      panel: { ...nativeTheme(1).widgets.panel, contentMargin: { left: 6, top: 3, right: 26, bottom: 3 } },
+    };
   }
 
   function pageRect(rtl: boolean): Rect2 {
     const p = page('Only');
     const n = { ...tabContainer('T', { tabsVisible: false }, [p], panelStyleBoxes()), rtl };
-    const rects = asMap(tabContainerLayout(n, [{ node: p, minSize: { x: 0, y: 0 } }], { x: 0, y: 0, w: 300, h: 120 }, ctx()));
+    const rects = asMap(
+      tabContainerLayout(n, [{ node: p, minSize: { x: 0, y: 0 } }], { x: 0, y: 0, w: 300, h: 120 }, ctx())
+    );
     return rects.get('Only')!;
   }
 
@@ -353,9 +416,16 @@ describe('the page band under RTL', () => {
     };
     const child = [{ node: p, minSize: { x: 0, y: 0 } }];
     const rect: Rect2 = { x: 0, y: 0, w: 300, h: 120 };
-    const ltr = asMap(tabContainerLayout(tabContainer('T', { tabsVisible: false }, [p], symmetric), child, rect, ctx()));
+    const ltr = asMap(
+      tabContainerLayout(tabContainer('T', { tabsVisible: false }, [p], symmetric), child, rect, ctx())
+    );
     const rtl = asMap(
-      tabContainerLayout({ ...tabContainer('T', { tabsVisible: false }, [p], symmetric), rtl: true }, child, rect, ctx())
+      tabContainerLayout(
+        { ...tabContainer('T', { tabsVisible: false }, [p], symmetric), rtl: true },
+        child,
+        rect,
+        ctx()
+      )
     );
     expect(rtl.get('Only')).toEqual(ltr.get('Only'));
   });
@@ -365,7 +435,9 @@ describe('the page band under RTL', () => {
     // so a container holding only one has no tabs and therefore no header.
     const p = page('Floating', { topLevel: true } as never);
     const n = tabContainer('T', { tabsVisible: true }, [p], tabbarBackgroundStyleBoxes());
-    const rects = asMap(tabContainerLayout(n, [{ node: p, minSize: { x: 0, y: 0 } }], { x: 0, y: 0, w: 200, h: 100 }, ctx()));
+    const rects = asMap(
+      tabContainerLayout(n, [{ node: p, minSize: { x: 0, y: 0 } }], { x: 0, y: 0, w: 200, h: 100 }, ctx())
+    );
     expect(rects.get('Floating')!.y).toBe(0);
   });
 });
@@ -392,11 +464,19 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
     };
   }
 
-  function container(props: Partial<TabContainerProperties>, projectTheme: ThemeResource | null = null): SolveNode {
+  function container(
+    props: Partial<TabContainerProperties>,
+    projectTheme: ThemeResource | null = null
+  ): SolveNode {
     return {
       ...solveNode(),
       path: 'Tabs',
-      node: { name: 'Tabs', type: 'TabContainer', children: [], properties: { name: 'Tabs', ...props } as TabContainerProperties },
+      node: {
+        name: 'Tabs',
+        type: 'TabContainer',
+        children: [],
+        properties: { name: 'Tabs', ...props } as TabContainerProperties,
+      },
       projectTheme,
     };
   }
@@ -411,7 +491,9 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
   });
 
   it("pushes a theme entry addressed to TabContainer, which the bar's own type chain would never find", () => {
-    const projectTheme = themeResource({ fontSizes: { TabContainer: { font_size: 22 }, TabBar: { font_size: 9 } } });
+    const projectTheme = themeResource({
+      fontSizes: { TabContainer: { font_size: 22 }, TabBar: { font_size: 9 } },
+    });
     expect(barFontSize(container({}, projectTheme))).toBe(22);
   });
 
@@ -419,10 +501,12 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
     expect(barFontSize(container({}))).toBe(THEME.fontSize);
   });
 
-  it("pushes the FONT the same way, off a TabContainer-addressed theme entry (tab_container.cpp:338)", () => {
+  it('pushes the FONT the same way, off a TabContainer-addressed theme entry (tab_container.cpp:338)', () => {
     const containerFont: FontResource = { kind: 'system', fontNames: ['Container Face'], properties: {} };
     const barFont: FontResource = { kind: 'system', fontNames: ['Bar Face'], properties: {} };
-    const projectTheme = themeResource({ fonts: { TabContainer: { font: containerFont }, TabBar: { font: barFont } } });
+    const projectTheme = themeResource({
+      fonts: { TabContainer: { font: containerFont }, TabBar: { font: barFont } },
+    });
     const n = container({}, projectTheme);
     const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties, THEME);
     expect(bar.fontOverrides.font).toBe(containerFont);

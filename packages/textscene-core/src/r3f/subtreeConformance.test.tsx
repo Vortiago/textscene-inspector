@@ -17,9 +17,7 @@ import type { TscnNode } from '../parser/types';
  * empty property block: every default, nothing authored.
  */
 function parseBareNode(type: string): TscnNode {
-  const scene = new TscnParser().parse(
-    `[gd_scene format=3]\n\n[node name="Probe" type="${type}"]\n`
-  );
+  const scene = new TscnParser().parse(`[gd_scene format=3]\n\n[node name="Probe" type="${type}"]\n`);
   return scene.nodes[0]!;
 }
 

@@ -11,9 +11,7 @@ export function decodePrismMesh(properties: Record<string, string>): PrismMeshPr
     try {
       size = parseVector3(properties.size);
     } catch (error) {
-      warn(
-        `Failed to parse PrismMesh size: ${error instanceof Error ? error.message : String(error)}`
-      );
+      warn(`Failed to parse PrismMesh size: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

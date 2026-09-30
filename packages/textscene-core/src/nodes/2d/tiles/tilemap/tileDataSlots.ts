@@ -8,7 +8,12 @@ import { accepts, propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { markIntSlot } from '../../../../linter/validators/intSlot.js';
 import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
-import { boolLiteralAsNumber, packedArrayLiteral, parseGodotFloat, ruleInt } from '../../../../godot/index.js';
+import {
+  boolLiteralAsNumber,
+  packedArrayLiteral,
+  parseGodotFloat,
+  ruleInt,
+} from '../../../../godot/index.js';
 import { replayPositions } from '../../../../godot/propertyReplay.js';
 
 /** `format` initialises to TILE_MAP_DATA_FORMAT_3, which is 2 (tile_map.h:64). */
@@ -29,7 +34,12 @@ export const formatValidator: PropertyValidator = accepts((key, value, line) => 
   const text = value.trim();
   if (INT_LITERAL_RE.test(text)) return null;
   if (parseGodotFloat(text) === null && boolLiteralAsNumber(text) === undefined) {
-    return propertyError(key, line, `Property 'format' must be an integer, got: "${value}"`, 'INVALID_FORMAT_FORMAT');
+    return propertyError(
+      key,
+      line,
+      `Property 'format' must be an integer, got: "${value}"`,
+      'INVALID_FORMAT_FORMAT'
+    );
   }
   return propertyError(
     key,

@@ -12,10 +12,9 @@ import { buildMaterial } from './buildMaterial.testkit';
 import { parseStandardMaterial3DScalars } from './scalars';
 
 function withScale(scale: number, texture: THREE.Texture): THREE.MeshStandardMaterial {
-  return buildMaterial(
-    parseStandardMaterial3DScalars({ uv1_scale: `Vector3(${scale}, ${scale}, 1)` }),
-    { albedo_texture: texture }
-  ) as THREE.MeshStandardMaterial;
+  return buildMaterial(parseStandardMaterial3DScalars({ uv1_scale: `Vector3(${scale}, ${scale}, 1)` }), {
+    albedo_texture: texture,
+  }) as THREE.MeshStandardMaterial;
 }
 
 /**

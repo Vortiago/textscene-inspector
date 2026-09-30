@@ -15,9 +15,7 @@ describe('Marker2D validators', () => {
   /** Diagnostics naming `gizmo_extents` for a scene carrying that value. */
   const extentsDiagnostics = (value: string) =>
     linter
-      .lint(
-        `[gd_scene format=3]\n\n[node name="Marker2D" type="Marker2D"]\ngizmo_extents = ${value}\n`
-      )
+      .lint(`[gd_scene format=3]\n\n[node name="Marker2D" type="Marker2D"]\ngizmo_extents = ${value}\n`)
       .filter((d) => d.message.toLowerCase().includes('gizmo_extents'));
 
   it('accepts a valid float gizmo_extents', () => {

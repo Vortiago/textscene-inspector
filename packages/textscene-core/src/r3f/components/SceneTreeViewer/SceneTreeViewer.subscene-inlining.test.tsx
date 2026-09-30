@@ -45,7 +45,7 @@ function wrap(loader: ResourceLoader, sceneGraph: ReturnType<typeof createSceneG
 }
 
 describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
-  it('renders a sub-scene\'s root nodes as inline children of the instance row when the loader has it cached', () => {
+  it("renders a sub-scene's root nodes as inline children of the instance row when the loader has it cached", () => {
     const fake = createFakeResourceLoader();
 
     // Sub-scene's content: a Node3D named "Frame" containing a MeshInstance3D.
@@ -75,7 +75,10 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
 
     const instanceRow = screen.getByText('PhotoFrame1').closest('[data-node-path]');
     expect(instanceRow).not.toBeNull();
-    expect(instanceRow!.getAttribute('aria-expanded') ?? instanceRow!.querySelector('[aria-expanded]')?.getAttribute('aria-expanded')).toBeDefined();
+    expect(
+      instanceRow!.getAttribute('aria-expanded') ??
+        instanceRow!.querySelector('[aria-expanded]')?.getAttribute('aria-expanded')
+    ).toBeDefined();
 
     // Only a row with children has the chevron (▶), not the leaf bullet (•).
     expect(instanceRow!.textContent).toContain('▶');
@@ -318,10 +321,7 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
       internalResources: [],
     });
     const graph = createSceneGraphFromTscnScene({
-      nodes: [
-        makeNode('Frame', 'Node3D', { instance: 'ExtResource("f")' }),
-        makeNode('Other', 'Node3D'),
-      ],
+      nodes: [makeNode('Frame', 'Node3D', { instance: 'ExtResource("f")' }), makeNode('Other', 'Node3D')],
       externalResources: [makeExtResource('f', 'res://frame.tscn')],
       internalResources: [],
     });
@@ -334,9 +334,7 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
 
     // The search walks the live tree: it keeps the instance row, an ancestor of
     // the match, and hides only the unrelated sibling.
-    act(() =>
-      fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'special' } })
-    );
+    act(() => fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'special' } }));
     expect(screen.getByText('Frame')).toBeTruthy();
     expect(screen.getByText('SpecialMesh')).toBeTruthy();
     expect(screen.queryByText('Other')).toBeNull();

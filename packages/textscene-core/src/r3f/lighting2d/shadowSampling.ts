@@ -92,9 +92,10 @@ export function updateShadowPolarTexture(
   return existing;
 }
 
-export function shadowSamplingParameters(
-  shadow: ShadowSampling
-): Pick<THREE.ShaderMaterialParameters, 'defines'> & {
+export function shadowSamplingParameters(shadow: ShadowSampling): Pick<
+  THREE.ShaderMaterialParameters,
+  'defines'
+> & {
   uniforms: Record<string, THREE.IUniform>;
 } {
   return {

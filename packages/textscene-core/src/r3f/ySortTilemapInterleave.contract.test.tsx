@@ -119,7 +119,7 @@ describe('Y-sort TileMapLayer per-Y interleave (issue #74 dungeon symptom)', () 
     expect(decorZ!).toBeLessThan(Math.max(...tileZ));
   });
 
-  it('keeps every expanded tile row inside the y-sort subtree\'s own draw-sequence run', async () => {
+  it("keeps every expanded tile row inside the y-sort subtree's own draw-sequence run", async () => {
     // The rows share the layer's own reserve (`canvasPaintOrder.ts`). A fresh reserve
     // per row runs off the subtree's run into the next sibling's, which the test above
     // misses: its decoration sits inside the same subtree and overflows with it.

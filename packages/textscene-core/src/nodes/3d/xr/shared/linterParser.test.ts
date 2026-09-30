@@ -35,7 +35,11 @@ const KEYS: string[] = [
 ];
 /** True only when the class binds no ADD_PROPERTY, beside the source line that proves it. */
 const DECLARES_NOTHING = false;
-const LEAVES = ["OpenXRCompositionLayerCylinder","OpenXRCompositionLayerEquirect","OpenXRCompositionLayerQuad"] as const;
+const LEAVES = [
+  'OpenXRCompositionLayerCylinder',
+  'OpenXRCompositionLayerEquirect',
+  'OpenXRCompositionLayerQuad',
+] as const;
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(nodeType: string, property: string, value: string) {
@@ -99,22 +103,26 @@ describe('OpenXRCompositionLayer shared validators', () => {
     });
     it('accepts the widest enum (swizzle, 0-5) and warns past it', () => {
       expect(check('OpenXRCompositionLayerQuad', 'swapchain_state_red_swizzle', '5')).toBeNull();
-      expect(check('OpenXRCompositionLayerQuad', 'swapchain_state_red_swizzle', '6')?.severity).toBe('warning');
+      expect(check('OpenXRCompositionLayerQuad', 'swapchain_state_red_swizzle', '6')?.severity).toBe(
+        'warning'
+      );
     });
   });
 
   describe('swapchain_state_max_anisotropy', () => {
     it('accepts the hinted range and warns outside it', () => {
       expect(check('OpenXRCompositionLayerQuad', 'swapchain_state_max_anisotropy', '16')).toBeNull();
-      expect(
-        check('OpenXRCompositionLayerQuad', 'swapchain_state_max_anisotropy', '17')?.severity
-      ).toBe('warning');
+      expect(check('OpenXRCompositionLayerQuad', 'swapchain_state_max_anisotropy', '17')?.severity).toBe(
+        'warning'
+      );
     });
   });
 
   describe('swapchain_state_border_color', () => {
     it('accepts a Color literal', () => {
-      expect(check('OpenXRCompositionLayerQuad', 'swapchain_state_border_color', 'Color(0, 0, 0, 1)')).toBeNull();
+      expect(
+        check('OpenXRCompositionLayerQuad', 'swapchain_state_border_color', 'Color(0, 0, 0, 1)')
+      ).toBeNull();
     });
   });
 

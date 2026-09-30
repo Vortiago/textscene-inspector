@@ -87,6 +87,9 @@ describe('a resource slot holding an integer index', () => {
     expect(lint(content)).toEqual([]);
     const parsed = new TscnParser().parse(content);
     expect(parsed.internalResources?.[0]?.id).toBe('3');
-    expect(resolveResourceSlot(parsed, 'SubResource(3)')).toEqual({ kind: 'resolved', type: 'RectangleShape2D' });
+    expect(resolveResourceSlot(parsed, 'SubResource(3)')).toEqual({
+      kind: 'resolved',
+      type: 'RectangleShape2D',
+    });
   });
 });

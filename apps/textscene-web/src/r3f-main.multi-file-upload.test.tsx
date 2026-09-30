@@ -30,9 +30,7 @@ vi.mock('@textscene/core', async () => {
       }),
     useMissingResources: () => {
       const value = real.useMissingResources();
-      return missingPathsOverride.current
-        ? { ...value, missingPaths: missingPathsOverride.current }
-        : value;
+      return missingPathsOverride.current ? { ...value, missingPaths: missingPathsOverride.current } : value;
     },
   };
 });

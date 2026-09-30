@@ -34,10 +34,7 @@ describe('parseNode', () => {
   });
 
   it('parses ExtResource instance reference', () => {
-    const p = parseNode(
-      heading('Node', { name: 'Enemy', instance: 'ExtResource("1_scene")' }),
-      {}
-    );
+    const p = parseNode(heading('Node', { name: 'Enemy', instance: 'ExtResource("1_scene")' }), {});
     expect(p.instance).toBe('ExtResource("1_scene")');
   });
 

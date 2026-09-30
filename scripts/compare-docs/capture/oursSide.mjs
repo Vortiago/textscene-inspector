@@ -4,7 +4,7 @@
  * runs fight over one port.
  */
 
-import {existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { chromium } from 'playwright';
 import { SWIFTSHADER_GL_ARGS } from '../../showcase/browser.mjs';
 import {

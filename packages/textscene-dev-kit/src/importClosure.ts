@@ -73,11 +73,7 @@ function isWorkspaceSpecifier(spec: string, aliases: Record<string, string>): bo
 }
 
 /** The on-disk source file of a relative or aliased specifier, or null. */
-function resolveSpecifier(
-  fromFile: string,
-  spec: string,
-  aliases: Record<string, string>
-): string | null {
+function resolveSpecifier(fromFile: string, spec: string, aliases: Record<string, string>): string | null {
   let base: string | undefined;
   if (spec.startsWith('.')) {
     base = resolve(dirname(fromFile), spec);
@@ -109,10 +105,7 @@ function resolveSpecifier(
 }
 
 /** The static value-import closure of `entry`. */
-export function walkImportClosure(
-  entry: string,
-  options: WalkImportClosureOptions = {}
-): ImportClosure {
+export function walkImportClosure(entry: string, options: WalkImportClosureOptions = {}): ImportClosure {
   const aliases = options.packageAliases ?? {};
   const exclude = options.exclude;
   const relativeTo = options.relativeTo;

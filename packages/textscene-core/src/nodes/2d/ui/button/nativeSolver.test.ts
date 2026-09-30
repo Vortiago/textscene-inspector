@@ -43,7 +43,12 @@ function node(
   return {
     ...solveNode(),
     path: 'B',
-    node: { name: 'B', type: 'Button', children: [], properties: { name: 'B', ...props } as ButtonProperties },
+    node: {
+      name: 'B',
+      type: 'Button',
+      children: [],
+      properties: { name: 'B', ...props } as ButtonProperties,
+    },
     styleBoxes,
     textureSize,
     // A local theme_override_colors/* reaches `resolveTextTheme` through
@@ -176,10 +181,7 @@ describe('buttonMinimumSize — icon contribution (!expand_icon && icon present)
   });
 
   it('vertical_icon_alignment CENTER: a TALLER icon floors the height instead of the text', () => {
-    const result = minSize(
-      node({ text: 'AB' }, {}, { x: 10, y: 40 }),
-      ctx()
-    );
+    const result = minSize(node({ text: 'AB' }, {}, { x: 10, y: 40 }), ctx());
     expect(result.y).toBe(8 + 40);
   });
 
@@ -188,20 +190,14 @@ describe('buttonMinimumSize — icon contribution (!expand_icon && icon present)
       'once as the initial paragraph size, once again as the final font_height add) — ported verbatim from ' +
       'button.cpp:322-329,515-522, not a divergence this port introduces',
     () => {
-      const result = minSize(
-        node({ text: 'AB', verticalIconAlignment: 0 }, {}, { x: 10, y: 15 }),
-        ctx()
-      );
+      const result = minSize(node({ text: 'AB', verticalIconAlignment: 0 }, {}, { x: 10, y: 15 }), ctx());
       // 23 (initial text) + 15 (icon, += branch) + 23 (final font_height, += branch) = 61.
       expect(result.y).toBe(8 + 61);
     }
   );
 
   it('icon_alignment CENTER: width is the MAX of icon/text, no h_separation added', () => {
-    const result = minSize(
-      node({ text: 'AB', iconAlignment: 1 }, {}, { x: 30, y: 10 }),
-      ctx()
-    );
+    const result = minSize(node({ text: 'AB', iconAlignment: 1 }, {}, { x: 30, y: 10 }), ctx());
     expect(result.x).toBeCloseTo(8 + 30, 6); // 30 > 21.125, floors width; no +4 separation
   });
 
@@ -353,7 +349,7 @@ describe('buttonMinimumSize — the shaped text extent is ceiled (text_server_ad
     ['Apply', 52],
     ['Restore defaults', 135],
     ['Back to bridge', 119],
-  ])('%p reaches Godot\'s own whole-pixel minimum width %p', (text, expected) => {
+  ])("%p reaches Godot's own whole-pixel minimum width %p", (text, expected) => {
     expect(minSize(node({ text }), ctx()).x).toBe(expected);
   });
 
@@ -426,6 +422,9 @@ describe('buttonLabelShape — the wrap width and trim flags reach the shaper (b
   it('keeps the trailing edge space when autowrap_trim_flags clears it (label.h:45)', () => {
     // BREAK_TRIM_START_EDGE_SPACES | BREAK_TRIM_END_EDGE_SPACES is 64 | 128.
     // Authoring 0 keeps both edges.
-    expect(rows({ text: 'alpha bravo', autowrapMode: 2, autowrapTrimFlags: 0 }, 50)).toEqual(['alpha ', 'bravo']);
+    expect(rows({ text: 'alpha bravo', autowrapMode: 2, autowrapTrimFlags: 0 }, 50)).toEqual([
+      'alpha ',
+      'bravo',
+    ]);
   });
 });

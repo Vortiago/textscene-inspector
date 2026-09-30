@@ -29,25 +29,33 @@ export const RADIAN_ROUNDTRIP_EPSILON = 0.0001;
 export const floatCombinators = {
   /** Float in a range. Either bound is optional. */
   float(name: string, opts: FloatOpts = {}): PropertyValidator {
-    return maybeNan(name, opts, maybeFinite(name, opts, ground(
-      accepts(
-        createNumericRangeValidator({
-          propertyName: name,
-          min: opts.min ?? null,
-          max: opts.max ?? null,
-          enforcedMin: opts.enforcedMin,
-          enforcedMax: opts.enforcedMax,
-          message: opts.message,
-          errorCodeFormat: formatCode(name),
-          errorCodeValue: valueCode(name),
-          minSeverity: endSeverity(opts, 'min'),
-          maxSeverity: endSeverity(opts, 'max'),
-        }),
-        numericRange('float', opts.min, opts.max, opts)
-      ),
+    return maybeNan(
+      name,
       opts,
-      { min: opts.min, max: opts.max, enforcedMin: opts.enforcedMin, enforcedMax: opts.enforcedMax }
-    )));
+      maybeFinite(
+        name,
+        opts,
+        ground(
+          accepts(
+            createNumericRangeValidator({
+              propertyName: name,
+              min: opts.min ?? null,
+              max: opts.max ?? null,
+              enforcedMin: opts.enforcedMin,
+              enforcedMax: opts.enforcedMax,
+              message: opts.message,
+              errorCodeFormat: formatCode(name),
+              errorCodeValue: valueCode(name),
+              minSeverity: endSeverity(opts, 'min'),
+              maxSeverity: endSeverity(opts, 'max'),
+            }),
+            numericRange('float', opts.min, opts.max, opts)
+          ),
+          opts,
+          { min: opts.min, max: opts.max, enforcedMin: opts.enforcedMin, enforcedMax: opts.enforcedMax }
+        )
+      )
+    );
   },
 
   /**
@@ -65,17 +73,17 @@ export const floatCombinators = {
     const lowDeg = opts.minDeg ?? 0;
     return ground(
       accepts(
-      createNumericRangeValidator({
-        propertyName: name,
-        min,
-        max,
-        message: `Property '${name}' must be between ${min.toFixed(4)} and ${max.toFixed(4)} radians (${lowDeg} to ${opts.maxDeg} degrees)`,
-        errorCodeFormat: formatCode(name),
-        errorCodeValue: valueCode(name),
-        minSeverity: endSeverity(opts, 'min'),
-        maxSeverity: endSeverity(opts, 'max'),
-      }),
-      `radians, ${lowDeg}° to ${opts.maxDeg}°`
+        createNumericRangeValidator({
+          propertyName: name,
+          min,
+          max,
+          message: `Property '${name}' must be between ${min.toFixed(4)} and ${max.toFixed(4)} radians (${lowDeg} to ${opts.maxDeg} degrees)`,
+          errorCodeFormat: formatCode(name),
+          errorCodeValue: valueCode(name),
+          minSeverity: endSeverity(opts, 'min'),
+          maxSeverity: endSeverity(opts, 'max'),
+        }),
+        `radians, ${lowDeg}° to ${opts.maxDeg}°`
       ),
       opts,
       { min, max }
@@ -92,11 +100,7 @@ export const floatCombinators = {
    * setter end at 0, never `Number.MIN_VALUE` in the `min` slot. Pass the hint's
    * own floor as `min`, and the band between the two warns.
    */
-  positiveFloat(
-    name: string,
-    message?: string,
-    opts: Grounding & { min?: number } = {}
-  ): PropertyValidator {
+  positiveFloat(name: string, message?: string, opts: Grounding & { min?: number } = {}): PropertyValidator {
     const enforcedMin = { at: 0, exclusive: true };
     // The setter's end merged into `opts`, so `endSeverity` derives the tier
     // here the same way it does for every other combinator.

@@ -16,7 +16,11 @@ import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { getFontAscentPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { OverrunBehavior, overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
+import {
+  OverrunBehavior,
+  overrunFlagsForBehavior,
+  trimLineToWidth,
+} from '../../../../r3f/controls/native/text/textOverrun';
 import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
 import {
   linkButtonLabelShape,

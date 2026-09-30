@@ -58,9 +58,7 @@ describe('dangling-resource-reference', () => {
 
   it('keeps the two id spaces apart', () => {
     // `int_resources` and `ext_resources` are separate maps in the loader.
-    expect(
-      dangling(scene(texture, node('CSGBox3D', { material: 'SubResource("1_tex")' })))
-    ).toHaveLength(1);
+    expect(dangling(scene(texture, node('CSGBox3D', { material: 'SubResource("1_tex")' })))).toHaveLength(1);
   });
 
   it('says nothing about a key that is not a registered resource slot', () => {
@@ -92,9 +90,7 @@ describe('dangling-resource-reference', () => {
   });
 
   it('reaches a slot the type inherits from a base', () => {
-    expect(
-      dangling(scene(node('OmniLight3D', { light_projector: 'SubResource("nope")' })))
-    ).toHaveLength(1);
+    expect(dangling(scene(node('OmniLight3D', { light_projector: 'SubResource("nope")' })))).toHaveLength(1);
   });
 
   it('reaches a slot behind a path wildcard, however the tail is spelled', () => {
@@ -104,7 +100,8 @@ describe('dangling-resource-reference', () => {
   });
 
   it('reaches a leaf behind an indexed-family dispatcher, and only a resource leaf', () => {
-    const item = (leaf: string) => node('ItemList', { item_count: 1, [`item_0/${leaf}`]: 'SubResource("nope")' });
+    const item = (leaf: string) =>
+      node('ItemList', { item_count: 1, [`item_0/${leaf}`]: 'SubResource("nope")' });
     expect(lint(scene(item('icon')))).toMatchObject([{ ruleName: RULE }]);
     const diagnostics = lint(scene(item('text')));
     expect(diagnostics).toHaveLength(1);

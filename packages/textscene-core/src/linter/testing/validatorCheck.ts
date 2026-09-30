@@ -49,10 +49,7 @@ export function expectRejected(
  * The value is refused as an error: Godot's setter would refuse or alter it, or
  * the literal never reaches the property at all (ADR-0032).
  */
-export function expectError(
-  error: ParseError | null,
-  ...contains: [string, ...string[]]
-): ParseError {
+export function expectError(error: ParseError | null, ...contains: [string, ...string[]]): ParseError {
   return expectRejected(error, 'error', contains);
 }
 
@@ -60,10 +57,7 @@ export function expectError(
  * The value is refused as a warning: it loads, but lies outside the property's
  * own `PROPERTY_HINT_*`, or is altered before the setter sees it (ADR-0032).
  */
-export function expectWarning(
-  error: ParseError | null,
-  ...contains: [string, ...string[]]
-): ParseError {
+export function expectWarning(error: ParseError | null, ...contains: [string, ...string[]]): ParseError {
   return expectRejected(error, 'warning', contains);
 }
 

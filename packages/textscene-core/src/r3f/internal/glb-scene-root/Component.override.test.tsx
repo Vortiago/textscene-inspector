@@ -208,9 +208,7 @@ describe('GLBSceneRoot — BUG 2 instance override onto GLB-internal node', () =
 
     const renderer = await renderHallwayLamp(fake.loader);
 
-    const mesh = renderer.scene
-      .findAllByType('Mesh')
-      .find((m) => m.instance.name === 'plafoniera');
+    const mesh = renderer.scene.findAllByType('Mesh').find((m) => m.instance.name === 'plafoniera');
     expect(mesh).toBeDefined();
     expect((mesh!.instance as THREE.Object3D).visible).toBe(false);
   });

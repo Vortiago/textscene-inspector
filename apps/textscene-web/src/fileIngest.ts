@@ -5,12 +5,7 @@
  */
 
 import { info, warn } from '@textscene/core/logger';
-import {
-  pickRootMostTscn,
-  matchResourceFiles,
-  extResourcePaths,
-  type MatchResult,
-} from './multiFileUpload';
+import { pickRootMostTscn, matchResourceFiles, extResourcePaths, type MatchResult } from './multiFileUpload';
 
 export interface FileIngestDeps {
   /** The corpus root of the scene on screen. */
@@ -31,9 +26,7 @@ export interface FileIngestDeps {
  * Other files match its ExtResources and the shell's missing paths, so repeated drops
  * bring a sub-scene's dependencies. With no .tscn, files fill missing paths.
  */
-export function createFileIngest(
-  deps: FileIngestDeps
-): (files: readonly File[]) => Promise<void> {
+export function createFileIngest(deps: FileIngestDeps): (files: readonly File[]) => Promise<void> {
   const {
     resourceRoot,
     missingPathsRef,
@@ -54,7 +47,9 @@ export function createFileIngest(
       );
     }
     if (unmatched.length > 0) {
-      info(`[MultiFileUpload] ${unmatched.length} dropped file(s) matched no res:// reference and were ignored.`);
+      info(
+        `[MultiFileUpload] ${unmatched.length} dropped file(s) matched no res:// reference and were ignored.`
+      );
     }
     for (const { path, file } of matches) {
       onResourceUpload(path, file);
@@ -96,9 +91,7 @@ export function createFileIngest(
 
     let tscnPairs: { file: File; text: string }[];
     try {
-      tscnPairs = await Promise.all(
-        tscnFiles.map(async (file) => ({ file, text: await file.text() }))
-      );
+      tscnPairs = await Promise.all(tscnFiles.map(async (file) => ({ file, text: await file.text() })));
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       reportUploadError(`Failed to read TSCN file: ${message}`);
@@ -107,9 +100,7 @@ export function createFileIngest(
 
     const picked = pickRootMostTscn(tscnPairs);
     if (picked.ambiguous) {
-      info(
-        '[MultiFileUpload] Could not determine root-most scene unambiguously; using first .tscn file.'
-      );
+      info('[MultiFileUpload] Could not determine root-most scene unambiguously; using first .tscn file.');
     }
 
     clearUploadError();

@@ -14,5 +14,8 @@ import { layerBitmask } from '../../../linter/validators/index.js';
 // `sorting_offset`, so the validator belongs to that subclass's slice.
 validatorRegistry.registerAll('VisualInstance3D', {
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(..., "layers", PROPERTY_HINT_LAYERS_3D_RENDER)
-  layers: layerBitmask('layers', { hinted: 'visual_instance_3d.cpp:182', width: 'uint32' /* visual_instance_3d.h:72 */ }),
+  layers: layerBitmask('layers', {
+    hinted: 'visual_instance_3d.cpp:182',
+    width: 'uint32' /* visual_instance_3d.h:72 */,
+  }),
 });

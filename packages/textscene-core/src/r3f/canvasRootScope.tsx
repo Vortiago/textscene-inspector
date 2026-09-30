@@ -62,10 +62,7 @@ export function CanvasRootScope({
   // every CanvasItem child (`canvas_item.cpp:102-108`). So that root stays inside its ancestors'
   // groups, where an eye toggle and `visible = false` reach it, and cancels their transform with
   // this inverse. A root whose parent is no CanvasItem escaped them (`parentSpaceScope.tsx`).
-  const inverse = useMemo(
-    () => (isRoot && ambient ? ambient.clone().invert() : null),
-    [isRoot, ambient]
-  );
+  const inverse = useMemo(() => (isRoot && ambient ? ambient.clone().invert() : null), [isRoot, ambient]);
   if (!isRoot) return <>{children}</>;
 
   const scoped = (

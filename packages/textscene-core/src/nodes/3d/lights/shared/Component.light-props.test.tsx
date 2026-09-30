@@ -62,9 +62,7 @@ describe('Lights — properties (assertions 67–80)', () => {
   });
 
   it('#68 DirectionalLight3D.light_energy → DirectionalLight.intensity (scaled)', async () => {
-    const r = await ReactThreeTestRenderer.create(
-      <DirectionalLight3D node={dirNode({ light_energy: 2 })} />
-    );
+    const r = await ReactThreeTestRenderer.create(<DirectionalLight3D node={dirNode({ light_energy: 2 })} />);
     const l = r.scene.findByType('DirectionalLight');
     expect(instanceAs<THREE.DirectionalLight>(l).intensity).toBe(2 * LIGHT_INTENSITY_SCALE);
   });
@@ -92,25 +90,19 @@ describe('Lights — properties (assertions 67–80)', () => {
   });
 
   it('#72 OmniLight3D.light_energy → PointLight.intensity (scaled)', async () => {
-    const r = await ReactThreeTestRenderer.create(
-      <OmniLight3D node={omniNode({ light_energy: 1.5 })} />
-    );
+    const r = await ReactThreeTestRenderer.create(<OmniLight3D node={omniNode({ light_energy: 1.5 })} />);
     expect(instanceAs<THREE.PointLight>(r.scene.findByType('PointLight')).intensity).toBe(
       1.5 * LIGHT_INTENSITY_SCALE
     );
   });
 
   it('#73 OmniLight3D.omni_range → PointLight.distance', async () => {
-    const r = await ReactThreeTestRenderer.create(
-      <OmniLight3D node={omniNode({ omni_range: 12 })} />
-    );
+    const r = await ReactThreeTestRenderer.create(<OmniLight3D node={omniNode({ omni_range: 12 })} />);
     expect(instanceAs<THREE.PointLight>(r.scene.findByType('PointLight')).distance).toBe(12);
   });
 
   it('#74 OmniLight3D.shadow_enabled → light.castShadow', async () => {
-    const r = await ReactThreeTestRenderer.create(
-      <OmniLight3D node={omniNode({ shadow_enabled: true })} />
-    );
+    const r = await ReactThreeTestRenderer.create(<OmniLight3D node={omniNode({ shadow_enabled: true })} />);
     expect(instanceAs<THREE.PointLight>(r.scene.findByType('PointLight')).castShadow).toBe(true);
   });
 
@@ -122,29 +114,20 @@ describe('Lights — properties (assertions 67–80)', () => {
   });
 
   it('#76 SpotLight3D.light_energy → SpotLight.intensity (scaled)', async () => {
-    const r = await ReactThreeTestRenderer.create(
-      <SpotLight3D node={spotNode({ light_energy: 3 })} />
-    );
+    const r = await ReactThreeTestRenderer.create(<SpotLight3D node={spotNode({ light_energy: 3 })} />);
     expect(instanceAs<THREE.SpotLight>(r.scene.findByType('SpotLight')).intensity).toBe(
       3 * LIGHT_INTENSITY_SCALE
     );
   });
 
   it('#77 SpotLight3D.spot_range → SpotLight.distance', async () => {
-    const r = await ReactThreeTestRenderer.create(
-      <SpotLight3D node={spotNode({ spot_range: 25 })} />
-    );
+    const r = await ReactThreeTestRenderer.create(<SpotLight3D node={spotNode({ spot_range: 25 })} />);
     expect(instanceAs<THREE.SpotLight>(r.scene.findByType('SpotLight')).distance).toBe(25);
   });
 
   it('#78 SpotLight3D.spot_angle (degrees) → SpotLight.angle (radians)', async () => {
-    const r = await ReactThreeTestRenderer.create(
-      <SpotLight3D node={spotNode({ spot_angle: 90 })} />
-    );
-    expect(instanceAs<THREE.SpotLight>(r.scene.findByType('SpotLight')).angle).toBeCloseTo(
-      Math.PI / 2,
-      5
-    );
+    const r = await ReactThreeTestRenderer.create(<SpotLight3D node={spotNode({ spot_angle: 90 })} />);
+    expect(instanceAs<THREE.SpotLight>(r.scene.findByType('SpotLight')).angle).toBeCloseTo(Math.PI / 2, 5);
   });
 
   it('#79 SpotLight3D.spot_attenuation → SpotLight.decay (distance falloff)', async () => {
@@ -167,9 +150,7 @@ describe('Lights — properties (assertions 67–80)', () => {
   });
 
   it('#80 SpotLight3D.shadow_enabled → light.castShadow', async () => {
-    const r = await ReactThreeTestRenderer.create(
-      <SpotLight3D node={spotNode({ shadow_enabled: true })} />
-    );
+    const r = await ReactThreeTestRenderer.create(<SpotLight3D node={spotNode({ shadow_enabled: true })} />);
     expect(instanceAs<THREE.SpotLight>(r.scene.findByType('SpotLight')).castShadow).toBe(true);
   });
 });

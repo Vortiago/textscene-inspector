@@ -23,7 +23,12 @@ function flowSolveNode(): SolveNode {
 describe('<HFlowContainer>', () => {
   it('renders no scene objects — a container draws nothing of its own', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <HFlowContainer {...painterEnv()} solveNode={flowSolveNode()} rect={{ x: 0, y: 0, w: 100, h: 40 }} renderOrder={0} />
+      <HFlowContainer
+        {...painterEnv()}
+        solveNode={flowSolveNode()}
+        rect={{ x: 0, y: 0, w: 100, h: 40 }}
+        renderOrder={0}
+      />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });

@@ -21,9 +21,7 @@ export function CanvasItemMaterialProvider({
   value: CanvasItemMaterialProperties | null;
   children: ReactNode;
 }) {
-  return (
-    <CanvasItemMaterialContext.Provider value={value}>{children}</CanvasItemMaterialContext.Provider>
-  );
+  return <CanvasItemMaterialContext.Provider value={value}>{children}</CanvasItemMaterialContext.Provider>;
 }
 
 /** The material inherited from the nearest ancestor that supplies one. */
@@ -37,9 +35,7 @@ export function useInheritedCanvasItemMaterial(): CanvasItemMaterialProperties |
  * and neither gives null. Any other material type resolves to null, since
  * invented blend state is worse than Godot's plain default.
  */
-export function useCanvasItemMaterial(
-  props: Node2DProperties
-): CanvasItemMaterialProperties | null {
+export function useCanvasItemMaterial(props: Node2DProperties): CanvasItemMaterialProperties | null {
   const inherited = useInheritedCanvasItemMaterial();
   const { internalResources } = useSceneResources();
 

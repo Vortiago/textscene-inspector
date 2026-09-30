@@ -8,9 +8,6 @@ import type { ParsedHeading } from '../../../../parser/utils';
 import { parseSlider } from '../shared/slider';
 import type { HSliderProperties } from './types';
 
-export function parseHSlider(
-  heading: ParsedHeading,
-  properties: Record<string, string>
-): HSliderProperties {
+export function parseHSlider(heading: ParsedHeading, properties: Record<string, string>): HSliderProperties {
   return parseSlider(heading, properties);
 }

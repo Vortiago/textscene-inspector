@@ -100,9 +100,7 @@ function reportCallArgs(file: string): string[] {
   let args = callArgs.get(file);
   if (args === undefined) {
     const src = sourceOf(file);
-    args = [...src.matchAll(REPORT_CALL)].map((m) =>
-      balancedGroup(src, m.index + m[0].length - 1)
-    );
+    args = [...src.matchAll(REPORT_CALL)].map((m) => balancedGroup(src, m.index + m[0].length - 1));
     callArgs.set(file, args);
   }
   return args;

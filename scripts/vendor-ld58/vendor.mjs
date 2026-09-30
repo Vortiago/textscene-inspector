@@ -92,7 +92,9 @@ export function vendorLd58() {
       copied++;
     }
 
-    console.log(`[vendor-ld58] vendored ${copied}/${FILES.length} files (${stripped} .tscn script-stripped) into scenes/ld58/`);
+    console.log(
+      `[vendor-ld58] vendored ${copied}/${FILES.length} files (${stripped} .tscn script-stripped) into scenes/ld58/`
+    );
     if (missing.length) {
       console.warn(
         `[vendor-ld58] ${missing.length} manifest path(s) not found at the source ` +
@@ -100,7 +102,10 @@ export function vendorLd58() {
       );
     }
   } catch (err) {
-    console.error('[vendor-ld58] vendoring failed after the source was obtained (scenes/ld58/ may be partial):', err);
+    console.error(
+      '[vendor-ld58] vendoring failed after the source was obtained (scenes/ld58/ may be partial):',
+      err
+    );
     process.exitCode = 1;
   } finally {
     if (work) rmSync(work, { recursive: true, force: true });

@@ -136,7 +136,9 @@ class FakeFontFace {
     FakeFontFace.instances.push(this);
   }
   load(): Promise<FakeFontFace> {
-    return FakeFontFace.loadResult === 'resolve' ? Promise.resolve(this) : Promise.reject(new Error('bad font bytes'));
+    return FakeFontFace.loadResult === 'resolve'
+      ? Promise.resolve(this)
+      : Promise.reject(new Error('bad font bytes'));
   }
 }
 
@@ -255,7 +257,9 @@ describe('bundled font registration gate', () => {
     expect(await resolveBundledCanvasFontMetrics()).toBeUndefined();
     expect(peekBundledCanvasFontMetrics()).toBeUndefined();
     // The door's diagnosis, not the catch's: an absent environment is not broken font bytes.
-    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('No FontFace/document.fonts in this environment'));
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('No FontFace/document.fonts in this environment')
+    );
   });
 });
 
@@ -287,20 +291,27 @@ describe('scene font in an environment with no font door', () => {
 
     const metrics = await resolveSceneFontMetrics(fontFile(new ArrayBuffer(4)), 'Root/NoDom');
     expect(metrics).toBe(bundled);
-    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('no FontFace/document.fonts in this environment'));
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('no FontFace/document.fonts in this environment')
+    );
   });
 
   it('does the same with no `document` at all, rather than throwing off a bare global', async () => {
-    vi.stubGlobal('FontFace', class {
-      load() {
-        return Promise.resolve(this);
+    vi.stubGlobal(
+      'FontFace',
+      class {
+        load() {
+          return Promise.resolve(this);
+        }
       }
-    });
+    );
     vi.stubGlobal('document', undefined);
     const { resolveSceneFontMetrics, logger, bundled } = await loaderWithoutVitestGuard();
 
     const metrics = await resolveSceneFontMetrics(fontFile(new ArrayBuffer(4)), 'Root/NoDocument');
     expect(metrics).toBe(bundled);
-    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('no FontFace/document.fonts in this environment'));
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('no FontFace/document.fonts in this environment')
+    );
   });
 });

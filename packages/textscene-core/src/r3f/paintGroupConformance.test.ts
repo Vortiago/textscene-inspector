@@ -21,9 +21,7 @@ import {
  * the 2D families nest (`nodes/2d/tiles/*`, `nodes/2d/ui/*`), and `r3f/components`
  * holds the shared placeholder every failed resource renders.
  */
-const SOURCE_ROOTS = ['../nodes/2d', '../nodes/base', '../r3f'].map((dir) =>
-  join(import.meta.dirname, dir)
-);
+const SOURCE_ROOTS = ['../nodes/2d', '../nodes/base', '../r3f'].map((dir) => join(import.meta.dirname, dir));
 
 /**
  * Every slice that draws inside a canvas item: `Component.tsx` under `nodes/2d/*`
@@ -86,9 +84,7 @@ describe('Canvas-item paint-group conformance', () => {
     // A multi-line group that does carry the key is not an offender.
     expect(bareGroupLines('  <group\n    renderOrder={7}\n  >')).toEqual([]);
     // A prop value holding a `>` does not close the tag early.
-    expect(
-      bareGroupLines('  <group\n    visible={a > b}\n    renderOrder={1}\n  >')
-    ).toEqual([]);
+    expect(bareGroupLines('  <group\n    visible={a > b}\n    renderOrder={1}\n  >')).toEqual([]);
     expect(bareGroupLines('  <group\n    visible={a > b}\n  >')).toEqual([1]);
     expect(bareGroupLines('  <CanvasItemGroup position={[1, 2, 3]}>')).toEqual([]);
     expect(bareGroupLines(' * a `<group>` in a comment is not a use')).toEqual([]);
