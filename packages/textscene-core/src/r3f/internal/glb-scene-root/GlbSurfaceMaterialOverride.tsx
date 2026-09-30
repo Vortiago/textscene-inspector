@@ -1,99 +1,80 @@
 /**
  * `surface_material_override/0` on a mesh inside a loaded GLB. Not in the pure, synchronous
- * `applyGlbNodeOverrides`: this resolves a reference against the outer scene and loads a `.tres`
- * asynchronously, which React handles declaratively.
+ * `applyGlbNodeOverrides`: its material may load asynchronously, which React handles
+ * declaratively.
  */
 
 import { useEffect, useMemo } from 'react';
 import type * as THREE from 'three';
-import type { TscnInternalResource } from '../../../parser/types.js';
-import { useResource } from '../../../resources/useResource.js';
-import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars.js';
 import { standardMaterialBag } from '../../../resources/materials/standardmaterial3d/materialBag.js';
 import { materialFromBag } from '../../../resources/materials/standardmaterial3d/build.js';
 import { textureSlotsFromMaps } from '../../materials/materialTextureMaps.js';
-import { useMaterialTextures } from '../../materials/SurfaceMaterialSlot.js';
+import { forEachSurfaceMaterial } from '../../../resources/formats/glb/glbProcessing.js';
+import { useMaterialScalars, useMaterialTextures } from '../../materials/SurfaceMaterialSlot.js';
+import { readyMaterial, useMaterial } from '../../materials/useMaterial.js';
 import type { MaterialSource } from '../../materials/materialSource.js';
 
 export interface GlbSurfaceMaterialOverrideProps {
-  /** The GLB-internal mesh whose material is being replaced. */
+  /** The GLB-internal object whose surface materials are being replaced. */
   target: THREE.Object3D;
   /** Where the override material lives, already resolved. */
   source: MaterialSource;
-}
-
-export function GlbSurfaceMaterialOverride({ target, source }: GlbSurfaceMaterialOverrideProps) {
-  // Split rather than branched inline: each arrival calls its own hooks, and a
-  // reference that changes kind remounts, which is what disposes the old one.
-  if (source.kind === 'path') return <ExternalGlbMaterialOverride target={target} path={source.path} />;
-  // An override that resolved to nothing buildable still replaced the glTF's own material, so
-  // the surface is Godot's default (ADR-0041).
-  if (source.kind === 'default') return <DefaultGlbMaterialOverride target={target} />;
-  return <SceneGlbMaterialOverride target={target} resource={source.resource} />;
-}
-
-/** Godot's default 3D surface, built and disposed here like any scene material. */
-function DefaultGlbMaterialOverride({ target }: { target: THREE.Object3D }) {
-  const material = useMemo(() => materialFromBag(standardMaterialBag(null, {})), []);
-  useEffect(() => () => material.dispose(), [material]);
-  useGlbMaterialSwap(target, material);
-  return null;
-}
-
-/** A `.tres` the material pipeline builds and owns, so it is never disposed here. */
-function ExternalGlbMaterialOverride({ target, path }: { target: THREE.Object3D; path: string }) {
-  const result = useResource<THREE.Material>(path, 'material');
-  useGlbMaterialSwap(target, result.value ?? null);
-  return null;
+  /** Which surface materials under `target` it replaces. Every one by default. Stable identity. */
+  replaces?: (current: THREE.Material) => boolean;
 }
 
 /**
- * A `[sub_resource]` of the scene, built and disposed here. Not `<StandardMaterialSlot>`: the
- * target is inside a cloned GLB with no R3F element. It shares that slot's derivation, so the
- * adapters stay two (ADR-0039).
+ * The override material, built and disposed here, whichever file it came from. Not
+ * `<StandardMaterialSlot>`: the target is inside a cloned GLB with no R3F element. It shares
+ * that slot's derivation, so the adapters stay two (ADR-0039). A material this previewer
+ * cannot build still replaced the glTF's own, so the surface is Godot's default (ADR-0041).
+ * One still loading, or one that never loads, replaces nothing, as Godot's null material does.
  */
-function SceneGlbMaterialOverride({
-  target,
-  resource,
-}: {
-  target: THREE.Object3D;
-  resource: TscnInternalResource;
-}) {
-  const scalars = useMemo(
-    () => parseStandardMaterial3DScalars(resource.data as Record<string, string>),
-    [resource]
-  );
+export function GlbSurfaceMaterialOverride({ target, source, replaces = everySurface }: GlbSurfaceMaterialOverrideProps) {
+  const loaded = useMaterial(source);
+  const ready = readyMaterial(loaded);
+  const scalars = useMaterialScalars(ready);
   // No `triplanarMesh`: the geometry is the glTF's, so there is no Godot mesh
   // sub-resource whose size a triplanar material could tile against.
-  const { maps } = useMaterialTextures(scalars);
+  const { maps } = useMaterialTextures(scalars, ready);
+  const isAbsent = loaded.status === 'absent';
   const material = useMemo(
-    () => materialFromBag(standardMaterialBag(scalars, textureSlotsFromMaps(maps))),
-    [scalars, maps]
+    () => (isAbsent ? null : materialFromBag(standardMaterialBag(scalars, textureSlotsFromMaps(maps)))),
+    [isAbsent, scalars, maps]
   );
-  useEffect(() => () => material.dispose(), [material]);
-  useGlbMaterialSwap(target, material);
+  useEffect(() => () => material?.dispose(), [material]);
+  useGlbMaterialSwap(target, material, replaces);
   return null;
 }
 
 /**
- * Puts `material` on every mesh under `target`: a glTF node with several primitives arrives as a
- * Group of Meshes. Restores the old material on unmount, since the GLB clone is long-lived and a
- * reload that dropped the override would leave the swap behind.
+ * Puts `material` into every surface slot under `target` that `replaces` accepts: a glTF node
+ * with several primitives arrives as a Group of Meshes. Restores each slot on unmount, since the
+ * GLB clone is long-lived and a reload that dropped the override would leave the swap behind. A
+ * slot another override has since taken keeps that override's material.
  */
-function useGlbMaterialSwap(target: THREE.Object3D, material: THREE.Material | null): void {
+function useGlbMaterialSwap(
+  target: THREE.Object3D,
+  material: THREE.Material | null,
+  replaces: (current: THREE.Material) => boolean
+): void {
   useEffect(() => {
     if (!material) return undefined;
 
-    const restore: Array<[THREE.Mesh, THREE.Material | THREE.Material[]]> = [];
-    target.traverse((child) => {
-      const mesh = child as THREE.Mesh;
-      if (!mesh.isMesh) return;
-      restore.push([mesh, mesh.material]);
-      mesh.material = material;
+    const restore: Array<() => void> = [];
+    forEachSurfaceMaterial(target, (current, assign, read) => {
+      if (!replaces(current)) return;
+      assign(material);
+      restore.push(() => {
+        if (read() === material) assign(current);
+      });
     });
 
-    return () => {
-      for (const [mesh, previous] of restore) mesh.material = previous;
-    };
-  }, [target, material]);
+    return () => restore.forEach((undo) => undo());
+  }, [target, material, replaces]);
+}
+
+/** A node's own override takes every surface under its target. */
+function everySurface(): boolean {
+  return true;
 }

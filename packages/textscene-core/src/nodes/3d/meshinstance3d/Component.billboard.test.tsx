@@ -11,7 +11,8 @@ import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { standardMaterial } from '../../../resources/materials/standardmaterial3d/testing/standardMaterial';
+import { parseTresFile } from '../../../parser/parsedResource';
+import { standardMaterialTres } from '../../../resources/materials/standardmaterial3d/testing/standardMaterial';
 import type {
   TscnExternalResource,
   TscnInternalResource,
@@ -50,10 +51,7 @@ async function renderMesh(
   internals: TscnInternalResource[]
 ): Promise<{ mesh: THREE.Mesh; child: THREE.Object3D }> {
   const fake = createFakeResourceLoader();
-  fake.materials.seed(
-    BILLBOARD_TRES,
-    standardMaterial({ billboard_mode: '1' })
-  );
+  fake.resources.seed(BILLBOARD_TRES, parseTresFile(standardMaterialTres({ billboard_mode: '1' })));
   const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider

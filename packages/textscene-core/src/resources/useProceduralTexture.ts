@@ -26,6 +26,8 @@ export interface ProceduralSlot {
   texture: THREE.Texture | null;
   /** The reference names a procedural texture, so no path resolver should look for it. */
   claimed: boolean;
+  /** A build for the current reference is running. False once it lands or fails. */
+  building: boolean;
 }
 
 interface Shown {
@@ -33,7 +35,7 @@ interface Shown {
   key: string;
 }
 
-const UNCLAIMED: ProceduralSlot = { texture: null, claimed: false };
+const UNCLAIMED: ProceduralSlot = { texture: null, claimed: false, building: false };
 
 /**
  * The procedural texture a `SubResource` ref names, held resident while the caller is mounted.
@@ -121,6 +123,7 @@ export function useProceduralTextures(
   return lookups.map((lookup, slot) => ({
     texture: shown[slot]?.texture ?? null,
     claimed: lookup !== null,
+    building: lookup !== null && builds.some((build) => build.key === lookup.key),
   }));
 }
 

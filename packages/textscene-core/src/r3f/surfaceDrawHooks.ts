@@ -7,7 +7,11 @@
 
 import * as THREE from 'three';
 import { BillboardMode } from '../godot/billboard';
-import { billboardOf, castsShadowOf } from '../resources/materials/standardmaterial3d/materialBag';
+import {
+  billboardOf,
+  castsShadowOf,
+  type SurfaceBillboard,
+} from '../resources/materials/standardmaterial3d/materialBag';
 import { billboardWorldMatrix } from './surfaceBillboard';
 
 /** The four `Object3D` hooks, one prop each: the material factory guard rejects a spread. */
@@ -100,12 +104,12 @@ function pose(
 }
 
 /**
- * Whether one InstancedMesh can draw every instance of `material`'s surface. Godot billboards
+ * Whether one InstancedMesh can draw every instance of a surface with this `billboard`. Godot billboards
  * each instance about its own origin (`scene_forward_clustered.glsl:338-342`), but three
  * multiplies `instanceMatrix` after the `modelMatrix` a draw hook moves, so a billboard cannot.
  */
-export function drawsAsOneBatch(material: THREE.Material): boolean {
-  return billboardOf(material).mode === BillboardMode.BILLBOARD_DISABLED;
+export function drawsAsOneBatch(billboard: SurfaceBillboard): boolean {
+  return billboard.mode === BillboardMode.BILLBOARD_DISABLED;
 }
 
 function closeDraw(): void {

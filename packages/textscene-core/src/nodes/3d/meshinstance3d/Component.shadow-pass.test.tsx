@@ -11,7 +11,8 @@ import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { standardMaterial } from '../../../resources/materials/standardmaterial3d/testing/standardMaterial';
+import { parseTresFile } from '../../../parser/parsedResource';
+import { standardMaterialTres } from '../../../resources/materials/standardmaterial3d/testing/standardMaterial';
 import type {
   TscnExternalResource,
   TscnInternalResource,
@@ -51,7 +52,7 @@ function makeNode(properties: Partial<MeshInstance3DProperties>): TscnNode {
 
 async function renderMesh(node: TscnNode): Promise<THREE.Mesh> {
   const fake = createFakeResourceLoader();
-  fake.materials.seed(ADDITIVE_TRES, standardMaterial(ADDITIVE));
+  fake.resources.seed(ADDITIVE_TRES, parseTresFile(standardMaterialTres(ADDITIVE)));
   const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider internalResources={INTERNALS} externalResources={EXTERNALS}>

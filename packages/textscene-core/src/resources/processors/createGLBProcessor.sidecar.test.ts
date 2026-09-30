@@ -37,7 +37,7 @@ async function loadWith(files: Record<string, string>): Promise<THREE.Object3D> 
     ),
   });
   const eventBus = new ResourceEventBus();
-  const processor = createGLBProcessor(fileEventBus, eventBus, vi.fn(async () => null));
+  const processor = createGLBProcessor(fileEventBus, eventBus);
 
   const loaded = eventBus.once<THREE.Object3D>('glb', 'loaded', GLTF_PATH, 5000);
   processor.request(GLTF_PATH);
@@ -96,7 +96,7 @@ describe('createGLBProcessor — import sidecar', () => {
     });
     fileEventBus.on('failed', failed);
     const eventBus = new ResourceEventBus();
-    const processor = createGLBProcessor(fileEventBus, eventBus, vi.fn(async () => null));
+    const processor = createGLBProcessor(fileEventBus, eventBus);
 
     const loaded = eventBus.once<THREE.Object3D>('glb', 'loaded', GLTF_PATH, 5000);
     processor.request(GLTF_PATH);

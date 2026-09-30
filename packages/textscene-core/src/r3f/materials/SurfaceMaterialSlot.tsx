@@ -12,7 +12,6 @@ import { useViewportTextureSlot } from '../../resources/textures/viewporttexture
 import { useProceduralTextures, type ProceduralSlot } from '../../resources/useProceduralTexture';
 import { useTiledUpload } from '../tiledUpload/useTiledUpload';
 import { useResource } from '../../resources/useResource';
-import { useSceneResources } from '../SceneResourcesContext';
 import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
 import type {
   StandardMaterial3DScalars,
@@ -22,15 +21,16 @@ import type {
 import { TEXTURE_SLOTS } from '../../resources/materials/standardmaterial3d/types';
 import {
   bindSlotTexture,
+  materialTextureState,
   releaseBoundTexture,
 } from '../../resources/materials/standardmaterial3d/textureBinding';
 import type { MaterialTextureState } from '../../resources/textures/applyTextureState';
-import { GODOT_TEXTURE_FILTER_DEFAULT } from '../../resources/textures/godotTextureFilter';
 import { repackAnisotropyFlowmap } from '../../resources/textures/repackFlowmap';
 import { triplanarPlaneScale } from '../../nodes/3d/meshinstance3d/triplanarScale';
 import { StandardMaterialSlot } from './StandardMaterialSlot';
-import { ExternalMaterialSlot } from './ExternalMaterialSlot';
-import type { MaterialSource } from './materialSource';
+import { pendingMapStandIn } from './pendingMapStandIn';
+import type { MaterialResource, MaterialSource } from './materialSource';
+import { readyMaterial, useMaterial } from './useMaterial';
 import type { MaterialTextureMaps } from './materialTextureMaps';
 
 export type { MaterialTextureMaps };
@@ -52,17 +52,24 @@ export interface ResolvedMaterialTextures {
   viewportCyclic: boolean;
 }
 
+/** The resource tables a material's references resolve in: its owning file's. */
+export type MaterialTables = Pick<MaterialResource, 'internalResources' | 'externalResources'>;
+
+const NO_TABLES: MaterialTables = { internalResources: [], externalResources: [] };
+
 /**
- * Resolve every texture slot of one scene-local StandardMaterial3D, from gated
- * references through loads, precedence and binding to the eight three maps. A
- * triplanar material tiles per world unit, so `triplanarMesh` folds in a PlaneMesh's
- * size. CSG and GridMap pass nothing and get the material's own `uv1_scale`.
+ * Resolve every texture slot of one StandardMaterial3D, from gated references through
+ * loads, precedence and binding to the eight three maps. Each reference resolves in
+ * `tables`, the material's own file, whichever file that is. A triplanar material tiles
+ * per world unit, so `triplanarMesh` folds in a PlaneMesh's size. CSG and GridMap pass
+ * nothing and get the material's own `uv1_scale`.
  */
 export function useMaterialTextures(
   scalars: StandardMaterial3DScalars | null,
+  tables: MaterialTables | null,
   triplanarMesh?: TscnInternalResource
 ): ResolvedMaterialTextures {
-  const { internalResources, externalResources } = useSceneResources();
+  const { internalResources, externalResources } = tables ?? NO_TABLES;
 
   // The decode's gated table, never the raw property bag: Godot declares and
   // samples a gated slot's sampler only inside its `if (features[…])` branch
@@ -133,25 +140,20 @@ export function useMaterialTextures(
     internalResources
   );
   const proceduralTextures = proceduralTexturesBySlot(proceduralSlots);
+  // A slot whose map is still loading or building binds a stand-in, never nothing.
+  const isArriving = (slot: TextureSlot): boolean =>
+    textureSlots[slot]?.status === 'pending' ||
+    (proceduralSlots[TEXTURE_SLOTS.indexOf(slot)]?.building ?? false);
 
   // The per-material half of every binding: UV transform, sampler filter and
   // wrapping. The per-slot half (which slots decode sRGB) is `bindSlotTexture`'s.
   const textureState = useMemo((): MaterialTextureState | null => {
     if (!scalars) return null;
-    const scale =
-      scalars.triplanar && triplanarMesh
-        ? triplanarPlaneScale(triplanarMesh, scalars.uv1Scale)
-        : scalars.uv1Scale;
+    const state = materialTextureState(scalars);
+    if (!scalars.triplanar || !triplanarMesh) return state;
     // PARITY LIMITATION (uv1_offset + world-triplanar): three applies `offset`
     // in UV space, Godot's world-triplanar offset is in world units.
-    return {
-      uv: { scale, offset: scalars.uv1Offset },
-      // Only an authored filter is a divergence, and passing Godot's default would
-      // clone every texture for a sampler state no material asked for.
-      filter:
-        scalars.textureFilter === GODOT_TEXTURE_FILTER_DEFAULT ? undefined : scalars.textureFilter,
-      repeat: scalars.textureRepeat,
-    };
+    return { ...state, uv: { scale: triplanarPlaneScale(triplanarMesh, scalars.uv1Scale), offset: scalars.uv1Offset } };
   }, [scalars, triplanarMesh]);
 
   // A ViewportTexture albedo names a `<SubViewport>`, not a file: it resolves
@@ -242,7 +244,7 @@ export function useMaterialTextures(
     return repackAnisotropyFlowmap(anisotropyFlowmap);
   }, [anisotropyStrength, anisotropyFlowmap]);
 
-  const anisotropyMap = useMemo(
+  const anisotropyBound = useMemo(
     () => transformedTexture({ value: repackedFlowmap }, textureState, 'anisotropy_flowmap'),
     [repackedFlowmap, textureState]
   );
@@ -250,7 +252,7 @@ export function useMaterialTextures(
   // The binding may hand back a clone of the repack with its own upload. Only
   // the clone is a second object: when nothing diverged the two are one texture,
   // and the repack effect below owns it.
-  const anisotropyClone = anisotropyMap === repackedFlowmap ? undefined : anisotropyMap;
+  const anisotropyClone = anisotropyBound === repackedFlowmap ? undefined : anisotropyBound;
 
   // One effect per texture: a shared dependency list runs every cleanup when any
   // slot resolves, freeing still-bound textures that three then re-uploads.
@@ -258,13 +260,39 @@ export function useMaterialTextures(
   useDisposeTexture(anisotropyClone);
   // Each map draws once it is on the GPU: a large one uploads in bands, and its
   // slot keeps the map it had meanwhile. The hook releases each map it stops drawing.
-  const albedoDrawn = useBoundMapUpload(albedoMap);
-  const normalDrawn = useBoundMapUpload(normalMap);
-  const roughnessDrawn = useBoundMapUpload(roughnessMap);
-  const metalnessDrawn = useBoundMapUpload(metalnessMap);
-  const emissiveDrawn = useBoundMapUpload(emissiveMap);
-  const aoDrawn = useBoundMapUpload(aoMap);
-  const displacementDrawn = useBoundMapUpload(displacementMap);
+  const albedoDrawn = orStandIn(useBoundMapUpload(albedoMap), albedoMap, isArriving, 'albedo_texture');
+  const normalDrawn = orStandIn(useBoundMapUpload(normalMap), normalMap, isArriving, 'normal_texture');
+  const roughnessDrawn = orStandIn(
+    useBoundMapUpload(roughnessMap),
+    roughnessMap,
+    isArriving,
+    'roughness_texture'
+  );
+  const metalnessDrawn = orStandIn(
+    useBoundMapUpload(metalnessMap),
+    metalnessMap,
+    isArriving,
+    'metallic_texture'
+  );
+  const emissiveDrawn = orStandIn(
+    useBoundMapUpload(emissiveMap),
+    emissiveMap,
+    isArriving,
+    'emission_texture'
+  );
+  const aoDrawn = orStandIn(useBoundMapUpload(aoMap), aoMap, isArriving, 'ao_texture');
+  const displacementDrawn = orStandIn(
+    useBoundMapUpload(displacementMap),
+    displacementMap,
+    isArriving,
+    'heightmap_texture'
+  );
+  // Only an anisotropy-enabled material samples the flowmap, so only it waits for one.
+  const anisotropyMap =
+    anisotropyBound ??
+    (anisotropyStrength > 0 && isArriving('anisotropy_flowmap')
+      ? pendingMapStandIn('anisotropy_flowmap')
+      : undefined);
 
   const firstMissingPath = useMemo(() => {
     for (const slot of TEXTURE_SLOTS) {
@@ -311,46 +339,23 @@ export interface SurfaceMaterialSlotProps {
 }
 
 /**
- * One surface's material slot: a scene `[sub_resource]`, resolved here with its
- * textures, or a `.tres` that `<ExternalMaterialSlot>` gets whole from the
- * material pipeline. The engine cannot tell the two apart, so neither can a surface.
+ * One surface's material slot, textures and all, whichever file the material came from.
+ * A surface with no usable material draws Godot's default one, which
+ * `<StandardMaterialSlot>` builds from null scalars (ADR-0041).
  */
 export function SurfaceMaterialSlot({ source, attach, triplanarMesh }: SurfaceMaterialSlotProps) {
-  if (source?.kind === 'path') {
-    return <ExternalMaterialSlot path={source.path} attach={attach} />;
-  }
-  // `'default'` and an absent source reach the same slot: a surface with no
-  // usable material draws Godot's default one, and `SceneMaterialSlot` builds
-  // exactly that from a null resource (ADR-0041).
-  return (
-    <SceneMaterialSlot
-      resource={source?.kind === 'scene' ? source.resource : undefined}
-      attach={attach}
-      triplanarMesh={triplanarMesh}
-    />
-  );
+  const material = readyMaterial(useMaterial(source));
+  const scalars = useMaterialScalars(material);
+  const { maps } = useMaterialTextures(scalars, material, triplanarMesh);
+  return <StandardMaterialSlot scalars={scalars} attach={attach} {...maps} />;
 }
 
-interface SceneMaterialSlotProps {
-  /** A scene-local StandardMaterial3D, or undefined for an unpopulated slot. */
-  resource: TscnInternalResource | undefined;
-  attach?: string;
-  triplanarMesh?: TscnInternalResource;
-}
-
-/**
- * A scene-local material rendered with its textures resolved. Split from
- * `SurfaceMaterialSlot` so the branch above calls no hook conditionally.
- */
-function SceneMaterialSlot({ resource, attach, triplanarMesh }: SceneMaterialSlotProps) {
-  const scalars = useMemo(
-    () =>
-      resource ? parseStandardMaterial3DScalars(resource.data as Record<string, string>) : null,
+/** The decoded scalars of `material`, or null for Godot's default surface. */
+export function useMaterialScalars(material: MaterialResource | null): StandardMaterial3DScalars | null {
+  const resource = material?.resource;
+  return useMemo(
+    () => (resource ? parseStandardMaterial3DScalars(resource.data as Record<string, string>) : null),
     [resource]
-  );
-  const { maps } = useMaterialTextures(scalars, triplanarMesh);
-  return (
-    <StandardMaterialSlot scalars={scalars} attach={attach} {...maps} />
   );
 }
 
@@ -417,6 +422,20 @@ function effectiveSlot(
   asyncSlot: { value: THREE.Texture | undefined } | null
 ): { value: THREE.Texture | undefined } | null {
   return procedural ? { value: procedural } : asyncSlot;
+}
+
+/**
+ * The map a slot draws: the uploaded one, else a stand-in while a bound map uploads or
+ * the map is still arriving (`pendingMapStandIn.ts` says why), else nothing.
+ */
+function orStandIn(
+  drawn: THREE.Texture | undefined,
+  bound: THREE.Texture | undefined,
+  isArriving: (slot: TextureSlot) => boolean,
+  slot: TextureSlot
+): THREE.Texture | undefined {
+  if (drawn) return drawn;
+  return bound || isArriving(slot) ? pendingMapStandIn(slot) : undefined;
 }
 
 /** One bound map as it draws: uploaded in bands where large, released once it no longer draws. */

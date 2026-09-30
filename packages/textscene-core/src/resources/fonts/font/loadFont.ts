@@ -1,7 +1,7 @@
 /**
  * The Font slice's whole-file loader, the one entry point `processors/createFontProcessor.ts`
  * calls. It parses content (`parseTresFile`) and resolves addresses and arrival shapes,
- * so the decode stays pure over a property bag, as with `loadMaterial.ts`.
+ * so the decode stays pure over a property bag.
  */
 
 import { parseTresFile, type ParsedResource } from '../../../parser/parsedResource';

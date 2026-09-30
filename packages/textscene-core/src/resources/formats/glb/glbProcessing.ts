@@ -57,10 +57,14 @@ export function gltfResourceDir(path: string): string {
   return slash === -1 ? '' : path.slice(0, slash + 1);
 }
 
-/** A material slot visitor: the material, and the setter that replaces it in place. */
+/**
+ * A material slot visitor: the material, the setter that replaces it in place, and a reader
+ * for what the slot holds later, after other writers may have replaced it.
+ */
 type SurfaceVisitor = (
   material: THREE.Material,
-  assign: (replacement: THREE.Material) => void
+  assign: (replacement: THREE.Material) => void,
+  read: () => THREE.Material | undefined
 ) => void;
 
 /**
@@ -74,20 +78,45 @@ function visitNodeMaterials(node: THREE.Object3D, visit: SurfaceVisitor): void {
   if (!slot) return;
   if (Array.isArray(slot)) {
     slot.forEach((material, index) => {
-      visit(material, (replacement) => {
-        slot[index] = replacement;
-      });
+      visit(
+        material,
+        (replacement) => {
+          slot[index] = replacement;
+        },
+        () => slot[index]
+      );
     });
   } else {
-    visit(slot, (replacement) => {
-      holder.material = replacement;
-    });
+    visit(
+      slot,
+      (replacement) => {
+        holder.material = replacement;
+      },
+      () => holder.material as THREE.Material
+    );
   }
 }
 
 /** Visit every surface material under `object`, with the setter for its own slot. */
 export function forEachSurfaceMaterial(object: THREE.Object3D, visit: SurfaceVisitor): void {
   object.traverse((node) => visitNodeMaterials(node, visit));
+}
+
+/**
+ * The `.tres` an **Import sidecar** remaps a surface's material to. The GLB processor writes
+ * it into the material's `userData`, which `Material.clone` copies to every consumer's clone,
+ * and the scene root draws that `.tres` through the one material path.
+ */
+const IMPORT_MATERIAL_PATH_KEY = 'textsceneImportMaterialPath';
+
+export function tagImportMaterial(material: THREE.Material, path: string): void {
+  material.userData[IMPORT_MATERIAL_PATH_KEY] = path;
+}
+
+/** The `.tres` the sidecar remaps `material` to, or undefined for none. */
+export function importMaterialPath(material: THREE.Material): string | undefined {
+  const path: unknown = material.userData[IMPORT_MATERIAL_PATH_KEY];
+  return typeof path === 'string' ? path : undefined;
 }
 
 /**

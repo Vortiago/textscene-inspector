@@ -1,0 +1,18 @@
+; A performance fixture: the unit-noisetexture2d-4096-seamless build, moved into an external
+; `.tres` material on a 3D mesh. It moves one variable, the file the material comes from. The
+; e2e long-task gate opens it and requires no main-thread task over 50 ms while the texture
+; builds and uploads, which holds only if a `.tres` material's maps take the same banded upload
+; as a scene material's. No golden covers it: unit-noisetexture2d already pins the pixels.
+
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="StandardMaterial3D" path="res://unit-noisetexture2d-4096-material.tres" id="1_mat"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_p"]
+size = Vector2(4, 4)
+
+[node name="World" type="Node3D"]
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_p")
+material_override = ExtResource("1_mat")

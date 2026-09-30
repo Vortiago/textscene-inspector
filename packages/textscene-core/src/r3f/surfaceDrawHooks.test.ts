@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { applyShadowCasting, shadowCastingEffects } from './shadowCasting';
 import { drawsAsOneBatch } from './surfaceDrawHooks';
+import { billboardOf } from '../resources/materials/standardmaterial3d/materialBag';
 import { ShadowCastingSetting } from '../godot/rendering';
 import { standardMaterial as material } from '../resources/materials/standardmaterial3d/testing/standardMaterial';
 import {
@@ -183,11 +184,11 @@ describe('surfaceDrawHooks — instanced meshes', () => {
 
 describe('drawsAsOneBatch', () => {
   it('batches a surface that does not billboard', () => {
-    expect(drawsAsOneBatch(material({}))).toBe(true);
+    expect(drawsAsOneBatch(billboardOf(material({})))).toBe(true);
   });
 
   it('refuses a surface that billboards, which must turn about each instance', () => {
-    expect(drawsAsOneBatch(material({ billboard_mode: '2' }))).toBe(false);
+    expect(drawsAsOneBatch(billboardOf(material({ billboard_mode: '2' })))).toBe(false);
   });
 });
 

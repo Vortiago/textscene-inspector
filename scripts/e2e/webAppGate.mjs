@@ -20,12 +20,15 @@ import { installViewMatrixProbe, matricesEqual, formatMatrix } from './cameraPro
 import { arraysEqual, describeNodePathMismatch, expandAllTreeRows, readOutlinerPaths, selectOutlinerNode } from './outliner.mjs';
 import { findRowValue, readInspectorPanel } from './inspector.mjs';
 import { openFixture } from './openFixture.mjs';
-import { longTasksDuringTextureWork } from './textureWorkProbe.mjs';
+import { longTasksAfterFirstReply, longTasksDuringTextureWork } from './textureWorkProbe.mjs';
 import {
-  checkLongTasks,
+  checkBlockedControl,
+  checkStalledControl,
+  checkWorkerArm,
   checkSettleControl,
   DELAY_FIXTURE,
   LARGE_FIXTURE,
+  LARGE_TRES_FIXTURE,
   runLongTaskArms,
   runSettleControl,
 } from './textureWorkScenarios.mjs';
@@ -185,8 +188,10 @@ async function main() {
     console.log(`[gate] texture settle control: ${DELAY_FIXTURE}`);
     const settleControl = await runSettleControl(browser, baseUrl);
 
-    console.log(`[gate] long tasks: ${LARGE_FIXTURE}, with the worker and with it blocked`);
-    const { withWorker, blocked } = await runLongTaskArms(baseUrl);
+    console.log(
+      `[gate] long tasks: ${LARGE_FIXTURE} with the worker, blocked and stalled, and ${LARGE_TRES_FIXTURE}`
+    );
+    const { withWorker, fromTres, blocked, stalled } = await runLongTaskArms(baseUrl);
 
     console.log(`[gate] phone scenario: ${FIXTURE_3D}`);
     const phone = await runPhoneScenario(browser, baseUrl, { fixture: FIXTURE_3D, selectPath: SELECT_A });
@@ -242,8 +247,18 @@ async function main() {
     checkDiagnostics(gate, '[2D]', twoD.diagnostics);
 
     checkSettleControl(gate, settleControl);
-    checkLongTasks(gate, withWorker, blocked, inkStats, INK_FLOOR_LARGE_TEXTURE);
+    const largeTexture = { inkOf: inkStats, inkFloor: INK_FLOOR_LARGE_TEXTURE };
+    checkWorkerArm(gate, 'long tasks', withWorker, { ...largeTexture, longTasksIn: longTasksDuringTextureWork });
+    // The status clears only once the drawn map's banded upload completes, so a cleared
+    // status and a reply show the `.tres` texture was built off-thread and uploaded to draw.
+    checkWorkerArm(gate, 'long tasks, .tres material', fromTres, {
+      ...largeTexture,
+      longTasksIn: longTasksAfterFirstReply,
+    });
+    checkBlockedControl(gate, blocked);
+    checkStalledControl(gate, stalled);
     checkDiagnostics(gate, '[long tasks]', withWorker.diagnostics);
+    checkDiagnostics(gate, '[long tasks, .tres material]', fromTres.diagnostics);
     checkPhoneLayout(gate, phone, { expectedPaths: EXPECTED_3D_PATHS, selectName: 'Title' });
 
     console.log('\n[gate] measurements');
@@ -259,11 +274,14 @@ async function main() {
         `unwaited=${settleControl.unwaited.settledMs}ms workers=${settleControl.delayed.workers}`
     );
     // The Long Tasks API reports only tasks over 50 ms, so 0 means it saw none in the window.
-    const longestInWindow = (probe) =>
-      Math.max(0, ...(longTasksDuringTextureWork(probe, 0) ?? []).map((task) => task.duration));
+    const longest = (tasks) => Math.max(0, ...(tasks ?? []).map((task) => task.duration));
     console.log(
       `  long tasks in the texture window  worker: replies=${withWorker.probe.replies} ` +
-        `longest=${longestInWindow(withWorker.probe)}ms | blocked: longest=${longestInWindow(blocked.probe)}ms`
+        `longest=${longest(longTasksDuringTextureWork(withWorker.probe, 0))}ms | ` +
+        `.tres material after the reply: replies=${fromTres.probe.replies} ` +
+        `longest=${longest(longTasksAfterFirstReply(fromTres.probe, 0))}ms | ` +
+        `blocked: longest=${longest(longTasksDuringTextureWork(blocked.probe, 0))}ms | ` +
+        `stalled after the reply: longest=${longest(longTasksAfterFirstReply(stalled.probe, 0))}ms`
     );
     console.log(
       `  phone  canvas=${phone.canvasBox?.width}x${phone.canvasBox?.height} ` +

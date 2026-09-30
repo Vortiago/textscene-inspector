@@ -145,9 +145,12 @@ const BILLBOARDING_MODES: ReadonlySet<number> = new Set([
   BillboardMode.BILLBOARD_PARTICLES,
 ]);
 
-/** Built once per bag, so the draw hooks read it every draw group without allocating. */
-function surfaceBillboard(scalars: StandardMaterial3DScalars): SurfaceBillboard {
-  if (!BILLBOARDING_MODES.has(scalars.billboardMode)) return NO_BILLBOARD;
+/**
+ * The billboard `scalars` describe, null being Godot's default surface. Built once per
+ * bag, so the draw hooks read it every draw group without allocating.
+ */
+export function surfaceBillboard(scalars: StandardMaterial3DScalars | null): SurfaceBillboard {
+  if (!scalars || !BILLBOARDING_MODES.has(scalars.billboardMode)) return NO_BILLBOARD;
   return { mode: scalars.billboardMode, keepScale: scalars.billboardKeepScale };
 }
 

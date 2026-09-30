@@ -52,7 +52,7 @@ describe('ResourceEventBus', () => {
       const materialHandler = vi.fn();
 
       eventBus.on('texture', 'loaded', textureHandler);
-      eventBus.on('material', 'loaded', materialHandler);
+      eventBus.on('arraymesh', 'loaded', materialHandler);
 
       eventBus.emit('texture', 'loaded', 'tex1');
 
@@ -92,10 +92,10 @@ describe('ResourceEventBus', () => {
   describe('emit', () => {
     it('emits events with correct id and data', () => {
       const handler = vi.fn();
-      eventBus.on('material', 'loaded', handler);
+      eventBus.on('arraymesh', 'loaded', handler);
 
       const testData = { color: 'red', metallic: 0.5 };
-      eventBus.emit('material', 'loaded', 'mat1', testData);
+      eventBus.emit('arraymesh', 'loaded', 'mat1', testData);
 
       expect(handler).toHaveBeenCalledWith('mat1', testData);
     });
@@ -269,7 +269,7 @@ describe('ResourceEventBus', () => {
     it('returns total across all event types', () => {
       eventBus.on('texture', 'loaded', vi.fn());
       eventBus.on('texture', 'failed', vi.fn());
-      eventBus.on('material', 'loaded', vi.fn());
+      eventBus.on('arraymesh', 'loaded', vi.fn());
 
       expect(eventBus.getTotalHandlerCount()).toBe(3);
     });
@@ -278,7 +278,7 @@ describe('ResourceEventBus', () => {
   describe('clear', () => {
     it('removes all handlers', () => {
       eventBus.on('texture', 'loaded', vi.fn());
-      eventBus.on('material', 'loaded', vi.fn());
+      eventBus.on('arraymesh', 'loaded', vi.fn());
       eventBus.on('scene', 'failed', vi.fn());
 
       expect(eventBus.getTotalHandlerCount()).toBe(3);

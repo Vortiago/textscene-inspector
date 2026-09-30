@@ -198,6 +198,26 @@ that writes `::`.
 **Clones.** A three.js object has one parent, so a cached Object3D is cloned for each consumer.
 Textures and materials are shared.
 
+### Materials
+
+A material reaches a surface through one path, whatever file it is in.
+
+- `resolveMaterialSource` names where the material is: one the scene holds, or a `.tres`
+  address, either a whole file or `file.tres::SubId`.
+- `useMaterial` loads either into the material body and the resource tables its references
+  resolve in, which are its own file's. A `.tres` comes through the cached `.tres` parse on
+  the resource bus. A ShaderMaterial or an unsupported type is declined as Godot's default
+  surface (ADR-0041).
+- `SurfaceMaterialSlot` renders the result for MeshInstance3D surfaces, CSG and GridMap
+  tiles. A GLB surface override takes the same result through `materialFromBag`, since a
+  GLB mesh has no R3F element. Each map resolves in the material's own tables and draws
+  through the tiled upload.
+- **Stand-in maps.** While a map loads, builds or uploads, its slot binds a neutral 1x1
+  texture (`pendingMapStandIn.ts`). three bakes each slot's presence into the program, so
+  the map then swaps in on the program already linked, with no relink.
+- A GLB **Import sidecar** remap tags the surface with its `.tres` address, and the scene
+  root draws that material through the same path.
+
 ### Procedural textures
 
 A NoiseTexture2D builds as a job, off the main thread (ADR-0042).

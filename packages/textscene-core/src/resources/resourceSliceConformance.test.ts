@@ -129,7 +129,6 @@ describe('resource-slice claim coverage', () => {
     // literals so that map can move freely.
     const LOADER_LABELS: Record<string, string> = {
       texture: 'Material using texture',
-      material: 'Node using material',
       scene: 'Node instance of scene',
       glb: 'Node using GLB mesh',
       resource: 'Resource',
@@ -140,6 +139,9 @@ describe('resource-slice claim coverage', () => {
     const failures: string[] = [];
     for (const reg of all) {
       if (reg.busType === null) continue; // not loader-served (ViewportTexture)
+      // Every `.tres` shares this bus, so a slice on it names its own consumer, and
+      // the loader reads that label by type name.
+      if (reg.busType === 'resource') continue;
       const expected = LOADER_LABELS[reg.busType];
       if (reg.failureLabel !== expected) {
         failures.push(`${reg.slice}: label "${reg.failureLabel}" != loader's "${expected}"`);

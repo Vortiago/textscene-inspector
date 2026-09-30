@@ -20,7 +20,8 @@ import type {
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
-import { depthSideOf } from '../../../r3f/testing/threePasses';
+import { parseTresFile } from '../../../parser/parsedResource';
+import { castsFrom, depthSideOf } from '../../../r3f/testing/threePasses';
 
 const EXTERNAL_PATH = 'res://dielectric.tres';
 const SECOND_EXTERNAL_PATH = 'res://second.tres';
@@ -52,10 +53,10 @@ function makeNode(properties: Partial<MeshInstance3DProperties>): TscnNode {
 
 async function materialsOf(
   node: TscnNode,
-  seeded: ReadonlyMap<string, THREE.Material> = new Map()
+  seeded: ReadonlyMap<string, string> = new Map()
 ): Promise<THREE.MeshStandardMaterial[]> {
   const fake = createFakeResourceLoader();
-  for (const [path, material] of seeded) fake.materials.seed(path, material);
+  for (const [path, text] of seeded) fake.resources.seed(path, parseTresFile(text));
   const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider internalResources={INTERNALS} externalResources={EXTERNALS}>
@@ -67,11 +68,19 @@ async function materialsOf(
   return (Array.isArray(material) ? material : [material]) as THREE.MeshStandardMaterial[];
 }
 
-/** The loaded `.tres` materials, each identifiable by its own albedo. */
-function loadedMaterials(): Map<string, THREE.Material> {
-  return new Map<string, THREE.Material>([
-    [EXTERNAL_PATH, new THREE.MeshStandardMaterial({ color: 0x5ab7ff })],
-    [SECOND_EXTERNAL_PATH, new THREE.MeshStandardMaterial({ color: 0xff6ad5 })],
+/** A `.tres` StandardMaterial3D with one albedo, so each file is identifiable by colour. */
+function materialTres(albedo: string): string {
+  return `[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\nalbedo_color = ${albedo}\n`;
+}
+
+const FIRST_HEX = 0x0000ff;
+const SECOND_HEX = 0xff00ff;
+
+/** The two `.tres` files, each identifiable by its own albedo. */
+function loadedMaterials(): Map<string, string> {
+  return new Map([
+    [EXTERNAL_PATH, materialTres('Color(0, 0, 1, 1)')],
+    [SECOND_EXTERNAL_PATH, materialTres('Color(1, 0, 1, 1)')],
   ]);
 }
 
@@ -86,7 +95,7 @@ describe('<MeshInstance3D> external .tres material on a primitive mesh', () => {
       makeNode({ surfaceMaterialOverrides: new Map([[0, 'ExtResource("1_ext")']]) }),
       seeded
     );
-    expect(materials[0]).toBe(seeded.get(EXTERNAL_PATH));
+    expect(materials[0]!.color.getHex()).toBe(FIRST_HEX);
   });
 
   it('loads material_override from an ExtResource .tres', async () => {
@@ -95,13 +104,13 @@ describe('<MeshInstance3D> external .tres material on a primitive mesh', () => {
       makeNode({ materialOverride: 'ExtResource("1_ext")' }),
       seeded
     );
-    expect(materials[0]).toBe(seeded.get(EXTERNAL_PATH));
+    expect(materials[0]!.color.getHex()).toBe(FIRST_HEX);
   });
 
   it('loads the primitive mesh’s OWN material from an ExtResource .tres', async () => {
     const seeded = loadedMaterials();
     const materials = await materialsOf(makeNode({ mesh: 'SubResource("Box_ext")' }), seeded);
-    expect(materials[0]).toBe(seeded.get(EXTERNAL_PATH));
+    expect(materials[0]!.color.getHex()).toBe(FIRST_HEX);
   });
 
   it('ranks material_override above a surface override that is an ExtResource', async () => {
@@ -113,7 +122,7 @@ describe('<MeshInstance3D> external .tres material on a primitive mesh', () => {
       }),
       seeded
     );
-    expect(materials[0]).toBe(seeded.get(EXTERNAL_PATH));
+    expect(materials[0]!.color.getHex()).toBe(FIRST_HEX);
   });
 
   it('mixes arrivals across surfaces — an inline slot and a .tres slot', async () => {
@@ -132,7 +141,7 @@ describe('<MeshInstance3D> external .tres material on a primitive mesh', () => {
     );
     expect(materials).toHaveLength(2);
     expect(materials[0]!.color.getHex()).toBe(0x00ff00);
-    expect(materials[1]).toBe(seeded.get(SECOND_EXTERNAL_PATH));
+    expect(materials[1]!.color.getHex()).toBe(SECOND_HEX);
   });
 
   it('draws Godot’s default material while the .tres is still loading', async () => {
@@ -155,14 +164,13 @@ describe('<MeshInstance3D> external .tres material on a primitive mesh', () => {
 
 /**
  * `cast_shadow` is GeometryInstance3D state, not material state
- * (`servers/rendering/renderer_scene_cull.cpp:732`), so it must survive a
- * material that arrives already built from a `.tres`.
+ * (`servers/rendering/renderer_scene_cull.cpp:732`), so it must hold for a
+ * material that arrives from a `.tres`.
  */
 describe('<MeshInstance3D> cast_shadow through an external .tres material', () => {
   it('casts double-sided shadows when the material came from a .tres', async () => {
-    const seeded = loadedMaterials();
     const fake = createFakeResourceLoader();
-    for (const [path, material] of seeded) fake.materials.seed(path, material);
+    for (const [path, text] of loadedMaterials()) fake.resources.seed(path, parseTresFile(text));
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider internalResources={INTERNALS} externalResources={EXTERNALS}>
@@ -179,9 +187,48 @@ describe('<MeshInstance3D> cast_shadow through an external .tres material', () =
     const material = mesh.material as THREE.Material;
     expect(depthSideOf(mesh)).toBe(THREE.DoubleSide);
 
-    // The cached `.tres` material is shared by every node referencing it, so a
-    // node's own cast_shadow must not be written onto it.
-    expect(material).toBe(seeded.get(EXTERNAL_PATH));
+    // The shadow side is the node's, carried by the mesh, never written onto the material.
+    expect((material as THREE.MeshStandardMaterial).color.getHex()).toBe(FIRST_HEX);
     expect(material.shadowSide).toBeNull();
+  });
+});
+
+/**
+ * The node reads its own decisions off the material's scalars, whichever file the material
+ * came from: a blended material casts no shadow, and a missing map diverts to the placeholder.
+ */
+describe('<MeshInstance3D> node decisions from a .tres material', () => {
+  async function meshWith(tres: string, seedTextures: (fake: ReturnType<typeof createFakeResourceLoader>) => void = () => {}) {
+    const fake = createFakeResourceLoader();
+    fake.resources.seed(EXTERNAL_PATH, parseTresFile(tres));
+    seedTextures(fake);
+    const renderer = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider internalResources={INTERNALS} externalResources={EXTERNALS}>
+          <MeshInstance3D node={makeNode({ materialOverride: 'ExtResource("1_ext")' })} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    return findMesh(renderer.scene);
+  }
+
+  it('casts no shadow for a blended .tres material, as for an inline one', async () => {
+    const mesh = await meshWith(
+      '[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\nblend_mode = 1\n'
+    );
+    expect(castsFrom(mesh)).toBe(false);
+  });
+
+  it('shows the missing-texture placeholder when a .tres material\'s map cannot load', async () => {
+    const tres = `[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://absent.png" id="1_tex"]
+
+[resource]
+albedo_texture = ExtResource("1_tex")
+`;
+    const mesh = await meshWith(tres, (fake) => fake.textures.seed('res://absent.png', null));
+    const material = mesh.material as THREE.MeshStandardMaterial;
+    expect(material.color.getHex()).toBe(0xff00ff);
   });
 });

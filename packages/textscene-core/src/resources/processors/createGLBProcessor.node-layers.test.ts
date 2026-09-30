@@ -73,7 +73,7 @@ async function loadWith(files: Record<string, string>): Promise<THREE.Object3D> 
     loadResource: vi.fn(async (path: string) => (path === GLTF_PATH ? asset : (files[path] ?? null))),
   });
   const eventBus = new ResourceEventBus();
-  const processor = createGLBProcessor(fileEventBus, eventBus, vi.fn(async () => null));
+  const processor = createGLBProcessor(fileEventBus, eventBus);
   const loaded = eventBus.once<THREE.Object3D>('glb', 'loaded', GLTF_PATH, 5000);
   processor.request(GLTF_PATH);
   return loaded;

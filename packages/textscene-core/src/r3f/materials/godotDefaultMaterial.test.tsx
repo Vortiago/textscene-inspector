@@ -12,7 +12,9 @@ import {
   GODOT_DEFAULT_METALLIC,
   GODOT_DEFAULT_ROUGHNESS,
 } from './godotDefaultMaterial';
-import { ExternalMaterialSlot } from './ExternalMaterialSlot';
+import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
+import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
 import { StandardMaterialSlot } from './StandardMaterialSlot';
 
 function linear(color: THREE.Color) {
@@ -21,10 +23,12 @@ function linear(color: THREE.Color) {
 
 async function renderSlot(element: ReactElement) {
   const renderer = await ReactThreeTestRenderer.create(
-    <mesh>
-      <boxGeometry />
-      {element}
-    </mesh>
+    <ResourceLoaderProvider loader={createFakeResourceLoader().loader}>
+      <mesh>
+        <boxGeometry />
+        {element}
+      </mesh>
+    </ResourceLoaderProvider>
   );
   const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
   return mesh.material as THREE.MeshStandardMaterial;
@@ -58,14 +62,14 @@ describe('Godot default 3D material constants', () => {
   });
 });
 
-describe('<ExternalMaterialSlot> fallback', () => {
-  it('renders Godot’s default material when there is no external material', async () => {
-    expectGodotDefault(await renderSlot(<ExternalMaterialSlot path={null} />));
+describe('<SurfaceMaterialSlot> fallback', () => {
+  it('renders Godot’s default material when there is no material', async () => {
+    expectGodotDefault(await renderSlot(<SurfaceMaterialSlot source={undefined} />));
   });
 
   it('renders Godot’s default material while a .tres has not resolved', async () => {
     expectGodotDefault(
-      await renderSlot(<ExternalMaterialSlot path="res://not_yet_loaded.tres" />)
+      await renderSlot(<SurfaceMaterialSlot source={{ kind: 'file', path: 'res://not_yet_loaded.tres' }} />)
     );
   });
 });

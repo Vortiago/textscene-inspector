@@ -31,6 +31,11 @@ const SLOT_COLOR_SPACE: Readonly<Record<TextureSlot, THREE.ColorSpace>> = {
   anisotropy_flowmap: THREE.NoColorSpace,
 };
 
+/** The colour space `slot`'s sampler reads in, whatever texture it binds. */
+export function slotColorSpace(slot: TextureSlot): THREE.ColorSpace {
+  return SLOT_COLOR_SPACE[slot];
+}
+
 /**
  * The per-material half of a binding, which a caller can adjust apart from the per-slot
  * decision, as a triplanar material folds the mesh size into the tiling scale. Only an
@@ -57,7 +62,7 @@ export function bindSlotTexture(
   slot: TextureSlot,
   material: MaterialTextureState
 ): THREE.Texture {
-  return applyTextureState(texture, { ...material, colorSpace: SLOT_COLOR_SPACE[slot] });
+  return applyTextureState(texture, { ...material, colorSpace: slotColorSpace(slot) });
 }
 
 /**

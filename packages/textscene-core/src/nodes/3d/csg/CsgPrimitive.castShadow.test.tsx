@@ -22,6 +22,7 @@ import type { CSGBox3DProperties } from './csgbox3d/types';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { parseTresFile } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { castsFrom, depthSideOf, drawsColour } from '../../../r3f/testing/threePasses';
 
@@ -166,15 +167,17 @@ describe('CSG cast_shadow', () => {
     );
     const renderer = await ReactThreeTestRenderer.create(tree);
 
-    const arrived = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-    // `_resolve`, not `seed`: the file lands with its `material:loaded` event.
     await ReactThreeTestRenderer.act(async () => {
-      fake.materials._resolve('res://paint.tres', arrived);
+      fake.resources._resolve(
+        'res://paint.tres',
+        parseTresFile('[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\nalbedo_color = Color(1, 0, 0, 1)\n')
+      );
       await renderer.update(tree);
     });
 
     const mesh = findMesh(renderer.scene) as unknown as THREE.Mesh;
-    expect(mesh.material).toBe(arrived);
+    const material = (Array.isArray(mesh.material) ? mesh.material[0]! : mesh.material)!;
+    expect((material as THREE.MeshStandardMaterial).color.getHex()).toBe(0xff0000);
     expect(drawsColour(mesh)).toBe(false);
   });
 });
