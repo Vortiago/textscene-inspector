@@ -1,7 +1,7 @@
 /**
- * binary-resource-reference: a node referencing a binary Godot resource (`.scn` scene, `.res`
- * resource) is reported at info, since the previewer loads only text formats (`.tscn`, `.tres`)
- * and that content degrades to placeholders.
+ * binary-resource-reference reports, at info, a node that references a binary Godot resource
+ * (`.scn` scene, `.res` resource). The previewer loads only text formats (`.tscn`, `.tres`), so
+ * that content shows as missing.
  */
 import { describe, it } from 'vitest';
 import { expectDiagnostic, expectNoDiagnostic } from '../../linter/testing/testkit';

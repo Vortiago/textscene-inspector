@@ -12,7 +12,7 @@ import { findExtResource } from '../../resources/SubResourceResolver.js';
 
 const BINARY_RESOURCE_RE = /\.(scn|res)$/i;
 
-/** One arm, so a heading with no type reports `<unknown>` as every other diagnostic does. */
+/** One arm, so the rule reports `<unknown>` for a heading with no type, as every other rule does. */
 const arms = {
   binaryReference: {
     severity: 'info',

@@ -1,7 +1,7 @@
 /**
- * Which diagnostic tiers a test block asserts, read from its body. A claim
- * starts at an anchor (`severity`, `.tiers`, a tier-named helper) and reaches to
- * the end of its statement. An ambiguous claim is skipped, never guessed.
+ * Which diagnostic tiers a test block asserts, and which negatives it narrows to
+ * a tier by hand, read from its body. A claim runs from an anchor to the end of
+ * its statement, and the scan skips an ambiguous claim rather than guess.
  */
 
 import { SEVERITIES } from '../types.js';
@@ -15,11 +15,10 @@ const TIER_NAMES = SEVERITIES.join('|');
 const TIER_NAMES_CAPITALISED = SEVERITIES.map((t) => t[0]!.toUpperCase() + t.slice(1)).join('|');
 
 /**
- * Where a tier claim starts. `severities` too, with no trailing boundary, for
- * `expect(severitiesOf(…)).toEqual(['info'])`. `expectSeverity` and
- * `expectRejected` are their own alternative: the capital `S` sits inside the
- * word, where `\b` does not hold. A validator's `tiers` counts only as a
- * property read, since the word also appears in titles.
+ * Where a tier claim starts: `severity`, `severities` (unbounded, for `severitiesOf(…)`),
+ * `expectSeverity`, `expectRejected` and a `.tiers` read. The two helpers need their own
+ * alternative, since `\b` fails before an inner capital, and `tiers` needs the dot, since
+ * titles use the word too.
  */
 const TIER_ANCHOR_RE = /\b(?:severit(?:y|ies)|expect(?:Severity|Rejected))|(?<=\.)tiers\b/g;
 
@@ -48,10 +47,9 @@ function reportsOfTier(body: string, index: number): string | null {
 }
 
 /**
- * What makes a list helper a claim: an assertion that the list is non-empty,
- * in the call's own statement or on the name it is bound to. Positive evidence,
- * because `const errors = errorsOf(x);` alone claims nothing, and
- * `toHaveLength(0)` asserts the tier is absent.
+ * An assertion that a list is non-empty, which a list helper needs to count as a claim.
+ * `const errors = errorsOf(x);` alone claims nothing, and `toHaveLength(0)` asserts the
+ * tier is absent.
  */
 const NON_EMPTY_RE = /toHaveLength\(\s*[1-9]|toBeGreaterThan\(\s*0|length\)\.toBe\(\s*[1-9]|\[0\]/;
 
@@ -65,10 +63,9 @@ const TIER_LITERAL_RE = new RegExp(`'(${TIER_NAMES})'`, 'g');
 const CLAIM_REACH = 240;
 
 /**
- * A tier named to be excluded is not a tier asserted: `filter(d => d.severity
- * !== 'error')` and `.not.toBe('info')` both spell one. Read over the whole
- * claim, so an ambiguous claim is skipped instead of fabricating a tier.
- * `emptiedExclusion` reads the one exception.
+ * A tier named to be excluded is not a tier asserted: `filter(d => d.severity !== 'error')`
+ * and `.not.toBe('info')` both spell one. The scan skips a claim this matches, except where
+ * `emptiedExclusion` reads it, rather than fabricate a tier.
  */
 const EXCLUDES_RE = /(?:!==?|\.not\b)/;
 
@@ -84,7 +81,7 @@ const EMPTY_RE = /\.(?:toEqual|toStrictEqual)\(\s*\[\s*\]\s*\)|\.toHaveLength\(\
 /** An `if` on the exclusion whose body pushes the survivors: `) { wrong.push(`. */
 const PUSHED_TO_RE = /^[^{]*\)\s*\{\s*(\w+)\.push\(/;
 
-/** Where the statement holding `index` starts. Statements are cut at `;`, like a claim. */
+/** Where the statement holding `index` starts. It cuts statements at `;`, as a claim does. */
 const statementStart = (body: string, index: number): number => body.lastIndexOf(';', index) + 1;
 
 /** The statement holding `index`. */
@@ -122,7 +119,7 @@ const isAssertedEmpty = (body: string, name: string): boolean =>
 const isAssertedNonEmpty = (body: string, name: string): boolean =>
   assertsOn(body, expectOfReadOf(name), NON_EMPTY_RE);
 
-/** Whether the list a helper call at `index` returns is asserted non-empty, inline or by name. */
+/** Whether `body` asserts that the list a helper call at `index` returns is non-empty. */
 function isListAssertedNonEmpty(body: string, index: number, claim: string): boolean {
   if (NON_EMPTY_RE.test(claim)) return true;
   const name = boundNameAt(body, index);
@@ -130,11 +127,9 @@ function isListAssertedNonEmpty(body: string, index: number, claim: string): boo
 }
 
 /**
- * The tier an exclusion claims when its survivors are asserted empty: no
- * diagnostic but `error` survives, so every one is `error`. The survivors reach
- * that assertion inline, through a bound name, or through `push` inside an `if`.
- * A statement naming a second tier is ambiguous and claims nothing, wherever
- * the second tier sits relative to this anchor.
+ * The tier an exclusion claims when a test asserts its survivors empty: no diagnostic but
+ * `error` survives, so every one is `error`. A statement that names a second tier anywhere
+ * is ambiguous and claims nothing.
  */
 function emptiedExclusion(body: string, index: number, claim: string): string | null {
   const tier = EXCLUSION_RE.exec(claim)?.[1];
@@ -187,7 +182,7 @@ const FOUND_NOTHING_RE = new RegExp(
   `${EMPTY_RE.source}|\\.toBe\\(\\s*false\\s*\\)|\\.toBeUndefined\\(\\s*\\)`
 );
 
-/** Whether the search in `statement` at `index` is asserted to find nothing, inline or by name. */
+/** Whether `body` asserts that the search at `index` in `statement` finds nothing. */
 function isFoundNothing(body: string, index: number, statement: string): boolean {
   if (FOUND_NOTHING_RE.test(statement)) return true;
   const name = boundNameAt(body, index);
@@ -195,9 +190,9 @@ function isFoundNothing(body: string, index: number, statement: string): boolean
 }
 
 /**
- * The statements of `body` that assert, by hand, that no diagnostic of one tier
- * and one identity exists: a `some`, `filter` or `find` narrowed by both, found
- * empty. Such a negative passes for any behaviour once the diagnostic's tier moves.
+ * The statements of `body` that assert by hand that no diagnostic of one tier and one
+ * identity exists. Each is a `some`, `filter` or `find` narrowed by both and found empty,
+ * and it cannot fail once that tier moves.
  */
 export function tierNarrowedNegatives(body: string): string[] {
   const offenders = new Set<string>();

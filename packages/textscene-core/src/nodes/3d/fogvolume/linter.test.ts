@@ -40,7 +40,7 @@ describe('FogVolume size-ignored-for-World rule', () => {
 
   it('never raises an ERROR for the combination — Godot accepts and stores both (severity contract)', () => {
     // The whole scene, not the rule: the rule declares only an info arm, so
-    // "no error from it" could never fail.
+    // "no error from it" cannot fail.
     expectNoErrors(scene(node('FogVolume', { shape: 4, size: 'Vector3(4, 3, 4)' }, { name: 'F' })));
   });
 

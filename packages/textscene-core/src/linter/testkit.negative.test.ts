@@ -1,7 +1,7 @@
 /**
- * The test-kit's tier-narrowed negatives. "No diagnostic at this tier" holds
- * for any behaviour once the rule stops reporting at that tier, so the kit
- * refuses a negative whose tier nothing declared can reach.
+ * The test kit's tier-narrowed negatives. "No diagnostic at this tier" cannot
+ * fail once the rule stops reporting at that tier, so the kit refuses a negative
+ * at a tier that no declared arm can reach.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -10,7 +10,7 @@ import './index.js'; // trigger all validator + rule registrations
 
 /** drag_left_margin's 0..1 bound is a PROPERTY_HINT_RANGE (camera_2d.cpp:989), so it warns. */
 const HINTED_WARNING = scene(node('Camera2D', { drag_left_margin: 1.5 }));
-/** set_zoom ERR_FAIL_CONDs on a near-zero component (camera_2d.cpp:103-105), so it errors. */
+/** set_zoom refuses a near-zero component with ERR_FAIL_COND (camera_2d.cpp:103-105), so it errors. */
 const ENFORCED_ERROR = scene(node('Camera2D', { zoom: 'Vector2(0, 1)' }));
 const CLEAN = scene(node('Node2D'));
 

@@ -50,10 +50,10 @@ const allBlocks = (): Block[] => {
 
 describe('test titles name the tier they assert', () => {
   it('never claims a tier the block does not assert', () => {
-    // The scrape's floor counts blocks, but this guard checks only those with
-    // exactly one tier, so a narrowed anchor drops subjects with the walk
-    // intact. That floor sits here, above the 1,756 blocks read without `.tiers`,
-    // emptied exclusions and bound list helpers. It is a floor, not a drift pin.
+    // The scan's floor counts all blocks, and this guard checks only single-tier
+    // blocks, so a narrowed anchor drops subjects with the walk intact. This floor
+    // is not a drift pin: it sits below today's 1,842 and above the 1,761 left
+    // without the exclusion and binding readers.
     const checked = atLeast(
       allBlocks()
         .map((b) => ({ ...b, tiers: assertedTiers(b.body) }))
@@ -159,7 +159,7 @@ describe('test titles name the tier they assert', () => {
 
   it('keeps an exclusion out of the scan unless its own survivors are asserted empty', () => {
     // `every(… !== …)` asserts the tier is absent, a list with survivors
-    // asserts nothing about them, and an empty sub-filter empties a different list.
+    // asserts nothing about them, and an empty sub-filter says nothing about the list it narrows.
     const src = [
       "it('every', () => { expect(all.every((d) => d.severity !== 'error')).toBe(true); });",
       "it('kept', () => { const kept = all.filter((d) => d.severity !== 'error'); expect(kept).toHaveLength(2); });",

@@ -1,7 +1,7 @@
 /**
  * The `it` and `test` blocks of a test file, read from its source: each block's
- * title, line and body. A scan, not a parse, so the title-tier guard and its
- * pins can run it over every test file in well under a second.
+ * title, line and body. A scan, not a parse, so a guard and its pins can run
+ * it over every test file in well under a second.
  */
 
 import { stripComments } from '@textscene/dev-kit';

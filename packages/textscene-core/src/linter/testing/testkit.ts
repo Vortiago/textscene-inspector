@@ -114,7 +114,7 @@ export interface DiagnosticExpectation {
   prop?: string;
   /** Find the diagnostic with this exact rule name. */
   ruleName?: string;
-  /** Assert the found diagnostic's severity or, in a negative, the tier none may have. */
+  /** Assert the found diagnostic's tier or, in a negative, the tier that none may have. */
   severity?: Severity;
   /** Assert the found diagnostic's node type. */
   nodeType?: string;
@@ -190,7 +190,7 @@ function expectEveryHeadingPlaced(diagnostics: Diagnostic[]): void {
   expect(stranded).toEqual([]);
 }
 
-/** Every tier `ruleName` is declared to report at, by a rule's `emits` or a file diagnostic. */
+/** Every tier that a rule's `emits` or a file diagnostic declares for `ruleName`. */
 function declaredTiers(ruleName: string): Severity[] {
   const arms = [
     ...ruleRegistry.getRules().flatMap(rule => rule.meta.emits ?? []),
@@ -200,9 +200,9 @@ function declaredTiers(ruleName: string): Severity[] {
 }
 
 /**
- * Refuse a negative at a tier nothing can report, since it passes for any
- * behaviour. A format failure always errors, so `error` needs no rule. Another
- * tier needs the rule named, because a message substring does not say whose tier applies.
+ * Refuse a negative at a tier that nothing can report, since it cannot fail.
+ * Only `error` goes without a rule name, because a format failure always errors
+ * and a message substring cannot say whose tier applies.
  */
 function expectTierReachable(ruleName: string | undefined, severity: Severity): void {
   if (ruleName === undefined || ruleName === STRICT_PARSER_RULE_NAME) {
@@ -217,14 +217,14 @@ function expectTierReachable(ruleName: string | undefined, severity: Severity): 
 
 /**
  * Assert no diagnostic matching `where` is present (other diagnostics may exist).
- * With a `severity`, "none at that tier", once the tier is shown reachable.
+ * With a `severity`, assert none at that tier, after `expectTierReachable` passes.
  */
 export function expectNoDiagnostic(content: string, where: DiagnosticExpectation): void {
   const diagnostics = lint(content);
   expectEveryHeadingPlaced(diagnostics);
   const { severity } = where;
   if (severity !== undefined) expectTierReachable(where.ruleName, severity);
-  // On the identity fields only, plus a severity the caller names. A negative
+  // Match on the identity fields only, plus a tier the caller names. A negative
   // quantifier over a family is the stronger claim, and narrowing it by the
   // other asserted fields would turn "no diagnostic for this property" into
   // "none with that node type".

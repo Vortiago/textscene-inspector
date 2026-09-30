@@ -1,7 +1,7 @@
 /**
- * The diagnostic lists linter tests assert on, named for the tier they hold, so
- * a name always means one filter. It imports types only, so a test that keeps
- * the linter barrel out can use it.
+ * The diagnostic lists that linter tests assert on, where each name means one
+ * filter. It imports only types from the linter, so a test that keeps the
+ * linter barrel out can use it.
  */
 
 import { expect } from 'vitest';
@@ -19,8 +19,8 @@ export const errorsOf = atTier('error');
 export const warningsOf = atTier('warning');
 
 /**
- * `ruleName`'s diagnostics, each asserted to be at `tier`. Filtering by tier
- * instead would hide a rule that moved tier behind an empty list.
+ * `ruleName`'s diagnostics, after it asserts that each one is at `tier`.
+ * Filtering by tier instead would hide a rule that moved tier behind an empty list.
  */
 export function reportsOf(
   diagnostics: readonly Diagnostic[],

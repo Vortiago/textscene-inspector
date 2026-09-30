@@ -1,8 +1,7 @@
 /**
- * A negative narrowed to a tier and to one diagnostic, spelled by hand, stops
- * being able to fail the moment that diagnostic's tier moves. The test kit's
- * `expectNoErrors` and `expectNoDiagnostic({ severity })` check the tier is
- * reachable first, so a raw one is refused here.
+ * Refuses a hand-written negative narrowed to a tier and to one diagnostic. It
+ * cannot fail once that diagnostic's tier moves, while the test kit's `expectNoErrors`
+ * and `expectNoDiagnostic({ severity })` first check that the tier is reachable.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -17,7 +16,7 @@ const SELF = 'linter/tierNarrowedNegatives.guard.test.ts';
 
 const isTestFile = (name: string) => /\.test\.tsx?$/.test(name);
 
-/** The raw negatives in `source`, each as `file:line` and its statement. */
+/** The hand-written negatives in `source`, each as `file:line` and its statement. */
 function offendersIn(file: string, source: string): string[] {
   return blocksIn(file, source).flatMap((block) =>
     tierNarrowedNegatives(block.body).map((statement) => `${file}:${block.line} ${statement.trim()}`)
@@ -45,7 +44,7 @@ describe('negatives narrowed to a tier go through the test kit', () => {
   });
 
   it('leaves a positive, an unnarrowed negative and a tier-only negative alone', () => {
-    // Only a tier with an identity can go vacuous: "no errors at all" stays
+    // Only a tier with an identity can stop failing: "no errors at all" stays
     // falsifiable, since a format failure always errors.
     const src = [
       "it('positive', () => { expect(all.some((d) => d.severity === 'warning' && d.message.includes('x'))).toBe(true); });",
