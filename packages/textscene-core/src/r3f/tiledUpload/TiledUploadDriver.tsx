@@ -4,7 +4,7 @@
  * GPU keeps up with (`gpuPacer.ts`).
  */
 
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { TiledUploadContext } from './TiledUploadContext';
 import { TiledUploadQueue } from './TiledUploadQueue';
@@ -20,10 +20,15 @@ export const FRAME_UPLOAD_BUDGET_MS = 8;
 
 export function TiledUploadDriver({ children }: { children: ReactNode }) {
   const renderer = useThree((state) => state.gl);
-  const queue = useMemo(() => {
-    const pacer = new GpuPacer(() => webglFence(renderer.getContext() as WebGL2RenderingContext));
-    return new TiledUploadQueue(webglUploadRenderer(renderer), undefined, pacer);
-  }, [renderer]);
+  const pacer = useMemo(
+    () => new GpuPacer(() => webglFence(renderer.getContext() as WebGL2RenderingContext)),
+    [renderer]
+  );
+  const queue = useMemo(
+    () => new TiledUploadQueue(webglUploadRenderer(renderer), undefined, pacer),
+    [renderer, pacer]
+  );
+  useEffect(() => () => pacer.dispose(), [pacer]);
   useFrame(() => queue.tick(FRAME_UPLOAD_BUDGET_MS));
   return <TiledUploadContext.Provider value={queue}>{children}</TiledUploadContext.Provider>;
 }

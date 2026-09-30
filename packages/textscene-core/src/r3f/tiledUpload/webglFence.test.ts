@@ -54,4 +54,31 @@ describe('webglFence', () => {
 
     expect(webglFence(gl).isDone()).toBe(true);
   });
+
+  it('deletes the sync when disposed before the GPU signals it', () => {
+    const { gl, calls } = fakeGl();
+    webglFence(gl).dispose();
+
+    expect(calls.deleteSync).toHaveBeenCalledTimes(1);
+  });
+
+  it('deletes the sync once, however it is released', () => {
+    const { gl, calls, signal } = fakeGl();
+    const fence = webglFence(gl);
+    signal();
+    fence.isDone();
+    fence.dispose();
+    fence.dispose();
+
+    expect(calls.deleteSync).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads as done once disposed, so nothing waits on a released fence', () => {
+    const { gl, calls } = fakeGl();
+    const fence = webglFence(gl);
+    fence.dispose();
+
+    expect(fence.isDone()).toBe(true);
+    expect(calls.getSyncParameter).not.toHaveBeenCalled();
+  });
 });
