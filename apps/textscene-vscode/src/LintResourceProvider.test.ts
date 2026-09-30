@@ -76,6 +76,14 @@ describe('LintResourceProvider', () => {
     expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
   });
 
+  it('reads nothing for a document in no Godot project, as the CLI declines one', async () => {
+    const outside = new LintResourceProvider(createMockUri('/workspace'), createMockUri('/workspace/loose/level.tscn'));
+    (vscode.workspace.fs.stat as Mock).mockRejectedValue(new Error('ENOENT'));
+
+    expect(await outside.loadResource('res://game/models/tree.glb', 'PackedScene')).toBeNull();
+    expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
+  });
+
   it('walks for the project root once across reads', async () => {
     const provider = providerForLevel();
     await provider.loadResource('res://models/tree.glb', 'PackedScene');

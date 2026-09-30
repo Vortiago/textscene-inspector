@@ -1,8 +1,8 @@
 /**
- * Walks up from a document's directory for `project.godot`, and falls back to the
- * workspace root, since Godot's `res://` is always project-root-relative. The
- * preview's `VSCodeResourceProvider`, `TscnDocumentLinkProvider` and the linter's
- * `LintResourceProvider` share it, so all agree on where a `res://` path points.
+ * Walks up from a document's directory for `project.godot`, since Godot's `res://`
+ * is always project-root-relative. The preview's `VSCodeResourceProvider` and
+ * `TscnDocumentLinkProvider` fall back to the workspace root. The linter's
+ * `LintResourceProvider` takes no fallback, so it reports the files the CLI reports.
  * The walk itself is core's `findProjectRoot`, which the CLI shares.
  */
 
@@ -34,11 +34,22 @@ async function hasProjectFile(dir: vscode.Uri): Promise<boolean> {
   }
 }
 
+/**
+ * The nearest directory, from the document's own up to the workspace root, that
+ * holds `project.godot`, or null when none does.
+ */
+export function findEnclosingGodotProject(
+  workspaceRoot: vscode.Uri,
+  documentUri: vscode.Uri
+): Promise<vscode.Uri | null> {
+  const documentDir = vscode.Uri.joinPath(documentUri, '..');
+  return findProjectRoot(documentDir, parentUri, stopsAt(workspaceRoot), hasProjectFile);
+}
+
+/** `findEnclosingGodotProject`, or the workspace root when no directory holds `project.godot`. */
 export async function findGodotProjectRoot(
   workspaceRoot: vscode.Uri,
   documentUri: vscode.Uri
 ): Promise<vscode.Uri> {
-  const documentDir = vscode.Uri.joinPath(documentUri, '..');
-  const root = await findProjectRoot(documentDir, parentUri, stopsAt(workspaceRoot), hasProjectFile);
-  return root ?? workspaceRoot;
+  return (await findEnclosingGodotProject(workspaceRoot, documentUri)) ?? workspaceRoot;
 }

@@ -36,15 +36,15 @@ export class VSCodeResourceProvider implements ResourceProvider {
     } catch (primaryError) {
       info(`[VSCodeResourceProvider] Primary resolution failed:`, primaryError);
 
-      // Fallback: relative to the document's directory.
+      // Fallback: relative to the document's directory. A `..` that climbs above it is
+      // refused here as in `resolveGodotPath`, or this branch reads what that one refused.
       try {
-        const relativePath = stripResPrefix(resourcePath);
+        const relativePath = normalizeRelativePath(stripResPrefix(resourcePath));
         const documentDir = vscode.Uri.joinPath(this.documentUri, '..');
-        const fallbackPath = vscode.Uri.joinPath(documentDir, relativePath);
+        const fallbackPath = relativePath === null ? null : vscode.Uri.joinPath(documentDir, relativePath);
 
-        info(`[VSCodeResourceProvider] Trying fallback path: ${fallbackPath.fsPath}`);
-
-        if (isWithinRoot(this.workspaceRoot.fsPath, fallbackPath.fsPath)) {
+        if (fallbackPath && isWithinRoot(this.workspaceRoot.fsPath, fallbackPath.fsPath)) {
+          info(`[VSCodeResourceProvider] Trying fallback path: ${fallbackPath.fsPath}`);
           this.servedResources.set(comparablePath(fallbackPath.fsPath), resourcePath);
           return await this.readContent(fallbackPath, resourcePath, type);
         }

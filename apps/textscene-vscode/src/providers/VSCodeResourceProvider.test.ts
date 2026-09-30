@@ -84,6 +84,22 @@ describe('VSCodeResourceProvider', () => {
       ).rejects.toThrow(/Path traversal detected/);
     });
 
+    it('refuses a path that climbs out of the project root in the document-relative fallback too', async () => {
+      // project.godot at /workspace/game: `res://../other.png` escapes it, while the
+      // document-relative spelling lands at /workspace/game/other.png, inside the workspace.
+      vscode.workspace.fs.stat.mockImplementation((uri: ReturnType<typeof createMockUri>) =>
+        uri.fsPath.replace(/\\/g, '/') === '/workspace/game/project.godot'
+          ? Promise.resolve({ type: 1, ctime: 0, mtime: 0, size: 100 })
+          : Promise.reject(new Error('Not found'))
+      );
+      const gameProvider = new VSCodeResourceProvider(workspaceRoot, createMockUri('/workspace/game/scenes/level.tscn'));
+
+      await expect(gameProvider.loadResource('res://../other.png', 'Texture2D')).rejects.toThrow(
+        /climbs out of the project root/
+      );
+      expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
+    });
+
     it('should handle paths without res:// prefix', async () => {
       const content = 'shader code';
       const mockData = createMockFileData(content);

@@ -9,7 +9,7 @@ import type { ResourceProvider } from '@textscene/core/linter';
 import { findProjectRoot, parentDir, projectFileIn, resolveResPath } from '@textscene/core/resources/resPath';
 import { isBinaryResourceType } from '@textscene/core/resources/resourceProviderUtils';
 
-async function hasProjectFile(dir: string): Promise<boolean> {
+async function probeProjectFile(dir: string): Promise<boolean> {
   try {
     await access(projectFileIn(dir));
     return true;
@@ -17,6 +17,21 @@ async function hasProjectFile(dir: string): Promise<boolean> {
     // Absent or unreadable: either way this directory is not a project root Godot could open.
     return false;
   }
+}
+
+/**
+ * Each directory's answer, written by `hasProjectFile` and never cleared: one CLI run lints a tree whose
+ * scenes share their ancestors, so each directory is probed once per run, not once per scene.
+ */
+const projectFileByDir = new Map<string, Promise<boolean>>();
+
+function hasProjectFile(dir: string): Promise<boolean> {
+  let answer = projectFileByDir.get(dir);
+  if (answer === undefined) {
+    answer = probeProjectFile(dir);
+    projectFileByDir.set(dir, answer);
+  }
+  return answer;
 }
 
 /** A provider over the project at `root`. It returns null for a path outside it or a file it does not hold. */

@@ -69,7 +69,7 @@ export const FILE_DIAGNOSTICS = {
    * A rule threw. Reported on the node it ran on, or on no line for the
    * cross-file rule, naming the rule and the error. Every other rule still
    * runs. Not an engine claim about the file: the rule's own findings are
-   * simply missing.
+   * missing.
    */
   ruleCrashed: {
     severity: 'error',
