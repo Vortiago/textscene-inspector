@@ -46,5 +46,9 @@ richer picture. No host exposes the switch yet.
 - A file whose optional `KHR_draco_mesh_compression` Godot skips still fails here. three
   constructs its Draco handler from `extensionsUsed` before any plugin runs, and this
   previewer ships no Draco decoder, so both rules refuse it.
+- A file that requires `KHR_texture_basisu` imports in Godot and fails here. The extension
+  is in Godot's set, so the filter keeps it, but three's handler refuses a required one
+  without a KTX2 transcoder, and this previewer sets none. An optional one falls back to
+  the texture's own `source`.
 - Upgrading three cannot widen what a model shows under `godot-importer`: the filter
   names what Godot reads, not what three reads.

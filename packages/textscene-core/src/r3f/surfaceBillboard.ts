@@ -20,7 +20,7 @@ const modelScale = new THREE.Vector3();
 
 /**
  * Write the billboarded world matrix into `target`. The model's per-axis scale survives
- * only under `billboard_keep_scale` (`material.cpp:1274-1281`); Godot's default drops it.
+ * only under `billboard_keep_scale` (`material.cpp:1274-1281`). Godot's default drops it.
  *
  * @param camera - the main camera's world matrix for ENABLED and FIXED_Y, and the pass
  *   camera's for PARTICLES, which reads `INV_VIEW_MATRIX` rather than `MAIN_CAM_INV_VIEW_MATRIX`

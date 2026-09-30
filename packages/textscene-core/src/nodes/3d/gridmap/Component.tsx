@@ -116,7 +116,7 @@ interface GridMapItemProps {
   cellCenter: GridMapProperties['cellCenter'];
 }
 
-/** All cells sharing one MeshLibrary item, batched into a single InstancedMesh. */
+/** All cells sharing one MeshLibrary item, drawn as the tiles `buildTiles` makes. */
 function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
   const meshResult = useResource<ArrayMeshResource>(item?.meshPath ?? '', 'arraymesh');
   // The surface material path only becomes known once the ArrayMesh resolves.

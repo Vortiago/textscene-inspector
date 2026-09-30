@@ -209,7 +209,7 @@ describe('cloneWithMaterials', () => {
   });
 
   it('casts nothing from a surface whose override material leaves Godot’s shadow pass', () => {
-    // `surface_material_override/N` swaps the clone's material; the hooks read it per draw.
+    // `surface_material_override/N` swaps the clone's material. The hooks read it per draw.
     const clonedSingle = findMesh(cloneWithMaterials(makeSource().root), 'single');
     clonedSingle.material = standardMaterial({ transparency: '1' });
     expect(castsFrom(clonedSingle)).toBe(false);

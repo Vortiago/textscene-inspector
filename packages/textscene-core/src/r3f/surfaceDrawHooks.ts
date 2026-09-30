@@ -85,8 +85,8 @@ function pose(
   mainCamera: THREE.Camera,
   passCamera: THREE.Camera
 ): boolean {
-  // A batch that `drawsAsOneBatch` refused, such as a GLB instanced under `three-loader`,
-  // keeps its pose rather than turning about its origin.
+  // An InstancedMesh this codebase did not batch, such as a GLB instanced under
+  // `three-loader`, keeps its pose: `drawsAsOneBatch` says why it cannot billboard.
   if ((object as THREE.InstancedMesh).isInstancedMesh) return false;
   const billboard = billboardOf(material);
   const camera = billboard.mode === BillboardMode.BILLBOARD_PARTICLES ? passCamera : mainCamera;

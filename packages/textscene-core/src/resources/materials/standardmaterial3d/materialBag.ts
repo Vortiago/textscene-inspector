@@ -135,9 +135,19 @@ const NO_BILLBOARD: SurfaceBillboard = Object.freeze({
   keepScale: false,
 });
 
+/**
+ * The modes `_update_shader` writes a billboard for (`material.cpp:1260-1335`). Any other
+ * value draws as DISABLED, so it must not unbatch a GridMap item either.
+ */
+const BILLBOARDING_MODES: ReadonlySet<number> = new Set([
+  BillboardMode.BILLBOARD_ENABLED,
+  BillboardMode.BILLBOARD_FIXED_Y,
+  BillboardMode.BILLBOARD_PARTICLES,
+]);
+
 /** Built once per bag, so the draw hooks read it every draw group without allocating. */
 function surfaceBillboard(scalars: StandardMaterial3DScalars): SurfaceBillboard {
-  if (scalars.billboardMode === BillboardMode.BILLBOARD_DISABLED) return NO_BILLBOARD;
+  if (!BILLBOARDING_MODES.has(scalars.billboardMode)) return NO_BILLBOARD;
   return { mode: scalars.billboardMode, keepScale: scalars.billboardKeepScale };
 }
 

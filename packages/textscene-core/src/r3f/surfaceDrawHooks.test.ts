@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { applyShadowCasting, shadowCastingEffects } from './shadowCasting';
 import { drawsAsOneBatch } from './surfaceDrawHooks';
-import { ShadowCastingSetting } from '../resources/meshlibrary/types';
+import { ShadowCastingSetting } from '../godot/rendering';
 import { standardMaterial as material } from '../resources/materials/standardmaterial3d/testing/standardMaterial';
 import {
   castsFrom,

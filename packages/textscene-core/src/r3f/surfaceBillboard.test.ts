@@ -45,7 +45,7 @@ describe('billboardWorldMatrix — ENABLED', () => {
   });
 
   it('drops the model scale by default, as Godot does without billboard_keep_scale', () => {
-    // `material.cpp:1266-1271` takes the camera basis alone; `:1274-1281` multiplies the
+    // `material.cpp:1266-1271` takes the camera basis alone. `:1274-1281` multiplies the
     // model scale back only under FLAG_BILLBOARD_KEEP_SCALE.
     const target = new THREE.Matrix4();
     billboardWorldMatrix(target, yawedScaledModel(), camera.matrixWorld, {

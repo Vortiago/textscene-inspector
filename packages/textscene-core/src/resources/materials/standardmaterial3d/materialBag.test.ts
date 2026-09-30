@@ -186,6 +186,18 @@ describe('standardMaterialBag — billboard_mode', () => {
     expect(billboardOf(standardMaterial({}))).toBe(billboardOf(new THREE.MeshBasicMaterial()));
   });
 
+  it('reads DISABLED from a billboard_mode that no shader case billboards', () => {
+    expect(billboardOf(standardMaterial({ billboard_mode: '7' }))).toBe(
+      billboardOf(new THREE.MeshBasicMaterial())
+    );
+  });
+
+  it('reads PARTICLES as a billboard', () => {
+    expect(billboardOf(standardMaterial({ billboard_mode: '3' })).mode).toBe(
+      BillboardMode.BILLBOARD_PARTICLES
+    );
+  });
+
   it('reads DISABLED from Godot’s default surface and from a foreign material', () => {
     expect(billboardOf(buildStandardMaterial(null)).mode).toBe(BillboardMode.BILLBOARD_DISABLED);
     expect(billboardOf(new THREE.MeshBasicMaterial()).mode).toBe(BillboardMode.BILLBOARD_DISABLED);
