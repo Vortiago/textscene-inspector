@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type * as THREE from 'three';
 import type { TscnInternalResource } from '../../parser/types';
 import {
+  cachedProceduralTexture,
+  cacheProceduralTexture,
   clearProceduralTextureCache,
   pinProceduralTexture,
   proceduralTexture,
@@ -179,5 +181,26 @@ describe('clearProceduralTextureCache', () => {
     clearProceduralTextureCache();
     proceduralTexture(resources, 'a', rasterize);
     expect(rasterize).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('content-keyed entries', () => {
+  it('returns the texture cached under a key', () => {
+    const texture = fakeTexture();
+    cacheProceduralTexture('NoiseTexture2D:abc', texture);
+    expect(cachedProceduralTexture('NoiseTexture2D:abc')).toBe(texture);
+  });
+
+  it('has nothing under a key never cached', () => {
+    expect(cachedProceduralTexture('NoiseTexture2D:missing')).toBeUndefined();
+  });
+
+  it('disposes an unpinned content-keyed texture on overflow, like any other entry', () => {
+    const first = fakeTexture();
+    cacheProceduralTexture('NoiseTexture2D:first', first);
+    for (let i = 0; i < CAPACITY; i++) cacheProceduralTexture(`NoiseTexture2D:${i}`, fakeTexture());
+
+    expect(cachedProceduralTexture('NoiseTexture2D:first')).toBeUndefined();
+    expect(first.dispose).toHaveBeenCalledTimes(1);
   });
 });

@@ -14,6 +14,7 @@ vi.mock('@textscene/core', async () => {
   return { ...real, TscnCanvas: () => null, TscnSceneContents: () => null };
 });
 
+import { COMPACT_LAYOUT_QUERY } from '@textscene/core';
 import { R3FApp } from './r3f-main';
 
 const FIXTURE_KEY = 'tscn-web-r3f-fixture';
@@ -85,7 +86,16 @@ function dragSplitterTo(clientX: number) {
   });
 }
 
-const paneWidth = () => parseFloat(screen.getByTestId('source-pane').style.width || 'NaN');
+/** The width the pane hands its stylesheet, as a custom property the compact layout overrides. */
+const paneWidth = () =>
+  parseFloat(screen.getByTestId('source-pane').style.getPropertyValue('--source-pane-width') || 'NaN');
+
+/** Makes `matchMedia` answer as a compact screen does, for the query the app asks. */
+function stubCompactScreen() {
+  vi.spyOn(window, 'matchMedia').mockImplementation(
+    (query: string) => ({ matches: query === COMPACT_LAYOUT_QUERY, media: query }) as MediaQueryList
+  );
+}
 
 beforeEach(() => {
   resetPersistence();
@@ -189,13 +199,39 @@ describe('#200 source pane — shown by default on first load (criterion 3)', ()
   });
 });
 
+describe('source pane — hidden by default on a compact screen, where it covers the preview', () => {
+  it('starts hidden on a compact screen with no stored choice', async () => {
+    stubCompactScreen();
+    render(<R3FApp />);
+    await waitForScene();
+    expect(screen.queryByTestId('source-pane')).toBeNull();
+    expect(screen.getByTestId('source-pane-toggle').getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('keeps a stored choice to show it on a compact screen', async () => {
+    globalThis.localStorage.setItem(SOURCE_PANE_KEY, JSON.stringify({ visible: true, width: 320 }));
+    stubCompactScreen();
+    render(<R3FApp />);
+    await waitForScene();
+    expect(screen.getByTestId('source-pane')).toBeTruthy();
+  });
+
+  it('opens from the toggle on a compact screen', async () => {
+    stubCompactScreen();
+    render(<R3FApp />);
+    await waitForScene();
+    fireEvent.click(screen.getByTestId('source-pane-toggle'));
+    await waitFor(() => expect(screen.getByTestId('source-pane')).toBeTruthy());
+  });
+});
+
 describe('#200 source pane — draggable splitter resizes the pane (criterion 4)', () => {
   it('narrows the pane when the splitter is dragged left', async () => {
     render(<R3FApp />);
     await waitForScene();
 
     const before = paneWidth();
-    expect(Number.isFinite(before)).toBe(true); // an inline style sets the width, so it is observable and resizable
+    expect(Number.isFinite(before)).toBe(true); // an inline custom property sets the width, so it is observable and resizable
 
     dragSplitterTo(300); // drag left from 600 → the left pane must shrink
     await waitFor(() => {

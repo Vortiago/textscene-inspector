@@ -18,6 +18,8 @@ body {
   color: #ddd;
 }
 
+/* `dvh` excludes a mobile browser's URL bar, which `vh` counts. The `vh` line is the fallback. */
 #app {
   height: 100vh;
+  height: 100dvh;
 }

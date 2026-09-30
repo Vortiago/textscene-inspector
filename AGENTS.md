@@ -48,7 +48,9 @@ Godot `.tscn` parser, linter and renderer (react-three-fiber over three.js). pnp
   `pnpm test:vscode:csp`. It drives a real desktop VS Code, opens a Control fixture
   through the extension's own preview command and reads the canvas back over CDP. It
   requires ink with text, exactly 0 ink with every label emptied, and zero CSP violations
-  or network attempts inside the preview frame. Linux/Xvfb. CI runs it there.
+  or network attempts inside the preview frame. A third run opens a NoiseTexture2D and
+  requires that a job worker replied and that the texture drew. Linux/Xvfb. CI runs it
+  there.
 - Changed the web previewer's outliner, inspector, mode switching, or camera/selection
   wiring: `pnpm test:e2e:web`. It drives the real built app in a headless browser
   (`scripts/e2e/webAppGate.mjs`) and asserts:
@@ -57,7 +59,11 @@ Godot `.tscn` parser, linter and renderer (react-three-fiber over three.js). pnp
   - the outliner's node paths and the inspector's displayed property values;
   - a 2D/3D fixture opens in the matching workspace with a correctly sized canvas,
     checked separately from its ink count;
-  - zero console errors, pageerrors or failed requests on load.
+  - zero console errors, pageerrors or failed requests on load;
+  - a capture waits for a procedural texture still building. A control delays the build
+    and shows the capture would differ without the wait;
+  - a 4096x4096 NoiseTexture2D builds and uploads with no main-thread task over 50 ms. A
+    control blocks the worker and must see one (ADR-0042).
 
   It observes entirely from outside the app (`context.addInitScript` patching
   `WebGL(2)RenderingContext.prototype`, the same mechanism `scripts/vscode/driveScene.mjs`

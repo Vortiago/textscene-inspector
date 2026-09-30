@@ -5,9 +5,13 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as logger from '../../logger';
+import type * as THREE from 'three';
 import type { TscnInternalResource } from '../../parser/types';
+import { WorkerJobRunner } from '../../workers/WorkerJobRunner';
 import { resolveGradientTexture2D } from './gradienttexture2d/resolveGradientTexture';
 import { resolveNoiseTexture2D } from './noisetexture2d/resolveNoiseTexture';
+import { abortProceduralBuilds } from './proceduralBuilds';
+import { clearProceduralTextureCache } from './proceduralTextureCache';
 
 /** What each mocked rasteriser throws, or null to run the real one. */
 const failure = vi.hoisted(() => ({ error: null as Error | null }));
@@ -38,9 +42,14 @@ vi.mock('./noisetexture2d/noiseImage', async (importOriginal) => {
 afterEach(() => {
   failure.error = null;
   vi.restoreAllMocks();
+  abortProceduralBuilds();
+  clearProceduralTextureCache();
 });
 
-/** A fresh table per call: the procedural cache keys on the table, so each resolve rasterises. */
+/**
+ * A fresh table per call: the gradient cache keys on the table, so each resolve rasterises.
+ * The noise cache keys on content, so `afterEach` clears it.
+ */
 function gradientResources(): TscnInternalResource[] {
   return [
     {
@@ -67,20 +76,9 @@ function noiseResources(): TscnInternalResource[] {
   ];
 }
 
-const CASES = [
-  {
-    typeName: 'GradientTexture2D',
-    resolve: () => resolveGradientTexture2D('SubResource("GradientTexture2D_a")', gradientResources()),
-    id: 'GradientTexture2D_a',
-  },
-  {
-    typeName: 'NoiseTexture2D',
-    resolve: () => resolveNoiseTexture2D('SubResource("NoiseTexture2D_a")', noiseResources()),
-    id: 'NoiseTexture2D_a',
-  },
-] as const;
+describe('GradientTexture2D allocation', () => {
+  const resolve = () => resolveGradientTexture2D('SubResource("GradientTexture2D_a")', gradientResources());
 
-describe.each(CASES)('$typeName allocation', ({ typeName, resolve, id }) => {
   it('draws the texture when the pixels allocate', () => {
     expect(resolve()?.texture.image.width).toBe(8);
   });
@@ -91,7 +89,7 @@ describe.each(CASES)('$typeName allocation', ({ typeName, resolve, id }) => {
 
     expect(resolve()).toBeNull();
     expect(warn).toHaveBeenCalledWith(
-      `[${typeName}] sub-resource "${id}" could not be allocated (Array buffer allocation failed); drawing no texture`
+      '[GradientTexture2D] sub-resource "GradientTexture2D_a" could not be allocated (Array buffer allocation failed); drawing no texture'
     );
   });
 
@@ -99,5 +97,34 @@ describe.each(CASES)('$typeName allocation', ({ typeName, resolve, id }) => {
     failure.error = new TypeError('not an allocation');
 
     expect(() => resolve()).toThrow(TypeError);
+  });
+});
+
+describe('NoiseTexture2D allocation', () => {
+  /** The build's outcome, through the in-thread runner that runs the worker's job. */
+  function build(): Promise<THREE.Texture | null> {
+    const lookup = resolveNoiseTexture2D('SubResource("NoiseTexture2D_a")', noiseResources());
+    if (lookup?.status !== 'pending') throw new Error(`expected a pending build, got ${lookup?.status}`);
+    return lookup.start(new WorkerJobRunner()).settled;
+  }
+
+  it('draws the texture when the pixels allocate', async () => {
+    expect(((await build())?.image as { width: number } | undefined)?.width).toBe(8);
+  });
+
+  it('draws no texture, and names the type and the sub-resource, when an allocation fails', async () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    failure.error = new RangeError('Array buffer allocation failed');
+
+    expect(await build()).toBeNull();
+    expect(warn).toHaveBeenCalledWith(
+      '[NoiseTexture2D] sub-resource "NoiseTexture2D_a" could not be allocated (Array buffer allocation failed); drawing no texture'
+    );
+  });
+
+  it('lets any other failure through', async () => {
+    failure.error = new TypeError('not an allocation');
+
+    await expect(build()).rejects.toBeInstanceOf(TypeError);
   });
 });

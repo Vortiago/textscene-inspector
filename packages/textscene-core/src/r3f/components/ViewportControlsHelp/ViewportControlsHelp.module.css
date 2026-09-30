@@ -20,6 +20,8 @@
 .hint {
   pointer-events: auto;
   display: flex;
+  /* Bounded to the root, so a narrow viewport ellipsises the summary instead of overflowing. */
+  max-width: 100%;
   align-items: center;
   gap: var(--tsi-space-2);
   appearance: none;
@@ -40,9 +42,25 @@
 }
 
 .summary {
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.touchSummary {
+  display: none;
+}
+
+/* A touch screen has no wheel or middle button, so its pill names the touch bindings. */
+@media (pointer: coarse) {
+  .pointerSummary {
+    display: none;
+  }
+
+  .touchSummary {
+    display: inline;
+  }
 }
 
 .badge {

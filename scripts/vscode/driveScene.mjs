@@ -16,6 +16,9 @@ import { chromium } from 'playwright';
 import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
 import { inkStats } from './pixels.mjs';
 import { THROWAWAY_USER_SETTINGS } from './userSettings.mjs';
+import { TEXTURE_WORK_STATUS_TESTID } from '../visual/preview/appContract.mjs';
+import { textureWorkCleared } from '../visual/preview/capture.mjs';
+import { isSizedCanvas } from './canvasSize.mjs';
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 export const EXTENSION_DIR = path.join(REPO_ROOT, 'apps/textscene-vscode');
@@ -299,14 +302,12 @@ async function findWebviewFrame(page, timeoutMs) {
 async function waitForSizedCanvas(frame, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const sized = await frame
+    const sizes = await frame
       .evaluate(() =>
-        [...document.querySelectorAll('canvas')].some(
-          (canvas) => canvas.width > 50 && canvas.height > 50
-        )
+        [...document.querySelectorAll('canvas')].map(({ width, height }) => ({ width, height }))
       )
-      .catch(() => false);
-    if (sized) return true;
+      .catch(() => []);
+    if (sizes.some(isSizedCanvas)) return true;
     await sleep(400);
   }
   return false;
@@ -368,6 +369,8 @@ async function stabilizeCanvas(frame, { timeoutMs, intervalMs }) {
  * @property {boolean} headed          use the ambient DISPLAY instead of xvfb-run
  * @property {number} keepOpen         hold VS Code open after capture (debugging)
  * @property {string} [evalFile]       ES module whose default export runs in-frame
+ * @property {[Function, unknown][]} [initScripts] `[script, argument]` pairs installed
+ *   before the webview exists, so each runs in the preview frame ahead of the app
  * @property {boolean} verbose         stream VS Code stdout/stderr
  * @property {Record<string, unknown>} [settings] extra user settings to seed
  *   the throwaway profile with, for callers that need a layout the palette
@@ -396,6 +399,7 @@ export async function driveScene(options) {
     headed,
     keepOpen,
     evalFile,
+    initScripts = [],
     verbose,
     settings,
     log: emit = () => {},
@@ -501,6 +505,7 @@ export async function driveScene(options) {
       });
     }, preserveBuffer);
     report.preserveDrawingBuffer = preserveBuffer;
+    for (const [script, argument] of initScripts) await page.addInitScript(script, argument);
 
     if (prepareLayout) {
       // The Chat/Copilot auxiliary bar is open on a fresh profile and takes
@@ -545,6 +550,10 @@ export async function driveScene(options) {
       // webview and land in the screenshot.
       await palette(page, 'Notifications: Clear All Notifications');
     }
+
+    // A texture still building or uploading would settle as a stable, wrong frame.
+    report.textureWorkCleared = await textureWorkCleared(frame.getByTestId(TEXTURE_WORK_STATUS_TESTID));
+    emit(`texture work ${report.textureWorkCleared ? 'cleared' : 'NEVER cleared'}`);
 
     if (preserveBuffer) {
       const settled = await stabilizeCanvas(frame, { timeoutMs: 60_000, intervalMs: 500 });

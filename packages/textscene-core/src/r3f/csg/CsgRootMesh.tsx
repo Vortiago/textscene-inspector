@@ -16,6 +16,7 @@ import type { CsgPlan } from './csgPlan';
 import { evaluateCsgPlan, type CsgEvaluation } from './evaluateCsgPlan';
 import { getCachedEvaluation, setCachedEvaluation } from './csgEvaluationCache';
 import { loadCsgModule, type CsgModule } from './csgModule';
+import { usePendingWhile } from '../../resources/usePendingWhile';
 import type { ShadowCastingEffects } from '../shadowCasting';
 
 export interface CsgRootMeshProps {
@@ -77,6 +78,9 @@ export function CsgRootMesh({ plan, shadow, fallback, children }: CsgRootMeshPro
       : evaluation === null
         ? 'failed'
         : 'ready';
+  // The library is a lazy chunk outside the resource bus. Counting it as pending lets the
+  // camera's settle-fit frame the evaluated result, whenever the chunk lands.
+  usePendingWhile(status === 'pending');
 
   const subtree = useMemo(
     () => ({ status, absorbedPaths: plan.absorbedPaths, invisiblePaths: plan.invisiblePaths }),

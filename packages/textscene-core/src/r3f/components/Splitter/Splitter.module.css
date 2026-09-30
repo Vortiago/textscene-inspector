@@ -8,14 +8,14 @@
   transition: background 0.12s ease;
 }
 
+/* A finger needs a wider target than the 5px line a mouse aims at. */
+@media (pointer: coarse) {
+  .splitter {
+    flex-basis: 12px;
+  }
+}
+
 .splitter:hover,
 .splitter:active {
   background: var(--tsi-accent);
-}
-
-/* In stack mode the columns flow vertically, so the col-resize handle hides. */
-@media (max-width: 768px) {
-  .splitter {
-    display: none;
-  }
 }

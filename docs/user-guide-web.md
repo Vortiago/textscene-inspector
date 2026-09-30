@@ -58,11 +58,21 @@ An uploaded file stays when you open another scene.
 
 Click **Show Source** in the toolbar to open the Source pane. The scene renders again as you type.
 
-- A dot in the gutter marks an error or a warning. Hover it to read the message.
+- A dot in the gutter marks an error or a warning. Hover or tap it to read the message.
 - The badge on **Show Source** counts the problems. A file-level section holds the problems that have no line.
 - **Download .tscn** saves the text.
 
 If the file cannot be parsed, a red banner shows the error. The app keeps working.
+
+## On a phone
+
+The page fits a phone screen. The layout also applies to a narrow VS Code preview tab.
+
+- The viewport is on top. A panel under it holds the scene tree or the node details.
+- Tap **Scene** or **Details** to switch the panel.
+- Drag the bar at the top of the panel to resize it. Tap **▾** to collapse the panel, and tap the **Scene** bar to open it again.
+- The Source pane is closed on a first visit. Tap **Source** to open it over the preview.
+- One finger orbits the 3D view, two fingers pan, and a pinch zooms. Tap a node to select it.
 
 ## Other tools
 

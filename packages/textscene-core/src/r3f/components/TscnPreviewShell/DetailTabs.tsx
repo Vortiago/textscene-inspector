@@ -4,7 +4,7 @@
  * instead of unmounting.
  */
 
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, type CSSProperties } from 'react';
 import { AnimationPanel } from '../AnimationPanel/AnimationPanel.js';
 import { MissingResourcesPanel } from '../MissingResourcesPanel/MissingResourcesPanel.js';
 import { CamerasPanel } from './CamerasPanel.js';
@@ -38,7 +38,7 @@ export function DetailTabs({
   onResourceRemove?: (path: string) => void;
 }) {
   return (
-    <div className={styles.detailPane} style={{ flexGrow: 1 - treeShare }}>
+    <div className={styles.detailPane} style={{ '--tsi-pane-grow': 1 - treeShare } as CSSProperties}>
       <div className={styles.paneTabs} role="tablist" aria-label="Detail panels">
         {(
           [

@@ -28,6 +28,7 @@ import './sliceRegistrations.js';
 import type { ParsedResource } from '../parser/parsedResource';
 import { PEER_LOAD_TIMEOUT_MS, type ResourceProcessor } from './createResourceProcessor';
 import * as logger from '../logger';
+import { WorkerJobRunner, type CreateJobWorker } from '../workers/WorkerJobRunner';
 
 /**
  * The bus tag a TSCN resource type routes to, from the slice claim table (ADR-0031),
@@ -43,10 +44,14 @@ export function busTypeFor(resourceType: string | undefined): ResourceType | nul
 export interface ResourceLoaderOptions {
   /** Which glTF extensions a GLB loads with. Absent means `createGLBMesh`'s default. */
   gltfExtensions?: GltfExtensionRules;
+  /** Starts the host's job worker. Without it, jobs run on the main thread. */
+  createWorker?: CreateJobWorker;
 }
 
 export class ResourceLoader {
   readonly metadata: MetadataStore;
+  /** Runs procedural texture builds, in the host's worker where it has one. */
+  readonly jobRunner: WorkerJobRunner;
   readonly eventBus: ResourceEventBus;
   readonly textures: ResourceProcessor<THREE.Texture>;
   readonly materials: ResourceProcessor<THREE.Material>;
@@ -125,8 +130,9 @@ export class ResourceLoader {
     }
   }
 
-  constructor(fileEventBus?: FileEventBus, { gltfExtensions }: ResourceLoaderOptions = {}) {
+  constructor(fileEventBus?: FileEventBus, options: ResourceLoaderOptions = {}) {
     this._fileEventBus = fileEventBus || null;
+    this.jobRunner = new WorkerJobRunner({ createWorker: options.createWorker });
     this.eventBus = new ResourceEventBus();
     this.metadata = new MetadataStore();
 
@@ -136,7 +142,7 @@ export class ResourceLoader {
     const loadTexture = (path: string): Promise<THREE.Texture | null> =>
       this.peerLoad(this.textures, 'texture', path);
 
-    this.materials = createMaterialProcessor(fileEventBus, this.eventBus, loadTexture);
+    this.materials = createMaterialProcessor(fileEventBus, this.eventBus, loadTexture, this.jobRunner);
 
     // A GLB's **Import sidecar** can repoint a glTF material at an external `.tres`,
     // which resolves through the material processor.
@@ -144,7 +150,7 @@ export class ResourceLoader {
       fileEventBus,
       this.eventBus,
       (path) => this.peerLoad(this.materials, 'material', path),
-      gltfExtensions
+      options.gltfExtensions
     );
 
     // PackedScene loads directly (`loadDirectly`). The id-to-path translation reads the

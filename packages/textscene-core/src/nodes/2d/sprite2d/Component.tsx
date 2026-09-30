@@ -5,14 +5,16 @@
  * flips the texture too, as in Godot, where 3D negates the UV.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { canvasItemBlendState, type CanvasItemBlendState } from '../../../resources/materials/canvasitemmaterial/renderer';
 import type { CanvasItemLightingProps } from '../../../r3f/lighting2d/useCanvasItemLighting';
 import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmaterial/types';
-import { composeFrameTexture, frameSizePx } from '../../../r3f/spriteFrame';
+import { frameSizePx, frameUvWindow, spriteSamplerClone } from '../../../r3f/spriteFrame';
+import { useUploadedClone } from '../../../r3f/tiledUpload/useTiledUpload';
+import { useUvWindow } from '../../../r3f/useUvWindow';
 import { useCanvasDecodeDefines } from '../../../r3f/canvas2DTextureDecode';
 import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
@@ -53,22 +55,27 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
     internalResources
   );
 
+  // 'clamp': the 2D canvas disables texture-repeat, so an overrunning
+  // region_rect stretches its edge texels, where Sprite3D tiles. NoColorSpace:
+  // the canvas filter blends undecoded sRGB bytes (`canvas2DTextureDecode.ts`),
+  // and QuadMesh decodes the filtered sample through `useCanvasDecodeDefines`.
+  const samplerClone = useMemo(
+    () => spriteSamplerClone(sourceTexture ?? undefined, 'clamp', THREE.NoColorSpace),
+    [sourceTexture]
+  );
+  // One clone per texture, not per frame: `useUploadedClone` uploads a large one in
+  // bands once, and disposes it once it no longer draws.
+  const drawnTexture = useUploadedClone(samplerClone ?? null);
   // A driven `frame` overrides the authored `frame` and any authored
   // `frame_coords` (in Godot the two are the same value), so the animation wins.
-  const composedTexture = useMemo(() => {
+  const frameWindow = useMemo(() => {
     const frameProps =
       animatedFrame !== null ? { ...props, frame: animatedFrame, frame_coords: undefined } : props;
-    // 'clamp': the 2D canvas disables texture-repeat, so an overrunning
-    // region_rect stretches its edge texels, where Sprite3D tiles. NoColorSpace:
-    // the canvas filter blends undecoded sRGB bytes (`canvas2DTextureDecode.ts`),
-    // and QuadMesh decodes the filtered sample through `useCanvasDecodeDefines`.
-    return composeFrameTexture(sourceTexture ?? undefined, frameProps, 'clamp', THREE.NoColorSpace);
+    return frameUvWindow(sourceTexture ?? undefined, frameProps);
   }, [sourceTexture, props, animatedFrame]);
-  // composeFrameTexture clones the texture per frame, so dispose the prior clone
-  // when the frame advances and on unmount, or playback leaks one per keyframe.
-  useEffect(() => () => composedTexture?.dispose(), [composedTexture]);
+  useUvWindow(drawnTexture, frameWindow);
 
-  const displayedTexture = viewportTexture ?? composedTexture;
+  const displayedTexture = viewportTexture ?? drawnTexture;
   // A ViewportTexture keeps its publisher's colour space, not the NoColorSpace
   // retag, so this resolves to `undefined` for it.
   const decodeDefines = useCanvasDecodeDefines(displayedTexture);

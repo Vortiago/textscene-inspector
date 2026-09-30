@@ -4,7 +4,7 @@
  * style run, or one `<RichTextImage>` per `[img]`, through the MSDF text
  * engine `<Label>` uses. Other tags are a non-goal.
  */
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -35,6 +35,7 @@ import {
   type RichTextImagePlacement,
 } from './nativeSolver';
 import type { RichTextLabelProperties } from './types';
+import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
 
 interface ImageLike {
   width?: number;
@@ -79,9 +80,9 @@ function RichTextImage({
     return cloned;
   }, [rawTexture, spec.region]);
 
-  useEffect(() => () => preparedTexture?.dispose(), [preparedTexture]);
+  const drawnTexture = useUploadedClone(preparedTexture);
 
-  if (!rawTexture || !preparedTexture) return null;
+  if (!rawTexture || !drawnTexture) return null;
 
   // `pad` centres `min(reservedSize, naturalSize)` inside the box
   // (`rich_text_label.cpp:1091-1096`), and pads nothing until the texture loads.
@@ -107,7 +108,7 @@ function RichTextImage({
         height={drawHeightPx}
         color={godotColorToLinear(imageTint)}
         opacity={imageTint.a}
-        map={preparedTexture}
+        map={drawnTexture}
       />
     </CanvasItemGroup>
   );

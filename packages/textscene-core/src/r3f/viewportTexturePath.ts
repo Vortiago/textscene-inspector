@@ -16,20 +16,17 @@ export function resolveViewportTexturePath(value: string | undefined): string | 
 }
 
 /**
- * Rebase a root-relative `viewport_path` onto the dispatcher-absolute key a
- * `<SubViewport>` publishes under: `NodePath("SubViewport")` means `Root/SubViewport`,
- * and the consumer path's first segment is that root. The path is walked as
- * `get_node_or_null` walks it (viewport.cpp:198), and a `%Name` jumps through
- * `uniquePaths`, the consumer's owner's claim table. Null with no consumer path, no
+ * Rebase a `viewport_path` onto the dispatcher-absolute key a `<SubViewport>` publishes
+ * under: `NodePath("SubViewport")` from the local scene root `Root` means `Root/SubViewport`.
+ * The path is walked as `get_node_or_null` walks it (viewport.cpp:198), and a `%Name` jumps
+ * through `uniquePaths`, the local scene's claim table. Null with no local scene root, no
  * viewport path, an absolute `/root/…` one, or a walk that reaches nothing.
  */
 export function viewportTextureRegistryKey(
-  consumerPath: string | null,
+  localRootPath: string | null,
   viewportPath: string,
   uniquePaths?: ReadonlyMap<string, string>
 ): string | null {
-  if (!consumerPath || viewportPath === '') return null;
-  const root = consumerPath.split('/')[0];
-  if (!root) return null;
-  return resolveRelativePath(root, viewportPath, uniquePaths);
+  if (!localRootPath || viewportPath === '') return null;
+  return resolveRelativePath(localRootPath, viewportPath, uniquePaths);
 }

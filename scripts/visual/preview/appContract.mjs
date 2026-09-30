@@ -82,6 +82,15 @@ export const SETTLE_INTERVAL_MS = 350;
 export const SETTLE_MAX_ATTEMPTS = 12;
 
 /**
+ * The shell's "Building textures…" status (`TscnPreviewShell/textureWorkStatusTestId.ts`).
+ * It is attached while a procedural texture builds or uploads, and a capture waits for it
+ * to detach, because a texture that lands later gives a stable, wrong frame.
+ */
+export const TEXTURE_WORK_STATUS_TESTID = 'texture-work-status';
+// Ceiling for that wait. A 4096² seamless noise texture builds and uploads in well under it.
+export const TEXTURE_WORK_WAIT_MS = 120000;
+
+/**
  * The settle contract: the instant on the scene's simulated clock, in seconds, at which both
  * harnesses open the shutter (`scripts/godot-ref/run.mjs` reads it too). The previewer runs no
  * simulated clock (ADR-0011, ADR-0012), so only its load instant exists, and Godot matches it by

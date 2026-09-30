@@ -3,11 +3,10 @@
  * `<ResourceLoaderProvider>`, so node components load resources with `useResource()`.
  * The shell's `<MissingResourcesPanel>` takes one upload per missing path.
  */
-import { useCallback, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useCallback, useMemo, useRef, useState, type ChangeEvent, type CSSProperties } from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import {
-  createResourcePipeline,
   resourceFilePath,
   ResourceLoaderProvider,
   TscnPreviewShell,
@@ -15,7 +14,7 @@ import {
 import { fixtures } from './fixturesAll';
 import { corpusRootFor, resToFixtureFile, fixtureFileToRes } from './corpusRoot';
 import { useCorpusRoot } from './useCorpusRoot';
-import { WebResourceProvider } from './providers/WebResourceProvider';
+import { createWebPipeline } from './webPipeline';
 import { SourceGutter } from './SourceGutter';
 import { FileProblems } from './FileProblems';
 import { useSceneSource } from './useSceneSource';
@@ -50,12 +49,9 @@ export function R3FApp() {
   // `?camera=<node path>` deep-link: look through a scene Camera3D on open.
   const initialActiveCameraPath = useCameraDeepLink();
 
-  // One provider, bus and loader for the app's lifetime, so an uploaded texture survives a
-  // fixture switch.
-  const pipeline = useMemo(
-    () => createResourcePipeline(new WebResourceProvider({ hasFixturesMirror: HAS_FIXTURES_MIRROR })),
-    []
-  );
+  // One provider, bus, loader and job worker for the app's lifetime, so an uploaded
+  // texture survives a fixture switch.
+  const pipeline = useMemo(() => createWebPipeline({ hasFixturesMirror: HAS_FIXTURES_MIRROR }), []);
   const { provider, loader } = pipeline;
 
   // Each vendored demo project keeps its own res:// namespace. The root switches at the
@@ -205,7 +201,7 @@ export function R3FApp() {
     <ResourceLoaderProvider loader={loader}>
       <div
         data-testid="app-root"
-        style={{ width: '100vw', height: '100vh', display: 'flex', position: 'relative' }}
+        className={styles.appRoot}
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -223,7 +219,7 @@ export function R3FApp() {
             <div
               data-testid="source-pane"
               className={styles.sourcePane}
-              style={{ width: sourcePane.width, minWidth: 0 }}
+              style={{ '--source-pane-width': `${sourcePane.width}px` } as CSSProperties}
             >
               <div className={styles.sourcePaneHeader}>
                 <span className={styles.sourcePaneTitle}>Source</span>
@@ -328,9 +324,6 @@ export function R3FApp() {
 
 export function mountR3F(container: HTMLElement): void {
   container.innerHTML = '';
-  container.style.display = 'block';
-  container.style.width = '100vw';
-  container.style.height = '100vh';
 
   const root = createRoot(container);
   root.render(<R3FApp />);

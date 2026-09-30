@@ -1,8 +1,9 @@
 /**
  * The one resolver for a Texture2D slot: an image path or `ExtResource`, a `CanvasTexture`, an
- * `AtlasTexture` inline or as a `.tres`, or an inline `GradientTexture2D`. Wrappers peel to a fixed
- * point, and the texture's size is Godot's size for the slot. `resolveTexture2DPath` suits only a
- * caller that wants a file path. `inlineTexture2DSize` sits here so the size cannot drift.
+ * `AtlasTexture` inline or as a `.tres`, or an inline `GradientTexture2D` or `NoiseTexture2D`.
+ * Wrappers peel to a fixed point, and the texture's size is Godot's size for the slot.
+ * `resolveTexture2DPath` suits only a caller that wants a file path. `inlineTexture2DSize` sits
+ * here so the size cannot drift.
  */
 
 import { useMemo } from 'react';
@@ -79,18 +80,19 @@ export function useTexture2D(
     return unwrapped;
   }, [extAtlasPath, extAtlas, atlas, internalResourcesForAtlas, unwrapped]);
 
-  // Procedural first: the scene describes it, so it resolves in the same tick. The procedural cache
-  // owns it, and this hook pins it while mounted and never disposes it.
+  // Procedural first: the scene describes it, so no file round trip. A gradient resolves in the
+  // same tick, a noise texture once its build lands. The procedural cache owns it, and this hook
+  // pins it while mounted and never disposes it.
   const procedural = useProceduralTexture(sourceRef, internalResourcesForAtlas);
 
   // `resolveExtResourcePath`, not `resolveTexture2DPath`: `sourceRef` is already
   // at its fixed point, so that resolver's own peel could only return it again.
   const path = useMemo(
-    () => (procedural ? null : resolveExtResourcePath(sourceRef, externalResourcesForAtlas)),
-    [procedural, sourceRef, externalResourcesForAtlas]
+    () => (procedural.claimed ? null : resolveExtResourcePath(sourceRef, externalResourcesForAtlas)),
+    [procedural.claimed, sourceRef, externalResourcesForAtlas]
   );
   const loaded = useResource<THREE.Texture>(path ?? '', 'texture');
-  const source = procedural ?? loaded.value ?? null;
+  const source = procedural.texture ?? loaded.value ?? null;
 
   // The crop is cache-owned and pinned while mounted, like the procedural texture. Keyed on the
   // previewed scene's resources: its re-parse invalidates the crop, a `.tres` reload does not.
@@ -107,13 +109,13 @@ export function useTexture2D(
     return { texture: null, missing: extAtlasFile.status !== 'pending' };
   }
 
-  const sourceMissing = !procedural && (!path || loaded.status === 'unavailable');
+  const sourceMissing = !procedural.claimed && (!path || loaded.status === 'unavailable');
   if (atlas) {
     // A sheet still loading, or a zero-area region that Godot's `get_rect_region` also declines,
     // draws nothing and is no resource error.
     return { texture: cropped?.texture ?? null, missing: sourceMissing };
   }
-  if (procedural) return { texture: procedural, missing: false };
+  if (procedural.claimed) return { texture: procedural.texture, missing: false };
   if (!path) return { texture: null, missing: true };
   return { texture: loaded.value ?? null, missing: loaded.status === 'unavailable' };
 }

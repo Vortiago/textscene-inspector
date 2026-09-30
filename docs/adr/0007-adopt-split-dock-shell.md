@@ -4,6 +4,7 @@
 - Supersedes the 3-column DCC chrome of `TscnPreviewShell` (left Scene dock · centre
   viewport · right Inspector dock).
 - Related: ADR-0003 (2D-UI overlay), ADR-0006 (viewport-mode seam / 2D framing).
+- Amended by: ADR-0042 (the narrow layout is a bottom sheet).
 
 ## Context
 
@@ -54,7 +55,7 @@ canonical design record of the "Split Dock" (J) layout that replaced it.
   theme integration and the web fallback stay byte-for-byte where unchanged.
 - All features and behaviour stay: parse pipeline, the five contexts, selection and
   hover sync, missing-resource upload, sub-scene inspector, camera switching, collapse,
-  responsive layout (at most 768 px, or a narrow dock), and **web + VS Code parity**
+  responsive layout (ADR-0042 defines the narrow layout), and **web + VS Code parity**
   (shared component).
 
 ## Consequences

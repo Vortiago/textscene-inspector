@@ -998,8 +998,18 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Noisetexture2d 4096 Seamless",
+    "file": "unit-noisetexture2d-4096-seamless.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Noisetexture2d Normal",
     "file": "unit-noisetexture2d-normal.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Noisetexture2d Tiled",
+    "file": "unit-noisetexture2d-tiled.tscn",
     "category": "Other"
   },
   {

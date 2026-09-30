@@ -15,6 +15,7 @@ import {
   type TextureLoaderFn,
 } from '../materials/standardmaterial3d/loadMaterial';
 import { parseSubResourcePath } from '../subResourcePath';
+import type { JobRunner } from '../textures/proceduralBuilds';
 import { releaseBoundTexture } from '../materials/standardmaterial3d/textureBinding';
 
 /**
@@ -23,7 +24,8 @@ import { releaseBoundTexture } from '../materials/standardmaterial3d/textureBind
 export function createMaterialProcessor(
   fileEventBus: FileEventBus | undefined,
   eventBus: ResourceEventBus,
-  loadTexture?: TextureLoaderFn
+  loadTexture?: TextureLoaderFn,
+  jobRunner?: JobRunner
 ): ResourceProcessor<THREE.Material> {
   return createResourceProcessor({
     fileEventBus,
@@ -33,7 +35,7 @@ export function createMaterialProcessor(
     addressesSubResources: true,
     process: async (path, data) => {
       const { subResourceId } = parseSubResourcePath(path);
-      return createMaterialFromContent(data as string, loadTexture, subResourceId);
+      return createMaterialFromContent(data as string, loadTexture, subResourceId, jobRunner);
     },
     dispose: disposeMaterialAndOwnedTextures,
   });
