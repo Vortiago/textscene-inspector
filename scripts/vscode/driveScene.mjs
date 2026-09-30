@@ -18,6 +18,7 @@ import { inkStats } from './pixels.mjs';
 import { THROWAWAY_USER_SETTINGS } from './userSettings.mjs';
 import { TEXTURE_WORK_STATUS_TESTID } from '../visual/preview/appContract.mjs';
 import { textureWorkCleared } from '../visual/preview/capture.mjs';
+import { isSizedCanvas } from './canvasSize.mjs';
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 export const EXTENSION_DIR = path.join(REPO_ROOT, 'apps/textscene-vscode');
@@ -301,14 +302,12 @@ async function findWebviewFrame(page, timeoutMs) {
 async function waitForSizedCanvas(frame, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const sized = await frame
+    const sizes = await frame
       .evaluate(() =>
-        [...document.querySelectorAll('canvas')].some(
-          (canvas) => canvas.width > 50 && canvas.height > 50
-        )
+        [...document.querySelectorAll('canvas')].map(({ width, height }) => ({ width, height }))
       )
-      .catch(() => false);
-    if (sized) return true;
+      .catch(() => []);
+    if (sizes.some(isSizedCanvas)) return true;
     await sleep(400);
   }
   return false;
