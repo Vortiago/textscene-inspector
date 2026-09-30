@@ -77,21 +77,21 @@ function gltfJsonText(data: ArrayBuffer | string): string | null {
 }
 
 /**
- * The `extensionsRequired` list of a `.glb` or `.gltf` file's bytes, or null where Godot cannot read
- * its JSON: a refused GLB container, text that is not JSON, or JSON that is not an object. A string is
- * a text glTF a host has already decoded.
+ * The `extensionsRequired` list of a `.glb` or `.gltf` file's bytes, and empty where Godot cannot read
+ * its JSON: a refused GLB container, text that is not JSON, or JSON that is not an object. Such a file
+ * never imports, but for a reason other than its extensions. A string is a text glTF a host has
+ * already decoded.
  */
-export function readGltfRequiredExtensions(data: ArrayBuffer | string): string[] | null {
+export function readGltfRequiredExtensions(data: ArrayBuffer | string): string[] {
   const text = gltfJsonText(data);
-  if (text === null) return null;
+  if (text === null) return [];
   let json: unknown;
   try {
     json = JSON.parse(text);
   } catch {
     // `JSON::parse` refuses the text (`gltf_document.cpp:6527-6528`), so the file never imports.
-    return null;
+    return [];
   }
-  if (typeof json !== 'object' || json === null || Array.isArray(json)) return null;
   return requiredGltfExtensions(json);
 }
 

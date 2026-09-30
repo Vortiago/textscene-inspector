@@ -31,10 +31,9 @@ export interface SourceDiagnostics {
 }
 
 /**
- * @param provider - The scene's resources, read for the diagnostics its dependencies add. Without
- *   one, the buffer is linted alone.
+ * @param provider - The scene's resources, read for the diagnostics its dependencies add.
  */
-export function useSourceDiagnostics(buffer: string, provider?: ResourceProvider): SourceDiagnostics {
+export function useSourceDiagnostics(buffer: string, provider: ResourceProvider): SourceDiagnostics {
   // Debounced like the render forward but outside its gate: a buffer that fails to render is
   // still linted, and the gutter tells the user why. The buffer's own diagnostics show at once,
   // and the cross-file lint replaces them only while the buffer it read is still the pane's.
@@ -42,12 +41,11 @@ export function useSourceDiagnostics(buffer: string, provider?: ResourceProvider
   useEffect(() => {
     let isCurrent = true;
     const timer = setTimeout(() => {
-      setDiagnostics(linter.lint(buffer));
-      if (!provider) return;
-      linter
-        .lintProject(buffer, provider)
-        .then((withDependencies) => {
-          if (isCurrent) setDiagnostics(withDependencies);
+      const { diagnostics: local, withDependencies } = linter.lintProject(buffer, provider);
+      setDiagnostics(local);
+      withDependencies
+        ?.then((merged) => {
+          if (isCurrent) setDiagnostics(merged);
         })
         .catch((reason: unknown) => logError('[SourceDiagnostics] Cross-file lint failed:', reason));
     }, DEBOUNCE_MS);

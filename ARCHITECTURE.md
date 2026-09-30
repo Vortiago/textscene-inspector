@@ -58,10 +58,15 @@ three.js, so the CLI and the VS Code extension host can bundle it alone.
 
 `Linter.lint` reads only the scene. `Linter.lintProject` also reads the files the scene uses,
 through the host's `ResourceProvider`. It reports a used `.glb` or `.gltf` that requires a
-glTF extension Godot's importer does not support, because Godot then fails to load the scene. The CLI
-and the VS Code extension root their providers at the nearest `project.godot` through
-`resources/resPath.ts`, and the web previewer at its corpus root. The CLI lints a scene
-outside every project with `lint` alone.
+glTF extension Godot's importer does not support, because Godot then fails to load the scene.
+One strict parse serves both parts. `lintProject` returns the scene's own diagnostics at once,
+and a promise of the merged list only when the scene uses a `res://` glTF, so a host publishes
+twice only then. A throw inside the cross-file rule becomes a `rule-crashed` diagnostic.
+
+The CLI and the VS Code extension root their linter providers at the nearest `project.godot`
+through `resources/resPath.ts`, and the web previewer at its corpus root. Both linter
+providers return null for a missing file or a path outside the root, so both report the same
+files. The CLI lints a scene outside every project with `lint` alone.
 
 ## Vertical slices and registries
 

@@ -1,9 +1,9 @@
 /**
  * Lint guard over `scenes/fixtures`, this package's own corpus. A positive fixture produces no error (warnings are
  * allowed). A negative `edge-*` fixture in INTEGRATION_FIXTURES_WITH_ERRORS produces at least one, so its rule still
- * fires. Scope is the one directory `fixtureCheck.ts` reads, plus each sub-folder that holds a `project.godot`: a
- * Godot project of its own, whose scenes are linted with that project's files. Which other directories get linted is
- * the caller's choice (`pnpm lint:scenes` and its CI step), never encoded in the library.
+ * fires. Scope is `scenes/fixtures` and every folder under it. A fixture under a `project.godot` is linted with that
+ * project's files, found as the CLI finds them. Which other directories get linted is the caller's choice
+ * (`pnpm lint:scenes` and its CI step), never encoded in the library.
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -13,7 +13,8 @@ import { fileURLToPath } from 'node:url';
 import { Linter } from './Linter.js';
 import { isGodotTextResourcePath } from '../godot/index.js';
 import { parseHeading } from '../parser/utils.js';
-import { projectFileIn, resolveResPath } from '../resources/resPath.js';
+import { findProjectRoot, parentDir, projectFileIn, resolveResPath } from '../resources/resPath.js';
+import { isBinaryResourceType } from '../resources/resourceProviderUtils.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { FILE_DIAGNOSTIC_NAMES } from './fileDiagnostics.js';
 import type { Diagnostic } from './types.js';
@@ -108,29 +109,32 @@ const fixturesDir = join(scenesRoot, 'fixtures');
 /**
  * Both text formats Godot writes, through the predicate the CLI walk and the editor's document filter use: a `.tres`
  * validates against the same registry a `[sub_resource]` block does, so the resource slices' fixtures are gated too.
+ * Every folder under `dir`, as the CLI expands a directory argument.
  */
 function tscnFiles(dir: string): string[] {
-  return readdirSync(dir).filter(isGodotTextResourcePath).sort();
-}
-
-/** The sub-folders of `scenes/fixtures` that hold a `project.godot`, each a `res://` root of its own. */
-function projectDirs(): string[] {
-  return readdirSync(fixturesDir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && existsSync(projectFileIn(join(fixturesDir, entry.name))))
-    .map((entry) => join(fixturesDir, entry.name))
+  return readdirSync(dir, { recursive: true, encoding: 'utf8' })
+    .filter(isGodotTextResourcePath)
+    .map((file) => join(dir, file))
     .sort();
 }
 
 /**
- * A provider over the project at `root`, as the CLI's provider reads it from disk. Bytes for every file: the one cross-file rule
- * reads glTF, which a host hands over as bytes whatever its extension.
+ * The project a fixture's `res://` paths resolve in: the nearest `project.godot` from its folder up to
+ * `scenes/fixtures`, or null for the flat corpus, which is no project.
  */
+function projectRootOf(path: string): Promise<string | null> {
+  const isFixturesDir = (dir: string) => resolve(dir) === fixturesDir;
+  return findProjectRoot(dirname(path), parentDir, isFixturesDir, async (dir) => existsSync(projectFileIn(dir)));
+}
+
+/** A provider over the project at `root`, as the CLI's provider reads it from disk: text or bytes by the type. */
 function projectProvider(root: string): ResourceProvider {
   return {
-    loadResource: async (resPath) => {
+    loadResource: async (resPath, type = '') => {
       const file = resolveResPath(root, resPath);
       if (file === null || !existsSync(file)) return null;
-      return new Uint8Array(readFileSync(file)).buffer;
+      const bytes = readFileSync(file);
+      return isBinaryResourceType(type, resPath) ? new Uint8Array(bytes).buffer : bytes.toString('utf-8');
     },
   };
 }
@@ -139,31 +143,27 @@ function projectProvider(root: string): ResourceProvider {
 interface Fixture {
   readonly path: string;
   readonly name: string;
-  readonly provider?: ResourceProvider;
+  readonly provider: ResourceProvider | null;
 }
 
-/** Every fixture, the flat bag first, then each sub-project's own. */
-function fixtures(): Fixture[] {
-  const flat = tscnFiles(fixturesDir).map((file) => ({ path: join(fixturesDir, file), name: file }));
-  const nested = projectDirs().flatMap((dir) => {
-    const provider = projectProvider(dir);
-    return tscnFiles(dir).map((file) => ({ path: join(dir, file), name: relative(fixturesDir, join(dir, file)), provider }));
-  });
-  return [...flat, ...nested];
+async function fixture(path: string): Promise<Fixture> {
+  const root = await projectRootOf(path);
+  return { path, name: relative(fixturesDir, path), provider: root === null ? null : projectProvider(root) };
 }
-
-/** Diagnostics for every fixture, keyed by its name, linted once before the checks below read them. */
-const diagnosticCache = new Map<string, Diagnostic[]>();
 
 async function lintFixture({ path, provider }: Fixture): Promise<Diagnostic[]> {
   const content = readFileSync(path, 'utf8');
-  return provider ? new Linter().lintProject(content, provider) : new Linter().lint(content);
+  if (!provider) return new Linter().lint(content);
+  const { diagnostics, withDependencies } = new Linter().lintProject(content, provider);
+  return (await withDependencies) ?? diagnostics;
 }
 
+/** Diagnostics for every fixture, keyed by its name. Written once, in `beforeAll`, before the checks read them. */
+let diagnosticsByName = new Map<string, Diagnostic[]>();
+
+/** A name no fixture has reads as clean, so a stale allowlist entry reports as one that no longer fires. */
 function diagnosticsFor(name: string): Diagnostic[] {
-  const cached = diagnosticCache.get(name);
-  if (!cached) throw new Error(`expected a linted fixture, got ${name}`);
-  return cached;
+  return diagnosticsByName.get(name) ?? [];
 }
 
 function lintFile(name: string): { errors: number; messages: string[] } {
@@ -183,15 +183,18 @@ function advisoryRulesFor(name: string): string[] {
 }
 
 describe('shipped scenes lint clean (bulk fixture guard)', () => {
-  const all = fixtures();
+  let all: Fixture[] = [];
 
   beforeAll(async () => {
-    for (const fixture of all) diagnosticCache.set(fixture.name, await lintFixture(fixture));
+    all = await Promise.all(tscnFiles(fixturesDir).map(fixture));
+    diagnosticsByName = new Map(
+      await Promise.all(all.map(async (linted) => [linted.name, await lintFixture(linted)] as const))
+    );
   });
 
   it('finds the fixtures directory and its sub-projects (path layout guard)', () => {
-    expect(tscnFiles(fixturesDir).length).toBeGreaterThan(0);
-    expect(all.some((fixture) => fixture.provider !== undefined)).toBe(true);
+    expect(all.length).toBeGreaterThan(0);
+    expect(all.some((linted) => linted.provider !== null)).toBe(true);
   });
 
   it('every unit-* fixture reports an advisory only where allowlisted, rule by rule', () => {

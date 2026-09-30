@@ -7,7 +7,6 @@
 
 import type { TscnExternalResource, TscnScene } from '../parser/types.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
-import { FileEventBus } from '../resources/FileEventBus.js';
 import {
   gltfRefusalMessage,
   isGltfPath,
@@ -29,13 +28,25 @@ function isReadableGltf(resource: TscnExternalResource): boolean {
 }
 
 /**
- * The required extensions of `resource`'s file that Godot refuses. Empty for a file the provider does not hold or
- * cannot read, and for JSON Godot cannot parse: those are the missing-resource path, not this rule's claim.
+ * The `[ext_resource]`s whose glTF files the rule reads: a readable glTF a value uses. The readable filter runs first,
+ * so a scene with no glTF walks no value.
  */
-async function refusedExtensions(files: FileEventBus, resource: TscnExternalResource): Promise<string[]> {
-  const data = await files.tryLoad(resource.path, resource.type);
+export function usedGltfResources(scene: TscnScene): TscnExternalResource[] {
+  const readable = scene.externalResources.filter(isReadableGltf);
+  if (readable.length === 0) return [];
+  const used = usedExtResourceIds(scene);
+  return readable.filter((resource) => used.has(resource.id));
+}
+
+/**
+ * The required extensions of `resource`'s file that Godot refuses. Empty for a file the provider does not hold or
+ * cannot read, and for JSON Godot cannot parse: those are the missing-resource path, not this rule's claim. A rejection
+ * counts as a miss, since the VS Code and web providers throw for a missing file where the contract says null.
+ */
+async function refusedExtensions(provider: ResourceProvider, resource: TscnExternalResource): Promise<string[]> {
+  const data = await provider.loadResource(resource.path, resource.type).catch(() => null);
   if (data === null) return [];
-  return unsupportedRequiredGltfExtensions(readGltfRequiredExtensions(data) ?? []);
+  return unsupportedRequiredGltfExtensions(readGltfRequiredExtensions(data));
 }
 
 function refusal(resource: TscnExternalResource, unsupported: readonly string[], lines: SourceLines): Diagnostic {
@@ -48,17 +59,14 @@ function refusal(resource: TscnExternalResource, unsupported: readonly string[],
   );
 }
 
-/** Each used glTF dependency Godot refuses to import, on its `[ext_resource]` heading, read through `provider`. */
+/** Each of `resources` whose glTF Godot refuses to import, on its `[ext_resource]` heading, read through `provider`. */
 export async function unimportableGltfDiagnostics(
-  scene: TscnScene,
+  resources: readonly TscnExternalResource[],
   lines: SourceLines,
   provider: ResourceProvider
 ): Promise<Diagnostic[]> {
-  const used = usedExtResourceIds(scene);
-  const files = new FileEventBus(provider);
-  const candidates = scene.externalResources.filter((r) => used.has(r.id) && isReadableGltf(r));
   const verdicts = await Promise.all(
-    candidates.map(async (resource) => ({ resource, unsupported: await refusedExtensions(files, resource) }))
+    resources.map(async (resource) => ({ resource, unsupported: await refusedExtensions(provider, resource) }))
   );
   return verdicts
     .filter(({ unsupported }) => unsupported.length > 0)

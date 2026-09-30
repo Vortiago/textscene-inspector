@@ -6,6 +6,7 @@ import {
   requiredGltfExtensions,
   unsupportedRequiredGltfExtensions,
 } from './gltf';
+import { BIN_CHUNK, GLB_MAGIC, JSON_CHUNK } from '../resources/formats/glb/testing/triangleGlb';
 
 describe('unsupportedRequiredGltfExtensions', () => {
   it('passes a file whose required extensions Godot all imports', () => {
@@ -22,10 +23,6 @@ describe('unsupportedRequiredGltfExtensions', () => {
     expect(unsupportedRequiredGltfExtensions([])).toEqual([]);
   });
 });
-
-const GLB_MAGIC = 0x46546c67;
-const JSON_CHUNK = 0x4e4f534a;
-const BIN_CHUNK = 0x004e4942;
 
 /** A GLB container: the 12-byte header, then one chunk of `chunkType` holding `body`. */
 function glb(body: string, chunkType = JSON_CHUNK): ArrayBuffer {
@@ -82,28 +79,28 @@ describe('readGltfRequiredExtensions', () => {
     expect(readGltfRequiredExtensions(textBytes('{"asset":{"version":"2.0"}}'))).toEqual([]);
   });
 
-  it('gives null for a GLB too short to hold its first chunk header', () => {
-    expect(readGltfRequiredExtensions(glb(REQUIRES_INSTANCING).slice(0, 16))).toBeNull();
+  it('gives an empty list for a GLB too short to hold its first chunk header', () => {
+    expect(readGltfRequiredExtensions(glb(REQUIRES_INSTANCING).slice(0, 16))).toEqual([]);
   });
 
-  it('gives null for a GLB whose first chunk is shorter than its declared length', () => {
-    expect(readGltfRequiredExtensions(glb(REQUIRES_INSTANCING).slice(0, 30))).toBeNull();
+  it('gives an empty list for a GLB whose first chunk is shorter than its declared length', () => {
+    expect(readGltfRequiredExtensions(glb(REQUIRES_INSTANCING).slice(0, 30))).toEqual([]);
   });
 
-  it('gives null for a GLB whose first chunk is not JSON', () => {
-    expect(readGltfRequiredExtensions(glb(REQUIRES_INSTANCING, BIN_CHUNK))).toBeNull();
+  it('gives an empty list for a GLB whose first chunk is not JSON', () => {
+    expect(readGltfRequiredExtensions(glb(REQUIRES_INSTANCING, BIN_CHUNK))).toEqual([]);
   });
 
-  it('gives null for text that is not JSON', () => {
-    expect(readGltfRequiredExtensions(textBytes('{"asset": '))).toBeNull();
+  it('gives an empty list for text that is not JSON', () => {
+    expect(readGltfRequiredExtensions(textBytes('{"asset": '))).toEqual([]);
   });
 
-  it('gives null for JSON that is not an object', () => {
-    expect(readGltfRequiredExtensions(textBytes('["EXT_mesh_gpu_instancing"]'))).toBeNull();
+  it('gives an empty list for JSON that is not an object', () => {
+    expect(readGltfRequiredExtensions(textBytes('["EXT_mesh_gpu_instancing"]'))).toEqual([]);
   });
 
-  it('gives null for an empty file', () => {
-    expect(readGltfRequiredExtensions(new ArrayBuffer(0))).toBeNull();
+  it('gives an empty list for an empty file', () => {
+    expect(readGltfRequiredExtensions(new ArrayBuffer(0))).toEqual([]);
   });
 });
 

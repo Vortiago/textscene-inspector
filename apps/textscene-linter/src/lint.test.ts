@@ -1,6 +1,6 @@
 /** Unit tests for lintFile/runLint exit-code logic and error handling. */
 
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'fs';
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -234,19 +234,11 @@ describe('collectFileDiagnostics', () => {
   });
 });
 
-/** A GLB whose JSON chunk requires `required`: enough for the glTF import verdict, which reads no mesh. */
-function glbRequiring(required: string): Uint8Array {
-  const json = new TextEncoder().encode(JSON.stringify({ asset: { version: '2.0' }, extensionsRequired: [required] }));
-  const file = new Uint8Array(20 + json.length);
-  const view = new DataView(file.buffer);
-  view.setUint32(0, 0x46546c67, true);
-  view.setUint32(4, 2, true);
-  view.setUint32(8, file.length, true);
-  view.setUint32(12, json.length, true);
-  view.setUint32(16, 0x4e4f534a, true);
-  file.set(json, 20);
-  return file;
-}
+/** The committed GLB that requires EXT_mesh_gpu_instancing, which Godot's glTF importer refuses. */
+const INSTANCED_TREE = join(
+  import.meta.dirname,
+  '../../../scenes/fixtures/gltf-unsupported-required-extension/instanced-tree.glb'
+);
 
 const USES_TREE_GLB = `[gd_scene format=3]
 
@@ -264,9 +256,9 @@ describe('cross-file rules', () => {
     projectDir = mkdtempSync(join(tmpdir(), 'tscn-lint-gltf-'));
     mkdirSync(join(projectDir, 'game', 'scenes'), { recursive: true });
     writeFileSync(join(projectDir, 'game', 'project.godot'), 'config_version=5\n');
-    writeFileSync(join(projectDir, 'game', 'tree.glb'), glbRequiring('EXT_mesh_gpu_instancing'));
+    copyFileSync(INSTANCED_TREE, join(projectDir, 'game', 'tree.glb'));
     writeFileSync(join(projectDir, 'game', 'scenes', 'level.tscn'), USES_TREE_GLB);
-    writeFileSync(join(projectDir, 'tree.glb'), glbRequiring('EXT_mesh_gpu_instancing'));
+    copyFileSync(INSTANCED_TREE, join(projectDir, 'tree.glb'));
     writeFileSync(join(projectDir, 'loose.tscn'), USES_TREE_GLB);
   });
 

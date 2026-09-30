@@ -3,9 +3,11 @@
  * extension lists and the node's extensions left to the caller.
  */
 
-const GLB_MAGIC = 0x46546c67;
-const JSON_CHUNK = 0x4e4f534a;
-const BIN_CHUNK = 0x004e4942;
+/** `glTF` as a little-endian `uint32`, the container's first four bytes. */
+export const GLB_MAGIC = 0x46546c67;
+/** `JSON` and `BIN\0` as chunk types. */
+export const JSON_CHUNK = 0x4e4f534a;
+export const BIN_CHUNK = 0x004e4942;
 
 /** One float32 VEC3 per vertex, and one per instance for the instancing extension. */
 const TRIANGLE = [0, 0, 0, 1, 0, 0, 0, 1, 0];

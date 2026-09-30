@@ -66,9 +66,10 @@ export const FILE_DIAGNOSTICS = {
     grounding: { kind: 'engine', at: 'packed_scene.cpp:218-219' },
   },
   /**
-   * A rule threw. Reported on the node it ran on, naming the rule and the
-   * error. Every other rule still runs. Not an engine claim about the
-   * file: the rule's own findings for that node are simply missing.
+   * A rule threw. Reported on the node it ran on, or on no line for the
+   * cross-file rule, naming the rule and the error. Every other rule still
+   * runs. Not an engine claim about the file: the rule's own findings are
+   * simply missing.
    */
   ruleCrashed: {
     severity: 'error',

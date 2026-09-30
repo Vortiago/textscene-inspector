@@ -5,7 +5,7 @@
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import type { Diagnostic } from '@textscene/core/linter';
+import type { Diagnostic, ProjectLintResult } from '@textscene/core/linter';
 
 vi.mock('@textscene/core', async () => {
   const real = await vi.importActual<typeof import('@textscene/core')>('@textscene/core');
@@ -22,9 +22,9 @@ vi.mock('@textscene/core/linter', async () => {
       return scripted.get(content) ?? [];
     }
 
-    /** The pane reads the scene's dependencies too. The script names none, so both lints agree. */
-    async lintProject(content: string): Promise<Diagnostic[]> {
-      return this.lint(content);
+    /** The pane reads the scene's dependencies too. The script names none, so there is no second lint. */
+    lintProject(content: string): ProjectLintResult {
+      return { diagnostics: this.lint(content), withDependencies: null };
     }
   }
   return { ...real, Linter };

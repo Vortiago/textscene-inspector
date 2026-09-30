@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { planChecks } from './prePushPlan.mjs';
 
-const plan = (changed, deleted = [], negativeFixtures = new Set()) =>
-  planChecks({ changed, deleted, negativeFixtures }).map((command) => command.join(' '));
+const plan = (changed, deleted = [], isNegativeFixture = () => false) =>
+  planChecks({ changed, deleted, isNegativeFixture }).map((command) => command.join(' '));
+
+/** A negative-fixture predicate over the one fixture `edge-a.tscn`, wherever it sits. */
+const isEdgeA = (path) => path.split('/').at(-1) === 'edge-a.tscn';
 
 describe('planChecks', () => {
   it('runs nothing for files no check reads', () => {
@@ -15,9 +18,13 @@ describe('planChecks', () => {
 
   it('runs the full gate when the toolchain changes', () => {
     for (const path of ['package.json', 'apps/textscene-web/package.json', 'pnpm-lock.yaml', 'githooks/pre-push',
-      'packages/textscene-core/tsconfig.tests.json', 'eslint.config.js']) {
+      'packages/textscene-core/tsconfig.tests.json', 'eslint.config.js', 'lint-staged.config.mjs']) {
       expect(plan([path])).toEqual(['pnpm validate']);
     }
+  });
+
+  it('runs the full gate when the negative-fixture loader both hooks read changes', () => {
+    expect(plan(['scripts/githooks/negativeFixtures.mjs'])).toEqual(['pnpm validate']);
   });
 
   it('type-checks, lints and runs the related tests for a TypeScript change', () => {
@@ -42,13 +49,11 @@ describe('planChecks', () => {
   });
 
   it('skips a negative fixture, which exists to error', () => {
-    const negative = new Set(['edge-a.tscn']);
-    expect(plan(['scenes/fixtures/nested/edge-a.tscn'], [], negative)).toEqual([]);
+    expect(plan(['scenes/fixtures/nested/edge-a.tscn'], [], isEdgeA)).toEqual([]);
   });
 
   it('lints the other scenes of a push that also changes a negative fixture', () => {
-    const negative = new Set(['edge-a.tscn']);
-    expect(plan(['scenes/fixtures/edge-a.tscn', 'scenes/fixtures/unit-a.tscn'], [], negative)).toEqual([
+    expect(plan(['scenes/fixtures/edge-a.tscn', 'scenes/fixtures/unit-a.tscn'], [], isEdgeA)).toEqual([
       'pnpm build:linter',
       'pnpm lint:tscn scenes/fixtures/unit-a.tscn',
     ]);

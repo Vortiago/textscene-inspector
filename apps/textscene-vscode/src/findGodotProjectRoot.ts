@@ -1,32 +1,32 @@
 /**
  * Walks up from a document's directory for `project.godot`, and falls back to the
  * workspace root, since Godot's `res://` is always project-root-relative. The
- * preview's `VSCodeResourceProvider` and `TscnDocumentLinkProvider` share it, so
- * both agree on where a `res://` path points. The walk itself is core's
- * `findProjectRoot`, which the CLI shares.
+ * preview's `VSCodeResourceProvider`, `TscnDocumentLinkProvider` and the linter's
+ * `LintResourceProvider` share it, so all agree on where a `res://` path points.
+ * The walk itself is core's `findProjectRoot`, which the CLI shares.
  */
 
 import * as vscode from 'vscode';
-import { comparablePath, findProjectRoot } from '@textscene/core/resources/resPath';
-
-/** How many directories `dir` lies above `from`, an ancestor of it. */
-function levelsAbove(from: string, dir: string): number {
-  const depth = (path: string) => comparablePath(path).split('/').filter(Boolean).length;
-  return depth(from) - depth(dir);
-}
+import { comparablePath, findProjectRoot, isWithinRoot } from '@textscene/core/resources/resPath';
 
 /**
- * The Uri of `dir`, an ancestor of `start` named by its path. Reached through
- * `joinPath`, never `Uri.file`, so a virtual workspace keeps its scheme.
+ * The directory above `dir`, or null at the top. Through `joinPath`, never
+ * `Uri.file`, so a virtual workspace keeps its scheme.
  */
-function ancestorUri(start: vscode.Uri, dir: string): vscode.Uri {
-  const levels = levelsAbove(start.fsPath, dir);
-  return levels === 0 ? start : vscode.Uri.joinPath(start, ...Array<string>(levels).fill('..'));
+function parentUri(dir: vscode.Uri): vscode.Uri | null {
+  const parent = vscode.Uri.joinPath(dir, '..');
+  return parent.path === dir.path ? null : parent;
 }
 
-async function exists(uri: vscode.Uri): Promise<boolean> {
+/** Whether the walk ends at a directory: the workspace root itself, or one outside it. */
+function stopsAt(workspaceRoot: vscode.Uri): (dir: vscode.Uri) => boolean {
+  const rootKey = comparablePath(workspaceRoot.fsPath);
+  return (dir) => comparablePath(dir.fsPath) === rootKey || !isWithinRoot(workspaceRoot.fsPath, dir.fsPath);
+}
+
+async function hasProjectFile(dir: vscode.Uri): Promise<boolean> {
   try {
-    await vscode.workspace.fs.stat(uri);
+    await vscode.workspace.fs.stat(vscode.Uri.joinPath(dir, 'project.godot'));
     return true;
   } catch {
     // `stat` rejects for a missing file, which is the answer.
@@ -39,8 +39,6 @@ export async function findGodotProjectRoot(
   documentUri: vscode.Uri
 ): Promise<vscode.Uri> {
   const documentDir = vscode.Uri.joinPath(documentUri, '..');
-  const root = await findProjectRoot(documentDir.fsPath, workspaceRoot.fsPath, (dir) =>
-    exists(vscode.Uri.joinPath(ancestorUri(documentDir, dir), 'project.godot'))
-  );
-  return root === null ? workspaceRoot : ancestorUri(documentDir, root);
+  const root = await findProjectRoot(documentDir, parentUri, stopsAt(workspaceRoot), hasProjectFile);
+  return root ?? workspaceRoot;
 }

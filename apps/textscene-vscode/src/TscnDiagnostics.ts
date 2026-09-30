@@ -1,8 +1,8 @@
 /**
- * Surfaces core Linter diagnostics for open `.tscn` and `.tres` documents. It lints a
- * document inside a workspace folder twice: alone at once, then with the files the
- * scene uses. It imports `@textscene/core/linter`, never the root index, to stay
- * renderer-free.
+ * Surfaces core Linter diagnostics for open `.tscn` and `.tres` documents. It publishes
+ * a document's own diagnostics at once, and again with those of the files the scene
+ * uses once they are read. It imports `@textscene/core/linter`, never the root index,
+ * to stay renderer-free.
  */
 
 import * as vscode from 'vscode';
@@ -14,7 +14,7 @@ import {
 } from '@textscene/core/linter';
 import { isGodotTextResourcePath } from '@textscene/core/godot';
 import { error as logError } from '@textscene/core/logger';
-import { VSCodeResourceProvider } from './providers/VSCodeResourceProvider';
+import { LintResourceProvider } from './LintResourceProvider';
 
 /** Fallback when `textscene.diagnostics.lintDebounceMs` is unset. */
 export const DEFAULT_LINT_DEBOUNCE_MS = 300;
@@ -119,11 +119,15 @@ export class TscnDiagnostics implements vscode.Disposable {
   private readonly _debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /**
    * The latest lint request per document URI. Written by `lintDocument`, deleted on
-   * close and cleared on disable and dispose. A counter, not `document.version`: a
+   * close and cleared on disable and dispose. A fresh token, not `document.version`: a
    * save re-lints the same version, and a dependency may have changed on disk since.
    */
-  private readonly _latestRequests = new Map<string, number>();
-  private _requestCount = 0;
+  private readonly _latestRequests = new Map<string, symbol>();
+  /**
+   * The linter's project view per document URI, so its project-root walk runs once.
+   * Written by `_providerFor`, deleted on close and cleared on disable and dispose.
+   */
+  private readonly _providers = new Map<string, LintResourceProvider>();
   private _enabled: boolean;
   private _debounceMs: number;
 
@@ -163,17 +167,20 @@ export class TscnDiagnostics implements vscode.Disposable {
     }
 
     const key = document.uri.toString();
-    const request = ++this._requestCount;
+    const request = Symbol(key);
     this._latestRequests.set(key, request);
     const text = document.getText();
-    this._publish(document, this._linter.lint(text));
-
     const provider = this._providerFor(document);
-    if (!provider) return;
-    this._linter
-      .lintProject(text, provider)
-      .then((diagnostics) => {
-        if (this._enabled && this._latestRequests.get(key) === request) this._publish(document, diagnostics);
+    if (!provider) {
+      this._publish(document, this._linter.lint(text));
+      return;
+    }
+
+    const { diagnostics, withDependencies } = this._linter.lintProject(text, provider);
+    this._publish(document, diagnostics);
+    withDependencies
+      ?.then((merged) => {
+        if (this._latestRequests.get(key) === request) this._publish(document, merged);
       })
       .catch((reason: unknown) => logError('[TscnDiagnostics] Cross-file lint failed:', reason));
   }
@@ -185,10 +192,16 @@ export class TscnDiagnostics implements vscode.Disposable {
     );
   }
 
-  /** The workspace view `document`'s `res://` paths resolve in, or null outside every workspace folder. */
-  private _providerFor(document: vscode.TextDocument): VSCodeResourceProvider | null {
+  /** The project view `document`'s `res://` paths resolve in, or null outside every workspace folder. */
+  private _providerFor(document: vscode.TextDocument): LintResourceProvider | null {
+    const key = document.uri.toString();
+    const cached = this._providers.get(key);
+    if (cached) return cached;
     const folder = vscode.workspace.getWorkspaceFolder(document.uri);
-    return folder ? new VSCodeResourceProvider(folder.uri, document.uri) : null;
+    if (!folder) return null;
+    const provider = new LintResourceProvider(folder.uri, document.uri);
+    this._providers.set(key, provider);
+    return provider;
   }
 
   private _scheduleLint(document: vscode.TextDocument): void {
@@ -233,6 +246,7 @@ export class TscnDiagnostics implements vscode.Disposable {
       }
       this._debounceTimers.clear();
       this._latestRequests.clear();
+      this._providers.clear();
       this._collection.clear();
       return;
     }
@@ -252,6 +266,7 @@ export class TscnDiagnostics implements vscode.Disposable {
       this._debounceTimers.delete(key);
     }
     this._latestRequests.delete(key);
+    this._providers.delete(key);
     this._collection.delete(document.uri);
   }
 
@@ -261,6 +276,7 @@ export class TscnDiagnostics implements vscode.Disposable {
     }
     this._debounceTimers.clear();
     this._latestRequests.clear();
+    this._providers.clear();
 
     while (this._disposables.length) {
       this._disposables.pop()?.dispose();

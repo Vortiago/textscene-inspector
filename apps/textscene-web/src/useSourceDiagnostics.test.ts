@@ -2,6 +2,8 @@
  * The Source pane's linter surface between an edit and the debounced lint that follows it:
  * the badge counts only findings the pane shows, a gutter row or the file-level section.
  */
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ResourceProvider } from '@textscene/core/linter';
@@ -27,8 +29,11 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+/** A project that holds no file, for a buffer that reads none. */
+const EMPTY_PROJECT: ResourceProvider = { loadResource: async () => null };
+
 function lintedPane(buffer: string) {
-  const hook = renderHook(({ text }) => useSourceDiagnostics(text), {
+  const hook = renderHook(({ text }) => useSourceDiagnostics(text, EMPTY_PROJECT), {
     initialProps: { text: buffer },
   });
   act(() => {
@@ -71,19 +76,12 @@ describe('useSourceDiagnostics', () => {
   });
 });
 
-/** A GLB whose one JSON chunk requires `required`: all the glTF import verdict reads. */
-function glbRequiring(required: string): ArrayBuffer {
-  const json = new TextEncoder().encode(JSON.stringify({ asset: { version: '2.0' }, extensionsRequired: [required] }));
-  const file = new Uint8Array(20 + json.length);
-  const view = new DataView(file.buffer);
-  view.setUint32(0, 0x46546c67, true);
-  view.setUint32(4, 2, true);
-  view.setUint32(8, file.length, true);
-  view.setUint32(12, json.length, true);
-  view.setUint32(16, 0x4e4f534a, true);
-  file.set(json, 20);
-  return file.buffer;
-}
+/** The committed GLB that requires EXT_mesh_gpu_instancing, which Godot's glTF importer refuses. */
+const INSTANCED_TREE = new Uint8Array(
+  readFileSync(
+    join(import.meta.dirname, '../../../scenes/fixtures/gltf-unsupported-required-extension/instanced-tree.glb')
+  )
+).buffer;
 
 /** A scene whose `Tree` node instances `res://tree.glb`, declared on line 3. */
 const USES_TREE_GLB = [
@@ -101,7 +99,7 @@ function heldProvider() {
   const pending: Array<() => void> = [];
   const provider: ResourceProvider = {
     loadResource: () =>
-      new Promise((resolve) => pending.push(() => resolve(glbRequiring('EXT_mesh_gpu_instancing')))),
+      new Promise((resolve) => pending.push(() => resolve(INSTANCED_TREE))),
   };
   return { provider, pending };
 }

@@ -295,6 +295,7 @@ export type {
   RuleMeta,
   ParseError,
   StrictParseResult,
+  ProjectLintResult,
   SectionLines,
   SourceLines,
 } from './types.js';

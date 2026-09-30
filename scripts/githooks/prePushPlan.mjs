@@ -5,10 +5,11 @@
 
 /**
  * A file whose change can break any check, so the push runs the full `pnpm validate`. A workflow
- * file is not one: no local check reads it, and CI runs it on the pull request.
+ * file is not one: no local check reads it, and CI runs it on the pull request. The negative-fixture
+ * loader is one: both hooks read it to decide which scenes they skip.
  */
 const TOOLCHAIN =
-  /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|eslint\.config\.js|lint-staged\.config\.mjs|vitest\.(?:config|shared)\.ts|githooks\/.*)$|(?:^|\/)(?:package\.json|tsconfig[^/]*\.json|vitest\.config\.ts)$/;
+  /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|eslint\.config\.js|lint-staged\.config\.mjs|vitest\.(?:config|shared)\.ts|githooks\/.*|scripts\/githooks\/negativeFixtures\.mjs)$|(?:^|\/)(?:package\.json|tsconfig[^/]*\.json|vitest\.config\.ts)$/;
 
 const CODE = /\.(?:ts|tsx|js|mjs|cjs|css)$/;
 const TYPED = /\.(?:ts|tsx)$/;
@@ -18,15 +19,12 @@ const SCENE = /\.(?:tscn|tres)$/;
 const GENERATED_DOCS_INPUT = /(?:^|\/)comparison\.md$|^docs\/comparison\//;
 const VENDORED = /^\.claude\/(?:skills\/conventional-commits\/|rules\/|agents\/ste-review\.md$)/;
 
-/** A path's last segment, which is how `negative-fixtures.json` names a fixture. */
-const basename = (path) => path.slice(path.lastIndexOf('/') + 1);
-
 /**
  * The commands, in order, for a push that changes `changed` (paths that still exist) and deletes
  * `deleted`. Each command is an argv array. An empty list means the push needs no check.
- * `negativeFixtures` holds the basenames of the scenes that exist to error, which the plan does not lint.
+ * `isNegativeFixture` tells a scene that exists to error, which the plan does not lint.
  */
-export function planChecks({ changed, deleted, negativeFixtures = new Set() }) {
+export function planChecks({ changed, deleted, isNegativeFixture }) {
   const all = [...changed, ...deleted];
   if (all.some((path) => TOOLCHAIN.test(path))) return [['pnpm', 'validate']];
 
@@ -39,7 +37,7 @@ export function planChecks({ changed, deleted, negativeFixtures = new Set() }) {
   if (linted.length > 0) plan.push(['npx', 'eslint', ...linted]);
   if (code.length > 0) plan.push(['pnpm', 'exec', 'vitest', 'related', '--run', ...code]);
 
-  const scenes = changed.filter((path) => SCENE.test(path) && !negativeFixtures.has(basename(path)));
+  const scenes = changed.filter((path) => SCENE.test(path) && !isNegativeFixture(path));
   if (scenes.length > 0) plan.push(['pnpm', 'build:linter'], ['pnpm', 'lint:tscn', ...scenes]);
 
   if (all.some((path) => GENERATED_DOCS_INPUT.test(path))) {

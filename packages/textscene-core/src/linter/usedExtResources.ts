@@ -15,7 +15,9 @@ function addIdsIn(values: Iterable<unknown>, into: Set<string>): void {
 }
 
 function addNodeIds(node: TscnNode, into: Set<string>): void {
-  if (node.instance !== undefined) addIdsIn([node.instance], into);
+  if (node.instance !== undefined) {
+    for (const id of extResourceIdsIn(node.instance)) into.add(id);
+  }
   addIdsIn(Object.values(node.rawProperties ?? {}), into);
   for (const child of node.children) addNodeIds(child, into);
 }

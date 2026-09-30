@@ -1,6 +1,6 @@
 /**
  * Where a `res://` path lives on a host: under the Godot project root, the nearest directory, from a file's own
- * upward, that holds `project.godot`. String paths alone, with no `node:path`, since the VS Code host runs in a web worker. Paths come
+ * upward, that holds `project.godot`. No `node:path`, since the VS Code host runs in a web worker. String paths come
  * back with forward slashes, which every host's filesystem API accepts.
  */
 
@@ -46,11 +46,14 @@ function joinUnder(dir: string, relative: string): string {
   return root.endsWith('/') ? `${root}${relative}` : `${root}/${relative}`;
 }
 
-/** The directory holding `path`, or null for a filesystem root. */
-function parentDir(path: string): string | null {
+/**
+ * The directory holding `path`, or null for a filesystem root or a bare name: the top of an upward walk over string
+ * paths, as `findProjectRoot`'s `parent`.
+ */
+export function parentDir(path: string): string | null {
   const dir = forwardSlashes(path);
-  if (dir.endsWith('/')) return null;
-  return forwardSlashes(dir.slice(0, dir.lastIndexOf('/') + 1));
+  const lastSlash = dir.lastIndexOf('/');
+  return dir.endsWith('/') || lastSlash < 0 ? null : forwardSlashes(dir.slice(0, lastSlash));
 }
 
 /**
@@ -67,28 +70,34 @@ export function normalizeRelativePath(relative: string): string | null {
   return segments.join('/');
 }
 
+/**
+ * `resPath` relative to its project root, or null for a path that is not `res://` or that escapes the root. For a host
+ * whose paths are not strings, such as VS Code's `Uri`.
+ */
+export function resRelativePath(resPath: string): string | null {
+  return resPath.startsWith(RES_SCHEME) ? normalizeRelativePath(resPath.slice(RES_SCHEME.length)) : null;
+}
+
 /** The host path of `resPath` under `projectRoot`, or null for a path that is not `res://` or that escapes the root. */
 export function resolveResPath(projectRoot: string, resPath: string): string | null {
-  if (!resPath.startsWith(RES_SCHEME)) return null;
-  const relative = normalizeRelativePath(resPath.slice(RES_SCHEME.length));
+  const relative = resRelativePath(resPath);
   return relative === null ? null : joinUnder(projectRoot, relative);
 }
 
 /**
- * The nearest directory, from `startDir` upward, where `hasProjectFile` finds a `project.godot`, or null for none. The walk
- * ends after `stopDir`, or after `startDir` itself when it lies outside `stopDir`. A null `stopDir` walks to the
- * filesystem root.
+ * The nearest directory, from `start` upward through `parent`, where `hasProjectFile` finds a `project.godot`, or null
+ * for none. The walk ends after the first directory `isStop` accepts, or at the top, where `parent` gives null. Generic
+ * over the directory handle, so each host walks its own kind: a string path, or a `Uri` that keeps its scheme.
  */
-export async function findProjectRoot(
-  startDir: string,
-  stopDir: string | null,
-  hasProjectFile: (dir: string) => Promise<boolean>
-): Promise<string | null> {
-  for (let dir: string | null = forwardSlashes(startDir); dir !== null; dir = parentDir(dir)) {
+export async function findProjectRoot<Dir>(
+  start: Dir,
+  parent: (dir: Dir) => Dir | null,
+  isStop: (dir: Dir) => boolean,
+  hasProjectFile: (dir: Dir) => Promise<boolean>
+): Promise<Dir | null> {
+  for (let dir: Dir | null = start; dir !== null; dir = parent(dir)) {
     if (await hasProjectFile(dir)) return dir;
-    if (stopDir !== null && (!isWithinRoot(stopDir, dir) || comparablePath(dir) === comparablePath(stopDir))) {
-      return null;
-    }
+    if (isStop(dir)) return null;
   }
   return null;
 }

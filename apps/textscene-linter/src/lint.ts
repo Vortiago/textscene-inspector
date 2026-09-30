@@ -111,8 +111,9 @@ export async function lintFileDiagnostics(filePath: string): Promise<FileDiagnos
     const provider = await projectProviderFor(absolutePath);
 
     const linter = new Linter();
-    const diagnostics = provider ? await linter.lintProject(content, provider) : linter.lint(content);
-    return { filePath, diagnostics };
+    if (!provider) return { filePath, diagnostics: linter.lint(content) };
+    const { diagnostics, withDependencies } = linter.lintProject(content, provider);
+    return { filePath, diagnostics: (await withDependencies) ?? diagnostics };
   } catch (error) {
     return {
       filePath,
@@ -195,8 +196,10 @@ export async function runLint(
 }
 
 /**
- * Lints files in order, one at a time, and returns raw per-file diagnostics, the
- * data source for the `json` and `github` formats. The exit code follows `runLint`.
+ * Lints files one at a time and returns raw per-file diagnostics, the data source
+ * for the `json` and `github` formats. Sequential, not parallel: parallel reads of
+ * a large tree, each file with its dependencies, can exhaust the process's file
+ * handles. The exit code follows `runLint`.
  */
 export async function collectFileDiagnostics(filePaths: string[]): Promise<CollectDiagnosticsResult> {
   const files: FileDiagnostics[] = [];

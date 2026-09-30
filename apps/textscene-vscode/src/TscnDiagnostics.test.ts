@@ -3,6 +3,8 @@
  * mapping and the lint-document flow against a mocked DiagnosticCollection.
  */
 
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { describe, it, expect, afterEach, beforeEach, vi, type Mock } from 'vitest';
 import * as vscode from 'vscode';
 import type { Diagnostic as TscnLintDiagnostic } from '@textscene/core/linter';
@@ -62,19 +64,12 @@ function makeTscnDocument(content: string, fsPath = '/workspace/scene.tscn'): vs
   } as unknown as vscode.TextDocument;
 }
 
-/** A GLB whose one JSON chunk requires `required`: all the glTF import verdict reads. */
-function glbRequiring(required: string): Uint8Array {
-  const json = new TextEncoder().encode(JSON.stringify({ asset: { version: '2.0' }, extensionsRequired: [required] }));
-  const file = new Uint8Array(20 + json.length);
-  const view = new DataView(file.buffer);
-  view.setUint32(0, 0x46546c67, true);
-  view.setUint32(4, 2, true);
-  view.setUint32(8, file.length, true);
-  view.setUint32(12, json.length, true);
-  view.setUint32(16, 0x4e4f534a, true);
-  file.set(json, 20);
-  return file;
-}
+/** The committed GLB that requires EXT_mesh_gpu_instancing, which Godot's glTF importer refuses. */
+const INSTANCED_TREE = new Uint8Array(
+  readFileSync(
+    join(import.meta.dirname, '../../../scenes/fixtures/gltf-unsupported-required-extension/instanced-tree.glb')
+  )
+);
 
 const VALID_TSCN = '[gd_scene format=3]\n\n[node name="Root" type="Node3D"]';
 const VALID_TRES = '[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]';
@@ -469,7 +464,6 @@ describe('TscnDiagnostics', () => {
       '[node name="Tree" parent="." instance=ExtResource("1_tree")]',
     ].join('\n');
     const RULE = 'gltf-required-extension-unsupported';
-    const INSTANCED_TREE = glbRequiring('EXT_mesh_gpu_instancing');
 
     /** Each read of the GLB, held until the test releases it. */
     let pendingReads: Array<() => void>;
@@ -566,6 +560,42 @@ describe('TscnDiagnostics', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(collection.set).toHaveBeenCalledTimes(1);
+      diagnostics.dispose();
+    });
+
+    it('publishes once for a scene that uses no glTF', async () => {
+      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+
+      diagnostics.lintDocument(makeTscnDocument(VALID_TSCN, '/workspace/scenes/plain.tscn'));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(collection.set).toHaveBeenCalledTimes(1);
+      expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
+      diagnostics.dispose();
+    });
+
+    it('walks for the project root once per open document, and again after it closes', async () => {
+      let closeHandler: ((document: vscode.TextDocument) => void) | undefined;
+      (vscode.workspace.onDidCloseTextDocument as Mock).mockImplementation((handler) => {
+        closeHandler = handler;
+        return { dispose: vi.fn() };
+      });
+      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+      const document = makeTscnDocument(SCENE_USING_TREE, '/workspace/scenes/level.tscn');
+      const projectFileChecks = () =>
+        (vscode.workspace.fs.stat as Mock).mock.calls.filter(([uri]) => uri.fsPath === '/workspace/project.godot')
+          .length;
+
+      diagnostics.lintDocument(document);
+      await releaseReads();
+      diagnostics.lintDocument(document);
+      await releaseReads();
+      expect(projectFileChecks()).toBe(1);
+
+      closeHandler!(document);
+      diagnostics.lintDocument(document);
+      await releaseReads();
+      expect(projectFileChecks()).toBe(2);
       diagnostics.dispose();
     });
 

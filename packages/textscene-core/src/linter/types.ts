@@ -137,6 +137,17 @@ export interface StrictParseResult {
   lines: SourceLines;
 }
 
+/** `Linter.lintProject`'s answer: the file's own diagnostics at once, and the cross-file ones when a rule reads a file. */
+export interface ProjectLintResult {
+  /** The diagnostics of the file alone, sorted, as `Linter.lint` returns them. */
+  diagnostics: Diagnostic[];
+  /**
+   * `diagnostics` and those of the files the scene uses, sorted together. Null when the scene uses no file a rule
+   * reads, so a host publishes once.
+   */
+  withDependencies: Promise<Diagnostic[]> | null;
+}
+
 /** Context provided to lint rules during execution. */
 export interface RuleContext {
   scene: TscnScene;

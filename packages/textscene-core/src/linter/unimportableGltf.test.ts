@@ -32,8 +32,14 @@ function sceneUsing(path: string): string {
 `;
 }
 
+/** What a host publishes last: the merged list when the lint reads a file, else the file-local one. */
+async function lastPublished(content: string, provider: ResourceProvider) {
+  const { diagnostics, withDependencies } = new Linter().lintProject(content, provider);
+  return (await withDependencies) ?? diagnostics;
+}
+
 async function refusals(content: string, provider: ResourceProvider) {
-  return (await new Linter().lintProject(content, provider)).filter((d) => d.ruleName === RULE);
+  return (await lastPublished(content, provider)).filter((d) => d.ruleName === RULE);
 }
 
 describe('unimportable glTF', () => {
@@ -138,7 +144,7 @@ metadata/source = ExtResource("1_tree")
 omni_range = -1.0
 `;
     const local = new Linter().lint(content);
-    const merged = await new Linter().lintProject(content, project({ 'res://tree.glb': INSTANCED_TREE }));
+    const merged = await lastPublished(content, project({ 'res://tree.glb': INSTANCED_TREE }));
 
     expect(merged).toHaveLength(local.length + 1);
     expect(merged).toEqual(expect.arrayContaining(local));
@@ -146,10 +152,56 @@ omni_range = -1.0
     expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
   });
 
-  it('declines a legacy-format file whole, as the file-local lint does', async () => {
+  it('hands back the file-local diagnostics at once, before any file is read', () => {
+    const content = sceneUsing('res://tree.glb');
+    const { diagnostics } = new Linter().lintProject(content, { loadResource: () => new Promise(() => {}) });
+
+    expect(diagnostics).toEqual(new Linter().lint(content));
+  });
+
+  it('leaves the merged list null when the scene uses no glTF, so a host publishes once', () => {
+    const provider = project({ 'res://tree.glb': INSTANCED_TREE });
+    const unused = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://tree.glb" id="1_tree"]
+
+[node name="Root" type="Node3D"]
+`;
+
+    expect(new Linter().lintProject(sceneUsing('res://tree.tscn'), provider).withDependencies).toBeNull();
+    expect(new Linter().lintProject(unused, provider).withDependencies).toBeNull();
+  });
+
+  it('reports a throw inside the cross-file rule as rule-crashed and keeps the file-local diagnostics', async () => {
+    const throwing: ResourceProvider = {
+      loadResource: () => {
+        throw new Error('provider bug');
+      },
+    };
+    const content = `${sceneUsing('res://tree.glb')}
+[node name="Light" type="OmniLight3D" parent="."]
+omni_range = -1.0
+`;
+    const { diagnostics, withDependencies } = new Linter().lintProject(content, throwing);
+    const merged = await withDependencies;
+
+    expect(merged).toEqual(expect.arrayContaining(diagnostics));
+    expect(merged?.filter((d) => d.ruleName === FILE_DIAGNOSTICS.ruleCrashed.ruleName)).toEqual([
+      {
+        severity: 'error',
+        ruleName: FILE_DIAGNOSTICS.ruleCrashed.ruleName,
+        nodeName: '<unknown>',
+        nodeType: '<unknown>',
+        message: expect.stringMatching(new RegExp(`^Rule '${RULE}' threw .*provider bug`)),
+      },
+    ]);
+  });
+
+  it('declines a legacy-format file whole, as the file-local lint does', () => {
     const content = sceneUsing('res://tree.glb').replace('format=3', 'format=2');
-    expect(await new Linter().lintProject(content, project({ 'res://tree.glb': INSTANCED_TREE }))).toEqual(
-      new Linter().lint(content)
-    );
+    expect(new Linter().lintProject(content, project({ 'res://tree.glb': INSTANCED_TREE }))).toEqual({
+      diagnostics: new Linter().lint(content),
+      withDependencies: null,
+    });
   });
 });

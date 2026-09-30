@@ -6,7 +6,7 @@
 import { access, readFile } from 'fs/promises';
 import { dirname, resolve } from 'path';
 import type { ResourceProvider } from '@textscene/core/linter';
-import { findProjectRoot, projectFileIn, resolveResPath } from '@textscene/core/resources/resPath';
+import { findProjectRoot, parentDir, projectFileIn, resolveResPath } from '@textscene/core/resources/resPath';
 import { isBinaryResourceType } from '@textscene/core/resources/resourceProviderUtils';
 
 async function hasProjectFile(dir: string): Promise<boolean> {
@@ -41,6 +41,7 @@ function fileProvider(root: string): ResourceProvider {
 
 /** The provider for the project `scenePath` belongs to, or null when no ancestor directory holds `project.godot`. */
 export async function projectProviderFor(scenePath: string): Promise<ResourceProvider | null> {
-  const root = await findProjectRoot(dirname(resolve(scenePath)), null, hasProjectFile);
+  // No stop directory: the CLI has no workspace to bound the walk, so it climbs to the filesystem root.
+  const root = await findProjectRoot(dirname(resolve(scenePath)), parentDir, () => false, hasProjectFile);
   return root === null ? null : fileProvider(root);
 }

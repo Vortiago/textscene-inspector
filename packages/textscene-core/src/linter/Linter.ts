@@ -1,16 +1,17 @@
 /** The linting engine for TSCN files: strict parsing, then the semantic rules. */
 
-import type { TscnScene, TscnNode } from '../parser/types.js';
+import type { TscnExternalResource, TscnScene, TscnNode } from '../parser/types.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { orphanDiagnostics } from './orphanDiagnostics.js';
 import { danglingResourceDiagnostics } from './danglingResources.js';
-import { unimportableGltfDiagnostics } from './unimportableGltf.js';
+import { unimportableGltfDiagnostics, usedGltfResources } from './unimportableGltf.js';
 import {
   SEVERITY_ORDER,
   flooredSeverity,
   type Diagnostic,
   type RuleContext,
   type ParseError,
+  type ProjectLintResult,
   type SourceLines,
   type StrictParseResult,
 } from './types.js';
@@ -45,18 +46,48 @@ export class Linter {
 
   /**
    * `lint`, plus the diagnostics of the rules that read the files `content` uses, through `provider`: a host's view of the
-   * Godot project the file sits in. A file the provider cannot deliver adds no diagnostic.
+   * Godot project the file sits in. One strict parse serves both. A file the provider cannot deliver adds no diagnostic.
    *
    * @param content - Raw TSCN file content
    * @param provider - Loads a `res://` path of the file's project
-   * @returns The diagnostics of `lint` and the cross-file ones, sorted together
+   * @returns The diagnostics of `lint` at once, and the cross-file ones merged in once read
    */
-  async lintProject(content: string, provider: ResourceProvider): Promise<Diagnostic[]> {
+  lintProject(content: string, provider: ResourceProvider): ProjectLintResult {
     const { diagnostics, parsed } = this.lintFile(content);
-    if (parsed?.scene) {
-      for (const d of await unimportableGltfDiagnostics(parsed.scene, parsed.lines, provider)) diagnostics.push(d);
+    const local = this.sortDiagnostics(diagnostics);
+    const gltfResources = parsed?.scene ? usedGltfResources(parsed.scene) : [];
+    if (!parsed || gltfResources.length === 0) return { diagnostics: local, withDependencies: null };
+
+    const withDependencies = this.gltfDiagnostics(gltfResources, parsed.lines, provider).then((found) =>
+      this.sortDiagnostics(local.concat(found))
+    );
+    return { diagnostics: local, withDependencies };
+  }
+
+  /**
+   * The cross-file rule's diagnostics, or its crash as `rule-crashed`. A throw is that rule's own diagnostic, as in
+   * `lintNode`: a rejection would reach a host as a failed lint, and the CLI would drop every local diagnostic with it.
+   * The crash names no line, since the rule is about the whole file.
+   */
+  private async gltfDiagnostics(
+    resources: readonly TscnExternalResource[],
+    lines: SourceLines,
+    provider: ResourceProvider
+  ): Promise<Diagnostic[]> {
+    try {
+      return await unimportableGltfDiagnostics(resources, lines, provider);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      const rule = FILE_DIAGNOSTICS.unimportableGltf.ruleName;
+      return [
+        armDiagnostic(
+          FILE_DIAGNOSTICS.ruleCrashed,
+          { name: '<unknown>', type: '<unknown>' },
+          `Rule '${rule}' threw while reading the files this scene uses: ${reason}. ` +
+            'Its own findings are missing; every file-local rule ran.'
+        ),
+      ];
     }
-    return this.sortDiagnostics(diagnostics);
   }
 
   /**
