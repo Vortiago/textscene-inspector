@@ -55,12 +55,10 @@ export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   DirectionalLight3D: {
     linterOnly: [
-      // Shadow-cascade and sky tuning the parser does not read.
-      'directional_shadow_blend_splits', 'directional_shadow_fade_start',
-      'directional_shadow_split_1', 'directional_shadow_split_2', 'directional_shadow_split_3',
+      // Sky tuning the parser does not read.
       'sky_mode',
     ],
-    reason: 'DirectionalLight3D linter validates additional shadow-cascade/sky tuning properties the static renderer ignores; the Light3D base keys are covered by the Light3D entry on both sides.',
+    reason: 'DirectionalLight3D linter validates the sky mode the static renderer ignores; the Light3D base keys are covered by the Light3D entry on both sides.',
   },
 
   OmniLight3D: {

@@ -11,9 +11,14 @@ import { useLiveSceneNodes } from '../useLiveSceneTree';
 import { EnvironmentLayer } from '../environment/EnvironmentLayer';
 import { LIGHT_INTENSITY_SCALE, PREVIEW_SUN_DEPTH_BIAS } from '../lightConstants';
 import {
+  DIRECTIONAL_SHADOW_BLEND_SPLITS_DEFAULT,
+  DIRECTIONAL_SHADOW_FADE_START_DEFAULT,
   DIRECTIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
   DIRECTIONAL_SHADOW_PANCAKE_SIZE_DEFAULT,
   DIRECTIONAL_SHADOW_SIZE_DEFAULT,
+  DIRECTIONAL_SHADOW_SPLIT_OFFSETS_DEFAULT,
+  DirectionalShadowMode,
+  directionalShadowSplitCount,
 } from '../../godot/directionalShadow';
 import { directionalShadowUserData } from '../directionalShadow/declaration';
 import {
@@ -35,15 +40,20 @@ import {
 const PREVIEW_SUN_DISTANCE = 30;
 
 /**
- * The preview sun's declaration: the editor sets only its max distance
- * (`node_3d_editor_plugin.cpp:9476`), so the pancake and normal bias keep the
+ * The preview sun's declaration: the editor sets its max distance
+ * (`node_3d_editor_plugin.cpp:9476`) and four splits (`:10383`), so the
+ * pancake, fade start, normal bias, split offsets and blending keep the
  * class defaults.
  */
 const PREVIEW_SUN_SHADOW = directionalShadowUserData({
   maxDistance: PREVIEW_SUN_SHADOW_MAX_DISTANCE,
   pancakeSize: DIRECTIONAL_SHADOW_PANCAKE_SIZE_DEFAULT,
+  fadeStart: DIRECTIONAL_SHADOW_FADE_START_DEFAULT,
   depthBias: PREVIEW_SUN_DEPTH_BIAS,
   normalBias: DIRECTIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
+  splitCount: directionalShadowSplitCount(DirectionalShadowMode.PARALLEL_4_SPLITS),
+  splitOffsets: DIRECTIONAL_SHADOW_SPLIT_OFFSETS_DEFAULT,
+  blendSplits: DIRECTIONAL_SHADOW_BLEND_SPLITS_DEFAULT,
 });
 
 export function PreviewLighting() {

@@ -22,6 +22,7 @@ describe('DirectionalLight3D Parser', () => {
       expect(result.directional_shadow_mode).toBeUndefined();
       expect(result.directional_shadow_max_distance).toBeUndefined();
       expect(result.directional_shadow_pancake_size).toBeUndefined();
+      expect(result.directional_shadow_fade_start).toBeUndefined();
     });
 
     it('should parse DirectionalLight3D with all properties', () => {
@@ -37,6 +38,7 @@ describe('DirectionalLight3D Parser', () => {
         directional_shadow_mode: '2',
         directional_shadow_max_distance: '100.0',
         directional_shadow_pancake_size: '0.0',
+        directional_shadow_fade_start: '0.5',
       };
 
       const result = parseDirectionalLight3D(h, properties);
@@ -51,6 +53,7 @@ describe('DirectionalLight3D Parser', () => {
       expect(result.directional_shadow_mode).toBe(2);
       expect(result.directional_shadow_max_distance).toBe(100.0);
       expect(result.directional_shadow_pancake_size).toBe(0);
+      expect(result.directional_shadow_fade_start).toBe(0.5);
     });
 
     it('should parse shadow_enabled as false when not "true"', () => {
@@ -115,15 +118,50 @@ describe('DirectionalLight3D Parser', () => {
       const h = heading('DirectionalLight3D', { name: 'Sun', parent: '.' });
 
       const modes = [
-        { value: '0', expected: 0 }, // SHADOW_ORTHOGONAL_SPLIT_1
-        { value: '1', expected: 1 }, // SHADOW_ORTHOGONAL_SPLIT_2
-        { value: '2', expected: 2 }, // SHADOW_ORTHOGONAL_SPLIT_4
+        { value: '0', expected: 0 }, // SHADOW_ORTHOGONAL
+        { value: '1', expected: 1 }, // SHADOW_PARALLEL_2_SPLITS
+        { value: '2', expected: 2 }, // SHADOW_PARALLEL_4_SPLITS
       ];
 
       modes.forEach(({ value, expected }) => {
         const result = parseDirectionalLight3D(h, { directional_shadow_mode: value });
         expect(result.directional_shadow_mode).toBe(expected);
       });
+    });
+
+    it('should parse the split offsets and blending', () => {
+      const h = heading('DirectionalLight3D', { name: 'Sun', parent: '.' });
+
+      const result = parseDirectionalLight3D(h, {
+        directional_shadow_split_1: '0.05',
+        directional_shadow_split_2: '0.25',
+        directional_shadow_split_3: '0.75',
+        directional_shadow_blend_splits: 'true',
+      });
+
+      expect(result.directional_shadow_split_1).toBe(0.05);
+      expect(result.directional_shadow_split_2).toBe(0.25);
+      expect(result.directional_shadow_split_3).toBe(0.75);
+      expect(result.directional_shadow_blend_splits).toBe(true);
+    });
+
+    it('should leave absent split keys undefined, so the renderer takes Godot’s defaults', () => {
+      const h = heading('DirectionalLight3D', { name: 'Sun', parent: '.' });
+
+      const result = parseDirectionalLight3D(h, {});
+
+      expect(result.directional_shadow_split_1).toBeUndefined();
+      expect(result.directional_shadow_split_2).toBeUndefined();
+      expect(result.directional_shadow_split_3).toBeUndefined();
+      expect(result.directional_shadow_blend_splits).toBeUndefined();
+    });
+
+    it('should keep split offsets past the inspector range, as the setter does (edge case)', () => {
+      const h = heading('DirectionalLight3D', { name: 'Sun', parent: '.' });
+
+      const result = parseDirectionalLight3D(h, { directional_shadow_split_1: '1.5' });
+
+      expect(result.directional_shadow_split_1).toBe(1.5);
     });
   });
 
@@ -162,6 +200,24 @@ describe('DirectionalLight3D Parser', () => {
       const h = heading('DirectionalLight3D', { name: 'Light', parent: '.' });
       const result = parseDirectionalLight3D(h, { directional_shadow_pancake_size: 'deep' });
       expect(result.directional_shadow_pancake_size).toBeUndefined();
+    });
+
+    it('should be undefined for an invalid split offset', () => {
+      const h = heading('DirectionalLight3D', { name: 'Light', parent: '.' });
+      const result = parseDirectionalLight3D(h, { directional_shadow_split_2: 'near' });
+      expect(result.directional_shadow_split_2).toBeUndefined();
+    });
+
+    it('should read an unconvertible directional_shadow_blend_splits as false', () => {
+      const h = heading('DirectionalLight3D', { name: 'Light', parent: '.' });
+      const result = parseDirectionalLight3D(h, { directional_shadow_blend_splits: 'maybe' });
+      expect(result.directional_shadow_blend_splits).toBe(false);
+    });
+
+    it('should be undefined for invalid directional_shadow_fade_start', () => {
+      const h = heading('DirectionalLight3D', { name: 'Light', parent: '.' });
+      const result = parseDirectionalLight3D(h, { directional_shadow_fade_start: 'late' });
+      expect(result.directional_shadow_fade_start).toBeUndefined();
     });
 
     it('should be undefined for invalid directional_shadow_mode', () => {

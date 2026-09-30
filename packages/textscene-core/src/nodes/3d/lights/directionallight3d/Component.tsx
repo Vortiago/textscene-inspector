@@ -1,8 +1,9 @@
 /**
  * <DirectionalLight3D>: a parallel light with optional shadow, in a transform
  * group, aimed at a target at local -Z. It declares its shadow parameters and
- * leaves the shadow box to the scene's `<DirectionalShadowFitter>`, as Godot
- * fits a directional shadow to the camera and not to the light.
+ * leaves the shadow boxes and splits to the scene's `<DirectionalShadowFitter>`,
+ * as Godot fits a directional shadow to the camera and not to the light. A mode
+ * with no split casts nothing, as Godot sets up no shadow map for it.
  */
 
 import { useMemo, useRef } from 'react';
@@ -13,10 +14,15 @@ import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
 import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 import {
+  DIRECTIONAL_SHADOW_BLEND_SPLITS_DEFAULT,
+  DIRECTIONAL_SHADOW_FADE_START_DEFAULT,
   DIRECTIONAL_SHADOW_MAX_DISTANCE_DEFAULT,
+  DIRECTIONAL_SHADOW_MODE_DEFAULT,
   DIRECTIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
   DIRECTIONAL_SHADOW_PANCAKE_SIZE_DEFAULT,
   DIRECTIONAL_SHADOW_SIZE_DEFAULT,
+  DIRECTIONAL_SHADOW_SPLIT_OFFSETS_DEFAULT,
+  directionalShadowSplitCount,
 } from '../../../../godot/directionalShadow';
 import { directionalShadowUserData } from '../../../../r3f/directionalShadow/declaration';
 import { directionalShadowBias } from '../shared/shadowBias';
@@ -33,6 +39,9 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
   );
   const color = parseColorToHex(properties.light_color);
   const intensity = properties.light_energy * LIGHT_INTENSITY_SCALE;
+  const splitCount = directionalShadowSplitCount(
+    properties.directional_shadow_mode ?? DIRECTIONAL_SHADOW_MODE_DEFAULT
+  );
   const shadowUserData = useMemo(
     () =>
       directionalShadowUserData({
@@ -40,10 +49,20 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
           properties.directional_shadow_max_distance ?? DIRECTIONAL_SHADOW_MAX_DISTANCE_DEFAULT,
         pancakeSize:
           properties.directional_shadow_pancake_size ?? DIRECTIONAL_SHADOW_PANCAKE_SIZE_DEFAULT,
+        fadeStart:
+          properties.directional_shadow_fade_start ?? DIRECTIONAL_SHADOW_FADE_START_DEFAULT,
         depthBias: directionalShadowBias(properties.shadow_bias, properties.shadow_blur),
         normalBias: properties.shadow_normal_bias ?? DIRECTIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
+        splitCount,
+        splitOffsets: [
+          properties.directional_shadow_split_1 ?? DIRECTIONAL_SHADOW_SPLIT_OFFSETS_DEFAULT[0],
+          properties.directional_shadow_split_2 ?? DIRECTIONAL_SHADOW_SPLIT_OFFSETS_DEFAULT[1],
+          properties.directional_shadow_split_3 ?? DIRECTIONAL_SHADOW_SPLIT_OFFSETS_DEFAULT[2],
+        ],
+        blendSplits:
+          properties.directional_shadow_blend_splits ?? DIRECTIONAL_SHADOW_BLEND_SPLITS_DEFAULT,
       }),
-    [properties]
+    [properties, splitCount]
   );
 
   return (
@@ -59,7 +78,7 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
             position={[0, 0, 0]}
             color={color}
             intensity={intensity}
-            castShadow={properties.shadow_enabled}
+            castShadow={properties.shadow_enabled && splitCount > 0}
             shadow-mapSize-width={DIRECTIONAL_SHADOW_SIZE_DEFAULT}
             shadow-mapSize-height={DIRECTIONAL_SHADOW_SIZE_DEFAULT}
             userData={shadowUserData}

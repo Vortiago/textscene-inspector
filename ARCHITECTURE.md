@@ -141,8 +141,12 @@ orchestrator, which runs them in dependency order from a single `useFrame`
 **Directional shadows.** As in Godot, the renderer owns a directional light's shadow box, and
 the light does not. A light only declares its shadow parameters on `userData`.
 `<DirectionalShadowFitter>` hooks each render of the scene (`scene.onBeforeRender`) and fits
-each declared light's shadow camera to that render's camera. A SubViewport with its own world
-hooks that world the same way (`r3f/directionalShadow/directionalShadow.md`).
+each declared light's shadow camera to that render's camera. A light with Godot's two or four
+splits shades through a child sun light that draws one fitted box per split into a shared
+atlas, and a patched shader chunk picks the split by view depth. Every directional shadow
+fades out over the far end of its last split, through a patched lighting chunk that reads one
+shared buffer the fitter writes before each render. A SubViewport with its own world hooks that
+world the same way (`r3f/directionalShadow/directionalShadow.md`).
 
 **Axis conventions.** Godot and three.js disagree in three places. Each is converted where
 Godot data becomes a three.js object, never in a parser:

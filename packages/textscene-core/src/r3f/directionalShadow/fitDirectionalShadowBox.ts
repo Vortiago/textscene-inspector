@@ -1,18 +1,21 @@
 /**
- * The orthogonal shadow box of one directional light, fitted to the viewing camera as Godot's
- * `_light_instance_setup_directional_shadow` fits it (`renderer_scene_cull.cpp:2134-2353`,
- * `directional_shadow_mode = 0`). Pure: it reads THREE maths and writes nothing.
+ * The orthogonal shadow box over one depth range of the viewing camera, fitted as Godot's
+ * `_light_instance_setup_directional_shadow` fits each split (`renderer_scene_cull.cpp:2134-2353`).
+ * Pure: it reads THREE maths and writes nothing.
  * `directionalShadow.md` beside this file has the port and its divergences.
  */
 
 import * as THREE from 'three';
 import { snapped } from '../../godot/math.js';
 import {
+  directionalShadowFade,
   directionalShadowSlice,
   directionalShadowSnapStep,
   directionalShadowTexelSize,
   pancakesCasters,
   texelPaddedRadius,
+  type DirectionalShadowFade,
+  type DirectionalShadowSlice,
 } from '../../godot/directionalShadow.js';
 import type { DirectionalShadowDeclaration } from './declaration.js';
 
@@ -74,19 +77,38 @@ const NDC_CORNERS: readonly (readonly [number, number])[] = [
   [1, 1],
 ];
 
-/**
- * Null when the inputs give no finite box, such as a camera with a non-invertible projection.
- * The caller then leaves the light's shadow as it is.
- */
-export function fitDirectionalShadowBox(input: DirectionalShadowFitInput): DirectionalShadowBox | null {
-  const { camera, declaration, shadowMapSize } = input;
-  const slice = directionalShadowSlice(
+/** The camera depths the light's shadow covers (`renderer_scene_cull.cpp:2143-2149`). */
+export function viewSlice(input: Pick<DirectionalShadowFitInput, 'camera' | 'declaration'>): DirectionalShadowSlice {
+  const { camera, declaration } = input;
+  return directionalShadowSlice(
     camera.near,
     camera.far,
     declaration.maxDistance,
     camera.isOrthographicCamera === true
   );
-  const corners = cameraSliceCorners(camera, slice.near, slice.far);
+}
+
+/**
+ * The fade of a light that draws the whole slice as its one split, so the fade ends at the
+ * slice's far end (`light_storage.cpp:752-754`).
+ */
+export function orthogonalShadowFade(
+  input: Pick<DirectionalShadowFitInput, 'camera' | 'declaration'>
+): DirectionalShadowFade {
+  return directionalShadowFade(viewSlice(input).far, input.declaration.fadeStart);
+}
+
+/**
+ * The box over `depths`, by default the whole slice. A split passes its own depths and its own
+ * `shadowMapSize`. Null when the inputs give no finite box, such as a camera with a
+ * non-invertible projection. The caller then leaves the light's shadow as it is.
+ */
+export function fitDirectionalShadowBox(
+  input: DirectionalShadowFitInput,
+  depths: DirectionalShadowSlice = viewSlice(input)
+): DirectionalShadowBox | null {
+  const { camera, declaration, shadowMapSize } = input;
+  const corners = cameraSliceCorners(camera, depths.near, depths.far);
   const axes = lightAxes(input.lightPosition, input.targetPosition, input.up);
 
   const { center: centre, radius: sliceRadius } = meanCentredSphere(corners);

@@ -9,7 +9,7 @@ renders_as: a THREE.DirectionalLight
 
 # DirectionalLight3D
 
-A parallel light, like sunlight, lighting every surface from one fixed direction. The previewer emits a `THREE.DirectionalLight` aimed down the node's local -Z and casts a shadow map when `shadow_enabled` is set. The shadow map covers the viewing camera's view out to `directional_shadow_max_distance`, wherever the node stands, as in Godot.
+A parallel light, like sunlight, lighting every surface from one fixed direction. The previewer emits a `THREE.DirectionalLight` aimed down the node's local -Z, whose shadow covers the viewing camera's view in one, two or four splits and fades out towards `directional_shadow_max_distance`, as in Godot.
 
 ## Linting
 
@@ -36,10 +36,10 @@ Strict parsing format-checks these `DirectionalLight3D` properties, plus 27 inhe
 | `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |
 <!-- lint:end -->
 
-The lenient parser reads only `directional_shadow_mode`, `directional_shadow_max_distance` and `directional_shadow_pancake_size`, through `parseOptionalInt` and `parseOptionalFloat`, which return `undefined` with no warning when absent or unparseable. The other six keys are never read, so an out-of-order shadow split strict rejects never reaches the renderer.
+The lenient parser reads `directional_shadow_mode`, the three `directional_shadow_split_*` offsets, `directional_shadow_max_distance`, `directional_shadow_pancake_size` and `directional_shadow_fade_start` through `parseOptionalInt` and `parseOptionalFloat`, which return `undefined` with no warning when absent or unparseable, so the renderer takes Godot's default: four splits at 0.1, 0.2 and 0.5, and a fade from 0.8 of the distance. It reads `directional_shadow_blend_splits` through `parseOptionalBool`, which reads an unparseable value as `false`. An out-of-range split offset or fade start reaches the renderer as written, as Godot's setter keeps it. It never reads `sky_mode`.
 
 ## Known limitations
 
 - **Approximated** The shadow's near edge shows more contrast here, where Godot's bright sky ambient washes it out.
-- **Approximated** `directional_shadow_mode` 1 and 2 draw one shadow map over the whole shadow distance, so a shadow near the camera is softer and blockier than in Godot's first split.
+- **Approximated** Each shadowed DirectionalLight3D draws into a shadow atlas of its own, so in a scene with several of them a shadow is sharper than in Godot, which shares one atlas between them.
 - **Approximated** A caster more than one view-slice diameter towards the light casts no shadow. Godot flattens every such caster onto the shadow map's near plane, and three.js has no equivalent.

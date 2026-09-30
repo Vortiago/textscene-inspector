@@ -84,13 +84,14 @@ describe('<DirectionalLight3D>', () => {
 });
 
 describe('<DirectionalLight3D> shadow declaration', () => {
-  it('declares the authored max distance and pancake size', async () => {
+  it('declares the authored max distance, pancake size and fade start', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <DirectionalLight3D
         node={makeNode({
           shadow_enabled: true,
           directional_shadow_max_distance: 80,
           directional_shadow_pancake_size: 5,
+          directional_shadow_fade_start: 0.5,
           shadow_normal_bias: 1.5,
         })}
       />
@@ -99,12 +100,13 @@ describe('<DirectionalLight3D> shadow declaration', () => {
     expect(readDirectionalShadowDeclaration(light)).toMatchObject({
       maxDistance: 80,
       pancakeSize: 5,
+      fadeStart: 0.5,
       normalBias: 1.5,
     });
   });
 
-  it('declares Godot’s defaults for an absent max distance, pancake size and normal bias', async () => {
-    // `light_3d.cpp:600`, `:487` and `:603`.
+  it('declares Godot’s defaults for an absent max distance, pancake size, fade start and normal bias', async () => {
+    // `light_3d.cpp:600`, `:487`, `:601` and `:603`.
     const renderer = await ReactThreeTestRenderer.create(
       <DirectionalLight3D node={makeNode({ shadow_enabled: true })} />
     );
@@ -112,6 +114,7 @@ describe('<DirectionalLight3D> shadow declaration', () => {
     expect(readDirectionalShadowDeclaration(light)).toMatchObject({
       maxDistance: 100,
       pancakeSize: 20,
+      fadeStart: 0.8,
       normalBias: 2,
     });
   });
@@ -136,5 +139,52 @@ describe('<DirectionalLight3D> shadow declaration', () => {
     expect(light.position.length()).toBe(0);
     expect(light.shadow.camera.left).toBe(untouched.left);
     expect(light.shadow.camera.near).toBe(untouched.near);
+  });
+});
+
+describe('<DirectionalLight3D> shadow splits', () => {
+  async function declared(overrides: Partial<DirectionalLight3DProperties>) {
+    const renderer = await ReactThreeTestRenderer.create(
+      <DirectionalLight3D node={makeNode({ shadow_enabled: true, ...overrides })} />
+    );
+    const light = instanceAs<THREE.DirectionalLight>(renderer.scene.findByType('DirectionalLight'));
+    return { light, declaration: readDirectionalShadowDeclaration(light) };
+  }
+
+  it('declares Godot’s default four splits, offsets and no blending', async () => {
+    // `light_3d.cpp:483-485`, `:606` and `:607`.
+    const { declaration } = await declared({});
+    expect(declaration).toMatchObject({
+      splitCount: 4,
+      splitOffsets: [0.1, 0.2, 0.5],
+      blendSplits: false,
+    });
+  });
+
+  it('declares the authored split offsets and blending', async () => {
+    const { declaration } = await declared({
+      directional_shadow_mode: 1,
+      directional_shadow_split_1: 0.3,
+      directional_shadow_split_2: 0.4,
+      directional_shadow_split_3: 0.9,
+      directional_shadow_blend_splits: true,
+    });
+    expect(declaration).toMatchObject({
+      splitCount: 2,
+      splitOffsets: [0.3, 0.4, 0.9],
+      blendSplits: true,
+    });
+  });
+
+  it('declares one split for the orthogonal mode (edge case)', async () => {
+    const { light, declaration } = await declared({ directional_shadow_mode: 0 });
+    expect(declaration?.splitCount).toBe(1);
+    expect(light.castShadow).toBe(true);
+  });
+
+  it('casts nothing for a mode Godot sets up no split for (error case)', async () => {
+    const { light, declaration } = await declared({ directional_shadow_mode: 3 });
+    expect(declaration?.splitCount).toBe(0);
+    expect(light.castShadow).toBe(false);
   });
 });

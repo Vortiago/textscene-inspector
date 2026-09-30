@@ -9,14 +9,20 @@ import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
 import { observeSceneCamera } from '../sceneRenderCamera.js';
-import { fitSceneDirectionalShadows } from './fitSceneDirectionalShadows.js';
+import { fitSceneDirectionalShadows, releaseSceneSplitSuns } from './fitSceneDirectionalShadows.js';
 
-/** Fits `scene`'s declared lights before every render of it, until unmount. */
+/**
+ * Fits `scene`'s declared lights before every render of it, until unmount. Unmount hands each
+ * light that drew splits its own shading back.
+ */
 export function useDirectionalShadowFit(scene: THREE.Scene): void {
-  useEffect(
-    () => observeSceneCamera(scene, (camera) => fitSceneDirectionalShadows(scene, camera)),
-    [scene]
-  );
+  useEffect(() => {
+    const stopObserving = observeSceneCamera(scene, (camera) => fitSceneDirectionalShadows(scene, camera));
+    return () => {
+      stopObserving();
+      releaseSceneSplitSuns(scene);
+    };
+  }, [scene]);
 }
 
 /** Mounted once per canvas, for the canvas's own scene. */

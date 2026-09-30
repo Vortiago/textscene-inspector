@@ -25,6 +25,12 @@ export const GEOMETRY_SCENES = [
   // do it: three skips an invisible object in the shadow pass and its subtree.
   // Soft-shadow edges are GPU-sensitive.
   { name: 'shadows-only', file: 'unit-shadows-only.tscn' },
+  // Bars under one texel of a single shadow map and about three of the first
+  // of Godot's default four splits. Crisp stripes need the near split to draw.
+  { name: 'directional-shadow-splits', file: 'unit-directional-shadow-splits.tscn' },
+  // Posts running away from the view past a short shadow max distance. The near
+  // posts cast, the fade thins the next and the far ones cast nothing.
+  { name: 'directional-shadow-fade', file: 'unit-directional-shadow-fade.tscn' },
   // CSG `material` as an ExtResource .tres beside an inline SubResource one. A
   // resolver of the inline form alone draws the external one white, and the
   // other CSG fixtures declare theirs inline. The left box is green, the right red.

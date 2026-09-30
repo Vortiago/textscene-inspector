@@ -11,6 +11,8 @@ export interface DirectionalShadowDeclaration {
   maxDistance: number;
   /** `directional_shadow_pancake_size`. A positive size lets casters nearer the light cast. */
   pancakeSize: number;
+  /** `directional_shadow_fade_start`: the fraction of the slice where the shadow starts to fade. */
+  fadeStart: number;
   /**
    * The depth bias in normalised depth, over Godot's own depth range for the map. The fitter
    * rescales it when three's range is longer, so its size in world units matches Godot.
@@ -18,6 +20,15 @@ export interface DirectionalShadowDeclaration {
   depthBias: number;
   /** `shadow_normal_bias`, in shadow-map texels. The fitter turns it into world units. */
   normalBias: number;
+  /**
+   * How many splits `directional_shadow_mode` draws: 1, 2 or 4. One split is the whole slice in
+   * the light's own shadow map. More draw a shadow atlas with one fitted box per split.
+   */
+  splitCount: number;
+  /** `directional_shadow_split_1` to `_3`: where the splits meet, as fractions of the slice. */
+  splitOffsets: readonly number[];
+  /** `directional_shadow_blend_splits`. */
+  blendSplits: boolean;
 }
 
 /** The `userData` key. One key, so a light carries one declaration. */
@@ -47,7 +58,11 @@ function isDeclaration(value: unknown): value is DirectionalShadowDeclaration {
   return (
     typeof candidate.maxDistance === 'number' &&
     typeof candidate.pancakeSize === 'number' &&
+    typeof candidate.fadeStart === 'number' &&
     typeof candidate.depthBias === 'number' &&
-    typeof candidate.normalBias === 'number'
+    typeof candidate.normalBias === 'number' &&
+    typeof candidate.splitCount === 'number' &&
+    Array.isArray(candidate.splitOffsets) &&
+    typeof candidate.blendSplits === 'boolean'
   );
 }

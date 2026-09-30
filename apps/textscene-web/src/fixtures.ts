@@ -423,6 +423,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Directional Shadow Fade",
+    "file": "unit-directional-shadow-fade.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Directional Shadow Splits",
+    "file": "unit-directional-shadow-splits.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Environment Sky Tonemap",
     "file": "unit-environment-sky-tonemap.tscn",
     "category": "Other"

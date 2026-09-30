@@ -7,6 +7,8 @@ import * as THREE from 'three';
 import {
   cameraSliceCorners,
   fitDirectionalShadowBox,
+  orthogonalShadowFade,
+  viewSlice,
   type DirectionalShadowBox,
   type DirectionalShadowFitInput,
 } from './fitDirectionalShadowBox';
@@ -17,8 +19,11 @@ const SUN_DIRECTION = new THREE.Vector3(-0.4, -0.8, -0.45).normalize();
 /** Float slack for a point that sits on a box face. */
 const FACE_TOLERANCE = 1e-9;
 
+/** The split fields of an orthogonal light, which the single box never reads. */
+const ONE_SPLIT = { splitCount: 1, splitOffsets: [0.1, 0.2, 0.5], blendSplits: false };
+
 function declaring(maxDistance: number, pancakeSize = 20): DirectionalShadowFitInput['declaration'] {
-  return { maxDistance, pancakeSize, depthBias: 0, normalBias: 2 };
+  return { maxDistance, pancakeSize, fadeStart: 0.8, depthBias: 0, normalBias: 2, ...ONE_SPLIT };
 }
 
 function perspectiveCamera(far = 4000): THREE.PerspectiveCamera {
@@ -38,7 +43,7 @@ function fitInput(overrides: Partial<DirectionalShadowFitInput> = {}): Direction
     camera: perspectiveCamera(),
     ...sunAt(new THREE.Vector3(11, 12.3, -31)),
     up: new THREE.Vector3(0, 1, 0),
-    declaration: { maxDistance: 80, pancakeSize: 20, depthBias: -0.0003, normalBias: 2 },
+    declaration: { maxDistance: 80, pancakeSize: 20, fadeStart: 0.8, depthBias: -0.0003, normalBias: 2, ...ONE_SPLIT },
     shadowMapSize: MAP_SIZE,
     ...overrides,
   };
@@ -176,6 +181,47 @@ describe('fitDirectionalShadowBox', () => {
   });
 });
 
+describe('fitDirectionalShadowBox over given depths', () => {
+  it('covers every corner of the depths it is given', () => {
+    const input = fitInput();
+    const box = fitDirectionalShadowBox(input, { near: 20, far: 40 })!;
+    const matrix = shadowMatrix(input, box);
+    for (const corner of cameraSliceCorners(input.camera, 20, 40)) {
+      expect(isInsideMap(inMap(matrix, corner))).toBe(true);
+    }
+  });
+
+  it('fits a narrower box to a near part of the slice than to the whole', () => {
+    const near = fitDirectionalShadowBox(fitInput(), { near: 0.05, far: 8 })!;
+    expect((near.right - near.left) * 4).toBeLessThan(fit().right - fit().left);
+  });
+
+  it('answers the whole slice by default (edge case)', () => {
+    const input = fitInput();
+    expect(fitDirectionalShadowBox(input)).toEqual(fitDirectionalShadowBox(input, viewSlice(input)));
+  });
+
+  it('answers null for depths that are not finite (error case)', () => {
+    expect(fitDirectionalShadowBox(fitInput(), { near: 0.05, far: Number.NaN })).toBeNull();
+  });
+});
+
+describe('viewSlice', () => {
+  it('ends at the max distance for a perspective camera', () => {
+    expect(viewSlice(fitInput())).toEqual({ near: 0.05, far: 80 });
+  });
+
+  it('ends at the camera far plane for a max distance of zero (edge case)', () => {
+    expect(viewSlice(fitInput({ declaration: declaring(0) }))).toEqual({ near: 0.05, far: 4000 });
+  });
+
+  it('keeps the far end past the near end for a camera with an empty range (error case)', () => {
+    const slice = viewSlice(fitInput({ camera: perspectiveCamera(0.01) }));
+    expect(slice.far).toBeCloseTo(0.051, 9);
+    expect(slice.near).toBe(0.05);
+  });
+});
+
 describe('cameraSliceCorners', () => {
   it('widens with depth for a perspective camera', () => {
     const camera = new THREE.PerspectiveCamera(90, 1, 1, 100);
@@ -208,5 +254,22 @@ describe('cameraSliceCorners', () => {
     camera.updateMatrixWorld();
     const corners = cameraSliceCorners(camera, 1, 10);
     expect(corners.some((corner) => !Number.isFinite(corner.x))).toBe(true);
+  });
+});
+
+describe('orthogonalShadowFade', () => {
+  it('fades the shadow out from the fade start of the max distance to its end', () => {
+    expect(orthogonalShadowFade(fitInput())).toEqual({ from: expect.closeTo(64, 12), to: 80 });
+  });
+
+  it('ends the fade at the camera far plane when it is nearer than the max distance (edge case)', () => {
+    const fade = orthogonalShadowFade(fitInput({ camera: perspectiveCamera(50), declaration: declaring(80) }));
+    expect(fade.to).toBe(50);
+    expect(fade.from).toBeCloseTo(40, 12);
+  });
+
+  it('keeps a finite fade for a nan fade start (error case)', () => {
+    const fade = orthogonalShadowFade(fitInput({ declaration: { ...declaring(80), fadeStart: Number.NaN } }));
+    expect(fade.from).toBeCloseTo(79.92, 12);
   });
 });
