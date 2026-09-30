@@ -4,12 +4,12 @@ category: 3D
 status: unreviewed
 fixture: unit-grid-map.tscn
 image: unit-grid-map
-renders_as: a THREE.InstancedMesh per MeshLibrary item
+renders_as: a THREE.InstancedMesh per MeshLibrary item, or a mesh per cell when its material billboards
 ---
 
 # GridMap
 
-Instances each populated cell's `MeshLibrary` item mesh, batching cells of the same item into one `THREE.InstancedMesh`. The fixture's nine flat tiles read as one grey surface receding to the upper right in both images.
+Instances each populated cell's `MeshLibrary` item mesh, batching cells of the same item into one `THREE.InstancedMesh`. An item whose material billboards draws one mesh per cell, so each tile turns about its own cell as Godot's does. The fixture's nine flat tiles read as one grey surface receding to the upper right in both images.
 
 ## Linting
 

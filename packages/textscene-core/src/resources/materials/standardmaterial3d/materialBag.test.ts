@@ -5,7 +5,10 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { standardMaterialBag } from './materialBag';
+import { billboardOf, castsShadowOf, standardMaterialBag, surfaceBillboard } from './materialBag';
+import { materialFromBag } from './build';
+import { standardMaterial } from './testing/standardMaterial';
+import { BillboardMode } from '../../../godot/billboard';
 import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextureSlots } from './types';
 
@@ -154,5 +157,79 @@ describe('standardMaterialBag — no material at all', () => {
     expect(props.roughness).toBe(0.8);
     expect(props.metalness).toBe(0.2);
     expect(props.side).toBe(THREE.FrontSide);
+  });
+});
+
+describe('standardMaterialBag — billboard_mode', () => {
+  it('carries the mode on the material, where each draw group reads it', () => {
+    const built = standardMaterial({ billboard_mode: '2' });
+    expect(billboardOf(built).mode).toBe(BillboardMode.BILLBOARD_FIXED_Y);
+  });
+
+  it('carries billboard_keep_scale beside the mode', () => {
+    expect(billboardOf(standardMaterial({ billboard_mode: '1', billboard_keep_scale: 'true' })).keepScale).toBe(true);
+  });
+
+  it('reads Godot’s default, no keep_scale, from a material that sets none', () => {
+    expect(billboardOf(standardMaterial({ billboard_mode: '1' })).keepScale).toBe(false);
+    expect(billboardOf(new THREE.MeshBasicMaterial()).keepScale).toBe(false);
+  });
+
+  it('reads DISABLED from a material that sets no billboard_mode', () => {
+    expect(billboardOf(standardMaterial({})).mode).toBe(
+      BillboardMode.BILLBOARD_DISABLED
+    );
+  });
+
+  it('hands back one shared billboard for every surface that does not billboard', () => {
+    // The draw hooks read it every draw group, so a non-billboard read must not allocate.
+    expect(billboardOf(standardMaterial({}))).toBe(billboardOf(new THREE.MeshBasicMaterial()));
+  });
+
+  it('reads DISABLED from a billboard_mode that no shader case billboards', () => {
+    expect(billboardOf(standardMaterial({ billboard_mode: '7' }))).toBe(
+      billboardOf(new THREE.MeshBasicMaterial())
+    );
+  });
+
+  it('reads PARTICLES as a billboard', () => {
+    expect(billboardOf(standardMaterial({ billboard_mode: '3' })).mode).toBe(
+      BillboardMode.BILLBOARD_PARTICLES
+    );
+  });
+
+  it('reads DISABLED from Godot’s default surface and from a foreign material', () => {
+    expect(billboardOf(materialFromBag(standardMaterialBag(null))).mode).toBe(BillboardMode.BILLBOARD_DISABLED);
+    expect(billboardOf(new THREE.MeshBasicMaterial()).mode).toBe(BillboardMode.BILLBOARD_DISABLED);
+  });
+
+  it('reads the same billboard from the scalars as from the material built from them', () => {
+    const scalars = parseStandardMaterial3DScalars({ billboard_mode: '2', billboard_keep_scale: 'true' });
+    expect(surfaceBillboard(scalars)).toEqual(billboardOf(materialFromBag(standardMaterialBag(scalars))));
+  });
+
+  it('reads DISABLED from no scalars, which is Godot’s default surface', () => {
+    expect(surfaceBillboard(null)).toBe(billboardOf(new THREE.MeshBasicMaterial()));
+  });
+
+  it('gives each bag its own userData, as the .tres loader writes into it', () => {
+    const scalars = parseStandardMaterial3DScalars({ billboard_mode: '1' });
+    expect(standardMaterialBag(scalars).props.userData).not.toBe(standardMaterialBag(scalars).props.userData);
+  });
+});
+
+describe('standardMaterialBag — shadow-pass membership', () => {
+  it('carries the decoded membership on the material, where each draw group reads it', () => {
+    const built = standardMaterial({ transparency: '1' });
+    expect(castsShadowOf(built)).toBe(false);
+  });
+
+  it('casts from an opaque material', () => {
+    expect(castsShadowOf(standardMaterial({}))).toBe(true);
+  });
+
+  it('casts from Godot’s default surface and from a foreign material', () => {
+    expect(castsShadowOf(materialFromBag(standardMaterialBag(null)))).toBe(true);
+    expect(castsShadowOf(new THREE.MeshBasicMaterial())).toBe(true);
   });
 });

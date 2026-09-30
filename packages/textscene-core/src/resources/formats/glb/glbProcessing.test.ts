@@ -18,6 +18,13 @@ import {
 // Statically, so the identity check below is immune to the `vi.resetModules()` calls in
 // this file: a dynamic import after a reset yields a fresh instance.
 import * as processingShim from '../../processing/glbProcessing';
+import { standardMaterial } from '../../materials/standardmaterial3d/testing/standardMaterial';
+import {
+  castsFrom,
+  drawColourGroup,
+  expectSameRotation,
+  TEST_CAMERA,
+} from '../../../r3f/testing/threePasses';
 
 /**
  * Locate a repo-relative asset by walking up from cwd. The cwd differs between a
@@ -192,6 +199,28 @@ describe('cloneWithMaterials', () => {
     const clonedArray = findMesh(cloned, 'array');
     expect(clonedSingle.uuid).not.toBe(meshSingle.uuid);
     expect(clonedArray.uuid).not.toBe(meshArray.uuid);
+  });
+
+  it('casts and receives shadows, as Godot’s import mounts each surface with cast_shadow ON', () => {
+    const clonedSingle = findMesh(cloneWithMaterials(makeSource().root), 'single');
+    expect(clonedSingle.castShadow).toBe(true);
+    expect(clonedSingle.receiveShadow).toBe(true);
+    expect(castsFrom(clonedSingle)).toBe(true);
+  });
+
+  it('casts nothing from a surface whose override material leaves Godot’s shadow pass', () => {
+    // `surface_material_override/N` swaps the clone's material. The hooks read it per draw.
+    const clonedSingle = findMesh(cloneWithMaterials(makeSource().root), 'single');
+    clonedSingle.material = standardMaterial({ transparency: '1' });
+    expect(castsFrom(clonedSingle)).toBe(false);
+  });
+
+  it('turns a surface whose override material billboards', () => {
+    const clonedSingle = findMesh(cloneWithMaterials(makeSource().root), 'single');
+    clonedSingle.material = standardMaterial({ billboard_mode: '1' });
+    clonedSingle.updateMatrixWorld(true);
+    const drawn = drawColourGroup(clonedSingle, TEST_CAMERA, 0, (s) => s.matrixWorld);
+    expectSameRotation(drawn, TEST_CAMERA.matrixWorld);
   });
 
   it('clones single-material references (different uuid)', () => {

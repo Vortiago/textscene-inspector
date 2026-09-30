@@ -23,34 +23,22 @@ import { findMesh } from '../testing/reactThreeTestInstance';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { parseTresFile } from '../../../parser/parsedResource';
-
-/** three's shadow pass: the side, then the per-object hook (`WebGLShadowMap.js:477,535,549`). */
-function depthSideAfterPass(mesh: THREE.Mesh): THREE.Side {
-  const flip: Record<number, THREE.Side> = {
-    [THREE.FrontSide]: THREE.BackSide,
-    [THREE.BackSide]: THREE.FrontSide,
-    [THREE.DoubleSide]: THREE.DoubleSide,
-  };
-  const material = (Array.isArray(mesh.material) ? mesh.material[0]! : mesh.material)!;
-  const depthMaterial = new THREE.MeshDepthMaterial();
-  depthMaterial.side = material.shadowSide ?? flip[material.side as number]!;
-  mesh.onBeforeShadow(
-    null as never, new THREE.Scene(), null as never, null as never,
-    mesh.geometry, depthMaterial, null as never
-  );
-  return depthMaterial.side;
-}
+import type { TscnInternalResource } from '../../../parser/types';
+import { castsFrom, depthSideOf, drawsColour } from '../../../r3f/testing/threePasses';
 
 function parseBox(properties: Record<string, string>): CSGBox3DProperties {
   return parseCSGBox3D(heading('CSGBox3D', { name: 'Box' }), properties);
 }
 
 /** The lone-root case: the node draws its own solid. */
-async function renderLoneBox(properties: Record<string, string>): Promise<THREE.Mesh> {
+async function renderLoneBox(
+  properties: Record<string, string>,
+  internalResources: TscnInternalResource[] = []
+): Promise<THREE.Mesh> {
   const parsed = parseBox(properties);
   const node: TscnNode = { name: 'Box', type: 'CSGBox3D', children: [], properties: parsed };
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneResourcesProvider internalResources={[]}>
+    <SceneResourcesProvider internalResources={internalResources}>
       <CsgPrimitive node={node} properties={parsed} />
     </SceneResourcesProvider>
   );
@@ -121,39 +109,49 @@ describe('CSG cast_shadow', () => {
   });
 
   it('a lone root with cast_shadow = DOUBLE_SIDED draws both faces into the depth pass', async () => {
-    expect(depthSideAfterPass(await renderLoneBox({ cast_shadow: '2' }))).toBe(THREE.DoubleSide);
+    expect(depthSideOf(await renderLoneBox({ cast_shadow: '2' }))).toBe(THREE.DoubleSide);
   });
 
-  it('leaves three’s flip alone for every other cast_shadow value', async () => {
-    // `render_forward_clustered.cpp:395-411`: only DOUBLE_SIDED drops the cull.
-    expect(depthSideAfterPass(await renderLoneBox({}))).toBe(THREE.BackSide);
-    expect(depthSideAfterPass(await renderLoneBox({ cast_shadow: '3' }))).toBe(THREE.BackSide);
+  it('keeps the material’s own cull for every other cast_shadow value', async () => {
+    // `render_forward_clustered.cpp:395-411`: only DOUBLE_SIDED drops the cull, and
+    // every other value undoes three's acne flip (`WebGLShadowMap.js:51`).
+    expect(depthSideOf(await renderLoneBox({}))).toBe(THREE.FrontSide);
+    expect(depthSideOf(await renderLoneBox({ cast_shadow: '3' }))).toBe(THREE.FrontSide);
   });
 
-  it('a lone root with cast_shadow = SHADOWS_ONLY casts but writes no colour', async () => {
+  it('a lone root with cast_shadow = SHADOWS_ONLY casts but draws no colour', async () => {
     const mesh = await renderLoneBox({ cast_shadow: '3' });
     expect(mesh.castShadow).toBe(true);
-    const material = (Array.isArray(mesh.material) ? mesh.material[0]! : mesh.material)!;
-    expect(material.colorWrite).toBe(false);
+    expect(drawsColour(mesh)).toBe(false);
+  });
+
+  it('a lone root with cast_shadow = SHADOWS_ONLY keeps its own surface material', async () => {
+    const mesh = await renderLoneBox({ cast_shadow: '3' });
+    expect((mesh.material as THREE.Material).colorWrite).toBe(true);
+  });
+
+  it('casts nothing from a lone root whose material leaves the shadow pass', async () => {
+    const mesh = await renderLoneBox({ material: 'SubResource("Glass")' }, [
+      { id: 'Glass', type: 'StandardMaterial3D', data: { transparency: '1' } },
+    ]);
+    expect(mesh.castShadow).toBe(true);
+    expect(castsFrom(mesh)).toBe(false);
   });
 
   it('applies the root’s cast_shadow to the mesh a boolean evaluated to', async () => {
     expect((await renderSubtraction('cast_shadow = 0')).castShadow).toBe(false);
-    expect(depthSideAfterPass(await renderSubtraction('cast_shadow = 2'))).toBe(THREE.DoubleSide);
+    expect(depthSideOf(await renderSubtraction('cast_shadow = 2'))).toBe(THREE.DoubleSide);
   });
 
   it('keeps a combining root’s evaluated mesh out of the colour pass for SHADOWS_ONLY', async () => {
     const mesh = await renderSubtraction('cast_shadow = 3');
     expect(mesh.castShadow).toBe(true);
-    const material = (Array.isArray(mesh.material) ? mesh.material[0]! : mesh.material)!;
-    expect(material.colorWrite).toBe(false);
+    expect(drawsColour(mesh)).toBe(false);
   });
 
   it('keeps SHADOWS_ONLY once the node’s own material RESOLVES, not only at first mount', async () => {
-    // r3f's `attach` restores the slot's previous value on detach, so a surface slot that remounts
-    // after this material attached takes `mesh.material` back. An external `.tres` slot remounts
-    // when the file lands. Mounting no surface material makes the substitution hold, and Godot's
-    // SHADOWS_ONLY draws nothing into the colour buffer.
+    // An external `.tres` slot remounts when the file lands. SHADOWS_ONLY lives in the draw
+    // hooks, not in the material, so the arrived material draws no colour either.
     const parsed = parseBox({ cast_shadow: '3', material: 'ExtResource("1_mat")' });
     const node: TscnNode = { name: 'Box', type: 'CSGBox3D', children: [], properties: parsed };
     const fake = createFakeResourceLoader();
@@ -179,7 +177,7 @@ describe('CSG cast_shadow', () => {
 
     const mesh = findMesh(renderer.scene) as unknown as THREE.Mesh;
     const material = (Array.isArray(mesh.material) ? mesh.material[0]! : mesh.material)!;
-    expect((material as THREE.MeshStandardMaterial).color?.getHex()).not.toBe(0xff0000);
-    expect(material.colorWrite).toBe(false);
+    expect((material as THREE.MeshStandardMaterial).color.getHex()).toBe(0xff0000);
+    expect(drawsColour(mesh)).toBe(false);
   });
 });

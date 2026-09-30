@@ -19,7 +19,6 @@ import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { buildCsgPlan } from '../../../r3f/csg/csgPlan';
 import { CsgRootMesh } from '../../../r3f/csg/CsgRootMesh';
 import { shadowCastingEffects } from '../../../r3f/shadowCasting';
-import { CSG_SHADOWS_ONLY_MATERIAL } from '../../../r3f/csg/csgShadowsOnlyMaterial';
 
 const NO_PATHS: ReadonlySet<string> = new Set();
 
@@ -154,21 +153,14 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const ownSolid = geometry && (
     <mesh
       castShadow={shadow.castShadow}
+      onBeforeRender={shadow.onBeforeRender}
+      onAfterRender={shadow.onAfterRender}
       onBeforeShadow={shadow.onBeforeShadow}
+      onAfterShadow={shadow.onAfterShadow}
       receiveShadow
     >
       {geometry}
-      {/* SHADOWS_ONLY draws nothing into the colour buffer, so no surface
-          material is mounted. `CsgRootMesh.tsx` says why mounting one and
-          relying on attach order is not the same thing. */}
-      {shadow.shadowsOnly ? (
-        <meshBasicMaterial
-          key={CSG_SHADOWS_ONLY_MATERIAL.key}
-          {...CSG_SHADOWS_ONLY_MATERIAL.props}
-        />
-      ) : (
-        <SurfaceMaterialSlot source={materialSource} />
-      )}
+      <SurfaceMaterialSlot source={materialSource} />
     </mesh>
   );
 

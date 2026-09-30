@@ -653,6 +653,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Grid Map Billboard",
+    "file": "unit-grid-map-billboard.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Grid Map Centering",
     "file": "unit-grid-map-centering.tscn",
     "category": "Other"

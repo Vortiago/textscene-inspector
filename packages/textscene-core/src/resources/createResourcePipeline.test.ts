@@ -5,6 +5,11 @@ import { FakeWorker } from '../workers/fakeWorker.testkit';
 import { createResourcePipeline } from './createResourcePipeline';
 import { ResourceLoader } from './ResourceLoader';
 import type { ResourceProvider } from './ResourceProvider';
+import {
+  containsInstancedMesh,
+  instancedGlbProvider,
+  loadInstancedGlb,
+} from './formats/glb/testing/loadGlb';
 
 const fakeProvider: ResourceProvider = {
   loadResource: async () => null,
@@ -24,6 +29,11 @@ describe('createResourcePipeline', () => {
 
     expect(loader.textures).toBeDefined();
     expect(loader.scenes).toBeDefined();
+  });
+
+  it('hands gltfExtensions to the loader', async () => {
+    const { loader } = createResourcePipeline(instancedGlbProvider(), { gltfExtensions: 'three-loader' });
+    expect(containsInstancedMesh(await loadInstancedGlb(loader))).toBe(true);
   });
 
   it('gives the loader a job runner that starts the host worker on its first job, not before', async () => {

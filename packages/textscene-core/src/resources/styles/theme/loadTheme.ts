@@ -1,7 +1,7 @@
 /**
  * The Theme slice's whole-file loader, between a fetched `.tres` and `decode.ts`,
  * called by `processors/createThemeProcessor.ts`. It owns `parseTresFile` and
- * sub-resource addressing, like `loadFont.ts` and `loadMaterial.ts`.
+ * sub-resource addressing, like `loadFont.ts`.
  */
 
 import { parseTresFile, type ParsedResource } from '../../../parser/parsedResource';

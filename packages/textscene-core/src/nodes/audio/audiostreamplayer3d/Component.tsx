@@ -13,7 +13,8 @@ import type { AudioStreamPlayer3DProperties } from './types';
 import { AttenuationModel } from './types';
 import { useGizmoVisible } from '../../3d/lights/shared/lightHelpers';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
-import { useBillboard, BILLBOARD_ENABLED } from '../../../r3f/hooks/useBillboard';
+import { useBillboard } from '../../../r3f/hooks/useBillboard';
+import { BillboardMode } from '../../../godot/billboard';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 
 /** Editor-only gizmo colour: yellow, to match the light helpers. */
@@ -101,7 +102,7 @@ const RANGE_CIRCLE_SEGMENTS = 64;
  */
 function RangeCircle({ radius }: RangeCircleProps) {
   const groupRef = useRef<THREE.Object3D | null>(null);
-  useBillboard(groupRef, BILLBOARD_ENABLED);
+  useBillboard(groupRef, BillboardMode.BILLBOARD_ENABLED);
 
   const positions = useMemo(() => {
     const verts = new Float32Array(RANGE_CIRCLE_SEGMENTS * 6);
