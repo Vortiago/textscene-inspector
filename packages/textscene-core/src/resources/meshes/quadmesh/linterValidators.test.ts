@@ -6,14 +6,11 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';
+import { errorsOf } from '../../../linter/testing/tierLists';
 // The full linter barrel, so a mesh validator import dropped from
 // linter/index.ts turns the "rejects …" cases red. resources/** validators are
 // outside the barrelCompleteness/ruleCoverage guards, so this guards their wiring.
 import '../../../linter/index';
-
-function errorsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.severity === 'error');
-}
 
 describe('QuadMesh strict validators', () => {
   let linter: Linter;

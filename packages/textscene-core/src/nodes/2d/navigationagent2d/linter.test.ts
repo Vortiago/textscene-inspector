@@ -2,14 +2,11 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';
+import { reportsOf } from '../../../linter/testing/tierLists';
 import './linterParser';
 import './linter';
 
 const RULE = 'navigationagent2d-parent-not-node2d';
-
-function warningsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.ruleName === RULE);
-}
 
 describe('NavigationAgent2D parent rule', () => {
   let linter: Linter;
@@ -25,7 +22,7 @@ describe('NavigationAgent2D parent rule', () => {
 
 [node name="Agent" type="NavigationAgent2D" parent="."]
 `;
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toEqual([]);
   });
 
   it('accepts an agent directly under a plain Node2D', () => {
@@ -35,7 +32,7 @@ describe('NavigationAgent2D parent rule', () => {
 
 [node name="Agent" type="NavigationAgent2D" parent="."]
 `;
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toEqual([]);
   });
 
   it('warns for an agent under a non-Node2D typed parent', () => {
@@ -45,9 +42,8 @@ describe('NavigationAgent2D parent rule', () => {
 
 [node name="Agent" type="NavigationAgent2D" parent="."]
 `;
-    const warnings = warningsOf(linter.lint(content));
+    const warnings = reportsOf(linter.lint(content), RULE, 'warning');
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]!.severity).toBe('warning');
     expect(warnings[0]!.message).toContain('Node2D');
   });
 
@@ -56,7 +52,7 @@ describe('NavigationAgent2D parent rule', () => {
 
 [node name="Agent" type="NavigationAgent2D"]
 `;
-    const warnings = warningsOf(linter.lint(content));
+    const warnings = reportsOf(linter.lint(content), RULE, 'warning');
     expect(warnings).toHaveLength(1);
     expect(warnings[0]!.message).toContain('scene root');
   });
@@ -72,7 +68,7 @@ describe('NavigationAgent2D parent rule', () => {
 
 [node name="Agent" type="NavigationAgent2D" parent="Body"]
 `;
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toEqual([]);
   });
 
   it('does not warn about nodes that are not NavigationAgent2D', () => {
@@ -82,6 +78,6 @@ describe('NavigationAgent2D parent rule', () => {
 
 [node name="Sprite" type="Sprite2D" parent="."]
 `;
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content), RULE, 'warning')).toEqual([]);
   });
 });

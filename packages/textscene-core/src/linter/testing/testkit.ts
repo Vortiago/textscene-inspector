@@ -6,6 +6,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { Linter } from '../Linter.js';
+import { FILE_DIAGNOSTICS, STRICT_PARSER_RULE_NAME } from '../fileDiagnostics.js';
+import { declaredArms } from './declaredArms.js';
 import type { Diagnostic, Severity } from '../types.js';
 
 /** A property value: rendered verbatim if a string, else `String(value)`. */
@@ -112,7 +114,7 @@ export interface DiagnosticExpectation {
   prop?: string;
   /** Find the diagnostic with this exact rule name. */
   ruleName?: string;
-  /** Assert the found diagnostic's severity. */
+  /** Assert the found diagnostic's tier or, in a negative, the tier that none may have. */
   severity?: Severity;
   /** Assert the found diagnostic's node type. */
   nodeType?: string;
@@ -174,12 +176,12 @@ export function expectDiagnostic(content: string, where: DiagnosticExpectation):
  * node. {@link node} omits `parent=` unless asked, which strands a second
  * heading, and a first heading's path resolves against `.`, not the root's name.
  */
-const STRANDED_RULES = [
-  'node-without-parent',
-  'unresolved-parent-path',
-  'empty-parent-path',
-  'root-declares-parent',
-];
+const STRANDED_RULES: readonly string[] = [
+  FILE_DIAGNOSTICS.nodeWithoutParent,
+  FILE_DIAGNOSTICS.unresolvedParentPath,
+  FILE_DIAGNOSTICS.emptyParentPath,
+  FILE_DIAGNOSTICS.rootDeclaresParent,
+].map(arm => arm.ruleName);
 
 function expectEveryHeadingPlaced(diagnostics: Diagnostic[]): void {
   const stranded = diagnostics
@@ -188,14 +190,49 @@ function expectEveryHeadingPlaced(diagnostics: Diagnostic[]): void {
   expect(stranded).toEqual([]);
 }
 
-/** Assert no diagnostic matching `where` is present (other diagnostics may exist). */
+/** Every tier that a declared arm gives `ruleName`. */
+function declaredTiers(ruleName: string): Severity[] {
+  return declaredArms()
+    .filter(arm => arm.ruleName === ruleName)
+    .map(arm => arm.severity);
+}
+
+/**
+ * Refuse a negative at a tier that nothing can report, since it cannot fail.
+ * Only `error` goes without a rule name, because a format failure always errors
+ * and a message substring cannot say whose tier applies.
+ */
+function expectTierReachable(ruleName: string | undefined, severity: Severity): void {
+  if (ruleName === undefined || ruleName === STRICT_PARSER_RULE_NAME) {
+    expect(
+      severity,
+      `only error is reachable without a declared arm; name the rule that reports ${severity}`
+    ).toBe('error');
+    return;
+  }
+  expect(
+    declaredTiers(ruleName),
+    `'${ruleName}' declares no ${severity} arm, so a negative at ${severity} cannot fail`
+  ).toContain(severity);
+}
+
+/**
+ * Assert no diagnostic matching `where` is present (other diagnostics may exist).
+ * With a `severity`, assert none at that tier, after `expectTierReachable` passes.
+ */
 export function expectNoDiagnostic(content: string, where: DiagnosticExpectation): void {
   const diagnostics = lint(content);
   expectEveryHeadingPlaced(diagnostics);
-  // On the identity fields only. A negative quantifier over a family is the
-  // stronger claim, and narrowing it by the asserted fields would turn "no
-  // diagnostic for this property" into "none at that tier".
-  expect(candidates(diagnostics, where).map(describe1)).toEqual([]);
+  const { severity } = where;
+  if (severity !== undefined) expectTierReachable(where.ruleName, severity);
+  // Match on the identity fields only, plus a tier the caller names. A negative
+  // quantifier over a family is the stronger claim, and narrowing it by the
+  // other asserted fields would turn "no diagnostic for this property" into
+  // "none with that node type".
+  const present = candidates(diagnostics, where).filter(
+    d => severity === undefined || d.severity === severity
+  );
+  expect(present.map(describe1)).toEqual([]);
 }
 
 /**
@@ -204,15 +241,7 @@ export function expectNoDiagnostic(content: string, where: DiagnosticExpectation
  * such as `{ ruleName: 'strict-parser' }` for "no strict-parser format errors".
  */
 export function expectNoErrors(content: string, where: DiagnosticExpectation = {}): void {
-  const diagnostics = lint(content);
-  expectEveryHeadingPlaced(diagnostics);
-  const errors = diagnostics.filter(
-    d =>
-      d.severity === 'error' &&
-      (where.prop === undefined || d.message.includes(where.prop)) &&
-      (where.ruleName === undefined || d.ruleName === where.ruleName)
-  );
-  expect(errors).toHaveLength(0);
+  expectNoDiagnostic(content, { prop: where.prop, ruleName: where.ruleName, severity: 'error' });
 }
 
 /** Assert at least one diagnostic of the given severity is present. */

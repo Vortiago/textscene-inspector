@@ -335,17 +335,16 @@ describe('AnimationPlayer Linter', () => {
     });
 
     it('should handle multiple validation errors', () => {
-      const diagnostics = lint(
-        scene(
-          node('AnimationPlayer', {
-            speed_scale: 0,
-            playback_default_blend_time: -1.0,
-            playback_process_mode: 5,
-            method_call_mode: 3,
-            playback_active: 'maybe',
-          })
-        )
+      const content = scene(
+        node('AnimationPlayer', {
+          speed_scale: 0,
+          playback_default_blend_time: -1.0,
+          playback_process_mode: 5,
+          method_call_mode: 3,
+          playback_active: 'maybe',
+        })
       );
+      const diagnostics = lint(content);
       // Errors for the three enum and boolean properties. speed_scale = 0 and a
       // negative blend time are not errors: their setters (:648, :822) are bare
       // assignments, so the blend time only warns and speed_scale is silent.
@@ -353,9 +352,7 @@ describe('AnimationPlayer Linter', () => {
       expect(diagnostics.some(d => d.message.includes('playback_process_mode'))).toBe(true);
       expect(diagnostics.some(d => d.message.includes('method_call_mode'))).toBe(true);
       expect(diagnostics.some(d => d.message.includes('playback_active'))).toBe(true);
-      expect(
-        diagnostics.some(d => d.severity === 'error' && d.message.includes('speed_scale'))
-      ).toBe(false);
+      expectNoErrors(content, { prop: 'speed_scale' });
     });
 
     it('should handle scientific notation in numeric values', () => {
