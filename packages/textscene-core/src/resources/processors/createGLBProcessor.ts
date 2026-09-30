@@ -15,6 +15,7 @@ import {
   isGLBPath,
 } from '../formats/glb/glbProcessing';
 import { applyRootScale } from '../formats/glb/rootScale';
+import type { GltfExtensionRules } from '../formats/glb/types';
 import { stampVisualLayers } from '../../r3f/visualLayers';
 import { flattenGlbObjects } from '../../r3f/internal/glb-scene-root/glbHierarchy';
 import { matchGlbTarget } from '../../r3f/internal/glb-scene-root/matchGlbTarget';
@@ -171,7 +172,8 @@ async function applySidecarMaterials(
 export function createGLBProcessor(
   fileEventBus: FileEventBus | undefined,
   eventBus: ResourceEventBus,
-  loadMaterial: MaterialLoaderFn
+  loadMaterial: MaterialLoaderFn,
+  extensionRules?: GltfExtensionRules
 ): ResourceProcessor<THREE.Object3D> {
   return createResourceProcessor({
     fileEventBus,
@@ -181,11 +183,11 @@ export function createGLBProcessor(
     process: async (path, data) => {
       // Text .gltf resolves external buffers/images against its own res://
       // directory through the bus's LoadingManager (host-mapped URLs).
-      const object = await createGLBMesh(
-        data as ArrayBuffer,
-        gltfResourceDir(path),
-        eventBus.getThreeManager()
-      );
+      const object = await createGLBMesh(data as ArrayBuffer, {
+        resourcePath: gltfResourceDir(path),
+        manager: eventBus.getThreeManager(),
+        extensionRules,
+      });
       await applyImportSidecar(object, path, fileEventBus, loadMaterial);
       return object;
     },

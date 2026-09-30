@@ -129,7 +129,7 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/nodes/3d/csg/CsgPrimitive.tsx':
     'spreads the shared Node3D transform bag onto a `<group>`, which has no material slot',
   'packages/textscene-core/src/nodes/3d/gridmap/Component.tsx':
-    'mounts the built InstancedMesh — an Object3D, added as a child; its tile material is mounted on the mesh itself',
+    'mounts the built tile meshes — Object3Ds, added as children; the tile material is mounted on each mesh itself',
   'packages/textscene-core/src/nodes/3d/lights/shared/lightHelpers.tsx':
     'mounts a THREE light helper — an Object3D, added as a child',
   'packages/textscene-core/src/nodes/3d/lights/shared/lightShared.tsx':
@@ -183,6 +183,8 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the glow pyramid passes: shaders fixed at construction, only uniforms move, disposed with the effect',
   'packages/textscene-core/src/r3f/lighting2d/lightSeedQuad.tsx':
     'the accumulator seed quad: fixed shaders, one uniform, one instance per accumulator',
+  'packages/textscene-core/src/r3f/testing/threePasses.ts':
+    "a test stand-in for three's shared `_depthMaterial`, read by a probe and never rendered, so never compiled",
   'packages/textscene-core/src/r3f/lighting2d/lightQuad.ts':
     'one material per light per parameter set, memoised on every input including the shadow `defines` and disposed on replacement',
   'packages/textscene-core/src/resources/sky/build.ts':

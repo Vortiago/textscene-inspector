@@ -128,6 +128,12 @@ export interface StandardMaterial3DData {
    * say, not `transparency` alone. See `decode.ts` for the transcription.
    */
   transparent: boolean;
+  /**
+   * Whether the surface joins Godot's shadow pass: `!uses_alpha_pass() ||
+   * uses_depth_in_alpha_pass()`, the `FLAG_PASS_SHADOW` rule. Decoded from Godot's own
+   * alpha pass, not from `transparent`, which approximates ALPHA_HASH as blended.
+   */
+  castsShadow: boolean;
   /** ALPHA_SCISSOR cutoff (`alpha_scissor_threshold`, 0..1). 0 means no cutout. */
   alphaTest: number;
   /** The authored `depth_draw_mode`, with refraction's forced ALWAYS applied. */
@@ -169,14 +175,13 @@ export interface StandardMaterial3DData {
    */
   heightmapScale: number;
   /**
-   * `billboard_mode`: 0 DISABLED, 1 ENABLED, 2 FIXED_Y, 3 PARTICLES. Fed
-   * straight to `useBillboard`, the same hook Label3D/Sprite3D drive.
+   * `billboard_mode`: 0 DISABLED, 1 ENABLED, 2 FIXED_Y, 3 PARTICLES. The derived
+   * material carries it on `userData`, and `r3f/surfaceDrawHooks.ts` poses each draw.
    */
   billboardMode: number;
   /**
-   * `billboard_keep_scale`. Godot's default (false) normalises the model scale
-   * away while billboarding. `useBillboard` rewrites only rotation, so the
-   * previewer's billboard always keeps the authored scale.
+   * `billboard_keep_scale`. Godot's default (false) drops the model scale while
+   * billboarding (`material.cpp:1274-1281`). It rides the built material's `userData`.
    */
   billboardKeepScale: boolean;
   /** `anisotropy` magnitude (0..1), gated on `anisotropy_enabled`. */
@@ -225,6 +230,7 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   uv1Scale: MaterialVec2;
   uv1Offset: MaterialVec2;
   transparent: boolean;
+  castsShadow: boolean;
   alphaTest: number;
   depthWrite: boolean;
   depthTest: boolean;

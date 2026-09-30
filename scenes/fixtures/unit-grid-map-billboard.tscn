@@ -1,0 +1,17 @@
+; A GridMap whose one MeshLibrary tile has a billboard_mode = ENABLED material, in three cells
+; along X. Godot billboards each MultiMesh instance about its own cell, so three camera-facing
+; squares stand in a row. grid-map and grid-map-centering draw no billboard, and
+; material-billboard is a MeshInstance3D with no per-instance pivot, so a tile turning about the
+; GridMap origin, or not turning, shows here and nowhere else.
+[gd_scene load_steps=2 format=3 uid="uid://unitgridmapbillboard"]
+
+[ext_resource type="MeshLibrary" path="res://unit-grid-map-billboard-lib.tres" id="1_lib"]
+
+[node name="Root" type="Node3D"]
+
+[node name="GridMap" type="GridMap" parent="."]
+mesh_library = ExtResource("1_lib")
+cell_size = Vector3(2, 2, 2)
+data = {
+"cells": PackedInt32Array(0, 0, 0, 2, 0, 0, 4, 0, 0)
+}

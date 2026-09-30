@@ -1,8 +1,8 @@
 /**
  * `cast_shadow = SHADOWS_ONLY` (3) hides the mesh, not its shadow and not its
  * descendants (class_geometryinstance3d.html). `visible = false` would skip the
- * shadow pass and the subtree in `WebGLShadowMap.renderObject`, so the mesh
- * writes neither colour nor depth instead.
+ * shadow pass and the subtree in `WebGLShadowMap.renderObject`, so each colour
+ * draw writes neither colour nor depth instead, with the surface's own material.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -11,6 +11,7 @@ import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { drawsColour } from '../../../r3f/testing/threePasses';
 
 const BOX: TscnInternalResource = {
   id: 'Box_1',
@@ -69,9 +70,15 @@ describe('<MeshInstance3D> cast_shadow = SHADOWS_ONLY', () => {
   });
 
   it('writes neither colour nor depth, so the mesh itself draws nothing', async () => {
-    const material = meshOf(await render({ castShadow: 3 })).material as THREE.Material;
-    expect(material.colorWrite).toBe(false);
-    expect(material.depthWrite).toBe(false);
+    const mesh = meshOf(await render({ castShadow: 3 }));
+    expect(drawsColour(mesh)).toBe(false);
+  });
+
+  it('keeps the surface material attached, so the shadow pass reads its blend mode', async () => {
+    const mesh = meshOf(await render({ castShadow: 3 }));
+    const material = mesh.material as THREE.Material;
+    expect(material.colorWrite).toBe(true);
+    expect(material.depthWrite).toBe(true);
   });
 
   it('renders the nodes parented under it', async () => {
@@ -79,9 +86,9 @@ describe('<MeshInstance3D> cast_shadow = SHADOWS_ONLY', () => {
   });
 
   it('leaves an ordinary mesh drawing normally', async () => {
-    const material = meshOf(await render({ castShadow: 1 })).material as THREE.Material;
-    expect(material.colorWrite).toBe(true);
-    expect(meshOf(await render({ castShadow: 1 })).visible).toBe(true);
+    const mesh = meshOf(await render({ castShadow: 1 }));
+    expect(drawsColour(mesh)).toBe(true);
+    expect(mesh.visible).toBe(true);
   });
 
   it('still hides a mesh whose `visible` is false — and its subtree with it', async () => {

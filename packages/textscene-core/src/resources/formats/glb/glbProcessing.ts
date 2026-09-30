@@ -5,6 +5,10 @@
  */
 
 import * as THREE from 'three';
+import { applyShadowCasting, shadowCastingEffects } from '../../../r3f/shadowCasting';
+import { ShadowCastingSetting } from '../../../godot/rendering';
+import { withExtensionRules } from './extensionRules';
+import type { GltfExtensionRules } from './types';
 
 interface GlbModules {
   GLTFLoader: typeof import('three/addons/loaders/GLTFLoader.js')['GLTFLoader'];
@@ -97,19 +101,25 @@ export function disposeClonedMaterials(object: THREE.Object3D): void {
 
 // Functions that require the lazy-loaded addons.
 
-/**
- * Create a THREE.Object3D from GLB/GLTF data. A text .gltf references buffers and images
- * relative to `resourcePath`, its res:// directory, and `manager` (the bus's
- * LoadingManager) lets the host map those URLs onto fetchable ones. A host with no
- * mapping fails the load, which shows the missing-resource placeholder.
- */
+export interface GlbLoadOptions {
+  /**
+   * The `res://` directory a text .gltf's buffers and images resolve against. `manager`,
+   * the bus's LoadingManager, lets the host map those URLs onto fetchable ones. A host with
+   * no mapping fails the load, which shows the missing-resource placeholder.
+   */
+  resourcePath?: string;
+  manager?: THREE.LoadingManager;
+  /** Defaults to `godot-importer`. */
+  extensionRules?: GltfExtensionRules;
+}
+
+/** Create a THREE.Object3D from GLB/GLTF data. */
 export async function createGLBMesh(
   data: ArrayBuffer,
-  resourcePath = '',
-  manager?: THREE.LoadingManager
+  { resourcePath = '', manager, extensionRules = 'godot-importer' }: GlbLoadOptions = {}
 ): Promise<THREE.Object3D> {
   const { GLTFLoader } = await initGlbModules();
-  const loader = new GLTFLoader(manager);
+  const loader = withExtensionRules(new GLTFLoader(manager), extensionRules);
   const gltf = await loader.parseAsync(data, resourcePath);
   // GLTFLoader returns embedded clips on `gltf.animations`. The scene's `.animations`
   // is where GLBSceneRoot plays them from and where `cloneWithMaterials` copies them.
@@ -141,9 +151,9 @@ export function cloneWithMaterials(mesh: THREE.Object3D): THREE.Object3D {
   cloned.traverse((node) => {
     if (node instanceof THREE.Mesh) {
       // Godot's glTF import mounts every surface as a MeshInstance3D that casts
-      // (SHADOW_CASTING_SETTING_ON) and always receives shadows. three defaults both
-      // to false, which leaves a GLB instance outside the shadow pass.
-      node.castShadow = true;
+      // (SHADOW_CASTING_SETTING_ON) and always receives shadows. three defaults both to
+      // false. The hooks let a surface override's own billboard and shadow pass apply.
+      applyShadowCasting(node, shadowCastingEffects(ShadowCastingSetting.ON));
       node.receiveShadow = true;
     }
   });

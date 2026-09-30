@@ -157,7 +157,73 @@ describe('decodeStandardMaterial3D — alpha-pass classification', () => {
   });
 });
 
+/**
+ * A surface joins Godot's shadow pass when `!uses_alpha_pass() || uses_depth_in_alpha_pass()`
+ * (`render_forward_clustered.cpp:4078-4088`, `scene_shader_forward_clustered.h:279-292`).
+ */
+describe('decodeStandardMaterial3D — shadow-pass membership', () => {
+  it('casts from an opaque surface', () => {
+    expect(decodeStandardMaterial3D({}).castsShadow).toBe(true);
+  });
+
+  it('casts nothing from an alpha-blended surface', () => {
+    expect(decodeStandardMaterial3D({ transparency: '1' }).castsShadow).toBe(false);
+  });
+
+  it('casts nothing from a non-MIX blend mode, whatever transparency says', () => {
+    for (const mode of ['1', '2', '3', '4']) {
+      expect(decodeStandardMaterial3D({ blend_mode: mode }).castsShadow, `blend_mode ${mode}`).toBe(false);
+    }
+  });
+
+  it('casts from a cutout, which stays in the opaque pass', () => {
+    expect(decodeStandardMaterial3D({ transparency: '2' }).castsShadow).toBe(true);
+    expect(decodeStandardMaterial3D({ transparency: '3' }).castsShadow).toBe(true);
+  });
+
+  it('casts from ALPHA_DEPTH_PRE_PASS, which draws depth in the alpha pass', () => {
+    expect(decodeStandardMaterial3D({ transparency: '4' }).castsShadow).toBe(true);
+  });
+
+  it('casts nothing from ALPHA_DEPTH_PRE_PASS once depth draw is off', () => {
+    const data = decodeStandardMaterial3D({ transparency: '4', depth_draw_mode: '2' });
+    expect(data.castsShadow).toBe(false);
+  });
+
+  it('casts from an alpha-antialiased cutout, which draws depth in the alpha pass', () => {
+    const data = decodeStandardMaterial3D({ transparency: '2', alpha_antialiasing_mode: '1' });
+    expect(data.castsShadow).toBe(true);
+  });
+
+  it('casts nothing from an alpha-antialiased cutout with the depth test off', () => {
+    const data = decodeStandardMaterial3D({
+      transparency: '2',
+      alpha_antialiasing_mode: '1',
+      no_depth_test: 'true',
+    });
+    expect(data.castsShadow).toBe(false);
+  });
+
+  it('casts nothing from a surface whose antialiasing mode has no cutout to act on', () => {
+    // `material.cpp:1843`: ALPHA_ANTIALIASING_EDGE is written only under SCISSOR or HASH.
+    const data = decodeStandardMaterial3D({ transparency: '1', alpha_antialiasing_mode: '1' });
+    expect(data.castsShadow).toBe(false);
+  });
+
+  it('casts nothing from a refractive surface', () => {
+    expect(decodeStandardMaterial3D({ refraction_enabled: 'true' }).castsShadow).toBe(false);
+  });
+});
+
 describe('decodeStandardMaterial3D — depth state', () => {
+  it('writes depth for an alpha-antialiased cutout, which Godot draws in its depth prepass', () => {
+    // `uses_depth_in_alpha_pass()` (`scene_shader_forward_clustered.h:289-293`) is true for
+    // it, as for ALPHA_DEPTH_PRE_PASS, so the colour pass sees the depth it wrote.
+    const data = decodeStandardMaterial3D({ transparency: '2', alpha_antialiasing_mode: '1' });
+    expect(data.transparent).toBe(true);
+    expect(data.depthWrite).toBe(true);
+  });
+
   it('defaults to OPAQUE_ONLY, which writes depth outside the alpha pass', () => {
     const data = decodeStandardMaterial3D({});
     expect(data.depthDrawMode).toBe(DepthDrawMode.OPAQUE_ONLY);

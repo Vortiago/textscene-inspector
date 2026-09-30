@@ -21,6 +21,7 @@ import { createThemeProcessor } from './processors/createThemeProcessor';
 import { runClearCachesSequence } from './clearCachesSequence';
 import { resourceFilePath } from './subResourcePath';
 import type { FontResource } from './fonts/font/types';
+import type { GltfExtensionRules } from './formats/glb/types';
 import type { ThemeResource } from './styles/theme/types';
 import { resourceSliceRegistry } from './sliceRegistration';
 import './sliceRegistrations.js';
@@ -41,6 +42,8 @@ export function busTypeFor(resourceType: string | undefined): ResourceType | nul
 }
 
 export interface ResourceLoaderOptions {
+  /** Which glTF extensions a GLB loads with. Absent means `createGLBMesh`'s default. */
+  gltfExtensions?: GltfExtensionRules;
   /** Starts the host's job worker. Without it, jobs run on the main thread. */
   createWorker?: CreateJobWorker;
 }
@@ -143,8 +146,11 @@ export class ResourceLoader {
 
     // A GLB's **Import sidecar** can repoint a glTF material at an external `.tres`,
     // which resolves through the material processor.
-    this.glbMeshes = createGLBProcessor(fileEventBus, this.eventBus, (path) =>
-      this.peerLoad(this.materials, 'material', path)
+    this.glbMeshes = createGLBProcessor(
+      fileEventBus,
+      this.eventBus,
+      (path) => this.peerLoad(this.materials, 'material', path),
+      options.gltfExtensions
     );
 
     // PackedScene loads directly (`loadDirectly`). The id-to-path translation reads the

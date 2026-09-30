@@ -11,6 +11,8 @@ import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { drawColourGroup, expectSameRotation, TEST_CAMERA } from '../../../r3f/testing/threePasses';
+import { YAWED } from './testing/yawedTransform';
 
 const INTERNALS: TscnInternalResource[] = [
   {
@@ -115,5 +117,43 @@ describe('MeshInstance3D — material_overlay', () => {
     // still receives, because Godot lights it like any surface.
     expect(drawn[1]!.castShadow).toBe(false);
     expect(drawn[1]!.receiveShadow).toBe(true);
+  });
+});
+
+/**
+ * The overlay is its own material pass, so its own `billboard_mode` decides
+ * whether it turns, whatever the surface under it does.
+ */
+describe('MeshInstance3D — material_overlay billboard_mode', () => {
+  const BILLBOARD_INTERNALS: TscnInternalResource[] = [
+    ...INTERNALS,
+    { id: 'Mat_facing', type: 'StandardMaterial3D', data: { billboard_mode: '1' } },
+  ];
+  const camera = TEST_CAMERA;
+
+  async function overlayOf(properties: Partial<MeshInstance3DProperties>): Promise<THREE.Mesh> {
+    const renderer = await ReactThreeTestRenderer.create(
+      <SceneResourcesProvider internalResources={BILLBOARD_INTERNALS}>
+        <MeshInstance3D node={makeNode({ ...properties, transform: YAWED })} />
+      </SceneResourcesProvider>
+    );
+    const [base, overlay] = meshes(renderer);
+    base!.updateMatrixWorld(true);
+    return overlay!;
+  }
+
+  it('turns an overlay whose material billboards', async () => {
+    const overlay = await overlayOf({ materialOverlay: 'SubResource("Mat_facing")' });
+    const drawn = drawColourGroup(overlay, camera, 0, (s) => s.matrixWorld);
+    expectSameRotation(drawn, camera.matrixWorld);
+  });
+
+  it('keeps an overlay whose material does not billboard in the node pose', async () => {
+    const overlay = await overlayOf({
+      materialOverride: 'SubResource("Mat_facing")',
+      materialOverlay: 'SubResource("Mat_overlay")',
+    });
+    const drawn = drawColourGroup(overlay, camera, 0, (s) => s.matrixWorld);
+    expect(drawn.equals(overlay.matrixWorld)).toBe(true);
   });
 });

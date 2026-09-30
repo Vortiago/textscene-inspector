@@ -1,7 +1,7 @@
 /**
- * RenderingServer-wide limits, as the engine declares them. They live here because classes with
- * no shared ancestor that owns the property read them, so a per-slice copy would diverge. Each
- * constant carries the numbers, not the grounding: cite the setter's `file:line` at each call site.
+ * RenderingServer-wide limits and enums, as the engine declares them. They live here because
+ * classes with no shared ancestor that owns the property read them, so a per-slice copy would
+ * diverge. Each constant carries the numbers, not the grounding: cite the setter's `file:line`.
  */
 
 /**
@@ -31,3 +31,14 @@ export const CANVAS_ITEM_Z_MAX = 4096;
 export const CANVAS_LAYER_MIN = -2147483648;
 /** See {@link CANVAS_LAYER_MIN}. */
 export const CANVAS_LAYER_MAX = 2147483647;
+
+/**
+ * `RS::ShadowCastingSetting` (`servers/rendering/rendering_server.h:1494-1499`), the integers a
+ * `.tscn` stores for `GeometryInstance3D.cast_shadow` and a MeshLibrary item's `mesh_cast_shadow`.
+ */
+export enum ShadowCastingSetting {
+  OFF = 0,
+  ON = 1,
+  DOUBLE_SIDED = 2,
+  SHADOWS_ONLY = 3,
+}

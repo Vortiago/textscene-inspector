@@ -1,8 +1,8 @@
 /**
  * <GridMap> instances each MeshLibrary item's ArrayMesh at its populated cells,
- * one THREE.InstancedMesh per item. An unresolved mesh draws a cell-sized
- * wireframe box. The item's primary surface material covers the whole instanced
- * mesh, since most library tiles are single-surface.
+ * one THREE.InstancedMesh per item, or one mesh per cell when its material
+ * billboards. An unresolved mesh draws a cell-sized wireframe box. The item's
+ * primary surface material covers every cell, since most tiles are single-surface.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -24,6 +24,7 @@ import type { GridMapProperties } from './types';
 import { decodeGridMapCells, ORTHO_BASES, type GridMapCell } from './cellData';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { shadowCastingEffects } from '../../../r3f/shadowCasting';
+import { drawsAsOneBatch } from '../../../r3f/surfaceDrawHooks';
 
 /** Literal-only, so the key is constant and a placeholder cell never remounts. */
 const PLACEHOLDER_CELL_MATERIAL = wireGizmoProgram(0x4488cc);
@@ -37,16 +38,6 @@ const DEFAULT_TILE_MATERIAL = new THREE.MeshStandardMaterial({
   color: GODOT_DEFAULT_ALBEDO,
   metalness: GODOT_DEFAULT_METALLIC,
   roughness: GODOT_DEFAULT_ROUGHNESS,
-});
-
-/**
- * A SHADOWS_ONLY tile's material: it writes neither colour nor depth.
- * `visible = false` would also stop the tile casting, since three's
- * `WebGLShadowMap.renderObject` returns on it. Shared and never disposed.
- */
-const SHADOWS_ONLY_TILE_MATERIAL = new THREE.MeshBasicMaterial({
-  colorWrite: false,
-  depthWrite: false,
 });
 
 /** Godot Transform3D (basis rows + origin) → THREE.Matrix4. */
@@ -125,7 +116,7 @@ interface GridMapItemProps {
   cellCenter: GridMapProperties['cellCenter'];
 }
 
-/** All cells sharing one MeshLibrary item, batched into a single InstancedMesh. */
+/** All cells sharing one MeshLibrary item, drawn as the tiles `buildTiles` makes. */
 function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
   const meshResult = useResource<ArrayMeshResource>(item?.meshPath ?? '', 'arraymesh');
   // The surface material path only becomes known once the ArrayMesh resolves.
@@ -144,34 +135,42 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
   // the library (`modules/gridmap/grid_map.cpp:799-800`).
   const shadow = shadowCastingEffects(item?.castShadow);
 
-  const instanced = useMemo(() => {
+  const tiles = useMemo(() => {
     const geometry = meshResult.value?.geometry;
     if (!geometry) return null;
     // The resource pipeline owns the cached ArrayMesh and a resolved material.
     // The shared default stands in when none is loaded.
-    const material = shadow.shadowsOnly
-      ? SHADOWS_ONLY_TILE_MATERIAL
-      : (materialPath && materialResult.value) || DEFAULT_TILE_MATERIAL;
-    const mesh = new THREE.InstancedMesh(geometry, material, matrices.length);
-    matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
-    mesh.instanceMatrix.needsUpdate = true;
-    mesh.castShadow = shadow.castShadow;
-    mesh.receiveShadow = true;
-    // DOUBLE_SIDED reaches three's shared depth material here, per mesh per
-    // light (`WebGLShadowMap.js:477,535,549`).
-    mesh.onBeforeShadow = shadow.onBeforeShadow;
-    return mesh;
-  }, [meshResult.value, materialPath, materialResult.value, matrices, shadow]);
+    const material = (materialPath && materialResult.value) || DEFAULT_TILE_MATERIAL;
+    return buildTiles(geometry, material, matrices);
+  }, [meshResult.value, materialPath, materialResult.value, matrices]);
 
   // InstancedMesh.dispose() frees only its own instanceMatrix buffer, and leaves
-  // the geometry and material the resource pipeline owns.
+  // the geometry and material the resource pipeline owns. A plain Mesh owns nothing.
   useEffect(() => {
-    if (!instanced) return;
-    return () => instanced.dispose();
-  }, [instanced]);
+    if (!tiles) return;
+    return () => {
+      for (const tile of tiles) if (tile instanceof THREE.InstancedMesh) tile.dispose();
+    };
+  }, [tiles]);
 
-  if (instanced) {
-    return <primitive object={instanced} />;
+  if (tiles) {
+    // Props, apart from the build, so a `cast_shadow` edit swaps hooks rather than
+    // rebuilding every cell.
+    return (
+      <>
+        {tiles.map((tile) => (
+          <primitive
+            key={tile.uuid}
+            object={tile}
+            castShadow={shadow.castShadow}
+            onBeforeRender={shadow.onBeforeRender}
+            onAfterRender={shadow.onAfterRender}
+            onBeforeShadow={shadow.onBeforeShadow}
+            onAfterShadow={shadow.onAfterShadow}
+          />
+        ))}
+      </>
+    );
   }
 
   // A pending or missing item draws cell-sized wireframe boxes.
@@ -182,6 +181,41 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
       ))}
     </>
   );
+}
+
+/**
+ * The item's cells as one InstancedMesh, or as one mesh per cell where `drawsAsOneBatch`
+ * refuses the material, so each billboarded tile turns about its own cell as in Godot.
+ */
+function buildTiles(
+  geometry: THREE.BufferGeometry,
+  material: THREE.Material,
+  matrices: THREE.Matrix4[]
+): THREE.Mesh[] {
+  if (drawsAsOneBatch(material)) {
+    return [batchedTiles(geometry, material, matrices)];
+  }
+  return matrices.map((matrix) => cellTile(geometry, material, matrix));
+}
+
+function batchedTiles(
+  geometry: THREE.BufferGeometry,
+  material: THREE.Material,
+  matrices: THREE.Matrix4[]
+): THREE.InstancedMesh {
+  const mesh = new THREE.InstancedMesh(geometry, material, matrices.length);
+  matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+function cellTile(geometry: THREE.BufferGeometry, material: THREE.Material, matrix: THREE.Matrix4): THREE.Mesh {
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.matrixAutoUpdate = false;
+  mesh.matrix.copy(matrix);
+  mesh.receiveShadow = true;
+  return mesh;
 }
 
 function PlaceholderCell({ matrix, cellSize }: { matrix: THREE.Matrix4; cellSize: Vector3 }) {
