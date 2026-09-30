@@ -77,6 +77,18 @@ export function dropTrailingComma(parts: string[]): string[] {
   return parts.length > 1 && parts[parts.length - 1] === '' ? parts.slice(0, -1) : parts;
 }
 
+/** The highest code `String::strip_edges` strips: every control character and the space (`ustring.cpp:4076`). */
+const STRIPPED_MAX_CODE = 32;
+
+/** `String::strip_edges`: every character up to 32 goes from each end, and nothing else (`ustring.cpp:4070-4099`). */
+export function stripEdges(text: string): string {
+  let begin = 0;
+  let end = text.length;
+  while (begin < end && text.charCodeAt(begin) <= STRIPPED_MAX_CODE) begin++;
+  while (end > begin && text.charCodeAt(end - 1) <= STRIPPED_MAX_CODE) end--;
+  return text.slice(begin, end);
+}
+
 /** A value that is exactly one `"…"` literal and nothing else. No `g` flag: `.test()` stays stateless. */
 export const STRING_LITERAL_RE = new RegExp(`^${STRING_LITERAL_SOURCE}$`);
 

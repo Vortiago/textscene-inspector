@@ -56,24 +56,36 @@ each node's registered component. Components load files through `useResource`.
 `Linter` then runs the semantic rules over the tree. The whole path imports no React and no
 three.js, so the CLI and the VS Code extension host can bundle it alone.
 
-`Linter.lint` reads only the scene. `Linter.lintProject` also reads the files the scene uses,
-through the host's `ResourceProvider`. It reports a used `.glb` or `.gltf` that requires a
-glTF extension Godot's importer does not support, because Godot then fails to load the scene.
-The report is an error when the project enables no editor plugin and loads no GDExtension, and
-a warning when one of them can register a `GLTFDocumentExtension` that supports the extension.
-One strict parse serves both parts. `lintProject` returns the scene's own diagnostics at once,
-and a promise of the cross-file diagnostics alone only when the scene uses a `res://` glTF, so
-a host publishes twice only then. Each host and the CLI join the two lists with
-`mergeDiagnostics`. While a new read is pending, a host shows the new file-local diagnostics
-beside the cross-file ones of its last lint, so a finding does not vanish on each edit. A throw
-inside the cross-file rule becomes a `rule-crashed` diagnostic.
+`Linter.lint` reads only the scene. A `LintSession`, from `Linter.session()`, also reads the
+files the scene uses, through the host's `ResourceProvider`. It reports a used `.glb` or
+`.gltf` that requires a glTF extension Godot's importer does not support, because Godot then
+fails to load the scene. The report is an error when the project enables no editor plugin and
+loads no GDExtension, and a warning when one of them can register a `GLTFDocumentExtension`
+that supports the extension.
 
-The `Linter` keeps the verdict of each glTF file it reads, per provider, under the stamp the
-provider's optional `stamp` gives: a file's modification time and size in the CLI and VS Code,
-an upload serial or the corpus root on the web. It reads a file again only when its stamp
-changes, and every time for a provider with no `stamp`. VS Code re-lints the open scenes of a
-workspace folder when a glTF file, `project.godot` or the GDExtension list in it changes. The
-web previewer re-lints the Source pane after each upload or removal.
+A host keeps one session per document. One strict parse serves both kinds of rule.
+`session.lint` returns `now`, the scene's own diagnostics beside the cross-file ones of the
+last read, and `later`, the full list once the files are read. `later` is null when the scene
+uses no `res://` glTF, so a host publishes twice only then. It resolves to null when a newer
+lint overtakes it. The session moves each kept cross-file diagnostic onto the new line of its
+`[ext_resource]`, and drops it when that id is gone or names another file. `session.reads`
+lists the `res://` paths the newest lint read: the glTF files, `project.godot` and the
+GDExtension list. The CLI and the tests call `Linter.lintComplete` for the full list in one
+answer. A throw inside the cross-file rule becomes a `rule-crashed` diagnostic.
+
+The `Linter` keeps what it reads per provider (`linter/stampedReads.ts`), under the stamp the
+provider's optional `stamp` gives: a file's modification time and size in the CLI and VS Code, an upload serial or the
+corpus root on the web. It keeps the verdict of each glTF file, and the plugin answer of
+`project.godot` and the GDExtension list, each file under its own stamp. It reads a file again
+only when its stamp changes, and every time for a provider with no `stamp`. The plugin probe
+starts beside the glTF reads, and the rule uses its answer only when a file is refused.
+
+VS Code keeps one provider per project root, so the documents of a project share the kept
+verdicts. The extension watches each glob once. On a change to a glTF file or the GDExtension
+list, it re-lints each open document whose last lint read that file. On a change to
+`project.godot`, it finds the project of each open document under that directory again, and
+re-lints it. It publishes a list only when it differs from the list it shows. The web
+previewer re-lints the Source pane after each upload or removal.
 
 The CLI and the VS Code extension root their linter providers at the nearest `project.godot`
 through `resources/resPath.ts`, and the web previewer at its corpus root. Both linter
@@ -124,7 +136,7 @@ properties in `properties`. The strict one stores the raw strings there. Both st
 strings in `rawProperties`, so code shared by both paths reads that field.
 
 The strict parser also returns `SourceLines`: the line of each `[ext_resource]`,
-`[sub_resource]` and `[node]` heading, and of each property. The `Linter` uses it to put a
+`[sub_resource]`, `[node]` and `.tres` `[resource]` heading, and of each property. The `Linter` uses it to put a
 rule's diagnostic on the right line.
 
 ## Rendering

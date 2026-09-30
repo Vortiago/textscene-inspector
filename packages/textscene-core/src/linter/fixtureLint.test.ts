@@ -1,9 +1,7 @@
 /**
- * Lint guard over `scenes/fixtures`, this package's own corpus. A positive fixture produces no error (warnings are
- * allowed). A negative `edge-*` fixture in INTEGRATION_FIXTURES_WITH_ERRORS produces at least one, so its rule still
- * fires. Scope is `scenes/fixtures` and every folder under it. A fixture under a `project.godot` is linted with that
- * project's files, found as the CLI finds them. Which other directories get linted is the caller's choice
- * (`pnpm lint:scenes` and its CI step), never encoded in the library.
+ * Lint guard over `scenes/fixtures` and every folder under it. A positive fixture produces no error. A negative
+ * `edge-*` fixture in INTEGRATION_FIXTURES_WITH_ERRORS produces at least one, so its rule still fires. A fixture under
+ * a `project.godot` is linted with that project's files. The caller chooses other directories (`pnpm lint:scenes`).
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -11,7 +9,6 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Linter } from './Linter.js';
-import { mergeDiagnostics } from './mergeDiagnostics.js';
 import { isGodotTextResourcePath } from '../godot/index.js';
 import { parseHeading } from '../parser/utils.js';
 import { findProjectRoot, parentDir, projectFileIn, resolveResPath } from '../resources/resPath.js';
@@ -152,11 +149,8 @@ async function fixture(path: string): Promise<Fixture> {
   return { path, name: relative(fixturesDir, path), provider: root === null ? null : projectProvider(root) };
 }
 
-async function lintFixture({ path, provider }: Fixture): Promise<Diagnostic[]> {
-  const content = readFileSync(path, 'utf8');
-  if (!provider) return new Linter().lint(content);
-  const { diagnostics, dependencies } = new Linter().lintProject(content, provider);
-  return mergeDiagnostics(diagnostics, (await dependencies) ?? []);
+function lintFixture({ path, provider }: Fixture): Promise<Diagnostic[]> {
+  return new Linter().lintComplete(readFileSync(path, 'utf8'), provider);
 }
 
 /** Diagnostics for every fixture, keyed by its name. Written once, in `beforeAll`, before the checks read them. */

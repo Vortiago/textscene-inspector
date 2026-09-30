@@ -5,13 +5,10 @@
  */
 
 import {
-  EXTENSION_LIST_FILE,
   boolSlotValue,
+  extensionListPath,
   isLocaleRightToLeft,
-  packedArrayBody,
-  packedArrayForms,
-  projectDataPath,
-  stringLiteralBodies,
+  stringArrayBodies,
   type LayoutDirectionEnv,
 } from '../godot/index.js';
 import { unquoteLiteral } from './utils.js';
@@ -159,9 +156,6 @@ export function projectLayoutDirectionEnv(settings: ProjectSettings | null): Lay
   return { forceRtl, rootRtl, applicationLocaleRtl, systemLocaleRtl };
 }
 
-/** The spellings a `PackedStringArray` setting reads: the packed constructor, a typed array and a bare array. */
-const STRING_LIST_FORMS = packedArrayForms('PackedStringArray');
-
 /**
  * `editor_plugins/enabled`, the `plugin.cfg` paths the editor enables at start (`init_plugins`,
  * `editor/editor_node.cpp:1167-1173`). Empty where the project sets none, and for a value that is not
@@ -170,16 +164,15 @@ const STRING_LIST_FORMS = packedArrayForms('PackedStringArray');
  */
 export function enabledEditorPlugins(settings: ProjectSettings | null): string[] {
   const raw = settings?.['editor_plugins/enabled'];
-  if (raw === undefined) return [];
-  const list = packedArrayBody(STRING_LIST_FORMS, raw.trim());
-  return (list && stringLiteralBodies(list.body)) ?? [];
+  return (raw !== undefined && stringArrayBodies(raw)) || [];
 }
 
 /**
- * The `res://` path of the project's GDExtension list, in the data directory the project names
- * (`gdextension.cpp:45-46`). A value a BOOL slot cannot read keeps the default, true.
+ * The `res://` path of the project's GDExtension list, in the data directory the project names.
+ * A value a BOOL slot cannot read keeps the default, true.
  */
-export function extensionListPath(settings: ProjectSettings | null): string {
-  const useHidden = boolSlotValue(settings?.['application/config/use_hidden_project_data_directory']) !== false;
-  return `${projectDataPath(useHidden)}/${EXTENSION_LIST_FILE}`;
+export function projectExtensionListPath(settings: ProjectSettings | null): string {
+  return extensionListPath(
+    boolSlotValue(settings?.['application/config/use_hidden_project_data_directory']) !== false
+  );
 }

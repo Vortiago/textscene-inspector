@@ -15,6 +15,7 @@ import {
   type DocumentLineSource,
 } from './TscnDiagnostics';
 import { createMockDiagnosticCollection, createMockUri } from './test-setup';
+import { EXTENSION_LIST_PATTERN, PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN } from './watchPatterns';
 
 /** Configure the mocked `textscene` configuration section for one test. */
 function mockDiagnosticsConfig(overrides: { enabled?: boolean; lintDebounceMs?: number } = {}): void {
@@ -54,7 +55,7 @@ function makeTscnDocument(content: string, fsPath = '/workspace/scene.tscn'): vs
     uri: createMockUri(fsPath),
     fileName: fsPath,
     languageId: 'tscn',
-    getText: () => content,
+    getText: vi.fn(() => content),
     lineCount: lines.length,
     lineAt: (lineOrPosition: number | vscode.Position) => {
       const line =
@@ -209,13 +210,21 @@ describe('toVsCodeDiagnostic', () => {
 describe('TscnDiagnostics', () => {
   let collection: ReturnType<typeof createMockDiagnosticCollection>;
 
+  /** Diagnostics over the mocked collection, fed by a resource watcher the test's mock creates. */
+  function newDiagnostics(): TscnDiagnostics {
+    return new TscnDiagnostics(
+      vscode.workspace.createFileSystemWatcher(RESOURCE_FILES_PATTERN),
+      collection as unknown as vscode.DiagnosticCollection
+    );
+  }
+
   beforeEach(() => {
     collection = createMockDiagnosticCollection('tscn');
     (vscode.workspace as unknown as { textDocuments: vscode.TextDocument[] }).textDocuments = [];
   });
 
   it('creates its own diagnostic collection when none is injected', () => {
-    const diagnostics = new TscnDiagnostics();
+    const diagnostics = new TscnDiagnostics(vscode.workspace.createFileSystemWatcher(RESOURCE_FILES_PATTERN));
 
     expect(vscode.languages.createDiagnosticCollection).toHaveBeenCalledWith('tscn');
     diagnostics.dispose();
@@ -227,7 +236,7 @@ describe('TscnDiagnostics', () => {
       document,
     ];
 
-    const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+    const diagnostics = newDiagnostics();
 
     expect(collection.set).toHaveBeenCalledTimes(1);
     const [uri, published] = collection.set.mock.calls[0]!;
@@ -238,7 +247,7 @@ describe('TscnDiagnostics', () => {
   });
 
   it('publishes an empty diagnostics array for a clean document', () => {
-    const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+    const diagnostics = newDiagnostics();
     const document = makeTscnDocument(VALID_TSCN);
 
     diagnostics.lintDocument(document);
@@ -248,7 +257,7 @@ describe('TscnDiagnostics', () => {
   });
 
   it('publishes a rule finding on the heading of the node it is about, not on the first line', () => {
-    const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+    const diagnostics = newDiagnostics();
     // A StaticBody2D with no shape child, which Godot's configuration warning names.
     const heading = '[node name="Body" type="StaticBody2D" parent="."]';
     const document = makeTscnDocument(
@@ -265,7 +274,7 @@ describe('TscnDiagnostics', () => {
   });
 
   it('publishes a dangling reference on the line of the property that holds it', () => {
-    const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+    const diagnostics = newDiagnostics();
     const document = makeTscnDocument(
       '[gd_scene format=3]\n\n[node name="Box" type="CSGBox3D"]\nmaterial = SubResource("nope")\n'
     );
@@ -279,7 +288,7 @@ describe('TscnDiagnostics', () => {
   });
 
   it('ignores non-.tscn documents', () => {
-    const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+    const diagnostics = newDiagnostics();
     const document = {
       ...makeTscnDocument(VALID_TSCN, '/workspace/readme.md'),
       languageId: 'markdown',
@@ -296,7 +305,7 @@ describe('TscnDiagnostics', () => {
   // the `tscn` language claims `.tres` too, and the filename arm is the
   // fallback for a document whose association a user overrode.
   it('publishes for a .tres document the tscn language claims', () => {
-    const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+    const diagnostics = newDiagnostics();
     const document = makeTscnDocument(VALID_TRES, '/workspace/material.tres');
 
     diagnostics.lintDocument(document);
@@ -313,7 +322,7 @@ describe('TscnDiagnostics', () => {
     fsPath,
     content
   ) => {
-    const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+    const diagnostics = newDiagnostics();
     const document = {
       ...makeTscnDocument(content, fsPath),
       languageId: 'plaintext',
@@ -338,13 +347,13 @@ describe('TscnDiagnostics', () => {
       return { dispose: vi.fn() };
     });
 
-    const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+    const diagnostics = newDiagnostics();
     const document = makeTscnDocument(VALID_TSCN);
 
     openHandler!(document);
     expect(collection.set).toHaveBeenCalledTimes(1);
 
-    saveHandler!(document);
+    saveHandler!(makeTscnDocument(INVALID_TSCN));
     expect(collection.set).toHaveBeenCalledTimes(2);
     diagnostics.dispose();
   });
@@ -360,9 +369,7 @@ describe('TscnDiagnostics', () => {
         return { dispose: vi.fn() };
       });
 
-      const diagnostics = new TscnDiagnostics(
-        collection as unknown as vscode.DiagnosticCollection
-      );
+      const diagnostics = newDiagnostics();
       const document = makeTscnDocument(VALID_TSCN);
 
       changeHandler!({ document });
@@ -397,9 +404,7 @@ describe('TscnDiagnostics', () => {
         return { dispose: vi.fn() };
       });
 
-      const diagnostics = new TscnDiagnostics(
-        collection as unknown as vscode.DiagnosticCollection
-      );
+      const diagnostics = newDiagnostics();
       const document = makeTscnDocument(VALID_TSCN);
 
       changeHandler!({ document });
@@ -433,9 +438,7 @@ describe('TscnDiagnostics', () => {
       });
       (vscode.workspace.onDidCloseTextDocument as Mock).mockImplementation(() => nextDisposable());
 
-      const diagnostics = new TscnDiagnostics(
-        collection as unknown as vscode.DiagnosticCollection
-      );
+      const diagnostics = newDiagnostics();
       changeHandler!({ document: makeTscnDocument(VALID_TSCN) });
 
       diagnostics.dispose();
@@ -512,7 +515,7 @@ describe('TscnDiagnostics', () => {
     }
 
     it('publishes the file-local lint at once, then a refused glTF on its ext_resource heading', async () => {
-      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+      const diagnostics = newDiagnostics();
       const document = makeTscnDocument(SCENE_USING_TREE, '/workspace/scenes/level.tscn');
 
       diagnostics.lintDocument(document);
@@ -528,7 +531,7 @@ describe('TscnDiagnostics', () => {
     });
 
     it('drops a cross-file result that a newer lint of the document has overtaken', async () => {
-      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+      const diagnostics = newDiagnostics();
       const document = makeTscnDocument(SCENE_USING_TREE, '/workspace/scenes/level.tscn');
 
       diagnostics.lintDocument(document);
@@ -539,11 +542,11 @@ describe('TscnDiagnostics', () => {
 
       releaseFirst();
       await new Promise((resolve) => setTimeout(resolve, 0));
-      expect(collection.set).toHaveBeenCalledTimes(2);
+      expect(collection.set).toHaveBeenCalledTimes(1);
 
       pendingReads.shift()!();
-      await vi.waitFor(() => expect(collection.set).toHaveBeenCalledTimes(3));
-      expect(publishedCodes(2)).toContain(RULE);
+      await vi.waitFor(() => expect(collection.set).toHaveBeenCalledTimes(2));
+      expect(publishedCodes(1)).toContain(RULE);
       diagnostics.dispose();
     });
 
@@ -553,10 +556,11 @@ describe('TscnDiagnostics', () => {
         closeHandler = handler;
         return { dispose: vi.fn() };
       });
-      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+      const diagnostics = newDiagnostics();
       const document = makeTscnDocument(SCENE_USING_TREE, '/workspace/scenes/level.tscn');
 
       diagnostics.lintDocument(document);
+      await vi.waitFor(() => expect(pendingReads.length).toBe(1));
       closeHandler!(document);
       await releaseReads();
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -566,7 +570,7 @@ describe('TscnDiagnostics', () => {
     });
 
     it('publishes once for a scene that uses no glTF', async () => {
-      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+      const diagnostics = newDiagnostics();
 
       diagnostics.lintDocument(makeTscnDocument(VALID_TSCN, '/workspace/scenes/plain.tscn'));
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -576,51 +580,99 @@ describe('TscnDiagnostics', () => {
       diagnostics.dispose();
     });
 
-    it('walks for the project root once per open document, and again after it closes', async () => {
-      let closeHandler: ((document: vscode.TextDocument) => void) | undefined;
-      (vscode.workspace.onDidCloseTextDocument as Mock).mockImplementation((handler) => {
-        closeHandler = handler;
-        return { dispose: vi.fn() };
-      });
-      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
-      const document = makeTscnDocument(SCENE_USING_TREE, '/workspace/scenes/level.tscn');
+    it('shares one project walk and one provider between the documents of a project', async () => {
+      (vscode.workspace.fs.stat as Mock).mockImplementation((uri: vscode.Uri) =>
+        ['/workspace/project.godot', '/workspace/tree.glb'].includes(uri.fsPath)
+          ? Promise.resolve({ type: 1, ctime: 0, mtime: 1, size: 1 })
+          : Promise.reject(new Error('Not found'))
+      );
+      // The walk from `scenes/` asks its own directory first. The plugin probe stamps only the root's project file.
       const projectFileChecks = () =>
-        (vscode.workspace.fs.stat as Mock).mock.calls.filter(([uri]) => uri.fsPath === '/workspace/project.godot')
+        (vscode.workspace.fs.stat as Mock).mock.calls.filter(
+          ([uri]) => uri.fsPath === '/workspace/scenes/project.godot'
+        ).length;
+      const glbReads = () =>
+        (vscode.workspace.fs.readFile as Mock).mock.calls.filter(([uri]) => uri.fsPath === '/workspace/tree.glb')
           .length;
+      const diagnostics = newDiagnostics();
+      const first = makeTscnDocument(SCENE_USING_TREE, '/workspace/scenes/a.tscn');
+      const second = makeTscnDocument(SCENE_USING_TREE, '/workspace/scenes/b.tscn');
 
-      diagnostics.lintDocument(document);
+      diagnostics.lintDocument(first);
       await releaseReads();
-      diagnostics.lintDocument(document);
-      await releaseReads();
+      await vi.waitFor(() => expect(collection.set).toHaveBeenCalledTimes(2));
+      diagnostics.lintDocument(second);
+      await vi.waitFor(() => expect(collection.set).toHaveBeenCalledTimes(4));
+
       expect(projectFileChecks()).toBe(1);
-
-      closeHandler!(document);
-      diagnostics.lintDocument(document);
-      await releaseReads();
-      expect(projectFileChecks()).toBe(2);
+      expect(glbReads()).toBe(1);
+      expect(publishedCodes(3)).toContain(RULE);
       diagnostics.dispose();
     });
 
-    it('keeps the last cross-file error visible while an edit re-reads the glTF', async () => {
-      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+    it('publishes nothing again while an edit leaves the list as it is shown', async () => {
+      const diagnostics = newDiagnostics();
       const document = makeTscnDocument(SCENE_USING_TREE, '/workspace/scenes/level.tscn');
 
       diagnostics.lintDocument(document);
       await releaseReads();
       await vi.waitFor(() => expect(collection.set).toHaveBeenCalledTimes(2));
 
-      diagnostics.lintDocument(document);
-      expect(collection.set).toHaveBeenCalledTimes(3);
-      expect(publishedCodes(2)).toContain(RULE);
+      diagnostics.lintDocument(makeTscnDocument(`${SCENE_USING_TREE}\n`, '/workspace/scenes/level.tscn'));
+      expect(collection.set).toHaveBeenCalledTimes(2);
+      expect(publishedCodes(1)).toContain(RULE);
 
       await releaseReads();
-      await vi.waitFor(() => expect(collection.set).toHaveBeenCalledTimes(4));
-      expect(publishedCodes(3).filter((code) => code === RULE)).toHaveLength(1);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(collection.set).toHaveBeenCalledTimes(2);
+      diagnostics.dispose();
+    });
+
+    it('publishes again when an edit lengthens a flagged line, since its range ends at the line end', async () => {
+      const diagnostics = newDiagnostics();
+      diagnostics.lintDocument(makeTscnDocument(SCENE_USING_TREE, '/workspace/scenes/level.tscn'));
+      await releaseReads();
+      await vi.waitFor(() => expect(collection.set).toHaveBeenCalledTimes(2));
+
+      const lengthened = SCENE_USING_TREE.replace('id="1_tree"]', 'id="1_tree"]   ');
+      diagnostics.lintDocument(makeTscnDocument(lengthened, '/workspace/scenes/level.tscn'));
+
+      expect(collection.set).toHaveBeenCalledTimes(3);
+      const finding = (collection.set.mock.calls[2]![1] as vscode.Diagnostic[]).find((d) => d.code === RULE);
+      expect(finding?.range.end.character).toBe(lengthened.split('\n')[2]!.length);
+      diagnostics.dispose();
+    });
+
+    it('moves the kept cross-file error to the line its ext_resource moved to while the glTF is re-read', async () => {
+      const diagnostics = newDiagnostics();
+      diagnostics.lintDocument(makeTscnDocument(SCENE_USING_TREE, '/workspace/scenes/level.tscn'));
+      await releaseReads();
+      await vi.waitFor(() => expect(collection.set).toHaveBeenCalledTimes(2));
+
+      const shifted = SCENE_USING_TREE.replace('\n\n[ext_resource', '\n\n\n\n[ext_resource');
+      diagnostics.lintDocument(makeTscnDocument(shifted, '/workspace/scenes/level.tscn'));
+
+      const kept = (collection.set.mock.calls.at(-1)![1] as vscode.Diagnostic[]).find((d) => d.code === RULE);
+      expect(kept?.range.start.line).toBe(4);
+      diagnostics.dispose();
+    });
+
+    it('drops the kept cross-file error once its ext_resource id is gone', async () => {
+      const diagnostics = newDiagnostics();
+      diagnostics.lintDocument(makeTscnDocument(SCENE_USING_TREE, '/workspace/scenes/level.tscn'));
+      await releaseReads();
+      await vi.waitFor(() => expect(collection.set).toHaveBeenCalledTimes(2));
+
+      const renamed = SCENE_USING_TREE.replaceAll('1_tree', '2_tree');
+      diagnostics.lintDocument(makeTscnDocument(renamed, '/workspace/scenes/level.tscn'));
+
+      const published = collection.set.mock.calls.at(-1)![1] as vscode.Diagnostic[];
+      expect(published.map((d) => d.code)).not.toContain(RULE);
       diagnostics.dispose();
     });
 
     it('drops the cross-file error once an edit leaves the scene with no glTF to read', async () => {
-      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+      const diagnostics = newDiagnostics();
       const document = makeTscnDocument(SCENE_USING_TREE, '/workspace/scenes/level.tscn');
       diagnostics.lintDocument(document);
       await releaseReads();
@@ -638,7 +690,7 @@ describe('TscnDiagnostics', () => {
         closeHandler = handler;
         return { dispose: vi.fn() };
       });
-      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+      const diagnostics = newDiagnostics();
       const document = makeTscnDocument(SCENE_USING_TREE, '/workspace/scenes/level.tscn');
       diagnostics.lintDocument(document);
       await releaseReads();
@@ -663,28 +715,27 @@ describe('TscnDiagnostics', () => {
       const glbReads = () =>
         (vscode.workspace.fs.readFile as Mock).mock.calls.filter(([uri]) => uri.fsPath === '/workspace/tree.glb')
           .length;
-      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+      const diagnostics = newDiagnostics();
       const document = makeTscnDocument(SCENE_USING_TREE, '/workspace/scenes/level.tscn');
 
       diagnostics.lintDocument(document);
       await releaseReads();
       await vi.waitFor(() => expect(collection.set).toHaveBeenCalledTimes(2));
       diagnostics.lintDocument(document);
-      await vi.waitFor(() => expect(collection.set).toHaveBeenCalledTimes(4));
-      expect(publishedCodes(3)).toContain(RULE);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(publishedCodes(1)).toContain(RULE);
       expect(glbReads()).toBe(1);
 
       mtime = 2;
       diagnostics.lintDocument(document);
       await releaseReads();
-      await vi.waitFor(() => expect(collection.set).toHaveBeenCalledTimes(6));
       expect(glbReads()).toBe(2);
       diagnostics.dispose();
     });
 
     it('reads nothing for a document outside every workspace folder', async () => {
       (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue(undefined);
-      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+      const diagnostics = newDiagnostics();
 
       diagnostics.lintDocument(makeTscnDocument(SCENE_USING_TREE, '/elsewhere/level.tscn'));
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -705,18 +756,34 @@ describe('TscnDiagnostics', () => {
     let watchers: Watcher[];
     let savedTextDocuments: vscode.TextDocument[];
 
-    const FOLDERS: Record<string, string> = { '/workspace': '/workspace', '/other': '/other' };
+    const FOLDERS = ['/workspace', '/other'];
+
+    /** A scene in `dir` whose `Tree` node instances `res://tree.glb`. */
+    function sceneUsingTree(dir: string): vscode.TextDocument {
+      return makeTscnDocument(
+        [
+          '[gd_scene format=3]',
+          '',
+          '[ext_resource type="PackedScene" path="res://tree.glb" id="1_tree"]',
+          '',
+          '[node name="Root" type="Node3D"]',
+          '',
+          '[node name="Tree" parent="." instance=ExtResource("1_tree")]',
+        ].join('\n'),
+        `${dir}/level.tscn`
+      );
+    }
 
     function folderOf(uri: vscode.Uri) {
-      const root = Object.keys(FOLDERS).find((prefix) => uri.fsPath.startsWith(`${prefix}/`));
+      const root = FOLDERS.find((prefix) => uri.fsPath.startsWith(`${prefix}/`));
       return root ? { uri: createMockUri(root) } : undefined;
     }
 
-    /** The one pattern of the three that matches `fsPath`, as the file watcher would route it. */
+    /** The pattern of the watcher that reports `fsPath`, as the file watcher would route it. */
     function patternFor(fsPath: string): string {
-      if (fsPath.endsWith('/project.godot')) return '**/project.godot';
-      if (fsPath.endsWith('/extension_list.cfg')) return '**/{.godot,godot}/extension_list.cfg';
-      return '**/*.{glb,gltf,GLB,GLTF}';
+      if (fsPath.endsWith('/project.godot')) return PROJECT_FILE_PATTERN;
+      if (fsPath.endsWith('/extension_list.cfg')) return EXTENSION_LIST_PATTERN;
+      return RESOURCE_FILES_PATTERN;
     }
 
     function fire(kind: 'change' | 'create' | 'delete', fsPath: string): void {
@@ -727,6 +794,16 @@ describe('TscnDiagnostics', () => {
 
     function open(...documents: vscode.TextDocument[]): void {
       (vscode.workspace as unknown as { textDocuments: vscode.TextDocument[] }).textDocuments = documents;
+    }
+
+    /** How often `document` has been linted: each lint reads its text once. */
+    function lintsOf(document: vscode.TextDocument): number {
+      return (document.getText as Mock).mock.calls.length;
+    }
+
+    /** Lets each open document's project walk answer, and the lint that follows it run. */
+    async function settleWalks(): Promise<void> {
+      await vi.advanceTimersByTimeAsync(0);
     }
 
     beforeEach(() => {
@@ -767,124 +844,158 @@ describe('TscnDiagnostics', () => {
       (vscode.workspace.fs.stat as Mock).mockResolvedValue({ type: 1, size: 0, ctime: 0, mtime: 0 });
     });
 
-    function publishedFor(document: vscode.TextDocument): number {
-      return collection.set.mock.calls.filter(([uri]) => uri === document.uri).length;
-    }
+    it('watches project.godot and the GDExtension list itself, and glTF files through the resource watcher', () => {
+      const diagnostics = newDiagnostics();
 
-    it('watches glTF files, project.godot and the GDExtension list', () => {
-      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
-
-      expect(watchers.map((w) => w.pattern).sort()).toEqual([
-        '**/*.{glb,gltf,GLB,GLTF}',
-        '**/project.godot',
-        '**/{.godot,godot}/extension_list.cfg',
-      ]);
+      expect(watchers.map((w) => w.pattern).sort()).toEqual(
+        [RESOURCE_FILES_PATTERN, PROJECT_FILE_PATTERN, EXTENSION_LIST_PATTERN].sort()
+      );
       diagnostics.dispose();
     });
 
     it.each(['change', 'create', 'delete'] as const)(
-      're-lints each open scene of the folder, after the edit debounce, when a glTF is %sd',
-      (kind) => {
-        const level = makeTscnDocument(VALID_TSCN, '/workspace/scenes/level.tscn');
-        const material = makeTscnDocument(VALID_TRES, '/workspace/material.tres');
-        const elsewhere = makeTscnDocument(VALID_TSCN, '/other/level.tscn');
+      're-lints, after the edit debounce, only each open document whose last lint read a glTF that is %sd',
+      async (kind) => {
+        const level = sceneUsingTree('/workspace/scenes');
+        const plain = makeTscnDocument(VALID_TSCN, '/workspace/plain.tscn');
+        const elsewhere = sceneUsingTree('/other');
         const readme = {
           ...makeTscnDocument(VALID_TSCN, '/workspace/readme.md'),
           languageId: 'markdown',
           fileName: '/workspace/readme.md',
         } as unknown as vscode.TextDocument;
-        open(level, material, elsewhere, readme);
-        const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
-        collection.set.mockClear();
+        open(level, plain, elsewhere, readme);
+        const diagnostics = newDiagnostics();
+        await settleWalks();
+        const before = [level, plain, elsewhere, readme].map(lintsOf);
 
-        fire(kind, '/workspace/models/tree.glb');
+        fire(kind, '/workspace/tree.glb');
         vi.advanceTimersByTime(DEFAULT_LINT_DEBOUNCE_MS - 1);
-        expect(collection.set).not.toHaveBeenCalled();
+        expect(lintsOf(level)).toBe(before[0]);
         vi.advanceTimersByTime(1);
 
-        expect(publishedFor(level)).toBe(1);
-        expect(publishedFor(material)).toBe(1);
-        expect(publishedFor(elsewhere)).toBe(0);
-        expect(publishedFor(readme)).toBe(0);
+        expect([level, plain, elsewhere, readme].map(lintsOf)).toEqual([before[0]! + 1, ...before.slice(1)]);
         diagnostics.dispose();
       }
     );
 
-    it('re-lints when the GDExtension list changes', () => {
-      const level = makeTscnDocument(VALID_TSCN, '/workspace/scenes/level.tscn');
+    it('re-lints a document that reads the glTF through an uppercase extension', async () => {
+      const level = makeTscnDocument(
+        sceneUsingTree('/workspace').getText().replace('res://tree.glb', 'res://TREE.GLB'),
+        '/workspace/level.tscn'
+      );
       open(level);
-      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
-      collection.set.mockClear();
+      const diagnostics = newDiagnostics();
+      await settleWalks();
+      const before = lintsOf(level);
+
+      fire('change', '/workspace/TREE.GLB');
+      vi.advanceTimersByTime(DEFAULT_LINT_DEBOUNCE_MS);
+
+      expect(lintsOf(level)).toBe(before + 1);
+      diagnostics.dispose();
+    });
+
+    it('re-lints a document that reads a glTF when the GDExtension list changes', async () => {
+      const level = sceneUsingTree('/workspace/scenes');
+      const plain = makeTscnDocument(VALID_TSCN, '/workspace/plain.tscn');
+      open(level, plain);
+      const diagnostics = newDiagnostics();
+      await settleWalks();
+      const before = [level, plain].map(lintsOf);
 
       fire('change', '/workspace/.godot/extension_list.cfg');
       vi.advanceTimersByTime(DEFAULT_LINT_DEBOUNCE_MS);
 
-      expect(publishedFor(level)).toBe(1);
+      expect([level, plain].map(lintsOf)).toEqual([before[0]! + 1, before[1]]);
       diagnostics.dispose();
     });
 
-    it('ignores a file outside every workspace folder', () => {
-      open(makeTscnDocument(VALID_TSCN, '/workspace/scenes/level.tscn'));
-      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
-      collection.set.mockClear();
+    it('ignores a file outside every project', async () => {
+      const level = sceneUsingTree('/workspace/scenes');
+      open(level);
+      const diagnostics = newDiagnostics();
+      await settleWalks();
+      const before = lintsOf(level);
 
       fire('change', '/elsewhere/tree.glb');
       vi.advanceTimersByTime(DEFAULT_LINT_DEBOUNCE_MS);
 
-      expect(collection.set).not.toHaveBeenCalled();
+      expect(lintsOf(level)).toBe(before);
       diagnostics.dispose();
     });
 
     it('re-lints nothing while diagnostics are disabled', () => {
       mockDiagnosticsConfig({ enabled: false });
-      open(makeTscnDocument(VALID_TSCN, '/workspace/scenes/level.tscn'));
-      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+      const level = sceneUsingTree('/workspace/scenes');
+      open(level);
+      const diagnostics = newDiagnostics();
 
       fire('change', '/workspace/tree.glb');
+      fire('change', '/workspace/project.godot');
       vi.advanceTimersByTime(DEFAULT_LINT_DEBOUNCE_MS);
 
-      expect(collection.set).not.toHaveBeenCalled();
+      expect(lintsOf(level)).toBe(0);
       diagnostics.dispose();
     });
 
-    it("walks for the project root again after the folder's project.godot changes", async () => {
-      vi.useRealTimers();
-      const level = makeTscnDocument(
-        [
-          '[gd_scene format=3]',
-          '',
-          '[ext_resource type="PackedScene" path="res://tree.glb" id="1_tree"]',
-          '',
-          '[node name="Root" type="Node3D"]',
-          '',
-          '[node name="Tree" parent="." instance=ExtResource("1_tree")]',
-        ].join('\n'),
-        '/workspace/scenes/level.tscn'
-      );
-      open(level);
+    it("walks again and re-lints each document under a project.godot that changes, and no other", async () => {
+      const level = sceneUsingTree('/workspace/scenes');
+      const elsewhere = sceneUsingTree('/other');
+      open(level, elsewhere);
+      // The walk from `scenes/` asks its own directory first. The plugin probe stamps only the root's project file.
       const projectFileChecks = () =>
-        (vscode.workspace.fs.stat as Mock).mock.calls.filter(([uri]) => uri.fsPath === '/workspace/project.godot')
-          .length;
-      mockDiagnosticsConfig({ lintDebounceMs: 0 });
-      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
-      await vi.waitFor(() => expect(projectFileChecks()).toBe(1));
-
-      fire('change', '/workspace/tree.glb');
-      await new Promise((resolve) => setTimeout(resolve, 10));
+        (vscode.workspace.fs.stat as Mock).mock.calls.filter(
+          ([uri]) => uri.fsPath === '/workspace/scenes/project.godot'
+        ).length;
+      const diagnostics = newDiagnostics();
+      await settleWalks();
       expect(projectFileChecks()).toBe(1);
 
+      fire('change', '/workspace/tree.glb');
+      await vi.advanceTimersByTimeAsync(DEFAULT_LINT_DEBOUNCE_MS);
+      expect(projectFileChecks()).toBe(1);
+      const before = [level, elsewhere].map(lintsOf);
+
       fire('change', '/workspace/project.godot');
-      await vi.waitFor(() => expect(projectFileChecks()).toBe(2));
+      await settleWalks();
+
+      expect(projectFileChecks()).toBe(2);
+      expect([level, elsewhere].map(lintsOf)).toEqual([before[0]! + 1, before[1]]);
       diagnostics.dispose();
     });
 
-    it('disposes its watchers with itself', () => {
-      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+    it('keeps the verdicts of a project whose root a project.godot event leaves unchanged', async () => {
+      (vscode.workspace.fs.stat as Mock).mockImplementation((uri: vscode.Uri) =>
+        ['/workspace/project.godot', '/workspace/tree.glb'].includes(uri.fsPath)
+          ? Promise.resolve({ type: 1, ctime: 0, mtime: 1, size: 1 })
+          : Promise.reject(new Error('Not found'))
+      );
+      const glbReads = () =>
+        (vscode.workspace.fs.readFile as Mock).mock.calls.filter(([uri]) => uri.fsPath === '/workspace/tree.glb')
+          .length;
+      const level = sceneUsingTree('/workspace/scenes');
+      open(level);
+      const diagnostics = newDiagnostics();
+      await settleWalks();
+      expect(glbReads()).toBe(1);
+
+      fire('change', '/workspace/project.godot');
+      await settleWalks();
+
+      expect(glbReads()).toBe(1);
+      diagnostics.dispose();
+    });
+
+    it('disposes the watchers it creates with itself, and leaves the resource watcher to its owner', () => {
+      const diagnostics = newDiagnostics();
 
       diagnostics.dispose();
 
       expect(watchers).toHaveLength(3);
-      for (const watcher of watchers) expect(watcher.dispose).toHaveBeenCalledTimes(1);
+      for (const watcher of watchers) {
+        expect(watcher.dispose).toHaveBeenCalledTimes(watcher.pattern === RESOURCE_FILES_PATTERN ? 0 : 1);
+      }
     });
   });
 
@@ -908,7 +1019,7 @@ describe('TscnDiagnostics', () => {
         document,
       ];
 
-      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+      const diagnostics = newDiagnostics();
 
       expect(collection.set).not.toHaveBeenCalled();
       diagnostics.dispose();
@@ -922,7 +1033,7 @@ describe('TscnDiagnostics', () => {
         return { dispose: vi.fn() };
       });
 
-      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+      const diagnostics = newDiagnostics();
       openHandler!(makeTscnDocument(VALID_TSCN));
 
       expect(collection.set).not.toHaveBeenCalled();
@@ -939,9 +1050,7 @@ describe('TscnDiagnostics', () => {
           return { dispose: vi.fn() };
         });
 
-        const diagnostics = new TscnDiagnostics(
-          collection as unknown as vscode.DiagnosticCollection
-        );
+        const diagnostics = newDiagnostics();
         const document = makeTscnDocument(VALID_TSCN);
 
         changeHandler!({ document });
@@ -972,9 +1081,7 @@ describe('TscnDiagnostics', () => {
           return { dispose: vi.fn() };
         });
 
-        const diagnostics = new TscnDiagnostics(
-          collection as unknown as vscode.DiagnosticCollection
-        );
+        const diagnostics = newDiagnostics();
         const document = makeTscnDocument(VALID_TSCN);
         changeHandler!({ document });
 
@@ -1004,7 +1111,7 @@ describe('TscnDiagnostics', () => {
         document,
       ];
 
-      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+      const diagnostics = newDiagnostics();
       expect(collection.set).not.toHaveBeenCalled();
 
       mockDiagnosticsConfig({ enabled: true });
@@ -1022,7 +1129,7 @@ describe('TscnDiagnostics', () => {
         return { dispose: vi.fn() };
       });
 
-      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+      const diagnostics = newDiagnostics();
       configHandler!({ affectsConfiguration: () => false });
 
       expect(collection.clear).not.toHaveBeenCalled();

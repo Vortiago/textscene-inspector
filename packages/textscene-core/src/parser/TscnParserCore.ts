@@ -160,7 +160,7 @@ export class TscnParserCore {
           observer?.onSectionBuilt?.(resource, currentHeadingLine);
         }
       } else if (currentSection === 'resource') {
-        mainResource = { type: headerResourceType ?? '', data: currentProperties };
+        mainResource = { data: currentProperties };
         observer?.onSectionBuilt?.(mainResource, currentHeadingLine);
       }
 
@@ -328,6 +328,7 @@ export class TscnParserCore {
       ...(orphanedNodes.length > 0 ? { orphanedNodes } : {}),
       ...(rootWithParent ? { rootWithParent } : {}),
       ...(emptyParents.length > 0 ? { emptyParentHeadings: emptyParents } : {}),
+      ...(headerResourceType !== undefined ? { resourceType: headerResourceType } : {}),
       ...(mainResource ? { mainResource } : {}),
     };
   }

@@ -53,6 +53,11 @@ export interface TscnScene {
    */
   emptyParentHeadings?: readonly NodeOrigin[];
   /**
+   * A `.tres` file's `[gd_resource type=]`, the class the loader builds its `[resource]` body as
+   * (`resource_format_text.cpp:1166`, `:741`). Absent in a `.tscn`, and where the header names no type.
+   */
+  resourceType?: string;
+  /**
    * A `.tres` file's own `[resource]` body. Absent in a `.tscn`, where the loader refuses the tag
    * (`resource_format_text.cpp:723-728`).
    */
@@ -140,13 +145,10 @@ export interface TscnInternalResource {
 }
 
 /**
- * A `.tres` file's `[resource]` body. It has no id and no `type=`: the loader builds the class the
- * `[gd_resource]` header names (`resource_format_text.cpp:741`). `data` holds the raw values, keyed
- * as the scan stores them.
+ * A `.tres` file's `[resource]` body. It has no id and no `type=`: its class is the header's,
+ * {@link TscnScene.resourceType}. `data` holds the raw values, keyed as the scan stores them.
  */
 export interface TscnMainResource {
-  /** The header's `type=`, or empty where it declares none. */
-  type: string;
   data: Record<string, string>;
 }
 

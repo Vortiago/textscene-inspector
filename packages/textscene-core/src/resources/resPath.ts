@@ -4,8 +4,9 @@
  * back with forward slashes, which every host's filesystem API accepts.
  */
 
+import { PROJECT_FILE_NAME } from '../godot/project.js';
+
 const RES_SCHEME = 'res://';
-const PROJECT_FILE = 'project.godot';
 
 /**
  * `path` without its trailing slashes. A loop, not `/\/+$/`: that regex backtracks quadratically on a
@@ -104,5 +105,5 @@ export async function findProjectRoot<Dir>(
 
 /** The `project.godot` a directory holds, for a host's `hasProjectFile`. */
 export function projectFileIn(dir: string): string {
-  return joinUnder(dir, PROJECT_FILE);
+  return joinUnder(dir, PROJECT_FILE_NAME);
 }

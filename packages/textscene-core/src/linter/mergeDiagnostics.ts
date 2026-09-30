@@ -1,6 +1,6 @@
 /**
- * The order every host shows diagnostics in, and the merge of a file's own diagnostics with the cross-file ones
- * `Linter.lintProject` reads later. The hosts and the CLI publish through it, so they agree on one order.
+ * The order every host shows diagnostics in, and the merge of a file's own diagnostics with the cross-file ones a
+ * `LintSession` reads later. `Linter` and the session sort through it, so every host shows one order.
  */
 
 import { SEVERITY_ORDER, flooredSeverity, type Diagnostic } from './types.js';

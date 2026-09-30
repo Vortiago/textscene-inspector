@@ -1,24 +1,18 @@
 /**
- * Where a Godot 4.6.3 project keeps its generated data, and how the GDExtension list in it reads
+ * Where a Godot 4.6.3 project keeps its GDExtension list, and how the list reads
  * (`project_settings.cpp:879-880`, `gdextension.cpp:45-46`, `gdextension_manager.cpp:319-334`).
  */
 
 import { describe, expect, it } from 'vitest';
-import { EXTENSION_LIST_FILE, extensionListEntries, projectDataPath } from './project.js';
+import { extensionListEntries, extensionListPath } from './project.js';
 
-describe('projectDataPath', () => {
-  it('is res://.godot for the default hidden directory', () => {
-    expect(projectDataPath(true)).toBe('res://.godot');
+describe('extensionListPath', () => {
+  it('is in res://.godot for the default hidden directory', () => {
+    expect(extensionListPath(true)).toBe('res://.godot/extension_list.cfg');
   });
 
-  it('is res://godot when the project turns the hidden directory off', () => {
-    expect(projectDataPath(false)).toBe('res://godot');
-  });
-});
-
-describe('EXTENSION_LIST_FILE', () => {
-  it('names the file the manager reads', () => {
-    expect(EXTENSION_LIST_FILE).toBe('extension_list.cfg');
+  it('is in res://godot when the project turns the hidden directory off', () => {
+    expect(extensionListPath(false)).toBe('res://godot/extension_list.cfg');
   });
 });
 

@@ -19,14 +19,12 @@ export class WebResourceProvider implements ResourceProvider {
     this.hasFixturesMirror = hasFixturesMirror;
   }
 
-  /** Uploaded files, keyed per corpus root by {@link uploadKey}. */
-  private uploadedFiles: Map<string, File> = new Map();
   /**
-   * Each upload's serial, keyed like `uploadedFiles`. Written by `addUploadedFile` from
-   * `uploadCount`, deleted with its file. A serial, not the file's `lastModified` and
-   * `size`: two different files can share both.
+   * Uploaded files, keyed per corpus root by {@link uploadKey}, each with its upload's serial
+   * from `uploadCount`. A serial, not the file's `lastModified` and `size`: two different files
+   * can share both.
    */
-  private uploadSerials: Map<string, number> = new Map();
+  private uploadedFiles: Map<string, { file: File; serial: number }> = new Map();
   private uploadCount = 0;
   /**
    * Public-fixtures subtree the active scene's res:// namespace maps onto: '' for
@@ -55,9 +53,7 @@ export class WebResourceProvider implements ResourceProvider {
    * @param file - The uploaded File object
    */
   addUploadedFile(path: string, file: File): void {
-    const key = this.uploadKey(path);
-    this.uploadedFiles.set(key, file);
-    this.uploadSerials.set(key, ++this.uploadCount);
+    this.uploadedFiles.set(this.uploadKey(path), { file, serial: ++this.uploadCount });
   }
 
   /**
@@ -72,7 +68,6 @@ export class WebResourceProvider implements ResourceProvider {
     for (const key of this.uploadedFiles.keys()) {
       if (key.endsWith(suffix)) {
         this.uploadedFiles.delete(key);
-        this.uploadSerials.delete(key);
         removed = true;
       }
     }
@@ -85,15 +80,15 @@ export class WebResourceProvider implements ResourceProvider {
    * changes under a running page.
    */
   async stamp(path: string): Promise<string> {
-    const serial = this.uploadSerials.get(this.uploadKey(path));
-    return serial === undefined ? `mirror:${this.resourceRoot}` : `upload:${serial}`;
+    const upload = this.uploadedFiles.get(this.uploadKey(path));
+    return upload === undefined ? `mirror:${this.resourceRoot}` : `upload:${upload.serial}`;
   }
 
   async loadResource(path: string, type: string): Promise<string | ArrayBuffer> {
     // Uploaded files of the active corpus root first.
-    const uploadedFile = this.uploadedFiles.get(this.uploadKey(path));
-    if (uploadedFile) {
-      return isBinaryResourceType(type, path) ? uploadedFile.arrayBuffer() : uploadedFile.text();
+    const upload = this.uploadedFiles.get(this.uploadKey(path));
+    if (upload) {
+      return isBinaryResourceType(type, path) ? upload.file.arrayBuffer() : upload.file.text();
     }
 
     if (this.hasFixturesMirror && path.startsWith('res://')) {

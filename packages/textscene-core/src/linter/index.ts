@@ -285,7 +285,6 @@ export { registeredTypes } from './registryPopulation.js';
 export { ruleRegistry } from './RuleRegistry.js';
 export { SEVERITY_ORDER, flooredSeverity, isSeverity } from './types.js';
 export { diagnosticLine } from './diagnosticLine.js';
-export { mergeDiagnostics, sortDiagnostics } from './mergeDiagnostics.js';
 
 // Re-export types
 export type {
@@ -296,10 +295,10 @@ export type {
   RuleMeta,
   ParseError,
   StrictParseResult,
-  ProjectLintResult,
   SectionLines,
   SourceLines,
 } from './types.js';
 export type { PropertyValidator } from './ValidatorRegistry.js';
-// The seam `Linter.lintProject` reads a scene's dependencies through, so a host needs no second import to type one.
+export type { LintSession, SessionLint } from './LintSession.js';
+// The seam a lint session reads a scene's dependencies through, so a host needs no second import to type one.
 export type { ResourceProvider } from '../resources/ResourceProvider.js';

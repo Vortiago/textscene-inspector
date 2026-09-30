@@ -1,29 +1,22 @@
 /**
- * Where Godot 4.6.3 keeps a project's generated data, and the GDExtension list it keeps there.
+ * The files Godot 4.6.3 reads at a project's root: its settings, and the GDExtension list in its data directory.
  */
+
+import { stripEdges } from './string.js';
+
+/** The settings file whose directory is the project's `res://` root (`project_settings.cpp:793`). */
+export const PROJECT_FILE_NAME = 'project.godot';
+
+/** {@link PROJECT_FILE_NAME} as the `res://` path a provider loads. */
+export const PROJECT_FILE_PATH = `res://${PROJECT_FILE_NAME}`;
 
 /**
- * `res://` plus the data directory's name: `.godot`, or `godot` when the project sets
- * `application/config/use_hidden_project_data_directory` to false (`project_settings.cpp:60-61`,
- * `:879-880`). The setting defaults to true (`:1694`).
+ * The `res://` path of the file that lists the GDExtensions the project loads (`gdextension.cpp:45-46`). It sits in
+ * the data directory: `.godot`, or `godot` when `application/config/use_hidden_project_data_directory` is false
+ * (`project_settings.cpp:60-61`, `:879-880`). The setting defaults to true (`:1694`).
  */
-export function projectDataPath(useHiddenDirectory: boolean): string {
-  return `res://${useHiddenDirectory ? '.' : ''}godot`;
-}
-
-/** The file in the data directory that lists the GDExtensions the project loads (`gdextension.cpp:45-46`). */
-export const EXTENSION_LIST_FILE = 'extension_list.cfg';
-
-/** The highest code `String::strip_edges` strips: every control character and the space (`ustring.cpp:4076`). */
-const STRIPPED_MAX_CODE = 32;
-
-/** `String::strip_edges`: every character up to 32 goes from each end, and nothing else (`ustring.cpp:4070-4099`). */
-function stripEdges(text: string): string {
-  let begin = 0;
-  let end = text.length;
-  while (begin < end && text.charCodeAt(begin) <= STRIPPED_MAX_CODE) begin++;
-  while (end > begin && text.charCodeAt(end - 1) <= STRIPPED_MAX_CODE) end--;
-  return text.slice(begin, end);
+export function extensionListPath(useHiddenDirectory: boolean): string {
+  return `res://${useHiddenDirectory ? '.' : ''}godot/extension_list.cfg`;
 }
 
 /**

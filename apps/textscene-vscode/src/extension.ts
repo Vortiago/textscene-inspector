@@ -10,6 +10,7 @@ import { TscnDocumentLinkProvider } from './TscnDocumentLinkProvider';
 import { TscnDiagnostics } from './TscnDiagnostics';
 import { initLogger, dispose as disposeLogger } from './logger';
 import { isUri } from './uriArgument';
+import { RESOURCE_FILES_PATTERN } from './watchPatterns';
 
 export function activate(context: vscode.ExtensionContext) {
   initLogger('TextScene Inspector');
@@ -84,8 +85,11 @@ export function activate(context: vscode.ExtensionContext) {
     )
   );
 
-  // Linter diagnostics in the Problems panel.
-  context.subscriptions.push(new TscnDiagnostics());
+  // External resource changes: materials (.tres), textures (png/jpg/webp/svg), glTF
+  // meshes and instanced sub-scenes (.tscn). One watcher serves the previews and the
+  // linter diagnostics in the Problems panel.
+  const resourceWatcher = vscode.workspace.createFileSystemWatcher(RESOURCE_FILES_PATTERN);
+  context.subscriptions.push(resourceWatcher, new TscnDiagnostics(resourceWatcher));
 
   context.subscriptions.push(
     vscode.workspace.onDidSaveTextDocument((document) => {
@@ -97,17 +101,6 @@ export function activate(context: vscode.ExtensionContext) {
       }
     })
   );
-
-  // Watch for external resource file changes: materials (.tres), textures
-  // (png/jpg/webp/svg), GLB/glTF meshes, and instanced sub-scenes (.tscn).
-  const resourceWatcher = vscode.workspace.createFileSystemWatcher(
-    '**/*.{tres,png,jpg,jpeg,webp,svg,glb,gltf,tscn}',
-    false, // ignoreCreateEvents
-    false, // ignoreChangeEvents
-    false  // ignoreDeleteEvents
-  );
-
-  context.subscriptions.push(resourceWatcher);
 
   // The panel whose own main scene changed re-reads it, which catches an external
   // edit (git pull, branch switch) that fires no save event. The content-diff guard

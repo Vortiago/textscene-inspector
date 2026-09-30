@@ -1,6 +1,6 @@
 /**
- * The linter's provider reads a `res://` path under the document's project root and
- * nowhere else, so the Problems panel reports the files the CLI reports.
+ * The linter's provider reads a `res://` path under its project root and nowhere else,
+ * so the Problems panel reports the files the CLI reports.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
@@ -14,7 +14,6 @@ const DISK: Record<string, Uint8Array> = {
   '/workspace/game/project.godot': createMockFileData('config_version=5\n'),
   '/workspace/game/models/tree.glb': new Uint8Array([0x67, 0x6c, 0x54, 0x46]),
   '/workspace/game/scenes/level.tscn': createMockFileData('[gd_scene format=3]\n'),
-  '/workspace/game/scenes/beside.glb': new Uint8Array([1, 2, 3]),
   '/workspace/secret.txt': createMockFileData('outside the project'),
 };
 
@@ -24,7 +23,7 @@ function onDisk(uri: vscode.Uri): Promise<Uint8Array> {
 }
 
 function providerForLevel(): LintResourceProvider {
-  return new LintResourceProvider(createMockUri('/workspace'), createMockUri('/workspace/game/scenes/level.tscn'));
+  return new LintResourceProvider(createMockUri('/workspace/game'));
 }
 
 beforeEach(() => {
@@ -62,10 +61,6 @@ describe('LintResourceProvider', () => {
     for (const level of Object.values(log)) expect(level).not.toHaveBeenCalled();
   });
 
-  it("gives null for a file beside the document, which Godot never reads for a res:// path", async () => {
-    expect(await providerForLevel().loadResource('res://beside.glb', 'PackedScene')).toBeNull();
-  });
-
   it('refuses a path that escapes the project root, reading nothing', async () => {
     expect(await providerForLevel().loadResource('res://../secret.txt', 'TextFile')).toBeNull();
     expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
@@ -76,23 +71,10 @@ describe('LintResourceProvider', () => {
     expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
   });
 
-  it('reads nothing for a document in no Godot project, as the CLI declines one', async () => {
-    const outside = new LintResourceProvider(createMockUri('/workspace'), createMockUri('/workspace/loose/level.tscn'));
-    (vscode.workspace.fs.stat as Mock).mockRejectedValue(new Error('ENOENT'));
-
-    expect(await outside.loadResource('res://game/models/tree.glb', 'PackedScene')).toBeNull();
-    expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
-  });
-
-  it('walks for the project root once across reads', async () => {
-    const provider = providerForLevel();
-    await provider.loadResource('res://models/tree.glb', 'PackedScene');
-    const walked = (vscode.workspace.fs.stat as Mock).mock.calls.length;
-
-    await provider.loadResource('res://scenes/level.tscn', 'PackedScene');
-
-    expect(walked).toBeGreaterThan(0);
-    expect(vscode.workspace.fs.stat).toHaveBeenCalledTimes(walked);
+  it('names the workspace file of a res:// path, and nothing for one that escapes the root', () => {
+    expect(providerForLevel().fileOf('res://models/tree.glb')?.fsPath).toBe('/workspace/game/models/tree.glb');
+    expect(providerForLevel().fileOf('res://../secret.txt')).toBeNull();
+    expect(providerForLevel().fileOf('/workspace/secret.txt')).toBeNull();
   });
 });
 
@@ -123,20 +105,5 @@ describe('LintResourceProvider stamp', () => {
     const provider = providerForLevel();
     expect(await provider.stamp('res://../secret.txt')).toBeNull();
     expect(await provider.stamp('/workspace/secret.txt')).toBeNull();
-  });
-
-  it('gives null for a document in no Godot project', async () => {
-    const outside = new LintResourceProvider(createMockUri('/workspace'), createMockUri('/workspace/loose/level.tscn'));
-    expect(await outside.stamp('res://game/models/tree.glb')).toBeNull();
-  });
-
-  it('shares the project-root walk with loadResource', async () => {
-    const provider = providerForLevel();
-    await provider.loadResource('res://models/tree.glb', 'PackedScene');
-    const walked = (vscode.workspace.fs.stat as Mock).mock.calls.length;
-
-    await provider.stamp('res://models/tree.glb');
-
-    expect(vscode.workspace.fs.stat).toHaveBeenCalledTimes(walked + 1);
   });
 });

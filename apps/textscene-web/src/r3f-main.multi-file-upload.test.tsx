@@ -214,20 +214,30 @@ describe('no-.tscn drop fulfills missing rows', () => {
   });
 
   it('re-lints the Source pane once the upload lands, since a cross-file rule may read it', async () => {
-    const lintProjectSpy = vi.spyOn(Linter.prototype, 'lintProject');
+    const linted: string[] = [];
+    const realSession = Linter.prototype.session;
+    vi.spyOn(Linter.prototype, 'session').mockImplementation(function (this: Linter) {
+      const session = realSession.call(this);
+      const lint = session.lint.bind(session);
+      session.lint = (content, provider) => {
+        linted.push(content);
+        return lint(content, provider);
+      };
+      return session;
+    });
     missingPathsOverride.current = new Set(['res://textures/child_tex.png']);
 
     render(<R3FApp />);
     await waitForScene();
-    await waitFor(() => expect(lintProjectSpy).toHaveBeenCalled());
-    const lintsBefore = lintProjectSpy.mock.calls.length;
+    await waitFor(() => expect(linted.length).toBeGreaterThan(0));
+    const lintsBefore = linted.length;
 
     await act(async () => {
       dropFiles([new File(['bytes'], 'child_tex.png', { type: 'image/png' })]);
     });
 
-    await waitFor(() => expect(lintProjectSpy.mock.calls.length).toBeGreaterThan(lintsBefore));
-    expect(lintProjectSpy.mock.calls.at(-1)![0]).toBe(lintProjectSpy.mock.calls[lintsBefore - 1]![0]);
+    await waitFor(() => expect(linted.length).toBeGreaterThan(lintsBefore));
+    expect(linted.at(-1)).toBe(linted[lintsBefore - 1]);
   });
 
   it('surfaces the no-match error when dropping a texture with no missing rows', async () => {

@@ -94,7 +94,7 @@ export const FILE_DIAGNOSTICS = {
    * A used `[ext_resource]` whose `.glb`/`.gltf` requires a glTF extension outside Godot's importer set, in a project
    * that enables no editor plugin and loads no GDExtension, so nothing can add the extension. The import refuses the
    * file (`gltf_document.cpp:7197-7202`), and the text loader aborts the scene where a value names the resource
-   * (`resource_format_text.cpp:145-151`). It and the row below read other files, so only `lintProject` reports them.
+   * (`resource_format_text.cpp:145-151`). It and the row below read other files, so only a lint session reports them.
    */
   unimportableGltf: {
     severity: 'error',

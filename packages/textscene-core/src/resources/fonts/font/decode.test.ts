@@ -26,6 +26,11 @@ describe('parsePackedStringArray', () => {
     expect(parsePackedStringArray('PackedStringArray()')).toEqual([]);
     expect(parsePackedStringArray('"sans-serif"')).toEqual([]);
   });
+
+  it('reads the typed and the bare array, which the slot converts', () => {
+    expect(parsePackedStringArray('Array[String](["sans-serif"])')).toEqual(['sans-serif']);
+    expect(parsePackedStringArray('["sans-serif"]')).toEqual(['sans-serif']);
+  });
 });
 
 describe('decodeFont', () => {

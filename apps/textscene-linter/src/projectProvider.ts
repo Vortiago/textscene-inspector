@@ -19,6 +19,16 @@ async function probeProjectFile(dir: string): Promise<boolean> {
   }
 }
 
+/** `map`'s value for `key`, made by `make` and kept the first time `key` is asked for. */
+function memo<V>(map: Map<string, V>, key: string, make: (key: string) => V): V {
+  let value = map.get(key);
+  if (value === undefined) {
+    value = make(key);
+    map.set(key, value);
+  }
+  return value;
+}
+
 /**
  * Each directory's answer, written by `hasProjectFile` and never cleared: one CLI run lints a tree whose
  * scenes share their ancestors, so each directory is probed once per run, not once per scene.
@@ -26,12 +36,7 @@ async function probeProjectFile(dir: string): Promise<boolean> {
 const projectFileByDir = new Map<string, Promise<boolean>>();
 
 function hasProjectFile(dir: string): Promise<boolean> {
-  let answer = projectFileByDir.get(dir);
-  if (answer === undefined) {
-    answer = probeProjectFile(dir);
-    projectFileByDir.set(dir, answer);
-  }
-  return answer;
+  return memo(projectFileByDir, dir, probeProjectFile);
 }
 
 /**
@@ -78,11 +83,5 @@ const providerByRoot = new Map<string, ResourceProvider>();
 export async function projectProviderFor(scenePath: string): Promise<ResourceProvider | null> {
   // No stop directory: the CLI has no workspace to bound the walk, so it climbs to the filesystem root.
   const root = await findProjectRoot(dirname(resolve(scenePath)), parentDir, () => false, hasProjectFile);
-  if (root === null) return null;
-  let provider = providerByRoot.get(root);
-  if (provider === undefined) {
-    provider = fileProvider(root);
-    providerByRoot.set(root, provider);
-  }
-  return provider;
+  return root === null ? null : memo(providerByRoot, root, fileProvider);
 }

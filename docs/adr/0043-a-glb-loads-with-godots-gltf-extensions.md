@@ -56,4 +56,6 @@ richer picture. No host exposes the switch yet.
   editor plugin or a GDExtension can register a `GLTFDocumentExtension` that adds the
   extension (`gltf_document.cpp:6798-6804`), and the linter cannot see which extensions
   such code adds. So the report is an error only when the project enables no editor plugin
-  and loads no GDExtension, and a warning when it does.
+  and loads no GDExtension, and a warning when it does. The linter reads both facts from
+  `project.godot` and the GDExtension list, and reads either file again only when its stamp
+  changes.

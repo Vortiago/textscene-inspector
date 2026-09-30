@@ -1,4 +1,4 @@
-/** The one merge every host and the CLI publish through: a file's own diagnostics and the cross-file ones, sorted. */
+/** The one merge a lint session publishes through: a file's own diagnostics and the cross-file ones, sorted. */
 
 import { describe, expect, it } from 'vitest';
 import { mergeDiagnostics, sortDiagnostics } from './mergeDiagnostics.js';

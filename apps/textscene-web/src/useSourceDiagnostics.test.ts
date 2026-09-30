@@ -33,7 +33,7 @@ afterEach(() => {
 const EMPTY_PROJECT: ResourceProvider = { loadResource: async () => null };
 
 function lintedPane(buffer: string) {
-  const hook = renderHook(({ text }) => useSourceDiagnostics(text, EMPTY_PROJECT), {
+  const hook = renderHook(({ text }) => useSourceDiagnostics(text, EMPTY_PROJECT, 0), {
     initialProps: { text: buffer },
   });
   act(() => {
@@ -123,7 +123,7 @@ function debounce(): void {
 describe('useSourceDiagnostics with a resource provider', () => {
   it("adds a refused glTF on its ext_resource heading once the scene's dependencies are read", async () => {
     const { provider, pending } = heldProvider();
-    const { result } = renderHook(() => useSourceDiagnostics(USES_TREE_GLB, provider));
+    const { result } = renderHook(() => useSourceDiagnostics(USES_TREE_GLB, provider, 0));
     act(() => {
       vi.advanceTimersByTime(DEBOUNCE_MS);
     });
@@ -139,7 +139,7 @@ describe('useSourceDiagnostics with a resource provider', () => {
 
   it('drops the result of a lint whose buffer has changed since', async () => {
     const { provider, pending } = heldProvider();
-    const { result, rerender } = renderHook(({ text }) => useSourceDiagnostics(text, provider), {
+    const { result, rerender } = renderHook(({ text }) => useSourceDiagnostics(text, provider, 0), {
       initialProps: { text: USES_TREE_GLB },
     });
     act(() => {
@@ -159,7 +159,7 @@ describe('useSourceDiagnostics with a resource provider', () => {
 
   it("keeps the refused glTF on its heading while an edit's read is pending", async () => {
     const { provider, pending } = heldProvider();
-    const { result, rerender } = renderHook(({ text }) => useSourceDiagnostics(text, provider), {
+    const { result, rerender } = renderHook(({ text }) => useSourceDiagnostics(text, provider, 0), {
       initialProps: { text: USES_TREE_GLB },
     });
     debounce();
@@ -177,7 +177,7 @@ describe('useSourceDiagnostics with a resource provider', () => {
 
   it('drops the refused glTF once an edit leaves the buffer with no glTF to read', async () => {
     const { provider, pending } = heldProvider();
-    const { result, rerender } = renderHook(({ text }) => useSourceDiagnostics(text, provider), {
+    const { result, rerender } = renderHook(({ text }) => useSourceDiagnostics(text, provider, 0), {
       initialProps: { text: USES_TREE_GLB },
     });
     debounce();
@@ -188,6 +188,21 @@ describe('useSourceDiagnostics with a resource provider', () => {
 
     expect(result.current.diagnosticsByLine.has(3)).toBe(false);
     expect(result.current.problemBadge).toBeNull();
+  });
+
+  it('renders once per lint when the read adds no cross-file diagnostic', async () => {
+    const provider: ResourceProvider = { loadResource: async () => null };
+    let renders = 0;
+    renderHook(() => {
+      renders++;
+      return useSourceDiagnostics(USES_TREE_GLB, provider, 0);
+    });
+    debounce();
+    const afterLint = renders;
+
+    await releaseAll([]);
+
+    expect(renders).toBe(afterLint);
   });
 
   it("re-lints the unchanged buffer when the project's files change", async () => {

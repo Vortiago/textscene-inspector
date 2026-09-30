@@ -157,15 +157,23 @@ item/0/mesh = ExtResource("1_tree")
 
       const scene = parser.parse(content, () => null);
 
+      expect(scene.resourceType).toBe('MeshLibrary');
       expect(scene.mainResource).toEqual({
-        type: 'MeshLibrary',
         data: { 'item/0/name': '"Tree"', 'item/0/mesh': 'ExtResource("1_tree")' },
       });
     });
 
-    it('leaves the main resource absent for a scene, which has no [resource] body', () => {
+    it('keeps the header type of a .tres that has no [resource] body', () => {
+      const scene = parser.parse('[gd_resource type="Environment" format=3]\n', () => null);
+
+      expect(scene.resourceType).toBe('Environment');
+      expect(scene).not.toHaveProperty('mainResource');
+    });
+
+    it('leaves the header type and the main resource absent for a scene', () => {
       const scene = parser.parse('[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n', () => null);
 
+      expect(scene).not.toHaveProperty('resourceType');
       expect(scene).not.toHaveProperty('mainResource');
     });
   });
@@ -641,7 +649,7 @@ second"
         parser.parse(content, simpleCreator, {
           onSectionStart: (heading) => events.push(`start ${heading.attributes.name}`),
           onProperty: ({ key }) => events.push(`property ${key}`),
-          onSectionBuilt: (built) => events.push(`built ${'name' in built ? built.name : built.type}`),
+          onSectionBuilt: (built) => events.push(`built ${'name' in built ? built.name : 'resource'}`),
         });
 
         expect(events).toEqual(['start Title', 'property text', 'built Title', 'start Next', 'built Next']);

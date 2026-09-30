@@ -10,8 +10,8 @@ import {
   DEFAULT_VIEWPORT_HEIGHT,
   DEFAULT_VIEWPORT_WIDTH,
   enabledEditorPlugins,
-  extensionListPath,
   parseProjectSettings,
+  projectExtensionListPath,
   projectLayoutDirectionEnv,
   projectThemeScale,
   projectViewportSize,
@@ -322,14 +322,14 @@ describe('enabledEditorPlugins', () => {
   });
 });
 
-describe('extensionListPath', () => {
+describe('projectExtensionListPath', () => {
   it('is under res://.godot by default', () => {
-    expect(extensionListPath(null)).toBe('res://.godot/extension_list.cfg');
-    expect(extensionListPath(parseProjectSettings('config_version=5\n'))).toBe('res://.godot/extension_list.cfg');
+    expect(projectExtensionListPath(null)).toBe('res://.godot/extension_list.cfg');
+    expect(projectExtensionListPath(parseProjectSettings('config_version=5\n'))).toBe('res://.godot/extension_list.cfg');
   });
 
   it('is under res://godot when the project turns the hidden data directory off', () => {
     const settings = parseProjectSettings('[application]\nconfig/use_hidden_project_data_directory=false\n');
-    expect(extensionListPath(settings)).toBe('res://godot/extension_list.cfg');
+    expect(projectExtensionListPath(settings)).toBe('res://godot/extension_list.cfg');
   });
 });

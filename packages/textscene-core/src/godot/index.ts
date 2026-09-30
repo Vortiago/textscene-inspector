@@ -54,6 +54,7 @@ export {
   stringLiteralBodies,
   stringToFloat,
   stringToInt,
+  stripEdges,
 } from './string.js';
 export {
   MATERIAL_RENDER_PRIORITY_MIN,
@@ -80,7 +81,7 @@ export {
   requiredGltfExtensions,
   unsupportedRequiredGltfExtensions,
 } from './gltf.js';
-export { EXTENSION_LIST_FILE, extensionListEntries, projectDataPath } from './project.js';
+export { PROJECT_FILE_NAME, PROJECT_FILE_PATH, extensionListEntries, extensionListPath } from './project.js';
 export { GRADIENT_TEXTURE_MAX_SIZE, IMAGE_MAX_PIXELS } from './texture.js';
 export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX, CLIP_CHILDREN_MODES } from './canvasItem.js';
 export {
@@ -172,5 +173,6 @@ export {
   packedArrayBody,
   packedArrayForms,
   packedElementType,
+  stringArrayBodies,
   type PackedArrayBody,
 } from './variantParser.js';

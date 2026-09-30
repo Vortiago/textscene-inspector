@@ -1,5 +1,5 @@
 /**
- * `Linter.lintProject` reads each glTF a scene uses through the host's provider. A file whose `extensionsRequired`
+ * A lint session reads each glTF a scene uses through the host's provider. A file whose `extensionsRequired`
  * names an extension Godot's importer does not read never imports (`gltf_document.cpp:7197-7202`), and the text
  * loader aborts the scene where a value names it (`resource_format_text.cpp:145-151`).
  */
@@ -7,7 +7,6 @@
 import { describe, expect, it } from 'vitest';
 import { Linter } from './Linter.js';
 import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
-import { mergeDiagnostics } from './mergeDiagnostics.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { triangleGlb } from '../resources/formats/glb/testing/triangleGlb.js';
 import './index.js';
@@ -34,14 +33,9 @@ function sceneUsing(path: string): string {
 `;
 }
 
-/** What a host publishes last: the file-local list merged with the cross-file one, when the lint reads a file. */
-async function lastPublished(content: string, provider: ResourceProvider) {
-  const { diagnostics, dependencies } = new Linter().lintProject(content, provider);
-  return mergeDiagnostics(diagnostics, (await dependencies) ?? []);
-}
-
 async function refusals(content: string, provider: ResourceProvider) {
-  return (await lastPublished(content, provider)).filter((d) => d.ruleName === RULE || d.ruleName === PLUGIN_RULE);
+  const diagnostics = await new Linter().lintComplete(content, provider);
+  return diagnostics.filter((d) => d.ruleName === RULE || d.ruleName === PLUGIN_RULE);
 }
 
 describe('unimportable glTF', () => {
@@ -168,7 +162,7 @@ item/0/name = "Tree"
 omni_range = -1.0
 `;
     const local = new Linter().lint(content);
-    const merged = await lastPublished(content, project({ 'res://tree.glb': INSTANCED_TREE }));
+    const merged = await new Linter().lintComplete(content, project({ 'res://tree.glb': INSTANCED_TREE }));
 
     expect(merged).toHaveLength(local.length + 1);
     expect(merged).toEqual(expect.arrayContaining(local));
@@ -178,12 +172,12 @@ omni_range = -1.0
 
   it('hands back the file-local diagnostics at once, before any file is read', () => {
     const content = sceneUsing('res://tree.glb');
-    const { diagnostics } = new Linter().lintProject(content, { loadResource: () => new Promise(() => {}) });
+    const { now } = new Linter().session().lint(content, { loadResource: () => new Promise(() => {}) });
 
-    expect(diagnostics).toEqual(new Linter().lint(content));
+    expect(now).toEqual(new Linter().lint(content));
   });
 
-  it('leaves the cross-file list null when the scene uses no glTF, so a host publishes once', () => {
+  it('has nothing to read later when the scene uses no glTF, so a host publishes once', () => {
     const provider = project({ 'res://tree.glb': INSTANCED_TREE });
     const unused = `[gd_scene format=3]
 
@@ -192,8 +186,8 @@ omni_range = -1.0
 [node name="Root" type="Node3D"]
 `;
 
-    expect(new Linter().lintProject(sceneUsing('res://tree.tscn'), provider).dependencies).toBeNull();
-    expect(new Linter().lintProject(unused, provider).dependencies).toBeNull();
+    expect(new Linter().session().lint(sceneUsing('res://tree.tscn'), provider).later).toBeNull();
+    expect(new Linter().session().lint(unused, provider).later).toBeNull();
   });
 
   it('reports a throw inside the cross-file rule as rule-crashed and keeps the file-local diagnostics', async () => {
@@ -206,11 +200,12 @@ omni_range = -1.0
 [node name="Light" type="OmniLight3D" parent="."]
 omni_range = -1.0
 `;
-    const { diagnostics, dependencies } = new Linter().lintProject(content, throwing);
-    const crossFile = await dependencies;
+    const { now, later } = new Linter().session().lint(content, throwing);
+    const complete = (await later) ?? [];
 
-    expect(diagnostics.some((d) => d.ruleName === FILE_DIAGNOSTICS.ruleCrashed.ruleName)).toBe(false);
-    expect(crossFile).toEqual([
+    expect(now.some((d) => d.ruleName === FILE_DIAGNOSTICS.ruleCrashed.ruleName)).toBe(false);
+    expect(complete).toEqual(expect.arrayContaining(now));
+    expect(complete.filter((d) => !now.includes(d))).toEqual([
       {
         severity: 'error',
         ruleName: FILE_DIAGNOSTICS.ruleCrashed.ruleName,
@@ -223,31 +218,14 @@ omni_range = -1.0
 
   it('declines a legacy-format file whole, as the file-local lint does', () => {
     const content = sceneUsing('res://tree.glb').replace('format=3', 'format=2');
-    expect(new Linter().lintProject(content, project({ 'res://tree.glb': INSTANCED_TREE }))).toEqual({
-      diagnostics: new Linter().lint(content),
-      dependencies: null,
-    });
-  });
-  it('hands back only the cross-file diagnostics as the dependencies, never a file-local one', async () => {
-    const content = `${sceneUsing('res://tree.glb')}
-[node name="Light" type="OmniLight3D" parent="."]
-omni_range = -1.0
-`;
-    const { diagnostics, dependencies } = new Linter().lintProject(content, project({ 'res://tree.glb': INSTANCED_TREE }));
+    const { now, later } = new Linter().session().lint(content, project({ 'res://tree.glb': INSTANCED_TREE }));
 
-    expect(diagnostics.length).toBeGreaterThan(0);
-    expect((await dependencies)?.map((d) => d.ruleName)).toEqual([RULE]);
+    expect(now).toEqual(new Linter().lint(content));
+    expect(later).toBeNull();
   });
 });
 
 describe('unimportable glTF in a project that may register a GLTFDocumentExtension', () => {
-  const PLUGIN_ENABLED = `config_version=5
-
-[editor_plugins]
-
-enabled=PackedStringArray("res://addons/gltf_instancing/plugin.cfg")
-`;
-
   it('is an error when the project enables no editor plugin and loads no GDExtension', async () => {
     const files = { 'res://tree.glb': INSTANCED_TREE, 'res://project.godot': 'config_version=5\n' };
     const [diagnostic] = await refusals(sceneUsing('res://tree.glb'), project(files));
@@ -256,39 +234,11 @@ enabled=PackedStringArray("res://addons/gltf_instancing/plugin.cfg")
     expect(diagnostic!.message).toContain('no editor plugin and loads no GDExtension');
   });
 
-  it('is an error when the project file is missing', async () => {
-    const [diagnostic] = await refusals(sceneUsing('res://tree.glb'), project({ 'res://tree.glb': INSTANCED_TREE }));
-    expect(diagnostic).toMatchObject({ severity: 'error', ruleName: RULE });
-  });
-
-  it('is an error when the project file cannot be read', async () => {
-    const provider: ResourceProvider = {
-      loadResource: async (path) => {
-        if (path === 'res://tree.glb') return INSTANCED_TREE;
-        throw new Error(`unreadable: ${path}`);
-      },
-    };
-    const [diagnostic] = await refusals(sceneUsing('res://tree.glb'), provider);
-    expect(diagnostic).toMatchObject({ severity: 'error', ruleName: RULE });
-  });
-
-  it('is an error for an empty enabled list', async () => {
+  it('is a warning when the project enables an editor plugin, which may register one', async () => {
     const files = {
       'res://tree.glb': INSTANCED_TREE,
-      'res://project.godot': '[editor_plugins]\n\nenabled=PackedStringArray()\n',
+      'res://project.godot': '[editor_plugins]\n\nenabled=PackedStringArray("res://addons/gltf_instancing/plugin.cfg")\n',
     };
-    const [diagnostic] = await refusals(sceneUsing('res://tree.glb'), project(files));
-    expect(diagnostic).toMatchObject({ severity: 'error', ruleName: RULE });
-  });
-
-  it('is an error for an extension list with only blank lines', async () => {
-    const files = { 'res://tree.glb': INSTANCED_TREE, 'res://.godot/extension_list.cfg': '\n  \n' };
-    const [diagnostic] = await refusals(sceneUsing('res://tree.glb'), project(files));
-    expect(diagnostic).toMatchObject({ severity: 'error', ruleName: RULE });
-  });
-
-  it('is a warning when the project enables an editor plugin, which may register one', async () => {
-    const files = { 'res://tree.glb': INSTANCED_TREE, 'res://project.godot': PLUGIN_ENABLED };
     const diagnostics = await refusals(sceneUsing('res://tree.glb'), project(files));
 
     expect(diagnostics).toEqual([
@@ -304,38 +254,13 @@ enabled=PackedStringArray("res://addons/gltf_instancing/plugin.cfg")
     expect(diagnostics[0]!.message).toContain('GLTFDocumentExtension');
   });
 
-  it('is a warning when the project loads a GDExtension', async () => {
-    const files = {
-      'res://tree.glb': INSTANCED_TREE,
-      'res://project.godot': 'config_version=5\n',
-      'res://.godot/extension_list.cfg': 'res://bin/gltf_ext.gdextension\n',
-    };
-    const [diagnostic] = await refusals(sceneUsing('res://tree.glb'), project(files));
-    expect(diagnostic).toMatchObject({ severity: 'warning', ruleName: PLUGIN_RULE });
-  });
-
-  it('reads the extension list from res://godot when the project turns the hidden data directory off', async () => {
-    const files = {
-      'res://tree.glb': INSTANCED_TREE,
-      'res://project.godot': '[application]\nconfig/use_hidden_project_data_directory=false\n',
-      'res://godot/extension_list.cfg': 'res://bin/gltf_ext.gdextension\n',
-      'res://.godot/extension_list.cfg': '',
-    };
-    const [diagnostic] = await refusals(sceneUsing('res://tree.glb'), project(files));
-    expect(diagnostic).toMatchObject({ severity: 'warning', ruleName: PLUGIN_RULE });
-  });
-
-  it('reads no project file for a scene whose glTF files Godot imports', async () => {
-    const read: string[] = [];
+  it('does not wait for the project files when nothing is refused', async () => {
     const tree = triangleGlb({ extensionsUsed: ['KHR_texture_transform'], extensionsRequired: ['KHR_texture_transform'] });
     const provider: ResourceProvider = {
-      loadResource: async (path) => {
-        read.push(path);
-        return path === 'res://tree.glb' ? tree : null;
-      },
+      loadResource: (path) => (path === 'res://tree.glb' ? Promise.resolve(tree) : new Promise(() => {})),
     };
-    await refusals(sceneUsing('res://tree.glb'), provider);
-    expect(read).toEqual(['res://tree.glb']);
+
+    expect(await refusals(sceneUsing('res://tree.glb'), provider)).toEqual([]);
   });
 });
 
@@ -352,11 +277,11 @@ describe("the linter's glTF verdict cache", () => {
     };
     const linter = new Linter();
 
-    const first = await linter.lintProject(sceneUsing('res://tree.glb'), provider).dependencies;
-    const second = await linter.lintProject(sceneUsing('res://tree.glb'), provider).dependencies;
+    const first = await linter.lintComplete(sceneUsing('res://tree.glb'), provider);
+    const second = await linter.lintComplete(sceneUsing('res://tree.glb'), provider);
 
     expect(glbReads).toBe(1);
     expect(second).toEqual(first);
-    expect(second?.map((d) => d.ruleName)).toEqual([RULE]);
+    expect(second.map((d) => d.ruleName)).toEqual([RULE]);
   });
 });

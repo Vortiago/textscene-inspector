@@ -23,11 +23,12 @@ import {
   type ProjectSettings,
   type ProjectViewportSize,
 } from '../../parser/projectSettingsParser.js';
+import { PROJECT_FILE_PATH } from '../../godot/project.js';
 import { useResourceLoader } from '../../resources/useResource.js';
 import * as logger from '../../logger.js';
 
 /** Where Godot keeps a project's settings, relative to its `res://` root. */
-export const PROJECT_SETTINGS_PATH = 'res://project.godot';
+export const PROJECT_SETTINGS_PATH = PROJECT_FILE_PATH;
 
 export interface ProjectSettingsValue {
   /** Raw settings by full name, such as `gui/theme/default_theme_scale`, or null. */

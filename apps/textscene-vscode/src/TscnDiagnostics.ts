@@ -1,8 +1,6 @@
 /**
- * Surfaces core Linter diagnostics for open `.tscn` and `.tres` documents. It publishes
- * a document's own diagnostics at once, beside the cross-file ones of its last lint,
- * and again once the files the scene uses are read. A change on disk to a file the
- * cross-file rules read re-lints the open documents of its workspace folder. It imports
+ * Surfaces core Linter diagnostics for open `.tscn` and `.tres` documents, through one lint session per document.
+ * A change on disk to a file a document's last lint read re-lints that document. It imports
  * `@textscene/core/linter`, never the root index, to stay renderer-free.
  */
 
@@ -11,27 +9,18 @@ import {
   Linter,
   diagnosticLine,
   flooredSeverity,
-  mergeDiagnostics,
   type Diagnostic as TscnLintDiagnostic,
+  type LintSession,
 } from '@textscene/core/linter';
 import { isGodotTextResourcePath } from '@textscene/core/godot';
 import { error as logError } from '@textscene/core/logger';
+import { comparablePath, isWithinRoot } from '@textscene/core/resources/resPath';
 import { LintResourceProvider } from './LintResourceProvider';
+import { findEnclosingGodotProject, hasProjectFile } from './findGodotProjectRoot';
+import { EXTENSION_LIST_PATTERN, PROJECT_FILE_PATTERN } from './watchPatterns';
 
 /** Fallback when `textscene.diagnostics.lintDebounceMs` is unset. */
 export const DEFAULT_LINT_DEBOUNCE_MS = 300;
-
-/**
- * The files the cross-file rules read besides the scene: a glTF (either case, since the importer
- * matches case-insensitively and a watcher glob does not), the project file and the GDExtension
- * list, in the hidden data directory or the plain one.
- */
-const PROJECT_FILE_PATTERN = '**/project.godot';
-const DEPENDENCY_FILE_PATTERNS = [
-  '**/*.{glb,gltf,GLB,GLTF}',
-  PROJECT_FILE_PATTERN,
-  '**/{.godot,godot}/extension_list.cfg',
-] as const;
 
 interface DiagnosticsConfig {
   enabled: boolean;
@@ -126,34 +115,73 @@ function isTscnDocument(document: vscode.TextDocument): boolean {
   return isGodotTextResourcePath(document.fileName);
 }
 
+/** The events of a file watcher, which `TscnDiagnostics` subscribes to and does not own. */
+export type FileEvents = Pick<vscode.FileSystemWatcher, 'onDidChange' | 'onDidCreate' | 'onDidDelete'>;
+
+/** Everything kept for one open document. */
+interface DocumentLint {
+  readonly session: LintSession;
+  /** The pending debounced lint. */
+  timer?: ReturnType<typeof setTimeout>;
+  /** The project view, once the walk has answered: null for a document in no project. */
+  provider?: LintResourceProvider | null;
+  /** The walk in flight. A newer walk replaces it, and only the newest one lands. */
+  walk?: symbol;
+  /** What the collection shows for the document, so an equal list is not published again. */
+  published?: readonly vscode.Diagnostic[];
+}
+
+function isSameRange(a: vscode.Range, b: vscode.Range): boolean {
+  return (
+    a.start.line === b.start.line &&
+    a.start.character === b.start.character &&
+    a.end.line === b.end.line &&
+    a.end.character === b.end.character
+  );
+}
+
+/**
+ * Whether two lists show the same entries: code, severity, range and message, in order. The range, not the core line:
+ * it ends at its line's current length, so an edit to a flagged line moves it while the core list stays equal.
+ */
+function isSameList(a: readonly vscode.Diagnostic[], b: readonly vscode.Diagnostic[]): boolean {
+  return (
+    a.length === b.length &&
+    a.every(
+      (d, i) =>
+        d.code === b[i]!.code &&
+        d.severity === b[i]!.severity &&
+        isSameRange(d.range, b[i]!.range) &&
+        d.message === b[i]!.message
+    )
+  );
+}
+
 export class TscnDiagnostics implements vscode.Disposable {
   private readonly _collection: vscode.DiagnosticCollection;
   private readonly _linter = new Linter();
   private readonly _disposables: vscode.Disposable[] = [];
-  private readonly _debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  /** Each linted open document, by URI. Written by `lintDocument`, deleted on close, cleared by `_clearAll`. */
+  private readonly _documents = new Map<string, DocumentLint>();
   /**
-   * The latest lint request per document URI. Written by `lintDocument`, deleted on
-   * close and cleared on disable and dispose. A fresh token, not `document.version`: a
-   * save re-lints the same version, and a dependency may have changed on disk since.
-   */
-  private readonly _latestRequests = new Map<string, symbol>();
-  /**
-   * The linter's project view per document URI, so its project-root walk runs once.
-   * Written by `_providerFor`, deleted on close and on a change to its folder's
-   * `project.godot`, and cleared on disable and dispose.
+   * One provider per project root, so the documents of a project share its verdicts. Written by `_providerFor`,
+   * cleared by `_clearAll`.
    */
   private readonly _providers = new Map<string, LintResourceProvider>();
   /**
-   * The cross-file diagnostics of each document's last lint that read a file, shown
-   * beside the file-local ones while the next read is pending, so they do not vanish
-   * on each edit. Written when a read lands, deleted when a lint reads no file, on
-   * close, and cleared on disable and dispose.
+   * Whether each directory holds `project.godot`, so the walks of a project's documents share their answers.
+   * Written by `_holdsProjectFile`, cleared on any `project.godot` event and by `_clearAll`.
    */
-  private readonly _crossFile = new Map<string, TscnLintDiagnostic[]>();
+  private readonly _projectFileByDir = new Map<string, Promise<boolean>>();
   private _enabled: boolean;
   private _debounceMs: number;
 
+  /**
+   * @param resourceFiles - The events of the extension's resource-file watcher, which the glTF files a lint reads
+   *   are among
+   */
   constructor(
+    resourceFiles: FileEvents,
     collection: vscode.DiagnosticCollection = vscode.languages.createDiagnosticCollection('tscn')
   ) {
     this._collection = collection;
@@ -169,7 +197,12 @@ export class TscnDiagnostics implements vscode.Disposable {
       vscode.workspace.onDidCloseTextDocument((document) => this._clearDocument(document)),
       vscode.workspace.onDidChangeConfiguration((event) => this._onConfigurationChanged(event))
     );
-    for (const pattern of DEPENDENCY_FILE_PATTERNS) this._watchDependencyFiles(pattern);
+    this._subscribe(resourceFiles, (uri) => this._onDependencyChanged(uri));
+    const extensionList = vscode.workspace.createFileSystemWatcher(EXTENSION_LIST_PATTERN);
+    const projectFile = vscode.workspace.createFileSystemWatcher(PROJECT_FILE_PATTERN);
+    this._disposables.push(extensionList, projectFile);
+    this._subscribe(extensionList, (uri) => this._onDependencyChanged(uri));
+    this._subscribe(projectFile, (uri) => this._onProjectFileChanged(uri));
 
     // Lint everything already open at activation, unless diagnostics are off.
     if (this._enabled) {
@@ -180,89 +213,121 @@ export class TscnDiagnostics implements vscode.Disposable {
   }
 
   /**
-   * Lint a document immediately and publish its diagnostics with the cross-file ones of
-   * its last lint, then again with the fresh cross-file ones, unless a newer request has
-   * overtaken this one. No-op while diagnostics are disabled.
+   * Lint a document immediately and publish its diagnostics with the cross-file ones of its last read, then again
+   * with the fresh cross-file ones, unless a newer lint has overtaken this one. A document linted before its project
+   * walk has answered gets the file-local rules, and a full lint once it answers. No-op while disabled.
    */
   public lintDocument(document: vscode.TextDocument): void {
     if (!isTscnDocument(document) || !this._enabled) {
       return;
     }
 
-    const key = document.uri.toString();
-    const request = Symbol(key);
-    this._latestRequests.set(key, request);
-    const text = document.getText();
-    const provider = this._providerFor(document);
-    const { diagnostics, dependencies } = provider
-      ? this._linter.lintProject(text, provider)
-      : { diagnostics: this._linter.lint(text), dependencies: null };
-    if (!dependencies) {
-      this._crossFile.delete(key);
-      this._publish(document, diagnostics);
-      return;
-    }
-
-    this._publish(document, mergeDiagnostics(diagnostics, this._crossFile.get(key) ?? []));
-    dependencies
-      .then((crossFile) => {
-        if (this._latestRequests.get(key) !== request) return;
-        this._crossFile.set(key, crossFile);
-        this._publish(document, mergeDiagnostics(diagnostics, crossFile));
+    const record = this._recordOf(document);
+    const { now, later } = record.session.lint(document.getText(), record.provider ?? null);
+    this._publish(document, record, now);
+    later
+      ?.then((complete) => {
+        if (complete && this._documents.get(document.uri.toString()) === record) {
+          this._publish(document, record, complete);
+        }
       })
       .catch((reason: unknown) => logError('[TscnDiagnostics] Cross-file lint failed:', reason));
+    if (record.provider === undefined && record.walk === undefined) this._walk(document, record);
   }
 
-  /** Re-lints the open documents of a folder whenever a file matching `pattern` is created, changed or deleted. */
-  private _watchDependencyFiles(pattern: string): void {
-    const watcher = vscode.workspace.createFileSystemWatcher(pattern);
-    const onChange = (uri: vscode.Uri) => this._onDependencyFileChanged(uri, pattern === PROJECT_FILE_PATTERN);
-    this._disposables.push(
-      watcher,
-      watcher.onDidCreate(onChange),
-      watcher.onDidChange(onChange),
-      watcher.onDidDelete(onChange)
-    );
+  private _subscribe(events: FileEvents, handler: (uri: vscode.Uri) => void): void {
+    this._disposables.push(events.onDidCreate(handler), events.onDidChange(handler), events.onDidDelete(handler));
+  }
+
+  /** Schedules a lint of each open document whose last lint read `uri`, debounced like an edit. */
+  private _onDependencyChanged(uri: vscode.Uri): void {
+    if (!this._enabled) return;
+    const changed = comparablePath(uri.fsPath);
+    for (const document of vscode.workspace.textDocuments) {
+      const record = this._documents.get(document.uri.toString());
+      const provider = record?.provider;
+      if (!provider) continue;
+      const read = record.session.reads.some((path) => {
+        const file = provider.fileOf(path);
+        return file !== null && comparablePath(file.fsPath) === changed;
+      });
+      if (read) this._scheduleLint(document);
+    }
   }
 
   /**
-   * Schedules a lint of each open document in `uri`'s workspace folder, debounced like an
-   * edit. A changed `project.godot` may move a document's project root, so the folder's
-   * providers go too, and their verdicts with them.
+   * Walks again for each open document under `uri`'s directory, the documents whose project the file roots or
+   * would root, and lints each once its walk answers. A provider whose root is unchanged stays, verdicts included.
    */
-  private _onDependencyFileChanged(uri: vscode.Uri, isProjectFile: boolean): void {
-    const folder = vscode.workspace.getWorkspaceFolder(uri);
-    if (!folder) return;
-    const folderKey = folder.uri.toString();
-    if (isProjectFile) {
-      for (const [key, provider] of this._providers) {
-        if (provider.workspaceRoot.toString() === folderKey) this._providers.delete(key);
-      }
-    }
+  private _onProjectFileChanged(uri: vscode.Uri): void {
+    if (!this._enabled) return;
+    this._projectFileByDir.clear();
+    const projectDir = vscode.Uri.joinPath(uri, '..').fsPath;
     for (const document of vscode.workspace.textDocuments) {
-      if (vscode.workspace.getWorkspaceFolder(document.uri)?.uri.toString() === folderKey) {
-        this._scheduleLint(document);
-      }
+      if (!isTscnDocument(document) || !isWithinRoot(projectDir, document.uri.fsPath)) continue;
+      const record = this._documents.get(document.uri.toString());
+      if (record) this._walk(document, record);
     }
   }
 
-  private _publish(document: vscode.TextDocument, diagnostics: readonly TscnLintDiagnostic[]): void {
-    this._collection.set(
-      document.uri,
-      diagnostics.map((diagnostic) => toVsCodeDiagnostic(diagnostic, document))
-    );
+  /** Finds `document`'s project, then lints it with that project's provider, unless the record is gone or walked again. */
+  private _walk(document: vscode.TextDocument, record: DocumentLint): void {
+    const walk = Symbol('walk');
+    record.walk = walk;
+    this._providerFor(document)
+      .then((provider) => {
+        if (record.walk !== walk || this._documents.get(document.uri.toString()) !== record) return;
+        record.walk = undefined;
+        record.provider = provider;
+        this.lintDocument(document);
+      })
+      .catch((reason: unknown) => logError('[TscnDiagnostics] Project lookup failed:', reason));
   }
 
-  /** The project view `document`'s `res://` paths resolve in, or null outside every workspace folder. */
-  private _providerFor(document: vscode.TextDocument): LintResourceProvider | null {
-    const key = document.uri.toString();
-    const cached = this._providers.get(key);
-    if (cached) return cached;
+  /** The provider of the project `document` sits in, or null outside every workspace folder and every project. */
+  private async _providerFor(document: vscode.TextDocument): Promise<LintResourceProvider | null> {
     const folder = vscode.workspace.getWorkspaceFolder(document.uri);
     if (!folder) return null;
-    const provider = new LintResourceProvider(folder.uri, document.uri);
-    this._providers.set(key, provider);
+    const root = await findEnclosingGodotProject(folder.uri, document.uri, (dir) => this._holdsProjectFile(dir));
+    if (root === null) return null;
+    const key = root.toString();
+    let provider = this._providers.get(key);
+    if (!provider) {
+      provider = new LintResourceProvider(root);
+      this._providers.set(key, provider);
+    }
     return provider;
+  }
+
+  private _holdsProjectFile(dir: vscode.Uri): Promise<boolean> {
+    const key = dir.toString();
+    let answer = this._projectFileByDir.get(key);
+    if (!answer) {
+      answer = hasProjectFile(dir);
+      this._projectFileByDir.set(key, answer);
+    }
+    return answer;
+  }
+
+  private _recordOf(document: vscode.TextDocument): DocumentLint {
+    const key = document.uri.toString();
+    let record = this._documents.get(key);
+    if (!record) {
+      record = { session: this._linter.session() };
+      this._documents.set(key, record);
+    }
+    return record;
+  }
+
+  private _publish(
+    document: vscode.TextDocument,
+    record: DocumentLint,
+    diagnostics: readonly TscnLintDiagnostic[]
+  ): void {
+    const shown = diagnostics.map((diagnostic) => toVsCodeDiagnostic(diagnostic, document));
+    if (record.published && isSameList(record.published, shown)) return;
+    record.published = shown;
+    this._collection.set(document.uri, shown);
   }
 
   private _scheduleLint(document: vscode.TextDocument): void {
@@ -270,19 +335,14 @@ export class TscnDiagnostics implements vscode.Disposable {
       return;
     }
 
-    const key = document.uri.toString();
-    const pending = this._debounceTimers.get(key);
-    if (pending !== undefined) {
-      clearTimeout(pending);
+    const record = this._recordOf(document);
+    if (record.timer !== undefined) {
+      clearTimeout(record.timer);
     }
-
-    this._debounceTimers.set(
-      key,
-      setTimeout(() => {
-        this._debounceTimers.delete(key);
-        this.lintDocument(document);
-      }, this._debounceMs)
-    );
+    record.timer = setTimeout(() => {
+      record.timer = undefined;
+      this.lintDocument(document);
+    }, this._debounceMs);
   }
 
   /**
@@ -302,13 +362,7 @@ export class TscnDiagnostics implements vscode.Disposable {
     this._debounceMs = config.debounceMs;
 
     if (!this._enabled) {
-      for (const timer of this._debounceTimers.values()) {
-        clearTimeout(timer);
-      }
-      this._debounceTimers.clear();
-      this._latestRequests.clear();
-      this._providers.clear();
-      this._crossFile.clear();
+      this._clearAll();
       this._collection.clear();
       return;
     }
@@ -322,25 +376,24 @@ export class TscnDiagnostics implements vscode.Disposable {
 
   private _clearDocument(document: vscode.TextDocument): void {
     const key = document.uri.toString();
-    const pending = this._debounceTimers.get(key);
-    if (pending !== undefined) {
-      clearTimeout(pending);
-      this._debounceTimers.delete(key);
-    }
-    this._latestRequests.delete(key);
-    this._providers.delete(key);
-    this._crossFile.delete(key);
+    const record = this._documents.get(key);
+    if (record?.timer !== undefined) clearTimeout(record.timer);
+    this._documents.delete(key);
     this._collection.delete(document.uri);
   }
 
-  public dispose(): void {
-    for (const timer of this._debounceTimers.values()) {
-      clearTimeout(timer);
+  /** Cancels every pending lint and forgets every document, provider and walk answer. */
+  private _clearAll(): void {
+    for (const record of this._documents.values()) {
+      if (record.timer !== undefined) clearTimeout(record.timer);
     }
-    this._debounceTimers.clear();
-    this._latestRequests.clear();
+    this._documents.clear();
     this._providers.clear();
-    this._crossFile.clear();
+    this._projectFileByDir.clear();
+  }
+
+  public dispose(): void {
+    this._clearAll();
 
     while (this._disposables.length) {
       this._disposables.pop()?.dispose();
