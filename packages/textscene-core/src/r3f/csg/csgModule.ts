@@ -27,9 +27,8 @@ export function loadCsgModule(): Promise<CsgModule> {
 }
 
 /**
- * Starts the load without waiting, as soon as a parsed scene holds any CSG type. The last
- * auto-frame retry of `CameraFit` fires at 1100 ms, and geometry that lands later is framed out of
- * the opening view.
+ * Starts the load without waiting, as soon as a parsed scene holds any CSG type, so the boolean
+ * result reaches the opening frame sooner. `CameraFit` re-frames it only once the loader settles.
  */
 export function prefetchCsgModule(): void {
   void loadCsgModule().catch(() => {
