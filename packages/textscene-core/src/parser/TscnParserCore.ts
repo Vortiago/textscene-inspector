@@ -6,7 +6,15 @@
  */
 
 import { resolveDeprecatedProperty, type ResolvedProperty } from '../godot/deprecated.js';
-import type { TscnScene, TscnNode, TscnExternalResource, TscnInternalResource, NodeOrigin } from './types.js';
+import type {
+  TscnScene,
+  TscnNode,
+  TscnExternalResource,
+  TscnInternalResource,
+  TscnMainResource,
+  NodeOrigin,
+  BuiltSection,
+} from './types.js';
 import {
   parseHeading,
   parseProperty,
@@ -67,11 +75,11 @@ export interface ParseObserver {
   /** A property value completed. */
   onProperty?(property: ParsedProperty): void;
   /**
-   * A `[node]` or `[sub_resource]` section closed, and the scan built `built` from it. `line` is
-   * its heading's line. It fires after the section's last `onProperty`, so an observer can file
-   * what it collected under the object.
+   * An `[ext_resource]`, `[sub_resource]`, `[node]` or `[resource]` section closed, and the scan
+   * built `built` from it. `line` is its heading's line. It fires after the section's last `onProperty`, so an
+   * observer can file what it collected under the object.
    */
-  onSectionBuilt?(built: TscnNode | TscnInternalResource, line: number): void;
+  onSectionBuilt?(built: BuiltSection, line: number): void;
 }
 
 /**
@@ -98,6 +106,13 @@ export class TscnParserCore {
     const origins: NodeOrigin[] = [];
     const externalResources: TscnExternalResource[] = [];
     const internalResources: TscnInternalResource[] = [];
+    // One per file: the loader refuses any tag after the `[resource]` body
+    // (`resource_format_text.cpp:837-841`), so a later one is a corrupt file, and the last one read stays.
+    let mainResource: TscnMainResource | undefined;
+    const connectionBinds: string[] = [];
+    const instancesOutsideNodeBody: string[] = [];
+    // The type of the last heading read, since only a `[node]` body reads the heading after it leniently.
+    let previousHeadingType: string | null = null;
 
     let currentSection: SectionType = 'none';
     let currentHeading: ParsedHeading | null = null;
@@ -137,6 +152,7 @@ export class TscnParserCore {
         const resource = parseExternalResource(currentHeading);
         if (resource) {
           externalResources.push(resource);
+          observer?.onSectionBuilt?.(resource, currentHeadingLine);
         }
       } else if (currentSection === 'sub_resource') {
         const resource = parseInternalResource(currentHeading, currentProperties);
@@ -144,6 +160,9 @@ export class TscnParserCore {
           internalResources.push(resource);
           observer?.onSectionBuilt?.(resource, currentHeadingLine);
         }
+      } else if (currentSection === 'resource') {
+        mainResource = { data: currentProperties };
+        observer?.onSectionBuilt?.(mainResource, currentHeadingLine);
       }
 
       currentHeading = null;
@@ -218,6 +237,13 @@ export class TscnParserCore {
           if (currentHeading.type === 'gd_resource') {
             headerResourceType = currentHeading.attributes.type;
           }
+          const binds = currentHeading.type === 'connection' ? currentHeading.attributes.binds : undefined;
+          if (binds !== undefined) connectionBinds.push(binds);
+          const { instance } = currentHeading.attributes;
+          if (currentHeading.type === 'node' && previousHeadingType !== 'node' && instance !== undefined) {
+            instancesOutsideNodeBody.push(instance);
+          }
+          previousHeadingType = currentHeading.type;
           observer?.onSectionStart?.(currentHeading, currentSection, lineNumber);
         } else {
           observer?.onError?.({
@@ -308,6 +334,10 @@ export class TscnParserCore {
       ...(orphanedNodes.length > 0 ? { orphanedNodes } : {}),
       ...(rootWithParent ? { rootWithParent } : {}),
       ...(emptyParents.length > 0 ? { emptyParentHeadings: emptyParents } : {}),
+      ...(headerResourceType !== undefined ? { resourceType: headerResourceType } : {}),
+      ...(mainResource ? { mainResource } : {}),
+      ...(connectionBinds.length > 0 ? { connectionBinds } : {}),
+      ...(instancesOutsideNodeBody.length > 0 ? { instancesOutsideNodeBody } : {}),
     };
   }
 

@@ -58,6 +58,19 @@ export function isBinaryResourceType(type: string, path?: string): boolean {
 }
 
 /**
+ * A file's bytes in the shape `loadResource` returns for `type` at `path`: an ArrayBuffer for a binary resource, else
+ * UTF-8 text. A view over a whole ArrayBuffer hands that buffer over, so a large `.glb` is not held twice. Any other
+ * view is copied, since it can sit inside a larger buffer, such as the pool `readFileSync` reads a small file into.
+ */
+export function resourceContent(bytes: Uint8Array, type: string, path: string): string | ArrayBuffer {
+  if (!isBinaryResourceType(type, path)) return new TextDecoder('utf-8').decode(bytes);
+  const { buffer } = bytes;
+  const spansBuffer =
+    buffer instanceof ArrayBuffer && bytes.byteOffset === 0 && bytes.byteLength === buffer.byteLength;
+  return spansBuffer ? buffer : new Uint8Array(bytes).buffer;
+}
+
+/**
  * Strip the "res://" prefix from a Godot resource path.
  * @param godotPath - Path with format "res://scenes/Door.tscn"
  * @returns Relative path without "res://" prefix

@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://edge_gltf_unsupported_required_extension"]
+
+; instanced-tree.glb lists EXT_mesh_gpu_instancing in extensionsRequired, which Godot's
+; glTF importer does not read, so the importer refuses the file (gltf_document.cpp:7197-7202).
+; The root heading inherits it. The loader reads that heading outside a node body
+; (resource_format_text.cpp:531-536), so the failed load ends the scene's load (:150-154).
+; A child node's instance= would only leave that node out (:288-289), which is a warning.
+; The .glb is a 144-byte container with one JSON chunk and no mesh. The importer refuses it
+; before it reads a mesh.
+
+[ext_resource type="PackedScene" path="res://instanced-tree.glb" id="1_tree"]
+
+[node name="Scene" instance=ExtResource("1_tree")]

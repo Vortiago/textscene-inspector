@@ -38,6 +38,46 @@ const DICT_SUB_RESOURCE_ENTRY_RE = new RegExp(`"([^"]*)"${WS}:${WS}${SUB_RESOURC
  */
 export const EXT_RESOURCE_CALL_ANYWHERE_RE = new RegExp(`ExtResource${WS}\\(`);
 
+/** The token every `ExtResource(…)` call spells, so a value without it names no id. */
+const EXT_RESOURCE_TOKEN = 'ExtResource';
+
+/** One `ExtResource(…)` call, read in place by {@link extResourceIdsIn}. Sticky, so it matches only where it is set. */
+const EXT_RESOURCE_REF_AT_RE = new RegExp(`${EXT_RESOURCE_TOKEN}${WS}\\(${WS}${RESOURCE_ID}${WS}\\)`, 'y');
+
+/** A character that continues an identifier, so `MyExtResource(` is not the `ExtResource` token. */
+const IDENTIFIER_CHAR_RE = /[A-Za-z0-9_]/;
+
+/**
+ * The id of every `ExtResource(…)` in a value, in order. The loader resolves each one as it tokenises
+ * the value (`resource_format_text.cpp:125-151`), but never text inside a string or a `StringName`,
+ * whose quotes `get_token` reads with `\` escapes (`variant_parser.cpp:265-289`).
+ */
+export function extResourceIdsIn(text: string): string[] {
+  // Most values name no resource, and the walk below reads every character of a multi-megabyte array.
+  if (!text.includes(EXT_RESOURCE_TOKEN)) return [];
+  const ids: string[] = [];
+  let inString = false;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (inString) {
+      if (char === '\\') i++;
+      else if (char === '"') inString = false;
+      continue;
+    }
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+    if (char !== 'E' || (i > 0 && IDENTIFIER_CHAR_RE.test(text[i - 1]!))) continue;
+    EXT_RESOURCE_REF_AT_RE.lastIndex = i;
+    const match = EXT_RESOURCE_REF_AT_RE.exec(text);
+    if (!match) continue;
+    ids.push(refId(match[1], match[2]));
+    i = EXT_RESOURCE_REF_AT_RE.lastIndex - 1;
+  }
+  return ids;
+}
+
 /** The kind and id of a resource reference. */
 export interface ResourceRef {
   kind: 'SubResource' | 'ExtResource';

@@ -15,6 +15,7 @@ import {
   isNilLiteral,
   nodePathLiteral,
   packedArrayCallAnywhere,
+  stringArrayBodies,
   variantShape,
 } from './variantParser.js';
 
@@ -236,5 +237,30 @@ describe('variantShape', () => {
   // (variant_parser.cpp:1619), and an array it opens must close (:1648-1651).
   it.each(['foo', 'Vector2(1, 2', '"unterminated', '[1', '', '1 2'])('names no Variant for %j', (text) => {
     expect(variantShape(text)).toBeNull();
+  });
+});
+
+describe('stringArrayBodies', () => {
+  it('reads the element bodies of each of the three spellings, escapes as written', () => {
+    expect(stringArrayBodies('PackedStringArray("a", "b\\"c")')).toEqual(['a', 'b\\"c']);
+    expect(stringArrayBodies('Array[String](["a", "b"])')).toEqual(['a', 'b']);
+    expect(stringArrayBodies('["a", "b"]')).toEqual(['a', 'b']);
+  });
+
+  it('reads an empty list as no elements', () => {
+    expect(stringArrayBodies('PackedStringArray()')).toEqual([]);
+  });
+
+  it('is null for a list that holds a non-string element', () => {
+    expect(stringArrayBodies('["a", 5]')).toBeNull();
+  });
+
+  it('reads a multi-line bare list whose closing line keeps trailing blanks', () => {
+    expect(stringArrayBodies('[\n"a",\n"b"\n]   ')).toEqual(['a', 'b']);
+  });
+
+  it('is null for a value that is no string-array spelling', () => {
+    expect(stringArrayBodies('Array[int]([1])')).toBeNull();
+    expect(stringArrayBodies('"a"')).toBeNull();
   });
 });

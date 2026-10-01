@@ -4,7 +4,7 @@
  * renderer runs the same loop with no observer.
  */
 
-import type { TscnInternalResource, TscnNode } from '../parser/types.js';
+import type { BuiltSection, TscnNode } from '../parser/types.js';
 import type { ParseError, SectionLines, StrictParseResult } from './types.js';
 import { TscnParserCore } from '../parser/TscnParserCore.js';
 import type { ParseObserver } from '../parser/TscnParserCore.js';
@@ -62,7 +62,7 @@ export class StrictTscnParser {
    */
   parse(content: string): StrictParseResult {
     const errors: ParseError[] = [];
-    const lines = new Map<TscnNode | TscnInternalResource, SectionLines>();
+    const lines = new Map<BuiltSection, SectionLines>();
     // The open section's property lines, which `onSectionBuilt` files under what the section
     // builds. A fresh map per heading, since the finished one is kept.
     let propertyLines = new Map<string, number>();

@@ -1,6 +1,6 @@
 /** The linter's diagnostic, rule and grounding types for `.tscn` validation. */
 
-import type { TscnScene, TscnNode, TscnInternalResource } from '../parser/types';
+import type { BuiltSection, TscnScene, TscnNode } from '../parser/types';
 
 /**
  * `error`: Godot refuses or alters the value or cannot load the file, or the linter failed. Fails CI.
@@ -100,7 +100,7 @@ export interface ParseError {
   nilVerdict?: true;
 }
 
-/** Where one `[node]` or `[sub_resource]` section sits in the file. Every line is 1-based. */
+/** Where one `[ext_resource]`, `[sub_resource]` or `[node]` section sits in the file. Every line is 1-based. */
 export interface SectionLines {
   readonly heading: number;
   /**
@@ -112,10 +112,10 @@ export interface SectionLines {
 }
 
 /**
- * The lines of every section the scan built, keyed by the node or sub-resource it built. A rule
+ * The lines of every section the scan built, keyed by the node or resource it built. A rule
  * reaches its subject through the tree, which carries no lines, so `Linter` looks them up here.
  */
-export type SourceLines = ReadonlyMap<TscnNode | TscnInternalResource, SectionLines>;
+export type SourceLines = ReadonlyMap<BuiltSection, SectionLines>;
 
 /** Result from the strict parser. */
 export interface StrictParseResult {
@@ -126,7 +126,7 @@ export interface StrictParseResult {
    * and the rule phase needs it. Absent only if the scanner could not run.
    */
   scene?: TscnScene;
-  /** Where each node and sub-resource of `scene` sits. */
+  /** Where each `[ext_resource]`, `[sub_resource]`, `[node]` and `.tres` `[resource]` section of `scene` sits. */
   lines: SourceLines;
 }
 
