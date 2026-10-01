@@ -12,7 +12,8 @@ import { Linter } from './Linter.js';
 import { isGodotTextResourcePath } from '../godot/index.js';
 import { parseHeading } from '../parser/utils.js';
 import { findProjectRoot, parentDir, projectFileIn, resolveResPath } from '../resources/resPath.js';
-import { isBinaryResourceType } from '../resources/resourceProviderUtils.js';
+import { resourceContent } from '../resources/resourceProviderUtils.js';
+import { listScannedFiles, type DirectoryEntry } from '../resources/projectListing.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { FILE_DIAGNOSTIC_NAMES } from './fileDiagnostics.js';
 import type { Diagnostic } from './types.js';
@@ -125,15 +126,28 @@ function projectRootOf(path: string): Promise<string | null> {
   return findProjectRoot(dirname(path), parentDir, isFixturesDir, async (dir) => existsSync(projectFileIn(dir)));
 }
 
-/** A provider over the project at `root`, as the CLI's provider reads it from disk: text or bytes by the type. */
+/** The entries of the directory a `res://` path names under `root`, as the CLI's walk reads them. */
+function readDirectoryUnder(root: string, resDirectory: string): DirectoryEntry[] {
+  const directory = resolveResPath(root, resDirectory);
+  if (directory === null || !existsSync(directory)) return [];
+  return readdirSync(directory, { withFileTypes: true }).map((entry) => ({
+    name: entry.name,
+    isDirectory: entry.isDirectory(),
+  }));
+}
+
+/**
+ * A provider over the project at `root`, as the CLI's provider reads it from disk: text or bytes by the type, and a
+ * listing walked as the editor's scan walks it.
+ */
 function projectProvider(root: string): ResourceProvider {
   return {
     loadResource: async (resPath, type = '') => {
       const file = resolveResPath(root, resPath);
       if (file === null || !existsSync(file)) return null;
-      const bytes = readFileSync(file);
-      return isBinaryResourceType(type, resPath) ? new Uint8Array(bytes).buffer : bytes.toString('utf-8');
+      return resourceContent(readFileSync(file), type, resPath);
     },
+    listFiles: (extension) => listScannedFiles(async (directory) => readDirectoryUnder(root, directory), extension),
   };
 }
 

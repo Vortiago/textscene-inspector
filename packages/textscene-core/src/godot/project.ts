@@ -11,12 +11,20 @@ export const PROJECT_FILE_NAME = 'project.godot';
 export const PROJECT_FILE_PATH = `res://${PROJECT_FILE_NAME}`;
 
 /**
- * The `res://` path of the file that lists the GDExtensions the project loads (`gdextension.cpp:45-46`). It sits in
- * the data directory: `.godot`, or `godot` when `application/config/use_hidden_project_data_directory` is false
- * (`project_settings.cpp:60-61`, `:879-880`). The setting defaults to true (`:1694`).
+ * The `res://` path of the project's data directory: `.godot`, or `godot` when
+ * `application/config/use_hidden_project_data_directory` is false (`project_settings.cpp:60-61`, `:879-880`). The
+ * setting defaults to true (`:1694`).
+ */
+export function dataDirectoryPath(useHiddenDirectory: boolean): string {
+  return `res://${useHiddenDirectory ? '.' : ''}godot`;
+}
+
+/**
+ * The `res://` path of the file in the data directory that lists the GDExtensions the project loads
+ * (`gdextension.cpp:45-46`).
  */
 export function extensionListPath(useHiddenDirectory: boolean): string {
-  return `res://${useHiddenDirectory ? '.' : ''}godot/extension_list.cfg`;
+  return `${dataDirectoryPath(useHiddenDirectory)}/extension_list.cfg`;
 }
 
 /**

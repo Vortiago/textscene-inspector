@@ -6,6 +6,7 @@
 
 import {
   boolSlotValue,
+  dataDirectoryPath,
   extensionListPath,
   isLocaleRightToLeft,
   stringArrayBodies,
@@ -156,6 +157,21 @@ export function projectLayoutDirectionEnv(settings: ProjectSettings | null): Lay
   return { forceRtl, rootRtl, applicationLocaleRtl, systemLocaleRtl };
 }
 
+/** The prefix of an `[autoload]` entry's full setting name. */
+const AUTOLOAD_PREFIX = 'autoload/';
+
+/**
+ * The name of each `[autoload]` entry. The editor builds one node per entry with a name, and adds each whose script is
+ * a tool script to its own tree (`editor/settings/editor_autoload_settings.cpp:859-869`, `:428-455`). Whether a
+ * script is a tool script is in the script, so a caller that reads only this file counts every entry.
+ */
+export function declaredAutoloads(settings: ProjectSettings | null): string[] {
+  return Object.keys(settings ?? {})
+    .filter((key) => key.startsWith(AUTOLOAD_PREFIX))
+    .map((key) => key.slice(AUTOLOAD_PREFIX.length))
+    .filter((name) => name !== '');
+}
+
 /**
  * `editor_plugins/enabled`, the `plugin.cfg` paths the editor enables at start (`init_plugins`,
  * `editor/editor_node.cpp:1167-1173`). Empty where the project sets none, and for a value that is not
@@ -168,11 +184,19 @@ export function enabledEditorPlugins(settings: ProjectSettings | null): string[]
 }
 
 /**
- * The `res://` path of the project's GDExtension list, in the data directory the project names.
- * A value a BOOL slot cannot read keeps the default, true.
+ * Whether the project keeps its data in the hidden directory. A value a BOOL slot cannot read
+ * keeps the default, true.
  */
+function usesHiddenDataDirectory(settings: ProjectSettings | null): boolean {
+  return boolSlotValue(settings?.['application/config/use_hidden_project_data_directory']) !== false;
+}
+
+/** The `res://` path of the data directory the project names. */
+export function projectDataDirectoryPath(settings: ProjectSettings | null): string {
+  return dataDirectoryPath(usesHiddenDataDirectory(settings));
+}
+
+/** The `res://` path of the project's GDExtension list, in the data directory the project names. */
 export function projectExtensionListPath(settings: ProjectSettings | null): string {
-  return extensionListPath(
-    boolSlotValue(settings?.['application/config/use_hidden_project_data_directory']) !== false
-  );
+  return extensionListPath(usesHiddenDataDirectory(settings));
 }

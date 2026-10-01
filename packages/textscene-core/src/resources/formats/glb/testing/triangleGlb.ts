@@ -3,10 +3,9 @@
  * extension lists and the node's extensions left to the caller.
  */
 
-/** `glTF` as a little-endian `uint32`, the container's first four bytes. */
-export const GLB_MAGIC = 0x46546c67;
-/** `JSON` and `BIN\0` as chunk types. */
-export const JSON_CHUNK = 0x4e4f534a;
+import { GLB_JSON_CHUNK, GLB_MAGIC } from '../../../../godot/gltf';
+
+/** `BIN\0` as a chunk type. Godot reads only the JSON chunk to judge a file, so this one is the builder's alone. */
 export const BIN_CHUNK = 0x004e4942;
 
 /** One float32 VEC3 per vertex, and one per instance for the instancing extension. */
@@ -93,7 +92,7 @@ export function triangleGlb(options: TriangleGlb = {}): ArrayBuffer {
   view.setUint32(4, 2, true);
   view.setUint32(8, total, true);
   view.setUint32(12, json.length, true);
-  view.setUint32(16, JSON_CHUNK, true);
+  view.setUint32(16, GLB_JSON_CHUNK, true);
   new Uint8Array(glb, 20, json.length).set(json);
   const binHeader = 20 + json.length;
   view.setUint32(binHeader, bin.length, true);

@@ -19,6 +19,7 @@ import {
   MockLocation,
   MockPosition,
   MockRange,
+  MockRelativePattern,
   MockSelection,
   MockSymbolKind,
   MockTabInputText,
@@ -58,6 +59,7 @@ vi.mock('vscode', () => ({
 
   DiagnosticSeverity: MockDiagnosticSeverity,
   TabInputText: MockTabInputText,
+  RelativePattern: MockRelativePattern,
   ViewColumn: MockViewColumn,
   FileType: MockFileType,
   TextEditorRevealType: MockTextEditorRevealType,

@@ -78,6 +78,15 @@ describe('LintResourceProvider', () => {
   });
 });
 
+describe('LintResourceProvider holds', () => {
+  it('holds a file under the project root and none outside it', () => {
+    const provider = providerForLevel();
+
+    expect(provider.holds(createMockUri('/workspace/game/bin/a.gdextension'))).toBe(true);
+    expect(provider.holds(createMockUri('/workspace/other/a.gdextension'))).toBe(false);
+  });
+});
+
 describe('LintResourceProvider stamp', () => {
   /** A stat of a file on the mocked disk, with the modification time and size of its bytes. */
   function statOnDisk(uri: vscode.Uri) {
@@ -105,5 +114,56 @@ describe('LintResourceProvider stamp', () => {
     const provider = providerForLevel();
     expect(await provider.stamp('res://../secret.txt')).toBeNull();
     expect(await provider.stamp('/workspace/secret.txt')).toBeNull();
+  });
+});
+
+describe('LintResourceProvider listFiles', () => {
+  /** Arranges the files `findFiles` finds for each glob: the GDExtension files, and the scan's stop files. */
+  function found(gdextensions: readonly string[], stopFiles: readonly string[]): void {
+    (vscode.workspace.findFiles as Mock).mockImplementation(async (include: vscode.RelativePattern) =>
+      (include.pattern.includes('gdignore') ? stopFiles : gdextensions).map((path) => createMockUri(path))
+    );
+  }
+
+  it("lists each GDExtension under the project root as a res:// path, in any case", async () => {
+    found(['/workspace/game/bin/a.gdextension', '/workspace/game/addons/x/B.GDExtension'], ['/workspace/game/project.godot']);
+
+    expect(await providerForLevel().listFiles('gdextension')).toEqual([
+      'res://bin/a.gdextension',
+      'res://addons/x/B.GDExtension',
+    ]);
+  });
+
+  it("leaves out one the editor's scan skips: under a dot-named directory, another project or a .gdignore", async () => {
+    found(
+      [
+        '/workspace/game/.godot/a.gdextension',
+        '/workspace/game/vendor/other/b.gdextension',
+        '/workspace/game/ignored/deep/c.gdextension',
+        '/workspace/game/kept/d.gdextension',
+      ],
+      ['/workspace/game/project.godot', '/workspace/game/vendor/other/project.godot', '/workspace/game/ignored/.gdignore']
+    );
+
+    expect(await providerForLevel().listFiles('gdextension')).toEqual(['res://kept/d.gdextension']);
+  });
+
+  it('searches under the project root with no excludes, so neither files.exclude nor .gitignore hides a file', async () => {
+    found([], []);
+
+    await providerForLevel().listFiles('gdextension');
+
+    const calls = (vscode.workspace.findFiles as Mock).mock.calls as [vscode.RelativePattern, unknown][];
+    expect(calls.map(([include]) => include.baseUri.fsPath)).toEqual(['/workspace/game', '/workspace/game']);
+    expect(calls.map(([include]) => include.pattern)).toContain(
+      '**/*.[gG][dD][eE][xX][tT][eE][nN][sS][iI][oO][nN]'
+    );
+    expect(calls.map(([, exclude]) => exclude)).toEqual([null, null]);
+  });
+
+  it('gives null when the search fails, since nothing is then proven', async () => {
+    (vscode.workspace.findFiles as Mock).mockRejectedValue(new Error('search failed'));
+
+    expect(await providerForLevel().listFiles('gdextension')).toBeNull();
   });
 });

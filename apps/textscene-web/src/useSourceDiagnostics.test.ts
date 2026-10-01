@@ -94,14 +94,24 @@ const USES_TREE_GLB = [
   '[node name="Tree" parent="." instance=ExtResource("1_tree")]',
 ].join('\n');
 
-/** A provider whose every read of the GLB waits until the test releases it. It holds no other file. */
+/**
+ * The test providers serve a plain `project.godot` and list no GDExtension, so nothing can add to the importer and a
+ * refused glTF is an error.
+ */
+const PLAIN_PROJECT_FILE = 'config_version=5\n';
+const listsNothing = async (): Promise<string[]> => [];
+
+/** A provider whose every read of the GLB waits until the test releases it. It holds only its project file besides. */
 function heldProvider() {
   const pending: Array<() => void> = [];
   const provider: ResourceProvider = {
-    loadResource: (path) =>
-      path === 'res://tree.glb'
+    loadResource: (path) => {
+      if (path === 'res://project.godot') return Promise.resolve(PLAIN_PROJECT_FILE);
+      return path === 'res://tree.glb'
         ? new Promise((resolve) => pending.push(() => resolve(INSTANCED_TREE)))
-        : Promise.resolve(null),
+        : Promise.resolve(null);
+    },
+    listFiles: listsNothing,
   };
   return { provider, pending };
 }
@@ -124,15 +134,10 @@ describe('useSourceDiagnostics with a resource provider', () => {
   it("adds a refused glTF on its ext_resource heading once the scene's dependencies are read", async () => {
     const { provider, pending } = heldProvider();
     const { result } = renderHook(() => useSourceDiagnostics(USES_TREE_GLB, provider, 0));
-    act(() => {
-      vi.advanceTimersByTime(DEBOUNCE_MS);
-    });
+    debounce();
 
     expect(result.current.diagnosticsByLine.has(3)).toBe(false);
-    await act(async () => {
-      for (const release of pending.splice(0)) release();
-      await vi.runAllTimersAsync();
-    });
+    await releaseAll(pending);
 
     expect(result.current.diagnosticsByLine.get(3)?.severity).toBe('error');
   });
@@ -142,9 +147,7 @@ describe('useSourceDiagnostics with a resource provider', () => {
     const { result, rerender } = renderHook(({ text }) => useSourceDiagnostics(text, provider, 0), {
       initialProps: { text: USES_TREE_GLB },
     });
-    act(() => {
-      vi.advanceTimersByTime(DEBOUNCE_MS);
-    });
+    debounce();
     const releaseStale = pending.shift()!;
 
     rerender({ text: WITH_BAD_LAST_LINE });
@@ -207,8 +210,11 @@ describe('useSourceDiagnostics with a resource provider', () => {
 
   it("re-lints the unchanged buffer when the project's files change", async () => {
     let tree: ArrayBuffer | null = null;
-    const loadResource = vi.fn(async (path: string) => (path === 'res://tree.glb' ? tree : null));
-    const provider: ResourceProvider = { loadResource };
+    const loadResource = vi.fn(async (path: string) => {
+      if (path === 'res://project.godot') return PLAIN_PROJECT_FILE;
+      return path === 'res://tree.glb' ? tree : null;
+    });
+    const provider: ResourceProvider = { loadResource, listFiles: listsNothing };
     const { result, rerender } = renderHook(
       ({ revision }) => useSourceDiagnostics(USES_TREE_GLB, provider, revision),
       { initialProps: { revision: 0 } }

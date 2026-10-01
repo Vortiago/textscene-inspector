@@ -8,13 +8,15 @@ import { Linter } from './Linter.js';
 import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { triangleGlb } from '../resources/formats/glb/testing/triangleGlb.js';
+import { PLAIN_PROJECT_FILE, memoryProject } from './testing/memoryProject.js';
 import './index.js';
 
 const RULE = FILE_DIAGNOSTICS.unimportableGltf.ruleName;
 const INSTANCED_TREE = triangleGlb({ extensionsRequired: ['EXT_mesh_gpu_instancing'], instanced: true });
 
+/** A project that can list itself and whose `project.godot` lets nothing add to the importer, holding `files`. */
 function project(files: Record<string, string | ArrayBuffer>): ResourceProvider {
-  return { loadResource: async (path) => files[path] ?? null };
+  return memoryProject({ 'res://project.godot': PLAIN_PROJECT_FILE, ...files });
 }
 
 /** A scene whose `[ext_resource]` `id` for `path` sits on line `3 + blankLines`, and whose `Tree` node instances it. */

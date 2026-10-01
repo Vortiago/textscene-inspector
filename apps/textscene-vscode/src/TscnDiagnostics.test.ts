@@ -14,8 +14,13 @@ import {
   DEFAULT_LINT_DEBOUNCE_MS,
   type DocumentLineSource,
 } from './TscnDiagnostics';
-import { createMockDiagnosticCollection, createMockUri } from './test-setup';
-import { EXTENSION_LIST_PATTERN, PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN } from './watchPatterns';
+import { createMockDiagnosticCollection, createMockFileData, createMockUri } from './test-setup';
+import {
+  EXTENSION_LIST_PATTERN,
+  GDEXTENSION_PATTERN,
+  PROJECT_FILE_PATTERN,
+  RESOURCE_FILES_PATTERN,
+} from './watchPatterns';
 
 /** Configure the mocked `textscene` configuration section for one test. */
 function mockDiagnosticsConfig(overrides: { enabled?: boolean; lintDebounceMs?: number } = {}): void {
@@ -491,11 +496,14 @@ describe('TscnDiagnostics', () => {
           ? Promise.resolve({ type: 1, ctime: 0, mtime: 0, size: 1 })
           : Promise.reject(new Error('Not found'))
       );
-      (vscode.workspace.fs.readFile as Mock).mockImplementation((uri: vscode.Uri) =>
-        uri.fsPath === '/workspace/tree.glb'
+      // A project file that lets nothing add to the importer, and a listing (`findFiles`) that finds no GDExtension.
+      (vscode.workspace.fs.readFile as Mock).mockImplementation((uri: vscode.Uri) => {
+        if (uri.fsPath === '/workspace/project.godot') return Promise.resolve(createMockFileData('config_version=5\n'));
+        return uri.fsPath === '/workspace/tree.glb'
           ? new Promise((resolve) => pendingReads.push(() => resolve(INSTANCED_TREE)))
-          : Promise.reject(new Error(`Not found: ${uri.fsPath}`))
-      );
+          : Promise.reject(new Error(`Not found: ${uri.fsPath}`));
+      });
+      (vscode.workspace.findFiles as Mock).mockResolvedValue([]);
     });
 
     afterEach(() => {
@@ -530,23 +538,23 @@ describe('TscnDiagnostics', () => {
       diagnostics.dispose();
     });
 
-    it('drops a cross-file result that a newer lint of the document has overtaken', async () => {
+    it('drops a cross-file result that a newer lint of the document has overtaken, and shares its read', async () => {
       const diagnostics = newDiagnostics();
       const document = makeTscnDocument(SCENE_USING_TREE, '/workspace/scenes/level.tscn');
+      const moved = makeTscnDocument(`\n${SCENE_USING_TREE}`, '/workspace/scenes/level.tscn');
 
       diagnostics.lintDocument(document);
       await vi.waitFor(() => expect(pendingReads.length).toBe(1));
-      const releaseFirst = pendingReads.shift()!;
-      diagnostics.lintDocument(document);
-      await vi.waitFor(() => expect(pendingReads.length).toBe(1));
-
-      releaseFirst();
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      expect(collection.set).toHaveBeenCalledTimes(1);
-
-      pendingReads.shift()!();
+      diagnostics.lintDocument(moved);
+      await releaseReads();
       await vi.waitFor(() => expect(collection.set).toHaveBeenCalledTimes(2));
-      expect(publishedCodes(1)).toContain(RULE);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const findingLines = collection.set.mock.calls.flatMap(([, list]) =>
+        (list as vscode.Diagnostic[]).filter((d) => d.code === RULE).map((d) => d.range.start.line)
+      );
+      expect(findingLines).toEqual([3]);
+      expect(pendingReads).toHaveLength(0);
       diagnostics.dispose();
     });
 
@@ -783,6 +791,7 @@ describe('TscnDiagnostics', () => {
     function patternFor(fsPath: string): string {
       if (fsPath.endsWith('/project.godot')) return PROJECT_FILE_PATTERN;
       if (fsPath.endsWith('/extension_list.cfg')) return EXTENSION_LIST_PATTERN;
+      if (fsPath.toLowerCase().endsWith('.gdextension')) return GDEXTENSION_PATTERN;
       return RESOURCE_FILES_PATTERN;
     }
 
@@ -844,12 +853,45 @@ describe('TscnDiagnostics', () => {
       (vscode.workspace.fs.stat as Mock).mockResolvedValue({ type: 1, size: 0, ctime: 0, mtime: 0 });
     });
 
-    it('watches project.godot and the GDExtension list itself, and glTF files through the resource watcher', () => {
+    it('watches project.godot, the GDExtension list and .gdextension files itself, and glTF files through the resource watcher', () => {
       const diagnostics = newDiagnostics();
 
       expect(watchers.map((w) => w.pattern).sort()).toEqual(
-        [RESOURCE_FILES_PATTERN, PROJECT_FILE_PATTERN, EXTENSION_LIST_PATTERN].sort()
+        [RESOURCE_FILES_PATTERN, PROJECT_FILE_PATTERN, EXTENSION_LIST_PATTERN, GDEXTENSION_PATTERN].sort()
       );
+      diagnostics.dispose();
+    });
+
+    it.each(['create', 'delete'] as const)(
+      're-lints each open document of the project whose last lint read a glTF when a .gdextension is %sd',
+      async (kind) => {
+        const level = sceneUsingTree('/workspace/scenes');
+        const plain = makeTscnDocument(VALID_TSCN, '/workspace/plain.tscn');
+        const elsewhere = sceneUsingTree('/other');
+        open(level, plain, elsewhere);
+        const diagnostics = newDiagnostics();
+        await settleWalks();
+        const before = [level, plain, elsewhere].map(lintsOf);
+
+        fire(kind, '/workspace/addons/gltf/bin/Gltf.GDExtension');
+        vi.advanceTimersByTime(DEFAULT_LINT_DEBOUNCE_MS);
+
+        expect([level, plain, elsewhere].map(lintsOf)).toEqual([before[0]! + 1, before[1], before[2]]);
+        diagnostics.dispose();
+      }
+    );
+
+    it('does not re-lint when a .gdextension file only changes, since only its presence counts', async () => {
+      const level = sceneUsingTree('/workspace/scenes');
+      open(level);
+      const diagnostics = newDiagnostics();
+      await settleWalks();
+      const before = lintsOf(level);
+
+      fire('change', '/workspace/bin/a.gdextension');
+      vi.advanceTimersByTime(DEFAULT_LINT_DEBOUNCE_MS);
+
+      expect(lintsOf(level)).toBe(before);
       diagnostics.dispose();
     });
 
@@ -992,7 +1034,7 @@ describe('TscnDiagnostics', () => {
 
       diagnostics.dispose();
 
-      expect(watchers).toHaveLength(3);
+      expect(watchers).toHaveLength(4);
       for (const watcher of watchers) {
         expect(watcher.dispose).toHaveBeenCalledTimes(watcher.pattern === RESOURCE_FILES_PATTERN ? 0 : 1);
       }

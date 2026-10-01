@@ -72,6 +72,37 @@ item/0/mesh = ExtResource("1_tree")
     ).toEqual(['1_tree']);
   });
 
+  it("reads a reference inside a [connection] heading's binds", () => {
+    expect(
+      used(`${HEADER}
+[node name="Root" type="Node3D"]
+
+[connection signal="ready" from="." to="." method="_on_ready" binds= [ExtResource("1_tree"), 2]]
+`)
+    ).toEqual(['1_tree']);
+  });
+
+  it('reads the binds of every [connection] heading', () => {
+    expect(
+      used(`${HEADER}
+[node name="Root" type="Node3D"]
+
+[connection signal="ready" from="." to="." method="a" binds= [ExtResource("1_tree")]]
+[connection signal="ready" from="." to="." method="b" binds= [ExtResource("2_tex")]]
+`)
+    ).toEqual(['1_tree', '2_tex']);
+  });
+
+  it('reads nothing from a [connection] heading without binds', () => {
+    expect(
+      used(`${HEADER}
+[node name="Root" type="Node3D"]
+
+[connection signal="ready" from="." to="." method="_on_ready"]
+`)
+    ).toEqual([]);
+  });
+
   it('gives an empty set for a declaration no value names', () => {
     expect(
       used(`${HEADER}

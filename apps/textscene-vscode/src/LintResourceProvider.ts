@@ -1,13 +1,23 @@
 /**
- * The linter's view of one Godot project: a `res://` path under its root, read from the workspace. Strict like the
- * CLI's provider, so both report the same files: null for a miss or a path that escapes the root. It logs nothing
- * for a miss, since a lint runs on each keystroke.
+ * The linter's view of one Godot project: a `res://` path under its root, read from the workspace, and its files by
+ * extension. Strict like the CLI's provider, so both report the same files: null for a miss or a path that escapes the
+ * root. It logs nothing for a miss, since a lint runs on each keystroke.
  */
 
 import * as vscode from 'vscode';
 import type { ResourceProvider } from '@textscene/core/resources/ResourceProvider';
-import { resRelativePath } from '@textscene/core/resources/resPath';
-import { isBinaryResourceType } from '@textscene/core/resources/resourceProviderUtils';
+import { isWithinRoot, resRelativePath } from '@textscene/core/resources/resPath';
+import { resourceContent } from '@textscene/core/resources/resourceProviderUtils';
+import { SCAN_STOP_FILES, isScannedPath } from '@textscene/core/godot';
+import { anyCase } from './anyCaseGlob';
+
+const ROOT = 'res://';
+
+/** The `res://` path of the directory holding the file at `path`. */
+function parentResPath(path: string): string {
+  const slash = path.lastIndexOf('/');
+  return slash < ROOT.length ? ROOT : path.slice(0, slash);
+}
 
 export class LintResourceProvider implements ResourceProvider {
   /** @param projectRoot - The directory that holds the project's `project.godot`. */
@@ -23,9 +33,7 @@ export class LintResourceProvider implements ResourceProvider {
       // A missing dependency is the missing-resource path, which the provider contract spells as null.
       return null;
     }
-    if (!isBinaryResourceType(type, resPath)) return new TextDecoder('utf-8').decode(bytes);
-    // A copy, not `bytes.buffer`: a view may sit inside a larger buffer.
-    return new Uint8Array(bytes).buffer;
+    return resourceContent(bytes, type, resPath);
   }
 
   /** The file's modification time and size, one `stat`, so the linter reads an unchanged file once. */
@@ -39,6 +47,37 @@ export class LintResourceProvider implements ResourceProvider {
       // A file with no stamp is read, and the read answers a missing one with null.
       return null;
     }
+  }
+
+  /**
+   * Every file with `extension` the editor's scan reaches, found with `findFiles`. A null exclude turns off
+   * `files.exclude` and `.gitignore` (`extHostWorkspace.ts:503-518` in VS Code), which Godot's scan does not read. Null
+   * when the search fails.
+   */
+  async listFiles(extension: string): Promise<string[] | null> {
+    const search = (glob: string) => vscode.workspace.findFiles(new vscode.RelativePattern(this.projectRoot, glob), null);
+    try {
+      const [candidates, stopFiles] = await Promise.all([
+        search(`**/*.${anyCase(extension)}`),
+        search(`**/{${SCAN_STOP_FILES.join(',')}}`),
+      ]);
+      const skipped = new Set(stopFiles.map((file) => parentResPath(this.resPathOf(file))).filter((dir) => dir !== ROOT));
+      return candidates.map((file) => this.resPathOf(file)).filter((path) => isScannedPath(path, skipped));
+    } catch {
+      // A search that fails proves nothing, which the linter reads as "may hold one".
+      return null;
+    }
+  }
+
+  /** The `res://` path of `file`, a file the search found under the project root. */
+  private resPathOf(file: vscode.Uri): string {
+    const rootPath = this.projectRoot.path.replace(/\/+$/, '');
+    return `${ROOT}${file.path.slice(rootPath.length + 1)}`;
+  }
+
+  /** Whether `file` lies under the project root. */
+  holds(file: vscode.Uri): boolean {
+    return isWithinRoot(this.projectRoot.fsPath, file.fsPath);
   }
 
   /** The workspace file `resPath` names, or null for a path that is not `res://` or escapes the project. */

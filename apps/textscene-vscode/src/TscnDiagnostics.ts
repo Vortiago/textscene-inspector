@@ -17,7 +17,7 @@ import { error as logError } from '@textscene/core/logger';
 import { comparablePath, isWithinRoot } from '@textscene/core/resources/resPath';
 import { LintResourceProvider } from './LintResourceProvider';
 import { findEnclosingGodotProject, hasProjectFile } from './findGodotProjectRoot';
-import { EXTENSION_LIST_PATTERN, PROJECT_FILE_PATTERN } from './watchPatterns';
+import { EXTENSION_LIST_PATTERN, GDEXTENSION_PATTERN, PROJECT_FILE_PATTERN } from './watchPatterns';
 
 /** Fallback when `textscene.diagnostics.lintDebounceMs` is unset. */
 export const DEFAULT_LINT_DEBOUNCE_MS = 300;
@@ -200,9 +200,13 @@ export class TscnDiagnostics implements vscode.Disposable {
     this._subscribe(resourceFiles, (uri) => this._onDependencyChanged(uri));
     const extensionList = vscode.workspace.createFileSystemWatcher(EXTENSION_LIST_PATTERN);
     const projectFile = vscode.workspace.createFileSystemWatcher(PROJECT_FILE_PATTERN);
-    this._disposables.push(extensionList, projectFile);
+    const gdextensions = vscode.workspace.createFileSystemWatcher(GDEXTENSION_PATTERN);
+    this._disposables.push(extensionList, projectFile, gdextensions);
     this._subscribe(extensionList, (uri) => this._onDependencyChanged(uri));
     this._subscribe(projectFile, (uri) => this._onProjectFileChanged(uri));
+    // Only a GDExtension's presence counts, so its content changes nothing the lint reads.
+    const onGdextension = (uri: vscode.Uri) => this._onGdextensionAddedOrRemoved(uri);
+    this._disposables.push(gdextensions.onDidCreate(onGdextension), gdextensions.onDidDelete(onGdextension));
 
     // Lint everything already open at activation, unless diagnostics are off.
     if (this._enabled) {
@@ -252,6 +256,18 @@ export class TscnDiagnostics implements vscode.Disposable {
         return file !== null && comparablePath(file.fsPath) === changed;
       });
       if (read) this._scheduleLint(document);
+    }
+  }
+
+  /**
+   * Schedules a lint of each open document in the project that holds `uri` whose last lint read anything: its plugin
+   * probe lists the project's GDExtension files, so one added or removed can change its answer.
+   */
+  private _onGdextensionAddedOrRemoved(uri: vscode.Uri): void {
+    if (!this._enabled) return;
+    for (const document of vscode.workspace.textDocuments) {
+      const record = this._documents.get(document.uri.toString());
+      if (record?.provider?.holds(uri) && record.session.reads.length > 0) this._scheduleLint(document);
     }
   }
 

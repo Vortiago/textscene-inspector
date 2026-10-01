@@ -229,7 +229,8 @@ export function packedArrayBody(
   return null;
 }
 
-const STRING_ARRAY_FORMS = packedArrayForms('PackedStringArray');
+/** {@link packedArrayForms} for `PackedStringArray`, built once for every reader of a string-array slot. */
+export const STRING_ARRAY_FORMS = packedArrayForms('PackedStringArray');
 
 /**
  * The body of each `"…"` element of a `PackedStringArray(…)`, `Array[String]([…])` or bare `[…]`, escapes still as

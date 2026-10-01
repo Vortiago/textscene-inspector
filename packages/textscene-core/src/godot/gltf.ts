@@ -46,23 +46,33 @@ export function requiredGltfExtensions(json: unknown): string[] {
 }
 
 /** `glTF` read as a little-endian `uint32`, which `_parse` tests the first four bytes against (`gltf_document.cpp:6514-6515`). */
-const GLB_MAGIC = 0x46546c67;
+export const GLB_MAGIC = 0x46546c67;
 /** `JSON` as a chunk type, which the first chunk of a GLB must carry (`gltf_document.cpp:283`). */
-const GLB_JSON_CHUNK = 0x4e4f534a;
-/** The 12-byte file header, then the first chunk's length and type (`gltf_document.cpp:276-281`). */
-const GLB_JSON_CHUNK_OFFSET = 20;
+export const GLB_JSON_CHUNK = 0x4e4f534a;
+
+/**
+ * Byte offsets in a GLB: the 12-byte file header (magic, version, total length), then the first chunk's length, its
+ * type and its data (`gltf_document.cpp:276-281`). Each field is a little-endian `uint32`.
+ */
+const GLB_MAGIC_OFFSET = 0;
+const GLB_FIRST_CHUNK_LENGTH_OFFSET = 12;
+const GLB_FIRST_CHUNK_TYPE_OFFSET = 16;
+const GLB_FIRST_CHUNK_DATA_OFFSET = 20;
+const UINT32_BYTES = 4;
 
 /**
  * The JSON text of a GLB's first chunk, or null where `_parse_glb` refuses the file: a first chunk
  * that is not JSON (`gltf_document.cpp:283`), or one shorter than its declared length (`:287`).
  */
 function glbJsonText(bytes: Uint8Array): string | null {
-  if (bytes.length < GLB_JSON_CHUNK_OFFSET) return null;
+  if (bytes.length < GLB_FIRST_CHUNK_DATA_OFFSET) return null;
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const chunkLength = view.getUint32(12, true);
-  if (view.getUint32(16, true) !== GLB_JSON_CHUNK) return null;
-  if (bytes.length - GLB_JSON_CHUNK_OFFSET < chunkLength) return null;
-  return new TextDecoder().decode(bytes.subarray(GLB_JSON_CHUNK_OFFSET, GLB_JSON_CHUNK_OFFSET + chunkLength));
+  const chunkLength = view.getUint32(GLB_FIRST_CHUNK_LENGTH_OFFSET, true);
+  if (view.getUint32(GLB_FIRST_CHUNK_TYPE_OFFSET, true) !== GLB_JSON_CHUNK) return null;
+  if (bytes.length - GLB_FIRST_CHUNK_DATA_OFFSET < chunkLength) return null;
+  return new TextDecoder().decode(
+    bytes.subarray(GLB_FIRST_CHUNK_DATA_OFFSET, GLB_FIRST_CHUNK_DATA_OFFSET + chunkLength)
+  );
 }
 
 /**
@@ -72,7 +82,9 @@ function glbJsonText(bytes: Uint8Array): string | null {
 function gltfJsonText(data: ArrayBuffer | string): string | null {
   if (typeof data === 'string') return data;
   const bytes = new Uint8Array(data);
-  const isGlb = bytes.length >= 4 && new DataView(data).getUint32(0, true) === GLB_MAGIC;
+  const isGlb =
+    bytes.length >= GLB_MAGIC_OFFSET + UINT32_BYTES &&
+    new DataView(data).getUint32(GLB_MAGIC_OFFSET, true) === GLB_MAGIC;
   return isGlb ? glbJsonText(bytes) : new TextDecoder().decode(bytes);
 }
 

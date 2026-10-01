@@ -133,7 +133,7 @@ export interface StrictParseResult {
    * and the rule phase needs it. Absent only if the scanner could not run.
    */
   scene?: TscnScene;
-  /** Where each node and sub-resource of `scene` sits. */
+  /** Where each `[ext_resource]`, `[sub_resource]`, `[node]` and `.tres` `[resource]` section of `scene` sits. */
   lines: SourceLines;
 }
 

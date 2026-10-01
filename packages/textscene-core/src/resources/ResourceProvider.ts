@@ -13,4 +13,12 @@ export interface ResourceProvider {
    * Null for a file the host cannot stamp, which the linter then reads. A provider without it is read every time.
    */
   stamp?(path: string): Promise<string | null>;
+  /**
+   * The `res://` path of every project file whose extension is `extension`, in any case, in the directories Godot's
+   * editor scan enters (`godot/editorScan.ts`). The caller leaves out the data directory, which the project's settings
+   * name. Null, like a provider without it, for a host that cannot list the whole project.
+   *
+   * @param extension - The extension without its dot, such as "gdextension"
+   */
+  listFiles?(extension: string): Promise<string[] | null>;
 }

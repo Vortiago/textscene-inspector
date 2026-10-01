@@ -112,6 +112,7 @@ export class TscnParserCore {
     // One per file: the loader refuses any tag after the `[resource]` body
     // (`resource_format_text.cpp:837-841`), so a later one is a corrupt file, and the last one read stays.
     let mainResource: TscnMainResource | undefined;
+    const connectionBinds: string[] = [];
 
     let currentSection: SectionType = 'none';
     let currentHeading: ParsedHeading | null = null;
@@ -236,6 +237,8 @@ export class TscnParserCore {
           if (currentHeading.type === 'gd_resource') {
             headerResourceType = currentHeading.attributes.type;
           }
+          const binds = currentHeading.type === 'connection' ? currentHeading.attributes.binds : undefined;
+          if (binds !== undefined) connectionBinds.push(binds);
           observer?.onSectionStart?.(currentHeading, currentSection, lineNumber);
         } else {
           observer?.onError?.({
@@ -330,6 +333,7 @@ export class TscnParserCore {
       ...(emptyParents.length > 0 ? { emptyParentHeadings: emptyParents } : {}),
       ...(headerResourceType !== undefined ? { resourceType: headerResourceType } : {}),
       ...(mainResource ? { mainResource } : {}),
+      ...(connectionBinds.length > 0 ? { connectionBinds } : {}),
     };
   }
 

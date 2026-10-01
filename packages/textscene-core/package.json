@@ -51,6 +51,11 @@
       "@textscene/source": "./src/resources/resourceProviderUtils.ts",
       "types": "./dist/resources/resourceProviderUtils.d.ts",
       "import": "./dist/resources/resourceProviderUtils.js"
+    },
+    "./resources/projectListing": {
+      "@textscene/source": "./src/resources/projectListing.ts",
+      "types": "./dist/resources/projectListing.d.ts",
+      "import": "./dist/resources/projectListing.js"
     }
   },
   "files": [

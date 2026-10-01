@@ -1,10 +1,15 @@
 /** The VS Code ResourceProvider: it loads resources from the workspace filesystem. */
 
 import * as vscode from 'vscode';
-import { isBinaryResourceType, stripResPrefix } from '@textscene/core/resources/resourceProviderUtils';
+import { resourceContent, stripResPrefix } from '@textscene/core/resources/resourceProviderUtils';
 import { info, error } from '@textscene/core/logger';
 import type { ResourceProvider } from '@textscene/core/resources/ResourceProvider';
-import { comparablePath, isWithinRoot, normalizeRelativePath } from '@textscene/core/resources/resPath';
+import {
+  comparablePath,
+  isWithinRoot,
+  normalizeRelativePath,
+  resRelativePath,
+} from '@textscene/core/resources/resPath';
 import { findGodotProjectRoot } from '../findGodotProjectRoot';
 
 export class VSCodeResourceProvider implements ResourceProvider {
@@ -36,12 +41,8 @@ export class VSCodeResourceProvider implements ResourceProvider {
     } catch (primaryError) {
       info(`[VSCodeResourceProvider] Primary resolution failed:`, primaryError);
 
-      // Fallback: relative to the document's directory. A `..` that climbs above it is
-      // refused here as in `resolveGodotPath`, or this branch reads what that one refused.
       try {
-        const relativePath = normalizeRelativePath(stripResPrefix(resourcePath));
-        const documentDir = vscode.Uri.joinPath(this.documentUri, '..');
-        const fallbackPath = relativePath === null ? null : vscode.Uri.joinPath(documentDir, relativePath);
+        const fallbackPath = this.documentRelativeUri(resourcePath);
 
         if (fallbackPath && isWithinRoot(this.workspaceRoot.fsPath, fallbackPath.fsPath)) {
           info(`[VSCodeResourceProvider] Trying fallback path: ${fallbackPath.fsPath}`);
@@ -70,17 +71,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
   ): Promise<string | ArrayBuffer> {
     const fileData = await vscode.workspace.fs.readFile(fsPath);
     info(`[VSCodeResourceProvider] Read ${fileData.byteLength} bytes`);
-
-    // Binary files (textures, audio, GLB/GLTF) return an ArrayBuffer.
-    if (isBinaryResourceType(type, resourcePath)) {
-      const buffer = new ArrayBuffer(fileData.byteLength);
-      const view = new Uint8Array(buffer);
-      view.set(fileData);
-      return buffer;
-    }
-
-    // Text files (scenes, scripts, shaders) return a string.
-    return new TextDecoder('utf-8').decode(fileData);
+    return resourceContent(fileData, type, resourcePath);
   }
 
   /**
@@ -107,6 +98,18 @@ export class VSCodeResourceProvider implements ResourceProvider {
     this.projectRoot = await findGodotProjectRoot(this.workspaceRoot, this.documentUri);
     info(`[VSCodeResourceProvider] Project root resolved to: ${this.projectRoot.fsPath}`);
     return this.projectRoot;
+  }
+
+  /**
+   * `resourcePath` under the document's directory, the fallback when the project root does not
+   * hold it. Null for a `res://` path that climbs out of its root, which `resolveGodotPath`
+   * refuses, so this branch cannot read it either. A relative path may climb: Godot resolves it
+   * from the scene's own directory (`resource_format_text.cpp:490-513`).
+   */
+  private documentRelativeUri(resourcePath: string): vscode.Uri | null {
+    const relativePath = resourcePath.startsWith('res://') ? resRelativePath(resourcePath) : resourcePath;
+    if (relativePath === null) return null;
+    return vscode.Uri.joinPath(vscode.Uri.joinPath(this.documentUri, '..'), relativePath);
   }
 
   /**

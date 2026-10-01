@@ -1,7 +1,7 @@
 /**
  * One diagnostic per used `[ext_resource]` whose glTF file Godot's importer refuses (`gltf_document.cpp:7197-7202`).
  * Its resource never loads, so the text loader aborts the scene where a value names it (`resource_format_text.cpp:145-151`,
- * `abort_on_missing_resource` at `resource_loader.cpp:1566`). A warning where a plugin or GDExtension can add one.
+ * `abort_on_missing_resource` at `resource_loader.cpp:1566`). A warning unless the project shows nothing can add one.
  */
 
 import type { TscnExternalResource, TscnScene } from '../parser/types.js';
@@ -39,13 +39,14 @@ interface Refusal {
   readonly unsupported: readonly string[];
 }
 
+// "The file", not "the scene": a `.tres` whose `[resource]` body names the glTF fails to load as well.
 const NOTHING_CAN_ADD =
-  ' The project enables no editor plugin and loads no GDExtension, so nothing can add it. ' +
-  'The import fails, so Godot fails to load the scene.';
+  ' The project enables no editor plugin, declares no autoload and holds no GDExtension, so nothing can add support. ' +
+  'The import fails, so Godot fails to load the file.';
 
 const A_PLUGIN_MAY_ADD =
-  ' Unless an editor plugin or a GDExtension of this project registers a GLTFDocumentExtension that supports it, ' +
-  'the import fails, and Godot fails to load the scene.';
+  ' Unless an editor plugin, an autoload or a GDExtension of this project registers a GLTFDocumentExtension that ' +
+  'adds support, the import fails, and Godot fails to load the file.';
 
 /** One refusal on its `[ext_resource]` heading, under `arm`, its message closed by `outcome`. */
 function report(arm: RuleArm, { resource, unsupported }: Refusal, lines: SourceLines, outcome: string): Diagnostic {
@@ -62,8 +63,8 @@ export interface ProjectReads {
 
 /**
  * Each of `resources` whose glTF Godot refuses to import, on its `[ext_resource]` heading, read through `provider`.
- * The plugin probe starts beside the glTF reads, so a refusal waits for neither in turn, and its answer is used only
- * when a file is refused.
+ * The plugin probe reads the project files beside the glTF reads, so a refusal waits for neither in turn, and its
+ * answer, which may list the project, is asked for only when a file is refused.
  */
 export async function unimportableGltfDiagnostics(
   resources: readonly TscnExternalResource[],
@@ -71,15 +72,13 @@ export async function unimportableGltfDiagnostics(
   provider: ResourceProvider,
   reads: ProjectReads
 ): Promise<Diagnostic[]> {
-  const mayBeExtended = reads.plugins.mayExtendGltfImport(provider);
-  // Awaited only when a file is refused: the await below still throws, and an unawaited rejection stays silent.
-  mayBeExtended.catch(() => undefined);
+  const mayBeExtended = reads.plugins.probe(provider);
   const found = await Promise.all(
     resources.map(async (resource) => ({ resource, unsupported: await reads.verdicts.refused(provider, resource) }))
   );
   const refusals = found.filter(({ unsupported }) => unsupported.length > 0);
   if (refusals.length === 0) return [];
-  const extensible = await mayBeExtended;
+  const extensible = await mayBeExtended();
   return refusals.map((refusal) =>
     extensible
       ? report(FILE_DIAGNOSTICS.unimportableGltfUnlessPlugin, refusal, lines, A_PLUGIN_MAY_ADD)

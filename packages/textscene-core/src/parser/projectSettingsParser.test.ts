@@ -9,6 +9,7 @@ import {
   DEFAULT_THEME_SCALE,
   DEFAULT_VIEWPORT_HEIGHT,
   DEFAULT_VIEWPORT_WIDTH,
+  declaredAutoloads,
   enabledEditorPlugins,
   parseProjectSettings,
   projectExtensionListPath,
@@ -292,6 +293,24 @@ describe('projectLayoutDirectionEnv — the settings are engine slots, not text'
         'internationalization/rendering/root_node_layout_direction': 'nonsense',
       }).rootRtl
     ).toBe(false);
+  });
+});
+
+describe('declaredAutoloads', () => {
+  it('names each entry of the [autoload] section, a singleton or not', () => {
+    const settings = parseProjectSettings(
+      '[autoload]\n\nGlobals="*res://globals.gd"\nImporter="res://importer.tscn"\n'
+    );
+    expect(declaredAutoloads(settings)).toEqual(['Globals', 'Importer']);
+  });
+
+  it('is empty for a project without an [autoload] section, and for none at all', () => {
+    expect(declaredAutoloads(parseProjectSettings('[application]\nconfig/name="A"\n'))).toEqual([]);
+    expect(declaredAutoloads(null)).toEqual([]);
+  });
+
+  it('ignores a key that only starts like the section, such as one in [autoload_prepend]', () => {
+    expect(declaredAutoloads(parseProjectSettings('[autoload_prepend]\nFirst="*res://first.gd"\n'))).toEqual([]);
   });
 });
 

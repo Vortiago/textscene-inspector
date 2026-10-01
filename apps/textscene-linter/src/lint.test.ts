@@ -292,6 +292,22 @@ describe('cross-file rules', () => {
     ]);
   });
 
+  it('warns, and passes the run, in a fresh checkout whose GDExtension has no .godot list yet', async () => {
+    const extendedProject = join(projectDir, 'extended');
+    mkdirSync(join(extendedProject, 'addons', 'gltf'), { recursive: true });
+    writeFileSync(join(extendedProject, 'project.godot'), 'config_version=5\n');
+    writeFileSync(join(extendedProject, 'addons', 'gltf', 'gltf.gdextension'), '[configuration]\n');
+    copyFileSync(INSTANCED_TREE, join(extendedProject, 'tree.glb'));
+    writeFileSync(join(extendedProject, 'level.tscn'), USES_TREE_GLB);
+
+    const { exitCode, files } = await collectFileDiagnostics([join(extendedProject, 'level.tscn')]);
+
+    expect(exitCode).toBe(0);
+    expect(files[0]!.diagnostics.map((d) => [d.severity, d.ruleName])).toEqual([
+      ['warning', 'gltf-required-extension-maybe-unsupported'],
+    ]);
+  });
+
   it('reads no dependency for a scene outside any Godot project', async () => {
     const { exitCode, files } = await collectFileDiagnostics([join(projectDir, 'loose.tscn')]);
 

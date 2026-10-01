@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
+  GLB_JSON_CHUNK,
+  GLB_MAGIC,
   gltfRefusalMessage,
   isGltfPath,
   readGltfRequiredExtensions,
   requiredGltfExtensions,
   unsupportedRequiredGltfExtensions,
 } from './gltf';
-import { BIN_CHUNK, GLB_MAGIC, JSON_CHUNK } from '../resources/formats/glb/testing/triangleGlb';
+import { BIN_CHUNK } from '../resources/formats/glb/testing/triangleGlb';
 
 describe('unsupportedRequiredGltfExtensions', () => {
   it('passes a file whose required extensions Godot all imports', () => {
@@ -25,7 +27,7 @@ describe('unsupportedRequiredGltfExtensions', () => {
 });
 
 /** A GLB container: the 12-byte header, then one chunk of `chunkType` holding `body`. */
-function glb(body: string, chunkType = JSON_CHUNK): ArrayBuffer {
+function glb(body: string, chunkType = GLB_JSON_CHUNK): ArrayBuffer {
   const json = new TextEncoder().encode(body);
   const file = new Uint8Array(20 + json.length);
   const view = new DataView(file.buffer);

@@ -110,6 +110,14 @@ export const MockDiagnosticSeverity = {
   Hint: 3
 } as const;
 
+/** `vscode.RelativePattern`: a glob matched under a base folder. */
+export class MockRelativePattern {
+  constructor(
+    public readonly baseUri: any,
+    public readonly pattern: string
+  ) {}
+}
+
 /** `vscode.TabInputText`: the input of a tab that shows a text document. */
 export class MockTabInputText {
   constructor(public readonly uri: any) {}

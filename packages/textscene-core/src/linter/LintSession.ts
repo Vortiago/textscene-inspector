@@ -32,7 +32,8 @@ export interface SessionLint {
   readonly now: Diagnostic[];
   /**
    * The full list, sorted, once the cross-file rules have read their files. It resolves to null when a newer `lint`
-   * of the session has overtaken this one. Null when the file uses nothing a cross-file rule reads: `now` is final.
+   * of the session has overtaken this one. Null when the lint has no provider or the file uses nothing a cross-file
+   * rule reads: `now` is final.
    */
   readonly later: Promise<Diagnostic[] | null> | null;
 }

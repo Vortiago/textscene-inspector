@@ -62,6 +62,12 @@ export interface TscnScene {
    * (`resource_format_text.cpp:723-728`).
    */
   mainResource?: TscnMainResource;
+  /**
+   * The `binds=` value of each `[connection]` heading, as written. The loader parses a heading's fields with the
+   * resource parser a property value goes through (`resource_format_text.cpp:286`, `:379`, `variant_parser.cpp:1862`),
+   * so an `ExtResource` in it is a use. Absent rather than empty when no heading binds anything.
+   */
+  connectionBinds?: readonly string[];
   /** Event-based resource loader, used by SceneGraph helpers. */
   resourceLoader?: ResourceLoader;
 }

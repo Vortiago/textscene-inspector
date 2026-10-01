@@ -27,46 +27,71 @@ interface Kept<T> {
   readonly value: T;
 }
 
+/** One provider's reads: the kept answers, and the reads still running, each by `res://` path. */
+interface ProviderReads<T> {
+  readonly kept: Map<string, Kept<T>>;
+  readonly running: Map<string, Promise<T>>;
+}
+
 export class StampedReads<T> {
-  /** Each provider's answers by `res://` path. Written by `get` after each read, and gone with the provider. */
-  private readonly byProvider = new WeakMap<ResourceProvider, Map<string, Kept<T>>>();
+  /**
+   * Each provider's reads. `get` writes a kept answer after each stamped read and a running read while it runs, and
+   * deletes the running one once it settles. Both go with the provider.
+   */
+  private readonly byProvider = new WeakMap<ResourceProvider, ProviderReads<T>>();
 
   /**
    * The answer `read` gives for `path`, kept under the file's stamp while the stamp is unchanged. The stamp is taken
    * before the read, so a file that changes between the two is kept under the older stamp and read again next time.
    * A file with no stamp is read, and its older answer is forgotten. With no stamp at all, the read starts at once.
+   * A get that arrives while a get of the same path runs shares that one's answer, so concurrent lints stat and read
+   * a file once.
    *
-   * @param stamp - The file's stamp, when the caller started reading it earlier
+   * @param stamp - The file's stamp, when the caller started reading it earlier. A shared get ignores it.
    */
-  async get(
+  get(provider: ResourceProvider, path: string, read: () => Promise<T>, stamp?: Promise<string | null>): Promise<T> {
+    const { running } = this.readsOf(provider);
+    const shared = running.get(path);
+    if (shared) return shared;
+
+    const answer = this.stampedRead(provider, path, read, stamp);
+    running.set(path, answer);
+    const settle = () => {
+      if (running.get(path) === answer) running.delete(path);
+    };
+    answer.then(settle, settle);
+    return answer;
+  }
+
+  /** The answer kept for `path`, whatever the file's stamp is now, or undefined for none. A running read is none. */
+  peek(provider: ResourceProvider, path: string): T | undefined {
+    return this.byProvider.get(provider)?.kept.get(path)?.value;
+  }
+
+  private async stampedRead(
     provider: ResourceProvider,
     path: string,
     read: () => Promise<T>,
-    stamp?: Promise<string | null>
+    stamp: Promise<string | null> | undefined
   ): Promise<T> {
     if (!stamp && !provider.stamp) return read();
     const current = await (stamp ?? stampOf(provider, path));
-    const answers = this.byProvider.get(provider);
-    const kept = answers?.get(path);
-    if (current !== null && kept?.stamp === current) return kept.value;
+    const { kept } = this.readsOf(provider);
+    const before = kept.get(path);
+    if (current !== null && before?.stamp === current) return before.value;
 
     const value = await read();
-    if (current === null) answers?.delete(path);
-    else this.answersOf(provider).set(path, { stamp: current, value });
+    if (current === null) kept.delete(path);
+    else kept.set(path, { stamp: current, value });
     return value;
   }
 
-  /** The answer kept for `path`, whatever the file's stamp is now, or undefined for none. */
-  peek(provider: ResourceProvider, path: string): T | undefined {
-    return this.byProvider.get(provider)?.get(path)?.value;
-  }
-
-  private answersOf(provider: ResourceProvider): Map<string, Kept<T>> {
-    let answers = this.byProvider.get(provider);
-    if (!answers) {
-      answers = new Map();
-      this.byProvider.set(provider, answers);
+  private readsOf(provider: ResourceProvider): ProviderReads<T> {
+    let reads = this.byProvider.get(provider);
+    if (!reads) {
+      reads = { kept: new Map(), running: new Map() };
+      this.byProvider.set(provider, reads);
     }
-    return answers;
+    return reads;
   }
 }

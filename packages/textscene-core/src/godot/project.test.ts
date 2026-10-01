@@ -4,7 +4,14 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { extensionListEntries, extensionListPath } from './project.js';
+import { extensionListEntries, extensionListPath, dataDirectoryPath } from './project.js';
+
+describe('dataDirectoryPath', () => {
+  it('is res://.godot by default, and res://godot when the project turns the hidden directory off', () => {
+    expect(dataDirectoryPath(true)).toBe('res://.godot');
+    expect(dataDirectoryPath(false)).toBe('res://godot');
+  });
+});
 
 describe('extensionListPath', () => {
   it('is in res://.godot for the default hidden directory', () => {

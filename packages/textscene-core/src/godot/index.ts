@@ -81,7 +81,14 @@ export {
   requiredGltfExtensions,
   unsupportedRequiredGltfExtensions,
 } from './gltf.js';
-export { PROJECT_FILE_NAME, PROJECT_FILE_PATH, extensionListEntries, extensionListPath } from './project.js';
+export {
+  PROJECT_FILE_NAME,
+  PROJECT_FILE_PATH,
+  extensionListEntries,
+  extensionListPath,
+  dataDirectoryPath,
+} from './project.js';
+export { GDEXTENSION_FILE_EXTENSION, SCAN_STOP_FILES, isScannedDirectoryName, isScannedPath } from './editorScan.js';
 export { GRADIENT_TEXTURE_MAX_SIZE, IMAGE_MAX_PIXELS } from './texture.js';
 export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX, CLIP_CHILDREN_MODES } from './canvasItem.js';
 export {
@@ -173,6 +180,7 @@ export {
   packedArrayBody,
   packedArrayForms,
   packedElementType,
+  STRING_ARRAY_FORMS,
   stringArrayBodies,
   type PackedArrayBody,
 } from './variantParser.js';

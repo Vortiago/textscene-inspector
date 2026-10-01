@@ -1,8 +1,8 @@
 /** The CLI's view of a scene's Godot project: the files under the nearest `project.godot`, read from disk. */
 
-import { mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'fs';
+import { mkdirSync, mkdtempSync, rmSync, statSync, symlinkSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
-import { join } from 'path';
+import { dirname, join } from 'path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { projectProviderFor } from './projectProvider';
 
@@ -92,5 +92,50 @@ describe('projectProviderFor stamp', () => {
   it('gives null for a path that escapes the project root', async () => {
     const provider = await projectProviderFor(scenePath);
     expect(await provider!.stamp!('res://../secret.txt')).toBeNull();
+  });
+});
+
+describe('projectProviderFor listFiles', () => {
+  let listedDir: string;
+
+  beforeAll(() => {
+    listedDir = join(tempDir, 'listed');
+    const files: Record<string, string> = {
+      'project.godot': 'config_version=5\n',
+      'scenes/level.tscn': '[gd_scene format=3]\n',
+      'bin/a.gdextension': '',
+      'addons/x/bin/B.GDExtension': '',
+      '.godot/c.gdextension': '',
+      'ignored/.gdignore': '',
+      'ignored/d.gdextension': '',
+      'nested/project.godot': 'config_version=5\n',
+      'nested/e.gdextension': '',
+    };
+    for (const [file, text] of Object.entries(files)) {
+      mkdirSync(dirname(join(listedDir, file)), { recursive: true });
+      writeFileSync(join(listedDir, file), text);
+    }
+    // A link back up the tree: the walk follows it once and does not loop.
+    symlinkSync(join(listedDir, 'addons'), join(listedDir, 'addons', 'x', 'loop'), 'dir');
+  });
+
+  it("lists each GDExtension the editor's scan finds, in any case, and none it skips", async () => {
+    const provider = await projectProviderFor(join(listedDir, 'scenes', 'level.tscn'));
+    const listed = await provider!.listFiles!('gdextension');
+
+    expect(listed).toContain('res://bin/a.gdextension');
+    expect(listed).toContain('res://addons/x/bin/B.GDExtension');
+    expect(listed!.filter((path) => !path.startsWith('res://addons/x/loop/')).sort()).toEqual([
+      'res://addons/x/bin/B.GDExtension',
+      'res://bin/a.gdextension',
+    ]);
+  });
+
+  it('lists the project once per run, since a run sees one state of it', async () => {
+    const provider = await projectProviderFor(join(listedDir, 'scenes', 'level.tscn'));
+    const first = await provider!.listFiles!('gdextension');
+    writeFileSync(join(listedDir, 'bin', 'late.gdextension'), '');
+
+    expect(await provider!.listFiles!('gdextension')).toEqual(first);
   });
 });

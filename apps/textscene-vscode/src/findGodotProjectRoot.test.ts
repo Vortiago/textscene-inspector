@@ -1,10 +1,10 @@
 /**
- * Tests for findGodotProjectRoot: walk up for project.godot, and fall back to the
- * workspace root.
+ * Tests for the project walk: up from a document for project.godot, with the
+ * workspace-root fallback the preview takes and the linter does not.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { findGodotProjectRoot } from './findGodotProjectRoot';
+import { findEnclosingGodotProject, findGodotProjectRoot, hasProjectFile } from './findGodotProjectRoot';
 import { createMockUri, vscode } from './test-setup';
 
 describe('findGodotProjectRoot', () => {
@@ -75,5 +75,57 @@ describe('findGodotProjectRoot', () => {
     const result = await findGodotProjectRoot(workspaceRoot, documentUri);
 
     expect(result.fsPath).toBe('/workspace');
+  });
+});
+
+describe('findEnclosingGodotProject', () => {
+  const workspaceRoot = createMockUri('/workspace');
+
+  it('finds the nearest directory that holds project.godot', async () => {
+    const holds = async (dir: ReturnType<typeof createMockUri>) => dir.fsPath === '/workspace/game';
+
+    const result = await findEnclosingGodotProject(workspaceRoot, createMockUri('/workspace/game/scenes/Door.tscn'), holds);
+
+    expect(result?.fsPath).toBe('/workspace/game');
+  });
+
+  it('gives null, not the workspace root, when no directory holds project.godot', async () => {
+    const result = await findEnclosingGodotProject(
+      workspaceRoot,
+      createMockUri('/workspace/scenes/Door.tscn'),
+      async () => false
+    );
+
+    expect(result).toBeNull();
+  });
+
+  it('asks about each directory from the document up to the workspace root, and none above it', async () => {
+    const asked: string[] = [];
+    const holds = async (dir: ReturnType<typeof createMockUri>) => {
+      asked.push(dir.fsPath);
+      return false;
+    };
+
+    await findEnclosingGodotProject(workspaceRoot, createMockUri('/workspace/a/b/Door.tscn'), holds);
+
+    expect(asked).toEqual(['/workspace/a/b', '/workspace/a', '/workspace']);
+  });
+});
+
+describe('hasProjectFile', () => {
+  it('is true when stat finds project.godot in the directory', async () => {
+    vscode.workspace.fs.stat.mockImplementation((uri: ReturnType<typeof createMockUri>) =>
+      uri.fsPath === '/workspace/project.godot'
+        ? Promise.resolve({ type: 1, ctime: 0, mtime: 0, size: 1 })
+        : Promise.reject(new Error('Not found'))
+    );
+
+    expect(await hasProjectFile(createMockUri('/workspace'))).toBe(true);
+  });
+
+  it('is false when stat rejects', async () => {
+    vscode.workspace.fs.stat.mockRejectedValue(new Error('Not found'));
+
+    expect(await hasProjectFile(createMockUri('/workspace'))).toBe(false);
   });
 });

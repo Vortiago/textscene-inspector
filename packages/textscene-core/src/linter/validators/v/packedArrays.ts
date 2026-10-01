@@ -12,6 +12,7 @@ import {
   packedElementType,
   readerLimitedInt,
   splitTopLevel,
+  STRING_ARRAY_FORMS,
   stringLiteralBodies,
   type IntWidth,
 } from '../../../godot/index.js';
@@ -19,8 +20,6 @@ import { compositeSpellings } from '../../../godot/variantConversion.js';
 import type { ParseError } from '../../types.js';
 import { formatCode } from './codes.js';
 import { shape } from './grounding.js';
-
-const STRING_ARRAY_FORMS = packedArrayForms('PackedStringArray');
 
 /** What is wrong with one element of a packed INT array, and which element. */
 interface BadIntElement {

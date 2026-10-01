@@ -101,6 +101,56 @@ describe('StampedReads.get', () => {
     expect(await cache.get(b.provider, 'res://a', async () => 'b/a')).toBe('b/a');
   });
 
+  it('shares a read already running for the path, so two concurrent gets load the file once', async () => {
+    let loads = 0;
+    const provider: ResourceProvider = {
+      loadResource: async () => {
+        loads++;
+        return 'text';
+      },
+      stamp: async () => '1',
+    };
+    const cache = new StampedReads<string | ArrayBuffer | null>();
+    const read = () => provider.loadResource('res://a');
+
+    const answers = await Promise.all([cache.get(provider, 'res://a', read), cache.get(provider, 'res://a', read)]);
+
+    expect(answers).toEqual(['text', 'text']);
+    expect(loads).toBe(1);
+  });
+
+  it('shares a running read for a provider without a stamp too', async () => {
+    let reads = 0;
+    const provider: ResourceProvider = { loadResource: async () => null };
+    const cache = new StampedReads<number>();
+    const read = async () => ++reads;
+
+    await Promise.all([cache.get(provider, 'res://a', read), cache.get(provider, 'res://a', read)]);
+
+    expect(reads).toBe(1);
+  });
+
+  it('reads again once the shared read has settled', async () => {
+    const { provider, read, reads } = stamped({ 'res://a': null });
+    const cache = new StampedReads<number>();
+
+    await Promise.all([cache.get(provider, 'res://a', read), cache.get(provider, 'res://a', read)]);
+    await cache.get(provider, 'res://a', read);
+
+    expect(reads()).toBe(2);
+  });
+
+  it('lets the next get read again after a shared read rejects', async () => {
+    const { provider } = stamped({ 'res://a': '1' });
+    const cache = new StampedReads<number>();
+    const failing = () => Promise.reject(new Error('read failed'));
+
+    const both = [cache.get(provider, 'res://a', failing), cache.get(provider, 'res://a', failing)];
+    await expect(Promise.all(both)).rejects.toThrow('read failed');
+
+    expect(await cache.get(provider, 'res://a', async () => 7)).toBe(7);
+  });
+
   it('uses a stamp the caller started earlier, and asks the provider for none', async () => {
     const asked: string[] = [];
     const provider: ResourceProvider = {

@@ -25,6 +25,9 @@ export const mockWorkspace: any = {
 
   workspaceFolders: [],
 
+  /** A test arranges the files it finds. */
+  findFiles: vi.fn().mockResolvedValue([]),
+
   openTextDocument: vi.fn(),
 
   getWorkspaceFolder: vi.fn(),

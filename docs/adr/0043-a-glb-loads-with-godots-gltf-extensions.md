@@ -52,10 +52,26 @@ richer picture. No host exposes the switch yet.
   the texture's own `source`.
 - Upgrading three cannot widen what a model shows under `godot-importer`: the filter
   names what Godot reads, not what three reads.
-- The linter reports a used glTF file that requires an extension outside Godot's set. An
-  editor plugin or a GDExtension can register a `GLTFDocumentExtension` that adds the
-  extension (`gltf_document.cpp:6798-6804`), and the linter cannot see which extensions
-  such code adds. So the report is an error only when the project enables no editor plugin
-  and loads no GDExtension, and a warning when it does. The linter reads both facts from
-  `project.godot` and the GDExtension list, and reads either file again only when its stamp
-  changes.
+- The linter reports a used glTF file that requires an extension outside Godot's set. Code
+  in the project can register a `GLTFDocumentExtension` that adds the extension
+  (`gltf_document.cpp:6798-6804`), and the linter cannot see which extensions such code adds.
+  The report is therefore an error only when the linter can show that the project runs no
+  such code, and a warning in every other case.
+- Before the editor's first scan imports a file, it loads each GDExtension the scan finds, then
+  builds the autoloads, then enables the editor plugins (`editor/file_system/editor_file_system.cpp:310-345`
+  in 4.6.3). Any of the three can register an extension. So the error needs all of these:
+  - a readable `project.godot` that enables no editor plugin (`editor_node.cpp:1164-1173`);
+  - a `project.godot` that declares no `[autoload]` entry. The editor builds every entry, and
+    runs the script of one that is a tool script (`editor_autoload_settings.cpp:428-455`,
+    `:859-869`). The linter does not read the script, so any entry counts;
+  - a host that can list the project, and a listing that finds no `*.gdextension` file in the
+    directories the scan enters (`editor_file_system.cpp:1144-1199`, `:3460-3478`).
+- The linter scans like the editor and does not trust `extension_list.cfg`. The editor writes
+  that list into the data directory (`gdextension_manager.cpp:383-397`), and the `.gitignore`
+  Godot creates leaves that directory out (`editor_vcs_interface.cpp:369`). A fresh checkout,
+  such as a CI run, has no list, although its GDExtensions load on the first scan. A list that
+  names an extension still counts as evidence that one exists, since Godot loads it at startup
+  (`register_core_types.cpp:390`).
+- A host that cannot list the whole project gets the warning. The web previewer is one: its
+  mirror is a static site with no listing. The CLI lists the project once per run, and VS Code
+  lists it with `findFiles` only when a lint finds a refused glTF.

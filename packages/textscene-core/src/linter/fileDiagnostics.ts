@@ -92,9 +92,10 @@ export const FILE_DIAGNOSTICS = {
   },
   /**
    * A used `[ext_resource]` whose `.glb`/`.gltf` requires a glTF extension outside Godot's importer set, in a project
-   * that enables no editor plugin and loads no GDExtension, so nothing can add the extension. The import refuses the
-   * file (`gltf_document.cpp:7197-7202`), and the text loader aborts the scene where a value names the resource
-   * (`resource_format_text.cpp:145-151`). It and the row below read other files, so only a lint session reports them.
+   * whose readable `project.godot` enables no editor plugin and declares no autoload, and whose listing holds no
+   * GDExtension, so nothing can add the extension. The import refuses the file (`gltf_document.cpp:7197-7202`), and the
+   * text loader aborts the scene where a value names the resource (`resource_format_text.cpp:145-151`). It and the row
+   * below read other files, so only a lint session reports them.
    */
   unimportableGltf: {
     severity: 'error',
@@ -102,10 +103,10 @@ export const FILE_DIAGNOSTICS = {
     grounding: { kind: 'engine', at: 'gltf_document.cpp:7197-7202' },
   },
   /**
-   * The same file in a project that enables an editor plugin or loads a GDExtension. Either can register a
-   * `GLTFDocumentExtension` (`gltf_document.cpp:6731-6732`), whose extensions join the supported set
-   * (`:6798-6804`), so the refusal is likely but not certain: the engine's own message asks "Are you missing a
-   * GLTFDocumentExtension plugin?" (`:7200`).
+   * The same file in a project that enables an editor plugin, declares an autoload or holds a GDExtension, or whose
+   * files the linter cannot read or list. Each can register a `GLTFDocumentExtension` (`gltf_document.cpp:6731-6732`),
+   * whose extensions join the supported set (`:6798-6804`), so the refusal is likely but not certain: the engine's own
+   * message asks "Are you missing a GLTFDocumentExtension plugin?" (`:7200`).
    */
   unimportableGltfUnlessPlugin: {
     severity: 'warning',

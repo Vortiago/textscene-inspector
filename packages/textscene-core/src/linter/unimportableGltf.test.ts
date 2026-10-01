@@ -4,19 +4,23 @@
  * loader aborts the scene where a value names it (`resource_format_text.cpp:145-151`).
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Linter } from './Linter.js';
 import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { triangleGlb } from '../resources/formats/glb/testing/triangleGlb.js';
+import { PLAIN_PROJECT_FILE, memoryProject, unlistableProject } from './testing/memoryProject.js';
 import './index.js';
 
 const RULE = FILE_DIAGNOSTICS.unimportableGltf.ruleName;
 const PLUGIN_RULE = FILE_DIAGNOSTICS.unimportableGltfUnlessPlugin.ruleName;
 
-/** A provider over an in-memory project: a path it does not hold is missing. */
+/**
+ * A provider over an in-memory project that can list itself, with a `project.godot` that enables no plugin and
+ * declares no autoload unless `files` gives its own. A path it does not hold is missing.
+ */
 function project(files: Record<string, string | ArrayBuffer>): ResourceProvider {
-  return { loadResource: async (path) => files[path] ?? null };
+  return memoryProject({ 'res://project.godot': PLAIN_PROJECT_FILE, ...files });
 }
 
 const INSTANCED_TREE = triangleGlb({ extensionsRequired: ['EXT_mesh_gpu_instancing'], instanced: true });
@@ -53,7 +57,7 @@ describe('unimportable glTF', () => {
       },
     ]);
     expect(diagnostics[0]!.message).toContain('res://tree.glb');
-    expect(diagnostics[0]!.message).toContain('Godot fails to load the scene');
+    expect(diagnostics[0]!.message).toContain('Godot fails to load the file');
   });
 
   it('names every refused extension of a text glTF', async () => {
@@ -93,6 +97,32 @@ metadata/source = ExtResource("1_tree")
 item/0/mesh = ExtResource("1_tree")
 `;
     expect(await refusals(content, project({ 'res://tree.glb': INSTANCED_TREE }))).toHaveLength(1);
+  });
+
+  it("reports a GLB named only in a [connection] heading's binds", async () => {
+    const content = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://tree.glb" id="1_tree"]
+
+[node name="Root" type="Node3D"]
+
+[connection signal="ready" from="." to="." method="_on_ready" binds= [ExtResource("1_tree")]]
+`;
+    expect(await refusals(content, project({ 'res://tree.glb': INSTANCED_TREE }))).toHaveLength(1);
+  });
+
+  it('says the file fails to load, not a scene, for a .tres that uses the GLB', async () => {
+    const content = `[gd_resource type="MeshLibrary" format=3]
+
+[ext_resource type="PackedScene" path="res://tree.glb" id="1_tree"]
+
+[resource]
+item/0/mesh = ExtResource("1_tree")
+`;
+    const [refusal] = await refusals(content, project({ 'res://tree.glb': INSTANCED_TREE }));
+
+    expect(refusal!.message).toContain('Godot fails to load the file.');
+    expect(refusal!.message).not.toContain('scene');
   });
 
   it('reports nothing for a .tres file that declares a refused GLB and uses it nowhere', async () => {
@@ -226,12 +256,50 @@ omni_range = -1.0
 });
 
 describe('unimportable glTF in a project that may register a GLTFDocumentExtension', () => {
-  it('is an error when the project enables no editor plugin and loads no GDExtension', async () => {
+  it('is an error when the project enables no editor plugin, declares no autoload and holds no GDExtension', async () => {
     const files = { 'res://tree.glb': INSTANCED_TREE, 'res://project.godot': 'config_version=5\n' };
     const [diagnostic] = await refusals(sceneUsing('res://tree.glb'), project(files));
 
     expect(diagnostic).toMatchObject({ severity: 'error', ruleName: RULE });
-    expect(diagnostic!.message).toContain('no editor plugin and loads no GDExtension');
+    expect(diagnostic!.message).toContain('enables no editor plugin, declares no autoload and holds no GDExtension');
+  });
+
+  it('is a warning when the project holds a .gdextension file anywhere, with no .godot directory', async () => {
+    const files = { 'res://tree.glb': INSTANCED_TREE, 'res://addons/gltf/bin/gltf.gdextension': '' };
+    const [diagnostic] = await refusals(sceneUsing('res://tree.glb'), project(files));
+
+    expect(diagnostic).toMatchObject({ severity: 'warning', ruleName: PLUGIN_RULE });
+  });
+
+  it('is a warning when the project declares an autoload, which a tool script can make register one', async () => {
+    const files = { 'res://tree.glb': INSTANCED_TREE, 'res://project.godot': '[autoload]\n\nGltf="*res://gltf.gd"\n' };
+    const [diagnostic] = await refusals(sceneUsing('res://tree.glb'), project(files));
+
+    expect(diagnostic).toMatchObject({ severity: 'warning', ruleName: PLUGIN_RULE });
+    expect(diagnostic!.message).toContain('an autoload');
+  });
+
+  it('is a warning for a provider that cannot list the project, since nothing rules a GDExtension out', async () => {
+    const files = { 'res://tree.glb': INSTANCED_TREE, 'res://project.godot': PLAIN_PROJECT_FILE };
+    const [diagnostic] = await refusals(sceneUsing('res://tree.glb'), unlistableProject(files));
+
+    expect(diagnostic).toMatchObject({ severity: 'warning', ruleName: PLUGIN_RULE });
+  });
+
+  it('is a warning for a project whose project.godot it cannot read', async () => {
+    const [diagnostic] = await refusals(sceneUsing('res://tree.glb'), memoryProject({ 'res://tree.glb': INSTANCED_TREE }));
+
+    expect(diagnostic).toMatchObject({ severity: 'warning', ruleName: PLUGIN_RULE });
+  });
+
+  it('lists the project only when a glTF is refused', async () => {
+    const tree = triangleGlb({ extensionsUsed: ['KHR_texture_transform'], extensionsRequired: ['KHR_texture_transform'] });
+    const provider = project({ 'res://tree.glb': tree });
+    const list = vi.spyOn(provider, 'listFiles' as never) as unknown as ReturnType<typeof vi.fn>;
+
+    await refusals(sceneUsing('res://tree.glb'), provider);
+
+    expect(list).not.toHaveBeenCalled();
   });
 
   it('is a warning when the project enables an editor plugin, which may register one', async () => {
@@ -265,15 +333,45 @@ describe('unimportable glTF in a project that may register a GLTFDocumentExtensi
 });
 
 describe("the linter's glTF verdict cache", () => {
+  it('reads a GLB once when two headings name it in one lint', async () => {
+    let glbReads = 0;
+    const files: Record<string, string | ArrayBuffer> = { 'res://project.godot': PLAIN_PROJECT_FILE };
+    const provider: ResourceProvider = {
+      ...memoryProject(files),
+      loadResource: async (path) => {
+        if (path !== 'res://tree.glb') return files[path] ?? null;
+        glbReads++;
+        return INSTANCED_TREE;
+      },
+      stamp: async () => '100:144',
+    };
+    const content = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://tree.glb" id="1_a"]
+[ext_resource type="PackedScene" path="res://tree.glb" id="2_b"]
+
+[node name="Root" type="Node3D"]
+
+[node name="A" parent="." instance=ExtResource("1_a")]
+
+[node name="B" parent="." instance=ExtResource("2_b")]
+`;
+
+    expect(await refusals(content, provider)).toHaveLength(2);
+    expect(glbReads).toBe(1);
+  });
+
   it('does not read an unchanged file again across lints, and reports the same refusal', async () => {
     let glbReads = 0;
     const provider: ResourceProvider = {
       loadResource: async (path) => {
+        if (path === 'res://project.godot') return PLAIN_PROJECT_FILE;
         if (path !== 'res://tree.glb') return null;
         glbReads++;
         return INSTANCED_TREE;
       },
       stamp: async () => '100:144',
+      listFiles: async () => [],
     };
     const linter = new Linter();
 
