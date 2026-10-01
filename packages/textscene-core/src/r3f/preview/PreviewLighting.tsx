@@ -9,7 +9,8 @@ import * as THREE from 'three';
 import { useViewportMode } from '../contexts/ViewportModeContext';
 import { useLiveSceneNodes } from '../useLiveSceneTree';
 import { EnvironmentLayer } from '../environment/EnvironmentLayer';
-import { LIGHT_INTENSITY_SCALE, PREVIEW_SUN_DEPTH_BIAS } from '../lightConstants';
+import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
+import { directionalShadowBias } from '../../nodes/3d/lights/shared/shadowBias';
 import {
   DIRECTIONAL_SHADOW_BLEND_SPLITS_DEFAULT,
   DIRECTIONAL_SHADOW_FADE_START_DEFAULT,
@@ -42,14 +43,14 @@ const PREVIEW_SUN_DISTANCE = 30;
 /**
  * The preview sun's declaration: the editor sets its max distance
  * (`node_3d_editor_plugin.cpp:9476`) and four splits (`:10383`), so the
- * pancake, fade start, normal bias, split offsets and blending keep the
- * class defaults.
+ * bias, blur, pancake, fade start, normal bias, split offsets and blending
+ * keep the class defaults an authored DirectionalLight3D gets.
  */
 const PREVIEW_SUN_SHADOW = directionalShadowUserData({
   maxDistance: PREVIEW_SUN_SHADOW_MAX_DISTANCE,
   pancakeSize: DIRECTIONAL_SHADOW_PANCAKE_SIZE_DEFAULT,
   fadeStart: DIRECTIONAL_SHADOW_FADE_START_DEFAULT,
-  depthBias: PREVIEW_SUN_DEPTH_BIAS,
+  depthBias: directionalShadowBias(undefined, undefined),
   normalBias: DIRECTIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
   splitCount: directionalShadowSplitCount(DirectionalShadowMode.PARALLEL_4_SPLITS),
   splitOffsets: DIRECTIONAL_SHADOW_SPLIT_OFFSETS_DEFAULT,

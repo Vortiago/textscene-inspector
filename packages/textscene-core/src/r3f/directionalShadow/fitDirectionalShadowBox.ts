@@ -65,8 +65,8 @@ interface LightAxes {
 /**
  * Godot flattens a caster nearer the light than the near plane onto it
  * (`scene_forward_clustered.glsl:679-682`), so every such caster casts. three has no pancaking,
- * so the near plane moves this many diameters of the fitted sphere further towards the light
- * instead. A caster beyond that casts nothing into this box.
+ * so the near plane moves this many diameters of the whole view slice's sphere further towards
+ * the light. Every split takes the same reach, so a caster casts into all of them or none.
  */
 const CASTER_REACH_IN_DIAMETERS = 1;
 
@@ -108,11 +108,8 @@ export function fitDirectionalShadowBox(
   depths: DirectionalShadowSlice = viewSlice(input)
 ): DirectionalShadowBox | null {
   const { camera, declaration, shadowMapSize } = input;
-  const corners = cameraSliceCorners(camera, depths.near, depths.far);
   const axes = lightAxes(input.lightPosition, input.targetPosition, input.up);
-
-  const { center: centre, radius: sliceRadius } = meanCentredSphere(corners);
-  const radius = texelPaddedRadius(sliceRadius, shadowMapSize);
+  const { centre, radius } = paddedSphere(cameraSliceCorners(camera, depths.near, depths.far), shadowMapSize);
 
   const centreX = axes.x.dot(centre);
   const centreY = axes.y.dot(centre);
@@ -128,7 +125,7 @@ export function fitDirectionalShadowBox(
   const zNear = centreZ + radius + declaration.pancakeSize;
 
   const zNearCovered = pancakesCasters(declaration.pancakeSize)
-    ? zNear + CASTER_REACH_IN_DIAMETERS * 2 * radius
+    ? Math.max(zNear, casterReach(input, axes))
     : zNear;
 
   const eyeX = axes.x.dot(input.lightPosition);
@@ -148,6 +145,29 @@ export function fitDirectionalShadowBox(
     normalBias: declaration.normalBias * directionalShadowTexelSize(radius, shadowMapSize),
   };
   return Object.values(box).every(Number.isFinite) ? box : null;
+}
+
+/** The slice corners' sphere (`renderer_scene_cull.cpp:2268-2282`), padded by one texel. */
+function paddedSphere(
+  corners: readonly THREE.Vector3[],
+  shadowMapSize: number
+): { centre: THREE.Vector3; radius: number } {
+  const { center, radius } = meanCentredSphere(corners);
+  return { centre: center, radius: texelPaddedRadius(radius, shadowMapSize) };
+}
+
+/**
+ * How far towards the light, along `axes.z`, the near plane reaches: one diameter past the whole
+ * view slice's own near face, whatever depths the box itself covers.
+ */
+function casterReach(input: DirectionalShadowFitInput, axes: LightAxes): number {
+  const slice = viewSlice(input);
+  const { centre, radius } = paddedSphere(
+    cameraSliceCorners(input.camera, slice.near, slice.far),
+    input.shadowMapSize
+  );
+  const sliceNearFace = axes.z.dot(centre) + radius + input.declaration.pancakeSize;
+  return sliceNearFace + CASTER_REACH_IN_DIAMETERS * 2 * radius;
 }
 
 /**

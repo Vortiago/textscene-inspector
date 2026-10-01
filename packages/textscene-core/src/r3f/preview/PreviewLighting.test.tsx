@@ -8,6 +8,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type * as THREE from 'three';
 import { TscnSceneContents } from '../TscnCanvas';
 import { readDirectionalShadowDeclaration } from '../directionalShadow/declaration';
+import { directionalShadowBias } from '../../nodes/3d/lights/shared/shadowBias';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
 import { SelectionProvider } from '../contexts/SelectionContext';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
@@ -128,5 +129,10 @@ describe('preview sun shadow', () => {
   it('keeps the class default fade start', async () => {
     // The editor never sets `PARAM_SHADOW_FADE_START` on its sun (`node_3d_editor_plugin.cpp:9475-9477`).
     expect((await previewSunDeclaration())?.fadeStart).toBe(0.8);
+  });
+
+  it('keeps the class default depth bias an authored sun gets', async () => {
+    // The editor never sets `PARAM_SHADOW_BIAS` or `PARAM_SHADOW_BLUR` on its sun.
+    expect((await previewSunDeclaration())?.depthBias).toBe(directionalShadowBias(undefined, undefined));
   });
 });

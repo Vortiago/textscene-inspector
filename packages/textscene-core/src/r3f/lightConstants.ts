@@ -16,13 +16,6 @@ export const LIGHT_INTENSITY_SCALE = Math.PI;
 export const SHADOW_MAP_SIZE = 2048;
 
 /**
- * The preview sun's depth bias, in normalised depth over Godot's own depth range for the map.
- * A constant depth bias detaches the shadow from the caster's base ("peter-panning"), so this
- * stays small and the normal bias suppresses the acne.
- */
-export const PREVIEW_SUN_DEPTH_BIAS = -0.0001;
-
-/**
  * Receiver offset along the normal, in world units, before the shadow lookup. Unlike a depth bias
  * it suppresses acne on lit slopes without detaching the shadow, as Godot's shadows touch their
  * casters. Shared by the omni and spot lights. A directional light counts its normal bias in

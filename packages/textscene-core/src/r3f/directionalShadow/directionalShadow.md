@@ -144,10 +144,10 @@ split's box. The fit costs microseconds in every mode, far below the draw.
   direction. The box covers the same slice. Only the snap grid turns.
 - **Pancaking.** Godot flattens a caster nearer the light than the near plane onto that plane
   (`scene_forward_clustered.glsl:679-682`), for any positive pancake size
-  (`render_forward_clustered.cpp:2606`). three clips such a caster. So the fitter moves each
-  box's near plane one diameter of that box's sphere further towards the light. A caster beyond
-  that casts nothing into that split. The nearest split reaches least, so a far caster's shadow
-  can stop where the next split starts.
+  (`render_forward_clustered.cpp:2606`). three clips such a caster. So the fitter moves every
+  box's near plane to one diameter of the whole view slice's sphere past that slice's near face.
+  Every split takes this same reach, so a caster casts into all of them or into none. A caster
+  beyond it casts nothing.
 - **Bias.** Godot spends the depth bias over its own depth range (`:2348`). When the near plane
   moves out, three's range is longer, so the fitter divides the declared bias by the same
   factor. The bias then holds the same size in world units.
