@@ -4,15 +4,8 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';
+import { errorsOf, warningsOf } from '../../../linter/testing/tierLists';
 import './linterParser';
-
-function errorsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.severity === 'error');
-}
-
-function warningsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.severity === 'warning');
-}
 
 describe('Decal strict validators', () => {
   let linter: Linter;

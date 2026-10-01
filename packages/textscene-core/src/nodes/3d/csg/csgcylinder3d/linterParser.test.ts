@@ -4,15 +4,8 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../../linter/Linter';
+import { errorsOf, warningsOf } from '../../../../linter/testing/tierLists';
 import './linterParser';
-
-function errorsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.severity === 'error');
-}
-
-function warningsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.severity === 'warning');
-}
 
 const sidesScene = (sides: number) =>
   `[gd_scene format=3]\n\n[node name="Cylinder" type="CSGCylinder3D"]\nsides = ${sides}\n`;

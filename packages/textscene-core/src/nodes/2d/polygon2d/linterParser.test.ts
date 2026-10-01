@@ -5,14 +5,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
+import { errorsOf, warningsOf } from '../../../linter/testing/tierLists';
 import './linterParser';
-
-/** The diagnostics of one severity: the error and warning tiers are asserted apart. */
-const ofSeverity = (severity: 'error' | 'warning') => (diagnostics: ReturnType<Linter['lint']>) =>
-  diagnostics.filter((d) => d.severity === severity);
-
-const errorsOf = ofSeverity('error');
-const warningsOf = ofSeverity('warning');
 
 describe('Polygon2D strict validators', () => {
   let linter: Linter;

@@ -4,11 +4,8 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';
+import { errorsOf } from '../../../linter/testing/tierLists';
 import './linterParser';
-
-function errorsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.severity === 'error');
-}
 
 describe('ParallaxBackground strict validators', () => {
   let linter: Linter;

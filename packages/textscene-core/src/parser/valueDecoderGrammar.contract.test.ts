@@ -205,14 +205,14 @@ describe('#175 optional scalars — fall to undefined on garbage, never NaN', ()
   });
 });
 
-// The CONTEXT.md Value-decoder note records the per-slice fork of the absent/error contract
-describe('#175 CONTEXT.md — the Value decoder note records the contract fork', () => {
+// The GLOSSARY.md Value-decoder note records the per-slice fork of the absent/error contract
+describe('#175 GLOSSARY.md — the Value decoder note records the contract fork', () => {
   it('states the absent/error contract may fork per slice while the grammar is shared', () => {
     // cwd-independent read (runs under lint-staged / CI from the repo root too).
-    const contextMd = readFileSync(join(import.meta.dirname, '../../../../CONTEXT.md'), 'utf8');
-    const idx = contextMd.indexOf('Value decoder');
+    const glossaryMd = readFileSync(join(import.meta.dirname, '../../../../GLOSSARY.md'), 'utf8');
+    const idx = glossaryMd.indexOf('Value decoder');
     expect(idx).toBeGreaterThan(-1);
-    const note = contextMd.slice(idx, idx + 1400);
+    const note = glossaryMd.slice(idx, idx + 1400);
     expect(note).toMatch(/fork/i);
   });
 });

@@ -6,6 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import { Linter } from '../../../linter/Linter';
+import { expectNoErrors } from '../../../linter/testing/testkit';
 import './linterValidators'; // Import to trigger registration
 
 describe('BaseMaterial3D Linter Validators', () => {
@@ -493,13 +494,7 @@ uv1_scale = Vector3(0, 0, 0)
 [node name="Root" type="Node3D"]
 `;
 
-      const linter = new Linter();
-      const diagnostics = linter.lint(content);
-
-      const parseErrors = diagnostics.filter(d =>
-        d.message.includes('uv1_scale') && d.severity === 'error'
-      );
-      expect(parseErrors).toHaveLength(0);
+      expectNoErrors(content, { prop: 'uv1_scale' });
     });
 
     it('should handle missing commas in Vector3', () => {
