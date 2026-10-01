@@ -23,7 +23,15 @@ const FACE_TOLERANCE = 1e-9;
 const ONE_SPLIT = { splitCount: 1, splitOffsets: [0.1, 0.2, 0.5], blendSplits: false, sharesAtlas: true };
 
 function declaring(maxDistance: number, pancakeSize = 20): DirectionalShadowFitInput['declaration'] {
-  return { maxDistance, pancakeSize, fadeStart: 0.8, depthBias: 0, normalBias: 2, ...ONE_SPLIT };
+  return {
+    maxDistance,
+    pancakeSize,
+    fadeStart: 0.8,
+    depthBias: 0,
+    normalBias: 2,
+    filterRadius: 2,
+    ...ONE_SPLIT,
+  };
 }
 
 function perspectiveCamera(far = 4000): THREE.PerspectiveCamera {
@@ -49,6 +57,7 @@ function fitInput(overrides: Partial<DirectionalShadowFitInput> = {}): Direction
       fadeStart: 0.8,
       depthBias: -0.0003,
       normalBias: 2,
+      filterRadius: 2,
       ...ONE_SPLIT,
     },
     shadowMapSize: MAP_SIZE,

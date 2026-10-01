@@ -26,6 +26,7 @@ describe('directionalShadowDeclaration', () => {
       fadeStart: 0.5,
       depthBias: directionalShadowBias(0.5, 2),
       normalBias: 1.5,
+      filterRadius: 4,
       splitCount: 2,
       splitOffsets: [0.3, 0.4, 0.9],
       blendSplits: true,
@@ -41,11 +42,17 @@ describe('directionalShadowDeclaration', () => {
       fadeStart: 0.8,
       depthBias: directionalShadowBias(undefined, undefined),
       normalBias: 2,
+      filterRadius: 2,
       splitCount: 4,
       splitOffsets: [0.1, 0.2, 0.5],
       blendSplits: false,
       sharesAtlas: true,
     });
+  });
+
+  it('declares a kernel of zero radius for a light with no blur (edge case)', () => {
+    // `light_storage.cpp:697-703`: 0 * 2. Every PCF tap then reads the centre texel.
+    expect(directionalShadowDeclaration({ shadow_enabled: true, shadow_blur: 0 }).filterRadius).toBe(0);
   });
 
   it('declares no share of the atlas for a light that lights only the sky (edge case)', () => {

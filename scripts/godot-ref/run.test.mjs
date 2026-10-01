@@ -19,6 +19,7 @@ import {
 } from '../visual/previewServer.mjs';
 import {
   bootstrapScript,
+  DEFAULT_RENDERING_METHOD,
   EDITOR_CAMERA_DIRECTION,
   EDITOR_CAMERA_DISTANCE,
   EDITOR_FOV,
@@ -30,6 +31,8 @@ import {
   parseArgs,
   REFERENCE_FIXED_FPS,
   renderArgv,
+  renderingMethodFallbackMessage,
+  requestedRenderingMethod,
   SPAWN_BACKSTOP_MS,
   resolveProjectRoot,
   projectConfig,
@@ -848,6 +851,60 @@ describe('--rendering-driver', () => {
 
   it('refuses a driver the engine does not have', () => {
     expect(() => parseArgs(['a.tscn', '--rendering-driver', 'directx'])).toThrow(/--rendering-driver/);
+  });
+});
+
+/**
+ * Godot renders with OpenGL 3 when Vulkan does not start, and still writes an image. A
+ * Compatibility picture answers a Forward+ parity question wrongly, so the harness compares the
+ * method that drew the frame with the one it asked for.
+ */
+describe('a renderer fallback', () => {
+  it('asks for Forward+ when neither the flag nor the project names a method', () => {
+    expect(requestedRenderingMethod(null, null)).toBe(DEFAULT_RENDERING_METHOD);
+    expect(DEFAULT_RENDERING_METHOD).toBe('forward_plus');
+  });
+
+  it("asks for the source project's method", () => {
+    const ini = '[rendering]\n\nrenderer/rendering_method="gl_compatibility"\n';
+    expect(requestedRenderingMethod(ini, null)).toBe('gl_compatibility');
+  });
+
+  it("asks for the method of the driver the flag names, over the project's", () => {
+    const ini = '[rendering]\nrenderer/rendering_method="mobile"\n';
+    expect(requestedRenderingMethod(ini, 'opengl3')).toBe('gl_compatibility');
+  });
+
+  it("ignores the project's per-platform override, which a desktop run does not read (edge case)", () => {
+    const ini = '[rendering]\nrenderer/rendering_method.mobile="gl_compatibility"\n';
+    expect(requestedRenderingMethod(ini, null)).toBe(DEFAULT_RENDERING_METHOD);
+  });
+
+  it('answers when the engine drew with the method asked for', () => {
+    expect(
+      renderingMethodFallbackMessage('forward_plus', { method: 'forward_plus', driver: 'vulkan' })
+    ).toBeNull();
+  });
+
+  it('refuses a fallback, naming both methods and the way out (error case)', () => {
+    const message = renderingMethodFallbackMessage('forward_plus', {
+      method: 'gl_compatibility',
+      driver: 'opengl3',
+    });
+    expect(message).toMatch(/asks for forward_plus/);
+    expect(message).toMatch(/gl_compatibility \(opengl3\)/);
+    expect(message).toMatch(/--rendering-driver/);
+  });
+
+  it('answers when the bootstrap wrote no report (edge case)', () => {
+    expect(renderingMethodFallbackMessage('forward_plus', null)).toBeNull();
+  });
+
+  it('writes the report from the bootstrap, after the pause', () => {
+    const script = bootstrap({ rendererOut: '/tmp/r.json' });
+    expect(script).toContain('const RENDERER_OUT := "/tmp/r.json"');
+    expect(script).toContain('RenderingServer.get_current_rendering_method()');
+    expect(script.indexOf('_write_renderer()\n')).toBeGreaterThan(script.indexOf('get_tree().paused = true'));
   });
 });
 

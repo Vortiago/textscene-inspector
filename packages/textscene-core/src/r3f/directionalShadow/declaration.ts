@@ -20,6 +20,8 @@ export interface DirectionalShadowDeclaration {
   depthBias: number;
   /** `shadow_normal_bias`, in shadow-map texels. The fitter turns it into world units. */
   normalBias: number;
+  /** The PCF kernel's radius in atlas texels: Godot's `soft_shadow_scale`. */
+  filterRadius: number;
   /**
    * How many splits `directional_shadow_mode` draws: 1, 2 or 4. One split is the whole slice in
    * the light's own shadow map. More draw a shadow atlas with one fitted box per split.
@@ -64,6 +66,7 @@ function isDeclaration(value: unknown): value is DirectionalShadowDeclaration {
     typeof candidate.fadeStart === 'number' &&
     typeof candidate.depthBias === 'number' &&
     typeof candidate.normalBias === 'number' &&
+    typeof candidate.filterRadius === 'number' &&
     typeof candidate.splitCount === 'number' &&
     Array.isArray(candidate.splitOffsets) &&
     typeof candidate.blendSplits === 'boolean' &&

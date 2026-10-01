@@ -1,9 +1,11 @@
 [gd_scene format=3 uid="uid://unitdirshadowsharedatlas"]
 
-; Moves the atlas share. Two orthogonal suns each take half the atlas's width at its full height, so
-; the thin posts cast nothing across the halved width, while the bars cast as under one sun. In every
-; other golden at most one sun takes a share, the whole atlas, so a light that ignores its share is
-; invisible there. Both suns end at 60 units, which sets the texel size the widths step through.
+; Moves the atlas share. Two orthogonal suns each take half the atlas's width at its full height. The
+; posts' shadows lie across that width, where a texel and the filter span twice the world width, so
+; they spread into faint smudges. The bars' shadows lie along the full height and cast as under one
+; sun. In every other golden at most one sun takes a share, the whole atlas, so a light that ignores
+; its share is invisible there. Both suns end at 60 units, which sets the texel size the widths step
+; through.
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
 size = Vector2(3, 3)

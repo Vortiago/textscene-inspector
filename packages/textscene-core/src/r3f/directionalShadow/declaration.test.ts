@@ -8,6 +8,7 @@ const DECLARATION = {
   fadeStart: 0.8,
   depthBias: -0.002,
   normalBias: 2,
+  filterRadius: 2,
   splitCount: 4,
   splitOffsets: [0.1, 0.2, 0.5],
   blendSplits: false,
@@ -50,6 +51,13 @@ describe('readDirectionalShadowDeclaration', () => {
     const light = new THREE.DirectionalLight();
     const { fadeStart: _fadeStart, ...withoutFade } = DECLARATION;
     light.userData = { directionalShadow: withoutFade };
+    expect(readDirectionalShadowDeclaration(light)).toBeNull();
+  });
+
+  it('answers null for a declaration without its filter radius (error case)', () => {
+    const light = new THREE.DirectionalLight();
+    const { filterRadius: _filterRadius, ...withoutRadius } = DECLARATION;
+    light.userData = { directionalShadow: withoutRadius };
     expect(readDirectionalShadowDeclaration(light)).toBeNull();
   });
 

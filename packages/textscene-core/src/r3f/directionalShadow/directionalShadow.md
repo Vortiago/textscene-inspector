@@ -106,12 +106,23 @@ band, where its weight is above zero. An orthogonal light never blends
 
 ## The filter
 
-Godot scales its PCF kernel by one atlas texel on each axis (`renderer_scene_render_rd.cpp:1388-1389`,
-`scene_forward_clustered.glsl:2443`). A light's map is its share of the atlas. So the kernel spans
-the same number of texels across and down a share twice as tall as it is wide. three r186 scales
-both axes by one texel of the map's width. `texelShadowFilter.ts` patches its PCF lookup to scale
-each axis by its own texel, which changes nothing for a square map. It installs once at import of
-`TscnCanvas.tsx`, and composes with the split lookup and the fade in any order.
+Godot's PCF kernel is a Vogel disk whose radius is `soft_shadow_scale` atlas texels on each axis
+(`scene_forward_clustered.glsl:2443`, `scene_forward_lights_inc.glsl:283-307`). For a light
+without an angular size, `soft_shadow_scale` is `shadow_blur` times the quality radius
+(`light_storage.cpp:697-703`), which is 2 at the default Soft Low quality
+(`renderer_scene_render_rd.cpp:1204-1207`). So the default kernel reaches two texels. The fitter
+writes that radius to the light's `shadow.radius` before each render (`godot/softShadowScale.ts`),
+and a split sun copies it.
+
+A light's map is its share of the atlas. So the kernel spans the same number of texels across and
+down a share twice as tall as it is wide. three r186 scales both axes by one texel of the map's
+width. `texelShadowFilter.ts` patches its PCF lookup to scale each axis by its own texel, which
+changes nothing for a square map. It installs once at import of `TscnCanvas.tsx`, and composes
+with the split lookup and the fade in any order.
+
+three's disk takes five taps, and Godot's Soft Low disk takes four. Both rotate the disk per pixel
+by the same interleaved gradient noise, in opposite senses. So the soft edge's dither differs, and
+its mean over a few pixels matches.
 
 ## The three.js design
 
@@ -179,10 +190,10 @@ A change in how many lights share the atlas resizes each light's map.
   moves out, three's range is longer, so the fitter divides the declared bias by the same
   factor. The bias then holds the same size in world units.
 - **Normal bias direction.** three moves the lookup along the whole world normal
-  (`shadowmap_vertex.glsl.js:35`). Godot scales the normal by `1 - max(0, N·L)` and removes
-  its component along the light (`scene_forward_clustered.glsl:2301-2307`), so its offset is
-  never longer than three's. The offset is two texels. In Truck Town, even a zero normal bias
-  changes only acne and shadow edges one pixel wide, not the extent of a shadow.
+  (`shadowmap_vertex.glsl.js:35`). Godot scales the normal by `1 - max(0, -N·L)`, which is 1 on a
+  lit face, and removes its component along the light (`scene_forward_clustered.glsl:2301-2307`).
+  So its offset is never longer than three's. The offset is two texels. In Truck Town, even a zero
+  normal bias changes only acne and shadow edges one pixel wide, not the extent of a shadow.
 - **Soft-shadow widening.** Godot widens the box by `tan(light_angular_distance)` times its
   depth (`:2286-2299`) to fit its soft-shadow blur. The previewer draws no angular soft shadow,
   so the box omits it.

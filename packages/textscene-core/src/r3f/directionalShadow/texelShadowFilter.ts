@@ -1,8 +1,9 @@
 /**
- * Godot's PCF kernel, one texel wide on each axis of the map. Godot scales its directional kernel by
- * one atlas texel per axis (`renderer_scene_render_rd.cpp:1388-1389`, passed at
- * `scene_forward_clustered.glsl:2443`). A light's map is its share of the atlas, so its texels are
- * atlas texels on both axes, even where the share is twice as tall as it is wide.
+ * Godot's PCF kernel, in texels of each axis of the map. Godot scales its directional kernel by one
+ * atlas texel per axis (`renderer_scene_render_rd.cpp:1388-1389`, passed at
+ * `scene_forward_clustered.glsl:2443`) times `soft_shadow_scale`, which the fitter writes as the
+ * light's `shadow.radius`. A light's map is its share of the atlas, so its texels are atlas texels
+ * on both axes, even where the share is twice as tall as it is wide.
  */
 
 import * as THREE from 'three';

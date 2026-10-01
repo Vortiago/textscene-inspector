@@ -190,9 +190,14 @@ function ownLayers(light: THREE.DirectionalLight): THREE.Layers {
   return splitSunOf(light)?.layers ?? light.layers;
 }
 
-/** A casting light with splits shades through its split sun. Any other declared light shades itself. */
+/**
+ * A casting light with splits shades through its split sun, which copies the light's filter radius.
+ * Any other declared light shades itself.
+ */
 function fitDeclaredLight(sharing: SharingLight, camera: ViewingCamera, fades: CasterFades): void {
   const { light, declaration } = sharing;
+  // Godot's PCF kernel spans `soft_shadow_scale` atlas texels (`scene_forward_clustered.glsl:2443`).
+  light.shadow.radius = declaration.filterRadius;
   if (light.castShadow && declaration.splitCount > 1) {
     fitSplitLight(sharing, camera, fades);
     return;

@@ -31,8 +31,8 @@ export const GEOMETRY_SCENES = [
   // Posts running away from the view past a short shadow max distance. The near
   // posts cast, the fade thins the next and the far ones cast nothing.
   { name: 'directional-shadow-fade', file: 'unit-directional-shadow-fade.tscn' },
-  // Two orthogonal suns, so each map is half the atlas wide. The thin posts,
-  // whose shadows lie across that width, cast nothing. The bars cast as under one sun.
+  // Two orthogonal suns, so each map is half the atlas wide. The posts' shadows,
+  // which lie across that width, spread into faint smudges. The bars cast as under one sun.
   { name: 'directional-shadow-shared-atlas', file: 'unit-directional-shadow-shared-atlas.tscn' },
   // A Sky Only sun and a Light Only sun, both in view. Only the first draws in
   // the sky, and only the second lights the box and ground.

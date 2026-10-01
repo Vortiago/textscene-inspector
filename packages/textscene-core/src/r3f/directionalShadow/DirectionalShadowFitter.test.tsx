@@ -122,6 +122,7 @@ function declaredLight(splitCount: number): THREE.DirectionalLight {
     fadeStart: 0.8,
     depthBias: 0,
     normalBias: 2,
+    filterRadius: 2,
     splitCount,
     splitOffsets: [0.1, 0.2, 0.5],
     blendSplits: false,

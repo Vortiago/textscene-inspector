@@ -16,6 +16,7 @@ import {
   sharesDirectionalShadowAtlas,
 } from '../../../../godot/directionalShadow';
 import { DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT } from '../../../../godot/directionalLightSkyMode';
+import { softShadowScale } from '../../../../godot/softShadowScale';
 import type { DirectionalShadowDeclaration } from '../../../../r3f/directionalShadow/declaration';
 import { directionalShadowBias } from '../shared/shadowBias';
 import type { DirectionalLight3DProperties } from './types';
@@ -47,6 +48,7 @@ export function directionalShadowDeclaration(
     fadeStart: properties.directional_shadow_fade_start ?? DIRECTIONAL_SHADOW_FADE_START_DEFAULT,
     depthBias: directionalShadowBias(properties.shadow_bias, properties.shadow_blur),
     normalBias: properties.shadow_normal_bias ?? DIRECTIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
+    filterRadius: softShadowScale(properties.shadow_blur),
     splitCount: directionalShadowSplitCount(
       properties.directional_shadow_mode ?? DIRECTIONAL_SHADOW_MODE_DEFAULT
     ),

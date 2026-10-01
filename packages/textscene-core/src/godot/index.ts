@@ -113,6 +113,7 @@ export {
   sharesDirectionalShadowAtlas,
   texelPaddedRadius,
 } from './directionalShadow.js';
+export { SHADOW_BLUR_DEFAULT, SOFT_LOW_QUALITY_RADIUS, softShadowScale } from './softShadowScale.js';
 export { GRADIENT_TEXTURE_MAX_SIZE, IMAGE_MAX_PIXELS } from './texture.js';
 export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX, CLIP_CHILDREN_MODES } from './canvasItem.js';
 export {

@@ -28,6 +28,7 @@ const DECLARATION: DirectionalShadowDeclaration = {
   fadeStart: 0.8,
   depthBias: -0.002,
   normalBias: 2,
+  filterRadius: 2,
   splitCount: 1,
   splitOffsets: [0.1, 0.2, 0.5],
   blendSplits: false,
@@ -73,12 +74,20 @@ describe('fitSceneDirectionalShadows', () => {
     expect(light.shadow.bias).toBeCloseTo((DECLARATION.depthBias * godotDepth) / threeDepth, 12);
   });
 
+  it('filters with the declared kernel radius', () => {
+    const { scene, light } = sceneWithSun({ declared: true, casts: true });
+    light.userData = directionalShadowUserData({ ...DECLARATION, splitCount: 1, filterRadius: 3.5 });
+    fitSceneDirectionalShadows(scene, viewingCamera());
+    expect(light.shadow.radius).toBe(3.5);
+  });
+
   it('leaves a light without a declaration alone', () => {
     const { scene, light } = sceneWithSun({ declared: false, casts: true });
     fitSceneDirectionalShadows(scene, viewingCamera());
     expect(light.shadow.camera.left).toBe(UNFITTED.left);
     expect(light.shadow.camera.far).toBe(UNFITTED.far);
     expect(light.shadow.bias).toBe(0);
+    expect(light.shadow.radius).toBe(new THREE.DirectionalLight().shadow.radius);
   });
 
   it('leaves a declared light that casts no shadow alone (edge case)', () => {
@@ -114,6 +123,13 @@ describe('fitSceneDirectionalShadows with splits', () => {
     expect(sun?.color.getHex()).toBe(0xff8000);
     expect(sun?.intensity).toBe(3);
     expect(sun?.castShadow).toBe(true);
+  });
+
+  it('filters the split sun with the declared kernel radius', () => {
+    const { scene, light } = sceneWithSun({ declared: true, casts: true, splitCount: 4 });
+    light.userData = directionalShadowUserData({ ...DECLARATION, splitCount: 4, filterRadius: 0 });
+    fitSceneDirectionalShadows(scene, viewingCamera());
+    expect(splitSunOf(light)?.shadow.radius).toBe(0);
   });
 
   it('hides the declared light from the render and keeps its layers on the sun', () => {

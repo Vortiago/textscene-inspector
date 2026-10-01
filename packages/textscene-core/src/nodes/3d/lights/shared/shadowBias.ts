@@ -5,24 +5,10 @@
  * omni and spot match at the far plane their range authors, a stated divergence nearer.
  */
 
+import { softShadowScale } from '../../../../godot/softShadowScale';
+
 /** `scene/3d/light_3d.cpp:490` (Light3D) and `:681` (SpotLight3D). */
 const GODOT_SHADOW_BIAS_DEFAULT = { DIRECTIONAL: 0.1, OMNI: 0.1, SPOT: 0.03 } as const;
-
-/** `Light3D::PARAM_SHADOW_BLUR` default (`scene/3d/light_3d.cpp:489`). */
-const GODOT_SHADOW_BLUR_DEFAULT = 1;
-
-/**
- * `soft_shadow_scale`'s PCF factor: the default "Soft Low" (`rendering_server.cpp:3706`)
- * is radius 2 (`renderer_scene_render_rd.cpp:1204-1207`), used while the angular
- * diameter is 0 (`light_storage.cpp:701-703`). A `.tscn` does not record the setting,
- * and a changed one puts the directional and spot bias off by up to 2x.
- */
-const GODOT_PCF_QUALITY_RADIUS = 2;
-
-/** Godot's `soft_shadow_scale` for a light that has not been given a size. */
-function softShadowScale(shadowBlur: number | undefined): number {
-  return (shadowBlur ?? GODOT_SHADOW_BLUR_DEFAULT) * GODOT_PCF_QUALITY_RADIUS;
-}
 
 /**
  * Exact: `light_storage.cpp:723` sends `shadow_bias / 100 * bias_scale`,
