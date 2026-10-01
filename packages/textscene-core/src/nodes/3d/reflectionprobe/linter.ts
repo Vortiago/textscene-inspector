@@ -65,9 +65,14 @@ const DEFAULT_SIZE: Vector3 = { x: 20, y: 20, z: 20 };
 const FACE_MARGIN = 0.01;
 const AXES = ['x', 'y', 'z'] as const;
 
-const formatVector3 = (v: Vector3): string => `Vector3(${AXES.map((axis) => formatReal(v[axis])).join(', ')})`;
+const formatVector3 = (v: Vector3): string =>
+  `Vector3(${AXES.map((axis) => formatReal(v[axis])).join(', ')})`;
 const sameReal = (a: number, b: number): boolean => a === b || (Number.isNaN(a) && Number.isNaN(b));
-const storedVector3 = (v: Vector3): Vector3 => ({ x: storedReal(v.x), y: storedReal(v.y), z: storedReal(v.z) });
+const storedVector3 = (v: Vector3): Vector3 => ({
+  x: storedReal(v.x),
+  y: storedReal(v.y),
+  z: storedReal(v.z),
+});
 
 /**
  * One setter's clamp of each `origin_offset` axis to `half_size - 0.01` against `size`

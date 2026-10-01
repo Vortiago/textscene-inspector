@@ -20,13 +20,7 @@ import type {
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { ControlProperties } from '../control/types';
 import { splitOffsetsOf, type SplitContainerProperties } from './splitContainer';
-import {
-  fitChildInRect,
-  hasFlag,
-  isSortableControl,
-  SIZE_EXPAND,
-  SIZE_FILL,
-} from './fitChildInRect';
+import { fitChildInRect, hasFlag, isSortableControl, SIZE_EXPAND, SIZE_FILL } from './fitChildInRect';
 
 /** `Control` defaults both axes to `SIZE_FILL` (`control.h:229-230`). */
 const DEFAULT_SIZE_FLAGS = SIZE_FILL;
@@ -264,11 +258,19 @@ export function resortSplitContainer(
 
   return children.map((c, i) => {
     const startPos = horizontalRtl
-      ? (i >= draggers.length ? 0 : draggers[i]! + separation)
-      : (i === 0 ? 0 : draggers[i - 1]! + separation);
+      ? i >= draggers.length
+        ? 0
+        : draggers[i]! + separation
+      : i === 0
+        ? 0
+        : draggers[i - 1]! + separation;
     const endPos = horizontalRtl
-      ? (i === 0 ? size : draggers[i - 1]!)
-      : (i >= draggers.length ? size : draggers[i]!);
+      ? i === 0
+        ? size
+        : draggers[i - 1]!
+      : i >= draggers.length
+        ? size
+        : draggers[i]!;
     const band: Rect2 = vertical
       ? { x: 0, y: startPos, w: crossSize, h: endPos - startPos }
       : { x: startPos, y: 0, w: endPos - startPos, h: crossSize };

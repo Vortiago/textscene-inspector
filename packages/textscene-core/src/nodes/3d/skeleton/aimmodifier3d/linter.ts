@@ -12,11 +12,13 @@ import { BONE_AXIS, axisFromBoneAxis } from '../skeletonmodifier3d/linterParser.
 import { resolveAimSettingLeaf } from './linterParser.js';
 import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
 import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
-import { indexedElements, boolSlotValue} from '../../../../godot/index.js';
+import { indexedElements, boolSlotValue } from '../../../../godot/index.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  parallelRotationAxes: groundedArm('aimmodifier3d-parallel-rotation-axes', { kind: 'configuration-warning' }),
+  parallelRotationAxes: groundedArm('aimmodifier3d-parallel-rotation-axes', {
+    kind: 'configuration-warning',
+  }),
 } as const satisfies RuleArms<string>;
 
 const SETTING_PREFIX = 'settings/';
@@ -44,11 +46,7 @@ function declaredSettings(properties: Record<string, string>): Map<number, Map<s
 }
 
 /** A setting's value for `leaf`, or the engine default when the scene omits it. */
-function settingNumber(
-  leaves: ReadonlyMap<string, string>,
-  leaf: string,
-  fallback: number
-): number {
+function settingNumber(leaves: ReadonlyMap<string, string>, leaf: string, fallback: number): number {
   const raw = leaves.get(leaf);
   if (raw === undefined) return fallback;
   const parsed = ruleInt(raw);
@@ -68,11 +66,7 @@ function checkAimModifier3D(context: RuleContext): Diagnostic[] {
     if (boolSlotValue(leaves.get('use_euler')) !== true) continue;
 
     const forwardAxis = settingNumber(leaves, 'forward_axis', DEFAULT_FORWARD_AXIS);
-    const primaryAxis = settingNumber(
-      leaves,
-      'primary_rotation_axis',
-      DEFAULT_PRIMARY_ROTATION_AXIS
-    );
+    const primaryAxis = settingNumber(leaves, 'primary_rotation_axis', DEFAULT_PRIMARY_ROTATION_AXIS);
     // `_process_aim` projects the target onto the plane of the primary axis
     // (aim_modifier_3d.cpp:235-238), and a parallel forward axis projects to a degenerate vector.
     if (axisFromBoneAxis(forwardAxis) !== primaryAxis) continue;

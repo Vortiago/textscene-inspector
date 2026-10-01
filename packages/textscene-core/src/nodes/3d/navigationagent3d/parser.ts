@@ -51,7 +51,9 @@ export function parseNavigationAgent3D(
     try {
       result.target_position = parseVector3(properties.target_position);
     } catch (error) {
-      warn(`[NavigationAgent3D] Failed to parse target_position: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `[NavigationAgent3D] Failed to parse target_position: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 

@@ -14,7 +14,10 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import { shapedTextSizeWidthPx, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import {
+  shapedTextSizeWidthPx,
+  type TextLayoutResult,
+} from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { CHECK_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import {
@@ -46,7 +49,10 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const clippingPlanes = useControlClipPlanes();
 
   const iconKey = resolveCheckButtonIconKey(props, solveNode.rtl);
-  const iconTexture = useNodeIcon(solveNode.icons[CHECK_BUTTON_ICON_THEME_NAME[iconKey]], CHECK_BUTTON_ICONS[iconKey]);
+  const iconTexture = useNodeIcon(
+    solveNode.icons[CHECK_BUTTON_ICON_THEME_NAME[iconKey]],
+    CHECK_BUTTON_ICONS[iconKey]
+  );
   const iconSize = useMemo(
     () =>
       fitIconSize(

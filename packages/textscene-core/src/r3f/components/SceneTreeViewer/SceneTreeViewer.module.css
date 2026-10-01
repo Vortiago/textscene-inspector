@@ -55,7 +55,9 @@
   padding: var(--tsi-space-1) var(--tsi-space-2);
   font-size: var(--tsi-font-sm);
   cursor: pointer;
-  transition: background-color 0.12s, color 0.12s;
+  transition:
+    background-color 0.12s,
+    color 0.12s;
 
   &:hover {
     background: var(--tsi-bg-hover);

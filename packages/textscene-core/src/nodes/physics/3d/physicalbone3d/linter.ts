@@ -76,7 +76,8 @@ function checkPhysicalBone3D(context: RuleContext): Diagnostic[] {
 const physicalBone3DValidationRule: LintRule = {
   meta: {
     name: 'valid-physicalbone3d-collision-shape',
-    description: 'Warns when a PhysicalBone3D has no CollisionShape3D or CollisionPolygon3D descendant, and errors on joint_constraints writes the live JointData drops',
+    description:
+      'Warns when a PhysicalBone3D has no CollisionShape3D or CollisionPolygon3D descendant, and errors on joint_constraints writes the live JointData drops',
     category: 'validation',
     applicableNodeTypes: ['PhysicalBone3D'],
     emits: armEmits(arms),

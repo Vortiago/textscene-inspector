@@ -11,9 +11,7 @@ export const OCCLUDER_CULL_CLOCKWISE = 1;
 export const OCCLUDER_CULL_COUNTER_CLOCKWISE = 2;
 
 export type OccluderCullMode =
-  | typeof OCCLUDER_CULL_DISABLED
-  | typeof OCCLUDER_CULL_CLOCKWISE
-  | typeof OCCLUDER_CULL_COUNTER_CLOCKWISE;
+  typeof OCCLUDER_CULL_DISABLED | typeof OCCLUDER_CULL_CLOCKWISE | typeof OCCLUDER_CULL_COUNTER_CLOCKWISE;
 
 /** An axis-aligned world rect, the shape Godot culls occluders against. */
 export interface LightRect {
@@ -133,11 +131,16 @@ export function edgeShadowRing(
   if (!Number.isFinite(far)) return null;
 
   return new Float32Array([
-    ax, ay,
-    bx, by,
-    lx + ubx * far, ly + uby * far,
-    lx + mx * far, ly + my * far,
-    lx + uax * far, ly + uay * far,
+    ax,
+    ay,
+    bx,
+    by,
+    lx + ubx * far,
+    ly + uby * far,
+    lx + mx * far,
+    ly + my * far,
+    lx + uax * far,
+    ly + uay * far,
   ]);
 }
 

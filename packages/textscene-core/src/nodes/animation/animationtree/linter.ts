@@ -25,7 +25,8 @@ const arms = {
   animPlayerWrongType: groundedArm('animationtree-anim-player-wrong-type', {
     kind: 'engine-inert',
     at: 'animation_tree.cpp:875-876',
-    unused: 'the cast to AnimationPlayer yields null and the whole setup block is skipped, so the tree binds to no player and plays nothing',
+    unused:
+      'the cast to AnimationPlayer yields null and the whole setup block is skipped, so the tree binds to no player and plays nothing',
   }),
   inactive: groundedArm('animationtree-inactive', {
     kind: 'engine-inert',
@@ -40,7 +41,6 @@ const arms = {
 function checkAnimationTree(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
-
 
   if (!isValidProperties(node.properties)) {
     return diagnostics;
@@ -116,7 +116,8 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
 const animationTreeValidationRule: LintRule = {
   meta: {
     name: 'valid-animationtree-properties',
-    description: 'Validates AnimationTree property values, resource references, and configuration dependencies',
+    description:
+      'Validates AnimationTree property values, resource references, and configuration dependencies',
     category: 'validation',
     applicableNodeTypes: ['AnimationTree'],
     emits: armEmits(arms),

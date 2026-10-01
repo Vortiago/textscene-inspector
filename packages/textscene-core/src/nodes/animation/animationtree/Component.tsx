@@ -11,10 +11,7 @@ import { AnimationMixer, type AnimationAction } from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import {
-  useAnimationTransport,
-  type PlayState,
-} from '../../../r3f/contexts/AnimationTransportContext';
+import { useAnimationTransport, type PlayState } from '../../../r3f/contexts/AnimationTransportContext';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { useAnimationDriver, type BoundClips } from '../../../r3f/contexts/AnimationDriverContext';
@@ -65,26 +62,23 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
   // Resolve `anim_player` to a node path and look up the driver there.
   const treeNames = useUniqueNamePaths(nodePath);
   const targetPath = useMemo(
-    () =>
-      nodePath === null
-        ? null
-        : resolveAnimPlayerPath(nodePath, properties.anim_player, treeNames),
+    () => (nodePath === null ? null : resolveAnimPlayerPath(nodePath, properties.anim_player, treeNames)),
     [nodePath, properties.anim_player, treeNames]
   );
   const driver = useAnimationDriver(targetPath);
 
   // Honour `active` (Godot only processes an active tree) and selection-driven
   // transport (ADR-0012): drive only while this is the selected, active node.
-  const isActive =
-    properties.active && nodePath !== null && nodePath === selectedNodePath;
+  const isActive = properties.active && nodePath !== null && nodePath === selectedNodePath;
 
   // Godot's Animation panel has no clip picker for an AnimationTree, so the dominant clip is the
   // single read-only transport entry, and the Animation tab and scrubber appear while selected.
   const dominant = useMemo(
-    () => program.reduce<(typeof program)[number] | null>(
-      (best, c) => (best === null || c.weight > best.weight ? c : best),
-      null
-    ),
+    () =>
+      program.reduce<(typeof program)[number] | null>(
+        (best, c) => (best === null || c.weight > best.weight ? c : best),
+        null
+      ),
     [program]
   );
   // Scrubber length = the longest active clip (a blend can mix clips of

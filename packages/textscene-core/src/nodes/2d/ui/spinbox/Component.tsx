@@ -15,7 +15,11 @@ import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import { shapeText, AutowrapMode, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import {
+  shapeText,
+  AutowrapMode,
+  type TextLayoutResult,
+} from '../../../../r3f/controls/native/text/textLayout';
 import {
   pickLineEditStyleBox,
   resolveLineEditStyleState,
@@ -54,13 +58,24 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
   const resolvedValue = resolveRangeValue(props, orderedKeys);
   const text = spinBoxDisplayText(props, resolvedValue);
 
-  const { fontSizePx, fontMetrics, color: baseFontColor } = spinBoxFieldTextTheme(solveNode, { theme }, editable);
+  const {
+    fontSizePx,
+    fontMetrics,
+    color: baseFontColor,
+  } = spinBoxFieldTextTheme(solveNode, { theme }, editable);
   // `tint.own` is raw sRGB, `self_modulate` folded onto `modulate`: it feeds each `<StyleBoxQuad>`
   // and multiplies into the font and arrow colours before their one sRGB-to-linear conversion.
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
   const textLayout: TextLayoutResult = useMemo(
-    () => shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0, fontMetrics }),
+    () =>
+      shapeText(text, {
+        fontSizePx,
+        boxWidthPx: 0,
+        autowrapMode: AutowrapMode.OFF,
+        lineSpacingPx: 0,
+        fontMetrics,
+      }),
     [text, fontSizePx, fontMetrics]
   );
 
@@ -74,7 +89,14 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
         textHeightPx: textLayout.heightPx,
         rtl: solveNode.rtl,
       }),
-    [layout.fieldRect.w, layout.fieldRect.h, fieldBox.contentMargin, props.alignment, textLayout, solveNode.rtl]
+    [
+      layout.fieldRect.w,
+      layout.fieldRect.h,
+      fieldBox.contentMargin,
+      props.alignment,
+      textLayout,
+      solveNode.rtl,
+    ]
   );
 
   // `content` is field-local, and the field sits at the control origin only in LTR
@@ -117,7 +139,8 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
   // SpinBox's own `theme_override_styles/*` items, empty in the default theme, so each draws only
   // under an override. `up_down_buttons_separator` has zero height (`SpinBoxLayout`) and never draws.
   const upBox = solveNode.styleBoxes[upState === 'disabled' ? 'up_background_disabled' : 'up_background'];
-  const downBox = solveNode.styleBoxes[downState === 'disabled' ? 'down_background_disabled' : 'down_background'];
+  const downBox =
+    solveNode.styleBoxes[downState === 'disabled' ? 'down_background_disabled' : 'down_background'];
   const fieldSeparatorBox = solveNode.styleBoxes['field_and_buttons_separator'];
 
   return (
@@ -142,11 +165,18 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
         )}
       </CanvasItemGroup>
       {fieldSeparatorBox && (
-        <CanvasItemGroup position={[layout.fieldAndButtonsSeparatorRect.x, -layout.fieldAndButtonsSeparatorRect.y, 0]}>
+        <CanvasItemGroup
+          position={[layout.fieldAndButtonsSeparatorRect.x, -layout.fieldAndButtonsSeparatorRect.y, 0]}
+        >
           <StyleBoxQuad
             styleBox={fieldSeparatorBox}
             color={tint.own}
-            rect={{ x: 0, y: 0, w: layout.fieldAndButtonsSeparatorRect.w, h: layout.fieldAndButtonsSeparatorRect.h }}
+            rect={{
+              x: 0,
+              y: 0,
+              w: layout.fieldAndButtonsSeparatorRect.w,
+              h: layout.fieldAndButtonsSeparatorRect.h,
+            }}
             renderOrder={renderOrder}
           />
         </CanvasItemGroup>

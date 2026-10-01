@@ -43,9 +43,7 @@ export function arrayLiteralBody(value: string): string | null {
   const text = value.trim();
   const wrapped = TYPED_WRAPPER_RE.exec(text);
   // `Array[` + the captured element type + `](`, then the bare literal, then `)`.
-  const bare = wrapped
-    ? text.slice('Array['.length + wrapped[1]!.length + ']('.length, -1).trim()
-    : text;
+  const bare = wrapped ? text.slice('Array['.length + wrapped[1]!.length + ']('.length, -1).trim() : text;
   return ARRAY_LITERAL_RE.exec(bare)?.[1] ?? null;
 }
 
@@ -97,9 +95,7 @@ export function dictCallField(key: string, typeName: string): RegExp {
  * for the compat list of bytes. Base64 holds no `"` or `)`, so the body ends where that one does.
  */
 export function dictBase64Field(key: string): RegExp {
-  return new RegExp(
-    `"${key}"${WS}:${WS}PackedByteArray${WS}\\((?:${WS}"([^")]*)"${WS}\\))?`
-  );
+  return new RegExp(`"${key}"${WS}:${WS}PackedByteArray${WS}\\((?:${WS}"([^")]*)"${WS}\\))?`);
 }
 
 /**
@@ -109,10 +105,7 @@ export function dictBase64Field(key: string): RegExp {
  * It lives here because `godotLiteralGrammar.guard.test.ts` forbids a second reader of the scalar grammar.
  */
 export function dictNumberField(key: string, global = false): RegExp {
-  return new RegExp(
-    `"${key}"${WS}:${WS}(${TSCN_FLOAT_PATTERN_SOURCE})${WS}(?=[,}])`,
-    global ? 'g' : ''
-  );
+  return new RegExp(`"${key}"${WS}:${WS}(${TSCN_FLOAT_PATTERN_SOURCE})${WS}(?=[,}])`, global ? 'g' : '');
 }
 
 /**
@@ -212,10 +205,7 @@ export interface PackedArrayBody {
  * not a type name, so a reader keeps the three RegExps at module scope, and turns the match index into the `flat` flag
  * every reader of a packed slot branches on.
  */
-export function packedArrayBody(
-  forms: readonly RegExp[],
-  value: string
-): PackedArrayBody | null {
+export function packedArrayBody(forms: readonly RegExp[], value: string): PackedArrayBody | null {
   for (let i = 0; i < forms.length; i++) {
     const match = forms[i]!.exec(value);
     if (match) return { flat: i === 0, body: match[1]!.trim() };

@@ -53,11 +53,8 @@ export function SkyLayer({
   // GradientTexture2D sub-resource), which has no path to load from. Every
   // other sky kind passes `undefined` and the hook idles.
   const panorama =
-    useTexture2D(
-      sky.kind === 'panorama' ? sky.panorama : undefined,
-      externalResources,
-      internalResources
-    ).texture ?? null;
+    useTexture2D(sky.kind === 'panorama' ? sky.panorama : undefined, externalResources, internalResources)
+      .texture ?? null;
   const lightsKey = useSkyLightsKey(scene);
 
   useEffect(() => {
@@ -93,16 +90,7 @@ export function SkyLayer({
       }
       built.dispose();
     };
-  }, [
-    gl,
-    scene,
-    sky,
-    intensity,
-    panorama,
-    asBackground,
-    backgroundIntensity,
-    lightsKey,
-  ]);
+  }, [gl, scene, sky, intensity, panorama, asBackground, backgroundIntensity, lightsKey]);
 
   return null;
 }

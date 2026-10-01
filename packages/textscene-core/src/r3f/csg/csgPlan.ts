@@ -82,11 +82,7 @@ function isVisible(node: TscnNode, path: string, hidden?: ReadonlySet<string>): 
  * The CSG children of `node`, with their paths. Descending ONLY into CSG-typed children is
  * the rule the header explains, so both walks below read it from here.
  */
-function csgChildren(
-  node: TscnNode,
-  path: string,
-  lookup: BuildOptions['lookup']
-): [TscnNode, string][] {
+function csgChildren(node: TscnNode, path: string, lookup: BuildOptions['lookup']): [TscnNode, string][] {
   const out: [TscnNode, string][] = [];
   for (const child of node.children) {
     if (lookup(child.type) !== null) out.push([child, joinPath(path, child.name)]);
@@ -106,11 +102,7 @@ function isFinite4(m: THREE.Matrix4): boolean {
  * contributions still returns a plan, with an empty `contributions` list: "this root
  * legitimately draws nothing" is a different answer from "this is not a CSG root".
  */
-export function buildCsgPlan(
-  root: TscnNode,
-  rootPath: string,
-  options: BuildOptions
-): CsgPlan | null {
+export function buildCsgPlan(root: TscnNode, rootPath: string, options: BuildOptions): CsgPlan | null {
   const { lookup, hiddenPaths } = options;
   if (lookup(root.type) === null) return null;
 
@@ -202,4 +194,3 @@ export function buildCsgPlan(
     cacheKey: keyParts.join('\n'),
   };
 }
-

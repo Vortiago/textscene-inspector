@@ -30,8 +30,10 @@ describe('formatMeshInstance3DProperties', () => {
 
   it('maps every cast_shadow value to its label, including an unknown value', () => {
     const labelFor = (castShadow: string) =>
-      section(formatMeshInstance3DProperties(props({ mesh: 'x', cast_shadow: castShadow })), 'Mesh')!
-        .items.find((i) => i.label === 'Cast Shadow')!.value;
+      section(
+        formatMeshInstance3DProperties(props({ mesh: 'x', cast_shadow: castShadow })),
+        'Mesh'
+      )!.items.find((i) => i.label === 'Cast Shadow')!.value;
 
     expect(labelFor('0')).toBe('OFF');
     expect(labelFor('1')).toBe('ON');

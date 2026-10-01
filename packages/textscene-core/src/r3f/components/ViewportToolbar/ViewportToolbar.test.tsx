@@ -51,9 +51,7 @@ describe('ViewportToolbar', () => {
   it('renders a pre-checked collision toggle when initially on', () => {
     renderToolbar('3D', true);
     openDisplayMenu();
-    expect(
-      (screen.getByRole('checkbox', { name: 'Collisions' }) as HTMLInputElement).checked
-    ).toBe(true);
+    expect((screen.getByRole('checkbox', { name: 'Collisions' }) as HTMLInputElement).checked).toBe(true);
   });
 
   it('labels checkbox reflects + toggles showLabels (on by default)', () => {
@@ -83,10 +81,7 @@ describe('ViewportToolbar', () => {
 });
 
 /** Mounts with the camera and hierarchy contexts that Reset Camera needs. */
-function renderWithChrome({
-  mode = '3D' as '2D' | '3D',
-  sceneGraph = {} as unknown,
-} = {}) {
+function renderWithChrome({ mode = '3D' as '2D' | '3D', sceneGraph = {} as unknown } = {}) {
   return render(
     <HierarchyProvider value={{ sceneGraph: sceneGraph as never, panelId: 'p' }}>
       <CameraControlProvider>
@@ -142,9 +137,7 @@ describe('ViewportToolbar — Screenshot (#224)', () => {
       return null;
     }
 
-    const clickSpy = vi
-      .spyOn(HTMLAnchorElement.prototype, 'click')
-      .mockImplementation(() => {});
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
     // Mount first, since render() itself calls document.body.appendChild. The
     // wrap afterwards still calls through to the original.
@@ -160,15 +153,11 @@ describe('ViewportToolbar — Screenshot (#224)', () => {
     );
 
     let capturedAnchor: HTMLAnchorElement | null = null;
-    const originalAppendChild = globalThis.document.body.appendChild.bind(
-      globalThis.document.body
-    );
-    const appendSpy = vi
-      .spyOn(globalThis.document.body, 'appendChild')
-      .mockImplementation((node) => {
-        if (node instanceof HTMLAnchorElement) capturedAnchor = node;
-        return originalAppendChild(node);
-      });
+    const originalAppendChild = globalThis.document.body.appendChild.bind(globalThis.document.body);
+    const appendSpy = vi.spyOn(globalThis.document.body, 'appendChild').mockImplementation((node) => {
+      if (node instanceof HTMLAnchorElement) capturedAnchor = node;
+      return originalAppendChild(node);
+    });
 
     fireEvent.click(screen.getByTestId('screenshot-button'));
 

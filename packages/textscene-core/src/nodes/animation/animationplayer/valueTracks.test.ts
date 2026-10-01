@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  sampleSteppedValue,
-  sampleInterpolatedValue,
-} from './valueTracks';
+import { sampleSteppedValue, sampleInterpolatedValue } from './valueTracks';
 import type { GodotKeyframe } from './animationResolver';
 
 const keys: GodotKeyframe[] = [

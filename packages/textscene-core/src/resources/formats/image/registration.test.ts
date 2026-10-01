@@ -26,9 +26,7 @@ describe('image slice registration', () => {
   });
 
   it('labels a failed load the way the missing-resources panel reads it', () => {
-    expect(resourceSliceRegistry.byTypeName('Texture2D')?.failureLabel).toBe(
-      'Material using texture'
-    );
+    expect(resourceSliceRegistry.byTypeName('Texture2D')?.failureLabel).toBe('Material using texture');
   });
 
   it('does not claim an image format the decoder has no path for', () => {

@@ -10,11 +10,7 @@ import { GLBSceneRoot, GLB_SCENE_ROOT_TYPE } from './Component';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import {
-  SelectionProvider,
-  useSelection,
-  type SelectionContextValue,
-} from '../../contexts/SelectionContext';
+import { SelectionProvider, useSelection, type SelectionContextValue } from '../../contexts/SelectionContext';
 import { NodePathProvider } from '../../contexts/NodePathContext';
 import type { TscnNode } from '../../../parser/types';
 

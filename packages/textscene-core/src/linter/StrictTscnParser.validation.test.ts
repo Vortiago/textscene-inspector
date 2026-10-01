@@ -133,7 +133,7 @@ background_mode = 99
       expect(result.errors[0]?.line).toBe(4);
     });
 
-    it('inherits the header type\'s base validators', () => {
+    it("inherits the header type's base validators", () => {
       // `resource_local_to_scene` is Resource's, not Environment's.
       const content = `[gd_resource type="Environment" format=3]
 
@@ -164,7 +164,7 @@ background_mode = 99
       expect(parser.parse('[resource]\nbackground_mode = 99\n').errors).toHaveLength(0);
     });
 
-    it('leaves a scene file\'s own sections judged by their own headings', () => {
+    it("leaves a scene file's own sections judged by their own headings", () => {
       // A `[gd_scene]` header carries no `type=`, so nothing leaks into the
       // nodes below it: the index-only child is judged by its own heading.
       const content = `[gd_scene load_steps=2 format=3]

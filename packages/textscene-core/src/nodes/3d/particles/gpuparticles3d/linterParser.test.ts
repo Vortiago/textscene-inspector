@@ -245,9 +245,7 @@ describe('GPUParticles3D strict validators', () => {
     it.each(['draw_pass_1', 'draw_pass_2', 'draw_pass_3', 'draw_pass_4'])(
       '%s rejects a non-reference, non-null value (always an error)',
       (property) => {
-        expect(check(property, '"not-a-resource"')?.code).toBe(
-          `INVALID_${property.toUpperCase()}_REFERENCE`
-        );
+        expect(check(property, '"not-a-resource"')?.code).toBe(`INVALID_${property.toUpperCase()}_REFERENCE`);
       }
     );
   });

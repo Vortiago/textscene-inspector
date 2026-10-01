@@ -109,9 +109,7 @@ export function parseImportFile(content: string): ParsedImportFile | null {
  * `nodes/apply_root_scale`: when true, Godot scales the meshes and leaves the root at 1,
  * so nodes a `.tscn` parents to the root are not scaled. When false, the root scales.
  */
-export function importRootScale(
-  parsed: ParsedImportFile | null
-): { scale: number; bake: boolean } | null {
+export function importRootScale(parsed: ParsedImportFile | null): { scale: number; bake: boolean } | null {
   const raw = parsed?.params['nodes/root_scale'];
   if (raw === undefined) return null;
 
@@ -133,9 +131,7 @@ export function importRootScale(
  * (`editor/import/3d/resource_importer_scene.cpp:1620-1645`), so they belong to the GLB.
  * Godot tries the uid first (`:1625-1633`). Nothing here resolves `uid://`.
  */
-export function importExternalMaterials(
-  parsed: ParsedImportFile | null
-): ReadonlyMap<string, string> {
+export function importExternalMaterials(parsed: ParsedImportFile | null): ReadonlyMap<string, string> {
   const remaps = new Map<string, string>();
   const materials = subResourceCategory(parsed, 'materials');
   if (!materials) return remaps;
@@ -146,8 +142,7 @@ export function importExternalMaterials(
     if (entry['use_external/enabled'] !== true) continue;
 
     const path = [entry['use_external/path'], entry['use_external/fallback_path']].find(
-      (candidate): candidate is string =>
-        typeof candidate === 'string' && candidate.startsWith('res://')
+      (candidate): candidate is string => typeof candidate === 'string' && candidate.startsWith('res://')
     );
     if (path) remaps.set(name, path);
     // A remap with no `res://` path resolves only through Godot's uid table, so it is
@@ -205,9 +200,7 @@ function decodeSubResources(parsed: ParsedImportFile): Record<string, unknown> |
     try {
       decoded = JSON.parse(raw) as Record<string, unknown>;
     } catch {
-      logger.warn(
-        '[ImportSidecar] _subresources is not readable as JSON; every override in it is ignored'
-      );
+      logger.warn('[ImportSidecar] _subresources is not readable as JSON; every override in it is ignored');
     }
   }
   decodedSubResources.set(parsed, decoded);

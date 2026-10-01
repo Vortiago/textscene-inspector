@@ -32,14 +32,7 @@ export interface Camera2DView {
  */
 export type Camera2DFraming = Pick<
   Camera2DProperties,
-  | 'zoom'
-  | 'offset'
-  | 'anchor_mode'
-  | 'limitLeft'
-  | 'limitTop'
-  | 'limitRight'
-  | 'limitBottom'
-  | 'limitEnabled'
+  'zoom' | 'offset' | 'anchor_mode' | 'limitLeft' | 'limitTop' | 'limitRight' | 'limitBottom' | 'limitEnabled'
 >;
 
 /**

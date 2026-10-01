@@ -99,10 +99,7 @@ const resolveSettingLeaf = declaredLeafResolver(Object.keys(SETTING_LEAVES));
  * it, so a subclass never reports a key its base passes.
  */
 export function chainIkSubclassSettings(ownLeaves: Readonly<Record<string, PropertyValidator>>) {
-  const resolveLeaf = declaredLeafResolver([
-    ...Object.keys(ownLeaves),
-    ...Object.keys(SETTING_LEAVES),
-  ]);
+  const resolveLeaf = declaredLeafResolver([...Object.keys(ownLeaves), ...Object.keys(SETTING_LEAVES)]);
   const ownsKey = (key: string): boolean => {
     if (!key.startsWith(SETTINGS_PREFIX)) return false;
     const slash = key.indexOf('/', SETTINGS_PREFIX.length);

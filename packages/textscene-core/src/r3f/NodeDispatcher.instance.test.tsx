@@ -16,11 +16,7 @@ import type { ResourceLoader } from '../resources/ResourceLoader';
 // The barrel registers every node-type component.
 import './nodes/index';
 
-function makeNode(
-  name: string,
-  type: string,
-  overrides: Partial<TscnNode> = {}
-): TscnNode {
+function makeNode(name: string, type: string, overrides: Partial<TscnNode> = {}): TscnNode {
   return {
     name,
     type,
@@ -86,11 +82,9 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
       } as Record<string, unknown>,
     };
 
-    const renderer = await renderTree(
-      [instancingNode],
-      fake.loader,
-      [{ id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' }]
-    );
+    const renderer = await renderTree([instancingNode], fake.loader, [
+      { id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' },
+    ]);
 
     // No wrapper level: the instance node is the sub-scene root's MeshInstance3D,
     // with the instance node's name and transform, and no 'TheBox' node.
@@ -113,17 +107,13 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
       properties: { name: 'BrokenInstance' } as Record<string, unknown>,
     };
 
-    const renderer = await renderTree(
-      [instancingNode],
-      fake.loader,
-      [
-        {
-          id: '99_missing',
-          path: 'res://missing_scene.tscn',
-          type: 'PackedScene',
-        },
-      ]
-    );
+    const renderer = await renderTree([instancingNode], fake.loader, [
+      {
+        id: '99_missing',
+        path: 'res://missing_scene.tscn',
+        type: 'PackedScene',
+      },
+    ]);
 
     // The placeholder is a magenta wireframe BoxMesh with a floating label.
     const meshes = renderer.scene.findAllByType('Mesh');
@@ -149,9 +139,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
         }),
       ],
       externalResources: [],
-      internalResources: [
-        { id: 'S_1', type: 'SphereMesh', data: { id: 'S_1', radius: '0.5' } },
-      ],
+      internalResources: [{ id: 'S_1', type: 'SphereMesh', data: { id: 'S_1', radius: '0.5' } }],
     };
 
     // Scene B: a Node3D that instances scene C.
@@ -165,9 +153,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
           properties: { name: 'MiddleRoot' } as Record<string, unknown>,
         },
       ],
-      externalResources: [
-        { id: 'c_ref', path: 'res://scene_c.tscn', type: 'PackedScene' },
-      ],
+      externalResources: [{ id: 'c_ref', path: 'res://scene_c.tscn', type: 'PackedScene' }],
       internalResources: [],
     };
 
@@ -185,11 +171,9 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
       },
     ];
 
-    const renderer = await renderTree(
-      sceneANodes,
-      fake.loader,
-      [{ id: 'b_ref', path: 'res://scene_b.tscn', type: 'PackedScene' }]
-    );
+    const renderer = await renderTree(sceneANodes, fake.loader, [
+      { id: 'b_ref', path: 'res://scene_b.tscn', type: 'PackedScene' },
+    ]);
 
     // The sphere makes it through three levels of dispatch, fully collapsed:
     // each level's instance ref is consumed, leaving one MeshInstance3D named
@@ -224,11 +208,9 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
       } as Record<string, unknown>,
     }));
 
-    const renderer = await renderTree(
-      nodes,
-      fake.loader,
-      [{ id: '1_cube', path: 'res://cube.tscn', type: 'PackedScene' }]
-    );
+    const renderer = await renderTree(nodes, fake.loader, [
+      { id: '1_cube', path: 'res://cube.tscn', type: 'PackedScene' },
+    ]);
 
     // Each instance collapses into its own MeshInstance3D, named after the
     // instance node and positioned by the instance's transform.
@@ -261,9 +243,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
         }),
       ],
       externalResources: [],
-      internalResources: [
-        { id: 'Box_1', type: 'BoxMesh', data: { id: 'Box_1', size: 'Vector3(1, 1, 1)' } },
-      ],
+      internalResources: [{ id: 'Box_1', type: 'BoxMesh', data: { id: 'Box_1', size: 'Vector3(1, 1, 1)' } }],
     };
     fake.scenes.seed('res://inner.tscn', innerScene);
 
@@ -291,9 +271,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
           internalResources: [
             { id: 'Box_1', type: 'BoxMesh', data: { id: 'Box_1', size: 'Vector3(1, 1, 1)' } },
           ],
-          externalResources: [
-            { id: 'inner_ref', path: 'res://inner.tscn', type: 'PackedScene' },
-          ],
+          externalResources: [{ id: 'inner_ref', path: 'res://inner.tscn', type: 'PackedScene' }],
         }}
       >
         <NodeDispatcher nodes={[parentNode]} />
@@ -309,7 +287,9 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     expect(instanced).toBeDefined();
     // The merged node adopts the instance node's name; the root's name is gone.
     expect(renderer.scene.findAllByType('Group').find((g) => g.instance.name === 'Parent')).toBeDefined();
-    expect(renderer.scene.findAllByType('Group').find((g) => g.instance.name === 'InnerRoot')).toBeUndefined();
+    expect(
+      renderer.scene.findAllByType('Group').find((g) => g.instance.name === 'InnerRoot')
+    ).toBeUndefined();
   });
 
   it('falls back to the nested form when the loaded scene has multiple roots', async () => {
@@ -336,9 +316,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
         }),
       ],
       externalResources: [],
-      internalResources: [
-        { id: 'Box_1', type: 'BoxMesh', data: { id: 'Box_1', size: 'Vector3(1, 1, 1)' } },
-      ],
+      internalResources: [{ id: 'Box_1', type: 'BoxMesh', data: { id: 'Box_1', size: 'Vector3(1, 1, 1)' } }],
     };
     fake.scenes.seed('res://multi.tscn', multiRootScene);
 
@@ -350,11 +328,9 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
       properties: { name: 'MultiHost' } as Record<string, unknown>,
     };
 
-    const renderer = await renderTree(
-      [instancingNode],
-      fake.loader,
-      [{ id: 'multi_ref', path: 'res://multi.tscn', type: 'PackedScene' }]
-    );
+    const renderer = await renderTree([instancingNode], fake.loader, [
+      { id: 'multi_ref', path: 'res://multi.tscn', type: 'PackedScene' },
+    ]);
 
     // The instancing node's own group survives (no collapse), and both roots
     // render under it by their own names.
@@ -373,7 +349,9 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
 
     // The Wrapper's sub-scene, whose own pool does not hold the gadget ref.
     const wrapperScene: TscnScene = {
-      nodes: [makeNode('WrapperRoot', 'Node3D', { properties: { name: 'WrapperRoot' } as Record<string, unknown> })],
+      nodes: [
+        makeNode('WrapperRoot', 'Node3D', { properties: { name: 'WrapperRoot' } as Record<string, unknown> }),
+      ],
       externalResources: [],
       internalResources: [],
     };
@@ -400,19 +378,21 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
       instance: 'ExtResource("wrapper_ref")',
       children: [
         // Host-added child that instances a host resource id.
-        { name: 'Gadget', type: 'Node3D', instance: 'ExtResource("gadget_ref")', children: [], properties: { name: 'Gadget' } as Record<string, unknown> },
+        {
+          name: 'Gadget',
+          type: 'Node3D',
+          instance: 'ExtResource("gadget_ref")',
+          children: [],
+          properties: { name: 'Gadget' } as Record<string, unknown>,
+        },
       ],
       properties: { name: 'Wrapper' } as Record<string, unknown>,
     };
 
-    const renderer = await renderTree(
-      [wrapperNode],
-      fake.loader,
-      [
-        { id: 'wrapper_ref', path: 'res://wrapper.tscn', type: 'PackedScene' },
-        { id: 'gadget_ref', path: 'res://gadget.tscn', type: 'PackedScene' },
-      ]
-    );
+    const renderer = await renderTree([wrapperNode], fake.loader, [
+      { id: 'wrapper_ref', path: 'res://wrapper.tscn', type: 'PackedScene' },
+      { id: 'gadget_ref', path: 'res://gadget.tscn', type: 'PackedScene' },
+    ]);
 
     // Gadget merges to its sphere and renders: it resolved the host 'gadget_ref'
     // under the merged Wrapper.
@@ -467,9 +447,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
           } as Record<string, unknown>,
         },
       ],
-      externalResources: [
-        { id: 'leaf_ref', path: 'res://leaf.tscn', type: 'PackedScene' },
-      ],
+      externalResources: [{ id: 'leaf_ref', path: 'res://leaf.tscn', type: 'PackedScene' }],
       internalResources: [],
     };
 
@@ -495,11 +473,9 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
       },
     ];
 
-    const renderer = await renderTree(
-      topNodes,
-      fake.loader,
-      [{ id: 'middle_ref', path: 'res://middle.tscn', type: 'PackedScene' }]
-    );
+    const renderer = await renderTree(topNodes, fake.loader, [
+      { id: 'middle_ref', path: 'res://middle.tscn', type: 'PackedScene' },
+    ]);
 
     // Fully collapsed: the chain becomes a single MeshInstance3D named after
     // the outermost instance node ('TopRoot'); the 'LeafBox' wrapper is gone.
@@ -583,11 +559,9 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
       properties: { name: 'LeftCube' } as Record<string, unknown>,
     };
 
-    await renderTree(
-      [instancingNode],
-      fake.loader,
-      [{ id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' }]
-    );
+    await renderTree([instancingNode], fake.loader, [
+      { id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' },
+    ]);
 
     // Behavior is preserved (registration still happens, so the resource
     // pipeline can resolve the instanced scene) even though the call now

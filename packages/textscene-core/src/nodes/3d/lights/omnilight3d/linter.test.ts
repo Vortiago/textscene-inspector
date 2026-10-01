@@ -109,12 +109,10 @@ describe('OmniLight3D Linter', () => {
         invalid: [{ value: 5, contains: ['0-2'] }],
       },
       {
-          prop: 'light_cull_mask',
-          valid: [1, 100, 1048575, 0, 2000000, 2147483648, 4294967295],
-          invalid: [
-
-          ],
-        },
+        prop: 'light_cull_mask',
+        valid: [1, 100, 1048575, 0, 2000000, 2147483648, 4294967295],
+        invalid: [],
+      },
       {
         // light_3d.cpp:639 hints "0,4096,0.001,or_greater,exp", unenforced, so 0
         // is legal, 1500 is above the open ceiling, and a negative only warns.
@@ -155,10 +153,9 @@ describe('OmniLight3D Linter', () => {
   describe('Semantic Validation', () => {
     describe('missing omni_range error', () => {
       it('should not error when omni_range is missing', () => {
-        expectNoErrors(
-          scene(node('OmniLight3D', { light_energy: 1.0, light_color: 'Color(1, 1, 1, 1)' })),
-          { prop: 'omni_range' }
-        );
+        expectNoErrors(scene(node('OmniLight3D', { light_energy: 1.0, light_color: 'Color(1, 1, 1, 1)' })), {
+          prop: 'omni_range',
+        });
       });
 
       it('should not error when omni_range is present', () => {
@@ -301,8 +298,8 @@ describe('OmniLight3D Linter', () => {
       // enforcement, so both diagnose as warnings, not errors. light_energy=0
       // is valid.
       expect(diagnostics.every((d) => d.severity === 'warning')).toBe(true);
-      const hasModeWarning = diagnostics.some(d => d.message.includes('omni_shadow_mode'));
-      const hasOpacityWarning = diagnostics.some(d => d.message.includes('shadow_opacity'));
+      const hasModeWarning = diagnostics.some((d) => d.message.includes('omni_shadow_mode'));
+      const hasOpacityWarning = diagnostics.some((d) => d.message.includes('shadow_opacity'));
       expect(hasModeWarning && hasOpacityWarning).toBe(true);
     });
 
@@ -347,9 +344,7 @@ describe('OmniLight3D Linter', () => {
       // 0 is the bottom of the hint (light_3d.cpp:639) and therefore in band.
       expectClean(scene(node('OmniLight3D', { omni_range: 0 })));
       const diagnostics = lint(scene(node('OmniLight3D', { omni_range: -0.01 })));
-      const warning = diagnostics.find(
-        d => d.severity === 'warning' && d.message.includes('omni_range')
-      );
+      const warning = diagnostics.find((d) => d.severity === 'warning' && d.message.includes('omni_range'));
       expect(warning).toBeDefined();
     });
 
@@ -361,9 +356,9 @@ describe('OmniLight3D Linter', () => {
       // at both ends (light_3d.cpp:640), so 7.0 contributes nothing.
       expect(diagnostics).toHaveLength(2);
       expect(diagnostics.every((d) => d.severity === 'warning')).toBe(true);
-      expect(diagnostics.some(d => d.message.includes('light_energy'))).toBe(true);
-      expect(diagnostics.some(d => d.message.includes('omni_range'))).toBe(true);
-      expect(diagnostics.some(d => d.message.includes('attenuation'))).toBe(false);
+      expect(diagnostics.some((d) => d.message.includes('light_energy'))).toBe(true);
+      expect(diagnostics.some((d) => d.message.includes('omni_range'))).toBe(true);
+      expect(diagnostics.some((d) => d.message.includes('attenuation'))).toBe(false);
     });
   });
 });

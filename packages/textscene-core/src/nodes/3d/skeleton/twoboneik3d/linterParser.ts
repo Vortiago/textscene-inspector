@@ -14,10 +14,7 @@ import { indexedFamilyValidator } from '../../../../linter/validators/indexedFam
 import { v } from '../../../../linter/validators/index.js';
 import { settingCount } from '../shared/settingCount.js';
 import { declaredLeafResolver } from '../../../../godot/index.js';
-import {
-  BONE_DIRECTION,
-  SECONDARY_DIRECTION,
-} from '../skeletonmodifier3d/linterParser.js';
+import { BONE_DIRECTION, SECONDARY_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
 
 /** Error code for a `settings/…` key whose shape or leaf name is unrecognised. */
 const UNKNOWN_SETTING_CODE = 'INVALID_SETTING_KEY';

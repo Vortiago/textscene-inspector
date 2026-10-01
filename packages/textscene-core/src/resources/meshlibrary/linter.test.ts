@@ -39,9 +39,7 @@ describe('MeshLibrary item family', () => {
   it('takes the values Godot writes for each leaf', () => {
     expect(check('item/0/name', '"Floor"')).toBeNull();
     expect(check('item/0/mesh', 'ExtResource("8_floor")')).toBeNull();
-    expect(
-      check('item/0/mesh_transform', 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)')
-    ).toBeNull();
+    expect(check('item/0/mesh_transform', 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)')).toBeNull();
     expect(check('item/0/mesh_cast_shadow', '2')).toBeNull();
     expect(check('item/0/shapes', '[]')).toBeNull();
     expect(check('item/0/navigation_mesh', 'SubResource("NavigationMesh_a")')).toBeNull();
@@ -96,9 +94,7 @@ describe('MeshLibrary item family', () => {
    */
   it('takes the typed Array spelling, and counts pairs inside the wrapper', () => {
     const identity = 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)';
-    expect(
-      check('item/0/shapes', `Array[Variant]([SubResource("BoxShape3D_a"), ${identity}])`)
-    ).toBeNull();
+    expect(check('item/0/shapes', `Array[Variant]([SubResource("BoxShape3D_a"), ${identity}])`)).toBeNull();
     expect(check('item/0/shapes', 'Array[Variant]([])')).toBeNull();
 
     // Counted off the WRAPPED body: `slice(1, -1)` would read
@@ -128,9 +124,7 @@ describe('MeshLibrary item family', () => {
   it('accepts the keys Godot loads but never saves', () => {
     expect(check('item/0/shape', 'SubResource("BoxShape3D_a")')).toBeNull();
     expect(check('item/0/navmesh', 'SubResource("NavigationMesh_a")')).toBeNull();
-    expect(
-      check('item/0/navmesh_transform', 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)')
-    ).toBeNull();
+    expect(check('item/0/navmesh_transform', 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)')).toBeNull();
   });
 
   it('reports a leaf `_set` does not recognise, which returns false (:94-95)', () => {
@@ -202,9 +196,7 @@ describe('MeshLibrary item family', () => {
       )
     ).toHaveLength(0);
 
-    const diagnostics = lint(
-      scene(subResource('MeshLibrary', { 'item/0/mesh_cast_shadow': 9 }))
-    );
+    const diagnostics = lint(scene(subResource('MeshLibrary', { 'item/0/mesh_cast_shadow': 9 })));
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0]?.severity).toBe('error');
     expect(diagnostics[0]?.message).toContain('mesh_cast_shadow');

@@ -6,7 +6,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { Skeleton3DProperties } from './types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { indexedKeyRegex, boolSlotValue} from '../../../godot/index.js';
+import { indexedKeyRegex, boolSlotValue } from '../../../godot/index.js';
 import { boneNameFindings } from './boneNameOrder.js';
 import { writtenIndex } from '../../../linter/reportedIndices.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
@@ -44,10 +44,7 @@ const arms = {
  * (skeleton_3d.cpp:107). Slice 2 alone reaches the arm (:83), so a segment
  * below the leaf still lands on it.
  */
-const DEPRECATED_POSE_KEY = indexedKeyRegex(
-  '^bones/#/(?:pose|bound_children)(?:/.*)?$',
-  'to_int'
-);
+const DEPRECATED_POSE_KEY = indexedKeyRegex('^bones/#/(?:pose|bound_children)(?:/.*)?$', 'to_int');
 
 function isSkeleton3DProperties(props: unknown): props is Skeleton3DProperties {
   return typeof props === 'object' && props !== null;

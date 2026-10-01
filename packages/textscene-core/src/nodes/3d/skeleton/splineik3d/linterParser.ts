@@ -39,8 +39,7 @@ const OWN_LEAVES: Readonly<Record<string, PropertyValidator>> = {
 };
 
 /** `what = path.get_slicec('/', 2)` (spline_ik_3d.cpp:38). */
-const { resolveLeaf: resolveSplineSettingLeaf, ownsKey: ownsLeaf } =
-  chainIkSubclassSettings(OWN_LEAVES);
+const { resolveLeaf: resolveSplineSettingLeaf, ownsKey: ownsLeaf } = chainIkSubclassSettings(OWN_LEAVES);
 export { resolveSplineSettingLeaf };
 
 /**

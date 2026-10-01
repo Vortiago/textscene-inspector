@@ -30,10 +30,7 @@ function isSpaceCode(code: number): boolean {
 /** `[A-Za-z0-9_]`: the characters a constructor name is built from. */
 function isIdentCode(code: number): boolean {
   return (
-    (code >= 97 && code <= 122) ||
-    (code >= 65 && code <= 90) ||
-    (code >= 48 && code <= 57) ||
-    code === 95
+    (code >= 97 && code <= 122) || (code >= 65 && code <= 90) || (code >= 48 && code <= 57) || code === 95
   );
 }
 
@@ -54,7 +51,8 @@ function skipToSpace(str: string, pos: number): number {
 // outside a string. A change to the escape convention lands in all three.
 function scanQuoted(str: string, pos: number): number {
   for (let i = pos + 1; i < str.length; i++) {
-    if (str[i] === '\\') i++; // skip the escaped character
+    if (str[i] === '\\')
+      i++; // skip the escaped character
     else if (str[i] === '"') return i + 1;
   }
   return -1;
@@ -304,7 +302,8 @@ export function scanValueChunk(chunk: string, state: ValueScanState): ValueScanS
   for (let i = 0; i < chunk.length; i++) {
     const c = chunk[i];
     if (inString) {
-      if (c === '\\') i++; // skip the escaped character
+      if (c === '\\')
+        i++; // skip the escaped character
       else if (c === '"') inString = false;
       continue;
     }
@@ -369,18 +368,15 @@ function decodeEscapes(text: string): string {
   // One left-to-right pass, so `\\u1234` is `\` plus literal `u1234`. A `\u` without
   // four hex digits stays as written: the tokenizer's `case 'u'` errors there rather
   // than passing the character through.
-  return text.replace(
-    /\\(u[0-9a-fA-F]{4}|U[0-9a-fA-F]{6}|[^uU])/g,
-    (_match, seq: string) => {
-      if (seq[0] === 'u' || seq[0] === 'U') {
-        const code = parseInt(seq.slice(1), 16);
-        // `\UXXXXXX` accepts six hex digits, past the Unicode maximum, and a
-        // literal beyond it would throw and abort the whole scene parse.
-        return code <= 0x10ffff ? String.fromCodePoint(code) : `\\${seq}`;
-      }
-      return ESCAPE_MAP[seq] ?? seq;
-    },
-  );
+  return text.replace(/\\(u[0-9a-fA-F]{4}|U[0-9a-fA-F]{6}|[^uU])/g, (_match, seq: string) => {
+    if (seq[0] === 'u' || seq[0] === 'U') {
+      const code = parseInt(seq.slice(1), 16);
+      // `\UXXXXXX` accepts six hex digits, past the Unicode maximum, and a
+      // literal beyond it would throw and abort the whole scene parse.
+      return code <= 0x10ffff ? String.fromCodePoint(code) : `\\${seq}`;
+    }
+    return ESCAPE_MAP[seq] ?? seq;
+  });
 }
 
 /**

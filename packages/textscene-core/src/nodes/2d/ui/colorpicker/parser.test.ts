@@ -3,7 +3,7 @@ import { parseColorPicker } from './parser';
 import { heading } from '../../../../parser/testing/parserKit';
 
 describe('parseColorPicker', () => {
-  it('maps every ColorPicker-own property alongside VBoxContainer\'s own layout props', () => {
+  it("maps every ColorPicker-own property alongside VBoxContainer's own layout props", () => {
     const p = parseColorPicker(heading('ColorPicker', { name: 'Picker' }), {
       color: 'Color(0.2, 0.4, 0.6, 0.8)',
       picker_shape: '1',

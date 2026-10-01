@@ -18,7 +18,8 @@ async function main() {
   let targets = collectTargets();
   if (args.only) targets = targets.filter((t) => t.image.includes(args.only));
   const { own, delegated } = partitionTargets(targets);
-  if (!targets.length) throw new Error(args.only ? `No sheet image matches --only ${args.only}` : 'No sheet images found');
+  if (!targets.length)
+    throw new Error(args.only ? `No sheet image matches --only ${args.only}` : 'No sheet images found');
   console.log(`Re-rendering ${own.length} comparison image(s)…`);
 
   const godot = args.godot ? await captureGodot(own) : { modes: new Map(), failures: [] };

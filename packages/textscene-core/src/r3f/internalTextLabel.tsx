@@ -6,13 +6,10 @@
 
 import { lazy, Suspense, type ReactNode } from 'react';
 
-const Text = lazy(() =>
-  import('@react-three/drei/core/Text').then((m) => ({ default: m.Text }))
-);
+const Text = lazy(() => import('@react-three/drei/core/Text').then((m) => ({ default: m.Text })));
 
 const IS_VITEST = (() => {
-  const proc = (globalThis as { process?: { env?: { VITEST?: string } } })
-    .process;
+  const proc = (globalThis as { process?: { env?: { VITEST?: string } } }).process;
   return proc?.env?.VITEST === 'true';
 })();
 
@@ -58,4 +55,3 @@ export function InternalTextLabel({
     </Suspense>
   );
 }
-

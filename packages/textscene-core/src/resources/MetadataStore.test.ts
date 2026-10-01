@@ -36,7 +36,11 @@ describe('MetadataStore', () => {
 
   it('re-registering the same id + path overwrites in place (idempotent, latest wins)', () => {
     store.register(TEX);
-    const updated: ExtResource = { id: '1_tex', path: 'res://textures/wall.png', type: 'CompressedTexture2D' };
+    const updated: ExtResource = {
+      id: '1_tex',
+      path: 'res://textures/wall.png',
+      type: 'CompressedTexture2D',
+    };
     store.register(updated);
 
     expect(store.get('1_tex')).toBe(updated);
@@ -102,10 +106,7 @@ describe('MetadataStore', () => {
 
     const all = store.getAll();
     expect(all).toHaveLength(2);
-    expect(all.map((r) => r.path).sort()).toEqual([
-      'res://scenes/door.tscn',
-      'res://textures/wall.png',
-    ]);
+    expect(all.map((r) => r.path).sort()).toEqual(['res://scenes/door.tscn', 'res://textures/wall.png']);
     expect(store.size).toBe(2);
   });
 

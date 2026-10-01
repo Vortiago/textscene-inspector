@@ -15,7 +15,9 @@ import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  missingSkeletonParent: groundedArm('physicalbone2d-missing-skeleton-parent', { kind: 'configuration-warning' }),
+  missingSkeletonParent: groundedArm('physicalbone2d-missing-skeleton-parent', {
+    kind: 'configuration-warning',
+  }),
   missingBoneIndex: groundedArm('physicalbone2d-missing-bone-index', { kind: 'configuration-warning' }),
   missingJointChild: groundedArm('physicalbone2d-missing-joint-child', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;

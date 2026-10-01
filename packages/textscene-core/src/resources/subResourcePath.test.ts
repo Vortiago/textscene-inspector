@@ -52,9 +52,7 @@ describe('subResourcePath', () => {
 
 describe('resourceFilePath', () => {
   it('is the fetchable file behind either form of path', () => {
-    expect(resourceFilePath('res://wheel.tres::StandardMaterial3D_020iw')).toBe(
-      'res://wheel.tres'
-    );
+    expect(resourceFilePath('res://wheel.tres::StandardMaterial3D_020iw')).toBe('res://wheel.tres');
     expect(resourceFilePath('res://wheel.tres')).toBe('res://wheel.tres');
   });
 });

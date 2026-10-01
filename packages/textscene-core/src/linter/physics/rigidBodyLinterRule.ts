@@ -61,7 +61,9 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
       at: contactMonitorCite,
       unused: 'the colliding-bodies list and the contact signals live behind this guard',
     }),
-    scaleOverriddenAtRuntime: groundedArm(`${prefix}-scale-overridden-at-runtime`, { kind: 'configuration-warning' }),
+    scaleOverriddenAtRuntime: groundedArm(`${prefix}-scale-overridden-at-runtime`, {
+      kind: 'configuration-warning',
+    }),
   } as const satisfies RuleArms<string>;
 
   function check(context: RuleContext): Diagnostic[] {

@@ -2,8 +2,20 @@ import { describe, expect, it } from 'vitest';
 import { findRowValue } from './inspector.mjs';
 
 const SECTIONS = [
-  { title: 'Text', rows: [{ label: 'Text', value: 'BoxMesh Test' }, { label: 'Pixel Size', value: '0.0080' }] },
-  { title: 'Position', rows: [{ label: 'X', value: '0.000' }, { label: 'Y', value: '2.500' }] },
+  {
+    title: 'Text',
+    rows: [
+      { label: 'Text', value: 'BoxMesh Test' },
+      { label: 'Pixel Size', value: '0.0080' },
+    ],
+  },
+  {
+    title: 'Position',
+    rows: [
+      { label: 'X', value: '0.000' },
+      { label: 'Y', value: '2.500' },
+    ],
+  },
 ];
 
 describe('findRowValue', () => {

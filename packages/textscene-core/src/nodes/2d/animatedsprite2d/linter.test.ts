@@ -44,9 +44,7 @@ describe('AnimatedSprite2D Linter', () => {
       });
 
       it('should accept valid sprite_frames reference format (ExtResource)', () => {
-        expectClean(
-          scene(extFrames, node('AnimatedSprite2D', { sprite_frames: 'ExtResource("frames_1")' }))
-        );
+        expectClean(scene(extFrames, node('AnimatedSprite2D', { sprite_frames: 'ExtResource("frames_1")' })));
       });
 
       it('should reject invalid sprite_frames format', () => {
@@ -148,7 +146,6 @@ describe('AnimatedSprite2D Linter', () => {
         });
       });
     });
-
   });
 
   describe('Semantic Validation (Resource References)', () => {
@@ -185,9 +182,7 @@ describe('AnimatedSprite2D Linter', () => {
     });
 
     it('should pass when sprite_frames is external resource', () => {
-      expectClean(
-        scene(extFrames, node('AnimatedSprite2D', { sprite_frames: 'ExtResource("frames_1")' }))
-      );
+      expectClean(scene(extFrames, node('AnimatedSprite2D', { sprite_frames: 'ExtResource("frames_1")' })));
     });
   });
 
@@ -252,14 +247,11 @@ describe('AnimatedSprite2D Linter', () => {
     // Properties replay in file order (packed_scene.cpp:492), so the slot is
     // still null on the line above it. Measured: this body loads on frame 0.
     it('errors when sprite_frames is written below frame', () => {
-      expectDiagnostic(
-        scene(spriteFrames, node('AnimatedSprite2D', { frame: 2, ...withFrames })),
-        {
-          ruleName: 'animatedsprite2d-frame-no-spriteframes',
-          severity: 'error',
-          contains: ['frame', 'in effect at that line'],
-        }
-      );
+      expectDiagnostic(scene(spriteFrames, node('AnimatedSprite2D', { frame: 2, ...withFrames })), {
+        ruleName: 'animatedsprite2d-frame-no-spriteframes',
+        severity: 'error',
+        contains: ['frame', 'in effect at that line'],
+      });
     });
 
     it('passes on the same values with sprite_frames written above frame', () => {
@@ -268,27 +260,25 @@ describe('AnimatedSprite2D Linter', () => {
 
     it('stays silent on frame 0, the value the node already holds', () => {
       const diagnostics = lint(scene(node('AnimatedSprite2D', { frame: 0 })));
-      expect(
-        diagnostics.filter((d) => d.ruleName === 'animatedsprite2d-frame-no-spriteframes')
-      ).toHaveLength(0);
+      expect(diagnostics.filter((d) => d.ruleName === 'animatedsprite2d-frame-no-spriteframes')).toHaveLength(
+        0
+      );
     });
 
     // The `>= 0` floor in linterParser.ts already reports a negative frame. A
     // second error on the same line is the double-report ADR-0032 forbids.
     it('leaves a negative frame to the validator alone', () => {
       const diagnostics = lint(scene(node('AnimatedSprite2D', { frame: -1 })));
-      expect(
-        diagnostics.filter((d) => d.ruleName === 'animatedsprite2d-frame-no-spriteframes')
-      ).toHaveLength(0);
+      expect(diagnostics.filter((d) => d.ruleName === 'animatedsprite2d-frame-no-spriteframes')).toHaveLength(
+        0
+      );
     });
   });
 
   describe('Edge Cases', () => {
     it('should handle multiple validation errors', () => {
       const diagnostics = lint(
-        scene(
-          node('AnimatedSprite2D', { centered: 1, speed_scale: 'fast', frame: -5, flip_h: 'yes' })
-        )
+        scene(node('AnimatedSprite2D', { centered: 1, speed_scale: 'fast', frame: -5, flip_h: 'yes' }))
       );
       expect(diagnostics.length).toBeGreaterThan(3);
     });
@@ -345,10 +335,7 @@ describe('AnimatedSprite2D Linter', () => {
 
     it('should handle whitespace in Vector2', () => {
       expectClean(
-        scene(
-          spriteFrames,
-          node('AnimatedSprite2D', { ...withFrames, offset: 'Vector2(  10  ,  20  )' })
-        )
+        scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, offset: 'Vector2(  10  ,  20  )' }))
       );
     });
   });
@@ -373,7 +360,12 @@ describe('AnimatedSprite2D Linter', () => {
     });
 
     it('should not flag reverse playback configuration (negative speed_scale is valid)', () => {
-      expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, animation: '"rewind"', speed_scale: -2.0 })));
+      expectClean(
+        scene(
+          spriteFrames,
+          node('AnimatedSprite2D', { ...withFrames, animation: '"rewind"', speed_scale: -2.0 })
+        )
+      );
     });
 
     it('should validate minimal valid configuration', () => {
@@ -400,8 +392,6 @@ animation = &"idle"
   });
 
   it('does not ask for a sprite_frames that is already set', () => {
-    expect(lint(scene).map((d) => d.ruleName)).not.toContain(
-      'animatedsprite2d-requires-spriteframes'
-    );
+    expect(lint(scene).map((d) => d.ruleName)).not.toContain('animatedsprite2d-requires-spriteframes');
   });
 });

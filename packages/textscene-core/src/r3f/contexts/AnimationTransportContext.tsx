@@ -4,15 +4,7 @@
  * its authored pose (ADR-0011). It tracks one registered player.
  */
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 
 export type PlayState = 'stopped' | 'playing' | 'paused';
 
@@ -118,8 +110,7 @@ export function AnimationTransportProvider({ children }: { children: ReactNode }
   const hasPlayer = registration !== null;
   const autoplayClip =
     registration?.autoplay && clips.includes(registration.autoplay) ? registration.autoplay : null;
-  const duration =
-    (selectedClip ? registration?.durations[selectedClip] : undefined) ?? 0;
+  const duration = (selectedClip ? registration?.durations[selectedClip] : undefined) ?? 0;
 
   const registerPlayer = useCallback((reg: PlayerRegistration) => {
     // A new player starts neutral, so no override from the last player applies.
@@ -227,9 +218,5 @@ export function AnimationTransportProvider({ children }: { children: ReactNode }
     ]
   );
 
-  return (
-    <AnimationTransportContext.Provider value={value}>
-      {children}
-    </AnimationTransportContext.Provider>
-  );
+  return <AnimationTransportContext.Provider value={value}>{children}</AnimationTransportContext.Provider>;
 }

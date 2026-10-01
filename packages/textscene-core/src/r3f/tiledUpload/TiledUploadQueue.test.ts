@@ -345,7 +345,13 @@ describe('TiledUploadQueue.needsTiling', () => {
   });
 
   it('leaves a texture that is not 8-bit RGBA to three', () => {
-    const floats = new THREE.DataTexture(new Float32Array(4096 * 256 * 4), 4096, 256, THREE.RGBAFormat, THREE.FloatType);
+    const floats = new THREE.DataTexture(
+      new Float32Array(4096 * 256 * 4),
+      4096,
+      256,
+      THREE.RGBAFormat,
+      THREE.FloatType
+    );
     const red = new THREE.DataTexture(new Uint8Array(4096 * 1024), 4096, 1024, THREE.RedFormat);
 
     expect(queue.needsTiling(floats)).toBe(false);

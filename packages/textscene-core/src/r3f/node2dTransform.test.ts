@@ -11,14 +11,19 @@ import { TRANSFORM2D_IDENTITY, transform2DFromParts } from '../godot/transform2d
 
 describe('node2dGroupProps', () => {
   it('conjugates by diag(1,-1,1): negates Y translation and rotation, preserves scale', () => {
-    const r = node2dGroupProps({ position: { x: 100, y: 50 }, rotation: Math.PI / 4, scale: { x: 2, y: 3 } }, 0.5);
+    const r = node2dGroupProps(
+      { position: { x: 100, y: 50 }, rotation: Math.PI / 4, scale: { x: 2, y: 3 } },
+      0.5
+    );
     expect(r.position).toEqual([100, -50, 0.5]);
     expect(r.rotation).toEqual([0, 0, -Math.PI / 4]);
     expect(r.scale).toEqual([2, 3, 1]);
   });
 
   it('omits a matrix when skew is zero/absent (TRS fast path)', () => {
-    expect(node2dGroupProps({ position: { x: 0, y: 0 }, rotation: 0, scale: { x: 1, y: 1 } }).matrix).toBeUndefined();
+    expect(
+      node2dGroupProps({ position: { x: 0, y: 0 }, rotation: 0, scale: { x: 1, y: 1 } }).matrix
+    ).toBeUndefined();
     expect(
       node2dGroupProps({ position: { x: 0, y: 0 }, rotation: 0, scale: { x: 1, y: 1 }, skew: 0 }).matrix
     ).toBeUndefined();
@@ -44,12 +49,18 @@ describe('node2dGroupProps', () => {
     // F·L·F spelled out from `cos`/`sin` directly. `+ 0` folds -0 into +0: the two spellings
     // differ at most in the sign of an exact zero, which no product on the GPU sees.
     const explicit = (rot: number, sx: number, sy: number, skew: number): number[] => [
-      Math.cos(rot) * sx, Math.sin(rot + skew) * sy,
-      -Math.sin(rot) * sx, Math.cos(rot + skew) * sy,
+      Math.cos(rot) * sx,
+      Math.sin(rot + skew) * sy,
+      -Math.sin(rot) * sx,
+      Math.cos(rot + skew) * sy,
     ];
     for (const rotation of [0, 0.5, -1.2, Math.PI / 2, Math.PI, 3.7]) {
       for (const skew of [0.25, -0.5, Math.PI / 3, -Math.PI / 2]) {
-        for (const [sx, sy] of [[1, 1], [2, -3], [-0.5, 0.25]] as const) {
+        for (const [sx, sy] of [
+          [1, 1],
+          [2, -3],
+          [-0.5, 0.25],
+        ] as const) {
           const e = node2dGroupProps({ position: { x: 4, y: 5 }, rotation, scale: { x: sx, y: sy }, skew })
             .matrix!.elements;
           // `elements` is column-major, so n12 is e[4] and n21 is e[1].
@@ -61,7 +72,9 @@ describe('node2dGroupProps', () => {
   });
 
   it('node2dGroupSpread → TRS props when no skew, matrix props when skewed', () => {
-    const trs = node2dGroupSpread(node2dGroupProps({ position: { x: 1, y: 2 }, rotation: 0, scale: { x: 1, y: 1 } }));
+    const trs = node2dGroupSpread(
+      node2dGroupProps({ position: { x: 1, y: 2 }, rotation: 0, scale: { x: 1, y: 1 } })
+    );
     expect(trs).toHaveProperty('position');
     expect(trs).not.toHaveProperty('matrix');
 
@@ -123,9 +136,7 @@ describe('threeMatrixFromTransform2D', () => {
   it('bakes the same matrix node2dGroupProps bakes for a sheared item', () => {
     const local = { position: { x: 4, y: 5 }, rotation: 0.5, scale: { x: 2, y: -3 }, skew: 0.25 };
     const baked = node2dGroupProps(local, 0.3).matrix!;
-    expect(threeMatrixFromTransform2D(node2DLocalTransform(local), 0.3).elements).toEqual(
-      baked.elements
-    );
+    expect(threeMatrixFromTransform2D(node2DLocalTransform(local), 0.3).elements).toEqual(baked.elements);
   });
 });
 

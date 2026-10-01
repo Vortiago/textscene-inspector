@@ -20,9 +20,7 @@ function posmod(a: number, b: number): number {
 /** Shapes whose cells stagger along an offset axis; everything else is plain square. */
 function isStaggered(shape: number): boolean {
   return (
-    shape === TILE_SHAPE_ISOMETRIC ||
-    shape === TILE_SHAPE_HALF_OFFSET_SQUARE ||
-    shape === TILE_SHAPE_HEXAGON
+    shape === TILE_SHAPE_ISOMETRIC || shape === TILE_SHAPE_HALF_OFFSET_SQUARE || shape === TILE_SHAPE_HEXAGON
   );
 }
 
@@ -50,19 +48,22 @@ export function mapToLocalPx(grid: TileGrid, cell: Vec2i): { x: number; y: numbe
         case 2: // STAIRS_RIGHT
           x += y / 2;
           break;
-        case 3: { // STAIRS_DOWN
+        case 3: {
+          // STAIRS_DOWN
           const rawX = x;
           x = rawX / 2;
           y = y * 2 + rawX;
           break;
         }
-        case 4: { // DIAMOND_RIGHT
+        case 4: {
+          // DIAMOND_RIGHT
           const rawX = x;
           x = (rawX + y) / 2;
           y = y - rawX;
           break;
         }
-        case 5: { // DIAMOND_DOWN
+        case 5: {
+          // DIAMOND_DOWN
           const rawX = x;
           x = (rawX - y) / 2;
           y = y + rawX;
@@ -78,7 +79,8 @@ export function mapToLocalPx(grid: TileGrid, cell: Vec2i): { x: number; y: numbe
         case 1: // STACKED_OFFSET
           y += posmod(x, 2) === 1 ? 0 : 0.5;
           break;
-        case 2: { // STAIRS_RIGHT
+        case 2: {
+          // STAIRS_RIGHT
           const rawY = y;
           y = rawY / 2;
           x = x * 2 + rawY;
@@ -87,13 +89,15 @@ export function mapToLocalPx(grid: TileGrid, cell: Vec2i): { x: number; y: numbe
         case 3: // STAIRS_DOWN
           y += x / 2;
           break;
-        case 4: { // DIAMOND_RIGHT
+        case 4: {
+          // DIAMOND_RIGHT
           const rawY = y;
           y = (rawY - x) / 2;
           x = x + rawY;
           break;
         }
-        case 5: { // DIAMOND_DOWN
+        case 5: {
+          // DIAMOND_DOWN
           const rawY = y;
           y = (rawY + x) / 2;
           x = x - rawY;

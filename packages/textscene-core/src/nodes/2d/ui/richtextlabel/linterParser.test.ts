@@ -155,17 +155,21 @@ describe('RichTextLabel strict validators', () => {
     });
 
     it('warns on BREAK_TRIM_INDENT, which the setter keeps but the hint omits', () => {
-      expectWarning(check('autowrap_trim_flags', '32'), 'sets BREAK_TRIM_INDENT (32), which the engine keeps but the inspector\'s flag list does not offer (it lists only BREAK_TRIM_START_EDGE_SPACES (64) | BREAK_TRIM_END_EDGE_SPACES (128))');
+      expectWarning(
+        check('autowrap_trim_flags', '32'),
+        "sets BREAK_TRIM_INDENT (32), which the engine keeps but the inspector's flag list does not offer (it lists only BREAK_TRIM_START_EDGE_SPACES (64) | BREAK_TRIM_END_EDGE_SPACES (128))"
+      );
     });
 
     it('rejects a negative value', () => {
-      expectError(check('autowrap_trim_flags', '-1'), 'accepts only the bits BREAK_TRIM_INDENT (32) | BREAK_TRIM_START_EDGE_SPACES (64) | BREAK_TRIM_END_EDGE_SPACES (128); -1 sets bits outside the mask, which Godot drops on assignment (Godot stores 224)');
+      expectError(
+        check('autowrap_trim_flags', '-1'),
+        'accepts only the bits BREAK_TRIM_INDENT (32) | BREAK_TRIM_START_EDGE_SPACES (64) | BREAK_TRIM_END_EDGE_SPACES (128); -1 sets bits outside the mask, which Godot drops on assignment (Godot stores 224)'
+      );
     });
 
     it('rejects a non-numeric value', () => {
-      expect(check('autowrap_trim_flags', 'not-a-number')?.code).toBe(
-        'INVALID_AUTOWRAP_TRIM_FLAGS_FORMAT'
-      );
+      expect(check('autowrap_trim_flags', 'not-a-number')?.code).toBe('INVALID_AUTOWRAP_TRIM_FLAGS_FORMAT');
     });
   });
 
@@ -237,12 +241,21 @@ describe('RichTextLabel strict validators', () => {
       // = 16 and JUSTIFICATION_TRIM_EDGE_SPACES = 4, which the hint omits. The
       // setter keeps them, so they are unreachable from the inspector, not
       // refused: the hint's warning tier.
-      expectWarning(check('justification_flags', '16'), 'sets a bit the inspector\'s flag list does not offer; it lists only JUSTIFICATION_KASHIDA (1) | JUSTIFICATION_WORD_BOUND (2) | JUSTIFICATION_AFTER_LAST_TAB (8) | JUSTIFICATION_SKIP_LAST_LINE (32) | JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) | JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128). Godot keeps the value, so this loads and runs, but the value is unreachable from the editor');
-      expectWarning(check('justification_flags', '4'), 'sets a bit the inspector\'s flag list does not offer; it lists only JUSTIFICATION_KASHIDA (1) | JUSTIFICATION_WORD_BOUND (2) | JUSTIFICATION_AFTER_LAST_TAB (8) | JUSTIFICATION_SKIP_LAST_LINE (32) | JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) | JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128). Godot keeps the value, so this loads and runs, but the value is unreachable from the editor');
+      expectWarning(
+        check('justification_flags', '16'),
+        "sets a bit the inspector's flag list does not offer; it lists only JUSTIFICATION_KASHIDA (1) | JUSTIFICATION_WORD_BOUND (2) | JUSTIFICATION_AFTER_LAST_TAB (8) | JUSTIFICATION_SKIP_LAST_LINE (32) | JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) | JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128). Godot keeps the value, so this loads and runs, but the value is unreachable from the editor"
+      );
+      expectWarning(
+        check('justification_flags', '4'),
+        "sets a bit the inspector's flag list does not offer; it lists only JUSTIFICATION_KASHIDA (1) | JUSTIFICATION_WORD_BOUND (2) | JUSTIFICATION_AFTER_LAST_TAB (8) | JUSTIFICATION_SKIP_LAST_LINE (32) | JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) | JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128). Godot keeps the value, so this loads and runs, but the value is unreachable from the editor"
+      );
     });
 
     it('warns on a negative value for the same reason, since no clamp rejects it', () => {
-      expectWarning(check('justification_flags', '-1'), 'sets a bit the inspector\'s flag list does not offer; it lists only JUSTIFICATION_KASHIDA (1) | JUSTIFICATION_WORD_BOUND (2) | JUSTIFICATION_AFTER_LAST_TAB (8) | JUSTIFICATION_SKIP_LAST_LINE (32) | JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) | JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128). Godot keeps the value, so this loads and runs, but the value is unreachable from the editor');
+      expectWarning(
+        check('justification_flags', '-1'),
+        "sets a bit the inspector's flag list does not offer; it lists only JUSTIFICATION_KASHIDA (1) | JUSTIFICATION_WORD_BOUND (2) | JUSTIFICATION_AFTER_LAST_TAB (8) | JUSTIFICATION_SKIP_LAST_LINE (32) | JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) | JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128). Godot keeps the value, so this loads and runs, but the value is unreachable from the editor"
+      );
     });
 
     it('accepts any subset of the six bits the hint does offer', () => {
@@ -267,7 +280,7 @@ describe('RichTextLabel strict validators', () => {
       }
     });
 
-    it('rejects the JavaScript-only spellings Godot\'s tokenizer cannot read', () => {
+    it("rejects the JavaScript-only spellings Godot's tokenizer cannot read", () => {
       for (const spelling of ['0x10', 'Infinity', '+3']) {
         expect(check('tab_stops', `PackedFloat32Array(${spelling}, 20)`)).not.toBeNull();
       }

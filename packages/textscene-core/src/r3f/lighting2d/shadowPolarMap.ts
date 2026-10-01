@@ -11,12 +11,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
 
-import {
-  casterInLightRect,
-  edgeCastsShadow,
-  type LightRect,
-  type ShadowCasterEdges,
-} from './shadowVolumes';
+import { casterInLightRect, edgeCastsShadow, type LightRect, type ShadowCasterEdges } from './shadowVolumes';
 
 /**
  * Texels in one light's map: the `rendering/2d/shadow_atlas/size` row (project

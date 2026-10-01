@@ -21,7 +21,12 @@ export async function supportedTypes() {
 function blobAfter(out, marker, what) {
   const at = out.indexOf(marker);
   if (at === -1) throw new Error(`Godot did not emit ${what}. Output:\n${out.slice(-800)}`);
-  return JSON.parse(out.slice(at + marker.length).trim().split('\n')[0]);
+  return JSON.parse(
+    out
+      .slice(at + marker.length)
+      .trim()
+      .split('\n')[0]
+  );
 }
 
 /**
@@ -56,5 +61,7 @@ export function enumerateGodotNodes() {
 }
 
 export function godotVersion() {
-  return (spawnSync('godot', ['--version'], { encoding: 'utf8' }).stdout ?? '').trim().split('\n')[0] || 'unknown';
+  return (
+    (spawnSync('godot', ['--version'], { encoding: 'utf8' }).stdout ?? '').trim().split('\n')[0] || 'unknown'
+  );
 }

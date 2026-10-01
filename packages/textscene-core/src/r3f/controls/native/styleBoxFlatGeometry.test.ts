@@ -220,8 +220,18 @@ describe('styleBoxFlatGeometry anti-aliasing (style_box_flat.cpp:468-471,511-630
     // (draw_border ? 8 : 4), and :316 adapts to 1 only when every radius is 0.
     // A filled ring is (detail + 1) * 4, so 5 draws 24 where 8 draws 36.
     const rounded = { topLeft: 10, topRight: 10, bottomRight: 10, bottomLeft: 10 };
-    const five = styleBoxFlatGeometry(box({ cornerRadius: rounded, cornerDetail: 5 }), { x: 0, y: 0, w: 100, h: 50 });
-    const eight = styleBoxFlatGeometry(box({ cornerRadius: rounded, cornerDetail: 8 }), { x: 0, y: 0, w: 100, h: 50 });
+    const five = styleBoxFlatGeometry(box({ cornerRadius: rounded, cornerDetail: 5 }), {
+      x: 0,
+      y: 0,
+      w: 100,
+      h: 50,
+    });
+    const eight = styleBoxFlatGeometry(box({ cornerRadius: rounded, cornerDetail: 8 }), {
+      x: 0,
+      y: 0,
+      w: 100,
+      h: 50,
+    });
     expect(five.positions).toHaveLength((5 + 1) * 4 * 3);
     expect(eight.positions).toHaveLength((8 + 1) * 4 * 3);
   });
@@ -368,10 +378,7 @@ describe('styleBoxFlatGeometry — drop shadow (style_box_flat.cpp:524-540)', ()
     // `shadow_rect = style_rect.grow(shadow_size)` then `.position +=
     // shadow_offset` (`:529-530`). The furthest-left vertex is therefore the
     // style rect's own left, minus the growth, plus the offset.
-    const shadowed = styleBoxFlatGeometry(
-      box({ shadowSize: 6, shadowOffset: { x: 4, y: 3 } }),
-      RECT
-    );
+    const shadowed = styleBoxFlatGeometry(box({ shadowSize: 6, shadowOffset: { x: 4, y: 3 } }), RECT);
     const xs: number[] = [];
     const ys: number[] = [];
     for (let i = 0; i < shadowed.positions.length; i += 3) {

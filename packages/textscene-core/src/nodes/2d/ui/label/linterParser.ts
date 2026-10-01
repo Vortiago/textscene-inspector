@@ -20,8 +20,6 @@ import {
 } from '../../../../linter/validators/textServerEnums.js';
 import { HORIZONTAL_ALIGNMENT, VERTICAL_ALIGNMENT } from '../../../../linter/validators/globalScopeEnums.js';
 
-
-
 /**
  * `TextServer::VisibleCharactersBehavior` (servers/text/text_server.h:90-96),
  * label.cpp:1451 hint with 5 entries.
@@ -141,13 +139,9 @@ validatorRegistry.registerAll('Label', {
   // label.cpp:1451: PROPERTY_HINT_ENUM with 5 entries.
   // set_visible_characters_behavior (label.cpp:1334-1343) assigns
   // unconditionally, no ERR_FAIL.
-  visible_characters_behavior: v.enumInt(
-    'visible_characters_behavior',
-    0,
-    4,
-    VISIBLE_CHARACTERS_BEHAVIOR,
-    { hinted: 'label.cpp:1451' }
-  ),
+  visible_characters_behavior: v.enumInt('visible_characters_behavior', 0, 4, VISIBLE_CHARACTERS_BEHAVIOR, {
+    hinted: 'label.cpp:1451',
+  }),
   // label.cpp:1452: PROPERTY_HINT_RANGE "0,1,0.001", a warning (ADR-0032), since the clamp
   // at label.cpp:1307-1312 sits behind `if (visible_ratio != p_ratio)` (label.cpp:1305) and
   // properties apply in file order (packed_scene.cpp:492). After `text = "0"` and
@@ -174,13 +168,9 @@ validatorRegistry.registerAll('Label', {
   language: v.quotedString('language'),
   // label.cpp:1457: PROPERTY_HINT_ENUM, 7 labels. set_structured_text_bidi_override
   // (label.cpp:1150-1158) assigns unconditionally, no ERR_FAIL.
-  structured_text_bidi_override: v.enumInt(
-    'structured_text_bidi_override',
-    0,
-    6,
-    STRUCTURED_TEXT_PARSER,
-    { hinted: 'label.cpp:1457' }
-  ),
+  structured_text_bidi_override: v.enumInt('structured_text_bidi_override', 0, 6, STRUCTURED_TEXT_PARSER, {
+    hinted: 'label.cpp:1457',
+  }),
   // label.cpp:1458: Variant::ARRAY with no hint at all, so it is never written
   // wrapped. set_structured_text_bidi_override_options (label.cpp:1164-1174)
   // assigns straight through, leaving only the literal shape to reject.

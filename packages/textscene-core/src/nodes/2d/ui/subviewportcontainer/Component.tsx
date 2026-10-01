@@ -114,7 +114,12 @@ function ViewportSurfaceNative({
   const renderedHeight = shrinking ? forcedSize.y : height;
 
   const contentKind = useViewportContentKind(viewport);
-  const { tree, generation } = useBuildSolveTree(viewport.children, externalResources, internalResources, rtl);
+  const { tree, generation } = useBuildSolveTree(
+    viewport.children,
+    externalResources,
+    internalResources,
+    rtl
+  );
   const controlsViewport: Rect2 = useMemo(
     () => ({ x: 0, y: 0, w: renderedWidth, h: renderedHeight }),
     [renderedWidth, renderedHeight]
@@ -163,7 +168,10 @@ function ViewportSurfaceNative({
   // The render target has only `renderedWidth`x`renderedHeight` pixels, so Godot clips by never
   // rendering past its edge. The Controls arm draws three.js objects with no such edge and needs
   // an explicit clip (`ScrollContainer`'s mechanism). The pixel arm's quad is already this size.
-  const clipRect = useMemo(() => ({ x: 0, y: 0, w: renderedWidth, h: renderedHeight }), [renderedWidth, renderedHeight]);
+  const clipRect = useMemo(
+    () => ({ x: 0, y: 0, w: renderedWidth, h: renderedHeight }),
+    [renderedWidth, renderedHeight]
+  );
   const { anchorRef, clip } = useWorldClipPlanes(clipRect);
 
   return (
@@ -205,17 +213,17 @@ function ViewportSurfaceNative({
             the quad carries the tint, so a live draw would composite it twice. This arm serves a
             mixed viewport, whose offscreen pass renders the non-Control half (`viewportContent.ts`). */}
         {contentKind === 'dom' ? null : (
-        <ControlCanvasWalker
-          tree={tree}
-          generation={generation}
-          viewport={controlsViewport}
-          theme={theme}
-          measurer={measureText}
-          // `scene/main/viewport.h`: `bool snap_controls_to_pixels = true` on every Viewport, and
-          // only the root window receives `gui/common/snap_controls_to_pixels` (`main/main.cpp`), so
-          // the project's opt-out never reaches the sub-viewport's Controls.
-          snapToPixels
-        />
+          <ControlCanvasWalker
+            tree={tree}
+            generation={generation}
+            viewport={controlsViewport}
+            theme={theme}
+            measurer={measureText}
+            // `scene/main/viewport.h`: `bool snap_controls_to_pixels = true` on every Viewport, and
+            // only the root window receives `gui/common/snap_controls_to_pixels` (`main/main.cpp`), so
+            // the project's opt-out never reaches the sub-viewport's Controls.
+            snapToPixels
+          />
         )}
       </ControlClipProvider>
     </CanvasItemGroup>

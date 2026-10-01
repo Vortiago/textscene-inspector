@@ -8,10 +8,9 @@ import './linter';
 
 describe('ScrollContainer Linter (scrollcontainer-not-single-child)', () => {
   it('passes with exactly one Control child', () => {
-    expectNoDiagnostic(
-      scene(node('ScrollContainer'), node('VBoxContainer', {}, { parent: '.' })),
-      { ruleName: 'scrollcontainer-not-single-child' }
-    );
+    expectNoDiagnostic(scene(node('ScrollContainer'), node('VBoxContainer', {}, { parent: '.' })), {
+      ruleName: 'scrollcontainer-not-single-child',
+    });
   });
 
   it('warns with zero children', () => {
@@ -68,15 +67,18 @@ describe('ScrollContainer Linter (scrollcontainer-not-single-child)', () => {
   });
 
   it('warns when the ONLY children are non-Control (zero sortable controls)', () => {
-    expectDiagnostic(
-      scene(node('ScrollContainer'), node('Node', {}, { name: 'Helper', parent: '.' })),
-      { ruleName: 'scrollcontainer-not-single-child', severity: 'warning' }
-    );
+    expectDiagnostic(scene(node('ScrollContainer'), node('Node', {}, { name: 'Helper', parent: '.' })), {
+      ruleName: 'scrollcontainer-not-single-child',
+      severity: 'warning',
+    });
   });
 
   it('stays silent when a child is an opaque instance — its real class is unknowable', () => {
     expectNoDiagnostic(
-      scene('[node name="ScrollContainer" type="ScrollContainer"]', '[node name="Sub" parent="." instance=ExtResource("1")]'),
+      scene(
+        '[node name="ScrollContainer" type="ScrollContainer"]',
+        '[node name="Sub" parent="." instance=ExtResource("1")]'
+      ),
       { ruleName: 'scrollcontainer-not-single-child' }
     );
   });

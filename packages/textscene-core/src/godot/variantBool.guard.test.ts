@@ -73,6 +73,6 @@ describe('boolean properties are read through the engine conversion', () => {
   it('sees a raw comparison when one is there', () => {
     // The guard is only worth its runtime if it fails on the shape it bans.
     expect(RAW_COMPARISON.test("if (props.visible !== 'false') {")).toBe(true);
-    expect(RAW_COMPARISON.test("if (boolSlotValue(props.visible) !== false) {")).toBe(false);
+    expect(RAW_COMPARISON.test('if (boolSlotValue(props.visible) !== false) {')).toBe(false);
   });
 });

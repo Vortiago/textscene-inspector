@@ -32,9 +32,7 @@ function checkSpotLight3D(context: RuleContext): Diagnostic[] {
   if (isValidProperties(node.properties)) {
     const properties = node.properties as Record<string, string>;
     const spotAngle =
-      properties.spot_angle !== undefined
-        ? parseGodotFloat(properties.spot_angle)
-        : DEFAULT_SPOT_ANGLE;
+      properties.spot_angle !== undefined ? parseGodotFloat(properties.spot_angle) : DEFAULT_SPOT_ANGLE;
 
     // light_3d.cpp:655 guards `>=` though the message says "wider than". No
     // finiteness guard: `spot_angle = inf` is a shadowless cone wider than 90

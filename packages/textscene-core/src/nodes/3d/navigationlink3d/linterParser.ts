@@ -18,7 +18,10 @@ validatorRegistry.registerAll('NavigationLink3D', {
   bidirectional: v.boolean('bidirectional'),
   // navigation_link_3d.cpp:214, PROPERTY_HINT_LAYERS_3D_NAVIGATION. The setter (:366-374)
   // is a bare uint32_t assignment, so the hint is the only authority and out-of-range warns.
-  navigation_layers: layerBitmask('navigation_layers', { hinted: 'navigation_link_3d.cpp:214', width: 'uint32' /* navigation_link_3d.h:81 */ }),
+  navigation_layers: layerBitmask('navigation_layers', {
+    hinted: 'navigation_link_3d.cpp:214',
+    width: 'uint32' /* navigation_link_3d.h:81 */,
+  }),
   // navigation_link_3d.cpp:398-411 and :419-432 are bare assignments with no range hint,
   // so every component is unconstrained, inf and nan included.
   start_position: v.vector3('start_position'),

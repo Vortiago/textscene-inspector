@@ -28,7 +28,7 @@ function checkSubViewportContainer(context: RuleContext): Diagnostic[] {
       diagnostics,
       arms.noViewport,
       node,
-      "SubViewportContainer has no SubViewport child, so it displays nothing. Add a SubViewport beneath it, or use a plain Container."
+      'SubViewportContainer has no SubViewport child, so it displays nothing. Add a SubViewport beneath it, or use a plain Container.'
     );
   }
 

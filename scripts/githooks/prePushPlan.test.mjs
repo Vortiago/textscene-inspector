@@ -8,13 +8,23 @@ describe('planChecks', () => {
     expect(plan(['README.md', '.claude/skills/other/SKILL.md', 'docs/adr/0001-x.md'])).toEqual([]);
   });
 
-  it('runs nothing for a workflow change, which only CI reads', () => {
-    expect(plan(['.github/workflows/release.yml'], ['.github/workflows/old.yml'])).toEqual([]);
+  it('only checks the formatting of a workflow change, since CI runs the workflow', () => {
+    expect(plan(['.github/workflows/release.yml'], ['.github/workflows/old.yml'])).toEqual([
+      'pnpm exec prettier --check .github/workflows/release.yml',
+    ]);
   });
 
   it('runs the full gate when the toolchain changes', () => {
-    for (const path of ['package.json', 'apps/textscene-web/package.json', 'pnpm-lock.yaml', 'githooks/pre-push',
-      'packages/textscene-core/tsconfig.tests.json', 'eslint.config.js']) {
+    for (const path of [
+      'package.json',
+      'apps/textscene-web/package.json',
+      'pnpm-lock.yaml',
+      'githooks/pre-push',
+      'packages/textscene-core/tsconfig.tests.json',
+      'eslint.config.js',
+      'prettier.config.mjs',
+      '.prettierignore',
+    ]) {
       expect(plan([path])).toEqual(['pnpm validate']);
     }
   });
@@ -24,20 +34,31 @@ describe('planChecks', () => {
       'pnpm type-check:all',
       'pnpm type-check:tests',
       'npx eslint packages/textscene-core/src/a.ts',
+      'pnpm exec prettier --check packages/textscene-core/src/a.ts',
       'pnpm exec vitest related --run packages/textscene-core/src/a.ts',
     ]);
   });
 
   it('lints and tests a script change without the type checks', () => {
-    expect(plan(['scripts/x.mjs'])).toEqual(['npx eslint scripts/x.mjs', 'pnpm exec vitest related --run scripts/x.mjs']);
+    expect(plan(['scripts/x.mjs'])).toEqual([
+      'npx eslint scripts/x.mjs',
+      'pnpm exec prettier --check scripts/x.mjs',
+      'pnpm exec vitest related --run scripts/x.mjs',
+    ]);
   });
 
   it('type-checks a deleted TypeScript file, since its importers break', () => {
-    expect(plan([], ['packages/textscene-core/src/gone.ts'])).toEqual(['pnpm type-check:all', 'pnpm type-check:tests']);
+    expect(plan([], ['packages/textscene-core/src/gone.ts'])).toEqual([
+      'pnpm type-check:all',
+      'pnpm type-check:tests',
+    ]);
   });
 
   it('lints a changed scene with the built linter', () => {
-    expect(plan(['scenes/fixtures/unit-a.tscn'])).toEqual(['pnpm build:linter', 'pnpm lint:tscn scenes/fixtures/unit-a.tscn']);
+    expect(plan(['scenes/fixtures/unit-a.tscn'])).toEqual([
+      'pnpm build:linter',
+      'pnpm lint:tscn scenes/fixtures/unit-a.tscn',
+    ]);
   });
 
   it('builds core before the generated-docs checks when nothing else built it', () => {

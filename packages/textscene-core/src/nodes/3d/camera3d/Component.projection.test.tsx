@@ -33,17 +33,13 @@ function makeNode(overrides: Partial<Camera3DProperties> = {}): TscnNode {
 
 describe('Camera3D projection (assertions 60–66)', () => {
   it('#60 fov → PerspectiveCamera.fov', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <Camera3D node={makeNode({ fov: 60 })} />
-    );
+    const renderer = await ReactThreeTestRenderer.create(<Camera3D node={makeNode({ fov: 60 })} />);
     const cam = renderer.scene.findByType('PerspectiveCamera');
     expect(instanceAs<THREE.PerspectiveCamera>(cam).fov).toBe(60);
   });
 
   it('#61 near → camera.near (clamped to >= 0.001)', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <Camera3D node={makeNode({ near: 0.1 })} />
-    );
+    const renderer = await ReactThreeTestRenderer.create(<Camera3D node={makeNode({ near: 0.1 })} />);
     const cam = renderer.scene.findByType('PerspectiveCamera');
     expect(instanceAs<THREE.PerspectiveCamera>(cam).near).toBe(0.1);
   });
@@ -74,9 +70,7 @@ describe('Camera3D projection (assertions 60–66)', () => {
 
   it('#65 size (ortho) → OrthographicCamera frustum width matches', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <Camera3D
-        node={makeNode({ projection: ProjectionMode.PROJECTION_ORTHOGONAL, size: 4 })}
-      />
+      <Camera3D node={makeNode({ projection: ProjectionMode.PROJECTION_ORTHOGONAL, size: 4 })} />
     );
     const cam = renderer.scene.findByType('OrthographicCamera');
     const o = instanceAs<THREE.OrthographicCamera>(cam);

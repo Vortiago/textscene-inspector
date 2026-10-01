@@ -5,19 +5,9 @@
 
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import {
-  createTestPanel,
-  getExtensionUri,
-  waitForPanelDisposal,
-} from '../helpers/panelHelpers';
-import {
-  getFixturePath,
-  listFixtures,
-} from '../helpers/fixtureHelpers';
-import {
-  assertPanelActive,
-  assertPanelResource,
-} from '../helpers/assertionHelpers';
+import { createTestPanel, getExtensionUri, waitForPanelDisposal } from '../helpers/panelHelpers';
+import { getFixturePath, listFixtures } from '../helpers/fixtureHelpers';
+import { assertPanelActive, assertPanelResource } from '../helpers/assertionHelpers';
 
 suite('Panel Lifecycle Tests', () => {
   setup(async () => {
@@ -80,7 +70,7 @@ suite('Panel Lifecycle Tests', () => {
     assert.notStrictEqual(
       panel1.resource.fsPath,
       panel2.resource.fsPath,
-      'Panels should manage different resources',
+      'Panels should manage different resources'
     );
   });
 

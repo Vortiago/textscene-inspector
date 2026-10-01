@@ -68,10 +68,7 @@ describe('subViewportContainerMinimumSize (scene/gui/subviewport_container.cpp::
 
   it('takes the componentwise max over several sub-viewports (`ms = ms.max(minsize)`)', () => {
     const size = subViewportContainerMinimumSize(
-      container({}, [
-        subViewport('Wide', { x: 400, y: 100 }),
-        subViewport('Tall', { x: 120, y: 260 }),
-      ]),
+      container({}, [subViewport('Wide', { x: 400, y: 100 }), subViewport('Tall', { x: 120, y: 260 })]),
       ctx()
     );
     expect(size).toEqual({ x: 400, y: 260 });
@@ -85,7 +82,7 @@ describe('subViewportContainerMinimumSize (scene/gui/subviewport_container.cpp::
     expect(size).toEqual({ x: 0, y: 0 });
   });
 
-  it("ignores stretch_shrink — it enters recalc_force_viewport_sizes, never get_minimum_size", () => {
+  it('ignores stretch_shrink — it enters recalc_force_viewport_sizes, never get_minimum_size', () => {
     const size = subViewportContainerMinimumSize(
       container({ stretch_shrink: 4 }, [subViewport('SubViewport', { x: 300, y: 180 })]),
       ctx()

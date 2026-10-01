@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { AutowrapMode, shapeText } from '../../../r3f/controls/native/text/textLayout';
 import { getLinePitchPx } from '../../../r3f/controls/native/text/openSansMetrics';
-import { OPEN_SANS_ATLAS_GLYPHS, OPEN_SANS_ATLAS_INFO } from '../../../r3f/controls/native/text/openSansAtlas';
+import {
+  OPEN_SANS_ATLAS_GLYPHS,
+  OPEN_SANS_ATLAS_INFO,
+} from '../../../r3f/controls/native/text/openSansAtlas';
 import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
 import { buildGlyphQuadArrays } from '../../../r3f/controls/native/text/TextRun';
 import { layoutLabel3DLines, outlineRadiusPx, outlineStrokeWidthPx } from './glyphLayout';
@@ -11,7 +14,12 @@ import { HorizontalAlignment } from './types';
 const FONT_SIZE = 32;
 
 function shape(text: string, lineSpacingPx = 0) {
-  return shapeText(text, { fontSizePx: FONT_SIZE, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx });
+  return shapeText(text, {
+    fontSizePx: FONT_SIZE,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.OFF,
+    lineSpacingPx,
+  });
 }
 
 describe('layoutLabel3DLines', () => {
@@ -127,7 +135,7 @@ describe('the outline stroke (FreeType stroker, text_server_adv.cpp:1383)', () =
   // and `fd->size.y` is the raw `outline_size` (`text_server_adv.h:406-414`). So
   // Godot's default `outline_size` 12 (`label_3d.h:126`) is 192 in 26.6, 3 px of
   // one-sided reach.
-  it('gives Label3D\'s default outline_size a 3 px one-sided radius', () => {
+  it("gives Label3D's default outline_size a 3 px one-sided radius", () => {
     expect(outlineRadiusPx(12)).toBe(3);
   });
 

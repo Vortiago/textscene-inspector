@@ -88,9 +88,7 @@ export function registeredTypes(
  * Every key any type registered, declarations then removals, in two walks: a
  * removal-only type never appears in the validator map.
  */
-export function registeredKeys(
-  registry: ValidatorRegistry = validatorRegistry
-): readonly RegisteredKey[] {
+export function registeredKeys(registry: ValidatorRegistry = validatorRegistry): readonly RegisteredKey[] {
   const out: RegisteredKey[] = [];
   for (const nodeType of registry.typesWithRegistrations()) {
     for (const key of registry.getOwnKeys(nodeType)) {

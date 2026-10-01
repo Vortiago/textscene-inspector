@@ -94,9 +94,8 @@ describe('<Label3D>', () => {
 
   /** The proxy carries no `name`, so this finds it by its userData tag, scene-wide. */
   function findProxyMesh(renderer: Awaited<ReturnType<typeof renderLabel>>): THREE.Mesh {
-    return renderer.scene.find(
-      (n) => (n.instance as THREE.Mesh).userData?.tscnBoundsProxy === true
-    ).instance as THREE.Mesh;
+    return renderer.scene.find((n) => (n.instance as THREE.Mesh).userData?.tscnBoundsProxy === true)
+      .instance as THREE.Mesh;
   }
 
   it('renders an invisible, zero-size bounds-proxy mesh at the node origin, so auto-framing sees the label before the lazy glyphs mount', async () => {
@@ -107,7 +106,9 @@ describe('<Label3D>', () => {
     );
     const mesh = findProxyMesh(renderer);
     expect(mesh.visible).toBe(false);
-    const geometry = mesh.geometry as unknown as { parameters: { width: number; height: number; depth: number } };
+    const geometry = mesh.geometry as unknown as {
+      parameters: { width: number; height: number; depth: number };
+    };
     expect(geometry.parameters.width).toBe(0);
     expect(geometry.parameters.height).toBe(0);
     expect(geometry.parameters.depth).toBe(0);

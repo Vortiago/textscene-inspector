@@ -19,17 +19,17 @@ describe('RemoteTransform2D Linter', () => {
   });
 
   it('warns when remote_path is the empty NodePath', () => {
-    expectDiagnostic(
-      scene(node('RemoteTransform2D', { remote_path: 'NodePath("")' })),
-      { ruleName: RULE_NAME, severity: 'warning' }
-    );
+    expectDiagnostic(scene(node('RemoteTransform2D', { remote_path: 'NodePath("")' })), {
+      ruleName: RULE_NAME,
+      severity: 'warning',
+    });
   });
 
   it('warns when remote_path names no node in this file', () => {
-    expectDiagnostic(
-      scene(node('RemoteTransform2D', { remote_path: 'NodePath("Ghost")' })),
-      { ruleName: RULE_NAME, severity: 'warning' }
-    );
+    expectDiagnostic(scene(node('RemoteTransform2D', { remote_path: 'NodePath("Ghost")' })), {
+      ruleName: RULE_NAME,
+      severity: 'warning',
+    });
   });
 
   it('warns when remote_path resolves to a non-Node2D node', () => {
@@ -51,11 +51,7 @@ describe('RemoteTransform2D Linter', () => {
         node('Node2D', {}, { name: 'Root' }),
         node('RemoteTransform2D', {}, { name: 'Relay', parent: '.' }),
         node('Sprite2D', {}, { name: 'Target', parent: 'Relay' }),
-        node(
-          'RemoteTransform2D',
-          { remote_path: 'NodePath("Target")' },
-          { name: 'Relay2', parent: '.' }
-        )
+        node('RemoteTransform2D', { remote_path: 'NodePath("Target")' }, { name: 'Relay2', parent: '.' })
       ),
       { ruleName: RULE_NAME, prop: 'Relay/' }
     );
@@ -95,11 +91,7 @@ describe('RemoteTransform2D Linter', () => {
         node('Sprite2D', {}, { name: 'Target', parent: '.' }),
         node('Sprite2D', {}, { name: 'Other', parent: '.' }),
         node('Node2D', {}, { name: 'Target', parent: 'Other' }),
-        node(
-          'RemoteTransform2D',
-          { remote_path: 'NodePath("../Other/Target")' },
-          { parent: '.' }
-        )
+        node('RemoteTransform2D', { remote_path: 'NodePath("../Other/Target")' }, { parent: '.' })
       ),
       { ruleName: RULE_NAME }
     );

@@ -113,7 +113,13 @@ describe('instanced AnimationPlayer — selection-driven tab via the collapsed p
         name: 'Coins',
         type: 'Node3D',
         children: [
-          { name: 'Coin1', type: 'Node3D', instance: 'ExtResource("coin")', children: [], properties: { name: 'Coin1' } as Record<string, unknown> },
+          {
+            name: 'Coin1',
+            type: 'Node3D',
+            instance: 'ExtResource("coin")',
+            children: [],
+            properties: { name: 'Coin1' } as Record<string, unknown>,
+          },
         ],
         properties: { name: 'Coins' } as Record<string, unknown>,
       },

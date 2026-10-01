@@ -20,7 +20,10 @@ import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout'
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { useSubOrExtResource } from '../../../../resources/useSubOrExtResource';
 import { decodeCodeHighlighter } from '../../../../resources/styles/codehighlighter/decode';
-import { resolveLineColors, type CodeHighlighterColorSpan } from '../../../../resources/styles/codehighlighter/highlight';
+import {
+  resolveLineColors,
+  type CodeHighlighterColorSpan,
+} from '../../../../resources/styles/codehighlighter/highlight';
 import {
   textEditCaretRect,
   textEditWrapIndentPx,
@@ -126,7 +129,10 @@ export function TextEditBody({
   );
 
   const lines = useMemo(() => (props.text ?? '').split('\n'), [props.text]);
-  const tabStopsPx = useMemo(() => textEditTabStopsPx(tabSize, fontMetrics, fontSizePx), [tabSize, fontMetrics, fontSizePx]);
+  const tabStopsPx = useMemo(
+    () => textEditTabStopsPx(tabSize, fontMetrics, fontSizePx),
+    [tabSize, fontMetrics, fontSizePx]
+  );
   const lineLayouts = useMemo(
     () =>
       shapeTextEditLines(
@@ -295,7 +301,10 @@ export function TextEditBody({
                       textEditGlyphColorAt(spans, rowStartIndex + glyphIndex, baseFontColor)
                     );
                     return (
-                      <CanvasItemGroup key={glyphIndex} position={[glyph.x, -((rowHeightPx - GLYPH_ICON_SIZE_PX) / 2), 0]}>
+                      <CanvasItemGroup
+                        key={glyphIndex}
+                        position={[glyph.x, -((rowHeightPx - GLYPH_ICON_SIZE_PX) / 2), 0]}
+                      >
                         <ControlQuad
                           width={GLYPH_ICON_SIZE_PX}
                           height={GLYPH_ICON_SIZE_PX}
@@ -314,7 +323,10 @@ export function TextEditBody({
                       textEditGlyphColorAt(spans, rowStartIndex + glyphIndex, baseFontColor)
                     );
                     return (
-                      <CanvasItemGroup key={glyphIndex} position={[xOfs, -((rowHeightPx - GLYPH_ICON_SIZE_PX) / 2), 0]}>
+                      <CanvasItemGroup
+                        key={glyphIndex}
+                        position={[xOfs, -((rowHeightPx - GLYPH_ICON_SIZE_PX) / 2), 0]}
+                      >
                         <ControlQuad
                           width={GLYPH_ICON_SIZE_PX}
                           height={GLYPH_ICON_SIZE_PX}

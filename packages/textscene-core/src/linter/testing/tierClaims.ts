@@ -111,8 +111,7 @@ const expectOf = (name: string): RegExp => new RegExp(`\\bexpect\\(\\s*${name}\\
 const expectOfReadOf = (name: string): RegExp => new RegExp(`\\bexpect\\(\\s*${name}\\b`);
 
 /** Whether `body` asserts that the list bound to `name` is empty. */
-const isAssertedEmpty = (body: string, name: string): boolean =>
-  assertsOn(body, expectOf(name), EMPTY_RE);
+const isAssertedEmpty = (body: string, name: string): boolean => assertsOn(body, expectOf(name), EMPTY_RE);
 
 /** Whether `body` asserts that the list bound to `name`, or a read of it, is non-empty. */
 const isAssertedNonEmpty = (body: string, name: string): boolean =>
@@ -145,8 +144,7 @@ const RULE_FIXTURE_RE = /\bmeta:\s*\{/;
 export const assertedTiers = (body: string): string[] => {
   if (RULE_FIXTURE_RE.test(body)) return [];
   const tiers = new Set<string>();
-  const claimAt = (index: number): string =>
-    body.slice(index, index + CLAIM_REACH).split(';')[0]!;
+  const claimAt = (index: number): string => body.slice(index, index + CLAIM_REACH).split(';')[0]!;
   for (const m of body.matchAll(TIER_HELPER_RE)) tiers.add(m[1]!.toLowerCase());
   for (const m of body.matchAll(TIER_LIST_RE)) {
     const tier = m[1] ?? lastArgumentTier(body, m.index + m[0].length - 1);

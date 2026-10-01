@@ -17,6 +17,7 @@ import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import { useLiveTreeVersion } from '../../../r3f/useLiveSceneTree';
 import { useResourceLoader } from '../../../resources/useResource';
 import { useTexture2D } from '../../../resources/useTexture2D';
+import { applyTextureState, isMaterialOwnedTexture } from '../../../resources/textures/applyTextureState';
 import type { Color } from '../../../utils/colorParser';
 import type { Vector3 } from '../../../parser/vectors';
 import type { DecalProperties } from './types';
@@ -71,8 +72,9 @@ export function Decal({ node, children }: NodeComponentProps) {
   useEffect(() => () => boxEdges.dispose(), [boxEdges]);
 
   // `useTexture2D`, not the path-only resolver: `texture_albedo` may name an inline procedural
-  // texture with no file to load. The projection material borrows it as `map` and never disposes
-  // it (`Material.dispose()` releases the material only), so the shared cache entry stays valid.
+  // texture with no file to load. The projection material samples it as `map` through the clamp
+  // bind in the effect below: a cache entry that already clamps is reused untouched, and only a
+  // bind-time clone is disposed with the material, so the shared entry stays valid for others.
   const { texture: albedoTexture } = useTexture2D(
     properties.texture_albedo,
     externalResources,
@@ -120,10 +122,19 @@ export function Decal({ node, children }: NodeComponentProps) {
     // Godot's rule, `decal.cull_mask & instance.layers`, applies as the receivers are collected.
     const receivers = collectDecalReceivers(scene, boxAABB, properties.cull_mask);
 
+    // Godot samples the decal through its clamped atlas: the blit uses REPEAT_DISABLED
+    // (`copy_effects.cpp:592`) and fragments outside the box are discarded
+    // (`scene_forward_clustered.glsl:1585-1587`). The consumer states clamp and never
+    // inherits a Repeat from the shared producer.
+    const projectionMap = applyTextureState(albedo, {
+      repeat: false,
+      colorSpace: THREE.SRGBColorSpace,
+    });
+
     // Unlit albedo over a lit surface: the same lights shade the projection as the surface
     // beneath it, as in Godot.
     const material = new THREE.MeshStandardMaterial({
-      map: albedo,
+      map: projectionMap,
       color,
       metalness: 0,
       roughness: 1,
@@ -172,6 +183,8 @@ export function Decal({ node, children }: NodeComponentProps) {
       }
       materialRef.current = null;
       material.dispose();
+      // Only a bind-time clone is this projection's to free; a shared cache entry is not.
+      if (isMaterialOwnedTexture(projectionMap)) projectionMap.dispose();
     };
     // `size` is the authored Vector3 (stable identity) unless an
     // AnimationPlayer is driving it, in which case a size keyframe rebuilds the

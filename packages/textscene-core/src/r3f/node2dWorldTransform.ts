@@ -8,11 +8,7 @@
 import type { TscnNode } from '../parser/types';
 import { liveNodeChain, type LiveTreeContext } from './liveSceneTree';
 import { node2DLocalTransform } from './node2dTransform';
-import {
-  TRANSFORM2D_IDENTITY,
-  multiplyTransform2D,
-  type Transform2DColumns,
-} from '../godot/transform2d.js';
+import { TRANSFORM2D_IDENTITY, multiplyTransform2D, type Transform2DColumns } from '../godot/transform2d.js';
 
 /** A live node's Node2D local transform, or the identity for a node with no 2D position. */
 function localTransform(node: TscnNode): Transform2DColumns {

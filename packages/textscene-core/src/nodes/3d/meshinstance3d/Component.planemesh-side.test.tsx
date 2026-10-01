@@ -12,11 +12,7 @@ import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
 
-function sub(
-  type: string,
-  id: string,
-  data: Record<string, string | undefined> = {}
-): TscnInternalResource {
+function sub(type: string, id: string, data: Record<string, string | undefined> = {}): TscnInternalResource {
   return {
     id,
     type,
@@ -35,21 +31,20 @@ function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode 
   return { name: props.name, type: 'MeshInstance3D', children: [], properties: props };
 }
 
-async function renderWithMeshAndMaterial(
-  meshType: string,
-  materialProps: Record<string, string> | null
-) {
+async function renderWithMeshAndMaterial(meshType: string, materialProps: Record<string, string> | null) {
   const internalResources: TscnInternalResource[] = [
-    sub(meshType, 'plane_1', meshType === 'PlaneMesh' ? { size: 'Vector2(1, 1)' } : { size: 'Vector3(1, 1, 1)' }),
+    sub(
+      meshType,
+      'plane_1',
+      meshType === 'PlaneMesh' ? { size: 'Vector2(1, 1)' } : { size: 'Vector3(1, 1, 1)' }
+    ),
   ];
   if (materialProps) {
     internalResources.push(sub('StandardMaterial3D', 'mat_1', materialProps));
   }
   const node = makeNode({
     mesh: `SubResource("plane_1")`,
-    surfaceMaterialOverrides: materialProps
-      ? new Map([[0, `SubResource("mat_1")`]])
-      : new Map(),
+    surfaceMaterialOverrides: materialProps ? new Map([[0, `SubResource("mat_1")`]]) : new Map(),
   });
   const renderer = await ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={internalResources}>

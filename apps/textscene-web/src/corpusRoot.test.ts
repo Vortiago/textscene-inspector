@@ -26,16 +26,12 @@ const manifest: Fixture[] = [
 
 describe('corpusRootFor', () => {
   it('uses the manifest root for listed fixtures', () => {
-    expect(corpusRootFor('demos/2d/platformer/game_singleplayer.tscn', manifest)).toBe(
-      'demos/2d/platformer'
-    );
+    expect(corpusRootFor('demos/2d/platformer/game_singleplayer.tscn', manifest)).toBe('demos/2d/platformer');
     expect(corpusRootFor('unit-plane-mesh.tscn', manifest)).toBe('');
   });
 
   it('derives the project root for unlisted demo subscenes (deep links)', () => {
-    expect(corpusRootFor('demos/2d/platformer/level/level.tscn', manifest)).toBe(
-      'demos/2d/platformer'
-    );
+    expect(corpusRootFor('demos/2d/platformer/level/level.tscn', manifest)).toBe('demos/2d/platformer');
     expect(corpusRootFor('demos/3d/physics_tests/tests/functional/test_stack.tscn', manifest)).toBe(
       'demos/3d/physics_tests'
     );
@@ -44,9 +40,9 @@ describe('corpusRootFor', () => {
   it('derives the game root for unlisted game subscenes (addons/, deep links)', () => {
     // games/<dir>/ is a two-segment root, and a demos root has three. Addon editor
     // scenes are on disk but unlisted, so they resolve through the prefix.
-    expect(
-      corpusRootFor('games/godot-open-rpg/addons/dialogic/Editor/editor.tscn', manifest)
-    ).toBe('games/godot-open-rpg');
+    expect(corpusRootFor('games/godot-open-rpg/addons/dialogic/Editor/editor.tscn', manifest)).toBe(
+      'games/godot-open-rpg'
+    );
     expect(corpusRootFor('games/kenney-platformer/objects/player.tscn', manifest)).toBe(
       'games/kenney-platformer'
     );

@@ -11,7 +11,9 @@ import { parentTypeVerdict, placementPhrase } from '../../../../linter/parentTyp
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  parentNotOriginOrManager: groundedArm('openxrrendermodel-parent-not-origin-or-manager', { kind: 'configuration-warning' }),
+  parentNotOriginOrManager: groundedArm('openxrrendermodel-parent-not-origin-or-manager', {
+    kind: 'configuration-warning',
+  }),
 } as const satisfies RuleArms<string>;
 
 // Godot dereferences `get_parent()` with no guard, so a scene-root node crashes its check. This rule

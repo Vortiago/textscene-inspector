@@ -66,9 +66,7 @@ describe('the two doors to a parent', () => {
 [node name="Shape" type="CollisionShape3D" parent="Body"]
 `
     );
-    expect(parentTypeVerdict(scene, byName(scene.nodes, 'Shape'), 'CollisionObject3D').kind).toBe(
-      'mismatch'
-    );
+    expect(parentTypeVerdict(scene, byName(scene.nodes, 'Shape'), 'CollisionObject3D').kind).toBe('mismatch');
   });
 
   it('parentIdentity hands the same node back, because identity is knowable', () => {
@@ -146,9 +144,7 @@ describe('parentTypeVerdict', () => {
 [node name="Mod" type="AimModifier3D" parent="."]
 `
     );
-    expect(parentTypeVerdict(scene, byName(scene.nodes, 'Mod'), 'Skeleton3D').kind).toBe(
-      'unknowable'
-    );
+    expect(parentTypeVerdict(scene, byName(scene.nodes, 'Mod'), 'Skeleton3D').kind).toBe('unknowable');
   });
 
   it('cannot know the type of a parent that only OVERRIDES one inside an instance', () => {
@@ -172,13 +168,11 @@ describe('parentTypeVerdict', () => {
     expect(parent.overridesExistingNode).toBe(true);
     expect(parent.type).toBe('Node'); // the default that made the old check lie
 
-    expect(parentTypeVerdict(scene, byName(scene.nodes, 'Sim'), 'Skeleton3D').kind).toBe(
-      'unknowable'
-    );
+    expect(parentTypeVerdict(scene, byName(scene.nodes, 'Sim'), 'Skeleton3D').kind).toBe('unknowable');
   });
 });
 
-describe('an ancestor Godot\'s catalog does not know', () => {
+describe("an ancestor Godot's catalog does not know", () => {
   const scene = parse(
     `[gd_scene format=3]
 

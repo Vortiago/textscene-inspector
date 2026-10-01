@@ -1,8 +1,8 @@
 /**
  * Binding a texture to a StandardMaterial3D slot, the one place that knows what a Godot
  * slot needs of its texture: its colour space, and when a shared cache entry must clone.
- * `<StandardMaterialSlot>` and `build.ts` both cross it. It value-imports `three`, so
- * `index.ts` never reaches it (ADR-0031).
+ * `SurfaceMaterialSlot` crosses it, for `<StandardMaterialSlot>` and the GLB override. It
+ * value-imports `three`, so `index.ts` never reaches it (ADR-0031).
  */
 
 import * as THREE from 'three';
@@ -42,13 +42,10 @@ export function slotColorSpace(slot: TextureSlot): THREE.ColorSpace {
  * authored filter passes: comparing against Godot's default would clone every texture
  * whose sampler state differs from it.
  */
-export function materialTextureState(
-  scalars: StandardMaterial3DScalars
-): MaterialTextureState {
+export function materialTextureState(scalars: StandardMaterial3DScalars): MaterialTextureState {
   return {
     uv: { scale: scalars.uv1Scale, offset: scalars.uv1Offset },
-    filter:
-      scalars.textureFilter === GODOT_TEXTURE_FILTER_DEFAULT ? undefined : scalars.textureFilter,
+    filter: scalars.textureFilter === GODOT_TEXTURE_FILTER_DEFAULT ? undefined : scalars.textureFilter,
     repeat: scalars.textureRepeat,
   };
 }

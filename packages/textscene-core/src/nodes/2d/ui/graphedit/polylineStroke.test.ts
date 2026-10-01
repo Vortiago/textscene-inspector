@@ -18,7 +18,15 @@ function alphas(colors: readonly number[]): number[] {
 }
 
 describe('polylineStrokeGeometry — no antialiasing', () => {
-  const geometry = polylineStrokeGeometry([{ x: 0, y: 0 }, { x: 10, y: 0 }], [RED, BLUE], 0.5, false);
+  const geometry = polylineStrokeGeometry(
+    [
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+    ],
+    [RED, BLUE],
+    0.5,
+    false
+  );
 
   it('emits one 2-vertex cross-section per point (renderer_canvas_cull.cpp:1200-1201)', () => {
     expect(xy(geometry.positions)).toEqual([
@@ -29,7 +37,7 @@ describe('polylineStrokeGeometry — no antialiasing', () => {
     ]);
   });
 
-  it('gives both vertices of a cross-section that point\'s own colour (:1207-1208)', () => {
+  it("gives both vertices of a cross-section that point's own colour (:1207-1208)", () => {
     expect(geometry.colors.slice(0, 8)).toEqual([1, 0, 0, 1, 1, 0, 0, 1]);
     expect(geometry.colors.slice(8)).toEqual([0, 0, 1, 1, 0, 0, 1, 1]);
   });
@@ -40,7 +48,15 @@ describe('polylineStrokeGeometry — no antialiasing', () => {
 });
 
 describe('polylineStrokeGeometry — antialiased', () => {
-  const geometry = polylineStrokeGeometry([{ x: 0, y: 0 }, { x: 10, y: 0 }], [RED, BLUE], 0.5, true);
+  const geometry = polylineStrokeGeometry(
+    [
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+    ],
+    [RED, BLUE],
+    0.5,
+    true
+  );
 
   it('scales the feather by the width below 1px (:1031-1034)', () => {
     expect(POLYLINE_FEATHER_SIZE).toBe(1.25);

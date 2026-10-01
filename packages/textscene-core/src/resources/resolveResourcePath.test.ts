@@ -21,9 +21,7 @@ function sceneWithLoader(loader?: ResourceLoader): TscnScene {
 describe('resolveResourcePath', () => {
   it('returns a res:// path unchanged without consulting the loader', () => {
     const scene = sceneWithLoader(undefined);
-    expect(resolveResourcePath(scene, 'res://textures/wood.png')).toBe(
-      'res://textures/wood.png'
-    );
+    expect(resolveResourcePath(scene, 'res://textures/wood.png')).toBe('res://textures/wood.png');
   });
 
   it('resolves ExtResource("id") to the registered path via the scene loader metadata', () => {
@@ -31,9 +29,7 @@ describe('resolveResourcePath', () => {
     loader.register({ id: '1_tex', path: 'res://textures/wood.png', type: 'Texture2D' });
     const scene = sceneWithLoader(loader);
 
-    expect(resolveResourcePath(scene, 'ExtResource("1_tex")')).toBe(
-      'res://textures/wood.png'
-    );
+    expect(resolveResourcePath(scene, 'ExtResource("1_tex")')).toBe('res://textures/wood.png');
   });
 
   it('tolerates extra whitespace inside the ExtResource(...) call', () => {
@@ -41,9 +37,7 @@ describe('resolveResourcePath', () => {
     loader.register({ id: '2_mat', path: 'res://materials/metal.tres', type: 'StandardMaterial3D' });
     const scene = sceneWithLoader(loader);
 
-    expect(resolveResourcePath(scene, 'ExtResource(  "2_mat"  )')).toBe(
-      'res://materials/metal.tres'
-    );
+    expect(resolveResourcePath(scene, 'ExtResource(  "2_mat"  )')).toBe('res://materials/metal.tres');
   });
 
   it('returns null when the ExtResource id is unknown to the loader', () => {

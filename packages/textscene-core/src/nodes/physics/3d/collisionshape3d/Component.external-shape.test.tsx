@@ -18,9 +18,7 @@ import { findMesh } from '../../../3d/testing/reactThreeTestInstance';
 
 const SHAPE_PATH = 'res://robot_head_collision.tres';
 
-const EXTERNALS: readonly TscnExternalResource[] = [
-  { id: '1', path: SHAPE_PATH, type: 'Shape3D' },
-];
+const EXTERNALS: readonly TscnExternalResource[] = [{ id: '1', path: SHAPE_PATH, type: 'Shape3D' }];
 
 const INLINE_BOX: readonly TscnInternalResource[] = [
   { id: 'Box_inline', type: 'BoxShape3D', data: { size: 'Vector3(3, 4, 5)' } },

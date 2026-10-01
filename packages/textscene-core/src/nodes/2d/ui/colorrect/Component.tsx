@@ -20,12 +20,6 @@ export function ColorRect({ solveNode, tint, rect, renderOrder }: NativeControlC
   const color = useGodotLinearColor(filled);
 
   return (
-    <ControlQuad
-      width={rect.w}
-      height={rect.h}
-      color={color}
-      opacity={filled.a}
-      renderOrder={renderOrder}
-    />
+    <ControlQuad width={rect.w} height={rect.h} color={color} opacity={filled.a} renderOrder={renderOrder} />
   );
 }

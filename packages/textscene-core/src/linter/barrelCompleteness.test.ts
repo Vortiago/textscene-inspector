@@ -117,9 +117,7 @@ describe('linter barrel completeness', () => {
 
   it('linter/index.ts imports every lint entry point (minus the allowlist)', () => {
     const imported = new Set(barrelRelativeSpecifiers());
-    const missing = requiredSpecifiers().filter(
-      (spec) => !imported.has(spec) && !ALLOWLIST.includes(spec)
-    );
+    const missing = requiredSpecifiers().filter((spec) => !imported.has(spec) && !ALLOWLIST.includes(spec));
     expect(missing).toEqual([]);
   });
 

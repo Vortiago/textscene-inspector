@@ -14,7 +14,9 @@ import type { Vector3 } from '../../../parser/vectors.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  startEqualsEnd: groundedArm('navigationlink3d-start-position-equals-end-position', { kind: 'configuration-warning' }),
+  startEqualsEnd: groundedArm('navigationlink3d-start-position-equals-end-position', {
+    kind: 'configuration-warning',
+  }),
 } as const satisfies RuleArms<string>;
 
 /**
@@ -39,9 +41,7 @@ function vector3EqualApprox(a: Vector3, b: Vector3): boolean {
 
 function checkNavigationLink3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  const properties = isValidProperties(node.properties)
-    ? (node.properties as Record<string, string>)
-    : {};
+  const properties = isValidProperties(node.properties) ? (node.properties as Record<string, string>) : {};
 
   const start = readPosition(properties, 'start_position');
   const end = readPosition(properties, 'end_position');

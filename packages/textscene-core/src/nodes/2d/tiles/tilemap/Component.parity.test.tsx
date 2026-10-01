@@ -6,11 +6,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { nearestGroupOrder } from '../../../../r3f/testing/paintOrder';
-import {
-  PAINT_SEQUENCE_STRIDE,
-  WHOLE_CANVAS_RANGE,
-  type PaintRange,
-} from '../../../../r3f/canvasPaintOrder';
+import { PAINT_SEQUENCE_STRIDE, WHOLE_CANVAS_RANGE, type PaintRange } from '../../../../r3f/canvasPaintOrder';
 import { PaintRangeProvider } from '../../../../r3f/contexts/PaintOrderContext';
 import { parseTileMap } from './parser';
 import { TileMap } from './Component';

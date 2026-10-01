@@ -103,7 +103,7 @@ tile_set = NotARef(1)
       expect(check('layer_0/y_sort_origin', '-9999')).toBeNull();
     });
 
-    it('accepts z_index within CanvasItem\'s enforced range', () => {
+    it("accepts z_index within CanvasItem's enforced range", () => {
       expect(check('layer_1/z_index', '1')).toBeNull();
       expect(check('layer_1/z_index', '-4096')).toBeNull();
       expect(check('layer_1/z_index', '4096')).toBeNull();
@@ -208,7 +208,7 @@ tile_set = NotARef(1)
       expect(error?.severity).toBe('error');
     });
 
-    it('warns above the hinted 128 ceiling — the setter never checks it (tile_map.cpp:996), unlike TileMapLayer\'s own rendering_quadrant_size which has no ceiling at all', () => {
+    it("warns above the hinted 128 ceiling — the setter never checks it (tile_map.cpp:996), unlike TileMapLayer's own rendering_quadrant_size which has no ceiling at all", () => {
       const error = checkTopLevel('rendering_quadrant_size', '129');
       expect(error).not.toBeNull();
       expect(error!.severity).toBe('warning');

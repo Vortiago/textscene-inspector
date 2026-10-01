@@ -4,7 +4,7 @@
  * visible canvas.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 
@@ -15,11 +15,24 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnNode } from '../../../parser/types';
+import { createTextureFromBuffer } from '../../../resources/formats/image/textureProcessing';
 import {
   CanvasLighting2DProvider,
   LIGHT_LAYER,
   LIGHT_SEED_LAYER,
 } from '../../../r3f/lighting2d/CanvasLighting2D';
+
+// happy-dom never settles a real image load, so the decode hands back a bare
+// texture. Everything after it is the real `createTextureFromBuffer`.
+vi.mock('three', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('three')>();
+  class FakeTextureLoader {
+    load(_url: string, onLoad: (texture: InstanceType<typeof actual.Texture>) => void): void {
+      onLoad(new actual.Texture());
+    }
+  }
+  return { ...actual, TextureLoader: FakeTextureLoader };
+});
 
 const nodeHeading = { type: 'node' as const, attributes: { type: 'PointLight2D', name: 'Light' } };
 
@@ -34,9 +47,8 @@ function node(raw: Record<string, string> = {}): TscnNode {
   };
 }
 
-async function render(rootNode: TscnNode) {
+async function render(rootNode: TscnNode, tex = new THREE.Texture()) {
   const fake = createFakeResourceLoader();
-  const tex = new THREE.Texture();
   (tex as unknown as { image: { width: number; height: number } }).image = { width: 64, height: 64 };
   fake.textures.seed(TEX, tex);
 
@@ -136,7 +148,7 @@ describe('PointLight2D Component', () => {
     expect(geom.parameters.height).toBeCloseTo(128, 5); // 64 * 2
   });
 
-  it('offsets the quad by `offset`, with Godot\'s Y pointing down', async () => {
+  it("offsets the quad by `offset`, with Godot's Y pointing down", async () => {
     const r = await render(node({ offset: 'Vector2(10, 4)' }));
     expect(lightMesh(r)!.position.x).toBeCloseTo(10, 5);
     expect(lightMesh(r)!.position.y).toBeCloseTo(-4, 5);
@@ -149,7 +161,7 @@ describe('PointLight2D Component', () => {
     const mat = lightMaterial(await render(node({ color: 'Color(0.5, 0.5, 0.5, 1)' })));
     const color = mat.uniforms.uColor!.value as THREE.Vector3;
     expect(color.x).toBeCloseTo(0.5, 5);
-    expect(color.x).not.toBeCloseTo(0.2140, 3); // godotColorToLinear(0.5)
+    expect(color.x).not.toBeCloseTo(0.214, 3); // godotColorToLinear(0.5)
   });
 
   it('carries energy as its own multiplier rather than folding it into the colour', async () => {
@@ -161,6 +173,53 @@ describe('PointLight2D Component', () => {
   it('feeds the resolved texture to the cookie sampler', async () => {
     const mat = lightMaterial(await render(node()));
     expect(mat.uniforms.uCookie!.value).toBeInstanceOf(THREE.Texture);
+  });
+
+  it('samples a loader-produced cookie clamped', async () => {
+    // The light states clamp (ADR-0044), so a clamp-tagged loader cookie is shared
+    // and reaches the sampler clamped. Godot's light texture clamps too, and a
+    // Repeat producer would tile a cookie's edge texels past its quad.
+    const entry = await createTextureFromBuffer(new ArrayBuffer(8), 'image/png');
+    const cookie = lightMaterial(await render(node(), entry)).uniforms.uCookie!.value as THREE.Texture;
+    expect(cookie.wrapS).toBe(THREE.ClampToEdgeWrapping);
+    expect(cookie.wrapT).toBe(THREE.ClampToEdgeWrapping);
+  });
+
+  it('binds a Repeat-wrapped producer cookie clamped (Godot clamps the light texture)', async () => {
+    // Godot resolves a canvas item's DEFAULT repeat to the viewport's DISABLED
+    // default (viewport.h:419-420, viewport.cpp:4009, renderer_canvas_render_rd.cpp:2344),
+    // and the light-texture tap uses that item sampler (canvas.glsl:774-782). A
+    // Repeat producer must not tile the cookie past its quad, so the light states clamp.
+    const producer = new THREE.Texture();
+    producer.colorSpace = THREE.SRGBColorSpace;
+    producer.wrapS = THREE.RepeatWrapping;
+    producer.wrapT = THREE.RepeatWrapping;
+    const cookie = lightMaterial(await render(node(), producer)).uniforms.uCookie!.value as THREE.Texture;
+    expect(cookie.wrapS).toBe(THREE.ClampToEdgeWrapping);
+    expect(cookie.wrapT).toBe(THREE.ClampToEdgeWrapping);
+  });
+
+  it('samples a raw-tagged producer cookie as sRGB, as Godot samples canvas items', async () => {
+    // The cookie is a `source_color`, so the light samples it as sRGB whatever the
+    // producer tagged. The retag lands on the clone; the shared entry keeps its own tag.
+    const raw = new THREE.Texture();
+    const cookie = lightMaterial(await render(node(), raw)).uniforms.uCookie!.value as THREE.Texture;
+    expect(cookie.colorSpace).toBe(THREE.SRGBColorSpace);
+    expect(raw.colorSpace).toBe(THREE.NoColorSpace);
+  });
+
+  it('never disposes the shared cache entry when the light unmounts', async () => {
+    // The cookie borrows the entry when it already clamps, so the cleanup may free
+    // only a bind-time clone. An unconditional dispose of the cookie would free the
+    // cache entry every other consumer is still sampling.
+    const entry = await createTextureFromBuffer(new ArrayBuffer(8), 'image/png');
+    let disposed = false;
+    entry.addEventListener('dispose', () => {
+      disposed = true;
+    });
+    const r = await render(node(), entry);
+    await r.unmount();
+    expect(disposed).toBe(false);
   });
 
   it('shows missing resource placeholder when no texture resolves', async () => {

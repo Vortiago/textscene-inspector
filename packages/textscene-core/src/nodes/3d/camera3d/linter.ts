@@ -51,9 +51,7 @@ const FAR_DEFAULT = 4000.0;
  */
 function projectionMode(raw: string | undefined): number {
   const mode = ruleInt(raw, null);
-  return mode === PROJECTION_ORTHOGONAL || mode === PROJECTION_FRUSTUM
-    ? mode
-    : PROJECTION_PERSPECTIVE;
+  return mode === PROJECTION_ORTHOGONAL || mode === PROJECTION_FRUSTUM ? mode : PROJECTION_PERSPECTIVE;
 }
 
 /**

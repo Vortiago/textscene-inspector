@@ -191,7 +191,11 @@ describe('usePlaybackLoop — reconfigureKey (#224 live loop-override)', () => {
 });
 
 describe('usePlaybackLoop — a mixer rebuilt under a running transport', () => {
-  function Rebuilt(props: { playState: PlayState; transportTime: number; mixerBox: ReturnType<typeof makeMixer> }) {
+  function Rebuilt(props: {
+    playState: PlayState;
+    transportTime: number;
+    mixerBox: ReturnType<typeof makeMixer>;
+  }) {
     return <Harness {...props} reportTime={() => {}} />;
   }
 

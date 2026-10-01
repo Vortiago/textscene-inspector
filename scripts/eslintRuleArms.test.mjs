@@ -11,7 +11,11 @@ const CORE = 'packages/textscene-core/src';
 const SLICE_RULE = `${CORE}/nodes/timers/timer/linter.ts`;
 const PHYSICS_RULE = `${CORE}/linter/physics/areaLinterRule.ts`;
 /** Not rules: `Linter.ts` takes a parse error's tier from the error, `ruleArms.ts` is the arm API, and `testkit.ts` builds expectations. */
-const EXEMPT = [`${CORE}/linter/Linter.ts`, `${CORE}/linter/ruleArms.ts`, `${CORE}/linter/testing/testkit.ts`];
+const EXEMPT = [
+  `${CORE}/linter/Linter.ts`,
+  `${CORE}/linter/ruleArms.ts`,
+  `${CORE}/linter/testing/testkit.ts`,
+];
 const RULE_TEST = `${CORE}/nodes/timers/timer/linter.test.ts`;
 
 /** The `no-restricted-syntax` selectors the repo's config resolves for `file`. */
@@ -42,16 +46,20 @@ describe('the rule-arm guard', () => {
   });
 
   it('refuses a hand-written diagnostic', async () => {
-    const code = "diagnostics.push({ severity: 'warning', message: m, nodeName: n, nodeType: t, ruleName: 'x-y' });";
+    const code =
+      "diagnostics.push({ severity: 'warning', message: m, nodeName: n, nodeType: t, ruleName: 'x-y' });";
     expect(await reportedOn(code)).toEqual(['no-restricted-syntax']);
   });
 
   it('refuses a shorthand ruleName', async () => {
-    expect(await reportedOn("const d = { severity: 'warning', ruleName };")).toEqual(['no-restricted-syntax']);
+    expect(await reportedOn("const d = { severity: 'warning', ruleName };")).toEqual([
+      'no-restricted-syntax',
+    ]);
   });
 
   it('accepts an arm, which carries its grounding', async () => {
-    const code = "const arms = { a: { severity: 'warning', ruleName: 'x-y', grounding: { kind: 'configuration-warning' } } };";
+    const code =
+      "const arms = { a: { severity: 'warning', ruleName: 'x-y', grounding: { kind: 'configuration-warning' } } };";
     expect(await reportedOn(code)).toEqual([]);
   });
 });

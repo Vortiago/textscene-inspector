@@ -88,7 +88,7 @@ const KNOWN_SUBRESOURCE_OVERRIDES = {
     blocks: ['animations', 'materials'],
     note:
       'materials use_external → res://player/player_{gray,glow}.tres, honoured. animations: ' +
-      'settings/loop_mode LOOP_LINEAR on every clip, which is already three\'s default, ' +
+      "settings/loop_mode LOOP_LINEAR on every clip, which is already three's default, " +
       'and no slice configured — unread, and no divergence to see here (ADR-0028).',
   },
   'scenes/demos/3d/ragdoll_physics/characters/mannequiny.glb.import': {

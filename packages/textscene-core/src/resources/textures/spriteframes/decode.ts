@@ -29,9 +29,7 @@ const SPEED_RE = dictNumberField('speed');
  * (`ERR_CONTINUE(!d.has(…))`, sprite_frames.cpp:200-203). Presence only, as
  * `Dictionary::has` is: the value's form is read afterwards.
  */
-const ANIMATION_KEYS_RE = ['name', 'speed', 'loop', 'frames'].map(
-  (key) => new RegExp(`"${key}"\\s*:`)
-);
+const ANIMATION_KEYS_RE = ['name', 'speed', 'loop', 'frames'].map((key) => new RegExp(`"${key}"\\s*:`));
 
 /** The `"name"` value: one string literal, escapes and all, with an optional `&` or `@` sigil. */
 const NAME_RE = dictStringField('name');
@@ -51,9 +49,7 @@ export function decodeSpriteFrames(properties: Record<string, unknown>): SpriteF
 }
 
 /** Animation name to its parsed frames and timing. */
-export function parseSpriteFramesAnimations(
-  animationsValue: string
-): Map<string, SpriteFramesAnimation> {
+export function parseSpriteFramesAnimations(animationsValue: string): Map<string, SpriteFramesAnimation> {
   const result = new Map<string, SpriteFramesAnimation>();
   for (const block of splitTopLevelDicts(animationsValue, ANIMATION_DICT_DEPTH)) {
     if (!ANIMATION_KEYS_RE.every((re) => re.test(block))) continue;

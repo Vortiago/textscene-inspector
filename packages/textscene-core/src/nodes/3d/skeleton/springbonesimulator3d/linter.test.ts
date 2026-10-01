@@ -71,10 +71,10 @@ describe('SpringBoneSimulator3D semantic rules', () => {
     });
 
     it('reports when setting_count is absent, since settings starts empty', () => {
-      expectDiagnostic(
-        scene(node('SpringBoneSimulator3D', { 'settings/0/individual_config': false })),
-        { ruleName: 'springbonesimulator3d-setting-index-out-of-range', severity: 'error' }
-      );
+      expectDiagnostic(scene(node('SpringBoneSimulator3D', { 'settings/0/individual_config': false })), {
+        ruleName: 'springbonesimulator3d-setting-index-out-of-range',
+        severity: 'error',
+      });
     });
 
     it('reaches a five-segment joints key with the index check too', () => {
@@ -115,9 +115,7 @@ describe('SpringBoneSimulator3D semantic rules', () => {
           })
         )
       ).filter((d) => d.ruleName.startsWith('springbonesimulator3d-'));
-      expect(found.map((d) => d.ruleName)).toEqual([
-        'springbonesimulator3d-setting-index-out-of-range',
-      ]);
+      expect(found.map((d) => d.ruleName)).toEqual(['springbonesimulator3d-setting-index-out-of-range']);
       expect(found[0]!.message).toContain('index(es) 4294967297 (stored as 1) fall outside');
     });
   });
@@ -419,10 +417,9 @@ describe('SpringBoneSimulator3D empty setting index', () => {
   });
 
   it('counts an empty index against setting_count as setting 0', () => {
-    expectDiagnostic(
-      scene(node('SpringBoneSimulator3D', { 'settings//individual_config': false })),
-      { ruleName: 'springbonesimulator3d-setting-index-out-of-range' }
-    );
+    expectDiagnostic(scene(node('SpringBoneSimulator3D', { 'settings//individual_config': false })), {
+      ruleName: 'springbonesimulator3d-setting-index-out-of-range',
+    });
   });
 });
 

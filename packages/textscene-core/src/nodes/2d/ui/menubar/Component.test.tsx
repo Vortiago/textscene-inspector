@@ -56,7 +56,12 @@ describe('<MenuBar> (isolated painter contract)', () => {
 
   it('draws one chrome mesh and one text mesh per PopupMenu child', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <MenuBar {...painterEnv()} solveNode={solveNode({}, [popup('File'), popup('Edit')])} rect={RECT} renderOrder={0} />
+      <MenuBar
+        {...painterEnv()}
+        solveNode={solveNode({}, [popup('File'), popup('Edit')])}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     expect(findChromeMeshes(renderer.scene)).toHaveLength(2);
     expect(findTextMeshes(renderer.scene)).toHaveLength(2);
@@ -111,7 +116,12 @@ describe('<MenuBar> (isolated painter contract)', () => {
   it('ignores a stray non-PopupMenu child instead of drawing a title for it', async () => {
     const stray: TscnNode = { name: 'NotAMenu', type: 'Label', children: [], properties: {} };
     const renderer = await ReactThreeTestRenderer.create(
-      <MenuBar {...painterEnv()} solveNode={solveNode({}, [stray, popup('File')])} rect={RECT} renderOrder={0} />
+      <MenuBar
+        {...painterEnv()}
+        solveNode={solveNode({}, [stray, popup('File')])}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     expect(findTextMeshes(renderer.scene)).toHaveLength(1);
   });

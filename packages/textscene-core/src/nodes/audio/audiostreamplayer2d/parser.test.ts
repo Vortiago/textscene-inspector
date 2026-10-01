@@ -67,15 +67,15 @@ describe('parseAudioStreamPlayer2D properties', () => {
 
   it('parses playback_type enum (and rejects out-of-range)', () => {
     // Godot AudioServer.PlaybackType: DEFAULT=0, STREAM=1, SAMPLE=2.
-    expect(parseAudioStreamPlayer2D(HEADING, { playback_type: '1' }).playback_type)
-      .toBe(PlaybackType.STREAM);
-    expect(parseAudioStreamPlayer2D(HEADING, { playback_type: '2' }).playback_type)
-      .toBe(PlaybackType.SAMPLE);
+    expect(parseAudioStreamPlayer2D(HEADING, { playback_type: '1' }).playback_type).toBe(PlaybackType.STREAM);
+    expect(parseAudioStreamPlayer2D(HEADING, { playback_type: '2' }).playback_type).toBe(PlaybackType.SAMPLE);
     // Out of range (incl. the MAX=3 sentinel) → fallback to default.
-    expect(parseAudioStreamPlayer2D(HEADING, { playback_type: '3' }).playback_type)
-      .toBe(PlaybackType.DEFAULT);
-    expect(parseAudioStreamPlayer2D(HEADING, { playback_type: '9' }).playback_type)
-      .toBe(PlaybackType.DEFAULT);
+    expect(parseAudioStreamPlayer2D(HEADING, { playback_type: '3' }).playback_type).toBe(
+      PlaybackType.DEFAULT
+    );
+    expect(parseAudioStreamPlayer2D(HEADING, { playback_type: '9' }).playback_type).toBe(
+      PlaybackType.DEFAULT
+    );
   });
 
   it('parses bus from plain string ("Music")', () => {

@@ -21,9 +21,7 @@ const FOLLOW_COLOR = 0xffa733;
 
 // A small 3-axis cross (extent 0.25) at the follow point.
 const FOLLOW_CROSS_POSITIONS = new Float32Array([
-  -0.25, 0, 0, 0.25, 0, 0,
-  0, -0.25, 0, 0, 0.25, 0,
-  0, 0, -0.25, 0, 0, 0.25,
+  -0.25, 0, 0, 0.25, 0, 0, 0, -0.25, 0, 0, 0.25, 0, 0, 0, -0.25, 0, 0, 0.25,
 ]);
 
 interface FollowTransform {

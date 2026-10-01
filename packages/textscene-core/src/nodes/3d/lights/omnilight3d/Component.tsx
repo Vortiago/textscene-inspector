@@ -9,11 +9,7 @@ import type { OmniLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
-import {
-  LIGHT_INTENSITY_SCALE,
-  SHADOW_MAP_SIZE,
-  SHADOW_NORMAL_BIAS,
-} from '../../../../r3f/lightConstants';
+import { LIGHT_INTENSITY_SCALE, SHADOW_MAP_SIZE, SHADOW_NORMAL_BIAS } from '../../../../r3f/lightConstants';
 import { omniShadowBias } from '../shared/shadowBias';
 import { PointLightGizmo } from '../shared/lightHelpers';
 

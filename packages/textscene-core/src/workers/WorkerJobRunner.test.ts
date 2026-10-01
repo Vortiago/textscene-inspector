@@ -73,7 +73,7 @@ describe('WorkerJobRunner through a worker', () => {
     expect(workers).toHaveLength(1);
   });
 
-  it('rejects with the job\'s own error class', async () => {
+  it("rejects with the job's own error class", async () => {
     const { runner, workers } = runnerWithFakes();
     const run = vi.spyOn(WORKER_JOBS['noise-texture-2d'], 'run').mockImplementation(() => {
       throw new RangeError('Array buffer allocation failed');
@@ -197,7 +197,12 @@ describe('WorkerJobRunner in-thread fallback', () => {
   });
 
   it.each([
-    ['throws', () => { throw new Error('blocked by CSP'); }],
+    [
+      'throws',
+      () => {
+        throw new Error('blocked by CSP');
+      },
+    ],
     ['rejects', () => Promise.reject(new Error('blocked by CSP'))],
   ])('falls back once, with one warning, when the factory %s', async (_label, createWorker) => {
     const runner = new WorkerJobRunner({ createWorker });

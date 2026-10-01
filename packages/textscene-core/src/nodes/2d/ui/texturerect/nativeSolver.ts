@@ -108,7 +108,12 @@ export function textureRectDraw(
       return { ...fullRect, tile: true };
 
     case STRETCH_KEEP:
-      return { offset: { x: 0, y: 0 }, size: { x: textureSize.x, y: textureSize.y }, region: undefined, tile: false };
+      return {
+        offset: { x: 0, y: 0 },
+        size: { x: textureSize.x, y: textureSize.y },
+        region: undefined,
+        tile: false,
+      };
 
     case STRETCH_KEEP_CENTERED:
       return {
@@ -136,7 +141,12 @@ export function textureRectDraw(
         offsetX = (rectSize.x - texWidth) / 2;
         offsetY = (rectSize.y - texHeight) / 2;
       }
-      return { offset: { x: offsetX, y: offsetY }, size: { x: texWidth, y: texHeight }, region: undefined, tile: false };
+      return {
+        offset: { x: offsetX, y: offsetY },
+        size: { x: texWidth, y: texHeight },
+        region: undefined,
+        tile: false,
+      };
     }
 
     case STRETCH_KEEP_ASPECT_COVERED: {

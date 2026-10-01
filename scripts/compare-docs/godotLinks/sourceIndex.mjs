@@ -1,7 +1,6 @@
 /** Which engine headers exist, indexed for lookup: the source of every candidate. */
 
-const TREE_API =
-  'https://api.github.com/repos/godotengine/godot/git/trees/master?recursive=1';
+const TREE_API = 'https://api.github.com/repos/godotengine/godot/git/trees/master?recursive=1';
 
 /**
  * Only engine code defines nodes and resources. `editor/` is in because a few

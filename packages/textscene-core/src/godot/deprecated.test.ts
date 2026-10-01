@@ -94,9 +94,7 @@ describe('an alias a slice already handles is deliberately absent', () => {
     // animation_tree.cpp:926-927 is its own `_set` arm, not an inherited one,
     // and the slice registers a validator under the deprecated spelling
     // (animationtree/linterParser.ts) exactly as AnimationPlayer's does.
-    expect(canonicalPropertyName('AnimationTree', 'process_callback', '1')).toBe(
-      'process_callback'
-    );
+    expect(canonicalPropertyName('AnimationTree', 'process_callback', '1')).toBe('process_callback');
   });
 });
 
@@ -171,7 +169,10 @@ describe('the half-extents family', () => {
  */
 describe('a bool-gated arm that writes an enum member', () => {
   it('TextureRect.expand / ignore_texture_size write EXPAND_IGNORE_SIZE (texture_rect.cpp:171-173)', () => {
-    expect(resolveDeprecatedProperty('TextureRect', 'expand', 'true')).toEqual({ key: 'expand_mode', value: '1' });
+    expect(resolveDeprecatedProperty('TextureRect', 'expand', 'true')).toEqual({
+      key: 'expand_mode',
+      value: '1',
+    });
     expect(resolveDeprecatedProperty('TextureRect', 'ignore_texture_size', '2')).toEqual({
       key: 'expand_mode',
       value: '1',
@@ -180,7 +181,10 @@ describe('a bool-gated arm that writes an enum member', () => {
   });
 
   it('drops a falsy value: the key stays under its own spelling', () => {
-    expect(resolveDeprecatedProperty('TextureRect', 'expand', 'false')).toEqual({ key: 'expand', value: 'false' });
+    expect(resolveDeprecatedProperty('TextureRect', 'expand', 'false')).toEqual({
+      key: 'expand',
+      value: 'false',
+    });
     expect(resolveDeprecatedProperty('TextureRect', 'expand', '0')).toEqual({ key: 'expand', value: '0' });
     expect(resolveDeprecatedProperty('TextureRect', 'expand', '""').key).toBe('expand');
   });
@@ -211,7 +215,10 @@ describe('an alias declared on an ancestor', () => {
   it.each(['MeshInstance3D', 'CSGBox3D', 'Label3D', 'Sprite3D', 'SoftBody3D', 'GPUParticles3D'])(
     '%s inherits GeometryInstance3D.use_in_baked_light',
     (type) => {
-      expect(resolveDeprecatedProperty(type, 'use_in_baked_light', 'true')).toEqual({ key: 'gi_mode', value: '1' });
+      expect(resolveDeprecatedProperty(type, 'use_in_baked_light', 'true')).toEqual({
+        key: 'gi_mode',
+        value: '1',
+      });
       expect(isDeprecatedPropertyName(type, 'use_dynamic_gi')).toBe(true);
     }
   );
@@ -222,7 +229,9 @@ describe('an alias declared on an ancestor', () => {
   });
 
   it('canonicalises a whole bag on a descendant type', () => {
-    expect(canonicalisePropertyBag('MeshInstance3D', { use_in_baked_light: 'true' })).toEqual({ gi_mode: '1' });
+    expect(canonicalisePropertyBag('MeshInstance3D', { use_in_baked_light: 'true' })).toEqual({
+      gi_mode: '1',
+    });
   });
 });
 
@@ -239,21 +248,30 @@ describe('pure renames measured on 4.6.3', () => {
   });
 
   it('Bone2D.default_length is length (skeleton_2d.cpp:48-49)', () => {
-    expect(resolveDeprecatedProperty('Bone2D', 'default_length', '12')).toEqual({ key: 'length', value: '12' });
+    expect(resolveDeprecatedProperty('Bone2D', 'default_length', '12')).toEqual({
+      key: 'length',
+      value: '12',
+    });
   });
 
   it('TileSetAtlasSource x:y/alt/texture_offset is texture_origin (tile_set.cpp:4812, :6702-6704)', () => {
     // Measured: `0:0/0/texture_offset = Vector2i(3, 4)` loads as texture_origin (3, 4).
-    expect(resolveDeprecatedProperty('TileSetAtlasSource', '0:0/0/texture_offset', 'Vector2i(3, 4)')).toEqual({
-      key: '0:0/0/texture_origin',
-      value: 'Vector2i(3, 4)',
-    });
-    expect(canonicalPropertyName('TileSetAtlasSource', '-1:2/+3/texture_offset', '1')).toBe('-1:2/+3/texture_origin');
+    expect(resolveDeprecatedProperty('TileSetAtlasSource', '0:0/0/texture_offset', 'Vector2i(3, 4)')).toEqual(
+      {
+        key: '0:0/0/texture_origin',
+        value: 'Vector2i(3, 4)',
+      }
+    );
+    expect(canonicalPropertyName('TileSetAtlasSource', '-1:2/+3/texture_offset', '1')).toBe(
+      '-1:2/+3/texture_origin'
+    );
     expect(isDeprecatedPropertyName('TileSetAtlasSource', '2:1/0/texture_offset')).toBe(true);
   });
 
   it('leaves a key the index gate refuses, and the bare leaf, alone', () => {
-    expect(canonicalPropertyName('TileSetAtlasSource', 'a:b/0/texture_offset', '1')).toBe('a:b/0/texture_offset');
+    expect(canonicalPropertyName('TileSetAtlasSource', 'a:b/0/texture_offset', '1')).toBe(
+      'a:b/0/texture_offset'
+    );
     expect(canonicalPropertyName('TileSetAtlasSource', 'texture_offset', '1')).toBe('texture_offset');
     expect(canonicalPropertyName('TileSetAtlasSource', '0:0/texture_offset', '1')).toBe('0:0/texture_offset');
   });

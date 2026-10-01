@@ -42,15 +42,11 @@ describe('OccluderInstance3D semantic rules', () => {
     });
 
     it('stays quiet when bake_mask has at least one bit set', () => {
-      expect(
-        RULE.check(makeContext({ occluder: 'SubResource("Occ_1")', bake_mask: '3' }))
-      ).toEqual([]);
+      expect(RULE.check(makeContext({ occluder: 'SubResource("Occ_1")', bake_mask: '3' }))).toEqual([]);
     });
 
     it('warns when bake_mask is explicitly 0', () => {
-      const diagnostics = RULE.check(
-        makeContext({ occluder: 'SubResource("Occ_1")', bake_mask: '0' })
-      );
+      const diagnostics = RULE.check(makeContext({ occluder: 'SubResource("Occ_1")', bake_mask: '0' }));
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('warning');
       expect(diagnostics[0]?.ruleName).toBe('occluderinstance3d-empty-bake-mask');

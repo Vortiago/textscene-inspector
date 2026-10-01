@@ -15,12 +15,17 @@ import { canvasRenderOrder, layerRankOf, layerRanks } from '../../canvasPaintOrd
 import { LayerRanksProvider } from '../../contexts/PaintOrderContext';
 import { withPaintRanges } from './testing/solveNode';
 import { controlComponentRegistry, type NativeControlComponent } from '../ControlComponentRegistry';
-import { CanvasLayerIndexProvider, CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN, useEffectiveZ } from '../../lighting2d/canvasItemPlacement';
+import {
+  CanvasLayerIndexProvider,
+  CANVAS_ITEM_Z_MAX,
+  CANVAS_ITEM_Z_MIN,
+  useEffectiveZ,
+} from '../../lighting2d/canvasItemPlacement';
 import { Modulate2DContext, useParentModulate } from '../../canvasItemModulate';
 import { solveNode as emptySolveNode } from './testing/solveNode';
 
 /** The world canvas's rank, derived, never hardcoded: only a rank's order means
-  * anything, and the spacing for undeclared layers moves the value. */
+ * anything, and the spacing for undeclared layers moves the value. */
 const WORLD_RANK = layerRankOf(layerRanks([]), 0);
 
 // A stand-in for `canvaslayer/Component.tsx`, enough to show the walker threads
@@ -64,7 +69,12 @@ interface WrapperInstance {
 }
 
 function namedGroup(scene: { findAllByType: (t: string) => { instance: WrapperInstance }[] }, name: string) {
-  return scene.findAllByType('Group').map((g) => g.instance).find((g) => g.name === name) ?? null;
+  return (
+    scene
+      .findAllByType('Group')
+      .map((g) => g.instance)
+      .find((g) => g.name === name) ?? null
+  );
 }
 
 describe('<ControlCanvasWalker>', () => {
@@ -102,7 +112,16 @@ describe('<ControlCanvasWalker>', () => {
     const root = solveNode(
       'Root',
       'TestType',
-      { anchorLeft: 0, anchorTop: 0, anchorRight: 0, anchorBottom: 0, offsetLeft: 100, offsetTop: 50, offsetRight: 180, offsetBottom: 90 },
+      {
+        anchorLeft: 0,
+        anchorTop: 0,
+        anchorRight: 0,
+        anchorBottom: 0,
+        offsetLeft: 100,
+        offsetTop: 50,
+        offsetRight: 180,
+        offsetBottom: 90,
+      },
       [child]
     );
 
@@ -121,7 +140,13 @@ describe('<ControlCanvasWalker>', () => {
     const shown = solveNode('Shown', 'TestType', { anchorsPreset: 15 });
 
     const renderer = await ReactThreeTestRenderer.create(
-      <ControlCanvasWalker tree={[hidden, shown]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+      <ControlCanvasWalker
+        tree={[hidden, shown]}
+        generation={0}
+        viewport={VIEWPORT}
+        theme={THEME}
+        measurer={null}
+      />
     );
 
     expect(namedGroup(renderer.scene, 'TestType:Hidden')!.visible).toBe(false);
@@ -140,7 +165,13 @@ describe('<ControlCanvasWalker>', () => {
     const shown = solveNode('Shown', 'TestType', { anchorsPreset: 15 });
 
     const renderer = await ReactThreeTestRenderer.create(
-      <ControlCanvasWalker tree={[promoted, shown]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+      <ControlCanvasWalker
+        tree={[promoted, shown]}
+        generation={0}
+        viewport={VIEWPORT}
+        theme={THEME}
+        measurer={null}
+      />
     );
 
     expect(namedGroup(renderer.scene, 'TestType:Promoted')!.visible).toBe(false);
@@ -179,7 +210,10 @@ describe('<ControlCanvasWalker>', () => {
 
     const lines = renderer.scene.findAllByType('LineSegments');
     expect(lines).toHaveLength(1);
-    const geometry = (lines[0]!.instance as THREE.LineSegments).geometry as { boundingBox: { max: { x: number; y: number }; min: { x: number; y: number } } | null; computeBoundingBox: () => void };
+    const geometry = (lines[0]!.instance as THREE.LineSegments).geometry as {
+      boundingBox: { max: { x: number; y: number }; min: { x: number; y: number } } | null;
+      computeBoundingBox: () => void;
+    };
     geometry.computeBoundingBox();
     const box = geometry.boundingBox!;
     expect(box.max.x - box.min.x).toBeCloseTo(64);
@@ -252,7 +286,11 @@ describe('<ControlCanvasWalker>', () => {
     };
     controlSolverRegistry.registerContainerLayout(TYPE, stack);
 
-    const child = solveNode('Stack/Child', 'TestType', { anchorsPreset: 15, rotation: Math.PI / 4, scale: { x: 2, y: 2 } });
+    const child = solveNode('Stack/Child', 'TestType', {
+      anchorsPreset: 15,
+      rotation: Math.PI / 4,
+      scale: { x: 2, y: 2 },
+    });
     const root = solveNode('Stack', TYPE, { anchorsPreset: 15 }, [child]);
 
     const renderer = await ReactThreeTestRenderer.create(
@@ -277,7 +315,9 @@ describe('<ControlCanvasWalker>', () => {
       />
     );
 
-    const lines = renderer.scene.findAllByType('LineSegments').map((l) => l.instance as { renderOrder: number });
+    const lines = renderer.scene
+      .findAllByType('LineSegments')
+      .map((l) => l.instance as { renderOrder: number });
     // The key a Node2D canvas item takes, with no band of its own, so a Control
     // interleaves with the world. Pre-order: Root first in its run, Child next.
     const at = (sequence: number) => canvasRenderOrder({ layerRank: WORLD_RANK, zFinal: 0, sequence });
@@ -350,7 +390,9 @@ describe('<ControlCanvasWalker>', () => {
       </LayerRanksProvider>
     );
 
-    const lines = renderer.scene.findAllByType('LineSegments').map((l) => l.instance as { renderOrder: number });
+    const lines = renderer.scene
+      .findAllByType('LineSegments')
+      .map((l) => l.instance as { renderOrder: number });
     // Godot's `layer < 0` draws before the world canvas, decided by the layer,
     // not the sequence: a layer -1 Control authored last would come first too.
     const worldFloor = canvasRenderOrder({
@@ -388,7 +430,9 @@ describe('<ControlCanvasWalker>', () => {
       .findAllByType('Group')
       .map((g) => g.instance as { name: string; renderOrder: number })
       .find((g) => g.name === 'order-probe')!;
-    const lines = renderer.scene.findAllByType('LineSegments').map((l) => l.instance as { renderOrder: number });
+    const lines = renderer.scene
+      .findAllByType('LineSegments')
+      .map((l) => l.instance as { renderOrder: number });
     // Root's run covers Root, Child and Grandchild; the next sibling starts one
     // past its end. So the chrome slot is the run's LAST value, which is both
     // the deepest descendant's own and exactly one below the sibling's.
@@ -407,10 +451,18 @@ describe('<ControlCanvasWalker>', () => {
     const bare = solveNode('Bare', 'TestType', { anchorsPreset: 15 });
 
     const renderer = await ReactThreeTestRenderer.create(
-      <ControlCanvasWalker tree={[layer, bare]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+      <ControlCanvasWalker
+        tree={[layer, bare]}
+        generation={0}
+        viewport={VIEWPORT}
+        theme={THEME}
+        measurer={null}
+      />
     );
 
-    const groups = renderer.scene.findAllByType('Group').map((g) => g.instance as { position: { z: number } });
+    const groups = renderer.scene
+      .findAllByType('Group')
+      .map((g) => g.instance as { position: { z: number } });
     expect(groups.length).toBeGreaterThan(0);
     expect(groups.every((g) => g.position.z === 0)).toBe(true);
   });
@@ -420,7 +472,9 @@ describe('<ControlCanvasWalker>', () => {
     // parent published: a hook runs only inside a real component.
     const ZProbe: NativeControlComponent = () => <group name={`ZProbe:z=${useEffectiveZ()}`} />;
 
-    function zProbeReading(renderer: { scene: { findAllByType: (t: string) => { instance: { name: string } }[] } }): number {
+    function zProbeReading(renderer: {
+      scene: { findAllByType: (t: string) => { instance: { name: string } }[] };
+    }): number {
       const probe = renderer.scene
         .findAllByType('Group')
         .map((g) => g.instance)
@@ -477,7 +531,13 @@ describe('<ControlCanvasWalker>', () => {
       const layer = solveNode('Layer', 'CanvasLayer', { layer: 5 }, [child]);
 
       const renderer = await ReactThreeTestRenderer.create(
-        <ControlCanvasWalker tree={[layer]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+        <ControlCanvasWalker
+          tree={[layer]}
+          generation={0}
+          viewport={VIEWPORT}
+          theme={THEME}
+          measurer={null}
+        />
       );
 
       expect(zProbeReading(renderer)).toBe(4);
@@ -523,7 +583,13 @@ describe('<ControlCanvasWalker>', () => {
       };
 
       const renderer = await ReactThreeTestRenderer.create(
-        <ControlCanvasWalker tree={[promoted]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+        <ControlCanvasWalker
+          tree={[promoted]}
+          generation={0}
+          viewport={VIEWPORT}
+          theme={THEME}
+          measurer={null}
+        />
       );
 
       expect(zProbeReading(renderer)).toBe(7);
@@ -549,7 +615,13 @@ describe('<ControlCanvasWalker>', () => {
       };
 
       const renderer = await ReactThreeTestRenderer.create(
-        <ControlCanvasWalker tree={[promoted]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+        <ControlCanvasWalker
+          tree={[promoted]}
+          generation={0}
+          viewport={VIEWPORT}
+          theme={THEME}
+          measurer={null}
+        />
       );
 
       expect(zProbeReading(renderer)).toBe(3);
@@ -588,14 +660,19 @@ describe('<ControlCanvasWalker>', () => {
       <group name={`tint:own=${tint.own.r},alpha=${tint.own.a},ambient=${useParentModulate().r}`} />
     );
 
-    function tintReading(renderer: { scene: { findAllByType: (t: string) => { instance: { name: string } }[] } }): string {
+    function tintReading(renderer: {
+      scene: { findAllByType: (t: string) => { instance: { name: string } }[] };
+    }): string {
       return renderer.scene
         .findAllByType('Group')
         .map((g) => g.instance)
         .find((g) => g.name.startsWith('tint:'))!.name;
     }
 
-    async function renderProbe(properties: Record<string, unknown>, ambient?: { r: number; g: number; b: number; a: number }) {
+    async function renderProbe(
+      properties: Record<string, unknown>,
+      ambient?: { r: number; g: number; b: number; a: number }
+    ) {
       controlComponentRegistry.register({ typeName: 'TintProbe', Component: TintProbe });
       const root = solveNode('Root', 'TintProbe', { anchorsPreset: 15, ...properties });
       const walker = (
@@ -610,16 +687,19 @@ describe('<ControlCanvasWalker>', () => {
       expect(tintReading(await renderProbe({}))).toBe('tint:own=1,alpha=1,ambient=1');
     });
 
-    it("multiplies the ambient by self_modulate — 0.25, never the ambient folded twice at 0.125", async () => {
+    it('multiplies the ambient by self_modulate — 0.25, never the ambient folded twice at 0.125', async () => {
       // The 0.5 is AMBIENT, not this node's `modulate`: authoring it as
       // `modulate` would read 0.25 under a walker that folds the ambient twice
       // as well, and pin nothing.
-      const name = await renderProbe({ selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 0.5 } }, {
-        r: 0.5,
-        g: 0.5,
-        b: 0.5,
-        a: 0.5,
-      }).then(tintReading);
+      const name = await renderProbe(
+        { selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 0.5 } },
+        {
+          r: 0.5,
+          g: 0.5,
+          b: 0.5,
+          a: 0.5,
+        }
+      ).then(tintReading);
       expect(name).toBe('tint:own=0.25,alpha=0.25,ambient=0.5');
     });
 
@@ -739,7 +819,7 @@ describe('<ControlCanvasWalker>', () => {
       expect(position.y).toBeCloseTo(-100.25);
     });
 
-    it("snaps a container child even when it carries its own rotation (fit_child_in_rect resets it)", async () => {
+    it('snaps a container child even when it carries its own rotation (fit_child_in_rect resets it)', async () => {
       const TYPE = 'TestSnapContainer';
       controlSolverRegistry.registerContainerLayout(TYPE, (_n, children, contentRect) => {
         const out = new Map<string, Rect2>();

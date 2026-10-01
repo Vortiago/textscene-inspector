@@ -272,7 +272,9 @@ describe('an int slot is read at the width its validator declares', () => {
   it('finds every reader the width can be passed to', () => {
     // The readers a slice calls, plus whatever else takes the type. A reader
     // missing from this list is a reader the sweep below cannot see.
-    expect(readers).toEqual(expect.arrayContaining(['intOr', 'parseGodotInt', 'parseOptionalInt', 'ruleInt']));
+    expect(readers).toEqual(
+      expect.arrayContaining(['intOr', 'parseGodotInt', 'parseOptionalInt', 'ruleInt'])
+    );
   });
 
   it('reads a call site the way the reader does', () => {
@@ -311,10 +313,25 @@ describe('an int slot is read at the width its validator declares', () => {
 
   it('names a disagreement on a slot its own class declares', () => {
     const reads: IntRead[] = [
-      { where: 'nodes/3d/meshinstance3d/parser.ts:80', reader: 'parseOptionalInt', key: 'layers', width: 'int32' },
-      { where: 'nodes/3d/meshinstance3d/parser.ts:81', reader: 'parseOptionalInt', key: 'layers', width: 'uint32' },
+      {
+        where: 'nodes/3d/meshinstance3d/parser.ts:80',
+        reader: 'parseOptionalInt',
+        key: 'layers',
+        width: 'int32',
+      },
+      {
+        where: 'nodes/3d/meshinstance3d/parser.ts:81',
+        reader: 'parseOptionalInt',
+        key: 'layers',
+        width: 'uint32',
+      },
       // Undeclared by this class: no second declaration, so nothing to disagree.
-      { where: 'nodes/3d/meshinstance3d/parser.ts:82', reader: 'intOr', key: 'gi_lightmap_scale', width: 'int32' },
+      {
+        where: 'nodes/3d/meshinstance3d/parser.ts:82',
+        reader: 'intOr',
+        key: 'gi_lightmap_scale',
+        width: 'int32',
+      },
     ];
     const verdicts = verdictsFor(reads, () => 'MeshInstance3D', synthetic);
     expect(verdicts.checked).toBe(2);
@@ -325,7 +342,12 @@ describe('an int slot is read at the width its validator declares', () => {
 
   it('holds a family helper to what every class declaring the key agrees on', () => {
     const reads: IntRead[] = [
-      { where: 'r3f/internal/glb-scene-root/glbNodeOverrides.ts:103', reader: 'parseOptionalInt', key: 'layers', width: 'int32' },
+      {
+        where: 'r3f/internal/glb-scene-root/glbNodeOverrides.ts:103',
+        reader: 'parseOptionalInt',
+        key: 'layers',
+        width: 'int32',
+      },
     ];
     const verdicts = verdictsFor(reads, () => undefined, synthetic);
     expect(verdicts.disagreements).toEqual([

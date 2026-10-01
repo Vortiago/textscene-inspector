@@ -3,11 +3,7 @@
  * frames and timing, with Godot's defaults and duration clamp.
  */
 import { describe, it, expect } from 'vitest';
-import {
-  decodeSpriteFrames,
-  parseSpriteFramesAnimations,
-  SPRITE_FRAME_MINIMUM_DURATION,
-} from './decode';
+import { decodeSpriteFrames, parseSpriteFramesAnimations, SPRITE_FRAME_MINIMUM_DURATION } from './decode';
 
 // The exact shape Godot writes.
 const ANIMATIONS = `[{
@@ -85,12 +81,8 @@ describe('parseSpriteFramesAnimations', () => {
     // (sprite_frames.cpp:201-202): the dict never becomes an animation, and the
     // `Anim` struct defaults are never reached for a loaded one.
     const frames = '[{"duration": 1.0, "texture": ExtResource("9")}]';
-    expect(
-      parseSpriteFramesAnimations(`[{"frames": ${frames}, "name": &"a", "loop": true}]`).size
-    ).toBe(0);
-    expect(
-      parseSpriteFramesAnimations(`[{"frames": ${frames}, "name": &"a", "speed": 5.0}]`).size
-    ).toBe(0);
+    expect(parseSpriteFramesAnimations(`[{"frames": ${frames}, "name": &"a", "loop": true}]`).size).toBe(0);
+    expect(parseSpriteFramesAnimations(`[{"frames": ${frames}, "name": &"a", "speed": 5.0}]`).size).toBe(0);
   });
 
   it('drops an animation dict lacking "name", keeping its neighbours', () => {
@@ -122,7 +114,7 @@ describe('parseSpriteFramesAnimations', () => {
     expect(map.get('x')!.durations).toEqual([2, 0.5]);
   });
 
-  it('clamps a zero duration to Godot\'s frame minimum, not to 1.0', () => {
+  it("clamps a zero duration to Godot's frame minimum, not to 1.0", () => {
     // `MAX(SPRITE_FRAME_MINIMUM_DURATION, (float)f["duration"])`, sprite_frames.cpp:225.
     // A 0-duration frame blinks in Godot (0.01/fps), not a full frame time.
     const map = parseSpriteFramesAnimations(
@@ -160,7 +152,7 @@ describe('parseSpriteFramesAnimations', () => {
     expect(blink.durations).toEqual([0.5, 3, 0.5]);
   });
 
-  it('reads `nil` in a texture slot the same way, the reader\'s other spelling', () => {
+  it("reads `nil` in a texture slot the same way, the reader's other spelling", () => {
     // `variant_parser.cpp:699` takes `null` and `nil` through one arm.
     const map = parseSpriteFramesAnimations(
       '[{"frames": [{"duration": 2.0, "texture": nil}], "name": &"x", "loop": true, "speed": 5.0}]'

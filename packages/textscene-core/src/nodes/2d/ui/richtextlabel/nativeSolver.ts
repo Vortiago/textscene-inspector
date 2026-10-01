@@ -27,10 +27,26 @@ import {
   type GlyphPlacement,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import { resolveTextTheme, type ResolvedTextTheme, type TextThemeDefaults, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
-import { getUnderlinePositionPx, getUnderlineThicknessPx } from '../../../../r3f/controls/native/text/openSansMetrics';
-import { getFontAscentPx, getFontGlyphAdvancePx, getFontLinePitchPx, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
-import { resolveNodeFontMetrics, resolveNodeFontSizePx } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import {
+  resolveTextTheme,
+  type ResolvedTextTheme,
+  type TextThemeDefaults,
+  type TextThemeKeys,
+} from '../../../../r3f/controls/native/textTheme';
+import {
+  getUnderlinePositionPx,
+  getUnderlineThicknessPx,
+} from '../../../../r3f/controls/native/text/openSansMetrics';
+import {
+  getFontAscentPx,
+  getFontGlyphAdvancePx,
+  getFontLinePitchPx,
+  type FontMetrics,
+} from '../../../../r3f/controls/native/text/fontMetrics';
+import {
+  resolveNodeFontMetrics,
+  resolveNodeFontSizePx,
+} from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { ControlColor } from '../control/types';
 import type { RichTextLabelProperties } from './types';
 import {
@@ -45,7 +61,10 @@ import {
 } from './bbcode';
 
 /** RichTextLabel reads `theme_override_font_sizes/normal_font_size` and `theme_override_colors/default_color`, not Label's `font_size` and `font_color`. */
-export const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'normal_font_size', colorKey: 'default_color' };
+export const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = {
+  sizeKey: 'normal_font_size',
+  colorKey: 'default_color',
+};
 
 /**
  * The plain-paragraph font key, `scene/theme/default_theme.cpp:1194`:
@@ -67,7 +86,10 @@ export function richTextLabelTextTheme(
   props: RichTextLabelProperties,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
-  const defaults: TextThemeDefaults = { fontSizePx: ctx.theme.fontSize, color: RICH_TEXT_LABEL_DEFAULT_FONT_COLOR };
+  const defaults: TextThemeDefaults = {
+    fontSizePx: ctx.theme.fontSize,
+    color: RICH_TEXT_LABEL_DEFAULT_FONT_COLOR,
+  };
   return resolveTextTheme(n, props, RICH_TEXT_LABEL_THEME_KEYS, defaults);
 }
 
@@ -94,7 +116,8 @@ export function imageSizePx(
   }
   if (heightPx > 0) {
     if (hasRegion) return { x: (region!.w * heightPx) / region!.h, y: heightPx };
-    if (naturalSize && naturalSize.y > 0) return { x: (naturalSize.x * heightPx) / naturalSize.y, y: heightPx };
+    if (naturalSize && naturalSize.y > 0)
+      return { x: (naturalSize.x * heightPx) / naturalSize.y, y: heightPx };
     return null;
   }
   if (hasRegion) return { x: region!.w, y: region!.h };
@@ -352,7 +375,12 @@ function resolveRunFontSizePx(
   cache: Map<string, number>
 ): number {
   if (!bold && !italic) return normalFontSizePx;
-  const key = bold && italic ? RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS.boldItalic : bold ? RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS.bold : RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS.italic;
+  const key =
+    bold && italic
+      ? RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS.boldItalic
+      : bold
+        ? RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS.bold
+        : RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS.italic;
   const cached = cache.get(key);
   if (cached !== undefined) return cached;
   const resolved = resolveNodeFontSizePx(n, key, props.themeOverrideFontSizes?.[key], builtInDefaultPx);
@@ -423,7 +451,15 @@ export function styledTextRuns(
       italic,
       underline: hasOpenTag(run.tags, 'u'),
       color: colorValue !== undefined ? resolveBBColor(colorValue, defaultColor) : defaultColor,
-      fontSizePx: resolveRunFontSizePx(bold, italic, props, normalFontSizePx, n, builtInDefaultPx, runFontSizeCache),
+      fontSizePx: resolveRunFontSizePx(
+        bold,
+        italic,
+        props,
+        normalFontSizePx,
+        n,
+        builtInDefaultPx,
+        runFontSizeCache
+      ),
       alignment: resolveParagraphAlignment(run.tags, props.horizontalAlignment),
     });
   }
@@ -506,7 +542,9 @@ function soloRunLayout(
   parentLayout: TextLayoutResult,
   lineAscentPx: number
 ): TextLayoutResult {
-  const widthPx = glyphs.length ? glyphs[glyphs.length - 1]!.x + glyphs[glyphs.length - 1]!.advance - glyphs[0]!.x : 0;
+  const widthPx = glyphs.length
+    ? glyphs[glyphs.length - 1]!.x + glyphs[glyphs.length - 1]!.advance - glyphs[0]!.x
+    : 0;
   return soloLineLayout({ text, glyphs, widthPx }, parentLayout, lineAscentPx);
 }
 
@@ -577,7 +615,12 @@ function lineMetricsOf(
     for (const segment of segments) {
       const run = styledRuns[segment.runIndex]!;
       if (!run.image) continue;
-      const yOffset = imageBaselineOffsetPx(textAscentPx, textDescentPx, run.image.sizePx.y, run.image.spec.alignment);
+      const yOffset = imageBaselineOffsetPx(
+        textAscentPx,
+        textDescentPx,
+        run.image.sizePx.y,
+        run.image.spec.alignment
+      );
       ascentPx = Math.max(ascentPx, -yOffset);
       descentPx = Math.max(descentPx, yOffset + run.image.sizePx.y);
     }
@@ -630,7 +673,10 @@ interface RunLineSegment {
  * whole paragraph once so line breaks see its full width, and this split is
  * not a Godot port. It also tells which font sizes land on each line.
  */
-function attributeRunsToLines(styledRuns: readonly StyledTextRun[], layout: TextLayoutResult): RunLineSegment[][] {
+function attributeRunsToLines(
+  styledRuns: readonly StyledTextRun[],
+  layout: TextLayoutResult
+): RunLineSegment[][] {
   const plainText = styledRuns.map((r) => r.text).join('');
   const charRunIndex: number[] = [];
   styledRuns.forEach((run, runIdx) => {
@@ -842,7 +888,14 @@ export function layoutRichTextRuns(
           ? {
               spec: run.image.spec,
               xPx: segment.glyphs[0]?.x ?? 0,
-              yPx: ascentPx + imageBaselineOffsetPx(textAscentPx, textDescentPx, run.image.sizePx.y, run.image.spec.alignment),
+              yPx:
+                ascentPx +
+                imageBaselineOffsetPx(
+                  textAscentPx,
+                  textDescentPx,
+                  run.image.sizePx.y,
+                  run.image.spec.alignment
+                ),
               widthPx: run.image.sizePx.x,
               heightPx: run.image.sizePx.y,
             }

@@ -13,7 +13,9 @@ import { slotComponents, slotComponentsAltered } from '../../../godot/int.js';
 import { isEqualApprox } from '../../../godot/index.js';
 
 const arms = {
-  coincidentEndpoints: groundedArm('navigationlink2d-coincident-endpoints', { kind: 'configuration-warning' }),
+  coincidentEndpoints: groundedArm('navigationlink2d-coincident-endpoints', {
+    kind: 'configuration-warning',
+  }),
 } as const satisfies RuleArms<string>;
 
 interface Vec2 {
@@ -62,9 +64,7 @@ function isEqualApproxVector2(left: Vec2, right: Vec2): boolean {
 
 function checkNavigationLink2D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  const properties = isValidProperties(node.properties)
-    ? (node.properties as Record<string, string>)
-    : {};
+  const properties = isValidProperties(node.properties) ? (node.properties as Record<string, string>) : {};
 
   const start = readPosition(properties, 'start_position');
   const end = readPosition(properties, 'end_position');

@@ -15,12 +15,20 @@ import {
 } from './nativeSolver';
 import type { TextureProgressBarProperties } from './types';
 
-function node(props: Partial<TextureProgressBarProperties>, textureSlots: SolveNode['textureSlots'] = {}): SolveNode {
+function node(
+  props: Partial<TextureProgressBarProperties>,
+  textureSlots: SolveNode['textureSlots'] = {}
+): SolveNode {
   const base = emptySolveNode();
   return {
     ...base,
     path: 'T',
-    node: { name: 'T', type: 'TextureProgressBar', children: [], properties: { name: 'T', ...props } as TextureProgressBarProperties },
+    node: {
+      name: 'T',
+      type: 'TextureProgressBar',
+      children: [],
+      properties: { name: 'T', ...props } as TextureProgressBarProperties,
+    },
     textureSlots,
   };
 }
@@ -29,7 +37,13 @@ describe('textureProgressBarMinimumSize (texture_progress_bar.cpp:81-97)', () =>
   it('nine_patch_stretch: sums the stretch margins per axis (:82-84)', () => {
     expect(
       textureProgressBarMinimumSize(
-        node({ ninePatchStretch: true, stretchMarginLeft: 4, stretchMarginRight: 6, stretchMarginTop: 2, stretchMarginBottom: 3 }),
+        node({
+          ninePatchStretch: true,
+          stretchMarginLeft: 4,
+          stretchMarginRight: 6,
+          stretchMarginTop: 2,
+          stretchMarginBottom: 3,
+        }),
         { theme: undefined as never, combinedMinimumSize: () => ({ x: 0, y: 0 }), measureText: null }
       )
     ).toEqual({ x: 10, y: 5 });
@@ -37,24 +51,36 @@ describe('textureProgressBarMinimumSize (texture_progress_bar.cpp:81-97)', () =>
 
   it('no textures resolved, no nine_patch_stretch: floors to (1, 1) rather than (0, 0)', () => {
     expect(
-      textureProgressBarMinimumSize(node({}), { theme: undefined as never, combinedMinimumSize: () => ({ x: 0, y: 0 }), measureText: null })
+      textureProgressBarMinimumSize(node({}), {
+        theme: undefined as never,
+        combinedMinimumSize: () => ({ x: 0, y: 0 }),
+        measureText: null,
+      })
     ).toEqual({ x: 1, y: 1 });
   });
 
-  it('maxes the three resolved texture slots\' own sizes (:86-96)', () => {
+  it("maxes the three resolved texture slots' own sizes (:86-96)", () => {
     const n = node(
       { textureUnder: 'SubResource("1")', textureOver: 'SubResource("2")' },
       { [TEXTURE_UNDER_KEY]: { x: 40, y: 12 }, [TEXTURE_OVER_KEY]: { x: 20, y: 30 } }
     );
     expect(
-      textureProgressBarMinimumSize(n, { theme: undefined as never, combinedMinimumSize: () => ({ x: 0, y: 0 }), measureText: null })
+      textureProgressBarMinimumSize(n, {
+        theme: undefined as never,
+        combinedMinimumSize: () => ({ x: 0, y: 0 }),
+        measureText: null,
+      })
     ).toEqual({ x: 40, y: 30 });
   });
 
   it('a slot authored but not yet resolved (null) does not contribute, and still floors to (1, 1)', () => {
     const n = node({ textureProgress: 'ExtResource("1")' }, { [TEXTURE_PROGRESS_KEY]: null });
     expect(
-      textureProgressBarMinimumSize(n, { theme: undefined as never, combinedMinimumSize: () => ({ x: 0, y: 0 }), measureText: null })
+      textureProgressBarMinimumSize(n, {
+        theme: undefined as never,
+        combinedMinimumSize: () => ({ x: 0, y: 0 }),
+        measureText: null,
+      })
     ).toEqual({ x: 1, y: 1 });
   });
 });

@@ -34,7 +34,10 @@ describe('parseButton', () => {
   });
 
   it('parses text_overrun_behavior and clip_text', () => {
-    const p = parseButton(h({ name: 'Ok', type: 'Button' }), { text_overrun_behavior: '3', clip_text: 'true' });
+    const p = parseButton(h({ name: 'Ok', type: 'Button' }), {
+      text_overrun_behavior: '3',
+      clip_text: 'true',
+    });
     expect(p.overrunBehavior).toBe(3);
     expect(p.clipText).toBe(true);
   });

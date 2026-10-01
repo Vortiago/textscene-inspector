@@ -279,10 +279,7 @@ function ControlNodeGroup({
   // The skipped Node2D chain this node promoted past (`SolveNode.skippedAncestors`). A product
   // of ancestors can shear, so it goes in as a whole matrix, never decomposed.
   return (
-    <group
-      matrix={threeMatrixFromTransform2D(solveNode.skippedAncestors.transform)}
-      matrixAutoUpdate={false}
-    >
+    <group matrix={threeMatrixFromTransform2D(solveNode.skippedAncestors.transform)} matrixAutoUpdate={false}>
       {ownGroup}
     </group>
   );

@@ -197,16 +197,14 @@ const SLOTS: Slot[] = [
   // Every draw pass, not just the first: an empty pass is what Godot writes for an
   // index below the count, so each index has to read as empty rather than dangling.
   ...at('nodes/3d/particles/gpuparticles3d/linter.ts', [
-    ...['process_material', 'draw_pass_1', 'draw_pass_2', 'draw_pass_3', 'draw_pass_4'].map(
-      (prop) => ({
-        type: 'GPUParticles3D',
-        prop,
-        expected: [
-          'warning gpuparticles3d-missing-process-material',
-          'warning gpuparticles3d-no-draw-pass-mesh',
-        ],
-      })
-    ),
+    ...['process_material', 'draw_pass_1', 'draw_pass_2', 'draw_pass_3', 'draw_pass_4'].map((prop) => ({
+      type: 'GPUParticles3D',
+      prop,
+      expected: [
+        'warning gpuparticles3d-missing-process-material',
+        'warning gpuparticles3d-no-draw-pass-mesh',
+      ],
+    })),
   ]),
   ...at('nodes/3d/sprite3d/linter.ts', [
     { type: 'Sprite3D', prop: 'texture', expected: ['info sprite3d-requires-texture'] },
@@ -412,12 +410,18 @@ describe('an explicitly cleared resource slot reads as an empty one', () => {
 
   it('derives the predicates from the module, so the one a roster would forget is swept too', () => {
     expect(slotPredicates()).toEqual(
-      expect.arrayContaining(['checkResourceExists', 'heldResource', 'resolveResourceSlot', 'resourceSlotIsEmpty'])
+      expect.arrayContaining([
+        'checkResourceExists',
+        'heldResource',
+        'resolveResourceSlot',
+        'resourceSlotIsEmpty',
+      ])
     );
   });
 
   it('follows a local back through the predicate call that bound it', () => {
-    const source = 'const script = heldResource(rawProps.script);\nif (!checkResourceExists(scene, script)) {}';
+    const source =
+      'const script = heldResource(rawProps.script);\nif (!checkResourceExists(scene, script)) {}';
     expect(keysOf(source, 'scene, script')).toEqual(['script']);
   });
 

@@ -34,11 +34,7 @@ export default defineConfig({
       include: ['src/**/*.ts'],
       // The setup file and its `*.testkit.ts` modules are test scaffolding, which
       // would otherwise report as uncovered production source.
-      exclude: [
-        'src/**/*.{test,spec}.ts',
-        'src/**/*.testkit.ts',
-        'src/test-setup.ts'
-      ]
-    }
-  }
+      exclude: ['src/**/*.{test,spec}.ts', 'src/**/*.testkit.ts', 'src/test-setup.ts'],
+    },
+  },
 });

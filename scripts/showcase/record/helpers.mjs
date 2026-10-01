@@ -78,9 +78,9 @@ export async function clickNode(page, { path, type } = {}) {
 
 /** Return the data-node-path of every Camera3D row in the tree (post-expand). */
 export async function cameraNodePaths(page) {
-  return page.locator('[data-node-path]:has(span[title="Camera3D"])').evaluateAll((els) =>
-    els.map((el) => el.getAttribute('data-node-path')).filter(Boolean)
-  );
+  return page
+    .locator('[data-node-path]:has(span[title="Camera3D"])')
+    .evaluateAll((els) => els.map((el) => el.getAttribute('data-node-path')).filter(Boolean));
 }
 
 /** Click the inspector "Use This Camera" button if the selected node is a Camera3D. */

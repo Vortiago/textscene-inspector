@@ -22,17 +22,15 @@ const TWO_RESOURCE_SLOTS = scene(
 );
 
 /** One bad slot: the same `where` is unambiguous here. */
-const ONE_RESOURCE_SLOT = scene(
-  node('GPUParticles3D', { process_material: '"not-a-reference"' })
-);
+const ONE_RESOURCE_SLOT = scene(node('GPUParticles3D', { process_material: '"not-a-reference"' }));
 
 describe('test-kit diagnostic lookup', () => {
   it('the two scenes carry the diagnostic counts every case below claims', () => {
     // Without this the `toThrow` cases pass whenever the scene stops producing
     // diagnostics at all, which is a different failure wearing the same colour.
     const shared = 'resource reference';
-    expect(lint(TWO_RESOURCE_SLOTS).filter(d => d.message.includes(shared))).toHaveLength(2);
-    expect(lint(ONE_RESOURCE_SLOT).filter(d => d.message.includes(shared))).toHaveLength(1);
+    expect(lint(TWO_RESOURCE_SLOTS).filter((d) => d.message.includes(shared))).toHaveLength(2);
+    expect(lint(ONE_RESOURCE_SLOT).filter((d) => d.message.includes(shared))).toHaveLength(1);
   });
 
   it('refuses a `where` that two diagnostics answer', () => {
@@ -58,9 +56,7 @@ describe('test-kit diagnostic lookup', () => {
   });
 
   it('leaves an unambiguous `where` alone', () => {
-    expect(expectDiagnostic(ONE_RESOURCE_SLOT, { prop: 'resource reference' }).severity).toBe(
-      'error'
-    );
+    expect(expectDiagnostic(ONE_RESOURCE_SLOT, { prop: 'resource reference' }).severity).toBe('error');
   });
 
   it('still fails when nothing matches, and says so differently', () => {

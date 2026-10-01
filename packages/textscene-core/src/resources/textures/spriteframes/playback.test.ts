@@ -6,12 +6,7 @@ import { describe, it, expect } from 'vitest';
 import { clipDuration, frameAtTime } from './playback';
 import type { SpriteFramesAnimation } from './types';
 
-const make = (
-  frames: number,
-  fps: number,
-  loop: boolean,
-  durations?: number[]
-): SpriteFramesAnimation => ({
+const make = (frames: number, fps: number, loop: boolean, durations?: number[]): SpriteFramesAnimation => ({
   name: 'a',
   frames: Array.from({ length: frames }, (_, i) => `f${i}`),
   durations: durations ?? Array.from({ length: frames }, () => 1),

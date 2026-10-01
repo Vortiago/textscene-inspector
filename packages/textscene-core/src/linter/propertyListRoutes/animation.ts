@@ -87,5 +87,4 @@ export const animationRoutes: readonly RouteRow[] = [
     sample: 'parameters/conditions/idle',
     verdict: { validated: true },
   },
-
 ];

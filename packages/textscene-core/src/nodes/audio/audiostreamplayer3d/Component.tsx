@@ -72,15 +72,11 @@ function SpeakerGizmo() {
   return (
     <group userData={{ isAudioGizmoBody: true }}>
       <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <coneGeometry
-          args={[SPEAKER_BODY_RADIUS, SPEAKER_BODY_HEIGHT, 16, 1, true]}
-        />
+        <coneGeometry args={[SPEAKER_BODY_RADIUS, SPEAKER_BODY_HEIGHT, 16, 1, true]} />
         <meshBasicMaterial key={GIZMO_MATERIAL.key} {...GIZMO_MATERIAL.props} />
       </mesh>
       <mesh position={[0, 0, -SPEAKER_BODY_HEIGHT / 2]}>
-        <cylinderGeometry
-          args={[SPEAKER_FRONT_RADIUS, SPEAKER_FRONT_RADIUS, SPEAKER_FRONT_THICKNESS, 24]}
-        />
+        <cylinderGeometry args={[SPEAKER_FRONT_RADIUS, SPEAKER_FRONT_RADIUS, SPEAKER_FRONT_THICKNESS, 24]} />
         <meshBasicMaterial key={GIZMO_MATERIAL.key} {...GIZMO_MATERIAL.props} />
       </mesh>
     </group>
@@ -110,10 +106,7 @@ function RangeCircle({ radius }: RangeCircleProps) {
       const a = (i / RANGE_CIRCLE_SEGMENTS) * Math.PI * 2;
       const b = ((i + 1) / RANGE_CIRCLE_SEGMENTS) * Math.PI * 2;
       verts.set(
-        [
-          Math.cos(a) * radius, Math.sin(a) * radius, 0,
-          Math.cos(b) * radius, Math.sin(b) * radius, 0,
-        ],
+        [Math.cos(a) * radius, Math.sin(a) * radius, 0, Math.cos(b) * radius, Math.sin(b) * radius, 0],
         i * 6
       );
     }
@@ -169,8 +162,12 @@ function EmissionCone({ radius, angleDegrees }: EmissionConeProps) {
       const a = (i / RANGE_CIRCLE_SEGMENTS) * Math.PI * 2;
       const b = ((i + 1) / RANGE_CIRCLE_SEGMENTS) * Math.PI * 2;
       ribs.push(
-        Math.cos(a) * base, Math.sin(a) * base, -radius,
-        Math.cos(b) * base, Math.sin(b) * base, -radius
+        Math.cos(a) * base,
+        Math.sin(a) * base,
+        -radius,
+        Math.cos(b) * base,
+        Math.sin(b) * base,
+        -radius
       );
     }
     return new Float32Array(ribs);

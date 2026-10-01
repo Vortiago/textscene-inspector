@@ -5,14 +5,7 @@
  * diverged before they were folded into this module.
  */
 import { describe, it, expect } from 'vitest';
-import {
-  CMP_EPSILON,
-  bezierInterpolate,
-  isZeroApprox,
-  isEqualApprox,
-  sign,
-  smoothstep,
-} from './math.js';
+import { CMP_EPSILON, bezierInterpolate, isZeroApprox, isEqualApprox, sign, smoothstep } from './math.js';
 
 describe('CMP_EPSILON', () => {
   it('is math_defs.h:50, not the 1e-6 a private copy stood in with', () => {

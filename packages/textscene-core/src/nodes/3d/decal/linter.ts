@@ -17,12 +17,7 @@ const arms = {
   emptyCullMask: groundedArm('decal-empty-cull-mask', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
-const TEXTURE_PROPS = [
-  'texture_albedo',
-  'texture_normal',
-  'texture_orm',
-  'texture_emission',
-] as const;
+const TEXTURE_PROPS = ['texture_albedo', 'texture_normal', 'texture_orm', 'texture_emission'] as const;
 
 function checkDecal(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -44,8 +39,7 @@ function checkDecal(context: RuleContext): Diagnostic[] {
   // decal.cpp:188: a Normal/ORM map blends onto the Albedo texture's alpha
   // channel, so it does nothing without one.
   if (
-    (!resourceSlotIsEmpty(rawProps.texture_normal) ||
-      !resourceSlotIsEmpty(rawProps.texture_orm)) &&
+    (!resourceSlotIsEmpty(rawProps.texture_normal) || !resourceSlotIsEmpty(rawProps.texture_orm)) &&
     resourceSlotIsEmpty(rawProps.texture_albedo)
   ) {
     reportArm(
@@ -75,7 +69,7 @@ const decalValidationRule: LintRule = {
   meta: {
     name: 'valid-decal-resources',
     description:
-      'Three of Decal\'s get_configuration_warnings checks: at least one texture, Normal/ORM without Albedo, and an empty Cull Mask',
+      "Three of Decal's get_configuration_warnings checks: at least one texture, Normal/ORM without Albedo, and an empty Cull Mask",
     category: 'validation',
     emits: armEmits(arms),
     applicableNodeTypes: ['Decal'],

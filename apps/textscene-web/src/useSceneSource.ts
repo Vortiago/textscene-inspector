@@ -181,20 +181,17 @@ export function useSceneSource({
     return cleanup;
   }, [fixtureFile, uploadedTscnName, replace, reloadNonce]);
 
-  const onBufferChange = useCallback(
-    (value: string) => {
-      setBuffer(value);
-      editedSinceLoadRef.current = true;
-      // A fetch error no longer describes what the pane holds.
-      setLoadError(null);
+  const onBufferChange = useCallback((value: string) => {
+    setBuffer(value);
+    editedSinceLoadRef.current = true;
+    // A fetch error no longer describes what the pane holds.
+    setLoadError(null);
 
-      clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => {
-        setForwardedContent((prev) => resolveForwardedContent(value, prev));
-      }, DEBOUNCE_MS);
-    },
-    []
-  );
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      setForwardedContent((prev) => resolveForwardedContent(value, prev));
+    }, DEBOUNCE_MS);
+  }, []);
 
   const editedSinceLoad = useCallback(() => editedSinceLoadRef.current, []);
 

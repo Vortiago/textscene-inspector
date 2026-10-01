@@ -44,8 +44,8 @@ function splitOffsetsValidator(): PropertyValidator {
     // variant_parser.cpp:1428-1430, narrows any number token), and `(+3, 0)` fails the load,
     // since `get_token` accepts no leading `+`, so `/^[+-]?\d+$/` is wrong both ways.
     const bad = badIntElement('split_offsets', key, line, body, {
-        format: SPLIT_OFFSETS_FORMAT,
-        value: 'INVALID_SPLIT_OFFSETS_VALUE',
+      format: SPLIT_OFFSETS_FORMAT,
+      value: 'INVALID_SPLIT_OFFSETS_VALUE',
     });
     return bad.error ?? bad.truncated;
   }, 'int array (PackedInt32Array(…), Array[int]([…]) or […])');

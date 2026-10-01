@@ -43,7 +43,10 @@ export async function captureOurFrames(fixture, framesDir, mode, driverText) {
     // The Animation tab and its transport mount only while the driver is selected (ADR-0012): the
     // AnimationPlayer (3D) or the AnimatedSprite2D (2D). The driver is a transform-only node at
     // the origin (3D) or the centred sprite (2D), so selecting it draws no selection box.
-    await page.locator('[aria-label="Expand all"]').click().catch(() => {});
+    await page
+      .locator('[aria-label="Expand all"]')
+      .click()
+      .catch(() => {});
     await page.waitForTimeout(300);
     await page.locator(`[role="treeitem"]:has-text("${driverText}")`).first().click();
     await page.waitForTimeout(500);

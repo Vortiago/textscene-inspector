@@ -7,7 +7,7 @@
 import type { Diagnostic } from '../../../../linter/types.js';
 import type { TscnNode } from '../../../../parser/types.js';
 import { armDiagnostic, groundedArm, type RuleArm } from '../../../../linter/ruleArms.js';
-import { resourceRef, boolSlotValue} from '../../../../godot/index.js';
+import { resourceRef, boolSlotValue } from '../../../../godot/index.js';
 
 /** The warning's arm under `rulePrefix`, the node-type slug, so each light keeps its own rule. */
 export function projectorArm(rulePrefix: string): RuleArm {

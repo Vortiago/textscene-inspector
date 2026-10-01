@@ -12,7 +12,9 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 
 const arms = {
-  missingProcessMaterial: groundedArm('gpuparticles2d-missing-process-material', { kind: 'configuration-warning' }),
+  missingProcessMaterial: groundedArm('gpuparticles2d-missing-process-material', {
+    kind: 'configuration-warning',
+  }),
 } as const satisfies RuleArms<string>;
 
 function checkGPUParticles2D(context: RuleContext): Diagnostic[] {

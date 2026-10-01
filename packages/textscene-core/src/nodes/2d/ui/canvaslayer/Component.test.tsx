@@ -9,7 +9,11 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { CanvasLayer } from './Component';
 import { parseCanvasLayer } from './parser';
-import { EffectiveZProvider, useCanvasLayerIndex, useEffectiveZ } from '../../../../r3f/lighting2d/canvasItemPlacement';
+import {
+  EffectiveZProvider,
+  useCanvasLayerIndex,
+  useEffectiveZ,
+} from '../../../../r3f/lighting2d/canvasItemPlacement';
 import { CanvasModulateContext, useCanvasModulate } from '../../../../r3f/canvasModulate';
 import { Modulate2DContext, useParentModulate } from '../../../../r3f/canvasItemModulate';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
@@ -18,7 +22,12 @@ import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 const ZERO_RECT = { x: 0, y: 0, w: 0, h: 0 };
 
 function canvasModulateChild(color: { r: number; g: number; b: number; a: number }): TscnNode {
-  return { name: 'CanvasModulate', type: 'CanvasModulate', children: [], properties: { name: 'CanvasModulate', color } };
+  return {
+    name: 'CanvasModulate',
+    type: 'CanvasModulate',
+    children: [],
+    properties: { name: 'CanvasModulate', color },
+  };
 }
 
 function layerSolveNode(raw: Record<string, string> = {}, rawChildren: TscnNode[] = []): SolveNode {
@@ -31,9 +40,7 @@ function layerSolveNode(raw: Record<string, string> = {}, rawChildren: TscnNode[
 function LayerProbe({ testId }: { testId: string }) {
   const layer = useCanvasLayerIndex();
   const modulate = useCanvasModulate();
-  return (
-    <group name={`probe:${testId}:layer=${layer}:r=${modulate.r}`} />
-  );
+  return <group name={`probe:${testId}:layer=${layer}:r=${modulate.r}`} />;
 }
 
 function ZProbe({ testId }: { testId: string }) {
@@ -48,7 +55,12 @@ function ModulateProbe({ testId }: { testId: string }) {
 
 async function renderLayer(raw: Record<string, string> = {}, rawChildren: TscnNode[] = [], testId = 'a') {
   return ReactThreeTestRenderer.create(
-    <CanvasLayer {...painterEnv()} solveNode={layerSolveNode(raw, rawChildren)} rect={ZERO_RECT} renderOrder={0}>
+    <CanvasLayer
+      {...painterEnv()}
+      solveNode={layerSolveNode(raw, rawChildren)}
+      rect={ZERO_RECT}
+      renderOrder={0}
+    >
       <LayerProbe testId={testId} />
     </CanvasLayer>
   );
@@ -71,7 +83,12 @@ describe('<CanvasLayer>', () => {
     const ownChild = canvasModulateChild({ r: 0.2, g: 0.4, b: 0.6, a: 1 });
     const renderer = await ReactThreeTestRenderer.create(
       <CanvasModulateContext.Provider value={{ r: 0.9, g: 0.9, b: 0.9, a: 1 }}>
-        <CanvasLayer {...painterEnv()} solveNode={layerSolveNode({}, [ownChild])} rect={ZERO_RECT} renderOrder={0}>
+        <CanvasLayer
+          {...painterEnv()}
+          solveNode={layerSolveNode({}, [ownChild])}
+          rect={ZERO_RECT}
+          renderOrder={0}
+        >
           <LayerProbe testId="tint" />
         </CanvasLayer>
       </CanvasModulateContext.Provider>
@@ -92,7 +109,7 @@ describe('<CanvasLayer>', () => {
   });
 
   it(
-    "resets EffectiveZProvider to 0 for its children regardless of any ambient z outside the layer " +
+    'resets EffectiveZProvider to 0 for its children regardless of any ambient z outside the layer ' +
       '— a CanvasLayer starts its OWN canvas (renderer_canvas_cull.cpp culls each canvas independently), ' +
       "mirroring NodeDispatcher.tsx's own CanvasLayer branch (`<EffectiveZProvider value={0}>`)",
     async () => {

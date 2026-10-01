@@ -12,9 +12,7 @@ import '../../../../linter/index.js';
 
 describe('control-tooltip-ignored-by-mouse-filter reach', () => {
   it('runs on every concrete registered Control descendant', () => {
-    const heirs = nodeRegistry
-      .getAllTypeNames()
-      .filter((t) => t === 'Control' || descendsFrom(t, 'Control'));
+    const heirs = nodeRegistry.getAllTypeNames().filter((t) => t === 'Control' || descendsFrom(t, 'Control'));
 
     // Pinned, so a new registered Control subclass fails here and "every" cannot change unseen.
     expect(heirs.length).toBe(61);

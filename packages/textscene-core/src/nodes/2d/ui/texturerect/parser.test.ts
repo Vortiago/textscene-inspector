@@ -47,7 +47,9 @@ describe('the Godot-3 expand flags', () => {
   // texture_rect.cpp:171-173: `(expand || ignore_texture_size) && bool(p_value)`
   // writes EXPAND_IGNORE_SIZE; a falsy value is dropped. Measured on 4.6.3.
   it('expand = true parses as expandMode 1', () => {
-    const scene = new TscnParser().parse('[gd_scene format=3]\n\n[node name="T" type="TextureRect"]\nexpand = true\n');
+    const scene = new TscnParser().parse(
+      '[gd_scene format=3]\n\n[node name="T" type="TextureRect"]\nexpand = true\n'
+    );
     expect((scene.nodes[0]!.properties as { expandMode?: number }).expandMode).toBe(1);
   });
 

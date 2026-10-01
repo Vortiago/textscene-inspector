@@ -14,14 +14,30 @@ describe('nodeComponentRegistry.scenePasses', () => {
   beforeEach(() => nodeComponentRegistry.clear());
 
   it('orders transform passes ahead of path passes regardless of registration order', () => {
-    nodeComponentRegistry.register({ typeName: 'A', Component: Dummy, scenePass: { stage: 'paths', run: paths } });
-    nodeComponentRegistry.register({ typeName: 'B', Component: Dummy, scenePass: { stage: 'transforms', run: transforms } });
+    nodeComponentRegistry.register({
+      typeName: 'A',
+      Component: Dummy,
+      scenePass: { stage: 'paths', run: paths },
+    });
+    nodeComponentRegistry.register({
+      typeName: 'B',
+      Component: Dummy,
+      scenePass: { stage: 'transforms', run: transforms },
+    });
     expect(nodeComponentRegistry.scenePasses()).toEqual([transforms, paths]);
   });
 
   it('runs a pass two types share once', () => {
-    nodeComponentRegistry.register({ typeName: 'A', Component: Dummy, scenePass: { stage: 'transforms', run: transforms } });
-    nodeComponentRegistry.register({ typeName: 'B', Component: Dummy, scenePass: { stage: 'transforms', run: transforms } });
+    nodeComponentRegistry.register({
+      typeName: 'A',
+      Component: Dummy,
+      scenePass: { stage: 'transforms', run: transforms },
+    });
+    nodeComponentRegistry.register({
+      typeName: 'B',
+      Component: Dummy,
+      scenePass: { stage: 'transforms', run: transforms },
+    });
     expect(nodeComponentRegistry.scenePasses()).toEqual([transforms]);
   });
 

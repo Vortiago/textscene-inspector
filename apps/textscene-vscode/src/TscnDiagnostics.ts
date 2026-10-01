@@ -76,10 +76,7 @@ export function toVsCodeDiagnostic(
   return result;
 }
 
-function rangeForDiagnostic(
-  diagnostic: TscnLintDiagnostic,
-  document: DocumentLineSource
-): vscode.Range {
+function rangeForDiagnostic(diagnostic: TscnLintDiagnostic, document: DocumentLineSource): vscode.Range {
   const line = diagnosticLine(diagnostic);
   if (line === undefined) {
     return new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0));
@@ -90,8 +87,7 @@ function rangeForDiagnostic(
   const lineLength = document.lineAt(lineIndex).text.length;
 
   const column = diagnostic.location?.column;
-  const startCharacter =
-    typeof column === 'number' ? clamp(column - 1, 0, lineLength) : 0;
+  const startCharacter = typeof column === 'number' ? clamp(column - 1, 0, lineLength) : 0;
 
   return new vscode.Range(
     new vscode.Position(lineIndex, startCharacter),
@@ -118,9 +114,7 @@ export class TscnDiagnostics implements vscode.Disposable {
   private _enabled: boolean;
   private _debounceMs: number;
 
-  constructor(
-    collection: vscode.DiagnosticCollection = vscode.languages.createDiagnosticCollection('tscn')
-  ) {
+  constructor(collection: vscode.DiagnosticCollection = vscode.languages.createDiagnosticCollection('tscn')) {
     this._collection = collection;
 
     const config = readDiagnosticsConfig();

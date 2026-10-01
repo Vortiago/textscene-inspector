@@ -29,12 +29,7 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
   // Each arm's enabling condition, stated once (see `ruleArms.ts`).
   const is2D = dim === '2D';
   const arms: RuleArms<
-    | 'noParent'
-    | 'invalidParent'
-    | 'emptyPolygon'
-    | 'insufficientPoints'
-    | 'oneWayIgnored'
-    | 'nonUniformScale'
+    'noParent' | 'invalidParent' | 'emptyPolygon' | 'insufficientPoints' | 'oneWayIgnored' | 'nonUniformScale'
   > = {
     noParent: groundedArm(`${prefix}-no-parent`, { kind: 'configuration-warning' }),
     invalidParent: groundedArm(`${prefix}-invalid-parent`, { kind: 'configuration-warning' }),
@@ -59,8 +54,7 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
     const { node, scene } = context;
     if (!isValidProperties(node.properties)) return diagnostics;
     const rawProps = node.properties;
-    const report = (arm: RuleArm | undefined, message: string) =>
-      reportArm(diagnostics, arm, node, message);
+    const report = (arm: RuleArm | undefined, message: string) => reportArm(diagnostics, arm, node, message);
 
     // collision_polygon_2d.cpp:235-237 / collision_polygon_3d.cpp:238-240:
     // `!Object::cast_to<CollisionObject<dim>>(get_parent())`. An instanced or override
@@ -71,7 +65,10 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
     if (placement.kind === 'root') {
       report(arms.noParent, `${type} '${node.name}' has no parent node. ${advice}`);
     } else if (placement.kind === 'mismatch') {
-      report(arms.invalidParent, `${type} '${node.name}' has parent '${placement.parent.name}' of type '${placement.parent.type}', which is not a ${collisionObject}. ${advice}`);
+      report(
+        arms.invalidParent,
+        `${type} '${node.name}' has parent '${placement.parent.name}' of type '${placement.parent.type}', which is not a ${collisionObject}. ${advice}`
+      );
     }
 
     // collision_polygon_2d.cpp:239-250 / collision_polygon_3d.cpp:242-244: an empty
@@ -90,15 +87,20 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
         // build_mode default BUILD_SOLIDS = 0 (collision_polygon_2d.h:48);
         // absent key means the default, same as every other property this
         // codebase omits at default.
-        const buildMode =
-          ruleInt(rawProps.build_mode, 0);
+        const buildMode = ruleInt(rawProps.build_mode, 0);
         // Finite: every arm below compares against BUILD_SOLIDS, and a
         // non-finite passes both of them, naming a mode the file never states.
         if (buildMode !== null) {
           if (buildMode === 0 && pointCount < 3) {
-            report(arms.insufficientPoints, `${type} '${node.name}' has an invalid polygon: at least 3 points are needed in 'Solids' build mode, got ${pointCount}.`);
+            report(
+              arms.insufficientPoints,
+              `${type} '${node.name}' has an invalid polygon: at least 3 points are needed in 'Solids' build mode, got ${pointCount}.`
+            );
           } else if (buildMode !== 0 && pointCount < 2) {
-            report(arms.insufficientPoints, `${type} '${node.name}' has an invalid polygon: at least 2 points are needed in 'Segments' build mode, got ${pointCount}.`);
+            report(
+              arms.insufficientPoints,
+              `${type} '${node.name}' has an invalid polygon: at least 2 points are needed in 'Segments' build mode, got ${pointCount}.`
+            );
           }
         }
       }
@@ -107,7 +109,10 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
     // collision_polygon_2d.cpp:252-254: `one_way_collision && Object::cast_to<Area2D>(get_parent())`.
     // No 3D equivalent: CollisionPolygon3D has no one_way_collision property.
     if (boolSlotValue(rawProps.one_way_collision) === true && parent && descendsFrom(parent.type, 'Area2D')) {
-      report(arms.oneWayIgnored, `${type} '${node.name}' has 'one_way_collision' set, but its parent '${parent.name}' is an Area2D. The One Way Collision property will be ignored when the collision object is an Area2D.`);
+      report(
+        arms.oneWayIgnored,
+        `${type} '${node.name}' has 'one_way_collision' set, but its parent '${parent.name}' is an Area2D. The One Way Collision property will be ignored when the collision object is an Area2D.`
+      );
     }
 
     // collision_polygon_3d.cpp:246-249: non-uniform transform scale. No 2D

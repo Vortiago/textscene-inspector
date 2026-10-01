@@ -16,7 +16,13 @@ const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 const SCALE = 16 / OPEN_SANS_ATLAS_INFO.fontSize;
 
 function layoutFor(text: string, uppercase = false) {
-  return shapeText(text, { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, uppercase, lineSpacingPx: 3 });
+  return shapeText(text, {
+    fontSizePx: 16,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.OFF,
+    uppercase,
+    lineSpacingPx: 3,
+  });
 }
 
 describe('buildGlyphQuadArrays (pure geometry math)', () => {
@@ -65,10 +71,10 @@ describe('buildGlyphQuadArrays (pure geometry math)', () => {
     "shears each vertex around the glyph's BASELINE, not the line's top edge — " +
       "FreeType's FT_Outline_Transform (text_server_adv.cpp:1318-1320, :3621-3623) runs on the " +
       "glyph outline loaded by FT_Load_Glyph, whose own coordinate origin is the glyph's baseline pen " +
-      "position, so a shear coefficient of 0.2 leaves a vertex ON the baseline unmoved and shifts a " +
+      'position, so a shear coefficient of 0.2 leaves a vertex ON the baseline unmoved and shifts a ' +
       "vertex ABOVE it (an ascender, smaller yPx) to the RIGHT — a pivot at the line's top edge instead " +
-      "(0.2 * distance below line top) would shift every ascender-height vertex LEFT, which is the " +
-      "wrong direction and (for a run boundary) eats into the space that precedes it.",
+      '(0.2 * distance below line top) would shift every ascender-height vertex LEFT, which is the ' +
+      'wrong direction and (for a run boundary) eats into the space that precedes it.',
     () => {
       // 'A' at 16 (bake size 42, SCALE = 16/42): yoffset 12.8916015625, height 34,
       // `base` 44.8916015625, so `base - yoffset` = 32. baselineOffsetPx = ceil(2189 *
@@ -87,7 +93,7 @@ describe('buildGlyphQuadArrays (pure geometry math)', () => {
 
   it(
     "anchors a line at its BASELINE (`layout.baselineOffsetPx` below the line's box top), " +
-      'folding the MSDF bake\'s own line-top anchor (`OPEN_SANS_ATLAS_INFO.base` above that ' +
+      "folding the MSDF bake's own line-top anchor (`OPEN_SANS_ATLAS_INFO.base` above that " +
       'baseline) in HERE rather than leaving it for a caller to add back — at fontSize 16 the ' +
       'reconciliation is 18 - OPEN_SANS_ATLAS_INFO.base*(16/42) Godot px, and every consumer ' +
       'that used to carry it now positions a line by its box-top Y alone.',
@@ -112,7 +118,12 @@ describe('buildGlyphQuadArrays (pure geometry math)', () => {
   );
 
   it('places line N exactly one linePitchPx below line N-1, with the same per-line baseline anchor', () => {
-    const layout = shapeText('A\nA', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
+    const layout = shapeText('A\nA', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+    });
     const arrays = buildGlyphQuadArrays(layout, 16);
     const firstTop = -arrays.positions[1]!;
     const secondTop = -arrays.positions[4 * 3 + 1]!;
@@ -177,12 +188,19 @@ describe('<TextRun>', () => {
 
   it('renders one fewer quad when the layout has an extra whitespace-only glyph', async () => {
     const renderer = await renderTextRun({ layout: layoutFor('A B') });
-    const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
+    const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .geometry as THREE.BufferGeometry;
     expect(geometry.getAttribute('position').count).toBe(2 * 4);
   });
 
   it('draws a hex-code box (draw_hex_code_box, text_server.cpp:771-812) for a preserveControl glyph, as EXTRA solid-colour meshes beside the atlas geometry', async () => {
-    const layout = shapeText('A', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3, preserveControl: true });
+    const layout = shapeText('A', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+      preserveControl: true,
+    });
     const renderer = await renderTextRun({ layout });
     // One merged atlas-glyph mesh ('A' only -- the control char has no atlas
     // ink) plus 4 frame rects + the "01" digit pair's own segments.
@@ -230,7 +248,8 @@ describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-k
     const renderer = await ReactThreeTestRenderer.create(
       <TextRun layout={canvasLayoutFor('Hi')} fontSizePx={16} tint={WHITE} />
     );
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
     expect((mat as unknown as { isShaderMaterial?: boolean }).isShaderMaterial).toBeUndefined();
     expect(mat.map).toBeInstanceOf(THREE.CanvasTexture);
     expect(mat.transparent).toBe(true);
@@ -240,35 +259,37 @@ describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-k
     'tags the canvas raster SRGBColorSpace -- DELIBERATELY NOT the general 2D-canvas ' +
       '`NoColorSpace` rule (`canvas2DTextureDecode.ts`) every OTHER 2D-canvas-drawn texture ' +
       '(TextureRect, theme icons, sprites) gets. Measured, not inferred ' +
-      '(`unit-control-scene-font-magnified.tscn`\'s header has the arbitration): `NoColorSpace` ' +
-      'here produces a dip below the backdrop at a magnified glyph edge that Godot\'s own render ' +
-      'of the SAME scene never shows, because Godot\'s own glyph texture is a coverage mask with ' +
+      "(`unit-control-scene-font-magnified.tscn`'s header has the arbitration): `NoColorSpace` " +
+      "here produces a dip below the backdrop at a magnified glyph edge that Godot's own render " +
+      "of the SAME scene never shows, because Godot's own glyph texture is a coverage mask with " +
       'a CONSTANT colour channel (`text_server_adv.cpp` `rasterize_bitmap`, `FT_PIXEL_MODE_GRAY`: ' +
       '`wr[ofs+0] = 255` always, only `wr[ofs+1]` -- alpha, never sRGB-encoded -- varies), so the ' +
-      'byte-vs-decoded-first blend order this file\'s sibling fixes correct for icons/sprites is, ' +
-      'for Godot\'s OWN text rendering, never even in play. `TextRun.tsx`\'s own doc has the full ' +
+      "byte-vs-decoded-first blend order this file's sibling fixes correct for icons/sprites is, " +
+      "for Godot's OWN text rendering, never even in play. `TextRun.tsx`'s own doc has the full " +
       'derivation. This pins the decision against a future change that "completes the pattern" by ' +
       'copying the icon/sprite retag here without re-measuring.',
     async () => {
       const renderer = await ReactThreeTestRenderer.create(
         <TextRun layout={canvasLayoutFor('Hi')} fontSizePx={16} tint={WHITE} />
       );
-      const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+      const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+        .material as THREE.MeshBasicMaterial;
       expect(mat.map!.colorSpace).toBe(THREE.SRGBColorSpace);
     }
   );
 
   it(
     'leaves DECODE_VIDEO_TEXTURE UNSET, matching the kept SRGBColorSpace tag -- ' +
-      '`createCanvasTextMaterial`\'s own auto-detection (`map.colorSpace === NoColorSpace`) means ' +
+      "`createCanvasTextMaterial`'s own auto-detection (`map.colorSpace === NoColorSpace`) means " +
       'this follows automatically from the tag above rather than needing its own separate pin, but ' +
-      'asserted here anyway: a `SRGBColorSpace` texture ALREADY gets three\'s automatic hardware ' +
+      "asserted here anyway: a `SRGBColorSpace` texture ALREADY gets three's automatic hardware " +
       'decode, so also setting this define would decode the sample TWICE.',
     async () => {
       const renderer = await ReactThreeTestRenderer.create(
         <TextRun layout={canvasLayoutFor('Hi')} fontSizePx={16} tint={WHITE} />
       );
-      const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+      const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+        .material as THREE.MeshBasicMaterial;
       expect(mat.defines?.DECODE_VIDEO_TEXTURE).toBeUndefined();
     }
   );
@@ -277,11 +298,11 @@ describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-k
     'keeps the SRGBColorSpace tag across a re-render that reuses the SAME material -- the ' +
       'material is built imperatively (`createCanvasTextMaterial`, a plain ' +
       '`new THREE.MeshBasicMaterial(...)`), never through a JSX `<meshBasicMaterial map={...}>` ' +
-      'element, so `@react-three/fiber`\'s `applyProps` `colorMaps` re-tagging never gets a chance ' +
+      "element, so `@react-three/fiber`'s `applyProps` `colorMaps` re-tagging never gets a chance " +
       'to run on it either way -- proving the KEPT tag survives a second commit the same way a ' +
-      'retag would have (`undecodedTexture.ts`\'s own doc: that re-tagging is what forces ' +
+      "retag would have (`undecodedTexture.ts`'s own doc: that re-tagging is what forces " +
       '`useIconTexture` to use `pinNoColorSpace` instead of a plain assignment there). ' +
-      '`renderOrder` is deliberately NOT a `useMemo` dep (`TextRun.tsx`\'s own deps list), so ' +
+      "`renderOrder` is deliberately NOT a `useMemo` dep (`TextRun.tsx`'s own deps list), so " +
       'changing only it forces a second commit of the SAME material/texture object.',
     async () => {
       // The same layout object across both renders: `layout` is a `useMemo` dep,
@@ -307,7 +328,8 @@ describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-k
     const renderer = await ReactThreeTestRenderer.create(
       <TextRun layout={canvasLayoutFor('Hi')} fontSizePx={16} tint={tint} />
     );
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
     expect(mat.opacity).toBe(0.4);
   });
 
@@ -323,7 +345,8 @@ describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-k
         side={THREE.FrontSide}
       />
     );
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
     expect(mat.clippingPlanes).toEqual(planes);
     expect(mat.depthTest).toBe(true);
     expect(mat.side).toBe(THREE.FrontSide);

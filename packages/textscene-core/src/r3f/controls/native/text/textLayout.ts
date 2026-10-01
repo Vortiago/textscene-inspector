@@ -309,7 +309,6 @@ function isSpaceSeparator(cp: number): boolean {
   );
 }
 
-
 /** `metrics.getKerningAdjustmentUnits` scaled to `fontSizePx` with `getFontKerningAdjustmentPx`. */
 function kerningAdjustmentPx(a: string, b: string, fontSizePx: number, metrics: FontMetrics): number {
   return getFontKerningAdjustmentPx(metrics, a, b, fontSizePx);
@@ -374,7 +373,14 @@ function toBreakGlyphs(
     glyphs[i]!.advance += kerningAdjustmentPx(text[i]!, text[i + 1]!, sizeI, metrics);
   }
   roundAdvancesToWholePixels(glyphs, text, sizeAt);
-  glyphs.push({ start: text.length, end: text.length + 1, advance: 0, isSpace: true, isHardBreak: false, isTab: false });
+  glyphs.push({
+    start: text.length,
+    end: text.length + 1,
+    advance: 0,
+    isSpace: true,
+    isHardBreak: false,
+    isTab: false,
+  });
   return glyphs;
 }
 
@@ -618,11 +624,20 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     const breakGlyphs = toBreakGlyphs(paraText, fontSizePx, fontMetrics, sizeAt, preserveControl);
     // First tab pass: the aligned advance must be in place before line breaking measures it.
     if (hasTabStops) {
-      const paragraphEntries = Array.from(paraText, (char, i) => ({ char, advance: breakGlyphs[i]!.advance }));
+      const paragraphEntries = Array.from(paraText, (char, i) => ({
+        char,
+        advance: breakGlyphs[i]!.advance,
+      }));
       const aligned = tabAlignAdvances(paragraphEntries, tabStopsPx!);
       for (let i = 0; i < aligned.length; i++) breakGlyphs[i]!.advance = aligned[i]!;
     }
-    for (const [start, end] of shapedTextGetLineBreaks(breakGlyphs, effectiveWidth, flags, trim, trimIndent)) {
+    for (const [start, end] of shapedTextGetLineBreaks(
+      breakGlyphs,
+      effectiveWidth,
+      flags,
+      trim,
+      trimIndent
+    )) {
       const clampedEnd = Math.min(end, paraText.length);
       // Second tab pass: restarts the tab-stop cycle at this line's pen origin.
       const lineAdvances = hasTabStops

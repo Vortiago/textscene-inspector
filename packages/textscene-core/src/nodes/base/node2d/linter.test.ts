@@ -364,10 +364,10 @@ describe('Node2D Linter', () => {
         )
       );
       expect(diagnostics.length).toBeGreaterThanOrEqual(4);
-      expect(diagnostics.some(d => d.message.includes('position'))).toBe(true);
-      expect(diagnostics.some(d => d.message.includes('scale'))).toBe(true);
-      expect(diagnostics.some(d => d.message.includes('z_index'))).toBe(true);
-      expect(diagnostics.some(d => d.message.includes('y_sort_enabled'))).toBe(true);
+      expect(diagnostics.some((d) => d.message.includes('position'))).toBe(true);
+      expect(diagnostics.some((d) => d.message.includes('scale'))).toBe(true);
+      expect(diagnostics.some((d) => d.message.includes('z_index'))).toBe(true);
+      expect(diagnostics.some((d) => d.message.includes('y_sort_enabled'))).toBe(true);
     });
   });
 

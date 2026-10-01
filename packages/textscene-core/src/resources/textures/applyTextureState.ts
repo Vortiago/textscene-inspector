@@ -2,15 +2,12 @@
  * Per-slot texture state (UV transform, filter, wrapping, colour space), applied
  * by cloning only when the binding diverges from the shared source. Not a
  * resource slice (ADR-0031): it decodes nothing. In production only
- * `standardmaterial3d/textureBinding.ts` calls it, and that module decides the state.
+ * `standardmaterial3d/textureBinding.ts` and the panorama sky (`sky/build.ts`)
+ * call it, and each decides the state its sampler needs.
  */
 
 import * as THREE from 'three';
-import {
-  applyTextureFilterState,
-  godotTextureFilterState,
-  textureFilterMatches,
-} from './godotTextureFilter';
+import { applyTextureFilterState, godotTextureFilterState, textureFilterMatches } from './godotTextureFilter';
 
 /** Below this, a UV transform is indistinguishable from identity. */
 const IDENTITY_EPSILON = 1e-6;
@@ -36,6 +33,8 @@ export interface MaterialTextureState {
    * Godot `BaseMaterial3D.texture_repeat`, default true
    * (`flags[FLAG_USE_TEXTURE_REPEAT] = true`, `repeat_enable` on the sampler).
    * three defaults to clamp-to-edge, which smears UVs outside 0..1 into stripes.
+   * The loader leaves wrapping at that clamp default (ADR-0044), so this field is
+   * the binding's only source of Repeat.
    * Omitted means Godot's default.
    */
   repeat?: boolean;
@@ -83,15 +82,14 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
 
   const filterState = godotTextureFilterState(state.filter);
   const uvDiverges = state.uv !== undefined && !isIdentity(state.uv);
-  // The shared texture gets Godot's default repeat at load, so only a material
-  // that turns it off diverges.
+  // A producer may hand over either wrapping (ADR-0044), so the wanted wrapping
+  // is compared with what the texture carries. Only a texture already wrapped as
+  // the binding wants stays shared.
   const wrapping = state.repeat === false ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
-  const wrapDiverges =
-    state.repeat === false && (texture.wrapS !== wrapping || texture.wrapT !== wrapping);
+  const wrapDiverges = texture.wrapS !== wrapping || texture.wrapT !== wrapping;
   // Only an authored filter diverges. Otherwise a GradientTexture2D, which has no
   // mipmaps, would clone per material and slot for a filter nobody asked for.
-  const filterDiverges =
-    state.filter !== undefined && !textureFilterMatches(texture, filterState);
+  const filterDiverges = state.filter !== undefined && !textureFilterMatches(texture, filterState);
   // A texture whose tag already matches the sampler is shared untouched.
   const colorSpaceDiverges = texture.colorSpace !== state.colorSpace;
   if (!uvDiverges && !filterDiverges && !wrapDiverges && !colorSpaceDiverges) return texture;
@@ -103,12 +101,9 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
     cloned.repeat.set(state.uv!.scale.x, state.uv!.scale.y);
     cloned.offset.set(state.uv!.offset.x, state.uv!.offset.y);
   }
-  // A tiling transform only tiles under repeat wrapping, so a clone made for one
-  // carries it too, unless the material turned repeat off.
-  if (wrapDiverges || uvDiverges) {
-    cloned.wrapS = wrapping;
-    cloned.wrapT = wrapping;
-  }
+  // Every clone carries the wanted wrapping, whatever the reason it was made.
+  cloned.wrapS = wrapping;
+  cloned.wrapT = wrapping;
   if (filterDiverges) applyTextureFilterState(cloned, filterState);
   // Pinned, not assigned: R3F reasserts `SRGBColorSpace` every commit. The sRGB
   // case wants what R3F reasserts, so it needs no pin.
@@ -128,9 +123,7 @@ export function isMaterialOwnedTexture(texture: THREE.Texture): boolean {
 }
 
 function isIdentity(uv: UVTransform): boolean {
-  return (
-    near(uv.scale.x, 1) && near(uv.scale.y, 1) && near(uv.offset.x, 0) && near(uv.offset.y, 0)
-  );
+  return near(uv.scale.x, 1) && near(uv.scale.y, 1) && near(uv.offset.x, 0) && near(uv.offset.y, 0);
 }
 
 function near(value: number, target: number): boolean {

@@ -53,7 +53,7 @@ describe('PopupPanel strict validators', () => {
     });
   });
 
-  it('resolves the dynamic theme_override_styles/panel key through Window\'s wildcard, not a PopupPanel-specific rule', () => {
+  it("resolves the dynamic theme_override_styles/panel key through Window's wildcard, not a PopupPanel-specific rule", () => {
     // popup.cpp:428 binds the "panel" stylebox and default_theme.cpp:726 registers it
     // under "PopupPanel", so Window's `_get_property_list` (window.cpp:224) yields
     // `theme_override_styles/panel` for this type alone. Window's generic wildcard

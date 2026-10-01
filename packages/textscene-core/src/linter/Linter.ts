@@ -93,7 +93,7 @@ export class Linter {
    * header and a `.tres`'s `[resource]` body, which no id identifies.
    */
   private convertParseErrors(errors: ParseError[]): Diagnostic[] {
-    return errors.map(error => ({
+    return errors.map((error) => ({
       severity: error.severity,
       message: error.message,
       nodeName: error.nodeName ?? '<unknown>',

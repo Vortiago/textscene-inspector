@@ -15,10 +15,7 @@ import { useNodePath } from '../../../r3f/contexts/NodePathContext.js';
 import { useViewportPassCycle } from '../../../r3f/contexts/ViewportPassRegistryContext.js';
 import { useViewportTexture } from '../../../r3f/contexts/ViewportTextureContext.js';
 import { useLocalScene } from '../../../r3f/useUniqueNames.js';
-import {
-  resolveViewportTexturePath,
-  viewportTextureRegistryKey,
-} from '../../../r3f/viewportTexturePath.js';
+import { resolveViewportTexturePath, viewportTextureRegistryKey } from '../../../r3f/viewportTexturePath.js';
 import { unclaimedUniqueNames } from '../../../godot/nodePath.js';
 import { warn } from '../../../logger.js';
 import { VIEWPORT_TEXTURE_TYPE } from './types.js';
@@ -59,10 +56,7 @@ export interface ViewportTextureSlotResult {
  * @param warnAs The caller in the cycle warning, usually its node path. Null
  *   suppresses it, as for `SubViewportContainer`, which the context already names.
  */
-export function useViewportTargetSlot(
-  path: string | null,
-  warnAs: string | null
-): ViewportTextureSlotResult {
+export function useViewportTargetSlot(path: string | null, warnAs: string | null): ViewportTextureSlotResult {
   const entry = useViewportTexture(path);
   const cycle = useViewportPassCycle(path);
   const cyclic = cycle !== null;
@@ -81,7 +75,7 @@ export function useViewportTargetSlot(
     );
   }, [cyclic, path, warnAs]);
 
-  return { texture: cyclic ? null : entry?.texture ?? null, cyclic };
+  return { texture: cyclic ? null : (entry?.texture ?? null), cyclic };
 }
 
 /**

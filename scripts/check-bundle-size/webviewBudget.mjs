@@ -97,27 +97,19 @@ export function checkWebviewBudget(enforce) {
   }
 
   const chunksDir = join(WEBVIEW_DIR, 'chunks');
-  const deadChunks = existsSync(chunksDir)
-    ? readdirSync(chunksDir).filter((f) => DEAD_CHUNK_RE.test(f))
-    : [];
+  const deadChunks = existsSync(chunksDir) ? readdirSync(chunksDir).filter((f) => DEAD_CHUNK_RE.test(f)) : [];
   if (deadChunks.length > 0) {
-    console.error(
-      `[bundle-size] FAIL: dead-weight chunks in dist/webview/chunks: ${deadChunks.join(', ')}`
-    );
-    console.error(
-      '[bundle-size] import drei via @react-three/drei/core/<Module> subpaths, not the barrel.'
-    );
+    console.error(`[bundle-size] FAIL: dead-weight chunks in dist/webview/chunks: ${deadChunks.join(', ')}`);
+    console.error('[bundle-size] import drei via @react-three/drei/core/<Module> subpaths, not the barrel.');
     return 'dead-chunks';
   }
 
   const { visited: closure, unresolved } = staticClosure(WEBVIEW_DIR, ENTRY);
   if (unresolved.size > 0) {
-    console.error(
-      `[bundle-size] FAIL: ${unresolved.size} import(s) resolved to no file on disk:`
-    );
+    console.error(`[bundle-size] FAIL: ${unresolved.size} import(s) resolved to no file on disk:`);
     for (const miss of unresolved) console.error(`  ${miss}`);
     console.error(
-      '[bundle-size] the closure walk reproduces the bundler\'s output layout; update it before trusting the number.'
+      "[bundle-size] the closure walk reproduces the bundler's output layout; update it before trusting the number."
     );
     return 'unresolved-imports';
   }

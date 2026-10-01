@@ -136,9 +136,7 @@ describe('Button strict validators', () => {
     });
 
     it('rejects a non-numeric value', () => {
-      expect(check('autowrap_trim_flags', 'not-a-number')?.code).toBe(
-        'INVALID_AUTOWRAP_TRIM_FLAGS_FORMAT'
-      );
+      expect(check('autowrap_trim_flags', 'not-a-number')?.code).toBe('INVALID_AUTOWRAP_TRIM_FLAGS_FORMAT');
     });
   });
 

@@ -10,7 +10,9 @@ type WorkerSourceModule = { default: string };
 const loadBundledSource = (): Promise<WorkerSourceModule> => import('virtual:texture-worker-source');
 
 /** The factory the loader calls on its first job, and again after an abort terminates the worker. */
-export function textureWorkerFactory(load: () => Promise<WorkerSourceModule> = loadBundledSource): CreateJobWorker {
+export function textureWorkerFactory(
+  load: () => Promise<WorkerSourceModule> = loadBundledSource
+): CreateJobWorker {
   let blobUrl: Promise<string> | undefined;
   return async () => {
     blobUrl ??= load().then(({ default: source }) =>

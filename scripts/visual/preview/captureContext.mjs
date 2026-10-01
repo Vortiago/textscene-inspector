@@ -22,10 +22,7 @@ import {
  * explicitly. `canvas2DFrame` is the project-viewport rect, which widens the window only when it
  * does not fit the default one.
  */
-export async function createCaptureContext(
-  browser,
-  { frameOnOpen, canvas2D = false, canvas2DFrame = null }
-) {
+export async function createCaptureContext(browser, { frameOnOpen, canvas2D = false, canvas2DFrame = null }) {
   const context = await browser.newContext({
     viewport: canvas2D ? canvas2DViewportFor(canvas2DFrame) : VIEWPORT,
     deviceScaleFactor: 1,

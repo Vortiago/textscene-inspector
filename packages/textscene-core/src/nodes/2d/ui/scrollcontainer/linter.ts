@@ -53,8 +53,7 @@ function checkScrollContainer(context: RuleContext): Diagnostic[] {
 const scrollContainerRule: LintRule = {
   meta: {
     name: 'valid-scrollcontainer-single-child',
-    description:
-      'Flags a ScrollContainer that does not have exactly one sortable Control child',
+    description: 'Flags a ScrollContainer that does not have exactly one sortable Control child',
     category: 'validation',
     applicableNodeTypes: ['ScrollContainer'],
     emits: armEmits(arms),

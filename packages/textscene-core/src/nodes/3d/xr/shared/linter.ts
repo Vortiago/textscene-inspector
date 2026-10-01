@@ -15,9 +15,15 @@ import { boolSlotValue } from '../../../../godot/index.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  parentNotXROrigin3D: groundedArm('openxrcompositionlayer-parent-not-xrorigin3d', { kind: 'configuration-warning' }),
-  nonOrthonormalTransform: groundedArm('openxrcompositionlayer-non-orthonormal-transform', { kind: 'configuration-warning' }),
-  holePunchSortOrder: groundedArm('openxrcompositionlayer-hole-punch-sort-order', { kind: 'configuration-warning' }),
+  parentNotXROrigin3D: groundedArm('openxrcompositionlayer-parent-not-xrorigin3d', {
+    kind: 'configuration-warning',
+  }),
+  nonOrthonormalTransform: groundedArm('openxrcompositionlayer-non-orthonormal-transform', {
+    kind: 'configuration-warning',
+  }),
+  holePunchSortOrder: groundedArm('openxrcompositionlayer-hole-punch-sort-order', {
+    kind: 'configuration-warning',
+  }),
 } as const satisfies RuleArms<string>;
 
 // Not modelled: set_layer_viewport's ERR_FAIL_COND_MSG when `use_android_surface` is true (:303-305).
@@ -68,8 +74,7 @@ function checkOpenXRCompositionLayer(context: RuleContext): Diagnostic[] {
   // explicit `enable_hole_punch = true` with sort_order omitted still warns: the trigger is an
   // explicit opt-in, so `default-omitted` does not apply.
   const holePunchEnabled = boolSlotValue(properties.enable_hole_punch) === true;
-  const sortOrder =
-    ruleInt(properties.sort_order, 1);
+  const sortOrder = ruleInt(properties.sort_order, 1);
   if (holePunchEnabled && sortOrder !== null && sortOrder >= 0) {
     reportArm(
       diagnostics,

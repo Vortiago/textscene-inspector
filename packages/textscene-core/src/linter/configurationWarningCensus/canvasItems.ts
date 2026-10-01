@@ -46,7 +46,8 @@ export const canvasItemWarnings: Readonly<Record<string, readonly WarningRow[]>>
       says: 'more than one CanvasModulate in the scene, only one will be active',
       verdict: {
         declined: 'runtime-only',
-        because: 'get_nodes_in_group("_canvas_modulate_" + canvas RID), a live-tree group query, canvas_modulate.cpp:120',
+        because:
+          'get_nodes_in_group("_canvas_modulate_" + canvas RID), a live-tree group query, canvas_modulate.cpp:120',
       },
       gate: 'visible-in-tree',
     },

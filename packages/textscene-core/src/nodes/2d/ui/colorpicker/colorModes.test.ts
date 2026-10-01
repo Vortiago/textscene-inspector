@@ -82,11 +82,21 @@ describe('colorModeChannels', () => {
 
 describe('colorModeAlphaChannel', () => {
   it('is color.a * 255 for every mode but Linear — color_mode.h:51-52', () => {
-    expect(colorModeAlphaChannel(MODE_RGB, { ...RED, a: 0.5 })).toEqual({ label: 'A', value: 127.5, max: 255, decimals: 0 });
+    expect(colorModeAlphaChannel(MODE_RGB, { ...RED, a: 0.5 })).toEqual({
+      label: 'A',
+      value: 127.5,
+      max: 255,
+      decimals: 0,
+    });
   });
 
   it('is the raw alpha, 0..1, for Linear — color_mode.h:127-128', () => {
-    expect(colorModeAlphaChannel(MODE_LINEAR, { ...RED, a: 0.5 })).toEqual({ label: 'A', value: 0.5, max: 1, decimals: 3 });
+    expect(colorModeAlphaChannel(MODE_LINEAR, { ...RED, a: 0.5 })).toEqual({
+      label: 'A',
+      value: 0.5,
+      max: 1,
+      decimals: 3,
+    });
   });
 });
 
@@ -119,7 +129,10 @@ describe('rgbChannelGradientStops', () => {
   });
 });
 
-function closeColor(actual: { r: number; g: number; b: number; a: number }, expected: { r: number; g: number; b: number; a: number }) {
+function closeColor(
+  actual: { r: number; g: number; b: number; a: number },
+  expected: { r: number; g: number; b: number; a: number }
+) {
   expect(actual.r).toBeCloseTo(expected.r, 9);
   expect(actual.g).toBeCloseTo(expected.g, 9);
   expect(actual.b).toBeCloseTo(expected.b, 9);

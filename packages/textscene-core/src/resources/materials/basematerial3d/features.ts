@@ -77,9 +77,7 @@ export const featureKeys: Record<string, PropertyValidator> = {
 
   subsurf_scatter_transmittance_enabled: v.boolean('subsurf_scatter_transmittance_enabled'),
   subsurf_scatter_transmittance_color: v.color('subsurf_scatter_transmittance_color'),
-  subsurf_scatter_transmittance_texture: v.resourceReference(
-    'subsurf_scatter_transmittance_texture'
-  ),
+  subsurf_scatter_transmittance_texture: v.resourceReference('subsurf_scatter_transmittance_texture'),
   // material.cpp:3695 ("0.001,8,0.001,or_greater"); set_transmittance_depth
   // (:2310) bare assigns, and `or_greater` opens the ceiling.
   subsurf_scatter_transmittance_depth: v.float('subsurf_scatter_transmittance_depth', {

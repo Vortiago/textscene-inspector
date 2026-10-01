@@ -9,21 +9,17 @@ import { resolveAnimPlayerPath } from './resolveAnimPlayer';
 
 describe('resolveAnimPlayerPath', () => {
   it('resolves a sibling-relative path (platformer GLB driver)', () => {
-    expect(
-      resolveAnimPlayerPath('Player/AnimationTree', 'NodePath("../Player/AnimationPlayer")')
-    ).toBe('Player/Player/AnimationPlayer');
+    expect(resolveAnimPlayerPath('Player/AnimationTree', 'NodePath("../Player/AnimationPlayer")')).toBe(
+      'Player/Player/AnimationPlayer'
+    );
   });
 
   it('resolves a direct sibling', () => {
-    expect(resolveAnimPlayerPath('Root/Tree', 'NodePath("../AnimationPlayer")')).toBe(
-      'Root/AnimationPlayer'
-    );
+    expect(resolveAnimPlayerPath('Root/Tree', 'NodePath("../AnimationPlayer")')).toBe('Root/AnimationPlayer');
   });
 
   it('resolves a child path with no leading `..`', () => {
-    expect(resolveAnimPlayerPath('Root/Tree', 'NodePath("Inner/Player")')).toBe(
-      'Root/Tree/Inner/Player'
-    );
+    expect(resolveAnimPlayerPath('Root/Tree', 'NodePath("Inner/Player")')).toBe('Root/Tree/Inner/Player');
   });
 
   it('resolves `.` to the tree node itself', () => {
@@ -53,9 +49,7 @@ describe('resolveAnimPlayerPath', () => {
   it('jumps a %Name segment through the claim table of the tree', () => {
     // `get_node_or_null` looks a `%` name up in the owner's table (node.cpp:1930-1938).
     const claims = new Map([['%Hud', 'Root/Ui/Hud']]);
-    expect(resolveAnimPlayerPath('Root/Tree', 'NodePath("%Hud/Player")', claims)).toBe(
-      'Root/Ui/Hud/Player'
-    );
+    expect(resolveAnimPlayerPath('Root/Tree', 'NodePath("%Hud/Player")', claims)).toBe('Root/Ui/Hud/Player');
   });
 
   it('returns null for a %Name segment without a claim table', () => {

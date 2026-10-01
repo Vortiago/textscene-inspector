@@ -81,9 +81,7 @@ function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] 
       ? bezierRefusalProblem(read.refusal, CURVE3D_DATA)
       : shortTiltsProblem(data, read.loaded);
   if (problem === null) return [];
-  return [
-    armDiagnostic(arms.unloadableCurve, node, `Path3D '${node.name}': ${problem}`),
-  ];
+  return [armDiagnostic(arms.unloadableCurve, node, `Path3D '${node.name}': ${problem}`)];
 }
 
 /**

@@ -10,11 +10,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties, extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
-import {
-  listIndices,
-  listWrittenIndices,
-  unsatisfiedIndices,
-} from '../../../../linter/reportedIndices.js';
+import { listIndices, listWrittenIndices, unsatisfiedIndices } from '../../../../linter/reportedIndices.js';
 import { indexedElements, indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
 import { resolveTwoBoneSettingLeaf } from './linterParser.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
@@ -30,7 +26,9 @@ const arms = {
     ruleName: 'twoboneik3d-pole-direction-vector-ignored',
     grounding: { kind: 'engine', at: 'two_bone_ik_3d.cpp:446' },
   },
-  settingMissingTargetNode: groundedArm('twoboneik3d-setting-missing-target-node', { kind: 'configuration-warning' }),
+  settingMissingTargetNode: groundedArm('twoboneik3d-setting-missing-target-node', {
+    kind: 'configuration-warning',
+  }),
 } as const satisfies RuleArms<string>;
 
 /**

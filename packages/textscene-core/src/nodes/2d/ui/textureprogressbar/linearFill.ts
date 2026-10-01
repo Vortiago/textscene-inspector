@@ -38,7 +38,11 @@ export function linearProgressDraw(
   switch (mode) {
     case FILL_LEFT_TO_RIGHT: {
       const w = s.x * ratio;
-      return { region: { x: 0, y: 0, w, h: s.y }, offset: { x: progressOffset.x, y: progressOffset.y }, size: { x: w, y: s.y } };
+      return {
+        region: { x: 0, y: 0, w, h: s.y },
+        offset: { x: progressOffset.x, y: progressOffset.y },
+        size: { x: w, y: s.y },
+      };
     }
     case FILL_RIGHT_TO_LEFT: {
       const w = s.x * ratio;
@@ -51,7 +55,11 @@ export function linearProgressDraw(
     }
     case FILL_TOP_TO_BOTTOM: {
       const h = s.y * ratio;
-      return { region: { x: 0, y: 0, w: s.x, h }, offset: { x: progressOffset.x, y: progressOffset.y }, size: { x: s.x, y: h } };
+      return {
+        region: { x: 0, y: 0, w: s.x, h },
+        offset: { x: progressOffset.x, y: progressOffset.y },
+        size: { x: s.x, y: h },
+      };
     }
     case FILL_BOTTOM_TO_TOP: {
       const h = s.y * ratio;

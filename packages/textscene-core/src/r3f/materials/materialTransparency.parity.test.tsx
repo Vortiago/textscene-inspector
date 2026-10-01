@@ -83,7 +83,9 @@ describe('StandardMaterialSlot parity rendering', () => {
   });
 
   it('ALPHA material does not write depth', async () => {
-    const m = await matFor(parseStandardMaterial3DScalars({ transparency: '1', albedo_color: 'Color(1,1,1,0.5)' }));
+    const m = await matFor(
+      parseStandardMaterial3DScalars({ transparency: '1', albedo_color: 'Color(1,1,1,0.5)' })
+    );
     expect(m.depthWrite).toBe(false);
     expect(m.transparent).toBe(true);
   });

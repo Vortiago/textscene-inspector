@@ -12,7 +12,9 @@ import { parentTypeVerdict, placementPhrase } from '../../../../linter/parentTyp
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  parentNotSkeleton3D: groundedArm('skeletonmodifier3d-parent-not-skeleton3d', { kind: 'configuration-warning' }),
+  parentNotSkeleton3D: groundedArm('skeletonmodifier3d-parent-not-skeleton3d', {
+    kind: 'configuration-warning',
+  }),
 } as const satisfies RuleArms<string>;
 
 function checkSkeletonModifier3D(context: RuleContext): Diagnostic[] {

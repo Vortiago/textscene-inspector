@@ -11,21 +11,14 @@ import type { AnimationClip, EulerOrder, Object3D } from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import {
-  useAnimationTransport,
-  type PlayState,
-} from '../../../r3f/contexts/AnimationTransportContext';
+import { useAnimationTransport, type PlayState } from '../../../r3f/contexts/AnimationTransportContext';
 import type { BoundClips } from '../../../r3f/contexts/AnimationDriverContext';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { usePlaybackLoop } from '../../../r3f/animation/usePlaybackLoop';
 import { applyLoopOverride } from '../../../r3f/animation/loopOverride';
 import { useAnimationDriverMount } from '../../../r3f/animation/useAnimationDriverMount';
-import {
-  restoreSnapshot,
-  snapshotPose,
-  type PoseSnapshot,
-} from '../../../r3f/animation/poseSnapshot';
+import { restoreSnapshot, snapshotPose, type PoseSnapshot } from '../../../r3f/animation/poseSnapshot';
 import {
   bindClip,
   splitTrackName,
@@ -37,11 +30,7 @@ import { useUniqueNamePaths } from '../../../r3f/useUniqueNames';
 import { resolveAnimations } from './animationResolver';
 import { resolveAnimationRootPath, resolveTrackScenePath } from './animationRoot';
 import { buildClip, loopSettingsFor } from './clipBuilder';
-import {
-  sampleSteppedValue,
-  sampleInterpolatedValue,
-  VALUE_PUSH_PROPERTIES,
-} from './valueTracks';
+import { sampleSteppedValue, sampleInterpolatedValue, VALUE_PUSH_PROPERTIES } from './valueTracks';
 
 import type { AnimationPlayerProperties } from './types';
 
@@ -81,8 +70,7 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
   // player for `root_node`, the Animation root for each Track.
   const playerNames = useUniqueNamePaths(nodePath);
   const rootPath = useMemo(
-    () =>
-      nodePath === null ? null : resolveAnimationRootPath(nodePath, properties.root_node, playerNames),
+    () => (nodePath === null ? null : resolveAnimationRootPath(nodePath, properties.root_node, playerNames)),
     [nodePath, properties.root_node, playerNames]
   );
   const rootNames = useUniqueNamePaths(rootPath);
@@ -224,9 +212,10 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     const owned = ownedValues.current;
     const next = new Map<string, { path: string; property: string }>();
     for (const { path, property, keys, interp } of valueTargets.targets) {
-      const value = Object.hasOwn(VALUE_PUSH_PROPERTIES, property) && VALUE_PUSH_PROPERTIES[property]
-        ? sampleInterpolatedValue(keys, action.time, interp)
-        : [sampleSteppedValue(keys, action.time)];
+      const value =
+        Object.hasOwn(VALUE_PUSH_PROPERTIES, property) && VALUE_PUSH_PROPERTIES[property]
+          ? sampleInterpolatedValue(keys, action.time, interp)
+          : [sampleSteppedValue(keys, action.time)];
       valueRegistry.set(path, property, value);
       next.set(`${path}:${property}`, { path, property });
     }
@@ -240,8 +229,7 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
   // value tracks) in an effect, not a frame tick, so the authored values return even when a state
   // change does not tick the loop.
   useEffect(() => {
-    const driving =
-      !!valueTargets && (transport.playState === 'playing' || transport.playState === 'paused');
+    const driving = !!valueTargets && (transport.playState === 'playing' || transport.playState === 'paused');
     if (!driving) releaseOwnedValues();
   }, [valueTargets, transport.playState, releaseOwnedValues]);
   useEffect(() => releaseOwnedValues, [releaseOwnedValues]); // release on unmount

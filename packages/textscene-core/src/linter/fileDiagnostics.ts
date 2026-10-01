@@ -16,8 +16,7 @@ export const FILE_DIAGNOSTICS = {
   legacyFormat: groundedArm('legacy-format-version', {
     kind: 'no-engine-counterpart',
     scope: 'previewer-limitation',
-    because:
-      'the engine reads the file; the rules are written against the format it writes today',
+    because: 'the engine reads the file; the rules are written against the format it writes today',
   }),
   /**
    * A `parent=` path that resolves against nothing. Godot warns, re-parents the

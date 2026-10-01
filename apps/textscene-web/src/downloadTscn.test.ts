@@ -20,9 +20,7 @@ let revokeObjectURL: MockInstance<typeof URL.revokeObjectURL>;
 
 /** Replaces the anchor's click with `onClick`, after it records the click in `clicks`. */
 function recordClicks(clicks: ClickRecord[], onClick: () => void): void {
-  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
-    this: HTMLAnchorElement
-  ) {
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
     clicks.push({
       anchor: this,
       wasInDocument: this.isConnected,

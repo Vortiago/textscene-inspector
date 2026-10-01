@@ -50,8 +50,10 @@ describe('NavigationLink3D position rule', () => {
 
   it('warns when start and end are the same point', () => {
     const warnings = reportsOf(
-      linter.lint(scene('start_position = Vector3(1, 2, 3)\nend_position = Vector3(1, 2, 3)\n'))
-    , RULE, 'warning');
+      linter.lint(scene('start_position = Vector3(1, 2, 3)\nend_position = Vector3(1, 2, 3)\n')),
+      RULE,
+      'warning'
+    );
     expect(warnings).toHaveLength(1);
     expect(warnings[0]!.nodeName).toBe('Link');
   });
@@ -61,7 +63,9 @@ describe('NavigationLink3D position rule', () => {
   });
 
   it('warns when only end_position is written, leaving start_position at its zero default', () => {
-    expect(reportsOf(linter.lint(scene('end_position = Vector3(0, 0, 0)\n')), RULE, 'warning')).toHaveLength(1);
+    expect(reportsOf(linter.lint(scene('end_position = Vector3(0, 0, 0)\n')), RULE, 'warning')).toHaveLength(
+      1
+    );
   });
 
   it('stays quiet when only end_position moves it off the shared default', () => {
@@ -72,18 +76,20 @@ describe('NavigationLink3D position rule', () => {
     // CMP_EPSILON = 1e-5; a component difference of 1e-6 is well inside it.
     expect(
       reportsOf(
-        linter.lint(
-          scene('start_position = Vector3(1, 1, 1)\nend_position = Vector3(1.000001, 1, 1)\n')
-        )
-      , RULE, 'warning')
+        linter.lint(scene('start_position = Vector3(1, 1, 1)\nend_position = Vector3(1.000001, 1, 1)\n')),
+        RULE,
+        'warning'
+      )
     ).toHaveLength(1);
   });
 
   it('stays quiet on a component difference outside tolerance', () => {
     expect(
       reportsOf(
-        linter.lint(scene('start_position = Vector3(1, 1, 1)\nend_position = Vector3(1.01, 1, 1)\n'))
-      , RULE, 'warning')
+        linter.lint(scene('start_position = Vector3(1, 1, 1)\nend_position = Vector3(1.01, 1, 1)\n')),
+        RULE,
+        'warning'
+      )
     ).toEqual([]);
   });
 

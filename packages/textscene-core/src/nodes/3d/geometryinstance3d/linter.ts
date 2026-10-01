@@ -14,9 +14,15 @@ import { ruleInt } from '../../../linter/validators/commonValidators.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  endBeforeBegin: groundedArm('geometryinstance3d-visibility-range-end-before-begin', { kind: 'configuration-warning' }),
-  beginFadeWithoutMargin: groundedArm('geometryinstance3d-visibility-range-begin-fade-without-margin', { kind: 'configuration-warning' }),
-  endFadeWithoutMargin: groundedArm('geometryinstance3d-visibility-range-end-fade-without-margin', { kind: 'configuration-warning' }),
+  endBeforeBegin: groundedArm('geometryinstance3d-visibility-range-end-before-begin', {
+    kind: 'configuration-warning',
+  }),
+  beginFadeWithoutMargin: groundedArm('geometryinstance3d-visibility-range-begin-fade-without-margin', {
+    kind: 'configuration-warning',
+  }),
+  endFadeWithoutMargin: groundedArm('geometryinstance3d-visibility-range-end-fade-without-margin', {
+    kind: 'configuration-warning',
+  }),
 } as const satisfies RuleArms<string>;
 
 const FADE_SELF = 1;

@@ -10,11 +10,7 @@ import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import type {
-  TscnExternalResource,
-  TscnInternalResource,
-  TscnNode,
-} from '../../../parser/types';
+import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
 
@@ -28,11 +24,7 @@ function makeNode(): TscnNode {
   return { name: 'M', type: 'MeshInstance3D', children: [], properties: props };
 }
 
-function sub(
-  type: string,
-  id: string,
-  data: Record<string, string | undefined>
-): TscnInternalResource {
+function sub(type: string, id: string, data: Record<string, string | undefined>): TscnInternalResource {
   return {
     id,
     type,
@@ -158,13 +150,7 @@ describe('StandardMaterial3D UV transforms (assertions 40–47)', () => {
         emission_texture: 'ExtResource("5")',
         uv1_scale: 'Vector3(4, 4, 1)',
       },
-      externals: [
-        ext('1', A_PATH),
-        ext('2', N_PATH),
-        ext('3', R_PATH),
-        ext('4', M_PATH),
-        ext('5', E_PATH),
-      ],
+      externals: [ext('1', A_PATH), ext('2', N_PATH), ext('3', R_PATH), ext('4', M_PATH), ext('5', E_PATH)],
       cached: [
         { path: A_PATH, texture: tex() },
         { path: N_PATH, texture: tex() },

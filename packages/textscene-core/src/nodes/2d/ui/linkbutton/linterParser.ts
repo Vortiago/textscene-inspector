@@ -59,13 +59,9 @@ validatorRegistry.registerAll('LinkButton', {
   // 0 .. 6 (servers/text/text_server.cpp:681-687, text_server.h:214-222). The hint labels index 5 "None",
   // but the constant is STRUCTURED_TEXT_GDSCRIPT. set_structured_text_bidi_override
   // (link_button.cpp:83-89) assigns unconditionally.
-  structured_text_bidi_override: v.enumInt(
-    'structured_text_bidi_override',
-    0,
-    6,
-    STRUCTURED_TEXT_PARSER,
-    { hinted: 'link_button.cpp:355' }
-  ),
+  structured_text_bidi_override: v.enumInt('structured_text_bidi_override', 0, 6, STRUCTURED_TEXT_PARSER, {
+    hinted: 'link_button.cpp:355',
+  }),
   // link_button.cpp:356: an ARRAY with no hint, so never written wrapped.
   // set_structured_text_bidi_override_options (link_button.cpp:118-122) assigns straight through, so
   // only the literal shape is checked.

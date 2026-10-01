@@ -24,16 +24,19 @@ function contactDiagnostics(dim: PhysicsDim, properties: Record<string, string>)
     .filter((d) => d.ruleName.endsWith('-max-contacts-without-monitor'));
 }
 
-describe.each<PhysicsDim>(['2D', '3D'])('RigidBody%s max_contacts_reported without contact_monitor', (dim) => {
-  it('warns for a positive count', () => {
-    expect(contactDiagnostics(dim, { max_contacts_reported: '10' })).toHaveLength(1);
-  });
+describe.each<PhysicsDim>(['2D', '3D'])(
+  'RigidBody%s max_contacts_reported without contact_monitor',
+  (dim) => {
+    it('warns for a positive count', () => {
+      expect(contactDiagnostics(dim, { max_contacts_reported: '10' })).toHaveLength(1);
+    });
 
-  it('stays silent on an explicit 0, the default', () => {
-    expect(contactDiagnostics(dim, { max_contacts_reported: '0' })).toEqual([]);
-  });
+    it('stays silent on an explicit 0, the default', () => {
+      expect(contactDiagnostics(dim, { max_contacts_reported: '0' })).toEqual([]);
+    });
 
-  it('stays silent on a count the INT slot cannot read', () => {
-    expect(contactDiagnostics(dim, { max_contacts_reported: '"ten"' })).toEqual([]);
-  });
-});
+    it('stays silent on a count the INT slot cannot read', () => {
+      expect(contactDiagnostics(dim, { max_contacts_reported: '"ten"' })).toEqual([]);
+    });
+  }
+);

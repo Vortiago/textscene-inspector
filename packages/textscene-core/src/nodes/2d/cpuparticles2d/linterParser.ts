@@ -55,7 +55,11 @@ validatorRegistry.registerAll('CPUParticles2D', {
   seed: v.int('seed', { min: 0, max: 4294967295, hinted: 'cpu_particles_2d.cpp:1502' }),
   // cpu_particles_2d.cpp:1503 hints "0,1,0.01" hard both ends;
   // set_lifetime_randomness (cpu_particles_2d.cpp:106-108) assigns unconditionally.
-  lifetime_randomness: v.float('lifetime_randomness', { min: 0, max: 1, hinted: 'cpu_particles_2d.cpp:1503' }),
+  lifetime_randomness: v.float('lifetime_randomness', {
+    min: 0,
+    max: 1,
+    hinted: 'cpu_particles_2d.cpp:1503',
+  }),
   // cpu_particles_2d.cpp:1504 hints "0,1000,1,suffix:FPS": hard both ends, and
   // the `suffix:` is a unit. set_fixed_fps (cpu_particles_2d.cpp:283-285) assigns
   // unconditionally, so both ends warn, as in the CPUParticles3D twin.

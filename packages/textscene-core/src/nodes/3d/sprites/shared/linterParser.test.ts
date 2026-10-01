@@ -43,7 +43,7 @@ const KEYS: string[] = [
 ];
 /** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
-const LEAVES = ["AnimatedSprite3D","Sprite3D"] as const;
+const LEAVES = ['AnimatedSprite3D', 'Sprite3D'] as const;
 
 describe('SpriteBase3D shared validators', () => {
   it('registers exactly what SpriteBase3D binds', () => {
@@ -59,26 +59,23 @@ describe('SpriteBase3D shared validators', () => {
     expect(missing).toEqual([]);
   });
 
-  it.each(LEAVES)(
-    '%s resolves every key to SpriteBase3D\'s own function, never a leaf shadow',
-    (nodeType) => {
-      // Guards the guard: if the leaf's own module never actually registered
-      // anything in THIS test file's module graph, `not.toContain(key)` below
-      // would pass vacuously for every key, regardless of shadowing.
-      expect(
-        validatorRegistry.getOwnKeys(nodeType).length,
-        `${nodeType} registered no validators of its own in this test's module graph`
-      ).toBeGreaterThan(0);
-      for (const key of KEYS) {
-        const owned = validatorRegistry.findValidator('SpriteBase3D', key);
-        expect(owned, `SpriteBase3D does not declare '${key}'`).not.toBeNull();
-        // The same function, not merely some validator: a shadowing copy on the
-        // leaf would answer here while drifting from the tier's rule.
-        expect(validatorRegistry.findValidator(nodeType, key)).toBe(owned);
-        expect(validatorRegistry.getOwnKeys(nodeType)).not.toContain(key);
-      }
+  it.each(LEAVES)("%s resolves every key to SpriteBase3D's own function, never a leaf shadow", (nodeType) => {
+    // Guards the guard: if the leaf's own module never actually registered
+    // anything in THIS test file's module graph, `not.toContain(key)` below
+    // would pass vacuously for every key, regardless of shadowing.
+    expect(
+      validatorRegistry.getOwnKeys(nodeType).length,
+      `${nodeType} registered no validators of its own in this test's module graph`
+    ).toBeGreaterThan(0);
+    for (const key of KEYS) {
+      const owned = validatorRegistry.findValidator('SpriteBase3D', key);
+      expect(owned, `SpriteBase3D does not declare '${key}'`).not.toBeNull();
+      // The same function, not merely some validator: a shadowing copy on the
+      // leaf would answer here while drifting from the tier's rule.
+      expect(validatorRegistry.findValidator(nodeType, key)).toBe(owned);
+      expect(validatorRegistry.getOwnKeys(nodeType)).not.toContain(key);
     }
-  );
+  });
 
   it('AnimatedSprite3D and Sprite3D resolve every shared key to the identical function', () => {
     // The regression this tier closes: `findValidator('AnimatedSprite3D', 'centered')` resolves,

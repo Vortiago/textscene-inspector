@@ -49,7 +49,11 @@ const CORPUS: Readonly<Record<string, string>> = {
 };
 
 /** Every id the corpus values name, declared ahead of the TileSet so none dangles. */
-const DECLARED = [...new Set(Object.values(CORPUS).flatMap((v) => [...v.matchAll(/SubResource\("([^"]+)"\)/g)].map((m) => m[1]!)))]
+const DECLARED = [
+  ...new Set(
+    Object.values(CORPUS).flatMap((v) => [...v.matchAll(/SubResource\("([^"]+)"\)/g)].map((m) => m[1]!))
+  ),
+]
   .map((id) => subResource('Resource', {}, id))
   .join('\n\n');
 

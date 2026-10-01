@@ -61,7 +61,9 @@ describe('graphEditLayout (graph_edit.cpp:435-462, position only)', () => {
       offsetBottom: 50,
     });
     const n = graphEdit('G', { scrollOffset: { x: 10, y: 5 } }, [child]);
-    const rects = asMap(graphEditLayout(n, [{ node: child, minSize: { x: 0, y: 0 } }], { x: 0, y: 0, w: 800, h: 600 }, ctx()));
+    const rects = asMap(
+      graphEditLayout(n, [{ node: child, minSize: { x: 0, y: 0 } }], { x: 0, y: 0, w: 800, h: 600 }, ctx())
+    );
     expect(rects.get('n')).toEqual({ x: 30, y: 55, w: 100, h: 50 });
   });
 
@@ -74,21 +76,27 @@ describe('graphEditLayout (graph_edit.cpp:435-462, position only)', () => {
       offsetBottom: 50,
     });
     const n = graphEdit('G', { zoom: 2, scrollOffset: { x: 0, y: 0 } }, [child]);
-    const rects = asMap(graphEditLayout(n, [{ node: child, minSize: { x: 0, y: 0 } }], { x: 0, y: 0, w: 800, h: 600 }, ctx()));
+    const rects = asMap(
+      graphEditLayout(n, [{ node: child, minSize: { x: 0, y: 0 } }], { x: 0, y: 0, w: 800, h: 600 }, ctx())
+    );
     expect(rects.get('n')).toEqual({ x: 80, y: 120, w: 100, h: 50 });
   });
 
   it('defaults position_offset to (0, 0) when absent', () => {
     const child = graphNodeChild('n', { offsetLeft: 0, offsetTop: 0, offsetRight: 10, offsetBottom: 10 });
     const n = graphEdit('G', {}, [child]);
-    const rects = asMap(graphEditLayout(n, [{ node: child, minSize: { x: 0, y: 0 } }], { x: 0, y: 0, w: 800, h: 600 }, ctx()));
+    const rects = asMap(
+      graphEditLayout(n, [{ node: child, minSize: { x: 0, y: 0 } }], { x: 0, y: 0, w: 800, h: 600 }, ctx())
+    );
     expect(rects.get('n')).toEqual({ x: 0, y: 0, w: 10, h: 10 });
   });
 
   it('a non-GraphElement child resolves as an ordinary free/anchored Control, untouched by position_offset', () => {
     const child = controlChild('c', { offsetLeft: 5, offsetTop: 5, offsetRight: 25, offsetBottom: 15 });
     const n = graphEdit('G', {}, [child]);
-    const rects = asMap(graphEditLayout(n, [{ node: child, minSize: { x: 0, y: 0 } }], { x: 0, y: 0, w: 800, h: 600 }, ctx()));
+    const rects = asMap(
+      graphEditLayout(n, [{ node: child, minSize: { x: 0, y: 0 } }], { x: 0, y: 0, w: 800, h: 600 }, ctx())
+    );
     expect(rects.get('c')).toEqual({ x: 5, y: 5, w: 20, h: 10 });
   });
 });

@@ -10,11 +10,7 @@ import * as THREE from 'three';
 import { AnimationTree, dominantActionTime } from './Component';
 import type { TscnNode } from '../../../parser/types';
 import type { AnimationTreeProperties } from './types';
-import {
-  AnimationTreeProcessMode,
-  CallbackModeDiscrete,
-  CallbackModeMethod,
-} from './types';
+import { AnimationTreeProcessMode, CallbackModeDiscrete, CallbackModeMethod } from './types';
 
 function makeNode(overrides: Partial<AnimationTreeProperties> = {}): TscnNode {
   const props: AnimationTreeProperties = {
@@ -45,15 +41,11 @@ function makeNode(overrides: Partial<AnimationTreeProperties> = {}): TscnNode {
 
 describe('<AnimationTree>', () => {
   it('renders without crashing with default props', async () => {
-    await expect(
-      ReactThreeTestRenderer.create(<AnimationTree node={makeNode()} />)
-    ).resolves.toBeDefined();
+    await expect(ReactThreeTestRenderer.create(<AnimationTree node={makeNode()} />)).resolves.toBeDefined();
   });
 
   it('mounts a group tagged with nodeType AnimationTree', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <AnimationTree node={makeNode({ name: 'Tree' })} />
-    );
+    const renderer = await ReactThreeTestRenderer.create(<AnimationTree node={makeNode({ name: 'Tree' })} />);
     const group = renderer.scene.findByProps({ name: 'Tree' });
     const userData = group.instance.userData as { nodeType: string };
     expect(userData.nodeType).toBe('AnimationTree');
@@ -92,9 +84,7 @@ describe('<AnimationTree>', () => {
   });
 
   it('renders no visible meshes of its own (is a pure container)', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <AnimationTree node={makeNode()} />
-    );
+    const renderer = await ReactThreeTestRenderer.create(<AnimationTree node={makeNode()} />);
     const meshes = renderer.scene.findAllByType('Mesh');
     expect(meshes).toHaveLength(0);
   });

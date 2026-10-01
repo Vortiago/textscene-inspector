@@ -32,7 +32,10 @@ function gridMapNode(properties: Record<string, string>): TscnNode {
     name: 'MyGridMap',
     type: 'GridMap',
     children: [],
-    properties: parseGridMap({ type: 'node', attributes: { type: 'GridMap', name: 'MyGridMap' } }, properties),
+    properties: parseGridMap(
+      { type: 'node', attributes: { type: 'GridMap', name: 'MyGridMap' } },
+      properties
+    ),
   };
 }
 
@@ -68,9 +71,7 @@ describe('<GridMap>', () => {
 
   it('falls back to a cell-sized wireframe box per decoded cell when no library resolves', async () => {
     // Two cells (items 0 and 0 at different positions); no mesh_library → boxes.
-    const renderer = await render(
-      gridMapNode({ data: '{"cells": PackedInt32Array(0, 0, 0, 1, 0, 0)}' })
-    );
+    const renderer = await render(gridMapNode({ data: '{"cells": PackedInt32Array(0, 0, 0, 1, 0, 0)}' }));
     expect(placeholderCells(renderer)).toHaveLength(2);
   });
 
@@ -78,9 +79,7 @@ describe('<GridMap>', () => {
     // One cell at the grid origin. Godot's _get_offset() adds cell_size * 0.5
     // on every axis whose cell_center_* is on, and all three default to on, so
     // (0,0,0) renders at (1,1,1) with the default 2-unit cell.
-    const renderer = await render(
-      gridMapNode({ data: '{"cells": PackedInt32Array(0, 0, 0)}' })
-    );
+    const renderer = await render(gridMapNode({ data: '{"cells": PackedInt32Array(0, 0, 0)}' }));
 
     expect(placeholderCells(renderer)[0]!.instance.position.toArray()).toEqual([1, 1, 1]);
   });
@@ -100,9 +99,7 @@ describe('<GridMap>', () => {
 
   it('adds the offset on top of the cell stride, not instead of it', async () => {
     // Cell (1, 0, 0) with the default 2-unit cell: 1*2 + 1 = 3 on x.
-    const renderer = await render(
-      gridMapNode({ data: '{"cells": PackedInt32Array(1, 0, 0)}' })
-    );
+    const renderer = await render(gridMapNode({ data: '{"cells": PackedInt32Array(1, 0, 0)}' }));
 
     expect(placeholderCells(renderer)[0]!.instance.position.toArray()).toEqual([3, 1, 1]);
   });

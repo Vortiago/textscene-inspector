@@ -28,9 +28,7 @@ interface CategoryBucket {
   items: readonly ViewportSelectorOption[];
 }
 
-function bucketByCategory(
-  options: readonly ViewportSelectorOption[]
-): readonly CategoryBucket[] {
+function bucketByCategory(options: readonly ViewportSelectorOption[]): readonly CategoryBucket[] {
   const map = new Map<string, ViewportSelectorOption[]>();
   for (const opt of options) {
     const key = opt.category ?? '';
@@ -62,12 +60,7 @@ export function ViewportSelector({
   return (
     <div className={rootClass}>
       <label className={styles.label}>{label}</label>
-      <select
-        className={styles.select}
-        value={value}
-        onChange={handleChange}
-        aria-label={label}
-      >
+      <select className={styles.select} value={value} onChange={handleChange} aria-label={label}>
         {buckets.map(({ category, items }) =>
           category ? (
             <optgroup key={category} label={category}>

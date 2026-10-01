@@ -24,7 +24,7 @@ describe('Linter', () => {
       const diagnostics = linter.lint(content);
 
       expect(diagnostics.length).toBeGreaterThan(0);
-      diagnostics.forEach(d => {
+      diagnostics.forEach((d) => {
         expect(d.ruleName).toBe('strict-parser');
       });
     });
@@ -40,7 +40,7 @@ describe('Linter', () => {
       const diagnostics = linter.lint(content);
 
       expect(diagnostics.length).toBeGreaterThan(0);
-      diagnostics.forEach(d => {
+      diagnostics.forEach((d) => {
         expect(d.nodeName).toBe('Root');
         expect(d.nodeType).toBe('<unknown>');
       });
@@ -60,7 +60,7 @@ describe('Linter', () => {
 `;
 
       const diagnostics = linter.lint(content);
-      const stranded = diagnostics.find(d => d.message.includes('has vanished'));
+      const stranded = diagnostics.find((d) => d.message.includes('has vanished'));
 
       expect(stranded).toBeDefined();
       expect(stranded?.nodeName).toBe('Stranded');
@@ -77,7 +77,7 @@ describe('Linter', () => {
       const diagnostics = linter.lint(content);
 
       expect(diagnostics.length).toBeGreaterThan(0);
-      diagnostics.forEach(d => {
+      diagnostics.forEach((d) => {
         expect(d.nodeName).toBe('<unknown>');
         expect(d.nodeType).toBe('<unknown>');
       });
@@ -109,7 +109,7 @@ describe('Linter', () => {
       const diagnostics = linter.lint(content);
 
       expect(diagnostics.length).toBeGreaterThan(0);
-      diagnostics.forEach(d => {
+      diagnostics.forEach((d) => {
         expect(d.severity).toBe('error');
       });
     });

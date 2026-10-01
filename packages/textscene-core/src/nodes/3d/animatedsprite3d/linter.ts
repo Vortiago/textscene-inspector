@@ -11,7 +11,9 @@ import { DEFAULT_ANIMATION_NAME, literalText } from '../../../godot/index.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  requiresSpriteFrames: groundedArm('animatedsprite3d-requires-spriteframes', { kind: 'configuration-warning' }),
+  requiresSpriteFrames: groundedArm('animatedsprite3d-requires-spriteframes', {
+    kind: 'configuration-warning',
+  }),
   animationWithoutSpriteFrames: {
     severity: 'error',
     ruleName: 'animatedsprite3d-animation-no-spriteframes',
@@ -60,8 +62,7 @@ function checkAnimatedSprite3D(context: RuleContext): Diagnostic[] {
 const animatedSprite3DValidationRule: LintRule = {
   meta: {
     name: 'valid-animatedsprite3d-properties',
-    description:
-      "Validates AnimatedSprite3D SpriteFrames references and animation names",
+    description: 'Validates AnimatedSprite3D SpriteFrames references and animation names',
     category: 'validation',
     applicableNodeTypes: ['AnimatedSprite3D'],
     emits: armEmits(arms),

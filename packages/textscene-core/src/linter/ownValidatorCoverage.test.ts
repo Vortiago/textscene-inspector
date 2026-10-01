@@ -26,7 +26,7 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
     "a solver body; the class is a `_solve_iteration` override alone, parameterised entirely by IterateIK3D's keys",
   CheckBox: 'a themed BaseButton; its constructor only changes inherited defaults',
   CSGCombiner3D:
-    'a CSGShape3D whose whole class body is `_build_brush` and a constructor (csg_shape.h:194-202, csg_shape.cpp:1072-1077); no _bind_methods, so operation and the collision keys are CSGShape3D\'s',
+    "a CSGShape3D whose whole class body is `_build_brush` and a constructor (csg_shape.h:194-202, csg_shape.cpp:1072-1077); no _bind_methods, so operation and the collision keys are CSGShape3D's",
   CheckButton: 'a themed BaseButton; its constructor only changes inherited defaults',
   Container: 'layout behaviour only, driven entirely by Control keys',
   FABRIK3D:
@@ -46,7 +46,7 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
   SpringBoneCollisionPlane3D:
     'an infinite XZ plane whose normal is +Y through the base offsets, so it needs no extent of its own; the class is a _collide override alone (spring_bone_collision_plane_3d.cpp:31-43) with no _bind_methods under any spelling, which GDCLASS then skips binding (object.h:526), and its XML lists no members',
   PhysicalBoneSimulator3D:
-    "drives its PhysicalBone3D children, which hold every simulation parameter; _bind_methods binds five methods and zero ADD_PROPERTY (physical_bone_simulator_3d.cpp:386-393), and it overrides no property-list hook under either spelling",
+    'drives its PhysicalBone3D children, which hold every simulation parameter; _bind_methods binds five methods and zero ADD_PROPERTY (physical_bone_simulator_3d.cpp:386-393), and it overrides no property-list hook under either spelling',
   MarginContainer: 'margins are theme constants, not properties',
   OpenXRBindingModifierEditor:
     'editor-only PanelContainer; its constructor only changes the inherited size_flags_horizontal default',
@@ -72,9 +72,9 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
   XRCamera3D:
     'the headset drives its transform, so it declares nothing of its own: xr_nodes.cpp has no XRCamera3D::_bind_methods at all, and its single XML member is physics_interpolation_mode carrying overrides=Node. Its _validate_property (xr_nodes.cpp:39-47) only sets PROPERTY_USAGE_NO_EDITOR on five inherited Camera3D keys, and only under is_editor_hint(), so those keys still serialise and Camera3D still validates them',
   XRAnchor3D:
-    'a tracked-anchor transform relay: _bind_methods (xr_nodes.cpp:660-663) binds get_size and get_plane as METHODS and nothing else, with no ADD_PROPERTY and no property-list override under either spelling, and its XML carries no members block. Everything it serialises is XRNode3D\'s',
+    "a tracked-anchor transform relay: _bind_methods (xr_nodes.cpp:660-663) binds get_size and get_plane as METHODS and nothing else, with no ADD_PROPERTY and no property-list override under either spelling, and its XML carries no members block. Everything it serialises is XRNode3D's",
   XRController3D:
-    'a tracked-controller input reader: _bind_methods (xr_nodes.cpp:524-538) binds is_button_pressed/get_input/get_float/get_vector2/get_tracker_hand as METHODS plus four signals, with no ADD_PROPERTY and no property-list override under either spelling. Its XML carries no members block, and everything it serialises is XRNode3D\'s',
+    "a tracked-controller input reader: _bind_methods (xr_nodes.cpp:524-538) binds is_button_pressed/get_input/get_float/get_vector2/get_tracker_hand as METHODS plus four signals, with no ADD_PROPERTY and no property-list override under either spelling. Its XML carries no members block, and everything it serialises is XRNode3D's",
   OpenXRRenderModel:
     'its one member, render_model (openxr_render_model.cpp:46), is a Variant::RID. RID is not excluded by grammar — VariantWriter::write puts it in the ordinary misc-types branch (variant_parser.cpp:2157-2163), not the SIGNAL/CALLABLE "do not really store" bucket, and its usage carries STORAGE. What rules it out is ownership: the only path that sets a non-default value is OpenXRRenderModelManager::_update_models (openxr_render_model_manager.cpp:93-96), which memnew/add_child()es these nodes without ever calling set_owner(), so packed_scene.cpp:797 discards them before any save. A hand-placed node keeps the RID() default, and only non-default values are written',
 };
@@ -116,26 +116,62 @@ function typesWithoutOwnValidators(): string[] {
  * the only correct removal.
  */
 const UNDECLARED_RESOURCES: readonly string[] = [
-  'ArrayMesh', 'AtlasTexture', 'BoxMesh', 'BoxShape3D', 'CanvasItemMaterial', 'CapsuleMesh',
+  'ArrayMesh',
+  'AtlasTexture',
+  'BoxMesh',
+  'BoxShape3D',
+  'CanvasItemMaterial',
+  'CapsuleMesh',
   'CompressedTexture2D',
-  'ConcavePolygonShape3D', 'ConvexPolygonShape3D', 'Curve', 'Curve2D', 'Curve3D', 'CylinderMesh',
-  'FastNoiseLite', 'Gradient', 'GradientTexture2D', 'ImageTexture',
-  'NavigationMesh', 'NavigationPolygon',
+  'ConcavePolygonShape3D',
+  'ConvexPolygonShape3D',
+  'Curve',
+  'Curve2D',
+  'Curve3D',
+  'CylinderMesh',
+  'FastNoiseLite',
+  'Gradient',
+  'GradientTexture2D',
+  'ImageTexture',
+  'NavigationMesh',
+  'NavigationPolygon',
   // `Noise` and `Texture` are abstract tiers with zero `ADD_PROPERTY` calls in
   // 4.6.3, so there is nothing of their own to validate; they are listed to
   // record that, not as work.
-  'Noise', 'NoiseTexture2D', 'PackedScene', 'PanoramaSkyMaterial',
-  'PhysicalSkyMaterial', 'PrismMesh', 'ProceduralSkyMaterial', 'QuadMesh', 'RectangleShape2D',
-  'ShaderMaterial', 'Sky', 'SphereMesh', 'SpriteFrames', 'StandardMaterial3D',
-  'StyleBoxEmpty', 'StyleBoxFlat', 'Texture', 'Texture2D', 'TorusMesh', 'ViewportTexture',
+  'Noise',
+  'NoiseTexture2D',
+  'PackedScene',
+  'PanoramaSkyMaterial',
+  'PhysicalSkyMaterial',
+  'PrismMesh',
+  'ProceduralSkyMaterial',
+  'QuadMesh',
+  'RectangleShape2D',
+  'ShaderMaterial',
+  'Sky',
+  'SphereMesh',
+  'SpriteFrames',
+  'StandardMaterial3D',
+  'StyleBoxEmpty',
+  'StyleBoxFlat',
+  'Texture',
+  'Texture2D',
+  'TorusMesh',
+  'ViewportTexture',
   // The font and theme slices decode enough to draw (a `.tres` wrapper's fallbacks,
   // a variation's base font, a theme's type chain) and validate none of it. `Font`
   // is the abstract tier the other three descend from.
-  'Font', 'FontFile', 'FontVariation', 'SystemFont', 'Theme',
+  'Font',
+  'FontFile',
+  'FontVariation',
+  'SystemFont',
+  'Theme',
   // The highlighter and label-settings slices decode enough to draw and validate
   // none of it. `SyntaxHighlighter`, the abstract tier `CodeHighlighter` descends
   // from, declares zero `ADD_PROPERTY` of its own in 4.6.3: listed as a record.
-  'CodeHighlighter', 'LabelSettings', 'SyntaxHighlighter',
+  'CodeHighlighter',
+  'LabelSettings',
+  'SyntaxHighlighter',
 ];
 
 /**
@@ -153,9 +189,7 @@ function claimedResourceClasses(): string[] {
       current = RESOURCE_BASE_TYPES_GENERATED[current];
     }
   }
-  return [...claimed]
-    .filter((type) => type === 'Resource' || type in RESOURCE_BASE_TYPES_GENERATED)
-    .sort();
+  return [...claimed].filter((type) => type === 'Resource' || type in RESOURCE_BASE_TYPES_GENERATED).sort();
 }
 
 describe('own-validator coverage for resource slices', () => {
@@ -171,9 +205,7 @@ describe('own-validator coverage for resource slices', () => {
   });
 
   it('keeps the list free of types that now declare validators', () => {
-    const stale = UNDECLARED_RESOURCES.filter(
-      (type) => validatorRegistry.getOwnKeys(type).length > 0
-    );
+    const stale = UNDECLARED_RESOURCES.filter((type) => validatorRegistry.getOwnKeys(type).length > 0);
     expect(stale).toEqual([]);
   });
 

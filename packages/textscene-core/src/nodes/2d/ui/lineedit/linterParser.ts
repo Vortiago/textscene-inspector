@@ -8,12 +8,8 @@
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-import {
-  STRUCTURED_TEXT_PARSER,
-  TEXT_DIRECTION,
-} from '../../../../linter/validators/textServerEnums.js';
+import { STRUCTURED_TEXT_PARSER, TEXT_DIRECTION } from '../../../../linter/validators/textServerEnums.js';
 import { HORIZONTAL_ALIGNMENT } from '../../../../linter/validators/globalScopeEnums.js';
-
 
 /** `LineEdit::VirtualKeyboardType` (line_edit.h, BIND_ENUM_CONSTANT line_edit.cpp:3470-3477). */
 const VIRTUAL_KEYBOARD_TYPE = {
@@ -66,9 +62,7 @@ validatorRegistry.registerAll('LineEdit', {
   expand_to_text_length: v.boolean('expand_to_text_length'),
   context_menu_enabled: v.boolean('context_menu_enabled'),
   emoji_menu_enabled: v.boolean('emoji_menu_enabled'),
-  backspace_deletes_composite_character_enabled: v.boolean(
-    'backspace_deletes_composite_character_enabled'
-  ),
+  backspace_deletes_composite_character_enabled: v.boolean('backspace_deletes_composite_character_enabled'),
   clear_button_enabled: v.boolean('clear_button_enabled'),
   shortcut_keys_enabled: v.boolean('shortcut_keys_enabled'),
   middle_mouse_paste_enabled: v.boolean('middle_mouse_paste_enabled'),
@@ -124,13 +118,9 @@ validatorRegistry.registerAll('LineEdit', {
   // line_edit.cpp:3521, PROPERTY_HINT_LOCALE_ID. set_language (line_edit.cpp:2178-2184) assigns unconditionally.
   language: v.quotedString('language'),
   // line_edit.cpp:3522, PROPERTY_HINT_ENUM, 7 labels. set_structured_text_bidi_override (line_edit.cpp:2205-2211) assigns unconditionally.
-  structured_text_bidi_override: v.enumInt(
-    'structured_text_bidi_override',
-    0,
-    6,
-    STRUCTURED_TEXT_PARSER,
-    { hinted: 'line_edit.cpp:3522' }
-  ),
+  structured_text_bidi_override: v.enumInt('structured_text_bidi_override', 0, 6, STRUCTURED_TEXT_PARSER, {
+    hinted: 'line_edit.cpp:3522',
+  }),
   // line_edit.cpp:3523: an ARRAY with no hint, so never written wrapped, of parser-specific arguments
   // with no fixed arity or type. set_structured_text_bidi_override_options (line_edit.cpp:2217-2220)
   // assigns straight through, so only the literal shape is checked.

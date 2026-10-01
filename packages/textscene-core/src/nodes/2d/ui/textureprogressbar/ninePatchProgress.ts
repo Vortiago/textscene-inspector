@@ -117,8 +117,11 @@ export function drawNinePatchStretched(
       middleSectionSize *= Math.min(maxMiddleRealSize, realMiddleSize) / maxMiddleRealSize;
       widthTexture = Math.min(widthTexture, firstSectionSize + middleSectionSize + lastSectionSize);
     } else {
-      middleSectionSize *=
-        Math.min(1, Math.max(0, widthFilled - firstSectionSize) / Math.max(1, widthTotal - firstSectionSize - lastSectionSize));
+      middleSectionSize *= Math.min(
+        1,
+        Math.max(0, widthFilled - firstSectionSize) /
+          Math.max(1, widthTotal - firstSectionSize - lastSectionSize)
+      );
       lastSectionSize = Math.max(0, lastSectionSize - (widthTotal - widthFilled));
       firstSectionSize = Math.min(firstSectionSize, widthFilled);
       widthTexture = Math.min(widthTexture, firstSectionSize + middleSectionSize + lastSectionSize);

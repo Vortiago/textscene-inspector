@@ -34,17 +34,10 @@ export interface UseViewportSelectionResult {
 
 const DEFAULT_DRAG_THRESHOLD_PX = 5;
 
-export function useViewportSelection(
-  options: UseViewportSelectionOptions = {}
-): UseViewportSelectionResult {
+export function useViewportSelection(options: UseViewportSelectionOptions = {}): UseViewportSelectionResult {
   const { dragThresholdPx = DEFAULT_DRAG_THRESHOLD_PX, autoExpandAncestors = true } = options;
-  const {
-    setSelectedNodePath,
-    hoverStore,
-    expandedNodePaths,
-    setExpandedNodePaths,
-    objectPathMap,
-  } = useSelection();
+  const { setSelectedNodePath, hoverStore, expandedNodePaths, setExpandedNodePaths, objectPathMap } =
+    useSelection();
 
   const downPosRef = useRef<{ x: number; y: number } | null>(null);
   const expandedRef = useRef<ReadonlySet<string>>(expandedNodePaths);

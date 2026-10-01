@@ -62,24 +62,81 @@ function recheckedParameters(): string[] {
 /** Every `Material.js` setter that bumps `version`, so its field re-derives on its own. */
 function versionBumpingAccessors(): string[] {
   const source = threeSource('materials/Material.js');
-  const setters = [...source.matchAll(/\bset\s+([A-Za-z0-9_]+)\s*\(\s*[A-Za-z0-9_]*\s*\)\s*\{([\s\S]*?)\n\t\}/g)];
-  return [...new Set(setters.filter(([, , body]) => /this\.version\s*\+\+/.test(body!)).map(([, name]) => name!))].sort();
+  const setters = [
+    ...source.matchAll(/\bset\s+([A-Za-z0-9_]+)\s*\(\s*[A-Za-z0-9_]*\s*\)\s*\{([\s\S]*?)\n\t\}/g),
+  ];
+  return [
+    ...new Set(setters.filter(([, , body]) => /this\.version\s*\+\+/.test(body!)).map(([, name]) => name!)),
+  ].sort();
 }
 
 /** three 0.186.0, `WebGLPrograms.js:56-400`. Every field the program's identity is decided from. */
 const BAKED_MATERIAL_FIELDS = [
-  'alphaHash', 'alphaMap', 'alphaTest', 'alphaToCoverage', 'anisotropy', 'anisotropyMap',
-  'aoMap', 'blending', 'bumpMap', 'clearcoat', 'clearcoatMap', 'clearcoatNormalMap',
-  'clearcoatRoughnessMap', 'combine', 'customProgramCacheKey', 'defines', 'depthPacking',
-  'dispersion', 'displacementMap', 'dithering', 'emissiveMap', 'envMap', 'extensions',
-  'flatShading', 'fog', 'fragmentShader', 'glslVersion', 'gradientMap', 'index0AttributeName',
-  'iridescence', 'iridescenceMap', 'iridescenceThicknessMap', 'isMeshLambertMaterial',
-  'isMeshPhongMaterial', 'isMeshPhysicalMaterial', 'isMeshStandardMaterial',
-  'isRawShaderMaterial', 'lightMap', 'map', 'matcap', 'metalnessMap', 'name', 'normalMap',
-  'normalMapType', 'precision', 'premultipliedAlpha', 'retroreflectivity', 'roughnessMap',
-  'sheen', 'sheenColorMap', 'sheenRoughnessMap', 'side', 'sizeAttenuation', 'specularColorMap',
-  'specularIntensityMap', 'specularMap', 'thicknessMap', 'toneMapped', 'transmission',
-  'transmissionMap', 'transparent', 'type', 'vertexColors', 'vertexShader', 'wireframe',
+  'alphaHash',
+  'alphaMap',
+  'alphaTest',
+  'alphaToCoverage',
+  'anisotropy',
+  'anisotropyMap',
+  'aoMap',
+  'blending',
+  'bumpMap',
+  'clearcoat',
+  'clearcoatMap',
+  'clearcoatNormalMap',
+  'clearcoatRoughnessMap',
+  'combine',
+  'customProgramCacheKey',
+  'defines',
+  'depthPacking',
+  'dispersion',
+  'displacementMap',
+  'dithering',
+  'emissiveMap',
+  'envMap',
+  'extensions',
+  'flatShading',
+  'fog',
+  'fragmentShader',
+  'glslVersion',
+  'gradientMap',
+  'index0AttributeName',
+  'iridescence',
+  'iridescenceMap',
+  'iridescenceThicknessMap',
+  'isMeshLambertMaterial',
+  'isMeshPhongMaterial',
+  'isMeshPhysicalMaterial',
+  'isMeshStandardMaterial',
+  'isRawShaderMaterial',
+  'lightMap',
+  'map',
+  'matcap',
+  'metalnessMap',
+  'name',
+  'normalMap',
+  'normalMapType',
+  'precision',
+  'premultipliedAlpha',
+  'retroreflectivity',
+  'roughnessMap',
+  'sheen',
+  'sheenColorMap',
+  'sheenRoughnessMap',
+  'side',
+  'sizeAttenuation',
+  'specularColorMap',
+  'specularIntensityMap',
+  'specularMap',
+  'thicknessMap',
+  'toneMapped',
+  'transmission',
+  'transmissionMap',
+  'transparent',
+  'type',
+  'vertexColors',
+  'vertexShader',
+  'wireframe',
 ];
 
 /**
@@ -88,10 +145,28 @@ const BAKED_MATERIAL_FIELDS = [
  * matching subtracts it. The factory keys `fog` anyway, which costs nothing.
  */
 const RECHECKED_PARAMETERS = [
-  '__version', 'batching', 'batchingColor', 'envMap', 'fog', 'instancing', 'instancingColor',
-  'instancingMorph', 'lightProbeGrid', 'lightsStateVersion', 'morphColors', 'morphNormals',
-  'morphTargets', 'morphTargetsCount', 'needsLights', 'numClippingPlanes', 'numIntersection',
-  'outputColorSpace', 'skinning', 'toneMapping', 'vertexAlphas', 'vertexTangents',
+  '__version',
+  'batching',
+  'batchingColor',
+  'envMap',
+  'fog',
+  'instancing',
+  'instancingColor',
+  'instancingMorph',
+  'lightProbeGrid',
+  'lightsStateVersion',
+  'morphColors',
+  'morphNormals',
+  'morphTargets',
+  'morphTargetsCount',
+  'needsLights',
+  'numClippingPlanes',
+  'numIntersection',
+  'outputColorSpace',
+  'skinning',
+  'toneMapping',
+  'vertexAlphas',
+  'vertexTangents',
 ];
 
 /**
@@ -138,7 +213,9 @@ const PINNED_LISTS = [
 
 describe('material program hazards, against three itself', () => {
   it('resolves three from source, not from the bundled dist', () => {
-    expect(resolve('three/src/renderers/webgl/WebGLPrograms.js')).toMatch(/three\/src\/renderers\/webgl\/WebGLPrograms\.js$/);
+    expect(resolve('three/src/renderers/webgl/WebGLPrograms.js')).toMatch(
+      /three\/src\/renderers\/webgl\/WebGLPrograms\.js$/
+    );
   });
 
   it.each(PINNED_LISTS)('$name', ({ read, expected, floor, hint }) => {

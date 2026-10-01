@@ -33,7 +33,9 @@ function findIconMesh(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
     .map((m) => m.instance as THREE.Mesh)
-    .find((m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined);
+    .find(
+      (m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined
+    );
 }
 
 function findTextMesh(scene: Rendered['scene']) {
@@ -103,7 +105,12 @@ describe('<CheckButton> (isolated painter contract)', () => {
 
   it('uses font_disabled_color (alpha 0.5) once disabled', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <CheckButton {...painterEnv()} solveNode={solveNode({ text: 'Hi', disabled: true })} rect={RECT} renderOrder={0} />
+      <CheckButton
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'Hi', disabled: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
     expect(material.uniforms.uOpacity!.value).toBeCloseTo(0.5, 5);
@@ -137,7 +144,7 @@ describe('<CheckButton> (isolated painter contract)', () => {
     for (const mesh of meshes) expect(mesh.renderOrder).toBe(7);
   });
 
-  it('defaults text alignment to LEFT (CheckButton\'s own constructor override), not Button\'s CENTER', async () => {
+  it("defaults text alignment to LEFT (CheckButton's own constructor override), not Button's CENTER", async () => {
     const rendererLeft = await ReactThreeTestRenderer.create(
       <CheckButton {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
     );
@@ -163,7 +170,12 @@ describe('<CheckButton> (isolated painter contract)', () => {
   it('draws the toggle at the LEFT content margin under RTL', async () => {
     const iconX = async (rtl: boolean) => {
       const renderer = await ReactThreeTestRenderer.create(
-        <CheckButton {...painterEnv()} solveNode={{ ...solveNode({ text: 'On' }), rtl }} rect={RECT} renderOrder={0} />
+        <CheckButton
+          {...painterEnv()}
+          solveNode={{ ...solveNode({ text: 'On' }), rtl }}
+          rect={RECT}
+          renderOrder={0}
+        />
       );
       return findIconMesh(renderer.scene)!.parent!.position.x;
     };
@@ -184,5 +196,4 @@ describe('<CheckButton> (isolated painter contract)', () => {
     expect(await iconSrc(false)).toBe(CHECK_BUTTON_ICONS.unchecked);
     expect(await iconSrc(true)).toBe(CHECK_BUTTON_ICONS.uncheckedMirrored);
   });
-
 });

@@ -11,7 +11,9 @@ import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../li
 import { parentTypeVerdict, placementPhrase } from '../../../linter/parentType.js';
 
 const arms = {
-  outsideParallaxBackground: groundedArm('parallaxlayer-outside-parallaxbackground', { kind: 'configuration-warning' }),
+  outsideParallaxBackground: groundedArm('parallaxlayer-outside-parallaxbackground', {
+    kind: 'configuration-warning',
+  }),
 } as const satisfies RuleArms<string>;
 
 function checkParallaxLayer(context: RuleContext): Diagnostic[] {

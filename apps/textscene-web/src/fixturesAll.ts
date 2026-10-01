@@ -18,10 +18,9 @@ const INCLUDE_GAMES = import.meta.env.VITE_INCLUDE_GAMES === '1';
 // Every manifest exports `corpusFixtures` (generate-fixtures.js), so one glob merges
 // them and a new corpus needs no change here. An absent manifest (a fresh clone, CI)
 // resolves to nothing, so no import breaks.
-const corpusModules = import.meta.glob<{ corpusFixtures?: Fixture[] }>(
-  ['./fixtures.*.ts', '!./*.test.ts'],
-  { eager: true }
-);
+const corpusModules = import.meta.glob<{ corpusFixtures?: Fixture[] }>(['./fixtures.*.ts', '!./*.test.ts'], {
+  eager: true,
+});
 const corpusFixtures: Fixture[] = Object.entries(corpusModules).flatMap(([path, m]) => {
   if (!INCLUDE_GAMES && path.includes('.games.')) return [];
   if (!m.corpusFixtures) {

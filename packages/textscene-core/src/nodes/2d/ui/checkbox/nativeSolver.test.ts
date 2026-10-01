@@ -39,7 +39,12 @@ function node(props: Partial<CheckBoxProperties>): SolveNode {
   return {
     ...solveNode(),
     path: 'C',
-    node: { name: 'C', type: 'CheckBox', children: [], properties: { name: 'C', ...props } as CheckBoxProperties },
+    node: {
+      name: 'C',
+      type: 'CheckBox',
+      children: [],
+      properties: { name: 'C', ...props } as CheckBoxProperties,
+    },
     // A local theme_override_colors/* reaches `resolveTextTheme` through
     // `n.colors` (the walker folds it in unconditionally), not props.
     colors: props.themeOverrideColors ?? {},
@@ -71,7 +76,9 @@ describe('resolveCheckBoxDrawState', () => {
   });
 
   it('is "disabled" when disabled is true, even if also pressed (disabled wins)', () => {
-    expect(resolveCheckBoxDrawState({ buttonPressed: true, disabled: true } as CheckBoxProperties)).toBe('disabled');
+    expect(resolveCheckBoxDrawState({ buttonPressed: true, disabled: true } as CheckBoxProperties)).toBe(
+      'disabled'
+    );
   });
 });
 
@@ -143,7 +150,11 @@ describe('resolveCheckBoxIconKey (check_box.cpp:112-131)', () => {
 
   it('checked, radio, disabled -> radioCheckedDisabled', () => {
     expect(
-      resolveCheckBoxIconKey({ buttonGroup: 'grp', buttonPressed: true, disabled: true } as CheckBoxProperties)
+      resolveCheckBoxIconKey({
+        buttonGroup: 'grp',
+        buttonPressed: true,
+        disabled: true,
+      } as CheckBoxProperties)
     ).toBe('radioCheckedDisabled');
   });
 });
@@ -169,14 +180,18 @@ describe('checkBoxMinimumSize — with text', () => {
   });
 
   it('h_separation theme_override_constants wins over the theme default', () => {
-    const result = checkBoxMinimumSize(node({ text: 'AB', themeOverrideConstants: { h_separation: 12 } }), ctx());
+    const result = checkBoxMinimumSize(
+      node({ text: 'AB', themeOverrideConstants: { h_separation: 12 } }),
+      ctx()
+    );
     expect(result.x).toBeCloseTo(8 + AB_SHAPED_WIDTH + 12 + 16, 6);
   });
 
   it('icon_max_width theme_override_constants clamps the (16x16) icon before it contributes', () => {
-    const result = 
-      checkBoxMinimumSize(node({ text: 'AB', themeOverrideConstants: { icon_max_width: 8 } }), ctx())
-    ;
+    const result = checkBoxMinimumSize(
+      node({ text: 'AB', themeOverrideConstants: { icon_max_width: 8 } }),
+      ctx()
+    );
     // fitIconSize(16x16, 8) = 8x8.
     expect(result.x).toBeCloseTo(8 + AB_SHAPED_WIDTH + 4 + 8, 6);
     expect(result.y).toBe(8 + FONT_HEIGHT); // 8 < 23, text still floors height
@@ -197,17 +212,20 @@ describe('checkBoxIconNaturalSize (check_box.cpp:35-62) — MAX over all 8 icons
   it('widens to a themed "checked" icon even while the widget draws "unchecked"', () => {
     // check_box.cpp:39-40: `tex_size = tex_size.max(theme_cache.unchecked->get_size())`
     // runs regardless of which icon is actually pressed/shown.
-    expect(checkBoxIconNaturalSize({ textureSlots: { checked: { x: 24, y: 24 } } })).toEqual({ x: 24, y: 24 });
+    expect(checkBoxIconNaturalSize({ textureSlots: { checked: { x: 24, y: 24 } } })).toEqual({
+      x: 24,
+      y: 24,
+    });
   });
 
-  it('never shrinks below an unthemed icon\'s vendored default', () => {
+  it("never shrinks below an unthemed icon's vendored default", () => {
     // Only "checked" themed smaller. The other 7 still default to 16x16.
     expect(checkBoxIconNaturalSize({ textureSlots: { checked: { x: 8, y: 8 } } })).toEqual({ x: 16, y: 16 });
   });
 });
 
 describe('checkBoxMinimumSize — a themed icon widens the minimum size (check_box.cpp:64-79)', () => {
-  it('floors the width on the themed icon\'s own size, not the vendored 16x16', () => {
+  it("floors the width on the themed icon's own size, not the vendored 16x16", () => {
     const n = { ...node({}), textureSlots: { unchecked: { x: 24, y: 24 } } };
     // No text: content_size is the icon alone (check_box.cpp:66-79), then
     // `_get_largest_stylebox_size()` (cbx_empty's uniform content margin,
@@ -259,7 +277,7 @@ describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-
     expect(textOffset!.x).toBe(16);
   });
 
-  it('floors a half-pixel centring remainder DOWN, matching Button\'s own text_ofs.y (never floored in the source itself, only per-glyph — text_server_adv.cpp:4083)', () => {
+  it("floors a half-pixel centring remainder DOWN, matching Button's own text_ofs.y (never floored in the source itself, only per-glyph — text_server_adv.cpp:4083)", () => {
     // customElementHeight = 32-2*4=24; (24-23)/2=0.5; +margin(4)=4.5 -> floor 4.
     const { textOffset } = layoutCheckBoxContent({
       ...BASE,
@@ -326,7 +344,7 @@ describe(`checkBoxMinimumSize — resolves this CheckBox's own theme font key ("
     warnSpy.mockRestore();
   });
 
-  it("a theme_override_fonts/font local override is fed to the text engine (also threaded through TextMeasurer, not just shapeText)", () => {
+  it('a theme_override_fonts/font local override is fed to the text engine (also threaded through TextMeasurer, not just shapeText)', () => {
     const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
     const n: SolveNode = { ...node({ text: 'A' }), fontOverrides: { [CHECKBOX_THEME_FONT_KEY]: systemFont } };
     checkBoxMinimumSize(n, ctx());
@@ -359,8 +377,6 @@ describe('checkBoxMinimumSize — the shaped text extent is ceiled (text_server_
   });
 
   it('keeps the icon and separation OUT of the ceil — an empty CheckBox is unchanged by it', () => {
-    expect(checkBoxMinimumSize(node({}), ctx()).x).toBe(
-      checkBoxMinimumSize(node({ text: '' }), ctx()).x
-    );
+    expect(checkBoxMinimumSize(node({}), ctx()).x).toBe(checkBoxMinimumSize(node({ text: '' }), ctx()).x);
   });
 });

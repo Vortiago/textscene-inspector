@@ -13,11 +13,7 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { pickButtonStyleBox, tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { resolveTextTheme } from '../../../../r3f/controls/native/textTheme';
-import {
-  MENU_BAR_TEXT_THEME_KEYS,
-  layoutMenuBarItems,
-  menuBarTitleShapes,
-} from './nativeSolver';
+import { MENU_BAR_TEXT_THEME_KEYS, layoutMenuBarItems, menuBarTitleShapes } from './nativeSolver';
 import { BUTTON_DEFAULT_FONT_COLOR } from '../button/nativeSolver';
 import type { MenuBarProperties } from './types';
 
@@ -27,12 +23,10 @@ export function MenuBar({ solveNode, tint, rect, theme, renderOrder }: NativeCon
   // defines one (`menu_bar.cpp:437-500`).
   const style = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.button, 'normal', solveNode.rtl);
 
-  const { fontSizePx, color: baseFontColor } = resolveTextTheme(
-    solveNode,
-    props,
-    MENU_BAR_TEXT_THEME_KEYS,
-    { fontSizePx: theme.fontSize, color: BUTTON_DEFAULT_FONT_COLOR }
-  );
+  const { fontSizePx, color: baseFontColor } = resolveTextTheme(solveNode, props, MENU_BAR_TEXT_THEME_KEYS, {
+    fontSizePx: theme.fontSize,
+    color: BUTTON_DEFAULT_FONT_COLOR,
+  });
   // `tint.own` goes raw to `<StyleBoxQuad>`'s `color` and multiplies the font colour before its one
   // sRGB-to-linear conversion, as in `Button`.
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);

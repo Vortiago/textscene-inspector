@@ -21,7 +21,11 @@ export const SHEET_HEIGHT = bandRows(SHEET_WIDTH) * SHEET_BANDS;
 export const SHEET_REF = 'ExtResource("sheet")';
 
 function sheet(): THREE.DataTexture {
-  const texture = new THREE.DataTexture(new Uint8Array(SHEET_WIDTH * SHEET_HEIGHT * 4), SHEET_WIDTH, SHEET_HEIGHT);
+  const texture = new THREE.DataTexture(
+    new Uint8Array(SHEET_WIDTH * SHEET_HEIGHT * 4),
+    SHEET_WIDTH,
+    SHEET_HEIGHT
+  );
   texture.needsUpdate = true;
   return texture;
 }
@@ -49,7 +53,8 @@ export async function mountSheetSprite(spriteAt: (frame: number) => ReactElement
     gpu,
     drawnMap: (): THREE.Texture | null => {
       const [mesh] = renderer.scene.findAllByType('Mesh');
-      const material = (mesh?.instance as THREE.Mesh | undefined)?.material as THREE.MeshBasicMaterial | undefined;
+      const material = (mesh?.instance as THREE.Mesh | undefined)?.material as
+        THREE.MeshBasicMaterial | undefined;
       return material?.map ?? null;
     },
     showFrame: (frame: number) => renderer.update(tree(frame)),

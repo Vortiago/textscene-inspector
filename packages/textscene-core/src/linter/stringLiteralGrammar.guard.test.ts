@@ -35,9 +35,7 @@ describe('Godot string literal grammar', () => {
   it('sees the class in each spelling, and leaves an escape-free body alone', () => {
     expect(spellsStringLiteral(String.raw`const RE = /^"(?:[^"\\]|\\.)*"$/;`)).toBe(true);
     expect(spellsStringLiteral(String.raw`const RE = /^"(?:[^\\"]|\\.)*"$/;`)).toBe(true);
-    expect(spellsStringLiteral(String.raw`const RE = new RegExp('"(?:[^"\\\\]|\\\\.)*"');`)).toBe(
-      true
-    );
+    expect(spellsStringLiteral(String.raw`const RE = new RegExp('"(?:[^"\\\\]|\\\\.)*"');`)).toBe(true);
     expect(spellsStringLiteral(String.raw`const RE = /^"([^"]*)"$/;`)).toBe(false);
     // A comment that quotes the grammar is not a copy of it.
     expect(spellsStringLiteral(String.raw`// the tokenizer's [^"\\] body`)).toBe(false);

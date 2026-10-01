@@ -15,7 +15,9 @@ import { slotComponents } from '../../../../godot/int.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  autowrapNeedsMinimumSize: groundedArm('label-autowrap-needs-custom-minimum-size', { kind: 'configuration-warning' }),
+  autowrapNeedsMinimumSize: groundedArm('label-autowrap-needs-custom-minimum-size', {
+    kind: 'configuration-warning',
+  }),
 } as const satisfies RuleArms<string>;
 
 // label.cpp:44/1435, TextServer::AutowrapMode: OFF=0, ARBITRARY=1, WORD=2, WORD_SMART=3.

@@ -64,9 +64,9 @@ describe('resolveCheckButtonDrawState', () => {
   });
 
   it('is "disabled" when disabled is true, even if also pressed (disabled wins)', () => {
-    expect(resolveCheckButtonDrawState({ buttonPressed: true, disabled: true } as CheckButtonProperties)).toBe(
-      'disabled'
-    );
+    expect(
+      resolveCheckButtonDrawState({ buttonPressed: true, disabled: true } as CheckButtonProperties)
+    ).toBe('disabled');
   });
 });
 
@@ -94,7 +94,12 @@ describe('checkButtonTextTheme', () => {
       name: 'CB',
       themeOverrideColors: { font_color: { r: 1, g: 0, b: 0, a: 1 } },
     };
-    expect(checkButtonTextTheme(node(props), props, 'normal', ctx()).color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+    expect(checkButtonTextTheme(node(props), props, 'normal', ctx()).color).toEqual({
+      r: 1,
+      g: 0,
+      b: 0,
+      a: 1,
+    });
   });
 });
 
@@ -104,17 +109,21 @@ describe('resolveCheckButtonIconKey (check_button.cpp:105-127)', () => {
   });
 
   it('checked, not disabled -> checked', () => {
-    expect(resolveCheckButtonIconKey({ buttonPressed: true } as CheckButtonProperties, false)).toBe('checked');
+    expect(resolveCheckButtonIconKey({ buttonPressed: true } as CheckButtonProperties, false)).toBe(
+      'checked'
+    );
   });
 
   it('unchecked, disabled -> uncheckedDisabled', () => {
-    expect(resolveCheckButtonIconKey({ disabled: true } as CheckButtonProperties, false)).toBe('uncheckedDisabled');
+    expect(resolveCheckButtonIconKey({ disabled: true } as CheckButtonProperties, false)).toBe(
+      'uncheckedDisabled'
+    );
   });
 
   it('checked, disabled -> checkedDisabled (disabled wins over checked for the icon variant)', () => {
-    expect(resolveCheckButtonIconKey({ buttonPressed: true, disabled: true } as CheckButtonProperties, false)).toBe(
-      'checkedDisabled'
-    );
+    expect(
+      resolveCheckButtonIconKey({ buttonPressed: true, disabled: true } as CheckButtonProperties, false)
+    ).toBe('checkedDisabled');
   });
 });
 
@@ -134,9 +143,12 @@ describe('checkButtonIconColor (default_theme.cpp:352-353)', () => {
 
   it('a theme_override_colors/button_checked_color override (already folded into n.colors) wins when checked', () => {
     const props: CheckButtonProperties = { name: 'CB', buttonPressed: true };
-    expect(
-      checkButtonIconColor(props, { button_checked_color: { r: 0, g: 1, b: 0, a: 1 } })
-    ).toEqual({ r: 0, g: 1, b: 0, a: 1 });
+    expect(checkButtonIconColor(props, { button_checked_color: { r: 0, g: 1, b: 0, a: 1 } })).toEqual({
+      r: 0,
+      g: 1,
+      b: 0,
+      a: 1,
+    });
   });
 });
 
@@ -185,16 +197,18 @@ describe('checkButtonMinimumSize — with text', () => {
   });
 
   it('h_separation theme_override_constants wins over the theme default', () => {
-    const result = 
-      checkButtonMinimumSize(node({ text: 'AB', themeOverrideConstants: { h_separation: 10 } }), ctx())
-    ;
+    const result = checkButtonMinimumSize(
+      node({ text: 'AB', themeOverrideConstants: { h_separation: 10 } }),
+      ctx()
+    );
     expect(result.x).toBe(12 + AB_SHAPED_WIDTH + 10 + 32);
   });
 
   it('icon_max_width theme_override_constants clamps the (32x16) icon before it contributes', () => {
-    const result = 
-      checkButtonMinimumSize(node({ text: 'AB', themeOverrideConstants: { icon_max_width: 8 } }), ctx())
-    ;
+    const result = checkButtonMinimumSize(
+      node({ text: 'AB', themeOverrideConstants: { icon_max_width: 8 } }),
+      ctx()
+    );
     // fitIconSize(32x16, 8) = (8, 4).
     expect(result.x).toBe(12 + AB_SHAPED_WIDTH + 4 + 8);
     expect(result.y).toBe(8 + FONT_HEIGHT); // 4 < 23, text still floors height
@@ -326,7 +340,9 @@ describe('layoutCheckButtonContent — RTL puts the toggle on the left', () => {
 describe('resolveCheckButtonIconKey — RTL selects the mirrored variant', () => {
   it('picks the mirrored twin of whichever state is showing', () => {
     expect(resolveCheckButtonIconKey({} as CheckButtonProperties, true)).toBe('uncheckedMirrored');
-    expect(resolveCheckButtonIconKey({ buttonPressed: true } as CheckButtonProperties, true)).toBe('checkedMirrored');
+    expect(resolveCheckButtonIconKey({ buttonPressed: true } as CheckButtonProperties, true)).toBe(
+      'checkedMirrored'
+    );
     expect(resolveCheckButtonIconKey({ disabled: true } as CheckButtonProperties, true)).toBe(
       'uncheckedDisabledMirrored'
     );

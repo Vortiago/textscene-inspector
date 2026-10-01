@@ -108,9 +108,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
       const currentRow = (e.target as HTMLElement).closest<HTMLElement>('[role="treeitem"]');
       if (!currentRow) return;
 
-      const allRows = Array.from(
-        e.currentTarget.querySelectorAll<HTMLElement>('[role="treeitem"]')
-      );
+      const allRows = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('[role="treeitem"]'));
       const index = allRows.indexOf(currentRow);
       if (index === -1) return;
 
@@ -221,12 +219,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
         </button>
       </div>
 
-      <div
-        className={styles.tree}
-        role="tree"
-        aria-label="Scene tree"
-        onKeyDown={handleTreeKeyDown}
-      >
+      <div className={styles.tree} role="tree" aria-label="Scene tree" onKeyDown={handleTreeKeyDown}>
         {rootNodes.length === 0 ? (
           <div className={styles.empty}>No nodes to display</div>
         ) : visibleRoots.length === 0 ? (

@@ -64,12 +64,18 @@ export const navigationWarnings: Readonly<Record<string, readonly WarningRow[]>>
     {
       at: 'navigation_obstacle_3d.cpp:417',
       says: 'does not support zero or negative global scaling',
-      verdict: { declined: 'runtime-only', because: 'get_global_basis().get_scale(), navigation_obstacle_3d.cpp:415-416' },
+      verdict: {
+        declined: 'runtime-only',
+        because: 'get_global_basis().get_scale(), navigation_obstacle_3d.cpp:415-416',
+      },
     },
     {
       at: 'navigation_obstacle_3d.cpp:421',
       says: 'agent radius can only be scaled uniformly',
-      verdict: { declined: 'runtime-only', because: 'get_global_basis().is_conformal(), navigation_obstacle_3d.cpp:420' },
+      verdict: {
+        declined: 'runtime-only',
+        because: 'get_global_basis().is_conformal(), navigation_obstacle_3d.cpp:420',
+      },
     },
   ],
 

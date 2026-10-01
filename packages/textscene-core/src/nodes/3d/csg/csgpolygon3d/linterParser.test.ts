@@ -19,9 +19,7 @@ describe('CSGPolygon3D strict validators', () => {
   });
 
   it('passes the DEPTH witness (csg.tscn:145)', () => {
-    const content = scene(
-      ['polygon = PackedVector2Array(0, -1, 0, 0, 2, -1)', 'depth = 2.0'].join('\n')
-    );
+    const content = scene(['polygon = PackedVector2Array(0, -1, 0, 0, 2, -1)', 'depth = 2.0'].join('\n'));
     expect(errorsOf(linter.lint(content))).toEqual([]);
   });
 
@@ -52,7 +50,9 @@ describe('CSGPolygon3D strict validators', () => {
 
   it('passes the racetrack witness, which sets path_u_distance high and calculate_tangents off', () => {
     const content = scene(
-      ['mode = 2', 'path_node = NodePath("Path3D")', 'path_u_distance = 20.0', 'path_interval = 0.5'].join('\n')
+      ['mode = 2', 'path_node = NodePath("Path3D")', 'path_u_distance = 20.0', 'path_interval = 0.5'].join(
+        '\n'
+      )
     );
     expect(errorsOf(linter.lint(content))).toEqual([]);
   });

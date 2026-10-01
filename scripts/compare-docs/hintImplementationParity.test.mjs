@@ -182,8 +182,10 @@ function enumMismatches(offered, bounds, addedLater = []) {
   const extra = accepted.filter((v) => !hint.has(v) && !laterRelease.has(v));
   const missing = offered.filter((v) => !ours.has(v));
   const out = [];
-  if (extra.length > 0) out.push(`we accept ${extra.join('/')}, the hint does not offer ${extra.length > 1 ? 'them' : 'it'}`);
-  if (missing.length > 0) out.push(`we reject ${missing.join('/')}, the hint offers ${missing.length > 1 ? 'them' : 'it'}`);
+  if (extra.length > 0)
+    out.push(`we accept ${extra.join('/')}, the hint does not offer ${extra.length > 1 ? 'them' : 'it'}`);
+  if (missing.length > 0)
+    out.push(`we reject ${missing.join('/')}, the hint offers ${missing.length > 1 ? 'them' : 'it'}`);
   return out;
 }
 
@@ -263,9 +265,7 @@ describe('the bound we implement against the bound Godot declared', () => {
     expect(rows.length).toBeGreaterThan(200);
 
     const wrong = rows.flatMap((r) =>
-      mismatches(r.hint, r.bounds, SETTER_OVERRIDES_HINT.get(r.label)?.end).map(
-        (d) => `${r.label}: ${d}`
-      )
+      mismatches(r.hint, r.bounds, SETTER_OVERRIDES_HINT.get(r.label)?.end).map((d) => `${r.label}: ${d}`)
     );
     expect(wrong.sort()).toEqual([]);
   });
@@ -331,9 +331,7 @@ describe('the bound we implement against the bound Godot declared', () => {
       .filter(([label, { end }]) => {
         const row = byLabel.get(label);
         if (row === undefined) return true;
-        return (
-          mismatches(row.hint, row.bounds).length === mismatches(row.hint, row.bounds, end).length
-        );
+        return mismatches(row.hint, row.bounds).length === mismatches(row.hint, row.bounds, end).length;
       })
       .map(([label]) => label);
     expect(dead).toEqual([]);

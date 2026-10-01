@@ -65,9 +65,7 @@ const CASES: KeyCase[] = [
   },
   {
     key: 'terrain_set_0/terrain_x/name',
-    invalid: [
-      { value: '"a"', severity: 'error', contains: ['Unknown', 'terrain_set_0/terrain_x/name'] },
-    ],
+    invalid: [{ value: '"a"', severity: 'error', contains: ['Unknown', 'terrain_set_0/terrain_x/name'] }],
   },
   {
     // `split("/", true, 2)` caps at three components, so `components[2]` is

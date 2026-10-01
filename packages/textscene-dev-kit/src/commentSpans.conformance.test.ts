@@ -16,16 +16,18 @@ const REPO_ROOT = resolve(dirname(new URL(import.meta.url).pathname), '../../..'
 
 function trackedSources(): string[] {
   // `.js` too: the TypeScript parser reads it, and `commentConventions` scans it.
-  return execFileSync('git', ['ls-files', '*.ts', '*.tsx', '*.mjs', '*.js'], {
-    cwd: REPO_ROOT,
-    encoding: 'utf8',
-    maxBuffer: 32 * 1024 * 1024,
-  })
-    .split('\n')
-    .filter((f) => f !== '' && !f.includes('/dist/'))
-    // A file the index lists but the worktree removed has no source, as in
-    // `godot-source-decoupling.test.mjs`. The corpus floor below stops this hiding a collapsed list.
-    .filter((f) => existsSync(resolve(REPO_ROOT, f)));
+  return (
+    execFileSync('git', ['ls-files', '*.ts', '*.tsx', '*.mjs', '*.js'], {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+      maxBuffer: 32 * 1024 * 1024,
+    })
+      .split('\n')
+      .filter((f) => f !== '' && !f.includes('/dist/'))
+      // A file the index lists but the worktree removed has no source, as in
+      // `godot-source-decoupling.test.mjs`. The corpus floor below stops this hiding a collapsed list.
+      .filter((f) => existsSync(resolve(REPO_ROOT, f)))
+  );
 }
 
 function scriptKind(file: string): ts.ScriptKind {

@@ -382,8 +382,7 @@ function restartParticle(
     : { r: 1, g: 1, b: 1, a: 1 };
 
   const angle1Rad =
-    Math.atan2(props.direction.y, props.direction.x) +
-    degToRad((rng.randf() * 2.0 - 1.0) * props.spread);
+    Math.atan2(props.direction.y, props.direction.x) + degToRad((rng.randf() * 2.0 - 1.0) * props.spread);
   const speed = lerp(
     props.params[CPUParticles2DParam.InitialLinearVelocity]!.min,
     props.params[CPUParticles2DParam.InitialLinearVelocity]!.max,
@@ -446,12 +445,7 @@ function emitAtShape(props: CPUParticles2DProperties, p: Particle, rng: GodotRan
 }
 
 /** The alive branch: integrate one step, returning the normalised age `tv`. */
-function advanceParticle(
-  state: SimState,
-  input: ParticleSimInput,
-  p: Particle,
-  localDelta: number
-): number {
+function advanceParticle(state: SimState, input: ParticleSimInput, p: Particle, localDelta: number): number {
   const { props, curves } = input;
   const seedRef: SeedRef = { value: p.seed };
 
@@ -496,8 +490,7 @@ function advanceParticle(
   // `yx` is `(diff.y, diff.x)` mirrored in X: the perpendicular Godot spins
   // tangential acceleration around. Its length is `diff`'s.
   if (diffLength > 0) {
-    const tangential =
-      texTangentialAccel * lerpParam(props, CPUParticles2DParam.TangentialAccel, seedRef);
+    const tangential = texTangentialAccel * lerpParam(props, CPUParticles2DParam.TangentialAccel, seedRef);
     force.x += (-diff.y / diffLength) * tangential;
     force.y += (diff.x / diffLength) * tangential;
   }
@@ -569,8 +562,7 @@ function applyAppearance(input: ParticleSimInput, p: Particle, tv: number): void
   const texHueVariation = hueCurve ? sampleCurve(hueCurve, tv) : 0.0;
 
   const hueParam = props.params[CPUParticles2DParam.HueVariation]!;
-  const hueRotAngle =
-    texHueVariation * 2 * Math.PI * lerp(hueParam.min, hueParam.max, p.hueRotRand);
+  const hueRotAngle = texHueVariation * 2 * Math.PI * lerp(hueParam.min, hueParam.max, p.hueRotRand);
 
   const base = colorRamp
     ? multiplyColor(sampleGradientColor(colorRamp, tv), props.color)
@@ -648,11 +640,7 @@ function sampleParam(curves: ParticleCurves, param: CPUParticles2DParam, tv: num
 }
 
 /** `Math::lerp(parameters_min[p], parameters_max[p], rand_from_seed(seed))`. */
-function lerpParam(
-  props: CPUParticles2DProperties,
-  param: CPUParticles2DParam,
-  seedRef: SeedRef
-): number {
+function lerpParam(props: CPUParticles2DProperties, param: CPUParticles2DParam, seedRef: SeedRef): number {
   const slot = props.params[param]!;
   return lerp(slot.min, slot.max, randFromSeed(seedRef));
 }

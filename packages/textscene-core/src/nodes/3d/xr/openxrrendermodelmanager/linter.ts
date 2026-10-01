@@ -14,8 +14,12 @@ import { literalText } from '../../../../godot/index.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  trackerRequiredForLocalPose: groundedArm('openxrrendermodelmanager-tracker-required-for-local-pose', { kind: 'configuration-warning' }),
-  parentNotXROrigin3D: groundedArm('openxrrendermodelmanager-parent-not-xrorigin3d', { kind: 'configuration-warning' }),
+  trackerRequiredForLocalPose: groundedArm('openxrrendermodelmanager-tracker-required-for-local-pose', {
+    kind: 'configuration-warning',
+  }),
+  parentNotXROrigin3D: groundedArm('openxrrendermodelmanager-parent-not-xrorigin3d', {
+    kind: 'configuration-warning',
+  }),
 } as const satisfies RuleArms<string>;
 
 /** The two `tracker` values that search only the DIRECT parent (cpp:203). */
@@ -52,8 +56,7 @@ function checkOpenXRRenderModelManager(context: RuleContext): Diagnostic[] {
   // `make_local_to_pose` beside them is a reachable state, even with no `tracker` key. LEFT_HAND(2)
   // and RIGHT_HAND(3) search every ancestor.
   const tracker = readTracker(properties);
-  const directParentOnly =
-    tracker === RENDER_MODEL_TRACKER_ANY || tracker === RENDER_MODEL_TRACKER_NONE_SET;
+  const directParentOnly = tracker === RENDER_MODEL_TRACKER_ANY || tracker === RENDER_MODEL_TRACKER_NONE_SET;
 
   if (directParentOnly) {
     const rawPose = properties.make_local_to_pose;

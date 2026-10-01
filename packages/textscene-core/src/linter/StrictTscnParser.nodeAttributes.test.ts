@@ -60,9 +60,7 @@ describe('StrictTscnParser', () => {
 
 [node name="Root" index="0"]
 `);
-      expect(result.errors.map((e) => [e.code, e.severity])).toEqual([
-        ['MISSING_NODE_IDENTIFIER', 'error'],
-      ]);
+      expect(result.errors.map((e) => [e.code, e.severity])).toEqual([['MISSING_NODE_IDENTIFIER', 'error']]);
     });
 
     it('warns, not errors, on a later heading with no type= or instance= and no instanced ancestor', () => {

@@ -11,7 +11,11 @@
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { getFontGlyphAdvancePx, getFontLinePitchPx, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
+import {
+  getFontGlyphAdvancePx,
+  getFontLinePitchPx,
+  type FontMetrics,
+} from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   AutowrapMode,
@@ -98,7 +102,10 @@ export function textEditTextTheme(
   state: TextEditStyleState,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
-  const defaults: TextThemeDefaults = { fontSizePx: ctx.theme.fontSize, color: TEXT_EDIT_DEFAULT_COLORS[state] };
+  const defaults: TextThemeDefaults = {
+    fontSizePx: ctx.theme.fontSize,
+    color: TEXT_EDIT_DEFAULT_COLORS[state],
+  };
   return resolveTextTheme(n, props, TEXT_EDIT_THEME_KEYS[state], defaults);
 }
 
@@ -125,8 +132,7 @@ export function shapeTextEditLines(
   preserveControl = false,
   indentWrappedLines = false
 ): TextEditLineLayout[] {
-  const mode =
-    wrapMode === 1 ? clampAutowrapMode(autowrapMode, AutowrapMode.WORD_SMART) : AutowrapMode.OFF;
+  const mode = wrapMode === 1 ? clampAutowrapMode(autowrapMode, AutowrapMode.WORD_SMART) : AutowrapMode.OFF;
   let row = 0;
   return lines.map((line) => {
     const layout = shapeText(line, {
@@ -206,7 +212,11 @@ export const TEXT_EDIT_DEFAULT_TAB_SIZE = 4;
  * repeating stop of `MAX(1, (space width + get_spacing(SPACING_SPACE)) * tab_size)`. The spacing is
  * 0 for every font here (`richTextTabStopsPx`, `../richtextlabel/nativeSolver.ts`).
  */
-export function textEditTabStopsPx(tabSize: number | undefined, fontMetrics: FontMetrics, fontSizePx: number): number[] {
+export function textEditTabStopsPx(
+  tabSize: number | undefined,
+  fontMetrics: FontMetrics,
+  fontSizePx: number
+): number[] {
   const size = tabSize ?? TEXT_EDIT_DEFAULT_TAB_SIZE;
   // `tab_size <= 0` skips tab alignment, and `[]` is `shapeText`'s no-op input.
   if (size <= 0) return [];
@@ -241,7 +251,13 @@ export function textEditMinimumSizeWith(
   const wrapWidthPx =
     rectWidthPx === undefined
       ? 0
-      : textEditWrapWidthPx(rectWidthPx, styleMin.x, gutterBandWidthPx, props.minimapWidth ?? 80, props.minimapDraw);
+      : textEditWrapWidthPx(
+          rectWidthPx,
+          styleMin.x,
+          gutterBandWidthPx,
+          props.minimapWidth ?? 80,
+          props.minimapDraw
+        );
   const effectiveWrapMode = rectWidthPx === undefined ? 0 : props.wrapMode;
 
   const lines = (props.text ?? '').split('\n');
@@ -325,11 +341,7 @@ export function textEditRowBandTopPx(
  * (`text_edit.cpp:1626`). The glyph baseline is one ascent lower, and `<TextRun>`
  * anchors a line by this top edge.
  */
-export function textEditRowTextTopPx(
-  bandTopPx: number,
-  rowHeightPx: number,
-  textHeightPx: number
-): number {
+export function textEditRowTextTopPx(bandTopPx: number, rowHeightPx: number, textHeightPx: number): number {
   return bandTopPx + (rowHeightPx - textHeightPx) / 2;
 }
 
@@ -364,11 +376,7 @@ export function textEditCaretRect(
  * (`:196`), so an all-whitespace line skips its last character. The run lives on `row0`, since the
  * `BREAK_TRIM_INDENT` gate (`text_server.cpp:1169`) refuses a soft break inside it.
  */
-export function textEditWrapIndentPx(
-  row0: TextLineLayout,
-  lineText: string,
-  wrapWidthPx: number
-): number {
+export function textEditWrapIndentPx(row0: TextLineLayout, lineText: string, wrapWidthPx: number): number {
   let indentPx = 0;
   const countable = Math.min(lineText.length - 1, row0.glyphs.length);
   for (let i = 0; i < countable; i++) {

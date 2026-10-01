@@ -29,7 +29,10 @@ function checkCPUParticles3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
   const rawProps = node.properties;
   if (!isValidProperties(rawProps)) return [];
-  return [...checkMissingMesh(node, rawProps), ...paramMinAboveMaxDiagnostics(node, rawProps, arms.paramMinAboveMax)];
+  return [
+    ...checkMissingMesh(node, rawProps),
+    ...paramMinAboveMaxDiagnostics(node, rawProps, arms.paramMinAboveMax),
+  ];
 }
 
 const cpuParticles3DValidationRule: LintRule = {

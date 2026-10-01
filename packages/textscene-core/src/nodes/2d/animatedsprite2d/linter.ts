@@ -10,7 +10,9 @@ import { heldResource } from '../../../linter/resourceChecker.js';
 import { DEFAULT_ANIMATION_NAME, literalText, ruleInt } from '../../../godot/index.js';
 
 const arms = {
-  missingSpriteFrames: groundedArm('animatedsprite2d-requires-spriteframes', { kind: 'configuration-warning' }),
+  missingSpriteFrames: groundedArm('animatedsprite2d-requires-spriteframes', {
+    kind: 'configuration-warning',
+  }),
   animationWithoutSpriteFrames: {
     severity: 'error',
     ruleName: 'animatedsprite2d-animation-no-spriteframes',
@@ -28,10 +30,7 @@ const arms = {
  * in file order (packed_scene.cpp:369-492), so a `sprite_frames` line below `key` is
  * still null, and `set_frame_and_progress` writes nothing (animated_sprite_2d.cpp:360-362).
  */
-function spriteFramesWhenApplied(
-  rawProps: Record<string, string>,
-  key: string
-): string | undefined {
+function spriteFramesWhenApplied(rawProps: Record<string, string>, key: string): string | undefined {
   const written = Object.keys(rawProps);
   const slotAt = written.indexOf('sprite_frames');
   if (slotAt === -1 || slotAt > written.indexOf(key)) return undefined;

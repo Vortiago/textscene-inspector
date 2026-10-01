@@ -29,7 +29,7 @@ describe('GpuPacer', () => {
     expect(pacer.allowance()).toBe(IN_FLIGHT_BANDS);
   });
 
-  it('counts every frame\'s bands still on their way against the window', () => {
+  it("counts every frame's bands still on their way against the window", () => {
     const pacer = new GpuPacer(fakeFences().fence);
     pacer.markIssued(1);
     pacer.markIssued(2);
@@ -37,7 +37,7 @@ describe('GpuPacer', () => {
     expect(pacer.allowance()).toBe(IN_FLIGHT_BANDS - 3);
   });
 
-  it('frees a frame\'s bands once the GPU has passed its fence', () => {
+  it("frees a frame's bands once the GPU has passed its fence", () => {
     const { fence, fences } = fakeFences();
     const pacer = new GpuPacer(fence);
     pacer.markIssued(1);

@@ -61,11 +61,12 @@ describe('AnimationTransportContext — registration (F1)', () => {
 
   it('skips RESET when defaulting — pre-selects the first non-RESET clip', () => {
     const { result } = renderHook(() => useAnimationTransport(), { wrapper: wrap });
-    act(() =>
-      void result.current.registerPlayer({
-        clips: ['RESET', 'idle', 'walk'],
-        durations: { RESET: 0, idle: 1, walk: 0.8 },
-      })
+    act(
+      () =>
+        void result.current.registerPlayer({
+          clips: ['RESET', 'idle', 'walk'],
+          durations: { RESET: 0, idle: 1, walk: 0.8 },
+        })
     );
     expect(result.current.selectedClip).toBe('idle');
   });

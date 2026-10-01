@@ -151,7 +151,8 @@ export const xrWarnings: Readonly<Record<string, readonly WarningRow[]>> = {
       says: 'XR shaders are not enabled in project settings',
       verdict: {
         declined: 'runtime-only',
-        because: 'GLOBAL_GET("xr/shaders/enabled"), a project setting, unconditional outside the visibility gate, xr_nodes.cpp:704',
+        because:
+          'GLOBAL_GET("xr/shaders/enabled"), a project setting, unconditional outside the visibility gate, xr_nodes.cpp:704',
       },
     },
   ],

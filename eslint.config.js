@@ -37,7 +37,6 @@ export default [
       '**/.claude/',
       '**/.tmp/',
       '.spike/',
-      'docs/probes/',
       // Vendored third-party source (minified); linted upstream, not here.
       'scripts/compare-docs/vendor/',
       // Generated MSDF font atlas: the base64 PNG and per-glyph
@@ -214,10 +213,7 @@ export default [
 
   // TypeScript files - Browser environment (web previewer, webview)
   {
-    files: [
-      'apps/textscene-web/src/**/*.{ts,tsx}',
-      'apps/textscene-vscode/src/webview/**/*.{ts,tsx}',
-    ],
+    files: ['apps/textscene-web/src/**/*.{ts,tsx}', 'apps/textscene-vscode/src/webview/**/*.{ts,tsx}'],
     languageOptions: {
       parser: tsparser,
       parserOptions: {

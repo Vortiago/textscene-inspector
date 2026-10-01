@@ -3,12 +3,7 @@
  * the error that refuses a negative one.
  */
 
-import {
-  IS_VALID_INT_RE,
-  stringToInt,
-  visitIndexedKeys,
-  type IndexParse,
-} from '../godot/index.js';
+import { IS_VALID_INT_RE, stringToInt, visitIndexedKeys, type IndexParse } from '../godot/index.js';
 import type { ParseError } from './types.js';
 import { keyShapeError } from './validators/propertyError.js';
 

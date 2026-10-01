@@ -5,8 +5,7 @@
  */
 import styles from './TscnPreviewShell.module.css';
 
-const HELP_URL =
-  'https://github.com/Vortiago/textscene-inspector#documentation';
+const HELP_URL = 'https://github.com/Vortiago/textscene-inspector#documentation';
 
 export function HelpLink() {
   return (

@@ -59,9 +59,7 @@ describe('findPublicSiteLeaks', () => {
   });
 
   it('passes a protocol-relative URL and a data URL', () => {
-    const files = [
-      { path: 'index.html', text: '<link href="//fonts.example/a.css"><link href="data:x">' },
-    ];
+    const files = [{ path: 'index.html', text: '<link href="//fonts.example/a.css"><link href="data:x">' }];
 
     expect(findPublicSiteLeaks(files, SCENES)).toEqual([]);
   });
@@ -81,9 +79,6 @@ describe('readDist', () => {
 
     const files = readDist(dist).sort((a, b) => a.path.localeCompare(b.path));
 
-    expect(files).toEqual([
-      { path: 'assets/font.woff2' },
-      { path: 'index.html', text: CLEAN_INDEX },
-    ]);
+    expect(files).toEqual([{ path: 'assets/font.woff2' }, { path: 'index.html', text: CLEAN_INDEX }]);
   });
 });

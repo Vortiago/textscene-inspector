@@ -28,7 +28,9 @@ const arms = {
     ruleName: 'pathfollow3d-progress-ratio-ignored',
     grounding: { kind: 'engine', at: 'path_3d.cpp:503' },
   },
-  orientedModeWithoutUpVector: groundedArm('pathfollow3d-oriented-mode-requires-up-vector', { kind: 'configuration-warning' }),
+  orientedModeWithoutUpVector: groundedArm('pathfollow3d-oriented-mode-requires-up-vector', {
+    kind: 'configuration-warning',
+  }),
 } as const satisfies RuleArms<string>;
 
 /** `PathFollow3D::ROTATION_ORIENTED` (path_3d.h), the mode that needs up vectors. */
@@ -49,7 +51,6 @@ function parentCurveDisablesUpVector(scene: TscnScene, parent: { properties: unk
 function checkPathFollow3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
-
 
   if (!isValidProperties(node.properties)) {
     return diagnostics;
@@ -137,7 +138,8 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
 const pathFollow3DValidationRule: LintRule = {
   meta: {
     name: 'valid-pathfollow3d',
-    description: 'Validates PathFollow3D parent relationship, progress values, and rotation mode requirements',
+    description:
+      'Validates PathFollow3D parent relationship, progress values, and rotation mode requirements',
     category: 'validation',
     applicableNodeTypes: ['PathFollow3D'],
     emits: armEmits(arms),

@@ -15,7 +15,9 @@ const PROCESS_CALLBACK = { 0: 'PHYSICS', 1: 'IDLE' };
 const zoomValidator = v.vector2('zoom', {
   components: ([x, y]) =>
     isZeroApprox(x!) || isZeroApprox(y!)
-      ? { message: `Property 'zoom' components must be non-zero (got Vector2(${x}, ${y})). Godot allows negative zoom (it flips the view); only a (near-)zero component is invalid.` }
+      ? {
+          message: `Property 'zoom' components must be non-zero (got Vector2(${x}, ${y})). Godot allows negative zoom (it flips the view); only a (near-)zero component is invalid.`,
+        }
       : null,
   accepts: 'Vector2(x, y), neither component (near-)zero',
   enforced: 'camera_2d.cpp:104',
@@ -68,4 +70,3 @@ validatorRegistry.registerAll('Camera2D', {
   editor_draw_limits: v.boolean('editor_draw_limits'),
   editor_draw_drag_margin: v.boolean('editor_draw_drag_margin'),
 });
-

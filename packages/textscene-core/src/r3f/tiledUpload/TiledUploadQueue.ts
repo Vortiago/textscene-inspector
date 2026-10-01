@@ -92,9 +92,7 @@ export class TiledUploadQueue {
       return { done: Promise.resolve(true), cancel: () => {} };
     }
     const key = residencyKey(texture);
-    const inFlight = this.queue.find(
-      (entry) => entry.texture.source === texture.source && entry.key === key
-    );
+    const inFlight = this.queue.find((entry) => entry.texture.source === texture.source && entry.key === key);
     return this.join(inFlight ?? this.start(texture, key), texture);
   }
 

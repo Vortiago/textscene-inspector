@@ -144,12 +144,12 @@ describe('<LabelGlyphs>', () => {
   it('double_sided=false → FrontSide material; default true → DoubleSide', async () => {
     const front = await render(props({ double_sided: false }));
     const double = await render(props({ double_sided: true }));
-    expect(
-      ((front.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material).side
-    ).toBe(THREE.FrontSide);
-    expect(
-      ((double.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material).side
-    ).toBe(THREE.DoubleSide);
+    expect(((front.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material).side).toBe(
+      THREE.FrontSide
+    );
+    expect(((double.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material).side).toBe(
+      THREE.DoubleSide
+    );
   });
 
   describe('outline pass', () => {
@@ -159,7 +159,9 @@ describe('<LabelGlyphs>', () => {
     // ordered by `material_set_render_priority` (`:402`).
 
     it('draws the outline as its own surface BEFORE the fill, at outline_render_priority then render_priority', async () => {
-      const renderer = await render(props({ outline_size: 12, outline_modulate: { r: 0, g: 0, b: 0, a: 1 } }));
+      const renderer = await render(
+        props({ outline_size: 12, outline_modulate: { r: 0, g: 0, b: 0, a: 1 } })
+      );
       const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
       expect(meshes.length).toBe(2);
       expect(meshes.map((m) => m.renderOrder)).toEqual([-1, 0]);
@@ -194,8 +196,10 @@ describe('<LabelGlyphs>', () => {
       expect(renderer.scene.findAllByType('Mesh').length).toBe(1);
     });
 
-    it('takes both surfaces\' paint order from the authored priorities, not a hardcoded pair', async () => {
-      const renderer = await render(props({ outline_size: 12, render_priority: 5, outline_render_priority: 3 }));
+    it("takes both surfaces' paint order from the authored priorities, not a hardcoded pair", async () => {
+      const renderer = await render(
+        props({ outline_size: 12, render_priority: 5, outline_render_priority: 3 })
+      );
       const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
       expect(meshes.map((m) => m.renderOrder)).toEqual([3, 5]);
     });
@@ -225,8 +229,12 @@ describe('<LabelGlyphs>', () => {
     });
 
     it('reads the nearest/linear bit of every mipmap variant, not just the two plain ones', async () => {
-      const nearestMip = await render(props({ texture_filter: TextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC }));
-      const linearMip = await render(props({ texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC }));
+      const nearestMip = await render(
+        props({ texture_filter: TextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC })
+      );
+      const linearMip = await render(
+        props({ texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC })
+      );
       expect(mapFilters(nearestMip).mag).toBe(THREE.NearestFilter);
       expect(mapFilters(linearMip).mag).toBe(THREE.LinearFilter);
     });
@@ -245,22 +253,27 @@ describe('<LabelGlyphs>', () => {
     it('DISABLED (default) orders by priority and leaves every surface at z=0', async () => {
       const renderer = await render(props({ outline_size: 12 }));
       expect(surfaceZ(renderer)).toEqual([0, 0]);
-      expect(renderer.scene.findAllByType('Mesh').map((m) => (m.instance as THREE.Mesh).renderOrder)).toEqual([
-        -1, 0,
-      ]);
+      expect(renderer.scene.findAllByType('Mesh').map((m) => (m.instance as THREE.Mesh).renderOrder)).toEqual(
+        [-1, 0]
+      );
     });
 
     it('DISCARD shifts each surface in Z by its own priority and stops ordering by it', async () => {
       const renderer = await render(props({ outline_size: 12, alpha_cut: AlphaCutMode.DISCARD }));
       expect(surfaceZ(renderer)).toEqual([-1, 0]);
-      expect(renderer.scene.findAllByType('Mesh').map((m) => (m.instance as THREE.Mesh).renderOrder)).toEqual([
-        0, 0,
-      ]);
+      expect(renderer.scene.findAllByType('Mesh').map((m) => (m.instance as THREE.Mesh).renderOrder)).toEqual(
+        [0, 0]
+      );
     });
 
     it('shifts by the AUTHORED priorities, not the defaults', async () => {
       const renderer = await render(
-        props({ outline_size: 12, alpha_cut: AlphaCutMode.HASH, render_priority: 4, outline_render_priority: -3 })
+        props({
+          outline_size: 12,
+          alpha_cut: AlphaCutMode.HASH,
+          render_priority: 4,
+          outline_render_priority: -3,
+        })
       );
       expect(surfaceZ(renderer)).toEqual([-3, 4]);
     });

@@ -54,8 +54,7 @@ describe('validator `accepts` metadata', () => {
 
   it('names BOTH ends, taking the tighter tier at each side', () => {
     // Built per end, so a setter ceiling beside a hinted floor still shows.
-    const find = (type: string, key: string) =>
-      validatorRegistry.declarationFor(type, key)?.accepts;
+    const find = (type: string, key: string) => validatorRegistry.declarationFor(type, key)?.accepts;
     expect(find('LightmapGI', 'bounces')).toBe('integer 0-16');
     expect(find('ReflectionProbe', 'max_distance')).toBe('float 0-262144');
     expect(find('RigidBody2D', 'max_contacts_reported')).toBe('integer >= 0, < 4096');
@@ -65,19 +64,14 @@ describe('validator `accepts` metadata', () => {
   it('lets an exclusive setter end win a tie against a coinciding hint end', () => {
     // Both ends sit at 0, and only the setter's excludes it. The column is the
     // domain that reports nothing, so it must not show a refused 0.
-    const aspect = validatorRegistry.declarationFor(
-      'OpenXRCompositionLayerCylinder',
-      'aspect_ratio'
-    );
+    const aspect = validatorRegistry.declarationFor('OpenXRCompositionLayerCylinder', 'aspect_ratio');
     expect(aspect?.accepts).toBe('float > 0, <= 100');
   });
 
   it('keeps the compact spelling when nothing but the hint states an end', () => {
     // The same builder feeds many `accepts` texts, so the shortcut keeps
     // `integer 1-10` the sheet's spelling.
-    expect(validatorRegistry.declarationFor('GeometryInstance3D', 'transparency')?.accepts).toBe(
-      'float 0-1'
-    );
+    expect(validatorRegistry.declarationFor('GeometryInstance3D', 'transparency')?.accepts).toBe('float 0-1');
   });
 
   it('describes a layer mask as a mask, not as a 4-billion integer range', () => {

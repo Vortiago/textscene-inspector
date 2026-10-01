@@ -347,9 +347,7 @@ describe('the derived read-only leaves', () => {
   });
 
   it('refuses every value of the joint bone pair', () => {
-    expect(check('settings/0/joints/0/bone_name', '"UpperArm"')?.code).toBe(
-      'INVALID_SETTING_READONLY'
-    );
+    expect(check('settings/0/joints/0/bone_name', '"UpperArm"')?.code).toBe('INVALID_SETTING_READONLY');
     expect(check('settings/0/joints/0/bone', '0')?.code).toBe('INVALID_SETTING_READONLY');
   });
 });

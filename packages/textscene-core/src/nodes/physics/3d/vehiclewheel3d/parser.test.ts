@@ -61,8 +61,7 @@ describe('parseVehicleWheel3D', () => {
 
   it('survives the scientific notation the trailer wheels carry in their basis', () => {
     const props = parseVehicleWheel3D(wheel, {
-      transform:
-        'Transform3D(1, 0, 0, 0, 1, -1.49012e-08, 0, 0, 1, 0.573678, -0.402732, -1.53277)',
+      transform: 'Transform3D(1, 0, 0, 0, 1, -1.49012e-08, 0, 0, 1, 0.573678, -0.402732, -1.53277)',
     });
 
     expect(props.transform?.basis_y.z).toBeCloseTo(-1.49012e-8, 12);

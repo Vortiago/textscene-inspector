@@ -12,9 +12,7 @@ interface Contribution {
   readonly when?: string;
 }
 
-const manifest = JSON.parse(
-  readFileSync(join(import.meta.dirname, '..', 'package.json'), 'utf8')
-) as {
+const manifest = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'package.json'), 'utf8')) as {
   contributes: {
     menus: Record<string, Contribution[]>;
     keybindings: Contribution[];

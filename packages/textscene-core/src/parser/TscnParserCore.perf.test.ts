@@ -38,7 +38,7 @@ describe('multi-line value scanning performance', () => {
     const elapsedMs = performance.now() - start;
 
     // The value still rejoins and parsing continues past it.
-    const title = scene.nodes.find(n => n.name === 'Title');
+    const title = scene.nodes.find((n) => n.name === 'Title');
     const titleProps = title?.properties as Record<string, unknown> | undefined;
     expect(titleProps?.text).toContain('Line number 0 of a very long pathological label value.');
     expect(titleProps?.horizontalAlignment).toBe(1);

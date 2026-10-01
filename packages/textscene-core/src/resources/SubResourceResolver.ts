@@ -19,14 +19,8 @@ interface IdIndex<T> {
  * the new tail and restarts after a truncation. A caller that replaced an entry in place
  * would read the old one.
  */
-const externalIdIndexes = new WeakMap<
-  readonly TscnExternalResource[],
-  IdIndex<TscnExternalResource>
->();
-const internalIdIndexes = new WeakMap<
-  readonly TscnInternalResource[],
-  IdIndex<TscnInternalResource>
->();
+const externalIdIndexes = new WeakMap<readonly TscnExternalResource[], IdIndex<TscnExternalResource>>();
+const internalIdIndexes = new WeakMap<readonly TscnInternalResource[], IdIndex<TscnInternalResource>>();
 
 /**
  * The id map over `table`, built once per table: every reference in a scene resolves
@@ -57,18 +51,12 @@ function claimId<T>(byId: Map<string, T>, id: string, entry: T): void {
   if (!byId.has(id)) byId.set(id, entry);
 }
 
-function claimExternalIds(
-  byId: Map<string, TscnExternalResource>,
-  resource: TscnExternalResource
-): void {
+function claimExternalIds(byId: Map<string, TscnExternalResource>, resource: TscnExternalResource): void {
   claimId(byId, resource.id, resource);
 }
 
 /** Both ids {@link findSubResource} answers to. */
-function claimInternalIds(
-  byId: Map<string, TscnInternalResource>,
-  resource: TscnInternalResource
-): void {
+function claimInternalIds(byId: Map<string, TscnInternalResource>, resource: TscnInternalResource): void {
   const dataId = (resource.data as { id?: unknown } | undefined)?.id;
   if (typeof dataId === 'string') claimId(byId, dataId, resource);
   claimId(byId, String(resource.id), resource);

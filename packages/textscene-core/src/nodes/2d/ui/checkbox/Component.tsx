@@ -44,7 +44,10 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const clippingPlanes = useControlClipPlanes();
 
   const iconKey = resolveCheckBoxIconKey(props);
-  const iconTexture = useNodeIcon(solveNode.icons[CHECK_BOX_ICON_THEME_NAME[iconKey]], CHECK_BOX_ICONS[iconKey]);
+  const iconTexture = useNodeIcon(
+    solveNode.icons[CHECK_BOX_ICON_THEME_NAME[iconKey]],
+    CHECK_BOX_ICONS[iconKey]
+  );
   const iconSize = useMemo(() => {
     const fitted = fitIconSize(checkBoxIconNaturalSize(solveNode), checkBoxIconMaxWidth(solveNode.constants));
     return { x: Math.round(fitted.x), y: Math.round(fitted.y) };
@@ -59,10 +62,7 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   // gives the reason.
   const fontMetrics = resolveNodeFontMetrics(solveNode, CHECKBOX_THEME_FONT_KEY);
   const layout: TextLayoutResult | null = useMemo(
-    () =>
-      hasText
-        ? shapeButtonLabel(text, fontSizePx, fontMetrics)
-        : null,
+    () => (hasText ? shapeButtonLabel(text, fontSizePx, fontMetrics) : null),
     [hasText, text, fontSizePx, fontMetrics]
   );
 

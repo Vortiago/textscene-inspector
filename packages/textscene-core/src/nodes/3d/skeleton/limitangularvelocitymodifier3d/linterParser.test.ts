@@ -21,13 +21,7 @@ function check(property: string, value: string, nodeType = 'LimitAngularVelocity
  * (limit_angular_velocity_modifier_3d.cpp:272-273), one `ADD_ARRAY_COUNT` (:274, since :275's
  * `joint_count` has an empty setter), and the two families `_get_property_list` builds (:98, :106).
  */
-const KEYS: string[] = [
-  'max_angular_velocity',
-  'exclude',
-  'chain_count',
-  'chains/#/*',
-  'joints/#/*',
-];
+const KEYS: string[] = ['max_angular_velocity', 'exclude', 'chain_count', 'chains/#/*', 'joints/#/*'];
 /** True only when the class binds no ADD_PROPERTY, beside the source line that proves it. */
 const DECLARES_NOTHING = false;
 
@@ -267,10 +261,7 @@ describe('LimitAngularVelocityModifier3D joints family', () => {
   );
 
   it('grounds the verdict on the fall-through in _set', () => {
-    const validator = validatorRegistry.declarationFor(
-      'LimitAngularVelocityModifier3D',
-      'joints/0/bone'
-    );
+    const validator = validatorRegistry.declarationFor('LimitAngularVelocityModifier3D', 'joints/0/bone');
     expect(validator?.grounding).toEqual({
       kind: 'enforced',
       cite: 'limit_angular_velocity_modifier_3d.cpp:36-53',
@@ -279,18 +270,15 @@ describe('LimitAngularVelocityModifier3D joints family', () => {
 });
 
 describe('LimitAngularVelocityModifier3D inherited keys', () => {
-  it.each(['active', 'influence'])(
-    'resolves %s through the base-walk without re-declaring it',
-    (key) => {
-      expect(validatorRegistry.findValidator('LimitAngularVelocityModifier3D', key)).not.toBeNull();
-      expect(validatorRegistry.getOwnKeys('LimitAngularVelocityModifier3D')).not.toContain(key);
-      // The same function object, so the slice cannot have shadowed it with a
-      // copy that then drifts from SkeletonModifier3D's.
-      expect(validatorRegistry.findValidator('LimitAngularVelocityModifier3D', key)).toBe(
-        validatorRegistry.findValidator('SkeletonModifier3D', key)
-      );
-    }
-  );
+  it.each(['active', 'influence'])('resolves %s through the base-walk without re-declaring it', (key) => {
+    expect(validatorRegistry.findValidator('LimitAngularVelocityModifier3D', key)).not.toBeNull();
+    expect(validatorRegistry.getOwnKeys('LimitAngularVelocityModifier3D')).not.toContain(key);
+    // The same function object, so the slice cannot have shadowed it with a
+    // copy that then drifts from SkeletonModifier3D's.
+    expect(validatorRegistry.findValidator('LimitAngularVelocityModifier3D', key)).toBe(
+      validatorRegistry.findValidator('SkeletonModifier3D', key)
+    );
+  });
 
   it('applies SkeletonModifier3D influence bound here', () => {
     // skeleton_modifier_3d.cpp:161 hints influence to "0,1,0.001", so 1.5 is
@@ -303,8 +291,6 @@ describe('LimitAngularVelocityModifier3D inherited keys', () => {
     // limit_angular_velocity_modifier_3d.cpp:275. `add_property` resolves a
     // setter MethodBind only when one is named (class_db.cpp:1512), so there is
     // no value of the key Godot would ever read back and refuse.
-    expect(validatorRegistry.getOwnKeys('LimitAngularVelocityModifier3D')).not.toContain(
-      'joint_count'
-    );
+    expect(validatorRegistry.getOwnKeys('LimitAngularVelocityModifier3D')).not.toContain('joint_count');
   });
 });

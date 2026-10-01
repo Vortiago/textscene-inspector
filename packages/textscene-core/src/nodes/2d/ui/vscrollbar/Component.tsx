@@ -9,7 +9,11 @@ import { painterView, controlLayoutOrder } from '../../../../r3f/controls/native
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { rangeRatio, RANGE_DEFAULT_MAX, RANGE_DEFAULT_MIN, RANGE_DEFAULT_PAGE } from '../shared/range';
-import { scrollBarGrabberGeometry, scrollBarGrabberRect, scrollBarTrackRect } from '../shared/scrollBarSolver';
+import {
+  scrollBarGrabberGeometry,
+  scrollBarGrabberRect,
+  scrollBarTrackRect,
+} from '../shared/scrollBarSolver';
 import type { VScrollBarProperties } from './types';
 
 export function VScrollBar({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {

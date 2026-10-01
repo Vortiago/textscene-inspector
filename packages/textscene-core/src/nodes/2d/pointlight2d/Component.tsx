@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { useTexture2D } from '../../../resources/useTexture2D';
+import { applyTextureState, isMaterialOwnedTexture } from '../../../resources/textures/applyTextureState';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import type { PointLight2DProperties } from './types';
@@ -205,6 +206,21 @@ function QuadMesh({
   const width = (texture.image as { width?: number } | null | undefined)?.width ?? 1;
   const height = (texture.image as { height?: number } | null | undefined)?.height ?? 1;
 
+  // Godot resolves a canvas item's DEFAULT repeat to the viewport's DISABLED default
+  // (`viewport.h:419-420`, `renderer_canvas_render_rd.cpp:2344`), and the light-texture
+  // tap uses that item sampler (`canvas.glsl:774-782`). The cookie states clamp and never
+  // inherits a Repeat from the shared producer; a clamp-tagged entry is reused as-is.
+  const cookie = useMemo(
+    () => applyTextureState(texture, { repeat: false, colorSpace: THREE.SRGBColorSpace }),
+    [texture]
+  );
+  useEffect(
+    () => () => {
+      if (isMaterialOwnedTexture(cookie)) cookie.dispose();
+    },
+    [cookie]
+  );
+
   // A callback ref, not useRef, so the pose sampler starts once the quad is in
   // the tree: the world matrix it needs does not exist before that.
   const [quad, setQuad] = useState<THREE.Mesh | null>(null);
@@ -261,7 +277,7 @@ function QuadMesh({
   const material = useMemo(
     () =>
       createLightQuadMaterial({
-        cookie: texture,
+        cookie,
         color,
         energy,
         blendMode,
@@ -270,7 +286,7 @@ function QuadMesh({
         stencil: shadowed && !filtered ? litQuadStencilProps(ordinal) : undefined,
         shadow: sampling,
       }),
-    [texture, color, energy, blendMode, shadowed, filtered, ordinal, sampling]
+    [cookie, color, energy, blendMode, shadowed, filtered, ordinal, sampling]
   );
   useEffect(() => () => material.dispose(), [material]);
 
@@ -284,14 +300,14 @@ function QuadMesh({
     // A sampling is the filtered branch, and it carries the colour, so the two
     // quads of one light cannot be handed different `shadow_color`s.
     return sampling
-      ? createShadowColorQuadMaterial({ cookie: texture, blendMode, shadow: sampling })
+      ? createShadowColorQuadMaterial({ cookie, blendMode, shadow: sampling })
       : createShadowColorQuadMaterial({
-          cookie: texture,
+          cookie,
           blendMode,
           shadowColor,
           stencil: shadowColorQuadStencilProps(ordinal),
         });
-  }, [tintsShadow, texture, shadowColor, blendMode, ordinal, sampling]);
+  }, [tintsShadow, cookie, shadowColor, blendMode, ordinal, sampling]);
   useEffect(() => () => shadowMaterial?.dispose(), [shadowMaterial]);
 
   // The light layer is what keeps this quad out of the visible pass and what

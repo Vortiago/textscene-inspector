@@ -129,7 +129,7 @@ const convertTransformModifier3DValidationRule: LintRule = {
   meta: {
     name: 'valid-converttransformmodifier3d-ranges',
     description:
-      "Validates each ConvertTransformModifier3D settings/<i>/ range against the PROPERTY_HINT_RANGE its sibling transform_mode selects",
+      'Validates each ConvertTransformModifier3D settings/<i>/ range against the PROPERTY_HINT_RANGE its sibling transform_mode selects',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'ConvertTransformModifier3D'),
     emits: armEmits(arms),

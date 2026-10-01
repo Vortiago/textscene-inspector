@@ -11,7 +11,9 @@ import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter
 import { clipAncestry } from '../../canvasitem/shared/clipAncestry.js';
 
 const arms = {
-  ancestorClipsChildren: groundedArm('canvasgroup-ancestor-clips-children', { kind: 'configuration-warning' }),
+  ancestorClipsChildren: groundedArm('canvasgroup-ancestor-clips-children', {
+    kind: 'configuration-warning',
+  }),
   nestedInCanvasGroup: groundedArm('canvasgroup-nested-in-canvasgroup', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 

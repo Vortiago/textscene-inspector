@@ -138,7 +138,9 @@ describe('comparison sheets', () => {
   it('references only images that exist', () => {
     const missing = [];
     for (const s of sheets) {
-      const basenames = parseCompareMarkers(s.body).map((a) => a.image).filter(Boolean);
+      const basenames = parseCompareMarkers(s.body)
+        .map((a) => a.image)
+        .filter(Boolean);
       if (s.meta.image) basenames.push(s.meta.image);
       for (const basename of basenames) {
         for (const side of ['godot', 'ours']) {
@@ -152,9 +154,7 @@ describe('comparison sheets', () => {
   it('renders the header pair of a sheet that ALSO has sections', async () => {
     // A sheet's own `image:` and its section markers are both sources, or the
     // first section silently swallows the sheet's own comparison.
-    const sectionedWithHeader = sheets.filter(
-      (s) => s.meta.image && parseCompareMarkers(s.body).length > 0
-    );
+    const sectionedWithHeader = sheets.filter((s) => s.meta.image && parseCompareMarkers(s.body).length > 0);
     expect(sectionedWithHeader.length).toBeGreaterThan(0);
 
     const out = join(tmpdir(), `gallery-header-pair-${process.pid}.html`);
@@ -206,7 +206,8 @@ describe('comparison sheets', () => {
         for (const row of rows) {
           if (isDivider(row.trim())) continue;
           const got = splitRow(row).length;
-          if (got !== width) problems.push(`${s.label}: ${got} cells in a ${width}-column table — ${row.trim()}`);
+          if (got !== width)
+            problems.push(`${s.label}: ${got} cells in a ${width}-column table — ${row.trim()}`);
         }
       }
     }
@@ -251,9 +252,7 @@ describe('comparison sheets', () => {
     // A relative .md link is dead: sheets sit at varying depths, and the gallery
     // emits the href verbatim into one flat page. Name the other sheet instead.
     const bad = sheets
-      .flatMap((s) =>
-        [...s.body.matchAll(/\]\(([^)]+\.md[^)]*)\)/g)].map((m) => `${s.label} -> ${m[1]}`)
-      )
+      .flatMap((s) => [...s.body.matchAll(/\]\(([^)]+\.md[^)]*)\)/g)].map((m) => `${s.label} -> ${m[1]}`))
       .sort();
     expect(bad).toEqual([]);
   });
@@ -270,9 +269,7 @@ describe('comparison sheets', () => {
       /\bx \d+\.\.\d+/,
     ];
     const bad = sheets
-      .flatMap((s) =>
-        MEASUREMENT.filter((re) => re.test(s.body)).map((re) => `${s.label}: ${re.source}`)
-      )
+      .flatMap((s) => MEASUREMENT.filter((re) => re.test(s.body)).map((re) => `${s.label}: ${re.source}`))
       .sort();
     expect(bad).toEqual([]);
   });
@@ -281,7 +278,9 @@ describe('comparison sheets', () => {
     // `fixture:` becomes a `?fixture=` link into the live previewer; a renamed
     // scene leaves the sheet pointing at nothing.
     const fixtures = sheets.flatMap((s) => {
-      const declared = parseCompareMarkers(s.body).map((a) => a.fixture).filter(Boolean);
+      const declared = parseCompareMarkers(s.body)
+        .map((a) => a.fixture)
+        .filter(Boolean);
       if (s.meta.fixture) declared.push(s.meta.fixture);
       return declared.map((f) => ({ label: s.label, fixture: f }));
     });
@@ -312,9 +311,7 @@ describe('comparison sheets', () => {
 
   it('hand-writes no ADR link or path, leaving them to the generator', () => {
     // Relative depth varies per slice, and the deployed site has no docs/ tree.
-    const bad = sheets
-      .filter((s) => /\]\([^)]*adr\/|\[ADR-\d{4}\]:/.test(s.body))
-      .map((s) => s.label);
+    const bad = sheets.filter((s) => /\]\([^)]*adr\/|\[ADR-\d{4}\]:/.test(s.body)).map((s) => s.label);
     expect(bad).toEqual([]);
   });
 
@@ -381,14 +378,8 @@ describe('comparison sheets', () => {
       // A loop registration: three slices own no `index.r3f.ts` and must
       // resolve, while another slice in the same directory must not inherit it.
       const family = join(NODES_ROOT, 'physics/2d/index.r3f.ts');
-      expect(typesRegisteredBy(family).sort()).toEqual([
-        'CharacterBody2D',
-        'RigidBody2D',
-        'StaticBody2D',
-      ]);
-      expect(registrationFor(join(NODES_ROOT, 'physics/2d/rigidbody2d'), 'RigidBody2D')?.file).toBe(
-        family
-      );
+      expect(typesRegisteredBy(family).sort()).toEqual(['CharacterBody2D', 'RigidBody2D', 'StaticBody2D']);
+      expect(registrationFor(join(NODES_ROOT, 'physics/2d/rigidbody2d'), 'RigidBody2D')?.file).toBe(family);
       expect(registrationFor(join(NODES_ROOT, 'physics/2d/rigidbody2d'), 'ProgressBar')).toBeNull();
     });
 
@@ -397,8 +388,7 @@ describe('comparison sheets', () => {
       // without one would escape them all. Resource sheets are in this check
       // only: a Resource slice registers through `registerResourceSlice`
       // (ADR-0031), not `nodeComponentRegistry`.
-      const slice = (s) =>
-        s.file.includes(`${sep}nodes${sep}`) || s.file.includes(`${sep}resources${sep}`);
+      const slice = (s) => s.file.includes(`${sep}nodes${sep}`) || s.file.includes(`${sep}resources${sep}`);
       // A sectioned sheet is exempt: the guard above forbids its key.
       const backed = sheets.filter(slice).filter((s) => !s.body.includes('<!-- compare:'));
       expect(backed.length).toBeGreaterThan(230);

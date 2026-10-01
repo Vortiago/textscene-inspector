@@ -142,9 +142,7 @@ export function cursorQuaternion(cursor: EditorCursor): THREE.Quaternion {
 
 /** The unit vector from the focus point towards the eye. */
 export function cursorDirection(cursor: EditorCursor): THREE.Vector3 {
-  return new THREE.Vector3(0, 0, 1)
-    .applyAxisAngle(AXIS_X, -cursor.xRot)
-    .applyAxisAngle(AXIS_Y, -cursor.yRot);
+  return new THREE.Vector3(0, 0, 1).applyAxisAngle(AXIS_X, -cursor.xRot).applyAxisAngle(AXIS_Y, -cursor.yRot);
 }
 
 /** Where `to_camera_transform` puts the eye for this cursor. */
@@ -197,11 +195,7 @@ export function panCursor(cursor: EditorCursor, dx: number, dy: number): EditorC
  * `+up` moves it up. Pan and zoom-to-pointer share it, so the two cannot disagree about which
  * way screen-y runs.
  */
-export function slideCursorInViewPlane(
-  cursor: EditorCursor,
-  right: number,
-  up: number
-): EditorCursor {
+export function slideCursorInViewPlane(cursor: EditorCursor, right: number, up: number): EditorCursor {
   const translation = new THREE.Vector3(right, up, 0).applyQuaternion(cursorQuaternion(cursor));
   return { ...cursor, target: cursor.target.clone().add(translation) };
 }
@@ -210,15 +204,10 @@ export function slideCursorInViewPlane(
  * `scale_cursor_distance`: the radius is multiplied, never added to, so zoom slows near the focus
  * point and never crosses it. The range comes from the camera's clip planes, as in Godot.
  */
-export function scaleCursorDistance(
-  cursor: EditorCursor,
-  scale: number,
-  range: ZoomRange
-): EditorCursor {
+export function scaleCursorDistance(cursor: EditorCursor, scale: number, range: ZoomRange): EditorCursor {
   const min = Math.max(range.near * 4, ZOOM_DISTANCE_MIN);
   const max = Math.min(range.far / 4, ZOOM_DISTANCE_MAX);
-  const distance =
-    min > max ? (min + max) / 2 : THREE.MathUtils.clamp(cursor.distance * scale, min, max);
+  const distance = min > max ? (min + max) / 2 : THREE.MathUtils.clamp(cursor.distance * scale, min, max);
   return { ...cursor, distance };
 }
 

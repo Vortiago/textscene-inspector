@@ -61,7 +61,7 @@ function checkFileDialog(context: RuleContext): Diagnostic[] {
     `FileDialog option index(es) ${indices} fall outside option_count (${count}). ` +
       `PropertyListHelper::_get_property (property_list_helper.cpp:58) returns null for ` +
       'an index >= the array length, so FileDialog never calls the ' +
-      "matching setter and these option_<N>/… values are silently dropped on load."
+      'matching setter and these option_<N>/… values are silently dropped on load.'
   );
 
   return diagnostics;

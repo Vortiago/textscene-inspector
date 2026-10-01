@@ -48,8 +48,14 @@ export const scenarios = {
     'All Meshes',
     'Every primitive mesh type — cube, sphere, cylinder, capsule, plane, torus, prism — rendered together with distinct materials.'
   ),
-  'csg-box': orbitScene('Csg Box', 'CSGBox3D shapes render as solid lit geometry with materials (not placeholders).'),
-  'csg-cylinder': orbitScene('Csg Cylinder', 'CSGCylinder3D renders as a solid cylinder, including the tapered cone form.'),
+  'csg-box': orbitScene(
+    'Csg Box',
+    'CSGBox3D shapes render as solid lit geometry with materials (not placeholders).'
+  ),
+  'csg-cylinder': orbitScene(
+    'Csg Cylinder',
+    'CSGCylinder3D renders as a solid cylinder, including the tapered cone form.'
+  ),
   'material-metallic': orbitScene(
     'Material Metallic',
     'A high-metallic, low-roughness StandardMaterial3D sphere with a tight specular highlight under the directional light.'

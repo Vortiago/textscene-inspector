@@ -22,9 +22,7 @@ function renderGutter() {
 
 /** Lays the gutter out as a browser would: `VIEWPORT` tall, one `ROW` per line from its top. */
 function stubLayout() {
-  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
-    this: HTMLElement
-  ) {
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
     const testId = this.dataset.testid ?? '';
     const line = /^gutter-row-(\d+)$/.exec(testId)?.[1];
     const top = line === undefined ? 0 : (Number(line) - 1) * ROW;

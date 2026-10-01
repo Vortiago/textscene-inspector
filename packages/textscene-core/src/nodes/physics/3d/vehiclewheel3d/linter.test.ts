@@ -87,10 +87,7 @@ describe('VehicleWheel3D Linter', () => {
     });
 
     it('accepts a wheel parented directly to a VehicleBody3D', () => {
-      const content = scene(
-        vehicleBody,
-        node('VehicleWheel3D', {}, { name: 'Wheel1', parent: '.' })
-      );
+      const content = scene(vehicleBody, node('VehicleWheel3D', {}, { name: 'Wheel1', parent: '.' }));
       expectNoDiagnostic(content, { ruleName: 'vehiclewheel3d-not-under-vehicle-body' });
     });
 
@@ -143,8 +140,7 @@ describe('VehicleWheel3D Linter', () => {
           node(
             'VehicleWheel3D',
             {
-              transform:
-                'Transform3D(1, 0, 0, 0, 1, -1.49012e-08, 0, 0, 1, 0.573678, -0.402732, -1.53277)',
+              transform: 'Transform3D(1, 0, 0, 0, 1, -1.49012e-08, 0, 0, 1, 0.573678, -0.402732, -1.53277)',
               wheel_roll_influence: 0.4,
               wheel_radius: 0.1,
               wheel_friction_slip: 1.0,

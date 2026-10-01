@@ -12,11 +12,7 @@
 import type { TscnNode } from '../parser/types';
 import { descendsFrom } from '../godot/nodeBaseTypes';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary';
-import {
-  CANVAS_ITEM_Z_MAX,
-  CANVAS_ITEM_Z_MIN,
-  WORLD_CANVAS_LAYER,
-} from './lighting2d/canvasItemPlacement';
+import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN, WORLD_CANVAS_LAYER } from './lighting2d/canvasItemPlacement';
 
 /** How many distinct `z_final` buckets one canvas has. */
 const Z_BUCKET_COUNT = CANVAS_ITEM_Z_MAX - CANVAS_ITEM_Z_MIN + 1;
@@ -374,11 +370,7 @@ function fitToRange(sizes: readonly number[], available: number): number[] {
  * a pass over items the tree does not list, such as a tile layer's y-sort rows,
  * whose count is known only once a resource resolves.
  */
-export function packPaintRanges(
-  range: PaintRange,
-  sizes: readonly number[],
-  from: number
-): PaintRange[] {
+export function packPaintRanges(range: PaintRange, sizes: readonly number[], from: number): PaintRange[] {
   const end = range.base + range.size;
   const fitted = fitToRange(sizes, Math.max(0, end - from) + 1);
   let cursor = from;

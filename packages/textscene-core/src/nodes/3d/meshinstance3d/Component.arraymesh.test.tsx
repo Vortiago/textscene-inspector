@@ -94,9 +94,7 @@ function makeNode(): TscnNode {
   };
 }
 
-const EXT: TscnExternalResource[] = [
-  { id: '1', path: 'res://stage/meshes/wall.tres', type: 'ArrayMesh' },
-];
+const EXT: TscnExternalResource[] = [{ id: '1', path: 'res://stage/meshes/wall.tres', type: 'ArrayMesh' }];
 
 function render(loader: ResourceLoader) {
   return ReactThreeTestRenderer.create(
@@ -170,7 +168,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
     expect(Number.isFinite(geo!.boundingSphere!.radius)).toBe(true);
     const wireframes = renderer.scene
       .findAllByType('MeshBasicMaterial')
-      .filter((m) => (materialInstanceAs<THREE.MeshBasicMaterial>(m)).wireframe);
+      .filter((m) => materialInstanceAs<THREE.MeshBasicMaterial>(m).wireframe);
     expect(wireframes).toHaveLength(0);
   });
 
@@ -200,7 +198,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
     expect(Number.isFinite(geo!.boundingSphere!.radius)).toBe(true);
     const noWireframe = renderer.scene
       .findAllByType('MeshBasicMaterial')
-      .filter((m) => (materialInstanceAs<THREE.MeshBasicMaterial>(m)).wireframe);
+      .filter((m) => materialInstanceAs<THREE.MeshBasicMaterial>(m).wireframe);
     expect(noWireframe).toHaveLength(0);
   });
 
@@ -241,10 +239,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
     // The sub_resource's own albedo, a near-black blue at roughness 0.6, not
     // the mid-grey 0.6/0.8/0.2 Godot binds for a surface with no material.
     for (const material of materials) {
-      const rgb = material.color.getRGB(
-        { r: 0, g: 0, b: 0 } as THREE.Color,
-        THREE.LinearSRGBColorSpace
-      );
+      const rgb = material.color.getRGB({ r: 0, g: 0, b: 0 } as THREE.Color, THREE.LinearSRGBColorSpace);
       expect(rgb.b).toBeGreaterThan(rgb.r);
       expect(rgb.b).toBeLessThan(0.1);
       expect(material.roughness).toBeCloseTo(0.6, 5);
@@ -269,7 +264,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
 
     const wireframes = renderer.scene
       .findAllByType('MeshBasicMaterial')
-      .filter((m) => (materialInstanceAs<THREE.MeshBasicMaterial>(m)).wireframe);
+      .filter((m) => materialInstanceAs<THREE.MeshBasicMaterial>(m).wireframe);
     expect(wireframes.length).toBeGreaterThan(0);
   });
 
@@ -288,9 +283,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
     );
 
     const materials = renderer.scene.findAllByType('MeshBasicMaterial');
-    const placeholder = materials.find(
-      (m) => (materialInstanceAs<THREE.MeshBasicMaterial>(m)).wireframe
-    );
+    const placeholder = materials.find((m) => materialInstanceAs<THREE.MeshBasicMaterial>(m).wireframe);
     expect(placeholder).toBeDefined();
   });
 });
@@ -322,7 +315,10 @@ blend_shape_mode = 0
 `;
 
 class SingleFileProvider implements ResourceProvider {
-  constructor(private path: string, private content: string) {}
+  constructor(
+    private path: string,
+    private content: string
+  ) {}
   async loadResource(path: string): Promise<string | ArrayBuffer | null> {
     return path === this.path ? this.content : null;
   }

@@ -32,7 +32,7 @@ describe('rasterizeGradientTexture2D', () => {
     expect(texture.minFilter).toBe(THREE.LinearFilter);
   });
 
-  it('puts Godot\'s TOP row at v = 1, matching a file-backed texture', () => {
+  it("puts Godot's TOP row at v = 1, matching a file-backed texture", () => {
     // WebGL's UNPACK_FLIP_Y does not apply to a typed-array DataTexture, so the
     // buffer carries the flip: v = 1 samples the last row, Godot's top row.
     const tex: GradientTexture2D = {

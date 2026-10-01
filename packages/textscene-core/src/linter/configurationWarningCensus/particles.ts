@@ -46,18 +46,24 @@ export const particleWarnings: Readonly<Record<string, readonly WarningRow[]>> =
       says: 'animation requires a CanvasItemMaterial with Particles Animation enabled',
       verdict: {
         declined: 'runtime-only',
-        because: "material and process_material property VALUES, gpu_particles_2d.cpp:379-385",
+        because: 'material and process_material property VALUES, gpu_particles_2d.cpp:379-385',
       },
     },
     {
       at: 'gpu_particles_2d.cpp:392',
       says: 'particle trails only available with the Forward+ or Mobile renderer',
-      verdict: { declined: 'runtime-only', because: 'OS::get_current_rendering_method(), gpu_particles_2d.cpp:391' },
+      verdict: {
+        declined: 'runtime-only',
+        because: 'OS::get_current_rendering_method(), gpu_particles_2d.cpp:391',
+      },
     },
     {
       at: 'gpu_particles_2d.cpp:396',
       says: 'particle sub-emitters only available with the Forward+ or Mobile renderer',
-      verdict: { declined: 'runtime-only', because: 'OS::get_current_rendering_method(), gpu_particles_2d.cpp:395' },
+      verdict: {
+        declined: 'runtime-only',
+        because: 'OS::get_current_rendering_method(), gpu_particles_2d.cpp:395',
+      },
     },
   ],
 
@@ -75,17 +81,26 @@ export const particleWarnings: Readonly<Record<string, readonly WarningRow[]>> =
     {
       at: 'gpu_particles_3d.cpp:373',
       says: 'animation requires a BaseMaterial3D with Particle Billboard mode',
-      verdict: { declined: 'runtime-only', because: "resolved material's billboard-mode VALUE, gpu_particles_3d.cpp:370-372" },
+      verdict: {
+        declined: 'runtime-only',
+        because: "resolved material's billboard-mode VALUE, gpu_particles_3d.cpp:370-372",
+      },
     },
     {
       at: 'gpu_particles_3d.cpp:415',
       says: 'Trail meshes with a Skin causes the Skin to override Trail poses',
-      verdict: { declined: 'runtime-only', because: 'resolved draw_pass/skin CONTENT, gpu_particles_3d.cpp:414' },
+      verdict: {
+        declined: 'runtime-only',
+        because: 'resolved draw_pass/skin CONTENT, gpu_particles_3d.cpp:414',
+      },
     },
     {
       at: 'gpu_particles_3d.cpp:417',
       says: 'Trails active, but neither Trail meshes nor a Skin were found',
-      verdict: { declined: 'runtime-only', because: 'resolved draw_pass/skin CONTENT, gpu_particles_3d.cpp:416' },
+      verdict: {
+        declined: 'runtime-only',
+        because: 'resolved draw_pass/skin CONTENT, gpu_particles_3d.cpp:416',
+      },
     },
     {
       at: 'gpu_particles_3d.cpp:419',
@@ -95,17 +110,26 @@ export const particleWarnings: Readonly<Record<string, readonly WarningRow[]>> =
     {
       at: 'gpu_particles_3d.cpp:423',
       says: 'Trails enabled, but one or more mesh materials are missing or unset for trails',
-      verdict: { declined: 'runtime-only', because: 'resolved draw_pass materials CONTENT, gpu_particles_3d.cpp:422' },
+      verdict: {
+        declined: 'runtime-only',
+        because: 'resolved draw_pass materials CONTENT, gpu_particles_3d.cpp:422',
+      },
     },
     {
       at: 'gpu_particles_3d.cpp:426',
       says: 'particle trails only available with the Forward+ or Mobile renderer',
-      verdict: { declined: 'runtime-only', because: 'OS::get_current_rendering_method(), gpu_particles_3d.cpp:425' },
+      verdict: {
+        declined: 'runtime-only',
+        because: 'OS::get_current_rendering_method(), gpu_particles_3d.cpp:425',
+      },
     },
     {
       at: 'gpu_particles_3d.cpp:431',
       says: 'particle sub-emitters only available with the Forward+ or Mobile renderer',
-      verdict: { declined: 'runtime-only', because: 'OS::get_current_rendering_method(), gpu_particles_3d.cpp:430' },
+      verdict: {
+        declined: 'runtime-only',
+        because: 'OS::get_current_rendering_method(), gpu_particles_3d.cpp:430',
+      },
     },
   ],
 

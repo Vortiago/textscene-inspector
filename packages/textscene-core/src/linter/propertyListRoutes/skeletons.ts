@@ -82,5 +82,4 @@ export const skeletonRoutes: readonly RouteRow[] = [
     sample: 'settings/0/target_node',
     verdict: { validated: true },
   },
-
 ];

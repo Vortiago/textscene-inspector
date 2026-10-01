@@ -14,10 +14,23 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { AutowrapMode, clampAutowrapMode, isWhitespace, shapeText, shapedTextSizeWidthPx, type TextLayoutResult, type TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
+import {
+  AutowrapMode,
+  clampAutowrapMode,
+  isWhitespace,
+  shapeText,
+  shapedTextSizeWidthPx,
+  type TextLayoutResult,
+  type TextLineLayout,
+} from '../../../../r3f/controls/native/text/textLayout';
 import { OverrunBehavior } from '../../../../r3f/controls/native/text/textOverrun';
 import { JustificationFlag, fitLineToWidth } from '../../../../r3f/controls/native/text/textJustify';
-import { resolveTextTheme, type ResolvedTextTheme, type TextThemeDefaults, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
+import {
+  resolveTextTheme,
+  type ResolvedTextTheme,
+  type TextThemeDefaults,
+  type TextThemeKeys,
+} from '../../../../r3f/controls/native/textTheme';
 import type { TscnInternalResource } from '../../../../parser/types';
 import { resolveLabelSettings } from '../../../../resources/styles/labelsettings/decode';
 import type { ControlColor } from '../control/types';
@@ -90,7 +103,11 @@ export function labelEffectiveTextTheme(
   settings: ReturnType<typeof resolveNodeLabelSettings>
 ): LabelEffectiveTextTheme {
   if (!settings) {
-    return { fontSizePx: themeResolved.fontSizePx, color: themeResolved.color, lineSpacingPx: LABEL_LINE_SPACING_PX };
+    return {
+      fontSizePx: themeResolved.fontSizePx,
+      color: themeResolved.color,
+      lineSpacingPx: LABEL_LINE_SPACING_PX,
+    };
   }
   return {
     fontSizePx: settings.fontSize,
@@ -116,7 +133,10 @@ export interface LabelOutlineTheme {
 }
 
 /** `label.cpp:765-766`: `has_settings ? settings->get_outline_X() : theme_cache.font_outline_X`, the precedence `labelEffectiveTextTheme` states. */
-export function labelOutlineTheme(n: SolveNode, settings: ReturnType<typeof resolveNodeLabelSettings>): LabelOutlineTheme {
+export function labelOutlineTheme(
+  n: SolveNode,
+  settings: ReturnType<typeof resolveNodeLabelSettings>
+): LabelOutlineTheme {
   if (settings) return { size: settings.outlineSize, color: settings.outlineColor };
   return {
     size: n.constants['outline_size'] ?? 0,
@@ -132,8 +152,12 @@ export interface LabelShadowTheme {
 }
 
 /** `label.cpp:762-767`: `has_settings ? settings->get_shadow_X() : theme_cache.font_shadow_X`, the precedence `labelEffectiveTextTheme` states. */
-export function labelShadowTheme(n: SolveNode, settings: ReturnType<typeof resolveNodeLabelSettings>): LabelShadowTheme {
-  if (settings) return { size: settings.shadowSize, color: settings.shadowColor, offset: settings.shadowOffset };
+export function labelShadowTheme(
+  n: SolveNode,
+  settings: ReturnType<typeof resolveNodeLabelSettings>
+): LabelShadowTheme {
+  if (settings)
+    return { size: settings.shadowSize, color: settings.shadowColor, offset: settings.shadowOffset };
   return {
     size: n.constants['shadow_outline_size'] ?? LABEL_DEFAULT_SHADOW_OUTLINE_SIZE,
     color: n.colors['font_shadow_color'] ?? LABEL_DEFAULT_SHADOW_COLOR,
@@ -205,7 +229,11 @@ export const VC_GLYPHS_RTL = 4;
  * line-breaking, so a typewriter reveal re-wraps as it grows. Other behaviours trim at draw time
  * (`applyVisibleCharsReveal`). An unset or negative `visibleChars` shows all.
  */
-export function labelPreShapeText(text: string, visibleChars: number | undefined, behavior: number | undefined): string {
+export function labelPreShapeText(
+  text: string,
+  visibleChars: number | undefined,
+  behavior: number | undefined
+): string {
   if (visibleChars === undefined || visibleChars < 0) return text;
   if ((behavior ?? VC_CHARS_BEFORE_SHAPING) !== VC_CHARS_BEFORE_SHAPING) return text;
   return text.slice(0, visibleChars);
@@ -227,7 +255,10 @@ export interface VisibleCharsBudget {
  * GLYPHS_RTL from the back (`label.cpp:780`), and GLYPHS_AUTO picks by `rtl_layout` (`:779-780`). One
  * glyph is one character here (no ligatures), except across a trimmed edge space (`comparison.md`).
  */
-export function applyVisibleCharsReveal(lines: readonly TextLineLayout[], budget: VisibleCharsBudget): TextLineLayout[] {
+export function applyVisibleCharsReveal(
+  lines: readonly TextLineLayout[],
+  budget: VisibleCharsBudget
+): TextLineLayout[] {
   if (budget.behavior === VC_CHARS_BEFORE_SHAPING) return [...lines];
 
   let limit: number;
@@ -239,7 +270,8 @@ export function applyVisibleCharsReveal(lines: readonly TextLineLayout[], budget
     if (budget.visibleRatio === undefined || budget.visibleRatio >= 1) return [...lines];
     const totalGlyphs = lines.reduce((sum, l) => sum + l.glyphs.length, 0);
     limit = Math.trunc(totalGlyphs * Math.max(0, budget.visibleRatio));
-    fromEnd = budget.behavior === VC_GLYPHS_RTL || (budget.behavior === VC_GLYPHS_AUTO && budget.rtl === true);
+    fromEnd =
+      budget.behavior === VC_GLYPHS_RTL || (budget.behavior === VC_GLYPHS_AUTO && budget.rtl === true);
   }
 
   const totalGlyphs = lines.reduce((sum, l) => sum + l.glyphs.length, 0);
@@ -266,7 +298,10 @@ export const labelUnwrappedShape = defineShare<TextLayoutResult | null>((n, them
   const text = labelPreShapeText(props.text ?? '', props.visibleCharacters, props.visibleCharactersBehavior);
   if (text.length === 0) return null;
   const settings = resolveNodeLabelSettings(props, n.resources.internalResources);
-  const { fontSizePx, lineSpacingPx } = labelEffectiveTextTheme(labelTextTheme(n, props, { theme }), settings);
+  const { fontSizePx, lineSpacingPx } = labelEffectiveTextTheme(
+    labelTextTheme(n, props, { theme }),
+    settings
+  );
   const layout = shapeText(text, {
     fontSizePx,
     boxWidthPx: 0,
@@ -278,7 +313,10 @@ export const labelUnwrappedShape = defineShare<TextLayoutResult | null>((n, them
     tabStopsPx: props.tabStopsPx,
     autowrapTrimFlags: props.autowrapTrimFlags,
   });
-  return windowLabelLines(layout, labelVisibleLineRange(layout.lines.length, props.linesSkipped ?? 0, props.maxLinesVisible));
+  return windowLabelLines(
+    layout,
+    labelVisibleLineRange(layout.lines.length, props.linesSkipped ?? 0, props.maxLinesVisible)
+  );
 });
 
 /**
@@ -286,7 +324,11 @@ export const labelUnwrappedShape = defineShare<TextLayoutResult | null>((n, them
  * `_update_visible` (`:344-388`) subtracts one trailing `line_spacing`, since N lines carry N-1
  * gaps, while `shapeText` returns `N * linePitchPx`.
  */
-function labelMinimumHeightPx(windowed: TextLayoutResult, lineSpacingPx: number, fontHeightPx: number): number {
+function labelMinimumHeightPx(
+  windowed: TextLayoutResult,
+  lineSpacingPx: number,
+  fontHeightPx: number
+): number {
   return Math.max(Math.max(0, windowed.heightPx - lineSpacingPx), fontHeightPx);
 }
 
@@ -350,7 +392,9 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   // (label.cpp:993-995), since a narrower box trims the text.
   const overrunBehavior = props.overrunBehavior ?? OverrunBehavior.NO_TRIMMING;
   const widthPx =
-    props.clipText || overrunBehavior !== OverrunBehavior.NO_TRIMMING ? 1 : shapedTextSizeWidthPx(windowed.widthPx);
+    props.clipText || overrunBehavior !== OverrunBehavior.NO_TRIMMING
+      ? 1
+      : shapedTextSizeWidthPx(windowed.widthPx);
   return { x: widthPx, y: height };
 };
 
@@ -366,8 +410,6 @@ const V_CENTER = 1;
 const V_BOTTOM = 2;
 const V_FILL = 3;
 
-
-
 export interface LabelLinePlacement {
   /** This line's left edge, box-local Godot px. */
   x: number;
@@ -379,7 +421,10 @@ export interface LabelLinePlacement {
 
 /** `Label.jst_flags`'s default (`label.h:46`), used absent a scene override. */
 export const LABEL_DEFAULT_JUSTIFICATION_FLAGS =
-  JustificationFlag.WORD_BOUND | JustificationFlag.KASHIDA | JustificationFlag.SKIP_LAST_LINE | JustificationFlag.DO_NOT_SKIP_SINGLE_LINE;
+  JustificationFlag.WORD_BOUND |
+  JustificationFlag.KASHIDA |
+  JustificationFlag.SKIP_LAST_LINE |
+  JustificationFlag.DO_NOT_SKIP_SINGLE_LINE;
 
 /** `TS->shaped_text_has_visible_chars` reduced to this engine's charset: any glyph whose own character is not whitespace. */
 function lineHasVisibleChars(line: TextLineLayout): boolean {
@@ -411,7 +456,12 @@ function justifyToLineIndex(lines: TextLineLayout[], flags: number): number {
  * than its line (only with `clip_text`) makes the difference negative, where `Math.floor` is a pixel
  * off. `margin` is zero for Label's `StyleBoxEmpty` (`default_theme.cpp:379`).
  */
-function horizontalOffsetPx(lineWidthPx: number, boxWidthPx: number, alignment: number | undefined, rtl: boolean): number {
+function horizontalOffsetPx(
+  lineWidthPx: number,
+  boxWidthPx: number,
+  alignment: number | undefined,
+  rtl: boolean
+): number {
   // `rtl_layout` swaps the two arms outright (`:481-497`): LEFT takes the
   // trailing-edge expression and RIGHT takes `style->get_offset().x`, which is
   // zero for the StyleBoxEmpty above. CENTER carries no arm.
@@ -505,6 +555,10 @@ export function layoutLabelLines(
     }
     // `_get_line_rect` aligns against the ceiled `TS->shaped_text_get_size(rid)` (`label.cpp:478`),
     // not the raw pen advance `fitLineToWidth` needs.
-    return { x: horizontalOffsetPx(shapedTextSizeWidthPx(line.widthPx), boxWidthPx, horizontalAlignment, rtl), y, line };
+    return {
+      x: horizontalOffsetPx(shapedTextSizeWidthPx(line.widthPx), boxWidthPx, horizontalAlignment, rtl),
+      y,
+      line,
+    };
   });
 }

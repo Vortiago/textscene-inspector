@@ -46,10 +46,16 @@ validatorRegistry.registerAll('CanvasItem', {
   // canvas_item.cpp:1477, PROPERTY_HINT_LAYERS_2D_RENDER, not a PROPERTY_HINT_RANGE, so no numeric
   // hint grounds a bound. set_light_mask (canvas_item.cpp:589-596) assigns unconditionally, with no
   // ERR_FAIL and no clamp, so no 0..2^32-1 bound is declared (ADR-0032 "none").
-  light_mask: layerBitmask('light_mask', { hinted: 'canvas_item.cpp:1477', width: 'int32' /* canvas_item.h:278 */ }),
+  light_mask: layerBitmask('light_mask', {
+    hinted: 'canvas_item.cpp:1477',
+    width: 'int32' /* canvas_item.h:278 */,
+  }),
   // canvas_item.cpp:1478, same PROPERTY_HINT_LAYERS_2D_RENDER shape.
   // set_visibility_layer (canvas_item.cpp:1598-1602) assigns unconditionally.
-  visibility_layer: layerBitmask('visibility_layer', { hinted: 'canvas_item.cpp:1478', width: 'uint32' /* canvas_item.h:288 */ }),
+  visibility_layer: layerBitmask('visibility_layer', {
+    hinted: 'canvas_item.cpp:1478',
+    width: 'uint32' /* canvas_item.h:288 */,
+  }),
   // scene/main/canvas_item.cpp:1481 builds the hint from the rendering server's
   // own constants, and set_z_index (canvas_item.cpp:668-669) ERR_FAIL_CONDs
   // against the same two, so this is enforced, not only hinted.

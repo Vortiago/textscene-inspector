@@ -25,7 +25,6 @@ function checkAudioStreamPlayer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-
   if (!isValidProperties(node.properties)) {
     return diagnostics;
   }
@@ -54,8 +53,7 @@ function checkAudioStreamPlayer(context: RuleContext): Diagnostic[] {
 const audioStreamPlayerValidationRule: LintRule = {
   meta: {
     name: 'valid-audiostreamplayer-properties',
-    description:
-      'Validates AudioStreamPlayer property values and logical consistency (non-positional node)',
+    description: 'Validates AudioStreamPlayer property values and logical consistency (non-positional node)',
     category: 'validation',
     applicableNodeTypes: ['AudioStreamPlayer'],
     emits: armEmits(arms),

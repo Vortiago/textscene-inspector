@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import {
-  ViewportModeProvider,
-  useViewportMode,
-  type ViewportModeProviderProps,
-} from './ViewportModeContext';
+import { ViewportModeProvider, useViewportMode, type ViewportModeProviderProps } from './ViewportModeContext';
 
 function wrapper(props: Omit<ViewportModeProviderProps, 'children'> = {}) {
   return ({ children }: { children: ReactNode }) => (
@@ -51,5 +47,4 @@ describe('ViewportModeContext', () => {
     act(() => result.current.setMode('2D'));
     expect(result.current.mode).toBe('2D');
   });
-
 });

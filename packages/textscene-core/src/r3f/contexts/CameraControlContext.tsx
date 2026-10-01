@@ -103,13 +103,10 @@ export function CameraControlProvider({
     setActiveCameraPath(path);
   }, []);
 
-  const requestFrame2D = useCallback(
-    (view: { center: { x: number; y: number }; zoom: number }) => {
-      frame2DIdRef.current += 1;
-      setFrame2D({ ...view, requestId: frame2DIdRef.current });
-    },
-    []
-  );
+  const requestFrame2D = useCallback((view: { center: { x: number; y: number }; zoom: number }) => {
+    frame2DIdRef.current += 1;
+    setFrame2D({ ...view, requestId: frame2DIdRef.current });
+  }, []);
 
   const claimFrame2D = useCallback((requestId: number) => {
     if (requestId <= claimedFrame2DIdRef.current) return false;
@@ -159,17 +156,13 @@ export function CameraControlProvider({
     ]
   );
 
-  return (
-    <CameraControlContext.Provider value={value}>{children}</CameraControlContext.Provider>
-  );
+  return <CameraControlContext.Provider value={value}>{children}</CameraControlContext.Provider>;
 }
 
 export function useCameraControl(): CameraControlContextValue {
   const value = useContext(CameraControlContext);
   if (value === null) {
-    throw new Error(
-      'useCameraControl must be used inside a <TscnPreviewShell> (CameraControlProvider).'
-    );
+    throw new Error('useCameraControl must be used inside a <TscnPreviewShell> (CameraControlProvider).');
   }
   return value;
 }

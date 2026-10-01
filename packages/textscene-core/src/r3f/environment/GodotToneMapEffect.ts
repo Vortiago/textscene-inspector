@@ -6,11 +6,7 @@
 
 import { BlendFunction, Effect } from 'postprocessing';
 import * as THREE from 'three';
-import {
-  brightPassGlsl,
-  glowLevelSize,
-  type GlowParams,
-} from '../../resources/environment/godotGlow';
+import { brightPassGlsl, glowLevelSize, type GlowParams } from '../../resources/environment/godotGlow';
 import { compositeGlsl } from '../../resources/environment/godotCompositor';
 import { glslFloat } from '../../resources/environment/glslLiterals';
 
@@ -49,16 +45,8 @@ export class GodotToneMapEffect extends Effect {
   /** Null when the environment has no glow: nothing to gather, nothing to own. */
   private readonly pyramid: GlowPyramid | null;
 
-  constructor({
-    glow,
-    toneMapMode,
-    toneMapWhite,
-    toneMapExposure,
-    toneMapAgxContrast,
-  }: GodotToneMapOptions) {
-    const uniforms = new Map<string, THREE.Uniform>([
-      ['godotExposure', new THREE.Uniform(toneMapExposure)],
-    ]);
+  constructor({ glow, toneMapMode, toneMapWhite, toneMapExposure, toneMapAgxContrast }: GodotToneMapOptions) {
+    const uniforms = new Map<string, THREE.Uniform>([['godotExposure', new THREE.Uniform(toneMapExposure)]]);
     // Only the glow arm of the shader reads it.
     if (glow) uniforms.set('godotGlowBuffer', new THREE.Uniform(null));
 
@@ -118,14 +106,10 @@ class GlowPyramid {
     this.maxLevel = glow.maxLevel;
     this.weights = glow.levels;
 
-    this.brightPassMaterial = pyramidMaterial(
-      'BrightPass',
-      brightPassFragmentShader(glow),
-      {
-        inputBuffer: { value: null },
-        texelSize: { value: new THREE.Vector2() },
-      }
-    );
+    this.brightPassMaterial = pyramidMaterial('BrightPass', brightPassFragmentShader(glow), {
+      inputBuffer: { value: null },
+      texelSize: { value: new THREE.Vector2() },
+    });
     this.downsampleMaterial = pyramidMaterial('Downsample', downsampleFragmentShader(glow), {
       inputBuffer: { value: null },
       texelSize: { value: new THREE.Vector2() },
@@ -348,4 +332,3 @@ void main() {
   gl_FragColor = vec4(accumulated, 1.0);
 }
 `;
-

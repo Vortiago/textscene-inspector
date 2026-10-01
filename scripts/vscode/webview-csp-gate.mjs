@@ -8,12 +8,7 @@
 import { spawnSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import {
-  assertExtensionBuilt,
-  driveScene,
-  REPO_ROOT,
-  resolveVscodeBinary,
-} from './driveScene.mjs';
+import { assertExtensionBuilt, driveScene, REPO_ROOT, resolveVscodeBinary } from './driveScene.mjs';
 import { blankSceneText } from './sceneText.mjs';
 import { installTextureWorkProbe } from '../e2e/textureWorkProbe.mjs';
 import { TEXTURE_WORK_STATUS_TESTID } from '../visual/preview/appContract.mjs';
@@ -63,10 +58,17 @@ function parseArgs(argv) {
   const opts = { skipBuild: false, verbose: false, headed: false };
   for (const arg of argv) {
     switch (arg) {
-      case '--skip-build': opts.skipBuild = true; break;
-      case '--verbose': opts.verbose = true; break;
-      case '--headed': opts.headed = true; break;
-      default: throw new Error(`Unknown option: ${arg}`);
+      case '--skip-build':
+        opts.skipBuild = true;
+        break;
+      case '--verbose':
+        opts.verbose = true;
+        break;
+      case '--headed':
+        opts.headed = true;
+        break;
+      default:
+        throw new Error(`Unknown option: ${arg}`);
     }
   }
   return opts;
@@ -150,7 +152,10 @@ function checkRun(gate, label, report) {
   gate.check(
     webview.cspViolations.length === 0,
     `${where} ${webview.cspViolations.length} CSP violation(s) inside the preview: ` +
-      webview.cspViolations.slice(0, 3).map((entry) => brief(entry.text ?? entry)).join(' | ')
+      webview.cspViolations
+        .slice(0, 3)
+        .map((entry) => brief(entry.text ?? entry))
+        .join(' | ')
   );
   gate.check(
     webview.failedRequests.length === 0,
@@ -163,12 +168,15 @@ function checkRun(gate, label, report) {
   gate.check(
     webview.consoleErrors.length === 0,
     `${where} ${webview.consoleErrors.length} console error(s) from the preview: ` +
-      webview.consoleErrors.slice(0, 3).map((entry) => brief(entry.text)).join(' | ')
+      webview.consoleErrors
+        .slice(0, 3)
+        .map((entry) => brief(entry.text))
+        .join(' | ')
   );
   gate.check(
     webview.offendingHosts.length === 0,
     `${where} the preview talked to ${webview.offendingHosts.join(', ')} — it must load ` +
-      'everything from VS Code\'s local resource origin and the bundle itself'
+      "everything from VS Code's local resource origin and the bundle itself"
   );
 }
 

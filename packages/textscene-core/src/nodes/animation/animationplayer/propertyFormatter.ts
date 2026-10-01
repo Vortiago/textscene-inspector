@@ -5,9 +5,7 @@
 import type { PropertySection } from '../../../core/NodeRegistry';
 import { AnimationProcessMode, type AnimationPlayerProperties, MethodCallMode } from './types';
 
-export function formatAnimationPlayerProperties(
-  properties: AnimationPlayerProperties
-): PropertySection[] {
+export function formatAnimationPlayerProperties(properties: AnimationPlayerProperties): PropertySection[] {
   const sections: PropertySection[] = [];
 
   sections.push({
@@ -49,17 +47,24 @@ export function formatAnimationPlayerProperties(
 
 function processModeName(mode: AnimationProcessMode): string {
   switch (mode) {
-    case AnimationProcessMode.PHYSICS: return 'Physics';
-    case AnimationProcessMode.IDLE: return 'Idle';
-    case AnimationProcessMode.MANUAL: return 'Manual';
-    default: return 'Unknown';
+    case AnimationProcessMode.PHYSICS:
+      return 'Physics';
+    case AnimationProcessMode.IDLE:
+      return 'Idle';
+    case AnimationProcessMode.MANUAL:
+      return 'Manual';
+    default:
+      return 'Unknown';
   }
 }
 
 function methodCallModeName(mode: MethodCallMode): string {
   switch (mode) {
-    case MethodCallMode.DEFERRED: return 'Deferred';
-    case MethodCallMode.IMMEDIATE: return 'Immediate';
-    default: return 'Unknown';
+    case MethodCallMode.DEFERRED:
+      return 'Deferred';
+    case MethodCallMode.IMMEDIATE:
+      return 'Immediate';
+    default:
+      return 'Unknown';
   }
 }

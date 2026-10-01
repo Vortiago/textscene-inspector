@@ -48,10 +48,7 @@ function makePhotoFrameScene(canvasName: string): TscnScene {
  * A PhotoFrame instancing node with the authored origin. Its ExtResource id derives from `name`,
  * and `renderFrame`'s `ref` argument resolves the path.
  */
-function makeFrameInstanceNode(
-  name: string,
-  origin: { x: number; y: number; z: number }
-): TscnNode {
+function makeFrameInstanceNode(name: string, origin: { x: number; y: number; z: number }): TscnNode {
   return {
     name,
     type: 'Node',
@@ -70,11 +67,7 @@ function makeFrameInstanceNode(
   };
 }
 
-async function renderFrame(
-  loader: ResourceLoader,
-  node: TscnNode,
-  ref: { id: string; path: string }
-) {
+async function renderFrame(loader: ResourceLoader, node: TscnNode, ref: { id: string; path: string }) {
   return ReactThreeTestRenderer.create(
     <SceneStack
       loader={loader}
@@ -108,36 +101,31 @@ const FRAMES = [
 ];
 
 describe('PhotoFrame composition — Canvas mesh inherits the authored instance origin', () => {
-  it.each(FRAMES)(
-    '$name Canvas world position == authored instance origin',
-    async ({ name, origin }) => {
-      const fake = createFakeResourceLoader();
-      const scenePath = `res://${name}.tscn`;
-      fake.scenes.seed(scenePath, makePhotoFrameScene('Canvas'));
+  it.each(FRAMES)('$name Canvas world position == authored instance origin', async ({ name, origin }) => {
+    const fake = createFakeResourceLoader();
+    const scenePath = `res://${name}.tscn`;
+    fake.scenes.seed(scenePath, makePhotoFrameScene('Canvas'));
 
-      const renderer = await renderFrame(
-        fake.loader,
-        makeFrameInstanceNode(name, origin),
-        { id: `${name}_ref`, path: scenePath }
-      );
+    const renderer = await renderFrame(fake.loader, makeFrameInstanceNode(name, origin), {
+      id: `${name}_ref`,
+      path: scenePath,
+    });
 
-      const pos = canvasWorldPosition(renderer, 'Canvas');
-      expect(pos.x).toBeCloseTo(origin.x, 4);
-      expect(pos.y).toBeCloseTo(origin.y, 4);
-      expect(pos.z).toBeCloseTo(origin.z, 4);
-    }
-  );
+    const pos = canvasWorldPosition(renderer, 'Canvas');
+    expect(pos.x).toBeCloseTo(origin.x, 4);
+    expect(pos.y).toBeCloseTo(origin.y, 4);
+    expect(pos.z).toBeCloseTo(origin.z, 4);
+  });
 
   it('PhotoFrameA renders at its authored Y=3.008 (data outlier, faithfully reproduced — not a renderer bug)', async () => {
     const fake = createFakeResourceLoader();
     const origin = { x: 8.548, y: 3.008, z: -1.625 };
     fake.scenes.seed('res://PhotoFrameA.tscn', makePhotoFrameScene('Canvas'));
 
-    const renderer = await renderFrame(
-      fake.loader,
-      makeFrameInstanceNode('PhotoFrameA', origin),
-      { id: 'PhotoFrameA_ref', path: 'res://PhotoFrameA.tscn' }
-    );
+    const renderer = await renderFrame(fake.loader, makeFrameInstanceNode('PhotoFrameA', origin), {
+      id: 'PhotoFrameA_ref',
+      path: 'res://PhotoFrameA.tscn',
+    });
 
     const pos = canvasWorldPosition(renderer, 'Canvas');
     // The previewer matches Godot: it reproduces Y=3.008 and does not "correct" it to ~2.0.

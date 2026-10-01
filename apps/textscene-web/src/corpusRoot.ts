@@ -41,9 +41,7 @@ export function resToFixtureFile(scenePath: string, resourceRoot: string): strin
  */
 export function fixtureFileToRes(file: string, resourceRoot: string): string {
   const relative =
-    resourceRoot && file.startsWith(`${resourceRoot}/`)
-      ? file.slice(resourceRoot.length + 1)
-      : file;
+    resourceRoot && file.startsWith(`${resourceRoot}/`) ? file.slice(resourceRoot.length + 1) : file;
   return `res://${relative}`;
 }
 

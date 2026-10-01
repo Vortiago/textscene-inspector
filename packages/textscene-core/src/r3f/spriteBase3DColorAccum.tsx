@@ -37,9 +37,7 @@ export function SpriteBase3DChildAccum({ node, children }: { node: TscnNode; chi
   const modulate = (node.properties as { modulate?: RGBA }).modulate;
   const value = useMemo(
     () =>
-      SPRITE_BASE_3D_TYPES.has(node.type) && modulate
-        ? accumulate(parentAccum, modulate)
-        : WHITE_MODULATE,
+      SPRITE_BASE_3D_TYPES.has(node.type) && modulate ? accumulate(parentAccum, modulate) : WHITE_MODULATE,
     [node.type, modulate, parentAccum]
   );
   return <ParentColorAccumContext.Provider value={value}>{children}</ParentColorAccumContext.Provider>;

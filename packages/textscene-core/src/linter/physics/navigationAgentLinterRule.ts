@@ -15,7 +15,9 @@ export function makeNavigationAgentLinterRule(dim: PhysicsDim): LintRule {
   const parentType = `Node${dim}`;
   const suffix = dimSuffix(dim);
   const arms = {
-    parentNotNode: groundedArm(`navigationagent${suffix}-parent-not-node${suffix}`, { kind: 'configuration-warning' }),
+    parentNotNode: groundedArm(`navigationagent${suffix}-parent-not-node${suffix}`, {
+      kind: 'configuration-warning',
+    }),
   } as const satisfies RuleArms<string>;
 
   function check(context: RuleContext): Diagnostic[] {

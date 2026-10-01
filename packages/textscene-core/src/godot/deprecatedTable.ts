@@ -109,7 +109,13 @@ const DEPRECATED_PROPERTY_NAMES = toLookup({
 const DEPRECATED_INDEXED_LEAVES = new Map<string, readonly { pattern: RegExp; leaf: string; to: string }[]>([
   [
     'TileSetAtlasSource',
-    [{ pattern: indexedKeyRegex('^(#):(#)/(#)/texture_offset$', 'is_valid_int'), leaf: 'texture_offset', to: 'texture_origin' }],
+    [
+      {
+        pattern: indexedKeyRegex('^(#):(#)/(#)/texture_offset$', 'is_valid_int'),
+        leaf: 'texture_offset',
+        to: 'texture_origin',
+      },
+    ],
   ],
 ]);
 

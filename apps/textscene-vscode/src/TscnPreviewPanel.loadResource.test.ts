@@ -14,10 +14,7 @@ async function createReadyPanel(
   triggerMessage: (msg: { type: string; [key: string]: unknown }) => void
 ): Promise<TscnPreviewPanel> {
   (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
-  const panel = TscnPreviewPanel.create(
-    createMockUri('/extension'),
-    createMockUri('/workspace/scene.tscn')
-  );
+  const panel = TscnPreviewPanel.create(createMockUri('/extension'), createMockUri('/workspace/scene.tscn'));
   await new Promise<void>((r) => setTimeout(r, 10));
   triggerMessage({ type: 'webviewReady' });
   return panel;
@@ -45,9 +42,7 @@ function loadedMessages(webview: MockWebview): ResourceLoadedMessage[] {
 function errorMessages(webview: MockWebview): ResourceLoadErrorMessage[] {
   return webview.postMessage.mock.calls
     .map((c) => c[0])
-    .filter(
-      (m): m is ResourceLoadErrorMessage => (m as { type: string }).type === 'resourceLoadError'
-    );
+    .filter((m): m is ResourceLoadErrorMessage => (m as { type: string }).type === 'resourceLoadError');
 }
 
 /** Decode a base64 string back into raw bytes for a round-trip comparison. */

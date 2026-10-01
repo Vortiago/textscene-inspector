@@ -49,10 +49,7 @@ function label(name: string, children: TscnNode[]): TscnNode {
     name,
     type: 'Label3D',
     children,
-    properties: parseLabel3D(
-      { type: 'node', attributes: { type: 'Label3D', name } },
-      { text: '"x"' }
-    ),
+    properties: parseLabel3D({ type: 'node', attributes: { type: 'Label3D', name } }, { text: '"x"' }),
   };
 }
 
@@ -74,10 +71,7 @@ async function render(nodes: TscnNode[]) {
   );
 }
 
-function materialOf(
-  renderer: Awaited<ReturnType<typeof render>>,
-  name: string
-): THREE.MeshBasicMaterial {
+function materialOf(renderer: Awaited<ReturnType<typeof render>>, name: string): THREE.MeshBasicMaterial {
   const mesh = renderer.scene
     .findAllByType('Mesh')
     .map((m) => m.instance as THREE.Mesh)
@@ -111,9 +105,7 @@ describe('SpriteBase3D colour accumulation', () => {
     // `sprite_3d.cpp:75` casts the immediate parent, and a Node3D fails the cast,
     // so the grandchild has no `parent_sprite` and accumulates from white.
     const renderer = await render([
-      sprite('Parent', { modulate: HALF }, [
-        plainNode3D('Between', [sprite('Child', { modulate: HALF })]),
-      ]),
+      sprite('Parent', { modulate: HALF }, [plainNode3D('Between', [sprite('Child', { modulate: HALF })])]),
     ]);
 
     const child = materialOf(renderer, 'Child');
@@ -126,9 +118,7 @@ describe('SpriteBase3D colour accumulation', () => {
     // (`sprite_3d.h:36`), so they are siblings and the cast fails here too. Its own `modulate`
     // makes it the tempting wrong answer.
     const renderer = await render([
-      sprite('Parent', { modulate: HALF }, [
-        label('Between', [sprite('Child', { modulate: HALF })]),
-      ]),
+      sprite('Parent', { modulate: HALF }, [label('Between', [sprite('Child', { modulate: HALF })])]),
     ]);
 
     const child = materialOf(renderer, 'Child');
@@ -138,9 +128,7 @@ describe('SpriteBase3D colour accumulation', () => {
 
   it('accumulates through three sprite levels', async () => {
     const renderer = await render([
-      sprite('A', { modulate: HALF }, [
-        sprite('B', { modulate: HALF }, [sprite('C', { modulate: HALF })]),
-      ]),
+      sprite('A', { modulate: HALF }, [sprite('B', { modulate: HALF }, [sprite('C', { modulate: HALF })])]),
     ]);
 
     const c = materialOf(renderer, 'C');
@@ -148,7 +136,7 @@ describe('SpriteBase3D colour accumulation', () => {
     expect(c.opacity).toBeCloseTo(0.125, 5);
   });
 
-  it('does not pass the parent\'s transparency down', async () => {
+  it("does not pass the parent's transparency down", async () => {
     // `_get_color_accum` reads `modulate` only; `transparency` is a
     // per-instance GeometryInstance3D property the renderer applies locally.
     const renderer = await render([

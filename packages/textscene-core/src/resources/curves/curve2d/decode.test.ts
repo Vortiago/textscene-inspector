@@ -40,10 +40,14 @@ describe('decodeCurve2D', () => {
   // the Variant, and ARRAY is a strict source for PACKED_VECTOR2_ARRAY
   // (variant.cpp:449-478), so both array spellings load the same two points.
   it('reads the bare-array and typed-array spellings of points', () => {
-    const bare = pointsOf('[Vector2(0, 0), Vector2(0, 0), Vector2(0, 0), Vector2(0, 0), Vector2(0, 0), Vector2(10, 0)]');
+    const bare = pointsOf(
+      '[Vector2(0, 0), Vector2(0, 0), Vector2(0, 0), Vector2(0, 0), Vector2(0, 0), Vector2(10, 0)]'
+    );
     expect(bare).toHaveLength(2);
     expect(bare[1]!.position).toEqual({ x: 10, y: 0 });
-    const typed = pointsOf('Array[Vector2]([Vector2(0, 0), Vector2(0, 0), Vector2(0, 0), Vector2(0, 0), Vector2(0, 0), Vector2(10, 0)])');
+    const typed = pointsOf(
+      'Array[Vector2]([Vector2(0, 0), Vector2(0, 0), Vector2(0, 0), Vector2(0, 0), Vector2(0, 0), Vector2(10, 0)])'
+    );
     expect(typed).toHaveLength(2);
   });
 
@@ -97,7 +101,10 @@ describe('decodeCurve2D', () => {
 
     it('keeps the authored points at an equal point_count', () => {
       const points = decodeCurve2D(body(TWO_POINTS, { point_count: '2' }));
-      expect(points.map((p) => p.position)).toEqual([{ x: 10, y: 0 }, { x: 20, y: 0 }]);
+      expect(points.map((p) => p.position)).toEqual([
+        { x: 10, y: 0 },
+        { x: 20, y: 0 },
+      ]);
     });
 
     // `ERR_FAIL_COND(p_count < 0)` (curve.cpp:722) leaves the list as `_data` set it.
@@ -127,7 +134,10 @@ describe('resolveCurve2D', () => {
 
   it('decodes the Curve2D a SubResource reference names', () => {
     const points = resolveCurve2D('SubResource("Path_1")', [curve]);
-    expect(points.map((p) => p.position)).toEqual([{ x: 0, y: 0 }, { x: 480, y: 0 }]);
+    expect(points.map((p) => p.position)).toEqual([
+      { x: 0, y: 0 },
+      { x: 480, y: 0 },
+    ]);
   });
 
   it('resolves no points for an absent, ExtResource or unknown reference', () => {

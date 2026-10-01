@@ -7,12 +7,7 @@ import * as THREE from 'three';
 import type { PlaneMeshProperties } from './types.js';
 
 export function buildPlaneMeshGeometry(p: PlaneMeshProperties): THREE.BufferGeometry {
-  const geom = new THREE.PlaneGeometry(
-    p.size.x,
-    p.size.y,
-    p.subdivideWidth + 1,
-    p.subdivideDepth + 1
-  );
+  const geom = new THREE.PlaneGeometry(p.size.x, p.size.y, p.subdivideWidth + 1, p.subdivideDepth + 1);
   // three's PlaneGeometry is an XY plane with normal +Z, which is Godot's FACE_Z (2).
   // FACE_X (0) rotates it into YZ, FACE_Y (1) into XZ.
   if (p.orientation === 0) geom.rotateY(Math.PI / 2);

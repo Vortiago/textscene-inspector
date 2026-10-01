@@ -44,7 +44,10 @@ const plan = (properties: Record<string, string>): ProceduralBuildPlan | null =>
         wrap: ({ pixels }) => new THREE.DataTexture(pixels, 1, 1),
       };
 
-function lookup(resources: TscnInternalResource[], ref = 'SubResource("tex")'): ProceduralTextureLookup | null {
+function lookup(
+  resources: TscnInternalResource[],
+  ref = 'SubResource("tex")'
+): ProceduralTextureLookup | null {
   return resolveProceduralSubResourceAsync(ref, resources, 'FakeTexture', plan);
 }
 

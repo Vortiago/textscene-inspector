@@ -11,7 +11,11 @@
 
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
-import { scrollBarGrabberGeometry, scrollBarGrabberRect, scrollBarMinimumSize } from '../shared/scrollBarSolver';
+import {
+  scrollBarGrabberGeometry,
+  scrollBarGrabberRect,
+  scrollBarMinimumSize,
+} from '../shared/scrollBarSolver';
 import type { GraphScrollBounds } from './minimap';
 
 export interface GraphEditScrollBar {

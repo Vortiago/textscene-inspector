@@ -48,7 +48,11 @@ describe('groundedArm', () => {
   });
 
   it('takes the severity a scope outside the engine fixes', () => {
-    const arm = groundedArm('x-y', { kind: 'no-engine-counterpart', scope: 'linter-failure', because: 'it threw' });
+    const arm = groundedArm('x-y', {
+      kind: 'no-engine-counterpart',
+      scope: 'linter-failure',
+      because: 'it threw',
+    });
     expect(arm.severity).toBe('error');
   });
 });

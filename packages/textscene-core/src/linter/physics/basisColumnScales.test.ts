@@ -62,11 +62,7 @@ describe('basisColumnScalesGodotFloat', () => {
   });
 
   it('leaves an infinite axis infinite and the finite ones at their magnitude', () => {
-    expect(basisColumnScalesGodotFloat(t('inf', 0, 0, 0, 1, 0, 0, 0, 1))).toEqual([
-      Infinity,
-      1,
-      1,
-    ]);
+    expect(basisColumnScalesGodotFloat(t('inf', 0, 0, 0, 1, 0, 0, 0, 1))).toEqual([Infinity, 1, 1]);
   });
 
   it('zeroes the OTHER two axes for a `nan` component, because SIGN(nan) is 0', () => {

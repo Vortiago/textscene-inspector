@@ -32,9 +32,7 @@ function shellEl(panelId: string): HTMLElement {
 
 function modeButton(shell: HTMLElement, label: '2D' | '3D'): HTMLButtonElement {
   const segment = shell.querySelector('[role="group"][aria-label="Viewport dimension"]');
-  const button = Array.from(segment?.querySelectorAll('button') ?? []).find(
-    (b) => b.textContent === label
-  );
+  const button = Array.from(segment?.querySelectorAll('button') ?? []).find((b) => b.textContent === label);
   expect(button).toBeTruthy();
   return button as HTMLButtonElement;
 }

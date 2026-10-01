@@ -176,11 +176,7 @@ describe('Node3D Linter', () => {
       expectNoDiagnostic(
         scene(
           node('Node3D', { unique_name_in_owner: 'true' }, { name: 'ParentNode' }),
-          node(
-            'Node3D',
-            { visibility_parent: 'NodePath("%ParentNode")' },
-            { name: 'ChildNode', parent: '.' }
-          )
+          node('Node3D', { visibility_parent: 'NodePath("%ParentNode")' }, { name: 'ChildNode', parent: '.' })
         ),
         { ruleName: 'valid-node3d-visibility' }
       );
@@ -231,9 +227,9 @@ describe('Node3D Linter', () => {
         )
       );
       expect(diagnostics.length).toBeGreaterThanOrEqual(3);
-      expect(diagnostics.some(d => d.message.includes('position'))).toBe(true);
-      expect(diagnostics.some(d => d.message.includes('scale'))).toBe(true);
-      expect(diagnostics.some(d => d.message.includes('visible'))).toBe(true);
+      expect(diagnostics.some((d) => d.message.includes('position'))).toBe(true);
+      expect(diagnostics.some((d) => d.message.includes('scale'))).toBe(true);
+      expect(diagnostics.some((d) => d.message.includes('visible'))).toBe(true);
     });
   });
 
@@ -269,7 +265,7 @@ scale = Vector3(1, 1)
       expect(diagnostics.length).toBeGreaterThan(0);
       // Should catch the malformed scale (base-walk delivers Node3D's own
       // validator to the subclass)
-      expect(diagnostics.some(d => d.message.includes('scale'))).toBe(true);
+      expect(diagnostics.some((d) => d.message.includes('scale'))).toBe(true);
     });
   });
 });

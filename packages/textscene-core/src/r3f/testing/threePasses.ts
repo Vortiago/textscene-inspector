@@ -80,9 +80,15 @@ export function drawShadowGroup<T>(
   mesh.modelViewMatrix.multiplyMatrices(shadowCamera.matrixWorldInverse, mesh.matrixWorld);
   const depthMaterial = new THREE.MeshDepthMaterial();
   depthMaterial.side = material.shadowSide ?? SHADOW_SIDE[material.side as number]!;
-  const args = [null, mesh, camera, shadowCamera, mesh.geometry, depthMaterial, group] as unknown as Parameters<
-    THREE.Object3D['onBeforeShadow']
-  >;
+  const args = [
+    null,
+    mesh,
+    camera,
+    shadowCamera,
+    mesh.geometry,
+    depthMaterial,
+    group,
+  ] as unknown as Parameters<THREE.Object3D['onBeforeShadow']>;
   mesh.onBeforeShadow(...args);
   const seen = probe({ ...snapshot(mesh, material, depthMaterial), depthMaterial });
   mesh.onAfterShadow(...args);

@@ -10,7 +10,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { paramMinAboveMaxArm, paramMinAboveMaxDiagnostics } from '../../../linter/particleParamRanges.js';
-import { ruleInt, boolSlotValue} from '../../../godot/index.js';
+import { ruleInt, boolSlotValue } from '../../../godot/index.js';
 
 const arms = {
   nondeterministicEmissionShape: groundedArm('cpuparticles2d-nondeterministic-emission-shape', {
@@ -72,7 +72,10 @@ function checkCPUParticles2D(context: RuleContext): Diagnostic[] {
   const { node } = context;
   const props = node.properties;
   if (!isValidProperties(props)) return [];
-  return [...checkPreviewLimits(node, props), ...paramMinAboveMaxDiagnostics(node, props, arms.paramMinAboveMax)];
+  return [
+    ...checkPreviewLimits(node, props),
+    ...paramMinAboveMaxDiagnostics(node, props, arms.paramMinAboveMax),
+  ];
 }
 
 const cpuParticles2DValidationRule: LintRule = {

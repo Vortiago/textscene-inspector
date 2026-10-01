@@ -17,7 +17,10 @@ export function makeNavigationRegionLinterRule(dim: PhysicsDim): LintRule {
   const property = dim === '2D' ? 'navigation_polygon' : 'navigation_mesh';
   const resourceClass = dim === '2D' ? 'NavigationPolygon' : 'NavigationMesh';
   const arms = {
-    missingResource: groundedArm(`navigationregion${dimSuffix(dim)}-requires-${property.replace(/_/g, '-')}`, { kind: 'configuration-warning' }),
+    missingResource: groundedArm(
+      `navigationregion${dimSuffix(dim)}-requires-${property.replace(/_/g, '-')}`,
+      { kind: 'configuration-warning' }
+    ),
   } as const satisfies RuleArms<string>;
 
   function check(context: RuleContext): Diagnostic[] {

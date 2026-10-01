@@ -12,7 +12,9 @@ import { parentTypeVerdict, placementPhrase } from '../../../../linter/parentTyp
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  outsideSimulator: groundedArm('springbonecollision3d-outside-springbonesimulator3d', { kind: 'configuration-warning' }),
+  outsideSimulator: groundedArm('springbonecollision3d-outside-springbonesimulator3d', {
+    kind: 'configuration-warning',
+  }),
 } as const satisfies RuleArms<string>;
 
 function checkSpringBoneCollision3D(context: RuleContext): Diagnostic[] {

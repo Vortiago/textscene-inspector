@@ -32,7 +32,15 @@ describe('listIndices', () => {
 
 describe('listWrittenIndices', () => {
   it('names each text as written, ascending by the index it resolves to', () => {
-    expect(listWrittenIndices(new Map([['10', 10], ['+2', 2], ['07', 7]]))).toBe('+2, 07, 10');
+    expect(
+      listWrittenIndices(
+        new Map([
+          ['10', 10],
+          ['+2', 2],
+          ['07', 7],
+        ])
+      )
+    ).toBe('+2, 07, 10');
   });
 
   it('names what Godot stores beside a text that does not spell it', () => {
@@ -132,7 +140,12 @@ describe('indicesPastCount', () => {
         'is_valid_int',
         2
       )
-    ).toEqual(new Map([['2', 2], ['+3', 3]]));
+    ).toEqual(
+      new Map([
+        ['2', 2],
+        ['+3', 3],
+      ])
+    );
   });
 
   it('leaves a negative index to the dispatcher that already reports it', () => {
@@ -151,9 +164,7 @@ describe('indicesPastCount', () => {
 
   // `int index = ….to_int()` (property_list_helper.cpp:57) keeps the low 32 bits.
   it('measures the index Godot stores, not the number the text spells', () => {
-    expect(indicesPastCount({ 'item_4294967296/text': '"a"' }, 'item_', 'is_valid_int', 1).size).toBe(
-      0
-    );
+    expect(indicesPastCount({ 'item_4294967296/text': '"a"' }, 'item_', 'is_valid_int', 1).size).toBe(0);
   });
 });
 

@@ -57,8 +57,23 @@ export async function renderReference({
   const root = resolveProjectRoot(scenePath);
   const work = await mkdtemp(join(tmpdir(), 'godot-ref-'));
   try {
-    return await renderInto(work, { root, scenePath, out, width, height, previews, camera,
-      lookAt, frame, sceneCamera, sceneCameraPath, mode, boundsOut, fov, fovExplicit });
+    return await renderInto(work, {
+      root,
+      scenePath,
+      out,
+      width,
+      height,
+      previews,
+      camera,
+      lookAt,
+      frame,
+      sceneCamera,
+      sceneCameraPath,
+      mode,
+      boundsOut,
+      fov,
+      fovExplicit,
+    });
   } finally {
     // Each run copies the whole res:// root, which a tmpfs /tmp holds in RAM,
     // and every `pnpm test:unit` runs engine-gated tests.
@@ -69,8 +84,21 @@ export async function renderReference({
 async function renderInto(
   work,
   {
-    root, scenePath, out, width, height, previews, camera, lookAt, frame, sceneCamera, sceneCameraPath,
-    mode, boundsOut, fov, fovExplicit,
+    root,
+    scenePath,
+    out,
+    width,
+    height,
+    previews,
+    camera,
+    lookAt,
+    frame,
+    sceneCamera,
+    sceneCameraPath,
+    mode,
+    boundsOut,
+    fov,
+    fovExplicit,
   }
 ) {
   await cp(root, work, { recursive: true, dereference: true });

@@ -72,12 +72,9 @@ describe('scientific-notation color channels', () => {
     'Color(-, 0, 0, 1)',
     'Color(+1, 0, 0, 1)',
     'Color(.5, 0, 0, 1)',
-  ])(
-    'still refuses the near-miss malformed color %s (grammar not over-loosened to accept it)',
-    (bad) => {
-      expect(parseColorOrUndefined(bad)).toBeUndefined();
-    },
-  );
+  ])('still refuses the near-miss malformed color %s (grammar not over-loosened to accept it)', (bad) => {
+    expect(parseColorOrUndefined(bad)).toBeUndefined();
+  });
 
   it('Environment linter REJECTS a malformed background_color (the validator has teeth, not accept-all)', () => {
     const validator = validatorRegistry.findValidator('Environment', 'background_color');
@@ -89,15 +86,11 @@ describe('scientific-notation color channels', () => {
     expect(validator!('albedo_color', 'Color(x, y, z, w)', 1)).not.toBeNull();
   });
 
-  it(
-    'rejects a pathological long-digit Color in linear time (no ReDoS backtracking)',
-    () => {
-      // The non-matching `!` tail makes `\d+\.?\d*` backtrack O(n^2), while the linear
-      // `\d+(?:\.\d*)?` fails fast. At 100_000 digits the linear form runs in <1ms and the
-      // backtracking form takes seconds, past the 2s timeout.
-      const adversarial = `Color(${'9'.repeat(100_000)}!, 0, 0, 1)`;
-      expect(parseColorOrUndefined(adversarial)).toBeUndefined();
-    },
-    2000,
-  );
+  it('rejects a pathological long-digit Color in linear time (no ReDoS backtracking)', () => {
+    // The non-matching `!` tail makes `\d+\.?\d*` backtrack O(n^2), while the linear
+    // `\d+(?:\.\d*)?` fails fast. At 100_000 digits the linear form runs in <1ms and the
+    // backtracking form takes seconds, past the 2s timeout.
+    const adversarial = `Color(${'9'.repeat(100_000)}!, 0, 0, 1)`;
+    expect(parseColorOrUndefined(adversarial)).toBeUndefined();
+  }, 2000);
 });

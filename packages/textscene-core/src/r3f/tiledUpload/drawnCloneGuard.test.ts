@@ -28,7 +28,10 @@ function sourceFiles(dir: string): string[] {
 
 describe('drawn texture clones', () => {
   const files = [...sourceFiles(path.join(SRC, 'nodes')), ...sourceFiles(path.join(SRC, 'r3f'))]
-    .map((file) => ({ file: path.relative(SRC, file).split(path.sep).join('/'), text: readFileSync(file, 'utf8') }))
+    .map((file) => ({
+      file: path.relative(SRC, file).split(path.sep).join('/'),
+      text: readFileSync(file, 'utf8'),
+    }))
     .filter(({ file, text }) => !CLONE_HELPERS.has(file) && DRAWN_CLONE.test(text));
 
   it('finds the clone sites, so the scan is not blind', () => {

@@ -20,11 +20,7 @@ function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode 
   return { name: props.name, type: 'MeshInstance3D', children: [], properties: props };
 }
 
-function sub(
-  type: string,
-  id: string,
-  data: Record<string, string | undefined> = {}
-): TscnInternalResource {
+function sub(type: string, id: string, data: Record<string, string | undefined> = {}): TscnInternalResource {
   return {
     id,
     type,

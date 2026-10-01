@@ -25,9 +25,7 @@ describe('GridMap strict validators', () => {
     });
 
     it('accepts a cells count that is a multiple of 3', () => {
-      expect(
-        check('data', '{\n"cells": PackedInt32Array(0, 0, 0, 1, 0, 0)\n}')
-      ).toBeNull();
+      expect(check('data', '{\n"cells": PackedInt32Array(0, 0, 0, 1, 0, 0)\n}')).toBeNull();
     });
 
     it('accepts an empty cells array', () => {
@@ -51,9 +49,7 @@ describe('GridMap strict validators', () => {
     });
 
     it('accepts an Array of resource references', () => {
-      expect(
-        check('baked_meshes', '[SubResource("ArrayMesh_1"), SubResource("ArrayMesh_2")]')
-      ).toBeNull();
+      expect(check('baked_meshes', '[SubResource("ArrayMesh_1"), SubResource("ArrayMesh_2")]')).toBeNull();
     });
 
     it('rejects a null entry (grid_map.cpp:97, ERR_CONTINUE silently drops it and shifts every later index)', () => {
@@ -63,9 +59,7 @@ describe('GridMap strict validators', () => {
     });
 
     it('rejects a value that is not an Array literal at all', () => {
-      expect(check('baked_meshes', 'SubResource("ArrayMesh_1")')?.code).toBe(
-        'INVALID_BAKED_MESHES_FORMAT'
-      );
+      expect(check('baked_meshes', 'SubResource("ArrayMesh_1")')?.code).toBe('INVALID_BAKED_MESHES_FORMAT');
     });
   });
 

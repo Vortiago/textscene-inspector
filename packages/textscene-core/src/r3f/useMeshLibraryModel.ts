@@ -20,9 +20,7 @@ export interface MeshLibraryModelResult {
 export function useMeshLibraryModel(meshLibraryRef: string | undefined): MeshLibraryModelResult {
   const { externalResources } = useSceneResources();
 
-  const resolvedPath = meshLibraryRef
-    ? resolveExtResourcePath(meshLibraryRef, externalResources)
-    : null;
+  const resolvedPath = meshLibraryRef ? resolveExtResourcePath(meshLibraryRef, externalResources) : null;
   // Only a text resource parses. A binary `.res` MeshLibrary would park forever.
   const tresPath = resolvedPath?.endsWith('.tres') ? resolvedPath : null;
   const tresResult = useResource<ParsedResource>(tresPath ?? '', 'resource');

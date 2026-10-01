@@ -25,10 +25,7 @@ export function HoverHighlight() {
 
   useSceneHelper<THREE.BoxHelper>(
     () => {
-      const target =
-        hoveredNodePath && nodeObjectMap
-          ? nodeObjectMap.get(hoveredNodePath) ?? null
-          : null;
+      const target = hoveredNodePath && nodeObjectMap ? (nodeObjectMap.get(hoveredNodePath) ?? null) : null;
       if (!target) return null;
       const helper = new WorldBoxHelper(target, HOVER_COLOR);
       helper.name = 'tscn-hover-highlight';

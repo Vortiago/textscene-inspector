@@ -164,7 +164,10 @@ describe('graphNodeLayout (graph_node.cpp:153-293)', () => {
 
   it('an EXPAND|FILL child absorbs the remaining stretch space, and the LAST stretching child snaps to the panel bottom margin', () => {
     const a = leaf('a', { customMinimumSize: { x: 10, y: 10 } });
-    const b = leaf('b', { customMinimumSize: { x: 10, y: 5 }, sizeFlagsVertical: 3 /* SIZE_FILL | SIZE_EXPAND */ });
+    const b = leaf('b', {
+      customMinimumSize: { x: 10, y: 5 },
+      sizeFlagsVertical: 3 /* SIZE_FILL | SIZE_EXPAND */,
+    });
     const n = graphNode('N', {}, [a, b]);
     const rects = asMap(
       graphNodeLayout(
@@ -184,7 +187,9 @@ describe('graphNodeLayout (graph_node.cpp:153-293)', () => {
   it('a declared slot widens its row by the slot StyleBox margins and insets its x', () => {
     const child = leaf('c', { customMinimumSize: { x: 10, y: 10 } });
     const slots = new Map([[0, { ...defaultGraphNodeSlot(), drawStylebox: true }]]);
-    const n = graphNode('N', { slots }, [child], { slot: marginBox({ left: 5, top: 0, right: 5, bottom: 0 }) });
+    const n = graphNode('N', { slots }, [child], {
+      slot: marginBox({ left: 5, top: 0, right: 5, bottom: 0 }),
+    });
     const rects = asMap(
       graphNodeLayout(n, [{ node: child, minSize: { x: 10, y: 10 } }], { x: 0, y: 0, w: 200, h: 100 }, ctx())
     );
@@ -230,7 +235,11 @@ describe('graphNodeLayout under RTL', () => {
     // child only through `Container::fit_child_in_rect`. The row is the same
     // (18, 43, 164, 20) as the LTR SHRINK case, so a 50-wide child lands at
     // 18 + 164 - 50.
-    const child = leaf('c', { customMinimumSize: { x: 50, y: 20 }, sizeFlagsHorizontal: 0, sizeFlagsVertical: 0 });
+    const child = leaf('c', {
+      customMinimumSize: { x: 50, y: 20 },
+      sizeFlagsHorizontal: 0,
+      sizeFlagsVertical: 0,
+    });
     const n = { ...graphNode('N', {}, [child]), rtl: true };
     const rects = asMap(
       graphNodeLayout(n, [{ node: child, minSize: { x: 50, y: 20 } }], { x: 0, y: 0, w: 200, h: 100 }, ctx())

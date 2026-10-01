@@ -35,8 +35,20 @@ function node(name: string, type: string, properties: Record<string, unknown> = 
   return { name, type, children: [], properties: { name, ...properties } };
 }
 
-function namedGroup(scene: { findAllByType: (t: string) => { instance: { name: string; visible: boolean; position: { x: number; y: number } } }[] }, name: string) {
-  return scene.findAllByType('Group').map((g) => g.instance).find((g) => g.name === name) ?? null;
+function namedGroup(
+  scene: {
+    findAllByType: (
+      t: string
+    ) => { instance: { name: string; visible: boolean; position: { x: number; y: number } } }[];
+  },
+  name: string
+) {
+  return (
+    scene
+      .findAllByType('Group')
+      .map((g) => g.instance)
+      .find((g) => g.name === name) ?? null
+  );
 }
 
 describe('<ControlCanvasLayer>', () => {

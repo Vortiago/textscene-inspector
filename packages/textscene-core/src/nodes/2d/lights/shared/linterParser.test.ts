@@ -31,7 +31,7 @@ const KEYS: string[] = [
 ];
 /** True only when the class binds no ADD_PROPERTY, with the source line that proves it. */
 const DECLARES_NOTHING = false;
-const LEAVES = ["DirectionalLight2D","PointLight2D"] as const;
+const LEAVES = ['DirectionalLight2D', 'PointLight2D'] as const;
 
 describe('Light2D shared validators', () => {
   it('registers exactly what Light2D binds', () => {

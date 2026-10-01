@@ -30,7 +30,9 @@ const internalResources: TscnInternalResource[] = [
   },
 ];
 
-const externalResources: TscnExternalResource[] = [{ id: '1_tex', path: 'res://icon.png', type: 'Texture2D' }];
+const externalResources: TscnExternalResource[] = [
+  { id: '1_tex', path: 'res://icon.png', type: 'Texture2D' },
+];
 
 describe('resolveStyleBoxes', () => {
   it('returns an empty map when the node declares no theme_override_styles', () => {
@@ -39,7 +41,10 @@ describe('resolveStyleBoxes', () => {
   });
 
   it('keeps a StyleBoxFlat override unchanged', () => {
-    const out = resolveStyleBoxes(node({ panel: 'SubResource("Flat_x")' }), { externalResources, internalResources });
+    const out = resolveStyleBoxes(node({ panel: 'SubResource("Flat_x")' }), {
+      externalResources,
+      internalResources,
+    });
     expect(out.panel?.bgColor).toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });
 
@@ -69,7 +74,10 @@ describe('resolveStyleBoxes', () => {
   });
 
   it('omits a slot whose ref fails to resolve, same as before (an unknown id)', () => {
-    const out = resolveStyleBoxes(node({ panel: 'SubResource("nope")' }), { externalResources, internalResources });
+    const out = resolveStyleBoxes(node({ panel: 'SubResource("nope")' }), {
+      externalResources,
+      internalResources,
+    });
     expect(out.panel).toBeUndefined();
   });
 });

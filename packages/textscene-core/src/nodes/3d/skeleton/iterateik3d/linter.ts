@@ -16,7 +16,9 @@ import { resolveIterateSettingLeaf } from './linterParser.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  settingMissingTargetNode: groundedArm('iterateik3d-setting-missing-target-node', { kind: 'configuration-warning' }),
+  settingMissingTargetNode: groundedArm('iterateik3d-setting-missing-target-node', {
+    kind: 'configuration-warning',
+  }),
 } as const satisfies RuleArms<string>;
 
 function checkIterateIK3D(context: RuleContext): Diagnostic[] {

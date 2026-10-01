@@ -35,11 +35,7 @@ export function NavigationRegion2D({ node, children }: NodeComponentProps) {
 
   // A NavigationPolygon is as often an inline `[sub_resource]` as a `.tres`, so
   // both forms resolve.
-  const resource = useSubOrExtResource(
-    properties.navigationPolygon,
-    internalResources,
-    externalResources
-  );
+  const resource = useSubOrExtResource(properties.navigationPolygon, internalResources, externalResources);
 
   const overlay = useMemo(() => {
     const polygon = resource ? decodeNavigationPolygon(resource.data) : null;

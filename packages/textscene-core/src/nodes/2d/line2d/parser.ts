@@ -11,10 +11,7 @@ import { parsePackedVector2Array } from '../../../resources/shapes/packedArray';
 import { warn } from '../../../logger';
 import type { Line2DProperties } from './types';
 
-export function parseLine2D(
-  heading: ParsedHeading,
-  properties: Record<string, string>
-): Line2DProperties {
+export function parseLine2D(heading: ParsedHeading, properties: Record<string, string>): Line2DProperties {
   const base = parseNode2D(heading, properties);
 
   let points: Float32Array = new Float32Array(0);
@@ -22,9 +19,7 @@ export function parseLine2D(
     try {
       points = parsePackedVector2Array(properties.points);
     } catch (error) {
-      warn(
-        `Line2D "${base.name}": invalid points ${error instanceof Error ? error.message : String(error)}`
-      );
+      warn(`Line2D "${base.name}": invalid points ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

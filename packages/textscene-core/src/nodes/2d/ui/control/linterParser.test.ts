@@ -154,10 +154,7 @@ describe('Control Linter', () => {
 
     it('accepts a SubResource theme (a scene-inline Theme)', () => {
       expectClean(
-        scene(
-          '[sub_resource type="Theme" id="5"]',
-          node('Control', { theme: 'SubResource("5")' })
-        )
+        scene('[sub_resource type="Theme" id="5"]', node('Control', { theme: 'SubResource("5")' }))
       );
     });
 
@@ -186,10 +183,10 @@ describe('Control Linter', () => {
     });
 
     it('rejects a malformed theme_override_colors Color', () => {
-      expectDiagnostic(
-        scene(node('Control', { 'theme_override_colors/font_color': 'Color(1, 1, 1)' })),
-        { prop: 'theme_override_colors', contains: ['Color'] }
-      );
+      expectDiagnostic(scene(node('Control', { 'theme_override_colors/font_color': 'Color(1, 1, 1)' })), {
+        prop: 'theme_override_colors',
+        contains: ['Color'],
+      });
     });
 
     it('accepts an integer theme_override_constants entry', () => {
@@ -197,10 +194,9 @@ describe('Control Linter', () => {
     });
 
     it('rejects a non-numeric theme_override_constants entry', () => {
-      expectDiagnostic(
-        scene(node('Control', { 'theme_override_constants/separation': 'wide' })),
-        { prop: 'theme_override_constants' }
-      );
+      expectDiagnostic(scene(node('Control', { 'theme_override_constants/separation': 'wide' })), {
+        prop: 'theme_override_constants',
+      });
     });
 
     it('accepts a SubResource theme_override_styles reference', () => {
@@ -213,10 +209,9 @@ describe('Control Linter', () => {
     });
 
     it('rejects a non-reference theme_override_styles value', () => {
-      expectDiagnostic(
-        scene(node('Control', { 'theme_override_styles/panel': 'hello' })),
-        { prop: 'theme_override_styles' }
-      );
+      expectDiagnostic(scene(node('Control', { 'theme_override_styles/panel': 'hello' })), {
+        prop: 'theme_override_styles',
+      });
     });
   });
 
@@ -375,10 +370,9 @@ describe('Control Linter', () => {
     });
 
     it('rejects a non-NodePath element', () => {
-      expectDiagnostic(
-        scene(node('Control', { accessibility_controls_nodes: 'Array[NodePath]([1, 2])' })),
-        { prop: 'accessibility_controls_nodes' }
-      );
+      expectDiagnostic(scene(node('Control', { accessibility_controls_nodes: 'Array[NodePath]([1, 2])' })), {
+        prop: 'accessibility_controls_nodes',
+      });
     });
 
     // `Array::assign` converts each untyped element with `can_convert_strict`
@@ -410,7 +404,10 @@ describe('Control Linter', () => {
     });
 
     it('cites both assign() refusals instead of claiming format-only', () => {
-      expect(nodePathArray().grounding).toEqual({ kind: 'enforced', cite: 'array.cpp:260-261, array.cpp:275-277' });
+      expect(nodePathArray().grounding).toEqual({
+        kind: 'enforced',
+        cite: 'array.cpp:260-261, array.cpp:275-277',
+      });
       expect(nodePathArray().formatOnly).toBeUndefined();
     });
   });
@@ -434,7 +431,9 @@ describe('Control Linter', () => {
 
   describe('theme (nullable resource slot)', () => {
     it('accepts a SubResource("id") theme', () => {
-      expectClean(scene(subResource('Theme', {}, 'Theme_1'), node('Control', { theme: 'SubResource("Theme_1")' })));
+      expectClean(
+        scene(subResource('Theme', {}, 'Theme_1'), node('Control', { theme: 'SubResource("Theme_1")' }))
+      );
     });
 
     it('accepts the literal null — an instance override clearing an inherited theme writes this (control.cpp:2986-3009, variant_parser.cpp:2184-2187)', () => {

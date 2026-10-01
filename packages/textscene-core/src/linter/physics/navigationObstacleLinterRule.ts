@@ -31,8 +31,7 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
   // `navmesh_parse_source_geometry` returns while `affect_navigation_mesh` is off,
   // before reading `carve_navigation_mesh`: navigation_obstacle_2d.cpp:363 (carve read
   // at :392 and :413) and navigation_obstacle_3d.cpp:443 (carve read at :474 and :496).
-  const CARVE_GATE_AT =
-    dim === '2D' ? 'navigation_obstacle_2d.cpp:363' : 'navigation_obstacle_3d.cpp:443';
+  const CARVE_GATE_AT = dim === '2D' ? 'navigation_obstacle_2d.cpp:363' : 'navigation_obstacle_3d.cpp:443';
   const type = `NavigationObstacle${dim}`;
   const prefix = `navigationobstacle${dimSuffix(dim)}`;
 
@@ -53,9 +52,7 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
     nonUniformScale: is2D
       ? groundedArm(`${prefix}-non-uniform-global-scale`, { kind: 'configuration-warning' })
       : undefined,
-    skew: is2D
-      ? groundedArm(`${prefix}-global-skew-ignored`, { kind: 'configuration-warning' })
-      : undefined,
+    skew: is2D ? groundedArm(`${prefix}-global-skew-ignored`, { kind: 'configuration-warning' }) : undefined,
   };
 
   function check(context: RuleContext): Diagnostic[] {
@@ -63,11 +60,16 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
     const diagnostics: Diagnostic[] = [];
     if (!isValidProperties(node.properties)) return diagnostics;
     const props = node.properties;
-    const report = (arm: RuleArm | undefined, message: string) =>
-      reportArm(diagnostics, arm, node, message);
+    const report = (arm: RuleArm | undefined, message: string) => reportArm(diagnostics, arm, node, message);
 
-    if (boolSlotValue(props.carve_navigation_mesh) === true && boolSlotValue(props.affect_navigation_mesh) !== true) {
-      report(arms.carveWithoutAffect, `${type} '${node.name}' has 'carve_navigation_mesh' enabled but 'affect_navigation_mesh' is not. Navmesh baking checks 'affect_navigation_mesh' first and returns before carving is ever considered, so 'carve_navigation_mesh' has no effect.`);
+    if (
+      boolSlotValue(props.carve_navigation_mesh) === true &&
+      boolSlotValue(props.affect_navigation_mesh) !== true
+    ) {
+      report(
+        arms.carveWithoutAffect,
+        `${type} '${node.name}' has 'carve_navigation_mesh' enabled but 'affect_navigation_mesh' is not. Navmesh baking checks 'affect_navigation_mesh' first and returns before carving is ever considered, so 'carve_navigation_mesh' has no effect.`
+      );
     }
 
     // Not ported: NavigationObstacle3D's warnings (navigation_obstacle_3d.cpp:408-425)
@@ -81,7 +83,10 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
 
         // navigation_obstacle_2d.cpp:331-333
         if (scale.x < MIN_GLOBAL_SCALE || scale.y < MIN_GLOBAL_SCALE) {
-          report(arms.nonPositiveScale, `${type} '${node.name}' has global scale (${scale.x.toFixed(3)}, ${scale.y.toFixed(3)}). NavigationObstacle2D does not support negative or zero scaling.`);
+          report(
+            arms.nonPositiveScale,
+            `${type} '${node.name}' has global scale (${scale.x.toFixed(3)}, ${scale.y.toFixed(3)}). NavigationObstacle2D does not support negative or zero scaling.`
+          );
         }
 
         // radius > 0.0 gate: navigation_obstacle_2d.h:46 defaults radius to
@@ -93,12 +98,18 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
         if (radius !== null && radius > 0) {
           // navigation_obstacle_2d.cpp:336-338
           if (!transform2DIsConformal(verdict.transform)) {
-            report(arms.nonUniformScale, `${type} '${node.name}' has radius ${radius} but a non-uniformly-scaled global transform. The agent radius can only be scaled uniformly; the largest value along the two axes of the global scale will be used to scale the radius, which may change in unexpected ways when the node is rotated.`);
+            report(
+              arms.nonUniformScale,
+              `${type} '${node.name}' has radius ${radius} but a non-uniformly-scaled global transform. The agent radius can only be scaled uniformly; the largest value along the two axes of the global scale will be used to scale the radius, which may change in unexpected ways when the node is rotated.`
+            );
           }
 
           // navigation_obstacle_2d.cpp:340-342
           if (!transform2DHasZeroSkew(verdict.transform)) {
-            report(arms.skew, `${type} '${node.name}' has radius ${radius} but a skewed global transform. Skew has no effect on the agent radius.`);
+            report(
+              arms.skew,
+              `${type} '${node.name}' has radius ${radius} but a skewed global transform. Skew has no effect on the agent radius.`
+            );
           }
         }
       }

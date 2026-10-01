@@ -35,13 +35,7 @@ const PLANE_MATERIAL = materialProgramInputs({
   merge: [canvasItemFacing()],
 });
 
-export function MissingResourcePlaceholder({
-  shape,
-  name,
-  position,
-  rotation,
-  scale,
-}: Props) {
+export function MissingResourcePlaceholder({ shape, name, position, rotation, scale }: Props) {
   return (
     <CanvasItemGroup name={name} position={position} rotation={rotation} scale={scale}>
       {shape === 'box' ? (

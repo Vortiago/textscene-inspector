@@ -173,9 +173,7 @@ describe('<ParallaxBackground>', () => {
     const scene = renderer.scene.instance;
     fireRender(scene, viewportPassCamera());
 
-    const wrappers = scene
-      .getObjectByName('BG')!
-      .children.filter((child) => child.type === 'Group');
+    const wrappers = scene.getObjectByName('BG')!.children.filter((child) => child.type === 'Group');
     expect(wrappers[0]!.position.x).toBe(-24);
     expect(wrappers[0]!.position.y).toBe(76);
     // `_update_scroll` only walks direct children, so the nested one keeps the
@@ -236,5 +234,4 @@ describe('<ParallaxBackground>', () => {
     expect(wrapper.position.y).toBe(0);
     expect(wrapper.scale.x).toBe(1);
   });
-
 });

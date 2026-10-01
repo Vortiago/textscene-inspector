@@ -64,9 +64,7 @@ export function renderPanels(nodes) {
         ${n.source ? `<a class="reflink" href="${n.source}" target="_blank" rel="noopener" title="Godot engine source for ${escapeHtml(n.type)}">source ↗</a>` : ''}
         ${
           n.fixture
-            ? `<a class="fixture" href="${PREVIEW_URL}?fixture=${encodeURIComponent(
-                n.fixture
-              )}${
+            ? `<a class="fixture" href="${PREVIEW_URL}?fixture=${encodeURIComponent(n.fixture)}${
                 n.camera ? `&camera=${encodeURIComponent(n.camera)}` : ''
               }" target="_blank" rel="noopener" title="Open ${escapeHtml(
                 n.fixture
@@ -81,18 +79,18 @@ export function renderPanels(nodes) {
         n.notes
           ? `<div class="prose">${n.html}</div>`
           : n.unimplemented
-          ? `<div class="novisual">Not yet implemented — the previewer renders this as a transform-only fallback (children still show, the node itself draws nothing). In Godot it is a <strong>${escapeHtml(
-              n.group
-            )}</strong> node.</div>${n.html ? `<div class="prose">${n.html}</div>` : ''}`
-          : n.sectioned
-            ? `${
-                // The whole-scene pair, when the sheet declares one, above the
-                // sections that break it down.
-                n.visual && n.godot && n.ours ? compareStage(n.godot, n.ours, n.type) : ''
-              }` +
-              n.sections
-                .map(
-                  (s) => `
+            ? `<div class="novisual">Not yet implemented — the previewer renders this as a transform-only fallback (children still show, the node itself draws nothing). In Godot it is a <strong>${escapeHtml(
+                n.group
+              )}</strong> node.</div>${n.html ? `<div class="prose">${n.html}</div>` : ''}`
+            : n.sectioned
+              ? `${
+                  // The whole-scene pair, when the sheet declares one, above the
+                  // sections that break it down.
+                  n.visual && n.godot && n.ours ? compareStage(n.godot, n.ours, n.type) : ''
+                }` +
+                n.sections
+                  .map(
+                    (s) => `
       <section class="prop">
         <div class="prop-head"><h3>${escapeHtml(s.title)}</h3><span class="status st-${
           s.status
@@ -100,14 +98,14 @@ export function renderPanels(nodes) {
         ${compareStage(s.godot, s.ours, s.title)}
         <div class="prose">${s.html}</div>
       </section>`
-                )
-                .join('') +
-              (n.trailingHtml ? `<div class="prose">${n.trailingHtml}</div>` : '')
-            : `${
-                n.visual
-                  ? compareStage(n.godot, n.ours, n.type)
-                  : `<div class="novisual">No visual output — this node draws nothing to compare.</div>`
-              }
+                  )
+                  .join('') +
+                (n.trailingHtml ? `<div class="prose">${n.trailingHtml}</div>` : '')
+              : `${
+                  n.visual
+                    ? compareStage(n.godot, n.ours, n.type)
+                    : `<div class="novisual">No visual output — this node draws nothing to compare.</div>`
+                }
       <div class="prose">${n.html}</div>`
       }
     </article>`

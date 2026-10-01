@@ -129,10 +129,7 @@ describe('ValidatorRegistry', () => {
         cast_shadow: mockValidator,
       });
 
-      expect(registry.getOwnKeys('MeshInstance3D').sort()).toEqual([
-        'cast_shadow',
-        'mesh',
-      ]);
+      expect(registry.getOwnKeys('MeshInstance3D').sort()).toEqual(['cast_shadow', 'mesh']);
     });
 
     it('should return an empty array for an unregistered node type', () => {
@@ -190,8 +187,20 @@ describe('ValidatorRegistry', () => {
     });
 
     it('should prefer exact match over wildcard', () => {
-      const exactValidator: PropertyValidator = () => ({ severity: 'error', message: 'exact', line: 1, column: 1, code: 'TEST' });
-      const wildcardValidator: PropertyValidator = () => ({ severity: 'error', message: 'wildcard', line: 1, column: 1, code: 'TEST' });
+      const exactValidator: PropertyValidator = () => ({
+        severity: 'error',
+        message: 'exact',
+        line: 1,
+        column: 1,
+        code: 'TEST',
+      });
+      const wildcardValidator: PropertyValidator = () => ({
+        severity: 'error',
+        message: 'wildcard',
+        line: 1,
+        column: 1,
+        code: 'TEST',
+      });
 
       registry.registerAll('MeshInstance3D', {
         'surface_material_override/0': exactValidator,

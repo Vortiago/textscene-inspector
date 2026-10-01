@@ -65,7 +65,9 @@ export function readStamp(copyText) {
 }
 
 function copyFrom(checkout) {
-  const rev = execFileSync('git', ['-C', checkout, 'rev-parse', '--short=12', 'HEAD'], { encoding: 'utf8' }).trim();
+  const rev = execFileSync('git', ['-C', checkout, 'rev-parse', '--short=12', 'HEAD'], {
+    encoding: 'utf8',
+  }).trim();
   for (const [canon, copy] of Object.entries(COPIES)) {
     const canonPath = resolve(checkout, canon);
     const canonText = readFileSync(canonPath, 'utf8');
@@ -84,7 +86,8 @@ export function forkedCopies() {
     const stamp = readStamp(readFileSync(resolve(REPO_ROOT, copy), 'utf8'));
     if (!stamp) problems.push(`${copy}: no stamp`);
     else if (stamp.canon !== canon) problems.push(`${copy}: stamp names ${stamp.canon}, expected ${canon}`);
-    else if (sha256OfText(stamp.body) !== stamp.sha) problems.push(`${copy}: edited here; edit ${canon} in Verktøykasse`);
+    else if (sha256OfText(stamp.body) !== stamp.sha)
+      problems.push(`${copy}: edited here; edit ${canon} in Verktøykasse`);
   }
   return problems;
 }

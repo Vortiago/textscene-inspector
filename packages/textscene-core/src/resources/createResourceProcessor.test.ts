@@ -203,11 +203,7 @@ describe('createResourceProcessor', () => {
       await flush();
 
       expect(loadDirectly).toHaveBeenCalledWith('res://scene.tscn');
-      expect(sequence).toEqual([
-        'requested',
-        'loading',
-        'loaded:res://scene.tscn:direct:res://scene.tscn',
-      ]);
+      expect(sequence).toEqual(['requested', 'loading', 'loaded:res://scene.tscn:direct:res://scene.tscn']);
       expect(processor.getCached('res://scene.tscn')).toBe('direct:res://scene.tscn');
     });
 
@@ -628,7 +624,7 @@ describe('createResourceProcessor', () => {
   });
 
   describe('full-clear invalidation (corpus switch)', () => {
-    it('clearCache never emits invalidated itself — announcing is the loader\'s job — and cachedPaths snapshots keys', async () => {
+    it("clearCache never emits invalidated itself — announcing is the loader's job — and cachedPaths snapshots keys", async () => {
       const processor = createResourceProcessor<string>({
         eventBus,
         resourceType: 'resource',

@@ -80,8 +80,7 @@ describe('editedSinceLoad — the discard-guard predicate', () => {
     globalThis.fetch = mockFetchOk(FIXTURE_TSCN);
 
     const { result, rerender } = renderHook(
-      ({ fixtureFile }: { fixtureFile: string }) =>
-        useSceneSource({ fixtureFile, uploadedTscnName: null }),
+      ({ fixtureFile }: { fixtureFile: string }) => useSceneSource({ fixtureFile, uploadedTscnName: null }),
       { initialProps: { fixtureFile: 'unit-plane-mesh.tscn' } }
     );
     await waitFor(() => {

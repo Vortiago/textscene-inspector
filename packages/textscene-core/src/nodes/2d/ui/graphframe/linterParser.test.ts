@@ -138,7 +138,7 @@ describe('GraphFrame strict validators', () => {
     });
   });
 
-  it('does not register mouse_filter: GraphFrame only overrides Control\'s default, it does not own the property', () => {
+  it("does not register mouse_filter: GraphFrame only overrides Control's default, it does not own the property", () => {
     expect(validatorRegistry.getOwnKeys('GraphFrame')).not.toContain('mouse_filter');
   });
 

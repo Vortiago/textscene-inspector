@@ -49,18 +49,25 @@ describe('<HSplitContainer>', () => {
   it('renders nothing under the default theme (autohide=true, no hover/drag a static render ever has)', async () => {
     const node = split({}, bothExpandChildren());
     const renderer = await ReactThreeTestRenderer.create(
-      <HSplitContainer {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={0} />
+      <HSplitContainer
+        {...painterEnv()}
+        solveNode={node}
+        rect={{ x: 0, y: 0, w: 400, h: 60 }}
+        renderOrder={0}
+      />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });
 
   it('renders nothing with fewer than two sortable children, even with autohide overridden', async () => {
-    const node = split(
-      { themeOverrideConstants: { autohide: 0 } },
-      [solveNode('Only', 'ColorRect', {})]
-    );
+    const node = split({ themeOverrideConstants: { autohide: 0 } }, [solveNode('Only', 'ColorRect', {})]);
     const renderer = await ReactThreeTestRenderer.create(
-      <HSplitContainer {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={0} />
+      <HSplitContainer
+        {...painterEnv()}
+        solveNode={node}
+        rect={{ x: 0, y: 0, w: 400, h: 60 }}
+        renderOrder={0}
+      />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });
@@ -68,7 +75,12 @@ describe('<HSplitContainer>', () => {
   it('renders nothing while collapsed, even with autohide overridden', async () => {
     const node = split({ themeOverrideConstants: { autohide: 0 }, collapsed: true }, bothExpandChildren());
     const renderer = await ReactThreeTestRenderer.create(
-      <HSplitContainer {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={0} />
+      <HSplitContainer
+        {...painterEnv()}
+        solveNode={node}
+        rect={{ x: 0, y: 0, w: 400, h: 60 }}
+        renderOrder={0}
+      />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });
@@ -79,7 +91,12 @@ describe('<HSplitContainer>', () => {
       bothExpandChildren()
     );
     const renderer = await ReactThreeTestRenderer.create(
-      <HSplitContainer {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={0} />
+      <HSplitContainer
+        {...painterEnv()}
+        solveNode={node}
+        rect={{ x: 0, y: 0, w: 400, h: 60 }}
+        renderOrder={0}
+      />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });
@@ -87,7 +104,12 @@ describe('<HSplitContainer>', () => {
   it('draws exactly one textured quad, at the grabber band centred on the computed split offset, once autohide is overridden', async () => {
     const node = split({ themeOverrideConstants: { autohide: 0 } }, bothExpandChildren());
     const renderer = await ReactThreeTestRenderer.create(
-      <HSplitContainer {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={5} />
+      <HSplitContainer
+        {...painterEnv()}
+        solveNode={node}
+        rect={{ x: 0, y: 0, w: 400, h: 60 }}
+        renderOrder={5}
+      />
     );
 
     const meshes = renderer.scene.findAllByType('Mesh');
@@ -108,12 +130,14 @@ describe('<HSplitContainer>', () => {
   });
 
   it('honours a split_offset override once visible', async () => {
-    const node = split(
-      { themeOverrideConstants: { autohide: 0 }, splitOffset: 60 },
-      bothExpandChildren()
-    );
+    const node = split({ themeOverrideConstants: { autohide: 0 }, splitOffset: 60 }, bothExpandChildren());
     const renderer = await ReactThreeTestRenderer.create(
-      <HSplitContainer {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={0} />
+      <HSplitContainer
+        {...painterEnv()}
+        solveNode={node}
+        rect={{ x: 0, y: 0, w: 400, h: 60 }}
+        renderOrder={0}
+      />
     );
     // draggerPos = 194 + 60 = 254; icon centres at 254 + (12-8)/2 = 256.
     const group = renderer.scene.findByType('Group');
@@ -126,7 +150,12 @@ describe('<HSplitContainer>', () => {
       ...bothExpandChildren(),
     ]);
     const renderer = await ReactThreeTestRenderer.create(
-      <HSplitContainer {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={0} />
+      <HSplitContainer
+        {...painterEnv()}
+        solveNode={node}
+        rect={{ x: 0, y: 0, w: 400, h: 60 }}
+        renderOrder={0}
+      />
     );
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1);
   });

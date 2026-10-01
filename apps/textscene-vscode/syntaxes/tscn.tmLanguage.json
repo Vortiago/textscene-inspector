@@ -65,9 +65,7 @@
         "0": { "name": "punctuation.definition.string.end.tscn" }
       },
       "name": "string.quoted.double.tscn",
-      "patterns": [
-        { "match": "\\\\.", "name": "constant.character.escape.tscn" }
-      ]
+      "patterns": [{ "match": "\\\\.", "name": "constant.character.escape.tscn" }]
     },
     "numeric": {
       "match": "-?\\b\\d+\\.\\d+(?:[eE][+-]?\\d+)?\\b|-?\\.\\d+(?:[eE][+-]?\\d+)?\\b|-?\\b\\d+(?:[eE][+-]?\\d+)?\\b",
@@ -87,10 +85,7 @@
       "endCaptures": {
         "1": { "name": "punctuation.section.arguments.end.tscn" }
       },
-      "patterns": [
-        { "include": "#value" },
-        { "match": ",", "name": "punctuation.separator.comma.tscn" }
-      ]
+      "patterns": [{ "include": "#value" }, { "match": ",", "name": "punctuation.separator.comma.tscn" }]
     },
     "array": {
       "begin": "\\[",
@@ -102,10 +97,7 @@
         "0": { "name": "punctuation.section.array.end.tscn" }
       },
       "name": "meta.array.tscn",
-      "patterns": [
-        { "include": "#value" },
-        { "match": ",", "name": "punctuation.separator.comma.tscn" }
-      ]
+      "patterns": [{ "include": "#value" }, { "match": ",", "name": "punctuation.separator.comma.tscn" }]
     },
     "dict": {
       "begin": "\\{",

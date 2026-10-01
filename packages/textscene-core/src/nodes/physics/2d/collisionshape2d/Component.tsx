@@ -28,9 +28,7 @@ export function CollisionShape2D({ node, children }: NodeComponentProps) {
       node={node}
       props={properties}
       body={() =>
-        showCollisions && shapeResource ? (
-          <CollisionGizmo2D shape={shapeResource} color={debugColor} />
-        ) : null
+        showCollisions && shapeResource ? <CollisionGizmo2D shape={shapeResource} color={debugColor} /> : null
       }
     >
       {children}

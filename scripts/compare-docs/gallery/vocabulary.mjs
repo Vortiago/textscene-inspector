@@ -18,8 +18,7 @@ export const STATUS_LABEL = {
   unreviewed: 'Unreviewed',
   'linter-only': 'Linter only',
 };
-export const rollupStatus = (statuses) =>
-  STATUS_ORDER.find((s) => statuses.includes(s)) ?? DEFAULT_STATUS;
+export const rollupStatus = (statuses) => STATUS_ORDER.find((s) => statuses.includes(s)) ?? DEFAULT_STATUS;
 
 export const CATEGORY_ORDER = ['3D', '2D', 'Resources', 'Complex Scenes', 'Other'];
 

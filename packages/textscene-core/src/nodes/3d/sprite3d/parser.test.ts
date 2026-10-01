@@ -41,25 +41,15 @@ describe('parseSprite3D properties', () => {
   });
 
   it('parses billboard enum and rejects out-of-range values', () => {
-    expect(parseSprite3D(HEADING, { billboard: '1' }).billboard).toBe(
-      BillboardMode.BILLBOARD_ENABLED
-    );
-    expect(parseSprite3D(HEADING, { billboard: '2' }).billboard).toBe(
-      BillboardMode.BILLBOARD_FIXED_Y
-    );
+    expect(parseSprite3D(HEADING, { billboard: '1' }).billboard).toBe(BillboardMode.BILLBOARD_ENABLED);
+    expect(parseSprite3D(HEADING, { billboard: '2' }).billboard).toBe(BillboardMode.BILLBOARD_FIXED_Y);
     // 7 is out of range, so it falls back to the default.
-    expect(parseSprite3D(HEADING, { billboard: '7' }).billboard).toBe(
-      BillboardMode.BILLBOARD_DISABLED
-    );
+    expect(parseSprite3D(HEADING, { billboard: '7' }).billboard).toBe(BillboardMode.BILLBOARD_DISABLED);
   });
 
   it('parses alpha_cut enum', () => {
-    expect(parseSprite3D(HEADING, { alpha_cut: '1' }).alpha_cut).toBe(
-      AlphaCutMode.ALPHA_CUT_DISCARD
-    );
-    expect(parseSprite3D(HEADING, { alpha_cut: '2' }).alpha_cut).toBe(
-      AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS
-    );
+    expect(parseSprite3D(HEADING, { alpha_cut: '1' }).alpha_cut).toBe(AlphaCutMode.ALPHA_CUT_DISCARD);
+    expect(parseSprite3D(HEADING, { alpha_cut: '2' }).alpha_cut).toBe(AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS);
   });
 
   it('parses pixel_size and transparency as floats', () => {

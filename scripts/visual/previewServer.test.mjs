@@ -163,7 +163,9 @@ describe('settleCanvas', () => {
 
   it('throws when the texture work wait fails for a reason other than its timeout', async () => {
     const { page, canvas } = stubCanvas(['x', 'x'], failingStatus(new Error('Target page has been closed')));
-    await expect(settleCanvas(page, canvas)).rejects.toThrow(/texture work status.*Target page has been closed/);
+    await expect(settleCanvas(page, canvas)).rejects.toThrow(
+      /texture work status.*Target page has been closed/
+    );
   });
 
   it('can skip the texture work wait, for the control that proves the wait matters', async () => {
@@ -197,9 +199,8 @@ describe('settleCanvas', () => {
  */
 describe('the texture work status id is shared, not duplicated', () => {
   it('matches the id the shell renders', async () => {
-    const { TEXTURE_WORK_STATUS_TESTID: shellId } = await import(
-      '../../packages/textscene-core/src/r3f/components/TscnPreviewShell/textureWorkStatusTestId.ts'
-    );
+    const { TEXTURE_WORK_STATUS_TESTID: shellId } =
+      await import('../../packages/textscene-core/src/r3f/components/TscnPreviewShell/textureWorkStatusTestId.ts');
     expect(TEXTURE_WORK_STATUS_TESTID).toBe(shellId);
   });
 });
@@ -317,17 +318,21 @@ ${keepAlive ? 'setTimeout(() => {}, 120000);' : 'proc.unref();'}
     ['SIGINT', 130],
     ['SIGTERM', 143],
     ['SIGHUP', 129],
-  ])('reaps the group and exits with the shell code when the harness gets %s', async (signal, code) => {
-    const h = await startHarness();
-    expect(alive(h.groupPid)).toBe(true);
+  ])(
+    'reaps the group and exits with the shell code when the harness gets %s',
+    async (signal, code) => {
+      const h = await startHarness();
+      expect(alive(h.groupPid)).toBe(true);
 
-    h.child.kill(signal);
-    const exit = await h.exited;
-    const reaped = await until(() => !alive(h.groupPid));
-    h.cleanup();
-    expect(exit).toEqual({ code, signal: null });
-    expect(reaped).toBe(true);
-  }, 20000);
+      h.child.kill(signal);
+      const exit = await h.exited;
+      const reaped = await until(() => !alive(h.groupPid));
+      h.cleanup();
+      expect(exit).toEqual({ code, signal: null });
+      expect(reaped).toBe(true);
+    },
+    20000
+  );
 
   it('reaps the group when the harness ends normally', async () => {
     const h = await startHarness({ keepAlive: false });

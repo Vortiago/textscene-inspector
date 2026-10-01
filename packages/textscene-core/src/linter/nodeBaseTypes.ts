@@ -6,12 +6,7 @@
  */
 
 /** Light3D-derived concrete nodes, each mapping to `Light3D`, then `Node3D`. */
-const LIGHT3D_LEAVES = [
-  'DirectionalLight3D',
-  'OmniLight3D',
-  'SpotLight3D',
-  'AreaLight3D',
-] as const;
+const LIGHT3D_LEAVES = ['DirectionalLight3D', 'OmniLight3D', 'SpotLight3D', 'AreaLight3D'] as const;
 
 /** Spatial (3D) nodes: Node3D carries the transform and visible set. */
 const NODE3D_LEAVES = [

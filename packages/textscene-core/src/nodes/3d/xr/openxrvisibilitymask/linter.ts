@@ -7,15 +7,13 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import {
-  isExplicitlyHidden,
-  parentTypeVerdict,
-  placementPhrase,
-} from '../../../../linter/parentType.js';
+import { isExplicitlyHidden, parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  parentNotXRCamera3D: groundedArm('openxrvisibilitymask-parent-not-xrcamera3d', { kind: 'configuration-warning' }),
+  parentNotXRCamera3D: groundedArm('openxrvisibilitymask-parent-not-xrcamera3d', {
+    kind: 'configuration-warning',
+  }),
 } as const satisfies RuleArms<string>;
 
 function checkOpenXRVisibilityMask(context: RuleContext): Diagnostic[] {

@@ -89,7 +89,8 @@ describe('<Panel> (isolated painter contract)', () => {
   it('composes self_modulate onto the panel fill, in sRGB, with a single linear conversion', async () => {
     const flat = styleBox({ bgColor: { r: 0.8, g: 0.8, b: 0.8, a: 1 } });
     const renderer = await ReactThreeTestRenderer.create(
-      <Panel {...painterEnv()}
+      <Panel
+        {...painterEnv()}
         tint={painterTint({ r: 0.5, g: 0.5, b: 0.5, a: 1 })}
         solveNode={solveNode({}, { panel: flat })}
         rect={RECT}
@@ -106,7 +107,8 @@ describe('<Panel> (isolated painter contract)', () => {
   it('applies the walker-composed tint to the panel fill exactly once', async () => {
     const flat = styleBox({ bgColor: { r: 1, g: 1, b: 1, a: 1 } });
     const renderer = await ReactThreeTestRenderer.create(
-      <Panel {...painterEnv()}
+      <Panel
+        {...painterEnv()}
         // The walker's own product: ambient(0.5) x self_modulate(0.5) = 0.25.
         tint={painterTint({ r: 0.25, g: 0.25, b: 0.25, a: 1 })}
         solveNode={solveNode({}, { panel: flat })}
@@ -131,7 +133,9 @@ describe('<Panel> registered through <ControlCanvasWalker> (end-to-end walker pl
       <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
     );
 
-    const groups = renderer.scene.findAllByType('Group').map((g) => g.instance as { visible: boolean; name: string });
+    const groups = renderer.scene
+      .findAllByType('Group')
+      .map((g) => g.instance as { visible: boolean; name: string });
     const rootGroup = groups.find((g) => g.name === 'Panel:MyPanel');
     expect(rootGroup).toBeDefined();
     expect(rootGroup!.visible).toBe(false);

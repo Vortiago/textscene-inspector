@@ -68,7 +68,10 @@ export function resolveFixture(input) {
  * two projects in one sweep can both hold a `settings_menu.tscn`.
  */
 function labelFor(fixtureName) {
-  return fixtureName.replace(/\.tscn$/, '').split('/').join('-');
+  return fixtureName
+    .replace(/\.tscn$/, '')
+    .split('/')
+    .join('-');
 }
 
 /** The `?fixture=` value the web catalog lists for a scene on disk. */
@@ -76,9 +79,7 @@ export function catalogName(scenePath) {
   const relative = relativePath(REPO_ROOT, scenePath).split(sep).join('/');
   if (!relative.startsWith('scenes/')) throw new Error(`scene is outside scenes/: ${scenePath}`);
   const withinScenes = relative.slice('scenes/'.length);
-  return withinScenes.startsWith('fixtures/')
-    ? withinScenes.slice('fixtures/'.length)
-    : withinScenes;
+  return withinScenes.startsWith('fixtures/') ? withinScenes.slice('fixtures/'.length) : withinScenes;
 }
 
 /**
@@ -92,8 +93,7 @@ export function comparePngs(godotBuffer, oursBuffer) {
     const { expected, actual } = result.sizeMismatch;
     return {
       sizeMismatch:
-        `godot ${expected.width}x${expected.height} vs ` +
-        `ours ${actual.width}x${actual.height}`,
+        `godot ${expected.width}x${expected.height} vs ` + `ours ${actual.width}x${actual.height}`,
     };
   }
   return result;

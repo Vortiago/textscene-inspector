@@ -154,7 +154,8 @@ describe('<TextureProgressBar>', () => {
     const properties = { textureProgress: 'ExtResource("2")', fillMode: 0, value: 50 };
     const renderer = await ReactThreeTestRenderer.create(bar(loader, properties));
     const mapOf = () =>
-      ((renderer.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial).map;
+      ((renderer.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial)
+        .map;
     const before = mapOf();
     await renderer.update(bar(loader, { ...properties }, undefined, { ...RECT }));
     expect(before).not.toBeNull();
@@ -165,9 +166,12 @@ describe('<TextureProgressBar>', () => {
     const fake = createFakeResourceLoader();
     const shared = fakeTexture(64, 16);
     fake.textures.seed(UNDER, shared);
-    const renderer = await ReactThreeTestRenderer.create(bar(fake.loader, { textureUnder: 'ExtResource("1")' }));
-    const map = ((renderer.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial)
-      .map!;
+    const renderer = await ReactThreeTestRenderer.create(
+      bar(fake.loader, { textureUnder: 'ExtResource("1")' })
+    );
+    const map = (
+      (renderer.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial
+    ).map!;
 
     expect(map).not.toBe(shared);
     expect(map.source).toBe(shared.source);

@@ -167,18 +167,22 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
     tentative === undefined ? 0 : tentative.w - marginX - buttonIconReservationPx(n, props, ctx);
   // An absent `ctx.measureText` means the text contributes nothing, while the margin and
   // the icon still count (`solverRegistry.ts`'s contract).
-  const layout: TextLayoutResult | null = ctx.measureText ? buttonLabelShape(n, ctx.theme, wrapWidthPx) : null;
+  const layout: TextLayoutResult | null = ctx.measureText
+    ? buttonLabelShape(n, ctx.theme, wrapWidthPx)
+    : null;
   // `minsize` starts from `paragraph->get_size()` (`button.cpp:492`), a max
   // over `TS->shaped_text_get_size(lines_rid[i])` (`text_paragraph.cpp:601-608`):
   // the ceiled extent, not the raw pen advance.
-  const textSize = layout
-    ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
-    : { x: 0, y: 0 };
+  const textSize = layout ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx } : { x: 0, y: 0 };
   // button.cpp:492-494: `clip_text`, a trimming overrun behaviour or autowrap zeroes the
   // text's width contribution, since a narrower box trims or wraps it. The icon still counts.
   const overrunBehavior = props.overrunBehavior ?? OverrunBehavior.NO_TRIMMING;
   const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.OFF);
-  if (props.clipText || overrunBehavior !== OverrunBehavior.NO_TRIMMING || autowrapMode !== AutowrapMode.OFF) {
+  if (
+    props.clipText ||
+    overrunBehavior !== OverrunBehavior.NO_TRIMMING ||
+    autowrapMode !== AutowrapMode.OFF
+  ) {
     textSize.x = 0;
   }
 

@@ -39,8 +39,7 @@ export interface LoadLane<T> {
 }
 
 export function createLoadLane<T>(ctx: LoadLaneContext<T>): LoadLane<T> {
-  const { cache, inflight, eventBus, resourceType, fileEventBus, shouldProcess, process, dispose } =
-    ctx;
+  const { cache, inflight, eventBus, resourceType, fileEventBus, shouldProcess, process, dispose } = ctx;
 
   /**
    * Every in-flight resource one file's bytes can settle: the file itself plus

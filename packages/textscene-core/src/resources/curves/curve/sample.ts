@@ -35,7 +35,6 @@
 import type { Curve, CurvePoint } from './types';
 import { CMP_EPSILON, bezierInterpolate } from '../../../godot/index.js';
 
-
 /**
  * `Curve::sample`: the value at `offset`. An out-of-range offset clamps to the first
  * or last point's value. An empty curve answers 0, which a caller must not confuse
@@ -80,11 +79,7 @@ export function curveIndex(points: readonly CurvePoint[], offset: number): numbe
  * `Curve::sample_local_nocheck`: the span between `index` and `index + 1`,
  * `localOffset` measured from the left point in curve units (not normalised).
  */
-function sampleLocalNoCheck(
-  points: readonly CurvePoint[],
-  index: number,
-  localOffset: number
-): number {
+function sampleLocalNoCheck(points: readonly CurvePoint[], index: number, localOffset: number): number {
   const a = points[index]!;
   const b = points[index + 1]!;
 
@@ -100,4 +95,3 @@ function sampleLocalNoCheck(
 
   return bezierInterpolate(a.position.y, yac, ybc, b.position.y, t);
 }
-

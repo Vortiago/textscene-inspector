@@ -50,9 +50,7 @@ describe('src/godot is a dependency-free leaf', () => {
 
   it('detects an import when one is present, before trusting its silence', () => {
     expect(specifiersIn("import { x } from './linter/y.js';")).toEqual(['./linter/y.js']);
-    expect(specifiersIn("import type { P } from '../linter/types.js';")).toEqual([
-      '../linter/types.js',
-    ]);
+    expect(specifiersIn("import type { P } from '../linter/types.js';")).toEqual(['../linter/types.js']);
     expect(specifiersIn("import 'three';")).toEqual(['three']);
     expect(specifiersIn("export { a } from './math.js';")).toEqual(['./math.js']);
     expect(specifiersIn("const m = await import('node:fs');")).toEqual(['node:fs']);
@@ -60,9 +58,7 @@ describe('src/godot is a dependency-free leaf', () => {
 
   it('sees a multi-line specifier list, the form this directory mostly uses', () => {
     expect(specifiersIn("import {\n  Mesh,\n  Vector3,\n} from 'three';")).toEqual(['three']);
-    expect(specifiersIn("import type {\n  P,\n} from '../linter/types.js';")).toEqual([
-      '../linter/types.js',
-    ]);
+    expect(specifiersIn("import type {\n  P,\n} from '../linter/types.js';")).toEqual(['../linter/types.js']);
     expect(specifiersIn("export {\n  a,\n  b,\n} from './math.js';")).toEqual(['./math.js']);
   });
 
@@ -88,9 +84,6 @@ describe('src/godot is a dependency-free leaf', () => {
         }
       }
     }
-    expect(
-      violations,
-      'src/godot must import nothing — see this file\'s docblock for why'
-    ).toEqual([]);
+    expect(violations, "src/godot must import nothing — see this file's docblock for why").toEqual([]);
   });
 });

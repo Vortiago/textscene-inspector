@@ -9,7 +9,9 @@ type WorkerClassModule = { default: new () => JobWorker };
 const loadInlineWorker = (): Promise<WorkerClassModule> => import('./textureWorker?worker&inline');
 
 /** The factory the loader calls on its first job, and again after an abort terminates the worker. `load` is replaceable for a test. */
-export function textureWorkerFactory(load: () => Promise<WorkerClassModule> = loadInlineWorker): CreateJobWorker {
+export function textureWorkerFactory(
+  load: () => Promise<WorkerClassModule> = loadInlineWorker
+): CreateJobWorker {
   return async () => {
     const { default: TextureWorker } = await load();
     return new TextureWorker();

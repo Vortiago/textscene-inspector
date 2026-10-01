@@ -5,7 +5,13 @@
  * refuses a diagnostic built any other way.
  */
 
-import { severityFixedBy, type Diagnostic, type EmitGrounding, type RuleArm, type RuleMeta } from './types.js';
+import {
+  severityFixedBy,
+  type Diagnostic,
+  type EmitGrounding,
+  type RuleArm,
+  type RuleMeta,
+} from './types.js';
 import type { TscnNode } from '../parser/types.js';
 
 export type { RuleArm } from './types.js';

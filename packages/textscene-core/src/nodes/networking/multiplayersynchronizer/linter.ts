@@ -12,7 +12,9 @@ import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  rootPathDangling: groundedArm('multiplayersynchronizer-root-path-dangling', { kind: 'configuration-warning' }),
+  rootPathDangling: groundedArm('multiplayersynchronizer-root-path-dangling', {
+    kind: 'configuration-warning',
+  }),
 } as const satisfies RuleArms<string>;
 
 function checkMultiplayerSynchronizer(context: RuleContext): Diagnostic[] {

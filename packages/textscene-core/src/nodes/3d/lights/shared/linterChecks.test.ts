@@ -21,7 +21,9 @@ describe('projectorArm', () => {
 
 describe('projectorWithoutShadowDiagnostic', () => {
   it('reports a projector without shadows through the arm', () => {
-    expect(projectorWithoutShadowDiagnostic(light({ light_projector: 'ExtResource("1")' }), arm)).toMatchObject({
+    expect(
+      projectorWithoutShadowDiagnostic(light({ light_projector: 'ExtResource("1")' }), arm)
+    ).toMatchObject({
       severity: 'warning',
       ruleName: 'omnilight3d-projector-without-shadow',
       nodeName: 'Lamp',

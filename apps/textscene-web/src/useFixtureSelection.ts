@@ -41,9 +41,7 @@ export function useFixtureSelection({
       const param = new URLSearchParams(window.location.search).get('fixture');
       if (
         param &&
-        (fixtures.some((f) => f.file === param) ||
-          param.startsWith('demos/') ||
-          param.startsWith('games/'))
+        (fixtures.some((f) => f.file === param) || param.startsWith('demos/') || param.startsWith('games/'))
       ) {
         return param;
       }

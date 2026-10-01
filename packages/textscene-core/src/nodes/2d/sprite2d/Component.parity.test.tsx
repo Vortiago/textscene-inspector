@@ -36,11 +36,18 @@ async function render(rootNode: TscnNode) {
   fake.textures.seed(TEX, tex);
   // Direct dispatcher-free render: children nodes become nested <Sprite2D>.
   const renderNode = (n: TscnNode): ReactElement => (
-    <Sprite2D node={n}>{n.children.map((c, i) => <Sprite2D key={i} node={c} />)}</Sprite2D>
+    <Sprite2D node={n}>
+      {n.children.map((c, i) => (
+        <Sprite2D key={i} node={c} />
+      ))}
+    </Sprite2D>
   );
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
-      <SceneResourcesProvider internalResources={[]} externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}>
+      <SceneResourcesProvider
+        internalResources={[]}
+        externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}
+      >
         {renderNode(rootNode)}
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
@@ -53,7 +60,10 @@ describe('Sprite2D parser parity', () => {
   });
   it('parses self_modulate Color', () => {
     expect(parseSprite2D(heading, { self_modulate: 'Color(0.5, 0.25, 0, 1)' }).self_modulate).toEqual({
-      r: 0.5, g: 0.25, b: 0, a: 1,
+      r: 0.5,
+      g: 0.25,
+      b: 0,
+      a: 1,
     });
   });
 });
@@ -61,13 +71,15 @@ describe('Sprite2D parser parity', () => {
 describe('Sprite2D render parity', () => {
   it('modulate is converted sRGB→linear before reaching the material', async () => {
     const r = await render(node({ modulate: 'Color(0.5, 0.5, 0.5, 1)' }));
-    const color = ((r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial).color;
+    const color = ((r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial)
+      .color;
     expect(color.r).toBeCloseTo(srgbToLinear(0.5), 4); // ≈ 0.214, not 0.5
   });
 
   it('self_modulate multiplies onto own pixels', async () => {
     const r = await render(node({ self_modulate: 'Color(0, 0, 0, 1)' }));
-    const color = ((r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial).color;
+    const color = ((r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial)
+      .color;
     expect(color.r).toBeCloseTo(0, 5);
   });
 

@@ -86,7 +86,10 @@ describe('FileEventBus', () => {
 
       let resolveLoad: (value: string) => void;
       vi.mocked(mockProvider.loadResource).mockImplementation(
-        () => new Promise((resolve) => { resolveLoad = resolve; })
+        () =>
+          new Promise((resolve) => {
+            resolveLoad = resolve;
+          })
       );
 
       eventBus.request('res://slow.tscn');
@@ -181,9 +184,7 @@ describe('FileEventBus', () => {
       const loaded = vi.fn();
       eventBus.on('loaded', loaded);
       let release!: (data: string) => void;
-      vi.mocked(mockProvider.loadResource).mockReturnValue(
-        new Promise((r) => (release = r))
-      );
+      vi.mocked(mockProvider.loadResource).mockReturnValue(new Promise((r) => (release = r)));
 
       eventBus.request('res://tex.png'); // cleared-era flight departs
       eventBus.clearCache(); // full clear (corpus switch) mid-flight
@@ -239,9 +240,7 @@ describe('FileEventBus', () => {
       const failed = vi.fn();
       eventBus.on('failed', failed);
       let rejectStale!: (err: Error) => void;
-      vi.mocked(mockProvider.loadResource).mockReturnValue(
-        new Promise((_r, rj) => (rejectStale = rj))
-      );
+      vi.mocked(mockProvider.loadResource).mockReturnValue(new Promise((_r, rj) => (rejectStale = rj)));
 
       eventBus.request('res://tex.png');
       eventBus.clearCache();
@@ -256,7 +255,10 @@ describe('FileEventBus', () => {
     it('returns true while file is loading', async () => {
       let resolveLoad: (value: string) => void;
       vi.mocked(mockProvider.loadResource).mockImplementation(
-        () => new Promise((resolve) => { resolveLoad = resolve; })
+        () =>
+          new Promise((resolve) => {
+            resolveLoad = resolve;
+          })
       );
 
       eventBus.request('res://loading.tscn');
@@ -279,7 +281,9 @@ describe('FileEventBus', () => {
 
   describe('error handling', () => {
     it('continues calling other handlers when one throws', async () => {
-      const errorHandler = vi.fn(() => { throw new Error('Handler error'); });
+      const errorHandler = vi.fn(() => {
+        throw new Error('Handler error');
+      });
       const normalHandler = vi.fn();
 
       eventBus.on('loaded', errorHandler);

@@ -7,19 +7,12 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import {
-  sameWorldCasters,
-  ShadowCasterStage,
-  useWorldShadowCasters,
-} from './ShadowCasterStage';
+import { sameWorldCasters, ShadowCasterStage, useWorldShadowCasters } from './ShadowCasterStage';
 import { useShadowCaster } from './shadowCasterRegistry';
 import { OCCLUDER_CULL_CLOCKWISE, OCCLUDER_CULL_DISABLED } from './shadowVolumes';
 import type { WorldShadowCaster } from './shadowCasterRegistry';
 
-function world(
-  segments: number[],
-  overrides: Partial<WorldShadowCaster> = {}
-): WorldShadowCaster {
+function world(segments: number[], overrides: Partial<WorldShadowCaster> = {}): WorldShadowCaster {
   return {
     segments: new Float32Array(segments),
     cullMode: OCCLUDER_CULL_DISABLED,
@@ -48,17 +41,14 @@ describe('sameWorldCasters', () => {
 
   it('breaks on a changed cull mode, which flips which edges cast', () => {
     expect(
-      sameWorldCasters(
-        [world([0, 0, 10, 0])],
-        [world([0, 0, 10, 0], { cullMode: OCCLUDER_CULL_CLOCKWISE })]
-      )
+      sameWorldCasters([world([0, 0, 10, 0])], [world([0, 0, 10, 0], { cullMode: OCCLUDER_CULL_CLOCKWISE })])
     ).toBe(false);
   });
 
   it('breaks on a changed occluder_light_mask, which flips which lights see it', () => {
-    expect(
-      sameWorldCasters([world([0, 0, 10, 0])], [world([0, 0, 10, 0], { occluderLightMask: 2 })])
-    ).toBe(false);
+    expect(sameWorldCasters([world([0, 0, 10, 0])], [world([0, 0, 10, 0], { occluderLightMask: 2 })])).toBe(
+      false
+    );
   });
 
   it('breaks when the polygon gains a point', () => {

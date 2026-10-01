@@ -12,7 +12,9 @@ import { resolveNodePath } from '../../../../linter/nodePathResolve.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  missingProcessMaterial: groundedArm('gpuparticles3d-missing-process-material', { kind: 'configuration-warning' }),
+  missingProcessMaterial: groundedArm('gpuparticles3d-missing-process-material', {
+    kind: 'configuration-warning',
+  }),
   noDrawPassMesh: groundedArm('gpuparticles3d-no-draw-pass-mesh', { kind: 'configuration-warning' }),
   subEmitterNotFound: groundedArm('valid-gpuparticles3d-sub-emitter', {
     kind: 'engine-inert',
@@ -110,7 +112,8 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
 const gpuParticles3DValidationRule: LintRule = {
   meta: {
     name: 'valid-gpuparticles3d-resources',
-    description: 'Validates GPUParticles3D process material and draw-pass mesh presence, and sub-emitter paths',
+    description:
+      'Validates GPUParticles3D process material and draw-pass mesh presence, and sub-emitter paths',
     category: 'validation',
     applicableNodeTypes: ['GPUParticles3D'],
     emits: armEmits(arms),

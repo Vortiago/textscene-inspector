@@ -88,7 +88,6 @@ describe('<GraphFrame> — the two tint arms (graph_frame.cpp:113-126)', () => {
     );
     expect(chromeMeshes(renderer.scene)).toHaveLength(1);
   });
-
 });
 
 describe('<GraphFrame> (isolated painter contract)', () => {

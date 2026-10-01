@@ -14,10 +14,9 @@ describe('parseRemoteTransform3D', () => {
   });
 
   it('falls back to identity transform on a malformed transform (error path)', () => {
-    const result = parseRemoteTransform3D(
-      heading('RemoteTransform3D', { name: 'Bad' }),
-      { transform: 'Transform3D(not, valid)' }
-    );
+    const result = parseRemoteTransform3D(heading('RemoteTransform3D', { name: 'Bad' }), {
+      transform: 'Transform3D(not, valid)',
+    });
     expect(result.transform?.basis_x).toEqual({ x: 1, y: 0, z: 0 });
     expect(result.transform?.origin).toEqual({ x: 0, y: 0, z: 0 });
   });

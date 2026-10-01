@@ -101,7 +101,7 @@ describe('buildSceneTree', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0]!.children).toHaveLength(2);
-      const childNames = result[0]!.children.map(c => c.name).sort();
+      const childNames = result[0]!.children.map((c) => c.name).sort();
       expect(childNames).toEqual(['Child1', 'Child2']);
     });
   });
@@ -185,8 +185,8 @@ describe('buildSceneTree', () => {
       const root = result[0]!;
       expect(root.children).toHaveLength(2);
 
-      const child1 = root.children.find(c => c.name === 'Child1');
-      const child2 = root.children.find(c => c.name === 'Child2');
+      const child1 = root.children.find((c) => c.name === 'Child1');
+      const child2 = root.children.find((c) => c.name === 'Child2');
 
       expect(child1).toBeDefined();
       expect(child2).toBeDefined();
@@ -405,11 +405,7 @@ describe('buildSceneTree', () => {
     it('strands a %Name no node in the file claims', () => {
       // Without the flag there is no claim, and Godot warns the parent path has
       // vanished rather than treating `%Player` as an ordinary child name.
-      const nodes = [
-        node('Root'),
-        node('Player', { parent: '.' }),
-        node('Hat', { parent: '%Player' }),
-      ];
+      const nodes = [node('Root'), node('Player', { parent: '.' }), node('Hat', { parent: '%Player' })];
 
       const [root] = buildSceneTree(nodes);
 

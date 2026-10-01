@@ -78,28 +78,21 @@ describe('buildCsgPlan', () => {
     // Godot's parent_shape is set only for a DIRECT CSG parent, so CSGBox3D >
     // Node3D > CSGSphere3D is two independent roots. Descending through the Node3D
     // would silently swallow the sphere into the box's boolean.
-    const root = node('CSGBox3D', 'Root', {}, [
-      node('Node3D', 'Holder', {}, [node('CSGSphere3D', 'Deep')]),
-    ]);
+    const root = node('CSGBox3D', 'Root', {}, [node('Node3D', 'Holder', {}, [node('CSGSphere3D', 'Deep')])]);
     const plan = buildCsgPlan(root, 'Root', OPTS)!;
     expect(solids(plan).map((c) => c.path)).toEqual(['Root']);
     expect(plan.absorbedPaths.has('Root/Holder/Deep')).toBe(false);
   });
 
   it('gives a combiner no solid of its own but keeps its children', () => {
-    const root = node('CSGCombiner3D', 'Comb', {}, [
-      node('CSGBox3D', 'Ground'),
-      node('CSGBox3D', 'Ledge'),
-    ]);
+    const root = node('CSGCombiner3D', 'Comb', {}, [node('CSGBox3D', 'Ground'), node('CSGBox3D', 'Ledge')]);
     const plan = buildCsgPlan(root, 'Comb', OPTS)!;
     expect(solids(plan).map((c) => c.path)).toEqual(['Comb/Ground', 'Comb/Ledge']);
   });
 
   it('composes nested transforms into root-local space', () => {
     const root = node('CSGBox3D', 'Root', translated(100, 0, 0), [
-      node('CSGCombiner3D', 'Mid', translated(0, 2, 0), [
-        node('CSGSphere3D', 'Leaf', translated(0, 0, 3)),
-      ]),
+      node('CSGCombiner3D', 'Mid', translated(0, 2, 0), [node('CSGSphere3D', 'Leaf', translated(0, 0, 3))]),
     ]);
     const plan = buildCsgPlan(root, 'Root', OPTS)!;
     const leaf = solids(plan).find((c) => c.path === 'Root/Mid/Leaf')!;
@@ -205,7 +198,7 @@ describe('buildCsgPlan', () => {
       expect([...buildCsgPlan(root, 'Root', OPTS)!.invisiblePaths]).toEqual([]);
     });
 
-    it('resolves an INVISIBLE root\'s subtree exactly as a visible one\'s', () => {
+    it("resolves an INVISIBLE root's subtree exactly as a visible one's", () => {
       // The root's own visibility never reaches _get_brush(): it recurses into the
       // visible children and skips the invisible ones either way. Stopping the walk at
       // an invisible root would leave its invisible children their full box.
@@ -239,7 +232,9 @@ describe('buildCsgPlan', () => {
     });
 
     it('gives "no material" its own surface slot', () => {
-      const root = node('CSGBox3D', 'Root', {}, [node('CSGSphere3D', 'X', { materialPath: 'SubResource("A")' })]);
+      const root = node('CSGBox3D', 'Root', {}, [
+        node('CSGSphere3D', 'X', { materialPath: 'SubResource("A")' }),
+      ]);
       const plan = buildCsgPlan(root, 'Root', OPTS)!;
       expect(plan.surfaces).toEqual([undefined, 'SubResource("A")']);
     });
@@ -260,12 +255,15 @@ describe('buildCsgPlan', () => {
 
     it('changes when an operation changes', () => {
       const withOp = (op: number) =>
-        buildCsgPlan(node('CSGBox3D', 'R', {}, [node('CSGSphere3D', 'A', { operation: op })]), 'R', OPTS)!.cacheKey;
+        buildCsgPlan(node('CSGBox3D', 'R', {}, [node('CSGSphere3D', 'A', { operation: op })]), 'R', OPTS)!
+          .cacheKey;
       expect(withOp(1)).not.toBe(withOp(2));
     });
 
     it('changes when a transform changes', () => {
-      const at = (x: number) => buildCsgPlan(node('CSGBox3D', 'R', {}, [node('CSGSphere3D', 'A', translated(x, 0, 0))]), 'R', OPTS)!.cacheKey;
+      const at = (x: number) =>
+        buildCsgPlan(node('CSGBox3D', 'R', {}, [node('CSGSphere3D', 'A', translated(x, 0, 0))]), 'R', OPTS)!
+          .cacheKey;
       expect(at(1)).not.toBe(at(2));
     });
 
@@ -275,7 +273,6 @@ describe('buildCsgPlan', () => {
       const hidden = buildCsgPlan(root(), 'R', { ...OPTS, hiddenPaths: new Set(['R/A']) })!.cacheKey;
       expect(shown).not.toBe(hidden);
     });
-
   });
 
   it('drops a contribution whose matrix is not finite', () => {

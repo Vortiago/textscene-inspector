@@ -51,9 +51,7 @@ describe('web extension host boundary (vscode.dev web worker)', () => {
   // `utils/transform.ts` decomposes Transform3D with pure math, pinned against
   // three.js by core's transform.threeEquivalence.test.ts, so the host needs no three.
   it('host closure imports no react/react-dom/@react-three/three', () => {
-    const frameworks = bareSpecifiers(closure).filter((s) =>
-      FRAMEWORK_BARE_RE.some((re) => re.test(s))
-    );
+    const frameworks = bareSpecifiers(closure).filter((s) => FRAMEWORK_BARE_RE.some((re) => re.test(s)));
     expect(frameworks).toEqual([]);
   });
 

@@ -67,7 +67,12 @@ function containerSolveNode(
   viewportChildren: TscnNode[] = []
 ): SolveNode {
   const containerNode = node('Booth', 'SubViewportContainer', containerProps, [
-    node('View', 'SubViewport', { size: { x: 200, y: 150 }, transparent_bg: false, ...viewportProps }, viewportChildren),
+    node(
+      'View',
+      'SubViewport',
+      { size: { x: 200, y: 150 }, transparent_bg: false, ...viewportProps },
+      viewportChildren
+    ),
   ]);
   return { ...solveNode(), path: 'Booth', node: containerNode };
 }
@@ -307,7 +312,12 @@ describe('<SubViewportContainer> — the forced sub-viewport size truncates', ()
           rect={{ x: 0, y: 0, w: 200, h: 150 }}
           renderOrder={0}
         />
-        <RectProbe path="Booth/View" onRect={(r) => { seen = r; }} />
+        <RectProbe
+          path="Booth/View"
+          onRect={(r) => {
+            seen = r;
+          }}
+        />
       </ViewportRectProvider>
     );
     // 200/3 = 66.67 -> 66; 150/3 = 50 exactly.

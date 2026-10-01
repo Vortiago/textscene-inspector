@@ -42,7 +42,6 @@ export const CHECKBUTTON_THEME_FONT_KEY = 'font';
 
 export { fitIconSize, tintColor };
 
-
 /**
  * `BaseButton::get_draw_mode()` (`base_button.cpp:325-358`) without input: `status.hovering` and
  * `status.press_attempt` stay false, so `button_pressed` alone selects pressed, and `disabled` wins.
@@ -86,7 +85,6 @@ export function checkButtonTextTheme(
   };
   return resolveTextTheme(n, props, CHECKBUTTON_THEME_KEYS[state], defaults);
 }
-
 
 export type CheckButtonIconKey = keyof CheckButtonIcons;
 
@@ -160,11 +158,13 @@ export function checkButtonIconNaturalSize(
 /** `button_checked_color` and `button_unchecked_color`, both `Color(1, 1, 1)` (`default_theme.cpp:352-353`) and overridable. Read whatever `disabled` says: the `_disabled` icons carry the dimming (`check_button.cpp:139-141`). */
 const CHECKBUTTON_ICON_MODULATE_DEFAULT: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
 
-export function checkButtonIconColor(props: CheckButtonProperties, colors: SolveNode['colors']): ControlColor {
+export function checkButtonIconColor(
+  props: CheckButtonProperties,
+  colors: SolveNode['colors']
+): ControlColor {
   const key = props.buttonPressed ? 'button_checked_color' : 'button_unchecked_color';
   return colors[key] ?? CHECKBUTTON_ICON_MODULATE_DEFAULT;
 }
-
 
 /** `cb_empty`'s Y content margin, `round(4*scale)` (`default_theme.cpp:317`), which equals `theme.contentMargin`. The margin is asymmetric: X is `round(6*scale)`. */
 export function checkButtonMarginY(ctx: Pick<SolveContext, 'theme'>): number {
@@ -182,7 +182,10 @@ export function checkButtonIconMaxWidth(constants: SolveNode['constants']): numb
 }
 
 /** `h_separation`: CheckButton's default (`default_theme.cpp:348`, `round(4*scale)`) equals `theme.separation`. */
-export function checkButtonHSeparation(constants: SolveNode['constants'], ctx: Pick<SolveContext, 'theme'>): number {
+export function checkButtonHSeparation(
+  constants: SolveNode['constants'],
+  ctx: Pick<SolveContext, 'theme'>
+): number {
   return Math.max(0, constants.h_separation ?? ctx.theme.separation);
 }
 
@@ -193,8 +196,6 @@ export function checkButtonCheckVOffset(constants: SolveNode['constants']): numb
 
 /** CheckButton's default text alignment is LEFT (`check_button.cpp:169`), over Button's CENTER. A scene's `alignment` still wins. */
 export const CHECKBUTTON_DEFAULT_ALIGNMENT_LEFT = 0;
-
-
 
 /**
  * `CheckButton::get_minimum_size` (`check_button.cpp:64-79`): Button's text-only floor plus the icon's
@@ -214,7 +215,8 @@ export const checkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const fontMetrics = resolveNodeFontMetrics(n, CHECKBUTTON_THEME_FONT_KEY);
   // `Button::get_minimum_size` (`button.cpp:492`) reads `paragraph->get_size()`, the ceiled
   // extent. The icon and separation are added outside the ceil (`check_button.cpp:66-77`).
-  const measured = hasText && ctx.measureText ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
+  const measured =
+    hasText && ctx.measureText ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
   const textSize = { x: shapedTextSizeWidthPx(measured.x), y: measured.y };
 
   const iconSize = fitIconSize(
@@ -228,7 +230,6 @@ export const checkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   return { x: width, y: height };
 };
-
 
 export interface CheckButtonContentInput {
   /** The control's own solved rect size, Godot px. */
@@ -296,4 +297,3 @@ export function layoutCheckButtonContent(input: CheckButtonContentInput): CheckB
 
   return { iconRect, textOffset };
 }
-

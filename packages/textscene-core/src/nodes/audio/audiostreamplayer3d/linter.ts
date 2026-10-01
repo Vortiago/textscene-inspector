@@ -40,7 +40,10 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
   // script or an AnimationPlayer audio track may supply the stream instead.
 
   // emission_angle_degrees without emission_angle_enabled.
-  if (rawProps.emission_angle_degrees !== undefined && boolSlotValue(rawProps.emission_angle_enabled) !== true) {
+  if (
+    rawProps.emission_angle_degrees !== undefined &&
+    boolSlotValue(rawProps.emission_angle_enabled) !== true
+  ) {
     reportArm(
       diagnostics,
       arms.emissionAngleNotEnabled,
@@ -50,7 +53,10 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
   }
 
   // emission_angle_filter_attenuation_db without emission_angle_enabled.
-  if (rawProps.emission_angle_filter_attenuation_db !== undefined && boolSlotValue(rawProps.emission_angle_enabled) !== true) {
+  if (
+    rawProps.emission_angle_filter_attenuation_db !== undefined &&
+    boolSlotValue(rawProps.emission_angle_enabled) !== true
+  ) {
     reportArm(
       diagnostics,
       arms.emissionFilterNotEnabled,

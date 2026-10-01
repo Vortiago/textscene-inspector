@@ -14,13 +14,27 @@ import { chromium } from 'playwright';
 import { assertPortFree } from '../../visual/previewServer.mjs';
 import { sleep } from './capture/platform.mjs';
 import { FIXTURES, OUT, PORT, TMP, UD, WS } from './capture/paths.mjs';
-import { killPortOrphan, killProcessTree, killStaleHost, launchDevHost, rmRetry, seedUserData, waitCDP } from './capture/devHost.mjs';
+import {
+  killPortOrphan,
+  killProcessTree,
+  killStaleHost,
+  launchDevHost,
+  rmRetry,
+  seedUserData,
+  waitCDP,
+} from './capture/devHost.mjs';
 import { openScenePreview, palette, settle, shoot, workbenchPage } from './capture/workbench.mjs';
 import { GUIDE_SHOTS } from './capture/guideShots.mjs';
 
 const SHOWCASE_SHOTS = {
-  'vscode-main': { desc: 'a 2D-UI field-journal dialog rendered by the Control painters', run: shotOfScene('example-ui-dialog.tscn') },
-  'vscode-hallway': { desc: 'a self-contained CSG hallway mockup with portrait frames', run: shotOfScene('example-hallway-mockup.tscn') },
+  'vscode-main': {
+    desc: 'a 2D-UI field-journal dialog rendered by the Control painters',
+    run: shotOfScene('example-ui-dialog.tscn'),
+  },
+  'vscode-hallway': {
+    desc: 'a self-contained CSG hallway mockup with portrait frames',
+    run: shotOfScene('example-hallway-mockup.tscn'),
+  },
 };
 
 function shotOfScene(file) {
@@ -89,7 +103,10 @@ try {
   browser = await chromium.connectOverCDP(`http://localhost:${PORT}`);
   const page = await workbenchPage(browser);
   // Clear any first-launch notifications/toasts before driving.
-  for (let i = 0; i < 3; i++) { await page.keyboard.press('Escape'); await sleep(300); }
+  for (let i = 0; i < 3; i++) {
+    await page.keyboard.press('Escape');
+    await sleep(300);
+  }
 
   // One-time workbench prep: hide the Copilot auxiliary (secondary) side bar.
   await palette(page, 'View: Close Secondary Side Bar');
@@ -114,7 +131,11 @@ try {
   console.error('[vscode] FAIL:', e.stack || e.message);
   process.exitCode = 1;
 } finally {
-  try { if (browser) await browser.close(); } catch { /* already gone */ }
+  try {
+    if (browser) await browser.close();
+  } catch {
+    /* already gone */
+  }
   killProcessTree(proc);
   // A dev-host process that escaped the group, such as a re-parented Electron helper, still
   // carries the user-data-dir marker.

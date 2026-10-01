@@ -141,10 +141,9 @@ describe('SelectionContext — hover (WI-213: ref-based external store)', () => 
   });
 
   it('useHoveredNodePath() re-renders when the store changes', () => {
-    const { result } = renderHook(
-      () => ({ selection: useSelection(), hovered: useHoveredNodePath() }),
-      { wrapper: wrap }
-    );
+    const { result } = renderHook(() => ({ selection: useSelection(), hovered: useHoveredNodePath() }), {
+      wrapper: wrap,
+    });
     expect(result.current.hovered).toBeNull();
     act(() => result.current.selection.hoverStore.set('Root/Cube'));
     expect(result.current.hovered).toBe('Root/Cube');

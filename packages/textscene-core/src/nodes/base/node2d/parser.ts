@@ -15,10 +15,7 @@ import { boolSlotValue } from '../../../godot/index.js';
 
 const TRANSFORM2D_RE = slotTupleRegex('Transform2D', 6);
 
-export function parseNode2D(
-  heading: ParsedHeading,
-  properties: Record<string, string>
-): Node2DProperties {
+export function parseNode2D(heading: ParsedHeading, properties: Record<string, string>): Node2DProperties {
   const name = heading.attributes.name || '';
   const visible = properties.visible === undefined ? undefined : boolSlotValue(properties.visible) !== false;
 
@@ -55,7 +52,8 @@ export function parseNode2D(
     scale,
     skew,
     z_index: intOr(properties.z_index, 0),
-    z_as_relative: properties.z_as_relative === undefined ? true : boolSlotValue(properties.z_as_relative) !== false,
+    z_as_relative:
+      properties.z_as_relative === undefined ? true : boolSlotValue(properties.z_as_relative) !== false,
     show_behind_parent: boolSlotValue(properties.show_behind_parent) === true,
     top_level: boolSlotValue(properties.top_level) === true,
     modulate: properties.modulate ? parseColor(properties.modulate) : { r: 1, g: 1, b: 1, a: 1 },
@@ -64,9 +62,7 @@ export function parseNode2D(
       : { r: 1, g: 1, b: 1, a: 1 },
     light_mask: intOr(properties.light_mask, 1, `${name || 'Node2D'}.light_mask`),
     y_sort_enabled: boolSlotValue(properties.y_sort_enabled) === true,
-    y_sort_origin: properties.y_sort_origin !== undefined
-      ? floatOr(properties.y_sort_origin, 0)
-      : 0,
+    y_sort_origin: properties.y_sort_origin !== undefined ? floatOr(properties.y_sort_origin, 0) : 0,
     ...(properties.material !== undefined ? { materialPath: properties.material } : {}),
     use_parent_material: boolSlotValue(properties.use_parent_material) === true,
   };
@@ -83,7 +79,12 @@ export function decomposeTransform2D(
     return null;
   }
   const [xx, xy, yx, yy, ox, oy] = m.slice(1, 7).map((v) => matchedFloat(v)) as [
-    number, number, number, number, number, number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
   ];
   // An overflowing exponent is inside the finite grammar; the decomposition
   // below turns it into a NaN skew and a canvas transform nothing draws under.

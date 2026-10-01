@@ -63,7 +63,13 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, linte
 
   if (linter) {
     for (const [name, content] of linterFiles({
-      typeName, lower, chain, kebabName, base, toSrc, parentLinterImport,
+      typeName,
+      lower,
+      chain,
+      kebabName,
+      base,
+      toSrc,
+      parentLinterImport,
     })) {
       files.set(name, content);
     }
@@ -102,7 +108,9 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, linte
   const imageBasename = fixtureName.replace(/\.tscn$/, '');
   files.set('comparison.md', sheetFile({ typeName, baseKey, intent, fixtureName, imageBasename }));
 
-  console.log(`[new-node-slice] ${typeName} → ${sliceRel} (base: ${baseKey}, intent: ${intent}${linter ? ', linter' : ''})`);
+  console.log(
+    `[new-node-slice] ${typeName} → ${sliceRel} (base: ${baseKey}, intent: ${intent}${linter ? ', linter' : ''})`
+  );
   for (const name of files.keys()) console.log(`  create  ${sliceRel}/${name}`);
   console.log(`  create  scenes/fixtures/${fixtureName}`);
   for (const w of wirings) console.log(`  wire    ${w.filePath.slice(REPO_ROOT.length + 1)} (${w.action})`);
