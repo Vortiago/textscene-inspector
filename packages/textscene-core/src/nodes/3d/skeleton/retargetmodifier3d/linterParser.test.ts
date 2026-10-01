@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
 import './linterParser';
+import { expectWarning } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -64,12 +65,11 @@ describe('RetargetModifier3D strict validators', () => {
       // away: the value loads and runs, and only the inspector cannot reach it. That is the hint
       // tier, not the setter tier.
       const error = check('enable', '8');
-      expect(error?.severity).toBe('warning');
-      expect(error?.message).toContain('TRANSFORM_FLAG_POSITION');
+      expectWarning(error, 'TRANSFORM_FLAG_POSITION');
     });
 
     it('warns for a negative value', () => {
-      expect(check('enable', '-1')?.severity).toBe('warning');
+      expect(check('enable', '-1')).toBeAtTier('warning');
     });
 
     it('truncates a float rather than calling it a format error', () => {
@@ -79,7 +79,7 @@ describe('RetargetModifier3D strict validators', () => {
 
     it('still rejects a literal Godot cannot tokenise', () => {
       const error = check('enable', 'abc');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_ENABLE_FORMAT');
     });
 
@@ -100,7 +100,7 @@ describe('RetargetModifier3D strict validators', () => {
 
     it('rejects anything that is not a resource reference', () => {
       const error = check('profile', '"res://profile.tres"');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_PROFILE_REFERENCE');
     });
 
@@ -122,7 +122,7 @@ describe('RetargetModifier3D strict validators', () => {
 
     it('rejects a non-boolean', () => {
       const error = check('use_global_pose', '1');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
       expect(error?.code).toBe('INVALID_USE_GLOBAL_POSE_FORMAT');
     });
   });
@@ -138,7 +138,7 @@ describe('RetargetModifier3D strict validators', () => {
       expect(check('influence', '0.75')).toBeNull();
       // skeleton_modifier_3d.cpp:161 hints "0,1,0.001" and set_influence (:111)
       // bare-assigns, so past the ceiling is the hint tier.
-      expect(check('influence', '1.5')?.severity).toBe('warning');
+      expect(check('influence', '1.5')).toBeAtTier('warning');
       expect(check('active', 'false')).toBeNull();
     });
   });

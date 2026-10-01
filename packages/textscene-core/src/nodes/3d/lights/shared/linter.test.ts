@@ -56,7 +56,7 @@ transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)
 `;
       const found = ruleDiagnostics(new Linter().lint(content), SCALE_RULE);
       expect(found).toHaveLength(1);
-      expect(found[0]!.severity).toBe('warning');
+      expect(found[0]).toBeAtTier('warning');
     });
 
     it.each(['inf', '-inf', 'nan'])('warns on a %s component, a value Godot writes', (spelling) => {

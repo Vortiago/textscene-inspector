@@ -45,7 +45,7 @@ make_local_to_pose = "aim"
     const found = ruleDiagnostics(linter.lint(content));
     expect(found).toHaveLength(1);
     expect(found[0]!.ruleName).toBe(TRACKER_RULE);
-    expect(found[0]!.severity).toBe('warning');
+    expect(found[0]).toBeAtTier('warning');
   });
 
   it('warns when make_local_to_pose is set and tracker is explicitly None set (1)', () => {

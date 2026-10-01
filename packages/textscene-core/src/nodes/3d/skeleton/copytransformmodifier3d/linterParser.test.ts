@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
 import './linterParser';
+import { expectError } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -62,8 +63,7 @@ describe('CopyTransformModifier3D strict validators', () => {
     it('rejects a negative count as an error, which the setter refuses', () => {
       // bone_constraint_3d.cpp:131, `ERR_FAIL_COND(p_count < 0)`.
       const error = check('setting_count', '-1');
-      expect(error?.severity).toBe('error');
-      expect(error?.message).toContain('setting_count');
+      expectError(error, 'setting_count');
     });
 
     it('has no ceiling, so a large count passes', () => {
@@ -86,20 +86,20 @@ describe('CopyTransformModifier3D strict validators', () => {
       // warning under ADR-0032, never an error.
       for (const leaf of FLAG_LEAVES) {
         const diagnostic = check(`settings/0/${leaf}`, '8');
-        expect(diagnostic?.severity, `${leaf} = 8`).toBe('warning');
+        expect(diagnostic, `${leaf} = 8`).toBeAtTier('warning');
         expect(diagnostic?.message).toContain(leaf);
       }
     });
 
     it('warns on a negative mask, which the widget cannot express either', () => {
-      expect(check('settings/0/copy', '-1')?.severity).toBe('warning');
+      expect(check('settings/0/copy', '-1')).toBeAtTier('warning');
     });
 
     it('warns on a boolean mask, which an INT slot stores as 1', () => {
       // `_to_int` maps `true` to 1 before the setter runs (variant.h:360-377),
       // so the stored value differs from the written one without the setter
       // refusing anything.
-      expect(check('settings/0/axes', 'true')?.severity).toBe('warning');
+      expect(check('settings/0/axes', 'true')).toBeAtTier('warning');
     });
   });
 
@@ -128,14 +128,13 @@ describe('CopyTransformModifier3D strict validators', () => {
   describe('the settings/ key shape', () => {
     it('validates every index, not just the first', () => {
       expect(check('settings/12/copy', '3')).toBeNull();
-      expect(check('settings/12/copy', '9')?.severity).toBe('warning');
+      expect(check('settings/12/copy', '9')).toBeAtTier('warning');
     });
 
     it('rejects a negative index, which _set refuses outright', () => {
       // copy_transform_modifier_3d.cpp:39, `ERR_FAIL_INDEX_V(which, …)`.
       const error = check('settings/-1/copy', '7');
-      expect(error?.severity).toBe('error');
-      expect(error?.message).toContain('-1');
+      expectError(error, '-1');
     });
 
     it('leaves a NON-NUMERIC index alone, which _set resolves to setting 0', () => {
@@ -144,7 +143,7 @@ describe('CopyTransformModifier3D strict validators', () => {
       // (ustring.cpp:2268-2298), so `x` reads as 0 and the write lands. The
       // leaf still decides: it resolved whatever the index came to.
       expect(check('settings/x/relative', 'true')).toBeNull();
-      expect(check('settings/x/copy', '9')?.severity).toBe('warning');
+      expect(check('settings/x/copy', '9')).toBeAtTier('warning');
       expect(check('settings/x/bogus', 'true')).not.toBeNull();
     });
 
@@ -152,7 +151,7 @@ describe('CopyTransformModifier3D strict validators', () => {
       // `amount` is the base's (bone_constraint_3d.cpp:102), and the index does
       // not change who owns the leaf.
       expect(check('settings/x/amount', '0.5')).toBeNull();
-      expect(check('settings/x/amount', '5')?.severity).toBe('warning');
+      expect(check('settings/x/amount', '5')).toBeAtTier('warning');
     });
 
     it('rejects a key that is not <prefix><index>/<leaf>', () => {

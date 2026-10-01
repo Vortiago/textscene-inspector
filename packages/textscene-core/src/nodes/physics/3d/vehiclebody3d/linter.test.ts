@@ -19,6 +19,7 @@ import '../rigidbody3d/linter';
 import './linterParser';
 import './linter';
 import '../shared/linter';
+import { errorsOf, warningsOf } from '../../../../linter/testing/tierLists';
 
 /** A VehicleWheel3D child, so the body is a complete vehicle by default. */
 const wheel = node('VehicleWheel3D', { wheel_radius: 0.25 }, { name: 'Wheel1', parent: '.' });
@@ -244,8 +245,8 @@ describe('VehicleBody3D Linter', () => {
   describe('Edge Cases', () => {
     it('leaves a bare VehicleBody3D free of ERRORS (warnings are advisory)', () => {
       const diagnostics = lint(scene(node('VehicleBody3D', {}, { name: 'Vehicle' })));
-      expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0);
-      expect(diagnostics.some((d) => d.severity === 'warning')).toBe(true);
+      expect(errorsOf(diagnostics)).toHaveLength(0);
+      expect(warningsOf(diagnostics)).not.toHaveLength(0);
     });
 
     it('collects the inherited RigidBody3D checks, each reported exactly once', () => {

@@ -130,7 +130,7 @@ describe('RootMotionView strict validators', () => {
     it('warns below the hinted floor, since the setter assigns straight through (root_motion_view.cpp:56-59)', () => {
       const result = check('cell_size', '0.05');
       expect(result?.code).toBe('INVALID_CELL_SIZE_VALUE');
-      expect(result?.severity).toBe('warning');
+      expect(result).toBeAtTier('warning');
     });
 
     it('accepts far above the hinted 16 ceiling, since the hint carries or_greater, which opens the max end', () => {
@@ -154,7 +154,7 @@ describe('RootMotionView strict validators', () => {
     it('warns below the hinted floor, since the setter assigns straight through (root_motion_view.cpp:65-68)', () => {
       const result = check('radius', '0.05');
       expect(result?.code).toBe('INVALID_RADIUS_VALUE');
-      expect(result?.severity).toBe('warning');
+      expect(result).toBeAtTier('warning');
     });
 
     it('accepts far above the hinted 16 ceiling, since the hint carries or_greater, which opens the max end', () => {

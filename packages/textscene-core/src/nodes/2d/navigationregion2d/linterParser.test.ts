@@ -74,7 +74,7 @@ describe('NavigationRegion2D strict validators', () => {
       const error = check('navigation_layers', '4294967296');
       expect(error).not.toBeNull();
       expect(error!.code).toBe('INVALID_NAVIGATION_LAYERS_VALUE');
-      expect(error!.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 
@@ -104,13 +104,13 @@ describe('NavigationRegion2D strict validators', () => {
       const error = check(property, negative);
       expect(error).not.toBeNull();
       expect(error!.code).toBe(`INVALID_${code}_VALUE`);
-      expect(error!.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('errors on inf_neg, since inf_neg < 0.0 trips the same guard', () => {
       const error = check(property, 'inf_neg');
       expect(error).not.toBeNull();
-      expect(error!.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 });

@@ -153,11 +153,11 @@ describe('GraphEdit.grid_pattern', () => {
     // (graph_edit.cpp:2743-2750) stores whatever int it is handed.
     const error = check('grid_pattern', '2');
     expect(error).not.toBeNull();
-    expect(error!.severity).toBe('warning');
+    expect(error).toBeAtTier('warning');
   });
 
   it('warns below the first member too', () => {
-    expect(check('grid_pattern', '-1')?.severity).toBe('warning');
+    expect(check('grid_pattern', '-1')).toBeAtTier('warning');
   });
 
   it('rejects a non-integer', () => {
@@ -174,14 +174,14 @@ describe('GraphEdit.panning_scheme', () => {
   it('warns rather than errors outside the hint', () => {
     // graph_edit.cpp:3074 hints "Scroll Zooms,Scroll Pans"; set_panning_scheme
     // (graph_edit.cpp:2418-2421) casts the int straight into the panner.
-    expect(check('panning_scheme', '2')?.severity).toBe('warning');
+    expect(check('panning_scheme', '2')).toBeAtTier('warning');
   });
 
   it('accepts a float literal, which Godot truncates into the int property', () => {
     // Variant's FLOAT -> int conversion is a C cast, `return T(_data._float);`
     // (core/variant/variant.h:369-370), so `0.5` loads as SCROLL_ZOOMS rather
     // than failing. Rejecting it would refuse a file the engine reads.
-    expect(check('panning_scheme', '0.5')?.severity).toBe('warning');
+    expect(check('panning_scheme', '0.5')).toBeAtTier('warning');
   });
 
   it('rejects a non-numeric token', () => {
@@ -202,11 +202,11 @@ describe('GraphEdit.snapping_distance', () => {
     // graph_edit.cpp:2718 ERR_FAIL_COND_MSG, so the write never lands.
     const error = check('snapping_distance', '1');
     expect(error).not.toBeNull();
-    expect(error!.severity).toBe('error');
+    expect(error).toBeAtTier('error');
   });
 
   it('errors above 100 for the same reason', () => {
-    expect(check('snapping_distance', '101')?.severity).toBe('error');
+    expect(check('snapping_distance', '101')).toBeAtTier('error');
   });
 
   it('rejects a non-numeric value', () => {
@@ -225,13 +225,13 @@ describe('GraphEdit.connection_lines_thickness', () => {
     // graph_edit.cpp:2907: ERR_FAIL_COND_MSG(p_thickness < 0, …).
     const error = check('connection_lines_thickness', '-0.5');
     expect(error).not.toBeNull();
-    expect(error!.severity).toBe('error');
+    expect(error).toBeAtTier('error');
   });
 
   it('only warns above 100, where nothing but the inspector hint objects', () => {
     // graph_edit.cpp:3081 hints "0,100,0.1,suffix:px" with no `or_greater`, but
     // the setter assigns 250 straight through and the line is drawn that thick.
-    expect(check('connection_lines_thickness', '250')?.severity).toBe('warning');
+    expect(check('connection_lines_thickness', '250')).toBeAtTier('warning');
   });
 });
 
@@ -269,7 +269,7 @@ describe('GraphEdit.zoom_step', () => {
     // says -1.2 and the engine zooms by 1.2, so the authored value is altered.
     const error = check('zoom_step', '-1.2');
     expect(error).not.toBeNull();
-    expect(error!.severity).toBe('error');
+    expect(error).toBeAtTier('error');
   });
 
   it('rejects a non-numeric value', () => {

@@ -19,6 +19,19 @@ const REGISTER_ALL_SPREAD = {
 };
 
 /**
+ * A core test asserts a tier through `toBeAtTier`, `toBeAllAtTier` or a helper that records it.
+ * `expect(d.severity)` records nothing, so the setup file's title check cannot see the test.
+ */
+const RAW_SEVERITY_ASSERTION = {
+  selector: [
+    "CallExpression[callee.name='expect'] > MemberExpression.arguments[property.name='severity']",
+    "CallExpression[callee.name='expect'] > ChainExpression.arguments > MemberExpression[property.name='severity']",
+  ].join(', '),
+  message:
+    "Assert a tier with expect(diagnostic).toBeAtTier(tier). A raw severity read records no tier, so the test title's tier goes unchecked.",
+};
+
+/**
  * ESLint flat configuration (ESLint 9+)
  * Provides TypeScript linting for the entire monorepo.
  */
@@ -242,6 +255,13 @@ export default [
       '@typescript-eslint/no-explicit-any': 'warn',
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'error',
+    },
+  },
+
+  {
+    files: ['packages/textscene-core/src/**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': ['error', RAW_SEVERITY_ASSERTION],
     },
   },
 

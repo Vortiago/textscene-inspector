@@ -42,8 +42,8 @@ describe('checkerFor', () => {
 
 describe('tier assertions', () => {
   it('the two probes carry the tiers every case below claims', () => {
-    expect(ENFORCED()?.severity).toBe('error');
-    expect(HINTED()?.severity).toBe('warning');
+    expect(ENFORCED()).toBeAtTier('error');
+    expect(HINTED()).toBeAtTier('warning');
   });
 
   it("fails when 'error' is claimed and the validator only warns", () => {
@@ -69,8 +69,8 @@ describe('tier assertions', () => {
   });
 
   it('passes, and returns the diagnostic, when tier and message both hold', () => {
-    expect(expectError(ENFORCED(), 'at most 16', 'Godot does not store this value').severity).toBe('error');
-    expect(expectWarning(HINTED(), 'Valid values').severity).toBe('warning');
+    expect(expectError(ENFORCED(), 'at most 16', 'Godot does not store this value')).toBeAtTier('error');
+    expect(expectWarning(HINTED(), 'Valid values')).toBeAtTier('warning');
   });
 });
 

@@ -7,6 +7,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';
 import '../../../linter/index.js';
+import { errorsOf } from '../../../linter/testing/tierLists';
 
 describe('#146 Light3D over-strict regression', () => {
   let linter: Linter;
@@ -22,7 +23,7 @@ describe('#146 Light3D over-strict regression', () => {
 light_energy = 0.0
 omni_range = 5.0
 `;
-    expect(linter.lint(content).filter((d) => d.severity === 'error')).toHaveLength(0);
+    expect(errorsOf(linter.lint(content))).toHaveLength(0);
   });
 
   it('OmniLight3D without omni_range is valid (Godot default applies)', () => {
@@ -31,7 +32,7 @@ omni_range = 5.0
 [node name="Default" type="OmniLight3D"]
 light_energy = 1.0
 `;
-    expect(linter.lint(content).filter((d) => d.severity === 'error')).toHaveLength(0);
+    expect(errorsOf(linter.lint(content))).toHaveLength(0);
   });
 
   it('SpotLight3D without spot_range or spot_angle is valid (defaults apply)', () => {
@@ -40,7 +41,7 @@ light_energy = 1.0
 [node name="Default" type="SpotLight3D"]
 light_energy = 1.0
 `;
-    expect(linter.lint(content).filter((d) => d.severity === 'error')).toHaveLength(0);
+    expect(errorsOf(linter.lint(content))).toHaveLength(0);
   });
 
   it('a switched-off spotlight (energy 0, explicit ranges) is valid', () => {
@@ -51,6 +52,6 @@ light_energy = 0.0
 spot_range = 30.0
 spot_angle = 60.0
 `;
-    expect(linter.lint(content).filter((d) => d.severity === 'error')).toHaveLength(0);
+    expect(errorsOf(linter.lint(content))).toHaveLength(0);
   });
 });

@@ -17,6 +17,7 @@ import {
 } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
+import { errorsOf } from '../../../linter/testing/tierLists';
 
 /** Scene with the ext_resource + an AudioStreamPlayer3D whose `stream` is pre-wired. */
 const withStream = (props: Record<string, PropValue> = {}): string =>
@@ -386,10 +387,8 @@ describe('AudioStreamPlayer3D Linter', () => {
       // pitch_scale and max_polyphony are refused by the engine, so they error;
       // unit_size = -5 only warns (audio_stream_player_3d.cpp:569 is a bare
       // assignment).
-      expect(diagnostics.some((d) => d.severity === 'error' && d.message.includes('pitch_scale'))).toBe(true);
-      expect(diagnostics.some((d) => d.severity === 'error' && d.message.includes('max_polyphony'))).toBe(
-        true
-      );
+      expect(errorsOf(diagnostics).some((d) => d.message.includes('pitch_scale'))).toBe(true);
+      expect(errorsOf(diagnostics).some((d) => d.message.includes('max_polyphony'))).toBe(true);
       expectNoErrors(content, { prop: 'unit_size' });
     });
 
@@ -408,7 +407,7 @@ describe('AudioStreamPlayer3D Linter', () => {
       const diagnostics = lint(withStream({ volume_db: -90, pitch_scale: 0.005 }));
       // Both sit below their hints.
       expect(diagnostics).toHaveLength(2);
-      expect(diagnostics.every((d) => d.severity === 'warning')).toBe(true);
+      expect(diagnostics).toBeAllAtTier('warning');
     });
 
     it('should handle SubResource references', () => {
@@ -439,7 +438,7 @@ describe('AudioStreamPlayer3D Linter', () => {
         'strict-parser',
         'strict-parser',
       ]);
-      expect(diagnostics.every((d) => d.severity !== 'error')).toBe(true);
+      expect(errorsOf(diagnostics)).toEqual([]);
     });
   });
 });

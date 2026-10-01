@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { errorsOf, reportsOf, warningsOf } from './tierLists';
+import { takeRecordedTiers } from './titleTier';
+import { errorsOf, infosOf, reportsOf, warningsOf } from './tierLists';
 import type { Diagnostic, Severity } from '../types';
 
 function diagnostic(severity: Severity, ruleName: string): Diagnostic {
@@ -12,10 +13,15 @@ const ruleError = diagnostic('error', 'some-rule');
 const ruleWarning = diagnostic('warning', 'some-rule');
 const all = [parserError, parserWarning, ruleError, ruleWarning];
 
-describe('errorsOf and warningsOf', () => {
+describe('errorsOf, warningsOf and infosOf', () => {
   it('keep the diagnostics at their tier', () => {
-    expect(errorsOf(all)).toEqual([parserError, ruleError]);
-    expect(warningsOf(all)).toEqual([parserWarning, ruleWarning]);
+    const ruleInfo = diagnostic('info', 'some-rule');
+
+    expect([errorsOf(all), warningsOf(all), infosOf([...all, ruleInfo])]).toEqual([
+      [parserError, ruleError],
+      [parserWarning, ruleWarning],
+      [ruleInfo],
+    ]);
   });
 
   it('narrow to one rule when given its name', () => {
@@ -24,6 +30,18 @@ describe('errorsOf and warningsOf', () => {
 
   it('return an empty list when nothing is at the tier', () => {
     expect(errorsOf([parserWarning])).toEqual([]);
+  });
+
+  it('record their tier when the list they return is non-empty', () => {
+    warningsOf(all);
+
+    expect(takeRecordedTiers()).toEqual(['warning']);
+  });
+
+  it('record nothing when the list they return is empty', () => {
+    errorsOf([parserWarning]);
+
+    expect(takeRecordedTiers()).toEqual([]);
   });
 });
 
@@ -38,5 +56,17 @@ describe('reportsOf', () => {
 
   it('returns an empty list for a rule that reports nothing', () => {
     expect(reportsOf(all, 'silent-rule', 'info')).toEqual([]);
+  });
+
+  it('records its tier when the rule reports', () => {
+    reportsOf([parserError, ruleWarning], 'some-rule', 'warning');
+
+    expect(takeRecordedTiers()).toEqual(['warning']);
+  });
+
+  it('records nothing for a rule that reports nothing', () => {
+    reportsOf(all, 'silent-rule', 'info');
+
+    expect(takeRecordedTiers()).toEqual([]);
   });
 });

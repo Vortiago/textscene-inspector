@@ -44,11 +44,11 @@ describe('BoneConstraint3D settings leaves', () => {
     });
 
     it.each(['-0.5', '5'])('warns on %s', (value) => {
-      expect(check('settings/0/amount', value)?.severity).toBe('warning');
+      expect(check('settings/0/amount', value)).toBeAtTier('warning');
     });
 
     it('rejects a non-number as a format error', () => {
-      expect(check('settings/0/amount', 'half')?.severity).toBe('error');
+      expect(check('settings/0/amount', 'half')).toBeAtTier('error');
     });
   });
 
@@ -58,7 +58,7 @@ describe('BoneConstraint3D settings leaves', () => {
     });
 
     it('warns on 2, which the two-value ReferenceType does not name', () => {
-      expect(check('settings/0/reference_type', '2')?.severity).toBe('warning');
+      expect(check('settings/0/reference_type', '2')).toBeAtTier('warning');
     });
   });
 
@@ -75,13 +75,13 @@ describe('BoneConstraint3D settings leaves', () => {
     });
 
     it('warns that a non-integer is truncated', () => {
-      expect(check('settings/0/apply_bone', '2.5')?.severity).toBe('warning');
+      expect(check('settings/0/apply_bone', '2.5')).toBeAtTier('warning');
     });
   });
 
   describe('the key shape', () => {
     it('rejects a negative setting index', () => {
-      expect(check('settings/-1/amount', '0.5')?.severity).toBe('error');
+      expect(check('settings/-1/amount', '0.5')).toBeAtTier('error');
     });
 
     it('rejects an unrecognised leaf', () => {
@@ -100,7 +100,7 @@ describe('BoneConstraint3D settings leaves', () => {
     });
 
     it('still judges the VALUE behind a non-numeric index', () => {
-      expect(check('settings/x/amount', '5')?.severity).toBe('warning');
+      expect(check('settings/x/amount', '5')).toBeAtTier('warning');
     });
 
     it('still rejects an unrecognised leaf behind a non-numeric index', () => {

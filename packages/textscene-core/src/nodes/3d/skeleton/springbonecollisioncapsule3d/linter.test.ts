@@ -57,7 +57,7 @@ describe('SpringBoneCollisionCapsule3D shape rule', () => {
     expect(reports).toHaveLength(1);
     // ADR-0032 error tier: `set_height` rewrites `radius` to half the height
     // rather than keeping what was authored.
-    expect(reports[0]!.severity).toBe('error');
+    expect(reports[0]).toBeAtTier('error');
     expect(reports[0]!.message).toContain('0.6');
     expect(reports[0]!.message).toContain('0.8');
     expect(reports[0]!.nodeName).toBe('Capsule');

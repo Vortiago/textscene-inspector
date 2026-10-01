@@ -142,7 +142,7 @@ describe('LinkButton strict validators', () => {
     it('warns on -1: the setter loads it, the hint does not offer it', () => {
       // The setter allows it, since its ERR_FAIL_COND opens below -1, so it loads. The hint (0-3)
       // does not offer it, so it warns instead of erroring.
-      expect(check('text_direction', '-1')?.severity).toBe('warning');
+      expect(check('text_direction', '-1')).toBeAtTier('warning');
     });
 
     it('rejects 4, past the ERR_FAIL_COND the setter enforces', () => {

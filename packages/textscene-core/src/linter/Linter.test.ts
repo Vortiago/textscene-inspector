@@ -7,6 +7,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { Linter } from './Linter.js';
 import { ruleRegistry } from './RuleRegistry.js';
 import type { LintRule } from './types.js';
+import { errorsOf } from './testing/tierLists';
 
 describe('Linter', () => {
   let linter: Linter;
@@ -47,7 +48,7 @@ describe('Linter', () => {
       expect(diagnostics.length).toBeGreaterThan(0);
       const parseError = diagnostics.find((d) => d.ruleName === 'strict-parser');
       expect(parseError).toBeDefined();
-      expect(parseError!.severity).toBe('error');
+      expect(parseError).toBeAtTier('error');
     });
 
     it('should run Phase 2 (semantic validation) when parsing succeeds', () => {
@@ -81,7 +82,7 @@ describe('Linter', () => {
       expect(diagnostics.length).toBeGreaterThan(0);
       const ruleViolation = diagnostics.find((d) => d.ruleName === 'test-rule');
       expect(ruleViolation).toBeDefined();
-      expect(ruleViolation!.severity).toBe('warning');
+      expect(ruleViolation).toBeAtTier('warning');
     });
 
     it('should combine parse errors and rule violations when both exist', () => {
@@ -119,11 +120,11 @@ describe('Linter', () => {
 
       const parseError = diagnostics.find((d) => d.ruleName === 'strict-parser');
       expect(parseError).toBeDefined();
-      expect(parseError!.severity).toBe('error');
+      expect(parseError).toBeAtTier('error');
 
       const ruleViolation = diagnostics.find((d) => d.ruleName === 'test-combined-rule');
       expect(ruleViolation).toBeDefined();
-      expect(ruleViolation!.severity).toBe('warning');
+      expect(ruleViolation).toBeAtTier('warning');
       expect(ruleViolation!.nodeName).toBe('Root');
       // The typeless heading gave the node no type, and it still reached phase 2.
       expect(ruleViolation!.nodeType).toBe('');
@@ -147,10 +148,9 @@ invalidproperty
       // Semantic rules run alongside parse errors, so the set is not errors-only. The typeless `Root` heading is an
       // error: Godot assumes it was instantiated (resource_format_text.cpp:218-221) and refuses a root with no base
       // scene (packed_scene.cpp:220).
-      expect(diagnostics.filter((d) => d.severity === 'error').length).toBeGreaterThanOrEqual(3);
-      expect(
-        diagnostics.filter((d) => d.severity === 'error' && d.message.includes('states no "type="'))
-      ).toHaveLength(1);
+      const errors = errorsOf(diagnostics);
+      expect(errors.length).toBeGreaterThanOrEqual(3);
+      expect(errors.filter((d) => d.message.includes('states no "type="'))).toHaveLength(1);
     });
 
     it('should integrate StrictTscnParser and RuleRegistry correctly', () => {
@@ -188,7 +188,7 @@ visible = true
 
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]!.ruleName).toBe('test-integration-rule');
-      expect(diagnostics[0]!.severity).toBe('warning');
+      expect(diagnostics[0]).toBeAtTier('warning');
       expect(diagnostics[0]!.message).toBe('Found root node');
 
       // Cleanup

@@ -34,7 +34,7 @@ describe('v.quotedString', () => {
 describe('v.stringName', () => {
   it('refuses a NodePath literal, since STRING_NAME converts only from STRING', () => {
     // `variant.cpp:738-744`: `case STRING_NAME: valid[] = { STRING, NIL }`.
-    expect(v.stringName('animation')('animation', 'NodePath("walk")', 1)?.severity).toBe('error');
+    expect(v.stringName('animation')('animation', 'NodePath("walk")', 1)).toBeAtTier('error');
   });
 });
 

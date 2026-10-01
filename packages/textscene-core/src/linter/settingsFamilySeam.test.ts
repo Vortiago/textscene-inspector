@@ -141,7 +141,7 @@ describe.each(SEAMS)('$base settings/ seam under the full barrel', (seam) => {
       // agree with each other. A real bound still fires on at least one leaf.
       const validator = validatorRegistry.findValidator(type, seam.key);
       const [value, severity] = seam.rejected;
-      expect(validator!(seam.key, value, 1)?.severity).toBe(severity);
+      expect(validator!(seam.key, value, 1)).toBeAtTier(severity);
     });
 
     it('accepts a legal value on the same leaf', () => {

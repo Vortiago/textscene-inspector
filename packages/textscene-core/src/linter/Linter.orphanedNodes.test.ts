@@ -46,7 +46,7 @@ describe('a parent path this file never defines', () => {
   it('reports the node, its path, and the line its heading is on', () => {
     const orphans = orphansIn(dangling);
     expect(orphans).toHaveLength(1);
-    expect(orphans[0]?.severity).toBe('warning');
+    expect(orphans[0]).toBeAtTier('warning');
     expect(orphans[0]?.nodeName).toBe('Body');
     expect(orphans[0]?.message).toContain('NoSuchNode');
     expect(orphans[0]?.location?.line).toBe(5);
@@ -85,7 +85,7 @@ describe('a parent path this file never defines', () => {
       scene(node('Node2D', {}, { name: 'Root' }), node('Node2D', {}, { name: 'Stray' }))
     ).filter((d) => d.ruleName === 'node-without-parent');
     expect(errors).toHaveLength(1);
-    expect(errors[0]?.severity).toBe('error');
+    expect(errors[0]).toBeAtTier('error');
     expect(errors[0]?.nodeName).toBe('Stray');
   });
 
@@ -230,7 +230,7 @@ describe('a parent path this file never defines', () => {
     const diagnostics = lint(EMPTY_PARENT);
     const empties = diagnostics.filter((d) => d.ruleName === 'empty-parent-path');
     expect(empties).toHaveLength(1);
-    expect(empties[0]?.severity).toBe('error');
+    expect(empties[0]).toBeAtTier('error');
     expect(empties[0]?.nodeName).toBe('B');
     expect(orphansIn(EMPTY_PARENT)).toEqual([]);
     expect(diagnostics.filter((d) => d.ruleName === 'node-without-parent')).toEqual([]);
@@ -325,7 +325,7 @@ describe('a root heading that declares a parent', () => {
   it('is an error naming the heading and the parent it declares', () => {
     const errors = rootErrors(ROOTLESS);
     expect(errors).toHaveLength(1);
-    expect(errors[0]?.severity).toBe('error');
+    expect(errors[0]).toBeAtTier('error');
     expect(errors[0]?.nodeName).toBe('A');
     expect(errors[0]?.message).toContain('parent="."');
     expect(errors[0]?.location?.line).toBe(3);

@@ -6,6 +6,7 @@ import { describe, it, expect } from 'vitest';
 import { lint, expectDiagnostic } from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
+import { errorsOf } from '../../../../linter/testing/tierLists';
 
 const VALID_DATA = 'PackedByteArray("AAAJAAsAAgABAAAABQA=")';
 
@@ -54,7 +55,7 @@ describe('TileMapLayer lint rules', () => {
         TILESET_RESOURCES
       )
     );
-    const onTileData = diagnostics.filter((d) => d.severity === 'error' && /tile_map_data/.test(d.message));
+    const onTileData = errorsOf(diagnostics).filter((d) => /tile_map_data/.test(d.message));
     expect(onTileData).toHaveLength(1);
     expect(onTileData[0]?.message).toContain('base64');
   });
@@ -64,7 +65,7 @@ describe('TileMapLayer lint rules', () => {
     const diagnostics = lint(
       scene(`tile_set = SubResource("TileSet_a")\ntile_map_data = ${data}`, TILESET_RESOURCES)
     );
-    expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    expect(errorsOf(diagnostics)).toEqual([]);
   });
 
   it('stays silent on a TileMapLayer with no tile data at all', () => {

@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
 import './linterParser';
+import { expectError, expectWarning } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -106,12 +107,11 @@ describe('Tree strict validators', () => {
     it('errors on zero columns, which set_columns refuses outright', () => {
       // tree.cpp:5716 `ERR_FAIL_COND(p_columns < 1)`.
       const error = check('columns', '0');
-      expect(error?.severity).toBe('error');
-      expect(error?.message).toContain('columns');
+      expectError(error, 'columns');
     });
 
     it('errors on a negative column count', () => {
-      expect(check('columns', '-2')?.severity).toBe('error');
+      expect(check('columns', '-2')).toBeAtTier('error');
     });
 
     it('accepts an absurdly wide tree, because the ADD_PROPERTY carries no hint', () => {
@@ -122,7 +122,7 @@ describe('Tree strict validators', () => {
 
     it('rejects a non-numeric value as a format error', () => {
       const error = check('columns', 'many');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_COLUMNS_FORMAT');
     });
   });
@@ -137,16 +137,15 @@ describe('Tree strict validators', () => {
       // Tree::set_select_mode is a bare assignment (tree.cpp:5403-5405), so a
       // wider value loads unaltered: a UI-control hint, hence warning.
       const error = check('select_mode', '3');
-      expect(error?.severity).toBe('warning');
-      expect(error?.message).toContain('SELECT_MULTI');
+      expectWarning(error, 'SELECT_MULTI');
     });
 
     it('warns below the first constant', () => {
-      expect(check('select_mode', '-1')?.severity).toBe('warning');
+      expect(check('select_mode', '-1')).toBeAtTier('warning');
     });
 
     it('rejects a symbolic name as a format error', () => {
-      expect(check('select_mode', 'SELECT_MULTI')?.severity).toBe('error');
+      expect(check('select_mode', 'SELECT_MULTI')).toBeAtTier('error');
     });
   });
 
@@ -160,16 +159,15 @@ describe('Tree strict validators', () => {
       // (tree.cpp:6086-6093) only early-returns on an unchanged value and then
       // assigns, so a wider value is stored as written.
       const error = check('scroll_hint_mode', '4');
-      expect(error?.severity).toBe('warning');
-      expect(error?.message).toContain('SCROLL_HINT_MODE_BOTTOM');
+      expectWarning(error, 'SCROLL_HINT_MODE_BOTTOM');
     });
 
     it('warns below the first constant', () => {
-      expect(check('scroll_hint_mode', '-1')?.severity).toBe('warning');
+      expect(check('scroll_hint_mode', '-1')).toBeAtTier('warning');
     });
 
     it('rejects a symbolic name as a format error', () => {
-      expect(check('scroll_hint_mode', 'SCROLL_HINT_MODE_TOP')?.severity).toBe('error');
+      expect(check('scroll_hint_mode', 'SCROLL_HINT_MODE_TOP')).toBeAtTier('error');
     });
   });
 
@@ -188,8 +186,7 @@ describe('Tree strict validators', () => {
       // so 4 is stored, not dropped: not a maskedBitField. Only the two-entry
       // PROPERTY_HINT_FLAGS at tree.cpp:6816 excludes it, and a UI hint grounds a warning.
       const error = check('drop_mode_flags', '4');
-      expect(error?.severity).toBe('warning');
-      expect(error?.message).toContain('drop_mode_flags');
+      expectWarning(error, 'drop_mode_flags');
       // The bit list, not a numeric span: `hintedBitField` names the two bits the hint
       // offers. A `{ min: 0, max: 3 }` range matches only because they are the lowest
       // bits, and would report a magnitude the property does not have.
@@ -198,17 +195,17 @@ describe('Tree strict validators', () => {
     });
 
     it('warns on a negative mask', () => {
-      expect(check('drop_mode_flags', '-1')?.severity).toBe('warning');
+      expect(check('drop_mode_flags', '-1')).toBeAtTier('warning');
     });
 
     // Read at the BitField width `hintedBitField` declares: 2^32 is a value the
     // slot holds, so it is the hint's warning and not an unstorable-int error.
     it('warns on a bit past int32 rather than refusing it', () => {
-      expect(check('drop_mode_flags', '4294967296')?.severity).toBe('warning');
+      expect(check('drop_mode_flags', '4294967296')).toBeAtTier('warning');
     });
 
     it('rejects a non-numeric mask as a format error', () => {
-      expect(check('drop_mode_flags', 'On Item')?.severity).toBe('error');
+      expect(check('drop_mode_flags', 'On Item')).toBeAtTier('error');
     });
   });
 
@@ -224,11 +221,11 @@ describe('Tree strict validators', () => {
     it('converts the integer spelling rather than refusing it', () => {
       // `can_convert_strict` lists INT as a valid source for a BOOL target
       // (`variant.cpp:550-558`), so Godot loads this and stores true. Measured.
-      expect(check(property, '1')?.severity).toBe('warning');
+      expect(check(property, '1')).toBeAtTier('warning');
     });
 
     it('rejects a capitalised spelling', () => {
-      expect(check(property, 'True')?.severity).toBe('error');
+      expect(check(property, 'True')).toBeAtTier('error');
     });
   });
 });

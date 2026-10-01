@@ -13,6 +13,7 @@ import {
 } from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
+import { warningsOf } from '../../../../linter/testing/tierLists';
 
 describe('OmniLight3D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -297,7 +298,7 @@ describe('OmniLight3D Linter', () => {
       // behind Light3D::set_param's index-only guard) are both hints, not
       // enforcement, so both diagnose as warnings, not errors. light_energy=0
       // is valid.
-      expect(diagnostics.every((d) => d.severity === 'warning')).toBe(true);
+      expect(diagnostics).toBeAllAtTier('warning');
       const hasModeWarning = diagnostics.some((d) => d.message.includes('omni_shadow_mode'));
       const hasOpacityWarning = diagnostics.some((d) => d.message.includes('shadow_opacity'));
       expect(hasModeWarning && hasOpacityWarning).toBe(true);
@@ -331,7 +332,7 @@ describe('OmniLight3D Linter', () => {
       // None of OmniLight3D's bounds are Godot-enforced (light_3d.cpp:389/639/
       // 640/407 are all PROPERTY_HINT_RANGE behind Light3D::set_param's
       // index-only guard), so nothing here can be an error.
-      expect(diagnostics.every((d) => d.severity === 'warning')).toBe(true);
+      expect(diagnostics).toBeAllAtTier('warning');
     });
 
     it('should handle only omni-specific properties', () => {
@@ -344,7 +345,7 @@ describe('OmniLight3D Linter', () => {
       // 0 is the bottom of the hint (light_3d.cpp:639) and therefore in band.
       expectClean(scene(node('OmniLight3D', { omni_range: 0 })));
       const diagnostics = lint(scene(node('OmniLight3D', { omni_range: -0.01 })));
-      const warning = diagnostics.find((d) => d.severity === 'warning' && d.message.includes('omni_range'));
+      const warning = warningsOf(diagnostics).find((d) => d.message.includes('omni_range'));
       expect(warning).toBeDefined();
     });
 
@@ -355,7 +356,7 @@ describe('OmniLight3D Linter', () => {
       // Two out-of-band properties, two warnings: omni_attenuation's hint is open
       // at both ends (light_3d.cpp:640), so 7.0 contributes nothing.
       expect(diagnostics).toHaveLength(2);
-      expect(diagnostics.every((d) => d.severity === 'warning')).toBe(true);
+      expect(diagnostics).toBeAllAtTier('warning');
       expect(diagnostics.some((d) => d.message.includes('light_energy'))).toBe(true);
       expect(diagnostics.some((d) => d.message.includes('omni_range'))).toBe(true);
       expect(diagnostics.some((d) => d.message.includes('attenuation'))).toBe(false);

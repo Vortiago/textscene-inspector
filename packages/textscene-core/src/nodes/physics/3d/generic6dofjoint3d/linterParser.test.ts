@@ -58,7 +58,7 @@ describe('Generic6DOFJoint3D strict validators', () => {
         for (const outside of ['0', '16.01']) {
           const error = check(`linear_limit_x/${leaf}`, outside);
           expect(error?.code, outside).toBe(code);
-          expect(error?.severity, outside).toBe('warning');
+          expect(error, outside).toBeAtTier('warning');
         }
       }
     );
@@ -111,9 +111,9 @@ describe('Generic6DOFJoint3D strict validators', () => {
       const upper = check('angular_limit_x/upper_angle', '4.0');
       const lower = check('angular_limit_x/lower_angle', '-4.0');
       expect(upper?.code).toBe('INVALID_ANGULAR_LIMIT_X/UPPER_ANGLE_VALUE');
-      expect(upper?.severity).toBe('warning');
+      expect(upper).toBeAtTier('warning');
       expect(lower?.code).toBe('INVALID_ANGULAR_LIMIT_X/LOWER_ANGLE_VALUE');
-      expect(lower?.severity).toBe('warning');
+      expect(lower).toBeAtTier('warning');
     });
 
     it.each(['softness', 'damping'])(
@@ -125,7 +125,7 @@ describe('Generic6DOFJoint3D strict validators', () => {
         for (const outside of ['0', '16.01']) {
           const error = check(`angular_limit_x/${leaf}`, outside);
           expect(error?.code, outside).toBe(code);
-          expect(error?.severity, outside).toBe('warning');
+          expect(error, outside).toBeAtTier('warning');
         }
       }
     );
@@ -136,7 +136,7 @@ describe('Generic6DOFJoint3D strict validators', () => {
       // only the param index. A default is omitted when serialised, so this fires only on an
       // explicit 0.
       for (const axis of ['x', 'y', 'z']) {
-        expect(check(`angular_limit_${axis}/restitution`, '0')?.severity, axis).toBe('warning');
+        expect(check(`angular_limit_${axis}/restitution`, '0'), axis).toBeAtTier('warning');
       }
       expect(check('angular_limit_x/restitution', '0.01')).toBeNull();
       expect(check('angular_limit_x/restitution', '16')).toBeNull();
@@ -176,7 +176,7 @@ describe('Generic6DOFJoint3D strict validators', () => {
       expect(check('angular_spring_z/equilibrium_point', '0.3')).toBeNull();
       const error = check('angular_spring_z/equilibrium_point', '4.0');
       expect(error?.code).toBe('INVALID_ANGULAR_SPRING_Z/EQUILIBRIUM_POINT_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 

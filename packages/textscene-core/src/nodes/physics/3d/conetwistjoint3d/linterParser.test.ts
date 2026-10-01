@@ -52,7 +52,7 @@ describe('ConeTwistJoint3D strict validators', () => {
     it('warns past ±π radians (the ±180 degree bound converted) rather than erroring (set_param index-guards only)', () => {
       const error = check('swing_span', '4.0');
       expect(error?.code).toBe('INVALID_SWING_SPAN_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -81,7 +81,7 @@ describe('ConeTwistJoint3D strict validators', () => {
     it('warns past the converted bound (well within the raw ±40000 degree numbers) rather than erroring', () => {
       const error = check('twist_span', '1000');
       expect(error?.code).toBe('INVALID_TWIST_SPAN_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -104,7 +104,7 @@ describe('ConeTwistJoint3D strict validators', () => {
     it('warns past the hinted bound rather than erroring (set_param index-guards only)', () => {
       const error = check('bias', '16.5');
       expect(error?.code).toBe('INVALID_BIAS_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -127,7 +127,7 @@ describe('ConeTwistJoint3D strict validators', () => {
     it('warns past the hinted bound rather than erroring (set_param index-guards only)', () => {
       const error = check('softness', '16.5');
       expect(error?.code).toBe('INVALID_SOFTNESS_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -150,7 +150,7 @@ describe('ConeTwistJoint3D strict validators', () => {
     it('warns past the hinted bound rather than erroring (set_param index-guards only)', () => {
       const error = check('relaxation', '16.5');
       expect(error?.code).toBe('INVALID_RELAXATION_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 });

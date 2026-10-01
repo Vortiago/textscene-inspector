@@ -128,7 +128,7 @@ describe('ImporterMeshInstance3D strict validators', () => {
     });
     it('accepts a negative value — set_layer_mask reads the uint32 straight through', () => {
       expect(check('layer_mask', '-1')).toBeNull();
-      expect(check('layer_mask', '4294967296')?.severity).toBe('error');
+      expect(check('layer_mask', '4294967296')).toBeAtTier('error');
     });
   });
 
@@ -141,7 +141,7 @@ describe('ImporterMeshInstance3D strict validators', () => {
     it('rejects a value past the enum as a WARNING — set_cast_shadows_setting is a bare assignment', () => {
       const result = check('cast_shadow', '4');
       expect(result).not.toBeNull();
-      expect(result?.severity).toBe('warning');
+      expect(result).toBeAtTier('warning');
     });
     it('rejects a non-numeric value', () => {
       expect(check('cast_shadow', 'On')).not.toBeNull();
@@ -163,7 +163,7 @@ describe('ImporterMeshInstance3D strict validators', () => {
     it('rejects a negative value as a WARNING — the setter is a bare assignment, only the hint says >= 0', () => {
       const result = check(prop, '-1.0');
       expect(result).not.toBeNull();
-      expect(result?.severity).toBe('warning');
+      expect(result).toBeAtTier('warning');
     });
     it('rejects a non-numeric value', () => {
       expect(check(prop, 'far')).not.toBeNull();
@@ -179,7 +179,7 @@ describe('ImporterMeshInstance3D strict validators', () => {
     it('rejects a value past the enum as a WARNING — set_visibility_range_fade_mode is a bare assignment', () => {
       const result = check('visibility_range_fade_mode', '3');
       expect(result).not.toBeNull();
-      expect(result?.severity).toBe('warning');
+      expect(result).toBeAtTier('warning');
     });
   });
 });

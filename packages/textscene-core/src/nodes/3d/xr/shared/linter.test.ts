@@ -56,7 +56,7 @@ describe('OpenXRCompositionLayer family rule', () => {
 `;
       const found = ruleDiagnostics(new Linter().lint(content), PARENT_RULE);
       expect(found).toHaveLength(1);
-      expect(found[0]!.severity).toBe('warning');
+      expect(found[0]).toBeAtTier('warning');
       expect(found[0]!.message).toContain('Node3D');
     });
 
@@ -128,7 +128,7 @@ transform = Transform3D(2, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 `;
       const found = ruleDiagnostics(new Linter().lint(content), ORTHONORMAL_RULE);
       expect(found).toHaveLength(1);
-      expect(found[0]!.severity).toBe('warning');
+      expect(found[0]).toBeAtTier('warning');
     });
 
     it.each(['inf', 'nan'])('warns on a %s component, a value Godot writes', (spelling) => {
@@ -195,7 +195,7 @@ enable_hole_punch = true
 `;
       const found = ruleDiagnostics(new Linter().lint(content), HOLE_PUNCH_RULE);
       expect(found).toHaveLength(1);
-      expect(found[0]!.severity).toBe('warning');
+      expect(found[0]).toBeAtTier('warning');
     });
 
     it('warns on a hidden layer too — :774 is outside the gate as well', () => {

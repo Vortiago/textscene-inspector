@@ -54,7 +54,7 @@ describe('SplineIK3D strict validators', () => {
     it('errors on a negative count, which the setter refuses outright', () => {
       // `ERR_FAIL_COND(p_count < 0)` in _set_setting_count, ik_modifier_3d.h:98.
       const error = check('setting_count', '-1');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('rejects a non-integer count', () => {
@@ -79,7 +79,7 @@ describe('SplineIK3D strict validators', () => {
     it('checks a path written with a tail, which _set ignores', () => {
       // `what = path.get_slicec('/', 2)` (spline_ik_3d.cpp:38) is `path_3d`, so set_path_3d runs.
       expect(check('settings/0/path_3d/extra', '&"../SplinePath"')).not.toBeNull();
-      expect(check('settings/0/tilt_fade_in/extra', '-2')?.severity).toBe('warning');
+      expect(check('settings/0/tilt_fade_in/extra', '-2')).toBeAtTier('warning');
       expect(check('settings/0/path_3d/extra', 'NodePath("../SplinePath")')).toBeNull();
     });
   });
@@ -111,7 +111,7 @@ describe('SplineIK3D strict validators', () => {
       // set_tilt_fade_in/out assign straight through (spline_ik_3d.cpp:147, :157),
       // so the hint's -1 floor is advisory (ADR-0032).
       const diagnostic = check(key, '-2');
-      expect(diagnostic?.severity).toBe('warning');
+      expect(diagnostic).toBeAtTier('warning');
     });
 
     it('rejects a non-integer size', () => {
@@ -124,7 +124,7 @@ describe('SplineIK3D strict validators', () => {
     it('errors on a negative setting index, which `_set` refuses', () => {
       // ERR_FAIL_INDEX_V(which, (int)settings.size(), false) at spline_ik_3d.cpp:39.
       const error = check('settings/-1/path_3d', 'NodePath("../SplinePath")');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('leaves a NON-NUMERIC setting index alone, which `_set` resolves to 0', () => {
@@ -132,7 +132,7 @@ describe('SplineIK3D strict validators', () => {
       // `_to_int` skips non-digits (ustring.cpp:2268-2298), so `x` reads as 0 and the write lands.
       // The value is still judged, because the leaf resolved either way.
       expect(check('settings/x/tilt_enabled', 'true')).toBeNull();
-      expect(check('settings/x/tilt_fade_in', 'not-an-int')?.severity).toBe('error');
+      expect(check('settings/x/tilt_fade_in', 'not-an-int')).toBeAtTier('error');
     });
 
     it('leaves a leaf no class in the chain declares alone', () => {

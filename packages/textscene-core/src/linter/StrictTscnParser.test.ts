@@ -201,7 +201,7 @@ visible = null
 
       const nils = parser.parse(content).errors.filter((e) => e.message.includes('cannot hold'));
       expect(nils).toHaveLength(2);
-      expect(nils.map((e) => e.severity)).toEqual(['warning', 'warning']);
+      expect(nils).toBeAllAtTier('warning');
     });
 
     // A key-shape refusal describes a key the class does not have, so "this slot stores the type's zero" names no
@@ -219,7 +219,7 @@ visible = null
         const [asNil] = parseOne('ItemList', 'item_0/bogus', 'null');
         expect(written!.message).toMatch(/^Unknown item_/);
         expect(asNil!.message).toBe(written!.message);
-        expect(asNil!.severity).toBe('error');
+        expect(asNil).toBeAtTier('error');
       });
 
       it('keeps the unknown-key error on a hand-rolled nested family', () => {
@@ -227,7 +227,7 @@ visible = null
         const [asNil] = parseOne('SpringBoneSimulator3D', 'settings/0/joints/0/bogus', 'null');
         expect(written!.message).toContain('Unknown SpringBoneSimulator3D joint property');
         expect(asNil!.message).toBe(written!.message);
-        expect(asNil!.severity).toBe('error');
+        expect(asNil).toBeAtTier('error');
       });
 
       it('keeps the negative-index refusal', () => {
@@ -235,7 +235,7 @@ visible = null
         const [asNil] = parseOne('FileDialog', 'option_-1/name', 'null');
         expect(written!.message).toContain('must be non-negative');
         expect(asNil!.message).toBe(written!.message);
-        expect(asNil!.severity).toBe('error');
+        expect(asNil).toBeAtTier('error');
       });
     });
   });

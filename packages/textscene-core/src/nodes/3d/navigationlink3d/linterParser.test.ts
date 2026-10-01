@@ -92,7 +92,7 @@ describe('NavigationLink3D strict validators', () => {
     it('rejects a non-boolean literal', () => {
       // A capitalised spelling is no Variant literal, so nothing converts it, unlike
       // the int spelling, which the slot converts.
-      expect(check('enabled', 'True')?.severity).toBe('error');
+      expect(check('enabled', 'True')).toBeAtTier('error');
     });
   });
 
@@ -103,7 +103,7 @@ describe('NavigationLink3D strict validators', () => {
     });
 
     it('rejects a non-boolean literal', () => {
-      expect(check('bidirectional', '1')?.severity).toBe('warning');
+      expect(check('bidirectional', '1')).toBeAtTier('warning');
     });
   });
 
@@ -116,14 +116,14 @@ describe('NavigationLink3D strict validators', () => {
     it('rejects a non-integer as a format error', () => {
       // navigation_link_3d.cpp:366-374 is a bare uint32_t assignment. A format failure
       // always errors (ADR-0032).
-      expect(check('navigation_layers', 'not-a-number')?.severity).toBe('error');
+      expect(check('navigation_layers', 'not-a-number')).toBeAtTier('error');
     });
 
     it('takes -1, and errors only past the 32-bit mask', () => {
       // navigation_link_3d.cpp:214, PROPERTY_HINT_LAYERS_3D_NAVIGATION. The
       // 32 checkboxes render every pattern, so only a dropped bit reports.
       expect(check('navigation_layers', '-1')).toBeNull();
-      expect(check('navigation_layers', '4294967296')?.severity).toBe('error');
+      expect(check('navigation_layers', '4294967296')).toBeAtTier('error');
     });
   });
 
@@ -133,7 +133,7 @@ describe('NavigationLink3D strict validators', () => {
     });
 
     it('rejects a malformed literal', () => {
-      expect(check('start_position', 'Vector3(1, 2)')?.severity).toBe('error');
+      expect(check('start_position', 'Vector3(1, 2)')).toBeAtTier('error');
     });
 
     it('accepts inf/nan components, since the setter carries no finite guard', () => {
@@ -149,7 +149,7 @@ describe('NavigationLink3D strict validators', () => {
     });
 
     it('rejects a malformed literal', () => {
-      expect(check('end_position', 'not-a-vector')?.severity).toBe('error');
+      expect(check('end_position', 'not-a-vector')).toBeAtTier('error');
     });
 
     it('accepts inf/nan components, since the setter carries no finite guard', () => {
@@ -165,12 +165,12 @@ describe('NavigationLink3D strict validators', () => {
     });
 
     it('rejects a non-numeric value as a format error', () => {
-      expect(check('enter_cost', 'not-a-number')?.severity).toBe('error');
+      expect(check('enter_cost', 'not-a-number')).toBeAtTier('error');
     });
 
     it('errors on a negative value, which the setter refuses outright', () => {
       // navigation_link_3d.cpp:473, ERR_FAIL_COND_MSG(p_enter_cost < 0.0, ...).
-      expect(check('enter_cost', '-1')?.severity).toBe('error');
+      expect(check('enter_cost', '-1')).toBeAtTier('error');
     });
 
     it('accepts positive infinity and nan, rejects negative infinity', () => {
@@ -178,7 +178,7 @@ describe('NavigationLink3D strict validators', () => {
       // is refused like any other negative value.
       expect(check('enter_cost', 'inf')).toBeNull();
       expect(check('enter_cost', 'nan')).toBeNull();
-      expect(check('enter_cost', 'inf_neg')?.severity).toBe('error');
+      expect(check('enter_cost', 'inf_neg')).toBeAtTier('error');
     });
   });
 
@@ -189,18 +189,18 @@ describe('NavigationLink3D strict validators', () => {
     });
 
     it('rejects a non-numeric value as a format error', () => {
-      expect(check('travel_cost', 'not-a-number')?.severity).toBe('error');
+      expect(check('travel_cost', 'not-a-number')).toBeAtTier('error');
     });
 
     it('errors on a negative value, which the setter refuses outright', () => {
       // navigation_link_3d.cpp:484, ERR_FAIL_COND_MSG(p_travel_cost < 0.0, ...).
-      expect(check('travel_cost', '-1')?.severity).toBe('error');
+      expect(check('travel_cost', '-1')).toBeAtTier('error');
     });
 
     it('accepts positive infinity and nan, rejects negative infinity', () => {
       expect(check('travel_cost', 'inf')).toBeNull();
       expect(check('travel_cost', 'nan')).toBeNull();
-      expect(check('travel_cost', 'inf_neg')?.severity).toBe('error');
+      expect(check('travel_cost', 'inf_neg')).toBeAtTier('error');
     });
   });
 });

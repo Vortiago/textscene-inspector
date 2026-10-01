@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { lint, node, scene, subResource } from '../../linter/testing/testkit.js';
 import { validatorRegistry } from '../../linter/ValidatorRegistry.js';
 import '../../linter/index';
+import { errorsOf } from '../../linter/testing/tierLists';
 
 /**
  * Every distinct `key = value` under a `[resource]` block of a corpus TileSet.
@@ -62,7 +63,7 @@ describe('TileSet corpus values', () => {
 
   it('accepts every value Godot itself wrote, in one TileSet', () => {
     const content = scene(DECLARED, subResource('TileSet', props), node('Node3D', {}, { name: 'Root' }));
-    const errors = lint(content).filter((d) => d.severity === 'error');
+    const errors = errorsOf(lint(content));
     expect(errors.map((d) => d.message)).toEqual([]);
   });
 
@@ -82,7 +83,7 @@ describe('TileSet corpus values', () => {
         subResource('TileSet', { [key]: value }),
         node('Node3D', {}, { name: 'Root' })
       );
-      expect(lint(content).filter((d) => d.severity === 'error')).toEqual([]);
+      expect(errorsOf(lint(content))).toEqual([]);
     });
   }
 });

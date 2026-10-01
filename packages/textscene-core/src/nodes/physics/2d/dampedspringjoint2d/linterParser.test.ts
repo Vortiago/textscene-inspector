@@ -51,13 +51,13 @@ describe('DampedSpringJoint2D strict validators', () => {
     it('warns below the minimum bound rather than erroring (set_length is bare)', () => {
       const error = check('length', '0');
       expect(error?.code).toBe('INVALID_LENGTH_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('warns beyond the 65535 cap (no or_greater on this hint) rather than erroring', () => {
       const error = check('length', '65536');
       expect(error?.code).toBe('INVALID_LENGTH_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -79,13 +79,13 @@ describe('DampedSpringJoint2D strict validators', () => {
     it('warns on a negative value rather than erroring (set_rest_length is bare)', () => {
       const error = check('rest_length', '-1');
       expect(error?.code).toBe('INVALID_REST_LENGTH_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('warns beyond the 65535 cap (no or_greater on this hint) rather than erroring', () => {
       const error = check('rest_length', '65536');
       expect(error?.code).toBe('INVALID_REST_LENGTH_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -111,13 +111,13 @@ describe('DampedSpringJoint2D strict validators', () => {
     it('warns below the 0.1 floor (no or_greater on this hint) rather than erroring', () => {
       const error = check('stiffness', '0');
       expect(error?.code).toBe('INVALID_STIFFNESS_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('warns beyond the 64 cap (no or_greater on this hint) rather than erroring', () => {
       const error = check('stiffness', '64.1');
       expect(error?.code).toBe('INVALID_STIFFNESS_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -143,13 +143,13 @@ describe('DampedSpringJoint2D strict validators', () => {
     it('warns below the 0.01 floor (no or_greater on this hint) rather than erroring', () => {
       const error = check('damping', '0');
       expect(error?.code).toBe('INVALID_DAMPING_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('warns beyond the 16 cap (no or_greater on this hint) rather than erroring', () => {
       const error = check('damping', '16.01');
       expect(error?.code).toBe('INVALID_DAMPING_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 });

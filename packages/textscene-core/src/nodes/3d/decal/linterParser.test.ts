@@ -131,7 +131,7 @@ normal_fade = 1.0
 
     const found = linter.lint(pastCeiling).filter((d) => d.message.includes('normal_fade'));
     expect(found).toHaveLength(1);
-    expect(found[0]!.severity).toBe('warning');
+    expect(found[0]).toBeAtTier('warning');
     expect(found[0]!.message).toContain('0.999');
   });
 
@@ -174,7 +174,7 @@ cull_mask = 4294967296
 
     const found = linter.lint(content).filter((x) => x.message.includes('cull_mask'));
     expect(found).toHaveLength(1);
-    expect(found[0]!.severity).toBe('error');
+    expect(found[0]).toBeAtTier('error');
   });
 
   it('rejects an invalid texture_albedo reference format', () => {

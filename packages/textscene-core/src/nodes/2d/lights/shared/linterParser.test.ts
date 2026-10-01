@@ -64,7 +64,7 @@ describe('Light2D shared validators', () => {
       // Past the 32-bit band the engine keeps bits the file does not state.
       // `2147483648` is inside it: the unsigned spelling of -2147483648, which the
       // hint's own floor allows.
-      expect(check(value)?.severity).toBe('error');
+      expect(check(value)).toBeAtTier('error');
     });
 
     it('takes 2147483648, the unsigned spelling of the int32 floor', () => {

@@ -15,7 +15,7 @@ describe('LightOccluder2D property validators', () => {
       .lint(scene(node('LightOccluder2D', { sdf_collision: '"maybe"' }, { name: 'Occ' })))
       .find((d) => d.message.includes('sdf_collision'));
     expect(found).toBeDefined();
-    expect(found?.severity).toBe('error');
+    expect(found).toBeAtTier('error');
   });
 
   it('sdf_collision accepts false', () => {
@@ -72,6 +72,6 @@ occluder = SubResource("999")
         .lint(scene(node('LightOccluder2D', { occluder_light_mask: value }, { name: 'Occ' })))
         .filter((d) => d.message.includes('occluder_light_mask'));
     expect(lint('-1')).toHaveLength(0);
-    expect(lint('4294967296')[0]!.severity).toBe('error');
+    expect(lint('4294967296')[0]).toBeAtTier('error');
   });
 });

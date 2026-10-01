@@ -59,13 +59,13 @@ describe('TextureRect strict validators', () => {
     it('warns, does not error, below the enum (-1): set_expand_mode has no ERR_FAIL_INDEX', () => {
       const error = check('expand_mode', '-1');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('warns, does not error, above the enum (6), same reason', () => {
       const error = check('expand_mode', '6');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('rejects a non-numeric value', () => {
@@ -123,13 +123,13 @@ describe('TextureRect strict validators', () => {
     it('warns, does not error, below the enum (-1): set_stretch_mode has no ERR_FAIL_INDEX', () => {
       const error = check('stretch_mode', '-1');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('warns, does not error, above the enum (7), same reason', () => {
       const error = check('stretch_mode', '7');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('rejects a non-numeric value', () => {

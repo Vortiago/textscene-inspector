@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import './linterParser';
+import { expectError } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -123,16 +124,15 @@ describe('Button strict validators', () => {
       // button.cpp:625 stores `p_flags & BREAK_TRIM_MASK`, so 3 lands as 0. Nothing
       // downstream reports the loss, which is why this is the error tier.
       const error = check('autowrap_trim_flags', '3');
-      expect(error?.severity).toBe('error');
-      expect(error?.message).toContain('Godot stores 0');
+      expectError(error, 'Godot stores 0');
     });
 
     it('warns on BREAK_TRIM_INDENT, which the setter keeps but the hint omits', () => {
-      expect(check('autowrap_trim_flags', '32')?.severity).toBe('warning');
+      expect(check('autowrap_trim_flags', '32')).toBeAtTier('warning');
     });
 
     it('rejects a negative value', () => {
-      expect(check('autowrap_trim_flags', '-1')?.severity).toBe('error');
+      expect(check('autowrap_trim_flags', '-1')).toBeAtTier('error');
     });
 
     it('rejects a non-numeric value', () => {
@@ -202,7 +202,7 @@ describe('Button strict validators', () => {
     it('warns on -1: the setter loads it, the hint does not offer it', () => {
       // The setter allows it (its ERR_FAIL_COND opens below -1), so it loads.
       // The hint (0-3) does not offer it, so it warns rather than erroring.
-      expect(check('text_direction', '-1')?.severity).toBe('warning');
+      expect(check('text_direction', '-1')).toBeAtTier('warning');
     });
 
     it('rejects 4, past the ERR_FAIL_COND the setter enforces', () => {

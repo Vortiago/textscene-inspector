@@ -59,7 +59,7 @@ describe('a resource slot holding an integer index', () => {
   });
 
   it('refuses a Resource(…) the parser cannot read', () => {
-    expect(validator('texture', 'Resource(1)', 1)?.severity).toBe('error');
+    expect(validator('texture', 'Resource(1)', 1)).toBeAtTier('error');
   });
 
   it('lints a scene holding a Resource("path") slot clean', () => {

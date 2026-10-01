@@ -88,7 +88,7 @@ describe('SplitContainer strict validators', () => {
       // `_parse_construct<int32_t>` narrows any number token. Measured on 4.6.3,
       // `PackedInt32Array(1.5, 0)` loads as `[1, 0]` (truncated, so a warning) and
       // `(2e3, 0)` as `[2000, 0]` (stored exactly, so nothing).
-      expect(check('split_offsets', 'PackedInt32Array(1.5)')?.severity).toBe('warning');
+      expect(check('split_offsets', 'PackedInt32Array(1.5)')).toBeAtTier('warning');
       expect(check('split_offsets', 'PackedInt32Array(2e3, 0)')).toBeNull();
     });
 

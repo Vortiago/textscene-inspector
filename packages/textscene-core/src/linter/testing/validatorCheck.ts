@@ -8,6 +8,7 @@
 import { expect } from 'vitest';
 import { validatorRegistry } from '../ValidatorRegistry.js';
 import type { ParseError, Severity } from '../types.js';
+import { describeTiered } from './tierMatchers.js';
 
 /** The signature the per-slice `check` helpers all had. */
 export type Check = (property: string, value: string, line?: number) => ParseError | null;
@@ -40,7 +41,7 @@ export function expectRejected(
     'name what the message must say — a tier alone does not identify the bound'
   ).toBeGreaterThan(0);
   expect(error, `expected a ${severity}, the validator accepted the value`).not.toBeNull();
-  expect(error!.severity).toBe(severity);
+  expect(error).toBeAtTier(severity);
   for (const substring of contains) expect(error!.message).toContain(substring);
   return error!;
 }
@@ -63,5 +64,5 @@ export function expectWarning(error: ParseError | null, ...contains: [string, ..
 
 /** Assert the validator accepted the value. Fails with the diagnostic it gave instead. */
 export function expectAccepted(error: ParseError | null): void {
-  expect(error, error ? `refused: [${error.severity}] ${error.message}` : undefined).toBeNull();
+  expect(error, error ? `refused: ${describeTiered(error)}` : undefined).toBeNull();
 }

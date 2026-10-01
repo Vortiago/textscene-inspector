@@ -16,6 +16,7 @@ import {
 import { readFixture } from '../../../../linter/testing/fixtureCheck';
 import './linterParser';
 import './linter';
+import { errorsOf } from '../../../../linter/testing/tierLists';
 
 /** One Weighted setting whose leaves are all mutually consistent. */
 const WEIGHTED_SETTING = {
@@ -275,7 +276,7 @@ describe('BoneTwistDisperser3D count and index reads', () => {
       'settings/4294967296/joints/0/twist_amount': 0.5,
     };
     expect(ruleFindings(props)).toEqual([]);
-    const errors = lint(scene(node('BoneTwistDisperser3D', props))).filter((d) => d.severity === 'error');
+    const errors = errorsOf(lint(scene(node('BoneTwistDisperser3D', props))));
     expect(errors).toEqual([]);
   });
 

@@ -122,13 +122,13 @@ describe('ColorPicker strict validators', () => {
     it('errors on a value beyond the enum (4)', () => {
       const error = check('color_mode', '4');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('errors on a negative value', () => {
       const error = check('color_mode', '-1');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 
@@ -168,13 +168,13 @@ describe('ColorPicker strict validators', () => {
     it('errors on a value beyond the enum (7)', () => {
       const error = check('picker_shape', '7');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('errors on a negative value', () => {
       const error = check('picker_shape', '-1');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 

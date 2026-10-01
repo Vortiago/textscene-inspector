@@ -51,13 +51,13 @@ describe('GrooveJoint2D strict validators', () => {
     it('warns below the lower bound (set_length is a bare assignment)', () => {
       const error = check('length', '0');
       expect(error?.code).toBe('INVALID_LENGTH_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('warns above the upper bound rather than erroring', () => {
       const error = check('length', '65536');
       expect(error?.code).toBe('INVALID_LENGTH_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -83,13 +83,13 @@ describe('GrooveJoint2D strict validators', () => {
     it('warns below the lower bound (set_initial_offset is a bare assignment)', () => {
       const error = check('initial_offset', '0');
       expect(error?.code).toBe('INVALID_INITIAL_OFFSET_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('warns above the upper bound rather than erroring', () => {
       const error = check('initial_offset', '65536');
       expect(error?.code).toBe('INVALID_INITIAL_OFFSET_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 });

@@ -9,15 +9,11 @@ import { describe, it, expect } from 'vitest';
 import { Linter } from '../../../linter/Linter';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import '../../../linter/index';
+import { errorsOf, warningsOf } from '../../../linter/testing/tierLists';
 
 /** How many diagnostics of one severity a scene draws, from every rule. */
-const lintCount =
-  (severity: 'error' | 'warning') =>
-  (raw: string): number =>
-    new Linter().lint(raw).filter((d) => d.severity === severity).length;
-
-const lintErrors = lintCount('error');
-const lintWarnings = lintCount('warning');
+const lintErrors = (raw: string): number => errorsOf(new Linter().lint(raw)).length;
+const lintWarnings = (raw: string): number => warningsOf(new Linter().lint(raw)).length;
 
 /**
  * Phase-1 warnings naming `prop`. A textureless scene always carries the
@@ -25,10 +21,9 @@ const lintWarnings = lintCount('warning');
  * nothing about whether the validator under test fired.
  */
 function propWarnings(raw: string, prop: string): number {
-  return new Linter()
-    .lint(raw)
-    .filter((d) => d.severity === 'warning' && d.ruleName === 'strict-parser' && d.message.includes(prop))
-    .length;
+  return warningsOf(new Linter().lint(raw)).filter(
+    (d) => d.ruleName === 'strict-parser' && d.message.includes(prop)
+  ).length;
 }
 
 describe('PointLight2D linterParser validators', () => {

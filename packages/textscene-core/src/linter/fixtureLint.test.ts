@@ -18,6 +18,7 @@ import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { FILE_DIAGNOSTIC_NAMES } from './fileDiagnostics.js';
 import type { Diagnostic } from './types.js';
 import './index.js';
+import { errorsOf } from './testing/tierLists';
 
 const here = dirname(fileURLToPath(import.meta.url)); // .../packages/textscene-core/src/linter
 const scenesRoot = resolve(here, '../../../../scenes');
@@ -181,7 +182,7 @@ function diagnosticsFor(name: string): Diagnostic[] {
 }
 
 function lintFile(name: string): { errors: number; messages: string[] } {
-  const errors = diagnosticsFor(name).filter((d) => d.severity === 'error');
+  const errors = errorsOf(diagnosticsFor(name));
   return { errors: errors.length, messages: errors.map((e) => `${name}: ${e.message}`) };
 }
 

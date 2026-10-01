@@ -131,7 +131,7 @@ describe('GeometryInstance3D strict validators', () => {
     it.each(['0', '0.0005'])('warns on %s, inside the hint-only band', (value) => {
       const error = check('lod_bias', value);
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('accepts the hint floor 0.001 in silence', () => {
@@ -145,13 +145,13 @@ describe('GeometryInstance3D strict validators', () => {
     it('errors on a negative value — setter is ERR_FAIL_COND(p_bias < 0.0)', () => {
       const error = check('lod_bias', '-0.001');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('warns past the 128 editor bound — the hint closes it, no setter does', () => {
       const error = check('lod_bias', '128.001');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 

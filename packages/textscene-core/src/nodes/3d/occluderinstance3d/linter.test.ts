@@ -48,7 +48,7 @@ describe('OccluderInstance3D semantic rules', () => {
     it('warns when bake_mask is explicitly 0', () => {
       const diagnostics = RULE.check(makeContext({ occluder: 'SubResource("Occ_1")', bake_mask: '0' }));
       expect(diagnostics).toHaveLength(1);
-      expect(diagnostics[0]?.severity).toBe('warning');
+      expect(diagnostics[0]).toBeAtTier('warning');
       expect(diagnostics[0]?.ruleName).toBe('occluderinstance3d-empty-bake-mask');
       expect(diagnostics[0]?.message).toContain('Bake Mask');
     });
@@ -58,7 +58,7 @@ describe('OccluderInstance3D semantic rules', () => {
     it('warns when occluder is absent', () => {
       const diagnostics = RULE.check(makeContext({}));
       expect(diagnostics).toHaveLength(1);
-      expect(diagnostics[0]?.severity).toBe('warning');
+      expect(diagnostics[0]).toBeAtTier('warning');
       expect(diagnostics[0]?.ruleName).toBe('occluderinstance3d-missing-occluder');
       expect(diagnostics[0]?.message).toContain('occluder');
     });

@@ -373,7 +373,7 @@ describe('AudioStreamPlayer2D Linter', () => {
       const diagnostics = lint(withStream({ volume_db: -90, pitch_scale: 0.005, max_distance: 0.5 }));
       // All three sit below their hints.
       expect(diagnostics).toHaveLength(3);
-      expect(diagnostics.every((d) => d.severity === 'warning')).toBe(true);
+      expect(diagnostics).toBeAllAtTier('warning');
     });
 
     it('should handle SubResource references', () => {
@@ -404,7 +404,7 @@ describe('AudioStreamPlayer2D Linter', () => {
         'strict-parser',
         'strict-parser',
       ]);
-      expect(diagnostics.every((d) => d.severity === 'warning')).toBe(true);
+      expect(diagnostics).toBeAllAtTier('warning');
     });
 
     it('should handle zero pitch_scale semantic validation', () => {

@@ -89,8 +89,8 @@ describe('OpenXRCompositionLayerEquirect strict validators', () => {
       expect(check('radius', '3')).toBeNull();
     });
     it('errors at 0 and below', () => {
-      expect(check('radius', '0')?.severity).toBe('error');
-      expect(check('radius', '-3')?.severity).toBe('error');
+      expect(check('radius', '0')).toBeAtTier('error');
+      expect(check('radius', '-3')).toBeAtTier('error');
     });
   });
 
@@ -102,7 +102,7 @@ describe('OpenXRCompositionLayerEquirect strict validators', () => {
       expect(check('central_horizontal_angle', '1000')).toBeNull();
     });
     it('errors at 0 and below', () => {
-      expect(check('central_horizontal_angle', '0')?.severity).toBe('error');
+      expect(check('central_horizontal_angle', '0')).toBeAtTier('error');
     });
   });
 
@@ -116,16 +116,16 @@ describe('OpenXRCompositionLayerEquirect strict validators', () => {
       expect(check('lower_vertical_angle', '1')).toBeNull();
     });
     it('errors at 0 and below', () => {
-      expect(check('upper_vertical_angle', '0')?.severity).toBe('error');
-      expect(check('lower_vertical_angle', '-1')?.severity).toBe('error');
+      expect(check('upper_vertical_angle', '0')).toBeAtTier('error');
+      expect(check('lower_vertical_angle', '-1')).toBeAtTier('error');
     });
     it('errors past PI/2', () => {
-      expect(check('upper_vertical_angle', '2')?.severity).toBe('error');
-      expect(check('lower_vertical_angle', '3.2')?.severity).toBe('error');
+      expect(check('upper_vertical_angle', '2')).toBeAtTier('error');
+      expect(check('lower_vertical_angle', '3.2')).toBeAtTier('error');
     });
     it("errors just past PI/2 — the ceiling is the predicate's literal, with no epsilon widening it", () => {
-      expect(check('upper_vertical_angle', '1.5709')?.severity).toBe('error');
-      expect(check('lower_vertical_angle', '1.5709')?.severity).toBe('error');
+      expect(check('upper_vertical_angle', '1.5709')).toBeAtTier('error');
+      expect(check('lower_vertical_angle', '1.5709')).toBeAtTier('error');
     });
     it('names the setter as the reason at each end', () => {
       expect(check('upper_vertical_angle', '2')?.message).toContain('Godot does not store this value');
@@ -149,7 +149,7 @@ describe('OpenXRCompositionLayerEquirect strict validators', () => {
       expect(check('fallback_segments', '12')).toBeNull();
     });
     it('errors at exactly 0', () => {
-      expect(check('fallback_segments', '0')?.severity).toBe('error');
+      expect(check('fallback_segments', '0')).toBeAtTier('error');
     });
     it('does not report a floor of 1, which no engine line states', () => {
       // The parameter is uint32_t, so `-1` narrows to 4294967295 before the `== 0` guard runs:

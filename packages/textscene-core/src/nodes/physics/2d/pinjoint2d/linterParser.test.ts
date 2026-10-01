@@ -50,7 +50,7 @@ describe('PinJoint2D strict validators', () => {
     it('warns past the hinted bound rather than erroring', () => {
       const error = check('softness', '16.5');
       expect(error?.code).toBe('INVALID_SOFTNESS_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -88,7 +88,7 @@ describe('PinJoint2D strict validators', () => {
     it('warns past +/-pi radians (the +/-180 degree bound converted) rather than erroring', () => {
       const error = check('angular_limit_lower', '4.0');
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT_LOWER_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -111,7 +111,7 @@ describe('PinJoint2D strict validators', () => {
     it('warns past +/-pi radians (the +/-180 degree bound converted) rather than erroring', () => {
       const error = check('angular_limit_upper', '-4.0');
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT_UPPER_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 

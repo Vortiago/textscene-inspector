@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
 import './linterParser';
+import { expectWarning } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -64,8 +65,7 @@ describe('SpringBoneCollisionCapsule3D strict validators', () => {
       // (spring_bone_collision_capsule_3d.cpp:36) with no ERR_FAIL and no clamp, so
       // the floor is the inspector hint's alone and warns (ADR-0032).
       const error = check('radius', '-0.25');
-      expect(error?.severity).toBe('warning');
-      expect(error?.message).toContain('radius');
+      expectWarning(error, 'radius');
     });
 
     it('accepts the non-finite float literals Godot writes and reloads', () => {
@@ -76,7 +76,7 @@ describe('SpringBoneCollisionCapsule3D strict validators', () => {
 
     it('rejects a non-numeric literal as a format error', () => {
       const error = check('radius', '"0.1"');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_RADIUS_FORMAT');
     });
   });
@@ -93,8 +93,7 @@ describe('SpringBoneCollisionCapsule3D strict validators', () => {
       // `set_height` assigns `height = p_height` unaltered
       // (spring_bone_collision_capsule_3d.cpp:50).
       const error = check('height', '-1');
-      expect(error?.severity).toBe('warning');
-      expect(error?.message).toContain('height');
+      expectWarning(error, 'height');
     });
 
     it('accepts the non-finite float literals Godot writes and reloads', () => {
@@ -112,7 +111,7 @@ describe('SpringBoneCollisionCapsule3D strict validators', () => {
 
     it('rejects a numeric stand-in for a boolean', () => {
       const error = check('inside', '1');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
       expect(error?.code).toBe('INVALID_INSIDE_FORMAT');
     });
   });

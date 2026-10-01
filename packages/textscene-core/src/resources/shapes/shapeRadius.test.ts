@@ -26,12 +26,12 @@ describe.each([
   });
 
   it('errors below 0, which the setter refuses', () => {
-    expect(check(type, key, '-1.0')?.severity).toBe('error');
+    expect(check(type, key, '-1.0')).toBeAtTier('error');
   });
 
   it('warns between the setter floor and the hint floor', () => {
     // 0 is stored (the guard is `< 0`) but outside the inspector's range.
-    expect(check(type, key, '0.0')?.severity).toBe('warning');
+    expect(check(type, key, '0.0')).toBeAtTier('warning');
   });
 
   it('accepts a value at the hint floor', () => {

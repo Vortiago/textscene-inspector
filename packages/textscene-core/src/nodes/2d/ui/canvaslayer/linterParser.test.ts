@@ -37,9 +37,9 @@ describe('CanvasLayer validators', () => {
       // The value code, not only the severity, proves the slot refused the value
       // rather than a format rejection landing on the same severity.
       expect(above?.code).toBe('INVALID_LAYER_VALUE');
-      expect(above?.severity).toBe('error');
+      expect(above).toBeAtTier('error');
       expect(below?.code).toBe('INVALID_LAYER_VALUE');
-      expect(below?.severity).toBe('error');
+      expect(below).toBeAtTier('error');
     });
   });
 
@@ -54,7 +54,7 @@ describe('CanvasLayer validators', () => {
     it('rejects a non-boolean value', () => {
       const error = check('visible', 'sure');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 
@@ -69,7 +69,7 @@ describe('CanvasLayer validators', () => {
     it('rejects a malformed literal', () => {
       const error = check('offset', 'Vector2(1)');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 
@@ -92,7 +92,7 @@ describe('CanvasLayer validators', () => {
     it('rejects a non-numeric value', () => {
       const error = check('rotation', 'sideways');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 
@@ -113,7 +113,7 @@ describe('CanvasLayer validators', () => {
     it('rejects a malformed literal', () => {
       const error = check('scale', 'Vector2(1)');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 
@@ -146,7 +146,7 @@ describe('CanvasLayer validators', () => {
     it('rejects a non-boolean value', () => {
       const error = check('follow_viewport_enabled', 'sure');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 
@@ -170,7 +170,7 @@ describe('CanvasLayer validators', () => {
     it('rejects a non-numeric value', () => {
       const error = check('follow_viewport_scale', 'big');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 });

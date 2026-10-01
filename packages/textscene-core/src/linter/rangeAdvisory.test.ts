@@ -111,8 +111,9 @@ describe('rangeAdvisories', () => {
       };
       const low = rangeAdvisories(nodeWith({ x: '0.05' }), table, arm);
       const high = rangeAdvisories(nodeWith({ x: '9' }), table, arm);
-      expect(low).toMatchObject([{ severity: 'warning', ruleName: 'x-extreme', message: 'low 0.05' }]);
-      expect(high).toMatchObject([{ severity: 'warning', ruleName: 'x-extreme', message: 'high 9' }]);
+      expect([...low, ...high]).toBeAllAtTier('warning');
+      expect(low).toMatchObject([{ ruleName: 'x-extreme', message: 'low 0.05' }]);
+      expect(high).toMatchObject([{ ruleName: 'x-extreme', message: 'high 9' }]);
       expect(rangeAdvisories(nodeWith({ x: '1' }), table, arm)).toEqual([]);
     });
   });
@@ -131,6 +132,7 @@ describe('rangeAdvisories', () => {
       x: [{ over: 10, message: (v) => `x is ${v}`, cite: 'light_3d.cpp:389' }],
     };
     const [diagnostic] = rangeAdvisories(nodeWith({ x: '12.50' }), table, arm);
+    expect(diagnostic).toBeAtTier('warning');
     expect(diagnostic).toEqual({
       severity: 'warning',
       message: 'x is 12.5',

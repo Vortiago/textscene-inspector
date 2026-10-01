@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
 import './linterParser';
+import { expectError } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -65,14 +66,13 @@ describe('XRHandModifier3D strict validators', () => {
       // on :65. A refused write is an error, not a hint warning (ADR-0032).
       const error = check('bone_update', '2');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
-      expect(error?.message).toContain('bone_update');
+      expectError(error, 'bone_update');
     });
 
     it('errors on a negative value, the other half of the ERR_FAIL_INDEX', () => {
       const error = check('bone_update', '-1');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('rejects a non-numeric value', () => {

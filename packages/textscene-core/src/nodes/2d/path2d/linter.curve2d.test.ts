@@ -42,7 +42,7 @@ describe('curve2d-loadable', () => {
   it('rejects a curve missing "points" as an error', () => {
     const errors = curveErrors(lint(''));
     expect(errors).toHaveLength(1);
-    expect(errors[0]!.severity).toBe('error');
+    expect(errors[0]).toBeAtTier('error');
     expect(errors[0]!.message).toContain('"points"');
     expect(errors[0]!.message).toContain('zero points');
   });
@@ -51,7 +51,7 @@ describe('curve2d-loadable', () => {
   it('rejects a points array that is not a whole number of control points', () => {
     const errors = curveErrors(lint('"points": PackedVector2Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)'));
     expect(errors).toHaveLength(1);
-    expect(errors[0]!.severity).toBe('error');
+    expect(errors[0]).toBeAtTier('error');
     expect(errors[0]!.message).toContain('holds 10 floats');
     expect(errors[0]!.message).toContain('6 floats each');
   });

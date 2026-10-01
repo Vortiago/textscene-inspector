@@ -93,19 +93,19 @@ describe('FogVolume strict validators', () => {
     });
 
     it('warns (not errors) on zero — the setter maxf(0) floor, not the 0.01 hint, is what is enforced', () => {
-      expect(check('size', 'Vector3(0, 1, 1)')?.severity).toBe('warning');
+      expect(check('size', 'Vector3(0, 1, 1)')).toBeAtTier('warning');
     });
 
     it('rejects a non-Vector3 value', () => {
       const error = check('size', 'not-a-vector');
       expect(error?.code).toBe('INVALID_SIZE_FORMAT');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('errors on a negative component — the setter clamps it up to 0 (fog_volume.cpp:78)', () => {
       const error = check('size', 'Vector3(-1, 2, 2)');
       expect(error?.code).toBe('INVALID_SIZE_VALUE');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('warns (not errors) on a component under the 0.01 hint but still non-negative', () => {
@@ -113,7 +113,7 @@ describe('FogVolume strict validators', () => {
       // setter itself never enforces it, so 0.005 loads exactly as written.
       const error = check('size', 'Vector3(0.005, 2, 2)');
       expect(error?.code).toBe('INVALID_SIZE_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('accepts a non-finite component (`inf`) unaltered — MAX(inf, 0) stays inf', () => {
@@ -125,7 +125,7 @@ describe('FogVolume strict validators', () => {
       // is false for -inf > 0), the same alteration a finite negative gets.
       const error = check('size', 'Vector3(-inf, 2, 2)');
       expect(error?.code).toBe('INVALID_SIZE_VALUE');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('accepts `nan` silently — every comparison against it is false, same as every other float validator', () => {
@@ -151,12 +151,12 @@ describe('FogVolume strict validators', () => {
 
     it('rejects a non-integer value', () => {
       const error = check('shape', 'Ellipsoid');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('warns (not errors) outside the enum — set_shape has no ERR_FAIL_INDEX (fog_volume.cpp:87-93)', () => {
       const error = check('shape', '5');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -171,7 +171,7 @@ describe('FogVolume strict validators', () => {
 
     it('rejects a bare identifier', () => {
       const error = check('material', 'FogMaterial_1');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 });

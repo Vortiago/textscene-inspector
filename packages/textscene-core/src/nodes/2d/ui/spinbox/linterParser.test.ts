@@ -52,7 +52,7 @@ describe('SpinBox strict validators', () => {
     it('rejects an out-of-range index as an error, since LineEdit::set_horizontal_alignment ERR_FAIL_INDEXs it', () => {
       const error = check('alignment', '4');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 
@@ -140,7 +140,7 @@ describe('SpinBox strict validators', () => {
     it('warns rather than errors below the hinted floor of 0', () => {
       const error = check('custom_arrow_step', '-1');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 

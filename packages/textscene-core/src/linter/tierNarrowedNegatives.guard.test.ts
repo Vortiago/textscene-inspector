@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { blocksIn, everyTestBlockExcept, type Block } from './testing/testBlocks.js';
-import { tierNarrowedNegatives } from './testing/tierClaims.js';
+import { tierNarrowedNegatives } from './testing/tierNarrowedNegatives.js';
 
 /** This file, excluded by path: its pins spell the refused shapes as data. */
 const SELF = 'linter/tierNarrowedNegatives.guard.test.ts';
@@ -35,6 +35,17 @@ describe('negatives narrowed to a tier go through the test kit', () => {
     ]);
   });
 
+  it('reads a tier list helper as the tier narrowing', () => {
+    const src = [
+      "it('some', () => { expect(errorsOf(all).some((d) => d.message.includes('x'))).toBe(false); });",
+      "it('bound', () => { const hits = warningsOf(all).filter((d) => d.ruleName === 'r'); expect(hits).toEqual([]); });",
+    ].join('\n');
+
+    expect(blocksIn('synthetic.test.ts', src).map((b) => tierNarrowedNegatives(b.body).length)).toEqual([
+      1, 1,
+    ]);
+  });
+
   it('leaves a positive, an unnarrowed negative and a tier-only negative alone', () => {
     // Only a tier with an identity can stop failing: "no errors at all" stays
     // falsifiable, since a format failure always errors.
@@ -42,9 +53,11 @@ describe('negatives narrowed to a tier go through the test kit', () => {
       "it('positive', () => { expect(all.some((d) => d.severity === 'warning' && d.message.includes('x'))).toBe(true); });",
       "it('identity', () => { expect(all.some((d) => d.message.includes('x'))).toBe(false); });",
       "it('tier', () => { expect(all.filter((d) => d.severity === 'error')).toHaveLength(0); });",
+      "it('list', () => { expect(errorsOf(all)).toEqual([]); });",
     ].join('\n');
 
     expect(blocksIn('synthetic.test.ts', src).map((b) => tierNarrowedNegatives(b.body))).toEqual([
+      [],
       [],
       [],
       [],
