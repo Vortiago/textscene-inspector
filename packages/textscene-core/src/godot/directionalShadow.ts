@@ -245,11 +245,10 @@ export interface DirectionalShadowFade {
 }
 
 /**
- * `light_storage.cpp:752-754`: the shadow fades out from `fade_start` of `shadow_split_offsets[3]`
- * to that depth. Slot 3 holds the last split's far end (`:711`), which is the slice's far end in
- * every mode (`renderer_scene_cull.cpp:2175`). The receiver mixes whichever split it sampled
- * towards unshadowed by `smoothstep(from, to, depth)` (`scene_forward_clustered.glsl:2491`), so
- * nothing past the last split is shadowed.
+ * `light_storage.cpp:752-754`: the fade runs from `fade_start` of `shadow_split_offsets[3]` to that
+ * depth. Slot 3 holds the slice's far end in every mode (`:711`, `renderer_scene_cull.cpp:2175`).
+ * The receiver mixes whichever split it sampled towards unshadowed by `smoothstep(from, to, depth)`
+ * (`scene_forward_clustered.glsl:2491`), so nothing past the last split is shadowed.
  */
 export function directionalShadowFade(lastSplitFar: number, fadeStart: number): DirectionalShadowFade {
   // Godot's `MIN` is a ternary, so a `nan` fade start takes the ceiling.

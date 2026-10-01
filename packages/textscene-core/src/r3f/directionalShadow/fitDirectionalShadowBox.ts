@@ -65,8 +65,8 @@ interface LightAxes {
 /**
  * Godot flattens a caster nearer the light than the near plane onto it
  * (`scene_forward_clustered.glsl:679-682`), so every such caster casts. three has no pancaking,
- * so the near plane moves this many slice diameters further towards the light instead. A caster
- * beyond that casts nothing here.
+ * so the near plane moves this many diameters of the fitted sphere further towards the light
+ * instead. A caster beyond that casts nothing into this box.
  */
 const CASTER_REACH_IN_DIAMETERS = 1;
 

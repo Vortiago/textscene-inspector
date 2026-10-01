@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import {
   SplitSunLight,
@@ -40,6 +40,17 @@ describe('attachSplitSun', () => {
     const light = new THREE.DirectionalLight();
     expect(attachSplitSun(light)).toBe(attachSplitSun(light));
     expect(light.children).toHaveLength(1);
+  });
+
+  it('frees the shadow map the light drew before its sun took over', () => {
+    const light = new THREE.DirectionalLight();
+    const ownMap = new THREE.WebGLRenderTarget(4, 4);
+    const freed = vi.fn();
+    ownMap.addEventListener('dispose', freed);
+    light.shadow.map = ownMap;
+    attachSplitSun(light);
+    expect(freed).toHaveBeenCalledTimes(1);
+    expect(light.shadow.map).toBeNull();
   });
 
   it('keeps a light’s own layers on its sun (edge case)', () => {

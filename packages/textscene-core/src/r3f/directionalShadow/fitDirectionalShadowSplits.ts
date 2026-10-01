@@ -27,16 +27,17 @@ export interface DirectionalShadowSplitFitInput extends Omit<DirectionalShadowFi
   atlasSize: number;
 }
 
-/** The w of a slot that does not blend into the next split. Every real depth is at least zero. */
-export const NO_BLEND = -1;
+/**
+ * The blend start of a slot that does not blend into the next split. A real blend start is negative
+ * for a negative split offset, which Godot's setter keeps, so the marker sits far below any depth.
+ */
+export const NO_BLEND = -1e30;
 
 /**
- * One slot of the shader's per-split data, `sunShadowCascade[slot]`:
- * - x: the depth where the slot's split ends, Godot's `shadow_split_offsets[slot]`;
- * - y: the split's depth bias, in normalised depth of its own box;
- * - z: the split's normal bias, in world units;
- * - w: the depth where the split starts to blend into the next, or `NO_BLEND`. The last drawn
- *   split never blends, and the lookup never reads slot 3's w as a blend start.
+ * One slot of the shader's per-split data, `sunShadowCascade[slot]`. The split end is Godot's
+ * `shadow_split_offsets[slot]`, the depth bias is in normalised depth of the split's own box, and
+ * the normal bias is in world units. The last drawn split never blends, and the lookup never reads
+ * slot 3's blend start.
  */
 export type SplitSlot = [splitEnd: number, depthBias: number, normalBias: number, blendStart: number];
 

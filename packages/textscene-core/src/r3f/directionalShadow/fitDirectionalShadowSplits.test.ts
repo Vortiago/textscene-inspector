@@ -168,6 +168,14 @@ describe('fitDirectionalShadowSplits', () => {
     expect(fit(fitInput(declaring({ fadeStart: Number.NaN }))).fade.from).toBeCloseTo(79.92, 12);
   });
 
+  it('keeps a negative blend start apart from the no-blend marker (edge case)', () => {
+    // Godot's setter keeps an offset below the inspector range, so a split can end behind the eye.
+    const declaration = declaring({ blendSplits: true, splitOffsets: [-0.1, 0.2, 0.5] });
+    const { slots } = fit(fitInput(declaration));
+    expect(slots[0]![3]).toBeLessThan(0);
+    expect(slots[0]![3]).toBeCloseTo(slots[0]![0] * 0.9, 9);
+  });
+
   it('marks no slot as blending past the last split, even with blending on', () => {
     const { slots } = fit(fitInput(declaring({ blendSplits: true })));
     expect(slots[3]![3]).toBe(NO_BLEND);

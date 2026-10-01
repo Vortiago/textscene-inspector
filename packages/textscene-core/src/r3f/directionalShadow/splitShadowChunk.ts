@@ -1,14 +1,14 @@
 /**
- * Godot's split selection in three's sun-light shadow lookup. three r186 walks two cascades with
- * its own fade bands. Godot picks one of up to four splits by view depth, blends into the next
- * split over the last tenth of it, and narrows the filter of a far split
- * (`scene_forward_clustered.glsl:2403-2478`, the branch without soft shadows). The per-slot values
- * it reads are laid out in `fitDirectionalShadowSplits.ts`.
+ * Godot's split selection in three r186's sun-light shadow lookup, which walks two cascades. Godot
+ * picks one of up to four splits by view depth, blends into the next over its last tenth, and
+ * narrows a far split's filter (`scene_forward_clustered.glsl:2403-2478`, the branch without soft
+ * shadows). `fitDirectionalShadowSplits.ts` lays out the per-slot values it reads.
  */
 
 import * as THREE from 'three';
 import { warn } from '../../logger.js';
 import { SPLIT_SLOTS } from './splitShadow.js';
+import { NO_BLEND } from './fitDirectionalShadowSplits.js';
 
 const CHUNK = 'shadowmap_pars_fragment';
 
@@ -20,6 +20,12 @@ const LOOKUP_BLOCK_END = '\n\t#endif';
 
 /** The name of the per-split lookup the patch adds, which marks a chunk it has patched. */
 const SPLIT_LOOKUP = 'getSunShadowSplit(';
+
+/**
+ * A slot blends while its blend start lies above this. Half of `NO_BLEND`, so the float32 rounding
+ * of the uniform cannot carry the marker across it, and a negative blend start still blends.
+ */
+const BLENDS_ABOVE = (NO_BLEND / 2).toExponential();
 
 /**
  * The replacement. The split is the first whose far end lies past the fragment's depth, and slot 3
@@ -71,11 +77,11 @@ const GODOT_LOOKUP = `\t\tfloat ${SPLIT_LOOKUP}
 \t\t\t\t: 3;
 \t\t\tvec4 selected = sunShadowCascade[ first + split ];
 
-\t\t\tbool blendsSplits = sunShadowCascade[ first ].w >= 0.0;
+\t\t\tbool blendsSplits = sunShadowCascade[ first ].w > ${BLENDS_ABOVE};
 \t\t\tfloat radiusScale = blendsSplits ? 1.0 : sunShadowCascade[ first ].x / selected.x;
 \t\t\tfloat shadow = getSunShadowSplit( shadowMap, sunLightShadow, first + split, radiusScale );
 
-\t\t\tif ( split < 3 && selected.w >= 0.0 ) {
+\t\t\tif ( split < 3 && selected.w > ${BLENDS_ABOVE} ) {
 
 \t\t\t\tfloat next = getSunShadowSplit( shadowMap, sunLightShadow, first + split + 1, 1.0 );
 \t\t\t\tshadow = mix( shadow, next, smoothstep( selected.w, selected.x, depth ) );

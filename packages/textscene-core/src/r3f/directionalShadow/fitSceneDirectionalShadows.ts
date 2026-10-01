@@ -82,11 +82,10 @@ export interface DirectionalShadowCasters {
 }
 
 /**
- * The casting directional and sun lights this render draws, in the order three indexes their
- * shadow uniforms. three pushes each light in visible pre-order when the camera's layers include
- * it (three r186 `WebGLRenderer.js:1860-1888`), sorts casters first with a stable sort
- * (`WebGLLights.js:245`), and counts sun and directional shadows apart (`:289-356`). A declared
- * light that draws splits fails the layer test, so only its split sun counts.
+ * The casting directional and sun lights this render draws, in three's shadow uniform order:
+ * visible pre-order where the camera's layers include the light (r186 `WebGLRenderer.js:1860-1888`),
+ * casters first (`WebGLLights.js:245`, a stable sort), sun and directional apart (`:289-356`). A
+ * declared light that draws splits fails the layer test, so only its split sun counts.
  */
 export function directionalShadowCasters(
   scene: THREE.Object3D,

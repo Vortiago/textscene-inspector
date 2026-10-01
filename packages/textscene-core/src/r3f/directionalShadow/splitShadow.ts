@@ -123,8 +123,7 @@ export class DirectionalSplitShadow extends THREE.LightShadow<THREE.Orthographic
   /** `LightShadow._updateMatrix` for one slot, with the slot's rectangle of the atlas. */
   private updateSplitMatrix(slot: number): void {
     const camera = this.splitCameras[slot]!;
-    // three sets the depth convention on the light's own camera (`WebGLShadowMap.js:201`).
-    (camera as unknown as { _reversedDepth: boolean })._reversedDepth = this.camera.reversedDepth;
+    this.followDepthConvention(camera);
     this.projectionView.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     this.splitFrustums[slot]!.setFromProjectionMatrix(
       this.projectionView,
@@ -144,5 +143,16 @@ export class DirectionalSplitShadow extends THREE.LightShadow<THREE.Orthographic
       0, 0, depthIsUnit ? 1 : 0.5, depthIsUnit ? 0 : 0.5,
       0, 0, 0, 1
     ).multiply(this.projectionView);
+  }
+
+  /**
+   * three sets the depth convention on the light's own camera (`WebGLShadowMap.js:201`), after the
+   * fit built the slot's projection, so a slot whose convention changes rebuilds its projection.
+   */
+  private followDepthConvention(camera: THREE.OrthographicCamera): void {
+    const reversedDepth = this.camera.reversedDepth;
+    if (camera.reversedDepth === reversedDepth) return;
+    (camera as unknown as { _reversedDepth: boolean })._reversedDepth = reversedDepth;
+    camera.updateProjectionMatrix();
   }
 }

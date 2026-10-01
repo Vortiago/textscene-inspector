@@ -13,11 +13,10 @@ import { warn } from '../../logger';
 export const DIRECTIONAL_SHADOW_FADE_UNIFORM = 'directionalShadowFade';
 
 /**
- * `[from, to]` per shadow: first every directional shadow in three's directional shadow order,
- * then every sun shadow in three's sun shadow order. Written only by
- * `writeDirectionalShadowFades`, before each render. A typed array, not an `Array`:
- * `cloneUniforms` copies an `Array` per material and keeps any other value by reference
- * (three r186 `UniformsUtils.js:43-65`), so every material reads this one buffer.
+ * `[from, to]` per shadow: every directional shadow, then every sun shadow, each in three's order.
+ * Written only by `writeDirectionalShadowFades`, before each render. A typed array, not an `Array`:
+ * `cloneUniforms` copies an `Array` per material and keeps any other value by reference (three
+ * r186 `UniformsUtils.js:43-65`), so every material reads this one buffer.
  */
 const fades = new Float32Array(MAX_DIRECTIONAL_LIGHTS * 2);
 

@@ -1,9 +1,8 @@
 /**
- * The light that shades for a declared directional light that draws parallel splits. three's
- * WebGL renderer draws a split atlas only for a light on its sun path (`isSunLight`), and that
- * path reads the light's direction from its world position (`WebGLLights.js:566-571`), not from a
- * target. So the fitter hangs this light under the declared one, points it by its world matrix,
- * and hides the declared light from the render, which then shades through this one alone.
+ * The light that shades for a declared directional light that draws parallel splits. three draws a
+ * split atlas only on its sun path (`isSunLight`), which reads the direction from the world position
+ * (`WebGLLights.js:566-571`), not from a target. So the fitter hangs this light under the declared
+ * one, points it by its world matrix, and hides the declared light, which then shades through it.
  */
 
 import * as THREE from 'three';
@@ -54,6 +53,7 @@ export function attachSplitSun(light: THREE.DirectionalLight): SplitSunLight {
   // A light that fails the camera's layer test never enters the render's light list
   // (`WebGLRenderer.js:1864-1888`), while its children still do.
   light.layers.disableAll();
+  freeOwnShadowMap(light);
   light.add(sun);
   // A light leaves the scene before the fitter can see it go, so it frees its own sun's atlas.
   light.addEventListener('removed', releaseRemovedLight);
@@ -68,6 +68,16 @@ export function releaseSplitSun(light: THREE.DirectionalLight): void {
   light.layers.mask = sun.sourceLayers.mask;
   light.remove(sun);
   sun.dispose();
+}
+
+/**
+ * The hidden light draws no shadow, so a map it drew before the sun attached only holds memory.
+ * three builds a new one from `mapSize` if the light casts again (`WebGLShadowMap.js:203`).
+ */
+function freeOwnShadowMap(light: THREE.DirectionalLight): void {
+  light.shadow.dispose();
+  light.shadow.map = null;
+  light.shadow.mapPass = null;
 }
 
 function releaseRemovedLight(event: { target: THREE.Object3D }): void {

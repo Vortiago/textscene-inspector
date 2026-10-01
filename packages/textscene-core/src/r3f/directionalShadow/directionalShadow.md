@@ -145,8 +145,9 @@ split's box. The fit costs microseconds in every mode, far below the draw.
 - **Pancaking.** Godot flattens a caster nearer the light than the near plane onto that plane
   (`scene_forward_clustered.glsl:679-682`), for any positive pancake size
   (`render_forward_clustered.cpp:2606`). three clips such a caster. So the fitter moves each
-  near plane one slice diameter further towards the light. A caster beyond that casts nothing
-  here.
+  box's near plane one diameter of that box's sphere further towards the light. A caster beyond
+  that casts nothing into that split. The nearest split reaches least, so a far caster's shadow
+  can stop where the next split starts.
 - **Bias.** Godot spends the depth bias over its own depth range (`:2348`). When the near plane
   moves out, three's range is longer, so the fitter divides the declared bias by the same
   factor. The bias then holds the same size in world units.

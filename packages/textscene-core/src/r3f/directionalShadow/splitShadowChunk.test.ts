@@ -132,6 +132,17 @@ describe('the patched split lookup', () => {
     expect(shadow).toBeCloseTo(0.5, 12);
   });
 
+  it('blends a light whose first blend start is negative (edge case)', () => {
+    // Godot's setter keeps a negative split offset, and Godot blends by its own flag.
+    const slots: SplitSlot[] = [
+      [-10, 0, 0, -9],
+      [20, 0, 0, 18],
+      [50, 0, 0, 45],
+      [100, 0, 0, NO_BLEND],
+    ];
+    expect(runLookup(slots, 30).samples[0]).toEqual({ slot: 2, radiusScale: 1 });
+  });
+
   it('never blends the last slot, whatever its w holds (edge case)', () => {
     const slots = fourSplits([9, 18, 45]);
     slots[3]![3] = 80;

@@ -1,9 +1,8 @@
 /**
- * <DirectionalLight3D>: a parallel light with optional shadow, in a transform
- * group, aimed at a target at local -Z. It declares its shadow parameters and
- * leaves the shadow boxes and splits to the scene's `<DirectionalShadowFitter>`,
- * as Godot fits a directional shadow to the camera and not to the light. A mode
- * with no split casts nothing, as Godot sets up no shadow map for it.
+ * <DirectionalLight3D>: a parallel light in a transform group, aimed at a target at local -Z. It
+ * declares its shadow and leaves the boxes and splits to the scene's `<DirectionalShadowFitter>`,
+ * as Godot fits a directional shadow to the camera and not to the light. A mode with no split
+ * casts nothing, as Godot sets up no shadow map for it.
  */
 
 import { useMemo, useRef } from 'react';

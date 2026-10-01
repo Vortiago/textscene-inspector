@@ -42,4 +42,4 @@ The lenient parser reads `directional_shadow_mode`, the three `directional_shado
 
 - **Approximated** The shadow's near edge shows more contrast here, where Godot's bright sky ambient washes it out.
 - **Approximated** Each shadowed DirectionalLight3D draws into a shadow atlas of its own, so in a scene with several of them a shadow is sharper than in Godot, which shares one atlas between them.
-- **Approximated** A caster more than one view-slice diameter towards the light casts no shadow. Godot flattens every such caster onto the shadow map's near plane, and three.js has no equivalent.
+- **Approximated** A caster more than one split's diameter towards the light casts no shadow into that split. The nearest split is the smallest, so a far caster's shadow can stop where the next split starts. Godot flattens every such caster onto the shadow map's near plane, and three.js has no equivalent.

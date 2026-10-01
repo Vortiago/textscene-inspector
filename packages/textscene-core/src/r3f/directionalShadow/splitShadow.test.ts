@@ -129,6 +129,15 @@ describe('DirectionalSplitShadow.updateMatrices', () => {
     expect(shadow.getFrustum(2).intersectsSphere(nothing)).toBe(false);
   });
 
+  it('rebuilds a split’s projection when three reverses the depth buffer (edge case)', () => {
+    const shadow = fittedShadow(viewingCamera(), 4);
+    const forwardDepth = shadow.getCamera(0).projectionMatrix.clone();
+    (shadow.camera as unknown as { _reversedDepth: boolean })._reversedDepth = true;
+    shadow.updateMatrices(new THREE.DirectionalLight());
+    expect(shadow.getCamera(0).reversedDepth).toBe(true);
+    expect(shadow.getCamera(0).projectionMatrix.equals(forwardDepth)).toBe(false);
+  });
+
   it('rolls every split camera by the up the fitter fits with (edge case)', () => {
     const shadow = new DirectionalSplitShadow();
     for (let slot = 0; slot < SPLIT_SLOTS; slot++) {
