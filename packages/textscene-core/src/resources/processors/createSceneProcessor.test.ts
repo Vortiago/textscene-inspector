@@ -178,9 +178,9 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
     });
 
     it('refuses a run of CRLF comment lines in linear time', async () => {
-      // A `;` comment that may swallow the `\r` before its `\n` gives the header
-      // pattern two ways to read each line, so its time doubled with each line: about
-      // a second at this length. The linear reading takes well under a millisecond.
+      // A `;` comment that may swallow the `\r` before its `\n` gives each line two
+      // readings, so the match time doubles per line: about a second at this length.
+      // One reading per line keeps it well under a millisecond.
       const commentLines = 28;
       const refused = new Promise<Error | undefined>((resolve) =>
         eventBus.on<Error>('scene', 'failed', (_id, error) => resolve(error))

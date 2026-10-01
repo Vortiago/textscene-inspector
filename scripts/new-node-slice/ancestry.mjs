@@ -49,10 +49,9 @@ function catalogChain(typeName, fallback = []) {
 }
 
 /**
- * Path from `sliceDir` to the linterParser that registers the nearest registering Godot ancestor,
- * so a test that imports only `./linterParser` sees inherited keys. Chaining to `base/node3d` past
- * a `RigidBody3D` parent would skip its validators. A scan for each ancestor's `registerAll` or
- * `registerUnavailable` call also finds an abstract tier (`physics/shared`). With no registering
+ * Path from `sliceDir` to the linterParser of the nearest registering Godot ancestor, so a test that
+ * imports only `./linterParser` sees inherited keys: `base/node3d` past a `RigidBody3D` would skip
+ * its validators. The scan also finds an abstract tier (`physics/shared`). With no registering
  * ancestor, it returns the `--base` slice.
  */
 export function parentLinterParser(typeName, parentType, sliceDir, fallback) {
@@ -75,22 +74,19 @@ export function parentLinterParser(typeName, parentType, sliceDir, fallback) {
   return fallback;
 }
 
+/** The local name one import specifier binds: `type X as Y` binds `Y`. */
+function boundName(specifier) {
+  const unmodified = specifier.trim().replace(/^type\s+/, '');
+  return unmodified.split(/\s+as\s+/).at(-1);
+}
+
 /**
  * The module specifier `src` imports the name `local` from, if it does. It reads both
  * `import type { X }` and the inline modifier in a value import (`import { Mode, type X }`).
  */
 function importSourceOf(src, local) {
   for (const [, names, from] of src.matchAll(/import\s+(?:type\s+)?\{([^}]*)\}\s*from\s*'([^']+)'/g)) {
-    const bound = names
-      .split(',')
-      .map((n) =>
-        n
-          .trim()
-          .replace(/^type\s+/, '')
-          .split(/\s+as\s+/)
-          .at(-1)
-      )
-      .filter(Boolean);
+    const bound = names.split(',').map(boundName).filter(Boolean);
     if (bound.includes(local)) return from;
   }
   return undefined;

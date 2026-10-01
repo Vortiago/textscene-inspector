@@ -5,7 +5,7 @@
 
 /**
  * A file whose change can break any check, so the push runs the full `pnpm validate`. A workflow
- * file is not one: no local check reads it, and CI runs it on the pull request.
+ * file is not one: locally only the format check reads it, and CI runs it on the pull request.
  */
 const TOOLCHAIN =
   /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|eslint\.config\.js|prettier\.config\.mjs|\.prettierignore|lint-staged\.config\.mjs|vitest\.(?:config|shared)\.ts|githooks\/.*)$|(?:^|\/)(?:package\.json|tsconfig[^/]*\.json|vitest\.config\.ts)$/;

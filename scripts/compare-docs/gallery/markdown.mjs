@@ -117,22 +117,21 @@ export function renderBody(body) {
   return out.join('\n');
 }
 
+/**
+ * One Markdown table row's cells, each rendered inline inside a `tag` element. The generator's own
+ * splitter: a cell carrying an escaped `|` is one cell on both sides, so a row cannot pass the sheet
+ * and still break the page.
+ */
+function tableCells(row, tag) {
+  return splitRow(row)
+    .map((cell) => `<${tag}>${inline(cell)}</${tag}>`)
+    .join('');
+}
+
 function renderTable(rows) {
-  // The generator's own splitter: a cell carrying an escaped `|` is one cell on
-  // both sides, so a row cannot pass the sheet and still break the page.
-  const cells = splitRow;
   const body = rows.filter((r) => !isDivider(r.trim()));
   const [head, ...rest] = body;
-  const th = cells(head)
-    .map((c) => `<th>${inline(c)}</th>`)
-    .join('');
-  const trs = rest
-    .map(
-      (r) =>
-        `<tr>${cells(r)
-          .map((c) => `<td>${inline(c)}</td>`)
-          .join('')}</tr>`
-    )
-    .join('');
+  const th = tableCells(head, 'th');
+  const trs = rest.map((r) => `<tr>${tableCells(r, 'td')}</tr>`).join('');
   return `<div class="tablewrap"><table><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table></div>`;
 }
