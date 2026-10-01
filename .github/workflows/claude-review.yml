@@ -1,0 +1,75 @@
+name: Claude review
+
+# Claude reviews a pull request against REVIEW.md and posts only findings that clear its bar.
+# It authenticates with a Claude subscription token from `claude setup-token`, not an API key,
+# so a review spends subscription usage and no API credit.
+#
+# A review spends the repository owner's usage, so only the owner starts one:
+# - The owner's own pull request gets one review when it is ready, not one per push.
+# - The owner comments `/claude-review` on any pull request, a fork's included, to ask for a
+#   review or for another one.
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    name: Review
+    # A fork's pull_request run gets no secrets, and a comment run reads this file from the
+    # default branch, so a pull request cannot start a review by editing this condition.
+    if: >-
+      (github.event_name == 'pull_request' &&
+       !github.event.pull_request.draft &&
+       github.event.pull_request.user.login == github.repository_owner) ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       github.event.comment.user.login == github.repository_owner &&
+       startsWith(github.event.comment.body, '/claude-review'))
+    # A second request for the same pull request cancels the review still in progress. The
+    # group sits on the job, so a skipped run, such as another comment, cancels nothing.
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: write
+      # The action exchanges the OIDC token for a Claude GitHub App token.
+      id-token: write
+    steps:
+      # The owner's own pull request checks out its head. A comment run checks out the default
+      # branch, so a fork's code never reaches the runner, and the diff is the only copy.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event.repository.default_branch }}
+          fetch-depth: 1
+
+      # Inline comments carry `confirmed: true` because the classifier that filters buffered
+      # comments needs an API key, which this workflow does not have.
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+
+            The working directory holds ${{ github.event_name == 'pull_request' && 'the pull request head' || 'the default branch, not the pull request. The new code exists only in `gh pr diff`' }}.
+
+            1. Read REVIEW.md. It is the bar for this review, and it overrides any default
+               review habit you have.
+            2. Read AGENTS.md for the project conventions that REVIEW.md refers to.
+            3. Read the diff with `gh pr diff`. Read the description and the earlier comments
+               with `gh pr view --comments`.
+            4. For each finding that clears the bar in REVIEW.md, post one inline comment with
+               `mcp__github_inline_comment__create_inline_comment` and `confirmed: true`.
+            5. Post one summary comment with `gh pr comment`, in the shape REVIEW.md gives.
+
+            Post only GitHub comments. Do not submit review text as a message.
+          claude_args: |
+            --allowedTools "Read,Glob,Grep,mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
