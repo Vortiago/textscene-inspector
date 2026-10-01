@@ -75,7 +75,9 @@ export const CANVAS_2D_TESTIDS = {
  */
 export const CANVAS_CAPTURE = { width: 955, height: 756 };
 export const NETWORK_IDLE_MS = 20000; // Ceiling for the app's own resource chain to go quiet.
-export const SETTLE_INITIAL_MS = 1200; // Covers the last CameraFit reframe at 1100 ms.
+// Covers CameraFit's last fit timer at 1100 ms. Its fit on a loader settle can come later, and
+// changes the frame, so the convergence loop below waits that one out.
+export const SETTLE_INITIAL_MS = 1200;
 // Convergence, the frames until the picture stops changing, may differ per side: Godot steps a
 // fixed count of process frames, and ours captures until two are byte-identical.
 export const SETTLE_INTERVAL_MS = 350;
