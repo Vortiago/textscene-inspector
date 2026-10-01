@@ -19,7 +19,7 @@ import { isNilLiteral } from '../godot/index.js';
  * `Variant()`, which every `Ref<T>` setter takes. `createResourceReferenceValidator`
  * holds the format half of the same rule.
  */
-export function isClearedResource(resourceRef: string | undefined): boolean {
+function isClearedResource(resourceRef: string | undefined): boolean {
   return resourceRef !== undefined && isNilLiteral(resourceRef);
 }
 

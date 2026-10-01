@@ -14,6 +14,7 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
+import { wallQuadSurfaces } from '../../../resources/testing/arrayMeshSurfaces';
 import type {
   TscnExternalResource,
   TscnInternalResource,
@@ -113,18 +114,6 @@ describe('scene material texture slots past surface 0', () => {
   });
 });
 
-/** A quad's worth of surface bytes, copied from the ArrayMesh override fixtures. */
-const QUAD_BODY = `"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
-"attribute_data": PackedByteArray("AAAAAAAAgD4AAIA+AACAPgAAgD4AAAAAAAAAAAAAAAA="),
-"format": 34359742487,
-"index_count": 6,
-"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 4,
-"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA//3//f////7//f/9/////v/9//3////+//3//f////78=")`;
-
-
 describe('inline ArrayMesh surfaces resolve their scene material\'s textures', () => {
   it('binds albedo_texture on a surface whose material is a scene sub-resource', async () => {
     const fake = createFakeResourceLoader();
@@ -137,7 +126,7 @@ describe('inline ArrayMesh surfaces resolve their scene material\'s textures', (
         id: 'Mesh_1',
         type: 'ArrayMesh',
         data: {
-          _surfaces: `[{\n${QUAD_BODY},\n"material": SubResource("Mat_tex"),\n"name": "s0"\n}]`,
+          _surfaces: wallQuadSurfaces({ material: 'SubResource("Mat_tex")', name: 's0' }),
         },
       },
       {

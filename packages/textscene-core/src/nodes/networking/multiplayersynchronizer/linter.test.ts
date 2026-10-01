@@ -8,10 +8,13 @@ import { describe, expect, it } from 'vitest';
 import { StrictTscnParser } from '../../../linter/StrictTscnParser';
 import { readFixture } from '../../../linter/testing/fixtureCheck';
 import { multiplayerSynchronizerRootPathRule } from './linter';
+import { reportsOf } from '../../../linter/testing/tierLists';
 import './linterParser';
 
+const RULE = 'multiplayersynchronizer-root-path-dangling';
+
 /** Every diagnostic the rule reports for the MultiplayerSynchronizer in `content`. */
-function warningsFor(content: string) {
+function diagnosticsFor(content: string) {
   const { scene } = new StrictTscnParser().parse(content);
   if (!scene) throw new Error('fixture failed to parse');
   const node = scene.nodes[0]?.children.find((child) => child.type === 'MultiplayerSynchronizer');
@@ -33,28 +36,26 @@ ${body}
 
 describe('MultiplayerSynchronizer root_path rule', () => {
   it('stays silent when root_path is absent (default is NodePath(".."), not empty)', () => {
-    expect(warningsFor(scene(''))).toEqual([]);
+    expect(reportsOf(diagnosticsFor(scene('')), RULE, 'warning')).toEqual([]);
   });
 
   it('stays silent on an explicit NodePath("..") — the same relative escape as the default', () => {
-    expect(warningsFor(scene('root_path = NodePath("..")\n'))).toEqual([]);
+    expect(reportsOf(diagnosticsFor(scene('root_path = NodePath("..")\n')), RULE, 'warning')).toEqual([]);
   });
 
   it('stays silent when root_path resolves to a real node', () => {
-    expect(warningsFor(scene('root_path = NodePath("SyncTarget")\n'))).toEqual([]);
+    expect(reportsOf(diagnosticsFor(scene('root_path = NodePath("SyncTarget")\n')), RULE, 'warning')).toEqual([]);
   });
 
   it('warns when root_path names no node in this file', () => {
-    const warnings = warningsFor(scene('root_path = NodePath("NoSuchNode")\n'));
+    const warnings = reportsOf(diagnosticsFor(scene('root_path = NodePath("NoSuchNode")\n')), RULE, 'warning');
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]?.severity).toBe('warning');
-    expect(warnings[0]?.ruleName).toBe('multiplayersynchronizer-root-path-dangling');
     expect(warnings[0]?.message).toContain('NoSuchNode');
   });
 
   it('leaves the committed fixture warning-free', () => {
     // expectFixtureClean runs validators only; rules never reach it. This is
     // the half of the fixture's "zero warnings" claim nothing else checks.
-    expect(warningsFor(readFixture('unit-multiplayer-synchronizer.tscn'))).toEqual([]);
+    expect(reportsOf(diagnosticsFor(readFixture('unit-multiplayer-synchronizer.tscn')), RULE, 'warning')).toEqual([]);
   });
 });

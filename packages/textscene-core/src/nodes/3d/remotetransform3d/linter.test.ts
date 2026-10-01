@@ -9,10 +9,13 @@ import { describe, expect, it } from 'vitest';
 import { StrictTscnParser } from '../../../linter/StrictTscnParser';
 import { readFixture } from '../../../linter/testing/fixtureCheck';
 import { remoteTransform3DValidationRule } from './linter';
+import { reportsOf } from '../../../linter/testing/tierLists';
 import './linterParser';
 
+const RULE = 'remotetransform3d-invalid-remote-path';
+
 /** Every diagnostic the rule reports for the RemoteTransform3D in `content`. */
-function warningsFor(content: string) {
+function diagnosticsFor(content: string) {
   const { scene } = new StrictTscnParser().parse(content);
   if (!scene) throw new Error('fixture failed to parse');
   const node = scene.nodes[0]?.children.find((child) => child.type === 'RemoteTransform3D');
@@ -36,46 +39,45 @@ ${body}`;
 
 describe('RemoteTransform3D remote_path rule', () => {
   it('warns when remote_path is absent (remote_transform_3d.h:38 default is NodePath())', () => {
-    const warnings = warningsFor(scene(''));
+    const warnings = reportsOf(diagnosticsFor(scene('')), RULE, 'warning');
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]?.severity).toBe('warning');
-    expect(warnings[0]?.ruleName).toBe('remotetransform3d-invalid-remote-path');
   });
 
   it('warns on an explicit empty NodePath, same as the default', () => {
-    expect(warningsFor(scene('remote_path = NodePath("")\n'))).toHaveLength(1);
+    expect(reportsOf(diagnosticsFor(scene('remote_path = NodePath("")\n')), RULE, 'warning')).toHaveLength(1);
   });
 
   it('stays silent when remote_path resolves to a Node3D', () => {
     // `../`, because a sibling is not a child: `get_node_or_null` walks
     // `data.children.getptr(name)` from the RemoteTransform3D itself
     // (node.cpp:1941), which is also the form the inspector writes.
-    expect(warningsFor(scene('remote_path = NodePath("../Target")\n'))).toEqual([]);
+    expect(reportsOf(diagnosticsFor(scene('remote_path = NodePath("../Target")\n')), RULE, 'warning')).toEqual([]);
   });
 
   it('warns on a bare sibling name, which resolves to nothing from this node', () => {
-    const warnings = warningsFor(scene('remote_path = NodePath("Target")\n'));
+    const warnings = reportsOf(diagnosticsFor(scene('remote_path = NodePath("Target")\n')), RULE, 'warning');
     expect(warnings).toHaveLength(1);
     expect(warnings[0]?.message).toContain('Target');
   });
 
   it('warns when remote_path names no node in this file', () => {
-    const warnings = warningsFor(scene('remote_path = NodePath("NoSuchNode")\n'));
+    const warnings = reportsOf(diagnosticsFor(scene('remote_path = NodePath("NoSuchNode")\n')), RULE, 'warning');
     expect(warnings).toHaveLength(1);
     expect(warnings[0]?.message).toContain('NoSuchNode');
   });
 
   it('warns when remote_path resolves to a node that is not a Node3D', () => {
-    const warnings = warningsFor(scene('remote_path = NodePath("../NotSpatial")\n'));
+    const warnings = reportsOf(diagnosticsFor(scene('remote_path = NodePath("../NotSpatial")\n')), RULE, 'warning');
     expect(warnings).toHaveLength(1);
     expect(warnings[0]?.message).toContain('Node');
   });
 
   it('stays silent on an escaping relative path rather than guessing', () => {
-    expect(warningsFor(scene('remote_path = NodePath("../../Elsewhere")\n'))).toEqual([]);
+    const content = scene('remote_path = NodePath("../../Elsewhere")\n');
+    expect(reportsOf(diagnosticsFor(content), RULE, 'warning')).toEqual([]);
   });
 
   it('leaves the committed fixture warning-free', () => {
-    expect(warningsFor(readFixture('unit-remote-transform-3d.tscn'))).toEqual([]);
+    expect(reportsOf(diagnosticsFor(readFixture('unit-remote-transform-3d.tscn')), RULE, 'warning')).toEqual([]);
   });
 });

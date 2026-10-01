@@ -8,6 +8,7 @@
 import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { stripComments } from '@textscene/dev-kit';
 import { lint, node, scene, subResource } from './testing/testkit.js';
 import { allSourceFiles, srcRoot } from './testing/ruleNameScrape.js';
 import '../linter/index.js';
@@ -282,12 +283,30 @@ function shapeOf(content: string): string[] {
 
 /** Where the predicates live: its own calls are the definition, not a slot. */
 const PREDICATE_MODULE = 'linter/resourceChecker.ts';
-const HELPER_CALL_RE = /\b(?:resourceSlotIsEmpty|heldResource|resolveResourceSlot)\(([^()]*)\)/g;
+
+/**
+ * Every function the module exports over a raw slot value, which is a parameter named `resourceRef`. Derived, not
+ * listed: a hand-written roster misses the predicate it forgets, and a new one is swept the day it is written.
+ */
+function slotPredicates(): string[] {
+  const source = stripComments(readFileSync(join(srcRoot, PREDICATE_MODULE), 'utf8'));
+  return [...source.matchAll(/\bexport function (\w+)\s*\(([^)]*)\)/g)]
+    .filter(([, , params]) => /\bresourceRef\b/.test(params!))
+    .map(([, name]) => name!)
+    .sort();
+}
+
+const PREDICATES = slotPredicates().join('|');
+const HELPER_CALL_RE = new RegExp(`\\b(?:${PREDICATES})\\(([^()]*)\\)`, 'g');
 /** The same calls counted without their argument, so one the pair above cannot bracket is still seen. */
-const HELPER_OPENER_RE = /\b(?:resourceSlotIsEmpty|heldResource|resolveResourceSlot)\(/g;
+const HELPER_OPENER_RE = new RegExp(`\\b(?:${PREDICATES})\\(`, 'g');
 const DOT_KEY_RE = /\.([A-Za-z_$][\w$]*)\s*$/;
 const QUOTED_KEY_RE = /\[\s*['"]([^'"]+)['"]\s*\]\s*$/;
 const COMPUTED_KEY_RE = /\[\s*([A-Za-z_$][\w$]*)\s*\]\s*$/;
+/** A local passed as the slot argument, alone or after the scene: `script` or `scene, script`. */
+const BARE_LOCAL_RE = /(?:^|,)\s*([A-Za-z_$][\w$]*)\s*$/;
+/** An initialiser that is one predicate call, such as `heldResource(rawProps.script)`: its argument names the slot. */
+const WRAPPED_READ_RE = new RegExp(`^\\s*(?:${PREDICATES})\\(([^()]*)\\)\\s*$`);
 /** A `.tscn` property key, which is how a resolved literal is told from a stray one. */
 const PROPERTY_KEY_RE = /^[a-z][a-z0-9_]*$/;
 
@@ -309,11 +328,23 @@ function keyLiterals(expression: string): string[] {
 }
 
 /**
+ * The property keys a predicate's argument names: a property read (`rawProps.shape`,
+ * `rawProps['shape']`), a computed key, or a local bound to either.
+ */
+function keysOf(source: string, argument: string, hops = 0): string[] {
+  const literal = DOT_KEY_RE.exec(argument) ?? QUOTED_KEY_RE.exec(argument);
+  if (literal) return [literal[1]!];
+  const identifier = (COMPUTED_KEY_RE.exec(argument) ?? BARE_LOCAL_RE.exec(argument))?.[1];
+  return identifier ? keysBehind(source, identifier, hops) : [];
+}
+
+/**
  * The property keys a source-level identifier stands for.
  *
  * Follows the binding back to the literals: a `const` whose initialiser holds them
- * (an array of keys, or a ternary between two), or a name bound over such a const by
- * a `for`-`of` or an array callback, one derivation at a time.
+ * (an array of keys, or a ternary between two), one predicate call over a property
+ * read, or a name bound over such a const by a `for`-`of` or an array callback, one
+ * derivation at a time.
  */
 function keysBehind(source: string, identifier: string, hops = 0): string[] {
   if (hops > 3) return [];
@@ -321,6 +352,8 @@ function keysBehind(source: string, identifier: string, hops = 0): string[] {
   if (initialiser !== undefined) {
     const literals = keyLiterals(initialiser);
     if (literals.length > 0) return literals;
+    const wrapped = WRAPPED_READ_RE.exec(initialiser)?.[1];
+    if (wrapped !== undefined) return keysOf(source, wrapped.trim(), hops + 1);
     // Derived from another list, for example `KEYS.filter(...)`: follow the receiver.
     const receiver = /^\s*(\w+)\s*\./.exec(initialiser)?.[1];
     return receiver ? keysBehind(source, receiver, hops + 1) : [];
@@ -346,10 +379,7 @@ function sweptSlots(): { slots: string[]; unreadable: string[] } {
     let bracketed = 0;
     for (const [call, rawArg] of source.matchAll(HELPER_CALL_RE)) {
       bracketed++;
-      const arg = rawArg!.trim();
-      const literal = DOT_KEY_RE.exec(arg) ?? QUOTED_KEY_RE.exec(arg);
-      const computed = COMPUTED_KEY_RE.exec(arg);
-      const keys = literal ? [literal[1]!] : computed ? keysBehind(source, computed[1]!) : [];
+      const keys = keysOf(source, rawArg!.trim());
       if (keys.length === 0) unreadable.push(`${file}: ${call}`);
       for (const key of keys) slots.add(`${file} ${key}`);
     }
@@ -379,6 +409,17 @@ describe('an explicitly cleared resource slot reads as an empty one', () => {
 
   // One scan for both assertions: it reads every source file in the package.
   const swept = sweptSlots();
+
+  it('derives the predicates from the module, so the one a roster would forget is swept too', () => {
+    expect(slotPredicates()).toEqual(
+      expect.arrayContaining(['checkResourceExists', 'heldResource', 'resolveResourceSlot', 'resourceSlotIsEmpty'])
+    );
+  });
+
+  it('follows a local back through the predicate call that bound it', () => {
+    const source = 'const script = heldResource(rawProps.script);\nif (!checkResourceExists(scene, script)) {}';
+    expect(keysOf(source, 'scene, script')).toEqual(['script']);
+  });
 
   it('answers for every slot the shared predicates are asked about', () => {
     const rows = [...new Set(SLOTS.map((s) => `${s.site} ${s.prop}`))].sort();

@@ -35,7 +35,7 @@ enforcement and enforce nothing.
 Two taxonomies are in play, with different names. A **bound tier** is what a property's
 bound may produce: **error**, **warning** or **nothing**. A **severity** is what a
 reported diagnostic carries: `error`, `warning` or `info` (the `Severity` type in
-`linter/types.ts`, the one CONTEXT.md defines). A bound tier never produces an `info`.
+`linter/types.ts`, the one GLOSSARY.md defines). A bound tier never produces an `info`.
 `info` exists only as a severity, fixed by a rule's `EmitGrounding` kind (see "How it is
 enforced").
 

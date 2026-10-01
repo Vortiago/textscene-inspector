@@ -28,34 +28,47 @@ function state(material: MaterialTextureState = {}) {
   return { ...material, colorSpace: THREE.NoColorSpace };
 }
 
+/**
+ * A texture already carrying the default binding's Repeat wrapping. A case about
+ * UV, filter or colour space starts from here so it isolates that reason and not
+ * the wrap: a default material tiles, so a clamped arrival would clone for
+ * wrapping before any of these reasons were reached.
+ */
+function tiling(): THREE.Texture {
+  const texture = new THREE.Texture();
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  return texture;
+}
+
 describe('applyTextureState', () => {
   describe('no divergence', () => {
     it('returns the original reference when nothing diverges', () => {
       // Repeat wrapping is Godot's default, so a texture already carrying it
       // needs nothing of its own.
-      const texture = new THREE.Texture();
+      const texture = tiling();
       expect(applyTextureState(texture, state({}))).toBe(texture);
     });
 
     it("returns the original for Godot's default filter, which is three's state already", () => {
-      const texture = new THREE.Texture();
+      const texture = tiling();
       expect(applyTextureState(texture, state({ filter: 3 }))).toBe(texture);
       expect(applyTextureState(texture, state({ filter: undefined }))).toBe(texture);
     });
 
     it('returns the original for an identity UV transform', () => {
-      const texture = new THREE.Texture();
+      const texture = tiling();
       expect(applyTextureState(texture, state({ uv: uv(1, 1) }))).toBe(texture);
     });
 
     it('treats values within the 1e-6 epsilon as identity', () => {
-      const texture = new THREE.Texture();
+      const texture = tiling();
       const result = applyTextureState(texture, state({ uv: uv(1 + 5e-7, 1 - 5e-7, 5e-7, -5e-7) }));
       expect(result).toBe(texture);
     });
 
     it('mutates nothing on the pass-through path', () => {
-      const texture = new THREE.Texture();
+      const texture = tiling();
       applyTextureState(texture, state({ uv: uv(1, 1), filter: 3 }));
       expect(texture.repeat.x).toBe(1);
       expect(texture.version).toBe(0);
@@ -133,7 +146,7 @@ describe('applyTextureState', () => {
 
     it('does not clone merely because the source diverges from Godot\'s default', () => {
       // An unauthored `texture_filter` means "no opinion", not "force row 3".
-      const texture = new THREE.Texture();
+      const texture = tiling();
       texture.minFilter = THREE.LinearFilter;
       texture.generateMipmaps = false;
 
@@ -144,15 +157,44 @@ describe('applyTextureState', () => {
   });
 
   describe('texture_repeat', () => {
-    it('does not clone for the default, which the loader already applied', () => {
-      // BaseMaterial3D constructs with FLAG_USE_TEXTURE_REPEAT = true, so repeat
-      // is set once on the loaded texture. Cloning for it would break texture
-      // identity for nearly every material.
+    it('clones a clamped arrival to Repeat for the default, Godot\'s repeat', () => {
+      // The loader ships three's clamp default. A default material asks for
+      // Repeat (`BaseMaterial3D` FLAG_USE_TEXTURE_REPEAT = true), so the binding
+      // clones to tile it, which guards against terrain stripes. The shared entry
+      // stays clamp for a 2D consumer of the same path.
       const texture = new THREE.Texture();
-      expect(applyTextureState(texture, state({}))).toBe(texture);
+      const result = applyTextureState(texture, state({}));
+
+      expect(result).not.toBe(texture);
+      expect(result.wrapS).toBe(THREE.RepeatWrapping);
+      expect(result.wrapT).toBe(THREE.RepeatWrapping);
+      expect(texture.wrapS).toBe(THREE.ClampToEdgeWrapping);
+      expect(texture.wrapT).toBe(THREE.ClampToEdgeWrapping);
     });
 
-    it('clones only when a material turns repeat OFF', () => {
+    it('clones a clamped arrival to Repeat when repeat is authored true', () => {
+      const texture = new THREE.Texture();
+      const result = applyTextureState(texture, state({ repeat: true }));
+      expect(result.wrapS).toBe(THREE.RepeatWrapping);
+      expect(result.wrapT).toBe(THREE.RepeatWrapping);
+    });
+
+    it('shares an already-Repeat texture for the default, as nothing diverges', () => {
+      const texture = new THREE.Texture();
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      expect(applyTextureState(texture, state({}))).toBe(texture);
+      expect(applyTextureState(texture, state({ repeat: true }))).toBe(texture);
+    });
+
+    it('shares a clamped texture when a material turns repeat OFF', () => {
+      // Clamp is what the entry already carries, so `repeat = false` asks for
+      // nothing: the loader's own texture comes straight back.
+      const texture = new THREE.Texture();
+      expect(applyTextureState(texture, state({ repeat: false }))).toBe(texture);
+    });
+
+    it('clones to clamp when a material turns repeat OFF on a Repeat texture', () => {
       const texture = new THREE.Texture();
       texture.wrapS = THREE.RepeatWrapping;
       texture.wrapT = THREE.RepeatWrapping;
@@ -229,7 +271,7 @@ describe('applyTextureState', () => {
 
   describe('colour space', () => {
     it('returns the original when the tag already matches the binding', () => {
-      const texture = new THREE.Texture();
+      const texture = tiling();
       texture.colorSpace = THREE.SRGBColorSpace;
       expect(applyTextureState(texture, { colorSpace: THREE.SRGBColorSpace })).toBe(texture);
     });

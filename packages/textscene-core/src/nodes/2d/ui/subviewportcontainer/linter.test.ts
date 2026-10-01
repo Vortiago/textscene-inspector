@@ -149,7 +149,7 @@ size = Vector2i(200, 150)
     });
 
     it('stays silent when a child is an instance — the file cannot see inside it', () => {
-      // Instance-opaque linting (CONTEXT.md): the instanced sub-scene's root may be a SubViewport,
+      // Instance-opaque linting (GLOSSARY.md): the instanced sub-scene's root may be a SubViewport,
       // and the linter never resolves across an instance boundary.
       expectNoDiagnostic(
         `[gd_scene format=3]
