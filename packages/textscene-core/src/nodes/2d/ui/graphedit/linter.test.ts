@@ -42,7 +42,7 @@ describe('GraphEdit zoom-limit rule', () => {
     // Both values parse, so this is no format failure. It is the ADR-0032 error tier:
     // set_zoom_min and set_zoom_max guard against each other, so the second write is
     // dropped and that limit keeps its constructor default.
-    expect(diagnose('zoom_min = 4.0\nzoom_max = 0.25\n')[0]!.severity).toBe('error');
+    expect(diagnose('zoom_min = 4.0\nzoom_max = 0.25\n')[0]).toBeAtTier('error');
   });
 
   it('stays silent on an equal pair, which both guards permit', () => {
@@ -112,7 +112,7 @@ describe('GraphEdit scroll_offset rule', () => {
     // scroll_offset is PROPERTY_HINT_NONE (graph_edit.cpp:3069) and the setter has no ERR_FAIL.
     // The clamp reads load state no child has filled: `engine-inert`, which severityFixedBy
     // pins at info.
-    expect(diagnose(`${SIZED_400_320}scroll_offset = Vector2(32, 16)\n`)[0]!.severity).toBe('info');
+    expect(diagnose(`${SIZED_400_320}scroll_offset = Vector2(32, 16)\n`)[0]).toBeAtTier('info');
   });
 
   it('reports a negative authored offset, which the min branch sends to (0, 0)', () => {

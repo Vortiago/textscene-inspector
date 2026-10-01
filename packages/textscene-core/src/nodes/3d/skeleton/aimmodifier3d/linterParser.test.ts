@@ -81,7 +81,7 @@ describe('AimModifier3D strict validators', () => {
     it('errors below zero, the floor its setter refuses', () => {
       // bone_constraint_3d.cpp:131, ERR_FAIL_COND(p_count < 0).
       const error = check('setting_count', '-1');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_SETTING_COUNT_VALUE');
     });
 
@@ -101,9 +101,9 @@ describe('AimModifier3D strict validators', () => {
       // aim_modifier_3d.cpp:91 hints "+X,-X,+Y,-Y,+Z,-Z", and set_forward_axis
       // (aim_modifier_3d.cpp:117) assigns straight through.
       const above = check('settings/0/forward_axis', '6');
-      expect(above?.severity).toBe('warning');
+      expect(above).toBeAtTier('warning');
       const below = check('settings/0/forward_axis', '-1');
-      expect(below?.severity).toBe('warning');
+      expect(below).toBeAtTier('warning');
     });
 
     it('rejects a non-integer', () => {
@@ -121,7 +121,7 @@ describe('AimModifier3D strict validators', () => {
     it('warns past the hint, which no setter enforces', () => {
       // aim_modifier_3d.cpp:93 hints "X,Y,Z", and set_primary_rotation_axis
       // (aim_modifier_3d.cpp:144) assigns straight through.
-      expect(check('settings/1/primary_rotation_axis', '3')?.severity).toBe('warning');
+      expect(check('settings/1/primary_rotation_axis', '3')).toBeAtTier('warning');
     });
 
     it('rejects a non-integer', () => {
@@ -138,7 +138,7 @@ describe('AimModifier3D strict validators', () => {
     });
 
     it('rejects anything else', () => {
-      expect(check(`settings/2/${leaf}`, 'maybe')?.severity).toBe('error');
+      expect(check(`settings/2/${leaf}`, 'maybe')).toBeAtTier('error');
     });
   });
 
@@ -154,8 +154,8 @@ describe('AimModifier3D strict validators', () => {
       // `amount` is BoneConstraint3D's (bone_constraint_3d.cpp:102), and this dispatcher shadows the
       // base's registration for this type, so it forwards. Accepting the key unconditionally would
       // make `settings/0/amount = 5` legal here while a plain BoneConstraint3D bounds it to 0..1.
-      expect(check('settings/0/amount', 'definitely-not-a-float')?.severity).toBe('error');
-      expect(check('settings/0/amount', '5')?.severity).toBe('warning');
+      expect(check('settings/0/amount', 'definitely-not-a-float')).toBeAtTier('error');
+      expect(check('settings/0/amount', '5')).toBeAtTier('warning');
       expect(check('settings/0/amount', '0.5')).toBeNull();
     });
   });
@@ -168,7 +168,7 @@ describe('AimModifier3D strict validators', () => {
     it('rejects a negative index, which the setter refuses outright', () => {
       // aim_modifier_3d.cpp:40, ERR_FAIL_INDEX_V(which, settings.size(), false).
       const error = check('settings/-1/relative', 'true');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_SETTING_INDEX');
     });
 

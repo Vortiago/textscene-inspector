@@ -16,6 +16,7 @@ import { fixturesDir, flatten, repoRoot } from '../../parser/testing/parserKit';
 import { nodeRegistry } from '../../core/NodeRegistry';
 import { Linter } from '../../linter/Linter';
 import { nodeComponentRegistry } from '../../r3f/NodeComponentRegistry';
+import { errorsOf } from '../../linter/testing/tierLists';
 import '../../r3f/nodes'; // side-effect: registers every node's r3f component
 
 // A minimal 4.7-style scene using an AreaLight3D with base-light properties set.
@@ -75,7 +76,7 @@ describe('#126 AreaLight3D slice — behavioral contract (RED until shipped)', (
     expect(withArea.length, 'a scenes/fixtures/*.tscn must use AreaLight3D').toBeGreaterThan(0);
     const raw = readFileSync(resolve(dir, withArea[0] as string), 'utf8');
     expect(flatten(new TscnParser().parse(raw)).some((n) => n.type === 'AreaLight3D')).toBe(true);
-    const errors = new Linter().lint(raw).filter((d) => d.severity === 'error');
+    const errors = errorsOf(new Linter().lint(raw));
     expect(errors, `fixture ${withArea[0]} lints with errors: ${JSON.stringify(errors)}`).toHaveLength(0);
   });
 

@@ -15,6 +15,7 @@ import {
 } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
+import { errorsOf } from '../../../linter/testing/tierLists';
 
 /**
  * Resource definitions appended to accept-case scenes so the required `texture`
@@ -170,8 +171,8 @@ describe('Sprite2D Linter', () => {
         scene(node('Sprite2D', { texture: 'SubResource("nonexistent")' }, { name: 'MissingTexture' }))
       );
       expect(diagnostics).toHaveLength(1);
+      expect(diagnostics[0]).toBeAtTier('error');
       expect(diagnostics[0]).toMatchObject({
-        severity: 'error',
         nodeName: 'MissingTexture',
         nodeType: 'Sprite2D',
         ruleName: 'dangling-resource-reference',
@@ -580,7 +581,7 @@ describe('a fractional frame_coords component', () => {
     const validator = validatorRegistry.findValidator('Sprite2D', 'frame_coords')!;
     const diagnostic = validator('frame_coords', 'Vector2i(1.5, 2.5)', 1);
 
-    expect(diagnostic?.severity).toBe('warning');
+    expect(diagnostic).toBeAtTier('warning');
     expect(diagnostic?.message).toContain('1.5');
   });
 });
@@ -597,7 +598,7 @@ describe('Sprite2D frame_coords with a converted component no int32 holds', () =
       scene(node('Sprite2D', { hframes: 4, vframes: 3, frame_coords: 'Vector2(4294967295, 5)' }))
     );
     expect(diagnostics.filter((d) => d.ruleName === 'sprite2d-frame-coords-range')).toEqual([]);
-    expect(diagnostics.some((d) => d.severity === 'error' && d.message.includes('frame_coords'))).toBe(true);
+    expect(errorsOf(diagnostics).some((d) => d.message.includes('frame_coords'))).toBe(true);
   });
 
   it('still reports the row on the canonical spelling of the same digits', () => {

@@ -57,11 +57,11 @@ describe('OpenXRHand strict validators', () => {
     it('errors past HAND_MAX, which set_hand refuses via ERR_FAIL_INDEX', () => {
       // openxr_hand.cpp:84: ERR_FAIL_INDEX(p_hand, HAND_MAX) returns before the
       // assignment, so the stored value never changes: the enforced tier.
-      expect(check('hand', '2')?.severity).toBe('error');
+      expect(check('hand', '2')).toBeAtTier('error');
     });
 
     it('rejects a negative index', () => {
-      expect(check('hand', '-1')?.severity).toBe('error');
+      expect(check('hand', '-1')).toBeAtTier('error');
     });
   });
 
@@ -76,7 +76,7 @@ describe('OpenXRHand strict validators', () => {
 
     it('errors past MOTION_RANGE_MAX, refused by ERR_FAIL_INDEX', () => {
       // openxr_hand.cpp:100.
-      expect(check('motion_range', '2')?.severity).toBe('error');
+      expect(check('motion_range', '2')).toBeAtTier('error');
     });
   });
 
@@ -114,7 +114,7 @@ describe('OpenXRHand strict validators', () => {
 
     it('errors past SKELETON_RIG_MAX, refused by ERR_FAIL_INDEX', () => {
       // openxr_hand.cpp:136.
-      expect(check('skeleton_rig', '2')?.severity).toBe('error');
+      expect(check('skeleton_rig', '2')).toBeAtTier('error');
     });
   });
 
@@ -129,7 +129,7 @@ describe('OpenXRHand strict validators', () => {
 
     it('errors past BONE_UPDATE_MAX, refused by ERR_FAIL_INDEX', () => {
       // openxr_hand.cpp:146.
-      expect(check('bone_update', '2')?.severity).toBe('error');
+      expect(check('bone_update', '2')).toBeAtTier('error');
     });
   });
 

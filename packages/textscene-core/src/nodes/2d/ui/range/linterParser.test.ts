@@ -185,7 +185,7 @@ describe('Range.page, whose setter clamps rather than stores', () => {
 
   it('reports a negative page, which range.cpp:255 CLAMPs up to 0', () => {
     const error = page('-1');
-    expect(error?.severity).toBe('error');
+    expect(error).toBeAtTier('error');
     expect(error?.message).toContain('0');
   });
 

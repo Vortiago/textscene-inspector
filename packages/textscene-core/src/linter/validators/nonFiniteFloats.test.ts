@@ -68,7 +68,7 @@ describe('an ordinary float property', () => {
     const bounded = v.float('ratio', { min: 0, max: 1, hinted: 'x.cpp:1' });
     const diagnostic = bounded('ratio', 'inf', 1);
     expect(diagnostic?.code).toBe('INVALID_RATIO_VALUE');
-    expect(diagnostic?.severity).toBe('warning');
+    expect(diagnostic).toBeAtTier('warning');
   });
 
   it('reports nothing for nan against a bound, since every comparison is false', () => {
@@ -82,7 +82,7 @@ describe('a property whose setter guards is_finite', () => {
 
   it.each(NON_FINITE)('rejects %s as an error', (value) => {
     const diagnostic = guarded('icon_scale', value, 1);
-    expect(diagnostic?.severity).toBe('error');
+    expect(diagnostic).toBeAtTier('error');
     expect(diagnostic?.code).toBe('INVALID_ICON_SCALE_VALUE');
     expect(diagnostic?.message).toContain('finite');
   });
@@ -140,7 +140,7 @@ describe('a property whose setter guards is_finite', () => {
       enforced: { min: 'graph_edit.cpp:2465' },
       finite: 'graph_edit.cpp:2466',
     });
-    expect(step('zoom_step', 'inf', 1)?.severity).toBe('error');
+    expect(step('zoom_step', 'inf', 1)).toBeAtTier('error');
     expect(step('zoom_step', '1.2', 1)).toBeNull();
   });
 });
@@ -189,11 +189,11 @@ describe('a COMPOSITE literal with a non-finite component', () => {
     // without a bound. The message must not name the stored number: the C++
     // conversion is UB, so only the alteration is portable.
     const reported = v.vector2i('size')('size', `Vector2i(${value}, 8)`, 1);
-    expect(reported?.severity).toBe('error');
+    expect(reported).toBeAtTier('error');
     expect(reported?.message).not.toContain('2147483648');
 
     const bounded = v.vector2i('size', { min: 1, enforced: 'viewport.cpp:1120' });
-    expect(bounded('size', `Vector2i(${value}, 8)`, 1)?.severity).toBe('error');
+    expect(bounded('size', `Vector2i(${value}, 8)`, 1)).toBeAtTier('error');
   });
 });
 
@@ -235,7 +235,7 @@ describe('a composite with a per-COMPONENT bound', () => {
   it('reports inf against a hinted ceiling as a range problem, as the scalar path does', () => {
     const diagnostic = bounded('size', 'Vector3(inf, 1, 1)', 1);
     expect(diagnostic?.code).toBe('INVALID_SIZE_VALUE');
-    expect(diagnostic?.severity).toBe('warning');
+    expect(diagnostic).toBeAtTier('warning');
   });
 
   it('reports inf_neg under a floor the same way', () => {
@@ -256,7 +256,7 @@ describe('a composite with a per-COMPONENT bound', () => {
     // and `_to_int<int32_t>` narrows the double before the widening into this
     // Vector3 slot. The bound cannot see it, since NaN compares false.
     const reported = bounded('size', `Vector3i(${value}, 1, 1)`, 1);
-    expect(reported?.severity).toBe('error');
+    expect(reported).toBeAtTier('error');
     expect(reported?.code).toBe('INVALID_SIZE_VALUE');
     // UB on the float branch (variant.h:369-370), so the result is
     // architecture-specific and only the alteration is portable.
@@ -267,13 +267,13 @@ describe('a composite with a per-COMPONENT bound', () => {
     // Nothing writes `4294967296`; the engine holds the wrap of it, which is
     // the alteration tier and not a value this linter names.
     const reported = bounded('size', 'Vector3i(4294967296, 1, 1)', 1);
-    expect(reported?.severity).toBe('error');
+    expect(reported).toBeAtTier('error');
     expect(reported?.code).toBe('INVALID_SIZE_VALUE');
   });
 
   it('leaves an integer spelling every component fits to the bound', () => {
     // `Vector3i(4294967295, …)` is -1 to the engine, which is below the floor.
-    expect(bounded('size', 'Vector3i(4294967295, 1, 1)', 1)?.severity).toBe('warning');
+    expect(bounded('size', 'Vector3i(4294967295, 1, 1)', 1)).toBeAtTier('warning');
     expect(bounded('size', 'Vector3i(1, 1, 1)', 1)).toBeNull();
   });
 });
@@ -316,14 +316,14 @@ describe('a property whose setter guards is_nan alone', () => {
 
   it('rejects nan as an error', () => {
     const diagnostic = guarded('volume_db', 'nan', 1);
-    expect(diagnostic?.severity).toBe('error');
+    expect(diagnostic).toBeAtTier('error');
     expect(diagnostic?.code).toBe('INVALID_VOLUME_DB_VALUE');
     expect(diagnostic?.message).toContain('must not be NaN');
   });
 
   it.each(['inf', '-inf', 'inf_neg'])('reports %s at the hint tier, not as a refusal', (value) => {
     const diagnostic = guarded('volume_db', value, 1);
-    expect(diagnostic?.severity).toBe('warning');
+    expect(diagnostic).toBeAtTier('warning');
     expect(diagnostic?.message).toContain('between -80 and 24');
   });
 

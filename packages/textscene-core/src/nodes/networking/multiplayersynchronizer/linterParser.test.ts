@@ -89,15 +89,15 @@ describe('MultiplayerSynchronizer strict validators', () => {
   it('errors a negative replication_interval (enforced floor), warns above the 5s hint ceiling', () => {
     expect(check('replication_interval', '0')).toBeNull();
     expect(check('replication_interval', '5')).toBeNull();
-    expect(check('replication_interval', '-0.1')?.severity).toBe('error');
-    expect(check('replication_interval', '5.1')?.severity).toBe('warning');
+    expect(check('replication_interval', '-0.1')).toBeAtTier('error');
+    expect(check('replication_interval', '5.1')).toBeAtTier('warning');
   });
 
   it('errors a negative delta_interval (enforced floor), warns above the 5s hint ceiling', () => {
     expect(check('delta_interval', '0')).toBeNull();
     expect(check('delta_interval', '5')).toBeNull();
-    expect(check('delta_interval', '-0.1')?.severity).toBe('error');
-    expect(check('delta_interval', '5.1')?.severity).toBe('warning');
+    expect(check('delta_interval', '-0.1')).toBeAtTier('error');
+    expect(check('delta_interval', '5.1')).toBeAtTier('warning');
   });
 
   it('accepts a resource reference for replication_config', () => {
@@ -108,7 +108,7 @@ describe('MultiplayerSynchronizer strict validators', () => {
   it('warns visibility_update_mode outside its 0-2 enum (hinted, bare-assign setter)', () => {
     expect(check('visibility_update_mode', '0')).toBeNull();
     expect(check('visibility_update_mode', '2')).toBeNull();
-    expect(check('visibility_update_mode', '3')?.severity).toBe('warning');
+    expect(check('visibility_update_mode', '3')).toBeAtTier('warning');
   });
 
   it('accepts boolean literals for public_visibility and rejects anything else', () => {

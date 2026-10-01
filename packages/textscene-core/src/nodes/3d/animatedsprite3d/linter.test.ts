@@ -11,6 +11,7 @@ import type { TscnNode, TscnScene } from '../../../parser/types';
 import { danglingResourceDiagnostics } from '../../../linter/danglingResources';
 import './linterParser';
 import './linter';
+import { errorsOf, reportsOf } from '../../../linter/testing/tierLists';
 
 const RULE_NAME = 'valid-animatedsprite3d-properties';
 
@@ -49,12 +50,7 @@ describe('AnimatedSprite3D semantic rule', () => {
   describe('requires-spriteframes', () => {
     it('warns when sprite_frames is absent', () => {
       const diagnostics = lint({});
-      expect(diagnostics).toContainEqual(
-        expect.objectContaining({
-          severity: 'warning',
-          ruleName: 'animatedsprite3d-requires-spriteframes',
-        })
-      );
+      expect(reportsOf(diagnostics, 'animatedsprite3d-requires-spriteframes', 'warning')).not.toHaveLength(0);
     });
 
     it('stays quiet when sprite_frames is set', () => {
@@ -74,12 +70,7 @@ describe('AnimatedSprite3D semantic rule', () => {
       );
 
     it('errors when the reference names an id the file never declares', () => {
-      expect(dangling([])).toContainEqual(
-        expect.objectContaining({
-          severity: 'error',
-          ruleName: 'dangling-resource-reference',
-        })
-      );
+      expect(reportsOf(dangling([]), 'dangling-resource-reference', 'error')).not.toHaveLength(0);
     });
 
     it('stays quiet when the scene declares it', () => {
@@ -90,11 +81,8 @@ describe('AnimatedSprite3D semantic rule', () => {
   describe('animation-no-spriteframes', () => {
     it('errors when animation is set without sprite_frames, since Godot clears it', () => {
       const diagnostics = lint({ animation: '&"walk"' });
-      expect(diagnostics).toContainEqual(
-        expect.objectContaining({
-          severity: 'error',
-          ruleName: 'animatedsprite3d-animation-no-spriteframes',
-        })
+      expect(reportsOf(diagnostics, 'animatedsprite3d-animation-no-spriteframes', 'error')).not.toHaveLength(
+        0
       );
     });
 
@@ -126,7 +114,7 @@ describe('AnimatedSprite3D semantic rule', () => {
         expect(
           diagnostics.filter((d) => d.ruleName === 'animatedsprite3d-animation-no-spriteframes')
         ).toHaveLength(0);
-        expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0);
+        expect(errorsOf(diagnostics)).toHaveLength(0);
       }
     );
   });

@@ -15,12 +15,12 @@ describe('a boolean slot given a number', () => {
 
   it('warns that the stored value is not the written spelling', () => {
     const error = v.boolean('visible')('visible', '0', 1);
-    expect(error?.severity).toBe('warning');
+    expect(error).toBeAtTier('warning');
     expect(error?.message).toContain('false');
   });
 
   it('still refuses a spelling the slot does not convert', () => {
-    expect(v.boolean('visible')('visible', '"yes"', 1)?.severity).toBe('error');
+    expect(v.boolean('visible')('visible', '"yes"', 1)).toBeAtTier('error');
   });
 
   it('accepts the canonical spellings silently', () => {
@@ -75,7 +75,7 @@ describe('every int reader, given a boolean', () => {
     '%s warns that the stored value is not the spelling',
     (_at, validator, key, spelling, stored) => {
       const diagnostic = validator(key, spelling, 1);
-      expect(diagnostic?.severity).toBe('warning');
+      expect(diagnostic).toBeAtTier('warning');
       expect(diagnostic?.message).toContain(`stores ${stored}`);
     }
   );
@@ -84,9 +84,9 @@ describe('every int reader, given a boolean', () => {
     // 0 is inside `cast_shadow`'s 0-3 band and is a whole int, so nothing but
     // the conversion arm has anything to say about it.
     const castShadow = v.enumInt('cast_shadow', 0, 3, { 0: 'OFF', 1: 'ON', 2: 'DOUBLE', 3: 'SHADOWS' });
-    expect(castShadow('cast_shadow', 'false', 1)?.severity).toBe('warning');
-    expect(v.lenientInt('frame')('frame', 'false', 1)?.severity).toBe('warning');
-    expect(v.strictInt('frame')('frame', 'false', 1)?.severity).toBe('warning');
+    expect(castShadow('cast_shadow', 'false', 1)).toBeAtTier('warning');
+    expect(v.lenientInt('frame')('frame', 'false', 1)).toBeAtTier('warning');
+    expect(v.strictInt('frame')('frame', 'false', 1)).toBeAtTier('warning');
     // The written 0 is stored as 0, so the same slot is silent about it.
     expect(castShadow('cast_shadow', '0', 1)).toBeNull();
     expect(trimFlags('autowrap_trim_flags', '0', 1)).toBeNull();
@@ -96,7 +96,7 @@ describe('every int reader, given a boolean', () => {
     // `false` is 0, below `positiveInt`'s floor; `true` is bit 1, which the
     // trim mask drops. Both outrank the warning, exactly as a bound outranks
     // the fractional one.
-    expect(v.positiveInt('columns')('columns', 'false', 1)?.severity).toBe('error');
-    expect(trimFlags('autowrap_trim_flags', 'true', 1)?.severity).toBe('error');
+    expect(v.positiveInt('columns')('columns', 'false', 1)).toBeAtTier('error');
+    expect(trimFlags('autowrap_trim_flags', 'true', 1)).toBeAtTier('error');
   });
 });

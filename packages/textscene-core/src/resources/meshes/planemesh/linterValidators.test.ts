@@ -9,6 +9,7 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import { Linter } from '../../../linter/Linter';
 import { runResourcePropertyValidation } from '../../../linter/testing/testkit.js';
 import '../../../linter/index';
+import { errorsOf } from '../../../linter/testing/tierLists';
 
 runResourcePropertyValidation('PlaneMesh', [
   {
@@ -53,7 +54,7 @@ describe('PlaneMesh Linter Validators', () => {
       const result = validator!('flip_faces', 'yes', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
       expect(result!.message).toContain('must be a boolean (true or false)');
       expect(result!.code).toBe('INVALID_FLIP_FACES_FORMAT');
     });
@@ -63,7 +64,7 @@ describe('PlaneMesh Linter Validators', () => {
       const result = validator!('flip_faces', '1', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('warning');
+      expect(result).toBeAtTier('warning');
       expect(result!.message).toContain('converts');
       expect(result!.code).toBe('INVALID_FLIP_FACES_FORMAT');
     });
@@ -73,7 +74,7 @@ describe('PlaneMesh Linter Validators', () => {
       const result = validator!('flip_faces', '0', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('warning');
+      expect(result).toBeAtTier('warning');
     });
 
     it('should reject string "True" (wrong capitalization)', () => {
@@ -81,7 +82,7 @@ describe('PlaneMesh Linter Validators', () => {
       const result = validator!('flip_faces', 'True', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
       expect(result!.message).toContain('must be a boolean (true or false)');
     });
 
@@ -90,7 +91,7 @@ describe('PlaneMesh Linter Validators', () => {
       const result = validator!('flip_faces', 'FALSE', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
   });
 
@@ -143,7 +144,7 @@ flip_faces = yes
         (d) => d.message.includes('flip_faces') && d.message.includes('must be a boolean (true or false)')
       );
       expect(flipFacesErrors.length).toBeGreaterThan(0);
-      expect(flipFacesErrors[0]!.severity).toBe('error');
+      expect(flipFacesErrors[0]).toBeAtTier('error');
     });
 
     it('should detect numeric value used for flip_faces', () => {
@@ -160,7 +161,7 @@ flip_faces = 1
 
       const flipFacesErrors = diagnostics.filter((d) => d.message.includes('flip_faces'));
       expect(flipFacesErrors.length).toBeGreaterThan(0);
-      expect(flipFacesErrors[0]!.severity).toBe('warning');
+      expect(flipFacesErrors[0]).toBeAtTier('warning');
     });
 
     it('should validate PlaneMesh with multiple properties including flip_faces', () => {
@@ -179,7 +180,7 @@ flip_faces = true
       const linter = new Linter();
       const diagnostics = linter.lint(content);
 
-      expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0);
+      expect(errorsOf(diagnostics)).toHaveLength(0);
     });
 
     it('should detect a malformed size vector (parity with QuadMesh)', () => {
@@ -192,7 +193,7 @@ size = Vector2(10)
 `;
 
       const linter = new Linter();
-      const errors = linter.lint(content).filter((d) => d.severity === 'error');
+      const errors = errorsOf(linter.lint(content));
       expect(errors.some((d) => d.message.includes('size'))).toBe(true);
     });
 
@@ -210,7 +211,7 @@ flip_faces = True
 
       const flipFacesErrors = diagnostics.filter((d) => d.message.includes('flip_faces'));
       expect(flipFacesErrors.length).toBeGreaterThan(0);
-      expect(flipFacesErrors[0]!.severity).toBe('error');
+      expect(flipFacesErrors[0]).toBeAtTier('error');
     });
   });
 });

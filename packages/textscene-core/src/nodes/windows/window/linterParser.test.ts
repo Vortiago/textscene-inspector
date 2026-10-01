@@ -212,19 +212,19 @@ describe('Window strict validators', () => {
       // 0.1 loads and runs: the setter only refuses `<= 0` (window.cpp:1774),
       // so the hint's floor is the inspector's limit and warns.
       const warning = check('content_scale_factor', '0.1');
-      expect(warning?.severity).toBe('warning');
+      expect(warning).toBeAtTier('warning');
       expect(warning?.message).toContain('between 0.5 and 8');
     });
 
     it('warns above the hinted 8.0 ceiling rather than erroring', () => {
       // window.cpp:3466 states the ceiling and set_content_scale_factor never
       // checks it, so it is the inspector's limit, not the engine's.
-      expect(check('content_scale_factor', '20')?.severity).toBe('warning');
+      expect(check('content_scale_factor', '20')).toBeAtTier('warning');
     });
 
     it('rejects content_scale_factor at or below 0 — the one bound set_content_scale_factor (window.cpp:1774) actually enforces', () => {
-      expect(check('content_scale_factor', '0')?.severity).toBe('error');
-      expect(check('content_scale_factor', '-1')?.severity).toBe('error');
+      expect(check('content_scale_factor', '0')).toBeAtTier('error');
+      expect(check('content_scale_factor', '-1')).toBeAtTier('error');
     });
   });
 

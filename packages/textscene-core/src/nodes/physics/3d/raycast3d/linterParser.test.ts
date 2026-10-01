@@ -198,9 +198,9 @@ describe('RayCast3D strict validators', () => {
       const low = check('debug_shape_thickness', '0');
       const high = check('debug_shape_thickness', '6');
       expect(low?.code).toBe('INVALID_DEBUG_SHAPE_THICKNESS_VALUE');
-      expect(low?.severity).toBe('warning');
+      expect(low).toBeAtTier('warning');
       expect(high?.code).toBe('INVALID_DEBUG_SHAPE_THICKNESS_VALUE');
-      expect(high?.severity).toBe('warning');
+      expect(high).toBeAtTier('warning');
     });
 
     it('rejects a non-numeric value as malformed', () => {

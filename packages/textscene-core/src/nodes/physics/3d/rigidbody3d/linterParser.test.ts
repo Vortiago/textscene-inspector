@@ -30,7 +30,7 @@ describe('RigidBody3D strict validators (physics state)', () => {
 
     it('rejects a Vector2, the 2D shape', () => {
       const error = check('linear_velocity', 'Vector2(0, 0)');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.message).toContain('linear_velocity');
     });
   });
@@ -48,7 +48,7 @@ describe('RigidBody3D strict validators (physics state)', () => {
     });
 
     it('rejects a scalar, the 2D shape', () => {
-      expect(check('angular_velocity', '1.5')?.severity).toBe('error');
+      expect(check('angular_velocity', '1.5')).toBeAtTier('error');
     });
   });
 
@@ -58,7 +58,7 @@ describe('RigidBody3D strict validators (physics state)', () => {
     });
 
     it('rejects a Vector2, the 2D shape', () => {
-      expect(check('constant_force', 'Vector2(1, 2)')?.severity).toBe('error');
+      expect(check('constant_force', 'Vector2(1, 2)')).toBeAtTier('error');
     });
   });
 
@@ -71,7 +71,7 @@ describe('RigidBody3D strict validators (physics state)', () => {
     });
 
     it('rejects a scalar, the 2D shape', () => {
-      expect(check('constant_torque', '3.0')?.severity).toBe('error');
+      expect(check('constant_torque', '3.0')).toBeAtTier('error');
     });
   });
 
@@ -90,14 +90,14 @@ describe('RigidBody3D strict validators (physics state)', () => {
 
     it('refuses the constant itself and above — ERR_FAIL_INDEX fails at >= 4096', () => {
       const error = check('max_contacts_reported', '4096');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.message).toContain('less than 4096');
       expect(error?.message).toContain('Godot does not store this value');
-      expect(check('max_contacts_reported', '100000')?.severity).toBe('error');
+      expect(check('max_contacts_reported', '100000')).toBeAtTier('error');
     });
 
     it('refuses a negative count', () => {
-      expect(check('max_contacts_reported', '-5')?.severity).toBe('error');
+      expect(check('max_contacts_reported', '-5')).toBeAtTier('error');
     });
 
     it('carries the setter ceiling in the enforced slot, leaving the or_greater end of `bounds` open', () => {

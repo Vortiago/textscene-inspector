@@ -84,7 +84,7 @@ describe('ReferenceRect strict validators', () => {
     it('rejects a negative value as an ERROR: the setter clamps it, it does not merely hint it (reference_rect.cpp:62)', () => {
       const result = check('border_width', '-1.0');
       expect(result?.code).toBe('INVALID_BORDER_WIDTH_VALUE');
-      expect(result?.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
 
     it('accepts far above the hinted 5.0 ceiling, since the hint carries or_greater, which opens the max end', () => {

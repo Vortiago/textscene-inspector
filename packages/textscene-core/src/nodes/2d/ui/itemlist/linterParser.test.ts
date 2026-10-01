@@ -105,7 +105,7 @@ describe('ItemList booleans', () => {
     // Godot stores true for `1` in a BOOL slot (`variant.cpp:550-558`), so the
     // spelling is a warning about what gets written back, not a refusal.
     const error = check(property, '1');
-    expect(error?.severity).toBe('warning');
+    expect(error).toBeAtTier('warning');
     expect(error?.message).toContain(property);
   });
 
@@ -123,8 +123,8 @@ describe('ItemList enums', () => {
     for (const value of ['0', '1', '2']) expect(check('select_mode', value)).toBeNull();
     // set_select_mode (item_list.cpp:657-665) assigns straight through, so 3 is
     // stored and merely unreachable from the inspector: a warning, not an error.
-    expect(check('select_mode', '3')?.severity).toBe('warning');
-    expect(check('select_mode', '-1')?.severity).toBe('warning');
+    expect(check('select_mode', '3')).toBeAtTier('warning');
+    expect(check('select_mode', '-1')).toBeAtTier('warning');
   });
 
   it('errors past IconMode, whose setter refuses the write', () => {
@@ -132,8 +132,8 @@ describe('ItemList enums', () => {
     for (const value of ['0', '1']) expect(check('icon_mode', value)).toBeNull();
     // ERR_FAIL_INDEX((int)p_mode, 2) at item_list.cpp:672 drops the write, so
     // out of range is an error rather than a hint warning.
-    expect(check('icon_mode', '2')?.severity).toBe('error');
-    expect(check('icon_mode', '-1')?.severity).toBe('error');
+    expect(check('icon_mode', '2')).toBeAtTier('error');
+    expect(check('icon_mode', '-1')).toBeAtTier('error');
   });
 
   it('accepts every ScrollHintMode and warns past the hint', () => {
@@ -142,7 +142,7 @@ describe('ItemList enums', () => {
       expect(check('scroll_hint_mode', value)).toBeNull();
     }
     // set_scroll_hint_mode (item_list.cpp:2211-2218) assigns straight through.
-    expect(check('scroll_hint_mode', '4')?.severity).toBe('warning');
+    expect(check('scroll_hint_mode', '4')).toBeAtTier('warning');
   });
 
   it('accepts every OverrunBehavior and warns past the hint', () => {
@@ -152,12 +152,12 @@ describe('ItemList enums', () => {
       expect(check('text_overrun_behavior', value)).toBeNull();
     }
     // set_text_overrun_behavior (item_list.cpp:2182-2191) assigns straight through.
-    expect(check('text_overrun_behavior', '7')?.severity).toBe('warning');
+    expect(check('text_overrun_behavior', '7')).toBeAtTier('warning');
   });
 
   it('rejects a non-numeric enum value as a format error', () => {
     const error = check('select_mode', 'Single');
-    expect(error?.severity).toBe('error');
+    expect(error).toBeAtTier('error');
     expect(error?.code).toBe('INVALID_SELECT_MODE_FORMAT');
   });
 });
@@ -166,8 +166,8 @@ describe('ItemList counts and sizes', () => {
   it('holds max_text_lines at its enforced floor of 1', () => {
     // ERR_FAIL_COND(p_lines < 1) at item_list.cpp:619.
     expect(check('max_text_lines', '1')).toBeNull();
-    expect(check('max_text_lines', '0')?.severity).toBe('error');
-    expect(check('max_text_lines', '-3')?.severity).toBe('error');
+    expect(check('max_text_lines', '0')).toBeAtTier('error');
+    expect(check('max_text_lines', '-3')).toBeAtTier('error');
   });
 
   it('lets max_text_lines past the hint ceiling, which `or_greater` opens', () => {
@@ -184,7 +184,7 @@ describe('ItemList counts and sizes', () => {
   ])('errors below the enforced 0 floor on %s (%s)', (property) => {
     expect(check(property, '0')).toBeNull();
     expect(check(property, '7')).toBeNull();
-    expect(check(property, '-1')?.severity).toBe('error');
+    expect(check(property, '-1')).toBeAtTier('error');
   });
 
   it('leaves the max_columns and fixed_column_width ceilings open', () => {
@@ -208,7 +208,7 @@ describe('ItemList counts and sizes', () => {
     // Godot writes non-finite floats as `inf` / `inf_neg` / `nan`; the setter
     // ERR_FAILs on all three, so none of them ever lands.
     for (const value of ['inf', 'inf_neg', 'nan']) {
-      expect(check('icon_scale', value)?.severity).toBe('error');
+      expect(check('icon_scale', value)).toBeAtTier('error');
     }
   });
 
@@ -226,11 +226,11 @@ describe('ItemList counts and sizes', () => {
     // token, so `32.5` loads as 32. `Vector2` is a different Variant type and
     // does not convert.
     // Loads, but stores 32 rather than 32.5: the truncation warning.
-    expect(check('fixed_icon_size', 'Vector2i(32.5, 24)')?.severity).toBe('warning');
+    expect(check('fixed_icon_size', 'Vector2i(32.5, 24)')).toBeAtTier('warning');
     // `Vector2` converts into a `Vector2i` slot (variant.cpp:536-830), so this
     // is a file Godot opens; only a type that does not convert is an error.
     expect(check('fixed_icon_size', 'Vector2(32, 24)')).toBeNull();
-    expect(check('fixed_icon_size', 'Color(1, 1, 1, 1)')?.severity).toBe('error');
+    expect(check('fixed_icon_size', 'Color(1, 1, 1, 1)')).toBeAtTier('error');
   });
 });
 
@@ -254,7 +254,7 @@ describe('ItemList per-item family', () => {
     // property_list_helper.cpp:58 returns nullptr for index < 0, so `_set`
     // treats the key as unrecognised and the write never lands.
     const error = check('item_-1/text', '"Sword"');
-    expect(error?.severity).toBe('error');
+    expect(error).toBeAtTier('error');
     expect(error?.code).toBe('INVALID_ITEM_INDEX');
   });
 

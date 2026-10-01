@@ -9,6 +9,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';
 import './linterParser';
 import './linter';
+import { errorsOf } from '../../../linter/testing/tierLists';
 
 describe('Camera3D must not error on ordinary Godot output', () => {
   let linter: Linter;
@@ -65,7 +66,7 @@ projection = 0
 [node name="Camera" type="Camera3D"]
 fov = 250.0
 `;
-    expect(linter.lint(content).some((d) => d.severity === 'error')).toBe(true);
+    expect(errorsOf(linter.lint(content))).not.toHaveLength(0);
   });
 
   it('reaches XRCamera3D too, which inherits the rule', () => {
@@ -75,6 +76,6 @@ fov = 250.0
 [node name="Camera" type="XRCamera3D"]
 fov = 250.0
 `;
-    expect(linter.lint(content).some((d) => d.severity === 'error')).toBe(true);
+    expect(errorsOf(linter.lint(content))).not.toHaveLength(0);
   });
 });

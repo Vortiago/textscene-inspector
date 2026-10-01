@@ -94,18 +94,18 @@ describe('HTTPRequest strict validators', () => {
     expect(check('body_size_limit', '0')).toBeNull();
     expect(check('body_size_limit', '2000000000')).toBeNull();
     const tooLow = check('body_size_limit', '-2');
-    expect(tooLow?.severity).toBe('warning');
+    expect(tooLow).toBeAtTier('warning');
     const tooHigh = check('body_size_limit', '2000000001');
-    expect(tooHigh?.severity).toBe('warning');
+    expect(tooHigh).toBeAtTier('warning');
   });
 
   it('errors download_chunk_size outside 256..16777216 (setter-enforced)', () => {
     expect(check('download_chunk_size', '256')).toBeNull();
     expect(check('download_chunk_size', '16777216')).toBeNull();
     const tooLow = check('download_chunk_size', '255');
-    expect(tooLow?.severity).toBe('error');
+    expect(tooLow).toBeAtTier('error');
     const tooHigh = check('download_chunk_size', '16777217');
-    expect(tooHigh?.severity).toBe('error');
+    expect(tooHigh).toBeAtTier('error');
   });
 
   it('requires download_file to be a quoted string', () => {
@@ -116,14 +116,14 @@ describe('HTTPRequest strict validators', () => {
   it('warns max_redirects outside -1..64 (hinted, not enforced)', () => {
     expect(check('max_redirects', '-1')).toBeNull();
     expect(check('max_redirects', '64')).toBeNull();
-    expect(check('max_redirects', '-2')?.severity).toBe('warning');
-    expect(check('max_redirects', '65')?.severity).toBe('warning');
+    expect(check('max_redirects', '-2')).toBeAtTier('warning');
+    expect(check('max_redirects', '65')).toBeAtTier('warning');
   });
 
   it('errors a negative timeout (setter-enforced floor) with no upper bound', () => {
     expect(check('timeout', '0')).toBeNull();
     expect(check('timeout', '3600')).toBeNull();
     expect(check('timeout', '999999')).toBeNull();
-    expect(check('timeout', '-0.1')?.severity).toBe('error');
+    expect(check('timeout', '-0.1')).toBeAtTier('error');
   });
 });

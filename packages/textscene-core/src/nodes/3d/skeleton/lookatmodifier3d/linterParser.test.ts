@@ -155,7 +155,7 @@ describe('LookAtModifier3D strict validators', () => {
       // rewrite anything at or below -1 back to -1 once a skeleton is present,
       // so the value does not survive as written: enforced, an error.
       const error = check(property, '-2');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it.each(['bone', 'origin_bone'])('warns that a fractional index on %s is truncated', (property) => {
@@ -178,8 +178,8 @@ describe('LookAtModifier3D strict validators', () => {
       for (const value of ['0', '1', '2', '3', '4', '5']) {
         expect(check('forward_axis', value)).toBeNull();
       }
-      expect(check('forward_axis', '6')?.severity).toBe('warning');
-      expect(check('forward_axis', '-1')?.severity).toBe('warning');
+      expect(check('forward_axis', '6')).toBeAtTier('warning');
+      expect(check('forward_axis', '-1')).toBeAtTier('warning');
     });
 
     it('accepts the three Vector3 axes on primary_rotation_axis', () => {
@@ -187,7 +187,7 @@ describe('LookAtModifier3D strict validators', () => {
       for (const value of ['0', '1', '2']) {
         expect(check('primary_rotation_axis', value)).toBeNull();
       }
-      expect(check('primary_rotation_axis', '3')?.severity).toBe('warning');
+      expect(check('primary_rotation_axis', '3')).toBeAtTier('warning');
     });
 
     it('accepts the three OriginFrom constants', () => {
@@ -195,7 +195,7 @@ describe('LookAtModifier3D strict validators', () => {
       for (const value of ['0', '1', '2']) {
         expect(check('origin_from', value)).toBeNull();
       }
-      expect(check('origin_from', '3')?.severity).toBe('warning');
+      expect(check('origin_from', '3')).toBeAtTier('warning');
     });
 
     it('accepts the twelve Tween transition types', () => {
@@ -204,7 +204,7 @@ describe('LookAtModifier3D strict validators', () => {
       for (let value = 0; value <= 11; value++) {
         expect(check('transition_type', String(value))).toBeNull();
       }
-      expect(check('transition_type', '12')?.severity).toBe('warning');
+      expect(check('transition_type', '12')).toBeAtTier('warning');
     });
 
     it('accepts the four Tween ease types', () => {
@@ -212,7 +212,7 @@ describe('LookAtModifier3D strict validators', () => {
       for (const value of ['0', '1', '2', '3']) {
         expect(check('ease_type', value)).toBeNull();
       }
-      expect(check('ease_type', '4')?.severity).toBe('warning');
+      expect(check('ease_type', '4')).toBeAtTier('warning');
     });
   });
 
@@ -247,7 +247,7 @@ describe('LookAtModifier3D strict validators', () => {
       expect(check(property, '0')).toBeNull();
       expect(check(property, '0.1')).toBeNull();
       expect(check(property, '5000')).toBeNull();
-      expect(check(property, '-0.001')?.severity).toBe('warning');
+      expect(check(property, '-0.001')).toBeAtTier('warning');
     });
 
     it('records where each open-ended bound comes from', () => {
@@ -266,8 +266,8 @@ describe('LookAtModifier3D strict validators', () => {
       expect(check(property, '0')).toBeNull();
       expect(check(property, '0.5')).toBeNull();
       expect(check(property, '1')).toBeNull();
-      expect(check(property, '1.5')?.severity).toBe('warning');
-      expect(check(property, '-0.5')?.severity).toBe('warning');
+      expect(check(property, '1.5')).toBeAtTier('warning');
+      expect(check(property, '-0.5')).toBeAtTier('warning');
     });
   });
 
@@ -276,7 +276,7 @@ describe('LookAtModifier3D strict validators', () => {
       // Hint "0,180,0.01,radians_as_degrees" (look_at_modifier_3d.cpp:497, :499, :505, :507): the
       // inspector shows 0-180 degrees, the .tscn stores radians, so the ceiling is PI ≈ 3.14159265.
       // 3.5 discriminates: inside the degree number 180, outside PI, so a degree bound accepts it.
-      expect(check(property, '3.5')?.severity).toBe('warning');
+      expect(check(property, '3.5')).toBeAtTier('warning');
       expect(check(property, '3.5')?.message).toContain('radians');
       expect(check(property, '180')).not.toBeNull();
     });
@@ -288,13 +288,13 @@ describe('LookAtModifier3D strict validators', () => {
       expect(check(property, '3.1415927')).toBeNull();
       expect(check(property, '0')).toBeNull();
       expect(check(property, '1.5707963')).toBeNull(); // 90 degrees
-      expect(check(property, '-0.5')?.severity).toBe('warning');
+      expect(check(property, '-0.5')).toBeAtTier('warning');
     });
 
     it.each(FULL_TURN_ANGLES)('%s bounds a full turn in radians', (property) => {
       // Hint "0,360,0.01,radians_as_degrees" (look_at_modifier_3d.cpp:494, :502): the stored ceiling
       // is TAU ≈ 6.28318531. 7 discriminates: inside the degree number 360, outside TAU.
-      expect(check(property, '7')?.severity).toBe('warning');
+      expect(check(property, '7')).toBeAtTier('warning');
       expect(check(property, '7')?.message).toContain('radians');
       expect(check(property, '360')).not.toBeNull();
     });
@@ -305,7 +305,7 @@ describe('LookAtModifier3D strict validators', () => {
       expect(check(property, '6.2831855')).toBeNull();
       expect(check(property, '0')).toBeNull();
       expect(check(property, '3.1415927')).toBeNull(); // 180 degrees
-      expect(check(property, '-0.5')?.severity).toBe('warning');
+      expect(check(property, '-0.5')).toBeAtTier('warning');
     });
 
     it.each([...HALF_TURN_ANGLES, ...FULL_TURN_ANGLES])(
@@ -347,9 +347,9 @@ describe('LookAtModifier3D strict validators', () => {
       // setter here guards `is_finite`, so it is never a format error. A closed
       // hint still puts it outside the inspector's range, which is a warning, and
       // `duration`'s `or_greater` end leaves it alone.
-      expect(check('primary_limit_angle', 'inf')?.severity).toBe('warning');
+      expect(check('primary_limit_angle', 'inf')).toBeAtTier('warning');
       expect(check('duration', 'inf')).toBeNull();
-      expect(check('duration', '-inf')?.severity).toBe('warning');
+      expect(check('duration', '-inf')).toBeAtTier('warning');
     });
   });
 });

@@ -18,7 +18,7 @@ import { atLeast, srcLabel, srcRoot, walk } from './ruleNameScrape.js';
 const BLOCK_START_RE = /(?<![.$\w])(it|test|describe)((?:\.\w+)*)\s*\(/g;
 
 /** The index just past the balanced `(` at `open`, or -1 when it never closes. */
-export function afterBalanced(src: string, open: number): number {
+function afterBalanced(src: string, open: number): number {
   let depth = 0;
   for (let i = open; i < src.length; i++) {
     if (src[i] === '(') depth++;
@@ -73,7 +73,7 @@ function bodyOf(src: string, at: number, callOpen: number, nextAt: number): stri
 /**
  * The `it`/`test` blocks in one file, each body bounded by `bodyOf`. Comments
  * are blanked first, at preserved offsets, since they spell block starts and
- * `severity:` assertions alike.
+ * assertions alike.
  */
 export function blocksIn(file: string, source: string): Block[] {
   const src = stripComments(source);

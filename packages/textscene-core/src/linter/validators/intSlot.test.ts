@@ -15,7 +15,7 @@ import {
 describe('truncatedComponent', () => {
   it('warns about a finite fractional component, naming it and what is stored', () => {
     const diagnostic = truncatedComponent('size', 'size', 1, ['1.5', '2'], 'CODE');
-    expect(diagnostic?.severity).toBe('warning');
+    expect(diagnostic).toBeAtTier('warning');
     expect(diagnostic?.message).toContain('1.5');
     expect(diagnostic?.message).toContain('stores 1');
   });
@@ -50,7 +50,7 @@ describe('storedNotWritten', () => {
       asFloat: 5.5,
       stored: 5,
     });
-    expect(diagnostic?.severity).toBe('warning');
+    expect(diagnostic).toBeAtTier('warning');
     expect(diagnostic?.code).toBe('INVALID_HFRAMES_VALUE');
   });
 
@@ -77,7 +77,7 @@ describe('storedNotWritten', () => {
       asFloat: 1,
       stored: 1,
     });
-    expect(diagnostic?.severity).toBe('warning');
+    expect(diagnostic).toBeAtTier('warning');
     expect(diagnostic?.message).toContain('stores 1');
   });
 
@@ -104,7 +104,7 @@ describe('readIntSlot', () => {
 
 describe('unrepresentableInt', () => {
   it('errors only on the NaN signal, never on a usable number or a miss', () => {
-    expect(unrepresentableInt('seed', 'seed', 'inf', 1, 'CODE', NaN)?.severity).toBe('error');
+    expect(unrepresentableInt('seed', 'seed', 'inf', 1, 'CODE', NaN)).toBeAtTier('error');
     expect(unrepresentableInt('seed', 'seed', '5', 1, 'CODE', 5)).toBeNull();
     expect(unrepresentableInt('seed', 'seed', 'nope', 1, 'CODE', null)).toBeNull();
   });

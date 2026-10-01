@@ -25,7 +25,7 @@ invalidproperty
       const result = parser.parse(content);
 
       expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]!.severity).toBe('error');
+      expect(result.errors[0]).toBeAtTier('error');
       expect(result.errors[0]!.code).toBe('INVALID_PROPERTY_FORMAT');
       expect(result.errors[0]!.line).toBe(4);
       expect(result.errors[0]!.message).toContain('Invalid property format');

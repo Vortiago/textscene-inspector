@@ -122,7 +122,7 @@ describe('LimitAngularVelocityModifier3D max_angular_velocity', () => {
     expect(check('max_angular_velocity', '0')).toBeNull();
     expect(check('max_angular_velocity', '0.0')).toBeNull();
     const below = check('max_angular_velocity', '-0.01');
-    expect(below?.severity).toBe('warning');
+    expect(below).toBeAtTier('warning');
     expect(below?.message).toContain('max_angular_velocity');
   });
 
@@ -133,11 +133,11 @@ describe('LimitAngularVelocityModifier3D max_angular_velocity', () => {
     expect(check('max_angular_velocity', 'nan')).toBeNull();
     // `-inf` is below the hinted floor for the same reason -0.01 is, so it
     // draws the same warning rather than a finiteness error.
-    expect(check('max_angular_velocity', '-inf')?.severity).toBe('warning');
+    expect(check('max_angular_velocity', '-inf')).toBeAtTier('warning');
   });
 
   it('rejects a value that is not a number at all', () => {
-    expect(check('max_angular_velocity', '"fast"')?.severity).toBe('error');
+    expect(check('max_angular_velocity', '"fast"')).toBeAtTier('error');
   });
 });
 
@@ -167,11 +167,11 @@ describe('LimitAngularVelocityModifier3D chain_count', () => {
   it('errors below zero, which the setter refuses outright', () => {
     // ERR_FAIL_COND(p_count < 0) at limit_angular_velocity_modifier_3d.cpp:204,
     // so the resize never happens: enforced, not hinted.
-    expect(check('chain_count', '-1')?.severity).toBe('error');
+    expect(check('chain_count', '-1')).toBeAtTier('error');
   });
 
   it('warns that a fractional count is truncated', () => {
-    expect(check('chain_count', '2.5')?.severity).toBe('warning');
+    expect(check('chain_count', '2.5')).toBeAtTier('warning');
   });
 });
 
@@ -184,7 +184,7 @@ describe('LimitAngularVelocityModifier3D chains family', () => {
       // restricting, and the setters (:129, :166) store the String as given.
       expect(check(key, '"UpperArm.L"')).toBeNull();
       expect(check(key, '""')).toBeNull();
-      expect(check(key, 'UpperArm.L')?.severity).toBe('error');
+      expect(check(key, 'UpperArm.L')).toBeAtTier('error');
     }
   );
 
@@ -206,14 +206,14 @@ describe('LimitAngularVelocityModifier3D chains family', () => {
       // anything at or below -1 to -1, and _validate_bone_names (:293-295,
       // :299-300) re-runs them on the first skeleton update, so a value under
       // -1 cannot survive as written.
-      expect(check(key, '-2')?.severity).toBe('error');
+      expect(check(key, '-2')).toBeAtTier('error');
     }
   );
 
   it.each(['chains/0/root_bone', 'chains/0/end_bone'])(
     'warns that a fractional bone index is truncated for %s',
     (key) => {
-      expect(check(key, '1.5')?.severity).toBe('warning');
+      expect(check(key, '1.5')).toBeAtTier('warning');
     }
   );
 
@@ -221,7 +221,7 @@ describe('LimitAngularVelocityModifier3D chains family', () => {
     // ERR_FAIL_INDEX_V(which, (int)chains.size(), false) at
     // limit_angular_velocity_modifier_3d.cpp:39.
     const error = check('chains/-1/root_bone_name', '"Head"');
-    expect(error?.severity).toBe('error');
+    expect(error).toBeAtTier('error');
     expect(error?.message).toContain('-1');
   });
 
@@ -234,7 +234,7 @@ describe('LimitAngularVelocityModifier3D chains family', () => {
     // so `chains/x/...` resolves to chain 0 and the write lands. Nothing refuses it, so ADR-0032
     // grounds no diagnostic on the index, and the leaf still decides.
     expect(check('chains/x/root_bone_name', '"Head"')).toBeNull();
-    expect(check('chains/x/root_bone', '-5')?.severity).toBe('error');
+    expect(check('chains/x/root_bone', '-5')).toBeAtTier('error');
   });
 
   it('rejects a leaf the class does not declare, its set being closed', () => {
@@ -242,7 +242,7 @@ describe('LimitAngularVelocityModifier3D chains family', () => {
     // (register_scene_types.cpp:687 registers it as a concrete class), and
     // `_set` returns false for any other `what` (:49-50), so the write is
     // dropped rather than handed to a subclass.
-    expect(check('chains/0/target_node', 'NodePath("../Target")')?.severity).toBe('error');
+    expect(check('chains/0/target_node', 'NodePath("../Target")')).toBeAtTier('error');
   });
 });
 
@@ -255,7 +255,7 @@ describe('LimitAngularVelocityModifier3D joints family', () => {
       // `joints/` branch, so a hand-written one falls through to `return true`
       // (:53) having assigned nothing.
       const error = check(key, '2');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.message).toContain('read-only');
     }
   );
@@ -284,7 +284,7 @@ describe('LimitAngularVelocityModifier3D inherited keys', () => {
     // skeleton_modifier_3d.cpp:161 hints influence to "0,1,0.001", so 1.5 is
     // out of range on a LimitAngularVelocityModifier3D too.
     expect(check('influence', '0.5')).toBeNull();
-    expect(check('influence', '1.5')?.severity).toBe('warning');
+    expect(check('influence', '1.5')).toBeAtTier('warning');
   });
 
   it('does not declare joint_count, whose ADD_ARRAY_COUNT has an empty setter', () => {

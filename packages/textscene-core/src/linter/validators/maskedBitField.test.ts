@@ -38,7 +38,7 @@ describe('maskedBitField', () => {
   describe('warns on a bit the setter keeps but the hint omits', () => {
     it.each(['32', '96', '160', '224'])('warns on %s, which carries bit 32', (value) => {
       const diagnostic = run(value);
-      expect(diagnostic?.severity).toBe('warning');
+      expect(diagnostic).toBeAtTier('warning');
       expect(diagnostic?.message).toContain('BREAK_TRIM_INDENT');
     });
 
@@ -62,7 +62,7 @@ describe('maskedBitField', () => {
       // The case that motivates the combinator: 4 is in 0..224, so
       // `v.int({min:0,max:224})` would pass it, yet Godot stores 0.
       const error = run('4');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_AUTOWRAP_TRIM_FLAGS_VALUE');
       expect(error?.message).toContain('Godot stores 0');
     });
@@ -111,7 +111,7 @@ describe('maskedBitField', () => {
       // the slot from going silent on `_to_int`'s own alteration, which
       // `markIntSlot` tags it for. `truncatedInts.test.ts` sweeps for the same gap.
       const truncated = run('64.9');
-      expect(truncated?.severity).toBe('warning');
+      expect(truncated).toBeAtTier('warning');
       expect(truncated?.code).toBe('INVALID_AUTOWRAP_TRIM_FLAGS_VALUE');
       expect(truncated?.message).toContain('stores 64');
     });
@@ -158,7 +158,7 @@ describe('hintedBitField', () => {
   it.each(['4', '16', '20', '255'])('warns on %s, a bit the hint omits', (value) => {
     // Membership, not magnitude: 4 and 16 sit inside 0..235, so
     // `{ min: 0, max: 235 }` would accept exactly the values worth reporting.
-    expect(run(value)?.severity).toBe('warning');
+    expect(run(value)).toBeAtTier('warning');
   });
 
   it('warns rather than errors, because the setter keeps the value', () => {
@@ -168,17 +168,17 @@ describe('hintedBitField', () => {
   });
 
   it('warns on a negative value', () => {
-    expect(run('-1')?.severity).toBe('warning');
+    expect(run('-1')).toBeAtTier('warning');
   });
 
   it('rejects a non-integer as a format error, not a warning', () => {
-    expect(run('two')?.severity).toBe('error');
+    expect(run('two')).toBeAtTier('error');
   });
 
   it('keeps a value past 32 bits, because the field is int64', () => {
     // `BitField<T>` is int64 and this setter bare-assigns, so 2^32 + 1 is
     // stored intact and only the hint warns.
-    expect(run('4294967297')?.severity).toBe('warning');
+    expect(run('4294967297')).toBeAtTier('warning');
   });
 
   it('carries the hinted grounding, so boundGrounding counts it as audited', () => {
@@ -200,7 +200,7 @@ describe('a mask that keeps a bit past 32', () => {
     // An int32 `&` reads 2^32 as 0, so the hint arm must refuse a value wider
     // than the bits it offers.
     const diagnostic = wide('flags', String(2 ** 32), 5);
-    expect(diagnostic?.severity).toBe('warning');
+    expect(diagnostic).toBeAtTier('warning');
     expect(diagnostic?.code).toBe('INVALID_FLAGS_VALUE');
   });
 

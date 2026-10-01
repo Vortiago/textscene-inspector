@@ -12,6 +12,7 @@ import {
 } from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
+import { errorsOf, warningsOf } from '../../../../linter/testing/tierLists';
 
 describe('DirectionalLight3D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -374,8 +375,8 @@ describe('DirectionalLight3D Linter', () => {
       // shadow_opacity (light_3d.cpp:407, behind Light3D::set_param's index-only
       // guard) are hints, not enforcement (ADR-0032), so both warn and nothing
       // here reaches the error tier.
-      expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0);
-      const warnings = diagnostics.filter((d) => d.severity === 'warning');
+      expect(errorsOf(diagnostics)).toHaveLength(0);
+      const warnings = warningsOf(diagnostics);
       const hasModeWarning = warnings.some((d) => d.message.includes('directional_shadow_mode'));
       const hasOpacityWarning = warnings.some((d) => d.message.includes('shadow_opacity'));
       expect(hasModeWarning && hasOpacityWarning).toBe(true);

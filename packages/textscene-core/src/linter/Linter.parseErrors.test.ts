@@ -110,7 +110,7 @@ describe('Linter', () => {
 
       expect(diagnostics.length).toBeGreaterThan(0);
       diagnostics.forEach((d) => {
-        expect(d.severity).toBe('error');
+        expect(d).toBeAtTier('error');
       });
     });
 

@@ -38,7 +38,7 @@ describe('v.arrayLiteral (untyped)', () => {
     ['a wrapper around no array', 'Array[int](5)'],
   ])('rejects %s', (_label, value) => {
     const error = untyped('st_args', value, 1);
-    expect(error?.severity).toBe('error');
+    expect(error).toBeAtTier('error');
     expect(error!.code).toBe('INVALID_ST_ARGS_FORMAT');
   });
 
@@ -61,7 +61,7 @@ describe('v.arrayLiteral (typed, enforced by the setter)', () => {
 
   it('errors on a wrapper naming a different element type', () => {
     const error = enforced('connections', 'Array[int]([1])', 1);
-    expect(error?.severity).toBe('error');
+    expect(error).toBeAtTier('error');
     expect(error!.code).toBe('INVALID_CONNECTIONS_VALUE');
     expect(error!.message).toContain('array.cpp:275-277');
   });
@@ -80,7 +80,7 @@ describe('v.arrayLiteral (typed, enforced by the setter)', () => {
 describe('v.arrayLiteral (typed, stated by the hint only)', () => {
   it('warns on a wrapper naming a different element type, which the bare setter stores', () => {
     const report = hinted('custom_effects', 'Array[Dictionary]([])', 1);
-    expect(report?.severity).toBe('warning');
+    expect(report).toBeAtTier('warning');
     expect(report!.message).toContain('rich_text_label.cpp:7773');
   });
 

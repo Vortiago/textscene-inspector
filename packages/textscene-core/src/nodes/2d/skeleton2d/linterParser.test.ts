@@ -62,7 +62,7 @@ describe('Skeleton2D strict validators', () => {
     it('rejects a value that is not a resource reference at all', () => {
       const error = check('modification_stack', '"res://stack.tres"');
       expect(error).not.toBeNull();
-      expect(error!.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error!.message).toContain('modification_stack');
     });
 

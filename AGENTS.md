@@ -314,6 +314,9 @@ fail on a mis-shaped slice.
   same seam.
 - Tests: happy + error + edge per public method, co-located. Prefix intentionally-unused
   params with `_`.
+- Assert a diagnostic's tier with `toBeAtTier`, `toBeAllAtTier`, or a test-kit or
+  `tierLists.ts` helper. Each records the tier it asserts, and the core setup file fails a
+  test whose title names a tier its test does not assert.
 - Self-registration on import: never edit central files beyond the aggregation imports.
   Keep the web previewer and the VS Code extension at parity through the shared core.
 - **Engine facts live in `packages/textscene-core/src/godot/`, which imports

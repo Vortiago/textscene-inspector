@@ -145,11 +145,11 @@ describe('CodeEdit strict validators', () => {
     // typed form through `ContainerTypeValidate`, which converts an element
     // whose type `can_convert_strict`s to the array's, as FLOAT does to INT.
     it('warns that a float element in the typed form is truncated', () => {
-      expect(check('line_length_guidelines', 'Array[int]([80.5])')?.severity).toBe('warning');
+      expect(check('line_length_guidelines', 'Array[int]([80.5])')).toBeAtTier('warning');
     });
 
     it('warns that a float element in the packed form is truncated', () => {
-      expect(check('line_length_guidelines', 'PackedInt32Array(80.5)')?.severity).toBe('warning');
+      expect(check('line_length_guidelines', 'PackedInt32Array(80.5)')).toBeAtTier('warning');
     });
 
     it('still rejects an element Godot cannot tokenise at all', () => {
@@ -168,15 +168,15 @@ describe('CodeEdit strict validators', () => {
 
     it('rejects the same element in the packed form, which narrows it away', () => {
       const diagnostic = check('line_length_guidelines', 'PackedInt32Array(4294967296, 1)');
-      expect(diagnostic?.severity).toBe('error');
+      expect(diagnostic).toBeAtTier('error');
       expect(diagnostic?.code).toBe('INVALID_LINE_LENGTH_GUIDELINES_VALUE');
     });
 
     it('reports a literal no width can hold, whichever form spells it', () => {
       // `1e20` is past int64 too, and the FLOAT branch is undefined there
       // (variant.h:369-370), so widening the typed form must not go silent.
-      expect(check('line_length_guidelines', 'Array[int]([1e20])')?.severity).toBe('error');
-      expect(check('line_length_guidelines', 'Array[int]([inf])')?.severity).toBe('error');
+      expect(check('line_length_guidelines', 'Array[int]([1e20])')).toBeAtTier('error');
+      expect(check('line_length_guidelines', 'Array[int]([inf])')).toBeAtTier('error');
     });
   });
 
@@ -235,13 +235,13 @@ describe('CodeEdit strict validators', () => {
     it('warns below the hinted floor (0), since only the hint says so', () => {
       const error = check('gutters_line_numbers_min_digits', '0');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('warns above the hinted ceiling (6)', () => {
       const error = check('gutters_line_numbers_min_digits', '6');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -278,13 +278,13 @@ describe('CodeEdit strict validators', () => {
     it('rejects an empty start key (a leading space before any content)', () => {
       const error = check('delimiter_comments', 'PackedStringArray(" x")');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('rejects a start key with a non-symbol (alphanumeric) character', () => {
       const error = check('delimiter_comments', 'PackedStringArray("rem")');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('rejects an end key with a non-symbol character', () => {
@@ -295,7 +295,7 @@ describe('CodeEdit strict validators', () => {
     it('rejects a start key repeated within the same array', () => {
       const error = check('delimiter_comments', 'PackedStringArray("# ", "#")');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 
@@ -311,13 +311,13 @@ describe('CodeEdit strict validators', () => {
     it('rejects an empty-string element (ERR_CONTINUE_MSG, code_edit.cpp:2217)', () => {
       const error = check('code_completion_prefixes', 'PackedStringArray("")');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('rejects a multi-character element (silently truncated, code_edit.cpp:2218)', () => {
       const error = check('code_completion_prefixes', 'PackedStringArray("->")');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('rejects a value that is not any array form', () => {
@@ -338,13 +338,13 @@ describe('CodeEdit strict validators', () => {
     it('rejects 0', () => {
       const error = check('indent_size', '0');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('rejects a negative value', () => {
       const error = check('indent_size', '-4');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('rejects a non-integer value', () => {
@@ -368,7 +368,7 @@ describe('CodeEdit strict validators', () => {
     it('rejects a multi-character element (silently truncated, code_edit.cpp:952)', () => {
       const error = check('indent_automatic_prefixes', 'PackedStringArray("::")');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 
@@ -407,13 +407,13 @@ describe('CodeEdit strict validators', () => {
     it('rejects an empty open key', () => {
       const error = check('auto_brace_completion_pairs', '{ "": ")" }');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('rejects an empty close key', () => {
       const error = check('auto_brace_completion_pairs', '{ "(": "" }');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('rejects an open key with a non-symbol character', () => {

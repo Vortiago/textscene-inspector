@@ -120,7 +120,7 @@ describe('OccluderInstance3D strict validators', () => {
     it('refuses a value past the 32-bit ceiling, where a bit is dropped', () => {
       const result = check('bake_mask', '4294967296');
       expect(result).not.toBeNull();
-      expect(result?.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
   });
 
@@ -140,13 +140,13 @@ describe('OccluderInstance3D strict validators', () => {
     it('rejects a negative value as an ERROR — set_bake_simplification_distance clamps with MAX(p_dist, 0.0f)', () => {
       const result = check('bake_simplification_distance', '-0.5');
       expect(result).not.toBeNull();
-      expect(result?.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
 
     it('rejects a value past 2.0 as a WARNING — the hint ceiling has no or_greater but the setter never checks it', () => {
       const result = check('bake_simplification_distance', '2.5');
       expect(result).not.toBeNull();
-      expect(result?.severity).toBe('warning');
+      expect(result).toBeAtTier('warning');
     });
   });
 });

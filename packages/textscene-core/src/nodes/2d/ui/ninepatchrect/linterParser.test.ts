@@ -82,13 +82,13 @@ describe('NinePatchRect strict validators', () => {
     it('a value beyond the enum (3) is only a WARNING', () => {
       const error = check(property, '3');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('a value below the enum (-1) is also only a WARNING', () => {
       const error = check(property, '-1');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('rejects a non-numeric value', () => {
@@ -130,13 +130,13 @@ describe('NinePatchRect strict validators', () => {
     it(`a value beyond the hint (16385) is only a WARNING (nine_patch_rect.cpp:${cite})`, () => {
       const error = check(property, '16385');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it(`a negative value is also only a WARNING (nine_patch_rect.cpp:${cite})`, () => {
       const error = check(property, '-1');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('rejects a non-numeric value', () => {

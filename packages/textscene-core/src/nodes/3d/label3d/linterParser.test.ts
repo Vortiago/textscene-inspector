@@ -218,7 +218,7 @@ describe('Label3D Linter', () => {
         expect(check('alpha_scissor_threshold', '0.5')).toBeNull();
       });
       it('warns above the hint — the setter bare-assigns', () => {
-        expect(check('alpha_scissor_threshold', '1.5')?.severity).toBe('warning');
+        expect(check('alpha_scissor_threshold', '1.5')).toBeAtTier('warning');
       });
     });
 
@@ -227,7 +227,7 @@ describe('Label3D Linter', () => {
         expect(check('alpha_hash_scale', '1')).toBeNull();
       });
       it('warns above the hint — the setter bare-assigns', () => {
-        expect(check('alpha_hash_scale', '3')?.severity).toBe('warning');
+        expect(check('alpha_hash_scale', '3')).toBeAtTier('warning');
       });
     });
 
@@ -236,7 +236,7 @@ describe('Label3D Linter', () => {
         expect(check('alpha_antialiasing_edge', '0.5')).toBeNull();
       });
       it('warns above the hint — the setter bare-assigns', () => {
-        expect(check('alpha_antialiasing_edge', '2')?.severity).toBe('warning');
+        expect(check('alpha_antialiasing_edge', '2')).toBeAtTier('warning');
       });
     });
 
@@ -245,7 +245,7 @@ describe('Label3D Linter', () => {
         expect(check('alpha_antialiasing_mode', '2')).toBeNull();
       });
       it('rejects 3, one past the hint — the setter bare-assigns so this warns', () => {
-        expect(check('alpha_antialiasing_mode', '3')?.severity).toBe('warning');
+        expect(check('alpha_antialiasing_mode', '3')).toBeAtTier('warning');
       });
     });
 
@@ -254,7 +254,7 @@ describe('Label3D Linter', () => {
         expect(check('structured_text_bidi_override', '6')).toBeNull();
       });
       it('warns past the hint — set_structured_text_bidi_override bare-assigns', () => {
-        expect(check('structured_text_bidi_override', '7')?.severity).toBe('warning');
+        expect(check('structured_text_bidi_override', '7')).toBeAtTier('warning');
       });
     });
 
@@ -263,7 +263,7 @@ describe('Label3D Linter', () => {
         expect(check('autowrap_mode', '3')).toBeNull();
       });
       it('warns past the enum — set_autowrap_mode bare-assigns', () => {
-        expect(check('autowrap_mode', '4')?.severity).toBe('warning');
+        expect(check('autowrap_mode', '4')).toBeAtTier('warning');
       });
     });
 
@@ -272,7 +272,7 @@ describe('Label3D Linter', () => {
         expect(check('texture_filter', '5')).toBeNull();
       });
       it('warns past the hint — set_texture_filter bare-assigns', () => {
-        expect(check('texture_filter', '6')?.severity).toBe('warning');
+        expect(check('texture_filter', '6')).toBeAtTier('warning');
       });
     });
 
@@ -281,33 +281,33 @@ describe('Label3D Linter', () => {
         expect(check('alpha_cut', '3')).toBeNull();
       });
       it('rejects 4, one past ALPHA_CUT_MAX — the setter ERR_FAIL_INDEXes', () => {
-        expect(check('alpha_cut', '4')?.severity).toBe('error');
+        expect(check('alpha_cut', '4')).toBeAtTier('error');
       });
     });
 
     describe('vertical_alignment', () => {
       it('warns on 3 (FILL) — the setter takes it, the hint lists only three labels', () => {
-        expect(check('vertical_alignment', '3')?.severity).toBe('warning');
+        expect(check('vertical_alignment', '3')).toBeAtTier('warning');
       });
       it('rejects 4, one past the setter bound', () => {
-        expect(check('vertical_alignment', '4')?.severity).toBe('error');
+        expect(check('vertical_alignment', '4')).toBeAtTier('error');
       });
     });
 
     describe('text_direction', () => {
       it('warns on -1: the setter loads it, the hint does not offer it', () => {
-        expect(check('text_direction', '-1')?.severity).toBe('warning');
+        expect(check('text_direction', '-1')).toBeAtTier('warning');
       });
       it('warns on 3 (INHERITED): Label3D hints only Auto/LTR/RTL', () => {
         // label_3d.cpp:166 lists three labels where the Control classes list
         // four, and set_text_direction:705 takes all of them.
-        expect(check('text_direction', '3')?.severity).toBe('warning');
+        expect(check('text_direction', '3')).toBeAtTier('warning');
       });
       it('rejects -2, one past the setter floor', () => {
-        expect(check('text_direction', '-2')?.severity).toBe('error');
+        expect(check('text_direction', '-2')).toBeAtTier('error');
       });
       it('rejects 4, one past the setter ceiling', () => {
-        expect(check('text_direction', '4')?.severity).toBe('error');
+        expect(check('text_direction', '4')).toBeAtTier('error');
       });
     });
 
@@ -317,11 +317,11 @@ describe('Label3D Linter', () => {
       });
       it('rejects a bit outside BREAK_TRIM_MASK, which the setter drops silently', () => {
         const error = check('autowrap_trim_flags', '3');
-        expect(error?.severity).toBe('error');
+        expect(error).toBeAtTier('error');
         expect(error?.message).toContain('Godot stores 0');
       });
       it('warns on BREAK_TRIM_INDENT, which the setter keeps but the hint omits', () => {
-        expect(check('autowrap_trim_flags', '32')?.severity).toBe('warning');
+        expect(check('autowrap_trim_flags', '32')).toBeAtTier('warning');
       });
     });
 
@@ -330,7 +330,7 @@ describe('Label3D Linter', () => {
         expect(check('justification_flags', '3')).toBeNull();
       });
       it('warns on JUSTIFICATION_TRIM_EDGE_SPACES (4), kept but not hinted', () => {
-        expect(check('justification_flags', '4')?.severity).toBe('warning');
+        expect(check('justification_flags', '4')).toBeAtTier('warning');
       });
     });
   });

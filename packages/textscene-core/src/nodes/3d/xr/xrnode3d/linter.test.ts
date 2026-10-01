@@ -39,7 +39,7 @@ describe('XRNode3D family rule', () => {
 `;
         const found = ruleDiagnostics(linter.lint(content), PARENT_RULE);
         expect(found).toHaveLength(1);
-        expect(found[0]!.severity).toBe('warning');
+        expect(found[0]).toBeAtTier('warning');
         expect(found[0]!.message).toContain('Node3D');
         // Godot's message text always names the base class, even for a subclass.
         expect(found[0]!.message).toContain('XRNode3D');
@@ -103,7 +103,7 @@ pose = &""
 `;
       const found = ruleDiagnostics(linter.lint(content), NO_POSE_RULE);
       expect(found).toHaveLength(1);
-      expect(found[0]!.severity).toBe('warning');
+      expect(found[0]).toBeAtTier('warning');
     });
 
     it('warns when pose is explicitly cleared to ""', () => {

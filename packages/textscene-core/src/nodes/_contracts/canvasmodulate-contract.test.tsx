@@ -20,6 +20,7 @@ import { NodeDispatcher } from '../../r3f/NodeDispatcher';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { godotColorToLinear } from '../../r3f/godotColor';
 import { SceneStack } from '../../r3f/testing/SceneStack';
+import { errorsOf } from '../../linter/testing/tierLists';
 import '../../r3f/nodes'; // side-effect: registers every node's r3f component
 import '../../linter/index'; // side-effect: registers every node's linter validators
 
@@ -79,7 +80,7 @@ function firstMeshMaterial(renderer: TestRenderer): THREE.MeshBasicMaterial | un
 }
 
 function lintErrorCount(raw: string): number {
-  return new Linter().lint(raw).filter((d) => d.severity === 'error').length;
+  return errorsOf(new Linter().lint(raw)).length;
 }
 
 function requireComp(): boolean {
@@ -217,7 +218,7 @@ color = Color(0.4, 0.6, 0.9, 1)
     expect(withCM.length, 'a scenes/fixtures/*.tscn must use CanvasModulate').toBeGreaterThan(0);
     const raw = readFileSync(resolve(dir, withCM[0] as string), 'utf8');
     expect(flatten(new TscnParser().parse(raw)).some((n) => n.type === 'CanvasModulate')).toBe(true);
-    const errors = new Linter().lint(raw).filter((d) => d.severity === 'error');
+    const errors = errorsOf(new Linter().lint(raw));
     expect(errors, `fixture ${withCM[0]} lints with errors: ${JSON.stringify(errors)}`).toHaveLength(0);
   });
 

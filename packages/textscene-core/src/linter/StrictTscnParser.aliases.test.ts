@@ -17,7 +17,7 @@ describe('a transforming arm with no validator of its own', () => {
     // a negative component. The scan sees size = Vector3(-2, 2, 2).
     const errors = lint('[node name="D" type="Decal"]\nextents = Vector3(-1, 1, 1)');
     expect(errors).toHaveLength(1);
-    expect(errors[0]!.severity).toBe('error');
+    expect(errors[0]).toBeAtTier('error');
     expect(errors[0]!.message).toContain("'extents'");
     expect(errors[0]!.message).toContain('size = Vector3(-2, 2, 2)');
     expect(errors[0]!.message).toContain('components must be >= 0.001');
@@ -36,7 +36,7 @@ describe('a pure rename with no validator of its own', () => {
   it('TileMap cell_quadrant_size = 0 draws the rendering_quadrant_size floor (tile_map.cpp:224)', () => {
     const errors = lint('[node name="T" type="TileMap"]\ncell_quadrant_size = 0');
     expect(errors).toHaveLength(1);
-    expect(errors[0]!.severity).toBe('error');
+    expect(errors[0]).toBeAtTier('error');
     expect(errors[0]!.message).toContain("'cell_quadrant_size'");
     expect(errors[0]!.message).toContain('rendering_quadrant_size = 0');
     expect(errors[0]!.message).toContain('must be between 1 and 128');
@@ -46,7 +46,7 @@ describe('a pure rename with no validator of its own', () => {
   it('carries the canonical validator’s tiering: the hinted ceiling warns', () => {
     const errors = lint('[node name="T" type="TileMap"]\ncell_quadrant_size = 200');
     expect(errors).toHaveLength(1);
-    expect(errors[0]!.severity).toBe('warning');
+    expect(errors[0]).toBeAtTier('warning');
   });
 
   it('a legal cell_quadrant_size draws nothing', () => {
@@ -215,7 +215,7 @@ describe('a pure rename validated through the fallback', () => {
     (type, key, canonical, refused, severity, legal) => {
       const errors = lint(`[node name="N" type="${type}"]\n${key} = ${refused}`);
       expect(errors).toHaveLength(1);
-      expect(errors[0]!.severity).toBe(severity);
+      expect(errors[0]).toBeAtTier(severity);
       expect(errors[0]!.message).toContain(applied(key, canonical, refused));
       expect(errors[0]!.column).toBe(key.length + 3);
       expect(lint(`[node name="N" type="${type}"]\n${key} = ${legal}`)).toEqual([]);

@@ -31,7 +31,7 @@ describe('RigidBody2D strict validators (physics state)', () => {
 
     it('rejects a Vector3', () => {
       const error = check('linear_velocity', 'Vector3(0, 0, 0)');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.message).toContain('linear_velocity');
     });
   });
@@ -50,7 +50,7 @@ describe('RigidBody2D strict validators (physics state)', () => {
     });
 
     it('rejects text that is not a float at all', () => {
-      expect(check('angular_velocity', 'fast')?.severity).toBe('error');
+      expect(check('angular_velocity', 'fast')).toBeAtTier('error');
     });
   });
 
@@ -60,7 +60,7 @@ describe('RigidBody2D strict validators (physics state)', () => {
     });
 
     it('rejects a Vector3, the 3D shape', () => {
-      expect(check('constant_force', 'Vector3(1, 2, 3)')?.severity).toBe('error');
+      expect(check('constant_force', 'Vector3(1, 2, 3)')).toBeAtTier('error');
     });
   });
 
@@ -70,7 +70,7 @@ describe('RigidBody2D strict validators (physics state)', () => {
     });
 
     it('rejects a Vector3, the 3D shape', () => {
-      expect(check('constant_torque', 'Vector3(1, 1, 1)')?.severity).toBe('error');
+      expect(check('constant_torque', 'Vector3(1, 1, 1)')).toBeAtTier('error');
     });
   });
 
@@ -84,12 +84,12 @@ describe('RigidBody2D strict validators (physics state)', () => {
       // Ray,Cast Shape". set_continuous_collision_detection_mode (:566-569)
       // assigns straight through, so out-of-range is the widget's complaint.
       const error = check('continuous_cd', '5');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
       expect(error?.message).toContain('0-2');
     });
 
     it('rejects a non-numeric value', () => {
-      expect(check('continuous_cd', '"ray"')?.severity).toBe('error');
+      expect(check('continuous_cd', '"ray"')).toBeAtTier('error');
     });
   });
 
@@ -108,14 +108,14 @@ describe('RigidBody2D strict validators (physics state)', () => {
 
     it('refuses the constant itself and above — ERR_FAIL_INDEX fails at >= 4096', () => {
       const error = check('max_contacts_reported', '4096');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.message).toContain('less than 4096');
       expect(error?.message).toContain('Godot does not store this value');
-      expect(check('max_contacts_reported', '100000')?.severity).toBe('error');
+      expect(check('max_contacts_reported', '100000')).toBeAtTier('error');
     });
 
     it('refuses a negative count', () => {
-      expect(check('max_contacts_reported', '-5')?.severity).toBe('error');
+      expect(check('max_contacts_reported', '-5')).toBeAtTier('error');
     });
 
     it('carries the setter ceiling in the enforced slot, leaving the or_greater end of `bounds` open', () => {
@@ -133,7 +133,7 @@ describe('RigidBody2D strict validators (physics state)', () => {
     it.each(['can_sleep', 'sleeping', 'custom_integrator'])(
       'converts a numeric stand-in for %s',
       (property) => {
-        expect(check(property, '1')?.severity).toBe('warning');
+        expect(check(property, '1')).toBeAtTier('warning');
       }
     );
   });

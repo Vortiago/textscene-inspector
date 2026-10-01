@@ -31,7 +31,7 @@ describe('v.vector2 / v.vector2i / v.vector3', () => {
     expect(v.vector2i('grid')('grid', 'Vector2i(2e1, 0)', 1)).toBeNull();
     // Fractional loads too, but the stored value is not the written one, so it
     // draws the truncation warning every int slot shares.
-    expect(v.vector2i('grid')('grid', 'Vector2i(1.5, 0)', 1)?.severity).toBe('warning');
+    expect(v.vector2i('grid')('grid', 'Vector2i(1.5, 0)', 1)).toBeAtTier('warning');
   });
 
   it('vector2i truncates a converted component toward zero before bounding it', () => {
@@ -39,9 +39,9 @@ describe('v.vector2 / v.vector2i / v.vector3', () => {
     // as -1 would answer differently.
     const validator = v.vector2i('size', { min: 1, enforced: 'viewport.cpp:1120' });
     // Below the floor once truncated: the error, which outranks the warning.
-    expect(validator('size', 'Vector2i(0.9, 4)', 1)?.severity).toBe('error');
+    expect(validator('size', 'Vector2i(0.9, 4)', 1)).toBeAtTier('error');
     // In range once truncated: only the truncation itself is left to report.
-    expect(validator('size', 'Vector2i(1.9, 4)', 1)?.severity).toBe('warning');
+    expect(validator('size', 'Vector2i(1.9, 4)', 1)).toBeAtTier('warning');
   });
 
   it('rect2i takes the same component spellings', () => {
@@ -54,7 +54,7 @@ describe('v.vector2 / v.vector2i / v.vector3', () => {
     // narrows through `double -> int32`: `4294967295` reaches the UB sentinel,
     // while the `Rect2i` spelling of the same digits wraps an int64 to -1.
     const converted = v.rect2i('region')('region', 'Rect2(0, 0, 4294967295, 16)', 1);
-    expect(converted?.severity).toBe('error');
+    expect(converted).toBeAtTier('error');
     expect(converted?.code).toBe('INVALID_REGION_VALUE');
     expect(v.rect2i('region')('region', 'Rect2i(0, 0, 4294967295, 16)', 1)).toBeNull();
     expect(v.rect2i('region')('region', 'Rect2(0, 0, 320, 16)', 1)).toBeNull();
@@ -75,9 +75,9 @@ describe('v.vector2 / v.vector2i / v.vector3', () => {
 
   it('vector2i reports a hinted min as a warning and an enforced one as an error', () => {
     const hinted = v.vector2i('grid', { min: 0, hinted: 'window.cpp:3430' });
-    expect(hinted('grid', 'Vector2i(-1, 0)', 1)?.severity).toBe('warning');
+    expect(hinted('grid', 'Vector2i(-1, 0)', 1)).toBeAtTier('warning');
     const enforced = v.vector2i('grid', { min: 0, enforced: 'window.cpp:1716' });
-    expect(enforced('grid', 'Vector2i(-1, 0)', 1)?.severity).toBe('error');
+    expect(enforced('grid', 'Vector2i(-1, 0)', 1)).toBeAtTier('error');
   });
 
   it('vector2i is never format-only: it rejects a component no int32 holds', () => {
@@ -154,19 +154,19 @@ describe('v.resourceReference / v.nodePath / v.color', () => {
     'color converts %s, with the converted-spelling warning',
     (value) => {
       const report = v.color('modulate')('modulate', value, 1);
-      expect(report?.severity).toBe('warning');
+      expect(report).toBeAtTier('warning');
       expect(report?.message).toContain('which this slot converts');
     }
   );
 
   it.each(['1.5', '1e3', '&"red"', 'true'])('color refuses %s, which COLOR does not convert', (value) => {
-    expect(v.color('modulate')('modulate', value, 1)?.severity).toBe('error');
+    expect(v.color('modulate')('modulate', value, 1)).toBeAtTier('error');
   });
 
   // `Color::named` fails with ERR_FAIL_V_MSG and yields `Color()` (color.cpp:396-402).
   it('color errors on a string that is no colour, which the slot stores as black', () => {
     const report = v.color('modulate')('modulate', '"not a color"', 1);
-    expect(report?.severity).toBe('error');
+    expect(report).toBeAtTier('error');
     expect(report?.message).toContain('color.cpp:396-402');
   });
 
@@ -236,12 +236,12 @@ describe('a fractional component of an integer composite', () => {
   // reaches here too.
   it('warns on Vector2i, as the scalar slot does', () => {
     const diagnostic = v.vector2i('size')('size', 'Vector2i(1.5, 2)', 1);
-    expect(diagnostic?.severity).toBe('warning');
+    expect(diagnostic).toBeAtTier('warning');
     expect(diagnostic?.message).toContain('1.5');
   });
 
   it('warns on Rect2i', () => {
-    expect(v.rect2i('region')('region', 'Rect2i(0, 0, 3.5, 4)', 1)?.severity).toBe('warning');
+    expect(v.rect2i('region')('region', 'Rect2i(0, 0, 3.5, 4)', 1)).toBeAtTier('warning');
   });
 
   it('warns on a packed int element', () => {
@@ -249,7 +249,7 @@ describe('a fractional component of an integer composite', () => {
     // per slice rather than exposed as a `v` combinator.
     const validator = validatorRegistry.findValidator('CodeEdit', 'line_length_guidelines')!;
     const diagnostic = validator('line_length_guidelines', 'PackedInt32Array(1.5, 80)', 1);
-    expect(diagnostic?.severity).toBe('warning');
+    expect(diagnostic).toBeAtTier('warning');
     expect(diagnostic?.message).toContain('1.5');
   });
 
@@ -268,7 +268,7 @@ describe('the converted integer spelling in a float slot', () => {
 
   it('reports a component past int32, which wraps to a value nothing writes', () => {
     const error = startPosition('Vector2i(4294967296, 0)');
-    expect(error?.severity).toBe('error');
+    expect(error).toBeAtTier('error');
     expect(error?.code).toBe('INVALID_START_POSITION_VALUE');
     expect(error?.message).toContain('narrowed at parse time');
   });

@@ -24,7 +24,7 @@ describe('StrictTscnParser', () => {
       const result = parser.parse(content);
 
       expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]!.severity).toBe('error');
+      expect(result.errors[0]).toBeAtTier('error');
       expect(result.errors[0]!.code).toBe('MISSING_NODE_NAME');
       expect(result.errors[0]!.line).toBe(3);
       expect(result.errors[0]!.message).toContain('name=');
@@ -45,7 +45,7 @@ describe('StrictTscnParser', () => {
       // only under `if (next_tag.fields.has("instance"))` (:236-239), so heading 0 hits
       // `ERR_FAIL_COND_V_MSG(n.type == TYPE_INSTANTIATED && base_scene_idx < 0, nullptr, "Invalid scene: root node %s in an instance, but there's no base scene.")`
       // (packed_scene.cpp:220): the instantiate is refused.
-      expect(result.errors[0]!.severity).toBe('error');
+      expect(result.errors[0]).toBeAtTier('error');
       expect(result.errors[0]!.code).toBe('MISSING_NODE_IDENTIFIER');
       expect(result.errors[0]!.line).toBe(3);
       expect(result.errors[0]!.message).toContain('type=');
@@ -77,7 +77,7 @@ describe('StrictTscnParser', () => {
       // The `i > 0` arm: Godot only warns at load if nothing instantiates the
       // node: "was modified from inside an instance, but it has vanished."
       // (packed_scene.cpp:310).
-      expect(result.errors[0]!.severity).toBe('warning');
+      expect(result.errors[0]).toBeAtTier('warning');
       expect(result.errors[0]!.code).toBe('MISSING_NODE_IDENTIFIER');
       expect(result.errors[0]!.line).toBe(5);
       expect(result.errors[0]!.message).toContain('type=');
@@ -194,9 +194,8 @@ position = Vector2(5, 5)
 
 [node name="Inner" parent="Rock"]
 `);
-      expect(result.errors.map((e) => [e.code, e.severity, e.line])).toEqual([
-        ['MISSING_NODE_IDENTIFIER', 'warning', 7],
-      ]);
+      expect(result.errors).toBeAllAtTier('warning');
+      expect(result.errors.map((e) => [e.code, e.line])).toEqual([['MISSING_NODE_IDENTIFIER', 7]]);
     });
 
     it('still warns beside a nameless instance heading, which stores no path', () => {

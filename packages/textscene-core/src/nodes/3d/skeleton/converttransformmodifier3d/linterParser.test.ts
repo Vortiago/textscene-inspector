@@ -46,7 +46,7 @@ describe('ConvertTransformModifier3D strict validators', () => {
 
     it('ERRORS below zero, which BoneConstraint3D::set_setting_count refuses', () => {
       // ERR_FAIL_COND(p_count < 0), bone_constraint_3d.cpp:131.
-      expect(check('setting_count', '-1')?.severity).toBe('error');
+      expect(check('setting_count', '-1')).toBeAtTier('error');
     });
   });
 
@@ -61,8 +61,8 @@ describe('ConvertTransformModifier3D strict validators', () => {
     it.each(['settings/0/apply/transform_mode', 'settings/0/reference/transform_mode'])(
       '%s WARNS outside the enum, since the setter only static_casts',
       (key) => {
-        expect(check(key, '3')?.severity).toBe('warning');
-        expect(check(key, '-1')?.severity).toBe('warning');
+        expect(check(key, '3')).toBeAtTier('warning');
+        expect(check(key, '-1')).toBeAtTier('warning');
       }
     );
 
@@ -70,7 +70,7 @@ describe('ConvertTransformModifier3D strict validators', () => {
       '%s accepts X, Y and Z and warns beyond them',
       (key) => {
         for (const value of ['0', '1', '2']) expect(check(key, value)).toBeNull();
-        expect(check(key, '3')?.severity).toBe('warning');
+        expect(check(key, '3')).toBeAtTier('warning');
       }
     );
 
@@ -87,7 +87,7 @@ describe('ConvertTransformModifier3D strict validators', () => {
       for (const value of ['-1000', '0', '1000', 'inf', '-inf', 'nan']) {
         expect(check(key, value)).toBeNull();
       }
-      expect(check(key, 'not-a-float')?.severity).toBe('error');
+      expect(check(key, 'not-a-float')).toBeAtTier('error');
     });
 
     it('reports the WHOLE key for an unrecognised leaf under apply/', () => {
@@ -109,14 +109,14 @@ describe('ConvertTransformModifier3D strict validators', () => {
     it('delegates settings/0/amount to the base, bound and all', () => {
       expect(check('settings/0/amount', '0.5')).toBeNull();
       // hinted 0..1 at bone_constraint_3d.cpp:102 with a bare-assign setter.
-      expect(check('settings/0/amount', '5')?.severity).toBe('warning');
+      expect(check('settings/0/amount', '5')).toBeAtTier('warning');
     });
 
     it('keeps apply_bone apart from the apply/ group despite the shared prefix', () => {
       // `apply_bone` is BoneConstraint3D's flat leaf, and `apply/axis` is this
       // class's nested one. The index split must not merge them.
       expect(check('settings/0/apply_bone', '4')).toBeNull();
-      expect(check('settings/0/apply_bone', 'not-an-int')?.severity).toBe('error');
+      expect(check('settings/0/apply_bone', 'not-an-int')).toBeAtTier('error');
     });
 
     it('delegates the remaining base leaves rather than reporting them unknown', () => {
@@ -133,7 +133,7 @@ describe('ConvertTransformModifier3D strict validators', () => {
       // ERR_FAIL_INDEX_V(which, (int)settings.size(), false),
       // convert_transform_modifier_3d.cpp:43.
       const error = check('settings/-1/apply/axis', '1');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_SETTING_INDEX');
     });
 

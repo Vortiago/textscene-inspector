@@ -4,7 +4,7 @@
  * which no other guard compares across siblings.
  */
 import { describe, expect, it } from 'vitest';
-import { validatorRegistry, type PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
+import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { settingCount, type SettingCountGuard } from './settingCount.js';
 import '../aimmodifier3d/linterParser.js';
 import '../bonetwistdisperser3d/linterParser.js';
@@ -50,44 +50,40 @@ const PROBES = [
   '"x"',
 ] as const;
 
-function severityOf(validator: PropertyValidator, literal: string): string {
-  return validator('setting_count', literal, 1)?.severity ?? 'none';
-}
-
 describe('settingCount', () => {
   const validator = settingCount('BoneConstraint3D');
 
   it('accepts a count from 0 up to INT32_MAX', () => {
     for (const literal of ['0', '3', '1e3', '2147483647']) {
-      expect(severityOf(validator, literal), literal).toBe('none');
+      expect(validator('setting_count', literal, 1), literal).toBeNull();
     }
   });
 
   it('refuses a negative count, as ERR_FAIL_COND(p_count < 0) does', () => {
-    expect(severityOf(validator, '-1')).toBe('error');
-    expect(severityOf(validator, '-2147483648')).toBe('error');
+    expect(validator('setting_count', '-1', 1)).toBeAtTier('error');
+    expect(validator('setting_count', '-2147483648', 1)).toBeAtTier('error');
   });
 
   it('refuses 2147483648, which the int32 slot wraps to a negative count', () => {
     const result = validator('setting_count', '2147483648', 1);
-    expect(result?.severity).toBe('error');
+    expect(result).toBeAtTier('error');
     expect(result?.message).toContain('-2147483648');
   });
 
   it('refuses a literal no int32 slot can hold', () => {
     for (const literal of ['-2147483649', '4294967296', '9223372036854775807', 'inf', 'nan']) {
-      expect(severityOf(validator, literal), literal).toBe('error');
+      expect(validator('setting_count', literal, 1), literal).toBeAtTier('error');
     }
   });
 
   it('warns on a literal the slot stores differently from how it is written', () => {
     for (const literal of ['3.7', '-0.5', 'true']) {
-      expect(severityOf(validator, literal), literal).toBe('warning');
+      expect(validator('setting_count', literal, 1), literal).toBeAtTier('warning');
     }
   });
 
   it('refuses text that is not a number', () => {
-    expect(severityOf(validator, '"x"')).toBe('error');
+    expect(validator('setting_count', '"x"', 1)).toBeAtTier('error');
   });
 
   it.each([

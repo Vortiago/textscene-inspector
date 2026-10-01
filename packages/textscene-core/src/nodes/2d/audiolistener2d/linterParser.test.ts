@@ -64,6 +64,6 @@ describe('AudioListener2D current', () => {
   it('rejects a non-bool as an error (format)', () => {
     const result = check('current', 'yes');
     expect(result).not.toBeNull();
-    expect(result?.severity).toBe('error');
+    expect(result).toBeAtTier('error');
   });
 });

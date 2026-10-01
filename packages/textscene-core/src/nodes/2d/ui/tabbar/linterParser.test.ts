@@ -81,7 +81,7 @@ describe('TabBar strict validators', () => {
     it('errors below 0: set_tab_count is ERR_FAIL_COND(p_count < 0) (tab_bar.cpp:745)', () => {
       const error = check('tab_count', '-1');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 
@@ -102,12 +102,12 @@ describe('TabBar strict validators', () => {
     it('errors below -1: set_current_tab reaches ERR_FAIL_INDEX(p_current, get_tab_count()) (tab_bar.cpp:804), which refuses any negative index other than the -1 deselect sentinel', () => {
       const error = check('current_tab', '-2');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
     it('warns above 4096: the setter assigns straight through, only the PROPERTY_HINT_RANGE "-1,4096,1" (tab_bar.cpp:2123) names that end and it carries no or_greater', () => {
       const diagnostic = check('current_tab', '4097');
       expect(diagnostic).not.toBeNull();
-      expect(diagnostic?.severity).toBe('warning');
+      expect(diagnostic).toBeAtTier('warning');
     });
   });
 
@@ -125,12 +125,12 @@ describe('TabBar strict validators', () => {
     it('errors below 0: set_max_tab_width is ERR_FAIL_COND(p_width < 0) (tab_bar.cpp:1966)', () => {
       const error = check('max_tab_width', '-1');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
     it('warns above 99999: PROPERTY_HINT_RANGE "0,99999,1,suffix:px" (tab_bar.cpp:2128) closes that end but the setter assigns it straight through', () => {
       const diagnostic = check('max_tab_width', '100000');
       expect(diagnostic).not.toBeNull();
-      expect(diagnostic?.severity).toBe('warning');
+      expect(diagnostic).toBeAtTier('warning');
     });
   });
 
@@ -146,10 +146,10 @@ describe('TabBar strict validators', () => {
     it('errors at ALIGNMENT_MAX and above: ERR_FAIL_INDEX(p_alignment, ALIGNMENT_MAX) (tab_bar.cpp:1671), ALIGNMENT_MAX = 3 (tab_bar.h:47)', () => {
       const error = check('tab_alignment', '3');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
     it('errors below 0: the same ERR_FAIL_INDEX refuses a negative index', () => {
-      expect(check('tab_alignment', '-1')?.severity).toBe('error');
+      expect(check('tab_alignment', '-1')).toBeAtTier('error');
     });
   });
 
@@ -165,10 +165,10 @@ describe('TabBar strict validators', () => {
     it('errors at CLOSE_BUTTON_MAX and above: ERR_FAIL_INDEX(p_policy, CLOSE_BUTTON_MAX) (tab_bar.cpp:1944), CLOSE_BUTTON_MAX = 3 (tab_bar.h:54)', () => {
       const error = check('tab_close_display_policy', '3');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
     it('errors below 0: the same ERR_FAIL_INDEX refuses a negative index', () => {
-      expect(check('tab_close_display_policy', '-1')?.severity).toBe('error');
+      expect(check('tab_close_display_policy', '-1')).toBeAtTier('error');
     });
   });
 
@@ -238,13 +238,13 @@ describe('TabBar strict validators', () => {
       const error = check('tab_-1/title', '"Ghost"');
       expect(error).not.toBeNull();
       expect(error?.code).toBe('INVALID_TAB_INDEX');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
     it('rejects a non-integer index, which the helper never resolves', () => {
       // `TabBar::_set` is `property_helper.property_set_value` (tab_bar.h:208), which
       // drops an index that fails `is_valid_int()` (property_list_helper.cpp:53-55).
       expect(check('tab_x/title', '"Ghost"')?.code).toBe('INVALID_TAB_KEY');
-      expect(check('tab_1.5/title', '"Ghost"')?.severity).toBe('error');
+      expect(check('tab_1.5/title', '"Ghost"')).toBeAtTier('error');
     });
     it('accepts an index past the live tab_count: that bound is against a sibling property, so linter.ts owns it', () => {
       expect(check('tab_99/title', '"Far"')).toBeNull();

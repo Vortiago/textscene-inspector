@@ -72,17 +72,17 @@ describe('GraphFrame strict validators', () => {
 
     it('warns, not errors, above 128: set_autoshrink_margin assigns straight through', () => {
       const found = check('autoshrink_margin', '129');
-      expect(found?.severity).toBe('warning');
+      expect(found).toBeAtTier('warning');
     });
 
     it('warns, not errors, below 0', () => {
       const found = check('autoshrink_margin', '-1');
-      expect(found?.severity).toBe('warning');
+      expect(found).toBeAtTier('warning');
     });
 
     it('rejects a non-numeric value as a format error', () => {
       const found = check('autoshrink_margin', 'abc');
-      expect(found?.severity).toBe('error');
+      expect(found).toBeAtTier('error');
     });
   });
 
@@ -101,12 +101,12 @@ describe('GraphFrame strict validators', () => {
 
     it('warns, not errors, above 128: set_drag_margin assigns straight through', () => {
       const found = check('drag_margin', '129');
-      expect(found?.severity).toBe('warning');
+      expect(found).toBeAtTier('warning');
     });
 
     it('warns, not errors, below 0', () => {
       const found = check('drag_margin', '-1');
-      expect(found?.severity).toBe('warning');
+      expect(found).toBeAtTier('warning');
     });
   });
 

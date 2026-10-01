@@ -25,7 +25,7 @@ describe('AudioStreamPlayer3D strict validators: playback_type', () => {
   it('warns, not errors, past the hint (audio_stream_player_internal.cpp:337-339 is a bare assignment)', () => {
     const error = check('playback_type', '3');
     expect(error).not.toBeNull();
-    expect(error!.severity).toBe('warning');
+    expect(error).toBeAtTier('warning');
     expect(error!.message).toContain('0-2');
   });
 
@@ -48,18 +48,18 @@ describe('AudioStreamPlayer3D strict validators: emission_angle_degrees', () => 
   });
 
   it('warns through [0, 0.1), which the setter accepts and the hint excludes', () => {
-    expect(check('emission_angle_degrees', '0')?.severity).toBe('warning');
-    expect(check('emission_angle_degrees', '0.05')?.severity).toBe('warning');
+    expect(check('emission_angle_degrees', '0')).toBeAtTier('warning');
+    expect(check('emission_angle_degrees', '0.05')).toBeAtTier('warning');
   });
 
   it('errors below the setter floor, which sits under the hint', () => {
     const below = check('emission_angle_degrees', '-0.1');
-    expect(below?.severity).toBe('error');
+    expect(below).toBeAtTier('error');
     expect(below?.message).toContain('at least 0');
   });
 
   it('errors above 90, where the setter and the hint agree', () => {
-    expect(check('emission_angle_degrees', '90.1')?.severity).toBe('error');
+    expect(check('emission_angle_degrees', '90.1')).toBeAtTier('error');
   });
 });
 
@@ -72,14 +72,14 @@ describe('AudioStreamPlayer3D strict validators: emission_angle_degrees', () => 
 describe('AudioStreamPlayer3D strict validators: volume_db', () => {
   it('errors on nan, which the setter refuses', () => {
     const error = check('volume_db', 'nan');
-    expect(error?.severity).toBe('error');
+    expect(error).toBeAtTier('error');
     expect(error?.message).toContain('must not be NaN');
   });
 
   it('warns on inf against the hint band rather than erroring', () => {
     for (const value of ['inf', '-inf', 'inf_neg']) {
       const error = check('volume_db', value);
-      expect(error?.severity, value).toBe('warning');
+      expect(error, value).toBeAtTier('warning');
       expect(error?.message, value).toContain('between -80 and 80');
     }
   });

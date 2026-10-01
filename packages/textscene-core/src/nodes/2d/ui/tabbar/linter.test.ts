@@ -67,7 +67,7 @@ describe('TabBar cross-field rule', () => {
     it('errors when current_tab equals tab_count, one past the last valid index', () => {
       const found = only({ tab_count: 3, current_tab: 3 });
       expect(found).toHaveLength(1);
-      expect(found[0]?.severity).toBe('error');
+      expect(found[0]).toBeAtTier('error');
     });
     it('errors when current_tab exceeds tab_count', () => {
       expect(only({ tab_count: 3, current_tab: 9 })).toHaveLength(1);
@@ -104,7 +104,7 @@ describe('TabBar cross-field rule', () => {
     it('errors on an index at tab_count, the first index the array does not hold', () => {
       const found = only({ tab_count: 2, 'tab_2/title': '"Three"' });
       expect(found).toHaveLength(1);
-      expect(found[0]?.severity).toBe('error');
+      expect(found[0]).toBeAtTier('error');
     });
     it('errors once, listing every offending index, rather than once per key', () => {
       const found = only({

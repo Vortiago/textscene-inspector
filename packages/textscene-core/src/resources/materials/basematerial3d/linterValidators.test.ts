@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import { Linter } from '../../../linter/Linter';
 import { expectNoErrors } from '../../../linter/testing/testkit';
+import { errorsOf } from '../../../linter/testing/tierLists';
 import './linterValidators'; // Import to trigger registration
 
 describe('BaseMaterial3D Linter Validators', () => {
@@ -30,7 +31,7 @@ describe('BaseMaterial3D Linter Validators', () => {
       const result = validator!('normal_enabled', 'yes', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
       expect(result!.message).toContain('must be a boolean (true or false)');
       expect(result!.code).toBe('INVALID_NORMAL_ENABLED_FORMAT');
     });
@@ -40,7 +41,7 @@ describe('BaseMaterial3D Linter Validators', () => {
       const result = validator!('normal_enabled', '1', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('warning');
+      expect(result).toBeAtTier('warning');
     });
   });
 
@@ -58,7 +59,7 @@ describe('BaseMaterial3D Linter Validators', () => {
       const result = validator!('emission_enabled', 'on', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
       expect(result!.message).toContain('must be a boolean (true or false)');
       expect(result!.code).toBe('INVALID_EMISSION_ENABLED_FORMAT');
     });
@@ -78,7 +79,7 @@ describe('BaseMaterial3D Linter Validators', () => {
       const result = validator!('refraction_enabled', 'yes', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
       expect(result!.message).toContain('must be a boolean (true or false)');
       expect(result!.code).toBe('INVALID_REFRACTION_ENABLED_FORMAT');
     });
@@ -98,7 +99,7 @@ describe('BaseMaterial3D Linter Validators', () => {
       const result = validator!('anisotropy_enabled', 'yes', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
       expect(result!.message).toContain('must be a boolean (true or false)');
       expect(result!.code).toBe('INVALID_ANISOTROPY_ENABLED_FORMAT');
     });
@@ -124,7 +125,7 @@ describe('BaseMaterial3D Linter Validators', () => {
       const result = validator!('normal_texture', 'ExtResource(1_abc)', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
       expect(result!.message).toContain('must be a resource reference');
       expect(result!.code).toBe('INVALID_NORMAL_TEXTURE_REFERENCE');
     });
@@ -141,7 +142,7 @@ describe('BaseMaterial3D Linter Validators', () => {
       const result = validator!('normal_texture', 'res://texture.png', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
   });
 
@@ -159,7 +160,7 @@ describe('BaseMaterial3D Linter Validators', () => {
       const result = validator!('albedo_texture', 'invalid', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
   });
 
@@ -208,7 +209,7 @@ describe('BaseMaterial3D Linter Validators', () => {
       const validator = validatorRegistry.findValidator('StandardMaterial3D', 'emission_energy_multiplier');
       const result = validator!('emission_energy_multiplier', '-1', 1);
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('warning');
+      expect(result).toBeAtTier('warning');
     });
   });
 
@@ -224,7 +225,7 @@ describe('BaseMaterial3D Linter Validators', () => {
       const validator = validatorRegistry.findValidator('StandardMaterial3D', 'emission_operator');
       const result = validator!('emission_operator', '2', 1);
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('warning');
+      expect(result).toBeAtTier('warning');
     });
   });
 
@@ -241,7 +242,7 @@ describe('BaseMaterial3D Linter Validators', () => {
       const validator = validatorRegistry.findValidator('StandardMaterial3D', 'texture_filter');
       const result = validator!('texture_filter', '6', 1);
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('warning');
+      expect(result).toBeAtTier('warning');
     });
 
     it('names BaseMaterial3D’s own constants, not another TextureFilter enum', () => {
@@ -269,7 +270,7 @@ describe('BaseMaterial3D Linter Validators', () => {
       const validator = validatorRegistry.findValidator('StandardMaterial3D', 'emission_intensity');
       const result = validator!('emission_intensity', '-1', 1);
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('warning');
+      expect(result).toBeAtTier('warning');
     });
   });
 
@@ -311,7 +312,7 @@ describe('BaseMaterial3D Linter Validators', () => {
       const result = validator!('uv1_scale', 'Invalid', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
       expect(result!.message).toContain('must be Vector3 with 3 numbers');
       expect(result!.code).toBe('INVALID_UV1_SCALE_FORMAT');
     });
@@ -321,7 +322,7 @@ describe('BaseMaterial3D Linter Validators', () => {
       const result = validator!('uv1_scale', 'Vector3(1, 2)', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
       expect(result!.code).toBe('INVALID_UV1_SCALE_FORMAT');
     });
 
@@ -330,7 +331,7 @@ describe('BaseMaterial3D Linter Validators', () => {
       const result = validator!('uv1_scale', 'Vector3(a, b, c)', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
 
     it('should accept Vector3 with zero components (format is valid)', () => {
@@ -352,7 +353,7 @@ describe('BaseMaterial3D Linter Validators', () => {
       const result = validator!('uv1_scale', 'Vector2(1, 1)', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
 
     it('should accept Vector3 with scientific notation (Godot emits exponents)', () => {
@@ -367,7 +368,7 @@ describe('BaseMaterial3D Linter Validators', () => {
       const result = validator!('uv1_scale', 'Vector3 1, 2, 3)', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
 
     it('should reject Vector3 with missing closing parenthesis', () => {
@@ -375,7 +376,7 @@ describe('BaseMaterial3D Linter Validators', () => {
       const result = validator!('uv1_scale', 'Vector3(1, 2, 3', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
 
     it('should reject Vector3 with extra commas', () => {
@@ -383,7 +384,7 @@ describe('BaseMaterial3D Linter Validators', () => {
       const result = validator!('uv1_scale', 'Vector3(1,, 2, 3)', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
 
     it('should accept very large values', () => {
@@ -434,7 +435,7 @@ uv1_scale = Invalid
         (d) => d.message.includes('uv1_scale') && d.message.includes('Vector3')
       );
       expect(uv1ScaleErrors.length).toBeGreaterThan(0);
-      expect(uv1ScaleErrors[0]!.severity).toBe('error');
+      expect(uv1ScaleErrors[0]).toBeAtTier('error');
     });
 
     it('should detect Vector2 used instead of Vector3 for uv1_scale', () => {
@@ -451,7 +452,7 @@ uv1_scale = Vector2(0.5, 0.5)
 
       const uv1ScaleErrors = diagnostics.filter((d) => d.message.includes('uv1_scale'));
       expect(uv1ScaleErrors.length).toBeGreaterThan(0);
-      expect(uv1ScaleErrors[0]!.severity).toBe('error');
+      expect(uv1ScaleErrors[0]).toBeAtTier('error');
     });
 
     it('should validate complex material with multiple properties including uv1_scale', () => {
@@ -472,7 +473,7 @@ roughness = 0.3
       const linter = new Linter();
       const diagnostics = linter.lint(content);
 
-      expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0);
+      expect(errorsOf(diagnostics)).toHaveLength(0);
     });
 
     it('accepts uv1_scale with zero components, which is a format-valid Vector3', () => {
@@ -501,7 +502,7 @@ uv1_scale = Vector3(0.5 0.5 0.5)
 
       const uv1ScaleErrors = diagnostics.filter((d) => d.message.includes('uv1_scale'));
       expect(uv1ScaleErrors.length).toBeGreaterThan(0);
-      expect(uv1ScaleErrors[0]!.severity).toBe('error');
+      expect(uv1ScaleErrors[0]).toBeAtTier('error');
     });
   });
 
@@ -518,7 +519,7 @@ uv1_scale = Vector3(0.5 0.5 0.5)
       // BaseMaterial3D's.
       const validator = validatorRegistry.findValidator('ORMMaterial3D', 'albedo_color');
       expect(validator).not.toBeNull();
-      expect(validator!('albedo_color', 'Color(1, 0)', 1)?.severity).toBe('error');
+      expect(validator!('albedo_color', 'Color(1, 0)', 1)).toBeAtTier('error');
     });
 
     it('reports through the Linter on an ORMMaterial3D sub-resource', () => {
@@ -530,9 +531,7 @@ uv1_scale = Vector2(0.5, 0.5)
 [node name="Root" type="Node3D"]
 `;
       const diagnostics = new Linter().lint(content);
-      expect(
-        diagnostics.filter((d) => d.severity === 'error' && d.message.includes('uv1_scale'))
-      ).toHaveLength(1);
+      expect(errorsOf(diagnostics).filter((d) => d.message.includes('uv1_scale'))).toHaveLength(1);
     });
 
     it('inherits Material keys through the base-walk without re-declaring them', () => {

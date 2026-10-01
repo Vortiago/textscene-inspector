@@ -93,7 +93,7 @@ stream = "res://sound.ogg"
       for (const value of ['-80.1', '24.1']) {
         const error = check('volume_db', value);
         expect(error).not.toBeNull();
-        expect(error!.severity).toBe('warning');
+        expect(error).toBeAtTier('warning');
         expect(error!.message).toContain('between -80 and 24');
       }
     });
@@ -103,14 +103,14 @@ stream = "res://sound.ogg"
     // `-inf` are stored unaltered. A range bound cannot cover it: every comparison against NaN is false.
     it('errors on nan, which the setter refuses', () => {
       const error = check('volume_db', 'nan');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.message).toContain('must not be NaN');
     });
 
     it('still only warns on inf, which the setter stores', () => {
       for (const value of ['inf', '-inf', 'inf_neg']) {
         const error = check('volume_db', value);
-        expect(error?.severity, value).toBe('warning');
+        expect(error, value).toBeAtTier('warning');
         expect(error?.message, value).toContain('between -80 and 24');
       }
     });
@@ -194,10 +194,10 @@ pitch_scale = -1.0
 [node name="Player" type="AudioStreamPlayer"]
 pitch_scale = ${value}
 `);
-      expect(at('0')[0]!.severity).toBe('error');
+      expect(at('0')[0]).toBeAtTier('error');
       const warned = at('0.005');
       expect(warned).toHaveLength(1);
-      expect(warned[0]!.severity).toBe('warning');
+      expect(warned[0]).toBeAtTier('warning');
       expect(warned[0]!.message).toContain('0.01');
       expect(at('0.01')).toHaveLength(0);
     });
@@ -391,7 +391,7 @@ bus = Master
     it('warns, not errors, past the hint (audio_stream_player.cpp:161-163 is a bare assignment)', () => {
       const error = check('mix_target', '3');
       expect(error).not.toBeNull();
-      expect(error!.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
       expect(error!.message).toContain('0-2');
     });
 
@@ -412,7 +412,7 @@ bus = Master
     it('warns, not errors, past the hint (audio_stream_player_internal.cpp:337-339 is a bare assignment)', () => {
       const error = check('playback_type', '3');
       expect(error).not.toBeNull();
-      expect(error!.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
       expect(error!.message).toContain('0-2');
     });
 

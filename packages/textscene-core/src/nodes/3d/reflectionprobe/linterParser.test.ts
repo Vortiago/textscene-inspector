@@ -101,7 +101,7 @@ describe('ReflectionProbe strict validators', () => {
     it('warns past the last constant (set_update_mode has no ERR_FAIL)', () => {
       const error = check('update_mode', '2');
       expect(error?.code).toBe('INVALID_UPDATE_MODE_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('rejects a non-numeric value', () => {
@@ -121,13 +121,13 @@ describe('ReflectionProbe strict validators', () => {
 
     it('warns (not errors) below the hinted floor', () => {
       const error = check('intensity', '-0.5');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
       expect(error?.code).toBe('INVALID_INTENSITY_VALUE');
     });
 
     it('warns (not errors) above the hinted ceiling', () => {
       const error = check('intensity', '1.5');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('rejects a non-numeric value', () => {
@@ -148,7 +148,7 @@ describe('ReflectionProbe strict validators', () => {
 
     it('warns (not errors) below the floor', () => {
       const error = check('blend_distance', '-1');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
       expect(error?.code).toBe('INVALID_BLEND_DISTANCE_VALUE');
     });
 
@@ -170,14 +170,14 @@ describe('ReflectionProbe strict validators', () => {
 
     it('errors past the enforced ceiling', () => {
       const error = check('max_distance', '262145');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_MAX_DISTANCE_VALUE');
       expect(error?.message).toContain('at most 262144');
       expect(error?.message).toContain('Godot does not store this value');
     });
 
     it('still refuses a value far past the clamp — or_greater opens the HINT, not the clamp', () => {
-      expect(check('max_distance', '1000000')?.severity).toBe('error');
+      expect(check('max_distance', '1000000')).toBeAtTier('error');
     });
 
     it('carries the clamp ceiling in the enforced slot, leaving the or_greater end of `bounds` open', () => {
@@ -187,7 +187,7 @@ describe('ReflectionProbe strict validators', () => {
 
     it('errors below the enforced floor', () => {
       const error = check('max_distance', '-1');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('rejects a non-numeric value', () => {
@@ -258,7 +258,7 @@ describe('ReflectionProbe strict validators', () => {
     it.each(['cull_mask', 'reflection_mask'])('errors past the 32-bit widget width', (key) => {
       // Inside the band every pattern is a mask; past it the engine drops bits.
       expect(check(key, '-1')).toBeNull();
-      expect(check(key, '4294967296')?.severity).toBe('error');
+      expect(check(key, '4294967296')).toBeAtTier('error');
     });
 
     it.each(['cull_mask', 'reflection_mask'])('rejects a non-numeric value', (key) => {
@@ -278,7 +278,7 @@ describe('ReflectionProbe strict validators', () => {
 
     it('warns (not errors) above the ceiling', () => {
       const error = check('mesh_lod_threshold', '2000');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('rejects a non-numeric value', () => {
@@ -294,7 +294,7 @@ describe('ReflectionProbe strict validators', () => {
 
     it('warns past the last constant (set_ambient_mode has no ERR_FAIL)', () => {
       const error = check('ambient_mode', '3');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
       expect(error?.code).toBe('INVALID_AMBIENT_MODE_VALUE');
     });
 
@@ -331,7 +331,7 @@ describe('ReflectionProbe strict validators', () => {
 
     it('warns (not errors) above the ceiling', () => {
       const error = check('ambient_color_energy', '20');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('rejects a non-numeric value', () => {

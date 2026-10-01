@@ -64,7 +64,7 @@ describe('XRBodyModifier3D strict validators', () => {
 
     it('rejects an unquoted bareword as a format error', () => {
       const error = check('body_tracker', '/user/body_tracker');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_BODY_TRACKER_FORMAT');
     });
 
@@ -93,12 +93,12 @@ describe('XRBodyModifier3D strict validators', () => {
       // 8: the scene loads, the BitField holds 15, and _get_joint_data never tests an undefined
       // bit. Only the inspector cannot reach it: the hint tier, not the setter tier.
       const error = check('body_update', '15');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
       expect(error?.message).toContain('BODY_UPDATE_UPPER_BODY');
     });
 
     it('warns for a negative value', () => {
-      expect(check('body_update', '-1')?.severity).toBe('warning');
+      expect(check('body_update', '-1')).toBeAtTier('warning');
     });
 
     it('truncates a float rather than calling it a format error', () => {
@@ -108,7 +108,7 @@ describe('XRBodyModifier3D strict validators', () => {
 
     it('still rejects a literal Godot cannot tokenise', () => {
       const error = check('body_update', 'abc');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_BODY_UPDATE_FORMAT');
     });
 
@@ -133,19 +133,19 @@ describe('XRBodyModifier3D strict validators', () => {
       // bone_update keeps whatever it held, so the written value is not the
       // stored one.
       const error = check('bone_update', '2');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_BONE_UPDATE_VALUE');
       expect(error?.message).toContain('BONE_UPDATE_ROTATION_ONLY');
     });
 
     it('errors below zero, the other end of the same guard', () => {
-      expect(check('bone_update', '-1')?.severity).toBe('error');
+      expect(check('bone_update', '-1')).toBeAtTier('error');
     });
 
     it('rejects a constant name as a format error', () => {
       // A `.tscn` stores the integer; the identifier is GDScript-only.
       const error = check('bone_update', 'BONE_UPDATE_ROTATION_ONLY');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_BONE_UPDATE_FORMAT');
     });
 
@@ -169,7 +169,7 @@ describe('XRBodyModifier3D strict validators', () => {
       expect(check('influence', '0.75')).toBeNull();
       // skeleton_modifier_3d.cpp:161 hints "0,1,0.001" and set_influence (:111)
       // bare-assigns, so past the ceiling is the hint tier.
-      expect(check('influence', '1.5')?.severity).toBe('warning');
+      expect(check('influence', '1.5')).toBeAtTier('warning');
       expect(check('active', 'false')).toBeNull();
     });
   });

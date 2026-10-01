@@ -116,20 +116,20 @@ describe('MenuBar strict validators', () => {
     it('warns on -1: the setter loads it, the hint does not offer it', () => {
       // The setter allows it, since its ERR_FAIL_COND opens below -1, so it loads. The hint (0-3)
       // does not offer it, so it warns instead of erroring.
-      expect(check('text_direction', '-1')?.severity).toBe('warning');
+      expect(check('text_direction', '-1')).toBeAtTier('warning');
     });
 
     it('errors below the enforced floor', () => {
       const error = check('text_direction', '-2');
       expect(error).not.toBeNull();
       // The setter refuses the write, so this is the error tier, not the hint's warning tier.
-      expect(error!.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('errors above the enforced ceiling', () => {
       const error = check('text_direction', '4');
       expect(error).not.toBeNull();
-      expect(error!.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('rejects a symbolic constant name, which TSCN never carries for an int enum', () => {

@@ -40,8 +40,8 @@ describe('MeshInstance3D Linter', () => {
           scene(node('MeshInstance3D', { cast_shadow: 99 }, { name: 'InvalidShadow' }))
         );
         expect(diagnostics).toHaveLength(1);
+        expect(diagnostics[0]).toBeAtTier('warning');
         expect(diagnostics[0]).toMatchObject({
-          severity: 'warning',
           ruleName: 'strict-parser',
         });
         expect(diagnostics[0]!.message).toContain('cast_shadow');
@@ -144,8 +144,8 @@ describe('MeshInstance3D Linter', () => {
         scene(node('MeshInstance3D', { transform: 'Transform3D(1, 0, 0)' }, { name: 'InvalidTransform' }))
       );
       expect(diagnostics).toHaveLength(1);
+      expect(diagnostics[0]).toBeAtTier('error');
       expect(diagnostics[0]).toMatchObject({
-        severity: 'error',
         ruleName: 'strict-parser',
       });
       expect(diagnostics[0]!.message).toContain('transform');
@@ -158,8 +158,8 @@ describe('MeshInstance3D Linter', () => {
         scene(node('MeshInstance3D', { mesh: 'SubResource("nonexistent")' }, { name: 'MissingMesh' }))
       );
       expect(diagnostics).toHaveLength(1);
+      expect(diagnostics[0]).toBeAtTier('error');
       expect(diagnostics[0]).toMatchObject({
-        severity: 'error',
         nodeName: 'MissingMesh',
         nodeType: 'MeshInstance3D',
         ruleName: 'dangling-resource-reference',
@@ -361,7 +361,7 @@ describe('MeshInstance3D Linter', () => {
       );
       // The missing resource is the only complaint: the index itself is unbounded.
       expect(diagnostics).toHaveLength(1);
-      expect(diagnostics[0]?.severity).toBe('error');
+      expect(diagnostics[0]).toBeAtTier('error');
       expect(diagnostics[0]?.message).toContain('never declares');
     });
   });

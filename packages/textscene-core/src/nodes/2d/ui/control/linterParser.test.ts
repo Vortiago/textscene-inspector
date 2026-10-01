@@ -128,7 +128,7 @@ describe('Control Linter', () => {
         expect(validator, `${leaf} does not resolve custom_minimum_size`).toBe(
           validatorRegistry.findValidator('Control', 'custom_minimum_size')
         );
-        expect(validator!('custom_minimum_size', 'Vector2(nan, 0)', 1)?.severity).toBe('error');
+        expect(validator!('custom_minimum_size', 'Vector2(nan, 0)', 1)).toBeAtTier('error');
         expect(validator!('custom_minimum_size', 'Vector2(64, 32)', 1)).toBeNull();
       }
     });
@@ -392,14 +392,14 @@ describe('Control Linter', () => {
     // fails (array.cpp:260-261) and the setter stores an empty array.
     it.each(['[null]', '[&"../A"]', '[1]'])('errors on the element %s, which assign() refuses', (value) => {
       const report = nodePathArray()('accessibility_controls_nodes', value, 1);
-      expect(report?.severity).toBe('error');
+      expect(report).toBeAtTier('error');
       expect(report?.message).toContain('array.cpp:260-261');
     });
 
     it('errors on a wrapper whose element type does not convert', () => {
       // array.cpp:275-277: "Cannot assign contents of Array[StringName] to Array[NodePath]".
       const report = nodePathArray()('accessibility_controls_nodes', 'Array[StringName]([])', 1);
-      expect(report?.severity).toBe('error');
+      expect(report).toBeAtTier('error');
       expect(report?.message).toContain('array.cpp:275-277');
     });
 

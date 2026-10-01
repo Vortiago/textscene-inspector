@@ -21,7 +21,7 @@ describe('CharacterBody2D strict validators (physics state)', () => {
     });
 
     it('rejects a numeric stand-in for a boolean', () => {
-      expect(check('slide_on_ceiling', '1')?.severity).toBe('warning');
+      expect(check('slide_on_ceiling', '1')).toBeAtTier('warning');
     });
   });
 
@@ -43,12 +43,12 @@ describe('CharacterBody2D strict validators (physics state)', () => {
 
     it('errors on the zero vector the setter refuses', () => {
       const error = check('up_direction', 'Vector2(0, 0)');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.message).toContain('zero vector');
     });
 
     it('errors on the Vector2i spelling of it that Godot converts', () => {
-      expect(check('up_direction', 'Vector2i(0, 0)')?.severity).toBe('error');
+      expect(check('up_direction', 'Vector2i(0, 0)')).toBeAtTier('error');
     });
 
     it('still reports a malformed literal as a format error', () => {
@@ -74,8 +74,8 @@ describe('CharacterBody2D strict validators (physics state)', () => {
 
     it('warns past the epsilon, since the setter assigns straight through', () => {
       // set_floor_max_angle (:622-624) and set_wall_min_slide_angle (:639-641).
-      expect(check(property, '-0.01')?.severity).toBe('warning');
-      expect(check(property, '3.2')?.severity).toBe('warning');
+      expect(check(property, '-0.01')).toBeAtTier('warning');
+      expect(check(property, '3.2')).toBeAtTier('warning');
     });
   });
 });

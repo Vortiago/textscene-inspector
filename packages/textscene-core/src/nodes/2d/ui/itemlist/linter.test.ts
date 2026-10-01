@@ -9,6 +9,7 @@ import { node, scene, lint, expectDiagnostic, expectNoDiagnostic } from '../../.
 import { readFixture } from '../../../../linter/testing/fixtureCheck';
 import './linterParser';
 import './linter';
+import { errorsOf } from '../../../../linter/testing/tierLists';
 
 describe('ItemList semantic rules', () => {
   it('reports when an item_<N>/… index is >= item_count', () => {
@@ -131,7 +132,7 @@ describe('ItemList index spelling in the message', () => {
   // `int index = ….to_int()` (property_list_helper.cpp:57) keeps the low 32 bits.
   it('applies an index that wraps past 32 bits to the item it lands on', () => {
     const content = scene(node('ItemList', { item_count: 1, 'item_4294967296/text': '"x"' }));
-    expect(lint(content).filter((d) => d.severity === 'error')).toEqual([]);
+    expect(errorsOf(lint(content))).toEqual([]);
   });
 
   it('names what Godot stores beside a wrapping index past the count', () => {
@@ -145,7 +146,7 @@ describe('ItemList index spelling in the message', () => {
   // INT64_MIN (ustring.cpp:2284) keeps 0 in its low 32 bits, so the write lands on item 0.
   it('applies an index that saturates to INT64_MIN to item 0', () => {
     const content = scene(node('ItemList', { item_count: 1, 'item_-9999999999999999999999/text': '"x"' }));
-    expect(lint(content).filter((d) => d.severity === 'error')).toEqual([]);
+    expect(errorsOf(lint(content))).toEqual([]);
   });
 
   // INT64_MAX keeps -1, which `_get_property` refuses (property_list_helper.cpp:58).

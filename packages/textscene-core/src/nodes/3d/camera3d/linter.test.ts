@@ -716,7 +716,7 @@ describe('Camera3D Linter', () => {
         "Property 'far' must be >= 0.01, got: 0.005",
         "Property 'near' must be >= 0.001, got: 0.0005",
       ]);
-      expect(diagnostics.every((d) => d.severity === 'warning')).toBe(true);
+      expect(diagnostics).toBeAllAtTier('warning');
     });
 
     it('should handle clipping planes at exact boundary (near = far boundary)', () => {

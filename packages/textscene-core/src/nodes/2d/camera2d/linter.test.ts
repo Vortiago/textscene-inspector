@@ -13,6 +13,7 @@ import {
 } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
+import { errorsOf } from '../../../linter/testing/tierLists';
 
 describe('Camera2D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -395,7 +396,7 @@ describe('Camera2D Linter', () => {
           const diagnostics = lint(
             scene(node('Camera2D', { position_smoothing_enabled: true, position_smoothing_speed: speed }))
           );
-          const errors = diagnostics.filter((d) => d.severity === 'error');
+          const errors = errorsOf(diagnostics);
           expect(errors).toHaveLength(1);
           expect(errors[0]?.ruleName).toBe('strict-parser');
           expect(errors[0]?.message).toContain('position_smoothing_speed');
@@ -429,7 +430,7 @@ describe('Camera2D Linter', () => {
           const diagnostics = lint(
             scene(node('Camera2D', { rotation_smoothing_enabled: true, rotation_smoothing_speed: speed }))
           );
-          const errors = diagnostics.filter((d) => d.severity === 'error');
+          const errors = errorsOf(diagnostics);
           expect(errors).toHaveLength(1);
           expect(errors[0]?.ruleName).toBe('strict-parser');
           expect(errors[0]?.message).toContain('rotation_smoothing_speed');

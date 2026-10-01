@@ -21,7 +21,7 @@ describe('ValidatorRegistry.registerUnavailable', () => {
     });
     const diagnostic = r.findValidator('Leaf', 'vertical')!('vertical', 'true', 7);
     expect(diagnostic?.code).toBe('UNAVAILABLE_VERTICAL');
-    expect(diagnostic?.severity).toBe('error');
+    expect(diagnostic).toBeAtTier('error');
     expect(diagnostic?.message).toContain('cannot be set on Leaf');
     expect(diagnostic?.message).toContain('its orientation is fixed');
   });

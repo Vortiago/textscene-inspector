@@ -80,20 +80,20 @@ describe('BackBufferCopy strict validators', () => {
 
     it('rejects a non-numeric value as a format error', () => {
       const error = check('copy_mode', 'Rect');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_COPY_MODE_FORMAT');
     });
 
     it('warns, rather than errors, on an out-of-range int: the hint bounds the inspector, not the setter', () => {
       // back_buffer_copy.cpp:73 `copy_mode = p_mode;` assigns unconditionally.
       const error = check('copy_mode', '3');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
       expect(error?.code).toBe('INVALID_COPY_MODE_VALUE');
     });
 
     it('warns on a negative int the same way', () => {
       const error = check('copy_mode', '-1');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -108,7 +108,7 @@ describe('BackBufferCopy strict validators', () => {
 
     it('rejects a malformed Rect2 literal', () => {
       const error = check('rect', 'Vector2(1, 2)');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_RECT_FORMAT');
     });
   });

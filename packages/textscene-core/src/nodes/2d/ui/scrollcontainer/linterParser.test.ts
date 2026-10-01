@@ -107,7 +107,7 @@ describe('ScrollContainer strict validators', () => {
     it('errors below 0: Range::_calc_value clamps to shared->min, which never leaves 0', () => {
       const error = check('scroll_horizontal', '-1');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('rejects a non-numeric value', () => {
@@ -128,7 +128,7 @@ describe('ScrollContainer strict validators', () => {
     it('errors below 0: Range::_calc_value clamps to shared->min, which never leaves 0', () => {
       const error = check('scroll_vertical', '-1');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('rejects a non-numeric value', () => {
@@ -156,13 +156,13 @@ describe('ScrollContainer strict validators', () => {
     it('warns, does not error, below -1: set_horizontal_custom_step has no clamp', () => {
       const error = check('scroll_horizontal_custom_step', '-2');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('warns, does not error, above 4096, same reason', () => {
       const error = check('scroll_horizontal_custom_step', '4097');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('rejects a non-numeric value', () => {
@@ -187,13 +187,13 @@ describe('ScrollContainer strict validators', () => {
     it('warns, does not error, below -1: set_vertical_custom_step has no clamp', () => {
       const error = check('scroll_vertical_custom_step', '-2');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('warns, does not error, above 4096, same reason', () => {
       const error = check('scroll_vertical_custom_step', '4097');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('rejects a non-numeric value', () => {
@@ -221,13 +221,13 @@ describe('ScrollContainer strict validators', () => {
     it('warns, does not error, below the enum (-1): set_horizontal_scroll_mode has no ERR_FAIL_INDEX', () => {
       const error = check('horizontal_scroll_mode', '-1');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('warns, does not error, above the enum (5), same reason', () => {
       const error = check('horizontal_scroll_mode', '5');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('rejects a non-numeric value', () => {
@@ -253,13 +253,13 @@ describe('ScrollContainer strict validators', () => {
     it('warns, does not error, below the enum (-1): set_vertical_scroll_mode has no ERR_FAIL_INDEX', () => {
       const error = check('vertical_scroll_mode', '-1');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('warns, does not error, above the enum (5), same reason', () => {
       const error = check('vertical_scroll_mode', '5');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('rejects a non-numeric value', () => {
@@ -303,13 +303,13 @@ describe('ScrollContainer strict validators', () => {
     it('warns, does not error, below the enum (-1): set_scroll_hint_mode has no ERR_FAIL_INDEX', () => {
       const error = check('scroll_hint_mode', '-1');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('warns, does not error, above the enum (4), same reason', () => {
       const error = check('scroll_hint_mode', '4');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('rejects a non-numeric value', () => {

@@ -40,7 +40,7 @@ export function expectRejected(
     'name what the message must say — a tier alone does not identify the bound'
   ).toBeGreaterThan(0);
   expect(error, `expected a ${severity}, the validator accepted the value`).not.toBeNull();
-  expect(error!.severity).toBe(severity);
+  expect(error).toBeAtTier(severity);
   for (const substring of contains) expect(error!.message).toContain(substring);
   return error!;
 }

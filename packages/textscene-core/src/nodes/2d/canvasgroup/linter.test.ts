@@ -9,6 +9,7 @@ import { node, scene, lint, expectDiagnostic, expectNoDiagnostic } from '../../.
 import { readFixture } from '../../../linter/testing/fixtureCheck';
 import './linterParser';
 import './linter';
+import { errorsOf } from '../../../linter/testing/tierLists';
 
 describe('CanvasGroup Linter', () => {
   describe('ancestor clips children (canvasgroup-ancestor-clips-children)', () => {
@@ -155,7 +156,7 @@ describe('CanvasGroup Linter', () => {
 
   it('lints the shipped fixture clean — zero errors, zero CanvasGroup diagnostics at all', () => {
     const diagnostics = lint(readFixture('unit-canvas-group.tscn'));
-    expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    expect(errorsOf(diagnostics)).toEqual([]);
     expect(diagnostics.filter((d) => d.nodeType === 'CanvasGroup')).toEqual([]);
   });
 });

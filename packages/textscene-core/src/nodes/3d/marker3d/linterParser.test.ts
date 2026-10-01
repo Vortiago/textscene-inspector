@@ -32,13 +32,13 @@ describe('Marker3D validators', () => {
 
   it('warns one step below the floor — set_gizmo_extents assigns straight through', () => {
     const [diagnostic] = extentsDiagnostics('-0.01');
-    expect(diagnostic?.severity).toBe('warning');
+    expect(diagnostic).toBeAtTier('warning');
     expect(diagnostic?.message).toContain('non-negative');
   });
 
   it('flags a non-numeric gizmo_extents', () => {
     const [diagnostic] = extentsDiagnostics('"not a number"');
-    expect(diagnostic?.severity).toBe('error');
+    expect(diagnostic).toBeAtTier('error');
     expect(diagnostic?.message).toContain('must be a number');
   });
 });

@@ -146,7 +146,7 @@ describe('ResourcePreloader strict validators', () => {
 
     it('reports errors, never warnings — every branch is a Godot setter drop', () => {
       const result = check('resources', '[PackedStringArray("a", "b"), [SubResource("Resource_1")]]');
-      expect(result?.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
   });
 });

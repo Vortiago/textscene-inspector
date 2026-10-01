@@ -50,8 +50,8 @@ describe('CanvasItem shared validators', () => {
     // TEXTURE_FILTER_MAX = 7 (canvas_item.h:52-60); the macro refuses < 0 too.
     const validator = validatorRegistry.findValidator(nodeType, 'texture_filter')!;
     for (const value of ['0', '3', '6']) expect(validator('texture_filter', value, 1)).toBeNull();
-    expect(validator('texture_filter', '7', 1)?.severity).toBe('error');
-    expect(validator('texture_filter', '-1', 1)?.severity).toBe('error');
+    expect(validator('texture_filter', '7', 1)).toBeAtTier('error');
+    expect(validator('texture_filter', '-1', 1)).toBeAtTier('error');
   });
 
   it.each(['Sprite2D', 'Label'])('bounds texture_repeat on %s', (nodeType) => {
@@ -62,8 +62,8 @@ describe('CanvasItem shared validators', () => {
     for (const value of ['0', '1', '2', '3']) {
       expect(validator('texture_repeat', value, 1)).toBeNull();
     }
-    expect(validator('texture_repeat', '4', 1)?.severity).toBe('error');
-    expect(validator('texture_repeat', '-1', 1)?.severity).toBe('error');
+    expect(validator('texture_repeat', '4', 1)).toBeAtTier('error');
+    expect(validator('texture_repeat', '-1', 1)).toBeAtTier('error');
   });
 
   it.each(['Sprite2D', 'Label'])('bounds clip_children on %s', (nodeType) => {
@@ -73,15 +73,15 @@ describe('CanvasItem shared validators', () => {
     // and keep 0, while `4294967295` narrows to -1 and is stored.
     const validator = validatorRegistry.findValidator(nodeType, 'clip_children')!;
     expect(validator('clip_children', '2', 1)).toBeNull();
-    expect(validator('clip_children', '3', 1)?.severity).toBe('error');
-    expect(validator('clip_children', '-3000000000', 1)?.severity).toBe('error');
+    expect(validator('clip_children', '3', 1)).toBeAtTier('error');
+    expect(validator('clip_children', '-3000000000', 1)).toBeAtTier('error');
   });
 
   it.each(['Sprite2D', 'Label'])('warns rather than errors on the wide spelling of -1 (%s)', (nodeType) => {
     // Godot's own serialiser writes `clip_children = 4294967295` for -1, and
     // the value clips, as the canvasgroup rule, which narrows the same key, says.
     const validator = validatorRegistry.findValidator(nodeType, 'clip_children')!;
-    expect(validator('clip_children', '4294967295', 1)?.severity).toBe('warning');
+    expect(validator('clip_children', '4294967295', 1)).toBeAtTier('warning');
   });
 
   it('keeps z_index inside the rendering server range', () => {
@@ -90,8 +90,8 @@ describe('CanvasItem shared validators', () => {
     const validator = validatorRegistry.findValidator('Sprite2D', 'z_index')!;
     expect(validator('z_index', '-4096', 1)).toBeNull();
     expect(validator('z_index', '4096', 1)).toBeNull();
-    expect(validator('z_index', '-4097', 1)?.severity).toBe('error');
-    expect(validator('z_index', '4097', 1)?.severity).toBe('error');
+    expect(validator('z_index', '-4097', 1)).toBeAtTier('error');
+    expect(validator('z_index', '4097', 1)).toBeAtTier('error');
   });
 
   it('takes every 32-bit mask, and refuses only what no 32-bit slot holds', () => {
@@ -106,8 +106,8 @@ describe('CanvasItem shared validators', () => {
     expect(visibilityLayer('visibility_layer', '4294967295', 1)).toBeNull();
     // Past the 32-bit band Godot keeps bits the file does not state: measured,
     // `light_mask = 4294967296` stores 0 and `-3000000000` stores 1294967296.
-    expect(lightMask('light_mask', '4294967296', 1)?.severity).toBe('error');
-    expect(lightMask('light_mask', '-3000000000', 1)?.severity).toBe('error');
+    expect(lightMask('light_mask', '4294967296', 1)).toBeAtTier('error');
+    expect(lightMask('light_mask', '-3000000000', 1)).toBeAtTier('error');
   });
 
   it.each(['Sprite2D', 'Label'])(
