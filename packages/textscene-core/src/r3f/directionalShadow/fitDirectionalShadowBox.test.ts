@@ -7,14 +7,22 @@ import * as THREE from 'three';
 import {
   cameraSliceCorners,
   directionalShadowBoxFitter,
-  fitDirectionalShadowBox,
   isViewingCamera,
   viewSlice,
   type DirectionalShadowBox,
   type DirectionalShadowFitInput,
 } from './fitDirectionalShadowBox';
+import type { DirectionalShadowSlice } from '../../godot/directionalShadow';
 
 const MAP_SIZE = 2048;
+
+/** The box over `depths`, for a light that draws one box. */
+function fitDirectionalShadowBox(
+  input: DirectionalShadowFitInput,
+  depths: DirectionalShadowSlice
+): DirectionalShadowBox | null {
+  return directionalShadowBoxFitter(input)(depths);
+}
 /** The sun's travel direction: down and away, as in most outdoor scenes. */
 const SUN_DIRECTION = new THREE.Vector3(-0.4, -0.8, -0.45).normalize();
 /** Float slack for a point that sits on a box face. */

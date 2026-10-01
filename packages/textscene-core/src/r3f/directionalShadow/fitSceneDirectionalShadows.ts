@@ -7,21 +7,10 @@
  */
 
 import * as THREE from 'three';
-import {
-  directionalShadowFade,
-  directionalShadowSplitTextureSize,
-  type DirectionalShadowAtlasRect,
-  type DirectionalShadowFade,
-} from '../../godot/directionalShadow.js';
+import type { DirectionalShadowAtlasRect, DirectionalShadowFade } from '../../godot/directionalShadow.js';
 import type { DirectionalShadowDeclaration } from './declaration.js';
 import { dropLight, isDropped, restoreDroppedLight } from './droppedLight.js';
-import {
-  fitDirectionalShadowBox,
-  isViewingCamera,
-  viewSlice,
-  type DirectionalShadowBox,
-  type ViewingCamera,
-} from './fitDirectionalShadowBox.js';
+import { isViewingCamera, type DirectionalShadowBox, type ViewingCamera } from './fitDirectionalShadowBox.js';
 import { fitDirectionalShadowSplits, type DirectionalShadowSplits } from './fitDirectionalShadowSplits.js';
 import {
   declaredLights,
@@ -135,8 +124,8 @@ export function directionalShadowCasters(
 
 /**
  * A visible light past Godot's eighth leaves the render. A light in Godot's list of shadowed lights
- * casts in its share of the atlas, through its split sun when it has splits. Any other declared light
- * gets no fit and no split sun, and its declaration leaves its `castShadow` off.
+ * casts in its share of the atlas through its split sun, in one, two or four splits. Any other
+ * declared light gets no fit and no split sun, and its declaration leaves its `castShadow` off.
  */
 function fitDeclaredLight(
   { light, declaration, isVisible }: DeclaredLight,
@@ -156,12 +145,7 @@ function fitDeclaredLight(
   }
   // Godot's PCF kernel spans `soft_shadow_scale` atlas texels (`scene_forward_clustered.glsl:2443`).
   light.shadow.radius = declaration.filterRadius;
-  if (declaration.splitCount > 1) {
-    fitSplitLight({ light, declaration, lightRect }, camera, fades);
-    return;
-  }
-  releaseSplitSun(light);
-  fitOrthogonalLight({ light, declaration, lightRect }, camera, fades);
+  fitSplitLight({ light, declaration, lightRect }, camera, fades);
 }
 
 function placementOf(light: THREE.DirectionalLight): LightPlacement {
@@ -172,34 +156,7 @@ function placementOf(light: THREE.DirectionalLight): LightPlacement {
 }
 
 /**
- * The light's map is its share of the atlas, which may not be square. Its fit counts texels against
- * the larger side (`light_storage.cpp:2603-2623`), and its fade ends at the slice's far end
- * (`light_storage.cpp:752-754`). A light whose fit gives no box keeps its last box and casts unfaded.
- */
-function fitOrthogonalLight(
-  { light, declaration, lightRect }: SharingLight,
-  camera: ViewingCamera,
-  fades: CasterFades
-): void {
-  light.shadow.mapSize.set(lightRect.width, lightRect.height);
-  const slice = viewSlice({ camera, declaration });
-  const box = fitDirectionalShadowBox(
-    {
-      camera,
-      ...placementOf(light),
-      up: light.shadow.camera.up,
-      declaration,
-      shadowMapSize: directionalShadowSplitTextureSize(declaration.splitCount, lightRect),
-    },
-    slice
-  );
-  if (!box) return;
-  applyShadowBox(light, box);
-  fades.set(light, directionalShadowFade(slice.far, declaration.fadeStart));
-}
-
-/**
- * The sun's atlas is the light's share of Godot's atlas, and each split takes its own part of that
+ * The sun draws into the light's share of Godot's atlas, and each split takes its own part of that
  * share (`render_forward_clustered.cpp:2610-2630`). The sun attaches with its first fit, so it
  * never shades with slots no fit has written. The sun casts in the declared light's place, so the
  * fade goes to the sun.
@@ -234,12 +191,6 @@ function applySplits(sun: SplitSunLight, placement: LightPlacement, splits: Dire
     splitCamera.updateMatrixWorld();
   });
   splits.slots.forEach((slot, index) => sun.shadow._cascadeData[index]!.fromArray(slot));
-}
-
-function applyShadowBox(light: THREE.DirectionalLight, box: DirectionalShadowBox): void {
-  applyShadowCameraBox(light.shadow.camera, box);
-  light.shadow.bias = box.bias;
-  light.shadow.normalBias = box.normalBias;
 }
 
 function applyShadowCameraBox(shadowCamera: THREE.OrthographicCamera, box: DirectionalShadowBox): void {

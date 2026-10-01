@@ -26,7 +26,7 @@ import { installDirectionalShadowFade } from './directionalShadow/shadowFade.js'
 import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterLayer.js';
 import { installGodotDiffuse } from './godotDiffuse.js';
 import { installGodotSplitShadow } from './directionalShadow/splitShadowChunk.js';
-import { installTexelShadowFilter } from './directionalShadow/texelShadowFilter.js';
+import { installDirectionalShadowAtlas } from './directionalShadow/shadowAtlasChunk.js';
 import { TiledUploadDriver } from './tiledUpload/TiledUploadDriver.js';
 import styles from './TscnCanvas.module.css';
 
@@ -34,7 +34,7 @@ import styles from './TscnCanvas.module.css';
 // uniforms only when it compiles.
 installGodotDiffuse();
 installGodotSplitShadow();
-installTexelShadowFilter();
+installDirectionalShadowAtlas();
 installDirectionalShadowFade();
 
 /**

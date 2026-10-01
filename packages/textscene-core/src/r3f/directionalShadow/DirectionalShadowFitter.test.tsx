@@ -63,6 +63,11 @@ function splitWidth(light: THREE.DirectionalLight, split: number): number | null
   return camera ? camera.right - camera.left : null;
 }
 
+/** The left edge of the first split's box, or null for a light that drew no splits. */
+function firstSplitLeft(light: THREE.DirectionalLight): number | null {
+  return splitSunOf(light)?.shadow.getCamera(0).left ?? null;
+}
+
 describe('<DirectionalShadowFitter> in the scene contents', () => {
   it('fits the preview sun in four splits before a render', async () => {
     const renderer = await renderScene(scene('\n[node name="Cube" type="MeshInstance3D" parent="."]\n'));
@@ -84,9 +89,9 @@ directional_shadow_max_distance = 80.0
     );
     renderThrough(renderer, cameraAt(0));
     const light = onlyDirectionalLight(renderer);
+    expect(splitSunOf(light)?.shadow.splitCount).toBe(1);
     // The box spans the camera's view, not a fixed patch round the node.
-    expect(light.shadow.camera.right - light.shadow.camera.left).toBeGreaterThan(80);
-    expect(splitSunOf(light)).toBeNull();
+    expect(splitWidth(light, 0)).toBeGreaterThan(80);
   });
 
   it('fits an authored sun in Godot’s default four splits', async () => {
@@ -108,7 +113,9 @@ directional_shadow_max_distance = 80.0
   it('leaves a sun without shadows alone (edge case)', async () => {
     const renderer = await renderScene(scene('\n[node name="Sun" type="DirectionalLight3D" parent="."]\n'));
     renderThrough(renderer, cameraAt(0));
-    expect(onlyDirectionalLight(renderer).shadow.camera.left).toBe(UNFITTED_LEFT);
+    const light = onlyDirectionalLight(renderer);
+    expect(light.shadow.camera.left).toBe(UNFITTED_LEFT);
+    expect(splitSunOf(light)).toBeNull();
   });
 });
 
@@ -148,17 +155,17 @@ describe('<DirectionalShadowFitter> on its own', () => {
   it('fits a declared light it finds in the scene', async () => {
     const { renderer, light } = await mountWithLight();
     renderThrough(renderer, cameraAt(0));
-    expect(light.shadow.camera.left).not.toBe(UNFITTED_LEFT);
+    expect(firstSplitLeft(light)).not.toBeNull();
   });
 
   it('fits each render to its own camera, in any order', async () => {
     const { renderer, light } = await mountWithLight();
     renderThrough(renderer, cameraAt(0));
-    const mainLeft = light.shadow.camera.left;
+    const mainLeft = firstSplitLeft(light)!;
     renderThrough(renderer, cameraAt(500));
-    expect(light.shadow.camera.left).not.toBeCloseTo(mainLeft, 3);
+    expect(firstSplitLeft(light)).not.toBeCloseTo(mainLeft, 3);
     renderThrough(renderer, cameraAt(0));
-    expect(light.shadow.camera.left).toBeCloseTo(mainLeft, 9);
+    expect(firstSplitLeft(light)).toBeCloseTo(mainLeft, 9);
   });
 
   it('stops fitting once unmounted (edge case)', async () => {
@@ -167,7 +174,7 @@ describe('<DirectionalShadowFitter> on its own', () => {
     await renderer.unmount();
     scene.add(light);
     renderThrough(renderer, cameraAt(0));
-    expect(light.shadow.camera.left).toBe(UNFITTED_LEFT);
+    expect(splitSunOf(light)).toBeNull();
   });
 
   it('hands a split light its own shading back once unmounted (edge case)', async () => {
@@ -207,7 +214,7 @@ describe('<DirectionalShadowFitter> on its own', () => {
   it('leaves the shadow unfitted for a render through a camera without a depth range (error case)', async () => {
     const { renderer, light } = await mountWithLight();
     renderThrough(renderer, new THREE.Camera());
-    expect(light.shadow.camera.left).toBe(UNFITTED_LEFT);
+    expect(splitSunOf(light)).toBeNull();
   });
 
   it('renders nothing into the scene', async () => {
@@ -229,7 +236,7 @@ describe('useDirectionalShadowFit', () => {
     await ReactThreeTestRenderer.create(<FitScene scene={own} />);
     own.updateMatrixWorld();
     (own.onBeforeRender as (...args: unknown[]) => void).call(own, null, own, cameraAt(0), null);
-    expect(light.shadow.camera.left).not.toBe(UNFITTED_LEFT);
+    expect(splitSunOf(light)).not.toBeNull();
   });
 
   it('fits nothing for a null scene (edge case)', async () => {
@@ -241,6 +248,6 @@ describe('useDirectionalShadowFit', () => {
       </>
     );
     renderThrough(renderer, cameraAt(0));
-    expect(light.shadow.camera.left).toBe(UNFITTED_LEFT);
+    expect(splitSunOf(light)).toBeNull();
   });
 });

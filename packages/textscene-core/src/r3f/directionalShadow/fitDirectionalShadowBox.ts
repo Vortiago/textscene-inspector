@@ -110,14 +110,6 @@ export function directionalShadowBoxFitter(input: DirectionalShadowFitInput): Di
   return (depths) => fitBox({ input, axes, reach }, depths);
 }
 
-/** The box over `depths`, for a light that draws one box. */
-export function fitDirectionalShadowBox(
-  input: DirectionalShadowFitInput,
-  depths: DirectionalShadowSlice
-): DirectionalShadowBox | null {
-  return directionalShadowBoxFitter(input)(depths);
-}
-
 /** What every box of one light and one render shares. Null `reach` keeps three's near clip. */
 interface LightFrame {
   input: DirectionalShadowFitInput;

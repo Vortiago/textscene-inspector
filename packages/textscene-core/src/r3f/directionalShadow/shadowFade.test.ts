@@ -63,6 +63,17 @@ describe('shadowFadeChunks', () => {
     );
   });
 
+  it('mixes a sun shadow that samples the atlas, whatever sampler it passes (edge case)', () => {
+    const atlasSampled = threeLights.replace(
+      'getSunShadow( sunShadowMap[ i ],',
+      'getSunShadow( directionalShadowAtlas,'
+    );
+    const { lights } = shadowFadeChunks(threePars, atlasSampled)!;
+    expect(lights).toContain(
+      'mix( getSunShadow( directionalShadowAtlas, sunLightShadow, UNROLLED_LOOP_INDEX ), 1.0,'
+    );
+  });
+
   it('leaves the spot shadow unfaded (edge case)', () => {
     const { lights } = shadowFadeChunks(threePars, threeLights)!;
     expect(occurrences(lights, 'directionalShadowFadeOut')).toBe(2);
@@ -72,7 +83,10 @@ describe('shadowFadeChunks', () => {
   it('is null for chunks without the lines (error case)', () => {
     expect(shadowFadeChunks('void main() {}', threeLights)).toBeNull();
     expect(shadowFadeChunks(threePars, 'void main() {}')).toBeNull();
-    const withoutSun = threeLights.replace('getSunShadow( sunShadowMap[ i ]', 'getSunShadow( sunMap[ i ]');
+    const withoutSun = threeLights.replace(
+      'getSunShadow( sunShadowMap[ i ]',
+      'getSunLightShadow( sunShadowMap[ i ]'
+    );
     expect(shadowFadeChunks(threePars, withoutSun)).toBeNull();
   });
 });
@@ -106,7 +120,7 @@ describe('installDirectionalShadowFade', () => {
   it('leaves both chunks and every material alone when three lacks a hooked line (error case)', () => {
     THREE.ShaderChunk[LIGHTS] = threeLights.replace(
       'getSunShadow( sunShadowMap[ i ]',
-      'getSunShadow( sunMap[ i ]'
+      'getSunLightShadow( sunShadowMap[ i ]'
     );
     const lights = THREE.ShaderChunk[LIGHTS];
     installDirectionalShadowFade();
