@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { OmniLight3D } from './Component';
 import type { TscnNode } from '../../../../parser/types';
@@ -18,6 +18,19 @@ function makeNode(overrides: Partial<OmniLight3DProperties> = {}): TscnNode {
     ...overrides,
   };
   return { name: props.name ?? 'Lamp', type: 'OmniLight3D', children: [], properties: props };
+}
+
+type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
+
+/** Plays `WebGLRenderer.render`'s part: the scene's `onBeforeRender` runs with the camera first. */
+function renderThrough(renderer: Renderer): void {
+  const camera = new THREE.PerspectiveCamera(70, 16 / 9, 0.05, 100);
+  camera.position.set(0, 0, 10);
+  camera.updateMatrixWorld();
+  const scene = renderer.scene.instance as THREE.Scene;
+  scene.updateMatrixWorld();
+  const beforeRender = scene.onBeforeRender as (...args: unknown[]) => void;
+  beforeRender.call(scene, null, scene, camera, null);
 }
 
 describe('<OmniLight3D>', () => {
@@ -85,5 +98,33 @@ describe('<OmniLight3D>', () => {
     expect(light.instance.position.x).toBe(3);
     expect(light.instance.position.y).toBe(4);
     expect(light.instance.position.z).toBe(5);
+  });
+});
+
+describe('<OmniLight3D> shadow fit', () => {
+  it("fits a cube face of half Godot's slot and its kernel before each render", async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <OmniLight3D node={makeNode({ shadow_enabled: true })} />
+    );
+    renderThrough(renderer);
+    const light = instanceAs<THREE.PointLight>(renderer.scene.findByType('PointLight'));
+    expect(light.shadow.mapSize.x).toBe(512);
+    // soft_shadow_scale 2 over the 1024 slot's inset paraboloid, in texels of a 512 face.
+    expect(light.shadow.radius).toBeCloseTo((4 / 1022) * 512, 12);
+  });
+
+  it('widens the kernel with shadow_blur', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <OmniLight3D node={makeNode({ shadow_enabled: true, shadow_blur: 3 })} />
+    );
+    renderThrough(renderer);
+    const light = instanceAs<THREE.PointLight>(renderer.scene.findByType('PointLight'));
+    expect(light.shadow.radius).toBeCloseTo((12 / 1022) * 512, 12);
+  });
+
+  it('leaves the kernel of a light without a shadow alone (edge case)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(<OmniLight3D node={makeNode({ shadow_blur: 3 })} />);
+    renderThrough(renderer);
+    expect(instanceAs<THREE.PointLight>(renderer.scene.findByType('PointLight')).shadow.radius).toBe(1);
   });
 });

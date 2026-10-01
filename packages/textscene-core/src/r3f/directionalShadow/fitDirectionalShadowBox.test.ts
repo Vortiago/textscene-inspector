@@ -8,6 +8,7 @@ import {
   cameraSliceCorners,
   directionalShadowBoxFitter,
   fitDirectionalShadowBox,
+  isViewingCamera,
   viewSlice,
   type DirectionalShadowBox,
   type DirectionalShadowFitInput,
@@ -291,5 +292,19 @@ describe('directionalShadowBoxFitter', () => {
     const fitter = directionalShadowBoxFitter(fitInput({ camera }));
     expect(fitter({ near: 0.05, far: 8 })).toBeNull();
     expect(fitter({ near: 20, far: 40 })).toBeNull();
+  });
+});
+
+describe('isViewingCamera', () => {
+  it('accepts a perspective camera', () => {
+    expect(isViewingCamera(new THREE.PerspectiveCamera())).toBe(true);
+  });
+
+  it('accepts an orthographic camera (edge case)', () => {
+    expect(isViewingCamera(new THREE.OrthographicCamera())).toBe(true);
+  });
+
+  it('refuses a bare camera, which has no depth range (error case)', () => {
+    expect(isViewingCamera(new THREE.Camera())).toBe(false);
   });
 });

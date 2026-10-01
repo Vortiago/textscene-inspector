@@ -25,6 +25,12 @@ export type ViewingCamera = THREE.Camera & {
   isOrthographicCamera?: boolean;
 };
 
+/** A bare `THREE.Camera` has no depth range. */
+export function isViewingCamera(camera: THREE.Camera): camera is ViewingCamera {
+  const candidate = camera as Partial<ViewingCamera>;
+  return typeof candidate.near === 'number' && typeof candidate.far === 'number';
+}
+
 export interface DirectionalShadowFitInput {
   camera: ViewingCamera;
   /** Where three puts the shadow camera: the light's world position. */

@@ -1058,6 +1058,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Omni Light Shadow Blur",
+    "file": "unit-omni-light-shadow-blur.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Open Xr Binding Modifier Editor",
     "file": "unit-open-xr-binding-modifier-editor.tscn",
     "category": "Other"
@@ -1405,6 +1410,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Spot Light 3d",
     "file": "unit-spot-light-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Spot Light Shadow Blur",
+    "file": "unit-spot-light-shadow-blur.tscn",
     "category": "Other"
   },
   {
