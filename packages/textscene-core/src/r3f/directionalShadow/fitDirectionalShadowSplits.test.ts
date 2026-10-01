@@ -15,6 +15,9 @@ import {
 import type { DirectionalShadowDeclaration } from './declaration';
 
 const ATLAS_SIZE = 4096;
+const WHOLE_ATLAS = { x: 0, y: 0, width: ATLAS_SIZE, height: ATLAS_SIZE };
+/** The second of two lights' shares: half the atlas's width at its full height. */
+const SECOND_OF_TWO = { x: 2048, y: 0, width: 2048, height: ATLAS_SIZE };
 const SUN_DIRECTION = new THREE.Vector3(-0.4, -0.8, -0.45).normalize();
 const FACE_TOLERANCE = 1e-9;
 /** The slice the camera below shows up to the max distance of 80. */
@@ -30,6 +33,7 @@ function declaring(overrides: Partial<DirectionalShadowDeclaration> = {}): Direc
     splitCount: 4,
     splitOffsets: [0.1, 0.2, 0.5],
     blendSplits: false,
+    sharesAtlas: true,
     ...overrides,
   };
 }
@@ -42,7 +46,7 @@ function perspectiveCamera(): THREE.PerspectiveCamera {
   return camera;
 }
 
-function fitInput(declaration = declaring()): DirectionalShadowSplitFitInput {
+function fitInput(declaration = declaring(), lightRect = WHOLE_ATLAS): DirectionalShadowSplitFitInput {
   const lightPosition = new THREE.Vector3(11, 12.3, -31);
   return {
     camera: perspectiveCamera(),
@@ -50,7 +54,7 @@ function fitInput(declaration = declaring()): DirectionalShadowSplitFitInput {
     targetPosition: lightPosition.clone().add(SUN_DIRECTION),
     up: new THREE.Vector3(0, 1, 0),
     declaration,
-    atlasSize: ATLAS_SIZE,
+    lightRect,
   };
 }
 
@@ -113,6 +117,18 @@ describe('fitDirectionalShadowSplits', () => {
   it('counts each of two splits’ texels against the whole atlas width', () => {
     const { boxes } = fit(fitInput(declaring({ splitCount: 2 })));
     boxes.forEach((box) => expect(box.normalBias / 2).toBeCloseTo(boxWidth(box) / ATLAS_SIZE, 2));
+  });
+
+  it('counts each of two splits’ texels against half the atlas for one of two lights', () => {
+    // `light_storage.cpp:2614-2617`: two splits of a 2048-wide share are 2048 square.
+    const { boxes } = fit(fitInput(declaring({ splitCount: 2 }), SECOND_OF_TWO));
+    boxes.forEach((box) => expect(box.normalBias / 2).toBeCloseTo(boxWidth(box) / 2048, 2));
+  });
+
+  it('counts each of four splits’ texels against the taller side for one of two lights (edge case)', () => {
+    // Four splits of a 2048 × 4096 share are 1024 × 2048, and the larger side counts.
+    const { boxes } = fit(fitInput(declaring(), SECOND_OF_TWO));
+    boxes.forEach((box) => expect(box.normalBias / 2).toBeCloseTo(boxWidth(box) / 2048, 2));
   });
 
   it('reaches every split as far towards the light as the whole view', () => {

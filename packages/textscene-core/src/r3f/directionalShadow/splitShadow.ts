@@ -1,15 +1,18 @@
 /**
- * The shadow of a directional light that draws Godot's parallel splits: one atlas, laid out as
- * Godot lays out its directional atlas, with one orthographic camera per split. three's WebGL
- * renderer draws and samples it through its sun-light path: `WebGLShadowMap.js:287-358` renders
- * one viewport per slot, and `WebGLLights.js:289-327` uploads one matrix and one vec4 per slot.
+ * The shadow of a directional light that draws Godot's parallel splits: the light's share of
+ * Godot's directional atlas, laid out as Godot lays it out, with one orthographic camera per
+ * split. three's WebGL renderer draws and samples it through its sun-light path:
+ * `WebGLShadowMap.js:287-358` renders one viewport per slot, and `WebGLLights.js:289-327` uploads
+ * one matrix and one vec4 per slot.
  */
 
 import * as THREE from 'three';
 import {
   DIRECTIONAL_SHADOW_MAX_SPLITS,
   directionalShadowSplitAtlasRect,
+  type DirectionalShadowAtlasRect,
 } from '../../godot/directionalShadow.js';
+import { freeShadowMap } from './shadowMapAllocation.js';
 
 /**
  * Every shadow on the sun path holds this many slots, because the shader finds a light's slots at
@@ -46,6 +49,8 @@ export class DirectionalSplitShadow extends THREE.LightShadow<THREE.Orthographic
   private readonly splitFrustums: THREE.Frustum[] = [];
   private readonly splitViewports: THREE.Vector4[] = [];
   private readonly atlasExtents = new THREE.Vector2(1, 1);
+  /** The texture size the last `setSplits` laid out, in texels. Zero before the first. */
+  private readonly textureSize = new THREE.Vector2(0, 0);
   private readonly undrawn = emptyFrustum();
   private readonly projectionView = new THREE.Matrix4();
 
@@ -63,22 +68,28 @@ export class DirectionalSplitShadow extends THREE.LightShadow<THREE.Orthographic
   }
 
   /**
-   * Lays out an `atlasSize` atlas for `splitCount` splits. `mapSize` is one split's rectangle, and
-   * three multiplies it by the frame extents to size the atlas (`WebGLShadowMap.js:170-176`).
+   * Lays out `splitCount` splits inside the light's rectangle of Godot's atlas. This shadow's own
+   * texture holds only that rectangle. `mapSize` is one split's rectangle, and three multiplies it
+   * by the frame extents to size the texture (`WebGLShadowMap.js:170-176`). three builds the
+   * texture once (`:203`), so a new texture size frees the old one.
    */
-  setSplits(splitCount: number, atlasSize: number): void {
+  setSplits(splitCount: number, lightRect: DirectionalShadowAtlasRect): void {
     this.splitCount = splitCount;
-    const first = directionalShadowSplitAtlasRect(splitCount, 0, atlasSize);
+    const first = directionalShadowSplitAtlasRect(splitCount, 0, lightRect);
+    if (this.textureSize.x !== lightRect.width || this.textureSize.y !== lightRect.height) {
+      this.textureSize.set(lightRect.width, lightRect.height);
+      freeShadowMap(this);
+    }
     this.mapSize.set(first.width, first.height);
-    this.atlasExtents.set(atlasSize / first.width, atlasSize / first.height);
+    this.atlasExtents.set(lightRect.width / first.width, lightRect.height / first.height);
     for (let slot = 0; slot < SPLIT_SLOTS; slot++) {
       const viewport = this.splitViewports[slot]!;
       if (slot >= splitCount) {
         viewport.set(0, 0, 0, 0);
         continue;
       }
-      const rect = directionalShadowSplitAtlasRect(splitCount, slot, atlasSize);
-      viewport.set(rect.x / first.width, rect.y / first.height, 1, 1);
+      const rect = directionalShadowSplitAtlasRect(splitCount, slot, lightRect);
+      viewport.set((rect.x - lightRect.x) / first.width, (rect.y - lightRect.y) / first.height, 1, 1);
     }
   }
 

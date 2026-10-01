@@ -75,6 +75,7 @@ export { formatReal, storedReal } from './real.js';
 export { BillboardMode } from './billboard.js';
 export { GODOT_GLTF_EXTENSIONS, unsupportedRequiredGltfExtensions } from './gltf.js';
 export {
+  DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT,
   DIRECTIONAL_SHADOW_BLEND_SPLITS_DEFAULT,
   DIRECTIONAL_SHADOW_MAX_DISTANCE_DEFAULT,
   DIRECTIONAL_SHADOW_MAX_SPLITS,
@@ -84,10 +85,13 @@ export {
   DIRECTIONAL_SHADOW_SIZE_DEFAULT,
   DIRECTIONAL_SHADOW_SPLIT_OFFSETS_DEFAULT,
   type DirectionalShadowAtlasRect,
+  DirectionalLightSkyMode,
   DirectionalShadowMode,
   type DirectionalShadowSlice,
   blendsSplits,
+  directionalLightsWithShadow,
   directionalShadowBlendStart,
+  directionalShadowLightRect,
   directionalShadowSlice,
   directionalShadowSnapStep,
   directionalShadowSplitAtlasRect,
@@ -98,6 +102,7 @@ export {
   directionalShadowSplitTextureSize,
   directionalShadowTexelSize,
   pancakesCasters,
+  sharesDirectionalShadowAtlas,
   texelPaddedRadius,
 } from './directionalShadow.js';
 export { GRADIENT_TEXTURE_MAX_SIZE, IMAGE_MAX_PIXELS } from './texture.js';

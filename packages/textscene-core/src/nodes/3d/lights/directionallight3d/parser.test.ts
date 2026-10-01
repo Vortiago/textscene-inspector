@@ -220,6 +220,21 @@ describe('DirectionalLight3D Parser', () => {
       expect(result.directional_shadow_fade_start).toBeUndefined();
     });
 
+    it('should parse the sky mode', () => {
+      const h = heading('DirectionalLight3D', { name: 'Sun', parent: '.' });
+      expect(parseDirectionalLight3D(h, { sky_mode: '2' }).sky_mode).toBe(2);
+    });
+
+    it('should leave an absent sky mode undefined, so the renderer takes Godot’s default (edge case)', () => {
+      const h = heading('DirectionalLight3D', { name: 'Sun', parent: '.' });
+      expect(parseDirectionalLight3D(h, {}).sky_mode).toBeUndefined();
+    });
+
+    it('should be undefined for an invalid sky mode (error case)', () => {
+      const h = heading('DirectionalLight3D', { name: 'Sun', parent: '.' });
+      expect(parseDirectionalLight3D(h, { sky_mode: 'sky' }).sky_mode).toBeUndefined();
+    });
+
     it('should be undefined for invalid directional_shadow_mode', () => {
       const h = heading('DirectionalLight3D', { name: 'Light', parent: '.' });
       const result = parseDirectionalLight3D(h, { directional_shadow_mode: 'bad' });

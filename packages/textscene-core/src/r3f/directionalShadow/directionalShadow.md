@@ -11,7 +11,8 @@ two or four splits by `directional_shadow_mode`. It ports Godot 4.6.3's
 - A light declares its shadow on `userData` through `directionalShadowUserData`
   (`declaration.ts`). The DirectionalLight3D component and the preview sun do this. Neither
   sets a shadow camera. The declaration carries the split count, the three split offsets,
-  `directional_shadow_blend_splits` and `directional_shadow_fade_start`. A DirectionalLight3D defaults to four splits
+  `directional_shadow_blend_splits`, `directional_shadow_fade_start` and whether the light
+  shares the atlas. A DirectionalLight3D defaults to four splits
   (`light_3d.cpp:606`), and so does the editor's preview sun (`node_3d_editor_plugin.cpp:10383`).
 - `<DirectionalShadowFitter>` is mounted inside `<TscnSceneContents>`, so the web previewer,
   the VS Code extension and the visual harness all mount it. It fits every declared, casting
@@ -23,7 +24,10 @@ two or four splits by `directional_shadow_mode`. It ports Godot 4.6.3's
   matters.
 - A SubViewport with its own world hooks that world with `useDirectionalShadowFit`. Its unmount
   hands every split light its own shading back.
-- A light without a declaration keeps its shadow camera as three built it.
+- The fitter sizes each declared light's shadow map to its share of the atlas, which need not be
+  square. three builds a map once, so the fitter frees the old one only when the share changes
+  size (`shadowMapAllocation.ts`). A light that takes no share keeps a whole atlas of its own.
+- A light without a declaration keeps its shadow camera and its map as three built them.
 
 ## The port
 
@@ -38,12 +42,17 @@ two or four splits by `directional_shadow_mode`. It ports Godot 4.6.3's
 4. Each box is the sphere's square across the light, with each edge snapped to four radii over
    the split's texture size (`:2303-2307`). The snap keeps the shadow's texel grid still while
    the camera moves.
-5. The atlas is Godot's default directional shadow size, 4096 texels square
-   (`rendering_server.cpp:3704`). One split takes all of it. Two splits take its halves by
-   height and four take its quadrants (`render_forward_clustered.cpp:2612-2629`). A split counts
-   its texels against the larger side of its rectangle (`light_storage.cpp:2603-2623`): 4096 for
-   one or two splits, 2048 for four. The normal bias counts in those texels (`:2347`,
-   `light_storage.cpp:724`), so the fitter turns it into world units for each box.
+5. Every visible shadowed directional light shares one atlas, Godot's default directional
+   shadow size of 4096 texels square (`rendering_server.cpp:3704`). A light whose `sky_mode`
+   is Sky Only takes no share, and only the first eight directional lights count
+   (`renderer_scene_cull.cpp:3257-3282`). The atlas splits into a grid that doubles its
+   columns, then its rows, until it holds every light, so two lights take its halves by width
+   at full height (`light_storage.cpp:2577-2597`). Within a light's share, two splits take its
+   halves by height and four take its quadrants (`render_forward_clustered.cpp:2610-2630`). A
+   split counts its texels against the larger side of its rectangle (`light_storage.cpp:2603-2623`):
+   4096 for one light with one or two splits, 2048 for four. The normal bias counts in those
+   texels (`:2347`, `light_storage.cpp:724`), so the fitter turns it into world units for each
+   box.
 6. The far side of each box sits one radius past its centre. The near side sits one radius plus
    `directional_shadow_pancake_size` towards the light (`:2284`, `:2327`).
 7. The shadow fades out across the far end of the last split, from
@@ -93,6 +102,15 @@ With blending, every split keeps the full radius and mixes in the next split's s
 last tenth of its own depth (`:2445-2478`). An orthogonal light never blends
 (`light_storage.cpp:705`).
 
+## The filter
+
+Godot scales its PCF kernel by one atlas texel on each axis (`renderer_scene_render_rd.cpp:1388-1389`,
+`scene_forward_clustered.glsl:2443`). A light's map is its share of the atlas, so the kernel spans
+the same number of texels across and down a share twice as tall as it is wide. three r186 scales
+both axes by one texel of the map's width. `texelShadowFilter.ts` patches its PCF lookup to scale
+each axis by its own texel, which changes nothing for a square map. It installs once at import of
+`TscnCanvas.tsx`, and composes with the split lookup and the fade in any order.
+
 ## The three.js design
 
 three r186's WebGL renderer draws a directional shadow atlas with several viewports only for a
@@ -106,7 +124,8 @@ with splits shades through three parts:
   and shadow strength onto it. Mode 0, a light that stops casting, and the fitter's
   unmount remove it and restore the declared light.
 - `DirectionalSplitShadow` (`splitShadow.ts`), the sun's shadow: one orthographic camera per
-  slot, Godot's atlas layout, and a world-to-atlas matrix per slot. A slot past the light's last
+  slot, and a world-to-atlas matrix per slot. Its texture holds only the light's share of the
+  atlas, with the splits where Godot puts them in that share. A slot past the light's last
   split draws nothing and repeats the last split's matrix.
 - `splitShadowChunk.ts`, which replaces three's cascade walk in `shadowmap_pars_fragment` with
   Godot's split lookup, and gives every sun four slots. It installs once at import of
@@ -159,8 +178,7 @@ split's box. The fit costs microseconds in every mode, far below the draw.
 - **Soft-shadow widening.** Godot widens the box by `tan(light_angular_distance)` times its
   depth (`:2286-2299`) to fit its soft-shadow blur. The previewer draws no angular soft shadow,
   so the box omits it.
-- **Shared atlas.** Godot divides one atlas between all shadowed directional lights
-  (`light_storage.cpp:2577-2597`). Here each light takes a whole atlas of its own, so a scene
-  with several gets sharper shadows than Godot.
+- **Sky Only.** Godot neither lights nor shadows a surface with a light whose `sky_mode` is
+  Sky Only (`light_storage.cpp:632`). Here it does both, with a whole atlas of its own.
 - **Last of two splits.** With blending on, Godot's last split of two blends towards a third
   slot it never set up. Here the last split never blends.

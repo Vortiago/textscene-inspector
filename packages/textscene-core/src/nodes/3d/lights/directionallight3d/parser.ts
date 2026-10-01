@@ -1,4 +1,4 @@
-/** DirectionalLight3D parser: the Light3D surface plus the directional shadow. */
+/** DirectionalLight3D parser: the Light3D surface, the directional shadow and the sky mode. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import type { DirectionalLight3DProperties } from './types';
@@ -24,5 +24,6 @@ export function parseDirectionalLight3D(
     directional_shadow_max_distance: parseOptionalFloat(properties.directional_shadow_max_distance),
     directional_shadow_pancake_size: parseOptionalFloat(properties.directional_shadow_pancake_size),
     directional_shadow_fade_start: parseOptionalFloat(properties.directional_shadow_fade_start),
+    sky_mode: parseOptionalInt(properties.sky_mode),
   };
 }

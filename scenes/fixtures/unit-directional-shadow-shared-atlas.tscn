@@ -1,0 +1,119 @@
+[gd_scene format=3 uid="uid://unitdirshadowsharedatlas"]
+
+; The shared directional shadow atlas, and nothing else. Two identical orthogonal suns cast, so
+; Godot gives each map half the atlas's width at its full height. The posts and the bars step
+; through the same widths. A post's shadow is thin across the map's halved width, so the thin
+; posts cast nothing and the rest blur. A bar's shadow is thin across the full height, so the bars
+; cast as under one sun. Every other golden has one sun, which takes the whole atlas, so a light
+; that ignores its share is invisible there.
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(3, 3)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_post_1"]
+size = Vector3(0.01, 1.6, 0.01)
+
+[sub_resource type="BoxMesh" id="BoxMesh_post_2"]
+size = Vector3(0.015, 1.6, 0.015)
+
+[sub_resource type="BoxMesh" id="BoxMesh_post_3"]
+size = Vector3(0.02, 1.6, 0.02)
+
+[sub_resource type="BoxMesh" id="BoxMesh_post_4"]
+size = Vector3(0.03, 1.6, 0.03)
+
+[sub_resource type="BoxMesh" id="BoxMesh_post_5"]
+size = Vector3(0.04, 1.6, 0.04)
+
+[sub_resource type="BoxMesh" id="BoxMesh_post_6"]
+size = Vector3(0.06, 1.6, 0.06)
+
+[sub_resource type="BoxMesh" id="BoxMesh_bar_1"]
+size = Vector3(1.1, 0.01, 0.01)
+
+[sub_resource type="BoxMesh" id="BoxMesh_bar_2"]
+size = Vector3(1.1, 0.015, 0.015)
+
+[sub_resource type="BoxMesh" id="BoxMesh_bar_3"]
+size = Vector3(1.1, 0.02, 0.02)
+
+[sub_resource type="BoxMesh" id="BoxMesh_bar_4"]
+size = Vector3(1.1, 0.03, 0.03)
+
+[sub_resource type="BoxMesh" id="BoxMesh_bar_5"]
+size = Vector3(1.1, 0.04, 0.04)
+
+[sub_resource type="BoxMesh" id="BoxMesh_bar_6"]
+size = Vector3(1.1, 0.06, 0.06)
+
+[node name="DirectionalShadowSharedAtlasRoot" type="Node3D"]
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("StandardMaterial3D_ground")
+
+[node name="Post1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.3, 0.8, -1.3)
+mesh = SubResource("BoxMesh_post_1")
+
+[node name="Post2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.1, 0.8, -1.3)
+mesh = SubResource("BoxMesh_post_2")
+
+[node name="Post3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9, 0.8, -1.3)
+mesh = SubResource("BoxMesh_post_3")
+
+[node name="Post4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7, 0.8, -1.3)
+mesh = SubResource("BoxMesh_post_4")
+
+[node name="Post5" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0.8, -1.3)
+mesh = SubResource("BoxMesh_post_5")
+
+[node name="Post6" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 0.8, -1.3)
+mesh = SubResource("BoxMesh_post_6")
+
+[node name="Bar1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, 0.4, -1.35)
+mesh = SubResource("BoxMesh_bar_1")
+
+[node name="Bar2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, 0.4, -0.9)
+mesh = SubResource("BoxMesh_bar_2")
+
+[node name="Bar3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, 0.4, -0.45)
+mesh = SubResource("BoxMesh_bar_3")
+
+[node name="Bar4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, 0.4, 0.0)
+mesh = SubResource("BoxMesh_bar_4")
+
+[node name="Bar5" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, 0.4, 0.45)
+mesh = SubResource("BoxMesh_bar_5")
+
+[node name="Bar6" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, 0.4, 0.9)
+mesh = SubResource("BoxMesh_bar_6")
+
+[node name="SunA" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-1, 0, 0, 0, 0.707107, 0.707107, 0, 0.707107, -0.707107, 0, 4, -4)
+light_energy = 0.75
+shadow_enabled = true
+directional_shadow_mode = 0
+directional_shadow_max_distance = 60.0
+
+[node name="SunB" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-1, 0, 0, 0, 0.707107, 0.707107, 0, 0.707107, -0.707107, 0, 4, -4)
+light_energy = 0.75
+shadow_enabled = true
+directional_shadow_mode = 0
+directional_shadow_max_distance = 60.0

@@ -1,10 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import {
+  DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT,
+  DirectionalLightSkyMode,
   DirectionalShadowMode,
+  MAX_DIRECTIONAL_LIGHTS,
   blendsSplits,
   directionalShadowBlendStart,
   DIRECTIONAL_SHADOW_FADE_START_DEFAULT,
   directionalShadowFade,
+  directionalLightsWithShadow,
+  directionalShadowLightRect,
   directionalShadowSlice,
   directionalShadowSnapStep,
   directionalShadowSplitAtlasRect,
@@ -15,6 +20,7 @@ import {
   directionalShadowSplitTextureSize,
   directionalShadowTexelSize,
   pancakesCasters,
+  sharesDirectionalShadowAtlas,
   texelPaddedRadius,
 } from './directionalShadow.js';
 
@@ -210,25 +216,114 @@ describe('directionalShadowBlendStart', () => {
   });
 });
 
+describe('sharesDirectionalShadowAtlas', () => {
+  it('shares the atlas for a shadowed light that lights the scene and the sky', () => {
+    expect(sharesDirectionalShadowAtlas(true, DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT)).toBe(true);
+    expect(sharesDirectionalShadowAtlas(true, DirectionalLightSkyMode.LIGHT_ONLY)).toBe(true);
+  });
+
+  it('leaves out a light that lights only the sky (edge case)', () => {
+    expect(sharesDirectionalShadowAtlas(true, DirectionalLightSkyMode.SKY_ONLY)).toBe(false);
+  });
+
+  it('leaves out a light whose shadow is off', () => {
+    expect(sharesDirectionalShadowAtlas(false, DirectionalLightSkyMode.LIGHT_AND_SKY)).toBe(false);
+  });
+
+  it('shares the atlas for an unknown sky mode, as only Sky Only is left out (error case)', () => {
+    expect(sharesDirectionalShadowAtlas(true, 7)).toBe(true);
+  });
+});
+
+describe('directionalLightsWithShadow', () => {
+  const shadowed = (light: string) => light.startsWith('shadowed');
+
+  it('keeps the shadowed lights in order', () => {
+    expect(directionalLightsWithShadow(['shadowed-a', 'plain', 'shadowed-b'], shadowed)).toEqual([
+      'shadowed-a',
+      'shadowed-b',
+    ]);
+  });
+
+  it('counts only the first eight lights, shadowed or not (edge case)', () => {
+    const lights = [...Array.from({ length: MAX_DIRECTIONAL_LIGHTS }, () => 'plain'), 'shadowed-ninth'];
+    expect(directionalLightsWithShadow(lights, shadowed)).toEqual([]);
+  });
+
+  it('returns no light for a scene without one (error case)', () => {
+    expect(directionalLightsWithShadow([], shadowed)).toEqual([]);
+  });
+});
+
+describe('directionalShadowLightRect', () => {
+  it('gives one light the whole atlas', () => {
+    expect(directionalShadowLightRect(4096, 1, 0)).toEqual({ x: 0, y: 0, width: 4096, height: 4096 });
+  });
+
+  it('gives two lights the halves of the width at full height', () => {
+    expect(directionalShadowLightRect(4096, 2, 0)).toEqual({ x: 0, y: 0, width: 2048, height: 4096 });
+    expect(directionalShadowLightRect(4096, 2, 1)).toEqual({ x: 2048, y: 0, width: 2048, height: 4096 });
+  });
+
+  it('gives three lights quadrants in reading order (edge case)', () => {
+    expect(directionalShadowLightRect(4096, 3, 2)).toEqual({ x: 0, y: 2048, width: 2048, height: 2048 });
+  });
+
+  it('doubles the columns again past four lights', () => {
+    expect(directionalShadowLightRect(4096, 5, 4)).toEqual({ x: 0, y: 2048, width: 1024, height: 2048 });
+    expect(directionalShadowLightRect(4096, 8, 7)).toEqual({ x: 3072, y: 2048, width: 1024, height: 2048 });
+  });
+
+  it('truncates an odd share to whole texels, as Rect2i does (edge case)', () => {
+    expect(directionalShadowLightRect(4095, 2, 1)).toEqual({ x: 2047, y: 0, width: 2047, height: 4095 });
+  });
+
+  it('gives a count of zero the whole atlas (error case)', () => {
+    expect(directionalShadowLightRect(4096, 0, 0)).toEqual({ x: 0, y: 0, width: 4096, height: 4096 });
+  });
+});
+
 describe('directionalShadowSplitTextureSize', () => {
+  const ALONE = { width: 4096, height: 4096 };
+  const HALF_WIDTH = { width: 2048, height: 4096 };
+
   it('halves the atlas for four splits', () => {
-    expect(directionalShadowSplitTextureSize(4, 4096)).toBe(2048);
+    expect(directionalShadowSplitTextureSize(4, ALONE)).toBe(2048);
   });
 
   it('keeps the atlas width for two splits (edge case)', () => {
-    expect(directionalShadowSplitTextureSize(2, 4096)).toBe(4096);
+    expect(directionalShadowSplitTextureSize(2, ALONE)).toBe(4096);
   });
 
-  it('keeps the whole atlas for a count with no split (error case)', () => {
-    expect(directionalShadowSplitTextureSize(0, 4096)).toBe(4096);
+  it('counts the larger side of a light that shares the atlas', () => {
+    expect(directionalShadowSplitTextureSize(1, HALF_WIDTH)).toBe(4096);
+    expect(directionalShadowSplitTextureSize(2, HALF_WIDTH)).toBe(2048);
+    expect(directionalShadowSplitTextureSize(4, HALF_WIDTH)).toBe(2048);
+  });
+
+  it('keeps the whole rectangle for a count with no split (error case)', () => {
+    expect(directionalShadowSplitTextureSize(0, HALF_WIDTH)).toBe(4096);
   });
 });
 
 describe('directionalShadowSplitAtlasRect', () => {
+  const ALONE = { x: 0, y: 0, width: 4096, height: 4096 };
+  const SECOND_OF_TWO = { x: 2048, y: 0, width: 2048, height: 4096 };
+
   it('puts four splits in the quadrants in reading order', () => {
-    expect(directionalShadowSplitAtlasRect(4, 1, 4096)).toEqual({ x: 2048, y: 0, width: 2048, height: 2048 });
-    expect(directionalShadowSplitAtlasRect(4, 2, 4096)).toEqual({ x: 0, y: 2048, width: 2048, height: 2048 });
-    expect(directionalShadowSplitAtlasRect(4, 3, 4096)).toEqual({
+    expect(directionalShadowSplitAtlasRect(4, 1, ALONE)).toEqual({
+      x: 2048,
+      y: 0,
+      width: 2048,
+      height: 2048,
+    });
+    expect(directionalShadowSplitAtlasRect(4, 2, ALONE)).toEqual({
+      x: 0,
+      y: 2048,
+      width: 2048,
+      height: 2048,
+    });
+    expect(directionalShadowSplitAtlasRect(4, 3, ALONE)).toEqual({
       x: 2048,
       y: 2048,
       width: 2048,
@@ -237,15 +332,35 @@ describe('directionalShadowSplitAtlasRect', () => {
   });
 
   it('puts two splits in the halves of the height (edge case)', () => {
-    expect(directionalShadowSplitAtlasRect(2, 1, 4096)).toEqual({ x: 0, y: 2048, width: 4096, height: 2048 });
+    expect(directionalShadowSplitAtlasRect(2, 1, ALONE)).toEqual({
+      x: 0,
+      y: 2048,
+      width: 4096,
+      height: 2048,
+    });
   });
 
-  it('gives an orthogonal light the whole atlas', () => {
-    expect(directionalShadowSplitAtlasRect(1, 0, 4096)).toEqual({ x: 0, y: 0, width: 4096, height: 4096 });
+  it('lays the splits out inside a light that shares the atlas', () => {
+    expect(directionalShadowSplitAtlasRect(4, 3, SECOND_OF_TWO)).toEqual({
+      x: 3072,
+      y: 2048,
+      width: 1024,
+      height: 2048,
+    });
+    expect(directionalShadowSplitAtlasRect(2, 1, SECOND_OF_TWO)).toEqual({
+      x: 2048,
+      y: 2048,
+      width: 2048,
+      height: 2048,
+    });
   });
 
-  it('gives an unknown count the whole atlas (error case)', () => {
-    expect(directionalShadowSplitAtlasRect(3, 2, 4096)).toEqual({ x: 0, y: 0, width: 4096, height: 4096 });
+  it('gives an orthogonal light its whole rectangle', () => {
+    expect(directionalShadowSplitAtlasRect(1, 0, SECOND_OF_TWO)).toEqual(SECOND_OF_TWO);
+  });
+
+  it('gives an unknown count the whole rectangle (error case)', () => {
+    expect(directionalShadowSplitAtlasRect(3, 2, ALONE)).toEqual(ALONE);
   });
 });
 

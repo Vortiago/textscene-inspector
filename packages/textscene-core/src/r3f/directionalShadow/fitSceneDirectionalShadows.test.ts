@@ -2,6 +2,7 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import { directionalShadowUserData, type DirectionalShadowDeclaration } from './declaration';
 import {
+  directionalShadowAtlasShares,
   directionalShadowCasters,
   fitSceneDirectionalShadows,
   releaseSceneSplitSuns,
@@ -28,6 +29,7 @@ const DECLARATION: DirectionalShadowDeclaration = {
   splitCount: 1,
   splitOffsets: [0.1, 0.2, 0.5],
   blendSplits: false,
+  sharesAtlas: true,
 };
 
 function viewingCamera(): THREE.PerspectiveCamera {
@@ -425,5 +427,157 @@ describe('directionalShadowCasters', () => {
     parent.add(caster(), new SplitSunLight());
     scene.add(parent);
     expect(directionalShadowCasters(scene, viewingCamera())).toEqual({ directional: [], sun: [] });
+  });
+});
+
+/** A declared, casting light, added to `scene` with its target. */
+function addDeclaredLight(
+  scene: THREE.Scene,
+  overrides: Partial<DirectionalShadowDeclaration> = {}
+): THREE.DirectionalLight {
+  const light = new THREE.DirectionalLight();
+  light.position.set(10, 20, 5);
+  light.castShadow = true;
+  light.userData = directionalShadowUserData({ ...DECLARATION, ...overrides });
+  scene.add(light, light.target);
+  return light;
+}
+
+function fitted(scene: THREE.Scene): void {
+  scene.updateMatrixWorld();
+  fitSceneDirectionalShadows(scene, viewingCamera());
+}
+
+describe('fitSceneDirectionalShadows atlas shares', () => {
+  it('gives the only shadowed light the whole atlas', () => {
+    const scene = new THREE.Scene();
+    const light = addDeclaredLight(scene);
+    fitted(scene);
+    expect(light.shadow.mapSize.toArray()).toEqual([4096, 4096]);
+  });
+
+  it('gives each of two orthogonal lights half the atlas width at full height', () => {
+    const scene = new THREE.Scene();
+    const lights = [addDeclaredLight(scene), addDeclaredLight(scene)];
+    fitted(scene);
+    for (const light of lights) expect(light.shadow.mapSize.toArray()).toEqual([2048, 4096]);
+  });
+
+  it('counts the texels of an orthogonal light against the larger side of its share', () => {
+    // `light_storage.cpp:2620`: MAX(2048, 4096), so the normal bias keeps its size alone.
+    const alone = new THREE.Scene();
+    const single = addDeclaredLight(alone);
+    fitted(alone);
+    const shared = new THREE.Scene();
+    const [first] = [addDeclaredLight(shared), addDeclaredLight(shared)];
+    fitted(shared);
+    expect(first!.shadow.normalBias).toBeCloseTo(single.shadow.normalBias, 12);
+  });
+
+  it('lays each of two split lights’ splits out inside its own share', () => {
+    const scene = new THREE.Scene();
+    const lights = [addDeclaredLight(scene, { splitCount: 4 }), addDeclaredLight(scene, { splitCount: 4 })];
+    fitted(scene);
+    for (const light of lights) {
+      const shadow = splitSunOf(light)!.shadow;
+      expect(shadow.mapSize.toArray()).toEqual([1024, 2048]);
+      expect(shadow.getFrameExtents().toArray()).toEqual([2, 2]);
+    }
+  });
+
+  it('shares the atlas between an orthogonal and a split light', () => {
+    const scene = new THREE.Scene();
+    const orthogonal = addDeclaredLight(scene);
+    const split = addDeclaredLight(scene, { splitCount: 2 });
+    fitted(scene);
+    expect(orthogonal.shadow.mapSize.toArray()).toEqual([2048, 4096]);
+    expect(splitSunOf(split)!.shadow.mapSize.toArray()).toEqual([2048, 2048]);
+  });
+
+  it('keeps the shadow map while its share keeps its size', () => {
+    const scene = new THREE.Scene();
+    const light = addDeclaredLight(scene);
+    fitted(scene);
+    const map = new THREE.WebGLRenderTarget(4096, 4096);
+    light.shadow.map = map;
+    fitted(scene);
+    expect(light.shadow.map).toBe(map);
+  });
+
+  it('frees the shadow map when a second shadowed light halves the share (edge case)', () => {
+    const scene = new THREE.Scene();
+    const light = addDeclaredLight(scene);
+    fitted(scene);
+    light.shadow.map = new THREE.WebGLRenderTarget(4096, 4096);
+    addDeclaredLight(scene);
+    fitted(scene);
+    expect(light.shadow.map).toBeNull();
+    expect(light.shadow.mapSize.toArray()).toEqual([2048, 4096]);
+  });
+
+  it('leaves a light that lights only the sky out of the count (edge case)', () => {
+    const scene = new THREE.Scene();
+    const skyOnly = addDeclaredLight(scene, { sharesAtlas: false });
+    const light = addDeclaredLight(scene);
+    fitted(scene);
+    expect(light.shadow.mapSize.toArray()).toEqual([4096, 4096]);
+    expect(skyOnly.shadow.mapSize.toArray()).toEqual([4096, 4096]);
+  });
+
+  it('leaves a hidden light out of the count (edge case)', () => {
+    const scene = new THREE.Scene();
+    const hidden = addDeclaredLight(scene);
+    hidden.visible = false;
+    const light = addDeclaredLight(scene);
+    fitted(scene);
+    expect(light.shadow.mapSize.toArray()).toEqual([4096, 4096]);
+  });
+});
+
+describe('directionalShadowAtlasShares', () => {
+  it('gives the shadowed lights their shares in visible pre-order', () => {
+    const scene = new THREE.Scene();
+    const group = new THREE.Group();
+    const first = addDeclaredLight(scene);
+    const nested = addDeclaredLight(scene);
+    group.add(nested);
+    scene.add(group);
+    const shares = directionalShadowAtlasShares(scene, viewingCamera());
+    expect(shares.get(first)).toEqual({ x: 0, y: 0, width: 2048, height: 4096 });
+    expect(shares.get(nested)).toEqual({ x: 2048, y: 0, width: 2048, height: 4096 });
+  });
+
+  it('counts a split light by its own layers while its sun shades for it', () => {
+    const scene = new THREE.Scene();
+    const split = addDeclaredLight(scene, { splitCount: 4 });
+    const orthogonal = addDeclaredLight(scene);
+    fitted(scene);
+    const shares = directionalShadowAtlasShares(scene, viewingCamera());
+    expect(shares.get(split)).toEqual({ x: 0, y: 0, width: 2048, height: 4096 });
+    expect(shares.get(orthogonal)).toEqual({ x: 2048, y: 0, width: 2048, height: 4096 });
+  });
+
+  it('counts only the first eight visible lights, shadowed or not (edge case)', () => {
+    const scene = new THREE.Scene();
+    for (let i = 0; i < 8; i++) addDeclaredLight(scene, { sharesAtlas: false });
+    const ninth = addDeclaredLight(scene);
+    expect(directionalShadowAtlasShares(scene, viewingCamera()).has(ninth)).toBe(false);
+  });
+
+  it('leaves out a light on a layer the camera does not render (edge case)', () => {
+    const scene = new THREE.Scene();
+    const otherLayer = addDeclaredLight(scene);
+    otherLayer.layers.set(5);
+    const light = addDeclaredLight(scene);
+    const shares = directionalShadowAtlasShares(scene, viewingCamera());
+    expect(shares.has(otherLayer)).toBe(false);
+    expect(shares.get(light)).toEqual({ x: 0, y: 0, width: 4096, height: 4096 });
+  });
+
+  it('ignores an undeclared light (error case)', () => {
+    const scene = new THREE.Scene();
+    scene.add(new THREE.DirectionalLight());
+    const light = addDeclaredLight(scene);
+    expect(directionalShadowAtlasShares(scene, viewingCamera()).get(light)?.width).toBe(4096);
   });
 });

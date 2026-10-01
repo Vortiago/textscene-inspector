@@ -11,6 +11,7 @@ const DECLARATION = {
   splitCount: 4,
   splitOffsets: [0.1, 0.2, 0.5],
   blendSplits: false,
+  sharesAtlas: true,
 };
 
 describe('directionalShadowUserData', () => {
@@ -49,6 +50,13 @@ describe('readDirectionalShadowDeclaration', () => {
     const light = new THREE.DirectionalLight();
     const { fadeStart: _fadeStart, ...withoutFade } = DECLARATION;
     light.userData = { directionalShadow: withoutFade };
+    expect(readDirectionalShadowDeclaration(light)).toBeNull();
+  });
+
+  it('answers null for a declaration without its atlas share (error case)', () => {
+    const light = new THREE.DirectionalLight();
+    const { sharesAtlas: _sharesAtlas, ...withoutShare } = DECLARATION;
+    light.userData = { directionalShadow: withoutShare };
     expect(readDirectionalShadowDeclaration(light)).toBeNull();
   });
 

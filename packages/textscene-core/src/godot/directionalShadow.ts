@@ -28,7 +28,8 @@ export const DIRECTIONAL_SHADOW_NORMAL_BIAS_DEFAULT = 2;
 
 /**
  * `rendering/lights_and_shadows/directional_shadow/size` defaults to 4096
- * (`servers/rendering/rendering_server.cpp:3704`). One orthogonal light takes the whole atlas.
+ * (`servers/rendering/rendering_server.cpp:3704`). Every shadowed directional light takes a share
+ * of the one atlas.
  */
 export const DIRECTIONAL_SHADOW_SIZE_DEFAULT = 4096;
 
@@ -193,13 +194,35 @@ export function directionalShadowBlendStart(splitOffset: number): number {
   return splitOffset - splitOffset * 0.1;
 }
 
+/** `DirectionalLight3D::SkyMode` (`scene/3d/light_3d.h:172-176`). */
+export const DirectionalLightSkyMode = {
+  LIGHT_AND_SKY: 0,
+  LIGHT_ONLY: 1,
+  SKY_ONLY: 2,
+} as const;
+
+/** `DirectionalLight3D()` lights both the scene and the sky (`scene/3d/light_3d.cpp:608`). */
+export const DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT = DirectionalLightSkyMode.LIGHT_AND_SKY;
+
 /**
- * `light_storage.cpp:2603-2623`: the texture size a split's fit counts texels against, for a scene's
- * only shadowed directional light, which owns the whole atlas. Two splits halve the height and keep
- * the width, so the larger side stays the whole atlas. Four splits halve both.
+ * `renderer_scene_cull.cpp:3268`: a directional light takes a share of the shadow atlas when its
+ * shadow is on and it lights more than the sky. The shadow mode does not count, so a light with an
+ * unknown mode takes a share and draws nothing into it.
  */
-export function directionalShadowSplitTextureSize(splitCount: number, atlasSize: number): number {
-  return splitCount === 4 ? atlasSize / 2 : atlasSize;
+export function sharesDirectionalShadowAtlas(shadowEnabled: boolean, skyMode: number): boolean {
+  return shadowEnabled && skyMode !== DirectionalLightSkyMode.SKY_ONLY;
+}
+
+/**
+ * `renderer_scene_cull.cpp:3257-3277`: the lights that share the atlas, in the order they take
+ * their shares. `lights` are the visible directional lights on a visible layer, in scenario order.
+ * Only the first `MAX_DIRECTIONAL_LIGHTS` of them count, shadowed or not.
+ */
+export function directionalLightsWithShadow<Light>(
+  lights: readonly Light[],
+  sharesAtlas: (light: Light) => boolean
+): Light[] {
+  return lights.slice(0, MAX_DIRECTIONAL_LIGHTS).filter(sharesAtlas);
 }
 
 /** A rectangle of the directional shadow atlas, in texels. */
@@ -211,20 +234,74 @@ export interface DirectionalShadowAtlasRect {
 }
 
 /**
- * `render_forward_clustered.cpp:2612-2629`: where split `index` draws in the atlas. Four splits take
- * the quadrants in reading order, and two splits take the first and second halves of its height.
+ * `light_storage.cpp:2577-2597`: the share of an `atlasSize` atlas that light `lightIndex` of
+ * `lightCount` takes. The atlas splits into a grid that doubles its columns, then its rows, until
+ * it holds every light, so two lights take the halves of its width at full height. The sizes are
+ * integers, as in `Rect2i`.
+ */
+export function directionalShadowLightRect(
+  atlasSize: number,
+  lightCount: number,
+  lightIndex: number
+): DirectionalShadowAtlasRect {
+  let columns = 1;
+  let rows = 1;
+  while (columns * rows < lightCount) {
+    if (columns === rows) columns *= 2;
+    else rows *= 2;
+  }
+  const width = Math.trunc(atlasSize / columns);
+  const height = Math.trunc(atlasSize / rows);
+  return {
+    x: width * (lightIndex % columns),
+    y: height * Math.trunc(lightIndex / columns),
+    width,
+    height,
+  };
+}
+
+/**
+ * `light_storage.cpp:2603-2623`, called at `renderer_scene_cull.cpp:2177`: the texture size a split's
+ * fit counts texels against. Two splits halve the light's height and four halve both, and the
+ * larger side counts. A count with no split keeps the light's whole rectangle.
+ */
+export function directionalShadowSplitTextureSize(
+  splitCount: number,
+  lightRect: Pick<DirectionalShadowAtlasRect, 'width' | 'height'>
+): number {
+  const split = directionalShadowSplitAtlasRect(splitCount, 0, { x: 0, y: 0, ...lightRect });
+  return Math.max(split.width, split.height);
+}
+
+/**
+ * `render_forward_clustered.cpp:2610-2630`: where split `index` draws, inside the light's own
+ * rectangle of the atlas. Four splits take its quadrants in reading order, and two splits take the
+ * first and second halves of its height.
  */
 export function directionalShadowSplitAtlasRect(
   splitCount: number,
   index: number,
-  atlasSize: number
+  lightRect: DirectionalShadowAtlasRect
 ): DirectionalShadowAtlasRect {
-  const half = atlasSize / 2;
+  const halfWidth = Math.trunc(lightRect.width / 2);
+  const halfHeight = Math.trunc(lightRect.height / 2);
   if (splitCount === 4) {
-    return { x: (index % 2) * half, y: Math.floor(index / 2) * half, width: half, height: half };
+    return {
+      x: lightRect.x + (index % 2) * halfWidth,
+      y: lightRect.y + Math.trunc(index / 2) * halfHeight,
+      width: halfWidth,
+      height: halfHeight,
+    };
   }
-  if (splitCount === 2) return { x: 0, y: index * half, width: atlasSize, height: half };
-  return { x: 0, y: 0, width: atlasSize, height: atlasSize };
+  if (splitCount === 2) {
+    return {
+      x: lightRect.x,
+      y: lightRect.y + index * halfHeight,
+      width: lightRect.width,
+      height: halfHeight,
+    };
+  }
+  return { ...lightRect };
 }
 
 /**

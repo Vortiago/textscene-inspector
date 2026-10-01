@@ -428,6 +428,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Directional Shadow Shared Atlas",
+    "file": "unit-directional-shadow-shared-atlas.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Directional Shadow Splits",
     "file": "unit-directional-shadow-splits.tscn",
     "category": "Other"

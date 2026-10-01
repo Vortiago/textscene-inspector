@@ -127,6 +127,7 @@ describe('<DirectionalShadowFitter> on its own', () => {
       splitCount,
       splitOffsets: [0.1, 0.2, 0.5],
       blendSplits: false,
+      sharesAtlas: true,
     });
     const renderer = await ReactThreeTestRenderer.create(
       <>

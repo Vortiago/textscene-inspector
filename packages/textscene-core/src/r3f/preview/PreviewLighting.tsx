@@ -12,14 +12,15 @@ import { EnvironmentLayer } from '../environment/EnvironmentLayer';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { directionalShadowBias } from '../../nodes/3d/lights/shared/shadowBias';
 import {
+  DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT,
   DIRECTIONAL_SHADOW_BLEND_SPLITS_DEFAULT,
   DIRECTIONAL_SHADOW_FADE_START_DEFAULT,
   DIRECTIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
   DIRECTIONAL_SHADOW_PANCAKE_SIZE_DEFAULT,
-  DIRECTIONAL_SHADOW_SIZE_DEFAULT,
   DIRECTIONAL_SHADOW_SPLIT_OFFSETS_DEFAULT,
   DirectionalShadowMode,
   directionalShadowSplitCount,
+  sharesDirectionalShadowAtlas,
 } from '../../godot/directionalShadow';
 import { directionalShadowUserData } from '../directionalShadow/declaration';
 import {
@@ -41,9 +42,9 @@ const PREVIEW_SUN_DISTANCE = 30;
 
 /**
  * The preview sun's declaration: the editor sets its max distance
- * (`node_3d_editor_plugin.cpp:9476`) and four splits (`:10383`), so the
- * bias, blur, pancake, fade start, normal bias, split offsets and blending
- * keep the class defaults an authored DirectionalLight3D gets.
+ * (`node_3d_editor_plugin.cpp:9476`), its shadow on (`:10382`) and four
+ * splits (`:10383`). Everything else, the sky mode included, keeps the class
+ * defaults an authored DirectionalLight3D gets.
  */
 const PREVIEW_SUN_SHADOW = directionalShadowUserData({
   maxDistance: PREVIEW_SUN_SHADOW_MAX_DISTANCE,
@@ -54,6 +55,7 @@ const PREVIEW_SUN_SHADOW = directionalShadowUserData({
   splitCount: directionalShadowSplitCount(DirectionalShadowMode.PARALLEL_4_SPLITS),
   splitOffsets: DIRECTIONAL_SHADOW_SPLIT_OFFSETS_DEFAULT,
   blendSplits: DIRECTIONAL_SHADOW_BLEND_SPLITS_DEFAULT,
+  sharesAtlas: sharesDirectionalShadowAtlas(true, DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT),
 });
 
 export function PreviewLighting() {
@@ -101,8 +103,6 @@ function PreviewSun() {
         color={PREVIEW_SUN_COLOR}
         intensity={PREVIEW_SUN_ENERGY * LIGHT_INTENSITY_SCALE}
         castShadow
-        shadow-mapSize-width={DIRECTIONAL_SHADOW_SIZE_DEFAULT}
-        shadow-mapSize-height={DIRECTIONAL_SHADOW_SIZE_DEFAULT}
         userData={PREVIEW_SUN_SHADOW}
       />
     </>

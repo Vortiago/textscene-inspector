@@ -13,6 +13,7 @@ import {
   directionalShadowSplitOffsets,
   directionalShadowSplitRange,
   directionalShadowSplitTextureSize,
+  type DirectionalShadowAtlasRect,
   type DirectionalShadowFade,
 } from '../../godot/directionalShadow.js';
 import {
@@ -23,8 +24,8 @@ import {
 } from './fitDirectionalShadowBox.js';
 
 export interface DirectionalShadowSplitFitInput extends Omit<DirectionalShadowFitInput, 'shadowMapSize'> {
-  /** The whole atlas's size. Each split counts its texels against its own share of it. */
-  atlasSize: number;
+  /** The light's share of Godot's atlas. Each split counts its texels against its own part of it. */
+  lightRect: DirectionalShadowAtlasRect;
 }
 
 /**
@@ -63,7 +64,7 @@ export function fitDirectionalShadowSplits(
   const distances = directionalShadowSplitDistances(viewSlice(input), splitCount, declaration.splitOffsets);
   const splitInput = {
     ...input,
-    shadowMapSize: directionalShadowSplitTextureSize(splitCount, input.atlasSize),
+    shadowMapSize: directionalShadowSplitTextureSize(splitCount, input.lightRect),
   };
 
   const boxes: DirectionalShadowBox[] = [];

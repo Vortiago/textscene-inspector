@@ -6,6 +6,7 @@
  */
 
 import * as THREE from 'three';
+import { freeShadowMap } from './shadowMapAllocation.js';
 import { DirectionalSplitShadow } from './splitShadow.js';
 
 export class SplitSunLight extends THREE.Light {
@@ -53,7 +54,8 @@ export function attachSplitSun(light: THREE.DirectionalLight): SplitSunLight {
   // A light that fails the camera's layer test never enters the render's light list
   // (`WebGLRenderer.js:1864-1888`), while its children still do.
   light.layers.disableAll();
-  freeOwnShadowMap(light);
+  // The hidden light draws no shadow, so a map it drew before the sun attached only holds memory.
+  freeShadowMap(light.shadow);
   light.add(sun);
   // A light leaves the scene before the fitter can see it go, so it frees its own sun's atlas.
   light.addEventListener('removed', releaseRemovedLight);
@@ -68,16 +70,6 @@ export function releaseSplitSun(light: THREE.DirectionalLight): void {
   light.layers.mask = sun.sourceLayers.mask;
   light.remove(sun);
   sun.dispose();
-}
-
-/**
- * The hidden light draws no shadow, so a map it drew before the sun attached only holds memory.
- * three builds a new one from `mapSize` if the light casts again (`WebGLShadowMap.js:203`).
- */
-function freeOwnShadowMap(light: THREE.DirectionalLight): void {
-  light.shadow.dispose();
-  light.shadow.map = null;
-  light.shadow.mapPass = null;
 }
 
 function releaseRemovedLight(event: { target: THREE.Object3D }): void {

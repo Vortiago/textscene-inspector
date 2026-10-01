@@ -31,6 +31,9 @@ export const GEOMETRY_SCENES = [
   // Posts running away from the view past a short shadow max distance. The near
   // posts cast, the fade thins the next and the far ones cast nothing.
   { name: 'directional-shadow-fade', file: 'unit-directional-shadow-fade.tscn' },
+  // Two orthogonal suns, so each map is half the atlas wide. The thin posts,
+  // whose shadows lie across that width, cast nothing. The bars cast as under one sun.
+  { name: 'directional-shadow-shared-atlas', file: 'unit-directional-shadow-shared-atlas.tscn' },
   // CSG `material` as an ExtResource .tres beside an inline SubResource one. A
   // resolver of the inline form alone draws the external one white, and the
   // other CSG fixtures declare theirs inline. The left box is green, the right red.

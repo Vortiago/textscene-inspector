@@ -29,6 +29,11 @@ export interface DirectionalShadowDeclaration {
   splitOffsets: readonly number[];
   /** `directional_shadow_blend_splits`. */
   blendSplits: boolean;
+  /**
+   * Whether the light takes a share of Godot's directional shadow atlas: `shadow_enabled` on and
+   * `sky_mode` not Sky Only (`sharesDirectionalShadowAtlas`).
+   */
+  sharesAtlas: boolean;
 }
 
 /** The `userData` key. One key, so a light carries one declaration. */
@@ -61,6 +66,7 @@ function isDeclaration(value: unknown): value is DirectionalShadowDeclaration {
     typeof candidate.normalBias === 'number' &&
     typeof candidate.splitCount === 'number' &&
     Array.isArray(candidate.splitOffsets) &&
-    typeof candidate.blendSplits === 'boolean'
+    typeof candidate.blendSplits === 'boolean' &&
+    typeof candidate.sharesAtlas === 'boolean'
   );
 }

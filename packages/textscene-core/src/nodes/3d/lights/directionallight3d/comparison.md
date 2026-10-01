@@ -9,7 +9,7 @@ renders_as: a THREE.DirectionalLight
 
 # DirectionalLight3D
 
-A sun-like light that lights every surface from one direction, down the node's local -Z. The previewer draws a `THREE.DirectionalLight` with Godot's shadow: fitted to the camera, in one, two or four splits, and faded out at `directional_shadow_max_distance`.
+A sun-like light that lights every surface from one direction, down the node's local -Z. The previewer draws a `THREE.DirectionalLight` with Godot's shadow: fitted to the camera, in one, two or four splits, in its share of one shadow atlas, and faded out at `directional_shadow_max_distance`.
 
 ## Linting
 
@@ -36,10 +36,10 @@ Strict parsing format-checks these `DirectionalLight3D` properties, plus 27 inhe
 | `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |
 <!-- lint:end -->
 
-The lenient parser reads the shadow mode, the three split offsets, the max distance, the pancake size, the fade start and `directional_shadow_blend_splits`. An absent or unparseable value takes Godot's default: four splits at 0.1, 0.2 and 0.5, no blending, and a fade from 0.8 of the distance. An out-of-range split offset or fade start reaches the renderer as written, as Godot's setter keeps it. The parser never reads `sky_mode`.
+The lenient parser reads the shadow mode, the three split offsets, the max distance, the pancake size, the fade start, `directional_shadow_blend_splits` and `sky_mode`. An absent or unparseable value takes Godot's default: four splits at 0.1, 0.2 and 0.5, no blending, and a fade from 0.8 of the distance. An out-of-range split offset or fade start reaches the renderer as written, as Godot's setter keeps it.
 
 ## Known limitations
 
 - **Approximated** A shadow's near edge has more contrast than in Godot, where the bright sky ambient washes it out.
-- **Approximated** In a scene with several shadowed suns, each shadow is sharper than in Godot, which shares one shadow atlas between them.
 - **Approximated** A caster more than one view diameter towards the sun casts no shadow, where Godot still draws it.
+- **Approximated** A light with `sky_mode` set to Sky Only lights and shadows surfaces here, where Godot uses it only for the sky.

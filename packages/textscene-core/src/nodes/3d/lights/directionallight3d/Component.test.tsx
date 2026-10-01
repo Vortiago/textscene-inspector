@@ -121,13 +121,29 @@ describe('<DirectionalLight3D> shadow declaration', () => {
     });
   });
 
-  it('draws into a map of Godot’s default directional shadow size', async () => {
-    // `rendering_server.cpp:3704`.
+  it('declares a share of the shadow atlas for a shadowed light of the default sky mode', async () => {
+    // `renderer_scene_cull.cpp:3268`, `light_3d.cpp:608`.
     const renderer = await ReactThreeTestRenderer.create(
       <DirectionalLight3D node={makeNode({ shadow_enabled: true })} />
     );
     const light = instanceAs<THREE.DirectionalLight>(renderer.scene.findByType('DirectionalLight'));
-    expect(light.shadow.mapSize.toArray()).toEqual([4096, 4096]);
+    expect(readDirectionalShadowDeclaration(light)?.sharesAtlas).toBe(true);
+  });
+
+  it('declares no share of the shadow atlas for a light that lights only the sky (edge case)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <DirectionalLight3D node={makeNode({ shadow_enabled: true, sky_mode: 2 })} />
+    );
+    const light = instanceAs<THREE.DirectionalLight>(renderer.scene.findByType('DirectionalLight'));
+    expect(readDirectionalShadowDeclaration(light)?.sharesAtlas).toBe(false);
+  });
+
+  it('declares no share of the shadow atlas for a light whose shadow is off (error case)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <DirectionalLight3D node={makeNode({ shadow_enabled: false })} />
+    );
+    const light = instanceAs<THREE.DirectionalLight>(renderer.scene.findByType('DirectionalLight'));
+    expect(readDirectionalShadowDeclaration(light)?.sharesAtlas).toBe(false);
   });
 
   it('leaves the shadow camera to the scene fitter, and the light at its node', async () => {

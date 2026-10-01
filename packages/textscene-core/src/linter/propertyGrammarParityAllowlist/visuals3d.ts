@@ -57,12 +57,8 @@ export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   // base-level asymmetries sit on Light3D in baseTypes.ts.
 
   DirectionalLight3D: {
-    linterOnly: [
-      // Sky tuning the parser does not read.
-      'sky_mode',
-    ],
     reason:
-      'DirectionalLight3D linter validates the sky mode the static renderer ignores; the Light3D base keys are covered by the Light3D entry on both sides.',
+      'No unique asymmetries; directional_* keys and sky_mode are symmetric and Light3D base keys are covered by the Light3D entry on both sides.',
   },
 
   OmniLight3D: {

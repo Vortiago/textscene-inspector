@@ -19,8 +19,8 @@ const SUN_DIRECTION = new THREE.Vector3(-0.4, -0.8, -0.45).normalize();
 /** Float slack for a point that sits on a box face. */
 const FACE_TOLERANCE = 1e-9;
 
-/** The split fields of an orthogonal light, which the single box never reads. */
-const ONE_SPLIT = { splitCount: 1, splitOffsets: [0.1, 0.2, 0.5], blendSplits: false };
+/** The split and atlas fields of an orthogonal light, which the single box never reads. */
+const ONE_SPLIT = { splitCount: 1, splitOffsets: [0.1, 0.2, 0.5], blendSplits: false, sharesAtlas: true };
 
 function declaring(maxDistance: number, pancakeSize = 20): DirectionalShadowFitInput['declaration'] {
   return { maxDistance, pancakeSize, fadeStart: 0.8, depthBias: 0, normalBias: 2, ...ONE_SPLIT };
