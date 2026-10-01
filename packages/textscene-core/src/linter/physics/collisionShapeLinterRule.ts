@@ -13,7 +13,7 @@ import { isZeroApprox } from '../../godot/math.js';
 import { basisColumnScales } from './basisColumnScales.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
-import { armEmits, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
 import { parseGodotFloat } from '../validators/commonValidators.js';
 import { boolSlotValue, descendsFromClass } from '../../godot/index.js';
 
@@ -34,7 +34,6 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
   // Each arm's enabling condition, stated once (see `ruleArms.ts`), in the
   // order the generated sheet lists them.
   const is2D = dim === '2D';
-  const configWarning = { kind: 'configuration-warning' } as const;
   const arms: RuleArms<
     | 'requiresShape'
     | 'invalidParent'
@@ -47,70 +46,38 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     | 'worldBoundaryUnderRigidBody'
     | 'concaveUnderCharacterBody'
   > = {
-    requiresShape: {
-      severity: 'warning',
-      ruleName: `${prefix}-requires-shape`,
-      grounding: configWarning,
-    },
-    invalidParent: {
-      severity: 'warning',
-      ruleName: `${prefix}-invalid-parent`,
-      grounding: configWarning,
-    },
-    noParent: { severity: 'warning', ruleName: `${prefix}-no-parent`, grounding: configWarning },
+    requiresShape: groundedArm(`${prefix}-requires-shape`, { kind: 'configuration-warning' }),
+    invalidParent: groundedArm(`${prefix}-invalid-parent`, { kind: 'configuration-warning' }),
+    noParent: groundedArm(`${prefix}-no-parent`, { kind: 'configuration-warning' }),
     // 2D only: `CollisionShape3D` declares neither one-way property, and the
     // polygon-editing advice is `collision_shape_2d.cpp:184-189`.
     unusedOneWayMargin: is2D
-      ? {
-          severity: 'info',
-          ruleName: `${prefix}-unused-one-way-margin`,
-          grounding: {
-            kind: 'engine-inert',
-            at: ONE_WAY_GROUP_AT,
-            unused: 'the group-enable toggle gates the margin, which is read only while it is on',
-          },
-        }
+      ? groundedArm(`${prefix}-unused-one-way-margin`, {
+          kind: 'engine-inert',
+          at: ONE_WAY_GROUP_AT,
+          unused: 'the group-enable toggle gates the margin, which is read only while it is on',
+        })
       : undefined,
     oneWayIgnoredUnderArea2D: is2D
-      ? {
-          severity: 'warning',
-          ruleName: `${prefix}-one-way-ignored-under-area2d`,
-          grounding: configWarning,
-        }
+      ? groundedArm(`${prefix}-one-way-ignored-under-area2d`, { kind: 'configuration-warning' })
       : undefined,
     polygonShapeLimitedEditing: is2D
-      ? {
-          severity: 'warning',
-          ruleName: `${prefix}-polygon-shape-limited-editing`,
-          grounding: configWarning,
-        }
+      ? groundedArm(`${prefix}-polygon-shape-limited-editing`, { kind: 'configuration-warning' })
       : undefined,
     // 3D only: `collision_shape_2d.cpp`'s configuration warnings carry neither
     // the scale check nor the shape-under-body pair.
     nonUniformScale: is2D
       ? undefined
-      : { severity: 'warning', ruleName: `${prefix}-non-uniform-scale`, grounding: configWarning },
+      : groundedArm(`${prefix}-non-uniform-scale`, { kind: 'configuration-warning' }),
     concaveUnderRigidBody: is2D
       ? undefined
-      : {
-          severity: 'warning',
-          ruleName: `${prefix}-concave-under-rigidbody`,
-          grounding: configWarning,
-        },
+      : groundedArm(`${prefix}-concave-under-rigidbody`, { kind: 'configuration-warning' }),
     worldBoundaryUnderRigidBody: is2D
       ? undefined
-      : {
-          severity: 'warning',
-          ruleName: `${prefix}-worldboundary-under-rigidbody`,
-          grounding: configWarning,
-        },
+      : groundedArm(`${prefix}-worldboundary-under-rigidbody`, { kind: 'configuration-warning' }),
     concaveUnderCharacterBody: is2D
       ? undefined
-      : {
-          severity: 'warning',
-          ruleName: `${prefix}-concave-under-characterbody`,
-          grounding: configWarning,
-        },
+      : groundedArm(`${prefix}-concave-under-characterbody`, { kind: 'configuration-warning' }),
   };
 
   function check(context: RuleContext): Diagnostic[] {

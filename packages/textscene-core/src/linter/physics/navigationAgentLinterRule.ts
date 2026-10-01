@@ -5,6 +5,7 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../ruleArms.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { parentTypeVerdict, placementPhrase } from '../parentType.js';
@@ -13,7 +14,11 @@ export function makeNavigationAgentLinterRule(dim: PhysicsDim): LintRule {
   const type = `NavigationAgent${dim}`;
   const parentType = `Node${dim}`;
   const suffix = dimSuffix(dim);
-  const ruleName = `navigationagent${suffix}-parent-not-node${suffix}`;
+  const arms = {
+    parentNotNode: groundedArm(`navigationagent${suffix}-parent-not-node${suffix}`, {
+      kind: 'configuration-warning',
+    }),
+  } as const satisfies RuleArms<string>;
 
   function check(context: RuleContext): Diagnostic[] {
     const { node, scene } = context;
@@ -26,13 +31,11 @@ export function makeNavigationAgentLinterRule(dim: PhysicsDim): LintRule {
     if (verdict.kind === 'satisfied' || verdict.kind === 'unknowable') return [];
 
     return [
-      {
-        severity: 'warning',
-        message: `${type} '${node.name}' is ${placementPhrase(verdict)}. ${type} only works as a child of a ${parentType}-inheriting node; elsewhere it has no position to steer and is never placed on the navigation map.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName,
-      },
+      armDiagnostic(
+        arms.parentNotNode,
+        node,
+        `${type} '${node.name}' is ${placementPhrase(verdict)}. ${type} only works as a child of a ${parentType}-inheriting node; elsewhere it has no position to steer and is never placed on the navigation map.`
+      ),
     ];
   }
 
@@ -43,7 +46,7 @@ export function makeNavigationAgentLinterRule(dim: PhysicsDim): LintRule {
       category: 'validation',
       // No subclasses, so the exact type, not `descendsFrom`.
       applicableNodeTypes: [type],
-      emits: [{ ruleName, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+      emits: armEmits(arms),
     },
     check,
   };

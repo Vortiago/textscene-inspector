@@ -5,19 +5,29 @@
 
 import type { Diagnostic } from './types.js';
 import type { TscnNode } from '../parser/types.js';
+import { armDiagnostic, type RuleArm } from './ruleArms.js';
 import { crossedParamRanges } from '../godot/cpuParticles.js';
 import { formatReal } from '../godot/real.js';
+
+/** The arm under `rulePrefix`, grounded at `setterAt`, the class's own setter that alters the value. */
+export function paramMinAboveMaxArm(rulePrefix: string, setterAt: string): RuleArm {
+  return {
+    severity: 'warning',
+    ruleName: `${rulePrefix}-param-min-above-max`,
+    grounding: { kind: 'engine', at: setterAt },
+  };
+}
 
 export function paramMinAboveMaxDiagnostics(
   node: TscnNode,
   properties: Record<string, string>,
-  rulePrefix: string
+  arm: RuleArm
 ): Diagnostic[] {
-  return crossedParamRanges(properties).map(({ minKey, maxKey, min, max, movedKey, loadedValue }) => ({
-    severity: 'warning',
-    message: `'${minKey}' ${formatReal(min)} is above '${maxKey}' ${formatReal(max)}. Godot applies them in the order the file lists them, so '${movedKey}' loads as ${formatReal(loadedValue)}.`,
-    nodeName: node.name,
-    nodeType: node.type,
-    ruleName: `${rulePrefix}-param-min-above-max`,
-  }));
+  return crossedParamRanges(properties).map(({ minKey, maxKey, min, max, movedKey, loadedValue }) =>
+    armDiagnostic(
+      arm,
+      node,
+      `'${minKey}' ${formatReal(min)} is above '${maxKey}' ${formatReal(max)}. Godot applies them in the order the file lists them, so '${movedKey}' loads as ${formatReal(loadedValue)}.`
+    )
+  );
 }

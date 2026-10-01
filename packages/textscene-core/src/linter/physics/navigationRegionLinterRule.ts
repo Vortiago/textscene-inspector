@@ -6,6 +6,7 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../ruleArms.js';
 import { resourceSlotIsEmpty } from '../resourceChecker.js';
 import { hiddenOrUnknowableInTree } from '../parentType.js';
 import type { PhysicsDim } from './dim.js';
@@ -14,8 +15,13 @@ import { dimSuffix } from './dim.js';
 export function makeNavigationRegionLinterRule(dim: PhysicsDim): LintRule {
   const type = `NavigationRegion${dim}`;
   const property = dim === '2D' ? 'navigation_polygon' : 'navigation_mesh';
-  const missingResourceRuleName = `navigationregion${dimSuffix(dim)}-requires-${property.replace(/_/g, '-')}`;
   const resourceClass = dim === '2D' ? 'NavigationPolygon' : 'NavigationMesh';
+  const arms = {
+    missingResource: groundedArm(
+      `navigationregion${dimSuffix(dim)}-requires-${property.replace(/_/g, '-')}`,
+      { kind: 'configuration-warning' }
+    ),
+  } as const satisfies RuleArms<string>;
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
@@ -28,13 +34,12 @@ export function makeNavigationRegionLinterRule(dim: PhysicsDim): LintRule {
     // is_inside_tree()`. `is_inside_tree()` is trivially true for any node
     // this linter sees; the visibility half walks each family's own chain.
     if (resourceSlotIsEmpty(rawProps[property]) && !hiddenOrUnknowableInTree(scene, node)) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `${type} '${node.name}' has no ${property} set. A ${resourceClass} resource must be set or created for this node to work.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: missingResourceRuleName,
-      });
+      reportArm(
+        diagnostics,
+        arms.missingResource,
+        node,
+        `${type} '${node.name}' has no ${property} set. A ${resourceClass} resource must be set or created for this node to work.`
+      );
     }
 
     return diagnostics;
@@ -46,13 +51,7 @@ export function makeNavigationRegionLinterRule(dim: PhysicsDim): LintRule {
       description: `Warns when a ${type}'s ${property} is absent while visible`,
       category: 'validation',
       applicableNodeTypes: [type],
-      emits: [
-        {
-          ruleName: missingResourceRuleName,
-          severity: 'warning',
-          grounding: { kind: 'configuration-warning' },
-        },
-      ],
+      emits: armEmits(arms),
     },
     check,
   };

@@ -8,7 +8,13 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { heldResource } from '../../../../linter/resourceChecker.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
-import { paramMinAboveMaxDiagnostics } from '../../../../linter/particleParamRanges.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { paramMinAboveMaxArm, paramMinAboveMaxDiagnostics } from '../../../../linter/particleParamRanges.js';
+
+const arms = {
+  requiresMesh: groundedArm('cpuparticles3d-requires-mesh', { kind: 'configuration-warning' }),
+  paramMinAboveMax: paramMinAboveMaxArm('cpuparticles3d', 'cpu_particles_3d.cpp:293-313'),
+} as const satisfies RuleArms<string>;
 
 // `set_mesh` (cpu_particles_3d.cpp:183-192) nulls the multimesh's RID, so nothing
 // renders, whatever the member doc says about spheres.
@@ -16,15 +22,7 @@ import { paramMinAboveMaxDiagnostics } from '../../../../linter/particleParamRan
 // materials, resource internals this linter reads nowhere, CPUParticles2D included.
 function checkMissingMesh(node: RuleContext['node'], rawProps: Record<string, string>): Diagnostic[] {
   if (heldResource(rawProps.mesh) !== undefined) return [];
-  return [
-    {
-      severity: 'warning',
-      message: 'Nothing is visible because no mesh has been assigned.',
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'cpuparticles3d-requires-mesh',
-    },
-  ];
+  return [armDiagnostic(arms.requiresMesh, node, 'Nothing is visible because no mesh has been assigned.')];
 }
 
 function checkCPUParticles3D(context: RuleContext): Diagnostic[] {
@@ -33,7 +31,7 @@ function checkCPUParticles3D(context: RuleContext): Diagnostic[] {
   if (!isValidProperties(rawProps)) return [];
   return [
     ...checkMissingMesh(node, rawProps),
-    ...paramMinAboveMaxDiagnostics(node, rawProps, 'cpuparticles3d'),
+    ...paramMinAboveMaxDiagnostics(node, rawProps, arms.paramMinAboveMax),
   ];
 }
 
@@ -44,18 +42,7 @@ const cpuParticles3DValidationRule: LintRule = {
       'Flags a CPUParticles3D with no mesh assigned (renders nothing, per get_configuration_warnings), and a *_min above its *_max, where one of the two loads as the other',
     category: 'validation',
     applicableNodeTypes: ['CPUParticles3D'],
-    emits: [
-      {
-        ruleName: 'cpuparticles3d-requires-mesh',
-        severity: 'warning',
-        grounding: { kind: 'configuration-warning' },
-      },
-      {
-        ruleName: 'cpuparticles3d-param-min-above-max',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'cpu_particles_3d.cpp:293-313' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkCPUParticles3D,
 };

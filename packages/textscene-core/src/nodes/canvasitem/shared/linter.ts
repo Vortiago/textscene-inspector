@@ -8,6 +8,12 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { clipAncestry, clipsChildren } from './clipAncestry.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+
+const arms = {
+  ancestorClipsChildren: groundedArm('canvasitem-ancestor-clips-children', { kind: 'configuration-warning' }),
+  ancestorIsCanvasGroup: groundedArm('canvasitem-ancestor-is-canvasgroup', { kind: 'configuration-warning' }),
+} as const satisfies RuleArms<string>;
 
 function checkCanvasItemClipAncestry(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
@@ -21,23 +27,21 @@ function checkCanvasItemClipAncestry(context: RuleContext): Diagnostic[] {
   const { clippingAncestor, canvasGroupAncestor } = clipAncestry(scene, node);
 
   if (clippingAncestor) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `${node.type} '${node.name}' sets 'clip_children', but ancestor '${clippingAncestor.name}' also clips its children, so this node will not be able to clip its own.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'canvasitem-ancestor-clips-children',
-    });
+    reportArm(
+      diagnostics,
+      arms.ancestorClipsChildren,
+      node,
+      `${node.type} '${node.name}' sets 'clip_children', but ancestor '${clippingAncestor.name}' also clips its children, so this node will not be able to clip its own.`
+    );
   }
 
   if (canvasGroupAncestor) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `${node.type} '${node.name}' sets 'clip_children', but ancestor '${canvasGroupAncestor.name}' is a CanvasGroup, so this node will not be able to clip its own children.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'canvasitem-ancestor-is-canvasgroup',
-    });
+    reportArm(
+      diagnostics,
+      arms.ancestorIsCanvasGroup,
+      node,
+      `${node.type} '${node.name}' sets 'clip_children', but ancestor '${canvasGroupAncestor.name}' is a CanvasGroup, so this node will not be able to clip its own children.`
+    );
   }
 
   return diagnostics;
@@ -50,18 +54,7 @@ const canvasItemClipAncestryRule: LintRule = {
       'Warns when a CanvasItem that clips its own children has an ancestor that also clips, or is a CanvasGroup, either of which wins over this node',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'CanvasItem'),
-    emits: [
-      {
-        ruleName: 'canvasitem-ancestor-clips-children',
-        severity: 'warning',
-        grounding: { kind: 'configuration-warning' },
-      },
-      {
-        ruleName: 'canvasitem-ancestor-is-canvasgroup',
-        severity: 'warning',
-        grounding: { kind: 'configuration-warning' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkCanvasItemClipAncestry,
 };

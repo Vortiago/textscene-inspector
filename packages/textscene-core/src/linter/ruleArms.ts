@@ -1,28 +1,37 @@
 /**
- * One reported diagnostic, declared once, so a parameterised factory derives
- * both the `push` in `check` and its `emits` from one arm. No guard sees the two
- * disagree, since a sibling's name satisfies the wildcard cross-check, so an
- * instance that reports a name its `emits` omits is unrepresentable.
+ * A **Rule arm**: one diagnostic a rule can report, declared once, so `check`
+ * reports through it and `armEmits` derives `emits` from it. A rule therefore
+ * cannot report a name or a severity its `emits` omits. The ESLint rule-arm guard
+ * refuses a diagnostic built any other way.
  */
 
-import type { Diagnostic, EmitGrounding, RuleMeta, Severity } from './types.js';
+import {
+  severityFixedBy,
+  type Diagnostic,
+  type EmitGrounding,
+  type RuleArm,
+  type RuleMeta,
+} from './types.js';
 import type { TscnNode } from '../parser/types.js';
 
-/**
- * `severity` first: `emitsScrape` pairs the two by source order, so the reverse
- * spelling mispairs (see `RuleMeta.emits`).
- */
-export interface RuleArm {
-  readonly severity: Severity;
-  readonly ruleName: string;
-  readonly grounding: EmitGrounding;
-}
+export type { RuleArm } from './types.js';
 
 /**
  * Arms an instance may or may not carry, in declaration order. A record, not an
  * array: `check` keeps its own control flow and names the arm it reports.
  */
 export type RuleArms<K extends string> = Readonly<Partial<Record<K, RuleArm>>>;
+
+/** Every grounding but `engine`, whose kind alone fixes the severity (`severityFixedBy`). */
+export type FixedGrounding = Exclude<EmitGrounding, { kind: 'engine' }>;
+
+/**
+ * The arm for `ruleName`, at the severity its grounding fixes. Only an `engine`
+ * arm writes its severity, because only its cited line can decide it.
+ */
+export function groundedArm(ruleName: string, grounding: FixedGrounding): RuleArm {
+  return { severity: severityFixedBy(grounding)!, ruleName, grounding };
+}
 
 /** The `emits` list these arms declare: every arm this instance has. */
 export function armEmits<K extends string>(arms: RuleArms<K>): NonNullable<RuleMeta['emits']> {

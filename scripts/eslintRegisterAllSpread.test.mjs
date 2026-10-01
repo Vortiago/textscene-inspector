@@ -4,30 +4,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { ESLint, Linter } from 'eslint';
-import tsparser from '@typescript-eslint/parser';
-import { findRepoRoot } from './repoRoot.mjs';
-
-const eslint = new ESLint({ cwd: findRepoRoot() });
+import { reportedOn as reportedOnFile, restrictedSyntaxFor } from './eslintGuardHarness.mjs';
 
 const CORE_SOURCE = 'packages/textscene-core/src/nodes/2d/ui/control/linterParser.ts';
 const CORE_TEST = 'packages/textscene-core/src/linter/ValidatorRegistry.shadowCopies.test.ts';
 
-/** The `no-restricted-syntax` setting the repo's config resolves for `file`, or undefined. */
-async function restrictedSyntaxFor(file) {
-  const config = await eslint.calculateConfigForFile(file);
-  return config.rules?.['no-restricted-syntax'];
-}
-
-/** The rule ids that setting reports on `code`, parsed as the core package's TypeScript is. */
-async function reportedOn(code) {
-  const setting = await restrictedSyntaxFor(CORE_SOURCE);
-  const linter = new Linter({ configType: 'flat' });
-  const config = [
-    { files: ['**/*.ts'], languageOptions: { parser: tsparser }, rules: { 'no-restricted-syntax': setting } },
-  ];
-  return linter.verify(code, config, 'sample.ts').map((message) => message.ruleId);
-}
+const reportedOn = (code) => reportedOnFile(code, CORE_SOURCE);
 
 describe('the registerAll spread guard', () => {
   it('applies to a core source module', async () => {

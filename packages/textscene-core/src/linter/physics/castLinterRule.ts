@@ -7,7 +7,7 @@
 
 import { ruleInt } from '../validators/commonValidators.js';
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { armEmits, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
 import type { PhysicsDim } from './dim.js';
 import { resolveResourceSlot } from '../resourceChecker.js';
 import { dimSuffix } from './dim.js';
@@ -33,40 +33,23 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
   // sweeps its shape through the solver, which cannot handle a concave mesh
   // (`shape_cast_3d.cpp:188` warns on it); the 2D solver has no such limit.
   const hasShape = kind === 'Shape';
-  const configWarning = { kind: 'configuration-warning' } as const;
   const arms: RuleArms<'noCollideTarget' | 'zeroMask' | 'missingShape' | 'concaveShape'> = {
-    noCollideTarget: {
-      severity: 'info',
-      ruleName: `${prefix}-no-collide-target`,
-      grounding: {
-        kind: 'engine-inert',
-        at: canCollideCite,
-        unused: 'both type clauses reject their category, so the query matches nothing',
-      },
-    },
-    zeroMask: {
-      severity: 'info',
-      ruleName: `${prefix}-zero-mask`,
-      grounding: {
-        kind: 'engine-inert',
-        at: maskCite,
-        unused: 'the layer test fails for every object, so the cast reports no hit',
-      },
-    },
+    noCollideTarget: groundedArm(`${prefix}-no-collide-target`, {
+      kind: 'engine-inert',
+      at: canCollideCite,
+      unused: 'both type clauses reject their category, so the query matches nothing',
+    }),
+    zeroMask: groundedArm(`${prefix}-zero-mask`, {
+      kind: 'engine-inert',
+      at: maskCite,
+      unused: 'the layer test fails for every object, so the cast reports no hit',
+    }),
     missingShape: hasShape
-      ? {
-          severity: 'warning',
-          ruleName: `${prefix}-missing-shape`,
-          grounding: configWarning,
-        }
+      ? groundedArm(`${prefix}-missing-shape`, { kind: 'configuration-warning' })
       : undefined,
     concaveShape:
       hasShape && dim === '3D'
-        ? {
-            severity: 'warning',
-            ruleName: `${prefix}-concave-shape`,
-            grounding: configWarning,
-          }
+        ? groundedArm(`${prefix}-concave-shape`, { kind: 'configuration-warning' })
         : undefined,
   };
 
