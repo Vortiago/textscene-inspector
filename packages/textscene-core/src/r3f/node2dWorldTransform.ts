@@ -1,33 +1,31 @@
 /**
- * 2D world-transform composition over the live scene tree, so a Camera2D inside
- * an instance composes correctly. Each Node2D local transform is Godot's +Y-down
- * T·R·Skew·S, and a non-2D ancestor contributes identity. The Cameras panel frames
- * the 2D stage with it, without touching live THREE objects.
+ * A node's 2D world position over the live scene tree, so a Camera2D inside an
+ * instance composes against the instance transform. The Cameras panel frames the
+ * 2D stage with it, without touching live THREE objects.
  */
 
 import type { TscnNode } from '../parser/types';
 import { liveNodeChain, type LiveTreeContext } from './liveSceneTree';
-import { node2DLocalTransform } from './node2dTransform';
-import { TRANSFORM2D_IDENTITY, multiplyTransform2D, type Transform2DColumns } from '../godot/transform2d.js';
+import { isTypeOpaque, type ParentLookup } from '../linter/parentType.js';
+import { resolveGlobalTransform2D } from '../nodes/canvasitem/shared/globalTransform2D.js';
 
-/** A live node's Node2D local transform, or the identity for a node with no 2D position. */
-function localTransform(node: TscnNode): Transform2DColumns {
-  const props = node.properties as Record<string, unknown> | undefined;
-  const position = props?.position as { x: number; y: number } | undefined;
-  if (!position || typeof position.x !== 'number') return TRANSFORM2D_IDENTITY;
-
-  // A Node3D also carries a `position`, beside a Vector3 `rotation`: only a number is an angle.
-  return node2DLocalTransform({
-    position,
-    rotation: typeof props?.rotation === 'number' ? props.rotation : undefined,
-    scale: props?.scale as { x: number; y: number } | undefined,
-    skew: typeof props?.skew === 'number' ? props.skew : undefined,
-  });
+/**
+ * The parent lookup over a live chain, root first. A collapsed instance carries its
+ * sub-scene root's type, so only an instance whose scene is not cached stays opaque.
+ */
+function chainParentOf(chain: readonly TscnNode[]): (child: TscnNode) => ParentLookup {
+  return (child) => {
+    const parent = chain[chain.indexOf(child) - 1];
+    if (!parent) return { kind: 'root' };
+    if (isTypeOpaque(parent)) return { kind: 'unknowable' };
+    return { kind: 'known', parent };
+  };
 }
 
 /**
- * The node's world position in Godot pixel space, or null for an unknown path,
- * composed from each collapsed ancestor's Node2D local transform.
+ * The node's world position in Godot pixel space, through Godot's canvas parent
+ * chain. Null for an unknown path, and for a chain this cannot decode: an opaque
+ * ancestor, or a Control between the node and the top of its chain.
  */
 export function node2dWorldPosition(
   roots: readonly TscnNode[],
@@ -37,7 +35,7 @@ export function node2dWorldPosition(
   const chain = liveNodeChain(path, roots, ctx);
   if (!chain) return null;
 
-  let world = TRANSFORM2D_IDENTITY;
-  for (const node of chain) world = multiplyTransform2D(world, localTransform(node));
-  return { x: world.tx, y: world.ty };
+  const verdict = resolveGlobalTransform2D(chain[chain.length - 1]!, chainParentOf(chain));
+  if (verdict.kind === 'unknowable') return null;
+  return { x: verdict.transform.tx, y: verdict.transform.ty };
 }

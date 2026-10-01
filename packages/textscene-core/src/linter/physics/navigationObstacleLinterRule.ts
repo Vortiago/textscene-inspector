@@ -7,7 +7,8 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import { isValidProperties } from '../linterUtils.js';
-import { resolveGlobalTransform2D } from '../node2dGlobalTransform.js';
+import { knownParent } from '../parentType.js';
+import { resolveGlobalTransform2D } from '../../nodes/canvasitem/shared/globalTransform2D.js';
 import { parseGodotFloat } from '../validators/commonValidators.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
@@ -44,7 +45,7 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
       unused: 'the source-geometry parser returns before it reads carve_navigation_mesh',
     }),
     // The global-transform warnings are 2D only: `NavigationObstacle2D::get_configuration_warnings()`
-    // (navigation_obstacle_2d.cpp:328-345), read through `node2dGlobalTransform.ts`'s
+    // (navigation_obstacle_2d.cpp:328-345), read through `globalTransform2D.ts`'s
     // static ancestor walk.
     nonPositiveScale: is2D
       ? groundedArm(`${prefix}-non-positive-global-scale`, { kind: 'configuration-warning' })
@@ -77,7 +78,7 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
     // as runtime-only in the coverage table. Node3D serialises one `transform`, which
     // needs a Transform3D composition the 2D helper does not do.
     if (arms.nonPositiveScale) {
-      const verdict = resolveGlobalTransform2D(scene, node);
+      const verdict = resolveGlobalTransform2D(node, (child) => knownParent(scene, child));
       if (verdict.kind === 'known') {
         const scale = transform2DGetScale(verdict.transform);
 

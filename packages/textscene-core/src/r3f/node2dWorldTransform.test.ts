@@ -1,7 +1,8 @@
 /**
- * node2dWorldPosition composes a node's ancestor Node2D transforms (Godot +Y-down,
- * T·R·Skew·S) over the live scene tree, so a Camera2D inside an instanced
- * sub-scene resolves. Non-2D ancestors contribute identity.
+ * node2dWorldPosition places a node through Godot's canvas parent chain
+ * (Godot +Y-down, T·R·Skew·S) over the live scene tree, so a Camera2D inside an
+ * instanced sub-scene resolves. The chain stops at a `top_level` node and at a
+ * parent that is not a CanvasItem.
  */
 import { describe, it, expect } from 'vitest';
 import { node2dWorldPosition } from './node2dWorldTransform';
@@ -10,19 +11,14 @@ import type { TscnNode, TscnScene, TscnExternalResource } from '../parser/types'
 
 function tnode(
   name: string,
-  properties: Record<string, unknown>,
+  rawProperties: Record<string, string>,
   children: TscnNode[] = [],
   extras: Partial<TscnNode> = {}
 ): TscnNode {
-  return { name, type: 'Node2D', children, properties, ...extras };
+  return { name, type: 'Node2D', children, properties: {}, rawProperties, ...extras };
 }
 
-const n2d = (x: number, y: number, rotation = 0, scale = { x: 1, y: 1 }) => ({
-  position: { x, y },
-  rotation,
-  scale,
-  skew: 0,
-});
+const at = (x: number, y: number) => ({ position: `Vector2(${x}, ${y})` });
 
 const emptyCtx: LiveTreeContext = {
   externalResources: [],
@@ -39,30 +35,37 @@ function ext(id: string, path: string): TscnExternalResource {
 
 describe('node2dWorldPosition', () => {
   it('composes nested translations', () => {
-    const roots = [tnode('A', n2d(100, 50), [tnode('B', n2d(10, 20))])];
+    const roots = [tnode('A', at(100, 50), [tnode('B', at(10, 20))])];
     expect(node2dWorldPosition(roots, emptyCtx, 'A/B')).toEqual({ x: 110, y: 70 });
   });
 
   it('applies an ancestor rotation to the child offset (Godot +Y-down, CW-positive)', () => {
     // Parent rotated 90° CW: child local +X maps to world +Y.
-    const roots = [tnode('A', n2d(100, 0, Math.PI / 2), [tnode('B', n2d(10, 0))])];
+    const roots = [tnode('A', { ...at(100, 0), rotation: String(Math.PI / 2) }, [tnode('B', at(10, 0))])];
     const p = node2dWorldPosition(roots, emptyCtx, 'A/B')!;
     expect(p.x).toBeCloseTo(100, 6);
     expect(p.y).toBeCloseTo(10, 6);
   });
 
-  it('applies ancestor scale and skips non-2D ancestors as identity', () => {
-    const roots = [
-      tnode('Root', {}, [
-        // A plain container with no 2D transform props is the identity.
-        tnode('A', n2d(0, 0, 0, { x: 2, y: 3 }), [tnode('B', n2d(5, 5))]),
-      ]),
-    ];
-    expect(node2dWorldPosition(roots, emptyCtx, 'Root/A/B')).toEqual({ x: 10, y: 15 });
+  it('applies an ancestor scale to the child offset', () => {
+    const roots = [tnode('A', { scale: 'Vector2(2, 3)' }, [tnode('B', at(5, 5))])];
+    expect(node2dWorldPosition(roots, emptyCtx, 'A/B')).toEqual({ x: 10, y: 15 });
   });
 
   it('returns null for unknown paths', () => {
     expect(node2dWorldPosition([], emptyCtx, 'Nope')).toBeNull();
+  });
+
+  it('places a top_level Camera2D under a translated Node2D at its own position', () => {
+    const cam = tnode('Cam', { ...at(20, 10), top_level: 'true' }, [], { type: 'Camera2D' });
+    const roots = [tnode('World', at(100, 50), [cam])];
+    expect(node2dWorldPosition(roots, emptyCtx, 'World/Cam')).toEqual({ x: 20, y: 10 });
+  });
+
+  it('places a Camera2D under a Node under a translated Node2D at its own position', () => {
+    const cam = tnode('Cam', at(20, 10), [], { type: 'Camera2D' });
+    const roots = [tnode('World', at(100, 50), [tnode('Group', {}, [cam], { type: 'Node' })])];
+    expect(node2dWorldPosition(roots, emptyCtx, 'World/Group/Cam')).toEqual({ x: 20, y: 10 });
   });
 
   it('composes a Camera2D inside an instanced sub-scene against the instance transform', () => {
@@ -70,11 +73,12 @@ describe('node2dWorldPosition', () => {
     // player.tscn: PlayerRoot → Cam (at 20,10). The instance transform replaces
     // the sub-scene root's (ADR-0013), so the camera sits at 120,60.
     const playerScene: TscnScene = {
-      nodes: [tnode('PlayerRoot', n2d(0, 0), [tnode('Cam', n2d(20, 10))])],
+      nodes: [tnode('PlayerRoot', at(0, 0), [tnode('Cam', at(20, 10), [], { type: 'Camera2D' })])],
       externalResources: [],
       internalResources: [],
     };
-    const roots = [tnode('World', {}, [tnode('Player', n2d(100, 50), [], { instance: 'ExtResource("p")' })])];
+    const player = tnode('Player', at(100, 50), [], { type: '', instance: 'ExtResource("p")' });
+    const roots = [tnode('World', {}, [player])];
     const ctx: LiveTreeContext = {
       externalResources: [ext('p', 'res://player.tscn')],
       sceneCache: cacheOf({ 'res://player.tscn': playerScene }),
