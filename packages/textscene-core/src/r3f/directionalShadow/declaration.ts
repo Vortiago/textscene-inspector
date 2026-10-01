@@ -23,8 +23,8 @@ export interface DirectionalShadowDeclaration {
   /** The PCF kernel's radius in atlas texels: Godot's `soft_shadow_scale`. */
   filterRadius: number;
   /**
-   * How many splits `directional_shadow_mode` draws: 1, 2 or 4. One split is the whole slice in
-   * the light's own shadow map. More draw a shadow atlas with one fitted box per split.
+   * How many splits `directional_shadow_mode` draws: 1, 2 or 4. Each split draws one fitted box
+   * into its part of the light's share of the atlas. One split is the whole slice.
    */
   splitCount: number;
   /** `directional_shadow_split_1` to `_3`: where the splits meet, as fractions of the slice. */

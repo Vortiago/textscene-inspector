@@ -141,10 +141,10 @@ orchestrator, which runs them in dependency order from a single `useFrame`
 **Directional shadows.** As in Godot, the renderer owns a directional light's shadow box, and
 the light does not. A light only declares its shadow parameters on `userData`.
 `<DirectionalShadowFitter>` hooks each render of the scene (`scene.onBeforeRender`) and fits
-each declared light's shadow camera to that render's camera. The shadowed lights share Godot's
-one directional shadow atlas, so each light's map is its share of it.
+each declared light's shadow to that render's camera. The shadowed lights share Godot's
+one directional shadow atlas: one texture, which every lit program samples through one sampler.
 
-A light with Godot's two or four splits shades through a child sun light. The sun draws one
+A shadowed light shades through a child sun light, in one, two or four splits. The sun draws one
 fitted box per split into the light's share, and a patched shader chunk picks the split by view
 depth. Every directional shadow fades out over the far end of its last split. A patched lighting
 chunk applies the fade from one shared buffer, which the fitter writes before each render. A 3D

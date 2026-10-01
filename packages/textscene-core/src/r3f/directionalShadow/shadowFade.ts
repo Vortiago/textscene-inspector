@@ -13,9 +13,9 @@ import { warn } from '../../logger';
 export const DIRECTIONAL_SHADOW_FADE_UNIFORM = 'directionalShadowFade';
 
 /**
- * The fades the buffer holds. A program binds one sampler per directional or sun shadow, so its
- * texture units bound how many it declares. WebGL 2 guarantees 16 (`MAX_TEXTURE_IMAGE_UNITS`), and
- * a desktop GPU commonly reports 32.
+ * The fades the buffer holds. The sun shadows are at most Godot's eight shadowed lights. An
+ * undeclared directional light binds a sampler of its own, so texture units bound those, and a
+ * desktop GPU commonly reports 32 (`MAX_TEXTURE_IMAGE_UNITS`).
  */
 const MAX_FADED_SHADOWS = 32;
 
@@ -62,7 +62,8 @@ const PARS_FADE = `${PARS_ANCHOR}
 const DIRECTIONAL_SHADOW =
   'getShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowIntensity, directionalLightShadow.shadowBias, directionalLightShadow.shadowRadius, vDirectionalShadowCoord[ i ] )';
 
-const SUN_SHADOW = 'getSunShadow( sunShadowMap[ i ], sunLightShadow, UNROLLED_LOOP_INDEX )';
+/** The sun shadow lookup, with three's per-shadow sampler or the atlas of `shadowAtlasChunk.ts`. */
+const SUN_SHADOW = /getSunShadow\( [^,]+, sunLightShadow, UNROLLED_LOOP_INDEX \)/;
 
 /**
  * `geometryPosition` is the view-space position, so its negated z is Godot's `-vertex.z`. The
@@ -80,14 +81,16 @@ export interface ShadowFadeChunks {
 
 /** Both chunks with the fade in, or null when either lacks a line the fade hooks onto. */
 export function shadowFadeChunks(pars: string, lights: string): ShadowFadeChunks | null {
-  if (!pars.includes(PARS_ANCHOR) || !lights.includes(DIRECTIONAL_SHADOW) || !lights.includes(SUN_SHADOW)) {
+  if (!pars.includes(PARS_ANCHOR) || !lights.includes(DIRECTIONAL_SHADOW) || !SUN_SHADOW.test(lights)) {
     return null;
   }
   return {
     pars: pars.replace(PARS_ANCHOR, PARS_FADE),
     lights: lights
       .replace(DIRECTIONAL_SHADOW, fadedShadow(DIRECTIONAL_SHADOW, 'i'))
-      .replace(SUN_SHADOW, fadedShadow(SUN_SHADOW, 'NUM_DIR_LIGHT_SHADOWS + UNROLLED_LOOP_INDEX')),
+      .replace(SUN_SHADOW, (sunShadow) =>
+        fadedShadow(sunShadow, 'NUM_DIR_LIGHT_SHADOWS + UNROLLED_LOOP_INDEX')
+      ),
   };
 }
 

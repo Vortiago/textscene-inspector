@@ -1,8 +1,8 @@
 /**
- * The light that shades for a declared directional light that draws parallel splits. three draws a
- * split atlas only on its sun path (`isSunLight`), which reads the direction from the world position
- * (`WebGLLights.js:566-571`), not from a target. So the fitter hangs this light under the declared
- * one, points it by its world matrix, and hides the declared light, which then shades through it.
+ * The light that shades for a declared directional light in Godot's shadow list. three draws a
+ * shadow with several splits only on its sun path (`isSunLight`), which reads the direction from
+ * the world position (`WebGLLights.js:566-571`), not from a target. So the fitter hangs this light
+ * under the declared one, points it by its world matrix, and hides the declared light.
  */
 
 import * as THREE from 'three';
@@ -54,7 +54,7 @@ export function attachSplitSun(light: THREE.DirectionalLight): SplitSunLight {
   // The hidden light draws no shadow, so a map it drew before the sun attached only holds memory.
   freeShadowMap(light.shadow);
   light.add(sun);
-  // A light leaves the scene before the fitter can see it go, so it frees its own sun's atlas.
+  // A light leaves the scene before the fitter can see it go, so it lets go of its own sun's share.
   light.addEventListener('removed', releaseRemovedLight);
   return sun;
 }
