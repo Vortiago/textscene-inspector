@@ -113,9 +113,14 @@ A per-node-type check that runs on the parsed scene and matches its node type ex
 It is the home for conditions no single property's value settles. Its **Severity** is fixed by the engine (ADR-0032), never chosen.
 _Avoid_: bare "rule" for a **Validator**. Expecting base-class inheritance from rules (that is the validators' walk).
 
+**Rule arm** (`linter/ruleArms.ts`):
+One diagnostic a **Lint rule** can report: its rule name, its **Severity** and the `EmitGrounding` that fixes that severity.
+A rule declares its arms in one table and reports only through them (`reportArm`, `armDiagnostic`). `armEmits` derives the rule's `emits` from the same table, so a rule cannot report a name or a tier that `emits` omits. `groundedArm(ruleName, grounding)` declares an arm whose grounding fixes its severity. Only an `engine` arm writes its severity, because only its cited line decides it.
+_Avoid_: a hand-written diagnostic object in a rule, which the ESLint rule-arm guard refuses. Confusing it with a **Range advisory**'s threshold (`RangeThreshold`).
+
 **Range advisory** (`linter/rangeAdvisory.ts`):
 A **Lint rule** that warns when a single numeric property falls outside a plausible `[low, high]` band: the semantic-warning analogue of a format **Validator**.
-The shared `rangeAdvisories` combinator emits it from a per-property table of arms. An arm is a too-high or too-low threshold with its own rule name and message. A too-low arm may carry a `floor` that suppresses it at or below a value. The combinator owns the presence check, numeric parse, NaN guard and comparison, so each rule is a declarative table. Always a warning: an out-of-band value is suspicious, never objectively invalid. Error-severity checks (a zero or negative `zoom`) and cross-field checks (`limit_right` below `limit_left`) are not range advisories.
+The shared `rangeAdvisories` combinator emits it from a per-property table of thresholds. A threshold is a too-high or too-low bound with its own message and cite. The table reports every threshold through one warning **Rule arm** that its rule declares. A too-low threshold may carry a `floor` that suppresses it at or below a value. The combinator owns the presence check, numeric parse, NaN guard and comparison, so each rule is a declarative table. Always a warning: an out-of-band value is suspicious, never objectively invalid.
 _Avoid_: modelling cross-field or presence-dependency checks as range advisories (different control flow, not just different data). A range advisory that emits an error.
 
 **Severity**:

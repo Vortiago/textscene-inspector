@@ -12,6 +12,15 @@ import { parentTypeVerdict, searchAncestors } from '../../../../linter/parentTyp
 import { hasChildOfType } from '../../../../linter/childType.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+
+const arms = {
+  missingSkeletonParent: groundedArm('physicalbone2d-missing-skeleton-parent', {
+    kind: 'configuration-warning',
+  }),
+  missingBoneIndex: groundedArm('physicalbone2d-missing-bone-index', { kind: 'configuration-warning' }),
+  missingJointChild: groundedArm('physicalbone2d-missing-joint-child', { kind: 'configuration-warning' }),
+} as const satisfies RuleArms<string>;
 
 /** What `_find_skeleton_parent()` would settle on, read off this file alone. */
 type SkeletonAncestry = 'found' | 'absent' | 'unknowable';
@@ -45,24 +54,22 @@ function checkPhysicalBone2D(context: RuleContext): Diagnostic[] {
   // `unknowable` answers neither warning: the first needs to know the ancestor
   // is not a Skeleton2D, the second needs to know it is.
   if (ancestry === 'absent') {
-    diagnostics.push({
-      severity: 'warning',
-      message: `PhysicalBone2D '${node.name}' has no Skeleton2D ancestor. A PhysicalBone2D only works with a Skeleton2D or another PhysicalBone2D as a parent node.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'physicalbone2d-missing-skeleton-parent',
-    });
+    reportArm(
+      diagnostics,
+      arms.missingSkeletonParent,
+      node,
+      `PhysicalBone2D '${node.name}' has no Skeleton2D ancestor. A PhysicalBone2D only works with a Skeleton2D or another PhysicalBone2D as a parent node.`
+    );
   } else if (ancestry === 'found') {
     // Absent, or present but unreadable, both mean no index is assigned.
     const boneIndex = ruleInt(rawProps.bone2d_index ?? '') ?? -1;
     if (!(boneIndex > -1)) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `PhysicalBone2D '${node.name}' has no bone2d_index assigned. A PhysicalBone2D needs to be assigned to a Bone2D node (set bone2d_index) in order to function.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'physicalbone2d-missing-bone-index',
-      });
+      reportArm(
+        diagnostics,
+        arms.missingBoneIndex,
+        node,
+        `PhysicalBone2D '${node.name}' has no bone2d_index assigned. A PhysicalBone2D needs to be assigned to a Bone2D node (set bone2d_index) in order to function.`
+      );
     }
   }
 
@@ -71,13 +78,12 @@ function checkPhysicalBone2D(context: RuleContext): Diagnostic[] {
   if (parentTypeVerdict(scene, node, 'PhysicalBone2D').kind === 'satisfied') {
     // The "Joint2D-based child" physical_bone_2d.cpp:118-122 asks for, a `cast_to<Joint2D>`.
     if (!hasChildOfType(node, ['Joint2D'])) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `PhysicalBone2D '${node.name}' is chained under another PhysicalBone2D but has no Joint2D-based child. A PhysicalBone2D node should have a Joint2D-based child node to keep bones connected.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'physicalbone2d-missing-joint-child',
-      });
+      reportArm(
+        diagnostics,
+        arms.missingJointChild,
+        node,
+        `PhysicalBone2D '${node.name}' is chained under another PhysicalBone2D but has no Joint2D-based child. A PhysicalBone2D node should have a Joint2D-based child node to keep bones connected.`
+      );
     }
   }
 
@@ -91,23 +97,7 @@ const physicalBone2DValidationRule: LintRule = {
       'Validates PhysicalBone2D scene-context rules mirrored from get_configuration_warnings: Skeleton2D/PhysicalBone2D ancestry, an assigned bone2d_index, and a Joint2D child when chained under another PhysicalBone2D',
     category: 'validation',
     applicableNodeTypes: ['PhysicalBone2D'],
-    emits: [
-      {
-        ruleName: 'physicalbone2d-missing-skeleton-parent',
-        severity: 'warning',
-        grounding: { kind: 'configuration-warning' },
-      },
-      {
-        ruleName: 'physicalbone2d-missing-bone-index',
-        severity: 'warning',
-        grounding: { kind: 'configuration-warning' },
-      },
-      {
-        ruleName: 'physicalbone2d-missing-joint-child',
-        severity: 'warning',
-        grounding: { kind: 'configuration-warning' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkPhysicalBone2D,
 };

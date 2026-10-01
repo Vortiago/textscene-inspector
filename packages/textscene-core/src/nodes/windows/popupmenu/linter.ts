@@ -10,6 +10,15 @@ import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../linter/validators/commonValidators.js';
 import { indicesPastCount, listWrittenIndices } from '../../../linter/reportedIndices.js';
+import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+
+const arms = {
+  itemIndexOutOfRange: {
+    severity: 'error',
+    ruleName: 'popupmenu-item-index-out-of-range',
+    grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
+  },
+} as const satisfies RuleArms<string>;
 
 /**
  * The family's prefix. It is a `PropertyListHelper` one
@@ -49,17 +58,15 @@ function checkPopupMenu(context: RuleContext): Diagnostic[] {
   // has one caller, tab_container.cpp:1294. `PopupMenu::_set` (popup_menu.cpp:3091-3094)
   // goes through `property_set_value` (property_list_helper.cpp:166-175), which drops
   // the write with no log: the dropped write ADR-0032 grounds a diagnostic on.
-  diagnostics.push({
-    severity: 'error',
-    message:
-      `PopupMenu item index(es) ${indices} fall outside item_count (${count}). ` +
+  reportArm(
+    diagnostics,
+    arms.itemIndexOutOfRange,
+    node,
+    `PopupMenu item index(es) ${indices} fall outside item_count (${count}). ` +
       'PropertyListHelper::_get_property (property_list_helper.cpp:58) returns null for ' +
       'an index >= the array length, so PopupMenu never calls the matching setter and ' +
-      'these item_<N>/… values are silently dropped on load.',
-    nodeName: node.name,
-    nodeType: node.type,
-    ruleName: 'popupmenu-item-index-out-of-range',
-  });
+      'these item_<N>/… values are silently dropped on load.'
+  );
 
   return diagnostics;
 }
@@ -70,13 +77,7 @@ const popupMenuValidationRule: LintRule = {
     description: "Validates PopupMenu's dynamic item_<N>/… indices stay within item_count",
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'PopupMenu'),
-    emits: [
-      {
-        ruleName: 'popupmenu-item-index-out-of-range',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkPopupMenu,
 };

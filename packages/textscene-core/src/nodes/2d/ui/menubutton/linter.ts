@@ -11,8 +11,15 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { indicesPastCount, listWrittenIndices } from '../../../../linter/reportedIndices.js';
+import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
 
-const RULE_NAME = 'menubutton-item-index-out-of-range';
+const arms = {
+  itemIndexOutOfRange: {
+    severity: 'error',
+    ruleName: 'menubutton-item-index-out-of-range',
+    grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
+  },
+} as const satisfies RuleArms<string>;
 
 /**
  * The family prefix is `popup/item_` (menu_button.cpp:213) and the count key is the bare `item_count`
@@ -38,18 +45,15 @@ function checkMenuButton(context: RuleContext): Diagnostic[] {
   if (offending.size === 0) return [];
 
   return [
-    {
-      severity: 'error',
-      message:
-        `MenuButton item index(es) ${listWrittenIndices(offending)} fall outside item_count (${count}). ` +
+    armDiagnostic(
+      arms.itemIndexOutOfRange,
+      node,
+      `MenuButton item index(es) ${listWrittenIndices(offending)} fall outside item_count (${count}). ` +
         'MenuButton forwards the write to its popup child (menu_button.cpp:178), whose ' +
         'PropertyListHelper::_get_property (property_list_helper.cpp:58) returns null for an ' +
         'index >= the array length, so no setter runs and these popup/item_<N>/… values are ' +
-        'silently dropped on load.',
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: RULE_NAME,
-    },
+        'silently dropped on load.'
+    ),
   ];
 }
 
@@ -59,13 +63,7 @@ const menuButtonValidationRule: LintRule = {
     description: "Validates MenuButton's dynamic popup/item_<N>/… indices stay within item_count",
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'MenuButton'),
-    emits: [
-      {
-        ruleName: RULE_NAME,
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkMenuButton,
 };

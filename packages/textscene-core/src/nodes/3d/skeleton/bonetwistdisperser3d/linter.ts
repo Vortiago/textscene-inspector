@@ -12,6 +12,20 @@ import { listWrittenIndices } from '../../../../linter/reportedIndices.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
+import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+
+const arms = {
+  settingIndexOutOfRange: {
+    severity: 'error',
+    ruleName: 'bonetwistdisperser3d-setting-index-out-of-range',
+    grounding: { kind: 'engine', at: 'bone_twist_disperser_3d.cpp:39' },
+  },
+  jointIndexOutOfRange: {
+    severity: 'error',
+    ruleName: 'bonetwistdisperser3d-joint-index-out-of-range',
+    grounding: { kind: 'engine', at: 'bone_twist_disperser_3d.cpp:502' },
+  },
+} as const satisfies RuleArms<string>;
 
 /**
  * Any `settings/<i>/…` leaf, with the index text captured. `_set` reads both index positions with a
@@ -112,33 +126,29 @@ function checkBoneTwistDisperser3D(context: RuleContext): Diagnostic[] {
 
   if (outOfRangeSettings.size > 0) {
     const indices = listWrittenIndices(outOfRangeSettings);
-    diagnostics.push({
-      severity: 'error',
-      message:
-        `BoneTwistDisperser3D setting index(es) ${indices} fall outside setting_count ` +
+    reportArm(
+      diagnostics,
+      arms.settingIndexOutOfRange,
+      node,
+      `BoneTwistDisperser3D setting index(es) ${indices} fall outside setting_count ` +
         `(${settingCount}). BoneTwistDisperser3D::_set opens with ERR_FAIL_INDEX_V(which, ` +
         'settings.size(), false) (bone_twist_disperser_3d.cpp:39), so no setter runs and ' +
-        'these settings/<i>/… values are silently dropped on load.',
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'bonetwistdisperser3d-setting-index-out-of-range',
-    });
+        'these settings/<i>/… values are silently dropped on load.'
+    );
   }
 
   if (outOfRangeJoints.size > 0) {
     // Ordered by both resolved indices: a lexicographic sort puts `0/10` before `0/2`.
     const pairs = listWrittenIndices(outOfRangeJoints);
-    diagnostics.push({
-      severity: 'error',
-      message:
-        `BoneTwistDisperser3D joint(s) ${pairs} (setting/joint) ` +
+    reportArm(
+      diagnostics,
+      arms.jointIndexOutOfRange,
+      node,
+      `BoneTwistDisperser3D joint(s) ${pairs} (setting/joint) ` +
         'set twist_amount past their own joint_count. set_joint_twist_amount guards with ' +
         'ERR_FAIL_INDEX(p_joint, joints.size()) (bone_twist_disperser_3d.cpp:502) and the ' +
-        'vector is sized only by joint_count (:485-491), so the amount is dropped on load.',
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'bonetwistdisperser3d-joint-index-out-of-range',
-    });
+        'vector is sized only by joint_count (:485-491), so the amount is dropped on load.'
+    );
   }
 
   return diagnostics;
@@ -154,18 +164,7 @@ const boneTwistDisperser3DValidationRule: LintRule = {
       "Validates BoneTwistDisperser3D's settings/<i>/… indices against setting_count and its joint twist amounts against each setting's joint_count",
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'BoneTwistDisperser3D'),
-    emits: [
-      {
-        ruleName: 'bonetwistdisperser3d-setting-index-out-of-range',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'bone_twist_disperser_3d.cpp:39' },
-      },
-      {
-        ruleName: 'bonetwistdisperser3d-joint-index-out-of-range',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'bone_twist_disperser_3d.cpp:502' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkBoneTwistDisperser3D,
 };

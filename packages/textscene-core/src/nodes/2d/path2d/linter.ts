@@ -7,6 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
+import { armDiagnostic, armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
 import { findSubResourceOfType } from '../../../resources/SubResourceResolver.js';
 import {
@@ -15,6 +16,19 @@ import {
   readBezierData,
 } from '../../../resources/curves/shared/bezierData.js';
 import { subResourceRefAnywhere } from '../../../godot/index.js';
+
+const arms = {
+  missingCurve: groundedArm('path2d-missing-curve', {
+    kind: 'engine-inert',
+    at: 'path_2d.cpp:161',
+    unused: 'the debug pass has already cleared the mesh and returns without refilling it',
+  }),
+  unloadableCurve: {
+    severity: 'error',
+    ruleName: 'curve2d-loadable',
+    grounding: { kind: 'engine', at: 'curve.cpp:1239' },
+  },
+} as const satisfies RuleArms<string>;
 
 function checkPath2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -31,13 +45,12 @@ function checkPath2D(context: RuleContext): Diagnostic[] {
     // loads nothing.
     const script = heldResource(rawProps.script);
     if (script === undefined || !checkResourceExists(scene, script)) {
-      diagnostics.push({
-        severity: 'info',
-        message: `Path2D '${node.name}' has no 'curve'. It will draw nothing until a Curve2D is assigned (often set at runtime via script).`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'path2d-missing-curve',
-      });
+      reportArm(
+        diagnostics,
+        arms.missingCurve,
+        node,
+        `Path2D '${node.name}' has no 'curve'. It will draw nothing until a Curve2D is assigned (often set at runtime via script).`
+      );
     }
   }
 
@@ -62,13 +75,11 @@ function checkCurve2DData(context: RuleContext, curveRef: string): Diagnostic[] 
   const { refusal } = readBezierData(data, CURVE2D_DATA);
   if (refusal === null) return [];
   return [
-    {
-      severity: 'error',
-      message: `Path2D '${node.name}': ${bezierRefusalProblem(refusal, CURVE2D_DATA)}`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'curve2d-loadable',
-    },
+    armDiagnostic(
+      arms.unloadableCurve,
+      node,
+      `Path2D '${node.name}': ${bezierRefusalProblem(refusal, CURVE2D_DATA)}`
+    ),
   ];
 }
 
@@ -78,22 +89,7 @@ const path2DValidationRule: LintRule = {
     description: 'Validates Path2D curve resource references',
     category: 'validation',
     applicableNodeTypes: ['Path2D'],
-    emits: [
-      {
-        ruleName: 'path2d-missing-curve',
-        severity: 'info',
-        grounding: {
-          kind: 'engine-inert',
-          at: 'path_2d.cpp:161',
-          unused: 'the debug pass has already cleared the mesh and returns without refilling it',
-        },
-      },
-      {
-        ruleName: 'curve2d-loadable',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'curve.cpp:1239' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkPath2D,
 };

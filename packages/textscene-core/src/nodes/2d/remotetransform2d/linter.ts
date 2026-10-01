@@ -7,21 +7,22 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { extractNodePath, isValidProperties } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 
-const RULE_NAME = 'remotetransform2d-invalid-remote-path';
+const arms = {
+  invalidRemotePath: groundedArm('remotetransform2d-invalid-remote-path', { kind: 'configuration-warning' }),
+} as const satisfies RuleArms<string>;
 
 function warn(node: RuleContext['node'], detail: string): Diagnostic[] {
   return [
-    {
-      severity: 'warning',
-      message: `RemoteTransform2D '${node.name}' ${detail} Path property must point to a valid Node2D node to work.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: RULE_NAME,
-    },
+    armDiagnostic(
+      arms.invalidRemotePath,
+      node,
+      `RemoteTransform2D '${node.name}' ${detail} Path property must point to a valid Node2D node to work.`
+    ),
   ];
 }
 
@@ -56,7 +57,7 @@ const remoteTransform2DPathRule: LintRule = {
       'Warns when RemoteTransform2D has no remote_path, or remote_path resolves to no node or a non-Node2D node',
     category: 'validation',
     applicableNodeTypes: ['RemoteTransform2D'],
-    emits: [{ ruleName: RULE_NAME, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: armEmits(arms),
   },
   check: checkRemoteTransform2D,
 };

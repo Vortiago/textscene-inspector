@@ -287,6 +287,7 @@ These rules keep the design in shape. A test or a script fails when one breaks.
 | `godot/` imports nothing | `noDependencies.test.ts` |
 | Every slice is wired into its barrels | `barrelCompleteness`, `parserBarrelCompleteness` |
 | Every registered type has a Godot base chain | `baseChainCompleteness.test.ts` |
+| A rule reports only through its declared arms, and derives `emits` from them | the ESLint rule-arm guard, `ruleCoverage.emits.test.ts`, `ruleArms.test.ts` |
 | A resource slice has the slice shape | `resourceSliceConformance`, `resourceSliceIsolation` |
 | The raw properties agree between parsers | `parser/rawPropertyParity.test.ts` |
 | The worker's import closure holds no React, three.js or `.tsx` | `workers/workerClosure.test.ts` |

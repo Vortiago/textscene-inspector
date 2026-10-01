@@ -4,6 +4,7 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../ruleArms.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { descendsFrom } from '../../godot/nodeBaseTypes.js';
@@ -54,6 +55,16 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
   // guard above, this one does not coincide: the 3D body assigns an inverse inertia
   // tensor the 2D one has no counterpart for, putting the line one earlier.
   const countLine = dim === '2D' ? 155 : 154;
+  const arms = {
+    maxContactsWithoutMonitor: groundedArm(`${prefix}-max-contacts-without-monitor`, {
+      kind: 'engine-inert',
+      at: contactMonitorCite,
+      unused: 'the colliding-bodies list and the contact signals live behind this guard',
+    }),
+    scaleOverriddenAtRuntime: groundedArm(`${prefix}-scale-overridden-at-runtime`, {
+      kind: 'configuration-warning',
+    }),
+  } as const satisfies RuleArms<string>;
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
@@ -75,20 +86,18 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
     if (maxContacts !== null && maxContacts > 0) {
       const contactMonitor = rawProps.contact_monitor;
       if (boolSlotValue(contactMonitor) !== true) {
-        diagnostics.push({
-          severity: 'info',
-          message:
-            `${node.type} '${node.name}' sets max_contacts_reported while contact_monitor is off, ` +
+        reportArm(
+          diagnostics,
+          arms.maxContactsWithoutMonitor,
+          node,
+          `${node.type} '${node.name}' sets max_contacts_reported while contact_monitor is off, ` +
             'so get_colliding_bodies() stays empty and the body_entered/exited signals never ' +
             'fire. The contact COUNT still works: _sync_body_state assigns contact_count at ' +
             `${bodyFile}:${countLine}, before the contact_monitor guard at :181, and the physics server ` +
             'gathers contacts on max_contacts_reported alone (can_report_contacts() is ' +
             'contacts.is_empty() negated). Enable contact_monitor only if you need the list ' +
-            'or the signals.',
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: `${prefix}-max-contacts-without-monitor`,
-        });
+            'or the signals.'
+        );
       }
     }
 
@@ -107,16 +116,14 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
           Math.abs(sz - 1) > RIGID_BODY_SCALE_TOLERANCE;
         if (overridden) {
           const shown = [sx, sy, sz].map((s) => Math.round(s * 1000) / 1000).join(', ');
-          diagnostics.push({
-            severity: 'warning',
-            message:
-              `${node.type} '${node.name}' has a scaled transform (${shown}). ` +
+          reportArm(
+            diagnostics,
+            arms.scaleOverriddenAtRuntime,
+            node,
+            `${node.type} '${node.name}' has a scaled transform (${shown}). ` +
               'Scale changes to RigidBody3D will be overridden by the physics engine when running. ' +
-              'Change the size in its children collision shapes instead.',
-            nodeName: node.name,
-            nodeType: node.type,
-            ruleName: `${prefix}-scale-overridden-at-runtime`,
-          });
+              'Change the size in its children collision shapes instead.'
+          );
         }
       }
     }
@@ -132,16 +139,14 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
       const sx = Math.abs(scale2D.x);
       const sy = Math.abs(scale2D.y);
       if (Math.abs(sx - 1) > RIGID_BODY_SCALE_TOLERANCE || Math.abs(sy - 1) > RIGID_BODY_SCALE_TOLERANCE) {
-        diagnostics.push({
-          severity: 'warning',
-          message:
-            `${node.type} '${node.name}' has scale (${scale2D.x}, ${scale2D.y}). ` +
+        reportArm(
+          diagnostics,
+          arms.scaleOverriddenAtRuntime,
+          node,
+          `${node.type} '${node.name}' has scale (${scale2D.x}, ${scale2D.y}). ` +
             'Size changes to RigidBody2D will be overridden by the physics engine when running. ' +
-            'Change the size in its children collision shapes instead.',
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: `${prefix}-scale-overridden-at-runtime`,
-        });
+            'Change the size in its children collision shapes instead.'
+        );
       }
     }
 
@@ -154,22 +159,7 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
       description: `Validates ${type} resource references, collision shapes, mass values, and physics configuration`,
       category: 'validation',
       applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, type),
-      emits: [
-        {
-          ruleName: `${prefix}-max-contacts-without-monitor`,
-          severity: 'info',
-          grounding: {
-            kind: 'engine-inert',
-            at: contactMonitorCite,
-            unused: 'the colliding-bodies list and the contact signals live behind this guard',
-          },
-        },
-        {
-          ruleName: `${prefix}-scale-overridden-at-runtime`,
-          severity: 'warning',
-          grounding: { kind: 'configuration-warning' },
-        },
-      ],
+      emits: armEmits(arms),
     },
     check,
   };

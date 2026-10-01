@@ -9,6 +9,20 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { indicesPastCount, listWrittenIndices } from '../../../../linter/reportedIndices.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+
+const arms = {
+  currentTabOutOfRange: {
+    severity: 'error',
+    ruleName: 'tabbar-current-tab-out-of-range',
+    grounding: { kind: 'engine', at: 'tab_bar.cpp:802' },
+  },
+  tabIndexOutOfRange: {
+    severity: 'error',
+    ruleName: 'tabbar-tab-index-out-of-range',
+    grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
+  },
+} as const satisfies RuleArms<string>;
 
 /**
  * The family's prefix. The `tab_` scalars (`tab_alignment`, `tab_count`) carry no `/`, so they
@@ -41,19 +55,17 @@ function checkTabBar(context: RuleContext): Diagnostic[] {
     // Below -1 is linterParser.ts's error. -1 is the default and the deselect sentinel,
     // guarded by `_can_deselect()` (tab_bar.cpp:798), which is true while the vector is empty.
     if (current !== null && current >= 0 && current >= count) {
-      diagnostics.push({
-        severity: 'error',
-        message:
-          `TabBar '${node.name}' selects tab ${current} but declares only ${count} tab(s) (tab_count). ` +
+      reportArm(
+        diagnostics,
+        arms.currentTabOutOfRange,
+        node,
+        `TabBar '${node.name}' selects tab ${current} but declares only ${count} tab(s) (tab_count). ` +
           'set_current_tab parks the index in queued_current and returns while the bar is ' +
           'uninitialised (tab_bar.cpp:801-802); only set_tab_count replays it (:778-782), and ' +
           'with tab_count absent or 0 that returns at its own `p_count == tabs.size()` guard ' +
           '(:741) without ever replaying. Either way the selection is dropped and the bar ' +
-          'opens on its default tab.',
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'tabbar-current-tab-out-of-range',
-      });
+          'opens on its default tab.'
+      );
     }
   }
 
@@ -65,17 +77,15 @@ function checkTabBar(context: RuleContext): Diagnostic[] {
 
   if (offending.size > 0) {
     const indices = listWrittenIndices(offending);
-    diagnostics.push({
-      severity: 'error',
-      message:
-        `TabBar '${node.name}' sets properties on tab index(es) ${indices} but declares only ${count} tab(s) (tab_count). ` +
+    reportArm(
+      diagnostics,
+      arms.tabIndexOutOfRange,
+      node,
+      `TabBar '${node.name}' sets properties on tab index(es) ${indices} but declares only ${count} tab(s) (tab_count). ` +
         'PropertyListHelper::_get_property returns null for an index at or past the array length ' +
         '(property_list_helper.cpp:58) and TabBar never enables out-of-bounds assignment, so these ' +
-        'tab_<idx>/… values are silently dropped on load.',
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'tabbar-tab-index-out-of-range',
-    });
+        'tab_<idx>/… values are silently dropped on load.'
+    );
   }
 
   return diagnostics;
@@ -87,18 +97,7 @@ const tabBarValidationRule: LintRule = {
     description: "Validates TabBar's current_tab and tab_<idx>/… indices against tab_count",
     category: 'validation',
     applicableNodeTypes: ['TabBar'],
-    emits: [
-      {
-        ruleName: 'tabbar-current-tab-out-of-range',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'tab_bar.cpp:802' },
-      },
-      {
-        ruleName: 'tabbar-tab-index-out-of-range',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkTabBar,
 };

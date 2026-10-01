@@ -7,8 +7,13 @@
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 import { boolSlotValue } from '../../../../godot/index.js';
+
+const arms = {
+  groupWithoutToggleMode: groundedArm('button-group-without-toggle-mode', { kind: 'configuration-warning' }),
+} as const satisfies RuleArms<string>;
 
 /**
  * Subclasses whose constructor sets toggle_mode (check_box.cpp:172, check_button.cpp:171,
@@ -44,13 +49,11 @@ function checkButtonGroup(context: RuleContext): Diagnostic[] {
   if (toggleMode) return [];
 
   return [
-    {
-      severity: 'warning',
-      message: `${node.type} '${node.name}' sets 'button_group' but leaves 'toggle_mode' false. A ButtonGroup only arbitrates between toggle buttons, so the group has no effect.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'button-group-without-toggle-mode',
-    },
+    armDiagnostic(
+      arms.groupWithoutToggleMode,
+      node,
+      `${node.type} '${node.name}' sets 'button_group' but leaves 'toggle_mode' false. A ButtonGroup only arbitrates between toggle buttons, so the group has no effect.`
+    ),
   ];
 }
 
@@ -60,13 +63,7 @@ const buttonGroupRule: LintRule = {
     description: 'Flags a ButtonGroup on a button that is not in toggle mode',
     category: 'validation',
     applicableNodeTypeMatcher: isButton,
-    emits: [
-      {
-        ruleName: 'button-group-without-toggle-mode',
-        severity: 'warning',
-        grounding: { kind: 'configuration-warning' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkButtonGroup,
 };

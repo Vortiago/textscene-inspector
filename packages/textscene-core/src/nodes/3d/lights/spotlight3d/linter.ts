@@ -5,12 +5,18 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
-import { projectorWithoutShadowDiagnostic } from '../shared/linterChecks.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { projectorArm, projectorWithoutShadowDiagnostic } from '../shared/linterChecks.js';
 import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../../godot/index.js';
 
 /** `Light3D::set_param` default for `PARAM_SPOT_ANGLE` (light_3d.cpp:480). */
 const DEFAULT_SPOT_ANGLE = 45;
+
+const arms = {
+  shadowAngleTooWide: groundedArm('spotlight3d-shadow-angle-too-wide', { kind: 'configuration-warning' }),
+  projectorWithoutShadow: projectorArm('spotlight3d'),
+} as const satisfies RuleArms<string>;
 
 /**
  * No range advisory: the validators hold the `spot_range`, `spot_angle` and
@@ -32,18 +38,17 @@ function checkSpotLight3D(context: RuleContext): Diagnostic[] {
     // finiteness guard: `spot_angle = inf` is a shadowless cone wider than 90
     // degrees, and `nan >= 90` is false either way.
     if (boolSlotValue(properties.shadow_enabled) === true && spotAngle !== null && spotAngle >= 90) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `SpotLight3D '${node.name}' has shadow_enabled with a spot_angle of ${spotAngle} degrees. An angle wider than 90 degrees cannot cast shadows.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'spotlight3d-shadow-angle-too-wide',
-      });
+      reportArm(
+        diagnostics,
+        arms.shadowAngleTooWide,
+        node,
+        `SpotLight3D '${node.name}' has shadow_enabled with a spot_angle of ${spotAngle} degrees. An angle wider than 90 degrees cannot cast shadows.`
+      );
     }
   }
 
   // light_3d.cpp:659-661, the same shape as OmniLight3D's.
-  const projectorDiagnostic = projectorWithoutShadowDiagnostic(node, 'spotlight3d');
+  const projectorDiagnostic = projectorWithoutShadowDiagnostic(node, arms.projectorWithoutShadow);
   if (projectorDiagnostic) diagnostics.push(projectorDiagnostic);
 
   return diagnostics;
@@ -55,18 +60,7 @@ const spotLight3DValidationRule: LintRule = {
     description: 'Validates SpotLight3D property values against the ranges the editor accepts',
     category: 'validation',
     applicableNodeTypes: ['SpotLight3D'],
-    emits: [
-      {
-        ruleName: 'spotlight3d-shadow-angle-too-wide',
-        severity: 'warning',
-        grounding: { kind: 'configuration-warning' },
-      },
-      {
-        ruleName: 'spotlight3d-projector-without-shadow',
-        severity: 'warning',
-        grounding: { kind: 'configuration-warning' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkSpotLight3D,
 };
