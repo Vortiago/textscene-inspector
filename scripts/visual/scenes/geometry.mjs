@@ -34,6 +34,11 @@ export const GEOMETRY_SCENES = [
   // Two orthogonal suns, so each map is half the atlas wide. The posts' shadows,
   // which lie across that width, spread into faint smudges. The bars cast as under one sun.
   { name: 'directional-shadow-shared-atlas', file: 'unit-directional-shadow-shared-atlas.tscn' },
+  // An omni light and a spot light, each with `shadow_blur = 4` and alone under a
+  // dark sun. A board's straight shadow edge fades over the width of the light's
+  // PCF kernel.
+  { name: 'omni-light-shadow-blur', file: 'unit-omni-light-shadow-blur.tscn' },
+  { name: 'spot-light-shadow-blur', file: 'unit-spot-light-shadow-blur.tscn' },
   // A Sky Only sun and a Light Only sun, both in view. Only the first draws in
   // the sky, and only the second lights the box and ground.
   { name: 'directional-light-sky-mode', file: 'unit-directional-light-sky-mode.tscn' },

@@ -151,6 +151,11 @@ chunk applies the fade from one shared buffer, which the fitter writes before ea
 SubViewport with its own portal scene hooks that scene the same way
 (`r3f/directionalShadow/directionalShadow.md`).
 
+**Positional shadows.** An omni or spot light hooks each render of its scene the same way, through
+`usePositionalShadowFit`. Godot gives the light a slot in its positional shadow atlas by how much
+of the view the light's range covers, so the hook sizes the light's map to that slot and its PCF
+kernel to the slot's texels (`r3f/positionalShadow/`).
+
 **Axis conventions.** Godot and three.js disagree in three places. Each is converted where
 Godot data becomes a three.js object, never in a parser:
 

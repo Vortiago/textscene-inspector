@@ -18,6 +18,7 @@ import {
 import { readDirectionalShadowDeclaration, type DirectionalShadowDeclaration } from './declaration.js';
 import {
   fitDirectionalShadowBox,
+  isViewingCamera,
   viewSlice,
   type DirectionalShadowBox,
   type ViewingCamera,
@@ -292,9 +293,4 @@ function applyShadowCameraBox(shadowCamera: THREE.OrthographicCamera, box: Direc
   shadowCamera.near = box.near;
   shadowCamera.far = box.far;
   shadowCamera.updateProjectionMatrix();
-}
-
-function isViewingCamera(camera: THREE.Camera): camera is ViewingCamera {
-  const candidate = camera as Partial<ViewingCamera>;
-  return typeof candidate.near === 'number' && typeof candidate.far === 'number';
 }

@@ -9,7 +9,9 @@ import type { SpotLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
-import { LIGHT_INTENSITY_SCALE, SHADOW_MAP_SIZE, SHADOW_NORMAL_BIAS } from '../../../../r3f/lightConstants';
+import { LIGHT_INTENSITY_SCALE, SHADOW_NORMAL_BIAS } from '../../../../r3f/lightConstants';
+import { usePositionalShadowFit } from '../../../../r3f/positionalShadow/usePositionalShadowFit';
+import { softShadowScale } from '../../../../godot/softShadowScale';
 import { spotShadowBias } from '../shared/shadowBias';
 import { LightWithTarget } from '../shared/lightShared';
 import { SpotLightGizmo } from '../shared/lightHelpers';
@@ -32,6 +34,7 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
   const penumbra =
     properties.penumbra ?? Math.max(0, Math.min(1, 1 / ((properties.spot_angle_attenuation ?? 1) + 1)));
   const bias = spotShadowBias(properties.shadow_bias, properties.shadow_blur, properties.spot_range);
+  usePositionalShadowFit(lightRef, softShadowScale(properties.shadow_blur));
 
   return (
     <LightWithTarget
@@ -51,8 +54,6 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
             penumbra={penumbra}
             decay={decay}
             castShadow={properties.shadow_enabled}
-            shadow-mapSize-width={SHADOW_MAP_SIZE}
-            shadow-mapSize-height={SHADOW_MAP_SIZE}
             shadow-bias={bias}
             shadow-normalBias={SHADOW_NORMAL_BIAS}
             shadow-camera-near={0.5}
