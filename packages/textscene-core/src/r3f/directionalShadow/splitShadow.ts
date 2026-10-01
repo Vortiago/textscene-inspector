@@ -1,9 +1,7 @@
 /**
- * The shadow of a directional light that draws Godot's parallel splits: the light's share of
- * Godot's directional atlas, laid out as Godot lays it out, with one orthographic camera per
- * split. three's WebGL renderer draws and samples it through its sun-light path:
- * `WebGLShadowMap.js:287-358` renders one viewport per slot, and `WebGLLights.js:289-327` uploads
- * one matrix and one vec4 per slot.
+ * The shadow of a directional light that draws Godot's parallel splits. It holds the light's share
+ * of Godot's directional atlas, laid out as Godot lays it out, with one orthographic camera per
+ * split. `directionalShadow.md` beside this file has how three draws and samples it.
  */
 
 import * as THREE from 'three';
@@ -12,7 +10,6 @@ import {
   directionalShadowSplitAtlasRect,
   type DirectionalShadowAtlasRect,
 } from '../../godot/directionalShadow.js';
-import { freeShadowMap } from './shadowMapAllocation.js';
 
 /**
  * Every shadow on the sun path holds this many slots, because the shader finds a light's slots at
@@ -24,15 +21,25 @@ export const SPLIT_SLOTS = DIRECTIONAL_SHADOW_MAX_SPLITS;
 /** The `up` of every split camera, which three's `lookAt` rolls the split boxes by. */
 export const SPLIT_CAMERA_UP: Readonly<THREE.Vector3> = new THREE.Vector3(0, 1, 0);
 
-/** A frustum that holds nothing, so the shadow pass draws no caster into an undrawn slot. */
-function emptyFrustum(): THREE.Frustum {
-  const nowhere = () => new THREE.Plane(new THREE.Vector3(1, 0, 0), -Infinity);
-  return new THREE.Frustum(nowhere(), nowhere(), nowhere(), nowhere(), nowhere(), nowhere());
+/** A plane that every point lies behind. */
+const nowhere = () => new THREE.Plane(new THREE.Vector3(1, 0, 0), -Infinity);
+
+/**
+ * A frustum that holds nothing, so the shadow pass draws no caster into an undrawn slot. three
+ * still walks the scene for the slot (`WebGLShadowMap.js:289-358`), so each caster's test answers
+ * at once, without the bounding sphere `Frustum.intersectsObject` transforms.
+ */
+class UndrawnFrustum extends THREE.Frustum {
+  constructor() {
+    super(nowhere(), nowhere(), nowhere(), nowhere(), nowhere(), nowhere());
+  }
+
+  override intersectsObject(): boolean {
+    return false;
+  }
 }
 
 export class DirectionalSplitShadow extends THREE.LightShadow<THREE.OrthographicCamera> {
-  readonly isDirectionalSplitShadow = true;
-
   /** How many slots draw a split: 2 or 4. */
   splitCount = SPLIT_SLOTS;
 
@@ -43,47 +50,52 @@ export class DirectionalSplitShadow extends THREE.LightShadow<THREE.Orthographic
    */
   readonly _cascadeData: THREE.Vector4[] = [];
 
+  // three r186's own `LightShadow` members, which its types leave out (`LightShadow.js:161-169`,
+  // `:235`). `declare` types them without a class field, which would reset the base's values.
+  declare _frameExtents: THREE.Vector2;
+  declare _viewports: THREE.Vector4[];
+  declare _viewportCount: number;
+  declare _updateMatrix: (
+    shadowCamera: THREE.Camera,
+    shadowMatrix: THREE.Matrix4,
+    frustum: THREE.Frustum,
+    viewport: THREE.Vector4
+  ) => void;
+
   /** One camera per slot. The fitter places each drawn one before every render. */
   private readonly splitCameras: THREE.OrthographicCamera[] = [];
   private readonly splitMatrices: THREE.Matrix4[] = [];
   private readonly splitFrustums: THREE.Frustum[] = [];
-  private readonly splitViewports: THREE.Vector4[] = [];
-  private readonly atlasExtents = new THREE.Vector2(1, 1);
-  /** The texture size the last `setSplits` laid out, in texels. Zero before the first. */
-  private readonly textureSize = new THREE.Vector2(0, 0);
-  private readonly undrawn = emptyFrustum();
-  private readonly projectionView = new THREE.Matrix4();
+  private readonly undrawn = new UndrawnFrustum();
 
   constructor() {
     super(new THREE.OrthographicCamera());
+    this._viewportCount = SPLIT_SLOTS;
+    this._viewports = [];
     for (let slot = 0; slot < SPLIT_SLOTS; slot++) {
       const camera = new THREE.OrthographicCamera();
       camera.up.copy(SPLIT_CAMERA_UP);
       this.splitCameras.push(camera);
       this.splitMatrices.push(new THREE.Matrix4());
       this.splitFrustums.push(new THREE.Frustum());
-      this.splitViewports.push(new THREE.Vector4());
+      this._viewports.push(new THREE.Vector4());
       this._cascadeData.push(new THREE.Vector4(0, 0, 0, 0));
     }
   }
 
   /**
    * Lays out `splitCount` splits inside the light's rectangle of Godot's atlas. This shadow's own
-   * texture holds only that rectangle. `mapSize` is one split's rectangle, and three multiplies it
-   * by the frame extents to size the texture (`WebGLShadowMap.js:170-176`). three builds the
-   * texture once (`:203`), so a new texture size frees the old one.
+   * texture holds only that rectangle. `mapSize` is one split's rectangle. three multiplies it by
+   * the frame extents to size the texture (`WebGLShadowMap.js:170-176`), and resizes the texture
+   * when that size changes (`:281-285`).
    */
   setSplits(splitCount: number, lightRect: DirectionalShadowAtlasRect): void {
     this.splitCount = splitCount;
     const first = directionalShadowSplitAtlasRect(splitCount, 0, lightRect);
-    if (this.textureSize.x !== lightRect.width || this.textureSize.y !== lightRect.height) {
-      this.textureSize.set(lightRect.width, lightRect.height);
-      freeShadowMap(this);
-    }
     this.mapSize.set(first.width, first.height);
-    this.atlasExtents.set(lightRect.width / first.width, lightRect.height / first.height);
+    this._frameExtents.set(lightRect.width / first.width, lightRect.height / first.height);
     for (let slot = 0; slot < SPLIT_SLOTS; slot++) {
-      const viewport = this.splitViewports[slot]!;
+      const viewport = this._viewports[slot]!;
       if (slot >= splitCount) {
         viewport.set(0, 0, 0, 0);
         continue;
@@ -91,18 +103,6 @@ export class DirectionalSplitShadow extends THREE.LightShadow<THREE.Orthographic
       const rect = directionalShadowSplitAtlasRect(splitCount, slot, lightRect);
       viewport.set((rect.x - lightRect.x) / first.width, (rect.y - lightRect.y) / first.height, 1, 1);
     }
-  }
-
-  override getViewportCount(): number {
-    return SPLIT_SLOTS;
-  }
-
-  override getViewport(slot: number): THREE.Vector4 {
-    return this.splitViewports[slot]!;
-  }
-
-  override getFrameExtents(): THREE.Vector2 {
-    return this.atlasExtents;
   }
 
   override getCamera(slot = 0): THREE.OrthographicCamera {
@@ -131,40 +131,11 @@ export class DirectionalSplitShadow extends THREE.LightShadow<THREE.Orthographic
     }
   }
 
-  /** `LightShadow._updateMatrix` for one slot, with the slot's rectangle of the atlas. */
+  /** three's own matrix and frustum update for one slot, with the slot's rectangle of the atlas. */
   private updateSplitMatrix(slot: number): void {
     const camera = this.splitCameras[slot]!;
     this.followDepthConvention(camera);
-    this.projectionView.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
-    this.splitFrustums[slot]!.setFromProjectionMatrix(
-      this.projectionView,
-      camera.coordinateSystem,
-      camera.reversedDepth
-    );
-    const viewport = this.splitViewports[slot]!;
-    const scaleX = viewport.z / this.atlasExtents.x;
-    const scaleY = viewport.w / this.atlasExtents.y;
-    const offsetX = viewport.x / this.atlasExtents.x;
-    const offsetY = viewport.y / this.atlasExtents.y;
-    const depthIsUnit = camera.coordinateSystem === THREE.WebGPUCoordinateSystem || camera.reversedDepth;
-    this.splitMatrices[slot]!.set(
-      0.5 * scaleX,
-      0,
-      0,
-      0.5 * scaleX + offsetX,
-      0,
-      0.5 * scaleY,
-      0,
-      0.5 * scaleY + offsetY,
-      0,
-      0,
-      depthIsUnit ? 1 : 0.5,
-      depthIsUnit ? 0 : 0.5,
-      0,
-      0,
-      0,
-      1
-    ).multiply(this.projectionView);
+    this._updateMatrix(camera, this.splitMatrices[slot]!, this.splitFrustums[slot]!, this._viewports[slot]!);
   }
 
   /**

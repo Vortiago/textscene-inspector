@@ -10,14 +10,14 @@ import {
   directionalShadowBlendStart,
   directionalShadowFade,
   directionalShadowSplitDistances,
-  directionalShadowSplitOffsets,
+  directionalShadowSplitEnds,
   directionalShadowSplitRange,
   directionalShadowSplitTextureSize,
   type DirectionalShadowAtlasRect,
   type DirectionalShadowFade,
 } from '../../godot/directionalShadow.js';
 import {
-  fitDirectionalShadowBox,
+  directionalShadowBoxFitter,
   viewSlice,
   type DirectionalShadowBox,
   type DirectionalShadowFitInput,
@@ -62,20 +62,20 @@ export function fitDirectionalShadowSplits(
   const { splitCount } = declaration;
   const blends = blendsSplits(splitCount, declaration.blendSplits);
   const distances = directionalShadowSplitDistances(viewSlice(input), splitCount, declaration.splitOffsets);
-  const splitInput = {
+  const fitSplit = directionalShadowBoxFitter({
     ...input,
     shadowMapSize: directionalShadowSplitTextureSize(splitCount, input.lightRect),
-  };
+  });
 
   const boxes: DirectionalShadowBox[] = [];
   for (let split = 0; split < splitCount; split++) {
-    const box = fitDirectionalShadowBox(splitInput, directionalShadowSplitRange(distances, split, blends));
+    const box = fitSplit(directionalShadowSplitRange(distances, split, blends));
     if (!box) return null;
     boxes.push(box);
   }
 
   const lastSplit = splitCount - 1;
-  const slots = directionalShadowSplitOffsets(distances, splitCount).map((splitEnd, slot): SplitSlot => {
+  const slots = directionalShadowSplitEnds(distances, splitCount).map((splitEnd, slot): SplitSlot => {
     const box = boxes[Math.min(slot, lastSplit)]!;
     const blendStart = blends && slot < lastSplit ? directionalShadowBlendStart(splitEnd) : NO_BLEND;
     return [splitEnd, box.bias, box.normalBias, blendStart];

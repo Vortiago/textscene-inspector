@@ -5,6 +5,8 @@
  * the light's position.
  */
 
+import { directionalLightLightsSurfaces } from './directionalLightSkyMode.js';
+
 /** `DirectionalLight3D()` sets `PARAM_SHADOW_MAX_DISTANCE` to 100 (`scene/3d/light_3d.cpp:600`). */
 export const DIRECTIONAL_SHADOW_MAX_DISTANCE_DEFAULT = 100;
 
@@ -167,15 +169,16 @@ export function directionalShadowSplitRange(
 }
 
 /**
- * `light_storage.cpp:704` and `:711`: the four depths the shader compares a fragment's depth with.
- * `MIN(limit, j)` clamps the split index, so a light with fewer splits repeats its last far end.
+ * `light_storage.cpp:704` and `:711`: the four split ends, the depths the shader compares a
+ * fragment's depth with (Godot's `shadow_split_offsets`). `MIN(limit, j)` clamps the split index, so
+ * a light with fewer splits repeats its last far end.
  */
-export function directionalShadowSplitOffsets(distances: readonly number[], splitCount: number): number[] {
-  const offsets: number[] = [];
+export function directionalShadowSplitEnds(distances: readonly number[], splitCount: number): number[] {
+  const ends: number[] = [];
   for (let j = 0; j < DIRECTIONAL_SHADOW_MAX_SPLITS; j++) {
-    offsets.push(distances[Math.min(splitCount - 1, j) + 1]!);
+    ends.push(distances[Math.min(splitCount - 1, j) + 1]!);
   }
-  return offsets;
+  return ends;
 }
 
 /**
@@ -188,34 +191,14 @@ export function blendsSplits(splitCount: number, blendSplits: boolean): boolean 
 
 /**
  * `scene_forward_clustered.glsl:2453`, `:2460` and `:2467`: a blending split mixes in the next
- * split's shadow over the last tenth of its own depth.
+ * split's shadow over the last tenth of its own depth, which ends at `splitEnd`.
  */
-export function directionalShadowBlendStart(splitOffset: number): number {
-  return splitOffset - splitOffset * 0.1;
-}
-
-/** `DirectionalLight3D::SkyMode` (`scene/3d/light_3d.h:172-176`). */
-export const DirectionalLightSkyMode = {
-  LIGHT_AND_SKY: 0,
-  LIGHT_ONLY: 1,
-  SKY_ONLY: 2,
-} as const;
-
-/** `DirectionalLight3D()` lights both the scene and the sky (`scene/3d/light_3d.cpp:608`). */
-export const DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT = DirectionalLightSkyMode.LIGHT_AND_SKY;
-
-/** `light_storage.cpp:632`: the scene shader skips a Sky Only light, so it lights no surface. */
-export function directionalLightLightsSurfaces(skyMode: number): boolean {
-  return skyMode !== DirectionalLightSkyMode.SKY_ONLY;
-}
-
-/** `sky.cpp:1069`: the sky shader skips a Light Only light, so it draws no disc in the sky. */
-export function directionalLightDrawsInSky(skyMode: number): boolean {
-  return skyMode !== DirectionalLightSkyMode.LIGHT_ONLY;
+export function directionalShadowBlendStart(splitEnd: number): number {
+  return splitEnd - splitEnd * 0.1;
 }
 
 /**
- * `renderer_scene_cull.cpp:3268`: a directional light takes a share of the shadow atlas when its
+ * `renderer_scene_cull.cpp:3271`: a directional light takes a share of the shadow atlas when its
  * shadow is on and it lights surfaces. The shadow mode does not count, so a light with an unknown
  * mode takes a share and draws nothing into it.
  */

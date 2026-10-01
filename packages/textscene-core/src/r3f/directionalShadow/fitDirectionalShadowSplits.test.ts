@@ -141,7 +141,7 @@ describe('fitDirectionalShadowSplits', () => {
     const { boxes } = fit(input);
     const nearSlice = cameraSliceCorners(input.camera, 0.05, SPLIT_ENDS[0]!);
     const centre = nearSlice.reduce((sum, corner) => sum.add(corner), new THREE.Vector3()).divideScalar(8);
-    // Beyond one diameter of the nearest split's own sphere, the old reach.
+    // Further towards the light than one diameter of the nearest split's own sphere.
     const caster = centre.clone().addScaledVector(SUN_DIRECTION, -100);
     expect(isInsideMap(shadowMatrix(input, boxes[0]!), caster)).toBe(true);
   });

@@ -13,10 +13,11 @@ import { fitSceneDirectionalShadows, releaseSceneSplitSuns } from './fitSceneDir
 
 /**
  * Fits `scene`'s declared lights before every render of it, until unmount. Unmount hands each
- * light that drew splits its own shading back.
+ * light that drew splits its own shading back. Null fits nothing.
  */
-export function useDirectionalShadowFit(scene: THREE.Scene): void {
+export function useDirectionalShadowFit(scene: THREE.Scene | null): void {
   useEffect(() => {
+    if (!scene) return undefined;
     const stopObserving = observeSceneCamera(scene, (camera) => fitSceneDirectionalShadows(scene, camera));
     return () => {
       stopObserving();

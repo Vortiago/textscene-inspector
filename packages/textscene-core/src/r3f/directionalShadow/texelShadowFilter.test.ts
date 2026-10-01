@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { installTexelShadowFilter, texelShadowFilterChunk } from './texelShadowFilter';
 import { godotSplitShadowChunk } from './splitShadowChunk';
 import { shadowFadeChunks } from './shadowFade';
+import { warningsOf } from '../testing/logWarnings';
 
 const CHUNK = 'shadowmap_pars_fragment';
 const threeChunk = THREE.ShaderChunk[CHUNK];
@@ -51,10 +52,10 @@ describe('installTexelShadowFilter', () => {
     expect(THREE.ShaderChunk[CHUNK]).toBe(texelShadowFilterChunk(threeChunk));
   });
 
-  it('changes nothing on a second call (edge case)', () => {
+  it('changes nothing and warns nothing on a second call (edge case)', () => {
     installTexelShadowFilter();
     const once = THREE.ShaderChunk[CHUNK];
-    installTexelShadowFilter();
+    expect(warningsOf(installTexelShadowFilter)).toEqual([]);
     expect(THREE.ShaderChunk[CHUNK]).toBe(once);
   });
 

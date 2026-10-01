@@ -13,13 +13,10 @@ export class SplitSunLight extends THREE.Light {
   /** The flag `WebGLLights` reads to put a light on the sun path (`WebGLLights.js:289`, `:566`). */
   readonly isSunLight = true;
 
-  /** `WebGLLights` keys its uniform caches on this string (`WebGLLights.js:26`, `:102`). */
+  /** `WebGLLights` caches by `id`, and shapes a new entry by this string (`WebGLLights.js:24`, `:100`). */
   override readonly type: string = 'SunLight';
 
   readonly shadow = new DirectionalSplitShadow();
-
-  /** The declared light's layers from before the fitter hid it, restored on release. */
-  readonly sourceLayers = new THREE.Layers();
 
   constructor() {
     super();
@@ -49,7 +46,7 @@ export function attachSplitSun(light: THREE.DirectionalLight): SplitSunLight {
   const existing = splitSunOf(light);
   if (existing) return existing;
   const sun = new SplitSunLight();
-  sun.sourceLayers.mask = light.layers.mask;
+  // The sun renders on the light's own layers, and release hands them back to the light.
   sun.layers.mask = light.layers.mask;
   // A light that fails the camera's layer test never enters the render's light list
   // (`WebGLRenderer.js:1864-1888`), while its children still do.
@@ -67,7 +64,7 @@ export function releaseSplitSun(light: THREE.DirectionalLight): void {
   const sun = splitSunOf(light);
   if (!sun) return;
   light.removeEventListener('removed', releaseRemovedLight);
-  light.layers.mask = sun.sourceLayers.mask;
+  light.layers.mask = sun.layers.mask;
   light.remove(sun);
   sun.dispose();
 }

@@ -24,6 +24,7 @@ import {
 } from '../../../r3f/contexts/ViewportPassRegistryContext';
 import { SubViewport } from './Component';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
+import { splitSunOf } from '../../../r3f/directionalShadow/splitSun';
 
 import '../../../r3f/nodes/index';
 
@@ -67,6 +68,33 @@ async function advanceFrameWithStubbedGl(
     gl.setRenderTarget = originalSet;
     gl.render = originalRender;
   }
+}
+
+/**
+ * Runs one frame whose renders run only each scene's `onBeforeRender`, as `WebGLRenderer.render`
+ * does after it updates the matrices, and answers every scene a pass rendered.
+ */
+async function scenesRenderedNextFrame(
+  renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>,
+  gl: THREE.WebGLRenderer
+): Promise<THREE.Scene[]> {
+  const rendered: THREE.Scene[] = [];
+  const originalSet = gl.setRenderTarget;
+  const originalRender = gl.render;
+  gl.setRenderTarget = (() => undefined) as typeof gl.setRenderTarget;
+  gl.render = ((scene: THREE.Scene, camera: THREE.Camera) => {
+    rendered.push(scene);
+    scene.updateMatrixWorld();
+    camera.updateMatrixWorld();
+    (scene.onBeforeRender as (...args: unknown[]) => void).call(scene, gl, scene, camera, null);
+  }) as typeof gl.render;
+  try {
+    await renderer.advanceFrames(1, 16);
+  } finally {
+    gl.setRenderTarget = originalSet;
+    gl.render = originalRender;
+  }
+  return rendered;
 }
 
 /**
@@ -248,6 +276,37 @@ mesh = SubResource("1")
     expect(await toneMappingAtNextBind(renderer, gl())).toBe(THREE.NoToneMapping);
     // Restored after the pass: the main render still owns the live curve.
     expect(gl().toneMapping).toBe(THREE.CustomToneMapping);
+  });
+
+  /**
+   * An own world's lights reach no render but this pass's, so the pass fits their shadows to
+   * its own camera. A DirectionalLight3D draws four splits by default, through a split sun.
+   */
+  it('own world: fits a shadowed sun inside the sub-viewport to the pass camera', async () => {
+    const { renderer, gl } = await renderScene(
+      `${scene3D('own_world_3d = true')}
+[node name="Sun" type="DirectionalLight3D" parent="Viewport"]
+shadow_enabled = true
+`
+    );
+    const portals = await scenesRenderedNextFrame(renderer, gl());
+    const suns = portals.flatMap((scene) => scene.getObjectsByProperty('isDirectionalLight', true));
+    expect(suns).toHaveLength(1);
+    expect(splitSunOf(suns[0] as THREE.DirectionalLight)).not.toBeNull();
+  });
+
+  it('2D content: hooks no shadow fit on a portal that holds no 3D light (edge case)', async () => {
+    const { renderer, gl } = await renderScene(`[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Viewport" type="SubViewport" parent="."]
+size = Vector2i(300, 300)
+
+[node name="Inside" type="Sprite2D" parent="Viewport"]
+`);
+    const [portal] = await scenesRenderedNextFrame(renderer, gl());
+    expect(portal!.onBeforeRender).toBe(THREE.Object3D.prototype.onBeforeRender);
   });
 
   /**

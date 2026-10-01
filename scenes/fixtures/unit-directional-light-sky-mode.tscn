@@ -1,11 +1,9 @@
 [gd_scene format=3 uid="uid://unitdirlightskymode"]
 
-; Moves one variable: DirectionalLight3D.sky_mode. Two suns sit low in the editor view.
-; The warm one is Sky Only: Godot draws its sun in the sky and lights no surface with it.
-; The cool one is Light Only: Godot lights the ground with it and draws no sun.
-; Every other scene keeps the default sky mode, so a light that ignores sky_mode looks
-; right there. Here such a light draws a second sun, tints the ground warm and casts a
-; second shadow.
+; Moves DirectionalLight3D.sky_mode. The warm sun is Sky Only: Godot draws its disc in the sky and
+; lights no surface with it. The cool sun is Light Only: Godot lights the ground and draws no disc.
+; Every other scene keeps the default sky mode, so a light that ignores it looks right there. Here
+; such a light draws a second sun, tints the ground warm and casts a second shadow.
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
 sky_top_color = Color(0.1, 0.15, 0.3, 1)

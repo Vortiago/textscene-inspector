@@ -118,8 +118,9 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
   const target = useMemo(() => createOffscreenTarget(width, height, node.name), [width, height, node.name]);
 
   useEffect(() => () => target.dispose(), [target]);
-  // An own world renders its lights only through this pass, so it fits them itself.
-  useDirectionalShadowFit(portalScene);
+  // A 3D portal renders its lights only through this pass, so it fits them itself. An inline pass
+  // renders the parent scene, which its own fitter fits, and a 2D portal holds no 3D light.
+  useDirectionalShadowFit(kind === '3d' && !rendersInline ? portalScene : null);
 
   // A persistent camera for 2D-world content. Godot draws a viewport's canvas
   // through its canvas transform, the identity until a Camera2D in the subtree

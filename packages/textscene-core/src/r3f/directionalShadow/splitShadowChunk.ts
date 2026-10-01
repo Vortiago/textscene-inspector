@@ -31,7 +31,7 @@ const BLENDS_ABOVE = (NO_BLEND / 2).toExponential();
  * The replacement. The split is the first whose far end lies past the fragment's depth, and slot 3
  * takes everything beyond slot 2 (`:2408-2440`). Without blending, a split's filter radius scales
  * by the first split's far end over its own (`:2422-2443`). A blending split mixes in the next one
- * (`:2445-2478`).
+ * (`:2445-2478`), sampled only inside the band, where its weight is above zero.
  */
 const GODOT_LOOKUP = `\t\tfloat ${SPLIT_LOOKUP}
 \t\t\t#if defined( SHADOWMAP_TYPE_PCF )
@@ -81,7 +81,7 @@ const GODOT_LOOKUP = `\t\tfloat ${SPLIT_LOOKUP}
 \t\t\tfloat radiusScale = blendsSplits ? 1.0 : sunShadowCascade[ first ].x / selected.x;
 \t\t\tfloat shadow = getSunShadowSplit( shadowMap, sunLightShadow, first + split, radiusScale );
 
-\t\t\tif ( split < 3 && selected.w > ${BLENDS_ABOVE} ) {
+\t\t\tif ( split < 3 && selected.w > ${BLENDS_ABOVE} && depth > selected.w ) {
 
 \t\t\t\tfloat next = getSunShadowSplit( shadowMap, sunLightShadow, first + split + 1, 1.0 );
 \t\t\t\tshadow = mix( shadow, next, smoothstep( selected.w, selected.x, depth ) );

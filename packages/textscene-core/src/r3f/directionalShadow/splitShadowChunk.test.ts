@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { godotSplitShadowChunk, installGodotSplitShadow } from './splitShadowChunk';
 import { NO_BLEND, type SplitSlot } from './fitDirectionalShadowSplits';
+import { warningsOf } from '../testing/logWarnings';
 
 const CHUNK = 'shadowmap_pars_fragment';
 const threeChunk = THREE.ShaderChunk[CHUNK];
@@ -135,6 +136,10 @@ describe('the patched split lookup', () => {
     expect(runLookup(fourSplits([9, 18, 45]), 5, [0, 1, 1, 1]).shadow).toBe(0);
   });
 
+  it('samples only its own split before the blend band (edge case)', () => {
+    expect(runLookup(fourSplits([9, 18, 45]), 5).samples).toEqual([{ slot: 0, radiusScale: 1 }]);
+  });
+
   it('mixes in the next split over the blend band, at the full filter radius', () => {
     const { shadow, samples } = runLookup(fourSplits([9, 18, 45]), 9.5, [0, 1, 1, 1]);
     expect(samples).toEqual([
@@ -186,9 +191,9 @@ describe('installGodotSplitShadow', () => {
     expect(THREE.ShaderChunk[CHUNK]).toBe(godotSplitShadowChunk(threeChunk));
   });
 
-  it('patches the chunk once when called twice (edge case)', () => {
+  it('patches the chunk once, and warns nothing, when called twice (edge case)', () => {
     installGodotSplitShadow();
-    installGodotSplitShadow();
+    expect(warningsOf(installGodotSplitShadow)).toEqual([]);
     expect(THREE.ShaderChunk[CHUNK]).toBe(godotSplitShadowChunk(threeChunk));
   });
 

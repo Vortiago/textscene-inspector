@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import {
   DIRECTIONAL_SHADOW_SIZE_DEFAULT,
   directionalLightsWithShadow,
+  directionalShadowFade,
   directionalShadowLightRect,
   directionalShadowSplitTextureSize,
   type DirectionalShadowAtlasRect,
@@ -17,12 +18,11 @@ import {
 import { readDirectionalShadowDeclaration, type DirectionalShadowDeclaration } from './declaration.js';
 import {
   fitDirectionalShadowBox,
-  orthogonalShadowFade,
+  viewSlice,
   type DirectionalShadowBox,
   type ViewingCamera,
 } from './fitDirectionalShadowBox.js';
 import { fitDirectionalShadowSplits, type DirectionalShadowSplits } from './fitDirectionalShadowSplits.js';
-import { sizeShadowMap } from './shadowMapAllocation.js';
 import { writeDirectionalShadowFades, type ShadowFades } from './shadowFade.js';
 import {
   attachSplitSun,
@@ -33,13 +33,22 @@ import {
 } from './splitSun.js';
 import { SPLIT_CAMERA_UP } from './splitShadow.js';
 
-interface DeclaredLight {
+/** A light in the scene, and whether three's render reaches it: it and every ancestor are visible. */
+export interface SceneLight {
+  light: THREE.Light;
+  isVisible: boolean;
+}
+
+/** A directional light that declared its shadow. */
+export interface DeclaredLight extends SceneLight {
   light: THREE.DirectionalLight;
   declaration: DirectionalShadowDeclaration;
 }
 
 /** A declared light and its share of Godot's directional shadow atlas for this render. */
-interface SharingLight extends DeclaredLight {
+interface SharingLight {
+  light: THREE.DirectionalLight;
+  declaration: DirectionalShadowDeclaration;
   lightRect: DirectionalShadowAtlasRect;
 }
 
@@ -47,7 +56,7 @@ interface SharingLight extends DeclaredLight {
 type AtlasShares = Map<THREE.DirectionalLight, DirectionalShadowAtlasRect>;
 
 /**
- * A light outside Godot's list draws no shadow in Godot (`renderer_scene_cull.cpp:3268`). Here it
+ * A light outside Godot's list draws no shadow in Godot (`renderer_scene_cull.cpp:3271`). Here it
  * keeps a whole atlas of its own.
  */
 const WHOLE_ATLAS = directionalShadowLightRect(DIRECTIONAL_SHADOW_SIZE_DEFAULT, 1, 0);
@@ -73,19 +82,23 @@ export function fitSceneDirectionalShadows(scene: THREE.Object3D, camera: THREE.
     writeDirectionalShadowFades(NO_FADES);
     return;
   }
-  const fades: CasterFades = new Map();
-  const shares = directionalShadowAtlasShares(scene, camera);
-  for (const { light, declaration } of declaredLights(scene)) {
-    const sharing = { light, declaration, lightRect: shares.get(light) ?? WHOLE_ATLAS };
-    if (light.castShadow && declaration.splitCount > 1) {
-      fitSplitLight(sharing, camera, fades);
-      continue;
-    }
-    releaseSplitSun(light);
-    if (light.castShadow) fitOrthogonalLight(sharing, camera, fades);
+  const lights = sceneLights(scene);
+  const declared = declaredLights(lights);
+  // Every render shares the fade buffer, so a scene with nothing to fade still clears it.
+  if (declared.length === 0) {
+    writeDirectionalShadowFades(NO_FADES);
+    return;
   }
-  // After the fits: a light that attaches or releases its sun changes which of the two casts.
-  const casters = directionalShadowCasters(scene, camera);
+  const fades: CasterFades = new Map();
+  const shares = directionalShadowAtlasShares(declared, camera);
+  let sunsChanged = false;
+  for (const { light, declaration } of declared) {
+    const hadSun = splitSunOf(light) !== null;
+    fitDeclaredLight({ light, declaration, lightRect: shares.get(light) ?? WHOLE_ATLAS }, camera, fades);
+    if ((splitSunOf(light) !== null) !== hadSun) sunsChanged = true;
+  }
+  // A sun that attaches or releases changes which of the two lights casts, so the walk runs again.
+  const casters = directionalShadowCasters(sunsChanged ? sceneLights(scene) : lights, camera);
   writeDirectionalShadowFades({
     directional: casters.directional.map((light) => fades.get(light) ?? null),
     sun: casters.sun.map((light) => fades.get(light) ?? null),
@@ -94,7 +107,35 @@ export function fitSceneDirectionalShadows(scene: THREE.Object3D, camera: THREE.
 
 /** Hands every declared light back its own shading, for a fitter that stops fitting the scene. */
 export function releaseSceneSplitSuns(scene: THREE.Object3D): void {
-  for (const { light } of declaredLights(scene)) releaseSplitSun(light);
+  for (const { light } of declaredLights(sceneLights(scene))) releaseSplitSun(light);
+}
+
+/**
+ * Every light in the scene, in the pre-order three's `projectObject` visits them (r186
+ * `WebGLRenderer.js:1860-1888`), each marked by whether the render reaches it.
+ */
+export function sceneLights(scene: THREE.Object3D): SceneLight[] {
+  const lights: SceneLight[] = [];
+  collectLights(scene, true, lights);
+  return lights;
+}
+
+function collectLights(object: THREE.Object3D, isParentVisible: boolean, lights: SceneLight[]): void {
+  const isVisible = isParentVisible && object.visible;
+  if ((object as THREE.Light).isLight) lights.push({ light: object as THREE.Light, isVisible });
+  for (const child of object.children) collectLights(child, isVisible, lights);
+}
+
+/** The declared directional lights among `lights`, hidden ones included. */
+export function declaredLights(lights: readonly SceneLight[]): DeclaredLight[] {
+  const declared: DeclaredLight[] = [];
+  for (const { light, isVisible } of lights) {
+    const directional = light as THREE.DirectionalLight;
+    if (!directional.isDirectionalLight) continue;
+    const declaration = readDirectionalShadowDeclaration(directional);
+    if (declaration) declared.push({ light: directional, declaration, isVisible });
+  }
+  return declared;
 }
 
 /** The lights three draws a directional or a sun shadow for, each list in three's index order. */
@@ -110,16 +151,16 @@ export interface DirectionalShadowCasters {
  * declared light that draws splits fails the layer test, so only its split sun counts.
  */
 export function directionalShadowCasters(
-  scene: THREE.Object3D,
+  lights: readonly SceneLight[],
   camera: THREE.Camera
 ): DirectionalShadowCasters {
   const casters: DirectionalShadowCasters = { directional: [], sun: [] };
-  scene.traverseVisible((object) => {
+  for (const { light: object, isVisible } of lights) {
     const light = object as THREE.Light & { isSunLight?: boolean; isDirectionalLight?: boolean };
-    if (!light.isLight || !light.castShadow || !light.layers.test(camera.layers)) return;
+    if (!isVisible || !light.castShadow || !light.layers.test(camera.layers)) continue;
     if (light.isSunLight) casters.sun.push(light);
     else if (light.isDirectionalLight) casters.directional.push(light as THREE.DirectionalLight);
-  });
+  }
   return casters;
 }
 
@@ -129,14 +170,13 @@ export function directionalShadowCasters(
  * in list order (`renderer_scene_cull.cpp:3257-3282`, `light_storage.cpp:2577-2597`). Here the
  * lights count in visible pre-order where the camera's layers include them, as three indexes them.
  */
-export function directionalShadowAtlasShares(scene: THREE.Object3D, camera: THREE.Camera): AtlasShares {
-  const visible: DeclaredLight[] = [];
-  scene.traverseVisible((object) => {
-    const light = object as THREE.DirectionalLight;
-    if (!light.isDirectionalLight || !ownLayers(light).test(camera.layers)) return;
-    const declaration = readDirectionalShadowDeclaration(light);
-    if (declaration) visible.push({ light, declaration });
-  });
+export function directionalShadowAtlasShares(
+  declared: readonly DeclaredLight[],
+  camera: THREE.Camera
+): AtlasShares {
+  const visible = declared.filter(
+    ({ light, isVisible }) => isVisible && ownLayers(light).test(camera.layers)
+  );
   const shadowed = directionalLightsWithShadow(visible, ({ declaration }) => declaration.sharesAtlas);
   const shares: AtlasShares = new Map();
   shadowed.forEach(({ light }, index) => {
@@ -147,18 +187,18 @@ export function directionalShadowAtlasShares(scene: THREE.Object3D, camera: THRE
 
 /** A light that shades through its split sun keeps its own layers on the sun. */
 function ownLayers(light: THREE.DirectionalLight): THREE.Layers {
-  return splitSunOf(light)?.sourceLayers ?? light.layers;
+  return splitSunOf(light)?.layers ?? light.layers;
 }
 
-function declaredLights(scene: THREE.Object3D): DeclaredLight[] {
-  const lights: DeclaredLight[] = [];
-  scene.traverse((object) => {
-    const light = object as THREE.DirectionalLight;
-    if (!light.isDirectionalLight) return;
-    const declaration = readDirectionalShadowDeclaration(light);
-    if (declaration) lights.push({ light, declaration });
-  });
-  return lights;
+/** A casting light with splits shades through its split sun. Any other declared light shades itself. */
+function fitDeclaredLight(sharing: SharingLight, camera: ViewingCamera, fades: CasterFades): void {
+  const { light, declaration } = sharing;
+  if (light.castShadow && declaration.splitCount > 1) {
+    fitSplitLight(sharing, camera, fades);
+    return;
+  }
+  releaseSplitSun(light);
+  if (light.castShadow) fitOrthogonalLight(sharing, camera, fades);
 }
 
 function placementOf(light: THREE.DirectionalLight): LightPlacement {
@@ -170,25 +210,29 @@ function placementOf(light: THREE.DirectionalLight): LightPlacement {
 
 /**
  * The light's map is its share of the atlas, which may not be square. Its fit counts texels against
- * the larger side (`light_storage.cpp:2603-2623`). A light whose fit gives no box keeps its last box
- * and casts unfaded.
+ * the larger side (`light_storage.cpp:2603-2623`), and its fade ends at the slice's far end
+ * (`light_storage.cpp:752-754`). A light whose fit gives no box keeps its last box and casts unfaded.
  */
 function fitOrthogonalLight(
   { light, declaration, lightRect }: SharingLight,
   camera: ViewingCamera,
   fades: CasterFades
 ): void {
-  sizeShadowMap(light.shadow, lightRect.width, lightRect.height);
-  const box = fitDirectionalShadowBox({
-    camera,
-    ...placementOf(light),
-    up: light.shadow.camera.up,
-    declaration,
-    shadowMapSize: directionalShadowSplitTextureSize(declaration.splitCount, lightRect),
-  });
+  light.shadow.mapSize.set(lightRect.width, lightRect.height);
+  const slice = viewSlice({ camera, declaration });
+  const box = fitDirectionalShadowBox(
+    {
+      camera,
+      ...placementOf(light),
+      up: light.shadow.camera.up,
+      declaration,
+      shadowMapSize: directionalShadowSplitTextureSize(declaration.splitCount, lightRect),
+    },
+    slice
+  );
   if (!box) return;
   applyShadowBox(light, box);
-  fades.set(light, orthogonalShadowFade({ camera, declaration }));
+  fades.set(light, directionalShadowFade(slice.far, declaration.fadeStart));
 }
 
 /**

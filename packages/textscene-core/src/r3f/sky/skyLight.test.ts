@@ -27,3 +27,19 @@ describe('readSkyLightDeclaration', () => {
     expect(readSkyLightDeclaration(lightWith({ skyLight: { drawsInSky: 'yes', energy: 1 } }))).toBeNull();
   });
 });
+
+describe('skyLightUserData', () => {
+  it('declares under one key, so a light that merges it carries one sky declaration', () => {
+    expect(Object.keys(skyLightUserData({ drawsInSky: true, energy: 1 }))).toHaveLength(1);
+  });
+
+  it('keeps a zero energy, which a Sky Only light never has (edge case)', () => {
+    const light = lightWith(skyLightUserData({ drawsInSky: true, energy: 0 }));
+    expect(readSkyLightDeclaration(light)?.energy).toBe(0);
+  });
+
+  it('declares a non-finite energy as written, for the sky to read (error case)', () => {
+    const light = lightWith(skyLightUserData({ drawsInSky: true, energy: Number.NaN }));
+    expect(readSkyLightDeclaration(light)?.energy).toBeNaN();
+  });
+});

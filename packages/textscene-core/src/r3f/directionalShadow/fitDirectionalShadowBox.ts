@@ -7,14 +7,13 @@
 
 import * as THREE from 'three';
 import { snapped } from '../../godot/math.js';
+import { allFinite } from '../../godot/number.js';
 import {
-  directionalShadowFade,
   directionalShadowSlice,
   directionalShadowSnapStep,
   directionalShadowTexelSize,
   pancakesCasters,
   texelPaddedRadius,
-  type DirectionalShadowFade,
   type DirectionalShadowSlice,
 } from '../../godot/directionalShadow.js';
 import type { DirectionalShadowDeclaration } from './declaration.js';
@@ -90,27 +89,41 @@ export function viewSlice(
   );
 }
 
-/**
- * The fade of a light that draws the whole slice as its one split, so the fade ends at the
- * slice's far end (`light_storage.cpp:752-754`).
- */
-export function orthogonalShadowFade(
-  input: Pick<DirectionalShadowFitInput, 'camera' | 'declaration'>
-): DirectionalShadowFade {
-  return directionalShadowFade(viewSlice(input).far, input.declaration.fadeStart);
-}
+/** A box over a depth range of the view, or null when the inputs give no finite box. */
+export type DirectionalShadowBoxFit = (depths: DirectionalShadowSlice) => DirectionalShadowBox | null;
 
 /**
- * The box over `depths`, by default the whole slice. A split passes its own depths and its own
- * `shadowMapSize`. Null when the inputs give no finite box, such as a camera with a
- * non-invertible projection. The caller then leaves the light's shadow as it is.
+ * Fits boxes for one light and one render. The light's axes and its caster reach hold for every
+ * split, so this computes them once, and each split passes only its own depths. A box is null when
+ * the inputs give no finite one, such as a camera with a non-invertible projection. The caller then
+ * leaves the light's shadow as it is.
  */
+export function directionalShadowBoxFitter(input: DirectionalShadowFitInput): DirectionalShadowBoxFit {
+  const axes = lightAxes(input.lightPosition, input.targetPosition, input.up);
+  const reach = pancakesCasters(input.declaration.pancakeSize) ? casterReach(input, axes) : null;
+  return (depths) => fitBox({ input, axes, reach }, depths);
+}
+
+/** The box over `depths`, for a light that draws one box. */
 export function fitDirectionalShadowBox(
   input: DirectionalShadowFitInput,
-  depths: DirectionalShadowSlice = viewSlice(input)
+  depths: DirectionalShadowSlice
+): DirectionalShadowBox | null {
+  return directionalShadowBoxFitter(input)(depths);
+}
+
+/** What every box of one light and one render shares. Null `reach` keeps three's near clip. */
+interface LightFrame {
+  input: DirectionalShadowFitInput;
+  axes: LightAxes;
+  reach: number | null;
+}
+
+function fitBox(
+  { input, axes, reach }: LightFrame,
+  depths: DirectionalShadowSlice
 ): DirectionalShadowBox | null {
   const { camera, declaration, shadowMapSize } = input;
-  const axes = lightAxes(input.lightPosition, input.targetPosition, input.up);
   const { centre, radius } = paddedSphere(cameraSliceCorners(camera, depths.near, depths.far), shadowMapSize);
 
   const centreX = axes.x.dot(centre);
@@ -125,10 +138,7 @@ export function fitDirectionalShadowBox(
   // the near side one radius plus the pancake towards the light.
   const zFar = centreZ - radius;
   const zNear = centreZ + radius + declaration.pancakeSize;
-
-  const zNearCovered = pancakesCasters(declaration.pancakeSize)
-    ? Math.max(zNear, casterReach(input, axes))
-    : zNear;
+  const zNearCovered = reach === null ? zNear : Math.max(zNear, reach);
 
   const eyeX = axes.x.dot(input.lightPosition);
   const eyeY = axes.y.dot(input.lightPosition);
@@ -146,12 +156,12 @@ export function fitDirectionalShadowBox(
     bias: declaration.depthBias * ((zNear - zFar) / (far - near)),
     normalBias: declaration.normalBias * directionalShadowTexelSize(radius, shadowMapSize),
   };
-  return Object.values(box).every(Number.isFinite) ? box : null;
+  return allFinite(Object.values(box)) ? box : null;
 }
 
 /** The slice corners' sphere (`renderer_scene_cull.cpp:2268-2282`), padded by one texel. */
 function paddedSphere(
-  corners: readonly THREE.Vector3[],
+  corners: THREE.Vector3[],
   shadowMapSize: number
 ): { centre: THREE.Vector3; radius: number } {
   const { center, radius } = meanCentredSphere(corners);
@@ -194,16 +204,13 @@ export function cameraSliceCorners(
 }
 
 /**
- * The sphere round the points' mean (`renderer_scene_cull.cpp:2268-2280`), not `Sphere.setFromPoints`,
- * which centres on the bounding box and so fits a different radius.
+ * The sphere round the points' mean (`renderer_scene_cull.cpp:2268-2280`). Without a centre,
+ * `Sphere.setFromPoints` centres on the bounding box and so fits a different radius.
  */
-function meanCentredSphere(points: readonly THREE.Vector3[]): THREE.Sphere {
-  const centre = new THREE.Vector3();
-  for (const point of points) centre.add(point);
-  centre.divideScalar(points.length);
-  let radius = 0;
-  for (const point of points) radius = Math.max(radius, centre.distanceTo(point));
-  return new THREE.Sphere(centre, radius);
+function meanCentredSphere(points: THREE.Vector3[]): THREE.Sphere {
+  const mean = new THREE.Vector3();
+  for (const point of points) mean.add(point);
+  return new THREE.Sphere().setFromPoints(points, mean.divideScalar(points.length));
 }
 
 /** The point on the view-space line through `a` and `b` whose depth, along -Z, is `depth`. */

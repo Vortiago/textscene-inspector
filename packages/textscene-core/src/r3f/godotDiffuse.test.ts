@@ -5,6 +5,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { FRESNEL_WEIGHTED_DIFFUSE, godotDiffuseChunk, installGodotDiffuse } from './godotDiffuse';
+import { warningsOf } from './testing/logWarnings';
 
 const CHUNK = 'lights_physical_pars_fragment';
 const threeChunk = THREE.ShaderChunk[CHUNK];
@@ -61,5 +62,15 @@ describe('installGodotDiffuse', () => {
     installGodotDiffuse();
 
     expect(THREE.ShaderChunk[CHUNK]).toBe('void main() {}');
+  });
+
+  it('changes nothing and warns nothing on a second call (edge case)', () => {
+    const warnings = warningsOf(() => {
+      installGodotDiffuse();
+      installGodotDiffuse();
+    });
+
+    expect(warnings).toEqual([]);
+    expect(THREE.ShaderChunk[CHUNK]).toBe(godotDiffuseChunk(threeChunk));
   });
 });

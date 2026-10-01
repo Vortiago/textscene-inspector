@@ -1,10 +1,7 @@
 /**
  * <DirectionalLight3D>: a parallel light in a transform group, aimed at a target at local -Z. It
- * declares its shadow and leaves the boxes and splits to the scene's `<DirectionalShadowFitter>`,
- * as Godot fits a directional shadow to the camera and not to the light. The fitter also sizes its
- * shadow map from its share of Godot's atlas. A mode with no split casts nothing, as Godot sets up
- * no shadow map for it. `sky_mode` decides whether it lights surfaces, the sky, or both: a Sky Only
- * light keeps zero intensity, and declares its energy for the sky.
+ * declares its shadow to the scene's `<DirectionalShadowFitter>` and its sun to the sky, by
+ * `sky_mode` (`r3f/directionalShadow/directionalShadow.md`).
  */
 
 import { useMemo, useRef } from 'react';
@@ -16,21 +13,12 @@ import { parseColorToHex } from '../../../../utils/colorParser';
 import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 import {
   DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT,
-  DIRECTIONAL_SHADOW_BLEND_SPLITS_DEFAULT,
-  DIRECTIONAL_SHADOW_FADE_START_DEFAULT,
-  DIRECTIONAL_SHADOW_MAX_DISTANCE_DEFAULT,
-  DIRECTIONAL_SHADOW_MODE_DEFAULT,
-  DIRECTIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
-  DIRECTIONAL_SHADOW_PANCAKE_SIZE_DEFAULT,
-  DIRECTIONAL_SHADOW_SPLIT_OFFSETS_DEFAULT,
   directionalLightDrawsInSky,
   directionalLightLightsSurfaces,
-  directionalShadowSplitCount,
-  sharesDirectionalShadowAtlas,
-} from '../../../../godot/directionalShadow';
+} from '../../../../godot/directionalLightSkyMode';
 import { directionalShadowUserData } from '../../../../r3f/directionalShadow/declaration';
 import { skyLightUserData } from '../../../../r3f/sky/skyLight';
-import { directionalShadowBias } from '../shared/shadowBias';
+import { directionalShadowDeclaration } from './shadowDeclaration';
 import { LightWithTarget } from '../shared/lightShared';
 import { DirectionalLightGizmo } from '../shared/lightHelpers';
 
@@ -43,34 +31,20 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
   );
   const color = parseColorToHex(properties.light_color);
   const skyMode = properties.sky_mode ?? DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT;
-  const lightsSurfaces = directionalLightLightsSurfaces(skyMode);
-  const intensity = lightsSurfaces ? properties.light_energy * LIGHT_INTENSITY_SCALE : 0;
-  const splitCount = directionalShadowSplitCount(
-    properties.directional_shadow_mode ?? DIRECTIONAL_SHADOW_MODE_DEFAULT
-  );
+  // A Sky Only light lights no surface. It keeps its energy for the sky, which reads it from `userData`.
+  const intensity = directionalLightLightsSurfaces(skyMode)
+    ? properties.light_energy * LIGHT_INTENSITY_SCALE
+    : 0;
+  const shadow = useMemo(() => directionalShadowDeclaration(properties), [properties]);
   const userData = useMemo(
     () => ({
       ...skyLightUserData({
         drawsInSky: directionalLightDrawsInSky(skyMode),
         energy: properties.light_energy,
       }),
-      ...directionalShadowUserData({
-        maxDistance: properties.directional_shadow_max_distance ?? DIRECTIONAL_SHADOW_MAX_DISTANCE_DEFAULT,
-        pancakeSize: properties.directional_shadow_pancake_size ?? DIRECTIONAL_SHADOW_PANCAKE_SIZE_DEFAULT,
-        fadeStart: properties.directional_shadow_fade_start ?? DIRECTIONAL_SHADOW_FADE_START_DEFAULT,
-        depthBias: directionalShadowBias(properties.shadow_bias, properties.shadow_blur),
-        normalBias: properties.shadow_normal_bias ?? DIRECTIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
-        splitCount,
-        splitOffsets: [
-          properties.directional_shadow_split_1 ?? DIRECTIONAL_SHADOW_SPLIT_OFFSETS_DEFAULT[0],
-          properties.directional_shadow_split_2 ?? DIRECTIONAL_SHADOW_SPLIT_OFFSETS_DEFAULT[1],
-          properties.directional_shadow_split_3 ?? DIRECTIONAL_SHADOW_SPLIT_OFFSETS_DEFAULT[2],
-        ],
-        blendSplits: properties.directional_shadow_blend_splits ?? DIRECTIONAL_SHADOW_BLEND_SPLITS_DEFAULT,
-        sharesAtlas: sharesDirectionalShadowAtlas(properties.shadow_enabled, skyMode),
-      }),
+      ...directionalShadowUserData(shadow),
     }),
-    [properties, skyMode, splitCount]
+    [skyMode, properties.light_energy, shadow]
   );
 
   return (
@@ -86,7 +60,8 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
             position={[0, 0, 0]}
             color={color}
             intensity={intensity}
-            castShadow={properties.shadow_enabled && lightsSurfaces && splitCount > 0}
+            // A mode with no split casts nothing, as Godot sets up no shadow map for it.
+            castShadow={shadow.sharesAtlas && shadow.splitCount > 0}
             userData={userData}
             target={target}
           />

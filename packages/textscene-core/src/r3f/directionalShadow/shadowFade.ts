@@ -6,19 +6,35 @@
  */
 
 import * as THREE from 'three';
-import { MAX_DIRECTIONAL_LIGHTS, type DirectionalShadowFade } from '../../godot/directionalShadow.js';
+import type { DirectionalShadowFade } from '../../godot/directionalShadow.js';
 import { warn } from '../../logger';
 
 /** The uniform every lit material reads its fades from. */
 export const DIRECTIONAL_SHADOW_FADE_UNIFORM = 'directionalShadowFade';
 
 /**
+ * The fades the buffer holds. A program binds one sampler per directional or sun shadow, so its
+ * texture units bound how many it declares. WebGL 2 guarantees 16 (`MAX_TEXTURE_IMAGE_UNITS`), and
+ * a desktop GPU commonly reports 32.
+ */
+const MAX_FADED_SHADOWS = 32;
+
+/**
  * `[from, to]` per shadow: every directional shadow, then every sun shadow, each in three's order.
  * Written only by `writeDirectionalShadowFades`, before each render. A typed array, not an `Array`:
  * `cloneUniforms` copies an `Array` per material and keeps any other value by reference (three
- * r186 `UniformsUtils.js:43-65`), so every material reads this one buffer.
+ * r186 `UniformsUtils.js:43-65`). So every material reads this one buffer.
  */
-const fades = new Float32Array(MAX_DIRECTIONAL_LIGHTS * 2);
+const fades = installedFades() ?? new Float32Array(MAX_FADED_SHADOWS * 2);
+
+/**
+ * The buffer an earlier evaluation of this module gave `ShaderLib`, as after a dev server reloads
+ * it. Every program compiled since keeps that buffer, so this evaluation writes it too.
+ */
+function installedFades(): Float32Array | null {
+  const installed: unknown = THREE.ShaderLib.standard.uniforms[DIRECTIONAL_SHADOW_FADE_UNIFORM]?.value;
+  return installed instanceof Float32Array ? installed : null;
+}
 
 const PARS_CHUNK = 'shadowmap_pars_fragment';
 const LIGHTS_CHUNK = 'lights_fragment_begin';
@@ -106,13 +122,10 @@ export interface ShadowFades {
   sun: readonly (DirectionalShadowFade | null)[];
 }
 
-/**
- * Sets the buffer from `shadowFades`. Every entry past the lists fades nothing. Godot draws at
- * most `MAX_DIRECTIONAL_LIGHTS`, so a shadow past that keeps three's unfaded shadow.
- */
+/** Sets the buffer from `shadowFades`. Every entry past the lists fades nothing. */
 export function writeDirectionalShadowFades(shadowFades: ShadowFades): void {
   fades.fill(0);
-  [...shadowFades.directional, ...shadowFades.sun].slice(0, MAX_DIRECTIONAL_LIGHTS).forEach((fade, index) => {
+  [...shadowFades.directional, ...shadowFades.sun].slice(0, fades.length / 2).forEach((fade, index) => {
     if (fade) fades.set([fade.from, fade.to], index * 2);
   });
 }

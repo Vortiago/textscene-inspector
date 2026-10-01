@@ -34,10 +34,13 @@ export function godotDiffuseChunk(chunk: string): string | null {
 
 /**
  * Replaces three's chunk for every program compiled after the call. A three release that
- * rewrites the lines keeps its own chunk, and `godotDiffuse.test.ts` fails on that release.
+ * rewrites the lines keeps its own chunk, and `godotDiffuse.test.ts` fails on that release. A
+ * second call changes nothing.
  */
 export function installGodotDiffuse(): void {
-  const patched = godotDiffuseChunk(THREE.ShaderChunk[CHUNK]);
+  const chunk = THREE.ShaderChunk[CHUNK];
+  if (FRESNEL_WEIGHTED_DIFFUSE.every(([, godot]) => chunk.includes(godot))) return;
+  const patched = godotDiffuseChunk(chunk);
   if (patched === null) {
     warn(`[Shading] three's ${CHUNK} has no Fresnel-weighted diffuse line to replace`);
     return;

@@ -1,15 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
-  DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT,
-  DirectionalLightSkyMode,
   DirectionalShadowMode,
   MAX_DIRECTIONAL_LIGHTS,
   blendsSplits,
   directionalShadowBlendStart,
   DIRECTIONAL_SHADOW_FADE_START_DEFAULT,
   directionalShadowFade,
-  directionalLightDrawsInSky,
-  directionalLightLightsSurfaces,
   directionalLightsWithShadow,
   directionalShadowLightRect,
   directionalShadowSlice,
@@ -17,7 +13,7 @@ import {
   directionalShadowSplitAtlasRect,
   directionalShadowSplitCount,
   directionalShadowSplitDistances,
-  directionalShadowSplitOffsets,
+  directionalShadowSplitEnds,
   directionalShadowSplitRange,
   directionalShadowSplitTextureSize,
   directionalShadowTexelSize,
@@ -25,6 +21,7 @@ import {
   sharesDirectionalShadowAtlas,
   texelPaddedRadius,
 } from './directionalShadow.js';
+import { DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT, DirectionalLightSkyMode } from './directionalLightSkyMode.js';
 
 describe('directionalShadowSlice', () => {
   it('pulls the far end in to the shadow max distance for a perspective camera', () => {
@@ -172,21 +169,21 @@ describe('directionalShadowSplitRange', () => {
   });
 });
 
-describe('directionalShadowSplitOffsets', () => {
+describe('directionalShadowSplitEnds', () => {
   it('gives each of four splits its own far end', () => {
-    expect(directionalShadowSplitOffsets([0, 10, 20, 50, 100], 4)).toEqual([10, 20, 50, 100]);
+    expect(directionalShadowSplitEnds([0, 10, 20, 50, 100], 4)).toEqual([10, 20, 50, 100]);
   });
 
   it('repeats the last far end for two splits (edge case)', () => {
-    expect(directionalShadowSplitOffsets([0, 10, 100], 2)).toEqual([10, 100, 100, 100]);
+    expect(directionalShadowSplitEnds([0, 10, 100], 2)).toEqual([10, 100, 100, 100]);
   });
 
   it('repeats the one far end for an orthogonal light (edge case)', () => {
-    expect(directionalShadowSplitOffsets([0, 100], 1)).toEqual([100, 100, 100, 100]);
+    expect(directionalShadowSplitEnds([0, 100], 1)).toEqual([100, 100, 100, 100]);
   });
 
-  it('answers undefined offsets for distances shorter than the split count (error case)', () => {
-    expect(directionalShadowSplitOffsets([0], 2)).toEqual([undefined, undefined, undefined, undefined]);
+  it('answers undefined ends for distances shorter than the split count (error case)', () => {
+    expect(directionalShadowSplitEnds([0], 2)).toEqual([undefined, undefined, undefined, undefined]);
   });
 });
 
@@ -215,36 +212,6 @@ describe('directionalShadowBlendStart', () => {
 
   it('passes nan through (error case)', () => {
     expect(directionalShadowBlendStart(Number.NaN)).toBeNaN();
-  });
-});
-
-describe('directionalLightLightsSurfaces', () => {
-  it('lights surfaces for a light of the default sky mode', () => {
-    expect(directionalLightLightsSurfaces(DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT)).toBe(true);
-    expect(directionalLightLightsSurfaces(DirectionalLightSkyMode.LIGHT_ONLY)).toBe(true);
-  });
-
-  it('lights no surface for a light that lights only the sky (edge case)', () => {
-    expect(directionalLightLightsSurfaces(DirectionalLightSkyMode.SKY_ONLY)).toBe(false);
-  });
-
-  it('lights surfaces for an unknown sky mode, as only Sky Only is skipped (error case)', () => {
-    expect(directionalLightLightsSurfaces(7)).toBe(true);
-  });
-});
-
-describe('directionalLightDrawsInSky', () => {
-  it('draws in the sky for a light of the default sky mode', () => {
-    expect(directionalLightDrawsInSky(DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT)).toBe(true);
-    expect(directionalLightDrawsInSky(DirectionalLightSkyMode.SKY_ONLY)).toBe(true);
-  });
-
-  it('draws nothing in the sky for a light that lights only surfaces (edge case)', () => {
-    expect(directionalLightDrawsInSky(DirectionalLightSkyMode.LIGHT_ONLY)).toBe(false);
-  });
-
-  it('draws in the sky for an unknown sky mode, as only Light Only is skipped (error case)', () => {
-    expect(directionalLightDrawsInSky(7)).toBe(true);
   });
 });
 

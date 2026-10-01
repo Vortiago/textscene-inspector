@@ -3,9 +3,8 @@
  * every lit material through one shared buffer. The first test reads the installed three, so a
  * release that rewrites a line fails here, not in a golden.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { MAX_DIRECTIONAL_LIGHTS } from '../../godot/directionalShadow';
 import {
   DIRECTIONAL_SHADOW_FADE_UNIFORM,
   installDirectionalShadowFade,
@@ -103,6 +102,27 @@ describe('installDirectionalShadowFade', () => {
     expect(occurrences(THREE.ShaderChunk[LIGHTS], 'directionalShadowFadeOut')).toBe(2);
     expect(occurrences(THREE.ShaderChunk[PARS], `uniform vec2 ${DIRECTIONAL_SHADOW_FADE_UNIFORM}`)).toBe(1);
   });
+
+  it('leaves both chunks and every material alone when three lacks a hooked line (error case)', () => {
+    THREE.ShaderChunk[LIGHTS] = threeLights.replace(
+      'getSunShadow( sunShadowMap[ i ]',
+      'getSunShadow( sunMap[ i ]'
+    );
+    const lights = THREE.ShaderChunk[LIGHTS];
+    installDirectionalShadowFade();
+    expect(THREE.ShaderChunk[PARS]).toBe(threePars);
+    expect(THREE.ShaderChunk[LIGHTS]).toBe(lights);
+    expect(THREE.ShaderLib.standard.uniforms[DIRECTIONAL_SHADOW_FADE_UNIFORM]).toBeUndefined();
+  });
+
+  it('writes the buffer an earlier evaluation of the module installed (edge case)', async () => {
+    installDirectionalShadowFade();
+    const installed = fadeBuffer();
+    vi.resetModules();
+    const reloaded = await import('./shadowFade');
+    reloaded.writeDirectionalShadowFades({ directional: [{ from: 5, to: 6 }], sun: [] });
+    expect(Array.from(installed.subarray(0, 2))).toEqual([5, 6]);
+  });
 });
 
 describe('writeDirectionalShadowFades', () => {
@@ -131,13 +151,21 @@ describe('writeDirectionalShadowFades', () => {
     expect(Array.from(fadeBuffer()).every((value) => value === 0)).toBe(true);
   });
 
-  it('ignores a shadow past Godot’s directional light limit (edge case)', () => {
+  it('fades a sun shadow that follows eight directional shadows (edge case)', () => {
+    // Godot's list can hold this sun while three counts eight directional shadows before it.
     installDirectionalShadowFade();
-    const tooMany = Array.from({ length: MAX_DIRECTIONAL_LIGHTS }, () => ({ from: 1, to: 2 }));
+    const eight = Array.from({ length: 8 }, () => ({ from: 1, to: 2 }));
+    writeDirectionalShadowFades({ directional: eight, sun: [{ from: 3, to: 4 }] });
+    expect(Array.from(fadeBuffer().subarray(16, 18))).toEqual([3, 4]);
+  });
+
+  it('ignores a shadow past the buffer (edge case)', () => {
+    installDirectionalShadowFade();
+    const capacity = fadeBuffer().length / 2;
+    const filled = Array.from({ length: capacity }, () => ({ from: 1, to: 2 }));
     expect(() =>
-      writeDirectionalShadowFades({ directional: tooMany, sun: [{ from: 3, to: 4 }] })
+      writeDirectionalShadowFades({ directional: filled, sun: [{ from: 3, to: 4 }] })
     ).not.toThrow();
-    expect(fadeBuffer()).toHaveLength(MAX_DIRECTIONAL_LIGHTS * 2);
     expect(Array.from(fadeBuffer()).includes(3)).toBe(false);
   });
 });

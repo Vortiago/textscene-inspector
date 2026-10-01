@@ -10,19 +10,9 @@ import { useViewportMode } from '../contexts/ViewportModeContext';
 import { useLiveSceneNodes } from '../useLiveSceneTree';
 import { EnvironmentLayer } from '../environment/EnvironmentLayer';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
-import { directionalShadowBias } from '../../nodes/3d/lights/shared/shadowBias';
-import {
-  DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT,
-  DIRECTIONAL_SHADOW_BLEND_SPLITS_DEFAULT,
-  DIRECTIONAL_SHADOW_FADE_START_DEFAULT,
-  DIRECTIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
-  DIRECTIONAL_SHADOW_PANCAKE_SIZE_DEFAULT,
-  DIRECTIONAL_SHADOW_SPLIT_OFFSETS_DEFAULT,
-  DirectionalShadowMode,
-  directionalShadowSplitCount,
-  sharesDirectionalShadowAtlas,
-} from '../../godot/directionalShadow';
+import { DirectionalShadowMode } from '../../godot/directionalShadow';
 import { directionalShadowUserData } from '../directionalShadow/declaration';
+import { directionalShadowDeclaration } from '../../nodes/3d/lights/directionallight3d/shadowDeclaration';
 import {
   PREVIEW_SUN_COLOR,
   PREVIEW_SUN_ENERGY,
@@ -41,22 +31,16 @@ import {
 const PREVIEW_SUN_DISTANCE = 30;
 
 /**
- * The preview sun's declaration: the editor sets its max distance
- * (`node_3d_editor_plugin.cpp:9476`), its shadow on (`:10382`) and four
- * splits (`:10383`). Everything else, the sky mode included, keeps the class
- * defaults an authored DirectionalLight3D gets.
+ * The preview sun's declaration: an authored DirectionalLight3D's, with the editor's max distance
+ * (`node_3d_editor_plugin.cpp:9476`), its shadow on (`:10382`) and four splits (`:10383`).
  */
-const PREVIEW_SUN_SHADOW = directionalShadowUserData({
-  maxDistance: PREVIEW_SUN_SHADOW_MAX_DISTANCE,
-  pancakeSize: DIRECTIONAL_SHADOW_PANCAKE_SIZE_DEFAULT,
-  fadeStart: DIRECTIONAL_SHADOW_FADE_START_DEFAULT,
-  depthBias: directionalShadowBias(undefined, undefined),
-  normalBias: DIRECTIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
-  splitCount: directionalShadowSplitCount(DirectionalShadowMode.PARALLEL_4_SPLITS),
-  splitOffsets: DIRECTIONAL_SHADOW_SPLIT_OFFSETS_DEFAULT,
-  blendSplits: DIRECTIONAL_SHADOW_BLEND_SPLITS_DEFAULT,
-  sharesAtlas: sharesDirectionalShadowAtlas(true, DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT),
-});
+const PREVIEW_SUN_SHADOW = directionalShadowUserData(
+  directionalShadowDeclaration({
+    shadow_enabled: true,
+    directional_shadow_mode: DirectionalShadowMode.PARALLEL_4_SPLITS,
+    directional_shadow_max_distance: PREVIEW_SUN_SHADOW_MAX_DISTANCE,
+  })
+);
 
 export function PreviewLighting() {
   const { showPreviewSun, showPreviewEnvironment } = useViewportMode();
@@ -81,9 +65,8 @@ export function PreviewLighting() {
 
 /**
  * Godot's preview sun: a white, energy-1.0 DirectionalLight3D with shadows on.
- * Built from the same constants an authored `<DirectionalLight3D>` uses and
- * fitted by the same system, so a scene does not visibly change character the
- * moment it gains its own sun.
+ * It declares its shadow as an authored `<DirectionalLight3D>` does, and the same fitter fits it.
+ * So a scene does not visibly change character the moment it gains its own sun.
  */
 function PreviewSun() {
   const target = useMemo(() => new THREE.Object3D(), []);

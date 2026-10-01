@@ -1,11 +1,9 @@
 [gd_scene format=3 uid="uid://unitdirshadowsharedatlas"]
 
-; The shared directional shadow atlas, and nothing else. Two identical orthogonal suns cast, so
-; Godot gives each map half the atlas's width at its full height. The posts and the bars step
-; through the same widths. A post's shadow is thin across the map's halved width, so the thin
-; posts cast nothing and the rest blur. A bar's shadow is thin across the full height, so the bars
-; cast as under one sun. Every other golden has one sun, which takes the whole atlas, so a light
-; that ignores its share is invisible there.
+; Moves the atlas share. Two orthogonal suns each take half the atlas's width at its full height, so
+; the thin posts cast nothing across the halved width, while the bars cast as under one sun. In every
+; other golden at most one sun takes a share, the whole atlas, so a light that ignores its share is
+; invisible there. Both suns end at 60 units, which sets the texel size the widths step through.
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
 size = Vector2(3, 3)

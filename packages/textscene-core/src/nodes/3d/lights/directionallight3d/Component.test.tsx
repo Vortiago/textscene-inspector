@@ -123,7 +123,7 @@ describe('<DirectionalLight3D> shadow declaration', () => {
   });
 
   it('declares a share of the shadow atlas for a shadowed light of the default sky mode', async () => {
-    // `renderer_scene_cull.cpp:3268`, `light_3d.cpp:608`.
+    // `renderer_scene_cull.cpp:3271`, `light_3d.cpp:608`.
     const renderer = await ReactThreeTestRenderer.create(
       <DirectionalLight3D node={makeNode({ shadow_enabled: true })} />
     );
@@ -221,7 +221,7 @@ describe('<DirectionalLight3D> sky mode', () => {
   });
 
   it('lights no surface and casts no shadow when it lights only the sky (edge case)', async () => {
-    // Godot skips it for surfaces (`light_storage.cpp:632`) and shadows (`renderer_scene_cull.cpp:3268`).
+    // Godot skips it for surfaces (`light_storage.cpp:632`) and shadows (`renderer_scene_cull.cpp:3271`).
     const light = await renderLight({ light_energy: 2, shadow_enabled: true, sky_mode: 2 });
     expect(light.intensity).toBe(0);
     expect(light.castShadow).toBe(false);

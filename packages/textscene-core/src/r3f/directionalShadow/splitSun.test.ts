@@ -113,6 +113,15 @@ describe('followDeclaredLight', () => {
     expect(new THREE.Vector3().setFromMatrixPosition(sun.matrixWorld).toArray()).toEqual([0, 4, 0]);
   });
 
+  it('takes the declared light’s latest colour and direction on a second call (edge case)', () => {
+    const light = new THREE.DirectionalLight(0xff0000);
+    const sun = followed(light);
+    light.color.setHex(0x00ff00);
+    followDeclaredLight(sun, light, new THREE.Vector3(0, 0, 5), new THREE.Vector3(0, 0, 0));
+    expect(sun.color.getHex()).toBe(0x00ff00);
+    expect(new THREE.Vector3().setFromMatrixPosition(sun.matrixWorld).toArray()).toEqual([0, 0, 5]);
+  });
+
   it('stands at the origin for a light on its own target (error case)', () => {
     const sun = new SplitSunLight();
     const point = new THREE.Vector3(2, 2, 2);

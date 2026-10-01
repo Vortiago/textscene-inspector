@@ -16,17 +16,16 @@ two or four splits by `directional_shadow_mode`. It ports Godot 4.6.3's
   (`light_3d.cpp:606`), and so does the editor's preview sun (`node_3d_editor_plugin.cpp:10383`).
 - `<DirectionalShadowFitter>` is mounted inside `<TscnSceneContents>`, so the web previewer,
   the VS Code extension and the visual harness all mount it. It fits every declared, casting
-  light in the scene before each render of it, to that render's camera, and writes each
-  shadow's fade for that render, through
-  `scene.onBeforeRender` (`r3f/sceneRenderCamera.ts`). three calls that hook after it updates the
-  world matrices and before the shadow pass, so each render gets a fit to its own camera: the main
-  view, a SubViewport pass that renders the shared world, and a screenshot. No render order
-  matters.
-- A SubViewport with its own world hooks that world with `useDirectionalShadowFit`. Its unmount
-  hands every split light its own shading back.
+  light in the scene to the camera of each render of it. It also writes each shadow's fade for
+  that render, through `scene.onBeforeRender` (`r3f/sceneRenderCamera.ts`). three calls that
+  hook after it updates the world matrices and before the shadow pass. So each render gets a fit
+  to its own camera: the main view, a SubViewport pass that renders the shared world, and a
+  screenshot. No render order matters.
+- A 3D SubViewport that renders its own portal scene hooks that scene with
+  `useDirectionalShadowFit`. Its unmount hands every split light its own shading back.
 - The fitter sizes each declared light's shadow map to its share of the atlas, which need not be
-  square. three builds a map once, so the fitter frees the old one only when the share changes
-  size (`shadowMapAllocation.ts`). A light that takes no share keeps a whole atlas of its own.
+  square. three resizes a map when that size changes (r186 `WebGLShadowMap.js:281-285`). A light
+  that takes no share keeps a whole atlas of its own.
 - A light without a declaration keeps its shadow camera and its map as three built them.
 
 ## The port
@@ -46,13 +45,14 @@ two or four splits by `directional_shadow_mode`. It ports Godot 4.6.3's
    shadow size of 4096 texels square (`rendering_server.cpp:3704`). A light whose `sky_mode`
    is Sky Only takes no share, and only the first eight directional lights count
    (`renderer_scene_cull.cpp:3257-3282`). The atlas splits into a grid that doubles its
-   columns, then its rows, until it holds every light, so two lights take its halves by width
-   at full height (`light_storage.cpp:2577-2597`). Within a light's share, two splits take its
-   halves by height and four take its quadrants (`render_forward_clustered.cpp:2610-2630`). A
-   split counts its texels against the larger side of its rectangle (`light_storage.cpp:2603-2623`):
-   4096 for one light with one or two splits, 2048 for four. The normal bias counts in those
-   texels (`:2347`, `light_storage.cpp:724`), so the fitter turns it into world units for each
-   box.
+   columns, then its rows, until it holds every light (`light_storage.cpp:2577-2597`). So two
+   lights take its halves by width at full height.
+
+   Within a light's share, two splits take its halves by height and four take its quadrants
+   (`render_forward_clustered.cpp:2610-2630`). A split counts its texels against the larger
+   side of its rectangle (`light_storage.cpp:2603-2623`): 4096 for one light with one or two
+   splits, 2048 for four. The normal bias counts in those texels (`:2347`,
+   `light_storage.cpp:724`), so the fitter turns it into world units for each box.
 6. The far side of each box sits one radius past its centre. The near side sits one radius plus
    `directional_shadow_pancake_size` towards the light (`:2284`, `:2327`).
 7. The shadow fades out across the far end of the last split, from
@@ -62,10 +62,9 @@ two or four splits by `directional_shadow_mode`. It ports Godot 4.6.3's
 
 ## The fade
 
-three shadows every receiver inside a shadow camera's box, and each box is a square round a
-sphere, so the last one reaches past the slice's far end. `shadowFade.ts` patches three's
-chunks to mix each directional and sun shadow towards unshadowed by the receiver's view depth,
-as Godot does.
+three shadows every receiver inside a shadow camera's box. Each box is a square round a sphere,
+so the last one reaches past the slice's far end. `shadowFade.ts` patches three's chunks to mix
+each directional and sun shadow towards unshadowed by the receiver's view depth, as Godot does.
 
 - Godot's fade runs from `fade_start` of `shadow_split_offsets[3]` to that depth. Slot 3 holds
   the last split's far end in every mode (`light_storage.cpp:711`), which is the slice's far end
@@ -73,16 +72,18 @@ as Godot does.
   the split lookup. So an orthogonal light and a light with splits fade over the same depths,
   and a small `fade_start` reaches into the nearer splits too.
 - `installDirectionalShadowFade` runs once, when `TscnCanvas` is imported. It declares one
-  `vec2` uniform array with an entry per directional shadow and per sun shadow, outside both of
-  three's shadow blocks, and gives every built-in lit material that uniform.
+  `vec2` uniform array outside both of three's shadow blocks, with an entry per directional
+  shadow and per sun shadow. It gives every built-in lit material that uniform.
 - The uniform's value is one shared `Float32Array`. `UniformsUtils.cloneUniforms` keeps a typed
-  array by reference, so each material's clone reads the same buffer.
+  array by reference, so each material's clone reads the same buffer. The buffer has 32 entries,
+  as a program binds a sampler per shadow and a desktop GPU commonly reports 32 texture units.
 - three counts directional shadows and sun shadows apart (`WebGLLights.js:289-356`). The
   directional loop reads entry `i`, and the sun loop reads entry `NUM_DIR_LIGHT_SHADOWS + i`.
-- The fitter writes the buffer before each render, after it fits every light, in the order three
-  indexes its shadow uniforms: casting lights in visible pre-order, where the camera's layers
-  include them. A light with splits fails that layer test, so its `SplitSunLight` takes the
-  light's fade at the sun's index. An undeclared caster keeps its index with no fade.
+- The fitter writes the buffer before each render, after it fits every light. It writes in the
+  order three indexes its shadow uniforms: casting lights in visible pre-order, where the
+  camera's layers include them. A light with splits fails that layer test, so its
+  `SplitSunLight` takes the light's fade at the sun's index. An undeclared caster keeps its
+  index with no fade.
 - A `ShaderMaterial` with `lights: true` lacks the uniform. Its shadow reads zeros, which the
   shader treats as no fade.
 - The fade and the split lookup both edit `shadowmap_pars_fragment`. The fade inserts after
@@ -91,21 +92,22 @@ as Godot does.
 
 ## The split lookup
 
-A fragment takes the first split whose far end lies past its view depth, and the last split
-takes everything beyond the third far end (`:2408-2440`). The far ends are Godot's
+A fragment takes the first split whose far end lies past its view depth (`:2408-2440`). The last
+split takes everything beyond the third far end. The far ends are Godot's
 `shadow_split_offsets`, and a light with two splits repeats its last far end in the slots past
 it (`light_storage.cpp:704`, `:711`).
 
 Without blending, a split's filter radius scales by the first split's far end over its own
-(`:2422-2443`), so a far split's blur keeps about the same world size as the first split's.
+(`:2422-2443`). So a far split's blur keeps about the same world size as the first split's.
 With blending, every split keeps the full radius and mixes in the next split's shadow over the
-last tenth of its own depth (`:2445-2478`). An orthogonal light never blends
+last tenth of its own depth (`:2445-2478`). The lookup samples the next split only inside that
+band, where its weight is above zero. An orthogonal light never blends
 (`light_storage.cpp:705`).
 
 ## The filter
 
 Godot scales its PCF kernel by one atlas texel on each axis (`renderer_scene_render_rd.cpp:1388-1389`,
-`scene_forward_clustered.glsl:2443`). A light's map is its share of the atlas, so the kernel spans
+`scene_forward_clustered.glsl:2443`). A light's map is its share of the atlas. So the kernel spans
 the same number of texels across and down a share twice as tall as it is wide. three r186 scales
 both axes by one texel of the map's width. `texelShadowFilter.ts` patches its PCF lookup to scale
 each axis by its own texel, which changes nothing for a square map. It installs once at import of
@@ -132,9 +134,9 @@ with splits shades through three parts:
   `TscnCanvas.tsx`, before any program compiles.
 
 `fitDirectionalShadowSplits.ts` holds the maths. It fits one box per split through
-`fitDirectionalShadowBox`, and returns the boxes, the light's fade and the four slots the
-shader reads. Each slot holds its split's far end, depth bias, normal bias
-and blend start. The lookup never reads slot 3's blend start.
+`directionalShadowBoxFitter`, which computes the light's axes and caster reach once. It returns
+the boxes, the light's fade and the four slots the shader reads. Each slot holds its split's far
+end, depth bias, normal bias and blend start. The lookup never reads slot 3's blend start.
 
 The other two designs cost more. One `DirectionalLight` per split lights the scene once per
 split, and still needs a shader patch to pick a split by depth. A hand-rolled atlas pass would
@@ -148,13 +150,19 @@ in the headless Chromium and SwiftShader of the visual harness:
 
 | Mode | Draw calls per frame | Fit per render |
 | --- | --- | --- |
-| 0 (one map) | 1,458 | 13 to 16 µs |
-| 1 (two splits) | 1,503 | 20 to 31 µs |
-| 2 (four splits) | 2,579 | 21 to 26 µs |
+| 0 (one map) | 1,458 | 15 to 27 µs |
+| 1 (two splits) | 1,503 | 20 to 51 µs |
+| 2 (four splits) | 2,579 | 26 to 39 µs |
 
 The shadow pass culls casters against each split's box, so a split draws only the casters in
 its own box, as Godot's does. The extra draw calls are the casters that fall in more than one
-split's box. The fit costs microseconds in every mode, far below the draw.
+split's box. The fit costs microseconds in every mode, far below the draw. Most of it is the one
+walk of the scene that finds the lights.
+
+The shadowed lights' maps hold the whole 4096 atlas between them. three gives each map an RGBA
+colour attachment beside its 24-bit depth texture, so the atlas takes about 128 MiB. Godot's
+atlas takes 32 MiB, since it stores 16-bit depth and nothing else (`rendering_server.cpp:3708`).
+A change in how many lights share the atlas resizes each light's map.
 
 ## Where it differs from Godot
 
@@ -180,3 +188,8 @@ split's box. The fit costs microseconds in every mode, far below the draw.
   so the box omits it.
 - **Last of two splits.** With blending on, Godot's last split of two blends towards a third
   slot it never set up. Here the last split never blends.
+- **Clip planes.** Godot's editor camera clips at 0.05 and 4000 (`editor_settings.cpp:931-932`),
+  and framing a node keeps both. The previewer's editor camera starts at react-three-fiber's 0.1
+  and 1000. Framing sets its clip planes to a two-hundredth and two hundred times the framing
+  distance (`frameSceneBounds.ts`, ADR-0029). The slice, the split ends and the fade follow those
+  planes. An authored Camera3D keeps its own planes, as in Godot.

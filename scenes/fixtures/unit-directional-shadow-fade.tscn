@@ -1,11 +1,9 @@
 [gd_scene load_steps=4 format=3 uid="uid://unitdirshadowfade"]
 
-; A DirectionalLight3D's distance fade, and nothing else: seven equal posts run away from the view,
-; and the orthogonal sun's short `directional_shadow_max_distance` ends its shadow part-way along the
-; row. Godot fades the shadow out from `directional_shadow_fade_start` of that distance to the
-; distance and draws none past it, so the near posts cast and the far ones do not. Every other shadow
-; golden keeps its casters well inside the default 100-unit range, where the fade never reaches, so
-; a shadow drawn past the range, or cut off without the fade, is invisible there.
+; Moves the distance fade. A short `directional_shadow_max_distance` ends the sun's shadow part-way
+; along seven posts: the near posts cast, the fade thins the next and the far ones cast nothing. The
+; sun is orthogonal, so no split selection shapes the row. Every other shadow golden keeps its
+; casters well inside its shadow range, where the fade never reaches.
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
 size = Vector2(4, 16)

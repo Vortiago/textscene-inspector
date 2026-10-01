@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { DirectionalShadowFitter } from './DirectionalShadowFitter';
+import { DirectionalShadowFitter, useDirectionalShadowFit } from './DirectionalShadowFitter';
 import { directionalShadowUserData } from './declaration';
 import { splitSunOf } from './splitSun';
 import { TscnSceneContents } from '../TscnCanvas';
@@ -112,23 +112,29 @@ directional_shadow_max_distance = 80.0
   });
 });
 
+/** A casting light that declares its shadow, in `splitCount` splits. */
+function declaredLight(splitCount: number): THREE.DirectionalLight {
+  const light = new THREE.DirectionalLight();
+  light.castShadow = true;
+  light.userData = directionalShadowUserData({
+    maxDistance: 50,
+    pancakeSize: 20,
+    fadeStart: 0.8,
+    depthBias: 0,
+    normalBias: 2,
+    splitCount,
+    splitOffsets: [0.1, 0.2, 0.5],
+    blendSplits: false,
+    sharesAtlas: true,
+  });
+  return light;
+}
+
 describe('<DirectionalShadowFitter> on its own', () => {
   async function mountWithLight(
     splitCount = 1
   ): Promise<{ renderer: Renderer; light: THREE.DirectionalLight }> {
-    const light = new THREE.DirectionalLight();
-    light.castShadow = true;
-    light.userData = directionalShadowUserData({
-      maxDistance: 50,
-      pancakeSize: 20,
-      fadeStart: 0.8,
-      depthBias: 0,
-      normalBias: 2,
-      splitCount,
-      splitOffsets: [0.1, 0.2, 0.5],
-      blendSplits: false,
-      sharesAtlas: true,
-    });
+    const light = declaredLight(splitCount);
     const renderer = await ReactThreeTestRenderer.create(
       <>
         <primitive object={light} />
@@ -172,8 +178,52 @@ describe('<DirectionalShadowFitter> on its own', () => {
     expect(light.layers.isEnabled(0)).toBe(true);
   });
 
+  it('hands a split light its own shading back when the fitter unmounts and the light stays (edge case)', async () => {
+    const { renderer, light } = await mountWithLight(4);
+    renderThrough(renderer, cameraAt(0));
+    await renderer.update(<primitive object={light} />);
+    expect(light.parent).not.toBeNull();
+    expect(splitSunOf(light)).toBeNull();
+    expect(light.layers.isEnabled(0)).toBe(true);
+  });
+
+  it('leaves the shadow unfitted for a render through a camera without a depth range (error case)', async () => {
+    const { renderer, light } = await mountWithLight();
+    renderThrough(renderer, new THREE.Camera());
+    expect(light.shadow.camera.left).toBe(UNFITTED_LEFT);
+  });
+
   it('renders nothing into the scene', async () => {
     const renderer = await ReactThreeTestRenderer.create(<DirectionalShadowFitter />);
     expect(renderer.scene.children).toHaveLength(0);
+  });
+});
+
+describe('useDirectionalShadowFit', () => {
+  function FitScene({ scene }: { scene: THREE.Scene | null }) {
+    useDirectionalShadowFit(scene);
+    return null;
+  }
+
+  it('fits the scene it is given, not the canvas scene', async () => {
+    const own = new THREE.Scene();
+    const light = declaredLight(1);
+    own.add(light);
+    await ReactThreeTestRenderer.create(<FitScene scene={own} />);
+    own.updateMatrixWorld();
+    (own.onBeforeRender as (...args: unknown[]) => void).call(own, null, own, cameraAt(0), null);
+    expect(light.shadow.camera.left).not.toBe(UNFITTED_LEFT);
+  });
+
+  it('fits nothing for a null scene (edge case)', async () => {
+    const light = declaredLight(1);
+    const renderer = await ReactThreeTestRenderer.create(
+      <>
+        <primitive object={light} />
+        <FitScene scene={null} />
+      </>
+    );
+    renderThrough(renderer, cameraAt(0));
+    expect(light.shadow.camera.left).toBe(UNFITTED_LEFT);
   });
 });

@@ -2,7 +2,7 @@
  * The atlas is checked through the matrices three samples with: a split is right when its matrix
  * maps its own slice into its own rectangle of the atlas, in texture coordinates.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import { DirectionalSplitShadow, SPLIT_CAMERA_UP, SPLIT_SLOTS } from './splitShadow';
 import { directionalShadowUserData } from './declaration';
@@ -123,12 +123,16 @@ describe('DirectionalSplitShadow.setSplits', () => {
     expect(shadow.getViewport(1).toArray()).toEqual([0, 1, 1, 1]);
   });
 
-  it('frees its texture when the share changes size', () => {
+  it('keeps its texture for three to resize when the share changes size', () => {
+    // three resizes a map whose size no longer matches `mapSize` × the frame extents (r186
+    // `WebGLShadowMap.js:281-285`).
     const shadow = new DirectionalSplitShadow();
     shadow.setSplits(4, WHOLE_ATLAS);
-    shadow.map = new THREE.WebGLRenderTarget(ATLAS_SIZE, ATLAS_SIZE);
+    const texture = new THREE.WebGLRenderTarget(ATLAS_SIZE, ATLAS_SIZE);
+    shadow.map = texture;
     shadow.setSplits(4, SECOND_OF_TWO);
-    expect(shadow.map).toBeNull();
+    expect(shadow.map).toBe(texture);
+    expect(shadow.mapSize.clone().multiply(shadow.getFrameExtents()).toArray()).toEqual([2048, 4096]);
   });
 
   it('keeps its texture while the share keeps its size (edge case)', () => {
@@ -202,6 +206,16 @@ describe('DirectionalSplitShadow.updateMatrices', () => {
     const shadow = fittedShadow(viewingCamera(), 2);
     expect(shadow.getFrustum(1).intersectsSphere(new THREE.Sphere(new THREE.Vector3(), 1))).toBe(true);
     expect(shadow.getFrustum(2).intersectsSphere(nothing)).toBe(false);
+  });
+
+  it('culls a caster from an undrawn slot without reading its bounds (edge case)', () => {
+    // three's shadow pass asks each caster through `intersectsObject` (r186 `Mesh.js:228`).
+    const shadow = fittedShadow(viewingCamera(), 2);
+    const caster = new THREE.Mesh(new THREE.BoxGeometry());
+    const bounds = vi.spyOn(caster.geometry, 'computeBoundingSphere');
+    expect(shadow.getFrustum(3).intersectsObject(caster)).toBe(false);
+    expect(shadow.getFrustum(1).intersectsObject(caster)).toBe(true);
+    expect(bounds).toHaveBeenCalledOnce();
   });
 
   it('rebuilds a split’s projection when three reverses the depth buffer (edge case)', () => {

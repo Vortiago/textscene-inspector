@@ -1,11 +1,9 @@
 [gd_scene load_steps=4 format=3 uid="uid://unitdirshadowsplits"]
 
-; A close-up shadow under the DirectionalLight3D's default four splits, and nothing else: the sun
-; leaves `directional_shadow_mode` and its split offsets at Godot's defaults. The bars are 0.04 wide,
-; under one texel of a single map over the 100-unit shadow range and about three texels of the
-; first split's map, so the stripes stay crisp only while the near split draws. Every other shadow
-; golden casts from a body many texels wide, which one map resolves too, so a regression to one map
-; or a wrong split selection is invisible there.
+; Moves the split selection. The sun keeps Godot's default four splits, and the 0.04-wide bars span
+; under one texel of a single map but about three of the first split's, so they stay crisp only
+; while the near split draws. Every other shadow golden casts from bodies many texels wide or has an
+; orthogonal sun, so a regression to one map or a wrong split selection is invisible there.
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
 size = Vector2(3, 3)

@@ -6,8 +6,8 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import {
   cameraSliceCorners,
+  directionalShadowBoxFitter,
   fitDirectionalShadowBox,
-  orthogonalShadowFade,
   viewSlice,
   type DirectionalShadowBox,
   type DirectionalShadowFitInput,
@@ -56,8 +56,10 @@ function fitInput(overrides: Partial<DirectionalShadowFitInput> = {}): Direction
   };
 }
 
+/** The box over the whole view slice, as a light that draws one box fits it. */
 function fit(overrides: Partial<DirectionalShadowFitInput> = {}): DirectionalShadowBox {
-  const box = fitDirectionalShadowBox(fitInput(overrides));
+  const input = fitInput(overrides);
+  const box = fitDirectionalShadowBox(input, viewSlice(input));
   if (!box) throw new Error('expected a finite shadow box, got null');
   return box;
 }
@@ -184,7 +186,8 @@ describe('fitDirectionalShadowBox', () => {
   it('answers null for a camera whose projection cannot be inverted (error case)', () => {
     const camera = perspectiveCamera();
     camera.projectionMatrixInverse.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    expect(fitDirectionalShadowBox(fitInput({ camera }))).toBeNull();
+    const input = fitInput({ camera });
+    expect(fitDirectionalShadowBox(input, viewSlice(input))).toBeNull();
   });
 });
 
@@ -201,11 +204,6 @@ describe('fitDirectionalShadowBox over given depths', () => {
   it('fits a narrower box to a near part of the slice than to the whole', () => {
     const near = fitDirectionalShadowBox(fitInput(), { near: 0.05, far: 8 })!;
     expect((near.right - near.left) * 4).toBeLessThan(fit().right - fit().left);
-  });
-
-  it('answers the whole slice by default (edge case)', () => {
-    const input = fitInput();
-    expect(fitDirectionalShadowBox(input)).toEqual(fitDirectionalShadowBox(input, viewSlice(input)));
   });
 
   it('answers null for depths that are not finite (error case)', () => {
@@ -264,21 +262,25 @@ describe('cameraSliceCorners', () => {
   });
 });
 
-describe('orthogonalShadowFade', () => {
-  it('fades the shadow out from the fade start of the max distance to its end', () => {
-    expect(orthogonalShadowFade(fitInput())).toEqual({ from: expect.closeTo(64, 12), to: 80 });
+describe('directionalShadowBoxFitter', () => {
+  it('fits each depth range as a single box fit of that range does', () => {
+    const input = fitInput();
+    const fitter = directionalShadowBoxFitter(input);
+    for (const depths of [viewSlice(input), { near: 0.05, far: 8 }, { near: 20, far: 40 }]) {
+      expect(fitter(depths)).toEqual(fitDirectionalShadowBox(input, depths));
+    }
   });
 
-  it('ends the fade at the camera far plane when it is nearer than the max distance (edge case)', () => {
-    const fade = orthogonalShadowFade(
-      fitInput({ camera: perspectiveCamera(50), declaration: declaring(80) })
-    );
-    expect(fade.to).toBe(50);
-    expect(fade.from).toBeCloseTo(40, 12);
+  it('gives every depth range the whole view’s caster reach (edge case)', () => {
+    const fitter = directionalShadowBoxFitter(fitInput());
+    expect(fitter({ near: 0.05, far: 8 })!.near).toBeCloseTo(fitter({ near: 20, far: 40 })!.near, 9);
   });
 
-  it('keeps a finite fade for a nan fade start (error case)', () => {
-    const fade = orthogonalShadowFade(fitInput({ declaration: { ...declaring(80), fadeStart: Number.NaN } }));
-    expect(fade.from).toBeCloseTo(79.92, 12);
+  it('answers null for every range of a camera whose projection cannot be inverted (error case)', () => {
+    const camera = perspectiveCamera();
+    camera.projectionMatrixInverse.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    const fitter = directionalShadowBoxFitter(fitInput({ camera }));
+    expect(fitter({ near: 0.05, far: 8 })).toBeNull();
+    expect(fitter({ near: 20, far: 40 })).toBeNull();
   });
 });
