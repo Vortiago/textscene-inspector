@@ -1,5 +1,8 @@
 # Commits `git blame` skips. GitHub reads this file, and a local blame reads it after
 # `git config blame.ignoreRevsFile .git-blame-ignore-revs`.
+# Name the commit that main holds: a squash merge gives a branch commit a new hash.
 
-# style: format the repository with Prettier
-6803d29435809c60e474421735dfc0c8864638ec
+# build: add Prettier and format the repository (#543)
+# The squash also holds the Prettier setup and a few code fixes. A line it adds stays
+# blamed on it, and a line it edits is blamed on the line's earlier version.
+fd3be159884c7c5fce8b298c91d635900ce57381
