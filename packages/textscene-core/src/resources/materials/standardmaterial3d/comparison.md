@@ -69,7 +69,7 @@ Godot's `heightmap_*` is texture-space parallax, so the silhouette stays a smoot
 ## Texture filter
 <!-- compare: image=unit-material-texture-filter status=done fixture=unit-material-texture-filter.tscn -->
 
-`texture_filter` picks the sampler every texture slot reads through, and `texture_repeat` rides the same helper. The default row is also three's own default, so an unauthored material is unchanged.
+`texture_filter` picks the sampler every texture slot reads through, and `texture_repeat` rides the same helper. Godot's repeat default is on while three's is clamp, so the applier states Repeat at bind time: an unauthored material tiles a clamped arrival on a source-shared clone.
 
 - **Approximated** Nearest sampling with anisotropy takes the property but not the anisotropy, since three skips it under `NearestFilter`.
 - **Approximated** `texture_mipmap_bias` is not applied. WebGL2 has no per-texture LOD bias.

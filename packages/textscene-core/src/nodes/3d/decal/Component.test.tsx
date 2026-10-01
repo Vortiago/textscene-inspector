@@ -30,6 +30,19 @@ function makeTexture(width = 64, height = 64): THREE.Texture {
   return t;
 }
 
+/**
+ * A file-texture-shaped entry as the loader hands it over: sRGB-tagged, wrapping
+ * set by the caller. Godot samples a decal's albedo as sRGB, so a shared entry
+ * the binding can reuse must already carry that space.
+ */
+function makeSrgbTexture(wrap: THREE.Wrapping, width = 64, height = 64): THREE.Texture {
+  const t = makeTexture(width, height);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = wrap;
+  t.wrapT = wrap;
+  return t;
+}
+
 function makeNode(props: Record<string, string> = {}, name = NODE_NAME): TscnNode {
   return {
     name,
@@ -131,6 +144,72 @@ describe('<Decal>', () => {
       cached: [{ path: TEXTURE_PATH, texture: makeTexture() }],
     });
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
+  it('binds a Repeat-wrapped producer texture clamped (Godot samples the clamped atlas)', async () => {
+    // The projection borrows the shared cache entry, so a producer that tiles would
+    // tile the decal too. Godot blits the atlas with REPEAT_DISABLED
+    // (copy_effects.cpp:592) and discards fragments outside the box
+    // (scene_forward_clustered.glsl:1585-1587), so the consumer states clamp.
+    const renderer = await render({
+      node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: makeSrgbTexture(THREE.RepeatWrapping) }],
+      children: <Receiver />,
+    });
+    const map = (projections(renderer)[0]!.material as THREE.MeshStandardMaterial).map!;
+    expect(map.wrapS).toBe(THREE.ClampToEdgeWrapping);
+    expect(map.wrapT).toBe(THREE.ClampToEdgeWrapping);
+  });
+
+  it('shares an already clamped entry, not a clone', async () => {
+    // The clamp declaration must not force a clone when the entry already clamps:
+    // textures are shared by identity, and a needless copy would be disposed with
+    // the material while the cache still hands the entry to other consumers.
+    const entry = makeSrgbTexture(THREE.ClampToEdgeWrapping);
+    const renderer = await render({
+      node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: entry }],
+      children: <Receiver />,
+    });
+    const map = (projections(renderer)[0]!.material as THREE.MeshStandardMaterial).map!;
+    expect(map).toBe(entry);
+  });
+
+  it('samples a raw-tagged producer as sRGB, as Godot samples the albedo', async () => {
+    // `texture_albedo` is a `source_color`, so the projection samples it as sRGB
+    // whatever the producer tagged (a NoiseTexture2D baked `as_normal_map` arrives
+    // NoColorSpace). The retag lands on the clone; the shared entry keeps its own tag.
+    const producer = makeTexture();
+    const renderer = await render({
+      node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: producer }],
+      children: <Receiver />,
+    });
+    const map = (projections(renderer)[0]!.material as THREE.MeshStandardMaterial).map!;
+    expect(map.colorSpace).toBe(THREE.SRGBColorSpace);
+    expect(producer.colorSpace).toBe(THREE.NoColorSpace);
+  });
+
+  it('never disposes the shared cache entry when the projection unmounts', async () => {
+    // The projection borrows the entry, so its cleanup may free only a bind-time
+    // clone. An unconditional dispose of the map would free the cache entry every
+    // other consumer is still sampling.
+    const entry = makeSrgbTexture(THREE.ClampToEdgeWrapping);
+    let disposed = false;
+    entry.addEventListener('dispose', () => {
+      disposed = true;
+    });
+    const renderer = await render({
+      node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: entry }],
+      children: <Receiver />,
+    });
+    await renderer.unmount();
+    expect(disposed).toBe(false);
   });
 
   it('projects onto a receiver whose render layers the cull_mask admits', async () => {
