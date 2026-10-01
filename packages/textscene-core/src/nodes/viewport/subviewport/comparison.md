@@ -34,10 +34,10 @@ Strict and lenient parsing diverge only on out-of-range enums. The lenient parse
 ## Known limitations
 
 - **Approximated** A sub-viewport holding both 2D and 3D content shows its 3D half only, since the renderer draws one workspace at a time.
-- **Approximated** `render_target_update_mode` and `render_target_clear_mode` do not gate the pass. The target is re-rendered and cleared every frame, whatever the mode says.
+- **Approximated** `render_target_update_mode` and `render_target_clear_mode` do not gate the pass, so the target is re-rendered and cleared every frame.
 - **Approximated** `msaa_3d`, `use_debanding` and `canvas_item_default_texture_filter` do not affect the target, which renders at `size` with linear filtering.
 - **Approximated** Selection highlights and gizmos leak into a shared-world target, because that target is a render of the main scene.
 - **Approximated** A consumer surface inside its own viewport's frustum samples a target still being written, with a driver-defined result.
-- **Not drawn** A `TextureRect` showing a `ViewportTexture` draws nothing for it. Only `albedo_texture` and `Sprite2D.texture` accept one.
+- **Not drawn** A `TextureRect` draws nothing for a `ViewportTexture`, which only `albedo_texture` and `Sprite2D.texture` accept.
 - **Approximated** `use_hdr_2d` is not read, so an HDR canvas composites differently.
 - **Needs runtime** A viewport whose camera or world is assigned by script frames from the origin.

@@ -6,7 +6,7 @@ renders_as: a grouping node whose children fold into one solid
 
 # CSGCombiner3D
 
-The only CSG node with no shape of its own. It exists so a set of CSG children folds into one solid, which then combines into its parent by its own `operation`. The previewer evaluates the boolean at the CSG root (ADR-0027), so only the root draws a mesh and clicking the result selects the root, as in Godot's editor.
+The only CSG node with no shape of its own. It exists so a set of CSG children folds into one solid, which then combines into its parent by its own `operation`. The previewer evaluates the boolean at the CSG root (ADR-0027), so only the root draws a mesh. Clicking the result selects the root, as in Godot's editor.
 
 ## Grouping and visibility
 <!-- compare: image=unit-csg-combiner status=done fixture=unit-csg-combiner.tscn -->
@@ -46,4 +46,4 @@ Strict parsing format-checks the inherited set (6 inherited from CSGShape3D, 18 
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-The combiner's only validated property is `operation`. The lenient parser reads it with `parseOptionalInt` and warns neither when absent nor when unparseable, and its `visible` flag is handled by the shared Node3D validator listed above.
+The combiner's only validated property is `operation`. The lenient parser reads it with `parseOptionalInt` and warns neither when absent nor when unparseable. The shared Node3D validator listed above handles its `visible` flag.

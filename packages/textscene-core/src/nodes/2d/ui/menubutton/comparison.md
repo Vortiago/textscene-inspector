@@ -49,7 +49,6 @@ default this slice does not inherit from Button.
 
 ## Known limitations
 
-- **Approximated** The label's paragraph direction is not applied, so under
-  `layout_direction = 3` or `text_direction = 2` a right-to-left script, or a label
-  ending in punctuation, keeps left-to-right glyph order. Which side the label, the
-  icon and the chrome sit on does follow the layout direction.
+- **Approximated** Under `layout_direction = 3` or `text_direction = 2`, the label's glyphs
+  keep left-to-right order for a right-to-left script or trailing punctuation, while the
+  label, icon and chrome swap sides.

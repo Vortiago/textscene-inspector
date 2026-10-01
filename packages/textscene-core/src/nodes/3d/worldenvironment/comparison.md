@@ -33,4 +33,4 @@ Both properties are assigned straight from the raw string with no format or reso
 
 ## Known limitations
 
-- **Not drawn** Volumetric fog is not drawn, so Godot's steel-blue haze and the boxes washing out with distance are absent. Ours shows the flat navy backdrop.
+- **Not drawn** Volumetric fog is not drawn, so Godot's steel-blue haze and the boxes washing out with distance are absent, and ours shows the flat navy backdrop.

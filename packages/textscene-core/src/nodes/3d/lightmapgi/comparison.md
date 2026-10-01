@@ -51,4 +51,4 @@ The lenient parser reuses `parseNode3D`, which reads only `transform` and `visib
 
 ## Known limitations
 
-- **Not drawn** Godot lights surfaces from the baked lightmap. Here only the live lights apply.
+- **Not drawn** Godot lights surfaces from the baked lightmap, but here only the live lights apply.

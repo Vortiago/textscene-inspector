@@ -38,5 +38,5 @@ The enum and range keys (`cast_shadow`, `gi_mode`, `layers`, the `visibility_ran
 ## Known limitations
 
 - **Approximated** A transparent material renders darker than Godot's on a brightly lit
-  face. An opaque one agrees.
+  face, while an opaque one agrees.
 - **Approximated** three removes both cylinder caps or neither, so a `CylinderMesh` with exactly one of `cap_top` and `cap_bottom` disabled renders with both.

@@ -9,7 +9,7 @@ renders_as: invisible transform-only fallback
 
 # LightmapProbe
 
-A hand-placed probe position that LightmapGI samples to light dynamic objects. It carries no state beyond where it sits, and the previewer does not use it yet, so the node is an invisible transform-only fallback and its children still show.
+A hand-placed probe position that LightmapGI samples to light dynamic objects. It carries no state beyond where it sits. The previewer does not use it yet, so the node is an invisible transform-only fallback and its children still show.
 
 ## Linting
 
@@ -26,4 +26,4 @@ LightmapProbe declares no validator of its own. The lenient parser reuses `parse
 
 ## Known limitations
 
-- **Not drawn** Godot samples the probe to light dynamic objects. Here it has no effect.
+- **Not drawn** Godot samples the probe to light dynamic objects, but here it has no effect.

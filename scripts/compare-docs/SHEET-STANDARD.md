@@ -116,12 +116,12 @@ renders_as: a THREE.MeshStandardMaterial / MeshPhysicalMaterial
 
 # StandardMaterial3D
 
-Intro sentence(s) — the whole resource, above the per-feature sections.
+Intro sentence(s) for the whole resource, above the per-feature sections.
 
 ## Metallic / roughness
 <!-- compare: image=unit-material-metallic status=done fixture=unit-material-metallic.tscn -->
 
-What the fixture sets and what the two images show; fold any limitation in here.
+What the fixture sets and what the two images show. Fold any limitation in here.
 
 ## Refraction
 <!-- compare: image=unit-material-refraction status=limitation fixture=unit-material-refraction.tscn -->
@@ -245,6 +245,30 @@ sees. If it is **closed**, delete the row. A fixed divergence is not a
 divergence, and a row "closed with numbers" is a changelog entry.
 
 History lives in git, the ADRs and the issue.
+
+## Prose: Simplified Technical English
+
+Write a sheet in Simplified Technical English (STE), as `.claude/rules/ste-rules.md` sets
+out. `sheets.test.mjs` checks the part of it that a machine can decide, on the prose that
+the author writes. The checks skip the frontmatter, headings, HTML comments, fenced code,
+code spans, link targets and the generated `lint:begin` section. A table cell is prose.
+
+The checks refuse:
+
+- An em dash, or an en dash or hyphen with a space on each side. Write a comma, a colon
+  or two sentences.
+- A semicolon. Write two sentences.
+- A contraction, such as `don't` or `it's`. A possessive `'s` stays.
+- A Latin abbreviation: `e.g.`, `i.e.`, `etc.`, `vs.`, `via` or `cf.`.
+- A praise or filler word: `simply`, `easily`, `seamlessly`, `just`, `robust`,
+  `powerful`, `comprehensive`, `utilise`, `leverage` or `facilitate`.
+- A sentence of more than 25 words. A code span, a bracketed text, a quote, a hyphenated
+  word and a number with its unit each count as one word.
+- A Known limitations bullet of more than one sentence. Its bold tag is not a word.
+
+The checks live in `sheetProse.mjs`. After Claude Code edits a sheet, the hook
+`.claude/hooks/check-sheet-prose.mjs` runs them on that sheet and reports each violation
+as `file:line: rule: text`.
 
 The rule applies to prose, headings and tables alike. A heading like
 `## Auto-framing (two bugs found while building this)` breaks it as much as the

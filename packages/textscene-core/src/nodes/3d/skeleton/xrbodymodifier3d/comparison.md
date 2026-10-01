@@ -10,7 +10,7 @@ renders_as: a transform-only group
 
 # XRBodyModifier3D
 
-Poses the bones of its parent Skeleton3D from an XRBodyTracker registered with XRServer. With no headset there is no tracker to read, and it draws nothing of its own, so the previewer renders it as a transform-only group (ADR-0008).
+Poses the bones of its parent Skeleton3D from an XRBodyTracker registered with XRServer. With no headset there is no tracker to read. It draws nothing of its own, so the previewer renders it as a transform-only group (ADR-0008).
 
 ## Linting
 
@@ -34,4 +34,4 @@ XRBodyModifier3D registers `parseNode3D` directly, so `body_tracker`, `body_upda
 
 ## Known limitations
 
-- **Needs runtime** Godot poses the skeleton from a live XR body tracker. Here nothing moves.
+- **Needs runtime** Godot poses the skeleton from a live XR body tracker, but here nothing moves.

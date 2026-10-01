@@ -32,12 +32,12 @@ one on minus the size the preceding `offset_*` keys produced.
 
 A `zoom` write that moves the value is the one load-time path that writes the pair first
 (`:2448`). It measures a child list that is still empty, so the bounds become `-size`
-and `+size`, and the clamp spans `-size` to `(0, 0)`, where an offset inside it
+and `+size`. The clamp then spans `-size` to `(0, 0)`, and an offset inside it
 survives. `set_zoom` (`:2434`) clamps against `zoom_min`/`zoom_max` as they stand: the
 constructor's `1 / 1.2^8` and `1.2^4` (`:3175-3177`) until the file states otherwise.
 Each bound's setter re-runs `set_zoom(zoom)` (`:2487`, `:2502`), which also sets the
-disabled flags of the two zoom buttons (`:2445-2446`), unless the clamp changed nothing
-and it returned first (`:2435-2437`).
+disabled flags of the two zoom buttons (`:2445-2446`). It skips them when the clamp
+changed nothing and it returned first (`:2435-2437`).
 
 A disabled zoom button keeps the empty box of `FlatButton` (`default_theme.cpp:370`) and
 draws its icon at the 0.4 alpha of `icon_disabled_color` (`:169`). `loadOrder.ts`
@@ -46,10 +46,10 @@ replays all of it.
 It also draws the three pieces of chrome that the GraphEdit C++ constructor builds. They
 are present in every GraphEdit, whatever the scene file says:
 
-- The **toolbar** at `(10, 10)`: a `PanelContainer` at its minimum size around an
-  `HBoxContainer` of these widgets: the zoom label
-  (`round(zoom * 100)%`), three zoom buttons, the grid and snapping toggles, the
-  snapping-distance `SpinBox`, the minimap toggle and the arrange button. `show_menu`
+- The **toolbar** at `(10, 10)`, a `PanelContainer` at its minimum size around an
+  `HBoxContainer`. Its widgets are the zoom label (`round(zoom * 100)%`), three zoom
+  buttons, the grid and snapping toggles, the snapping-distance `SpinBox`, the minimap
+  toggle and the arrange button. `show_menu`
   hides the panel. `show_zoom_label`, `show_zoom_buttons`, `show_grid_buttons`,
   `show_minimap_button` and `show_arrange_button` hide widgets inside it, which re-flows
   the row and re-sizes the panel. `show_grid`, `snapping_enabled` and `minimap_enabled`
@@ -110,8 +110,8 @@ Strict parsing format-checks these `GraphEdit` properties, plus 53 inherited fro
 |  | `graphedit-scroll-offset-discarded` | info |
 <!-- lint:end -->
 
-The lenient parser reads the members that drawing needs, the same way the strict one
-does: `scroll_offset`, `zoom`, `zoom_min`, `zoom_max`, `show_grid`, `grid_pattern`,
+The lenient parser reads the members that drawing needs, as the strict one does. They
+are `scroll_offset`, `zoom`, `zoom_min`, `zoom_max`, `show_grid`, `grid_pattern`,
 `snapping_distance`, `snapping_enabled`, `connection_lines_curvature`,
 `connection_lines_thickness`, `connection_lines_antialiased`, `connections`, the three
 `minimap_*` members and the six `show_*` flags. The others (`type_names`,
@@ -120,20 +120,9 @@ lenient tree carries none of them, and a malformed one does not reach the tree.
 
 ## Known limitations
 
-- **Approximated** A GraphElement child's `position` scales with `zoom`, but its drawn
-  pixels do not: the previewer cannot apply a container-imposed scale to a child's
-  chrome. It is exact at `zoom = 1`, and at any other zoom a child renders at its
-  unscaled size. A connection endpoint uses the full
-  `(portLocal + position_offset) * zoom - scroll_offset` formula. So at a zoom other
-  than 1, the line lands on the port's real position while the node's drawn icon stays
-  unscaled beside it.
-- **Approximated** Draw order. Godot moves `connections_layer` to just above the grid
-  and below every GraphFrame/GraphNode (`graph_edit.cpp:717`), so a connection paints
-  over the grid but under every node and frame. This painter draws its connections at
-  its `renderOrder`, the same as the grid, so they sit behind every GraphElement child.
-  The difference shows only where a node overlaps a line. The toolbar, scrollbars and
-  minimap paint above the whole subtree, as the `INTERNAL_MODE_BACK` of `top_layer`
-  does.
-- **Approximated** Every toolbar button draws its icon and its pressed box, the SpinBox
-  draws its field and arrows, and the two zoom buttons draw their disabled state. No
-  button draws a hover or focus state.
+- **Approximated** A GraphElement child's `position` scales with `zoom` but its drawn
+  pixels do not, so away from `zoom = 1` a node's chrome draws at its unscaled size.
+- **Approximated** Connections draw at the grid's `renderOrder` instead of directly above
+  it (`graph_edit.cpp:717`), which shows only where a node overlaps a line.
+- **Approximated** The toolbar buttons and SpinBox draw their icons, pressed boxes, field,
+  arrows and disabled state, but no hover or focus state.

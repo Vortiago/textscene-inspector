@@ -9,7 +9,7 @@ renders_as: a textured THREE.Mesh quad
 
 # Sprite3D
 
-Draws a 2D texture on a quad in 3D space. The previewer renders it as an unlit textured plane sized by `pixel_size` times the texture, with `modulate` driving colour and opacity and `billboard` applied as a per-frame look-at.
+Draws a 2D texture on a quad in 3D space. The previewer renders it as an unlit textured plane sized by `pixel_size` times the texture. `modulate` drives colour and opacity, and `billboard` applies as a per-frame look-at.
 
 ## Linting
 

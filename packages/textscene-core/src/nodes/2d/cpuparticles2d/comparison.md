@@ -9,8 +9,8 @@ renders_as: one merged quad mesh holding a frozen particle pose
 # CPUParticles2D
 
 CPUParticles2D is Godot's CPU-simulated emitter. The previewer runs a port of the
-engine's own simulation once, PCG32 generator included, and draws the result as one
-merged quad mesh holding a frozen pose.
+engine's own simulation once, PCG32 generator included. It draws the result as one
+merged quad mesh that holds a frozen pose.
 
 ## Emission shapes
 <!-- compare: image=unit-cpuparticles2d-emission-shapes status=done fixture=unit-cpuparticles2d-emission-shapes.tscn -->
@@ -39,8 +39,8 @@ A scaled emitter's particles do not scale with it by default, in Godot as here.
 <!-- compare: image=unit-cpuparticles2d-unpreprocessed status=done fixture=unit-cpuparticles2d-unpreprocessed.tscn particles=0.95 -->
 
 An emitter that authors no `preprocess` names no instant, so the previewer picks
-one: **one `lifetime`**, where a continuous emitter reaches steady state, halved
-for a `one_shot` burst so it is caught mid-flight. This fixture's lifetime is
+**one `lifetime`**, where a continuous emitter reaches steady state. It halves that
+for a `one_shot` burst, so the burst is caught mid-flight. This fixture's lifetime is
 `0.95 s`, and both images show that instant. The Godot image comes from
 `pnpm ref:godot … --particles 0.95`.
 
@@ -145,17 +145,15 @@ and reads everything but `1` as `Index`.
 
 ## Known limitations
 
-- **Needs runtime** The emitter runs in Godot and freezes here. With `preprocess` set
-  the frozen moment is Godot's own. Without it the previewer picks one `lifetime`, or
-  half of one for a `one_shot` burst.
-- **Approximated** An emitter without `use_fixed_seed` takes a fixed constant seed. Its
-  particles sit in plausible places rather than the engine's, which Godot randomises on
-  every run.
-- **Approximated** `speed_scale` does not move a preprocessed pose, since Godot forces
-  it to 1 while preprocessing. It applies only to the substituted window.
+- **Needs runtime** The emitter runs in Godot and freezes here, at Godot's own
+  `preprocess` moment or else at the substituted window described above.
+- **Approximated** An emitter without `use_fixed_seed` takes a fixed constant seed, so its
+  particles sit in plausible places where Godot randomises them on every run.
+- **Approximated** `speed_scale` applies only to the substituted window and never to a
+  preprocessed pose, since Godot forces it to 1 while preprocessing.
 - **Approximated** `split_scale`, `scale_curve_x` and `scale_curve_y` are not read, so a
   quad stretched on one axis draws square.
 - **Approximated** `emission_shape` POINTS, DIRECTED_POINTS and RING sample Godot's
   process-wide RNG, so they emit from the origin here and raise a warning.
 - **Approximated** `fract_delta` is ignored, so a particle can sit up to one frame
-  behind Godot's. A scene that sets it explicitly is warned.
+  behind Godot's, and the linter warns on a scene that sets it explicitly.

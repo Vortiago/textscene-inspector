@@ -9,7 +9,7 @@ renders_as: a solid sphere mesh
 
 # CSGSphere3D
 
-A constructive-solid-geometry sphere. The previewer draws it as a solid sphere carrying its `StandardMaterial3D` and evaluates the boolean `operation` (ADR-0027), so a sphere inside a CSG root contributes to that root's result.
+A constructive-solid-geometry sphere. The previewer draws it as a solid sphere with its `StandardMaterial3D` and evaluates the boolean `operation` (ADR-0027). A sphere inside a CSG root adds to that root's result.
 
 ## Linting
 
@@ -35,4 +35,4 @@ Strict parsing format-checks these `CSGSphere3D` properties, plus 1 inherited fr
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-The lenient parser falls back silently when a key is absent, and warns then falls back when it is unparseable: `radius` to `0.5`, `radial_segments` to `12`, `rings` to `6`. `operation` is read with `parseOptionalInt` and warns neither way, and `material` is copied through unvalidated.
+The lenient parser falls back silently when a key is absent. When a key is unparseable, it warns and falls back: `radius` to `0.5`, `radial_segments` to `12`, `rings` to `6`. `operation` is read with `parseOptionalInt` and warns neither way, and `material` is copied through unvalidated.

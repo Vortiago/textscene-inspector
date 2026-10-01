@@ -31,4 +31,4 @@ The lenient parser reads `gizmo_extents` through `floatOr`, so a non-numeric val
 
 ## Known limitations
 
-- **Editor only** The axis cross appears only in Godot's editor. Here it is selection-gated.
+- **Editor only** The axis cross appears only in Godot's editor, but here it is selection-gated.

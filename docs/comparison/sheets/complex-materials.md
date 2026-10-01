@@ -37,7 +37,7 @@ show the same whole scene from real Godot and from this previewer.
 The two frames agree closely. Both render through the same authored Camera3D, so
 the layout, zoom and every Label3D caption line up. The plain PBR spheres (red,
 chrome-grey with its matching specular, copper/brown) read the same. The bright
-emissive materials bloom on both sides: Godot's editor environment runs a glow
+emissive materials bloom on both sides. Godot's editor environment runs a glow
 pass, and the previewer reproduces it with an HDR bloom driven by the
 environment's `glow_*` values. The emission-row sphere throws its cyan-green halo,
 the pale glass sphere glows lavender, and the emission cores tonemap toward a
@@ -46,5 +46,5 @@ exactly once, so the emissive sphere reads Godot's cyan-white.
 
 The remaining difference is minor. The previewer's single-pass additive bloom
 spreads a little brighter and wider than Godot's default SOFTLIGHT glow, so the
-halos are a little stronger, and the previewer does not apply `glow_blend_mode`.
+halos are a little stronger. The previewer does not apply `glow_blend_mode`.
 The spheres, their colours and the bloom pattern all match.

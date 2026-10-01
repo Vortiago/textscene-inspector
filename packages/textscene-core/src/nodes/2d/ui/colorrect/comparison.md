@@ -31,5 +31,5 @@ Strict parsing format-checks these `ColorRect` properties, plus 53 inherited fro
 
 `color` gets a format-only check, since `set_color` assigns any value unclamped and a
 component outside 0 to 1 is legal HDR. The render parser keeps the raw string verbatim,
-so even a malformed literal reaches the renderer, and only an absent or empty value
-falls back to `Color(1, 1, 1, 1)`.
+so even a malformed literal reaches the renderer. Only an absent or empty value falls
+back to `Color(1, 1, 1, 1)`.

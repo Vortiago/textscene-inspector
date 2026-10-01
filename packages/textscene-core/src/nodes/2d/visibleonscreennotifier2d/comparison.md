@@ -33,4 +33,4 @@ The lenient parser (`parseNode2D`) never reads `rect` or `show_rect`, since neit
 
 ## Known limitations
 
-- **Editor only** The translucent magenta `rect` fill appears only in Godot's editor. Here it is absent.
+- **Editor only** The translucent magenta `rect` fill appears only in Godot's editor, but here it is absent.

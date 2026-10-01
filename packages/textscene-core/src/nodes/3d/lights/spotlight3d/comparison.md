@@ -32,11 +32,11 @@ Strict parsing format-checks these `SpotLight3D` properties, plus 27 inherited f
 | `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |
 <!-- lint:end -->
 
-The lenient parser falls back silently when a key is absent, and warns then falls back when it is unparseable: `spot_range` to `5.0`, `spot_angle` to `45.0`, `spot_attenuation` to `1.0`, `spot_angle_attenuation` to `1.0`.
+The lenient parser falls back silently when a key is absent. When a key is unparseable, it warns and falls back: `spot_range` to `5.0`, `spot_angle` to `45.0`, `spot_attenuation` to `1.0`, `spot_angle_attenuation` to `1.0`.
 
 ## Known limitations
 
 - **Approximated** Distance falloff follows three's inverse-square curve rather than Godot's, so the lit pool near the cube reads slightly brighter.
 - **Approximated** `spot_angle_attenuation` maps onto three's single `penumbra` value, so the cone-edge softness curve differs.
 - **Approximated** The shadow's penumbra is a little lighter and grainier than Godot's filtered edge.
-- **Editor only** The wireframe cone gizmo appears only in Godot's editor. Here it is selection-gated.
+- **Editor only** The wireframe cone gizmo appears only in Godot's editor, but here it is selection-gated.

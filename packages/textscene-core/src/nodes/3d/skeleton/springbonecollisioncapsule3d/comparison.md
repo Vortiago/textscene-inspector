@@ -31,8 +31,8 @@ Strict parsing format-checks these `SpringBoneCollisionCapsule3D` properties, pl
 | `valid-springbonecollisioncapsule3d-shape` | `springbonecollisioncapsule3d-radius-exceeds-half-height` | error |
 <!-- lint:end -->
 
-SpringBoneCollisionCapsule3D registers `parseNode3D` directly, so `radius`, `height` and `inside` are never read and a malformed one is dropped silently. Strict warns when `radius` exceeds half of `height`, since Godot's setters rewrite the other property to restore that invariant and the loaded capsule differs from the one on disk.
+SpringBoneCollisionCapsule3D registers `parseNode3D` directly, so `radius`, `height` and `inside` are never read and a malformed one is dropped silently. Strict warns when `radius` exceeds half of `height`. Godot's setters then rewrite the other property to restore that invariant, so the loaded capsule differs from the one on disk.
 
 ## Known limitations
 
-- **Editor only** The capsule gizmo appears only in Godot's editor. Here it is absent.
+- **Editor only** The capsule gizmo appears only in Godot's editor, but here it is absent.

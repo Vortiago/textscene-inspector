@@ -35,4 +35,4 @@ Strict parsing format-checks these `RootMotionView` properties, plus 1 inherited
 
 ## Known limitations
 
-- **Editor only** The root-motion grid appears only in Godot's editor. Here it is absent.
+- **Editor only** The root-motion grid appears only in Godot's editor, but here it is absent.

@@ -1,12 +1,16 @@
-# Claude Code commit hooks
+# Claude Code hooks
 
-These `PreToolUse` hooks make every commit that Claude Code makes pass the checks of the git pre-commit hook.
+The `PreToolUse` hooks make every commit that Claude Code makes pass the checks of the git pre-commit
+hook. The `PostToolUse` hook checks the prose of a comparison sheet after Claude Code edits it.
 Each hook is an ES module that `node` runs. Claude Code sends the tool input to the hook as JSON on
 stdin.
 
 ## Exit codes
 
-- Exit code 2 blocks the tool call. Claude Code shows the hook's stderr to Claude.
+- Exit code 2 from a `PreToolUse` hook blocks the tool call. Claude Code shows the hook's stderr to
+  Claude.
+- Exit code 2 from a `PostToolUse` hook cannot block, because the tool has already run. Claude Code
+  shows the hook's stderr to Claude.
 - Exit code 0 lets the tool call continue.
 - Any other exit code, or a timeout, is a hook error. The tool call continues.
 
@@ -41,6 +45,22 @@ through the GitHub API, so no git hook runs for it.
 A Bash `git commit` does not need this hook. The git pre-commit hook runs the same checks, and
 `pnpm install` points git at `githooks/` in every checkout.
 
+### `check-sheet-prose.mjs`
+
+Checks the prose of a comparison sheet after an Edit, Write or MultiEdit. The checks are the
+Simplified Technical English (STE) checks that `sheets.test.mjs` runs over every sheet, so Claude
+fixes a violation at once instead of at the next test run.
+
+1. Reads the edited path from `tool_input.file_path`.
+2. If the path is not a sheet (`comparison.md`, or a `.md` file in `docs/comparison/sheets/`),
+   exits with code 0.
+3. Runs `findProseViolations` from `scripts/compare-docs/sheetProse.mjs` on the file.
+4. If the prose breaks a check, prints one `file:line: rule: text` line per violation to stderr
+   and exits with code 2.
+5. Exits with code 0 when the prose passes.
+
+`scripts/compare-docs/sheetProse.test.mjs` tests the checks and the path filter.
+
 ## Configuration
 
 `.claude/settings.json` configures the hooks:
@@ -68,13 +88,25 @@ A Bash `git commit` does not need this hook. The git pre-commit hook runs the sa
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check-sheet-prose.mjs"
+          }
+        ]
+      }
     ]
   }
 }
 ```
 
 A `matcher` is compared with the tool name only, so the Bash hook runs for every Bash command.
-`check-no-verify.mjs` finds the `git commit` in the command itself.
+`check-no-verify.mjs` finds the `git commit` in the command itself. In the same way,
+`check-sheet-prose.mjs` runs for every edit and finds the sheet in the path.
 
 ## Test the hooks
 
@@ -95,6 +127,14 @@ echo '{"tool_name":"mcp__github_file_ops__commit_files","tool_input":{"files":["
 
 `README.md` matches no lint-staged glob, so the exit code is 0. A path to a `.mjs` file with an
 ESLint error gives exit code 2.
+
+```bash
+echo '{"tool_name":"Edit","tool_input":{"file_path":"packages/textscene-core/src/nodes/node/comparison.md"}}' \
+  | CLAUDE_PROJECT_DIR=$PWD node .claude/hooks/check-sheet-prose.mjs; echo $?
+```
+
+The sheet passes, so the exit code is 0. A sheet with a semicolon in its prose gives exit code 2
+and the line of the semicolon.
 
 ## Comparison with the git hooks
 

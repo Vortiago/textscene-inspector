@@ -30,10 +30,10 @@ Strict parsing format-checks these `OmniLight3D` properties, plus 27 inherited f
 | `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |
 <!-- lint:end -->
 
-The lenient parser falls back silently when `omni_range` or `omni_attenuation` is absent, and warns then falls back to `5.0` and `1.0` when one is present but unparseable. `omni_shadow_mode` goes through `parseOptionalInt`, so an absent or invalid value quietly becomes `undefined`.
+The lenient parser falls back silently when `omni_range` or `omni_attenuation` is absent. When one is unparseable, it warns and falls back to `5.0` and `1.0`. `omni_shadow_mode` goes through `parseOptionalInt`, so an absent or invalid value quietly becomes `undefined`.
 
 ## Known limitations
 
 - **Approximated** Distance falloff follows three's inverse-square curve rather than Godot's, so the mid-range brightness differs.
 - **Approximated** The cube's shadow edge is stepped and jagged here, where Godot filters its omni shadow to a soft edge.
-- **Editor only** The wireframe sphere gizmo appears only in Godot's editor. Here it is selection-gated.
+- **Editor only** The wireframe sphere gizmo appears only in Godot's editor, but here it is selection-gated.

@@ -10,7 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # TwoBoneIK3D
 
-A rotation-based two-bone IK solver. It builds a plane from the root, middle and end joints plus a pole target, then poses the skeleton so the end bone reaches the target. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
+A rotation-based two-bone IK solver. It builds a plane from the root, middle and end joints and a pole target. It then poses the skeleton so the end bone reaches the target. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
 
 ## Linting
 
