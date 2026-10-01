@@ -5,6 +5,20 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 
 /**
+ * `registerAll` takes a validator table's parts as separate arguments and throws on a key two of
+ * them share. A spread merges the parts first, last-wins, so the earlier validator is gone before
+ * the check runs.
+ */
+const REGISTER_ALL_SPREAD = {
+  selector: [
+    "CallExpression[callee.property.name='registerAll'] SpreadElement",
+    "CallExpression[callee.name='registerAll'] SpreadElement",
+  ].join(', '),
+  message:
+    'Pass each part of a validator table to registerAll as its own argument. A spread keeps the last validator for a shared key and drops the earlier one without a report.',
+};
+
+/**
  * ESLint flat configuration (ESLint 9+)
  * Provides TypeScript linting for the entire monorepo.
  */
@@ -145,22 +159,37 @@ export default [
     },
   },
 
-  // `registerAll` takes a validator table's parts as separate arguments and throws on a key two of
-  // them share. A spread merges the parts first, last-wins, so the earlier validator is gone before
-  // the check runs. Test files are exempt: a registry test spreads a shared group on purpose.
+  // Test files are exempt: a registry test spreads a shared group on purpose.
   {
     files: ['packages/textscene-core/src/**/*.{ts,tsx}'],
     ignores: ['**/*.test.ts', '**/*.test.tsx'],
     rules: {
+      'no-restricted-syntax': ['error', REGISTER_ALL_SPREAD],
+    },
+  },
+
+  // The ESLint rule-arm guard. A rule reports only through a declared arm (`linter/ruleArms.ts`),
+  // and `armEmits` derives the rule's `emits` from its arms. An object with a `ruleName` and no
+  // `grounding` is a hand-written diagnostic that `emits` cannot see. `Linter.ts` takes a parse error's tier from the error, `ruleArms.ts` is
+  // the arm API, and `testing/` builds expectations, so none of them is a rule.
+  {
+    files: ['packages/textscene-core/src/{nodes,linter}/**/*.ts'],
+    ignores: [
+      '**/*.test.ts',
+      'packages/textscene-core/src/linter/testing/**',
+      'packages/textscene-core/src/linter/Linter.ts',
+      'packages/textscene-core/src/linter/ruleArms.ts',
+    ],
+    rules: {
+      // Repeats REGISTER_ALL_SPREAD: for these files, this block's options replace the block above's.
       'no-restricted-syntax': [
         'error',
+        REGISTER_ALL_SPREAD,
         {
-          selector: [
-            "CallExpression[callee.property.name='registerAll'] SpreadElement",
-            "CallExpression[callee.name='registerAll'] SpreadElement",
-          ].join(', '),
+          selector:
+            "ObjectExpression:has(> Property[key.name='ruleName']):not(:has(> Property[key.name='grounding']))",
           message:
-            'Pass each part of a validator table to registerAll as its own argument. A spread keeps the last validator for a shared key and drops the earlier one without a report.',
+            'Report a rule diagnostic through a declared arm: reportArm or armDiagnostic with a RuleArms entry, and emits: armEmits(arms).',
         },
       ],
     },

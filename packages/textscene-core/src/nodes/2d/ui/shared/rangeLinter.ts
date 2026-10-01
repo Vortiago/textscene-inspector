@@ -16,9 +16,8 @@ const RANGE_VALUE_TRIGGERS = ['min_value', 'max_value', 'page'] as const;
 
 /**
  * The trigger keys after `value`, which re-clamp it, or `null` without a hazard. It returns data,
- * not a `Diagnostic`: `ruleCoverage` (`linter/ruleCoverage.test.ts`) scrapes each `severity`/`ruleName`
- * pair from its slice's `nodes/**\/linter.ts` file, so the literal lives in `hslider/linter.ts`
- * and `vslider/linter.ts`.
+ * not a `Diagnostic`, so `hslider/linter.ts` and `vslider/linter.ts` each report it through their
+ * own arm, under their own rule name.
  */
 export function rangeOrderHazard(properties: Record<string, string>): readonly string[] | null {
   if (!('value' in properties)) return null;

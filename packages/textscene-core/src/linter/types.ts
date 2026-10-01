@@ -18,13 +18,6 @@ export type Severity = 'error' | 'warning' | 'info';
 export const SEVERITY_ORDER: Record<Severity, number> = { error: 0, warning: 1, info: 2 };
 
 /**
- * The tier names as data, for the scrapes that build a severity alternation
- * into a regex. Derived here, not in each scraper: a tier spelled out at a
- * match site compiles and silently drops out of that scraper's population.
- */
-export const SEVERITIES = Object.keys(SEVERITY_ORDER) as Severity[];
-
-/**
  * Whether a string is one of the three tiers: the test every reader needs
  * before it indexes a table by severity. The sort, the CLI formatter, the
  * VS Code squiggle map and the web gutter all share it.
@@ -172,7 +165,7 @@ export type OutsideEngineScope =
 /**
  * Where one reported diagnostic's authority comes from, one grounding per
  * emitted `ruleName`, since one registered rule can report under many. It is
- * required, as `RangeArm.cite` is, so the compiler rejects an ungrounded
+ * required, as `RangeThreshold.cite` is, so the compiler rejects an ungrounded
  * diagnostic everywhere.
  */
 export type EmitGrounding =
@@ -208,6 +201,13 @@ export type EmitGrounding =
       readonly scope: OutsideEngineScope;
       readonly because: string;
     };
+
+/** The severity and rule name a diagnostic reports, and the grounding that fixes the severity. */
+export interface RuleArm {
+  readonly severity: Severity;
+  readonly ruleName: string;
+  readonly grounding: EmitGrounding;
+}
 
 /**
  * The severity a grounding fixes, or `undefined` where only the cited line can
@@ -262,19 +262,17 @@ export interface RuleMeta {
    */
   applicableNodeTypeMatcher?: (nodeType: string) => boolean;
   /**
-   * Every `ruleName`/`severity` pair `check` can emit, with its `EmitGrounding`.
-   * One rule can report under many `ruleName`s, and each sheet's Linting chapter
-   * is generated from this list. `ruleCoverage.test.ts` holds it to the literals
-   * in the file, except for factories that interpolate a `ruleName`.
+   * Every `ruleName`/`severity` pair `check` can report, with its `EmitGrounding`.
+   * One rule can report under many `ruleName`s, and the sheet generator builds
+   * each sheet's Linting chapter from this list. `armEmits` derives it from the
+   * arms `check` reports through (`ruleArms.ts`), so it cannot disagree with them.
    */
-  // Put `severity:` before `ruleName:` in every diagnostic object literal: the
-  // coverage guard pairs the two by source order, and it strips `emits` first.
-  emits?: ReadonlyArray<{ ruleName: string; severity: Severity; grounding: EmitGrounding }>;
+  emits?: ReadonlyArray<RuleArm>;
   /**
    * `file:line` of the engine guard that confines this rule to one exact class,
    * as `container.cpp:210`'s `get_class() == "Container"` does. Without it,
    * `ruleCoverage` fails a rule that names a type with descendants. Declared on
-   * the rule, as `RangeArm.cite` is, so the guard keeps no parallel roster.
+   * the rule, as `RangeThreshold.cite` is, so the guard keeps no parallel roster.
    */
   exactClassByDesign?: string;
 }

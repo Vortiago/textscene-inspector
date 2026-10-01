@@ -11,6 +11,13 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { BONE_AXIS, axisFromBoneAxis } from '../skeletonmodifier3d/linterParser.js';
 import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
+
+const arms = {
+  parallelRotationAxes: groundedArm('lookatmodifier3d-parallel-rotation-axes', {
+    kind: 'configuration-warning',
+  }),
+} as const satisfies RuleArms<string>;
 
 // look_at_modifier_3d.h:52-53, the field initialisers: a key a scene omits
 // carries these, and the pair is not parallel (BONE_AXIS_PLUS_Z maps to AXIS_Z,
@@ -43,13 +50,11 @@ function checkLookAtModifier3D(context: RuleContext): Diagnostic[] {
   const forwardLabel = BONE_AXIS[forwardAxis] ?? String(forwardAxis);
   const primaryLabel = VECTOR3_AXIS[primaryAxis] ?? String(primaryAxis);
   return [
-    {
-      severity: 'warning',
-      message: `LookAtModifier3D '${node.name}' looks along ${forwardLabel} and rotates primarily about ${primaryLabel}, the same axis. Godot reports "Forward axis and primary rotation axis must not be parallel", and the projection it aims with is degenerate, so the primary rotation is always zero. Choose a primary_rotation_axis perpendicular to forward_axis.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'lookatmodifier3d-parallel-rotation-axes',
-    },
+    armDiagnostic(
+      arms.parallelRotationAxes,
+      node,
+      `LookAtModifier3D '${node.name}' looks along ${forwardLabel} and rotates primarily about ${primaryLabel}, the same axis. Godot reports "Forward axis and primary rotation axis must not be parallel", and the projection it aims with is degenerate, so the primary rotation is always zero. Choose a primary_rotation_axis perpendicular to forward_axis.`
+    ),
   ];
 }
 
@@ -60,13 +65,7 @@ const lookAtModifier3DAxisRule: LintRule = {
       "Warns when the forward axis is parallel to the primary rotation axis, the configuration Godot's own LookAtModifier3D warning refuses",
     category: 'validation',
     applicableNodeTypes: ['LookAtModifier3D'],
-    emits: [
-      {
-        ruleName: 'lookatmodifier3d-parallel-rotation-axes',
-        severity: 'warning',
-        grounding: { kind: 'configuration-warning' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkLookAtModifier3D,
 };

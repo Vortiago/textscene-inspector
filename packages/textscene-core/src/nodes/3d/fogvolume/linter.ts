@@ -8,6 +8,15 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
+
+const arms = {
+  sizeIgnoredForWorldShape: groundedArm('fogvolume-size-ignored-for-world-shape', {
+    kind: 'engine-inert',
+    at: 'fog.cpp:702',
+    unused: 'the world shape never enters the branch that reads the extents',
+  }),
+} as const satisfies RuleArms<string>;
 
 /** `RS::FogVolumeShape::FOG_VOLUME_SHAPE_WORLD`, fog_volume.cpp:47's 5th enum value. */
 const FOG_VOLUME_SHAPE_WORLD = 4;
@@ -27,13 +36,11 @@ function checkFogVolumeSize(context: RuleContext): Diagnostic[] {
   if (ruleInt(shapeRaw) !== FOG_VOLUME_SHAPE_WORLD) return [];
 
   return [
-    {
-      severity: 'info',
-      message: `FogVolume 'size = ${sizeRaw}' has no effect while 'shape = ${shapeRaw}' (World). A World-shaped FogVolume's extents are never consulted by the volumetric fog pass (fog.cpp:702), and the editor itself hides 'size' for this shape (fog_volume.cpp:52).`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'fogvolume-size-ignored-for-world-shape',
-    },
+    armDiagnostic(
+      arms.sizeIgnoredForWorldShape,
+      node,
+      `FogVolume 'size = ${sizeRaw}' has no effect while 'shape = ${shapeRaw}' (World). A World-shaped FogVolume's extents are never consulted by the volumetric fog pass (fog.cpp:702), and the editor itself hides 'size' for this shape (fog_volume.cpp:52).`
+    ),
   ];
 }
 
@@ -44,17 +51,7 @@ const fogVolumeSizeRule: LintRule = {
       "Flags a FogVolume authoring 'size' while 'shape' is World, where Godot's renderer never consults it",
     category: 'validation',
     applicableNodeTypes: ['FogVolume'],
-    emits: [
-      {
-        ruleName: 'fogvolume-size-ignored-for-world-shape',
-        severity: 'info',
-        grounding: {
-          kind: 'engine-inert',
-          at: 'fog.cpp:702',
-          unused: 'the world shape never enters the branch that reads the extents',
-        },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkFogVolumeSize,
 };

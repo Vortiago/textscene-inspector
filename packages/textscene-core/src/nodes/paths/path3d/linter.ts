@@ -17,6 +17,20 @@ import {
 } from '../../../resources/curves/shared/bezierData.js';
 import { packedArrayForms, subResourceRefAnywhere } from '../../../godot/index.js';
 import { dictPackedField, packedFloatCount } from '../../../godot/packedArrayFields.js';
+import { armDiagnostic, armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+
+const arms = {
+  missingCurve: groundedArm('path3d-requires-curve', {
+    kind: 'engine-inert',
+    at: 'path_3d.cpp:275',
+    unused: 'a PathFollow3D on this path returns before moving, so nothing follows it',
+  }),
+  unloadableCurve: {
+    severity: 'error',
+    ruleName: 'curve3d-loadable',
+    grounding: { kind: 'engine', at: 'curve.cpp:2279' },
+  },
+} as const satisfies RuleArms<string>;
 
 // "tilts" converts through the Variant (curve.cpp:2291), so it takes the three
 // spellings `packedArrayForms` lists.
@@ -33,13 +47,12 @@ function checkPath3D(context: RuleContext): Diagnostic[] {
   // draws nothing until one is set.
   const curve = heldResource(rawProps.curve);
   if (curve === undefined) {
-    diagnostics.push({
-      severity: 'info',
-      message: `Path3D '${node.name}' is missing required property 'curve'. A Path3D without a Curve3D resource is useless.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'path3d-requires-curve',
-    });
+    reportArm(
+      diagnostics,
+      arms.missingCurve,
+      node,
+      `Path3D '${node.name}' is missing required property 'curve'. A Path3D without a Curve3D resource is useless.`
+    );
   } else {
     diagnostics.push(...checkCurve3DData(context, curve));
   }
@@ -68,15 +81,7 @@ function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] 
       ? bezierRefusalProblem(read.refusal, CURVE3D_DATA)
       : shortTiltsProblem(data, read.loaded);
   if (problem === null) return [];
-  return [
-    {
-      severity: 'error',
-      message: `Path3D '${node.name}': ${problem}`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'curve3d-loadable',
-    },
-  ];
+  return [armDiagnostic(arms.unloadableCurve, node, `Path3D '${node.name}': ${problem}`)];
 }
 
 /**
@@ -101,22 +106,7 @@ const path3DValidationRule: LintRule = {
     description: 'Validates Path3D curve resource references',
     category: 'validation',
     applicableNodeTypes: ['Path3D'],
-    emits: [
-      {
-        ruleName: 'path3d-requires-curve',
-        severity: 'info',
-        grounding: {
-          kind: 'engine-inert',
-          at: 'path_3d.cpp:275',
-          unused: 'a PathFollow3D on this path returns before moving, so nothing follows it',
-        },
-      },
-      {
-        ruleName: 'curve3d-loadable',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'curve.cpp:2279' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkPath3D,
 };

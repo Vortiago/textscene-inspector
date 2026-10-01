@@ -5,6 +5,7 @@
 
 import { ruleInt } from '../validators/commonValidators.js';
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../ruleArms.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { boolSlotValue } from '../../godot/index.js';
@@ -20,6 +21,18 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
   const areaMaskCite = dim === '2D' ? 'godot_area_pair_2d.cpp:36' : 'godot_area_pair_3d.cpp:37';
   const type = `Area${dim}`;
   const prefix = `area${dimSuffix(dim)}`;
+  const arms = {
+    detectsNothing: groundedArm(`${prefix}-detects-nothing`, {
+      kind: 'engine-inert',
+      at: monitorFlagsCite,
+      unused: 'a non-monitoring area never registers the callback this line requires',
+    }),
+    monitoringZeroMask: groundedArm(`${prefix}-monitoring-zero-mask`, {
+      kind: 'engine-inert',
+      at: areaMaskCite,
+      unused: 'collides_with returns false for every layer, so monitoring detects nothing',
+    }),
+  } as const satisfies RuleArms<string>;
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
@@ -35,13 +48,12 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
     // `has_space_override`, from the gravity and damp modes alone (godot_area_pair_2d.cpp:41-50,
     // :68-71), and `has_monitor_callback()` gates only the body-to-query call.
     if (boolSlotValue(monitoring) === false && boolSlotValue(monitorable) === false) {
-      diagnostics.push({
-        severity: 'info',
-        message: `${type} '${node.name}' has both 'monitoring' and 'monitorable' set to false, so it detects no bodies or areas and no other area detects it. Its gravity, damping and audio-bus overrides still apply.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: `${prefix}-detects-nothing`,
-      });
+      reportArm(
+        diagnostics,
+        arms.detectsNothing,
+        node,
+        `${type} '${node.name}' has both 'monitoring' and 'monitorable' set to false, so it detects no bodies or areas and no other area detects it. Its gravity, damping and audio-bus overrides still apply.`
+      );
     }
 
     // No point-gravity distance rule: `gravity_point_unit_distance` defaults to 0.0,
@@ -63,13 +75,12 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
       // (collision_object_2d.h:124, collision_object_3d.h:133).
       const mask = ruleInt(collisionMask, null, 'uint32');
       if (mask === 0) {
-        diagnostics.push({
-          severity: 'info',
-          message: `${type} '${node.name}' has 'monitoring' enabled but 'collision_mask' is 0. The area won't detect any collision layers.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: `${prefix}-monitoring-zero-mask`,
-        });
+        reportArm(
+          diagnostics,
+          arms.monitoringZeroMask,
+          node,
+          `${type} '${node.name}' has 'monitoring' enabled but 'collision_mask' is 0. The area won't detect any collision layers.`
+        );
       }
     }
 
@@ -86,26 +97,7 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
       description: `Validates ${type} collision shapes, monitoring configuration, gravity settings, and physics overrides`,
       category: 'validation',
       applicableNodeTypes: [type],
-      emits: [
-        {
-          ruleName: `${prefix}-detects-nothing`,
-          severity: 'info',
-          grounding: {
-            kind: 'engine-inert',
-            at: monitorFlagsCite,
-            unused: 'a non-monitoring area never registers the callback this line requires',
-          },
-        },
-        {
-          ruleName: `${prefix}-monitoring-zero-mask`,
-          severity: 'info',
-          grounding: {
-            kind: 'engine-inert',
-            at: areaMaskCite,
-            unused: 'collides_with returns false for every layer, so monitoring detects nothing',
-          },
-        },
-      ],
+      emits: armEmits(arms),
     },
     check,
   };

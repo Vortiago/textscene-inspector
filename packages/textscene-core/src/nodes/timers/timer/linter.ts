@@ -8,6 +8,11 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { CMP_EPSILON } from '../../../godot/math.js';
 import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
+
+const arms = {
+  lowWaitTime: groundedArm('timer-low-wait-time', { kind: 'configuration-warning' }),
+} as const satisfies RuleArms<string>;
 
 const LOW_WAIT_TIME_THRESHOLD = 0.05 - CMP_EPSILON;
 
@@ -26,13 +31,11 @@ function checkTimerWaitTime(context: RuleContext): Diagnostic[] {
   if (waitTime <= 0 || waitTime >= LOW_WAIT_TIME_THRESHOLD) return [];
 
   return [
-    {
-      severity: 'warning',
-      message: `Timer '${node.name}' has 'wait_time = ${raw}', below 0.05 seconds. Very low timer wait times behave differently across frame rates; consider a script's process loop instead.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'timer-low-wait-time',
-    },
+    armDiagnostic(
+      arms.lowWaitTime,
+      node,
+      `Timer '${node.name}' has 'wait_time = ${raw}', below 0.05 seconds. Very low timer wait times behave differently across frame rates; consider a script's process loop instead.`
+    ),
   ];
 }
 
@@ -43,9 +46,7 @@ const timerWaitTimeRule: LintRule = {
       'Flags a Timer with a very low positive wait_time (< 0.05s), which behaves differently across frame rates',
     category: 'validation',
     applicableNodeTypes: ['Timer'],
-    emits: [
-      { ruleName: 'timer-low-wait-time', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-    ],
+    emits: armEmits(arms),
   },
   check: checkTimerWaitTime,
 };

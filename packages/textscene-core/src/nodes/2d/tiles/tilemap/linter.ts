@@ -12,7 +12,28 @@ import { decodeLegacyTileData } from '../shared/tileData.js';
 import { TILE_MAP_DATA_FORMAT_DEFAULT, formatWhenApplied, tileDataValidator } from './tileDataSlots.js';
 import { tileMapLayerVector } from '../shared/layerVector';
 import { visitIndexedKeys } from '../../../../godot/index.js';
-import { ySortDiagnostics } from './ySortRules.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { ySortArms, ySortDiagnostics } from './ySortRules.js';
+
+const arms = {
+  deprecated: groundedArm('tilemap-deprecated', { kind: 'configuration-warning' }),
+  ...ySortArms,
+  requiresTileset: groundedArm('tilemap-requires-tileset', {
+    kind: 'engine-inert',
+    at: 'tile_map_layer.cpp:224',
+    unused: 'a null tile set forces the cleanup path, so nothing is drawn',
+  }),
+  unsupportedFormat: {
+    severity: 'error',
+    ruleName: 'tilemap-unsupported-format',
+    grounding: { kind: 'engine', at: 'tile_map.cpp:71' },
+  },
+  invalidTileData: {
+    severity: 'error',
+    ruleName: 'tilemap-invalid-tile-data',
+    grounding: { kind: 'engine', at: 'tile_map.cpp:79' },
+  },
+} as const satisfies RuleArms<string>;
 
 /** One `layer_<i>/tile_data` write, the key as the file writes it. */
 interface TileDataWrite {
@@ -49,13 +70,12 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
   // is not y-sorted, at z_index 0, and takes part in the comparison below.
   const layers = tileMapLayerVector(rawProps);
   // tile_map.cpp:843: unconditional, on every TileMap whatever its configuration.
-  diagnostics.push({
-    severity: 'warning',
-    message: `TileMap '${node.name}' is deprecated, superseded by TileMapLayer nodes. Use the editor's "Extract TileMap layers as individual TileMapLayer nodes" action to convert it.`,
-    nodeName: node.name,
-    nodeType: node.type,
-    ruleName: 'tilemap-deprecated',
-  });
+  reportArm(
+    diagnostics,
+    arms.deprecated,
+    node,
+    `TileMap '${node.name}' is deprecated, superseded by TileMapLayer nodes. Use the editor's "Extract TileMap layers as individual TileMapLayer nodes" action to convert it.`
+  );
 
   diagnostics.push(...ySortDiagnostics(node, rawProps, layers));
 
@@ -77,36 +97,33 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
     // Phase 1 has already refused a malformed shape, so only a value it accepted is decoded.
     if (tileDataValidator(key, value, 0) !== null) continue;
     if (decodeLegacyTileData(value, format) === null) {
-      diagnostics.push({
-        severity: 'error',
-        message: `'${key}' is not a decodable PackedInt32Array of cell triplets (${key.replace('/tile_data', '')}).`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'tilemap-invalid-tile-data',
-      });
+      reportArm(
+        diagnostics,
+        arms.invalidTileData,
+        node,
+        `'${key}' is not a decodable PackedInt32Array of cell triplets (${key.replace('/tile_data', '')}).`
+      );
       continue;
     }
     loadedFrom.set(layer, key);
   }
 
   if (loadedFrom.size > 0 && resourceSlotIsEmpty(rawProps.tile_set)) {
-    diagnostics.push({
-      severity: 'info',
-      message: `TileMap has tile data but no 'tile_set' — its tiles cannot render.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'tilemap-requires-tileset',
-    });
+    reportArm(
+      diagnostics,
+      arms.requiresTileset,
+      node,
+      `TileMap has tile data but no 'tile_set' — its tiles cannot render.`
+    );
   }
 
   if (refused.length > 0) {
-    diagnostics.push({
-      severity: 'error',
-      message: `TileMap refuses Godot 3 tile data outright (tile_map.cpp:71): ${refused.join('; ')}.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'tilemap-unsupported-format',
-    });
+    reportArm(
+      diagnostics,
+      arms.unsupportedFormat,
+      node,
+      `TileMap refuses Godot 3 tile data outright (tile_map.cpp:71): ${refused.join('; ')}.`
+    );
   }
 
   return diagnostics;
@@ -119,43 +136,7 @@ const tileMapValidationRule: LintRule = {
       'Validates TileMap tile_set assignment, data format, per-layer tile data, deprecation, and Y-sort/Z-index consistency',
     category: 'validation',
     applicableNodeTypes: ['TileMap'],
-    emits: [
-      { ruleName: 'tilemap-deprecated', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      {
-        ruleName: 'tilemap-y-sort-z-index-conflict',
-        severity: 'warning',
-        grounding: { kind: 'configuration-warning' },
-      },
-      {
-        ruleName: 'tilemap-layer-y-sort-without-node',
-        severity: 'warning',
-        grounding: { kind: 'configuration-warning' },
-      },
-      {
-        ruleName: 'tilemap-node-y-sort-without-layer',
-        severity: 'warning',
-        grounding: { kind: 'configuration-warning' },
-      },
-      {
-        ruleName: 'tilemap-requires-tileset',
-        severity: 'info',
-        grounding: {
-          kind: 'engine-inert',
-          at: 'tile_map_layer.cpp:224',
-          unused: 'a null tile set forces the cleanup path, so nothing is drawn',
-        },
-      },
-      {
-        ruleName: 'tilemap-unsupported-format',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'tile_map.cpp:71' },
-      },
-      {
-        ruleName: 'tilemap-invalid-tile-data',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'tile_map.cpp:79' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkTileMap,
 };
