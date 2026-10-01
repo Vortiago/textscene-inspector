@@ -91,7 +91,7 @@ export class WebResourceProvider implements ResourceProvider {
     return this.deliveredMirrorFiles.has(key) ? `mirror:${this.resourceRoot}` : null;
   }
 
-  async loadResource(path: string, type: string): Promise<string | ArrayBuffer> {
+  async loadResource(path: string, type?: string): Promise<string | ArrayBuffer> {
     // Uploaded files of the active corpus root first.
     const upload = this.uploadedFiles.get(this.uploadKey(path));
     if (upload) {

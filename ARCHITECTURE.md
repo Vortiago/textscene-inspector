@@ -244,8 +244,10 @@ flowchart TD
 | `useResource` | The only API a component sees. It never suspends. |
 
 **Late arrival.** A failed load leaves the hook subscribed. When the user uploads the file,
-`loader.provideFile(path)` clears that path and loads it again. The hook flips to `loaded`
-and the component updates without a remount. A promise resolves once, so it cannot do this.
+`loader.provideFile(path)` clears that path, and every resource that read it, and announces
+each as `invalidated`. The hook answers by loading it again, flips to `loaded`, and the
+component updates without a remount. A promise resolves once, so it cannot do this. A
+**Dependency hot-reload** takes the same path.
 
 **Sub-resource paths.** `res://file.tres::SubId` addresses a resource inside a `.tres`
 (ADR-0032). The whole address is the cache key. The processor reads the owning file, so the

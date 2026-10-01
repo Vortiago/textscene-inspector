@@ -102,7 +102,8 @@ export type JumpToNodeMessage = {
 export type LoadResourceMessage = {
   type: 'loadResource';
   path: string;
-  resourceType: string;
+  /** Absent for a processor load: the byte layer reads a file without knowing its type. */
+  resourceType?: string;
   requestId: string;
 };
 

@@ -9,6 +9,7 @@ import { applyShadowCasting, shadowCastingEffects } from '../../../r3f/shadowCas
 import { ShadowCastingSetting } from '../../../godot/rendering';
 import { withExtensionRules } from './extensionRules';
 import type { GltfExtensionRules } from './types';
+import type { GLTFLoaderPlugin, GLTFParser } from 'three/addons/loaders/GLTFLoader.js';
 
 interface GlbModules {
   GLTFLoader: (typeof import('three/addons/loaders/GLTFLoader.js'))['GLTFLoader'];
@@ -42,15 +43,6 @@ export function initGlbModules(): Promise<GlbModules> {
 }
 
 // Synchronous helpers, with no addons, safe in the initial bundle.
-
-/**
- * The directory a glTF's relative dependencies (external .bin buffers, image files)
- * resolve against: `res://stage/model.gltf` → `res://stage/`.
- */
-export function gltfResourceDir(path: string): string {
-  const slash = path.lastIndexOf('/');
-  return slash === -1 ? '' : path.slice(0, slash + 1);
-}
 
 /**
  * A material slot visitor: the material, the setter that replaces it in place, and a reader
@@ -123,28 +115,37 @@ export function disposeClonedMaterials(object: THREE.Object3D): void {
   forEachSurfaceMaterial(object, (material) => material.dispose());
 }
 
+/**
+ * Images decode through an `<img>` element, as every other texture here does. GLTFLoader's
+ * default `ImageBitmapLoader` fetches its `blob:` URL, which the VS Code webview's CSP
+ * refuses, so every glTF image failed there. Plugins run after the parser exists.
+ */
+function decodeImagesInImageElements(parser: GLTFParser): GLTFLoaderPlugin {
+  parser.textureLoader = new THREE.TextureLoader(parser.options.manager);
+  return { name: 'textscene_image_element_textures' };
+}
+
 // Functions that require the lazy-loaded addons.
 
 export interface GlbLoadOptions {
-  /**
-   * The `res://` directory a text .gltf's buffers and images resolve against. `manager`,
-   * the bus's LoadingManager, lets the host map those URLs onto fetchable ones. A host with
-   * no mapping fails the load, which shows the missing-resource placeholder.
-   */
-  resourcePath?: string;
   manager?: THREE.LoadingManager;
   /** Defaults to `godot-importer`. */
   extensionRules?: GltfExtensionRules;
 }
 
-/** Create a THREE.Object3D from GLB/GLTF data. */
+/**
+ * Create a THREE.Object3D from a GLB, whose resources it carries: `glbBytes` in the
+ * processor packs a text `.gltf` first, so nothing is fetched.
+ */
 export async function createGLBMesh(
   data: ArrayBuffer,
-  { resourcePath = '', manager, extensionRules = 'godot-importer' }: GlbLoadOptions = {}
+  { manager, extensionRules = 'godot-importer' }: GlbLoadOptions = {}
 ): Promise<THREE.Object3D> {
   const { GLTFLoader } = await initGlbModules();
-  const loader = withExtensionRules(new GLTFLoader(manager), extensionRules);
-  const gltf = await loader.parseAsync(data, resourcePath);
+  const loader = withExtensionRules(new GLTFLoader(manager), extensionRules).register(
+    decodeImagesInImageElements
+  );
+  const gltf = await loader.parseAsync(data, '');
   // GLTFLoader returns embedded clips on `gltf.animations`. The scene's `.animations`
   // is where GLBSceneRoot plays them from and where `cloneWithMaterials` copies them.
   gltf.scene.animations = gltf.animations;

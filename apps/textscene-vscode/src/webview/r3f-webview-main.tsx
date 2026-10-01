@@ -82,8 +82,8 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
           setContent(raw);
         }
       } else if (message.type === 'resourceChanged') {
-        // A dependency (texture, .tres, sub-scene) changed on disk. Re-fetching it
-        // moves its useResource subscribers to loaded with no remount.
+        // A dependency (texture, .tres, sub-scene, sidecar, project.godot) changed on
+        // disk. Its consumers load it again, with no remount.
         loader.provideFile(message.path);
       }
     }

@@ -6,12 +6,13 @@
  */
 
 import { registerResourceSlice } from '../../sliceRegistration';
+import { IMAGE_EXTENSIONS } from './extensions';
 
 registerResourceSlice({
   slice: 'image',
   kind: 'foreign-format',
   typeNames: ['Texture2D', 'CompressedTexture2D', 'ImageTexture'],
-  extensions: ['.png', '.jpg', '.jpeg', '.webp', '.svg'],
+  extensions: IMAGE_EXTENSIONS,
   binaryBytes: true,
   busType: 'texture',
   failureLabel: 'Material using texture',

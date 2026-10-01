@@ -10,8 +10,13 @@ import type { ParsedResource } from '../../parser/parsedResource';
 import type { ExtResource, TscnScene } from '../../parser/types';
 import { ResourceEventBus, type ResourceType } from '../ResourceEventBus';
 import { MetadataStore } from '../MetadataStore';
-import { busTypeFor, type ResourceLoader } from '../ResourceLoader';
+import type { ResourceLoader } from '../ResourceLoader';
+// The claim table `useResource` reads (`clonesPerConsumer`), registered here as
+// the real loader registers it: a type-only import of the loader loads nothing.
+import '../sliceRegistrations.js';
 import { runClearCachesSequence } from '../clearCachesSequence';
+import { runProvideFileSequence } from '../provideFileSequence';
+import { createClearCache } from '../resourceProcessorClear';
 import type { ArrayMeshResource } from '../processors/createArrayMeshProcessor';
 import type { FontResource } from '../fonts/font/types';
 import type { ThemeResource } from '../styles/theme/types';
@@ -69,6 +74,9 @@ function makeFakeProcessor<T>(eventBus: ResourceEventBus, type: ResourceType): F
   const cache = new Map<string, T | null>();
   const pinCounts = new Map<string, number>();
   let requestImpl: (path: string) => void = () => {};
+  // The real clear, over an empty in-flight map: loads here settle through
+  // `_resolve` and `_fail`, so nothing is ever in flight.
+  const clearCache = createClearCache({ cache, inflight: new Map(), eventBus, resourceType: type });
   return {
     cache,
     pinCounts,
@@ -84,14 +92,10 @@ function makeFakeProcessor<T>(eventBus: ResourceEventBus, type: ResourceType): F
     isLoading(_path: string): boolean {
       return false;
     },
-    clearCache(path?: string): void {
-      if (path === undefined) cache.clear();
-      else cache.delete(path);
-    },
+    clearCache,
     cachedPaths(): string[] {
       return [...cache.keys()];
     },
-    // Loads are driven by `_resolve` and `_fail`, so nothing is ever in flight.
     inflightPaths(): string[] {
       return [];
     },
@@ -144,7 +148,8 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     font: fonts,
     theme: themes,
   };
-  const all = Object.values(byType);
+
+  const byTypeMap = new Map(Object.entries(byType) as [ResourceType, FakeProcessor<unknown>][]);
 
   const jobRunner = new WorkerJobRunner();
 
@@ -167,24 +172,14 @@ export function createFakeResourceLoader(): FakeResourceLoader {
       registerCalls.push(resource);
       metadata.register(resource);
     },
-    // Mirrors ResourceLoader.provideFile: clear the path everywhere, then re-route
-    // to the metadata-typed processor, else the .tres and texture+material fan-outs.
-    // Re-requests land in `requestImpl`, so `setRequestImpl` spies observe them.
+    // The real provideFile sequence, with no byte layer and no recorded reads: a
+    // mounted consumer hears `invalidated` and its re-request lands in `requestImpl`,
+    // so a `setRequestImpl` spy observes it.
     provideFile(path: string): void {
-      for (const proc of all) proc.clearCache(path);
-      const busType = busTypeFor(metadata.get(path)?.type);
-      if (busType) {
-        byType[busType].request(path);
-      } else if (path.endsWith('.tres')) {
-        resources.request(path);
-        fonts.request(path);
-        themes.request(path);
-      } else {
-        textures.request(path);
-      }
+      runProvideFileSequence({ path, processors: byTypeMap });
     },
     clear(): void {
-      for (const proc of all) proc.clearCache();
+      for (const proc of byTypeMap.values()) proc.clearCache();
       eventBus.clear();
       metadata.clear();
     },
@@ -192,7 +187,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     // contract, so the fake runs the same sequence, not a copy.
     clearCaches(): void {
       runClearCachesSequence({
-        processors: Object.entries(byType) as [ResourceType, FakeProcessor<unknown>][],
+        processors: byTypeMap,
         eventBus,
         metadata,
       });

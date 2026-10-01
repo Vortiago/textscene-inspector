@@ -2,7 +2,7 @@
  * The corpus ↔ `res://` boundary of the web previewer. A fixture's `res://`
  * namespace maps onto a public/fixtures subtree, the **Corpus root**
  * (`corpusRootFor`). This owns that, the bijection (`resToFixtureFile` /
- * `fixtureFileToRes`) and the fetch URLs (`fixtureUrlForRes` / `fixtureUrlForGltfUri`).
+ * `fixtureFileToRes`) and the fetch URL (`fixtureUrlForRes`).
  */
 import type { Fixture } from './fixtures';
 
@@ -53,22 +53,4 @@ export function fixtureFileToRes(file: string, resourceRoot: string): string {
 export function fixtureUrlForRes(url: string, resourceRoot: string): string {
   if (!url.startsWith('res://')) return url;
   return `/fixtures/${resToFixtureFile(url, resourceRoot)}`;
-}
-
-/**
- * Like {@link fixtureUrlForRes}, for the THREE LoadingManager URL modifier of a
- * text glTF's dependencies (.bin buffers, images). glTF URIs arrive
- * percent-encoded (`textures%2Fgrass.webp`) and the mirror uses real separators,
- * so the `res://` remainder is decoded first.
- */
-export function fixtureUrlForGltfUri(uri: string, resourceRoot: string): string {
-  if (!uri.startsWith('res://')) return uri;
-  let rest = uri.slice('res://'.length);
-  try {
-    rest = decodeURIComponent(rest);
-  } catch {
-    // A malformed escape keeps the raw path.
-  }
-  // The decoded remainder is a bare fixtures-relative path; reuse the one mapping.
-  return `/fixtures/${resToFixtureFile(rest, resourceRoot)}`;
 }

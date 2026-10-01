@@ -1,8 +1,7 @@
 /**
  * The font resource processor, on the shared `createResourceProcessor` loop.
- * Like the material processor it fetches through `FileEventBus`, addresses a
- * **Sub-resource path** (`res://file.tres::SubId`) and loads other resources:
- * a font's `base_font`/`fallbacks`.
+ * It fetches through `FileEventBus`, addresses a **Sub-resource path**
+ * (`res://file.tres::SubId`) and loads other fonts: a font's `base_font`/`fallbacks`.
  */
 
 import type { FileEventBus } from '../FileEventBus';
@@ -12,12 +11,15 @@ import {
   PEER_LOAD_TIMEOUT_MS,
   type ResourceProcessor,
 } from '../createResourceProcessor';
+import type { DependencyGraph } from '../dependencyGraph';
 import { buildFontResource } from '../fonts/font/loadFont';
 import type { FontResource } from '../fonts/font/types';
 
 export function createFontProcessor(
   fileEventBus: FileEventBus | undefined,
-  eventBus: ResourceEventBus
+  eventBus: ResourceEventBus,
+  /** Records each font a font reads, so a change to that file reloads the reader. */
+  dependencies: DependencyGraph
 ): ResourceProcessor<FontResource> {
   // Assigned once `createResourceProcessor` returns, below. `process()` only
   // ever runs after a `.request()` call, always after this function has
@@ -50,6 +52,9 @@ export function createFontProcessor(
    * method. It requests through this processor, since a Font depends only on Fonts.
    */
   const loadFont = async (parent: string, address: string): Promise<FontResource | null> => {
+    // Before the cache answer, so a read served from cache, a failed one and one
+    // still in flight all reload `parent` when `address` changes.
+    dependencies.record({ busType: 'font', key: parent }, address);
     const cached = processor.getCached(address);
     if (cached !== undefined) return cached;
     if (wouldCycle(parent, address)) return null;

@@ -10,6 +10,21 @@
 // a second, narrower view of the registry than the loader's.
 import './sliceRegistrations.js';
 import { resourceSliceRegistry } from './sliceRegistration';
+import { fileExtension } from './fileExtension';
+import { GODOT_TEXT_RESOURCE_EXTENSIONS, IMPORT_SIDECAR_SUFFIX, PROJECT_FILE_PATH } from '../godot/index.js';
+
+/**
+ * Every file extension a scene's resources can have, dotted: the slices' claims, Godot's
+ * text resources, and the **Import sidecar** read beside an asset. A host's resource watcher
+ * watches these. `project.godot` is not a resource: a host watches it on its own.
+ */
+export const LOADED_FILE_EXTENSIONS: readonly string[] = [
+  ...new Set([
+    ...resourceSliceRegistry.all().flatMap((registration) => registration.extensions ?? []),
+    ...GODOT_TEXT_RESOURCE_EXTENSIONS,
+    IMPORT_SIDECAR_SUFFIX,
+  ]),
+];
 
 /**
  * Binary types no slice owns: audio, which this previewer neither decodes nor
@@ -27,26 +42,26 @@ const UNOWNED_BINARY_TYPES: readonly string[] = [
 const UNOWNED_BINARY_EXTENSIONS: readonly string[] = ['.wav', '.ogg', '.mp3'];
 
 /**
- * The file extension of a path, dot-prefixed and lowercased, or null when the
- * path has none. A dot inside a directory name is not an extension.
+ * Every file extension a host provider may be asked for: a scene's resources, the
+ * project file, and the unowned binary formats it still fetches as bytes. A host's file
+ * picker accepts these.
  */
-function fileExtension(path: string): string | null {
-  const dot = path.lastIndexOf('.');
-  if (dot === -1 || dot < path.lastIndexOf('/')) return null;
-  return path.slice(dot).toLowerCase();
-}
+export const PROVIDED_FILE_EXTENSIONS: readonly string[] = [
+  ...new Set([...LOADED_FILE_EXTENSIONS, fileExtension(PROJECT_FILE_PATH)!, ...UNOWNED_BINARY_EXTENSIONS]),
+];
 
 /**
  * Whether a resource loads as an ArrayBuffer (images, GLB/GLTF, audio, fonts)
  * rather than a string (scenes, scripts). Type and path are independent: a
  * `PackedScene` at a `.glb` is binary, so a text type never skips the extension check.
  *
- * @param type - Godot resource type (for example "Texture2D", "PackedScene")
+ * @param type - Godot resource type (for example "Texture2D", "PackedScene"), or
+ *   undefined for a load the byte layer makes, which knows only the path
  * @param path - Optional resource path to check file extension
  */
-export function isBinaryResourceType(type: string, path?: string): boolean {
-  if (resourceSliceRegistry.byTypeName(type)?.binaryBytes) return true;
-  if (UNOWNED_BINARY_TYPES.includes(type)) return true;
+export function isBinaryResourceType(type: string | undefined, path?: string): boolean {
+  if (type !== undefined && resourceSliceRegistry.byTypeName(type)?.binaryBytes) return true;
+  if (type !== undefined && UNOWNED_BINARY_TYPES.includes(type)) return true;
 
   const extension = path ? fileExtension(path) : null;
   if (!extension) return false;
@@ -62,7 +77,11 @@ export function isBinaryResourceType(type: string, path?: string): boolean {
  * UTF-8 text. A view over a whole ArrayBuffer hands that buffer over, so a large `.glb` is not held twice. Any other
  * view is copied, since it can sit inside a larger buffer, such as the pool `readFileSync` reads a small file into.
  */
-export function resourceContent(bytes: Uint8Array, type: string, path: string): string | ArrayBuffer {
+export function resourceContent(
+  bytes: Uint8Array,
+  type: string | undefined,
+  path: string
+): string | ArrayBuffer {
   if (!isBinaryResourceType(type, path)) return new TextDecoder('utf-8').decode(bytes);
   const { buffer } = bytes;
   const spansBuffer =

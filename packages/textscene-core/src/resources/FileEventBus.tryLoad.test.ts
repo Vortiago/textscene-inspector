@@ -5,20 +5,16 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { FileEventBus } from './FileEventBus';
-
-function busWith(files: Record<string, string>) {
-  const loadResource = vi.fn(async (path: string) => files[path] ?? null);
-  return { bus: new FileEventBus({ loadResource }), loadResource };
-}
+import { busServing } from './testing/servingFileBus';
 
 describe('FileEventBus.tryLoad', () => {
   it('returns the file when it exists', async () => {
-    const { bus } = busWith({ 'res://a.gltf.import': '[params]\n' });
+    const { bus } = busServing({ 'res://a.gltf.import': '[params]\n' });
     await expect(bus.tryLoad('res://a.gltf.import')).resolves.toBe('[params]\n');
   });
 
   it('returns null for a missing file without announcing it', async () => {
-    const { bus } = busWith({});
+    const { bus } = busServing({});
     const failed = vi.fn();
     bus.on('failed', failed);
 
@@ -41,7 +37,7 @@ describe('FileEventBus.tryLoad', () => {
   it('does not fire the loaded handlers either', async () => {
     // No consumer subscribes to a sidecar, and waking every handler for one risks a
     // re-entrant load.
-    const { bus } = busWith({ 'res://a.gltf.import': 'x' });
+    const { bus } = busServing({ 'res://a.gltf.import': 'x' });
     const loaded = vi.fn();
     bus.on('loaded', loaded);
 
@@ -50,27 +46,27 @@ describe('FileEventBus.tryLoad', () => {
   });
 
   it('serves a repeat read from cache', async () => {
-    const { bus, loadResource } = busWith({ 'res://a.gltf.import': 'x' });
+    const { bus, loads } = busServing({ 'res://a.gltf.import': 'x' });
     await bus.tryLoad('res://a.gltf.import');
     await bus.tryLoad('res://a.gltf.import');
-    expect(loadResource).toHaveBeenCalledTimes(1);
+    expect(loads).toHaveLength(1);
   });
 
   it('re-reads after the cache is cleared, so a corpus switch cannot serve stale bytes', async () => {
-    const { bus, loadResource } = busWith({ 'res://a.gltf.import': 'x' });
+    const { bus, loads } = busServing({ 'res://a.gltf.import': 'x' });
     await bus.tryLoad('res://a.gltf.import');
     bus.clearCache();
     await bus.tryLoad('res://a.gltf.import');
-    expect(loadResource).toHaveBeenCalledTimes(2);
+    expect(loads).toHaveLength(2);
   });
 
   it('shares the cache with request(), so a sidecar is read once either way', async () => {
-    const { bus, loadResource } = busWith({ 'res://a.gltf.import': 'x' });
+    const { bus, loads } = busServing({ 'res://a.gltf.import': 'x' });
     await bus.tryLoad('res://a.gltf.import');
     await new Promise<void>((resolve) => {
       bus.on('loaded', () => resolve());
       bus.request('res://a.gltf.import');
     });
-    expect(loadResource).toHaveBeenCalledTimes(1);
+    expect(loads).toHaveLength(1);
   });
 });

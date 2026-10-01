@@ -10,7 +10,7 @@ import { TscnDocumentLinkProvider } from './TscnDocumentLinkProvider';
 import { TscnDiagnostics } from './TscnDiagnostics';
 import { initLogger, dispose as disposeLogger } from './logger';
 import { isUri } from './uriArgument';
-import { RESOURCE_FILES_PATTERN } from './watchPatterns';
+import { PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN } from './watchPatterns';
 
 export function activate(context: vscode.ExtensionContext) {
   initLogger('TextScene Inspector');
@@ -75,11 +75,15 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.languages.registerDocumentLinkProvider({ language: 'tscn' }, new TscnDocumentLinkProvider())
   );
 
-  // External resource changes: materials (.tres), textures (png/jpg/webp/svg), glTF
-  // meshes and instanced sub-scenes (.tscn). One watcher serves the previews and the
-  // linter diagnostics in the Problems panel.
+  // External changes to every file a scene can load, and to the project file. Each watcher
+  // serves the previews and the linter diagnostics in the Problems panel.
   const resourceWatcher = vscode.workspace.createFileSystemWatcher(RESOURCE_FILES_PATTERN);
-  context.subscriptions.push(resourceWatcher, new TscnDiagnostics(resourceWatcher));
+  const projectFileWatcher = vscode.workspace.createFileSystemWatcher(PROJECT_FILE_PATTERN);
+  context.subscriptions.push(
+    resourceWatcher,
+    projectFileWatcher,
+    new TscnDiagnostics(resourceWatcher, projectFileWatcher)
+  );
 
   context.subscriptions.push(
     vscode.workspace.onDidSaveTextDocument((document) => {
@@ -114,11 +118,13 @@ export function activate(context: vscode.ExtensionContext) {
     );
   };
 
-  context.subscriptions.push(
-    resourceWatcher.onDidChange(handleResourceChange),
-    resourceWatcher.onDidCreate(handleResourceChange),
-    resourceWatcher.onDidDelete((uri) => handleResourceChange(uri, true))
-  );
+  for (const watcher of [resourceWatcher, projectFileWatcher]) {
+    context.subscriptions.push(
+      watcher.onDidChange(handleResourceChange),
+      watcher.onDidCreate(handleResourceChange),
+      watcher.onDidDelete((uri) => handleResourceChange(uri, true))
+    );
+  }
 }
 
 export function deactivate() {

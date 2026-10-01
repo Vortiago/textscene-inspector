@@ -86,13 +86,17 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See
   CI skips the golden run on a pull request whose every changed file matches
   `scripts/ci/visualScope.mjs`. A file the harness or the web build reads never goes on
   that list.
-- Changed the webview CSP, its bundle or asset loading, or the text pipeline:
-  `pnpm test:vscode:csp`. It drives a real desktop VS Code, opens a Control fixture
-  through the extension's own preview command and reads the canvas back over CDP. It
-  requires ink with text, exactly 0 ink with every label emptied, and zero CSP violations
-  or network attempts inside the preview frame. A third run opens a NoiseTexture2D and
-  requires that a job worker replied and that the texture drew. Linux/Xvfb. CI runs it
-  there.
+- Changed the webview CSP, its bundle, asset loading, the text pipeline or the
+  **Dependency hot-reload**: `pnpm test:vscode:csp`. It drives a real desktop VS Code,
+  opens a Control fixture through the extension's own preview command and reads the
+  canvas back over CDP. It requires ink with text, exactly 0 ink with every label emptied,
+  and zero CSP violations or network attempts inside the preview frame. Further runs:
+  - a NoiseTexture2D: a job worker replied and the texture drew;
+  - an ArrayMesh `.tres` recoloured on disk while the preview is open: the redrawn canvas
+    equals a cold render of the edit pixel for pixel;
+  - a text glTF with an external `.bin` and texture: no missing-resource placeholder.
+
+  Linux/Xvfb. CI runs it there.
 - Changed the web previewer's outliner, inspector, mode switching, or camera/selection
   wiring: `pnpm test:e2e:web`. It drives the real built app in a headless browser
   (`scripts/e2e/webAppGate.mjs`) and asserts:

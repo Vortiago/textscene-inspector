@@ -17,7 +17,7 @@ describe('noisetexture2d slice registration', () => {
   });
 
   it('routes NoiseTexture2D to the resource bus slot', () => {
-    expect(resourceSliceRegistry.busTypeFor('NoiseTexture2D')).toBe('resource');
+    expect(resourceSliceRegistry.byTypeName('NoiseTexture2D')?.busType ?? null).toBe('resource');
   });
 
   it('claims no file extension — the pixels are generated, never loaded', () => {

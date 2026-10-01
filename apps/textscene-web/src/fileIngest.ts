@@ -23,8 +23,9 @@ export interface FileIngestDeps {
 /**
  * The Multi-file matching contract, for a drop and the file input alike. The .tscn
  * no other dropped .tscn references becomes the scene, the first on a tie or cycle.
- * Other files match its ExtResources and the shell's missing paths, so repeated drops
- * bring a sub-scene's dependencies. With no .tscn, files fill missing paths.
+ * Other files match its ExtResources and the shell's missing paths, each with its import
+ * sidecar, and `project.godot`, so repeated drops bring a sub-scene's dependencies. With
+ * no .tscn, files fill missing paths and `project.godot`.
  */
 export function createFileIngest(deps: FileIngestDeps): (files: readonly File[]) => Promise<void> {
   const {

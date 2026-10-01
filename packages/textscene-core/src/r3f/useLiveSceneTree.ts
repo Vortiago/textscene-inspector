@@ -3,9 +3,10 @@
  * loader's scene and GLB cache snapshots, and re-render when the tree grows because an
  * instance sub-scene or GLB finishes loading after the parsed SceneGraph was built.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useHierarchy, useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useResourceLoader } from '../resources/useResource.js';
+import { useCacheVersion } from '../resources/useCacheVersion.js';
 import {
   collectLiveNodes,
   resolveLiveEntry,
@@ -16,6 +17,7 @@ import {
 import type { TscnNode } from '../parser/types.js';
 import type { SceneGraph } from '../core/SceneGraph.js';
 import type { ResourceLoader } from '../resources/ResourceLoader.js';
+import type { ResourceType } from '../resources/ResourceEventBus.js';
 
 /**
  * Build the live-tree roots and context from the parsed SceneGraph and the loader
@@ -42,25 +44,15 @@ export function liveTreeContext(
 }
 
 /**
- * A counter that increments whenever a scene or GLB finishes loading. The loader
- * caches mutate outside React, so every live-tree reader depends on this tick to
- * re-derive.
+ * A counter that increments whenever a scene or GLB loads or fails, so a deleted
+ * instance leaves the tree. Every live-tree reader re-derives on it. The scenes and
+ * GLBs it reads are `useResource` consumers' keys, which they request again.
  */
 export function useLiveTreeVersion(loader: ResourceLoader | null | undefined): number {
-  const [version, setVersion] = useState(0);
-  useEffect(() => {
-    const bus = loader?.eventBus;
-    if (!bus) return undefined;
-    const bump = () => setVersion((v) => v + 1);
-    bus.on('scene', 'loaded', bump);
-    bus.on('glb', 'loaded', bump);
-    return () => {
-      bus.off('scene', 'loaded', bump);
-      bus.off('glb', 'loaded', bump);
-    };
-  }, [loader]);
-  return version;
+  return useCacheVersion(loader, LIVE_TREE_BUSES);
 }
+
+const LIVE_TREE_BUSES: readonly ResourceType[] = ['scene', 'glb'];
 
 /** The live nodes matching `predicate`. Pass a stable `predicate` (module-level or memoised), or the memo recomputes every render. */
 export function useLiveSceneNodes(

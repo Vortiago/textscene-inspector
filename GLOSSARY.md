@@ -408,7 +408,8 @@ _Avoid_: expecting Source-pane-style live typing in the **Preview panel** (a del
 
 **Dependency hot-reload** (VS Code):
 A disk change to a dependency refreshes just that resource in every open **Preview panel** that ever resolved it.
-A dependency is a texture, a `.tres` material, a GLB or glTF, or an instanced sub-scene. The closure is transitive, at any dependency depth, because every resource a panel renders passes through its own provider. It is relevance-gated, with no full scene refresh. A resource that failed to load still counts as relevant, so creating a **Missing resource**'s file heals it. Hidden panels refresh in the background rather than on re-focus. Distinct from **Save-driven refresh**, which covers the panel's own main scene.
+A dependency is any file a scene loads. That is a texture, a `.tres` (material, mesh, font, Theme, TileSet), a GLB or glTF, a font file, an instanced sub-scene, an **Import sidecar** or `project.godot`. The closure is transitive, at any dependency depth, because every resource a panel renders passes through its own provider. It is relevance-gated, with no full scene refresh.
+`provideFile` drops every cached resource built from the file. It also drops every Theme, Font or GLB that read the file while it built (a font, a base font, an **Import sidecar**). It announces each as `invalidated`. Each reader requests the resource again and keeps its old render until the new value arrives, so the loader requests nothing itself. A resource that failed to load still counts as relevant, so creating a **Missing resource**'s file heals it. Hidden panels refresh in the background rather than on re-focus. Distinct from **Save-driven refresh**, which covers the panel's own main scene.
 _Avoid_: "HMR". Conflating with the main scene's **Save-driven refresh**. "direct dependencies" (the closure is transitive).
 
 **Progressive fill-in**:
@@ -445,7 +446,7 @@ _Avoid_: conflating with **Uploaded scene** (one replaces the active scene, the 
 
 **Multi-file matching**:
 The one-gesture drop or select contract: the root-most `.tscn` in the batch becomes the **Uploaded scene**.
-The root-most scene is the one no other dropped scene references. Every other file fulfils a `res://` reference by case-insensitive basename. Files are matched against the scene's ExtResources and the current **Missing resource** list, so a sub-scene's own dependencies arrive by repeated drops. A batch with no `.tscn` fulfils missing rows directly. Files matching nothing are ignored.
+The root-most scene is the one no other dropped scene references. Every other file fulfils a `res://` reference by case-insensitive basename. Files are matched against the scene's ExtResources and the current **Missing resource** list, so a sub-scene's own dependencies arrive by repeated drops. Each of those paths also matches its **Import sidecar**, and `project.godot` always matches `res://project.godot`. A batch with no `.tscn` fulfils missing rows directly. Files matching nothing are ignored.
 _Avoid_: "import wizard". Per-file prompts (the gesture is match-by-name, not a dialog flow).
 
 **Missing resource**:

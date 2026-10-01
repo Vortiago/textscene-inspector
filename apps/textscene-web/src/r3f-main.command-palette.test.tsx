@@ -13,6 +13,7 @@ vi.mock('@textscene/core', async () => {
   return { ...real, TscnCanvas: () => null, TscnSceneContents: () => null };
 });
 
+import { PROVIDED_FILE_EXTENSIONS } from '@textscene/core/resources/resourceProviderUtils';
 import { R3FApp } from './r3f-main';
 import { fixtures } from './fixturesAll';
 import { buildFixtureTree } from './fixtureTree';
@@ -232,6 +233,15 @@ describe('command palette — open a .tscn from disk', () => {
 
     await waitFor(() => expect(queryDialog()).toBeNull());
     await waitFor(() => expect(screen.queryByText('PickedRoot')).toBeTruthy());
+  });
+
+  it('accepts every file a scene can read, the import sidecar, project.godot and fonts included', async () => {
+    render(<R3FApp />);
+    await waitForScene();
+    const input = screen.getByTestId('upload-tscn-input') as HTMLInputElement;
+
+    expect(input.accept.split(',').sort()).toEqual([...PROVIDED_FILE_EXTENSIONS].sort());
+    expect(input.accept.split(',')).toEqual(expect.arrayContaining(['.import', '.godot', '.ttf']));
   });
 
   it('resets the shared input value after a pick, so the same filename can be re-selected', async () => {

@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { FileEventBus } from '../FileEventBus';
 import { ResourceEventBus } from '../ResourceEventBus';
 import { createGLBProcessor } from './createGLBProcessor';
+import { DependencyGraph } from '../dependencyGraph';
 import { initGlbModules } from '../formats/glb/glbProcessing';
 import { visualLayersOf } from '../../r3f/visualLayers';
 
@@ -73,7 +74,7 @@ async function loadWith(files: Record<string, string>): Promise<THREE.Object3D> 
     loadResource: vi.fn(async (path: string) => (path === GLTF_PATH ? asset : (files[path] ?? null))),
   });
   const eventBus = new ResourceEventBus();
-  const processor = createGLBProcessor(fileEventBus, eventBus);
+  const processor = createGLBProcessor(fileEventBus, eventBus, new DependencyGraph());
   const loaded = eventBus.once<THREE.Object3D>('glb', 'loaded', GLTF_PATH, 5000);
   processor.request(GLTF_PATH);
   return loaded;

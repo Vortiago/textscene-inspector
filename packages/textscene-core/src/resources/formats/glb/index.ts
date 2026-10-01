@@ -13,7 +13,8 @@ registerResourceSlice({
   // `GLBMesh` is this previewer's own request tag for a `.glb`/`.gltf` a scene
   // instances; `GLB`/`GLTF` are the type names an ext_resource can carry.
   typeNames: ['GLB', 'GLTF', 'GLBMesh'],
-  extensions: ['.glb', '.gltf'],
+  // `.bin` is a text glTF's external buffer: binary, and watched with its glTF.
+  extensions: ['.glb', '.gltf', '.bin'],
   binaryBytes: true,
   // A loaded glTF is one Object3D tree; two consumers of the same file each need
   // their own, or the second mount reparents the first's.

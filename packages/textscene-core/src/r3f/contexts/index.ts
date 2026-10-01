@@ -30,7 +30,6 @@ export { Path3DCurveProvider, useParentPath3DCurve } from './Path3DCurveContext.
 export {
   ProjectSettingsProvider,
   useProjectSettings,
-  PROJECT_SETTINGS_PATH,
   type ProjectSettingsValue,
   type ProjectSettingsProviderProps,
 } from './ProjectSettingsContext.js';

@@ -18,7 +18,7 @@ describe('atlastexture slice registration', () => {
   });
 
   it('routes AtlasTexture to the resource bus slot', () => {
-    expect(resourceSliceRegistry.busTypeFor('AtlasTexture')).toBe('resource');
+    expect(resourceSliceRegistry.byTypeName('AtlasTexture')?.busType ?? null).toBe('resource');
   });
 
   it('claims no file extension — an AtlasTexture is always a sub-resource', () => {

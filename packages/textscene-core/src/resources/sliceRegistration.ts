@@ -72,8 +72,6 @@ export function registerResourceSlice(registration: ResourceSliceRegistration): 
 export const resourceSliceRegistry = {
   byTypeName: (typeName: string): ResourceSliceRegistration | null => byTypeName.get(typeName) ?? null,
   byExtension: (extension: string): ResourceSliceRegistration | null => byExtension.get(extension) ?? null,
-  /** The processor slot for a type name. Null means unroutable. */
-  busTypeFor: (typeName: string): ResourceBusType | null => byTypeName.get(typeName)?.busType ?? null,
   /** Whether the slice claiming `busType` marks its values clone-per-consumer. */
   clonesPerConsumer: (busType: ResourceBusType): boolean =>
     all.some((r) => r.busType === busType && r.clonePerConsumer === true),
