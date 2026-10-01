@@ -6,6 +6,7 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SpotLight3DProperties } from './types';
 import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
+import { PositionalShadowFitter } from '../../../../r3f/positionalShadow/PositionalShadowFitter';
 
 function makeNode(overrides: Partial<SpotLight3DProperties> = {}): TscnNode {
   const props: SpotLight3DProperties = {
@@ -36,13 +37,22 @@ function renderThrough(renderer: Renderer): void {
 }
 
 describe('<SpotLight3D>', () => {
-  it('converts shadow_bias at the shadow camera’s far plane', async () => {
-    // 0.03 / 100 * soft_shadow_scale(2) / spot_range.
+  it('keeps shadow_bias in Godot’s clip depth, for the patched spot lookup', async () => {
+    // 0.03 / 100 * soft_shadow_scale(2) (`light_storage.cpp:971`, `:1024`).
     const renderer = await ReactThreeTestRenderer.create(
       <SpotLight3D node={makeNode({ shadow_enabled: true, spot_range: 5 })} />
     );
     const light = renderer.scene.findByType('SpotLight');
-    expect(instanceAs<THREE.SpotLight>(light).shadow.bias).toBeCloseTo(-0.00012, 12);
+    expect(instanceAs<THREE.SpotLight>(light).shadow.bias).toBeCloseTo(0.0006, 12);
+  });
+
+  it('renders the map from Godot’s 0.025 near plane, which the bias needs', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <SpotLight3D node={makeNode({ shadow_enabled: true, spot_range: 5 })} />
+    );
+    expect(instanceAs<THREE.SpotLight>(renderer.scene.findByType('SpotLight')).shadow.camera.near).toBe(
+      0.025
+    );
   });
 
   it('renders a SpotLight', async () => {
@@ -84,27 +94,38 @@ describe('<SpotLight3D>', () => {
   });
 });
 
+/** The light with the scene's fitter, as `<TscnSceneContents>` mounts both. */
+function withFitter(node: TscnNode) {
+  return (
+    <>
+      <SpotLight3D node={node} />
+      <PositionalShadowFitter />
+    </>
+  );
+}
+
 describe('<SpotLight3D> shadow fit', () => {
-  it("fits Godot's slot and a kernel of soft_shadow_scale texels before each render", async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <SpotLight3D node={makeNode({ shadow_enabled: true })} />
-    );
+  it("fits Godot's slot, a kernel of soft_shadow_scale texels and the normal bias before each render", async () => {
+    const renderer = await ReactThreeTestRenderer.create(withFitter(makeNode({ shadow_enabled: true })));
     renderThrough(renderer);
     const light = instanceAs<THREE.SpotLight>(renderer.scene.findByType('SpotLight'));
     expect(light.shadow.mapSize.x).toBe(1024);
     expect(light.shadow.radius).toBe(2);
+    expect(light.shadow.normalBias).toBeCloseTo(10 / 1024, 12);
   });
 
-  it('widens the kernel with shadow_blur', async () => {
+  it('widens the kernel with shadow_blur, and the offset with shadow_normal_bias', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <SpotLight3D node={makeNode({ shadow_enabled: true, shadow_blur: 3 })} />
+      withFitter(makeNode({ shadow_enabled: true, shadow_blur: 3, shadow_normal_bias: 0.5 }))
     );
     renderThrough(renderer);
-    expect(instanceAs<THREE.SpotLight>(renderer.scene.findByType('SpotLight')).shadow.radius).toBe(6);
+    const light = instanceAs<THREE.SpotLight>(renderer.scene.findByType('SpotLight'));
+    expect(light.shadow.radius).toBe(6);
+    expect(light.shadow.normalBias).toBeCloseTo(5 / 1024, 12);
   });
 
   it('leaves the kernel of a light without a shadow alone (edge case)', async () => {
-    const renderer = await ReactThreeTestRenderer.create(<SpotLight3D node={makeNode({ shadow_blur: 3 })} />);
+    const renderer = await ReactThreeTestRenderer.create(withFitter(makeNode({ shadow_blur: 3 })));
     renderThrough(renderer);
     expect(instanceAs<THREE.SpotLight>(renderer.scene.findByType('SpotLight')).shadow.radius).toBe(1);
   });

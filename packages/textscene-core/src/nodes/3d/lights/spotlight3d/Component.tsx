@@ -9,9 +9,13 @@ import type { SpotLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
-import { LIGHT_INTENSITY_SCALE, SHADOW_NORMAL_BIAS } from '../../../../r3f/lightConstants';
-import { usePositionalShadowFit } from '../../../../r3f/positionalShadow/usePositionalShadowFit';
+import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
+import { positionalShadowUserData } from '../../../../r3f/positionalShadow/declaration';
 import { softShadowScale } from '../../../../godot/softShadowScale';
+import {
+  POSITIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
+  positionalShadowNear,
+} from '../../../../godot/positionalShadow';
 import { spotShadowBias } from '../shared/shadowBias';
 import { LightWithTarget } from '../shared/lightShared';
 import { SpotLightGizmo } from '../shared/lightHelpers';
@@ -33,8 +37,14 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
   const decay = properties.spot_attenuation ?? 1;
   const penumbra =
     properties.penumbra ?? Math.max(0, Math.min(1, 1 / ((properties.spot_angle_attenuation ?? 1) + 1)));
-  const bias = spotShadowBias(properties.shadow_bias, properties.shadow_blur, properties.spot_range);
-  usePositionalShadowFit(lightRef, softShadowScale(properties.shadow_blur));
+  const userData = useMemo(
+    () =>
+      positionalShadowUserData({
+        normalBias: properties.shadow_normal_bias ?? POSITIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
+        softShadowScale: softShadowScale(properties.shadow_blur),
+      }),
+    [properties.shadow_normal_bias, properties.shadow_blur]
+  );
 
   return (
     <LightWithTarget
@@ -54,9 +64,9 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
             penumbra={penumbra}
             decay={decay}
             castShadow={properties.shadow_enabled}
-            shadow-bias={bias}
-            shadow-normalBias={SHADOW_NORMAL_BIAS}
-            shadow-camera-near={0.5}
+            userData={userData}
+            shadow-bias={spotShadowBias(properties.shadow_bias, properties.shadow_blur)}
+            shadow-camera-near={positionalShadowNear(properties.spot_range)}
             shadow-camera-far={properties.spot_range}
             target={target}
           />

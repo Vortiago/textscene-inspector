@@ -117,11 +117,28 @@ export {
 export { SHADOW_BLUR_DEFAULT, SOFT_LOW_QUALITY_RADIUS, softShadowScale } from './softShadowScale.js';
 export {
   POSITIONAL_SHADOW_ATLAS_SIZE_DEFAULT,
-  POSITIONAL_SHADOW_QUADRANT_SHADOWS_DEFAULT,
+  POSITIONAL_SHADOW_QUADRANT_SUBDIV_DEFAULT,
+  POSITIONAL_SHADOW_QUADRANT_SUBDIV_SHADOWS,
+  POSITIONAL_SHADOW_REALLOC_TOLERANCE_MSEC,
+  PositionalShadowAtlas,
+  ROOT_POSITIONAL_SHADOW_ATLAS,
+  VIEWPORT_POSITIONAL_SHADOW_ATLAS_SIZE_DEFAULT,
   omniShadowCubeSize,
   omniShadowKernelAngle,
-  positionalShadowSlotSize,
+  positionalShadowQuadrantSubdivision,
+  viewportPositionalShadowAtlas,
+  type PositionalShadowAtlasSettings,
+  type PositionalShadowRequest,
 } from './positionalShadowAtlas.js';
+export {
+  POSITIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
+  omniShadowDepthBias,
+  positionalLightBounds,
+  positionalShadowNear,
+  positionalShadowNormalBias,
+  spotShadowDepthBias,
+  type LightBounds,
+} from './positionalShadow.js';
 export { GRADIENT_TEXTURE_MAX_SIZE, IMAGE_MAX_PIXELS } from './texture.js';
 export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX, CLIP_CHILDREN_MODES } from './canvasItem.js';
 export {

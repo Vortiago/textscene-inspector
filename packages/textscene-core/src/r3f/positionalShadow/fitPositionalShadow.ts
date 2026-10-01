@@ -1,30 +1,30 @@
 /**
- * Sizes an omni or spot light's shadow map and PCF kernel to the slot Godot's positional shadow atlas
- * gives the light for the camera about to render. Godot keeps one atlas per viewport. Here a light
- * keeps one map, so two cameras that give it different slots reallocate the map between them.
+ * Sizes an omni or spot light's shadow map, PCF kernel and normal bias to the slot Godot's
+ * positional shadow atlas gives the light.
  */
 
-import * as THREE from 'three';
-import {
-  omniShadowCubeSize,
-  omniShadowKernelAngle,
-  positionalShadowSlotSize,
-} from '../../godot/positionalShadowAtlas.js';
-import { isViewingCamera, type ViewingCamera } from '../directionalShadow/fitDirectionalShadowBox.js';
-import { omniShadowCoverage, spotShadowCoverage } from './shadowCoverage.js';
+import type * as THREE from 'three';
+import { omniShadowCubeSize, omniShadowKernelAngle } from '../../godot/positionalShadowAtlas.js';
+import { positionalShadowNormalBias } from '../../godot/positionalShadow.js';
+import type { PositionalShadowDeclaration } from './declaration.js';
+
+/** three's own shadow intensity, which a light with a slot keeps. */
+const FULL_SHADOW = 1;
 
 /**
- * `softShadowScale` is the light's own. A light that casts no shadow, or a camera without a depth
- * range, keeps the map as it is.
+ * A null slot draws no shadow: Godot sends an opacity of zero for a light the atlas holds no slot
+ * for (`light_storage.cpp:947-1029`). The light's map stays as it is.
  */
 export function fitPositionalShadow(
   light: THREE.PointLight | THREE.SpotLight,
-  camera: THREE.Camera,
-  softShadowScale: number
+  slotSize: number | null,
+  declaration: PositionalShadowDeclaration
 ): void {
-  if (!light.castShadow || !isViewingCamera(camera)) return;
-  if ('isSpotLight' in light) fitSpotShadow(light, camera, softShadowScale);
-  else fitOmniShadow(light, camera, softShadowScale);
+  light.shadow.intensity = slotSize === null ? 0 : FULL_SHADOW;
+  if (slotSize === null) return;
+  light.shadow.normalBias = positionalShadowNormalBias(declaration.normalBias, slotSize);
+  if ('isSpotLight' in light) fitSpotShadow(light.shadow, slotSize, declaration.softShadowScale);
+  else fitOmniShadow(light.shadow, slotSize, declaration.softShadowScale);
 }
 
 /**
@@ -32,12 +32,10 @@ export function fitPositionalShadow(
  * `shadowmap_pars_fragment.glsl.js:381`), an angle in radians, so the radius is Godot's angle in
  * texels of a cube face.
  */
-function fitOmniShadow(light: THREE.PointLight, camera: ViewingCamera, softShadowScale: number): void {
-  const position = light.getWorldPosition(new THREE.Vector3());
-  const slotSize = positionalShadowSlotSize(omniShadowCoverage(position, light.distance, camera));
+function fitOmniShadow(shadow: THREE.LightShadow, slotSize: number, softShadowScale: number): void {
   const faceSize = omniShadowCubeSize(slotSize);
-  resizeShadowMap(light.shadow, faceSize);
-  light.shadow.radius = omniShadowKernelAngle(softShadowScale, slotSize) * faceSize;
+  resizeShadowMap(shadow, faceSize);
+  shadow.radius = omniShadowKernelAngle(softShadowScale, slotSize) * faceSize;
 }
 
 /**
@@ -45,21 +43,19 @@ function fitOmniShadow(light: THREE.PointLight, camera: ViewingCamera, softShado
  * (`servers/rendering/renderer_rd/shaders/scene_forward_lights_inc.glsl:847`), and the slot holds
  * the map at the atlas's own resolution, so the radius is that many texels of the map.
  */
-function fitSpotShadow(light: THREE.SpotLight, camera: ViewingCamera, softShadowScale: number): void {
-  const position = light.getWorldPosition(new THREE.Vector3());
-  const direction = light.target.getWorldPosition(new THREE.Vector3()).sub(position).normalize();
-  const coverage = spotShadowCoverage(position, direction, light.distance, light.angle, camera);
-  resizeShadowMap(light.shadow, positionalShadowSlotSize(coverage));
-  light.shadow.radius = softShadowScale;
+function fitSpotShadow(shadow: THREE.LightShadow, slotSize: number, softShadowScale: number): void {
+  resizeShadowMap(shadow, slotSize);
+  shadow.radius = softShadowScale;
 }
 
 /**
  * three resizes a 2D map at its next render but never a cube one (r186 `WebGLShadowMap.js:281`), so a
- * new size drops the map, and three allocates one at that size. An unchanged size keeps the map.
+ * map of another size is dropped, and three allocates one at the new size. The map's own width
+ * decides, since a map another viewport rendered can arrive with this light's `mapSize` unchanged.
  */
 export function resizeShadowMap(shadow: THREE.LightShadow, size: number): void {
-  if (shadow.mapSize.x === size && shadow.mapSize.y === size) return;
   shadow.mapSize.set(size, size);
-  shadow.map?.dispose();
+  if (!shadow.map || shadow.map.width === size) return;
+  shadow.map.dispose();
   shadow.map = null;
 }

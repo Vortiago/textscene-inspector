@@ -25,7 +25,7 @@ export interface BaseLightProperties {
   shadow_blur?: number;
 }
 
-/** The base plus normal bias, for DirectionalLight3D and OmniLight3D. */
+/** The base plus normal bias, for the light types whose shadow reads it. */
 export interface BaseLightWithNormalBias extends BaseLightProperties {
   /** Shadow normal bias (optional) */
   shadow_normal_bias?: number;

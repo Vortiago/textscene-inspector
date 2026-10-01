@@ -16,6 +16,12 @@ import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { CanvasWorkspaceProvider, useCanvasWorkspace } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { useDirectionalShadowFit } from '../../../r3f/directionalShadow/DirectionalShadowFitter';
+import { usePositionalShadowFit } from '../../../r3f/positionalShadow/PositionalShadowFitter';
+import {
+  renderWithShadowAtlas,
+  ViewportShadowAtlas,
+} from '../../../r3f/positionalShadow/viewportShadowAtlas';
+import { viewportPositionalShadowAtlas } from '../../../godot/positionalShadowAtlas';
 import { Node } from '../../node/Component';
 import {
   applyOrthoFrame,
@@ -121,6 +127,8 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
   // A 3D portal renders its lights only through this pass, so it fits them itself. An inline pass
   // renders the parent scene, which its own fitter fits, and a 2D portal holds no 3D light.
   useDirectionalShadowFit(kind === '3d' && !rendersInline ? portalScene : null);
+  usePositionalShadowFit(kind === '3d' && !rendersInline ? portalScene : null);
+  const shadowAtlas = useViewportShadowAtlas(properties);
 
   // A persistent camera for 2D-world content. Godot draws a viewport's canvas
   // through its canvas transform, the identity until a Camera2D in the subtree
@@ -182,7 +190,7 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
         },
         // No camera is not an error: Godot renders the clear colour and nothing else.
         draw: () => {
-          if (camera) gl.render(source, camera);
+          if (camera) renderWithShadowAtlas(shadowAtlas, () => gl.render(source, camera));
         },
       });
     } finally {
@@ -200,6 +208,7 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
     orthoCamera,
     gl,
     target,
+    shadowAtlas,
     transparentBg,
     properties.own_world_3d,
     width,
@@ -224,4 +233,25 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
     </CanvasWorkspaceProvider>,
     portalScene
   );
+}
+
+/**
+ * The viewport's own positional shadow atlas, as Godot keeps one per viewport. A main view and this
+ * pass that give a light different slots each keep their own map, so a steady scene never
+ * reallocates one per render. One shared map would reallocate on every render the two disagree on.
+ */
+function useViewportShadowAtlas(properties: SubViewportProperties): ViewportShadowAtlas {
+  const {
+    positional_shadow_atlas_size: size,
+    positional_shadow_atlas_quad_0: quad0,
+    positional_shadow_atlas_quad_1: quad1,
+    positional_shadow_atlas_quad_2: quad2,
+    positional_shadow_atlas_quad_3: quad3,
+  } = properties;
+  const atlas = useMemo(
+    () => new ViewportShadowAtlas(viewportPositionalShadowAtlas(size, [quad0, quad1, quad2, quad3])),
+    [size, quad0, quad1, quad2, quad3]
+  );
+  useEffect(() => () => atlas.dispose(), [atlas]);
+  return atlas;
 }

@@ -7,11 +7,3 @@
  * asks for 2 × 1.5748, against PI = 2 × 1.5708.
  */
 export const LIGHT_INTENSITY_SCALE = Math.PI;
-
-/**
- * Receiver offset along the normal, in world units, before the shadow lookup. Unlike a depth bias
- * it suppresses acne on lit slopes without detaching the shadow, as Godot's shadows touch their
- * casters. Shared by the omni and spot lights. A directional light counts its normal bias in
- * texels, as Godot does (`r3f/directionalShadow/`).
- */
-export const SHADOW_NORMAL_BIAS = 0.04;
