@@ -11,18 +11,14 @@ import { viewportScopeCounter, viewportScopeOf } from '../../../linter/viewportS
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../godot/index.js';
-import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  multipleCurrent: {
-    severity: 'info',
-    ruleName: 'camera3d-multiple-current',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'camera_3d.cpp:190',
-      unused: 'the earlier camera loses the slot to the last entered current one and is never drawn',
-    },
-  },
+  multipleCurrent: groundedArm('camera3d-multiple-current', {
+    kind: 'engine-inert',
+    at: 'camera_3d.cpp:190',
+    unused: 'the earlier camera loses the slot to the last entered current one and is never drawn',
+  }),
   invalidClippingPlanes: {
     severity: 'error',
     ruleName: 'camera3d-invalid-clipping-planes',

@@ -9,24 +9,12 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
-import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  requiresTexture: {
-    severity: 'warning',
-    ruleName: 'decal-requires-texture',
-    grounding: { kind: 'configuration-warning' },
-  },
-  normalOrmWithoutAlbedo: {
-    severity: 'warning',
-    ruleName: 'decal-normal-orm-without-albedo',
-    grounding: { kind: 'configuration-warning' },
-  },
-  emptyCullMask: {
-    severity: 'warning',
-    ruleName: 'decal-empty-cull-mask',
-    grounding: { kind: 'configuration-warning' },
-  },
+  requiresTexture: groundedArm('decal-requires-texture', { kind: 'configuration-warning' }),
+  normalOrmWithoutAlbedo: groundedArm('decal-normal-orm-without-albedo', { kind: 'configuration-warning' }),
+  emptyCullMask: groundedArm('decal-empty-cull-mask', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 const TEXTURE_PROPS = [

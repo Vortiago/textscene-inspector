@@ -9,14 +9,10 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { hasNonUnitScale3D } from '../../../../linter/transformBasis.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  nonUnitScale: {
-    severity: 'warning',
-    ruleName: 'light3d-non-unit-scale',
-    grounding: { kind: 'configuration-warning' },
-  },
+  nonUnitScale: groundedArm('light3d-non-unit-scale', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function checkLight3DScale(context: RuleContext): Diagnostic[] {

@@ -7,22 +7,18 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { hiddenOrUnknowableInTree } from '../../../../linter/parentType.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../../godot/index.js';
 
 const arms = {
-  unsupportedExpandMode: {
-    severity: 'info',
-    ruleName: 'aspectratiocontainer-unsupported-texturerect-expand-mode',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'aspect_ratio_container.cpp:113',
-      unused: 'the sort pass skips the child instead of positioning it',
-    },
-  },
+  unsupportedExpandMode: groundedArm('aspectratiocontainer-unsupported-texturerect-expand-mode', {
+    kind: 'engine-inert',
+    at: 'aspect_ratio_container.cpp:113',
+    unused: 'the sort pass skips the child instead of positioning it',
+  }),
 } as const satisfies RuleArms<string>;
 
 // texture_rect.h:39-45 TextureRect::ExpandMode: EXPAND_KEEP_SIZE=0,

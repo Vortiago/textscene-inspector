@@ -34,7 +34,7 @@ describe('rangeAdvisories', () => {
     expect(rangeAdvisories(node, { x: [{ over: 10, message: () => 'm', cite: 'light_3d.cpp:389' }] }, arm)).toEqual([]);
   });
 
-  describe('over arm', () => {
+  describe('over threshold', () => {
     const table: RangeAdvisoryTable = { x: [{ over: 10, message: (v) => `x is ${v}`, cite: 'light_3d.cpp:389' }] };
 
     // `inf` is a legal literal Godot stores unaltered (variant_parser.cpp:150-155),
@@ -59,7 +59,7 @@ describe('rangeAdvisories', () => {
     });
   });
 
-  describe('under arm', () => {
+  describe('under threshold', () => {
     const table: RangeAdvisoryTable = { x: [{ under: 5, message: (v) => `x is ${v}`, cite: 'light_3d.cpp:389' }] };
 
     it('trips strictly below the bound', () => {
@@ -70,7 +70,7 @@ describe('rangeAdvisories', () => {
     });
   });
 
-  describe('floor on an under arm', () => {
+  describe('floor on an under threshold', () => {
     const table: RangeAdvisoryTable = { x: [{ under: 1, floor: 0, message: (v) => `x is ${v}`, cite: 'light_3d.cpp:389' }] };
 
     it('trips between the floor and the bound', () => {

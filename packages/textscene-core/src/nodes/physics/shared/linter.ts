@@ -10,14 +10,10 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { isZeroApprox } from '../../../godot/math.js';
 import { basisColumnScales } from '../../../linter/physics/basisColumnScales.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  nonUniformScale: {
-    severity: 'warning',
-    ruleName: 'collisionobject3d-non-uniform-scale',
-    grounding: { kind: 'configuration-warning' },
-  },
+  nonUniformScale: groundedArm('collisionobject3d-non-uniform-scale', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function checkCollisionObject3DScale(context: RuleContext): Diagnostic[] {

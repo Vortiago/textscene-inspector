@@ -5,7 +5,7 @@
 
 import { ruleInt } from '../validators/commonValidators.js';
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { armEmits, reportArm, type RuleArms } from '../ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../ruleArms.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { boolSlotValue } from '../../godot/index.js';
@@ -23,24 +23,16 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
   const type = `Area${dim}`;
   const prefix = `area${dimSuffix(dim)}`;
   const arms = {
-    detectsNothing: {
-      severity: 'info',
-      ruleName: `${prefix}-detects-nothing`,
-      grounding: {
-        kind: 'engine-inert',
-        at: monitorFlagsCite,
-        unused: 'a non-monitoring area never registers the callback this line requires',
-      },
-    },
-    monitoringZeroMask: {
-      severity: 'info',
-      ruleName: `${prefix}-monitoring-zero-mask`,
-      grounding: {
-        kind: 'engine-inert',
-        at: areaMaskCite,
-        unused: 'collides_with returns false for every layer, so monitoring detects nothing',
-      },
-    },
+    detectsNothing: groundedArm(`${prefix}-detects-nothing`, {
+      kind: 'engine-inert',
+      at: monitorFlagsCite,
+      unused: 'a non-monitoring area never registers the callback this line requires',
+    }),
+    monitoringZeroMask: groundedArm(`${prefix}-monitoring-zero-mask`, {
+      kind: 'engine-inert',
+      at: areaMaskCite,
+      unused: 'collides_with returns false for every layer, so monitoring detects nothing',
+    }),
   } as const satisfies RuleArms<string>;
 
   function check(context: RuleContext): Diagnostic[] {

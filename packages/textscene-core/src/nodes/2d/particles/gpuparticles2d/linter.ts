@@ -7,16 +7,12 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 
 const arms = {
-  missingProcessMaterial: {
-    severity: 'warning',
-    ruleName: 'gpuparticles2d-missing-process-material',
-    grounding: { kind: 'configuration-warning' },
-  },
+  missingProcessMaterial: groundedArm('gpuparticles2d-missing-process-material', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function checkGPUParticles2D(context: RuleContext): Diagnostic[] {

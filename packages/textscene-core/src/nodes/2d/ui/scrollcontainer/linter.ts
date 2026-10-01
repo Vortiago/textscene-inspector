@@ -11,14 +11,10 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { isTypeUnknowable } from '../../../../linter/parentType.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { boolSlotValue } from '../../../../godot/index.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  notSingleChild: {
-    severity: 'warning',
-    ruleName: 'scrollcontainer-not-single-child',
-    grounding: { kind: 'configuration-warning' },
-  },
+  notSingleChild: groundedArm('scrollcontainer-not-single-child', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 /**

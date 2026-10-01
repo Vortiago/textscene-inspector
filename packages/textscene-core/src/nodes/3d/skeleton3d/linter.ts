@@ -9,18 +9,14 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { indexedKeyRegex, boolSlotValue} from '../../../godot/index.js';
 import { boneNameFindings } from './boneNameOrder.js';
 import { writtenIndex } from '../../../linter/reportedIndices.js';
-import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  debugMode: {
-    severity: 'info',
-    ruleName: 'skeleton3d-debug-mode',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'skeleton_3d.cpp:551',
-      unused: 'show_rest_only disables every bone, so no authored pose is applied',
-    },
-  },
+  debugMode: groundedArm('skeleton3d-debug-mode', {
+    kind: 'engine-inert',
+    at: 'skeleton_3d.cpp:551',
+    unused: 'show_rest_only disables every bone, so no authored pose is applied',
+  }),
   deprecatedFeature: {
     severity: 'warning',
     ruleName: 'skeleton3d-deprecated-feature',

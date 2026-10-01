@@ -13,18 +13,14 @@ import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { parseGodotFloat } from '../../../godot/number.js';
 import { formatReal, storedReal } from '../../../godot/real.js';
 import type { Vector2 as Size } from '../../../parser/vectors.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  maxSizeBelowMinSize: {
-    severity: 'info',
-    ruleName: 'window-max-size-below-min-size',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'window.cpp:473',
-      unused: 'the size fails this validity test, so the rendering server maximum is used instead',
-    },
-  },
+  maxSizeBelowMinSize: groundedArm('window-max-size-below-min-size', {
+    kind: 'engine-inert',
+    at: 'window.cpp:473',
+    unused: 'the size fails this validity test, so the rendering server maximum is used instead',
+  }),
   sizeClampedByLimits: {
     severity: 'warning',
     ruleName: 'window-size-clamped-by-limits',

@@ -10,19 +10,11 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { isExplicitlyHidden, parentTypeVerdict } from '../../../../linter/parentType.js';
 import { literalText } from '../../../../godot/index.js';
-import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  parentNotOrigin: {
-    severity: 'warning',
-    ruleName: 'xrnode3d-parent-not-xrorigin3d',
-    grounding: { kind: 'configuration-warning' },
-  },
-  noPose: {
-    severity: 'warning',
-    ruleName: 'xrnode3d-no-pose-set',
-    grounding: { kind: 'configuration-warning' },
-  },
+  parentNotOrigin: groundedArm('xrnode3d-parent-not-xrorigin3d', { kind: 'configuration-warning' }),
+  noPose: groundedArm('xrnode3d-no-pose-set', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 // Not modelled: "No tracker name is set" fires only at `tracker`'s default `&""`

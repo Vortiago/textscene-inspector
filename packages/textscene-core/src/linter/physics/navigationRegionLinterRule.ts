@@ -6,7 +6,7 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { armEmits, reportArm, type RuleArms } from '../ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../ruleArms.js';
 import { resourceSlotIsEmpty } from '../resourceChecker.js';
 import { hiddenOrUnknowableInTree } from '../parentType.js';
 import type { PhysicsDim } from './dim.js';
@@ -17,11 +17,7 @@ export function makeNavigationRegionLinterRule(dim: PhysicsDim): LintRule {
   const property = dim === '2D' ? 'navigation_polygon' : 'navigation_mesh';
   const resourceClass = dim === '2D' ? 'NavigationPolygon' : 'NavigationMesh';
   const arms = {
-    missingResource: {
-      severity: 'warning',
-      ruleName: `navigationregion${dimSuffix(dim)}-requires-${property.replace(/_/g, '-')}`,
-      grounding: { kind: 'configuration-warning' },
-    },
+    missingResource: groundedArm(`navigationregion${dimSuffix(dim)}-requires-${property.replace(/_/g, '-')}`, { kind: 'configuration-warning' }),
   } as const satisfies RuleArms<string>;
 
   function check(context: RuleContext): Diagnostic[] {

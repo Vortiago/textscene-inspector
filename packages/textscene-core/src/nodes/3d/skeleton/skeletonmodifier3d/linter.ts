@@ -9,14 +9,10 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  parentNotSkeleton3D: {
-    severity: 'warning',
-    ruleName: 'skeletonmodifier3d-parent-not-skeleton3d',
-    grounding: { kind: 'configuration-warning' },
-  },
+  parentNotSkeleton3D: groundedArm('skeletonmodifier3d-parent-not-skeleton3d', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function checkSkeletonModifier3D(context: RuleContext): Diagnostic[] {

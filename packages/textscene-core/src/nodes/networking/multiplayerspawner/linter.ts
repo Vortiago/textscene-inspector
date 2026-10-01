@@ -9,14 +9,10 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { extractNodePath, isValidProperties } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  spawnPathDangling: {
-    severity: 'warning',
-    ruleName: 'multiplayerspawner-spawn-path-dangling',
-    grounding: { kind: 'configuration-warning' },
-  },
+  spawnPathDangling: groundedArm('multiplayerspawner-spawn-path-dangling', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function checkMultiplayerSpawner(context: RuleContext): Diagnostic[] {

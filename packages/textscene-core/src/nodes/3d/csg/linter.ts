@@ -10,27 +10,19 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { polygonPointCount } from '../../../linter/polygonPoints.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  missingMesh: {
-    severity: 'info',
-    ruleName: 'csgmesh3d-requires-mesh',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'csg_shape.cpp:1126',
-      unused: 'the build returns an empty brush, so the shape contributes no geometry',
-    },
-  },
-  insufficientPoints: {
-    severity: 'info',
-    ruleName: 'csgpolygon3d-insufficient-points',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'csg_shape.cpp:2154',
-      unused: 'the build returns an empty brush, so the shape contributes no geometry',
-    },
-  },
+  missingMesh: groundedArm('csgmesh3d-requires-mesh', {
+    kind: 'engine-inert',
+    at: 'csg_shape.cpp:1126',
+    unused: 'the build returns an empty brush, so the shape contributes no geometry',
+  }),
+  insufficientPoints: groundedArm('csgpolygon3d-insufficient-points', {
+    kind: 'engine-inert',
+    at: 'csg_shape.cpp:2154',
+    unused: 'the build returns an empty brush, so the shape contributes no geometry',
+  }),
 } as const satisfies RuleArms<string>;
 
 // A `CSGMesh3D` with no mesh and a `CSGPolygon3D` under 3 points build zero faces on their own

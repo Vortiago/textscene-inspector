@@ -11,7 +11,7 @@ import { resolveGlobalTransform2D } from '../node2dGlobalTransform.js';
 import { parseGodotFloat } from '../validators/commonValidators.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
-import { armEmits, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
 import {
   boolSlotValue,
   transform2DGetScale,
@@ -38,40 +38,23 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
 
   // Each arm's enabling condition, stated once (see `ruleArms.ts`).
   const is2D = dim === '2D';
-  const configWarning = { kind: 'configuration-warning' } as const;
   const arms: RuleArms<'carveWithoutAffect' | 'nonPositiveScale' | 'nonUniformScale' | 'skew'> = {
-    carveWithoutAffect: {
-      severity: 'info',
-      ruleName: `${prefix}-carve-without-affect`,
-      grounding: {
-        kind: 'engine-inert',
-        at: CARVE_GATE_AT,
-        unused: 'the source-geometry parser returns before it reads carve_navigation_mesh',
-      },
-    },
+    carveWithoutAffect: groundedArm(`${prefix}-carve-without-affect`, {
+      kind: 'engine-inert',
+      at: CARVE_GATE_AT,
+      unused: 'the source-geometry parser returns before it reads carve_navigation_mesh',
+    }),
     // The global-transform warnings are 2D only: `NavigationObstacle2D::get_configuration_warnings()`
     // (navigation_obstacle_2d.cpp:328-345), read through `node2dGlobalTransform.ts`'s
     // static ancestor walk.
     nonPositiveScale: is2D
-      ? {
-          severity: 'warning',
-          ruleName: `${prefix}-non-positive-global-scale`,
-          grounding: configWarning,
-        }
+      ? groundedArm(`${prefix}-non-positive-global-scale`, { kind: 'configuration-warning' })
       : undefined,
     nonUniformScale: is2D
-      ? {
-          severity: 'warning',
-          ruleName: `${prefix}-non-uniform-global-scale`,
-          grounding: configWarning,
-        }
+      ? groundedArm(`${prefix}-non-uniform-global-scale`, { kind: 'configuration-warning' })
       : undefined,
     skew: is2D
-      ? {
-          severity: 'warning',
-          ruleName: `${prefix}-global-skew-ignored`,
-          grounding: configWarning,
-        }
+      ? groundedArm(`${prefix}-global-skew-ignored`, { kind: 'configuration-warning' })
       : undefined,
   };
 

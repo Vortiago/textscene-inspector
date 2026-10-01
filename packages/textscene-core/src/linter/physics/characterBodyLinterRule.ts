@@ -5,7 +5,7 @@
 
 import { ruleInt } from '../validators/commonValidators.js';
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { armEmits, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 
@@ -33,37 +33,25 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
     | 'slideOnCeilingInFloating'
     | 'wallAngleInGrounded'
   > = {
-    floorPropsInFloating: {
-      severity: 'info',
-      ruleName: `${prefix}-floor-props-in-floating-mode`,
-      grounding: {
-        kind: 'engine-inert',
-        at: floatingCite,
-        unused: 'floating mode strips every floor_ key from the property list',
-      },
-    },
-    slideOnCeilingInFloating: {
-      severity: 'info',
-      ruleName: `${prefix}-slide-on-ceiling-in-floating-mode`,
-      grounding: {
-        kind: 'engine-inert',
-        at: floatingCite,
-        unused: 'the same line strips it, and every read sits in _move_and_slide_grounded',
-      },
-    },
+    floorPropsInFloating: groundedArm(`${prefix}-floor-props-in-floating-mode`, {
+      kind: 'engine-inert',
+      at: floatingCite,
+      unused: 'floating mode strips every floor_ key from the property list',
+    }),
+    slideOnCeilingInFloating: groundedArm(`${prefix}-slide-on-ceiling-in-floating-mode`, {
+      kind: 'engine-inert',
+      at: floatingCite,
+      unused: 'the same line strips it, and every read sits in _move_and_slide_grounded',
+    }),
     // 2D only. `character_body_3d.cpp` has no `else` arm because its :300-303
     // reads `wall_min_slide_angle` in the grounded path too; the 2D twin's only
     // read is `character_body_2d.cpp:313`, inside `_move_and_slide_floating`.
     wallAngleInGrounded: is2D
-      ? {
-          severity: 'info',
-          ruleName: `${prefix}-wall-min-slide-angle-in-grounded-mode`,
-          grounding: {
-            kind: 'engine-inert',
-            at: 'character_body_2d.cpp:676',
-            unused: 'grounded mode strips it, and its only read sits in _move_and_slide_floating',
-          },
-        }
+      ? groundedArm(`${prefix}-wall-min-slide-angle-in-grounded-mode`, {
+          kind: 'engine-inert',
+          at: 'character_body_2d.cpp:676',
+          unused: 'grounded mode strips it, and its only read sits in _move_and_slide_floating',
+        })
       : undefined,
   };
 

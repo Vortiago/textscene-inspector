@@ -9,14 +9,10 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { extractNodePath, isValidProperties } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  rootPathDangling: {
-    severity: 'warning',
-    ruleName: 'multiplayersynchronizer-root-path-dangling',
-    grounding: { kind: 'configuration-warning' },
-  },
+  rootPathDangling: groundedArm('multiplayersynchronizer-root-path-dangling', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function checkMultiplayerSynchronizer(context: RuleContext): Diagnostic[] {

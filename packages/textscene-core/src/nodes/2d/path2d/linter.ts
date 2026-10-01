@@ -7,7 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { armDiagnostic, armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
 import { findSubResourceOfType } from '../../../resources/SubResourceResolver.js';
 import {
@@ -18,15 +18,11 @@ import {
 import { subResourceRefAnywhere } from '../../../godot/index.js';
 
 const arms = {
-  missingCurve: {
-    severity: 'info',
-    ruleName: 'path2d-missing-curve',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'path_2d.cpp:161',
-      unused: 'the debug pass has already cleared the mesh and returns without refilling it',
-    },
-  },
+  missingCurve: groundedArm('path2d-missing-curve', {
+    kind: 'engine-inert',
+    at: 'path_2d.cpp:161',
+    unused: 'the debug pass has already cleared the mesh and returns without refilling it',
+  }),
   unloadableCurve: {
     severity: 'error',
     ruleName: 'curve2d-loadable',

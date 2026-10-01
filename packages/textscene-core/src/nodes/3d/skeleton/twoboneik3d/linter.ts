@@ -17,7 +17,7 @@ import {
 } from '../../../../linter/reportedIndices.js';
 import { indexedElements, indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
 import { resolveTwoBoneSettingLeaf } from './linterParser.js';
-import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
   settingIndexOutOfRange: {
@@ -30,11 +30,7 @@ const arms = {
     ruleName: 'twoboneik3d-pole-direction-vector-ignored',
     grounding: { kind: 'engine', at: 'two_bone_ik_3d.cpp:446' },
   },
-  settingMissingTargetNode: {
-    severity: 'warning',
-    ruleName: 'twoboneik3d-setting-missing-target-node',
-    grounding: { kind: 'configuration-warning' },
-  },
+  settingMissingTargetNode: groundedArm('twoboneik3d-setting-missing-target-node', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 /**

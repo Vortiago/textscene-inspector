@@ -13,14 +13,10 @@ import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { listIndices, unsatisfiedIndices } from '../../../../linter/reportedIndices.js';
 import { indexedElements } from '../../../../godot/index.js';
 import { resolveIterateSettingLeaf } from './linterParser.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  settingMissingTargetNode: {
-    severity: 'warning',
-    ruleName: 'iterateik3d-setting-missing-target-node',
-    grounding: { kind: 'configuration-warning' },
-  },
+  settingMissingTargetNode: groundedArm('iterateik3d-setting-missing-target-node', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function checkIterateIK3D(context: RuleContext): Diagnostic[] {

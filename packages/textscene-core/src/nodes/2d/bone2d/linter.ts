@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { TscnNode, TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { knownParent, searchAncestors } from '../../../linter/parentType.js';
@@ -16,21 +16,9 @@ import { tupleComponent } from '../../../linter/validators/commonValidators.js';
 import { makeFloatTupleRegex } from '../../../linter/validators/floatTupleValidator.js';
 
 const arms = {
-  chainDoesNotTerminate: {
-    severity: 'warning',
-    ruleName: 'bone2d-chain-does-not-terminate',
-    grounding: { kind: 'configuration-warning' },
-  },
-  invalidParent: {
-    severity: 'warning',
-    ruleName: 'bone2d-invalid-parent',
-    grounding: { kind: 'configuration-warning' },
-  },
-  missingRestPose: {
-    severity: 'warning',
-    ruleName: 'bone2d-missing-rest-pose',
-    grounding: { kind: 'configuration-warning' },
-  },
+  chainDoesNotTerminate: groundedArm('bone2d-chain-does-not-terminate', { kind: 'configuration-warning' }),
+  invalidParent: groundedArm('bone2d-invalid-parent', { kind: 'configuration-warning' }),
+  missingRestPose: groundedArm('bone2d-missing-rest-pose', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 type AncestryVerdict =

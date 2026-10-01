@@ -5,7 +5,7 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { armEmits, reportArm, type RuleArms } from '../ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../ruleArms.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { parentTypeVerdict } from '../parentType.js';
@@ -15,11 +15,7 @@ export function makeVehicleWheelLinterRule(dim: PhysicsDim): LintRule {
   const bodyType = `VehicleBody${dim}`;
   const prefix = `vehiclewheel${dimSuffix(dim)}`;
   const arms = {
-    notUnderVehicleBody: {
-      severity: 'warning',
-      ruleName: `${prefix}-not-under-vehicle-body`,
-      grounding: { kind: 'configuration-warning' },
-    },
+    notUnderVehicleBody: groundedArm(`${prefix}-not-under-vehicle-body`, { kind: 'configuration-warning' }),
   } as const satisfies RuleArms<string>;
 
   function check(context: RuleContext): Diagnostic[] {

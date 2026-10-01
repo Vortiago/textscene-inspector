@@ -9,19 +9,11 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isExplicitlyHidden } from '../../../../linter/parentType.js';
 import { hasChildOfType } from '../../../../linter/childType.js';
 import { hasNonUnitScale3D } from '../../../../linter/transformBasis.js';
-import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  missingCameraChild: {
-    severity: 'warning',
-    ruleName: 'xrorigin3d-missing-camera-child',
-    grounding: { kind: 'configuration-warning' },
-  },
-  unsupportedScale: {
-    severity: 'warning',
-    ruleName: 'xrorigin3d-unsupported-scale',
-    grounding: { kind: 'configuration-warning' },
-  },
+  missingCameraChild: groundedArm('xrorigin3d-missing-camera-child', { kind: 'configuration-warning' }),
+  unsupportedScale: groundedArm('xrorigin3d-unsupported-scale', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function checkXROrigin3D(context: RuleContext): Diagnostic[] {

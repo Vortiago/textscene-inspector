@@ -13,38 +13,22 @@ import { hiddenOrUnknowableInTree, parentTypeVerdict, placementPhrase } from '..
 import { resolveSubResourceRef } from '../../../resources/SubResourceResolver.js';
 import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../godot/index.js';
-import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  noParent: {
-    severity: 'warning',
-    ruleName: 'pathfollow3d-no-parent',
-    grounding: { kind: 'configuration-warning' },
-  },
-  invalidParent: {
-    severity: 'warning',
-    ruleName: 'pathfollow3d-invalid-parent',
-    grounding: { kind: 'configuration-warning' },
-  },
-  negativeProgress: {
-    severity: 'info',
-    ruleName: 'pathfollow3d-negative-progress',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'curve.cpp:2024',
-      unused: 'the sampler clamps the offset, so travel before the start moves nothing',
-    },
-  },
+  noParent: groundedArm('pathfollow3d-no-parent', { kind: 'configuration-warning' }),
+  invalidParent: groundedArm('pathfollow3d-invalid-parent', { kind: 'configuration-warning' }),
+  negativeProgress: groundedArm('pathfollow3d-negative-progress', {
+    kind: 'engine-inert',
+    at: 'curve.cpp:2024',
+    unused: 'the sampler clamps the offset, so travel before the start moves nothing',
+  }),
   progressRatioIgnored: {
     severity: 'error',
     ruleName: 'pathfollow3d-progress-ratio-ignored',
     grounding: { kind: 'engine', at: 'path_3d.cpp:503' },
   },
-  orientedModeWithoutUpVector: {
-    severity: 'warning',
-    ruleName: 'pathfollow3d-oriented-mode-requires-up-vector',
-    grounding: { kind: 'configuration-warning' },
-  },
+  orientedModeWithoutUpVector: groundedArm('pathfollow3d-oriented-mode-requires-up-vector', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 /** `PathFollow3D::ROTATION_ORIENTED` (path_3d.h), the mode that needs up vectors. */

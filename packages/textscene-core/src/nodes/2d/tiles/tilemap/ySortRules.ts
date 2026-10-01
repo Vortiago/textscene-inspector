@@ -7,7 +7,7 @@
 
 import type { Diagnostic } from '../../../../linter/types.js';
 import type { TscnNode } from '../../../../parser/types.js';
-import { reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../../godot/index.js';
 import type { tileMapLayerVector } from '../shared/layerVector';
@@ -15,21 +15,9 @@ import type { tileMapLayerVector } from '../shared/layerVector';
 type Layer = ReturnType<typeof tileMapLayerVector>[number];
 
 export const ySortArms = {
-  ySortZIndexConflict: {
-    severity: 'warning',
-    ruleName: 'tilemap-y-sort-z-index-conflict',
-    grounding: { kind: 'configuration-warning' },
-  },
-  layerYSortWithoutNode: {
-    severity: 'warning',
-    ruleName: 'tilemap-layer-y-sort-without-node',
-    grounding: { kind: 'configuration-warning' },
-  },
-  nodeYSortWithoutLayer: {
-    severity: 'warning',
-    ruleName: 'tilemap-node-y-sort-without-layer',
-    grounding: { kind: 'configuration-warning' },
-  },
+  ySortZIndexConflict: groundedArm('tilemap-y-sort-z-index-conflict', { kind: 'configuration-warning' }),
+  layerYSortWithoutNode: groundedArm('tilemap-layer-y-sort-without-node', { kind: 'configuration-warning' }),
+  nodeYSortWithoutLayer: groundedArm('tilemap-node-y-sort-without-layer', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 export function ySortDiagnostics(

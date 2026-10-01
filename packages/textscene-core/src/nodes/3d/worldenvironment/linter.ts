@@ -9,19 +9,11 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { heldResource } from '../../../linter/resourceChecker.js';
 import { firstNodeOfType, isValidProperties } from '../../../linter/linterUtils.js';
 import { parseResourceReference } from '../../../resources/SubResourceResolver.js';
-import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  requiresEnvironment: {
-    severity: 'warning',
-    ruleName: 'worldenvironment-requires-environment',
-    grounding: { kind: 'configuration-warning' },
-  },
-  notFirstInGroup: {
-    severity: 'warning',
-    ruleName: 'single-worldenvironment',
-    grounding: { kind: 'configuration-warning' },
-  },
+  requiresEnvironment: groundedArm('worldenvironment-requires-environment', { kind: 'configuration-warning' }),
+  notFirstInGroup: groundedArm('single-worldenvironment', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 /**

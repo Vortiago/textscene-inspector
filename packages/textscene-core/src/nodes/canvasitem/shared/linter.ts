@@ -8,19 +8,11 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { clipAncestry, clipsChildren } from './clipAncestry.js';
-import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  ancestorClipsChildren: {
-    severity: 'warning',
-    ruleName: 'canvasitem-ancestor-clips-children',
-    grounding: { kind: 'configuration-warning' },
-  },
-  ancestorIsCanvasGroup: {
-    severity: 'warning',
-    ruleName: 'canvasitem-ancestor-is-canvasgroup',
-    grounding: { kind: 'configuration-warning' },
-  },
+  ancestorClipsChildren: groundedArm('canvasitem-ancestor-clips-children', { kind: 'configuration-warning' }),
+  ancestorIsCanvasGroup: groundedArm('canvasitem-ancestor-is-canvasgroup', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function checkCanvasItemClipAncestry(context: RuleContext): Diagnostic[] {

@@ -9,14 +9,10 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { hasChildOfType } from '../../../../linter/childType.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  noChildSkeleton: {
-    severity: 'warning',
-    ruleName: 'retargetmodifier3d-no-child-skeleton',
-    grounding: { kind: 'configuration-warning' },
-  },
+  noChildSkeleton: groundedArm('retargetmodifier3d-no-child-skeleton', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function checkRetargetModifier3D(context: RuleContext): Diagnostic[] {

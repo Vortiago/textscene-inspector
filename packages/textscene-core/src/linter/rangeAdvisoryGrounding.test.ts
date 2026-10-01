@@ -1,6 +1,6 @@
 /**
  * Every range-advisory threshold cites a real Godot source location. The
- * compiler already requires `RangeArm.cite`, so this reads the sources for each
+ * compiler already requires `RangeThreshold.cite`, so this reads the sources for each
  * `cite: '…'` literal: a runtime registry would re-register per lint for a table
  * a shared helper builds inside `check()`.
  */
@@ -52,14 +52,14 @@ function node(properties: Record<string, string>): TscnNode {
 }
 
 describe('range advisory grounding', () => {
-  it('finds the arms it is meant to be checking', () => {
+  it('finds the thresholds it is meant to be checking', () => {
     // A scrape that matches nothing passes every assertion below it, so the
     // floor sits near the real count: a broken regex, a moved directory or
     // double-quoted cites fail here.
     expect(citeLiterals().length).toBeGreaterThan(55);
   });
 
-  it('cites a real source location on every arm', () => {
+  it('cites a real source location on every threshold', () => {
     const uncited = citeLiterals()
       .filter(({ cite }) => !ENGINE_CITE_RE.test(cite))
       .map(({ file, cite }) => `${file}: "${cite}"`);
@@ -67,7 +67,7 @@ describe('range advisory grounding', () => {
   });
 
   it('emits a warning, never an error, whatever the citation says', () => {
-    // ADR-0032: a hint constrains the inspector widget, not the engine. An arm
+    // ADR-0032: a hint constrains the inspector widget, not the engine. A threshold
     // grounded in an ERR_FAIL belongs in a validator as an error instead.
     const table: RangeAdvisoryTable = {
       range: [{ over: 1, message: () => 'm', cite: 'light_3d.cpp:389' }],
@@ -75,7 +75,7 @@ describe('range advisory grounding', () => {
     expect(rangeAdvisories(node({ range: '5' }), table, arm)[0]?.severity).toBe('warning');
   });
 
-  it('still trips the arm it cites', () => {
+  it('still trips the threshold it cites', () => {
     const table: RangeAdvisoryTable = {
       range: [{ over: 100, message: (v) => `${v}`, cite: 'light_3d.cpp:389' }],
     };

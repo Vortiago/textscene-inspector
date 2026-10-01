@@ -165,7 +165,7 @@ export type OutsideEngineScope =
 /**
  * Where one reported diagnostic's authority comes from, one grounding per
  * emitted `ruleName`, since one registered rule can report under many. It is
- * required, as `RangeArm.cite` is, so the compiler rejects an ungrounded
+ * required, as `RangeThreshold.cite` is, so the compiler rejects an ungrounded
  * diagnostic everywhere.
  */
 export type EmitGrounding =
@@ -272,7 +272,7 @@ export interface RuleMeta {
    * `file:line` of the engine guard that confines this rule to one exact class,
    * as `container.cpp:210`'s `get_class() == "Container"` does. Without it,
    * `ruleCoverage` fails a rule that names a type with descendants. Declared on
-   * the rule, as `RangeArm.cite` is, so the guard keeps no parallel roster.
+   * the rule, as `RangeThreshold.cite` is, so the guard keeps no parallel roster.
    */
   exactClassByDesign?: string;
 }

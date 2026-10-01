@@ -11,19 +11,11 @@ import { parentTypeVerdict, type ParentVerdict } from '../../../../linter/parent
 import type { TscnNode, TscnScene } from '../../../../parser/types.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { literalText } from '../../../../godot/index.js';
-import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  trackerRequiredForLocalPose: {
-    severity: 'warning',
-    ruleName: 'openxrrendermodelmanager-tracker-required-for-local-pose',
-    grounding: { kind: 'configuration-warning' },
-  },
-  parentNotXROrigin3D: {
-    severity: 'warning',
-    ruleName: 'openxrrendermodelmanager-parent-not-xrorigin3d',
-    grounding: { kind: 'configuration-warning' },
-  },
+  trackerRequiredForLocalPose: groundedArm('openxrrendermodelmanager-tracker-required-for-local-pose', { kind: 'configuration-warning' }),
+  parentNotXROrigin3D: groundedArm('openxrrendermodelmanager-parent-not-xrorigin3d', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 /** The two `tracker` values that search only the DIRECT parent (cpp:203). */

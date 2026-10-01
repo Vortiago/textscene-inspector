@@ -8,30 +8,22 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
-import { paramMinAboveMaxArms, paramMinAboveMaxDiagnostics } from '../../../linter/particleParamRanges.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { paramMinAboveMaxArm, paramMinAboveMaxDiagnostics } from '../../../linter/particleParamRanges.js';
 import { ruleInt, boolSlotValue} from '../../../godot/index.js';
 
 const arms = {
-  nondeterministicEmissionShape: {
-    severity: 'info',
-    ruleName: 'cpuparticles2d-nondeterministic-emission-shape',
-    grounding: {
-      kind: 'no-engine-counterpart',
-      scope: 'previewer-limitation',
-      because: 'the emitter samples an unserialised global RNG, so no static pose can place it',
-    },
-  },
-  fractDeltaIgnored: {
-    severity: 'info',
-    ruleName: 'cpuparticles2d-fract-delta-ignored',
-    grounding: {
-      kind: 'no-engine-counterpart',
-      scope: 'previewer-limitation',
-      because: 'the frozen pose steps at a fixed rate, so a partial first step is unreachable',
-    },
-  },
-  ...paramMinAboveMaxArms('cpuparticles2d', 'cpu_particles_2d.cpp:352-376'),
+  nondeterministicEmissionShape: groundedArm('cpuparticles2d-nondeterministic-emission-shape', {
+    kind: 'no-engine-counterpart',
+    scope: 'previewer-limitation',
+    because: 'the emitter samples an unserialised global RNG, so no static pose can place it',
+  }),
+  fractDeltaIgnored: groundedArm('cpuparticles2d-fract-delta-ignored', {
+    kind: 'no-engine-counterpart',
+    scope: 'previewer-limitation',
+    because: 'the frozen pose steps at a fixed rate, so a partial first step is unreachable',
+  }),
+  paramMinAboveMax: paramMinAboveMaxArm('cpuparticles2d', 'cpu_particles_2d.cpp:352-376'),
 } as const satisfies RuleArms<string>;
 
 /**
@@ -80,7 +72,7 @@ function checkCPUParticles2D(context: RuleContext): Diagnostic[] {
   const { node } = context;
   const props = node.properties;
   if (!isValidProperties(props)) return [];
-  return [...checkPreviewLimits(node, props), ...paramMinAboveMaxDiagnostics(node, props, arms)];
+  return [...checkPreviewLimits(node, props), ...paramMinAboveMaxDiagnostics(node, props, arms.paramMinAboveMax)];
 }
 
 const cpuParticles2DValidationRule: LintRule = {

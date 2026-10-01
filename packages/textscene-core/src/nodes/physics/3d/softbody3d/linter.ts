@@ -10,14 +10,10 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
-import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  missingMesh: {
-    severity: 'warning',
-    ruleName: 'valid-softbody3d-mesh',
-    grounding: { kind: 'configuration-warning' },
-  },
+  missingMesh: groundedArm('valid-softbody3d-mesh', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function checkSoftBody3D(context: RuleContext): Diagnostic[] {

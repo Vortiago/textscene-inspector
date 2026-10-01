@@ -5,16 +5,12 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { heldResource } from '../../../linter/resourceChecker.js';
 import { DEFAULT_ANIMATION_NAME, literalText, ruleInt } from '../../../godot/index.js';
 
 const arms = {
-  missingSpriteFrames: {
-    severity: 'warning',
-    ruleName: 'animatedsprite2d-requires-spriteframes',
-    grounding: { kind: 'configuration-warning' },
-  },
+  missingSpriteFrames: groundedArm('animatedsprite2d-requires-spriteframes', { kind: 'configuration-warning' }),
   animationWithoutSpriteFrames: {
     severity: 'error',
     ruleName: 'animatedsprite2d-animation-no-spriteframes',

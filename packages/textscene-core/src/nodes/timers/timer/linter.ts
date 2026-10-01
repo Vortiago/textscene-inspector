@@ -8,14 +8,10 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { CMP_EPSILON } from '../../../godot/math.js';
 import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  lowWaitTime: {
-    severity: 'warning',
-    ruleName: 'timer-low-wait-time',
-    grounding: { kind: 'configuration-warning' },
-  },
+  lowWaitTime: groundedArm('timer-low-wait-time', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 const LOW_WAIT_TIME_THRESHOLD = 0.05 - CMP_EPSILON;

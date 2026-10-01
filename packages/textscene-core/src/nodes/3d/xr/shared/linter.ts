@@ -12,24 +12,12 @@ import { isExplicitlyHidden, parentTypeVerdict, placementPhrase } from '../../..
 import { isOrthonormalTransform } from '../../../../linter/transformBasis.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../../godot/index.js';
-import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  parentNotXROrigin3D: {
-    severity: 'warning',
-    ruleName: 'openxrcompositionlayer-parent-not-xrorigin3d',
-    grounding: { kind: 'configuration-warning' },
-  },
-  nonOrthonormalTransform: {
-    severity: 'warning',
-    ruleName: 'openxrcompositionlayer-non-orthonormal-transform',
-    grounding: { kind: 'configuration-warning' },
-  },
-  holePunchSortOrder: {
-    severity: 'warning',
-    ruleName: 'openxrcompositionlayer-hole-punch-sort-order',
-    grounding: { kind: 'configuration-warning' },
-  },
+  parentNotXROrigin3D: groundedArm('openxrcompositionlayer-parent-not-xrorigin3d', { kind: 'configuration-warning' }),
+  nonOrthonormalTransform: groundedArm('openxrcompositionlayer-non-orthonormal-transform', { kind: 'configuration-warning' }),
+  holePunchSortOrder: groundedArm('openxrcompositionlayer-hole-punch-sort-order', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 // Not modelled: set_layer_viewport's ERR_FAIL_COND_MSG when `use_android_surface` is true (:303-305).

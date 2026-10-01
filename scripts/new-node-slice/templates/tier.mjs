@@ -89,10 +89,11 @@ import { armEmits, type RuleArms } from '${toSrc}linter/ruleArms.js';
 import { descendsFrom } from '${toSrc}godot/nodeBaseTypes.js';
 
 /**
- * One arm per diagnostic \`check\` reports, each with its grounding (ADR-0032).
+ * One arm per diagnostic \`check\` reports, each with its grounding (ADR-0032): an
+ * \`engine\` arm as \`{ severity, ruleName, grounding }\`, any other as \`groundedArm(ruleName, grounding)\`.
  * \`check\` reports through \`reportArm(diagnostics, arms.<key>, node, message)\`.
  */
-const arms = {} as const satisfies RuleArms<never>;
+const arms = {} as const satisfies RuleArms<string>;
 
 function check${typeName}(context: RuleContext): Diagnostic[] {
   // No applicability check here: RuleRegistry has already filtered by the

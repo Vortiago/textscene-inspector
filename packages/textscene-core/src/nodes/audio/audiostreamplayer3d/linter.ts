@@ -7,27 +7,19 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { boolSlotValue } from '../../../godot/index.js';
-import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  emissionAngleNotEnabled: {
-    severity: 'info',
-    ruleName: 'audiostreamplayer3d-emission-angle-not-enabled',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'audio_stream_player_3d.cpp:898',
-      unused: 'the group-enable toggle gates the whole emission_angle group',
-    },
-  },
-  emissionFilterNotEnabled: {
-    severity: 'info',
-    ruleName: 'audiostreamplayer3d-emission-filter-not-enabled',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'audio_stream_player_3d.cpp:898',
-      unused: 'the group-enable toggle gates the whole emission_angle group',
-    },
-  },
+  emissionAngleNotEnabled: groundedArm('audiostreamplayer3d-emission-angle-not-enabled', {
+    kind: 'engine-inert',
+    at: 'audio_stream_player_3d.cpp:898',
+    unused: 'the group-enable toggle gates the whole emission_angle group',
+  }),
+  emissionFilterNotEnabled: groundedArm('audiostreamplayer3d-emission-filter-not-enabled', {
+    kind: 'engine-inert',
+    at: 'audio_stream_player_3d.cpp:898',
+    unused: 'the group-enable toggle gates the whole emission_angle group',
+  }),
 } as const satisfies RuleArms<string>;
 
 /**

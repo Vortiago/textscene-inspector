@@ -11,14 +11,10 @@ import { isValidProperties } from '../../../linter/linterUtils.js';
 import { matchVector3 } from '../../../linter/validators/vectorValidators.js';
 import { isEqualApprox } from '../../../godot/index.js';
 import type { Vector3 } from '../../../parser/vectors.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  startEqualsEnd: {
-    severity: 'warning',
-    ruleName: 'navigationlink3d-start-position-equals-end-position',
-    grounding: { kind: 'configuration-warning' },
-  },
+  startEqualsEnd: groundedArm('navigationlink3d-start-position-equals-end-position', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 /**

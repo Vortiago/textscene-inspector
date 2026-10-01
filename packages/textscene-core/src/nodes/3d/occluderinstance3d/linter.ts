@@ -9,19 +9,11 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
-import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  emptyBakeMask: {
-    severity: 'warning',
-    ruleName: 'occluderinstance3d-empty-bake-mask',
-    grounding: { kind: 'configuration-warning' },
-  },
-  missingOccluder: {
-    severity: 'warning',
-    ruleName: 'occluderinstance3d-missing-occluder',
-    grounding: { kind: 'configuration-warning' },
-  },
+  emptyBakeMask: groundedArm('occluderinstance3d-empty-bake-mask', { kind: 'configuration-warning' }),
+  missingOccluder: groundedArm('occluderinstance3d-missing-occluder', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 // Not ported: the `use_occlusion_culling` project setting needs `project.godot`. The

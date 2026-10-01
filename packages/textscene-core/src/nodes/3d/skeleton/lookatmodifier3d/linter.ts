@@ -11,14 +11,10 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { BONE_AXIS, axisFromBoneAxis } from '../skeletonmodifier3d/linterParser.js';
 import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  parallelRotationAxes: {
-    severity: 'warning',
-    ruleName: 'lookatmodifier3d-parallel-rotation-axes',
-    grounding: { kind: 'configuration-warning' },
-  },
+  parallelRotationAxes: groundedArm('lookatmodifier3d-parallel-rotation-axes', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 // look_at_modifier_3d.h:52-53, the field initialisers: a key a scene omits

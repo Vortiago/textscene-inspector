@@ -12,18 +12,14 @@ import { matchVector3 } from '../../../linter/validators/vectorValidators.js';
 import { sign } from '../../../godot/math.js';
 import { formatReal, storedReal } from '../../../godot/real.js';
 import type { Vector3 } from '../../../parser/vectors.js';
-import { armDiagnostic, armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  ambientColorNoEffect: {
-    severity: 'info',
-    ruleName: 'reflectionprobe-ambient-color-no-effect',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'scene_forward_lights_inc.glsl:998',
-      unused: 'the ambient colour is read only while the mode is AMBIENT_COLOR',
-    },
-  },
+  ambientColorNoEffect: groundedArm('reflectionprobe-ambient-color-no-effect', {
+    kind: 'engine-inert',
+    at: 'scene_forward_lights_inc.glsl:998',
+    unused: 'the ambient colour is read only while the mode is AMBIENT_COLOR',
+  }),
   originOffsetClamped: {
     severity: 'warning',
     ruleName: 'reflectionprobe-origin-offset-clamped',

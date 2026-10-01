@@ -12,14 +12,10 @@ import { indexedElements, nodePathLiteral } from '../../../../godot/index.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { unsatisfiedIndices } from '../../../../linter/reportedIndices.js';
 import { resolveSplineSettingLeaf } from './linterParser.js';
-import { armDiagnostic, armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  settingWithoutPath3D: {
-    severity: 'warning',
-    ruleName: 'splineik3d-setting-without-path-3d',
-    grounding: { kind: 'configuration-warning' },
-  },
+  settingWithoutPath3D: groundedArm('splineik3d-setting-without-path-3d', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 /** `NodePath("")` and a bare `""`, the two spellings of the unset path. */

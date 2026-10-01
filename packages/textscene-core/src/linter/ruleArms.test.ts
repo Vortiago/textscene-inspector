@@ -4,8 +4,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { stripComments } from '@textscene/dev-kit';
-import { armEmits, reportArm, type RuleArm, type RuleArms } from './ruleArms.js';
+import { escapeRegExp, stripComments } from '@textscene/dev-kit';
+import { armEmits, groundedArm, reportArm, type RuleArm, type RuleArms } from './ruleArms.js';
 import { allSourceFiles, atLeast, srcLabel } from './testing/ruleNameScrape.js';
 import { balancedGroup, topLevelParts } from './testing/bracketScan.js';
 import type { Diagnostic } from './types.js';
@@ -30,6 +30,26 @@ describe('armEmits', () => {
     // disagree with `check` about it, because both read this same record.
     const arms: RuleArms<'a' | 'b'> = { a: present };
     expect(armEmits(arms).map((e) => e.ruleName)).toEqual(['shapecast2d-zero-mask']);
+  });
+});
+
+describe('groundedArm', () => {
+  it('takes the severity a configuration warning fixes', () => {
+    expect(groundedArm('x-y', { kind: 'configuration-warning' })).toEqual({
+      severity: 'warning',
+      ruleName: 'x-y',
+      grounding: { kind: 'configuration-warning' },
+    });
+  });
+
+  it('takes the severity an inert value fixes', () => {
+    const arm = groundedArm('x-y', { kind: 'engine-inert', at: 'a.cpp:1', unused: 'nothing reads it' });
+    expect(arm.severity).toBe('info');
+  });
+
+  it('takes the severity a scope outside the engine fixes', () => {
+    const arm = groundedArm('x-y', { kind: 'no-engine-counterpart', scope: 'linter-failure', because: 'it threw' });
+    expect(arm.severity).toBe('error');
   });
 });
 
@@ -58,28 +78,21 @@ describe('reportArm', () => {
 });
 
 /**
- * Every arm a table declares needs a report site, because `armEmits` lists each
- * arm whether or not `check` reaches it. The test finds a table by the type it
- * claims, annotation or `satisfies`, with or without `as const`: matching one
- * spelling leaves the others unguarded.
+ * Every arm a table declares is used, because `armEmits` lists each arm whether
+ * or not `check` reaches it. The test finds a table by the type it claims,
+ * annotation or `satisfies`, with or without `as const`: matching one spelling
+ * leaves the others unguarded.
  */
 const OBJECT_LITERAL = /(export\s+)?const\s+([A-Za-z_$][\w$]*)\s*(?::([^=]*?))?=\s*\{/g;
 /** The contract, in either place TypeScript lets it be stated. */
 const ARM_CONTRACT = /RuleArms<|Record<\s*string\s*,\s*RuleArm\s*>/;
 const SATISFIES_TAIL = /^\s*(?:as\s+const\s+)?satisfies\s+([^;]*)/;
-/** A call that reports through the arm it receives, `rangeAdvisories` included. */
-const REPORT_CALL = /\b(?:report|reportArm|armDiagnostic|rangeAdvisories)\s*\(/g;
 
 interface ArmTable {
   readonly file: string;
   readonly binding: string;
   readonly exported: boolean;
   readonly keys: string[];
-}
-
-/** `binding` and `key` reach a RegExp, and both grammars admit `$`. */
-function escapeRe(literal: string): string {
-  return literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function keysIn(body: string): string[] {
@@ -93,20 +106,6 @@ function sourceOf(file: string): string {
   let src = stripped.get(file);
   if (src === undefined) stripped.set(file, (src = stripComments(readFileSync(file, 'utf8'))));
   return src;
-}
-
-/** Every argument list handed to a report call in `file`. */
-const callArgs = new Map<string, string[]>();
-function reportCallArgs(file: string): string[] {
-  let args = callArgs.get(file);
-  if (args === undefined) {
-    const src = sourceOf(file);
-    args = [...src.matchAll(REPORT_CALL)].map((m) =>
-      balancedGroup(src, m.index + m[0].length - 1)
-    );
-    callArgs.set(file, args);
-  }
-  return args;
 }
 
 function armTables(): ArmTable[] {
@@ -126,19 +125,18 @@ function armTables(): ArmTable[] {
 }
 
 describe('an arm table', () => {
-  it('reports every arm it declares', () => {
-    const unreported: string[] = [];
-    // A private table is reported in its own file, an exported one anywhere
-    // (`FILE_DIAGNOSTICS`). The reference may sit anywhere in the argument
-    // list, since one call can pick its arm with a ternary.
+  it('uses every arm it declares', () => {
+    const unused: string[] = [];
+    // A private table is used in its own file, an exported one anywhere
+    // (`FILE_DIAGNOSTICS`). Any reference counts: a report call, a helper's
+    // argument or a row of a table that `check` loops over.
     for (const { file, binding, exported, keys } of armTables()) {
       const scope = exported ? allSourceFiles() : [file];
       for (const key of keys) {
-        const ref = new RegExp(String.raw`\b${escapeRe(binding)}\.${escapeRe(key)}\b`);
-        const reported = scope.some((f) => reportCallArgs(f).some((args) => ref.test(args)));
-        if (!reported) unreported.push(`${srcLabel(file)}: ${binding}.${key}`);
+        const ref = new RegExp(String.raw`\b${escapeRegExp(binding)}\.${escapeRegExp(key)}\b`);
+        if (!scope.some((f) => ref.test(sourceOf(f)))) unused.push(`${srcLabel(file)}: ${binding}.${key}`);
       }
     }
-    expect(unreported.sort()).toEqual([]);
+    expect(unused.sort()).toEqual([]);
   });
 });

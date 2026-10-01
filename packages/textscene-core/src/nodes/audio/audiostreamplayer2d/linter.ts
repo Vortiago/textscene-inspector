@@ -9,18 +9,14 @@ import { isValidProperties } from '../../../linter/linterUtils.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { isDrivenByAnimationAudioTrack } from '../sharedLinterChecks.js';
 import { boolSlotValue } from '../../../godot/index.js';
-import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  autoplayWithoutStream: {
-    severity: 'info',
-    ruleName: 'audiostreamplayer2d-autoplay-without-stream',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'audio_stream_player_internal.cpp:139',
-      unused: 'play_basic returns an empty playback, so autoplay produces no sound',
-    },
-  },
+  autoplayWithoutStream: groundedArm('audiostreamplayer2d-autoplay-without-stream', {
+    kind: 'engine-inert',
+    at: 'audio_stream_player_internal.cpp:139',
+    unused: 'play_basic returns an empty playback, so autoplay produces no sound',
+  }),
 } as const satisfies RuleArms<string>;
 
 /**

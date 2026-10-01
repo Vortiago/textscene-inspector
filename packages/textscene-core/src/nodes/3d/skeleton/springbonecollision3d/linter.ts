@@ -9,14 +9,10 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  outsideSimulator: {
-    severity: 'warning',
-    ruleName: 'springbonecollision3d-outside-springbonesimulator3d',
-    grounding: { kind: 'configuration-warning' },
-  },
+  outsideSimulator: groundedArm('springbonecollision3d-outside-springbonesimulator3d', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function checkSpringBoneCollision3D(context: RuleContext): Diagnostic[] {

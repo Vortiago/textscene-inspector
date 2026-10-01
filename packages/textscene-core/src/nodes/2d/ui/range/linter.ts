@@ -6,7 +6,7 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../../godot/index.js';
-import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
   maxBelowMin: {
@@ -14,11 +14,7 @@ const arms = {
     ruleName: 'range-max-below-min',
     grounding: { kind: 'engine', at: 'range.cpp:229' },
   },
-  expEditNegativeMin: {
-    severity: 'warning',
-    ruleName: 'range-exp-edit-negative-min',
-    grounding: { kind: 'configuration-warning' },
-  },
+  expEditNegativeMin: groundedArm('range-exp-edit-negative-min', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function checkRangeBounds(context: RuleContext): Diagnostic[] {

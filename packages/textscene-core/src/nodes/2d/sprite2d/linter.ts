@@ -7,33 +7,25 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { heldResource } from '../../../linter/resourceChecker.js';
 import { boolSlotValue } from '../../../godot/index.js';
-import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { spriteFrameArms, spriteFrameDiagnostics } from '../../../linter/spriteFrameGrid.js';
 
 const arms = {
-  requiresTexture: {
-    severity: 'info',
-    ruleName: 'sprite2d-requires-texture',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'sprite_2d.cpp:159',
-      unused: 'the draw returns immediately, so the sprite renders nothing',
-    },
-  },
+  requiresTexture: groundedArm('sprite2d-requires-texture', {
+    kind: 'engine-inert',
+    at: 'sprite_2d.cpp:159',
+    unused: 'the draw returns immediately, so the sprite renders nothing',
+  }),
   ...spriteFrameArms('sprite2d', {
     frame: 'sprite_2d.cpp:296',
     frameCoords: 'sprite_2d.cpp:312',
     remap: 'sprite_2d.cpp:358',
   }),
-  regionConfiguration: {
-    severity: 'info',
-    ruleName: 'sprite2d-region-configuration',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'sprite_2d.cpp:98',
-      unused: 'region_rect is read only inside this branch; the else uses the texture size',
-    },
-  },
+  regionConfiguration: groundedArm('sprite2d-region-configuration', {
+    kind: 'engine-inert',
+    at: 'sprite_2d.cpp:98',
+    unused: 'region_rect is read only inside this branch; the else uses the texture size',
+  }),
 } as const satisfies RuleArms<string>;
 
 /** Checks the Sprite2D semantic rules. */

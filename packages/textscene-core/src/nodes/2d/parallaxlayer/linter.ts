@@ -7,15 +7,11 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { parentTypeVerdict, placementPhrase } from '../../../linter/parentType.js';
 
 const arms = {
-  outsideParallaxBackground: {
-    severity: 'warning',
-    ruleName: 'parallaxlayer-outside-parallaxbackground',
-    grounding: { kind: 'configuration-warning' },
-  },
+  outsideParallaxBackground: groundedArm('parallaxlayer-outside-parallaxbackground', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function checkParallaxLayer(context: RuleContext): Diagnostic[] {

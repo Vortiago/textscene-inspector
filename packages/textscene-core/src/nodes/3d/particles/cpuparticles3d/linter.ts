@@ -8,16 +8,12 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { heldResource } from '../../../../linter/resourceChecker.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
-import { paramMinAboveMaxArms, paramMinAboveMaxDiagnostics } from '../../../../linter/particleParamRanges.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { paramMinAboveMaxArm, paramMinAboveMaxDiagnostics } from '../../../../linter/particleParamRanges.js';
 
 const arms = {
-  requiresMesh: {
-    severity: 'warning',
-    ruleName: 'cpuparticles3d-requires-mesh',
-    grounding: { kind: 'configuration-warning' },
-  },
-  ...paramMinAboveMaxArms('cpuparticles3d', 'cpu_particles_3d.cpp:293-313'),
+  requiresMesh: groundedArm('cpuparticles3d-requires-mesh', { kind: 'configuration-warning' }),
+  paramMinAboveMax: paramMinAboveMaxArm('cpuparticles3d', 'cpu_particles_3d.cpp:293-313'),
 } as const satisfies RuleArms<string>;
 
 // `set_mesh` (cpu_particles_3d.cpp:183-192) nulls the multimesh's RID, so nothing
@@ -33,7 +29,7 @@ function checkCPUParticles3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
   const rawProps = node.properties;
   if (!isValidProperties(rawProps)) return [];
-  return [...checkMissingMesh(node, rawProps), ...paramMinAboveMaxDiagnostics(node, rawProps, arms)];
+  return [...checkMissingMesh(node, rawProps), ...paramMinAboveMaxDiagnostics(node, rawProps, arms.paramMinAboveMax)];
 }
 
 const cpuParticles3DValidationRule: LintRule = {

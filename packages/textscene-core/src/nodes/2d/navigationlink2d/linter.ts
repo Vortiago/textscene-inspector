@@ -6,18 +6,14 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { VECTOR2_REGEX, tupleComponent } from '../../../linter/validators/index.js';
 import { slotComponents, slotComponentsAltered } from '../../../godot/int.js';
 import { isEqualApprox } from '../../../godot/index.js';
 
 const arms = {
-  coincidentEndpoints: {
-    severity: 'warning',
-    ruleName: 'navigationlink2d-coincident-endpoints',
-    grounding: { kind: 'configuration-warning' },
-  },
+  coincidentEndpoints: groundedArm('navigationlink2d-coincident-endpoints', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 interface Vec2 {

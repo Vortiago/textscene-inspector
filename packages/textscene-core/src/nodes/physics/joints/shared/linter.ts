@@ -11,22 +11,14 @@ import { extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { resolveNodePath } from '../../../../linter/nodePathResolve.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 // Dimension-free: `emits` is rule-level, so a per-dimension name would put
 // `joint3d-not-connected` in every PinJoint2D sheet. The dimension is
 // already on the diagnostic's `nodeType` and in its message.
 const arms = {
-  notConnected: {
-    severity: 'warning',
-    ruleName: 'joint-not-connected',
-    grounding: { kind: 'configuration-warning' },
-  },
-  sameBody: {
-    severity: 'warning',
-    ruleName: 'joint-same-body',
-    grounding: { kind: 'configuration-warning' },
-  },
+  notConnected: groundedArm('joint-not-connected', { kind: 'configuration-warning' }),
+  sameBody: groundedArm('joint-same-body', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 /** `'2D'` or `'3D'` for a joint type, or undefined when it is not a joint. */

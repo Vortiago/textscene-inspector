@@ -12,19 +12,11 @@ import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
 import { resolveNodePath } from '../../../../linter/nodePathResolve.js';
 import { boolSlotValue } from '../../../../godot/index.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  parentNotSkeleton3D: {
-    severity: 'warning',
-    ruleName: 'boneattachment3d-parent-not-skeleton3d',
-    grounding: { kind: 'configuration-warning' },
-  },
-  externalSkeletonUnset: {
-    severity: 'warning',
-    ruleName: 'boneattachment3d-external-skeleton-unset',
-    grounding: { kind: 'configuration-warning' },
-  },
+  parentNotSkeleton3D: groundedArm('boneattachment3d-parent-not-skeleton3d', { kind: 'configuration-warning' }),
+  externalSkeletonUnset: groundedArm('boneattachment3d-external-skeleton-unset', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 // `bone_idx == -1` (cpp:74-76) is Godot's third warning and gets no rule: -1 is the serialised

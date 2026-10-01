@@ -8,14 +8,10 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { heldResource, resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { DEFAULT_ANIMATION_NAME, literalText } from '../../../godot/index.js';
-import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  requiresSpriteFrames: {
-    severity: 'warning',
-    ruleName: 'animatedsprite3d-requires-spriteframes',
-    grounding: { kind: 'configuration-warning' },
-  },
+  requiresSpriteFrames: groundedArm('animatedsprite3d-requires-spriteframes', { kind: 'configuration-warning' }),
   animationWithoutSpriteFrames: {
     severity: 'error',
     ruleName: 'animatedsprite3d-animation-no-spriteframes',

@@ -6,18 +6,14 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
-import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  unusedSplits: {
-    severity: 'info',
-    ruleName: 'directionallight3d-unused-splits',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'renderer_scene_cull.cpp:2175',
-      unused: 'the cascade loop reads only the first split offsets for the chosen mode',
-    },
-  },
+  unusedSplits: groundedArm('directionallight3d-unused-splits', {
+    kind: 'engine-inert',
+    at: 'renderer_scene_cull.cpp:2175',
+    unused: 'the cascade loop reads only the first split offsets for the chosen mode',
+  }),
 } as const satisfies RuleArms<string>;
 
 /**

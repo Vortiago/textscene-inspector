@@ -6,7 +6,7 @@
  */
 
 import type { Diagnostic, LintRule, RuleContext } from '../types.js';
-import { armEmits, reportArm, type RuleArms } from '../ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../ruleArms.js';
 import { descendsFrom } from '../../godot/nodeBaseTypes.js';
 import { collisionShapeTypesPhrase, hasCollisionShapeChild } from './hasCollisionShapeChild.js';
 import type { PhysicsDim } from './dim.js';
@@ -17,11 +17,7 @@ export function makeCollisionObjectLinterRule(dim: PhysicsDim): LintRule {
   const prefix = `collisionobject${dimSuffix(dim)}`;
   const cite = dim === '2D' ? 'collision_object_2d.cpp:588' : 'collision_object_3d.cpp:739';
   const arms = {
-    needsCollisionShape: {
-      severity: 'warning',
-      ruleName: `${prefix}-needs-collision-shape`,
-      grounding: { kind: 'configuration-warning' },
-    },
+    needsCollisionShape: groundedArm(`${prefix}-needs-collision-shape`, { kind: 'configuration-warning' }),
   } as const satisfies RuleArms<string>;
 
   function check(context: RuleContext): Diagnostic[] {

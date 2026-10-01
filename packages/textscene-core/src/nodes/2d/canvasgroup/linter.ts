@@ -7,20 +7,12 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { clipAncestry } from '../../canvasitem/shared/clipAncestry.js';
 
 const arms = {
-  ancestorClipsChildren: {
-    severity: 'warning',
-    ruleName: 'canvasgroup-ancestor-clips-children',
-    grounding: { kind: 'configuration-warning' },
-  },
-  nestedInCanvasGroup: {
-    severity: 'warning',
-    ruleName: 'canvasgroup-nested-in-canvasgroup',
-    grounding: { kind: 'configuration-warning' },
-  },
+  ancestorClipsChildren: groundedArm('canvasgroup-ancestor-clips-children', { kind: 'configuration-warning' }),
+  nestedInCanvasGroup: groundedArm('canvasgroup-nested-in-canvasgroup', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function checkCanvasGroup(context: RuleContext): Diagnostic[] {

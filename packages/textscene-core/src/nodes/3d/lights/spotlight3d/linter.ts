@@ -5,8 +5,8 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
-import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
-import { projectorArms, projectorWithoutShadowDiagnostic } from '../shared/linterChecks.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { projectorArm, projectorWithoutShadowDiagnostic } from '../shared/linterChecks.js';
 import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../../godot/index.js';
 
@@ -14,12 +14,8 @@ import { boolSlotValue } from '../../../../godot/index.js';
 const DEFAULT_SPOT_ANGLE = 45;
 
 const arms = {
-  shadowAngleTooWide: {
-    severity: 'warning',
-    ruleName: 'spotlight3d-shadow-angle-too-wide',
-    grounding: { kind: 'configuration-warning' },
-  },
-  ...projectorArms('spotlight3d'),
+  shadowAngleTooWide: groundedArm('spotlight3d-shadow-angle-too-wide', { kind: 'configuration-warning' }),
+  projectorWithoutShadow: projectorArm('spotlight3d'),
 } as const satisfies RuleArms<string>;
 
 /**
@@ -54,7 +50,7 @@ function checkSpotLight3D(context: RuleContext): Diagnostic[] {
   }
 
   // light_3d.cpp:659-661, the same shape as OmniLight3D's.
-  const projectorDiagnostic = projectorWithoutShadowDiagnostic(node, arms);
+  const projectorDiagnostic = projectorWithoutShadowDiagnostic(node, arms.projectorWithoutShadow);
   if (projectorDiagnostic) diagnostics.push(projectorDiagnostic);
 
   return diagnostics;

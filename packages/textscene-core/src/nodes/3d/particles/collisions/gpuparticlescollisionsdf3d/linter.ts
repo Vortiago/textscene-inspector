@@ -10,14 +10,10 @@ import { ruleRegistry } from '../../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../../godot/nodeBaseTypes.js';
 import { ruleInt } from '../../../../../linter/validators/commonValidators.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../../linter/ruleArms.js';
 
 const arms = {
-  emptyBakeMask: {
-    severity: 'warning',
-    ruleName: 'gpuparticlescollisionsdf3d-empty-bake-mask',
-    grounding: { kind: 'configuration-warning' },
-  },
+  emptyBakeMask: groundedArm('gpuparticlescollisionsdf3d-empty-bake-mask', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function checkGPUParticlesCollisionSDF3D(context: RuleContext): Diagnostic[] {

@@ -4,7 +4,7 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { armEmits, reportArm, type RuleArms } from '../ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../ruleArms.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { descendsFrom } from '../../godot/nodeBaseTypes.js';
@@ -56,20 +56,12 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
   // tensor the 2D one has no counterpart for, putting the line one earlier.
   const countLine = dim === '2D' ? 155 : 154;
   const arms = {
-    maxContactsWithoutMonitor: {
-      severity: 'info',
-      ruleName: `${prefix}-max-contacts-without-monitor`,
-      grounding: {
-        kind: 'engine-inert',
-        at: contactMonitorCite,
-        unused: 'the colliding-bodies list and the contact signals live behind this guard',
-      },
-    },
-    scaleOverriddenAtRuntime: {
-      severity: 'warning',
-      ruleName: `${prefix}-scale-overridden-at-runtime`,
-      grounding: { kind: 'configuration-warning' },
-    },
+    maxContactsWithoutMonitor: groundedArm(`${prefix}-max-contacts-without-monitor`, {
+      kind: 'engine-inert',
+      at: contactMonitorCite,
+      unused: 'the colliding-bodies list and the contact signals live behind this guard',
+    }),
+    scaleOverriddenAtRuntime: groundedArm(`${prefix}-scale-overridden-at-runtime`, { kind: 'configuration-warning' }),
   } as const satisfies RuleArms<string>;
 
   function check(context: RuleContext): Diagnostic[] {

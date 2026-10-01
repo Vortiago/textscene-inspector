@@ -5,16 +5,12 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 
 const arms = {
-  noScript: {
-    severity: 'warning',
-    ruleName: 'container-no-script',
-    grounding: { kind: 'configuration-warning' },
-  },
+  noScript: groundedArm('container-no-script', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function checkContainer(context: RuleContext): Diagnostic[] {

@@ -258,7 +258,8 @@ fail on a mis-shaped slice.
 - A rule declares each diagnostic it reports as a **Rule arm** (`linter/ruleArms.ts`), with
   its tier and grounding. `check` reports only through `reportArm` or `armDiagnostic`, and
   `emits` is `armEmits(arms)`, so `emits` lists exactly what `check` reports. The ESLint
-  rule-arm guard refuses a diagnostic object written by hand.
+  rule-arm guard refuses a diagnostic object written by hand. Declare an arm whose grounding
+  fixes its tier with `groundedArm(ruleName, grounding)`. Only an `engine` arm writes its tier.
 - **`ADD_PROPERTY` is one of four ways a property reaches a `.tscn`.** The others are
   `PropertyListHelper`/`register_property`, `ADD_ARRAY_COUNT` (a real serialised INT,
   `class_db.cpp:1492`, whose floor is often an `ERR_FAIL_COND` in a template in the
@@ -285,7 +286,7 @@ fail on a mis-shaped slice.
 
   The `v` DSL sets one. A hand-rolled validator must say which. `boundGrounding` fails
   on one that says none, or that claims both `formatOnly` and `grounding`. `intSlot`
-  counts only for a validator that carries no bounds of its own. Every `RangeArm`
+  counts only for a validator that carries no bounds of its own. Every `RangeThreshold`
   carries a required `cite`, checked by `rangeAdvisoryGrounding`. Both guards exist
   because a check that sees only the DSL misses a hand-rolled validator that rejects
   legal scenes.

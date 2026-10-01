@@ -17,18 +17,14 @@ import {
 } from '../../../resources/curves/shared/bezierData.js';
 import { packedArrayForms, subResourceRefAnywhere } from '../../../godot/index.js';
 import { dictPackedField, packedFloatCount } from '../../../godot/packedArrayFields.js';
-import { armDiagnostic, armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  missingCurve: {
-    severity: 'info',
-    ruleName: 'path3d-requires-curve',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'path_3d.cpp:275',
-      unused: 'a PathFollow3D on this path returns before moving, so nothing follows it',
-    },
-  },
+  missingCurve: groundedArm('path3d-requires-curve', {
+    kind: 'engine-inert',
+    at: 'path_3d.cpp:275',
+    unused: 'a PathFollow3D on this path returns before moving, so nothing follows it',
+  }),
   unloadableCurve: {
     severity: 'error',
     ruleName: 'curve3d-loadable',

@@ -9,45 +9,29 @@ import { isValidProperties, extractNodePath } from '../../../linter/linterUtils.
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 import { boolSlotValue } from '../../../godot/index.js';
 import { heldResource } from '../../../linter/resourceChecker.js';
-import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  missingTreeRoot: {
-    severity: 'warning',
-    ruleName: 'animationtree-missing-tree-root',
-    grounding: { kind: 'configuration-warning' },
-  },
-  animPlayerNotFound: {
-    severity: 'warning',
-    ruleName: 'animationtree-anim-player-not-found',
-    grounding: {
-      kind: 'no-engine-counterpart',
-      scope: 'dangling-reference',
-      because: 'the path names a node the file never declares',
-    },
-  },
-  animPlayerWrongType: {
-    severity: 'info',
-    ruleName: 'animationtree-anim-player-wrong-type',
-    // Not animation_tree.cpp:1020: that ADD_PROPERTY's
-    // PROPERTY_HINT_NODE_PATH_VALID_TYPES filters the inspector's node
-    // picker and constrains no stored value. set_animation_player
-    // (:845-856) bare-assigns any path; the type is consulted only here.
-    grounding: {
-      kind: 'engine-inert',
-      at: 'animation_tree.cpp:875-876',
-      unused: 'the cast to AnimationPlayer yields null and the whole setup block is skipped, so the tree binds to no player and plays nothing',
-    },
-  },
-  inactive: {
-    severity: 'info',
-    ruleName: 'animationtree-inactive',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'animation_mixer.cpp:446',
-      unused: 'processing is gated on active, so the blend tree never advances',
-    },
-  },
+  missingTreeRoot: groundedArm('animationtree-missing-tree-root', { kind: 'configuration-warning' }),
+  animPlayerNotFound: groundedArm('animationtree-anim-player-not-found', {
+    kind: 'no-engine-counterpart',
+    scope: 'dangling-reference',
+    because: 'the path names a node the file never declares',
+  }),
+  // Not animation_tree.cpp:1020: that ADD_PROPERTY's
+  // PROPERTY_HINT_NODE_PATH_VALID_TYPES filters the inspector's node
+  // picker and constrains no stored value. set_animation_player
+  // (:845-856) bare-assigns any path; the type is consulted only here.
+  animPlayerWrongType: groundedArm('animationtree-anim-player-wrong-type', {
+    kind: 'engine-inert',
+    at: 'animation_tree.cpp:875-876',
+    unused: 'the cast to AnimationPlayer yields null and the whole setup block is skipped, so the tree binds to no player and plays nothing',
+  }),
+  inactive: groundedArm('animationtree-inactive', {
+    kind: 'engine-inert',
+    at: 'animation_mixer.cpp:446',
+    unused: 'processing is gated on active, so the blend tree never advances',
+  }),
 } as const satisfies RuleArms<string>;
 
 /**

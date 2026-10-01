@@ -11,24 +11,12 @@ import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { isZeroApprox } from '../../../godot/index.js';
 import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
-import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  endBeforeBegin: {
-    severity: 'warning',
-    ruleName: 'geometryinstance3d-visibility-range-end-before-begin',
-    grounding: { kind: 'configuration-warning' },
-  },
-  beginFadeWithoutMargin: {
-    severity: 'warning',
-    ruleName: 'geometryinstance3d-visibility-range-begin-fade-without-margin',
-    grounding: { kind: 'configuration-warning' },
-  },
-  endFadeWithoutMargin: {
-    severity: 'warning',
-    ruleName: 'geometryinstance3d-visibility-range-end-fade-without-margin',
-    grounding: { kind: 'configuration-warning' },
-  },
+  endBeforeBegin: groundedArm('geometryinstance3d-visibility-range-end-before-begin', { kind: 'configuration-warning' }),
+  beginFadeWithoutMargin: groundedArm('geometryinstance3d-visibility-range-begin-fade-without-margin', { kind: 'configuration-warning' }),
+  endFadeWithoutMargin: groundedArm('geometryinstance3d-visibility-range-end-fade-without-margin', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 const FADE_SELF = 1;

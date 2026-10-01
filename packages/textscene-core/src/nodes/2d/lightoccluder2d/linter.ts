@@ -7,16 +7,12 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 
 const arms = {
-  missingOccluder: {
-    severity: 'warning',
-    ruleName: 'lightoccluder2d-requires-occluder',
-    grounding: { kind: 'configuration-warning' },
-  },
+  missingOccluder: groundedArm('lightoccluder2d-requires-occluder', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function checkLightOccluder2D(context: RuleContext): Diagnostic[] {

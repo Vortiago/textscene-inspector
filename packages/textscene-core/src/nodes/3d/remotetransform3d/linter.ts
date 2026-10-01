@@ -10,14 +10,10 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { extractNodePath } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  invalidRemotePath: {
-    severity: 'warning',
-    ruleName: 'remotetransform3d-invalid-remote-path',
-    grounding: { kind: 'configuration-warning' },
-  },
+  invalidRemotePath: groundedArm('remotetransform3d-invalid-remote-path', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function checkRemoteTransform3D(context: RuleContext): Diagnostic[] {

@@ -6,20 +6,16 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 import { decodeTileMapData, readTileMapDataLiteral } from '../shared/tileData.js';
 
 const arms = {
-  missingTileSet: {
-    severity: 'info',
-    ruleName: 'tilemaplayer-requires-tileset',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'tile_map_layer.cpp:224',
-      unused: 'a null tile set forces the cleanup path, so nothing is drawn',
-    },
-  },
+  missingTileSet: groundedArm('tilemaplayer-requires-tileset', {
+    kind: 'engine-inert',
+    at: 'tile_map_layer.cpp:224',
+    unused: 'a null tile set forces the cleanup path, so nothing is drawn',
+  }),
   invalidTileData: {
     severity: 'error',
     ruleName: 'tilemaplayer-invalid-tile-data',

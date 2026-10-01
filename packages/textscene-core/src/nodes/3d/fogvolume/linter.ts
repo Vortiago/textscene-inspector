@@ -8,18 +8,14 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  sizeIgnoredForWorldShape: {
-    severity: 'info',
-    ruleName: 'fogvolume-size-ignored-for-world-shape',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'fog.cpp:702',
-      unused: 'the world shape never enters the branch that reads the extents',
-    },
-  },
+  sizeIgnoredForWorldShape: groundedArm('fogvolume-size-ignored-for-world-shape', {
+    kind: 'engine-inert',
+    at: 'fog.cpp:702',
+    unused: 'the world shape never enters the branch that reads the extents',
+  }),
 } as const satisfies RuleArms<string>;
 
 /** `RS::FogVolumeShape::FOG_VOLUME_SHAPE_WORLD`, fog_volume.cpp:47's 5th enum value. */

@@ -9,32 +9,24 @@ import { isValidProperties } from '../../../linter/linterUtils.js';
 import { extractLibraries, isActive } from './parser.js';
 import { EXT_RESOURCE_CALL_ANYWHERE_RE, literalText } from '../../../godot/index.js';
 import { hasUnresolvableClips, resolveAnimations } from './animationResolver.js';
-import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  autoplayMissing: {
-    severity: 'warning',
-    ruleName: 'animationplayer-autoplay-missing',
-    grounding: {
-      kind: 'no-engine-counterpart',
-      scope: 'dangling-reference',
-      because: 'no library the file declares holds a clip under that name',
-    },
-  },
+  autoplayMissing: groundedArm('animationplayer-autoplay-missing', {
+    kind: 'no-engine-counterpart',
+    scope: 'dangling-reference',
+    because: 'no library the file declares holds a clip under that name',
+  }),
   currentAnimationMissing: {
     severity: 'error',
     ruleName: 'animationplayer-current-animation-missing',
     grounding: { kind: 'engine', at: 'animation_player.cpp:429' },
   },
-  inactive: {
-    severity: 'info',
-    ruleName: 'animationplayer-inactive',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'animation_mixer.cpp:446',
-      unused: 'processing is gated on active, so autoplay and current_animation never advance',
-    },
-  },
+  inactive: groundedArm('animationplayer-inactive', {
+    kind: 'engine-inert',
+    at: 'animation_mixer.cpp:446',
+    unused: 'processing is gated on active, so autoplay and current_animation never advance',
+  }),
 } as const satisfies RuleArms<string>;
 
 /**

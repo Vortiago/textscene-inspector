@@ -10,19 +10,11 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { hasChildOfType } from '../../../../linter/childType.js';
 import { CURSOR_ARROW, CURSOR_MAX } from '../../../../godot/control.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
-import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  noViewport: {
-    severity: 'warning',
-    ruleName: 'subviewportcontainer-no-viewport',
-    grounding: { kind: 'configuration-warning' },
-  },
-  nonArrowCursor: {
-    severity: 'warning',
-    ruleName: 'subviewportcontainer-non-arrow-cursor',
-    grounding: { kind: 'configuration-warning' },
-  },
+  noViewport: groundedArm('subviewportcontainer-no-viewport', { kind: 'configuration-warning' }),
+  nonArrowCursor: groundedArm('subviewportcontainer-non-arrow-cursor', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function checkSubViewportContainer(context: RuleContext): Diagnostic[] {

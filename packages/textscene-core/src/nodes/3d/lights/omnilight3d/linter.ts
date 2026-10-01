@@ -4,10 +4,12 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { armEmits } from '../../../../linter/ruleArms.js';
-import { projectorArms, projectorWithoutShadowDiagnostic } from '../shared/linterChecks.js';
+import { armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
+import { projectorArm, projectorWithoutShadowDiagnostic } from '../shared/linterChecks.js';
 
-const arms = projectorArms('omnilight3d');
+const arms = {
+  projectorWithoutShadow: projectorArm('omnilight3d'),
+} as const satisfies RuleArms<string>;
 
 /**
  * light_3d.cpp:623-625: `light_projector` set while `shadow_enabled` is not true.
@@ -17,7 +19,7 @@ const arms = projectorArms('omnilight3d');
 function checkOmniLight3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
 
-  const projectorDiagnostic = projectorWithoutShadowDiagnostic(node, arms);
+  const projectorDiagnostic = projectorWithoutShadowDiagnostic(node, arms.projectorWithoutShadow);
   return projectorDiagnostic ? [projectorDiagnostic] : [];
 }
 

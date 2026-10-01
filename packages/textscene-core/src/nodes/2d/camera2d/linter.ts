@@ -6,58 +6,38 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { TscnNode } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { isValidProperties, nodesOfType } from '../../../linter/linterUtils.js';
 import { viewportScopeCounter, viewportScopeOf } from '../../../linter/viewportScope.js';
 import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../godot/index.js';
 
 const arms = {
-  multipleEnabled: {
-    severity: 'info',
-    ruleName: 'camera2d-multiple-enabled',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'camera_2d.cpp:354',
-      unused: 'a second camera entering a tree that already has a current one never becomes current',
-    },
-  },
-  invertedHorizontalLimits: {
-    severity: 'info',
-    ruleName: 'camera2d-invalid-horizontal-limits',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'camera_2d.cpp:229',
-      unused: 'the degenerate branch centres the view instead of applying the limits',
-    },
-  },
-  invertedVerticalLimits: {
-    severity: 'info',
-    ruleName: 'camera2d-invalid-vertical-limits',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'camera_2d.cpp:241',
-      unused: 'the degenerate branch centres the view instead of applying the limits',
-    },
-  },
-  zeroSmoothingSpeed: {
-    severity: 'info',
-    ruleName: 'camera2d-smoothing-speed-zero',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'camera_2d.cpp:199',
-      unused: 'a zero factor leaves the smoothed position where it started',
-    },
-  },
-  zeroRotationSmoothingSpeed: {
-    severity: 'info',
-    ruleName: 'camera2d-rotation-smoothing-speed-zero',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'camera_2d.cpp:216',
-      unused: 'a zero step leaves lerp_angle at the angle it started from',
-    },
-  },
+  multipleEnabled: groundedArm('camera2d-multiple-enabled', {
+    kind: 'engine-inert',
+    at: 'camera_2d.cpp:354',
+    unused: 'a second camera entering a tree that already has a current one never becomes current',
+  }),
+  invertedHorizontalLimits: groundedArm('camera2d-invalid-horizontal-limits', {
+    kind: 'engine-inert',
+    at: 'camera_2d.cpp:229',
+    unused: 'the degenerate branch centres the view instead of applying the limits',
+  }),
+  invertedVerticalLimits: groundedArm('camera2d-invalid-vertical-limits', {
+    kind: 'engine-inert',
+    at: 'camera_2d.cpp:241',
+    unused: 'the degenerate branch centres the view instead of applying the limits',
+  }),
+  zeroSmoothingSpeed: groundedArm('camera2d-smoothing-speed-zero', {
+    kind: 'engine-inert',
+    at: 'camera_2d.cpp:199',
+    unused: 'a zero factor leaves the smoothed position where it started',
+  }),
+  zeroRotationSmoothingSpeed: groundedArm('camera2d-rotation-smoothing-speed-zero', {
+    kind: 'engine-inert',
+    at: 'camera_2d.cpp:216',
+    unused: 'a zero step leaves lerp_angle at the angle it started from',
+  }),
 } as const satisfies RuleArms<string>;
 
 /** Enabled unless the key says otherwise: `enabled` defaults true (camera_2d.h:67). */

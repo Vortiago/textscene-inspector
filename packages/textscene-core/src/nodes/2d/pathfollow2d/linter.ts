@@ -7,31 +7,19 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { hiddenOrUnknowableInTree, parentTypeVerdict, placementPhrase } from '../../../linter/parentType.js';
 import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
 
 const arms = {
-  noParent: {
-    severity: 'warning',
-    ruleName: 'pathfollow2d-no-parent',
-    grounding: { kind: 'configuration-warning' },
-  },
-  invalidParent: {
-    severity: 'warning',
-    ruleName: 'pathfollow2d-invalid-parent',
-    grounding: { kind: 'configuration-warning' },
-  },
-  negativeProgress: {
-    severity: 'info',
-    ruleName: 'pathfollow2d-negative-progress',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'curve.cpp:1079',
-      unused: 'the sampler clamps the offset, so travel before the start moves nothing',
-    },
-  },
+  noParent: groundedArm('pathfollow2d-no-parent', { kind: 'configuration-warning' }),
+  invalidParent: groundedArm('pathfollow2d-invalid-parent', { kind: 'configuration-warning' }),
+  negativeProgress: groundedArm('pathfollow2d-negative-progress', {
+    kind: 'engine-inert',
+    at: 'curve.cpp:1079',
+    unused: 'the sampler clamps the offset, so travel before the start moves nothing',
+  }),
   progressRatioIgnored: {
     severity: 'error',
     ruleName: 'pathfollow2d-progress-ratio-ignored',

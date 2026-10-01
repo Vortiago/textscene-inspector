@@ -9,46 +9,26 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { heldResource } from '../../../../linter/resourceChecker.js';
 import { extractNodePath } from '../../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../../linter/nodePathResolve.js';
-import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  missingProcessMaterial: {
-    severity: 'warning',
-    ruleName: 'gpuparticles3d-missing-process-material',
-    grounding: { kind: 'configuration-warning' },
-  },
-  noDrawPassMesh: {
-    severity: 'warning',
-    ruleName: 'gpuparticles3d-no-draw-pass-mesh',
-    grounding: { kind: 'configuration-warning' },
-  },
-  subEmitterNotFound: {
-    severity: 'info',
-    ruleName: 'valid-gpuparticles3d-sub-emitter',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'gpu_particles_3d.cpp:484',
-      unused: 'get_node_or_null finds nothing and the attach is skipped, so no sub-emitter is set',
-    },
-  },
-  subEmitterSelf: {
-    severity: 'info',
-    ruleName: 'gpuparticles3d-sub-emitter-self',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'gpu_particles_3d.cpp:486',
-      unused: 'the `sen != this` arm skips the attach, so no sub-emitter is set',
-    },
-  },
-  subEmitterWrongType: {
-    severity: 'info',
-    ruleName: 'gpuparticles3d-sub-emitter-wrong-type',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'gpu_particles_3d.cpp:485',
-      unused: 'the cast to GPUParticles3D fails, so no sub-emitter is set',
-    },
-  },
+  missingProcessMaterial: groundedArm('gpuparticles3d-missing-process-material', { kind: 'configuration-warning' }),
+  noDrawPassMesh: groundedArm('gpuparticles3d-no-draw-pass-mesh', { kind: 'configuration-warning' }),
+  subEmitterNotFound: groundedArm('valid-gpuparticles3d-sub-emitter', {
+    kind: 'engine-inert',
+    at: 'gpu_particles_3d.cpp:484',
+    unused: 'get_node_or_null finds nothing and the attach is skipped, so no sub-emitter is set',
+  }),
+  subEmitterSelf: groundedArm('gpuparticles3d-sub-emitter-self', {
+    kind: 'engine-inert',
+    at: 'gpu_particles_3d.cpp:486',
+    unused: 'the `sen != this` arm skips the attach, so no sub-emitter is set',
+  }),
+  subEmitterWrongType: groundedArm('gpuparticles3d-sub-emitter-wrong-type', {
+    kind: 'engine-inert',
+    at: 'gpu_particles_3d.cpp:485',
+    unused: 'the cast to GPUParticles3D fails, so no sub-emitter is set',
+  }),
 } as const satisfies RuleArms<string>;
 
 /** One key per draw pass; `MAX_DRAW_PASSES = 4` (gpu_particles_3d.h:56). */

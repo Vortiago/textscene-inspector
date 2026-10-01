@@ -6,18 +6,14 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { heldResource } from '../../../linter/resourceChecker.js';
-import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  missingMeshLibrary: {
-    severity: 'info',
-    ruleName: 'gridmap-requires-mesh-library',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'grid_map.cpp:676',
-      unused: 'every cell is skipped while the library is null, so the map draws nothing',
-    },
-  },
+  missingMeshLibrary: groundedArm('gridmap-requires-mesh-library', {
+    kind: 'engine-inert',
+    at: 'grid_map.cpp:676',
+    unused: 'every cell is skipped while the library is null, so the map draws nothing',
+  }),
 } as const satisfies RuleArms<string>;
 
 function checkGridMap(context: RuleContext): Diagnostic[] {

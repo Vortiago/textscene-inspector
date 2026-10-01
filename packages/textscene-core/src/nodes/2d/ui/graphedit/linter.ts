@@ -5,7 +5,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
 import { parseOptionalVector2 } from '../../../../parser/valueParsers.js';
@@ -17,15 +17,11 @@ const arms = {
     ruleName: 'graphedit-zoom-min-above-max',
     grounding: { kind: 'engine', at: 'graph_edit.cpp:2480' },
   },
-  scrollOffsetDiscarded: {
-    severity: 'info',
-    ruleName: 'graphedit-scroll-offset-discarded',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'graph_edit.cpp:407',
-      unused: 'the authored offset never becomes the stored scroll position',
-    },
-  },
+  scrollOffsetDiscarded: groundedArm('graphedit-scroll-offset-discarded', {
+    kind: 'engine-inert',
+    at: 'graph_edit.cpp:407',
+    unused: 'the authored offset never becomes the stored scroll position',
+  }),
 } as const satisfies RuleArms<string>;
 
 /**

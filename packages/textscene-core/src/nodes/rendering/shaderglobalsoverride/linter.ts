@@ -8,14 +8,10 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { countNodesOfType, firstNodeOfType } from '../../../linter/linterUtils.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  multipleInScene: {
-    severity: 'warning',
-    ruleName: 'shaderglobalsoverride-multiple-in-scene',
-    grounding: { kind: 'configuration-warning' },
-  },
+  multipleInScene: groundedArm('shaderglobalsoverride-multiple-in-scene', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function checkShaderGlobalsOverride(context: RuleContext): Diagnostic[] {

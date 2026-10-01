@@ -7,16 +7,12 @@
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 import { boolSlotValue } from '../../../../godot/index.js';
 
 const arms = {
-  groupWithoutToggleMode: {
-    severity: 'warning',
-    ruleName: 'button-group-without-toggle-mode',
-    grounding: { kind: 'configuration-warning' },
-  },
+  groupWithoutToggleMode: groundedArm('button-group-without-toggle-mode', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 /**

@@ -13,7 +13,7 @@ import { isZeroApprox } from '../../godot/math.js';
 import { basisColumnScales } from './basisColumnScales.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
-import { armEmits, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
 import { ruleInt } from '../validators/commonValidators.js';
 import { polygonPointCount } from '../polygonPoints.js';
 import { boolSlotValue } from '../../godot/index.js';
@@ -28,7 +28,6 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
 
   // Each arm's enabling condition, stated once (see `ruleArms.ts`).
   const is2D = dim === '2D';
-  const configWarning = { kind: 'configuration-warning' } as const;
   const arms: RuleArms<
     | 'noParent'
     | 'invalidParent'
@@ -37,38 +36,22 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
     | 'oneWayIgnored'
     | 'nonUniformScale'
   > = {
-    noParent: { severity: 'warning', ruleName: `${prefix}-no-parent`, grounding: configWarning },
-    invalidParent: {
-      severity: 'warning',
-      ruleName: `${prefix}-invalid-parent`,
-      grounding: configWarning,
-    },
-    emptyPolygon: {
-      severity: 'warning',
-      ruleName: `${prefix}-empty-polygon`,
-      grounding: configWarning,
-    },
+    noParent: groundedArm(`${prefix}-no-parent`, { kind: 'configuration-warning' }),
+    invalidParent: groundedArm(`${prefix}-invalid-parent`, { kind: 'configuration-warning' }),
+    emptyPolygon: groundedArm(`${prefix}-empty-polygon`, { kind: 'configuration-warning' }),
     // 2D only: `collision_polygon_2d.cpp` carries the build-mode vertex count
     // and the one-way check, and `collision_polygon_3d.cpp` declares neither property.
     insufficientPoints: is2D
-      ? {
-          severity: 'warning',
-          ruleName: `${prefix}-insufficient-points`,
-          grounding: configWarning,
-        }
+      ? groundedArm(`${prefix}-insufficient-points`, { kind: 'configuration-warning' })
       : undefined,
     oneWayIgnored: is2D
-      ? {
-          severity: 'warning',
-          ruleName: `${prefix}-one-way-ignored`,
-          grounding: configWarning,
-        }
+      ? groundedArm(`${prefix}-one-way-ignored`, { kind: 'configuration-warning' })
       : undefined,
     // 3D only: `collision_polygon_2d.cpp`'s configuration warnings carry no
     // scale check at all.
     nonUniformScale: is2D
       ? undefined
-      : { severity: 'warning', ruleName: `${prefix}-non-uniform-scale`, grounding: configWarning },
+      : groundedArm(`${prefix}-non-uniform-scale`, { kind: 'configuration-warning' }),
   };
 
   function check(context: RuleContext): Diagnostic[] {

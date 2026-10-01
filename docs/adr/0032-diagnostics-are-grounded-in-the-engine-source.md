@@ -199,7 +199,7 @@ one. A literal stored as written may draw no diagnostic. A converted literal may
 converted-spelling warning, and no error. The corpus is data written at authoring time,
 because no test may read the Godot checkout.
 
-**Each advisory threshold carries a `cite`.** `RangeArm.cite` is required, so the
+**Each advisory threshold carries a `cite`.** `RangeThreshold.cite` is required, so the
 compiler rejects an uncited arm. `rangeAdvisoryGrounding.test.ts` then checks that the
 string names a source location and does not restate the rule's own opinion. Arms are the
 other population outside the sweep, and the one where invented thresholds ship.
@@ -212,8 +212,9 @@ A ported `get_configuration_warnings()` row is a **warning**. An `engine-inert` 
 scopes that describe the file, not the engine (`dangling-reference`,
 `unresolvable-path`, `file-integrity`), are **warnings**. Only the `engine` kind is left
 to its cite, since a refusal and a hint sit on the same kind. `emitsGrounding.test.ts`
-holds each declared severity to that map. A rule reports only through its declared arms
-(`linter/ruleArms.ts`), so a report cannot carry a severity its rule does not declare.
+holds each declared severity to that map, and `groundedArm` (`linter/ruleArms.ts`) derives
+the severity from it for every kind but `engine`. A rule reports only through its declared
+arms, so a report cannot carry a severity its rule does not declare.
 
 **A bound cites each end separately when the ends differ.** `enforced` and `hinted` each
 take `{ min, max }`, because a floor with an `ERR_FAIL_COND` and a ceiling with only a

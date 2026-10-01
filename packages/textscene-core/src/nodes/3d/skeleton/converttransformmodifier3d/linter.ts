@@ -2,13 +2,13 @@
  * ConvertTransformModifier3D's rule that needs a sibling: `_get_property_list` picks the
  * `PROPERTY_HINT_RANGE` for a setting's `range_min`/`range_max` from that setting's `transform_mode`,
  * for `apply/` (convert_transform_modifier_3d.cpp:133-140) and `reference/` (:146-153). Every setter
- * assigns past an `ERR_FAIL_INDEX` on the index (:208, :220, :257, :269), so each arm only warns.
+ * assigns past an `ERR_FAIL_INDEX` on the index (:208, :220, :257, :269), so each threshold only warns.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
-import { rangeAdvisories, type RangeArm } from '../../../../linter/rangeAdvisory.js';
+import { rangeAdvisories, type RangeThreshold } from '../../../../linter/rangeAdvisory.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { RADIAN_ROUNDTRIP_EPSILON } from '../../../../linter/validators/v.js';
@@ -49,10 +49,10 @@ const TRANSFORM_MODE_ROTATION = 1;
 const ROTATION_LIMIT = Math.PI + RADIAN_ROUNDTRIP_EPSILON;
 
 /**
- * Arms for HINT_ROTATION "-180,180,0.01,radians_as_degrees" (:34): both ends closed, in radians. The
+ * Thresholds for HINT_ROTATION "-180,180,0.01,radians_as_degrees" (:34): both ends closed, in radians. The
  * `.tscn` stores radians, and `Quaternion(rot_axis, point)` (:407) reads the value as an angle.
  */
-function rotationArms(key: string): RangeArm[] {
+function rotationThresholds(key: string): RangeThreshold[] {
   const explain =
     'the hint is radians_as_degrees, so the inspector shows -180..180 while the .tscn stores radians. ' +
     'The setter assigns the value unaltered, so it loads and runs; only the inspector cannot reach it.';
@@ -73,10 +73,10 @@ function rotationArms(key: string): RangeArm[] {
 }
 
 /**
- * Arms for HINT_SCALE "0,10,0.01,or_greater" (:35): a floor of 0, the ceiling open. It is the `else`
- * arm, so a mode outside the enum lands here too, and the mode itself is the validator's warning.
+ * Thresholds for HINT_SCALE "0,10,0.01,or_greater" (:35): a floor of 0, the ceiling open. It is the `else`
+ * branch, so a mode outside the enum lands here too, and the mode itself is the validator's warning.
  */
-function scaleArms(key: string): RangeArm[] {
+function scaleThresholds(key: string): RangeThreshold[] {
   return [
     {
       under: 0,
@@ -96,7 +96,7 @@ function checkConvertTransformModifier3D(context: RuleContext): Diagnostic[] {
   // one setting and a range finds the mode written beside it under either spelling.
   const settings = indexedElements(props, 'settings/', 'to_int', resolveConvertSettingLeaf);
 
-  const table: Record<string, RangeArm[]> = {};
+  const table: Record<string, RangeThreshold[]> = {};
   for (const key of Object.keys(props)) {
     const match = SETTING_KEY_RE.exec(key);
     if (!match) continue;
@@ -112,12 +112,12 @@ function checkConvertTransformModifier3D(context: RuleContext): Diagnostic[] {
     // (convert_transform_modifier_3d.h:46, :51), which Godot omits when unchanged.
     const mode = ruleInt(modeRaw, TRANSFORM_MODE_POSITION);
     // A malformed mode is already reported by its own validator, and a
-    // non-finite one is altered at parse. Neither selects an arm here.
+    // non-finite one is altered at parse. Neither selects a threshold here.
     if (mode === null) continue;
     // HINT_POSITION "-10,10,0.01,or_greater,or_less,suffix:m" (:33) opens both ends: no bound.
     if (mode === TRANSFORM_MODE_POSITION) continue;
 
-    table[key] = mode === TRANSFORM_MODE_ROTATION ? rotationArms(key) : scaleArms(key);
+    table[key] = mode === TRANSFORM_MODE_ROTATION ? rotationThresholds(key) : scaleThresholds(key);
   }
 
   // The `CLAMP` at :405 applies to the interpolated result during processing, not the stored

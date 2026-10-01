@@ -12,24 +12,12 @@ import { parentTypeVerdict, searchAncestors } from '../../../../linter/parentTyp
 import { hasChildOfType } from '../../../../linter/childType.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
-import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  missingSkeletonParent: {
-    severity: 'warning',
-    ruleName: 'physicalbone2d-missing-skeleton-parent',
-    grounding: { kind: 'configuration-warning' },
-  },
-  missingBoneIndex: {
-    severity: 'warning',
-    ruleName: 'physicalbone2d-missing-bone-index',
-    grounding: { kind: 'configuration-warning' },
-  },
-  missingJointChild: {
-    severity: 'warning',
-    ruleName: 'physicalbone2d-missing-joint-child',
-    grounding: { kind: 'configuration-warning' },
-  },
+  missingSkeletonParent: groundedArm('physicalbone2d-missing-skeleton-parent', { kind: 'configuration-warning' }),
+  missingBoneIndex: groundedArm('physicalbone2d-missing-bone-index', { kind: 'configuration-warning' }),
+  missingJointChild: groundedArm('physicalbone2d-missing-joint-child', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 /** What `_find_skeleton_parent()` would settle on, read off this file alone. */

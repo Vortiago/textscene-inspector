@@ -5,7 +5,7 @@
  * refuses a diagnostic built any other way.
  */
 
-import type { Diagnostic, RuleArm, RuleMeta } from './types.js';
+import { severityFixedBy, type Diagnostic, type EmitGrounding, type RuleArm, type RuleMeta } from './types.js';
 import type { TscnNode } from '../parser/types.js';
 
 export type { RuleArm } from './types.js';
@@ -15,6 +15,17 @@ export type { RuleArm } from './types.js';
  * array: `check` keeps its own control flow and names the arm it reports.
  */
 export type RuleArms<K extends string> = Readonly<Partial<Record<K, RuleArm>>>;
+
+/** Every grounding but `engine`, whose kind alone fixes the severity (`severityFixedBy`). */
+export type FixedGrounding = Exclude<EmitGrounding, { kind: 'engine' }>;
+
+/**
+ * The arm for `ruleName`, at the severity its grounding fixes. Only an `engine`
+ * arm writes its severity, because only its cited line can decide it.
+ */
+export function groundedArm(ruleName: string, grounding: FixedGrounding): RuleArm {
+  return { severity: severityFixedBy(grounding)!, ruleName, grounding };
+}
 
 /** The `emits` list these arms declare: every arm this instance has. */
 export function armEmits<K extends string>(arms: RuleArms<K>): NonNullable<RuleMeta['emits']> {

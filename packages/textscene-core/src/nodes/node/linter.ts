@@ -6,7 +6,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../linter/types.js';
 import { ruleRegistry } from '../../linter/RuleRegistry.js';
-import { armEmits, reportArm, type RuleArms } from '../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../linter/ruleArms.js';
 import { resourceRef } from '../../godot/index.js';
 import { findExtResource } from '../../resources/SubResourceResolver.js';
 
@@ -14,15 +14,11 @@ const BINARY_RESOURCE_RE = /\.(scn|res)$/i;
 
 /** One arm, so the rule reports `<unknown>` for a heading with no type, as every other rule does. */
 const arms = {
-  binaryReference: {
-    severity: 'info',
-    ruleName: 'binary-resource-reference',
-    grounding: {
-      kind: 'no-engine-counterpart',
-      scope: 'previewer-limitation',
-      because: 'this previewer decodes only text .tscn/.tres, never a binary .scn/.res payload',
-    },
-  },
+  binaryReference: groundedArm('binary-resource-reference', {
+    kind: 'no-engine-counterpart',
+    scope: 'previewer-limitation',
+    because: 'this previewer decodes only text .tscn/.tres, never a binary .scn/.res payload',
+  }),
 } as const satisfies RuleArms<string>;
 
 function checkBinaryResourceReferences(context: RuleContext): Diagnostic[] {

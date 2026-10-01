@@ -12,25 +12,17 @@ import { decodeLegacyTileData } from '../shared/tileData.js';
 import { TILE_MAP_DATA_FORMAT_DEFAULT, formatWhenApplied, tileDataValidator } from './tileDataSlots.js';
 import { tileMapLayerVector } from '../shared/layerVector';
 import { visitIndexedKeys } from '../../../../godot/index.js';
-import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { ySortArms, ySortDiagnostics } from './ySortRules.js';
 
 const arms = {
-  deprecated: {
-    severity: 'warning',
-    ruleName: 'tilemap-deprecated',
-    grounding: { kind: 'configuration-warning' },
-  },
+  deprecated: groundedArm('tilemap-deprecated', { kind: 'configuration-warning' }),
   ...ySortArms,
-  requiresTileset: {
-    severity: 'info',
-    ruleName: 'tilemap-requires-tileset',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'tile_map_layer.cpp:224',
-      unused: 'a null tile set forces the cleanup path, so nothing is drawn',
-    },
-  },
+  requiresTileset: groundedArm('tilemap-requires-tileset', {
+    kind: 'engine-inert',
+    at: 'tile_map_layer.cpp:224',
+    unused: 'a null tile set forces the cleanup path, so nothing is drawn',
+  }),
   unsupportedFormat: {
     severity: 'error',
     ruleName: 'tilemap-unsupported-format',

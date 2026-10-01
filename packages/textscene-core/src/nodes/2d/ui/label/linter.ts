@@ -12,14 +12,10 @@ import { parentTypeVerdict } from '../../../../linter/parentType.js';
 import { VECTOR2_REGEX } from '../../../../linter/validators/index.js';
 import { ruleInt, tupleComponent } from '../../../../linter/validators/commonValidators.js';
 import { slotComponents } from '../../../../godot/int.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  autowrapNeedsMinimumSize: {
-    severity: 'warning',
-    ruleName: 'label-autowrap-needs-custom-minimum-size',
-    grounding: { kind: 'configuration-warning' },
-  },
+  autowrapNeedsMinimumSize: groundedArm('label-autowrap-needs-custom-minimum-size', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 // label.cpp:44/1435, TextServer::AutowrapMode: OFF=0, ARBITRARY=1, WORD=2, WORD_SMART=3.

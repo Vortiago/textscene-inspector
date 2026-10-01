@@ -7,14 +7,10 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
-  missingData: {
-    severity: 'warning',
-    ruleName: 'voxelgi-missing-data',
-    grounding: { kind: 'configuration-warning' },
-  },
+  missingData: groundedArm('voxelgi-missing-data', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function checkVoxelGI(context: RuleContext): Diagnostic[] {

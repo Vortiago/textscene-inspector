@@ -7,17 +7,13 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { extractNodePath, isValidProperties } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 
 const arms = {
-  invalidRemotePath: {
-    severity: 'warning',
-    ruleName: 'remotetransform2d-invalid-remote-path',
-    grounding: { kind: 'configuration-warning' },
-  },
+  invalidRemotePath: groundedArm('remotetransform2d-invalid-remote-path', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function warn(node: RuleContext['node'], detail: string): Diagnostic[] {

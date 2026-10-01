@@ -13,14 +13,10 @@ import { resolveAimSettingLeaf } from './linterParser.js';
 import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
 import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { indexedElements, boolSlotValue} from '../../../../godot/index.js';
-import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  parallelRotationAxes: {
-    severity: 'warning',
-    ruleName: 'aimmodifier3d-parallel-rotation-axes',
-    grounding: { kind: 'configuration-warning' },
-  },
+  parallelRotationAxes: groundedArm('aimmodifier3d-parallel-rotation-axes', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 const SETTING_PREFIX = 'settings/';

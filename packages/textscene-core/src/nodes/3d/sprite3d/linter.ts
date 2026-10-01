@@ -7,33 +7,25 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { heldResource } from '../../../linter/resourceChecker.js';
 import { boolSlotValue } from '../../../godot/index.js';
-import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { spriteFrameArms, spriteFrameDiagnostics } from '../../../linter/spriteFrameGrid.js';
 
 const arms = {
-  requiresTexture: {
-    severity: 'info',
-    ruleName: 'sprite3d-requires-texture',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'sprite_3d.cpp:798',
-      unused: 'the draw clears the base and returns, so the sprite renders nothing',
-    },
-  },
+  requiresTexture: groundedArm('sprite3d-requires-texture', {
+    kind: 'engine-inert',
+    at: 'sprite_3d.cpp:798',
+    unused: 'the draw clears the base and returns, so the sprite renders nothing',
+  }),
   ...spriteFrameArms('sprite3d', {
     frame: 'sprite_3d.cpp:878',
     frameCoords: 'sprite_3d.cpp:894',
     remap: 'sprite_3d.cpp:938',
   }),
-  regionConfiguration: {
-    severity: 'info',
-    ruleName: 'sprite3d-region-configuration',
-    grounding: {
-      kind: 'engine-inert',
-      at: 'sprite_3d.cpp:808',
-      unused: 'region_rect is read only inside this branch',
-    },
-  },
+  regionConfiguration: groundedArm('sprite3d-region-configuration', {
+    kind: 'engine-inert',
+    at: 'sprite_3d.cpp:808',
+    unused: 'region_rect is read only inside this branch',
+  }),
 } as const satisfies RuleArms<string>;
 
 function checkSprite3D(context: RuleContext): Diagnostic[] {

@@ -8,14 +8,10 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isExplicitlyHidden, parentTypeVerdict } from '../../../../linter/parentType.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
-  parentNotOrigin: {
-    severity: 'warning',
-    ruleName: 'xrcamera3d-parent-not-xrorigin3d',
-    grounding: { kind: 'configuration-warning' },
-  },
+  parentNotOrigin: groundedArm('xrcamera3d-parent-not-xrorigin3d', { kind: 'configuration-warning' }),
 } as const satisfies RuleArms<string>;
 
 function checkXRCamera3DParent(context: RuleContext): Diagnostic[] {

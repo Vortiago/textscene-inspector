@@ -5,7 +5,7 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { armDiagnostic, armEmits, type RuleArms } from '../ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../ruleArms.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { parentTypeVerdict, placementPhrase } from '../parentType.js';
@@ -15,11 +15,7 @@ export function makeNavigationAgentLinterRule(dim: PhysicsDim): LintRule {
   const parentType = `Node${dim}`;
   const suffix = dimSuffix(dim);
   const arms = {
-    parentNotNode: {
-      severity: 'warning',
-      ruleName: `navigationagent${suffix}-parent-not-node${suffix}`,
-      grounding: { kind: 'configuration-warning' },
-    },
+    parentNotNode: groundedArm(`navigationagent${suffix}-parent-not-node${suffix}`, { kind: 'configuration-warning' }),
   } as const satisfies RuleArms<string>;
 
   function check(context: RuleContext): Diagnostic[] {
