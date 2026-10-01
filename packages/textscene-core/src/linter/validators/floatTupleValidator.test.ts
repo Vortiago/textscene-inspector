@@ -9,12 +9,12 @@ import { describe, expect, it } from 'vitest';
 import { v } from './v.js';
 import '../index.js';
 import { node, scene, expectDiagnostic, expectNoDiagnostic } from '../testing/testkit';
+import { expectWarning } from '../testing/validatorCheck.js';
 
 describe('floatTupleValidator on the converted integer spelling', () => {
   it('warns that a fractional component is truncated', () => {
     const diagnostic = v.vector2('position')('position', 'Vector2i(1.5, 2)', 1);
-    expect(diagnostic).toBeAtTier('warning');
-    expect(diagnostic?.message).toContain('drops the fractional part of "1.5"');
+    expectWarning(diagnostic, 'drops the fractional part of "1.5"');
   });
 
   it('says nothing for a whole-valued integer spelling or a float spelling', () => {
@@ -29,8 +29,7 @@ describe('floatTupleValidator on the converted integer spelling', () => {
 
   it('boundedVector3 warns the same way after its bounds', () => {
     const bounded = v.boundedVector3('scale', { min: 0, hinted: 'node_3d.cpp:1' });
-    expect(bounded('scale', 'Vector3i(1.5, 1, 1)', 1)).toBeAtTier('warning');
-    expect(bounded('scale', 'Vector3i(1.5, 1, 1)', 1)?.message).toContain('drops the fractional part');
+    expectWarning(bounded('scale', 'Vector3i(1.5, 1, 1)', 1), 'drops the fractional part');
     expect(bounded('scale', 'Vector3i(-1.5, 1, 1)', 1)?.message).toContain('must be');
   });
 });

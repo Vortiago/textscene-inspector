@@ -7,6 +7,7 @@ import { Linter } from '../../../../linter/Linter';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { errorsOf } from '../../../../linter/testing/tierLists';
 import './linterParser';
+import { expectWarning } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -241,8 +242,7 @@ describe('tile_map_data element storage', () => {
     // `uint8_t(1.5)` is 1, defined and nameable: the truncation tier, which the
     // narrower band must not swallow.
     const diagnostic = validator('tile_map_data', 'PackedByteArray(1.5, 0)', 1);
-    expect(diagnostic).toBeAtTier('warning');
-    expect(diagnostic?.message).toContain('stores 1');
+    expectWarning(diagnostic, 'stores 1');
   });
 
   it('accepts both ends of the byte range', () => {

@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import './linterParser';
+import { expectError } from '../../../../linter/testing/validatorCheck.js';
 
 function check(property: string, value: string) {
   const validator = validatorRegistry.findValidator('CharacterBody3D', property);
@@ -43,8 +44,7 @@ describe('CharacterBody3D strict validators (physics state)', () => {
 
     it('errors on the zero vector the setter refuses', () => {
       const error = check('up_direction', 'Vector3(0, 0, 0)');
-      expect(error).toBeAtTier('error');
-      expect(error?.message).toContain('zero vector');
+      expectError(error, 'zero vector');
     });
 
     it('errors on the Vector3i spelling of it that Godot converts', () => {

@@ -16,6 +16,7 @@ import {
 } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
+import { errorsOf, warningsOf } from '../../../linter/testing/tierLists';
 
 describe('Camera3D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -673,14 +674,12 @@ describe('Camera3D Linter', () => {
       // Only warnings: values below their hints.
       let diagnostics = lint(scene(node('Camera3D', { projection: 0, fov: 10, near: 0.0005, far: 0.005 })));
       expect(diagnostics.length).toBeGreaterThan(0);
-      const hasWarnings = diagnostics.some((d) => d.severity === 'warning');
-      expect(hasWarnings).toBe(true);
+      expect(warningsOf(diagnostics)).not.toHaveLength(0);
 
       // Errors from invalid values.
       diagnostics = lint(scene(node('Camera3D', { projection: 5, fov: 200, near: -0.1 })));
       expect(diagnostics.length).toBeGreaterThan(0);
-      const hasErrors = diagnostics.some((d) => d.severity === 'error');
-      expect(hasErrors).toBe(true);
+      expect(errorsOf(diagnostics)).not.toHaveLength(0);
     });
 
     it('should handle boundary values for fov', () => {

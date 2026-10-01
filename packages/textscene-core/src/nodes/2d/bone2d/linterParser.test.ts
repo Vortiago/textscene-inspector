@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../linter/testing/fixtureCheck';
 import './linterParser';
+import { expectError, expectWarning } from '../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -71,8 +72,7 @@ describe('Bone2D strict validators', () => {
 
     it('rejects a Transform2D of the wrong arity', () => {
       const error = check('rest', 'Transform2D(1, 0, 0)');
-      expect(error).toBeAtTier('error');
-      expect(error?.message).toContain('rest');
+      expectError(error, 'rest');
     });
   });
 
@@ -103,8 +103,7 @@ describe('Bone2D strict validators', () => {
       // clamp and no ERR_FAIL, so the bound is the widget's and ADR-0032 makes it
       // a warning.
       const error = check('length', value);
-      expect(error).toBeAtTier('warning');
-      expect(error?.message).toContain('length');
+      expectWarning(error, 'length');
     });
 
     it('rejects text that is not a float at all', () => {
@@ -134,8 +133,7 @@ describe('Bone2D strict validators', () => {
       // skeleton_2d.cpp:89 hints "-360, 360, 0.01". set_bone_angle (:475-481)
       // assigns straight through, so out of range is the widget's complaint.
       const error = check('bone_angle', value);
-      expect(error).toBeAtTier('warning');
-      expect(error?.message).toContain('bone_angle');
+      expectWarning(error, 'bone_angle');
     });
 
     it('rejects text that is not a float at all', () => {

@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { ValidatorRegistry, validatorRegistry } from './ValidatorRegistry.js';
 import type { PropertyValidator } from './ValidatorRegistry.js';
+import { expectError } from './testing/validatorCheck.js';
 import './index.js'; // trigger all validator registrations
 
 describe('ValidatorRegistry.registerUnavailable', () => {
@@ -21,9 +22,7 @@ describe('ValidatorRegistry.registerUnavailable', () => {
     });
     const diagnostic = r.findValidator('Leaf', 'vertical')!('vertical', 'true', 7);
     expect(diagnostic?.code).toBe('UNAVAILABLE_VERTICAL');
-    expect(diagnostic).toBeAtTier('error');
-    expect(diagnostic?.message).toContain('cannot be set on Leaf');
-    expect(diagnostic?.message).toContain('its orientation is fixed');
+    expectError(diagnostic, 'cannot be set on Leaf', 'its orientation is fixed');
   });
 
   it('rejects the key whatever the value, since presence is the defect', () => {

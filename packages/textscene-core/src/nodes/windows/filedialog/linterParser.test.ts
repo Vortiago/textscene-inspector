@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import './linterParser';
+import { expectError } from '../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -52,8 +53,7 @@ describe('FileDialog strict validators', () => {
 
     it('rejects 5 as an error (set_file_mode ERR_FAIL_INDEXes at 5)', () => {
       const error = check('file_mode', '5');
-      expect(error).toBeAtTier('error');
-      expect(error?.message).toContain('0-4');
+      expectError(error, '0-4');
     });
 
     it('rejects a negative index as an error', () => {
@@ -69,8 +69,7 @@ describe('FileDialog strict validators', () => {
 
     it('rejects 2 as an error (set_display_mode ERR_FAIL_INDEXes at DISPLAY_MAX = 2)', () => {
       const error = check('display_mode', '2');
-      expect(error).toBeAtTier('error');
-      expect(error?.message).toContain('0-1');
+      expectError(error, '0-1');
     });
   });
 
@@ -83,8 +82,7 @@ describe('FileDialog strict validators', () => {
 
     it('rejects 3 as an error (set_access ERR_FAIL_INDEXes at 3)', () => {
       const error = check('access', '3');
-      expect(error).toBeAtTier('error');
-      expect(error?.message).toContain('0-2');
+      expectError(error, '0-2');
     });
   });
 
@@ -174,8 +172,7 @@ describe('FileDialog strict validators', () => {
 
     it('rejects a negative count as an error (set_option_count ERR_FAIL_CONDs below 0)', () => {
       const error = check('option_count', '-1');
-      expect(error).toBeAtTier('error');
-      expect(error?.message).toContain('non-negative');
+      expectError(error, 'non-negative');
     });
   });
 

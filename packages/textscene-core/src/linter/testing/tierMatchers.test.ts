@@ -12,12 +12,10 @@ describe('toBeAtTier', () => {
     expect(() => expect(diagnostic).toBeAtTier('error')).toThrow(
       'expected a diagnostic at error, got [warning] outside the hint'
     );
-    takeRecordedTiers();
   });
 
   it('fails a missing diagnostic, naming the tier it wanted', () => {
     expect(() => expect(null).toBeAtTier('info')).toThrow('expected a diagnostic at info, got null');
-    takeRecordedTiers();
   });
 
   it('records the tier it asserts', () => {
@@ -50,7 +48,6 @@ describe('toBeAllAtTier', () => {
     expect(() => expect([diagnostic, other, null]).toBeAllAtTier('warning')).toThrow(
       'expected every diagnostic at warning, got:\n  [error] refused by the setter\n  null'
     );
-    takeRecordedTiers();
   });
 
   it('records the tier it asserts', () => {

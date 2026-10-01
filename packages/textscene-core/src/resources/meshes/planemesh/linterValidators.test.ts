@@ -10,6 +10,7 @@ import { Linter } from '../../../linter/Linter';
 import { runResourcePropertyValidation } from '../../../linter/testing/testkit.js';
 import '../../../linter/index';
 import { errorsOf } from '../../../linter/testing/tierLists';
+import { expectError, expectWarning } from '../../../linter/testing/validatorCheck.js';
 
 runResourcePropertyValidation('PlaneMesh', [
   {
@@ -54,8 +55,7 @@ describe('PlaneMesh Linter Validators', () => {
       const result = validator!('flip_faces', 'yes', 1);
 
       expect(result).not.toBeNull();
-      expect(result).toBeAtTier('error');
-      expect(result!.message).toContain('must be a boolean (true or false)');
+      expectError(result, 'must be a boolean (true or false)');
       expect(result!.code).toBe('INVALID_FLIP_FACES_FORMAT');
     });
 
@@ -64,8 +64,7 @@ describe('PlaneMesh Linter Validators', () => {
       const result = validator!('flip_faces', '1', 1);
 
       expect(result).not.toBeNull();
-      expect(result).toBeAtTier('warning');
-      expect(result!.message).toContain('converts');
+      expectWarning(result, 'converts');
       expect(result!.code).toBe('INVALID_FLIP_FACES_FORMAT');
     });
 
@@ -82,8 +81,7 @@ describe('PlaneMesh Linter Validators', () => {
       const result = validator!('flip_faces', 'True', 1);
 
       expect(result).not.toBeNull();
-      expect(result).toBeAtTier('error');
-      expect(result!.message).toContain('must be a boolean (true or false)');
+      expectError(result, 'must be a boolean (true or false)');
     });
 
     it('should reject string "FALSE" (wrong capitalization)', () => {

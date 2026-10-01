@@ -148,8 +148,9 @@ invalidproperty
       // Semantic rules run alongside parse errors, so the set is not errors-only. The typeless `Root` heading is an
       // error: Godot assumes it was instantiated (resource_format_text.cpp:218-221) and refuses a root with no base
       // scene (packed_scene.cpp:220).
-      expect(errorsOf(diagnostics).length).toBeGreaterThanOrEqual(3);
-      expect(errorsOf(diagnostics).filter((d) => d.message.includes('states no "type="'))).toHaveLength(1);
+      const errors = errorsOf(diagnostics);
+      expect(errors.length).toBeGreaterThanOrEqual(3);
+      expect(errors.filter((d) => d.message.includes('states no "type="'))).toHaveLength(1);
     });
 
     it('should integrate StrictTscnParser and RuleRegistry correctly', () => {

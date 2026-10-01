@@ -6,17 +6,17 @@
 import { describe, it, expect } from 'vitest';
 import { v } from './v.js';
 import { maskedBitField } from './maskedBitField.js';
+import { expectWarning } from '../testing/validatorCheck.js';
 
 describe('a boolean slot given a number', () => {
   it('does not report the format error Godot has no counterpart for', () => {
     const error = v.boolean('visible')('visible', '0', 1);
-    expect(error?.severity).not.toBe('error');
+    expect(error).not.toBeAtTier('error');
   });
 
   it('warns that the stored value is not the written spelling', () => {
     const error = v.boolean('visible')('visible', '0', 1);
-    expect(error).toBeAtTier('warning');
-    expect(error?.message).toContain('false');
+    expectWarning(error, 'false');
   });
 
   it('still refuses a spelling the slot does not convert', () => {
@@ -31,15 +31,15 @@ describe('a boolean slot given a number', () => {
 
 describe('a numeric slot given a boolean', () => {
   it('reads it as 1/0 rather than reporting a format error', () => {
-    expect(v.int('hframes', { min: 1, max: 16384 })('hframes', 'true', 1)?.severity).not.toBe('error');
-    expect(v.float('rotation')('rotation', 'false', 1)?.severity).not.toBe('error');
+    expect(v.int('hframes', { min: 1, max: 16384 })('hframes', 'true', 1)).not.toBeAtTier('error');
+    expect(v.float('rotation')('rotation', 'false', 1)).not.toBeAtTier('error');
   });
 
   it('feeds the converted number INTO the slot bounds, never past them', () => {
     // `false` reads as 0, which is below this slot's floor, so the bound still
     // decides, exactly as it would for a written `0`.
     const bounded = v.int('hframes', { min: 1, max: 16384 });
-    expect(bounded('hframes', 'false', 1)?.severity).toBe(bounded('hframes', '0', 1)?.severity);
+    expect(bounded('hframes', 'false', 1)).toEqual(bounded('hframes', '0', 1));
   });
 });
 
@@ -75,8 +75,7 @@ describe('every int reader, given a boolean', () => {
     '%s warns that the stored value is not the spelling',
     (_at, validator, key, spelling, stored) => {
       const diagnostic = validator(key, spelling, 1);
-      expect(diagnostic).toBeAtTier('warning');
-      expect(diagnostic?.message).toContain(`stores ${stored}`);
+      expectWarning(diagnostic, `stores ${stored}`);
     }
   );
 

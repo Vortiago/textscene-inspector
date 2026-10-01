@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../linter/ValidatorRegistry';
 import './linterParser';
+import { expectWarning } from '../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string, nodeType = 'Node') {
@@ -119,9 +120,7 @@ describe('Node strict validators', () => {
 
     it('warns on a bit the hint does not offer, naming the ones it does', () => {
       const error = check('process_thread_messages', '7');
-      expect(error).toBeAtTier('warning');
-      expect(error?.message).toContain('FLAG_PROCESS_THREAD_MESSAGES (1)');
-      expect(error?.message).toContain('FLAG_PROCESS_THREAD_MESSAGES_PHYSICS (2)');
+      expectWarning(error, 'FLAG_PROCESS_THREAD_MESSAGES (1)', 'FLAG_PROCESS_THREAD_MESSAGES_PHYSICS (2)');
     });
 
     it('warns on a negative, which sets every bit rather than none', () => {

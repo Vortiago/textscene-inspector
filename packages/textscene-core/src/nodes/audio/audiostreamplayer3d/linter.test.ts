@@ -438,7 +438,7 @@ describe('AudioStreamPlayer3D Linter', () => {
         'strict-parser',
         'strict-parser',
       ]);
-      expect(diagnostics.every((d) => d.severity !== 'error')).toBe(true);
+      expect(errorsOf(diagnostics)).toEqual([]);
     });
   });
 });

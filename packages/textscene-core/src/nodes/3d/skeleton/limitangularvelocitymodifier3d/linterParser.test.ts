@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
 import './linterParser';
+import { expectError, expectWarning } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string, nodeType = 'LimitAngularVelocityModifier3D') {
@@ -122,8 +123,7 @@ describe('LimitAngularVelocityModifier3D max_angular_velocity', () => {
     expect(check('max_angular_velocity', '0')).toBeNull();
     expect(check('max_angular_velocity', '0.0')).toBeNull();
     const below = check('max_angular_velocity', '-0.01');
-    expect(below).toBeAtTier('warning');
-    expect(below?.message).toContain('max_angular_velocity');
+    expectWarning(below, 'max_angular_velocity');
   });
 
   it('keeps inf and nan, which no is_finite guard refuses', () => {
@@ -221,8 +221,7 @@ describe('LimitAngularVelocityModifier3D chains family', () => {
     // ERR_FAIL_INDEX_V(which, (int)chains.size(), false) at
     // limit_angular_velocity_modifier_3d.cpp:39.
     const error = check('chains/-1/root_bone_name', '"Head"');
-    expect(error).toBeAtTier('error');
-    expect(error?.message).toContain('-1');
+    expectError(error, '-1');
   });
 
   it('accepts an index past the live chain count, which no per-property rule can see', () => {
@@ -255,8 +254,7 @@ describe('LimitAngularVelocityModifier3D joints family', () => {
       // `joints/` branch, so a hand-written one falls through to `return true`
       // (:53) having assigned nothing.
       const error = check(key, '2');
-      expect(error).toBeAtTier('error');
-      expect(error?.message).toContain('read-only');
+      expectError(error, 'read-only');
     }
   );
 

@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
 import './linterParser';
+import { expectWarning } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -105,8 +106,7 @@ describe('ItemList booleans', () => {
     // Godot stores true for `1` in a BOOL slot (`variant.cpp:550-558`), so the
     // spelling is a warning about what gets written back, not a refusal.
     const error = check(property, '1');
-    expect(error).toBeAtTier('warning');
-    expect(error?.message).toContain(property);
+    expectWarning(error, property);
   });
 
   it('rejects capitalised True, which the TSCN grammar does not spell', () => {

@@ -16,6 +16,7 @@ import {
 import './linterParser';
 import './linter';
 import { errorsOf } from '../../../linter/testing/tierLists';
+import { expectWarning } from '../../../linter/testing/validatorCheck.js';
 
 /**
  * Resource definitions appended to accept-case scenes so the required `texture`
@@ -581,8 +582,7 @@ describe('a fractional frame_coords component', () => {
     const validator = validatorRegistry.findValidator('Sprite2D', 'frame_coords')!;
     const diagnostic = validator('frame_coords', 'Vector2i(1.5, 2.5)', 1);
 
-    expect(diagnostic).toBeAtTier('warning');
-    expect(diagnostic?.message).toContain('1.5');
+    expectWarning(diagnostic, '1.5');
   });
 });
 

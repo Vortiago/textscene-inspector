@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { node, scene, expectClean, runPropertyValidation } from '../../../linter/testing/testkit';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import './linterParser';
+import { expectError } from '../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -317,8 +318,7 @@ describe('Label3D Linter', () => {
       });
       it('rejects a bit outside BREAK_TRIM_MASK, which the setter drops silently', () => {
         const error = check('autowrap_trim_flags', '3');
-        expect(error).toBeAtTier('error');
-        expect(error?.message).toContain('Godot stores 0');
+        expectError(error, 'Godot stores 0');
       });
       it('warns on BREAK_TRIM_INDENT, which the setter keeps but the hint omits', () => {
         expect(check('autowrap_trim_flags', '32')).toBeAtTier('warning');

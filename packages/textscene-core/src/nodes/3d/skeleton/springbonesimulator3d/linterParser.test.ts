@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
 import './linterParser';
+import { expectError } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -157,8 +158,7 @@ describe('SpringBoneSimulator3D strict validators', () => {
   describe('the settings/<i>/ index', () => {
     it('errors on a negative index, which _set refuses outright', () => {
       const error = check('settings/-1/root_bone_name', '"Head"');
-      expect(error).toBeAtTier('error');
-      expect(error?.message).toContain('spring_bone_simulator_3d.cpp:44');
+      expectError(error, 'spring_bone_simulator_3d.cpp:44');
     });
 
     it('leaves a non-numeric index alone, because to_int resolves it', () => {

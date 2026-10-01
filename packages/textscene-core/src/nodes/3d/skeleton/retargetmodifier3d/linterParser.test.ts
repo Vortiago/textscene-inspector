@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
 import './linterParser';
+import { expectWarning } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -64,8 +65,7 @@ describe('RetargetModifier3D strict validators', () => {
       // away: the value loads and runs, and only the inspector cannot reach it. That is the hint
       // tier, not the setter tier.
       const error = check('enable', '8');
-      expect(error).toBeAtTier('warning');
-      expect(error?.message).toContain('TRANSFORM_FLAG_POSITION');
+      expectWarning(error, 'TRANSFORM_FLAG_POSITION');
     });
 
     it('warns for a negative value', () => {

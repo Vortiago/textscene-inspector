@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import './linterParser';
+import { expectWarning } from '../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -78,8 +79,7 @@ describe('AnimationPlayer strict validators: Playback Options group', () => {
     it('warns, not errors, past the hint (animation_player.cpp:1044 is hinted, not enforced)', () => {
       const error = check('playback_auto_capture_transition_type', '12');
       expect(error).not.toBeNull();
-      expect(error).toBeAtTier('warning');
-      expect(error!.message).toContain('0-11');
+      expectWarning(error, '0-11');
     });
 
     it('rejects a non-numeric value', () => {
@@ -99,8 +99,7 @@ describe('AnimationPlayer strict validators: Playback Options group', () => {
     it('warns, not errors, past the hint (animation_player.cpp:1045 is hinted, not enforced)', () => {
       const error = check('playback_auto_capture_ease_type', '4');
       expect(error).not.toBeNull();
-      expect(error).toBeAtTier('warning');
-      expect(error!.message).toContain('0-3');
+      expectWarning(error, '0-3');
     });
 
     it('rejects a non-numeric value', () => {
@@ -119,15 +118,13 @@ describe('AnimationPlayer strict validators: Playback Options group', () => {
     it('warns, not errors, below 0 (animation_player.cpp:823 is a bare assignment)', () => {
       const error = check('playback_default_blend_time', '-0.01');
       expect(error).not.toBeNull();
-      expect(error).toBeAtTier('warning');
-      expect(error!.message).toContain('between 0 and 4096');
+      expectWarning(error, 'between 0 and 4096');
     });
 
     it('warns, not errors, above 4096', () => {
       const error = check('playback_default_blend_time', '4096.01');
       expect(error).not.toBeNull();
-      expect(error).toBeAtTier('warning');
-      expect(error!.message).toContain('between 0 and 4096');
+      expectWarning(error, 'between 0 and 4096');
     });
 
     it('rejects a non-numeric value', () => {

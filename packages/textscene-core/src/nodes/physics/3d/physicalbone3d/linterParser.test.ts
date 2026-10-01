@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import './linterParser';
+import { expectWarning } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -142,8 +143,7 @@ describe('PhysicalBone3D strict validators', () => {
     // (0, 0.01) loads into Godot and the inspector still excludes it.
     it('warns between the refused floor and the hinted one', () => {
       const warning = check('mass', '0.005');
-      expect(warning).toBeAtTier('warning');
-      expect(warning?.message).toContain('0.01');
+      expectWarning(warning, '0.01');
     });
 
     it('rejects a non-numeric value', () => {

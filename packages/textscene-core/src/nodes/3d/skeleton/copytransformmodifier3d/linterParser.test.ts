@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
 import './linterParser';
+import { expectError } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -62,8 +63,7 @@ describe('CopyTransformModifier3D strict validators', () => {
     it('rejects a negative count as an error, which the setter refuses', () => {
       // bone_constraint_3d.cpp:131, `ERR_FAIL_COND(p_count < 0)`.
       const error = check('setting_count', '-1');
-      expect(error).toBeAtTier('error');
-      expect(error?.message).toContain('setting_count');
+      expectError(error, 'setting_count');
     });
 
     it('has no ceiling, so a large count passes', () => {
@@ -134,8 +134,7 @@ describe('CopyTransformModifier3D strict validators', () => {
     it('rejects a negative index, which _set refuses outright', () => {
       // copy_transform_modifier_3d.cpp:39, `ERR_FAIL_INDEX_V(which, …)`.
       const error = check('settings/-1/copy', '7');
-      expect(error).toBeAtTier('error');
-      expect(error?.message).toContain('-1');
+      expectError(error, '-1');
     });
 
     it('leaves a NON-NUMERIC index alone, which _set resolves to setting 0', () => {

@@ -11,7 +11,8 @@ import { recordTier } from './titleTier.js';
 /** A diagnostic, a `ParseError`, or the null a validator returns for an accepted value. */
 type Tiered = { readonly severity: Severity; readonly message: string } | null | undefined;
 
-function describeTiered(tiered: Tiered): string {
+/** The failure line for one tiered value: `[warning] <message>`, or `null`. */
+export function describeTiered(tiered: Tiered): string {
   if (tiered === null || tiered === undefined) return String(tiered);
   return `[${tiered.severity}] ${tiered.message}`;
 }

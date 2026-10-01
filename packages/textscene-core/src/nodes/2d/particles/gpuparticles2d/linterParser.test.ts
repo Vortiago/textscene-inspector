@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import './linterParser';
+import { expectWarning } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -186,8 +187,7 @@ describe('GPUParticles2D strict validators', () => {
 
     it('warns below the hint floor, which the setter does not reject', () => {
       const warning = check('lifetime', '0.001');
-      expect(warning).toBeAtTier('warning');
-      expect(warning?.message).toContain('0.01');
+      expectWarning(warning, '0.01');
     });
 
     it('rejects a non-numeric value', () => {

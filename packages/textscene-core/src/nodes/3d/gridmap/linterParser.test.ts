@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import './linterParser';
+import { expectWarning } from '../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -258,7 +259,6 @@ describe('a fractional cell element beside a grounded error', () => {
 
   it('reports the truncation once nothing stronger applies', () => {
     const diagnostic = check('{ "cells": PackedInt32Array(1.5, 2, 3) }');
-    expect(diagnostic).toBeAtTier('warning');
-    expect(diagnostic?.message).toContain('1.5');
+    expectWarning(diagnostic, '1.5');
   });
 });

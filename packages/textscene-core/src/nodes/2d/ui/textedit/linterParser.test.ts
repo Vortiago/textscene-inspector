@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import './linterParser';
+import { expectError, expectWarning } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -253,22 +254,19 @@ describe('TextEdit strict validators', () => {
     it('warns, not errors, past the ceiling', () => {
       const error = check('caret_blink_interval', '10.01');
       expect(error).not.toBeNull();
-      expect(error).toBeAtTier('warning');
-      expect(error!.message).toContain('between 0.1 and 10');
+      expectWarning(error, 'between 0.1 and 10');
     });
 
     it('warns between the refused floor and the hinted one', () => {
       const warning = check('caret_blink_interval', '0.05');
       expect(warning).not.toBeNull();
-      expect(warning).toBeAtTier('warning');
-      expect(warning!.message).toContain('between 0.1 and 10');
+      expectWarning(warning, 'between 0.1 and 10');
     });
 
     it('errors on 0, which the setter refuses', () => {
       const error = check('caret_blink_interval', '0');
       expect(error).not.toBeNull();
-      expect(error).toBeAtTier('error');
-      expect(error!.message).toContain('greater than 0');
+      expectError(error, 'greater than 0');
     });
 
     it('errors on a negative value', () => {

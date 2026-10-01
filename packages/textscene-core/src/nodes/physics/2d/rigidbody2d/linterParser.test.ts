@@ -8,6 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import './linterParser';
+import { expectError, expectWarning } from '../../../../linter/testing/validatorCheck.js';
 
 function check(property: string, value: string) {
   const validator = validatorRegistry.declarationFor('RigidBody2D', property);
@@ -31,8 +32,7 @@ describe('RigidBody2D strict validators (physics state)', () => {
 
     it('rejects a Vector3', () => {
       const error = check('linear_velocity', 'Vector3(0, 0, 0)');
-      expect(error).toBeAtTier('error');
-      expect(error?.message).toContain('linear_velocity');
+      expectError(error, 'linear_velocity');
     });
   });
 
@@ -84,8 +84,7 @@ describe('RigidBody2D strict validators (physics state)', () => {
       // Ray,Cast Shape". set_continuous_collision_detection_mode (:566-569)
       // assigns straight through, so out-of-range is the widget's complaint.
       const error = check('continuous_cd', '5');
-      expect(error).toBeAtTier('warning');
-      expect(error?.message).toContain('0-2');
+      expectWarning(error, '0-2');
     });
 
     it('rejects a non-numeric value', () => {
@@ -108,9 +107,7 @@ describe('RigidBody2D strict validators (physics state)', () => {
 
     it('refuses the constant itself and above — ERR_FAIL_INDEX fails at >= 4096', () => {
       const error = check('max_contacts_reported', '4096');
-      expect(error).toBeAtTier('error');
-      expect(error?.message).toContain('less than 4096');
-      expect(error?.message).toContain('Godot does not store this value');
+      expectError(error, 'less than 4096', 'Godot does not store this value');
       expect(check('max_contacts_reported', '100000')).toBeAtTier('error');
     });
 

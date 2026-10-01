@@ -11,6 +11,7 @@ import { makeFloatTupleRegex } from './floatTupleValidator.js';
 import { FLOAT_PATTERN_SOURCE } from '../../godot/number.js';
 import { v } from './v.js';
 import { withFiniteGuard, withNanGuard } from './v/grounding.js';
+import { expectWarning } from '../testing/validatorCheck.js';
 
 const NON_FINITE = ['inf', '-inf', 'inf_neg', 'nan'];
 
@@ -323,8 +324,7 @@ describe('a property whose setter guards is_nan alone', () => {
 
   it.each(['inf', '-inf', 'inf_neg'])('reports %s at the hint tier, not as a refusal', (value) => {
     const diagnostic = guarded('volume_db', value, 1);
-    expect(diagnostic).toBeAtTier('warning');
-    expect(diagnostic?.message).toContain('between -80 and 24');
+    expectWarning(diagnostic, 'between -80 and 24');
   });
 
   it('accepts an ordinary value inside the band', () => {

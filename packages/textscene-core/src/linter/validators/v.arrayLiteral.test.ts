@@ -10,6 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { v, arrayLiteralElements } from './v.js';
+import { expectWarning } from '../testing/validatorCheck.js';
 
 const untyped = v.arrayLiteral('st_args');
 const enforced = v.arrayLiteral('connections', { typedAs: 'Dictionary', enforced: 'array.cpp:275-277' });
@@ -80,8 +81,7 @@ describe('v.arrayLiteral (typed, enforced by the setter)', () => {
 describe('v.arrayLiteral (typed, stated by the hint only)', () => {
   it('warns on a wrapper naming a different element type, which the bare setter stores', () => {
     const report = hinted('custom_effects', 'Array[Dictionary]([])', 1);
-    expect(report).toBeAtTier('warning');
-    expect(report!.message).toContain('rich_text_label.cpp:7773');
+    expectWarning(report, 'rich_text_label.cpp:7773');
   });
 
   it('accepts its own element type', () => {

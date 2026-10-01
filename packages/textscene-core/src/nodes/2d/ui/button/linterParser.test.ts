@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import './linterParser';
+import { expectError } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -123,8 +124,7 @@ describe('Button strict validators', () => {
       // button.cpp:625 stores `p_flags & BREAK_TRIM_MASK`, so 3 lands as 0. Nothing
       // downstream reports the loss, which is why this is the error tier.
       const error = check('autowrap_trim_flags', '3');
-      expect(error).toBeAtTier('error');
-      expect(error?.message).toContain('Godot stores 0');
+      expectError(error, 'Godot stores 0');
     });
 
     it('warns on BREAK_TRIM_INDENT, which the setter keeps but the hint omits', () => {

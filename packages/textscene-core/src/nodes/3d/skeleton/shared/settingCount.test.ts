@@ -14,6 +14,7 @@ import '../iterateik3d/linterParser.js';
 import '../splineik3d/linterParser.js';
 import '../springbonesimulator3d/linterParser.js';
 import '../twoboneik3d/linterParser.js';
+import { expectError } from '../../../../linter/testing/validatorCheck.js';
 
 /** Each class that declares `setting_count`, and the class whose guard site its setter reaches. */
 const DECLARERS: ReadonlyArray<readonly [string, SettingCountGuard]> = [
@@ -66,8 +67,7 @@ describe('settingCount', () => {
 
   it('refuses 2147483648, which the int32 slot wraps to a negative count', () => {
     const result = validator('setting_count', '2147483648', 1);
-    expect(result).toBeAtTier('error');
-    expect(result?.message).toContain('-2147483648');
+    expectError(result, '-2147483648');
   });
 
   it('refuses a literal no int32 slot can hold', () => {

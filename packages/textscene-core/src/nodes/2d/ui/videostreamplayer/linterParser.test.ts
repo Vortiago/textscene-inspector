@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
 import './linterParser';
+import { expectError } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -66,8 +67,7 @@ describe('VideoStreamPlayer strict validators', () => {
 
     it('rejects a track index that is not a number', () => {
       const error = check('audio_track', 'first');
-      expect(error).toBeAtTier('error');
-      expect(error?.message).toContain('audio_track');
+      expectError(error, 'audio_track');
     });
 
     it('only warns outside the span, because set_audio_track assigns straight through', () => {
@@ -87,8 +87,7 @@ describe('VideoStreamPlayer strict validators', () => {
 
     it('rejects a buffer size that is not a number', () => {
       const error = check('buffering_msec', 'half a second');
-      expect(error).toBeAtTier('error');
-      expect(error?.message).toContain('buffering_msec');
+      expectError(error, 'buffering_msec');
     });
 
     it('only warns outside the span, because set_buffering_msec assigns straight through', () => {
@@ -117,15 +116,13 @@ describe('VideoStreamPlayer strict validators', () => {
 
     it('rejects a speed that is not a number', () => {
       const error = check('speed_scale', 'double');
-      expect(error).toBeAtTier('error');
-      expect(error?.message).toContain('speed_scale');
+      expectError(error, 'speed_scale');
     });
 
     it('errors below zero, which the setter refuses outright', () => {
       // video_stream_player.cpp:437, `ERR_FAIL_COND(p_speed_scale < 0.0);`
       const error = check('speed_scale', '-0.5');
-      expect(error).toBeAtTier('error');
-      expect(error?.message).toContain('non-negative');
+      expectError(error, 'non-negative');
     });
   });
 
@@ -141,8 +138,7 @@ describe('VideoStreamPlayer strict validators', () => {
 
     it('rejects a volume that is not a number', () => {
       const error = check('volume_db', 'loud');
-      expect(error).toBeAtTier('error');
-      expect(error?.message).toContain('volume_db');
+      expectError(error, 'volume_db');
     });
 
     it('errors below -80, where the setter collapses the value to silence', () => {
@@ -195,8 +191,7 @@ describe('VideoStreamPlayer strict validators', () => {
 
     it('rejects an unquoted bus name', () => {
       const error = check('bus', 'Master');
-      expect(error).toBeAtTier('error');
-      expect(error?.message).toContain('bus');
+      expectError(error, 'bus');
     });
 
     it('does not judge which bus names exist, because the scene cannot know', () => {
@@ -217,12 +212,11 @@ describe('VideoStreamPlayer strict validators', () => {
 
     it('rejects a bare path where a reference belongs', () => {
       const error = check('stream', '"res://video/intro.ogv"');
-      expect(error).toBeAtTier('error');
-      expect(error?.message).toContain('stream');
+      expectError(error, 'stream');
     });
 
     it('rejects a truncated reference', () => {
-      expect(check('stream', 'ExtResource(')?.severity).toBe('error');
+      expect(check('stream', 'ExtResource(')).toBeAtTier('error');
     });
   });
 

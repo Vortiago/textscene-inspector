@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
 import './linterParser';
+import { expectWarning } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -93,8 +94,7 @@ describe('XRBodyModifier3D strict validators', () => {
       // 8: the scene loads, the BitField holds 15, and _get_joint_data never tests an undefined
       // bit. Only the inspector cannot reach it: the hint tier, not the setter tier.
       const error = check('body_update', '15');
-      expect(error).toBeAtTier('warning');
-      expect(error?.message).toContain('BODY_UPDATE_UPPER_BODY');
+      expectWarning(error, 'BODY_UPDATE_UPPER_BODY');
     });
 
     it('warns for a negative value', () => {

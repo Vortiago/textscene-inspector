@@ -7,6 +7,7 @@ import { Linter } from '../../../../linter/Linter';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { errorsOf } from '../../../../linter/testing/tierLists';
 import './linterParser';
+import { expectError } from '../../../../linter/testing/validatorCheck.js';
 
 describe('tile_data with an element no int32 holds', () => {
   it('errors, where the grammar alone was silent', () => {
@@ -65,8 +66,7 @@ tile_set = NotARef(1)
 
     it('errors on a FLOAT spelling as a dropped write, not a truncation', () => {
       const error = checkTopLevel('format', '1.0');
-      expect(error).toBeAtTier('error');
-      expect(error?.message).toContain('dropped');
+      expectError(error, 'dropped');
     });
 
     it('errors on a BOOL spelling the same way', () => {

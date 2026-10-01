@@ -1,8 +1,9 @@
 /**
  * The tiers the running test asserts, and the check that its title names no
  * other. Every helper that asserts a tier records it here, and the setup file's
- * `afterEach` checks the title against the record, so no assertion spelling can
- * hide from the check. It imports only types, so any test file can load it.
+ * `afterEach` checks the title against the record. A lint rule refuses the raw
+ * `expect(d.severity)` spelling, which records nothing. It imports only types,
+ * so any test file can load it.
  */
 
 import type { Severity } from '../types.js';

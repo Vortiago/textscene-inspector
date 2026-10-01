@@ -13,7 +13,7 @@ import {
 } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
-import { errorsOf } from '../../../linter/testing/tierLists';
+import { errorsOf, infosOf } from '../../../linter/testing/tierLists';
 
 describe('Camera2D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -543,9 +543,7 @@ describe('Camera2D Linter', () => {
           node('Camera2D', { enabled: true }, { name: 'Camera2', parent: 'Holder' })
         )
       );
-      const reports = diagnostics.filter(
-        (d) => d.severity === 'info' && d.message.includes('Multiple enabled')
-      );
+      const reports = infosOf(diagnostics).filter((d) => d.message.includes('Multiple enabled'));
       expect(reports.length).toBeGreaterThan(0);
     });
 

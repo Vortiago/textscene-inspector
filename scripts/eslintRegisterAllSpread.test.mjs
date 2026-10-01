@@ -17,7 +17,7 @@ describe('the registerAll spread guard', () => {
   });
 
   it('leaves a test file alone, where a registry test spreads a shared group on purpose', async () => {
-    expect(await restrictedSyntaxFor(CORE_TEST)).toBeUndefined();
+    expect(await reportedOnFile("registerAll('A', ...groups);", CORE_TEST)).toEqual([]);
   });
 
   it('refuses an object spread inside a registerAll argument', async () => {

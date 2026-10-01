@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import './linterParser';
+import { expectError } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -185,8 +186,7 @@ describe('Range.page, whose setter clamps rather than stores', () => {
 
   it('reports a negative page, which range.cpp:255 CLAMPs up to 0', () => {
     const error = page('-1');
-    expect(error).toBeAtTier('error');
-    expect(error?.message).toContain('0');
+    expectError(error, '0');
   });
 
   it('takes 0 and any positive page', () => {

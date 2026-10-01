@@ -4,6 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { validatorRegistry } from '../../linter/ValidatorRegistry';
+import { expectError, expectWarning } from '../../linter/testing/validatorCheck.js';
 import './linterValidators'; // Import to trigger registration
 
 describe('Environment Linter Validators', () => {
@@ -25,8 +26,7 @@ describe('Environment Linter Validators', () => {
       const result = validator!('background_mode', '99', 1);
 
       expect(result).not.toBeNull();
-      expect(result).toBeAtTier('warning');
-      expect(result!.message).toContain('must be 0-5 (got 99)');
+      expectWarning(result, 'must be 0-5 (got 99)');
       // The combinators name Godot's own constants rather than printing a bare range.
       expect(result!.message).toContain('0=BG_CLEAR_COLOR');
       expect(result!.code).toBe('INVALID_BACKGROUND_MODE_VALUE');
@@ -69,8 +69,7 @@ describe('Environment Linter Validators', () => {
       const result = validator!('background_color', 'Color(1, 2, 3)', 1);
 
       expect(result).not.toBeNull();
-      expect(result).toBeAtTier('error');
-      expect(result!.message).toContain('Color with 4 numbers like Color(1, 1, 1, 1)');
+      expectError(result, 'Color with 4 numbers like Color(1, 1, 1, 1)');
       expect(result!.code).toBe('INVALID_BACKGROUND_COLOR_FORMAT');
     });
 
@@ -119,8 +118,7 @@ describe('Environment Linter Validators', () => {
       const result = validator!('volumetric_fog_enabled', 'maybe', 1);
 
       expect(result).not.toBeNull();
-      expect(result).toBeAtTier('error');
-      expect(result!.message).toContain('must be a boolean (true or false)');
+      expectError(result, 'must be a boolean (true or false)');
       expect(result!.code).toBe('INVALID_VOLUMETRIC_FOG_ENABLED_FORMAT');
     });
 
@@ -155,8 +153,7 @@ describe('Environment Linter Validators', () => {
       const result = validator!('volumetric_fog_density', '-0.5', 1);
 
       expect(result).not.toBeNull();
-      expect(result).toBeAtTier('warning');
-      expect(result!.message).toContain('must be non-negative');
+      expectWarning(result, 'must be non-negative');
       expect(result!.code).toBe('INVALID_VOLUMETRIC_FOG_DENSITY_VALUE');
     });
 
@@ -209,8 +206,7 @@ describe('Environment Linter Validators', () => {
       const result = validator!('adjustment_brightness', '-0.5', 1);
 
       expect(result).not.toBeNull();
-      expect(result).toBeAtTier('warning');
-      expect(result!.message).toContain('must be non-negative');
+      expectWarning(result, 'must be non-negative');
       expect(result!.code).toBe('INVALID_ADJUSTMENT_BRIGHTNESS_VALUE');
     });
   });

@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import './linterParser';
+import { expectError, expectWarning } from '../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -25,8 +26,7 @@ describe('AudioStreamPlayer3D strict validators: playback_type', () => {
   it('warns, not errors, past the hint (audio_stream_player_internal.cpp:337-339 is a bare assignment)', () => {
     const error = check('playback_type', '3');
     expect(error).not.toBeNull();
-    expect(error).toBeAtTier('warning');
-    expect(error!.message).toContain('0-2');
+    expectWarning(error, '0-2');
   });
 
   it('rejects a non-numeric value', () => {
@@ -54,8 +54,7 @@ describe('AudioStreamPlayer3D strict validators: emission_angle_degrees', () => 
 
   it('errors below the setter floor, which sits under the hint', () => {
     const below = check('emission_angle_degrees', '-0.1');
-    expect(below).toBeAtTier('error');
-    expect(below?.message).toContain('at least 0');
+    expectError(below, 'at least 0');
   });
 
   it('errors above 90, where the setter and the hint agree', () => {
@@ -72,8 +71,7 @@ describe('AudioStreamPlayer3D strict validators: emission_angle_degrees', () => 
 describe('AudioStreamPlayer3D strict validators: volume_db', () => {
   it('errors on nan, which the setter refuses', () => {
     const error = check('volume_db', 'nan');
-    expect(error).toBeAtTier('error');
-    expect(error?.message).toContain('must not be NaN');
+    expectError(error, 'must not be NaN');
   });
 
   it('warns on inf against the hint band rather than erroring', () => {

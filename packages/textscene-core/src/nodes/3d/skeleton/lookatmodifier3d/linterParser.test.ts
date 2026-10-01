@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
 import './linterParser';
+import { expectWarning } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -276,8 +277,7 @@ describe('LookAtModifier3D strict validators', () => {
       // Hint "0,180,0.01,radians_as_degrees" (look_at_modifier_3d.cpp:497, :499, :505, :507): the
       // inspector shows 0-180 degrees, the .tscn stores radians, so the ceiling is PI ≈ 3.14159265.
       // 3.5 discriminates: inside the degree number 180, outside PI, so a degree bound accepts it.
-      expect(check(property, '3.5')).toBeAtTier('warning');
-      expect(check(property, '3.5')?.message).toContain('radians');
+      expectWarning(check(property, '3.5'), 'radians');
       expect(check(property, '180')).not.toBeNull();
     });
 
@@ -294,8 +294,7 @@ describe('LookAtModifier3D strict validators', () => {
     it.each(FULL_TURN_ANGLES)('%s bounds a full turn in radians', (property) => {
       // Hint "0,360,0.01,radians_as_degrees" (look_at_modifier_3d.cpp:494, :502): the stored ceiling
       // is TAU ≈ 6.28318531. 7 discriminates: inside the degree number 360, outside TAU.
-      expect(check(property, '7')).toBeAtTier('warning');
-      expect(check(property, '7')?.message).toContain('radians');
+      expectWarning(check(property, '7'), 'radians');
       expect(check(property, '360')).not.toBeNull();
     });
 

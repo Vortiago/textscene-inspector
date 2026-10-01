@@ -404,10 +404,8 @@ describe('DirectionalLight3D Linter', () => {
         )
       );
       expect(diagnostics.length).toBeGreaterThan(0);
-      const hasWarnings = diagnostics.some((d) => d.severity === 'warning');
-      const hasErrors = diagnostics.some((d) => d.severity === 'error');
-      expect(hasWarnings).toBe(true);
-      expect(hasErrors).toBe(true);
+      expect(warningsOf(diagnostics)).not.toHaveLength(0);
+      expect(errorsOf(diagnostics)).not.toHaveLength(0);
     });
   });
 });

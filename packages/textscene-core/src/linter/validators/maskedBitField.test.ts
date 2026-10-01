@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { hintedBitField, maskedBitField } from './maskedBitField.js';
+import { expectWarning } from '../testing/validatorCheck.js';
 
 // BREAK_TRIM_INDENT | BREAK_TRIM_START_EDGE_SPACES | BREAK_TRIM_END_EDGE_SPACES
 // (servers/text/text_server.h:120).
@@ -38,8 +39,7 @@ describe('maskedBitField', () => {
   describe('warns on a bit the setter keeps but the hint omits', () => {
     it.each(['32', '96', '160', '224'])('warns on %s, which carries bit 32', (value) => {
       const diagnostic = run(value);
-      expect(diagnostic).toBeAtTier('warning');
-      expect(diagnostic?.message).toContain('BREAK_TRIM_INDENT');
+      expectWarning(diagnostic, 'BREAK_TRIM_INDENT');
     });
 
     it('names only the offending bit, not every bit set', () => {

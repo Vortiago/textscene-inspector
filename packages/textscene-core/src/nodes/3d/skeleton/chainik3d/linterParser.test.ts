@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 import { chainIkSubclassSettings } from './linterParser.js';
+import { expectError } from '../../../../linter/testing/validatorCheck.js';
 
 /**
  * Every key ChainIK3D registers. It has no `ADD_PROPERTY`: `_set` (chain_ik_3d.cpp:33), `_get` (:69)
@@ -67,8 +68,7 @@ describe('ChainIK3D settings index', () => {
   it('rejects a negative setting index', () => {
     // ERR_FAIL_INDEX_V(which, (int)settings.size(), false) at chain_ik_3d.cpp:39.
     const error = check('settings/-1/root_bone_name', '"Head"');
-    expect(error).toBeAtTier('error');
-    expect(error?.message).toContain('-1');
+    expectError(error, '-1');
   });
 
   it('accepts an index past the live setting count, which no per-property rule can see', () => {
@@ -271,8 +271,7 @@ describe('ChainIK3D derived joint leaves', () => {
     'errors on %s, which no _set branch accepts',
     (key) => {
       const error = check(key, '"Head"');
-      expect(error).toBeAtTier('error');
-      expect(error?.message).toContain('read-only');
+      expectError(error, 'read-only');
     }
   );
 
@@ -281,8 +280,7 @@ describe('ChainIK3D derived joint leaves', () => {
     // `return false` (chain_ik_3d.cpp:62-63) and the index text decides
     // nothing.
     const error = check('settings/0/joints/x/bone', '"Head"');
-    expect(error).toBeAtTier('error');
-    expect(error?.message).toContain('read-only');
+    expectError(error, 'read-only');
   });
 
   it('says nothing about a joint leaf a subclass adds', () => {

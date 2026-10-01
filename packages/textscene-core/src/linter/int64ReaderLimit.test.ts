@@ -8,6 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import './index.js';
+import { expectError } from './testing/validatorCheck.js';
 
 /** The first diagnostic a registered validator gives `value` for `key`. */
 function check(nodeType: string, key: string, value: string) {
@@ -56,7 +57,6 @@ describe('int64 slots past the reader’s range', () => {
     // `inf` reads (`variant_parser.cpp:701-707`) and is then altered on the
     // write, so this one is a genuine alteration at every width.
     const error = check('Label', 'autowrap_trim_flags', 'inf');
-    expect(error).toBeAtTier('error');
-    expect(error?.message).toContain('cannot be stored in an integer slot');
+    expectError(error, 'cannot be stored in an integer slot');
   });
 });

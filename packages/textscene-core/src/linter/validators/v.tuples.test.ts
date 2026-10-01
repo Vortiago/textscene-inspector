@@ -8,6 +8,7 @@ import { validatorRegistry } from '../ValidatorRegistry.js';
 import '../index.js';
 import { describe, expect, it } from 'vitest';
 import { v } from './v.js';
+import { expectError, expectWarning } from '../testing/validatorCheck.js';
 
 describe('v.vector2 / v.vector2i / v.vector3', () => {
   it('vector2 accepts Vector2(x, y)', () => {
@@ -154,8 +155,7 @@ describe('v.resourceReference / v.nodePath / v.color', () => {
     'color converts %s, with the converted-spelling warning',
     (value) => {
       const report = v.color('modulate')('modulate', value, 1);
-      expect(report).toBeAtTier('warning');
-      expect(report?.message).toContain('which this slot converts');
+      expectWarning(report, 'which this slot converts');
     }
   );
 
@@ -166,8 +166,7 @@ describe('v.resourceReference / v.nodePath / v.color', () => {
   // `Color::named` fails with ERR_FAIL_V_MSG and yields `Color()` (color.cpp:396-402).
   it('color errors on a string that is no colour, which the slot stores as black', () => {
     const report = v.color('modulate')('modulate', '"not a color"', 1);
-    expect(report).toBeAtTier('error');
-    expect(report?.message).toContain('color.cpp:396-402');
+    expectError(report, 'color.cpp:396-402');
   });
 
   it('color cites that refusal instead of claiming format-only', () => {
@@ -236,8 +235,7 @@ describe('a fractional component of an integer composite', () => {
   // reaches here too.
   it('warns on Vector2i, as the scalar slot does', () => {
     const diagnostic = v.vector2i('size')('size', 'Vector2i(1.5, 2)', 1);
-    expect(diagnostic).toBeAtTier('warning');
-    expect(diagnostic?.message).toContain('1.5');
+    expectWarning(diagnostic, '1.5');
   });
 
   it('warns on Rect2i', () => {
@@ -249,8 +247,7 @@ describe('a fractional component of an integer composite', () => {
     // per slice rather than exposed as a `v` combinator.
     const validator = validatorRegistry.findValidator('CodeEdit', 'line_length_guidelines')!;
     const diagnostic = validator('line_length_guidelines', 'PackedInt32Array(1.5, 80)', 1);
-    expect(diagnostic).toBeAtTier('warning');
-    expect(diagnostic?.message).toContain('1.5');
+    expectWarning(diagnostic, '1.5');
   });
 
   it('says nothing when every component is whole', () => {

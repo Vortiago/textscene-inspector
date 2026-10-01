@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
 import './linterParser';
+import { expectError, expectWarning } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -106,8 +107,7 @@ describe('Tree strict validators', () => {
     it('errors on zero columns, which set_columns refuses outright', () => {
       // tree.cpp:5716 `ERR_FAIL_COND(p_columns < 1)`.
       const error = check('columns', '0');
-      expect(error).toBeAtTier('error');
-      expect(error?.message).toContain('columns');
+      expectError(error, 'columns');
     });
 
     it('errors on a negative column count', () => {
@@ -137,8 +137,7 @@ describe('Tree strict validators', () => {
       // Tree::set_select_mode is a bare assignment (tree.cpp:5403-5405), so a
       // wider value loads unaltered: a UI-control hint, hence warning.
       const error = check('select_mode', '3');
-      expect(error).toBeAtTier('warning');
-      expect(error?.message).toContain('SELECT_MULTI');
+      expectWarning(error, 'SELECT_MULTI');
     });
 
     it('warns below the first constant', () => {
@@ -160,8 +159,7 @@ describe('Tree strict validators', () => {
       // (tree.cpp:6086-6093) only early-returns on an unchanged value and then
       // assigns, so a wider value is stored as written.
       const error = check('scroll_hint_mode', '4');
-      expect(error).toBeAtTier('warning');
-      expect(error?.message).toContain('SCROLL_HINT_MODE_BOTTOM');
+      expectWarning(error, 'SCROLL_HINT_MODE_BOTTOM');
     });
 
     it('warns below the first constant', () => {
@@ -188,8 +186,7 @@ describe('Tree strict validators', () => {
       // so 4 is stored, not dropped: not a maskedBitField. Only the two-entry
       // PROPERTY_HINT_FLAGS at tree.cpp:6816 excludes it, and a UI hint grounds a warning.
       const error = check('drop_mode_flags', '4');
-      expect(error).toBeAtTier('warning');
-      expect(error?.message).toContain('drop_mode_flags');
+      expectWarning(error, 'drop_mode_flags');
       // The bit list, not a numeric span: `hintedBitField` names the two bits the hint
       // offers. A `{ min: 0, max: 3 }` range matches only because they are the lowest
       // bits, and would report a magnitude the property does not have.

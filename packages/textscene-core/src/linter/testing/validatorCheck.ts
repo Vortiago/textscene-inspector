@@ -8,6 +8,7 @@
 import { expect } from 'vitest';
 import { validatorRegistry } from '../ValidatorRegistry.js';
 import type { ParseError, Severity } from '../types.js';
+import { describeTiered } from './tierMatchers.js';
 
 /** The signature the per-slice `check` helpers all had. */
 export type Check = (property: string, value: string, line?: number) => ParseError | null;
@@ -63,5 +64,5 @@ export function expectWarning(error: ParseError | null, ...contains: [string, ..
 
 /** Assert the validator accepted the value. Fails with the diagnostic it gave instead. */
 export function expectAccepted(error: ParseError | null): void {
-  expect(error, error ? `refused: [${error.severity}] ${error.message}` : undefined).toBeNull();
+  expect(error, error ? `refused: ${describeTiered(error)}` : undefined).toBeNull();
 }

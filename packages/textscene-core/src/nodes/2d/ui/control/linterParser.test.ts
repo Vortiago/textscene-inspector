@@ -15,6 +15,7 @@ import {
   runPropertyValidation,
 } from '../../../../linter/testing/testkit';
 import './linterParser';
+import { expectError } from '../../../../linter/testing/validatorCheck.js';
 
 describe('Control Linter', () => {
   runPropertyValidation({ nodeType: 'Control' }, [
@@ -392,15 +393,13 @@ describe('Control Linter', () => {
     // fails (array.cpp:260-261) and the setter stores an empty array.
     it.each(['[null]', '[&"../A"]', '[1]'])('errors on the element %s, which assign() refuses', (value) => {
       const report = nodePathArray()('accessibility_controls_nodes', value, 1);
-      expect(report).toBeAtTier('error');
-      expect(report?.message).toContain('array.cpp:260-261');
+      expectError(report, 'array.cpp:260-261');
     });
 
     it('errors on a wrapper whose element type does not convert', () => {
       // array.cpp:275-277: "Cannot assign contents of Array[StringName] to Array[NodePath]".
       const report = nodePathArray()('accessibility_controls_nodes', 'Array[StringName]([])', 1);
-      expect(report).toBeAtTier('error');
-      expect(report?.message).toContain('array.cpp:275-277');
+      expectError(report, 'array.cpp:275-277');
     });
 
     it('cites both assign() refusals instead of claiming format-only', () => {

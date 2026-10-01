@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import './linterParser';
+import { expectWarning } from '../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -212,8 +213,7 @@ describe('Window strict validators', () => {
       // 0.1 loads and runs: the setter only refuses `<= 0` (window.cpp:1774),
       // so the hint's floor is the inspector's limit and warns.
       const warning = check('content_scale_factor', '0.1');
-      expect(warning).toBeAtTier('warning');
-      expect(warning?.message).toContain('between 0.5 and 8');
+      expectWarning(warning, 'between 0.5 and 8');
     });
 
     it('warns above the hinted 8.0 ceiling rather than erroring', () => {
