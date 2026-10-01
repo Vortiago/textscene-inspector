@@ -8,7 +8,7 @@
  */
 
 import type { TscnNode } from '../../../parser/types.js';
-import type { ParentLookup } from '../../../linter/parentType.js';
+import { climbAncestors, type ParentLookup } from '../../../linter/parentType.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { VECTOR2_REGEX } from '../../../linter/validators/vectorValidators.js';
 import {
@@ -86,20 +86,19 @@ export type GlobalTransform2DVerdict =
  */
 function canvasChain(node: TscnNode, parentOf: (child: TscnNode) => ParentLookup): TscnNode[] | null {
   const chain: TscnNode[] = [node];
-  let current = node;
-  while (!isTopLevel(current)) {
-    const step = parentOf(current);
-    if (step.kind === 'root') break;
-    // An opaque ancestor's `top_level` and transform live in a scene this walk never
-    // opens, and guessing identity would place the node wrong.
-    if (step.kind === 'unknowable') return null;
-    const { parent } = step;
-    if (!descendsFrom(parent.type, 'CanvasItem')) break;
+  if (isTopLevel(node)) return chain;
+
+  const search = climbAncestors<'terminus' | 'control'>(node, parentOf, (parent) => {
+    if (!descendsFrom(parent.type, 'CanvasItem')) return 'terminus';
     // A Control composes, but this decodes only a Node2D's discrete properties.
-    if (!descendsFrom(parent.type, 'Node2D')) return null;
+    if (!descendsFrom(parent.type, 'Node2D')) return 'control';
     chain.push(parent);
-    current = parent;
-  }
+    return isTopLevel(parent) ? 'terminus' : undefined;
+  });
+  // An opaque ancestor's `top_level` and transform live in a scene this walk never
+  // opens, and guessing identity would place the node wrong.
+  if (search.kind === 'unknowable') return null;
+  if (search.kind === 'found' && search.value === 'control') return null;
   return chain;
 }
 

@@ -6,7 +6,7 @@
 
 import type { TscnNode } from '../parser/types';
 import { liveNodeChain, type LiveTreeContext } from './liveSceneTree';
-import { isTypeOpaque, type ParentLookup } from '../linter/parentType.js';
+import { parentLookup, type ParentLookup } from '../linter/parentType.js';
 import { resolveGlobalTransform2D } from '../nodes/canvasitem/shared/globalTransform2D.js';
 
 /**
@@ -14,12 +14,8 @@ import { resolveGlobalTransform2D } from '../nodes/canvasitem/shared/globalTrans
  * sub-scene root's type, so only an instance whose scene is not cached stays opaque.
  */
 function chainParentOf(chain: readonly TscnNode[]): (child: TscnNode) => ParentLookup {
-  return (child) => {
-    const parent = chain[chain.indexOf(child) - 1];
-    if (!parent) return { kind: 'root' };
-    if (isTypeOpaque(parent)) return { kind: 'unknowable' };
-    return { kind: 'known', parent };
-  };
+  const parents = new Map(chain.slice(1).map((child, i): [TscnNode, TscnNode] => [child, chain[i]!]));
+  return (child) => parentLookup(parents.get(child));
 }
 
 /**
