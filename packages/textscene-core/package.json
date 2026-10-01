@@ -42,10 +42,20 @@
       "types": "./dist/resources/ResourceProvider.d.ts",
       "import": "./dist/resources/ResourceProvider.js"
     },
+    "./resources/resPath": {
+      "@textscene/source": "./src/resources/resPath.ts",
+      "types": "./dist/resources/resPath.d.ts",
+      "import": "./dist/resources/resPath.js"
+    },
     "./resources/resourceProviderUtils": {
       "@textscene/source": "./src/resources/resourceProviderUtils.ts",
       "types": "./dist/resources/resourceProviderUtils.d.ts",
       "import": "./dist/resources/resourceProviderUtils.js"
+    },
+    "./resources/projectListing": {
+      "@textscene/source": "./src/resources/projectListing.ts",
+      "types": "./dist/resources/projectListing.d.ts",
+      "import": "./dist/resources/projectListing.js"
     }
   },
   "files": [

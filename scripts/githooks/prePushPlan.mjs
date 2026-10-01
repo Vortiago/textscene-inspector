@@ -5,10 +5,11 @@
 
 /**
  * A file whose change can break any check, so the push runs the full `pnpm validate`. A workflow
- * file is not one: locally only the format check reads it, and CI runs it on the pull request.
+ * file is not one: locally only the format check reads it, and CI runs it on the pull request. The
+ * negative-fixture loader is one: both hooks read it to decide which scenes they skip.
  */
 const TOOLCHAIN =
-  /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|eslint\.config\.js|prettier\.config\.mjs|\.prettierignore|lint-staged\.config\.mjs|vitest\.(?:config|shared)\.ts|githooks\/.*)$|(?:^|\/)(?:package\.json|tsconfig[^/]*\.json|vitest\.config\.ts)$/;
+  /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|eslint\.config\.js|prettier\.config\.mjs|\.prettierignore|lint-staged\.config\.mjs|vitest\.(?:config|shared)\.ts|githooks\/.*|scripts\/githooks\/negativeFixtures\.mjs)$|(?:^|\/)(?:package\.json|tsconfig[^/]*\.json|vitest\.config\.ts)$/;
 
 const CODE = /\.(?:ts|tsx|js|mjs|cjs|css)$/;
 const TYPED = /\.(?:ts|tsx)$/;
@@ -23,8 +24,9 @@ const VENDORED = /^\.claude\/(?:skills\/conventional-commits\/|rules\/|agents\/s
 /**
  * The commands, in order, for a push that changes `changed` (paths that still exist) and deletes
  * `deleted`. Each command is an argv array. An empty list means the push needs no check.
+ * `isNegativeFixture` tells a scene that exists to error, which the plan does not lint.
  */
-export function planChecks({ changed, deleted }) {
+export function planChecks({ changed, deleted, isNegativeFixture }) {
   const all = [...changed, ...deleted];
   if (all.some((path) => TOOLCHAIN.test(path))) return [['pnpm', 'validate']];
 
@@ -39,7 +41,7 @@ export function planChecks({ changed, deleted }) {
   if (formatted.length > 0) plan.push(['pnpm', 'exec', 'prettier', '--check', ...formatted]);
   if (code.length > 0) plan.push(['pnpm', 'exec', 'vitest', 'related', '--run', ...code]);
 
-  const scenes = changed.filter((path) => SCENE.test(path));
+  const scenes = changed.filter((path) => SCENE.test(path) && !isNegativeFixture(path));
   if (scenes.length > 0) plan.push(['pnpm', 'build:linter'], ['pnpm', 'lint:tscn', ...scenes]);
 
   if (all.some((path) => GENERATED_DOCS_INPUT.test(path))) {

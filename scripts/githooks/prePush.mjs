@@ -8,6 +8,7 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import process from 'node:process';
+import { isNegativeFixture } from './negativeFixtures.mjs';
 import { planChecks } from './prePushPlan.mjs';
 
 /** Git writes this sha for a ref that does not exist on one side of the push. */
@@ -64,7 +65,7 @@ function run(command) {
 
 function main() {
   const files = process.env.FULL_VALIDATE === '1' ? undefined : pushedFiles(readFileSync(0, 'utf8'));
-  const plan = files === undefined ? [['pnpm', 'validate']] : planChecks(files);
+  const plan = files === undefined ? [['pnpm', 'validate']] : planChecks({ ...files, isNegativeFixture });
   if (plan.length === 0) console.log('pre-push: no check applies to these files. CI runs the full gate.');
   for (const command of plan) {
     const status = run(command);

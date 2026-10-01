@@ -7,7 +7,7 @@ import { TscnParser } from '../../parser/TscnParser.js';
 import { tscnSceneToParsedScene, buildSceneGraph } from '../../core/SceneGraph.js';
 import type { SceneGraph } from '../../core/SceneGraph.js';
 import type { TscnScene } from '../../parser/types.js';
-import { isGLBPath } from '../../resources/processing/glbProcessing.js';
+import { isGltfPath } from '../../godot/gltf.js';
 import { synthesiseGLBScene } from '../../resources/processors/createSceneProcessor.js';
 import { nodeComponentRegistry } from '../NodeComponentRegistry.js';
 
@@ -20,7 +20,7 @@ export function parseTscnContent(content: string, rootScenePath: string): ParseR
   // A top-level .glb/.gltf is not TSCN text. Synthesise the single GLBSceneRoot that
   // createSceneProcessor's instanced path uses. The node fetches the bytes through
   // useResource('GLBMesh').
-  if (isGLBPath(rootScenePath)) {
+  if (isGltfPath(rootScenePath)) {
     return toParseResult(rootScenePath, synthesiseGLBScene(rootScenePath));
   }
   if (!content) {

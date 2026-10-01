@@ -21,7 +21,7 @@ Each `.tscn` file can have its own preview.
 
 ## Editor features
 
-- **Problems panel:** the linter checks each open `.tscn` file.
+- **Problems panel:** the linter checks each open `.tscn` file. For a scene inside a Godot project in a workspace folder, it also reports a `.glb` or `.gltf` file the scene uses that Godot's importer refuses. Where a sub-resource, a `.tres` `[resource]` body, a connection or the scene's root node uses the glTF file, Godot fails to load the scene or resource that uses it. The report is then an error when `project.godot` enables no editor plugin and declares no autoload, and the project holds no `.gdextension` file. Otherwise it is a warning, because one of them can add support. Where only other nodes use the glTF file, the scene loads without it, and the report is always a warning. A change on disk to a glTF file or `.godot/extension_list.cfg` checks again each open scene that reads it. A `.gdextension` file, a `.gdignore` or a `project.godot` created or deleted, or a change to `project.godot`, checks again the open scenes of that project. A folder deleted or moved away checks again each open scene that read a file inside it, or whose project listed a `.gdextension` file inside it.
 - **Outline:** the scene tree of the file. Click an entry to jump to its line.
 - **`res://` links:** Ctrl-click (Cmd-click on macOS) a path to open the file.
 - **Go to Definition** on `SubResource("id")` and `ExtResource("id")`.

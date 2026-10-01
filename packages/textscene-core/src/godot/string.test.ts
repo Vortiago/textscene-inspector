@@ -9,6 +9,7 @@ import {
   stringLiteralBodies,
   stringToFloat,
   stringToInt,
+  stripEdges,
 } from './string.js';
 
 describe('literalText', () => {
@@ -380,5 +381,19 @@ describe('stringToInt is total over its slot', () => {
       return !Number.isSafeInteger(value) || value < low || value > high || Object.is(value, -0);
     });
     expect(outside).toEqual([]);
+  });
+});
+
+describe('stripEdges', () => {
+  it('strips control characters and spaces from both ends', () => {
+    expect(stripEdges('\t a b \r\n')).toBe('a b');
+  });
+
+  it('keeps a non-breaking space, which is above code 32', () => {
+    expect(stripEdges('\u00a0a\u00a0')).toBe('\u00a0a\u00a0');
+  });
+
+  it('is empty for a string of only stripped characters', () => {
+    expect(stripEdges(' \t\u0000 ')).toBe('');
   });
 });
