@@ -12,7 +12,7 @@ import {
 import { warningsOf } from '../testing/logWarnings';
 import { installGodotSplitShadow } from '../directionalShadow/splitShadowChunk';
 import { installDirectionalShadowFade } from '../directionalShadow/shadowFade';
-import { installTexelShadowFilter } from '../directionalShadow/texelShadowFilter';
+import { installDirectionalShadowAtlas } from '../directionalShadow/shadowAtlasChunk';
 
 const threeChunks = {
   shadowmap_vertex: THREE.ShaderChunk.shadowmap_vertex,
@@ -74,7 +74,7 @@ describe('installGodotPositionalShadow', () => {
 
   it('composes with the directional patches, which `TscnCanvas` installs first', () => {
     installGodotSplitShadow();
-    installTexelShadowFilter();
+    installDirectionalShadowAtlas();
     installDirectionalShadowFade();
     const warnings = warningsOf(() => installGodotPositionalShadow());
     expect(warnings).toEqual([]);
