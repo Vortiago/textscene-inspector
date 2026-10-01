@@ -13,6 +13,7 @@ Godot `.tscn` parser, linter and renderer (react-three-fiber over three.js). pnp
 - GLOSSARY.md: the domain terms. Use them exactly.
 - REFERENCES.md: doc links, Context7 library IDs.
 - RELEASING.md: how to release a package.
+- REVIEW.md: the bar for the Claude review of a pull request (`claude-review.yml`).
 - docs/adr/: decisions. Respect them in the areas they govern.
 
 ## Work items = GitHub issues
