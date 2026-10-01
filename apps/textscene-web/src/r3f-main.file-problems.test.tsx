@@ -5,7 +5,7 @@
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import type { Diagnostic } from '@textscene/core/linter';
+import type { Diagnostic, LintSession, SessionLint } from '@textscene/core/linter';
 
 vi.mock('@textscene/core', async () => {
   const real = await vi.importActual<typeof import('@textscene/core')>('@textscene/core');
@@ -20,6 +20,11 @@ vi.mock('@textscene/core/linter', async () => {
   class Linter {
     lint(content: string): Diagnostic[] {
       return scripted.get(content) ?? [];
+    }
+
+    /** The pane lints through a session. The script names no dependency, so there is nothing to read later. */
+    session(): Pick<LintSession, 'lint'> {
+      return { lint: (content: string): SessionLint => ({ now: this.lint(content), later: null }) };
     }
   }
   return { ...real, Linter };

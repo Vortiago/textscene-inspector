@@ -35,6 +35,7 @@ vi.mock('@textscene/core', async () => {
   };
 });
 
+import { Linter } from '@textscene/core/linter';
 import { R3FApp } from './r3f-main';
 import { WebResourceProvider } from './providers/WebResourceProvider';
 
@@ -208,6 +209,33 @@ describe('no-.tscn drop fulfills missing rows', () => {
     // Fulfilled, not errored, and the active scene is untouched.
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByText('StubRoot')).toBeTruthy();
+  });
+
+  it('re-lints the Source pane once the upload lands, since a cross-file rule may read it', async () => {
+    const linted: string[] = [];
+    const realSession = Linter.prototype.session;
+    vi.spyOn(Linter.prototype, 'session').mockImplementation(function (this: Linter) {
+      const session = realSession.call(this);
+      const lint = session.lint.bind(session);
+      session.lint = (content, provider) => {
+        linted.push(content);
+        return lint(content, provider);
+      };
+      return session;
+    });
+    missingPathsOverride.current = new Set(['res://textures/child_tex.png']);
+
+    render(<R3FApp />);
+    await waitForScene();
+    await waitFor(() => expect(linted.length).toBeGreaterThan(0));
+    const lintsBefore = linted.length;
+
+    await act(async () => {
+      dropFiles([new File(['bytes'], 'child_tex.png', { type: 'image/png' })]);
+    });
+
+    await waitFor(() => expect(linted.length).toBeGreaterThan(lintsBefore));
+    expect(linted.at(-1)).toBe(linted[lintsBefore - 1]);
   });
 
   it('surfaces the no-match error when dropping a texture with no missing rows', async () => {

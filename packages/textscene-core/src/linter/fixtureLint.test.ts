@@ -1,17 +1,20 @@
 /**
- * Lint guard over `scenes/fixtures`, this package's own corpus. A positive fixture produces no error (warnings are
- * allowed). A negative `edge-*` fixture in INTEGRATION_FIXTURES_WITH_ERRORS produces at least one, so its rule still
- * fires. Scope is the one directory `fixtureCheck.ts` reads: which other directories get linted is the caller's choice
- * (`pnpm lint:scenes` and its CI step), never encoded in the library.
+ * Lint guard over `scenes/fixtures` and every folder under it. A positive fixture produces no error. A negative
+ * `edge-*` fixture in INTEGRATION_FIXTURES_WITH_ERRORS produces at least one, so its rule still fires. A fixture under
+ * a `project.godot` is linted with that project's files. The caller chooses other directories (`pnpm lint:scenes`).
  */
 
-import { describe, expect, it } from 'vitest';
-import { readdirSync, readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Linter } from './Linter.js';
 import { isGodotTextResourcePath } from '../godot/index.js';
 import { parseHeading } from '../parser/utils.js';
+import { findProjectRoot, parentDir, projectFileIn, resolveResPath } from '../resources/resPath.js';
+import { resourceContent } from '../resources/resourceProviderUtils.js';
+import { listScannedFiles, type DirectoryEntry } from '../resources/projectListing.js';
+import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { FILE_DIAGNOSTIC_NAMES } from './fileDiagnostics.js';
 import type { Diagnostic } from './types.js';
 import './index.js';
@@ -101,39 +104,93 @@ const INTEGRATION_FIXTURES_WITH_ERRORS: ReadonlySet<string> = new Set(
 );
 
 /** How many fixtures that list is meant to hold; see the pin at the bottom. */
-const NEGATIVE_FIXTURE_COUNT = 4;
+const NEGATIVE_FIXTURE_COUNT = 5;
+
+const fixturesDir = join(scenesRoot, 'fixtures');
 
 /**
  * Both text formats Godot writes, through the predicate the CLI walk and the editor's document filter use: a `.tres`
  * validates against the same registry a `[sub_resource]` block does, so the resource slices' fixtures are gated too.
+ * Every folder under `dir`, as the CLI expands a directory argument.
  */
 function tscnFiles(dir: string): string[] {
-  return readdirSync(dir).filter(isGodotTextResourcePath).sort();
+  return readdirSync(dir, { recursive: true, encoding: 'utf8' })
+    .filter(isGodotTextResourcePath)
+    .map((file) => join(dir, file))
+    .sort();
 }
 
-/** Diagnostics for one file, linted once and reused by all three checks below. */
-const diagnosticCache = new Map<string, Diagnostic[]>();
-
-function diagnosticsFor(dir: string, file: string): Diagnostic[] {
-  const key = join(dir, file);
-  let cached = diagnosticCache.get(key);
-  if (!cached) {
-    cached = new Linter().lint(readFileSync(key, 'utf8'));
-    diagnosticCache.set(key, cached);
-  }
-  return cached;
+/**
+ * The project a fixture's `res://` paths resolve in: the nearest `project.godot` from its folder up to
+ * `scenes/fixtures`, or null for the flat corpus, which is no project.
+ */
+function projectRootOf(path: string): Promise<string | null> {
+  const isFixturesDir = (dir: string) => resolve(dir) === fixturesDir;
+  return findProjectRoot(dirname(path), parentDir, isFixturesDir, async (dir) =>
+    existsSync(projectFileIn(dir))
+  );
 }
 
-function lintFile(dir: string, file: string): { errors: number; messages: string[] } {
-  const errors = errorsOf(diagnosticsFor(dir, file));
-  return { errors: errors.length, messages: errors.map((e) => `${file}: ${e.message}`) };
+/** The entries of the directory a `res://` path names under `root`, as the CLI's walk reads them. */
+function readDirectoryUnder(root: string, resDirectory: string): DirectoryEntry[] {
+  const directory = resolveResPath(root, resDirectory);
+  if (directory === null || !existsSync(directory)) return [];
+  return readdirSync(directory, { withFileTypes: true }).map((entry) => ({
+    name: entry.name,
+    isDirectory: entry.isDirectory(),
+  }));
+}
+
+/**
+ * A provider over the project at `root`, as the CLI's provider reads it from disk: text or bytes by the type, and a
+ * listing walked as the editor's scan walks it.
+ */
+function projectProvider(root: string): ResourceProvider {
+  return {
+    loadResource: async (resPath, type = '') => {
+      const file = resolveResPath(root, resPath);
+      if (file === null || !existsSync(file)) return null;
+      return resourceContent(readFileSync(file), type, resPath);
+    },
+    listFiles: (extension) =>
+      listScannedFiles(async (directory) => readDirectoryUnder(root, directory), extension),
+  };
+}
+
+/** One fixture: where it lies, its name relative to `scenes/fixtures`, and the project it is linted in. */
+interface Fixture {
+  readonly path: string;
+  readonly name: string;
+  readonly provider: ResourceProvider | null;
+}
+
+async function fixture(path: string): Promise<Fixture> {
+  const root = await projectRootOf(path);
+  return { path, name: relative(fixturesDir, path), provider: root === null ? null : projectProvider(root) };
+}
+
+function lintFixture({ path, provider }: Fixture): Promise<Diagnostic[]> {
+  return new Linter().lintComplete(readFileSync(path, 'utf8'), provider);
+}
+
+/** Diagnostics for every fixture, keyed by its name. Written once, in `beforeAll`, before the checks read them. */
+let diagnosticsByName = new Map<string, Diagnostic[]>();
+
+/** A name no fixture has reads as clean, so a stale allowlist entry reports as one that no longer fires. */
+function diagnosticsFor(name: string): Diagnostic[] {
+  return diagnosticsByName.get(name) ?? [];
+}
+
+function lintFile(name: string): { errors: number; messages: string[] } {
+  const errors = errorsOf(diagnosticsFor(name));
+  return { errors: errors.length, messages: errors.map((e) => `${name}: ${e.message}`) };
 }
 
 /** Distinct advisory (warning or info) rule names one file trips. */
-function advisoryRulesFor(dir: string, file: string): string[] {
+function advisoryRulesFor(name: string): string[] {
   return [
     ...new Set(
-      diagnosticsFor(dir, file)
+      diagnosticsFor(name)
         .filter((d) => d.severity !== 'error')
         .map((d) => d.ruleName)
     ),
@@ -141,21 +198,29 @@ function advisoryRulesFor(dir: string, file: string): string[] {
 }
 
 describe('shipped scenes lint clean (bulk fixture guard)', () => {
-  const fixturesDir = join(scenesRoot, 'fixtures');
+  let all: Fixture[] = [];
 
-  it('finds the fixtures directory (path layout guard)', () => {
-    expect(tscnFiles(fixturesDir).length).toBeGreaterThan(0);
+  beforeAll(async () => {
+    all = await Promise.all(tscnFiles(fixturesDir).map(fixture));
+    diagnosticsByName = new Map(
+      await Promise.all(all.map(async (linted) => [linted.name, await lintFixture(linted)] as const))
+    );
+  });
+
+  it('finds the fixtures directory and its sub-projects (path layout guard)', () => {
+    expect(all.length).toBeGreaterThan(0);
+    expect(all.some((linted) => linted.provider !== null)).toBe(true);
   });
 
   it('every unit-* fixture reports an advisory only where allowlisted, rule by rule', () => {
     const unexpected: string[] = [];
-    for (const file of tscnFiles(fixturesDir)) {
-      if (!file.startsWith('unit-')) continue;
-      const allowed = new Set(UNIT_FIXTURE_ADVISORIES[file]?.rules ?? []);
+    for (const { name } of all) {
+      if (!basename(name).startsWith('unit-')) continue;
+      const allowed = new Set(UNIT_FIXTURE_ADVISORIES[name]?.rules ?? []);
       unexpected.push(
-        ...advisoryRulesFor(fixturesDir, file)
+        ...advisoryRulesFor(name)
           .filter((rule) => !allowed.has(rule))
-          .map((rule) => `${file}: ${rule}`)
+          .map((rule) => `${name}: ${rule}`)
       );
     }
     expect(unexpected).toEqual([]);
@@ -166,7 +231,7 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
     // fixed or the rule changed, and the exemption is now a lie about the file.
     const stale: string[] = [];
     for (const [file, { rules }] of Object.entries(UNIT_FIXTURE_ADVISORIES)) {
-      const firing = new Set(advisoryRulesFor(fixturesDir, file));
+      const firing = new Set(advisoryRulesFor(file));
       for (const rule of rules) {
         if (!firing.has(rule)) stale.push(`${file}: ${rule} is allowlisted but no longer fires`);
       }
@@ -176,9 +241,9 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
 
   it('every positive fixture produces zero error diagnostics', () => {
     const failures: string[] = [];
-    for (const file of tscnFiles(fixturesDir)) {
-      if (INTEGRATION_FIXTURES_WITH_ERRORS.has(file)) continue;
-      failures.push(...lintFile(fixturesDir, file).messages);
+    for (const { name } of all) {
+      if (INTEGRATION_FIXTURES_WITH_ERRORS.has(basename(name))) continue;
+      failures.push(...lintFile(name).messages);
     }
     expect(failures).toEqual([]);
   });
@@ -188,12 +253,13 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
     // was deleted, or that someone fixed, exempts nothing and has silently
     // stopped being a negative test. Existence is checked first, so a deleted
     // entry reports as stale rather than as an ENOENT out of the linter.
-    const existing = new Set(tscnFiles(fixturesDir));
+    const byBasename = new Map(all.map(({ name }) => [basename(name), name]));
     const stale: string[] = [];
     for (const file of INTEGRATION_FIXTURES_WITH_ERRORS) {
-      if (!existing.has(file)) {
+      const name = byBasename.get(file);
+      if (name === undefined) {
         stale.push(`${file}: listed but no longer in scenes/fixtures`);
-      } else if (lintFile(fixturesDir, file).errors === 0) {
+      } else if (lintFile(name).errors === 0) {
         stale.push(`${file}: listed as a negative fixture but produces no error`);
       }
     }
@@ -205,9 +271,9 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
     // is shown as one about the whole file. No finding here is about the whole file.
     const misplaced: string[] = [];
     let checkedRuleDiagnostics = 0;
-    for (const file of tscnFiles(fixturesDir)) {
-      const text = readFileSync(join(fixturesDir, file), 'utf8').split(/\r?\n/);
-      for (const d of diagnosticsFor(fixturesDir, file)) {
+    for (const { path, name: file } of all) {
+      const text = readFileSync(path, 'utf8').split(/\r?\n/);
+      for (const d of diagnosticsFor(file)) {
         const line = d.location?.line;
         if (line === undefined) {
           misplaced.push(`${file}: ${d.ruleName} carries no line`);

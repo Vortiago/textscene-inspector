@@ -4,17 +4,30 @@
  * scene names it, so it claims no type name and no bus slot.
  */
 
-import { boolSlotValue, isLocaleRightToLeft, type LayoutDirectionEnv } from '../godot/index.js';
+import {
+  STRING_ARRAY_FORMS,
+  STRING_LITERAL_RE,
+  STRING_LITERAL_SOURCE,
+  boolSlotValue,
+  dataDirectoryPath,
+  dropTrailingComma,
+  extensionListPath,
+  isLocaleRightToLeft,
+  packedArrayBody,
+  splitTopLevel,
+  type LayoutDirectionEnv,
+} from '../godot/index.js';
 import { unquoteLiteral } from './utils.js';
 import { parseOptionalInt } from './valueParsers.js';
 
 /**
- * A `key=value` line. The key admits `/`, Godot's subsection separator, and `.`: a
- * feature-tagged override like `renderer/rendering_method.mobile` is a real key.
+ * A `key=value` line as `parse_tag_assign_eof` reads it (`variant_parser.cpp:1932-1950`): blanks may precede the `=`,
+ * and a key is quoted where the writer quotes it, as for a Unicode autoload name (`property_name_encode`,
+ * `ustring.cpp:5056-5067`). A feature-tagged override like `renderer/rendering_method.mobile` is a real key.
  */
-const KEY_VALUE = /^([A-Za-z_][A-Za-z0-9_/.]*)=(.*)$/;
-/** A `[section]` heading. Godot's section names are bare identifiers. */
-const SECTION = /^\[([A-Za-z_][A-Za-z0-9_]*)\]$/;
+const KEY_VALUE = new RegExp(String.raw`^(${STRING_LITERAL_SOURCE}|[^\s="]+)\s*=(.*)$`);
+/** A `[section]` heading, and any `;` comment after it. Godot's section names are bare identifiers. */
+const SECTION = /^\[([A-Za-z_][A-Za-z0-9_]*)\]\s*(?:;.*)?$/;
 
 /**
  * `project.godot` settings, keyed by full setting name: a string literal's decoded text, as
@@ -49,11 +62,12 @@ export function parseProjectSettings(content: string): ProjectSettings | null {
     // continuation has no `=`. No setting this previewer reads is multi-line.
     const pair = KEY_VALUE.exec(line);
     if (!pair) continue;
-    const [, key, rawValue] = pair;
+    const [, rawKey, rawValue] = pair;
+    const key = unquoteLiteral(rawKey!);
     // Godot splits a name across heading and key: `theme/default_theme_scale` under
     // `[gui]` is `gui/theme/default_theme_scale`, as `ProjectSettings.get_setting()`
     // takes it. `config_version` above the first heading keeps its bare name.
-    settings[section ? `${section}/${key!}` : key!] = unquoteLiteral(rawValue!.trim());
+    settings[section ? `${section}/${key}` : key] = unquoteLiteral(rawValue!.trim());
     sawSetting = true;
   }
 
@@ -148,4 +162,51 @@ export function projectLayoutDirectionEnv(settings: ProjectSettings | null): Lay
           : applicationLocaleRtl;
 
   return { forceRtl, rootRtl, applicationLocaleRtl, systemLocaleRtl };
+}
+
+/** The prefix of an `[autoload]` entry's full setting name. */
+const AUTOLOAD_PREFIX = 'autoload/';
+
+/**
+ * The name of each `[autoload]` entry. The editor builds one node per entry with a name, and adds each whose script is
+ * a tool script to its own tree (`editor/settings/editor_autoload_settings.cpp:859-869`, `:428-455`). Whether a
+ * script is a tool script is in the script, so a caller that reads only this file counts every entry.
+ */
+export function declaredAutoloads(settings: ProjectSettings | null): string[] {
+  return Object.keys(settings ?? {})
+    .filter((key) => key.startsWith(AUTOLOAD_PREFIX))
+    .map((key) => key.slice(AUTOLOAD_PREFIX.length))
+    .filter((name) => name !== '');
+}
+
+/**
+ * Each entry of `editor_plugins/enabled`, the `plugin.cfg` paths the editor enables at start (`init_plugins`,
+ * `editor/editor_node.cpp:1166-1173`), as written. The conversion to `Vector<String>` stringifies each element
+ * (`core/variant/variant.cpp:2082-2091`), so an element that is no string literal counts too. Empty for no array.
+ */
+export function enabledEditorPlugins(settings: ProjectSettings | null): string[] {
+  const raw = settings?.['editor_plugins/enabled'];
+  const body = raw === undefined ? undefined : packedArrayBody(STRING_ARRAY_FORMS, raw)?.body;
+  if (body === undefined) return [];
+  return dropTrailingComma(splitTopLevel(body)).map((entry) =>
+    STRING_LITERAL_RE.test(entry) ? entry.slice(1, -1) : entry
+  );
+}
+
+/**
+ * Whether the project keeps its data in the hidden directory. A value a BOOL slot cannot read
+ * keeps the default, true.
+ */
+function usesHiddenDataDirectory(settings: ProjectSettings | null): boolean {
+  return boolSlotValue(settings?.['application/config/use_hidden_project_data_directory']) !== false;
+}
+
+/** The `res://` path of the data directory the project names. */
+export function projectDataDirectoryPath(settings: ProjectSettings | null): string {
+  return dataDirectoryPath(usesHiddenDataDirectory(settings));
+}
+
+/** The `res://` path of the project's GDExtension list, in the data directory the project names. */
+export function projectExtensionListPath(settings: ProjectSettings | null): string {
+  return extensionListPath(usesHiddenDataDirectory(settings));
 }

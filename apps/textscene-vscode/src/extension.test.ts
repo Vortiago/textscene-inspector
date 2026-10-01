@@ -5,6 +5,8 @@ import { activate, deactivate } from './extension';
 import { createMockUri, vscode } from './test-setup';
 import { TscnPreviewPanel } from './TscnPreviewPanel';
 import * as logger from './logger';
+import { TscnDiagnostics } from './TscnDiagnostics';
+import { RESOURCE_FILES_PATTERN } from './watchPatterns';
 
 vi.mock('./TscnPreviewPanel', () => ({
   TscnPreviewPanel: {
@@ -410,6 +412,15 @@ describe('Extension', () => {
   });
 
   describe('Resource Watcher', () => {
+    it('creates one resource watcher and hands it to the diagnostics', () => {
+      activate(mockContext);
+
+      expect(vscode.workspace.createFileSystemWatcher).toHaveBeenCalledTimes(1);
+      expect(vscode.workspace.createFileSystemWatcher).toHaveBeenCalledWith(RESOURCE_FILES_PATTERN);
+      const watcher = (vscode.workspace.createFileSystemWatcher as Mock).mock.results[0]!.value;
+      expect(TscnDiagnostics).toHaveBeenCalledWith(watcher);
+    });
+
     it('routes a changed dependency to the panel for re-fetch', async () => {
       activate(mockContext);
       openPanelFor('/workspace/scene.tscn');

@@ -12,6 +12,7 @@ import {
   packedElementType,
   readerLimitedInt,
   splitTopLevel,
+  STRING_ARRAY_FORMS,
   stringLiteralBodies,
   type IntWidth,
 } from '../../../godot/index.js';
@@ -276,9 +277,8 @@ export const packedArrayCombinators = {
    */
   packedStringArray(name: string, example: string): PropertyValidator {
     const code = formatCode(name);
-    const forms = packedArrayForms('PackedStringArray');
     return shape((key, value, line) => {
-      const parsed = packedArrayBody(forms, value);
+      const parsed = packedArrayBody(STRING_ARRAY_FORMS, value);
       if (parsed === null) {
         return propertyError(
           key,

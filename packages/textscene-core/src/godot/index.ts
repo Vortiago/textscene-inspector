@@ -55,6 +55,7 @@ export {
   stringLiteralBodies,
   stringToFloat,
   stringToInt,
+  stripEdges,
 } from './string.js';
 export {
   MATERIAL_RENDER_PRIORITY_MIN,
@@ -73,7 +74,27 @@ export {
 } from './cpuParticles.js';
 export { formatReal, storedReal } from './real.js';
 export { BillboardMode } from './billboard.js';
-export { GODOT_GLTF_EXTENSIONS, unsupportedRequiredGltfExtensions } from './gltf.js';
+export {
+  GODOT_GLTF_EXTENSIONS,
+  gltfRefusalMessage,
+  isGltfPath,
+  readGltfRequiredExtensions,
+  requiredGltfExtensions,
+  unsupportedRequiredGltfExtensions,
+} from './gltf.js';
+export {
+  PROJECT_FILE_NAME,
+  PROJECT_FILE_PATH,
+  extensionListEntries,
+  extensionListPath,
+  dataDirectoryPath,
+} from './project.js';
+export {
+  GDEXTENSION_FILE_EXTENSION,
+  SCAN_STOP_FILES,
+  isScannedDirectoryName,
+  isScannedPath,
+} from './editorScan.js';
 export {
   DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT,
   DirectionalLightSkyMode,
@@ -184,6 +205,7 @@ export {
 } from './variantParser.js';
 export {
   EXT_RESOURCE_CALL_ANYWHERE_RE,
+  extResourceIdsIn,
   type ResourceRef,
   dictSubResourceEntries,
   keyedResourceRefReader,
@@ -209,5 +231,7 @@ export {
   packedArrayBody,
   packedArrayForms,
   packedElementType,
+  STRING_ARRAY_FORMS,
+  stringArrayBodies,
   type PackedArrayBody,
 } from './variantParser.js';
