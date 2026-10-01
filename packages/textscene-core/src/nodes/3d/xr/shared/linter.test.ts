@@ -224,7 +224,7 @@ sort_order = -1
   });
 
   describe.each(LEAVES)('%s leaves its own fixture clean', (nodeType) => {
-    it('draws no diagnostic from any of this family rule\'s three checks', () => {
+    it("draws no diagnostic from any of this family rule's three checks", () => {
       const content = readFixture(FIXTURES[nodeType]);
       const diagnostics = new Linter().lint(content);
       const found = [

@@ -21,19 +21,13 @@ describe('parseCanvasLayer', () => {
   // Without the parent the node attaches to nothing, and a scene has exactly
   // one root, so the layer and its whole subtree vanish from the tree.
   it('carries the heading’s hierarchy attributes, so the layer stays in the tree', () => {
-    const p = parseCanvasLayer(
-      h({ name: 'HUD', type: 'CanvasLayer', parent: '.', index: '2' }),
-      {}
-    );
+    const p = parseCanvasLayer(h({ name: 'HUD', type: 'CanvasLayer', parent: '.', index: '2' }), {});
     expect(p.parent).toBe('.');
     expect(p.index).toBe(2);
   });
 
   it('keeps an instanced layer’s sub-scene reference', () => {
-    const p = parseCanvasLayer(
-      h({ name: 'HUD', parent: '.', instance: 'ExtResource("1_hud")' }),
-      {}
-    );
+    const p = parseCanvasLayer(h({ name: 'HUD', parent: '.', instance: 'ExtResource("1_hud")' }), {});
     expect(p.instance).toBe('ExtResource("1_hud")');
   });
 });

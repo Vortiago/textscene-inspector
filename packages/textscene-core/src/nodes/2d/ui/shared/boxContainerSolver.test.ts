@@ -110,7 +110,7 @@ describe('resortBoxContainer — fractional-remainder carry + discard/refit evic
   });
 });
 
-describe('resortBoxContainer — float32 fractional-error accumulator (unit-vbox-container-pitch.tscn\'s ExpandColumn)', () => {
+describe("resortBoxContainer — float32 fractional-error accumulator (unit-vbox-container-pitch.tscn's ExpandColumn)", () => {
   it('three-way carry test lands on Green=213/Amber=451, not the float64 double-precision 214/452', () => {
     // Godot 4.6.3 `get_rect()`: Red [P:(0,0), S:(400,60)], Blue [P:(0,84), S:(400,106)], Green
     // [P:(0,214), S:(400,213)], Amber [P:(0,451), S:(400,90)]. Blue's 320/3 and Green's 640/3 sum in
@@ -133,7 +133,7 @@ describe('resortBoxContainer — float32 fractional-error accumulator (unit-vbox
   });
 });
 
-describe('resortBoxContainer — Size2i truncation of the container size and each child\'s minimum, ahead of the stretch arithmetic', () => {
+describe("resortBoxContainer — Size2i truncation of the container size and each child's minimum, ahead of the stretch arithmetic", () => {
   it('truncates the fractional container height AND both fractional child minimums before dividing the stretch range', () => {
     // Godot 4.6.3 `get_rect()`, VBox 400.9x541.3, separation 24, two FILL|EXPAND children with
     // minimums 60.6 and 40.4: A [P:(0,0), S:(400,258)], B [P:(0,282), S:(400,259)]. `Size2i` truncates
@@ -207,13 +207,20 @@ describe('boxContainerMinimumSize', () => {
   it('main axis sums children + separation between them; cross axis is the largest child (horizontal)', () => {
     // Matches the unit-hbox-container-stretch.tscn fixture's container minimum,
     // measured by the same Godot oracle: MyHBoxContainer min=[822, 0].
-    const sizes = [{ x: 100, y: 0 }, { x: 100, y: 0 }, { x: 600, y: 0 }];
+    const sizes = [
+      { x: 100, y: 0 },
+      { x: 100, y: 0 },
+      { x: 600, y: 0 },
+    ];
     expect(boxContainerMinimumSize(false, 11, sizes)).toEqual({ x: 822, y: 0 });
   });
 
   it('main axis sums children + separation between them; cross axis is the largest child (vertical)', () => {
     // box_container.cpp:238-271, hand-worked: mainAxis = 23+23+16 = 62; crossAxis = max(29,58) = 58.
-    const sizes = [{ x: 29, y: 23 }, { x: 58, y: 23 }];
+    const sizes = [
+      { x: 29, y: 23 },
+      { x: 58, y: 23 },
+    ];
     expect(boxContainerMinimumSize(true, 16, sizes)).toEqual({ x: 58, y: 62 });
   });
 
@@ -221,7 +228,12 @@ describe('boxContainerMinimumSize', () => {
     // `Size2i size = c->get_combined_minimum_size()` narrows before the sum, so
     // two 10.7px children come to 10 + 10 + separation, not 21.4 + separation.
     // Every real text minimum is fractional, so this is the common case.
-    expect(boxContainerMinimumSize(true, 4, [{ x: 0, y: 10.7 }, { x: 0, y: 10.7 }])).toEqual({
+    expect(
+      boxContainerMinimumSize(true, 4, [
+        { x: 0, y: 10.7 },
+        { x: 0, y: 10.7 },
+      ])
+    ).toEqual({
       x: 0,
       y: 24,
     });
@@ -238,12 +250,18 @@ describe('boxContainerMinimumSize', () => {
   });
 });
 
-function solveNode(path: string, type: string, properties: Record<string, unknown>, children: SolveNode[] = []): SolveNode {
+function solveNode(
+  path: string,
+  type: string,
+  properties: Record<string, unknown>,
+  children: SolveNode[] = []
+): SolveNode {
   const name = path.split('/').pop()!;
   const tscnNode: TscnNode = { name, type, children: [], properties: { name, ...properties } };
   // A local theme_override_constants/* reaches a solver through
   // `n.constants` (the walker folds it in unconditionally), not `node.properties`.
-  const constants = (properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
+  const constants =
+    (properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
   return { ...emptySolveNode(), path, node: tscnNode, children, constants };
 }
 
@@ -256,32 +274,37 @@ describe('makeBoxContainerLayout / makeBoxContainerMinimumSize — registered en
     controlSolverRegistry.registerContainerLayout('HBoxContainer', makeBoxContainerLayout(false));
     controlSolverRegistry.registerMinimumSize('HBoxContainer', makeBoxContainerMinimumSize(false));
 
-    const root = solveNode('MyHBoxContainer', 'HBoxContainer', {
-      layoutMode: 1,
-      anchorsPreset: 15,
-      anchorRight: 1,
-      anchorBottom: 1,
-      themeOverrideConstants: { separation: 11 },
-    }, [
-      solveNode('MyHBoxContainer/Narrow', 'Control', {
-        layoutMode: 2,
-        customMinimumSize: { x: 100, y: 0 },
-        sizeFlagsHorizontal: HORIZONTAL,
-        sizeFlagsStretchRatio: 1,
-      }),
-      solveNode('MyHBoxContainer/Wide', 'Control', {
-        layoutMode: 2,
-        customMinimumSize: { x: 100, y: 0 },
-        sizeFlagsHorizontal: HORIZONTAL,
-        sizeFlagsStretchRatio: 3,
-      }),
-      solveNode('MyHBoxContainer/Oversized', 'Control', {
-        layoutMode: 2,
-        customMinimumSize: { x: 600, y: 0 },
-        sizeFlagsHorizontal: HORIZONTAL,
-        sizeFlagsStretchRatio: 2,
-      }),
-    ]);
+    const root = solveNode(
+      'MyHBoxContainer',
+      'HBoxContainer',
+      {
+        layoutMode: 1,
+        anchorsPreset: 15,
+        anchorRight: 1,
+        anchorBottom: 1,
+        themeOverrideConstants: { separation: 11 },
+      },
+      [
+        solveNode('MyHBoxContainer/Narrow', 'Control', {
+          layoutMode: 2,
+          customMinimumSize: { x: 100, y: 0 },
+          sizeFlagsHorizontal: HORIZONTAL,
+          sizeFlagsStretchRatio: 1,
+        }),
+        solveNode('MyHBoxContainer/Wide', 'Control', {
+          layoutMode: 2,
+          customMinimumSize: { x: 100, y: 0 },
+          sizeFlagsHorizontal: HORIZONTAL,
+          sizeFlagsStretchRatio: 3,
+        }),
+        solveNode('MyHBoxContainer/Oversized', 'Control', {
+          layoutMode: 2,
+          customMinimumSize: { x: 600, y: 0 },
+          sizeFlagsHorizontal: HORIZONTAL,
+          sizeFlagsStretchRatio: 2,
+        }),
+      ]
+    );
 
     const ctx = createSolveContext(nativeTheme(1));
     const solved = solveControlTree([root], VIEWPORT, ctx);
@@ -317,20 +340,25 @@ describe('makeBoxContainerLayout / makeBoxContainerMinimumSize — registered en
         z: [],
       },
     };
-    const root = solveNode('MyHBoxContainer', 'HBoxContainer', {
-      layoutMode: 1,
-      anchorsPreset: 15,
-      anchorRight: 1,
-      anchorBottom: 1,
-      themeOverrideConstants: { separation: 11 },
-    }, [
-      solveNode('MyHBoxContainer/Direct', 'Control', {
-        layoutMode: 2,
-        customMinimumSize: { x: 100, y: 0 },
-        sizeFlagsHorizontal: HORIZONTAL,
-      }),
-      promoted,
-    ]);
+    const root = solveNode(
+      'MyHBoxContainer',
+      'HBoxContainer',
+      {
+        layoutMode: 1,
+        anchorsPreset: 15,
+        anchorRight: 1,
+        anchorBottom: 1,
+        themeOverrideConstants: { separation: 11 },
+      },
+      [
+        solveNode('MyHBoxContainer/Direct', 'Control', {
+          layoutMode: 2,
+          customMinimumSize: { x: 100, y: 0 },
+          sizeFlagsHorizontal: HORIZONTAL,
+        }),
+        promoted,
+      ]
+    );
 
     const ctx = createSolveContext(nativeTheme(1));
     const solved = solveControlTree([root], VIEWPORT, ctx);
@@ -349,25 +377,30 @@ describe('makeBoxContainerLayout / makeBoxContainerMinimumSize — registered en
     // sizeFlagsVertical mimics what nodes/2d/ui/label/parser.ts already bakes in for an
     // unset Label (SIZE_SHRINK_CENTER): a synthetic input, not a Label parse, to keep font
     // metrics out of a `_resort` test.
-    const root = solveNode('MyVBoxContainer', 'VBoxContainer', {
-      layoutMode: 1,
-      anchorsPreset: 15,
-      anchorRight: 1,
-      anchorBottom: 1,
-      alignment: 2,
-      themeOverrideConstants: { separation: 16 },
-    }, [
-      solveNode('MyVBoxContainer/Top', 'Label', {
-        layoutMode: 2,
-        customMinimumSize: { x: 0, y: 23 },
-        sizeFlagsVertical: SHRINK_CENTER,
-      }),
-      solveNode('MyVBoxContainer/Bottom', 'Label', {
-        layoutMode: 2,
-        customMinimumSize: { x: 0, y: 23 },
-        sizeFlagsVertical: SHRINK_CENTER,
-      }),
-    ]);
+    const root = solveNode(
+      'MyVBoxContainer',
+      'VBoxContainer',
+      {
+        layoutMode: 1,
+        anchorsPreset: 15,
+        anchorRight: 1,
+        anchorBottom: 1,
+        alignment: 2,
+        themeOverrideConstants: { separation: 16 },
+      },
+      [
+        solveNode('MyVBoxContainer/Top', 'Label', {
+          layoutMode: 2,
+          customMinimumSize: { x: 0, y: 23 },
+          sizeFlagsVertical: SHRINK_CENTER,
+        }),
+        solveNode('MyVBoxContainer/Bottom', 'Label', {
+          layoutMode: 2,
+          customMinimumSize: { x: 0, y: 23 },
+          sizeFlagsVertical: SHRINK_CENTER,
+        }),
+      ]
+    );
 
     const ctx = createSolveContext(nativeTheme(1));
     const solved = solveControlTree([root], VIEWPORT, ctx);
@@ -405,7 +438,7 @@ describe('makeBoxContainerLayout / makeBoxContainerMinimumSize — registered en
   });
 });
 
-describe('makeBoxContainerLayout — the container\'s own layout direction reaches _resort', () => {
+describe("makeBoxContainerLayout — the container's own layout direction reaches _resort", () => {
   afterEach(() => {
     controlSolverRegistry.clear();
   });

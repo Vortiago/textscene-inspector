@@ -110,9 +110,7 @@ describe('URL writeback', () => {
     });
 
     await waitFor(() => {
-      expect(new URLSearchParams(window.location.search).get('fixture')).toBe(
-        'unit-box-mesh.tscn'
-      );
+      expect(new URLSearchParams(window.location.search).get('fixture')).toBe('unit-box-mesh.tscn');
     });
   });
 
@@ -144,9 +142,7 @@ describe('URL writeback', () => {
     });
 
     await waitFor(() => {
-      expect(new URLSearchParams(window.location.search).get('fixture')).toBe(
-        'unit-box-mesh.tscn'
-      );
+      expect(new URLSearchParams(window.location.search).get('fixture')).toBe('unit-box-mesh.tscn');
     });
 
     expect(pushSpy).not.toHaveBeenCalled();

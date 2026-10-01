@@ -304,21 +304,18 @@ describe('Sprite2D Linter', () => {
         scene(node('Sprite2D', { hframes: 2, vframes: 2, frame_coords: 'Vector2i(2, 2)' }))
       );
       expect(diagnostics.length).toBeGreaterThan(1);
-      const coordErrors = diagnostics.filter(d => d.ruleName === 'sprite2d-frame-coords-range');
+      const coordErrors = diagnostics.filter((d) => d.ruleName === 'sprite2d-frame-coords-range');
       expect(coordErrors).toHaveLength(2);
     });
 
     // Same replay order, same guard (sprite_2d.cpp:312): this body raises
     // ERR_FAIL_INDEX and keeps frame_coords at (0, 0).
     it('errors when hframes is written below frame_coords', () => {
-      expectDiagnostic(
-        scene(node('Sprite2D', { frame_coords: 'Vector2i(3, 0)', hframes: 4 })),
-        {
-          ruleName: 'sprite2d-frame-coords-range',
-          severity: 'error',
-          contains: ['frame_coords.x (3)', 'hframes=1', 'file order'],
-        }
-      );
+      expectDiagnostic(scene(node('Sprite2D', { frame_coords: 'Vector2i(3, 0)', hframes: 4 })), {
+        ruleName: 'sprite2d-frame-coords-range',
+        severity: 'error',
+        contains: ['frame_coords.x (3)', 'hframes=1', 'file order'],
+      });
     });
 
     it('should pass when frame_coords is within range', () => {
@@ -547,9 +544,13 @@ describe('Sprite2D Linter', () => {
         )
       );
       expect(diagnostics.length).toBeGreaterThan(2);
-      expect(diagnostics.some(d => d.ruleName === 'dangling-resource-reference')).toBe(true);
-      expect(diagnostics.some(d => d.message.includes('frame') && d.message.includes('out of range'))).toBe(true);
-      expect(diagnostics.some(d => d.message.includes('region_rect') && d.message.includes('ignored'))).toBe(true);
+      expect(diagnostics.some((d) => d.ruleName === 'dangling-resource-reference')).toBe(true);
+      expect(diagnostics.some((d) => d.message.includes('frame') && d.message.includes('out of range'))).toBe(
+        true
+      );
+      expect(
+        diagnostics.some((d) => d.message.includes('region_rect') && d.message.includes('ignored'))
+      ).toBe(true);
     });
   });
 });

@@ -20,7 +20,7 @@ import { PaintRangeProvider } from '../../../r3f/contexts/PaintOrderContext';
 import type { TscnNode } from '../../../parser/types';
 
 /** The world canvas's rank, derived, never hardcoded: only the order of the
-  * ranks carries meaning. */
+ * ranks carries meaning. */
 const WORLD_RANK = layerRankOf(layerRanks([]), 0);
 
 const heading = { type: 'node', attributes: { type: 'Node2D', name: 'N' } };

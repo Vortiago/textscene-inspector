@@ -20,7 +20,11 @@ ${children}`;
 
 describe(RULE, () => {
   it('warns on a body with no shape child', () => {
-    expectDiagnostic(scene('StaticBody2D'), { ruleName: RULE, severity: 'warning', nodeType: 'StaticBody2D' });
+    expectDiagnostic(scene('StaticBody2D'), {
+      ruleName: RULE,
+      severity: 'warning',
+      nodeType: 'StaticBody2D',
+    });
   });
 
   it('reaches an area the same way', () => {

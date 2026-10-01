@@ -44,7 +44,8 @@ function makeNode(material: string | undefined): TscnNode {
 }
 
 /** A `.tres` StandardMaterial3D whose albedo is pure blue. */
-const BLUE_TRES = '[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\nalbedo_color = Color(0, 0, 1, 1)\n';
+const BLUE_TRES =
+  '[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\nalbedo_color = Color(0, 0, 1, 1)\n';
 
 async function render(material: string | undefined, tresText?: string) {
   const fake = createFakeResourceLoader();
@@ -72,7 +73,7 @@ describe('<CsgPrimitive> material resolution', () => {
     expect(materialOf(renderer).color.getHex()).toBe(0x0000ff);
   });
 
-  it('resolves an inline material\'s texture slots, as a mesh surface does', async () => {
+  it("resolves an inline material's texture slots, as a mesh surface does", async () => {
     const renderer = await render('SubResource("Mat_textured")');
     expect(materialOf(renderer).map).toBeInstanceOf(THREE.Texture);
   });

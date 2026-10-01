@@ -204,7 +204,11 @@ pixel_size = 0.01
     it('should pass when frame is within valid range', () => {
       expectClean(
         scene(
-          node('Sprite3D', { texture: textureRef, hframes: 4, vframes: 3, frame: 11 }, { name: 'ValidFrame' }),
+          node(
+            'Sprite3D',
+            { texture: textureRef, hframes: 4, vframes: 3, frame: 11 },
+            { name: 'ValidFrame' }
+          ),
           textureDef
         )
       );
@@ -434,12 +438,13 @@ describe('Sprite3D frame_coords with a converted component no int32 holds', () =
 
   it('still reports the row on the canonical spelling of the same digits', () => {
     expectDiagnostic(
-      scene(node('Sprite3D', { texture: 1, hframes: 4, vframes: 3, frame_coords: 'Vector2i(4294967295, 5)' })),
+      scene(
+        node('Sprite3D', { texture: 1, hframes: 4, vframes: 3, frame_coords: 'Vector2i(4294967295, 5)' })
+      ),
       { ruleName: 'sprite3d-frame-coords-range', severity: 'error', contains: ['frame_coords.y'] }
     );
   });
 });
-
 
 describe('Sprite3D grid writes, judged in file order like the 2D twin', () => {
   // `SceneState::instantiate` replays a node's properties in FILE order
@@ -455,17 +460,12 @@ describe('Sprite3D grid writes, judged in file order like the 2D twin', () => {
   });
 
   it('passes on the same values with the grid written above frame', () => {
-    expectClean(
-      scene(node('Sprite3D', { ...withTexture, hframes: 4, vframes: 1, frame: 3 }), textureDef)
-    );
+    expectClean(scene(node('Sprite3D', { ...withTexture, hframes: 4, vframes: 1, frame: 3 }), textureDef));
   });
 
   it('errors when hframes is written below frame_coords', () => {
     expectDiagnostic(
-      scene(
-        node('Sprite3D', { ...withTexture, frame_coords: 'Vector2i(3, 0)', hframes: 4 }),
-        textureDef
-      ),
+      scene(node('Sprite3D', { ...withTexture, frame_coords: 'Vector2i(3, 0)', hframes: 4 }), textureDef),
       {
         ruleName: 'sprite3d-frame-coords-range',
         severity: 'error',
@@ -480,17 +480,23 @@ describe('Sprite3D frame re-mapped by a later hframes write (sprite_3d.cpp:938)'
   // new sheet: `frame = original_row * p_amount + original_column`. Probed on
   // 4.6.3: this body loads on frame 2, not the authored 1.
   it('warns that the authored frame is stored as another', () => {
-    expectDiagnostic(scene(node('Sprite3D', { ...withTexture, vframes: 2, frame: 1, hframes: 2 }), textureDef), {
-      ruleName: 'sprite3d-frame-remapped',
-      severity: 'warning',
-      contains: ['Frame 1', 'stored as frame 2'],
-    });
+    expectDiagnostic(
+      scene(node('Sprite3D', { ...withTexture, vframes: 2, frame: 1, hframes: 2 }), textureDef),
+      {
+        ruleName: 'sprite3d-frame-remapped',
+        severity: 'warning',
+        contains: ['Frame 1', 'stored as frame 2'],
+      }
+    );
   });
 
   it('stays quiet when the grid is written above the frame', () => {
-    expectNoDiagnostic(scene(node('Sprite3D', { ...withTexture, hframes: 2, vframes: 2, frame: 1 }), textureDef), {
-      ruleName: 'sprite3d-frame-remapped',
-    });
+    expectNoDiagnostic(
+      scene(node('Sprite3D', { ...withTexture, hframes: 2, vframes: 2, frame: 1 }), textureDef),
+      {
+        ruleName: 'sprite3d-frame-remapped',
+      }
+    );
   });
 
   it('stays quiet when only hframes follows, the row being 0', () => {

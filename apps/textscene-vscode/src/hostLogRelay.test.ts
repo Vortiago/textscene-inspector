@@ -8,10 +8,7 @@ import { describe, expect, it, beforeEach, afterEach, type Mock } from 'vitest';
 import { relayMissingResource, relayWebviewLog } from './hostLogRelay';
 import { getChannel, initLogger, dispose as disposeLogger } from './logger';
 
-type ChannelSpies = Record<
-  'trace' | 'debug' | 'info' | 'warn' | 'error' | 'show',
-  Mock
->;
+type ChannelSpies = Record<'trace' | 'debug' | 'info' | 'warn' | 'error' | 'show', Mock>;
 
 function channel(): ChannelSpies {
   return getChannel() as unknown as ChannelSpies;
@@ -46,9 +43,7 @@ describe('relayWebviewLog', () => {
   it('appends args to the message, serialising objects as JSON', () => {
     relayWebviewLog('info', 'loaded', [{ path: 'res://icon.png' }, 3, 'Sprite2D', null]);
 
-    expect(channel().info).toHaveBeenCalledWith(
-      'loaded {"path":"res://icon.png"} 3 Sprite2D null'
-    );
+    expect(channel().info).toHaveBeenCalledWith('loaded {"path":"res://icon.png"} 3 Sprite2D null');
   });
 
   it('falls back to String() for an arg JSON cannot serialise', () => {
@@ -78,10 +73,7 @@ describe('relayMissingResource', () => {
   it('warns the path, the referencing node and the error, then reveals the channel', () => {
     relayMissingResource(MISSING);
 
-    expect(channel().warn).toHaveBeenNthCalledWith(
-      1,
-      'Missing resource: res://icon.png (Texture2D)'
-    );
+    expect(channel().warn).toHaveBeenNthCalledWith(1, 'Missing resource: res://icon.png (Texture2D)');
     expect(channel().warn).toHaveBeenNthCalledWith(2, '  Referenced by node: Sprite2D');
     expect(channel().warn).toHaveBeenNthCalledWith(3, '  Error: File not found');
     expect(channel().show).toHaveBeenCalledWith(true);

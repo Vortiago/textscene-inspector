@@ -48,17 +48,53 @@ const NO_TRIM_FLAGS: OverrunTrimFlags = {
 export function overrunFlagsForBehavior(behavior: OverrunBehavior): OverrunTrimFlags {
   switch (behavior) {
     case OverrunBehavior.TRIM_WORD_ELLIPSIS_FORCE:
-      return { trim: true, trimWordOnly: true, addEllipsis: true, enforceEllipsis: true, justificationAware: false };
+      return {
+        trim: true,
+        trimWordOnly: true,
+        addEllipsis: true,
+        enforceEllipsis: true,
+        justificationAware: false,
+      };
     case OverrunBehavior.TRIM_ELLIPSIS_FORCE:
-      return { trim: true, trimWordOnly: false, addEllipsis: true, enforceEllipsis: true, justificationAware: false };
+      return {
+        trim: true,
+        trimWordOnly: false,
+        addEllipsis: true,
+        enforceEllipsis: true,
+        justificationAware: false,
+      };
     case OverrunBehavior.TRIM_WORD_ELLIPSIS:
-      return { trim: true, trimWordOnly: true, addEllipsis: true, enforceEllipsis: false, justificationAware: false };
+      return {
+        trim: true,
+        trimWordOnly: true,
+        addEllipsis: true,
+        enforceEllipsis: false,
+        justificationAware: false,
+      };
     case OverrunBehavior.TRIM_ELLIPSIS:
-      return { trim: true, trimWordOnly: false, addEllipsis: true, enforceEllipsis: false, justificationAware: false };
+      return {
+        trim: true,
+        trimWordOnly: false,
+        addEllipsis: true,
+        enforceEllipsis: false,
+        justificationAware: false,
+      };
     case OverrunBehavior.TRIM_WORD:
-      return { trim: true, trimWordOnly: true, addEllipsis: false, enforceEllipsis: false, justificationAware: false };
+      return {
+        trim: true,
+        trimWordOnly: true,
+        addEllipsis: false,
+        enforceEllipsis: false,
+        justificationAware: false,
+      };
     case OverrunBehavior.TRIM_CHAR:
-      return { trim: true, trimWordOnly: false, addEllipsis: false, enforceEllipsis: false, justificationAware: false };
+      return {
+        trim: true,
+        trimWordOnly: false,
+        addEllipsis: false,
+        enforceEllipsis: false,
+        justificationAware: false,
+      };
     case OverrunBehavior.NO_TRIMMING:
     default:
       return NO_TRIM_FLAGS;
@@ -100,12 +136,27 @@ function isSoftBreakGlyph(gp: GlyphPlacement): boolean {
  * `line` unchanged when nothing needs trimming (`:5958-5966`), else a new layout whose glyphs, text
  * and `widthPx` include the cut and any ellipsis.
  */
-export function trimLineToWidth(line: TextLineLayout, widthPx: number, flags: OverrunTrimFlags, options: OverrunTrimOptions): TextLineLayout {
-  const { fontMetrics, fontSizePx, ellipsisChar = DEFAULT_ELLIPSIS_CHAR, fitWidthMinimumReached = false } = options;
+export function trimLineToWidth(
+  line: TextLineLayout,
+  widthPx: number,
+  flags: OverrunTrimFlags,
+  options: OverrunTrimOptions
+): TextLineLayout {
+  const {
+    fontMetrics,
+    fontSizePx,
+    ellipsisChar = DEFAULT_ELLIPSIS_CHAR,
+    fitWidthMinimumReached = false,
+  } = options;
   const glyphs = line.glyphs;
 
   // :5958
-  if (!flags.trim || glyphs.length === 0 || widthPx <= 0 || !(line.widthPx > widthPx || flags.enforceEllipsis)) {
+  if (
+    !flags.trim ||
+    glyphs.length === 0 ||
+    widthPx <= 0 ||
+    !(line.widthPx > widthPx || flags.enforceEllipsis)
+  ) {
     return line;
   }
   // :5964-5966
@@ -114,10 +165,12 @@ export function trimLineToWidth(line: TextLineLayout, widthPx: number, flags: Ov
   }
 
   // :5985-6046, without the span and fallback-font search: one font per line here.
-  const foundElChar = flags.addEllipsis || flags.enforceEllipsis ? hasGlyphInk(fontMetrics, ellipsisChar) : true;
+  const foundElChar =
+    flags.addEllipsis || flags.enforceEllipsis ? hasGlyphInk(fontMetrics, ellipsisChar) : true;
   const dotChar = foundElChar ? ellipsisChar : '.';
   const dotRepeat = foundElChar ? 1 : 3;
-  const dotAdvancePx = flags.addEllipsis || flags.enforceEllipsis ? getFontGlyphAdvancePx(fontMetrics, dotChar, fontSizePx) : 0;
+  const dotAdvancePx =
+    flags.addEllipsis || flags.enforceEllipsis ? getFontGlyphAdvancePx(fontMetrics, dotChar, fontSizePx) : 0;
   const whitespaceAdvancePx = getFontGlyphAdvancePx(fontMetrics, ' ', fontSizePx);
   // :6044-6046 -- `int ellipsis_width` truncates.
   const ellipsisWidthPx = flags.addEllipsis
@@ -151,10 +204,15 @@ export function trimLineToWidth(line: TextLineLayout, widthPx: number, flags: Ov
         lastValidCutWithoutEl = i;
       }
 
-      const ellipsisBudget = (aboveMinCharThreshold && flags.addEllipsis) || flags.enforceEllipsis ? ellipsisWidthPx : 0;
+      const ellipsisBudget =
+        (aboveMinCharThreshold && flags.addEllipsis) || flags.enforceEllipsis ? ellipsisWidthPx : 0;
       if (width + ellipsisBudget <= widthPx && cutAllowedHere) {
         trimPos = i;
-        if (flags.addEllipsis && (aboveMinCharThreshold || flags.enforceEllipsis) && width - ellipsisWidthPx <= widthPx) {
+        if (
+          flags.addEllipsis &&
+          (aboveMinCharThreshold || flags.enforceEllipsis) &&
+          width - ellipsisWidthPx <= widthPx
+        ) {
           ellipsisPos = trimPos;
         }
         break;
@@ -181,11 +239,21 @@ export function trimLineToWidth(line: TextLineLayout, widthPx: number, flags: Ov
   // :6123-6149
   if (flags.addEllipsis && (ellipsisPos > 0 || flags.enforceEllipsis)) {
     if (flags.trimWordOnly && ellipsisPos > 0) {
-      appended.push({ char: ' ', x: penX, advance: whitespaceAdvancePx, glyph: atlasGlyphFor(fontMetrics, ' ') });
+      appended.push({
+        char: ' ',
+        x: penX,
+        advance: whitespaceAdvancePx,
+        glyph: atlasGlyphFor(fontMetrics, ' '),
+      });
       penX += whitespaceAdvancePx;
     }
     for (let r = 0; r < dotRepeat; r++) {
-      appended.push({ char: dotChar, x: penX, advance: dotAdvancePx, glyph: atlasGlyphFor(fontMetrics, dotChar) });
+      appended.push({
+        char: dotChar,
+        x: penX,
+        advance: dotAdvancePx,
+        glyph: atlasGlyphFor(fontMetrics, dotChar),
+      });
       penX += dotAdvancePx;
     }
   }

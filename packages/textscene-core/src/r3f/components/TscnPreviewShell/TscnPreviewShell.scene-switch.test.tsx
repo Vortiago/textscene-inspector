@@ -27,15 +27,11 @@ const FIXTURE_B = `[gd_scene load_steps=1 format=3]
 
 describe('<TscnPreviewShell> scene-switch (WI-UX-5)', () => {
   it('clears the selected row when content changes (non-null → non-null sceneGraph transition)', async () => {
-    const { container, rerender } = render(
-      <TscnPreviewShell panelId="p1" content={FIXTURE_A} />
-    );
+    const { container, rerender } = render(<TscnPreviewShell panelId="p1" content={FIXTURE_A} />);
 
     // Wait for lazy SceneTreeViewer to resolve before querying DOM.
     await screen.findByText('AlphaRoot');
-    const alphaRow = container.querySelector(
-      '[data-node-path="AlphaRoot"] [class*=header]'
-    ) as HTMLElement;
+    const alphaRow = container.querySelector('[data-node-path="AlphaRoot"] [class*=header]') as HTMLElement;
     expect(alphaRow).toBeTruthy();
 
     await act(async () => {
@@ -43,9 +39,7 @@ describe('<TscnPreviewShell> scene-switch (WI-UX-5)', () => {
     });
 
     // AlphaRoot is selected in fixture A.
-    const selectedAfterClick = container.querySelector(
-      '[data-node-path="AlphaRoot"] [aria-selected="true"]'
-    );
+    const selectedAfterClick = container.querySelector('[data-node-path="AlphaRoot"] [aria-selected="true"]');
     expect(selectedAfterClick).toBeTruthy();
 
     rerender(<TscnPreviewShell panelId="p1" content={FIXTURE_B} />);
@@ -59,33 +53,23 @@ describe('<TscnPreviewShell> scene-switch (WI-UX-5)', () => {
   it('does NOT fire clearAll on the initial null → first-scene mount transition', async () => {
     // A mount-time clearAll would erase a selection made right after mount, so a
     // selection on the first scene must stick.
-    const { container } = render(
-      <TscnPreviewShell panelId="p1" content={FIXTURE_A} />
-    );
+    const { container } = render(<TscnPreviewShell panelId="p1" content={FIXTURE_A} />);
 
     // Wait for lazy SceneTreeViewer to resolve before querying DOM.
     await screen.findByText('AlphaRoot');
-    const alphaRow = container.querySelector(
-      '[data-node-path="AlphaRoot"] [class*=header]'
-    );
+    const alphaRow = container.querySelector('[data-node-path="AlphaRoot"] [class*=header]');
     expect(alphaRow).toBeTruthy();
   });
 
   it('clears expanded + hidden + selection together when scene swaps', async () => {
-    const { container, rerender } = render(
-      <TscnPreviewShell panelId="p1" content={FIXTURE_A} />
-    );
+    const { container, rerender } = render(<TscnPreviewShell panelId="p1" content={FIXTURE_A} />);
 
     // Wait for lazy SceneTreeViewer to resolve before querying DOM.
     await screen.findByText('AlphaRoot');
 
     // Expand AlphaRoot (click the chevron) and select it.
-    const alphaRow = container.querySelector(
-      '[data-node-path="AlphaRoot"] [class*=header]'
-    ) as HTMLElement;
-    const expandIcon = alphaRow.querySelector(
-      '[class*=expandIcon]'
-    ) as HTMLElement;
+    const alphaRow = container.querySelector('[data-node-path="AlphaRoot"] [class*=header]') as HTMLElement;
+    const expandIcon = alphaRow.querySelector('[class*=expandIcon]') as HTMLElement;
     if (expandIcon) {
       await act(async () => {
         await userEvent.click(expandIcon);

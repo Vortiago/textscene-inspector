@@ -24,8 +24,9 @@ import type {
 // ShaderMaterial alone, so another class reads (0,0,0) and blacks out albedo. On the
 // prototype, as `copy` drops it, and here, as this module mints every material that can
 // read the default.
-(THREE.Material.prototype as { defaultAttributeValues?: Record<string, number[]> }
-).defaultAttributeValues = { color: [1, 1, 1] };
+(THREE.Material.prototype as { defaultAttributeValues?: Record<string, number[]> }).defaultAttributeValues = {
+  color: [1, 1, 1],
+};
 
 /** Which three material class a feature set needs. */
 export type StandardMaterialClass = 'basic' | 'standard' | 'physical';
@@ -60,12 +61,7 @@ const NO_MATERIAL: StandardMaterialBag = {
  * physical-only feature extends this set.
  */
 function needsPhysicalMaterial(scalars: StandardMaterial3DScalars): boolean {
-  return (
-    scalars.clearcoat > 0 ||
-    scalars.rim > 0 ||
-    scalars.anisotropy > 0 ||
-    scalars.transmission > 0
-  );
+  return scalars.clearcoat > 0 || scalars.rim > 0 || scalars.anisotropy > 0 || scalars.transmission > 0;
 }
 
 /**

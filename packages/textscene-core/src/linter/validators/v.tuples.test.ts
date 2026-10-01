@@ -98,11 +98,7 @@ describe('v.rect2 / v.transform3d', () => {
 
   it('transform3d accepts 12-number transform', () => {
     expect(
-      v.transform3d('transform')(
-        'transform',
-        'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)',
-        1
-      )
+      v.transform3d('transform')('transform', 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)', 1)
     ).toBeNull();
   });
 
@@ -115,9 +111,7 @@ describe('v.rect2 / v.transform3d', () => {
 describe('v.resourceReference / v.nodePath / v.color', () => {
   it('resourceReference accepts SubResource and ExtResource', () => {
     expect(v.resourceReference('mesh')('mesh', 'SubResource("box")', 1)).toBeNull();
-    expect(
-      v.resourceReference('mesh')('mesh', 'ExtResource("1_texture")', 1)
-    ).toBeNull();
+    expect(v.resourceReference('mesh')('mesh', 'ExtResource("1_texture")', 1)).toBeNull();
   });
 
   it('resourceReference rejects raw paths', () => {
@@ -134,22 +128,18 @@ describe('v.resourceReference / v.nodePath / v.color', () => {
   });
 
   it('nodePath accepts NodePath("…")', () => {
-    expect(
-      v.nodePath('skeleton')('skeleton', 'NodePath("../Armature")', 1)
-    ).toBeNull();
+    expect(v.nodePath('skeleton')('skeleton', 'NodePath("../Armature")', 1)).toBeNull();
   });
 
   // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
-  it('nodePath takes the bare string the slot converts and rejects a StringName under the property\'s own code', () => {
+  it("nodePath takes the bare string the slot converts and rejects a StringName under the property's own code", () => {
     expect(v.nodePath('skeleton')('skeleton', '"../Armature"', 1)).toBeNull();
     const err = v.nodePath('skeleton')('skeleton', '&"../Armature"', 1);
     expect(err!.code).toBe('INVALID_SKELETON_PATH');
   });
 
   it('color accepts 4-component Color', () => {
-    expect(
-      v.color('light_color')('light_color', 'Color(1, 0.5, 0, 1)', 1)
-    ).toBeNull();
+    expect(v.color('light_color')('light_color', 'Color(1, 0.5, 0, 1)', 1)).toBeNull();
   });
 
   it('color rejects 3-component', () => {
@@ -160,11 +150,14 @@ describe('v.resourceReference / v.nodePath / v.color', () => {
   // `variant.cpp:712-719`: COLOR converts from STRING and INT, which
   // `Variant::operator Color` reads as HTML or a name, and as RGBA hex
   // (`variant.cpp:1986-1996`). The stored Color is not what the file says.
-  it.each(['"ff0000"', '"red"', '4294967295', '-1'])('color converts %s, with the converted-spelling warning', (value) => {
-    const report = v.color('modulate')('modulate', value, 1);
-    expect(report?.severity).toBe('warning');
-    expect(report?.message).toContain('which this slot converts');
-  });
+  it.each(['"ff0000"', '"red"', '4294967295', '-1'])(
+    'color converts %s, with the converted-spelling warning',
+    (value) => {
+      const report = v.color('modulate')('modulate', value, 1);
+      expect(report?.severity).toBe('warning');
+      expect(report?.message).toContain('which this slot converts');
+    }
+  );
 
   it.each(['1.5', '1e3', '&"red"', 'true'])('color refuses %s, which COLOR does not convert', (value) => {
     expect(v.color('modulate')('modulate', value, 1)?.severity).toBe('error');
@@ -207,9 +200,7 @@ describe('float-tuple validators speak the tokenizer float grammar', () => {
   });
 
   it('v.transform3d accepts the tokenizer grammar', () => {
-    expect(
-      v.transform3d('t')('t', 'Transform3D(1., 0.5, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)', 1)
-    ).toBeNull();
+    expect(v.transform3d('t')('t', 'Transform3D(1., 0.5, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)', 1)).toBeNull();
   });
 
   it('v.color accepts the tokenizer grammar', () => {
@@ -273,8 +264,7 @@ describe('the converted integer spelling in a float slot', () => {
   // through `_parse_construct<int32_t>` before the widening. A component that
   // does not survive that narrowing is stored as a number the file never
   // states, and a slot with no bound has no other reporter.
-  const startPosition = (value: string) =>
-    v.vector2('start_position')('start_position', value, 1);
+  const startPosition = (value: string) => v.vector2('start_position')('start_position', value, 1);
 
   it('reports a component past int32, which wraps to a value nothing writes', () => {
     const error = startPosition('Vector2i(4294967296, 0)');

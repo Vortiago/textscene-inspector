@@ -75,6 +75,9 @@ catalogs:
     postprocessing:
       specifier: ^6.39
       version: 6.39.3
+    prettier:
+      specifier: 3.9.9
+      version: 3.9.9
     react:
       specifier: ^19.3
       version: 19.3.0
@@ -158,6 +161,9 @@ importers:
       pngjs:
         specifier: ^7.0.0
         version: 7.0.0
+      prettier:
+        specifier: 'catalog:'
+        version: 3.9.9
       publint:
         specifier: ^0.3.24
         version: 0.3.24
@@ -169,7 +175,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 'catalog:'
-        version: 5.0.2(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1)(@vitest/ui@4.1.10)(happy-dom@20.14.5)(jsdom@30.0.1)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(yaml@2.9.1))
+        version: 5.0.2(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1(vitest@5.0.2))(@vitest/ui@4.1.10(vitest@5.0.2))(happy-dom@20.14.5)(jsdom@30.0.1)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(yaml@2.9.1))
       wawoff2:
         specifier: 'catalog:'
         version: 2.0.1
@@ -200,7 +206,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 'catalog:'
-        version: 5.0.2(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1)(@vitest/ui@4.1.10)(happy-dom@20.14.5)(jsdom@30.0.1)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(yaml@2.9.1))
+        version: 5.0.2(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1(vitest@5.0.2))(@vitest/ui@4.1.10(vitest@5.0.2))(happy-dom@20.14.5)(jsdom@30.0.1)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(yaml@2.9.1))
 
   apps/textscene-vscode:
     dependencies:
@@ -264,7 +270,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 'catalog:'
-        version: 5.0.2(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1)(@vitest/ui@4.1.10)(happy-dom@20.14.5)(jsdom@30.0.1)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(yaml@2.9.1))
+        version: 5.0.2(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1(vitest@5.0.2))(@vitest/ui@4.1.10(vitest@5.0.2))(happy-dom@20.14.5)(jsdom@30.0.1)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(yaml@2.9.1))
 
   apps/textscene-web:
     dependencies:
@@ -313,7 +319,7 @@ importers:
         version: 8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(yaml@2.9.1)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.2(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1)(@vitest/ui@4.1.10)(happy-dom@20.14.5)(jsdom@30.0.1)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(yaml@2.9.1))
+        version: 5.0.2(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1(vitest@5.0.2))(@vitest/ui@4.1.10(vitest@5.0.2))(happy-dom@20.14.5)(jsdom@30.0.1)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(yaml@2.9.1))
 
   packages/textscene-core:
     dependencies:
@@ -386,7 +392,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 'catalog:'
-        version: 5.0.2(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1)(@vitest/ui@4.1.10)(happy-dom@20.14.5)(jsdom@30.0.1)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(yaml@2.9.1))
+        version: 5.0.2(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1(vitest@5.0.2))(@vitest/ui@4.1.10(vitest@5.0.2))(happy-dom@20.14.5)(jsdom@30.0.1)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(yaml@2.9.1))
 
   packages/textscene-dev-kit:
     devDependencies:
@@ -401,7 +407,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 'catalog:'
-        version: 5.0.2(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1)(@vitest/ui@4.1.10)(happy-dom@20.14.5)(jsdom@30.0.1)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(yaml@2.9.1))
+        version: 5.0.2(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1(vitest@5.0.2))(@vitest/ui@4.1.10(vitest@5.0.2))(happy-dom@20.14.5)(jsdom@30.0.1)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(yaml@2.9.1))
 
 packages:
 
@@ -3050,6 +3056,11 @@ packages:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
 
+  prettier@3.9.9:
+    resolution: {integrity: sha512-Z/CJHIkdujO/OtN7nXUii0Rf3VT5SRuhjBA82Xvu2XhBUgX3nhP67T0LHceBdQLex7OOFGTox+Q5Yg8Jk2Qivg==}
+    engines: {node: '>=14'}
+    hasBin: true
+
   pretty-format@27.5.1:
     resolution: {integrity: sha512-Qb1gy5OrP5+zDf2Bvnzdl3jsTf1qXVMazbvCoKhtKqVs4/YK4ozX4gKQJJVyNe+cajNPn0KoC0MC3FUmaHWEmQ==}
     engines: {node: ^10.13.0 || ^12.13.0 || ^14.15.0 || >=15.0.0}
@@ -3348,10 +3359,6 @@ packages:
 
   stubborn-utils@1.0.2:
     resolution: {integrity: sha512-zOh9jPYI+xrNOyisSelgym4tolKTJCQd5GBhK0+0xJvcYDcwlOoxF/rnFKQ2KRZknXSG9jWAp66fwP6AxN9STg==}
-
-  supports-color@7.2.0:
-    resolution: {integrity: sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw==}
-    engines: {node: '>=8'}
 
   supports-color@8.1.1:
     resolution: {integrity: sha512-MpUEN2OodtUzxvKQl72cUF7RQ5EiHsGvSsVG0ia9c5RbWGL2CI4C7EpPS8UTBIplnlzZiNuV56w+FuNxy3ty2Q==}
@@ -4945,7 +4952,7 @@ snapshots:
       obug: 2.2.1
       std-env: 4.2.0
       tinyrainbow: 3.1.1
-      vitest: 5.0.2(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1)(@vitest/ui@4.1.10)(happy-dom@20.14.5)(jsdom@30.0.1)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(yaml@2.9.1))
+      vitest: 5.0.2(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1(vitest@5.0.2))(@vitest/ui@4.1.10(vitest@5.0.2))(happy-dom@20.14.5)(jsdom@30.0.1)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(yaml@2.9.1))
 
   '@vitest/istanbul-lib-coverage@1.0.1': {}
 
@@ -4977,7 +4984,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.1
-      vitest: 5.0.2(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1)(@vitest/ui@4.1.10)(happy-dom@20.14.5)(jsdom@30.0.1)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(yaml@2.9.1))
+      vitest: 5.0.2(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1(vitest@5.0.2))(@vitest/ui@4.1.10(vitest@5.0.2))(happy-dom@20.14.5)(jsdom@30.0.1)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(yaml@2.9.1))
 
   '@vitest/utils@4.1.10':
     dependencies:
@@ -6571,6 +6578,8 @@ snapshots:
 
   prelude-ls@1.2.1: {}
 
+  prettier@3.9.9: {}
+
   pretty-format@27.5.1:
     dependencies:
       ansi-regex: 5.0.1
@@ -6872,11 +6881,6 @@ snapshots:
 
   stubborn-utils@1.0.2: {}
 
-  supports-color@7.2.0:
-    dependencies:
-      has-flag: 4.0.0
-    optional: true
-
   supports-color@8.1.1:
     dependencies:
       has-flag: 4.0.0
@@ -7123,7 +7127,7 @@ snapshots:
       fsevents: 2.3.3
       yaml: 2.9.1
 
-  vitest@5.0.2(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1)(@vitest/ui@4.1.10)(happy-dom@20.14.5)(jsdom@30.0.1)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(yaml@2.9.1)):
+  vitest@5.0.2(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1(vitest@5.0.2))(@vitest/ui@4.1.10(vitest@5.0.2))(happy-dom@20.14.5)(jsdom@30.0.1)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(yaml@2.9.1)):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/mocker': 5.0.2(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(yaml@2.9.1))

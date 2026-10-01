@@ -41,10 +41,7 @@ export function useTexture2D(
 ): Texture2DResult {
   // An AtlasTexture windows the sheet it names, so the sheet's ref resolves below. Unwrapped before
   // the atlas lookup: a CanvasTexture may wrap an AtlasTexture, and the raw ref loses the window.
-  const unwrapped = useMemo(
-    () => unwrapCanvasTextureRef(ref, internalResources),
-    [ref, internalResources]
-  );
+  const unwrapped = useMemo(() => unwrapCanvasTextureRef(ref, internalResources), [ref, internalResources]);
   const inlineAtlas = useMemo(
     () => resolveAtlasTextureRef(unwrapped, internalResources),
     [unwrapped, internalResources]
@@ -59,9 +56,7 @@ export function useTexture2D(
   const extAtlasFile = useResource<ParsedResource>(extAtlasPath ?? '', 'resource');
   const extAtlas = useMemo(
     () =>
-      extAtlasPath && extAtlasFile.value
-        ? decodeExtAtlasTextureRef(extAtlasPath, extAtlasFile.value)
-        : null,
+      extAtlasPath && extAtlasFile.value ? decodeExtAtlasTextureRef(extAtlasPath, extAtlasFile.value) : null,
     [extAtlasPath, extAtlasFile.value]
   );
 

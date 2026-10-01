@@ -45,7 +45,12 @@ const resources: TscnInternalResource[] = [
   {
     id: 'StyleBoxFlat_border_only',
     type: 'StyleBoxFlat',
-    data: { border_width_left: '3', border_width_top: '3', border_width_right: '3', border_width_bottom: '3' },
+    data: {
+      border_width_left: '3',
+      border_width_top: '3',
+      border_width_right: '3',
+      border_width_bottom: '3',
+    },
   },
   { id: 'StyleBoxFlat_aa_size_too_small', type: 'StyleBoxFlat', data: { anti_aliasing_size: '0' } },
   { id: 'StyleBoxFlat_corner_detail_too_small', type: 'StyleBoxFlat', data: { corner_detail: '0' } },
@@ -128,8 +133,12 @@ describe('parseStyleBox', () => {
   it('clamps an authored corner_detail to the setter range 1..20 (StyleBoxFlat::set_corner_detail)', () => {
     // style_box_flat.cpp:130: CLAMP(p_corner_detail, 1, 20). A 0 would divide
     // by zero in the arc sweep (`pt_angle`'s `detail / (double)adapted_corner_detail`).
-    expect(parseStyleBox('SubResource("StyleBoxFlat_corner_detail_too_small")', [], resources)?.cornerDetail).toBe(1);
-    expect(parseStyleBox('SubResource("StyleBoxFlat_corner_detail_too_large")', [], resources)?.cornerDetail).toBe(20);
+    expect(
+      parseStyleBox('SubResource("StyleBoxFlat_corner_detail_too_small")', [], resources)?.cornerDetail
+    ).toBe(1);
+    expect(
+      parseStyleBox('SubResource("StyleBoxFlat_corner_detail_too_large")', [], resources)?.cornerDetail
+    ).toBe(20);
   });
 
   it('falls back content_margin to the matching border_width when content_margin is absent (the -1 sentinel)', () => {

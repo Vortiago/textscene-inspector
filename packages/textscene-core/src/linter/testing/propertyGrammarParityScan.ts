@@ -97,7 +97,13 @@ export function scrapeParserReads(file: string, seen = new Set<string>()): Set<s
   const importRe = /import\s*(?:type\s+)?\{([^}]*)\}\s*from\s*['"](\.[^'"]+)['"]/g;
   let m: RegExpExecArray | null;
   while ((m = importRe.exec(src)) !== null) {
-    const names = m[1]!.split(',').map((n) => n.trim().replace(/^type\s+/, '').split(/\s+as\s+/).pop()!);
+    const names = m[1]!.split(',').map((n) =>
+      n
+        .trim()
+        .replace(/^type\s+/, '')
+        .split(/\s+as\s+/)
+        .pop()!
+    );
     const specifier = m[2]!;
     for (const name of names) {
       if (!name || !new RegExp(`\\b${name}\\((?:[^()]*,\\s*)?properties\\s*[,)]`).test(src)) continue;
@@ -127,9 +133,7 @@ export function getInheritedParserProps(nodeType: string): Set<string> {
     if (!subpath) continue;
     const parserPath = join(nodesRoot, subpath);
     if (!existsSync(parserPath)) {
-      throw new Error(
-        `BASE_TYPE_TO_PARSER_SUBPATH['${base}'] points at a missing file: ${subpath}`
-      );
+      throw new Error(`BASE_TYPE_TO_PARSER_SUBPATH['${base}'] points at a missing file: ${subpath}`);
     }
     for (const p of scrapeParserProps(readFileSync(parserPath, 'utf8'))) result.add(p);
   }

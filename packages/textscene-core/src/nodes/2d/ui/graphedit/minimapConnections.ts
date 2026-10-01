@@ -50,12 +50,17 @@ export function minimapConnectionLines(
   curvature: number
 ): MinimapConnectionLine[] {
   return connections.map((connection) => {
-    const from = { x: connection.from.graphPos.x - bounds.min.x, y: connection.from.graphPos.y - bounds.min.y };
+    const from = {
+      x: connection.from.graphPos.x - bounds.min.x,
+      y: connection.from.graphPos.y - bounds.min.y,
+    };
     const to = { x: connection.to.graphPos.x - bounds.min.x, y: connection.to.graphPos.y - bounds.min.y };
-    const points = tessellateConnectionLine(connectionControlPoints(from, to, curvature), curvature).map((point) => {
-      const mapped = minimapConvertFromGraph(transform, point);
-      return { x: mapped.x + transform.minimapOffset.x, y: mapped.y + transform.minimapOffset.y };
-    });
+    const points = tessellateConnectionLine(connectionControlPoints(from, to, curvature), curvature).map(
+      (point) => {
+        const mapped = minimapConvertFromGraph(transform, point);
+        return { x: mapped.x + transform.minimapOffset.x, y: mapped.y + transform.minimapOffset.y };
+      }
+    );
 
     const lengthInv = 1 / distance(points[0]!, points[points.length - 1]!);
     const colors = points.map((point) =>

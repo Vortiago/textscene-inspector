@@ -5,14 +5,16 @@
 
 /**
  * A file whose change can break any check, so the push runs the full `pnpm validate`. A workflow
- * file is not one: no local check reads it, and CI runs it on the pull request.
+ * file is not one: locally only the format check reads it, and CI runs it on the pull request.
  */
 const TOOLCHAIN =
-  /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|eslint\.config\.js|lint-staged\.config\.mjs|vitest\.(?:config|shared)\.ts|githooks\/.*)$|(?:^|\/)(?:package\.json|tsconfig[^/]*\.json|vitest\.config\.ts)$/;
+  /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|eslint\.config\.js|prettier\.config\.mjs|\.prettierignore|lint-staged\.config\.mjs|vitest\.(?:config|shared)\.ts|githooks\/.*)$|(?:^|\/)(?:package\.json|tsconfig[^/]*\.json|vitest\.config\.ts)$/;
 
 const CODE = /\.(?:ts|tsx|js|mjs|cjs|css)$/;
 const TYPED = /\.(?:ts|tsx)$/;
 const LINTED_CODE = /\.(?:ts|tsx|js|mjs|cjs)$/;
+/** What Prettier formats here. Markdown is not: `.prettierignore` leaves it to the STE rules. */
+const FORMATTED = /\.(?:ts|tsx|js|mjs|cjs|css|json|ya?ml|html)$/;
 const SCENE = /\.(?:tscn|tres)$/;
 /** Markdown that the generated-docs checks read or write. */
 const GENERATED_DOCS_INPUT = /(?:^|\/)comparison\.md$|^docs\/comparison\//;
@@ -33,6 +35,8 @@ export function planChecks({ changed, deleted }) {
   if (typeChecks) plan.push(['pnpm', 'type-check:all'], ['pnpm', 'type-check:tests']);
   const linted = changed.filter((path) => LINTED_CODE.test(path));
   if (linted.length > 0) plan.push(['npx', 'eslint', ...linted]);
+  const formatted = changed.filter((path) => FORMATTED.test(path));
+  if (formatted.length > 0) plan.push(['pnpm', 'exec', 'prettier', '--check', ...formatted]);
   if (code.length > 0) plan.push(['pnpm', 'exec', 'vitest', 'related', '--run', ...code]);
 
   const scenes = changed.filter((path) => SCENE.test(path));

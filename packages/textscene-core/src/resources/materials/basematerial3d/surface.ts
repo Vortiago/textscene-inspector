@@ -69,13 +69,7 @@ export const surfaceKeys: Record<string, PropertyValidator> = {
   ),
   // material.cpp:3596, one of the FLAG_* booleans routed through set_flag.
   no_depth_test: v.boolean('no_depth_test'),
-  depth_test: v.enumInt(
-    'depth_test',
-    0,
-    1,
-    { 0: 'DEFAULT', 1: 'INVERTED' },
-    { hinted: 'material.cpp:3597' }
-  ),
+  depth_test: v.enumInt('depth_test', 0, 1, { 0: 'DEFAULT', 1: 'INVERTED' }, { hinted: 'material.cpp:3597' }),
 
   shading_mode: v.enumInt(
     'shading_mode',

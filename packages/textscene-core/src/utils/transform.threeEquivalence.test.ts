@@ -13,10 +13,22 @@ import { decomposeTransform3D } from './transform';
 function decomposeWithThree(transform: Transform3D): DecomposedTransform {
   const { basis_x, basis_y, basis_z, origin } = transform;
   const m = new THREE.Matrix4().set(
-    basis_x.x, basis_x.y, basis_x.z, origin.x,
-    basis_y.x, basis_y.y, basis_y.z, origin.y,
-    basis_z.x, basis_z.y, basis_z.z, origin.z,
-    0, 0, 0, 1
+    basis_x.x,
+    basis_x.y,
+    basis_x.z,
+    origin.x,
+    basis_y.x,
+    basis_y.y,
+    basis_y.z,
+    origin.y,
+    basis_z.x,
+    basis_z.y,
+    basis_z.z,
+    origin.z,
+    0,
+    0,
+    0,
+    1
   );
 
   const pos = new THREE.Vector3();
@@ -74,11 +86,7 @@ function froundTransform(t: Transform3D): Transform3D {
  * Object.is comparison per component (bit-exact: distinguishes ±0, accepts
  * NaN === NaN). Returns a list of human-readable mismatches.
  */
-function bitDiff(
-  label: string,
-  actual: DecomposedTransform,
-  expected: DecomposedTransform
-): string[] {
+function bitDiff(label: string, actual: DecomposedTransform, expected: DecomposedTransform): string[] {
   const diffs: string[] = [];
   for (const section of ['position', 'rotation', 'scale'] as const) {
     for (const axis of ['x', 'y', 'z'] as const) {
@@ -109,11 +117,7 @@ describe('decomposeTransform3D — bit-equivalence with the three.js oracle', ()
         'XYZ'
       );
       const quat = new THREE.Quaternion().setFromEuler(euler);
-      const scale = new THREE.Vector3(
-        0.05 + rand() * 19.95,
-        0.05 + rand() * 19.95,
-        0.05 + rand() * 19.95
-      );
+      const scale = new THREE.Vector3(0.05 + rand() * 19.95, 0.05 + rand() * 19.95, 0.05 + rand() * 19.95);
       if (rand() < 0.25) {
         const axis = Math.floor(rand() * 3);
         if (axis === 0) scale.x = -scale.x;
@@ -188,11 +192,7 @@ describe('decomposeTransform3D — bit-equivalence with the three.js oracle', ()
         const quat = new THREE.Quaternion().setFromEuler(
           new THREE.Euler(0.3, Math.asin(Math.max(-1, Math.min(1, target))), -0.2, 'XYZ')
         );
-        const m = new THREE.Matrix4().compose(
-          new THREE.Vector3(1, 2, 3),
-          quat,
-          new THREE.Vector3(1, 1, 1)
-        );
+        const m = new THREE.Matrix4().compose(new THREE.Vector3(1, 2, 3), quat, new THREE.Vector3(1, 1, 1));
         expectBitEqual(`gimbal ${target}`, godotRowsFromMatrix(m));
       }
     }
@@ -203,11 +203,7 @@ describe('decomposeTransform3D — bit-equivalence with the three.js oracle', ()
       const quat = new THREE.Quaternion().setFromEuler(
         new THREE.Euler(0.7, (sign * Math.PI) / 2, 1.1, 'XYZ')
       );
-      const m = new THREE.Matrix4().compose(
-        new THREE.Vector3(0, 0, 0),
-        quat,
-        new THREE.Vector3(2, 3, 4)
-      );
+      const m = new THREE.Matrix4().compose(new THREE.Vector3(0, 0, 0), quat, new THREE.Vector3(2, 3, 4));
       expectBitEqual(`±90°Y ${sign}`, godotRowsFromMatrix(m));
     }
   });

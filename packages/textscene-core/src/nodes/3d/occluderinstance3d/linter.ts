@@ -57,8 +57,16 @@ const occluderInstance3DConfigurationWarningsRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['OccluderInstance3D'],
     emits: [
-      { ruleName: 'occluderinstance3d-empty-bake-mask', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      { ruleName: 'occluderinstance3d-missing-occluder', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'occluderinstance3d-empty-bake-mask',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
+      {
+        ruleName: 'occluderinstance3d-missing-occluder',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
     ],
   },
   check: checkOccluderInstance3D,

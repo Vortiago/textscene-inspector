@@ -9,10 +9,7 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { useTexture2D } from '../../../resources/useTexture2D';
-import {
-  applyTextureState,
-  isMaterialOwnedTexture,
-} from '../../../resources/textures/applyTextureState';
+import { applyTextureState, isMaterialOwnedTexture } from '../../../resources/textures/applyTextureState';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import type { PointLight2DProperties } from './types';

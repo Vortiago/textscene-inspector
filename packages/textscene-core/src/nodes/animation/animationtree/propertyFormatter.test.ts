@@ -44,9 +44,7 @@ describe('formatAnimationTreeProperties', () => {
   });
 
   it('shows tree_root when set', () => {
-    const sections = formatAnimationTreeProperties(
-      makeProps({ tree_root: 'SubResource("AnimSM_1")' })
-    );
+    const sections = formatAnimationTreeProperties(makeProps({ tree_root: 'SubResource("AnimSM_1")' }));
     const main = sections.find((s) => s.title === 'AnimationTree');
     const rootItem = main?.items.find((i) => i.label === 'Tree Root');
     expect(rootItem?.value).toBe('SubResource("AnimSM_1")');
@@ -79,9 +77,7 @@ describe('formatAnimationTreeProperties', () => {
   });
 
   it('omits Root Motion section when root_motion_track is empty NodePath', () => {
-    const sections = formatAnimationTreeProperties(
-      makeProps({ root_motion_track: 'NodePath("")' })
-    );
+    const sections = formatAnimationTreeProperties(makeProps({ root_motion_track: 'NodePath("")' }));
     const titles = sections.map((s) => s.title);
     expect(titles).not.toContain('Root Motion');
   });

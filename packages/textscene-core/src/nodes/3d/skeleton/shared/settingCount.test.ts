@@ -103,7 +103,7 @@ describe('settingCount', () => {
 });
 
 describe('setting_count across its eight declarers', () => {
-  it.each(DECLARERS)('%s owns the key and cites its setter\'s guard site', (nodeType, guard) => {
+  it.each(DECLARERS)("%s owns the key and cites its setter's guard site", (nodeType, guard) => {
     expect(validatorRegistry.getOwnKeys(nodeType)).toContain('setting_count');
     const declared = validatorRegistry.declarationFor(nodeType, 'setting_count')!;
     expect(declared.grounding).toEqual(settingCount(guard).grounding);

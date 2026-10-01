@@ -43,10 +43,7 @@ export function useWorldShadowCasters(): readonly WorldShadowCaster[] {
 }
 
 /** Exact equality, coordinate by coordinate. */
-export function sameWorldCasters(
-  a: readonly WorldShadowCaster[],
-  b: readonly WorldShadowCaster[]
-): boolean {
+export function sameWorldCasters(a: readonly WorldShadowCaster[], b: readonly WorldShadowCaster[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i += 1) {
     const one = a[i]!;
@@ -91,9 +88,7 @@ export function ShadowCasterStage({ children }: { children: ReactNode }) {
 
   return (
     <ShadowCasterProvider registry={registry}>
-      <WorldShadowCasterContext.Provider value={casters}>
-        {children}
-      </WorldShadowCasterContext.Provider>
+      <WorldShadowCasterContext.Provider value={casters}>{children}</WorldShadowCasterContext.Provider>
     </ShadowCasterProvider>
   );
 }

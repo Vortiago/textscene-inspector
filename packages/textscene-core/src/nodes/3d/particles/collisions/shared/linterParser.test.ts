@@ -10,7 +10,11 @@ import './linterParser.js';
 
 /** Fill from doc/classes/GPUParticlesCollision3D.xml. Red until you do, deliberately. */
 const KEYS: string[] = ['cull_mask'];
-const LEAVES = ["GPUParticlesCollisionBox3D","GPUParticlesCollisionHeightField3D","GPUParticlesCollisionSDF3D"] as const;
+const LEAVES = [
+  'GPUParticlesCollisionBox3D',
+  'GPUParticlesCollisionHeightField3D',
+  'GPUParticlesCollisionSDF3D',
+] as const;
 
 describe('GPUParticlesCollision3D shared validators', () => {
   it('registers exactly what GPUParticlesCollision3D binds', () => {

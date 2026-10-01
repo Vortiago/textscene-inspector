@@ -15,9 +15,7 @@ describe('arraysEqual', () => {
   });
 
   it('is false when the same rows appear in a different order', () => {
-    expect(arraysEqual(['Root', 'Root/Box', 'Root/Title'], ['Root', 'Root/Title', 'Root/Box'])).toBe(
-      false
-    );
+    expect(arraysEqual(['Root', 'Root/Box', 'Root/Title'], ['Root', 'Root/Title', 'Root/Box'])).toBe(false);
   });
 
   it('is false for non-array input', () => {

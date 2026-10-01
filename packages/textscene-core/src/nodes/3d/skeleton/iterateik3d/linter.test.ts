@@ -105,7 +105,10 @@ describe('IterateIK3D index grammar', () => {
     // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()` and no validity gate
     // (iterate_ik_3d.cpp:37), and `to_int` skips a character it cannot use (ustring.cpp:2280-2293),
     // so `settings/x0/target_node` sets setting 0's target.
-    const content = scene('CCDIK3D', 'setting_count = 1\nsettings/x0/target_node = NodePath("../../Target")\n');
+    const content = scene(
+      'CCDIK3D',
+      'setting_count = 1\nsettings/x0/target_node = NodePath("../../Target")\n'
+    );
     expect(reportsOf(new Linter().lint(content), RULE, 'warning')).toEqual([]);
   });
 

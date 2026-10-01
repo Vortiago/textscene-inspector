@@ -15,7 +15,11 @@ const __dirname = dirname(__filename);
  * @returns {string}
  */
 function detectCategory(filename) {
-  if (filename.startsWith('unit-node') || filename.startsWith('unit-empty') || filename.startsWith('unit-camera')) {
+  if (
+    filename.startsWith('unit-node') ||
+    filename.startsWith('unit-empty') ||
+    filename.startsWith('unit-camera')
+  ) {
     return 'Unit - Basic Nodes';
   }
   if (
@@ -99,7 +103,7 @@ function generateName(filename) {
     .replace(/-/g, ' ')
     .replace('.tscn', '')
     .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 }
 
@@ -110,7 +114,7 @@ const fixturesDir = join(rootDir, 'scenes/fixtures');
 // subdirectory in it is a res:// namespace (materials/, textures/, fonts/) or a
 // nested Godot project, not a shelf of selectable scenes.
 const fixtureFiles = readdirSync(fixturesDir)
-  .filter(f => f.endsWith('.tscn'))
+  .filter((f) => f.endsWith('.tscn'))
   .sort();
 
 // Every ld-58 scene at any depth is selectable. `file` is the res://-relative
@@ -166,7 +170,7 @@ function demoProjects() {
 function humanizeProject(name) {
   return name
     .split(/[_-]/)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 }
 /**
@@ -196,7 +200,7 @@ function demoMainScene(projDir) {
       if (head.includes(`uid="${declared}"`)) return rel;
     }
   }
-  return scenes.find(rel => rel === 'main.tscn') ?? scenes[0];
+  return scenes.find((rel) => rel === 'main.tscn') ?? scenes[0];
 }
 const demoFixtures = demoProjects().flatMap(({ top, project }) => {
   const root = `demos/${top}/${project}`;
@@ -232,25 +236,25 @@ const GAME_LABELS = {
 function gameDirs() {
   try {
     return readdirSync(gamesDir, { withFileTypes: true })
-      .filter(entry => entry.isDirectory())
-      .map(entry => entry.name)
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
       .sort();
   } catch {
     return []; // No games vendored.
   }
 }
-const gameFixtures = gameDirs().flatMap(dir => {
+const gameFixtures = gameDirs().flatMap((dir) => {
   const root = `games/${dir}`;
   const label = GAME_LABELS[dir] ?? humanizeProject(dir);
   const projDir = join(gamesDir, dir);
   const scenes = walkTscn(projDir)
     // Editor scenes under an addons/ folder at any depth stay on disk so refs
     // resolve, but would flood the selector with plugin UI.
-    .filter(rel => !/(^|\/)addons\//.test(rel))
+    .filter((rel) => !/(^|\/)addons\//.test(rel))
     .sort();
   if (scenes.length === 0) return [];
   const mainScene = demoMainScene(projDir);
-  return scenes.map(rel => {
+  return scenes.map((rel) => {
     const isMain = rel === mainScene;
     const stem = rel.replace(/\.tscn$/, '');
     return {
@@ -265,7 +269,7 @@ const gameFixtures = gameDirs().flatMap(dir => {
 
 // The optional ld-58 corpus (scenes/ld58/), vendored on demand with
 // `pnpm vendor:ld58` and not committed, like the games corpus.
-const ld58Fixtures = ld58Files.map(file => ({
+const ld58Fixtures = ld58Files.map((file) => ({
   // Vendored scenes keep Godot's CamelCase / snake_case basenames; split those
   // into words so the selector shows "Clue Container", not "ClueContainer".
   name: generateName(
@@ -280,12 +284,12 @@ const ld58Fixtures = ld58Files.map(file => ({
 }));
 
 const fixtures = [
-  ...fixtureFiles.map(file => ({
+  ...fixtureFiles.map((file) => ({
     name: generateName(file),
     file,
     category: detectCategory(file),
   })),
-  ...isometricFiles.map(file => ({
+  ...isometricFiles.map((file) => ({
     name: generateName(file.split('/').pop().replace(/_/g, '-')),
     file,
     category: 'Examples - Isometric Dungeon',
@@ -311,8 +315,8 @@ for (const fixture of [...fixtures, ...gameFixtures, ...ld58Fixtures]) {
 // Groups fixtures by category, in first-seen category order and declaration
 // order within each.
 function groupByCategory(items) {
-  const categories = [...new Set(items.map(f => f.category))];
-  return { categories, sorted: categories.flatMap(cat => items.filter(f => f.category === cat)) };
+  const categories = [...new Set(items.map((f) => f.category))];
+  return { categories, sorted: categories.flatMap((cat) => items.filter((f) => f.category === cat)) };
 }
 
 const { categories, sorted: sortedFixtures } = groupByCategory(fixtures);
@@ -349,7 +353,9 @@ export function getFixturesByCategory(): Map<string, Fixture[]> {
 
 const outputPath = join(rootDir, 'apps/textscene-web/src/fixtures.ts');
 writeFileSync(outputPath, output);
-console.log(`✅ Generated fixtures.ts with ${fixtures.length} fixtures across ${categories.length} categories`);
+console.log(
+  `✅ Generated fixtures.ts with ${fixtures.length} fixtures across ${categories.length} categories`
+);
 
 /**
  * An optional corpus manifest goes to its own gitignored file, which
@@ -372,7 +378,9 @@ import type { Fixture } from './fixtures';
 export const corpusFixtures: Fixture[] = ${JSON.stringify(sorted, null, 2)};
 `;
     writeFileSync(outPath, manifest);
-    console.log(`✅ Generated ${fileName} with ${items.length} ${corpusLabel} fixtures across ${corpusCategories.length} categories`);
+    console.log(
+      `✅ Generated ${fileName} with ${items.length} ${corpusLabel} fixtures across ${corpusCategories.length} categories`
+    );
   } else if (existsSync(outPath)) {
     rmSync(outPath);
     console.log(`🧹 Removed stale ${fileName} (no ${corpusLabel} vendored)`);

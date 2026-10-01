@@ -19,9 +19,7 @@ import { findMesh } from '../testing/reactThreeTestInstance';
 describe('material misc scalar parity', () => {
   it('vertex_color_use_as_albedo → useVertexColors (default false)', () => {
     expect(parseStandardMaterial3DScalars({}).useVertexColors).toBe(false);
-    expect(
-      parseStandardMaterial3DScalars({ vertex_color_use_as_albedo: 'true' }).useVertexColors
-    ).toBe(true);
+    expect(parseStandardMaterial3DScalars({ vertex_color_use_as_albedo: 'true' }).useVertexColors).toBe(true);
   });
 
   it('ao_enabled → aoEnabled (default false)', () => {

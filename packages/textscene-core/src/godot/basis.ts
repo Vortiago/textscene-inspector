@@ -9,9 +9,15 @@ import { basisDeterminant, isEqualApprox, isZeroApprox, sign } from './math.js';
 
 /** The nine row-major components of a serialised `Basis`. */
 export type BasisComponents = readonly [
-  number, number, number,
-  number, number, number,
-  number, number, number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
 ];
 
 /** Column `index` of the basis, the vector `Basis::get_column` returns. */
@@ -25,11 +31,7 @@ function dot(a: readonly number[], b: readonly number[]): number {
 
 /** `Basis::get_scale_abs()` (basis.cpp:287-292): the three column magnitudes, unsigned. */
 export function basisGetScaleAbs(n: BasisComponents): [number, number, number] {
-  return [
-    Math.hypot(n[0], n[3], n[6]),
-    Math.hypot(n[1], n[4], n[7]),
-    Math.hypot(n[2], n[5], n[8]),
-  ];
+  return [Math.hypot(n[0], n[3], n[6]), Math.hypot(n[1], n[4], n[7]), Math.hypot(n[2], n[5], n[8])];
 }
 
 /**

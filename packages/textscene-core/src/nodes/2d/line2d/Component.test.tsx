@@ -46,9 +46,7 @@ describe('<Line2D>', () => {
       node({ points: 'PackedVector2Array(0, 0, 100, 0, 100, 100)', width: '20.0' })
     );
     const geom = (drawn(renderer)[0]!.instance as THREE.Mesh).geometry as THREE.BufferGeometry;
-    const triangles = geom.index
-      ? geom.index.count / 3
-      : geom.attributes.position!.count / 3;
+    const triangles = geom.index ? geom.index.count / 3 : geom.attributes.position!.count / 3;
     expect(triangles).toBeGreaterThanOrEqual(4); // 2 segments × 2 triangles
   });
 
@@ -68,9 +66,7 @@ describe('<Line2D>', () => {
   });
 
   it('negates Y so Godot +Y-down maps into the conjugated 2D frame', async () => {
-    const renderer = await render(
-      node({ points: 'PackedVector2Array(0, 0, 0, 100)' })
-    );
+    const renderer = await render(node({ points: 'PackedVector2Array(0, 0, 0, 100)' }));
     const geom = (drawn(renderer)[0]!.instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     geom.computeBoundingBox();
     // Godot y ∈ [0,100] → three y ∈ [-100, 0] (width expands x, not y, on a

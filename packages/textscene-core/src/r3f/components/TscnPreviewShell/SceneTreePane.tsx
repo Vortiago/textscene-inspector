@@ -35,9 +35,7 @@ export function SceneTreePane({
   let treeBody: ReactNode;
   if (error) {
     treeBody = (
-      <div className={styles.emptyState}>
-        No scene loaded — fix the parse error above to continue.
-      </div>
+      <div className={styles.emptyState}>No scene loaded — fix the parse error above to continue.</div>
     );
   } else if (sceneGraph === null) {
     treeBody = <div className={styles.loading}>Loading scene…</div>;

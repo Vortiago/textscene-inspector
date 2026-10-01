@@ -8,10 +8,9 @@ import { parseSubViewport } from './parser';
  */
 describe('parseSubViewport', () => {
   it('parses name and parent, and carries no transform (happy path)', () => {
-    const result = parseSubViewport(
-      heading('SubViewport', { name: 'RenderBooth', parent: '.' }),
-      { size: 'Vector2i(600, 400)' }
-    );
+    const result = parseSubViewport(heading('SubViewport', { name: 'RenderBooth', parent: '.' }), {
+      size: 'Vector2i(600, 400)',
+    });
     expect(result.name).toBe('RenderBooth');
     expect(result.parent).toBe('.');
     // A SubViewport derives from Viewport and Node, so it has no spatial

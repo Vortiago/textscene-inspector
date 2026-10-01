@@ -38,7 +38,11 @@ export function Tree({ solveNode, tint, rect, renderOrder, theme }: NativeContro
         Array.from({ length: columns }, (_, i) => (
           <CanvasItemGroup
             key={i}
-            position={[treeTitleButtonX(i, contentRect.x, columnWidthPx, rect.w, solveNode.rtl), -panelBox.contentMargin.top, 0]}
+            position={[
+              treeTitleButtonX(i, contentRect.x, columnWidthPx, rect.w, solveNode.rtl),
+              -panelBox.contentMargin.top,
+              0,
+            ]}
           >
             <StyleBoxQuad
               styleBox={titleButtonBox}

@@ -10,21 +10,12 @@ import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 
 export function Node3D({ node, children }: NodeComponentProps) {
   const props = node.properties as Node3DProperties;
-  const { position, rotation, scale } = useMemo(
-    () => transformFromNode3DProperties(props),
-    [props]
-  );
+  const { position, rotation, scale } = useMemo(() => transformFromNode3DProperties(props), [props]);
   const visible = props.visible !== false;
   // paint-order-safe: 3D content, which the canvas key never reaches. Only the
   // 2D canvas gives `groupOrder` a value.
   return (
-    <group
-      name={node.name}
-      position={position}
-      rotation={rotation}
-      scale={scale}
-      visible={visible}
-    >
+    <group name={node.name} position={position} rotation={rotation} scale={scale} visible={visible}>
       {children}
     </group>
   );

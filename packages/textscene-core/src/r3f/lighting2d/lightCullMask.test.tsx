@@ -149,7 +149,9 @@ function classBuffers(renderer: Rendered, name: string): (THREE.Texture | null)[
 
 describe('2D light cull masks, through the dispatcher', () => {
   it('gives every light the SAME class when they share a cull mask', async () => {
-    const renderer = await render(scene(`${panel('P', null, 0)}${light('A', null, 40)}${light('B', null, 90)}`));
+    const renderer = await render(
+      scene(`${panel('P', null, 0)}${light('A', null, 40)}${light('B', null, 90)}`)
+    );
     expect(lightQuadLayers(renderer)).toEqual([LIGHT_LAYER, LIGHT_LAYER]);
     // One class, and the item reads it.
     expect(classWeights(renderer, 'P')).toEqual([1, 0, 0, 0]);
@@ -271,7 +273,7 @@ ${properties}texture = ExtResource("1")`;
  * bare canvas tint, and a default light leaves a panel in a bare CanvasLayer at its raw albedo.
  */
 describe('2D light range windows, through the dispatcher', () => {
-  it('culls an item whose z sits above the light\'s window', async () => {
+  it("culls an item whose z sits above the light's window", async () => {
     const renderer = await render(
       scene(
         `${windowPanel('Inside', '')}${windowPanel('Above', 'z_index = 5\n')}` +
@@ -328,7 +330,7 @@ describe('2D light range windows, through the dispatcher', () => {
     expect(classWeights(renderer, 'HudPanel')).toEqual([0, 0, 0, 0]);
   });
 
-  it('reaches a CanvasLayer once the light\'s layer window includes it', async () => {
+  it("reaches a CanvasLayer once the light's layer window includes it", async () => {
     const renderer = await render(
       scene(
         `${windowPanel('WorldPanel', '')}\n[node name="Hud" type="CanvasLayer" parent="."]\nlayer = 3\n` +
@@ -345,9 +347,7 @@ describe('2D light range windows, through the dispatcher', () => {
     // The accumulation is a screen-space sum, so a light that reaches fewer
     // items than its pass-mate cannot be excluded per fragment afterwards.
     const renderer = await render(
-      scene(
-        `${windowPanel('P', '')}${windowLight('Wide')}${windowLight('Narrow', 'range_z_max = 4\n')}`
-      )
+      scene(`${windowPanel('P', '')}${windowLight('Wide')}${windowLight('Narrow', 'range_z_max = 4\n')}`)
     );
     // Ordered by the tuple: both masks are 1, so the narrower zMax sorts first.
     expect(lightQuadLayers(renderer)).toEqual([LIGHT_LAYER + 1, LIGHT_LAYER]);

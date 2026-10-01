@@ -6,10 +6,7 @@
  */
 
 import { warn } from '../../../logger';
-import {
-  parsePackedInt32Arrays,
-  parsePackedVector2Array,
-} from '../../shapes/packedArray';
+import { parsePackedInt32Arrays, parsePackedVector2Array } from '../../shapes/packedArray';
 import { drawableNavigationPolygons } from '../polygonIndices';
 import type { NavigationPolygonData } from './types';
 
@@ -20,9 +17,7 @@ const FLOATS_PER_VERTEX = 2;
  * drawable: absent, empty, unreadable, or without one surviving polygon. Never
  * throws: a malformed value degrades to null so a render pass cannot fault on it.
  */
-export function decodeNavigationPolygon(
-  properties: Record<string, unknown>
-): NavigationPolygonData | null {
+export function decodeNavigationPolygon(properties: Record<string, unknown>): NavigationPolygonData | null {
   // `Record<string, unknown>` serves both arrival paths unchanged: a
   // ParsedResource's `properties` and an inline `[sub_resource]`'s `data`. A
   // non-string value is not a Godot-text literal, so it decodes to nothing.
@@ -44,9 +39,7 @@ export function decodeNavigationPolygon(
   // A trailing half vertex would leave the position buffer's item count
   // fractional, so it is dropped rather than hand THREE a ragged array.
   const vertices =
-    flat.length === vertexCount * FLOATS_PER_VERTEX
-      ? flat
-      : flat.slice(0, vertexCount * FLOATS_PER_VERTEX);
+    flat.length === vertexCount * FLOATS_PER_VERTEX ? flat : flat.slice(0, vertexCount * FLOATS_PER_VERTEX);
 
   let indexLists: number[][];
   try {

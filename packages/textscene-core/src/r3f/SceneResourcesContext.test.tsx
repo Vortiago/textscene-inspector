@@ -14,18 +14,10 @@ import {
 } from './SceneResourcesContext';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 
-const hostInternal: TscnInternalResource[] = [
-  { id: 'BoxMesh_host', type: 'BoxMesh', data: {} },
-];
-const hostExternal: TscnExternalResource[] = [
-  { id: '1_tex', type: 'Texture2D', path: 'res://host.png' },
-];
-const subInternal: TscnInternalResource[] = [
-  { id: 'SphereMesh_sub', type: 'SphereMesh', data: {} },
-];
-const subExternal: TscnExternalResource[] = [
-  { id: '1_tex', type: 'Texture2D', path: 'res://sub.png' },
-];
+const hostInternal: TscnInternalResource[] = [{ id: 'BoxMesh_host', type: 'BoxMesh', data: {} }];
+const hostExternal: TscnExternalResource[] = [{ id: '1_tex', type: 'Texture2D', path: 'res://host.png' }];
+const subInternal: TscnInternalResource[] = [{ id: 'SphereMesh_sub', type: 'SphereMesh', data: {} }];
+const subExternal: TscnExternalResource[] = [{ id: '1_tex', type: 'Texture2D', path: 'res://sub.png' }];
 
 describe('SceneResourcesContext', () => {
   it('defaults to empty resource lists outside a provider (degrade, not throw)', () => {
@@ -37,10 +29,7 @@ describe('SceneResourcesContext', () => {
   it('provider supplies internal and external resources (top level, empty parent)', () => {
     const { result } = renderHook(() => useSceneResources(), {
       wrapper: ({ children }: { children: ReactNode }) => (
-        <SceneResourcesProvider
-          internalResources={hostInternal}
-          externalResources={hostExternal}
-        >
+        <SceneResourcesProvider internalResources={hostInternal} externalResources={hostExternal}>
           {children}
         </SceneResourcesProvider>
       ),

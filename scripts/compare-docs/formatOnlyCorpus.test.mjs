@@ -20,10 +20,21 @@ const CORPUS = [
   { type: TYPE_STRING, literal: '"a"', cite: 'variant_parser.cpp:276', stores: 'as-written' },
   { type: TYPE_STRING, literal: '@"a"', cite: 'variant_parser.cpp:262-265', stores: 'as-written' },
   { type: TYPE_ARRAY, literal: '[]', cite: 'variant_parser.cpp:1650', stores: 'as-written' },
-  { type: TYPE_ARRAY, literal: '[null]', cite: 'polygon_2d.cpp:435-437', stores: 'as-written', slot: 'untyped' },
+  {
+    type: TYPE_ARRAY,
+    literal: '[null]',
+    cite: 'polygon_2d.cpp:435-437',
+    stores: 'as-written',
+    slot: 'untyped',
+  },
 ];
 
-const CONVERTED = { type: TYPE_STRING, literal: 'NodePath("a")', cite: 'variant.cpp:582-589', stores: 'converted' };
+const CONVERTED = {
+  type: TYPE_STRING,
+  literal: 'NodePath("a")',
+  cite: 'variant.cpp:582-589',
+  stores: 'converted',
+};
 
 /** A scratch validator that refuses anything `accepts` rejects. */
 function scratch(accepts, tags = { formatOnly: true }) {
@@ -46,7 +57,13 @@ describe('applicableEntries', () => {
   });
 
   it('gives an entry scoped to one element hint only to that hint', () => {
-    const scoped = { type: TYPE_ARRAY, literal: '["a"]', cite: 'array.cpp:260', stores: 'converted', slot: { hint: HINT_ARRAY_TYPE, hint_string: 'NodePath' } };
+    const scoped = {
+      type: TYPE_ARRAY,
+      literal: '["a"]',
+      cite: 'array.cpp:260',
+      stores: 'converted',
+      slot: { hint: HINT_ARRAY_TYPE, hint_string: 'NodePath' },
+    };
     const nodePaths = row('X.a', TYPE_ARRAY, HINT_ARRAY_TYPE, 'NodePath');
     const ints = row('X.b', TYPE_ARRAY, HINT_ARRAY_TYPE, 'int');
     expect(applicableEntries(nodePaths, [scoped])).toEqual([scoped]);
@@ -55,7 +72,13 @@ describe('applicableEntries', () => {
   });
 
   it('gives an entry that names a hint but no hint string to every slot with that hint', () => {
-    const anyResource = { type: TYPE_OBJECT, literal: 'SubResource("a")', cite: 'variant_parser.cpp:1115', stores: 'as-written', slot: { hint: HINT_RESOURCE_TYPE } };
+    const anyResource = {
+      type: TYPE_OBJECT,
+      literal: 'SubResource("a")',
+      cite: 'variant_parser.cpp:1115',
+      stores: 'as-written',
+      slot: { hint: HINT_RESOURCE_TYPE },
+    };
     const textures = row('X.a', TYPE_OBJECT, HINT_RESOURCE_TYPE, 'Texture2D');
     expect(applicableEntries(textures, [anyResource])).toEqual([anyResource]);
     expect(applicableEntries(row('X.b', TYPE_OBJECT), [anyResource])).toEqual([]);
@@ -119,12 +142,17 @@ describe('corpusRefusals', () => {
 
 describe('the corpus data', () => {
   it('cites an engine line for every literal and every setter type', () => {
-    const cites = [...FORMAT_ONLY_CORPUS.map((e) => [e.literal, e.cite]), ...[...SETTER_TYPES].map(([label, e]) => [label, e.cite])];
+    const cites = [
+      ...FORMAT_ONLY_CORPUS.map((e) => [e.literal, e.cite]),
+      ...[...SETTER_TYPES].map(([label, e]) => [label, e.cite]),
+    ];
     expect(cites.length).toBeGreaterThan(80);
     expect(cites.filter(([, cite]) => !ENGINE_CITE_RE.test(cite))).toEqual([]);
   });
 
   it('says for every literal whether the slot stores it as written or converted', () => {
-    expect(FORMAT_ONLY_CORPUS.filter((e) => e.stores !== 'as-written' && e.stores !== 'converted')).toEqual([]);
+    expect(FORMAT_ONLY_CORPUS.filter((e) => e.stores !== 'as-written' && e.stores !== 'converted')).toEqual(
+      []
+    );
   });
 });

@@ -107,9 +107,7 @@ flip_faces = true
       const linter = new Linter();
       const diagnostics = linter.lint(content);
 
-      const flipFacesErrors = diagnostics.filter(d =>
-        d.message.includes('flip_faces')
-      );
+      const flipFacesErrors = diagnostics.filter((d) => d.message.includes('flip_faces'));
       expect(flipFacesErrors).toHaveLength(0);
     });
 
@@ -125,9 +123,7 @@ flip_faces = false
       const linter = new Linter();
       const diagnostics = linter.lint(content);
 
-      const flipFacesErrors = diagnostics.filter(d =>
-        d.message.includes('flip_faces')
-      );
+      const flipFacesErrors = diagnostics.filter((d) => d.message.includes('flip_faces'));
       expect(flipFacesErrors).toHaveLength(0);
     });
 
@@ -143,8 +139,8 @@ flip_faces = yes
       const linter = new Linter();
       const diagnostics = linter.lint(content);
 
-      const flipFacesErrors = diagnostics.filter(d =>
-        d.message.includes('flip_faces') && d.message.includes('must be a boolean (true or false)')
+      const flipFacesErrors = diagnostics.filter(
+        (d) => d.message.includes('flip_faces') && d.message.includes('must be a boolean (true or false)')
       );
       expect(flipFacesErrors.length).toBeGreaterThan(0);
       expect(flipFacesErrors[0]!.severity).toBe('error');
@@ -162,9 +158,7 @@ flip_faces = 1
       const linter = new Linter();
       const diagnostics = linter.lint(content);
 
-      const flipFacesErrors = diagnostics.filter(d =>
-        d.message.includes('flip_faces')
-      );
+      const flipFacesErrors = diagnostics.filter((d) => d.message.includes('flip_faces'));
       expect(flipFacesErrors.length).toBeGreaterThan(0);
       expect(flipFacesErrors[0]!.severity).toBe('warning');
     });
@@ -185,7 +179,7 @@ flip_faces = true
       const linter = new Linter();
       const diagnostics = linter.lint(content);
 
-      expect(diagnostics.filter(d => d.severity === 'error')).toHaveLength(0);
+      expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0);
     });
 
     it('should detect a malformed size vector (parity with QuadMesh)', () => {
@@ -214,9 +208,7 @@ flip_faces = True
       const linter = new Linter();
       const diagnostics = linter.lint(content);
 
-      const flipFacesErrors = diagnostics.filter(d =>
-        d.message.includes('flip_faces')
-      );
+      const flipFacesErrors = diagnostics.filter((d) => d.message.includes('flip_faces'));
       expect(flipFacesErrors.length).toBeGreaterThan(0);
       expect(flipFacesErrors[0]!.severity).toBe('error');
     });

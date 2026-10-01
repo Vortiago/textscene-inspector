@@ -60,16 +60,19 @@ function makeTownNode(materialRef: string | undefined): TscnNode {
     name: 'town',
     type: 'Node3D',
     instance: 'ExtResource("glb_1")',
-    children: materialRef === undefined ? [] : [
-      {
-        name: 'road',
-        type: 'Node',
-        children: [],
-        overridesExistingNode: true,
-        rawProperties: { 'surface_material_override/0': materialRef },
-        properties: { name: 'road' } as Record<string, unknown>,
-      },
-    ],
+    children:
+      materialRef === undefined
+        ? []
+        : [
+            {
+              name: 'road',
+              type: 'Node',
+              children: [],
+              overridesExistingNode: true,
+              rawProperties: { 'surface_material_override/0': materialRef },
+              properties: { name: 'road' } as Record<string, unknown>,
+            },
+          ],
     properties: { name: 'town' } as Record<string, unknown>,
   };
 }
@@ -112,14 +115,17 @@ function seeded(importPath?: string) {
   return fake;
 }
 
-const RED_TRES = '[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\nalbedo_color = Color(1, 0, 0, 1)\n';
+const RED_TRES =
+  '[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\nalbedo_color = Color(1, 0, 0, 1)\n';
 
 describe('GLBSceneRoot — surface_material_override on a GLB-internal mesh', () => {
   it('applies a material that arrived as an ExtResource .tres', async () => {
     const fake = seeded();
     fake.resources.seed(
       TRES_PATH,
-      parseTresFile('[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\nalbedo_color = Color(1, 0, 0, 1)\n')
+      parseTresFile(
+        '[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\nalbedo_color = Color(1, 0, 0, 1)\n'
+      )
     );
 
     const renderer = await render(fake.loader, 'ExtResource("tres_1")');
@@ -132,10 +138,7 @@ describe('GLBSceneRoot — surface_material_override on a GLB-internal mesh', ()
     const material = roadMaterial(renderer);
     // A dropped override leaves the glTF's own material, which looks deliberately authored.
     expect(material.color.getHex()).not.toBe(GLTF_COLOR);
-    const linear = material.color.getRGB(
-      { r: 0, g: 0, b: 0 } as THREE.Color,
-      THREE.LinearSRGBColorSpace
-    );
+    const linear = material.color.getRGB({ r: 0, g: 0, b: 0 } as THREE.Color, THREE.LinearSRGBColorSpace);
     expect(linear.g).toBeCloseTo(1, 5);
     expect(linear.r).toBeCloseTo(0, 5);
     expect(material.roughness).toBeCloseTo(0.25, 5);
@@ -175,7 +178,10 @@ describe('GLBSceneRoot — import sidecar material remap', () => {
     fake.resources.seed(TRES_PATH, parseTresFile(RED_TRES));
 
     const renderer = await render(fake.loader, 'SubResource("Mat_road")');
-    const linear = roadMaterial(renderer).color.getRGB({ r: 0, g: 0, b: 0 } as THREE.Color, THREE.LinearSRGBColorSpace);
+    const linear = roadMaterial(renderer).color.getRGB(
+      { r: 0, g: 0, b: 0 } as THREE.Color,
+      THREE.LinearSRGBColorSpace
+    );
     expect(linear.g).toBeCloseTo(1, 5);
     expect(linear.r).toBeCloseTo(0, 5);
   });

@@ -93,17 +93,12 @@ describe('createGLBMesh', () => {
     // model's AnimationPlayer.
     const glbPath = findRepoAsset('scenes/demos/3d/platformer/player/player.glb');
     const buffer = readFileSync(glbPath);
-    const arrayBuffer = buffer.buffer.slice(
-      buffer.byteOffset,
-      buffer.byteOffset + buffer.byteLength
-    );
+    const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
 
     const object = await createGLBMesh(arrayBuffer as ArrayBuffer);
     const names = object.animations.map((c) => c.name);
 
-    expect(names).toEqual(
-      expect.arrayContaining(['idle', 'run', 'jump', 'walk', 'falling'])
-    );
+    expect(names).toEqual(expect.arrayContaining(['idle', 'run', 'jump', 'walk', 'falling']));
   });
 });
 
@@ -297,10 +292,7 @@ describe('cloneWithMaterials', () => {
     const bone = new THREE.Bone();
     bone.name = 'b0';
     root.add(bone);
-    const skinned = new THREE.SkinnedMesh(
-      new THREE.BoxGeometry(),
-      new THREE.MeshStandardMaterial()
-    );
+    const skinned = new THREE.SkinnedMesh(new THREE.BoxGeometry(), new THREE.MeshStandardMaterial());
     skinned.name = 'skin';
     root.add(skinned);
     skinned.bind(new THREE.Skeleton([bone]));
@@ -338,10 +330,7 @@ describe('disposeClonedMaterials', () => {
   }
 
   it('disposes a single-material mesh clone without touching its (shared) geometry', () => {
-    const source = new THREE.Mesh(
-      new THREE.BoxGeometry(),
-      new THREE.MeshStandardMaterial()
-    );
+    const source = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshStandardMaterial());
     source.name = 'single';
     const clone = cloneWithMaterials(source);
     const clonedMesh = findMesh(clone, 'single');
@@ -391,10 +380,7 @@ describe('disposeClonedMaterials', () => {
   });
 
   it('does not dispose the SOURCE material (only the clone owns the disposed instance)', () => {
-    const source = new THREE.Mesh(
-      new THREE.BoxGeometry(),
-      new THREE.MeshStandardMaterial()
-    );
+    const source = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshStandardMaterial());
     source.name = 'single';
     const clone = cloneWithMaterials(source);
     const sourceMaterialSpy = vi.spyOn(source.material as THREE.Material, 'dispose');

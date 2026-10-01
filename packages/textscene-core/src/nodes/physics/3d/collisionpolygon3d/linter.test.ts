@@ -4,7 +4,17 @@
  * get_configuration_warnings() (:235-252), so all three warn.
  */
 import { describe, it, expect } from 'vitest';
-import { node, scene, lint, expectDiagnostic, expectNoDiagnostic, expectClean , instanced, override, packedScene} from '../../../../linter/testing/testkit';
+import {
+  node,
+  scene,
+  lint,
+  expectDiagnostic,
+  expectNoDiagnostic,
+  expectClean,
+  instanced,
+  override,
+  packedScene,
+} from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
@@ -23,7 +33,11 @@ describe('CollisionPolygon3D Linter', () => {
         node('Node3D', {}, { name: 'Root' }),
         node('CollisionPolygon3D', { polygon: validPolygon }, { parent: '.' })
       ),
-      { ruleName: 'collisionpolygon3d-invalid-parent', severity: 'warning', contains: ['Node3D', 'CollisionObject3D'] }
+      {
+        ruleName: 'collisionpolygon3d-invalid-parent',
+        severity: 'warning',
+        contains: ['Node3D', 'CollisionObject3D'],
+      }
     );
   });
 
@@ -88,14 +102,20 @@ describe('CollisionPolygon3D Linter', () => {
 
   it('warns on a single stray coordinate, which forms no complete vertex pair (unified with the 2D vertex-pairing count)', () => {
     expectDiagnostic(
-      scene(node('StaticBody3D'), node('CollisionPolygon3D', { polygon: 'PackedVector2Array(5)' }, { parent: '.' })),
+      scene(
+        node('StaticBody3D'),
+        node('CollisionPolygon3D', { polygon: 'PackedVector2Array(5)' }, { parent: '.' })
+      ),
       { ruleName: 'collisionpolygon3d-empty-polygon', severity: 'warning' }
     );
   });
 
   it('stays silent on emptiness for a polygon value the format validator itself cannot parse', () => {
     expectNoDiagnostic(
-      scene(node('StaticBody3D'), node('CollisionPolygon3D', { polygon: 'NodePath("nonsense")' }, { parent: '.' })),
+      scene(
+        node('StaticBody3D'),
+        node('CollisionPolygon3D', { polygon: 'NodePath("nonsense")' }, { parent: '.' })
+      ),
       { ruleName: 'collisionpolygon3d-empty-polygon' }
     );
   });

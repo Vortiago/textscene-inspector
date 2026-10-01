@@ -37,7 +37,12 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
   const props = painterView<OptionButtonProperties>(solveNode);
   const state = resolveButtonDrawState(props.disabled);
 
-  const baseStyleBox = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.optionButton, state, solveNode.rtl);
+  const baseStyleBox = pickButtonStyleBox(
+    solveNode.styleBoxes,
+    theme.widgets.optionButton,
+    state,
+    solveNode.rtl
+  );
 
   const clippingPlanes = useControlClipPlanes();
 
@@ -53,10 +58,7 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
   // Read in the render body, not the `useMemo` below, for the reason Label's Component.tsx gives.
   const fontMetrics = resolveNodeFontMetrics(solveNode, OPTION_BUTTON_THEME_FONT_KEY);
   const layout: TextLayoutResult | null = useMemo(
-    () =>
-      hasText
-        ? shapeButtonLabel(text, fontSizePx, fontMetrics)
-        : null,
+    () => (hasText ? shapeButtonLabel(text, fontSizePx, fontMetrics) : null),
     [hasText, text, fontSizePx, fontMetrics]
   );
 
@@ -79,7 +81,17 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
           ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
           : { x: 0, y: 0 },
       }),
-    [rect.w, rect.h, baseStyleBox.contentMargin, arrowSize, arrowMargin, layout, solveNode.constants, theme, solveNode.rtl]
+    [
+      rect.w,
+      rect.h,
+      baseStyleBox.contentMargin,
+      arrowSize,
+      arrowMargin,
+      layout,
+      solveNode.constants,
+      theme,
+      solveNode.rtl,
+    ]
   );
 
   return (

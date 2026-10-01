@@ -145,7 +145,12 @@ describe('<LineEdit> — chrome (StyleBoxQuad)', () => {
   it('draws a resolved theme_override_styles/normal chrome, not the default fill, when one is present', async () => {
     const override = styleBox({ bgColor: { r: 0.9, g: 0.1, b: 0.1, a: 1 } });
     const renderer = await ReactThreeTestRenderer.create(
-      <LineEdit {...painterEnv()} solveNode={solveNode({}, { normal: override })} rect={RECT} renderOrder={0} />
+      <LineEdit
+        {...painterEnv()}
+        solveNode={solveNode({}, { normal: override })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     const mesh = findChromeMesh(renderer.scene)!;
     const fill = findFillColor(mesh);
@@ -154,7 +159,12 @@ describe('<LineEdit> — chrome (StyleBoxQuad)', () => {
 
   it('flat=true draws NO chrome mesh at all, but still draws the text', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <LineEdit {...painterEnv()} solveNode={solveNode({ flat: true, text: 'Hi' })} rect={RECT} renderOrder={0} />
+      <LineEdit
+        {...painterEnv()}
+        solveNode={solveNode({ flat: true, text: 'Hi' })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     expect(findChromeMesh(renderer.scene)).toBeUndefined();
     expect(findTextMesh(renderer.scene)).toBeDefined();
@@ -235,9 +245,16 @@ describe('<LineEdit> — text: placeholder vs text vs secret echo', () => {
       <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'AB' })} rect={RECT} renderOrder={0} />
     );
     const boxed = await ReactThreeTestRenderer.create(
-      <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'AB', drawControlChars: true })} rect={RECT} renderOrder={0} />
+      <LineEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'AB', drawControlChars: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
-    expect(boxed.scene.findAllByType('Mesh').length).toBeGreaterThan(dropped.scene.findAllByType('Mesh').length);
+    expect(boxed.scene.findAllByType('Mesh').length).toBeGreaterThan(
+      dropped.scene.findAllByType('Mesh').length
+    );
   });
 
   it('secret=true substitutes an ASCII secret_character repeated to the text length (glyph count survives the atlas)', async () => {
@@ -260,7 +277,12 @@ describe('<LineEdit> — text: placeholder vs text vs secret echo', () => {
       'draws one quad per character, exactly like an ASCII override',
     async () => {
       const renderer = await ReactThreeTestRenderer.create(
-        <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'hunter2', secret: true })} rect={RECT} renderOrder={0} />
+        <LineEdit
+          {...painterEnv()}
+          solveNode={solveNode({ text: 'hunter2', secret: true })}
+          rect={RECT}
+          renderOrder={0}
+        />
       );
       const mesh = findTextMesh(renderer.scene)!;
       const indexAttr = (mesh.geometry as THREE.BufferGeometry).index!;
@@ -277,7 +299,12 @@ describe('<LineEdit> — alignment', () => {
       <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
     );
     const centerRenderer = await ReactThreeTestRenderer.create(
-      <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'Hi', alignment: 1 })} rect={RECT} renderOrder={0} />
+      <LineEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'Hi', alignment: 1 })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     const leftX = findTextGroup(leftRenderer.scene)!.position.x;
     const centerX = findTextGroup(centerRenderer.scene)!.position.x;
@@ -286,30 +313,27 @@ describe('<LineEdit> — alignment', () => {
 });
 
 describe('<LineEdit> — tint composition', () => {
-  it(
-    'applies the walker-composed tint as ONE product, reaching chrome AND text alike',
-    async () => {
-      const flat = styleBox({ bgColor: { r: 1, g: 1, b: 1, a: 1 } });
-      const renderer = await ReactThreeTestRenderer.create(
-        <LineEdit
-          {...painterEnv()}
-          // The walker's own product: ambient(0.5) x self_modulate(0.5) = 0.25.
-          tint={painterTint({ r: 0.25, g: 0.25, b: 0.25, a: 1 })}
-          solveNode={solveNode({ text: 'Hi' }, { normal: flat })}
-          rect={RECT}
-          renderOrder={0}
-        />
-      );
-      const chromeColor = (findChromeMesh(renderer.scene)!.geometry as THREE.BufferGeometry).attributes
-        .color as THREE.BufferAttribute;
-      // The StyleBox's own white bgColor x tint(0.25) = 0.25, in sRGB.
-      expect(chromeColor.getX(0)).toBeCloseTo(0.25, 4);
+  it('applies the walker-composed tint as ONE product, reaching chrome AND text alike', async () => {
+    const flat = styleBox({ bgColor: { r: 1, g: 1, b: 1, a: 1 } });
+    const renderer = await ReactThreeTestRenderer.create(
+      <LineEdit
+        {...painterEnv()}
+        // The walker's own product: ambient(0.5) x self_modulate(0.5) = 0.25.
+        tint={painterTint({ r: 0.25, g: 0.25, b: 0.25, a: 1 })}
+        solveNode={solveNode({ text: 'Hi' }, { normal: flat })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const chromeColor = (findChromeMesh(renderer.scene)!.geometry as THREE.BufferGeometry).attributes
+      .color as THREE.BufferAttribute;
+    // The StyleBox's own white bgColor x tint(0.25) = 0.25, in sRGB.
+    expect(chromeColor.getX(0)).toBeCloseTo(0.25, 4);
 
-      const textMaterial = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-      // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, then linearised.
-      expect(textMaterial.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.21875), 5);
-    }
-  );
+    const textMaterial = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
+    // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, then linearised.
+    expect(textMaterial.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.21875), 5);
+  });
 });
 
 describe('<LineEdit> — content-rect clipping', () => {
@@ -355,7 +379,9 @@ describe('<LineEdit> registered through <ControlCanvasWalker> (end-to-end walker
       <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
     );
 
-    const groups = renderer.scene.findAllByType('Group').map((g) => g.instance as { visible: boolean; name: string });
+    const groups = renderer.scene
+      .findAllByType('Group')
+      .map((g) => g.instance as { visible: boolean; name: string });
     const rootGroup = groups.find((g) => g.name === 'LineEdit:MyLineEdit');
     expect(rootGroup).toBeDefined();
     expect(rootGroup!.visible).toBe(false);
@@ -455,7 +481,13 @@ describe('<LineEdit> — right_icon', () => {
       children: [],
       properties: { name: 'MyLineEdit', rightIcon: 'ExtResource("1")', ...raw } as LineEditProperties,
     };
-    const n: SolveNode = { ...emptySolveNode(), path: 'MyLineEdit', node, resources: ICON_SCOPE, textureSlots: { right_icon: iconSize } };
+    const n: SolveNode = {
+      ...emptySolveNode(),
+      path: 'MyLineEdit',
+      node,
+      resources: ICON_SCOPE,
+      textureSlots: { right_icon: iconSize },
+    };
     return ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider internalResources={[]} externalResources={ICON_SCOPE.externalResources}>
@@ -471,7 +503,7 @@ describe('<LineEdit> — right_icon', () => {
     expect(quads.some((m) => (m.material as THREE.MeshBasicMaterial).map != null)).toBe(true);
   });
 
-  it('insets the text content rect by the icon\'s own (ORIGINAL_SIZE) width', async () => {
+  it("insets the text content rect by the icon's own (ORIGINAL_SIZE) width", async () => {
     const withIcon = await renderWithIcon({ text: 'Hi' }, RECT);
     const without = await ReactThreeTestRenderer.create(
       <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
@@ -480,7 +512,7 @@ describe('<LineEdit> — right_icon', () => {
       m.scene
         .findAllByType('Mesh')
         .map((x) => x.instance as THREE.Mesh)
-        .find((x) => ((x.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined))!
+        .find((x) => (x.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined)!
         .material as THREE.ShaderMaterial & { clippingPlanes?: THREE.Plane[] };
     // Just past the icon-narrowed content edge (200 - 4 margin - 32 icon = 164): inside a content rect
     // that ignored the icon, outside this one.
@@ -495,7 +527,12 @@ describe('<LineEdit> — right_icon', () => {
 describe('<LineEdit> — clear_button_enabled', () => {
   it('draws NO icon at all with no text (display_clear_icon requires !using_placeholder)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <LineEdit {...painterEnv()} solveNode={solveNode({ clearButtonEnabled: true })} rect={RECT} renderOrder={0} />
+      <LineEdit
+        {...painterEnv()}
+        solveNode={solveNode({ clearButtonEnabled: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     const quads = findControlQuadMeshes(renderer.scene);
     expect(quads.some((m) => (m.material as THREE.MeshBasicMaterial).map != null)).toBe(false);
@@ -526,7 +563,9 @@ describe('<LineEdit> — clear_button_enabled', () => {
           renderOrder={0}
         />
       );
-      const icon = findControlQuadMeshes(renderer.scene).find((m) => (m.material as THREE.MeshBasicMaterial).map != null)!;
+      const icon = findControlQuadMeshes(renderer.scene).find(
+        (m) => (m.material as THREE.MeshBasicMaterial).map != null
+      )!;
       return icon.getWorldPosition(new THREE.Vector3()).x;
     };
     const ltrX = await iconXFor(false);
@@ -555,7 +594,9 @@ describe('<LineEdit> — caret_force_displayed', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
     );
-    const quads = findControlQuadMeshes(renderer.scene).filter((m) => (m.material as THREE.MeshBasicMaterial).map == null);
+    const quads = findControlQuadMeshes(renderer.scene).filter(
+      (m) => (m.material as THREE.MeshBasicMaterial).map == null
+    );
     expect(quads).toHaveLength(0);
   });
 
@@ -568,7 +609,9 @@ describe('<LineEdit> — caret_force_displayed', () => {
         renderOrder={0}
       />
     );
-    const quads = findControlQuadMeshes(renderer.scene).filter((m) => (m.material as THREE.MeshBasicMaterial).map == null);
+    const quads = findControlQuadMeshes(renderer.scene).filter(
+      (m) => (m.material as THREE.MeshBasicMaterial).map == null
+    );
     expect(quads).toHaveLength(1);
     const group = quads[0]!.parent as THREE.Object3D;
     expect(group.position.x).toBe(4); // style margin left, default theme.
@@ -576,9 +619,16 @@ describe('<LineEdit> — caret_force_displayed', () => {
 
   it('draws the caret at the left margin even for an EMPTY field (the fallback branch, no text and no placeholder)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <LineEdit {...painterEnv()} solveNode={solveNode({ caretForceDisplayed: true })} rect={RECT} renderOrder={0} />
+      <LineEdit
+        {...painterEnv()}
+        solveNode={solveNode({ caretForceDisplayed: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
-    const quads = findControlQuadMeshes(renderer.scene).filter((m) => (m.material as THREE.MeshBasicMaterial).map == null);
+    const quads = findControlQuadMeshes(renderer.scene).filter(
+      (m) => (m.material as THREE.MeshBasicMaterial).map == null
+    );
     expect(quads).toHaveLength(1);
     expect((quads[0]!.parent as THREE.Object3D).position.x).toBe(4);
   });

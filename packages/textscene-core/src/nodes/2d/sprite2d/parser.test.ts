@@ -78,7 +78,11 @@ describe('frame replayed in file order (sprite_2d.cpp:358)', () => {
   // new sheet: `frame = original_row * p_amount + original_column`, so this body
   // holds frame 2, and draws it.
   it('draws the re-mapped frame when hframes is written below frame', () => {
-    const props = parseSprite2D(heading('Sprite2D', { name: 'S' }), { vframes: '2', frame: '1', hframes: '2' });
+    const props = parseSprite2D(heading('Sprite2D', { name: 'S' }), {
+      vframes: '2',
+      frame: '1',
+      hframes: '2',
+    });
     expect(props.frame).toBe(2);
   });
 

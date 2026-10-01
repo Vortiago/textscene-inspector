@@ -3,10 +3,7 @@
 import type { PropertySection } from '../../../../core/NodeRegistry';
 import type { OmniLight3DProperties } from './types';
 import { formatNode3DProperties } from '../../../base/node3d/propertyFormatter';
-import {
-  formatBaseLightSection,
-  formatShadowSectionWithNormalBias,
-} from '../shared/propertyFormatter';
+import { formatBaseLightSection, formatShadowSectionWithNormalBias } from '../shared/propertyFormatter';
 
 export function formatOmniLight3DProperties(properties: OmniLight3DProperties): PropertySection[] {
   const sections: PropertySection[] = [];

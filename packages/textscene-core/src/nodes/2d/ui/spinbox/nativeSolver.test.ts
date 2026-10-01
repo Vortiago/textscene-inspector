@@ -37,7 +37,12 @@ function node(props: Partial<SpinBoxProperties> = {}): SolveNode {
   return {
     ...solveNode(),
     path: 'S',
-    node: { name: 'S', type: 'SpinBox', children: [], properties: { name: 'S', ...props } as SpinBoxProperties },
+    node: {
+      name: 'S',
+      type: 'SpinBox',
+      children: [],
+      properties: { name: 'S', ...props } as SpinBoxProperties,
+    },
   };
 }
 
@@ -177,7 +182,13 @@ describe('spinBoxFullyDisabled / spinBoxUpButtonState / spinBoxDownButtonState',
   });
 
   it('stays enabled at the bound when allow_greater/allow_lesser lifts it (edge case)', () => {
-    const props: SpinBoxProperties = { name: 'S', minValue: 0, maxValue: 10, allowGreater: true, allowLesser: true };
+    const props: SpinBoxProperties = {
+      name: 'S',
+      minValue: 0,
+      maxValue: 10,
+      allowGreater: true,
+      allowLesser: true,
+    };
     expect(spinBoxUpButtonState(props, 10)).toBe('normal');
     expect(spinBoxDownButtonState(props, 0)).toBe('normal');
   });
@@ -204,12 +215,17 @@ describe('spinBoxFieldTextTheme', () => {
   });
 
   it('reads the uneditable colour when not editable (edge case)', () => {
-    expect(spinBoxFieldTextTheme(node(), ctx(), false).color).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 0.5 });
+    expect(spinBoxFieldTextTheme(node(), ctx(), false).color).toEqual({
+      r: 0.875,
+      g: 0.875,
+      b: 0.875,
+      a: 0.5,
+    });
   });
 });
 
 describe('spinBoxMinimumSize', () => {
-  it('floors LineEdit\'s own minimum size plus the buttons block width (happy path)', () => {
+  it("floors LineEdit's own minimum size plus the buttons block width (happy path)", () => {
     const result = spinBoxMinimumSize(node(), ctx());
     expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE + 18, 5);
     expect(result.y).toBe(8 + FONT_HEIGHT);

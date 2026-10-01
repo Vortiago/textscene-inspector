@@ -29,9 +29,7 @@ describe('parseTresFile', () => {
     const parsed = parseTresFile(TILESET_TRES);
 
     expect(parsed.resourceType).toBe('TileSet');
-    expect(parsed.extResources).toEqual([
-      { id: '1', type: 'Texture2D', path: 'res://tileset/isotiles.png' },
-    ]);
+    expect(parsed.extResources).toEqual([{ id: '1', type: 'Texture2D', path: 'res://tileset/isotiles.png' }]);
     expect(parsed.subResources).toHaveLength(1);
     expect(parsed.subResources[0]!.type).toBe('TileSetAtlasSource');
     expect(parsed.subResources[0]!.data['0:0/1/flip_h']).toBe('true');

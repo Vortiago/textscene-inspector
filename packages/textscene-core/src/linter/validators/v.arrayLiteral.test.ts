@@ -13,7 +13,10 @@ import { v, arrayLiteralElements } from './v.js';
 
 const untyped = v.arrayLiteral('st_args');
 const enforced = v.arrayLiteral('connections', { typedAs: 'Dictionary', enforced: 'array.cpp:275-277' });
-const hinted = v.arrayLiteral('custom_effects', { typedAs: 'RichTextEffect', hinted: 'rich_text_label.cpp:7773' });
+const hinted = v.arrayLiteral('custom_effects', {
+  typedAs: 'RichTextEffect',
+  hinted: 'rich_text_label.cpp:7773',
+});
 
 describe('v.arrayLiteral (untyped)', () => {
   it.each([

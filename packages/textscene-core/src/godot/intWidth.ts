@@ -3,7 +3,6 @@
  * per-slot width that selects them. See `int.ts` for the whole picture.
  */
 
-
 /** `(int32_t)` of an integer Variant (`variant.h:436`, `variant.cpp:1495-1497`). */
 export function toInt32(value: number): number {
   return value | 0;

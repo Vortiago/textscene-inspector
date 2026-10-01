@@ -19,7 +19,12 @@ function node(properties: Record<string, unknown>): SolveNode {
 describe('<VideoStreamPlayer> (isolated painter contract)', () => {
   it('renders no mesh with no stream authored', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <VideoStreamPlayer {...painterEnv()} solveNode={node({})} rect={{ x: 0, y: 0, w: 64, h: 32 }} renderOrder={0} />
+      <VideoStreamPlayer
+        {...painterEnv()}
+        solveNode={node({})}
+        rect={{ x: 0, y: 0, w: 64, h: 32 }}
+        renderOrder={0}
+      />
     );
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });

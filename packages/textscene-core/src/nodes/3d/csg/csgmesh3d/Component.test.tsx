@@ -111,8 +111,6 @@ describe('<CSGMesh3D>', () => {
         </CSGMesh3D>
       </SceneResourcesProvider>
     );
-    expect(
-      renderer.scene.find((n) => (n.instance as THREE.Object3D).name === 'injected-child')
-    ).toBeTruthy();
+    expect(renderer.scene.find((n) => (n.instance as THREE.Object3D).name === 'injected-child')).toBeTruthy();
   });
 });

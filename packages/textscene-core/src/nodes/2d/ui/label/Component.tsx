@@ -15,7 +15,11 @@ import {
   soloLineLayout,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import { OverrunBehavior, overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
+import {
+  OverrunBehavior,
+  overrunFlagsForBehavior,
+  trimLineToWidth,
+} from '../../../../r3f/controls/native/text/textOverrun';
 import { JustificationFlag } from '../../../../r3f/controls/native/text/textJustify';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
@@ -60,7 +64,10 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
     [props, solveNode.resources.internalResources]
   );
   // A valid `label_settings` beats the theme outright: see its own doc.
-  const textTheme = useMemo(() => labelEffectiveTextTheme(themeResolved, labelSettings), [themeResolved, labelSettings]);
+  const textTheme = useMemo(
+    () => labelEffectiveTextTheme(themeResolved, labelSettings),
+    [themeResolved, labelSettings]
+  );
 
   // Composed in sRGB: `TextRun` converts its `tint` once, internally.
   const tintColor = multiplyModulate(tint.own, textTheme.color);
@@ -195,7 +202,13 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
       }
     );
     return trimmedPlacements.map((placement, index) => ({ ...placement, line: revealed[index]! }));
-  }, [trimmedPlacements, props.visibleCharactersBehavior, props.visibleCharacters, props.visibleRatio, solveNode.rtl]);
+  }, [
+    trimmedPlacements,
+    props.visibleCharactersBehavior,
+    props.visibleCharacters,
+    props.visibleRatio,
+    solveNode.rtl,
+  ]);
 
   const lineLayouts = useSoloLineLayouts(revealedPlacements, layout);
 

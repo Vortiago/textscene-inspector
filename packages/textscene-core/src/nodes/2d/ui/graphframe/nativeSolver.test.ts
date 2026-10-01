@@ -108,7 +108,11 @@ describe('graphFrameLayout under RTL', () => {
     // only through `Container::fit_child_in_rect`. The
     // panel's margins (18, 12, 18, 12) (`default_theme.cpp:830`) give a content rect
     // at x 18, width 200 - 18 - 18 = 164, so a 10-wide child lands at 18 + 164 - 10.
-    const a = leaf('a', { customMinimumSize: { x: 10, y: 10 }, sizeFlagsHorizontal: 0, sizeFlagsVertical: 0 });
+    const a = leaf('a', {
+      customMinimumSize: { x: 10, y: 10 },
+      sizeFlagsHorizontal: 0,
+      sizeFlagsVertical: 0,
+    });
     const n = { ...graphFrame('F', { title: '' }, [a]), rtl: true };
     const rects = asMap(
       graphFrameLayout(n, [{ node: a, minSize: { x: 10, y: 10 } }], { x: 0, y: 0, w: 200, h: 150 }, ctx())

@@ -59,9 +59,7 @@ describe('AnimatedSprite3D semantic rule', () => {
 
     it('stays quiet when sprite_frames is set', () => {
       const diagnostics = lint({ sprite_frames: 'SubResource("frames_1")' });
-      expect(diagnostics.some((d) => d.ruleName === 'animatedsprite3d-requires-spriteframes')).toBe(
-        false
-      );
+      expect(diagnostics.some((d) => d.ruleName === 'animatedsprite3d-requires-spriteframes')).toBe(false);
     });
   });
 
@@ -112,9 +110,9 @@ describe('AnimatedSprite3D semantic rule', () => {
 
     it('stays quiet when both animation and sprite_frames are set', () => {
       const diagnostics = lint({ animation: '&"walk"', sprite_frames: 'SubResource("frames_1")' });
-      expect(
-        diagnostics.some((d) => d.ruleName === 'animatedsprite3d-animation-no-spriteframes')
-      ).toBe(false);
+      expect(diagnostics.some((d) => d.ruleName === 'animatedsprite3d-animation-no-spriteframes')).toBe(
+        false
+      );
     });
 
     // `set_animation` returns at sprite_3d.cpp:1432-1434 when the name equals the one

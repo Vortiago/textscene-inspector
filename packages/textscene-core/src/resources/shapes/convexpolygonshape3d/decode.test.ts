@@ -19,9 +19,7 @@ describe('decodeConvexPolygonShape3D', () => {
   it('degrades to empty points (no throw) on malformed data', () => {
     // CollisionGizmo calls this directly in render with no error boundary, so
     // a hand-edited/corrupt array must not crash the whole scene preview.
-    expect(() =>
-      decodeConvexPolygonShape3D({ points: 'PackedVector3Array(1, x, 3)' })
-    ).not.toThrow();
+    expect(() => decodeConvexPolygonShape3D({ points: 'PackedVector3Array(1, x, 3)' })).not.toThrow();
     expect(decodeConvexPolygonShape3D({ points: 'garbage' }).points.length).toBe(0);
   });
 });

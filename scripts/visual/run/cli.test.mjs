@@ -34,7 +34,10 @@ describe('shardOf', () => {
   it('covers each scene exactly once across the shards of one count', () => {
     const scenes = GOLDEN_SCENES;
     const shards = [1, 2, 3, 4].map((index) => shardOf(scenes, { index, count: 4 }));
-    const covered = shards.flat().map((s) => s.name).sort();
+    const covered = shards
+      .flat()
+      .map((s) => s.name)
+      .sort();
     expect(covered).toEqual(scenes.map((s) => s.name).sort());
   });
 

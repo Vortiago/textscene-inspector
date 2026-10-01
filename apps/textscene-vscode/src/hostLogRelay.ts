@@ -24,9 +24,7 @@ export function relayWebviewLog(level: string, message: string, args: unknown[])
     return String(arg);
   });
 
-  const fullMessage = formattedArgs.length > 0
-    ? `${message} ${formattedArgs.join(' ')}`
-    : message;
+  const fullMessage = formattedArgs.length > 0 ? `${message} ${formattedArgs.join(' ')}` : message;
 
   switch (level) {
     case 'trace':

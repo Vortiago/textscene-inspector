@@ -17,7 +17,6 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-
   if (!isValidProperties(node.properties)) {
     return diagnostics;
   }
@@ -96,11 +95,16 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
 const animationTreeValidationRule: LintRule = {
   meta: {
     name: 'valid-animationtree-properties',
-    description: 'Validates AnimationTree property values, resource references, and configuration dependencies',
+    description:
+      'Validates AnimationTree property values, resource references, and configuration dependencies',
     category: 'validation',
     applicableNodeTypes: ['AnimationTree'],
     emits: [
-      { ruleName: 'animationtree-missing-tree-root', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'animationtree-missing-tree-root',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
       {
         ruleName: 'animationtree-anim-player-not-found',
         severity: 'warning',
@@ -120,7 +124,8 @@ const animationTreeValidationRule: LintRule = {
         grounding: {
           kind: 'engine-inert',
           at: 'animation_tree.cpp:875-876',
-          unused: 'the cast to AnimationPlayer yields null and the whole setup block is skipped, so the tree binds to no player and plays nothing',
+          unused:
+            'the cast to AnimationPlayer yields null and the whole setup block is skipped, so the tree binds to no player and plays nothing',
         },
       },
       {

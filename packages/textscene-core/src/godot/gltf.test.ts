@@ -8,7 +8,11 @@ describe('unsupportedRequiredGltfExtensions', () => {
 
   it('names each required extension Godot does not import', () => {
     expect(
-      unsupportedRequiredGltfExtensions(['EXT_mesh_gpu_instancing', 'KHR_texture_transform', 'KHR_draco_mesh_compression'])
+      unsupportedRequiredGltfExtensions([
+        'EXT_mesh_gpu_instancing',
+        'KHR_texture_transform',
+        'KHR_draco_mesh_compression',
+      ])
     ).toEqual(['EXT_mesh_gpu_instancing', 'KHR_draco_mesh_compression']);
   });
 

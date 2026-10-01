@@ -10,9 +10,7 @@ import { REPO_ROOT, fail } from './paths.mjs';
 /** The node catalog `pnpm nodes:catalog` derived from ClassDB, read once per invocation. */
 let cached;
 function loadCatalog() {
-  cached ??= JSON.parse(
-    readFileSync(join(REPO_ROOT, 'scripts/compare-docs/node-catalog.json'), 'utf8')
-  );
+  cached ??= JSON.parse(readFileSync(join(REPO_ROOT, 'scripts/compare-docs/node-catalog.json'), 'utf8'));
   return cached;
 }
 

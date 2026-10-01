@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  formatColorRgba,
-  parseColor,
-  parseColorOrUndefined,
-  parseColorToHex,
-} from './colorParser';
+import { formatColorRgba, parseColor, parseColorOrUndefined, parseColorToHex } from './colorParser';
 
 describe('colorParser', () => {
   describe('parseColor', () => {
@@ -144,9 +139,7 @@ describe('colorParser', () => {
     });
 
     it('rounds channels to integers and keeps fractional alpha', () => {
-      expect(formatColorRgba({ r: 0.662745, g: 0.247059, b: 1, a: 0.8 })).toBe(
-        'rgba(169, 63, 255, 0.80)'
-      );
+      expect(formatColorRgba({ r: 0.662745, g: 0.247059, b: 1, a: 0.8 })).toBe('rgba(169, 63, 255, 0.80)');
     });
   });
 });

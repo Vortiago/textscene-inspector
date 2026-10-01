@@ -16,9 +16,7 @@ import { solveControlTree } from '../../../../r3f/controls/native/controlRectSol
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 /** `gridContainerLayout`'s `rects` half only: see `ContainerLayoutResult`'s own doc for why the union is here at all. */
-function asMap(
-  result: ReadonlyMap<string, Rect2> | ContainerLayoutResult
-): ReadonlyMap<string, Rect2> {
+function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
   return 'rects' in result ? result.rects : result;
 }
 
@@ -55,7 +53,6 @@ function ctx(): SolveContext {
     combinedMinimumSize: (n) => (n.node.properties as ControlProperties).customMinimumSize ?? { x: 0, y: 0 },
   };
 }
-
 
 /**
  * Solves `grid` and its children through the real solver core, so a test can
@@ -94,11 +91,12 @@ describe('gridContainerMinimumSize', () => {
     const b = leaf('B', { customMinimumSize: { x: 50, y: 20 } });
     const c = leaf('C', { customMinimumSize: { x: 40, y: 15 } });
     const d = leaf('D', { customMinimumSize: { x: 20, y: 25 } });
-    const n = grid(
-      'Grid',
-      { columns: 2, themeOverrideConstants: { h_separation: 8, v_separation: 12 } },
-      [a, b, c, d]
-    );
+    const n = grid('Grid', { columns: 2, themeOverrideConstants: { h_separation: 8, v_separation: 12 } }, [
+      a,
+      b,
+      c,
+      d,
+    ]);
     expect(gridContainerMinimumSize(n, ctx())).toEqual({ x: 98, y: 57 });
   });
 
@@ -120,11 +118,11 @@ describe('gridContainerMinimumSize', () => {
     const c0 = leaf('C0', { customMinimumSize: { x: 20, y: 10 } });
     const hidden = leaf('C1Hidden', { customMinimumSize: { x: 999, y: 999 }, visible: false });
     const c2 = leaf('C2', { customMinimumSize: { x: 30, y: 12 } });
-    const n = grid(
-      'Grid',
-      { columns: 2, themeOverrideConstants: { h_separation: 5, v_separation: 5 } },
-      [c0, hidden, c2]
-    );
+    const n = grid('Grid', { columns: 2, themeOverrideConstants: { h_separation: 5, v_separation: 5 } }, [
+      c0,
+      hidden,
+      c2,
+    ]);
     expect(gridContainerMinimumSize(n, ctx())).toEqual({ x: 55, y: 12 });
   });
 
@@ -282,7 +280,7 @@ describe('gridContainerLayout', () => {
   it(
     "re-floors a FILL child against its OWN untruncated minimum size after the container's truncated " +
       'column bookkeeping shrinks it (control.cpp:1773-1797, `Control::_size_changed` — a third file ' +
-      "neither grid_container.cpp nor container.cpp calls out, but EVERY `Container::fit_child_in_rect` " +
+      'neither grid_container.cpp nor container.cpp calls out, but EVERY `Container::fit_child_in_rect` ' +
       'ends in `Control::set_rect`, which re-derives and re-floors unconditionally) (oracle: scenario_h.tscn)',
     () => {
       // col_minw truncates both to 10, so the container hands each row a
@@ -355,10 +353,16 @@ describe('gridContainerLayout under RTL', () => {
     const d = leaf('D', { customMinimumSize: { x: 20, y: 25 } });
     const children = [a, b, c, d];
     const n = {
-      ...grid('Grid', { columns: 2, themeOverrideConstants: { h_separation: 8, v_separation: 12 } }, children),
+      ...grid(
+        'Grid',
+        { columns: 2, themeOverrideConstants: { h_separation: 8, v_separation: 12 } },
+        children
+      ),
       rtl: true,
     };
-    const rects = asMap(gridContainerLayout(n, childEntries(children), { x: 0, y: 0, w: 400, h: 400 }, ctx()));
+    const rects = asMap(
+      gridContainerLayout(n, childEntries(children), { x: 0, y: 0, w: 400, h: 400 }, ctx())
+    );
 
     expect(rects.get('A')).toEqual({ x: 360, y: 0, w: 40, h: 20 });
     expect(rects.get('B')).toEqual({ x: 302, y: 0, w: 50, h: 20 });
@@ -377,7 +381,9 @@ describe('gridContainerLayout under RTL', () => {
       ...grid('Grid', { columns: 1, themeOverrideConstants: { h_separation: 0, v_separation: 0 } }, children),
       rtl: true,
     };
-    const rects = asMap(gridContainerLayout(n, childEntries(children), { x: 0, y: 0, w: 100, h: 100 }, ctx()));
+    const rects = asMap(
+      gridContainerLayout(n, childEntries(children), { x: 0, y: 0, w: 100, h: 100 }, ctx())
+    );
 
     expect(rects.get('A')).toEqual({ x: 80, y: 0, w: 20, h: 10 });
     expect(rects.get('B')).toEqual({ x: 60, y: 10, w: 40, h: 10 });

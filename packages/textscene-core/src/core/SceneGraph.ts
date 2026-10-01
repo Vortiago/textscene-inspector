@@ -62,7 +62,6 @@ export interface ExternalSceneRef {
   readonly resolutionStatus: 'pending' | 'resolved' | 'failed';
 }
 
-
 /** Wrap a TscnScene's parts in a ParsedScene, without copying them. */
 export function tscnSceneToParsedScene(
   path: string,

@@ -31,10 +31,22 @@ const PLACEHOLDER_CELL_MATERIAL = wireGizmoProgram(0x4488cc);
 /** Godot Transform3D (basis rows + origin) → THREE.Matrix4. */
 function transform3DToMatrix4(t: Transform3D): THREE.Matrix4 {
   return new THREE.Matrix4().set(
-    t.basis_x.x, t.basis_x.y, t.basis_x.z, t.origin.x,
-    t.basis_y.x, t.basis_y.y, t.basis_y.z, t.origin.y,
-    t.basis_z.x, t.basis_z.y, t.basis_z.z, t.origin.z,
-    0, 0, 0, 1
+    t.basis_x.x,
+    t.basis_x.y,
+    t.basis_x.z,
+    t.origin.x,
+    t.basis_y.x,
+    t.basis_y.y,
+    t.basis_y.z,
+    t.origin.y,
+    t.basis_z.x,
+    t.basis_z.y,
+    t.basis_z.z,
+    t.origin.z,
+    0,
+    0,
+    0,
+    1
   );
 }
 
@@ -52,10 +64,22 @@ function cellMatrix(
 ): THREE.Matrix4 {
   const basis = ORTHO_BASES[cell.rot] ?? ORTHO_BASES[0]!;
   const orient = new THREE.Matrix4().set(
-    basis[0]!, basis[1]!, basis[2]!, 0,
-    basis[3]!, basis[4]!, basis[5]!, 0,
-    basis[6]!, basis[7]!, basis[8]!, 0,
-    0, 0, 0, 1
+    basis[0]!,
+    basis[1]!,
+    basis[2]!,
+    0,
+    basis[3]!,
+    basis[4]!,
+    basis[5]!,
+    0,
+    basis[6]!,
+    basis[7]!,
+    basis[8]!,
+    0,
+    0,
+    0,
+    0,
+    1
   );
   const matrix = new THREE.Matrix4().makeTranslation(
     cell.x * cellSize.x + (cellCenter.x ? cellSize.x * 0.5 : 0),
@@ -141,7 +165,8 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
       </>
     );
   }
-  if (batched) return <BatchedTiles geometry={geometry} material={material} matrices={matrices} shadow={shadow} />;
+  if (batched)
+    return <BatchedTiles geometry={geometry} material={material} matrices={matrices} shadow={shadow} />;
   return (
     <>
       {matrices.map((m, i) => (

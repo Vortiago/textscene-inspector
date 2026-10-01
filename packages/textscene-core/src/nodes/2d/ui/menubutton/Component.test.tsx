@@ -50,7 +50,12 @@ describe('<MenuButton> (isolated painter contract)', () => {
 
   it('draws the default-theme button.normal chrome and label when flat=false is authored', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <MenuButton {...painterEnv()} solveNode={solveNode({ text: 'File', flat: false })} rect={RECT} renderOrder={0} />
+      <MenuButton
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'File', flat: false })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     const mesh = findChromeMesh(renderer.scene)!;
     const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
@@ -61,7 +66,12 @@ describe('<MenuButton> (isolated painter contract)', () => {
 
   it('flat=true (the parsed default) draws NO chrome mesh, but still draws the label', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <MenuButton {...painterEnv()} solveNode={solveNode({ text: 'File', flat: true })} rect={RECT} renderOrder={0} />
+      <MenuButton
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'File', flat: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     expect(findChromeMesh(renderer.scene)).toBeUndefined();
     expect(findTextMesh(renderer.scene)).toBeDefined();

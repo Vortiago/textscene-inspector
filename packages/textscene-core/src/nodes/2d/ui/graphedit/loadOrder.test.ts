@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { resolveGraphEditLoadState, GRAPH_EDIT_DEFAULT_ZOOM_MAX, GRAPH_EDIT_DEFAULT_ZOOM_MIN } from './loadOrder';
+import {
+  resolveGraphEditLoadState,
+  GRAPH_EDIT_DEFAULT_ZOOM_MAX,
+  GRAPH_EDIT_DEFAULT_ZOOM_MIN,
+} from './loadOrder';
 
 /** The rect `offset_left = 8 … offset_bottom = 328` gives, as `Control::_size_changed` computes it out of tree. */
 const SIZED_400_320 = {
@@ -109,7 +113,7 @@ describe('resolveGraphEditLoadState — scroll_offset', () => {
 
 describe('resolveGraphEditLoadState — zoom', () => {
   it('starts from the constructor bounds of 1/1.2^8 and 1.2^4 (graph_edit.cpp:3175-3177)', () => {
-    expect(GRAPH_EDIT_DEFAULT_ZOOM_MIN).toBeCloseTo(0.2325680, 6);
+    expect(GRAPH_EDIT_DEFAULT_ZOOM_MIN).toBeCloseTo(0.232568, 6);
     expect(GRAPH_EDIT_DEFAULT_ZOOM_MAX).toBeCloseTo(2.0736, 5);
   });
 

@@ -48,10 +48,10 @@ physics_material_override = SubResource("mat_1")
       });
 
       it('should reject invalid physics_material_override format', () => {
-        expectDiagnostic(
-          scene(node('StaticBody2D', { physics_material_override: '"invalid_format"' })),
-          { prop: 'physics_material_override', contains: ['resource reference'] }
-        );
+        expectDiagnostic(scene(node('StaticBody2D', { physics_material_override: '"invalid_format"' })), {
+          prop: 'physics_material_override',
+          contains: ['resource reference'],
+        });
       });
     });
 
@@ -63,7 +63,9 @@ physics_material_override = SubResource("mat_1")
       });
 
       it('should accept zero constant_linear_velocity', () => {
-        expectClean(scene(node('StaticBody2D', { constant_linear_velocity: 'Vector2(0, 0)' }), collisionShape2d));
+        expectClean(
+          scene(node('StaticBody2D', { constant_linear_velocity: 'Vector2(0, 0)' }), collisionShape2d)
+        );
       });
 
       it('should reject invalid constant_linear_velocity format (wrong number of components)', () => {
@@ -74,10 +76,10 @@ physics_material_override = SubResource("mat_1")
       });
 
       it('should reject Vector3 used for constant_linear_velocity', () => {
-        expectDiagnostic(
-          scene(node('StaticBody2D', { constant_linear_velocity: 'Vector3(1, 2, 3)' })),
-          { prop: 'constant_linear_velocity', contains: ['Vector2 with 2 numbers'] }
-        );
+        expectDiagnostic(scene(node('StaticBody2D', { constant_linear_velocity: 'Vector3(1, 2, 3)' })), {
+          prop: 'constant_linear_velocity',
+          contains: ['Vector2 with 2 numbers'],
+        });
       });
 
       it('should reject non-Vector2 constant_linear_velocity', () => {
@@ -110,20 +112,20 @@ physics_material_override = SubResource("mat_1")
 
     runPropertyValidation({ nodeType: 'StaticBody2D', acceptChild: collisionShape2d }, [
       {
-          prop: 'collision_layer',
-          valid: [1, 100, 1048575, 2000000, 2147483648, 4294967295],
-          invalid: [
-{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
+        prop: 'collision_layer',
+        valid: [1, 100, 1048575, 2000000, 2147483648, 4294967295],
+        invalid: [
+          { value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
           { value: '"invalid"' },
-          ],
-        },
+        ],
+      },
       {
-          prop: 'collision_mask',
-          valid: [1, 255, 1048575, 5000000, 2147483648, 4294967295],
-          invalid: [
-{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
-          ],
-        },
+        prop: 'collision_mask',
+        valid: [1, 255, 1048575, 5000000, 2147483648, 4294967295],
+        invalid: [
+          { value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
+        ],
+      },
       {
         prop: 'collision_priority',
         valid: [0.0, 0.5, 1.0, -1.0, 100.5],
@@ -243,8 +245,8 @@ physics_material_override = ExtResource("ext_mat_1")
       );
       // At least one error: format errors may prevent semantic checks.
       expect(diagnostics.length).toBeGreaterThanOrEqual(1);
-      const hasCollisionLayerError = diagnostics.some(d => d.message.includes('collision_layer'));
-      const hasResourceError = diagnostics.some(d => d.message.includes('never declares'));
+      const hasCollisionLayerError = diagnostics.some((d) => d.message.includes('collision_layer'));
+      const hasResourceError = diagnostics.some((d) => d.message.includes('never declares'));
       expect(hasCollisionLayerError || hasResourceError).toBe(true);
     });
 
@@ -299,10 +301,10 @@ describe('the subclasses the matcher reaches', () => {
   // descendsFrom pulls AnimatableBody2D in. The message must name the type the
   // author can find in their file, not the base the rule factory was built for.
   it('names AnimatableBody2D, not StaticBody2D, in its own diagnostic', () => {
-    const found = expectDiagnostic(
-      scene(node('AnimatableBody2D', {}, { name: 'MovingPlatform' })),
-      { ruleName: 'collisionobject2d-needs-collision-shape', severity: 'warning' }
-    );
+    const found = expectDiagnostic(scene(node('AnimatableBody2D', {}, { name: 'MovingPlatform' })), {
+      ruleName: 'collisionobject2d-needs-collision-shape',
+      severity: 'warning',
+    });
     expect(found.message).toContain("AnimatableBody2D 'MovingPlatform'");
     expect(found.message).not.toContain('StaticBody2D');
   });

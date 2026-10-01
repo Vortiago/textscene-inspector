@@ -12,11 +12,7 @@ import type { CachedSceneSource } from '../../../r3f/liveSceneTree.js';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext.js';
 import { useResourceLoader } from '../../../resources/useResource.js';
 import { useLiveTreeVersion } from '../../../r3f/useLiveSceneTree.js';
-import {
-  resolveViewportSubtree,
-  viewportContentKind,
-  type ViewportContentKind,
-} from './viewportContent.js';
+import { resolveViewportSubtree, viewportContentKind, type ViewportContentKind } from './viewportContent.js';
 
 /** No loader (the linter bundle, isolated tests): nothing is cached, ever. */
 const NO_SCENES: CachedSceneSource = { getCached: () => undefined };
@@ -30,8 +26,7 @@ export function useViewportContentKind(node: TscnNode): ViewportContentKind {
   const sceneCache = loader?.scenes ?? NO_SCENES;
 
   return useMemo(
-    () =>
-      viewportContentKind(resolveViewportSubtree(node, externalResources, sceneCache)),
+    () => viewportContentKind(resolveViewportSubtree(node, externalResources, sceneCache)),
     // `version` is an intentional cache-buster: it increments each time a
     // sub-scene finishes loading, which is when an instance child stops being
     // typeless. The value itself is not read in the callback.

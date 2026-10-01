@@ -13,7 +13,6 @@ import { rangeAdvisories, type RangeAdvisoryTable } from './rangeAdvisory.js';
 import type { TscnNode } from '../parser/types.js';
 import { ENGINE_CITE_RE } from './testing/engineCite.js';
 
-
 /**
  * Every `cite: '…'` literal in the sources, with its file. A cite passed to an
  * arm-builder as a parameter hides from it, so `lights/shared/linterChecks.ts`

@@ -11,11 +11,7 @@ import { isTypingTarget } from './hooks/isTypingTarget.js';
 import type { EditorControlsHandle } from './EditorControlsHandle.js';
 import { freelookMoveCursor, resolveNavMode } from './godotEditorCursor.js';
 import { isGesturePointer, type TouchPoint } from './pointerGesture.js';
-import {
-  applyEditorDragMove,
-  applyEditorWheel,
-  type DragState,
-} from './editorMouseNavigation.js';
+import { applyEditorDragMove, applyEditorWheel, type DragState } from './editorMouseNavigation.js';
 import {
   applyEditorTouchMove,
   beginEditorTouch,

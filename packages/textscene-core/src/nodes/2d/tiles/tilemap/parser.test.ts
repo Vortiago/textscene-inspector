@@ -74,12 +74,7 @@ describe('parseTileMap', () => {
       'layer_3/y_sort_origin': '4',
     });
 
-    expect(result.layers.map((layer) => layer.name)).toEqual([
-      'Layer0',
-      'Layer1',
-      'Layer2',
-      'Layer3',
-    ]);
+    expect(result.layers.map((layer) => layer.name)).toEqual(['Layer0', 'Layer1', 'Layer2', 'Layer3']);
   });
 
   it('grows the vector for no other leaf', () => {
@@ -147,9 +142,7 @@ describe('parseTileMap', () => {
   it('handles a TileMap without layers or tile_set (edge case)', () => {
     const result = parseTileMap({ type: 'node', attributes: {} }, {});
     expect(result.name).toBe('');
-    expect(result.layers).toEqual([
-      { name: 'Layer0', enabled: true, zIndex: 0, cells: [] },
-    ]);
+    expect(result.layers).toEqual([{ name: 'Layer0', enabled: true, zIndex: 0, cells: [] }]);
     expect(result.tile_set).toBeUndefined();
   });
 

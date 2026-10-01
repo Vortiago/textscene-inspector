@@ -10,9 +10,7 @@ export const NINE_PATCH_TILE_FIT = 2;
 
 /** `NinePatchRect::AxisStretchMode` / `StyleBoxTexture::AxisStretchMode` (both 0/1/2, same order). */
 export type NinePatchAxisMode =
-  | typeof NINE_PATCH_STRETCH
-  | typeof NINE_PATCH_TILE
-  | typeof NINE_PATCH_TILE_FIT;
+  typeof NINE_PATCH_STRETCH | typeof NINE_PATCH_TILE | typeof NINE_PATCH_TILE_FIT;
 
 export interface NinePatchMargins {
   left: number;
@@ -82,7 +80,13 @@ function solveAxisCells(
   // shader's unconditional first check.
   const beginW = Math.min(Math.max(marginBegin, 0), drawSize);
   if (beginW > 0) {
-    cells.push({ destStart: 0, destEnd: beginW, srcStart: regionOrigin, srcEnd: regionOrigin + beginW, isMiddle: false });
+    cells.push({
+      destStart: 0,
+      destEnd: beginW,
+      srcStart: regionOrigin,
+      srcEnd: regionOrigin + beginW,
+      isMiddle: false,
+    });
   }
 
   // `pixel >= draw_size - margin_end` (`:439-440`): an identity map anchored to
@@ -101,7 +105,13 @@ function solveAxisCells(
     if (midSourceLen > 0) {
       if (mode === NINE_PATCH_STRETCH) {
         // An affine ratio map, like three's UV interpolation, so one quad is exact.
-        cells.push({ destStart: beginW, destEnd: endDestStart, srcStart: midSrcStart, srcEnd: midSrcEnd, isMiddle: true });
+        cells.push({
+          destStart: beginW,
+          destEnd: endDestStart,
+          srcStart: midSrcStart,
+          srcEnd: midSrcEnd,
+          isMiddle: true,
+        });
       } else if (mode === NINE_PATCH_TILE) {
         // `ofs = mod(pixel - margin_begin, mid_source_len)` (`:453-455`): an
         // unscaled repeat, `midSourceLen`-wide dest cells showing the whole
@@ -110,12 +120,24 @@ function solveAxisCells(
         const fullTiles = Math.floor(midDestLen / midSourceLen);
         let cursor = beginW;
         for (let i = 0; i < fullTiles; i++) {
-          cells.push({ destStart: cursor, destEnd: cursor + midSourceLen, srcStart: midSrcStart, srcEnd: midSrcEnd, isMiddle: true });
+          cells.push({
+            destStart: cursor,
+            destEnd: cursor + midSourceLen,
+            srcStart: midSrcStart,
+            srcEnd: midSrcEnd,
+            isMiddle: true,
+          });
           cursor += midSourceLen;
         }
         const remainder = endDestStart - cursor;
         if (remainder > 0) {
-          cells.push({ destStart: cursor, destEnd: endDestStart, srcStart: midSrcStart, srcEnd: midSrcStart + remainder, isMiddle: true });
+          cells.push({
+            destStart: cursor,
+            destEnd: endDestStart,
+            srcStart: midSrcStart,
+            srcEnd: midSrcStart + remainder,
+            isMiddle: true,
+          });
         }
       } else {
         // TILE_FIT (`:456-464`): `scale = max(1, floor(src_area/dst_area + 0.5))`,
@@ -138,7 +160,13 @@ function solveAxisCells(
       // non-positive `midSourceLen`, undefined in GLSL. Sample the nearest
       // valid texel rather than propagate a NaN UV.
       const clampedSrc = regionOrigin + Math.min(Math.max(marginBegin, 0), regionSize);
-      cells.push({ destStart: beginW, destEnd: endDestStart, srcStart: clampedSrc, srcEnd: clampedSrc, isMiddle: true });
+      cells.push({
+        destStart: beginW,
+        destEnd: endDestStart,
+        srcStart: clampedSrc,
+        srcEnd: clampedSrc,
+        isMiddle: true,
+      });
     }
   }
 

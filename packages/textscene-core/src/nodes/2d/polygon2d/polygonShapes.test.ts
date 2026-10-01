@@ -8,9 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { polygonRings } from './polygonShapes';
 
 /** A 10x10 square followed by a second, disjoint 10x10 square. */
-const TWO_SQUARES = new Float32Array([
-  0, 0, 10, 0, 10, 10, 0, 10, 20, 0, 30, 0, 30, 10, 20, 10,
-]);
+const TWO_SQUARES = new Float32Array([0, 0, 10, 0, 10, 10, 0, 10, 20, 0, 30, 0, 30, 10, 20, 10]);
 
 describe('polygonRings', () => {
   it('uses the stored vertex order when `polygons` is empty', () => {
@@ -21,7 +19,16 @@ describe('polygonRings', () => {
   });
 
   it('builds one ring per `polygons` entry, indexing into `polygon`', () => {
-    const rings = polygonRings(TWO_SQUARES, [[0, 1, 2, 3], [4, 5, 6, 7]], 0, false, 100);
+    const rings = polygonRings(
+      TWO_SQUARES,
+      [
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+      ],
+      0,
+      false,
+      100
+    );
     expect(rings.outlines).toHaveLength(2);
     // Rings are indices into the shared vertex pool, so a caller can carry
     // `uv` / `vertex_colors` through unchanged.

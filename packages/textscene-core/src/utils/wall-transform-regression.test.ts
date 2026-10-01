@@ -53,8 +53,7 @@ describe('hallway wall transforms — regression suite', () => {
   });
 
   describe('ShortCorridor/EndWall (Transform3D with 90° Y-rotation + X-scale=3 in basis)', () => {
-    const END_WALL =
-      'Transform3D(-4.371139e-08, 0, 3, 0, 1, 0, -1, 0, -1.3113416e-07, 1.2504363, 0, 8.75)';
+    const END_WALL = 'Transform3D(-4.371139e-08, 0, 3, 0, 1, 0, -1, 0, -1.3113416e-07, 1.2504363, 0, 8.75)';
 
     it('decomposes to scale=(1, 1, 3) with +π/2 Y rotation', () => {
       const d = decomposeTransform3D(parseTransform3D(END_WALL));
@@ -91,8 +90,7 @@ describe('hallway wall transforms — regression suite', () => {
   });
 
   describe('LongCorridor/ShortWall (Transform3D with 90° Y-rotation + X-scale=6)', () => {
-    const LONG_SHORT_WALL =
-      'Transform3D(-4.371139e-08, 0, 6, 0, 1, 0, -1, 0, -2.6226832e-07, 0, 0, 1.75)';
+    const LONG_SHORT_WALL = 'Transform3D(-4.371139e-08, 0, 6, 0, 1, 0, -1, 0, -2.6226832e-07, 0, 0, 1.75)';
 
     it('decomposes to scale=(1, 1, 6) with +π/2 Y rotation', () => {
       const d = decomposeTransform3D(parseTransform3D(LONG_SHORT_WALL));
@@ -117,8 +115,7 @@ describe('hallway wall transforms — regression suite', () => {
   });
 
   describe('LongCorridor/LongWall (Transform3D with mirrored 90° rotation + X-scale=9)', () => {
-    const LONG_LONG_WALL =
-      'Transform3D(-4.371139e-08, 0, -9, 0, 1, 0, 1, 0, -3.934025e-07, 3, 0, -1.75)';
+    const LONG_LONG_WALL = 'Transform3D(-4.371139e-08, 0, -9, 0, 1, 0, 1, 0, -3.934025e-07, 3, 0, -1.75)';
 
     it('decomposes with scale.z=9 (absolute) — total wall width 18 units along world X', () => {
       const front = worldPosFor(LONG_LONG_WALL, 0, 0, 1);
@@ -132,9 +129,7 @@ describe('hallway wall transforms — regression suite', () => {
     // plane (vertices x=0) that scale does nothing, so the wall shows at 1/6 of its width.
     it('NOT the b4ccaab regression: ShortWall scale.x !== 6, scale.z === 6', () => {
       const d = decomposeTransform3D(
-        parseTransform3D(
-          'Transform3D(-4.371139e-08, 0, 6, 0, 1, 0, -1, 0, -2.6226832e-07, 0, 0, 1.75)'
-        )
+        parseTransform3D('Transform3D(-4.371139e-08, 0, 6, 0, 1, 0, -1, 0, -2.6226832e-07, 0, 0, 1.75)')
       );
       expect(d.scale.x).not.toBeCloseTo(6, 4);
       expect(d.scale.z).toBeCloseTo(6, 5);

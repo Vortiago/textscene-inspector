@@ -6,7 +6,13 @@
  */
 
 import { warn } from '../logger.js';
-import { WORKER_JOBS, type WorkerJob, type WorkerJobInput, type WorkerJobName, type WorkerJobOutput } from './jobs';
+import {
+  WORKER_JOBS,
+  type WorkerJob,
+  type WorkerJobInput,
+  type WorkerJobName,
+  type WorkerJobOutput,
+} from './jobs';
 import { fromJobError, type WorkerJobReply, type WorkerJobRequest } from './protocol';
 
 /** The part of a `Worker` the runner uses, so a test can stand in for one. */

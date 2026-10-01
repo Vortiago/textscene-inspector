@@ -151,11 +151,11 @@ describe('FoldableContainer strict validators', () => {
     });
   });
 
-  it('inherits Control\'s layout set through the base-walk', () => {
+  it("inherits Control's layout set through the base-walk", () => {
     expect(validatorRegistry.findValidator('FoldableContainer', 'anchor_right')).not.toBeNull();
   });
 
-  it('inherits CanvasItem\'s modulate through the base-walk', () => {
+  it("inherits CanvasItem's modulate through the base-walk", () => {
     expect(validatorRegistry.findValidator('FoldableContainer', 'modulate')).not.toBeNull();
   });
 });

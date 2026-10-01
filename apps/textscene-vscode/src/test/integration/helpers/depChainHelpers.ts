@@ -36,24 +36,78 @@ export const RES_SUB = 'res://sub.tscn';
 function fakePngBytes(): Uint8Array {
   return new Uint8Array([
     // PNG signature
-    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    0x89,
+    0x50,
+    0x4e,
+    0x47,
+    0x0d,
+    0x0a,
+    0x1a,
+    0x0a,
     // IHDR chunk (13 bytes)
-    0x00, 0x00, 0x00, 0x0d,
-    0x49, 0x48, 0x44, 0x52,
-    0x00, 0x00, 0x00, 0x01, // width: 1
-    0x00, 0x00, 0x00, 0x01, // height: 1
-    0x08, 0x02,             // bit depth: 8, colour type: 2 (RGB)
-    0x00, 0x00, 0x00,       // compression, filter, interlace
-    0x90, 0x77, 0x53, 0xde, // CRC
+    0x00,
+    0x00,
+    0x00,
+    0x0d,
+    0x49,
+    0x48,
+    0x44,
+    0x52,
+    0x00,
+    0x00,
+    0x00,
+    0x01, // width: 1
+    0x00,
+    0x00,
+    0x00,
+    0x01, // height: 1
+    0x08,
+    0x02, // bit depth: 8, colour type: 2 (RGB)
+    0x00,
+    0x00,
+    0x00, // compression, filter, interlace
+    0x90,
+    0x77,
+    0x53,
+    0xde, // CRC
     // IDAT chunk
-    0x00, 0x00, 0x00, 0x0c,
-    0x49, 0x44, 0x41, 0x54,
-    0x08, 0xd7, 0x63, 0xf8, 0xcf, 0xc0, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01,
-    0xe2, 0x21, 0xbc, 0x33, // CRC
+    0x00,
+    0x00,
+    0x00,
+    0x0c,
+    0x49,
+    0x44,
+    0x41,
+    0x54,
+    0x08,
+    0xd7,
+    0x63,
+    0xf8,
+    0xcf,
+    0xc0,
+    0x00,
+    0x00,
+    0x00,
+    0x02,
+    0x00,
+    0x01,
+    0xe2,
+    0x21,
+    0xbc,
+    0x33, // CRC
     // IEND chunk
-    0x00, 0x00, 0x00, 0x00,
-    0x49, 0x45, 0x4e, 0x44,
-    0xae, 0x42, 0x60, 0x82, // CRC
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x49,
+    0x45,
+    0x4e,
+    0x44,
+    0xae,
+    0x42,
+    0x60,
+    0x82, // CRC
   ]);
 }
 
@@ -75,7 +129,7 @@ export function setupDepChainWorkspace(): void {
   fs.writeFileSync(
     path.join(dir, 'project.godot'),
     '; Godot Project Configuration\nconfig_version=5\n[application]\nconfig/name="DepChainTest"\n',
-    'utf8',
+    'utf8'
   );
 
   fs.writeFileSync(path.join(dir, 'texture.png'), Buffer.from(fakePngBytes()));
@@ -91,7 +145,7 @@ export function setupDepChainWorkspace(): void {
       'albedo_texture = ExtResource("1_tex")',
       '',
     ].join('\n'),
-    'utf8',
+    'utf8'
   );
 
   fs.writeFileSync(
@@ -107,7 +161,7 @@ export function setupDepChainWorkspace(): void {
       '[node name="SubRoot" type="MeshInstance3D"]',
       '',
     ].join('\n'),
-    'utf8',
+    'utf8'
   );
 
   fs.writeFileSync(
@@ -125,7 +179,7 @@ export function setupDepChainWorkspace(): void {
       'instance = ExtResource("1_sub")',
       '',
     ].join('\n'),
-    'utf8',
+    'utf8'
   );
 
   fs.writeFileSync(
@@ -136,7 +190,7 @@ export function setupDepChainWorkspace(): void {
       '[node name="Unrelated" type="Node3D"]',
       '',
     ].join('\n'),
-    'utf8',
+    'utf8'
   );
 }
 
@@ -157,12 +211,10 @@ export function teardownDepChainWorkspace(): void {
 export async function primeResource(
   triggerMessage: (msg: Record<string, unknown>) => void,
   sentMessages: HostToWebviewMessage[],
-  resource: { path: string; resourceType: string; requestId: string },
+  resource: { path: string; resourceType: string; requestId: string }
 ): Promise<void> {
   const countResponses = () =>
-    sentMessages.filter(
-      (m) => m.type === 'resourceLoaded' || m.type === 'resourceLoadError',
-    ).length;
+    sentMessages.filter((m) => m.type === 'resourceLoaded' || m.type === 'resourceLoadError').length;
   const responseBefore = countResponses();
 
   triggerMessage({ type: 'loadResource', ...resource });
@@ -177,7 +229,7 @@ export async function primeResource(
  */
 export async function primePanelForDepChain(
   triggerMessage: (msg: Record<string, unknown>) => void,
-  sentMessages: HostToWebviewMessage[],
+  sentMessages: HostToWebviewMessage[]
 ): Promise<void> {
   const resources = [
     { path: RES_SUB, resourceType: 'PackedScene', requestId: 'prime-sub' },
@@ -197,16 +249,13 @@ export async function primePanelForDepChain(
 export async function waitForResourceChanged(
   sentMessages: HostToWebviewMessage[],
   expectedPath: string,
-  timeoutMs = 8000,
+  timeoutMs = 8000
 ): Promise<void> {
   await waitFor(
-    () =>
-      sentMessages.some((m) => m.type === 'resourceChanged' && m.path === expectedPath),
+    () => sentMessages.some((m) => m.type === 'resourceChanged' && m.path === expectedPath),
     timeoutMs,
     () => {
-      const seen = sentMessages
-        .flatMap((m) => (m.type === 'resourceChanged' ? [m.path] : []))
-        .join(', ');
+      const seen = sentMessages.flatMap((m) => (m.type === 'resourceChanged' ? [m.path] : [])).join(', ');
       const allTypes = sentMessages.map((m) => m.type).join(', ');
       const errors = sentMessages
         .filter((m) => m.type === 'resourceLoadError')
@@ -218,7 +267,7 @@ export async function waitForResourceChanged(
         `All message types: [${allTypes || 'none'}]. ` +
         `resourceLoadError messages: [${errors || 'none'}]`
       );
-    },
+    }
   );
 }
 
@@ -230,16 +279,14 @@ export async function waitForResourceChanged(
 export async function assertNoResourceChanged(
   sentMessages: HostToWebviewMessage[],
   action: () => Promise<void>,
-  windowMs = 500,
+  windowMs = 500
 ): Promise<void> {
   const countBefore = countResourceChanged(sentMessages);
   await action();
   await new Promise<void>((r) => setTimeout(r, windowMs));
   const countAfter = countResourceChanged(sentMessages);
   if (countAfter !== countBefore) {
-    throw new Error(
-      `Expected no new resourceChanged messages, got ${countAfter - countBefore}.`,
-    );
+    throw new Error(`Expected no new resourceChanged messages, got ${countAfter - countBefore}.`);
   }
 }
 

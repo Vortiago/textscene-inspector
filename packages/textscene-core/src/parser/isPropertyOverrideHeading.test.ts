@@ -20,19 +20,15 @@ describe('isPropertyOverrideHeading', () => {
     // `index=` is an addressing hint the editor writes alongside; it declares
     // nothing, so it does not make the heading a declaration.
     expect(
-      isPropertyOverrideHeading(
-        heading('[node name="Robot" parent="Player/Skeleton/Skeleton3D" index="0"]')
-      )
+      isPropertyOverrideHeading(heading('[node name="Robot" parent="Player/Skeleton/Skeleton3D" index="0"]'))
     ).toBe(true);
-    expect(
-      isPropertyOverrideHeading(heading('[node name="Robot" parent="Player/Skeleton"]'))
-    ).toBe(true);
+    expect(isPropertyOverrideHeading(heading('[node name="Robot" parent="Player/Skeleton"]'))).toBe(true);
   });
 
   it('is false when the heading declares a type — that adds a new node', () => {
-    expect(
-      isPropertyOverrideHeading(heading('[node name="CoinCount" type="Label3D" parent="Player"]'))
-    ).toBe(false);
+    expect(isPropertyOverrideHeading(heading('[node name="CoinCount" type="Label3D" parent="Player"]'))).toBe(
+      false
+    );
   });
 
   it('is false when the heading instances a scene', () => {

@@ -19,4 +19,3 @@ describe('parseBoxContainer', () => {
     expect(parseBoxContainer(heading, { alignment: 'garbage' }).alignment).toBeUndefined();
   });
 });
-

@@ -77,7 +77,13 @@ describe('isLegacyFormat', () => {
     // `if (format_version > FORMAT_VERSION)` (resource_format_text.cpp:1141)
     // is the loader's only comparison.
     expect([-1, 0, 1, 2, 3, 4, null].map(isLegacyFormat)).toEqual([
-      false, false, true, true, false, false, false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
     ]);
   });
 });

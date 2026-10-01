@@ -67,24 +67,16 @@ describe('decodeStandardMaterial3D — transparency', () => {
   });
 
   it('clamps the scissor threshold to its 0..1 hint', () => {
-    expect(
-      decodeStandardMaterial3D({ transparency: '2', alpha_scissor_threshold: '5' }).alphaTest
-    ).toBe(1);
-    expect(
-      decodeStandardMaterial3D({ transparency: '2', alpha_scissor_threshold: '-1' }).alphaTest
-    ).toBe(0);
+    expect(decodeStandardMaterial3D({ transparency: '2', alpha_scissor_threshold: '5' }).alphaTest).toBe(1);
+    expect(decodeStandardMaterial3D({ transparency: '2', alpha_scissor_threshold: '-1' }).alphaTest).toBe(0);
   });
 
   it('ignores alpha_scissor_threshold outside ALPHA_SCISSOR', () => {
-    expect(
-      decodeStandardMaterial3D({ transparency: '1', alpha_scissor_threshold: '0.9' }).alphaTest
-    ).toBe(0);
+    expect(decodeStandardMaterial3D({ transparency: '1', alpha_scissor_threshold: '0.9' }).alphaTest).toBe(0);
   });
 
   it('falls back to DISABLED for a mode outside the enum', () => {
-    expect(decodeStandardMaterial3D({ transparency: '9' }).transparency).toBe(
-      Transparency.DISABLED
-    );
+    expect(decodeStandardMaterial3D({ transparency: '9' }).transparency).toBe(Transparency.DISABLED);
     expect(decodeStandardMaterial3D({ transparency: 'nope' }).transparent).toBe(false);
   });
 });
@@ -356,9 +348,7 @@ describe('decodeStandardMaterial3D — texture-slot enumeration', () => {
 
 describe('decodeStandardMaterial3D — value-decoder edges', () => {
   it('falls back to white for a malformed albedo colour', () => {
-    expect(decodeStandardMaterial3D({ albedo_color: 'Color(a, b, c, d)' }).albedo).toEqual([
-      1, 1, 1,
-    ]);
+    expect(decodeStandardMaterial3D({ albedo_color: 'Color(a, b, c, d)' }).albedo).toEqual([1, 1, 1]);
   });
 
   it('falls back to Godot’s BLACK emission for a malformed emission colour', () => {

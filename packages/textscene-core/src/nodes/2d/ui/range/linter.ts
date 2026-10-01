@@ -68,7 +68,11 @@ const rangeBoundsRule: LintRule = {
         severity: 'error',
         grounding: { kind: 'engine', at: 'range.cpp:229' },
       },
-      { ruleName: 'range-exp-edit-negative-min', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'range-exp-edit-negative-min',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
     ],
   },
   check: checkRangeBounds,

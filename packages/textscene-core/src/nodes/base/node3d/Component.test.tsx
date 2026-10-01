@@ -22,9 +22,7 @@ const identityTransform: Transform3D = {
 
 describe('<Node3D>', () => {
   it('renders a named group', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <Node3D node={makeNode({ name: 'MyNode' })} />
-    );
+    const renderer = await ReactThreeTestRenderer.create(<Node3D node={makeNode({ name: 'MyNode' })} />);
     expect(renderer.scene.findByProps({ name: 'MyNode' })).toBeDefined();
   });
 
@@ -39,9 +37,7 @@ describe('<Node3D>', () => {
   });
 
   it('defaults to identity when no transform provided', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <Node3D node={makeNode({ name: 'NoTransform' })} />
-    );
+    const renderer = await ReactThreeTestRenderer.create(<Node3D node={makeNode({ name: 'NoTransform' })} />);
     const group = renderer.scene.findByProps({ name: 'NoTransform' });
     expect(group.instance.position.x).toBe(0);
     expect(group.instance.scale.x).toBe(1);

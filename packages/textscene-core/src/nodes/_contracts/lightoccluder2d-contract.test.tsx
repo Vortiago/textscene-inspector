@@ -211,6 +211,9 @@ occluder = ExtResource("1_occ")
   it('ships co-located parser + Component render tests for the slice', () => {
     const slice = resolve(repoRoot(), 'packages/textscene-core/src/nodes/2d/lightoccluder2d');
     expect(existsSync(resolve(slice, 'parser.test.ts')), 'lightoccluder2d/parser.test.ts missing').toBe(true);
-    expect(existsSync(resolve(slice, 'Component.test.tsx')), 'lightoccluder2d/Component.test.tsx missing').toBe(true);
+    expect(
+      existsSync(resolve(slice, 'Component.test.tsx')),
+      'lightoccluder2d/Component.test.tsx missing'
+    ).toBe(true);
   });
 });

@@ -5,10 +5,7 @@ import type { MenuBarProperties } from './types';
 import { parseControl } from '../control/parser';
 import { boolSlotValue } from '../../../../godot/index.js';
 
-export function parseMenuBar(
-  heading: ParsedHeading,
-  properties: Record<string, string>
-): MenuBarProperties {
+export function parseMenuBar(heading: ParsedHeading, properties: Record<string, string>): MenuBarProperties {
   const result: MenuBarProperties = { ...parseControl(heading, properties) };
   result.flat = boolSlotValue(properties.flat) === true;
   return result;

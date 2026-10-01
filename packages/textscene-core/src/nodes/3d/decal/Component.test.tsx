@@ -306,10 +306,7 @@ describe('<Decal>', () => {
     expect((projection.material as THREE.MeshStandardMaterial).opacity).toBe(0);
 
     await renderer.update(
-      decalTree(
-        { ...options, node: makeNode({ ...faded, distance_fade_enabled: 'false' }) },
-        loader
-      )
+      decalTree({ ...options, node: makeNode({ ...faded, distance_fade_enabled: 'false' }) }, loader)
     );
     await renderer.advanceFrames(1, 16);
 

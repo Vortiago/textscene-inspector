@@ -44,13 +44,7 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
         props.invertEnabled,
         props.invertBorder
       ),
-    [
-      props.polygon,
-      props.polygons,
-      props.internalVertexCount,
-      props.invertEnabled,
-      props.invertBorder,
-    ]
+    [props.polygon, props.polygons, props.internalVertexCount, props.invertEnabled, props.invertBorder]
   );
 
   // Godot divides the transformed UV by the texture's pixel size, so the
@@ -275,16 +269,9 @@ function buildVertexColors(vertexCount: number, vertexColors: Float32Array): Flo
  * returns triples indexing the contour arrays it was given, so they are mapped
  * back through the ring's own indices.
  */
-function triangulateRing(
-  points: Vector2[],
-  outline: number[],
-  holes: number[][],
-  index: number[]
-): void {
+function triangulateRing(points: Vector2[], outline: number[], holes: number[][], index: number[]): void {
   const contour = outline.map((i) => new THREE.Vector2(points[i]!.x, -points[i]!.y));
-  const holeContours = holes.map((hole) =>
-    hole.map((i) => new THREE.Vector2(points[i]!.x, -points[i]!.y))
-  );
+  const holeContours = holes.map((hole) => hole.map((i) => new THREE.Vector2(points[i]!.x, -points[i]!.y)));
   // The flat local numbering triangulateShape works in: contour first, then
   // each hole, in the order it concatenates them internally.
   const localToGlobal = [...outline, ...holes.flat()];

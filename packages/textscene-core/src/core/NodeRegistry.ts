@@ -87,8 +87,7 @@ export function parseNodeWithRegistry(
 
   // The base Node fallback keeps unsupported types and instance nodes in the tree.
   if (!registration) {
-    const originalType =
-      heading.attributes.type || (placeholderPath ? INSTANCE_PLACEHOLDER_TYPE : 'Node');
+    const originalType = heading.attributes.type || (placeholderPath ? INSTANCE_PLACEHOLDER_TYPE : 'Node');
 
     // An instance node has no type until loaded, so only an unsupported type warns.
     if (!hasInstanceAttribute) {
@@ -149,4 +148,3 @@ export function parseNodeWithRegistry(
 
   return node;
 }
-

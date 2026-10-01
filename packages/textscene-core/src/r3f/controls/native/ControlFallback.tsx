@@ -32,7 +32,11 @@ export function ControlFallback({ rect, renderOrder, children }: NativeControlCo
 
   return (
     <>
-      <lineSegments position={[rect.w / 2, -(rect.h / 2), 0]} renderOrder={renderOrder ?? 0} geometry={geometry}>
+      <lineSegments
+        position={[rect.w / 2, -(rect.h / 2), 0]}
+        renderOrder={renderOrder ?? 0}
+        geometry={geometry}
+      >
         <lineBasicMaterial key={program.key} {...program.props} />
       </lineSegments>
       {children}

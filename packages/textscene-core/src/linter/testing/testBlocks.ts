@@ -66,8 +66,7 @@ function bodyOf(src: string, at: number, callOpen: number, nextAt: number): stri
   const close = afterBalanced(src, callOpen);
   // `Math.max`: a negative `slice` start counts from the end of the file, so a
   // block closing inside the first 16 characters would be judged on the tail.
-  const closes =
-    close > at && close <= nextAt && /\}\s*\)$/.test(src.slice(Math.max(0, close - 16), close));
+  const closes = close > at && close <= nextAt && /\}\s*\)$/.test(src.slice(Math.max(0, close - 16), close));
   return src.slice(at, closes ? close : nextAt);
 }
 

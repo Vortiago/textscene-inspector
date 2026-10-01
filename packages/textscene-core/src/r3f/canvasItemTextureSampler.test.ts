@@ -5,10 +5,7 @@
  * wins. `ControlCanvasWalker.test.tsx` covers the propagation.
  */
 import { describe, expect, it } from 'vitest';
-import {
-  CANVAS_ITEM_SAMPLER_INHERIT,
-  resolveInheritedSamplerValue,
-} from './canvasItemTextureSampler';
+import { CANVAS_ITEM_SAMPLER_INHERIT, resolveInheritedSamplerValue } from './canvasItemTextureSampler';
 
 const NEAREST = 1; // TEXTURE_FILTER_NEAREST / (unused by repeat, ordinal only)
 const LINEAR = 2; // TEXTURE_FILTER_LINEAR
@@ -34,15 +31,12 @@ describe('resolveInheritedSamplerValue', () => {
     // takes its parent's cache (`parent_item->texture_filter_cache`), so two
     // composed calls model it, as the walker composes them.
     const grandparentEffective = resolveInheritedSamplerValue(NEAREST, undefined);
-    const middleEffective = resolveInheritedSamplerValue(
-      CANVAS_ITEM_SAMPLER_INHERIT,
-      grandparentEffective
-    );
+    const middleEffective = resolveInheritedSamplerValue(CANVAS_ITEM_SAMPLER_INHERIT, grandparentEffective);
     const leafEffective = resolveInheritedSamplerValue(CANVAS_ITEM_SAMPLER_INHERIT, middleEffective);
     expect(leafEffective).toBe(NEAREST);
   });
 
-  it('no ancestor ever names one: resolves to undefined, the caller\'s cue to use the viewport default', () => {
+  it("no ancestor ever names one: resolves to undefined, the caller's cue to use the viewport default", () => {
     expect(resolveInheritedSamplerValue(CANVAS_ITEM_SAMPLER_INHERIT, undefined)).toBeUndefined();
   });
 

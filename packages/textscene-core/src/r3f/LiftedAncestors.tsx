@@ -105,7 +105,8 @@ export function LiftedAncestors({
   const inherited = useMemo(
     () =>
       liftedPast.reduce(
-        (acc, a) => multiplyModulate(acc, (a.properties as Partial<Node2DProperties>).modulate ?? WHITE_MODULATE),
+        (acc, a) =>
+          multiplyModulate(acc, (a.properties as Partial<Node2DProperties>).modulate ?? WHITE_MODULATE),
         parentModulate
       ),
     [liftedPast, parentModulate]
@@ -122,5 +123,8 @@ export function LiftedAncestors({
 
 /** The item's true path in the scene tree, including the levels it was lifted past. */
 export function liftedPath(basePath: string, liftedPast: readonly TscnNode[], name: string): string {
-  return joinPath(liftedPast.reduce((p, a) => joinPath(p, a.name), basePath), name);
+  return joinPath(
+    liftedPast.reduce((p, a) => joinPath(p, a.name), basePath),
+    name
+  );
 }

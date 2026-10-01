@@ -8,12 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  walkImportClosure,
-  bareSpecifiers,
-  tsxFiles,
-  FRAMEWORK_BARE_RE,
-} from '@textscene/dev-kit';
+import { walkImportClosure, bareSpecifiers, tsxFiles, FRAMEWORK_BARE_RE } from '@textscene/dev-kit';
 
 const here = dirname(fileURLToPath(import.meta.url)); // .../apps/textscene-linter/src
 const repoRoot = resolve(here, '../../..');
@@ -40,8 +35,6 @@ describe('linter-app React-free boundary', () => {
   });
 
   it('cli closure value-imports no react/react-dom/@react-three/three', () => {
-    expect(bareSpecifiers(closure).filter((s) => FRAMEWORK_BARE_RE.some((re) => re.test(s)))).toEqual(
-      []
-    );
+    expect(bareSpecifiers(closure).filter((s) => FRAMEWORK_BARE_RE.some((re) => re.test(s)))).toEqual([]);
   });
 });

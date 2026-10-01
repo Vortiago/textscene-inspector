@@ -145,8 +145,7 @@ const GROUP_AXIS_PREFIX_RE = /^[^/]+\//;
  * drives its severity. No `enforced`: `set_param_*`/`set_flag_*` guard only the index.
  */
 type GroupClassification =
-  | { readonly kind: 'formatOnly' }
-  | { readonly kind: 'hinted'; readonly cite: string };
+  { readonly kind: 'formatOnly' } | { readonly kind: 'hinted'; readonly cite: string };
 
 /**
  * Builds the `<group>_<axis>/*` dispatcher over one axis's instance of a

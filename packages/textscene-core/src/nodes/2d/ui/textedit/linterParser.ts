@@ -8,7 +8,11 @@
 import '../../../2d/ui/control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-import { AUTOWRAP_MODE, STRUCTURED_TEXT_PARSER, TEXT_DIRECTION } from '../../../../linter/validators/textServerEnums.js';
+import {
+  AUTOWRAP_MODE,
+  STRUCTURED_TEXT_PARSER,
+  TEXT_DIRECTION,
+} from '../../../../linter/validators/textServerEnums.js';
 
 validatorRegistry.registerAll('TextEdit', {
   // Text & behaviour (ungrouped run, text_edit.cpp:7545-7561).
@@ -23,9 +27,7 @@ validatorRegistry.registerAll('TextEdit', {
   // text_edit.cpp:7550
   emoji_menu_enabled: v.boolean('emoji_menu_enabled'),
   // text_edit.cpp:7551
-  backspace_deletes_composite_character_enabled: v.boolean(
-    'backspace_deletes_composite_character_enabled'
-  ),
+  backspace_deletes_composite_character_enabled: v.boolean('backspace_deletes_composite_character_enabled'),
   // text_edit.cpp:7552
   shortcut_keys_enabled: v.boolean('shortcut_keys_enabled'),
   // text_edit.cpp:7553
@@ -151,13 +153,9 @@ validatorRegistry.registerAll('TextEdit', {
   // text_edit.cpp:7607: PROPERTY_HINT_ENUM "Default,URI,File,Email,List,None,Custom",
   // STRUCTURED_TEXT_DEFAULT=0 .. STRUCTURED_TEXT_CUSTOM=6 (servers/text/text_server.cpp:681-687,
   // text_server.h:214-222). set_structured_text_bidi_override (text_edit.cpp:3778-3786) has no ERR_FAIL.
-  structured_text_bidi_override: v.enumInt(
-    'structured_text_bidi_override',
-    0,
-    6,
-    STRUCTURED_TEXT_PARSER,
-    { hinted: 'text_edit.cpp:7607' }
-  ),
+  structured_text_bidi_override: v.enumInt('structured_text_bidi_override', 0, 6, STRUCTURED_TEXT_PARSER, {
+    hinted: 'text_edit.cpp:7607',
+  }),
   // text_edit.cpp:7608: Variant::ARRAY with no hint, so never written wrapped.
   // The contents are opaque parser-specific arguments with no fixed arity or
   // element type; set_structured_text_bidi_override_options (text_edit.cpp:3793-3803)

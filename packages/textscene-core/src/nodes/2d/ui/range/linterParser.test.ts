@@ -181,8 +181,7 @@ describe('Range strict validators', () => {
 });
 
 describe('Range.page, whose setter clamps rather than stores', () => {
-  const page = (value: string) =>
-    validatorRegistry.findValidator('Range', 'page')!('page', value, 1);
+  const page = (value: string) => validatorRegistry.findValidator('Range', 'page')!('page', value, 1);
 
   it('reports a negative page, which range.cpp:255 CLAMPs up to 0', () => {
     const error = page('-1');

@@ -50,7 +50,10 @@ function unitsToPx(units: number, metrics: Pick<FontMetrics, 'unitsPerEm'>, font
  * A line's baseline sits this far below its top (`rich_text_label.cpp:1049`), and
  * every baseline-relative quantity adds to this value rather than re-deriving it.
  */
-export function getFontAscentPx(metrics: Pick<FontMetrics, 'ascent' | 'unitsPerEm'>, fontSizePx: number): number {
+export function getFontAscentPx(
+  metrics: Pick<FontMetrics, 'ascent' | 'unitsPerEm'>,
+  fontSizePx: number
+): number {
   return Math.ceil(unitsToPx(metrics.ascent, metrics, fontSizePx));
 }
 
@@ -145,7 +148,12 @@ export function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSize
 }
 
 /** `metrics.getKerningAdjustmentUnits(a, b)` scaled to `fontSizePx`. `0` short-circuits without a scale. */
-export function getFontKerningAdjustmentPx(metrics: FontMetrics, a: string, b: string, fontSizePx: number): number {
+export function getFontKerningAdjustmentPx(
+  metrics: FontMetrics,
+  a: string,
+  b: string,
+  fontSizePx: number
+): number {
   const units = metrics.getKerningAdjustmentUnits(a, b);
   if (units === 0) return 0;
   return unitsToPx(units, metrics, fontSizePx);

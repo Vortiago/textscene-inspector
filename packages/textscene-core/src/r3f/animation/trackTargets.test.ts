@@ -92,7 +92,9 @@ describe('trackTargetPaths', () => {
 describe('bindClip', () => {
   it('renames each track to its target’s uuid, which PropertyBinding matches exactly', () => {
     const target = new THREE.Object3D();
-    const clip = new AnimationClip('slide', 1, [new VectorKeyframeTrack('Root/A.position', [0, 1], [0, 0, 0, 1, 0, 0])]);
+    const clip = new AnimationClip('slide', 1, [
+      new VectorKeyframeTrack('Root/A.position', [0, 1], [0, 0, 0, 1, 0, 0]),
+    ]);
     const bound = bindClip(clip, new Map([['Root/A', target]]));
     expect(bound.tracks.map((t) => t.name)).toEqual([`${target.uuid}.position`]);
   });
@@ -120,7 +122,9 @@ describe('bindClip', () => {
     const scene = new THREE.Scene();
     const left = mountNode(scene, 'Arm');
     const right = mountNode(scene, 'Arm');
-    const clip = new AnimationClip('reach', 1, [new VectorKeyframeTrack('Root/Right/Arm.position', [0, 1], [5, 0, 0, 5, 0, 0])]);
+    const clip = new AnimationClip('reach', 1, [
+      new VectorKeyframeTrack('Root/Right/Arm.position', [0, 1], [5, 0, 0, 5, 0, 0]),
+    ]);
     const bound = bindClip(clip, new Map([['Root/Right/Arm', right.group]]));
     const mixer = new THREE.AnimationMixer(scene);
     mixer.clipAction(bound).play();

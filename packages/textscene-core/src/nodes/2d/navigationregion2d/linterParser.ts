@@ -14,7 +14,10 @@ validatorRegistry.registerAll('NavigationRegion2D', {
   use_edge_connections: v.boolean('use_edge_connections'),
   // navigation_region_2d.cpp:350, PROPERTY_HINT_LAYERS_2D_NAVIGATION.
   // set_navigation_layers (:75-83) is a bare assignment.
-  navigation_layers: layerBitmask('navigation_layers', { hinted: 'navigation_region_2d.cpp:350', width: 'uint32' /* navigation_region_2d.h:94 */ }),
+  navigation_layers: layerBitmask('navigation_layers', {
+    hinted: 'navigation_region_2d.cpp:350',
+    width: 'uint32' /* navigation_region_2d.h:94 */,
+  }),
   // navigation_region_2d.cpp:351 declares plain FLOAT with no
   // PROPERTY_HINT_RANGE, but set_enter_cost (:112) opens with
   // ERR_FAIL_COND_MSG(p_enter_cost < 0.0, ...): an enforced floor.

@@ -36,9 +36,7 @@ const SWITCHED_TSCN = `[gd_scene load_steps=1 format=3]
 
 const DEFAULT_FILE = 'unit-plane-mesh.tscn';
 /** The fixture the tests switch to: any leaf but the app's default. */
-const SWITCH_TARGET = flattenLeaves(buildFixtureTree(fixtures)).find(
-  (l) => l.file !== DEFAULT_FILE
-) as Leaf;
+const SWITCH_TARGET = flattenLeaves(buildFixtureTree(fixtures)).find((l) => l.file !== DEFAULT_FILE) as Leaf;
 
 /** Default fixture resolves with the stub; the switch target succeeds or fails per test. */
 function mockFetch(target: 'ok' | 'fail') {
@@ -136,7 +134,10 @@ describe('debounce supersession — a fixture switch cancels a pending edit forw
   // An edit mid-switch triggers the discard guard, and happy-dom has no window.confirm.
   // r3f-main.edit-guard.test.tsx holds the guard's own contract.
   beforeEach(() => {
-    vi.stubGlobal('confirm', vi.fn(() => true));
+    vi.stubGlobal(
+      'confirm',
+      vi.fn(() => true)
+    );
   });
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -254,8 +255,7 @@ describe('error-banner supersession — stale errors do not outlive the next act
     globalThis.fetch = vi.fn().mockImplementation((url: unknown) => {
       if (String(url).endsWith(`/${SWITCH_TARGET.file}`)) {
         return new Promise<Response>((resolve) => {
-          failSwitchFetch = () =>
-            resolve({ ok: false, statusText: 'Not Found' } as unknown as Response);
+          failSwitchFetch = () => resolve({ ok: false, statusText: 'Not Found' } as unknown as Response);
         });
       }
       return Promise.resolve({

@@ -152,7 +152,9 @@ export function checkPhoneLayout(gate, phone, { expectedPaths, selectName }) {
   );
 
   gate.check(
-    !!phone.collapsedCanvasBox && !!phone.canvasBox && phone.collapsedCanvasBox.height > phone.canvasBox.height,
+    !!phone.collapsedCanvasBox &&
+      !!phone.canvasBox &&
+      phone.collapsedCanvasBox.height > phone.canvasBox.height,
     `${label} collapsing the sheet does not grow the viewport ` +
       `(${phone.canvasBox?.height}px → ${phone.collapsedCanvasBox?.height}px)`
   );

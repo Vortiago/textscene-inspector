@@ -52,7 +52,9 @@ describe('transform utils', () => {
     });
 
     it('should handle extra whitespace', () => {
-      const result = parseTransform3D('Transform3D( 1 ,  0 ,  0 ,  0 ,  1 ,  0 ,  0 ,  0 ,  1 ,  0 ,  0 ,  0 )');
+      const result = parseTransform3D(
+        'Transform3D( 1 ,  0 ,  0 ,  0 ,  1 ,  0 ,  0 ,  0 ,  1 ,  0 ,  0 ,  0 )'
+      );
 
       expect(result).toEqual({
         basis_x: { x: 1, y: 0, z: 0 },
@@ -73,15 +75,15 @@ describe('transform utils', () => {
     });
 
     it('should throw error for too many values', () => {
-      expect(() =>
-        parseTransform3D('Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 3)')
-      ).toThrow('Transform3D must have 12 values');
+      expect(() => parseTransform3D('Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 3)')).toThrow(
+        'Transform3D must have 12 values'
+      );
     });
 
     it('should throw error for non-numeric values', () => {
-      expect(() =>
-        parseTransform3D('Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, a, b, c)')
-      ).toThrow('Invalid Transform3D format');
+      expect(() => parseTransform3D('Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, a, b, c)')).toThrow(
+        'Invalid Transform3D format'
+      );
     });
 
     it('should throw error for empty string', () => {
@@ -260,7 +262,6 @@ describe('transform utils', () => {
         expect(result.rotation.y).toBeCloseTo(Math.PI / 2, 5);
       });
 
-
       it('ShortWall with origin: FACE_X vertex (0,0,1) maps to world x≈6 (12-unit wide wall)', () => {
         // scale.z=6, rotation.y=+π/2, position=(0,0,1.75): local (0, 0, 1) scales to (0, 0, 6),
         // Ry maps +Z to +X for (6, 0, 0), and translation gives (6, 0, 1.75). world_x=6 makes the
@@ -347,10 +348,7 @@ describe('transform utils', () => {
     });
 
     it('should parse valid transform string', () => {
-      const result = parseOptionalTransform(
-        'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 10, 15)',
-        'TestNode'
-      );
+      const result = parseOptionalTransform('Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 10, 15)', 'TestNode');
 
       expect(result).toBeDefined();
       expect(result?.origin).toEqual({ x: 5, y: 10, z: 15 });

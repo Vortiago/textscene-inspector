@@ -60,7 +60,9 @@ function findIconMeshes(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
     .map((m) => m.instance as THREE.Mesh)
-    .filter((m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined);
+    .filter(
+      (m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined
+    );
 }
 
 function fakeTexture(w: number, h: number): THREE.Texture {
@@ -103,7 +105,12 @@ function absoluteY(object: THREE.Object3D): number {
 describe('<ItemList> — panel + rows', () => {
   it('draws exactly one panel chrome mesh', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ItemList {...painterEnv()} solveNode={solveNode({ items: [{ text: 'Sword' }] })} rect={RECT} renderOrder={0} />
+      <ItemList
+        {...painterEnv()}
+        solveNode={solveNode({ items: [{ text: 'Sword' }] })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     expect(findChromeMeshes(renderer.scene).length).toBe(1);
   });
@@ -122,7 +129,12 @@ describe('<ItemList> — panel + rows', () => {
 
   it('draws no icon mesh at all when no item names one', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ItemList {...painterEnv()} solveNode={solveNode({ items: [{ text: 'Sword' }] })} rect={RECT} renderOrder={0} />
+      <ItemList
+        {...painterEnv()}
+        solveNode={solveNode({ items: [{ text: 'Sword' }] })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     expect(findIconMeshes(renderer.scene).length).toBe(0);
   });
@@ -134,7 +146,7 @@ describe('<ItemList> — panel + rows', () => {
     expect((meshes[0]!.material as THREE.MeshBasicMaterial).map).not.toBeNull();
   });
 
-  it('dims a disabled item\'s text below a non-disabled one\'s', async () => {
+  it("dims a disabled item's text below a non-disabled one's", async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <ItemList
         {...painterEnv()}
@@ -168,7 +180,12 @@ describe('<ItemList> — row packing', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <ItemList
         {...painterEnv()}
-        solveNode={solveNode({ items: [{ text: 'A' }, { text: 'B' }], maxColumns: 2, sameColumnWidth: true, fixedColumnWidth: 40 })}
+        solveNode={solveNode({
+          items: [{ text: 'A' }, { text: 'B' }],
+          maxColumns: 2,
+          sameColumnWidth: true,
+          fixedColumnWidth: 40,
+        })}
         rect={RECT}
         renderOrder={0}
       />
@@ -249,7 +266,12 @@ describe('<ItemList> — row-relative vertical placement', () => {
   // `v_separation / 2` down whatever the font measures.
   it('centres a row label against the row height, not its y position', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ItemList {...painterEnv()} solveNode={solveNode({ items: [{ text: 'Sword' }] })} rect={RECT} renderOrder={0} />
+      <ItemList
+        {...painterEnv()}
+        solveNode={solveNode({ items: [{ text: 'Sword' }] })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     expect(absoluteY(findTextMeshes(renderer.scene)[0]!.parent!)).toBeCloseTo(4 + 2, 5);
   });

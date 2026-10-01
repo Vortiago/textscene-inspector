@@ -10,10 +10,7 @@ function props(raw: Record<string, string> = {}): DirectionalLight3DProperties {
   return parseDirectionalLight3D(heading('DirectionalLight3D', { name: 'Sun' }), raw);
 }
 
-function section(
-  sections: ReturnType<typeof formatDirectionalLight3DProperties>,
-  title: string
-) {
+function section(sections: ReturnType<typeof formatDirectionalLight3DProperties>, title: string) {
   return sections.find((s) => s.title === title);
 }
 

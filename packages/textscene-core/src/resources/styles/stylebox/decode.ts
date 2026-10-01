@@ -16,10 +16,7 @@ const SHADOW_DEFAULT = { r: 0, g: 0, b: 0, a: 0.6 }; // h:39
  * `null` for a type this slice does not claim (`StyleBoxTexture`, `StyleBoxLine`,
  * a non-StyleBox), so callers can tell "not ours" from "ours, paints nothing".
  */
-export function decodeStyleBox(
-  type: string,
-  properties: Record<string, string>
-): StyleBoxData | null {
+export function decodeStyleBox(type: string, properties: Record<string, string>): StyleBoxData | null {
   if (type === 'StyleBoxEmpty') return { kind: 'empty' };
   if (type === 'StyleBoxFlat') return decodeFlat(properties);
   return null;

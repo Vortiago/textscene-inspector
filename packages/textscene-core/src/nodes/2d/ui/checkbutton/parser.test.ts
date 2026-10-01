@@ -7,7 +7,7 @@ function h(attributes: Record<string, string>): ParsedHeading {
 }
 
 describe('parseCheckButton', () => {
-  it('reads text, the checked flag and disabled through Button\'s own parse', () => {
+  it("reads text, the checked flag and disabled through Button's own parse", () => {
     const p = parseCheckButton(h({ name: 'Sound', type: 'CheckButton' }), {
       text: '"Enable Sound"',
       button_pressed: 'true',
@@ -25,7 +25,7 @@ describe('parseCheckButton', () => {
     expect(p.text).toBeUndefined();
   });
 
-  it('an unrecognised button_pressed value falls back to false, same as Button\'s own boolean slots', () => {
+  it("an unrecognised button_pressed value falls back to false, same as Button's own boolean slots", () => {
     const p = parseCheckButton(h({ name: 'Sound', type: 'CheckButton' }), { button_pressed: 'maybe' });
     expect(p.buttonPressed).toBe(false);
   });

@@ -3,7 +3,15 @@ import { drawableNavigationPolygons } from './polygonIndices';
 
 describe('drawableNavigationPolygons', () => {
   it('keeps every polygon whose indices are in range (happy path)', () => {
-    expect(drawableNavigationPolygons([[0, 1, 2], [0, 2, 3]], 4)).toEqual([
+    expect(
+      drawableNavigationPolygons(
+        [
+          [0, 1, 2],
+          [0, 2, 3],
+        ],
+        4
+      )
+    ).toEqual([
       [0, 1, 2],
       [0, 2, 3],
     ]);
@@ -14,7 +22,15 @@ describe('drawableNavigationPolygons', () => {
   });
 
   it('drops a polygon indexing a vertex that does not exist (error path)', () => {
-    expect(drawableNavigationPolygons([[0, 1, 9], [0, 1, 2]], 3)).toEqual([[0, 1, 2]]);
+    expect(
+      drawableNavigationPolygons(
+        [
+          [0, 1, 9],
+          [0, 1, 2],
+        ],
+        3
+      )
+    ).toEqual([[0, 1, 2]]);
     expect(drawableNavigationPolygons([[0, 1, -1]], 3)).toEqual([]);
   });
 

@@ -17,7 +17,6 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-
   if (!isValidProperties(node.properties)) {
     return diagnostics;
   }
@@ -32,9 +31,9 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   // clips in an `anims/<name>` section, Godot 4 references AnimationLibraries
   // through `libraries/<name>` keys (the empty-name default library is written
   // `libraries/`), and older 4.x files use a single `libraries` dict.
-  const hasAnimations = Object.keys(rawProps).some(key => key.startsWith('anims/'));
+  const hasAnimations = Object.keys(rawProps).some((key) => key.startsWith('anims/'));
   const hasLibraries = Object.keys(rawProps).some(
-    key => key === 'libraries' || key.startsWith('libraries/')
+    (key) => key === 'libraries' || key.startsWith('libraries/')
   );
 
   // Build the set of known clip names. Godot references a clip in the default
@@ -59,8 +58,7 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   const hasUnresolvableLibrary =
     Object.entries(rawProps).some(
       ([key, value]) =>
-        (key === 'libraries' || key.startsWith('libraries/')) &&
-        EXT_RESOURCE_CALL_ANYWHERE_RE.test(value)
+        (key === 'libraries' || key.startsWith('libraries/')) && EXT_RESOURCE_CALL_ANYWHERE_RE.test(value)
     ) || hasUnresolvableClips(extractLibraries(rawProps), scene.internalResources);
   // A resolvable but empty library is still enumerable. A file with no clip source is not: a
   // script may add the clips, so nothing here can call a reference dangling.
@@ -128,7 +126,8 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
 const animationPlayerValidationRule: LintRule = {
   meta: {
     name: 'valid-animationplayer-properties',
-    description: 'Validates AnimationPlayer property values, animation references, and playback configuration',
+    description:
+      'Validates AnimationPlayer property values, animation references, and playback configuration',
     category: 'validation',
     applicableNodeTypes: ['AnimationPlayer'],
     emits: [

@@ -182,7 +182,7 @@ describe('AudioStreamPlayer2D Linter', () => {
           prop: 'area_mask',
           valid: [0, 1, 100, 1048575, 2000000, 2147483648, 4294967295],
           invalid: [
-{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
+            { value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
           ],
         },
         {
@@ -353,9 +353,9 @@ describe('AudioStreamPlayer2D Linter', () => {
       // Errors for pitch_scale and max_polyphony, both of which the engine refuses;
       // attenuation = -1 is legal (PROPERTY_HINT_EXP_EASING, no range).
       expect(diagnostics.length).toBeGreaterThan(1);
-      expect(diagnostics.some(d => d.message.includes('pitch_scale'))).toBe(true);
-      expect(diagnostics.some(d => d.message.includes('max_polyphony'))).toBe(true);
-      expect(diagnostics.some(d => d.message.includes('attenuation'))).toBe(false);
+      expect(diagnostics.some((d) => d.message.includes('pitch_scale'))).toBe(true);
+      expect(diagnostics.some((d) => d.message.includes('max_polyphony'))).toBe(true);
+      expect(diagnostics.some((d) => d.message.includes('attenuation'))).toBe(false);
     });
 
     it('should handle scientific notation in numeric values', () => {
@@ -370,12 +370,10 @@ describe('AudioStreamPlayer2D Linter', () => {
     });
 
     it('should validate mixed warnings and errors', () => {
-      const diagnostics = lint(
-        withStream({ volume_db: -90, pitch_scale: 0.005, max_distance: 0.5 })
-      );
+      const diagnostics = lint(withStream({ volume_db: -90, pitch_scale: 0.005, max_distance: 0.5 }));
       // All three sit below their hints.
       expect(diagnostics).toHaveLength(3);
-      expect(diagnostics.every(d => d.severity === 'warning')).toBe(true);
+      expect(diagnostics.every((d) => d.severity === 'warning')).toBe(true);
     });
 
     it('should handle SubResource references', () => {
@@ -401,19 +399,19 @@ describe('AudioStreamPlayer2D Linter', () => {
       );
       // Three warnings, all three the validators' own hint bands; attenuation
       // has no hint band (EXP_EASING) and stays silent.
-      expect(diagnostics.map(d => d.ruleName).sort()).toEqual([
+      expect(diagnostics.map((d) => d.ruleName).sort()).toEqual([
         'strict-parser',
         'strict-parser',
         'strict-parser',
       ]);
-      expect(diagnostics.every(d => d.severity === 'warning')).toBe(true);
+      expect(diagnostics.every((d) => d.severity === 'warning')).toBe(true);
     });
 
     it('should handle zero pitch_scale semantic validation', () => {
       const diagnostics = lint(withStream({ pitch_scale: 0 }));
       expect(diagnostics.length).toBeGreaterThan(0);
       // Should have error from both format validator and semantic validator
-      const pitchErrors = diagnostics.filter(d => d.message.includes('pitch_scale'));
+      const pitchErrors = diagnostics.filter((d) => d.message.includes('pitch_scale'));
       expect(pitchErrors.length).toBeGreaterThan(0);
     });
   });

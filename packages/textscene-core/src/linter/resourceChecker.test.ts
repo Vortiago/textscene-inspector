@@ -195,9 +195,7 @@ describe('checkResourceExists', () => {
       const external = countedTable<TscnExternalResource>([
         { id: 'texture_1', type: 'Texture2D', path: 'res://textures/texture.png' },
       ]);
-      const internal = countedTable<TscnInternalResource>([
-        { id: 'Box_1', type: 'BoxMesh', data: {} },
-      ]);
+      const internal = countedTable<TscnInternalResource>([{ id: 'Box_1', type: 'BoxMesh', data: {} }]);
       const scene: TscnScene = {
         nodes: [],
         externalResources: external.table,

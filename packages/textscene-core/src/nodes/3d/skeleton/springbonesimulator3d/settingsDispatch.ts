@@ -93,7 +93,7 @@ export const settingsValidator: PropertyValidator = accepts((key, value, line) =
       line,
       `Unknown SpringBoneSimulator3D joint property: "${key}". _set has no case for ` +
         'it and returns false (spring_bone_simulator_3d.cpp:138-139), so the write is dropped',
-      'INVALID_SPRING_BONE_JOINT_KEY',
+      'INVALID_SPRING_BONE_JOINT_KEY'
     );
   }
 
@@ -112,8 +112,4 @@ export const settingsValidator: PropertyValidator = accepts((key, value, line) =
 // every magnitude bound lives in the leaves, exposed so `boundGrounding`'s sweep
 // recurses past this function.
 settingsValidator.grounding = { kind: 'enforced', cite: 'spring_bone_simulator_3d.cpp:44' };
-settingsValidator.leaves = [
-  settingLeafValidator,
-  ...Object.values(JOINT_LEAVES),
-  collisionPath,
-];
+settingsValidator.leaves = [settingLeafValidator, ...Object.values(JOINT_LEAVES), collisionPath];

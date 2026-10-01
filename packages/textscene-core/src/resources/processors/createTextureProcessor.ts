@@ -8,11 +8,7 @@ import * as THREE from 'three';
 import type { FileEventBus } from '../FileEventBus';
 import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
-import {
-  createTextureFromBuffer,
-  getMimeType,
-  isTexturePath,
-} from '../formats/image/textureProcessing';
+import { createTextureFromBuffer, getMimeType, isTexturePath } from '../formats/image/textureProcessing';
 
 /**
  * Create a texture processor that handles loading and caching textures.

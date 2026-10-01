@@ -51,9 +51,7 @@ describe('lineEditDisplayText', () => {
 
   it('counts code points, not UTF-16 units, so an emoji echoes once (edge case)', () => {
     // Godot's String::length() is UTF-32; '🎉' is one character there.
-    expect(lineEditDisplayText({ name: 'L', text: '🎉', secret: true }).text).toBe(
-      DEFAULT_SECRET_CHARACTER
-    );
+    expect(lineEditDisplayText({ name: 'L', text: '🎉', secret: true }).text).toBe(DEFAULT_SECRET_CHARACTER);
   });
 
   it('paints an empty placeholder for a wholly bare LineEdit (edge case)', () => {
@@ -76,7 +74,9 @@ describe('lineEditDisplayText', () => {
   });
 
   it('max_length 0 (absent, or authored) means unlimited — the Godot default — text is never truncated', () => {
-    expect(lineEditDisplayText({ name: 'L', text: 'a much longer string' }).text).toBe('a much longer string');
+    expect(lineEditDisplayText({ name: 'L', text: 'a much longer string' }).text).toBe(
+      'a much longer string'
+    );
     expect(lineEditDisplayText({ name: 'L', text: 'a much longer string', maxLength: 0 }).text).toBe(
       'a much longer string'
     );

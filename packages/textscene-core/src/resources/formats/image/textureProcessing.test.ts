@@ -7,11 +7,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import {
-  createTextureFromBuffer,
-  getMimeType,
-  isTexturePath,
-} from './textureProcessing';
+import { createTextureFromBuffer, getMimeType, isTexturePath } from './textureProcessing';
 
 const fakeLoader = vi.hoisted(() => ({
   mode: 'success' as 'success' | 'error',
@@ -120,7 +116,7 @@ describe('createTextureFromBuffer', () => {
     expect(texture.colorSpace).toBe(THREE.SRGBColorSpace);
   });
 
-  it('leaves wrapping at three\'s clamp-to-edge default on both axes', async () => {
+  it("leaves wrapping at three's clamp-to-edge default on both axes", async () => {
     // The loader ships the shared cache entry with three's own default, NOT
     // Repeat. Godot has two defaults for one image (`BaseMaterial3D` repeat,
     // `CanvasItem` clamp), so neither belongs on the shared entry. Each
@@ -150,9 +146,7 @@ describe('createTextureFromBuffer', () => {
 
   it('rejects with the decode-failure contract message on loader error', async () => {
     fakeLoader.mode = 'error';
-    await expect(createTextureFromBuffer(data, 'image/png')).rejects.toThrow(
-      'Failed to decode texture'
-    );
+    await expect(createTextureFromBuffer(data, 'image/png')).rejects.toThrow('Failed to decode texture');
   });
 
   it('revokes the blob URL even when decoding fails', async () => {

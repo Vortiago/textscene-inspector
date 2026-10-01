@@ -164,7 +164,10 @@ describe('dictBase64Field', () => {
 
   it('matches the call but captures nothing for an empty array or the compat byte list', () => {
     const field = dictBase64Field('vertex_data');
-    for (const block of ['{ "vertex_data": PackedByteArray() }', '{ "vertex_data": PackedByteArray(1, 2) }']) {
+    for (const block of [
+      '{ "vertex_data": PackedByteArray() }',
+      '{ "vertex_data": PackedByteArray(1, 2) }',
+    ]) {
       const match = field.exec(block);
       expect(match).not.toBeNull();
       expect(match?.[1]).toBeUndefined();

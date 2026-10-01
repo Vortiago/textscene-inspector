@@ -59,7 +59,12 @@ async function followResourceLink(page) {
 
 /** Collapse the Explorer's Outline section again by clicking its header. */
 async function collapseOutline(page) {
-  await page.locator('.pane-header').filter({ hasText: 'Outline' }).first().click().catch(() => {});
+  await page
+    .locator('.pane-header')
+    .filter({ hasText: 'Outline' })
+    .first()
+    .click()
+    .catch(() => {});
   await sleep(600);
 }
 

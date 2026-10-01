@@ -7,9 +7,7 @@
 import { nonNegativeOr } from '../../../parser/valueParsers';
 import type { CylinderShape3DProperties } from './types';
 
-export function decodeCylinderShape3D(
-  properties: Record<string, string>
-): CylinderShape3DProperties {
+export function decodeCylinderShape3D(properties: Record<string, string>): CylinderShape3DProperties {
   return {
     radius: nonNegativeOr(properties.radius, 0.5, 'CylinderShape3D radius'),
     height: nonNegativeOr(properties.height, 2, 'CylinderShape3D height'),

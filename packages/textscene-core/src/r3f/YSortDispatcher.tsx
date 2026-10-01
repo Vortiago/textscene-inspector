@@ -78,9 +78,7 @@ function SortedChildren({
   const canvasRoots = useCanvasRootRanges();
   const topLevelChildren = useMemo(
     () =>
-      node.children
-        .map((child, index) => ({ child, index }))
-        .filter(({ child }) => isTopLevelItem(child)),
+      node.children.map((child, index) => ({ child, index })).filter(({ child }) => isTopLevelItem(child)),
     [node.children]
   );
 
@@ -126,11 +124,10 @@ function SortedChildren({
   // Bucket by effectiveZ, sort within each bucket by sortY ascending (stable),
   // then assign rank-based z within each bucket.
   const sorted = useMemo(() => {
-    const sorted = [...items]
-      .sort((a, b) => {
-        if (a.effectiveZ !== b.effectiveZ) return a.effectiveZ - b.effectiveZ;
-        return a.sortY - b.sortY;
-      });
+    const sorted = [...items].sort((a, b) => {
+      if (a.effectiveZ !== b.effectiveZ) return a.effectiveZ - b.effectiveZ;
+      return a.sortY - b.sortY;
+    });
 
     const buckets = new Map<number, typeof sorted>();
     for (const item of sorted) {
@@ -168,7 +165,9 @@ function SortedChildren({
   return (
     <>
       {packed.map(({ item, range }) => {
-        const Renderer = item.node ? nodeComponentRegistry.getYSortGroup(item.node.type)?.Renderer : undefined;
+        const Renderer = item.node
+          ? nodeComponentRegistry.getYSortGroup(item.node.type)?.Renderer
+          : undefined;
         if (item.kind === 'tileGroup' && item.node && Renderer) {
           // The row's whole draw position rides the group as one paint sequence;
           // its meshes order within it by their own `renderOrder`, a batching
@@ -176,12 +175,7 @@ function SortedChildren({
           return (
             <Fragment key={`tg-${item.node.name}-${ySortItemId(item)}`}>
               <LiftedAncestors liftedPast={item.liftedPast}>
-                <Renderer
-                  item={item}
-                  layerRank={layerRank}
-                  sequence={range.base}
-                  node={item.node}
-                />
+                <Renderer item={item} layerRank={layerRank} sequence={range.base} node={item.node} />
               </LiftedAncestors>
             </Fragment>
           );

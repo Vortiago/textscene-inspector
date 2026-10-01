@@ -67,7 +67,7 @@ describe('frameSceneBounds — tscnEmptyState exclusion', () => {
   });
 });
 
-describe('frameSceneBounds — dimensionally flat scenes use Godot\'s own editor orbit', () => {
+describe("frameSceneBounds — dimensionally flat scenes use Godot's own editor orbit", () => {
   it('a scene whose geometry is entirely coplanar (z spread 0) still frames from editorCameraDirection(), not head-on', () => {
     // A quad flat in the XY plane. Godot's editor orbit is fixed whatever the scene's flatness, so
     // it never frames head-on along (0,0,1).
@@ -102,10 +102,7 @@ describe('frameSceneBounds — a bounds union with no extent', () => {
     const scene = new THREE.Scene();
     scene.add(pointProxy(0));
     const gizmo = new THREE.LineSegments(
-      new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(3, 3, 3),
-        new THREE.Vector3(5, 5, 5),
-      ])
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(3, 3, 3), new THREE.Vector3(5, 5, 5)])
     );
     scene.add(gizmo);
 

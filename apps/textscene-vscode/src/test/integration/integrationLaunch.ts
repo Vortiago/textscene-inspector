@@ -39,9 +39,7 @@ export function integrationLaunchPaths(runnerDir: string): IntegrationLaunchPath
 }
 
 /** Build the argument list VS Code is launched with. */
-export function integrationLaunchOptions(
-  paths: IntegrationLaunchPaths,
-): IntegrationLaunchOptions {
+export function integrationLaunchOptions(paths: IntegrationLaunchPaths): IntegrationLaunchOptions {
   return {
     extensionDevelopmentPath: paths.extensionDevelopmentPath,
     extensionTestsPath: paths.extensionTestsPath,
@@ -70,9 +68,7 @@ export interface IntegrationLaunchDeps {
  * `workspace.getWorkspaceFolder` for the whole run, so every `res://` read fails.
  * Preparing here also keeps the suite from recreating a directory the window holds.
  */
-export async function launchIntegrationTests(
-  deps: IntegrationLaunchDeps,
-): Promise<void> {
+export async function launchIntegrationTests(deps: IntegrationLaunchDeps): Promise<void> {
   deps.prepareWorkspace(deps.paths.workspaceRoot);
   await deps.launch(integrationLaunchOptions(deps.paths));
 }

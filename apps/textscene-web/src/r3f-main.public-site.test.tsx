@@ -90,9 +90,7 @@ describe('public site edition', () => {
 
     render(<R3FApp />);
 
-    await waitFor(() =>
-      expect(new URL(window.location.href).searchParams.has('fixture')).toBe(false)
-    );
+    await waitFor(() => expect(new URL(window.location.href).searchParams.has('fixture')).toBe(false));
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 

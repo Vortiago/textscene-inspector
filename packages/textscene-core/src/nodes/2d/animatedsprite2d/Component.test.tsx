@@ -18,10 +18,7 @@ import {
   useAnimationTransport,
   type AnimationTransport,
 } from '../../../r3f/contexts/AnimationTransportContext';
-import {
-  useOptionalSelection,
-  type SelectionContextValue,
-} from '../../../r3f/contexts/SelectionContext';
+import { useOptionalSelection, type SelectionContextValue } from '../../../r3f/contexts/SelectionContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 import type { TscnNode } from '../../../parser/types';
@@ -310,7 +307,8 @@ describe('AnimatedSprite2D authored-frame reactivity', () => {
   it('reflects a changed authored frame on a reused fiber when not playing', async () => {
     const fake = makeFake();
     const r = await ReactThreeTestRenderer.create(tree(fake, '0'));
-    const width = () => ((r.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.PlaneGeometry).parameters.width;
+    const width = () =>
+      ((r.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.PlaneGeometry).parameters.width;
     expect(width()).toBe(32); // authored frame 0
 
     await ReactThreeTestRenderer.act(async () => {
@@ -379,8 +377,16 @@ describe('AnimatedSprite2D AtlasTexture frames (sprite-sheet packing)', () => {
         <SceneResourcesProvider
           internalResources={[
             { id: 'sf', type: 'SpriteFrames', data: { animations: ATLAS_ANIM, id: 'sf' } },
-            { id: 'Atlas_a', type: 'AtlasTexture', data: { atlas: 'ExtResource("2")', region: 'Rect2(0, 0, 16, 16)', id: 'Atlas_a' } },
-            { id: 'Atlas_b', type: 'AtlasTexture', data: { atlas: 'ExtResource("2")', region: 'Rect2(16, 0, 16, 32)', id: 'Atlas_b' } },
+            {
+              id: 'Atlas_a',
+              type: 'AtlasTexture',
+              data: { atlas: 'ExtResource("2")', region: 'Rect2(0, 0, 16, 16)', id: 'Atlas_a' },
+            },
+            {
+              id: 'Atlas_b',
+              type: 'AtlasTexture',
+              data: { atlas: 'ExtResource("2")', region: 'Rect2(16, 0, 16, 32)', id: 'Atlas_b' },
+            },
           ]}
           externalResources={[{ id: '2', type: 'Texture2D', path: 'res://atlas.png' }]}
         >

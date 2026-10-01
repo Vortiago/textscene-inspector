@@ -25,13 +25,12 @@ describe('parameterList', () => {
   it('survives a nested type, a default and a rest parameter', () => {
     // An alternation that consumes the separating comma yields one name for
     // two parameters, and a real builder templates its second parameter.
-    expect(parameterList('a: Record<string, number>, b = { x: 1, y: 2 }, ...rest: string[]')).toEqual(
-      ['a', 'b', 'rest']
-    );
-    expect(parameterList('cb: (a: number, b: number) => void, after: string')).toEqual([
-      'cb',
-      'after',
+    expect(parameterList('a: Record<string, number>, b = { x: 1, y: 2 }, ...rest: string[]')).toEqual([
+      'a',
+      'b',
+      'rest',
     ]);
+    expect(parameterList('cb: (a: number, b: number) => void, after: string')).toEqual(['cb', 'after']);
   });
 });
 
@@ -82,7 +81,7 @@ describe('armBuilders comment and slot handling', () => {
 describe('armBuilders', () => {
   it('pins the templated parameter to its position', () => {
     const file = fileWith(
-      "export function make(node: TscnNode, rulePrefix: string) {\n" +
+      'export function make(node: TscnNode, rulePrefix: string) {\n' +
         '  return { ruleName: `${rulePrefix}-projector-without-shadow` };\n' +
         '}\n'
     );
@@ -98,20 +97,16 @@ describe('armBuilders', () => {
   it('keeps the WHOLE template, so a prefix in the middle substitutes', () => {
     // `valid-${prefix}-resources` is a name concatenation cannot produce.
     const file = fileWith(
-      "export function make(prefix: string) {\n" +
+      'export function make(prefix: string) {\n' +
         '  return { ruleName: `valid-${prefix}-resources` };\n' +
         '}\n'
     );
-    expect(armBuilders([file]).builders.get('make')?.templates).toEqual([
-      'valid-${prefix}-resources',
-    ]);
+    expect(armBuilders([file]).builders.get('make')?.templates).toEqual(['valid-${prefix}-resources']);
   });
 
   it('ignores a builder whose rule names are literal, leaving them to the literal scrape', () => {
     const file = fileWith(
-      "export function make(prefix: string) {\n" +
-        "  return { ruleName: 'a-fixed-name' };\n" +
-        '}\n'
+      'export function make(prefix: string) {\n' + "  return { ruleName: 'a-fixed-name' };\n" + '}\n'
     );
     expect(armBuilders([file]).builders.size).toBe(0);
   });
@@ -120,7 +115,7 @@ describe('armBuilders', () => {
     // Nothing here pins one argument position, so nothing ties the names it
     // produces back to a rule: a defect, not a category.
     const file = fileWith(
-      "export function make(a: string, b: string) {\n" +
+      'export function make(a: string, b: string) {\n' +
         '  return [{ ruleName: `${a}-one` }, { ruleName: `${b}-two` }];\n' +
         '}\n'
     );
@@ -140,9 +135,7 @@ describe('armBuilders', () => {
     );
     const { builders, unresolvable } = armBuilders([file]);
     expect(builders.size).toBe(0);
-    expect(unresolvable).toEqual([
-      { builder: 'make', templates: ['${prefix}-needs-collision-shape'] },
-    ]);
+    expect(unresolvable).toEqual([{ builder: 'make', templates: ['${prefix}-needs-collision-shape'] }]);
   });
 
   it('sees a rule name hoisted into a local, not only the property form', () => {

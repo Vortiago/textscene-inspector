@@ -123,13 +123,11 @@ describe('canvasItemBlendState', () => {
       CanvasItemBlendMode.MUL,
       CanvasItemBlendMode.PREMULT_ALPHA,
     ];
-    const custom = authorable.filter(
-      (mode) => canvasItemBlendState(mode).blending === THREE.CustomBlending
-    );
+    const custom = authorable.filter((mode) => canvasItemBlendState(mode).blending === THREE.CustomBlending);
     expect(custom).toEqual(authorable.filter((mode) => mode !== CanvasItemBlendMode.MIX));
   });
 
-  it('never sets three\'s in-shader premultiply — Godot only programs blend factors', () => {
+  it("never sets three's in-shader premultiply — Godot only programs blend factors", () => {
     // Godot's premult mode is blend attachments alone (cpp:700-708); three's
     // premultipliedAlpha adds `rgb *= a` in-shader, which would premultiply a
     // straight-alpha texture twice against Godot's output.

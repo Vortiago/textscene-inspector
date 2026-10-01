@@ -39,9 +39,7 @@ describe('decodeCanvasItemMaterial', () => {
   it('falls back to the default for an out-of-range or unparseable enum', () => {
     expect(decodeCanvasItemMaterial({ blend_mode: '9' }).blendMode).toBe(CanvasItemBlendMode.MIX);
     expect(decodeCanvasItemMaterial({ blend_mode: '-1' }).blendMode).toBe(CanvasItemBlendMode.MIX);
-    expect(decodeCanvasItemMaterial({ light_mode: 'nope' }).lightMode).toBe(
-      CanvasItemLightMode.NORMAL
-    );
+    expect(decodeCanvasItemMaterial({ light_mode: 'nope' }).lightMode).toBe(CanvasItemLightMode.NORMAL);
   });
 });
 

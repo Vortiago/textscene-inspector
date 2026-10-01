@@ -143,10 +143,7 @@ describe('canvasRootRanges', () => {
     // The canvas draws in that order (renderer_canvas_cull.h:146-151, :494-511), each
     // root whole, so a nested root draws after everything under the root it hangs under.
     const detached = node('Detached', 'ColorRect');
-    const root = node('Root', 'Control', [
-      node('Holder', 'Node', [detached]),
-      node('Later', 'ColorRect'),
-    ]);
+    const root = node('Root', 'Control', [node('Holder', 'Node', [detached]), node('Later', 'ColorRect')]);
     const ranges = allocatePaintRange(WHOLE_CANVAS_RANGE, [root]).children;
     const roots = canvasRootRanges([root], ranges);
 
@@ -302,7 +299,7 @@ describe('allocatePaintRange', () => {
     expect(allocated.children[1]!.base).toBeLessThanOrEqual(allocated.children[2]!.base);
   });
 
-  it('puts a TileMap\'s layers after the TileMap and before its authored children', () => {
+  it("puts a TileMap's layers after the TileMap and before its authored children", () => {
     // `add_child(new_layer, false, INTERNAL_MODE_FRONT)` (`tile_map.cpp:279`)
     // gives the layers draw indices 0..L-1 (`node.h:585-600`), so every authored
     // child draws after them.
@@ -313,7 +310,7 @@ describe('allocatePaintRange', () => {
     expect(allocated.children[0]!.base).toBe(allocated.front.base + allocated.front.size);
   });
 
-  it('keeps a TileMap\'s layers inside a range too small for them', () => {
+  it("keeps a TileMap's layers inside a range too small for them", () => {
     // A squeezed range cannot give each layer its own value, but an overrun
     // would draw a layer inside the next sibling's range.
     const range = { base: 10, size: 4 };
@@ -326,7 +323,10 @@ describe('allocatePaintRange', () => {
   });
 
   it('gives a node with no internal children an empty front', () => {
-    const allocated = allocateNodePaintRange(WHOLE_CANVAS_RANGE, node('P', 'Node2D', [node('A', 'Sprite2D')]));
+    const allocated = allocateNodePaintRange(
+      WHOLE_CANVAS_RANGE,
+      node('P', 'Node2D', [node('A', 'Sprite2D')])
+    );
     expect(allocated.front.size).toBe(0);
     expect(allocated.children[0]!.base).toBe(allocated.self + 1);
   });

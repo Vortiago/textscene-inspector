@@ -67,9 +67,7 @@ describe('rule emits meta-guard', () => {
   // `applicableNodeTypes` reaches, declared with its severity and citation in
   // `fileDiagnostics.ts`.
   const NON_RULE_NAMES = FILE_DIAGNOSTIC_NAMES;
-  const codePairs = allFiles
-    .flatMap((f) => scrapePairs(f))
-    .filter((p) => !NON_RULE_NAMES.has(p.name));
+  const codePairs = allFiles.flatMap((f) => scrapePairs(f)).filter((p) => !NON_RULE_NAMES.has(p.name));
 
   /** meta.name -> the slice file declaring it. */
   const fileByRuleName = new Map<string, string>();
@@ -85,9 +83,7 @@ describe('rule emits meta-guard', () => {
       if (!file) continue;
       const reachable = reachablePairs(file);
       for (const e of rule.meta.emits ?? []) {
-        const found = reachable.some(
-          (p) => pairMatches(p.name, e.ruleName) && p.severity === e.severity
-        );
+        const found = reachable.some((p) => pairMatches(p.name, e.ruleName) && p.severity === e.severity);
         if (!found) invented.push(`${rule.meta.name}: ${e.ruleName} (${e.severity})`);
       }
     }
@@ -101,9 +97,7 @@ describe('rule emits meta-guard', () => {
     expect(codePairs.length).toBeGreaterThan(200);
     const declared = ruleRegistry.getRules().flatMap((r) => r.meta.emits ?? []);
     const undeclared = codePairs
-      .filter(
-        (p) => !declared.some((e) => pairMatches(p.name, e.ruleName) && e.severity === p.severity)
-      )
+      .filter((p) => !declared.some((e) => pairMatches(p.name, e.ruleName) && e.severity === p.severity))
       .map((p) => `${p.name} (${p.severity})`);
     expect([...new Set(undeclared)].sort()).toEqual([]);
   });
@@ -140,9 +134,7 @@ describe('rule emits meta-guard', () => {
         called.add(call[1]!);
         for (const template of builder.templates) {
           const expected = template.replaceAll(`\${${builder.param}}`, literal);
-          const covered = owners.some((r) =>
-            (r!.meta.emits ?? []).some((e) => e.ruleName === expected)
-          );
+          const covered = owners.some((r) => (r!.meta.emits ?? []).some((e) => e.ruleName === expected));
           if (!covered) missing.push(`${file.slice(nodesRoot.length + 1)}: ${expected}`);
         }
       }

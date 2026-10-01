@@ -20,12 +20,7 @@ import {
 
 /** One node of a resolved AnimationTree. */
 export type AnimNode =
-  | AnimationLeaf
-  | Blend2Node
-  | Add2Node
-  | TimeScaleNode
-  | StateMachineNode
-  | PassthroughNode;
+  AnimationLeaf | Blend2Node | Add2Node | TimeScaleNode | StateMachineNode | PassthroughNode;
 
 /** Plays a single named clip from the resolved AnimationPlayer. */
 export interface AnimationLeaf {
@@ -264,10 +259,7 @@ function resolveStateMachine(
  * `transitions = [&"Start", &"Idle", SubResource("…"), …]` is split as the
  * array it is, the way `parseConnections` reads its triples.
  */
-function pickStartState(
-  transitions: string,
-  states: StateMachineNode['states']
-): string | null {
+function pickStartState(transitions: string, states: StateMachineNode['states']): string | null {
   const body = arrayLiteralBody(transitions);
   const tokens = body === null ? [] : dropTrailingComma(splitTopLevel(body));
   for (let i = 0; i + 2 < tokens.length; i += 3) {

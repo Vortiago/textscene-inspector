@@ -10,7 +10,12 @@ import { TEXTURE_WORK_STATUS_TESTID } from './textureWorkStatusTestId.js';
 export function TextureWorkStatus() {
   if (usePendingTextureWork() === 0) return null;
   return (
-    <span className={styles.statChip} role="status" aria-live="polite" data-testid={TEXTURE_WORK_STATUS_TESTID}>
+    <span
+      className={styles.statChip}
+      role="status"
+      aria-live="polite"
+      data-testid={TEXTURE_WORK_STATUS_TESTID}
+    >
       Building textures…
     </span>
   );

@@ -16,17 +16,9 @@ export function Node({ node, children }: NodeComponentProps) {
   // Node3DProperties superset, which includes the `transform?` slot
   // that NodeProperties shares. Identity transform when absent.
   const props = node.properties as NodeProperties;
-  const { position, rotation, scale } = useMemo(
-    () => transformFromNode3DProperties(props),
-    [props]
-  );
+  const { position, rotation, scale } = useMemo(() => transformFromNode3DProperties(props), [props]);
   return (
-    <group
-      name={node.name}
-      position={position}
-      rotation={rotation}
-      scale={scale}
-    >
+    <group name={node.name} position={position} rotation={rotation} scale={scale}>
       {children}
     </group>
   );

@@ -10,16 +10,18 @@
  * A `Map`: `typeName` comes from a validator parameter, and a plain object would answer `constructor` with a function,
  * so the spread below would throw `also is not iterable` instead of returning a diagnostic.
  */
-const CONVERTIBLE_SPELLINGS = new Map<string, readonly string[]>(Object.entries({
-  Vector2: ['Vector2i'],
-  Vector2i: ['Vector2'],
-  Vector3: ['Vector3i'],
-  Vector3i: ['Vector3'],
-  Vector4: ['Vector4i'],
-  Vector4i: ['Vector4'],
-  Rect2: ['Rect2i'],
-  Rect2i: ['Rect2'],
-}));
+const CONVERTIBLE_SPELLINGS = new Map<string, readonly string[]>(
+  Object.entries({
+    Vector2: ['Vector2i'],
+    Vector2i: ['Vector2'],
+    Vector3: ['Vector3i'],
+    Vector3i: ['Vector3'],
+    Vector4: ['Vector4i'],
+    Vector4i: ['Vector4'],
+    Rect2: ['Rect2i'],
+    Rect2i: ['Rect2'],
+  })
+);
 
 /**
  * The regex alternation matching every spelling a `typeName` slot accepts, the type's own name first so a canonical value

@@ -75,7 +75,7 @@ describe('createGLBProcessor — import sidecar external materials', () => {
     await initGlbModules();
   });
 
-  it('tags the remapped surface with the sidecar\'s external .tres, and keeps the glTF material', async () => {
+  it("tags the remapped surface with the sidecar's external .tres, and keeps the glTF material", async () => {
     const root = await loadWith({ [`${GLTF_PATH}.import`]: SIDECAR });
     const material = surfaceMaterial(root);
 

@@ -37,14 +37,16 @@ function leaf(name: string, props: Partial<ScrollContainerProperties> = {}): Sol
   return {
     ...solveNode(),
     path: name,
-    node: { name, type: 'Control', children: [], properties: { name, ...props } as ScrollContainerProperties },
+    node: {
+      name,
+      type: 'Control',
+      children: [],
+      properties: { name, ...props } as ScrollContainerProperties,
+    },
   };
 }
 
-function scrollNode(
-  props: Partial<ScrollContainerProperties> = {},
-  children: SolveNode[] = []
-): SolveNode {
+function scrollNode(props: Partial<ScrollContainerProperties> = {}, children: SolveNode[] = []): SolveNode {
   const node: TscnNode = {
     name: 'Scroll',
     type: 'ScrollContainer',
@@ -76,14 +78,19 @@ describe('<ScrollContainer> — no scrollbar when content fits', () => {
   it('draws no mesh and still renders children when neither axis overflows', async () => {
     const child = leaf('Scroll/Child', { customMinimumSize: { x: 100, y: 100 } });
     const renderer = await ReactThreeTestRenderer.create(
-      <ScrollContainer {...painterEnv()} solveNode={scrollNode({}, [child])} rect={NO_OVERFLOW_RECT} renderOrder={5}>
+      <ScrollContainer
+        {...painterEnv()}
+        solveNode={scrollNode({}, [child])}
+        rect={NO_OVERFLOW_RECT}
+        renderOrder={5}
+      >
         <group name="probe-child" />
       </ScrollContainer>
     );
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
-    expect(renderer.scene.findAllByType('Group').some((g) => (g.instance as THREE.Group).name === 'probe-child')).toBe(
-      true
-    );
+    expect(
+      renderer.scene.findAllByType('Group').some((g) => (g.instance as THREE.Group).name === 'probe-child')
+    ).toBe(true);
   });
 });
 
@@ -91,7 +98,12 @@ describe('<ScrollContainer> — vertical scrollbar geometry (real-fixture number
   async function mountFixtureScrollbar() {
     const content = leaf('Scroll/Content', { customMinimumSize: { x: 399, y: 800 } });
     return ReactThreeTestRenderer.create(
-      <ScrollContainer {...painterEnv()} solveNode={scrollNode({}, [content])} rect={FIXTURE_RECT} renderOrder={10} />
+      <ScrollContainer
+        {...painterEnv()}
+        solveNode={scrollNode({}, [content])}
+        rect={FIXTURE_RECT}
+        renderOrder={10}
+      />
     );
   }
 
@@ -106,8 +118,9 @@ describe('<ScrollContainer> — vertical scrollbar geometry (real-fixture number
     // counts it, so the box grows 0.5 per side (style_box_flat.cpp:584-601).
     const renderer = await mountFixtureScrollbar();
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
-    const track = meshes.reduce((a, b) => (worldBounds(a).max.y - worldBounds(a).min.y >
-      worldBounds(b).max.y - worldBounds(b).min.y ? a : b));
+    const track = meshes.reduce((a, b) =>
+      worldBounds(a).max.y - worldBounds(a).min.y > worldBounds(b).max.y - worldBounds(b).min.y ? a : b
+    );
     const box = worldBounds(track);
     expect(box.min.x).toBeCloseTo(1111.5, 3);
     expect(box.max.x).toBeCloseTo(1120.5, 3);
@@ -118,8 +131,9 @@ describe('<ScrollContainer> — vertical scrollbar geometry (real-fixture number
   it('places the grabber at the TOP of the track (scroll_vertical unset = 0), height ~476.16, flipped the right way, grown by the AA feather ring', async () => {
     const renderer = await mountFixtureScrollbar();
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
-    const grabber = meshes.reduce((a, b) => (worldBounds(a).max.y - worldBounds(a).min.y <
-      worldBounds(b).max.y - worldBounds(b).min.y ? a : b));
+    const grabber = meshes.reduce((a, b) =>
+      worldBounds(a).max.y - worldBounds(a).min.y < worldBounds(b).max.y - worldBounds(b).min.y ? a : b
+    );
     const box = worldBounds(grabber);
     expect(box.min.x).toBeCloseTo(1111.5, 3);
     expect(box.max.x).toBeCloseTo(1120.5, 3);
@@ -164,15 +178,17 @@ describe('<ScrollContainer> — vertical scrollbar geometry (real-fixture number
   it('offsets the grabber toward the bottom when scrolled (scroll_vertical authored)', async () => {
     const content = leaf('Scroll/Content', { customMinimumSize: { x: 0, y: 800 } });
     const renderer = await ReactThreeTestRenderer.create(
-      <ScrollContainer {...painterEnv()}
+      <ScrollContainer
+        {...painterEnv()}
         solveNode={scrollNode({ scrollVertical: 200 }, [content])}
         rect={{ x: 0, y: 0, w: 300, h: 200 }}
         renderOrder={0}
       />
     );
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
-    const grabber = meshes.reduce((a, b) => (worldBounds(a).max.y - worldBounds(a).min.y <
-      worldBounds(b).max.y - worldBounds(b).min.y ? a : b));
+    const grabber = meshes.reduce((a, b) =>
+      worldBounds(a).max.y - worldBounds(a).min.y < worldBounds(b).max.y - worldBounds(b).min.y ? a : b
+    );
     const box = worldBounds(grabber);
     // range=800, area=200-8=192; ratio=200/800=0.25; offset=48 -> top at -48,
     // then +0.5 for the feather ring -> -47.5.
@@ -253,9 +269,7 @@ describe('<ScrollContainer> — per-bar whole-pixel snap', () => {
   it('honours a snap resolved OFF by the walker — both bars stay on the solved fraction', async () => {
     // `gui/common/snap_controls_to_pixels` is the root window's alone (`main/main.cpp`),
     // so the painter takes the walker's resolved value, correct in a SubViewport.
-    const [horizontal, vertical] = tracks(
-      await drawnMeshes(overflowing(), FRACTIONAL_RECT, false)
-    );
+    const [horizontal, vertical] = tracks(await drawnMeshes(overflowing(), FRACTIONAL_RECT, false));
     expect(horizontal!.position.y).toBeCloseTo(-592.5, 6);
     expect(vertical!.position.x).toBeCloseTo(892.5, 6);
   });
@@ -265,7 +279,8 @@ describe('<ScrollContainer> — tint', () => {
   it('composes self_modulate onto the track fill, in sRGB, with a single linear conversion', async () => {
     const content = leaf('Scroll/Content', { customMinimumSize: { x: 399, y: 800 } });
     const renderer = await ReactThreeTestRenderer.create(
-      <ScrollContainer {...painterEnv()}
+      <ScrollContainer
+        {...painterEnv()}
         solveNode={scrollNode({ selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } }, [content])}
         rect={FIXTURE_RECT}
         renderOrder={0}
@@ -285,7 +300,8 @@ describe('<ScrollContainer> — tint', () => {
     // track's own base (0.1, default-theme style_normal_color) = 0.025.
     const content = leaf('Scroll/Content', { customMinimumSize: { x: 0, y: 800 } });
     const renderer = await ReactThreeTestRenderer.create(
-      <ScrollContainer {...painterEnv()}
+      <ScrollContainer
+        {...painterEnv()}
         tint={painterTint({ r: 0.25, g: 0.25, b: 0.25, a: 1 })}
         solveNode={scrollNode({}, [content])}
         rect={{ x: 0, y: 0, w: 300, h: 200 }}
@@ -293,8 +309,9 @@ describe('<ScrollContainer> — tint', () => {
       />
     );
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
-    const track = meshes.reduce((a, b) => (worldBounds(a).max.y - worldBounds(a).min.y >
-      worldBounds(b).max.y - worldBounds(b).min.y ? a : b));
+    const track = meshes.reduce((a, b) =>
+      worldBounds(a).max.y - worldBounds(a).min.y > worldBounds(b).max.y - worldBounds(b).min.y ? a : b
+    );
     const color = (track.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
     // Raw sRGB: the shader decodes the StyleBox vertex attribute per fragment.
     expect(color.getX(0)).toBeCloseTo(0.025, 6);
@@ -305,7 +322,12 @@ describe('<ScrollContainer> — clip planes', () => {
   it("pushes exactly 4 world-space planes matching this node's own full rect", async () => {
     let captured: readonly THREE.Plane[] = [];
     await ReactThreeTestRenderer.create(
-      <ScrollContainer {...painterEnv()} solveNode={scrollNode({}, [])} rect={{ x: 0, y: 0, w: 300, h: 200 }} renderOrder={0}>
+      <ScrollContainer
+        {...painterEnv()}
+        solveNode={scrollNode({}, [])}
+        rect={{ x: 0, y: 0, w: 300, h: 200 }}
+        renderOrder={0}
+      >
         <ClipProbe onPlanes={(p) => (captured = p)} />
       </ScrollContainer>
     );
@@ -323,7 +345,12 @@ describe('<ScrollContainer> — clip planes', () => {
     const inheritedPlane = new THREE.Plane(new THREE.Vector3(1, 0, 0), 0);
     await ReactThreeTestRenderer.create(
       <ControlClipProvider value={{ planes: [inheritedPlane], rect: null }}>
-        <ScrollContainer {...painterEnv()} solveNode={scrollNode({}, [])} rect={{ x: 0, y: 0, w: 300, h: 200 }} renderOrder={0}>
+        <ScrollContainer
+          {...painterEnv()}
+          solveNode={scrollNode({}, [])}
+          rect={{ x: 0, y: 0, w: 300, h: 200 }}
+          renderOrder={0}
+        >
           <ClipProbe onPlanes={(p) => (captured = p)} />
         </ScrollContainer>
       </ControlClipProvider>
@@ -338,9 +365,19 @@ describe('<ScrollContainer> — clip planes', () => {
     // outer's plane enforces the right side, and the inner's the other three.
     let captured: readonly THREE.Plane[] = [];
     await ReactThreeTestRenderer.create(
-      <ScrollContainer {...painterEnv()} solveNode={scrollNode({}, [])} rect={{ x: 0, y: 0, w: 400, h: 300 }} renderOrder={0}>
+      <ScrollContainer
+        {...painterEnv()}
+        solveNode={scrollNode({}, [])}
+        rect={{ x: 0, y: 0, w: 400, h: 300 }}
+        renderOrder={0}
+      >
         <group position={[350, -40, 0]}>
-          <ScrollContainer {...painterEnv()} solveNode={scrollNode({}, [])} rect={{ x: 0, y: 0, w: 100, h: 80 }} renderOrder={1}>
+          <ScrollContainer
+            {...painterEnv()}
+            solveNode={scrollNode({}, [])}
+            rect={{ x: 0, y: 0, w: 100, h: 80 }}
+            renderOrder={1}
+          >
             <ClipProbe onPlanes={(p) => (captured = p)} />
           </ScrollContainer>
         </group>
@@ -432,7 +469,7 @@ describe('<ScrollContainer> — scroll hints', () => {
     expect(worldBounds(meshes[0]!).max.y).toBeCloseTo(0, 3);
   });
 
-  it('carries the chrome key on the enclosing GROUP, which three consults before the mesh\'s own order', async () => {
+  it("carries the chrome key on the enclosing GROUP, which three consults before the mesh's own order", async () => {
     // `projectObject` sorts by `groupOrder`, the nearest Group's `renderOrder`,
     // first, so a hint group on this node's key paints behind its content.
     const meshes = hintMeshes(await mount({ scrollHintMode: 1 }, { x: 100, y: 500 }));

@@ -11,7 +11,10 @@
  */
 
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry.js';
-import { combinedMinimumSize, createSolveContext } from '../../../../r3f/controls/native/controlRectSolver.js';
+import {
+  combinedMinimumSize,
+  createSolveContext,
+} from '../../../../r3f/controls/native/controlRectSolver.js';
 import type { TextMeasurer } from '../../../../r3f/controls/native/solverRegistry.js';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree.js';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme.js';

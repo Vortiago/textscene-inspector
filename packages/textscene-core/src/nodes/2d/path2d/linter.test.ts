@@ -4,13 +4,7 @@
  * `PathFollow2D` overrides `get_configuration_warnings()` in `path_2d.h`/`path_2d.cpp`.
  */
 import { describe, it, expect } from 'vitest';
-import {
-  node,
-  scene,
-  lint,
-  expectDiagnostic,
-  expectNoDiagnostic,
-} from '../../../linter/testing/testkit';
+import { node, scene, lint, expectDiagnostic, expectNoDiagnostic } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 

@@ -15,8 +15,4 @@ registerResourceSlice({
 });
 
 export { decodeEnvironment } from './decode';
-export {
-  BackgroundMode,
-  type EnvironmentProperties,
-  type EnvironmentSettings,
-} from './types';
+export { BackgroundMode, type EnvironmentProperties, type EnvironmentSettings } from './types';

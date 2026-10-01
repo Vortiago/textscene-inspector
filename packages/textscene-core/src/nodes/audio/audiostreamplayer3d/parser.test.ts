@@ -74,20 +74,25 @@ describe('parseAudioStreamPlayer3D properties', () => {
   });
 
   it('parses attenuation_model enum (and rejects out-of-range)', () => {
-    expect(parseAudioStreamPlayer3D(HEADING, { attenuation_model: '2' }).attenuation_model)
-      .toBe(AttenuationModel.ATTENUATION_LOGARITHMIC);
-    expect(parseAudioStreamPlayer3D(HEADING, { attenuation_model: '3' }).attenuation_model)
-      .toBe(AttenuationModel.ATTENUATION_DISABLED);
+    expect(parseAudioStreamPlayer3D(HEADING, { attenuation_model: '2' }).attenuation_model).toBe(
+      AttenuationModel.ATTENUATION_LOGARITHMIC
+    );
+    expect(parseAudioStreamPlayer3D(HEADING, { attenuation_model: '3' }).attenuation_model).toBe(
+      AttenuationModel.ATTENUATION_DISABLED
+    );
     // Out of range → fallback to default.
-    expect(parseAudioStreamPlayer3D(HEADING, { attenuation_model: '9' }).attenuation_model)
-      .toBe(AttenuationModel.ATTENUATION_INVERSE_DISTANCE);
+    expect(parseAudioStreamPlayer3D(HEADING, { attenuation_model: '9' }).attenuation_model).toBe(
+      AttenuationModel.ATTENUATION_INVERSE_DISTANCE
+    );
   });
 
   it('parses doppler_tracking enum', () => {
-    expect(parseAudioStreamPlayer3D(HEADING, { doppler_tracking: '1' }).doppler_tracking)
-      .toBe(DopplerTracking.DOPPLER_TRACKING_IDLE_STEP);
-    expect(parseAudioStreamPlayer3D(HEADING, { doppler_tracking: '2' }).doppler_tracking)
-      .toBe(DopplerTracking.DOPPLER_TRACKING_PHYSICS_STEP);
+    expect(parseAudioStreamPlayer3D(HEADING, { doppler_tracking: '1' }).doppler_tracking).toBe(
+      DopplerTracking.DOPPLER_TRACKING_IDLE_STEP
+    );
+    expect(parseAudioStreamPlayer3D(HEADING, { doppler_tracking: '2' }).doppler_tracking).toBe(
+      DopplerTracking.DOPPLER_TRACKING_PHYSICS_STEP
+    );
   });
 
   it('parses bus from plain string ("Music")', () => {

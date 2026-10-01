@@ -4,20 +4,16 @@ import { parseTimer } from './parser';
 
 describe('parseTimer', () => {
   it('parses name, parent, and transform (happy path)', () => {
-    const result = parseTimer(
-      heading('Timer', { name: 'MyTimer', parent: '.' }),
-      { transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 3, 4)' }
-    );
+    const result = parseTimer(heading('Timer', { name: 'MyTimer', parent: '.' }), {
+      transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 3, 4)',
+    });
     expect(result.name).toBe('MyTimer');
     expect(result.parent).toBe('.');
     expect(result.transform?.origin).toEqual({ x: 2, y: 3, z: 4 });
   });
 
   it('falls back to identity transform on a malformed transform (error path)', () => {
-    const result = parseTimer(
-      heading('Timer', { name: 'Bad' }),
-      { transform: 'Transform3D(not, valid)' }
-    );
+    const result = parseTimer(heading('Timer', { name: 'Bad' }), { transform: 'Transform3D(not, valid)' });
     expect(result.transform?.basis_x).toEqual({ x: 1, y: 0, z: 0 });
     expect(result.transform?.origin).toEqual({ x: 0, y: 0, z: 0 });
   });

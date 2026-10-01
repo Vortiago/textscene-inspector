@@ -77,9 +77,7 @@ export async function captureOurs({ fixture, frame = false, canvas2D = false, ca
     // a scene too large to read at distance 4.
     const context = await createCaptureContext(browser, { frameOnOpen: frame, canvas2D, canvas2DFrame });
     const page = await context.newPage();
-    await gotoFixture(page, baseUrl, fixture, (ms) =>
-      console.log(`[ours] no network idle within ${ms}ms`)
-    );
+    await gotoFixture(page, baseUrl, fixture, (ms) => console.log(`[ours] no network idle within ${ms}ms`));
     const { target, reason: targetReason } = await findCaptureTarget(page, { canvas2D });
     if (!target) throw new Error(targetReason);
     const { buffer, reason } = await settleCanvas(page, target);

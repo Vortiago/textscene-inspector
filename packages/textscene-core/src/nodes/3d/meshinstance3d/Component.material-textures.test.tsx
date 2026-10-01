@@ -13,11 +13,7 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { pendingMapStandIn } from '../../../r3f/materials/pendingMapStandIn';
-import type {
-  TscnExternalResource,
-  TscnInternalResource,
-  TscnNode,
-} from '../../../parser/types';
+import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 
 function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode {
@@ -31,11 +27,7 @@ function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode 
   return { name: props.name, type: 'MeshInstance3D', children: [], properties: props };
 }
 
-function sub(
-  type: string,
-  id: string,
-  data: Record<string, string | undefined> = {}
-): TscnInternalResource {
+function sub(type: string, id: string, data: Record<string, string | undefined> = {}): TscnInternalResource {
   return {
     id,
     type,

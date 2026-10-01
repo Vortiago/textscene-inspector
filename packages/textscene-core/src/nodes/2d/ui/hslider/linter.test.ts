@@ -6,7 +6,13 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { node, scene, expectClean, expectDiagnostic, expectNoDiagnostic } from '../../../../linter/testing/testkit';
+import {
+  node,
+  scene,
+  expectClean,
+  expectDiagnostic,
+  expectNoDiagnostic,
+} from '../../../../linter/testing/testkit';
 import './linter';
 
 describe('HSlider property-order rule', () => {

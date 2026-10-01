@@ -62,12 +62,6 @@ export function useCanvasLayerIndex(): number {
   return useContext(CanvasLayerIndexContext);
 }
 
-export function CanvasLayerIndexProvider({
-  value,
-  children,
-}: {
-  value: number;
-  children: ReactNode;
-}) {
+export function CanvasLayerIndexProvider({ value, children }: { value: number; children: ReactNode }) {
   return <CanvasLayerIndexContext.Provider value={value}>{children}</CanvasLayerIndexContext.Provider>;
 }

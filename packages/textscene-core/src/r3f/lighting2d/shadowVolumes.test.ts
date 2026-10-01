@@ -29,9 +29,12 @@ function lightAt(x = 0, y = 0, reach = 512): ShadowLight {
 function covered(positions: Float32Array | null, px: number, py: number): boolean {
   if (!positions) return false;
   for (let i = 0; i + 8 < positions.length; i += 9) {
-    const ax = positions[i]!, ay = positions[i + 1]!;
-    const bx = positions[i + 3]!, by = positions[i + 4]!;
-    const cx = positions[i + 6]!, cy = positions[i + 7]!;
+    const ax = positions[i]!,
+      ay = positions[i + 1]!;
+    const bx = positions[i + 3]!,
+      by = positions[i + 4]!;
+    const cx = positions[i + 6]!,
+      cy = positions[i + 7]!;
     const d1 = (px - bx) * (ay - by) - (ax - bx) * (py - by);
     const d2 = (px - cx) * (by - cy) - (bx - cx) * (py - cy);
     const d3 = (px - ax) * (cy - ay) - (cx - ax) * (py - ay);
@@ -184,7 +187,10 @@ describe('buildShadowVolumes — a single segment east of the light', () => {
   const light = lightAt();
   // Wedge boundary rays run from (0,0) through (100, ∓50), so at x = 200 the
   // shadow spans y ∈ (−100, 100).
-  const caster = { segments: new Float32Array([100, -50, 100, 50]), cullMode: OCCLUDER_CULL_DISABLED } as const;
+  const caster = {
+    segments: new Float32Array([100, -50, 100, 50]),
+    cullMode: OCCLUDER_CULL_DISABLED,
+  } as const;
   const volumes = buildShadowVolumes(light, [caster]);
 
   it('emits one 5-gon fanned into three triangles', () => {

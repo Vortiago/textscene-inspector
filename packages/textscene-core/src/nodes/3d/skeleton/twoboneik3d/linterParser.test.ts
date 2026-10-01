@@ -147,7 +147,7 @@ describe('TwoBoneIK3D settings/<i>/ key shape', () => {
     expect(error?.severity).toBe('error');
   });
 
-  it('accepts an index far past the current setting_count, which is the rule\'s job', () => {
+  it("accepts an index far past the current setting_count, which is the rule's job", () => {
     // A per-property validator cannot see a sibling count, so the high end of
     // the index range belongs to linter.ts and must not be guessed at here.
     expect(check('settings/99/use_virtual_end', 'true')).toBeNull();

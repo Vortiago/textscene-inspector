@@ -13,11 +13,7 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { parseTresFile } from '../../../parser/parsedResource';
 import { standardMaterialTres } from '../../../resources/materials/standardmaterial3d/testing/standardMaterial';
-import type {
-  TscnExternalResource,
-  TscnInternalResource,
-  TscnNode,
-} from '../../../parser/types';
+import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { findMesh, instanceAs } from '../testing/reactThreeTestInstance';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
@@ -79,32 +75,24 @@ function facesCamera(drawn: THREE.Matrix4): boolean {
   return rotationAngle(drawn, camera.matrixWorld) < 1e-5;
 }
 
-const withSceneMaterial = (data: Record<string, string>) =>
-  [sub('StandardMaterial3D', 'Mat', { shading_mode: '0', ...data })];
+const withSceneMaterial = (data: Record<string, string>) => [
+  sub('StandardMaterial3D', 'Mat', { shading_mode: '0', ...data }),
+];
 
 describe('<MeshInstance3D> material billboard_mode', () => {
   it('draws the authored pose when the material sets no billboard_mode', async () => {
-    const { mesh } = await renderMesh(
-      meshNode({}),
-      withSceneMaterial({})
-    );
+    const { mesh } = await renderMesh(meshNode({}), withSceneMaterial({}));
     const drawn = drawColourGroup(mesh, camera, 0, (s) => s.matrixWorld);
     expect(drawn.equals(mesh.matrixWorld)).toBe(true);
   });
 
   it('draws facing the camera when the material sets billboard_mode = 1 (ENABLED)', async () => {
-    const { mesh } = await renderMesh(
-      meshNode({}),
-      withSceneMaterial({ billboard_mode: '1' })
-    );
+    const { mesh } = await renderMesh(meshNode({}), withSceneMaterial({ billboard_mode: '1' }));
     expect(facesCamera(drawColourGroup(mesh, camera, 0, (s) => s.matrixWorld))).toBe(true);
   });
 
   it('draws with world up kept when the material sets billboard_mode = 2 (FIXED_Y)', async () => {
-    const { mesh } = await renderMesh(
-      meshNode({}),
-      withSceneMaterial({ billboard_mode: '2' })
-    );
+    const { mesh } = await renderMesh(meshNode({}), withSceneMaterial({ billboard_mode: '2' }));
     const drawn = drawColourGroup(mesh, camera, 0, (s) => s.matrixWorld);
     const drawnUp = new THREE.Vector3().setFromMatrixColumn(drawn, 1);
     expect(drawnUp.x).toBeCloseTo(0, 6);
@@ -114,19 +102,13 @@ describe('<MeshInstance3D> material billboard_mode', () => {
   });
 
   it('draws facing the camera when the billboarding material is an ExtResource .tres', async () => {
-    const { mesh } = await renderMesh(
-      meshNode({ materialOverride: 'ExtResource("1_ext")' }),
-      []
-    );
+    const { mesh } = await renderMesh(meshNode({ materialOverride: 'ExtResource("1_ext")' }), []);
     expect(facesCamera(drawColourGroup(mesh, camera, 0, (s) => s.matrixWorld))).toBe(true);
   });
 
   it('keeps the node and its children in the authored pose', async () => {
     // Godot's billboard is a surface-shader term, so no transform above or below it moves.
-    const { mesh, child } = await renderMesh(
-      meshNode({}),
-      withSceneMaterial({ billboard_mode: '1' })
-    );
+    const { mesh, child } = await renderMesh(meshNode({}), withSceneMaterial({ billboard_mode: '1' }));
     expect(Math.abs(mesh.quaternion.y)).toBeGreaterThan(0.5);
     expect(facesCamera(child.matrixWorld)).toBe(false);
   });

@@ -20,9 +20,7 @@ export class TscnResourceDocumentLink extends vscode.DocumentLink {
   }
 }
 
-export class TscnDocumentLinkProvider
-  implements vscode.DocumentLinkProvider<TscnResourceDocumentLink>
-{
+export class TscnDocumentLinkProvider implements vscode.DocumentLinkProvider<TscnResourceDocumentLink> {
   /**
    * `findGodotProjectRoot` result, keyed by the document's own directory, so one
    * walk serves every link and re-hover. Not keyed by workspace folder: one folder

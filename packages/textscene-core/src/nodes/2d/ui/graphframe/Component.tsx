@@ -51,11 +51,7 @@ function lightened(c: ControlColor, amount: number): ControlColor {
  * `border_color` keeps the untinted border when selected, else
  * `tint_color.lightened(0.3)` (`:114-119`). A texture panel is modulated (`:120-124`).
  */
-function tintedPanel(
-  base: ResolvedStyleBox,
-  tintColor: ControlColor,
-  selected: boolean
-): ResolvedStyleBox {
+function tintedPanel(base: ResolvedStyleBox, tintColor: ControlColor, selected: boolean): ResolvedStyleBox {
   if (isStyleBoxTexture(base)) {
     return { ...base, texture: { ...base.texture, modulateColor: tintColor } };
   }
@@ -106,7 +102,10 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
       ),
     [solveNode]
   );
-  const titleLayout = useMemo(() => (title.length > 0 ? shapeTitleText(title, fontTheme) : null), [title, fontTheme]);
+  const titleLayout = useMemo(
+    () => (title.length > 0 ? shapeTitleText(title, fontTheme) : null),
+    [title, fontTheme]
+  );
   const titlePlacements = useMemo(
     () =>
       titleLayout
@@ -119,12 +118,18 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
     () => (titleLayout ? titlePlacements.map((p) => soloLineLayout(p.line, titleLayout)) : []),
     [titlePlacements, titleLayout]
   );
-  const titleTintColor = useMemo(() => multiplyModulate(tint.own, fontTheme.color), [tint.own, fontTheme.color]);
+  const titleTintColor = useMemo(
+    () => multiplyModulate(tint.own, fontTheme.color),
+    [tint.own, fontTheme.color]
+  );
 
   // `resizable && !autoshrink_enabled` (graph_frame.cpp:133, and `get_cursor_shape` at `:84`):
   // `autoshrink_enabled` defaults true, so `resizable = true` alone shows no handle.
   const showResizer = props.resizable === true && props.autoshrinkEnabled === false;
-  const resizerTexture = useNodeIcon(showResizer ? solveNode.icons.resizer : undefined, showResizer ? RESIZER_SE_ICON : null);
+  const resizerTexture = useNodeIcon(
+    showResizer ? solveNode.icons.resizer : undefined,
+    showResizer ? RESIZER_SE_ICON : null
+  );
   const resizerCombined = useMemo(() => multiplyModulate(tint.own, GRAPH_FRAME_RESIZER_COLOR), [tint.own]);
   const resizerColor = useGodotLinearColor(resizerCombined);
 
@@ -138,13 +143,22 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
           <StyleBoxQuad styleBox={panelStyle} color={tint.own} rect={bodyRect} renderOrder={renderOrder} />
         </CanvasItemGroup>
       )}
-      <StyleBoxQuad styleBox={titlebarStyle} color={tint.own} rect={titlebarBand.rect} renderOrder={renderOrder} />
+      <StyleBoxQuad
+        styleBox={titlebarStyle}
+        color={tint.own}
+        rect={titlebarBand.rect}
+        renderOrder={renderOrder}
+      />
 
       {titleLayout &&
         titlePlacements.map((placement, i) => (
           <CanvasItemGroup
             key={i}
-            position={[titlebarBand.contentRect.x + placement.x, -(titlebarBand.contentRect.y + placement.y), 0]}
+            position={[
+              titlebarBand.contentRect.x + placement.x,
+              -(titlebarBand.contentRect.y + placement.y),
+              0,
+            ]}
           >
             <TextRun
               layout={titleLineLayouts[i]!}

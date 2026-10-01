@@ -9,17 +9,9 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import {
-  ResourceLoaderProvider,
-  ResourceLoader,
-  FileEventBus,
-} from '../../../index';
+import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../index';
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
-import type {
-  TscnExternalResource,
-  TscnInternalResource,
-  TscnNode,
-} from '../../../parser/types';
+import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { materialInstanceAs } from '../testing/reactThreeTestInstance';
 
@@ -98,10 +90,7 @@ async function renderWith(
 ) {
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={loader}>
-      <SceneResourcesProvider
-        internalResources={internalResources}
-        externalResources={externalResources}
-      >
+      <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
         <MeshInstance3D node={node} />
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
@@ -136,10 +125,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     await new Promise<void>((r) => setTimeout(r, 10));
     await renderer.update(
       <ResourceLoaderProvider loader={loader}>
-        <SceneResourcesProvider
-          internalResources={internalResources}
-          externalResources={externalResources}
-        >
+        <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
           <MeshInstance3D node={makeNode('mat')} />
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
@@ -188,10 +174,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     await new Promise<void>((r) => setTimeout(r, 10));
     await renderer.update(
       <ResourceLoaderProvider loader={loader}>
-        <SceneResourcesProvider
-          internalResources={internalResources}
-          externalResources={externalResources}
-        >
+        <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
           <MeshInstance3D node={makeNode('mat')} />
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
@@ -290,10 +273,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
 
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={loader}>
-        <SceneResourcesProvider
-          internalResources={internalResources}
-          externalResources={externalResources}
-        >
+        <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
           <MeshInstance3D node={makeNode('matA', 'MeshA')} />
           <MeshInstance3D node={makeNode('matB', 'MeshB')} />
         </SceneResourcesProvider>
@@ -302,10 +282,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     await new Promise<void>((r) => setTimeout(r, 10));
     await renderer.update(
       <ResourceLoaderProvider loader={loader}>
-        <SceneResourcesProvider
-          internalResources={internalResources}
-          externalResources={externalResources}
-        >
+        <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
           <MeshInstance3D node={makeNode('matA', 'MeshA')} />
           <MeshInstance3D node={makeNode('matB', 'MeshB')} />
         </SceneResourcesProvider>

@@ -48,7 +48,7 @@ const springBoneCollisionCapsule3DShapeRule: LintRule = {
   meta: {
     name: 'valid-springbonecollisioncapsule3d-shape',
     description:
-      "Reports a SpringBoneCollisionCapsule3D whose radius exceeds half its height, since Godot silently rewrites one of the two on load",
+      'Reports a SpringBoneCollisionCapsule3D whose radius exceeds half its height, since Godot silently rewrites one of the two on load',
     category: 'validation',
     applicableNodeTypes: ['SpringBoneCollisionCapsule3D'],
     emits: [

@@ -58,7 +58,7 @@ export function useRegisterViewportPass(): RegisterViewportPass {
  */
 export function useViewportPassCycle(path: string | null): ViewportPassCycle | null {
   const { cycles } = useContext(StateContext);
-  return path === null ? null : cycles.get(path) ?? null;
+  return path === null ? null : (cycles.get(path) ?? null);
 }
 
 /** An order-independent key for a cycle set, so each set warns once. */
@@ -89,9 +89,7 @@ export function ViewportPassProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const { order, cycles } = useMemo(() => {
-    const result = orderViewportPasses(
-      [...passes].map(([id, pass]) => ({ id, dependsOn: pass.dependsOn }))
-    );
+    const result = orderViewportPasses([...passes].map(([id, pass]) => ({ id, dependsOn: pass.dependsOn })));
     const cycleMap = new Map<string, ViewportPassCycle>();
     for (const cycle of result.cycles) cycleMap.set(cycle.sampler, cycle);
     return { order: result.order, cycles: cycleMap };

@@ -7,10 +7,7 @@ import type { NodeProperties } from './types';
 import { parseOptionalTransform } from '../../utils/transform';
 import { parseHeadingIndex } from '../../parser/valueParsers';
 
-export function parseNode(
-  heading: ParsedHeading,
-  properties: Record<string, string>
-): NodeProperties {
+export function parseNode(heading: ParsedHeading, properties: Record<string, string>): NodeProperties {
   const name = heading.attributes.name || '';
   const parent = heading.attributes.parent;
   const instance = heading.attributes.instance;

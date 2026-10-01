@@ -23,7 +23,12 @@ const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 200 };
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function page(name: string, properties: Partial<ControlProperties> = {}): SolveNode {
-  const node: TscnNode = { name, type: 'Control', children: [], properties: { name, ...properties } as ControlProperties };
+  const node: TscnNode = {
+    name,
+    type: 'Control',
+    children: [],
+    properties: { name, ...properties } as ControlProperties,
+  };
   return { ...emptySolveNode(), path: name, node };
 }
 
@@ -73,7 +78,10 @@ describe('<TabContainer> (isolated painter contract)', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <TabContainer
         {...painterEnv()}
-        solveNode={solveNode({ currentTab: 0 }, [page('General'), page('AdvancedSettings', { visible: false })])}
+        solveNode={solveNode({ currentTab: 0 }, [
+          page('General'),
+          page('AdvancedSettings', { visible: false }),
+        ])}
         rect={RECT}
         theme={THEME}
         renderOrder={0}
@@ -84,7 +92,13 @@ describe('<TabContainer> (isolated painter contract)', () => {
 
   it('draws no tab strip at all when tabs_visible is false, and the panel spans the whole rect', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <TabContainer {...painterEnv()} solveNode={solveNode({ tabsVisible: false }, [page('Only')])} rect={RECT} theme={THEME} renderOrder={0} />
+      <TabContainer
+        {...painterEnv()}
+        solveNode={solveNode({ tabsVisible: false }, [page('Only')])}
+        rect={RECT}
+        theme={THEME}
+        renderOrder={0}
+      />
     );
     // Only the panel StyleBox remains; no tab title to draw either.
     expect(findChromeMeshes(renderer.scene)).toHaveLength(1);
@@ -93,13 +107,19 @@ describe('<TabContainer> (isolated painter contract)', () => {
 
   it('draws no strip at all for a childless TabContainer (just the empty panel)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <TabContainer {...painterEnv()} solveNode={solveNode({}, [])} rect={RECT} theme={THEME} renderOrder={0} />
+      <TabContainer
+        {...painterEnv()}
+        solveNode={solveNode({}, [])}
+        rect={RECT}
+        theme={THEME}
+        renderOrder={0}
+      />
     );
     expect(findChromeMeshes(renderer.scene)).toHaveLength(1);
     expect(findTextMeshes(renderer.scene)).toHaveLength(0);
   });
 
-  it('all_tabs_in_front flips the strip from the subtree-chrome slot to this node\'s own paint slot', async () => {
+  it("all_tabs_in_front flips the strip from the subtree-chrome slot to this node's own paint slot", async () => {
     const behind = await ReactThreeTestRenderer.create(
       <TabContainer
         {...painterEnv()}
@@ -145,7 +165,10 @@ describe('<TabContainer> panel band', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <TabContainer
         {...painterEnv()}
-        solveNode={{ ...solveNode({ currentTab: 0, ...properties }, [page('Only')]), styleBoxes: STYLE_BOXES }}
+        solveNode={{
+          ...solveNode({ currentTab: 0, ...properties }, [page('Only')]),
+          styleBoxes: STYLE_BOXES,
+        }}
         rect={RECT}
         theme={THEME}
         renderOrder={0}

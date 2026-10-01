@@ -26,4 +26,3 @@ export function PanelChrome({ solveNode, rect, theme, tint, renderOrder }: Panel
 
   return <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />;
 }
-

@@ -6,10 +6,7 @@
 
 import { useMemo } from 'react';
 import type { TscnInternalResource } from '../../../parser/types';
-import {
-  buildPrimitiveMeshGeometry,
-  primitiveMeshGeometryKey,
-} from './primitiveMeshGeometry';
+import { buildPrimitiveMeshGeometry, primitiveMeshGeometryKey } from './primitiveMeshGeometry';
 
 export interface MeshGeometryProps {
   resource: TscnInternalResource;

@@ -22,7 +22,11 @@ import {
   soloLineLayout,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import { OverrunBehavior, overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
+import {
+  OverrunBehavior,
+  overrunFlagsForBehavior,
+  trimLineToWidth,
+} from '../../../../r3f/controls/native/text/textOverrun';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import {
@@ -60,10 +64,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
   const text = props.text ?? '';
   const hasText = text.length > 0;
   const { fontSizePx, color: baseFontColor } = buttonTextTheme(solveNode, props, state, { theme });
-  const tintedFontColor = useMemo(
-    () => tintColor(baseFontColor, tint.own),
-    [baseFontColor, tint.own]
-  );
+  const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
   const fontMetrics = resolveNodeFontMetrics(solveNode, BUTTON_THEME_FONT_KEY);
   // Pass 1, unwrapped: what the icon's own reservation is measured against. It is the
@@ -90,27 +91,24 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
   }, [props.icon, iconTexture]);
 
   const baseIconColor = buttonIconColor(solveNode.colors, state);
-  const tintedIconColorSrgb = useMemo(
-    () => tintColor(baseIconColor, tint.own),
-    [baseIconColor, tint.own]
-  );
+  const tintedIconColorSrgb = useMemo(() => tintColor(baseIconColor, tint.own), [baseIconColor, tint.own]);
   const iconLinearColor = useGodotLinearColor(tintedIconColorSrgb);
 
   const contentInput = useMemo(
     () => ({
-        rectSize: { x: rect.w, y: rect.h },
-        styleMargin: baseStyleBox.contentMargin,
-        hSeparation: solveNode.constants.h_separation ?? theme.separation,
-        iconMaxWidth: solveNode.constants.icon_max_width ?? 0,
-        // Aligned against the ceiled text width (`scene/gui/button.cpp:343,349`).
-        textAlignment: props.alignment ?? HORIZONTAL_ALIGNMENT_CENTER,
-        iconAlignment: props.iconAlignment ?? HORIZONTAL_ALIGNMENT_LEFT,
-        verticalIconAlignment: props.verticalIconAlignment ?? VERTICAL_ALIGNMENT_CENTER,
-        expandIcon: props.expandIcon === true,
-        iconNaturalSize,
-        hasText,
-        rtl: solveNode.rtl,
-      }),
+      rectSize: { x: rect.w, y: rect.h },
+      styleMargin: baseStyleBox.contentMargin,
+      hSeparation: solveNode.constants.h_separation ?? theme.separation,
+      iconMaxWidth: solveNode.constants.icon_max_width ?? 0,
+      // Aligned against the ceiled text width (`scene/gui/button.cpp:343,349`).
+      textAlignment: props.alignment ?? HORIZONTAL_ALIGNMENT_CENTER,
+      iconAlignment: props.iconAlignment ?? HORIZONTAL_ALIGNMENT_LEFT,
+      verticalIconAlignment: props.verticalIconAlignment ?? VERTICAL_ALIGNMENT_CENTER,
+      expandIcon: props.expandIcon === true,
+      iconNaturalSize,
+      hasText,
+      rtl: solveNode.rtl,
+    }),
     [
       rect.w,
       rect.h,
@@ -171,13 +169,29 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
     // button.cpp:424 `text_buf_width = ceil(MAX(1, drawable_size_remained.width))`. The icon's
     // computed reservation, `content.icon.rect.w`, keeps this in step with `layoutButtonContent`.
     const trimWidthPx = Math.ceil(Math.max(1, customElementWidth - iconReserve));
-    const trimmedLine = trimLineToWidth(layout.lines[0]!, trimWidthPx, overrunFlags, { fontMetrics, fontSizePx });
+    const trimmedLine = trimLineToWidth(layout.lines[0]!, trimWidthPx, overrunFlags, {
+      fontMetrics,
+      fontSizePx,
+    });
     return soloLineLayout(trimmedLine, layout);
-  }, [layout, overrunFlags, rect.w, baseStyleBox.contentMargin, content.icon, props.iconAlignment, solveNode.constants, theme.separation, fontMetrics, fontSizePx]);
+  }, [
+    layout,
+    overrunFlags,
+    rect.w,
+    baseStyleBox.contentMargin,
+    content.icon,
+    props.iconAlignment,
+    solveNode.constants,
+    theme.separation,
+    fontMetrics,
+    fontSizePx,
+  ]);
 
   return (
     <>
-      {!props.flat && <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />}
+      {!props.flat && (
+        <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
+      )}
       {content.icon && iconTexture && (
         <CanvasItemGroup position={[content.icon.rect.x, -content.icon.rect.y, 0]}>
           <ControlQuad

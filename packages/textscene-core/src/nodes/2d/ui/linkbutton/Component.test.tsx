@@ -119,7 +119,12 @@ describe('<LinkButton> (isolated painter contract)', () => {
 
   it('uses opaque BLACK once disabled (no font_disabled_color in its ClassDB chain)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <LinkButton {...painterEnv()} solveNode={solveNode({ text: 'Visit', disabled: true })} rect={RECT} renderOrder={0} />
+      <LinkButton
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'Visit', disabled: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
     expect(material.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0), 5);
@@ -153,10 +158,15 @@ describe('<LinkButton> (isolated painter contract)', () => {
     for (const mesh of meshes) expect(mesh.renderOrder).toBe(5);
   });
 
-  it('text_overrun_behavior trims the label to the control\'s own rect width (link_button.cpp:286-289)', async () => {
+  it("text_overrun_behavior trims the label to the control's own rect width (link_button.cpp:286-289)", async () => {
     const narrow: Rect2 = { x: 0, y: 0, w: 30, h: 28 };
     const untrimmed = await ReactThreeTestRenderer.create(
-      <LinkButton {...painterEnv()} solveNode={solveNode({ text: 'AAAAAAAAAAAA' })} rect={narrow} renderOrder={0} />
+      <LinkButton
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'AAAAAAAAAAAA' })}
+        rect={narrow}
+        renderOrder={0}
+      />
     );
     const trimmed = await ReactThreeTestRenderer.create(
       <LinkButton
@@ -172,10 +182,15 @@ describe('<LinkButton> (isolated painter contract)', () => {
 
   // `link_button.cpp:311`: under RTL the underline runs `(size.width - width) .. size.width`, flush with
   // the control's right edge. `:313`'s LTR arm starts at 0.
-  it('ends the underline at the control\'s right edge under RTL, and starts it at 0 under LTR', async () => {
+  it("ends the underline at the control's right edge under RTL, and starts it at 0 under LTR", async () => {
     const span = async (rtl: boolean) => {
       const renderer = await ReactThreeTestRenderer.create(
-        <LinkButton {...painterEnv()} solveNode={{ ...solveNode({ text: 'Visit' }), rtl }} rect={RECT} renderOrder={0} />
+        <LinkButton
+          {...painterEnv()}
+          solveNode={{ ...solveNode({ text: 'Visit' }), rtl }}
+          rect={RECT}
+          renderOrder={0}
+        />
       );
       const mesh = findUnderlineMesh(renderer.scene)!;
       const width = (mesh.geometry as unknown as { parameters: { width: number } }).parameters.width;
@@ -186,5 +201,4 @@ describe('<LinkButton> (isolated painter contract)', () => {
     expect((await span(true)).end).toBe(RECT.w);
     expect((await span(true)).start).toBe(RECT.w - (await span(false)).end);
   });
-
 });

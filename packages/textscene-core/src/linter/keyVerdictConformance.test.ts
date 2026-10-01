@@ -139,9 +139,7 @@ function sweep(): { offenders: Offender[]; probes: number; exempt: number } {
 describe('key-shape refusals declare themselves on the error', () => {
   it('every value-independent refusal carries keyVerdict', () => {
     const { offenders } = sweep();
-    const report = offenders
-      .map((o) => `  ${o.nodeType} :: ${o.key}\n    ${o.message}`)
-      .join('\n');
+    const report = offenders.map((o) => `  ${o.nodeType} :: ${o.key}\n    ${o.message}`).join('\n');
     expect(
       offenders,
       `A refusal that draws the same message for every value never read the ` +

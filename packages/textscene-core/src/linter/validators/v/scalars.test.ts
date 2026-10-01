@@ -66,9 +66,6 @@ describe('string slots through the linter', () => {
   });
 
   it('LineEdit.secret_character takes the StringName jacket', () => {
-    expectNoDiagnostic(
-      scene(node('LineEdit', { secret_character: '&"*"' })),
-      { prop: 'secret_character' }
-    );
+    expectNoDiagnostic(scene(node('LineEdit', { secret_character: '&"*"' })), { prop: 'secret_character' });
   });
 });

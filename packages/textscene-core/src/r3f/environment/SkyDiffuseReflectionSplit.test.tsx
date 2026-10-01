@@ -8,11 +8,7 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import {
-  SkyDiffuseReflectionSplit,
-  splitSkyDiffuse,
-  type EnvMapOriginal,
-} from './SkyDiffuseReflectionSplit';
+import { SkyDiffuseReflectionSplit, splitSkyDiffuse, type EnvMapOriginal } from './SkyDiffuseReflectionSplit';
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 

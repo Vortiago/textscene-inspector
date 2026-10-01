@@ -7,12 +7,7 @@
  */
 
 import type { EditorControlsHandle } from './EditorControlsHandle.js';
-import {
-  orbitCursor,
-  panCursor,
-  scaleCursorDistance,
-  type EditorCursor,
-} from './godotEditorCursor.js';
+import { orbitCursor, panCursor, scaleCursorDistance, type EditorCursor } from './godotEditorCursor.js';
 import {
   pinchSpanRatio,
   resolveTouchMode,

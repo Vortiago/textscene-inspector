@@ -144,9 +144,7 @@ function ruleTypes(file: string): string[] {
 function refusesNegative(type: string, key: string): boolean {
   const validator = validatorRegistry.findValidator(type, key);
   return (
-    validator !== null &&
-    validator(key, '0', 1) === null &&
-    validator(key, '-1', 1)?.severity === 'error'
+    validator !== null && validator(key, '0', 1) === null && validator(key, '-1', 1)?.severity === 'error'
   );
 }
 
@@ -179,7 +177,10 @@ describe('rule-layer count reads', () => {
     // Both resolution paths: a direct `setting_count` read, and a `joint_count` through a loop key.
     expect(refused).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ rel: 'nodes/3d/skeleton/bonetwistdisperser3d/linter.ts', key: 'setting_count' }),
+        expect.objectContaining({
+          rel: 'nodes/3d/skeleton/bonetwistdisperser3d/linter.ts',
+          key: 'setting_count',
+        }),
         expect.objectContaining({
           rel: 'nodes/3d/skeleton/bonetwistdisperser3d/linter.ts',
           key: 'settings/0/joint_count',
@@ -210,9 +211,7 @@ describe('rule-layer count reads', () => {
       'for (const key of Object.keys(properties)) { const match = JOINT_COUNT_KEY_RE.exec(key); ';
     expect(countKeyRead('properties[key]', loop, loop.length)).toBe('settings/0/joint_count');
     const tailLoop = loop.replace('joint_count$', 'joint_count(?:/|$)');
-    expect(countKeyRead('properties[key]', tailLoop, tailLoop.length)).toBe(
-      'settings/0/joint_count'
-    );
+    expect(countKeyRead('properties[key]', tailLoop, tailLoop.length)).toBe('settings/0/joint_count');
 
     expect(countKeyRead('rawProps.current_tab', '', 0)).toBeNull();
     const other = 'const raw = leaves.get("z_index");';
@@ -232,8 +231,7 @@ describe('rule-layer count reads', () => {
   });
 
   it('reads the binding of the innermost block that declares the name', () => {
-    const shadowed =
-      'function a() { const raw = props.item_count; for (const x of y) { const raw = x.z; ';
+    const shadowed = 'function a() { const raw = props.item_count; for (const x of y) { const raw = x.z; ';
     expect(countKeyRead('raw', shadowed, shadowed.length)).toBeNull();
     const outer = 'function a() { const raw = props.item_count; for (const x of y) { ';
     expect(countKeyRead('raw', outer, outer.length)).toBe('item_count');

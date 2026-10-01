@@ -85,22 +85,25 @@ end_cap_mode = 2
     expect(errors[0]!.message).toContain('width_curve');
   });
 
-  describe.each(['gradient', 'texture', 'width_curve'] as const)('%s resource reference spellings', (prop) => {
-    it(`accepts SubResource(id) (resourceRef, godot/resourceRef.ts)`, () => {
-      const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\n${prop} = SubResource("7")\n`;
-      expect(errorsOf(linter.lint(content), STRICT_PARSER_RULE_NAME)).toEqual([]);
-    });
+  describe.each(['gradient', 'texture', 'width_curve'] as const)(
+    '%s resource reference spellings',
+    (prop) => {
+      it(`accepts SubResource(id) (resourceRef, godot/resourceRef.ts)`, () => {
+        const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\n${prop} = SubResource("7")\n`;
+        expect(errorsOf(linter.lint(content), STRICT_PARSER_RULE_NAME)).toEqual([]);
+      });
 
-    it(`accepts ExtResource(id), the other spelling Godot's own writer produces`, () => {
-      const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\n${prop} = ExtResource("7")\n`;
-      expect(errorsOf(linter.lint(content), STRICT_PARSER_RULE_NAME)).toEqual([]);
-    });
+      it(`accepts ExtResource(id), the other spelling Godot's own writer produces`, () => {
+        const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\n${prop} = ExtResource("7")\n`;
+        expect(errorsOf(linter.lint(content), STRICT_PARSER_RULE_NAME)).toEqual([]);
+      });
 
-    it('accepts internal whitespace padding around the id', () => {
-      const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\n${prop} = SubResource( "7" )\n`;
-      expect(errorsOf(linter.lint(content), STRICT_PARSER_RULE_NAME)).toEqual([]);
-    });
-  });
+      it('accepts internal whitespace padding around the id', () => {
+        const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\n${prop} = SubResource( "7" )\n`;
+        expect(errorsOf(linter.lint(content), STRICT_PARSER_RULE_NAME)).toEqual([]);
+      });
+    }
+  );
 
   it('rejects a malformed default_color', () => {
     const content = `[gd_scene format=3]

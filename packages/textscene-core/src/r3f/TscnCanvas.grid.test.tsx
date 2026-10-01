@@ -95,8 +95,6 @@ describe('<TscnSceneContents> ground-plane grid toggle (#224)', () => {
 
     const emptyStateRenderer = await ReactThreeTestRenderer.create(<TscnSceneContents />);
     const emptyStateGrid = emptyStateRenderer.scene.findByType('GridHelper');
-    expect((emptyStateGrid.instance as unknown as THREE.Object3D).userData.tscnEmptyState).toBe(
-      true
-    );
+    expect((emptyStateGrid.instance as unknown as THREE.Object3D).userData.tscnEmptyState).toBe(true);
   });
 });

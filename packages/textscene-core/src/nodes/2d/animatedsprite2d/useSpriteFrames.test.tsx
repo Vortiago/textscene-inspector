@@ -93,7 +93,11 @@ describe('useSpriteFrames — in-scene SubResource', () => {
   });
 
   it('is unavailable when the embedded SpriteFrames declares no animations', () => {
-    const empty: TscnInternalResource = { id: 'sf', type: 'SpriteFrames', data: { id: 'sf', animations: '[]' } };
+    const empty: TscnInternalResource = {
+      id: 'sf',
+      type: 'SpriteFrames',
+      data: { id: 'sf', animations: '[]' },
+    };
     const { result } = renderHook(() => useSpriteFrames('SubResource("sf")'), {
       wrapper: ({ children }: { children: ReactNode }) => (
         <ResourceLoaderProvider loader={createFakeResourceLoader().loader}>
@@ -122,7 +126,7 @@ describe('useSpriteFrames — external .tres', () => {
     expect(requested).toEqual(['res://frames.tres']);
   });
 
-  it('decodes the arriving ParsedResource against the FILE\'s own pools', () => {
+  it("decodes the arriving ParsedResource against the FILE's own pools", () => {
     const fake = createFakeResourceLoader();
     fake.resources.seed('res://frames.tres', TRES);
     const { result } = renderSpriteFrames('ExtResource("7")', fake);

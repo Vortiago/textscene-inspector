@@ -71,9 +71,9 @@ describe('VSCodeResourceProvider', () => {
     it('should prevent path traversal attacks', async () => {
       const maliciousPath = 'res://../../../etc/passwd';
 
-      await expect(
-        provider.loadResource(maliciousPath, 'PackedScene')
-      ).rejects.toThrow(/Path traversal detected/);
+      await expect(provider.loadResource(maliciousPath, 'PackedScene')).rejects.toThrow(
+        /Path traversal detected/
+      );
     });
 
     it('refuses a sibling directory whose path merely starts with the root spelling', async () => {
@@ -130,9 +130,9 @@ describe('VSCodeResourceProvider', () => {
       // Reject both primary and fallback attempts
       vscode.workspace.fs.readFile.mockRejectedValue(notFoundError);
 
-      await expect(
-        provider.loadResource('res://missing.tscn', 'PackedScene')
-      ).rejects.toThrow(/Failed to load resource.*missing\.tscn/);
+      await expect(provider.loadResource('res://missing.tscn', 'PackedScene')).rejects.toThrow(
+        /Failed to load resource.*missing\.tscn/
+      );
     });
   });
 
@@ -153,9 +153,9 @@ describe('VSCodeResourceProvider', () => {
       // Reject both primary and fallback attempts
       vscode.workspace.fs.readFile.mockRejectedValue(permissionError);
 
-      await expect(
-        provider.loadResource('res://protected.tscn', 'PackedScene')
-      ).rejects.toThrow(/Failed to load resource.*protected\.tscn/);
+      await expect(provider.loadResource('res://protected.tscn', 'PackedScene')).rejects.toThrow(
+        /Failed to load resource.*protected\.tscn/
+      );
     });
 
     it('should handle paths with special characters', async () => {

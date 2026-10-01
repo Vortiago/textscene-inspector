@@ -42,4 +42,3 @@ export function parseSprite2D(
 
   return result;
 }
-

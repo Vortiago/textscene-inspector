@@ -116,10 +116,7 @@ export const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   'gravity/damping_curve': v.resourceReference('gravity/damping_curve'),
 
   // :315, Variant::VECTOR3, and the one leaf whose setter refuses a value.
-  'gravity/direction': nonZeroVector3(
-    'gravity/direction',
-    'spring_bone_simulator_3d.cpp:780',
-  ),
+  'gravity/direction': nonZeroVector3('gravity/direction', 'spring_bone_simulator_3d.cpp:780'),
 
   // :316, Variant::INT with PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_ARRAY, so it
   // carries STORAGE (object.h). set_joint_count opens with

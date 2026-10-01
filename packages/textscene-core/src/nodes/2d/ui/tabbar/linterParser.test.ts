@@ -182,9 +182,7 @@ describe('TabBar strict validators', () => {
       expect(check('tabs_rearrange_group', '-99')).toBeNull();
     });
     it('rejects a non-numeric value', () => {
-      expect(check('tabs_rearrange_group', 'group-a')?.code).toBe(
-        'INVALID_TABS_REARRANGE_GROUP_FORMAT'
-      );
+      expect(check('tabs_rearrange_group', 'group-a')?.code).toBe('INVALID_TABS_REARRANGE_GROUP_FORMAT');
     });
   });
 

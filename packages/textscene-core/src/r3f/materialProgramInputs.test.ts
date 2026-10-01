@@ -65,9 +65,7 @@ describe('materialProgramInputs', () => {
   it('keeps one key across a texture swap — a new texture is not a new program', () => {
     // An AnimatedSprite2D advancing a frame, a Sprite2D re-regioned: the program
     // is identical, so a remount per frame would waste a compile per frame.
-    expect(keyOf({ map: texture(), defines: DECODE })).toBe(
-      keyOf({ map: texture(), defines: DECODE })
-    );
+    expect(keyOf({ map: texture(), defines: DECODE })).toBe(keyOf({ map: texture(), defines: DECODE }));
   });
 
   it('separates two different define sets, and treats a same-shaped set as one', () => {
@@ -151,9 +149,7 @@ describe('materialProgramInputs', () => {
       // material the flowmap is not a program input.
       const flowmap = texture(THREE.NoColorSpace);
       expect(keyOf({ anisotropyMap: flowmap })).toBe(keyOf({}));
-      expect(keyOf({ anisotropy: 0.5, anisotropyMap: flowmap })).not.toBe(
-        keyOf({ anisotropy: 0.5 })
-      );
+      expect(keyOf({ anisotropy: 0.5, anisotropyMap: flowmap })).not.toBe(keyOf({ anisotropy: 0.5 }));
     });
 
     it('keys alphaHash even though its neighbour alphaTest is exempt', () => {
@@ -248,10 +244,7 @@ describe('materialProgramInputs', () => {
     it('separates one injection from none, and two from one', () => {
       const none = keyOf({});
       const one = keyOf({ injection: injection('light', 'B') });
-      const two = keyOf(
-        { injection: injection('stylebox', 'A') },
-        { injection: injection('light', 'B') }
-      );
+      const two = keyOf({ injection: injection('stylebox', 'A') }, { injection: injection('light', 'B') });
       expect(one).not.toBe(none);
       expect(two).not.toBe(one);
     });
@@ -327,9 +320,7 @@ describe('materialProgramInputs', () => {
       it('keeps the injection in the key beside the prototype key and its curve term', () => {
         const material = injectedMaterial(true);
         const { agx } = keysAcrossSwap(material);
-        expect(agx).toBe(
-          `stylebox${material.onBeforeCompile.toString()}${toneMappingProgramKey(material)}`
-        );
+        expect(agx).toBe(`stylebox${material.onBeforeCompile.toString()}${toneMappingProgramKey(material)}`);
       });
 
       it('leaves the key of an injected material that is not tone-mapped', () => {

@@ -29,11 +29,7 @@ export interface EmissionScalars {
  * from `resolveEmission`, since the inline path learns whether a texture landed only
  * in the component.
  */
-export function emissionScalars(
-  color: Color | undefined,
-  energy: number,
-  enabled = true
-): EmissionScalars {
+export function emissionScalars(color: Color | undefined, energy: number, enabled = true): EmissionScalars {
   if (!enabled) return { emissive: [0, 0, 0], emissiveIntensity: 0 };
   // Convert before taking the peak, as sRGB→linear is not linear: for `Color(2, 0.5, 0)`
   // the other order gives `(2, 0.102, 0)` against Godot's `(4.954, 0.214, 0)`.
@@ -46,11 +42,7 @@ export function emissionScalars(
   // light from the surface rather than adding none.
   return {
     emissive: linear
-      ? [
-          Math.max(0, linear[0] / peak),
-          Math.max(0, linear[1] / peak),
-          Math.max(0, linear[2] / peak),
-        ]
+      ? [Math.max(0, linear[0] / peak), Math.max(0, linear[1] / peak), Math.max(0, linear[2] / peak)]
       : [0, 0, 0],
     emissiveIntensity: Math.max(0, energy * peak),
   };
@@ -69,9 +61,7 @@ export function resolveEmission(
   // With a texture this is three's own `emissive * tex * intensity`. Without one it is
   // `emission * 0 * energy`, a Godot content trap reproduced: no emission at all.
   if (operator === EmissionOperator.MULTIPLY) {
-    return hasEmissiveMap
-      ? { emissive, emissiveIntensity }
-      : { emissive: [0, 0, 0], emissiveIntensity: 0 };
+    return hasEmissiveMap ? { emissive, emissiveIntensity } : { emissive: [0, 0, 0], emissiveIntensity: 0 };
   }
   const colourIsBlack = emissive[0] === 0 && emissive[1] === 0 && emissive[2] === 0;
   // `(0 + tex) * energy` is a white emissive in three. Godot's `emission` defaults to

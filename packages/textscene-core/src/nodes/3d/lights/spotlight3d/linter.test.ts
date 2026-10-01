@@ -75,10 +75,7 @@ describe('SpotLight3D Linter', () => {
       {
         prop: 'light_color',
         valid: ['Color(0.95, 0.9, 0.85, 1)'],
-        invalid: [
-          { value: 'RGB(1, 1, 1)', contains: ['Color'] },
-          { value: 'Color(1, 1, 1)' },
-        ],
+        invalid: [{ value: 'RGB(1, 1, 1)', contains: ['Color'] }, { value: 'Color(1, 1, 1)' }],
       },
       {
         prop: 'light_indirect_energy',
@@ -139,12 +136,10 @@ describe('SpotLight3D Linter', () => {
         invalid: [{ value: 5, contains: ['0-2'] }],
       },
       {
-          prop: 'light_cull_mask',
-          valid: [1, 100, 1048575, 0, 2000000, 2147483648, 4294967295],
-          invalid: [
-
-          ],
-        },
+        prop: 'light_cull_mask',
+        valid: [1, 100, 1048575, 0, 2000000, 2147483648, 4294967295],
+        invalid: [],
+      },
       {
         // light_3d.cpp:672 hints "0,4096,0.001,or_greater,exp,suffix:m",
         // unenforced, so 0 is legal, 1500 is above the open ceiling, and a
@@ -250,10 +245,9 @@ describe('SpotLight3D Linter', () => {
       it.each([0.05, 1.5, 7.0, 21.1121])(
         'says nothing about spot_angle_attenuation %s',
         (angleAttenuation) => {
-          expectNoDiagnostic(
-            scene(node('SpotLight3D', { spot_angle_attenuation: angleAttenuation })),
-            { prop: 'attenuation' }
-          );
+          expectNoDiagnostic(scene(node('SpotLight3D', { spot_angle_attenuation: angleAttenuation })), {
+            prop: 'attenuation',
+          });
         }
       );
     });

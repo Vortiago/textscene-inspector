@@ -44,8 +44,5 @@ export const JOINT_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   gravity: v.float('gravity'),
 
   // :327, and the joint-level twin of the setting's gravity/direction.
-  gravity_direction: nonZeroVector3(
-    'gravity_direction',
-    'spring_bone_simulator_3d.cpp:985',
-  ),
+  gravity_direction: nonZeroVector3('gravity_direction', 'spring_bone_simulator_3d.cpp:985'),
 };

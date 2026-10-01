@@ -24,9 +24,7 @@ export interface ResolvedEnvironment {
  * `useSubOrExtResource` returns the inline case on the first render, so an all-inline scene resolves
  * in one pass. Each level applies as it resolves (**Progressive fill-in**).
  */
-export function useResolvedEnvironment(
-  environmentRef: string | undefined
-): ResolvedEnvironment | null {
+export function useResolvedEnvironment(environmentRef: string | undefined): ResolvedEnvironment | null {
   const { internalResources, externalResources } = useSceneResources();
 
   const environment = useSubOrExtResource(environmentRef, internalResources, externalResources);

@@ -29,7 +29,9 @@ describe('parseGraphEditConnections', () => {
   });
 
   it('accepts a plain (non-StringName) quoted node name', () => {
-    const result = parseGraphEditConnections('[{ "from_node": "A", "from_port": 0, "to_node": "B", "to_port": 0 }]');
+    const result = parseGraphEditConnections(
+      '[{ "from_node": "A", "from_port": 0, "to_node": "B", "to_port": 0 }]'
+    );
     expect(result).toEqual([{ fromNode: 'A', fromPort: 0, toNode: 'B', toPort: 0 }]);
   });
 

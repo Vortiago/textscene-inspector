@@ -26,9 +26,7 @@ function checkSpotLight3D(context: RuleContext): Diagnostic[] {
   if (isValidProperties(node.properties)) {
     const properties = node.properties as Record<string, string>;
     const spotAngle =
-      properties.spot_angle !== undefined
-        ? parseGodotFloat(properties.spot_angle)
-        : DEFAULT_SPOT_ANGLE;
+      properties.spot_angle !== undefined ? parseGodotFloat(properties.spot_angle) : DEFAULT_SPOT_ANGLE;
 
     // light_3d.cpp:655 guards `>=` though the message says "wider than". No
     // finiteness guard: `spot_angle = inf` is a shadowless cone wider than 90
@@ -58,8 +56,16 @@ const spotLight3DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['SpotLight3D'],
     emits: [
-      { ruleName: 'spotlight3d-shadow-angle-too-wide', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      { ruleName: 'spotlight3d-projector-without-shadow', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'spotlight3d-shadow-angle-too-wide',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
+      {
+        ruleName: 'spotlight3d-projector-without-shadow',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
     ],
   },
   check: checkSpotLight3D,

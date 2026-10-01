@@ -30,6 +30,9 @@ export function checkDiagnostics(gate, label, diagnostics) {
   gate.check(
     diagnostics.failedRequests.length === 0,
     `${label} ${diagnostics.failedRequests.length} failed request(s): ` +
-      diagnostics.failedRequests.slice(0, 3).map((r) => `${r.failure} ${r.url}`).join(' | ')
+      diagnostics.failedRequests
+        .slice(0, 3)
+        .map((r) => `${r.failure} ${r.url}`)
+        .join(' | ')
   );
 }

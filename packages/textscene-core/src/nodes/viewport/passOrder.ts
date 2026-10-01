@@ -39,9 +39,7 @@ type VisitState = 'visiting' | 'done';
  * pass: its other dependencies still order, and the cycle is reported with the
  * sampler that closed it, so a caller can skip or warn about that pass alone.
  */
-export function orderViewportPasses(
-  passes: readonly ViewportPassDependency[]
-): ViewportPassOrder {
+export function orderViewportPasses(passes: readonly ViewportPassDependency[]): ViewportPassOrder {
   const dependsOn = new Map<string, readonly string[]>();
   for (const pass of passes) dependsOn.set(pass.id, pass.dependsOn);
 

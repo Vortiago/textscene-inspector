@@ -19,9 +19,10 @@ let reportOnMount = true;
 // keys by resolved path, so the mock targets the source file. The stand-in calls the real
 // `report()` on mount, without the useResource and fetch machinery.
 vi.mock('../../../packages/textscene-core/src/r3f/TscnCanvas', async () => {
-  const real = (await vi.importActual(
-    '../../../packages/textscene-core/src/r3f/TscnCanvas'
-  )) as Record<string, unknown>;
+  const real = (await vi.importActual('../../../packages/textscene-core/src/r3f/TscnCanvas')) as Record<
+    string,
+    unknown
+  >;
   // The leaf context module, not the barrel: the barrel's graph passes back through this
   // `TscnCanvas` file, so its `useMissingResources` is `undefined` inside this factory.
   const { useMissingResources } = (await vi.importActual(

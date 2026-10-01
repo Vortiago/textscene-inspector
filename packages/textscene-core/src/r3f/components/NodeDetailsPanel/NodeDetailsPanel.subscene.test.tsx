@@ -79,9 +79,7 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
     const graph = createSceneGraphFromTscnScene({
       nodes: [
         makeNode('RoomGeometry', 'Node3D', {
-          children: [
-            makeNode('ceiling_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' }),
-          ],
+          children: [makeNode('ceiling_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' })],
         }),
       ],
       externalResources: [makeExtResource('3_as5ck', 'res://ceiling_lamp.tscn')],
@@ -124,9 +122,7 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
     const graph = createSceneGraphFromTscnScene({
       nodes: [
         makeNode('RoomGeometry', 'Node3D', {
-          children: [
-            makeNode('ceiling_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' }),
-          ],
+          children: [makeNode('ceiling_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' })],
         }),
       ],
       externalResources: [makeExtResource('3_as5ck', 'res://ceiling_lamp.tscn')],

@@ -57,7 +57,9 @@ export function evaluateCsgPlan(
   // group faces by material and so the result's material array can be mapped back.
   const sentinels = plan.surfaces.map(() => new THREE.MeshBasicMaterial());
   const slotOf = (material: THREE.Material | THREE.Material[]): number[] =>
-    (Array.isArray(material) ? material : [material]).map((m) => sentinels.indexOf(m as THREE.MeshBasicMaterial));
+    (Array.isArray(material) ? material : [material]).map((m) =>
+      sentinels.indexOf(m as THREE.MeshBasicMaterial)
+    );
 
   try {
     const evaluator = new csg.Evaluator();

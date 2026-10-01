@@ -9,7 +9,11 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import type { SolveContext, TextureSlotRequest, TextureSlotsFn } from '../../../../r3f/controls/native/solverRegistry';
+import type {
+  SolveContext,
+  TextureSlotRequest,
+  TextureSlotsFn,
+} from '../../../../r3f/controls/native/solverRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -17,8 +21,16 @@ import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxF
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import { AutowrapMode, isTextLayoutResult, shapeText, shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
-import { resolveNodeFontMetrics, resolveNodeFontSizePx } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import {
+  AutowrapMode,
+  isTextLayoutResult,
+  shapeText,
+  shapedTextSizeWidthPx,
+} from '../../../../r3f/controls/native/text/textLayout';
+import {
+  resolveNodeFontMetrics,
+  resolveNodeFontSizePx,
+} from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { fitIconSize } from '../../../../r3f/controls/native/buttonBase';
 import { DEFAULT_FONT_SIZE } from '../../../../r3f/controls/godotDefaultTheme';
 import type { ControlColor } from '../control/types';
@@ -31,7 +43,11 @@ export type TabDrawState = 'selected' | 'unselected' | 'disabled';
  * `TabBar::get_tab_width`/`_notification(DRAW)`'s state pick, minus the `hover`
  * arm: a static previewer has no pointer.
  */
-export function resolveTabDrawState(tab: Pick<TabBarTabProperties, 'disabled'>, index: number, currentTab: number): TabDrawState {
+export function resolveTabDrawState(
+  tab: Pick<TabBarTabProperties, 'disabled'>,
+  index: number,
+  currentTab: number
+): TabDrawState {
   if (tab.disabled) return 'disabled';
   if (index === currentTab) return 'selected';
   return 'unselected';
@@ -154,7 +170,10 @@ export function tabWidthStyleMinWidth(
 ): number {
   const minWidth = (box: StyleBoxFlatData) => box.contentMargin.left + box.contentMargin.right;
   if (state !== 'unselected') return minWidth(pickTabStyleBox(overrides, defaults, state));
-  return Math.max(minWidth(pickTabStyleBox(overrides, defaults, 'unselected')), minWidth(overrides.tab_hovered ?? defaults.hovered));
+  return Math.max(
+    minWidth(pickTabStyleBox(overrides, defaults, 'unselected')),
+    minWidth(overrides.tab_hovered ?? defaults.hovered)
+  );
 }
 
 export const TAB_BAR_THEME_FONT_KEY = 'font';
@@ -270,7 +289,16 @@ export function tabContentWidth(input: {
   closeIconWidth: number;
   closeButtonMarginLeft: number;
 }): number {
-  const { styleMinWidth, iconWidth, hSeparation, textWidthPx, hasText, closeVisible, closeIconWidth, closeButtonMarginLeft } = input;
+  const {
+    styleMinWidth,
+    iconWidth,
+    hSeparation,
+    textWidthPx,
+    hasText,
+    closeVisible,
+    closeIconWidth,
+    closeButtonMarginLeft,
+  } = input;
   let x = styleMinWidth;
   if (iconWidth !== null) x += iconWidth + hSeparation;
   if (hasText) x += textWidthPx + hSeparation;
@@ -285,8 +313,18 @@ export function isCloseButtonVisible(policy: number, index: number, currentTab: 
 }
 
 /** Natural, untruncated text: TabBar never wraps and sets no `line_spacing` on `text_buf`, like `buttonBase.ts`'s `shapeButtonLabel`, but TabBar is not a Button. */
-export function shapeTabLabel(text: string, fontSizePx: number, fontMetrics: Parameters<typeof shapeText>[1]['fontMetrics']): TextLayoutResult {
-  return shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0, fontMetrics });
+export function shapeTabLabel(
+  text: string,
+  fontSizePx: number,
+  fontMetrics: Parameters<typeof shapeText>[1]['fontMetrics']
+): TextLayoutResult {
+  return shapeText(text, {
+    fontSizePx,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.OFF,
+    lineSpacingPx: 0,
+    fontMetrics,
+  });
 }
 
 export { isTextLayoutResult };
@@ -505,7 +543,13 @@ export function computeTabBarDrawLayout(
   const items: TabLayoutItem[] = [];
   for (let i = 0; i <= maxDrawnTab; i++) {
     if (tabs[i]!.hidden) continue;
-    items.push({ index: i, ofs: ofsCache[i]!, width: sizeCache[i]!, textBudgetPx: textBudget[i]!, truncated: truncated[i]! });
+    items.push({
+      index: i,
+      ofs: ofsCache[i]!,
+      width: sizeCache[i]!,
+      textBudgetPx: textBudget[i]!,
+      truncated: truncated[i]!,
+    });
   }
 
   return { items, offset: 0, maxDrawnTab, missingRight, buttonsVisible };

@@ -6,11 +6,7 @@ import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
 import { ResourceLoader, type ResourceLoaderOptions } from './ResourceLoader';
 import { FileEventBus } from './FileEventBus';
-import {
-  containsInstancedMesh,
-  instancedGlbProvider,
-  loadInstancedGlb,
-} from './formats/glb/testing/loadGlb';
+import { containsInstancedMesh, instancedGlbProvider, loadInstancedGlb } from './formats/glb/testing/loadGlb';
 
 function load(options?: ResourceLoaderOptions): Promise<THREE.Object3D> {
   const provider = instancedGlbProvider();

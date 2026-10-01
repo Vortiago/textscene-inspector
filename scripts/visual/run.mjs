@@ -104,9 +104,7 @@ async function main() {
     );
   }
   if (failed > 0) {
-    console.error(
-      `\n[visual] ${failed}/${results.length} scene(s) failed. Diffs in scripts/visual/output/.`
-    );
+    console.error(`\n[visual] ${failed}/${results.length} scene(s) failed. Diffs in scripts/visual/output/.`);
     process.exit(1);
   }
   console.log(`\n[visual] PASS: ${results.length}/${results.length} scenes.`);

@@ -15,10 +15,7 @@ import { beginTextureWork } from './textures/textureWork.js';
 import { useResourceLoader } from './useResource.js';
 import type { ProceduralTextureLookup } from './textures/proceduralBuilds.js';
 import { resolveProceduralTexture } from './textures/resolveProceduralTexture.js';
-import {
-  pinProceduralTexture,
-  unpinProceduralTexture,
-} from './textures/proceduralTextureCache.js';
+import { pinProceduralTexture, unpinProceduralTexture } from './textures/proceduralTextureCache.js';
 
 /** One slot's procedural texture. */
 export interface ProceduralSlot {

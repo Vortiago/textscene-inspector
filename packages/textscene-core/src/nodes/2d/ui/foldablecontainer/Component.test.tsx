@@ -49,7 +49,9 @@ function findIconMeshes(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
     .map((m) => m.instance as THREE.Mesh)
-    .filter((m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined);
+    .filter(
+      (m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined
+    );
 }
 
 describe('<FoldableContainer> (isolated painter contract)', () => {
@@ -59,7 +61,12 @@ describe('<FoldableContainer> (isolated painter contract)', () => {
 
   it('folded draws the title bar chrome + arrow, but NO content panel', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <FoldableContainer {...painterEnv()} solveNode={solveNode({ folded: true, title: 'Inventory' })} rect={RECT} renderOrder={0} />
+      <FoldableContainer
+        {...painterEnv()}
+        solveNode={solveNode({ folded: true, title: 'Inventory' })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     // One title StyleBox, no content panel StyleBox.
     expect(findChromeMeshes(renderer.scene)).toHaveLength(1);
@@ -69,29 +76,49 @@ describe('<FoldableContainer> (isolated painter contract)', () => {
 
   it('unfolded draws the title bar chrome AND the content panel chrome', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <FoldableContainer {...painterEnv()} solveNode={solveNode({ folded: false, title: 'Inventory' })} rect={RECT} renderOrder={0} />
+      <FoldableContainer
+        {...painterEnv()}
+        solveNode={solveNode({ folded: false, title: 'Inventory' })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     expect(findChromeMeshes(renderer.scene)).toHaveLength(2);
   });
 
   it('draws no text mesh when the title is empty, but still draws the arrow', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <FoldableContainer {...painterEnv()} solveNode={solveNode({ folded: false })} rect={RECT} renderOrder={0} />
+      <FoldableContainer
+        {...painterEnv()}
+        solveNode={solveNode({ folded: false })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     expect(findTextMeshes(renderer.scene)).toHaveLength(0);
     expect(findIconMeshes(renderer.scene)).toHaveLength(1);
   });
 
-  it("uses control_font_color for the UNFOLDED title, control_font_pressed_color (white) once folded", async () => {
+  it('uses control_font_color for the UNFOLDED title, control_font_pressed_color (white) once folded', async () => {
     const expanded = await ReactThreeTestRenderer.create(
-      <FoldableContainer {...painterEnv()} solveNode={solveNode({ folded: false, title: 'A' })} rect={RECT} renderOrder={0} />
+      <FoldableContainer
+        {...painterEnv()}
+        solveNode={solveNode({ folded: false, title: 'A' })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     const expandedMaterial = findTextMeshes(expanded.scene)[0]!.material as THREE.ShaderMaterial;
     // control_font_color = 0.875 sRGB, decoded to linear inside the shader uniform.
     expect(expandedMaterial.uniforms.uColor!.value.x).toBeLessThan(0.9);
 
     const folded = await ReactThreeTestRenderer.create(
-      <FoldableContainer {...painterEnv()} solveNode={solveNode({ folded: true, title: 'A' })} rect={RECT} renderOrder={0} />
+      <FoldableContainer
+        {...painterEnv()}
+        solveNode={solveNode({ folded: true, title: 'A' })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     const foldedMaterial = findTextMeshes(folded.scene)[0]!.material as THREE.ShaderMaterial;
     // control_font_pressed_color = Color(1, 1, 1): linear 1 exactly.
@@ -103,19 +130,34 @@ describe('<FoldableContainer> (isolated painter contract)', () => {
     // width=11 (ceil(1354*16/2048)): title_text_width = 120-8-16-2 = 94,
     // extraSpace = 94-11 = 83.
     const left = await ReactThreeTestRenderer.create(
-      <FoldableContainer {...painterEnv()} solveNode={solveNode({ folded: true, title: 'A', titleAlignment: 0 })} rect={RECT} renderOrder={0} />
+      <FoldableContainer
+        {...painterEnv()}
+        solveNode={solveNode({ folded: true, title: 'A', titleAlignment: 0 })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     const leftMesh = findTextMeshes(left.scene)[0]!;
     expect((leftMesh.parent as THREE.Object3D).position.x).toBe(4 + 16 + 2);
 
     const center = await ReactThreeTestRenderer.create(
-      <FoldableContainer {...painterEnv()} solveNode={solveNode({ folded: true, title: 'A', titleAlignment: 1 })} rect={RECT} renderOrder={0} />
+      <FoldableContainer
+        {...painterEnv()}
+        solveNode={solveNode({ folded: true, title: 'A', titleAlignment: 1 })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     const centerMesh = findTextMeshes(center.scene)[0]!;
     expect((centerMesh.parent as THREE.Object3D).position.x).toBe(4 + 16 + 2 + Math.floor(83 / 2));
 
     const right = await ReactThreeTestRenderer.create(
-      <FoldableContainer {...painterEnv()} solveNode={solveNode({ folded: true, title: 'A', titleAlignment: 2 })} rect={RECT} renderOrder={0} />
+      <FoldableContainer
+        {...painterEnv()}
+        solveNode={solveNode({ folded: true, title: 'A', titleAlignment: 2 })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     const rightMesh = findTextMeshes(right.scene)[0]!;
     expect((rightMesh.parent as THREE.Object3D).position.x).toBe(4 + 16 + 2 + 83);
@@ -169,7 +211,12 @@ describe('<FoldableContainer> (isolated painter contract)', () => {
   it('title_text_overrun_behavior trims the title to the space left of the icon (foldable_container.cpp:307-313)', async () => {
     const narrow: Rect2 = { x: 0, y: 0, w: 40, h: 28 };
     const untrimmed = await ReactThreeTestRenderer.create(
-      <FoldableContainer {...painterEnv()} solveNode={solveNode({ folded: true, title: 'AAAAAAAAAAAA' })} rect={narrow} renderOrder={0} />
+      <FoldableContainer
+        {...painterEnv()}
+        solveNode={solveNode({ folded: true, title: 'AAAAAAAAAAAA' })}
+        rect={narrow}
+        renderOrder={0}
+      />
     );
     const trimmed = await ReactThreeTestRenderer.create(
       <FoldableContainer
@@ -195,7 +242,12 @@ describe('<FoldableContainer> chrome placement', () => {
     // `Rect2 panel_rect(Point2(0, title_minimum_size.height), ...)`: the panel starts where
     // the title bar ends. `StyleBoxQuad` takes only a size, so the group supplies the offset.
     const renderer = await ReactThreeTestRenderer.create(
-      <FoldableContainer {...painterEnv()} solveNode={solveNode({ folded: false, title: 'A' })} rect={RECT} renderOrder={0} />
+      <FoldableContainer
+        {...painterEnv()}
+        solveNode={solveNode({ folded: false, title: 'A' })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     const [titleChrome, panelChrome] = findChromeMeshes(renderer.scene);
     // title bar height = content margin 8 + max(font height 23, arrow 16) = 31.

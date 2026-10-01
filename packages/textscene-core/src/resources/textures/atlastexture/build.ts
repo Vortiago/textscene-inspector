@@ -36,10 +36,7 @@ function rawPixels(image: unknown, atlas: { width: number; height: number }): Ra
  * an undecoded image, a region that misses the atlas, or no 2D canvas. Null never
  * means "draw the sheet": a whole sprite sheet is the failure this prevents.
  */
-export function rasterizeAtlasTexture(
-  image: unknown,
-  layout: AtlasTextureLayout
-): THREE.Texture | null {
+export function rasterizeAtlasTexture(image: unknown, layout: AtlasTextureLayout): THREE.Texture | null {
   const atlas = imageSize(image);
   if (!atlas) return null;
 

@@ -81,10 +81,9 @@ describe('<CSGCylinder3D>', () => {
       type: 'StandardMaterial3D',
       data: { albedo_color: 'Color(0.4, 0.3, 0.25, 1)' },
     };
-    const renderer = await render(
-      makeNode({ materialPath: 'SubResource("StandardMaterial3D_pole")' }),
-      [material]
-    );
+    const renderer = await render(makeNode({ materialPath: 'SubResource("StandardMaterial3D_pole")' }), [
+      material,
+    ]);
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const mat = mesh.material as THREE.MeshStandardMaterial;
     // sRGB→linear conversion at parse time makes the channel darker than the raw 0.4 but still
@@ -124,9 +123,7 @@ describe('<CSGCylinder3D>', () => {
         </CSGCylinder3D>
       </SceneResourcesProvider>
     );
-    const injected = renderer.scene.find(
-      (n) => (n.instance as THREE.Object3D).name === 'injected-child'
-    );
+    const injected = renderer.scene.find((n) => (n.instance as THREE.Object3D).name === 'injected-child');
     expect(injected).toBeTruthy();
   });
 });

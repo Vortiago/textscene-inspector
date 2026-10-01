@@ -36,7 +36,6 @@ function finiteIntScalar(value: string, width: IntWidth): number | null {
   return Number.isNaN(stored) ? null : stored;
 }
 
-
 export interface Rect2Value {
   x: number;
   y: number;
@@ -52,10 +51,7 @@ const RECT2_PATTERN = slotTupleRegex('Rect2', 4);
  * each component must parse whole, so `1.2.3` and `--1` are refused outright
  * instead of truncating or landing as NaN.
  */
-export function parseOptionalRect2(
-  value: string | undefined,
-  context = 'value'
-): Rect2Value | undefined {
+export function parseOptionalRect2(value: string | undefined, context = 'value'): Rect2Value | undefined {
   if (value === undefined) return undefined;
   const m = RECT2_PATTERN.exec(value);
   if (!m) {
@@ -122,10 +118,7 @@ export function boolOr(value: string | undefined, fallback: boolean, context = '
  * default. `undefined` for absent, unparseable or negative, warning on the last two:
  * the capsule pair clamps each other only for values the setter accepted.
  */
-export function settableNonNegative(
-  value: string | undefined,
-  context = 'value'
-): number | undefined {
+export function settableNonNegative(value: string | undefined, context = 'value'): number | undefined {
   if (value === undefined) return undefined;
   const parsed = finiteScalar(value);
   if (parsed === null) {
@@ -140,11 +133,7 @@ export function settableNonNegative(
 }
 
 /** {@link settableNonNegative} with a concrete default, the common case. */
-export function nonNegativeOr(
-  value: string | undefined,
-  fallback: number,
-  context = 'value'
-): number {
+export function nonNegativeOr(value: string | undefined, fallback: number, context = 'value'): number {
   return settableNonNegative(value, context) ?? fallback;
 }
 
@@ -243,10 +232,7 @@ export function vec2iOr(value: string | undefined, fallback: Vector2, context = 
  * `storedVector2i` reads it: the slot takes any number token and truncates it
  * (`_parse_construct<int32_t>`), so `SubViewport.size = Vector2i(2e1, 2e1)` is `(20, 20)`.
  */
-export function parseOptionalVector2i(
-  value: string | undefined,
-  context = 'value'
-): Vector2 | undefined {
+export function parseOptionalVector2i(value: string | undefined, context = 'value'): Vector2 | undefined {
   if (!value) return undefined;
   const stored = storedVector2i(value);
   if (stored === 'malformed') {
@@ -265,10 +251,7 @@ export function parseOptionalVector2i(
  * something (Control layout props). `width` is as on {@link intOr}: read at int32, a
  * `uint32_t` slot refuses `3e9`, a float literal it holds exactly.
  */
-export function parseOptionalInt(
-  value: string | undefined,
-  width: IntWidth = 'int32'
-): number | undefined {
+export function parseOptionalInt(value: string | undefined, width: IntWidth = 'int32'): number | undefined {
   if (value === undefined) return undefined;
   return finiteIntScalar(value, width) ?? undefined;
 }

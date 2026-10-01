@@ -44,10 +44,7 @@ describe('<MeshInstance3D> unpopulated secondary surface slot', () => {
     expect(materials).toHaveLength(3);
 
     const gap = materials[1]!;
-    const rgb = gap.color.getRGB(
-      { r: 0, g: 0, b: 0 } as THREE.Color,
-      THREE.LinearSRGBColorSpace
-    );
+    const rgb = gap.color.getRGB({ r: 0, g: 0, b: 0 } as THREE.Color, THREE.LinearSRGBColorSpace);
     expect(rgb.r).toBeCloseTo(0.6, 5);
     expect(rgb.g).toBeCloseTo(0.6, 5);
     expect(rgb.b).toBeCloseTo(0.6, 5);

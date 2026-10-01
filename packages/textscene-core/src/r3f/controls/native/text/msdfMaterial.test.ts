@@ -67,7 +67,10 @@ describe('createMsdfMaterial', () => {
   });
 
   it('spreads supplied clipping planes onto the material (per-material state)', () => {
-    const planes = [new THREE.Plane(new THREE.Vector3(1, 0, 0), 0), new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)];
+    const planes = [
+      new THREE.Plane(new THREE.Vector3(1, 0, 0), 0),
+      new THREE.Plane(new THREE.Vector3(0, 1, 0), 0),
+    ];
     const mat = createMsdfMaterial({
       map: new THREE.Texture(),
       color: RED,

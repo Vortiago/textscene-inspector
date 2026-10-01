@@ -15,7 +15,10 @@ describe('CanvasItem clip-ancestry rule', () => {
   describe('own gate: clip_children_mode must be non-DISABLED first', () => {
     it('stays silent with no clip_children set at all, even under a clipping ancestor', () => {
       expectNoDiagnostic(
-        scene(node('Node2D', { clip_children: 1 }, { name: 'Clipper' }), node('Sprite2D', {}, { parent: '.' })),
+        scene(
+          node('Node2D', { clip_children: 1 }, { name: 'Clipper' }),
+          node('Sprite2D', {}, { parent: '.' })
+        ),
         { ruleName: 'canvasitem-ancestor-clips-children' }
       );
     });
@@ -122,7 +125,10 @@ describe('CanvasItem clip-ancestry rule', () => {
 
     it('warns and names the ancestor when nested under a CanvasGroup', () => {
       const diagnostic = expectDiagnostic(
-        scene(node('CanvasGroup', {}, { name: 'Outer' }), node('Sprite2D', { clip_children: 1 }, { parent: '.' })),
+        scene(
+          node('CanvasGroup', {}, { name: 'Outer' }),
+          node('Sprite2D', { clip_children: 1 }, { parent: '.' })
+        ),
         { ruleName: 'canvasitem-ancestor-is-canvasgroup', severity: 'warning' }
       );
       expect(diagnostic.message).toContain('Outer');

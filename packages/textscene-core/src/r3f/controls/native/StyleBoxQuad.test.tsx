@@ -38,7 +38,7 @@ function box(overrides: Partial<StyleBoxFlatData>): StyleBoxFlatData {
 }
 
 describe('<StyleBoxQuad>', () => {
-  it('builds an indexed BufferGeometry matching styleBoxFlatGeometry\'s vertex/index counts', async () => {
+  it("builds an indexed BufferGeometry matching styleBoxFlatGeometry's vertex/index counts", async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <StyleBoxQuad styleBox={box({})} rect={{ x: 0, y: 0, w: 100, h: 50 }} renderOrder={0} />
     );
@@ -68,7 +68,8 @@ describe('<StyleBoxQuad>', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <StyleBoxQuad styleBox={box({})} rect={{ x: 0, y: 0, w: 100, h: 50 }} renderOrder={0} />
     );
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
     // `WebGLRenderer` draws a transparent `DoubleSide` material twice, back then
     // front, unless it opts out. The rings alternate winding, so each pass would
     // keep one triangle per ring quad and reorder shadow after border.
@@ -101,7 +102,8 @@ describe('<StyleBoxQuad>', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <StyleBoxQuad styleBox={box({})} rect={{ x: 0, y: 0, w: 100, h: 50 }} renderOrder={0} />
     );
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
     expect(mat.customProgramCacheKey!()).toContain('stylebox');
 
     const shader = { fragmentShader: '#include <color_fragment>' };
@@ -118,7 +120,11 @@ describe('<StyleBoxQuad>', () => {
 
   it('renders nothing (no mesh) when the stylebox draws no geometry (draw_center false, no border)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <StyleBoxQuad styleBox={box({ drawCenter: false })} rect={{ x: 0, y: 0, w: 100, h: 50 }} renderOrder={0} />
+      <StyleBoxQuad
+        styleBox={box({ drawCenter: false })}
+        rect={{ x: 0, y: 0, w: 100, h: 50 }}
+        renderOrder={0}
+      />
     );
     expect(() => renderer.scene.findByType('Mesh')).toThrow();
   });
@@ -168,7 +174,10 @@ describe('<StyleBoxQuad>', () => {
     it('tints borderColor the same way as bgColor', async () => {
       const renderer = await ReactThreeTestRenderer.create(
         <StyleBoxQuad
-          styleBox={box({ borderColor: { r: 0.5, g: 0.5, b: 0.5, a: 1 }, borderWidth: { left: 5, top: 5, right: 5, bottom: 5 } })}
+          styleBox={box({
+            borderColor: { r: 0.5, g: 0.5, b: 0.5, a: 1 },
+            borderWidth: { left: 5, top: 5, right: 5, bottom: 5 },
+          })}
           rect={{ x: 0, y: 0, w: 100, h: 50 }}
           color={{ r: 0.5, g: 0.5, b: 0.5, a: 1 }}
           renderOrder={0}
@@ -183,7 +192,11 @@ describe('<StyleBoxQuad>', () => {
 
     it('defaults to no tint (opaque white) when the prop is omitted, matching pre-existing behaviour', async () => {
       const renderer = await ReactThreeTestRenderer.create(
-        <StyleBoxQuad styleBox={box({ bgColor: { r: 0.8, g: 0.8, b: 0.8, a: 1 } })} rect={{ x: 0, y: 0, w: 100, h: 50 }} renderOrder={0} />
+        <StyleBoxQuad
+          styleBox={box({ bgColor: { r: 0.8, g: 0.8, b: 0.8, a: 1 } })}
+          rect={{ x: 0, y: 0, w: 100, h: 50 }}
+          renderOrder={0}
+        />
       );
       const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
       const color = geom.attributes.color as THREE.BufferAttribute;

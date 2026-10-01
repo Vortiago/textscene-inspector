@@ -30,9 +30,7 @@ export type { ResourceProcessor, ResourceProcessorConfig } from './resourceProce
  * `process` (bytes, then process), or `loadDirectly` for a load that needs the
  * path and content together, such as a scene.
  */
-export function createResourceProcessor<T>(
-  config: ResourceProcessorConfig<T>
-): ResourceProcessor<T> {
+export function createResourceProcessor<T>(config: ResourceProcessorConfig<T>): ResourceProcessor<T> {
   const {
     fileEventBus,
     eventBus,

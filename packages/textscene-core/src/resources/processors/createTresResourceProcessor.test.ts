@@ -15,7 +15,10 @@ tile_size = Vector2i(128, 64)
 `;
 
 function mockFileBus() {
-  const handlers = { loaded: new Set<(p: string, d: FileData) => void>(), failed: new Set<(p: string, e: Error) => void>() };
+  const handlers = {
+    loaded: new Set<(p: string, d: FileData) => void>(),
+    failed: new Set<(p: string, e: Error) => void>(),
+  };
   const request = vi.fn();
   const bus = {
     on: (event: 'loaded' | 'failed', h: never) => handlers[event].add(h),

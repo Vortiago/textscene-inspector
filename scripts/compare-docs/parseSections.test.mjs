@@ -63,8 +63,7 @@ describe('parseSections', () => {
   });
 
   it('does not treat a marker after prose (not just blank lines) as attached to the heading above', () => {
-    const body =
-      `## Metallic\n\nAn introductory sentence.\n\n<!-- compare: image=unit-metallic status=done -->\n\nBody prose.\n`;
+    const body = `## Metallic\n\nAn introductory sentence.\n\n<!-- compare: image=unit-metallic status=done -->\n\nBody prose.\n`;
     const { sections, orphaned } = parseSections(body);
     expect(sections).toEqual([]);
     expect(orphaned).toHaveLength(1);
@@ -87,8 +86,7 @@ describe('build() orphaned-marker failure', () => {
   });
 
   it('fails the build and names the sheet and marker for an orphaned marker', () => {
-    const body =
-      `# FakeType\n\nSome prose.\n\n<!-- compare: image=unit-fake status=done -->\n\nDangling.\n`;
+    const body = `# FakeType\n\nSome prose.\n\n<!-- compare: image=unit-fake status=done -->\n\nDangling.\n`;
     const { orphanedMarkers } = build([minimalSheet(body)], false, false);
     expect(orphanedMarkers).toHaveLength(1);
     expect(orphanedMarkers[0]).toContain('FakeType');
@@ -96,8 +94,7 @@ describe('build() orphaned-marker failure', () => {
   });
 
   it('stays empty for a sheet whose markers are all properly attached', () => {
-    const body =
-      `# FakeType\n\n## Metallic\n<!-- compare: image=unit-fake status=done -->\n\nBody.\n`;
+    const body = `# FakeType\n\n## Metallic\n<!-- compare: image=unit-fake status=done -->\n\nBody.\n`;
     const { orphanedMarkers } = build([minimalSheet(body)], false, false);
     expect(orphanedMarkers).toEqual([]);
   });

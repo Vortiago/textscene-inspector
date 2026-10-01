@@ -17,7 +17,7 @@ describe('connectionStrokeGeometry', () => {
     expect(geo.indices.length).toBe((points.length - 1) * 5 * 6);
   });
 
-  it('the outermost ring is fully transparent — the shader\'s fixed fake-AA fade (graph_edit.cpp:232-233)', () => {
+  it("the outermost ring is fully transparent — the shader's fixed fake-AA fade (graph_edit.cpp:232-233)", () => {
     const points = [
       { x: 0, y: 0 },
       { x: 100, y: 0 },
@@ -37,10 +37,14 @@ describe('connectionStrokeGeometry', () => {
     const geo = connectionStrokeGeometry(points, 8, RED, BLUE, RIM);
     // Point 0 (t=0): core rings are indices 2 and 3 of its 6-vertex group.
     const p0CoreStart = 0 * 6 * 4 + 2 * 4;
-    expect([geo.colors[p0CoreStart], geo.colors[p0CoreStart + 1], geo.colors[p0CoreStart + 2]]).toEqual([1, 0, 0]);
+    expect([geo.colors[p0CoreStart], geo.colors[p0CoreStart + 1], geo.colors[p0CoreStart + 2]]).toEqual([
+      1, 0, 0,
+    ]);
     // Point 2 (t=1, last of 3 points, halfway along a straight line): full BLUE.
     const p2CoreStart = 2 * 6 * 4 + 2 * 4;
-    expect([geo.colors[p2CoreStart], geo.colors[p2CoreStart + 1], geo.colors[p2CoreStart + 2]]).toEqual([0, 0, 1]);
+    expect([geo.colors[p2CoreStart], geo.colors[p2CoreStart + 1], geo.colors[p2CoreStart + 2]]).toEqual([
+      0, 0, 1,
+    ]);
   });
 
   it('returns empty buffers for fewer than two points', () => {

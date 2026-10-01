@@ -99,7 +99,7 @@ describe('parsePointLight2D', () => {
     expect(p.shadow_item_cull_mask).toBe(1);
   });
 
-  it('keeps range_item_cull_mask separate from the node\'s own light_mask', () => {
+  it("keeps range_item_cull_mask separate from the node's own light_mask", () => {
     // A Light2D's `light_mask` is its CanvasItem mask, meaning which lights
     // reach the light node itself. It says nothing about what the light lights.
     // The dungeon's torches set it to 2 while culling items with the default 1.
@@ -126,7 +126,7 @@ describe('parsePointLight2D', () => {
     expect(p.range_layer_max).toBe(3);
   });
 
-  it('defaults the range windows to Godot\'s own', () => {
+  it("defaults the range windows to Godot's own", () => {
     // `scene/2d/light_2d.h:50-53`: z_min = -1024, z_max = 1024, layer_min = 0,
     // layer_max = 0. The layer pair stops a default light reaching a default
     // CanvasLayer, whose `layer` is 1.

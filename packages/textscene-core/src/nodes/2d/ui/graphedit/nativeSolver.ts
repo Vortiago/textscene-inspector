@@ -13,7 +13,10 @@
 import type { ControlProperties } from '../control/types';
 import type { GraphElementProperties } from '../graphelement/types';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
-import { controlSolverRegistry, type ContainerLayoutFn } from '../../../../r3f/controls/native/solverRegistry';
+import {
+  controlSolverRegistry,
+  type ContainerLayoutFn,
+} from '../../../../r3f/controls/native/solverRegistry';
 import { controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';
 import { resolveControlLayout } from '../../../../r3f/controls/controlAnchors';
 import type { GraphEditProperties } from './types';
@@ -47,7 +50,9 @@ export const graphEditLayout: ContainerLayoutFn = (n, children, contentRect, ctx
   const rects = new Map<string, Rect2>();
   for (const { node: child } of children) {
     const childProps = child.node.properties as ControlProperties;
-    const layout = resolveControlLayout(childProps, controlLayoutOrder(child), () => ctx.combinedMinimumSize(child));
+    const layout = resolveControlLayout(childProps, controlLayoutOrder(child), () =>
+      ctx.combinedMinimumSize(child)
+    );
     // `Control::set_position(pos)` (no `keep_offsets`) keeps the anchored width
     // and height, so a GraphElement child overwrites only x/y below.
     // `dispatchChildren` floors the rect at the child's minimum size afterwards
@@ -55,7 +60,10 @@ export const graphEditLayout: ContainerLayoutFn = (n, children, contentRect, ctx
     const natural = anchoredRect(layout.anchors, layout.offsets, contentRect);
 
     if (GRAPH_ELEMENT_TYPES.has(child.node.type)) {
-      const positionOffset = (child.node.properties as GraphElementProperties).positionOffset ?? { x: 0, y: 0 };
+      const positionOffset = (child.node.properties as GraphElementProperties).positionOffset ?? {
+        x: 0,
+        y: 0,
+      };
       rects.set(child.path, {
         x: positionOffset.x * zoom - scrollOffset.x,
         y: positionOffset.y * zoom - scrollOffset.y,

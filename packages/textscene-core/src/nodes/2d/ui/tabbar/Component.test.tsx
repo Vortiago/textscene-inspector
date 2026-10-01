@@ -68,7 +68,13 @@ describe('<TabBar> (isolated painter contract)', () => {
 
   it('draws nothing for an empty tab list', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <TabBar {...painterEnv()} solveNode={solveNode({ tabs: [] })} rect={RECT} theme={THEME} renderOrder={0} />
+      <TabBar
+        {...painterEnv()}
+        solveNode={solveNode({ tabs: [] })}
+        rect={RECT}
+        theme={THEME}
+        renderOrder={0}
+      />
     );
     expect(findChromeMeshes(renderer.scene)).toHaveLength(0);
     expect(findTextMeshes(renderer.scene)).toHaveLength(0);
@@ -132,19 +138,35 @@ describe('<TabBar> (isolated painter contract)', () => {
   it('draws a close icon per tab under SHOW_ALWAYS but none under SHOW_NEVER', async () => {
     const tabs = [{ title: 'A', tooltip: '', disabled: false }];
     const always = await ReactThreeTestRenderer.create(
-      <TabBar {...painterEnv()} solveNode={solveNode({ tabs, currentTab: 0, tabCloseDisplayPolicy: 2 })} rect={RECT} theme={THEME} renderOrder={0} />
+      <TabBar
+        {...painterEnv()}
+        solveNode={solveNode({ tabs, currentTab: 0, tabCloseDisplayPolicy: 2 })}
+        rect={RECT}
+        theme={THEME}
+        renderOrder={0}
+      />
     );
     const never = await ReactThreeTestRenderer.create(
-      <TabBar {...painterEnv()} solveNode={solveNode({ tabs, currentTab: 0, tabCloseDisplayPolicy: 0 })} rect={RECT} theme={THEME} renderOrder={0} />
+      <TabBar
+        {...painterEnv()}
+        solveNode={solveNode({ tabs, currentTab: 0, tabCloseDisplayPolicy: 0 })}
+        rect={RECT}
+        theme={THEME}
+        renderOrder={0}
+      />
     );
     const alwaysIconMeshes = always.scene
       .findAllByType('Mesh')
       .map((m) => m.instance as THREE.Mesh)
-      .filter((m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined);
+      .filter(
+        (m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined
+      );
     const neverIconMeshes = never.scene
       .findAllByType('Mesh')
       .map((m) => m.instance as THREE.Mesh)
-      .filter((m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined);
+      .filter(
+        (m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined
+      );
     expect(alwaysIconMeshes.length).toBeGreaterThan(neverIconMeshes.length);
   });
 
@@ -152,14 +174,22 @@ describe('<TabBar> (isolated painter contract)', () => {
     const tabs = [{ title: 'Inventory', tooltip: '', disabled: false }];
     const glyphHeight = async (properties: Partial<TabBarProperties>) => {
       const renderer = await ReactThreeTestRenderer.create(
-        <TabBar {...painterEnv()} solveNode={solveNode({ tabs, currentTab: 0, ...properties })} rect={RECT} theme={THEME} renderOrder={0} />
+        <TabBar
+          {...painterEnv()}
+          solveNode={solveNode({ tabs, currentTab: 0, ...properties })}
+          rect={RECT}
+          theme={THEME}
+          renderOrder={0}
+        />
       );
       const geometry = findTextMeshes(renderer.scene)[0]!.geometry as THREE.BufferGeometry;
       geometry.computeBoundingBox();
       const box = geometry.boundingBox!;
       return box.max.y - box.min.y;
     };
-    expect(await glyphHeight({ themeOverrideFontSizes: { font_size: 28 } })).toBeGreaterThan(await glyphHeight({}));
+    expect(await glyphHeight({ themeOverrideFontSizes: { font_size: 28 } })).toBeGreaterThan(
+      await glyphHeight({})
+    );
   });
 
   it('draws the scroll arrows once the tabs overflow a clipped bar', async () => {
@@ -183,7 +213,9 @@ describe('<TabBar> (isolated painter contract)', () => {
     const iconMeshes = renderer.scene
       .findAllByType('Mesh')
       .map((m) => m.instance as THREE.Mesh)
-      .filter((m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined);
+      .filter(
+        (m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined
+      );
     // The overflowing second tab is clipped off (never drawn) and its
     // absence is what makes the two scroll arrows visible.
     expect(iconMeshes.length).toBeGreaterThanOrEqual(2);

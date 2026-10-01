@@ -26,10 +26,7 @@ export function ReferenceRect({ solveNode, tint, rect, renderOrder }: NativeCont
   const filled = useMemo(() => multiplyModulate(tint.own, fill), [tint.own, fill]);
   const color = useGodotLinearColor(filled);
   const width = props.borderWidth ?? 1;
-  const quads = useMemo(
-    () => referenceRectBorderQuads(rect.w, rect.h, width),
-    [rect.w, rect.h, width]
-  );
+  const quads = useMemo(() => referenceRectBorderQuads(rect.w, rect.h, width), [rect.w, rect.h, width]);
 
   // Godot draws when `is_editor_hint() || !editor_only` (`reference_rect.cpp:38`).
   // The editor case shows only while selected, as ADR-0018 does for Marker2D.

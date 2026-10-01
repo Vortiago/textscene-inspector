@@ -60,9 +60,9 @@ describe('readPackedBytes', () => {
   });
 
   it('reads the padded form the tokenizer also loads', () => {
-    expect(Array.from(readPackedBytes('{ "vertex_data" : PackedByteArray ( "AQID" ) }', 'vertex_data'))).toEqual([
-      1, 2, 3,
-    ]);
+    expect(
+      Array.from(readPackedBytes('{ "vertex_data" : PackedByteArray ( "AQID" ) }', 'vertex_data'))
+    ).toEqual([1, 2, 3]);
   });
 
   it('gives an empty buffer and a warning for a corrupt payload', () => {

@@ -3,10 +3,7 @@
  * selector, play, pause and stop, and a scrubber with an m:ss.cc readout.
  */
 
-import {
-  useAnimationTransport,
-  type LoopOverride,
-} from '../../contexts/AnimationTransportContext';
+import { useAnimationTransport, type LoopOverride } from '../../contexts/AnimationTransportContext';
 import styles from './AnimationPanel.module.css';
 
 /** Preview speed multipliers: enough range to spot subtle timing, with no free-form input. */

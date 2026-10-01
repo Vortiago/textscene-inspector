@@ -30,12 +30,8 @@ describe('parseStandardMaterial3DScalars — clearcoat flag (WI-66)', () => {
   it('clamps the enabled clearcoat strength to 0..1 (over-range → 1, negative → 0)', () => {
     // Strength is a 0..1 scalar; a stray out-of-range value must saturate, not
     // leak past the range into the renderer.
-    expect(
-      parseStandardMaterial3DScalars({ clearcoat_enabled: 'true', clearcoat: '2.5' }).clearcoat
-    ).toBe(1);
-    expect(
-      parseStandardMaterial3DScalars({ clearcoat_enabled: 'true', clearcoat: '-1' }).clearcoat
-    ).toBe(0);
+    expect(parseStandardMaterial3DScalars({ clearcoat_enabled: 'true', clearcoat: '2.5' }).clearcoat).toBe(1);
+    expect(parseStandardMaterial3DScalars({ clearcoat_enabled: 'true', clearcoat: '-1' }).clearcoat).toBe(0);
   });
 
   it('gates on clearcoat_enabled — scalars present but the flag absent → no coat (0)', () => {

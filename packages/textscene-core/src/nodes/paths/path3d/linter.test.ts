@@ -1,13 +1,7 @@
 /** Path3D linter: the strict parser and the semantic rules. */
 
 import { describe, it, expect } from 'vitest';
-import {
-  node,
-  scene,
-  lint,
-  expectClean,
-  expectDiagnostic,
-} from '../../../linter/testing/testkit';
+import { node, scene, lint, expectClean, expectDiagnostic } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
@@ -59,7 +53,7 @@ curve = SubResource("curve_1")
 `;
 
         const diagnostics = lint(content);
-        const formatErrors = diagnostics.filter(d => d.message.includes('resource reference'));
+        const formatErrors = diagnostics.filter((d) => d.message.includes('resource reference'));
         expect(formatErrors).toHaveLength(0);
       });
 
@@ -73,7 +67,7 @@ curve = ExtResource("curve_ext")
 `;
 
         const diagnostics = lint(content);
-        const formatErrors = diagnostics.filter(d => d.message.includes('resource reference'));
+        const formatErrors = diagnostics.filter((d) => d.message.includes('resource reference'));
         expect(formatErrors).toHaveLength(0);
       });
 
@@ -201,10 +195,7 @@ curve = ExtResource("curve_ext")
       const diagnostics = lint(content);
       expect(diagnostics.length).toBeGreaterThan(0);
 
-      const curveError = diagnostics.find(d =>
-        d.nodeName === 'Path3D1' &&
-        d.message.includes("'curve'")
-      );
+      const curveError = diagnostics.find((d) => d.nodeName === 'Path3D1' && d.message.includes("'curve'"));
       expect(curveError).toBeDefined();
       expect(curveError?.severity).toBe('error');
     });
@@ -272,9 +263,8 @@ curve = ExtResource("curve_ext")
     it('should not run Path3D rules on other node types', () => {
       const diagnostics = lint(scene(node('Node3D', {}, { name: 'NotPath3D' })));
       // Should not produce Path3D-specific errors
-      const path3dErrors = diagnostics.filter(d =>
-        d.ruleName?.includes('path3d') ||
-        d.nodeType === 'Path3D'
+      const path3dErrors = diagnostics.filter(
+        (d) => d.ruleName?.includes('path3d') || d.nodeType === 'Path3D'
       );
       expect(path3dErrors).toHaveLength(0);
     });
@@ -324,12 +314,11 @@ curve = SubResource("nonexistent")
       const diagnostics = lint(content);
       expect(diagnostics.length).toBeGreaterThan(0);
 
-      const validPathErrors = diagnostics.filter(d => d.nodeName === 'ValidPath');
+      const validPathErrors = diagnostics.filter((d) => d.nodeName === 'ValidPath');
       expect(validPathErrors).toHaveLength(0);
 
-      const resourceError = diagnostics.find(d =>
-        d.nodeName === 'InvalidPath' &&
-        d.message.includes("'curve'")
+      const resourceError = diagnostics.find(
+        (d) => d.nodeName === 'InvalidPath' && d.message.includes("'curve'")
       );
       expect(resourceError).toBeDefined();
     });

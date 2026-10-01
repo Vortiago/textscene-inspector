@@ -28,11 +28,7 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
   const floatingCite = is2D ? 'character_body_2d.cpp:672' : 'character_body_3d.cpp:957';
 
   // Each arm's enabling condition, stated once (see `ruleArms.ts`).
-  const arms: RuleArms<
-    | 'floorPropsInFloating'
-    | 'slideOnCeilingInFloating'
-    | 'wallAngleInGrounded'
-  > = {
+  const arms: RuleArms<'floorPropsInFloating' | 'slideOnCeilingInFloating' | 'wallAngleInGrounded'> = {
     floorPropsInFloating: {
       severity: 'info',
       ruleName: `${prefix}-floor-props-in-floating-mode`,
@@ -70,8 +66,7 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
     const { node } = context;
-    const report = (arm: RuleArm | undefined, message: string) =>
-      reportArm(diagnostics, arm, node, message);
+    const report = (arm: RuleArm | undefined, message: string) => reportArm(diagnostics, arm, node, message);
 
     const rawProps = node.properties as unknown as Record<string, string>;
 
@@ -101,13 +96,22 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
     if (motionMode === 1) {
       const floorProperty = FLOOR_PROPERTIES.find((prop) => rawProps[prop] !== undefined);
       if (floorProperty !== undefined) {
-        report(arms.floorPropsInFloating, `${type} '${node.name}' has motion_mode=FLOATING but '${floorProperty}' is set. Floor properties only work in GROUNDED mode (motion_mode=0).`);
+        report(
+          arms.floorPropsInFloating,
+          `${type} '${node.name}' has motion_mode=FLOATING but '${floorProperty}' is set. Floor properties only work in GROUNDED mode (motion_mode=0).`
+        );
       }
       if (rawProps.slide_on_ceiling !== undefined) {
-        report(arms.slideOnCeilingInFloating, `${type} '${node.name}' has motion_mode=FLOATING but 'slide_on_ceiling' is set. It is read only in GROUNDED mode (motion_mode=0).`);
+        report(
+          arms.slideOnCeilingInFloating,
+          `${type} '${node.name}' has motion_mode=FLOATING but 'slide_on_ceiling' is set. It is read only in GROUNDED mode (motion_mode=0).`
+        );
       }
     } else if (motionMode === 0 && rawProps.wall_min_slide_angle !== undefined) {
-      report(arms.wallAngleInGrounded, `${type} '${node.name}' has motion_mode=GROUNDED but 'wall_min_slide_angle' is set. It is read only in FLOATING mode (motion_mode=1).`);
+      report(
+        arms.wallAngleInGrounded,
+        `${type} '${node.name}' has motion_mode=GROUNDED but 'wall_min_slide_angle' is set. It is read only in FLOATING mode (motion_mode=1).`
+      );
     }
 
     return diagnostics;

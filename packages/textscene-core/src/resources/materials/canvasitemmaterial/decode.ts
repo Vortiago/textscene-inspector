@@ -5,11 +5,7 @@
  */
 
 import { boolOr, enumOr, intOr } from '../../../parser/valueParsers';
-import {
-  CanvasItemBlendMode,
-  CanvasItemLightMode,
-  type CanvasItemMaterialProperties,
-} from './types';
+import { CanvasItemBlendMode, CanvasItemLightMode, type CanvasItemMaterialProperties } from './types';
 
 /**
  * The authorable blend modes. `BLEND_MODE_DISABLED` (5) is in the C++ enum
@@ -30,9 +26,7 @@ const LIGHT_MODES = [
   CanvasItemLightMode.LIGHT_ONLY,
 ] as const;
 
-export function decodeCanvasItemMaterial(
-  properties: Record<string, string>
-): CanvasItemMaterialProperties {
+export function decodeCanvasItemMaterial(properties: Record<string, string>): CanvasItemMaterialProperties {
   return {
     blendMode: enumOr(
       properties.blend_mode,

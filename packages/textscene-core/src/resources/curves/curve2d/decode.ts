@@ -10,11 +10,7 @@ import { parsePackedVector2Array } from '../../shapes/packedArray';
 import { bezierInterpolate } from '../../../godot/index.js';
 import { CURVE2D_DATA } from '../shared/bezierData';
 import { decodeBezierCurve, resolveBezierCurve, type BezierCurveReader } from '../shared/bezierCurve';
-import type {
-  Curve2DControlPoint,
-  Curve2DSample,
-  Curve2DSampler,
-} from './types';
+import type { Curve2DControlPoint, Curve2DSample, Curve2DSampler } from './types';
 
 const CURVE2D: BezierCurveReader<Curve2DControlPoint> = {
   format: CURVE2D_DATA,
@@ -46,10 +42,7 @@ export function resolveCurve2D(
  * `segmentsPerSpan` cubic-Bézier steps. Degenerate input (0 or 1 points) yields
  * a zero-length sampler that still reports the lone point's position.
  */
-export function tessellateCurve2D(
-  points: Curve2DControlPoint[],
-  segmentsPerSpan = 16
-): Curve2DSampler {
+export function tessellateCurve2D(points: Curve2DControlPoint[], segmentsPerSpan = 16): Curve2DSampler {
   const flat: number[] = [];
   if (points.length > 0) {
     const first = points[0]!.position;
@@ -104,8 +97,7 @@ function appendSpan(
   b: Curve2DControlPoint,
   segmentsPerSpan: number
 ): void {
-  const straight =
-    a.out.x === 0 && a.out.y === 0 && b.in.x === 0 && b.in.y === 0;
+  const straight = a.out.x === 0 && a.out.y === 0 && b.in.x === 0 && b.in.y === 0;
   if (straight) {
     flat.push(b.position.x, b.position.y);
     return;

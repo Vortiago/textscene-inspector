@@ -14,7 +14,10 @@ validatorRegistry.registerAll('NavigationRegion3D', {
   use_edge_connections: v.boolean('use_edge_connections'),
   // navigation_region_3d.cpp:301: PROPERTY_HINT_LAYERS_3D_NAVIGATION.
   // set_navigation_layers (:95-103) is a bare assignment.
-  navigation_layers: layerBitmask('navigation_layers', { hinted: 'navigation_region_3d.cpp:301', width: 'uint32' /* navigation_region_3d.h:89 */ }),
+  navigation_layers: layerBitmask('navigation_layers', {
+    hinted: 'navigation_region_3d.cpp:301',
+    width: 'uint32' /* navigation_region_3d.h:89 */,
+  }),
   // navigation_region_3d.cpp:302 is a plain FLOAT with no range hint, but set_enter_cost
   // (:132) refuses p_enter_cost < 0.0, so the floor is enforced.
   enter_cost: v.float('enter_cost', {

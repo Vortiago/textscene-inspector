@@ -25,9 +25,7 @@ const KEYS: string[] = ['setting_count', 'settings/*'];
 
 describe('ConvertTransformModifier3D strict validators', () => {
   it('registers exactly what ConvertTransformModifier3D binds', () => {
-    expect(validatorRegistry.getOwnKeys('ConvertTransformModifier3D').sort()).toEqual(
-      [...KEYS].sort()
-    );
+    expect(validatorRegistry.getOwnKeys('ConvertTransformModifier3D').sort()).toEqual([...KEYS].sort());
   });
 
   it('accepts every value its own fixture carries', () => {
@@ -53,20 +51,20 @@ describe('ConvertTransformModifier3D strict validators', () => {
   });
 
   describe('the two-segment apply/ and reference/ groups', () => {
-    it.each([
-      'settings/0/apply/transform_mode',
-      'settings/0/reference/transform_mode',
-    ])('%s accepts the three TransformMode values', (key) => {
-      for (const value of ['0', '1', '2']) expect(check(key, value)).toBeNull();
-    });
+    it.each(['settings/0/apply/transform_mode', 'settings/0/reference/transform_mode'])(
+      '%s accepts the three TransformMode values',
+      (key) => {
+        for (const value of ['0', '1', '2']) expect(check(key, value)).toBeNull();
+      }
+    );
 
-    it.each([
-      'settings/0/apply/transform_mode',
-      'settings/0/reference/transform_mode',
-    ])('%s WARNS outside the enum, since the setter only static_casts', (key) => {
-      expect(check(key, '3')?.severity).toBe('warning');
-      expect(check(key, '-1')?.severity).toBe('warning');
-    });
+    it.each(['settings/0/apply/transform_mode', 'settings/0/reference/transform_mode'])(
+      '%s WARNS outside the enum, since the setter only static_casts',
+      (key) => {
+        expect(check(key, '3')?.severity).toBe('warning');
+        expect(check(key, '-1')?.severity).toBe('warning');
+      }
+    );
 
     it.each(['settings/0/apply/axis', 'settings/0/reference/axis'])(
       '%s accepts X, Y and Z and warns beyond them',

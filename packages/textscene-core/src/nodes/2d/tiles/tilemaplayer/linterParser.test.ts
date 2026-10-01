@@ -87,9 +87,7 @@ tile_set = NotARef(1)
     });
 
     it('rejects a decimal list with a non-integer entry — _parse_byte_array requires TK_NUMBER (variant_parser.cpp:631-647)', () => {
-      expect(check('tile_map_data', 'PackedByteArray(0, abc, 0)')?.code).toBe(
-        'INVALID_TILE_MAP_DATA_FORMAT'
-      );
+      expect(check('tile_map_data', 'PackedByteArray(0, abc, 0)')?.code).toBe('INVALID_TILE_MAP_DATA_FORMAT');
     });
 
     it('rejects a quoted string with non-base64 characters — CryptoCore::b64_decode fails the parse (variant_parser.cpp:618-622)', () => {
@@ -128,7 +126,7 @@ tile_set = NotARef(1)
     });
   });
 
-  describe('rendering_quadrant_size — ERR_FAIL_COND_MSG(p_size < 1) at tile_map_layer.cpp:3373; hint is PROPERTY_HINT_NONE (:2275), unlike TileMap\'s own property', () => {
+  describe("rendering_quadrant_size — ERR_FAIL_COND_MSG(p_size < 1) at tile_map_layer.cpp:3373; hint is PROPERTY_HINT_NONE (:2275), unlike TileMap's own property", () => {
     it('accepts the floor value 1', () => {
       expect(check('rendering_quadrant_size', '1')).toBeNull();
     });
@@ -139,7 +137,7 @@ tile_set = NotARef(1)
       expect(error!.severity).toBe('error');
     });
 
-    it('accepts an arbitrarily large size — no RANGE hint means no ceiling at all, unlike TileMap\'s hinted 128 (tile_map.cpp:996)', () => {
+    it("accepts an arbitrarily large size — no RANGE hint means no ceiling at all, unlike TileMap's hinted 128 (tile_map.cpp:996)", () => {
       expect(check('rendering_quadrant_size', '999999')).toBeNull();
     });
   });

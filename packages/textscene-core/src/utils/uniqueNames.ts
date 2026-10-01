@@ -55,8 +55,7 @@ export function uniqueNameOwnership(roots: readonly TscnNode[]): UniqueNameOwner
   const claims = new Map<string, UniqueNameClaim>();
   const instanceClaims = new Map<string, UniqueNameClaim[]>();
   const ownedInsideInstances = new Set<string>();
-  const join = (parent: string, segment: string): string =>
-    parent ? `${parent}/${segment}` : segment;
+  const join = (parent: string, segment: string): string => (parent ? `${parent}/${segment}` : segment);
   // `instanceOwner`: the live path of the nearest ancestor below the root that is an `instance=`
   // heading in this file, or null.
   const walk = (

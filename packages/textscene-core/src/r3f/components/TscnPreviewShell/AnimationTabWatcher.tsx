@@ -6,11 +6,7 @@ import { useAnimationTransport } from '../../contexts/AnimationTransportContext.
  * decides the Animation tab (ADR-0012). Registration follows the selection and
  * covers instanced players, which `flattenedNodes` never holds.
  */
-export function AnimationTabWatcher({
-  onVisibleChange,
-}: {
-  onVisibleChange: (visible: boolean) => void;
-}) {
+export function AnimationTabWatcher({ onVisibleChange }: { onVisibleChange: (visible: boolean) => void }) {
   const { hasPlayer } = useAnimationTransport();
   useEffect(() => {
     onVisibleChange(hasPlayer);

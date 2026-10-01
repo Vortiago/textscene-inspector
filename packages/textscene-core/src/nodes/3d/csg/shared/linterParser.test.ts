@@ -83,9 +83,7 @@ describe('CSGShape3D shared validators', () => {
   });
 
   it('a whole-scene lint reports the malformed values', () => {
-    const diagnostics = new Linter().lint(
-      scene('use_collision = "banana"\ncollision_layer = "banana"')
-    );
+    const diagnostics = new Linter().lint(scene('use_collision = "banana"\ncollision_layer = "banana"'));
     const errors = diagnostics.filter((d) => d.severity === 'error').map((d) => d.message);
     expect(errors.some((m) => m.includes('use_collision'))).toBe(true);
     expect(errors.some((m) => m.includes('collision_layer'))).toBe(true);

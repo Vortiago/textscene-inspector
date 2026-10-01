@@ -14,7 +14,10 @@ import { isTabChar } from './textLayout';
  * first stop (`:5722-5737`). Other advances are unchanged. One non-positive stop disables tab
  * alignment entirely (`:5700-5704`).
  */
-export function tabAlignAdvances(entries: ReadonlyArray<{ char: string; advance: number }>, tabStopsPx: readonly number[]): number[] {
+export function tabAlignAdvances(
+  entries: ReadonlyArray<{ char: string; advance: number }>,
+  tabStopsPx: readonly number[]
+): number[] {
   if (tabStopsPx.length === 0 || tabStopsPx.some((stop) => stop <= 0)) {
     return entries.map((e) => e.advance);
   }

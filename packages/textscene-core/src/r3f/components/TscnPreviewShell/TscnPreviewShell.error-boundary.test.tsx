@@ -74,9 +74,7 @@ describe('<TscnPreviewShell> PreviewErrorBoundary (#216)', () => {
     expect(screen.getByRole('alert')).toBeTruthy();
 
     // Only an unrelated prop changes, so the boundary stays on the fallback.
-    rerender(
-      <TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} toolbar={<span>hi</span>} />
-    );
+    rerender(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} toolbar={<span>hi</span>} />);
     expect(screen.getByRole('alert')).toBeTruthy();
 
     consoleSpy.mockRestore();

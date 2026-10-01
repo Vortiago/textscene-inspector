@@ -76,9 +76,7 @@ describe('<CollisionShape3D> gizmo', () => {
     const tree = (
       <ViewportModeProvider initialShowCollisions>
         <SceneResourcesProvider internalResources={[convexShape]}>
-          <CollisionShape3D
-            node={makeNode({ shape: 'SubResource("ConvexPolygonShape3D_1")' })}
-          />
+          <CollisionShape3D node={makeNode({ shape: 'SubResource("ConvexPolygonShape3D_1")' })} />
         </SceneResourcesProvider>
       </ViewportModeProvider>
     );
@@ -101,11 +99,7 @@ describe('<CollisionShape3D> gizmo', () => {
   });
 
   it('renders a triangle-soup wireframe for ConcavePolygonShape3D', async () => {
-    const renderer = await render(
-      true,
-      { shape: 'SubResource("ConcavePolygonShape3D_1")' },
-      [concaveShape]
-    );
+    const renderer = await render(true, { shape: 'SubResource("ConcavePolygonShape3D_1")' }, [concaveShape]);
     const meshes = renderer.scene.findAll((n) => n.type === 'Mesh');
     expect(meshes).toHaveLength(1);
     const mesh = meshes[0]!.instance as THREE.Mesh;
@@ -114,11 +108,7 @@ describe('<CollisionShape3D> gizmo', () => {
   });
 
   it('renders no gizmo and does not crash when the shape SubResource is missing', async () => {
-    const renderer = await render(
-      true,
-      { shape: 'SubResource("BoxShape3D_ghost")' },
-      [boxShape]
-    );
+    const renderer = await render(true, { shape: 'SubResource("BoxShape3D_ghost")' }, [boxShape]);
     const meshes = renderer.scene.findAll((n) => n.type === 'Mesh');
     expect(meshes).toHaveLength(0);
   });

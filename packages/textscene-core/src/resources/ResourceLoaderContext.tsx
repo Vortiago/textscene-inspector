@@ -10,13 +10,6 @@ export interface ResourceLoaderProviderProps {
   children: ReactNode;
 }
 
-export function ResourceLoaderProvider({
-  loader,
-  children,
-}: ResourceLoaderProviderProps) {
-  return (
-    <ResourceLoaderContext.Provider value={loader}>
-      {children}
-    </ResourceLoaderContext.Provider>
-  );
+export function ResourceLoaderProvider({ loader, children }: ResourceLoaderProviderProps) {
+  return <ResourceLoaderContext.Provider value={loader}>{children}</ResourceLoaderContext.Provider>;
 }

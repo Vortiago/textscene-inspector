@@ -124,9 +124,7 @@ describe('LookAtModifier3D strict validators', () => {
     // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
     it.each(['target_node', 'origin_external_node'])('rejects a StringName on %s', (property) => {
       expect(check(property, '"../Target"')).toBeNull();
-      expect(check(property, '&"../Target"')?.code).toBe(
-        `INVALID_${property.toUpperCase()}_PATH`
-      );
+      expect(check(property, '&"../Target"')?.code).toBe(`INVALID_${property.toUpperCase()}_PATH`);
     });
   });
 
@@ -160,12 +158,9 @@ describe('LookAtModifier3D strict validators', () => {
       expect(error?.severity).toBe('error');
     });
 
-    it.each(['bone', 'origin_bone'])(
-      'warns that a fractional index on %s is truncated',
-      (property) => {
-        expect(check(property, '3.5')?.message).toContain('integer slot');
-      }
-    );
+    it.each(['bone', 'origin_bone'])('warns that a fractional index on %s is truncated', (property) => {
+      expect(check(property, '3.5')?.message).toContain('integer slot');
+    });
 
     it.each(['bone', 'origin_bone'])('leaves the upper end open on %s', (property) => {
       // The real ceiling is the live `get_bone_count()`, which no per-property
@@ -277,7 +272,7 @@ describe('LookAtModifier3D strict validators', () => {
   });
 
   describe('radians_as_degrees angles', () => {
-    it.each(HALF_TURN_ANGLES)('%s bounds RADIANS, not the hint\'s degrees', (property) => {
+    it.each(HALF_TURN_ANGLES)("%s bounds RADIANS, not the hint's degrees", (property) => {
       // Hint "0,180,0.01,radians_as_degrees" (look_at_modifier_3d.cpp:497, :499, :505, :507): the
       // inspector shows 0-180 degrees, the .tscn stores radians, so the ceiling is PI ≈ 3.14159265.
       // 3.5 discriminates: inside the degree number 180, outside PI, so a degree bound accepts it.

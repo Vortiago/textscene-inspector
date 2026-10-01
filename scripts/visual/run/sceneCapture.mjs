@@ -4,12 +4,7 @@
  * gives a wrong baseline, and its comment names the race.
  */
 
-import {
-  findCaptureTarget,
-  gotoFixture,
-  setDisplayToggle,
-  settleCanvas,
-} from '../previewServer.mjs';
+import { findCaptureTarget, gotoFixture, setDisplayToggle, settleCanvas } from '../previewServer.mjs';
 
 // Greater than CameraFit's last load-time fit timer (1100 ms after mount), with margin for
 // render-loop latency under host contention.

@@ -17,11 +17,7 @@ function makeNode(meshSubResId: string): TscnNode {
   return { name: 'M', type: 'MeshInstance3D', children: [], properties: props };
 }
 
-function sub(
-  type: string,
-  id: string,
-  data: Record<string, string | undefined> = {}
-): TscnInternalResource {
+function sub(type: string, id: string, data: Record<string, string | undefined> = {}): TscnInternalResource {
   return {
     id,
     type,
@@ -29,9 +25,7 @@ function sub(
   };
 }
 
-async function renderGeometry(
-  meshSubResource: TscnInternalResource
-): Promise<THREE.BufferGeometry> {
+async function renderGeometry(meshSubResource: TscnInternalResource): Promise<THREE.BufferGeometry> {
   const renderer = await ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={[meshSubResource]}>
       <MeshInstance3D node={makeNode(meshSubResource.id)} />
@@ -103,9 +97,7 @@ describe('Mesh primitives (assertions 48–59)', () => {
   it('#54 PlaneMesh.orientation FACE_X/FACE_Y/FACE_Z → rotation applied', async () => {
     // FACE_Y (orientation=1) lays the plane in XZ with its normal up, so a (2,2) plane
     // has 2-unit extents in X and Z and none in Y.
-    const geom = await renderGeometry(
-      sub('PlaneMesh', 'P', { size: 'Vector2(2, 2)', orientation: '1' })
-    );
+    const geom = await renderGeometry(sub('PlaneMesh', 'P', { size: 'Vector2(2, 2)', orientation: '1' }));
     geom.computeBoundingBox();
     const size = new THREE.Vector3();
     geom.boundingBox!.getSize(size);

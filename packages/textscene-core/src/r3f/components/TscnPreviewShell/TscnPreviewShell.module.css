@@ -6,48 +6,48 @@
  */
 :root {
   /* Surfaces */
-  --tsi-bg-canvas:     #181818;
-  --tsi-bg-shell:      var(--vscode-editor-background, #1e1e1e);
-  --tsi-bg-panel:      var(--vscode-sideBar-background, #1a1a1a);
-  --tsi-bg-elevated:   var(--vscode-input-background, #242424);
-  --tsi-bg-hover:      var(--vscode-list-hoverBackground, #2a2d2e);
-  --tsi-bg-active:     var(--vscode-list-activeSelectionBackground, #3e3e42);
+  --tsi-bg-canvas: #181818;
+  --tsi-bg-shell: var(--vscode-editor-background, #1e1e1e);
+  --tsi-bg-panel: var(--vscode-sideBar-background, #1a1a1a);
+  --tsi-bg-elevated: var(--vscode-input-background, #242424);
+  --tsi-bg-hover: var(--vscode-list-hoverBackground, #2a2d2e);
+  --tsi-bg-active: var(--vscode-list-activeSelectionBackground, #3e3e42);
 
   /* Foreground */
-  --tsi-fg-strong:     var(--vscode-foreground, #f0f0f0);
-  --tsi-fg-default:    var(--vscode-foreground, #ddd);
+  --tsi-fg-strong: var(--vscode-foreground, #f0f0f0);
+  --tsi-fg-default: var(--vscode-foreground, #ddd);
   --tsi-fg-on-control: var(--vscode-button-foreground, #ccc);
-  --tsi-fg-muted:      var(--vscode-descriptionForeground, #888);
-  --tsi-fg-faint:      #555;
+  --tsi-fg-muted: var(--vscode-descriptionForeground, #888);
+  --tsi-fg-faint: #555;
 
   /* Borders */
-  --tsi-border:        var(--vscode-panel-border, #2a2d2e);
+  --tsi-border: var(--vscode-panel-border, #2a2d2e);
   --tsi-border-strong: var(--vscode-widget-border, #3e3e42);
 
   /* The selected-row triplet maps to VS Code's list selection, so a clicked
      tree row looks like any clicked VS Code row. */
-  --tsi-accent:        var(--vscode-focusBorder, #2a8af6);
-  --tsi-accent-soft:   var(--vscode-list-activeSelectionBackground, #173d6b);
-  --tsi-accent-fg:     var(--vscode-list-activeSelectionForeground, #e7f1ff);
-  --tsi-focus-ring:    var(--vscode-focusBorder, #6cf);
+  --tsi-accent: var(--vscode-focusBorder, #2a8af6);
+  --tsi-accent-soft: var(--vscode-list-activeSelectionBackground, #173d6b);
+  --tsi-accent-fg: var(--vscode-list-activeSelectionForeground, #e7f1ff);
+  --tsi-focus-ring: var(--vscode-focusBorder, #6cf);
 
   /* The `*-bg` shades have no VS Code analog. */
-  --tsi-danger:        var(--vscode-errorForeground, #f04747);
-  --tsi-danger-bg:     #5a1d1d;
+  --tsi-danger: var(--vscode-errorForeground, #f04747);
+  --tsi-danger-bg: #5a1d1d;
   --tsi-danger-border: #8a2929;
-  --tsi-danger-fg:     #ffd6d6;
-  --tsi-warning:       #ffc107;
-  --tsi-warning-bg:    #3d3319;
-  --tsi-warning-fg:    #ffd966;
-  --tsi-success:       var(--vscode-terminal-ansiGreen, #4ec9b0);
+  --tsi-danger-fg: #ffd6d6;
+  --tsi-warning: #ffc107;
+  --tsi-warning-bg: #3d3319;
+  --tsi-warning-fg: #ffd966;
+  --tsi-success: var(--vscode-terminal-ansiGreen, #4ec9b0);
 
   /* Per-type accent */
-  --tsi-type-mesh-bg:    #1e4d2b;
-  --tsi-type-mesh-fg:    #95e3b3;
-  --tsi-type-camera-bg:  #3d2e00;
-  --tsi-type-camera-fg:  #ffcc00;
-  --tsi-type-light-bg:   #4d3319;
-  --tsi-type-light-fg:   #ffcc99;
+  --tsi-type-mesh-bg: #1e4d2b;
+  --tsi-type-mesh-fg: #95e3b3;
+  --tsi-type-camera-bg: #3d2e00;
+  --tsi-type-camera-fg: #ffcc00;
+  --tsi-type-light-bg: #4d3319;
+  --tsi-type-light-fg: #ffcc99;
   --tsi-type-unknown-bg: #2a1a2e;
   --tsi-type-unknown-fg: #c792ea;
 
@@ -55,28 +55,28 @@
   --tsi-instance-accent: #66c;
 
   /* Value-cell mono accent */
-  --tsi-value-mono:    #6c9;
+  --tsi-value-mono: #6c9;
 
   /* The shadow a panel floating over the viewport casts. */
   --tsi-shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.5);
 
   /* Radii */
-  --tsi-radius-sm:     3px;
-  --tsi-radius-md:     6px;
+  --tsi-radius-sm: 3px;
+  --tsi-radius-md: 6px;
 
   /* Spacing: 1 unit = 0.25rem */
-  --tsi-space-1:       0.25rem;
-  --tsi-space-2:       0.5rem;
-  --tsi-space-3:       0.75rem;
-  --tsi-space-4:       1rem;
+  --tsi-space-1: 0.25rem;
+  --tsi-space-2: 0.5rem;
+  --tsi-space-3: 0.75rem;
+  --tsi-space-4: 1rem;
 
   /* Typography */
-  --tsi-font-ui:       system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --tsi-font-mono:     "Consolas", "Monaco", monospace;
-  --tsi-font-xs:       0.625rem;     /* tree expand icon */
-  --tsi-font-sm:       0.75rem;      /* tree button, section title */
-  --tsi-font-md:       0.8125rem;    /* default body */
-  --tsi-font-lg:       1rem;         /* node-details title */
+  --tsi-font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --tsi-font-mono: 'Consolas', 'Monaco', monospace;
+  --tsi-font-xs: 0.625rem; /* tree expand icon */
+  --tsi-font-sm: 0.75rem; /* tree button, section title */
+  --tsi-font-md: 0.8125rem; /* default body */
+  --tsi-font-lg: 1rem; /* node-details title */
 
   /* The top bar's height, which the web app's Source overlay starts below. */
   --tsi-top-bar-height: 2.75rem;

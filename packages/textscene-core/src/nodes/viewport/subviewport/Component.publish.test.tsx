@@ -85,11 +85,7 @@ async function toneMappingAtNextBind(
   return seen;
 }
 
-async function renderScene(
-  source: string,
-  workspace: '2d' | '3d' = '3d',
-  viewportPath = 'Root/Viewport'
-) {
+async function renderScene(source: string, workspace: '2d' | '3d' = '3d', viewportPath = 'Root/Viewport') {
   const parsed = new TscnParser().parse(source);
   const fake = createFakeResourceLoader();
   const seen: (ViewportTextureEntry | null)[] = [];
@@ -106,9 +102,7 @@ async function renderScene(
       </ViewportTextureProvider>
     </SceneStack>
   );
-  const renderer = await ReactThreeTestRenderer.create(
-    wrap(<NodeDispatcher nodes={parsed.nodes} />)
-  );
+  const renderer = await ReactThreeTestRenderer.create(wrap(<NodeDispatcher nodes={parsed.nodes} />));
   return {
     renderer,
     gl: () => capturedGl.current!,

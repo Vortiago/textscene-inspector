@@ -18,14 +18,7 @@ export interface SourceFile {
  * `.vscode-test` is a downloaded, gitignored VS Code, so walking it makes every
  * corpus depend on whether the machine has run the extension gate.
  */
-const SKIPPED_DIRECTORIES = new Set([
-  'node_modules',
-  'dist',
-  'build',
-  'coverage',
-  '.git',
-  '.vscode-test',
-]);
+const SKIPPED_DIRECTORIES = new Set(['node_modules', 'dist', 'build', 'coverage', '.git', '.vscode-test']);
 
 const REPO_ROOT = repoRoot();
 
@@ -55,12 +48,7 @@ function hasExemptionAbove(lines: string[], index: number, marker: string): bool
  * uses this, not the block walk: a braced JSX comment's continuation lines read as
  * code to `isCommentLine`, and the marker often sits above a `return (`.
  */
-export function hasExemptionWithin(
-  lines: string[],
-  index: number,
-  marker: string,
-  window = 10
-): boolean {
+export function hasExemptionWithin(lines: string[], index: number, marker: string, window = 10): boolean {
   return lines
     .slice(Math.max(0, index - window), index)
     .join('\n')

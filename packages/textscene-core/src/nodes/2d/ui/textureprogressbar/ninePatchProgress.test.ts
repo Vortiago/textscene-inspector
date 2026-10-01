@@ -17,7 +17,14 @@ const MARGIN = { left: 4, top: 4, right: 4, bottom: 4 };
 
 describe('drawNinePatchStretched (texture_progress_bar.cpp:257-425)', () => {
   it('ratio 1.0 (under/over) never enters the partial-fill branch: full src, full dst, raw margins', () => {
-    const draw = drawNinePatchStretched(TEXTURE_SIZE, MARGIN, FILL_LEFT_TO_RIGHT, 1.0, { x: 100, y: 32 }, null);
+    const draw = drawNinePatchStretched(
+      TEXTURE_SIZE,
+      MARGIN,
+      FILL_LEFT_TO_RIGHT,
+      1.0,
+      { x: 100, y: 32 },
+      null
+    );
     expect(draw).toEqual({
       srcOffset: { x: 0, y: 0 },
       srcSize: { x: 64, y: 16 },
@@ -28,12 +35,26 @@ describe('drawNinePatchStretched (texture_progress_bar.cpp:257-425)', () => {
   });
 
   it('a progress_offset shifts dstOffset at ratio 1.0 (:421-423, progress only)', () => {
-    const draw = drawNinePatchStretched(TEXTURE_SIZE, MARGIN, FILL_LEFT_TO_RIGHT, 1.0, { x: 100, y: 32 }, { x: 1, y: 2 });
+    const draw = drawNinePatchStretched(
+      TEXTURE_SIZE,
+      MARGIN,
+      FILL_LEFT_TO_RIGHT,
+      1.0,
+      { x: 100, y: 32 },
+      { x: 1, y: 2 }
+    );
     expect(draw.dstOffset).toEqual({ x: 1, y: 2 });
   });
 
   it('FILL_LEFT_TO_RIGHT at ratio 0.5 shrinks the source window from the RIGHT and floors bottomright to 0', () => {
-    const draw = drawNinePatchStretched(TEXTURE_SIZE, MARGIN, FILL_LEFT_TO_RIGHT, 0.5, { x: 100, y: 20 }, null);
+    const draw = drawNinePatchStretched(
+      TEXTURE_SIZE,
+      MARGIN,
+      FILL_LEFT_TO_RIGHT,
+      0.5,
+      { x: 100, y: 20 },
+      null
+    );
     expect(draw).toEqual({
       srcOffset: { x: 0, y: 0 },
       srcSize: { x: 32, y: 16 },
@@ -43,8 +64,15 @@ describe('drawNinePatchStretched (texture_progress_bar.cpp:257-425)', () => {
     });
   });
 
-  it('FILL_RIGHT_TO_LEFT at ratio 0.5 mirrors the same shrink from the source\'s own right edge', () => {
-    const draw = drawNinePatchStretched(TEXTURE_SIZE, MARGIN, FILL_RIGHT_TO_LEFT, 0.5, { x: 100, y: 20 }, null);
+  it("FILL_RIGHT_TO_LEFT at ratio 0.5 mirrors the same shrink from the source's own right edge", () => {
+    const draw = drawNinePatchStretched(
+      TEXTURE_SIZE,
+      MARGIN,
+      FILL_RIGHT_TO_LEFT,
+      0.5,
+      { x: 100, y: 20 },
+      null
+    );
     expect(draw).toEqual({
       srcOffset: { x: 32, y: 0 },
       srcSize: { x: 32, y: 16 },
@@ -58,7 +86,14 @@ describe('drawNinePatchStretched (texture_progress_bar.cpp:257-425)', () => {
   });
 
   it('FILL_BILINEAR_LEFT_AND_RIGHT at ratio 0.5 shrinks the source symmetrically from its own centre', () => {
-    const draw = drawNinePatchStretched(TEXTURE_SIZE, MARGIN, FILL_BILINEAR_LEFT_AND_RIGHT, 0.5, { x: 100, y: 20 }, null);
+    const draw = drawNinePatchStretched(
+      TEXTURE_SIZE,
+      MARGIN,
+      FILL_BILINEAR_LEFT_AND_RIGHT,
+      0.5,
+      { x: 100, y: 20 },
+      null
+    );
     expect(draw.srcOffset.x).toBeCloseTo(16.7826086957, 9);
     expect(draw.srcSize.x).toBeCloseTo(30.4347826087, 9);
     expect(draw.dstOffset.x).toBeCloseTo(25, 9);

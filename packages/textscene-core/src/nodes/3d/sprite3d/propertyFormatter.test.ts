@@ -33,28 +33,24 @@ describe('formatSprite3DProperties', () => {
     const withoutAxis = section(formatSprite3DProperties(props()), 'Texture')!;
     expect(withoutAxis.items.some((i) => i.label === 'Axis')).toBe(false);
 
-    const withAxis = section(
-      formatSprite3DProperties(props({ billboard: '2', axis: '0' })),
-      'Texture'
-    )!;
+    const withAxis = section(formatSprite3DProperties(props({ billboard: '2', axis: '0' })), 'Texture')!;
     expect(withAxis.items).toContainEqual({ label: 'Billboard', value: 'Y-Axis Only' });
     expect(withAxis.items).toContainEqual({ label: 'Axis', value: 'X' });
   });
 
   it('reports every billboard mode name', () => {
-    expect(section(formatSprite3DProperties(props({ billboard: '1' })), 'Texture')!.items).toContainEqual(
-      { label: 'Billboard', value: 'Enabled' }
-    );
-    expect(section(formatSprite3DProperties(props({ billboard: '3' })), 'Texture')!.items).toContainEqual(
-      { label: 'Billboard', value: 'Particles (Unsupported)' }
-    );
+    expect(section(formatSprite3DProperties(props({ billboard: '1' })), 'Texture')!.items).toContainEqual({
+      label: 'Billboard',
+      value: 'Enabled',
+    });
+    expect(section(formatSprite3DProperties(props({ billboard: '3' })), 'Texture')!.items).toContainEqual({
+      label: 'Billboard',
+      value: 'Particles (Unsupported)',
+    });
   });
 
   it('shows the texture resource reference verbatim when set', () => {
-    const texture = section(
-      formatSprite3DProperties(props({ texture: 'ExtResource("1_tex")' })),
-      'Texture'
-    )!;
+    const texture = section(formatSprite3DProperties(props({ texture: 'ExtResource("1_tex")' })), 'Texture')!;
     expect(texture.items).toContainEqual({ label: 'Texture', value: 'ExtResource("1_tex")' });
   });
 
@@ -79,9 +75,7 @@ describe('formatSprite3DProperties', () => {
 
   it('shows the Region section only when region_enabled with a rect', () => {
     const withRegion = section(
-      formatSprite3DProperties(
-        props({ region_enabled: 'true', region_rect: 'Rect2(0, 0, 32, 16)' })
-      ),
+      formatSprite3DProperties(props({ region_enabled: 'true', region_rect: 'Rect2(0, 0, 32, 16)' })),
       'Region'
     )!;
     expect(withRegion.items).toEqual([
@@ -119,10 +113,7 @@ describe('formatSprite3DProperties', () => {
   });
 
   it('reports every alpha-cut mode name', () => {
-    const appearance = section(
-      formatSprite3DProperties(props({ alpha_cut: '2' })),
-      'Appearance'
-    )!;
+    const appearance = section(formatSprite3DProperties(props({ alpha_cut: '2' })), 'Appearance')!;
     expect(appearance.items).toContainEqual({ label: 'Alpha Cut', value: 'Opaque Prepass' });
   });
 

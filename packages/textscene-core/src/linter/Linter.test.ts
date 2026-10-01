@@ -45,7 +45,7 @@ describe('Linter', () => {
       const diagnostics = linter.lint(content);
 
       expect(diagnostics.length).toBeGreaterThan(0);
-      const parseError = diagnostics.find(d => d.ruleName === 'strict-parser');
+      const parseError = diagnostics.find((d) => d.ruleName === 'strict-parser');
       expect(parseError).toBeDefined();
       expect(parseError!.severity).toBe('error');
     });
@@ -58,13 +58,15 @@ describe('Linter', () => {
           description: 'Test rule',
           category: 'validation',
         },
-        check: (context) => [{
-          severity: 'warning',
-          message: 'Test warning',
-          nodeName: context.node.name,
-          nodeType: context.node.type,
-          ruleName: 'test-rule',
-        }],
+        check: (context) => [
+          {
+            severity: 'warning',
+            message: 'Test warning',
+            nodeName: context.node.name,
+            nodeType: context.node.type,
+            ruleName: 'test-rule',
+          },
+        ],
       };
 
       ruleRegistry.register(testRule);
@@ -77,7 +79,7 @@ describe('Linter', () => {
       const diagnostics = linter.lint(content);
 
       expect(diagnostics.length).toBeGreaterThan(0);
-      const ruleViolation = diagnostics.find(d => d.ruleName === 'test-rule');
+      const ruleViolation = diagnostics.find((d) => d.ruleName === 'test-rule');
       expect(ruleViolation).toBeDefined();
       expect(ruleViolation!.severity).toBe('warning');
     });
@@ -91,13 +93,15 @@ describe('Linter', () => {
           description: 'Test rule',
           category: 'validation',
         },
-        check: (context) => [{
-          severity: 'warning',
-          message: 'Test warning',
-          nodeName: context.node.name,
-          nodeType: context.node.type,
-          ruleName: 'test-combined-rule',
-        }],
+        check: (context) => [
+          {
+            severity: 'warning',
+            message: 'Test warning',
+            nodeName: context.node.name,
+            nodeType: context.node.type,
+            ruleName: 'test-combined-rule',
+          },
+        ],
       };
 
       ruleRegistry.register(testRule);
@@ -113,11 +117,11 @@ describe('Linter', () => {
 
       const diagnostics = linter.lint(content);
 
-      const parseError = diagnostics.find(d => d.ruleName === 'strict-parser');
+      const parseError = diagnostics.find((d) => d.ruleName === 'strict-parser');
       expect(parseError).toBeDefined();
       expect(parseError!.severity).toBe('error');
 
-      const ruleViolation = diagnostics.find(d => d.ruleName === 'test-combined-rule');
+      const ruleViolation = diagnostics.find((d) => d.ruleName === 'test-combined-rule');
       expect(ruleViolation).toBeDefined();
       expect(ruleViolation!.severity).toBe('warning');
       expect(ruleViolation!.nodeName).toBe('Root');
@@ -145,9 +149,7 @@ invalidproperty
       // scene (packed_scene.cpp:220).
       expect(diagnostics.filter((d) => d.severity === 'error').length).toBeGreaterThanOrEqual(3);
       expect(
-        diagnostics.filter(
-          (d) => d.severity === 'error' && d.message.includes('states no "type="')
-        )
+        diagnostics.filter((d) => d.severity === 'error' && d.message.includes('states no "type="'))
       ).toHaveLength(1);
     });
 
@@ -160,13 +162,15 @@ invalidproperty
         },
         check: (context) => {
           if (context.node.name === 'Root') {
-            return [{
-              severity: 'warning',
-              message: 'Found root node',
-              nodeName: context.node.name,
-              nodeType: context.node.type,
-              ruleName: 'test-integration-rule',
-            }];
+            return [
+              {
+                severity: 'warning',
+                message: 'Found root node',
+                nodeName: context.node.name,
+                nodeType: context.node.type,
+                ruleName: 'test-integration-rule',
+              },
+            ];
           }
           return [];
         },

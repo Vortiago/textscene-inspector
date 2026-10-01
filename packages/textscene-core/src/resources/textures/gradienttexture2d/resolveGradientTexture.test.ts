@@ -29,27 +29,16 @@ const coinResources: TscnInternalResource[] = [
 
 describe('resolveGradientTexture2D', () => {
   it('rasterises a SubResource(GradientTexture2D) into a DataTexture', () => {
-    const resolved = resolveGradientTexture2D(
-      'SubResource("GradientTexture2D_qhu5r")',
-      coinResources
-    );
+    const resolved = resolveGradientTexture2D('SubResource("GradientTexture2D_qhu5r")', coinResources);
     expect(resolved!.texture).toBeInstanceOf(THREE.DataTexture);
     expect(resolved!.texture.image.width).toBe(64);
   });
 
   it('pairs the texture with the cache key that holds it resident', () => {
-    const resolved = resolveGradientTexture2D(
-      'SubResource("GradientTexture2D_qhu5r")',
-      coinResources
-    );
-    expect(resolved!.key).toBe(
-      proceduralTextureKey(coinResources, 'GradientTexture2D_qhu5r')
-    );
+    const resolved = resolveGradientTexture2D('SubResource("GradientTexture2D_qhu5r")', coinResources);
+    expect(resolved!.key).toBe(proceduralTextureKey(coinResources, 'GradientTexture2D_qhu5r'));
     // Same scene, same sub-resource: one entry, one key, one rasterisation.
-    const again = resolveGradientTexture2D(
-      'SubResource("GradientTexture2D_qhu5r")',
-      coinResources
-    );
+    const again = resolveGradientTexture2D('SubResource("GradientTexture2D_qhu5r")', coinResources);
     expect(again!.key).toBe(resolved!.key);
     expect(again!.texture).toBe(resolved!.texture);
   });
@@ -72,9 +61,7 @@ describe('resolveGradientTexture2D', () => {
 
   // A null result carries no key, so a consumer has nothing to pin.
   it('returns null for a SubResource of a different type', () => {
-    const resources: TscnInternalResource[] = [
-      { id: 'CanvasTexture_x', type: 'CanvasTexture', data: {} },
-    ];
+    const resources: TscnInternalResource[] = [{ id: 'CanvasTexture_x', type: 'CanvasTexture', data: {} }];
     expect(resolveGradientTexture2D('SubResource("CanvasTexture_x")', resources)).toBeNull();
   });
 
@@ -86,9 +73,7 @@ describe('resolveGradientTexture2D', () => {
         data: { gradient: 'SubResource("Missing")', fill: '1' },
       },
     ];
-    expect(
-      resolveGradientTexture2D('SubResource("GradientTexture2D_orphan")', resources)
-    ).toBeNull();
+    expect(resolveGradientTexture2D('SubResource("GradientTexture2D_orphan")', resources)).toBeNull();
   });
 
   it('returns null for undefined / malformed references', () => {
@@ -134,29 +119,18 @@ describe('a GradientTexture2D inside a material .tres', () => {
   it('resolves against the material file’s own sub-resource table', () => {
     // The texture is in no scene's table, so it resolves in the file that carries it.
     const parsed = parseTresFile(MATERIAL_FILE);
-    const resolved = resolveGradientTexture2D(
-      parsed.properties.albedo_texture,
-      parsed.subResources
-    );
+    const resolved = resolveGradientTexture2D(parsed.properties.albedo_texture, parsed.subResources);
 
     expect(resolved!.texture).toBeInstanceOf(THREE.DataTexture);
-    expect(resolved!.key).toBe(
-      proceduralTextureKey(parsed.subResources, 'GradientTexture2D_qhu5r')
-    );
+    expect(resolved!.key).toBe(proceduralTextureKey(parsed.subResources, 'GradientTexture2D_qhu5r'));
   });
 
   it('rasterises the same pixels the inline scene form does', () => {
     // The material file's [sub_resource] and the scene's inline one must produce
     // the same pixels, wherever the gradient was saved.
     const parsed = parseTresFile(MATERIAL_FILE);
-    const inMaterial = resolveGradientTexture2D(
-      parsed.properties.albedo_texture,
-      parsed.subResources
-    );
-    const inline = resolveGradientTexture2D(
-      'SubResource("GradientTexture2D_qhu5r")',
-      coinResources
-    );
+    const inMaterial = resolveGradientTexture2D(parsed.properties.albedo_texture, parsed.subResources);
+    const inline = resolveGradientTexture2D('SubResource("GradientTexture2D_qhu5r")', coinResources);
 
     expect(pixels(inMaterial!.texture)).toEqual(pixels(inline!.texture));
   });

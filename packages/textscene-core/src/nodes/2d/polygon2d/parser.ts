@@ -53,9 +53,7 @@ export function parsePolygon2D(
     try {
       uv = parsePackedVector2Array(properties.uv);
     } catch (error) {
-      warn(
-        `Polygon2D "${base.name}": invalid uv ${error instanceof Error ? error.message : String(error)}`
-      );
+      warn(`Polygon2D "${base.name}": invalid uv ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

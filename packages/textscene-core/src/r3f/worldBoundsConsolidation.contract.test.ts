@@ -41,10 +41,7 @@ describe('frameSceneBounds — routes subtree bounds through the sanctioned util
   it('frames a skinned-mesh scene at the rendered model, not the corrupt posed box', () => {
     const skinned = new THREE.SkinnedMesh(unitBoxGeometry(), new THREE.MeshBasicMaterial());
     // Mimic the GLTF-clone bug: a posed/cached box in a far-away frame.
-    skinned.boundingBox = new THREE.Box3(
-      new THREE.Vector3(100, 100, 100),
-      new THREE.Vector3(102, 102, 102)
-    );
+    skinned.boundingBox = new THREE.Box3(new THREE.Vector3(100, 100, 100), new THREE.Vector3(102, 102, 102));
     const model = new THREE.Group();
     model.position.set(-9.5, -3.84, 3.93);
     model.add(skinned);
@@ -62,10 +59,7 @@ describe('frameSceneBounds — routes subtree bounds through the sanctioned util
     // centre tracks the union of the geometry (bind) boxes, never the posed box near
     // (101,101,101).
     const skinned = new THREE.SkinnedMesh(unitBoxGeometry(), new THREE.MeshBasicMaterial());
-    skinned.boundingBox = new THREE.Box3(
-      new THREE.Vector3(100, 100, 100),
-      new THREE.Vector3(102, 102, 102)
-    );
+    skinned.boundingBox = new THREE.Box3(new THREE.Vector3(100, 100, 100), new THREE.Vector3(102, 102, 102));
     const plainA = new THREE.Mesh(unitBoxGeometry(), new THREE.MeshBasicMaterial());
     plainA.position.set(10, 0, 0);
     const plainB = new THREE.Mesh(unitBoxGeometry(), new THREE.MeshBasicMaterial());
@@ -148,9 +142,7 @@ describe('bounds guard — no production source calls Box3.setFromObject directl
     // The guard above only forbids raw `setFromObject`. This pins the one definition
     // to `bounds.ts`, so no divergent copy returns to WorldBoxHelper.
     const definers = productionSourceFiles(srcRoot)
-      .filter((f) =>
-        /function\s+computeWorldBoundingBox\b/.test(stripComments(readFileSync(f, 'utf8')))
-      )
+      .filter((f) => /function\s+computeWorldBoundingBox\b/.test(stripComments(readFileSync(f, 'utf8'))))
       .map((f) => relative(srcRoot, f).split('\\').join('/'));
     expect(definers).toEqual(['r3f/bounds.ts']);
   });

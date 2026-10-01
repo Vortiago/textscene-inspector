@@ -32,10 +32,7 @@ export {
   type MissingResourcesProviderProps,
 } from './contexts/index.js';
 
-export {
-  SceneTreeViewer,
-  type SceneTreeViewerProps,
-} from './components/SceneTreeViewer/SceneTreeViewer.js';
+export { SceneTreeViewer, type SceneTreeViewerProps } from './components/SceneTreeViewer/SceneTreeViewer.js';
 export { NodeDetailsPanel } from './components/NodeDetailsPanel/NodeDetailsPanel.js';
 export {
   MissingResourcesPanel,
@@ -51,10 +48,7 @@ export {
   type TscnPreviewShellProps,
 } from './components/TscnPreviewShell/TscnPreviewShell.js';
 // The shell's narrow-layout queries, so a host's own chrome switches at the same width.
-export {
-  COMPACT_LAYOUT_QUERY,
-  isCompactLayout,
-} from './components/TscnPreviewShell/narrowLayout.js';
+export { COMPACT_LAYOUT_QUERY, isCompactLayout } from './components/TscnPreviewShell/narrowLayout.js';
 
 export {
   useViewportSelection,

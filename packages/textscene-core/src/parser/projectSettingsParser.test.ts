@@ -172,8 +172,7 @@ describe('projectViewportSize', () => {
    * A zero-width viewport cannot be laid out, and it divides by zero in the stage's fit.
    */
   it('rejects a non-positive or non-finite value', () => {
-    const width = (raw: string) =>
-      projectViewportSize({ 'display/window/size/viewport_width': raw }).width;
+    const width = (raw: string) => projectViewportSize({ 'display/window/size/viewport_width': raw }).width;
     expect(width('0')).toBe(1152);
     expect(width('-800')).toBe(1152);
     expect(width('wide')).toBe(1152);
@@ -194,7 +193,7 @@ describe('projectViewportSize', () => {
 });
 
 describe('projectLayoutDirectionEnv', () => {
-  it('answers Godot\'s own defaults without a project file', () => {
+  it("answers Godot's own defaults without a project file", () => {
     // Both default off and 0 (`core/config/project_settings.cpp:1797-1798`). Arm 0 is
     // "Based on Application Locale", and with no `internationalization/locale/test`
     // that is the OS locale, which this previewer cannot read.
@@ -250,9 +249,9 @@ describe('projectLayoutDirectionEnv', () => {
   });
 
   it('leaves the system-locale answer false — the host locale is not in the scene', () => {
-    expect(
-      projectLayoutDirectionEnv({ 'internationalization/locale/test': 'ar' }).systemLocaleRtl
-    ).toBe(false);
+    expect(projectLayoutDirectionEnv({ 'internationalization/locale/test': 'ar' }).systemLocaleRtl).toBe(
+      false
+    );
   });
 
   it('ignores a blank test locale, which `setup()` strips before testing it', () => {

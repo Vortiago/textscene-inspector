@@ -36,9 +36,9 @@ describe('a negative narrowed to a tier', () => {
   });
 
   it('refuses a warning located by message alone, which names no rule', () => {
-    expect(() =>
-      expectNoDiagnostic(HINTED_WARNING, { prop: 'zoom', severity: 'warning' })
-    ).toThrow('name the rule');
+    expect(() => expectNoDiagnostic(HINTED_WARNING, { prop: 'zoom', severity: 'warning' })).toThrow(
+      'name the rule'
+    );
   });
 
   it("reads a file diagnostic's declared arm like a rule's", () => {

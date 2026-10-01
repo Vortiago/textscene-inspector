@@ -5,7 +5,13 @@ import type { FontLoaderFn, FontResource } from './types';
 /** A loader that resolves nothing, for cases with no Font-valued property to recurse into. */
 const NO_OP_LOADER: FontLoaderFn = async () => null;
 
-const FONT_A: FontResource = { kind: 'file', bytes: new ArrayBuffer(1), mimeType: 'font/ttf', fallbacks: [], properties: {} };
+const FONT_A: FontResource = {
+  kind: 'file',
+  bytes: new ArrayBuffer(1),
+  mimeType: 'font/ttf',
+  fallbacks: [],
+  properties: {},
+};
 
 describe('parsePackedStringArray', () => {
   it('reads each element as a String slot does', () => {
@@ -63,7 +69,13 @@ describe('decodeFont', () => {
   });
 
   it('recurses into an ExtResource base_font via loadFont', async () => {
-    const loaded: FontResource = { kind: 'file', bytes: new ArrayBuffer(1), mimeType: 'font/otf', fallbacks: [], properties: {} };
+    const loaded: FontResource = {
+      kind: 'file',
+      bytes: new ArrayBuffer(1),
+      mimeType: 'font/otf',
+      fallbacks: [],
+      properties: {},
+    };
     const loadFont = vi.fn(async (address: string) => (address === 'res://fonts/base.otf' ? loaded : null));
 
     const resource = await decodeFont(
@@ -100,11 +112,23 @@ describe('decodeFont', () => {
 
   it('resolves a FontFile with no fallbacks (bytes-less-only case never keeps a fallback list)', async () => {
     const resource = await decodeFont('res://x.tres', 'FontFile', {}, [], [], NO_OP_LOADER);
-    expect(resource).toEqual({ kind: 'file', bytes: undefined, mimeType: undefined, fallbacks: [], properties: {} });
+    expect(resource).toEqual({
+      kind: 'file',
+      bytes: undefined,
+      mimeType: undefined,
+      fallbacks: [],
+      properties: {},
+    });
   });
 
   it('resolves every fallback in a FontFile fallbacks list, in order, dropping ones that fail to load', async () => {
-    const good: FontResource = { kind: 'file', bytes: new ArrayBuffer(1), mimeType: 'font/ttf', fallbacks: [], properties: {} };
+    const good: FontResource = {
+      kind: 'file',
+      bytes: new ArrayBuffer(1),
+      mimeType: 'font/ttf',
+      fallbacks: [],
+      properties: {},
+    };
     const loadFont = vi.fn(async (address: string) => (address === 'res://fonts/good.ttf' ? good : null));
 
     const resource = await decodeFont(
@@ -120,13 +144,19 @@ describe('decodeFont', () => {
     );
 
     expect(loadFont).toHaveBeenCalledTimes(2);
-    expect(resource).toEqual({ kind: 'file', bytes: undefined, mimeType: undefined, fallbacks: [good], properties: {} });
+    expect(resource).toEqual({
+      kind: 'file',
+      bytes: undefined,
+      mimeType: undefined,
+      fallbacks: [good],
+      properties: {},
+    });
   });
 
   it('throws for an unsupported resource type', async () => {
-    await expect(
-      decodeFont('res://x.tres', 'StyleBoxFlat', {}, [], [], NO_OP_LOADER)
-    ).rejects.toThrow('Unsupported font resource type: StyleBoxFlat');
+    await expect(decodeFont('res://x.tres', 'StyleBoxFlat', {}, [], [], NO_OP_LOADER)).rejects.toThrow(
+      'Unsupported font resource type: StyleBoxFlat'
+    );
   });
 
   it('gates the SubResource branch to font types — a non-font sub-resource resolves to no address', async () => {
@@ -202,12 +232,20 @@ describe('resolveInlineFontResource', () => {
   });
 
   it("decodes a scene-inline FontVariation, recursing into base_font's ExtResource through the cache", () => {
-    const cache = { getCached: (address: string) => (address === 'res://fonts/base.ttf' ? FONT_A : undefined) };
+    const cache = {
+      getCached: (address: string) => (address === 'res://fonts/base.ttf' ? FONT_A : undefined),
+    };
     const pending = new Set<string>();
     const resolved = resolveInlineFontResource(
       'SubResource("FontVariation_1")',
       [{ id: '1', path: 'res://fonts/base.ttf', type: 'FontFile' }],
-      [{ id: 'FontVariation_1', type: 'FontVariation', data: { base_font: 'ExtResource("1")', spacing_glyph: '-8' } }],
+      [
+        {
+          id: 'FontVariation_1',
+          type: 'FontVariation',
+          data: { base_font: 'ExtResource("1")', spacing_glyph: '-8' },
+        },
+      ],
       cache,
       pending
     );
@@ -246,11 +284,23 @@ describe('resolveInlineFontResource', () => {
       cache,
       pending
     );
-    expect(resolved).toEqual({ kind: 'file', bytes: undefined, mimeType: undefined, fallbacks: [FONT_A], properties: {} });
+    expect(resolved).toEqual({
+      kind: 'file',
+      bytes: undefined,
+      mimeType: undefined,
+      fallbacks: [FONT_A],
+      properties: {},
+    });
   });
 
   it('returns null for a SubResource id that is not declared', () => {
-    const resolved = resolveInlineFontResource('SubResource("Missing")', [], [], { getCached: () => undefined }, new Set());
+    const resolved = resolveInlineFontResource(
+      'SubResource("Missing")',
+      [],
+      [],
+      { getCached: () => undefined },
+      new Set()
+    );
     expect(resolved).toBeNull();
   });
 

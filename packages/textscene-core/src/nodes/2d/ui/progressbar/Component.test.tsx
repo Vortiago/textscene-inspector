@@ -16,7 +16,12 @@ function solveNode(properties: Record<string, unknown>): SolveNode {
   return {
     ...emptySolveNode(),
     path: 'P',
-    node: { name: 'P', type: 'ProgressBar', children: [], properties: { name: 'P', ...properties } } as TscnNode,
+    node: {
+      name: 'P',
+      type: 'ProgressBar',
+      children: [],
+      properties: { name: 'P', ...properties },
+    } as TscnNode,
   };
 }
 
@@ -37,7 +42,7 @@ describe('<ProgressBar>', () => {
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(3); // background + fill + "50%"
   });
 
-  it('composites font_outline_color/outline_size into the percent text\'s SAME mesh (the bundled font is MSDF, no contour to stroke)', async () => {
+  it("composites font_outline_color/outline_size into the percent text's SAME mesh (the bundled font is MSDF, no contour to stroke)", async () => {
     const n = {
       ...solveNode({ value: 50 }),
       colors: { font_outline_color: { r: 1, g: 0, b: 0, a: 1 } },
@@ -66,7 +71,7 @@ describe('<ProgressBar>', () => {
     expect(textMat.uniforms.uOutlineWidthPx!.value).toBe(0);
   });
 
-  it('positions the fill CanvasItemGroup at progressBarFillRect\'s own (x, y) — FILL_BEGIN_TO_END grows from the left', async () => {
+  it("positions the fill CanvasItemGroup at progressBarFillRect's own (x, y) — FILL_BEGIN_TO_END grows from the left", async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <ProgressBar {...painterEnv()} solveNode={solveNode({ value: 50 })} rect={RECT} renderOrder={0} />
     );
@@ -80,7 +85,12 @@ describe('<ProgressBar>', () => {
 
   it('show_percentage = false draws no text mesh', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ProgressBar {...painterEnv()} solveNode={solveNode({ value: 50, showPercentage: false })} rect={RECT} renderOrder={0} />
+      <ProgressBar
+        {...painterEnv()}
+        solveNode={solveNode({ value: 50, showPercentage: false })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(2); // background + fill, no text
   });
@@ -120,8 +130,10 @@ describe('<ProgressBar>', () => {
       />
     );
     const bgChannel = (r: typeof untinted) =>
-      (((r.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh).geometry as THREE.BufferGeometry)
-        .attributes.color as THREE.BufferAttribute).getX(0);
+      (
+        ((r.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh).geometry as THREE.BufferGeometry)
+          .attributes.color as THREE.BufferAttribute
+      ).getX(0);
     expect(bgChannel(untinted)).toBeGreaterThan(0);
     expect(bgChannel(tinted)).toBeCloseTo(bgChannel(untinted) * 0.5, 6);
   });

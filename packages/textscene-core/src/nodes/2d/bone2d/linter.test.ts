@@ -53,10 +53,10 @@ describe('Bone2D Linter', () => {
     });
 
     it('warns "invalid parent" when the immediate parent is neither Skeleton2D nor Bone2D', () => {
-      expectDiagnostic(
-        scene(node('Node2D', {}, { name: 'Root' }), node('Bone2D', {}, { parent: '.' })),
-        { ruleName: 'bone2d-invalid-parent', severity: 'warning' }
-      );
+      expectDiagnostic(scene(node('Node2D', {}, { name: 'Root' }), node('Bone2D', {}, { parent: '.' })), {
+        ruleName: 'bone2d-invalid-parent',
+        severity: 'warning',
+      });
     });
 
     it('never raises both verdicts on the same node (the two are mutually exclusive per-node)', () => {
@@ -116,10 +116,10 @@ describe('Bone2D Linter', () => {
     it('warns when rest is absent, which IS the all-zero default', () => {
       // `Bone2D::Bone2D()` zeroes all three columns (skeleton_2d.cpp:496-499),
       // so the serialiser omits the key on exactly the bone Godot warns about.
-      expectDiagnostic(
-        scene(node('Skeleton2D', {}, { name: 'Root' }), node('Bone2D', {}, { parent: '.' })),
-        { ruleName: 'bone2d-missing-rest-pose', severity: 'warning' }
-      );
+      expectDiagnostic(scene(node('Skeleton2D', {}, { name: 'Root' }), node('Bone2D', {}, { parent: '.' })), {
+        ruleName: 'bone2d-missing-rest-pose',
+        severity: 'warning',
+      });
     });
 
     it('passes when rest is a real, non-zero Transform2D', () => {

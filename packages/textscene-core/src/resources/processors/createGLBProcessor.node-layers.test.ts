@@ -97,18 +97,18 @@ describe('createGLBProcessor — import sidecar node layers', () => {
     expect(visualLayersOf(theMesh(root))).toBe(2);
   });
 
-  it('leaves Godot\'s default when no sidecar exists', async () => {
+  it("leaves Godot's default when no sidecar exists", async () => {
     expect(visualLayersOf(theMesh(await loadWith({})))).toBe(1);
   });
 
-  it('leaves Godot\'s default when the path matches no node', async () => {
+  it("leaves Godot's default when the path matches no node", async () => {
     const root = await loadWith({
       [`${GLTF_PATH}.import`]: SIDECAR.replace('Object_4"', 'Object_9"'),
     });
     expect(visualLayersOf(theMesh(root))).toBe(1);
   });
 
-  it('crosses a level Godot\'s importer synthesised and three\'s did not', async () => {
+  it("crosses a level Godot's importer synthesised and three's did not", async () => {
     // Godot inserts a Skeleton3D between an armature and the mesh it skins, so a sidecar
     // path into any skinned asset names a node three's graph has no counterpart for.
     const root = await loadWith({

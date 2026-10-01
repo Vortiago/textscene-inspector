@@ -33,7 +33,9 @@ const voxelGIValidationRule: LintRule = {
     description: "Mirrors VoxelGI::get_configuration_warnings' missing-data check",
     category: 'validation',
     applicableNodeTypes: ['VoxelGI'],
-    emits: [{ ruleName: MISSING_DATA_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: [
+      { ruleName: MISSING_DATA_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } },
+    ],
   },
   check: checkVoxelGI,
 };

@@ -99,7 +99,9 @@ function findIconMesh(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
     .map((m) => m.instance as THREE.Mesh)
-    .find((m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined);
+    .find(
+      (m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined
+    );
 }
 
 describe('<Button> (isolated painter contract)', () => {
@@ -141,7 +143,12 @@ describe('<Button> (isolated painter contract)', () => {
 
   it('flat=true draws NO chrome mesh at all, but still draws the text', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <Button {...painterEnv()} solveNode={solveNode({ flat: true, text: 'Hi' })} rect={RECT} renderOrder={0} />
+      <Button
+        {...painterEnv()}
+        solveNode={solveNode({ flat: true, text: 'Hi' })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     expect(findChromeMesh(renderer.scene)).toBeUndefined();
     expect(findTextMesh(renderer.scene)).toBeDefined();
@@ -166,10 +173,15 @@ describe('<Button> (isolated painter contract)', () => {
 
   it(
     'uses control_font_disabled_color (alpha 0.5) for the DISABLED label — the exact theme constant, ' +
-      'not the DOM overlay\'s 0.6-opacity approximation comparison.md documents closing',
+      "not the DOM overlay's 0.6-opacity approximation comparison.md documents closing",
     async () => {
       const renderer = await ReactThreeTestRenderer.create(
-        <Button {...painterEnv()} solveNode={solveNode({ text: 'Hi', disabled: true })} rect={RECT} renderOrder={0} />
+        <Button
+          {...painterEnv()}
+          solveNode={solveNode({ text: 'Hi', disabled: true })}
+          rect={RECT}
+          renderOrder={0}
+        />
       );
       const mesh = findTextMesh(renderer.scene)!;
       const material = mesh.material as THREE.ShaderMaterial;
@@ -178,29 +190,27 @@ describe('<Button> (isolated painter contract)', () => {
     }
   );
 
-  it(
-    'applies the walker-composed tint as ONE product, reaching chrome AND text alike',
-    async () => {
-      const flat = styleBox({ bgColor: { r: 1, g: 1, b: 1, a: 1 } });
-      const renderer = await ReactThreeTestRenderer.create(
-        <Button {...painterEnv()}
-          // The walker's own product: ambient(0.5) x self_modulate(0.5) = 0.25.
-          tint={painterTint({ r: 0.25, g: 0.25, b: 0.25, a: 1 })}
-          solveNode={solveNode({ text: 'Hi' }, { normal: flat })}
-          rect={RECT}
-          renderOrder={0}
-        />
-      );
-      const chromeColor = (findChromeMesh(renderer.scene)!.geometry as THREE.BufferGeometry).attributes
-        .color as THREE.BufferAttribute;
-      // The StyleBox's own white bgColor x tint(0.25) = 0.25, in sRGB.
-      expect(chromeColor.getX(0)).toBeCloseTo(0.25, 4);
+  it('applies the walker-composed tint as ONE product, reaching chrome AND text alike', async () => {
+    const flat = styleBox({ bgColor: { r: 1, g: 1, b: 1, a: 1 } });
+    const renderer = await ReactThreeTestRenderer.create(
+      <Button
+        {...painterEnv()}
+        // The walker's own product: ambient(0.5) x self_modulate(0.5) = 0.25.
+        tint={painterTint({ r: 0.25, g: 0.25, b: 0.25, a: 1 })}
+        solveNode={solveNode({ text: 'Hi' }, { normal: flat })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const chromeColor = (findChromeMesh(renderer.scene)!.geometry as THREE.BufferGeometry).attributes
+      .color as THREE.BufferAttribute;
+    // The StyleBox's own white bgColor x tint(0.25) = 0.25, in sRGB.
+    expect(chromeColor.getX(0)).toBeCloseTo(0.25, 4);
 
-      const textMaterial = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-      // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, then linearised.
-      expect(textMaterial.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.21875), 5);
-    }
-  );
+    const textMaterial = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
+    // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, then linearised.
+    expect(textMaterial.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.21875), 5);
+  });
 
   it('forwards renderOrder to the chrome mesh and to the text mesh', async () => {
     const renderer = await ReactThreeTestRenderer.create(
@@ -215,10 +225,20 @@ describe('<Button> (isolated painter contract)', () => {
   it('text_overrun_behavior trims the label to the content box, minus the style margins (button.cpp:424)', async () => {
     const narrow: Rect2 = { x: 0, y: 0, w: 30, h: 32 };
     const untrimmed = await ReactThreeTestRenderer.create(
-      <Button {...painterEnv()} solveNode={solveNode({ text: 'AAAAAAAAAAAA' })} rect={narrow} renderOrder={0} />
+      <Button
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'AAAAAAAAAAAA' })}
+        rect={narrow}
+        renderOrder={0}
+      />
     );
     const trimmed = await ReactThreeTestRenderer.create(
-      <Button {...painterEnv()} solveNode={solveNode({ text: 'AAAAAAAAAAAA', overrunBehavior: 1 })} rect={narrow} renderOrder={0} />
+      <Button
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'AAAAAAAAAAAA', overrunBehavior: 1 })}
+        rect={narrow}
+        renderOrder={0}
+      />
     );
     const quadCount = (r: Rendered) => findTextMesh(r.scene)!.geometry.attributes.position!.count / 4;
     expect(quadCount(trimmed)).toBeLessThan(quadCount(untrimmed));
@@ -226,7 +246,6 @@ describe('<Button> (isolated painter contract)', () => {
 });
 
 describe('<Button> — icon (ControlQuad), via ResourceLoader/SceneResources', () => {
-
   function fakeTexture(w: number, h: number): THREE.Texture {
     const tex = new THREE.Texture();
     (tex as unknown as { image: { width: number; height: number } }).image = { width: w, height: h };
@@ -239,7 +258,8 @@ describe('<Button> — icon (ControlQuad), via ResourceLoader/SceneResources', (
     return ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider externalResources={[{ id: '1', type: 'Texture2D', path: ICON_PATH }]}>
-          <Button {...painterEnv()}
+          <Button
+            {...painterEnv()}
             solveNode={solveNode({ icon: 'ExtResource("1")', ...properties })}
             rect={RECT}
             renderOrder={0}
@@ -282,7 +302,12 @@ describe('<Button> — icon (ControlQuad), via ResourceLoader/SceneResources', (
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider externalResources={[{ id: '1', type: 'Texture2D', path: ICON_PATH }]}>
-          <Button {...painterEnv()} solveNode={solveNode({ icon: 'ExtResource("1")' })} rect={RECT} renderOrder={9} />
+          <Button
+            {...painterEnv()}
+            solveNode={solveNode({ icon: 'ExtResource("1")' })}
+            rect={RECT}
+            renderOrder={9}
+          />
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     );
@@ -301,7 +326,9 @@ describe('<Button> registered through <ControlCanvasWalker> (end-to-end walker p
       <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
     );
 
-    const groups = renderer.scene.findAllByType('Group').map((g) => g.instance as { visible: boolean; name: string });
+    const groups = renderer.scene
+      .findAllByType('Group')
+      .map((g) => g.instance as { visible: boolean; name: string });
     const rootGroup = groups.find((g) => g.name === 'Button:MyButton');
     expect(rootGroup).toBeDefined();
     expect(rootGroup!.visible).toBe(false);
@@ -384,5 +411,4 @@ describe('<Button> — scene-font (canvas-kind FontMetrics) text path', () => {
     expect(ltrRight).toBeGreaterThan(ltrLeft);
     expect(await labelX(0, true)).toBe(ltrRight);
   });
-
 });

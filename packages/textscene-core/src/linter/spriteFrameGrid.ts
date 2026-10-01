@@ -45,7 +45,9 @@ export function spriteFrameDiagnostics(
         ...at,
         severity: 'error',
         ruleName: `${prefix}-frame-range`,
-        message: `Frame ${write.authored} is out of range. Maximum frame is ${maxFrame - 1} (hframes=${write.hframes}, vframes=${write.vframes}). ` + refused(write),
+        message:
+          `Frame ${write.authored} is out of range. Maximum frame is ${maxFrame - 1} (hframes=${write.hframes}, vframes=${write.vframes}). ` +
+          refused(write),
       });
       continue;
     }
@@ -57,7 +59,9 @@ export function spriteFrameDiagnostics(
         ...at,
         severity: 'error',
         ruleName: `${prefix}-frame-coords-range`,
-        message: `frame_coords.x (${x}) is out of range. Maximum is ${write.hframes - 1} (hframes=${write.hframes}). ` + refused(write),
+        message:
+          `frame_coords.x (${x}) is out of range. Maximum is ${write.hframes - 1} (hframes=${write.hframes}). ` +
+          refused(write),
       });
     }
     if (write.refused.y && y >= 0) {
@@ -65,7 +69,9 @@ export function spriteFrameDiagnostics(
         ...at,
         severity: 'error',
         ruleName: `${prefix}-frame-coords-range`,
-        message: `frame_coords.y (${y}) is out of range. Maximum is ${write.vframes - 1} (vframes=${write.vframes}). ` + refused(write),
+        message:
+          `frame_coords.y (${y}) is out of range. Maximum is ${write.vframes - 1} (vframes=${write.vframes}). ` +
+          refused(write),
       });
     }
   }
@@ -76,9 +82,12 @@ export function spriteFrameDiagnostics(
     const stored = { x: to % state.hframes, y: Math.trunc(to / state.hframes) };
     // The remap keeps a row and column, so an authored coordinate pair usually
     // survives it; only a changed pair is worth a line.
-    const sameCoords = write.coords !== undefined && write.coords.x === stored.x && write.coords.y === stored.y;
+    const sameCoords =
+      write.coords !== undefined && write.coords.x === stored.x && write.coords.y === stored.y;
     if (!sameCoords) {
-      const authored = write.coords ? `frame_coords (${write.coords.x}, ${write.coords.y})` : `Frame ${write.authored}`;
+      const authored = write.coords
+        ? `frame_coords (${write.coords.x}, ${write.coords.y})`
+        : `Frame ${write.authored}`;
       diagnostics.push({
         ...at,
         severity: 'warning',

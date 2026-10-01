@@ -102,7 +102,11 @@ function defaultTitleStyle(theme: NativeTheme, folded: boolean, titlePosition: n
     bottom: theme.contentMargin,
   };
   // default_theme.cpp:1302,1311: both title styles fill with style_pressed_color.
-  return flatStyleBox(STYLE_FILL.pressed, margin, titleStyleCornerRadius(theme.cornerRadius, folded, titlePosition));
+  return flatStyleBox(
+    STYLE_FILL.pressed,
+    margin,
+    titleStyleCornerRadius(theme.cornerRadius, folded, titlePosition)
+  );
 }
 
 function defaultPanelStyle(theme: NativeTheme, titlePosition: number): StyleBoxFlatData {
@@ -147,7 +151,11 @@ export const foldableContainerTextureSlots: TextureSlotsFn = (_node, themedIcons
 };
 
 /** The arrow's size: themed when `SolveNode.textureSlots` resolved it, else the scaled vendored default. */
-function resolveArrowSize(n: Pick<SolveNode, 'textureSlots'>, arrow: FoldableContainerArrow, theme: NativeTheme): Vec2 {
+function resolveArrowSize(
+  n: Pick<SolveNode, 'textureSlots'>,
+  arrow: FoldableContainerArrow,
+  theme: NativeTheme
+): Vec2 {
   return n.textureSlots[FOLDABLE_CONTAINER_ARROW_THEME_NAME[arrow]] ?? foldableContainerArrowSize(theme);
 }
 
@@ -208,7 +216,13 @@ export function foldableContainerTitleMetrics(
   const fontMetrics = resolveNodeFontMetrics(n, FOLDABLE_CONTAINER_THEME_FONT_KEY);
   const layout: TextLayoutResult | null =
     hasTitle && shapeTitle
-      ? shapeText(title, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0, fontMetrics })
+      ? shapeText(title, {
+          fontSizePx,
+          boxWidthPx: 0,
+          autowrapMode: AutowrapMode.OFF,
+          lineSpacingPx: 0,
+          fontMetrics,
+        })
       : null;
 
   const arrowSize = resolveArrowSize(n, arrow, ctx.theme);
@@ -229,7 +243,18 @@ export function foldableContainerTitleMetrics(
     height += arrowSize.y;
   }
 
-  return { folded, titlePosition, titleStyle, panelStyle, arrow, arrowSize, fontSizePx, color, layout, size: { x: width, y: height } };
+  return {
+    folded,
+    titlePosition,
+    titleStyle,
+    panelStyle,
+    arrow,
+    arrowSize,
+    fontSizePx,
+    color,
+    layout,
+    size: { x: width, y: height },
+  };
 }
 
 /**

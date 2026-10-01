@@ -7,10 +7,7 @@ import { useResource } from './useResource';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import type { ResourceLoader } from './ResourceLoader';
 import { createFakeResourceLoader, type FakeProcessor } from './testing/createFakeResourceLoader';
-import {
-  MissingResourcesProvider,
-  useMissingResources,
-} from '../r3f/contexts/MissingResourcesContext';
+import { MissingResourcesProvider, useMissingResources } from '../r3f/contexts/MissingResourcesContext';
 
 function makeMockLoader(): {
   loader: ResourceLoader;
@@ -27,9 +24,7 @@ function makeWrappers(loader: ResourceLoader) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <MissingResourcesProvider>
-        <ResourceLoaderProvider loader={loader}>
-          {children}
-        </ResourceLoaderProvider>
+        <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>
       </MissingResourcesProvider>
     );
   };

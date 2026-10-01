@@ -24,7 +24,14 @@ describe('doubledVector', () => {
   });
 
   it('returns a literal it cannot read as written', () => {
-    for (const raw of ['Vector2(1, 2)', 'Vector3(1, 2)', 'Vector3(1, 2, +3)', 'Vector3(a, 2, 3)', '"x"', 'null']) {
+    for (const raw of [
+      'Vector2(1, 2)',
+      'Vector3(1, 2)',
+      'Vector3(1, 2, +3)',
+      'Vector3(a, 2, 3)',
+      '"x"',
+      'null',
+    ]) {
       expect(twice3(raw)).toBe(raw);
     }
     expect(twice2('Vector3(1, 2, 3)')).toBe('Vector3(1, 2, 3)');

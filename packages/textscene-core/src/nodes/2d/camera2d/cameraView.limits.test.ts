@@ -40,31 +40,19 @@ describe('camera2DView limits', () => {
   });
 
   it('snaps the view to the near edge when it runs past it', () => {
-    const view = camera2DView(
-      props({ limit_left: '0', limit_top: '0' }),
-      { x: 0, y: 0 },
-      VIEWPORT
-    );
+    const view = camera2DView(props({ limit_left: '0', limit_top: '0' }), { x: 0, y: 0 }, VIEWPORT);
     expect(topLeft(view).x).toBeCloseTo(0, 5);
     expect(topLeft(view).y).toBeCloseTo(0, 5);
   });
 
   it('snaps the far edge back when the view overruns it', () => {
-    const view = camera2DView(
-      props({ limit_left: '0', limit_right: '2000' }),
-      { x: 5000, y: 0 },
-      VIEWPORT
-    );
+    const view = camera2DView(props({ limit_left: '0', limit_right: '2000' }), { x: 5000, y: 0 }, VIEWPORT);
     expect(topLeft(view).x).toBeCloseTo(2000 - VIEWPORT.x, 5);
   });
 
   it('centres the view in the span when the span is narrower than the view', () => {
     // Span 400 px, view 1152 px → Godot splits the difference.
-    const view = camera2DView(
-      props({ limit_left: '0', limit_right: '400' }),
-      { x: 5000, y: 0 },
-      VIEWPORT
-    );
+    const view = camera2DView(props({ limit_left: '0', limit_right: '400' }), { x: 5000, y: 0 }, VIEWPORT);
     expect(topLeft(view).x).toBeCloseTo((0 + 400 - VIEWPORT.x) / 2, 5);
   });
 

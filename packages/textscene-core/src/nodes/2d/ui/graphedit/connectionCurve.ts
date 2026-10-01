@@ -27,7 +27,11 @@ export interface ConnectionCurveControlPoints {
 }
 
 /** `graph_edit.cpp:1523-1533`: the two anchors, plus a horizontal tangent-handle control point on each. */
-export function connectionControlPoints(from: Vec2, to: Vec2, curvature: number): ConnectionCurveControlPoints {
+export function connectionControlPoints(
+  from: Vec2,
+  to: Vec2,
+  curvature: number
+): ConnectionCurveControlPoints {
   const xDiff = to.x - from.x;
   let cpOffset = xDiff * curvature;
   if (xDiff < 0) cpOffset = -cpOffset;

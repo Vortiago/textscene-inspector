@@ -42,7 +42,10 @@ import { spinBoxLayout, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver
 import { SPIN_BOX_ICONS } from '../spinbox/icons';
 import { isColorOverbright } from '../shared/colorOverbright';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import { shapedTextSizeWidthPx, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import {
+  shapedTextSizeWidthPx,
+  type TextLayoutResult,
+} from '../../../../r3f/controls/native/text/textLayout';
 import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
@@ -75,7 +78,14 @@ import {
   swatchesRowRects,
   type TextWidthMeasurer,
 } from './nativeSolver';
-import { hueStripGeometry, horizontalStripGeometry, linearizeStops, svSquareBaseLayer, svSquareHueLayer, type QuadGeometry } from './svGradient';
+import {
+  hueStripGeometry,
+  horizontalStripGeometry,
+  linearizeStops,
+  svSquareBaseLayer,
+  svSquareHueLayer,
+  type QuadGeometry,
+} from './svGradient';
 import {
   MODE_HSV,
   MODE_LINEAR,
@@ -202,7 +212,18 @@ interface LabelledTextProps {
 }
 
 /** One row of shaped text, vertically centred in `rect`. */
-function LabelledText({ rect, layout, fontSizePx, tint, clippingPlanes, renderOrder, alignRight, center, inset = 0, rtl = false }: LabelledTextProps) {
+function LabelledText({
+  rect,
+  layout,
+  fontSizePx,
+  tint,
+  clippingPlanes,
+  renderOrder,
+  alignRight,
+  center,
+  inset = 0,
+  rtl = false,
+}: LabelledTextProps) {
   if (!layout) return null;
   const width = shapedTextSizeWidthPx(layout.widthPx);
   const trailing = Math.max(inset, rect.w - width - inset);
@@ -210,7 +231,13 @@ function LabelledText({ rect, layout, fontSizePx, tint, clippingPlanes, renderOr
   const y = Math.max(0, (rect.h - layout.heightPx) / 2);
   return (
     <CanvasItemGroup position={[rect.x + x, -(rect.y + y), 0]}>
-      <TextRun layout={layout} fontSizePx={fontSizePx} tint={tint} clippingPlanes={clippingPlanes} renderOrder={renderOrder} />
+      <TextRun
+        layout={layout}
+        fontSizePx={fontSizePx}
+        tint={tint}
+        clippingPlanes={clippingPlanes}
+        renderOrder={renderOrder}
+      />
     </CanvasItemGroup>
   );
 }
@@ -230,7 +257,14 @@ function CenteredIcon({ rect, size, texture, tint, renderOrder }: CenteredIconPr
   const y = (rect.h - size) / 2;
   return (
     <CanvasItemGroup position={[rect.x + x, -(rect.y + y), 0]}>
-      <ControlQuad width={size} height={size} color={tint.color} opacity={tint.opacity} map={texture} renderOrder={renderOrder} />
+      <ControlQuad
+        width={size}
+        height={size}
+        color={tint.color}
+        opacity={tint.opacity}
+        map={texture}
+        renderOrder={renderOrder}
+      />
     </CanvasItemGroup>
   );
 }
@@ -264,11 +298,27 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const rows = useMemo(
     () => colorPickerRows(contentWidth, theme, props, measure),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [contentWidth, theme, props.pickerShape, props.samplerVisible, props.colorModesVisible, props.slidersVisible, props.hexVisible, props.presetsVisible, props.editAlpha, props.editIntensity, fontSizePx, fontMetrics]
+    [
+      contentWidth,
+      theme,
+      props.pickerShape,
+      props.samplerVisible,
+      props.colorModesVisible,
+      props.slidersVisible,
+      props.hexVisible,
+      props.presetsVisible,
+      props.editAlpha,
+      props.editIntensity,
+      fontSizePx,
+      fontMetrics,
+    ]
   );
 
   const fontColor = useMemo(() => multiplyModulate(tint.own, CONTROL_FONT_COLOR), [tint.own]);
-  const pressedFontColor = useMemo(() => multiplyModulate(tint.own, MODE_BUTTON_PRESSED_FONT_COLOR), [tint.own]);
+  const pressedFontColor = useMemo(
+    () => multiplyModulate(tint.own, MODE_BUTTON_PRESSED_FONT_COLOR),
+    [tint.own]
+  );
   // Every value and hex `LineEdit` uses the same box, so one inset covers both.
   const lineEditInsetX = theme.widgets.lineEdit.normal.contentMargin.left;
 
@@ -276,22 +326,32 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const sampleColor = useGodotLinearColor(sampleFill);
   const overbrightTexture = useNodeIcon(solveNode.icons.overbright_indicator, COLOR_PICKER_OVERBRIGHT_ICON);
   const overbright = isColorOverbright(fill);
-  const sampleCols = rows.sample ? sampleRowColumns(rows.sample, theme, props.pickerShape, solveNode.rtl) : null;
-  const sampleQuadRect = sampleCols ? { w: sampleCols.sample.w, h: sampleCols.sample.h * COLOR_PICKER_SAMPLE_HEIGHT_FRACTION } : null;
+  const sampleCols = rows.sample
+    ? sampleRowColumns(rows.sample, theme, props.pickerShape, solveNode.rtl)
+    : null;
+  const sampleQuadRect = sampleCols
+    ? { w: sampleCols.sample.w, h: sampleCols.sample.h * COLOR_PICKER_SAMPLE_HEIGHT_FRACTION }
+    : null;
   // `btn_shape`, `btn_mode` and `menu_btn` use `FlatMenuButton`, whose boxes are `StyleBoxEmpty`
   // (`default_theme.cpp:360,372-375`). Only `btn_pick`, a plain `Button` (`default_theme.cpp:138-141`), draws one.
   const pickButtonBox = theme.widgets.button.normal;
   const pickIconTexture = useNodeIcon(solveNode.icons.screen_picker, COLOR_PICKER_PIPETTE_ICON);
   // `shape_rect` is correct only at `SHAPE_HSV_RECTANGLE`. No other shape is drawn (`comparison.md`).
   const isHsvRectangle = (props.pickerShape ?? SHAPE_HSV_RECTANGLE) === SHAPE_HSV_RECTANGLE;
-  const shapeIconTexture = useNodeIcon(solveNode.icons.shape_rect, isHsvRectangle ? COLOR_PICKER_SHAPE_RECT_ICON : null);
+  const shapeIconTexture = useNodeIcon(
+    solveNode.icons.shape_rect,
+    isHsvRectangle ? COLOR_PICKER_SHAPE_RECT_ICON : null
+  );
   const menuIconTexture = useNodeIcon(solveNode.icons.menu_option, COLOR_PICKER_MENU_ICON);
   const barArrowTexture = useNodeIcon(solveNode.icons.bar_arrow, COLOR_PICKER_BAR_ARROW_ICON);
   const defaultGrabberTexture = useNodeIcon(solveNode.icons.grabber, SLIDER_GRABBER_ICONS.grabber);
   const spinUpTexture = useNodeIcon(solveNode.icons.up, SPIN_BOX_ICONS.up);
   const spinDownTexture = useNodeIcon(solveNode.icons.down, SPIN_BOX_ICONS.down);
   // `up_icon_modulate` and `down_icon_modulate` default to `control_font_color` (`default_theme.cpp:634,638`).
-  const spinArrowColor = useMemo(() => srgbToLinearColor(multiplyModulate(tint.own, CONTROL_FONT_COLOR)), [tint.own]);
+  const spinArrowColor = useMemo(
+    () => srgbToLinearColor(multiplyModulate(tint.own, CONTROL_FONT_COLOR)),
+    [tint.own]
+  );
 
   const shapeRects = rows.shape ? svAndHueRects(rows.shape, theme, solveNode.rtl) : null;
 
@@ -339,10 +399,24 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const channels = useMemo(() => colorModeChannels(colorMode, fill), [colorMode, fill]);
   const alphaChannel = useMemo(() => colorModeAlphaChannel(colorMode, fill), [colorMode, fill]);
   const intensityChannel = useMemo(() => colorModeIntensityChannel(fill), [fill]);
-  const sliderLabelWidth = colorPickerLabelColumnWidth(theme, measure, colorPickerSliderLabels(colorMode, editAlpha, editIntensity));
+  const sliderLabelWidth = colorPickerLabelColumnWidth(
+    theme,
+    measure,
+    colorPickerSliderLabels(colorMode, editAlpha, editIntensity)
+  );
   const sliderValueWidth = colorPickerValueColumnWidth(theme, measure);
   const sliderCols = useMemo(
-    () => (rows.sliders ? sliderGridRowRects(rows.sliders, sliderRowCount, theme, sliderLabelWidth, sliderValueWidth, solveNode.rtl) : []),
+    () =>
+      rows.sliders
+        ? sliderGridRowRects(
+            rows.sliders,
+            sliderRowCount,
+            theme,
+            sliderLabelWidth,
+            sliderValueWidth,
+            solveNode.rtl
+          )
+        : [],
     [rows.sliders, sliderRowCount, theme, sliderLabelWidth, sliderValueWidth, solveNode.rtl]
   );
 
@@ -358,7 +432,10 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
   }
 
   // The tested source of the row order: each row below takes its label from here by index.
-  const sliderLabels = useMemo(() => colorPickerSliderLabels(colorMode, editAlpha, editIntensity), [colorMode, editAlpha, editIntensity]);
+  const sliderLabels = useMemo(
+    () => colorPickerSliderLabels(colorMode, editAlpha, editIntensity),
+    [colorMode, editAlpha, editIntensity]
+  );
 
   const sliderRows: SliderRowContent[] = useMemo(() => {
     const out: SliderRowContent[] = [];
@@ -411,7 +488,16 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
       });
     }
     return out;
-  }, [channels, alphaChannel, intensityChannel, colorMode, normalized, editAlpha, editIntensity, sliderLabels]);
+  }, [
+    channels,
+    alphaChannel,
+    intensityChannel,
+    colorMode,
+    normalized,
+    editAlpha,
+    editIntensity,
+    sliderLabels,
+  ]);
 
   const sliderGeometries = useMemo(
     () =>
@@ -432,7 +518,10 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const swatchesCols = rows.swatches ? swatchesRowRects(rows.swatches, theme, solveNode.rtl) : null;
   // No `.tscn` property presses `btn_preset` or `btn_recent_preset`, so
   // `_update_drop_down_arrow` picks `folded_arrow` (`color_picker.cpp:1024-1030`).
-  const dropdownArrowTexture = useNodeIcon(solveNode.icons.folded_arrow, FOLDABLE_CONTAINER_ICONS.foldedArrow);
+  const dropdownArrowTexture = useNodeIcon(
+    solveNode.icons.folded_arrow,
+    FOLDABLE_CONTAINER_ICONS.foldedArrow
+  );
   // Button's `h_separation` (`default_theme.cpp:171`) is a different theme key
   // from BoxContainer's `separation`, with the same value `round(4 * scale)`.
   const buttonIconTextSeparation = theme.separation;
@@ -443,10 +532,29 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
       {rows.sample && sampleCols && sampleQuadRect && (
         <>
           <CanvasItemGroup position={[sampleCols.pick.x, -sampleCols.pick.y, 0]}>
-            <StyleBoxQuad styleBox={pickButtonBox} rect={{ x: 0, y: 0, w: sampleCols.pick.w, h: sampleCols.pick.h }} color={tint.own} renderOrder={renderOrder} />
+            <StyleBoxQuad
+              styleBox={pickButtonBox}
+              rect={{ x: 0, y: 0, w: sampleCols.pick.w, h: sampleCols.pick.h }}
+              color={tint.own}
+              renderOrder={renderOrder}
+            />
           </CanvasItemGroup>
-          <CenteredIcon rect={sampleCols.pick} size={COLOR_PICKER_BUTTON_ICON_SIZE} texture={pickIconTexture} tint={tint} renderOrder={renderOrder} />
-          {sampleCols.shape && <CenteredIcon rect={sampleCols.shape} size={COLOR_PICKER_BUTTON_ICON_SIZE} texture={shapeIconTexture} tint={tint} renderOrder={renderOrder} />}
+          <CenteredIcon
+            rect={sampleCols.pick}
+            size={COLOR_PICKER_BUTTON_ICON_SIZE}
+            texture={pickIconTexture}
+            tint={tint}
+            renderOrder={renderOrder}
+          />
+          {sampleCols.shape && (
+            <CenteredIcon
+              rect={sampleCols.shape}
+              size={COLOR_PICKER_BUTTON_ICON_SIZE}
+              texture={shapeIconTexture}
+              tint={tint}
+              renderOrder={renderOrder}
+            />
+          )}
           <CanvasItemGroup position={[sampleCols.sample.x, -sampleCols.sample.y, 0]}>
             {sampleFill.a < 1 && (
               <AlphaCheckerboardQuad
@@ -458,10 +566,23 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
                 themed={solveNode.icons.sample_bg}
               />
             )}
-            <ControlQuad width={sampleQuadRect.w} height={sampleQuadRect.h} color={sampleColor} opacity={sampleFill.a} renderOrder={renderOrder} />
+            <ControlQuad
+              width={sampleQuadRect.w}
+              height={sampleQuadRect.h}
+              color={sampleColor}
+              opacity={sampleFill.a}
+              renderOrder={renderOrder}
+            />
             {overbright && (
               <CanvasItemGroup position={[sampleCols.sample.w * 0.5, 0, 0]}>
-                <ControlQuad width={16} height={16} color={tint.color} opacity={tint.opacity} map={overbrightTexture} renderOrder={renderOrder} />
+                <ControlQuad
+                  width={16}
+                  height={16}
+                  color={tint.color}
+                  opacity={tint.opacity}
+                  map={overbrightTexture}
+                  renderOrder={renderOrder}
+                />
               </CanvasItemGroup>
             )}
           </CanvasItemGroup>
@@ -472,17 +593,47 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
       {shapeRects && svBaseGeometry && svHueGeometry && hueStrip && cursorLocal && (
         <>
           <CanvasItemGroup position={[shapeRects.svSquare.x, -shapeRects.svSquare.y, 0]}>
-            <GradientMesh geometry={svBaseGeometry} renderOrder={renderOrder} clippingPlanes={clippingPlanes} />
-            <GradientMesh geometry={svHueGeometry} renderOrder={renderOrder} clippingPlanes={clippingPlanes} />
-            <CanvasItemGroup position={[cursorLocal.x - cursorSize / 2, -(cursorLocal.y - cursorSize / 2), 0]}>
-              <ControlQuad width={cursorSize} height={cursorSize} color={cursorBgColor} opacity={cursorBgFill.a} map={cursorBgTexture} renderOrder={renderOrder} />
-              <ControlQuad width={cursorSize} height={cursorSize} color={tint.color} opacity={tint.opacity} map={cursorTexture} renderOrder={renderOrder} />
+            <GradientMesh
+              geometry={svBaseGeometry}
+              renderOrder={renderOrder}
+              clippingPlanes={clippingPlanes}
+            />
+            <GradientMesh
+              geometry={svHueGeometry}
+              renderOrder={renderOrder}
+              clippingPlanes={clippingPlanes}
+            />
+            <CanvasItemGroup
+              position={[cursorLocal.x - cursorSize / 2, -(cursorLocal.y - cursorSize / 2), 0]}
+            >
+              <ControlQuad
+                width={cursorSize}
+                height={cursorSize}
+                color={cursorBgColor}
+                opacity={cursorBgFill.a}
+                map={cursorBgTexture}
+                renderOrder={renderOrder}
+              />
+              <ControlQuad
+                width={cursorSize}
+                height={cursorSize}
+                color={tint.color}
+                opacity={tint.opacity}
+                map={cursorTexture}
+                renderOrder={renderOrder}
+              />
             </CanvasItemGroup>
           </CanvasItemGroup>
           <CanvasItemGroup position={[shapeRects.hueSlider.x, -shapeRects.hueSlider.y, 0]}>
             <GradientMesh geometry={hueStrip} renderOrder={renderOrder} clippingPlanes={clippingPlanes} />
             <CanvasItemGroup position={[0, -hueY, 0]}>
-              <ControlQuad width={shapeRects.hueSlider.w} height={1} color={hueLineLinear} opacity={hueLineColor.a} renderOrder={renderOrder} />
+              <ControlQuad
+                width={shapeRects.hueSlider.w}
+                height={1}
+                color={hueLineLinear}
+                opacity={hueLineColor.a}
+                renderOrder={renderOrder}
+              />
             </CanvasItemGroup>
           </CanvasItemGroup>
         </>
@@ -513,7 +664,13 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
               center
             />
           ))}
-          <CenteredIcon rect={modeCols.dropdown} size={COLOR_PICKER_BUTTON_ICON_SIZE} texture={menuIconTexture} tint={tint} renderOrder={renderOrder} />
+          <CenteredIcon
+            rect={modeCols.dropdown}
+            size={COLOR_PICKER_BUTTON_ICON_SIZE}
+            texture={menuIconTexture}
+            tint={tint}
+            renderOrder={renderOrder}
+          />
         </>
       )}
 
@@ -527,30 +684,70 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
           // `bar_arrow` grabber and a gradient band. Only such a row has `overlay` or `stops`.
           // Intensity keeps the stock `HSlider` track, fill and grabber.
           const isColorized = row.stops.length >= 2 || !!row.overlay;
-          const grabberIconSize = isColorized ? { x: COLOR_PICKER_BUTTON_ICON_SIZE, y: COLOR_PICKER_BUTTON_ICON_SIZE } : { x: theme.sliderGrabberSize, y: theme.sliderGrabberSize };
+          const grabberIconSize = isColorized
+            ? { x: COLOR_PICKER_BUTTON_ICON_SIZE, y: COLOR_PICKER_BUTTON_ICON_SIZE }
+            : { x: theme.sliderGrabberSize, y: theme.sliderGrabberSize };
           const sliderBox = colorPickerSliderBoxRect(col.slider, theme, grabberIconSize);
           const sliderBoxSize = { x: sliderBox.w, y: sliderBox.h };
           return (
             <CanvasItemGroup key={`${row.label}-${i}`} position={[0, 0, 0]}>
-              <LabelledText rect={col.label} layout={shape(row.label)} fontSizePx={fontSizePx} tint={fontColor} clippingPlanes={clippingPlanes} renderOrder={renderOrder} rtl={solveNode.rtl} />
+              <LabelledText
+                rect={col.label}
+                layout={shape(row.label)}
+                fontSizePx={fontSizePx}
+                tint={fontColor}
+                clippingPlanes={clippingPlanes}
+                renderOrder={renderOrder}
+                rtl={solveNode.rtl}
+              />
               <CanvasItemGroup position={[sliderBox.x, -sliderBox.y, 0]}>
                 {!isColorized &&
                   (() => {
                     const trackRect = sliderTrackRect(false, sliderBoxSize, theme);
                     // Every internal slider is a child Control, so it resolves
                     // the picker's own `is_layout_rtl()` (`control.cpp:3551-3620`).
-                    const fillRect = sliderGrabberAreaRect(false, sliderBoxSize, row.ratio, theme, grabberIconSize, solveNode.rtl);
-                    const gr = sliderGrabberRect(false, sliderBoxSize, row.ratio, grabberIconSize, solveNode.rtl);
+                    const fillRect = sliderGrabberAreaRect(
+                      false,
+                      sliderBoxSize,
+                      row.ratio,
+                      theme,
+                      grabberIconSize,
+                      solveNode.rtl
+                    );
+                    const gr = sliderGrabberRect(
+                      false,
+                      sliderBoxSize,
+                      row.ratio,
+                      grabberIconSize,
+                      solveNode.rtl
+                    );
                     return (
                       <>
                         <CanvasItemGroup position={[trackRect.x, -trackRect.y, 0]}>
-                          <StyleBoxQuad styleBox={theme.widgets.slider.track} rect={{ x: 0, y: 0, w: trackRect.w, h: trackRect.h }} color={tint.own} renderOrder={renderOrder} />
+                          <StyleBoxQuad
+                            styleBox={theme.widgets.slider.track}
+                            rect={{ x: 0, y: 0, w: trackRect.w, h: trackRect.h }}
+                            color={tint.own}
+                            renderOrder={renderOrder}
+                          />
                         </CanvasItemGroup>
                         <CanvasItemGroup position={[fillRect.x, -fillRect.y, 0]}>
-                          <StyleBoxQuad styleBox={theme.widgets.slider.fill} rect={{ x: 0, y: 0, w: fillRect.w, h: fillRect.h }} color={tint.own} renderOrder={renderOrder} />
+                          <StyleBoxQuad
+                            styleBox={theme.widgets.slider.fill}
+                            rect={{ x: 0, y: 0, w: fillRect.w, h: fillRect.h }}
+                            color={tint.own}
+                            renderOrder={renderOrder}
+                          />
                         </CanvasItemGroup>
                         <CanvasItemGroup position={[gr.x, -gr.y, 0]}>
-                          <ControlQuad width={gr.w} height={gr.h} color={tint.color} opacity={tint.opacity} map={defaultGrabberTexture} renderOrder={renderOrder} />
+                          <ControlQuad
+                            width={gr.w}
+                            height={gr.h}
+                            color={tint.color}
+                            opacity={tint.opacity}
+                            map={defaultGrabberTexture}
+                            renderOrder={renderOrder}
+                          />
                         </CanvasItemGroup>
                       </>
                     );
@@ -564,14 +761,34 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
                     renderOrder={renderOrder}
                   />
                 )}
-                {geometry && <GradientMesh geometry={geometry} renderOrder={renderOrder} clippingPlanes={clippingPlanes} linear={row.linearSpace} />}
+                {geometry && (
+                  <GradientMesh
+                    geometry={geometry}
+                    renderOrder={renderOrder}
+                    clippingPlanes={clippingPlanes}
+                    linear={row.linearSpace}
+                  />
+                )}
                 {isColorized &&
                   (() => {
                     const offsetPx = Math.round(COLOR_PICKER_SLIDER_GRABBER_OFFSET * scale);
-                    const gr = colorPickerChannelGrabberRect(sliderBoxSize, row.ratio, grabberIconSize, offsetPx, solveNode.rtl);
+                    const gr = colorPickerChannelGrabberRect(
+                      sliderBoxSize,
+                      row.ratio,
+                      grabberIconSize,
+                      offsetPx,
+                      solveNode.rtl
+                    );
                     return (
                       <CanvasItemGroup position={[gr.x, -gr.y, 0]}>
-                        <ControlQuad width={gr.w} height={gr.h} color={tint.color} opacity={tint.opacity} map={barArrowTexture} renderOrder={renderOrder} />
+                        <ControlQuad
+                          width={gr.w}
+                          height={gr.h}
+                          color={tint.color}
+                          opacity={tint.opacity}
+                          map={barArrowTexture}
+                          renderOrder={renderOrder}
+                        />
                       </CanvasItemGroup>
                     );
                   })()}
@@ -579,23 +796,77 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
               {(() => {
                 // `SpinBox::_compute_sizes` (`spin_box.cpp:392-397`): the `LineEdit` box
                 // covers only `fieldRect`, and the up/down buttons block sits beside it.
-                const spinLayout = spinBoxLayout({ x: col.value.w, y: col.value.h }, SPIN_BOX_ARROW_ICON_SIZE.x, solveNode.rtl);
-                const fieldRect = { x: col.value.x + spinLayout.fieldRect.x, y: col.value.y + spinLayout.fieldRect.y, w: spinLayout.fieldRect.w, h: spinLayout.fieldRect.h };
-                const upRect = { x: col.value.x + spinLayout.upRect.x, y: col.value.y + spinLayout.upRect.y, w: spinLayout.upRect.w, h: spinLayout.upRect.h };
-                const downRect = { x: col.value.x + spinLayout.downRect.x, y: col.value.y + spinLayout.downRect.y, w: spinLayout.downRect.w, h: spinLayout.downRect.h };
-                const upIconPos = { x: upRect.x + (upRect.w - SPIN_BOX_ARROW_ICON_SIZE.x) / 2, y: upRect.y + (upRect.h - SPIN_BOX_ARROW_ICON_SIZE.y) / 2 };
-                const downIconPos = { x: downRect.x + (downRect.w - SPIN_BOX_ARROW_ICON_SIZE.x) / 2, y: downRect.y + (downRect.h - SPIN_BOX_ARROW_ICON_SIZE.y) / 2 };
+                const spinLayout = spinBoxLayout(
+                  { x: col.value.w, y: col.value.h },
+                  SPIN_BOX_ARROW_ICON_SIZE.x,
+                  solveNode.rtl
+                );
+                const fieldRect = {
+                  x: col.value.x + spinLayout.fieldRect.x,
+                  y: col.value.y + spinLayout.fieldRect.y,
+                  w: spinLayout.fieldRect.w,
+                  h: spinLayout.fieldRect.h,
+                };
+                const upRect = {
+                  x: col.value.x + spinLayout.upRect.x,
+                  y: col.value.y + spinLayout.upRect.y,
+                  w: spinLayout.upRect.w,
+                  h: spinLayout.upRect.h,
+                };
+                const downRect = {
+                  x: col.value.x + spinLayout.downRect.x,
+                  y: col.value.y + spinLayout.downRect.y,
+                  w: spinLayout.downRect.w,
+                  h: spinLayout.downRect.h,
+                };
+                const upIconPos = {
+                  x: upRect.x + (upRect.w - SPIN_BOX_ARROW_ICON_SIZE.x) / 2,
+                  y: upRect.y + (upRect.h - SPIN_BOX_ARROW_ICON_SIZE.y) / 2,
+                };
+                const downIconPos = {
+                  x: downRect.x + (downRect.w - SPIN_BOX_ARROW_ICON_SIZE.x) / 2,
+                  y: downRect.y + (downRect.h - SPIN_BOX_ARROW_ICON_SIZE.y) / 2,
+                };
                 return (
                   <>
                     <CanvasItemGroup position={[fieldRect.x, -fieldRect.y, 0]}>
-                      <StyleBoxQuad styleBox={theme.widgets.lineEdit.normal} rect={{ x: 0, y: 0, w: fieldRect.w, h: fieldRect.h }} color={tint.own} renderOrder={renderOrder} />
+                      <StyleBoxQuad
+                        styleBox={theme.widgets.lineEdit.normal}
+                        rect={{ x: 0, y: 0, w: fieldRect.w, h: fieldRect.h }}
+                        color={tint.own}
+                        renderOrder={renderOrder}
+                      />
                     </CanvasItemGroup>
-                    <LabelledText rect={fieldRect} layout={shape(row.valueText)} fontSizePx={fontSizePx} tint={fontColor} clippingPlanes={clippingPlanes} renderOrder={renderOrder} alignRight inset={lineEditInsetX} rtl={solveNode.rtl} />
+                    <LabelledText
+                      rect={fieldRect}
+                      layout={shape(row.valueText)}
+                      fontSizePx={fontSizePx}
+                      tint={fontColor}
+                      clippingPlanes={clippingPlanes}
+                      renderOrder={renderOrder}
+                      alignRight
+                      inset={lineEditInsetX}
+                      rtl={solveNode.rtl}
+                    />
                     <CanvasItemGroup position={[upIconPos.x, -upIconPos.y, 0]}>
-                      <ControlQuad width={SPIN_BOX_ARROW_ICON_SIZE.x} height={SPIN_BOX_ARROW_ICON_SIZE.y} color={spinArrowColor} opacity={tint.opacity} map={spinUpTexture} renderOrder={renderOrder} />
+                      <ControlQuad
+                        width={SPIN_BOX_ARROW_ICON_SIZE.x}
+                        height={SPIN_BOX_ARROW_ICON_SIZE.y}
+                        color={spinArrowColor}
+                        opacity={tint.opacity}
+                        map={spinUpTexture}
+                        renderOrder={renderOrder}
+                      />
                     </CanvasItemGroup>
                     <CanvasItemGroup position={[downIconPos.x, -downIconPos.y, 0]}>
-                      <ControlQuad width={SPIN_BOX_ARROW_ICON_SIZE.x} height={SPIN_BOX_ARROW_ICON_SIZE.y} color={spinArrowColor} opacity={tint.opacity} map={spinDownTexture} renderOrder={renderOrder} />
+                      <ControlQuad
+                        width={SPIN_BOX_ARROW_ICON_SIZE.x}
+                        height={SPIN_BOX_ARROW_ICON_SIZE.y}
+                        color={spinArrowColor}
+                        opacity={tint.opacity}
+                        map={spinDownTexture}
+                        renderOrder={renderOrder}
+                      />
                     </CanvasItemGroup>
                   </>
                 );
@@ -607,14 +878,44 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
       {/* Hex row */}
       {rows.hex && hexCols && (
         <>
-          <LabelledText rect={hexCols.label} layout={shape(hexContent.label)} fontSizePx={fontSizePx} tint={fontColor} clippingPlanes={clippingPlanes} renderOrder={renderOrder} rtl={solveNode.rtl} />
+          <LabelledText
+            rect={hexCols.label}
+            layout={shape(hexContent.label)}
+            fontSizePx={fontSizePx}
+            tint={fontColor}
+            clippingPlanes={clippingPlanes}
+            renderOrder={renderOrder}
+            rtl={solveNode.rtl}
+          />
           {hexContent.typeText && (
-            <LabelledText rect={hexCols.textType} layout={shape(hexContent.typeText)} fontSizePx={fontSizePx} tint={fontColor} clippingPlanes={clippingPlanes} renderOrder={renderOrder} center />
+            <LabelledText
+              rect={hexCols.textType}
+              layout={shape(hexContent.typeText)}
+              fontSizePx={fontSizePx}
+              tint={fontColor}
+              clippingPlanes={clippingPlanes}
+              renderOrder={renderOrder}
+              center
+            />
           )}
           <CanvasItemGroup position={[hexCols.field.x, -hexCols.field.y, 0]}>
-            <StyleBoxQuad styleBox={theme.widgets.lineEdit.normal} rect={{ x: 0, y: 0, w: hexCols.field.w, h: hexCols.field.h }} color={tint.own} renderOrder={renderOrder} />
+            <StyleBoxQuad
+              styleBox={theme.widgets.lineEdit.normal}
+              rect={{ x: 0, y: 0, w: hexCols.field.w, h: hexCols.field.h }}
+              color={tint.own}
+              renderOrder={renderOrder}
+            />
           </CanvasItemGroup>
-          <LabelledText rect={hexCols.field} layout={shape(hexContent.text)} fontSizePx={fontSizePx} tint={fontColor} clippingPlanes={clippingPlanes} renderOrder={renderOrder} inset={lineEditInsetX} rtl={solveNode.rtl} />
+          <LabelledText
+            rect={hexCols.field}
+            layout={shape(hexContent.text)}
+            fontSizePx={fontSizePx}
+            tint={fontColor}
+            clippingPlanes={clippingPlanes}
+            renderOrder={renderOrder}
+            inset={lineEditInsetX}
+            rtl={solveNode.rtl}
+          />
         </>
       )}
 
@@ -636,8 +937,17 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
             };
             return (
               <CanvasItemGroup key={key} position={[0, 0, 0]}>
-                <CanvasItemGroup position={[iconX, -(box.y + (box.h - COLOR_PICKER_BUTTON_ICON_SIZE) / 2), 0]}>
-                  <ControlQuad width={COLOR_PICKER_BUTTON_ICON_SIZE} height={COLOR_PICKER_BUTTON_ICON_SIZE} color={tint.color} opacity={tint.opacity} map={dropdownArrowTexture} renderOrder={renderOrder} />
+                <CanvasItemGroup
+                  position={[iconX, -(box.y + (box.h - COLOR_PICKER_BUTTON_ICON_SIZE) / 2), 0]}
+                >
+                  <ControlQuad
+                    width={COLOR_PICKER_BUTTON_ICON_SIZE}
+                    height={COLOR_PICKER_BUTTON_ICON_SIZE}
+                    color={tint.color}
+                    opacity={tint.opacity}
+                    map={dropdownArrowTexture}
+                    renderOrder={renderOrder}
+                  />
                 </CanvasItemGroup>
                 <LabelledText
                   rect={textBox}
@@ -651,7 +961,13 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
               </CanvasItemGroup>
             );
           })}
-          <CenteredIcon rect={swatchesCols.menuButton} size={COLOR_PICKER_BUTTON_ICON_SIZE} texture={menuIconTexture} tint={tint} renderOrder={renderOrder} />
+          <CenteredIcon
+            rect={swatchesCols.menuButton}
+            size={COLOR_PICKER_BUTTON_ICON_SIZE}
+            texture={menuIconTexture}
+            tint={tint}
+            renderOrder={renderOrder}
+          />
         </>
       )}
     </CanvasItemGroup>

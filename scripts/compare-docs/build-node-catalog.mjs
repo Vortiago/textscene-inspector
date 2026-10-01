@@ -10,12 +10,7 @@ import { enumerateGodotNodes, godotVersion, supportedTypes } from './build-node-
 import { EXTRA_CLASSES, RESOURCE_CLASSES } from './build-node-catalog/extraClasses.mjs';
 import { groupOf } from './build-node-catalog/groups.mjs';
 import { attachLinks } from './build-node-catalog/links.mjs';
-import {
-  OUT,
-  PROPS_OUT,
-  RESOURCE_BASES_OUT,
-  RESOURCE_PROPS_OUT,
-} from './build-node-catalog/paths.mjs';
+import { OUT, PROPS_OUT, RESOURCE_BASES_OUT, RESOURCE_PROPS_OUT } from './build-node-catalog/paths.mjs';
 
 const linksOnly = process.argv.includes('--links-only');
 // The engine half alone: the property tables need a local godot, not the
@@ -82,7 +77,9 @@ if (linksOnly) {
   writePropertyTables(enumerated);
   nodes = enumerated.classes
     // Editor-only plugins and engine-internal placeholders are not scene content.
-    .filter((n) => !n.name.startsWith('Editor') && !n.name.endsWith('EditorPlugin') && n.name !== 'MissingNode')
+    .filter(
+      (n) => !n.name.startsWith('Editor') && !n.name.endsWith('EditorPlugin') && n.name !== 'MissingNode'
+    )
     .map((n) => ({
       name: n.name,
       category: n.dim,

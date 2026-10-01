@@ -153,10 +153,7 @@ enabled = false
     if (!requireComp()) return;
     const mats = lightMaterials(await renderScene(litScene('')));
     expect(mats.length, 'PointLight2D should emit a mesh on the light layer').toBeGreaterThan(0);
-    expect(
-      mats[0]!.uniforms.uCookie?.value,
-      'the light quad should sample its light texture'
-    ).toBeTruthy();
+    expect(mats[0]!.uniforms.uCookie?.value, 'the light quad should sample its light texture').toBeTruthy();
     // Godot's ADD: color += light_color.rgb * light_color.a.
     expect(mats[0]!.blending).toBe(THREE.CustomBlending);
     expect(mats[0]!.blendSrc).toBe(THREE.SrcAlphaFactor);
@@ -164,7 +161,7 @@ enabled = false
     expect(mats[0]!.blendEquation).toBe(THREE.AddEquation);
   });
 
-  it('hands the shader its color in the canvas\' sRGB space, unconverted', async () => {
+  it("hands the shader its color in the canvas' sRGB space, unconverted", async () => {
     if (!requireComp()) return;
     const mats = lightMaterials(await renderScene(litScene('color = Color(0.5, 0.5, 0.5, 1)')));
     expect(mats.length).toBeGreaterThan(0);
@@ -241,6 +238,8 @@ enabled = false
   it('ships co-located parser + Component render tests for the slice', () => {
     const slice = resolve(repoRoot(), 'packages/textscene-core/src/nodes/2d/pointlight2d');
     expect(existsSync(resolve(slice, 'parser.test.ts')), 'pointlight2d/parser.test.ts missing').toBe(true);
-    expect(existsSync(resolve(slice, 'Component.test.tsx')), 'pointlight2d/Component.test.tsx missing').toBe(true);
+    expect(existsSync(resolve(slice, 'Component.test.tsx')), 'pointlight2d/Component.test.tsx missing').toBe(
+      true
+    );
   });
 });

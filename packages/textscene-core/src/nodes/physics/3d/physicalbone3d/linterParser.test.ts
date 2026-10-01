@@ -455,16 +455,16 @@ describe('PhysicalBone3D strict validators', () => {
       for (const axis of ['', 'x/', 'y/', 'z/']) {
         expect(check(`joint_constraints/${axis}angular_limit_softness`, '0.01'), axis).toBeNull();
         expect(check(`joint_constraints/${axis}angular_limit_softness`, '16'), axis).toBeNull();
-        expect(check(`joint_constraints/${axis}angular_limit_softness`, '16.01')?.severity, axis).toBe('warning');
+        expect(check(`joint_constraints/${axis}angular_limit_softness`, '16.01')?.severity, axis).toBe(
+          'warning'
+        );
       }
     });
   });
 
   describe('joint_constraints/* — unknown leaf', () => {
     it('rejects a key whose leaf name is not one Godot ever registers', () => {
-      expect(check('joint_constraints/not_a_real_leaf', '1')?.code).toBe(
-        'INVALID_JOINT_CONSTRAINTS_KEY'
-      );
+      expect(check('joint_constraints/not_a_real_leaf', '1')?.code).toBe('INVALID_JOINT_CONSTRAINTS_KEY');
     });
   });
 });

@@ -7,10 +7,7 @@ import { parseControl } from '../control/parser';
 import { MAX_WALKED_ELEMENTS } from '../shared/countWalk';
 import type { TabBarProperties, TabBarTabProperties } from './types';
 
-export function parseTabBar(
-  heading: ParsedHeading,
-  properties: Record<string, string>
-): TabBarProperties {
+export function parseTabBar(heading: ParsedHeading, properties: Record<string, string>): TabBarProperties {
   const result: TabBarProperties = { ...parseControl(heading, properties) };
 
   result.currentTab = parseOptionalInt(properties.current_tab);

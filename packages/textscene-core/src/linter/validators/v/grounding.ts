@@ -57,9 +57,7 @@ function citeFor(g: string | { min?: string; max?: string } | undefined, end: 'm
 
 /** Both ends' citations, in min-then-max order, without the duplicate a shared one makes. */
 function distinctCites(g: string | { min?: string; max?: string } | undefined): string[] {
-  const cites = [citeFor(g, 'min'), citeFor(g, 'max')].filter(
-    (cite): cite is string => cite !== undefined
-  );
+  const cites = [citeFor(g, 'min'), citeFor(g, 'max')].filter((cite): cite is string => cite !== undefined);
   return [...new Set(cites)];
 }
 
@@ -134,11 +132,7 @@ function withLiteralGuard(
 }
 
 /** Reject all four non-finite spellings: `ERR_FAIL_COND(!is_finite(...))`. */
-export function withFiniteGuard(
-  validator: PropertyValidator,
-  name: string,
-  cite: string
-): PropertyValidator {
+export function withFiniteGuard(validator: PropertyValidator, name: string, cite: string): PropertyValidator {
   return withLiteralGuard(validator, name, cite, (n) => !Number.isFinite(n), 'must be finite');
 }
 
@@ -147,11 +141,7 @@ export function withFiniteGuard(
  * `!is_finite`. `inf` and `-inf` reach the field unaltered there, so the finite
  * guard cannot stand in: it would reject two values Godot stores.
  */
-export function withNanGuard(
-  validator: PropertyValidator,
-  name: string,
-  cite: string
-): PropertyValidator {
+export function withNanGuard(validator: PropertyValidator, name: string, cite: string): PropertyValidator {
   return withLiteralGuard(validator, name, cite, Number.isNaN, 'must not be NaN');
 }
 
@@ -204,8 +194,7 @@ export function ground(
   const hasMax = bounds.max !== undefined;
   // A setter end rejects real values just as a hint end does, so a validator
   // carrying only one is bounded and owes a citation.
-  const isBounded =
-    hasMin || hasMax || bounds.enforcedMin !== undefined || bounds.enforcedMax !== undefined;
+  const isBounded = hasMin || hasMax || bounds.enforcedMin !== undefined || bounds.enforcedMax !== undefined;
   // Here, not in the range factories: every combinator passes through this
   // function, including those built from an inline arrow, such as `v.strictInt`.
   if (isBounded) {

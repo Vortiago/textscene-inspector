@@ -34,13 +34,10 @@ export function NodeDetailsPanel() {
   // See TreeNode: a parser registration does not mean the node renders.
   const isNotRendered = rendersOwnVisual(node.type) === 'not-implemented';
 
-  const sections = registration?.propertyFormatter
-    ? registration.propertyFormatter(node.properties)
-    : [];
+  const sections = registration?.propertyFormatter ? registration.propertyFormatter(node.properties) : [];
 
   const showCameraActions = isCamera3DType(node.type) && cameraControl !== null;
-  const isActiveCamera =
-    cameraControl !== null && cameraControl.activeCameraPath === path;
+  const isActiveCamera = cameraControl !== null && cameraControl.activeCameraPath === path;
 
   return (
     <div className={styles.root}>
@@ -54,8 +51,8 @@ export function NodeDetailsPanel() {
         <div className={`${styles.section} ${styles.warningSection}`}>
           <h4 className={styles.sectionTitle}>Not Implemented</h4>
           <p className={styles.warningText}>
-            This node type is not yet drawn by the previewer. It is preserved in the tree
-            and its properties are parsed, but nothing appears in the viewport.
+            This node type is not yet drawn by the previewer. It is preserved in the tree and its properties
+            are parsed, but nothing appears in the viewport.
           </p>
         </div>
       )}

@@ -33,9 +33,7 @@ describe('<DisplayMenu>', () => {
   it('renders every toggle with its own title and checked state', () => {
     open([toggle('Grid', { checked: true }), toggle('Labels')]);
     expect((screen.getByRole('checkbox', { name: 'Grid' }) as HTMLInputElement).checked).toBe(true);
-    expect((screen.getByRole('checkbox', { name: 'Labels' }) as HTMLInputElement).checked).toBe(
-      false
-    );
+    expect((screen.getByRole('checkbox', { name: 'Labels' }) as HTMLInputElement).checked).toBe(false);
   });
 
   it('reports each change to the toggle that owns it', () => {
@@ -64,9 +62,7 @@ describe('<DisplayMenu>', () => {
 
   it('renders a disabled toggle as disabled', () => {
     open([toggle('Preview Sun', { checked: true, disabled: true })]);
-    expect(
-      (screen.getByRole('checkbox', { name: 'Preview Sun' }) as HTMLInputElement).disabled
-    ).toBe(true);
+    expect((screen.getByRole('checkbox', { name: 'Preview Sun' }) as HTMLInputElement).disabled).toBe(true);
   });
 
   it('closes on Escape', () => {

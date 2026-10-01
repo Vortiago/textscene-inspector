@@ -158,9 +158,7 @@ describe('toneMappingEffectGlsl — the same curves for the glow composer', () =
   });
 
   it('bakes AgX’s FLOORED high clip, not the authored white (regression)', () => {
-    expect(toneMappingEffectGlsl(GodotToneMapper.AGX, 1)).toContain(
-      'const float godotToneMapWhite = 2.0;'
-    );
+    expect(toneMappingEffectGlsl(GodotToneMapper.AGX, 1)).toContain('const float godotToneMapWhite = 2.0;');
     expect(toneMappingEffectGlsl(GodotToneMapper.AGX, 16.29)).toContain(
       'const float godotToneMapWhite = 16.29;'
     );
@@ -206,9 +204,7 @@ describe('AgX contrast — Godot’s tonemap_agx_contrast reaches the curve', ()
     // The two paths differ only in where the curve runs. A contrast that reached one
     // and not the other would change the picture the moment glow mounted, the class
     // of divergence ADR-0031 exists for.
-    expect(toneMappingEffectGlsl(GodotToneMapper.AGX, 16.29, 1.8)).toContain(
-      'awp_contrast = 1.8;'
-    );
+    expect(toneMappingEffectGlsl(GodotToneMapper.AGX, 16.29, 1.8)).toContain('awp_contrast = 1.8;');
   });
 
   it('emits an integer contrast as a GLSL float literal (edge case)', () => {
@@ -230,9 +226,7 @@ describe('AgX contrast — Godot’s tonemap_agx_contrast reaches the curve', ()
       GodotToneMapper.FILMIC,
       GodotToneMapper.ACES,
     ]) {
-      expect(toneMappingShaderChunk(mode, 1.8), `mode ${mode}`).toBe(
-        toneMappingShaderChunk(mode, 1.25)
-      );
+      expect(toneMappingShaderChunk(mode, 1.8), `mode ${mode}`).toBe(toneMappingShaderChunk(mode, 1.25));
     }
   });
 });

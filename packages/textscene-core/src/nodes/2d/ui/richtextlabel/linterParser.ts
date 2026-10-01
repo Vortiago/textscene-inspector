@@ -101,7 +101,10 @@ validatorRegistry.registerAll('RichTextLabel', {
   // as `Array[RichTextEffect]([...])`. set_effects (rich_text_label.cpp:7464-7466)
   // assigns into the untyped `Array custom_effects` (rich_text_label.h:588), so
   // another element type stores and only the hint refuses it.
-  custom_effects: v.arrayLiteral('custom_effects', { typedAs: 'RichTextEffect', hinted: 'rich_text_label.cpp:7773' }),
+  custom_effects: v.arrayLiteral('custom_effects', {
+    typedAs: 'RichTextEffect',
+    hinted: 'rich_text_label.cpp:7773',
+  }),
   // rich_text_label.cpp:7774: bare BOOL, no hint. set_meta_underline
   // (rich_text_label.cpp:5155-5162) is an unconditional assignment.
   meta_underlined: v.boolean('meta_underlined'),
@@ -141,13 +144,9 @@ validatorRegistry.registerAll('RichTextLabel', {
   }),
   // rich_text_label.cpp:7789: PROPERTY_HINT_ENUM, 5 entries (0-4).
   // set_visible_characters_behavior (rich_text_label.cpp:7880-7890) is a bare assignment.
-  visible_characters_behavior: v.enumInt(
-    'visible_characters_behavior',
-    0,
-    4,
-    VISIBLE_CHARACTERS_BEHAVIOR,
-    { hinted: 'rich_text_label.cpp:7789' }
-  ),
+  visible_characters_behavior: v.enumInt('visible_characters_behavior', 0, 4, VISIBLE_CHARACTERS_BEHAVIOR, {
+    hinted: 'rich_text_label.cpp:7789',
+  }),
   // rich_text_label.cpp:7790: PROPERTY_HINT_RANGE "0,1,0.001". The clamp sits
   // behind `if (visible_ratio != p_ratio)` (rich_text_label.cpp:7402), which a
   // preceding `visible_characters` can skip, so this is hint-tier, as Label's.
@@ -172,13 +171,9 @@ validatorRegistry.registerAll('RichTextLabel', {
   // rich_text_label.cpp:7795: PROPERTY_HINT_ENUM, 7 entries (0-6).
   // set_structured_text_bidi_override (rich_text_label.cpp:7314-7328) is a
   // bare assignment.
-  structured_text_bidi_override: v.enumInt(
-    'structured_text_bidi_override',
-    0,
-    6,
-    STRUCTURED_TEXT_PARSER,
-    { hinted: 'rich_text_label.cpp:7795' }
-  ),
+  structured_text_bidi_override: v.enumInt('structured_text_bidi_override', 0, 6, STRUCTURED_TEXT_PARSER, {
+    hinted: 'rich_text_label.cpp:7795',
+  }),
   // rich_text_label.cpp:7796: Variant::ARRAY, no hint, so no `Array[Type](...)`
   // wrapper. set_structured_text_bidi_override_options
   // (rich_text_label.cpp:7334-7344) is a bare assignment.

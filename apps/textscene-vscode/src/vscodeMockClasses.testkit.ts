@@ -53,7 +53,7 @@ export class MockEventEmitter {
   };
 
   fire(...args: any[]) {
-    this.listeners.forEach(listener => listener(...args));
+    this.listeners.forEach((listener) => listener(...args));
   }
 
   dispose() {
@@ -107,7 +107,7 @@ export const MockDiagnosticSeverity = {
   Error: 0,
   Warning: 1,
   Information: 2,
-  Hint: 3
+  Hint: 3,
 } as const;
 
 /** `vscode.TabInputText`: the input of a tab that shows a text document. */
@@ -120,21 +120,21 @@ export const MockViewColumn = {
   Two: 2,
   Three: 3,
   Active: -1,
-  Beside: -2
+  Beside: -2,
 };
 
 export const MockFileType = {
   Unknown: 0,
   File: 1,
   Directory: 2,
-  SymbolicLink: 64
+  SymbolicLink: 64,
 };
 
 export const MockTextEditorRevealType = {
   Default: 0,
   InCenter: 1,
   InCenterIfOutsideViewport: 2,
-  AtTop: 3
+  AtTop: 3,
 };
 
 export const MockSymbolKind: Record<string, number> = {
@@ -163,5 +163,5 @@ export const MockSymbolKind: Record<string, number> = {
   Struct: 22,
   Event: 23,
   Operator: 24,
-  TypeParameter: 25
+  TypeParameter: 25,
 };

@@ -239,9 +239,7 @@ describe('freelookCursor', () => {
   it('turns the view without moving the eye', () => {
     const cursor = editorCursor();
     const looked = freelookCursor(cursor, 45, 20);
-    expect(cursorCameraPosition(looked).distanceTo(cursorCameraPosition(cursor))).toBeLessThan(
-      1e-9
-    );
+    expect(cursorCameraPosition(looked).distanceTo(cursorCameraPosition(cursor))).toBeLessThan(1e-9);
     expect(cursorDirection(looked).distanceTo(cursorDirection(cursor))).toBeGreaterThan(0.01);
   });
 
@@ -310,10 +308,7 @@ describe('viewSnapCursor', () => {
     bottom: [0, -1, 0],
   };
 
-  for (const [view, expected] of Object.entries(EXPECTED) as [
-    GodotViewAngle,
-    [number, number, number],
-  ][]) {
+  for (const [view, expected] of Object.entries(EXPECTED) as [GodotViewAngle, [number, number, number]][]) {
     it(`looks at the scene from the ${view}`, () => {
       const snapped = viewSnapCursor(editorCursor(), view);
       const direction = cursorDirection(snapped);
@@ -329,10 +324,7 @@ describe('viewSnapCursor', () => {
   });
 
   it('pairs every view with the face across from it', () => {
-    for (const [view, opposite] of Object.entries(OPPOSITE_VIEW) as [
-      GodotViewAngle,
-      GodotViewAngle,
-    ][]) {
+    for (const [view, opposite] of Object.entries(OPPOSITE_VIEW) as [GodotViewAngle, GodotViewAngle][]) {
       const a = cursorDirection(viewSnapCursor(cursorAt(0, 0), view));
       const b = cursorDirection(viewSnapCursor(cursorAt(0, 0), opposite));
       expect(a.dot(b)).toBeCloseTo(-1, 9);

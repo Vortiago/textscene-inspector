@@ -23,7 +23,7 @@ export function formatLabel3DProperties(properties: Label3DProperties): Property
   const colorItems: PropertySection['items'] = [
     {
       label: 'Modulate',
-      value: formatColorRgba(properties.modulate)
+      value: formatColorRgba(properties.modulate),
     },
   ];
 
@@ -37,7 +37,7 @@ export function formatLabel3DProperties(properties: Label3DProperties): Property
       { label: 'Outline Size', value: properties.outline_size.toFixed(0) },
       {
         label: 'Outline Color',
-        value: formatColorRgba(properties.outline_modulate)
+        value: formatColorRgba(properties.outline_modulate),
       },
     ];
 

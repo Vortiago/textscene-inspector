@@ -42,7 +42,12 @@ function node(props: Partial<TextEditProperties>): SolveNode {
   return {
     ...solveNode(),
     path: 'T',
-    node: { name: 'T', type: 'TextEdit', children: [], properties: { name: 'T', ...props } as TextEditProperties },
+    node: {
+      name: 'T',
+      type: 'TextEdit',
+      children: [],
+      properties: { name: 'T', ...props } as TextEditProperties,
+    },
   };
 }
 
@@ -58,10 +63,15 @@ describe('resolveTextEditStyleState', () => {
 describe('pickTextEditStyleBox', () => {
   it('falls back to LineEdit-reused defaults (default_theme.cpp:453,455 reuse the same Refs)', () => {
     expect(pickTextEditStyleBox({}, THEME.widgets.lineEdit, 'normal')).toBe(THEME.widgets.lineEdit.normal);
-    expect(pickTextEditStyleBox({}, THEME.widgets.lineEdit, 'read_only')).toBe(THEME.widgets.lineEdit.readOnly);
+    expect(pickTextEditStyleBox({}, THEME.widgets.lineEdit, 'read_only')).toBe(
+      THEME.widgets.lineEdit.readOnly
+    );
   });
   it('prefers a theme_override_styles override over the default', () => {
-    const override = { ...THEME.widgets.lineEdit.normal, cornerRadius: { topLeft: 99, topRight: 99, bottomRight: 99, bottomLeft: 99 } };
+    const override = {
+      ...THEME.widgets.lineEdit.normal,
+      cornerRadius: { topLeft: 99, topRight: 99, bottomRight: 99, bottomLeft: 99 },
+    };
     expect(pickTextEditStyleBox({ normal: override }, THEME.widgets.lineEdit, 'normal')).toBe(override);
   });
 });
@@ -98,7 +108,7 @@ describe('shapeTextEditLines', () => {
     expect(result[0]!.layout.lines).toHaveLength(1);
     expect(result[1]!.startRow).toBe(1);
   });
-  it('preserveControl threads through to each line\'s own shapeText call (Text::set_draw_control_chars, text_edit.cpp:292)', () => {
+  it("preserveControl threads through to each line's own shapeText call (Text::set_draw_control_chars, text_edit.cpp:292)", () => {
     const dropped = shapeTextEditLines(['AB'], 16, 0, undefined, 0, OPEN_SANS_FONT_METRICS);
     const boxed = shapeTextEditLines(['AB'], 16, 0, undefined, 0, OPEN_SANS_FONT_METRICS, [], true);
     expect(dropped[0]!.layout.lines[0]!.glyphs[1]!.controlCodepoint).toBeUndefined();
@@ -198,7 +208,7 @@ describe('textEditRowOriginXPx (text_edit.cpp:1490-1494)', () => {
     expect(textEditRowOriginXPx(26, 300, 120, false)).toBe(26);
   });
 
-  it('mirrors the band start about the control under RTL, by the ROW\'s own width', () => {
+  it("mirrors the band start about the control under RTL, by the ROW's own width", () => {
     // `char_margin = size.width - char_margin - TS->shaped_text_get_size(rid).x
     // - wrap_indent` (:1490-1491), with `wrap_indent` 0. 300 - 26 - 120 = 154.
     expect(textEditRowOriginXPx(26, 300, 120, true)).toBe(154);
@@ -232,7 +242,7 @@ describe('textEditCurrentLineXPx (text_edit.cpp:1404-1409)', () => {
  * and `line_spacing` is 4 (`:479`), so row 0's band starts 6px down and its text 8px down.
  */
 describe('textEditRowBandTopPx / textEditRowTextTopPx (text_edit.cpp:1376-1378,1626)', () => {
-  it('puts row 0\'s band at the top margin plus half the line spacing', () => {
+  it("puts row 0's band at the top margin plus half the line spacing", () => {
     expect(textEditRowBandTopPx(0, 20, 4, 4)).toBe(6);
   });
 
@@ -261,7 +271,7 @@ describe('textEditCaretRect (text_edit.cpp:926-927,945-947,1858-1877)', () => {
     expect(textEditCaretRect(false, false, 12, 6, 20, 16, 1)).toBeNull();
   });
 
-  it('draws a caret_width bar over the row\'s own text box when both hold', () => {
+  it("draws a caret_width bar over the row's own text box when both hold", () => {
     expect(textEditCaretRect(false, true, 12, 6, 20, 16, 1)).toEqual({ x: 12, y: 8, w: 1, h: 16 });
   });
 

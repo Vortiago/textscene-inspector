@@ -4,13 +4,7 @@
  * on, grid off) needs no provider, and the host layers persistence on top.
  */
 
-import {
-  createContext,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 
 export type ViewportMode = '2D' | '3D';
 
@@ -106,9 +100,7 @@ export function ViewportModeProvider({
   const [showNavigation, setShowNavigation] = useState(initialShowNavigation);
   const [showGrid, setShowGrid] = useState(initialShowGrid);
   const [showPreviewSun, setShowPreviewSun] = useState(initialShowPreviewSun);
-  const [showPreviewEnvironment, setShowPreviewEnvironment] = useState(
-    initialShowPreviewEnvironment
-  );
+  const [showPreviewEnvironment, setShowPreviewEnvironment] = useState(initialShowPreviewEnvironment);
   const [frameOnOpen, setFrameOnOpen] = useState(initialFrameOnOpen);
   const value = useMemo<ViewportModeValue>(
     () => ({

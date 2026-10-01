@@ -63,7 +63,7 @@ describe('#126 AreaLight3D slice — behavioral contract (RED until shipped)', (
     const renderer = await ReactThreeTestRenderer.create(createElement(Comp, { node: area }));
     expect(
       renderer.scene.findAllByType('RectAreaLight').length,
-      'AreaLight3D should render a three.js RectAreaLight',
+      'AreaLight3D should render a three.js RectAreaLight'
     ).toBeGreaterThan(0);
   });
 
@@ -82,6 +82,8 @@ describe('#126 AreaLight3D slice — behavioral contract (RED until shipped)', (
   it('ships co-located parser + r3f render tests for the slice', () => {
     const slice = resolve(repoRoot(), 'packages/textscene-core/src/nodes/3d/lights/arealight3d');
     expect(existsSync(resolve(slice, 'parser.test.ts')), 'arealight3d/parser.test.ts missing').toBe(true);
-    expect(existsSync(resolve(slice, 'Component.test.tsx')), 'arealight3d/Component.test.tsx missing').toBe(true);
+    expect(existsSync(resolve(slice, 'Component.test.tsx')), 'arealight3d/Component.test.tsx missing').toBe(
+      true
+    );
   });
 });

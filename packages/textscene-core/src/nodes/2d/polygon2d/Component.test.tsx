@@ -17,9 +17,7 @@ async function render(n: TscnNode) {
 
 describe('<Polygon2D>', () => {
   it('fills an indexed BufferGeometry holding one vertex per polygon point', async () => {
-    const renderer = await render(
-      node({ polygon: 'PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)' })
-    );
+    const renderer = await render(node({ polygon: 'PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)' }));
     const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     // Exactly the authored vertices, triangulated by index: vertex identity keeps
     // `uv` and `vertex_colors` aligned with the points Godot paired them against.
@@ -28,9 +26,7 @@ describe('<Polygon2D>', () => {
   });
 
   it('negates Y so Godot +Y-down maps into the conjugated 2D frame', async () => {
-    const renderer = await render(
-      node({ polygon: 'PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)' })
-    );
+    const renderer = await render(node({ polygon: 'PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)' }));
     const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     geom.computeBoundingBox();
     // Godot y ∈ [0,100] → three y ∈ [-100, 0].
@@ -64,7 +60,8 @@ describe('<Polygon2D>', () => {
         color: 'Color(1, 0.329412, 0.611765, 0.501961)',
       })
     );
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
     expect(mat.opacity).toBeCloseTo(0.501961, 5);
   });
 
@@ -76,7 +73,8 @@ describe('<Polygon2D>', () => {
         modulate: 'Color(0.5, 0.5, 0.5, 1)',
       })
     );
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
     // White fill × 0.5 modulate → mid-grey (well below 1, above 0).
     expect(mat.color.r).toBeGreaterThan(0);
     expect(mat.color.r).toBeLessThan(1);

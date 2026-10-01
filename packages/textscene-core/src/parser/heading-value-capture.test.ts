@@ -11,7 +11,7 @@ import { parseHeading } from './utils';
 describe('parseHeading captures a complete attribute value', () => {
   it('captures a multi-element PackedInt32Array (the reported truncation)', () => {
     const result = parseHeading(
-      '[node name="Robot" parent="Player" parent_id_path=PackedInt32Array(840561040, 1598164129)]',
+      '[node name="Robot" parent="Player" parent_id_path=PackedInt32Array(840561040, 1598164129)]'
     );
     expect(result).not.toBeNull();
     expect(result!.attributes.parent_id_path).toBe('PackedInt32Array(840561040, 1598164129)');
@@ -32,7 +32,7 @@ describe('parseHeading captures a complete attribute value', () => {
 
   it('keeps two adjacent constructor attributes separate', () => {
     const result = parseHeading(
-      '[node name="X" node_paths=PackedStringArray("a", "b") parent_id_path=PackedInt32Array(1, 2) parent="."]',
+      '[node name="X" node_paths=PackedStringArray("a", "b") parent_id_path=PackedInt32Array(1, 2) parent="."]'
     );
     expect(result).not.toBeNull();
     expect(result!.attributes.node_paths).toBe('PackedStringArray("a", "b")');
@@ -49,7 +49,7 @@ describe('parseHeading captures a complete attribute value', () => {
 
   it('does not end a constructor at a ")" inside one of its quoted strings', () => {
     const result = parseHeading(
-      '[node name="X" node_paths=PackedStringArray("Foo (copy)", "Bar") parent="."]',
+      '[node name="X" node_paths=PackedStringArray("Foo (copy)", "Bar") parent="."]'
     );
     expect(result).not.toBeNull();
     expect(result!.attributes).toEqual({
@@ -85,9 +85,7 @@ describe('parseHeading captures a complete attribute value', () => {
   });
 
   it('still treats brackets and parens inside a quoted value as literal text', () => {
-    const result = parseHeading(
-      '[ext_resource type="Texture2D" path="res://art/Foo (1)/[x].png" id="1_a"]',
-    );
+    const result = parseHeading('[ext_resource type="Texture2D" path="res://art/Foo (1)/[x].png" id="1_a"]');
     expect(result).not.toBeNull();
     expect(result!.attributes).toEqual({
       type: 'Texture2D',

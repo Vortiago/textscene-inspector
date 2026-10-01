@@ -32,8 +32,7 @@ const emittedBy = (type: string) =>
 describe.each(CASTS)('%s semantic rules', (type) => {
   const prefix = type.toLowerCase();
   // A shape cast needs a resolvable shape before any other check is reachable.
-  const prelude =
-    kindOf(type) === 'Shape' ? [`[sub_resource type="BoxShape${dimOf(type)}" id="Box_1"]`] : [];
+  const prelude = kindOf(type) === 'Shape' ? [`[sub_resource type="BoxShape${dimOf(type)}" id="Box_1"]`] : [];
   // Annotated, not inferred: the ternary would otherwise widen to a union whose
   // empty branch carries `shape?: undefined`, which `PropValue` excludes.
   const shapeProp: Record<string, PropValue> =

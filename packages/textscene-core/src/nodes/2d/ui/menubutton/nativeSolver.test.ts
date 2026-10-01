@@ -10,7 +10,11 @@ import type { SolveContext } from '../../../../r3f/controls/native/solverRegistr
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { MenuButtonProperties } from './types';
-import { menuButtonMinimumSize, menuButtonTextTheme, MENU_BUTTON_DEFAULT_DISABLED_FONT_COLOR } from './nativeSolver';
+import {
+  menuButtonMinimumSize,
+  menuButtonTextTheme,
+  MENU_BUTTON_DEFAULT_DISABLED_FONT_COLOR,
+} from './nativeSolver';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const FONT_HEIGHT = 23;
@@ -21,7 +25,12 @@ function node(props: Partial<MenuButtonProperties>): SolveNode {
   return {
     ...solveNode(),
     path: 'M',
-    node: { name: 'M', type: 'MenuButton', children: [], properties: { name: 'M', ...props } as MenuButtonProperties },
+    node: {
+      name: 'M',
+      type: 'MenuButton',
+      children: [],
+      properties: { name: 'M', ...props } as MenuButtonProperties,
+    },
     // A local theme_override_colors/* reaches `resolveTextTheme` through `n.colors`, which the walker
     // fills unconditionally, not through props.
     colors: props.themeOverrideColors ?? {},
@@ -65,7 +74,10 @@ describe('menuButtonTextTheme', () => {
   });
 
   it('honours a theme_override_colors/font_disabled_color override over the built-in literal', () => {
-    const n = node({ disabled: true, themeOverrideColors: { font_disabled_color: { r: 0, g: 1, b: 0, a: 1 } } });
+    const n = node({
+      disabled: true,
+      themeOverrideColors: { font_disabled_color: { r: 0, g: 1, b: 0, a: 1 } },
+    });
     const resolved = menuButtonTextTheme(n, n.node.properties as MenuButtonProperties, 'disabled', {
       theme: nativeTheme(1),
     });

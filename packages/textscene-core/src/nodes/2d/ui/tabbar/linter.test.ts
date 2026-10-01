@@ -96,9 +96,7 @@ describe('TabBar cross-field rule', () => {
       findings(props).filter((d) => d.ruleName === 'tabbar-tab-index-out-of-range');
 
     it('stays silent when every tab index is inside tab_count', () => {
-      expect(
-        only({ tab_count: 2, 'tab_0/title': '"One"', 'tab_1/title': '"Two"' })
-      ).toHaveLength(0);
+      expect(only({ tab_count: 2, 'tab_0/title': '"One"', 'tab_1/title': '"Two"' })).toHaveLength(0);
     });
     it('stays silent when no tab_<idx>/ key is present at all', () => {
       expect(only({ tab_count: 2 })).toHaveLength(0);
@@ -123,9 +121,7 @@ describe('TabBar cross-field rule', () => {
       expect(only({ 'tab_0/title': '"One"' })).toHaveLength(1);
     });
     it('never claims the tab_-prefixed scalars are indexed keys', () => {
-      expect(
-        only({ tab_count: 0, tab_alignment: 1, tab_close_display_policy: 2 })
-      ).toHaveLength(0);
+      expect(only({ tab_count: 0, tab_alignment: 1, tab_close_display_policy: 2 })).toHaveLength(0);
     });
     it('leaves a negative index to linterParser.ts, which already errors on it', () => {
       expect(only({ tab_count: 1, 'tab_-1/title': '"Ghost"' })).toHaveLength(0);
@@ -147,9 +143,7 @@ describe('TabBar cross-field rule', () => {
       expect(only({ tab_count: 2, 'tab_9999999999999999999999/title': '"x"' })).toHaveLength(0);
     });
     it('caps the list it names, however many tabs fall outside', () => {
-      const tabs = Object.fromEntries(
-        Array.from({ length: 40 }, (_, i) => [`tab_${i + 1}/title`, '"x"'])
-      );
+      const tabs = Object.fromEntries(Array.from({ length: 40 }, (_, i) => [`tab_${i + 1}/title`, '"x"']));
       const found = only({ tab_count: 1, ...tabs });
       expect(found).toHaveLength(1);
       expect(found[0]?.message).toContain('32 and 8 more but');

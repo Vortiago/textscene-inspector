@@ -36,7 +36,11 @@ import { resolveInlineFontResource } from '../../../resources/fonts/font/decode'
 import type { FontCacheReader, FontResource } from '../../../resources/fonts/font/types';
 import { resolveInlineThemeResource } from '../../../resources/styles/theme/decode';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
-import { mergeThemedRecord, themeResolutionScope, type ThemeResolutionScope } from '../../../resources/styles/theme/lookup';
+import {
+  mergeThemedRecord,
+  themeResolutionScope,
+  type ThemeResolutionScope,
+} from '../../../resources/styles/theme/lookup';
 import { onSceneFontMetricsSettled } from './text/sceneFontLoader';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
@@ -91,7 +95,10 @@ function resolvedStylesOfTheme(
 ): Readonly<Record<string, Readonly<Record<string, ResolvedStyleBox>>>> {
   const cached = themeStyleBoxCache.get(theme);
   if (cached) return cached;
-  const { externalResources, internalResources } = theme.resources ?? { externalResources: [], internalResources: [] };
+  const { externalResources, internalResources } = theme.resources ?? {
+    externalResources: [],
+    internalResources: [],
+  };
   const out: Record<string, Record<string, ResolvedStyleBox>> = {};
   for (const [type, byName] of Object.entries(theme.styles ?? {})) {
     for (const [name, ref] of Object.entries(byName)) {
@@ -307,9 +314,13 @@ function buildForest(
     ? { getCached: (p: string) => loader.scenes.getCached(p) }
     : EMPTY_SCENE_CACHE;
   const textureCache = loader ? { getCached: (p: string) => loader.textures.getCached(p) } : NO_TEXTURE_CACHE;
-  const resourceCache = loader ? { getCached: (p: string) => loader.resources.getCached(p) } : NO_RESOURCE_CACHE;
+  const resourceCache = loader
+    ? { getCached: (p: string) => loader.resources.getCached(p) }
+    : NO_RESOURCE_CACHE;
   const themeCache = loader ? { getCached: (p: string) => loader.themes.getCached(p) } : NO_THEME_CACHE;
-  const fontCache: FontCacheReader = loader ? { getCached: (p: string) => loader.fonts.getCached(p) } : NO_FONT_CACHE;
+  const fontCache: FontCacheReader = loader
+    ? { getCached: (p: string) => loader.fonts.getCached(p) }
+    : NO_FONT_CACHE;
 
   /**
    * A Control's own `theme` (`Control::get_theme()`, `scene/gui/control.h`). An
@@ -711,7 +722,11 @@ function buildForest(
           styleBoxes: resolveStyleBoxes(collapsed, ownScope, themeScope),
           textureSize: texture.size,
           textureSlots: texture.slots,
-          fontOverrides: resolveFontOverrides(collapsed, ownScope.externalResources, ownScope.internalResources),
+          fontOverrides: resolveFontOverrides(
+            collapsed,
+            ownScope.externalResources,
+            ownScope.internalResources
+          ),
           colors: resolveThemedColors(collapsed, themeScope),
           constants: resolveThemedConstants(collapsed, themeScope),
           icons: themedIcons,
@@ -777,10 +792,7 @@ export function useBuildSolveTree(
   const projectSettings = useProjectSettings().settings;
   const projectThemeRef = projectSettings?.['gui/theme/custom']?.trim() || undefined;
   // `internationalization/*`, reduced to the booleans `is_layout_rtl` branches on.
-  const layoutDirectionEnv = useMemo(
-    () => projectLayoutDirectionEnv(projectSettings),
-    [projectSettings]
-  );
+  const layoutDirectionEnv = useMemo(() => projectLayoutDirectionEnv(projectSettings), [projectSettings]);
 
   useEffect(() => {
     const bump = () => setGeneration((g) => g + 1);

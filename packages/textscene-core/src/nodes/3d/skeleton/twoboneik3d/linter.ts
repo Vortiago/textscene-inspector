@@ -10,11 +10,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties, extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
-import {
-  listIndices,
-  listWrittenIndices,
-  unsatisfiedIndices,
-} from '../../../../linter/reportedIndices.js';
+import { listIndices, listWrittenIndices, unsatisfiedIndices } from '../../../../linter/reportedIndices.js';
 import { indexedElements, indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
 import { resolveTwoBoneSettingLeaf } from './linterParser.js';
 
@@ -161,7 +157,11 @@ const twoBoneIK3DValidationRule: LintRule = {
         severity: 'error',
         grounding: { kind: 'engine', at: 'two_bone_ik_3d.cpp:446' },
       },
-      { ruleName: 'twoboneik3d-setting-missing-target-node', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'twoboneik3d-setting-missing-target-node',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
     ],
   },
   check: checkTwoBoneIK3D,

@@ -127,19 +127,20 @@ function resetFingerprints() {
 beforeEach(() => {
   resetFingerprints();
   const realSetRoot = WebResourceProvider.prototype.setResourceRoot;
-  setResourceRoot = vi
-    .spyOn(WebResourceProvider.prototype, 'setResourceRoot')
-    .mockImplementation(function (this: WebResourceProvider, root: string) {
-      atRootSwitch.record();
-      realSetRoot.call(this, root);
-    });
+  setResourceRoot = vi.spyOn(WebResourceProvider.prototype, 'setResourceRoot').mockImplementation(function (
+    this: WebResourceProvider,
+    root: string
+  ) {
+    atRootSwitch.record();
+    realSetRoot.call(this, root);
+  });
   const realClear = ResourceLoader.prototype.clearCaches;
-  clearCaches = vi
-    .spyOn(ResourceLoader.prototype, 'clearCaches')
-    .mockImplementation(function (this: ResourceLoader) {
-      atClear.record();
-      realClear.call(this);
-    });
+  clearCaches = vi.spyOn(ResourceLoader.prototype, 'clearCaches').mockImplementation(function (
+    this: ResourceLoader
+  ) {
+    atClear.record();
+    realClear.call(this);
+  });
 });
 
 afterEach(() => {

@@ -30,7 +30,9 @@ describe('negatives narrowed to a tier go through the test kit', () => {
       "it('bound', () => { const hits = all.filter((d) => d.message.includes('x') && d.severity === 'error'); expect(hits).toHaveLength(0); });",
     ].join('\n');
 
-    expect(blocksIn('synthetic.test.ts', src).map((b) => tierNarrowedNegatives(b.body).length)).toEqual([1, 1, 1]);
+    expect(blocksIn('synthetic.test.ts', src).map((b) => tierNarrowedNegatives(b.body).length)).toEqual([
+      1, 1, 1,
+    ]);
   });
 
   it('leaves a positive, an unnarrowed negative and a tier-only negative alone', () => {
@@ -42,6 +44,10 @@ describe('negatives narrowed to a tier go through the test kit', () => {
       "it('tier', () => { expect(all.filter((d) => d.severity === 'error')).toHaveLength(0); });",
     ].join('\n');
 
-    expect(blocksIn('synthetic.test.ts', src).map((b) => tierNarrowedNegatives(b.body))).toEqual([[], [], []]);
+    expect(blocksIn('synthetic.test.ts', src).map((b) => tierNarrowedNegatives(b.body))).toEqual([
+      [],
+      [],
+      [],
+    ]);
   });
 });

@@ -28,9 +28,7 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
   // Prose only. The check asks the base chain, because Godot's test is
   // `Object::cast_to<CollisionObject2D>(get_parent())` (collision_shape_2d.cpp:174),
   // not a list of names.
-  const examples = ['Area', 'StaticBody', 'RigidBody', 'CharacterBody']
-    .map((n) => n + dim)
-    .join(', ');
+  const examples = ['Area', 'StaticBody', 'RigidBody', 'CharacterBody'].map((n) => n + dim).join(', ');
   const advice = `${type} only gives a shape to a ${collisionObject}: use it under ${examples} or another subclass.`;
 
   // Each arm's enabling condition, stated once (see `ruleArms.ts`), in the
@@ -118,8 +116,7 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
     const { node, scene } = context;
-    const report = (arm: RuleArm | undefined, message: string) =>
-      reportArm(diagnostics, arm, node, message);
+    const report = (arm: RuleArm | undefined, message: string) => reportArm(diagnostics, arm, node, message);
     const rawProps = node.properties as unknown as Record<string, string>;
 
     // One scan of the scene's resource tables for every question below: the
@@ -127,7 +124,10 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     const shape = resolveResourceSlot(scene, rawProps.shape);
 
     if (shape.kind === 'empty') {
-      report(arms.requiresShape, `${type} '${node.name}' is missing required property 'shape'. A collision shape needs a shape resource to define its collision geometry.`);
+      report(
+        arms.requiresShape,
+        `${type} '${node.name}' is missing required property 'shape'. A collision shape needs a shape resource to define its collision geometry.`
+      );
     }
 
     // Through the verdict for its `unknowable` arm: an instanced or override parent's
@@ -137,7 +137,10 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     const placement = parentTypeVerdict(scene, node, collisionObject);
     const parent = verdictParent(placement);
     if (placement.kind === 'mismatch') {
-      report(arms.invalidParent, `${type} '${node.name}' has parent '${placement.parent.name}' of type '${placement.parent.type}', which is not a ${collisionObject}. ${advice}`);
+      report(
+        arms.invalidParent,
+        `${type} '${node.name}' has parent '${placement.parent.name}' of type '${placement.parent.type}', which is not a ${collisionObject}. ${advice}`
+      );
     } else if (placement.kind === 'root') {
       report(arms.noParent, `${type} '${node.name}' has no parent node. ${advice}`);
     }
@@ -151,12 +154,16 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
         // `descendsFromClass`: `cast_to<ConcavePolygonShape3D>` (:140, :142) passes for
         // a subclass, and only the merged node and resource table holds a Shape's ancestry.
         if (descendsFromClass(shape.type, 'ConcavePolygonShape3D')) {
-          report(arms.concaveUnderRigidBody, `${type} '${node.name}' uses a ConcavePolygonShape3D under a ${bodyType} ('${parent.name}'). ` +
+          report(
+            arms.concaveUnderRigidBody,
+            `${type} '${node.name}' uses a ConcavePolygonShape3D under a ${bodyType} ('${parent.name}'). ` +
               `ConcavePolygonShape3D is intended for static bodies like StaticBody3D and will likely not ` +
               `behave well for a ${bodyType}, except when frozen with freeze_mode set to Static.`
           );
         } else if (descendsFromClass(shape.type, 'WorldBoundaryShape3D')) {
-          report(arms.worldBoundaryUnderRigidBody, `${type} '${node.name}' uses a WorldBoundaryShape3D under a ${bodyType} ('${parent.name}'). ` +
+          report(
+            arms.worldBoundaryUnderRigidBody,
+            `${type} '${node.name}' uses a WorldBoundaryShape3D under a ${bodyType} ('${parent.name}'). ` +
               `WorldBoundaryShape3D doesn't support ${bodyType} in a non-static mode.`
           );
         }
@@ -164,7 +171,9 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
         descendsFrom(parent.type, 'CharacterBody3D') &&
         descendsFromClass(shape.type, 'ConcavePolygonShape3D')
       ) {
-        report(arms.concaveUnderCharacterBody, `${type} '${node.name}' uses a ConcavePolygonShape3D under a CharacterBody3D ('${parent.name}'). ` +
+        report(
+          arms.concaveUnderCharacterBody,
+          `${type} '${node.name}' uses a ConcavePolygonShape3D under a CharacterBody3D ('${parent.name}'). ` +
             `ConcavePolygonShape3D is intended for static bodies like StaticBody3D and will likely not ` +
             `behave well for a CharacterBody3D.`
         );
@@ -177,7 +186,9 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
       if (scales) {
         const [sx, sy, sz] = scales;
         if (!(isZeroApprox(sx - sy) && isZeroApprox(sy - sz))) {
-          report(arms.nonUniformScale, `${type} '${node.name}' has a non-uniformly scaled transform ` +
+          report(
+            arms.nonUniformScale,
+            `${type} '${node.name}' has a non-uniformly scaled transform ` +
               `(${sx.toFixed(3)}, ${sy.toFixed(3)}, ${sz.toFixed(3)}), which will probably not ` +
               'function as expected. Keep its scale uniform and change the size of its shape resource instead.'
           );
@@ -190,7 +201,10 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     // This fires on the flag under an Area2D parent. `unused-one-way-margin` fires on a
     // margin without the flag, whatever the parent.
     if (boolSlotValue(rawProps.one_way_collision) === true && parent && descendsFrom(parent.type, 'Area2D')) {
-      report(arms.oneWayIgnoredUnderArea2D, `${type} '${node.name}' has 'one_way_collision' enabled under an Area2D ('${parent.name}'). One Way Collision is ignored when the collision object is an Area2D.`);
+      report(
+        arms.oneWayIgnoredUnderArea2D,
+        `${type} '${node.name}' has 'one_way_collision' enabled under an Area2D ('${parent.name}'). One Way Collision is ignored when the collision object is an Area2D.`
+      );
     }
 
     // A polygon-based Shape2D has limited editing (2D only: collision_shape_2d.cpp:185-187
@@ -201,14 +215,20 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
       (descendsFromClass(shape.type, 'ConvexPolygonShape2D') ||
         descendsFromClass(shape.type, 'ConcavePolygonShape2D'))
     ) {
-      report(arms.polygonShapeLimitedEditing, `${type} '${node.name}' uses a ${shape.type}, which has limited editing options in CollisionShape2D. Consider using a CollisionPolygon2D node instead.`);
+      report(
+        arms.polygonShapeLimitedEditing,
+        `${type} '${node.name}' uses a ${shape.type}, which has limited editing options in CollisionShape2D. Consider using a CollisionPolygon2D node instead.`
+      );
     }
 
     // one_way_collision_margin set but one_way_collision is false (2D only)
     if (rawProps.one_way_collision_margin && boolSlotValue(rawProps.one_way_collision) !== true) {
       const margin = parseGodotFloat(rawProps.one_way_collision_margin);
       if (margin !== null && margin > 0) {
-        report(arms.unusedOneWayMargin, `${type} '${node.name}' has 'one_way_collision_margin' set to ${margin}, but 'one_way_collision' is ${rawProps.one_way_collision || 'not set (defaults to false)'}. The margin will have no effect unless 'one_way_collision' is true.`);
+        report(
+          arms.unusedOneWayMargin,
+          `${type} '${node.name}' has 'one_way_collision_margin' set to ${margin}, but 'one_way_collision' is ${rawProps.one_way_collision || 'not set (defaults to false)'}. The margin will have no effect unless 'one_way_collision' is true.`
+        );
       }
     }
 

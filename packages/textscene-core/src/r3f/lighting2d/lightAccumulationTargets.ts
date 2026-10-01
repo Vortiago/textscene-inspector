@@ -26,10 +26,7 @@ function createAccumulationTarget(): THREE.WebGLRenderTarget {
 
 /** `count` accumulators, disposed together when the count changes. */
 export function useAccumulationTargets(count: number): THREE.WebGLRenderTarget[] {
-  const targets = useMemo(
-    () => Array.from({ length: count }, createAccumulationTarget),
-    [count]
-  );
+  const targets = useMemo(() => Array.from({ length: count }, createAccumulationTarget), [count]);
   // A cleanup belongs to an effect: React never calls a useMemo factory's return value.
   useEffect(() => () => targets.forEach((target) => target.dispose()), [targets]);
   return targets;

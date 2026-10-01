@@ -64,11 +64,7 @@ export type HostToWebviewMessage =
  * listeners share this guard so the wire is policed one way.
  */
 export function isHostToWebviewMessage(data: unknown): data is HostToWebviewMessage {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    typeof (data as { type?: unknown }).type === 'string'
-  );
+  return typeof data === 'object' && data !== null && typeof (data as { type?: unknown }).type === 'string';
 }
 
 // Webview -> Host
@@ -139,9 +135,5 @@ export type WebviewToHostMessage =
  * `isHostToWebviewMessage`, a message is a non-null object carrying a string `type`.
  */
 export function isWebviewToHostMessage(data: unknown): data is WebviewToHostMessage {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    typeof (data as { type?: unknown }).type === 'string'
-  );
+  return typeof data === 'object' && data !== null && typeof (data as { type?: unknown }).type === 'string';
 }

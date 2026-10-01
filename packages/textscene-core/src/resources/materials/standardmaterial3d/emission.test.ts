@@ -44,7 +44,7 @@ describe('emissionScalars', () => {
     expect(s.emissive[1] * s.emissiveIntensity).toBeCloseTo(linear(0.5) * 2, 5);
   });
 
-  it('treats an absent colour as black, matching Godot\'s default', () => {
+  it("treats an absent colour as black, matching Godot's default", () => {
     const s = emissionScalars(undefined, 2);
     expect(s.emissive).toEqual([0, 0, 0]);
     expect(s.emissiveIntensity).toBeCloseTo(2, 6);

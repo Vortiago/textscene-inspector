@@ -80,8 +80,7 @@ export interface CanvasItemLightingUniforms {
 
 /** Both injections depend only on module constants, so they are built once. */
 const UNIFORM_PREAMBLE = `${CLASS_SLOTS.map(
-  (index) =>
-    `uniform sampler2D ${lightClassSampler(index)};\nuniform sampler2D ${shadowTintSampler(index)};`
+  (index) => `uniform sampler2D ${lightClassSampler(index)};\nuniform sampler2D ${shadowTintSampler(index)};`
 ).join('\n')}
 uniform float uLightClassWeight[${MAX_LIGHT_CLASSES}];
 uniform vec2 uLightResolution;
@@ -135,9 +134,7 @@ const PROGRAM_CACHE_KEY = 'godot-canvas-light';
  * `materialProgramInputs()`. An item that passes none stays unlit, as every 3D consumer needs. The
  * props are the same for every light mode, with or without lights: both are uniforms.
  */
-export function canvasItemLightingProps(
-  uniforms: CanvasItemLightingUniforms
-): CanvasItemLightingProps {
+export function canvasItemLightingProps(uniforms: CanvasItemLightingUniforms): CanvasItemLightingProps {
   return {
     transparent: true,
     injection: {

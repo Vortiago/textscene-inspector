@@ -11,8 +11,9 @@ describe('LightOccluder2D property validators', () => {
   });
 
   it('sdf_collision rejects a non-boolean', () => {
-    const found = new Linter().lint(scene(node('LightOccluder2D', { sdf_collision: '"maybe"' }, { name: 'Occ' })))
-      .find(d => d.message.includes('sdf_collision'));
+    const found = new Linter()
+      .lint(scene(node('LightOccluder2D', { sdf_collision: '"maybe"' }, { name: 'Occ' })))
+      .find((d) => d.message.includes('sdf_collision'));
     expect(found).toBeDefined();
     expect(found?.severity).toBe('error');
   });

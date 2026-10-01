@@ -22,9 +22,7 @@ function whiteFor(properties: EnvironmentProperties): number {
     : properties.tonemap_white;
 }
 
-export function createEnvironmentSettings(
-  properties: EnvironmentProperties
-): EnvironmentSettings {
+export function createEnvironmentSettings(properties: EnvironmentProperties): EnvironmentSettings {
   return {
     background: {
       mode: properties.background_mode,
@@ -124,8 +122,7 @@ function ambientFor(properties: EnvironmentProperties): {
   // Otherwise flat = ambient_light_color × ambient_light_energy, and the cubemap is
   // used for (BG + BG_SKY) or SKY.
   const overSky = background === BackgroundMode.BG_SKY;
-  const fromCubemap =
-    (source === AMBIENT_SOURCE_BG && overSky) || source === AMBIENT_SOURCE_SKY;
+  const fromCubemap = (source === AMBIENT_SOURCE_BG && overSky) || source === AMBIENT_SOURCE_SKY;
 
   // The shader blends ambient = mix(flat, sky × background_energy_multiplier,
   // sky_contribution), folded into the energies: at the default 1.0 the flat term is
@@ -137,9 +134,7 @@ function ambientFor(properties: EnvironmentProperties): {
   // is the background or the ambient, independent of `ambient_light_source`. `energy`
   // carries the reflection, `contribution` the diffuse share, scaled apart per material.
   const skyAmbient =
-    fromCubemap || overSky
-      ? { energy: properties.background_energy_multiplier, contribution }
-      : null;
+    fromCubemap || overSky ? { energy: properties.background_energy_multiplier, contribution } : null;
 
   if (!fromCubemap && source !== AMBIENT_SOURCE_COLOR) {
     return { ambient: null, skyAmbient };

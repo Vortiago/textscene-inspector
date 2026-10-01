@@ -54,10 +54,7 @@ interface IntElementVerdict {
  * (`variant_parser.cpp:1428-1430`), which narrows any number token, so
  * `PackedInt32Array(2e3, 0, 0)` loads: the grammar is not `IS_VALID_INT_RE`'s.
  */
-function scanIntElements(
-  body: string | readonly string[],
-  width: IntWidth = 'int32'
-): IntElementVerdict {
+function scanIntElements(body: string | readonly string[], width: IntWidth = 'int32'): IntElementVerdict {
   let truncated: TruncatedElement | null = null;
   for (const part of typeof body === 'string' ? body.split(',') : body) {
     const text = part.trim();
@@ -161,11 +158,7 @@ function firstNonNumericElement(body: string | readonly string[]): string | null
  * slot, or null. These spellings hold one whole element per top-level comma,
  * such as `Vector2(0, 0)`, not the packed form's flat `0, 0`.
  */
-function firstBadArrayElement(
-  body: string,
-  elementCall: RegExp,
-  groupSize: number
-): string | null {
+function firstBadArrayElement(body: string, elementCall: RegExp, groupSize: number): string | null {
   for (const part of splitTopLevel(body)) {
     const trimmed = part.trim();
     if (trimmed === '') continue;

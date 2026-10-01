@@ -7,9 +7,6 @@ import type { ParsedHeading } from '../../../../parser/utils';
 import type { ControlProperties } from '../control/types';
 import { parseControl } from '../control/parser';
 
-export function parsePanel(
-  heading: ParsedHeading,
-  properties: Record<string, string>
-): ControlProperties {
+export function parsePanel(heading: ParsedHeading, properties: Record<string, string>): ControlProperties {
   return parseControl(heading, properties);
 }
