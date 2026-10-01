@@ -5,14 +5,19 @@
  * launch, never prepared inside the suite.
  */
 
+import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+
+/** The variable that names the suite's start marker inside the extension host. */
+export const SUITE_STARTED_MARKER_ENV = 'TEXTSCENE_SUITE_STARTED_MARKER';
 
 /** The subset of `@vscode/test-electron`'s options this runner supplies. */
 export interface IntegrationLaunchOptions {
   extensionDevelopmentPath: string;
   extensionTestsPath: string;
   launchArgs: string[];
+  extensionTestsEnv: Record<string, string>;
 }
 
 /** Every path the launch derives from the directory the runner was loaded from. */
@@ -21,6 +26,8 @@ export interface IntegrationLaunchPaths {
   extensionTestsPath: string;
   workspaceRoot: string;
   userDataDir: string;
+  /** The suite writes this file as it starts, so the launcher knows a test may have run. */
+  suiteStartedMarker: string;
 }
 
 /**
@@ -35,6 +42,7 @@ export function integrationLaunchPaths(runnerDir: string): IntegrationLaunchPath
     workspaceRoot: path.resolve(extensionDevelopmentPath, '.test-workspace'),
     // A short user-data path: macOS caps an IPC socket path at 103 characters.
     userDataDir: path.join(os.tmpdir(), 'vscode-test-data'),
+    suiteStartedMarker: path.join(os.tmpdir(), 'vscode-test-suite-started'),
   };
 }
 
@@ -49,6 +57,7 @@ export function integrationLaunchOptions(paths: IntegrationLaunchPaths): Integra
       '--disable-extensions',
       `--user-data-dir=${paths.userDataDir}`,
     ],
+    extensionTestsEnv: { [SUITE_STARTED_MARKER_ENV]: paths.suiteStartedMarker },
   };
 }
 
@@ -70,5 +79,22 @@ export interface IntegrationLaunchDeps {
  */
 export async function launchIntegrationTests(deps: IntegrationLaunchDeps): Promise<void> {
   deps.prepareWorkspace(deps.paths.workspaceRoot);
+  try {
+    await launchOnce(deps);
+  } catch (err) {
+    if (fs.existsSync(deps.paths.suiteStartedMarker)) throw err;
+    console.warn(`[IntegrationLaunch] VS Code exited before the suite started (${err}). Relaunching once.`);
+    await launchOnce(deps);
+  }
+}
+
+/**
+ * VS Code exits with code 1 on the first unresponsive window of a CLI test run
+ * (`windowImpl.ts:1020-1022`, 1.140.0). On a CI runner the window can stall before
+ * the workbench opens, so that exit comes before any test has run, and a second
+ * launch is the same run. A failure after the suite starts is never retried.
+ */
+async function launchOnce(deps: IntegrationLaunchDeps): Promise<void> {
+  fs.rmSync(deps.paths.suiteStartedMarker, { force: true });
   await deps.launch(integrationLaunchOptions(deps.paths));
 }

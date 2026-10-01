@@ -5,24 +5,29 @@
  * found".
  */
 
-import { describe, it, expect } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { afterEach, beforeEach, describe, it, expect } from 'vitest';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import {
   integrationLaunchOptions,
   integrationLaunchPaths,
   launchIntegrationTests,
+  SUITE_STARTED_MARKER_ENV,
   type IntegrationLaunchOptions,
   type IntegrationLaunchPaths,
 } from './test/integration/integrationLaunch';
 
-function fakePaths(workspaceRoot: string): IntegrationLaunchPaths {
+function fakePaths(
+  workspaceRoot: string,
+  suiteStartedMarker = '/nonexistent/suite-started'
+): IntegrationLaunchPaths {
   return {
     extensionDevelopmentPath: '/repo/apps/textscene-vscode',
     extensionTestsPath: '/repo/apps/textscene-vscode/dist/test/integration/suite/index',
     workspaceRoot,
     userDataDir: '/tmp/vscode-test-data',
+    suiteStartedMarker,
   };
 }
 
@@ -36,6 +41,12 @@ describe('integrationLaunchPaths', () => {
 
   it('opens the host on the test workspace, so files under it have a folder', () => {
     expect(integrationLaunchOptions(paths).launchArgs[0]).toBe(paths.workspaceRoot);
+  });
+
+  it('names the start marker to the suite through the extension host environment', () => {
+    expect(integrationLaunchOptions(paths).extensionTestsEnv).toEqual({
+      [SUITE_STARTED_MARKER_ENV]: paths.suiteStartedMarker,
+    });
   });
 });
 
@@ -81,5 +92,77 @@ describe('launchIntegrationTests', () => {
         launch: () => Promise.reject(new Error('host exited 1')),
       })
     ).rejects.toThrow('host exited 1');
+  });
+
+  describe('when VS Code exits before the suite starts', () => {
+    let markerDir: string;
+    let marker: string;
+
+    beforeEach(() => {
+      markerDir = mkdtempSync(join(tmpdir(), 'tsi-marker-'));
+      marker = join(markerDir, 'suite-started');
+    });
+
+    afterEach(() => rmSync(markerDir, { recursive: true, force: true }));
+
+    it('relaunches once, and a passing second launch passes the run', async () => {
+      let launches = 0;
+      await launchIntegrationTests({
+        paths: fakePaths('/ws', marker),
+        prepareWorkspace: () => {},
+        launch: async () => {
+          launches += 1;
+          if (launches === 1) throw new Error('host exited 1');
+        },
+      });
+
+      expect(launches).toBe(2);
+    });
+
+    it('fails the run when the second launch also exits before the suite starts', async () => {
+      let launches = 0;
+      await expect(
+        launchIntegrationTests({
+          paths: fakePaths('/ws', marker),
+          prepareWorkspace: () => {},
+          launch: async () => {
+            launches += 1;
+            throw new Error(`host exited 1 on launch ${launches}`);
+          },
+        })
+      ).rejects.toThrow('host exited 1 on launch 2');
+    });
+
+    it('never relaunches a run whose suite started, so a failing test fails at once', async () => {
+      let launches = 0;
+      await expect(
+        launchIntegrationTests({
+          paths: fakePaths('/ws', marker),
+          prepareWorkspace: () => {},
+          launch: async () => {
+            launches += 1;
+            writeFileSync(marker, '');
+            throw new Error('1 tests failed.');
+          },
+        })
+      ).rejects.toThrow('1 tests failed.');
+
+      expect(launches).toBe(1);
+    });
+
+    it('ignores a marker that an earlier run left behind', async () => {
+      writeFileSync(marker, '');
+      let launches = 0;
+      await launchIntegrationTests({
+        paths: fakePaths('/ws', marker),
+        prepareWorkspace: () => {},
+        launch: async () => {
+          launches += 1;
+          if (launches === 1) throw new Error('host exited 1');
+        },
+      });
+
+      expect(launches).toBe(2);
+    });
   });
 });
