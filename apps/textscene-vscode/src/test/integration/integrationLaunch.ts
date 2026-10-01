@@ -46,8 +46,14 @@ export function integrationLaunchPaths(runnerDir: string): IntegrationLaunchPath
   };
 }
 
-/** Build the argument list VS Code is launched with. */
-export function integrationLaunchOptions(paths: IntegrationLaunchPaths): IntegrationLaunchOptions {
+/**
+ * Build the argument list VS Code is launched with. `platform` is the host's own
+ * unless a test names another.
+ */
+export function integrationLaunchOptions(
+  paths: IntegrationLaunchPaths,
+  platform: string = process.platform
+): IntegrationLaunchOptions {
   return {
     extensionDevelopmentPath: paths.extensionDevelopmentPath,
     extensionTestsPath: paths.extensionTestsPath,
@@ -56,6 +62,9 @@ export function integrationLaunchOptions(paths: IntegrationLaunchPaths): Integra
       // Keep other installed extensions out of the run.
       '--disable-extensions',
       `--user-data-dir=${paths.userDataDir}`,
+      // Xvfb has no GPU, so Chromium emulates one in software. On the Ubuntu runner
+      // the window stalls before the workbench opens, and only Linux runs this way.
+      ...(platform === 'linux' ? ['--disable-gpu'] : []),
     ],
     extensionTestsEnv: { [SUITE_STARTED_MARKER_ENV]: paths.suiteStartedMarker },
   };

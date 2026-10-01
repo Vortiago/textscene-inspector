@@ -43,6 +43,15 @@ describe('integrationLaunchPaths', () => {
     expect(integrationLaunchOptions(paths).launchArgs[0]).toBe(paths.workspaceRoot);
   });
 
+  it('launches without the GPU on Linux, where the suite runs under Xvfb', () => {
+    expect(integrationLaunchOptions(paths, 'linux').launchArgs).toContain('--disable-gpu');
+  });
+
+  it('keeps the GPU on macOS and Windows, which run on a real display', () => {
+    expect(integrationLaunchOptions(paths, 'darwin').launchArgs).not.toContain('--disable-gpu');
+    expect(integrationLaunchOptions(paths, 'win32').launchArgs).not.toContain('--disable-gpu');
+  });
+
   it('names the start marker to the suite through the extension host environment', () => {
     expect(integrationLaunchOptions(paths).extensionTestsEnv).toEqual({
       [SUITE_STARTED_MARKER_ENV]: paths.suiteStartedMarker,
