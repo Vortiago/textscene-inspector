@@ -264,4 +264,82 @@ describe('WebResourceProvider', () => {
       expect(global.fetch).toHaveBeenCalledWith('/fixtures/texture.png');
     });
   });
+
+  describe('stamp', () => {
+    it('stamps an uploaded file, and a new upload at the same path differently', async () => {
+      provider.addUploadedFile('res://tree.glb', new File(['a'], 'tree.glb'));
+      const first = await provider.stamp('res://tree.glb');
+      provider.addUploadedFile('res://tree.glb', new File(['a'], 'tree.glb'));
+
+      expect(first).not.toBeNull();
+      expect(await provider.stamp('res://tree.glb')).not.toBe(first);
+    });
+
+    it('changes the stamp when an upload is removed and the path falls back to the mirror', async () => {
+      provider.addUploadedFile('res://tree.glb', new File(['a'], 'tree.glb'));
+      const uploaded = await provider.stamp('res://tree.glb');
+      provider.removeUploadedFile('res://tree.glb');
+
+      expect(await provider.stamp('res://tree.glb')).not.toBe(uploaded);
+    });
+
+    it('gives no stamp for a mirrored file no fetch has delivered, and fetches nothing', async () => {
+      expect(await provider.stamp('res://tree.glb')).toBeNull();
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('gives no stamp for a mirrored file whose fetch failed', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('offline'));
+      await expect(provider.loadResource('res://tree.glb', 'PackedScene')).rejects.toThrow();
+
+      expect(await provider.stamp('res://tree.glb')).toBeNull();
+    });
+
+    it('gives no stamp for a mirrored file the site answered with its HTML fallback', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
+        mirrorResponse('<html></html>', 'text/html')
+      );
+      await expect(provider.loadResource('res://tree.glb', 'PackedScene')).rejects.toThrow();
+
+      expect(await provider.stamp('res://tree.glb')).toBeNull();
+    });
+
+    it('stamps a mirrored file once a fetch delivered it, by the corpus root it resolves under', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(mirrorResponse('glb'));
+      await provider.loadResource('res://tree.glb', 'PackedScene');
+      const atRoot = await provider.stamp('res://tree.glb');
+      provider.setResourceRoot('demos/3d/truck_town');
+      await provider.loadResource('res://tree.glb', 'PackedScene');
+
+      expect(atRoot).not.toBeNull();
+      expect(await provider.stamp('res://tree.glb')).not.toBe(atRoot);
+      expect(await provider.stamp('res://tree.glb')).toBe(await provider.stamp('res://tree.glb'));
+    });
+
+    it('keeps no stamp for a root whose fetch has not delivered the file', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(mirrorResponse('glb'));
+      await provider.loadResource('res://tree.glb', 'PackedScene');
+      provider.setResourceRoot('demos/3d/truck_town');
+
+      expect(await provider.stamp('res://tree.glb')).toBeNull();
+    });
+
+    it('stamps an upload only under the corpus root it was added in', async () => {
+      provider.addUploadedFile('res://tree.glb', new File(['a'], 'tree.glb'));
+      const uploaded = await provider.stamp('res://tree.glb');
+      provider.setResourceRoot('demos/3d/truck_town');
+
+      expect(await provider.stamp('res://tree.glb')).not.toBe(uploaded);
+    });
+  });
 });
+
+/** A successful mirror response holding `body`, served as `contentType`. */
+function mirrorResponse(body: string, contentType = 'application/octet-stream') {
+  return {
+    ok: true,
+    headers: { get: (name: string) => (name === 'content-type' ? contentType : null) },
+    text: async () => body,
+    arrayBuffer: async () => new TextEncoder().encode(body).buffer,
+  };
+}

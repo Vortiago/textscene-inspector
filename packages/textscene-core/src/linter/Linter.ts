@@ -1,15 +1,25 @@
 /** The linting engine for TSCN files: strict parsing, then the semantic rules. */
 
 import type { TscnScene, TscnNode } from '../parser/types.js';
+import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { orphanDiagnostics } from './orphanDiagnostics.js';
 import { danglingResourceDiagnostics } from './danglingResources.js';
 import {
-  SEVERITY_ORDER,
-  flooredSeverity,
+  unimportableGltfDiagnostics,
+  usedGltfResources,
+  type ProjectReads,
+  type UsedGltf,
+} from './unimportableGltf.js';
+import { GltfVerdicts } from './gltfVerdicts.js';
+import { PLUGIN_PROBE_PATHS, ProjectPluginProbes } from './projectPlugins.js';
+import { LintSession, type GltfUse, type ProjectLint } from './LintSession.js';
+import { sortDiagnostics } from './mergeDiagnostics.js';
+import {
   type Diagnostic,
   type RuleContext,
   type ParseError,
   type SourceLines,
+  type StrictParseResult,
 } from './types.js';
 import { ruleRegistry } from './RuleRegistry.js';
 import { StrictTscnParser } from './StrictTscnParser.js';
@@ -17,6 +27,8 @@ import { isLegacyFormat, readHeaderFormat } from './headerFormat.js';
 import { FILE_DIAGNOSTICS, STRICT_PARSER_RULE_NAME } from './fileDiagnostics.js';
 import { armDiagnostic } from './ruleArms.js';
 import { headingLocation } from './sourceLocation.js';
+
+const NO_GLTF_USES: ReadonlyMap<string, GltfUse> = new Map();
 
 /**
  * `diagnostic` put on `heading`, unless it carries a location of its own. A copy, not a write:
@@ -29,6 +41,11 @@ function onHeading(diagnostic: Diagnostic, heading: Diagnostic['location']): Dia
 
 export class Linter {
   private parser = new StrictTscnParser();
+  /** What the cross-file rules read, per provider, for the linter's lifetime, so every session shares it. */
+  private readonly projectReads: ProjectReads = {
+    verdicts: new GltfVerdicts(),
+    plugins: new ProjectPluginProbes(),
+  };
 
   /**
    * Lint TSCN file content in two phases: strict parsing (syntax and format errors), then the semantic rules.
@@ -37,13 +54,87 @@ export class Linter {
    * @returns Array of diagnostics (parse errors + rule violations)
    */
   lint(content: string): Diagnostic[] {
+    return sortDiagnostics(this.lintFile(content).diagnostics);
+  }
+
+  /**
+   * A session for one document a host lints again on each edit. It adds the rules that read the files the document
+   * uses, and keeps their last diagnostics beside the file's own while the next read is pending.
+   */
+  session(): LintSession {
+    return new LintSession((content, provider) => this.lintProject(content, provider));
+  }
+
+  /**
+   * `lint`, plus the diagnostics of the rules that read the files `content` uses through `provider`, sorted, in one
+   * answer. A file the provider cannot deliver adds no diagnostic.
+   *
+   * @param content - Raw TSCN file content
+   * @param provider - Loads a `res://` path of the file's project, or null for a file in no project
+   */
+  async lintComplete(content: string, provider: ResourceProvider | null): Promise<Diagnostic[]> {
+    const { now, later } = this.session().lint(content, provider);
+    return (await later) ?? now;
+  }
+
+  /** One strict parse for both the file's own rules and the cross-file ones, as a session assembles them. */
+  private lintProject(content: string, provider: ResourceProvider | null): ProjectLint {
+    const { diagnostics, parsed } = this.lintFile(content);
+    const usedGltf = provider && parsed?.scene ? usedGltfResources(parsed.scene) : [];
+    if (!provider || !parsed || usedGltf.length === 0) {
+      return { local: diagnostics, gltfUses: NO_GLTF_USES, crossFile: null, reads: [] };
+    }
+
+    const gltfUses = new Map<string, GltfUse>();
+    for (const { resource } of usedGltf) {
+      gltfUses.set(resource.id, { path: resource.path, location: headingLocation(parsed.lines, resource) });
+    }
+    return {
+      local: diagnostics,
+      gltfUses,
+      crossFile: this.gltfDiagnostics(usedGltf, parsed.lines, provider),
+      reads: [...new Set(usedGltf.map(({ resource }) => resource.path)), ...PLUGIN_PROBE_PATHS],
+    };
+  }
+
+  /**
+   * The cross-file rule's diagnostics, or its crash as `rule-crashed`. A throw is that rule's own diagnostic, as in
+   * `lintNode`: a rejection would reach a host as a failed lint, and the CLI would drop every local diagnostic with it.
+   * The crash names no line, since the rule is about the whole file.
+   */
+  private async gltfDiagnostics(
+    used: readonly UsedGltf[],
+    lines: SourceLines,
+    provider: ResourceProvider
+  ): Promise<Diagnostic[]> {
+    try {
+      return await unimportableGltfDiagnostics(used, lines, provider, this.projectReads);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      const rule = FILE_DIAGNOSTICS.unimportableGltf.ruleName;
+      return [
+        armDiagnostic(
+          FILE_DIAGNOSTICS.ruleCrashed,
+          { name: '<unknown>', type: '<unknown>' },
+          `Rule '${rule}' threw while reading the files this scene uses: ${reason}. ` +
+            'Its own findings are missing; every file-local rule ran.'
+        ),
+      ];
+    }
+  }
+
+  /**
+   * The unsorted diagnostics of `content` alone, and the strict parse they came from. No parse for a legacy-format
+   * file, which is declined whole.
+   */
+  private lintFile(content: string): { diagnostics: Diagnostic[]; parsed?: StrictParseResult } {
     const diagnostics: Diagnostic[] = [];
 
     // Phase 0: the file's own format version. These rules are written against
     // the format Godot writes today, so an older one is declined whole rather
     // than reported against a grammar it predates.
     const legacy = this.legacyFormatDiagnostic(content);
-    if (legacy) return [legacy];
+    if (legacy) return { diagnostics: [legacy] };
 
     // Phase 1: strict parsing.
     const parseResult = this.parser.parse(content);
@@ -62,7 +153,7 @@ export class Linter {
       for (const d of this.lintScene(scene, lines)) diagnostics.push(d);
     }
 
-    return this.sortDiagnostics(diagnostics);
+    return { diagnostics, parsed: parseResult };
   }
 
   /**
@@ -159,15 +250,5 @@ export class Linter {
     for (const child of node.children) {
       this.lintNode(scene, child, lines, diagnostics);
     }
-  }
-
-  /**
-   * Sort diagnostics by severity, errors first, an unranked tier floored to `info`. A bare index gives `undefined` for
-   * a severity outside the union, and the `NaN` difference reads as "equal", leaving the order undecided.
-   */
-  private sortDiagnostics(diagnostics: Diagnostic[]): Diagnostic[] {
-    return diagnostics.sort(
-      (a, b) => SEVERITY_ORDER[flooredSeverity(a.severity)] - SEVERITY_ORDER[flooredSeverity(b.severity)]
-    );
   }
 }

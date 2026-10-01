@@ -1,11 +1,10 @@
 /**
- * One error per registered resource slot whose reference names an id the file never declares. The loader resolves the
- * reference while it tokenises the value, before any setter, and fails the whole load on a miss:
- * `resource_format_text.cpp:113` `ERR_FAIL_COND_V(!int_resources.has(id), ERR_INVALID_PARAMETER)` and the ext twin at `:138`.
- * So the fact lives here once, and the registry says which keys are slots (`createResourceReferenceValidator` marks them).
+ * One error per registered resource slot whose reference names an id the file never declares. The loader resolves it
+ * while it tokenises the value, before any setter, and fails the whole load on a miss (`resource_format_text.cpp:113`,
+ * and the ext twin at `:138`). The registry says which keys are slots (`createResourceReferenceValidator` marks them).
  */
 
-import type { TscnInternalResource, TscnNode, TscnScene } from '../parser/types.js';
+import type { BuiltSection, TscnNode, TscnScene } from '../parser/types.js';
 import type { Diagnostic, SourceLines } from './types.js';
 import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
 import { armDiagnostic } from './ruleArms.js';
@@ -20,10 +19,10 @@ interface Declared {
   readonly int: ReadonlySet<string>;
 }
 
-/** One section whose body the sweep reads: a node, or a sub-resource named by its `id=`. */
+/** One section whose body the sweep reads: a node, a sub-resource named by its `id=`, or a `.tres` body. */
 interface Owner {
   /** What the scan built from the section, the key into `SourceLines`. */
-  readonly built: TscnNode | TscnInternalResource;
+  readonly built: BuiltSection;
   readonly name: string;
   readonly type: string;
   readonly properties: Record<string, unknown>;
@@ -66,7 +65,7 @@ function sweep(
       armDiagnostic(
         FILE_DIAGNOSTICS.danglingResourceReference,
         owner,
-        `Property '${key}' references ${value.trim()}, ${where}. Godot fails to load the scene.`,
+        `Property '${key}' references ${value.trim()}, ${where}. Godot fails to load the file.`,
         propertyLocation(lines, owner.built, key)
       )
     );
@@ -92,6 +91,17 @@ export function danglingResourceDiagnostics(scene: TscnScene, lines: SourceLines
 
   const declared: Declared = { ext, int };
   const none: ReadonlySet<string> = new Set();
+  // A `.tres` body parses at `:774` with the ext and sub callbacks set at `:1191-1192`, after every sub-resource.
+  if (scene.mainResource) {
+    const { mainResource } = scene;
+    const owner: Owner = {
+      built: mainResource,
+      name: '<unknown>',
+      type: scene.resourceType ?? '',
+      properties: mainResource.data,
+    };
+    sweep(owner, declared, none, lines, diagnostics);
+  }
   const visit = (node: TscnNode): void => {
     const properties = node.properties as Record<string, unknown>;
     sweep({ built: node, name: node.name, type: node.type, properties }, declared, none, lines, diagnostics);

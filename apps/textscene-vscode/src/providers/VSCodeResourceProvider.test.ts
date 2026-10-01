@@ -84,6 +84,25 @@ describe('VSCodeResourceProvider', () => {
       ).rejects.toThrow(/Path traversal detected/);
     });
 
+    it('refuses a path that climbs out of the project root in the document-relative fallback too', async () => {
+      // project.godot at /workspace/game: `res://../other.png` escapes it, while the
+      // document-relative spelling lands at /workspace/game/other.png, inside the workspace.
+      vscode.workspace.fs.stat.mockImplementation((uri: ReturnType<typeof createMockUri>) =>
+        uri.fsPath.replace(/\\/g, '/') === '/workspace/game/project.godot'
+          ? Promise.resolve({ type: 1, ctime: 0, mtime: 0, size: 100 })
+          : Promise.reject(new Error('Not found'))
+      );
+      const gameProvider = new VSCodeResourceProvider(
+        workspaceRoot,
+        createMockUri('/workspace/game/scenes/level.tscn')
+      );
+
+      await expect(gameProvider.loadResource('res://../other.png', 'Texture2D')).rejects.toThrow(
+        /climbs out of the project root/
+      );
+      expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
+    });
+
     it('should handle paths without res:// prefix', async () => {
       const content = 'shader code';
       const mockData = createMockFileData(content);
@@ -94,6 +113,30 @@ describe('VSCodeResourceProvider', () => {
 
       expect(typeof result).toBe('string');
       expect(result).toBe(content);
+    });
+
+    it("reads a relative path that climbs from the document's directory, as Godot resolves it", async () => {
+      // documentUri is /workspace/scenes/test.tscn, so `../textures/wood.png` is
+      // /workspace/textures/wood.png: inside the project and the workspace.
+      let readUri: ReturnType<typeof createMockUri> | undefined;
+      vscode.workspace.fs.readFile.mockImplementation((uri: ReturnType<typeof createMockUri>) => {
+        if (uri.fsPath.replace(/\\/g, '/') !== '/workspace/textures/wood.png') {
+          return Promise.reject(new Error('Not found'));
+        }
+        readUri = uri;
+        return Promise.resolve(createMockFileData('wood-bytes'));
+      });
+
+      await provider.loadResource('../textures/wood.png', 'Texture2D');
+
+      expect(readUri?.fsPath.replace(/\\/g, '/')).toBe('/workspace/textures/wood.png');
+    });
+
+    it('refuses a relative path that climbs out of the workspace', async () => {
+      await expect(provider.loadResource('../../secrets/key.pem', 'TextFile')).rejects.toThrow(
+        /Failed to load resource/
+      );
+      expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
     });
   });
 

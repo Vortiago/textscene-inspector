@@ -4,13 +4,7 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { basename } from 'node:path';
-
-// A negative fixture exists to error, so linting it would fail every commit that touches one.
-// `fixtureLint.test.ts` reads the same list and asserts each one does error.
-const NEGATIVE_FIXTURES = new Set(
-  JSON.parse(readFileSync(new URL('./scenes/fixtures/negative-fixtures.json', import.meta.url), 'utf8')).files
-);
+import { isNegativeFixture } from './scripts/githooks/negativeFixtures.mjs';
 
 /**
  * One argument for the command string lint-staged parses. Plain double quotes, not
@@ -65,9 +59,8 @@ export default {
   // Function form, so the staged paths reach only the lint CLI: lint-staged appends them to every
   // string command, and the esbuild build behind `build:linter` would read them as entry points.
   '*.{tscn,tres}': (files) => {
-    // `basename`, not a split: lint-staged hands the hook absolute paths, and `node:path` is
-    // `path.win32` on Windows, so it cuts a backslash path there and leaves a POSIX name alone.
-    const lintable = files.filter((f) => !NEGATIVE_FIXTURES.has(basename(f)));
+    // A negative fixture exists to error, so linting it would fail every commit that touches one.
+    const lintable = files.filter((f) => !isNegativeFixture(f));
     if (lintable.length === 0) return [];
     return ['pnpm build:linter', `node apps/textscene-linter/dist/cli.js ${lintable.map(quote).join(' ')}`];
   },

@@ -5,7 +5,7 @@
 
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { unquoteString } from '../../../parser/utils';
-import { STRING_LITERAL_SOURCE } from '../../../godot/index.js';
+import { stringArrayBodies } from '../../../godot/index.js';
 import { findExtResource, findSubResource, parseResourceReference } from '../../SubResourceResolver';
 import { resolveRefToResourcePath, subResourceTypeGate } from '../../subResourcePath';
 import type { FontCacheReader, FontLoaderFn, FontResource } from './types';
@@ -31,21 +31,11 @@ export function extractResourceRefs(value: string): string[] {
 }
 
 /**
- * `PackedStringArray("a", "b")` → `["a", "b"]`, each element decoded as `unquoteString` decodes
- * it, so `\n` is a newline and not the letter `n`.
+ * `PackedStringArray("a", "b")`, `Array[String](["a", "b"])` or `["a", "b"]` → `["a", "b"]`, each element decoded as
+ * `unquoteString` decodes it, so `\n` is a newline and not the letter `n`. Empty for any other value.
  */
 export function parsePackedStringArray(value: string): string[] {
-  const match = value.match(/^PackedStringArray\s*\(([\s\S]*)\)$/);
-  if (!match) return [];
-  const inner = match[1]!.trim();
-  if (inner === '') return [];
-  const strings: string[] = [];
-  const re = new RegExp(STRING_LITERAL_SOURCE, 'g');
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(inner)) !== null) {
-    strings.push(unquoteString(m[0]));
-  }
-  return strings;
+  return stringArrayBodies(value)?.map(unquoteString) ?? [];
 }
 
 /**

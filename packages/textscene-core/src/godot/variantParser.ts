@@ -7,7 +7,7 @@
  * Every pattern below derives from one body string per literal, so no copy can diverge on padding.
  */
 import { TSCN_FLOAT_PATTERN_SOURCE, TSCN_FLOAT_RE } from './number.js';
-import { STRING_LITERAL_SOURCE } from './string.js';
+import { STRING_LITERAL_SOURCE, stringLiteralBodies } from './string.js';
 import { boolLiteralAsNumber } from './variantBool.js';
 
 const WS = '\\s*';
@@ -23,6 +23,12 @@ const NODE_PATH_BODY = `NodePath${WS}\\(${WS}"([^"]*)"${WS}\\)`;
  * the shape uses `v.arrayLiteral` instead of re-deriving this.
  */
 export const ARRAY_LITERAL_RE = /^\[([\s\S]*)\]$/;
+
+/**
+ * {@link ARRAY_LITERAL_RE} with the padding the other packed spellings take. A multi-line value keeps its last raw
+ * line, so `]` can arrive with trailing blanks the tokenizer skips.
+ */
+const PADDED_ARRAY_LITERAL_RE = new RegExp(`^${WS}\\[([\\s\\S]*)\\]${WS}$`);
 
 /**
  * A bare `[…]` or a typed `Array[Type]([…])` literal. The writer wraps elements in `Array[Type](…)` when `Array::is_typed()`
@@ -181,7 +187,7 @@ export function packedArrayForms(packedTypeName: string): readonly RegExp[] {
   return [
     packedArrayLiteral(packedTypeName),
     new RegExp(`^${WS}Array${WS}\\[${WS}${element}${WS}\\]${WS}\\(${WS}\\[([\\s\\S]*)\\]${WS}\\)${WS}$`),
-    ARRAY_LITERAL_RE,
+    PADDED_ARRAY_LITERAL_RE,
   ];
 }
 
@@ -211,6 +217,19 @@ export function packedArrayBody(forms: readonly RegExp[], value: string): Packed
     if (match) return { flat: i === 0, body: match[1]!.trim() };
   }
   return null;
+}
+
+/** {@link packedArrayForms} for `PackedStringArray`, built once for every reader of a string-array slot. */
+export const STRING_ARRAY_FORMS = packedArrayForms('PackedStringArray');
+
+/**
+ * The body of each `"…"` element of a `PackedStringArray(…)`, `Array[String]([…])` or bare `[…]`, escapes still as
+ * written, or null when the value is none of the three or an element is not one string literal. Each element must be
+ * one TK_STRING (variant_parser.cpp:1526-1529), and one trailing comma loads ({@link stringLiteralBodies}).
+ */
+export function stringArrayBodies(value: string): string[] | null {
+  const parsed = packedArrayBody(STRING_ARRAY_FORMS, value);
+  return parsed === null ? null : stringLiteralBodies(parsed.body);
 }
 
 /** What {@link variantShape} names. `call` is any `Name(…)` constructor or reference. */
