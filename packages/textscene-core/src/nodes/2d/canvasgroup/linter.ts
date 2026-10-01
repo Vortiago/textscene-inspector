@@ -7,7 +7,15 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { clipAncestry } from '../../canvasitem/shared/clipAncestry.js';
+
+const arms = {
+  ancestorClipsChildren: groundedArm('canvasgroup-ancestor-clips-children', {
+    kind: 'configuration-warning',
+  }),
+  nestedInCanvasGroup: groundedArm('canvasgroup-nested-in-canvasgroup', { kind: 'configuration-warning' }),
+} as const satisfies RuleArms<string>;
 
 function checkCanvasGroup(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -20,23 +28,21 @@ function checkCanvasGroup(context: RuleContext): Diagnostic[] {
   const { clippingAncestor, canvasGroupAncestor } = clipAncestry(scene, node);
 
   if (clippingAncestor) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `CanvasGroup '${node.name}' has ancestor '${clippingAncestor.name}' which clips its children, so this CanvasGroup will not function properly.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'canvasgroup-ancestor-clips-children',
-    });
+    reportArm(
+      diagnostics,
+      arms.ancestorClipsChildren,
+      node,
+      `CanvasGroup '${node.name}' has ancestor '${clippingAncestor.name}' which clips its children, so this CanvasGroup will not function properly.`
+    );
   }
 
   if (canvasGroupAncestor) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `CanvasGroup '${node.name}' has ancestor '${canvasGroupAncestor.name}' which is a CanvasGroup, so this CanvasGroup will not function properly.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'canvasgroup-nested-in-canvasgroup',
-    });
+    reportArm(
+      diagnostics,
+      arms.nestedInCanvasGroup,
+      node,
+      `CanvasGroup '${node.name}' has ancestor '${canvasGroupAncestor.name}' which is a CanvasGroup, so this CanvasGroup will not function properly.`
+    );
   }
 
   return diagnostics;
@@ -49,18 +55,7 @@ const canvasGroupAncestryRule: LintRule = {
       'Warns when a CanvasGroup has an ancestor that clips its children or is itself a CanvasGroup, either of which breaks the backbuffer compositing this node relies on',
     category: 'validation',
     applicableNodeTypes: ['CanvasGroup'],
-    emits: [
-      {
-        ruleName: 'canvasgroup-ancestor-clips-children',
-        severity: 'warning',
-        grounding: { kind: 'configuration-warning' },
-      },
-      {
-        ruleName: 'canvasgroup-nested-in-canvasgroup',
-        severity: 'warning',
-        grounding: { kind: 'configuration-warning' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkCanvasGroup,
 };

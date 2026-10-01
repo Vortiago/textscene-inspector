@@ -12,6 +12,17 @@ import { indexedElements, nodePathLiteral } from '../../../../godot/index.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { unsatisfiedIndices } from '../../../../linter/reportedIndices.js';
 import { resolveSplineSettingLeaf } from './linterParser.js';
+import {
+  armDiagnostic,
+  armEmits,
+  groundedArm,
+  reportArm,
+  type RuleArms,
+} from '../../../../linter/ruleArms.js';
+
+const arms = {
+  settingWithoutPath3D: groundedArm('splineik3d-setting-without-path-3d', { kind: 'configuration-warning' }),
+} as const satisfies RuleArms<string>;
 
 /** `NodePath("")` and a bare `""`, the two spellings of the unset path. */
 function isUnsetPath(raw: string): boolean {
@@ -42,21 +53,20 @@ function checkSplineIK3D(context: RuleContext): Diagnostic[] {
   // message. See `reportedIndices.ts`.
   const { listed: missing, total } = unsatisfiedIndices(count, posed);
   const omitted = total - missing.length;
-  const diagnostics: Diagnostic[] = missing.map((index) => ({
-    severity: 'warning' as const,
-    message: `SplineIK3D '${node.name}' setting ${index} has no Path3D. Godot resolves 'settings/${index}/path_3d' before it reads the curve and skips the setting when nothing comes back, so this chain of bones is never posed.`,
-    nodeName: node.name,
-    nodeType: node.type,
-    ruleName: 'splineik3d-setting-without-path-3d',
-  }));
+  const diagnostics: Diagnostic[] = missing.map((index) =>
+    armDiagnostic(
+      arms.settingWithoutPath3D,
+      node,
+      `SplineIK3D '${node.name}' setting ${index} has no Path3D. Godot resolves 'settings/${index}/path_3d' before it reads the curve and skips the setting when nothing comes back, so this chain of bones is never posed.`
+    )
+  );
   if (omitted > 0) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `SplineIK3D '${node.name}' has ${omitted.toLocaleString('en-US')} further settings with no Path3D, not listed individually.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'splineik3d-setting-without-path-3d',
-    });
+    reportArm(
+      diagnostics,
+      arms.settingWithoutPath3D,
+      node,
+      `SplineIK3D '${node.name}' has ${omitted.toLocaleString('en-US')} further settings with no Path3D, not listed individually.`
+    );
   }
   return diagnostics;
 }
@@ -68,13 +78,7 @@ const splineIK3DPathRule: LintRule = {
       'Warns when a SplineIK3D setting names no Path3D, the configuration Godot itself flags and then skips',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'SplineIK3D'),
-    emits: [
-      {
-        ruleName: 'splineik3d-setting-without-path-3d',
-        severity: 'warning',
-        grounding: { kind: 'configuration-warning' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkSplineIK3D,
 };

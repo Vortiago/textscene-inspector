@@ -5,7 +5,7 @@
  * `emitsGrounding.test.ts` checks these cites beside the registry's own arms.
  */
 
-import type { RuleArm } from './ruleArms.js';
+import { groundedArm, type RuleArm } from './ruleArms.js';
 
 export const FILE_DIAGNOSTICS = {
   /**
@@ -13,15 +13,11 @@ export const FILE_DIAGNOSTICS = {
    * loader's three header-version comparisons are all `>`, so 4.6.3 parses a `format=2` file with the current grammar.
    * Declining it is a decision about this tool's scope.
    */
-  legacyFormat: {
-    severity: 'info',
-    ruleName: 'legacy-format-version',
-    grounding: {
-      kind: 'no-engine-counterpart',
-      scope: 'previewer-limitation',
-      because: 'the engine reads the file; the rules are written against the format it writes today',
-    },
-  },
+  legacyFormat: groundedArm('legacy-format-version', {
+    kind: 'no-engine-counterpart',
+    scope: 'previewer-limitation',
+    because: 'the engine reads the file; the rules are written against the format it writes today',
+  }),
   /**
    * A `parent=` path that resolves against nothing. Godot warns, re-parents the
    * node to the scene root and renames it `<path>#<name>`, so the file loads
@@ -69,15 +65,11 @@ export const FILE_DIAGNOSTICS = {
    * error. Every other rule still runs. Not an engine claim about the
    * file: the rule's own findings for that node are simply missing.
    */
-  ruleCrashed: {
-    severity: 'error',
-    ruleName: 'rule-crashed',
-    grounding: {
-      kind: 'no-engine-counterpart',
-      scope: 'linter-failure',
-      because: 'a rule threw instead of reporting; the linter says which one rather than dropping the file',
-    },
-  },
+  ruleCrashed: groundedArm('rule-crashed', {
+    kind: 'no-engine-counterpart',
+    scope: 'linter-failure',
+    because: 'a rule threw instead of reporting; the linter says which one rather than dropping the file',
+  }),
   /**
    * A well-formed `SubResource("id")` / `ExtResource("id")` in a registered resource slot whose id the file never
    * declares. Not a slice's claim: the loader resolves it while tokenising the value, before any setter, so every slot

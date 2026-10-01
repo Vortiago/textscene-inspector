@@ -11,6 +11,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MissingResourcesProvider, useMissingResources } from '../../contexts/MissingResourcesContext';
 import { MissingResourcesPanel } from './MissingResourcesPanel';
+import { escapeRegExp } from '@textscene/dev-kit';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const panelCss = readFileSync(join(__dirname, 'MissingResourcesPanel.module.css'), 'utf-8');
@@ -60,7 +61,7 @@ describe('<MissingResourcesPanel> scale behavior (WI-UX-13)', () => {
 
 /** The body of a top-level CSS rule. It does not walk nested rules. */
 function extractRule(css: string, selector: string): string {
-  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escaped = escapeRegExp(selector);
   const match = css.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`));
   if (!match) {
     throw new Error(`Could not find rule for selector "${selector}" in the CSS file.`);

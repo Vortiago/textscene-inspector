@@ -5,8 +5,13 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
+
+const arms = {
+  noScript: groundedArm('container-no-script', { kind: 'configuration-warning' }),
+} as const satisfies RuleArms<string>;
 
 function checkContainer(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -18,13 +23,11 @@ function checkContainer(context: RuleContext): Diagnostic[] {
   if (!resourceSlotIsEmpty(props.script)) return [];
 
   return [
-    {
-      severity: 'warning',
-      message: `Container '${node.name}' serves no purpose by itself unless a script configures its children's placement. If you don't intend to add a script, use a plain Control node instead.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'container-no-script',
-    },
+    armDiagnostic(
+      arms.noScript,
+      node,
+      `Container '${node.name}' serves no purpose by itself unless a script configures its children's placement. If you don't intend to add a script, use a plain Control node instead.`
+    ),
   ];
 }
 
@@ -38,9 +41,7 @@ const containerScriptRule: LintRule = {
     // only the exact class warns, and `applicableNodeTypeMatcher` would be wrong here.
     exactClassByDesign: 'container.cpp:210',
     applicableNodeTypes: ['Container'],
-    emits: [
-      { ruleName: 'container-no-script', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-    ],
+    emits: armEmits(arms),
   },
   check: checkContainer,
 };

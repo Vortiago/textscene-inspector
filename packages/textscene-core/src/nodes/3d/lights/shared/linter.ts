@@ -9,8 +9,11 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { hasNonUnitScale3D } from '../../../../linter/transformBasis.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
-const SCALE_RULE = 'light3d-non-unit-scale';
+const arms = {
+  nonUnitScale: groundedArm('light3d-non-unit-scale', { kind: 'configuration-warning' }),
+} as const satisfies RuleArms<string>;
 
 function checkLight3DScale(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -23,13 +26,11 @@ function checkLight3DScale(context: RuleContext): Diagnostic[] {
   if (!hasNonUnitScale3D(properties.transform)) return [];
 
   return [
-    {
-      severity: 'warning',
-      message: `${node.type} '${node.name}' has a non-unit scale. A light's scale does not affect the visual size of the light, the same configuration warning Godot's own editor reports.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: SCALE_RULE,
-    },
+    armDiagnostic(
+      arms.nonUnitScale,
+      node,
+      `${node.type} '${node.name}' has a non-unit scale. A light's scale does not affect the visual size of the light, the same configuration warning Godot's own editor reports.`
+    ),
   ];
 }
 
@@ -40,7 +41,7 @@ const light3DScaleValidationRule: LintRule = {
       "Mirrors Light3D::get_configuration_warnings' own-scale check across every concrete light type",
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Light3D'),
-    emits: [{ ruleName: SCALE_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: armEmits(arms),
   },
   check: checkLight3DScale,
 };

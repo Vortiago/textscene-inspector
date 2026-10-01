@@ -9,8 +9,13 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { extractNodePath, isValidProperties } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 
-const RULE_NAME = 'multiplayersynchronizer-root-path-dangling';
+const arms = {
+  rootPathDangling: groundedArm('multiplayersynchronizer-root-path-dangling', {
+    kind: 'configuration-warning',
+  }),
+} as const satisfies RuleArms<string>;
 
 function checkMultiplayerSynchronizer(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
@@ -26,13 +31,11 @@ function checkMultiplayerSynchronizer(context: RuleContext): Diagnostic[] {
   if (target.status !== 'missing') return [];
 
   return [
-    {
-      severity: 'warning',
-      message: `MultiplayerSynchronizer '${node.name}' has root_path set to NodePath("${path}"), which names no node in this file. A valid Root Path is required for MultiplayerSynchronizer to synchronize properties.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: RULE_NAME,
-    },
+    armDiagnostic(
+      arms.rootPathDangling,
+      node,
+      `MultiplayerSynchronizer '${node.name}' has root_path set to NodePath("${path}"), which names no node in this file. A valid Root Path is required for MultiplayerSynchronizer to synchronize properties.`
+    ),
   ];
 }
 
@@ -43,7 +46,7 @@ const multiplayerSynchronizerRootPathRule: LintRule = {
       "Warns when MultiplayerSynchronizer's root_path names no node in this file, mirroring Godot's own configuration warning",
     category: 'validation',
     applicableNodeTypes: ['MultiplayerSynchronizer'],
-    emits: [{ ruleName: RULE_NAME, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: armEmits(arms),
   },
   check: checkMultiplayerSynchronizer,
 };

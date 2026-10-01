@@ -11,6 +11,19 @@ import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { isZeroApprox } from '../../../godot/index.js';
 import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+
+const arms = {
+  endBeforeBegin: groundedArm('geometryinstance3d-visibility-range-end-before-begin', {
+    kind: 'configuration-warning',
+  }),
+  beginFadeWithoutMargin: groundedArm('geometryinstance3d-visibility-range-begin-fade-without-margin', {
+    kind: 'configuration-warning',
+  }),
+  endFadeWithoutMargin: groundedArm('geometryinstance3d-visibility-range-end-fade-without-margin', {
+    kind: 'configuration-warning',
+  }),
+} as const satisfies RuleArms<string>;
 
 const FADE_SELF = 1;
 const FADE_DEPENDENCIES = 2;
@@ -54,38 +67,35 @@ function checkGeometryInstance3D(context: RuleContext): Diagnostic[] {
     // in JS as in C++, and an infinite begin is the engine's own warning
     // (visual_instance_3d.cpp:512).
     if (end !== null && begin !== null && end <= begin) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `${node.type} visibility range's End distance (${end}) is set to a non-zero value, but is lower than or equal to the Begin distance (${begin}). This means the node will never be visible. Set End to 0 or to a value greater than Begin.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'geometryinstance3d-visibility-range-end-before-begin',
-      });
+      reportArm(
+        diagnostics,
+        arms.endBeforeBegin,
+        node,
+        `${node.type} visibility range's End distance (${end}) is set to a non-zero value, but is lower than or equal to the Begin distance (${begin}). This means the node will never be visible. Set End to 0 or to a value greater than Begin.`
+      );
     }
   }
 
   // scene/3d/visual_instance_3d.cpp: fade_mode in {SELF, DEPENDENCIES} &&
   // !is_zero_approx(visibility_range_begin) && is_zero_approx(visibility_range_begin_margin)
   if (fades && !isZeroish(props.visibility_range_begin) && isZeroish(props.visibility_range_begin_margin)) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `${node.type} is configured to fade in smoothly over distance, but 'visibility_range_begin_margin' is 0. Increase Visibility Range Begin Margin above 0 for the fade transition to be noticeable.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'geometryinstance3d-visibility-range-begin-fade-without-margin',
-    });
+    reportArm(
+      diagnostics,
+      arms.beginFadeWithoutMargin,
+      node,
+      `${node.type} is configured to fade in smoothly over distance, but 'visibility_range_begin_margin' is 0. Increase Visibility Range Begin Margin above 0 for the fade transition to be noticeable.`
+    );
   }
 
   // scene/3d/visual_instance_3d.cpp: fade_mode in {SELF, DEPENDENCIES} &&
   // !is_zero_approx(visibility_range_end) && is_zero_approx(visibility_range_end_margin)
   if (fades && !isZeroish(props.visibility_range_end) && isZeroish(props.visibility_range_end_margin)) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `${node.type} is configured to fade out smoothly over distance, but 'visibility_range_end_margin' is 0. Increase Visibility Range End Margin above 0 for the fade transition to be noticeable.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'geometryinstance3d-visibility-range-end-fade-without-margin',
-    });
+    reportArm(
+      diagnostics,
+      arms.endFadeWithoutMargin,
+      node,
+      `${node.type} is configured to fade out smoothly over distance, but 'visibility_range_end_margin' is 0. Increase Visibility Range End Margin above 0 for the fade transition to be noticeable.`
+    );
   }
 
   return diagnostics;
@@ -101,23 +111,7 @@ const geometryInstance3DValidationRule: LintRule = {
     // name, so it would miss MeshInstance3D, Sprite3D, Label3D and GPUParticles3D.
     // The matcher keeps the CSG shapes, as the Viewport size rule keeps SubViewport.
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'GeometryInstance3D'),
-    emits: [
-      {
-        ruleName: 'geometryinstance3d-visibility-range-end-before-begin',
-        severity: 'warning',
-        grounding: { kind: 'configuration-warning' },
-      },
-      {
-        ruleName: 'geometryinstance3d-visibility-range-begin-fade-without-margin',
-        severity: 'warning',
-        grounding: { kind: 'configuration-warning' },
-      },
-      {
-        ruleName: 'geometryinstance3d-visibility-range-end-fade-without-margin',
-        severity: 'warning',
-        grounding: { kind: 'configuration-warning' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkGeometryInstance3D,
 };

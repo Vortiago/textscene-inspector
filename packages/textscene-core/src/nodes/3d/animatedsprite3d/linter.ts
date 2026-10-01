@@ -8,6 +8,18 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { heldResource, resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { DEFAULT_ANIMATION_NAME, literalText } from '../../../godot/index.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+
+const arms = {
+  requiresSpriteFrames: groundedArm('animatedsprite3d-requires-spriteframes', {
+    kind: 'configuration-warning',
+  }),
+  animationWithoutSpriteFrames: {
+    severity: 'error',
+    ruleName: 'animatedsprite3d-animation-no-spriteframes',
+    grounding: { kind: 'engine', at: 'sprite_3d.cpp:1441' },
+  },
+} as const satisfies RuleArms<string>;
 
 function checkAnimatedSprite3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -17,13 +29,12 @@ function checkAnimatedSprite3D(context: RuleContext): Diagnostic[] {
   // An absent `sprite_frames` warns, since a script may assign one at runtime. A present but
   // unresolvable one is the ADR-0032 error arm.
   if (heldResource(rawProps.sprite_frames) === undefined) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `AnimatedSprite3D requires a 'sprite_frames' property. AnimatedSprite3D cannot play animations without a SpriteFrames resource.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'animatedsprite3d-requires-spriteframes',
-    });
+    reportArm(
+      diagnostics,
+      arms.requiresSpriteFrames,
+      node,
+      `AnimatedSprite3D requires a 'sprite_frames' property. AnimatedSprite3D cannot play animations without a SpriteFrames resource.`
+    );
   }
 
   // An `animation` with no SpriteFrames is also the error arm: Godot clears the name to empty.
@@ -37,13 +48,12 @@ function checkAnimatedSprite3D(context: RuleContext): Diagnostic[] {
     literalText(rawProps.animation) !== DEFAULT_ANIMATION_NAME &&
     resourceSlotIsEmpty(rawProps.sprite_frames)
   ) {
-    diagnostics.push({
-      severity: 'error',
-      message: `Property 'animation' is set to "${literalText(rawProps.animation)}" but 'sprite_frames' is not set. Godot clears 'animation' back to empty, so the authored name never applies.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'animatedsprite3d-animation-no-spriteframes',
-    });
+    reportArm(
+      diagnostics,
+      arms.animationWithoutSpriteFrames,
+      node,
+      `Property 'animation' is set to "${literalText(rawProps.animation)}" but 'sprite_frames' is not set. Godot clears 'animation' back to empty, so the authored name never applies.`
+    );
   }
 
   return diagnostics;
@@ -55,18 +65,7 @@ const animatedSprite3DValidationRule: LintRule = {
     description: 'Validates AnimatedSprite3D SpriteFrames references and animation names',
     category: 'validation',
     applicableNodeTypes: ['AnimatedSprite3D'],
-    emits: [
-      {
-        ruleName: 'animatedsprite3d-requires-spriteframes',
-        severity: 'warning',
-        grounding: { kind: 'configuration-warning' },
-      },
-      {
-        ruleName: 'animatedsprite3d-animation-no-spriteframes',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'sprite_3d.cpp:1441' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkAnimatedSprite3D,
 };

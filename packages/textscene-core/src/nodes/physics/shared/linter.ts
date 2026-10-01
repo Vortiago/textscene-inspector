@@ -10,8 +10,11 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { isZeroApprox } from '../../../godot/math.js';
 import { basisColumnScales } from '../../../linter/physics/basisColumnScales.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 
-const RULE_NAME = 'collisionobject3d-non-uniform-scale';
+const arms = {
+  nonUniformScale: groundedArm('collisionobject3d-non-uniform-scale', { kind: 'configuration-warning' }),
+} as const satisfies RuleArms<string>;
 
 function checkCollisionObject3DScale(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -25,17 +28,14 @@ function checkCollisionObject3DScale(context: RuleContext): Diagnostic[] {
   if (isZeroApprox(sx - sy) && isZeroApprox(sy - sz)) return [];
 
   return [
-    {
-      severity: 'warning',
-      message:
-        `${node.type} '${node.name}' has a non-uniformly scaled transform ` +
+    armDiagnostic(
+      arms.nonUniformScale,
+      node,
+      `${node.type} '${node.name}' has a non-uniformly scaled transform ` +
         `(${sx.toFixed(3)}, ${sy.toFixed(3)}, ${sz.toFixed(3)}), which will probably not ` +
         'function as expected. Keep its scale uniform and change the size of its collision ' +
-        'shapes instead.',
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: RULE_NAME,
-    },
+        'shapes instead.'
+    ),
   ];
 }
 
@@ -46,7 +46,7 @@ const collisionObject3DScaleRule: LintRule = {
       "Warns when a CollisionObject3D-derived node's own transform is scaled non-uniformly, which the physics engine cannot honour",
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'CollisionObject3D'),
-    emits: [{ ruleName: RULE_NAME, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: armEmits(arms),
   },
   check: checkCollisionObject3DScale,
 };

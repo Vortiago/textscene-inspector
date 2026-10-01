@@ -5,11 +5,21 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { unquoteString } from '../../../../parser/utils.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { targetsBeforeLatestTrigger } from '../../../../linter/propertyOrder.js';
+
+const arms = {
+  tooltipIgnored: groundedArm('control-tooltip-ignored-by-mouse-filter', { kind: 'configuration-warning' }),
+  propertyOrder: {
+    severity: 'warning',
+    ruleName: 'control-property-order',
+    grounding: { kind: 'engine', at: 'control.cpp:991' },
+  },
+} as const satisfies RuleArms<string>;
 
 /**
  * The keys `_set_anchors_layout_preset` (`scene/gui/control.cpp:982-1032`) overwrites through
@@ -74,19 +84,16 @@ function checkControlPropertyOrder(context: RuleContext): Diagnostic[] {
   // nothing, so the wipe check below does not apply.
   if (layoutModeIndex > presetIndex) {
     return [
-      {
-        severity: 'warning',
-        message:
-          `'layout_mode' is authored after 'anchors_preset' on ${node.name}. Godot applies a ` +
+      armDiagnostic(
+        arms.propertyOrder,
+        node,
+        `'layout_mode' is authored after 'anchors_preset' on ${node.name}. Godot applies a ` +
           `node's properties in the order the file lists them (SceneState::instantiate, ` +
           `scene/resources/packed_scene.cpp), so 'anchors_preset' ran while 'layout_mode' was ` +
           `still its default (Position) and had no effect at all — the anchors/offsets/grow ` +
           `direction stayed whatever they were before this line. Move 'layout_mode' before ` +
-          `'anchors_preset'.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'control-property-order',
-      },
+          `'anchors_preset'.`
+      ),
     ];
   }
 
@@ -98,21 +105,18 @@ function checkControlPropertyOrder(context: RuleContext): Diagnostic[] {
   if (wiped.length === 0) return [];
 
   return [
-    {
-      severity: 'warning',
-      message:
-        `${wiped.join(', ')} ${wiped.length > 1 ? 'are' : 'is'} authored before 'anchors_preset' ` +
+    armDiagnostic(
+      arms.propertyOrder,
+      node,
+      `${wiped.join(', ')} ${wiped.length > 1 ? 'are' : 'is'} authored before 'anchors_preset' ` +
         `on ${node.name}. Godot applies a node's properties in the order the file lists them ` +
         `(SceneState::instantiate, scene/resources/packed_scene.cpp), and ` +
         `'anchors_preset''s setter overwrites ${wiped.length > 1 ? 'these' : 'this'} as a side ` +
         `effect (Control::_set_anchors_layout_preset, scene/gui/control.cpp) — so the authored ` +
         `value${wiped.length > 1 ? 's are' : ' is'} silently discarded at load. Move ` +
         `${wiped.length > 1 ? 'them' : 'it'} after 'anchors_preset', or drop 'anchors_preset' if ` +
-        `the explicit value${wiped.length > 1 ? 's are' : ' is'} what should apply.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'control-property-order',
-    },
+        `the explicit value${wiped.length > 1 ? 's are' : ' is'} what should apply.`
+    ),
   ];
 }
 
@@ -149,19 +153,17 @@ function checkControlTooltip(context: RuleContext): Diagnostic[] {
   if (!resolvedMouseFilterIsIgnore(node)) return [];
 
   return [
-    {
-      severity: 'warning',
-      message: `${node.type} '${node.name}' sets 'tooltip_text' but its Mouse Filter resolves to Ignore, so the tooltip will never be displayed. Set Mouse Filter to Stop or Pass instead.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'control-tooltip-ignored-by-mouse-filter',
-    },
+    armDiagnostic(
+      arms.tooltipIgnored,
+      node,
+      `${node.type} '${node.name}' sets 'tooltip_text' but its Mouse Filter resolves to Ignore, so the tooltip will never be displayed. Set Mouse Filter to Stop or Pass instead.`
+    ),
   ];
 }
 
 /**
- * One rule with two reports: `ruleCoverage.emits.test.ts` gives every `ruleName`
- * in a slice's `linter.ts` to every rule declared there, which is sound only for one rule.
+ * One rule with two reports. `configurationWarningCoverage.test.ts` looks for a
+ * rule's cases in the one `linter.test.ts` of its slice, so a slice declares one rule.
  */
 const controlRule: LintRule = {
   meta: {
@@ -171,18 +173,7 @@ const controlRule: LintRule = {
       'Ignore, and an anchor/offset/layout_mode file order the anchors_preset setter discards.',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Control'),
-    emits: [
-      {
-        ruleName: 'control-tooltip-ignored-by-mouse-filter',
-        severity: 'warning',
-        grounding: { kind: 'configuration-warning' },
-      },
-      {
-        ruleName: 'control-property-order',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'control.cpp:991' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: (context) => [...checkControlTooltip(context), ...checkControlPropertyOrder(context)],
 };

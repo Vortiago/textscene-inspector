@@ -9,8 +9,11 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { extractNodePath, isValidProperties } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 
-const RULE_NAME = 'multiplayerspawner-spawn-path-dangling';
+const arms = {
+  spawnPathDangling: groundedArm('multiplayerspawner-spawn-path-dangling', { kind: 'configuration-warning' }),
+} as const satisfies RuleArms<string>;
 
 function checkMultiplayerSpawner(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
@@ -26,13 +29,11 @@ function checkMultiplayerSpawner(context: RuleContext): Diagnostic[] {
   if (target.status !== 'missing') return [];
 
   return [
-    {
-      severity: 'warning',
-      message: `MultiplayerSpawner '${node.name}' has spawn_path set to NodePath("${path}"), which names no node in this file. A valid Spawn Path is required for MultiplayerSpawner to spawn nodes.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: RULE_NAME,
-    },
+    armDiagnostic(
+      arms.spawnPathDangling,
+      node,
+      `MultiplayerSpawner '${node.name}' has spawn_path set to NodePath("${path}"), which names no node in this file. A valid Spawn Path is required for MultiplayerSpawner to spawn nodes.`
+    ),
   ];
 }
 
@@ -43,7 +44,7 @@ const multiplayerSpawnerSpawnPathRule: LintRule = {
       "Warns when MultiplayerSpawner's spawn_path names no node in this file, mirroring Godot's own configuration warning",
     category: 'validation',
     applicableNodeTypes: ['MultiplayerSpawner'],
-    emits: [{ ruleName: RULE_NAME, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: armEmits(arms),
   },
   check: checkMultiplayerSpawner,
 };
