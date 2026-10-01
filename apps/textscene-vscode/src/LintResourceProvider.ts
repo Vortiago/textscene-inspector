@@ -8,8 +8,9 @@ import * as vscode from 'vscode';
 import type { ResourceProvider } from '@textscene/core/resources/ResourceProvider';
 import { isWithinRoot, resRelativePath } from '@textscene/core/resources/resPath';
 import { resourceContent } from '@textscene/core/resources/resourceProviderUtils';
-import { SCAN_STOP_FILES, isScannedPath } from '@textscene/core/godot';
+import { isScannedPath } from '@textscene/core/godot';
 import { anyCase } from './anyCaseGlob';
+import { SCAN_STOP_FILES_PATTERN } from './watchPatterns';
 
 const ROOT = 'res://';
 
@@ -20,8 +21,16 @@ function parentResPath(path: string): string {
 }
 
 export class LintResourceProvider implements ResourceProvider {
+  /** The `res://` paths the last listing that answered found. Written only by `listFiles`. */
+  private _listed: readonly string[] = [];
+
   /** @param projectRoot - The directory that holds the project's `project.godot`. */
   constructor(private readonly projectRoot: vscode.Uri) {}
+
+  /** The `res://` paths the last listing that answered found, so a host can tell when one of them goes. */
+  get listed(): readonly string[] {
+    return this._listed;
+  }
 
   async loadResource(resPath: string, type = ''): Promise<string | ArrayBuffer | null> {
     const file = this.fileOf(resPath);
@@ -58,14 +67,16 @@ export class LintResourceProvider implements ResourceProvider {
     const search = (glob: string) =>
       vscode.workspace.findFiles(new vscode.RelativePattern(this.projectRoot, glob), null);
     try {
-      const [candidates, stopFiles] = await Promise.all([
-        search(`**/*.${anyCase(extension)}`),
-        search(`**/{${SCAN_STOP_FILES.join(',')}}`),
-      ]);
+      const candidates = await search(`**/*.${anyCase(extension)}`);
+      // A stop file only removes a candidate, so the second whole-project search runs only when there is one.
+      const stopFiles = candidates.length === 0 ? [] : await search(SCAN_STOP_FILES_PATTERN);
       const skipped = new Set(
         stopFiles.map((file) => parentResPath(this.resPathOf(file))).filter((dir) => dir !== ROOT)
       );
-      return candidates.map((file) => this.resPathOf(file)).filter((path) => isScannedPath(path, skipped));
+      this._listed = candidates
+        .map((file) => this.resPathOf(file))
+        .filter((path) => isScannedPath(path, skipped));
+      return [...this._listed];
     } catch {
       // A search that fails proves nothing, which the linter reads as "may hold one".
       return null;
@@ -81,6 +92,11 @@ export class LintResourceProvider implements ResourceProvider {
   /** Whether `file` lies under the project root. */
   holds(file: vscode.Uri): boolean {
     return isWithinRoot(this.projectRoot.fsPath, file.fsPath);
+  }
+
+  /** Whether the project root is `dir` or lies under it. */
+  isRootedWithin(dir: vscode.Uri): boolean {
+    return isWithinRoot(dir.fsPath, this.projectRoot.fsPath);
   }
 
   /** The workspace file `resPath` names, or null for a path that is not `res://` or escapes the project. */

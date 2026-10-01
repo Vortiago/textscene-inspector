@@ -9,7 +9,12 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { globSync } from 'glob';
-import { GDEXTENSION_PATTERN, RESOURCE_FILES_PATTERN } from './watchPatterns';
+import {
+  ANY_PATH_PATTERN,
+  GDEXTENSION_PATTERN,
+  RESOURCE_FILES_PATTERN,
+  SCAN_STOP_FILES_PATTERN,
+} from './watchPatterns';
 
 let root: string;
 
@@ -21,13 +26,16 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-/** The files of `files` under a fresh directory that `pattern` matches, sorted. */
-function matched(pattern: string, files: readonly string[]): string[] {
+/**
+ * The paths under a fresh directory holding `files` that `pattern` matches, sorted. VS Code's `*` matches a name that
+ * starts with a dot (`[^/\\]*?`, `glob.ts:48`, `:56` in VS Code), and `dot` asks `glob` to do the same.
+ */
+function matched(pattern: string, files: readonly string[], { dot = false } = {}): string[] {
   for (const file of files) {
     mkdirSync(join(root, dirname(file)), { recursive: true });
     writeFileSync(join(root, file), '');
   }
-  return globSync(pattern, { cwd: root, posix: true }).sort();
+  return globSync(pattern, { cwd: root, posix: true, dot }).sort();
 }
 
 describe('RESOURCE_FILES_PATTERN', () => {
@@ -57,5 +65,33 @@ describe('GDEXTENSION_PATTERN', () => {
 
   it('matches no file of another extension', () => {
     expect(matched(GDEXTENSION_PATTERN, ['bin/a.gdextension.import', 'bin/a.so'])).toEqual([]);
+  });
+});
+
+describe('SCAN_STOP_FILES_PATTERN', () => {
+  it('matches a project.godot or a .gdignore at any depth', () => {
+    const files = ['addons/x/.gdignore', 'nested/project.godot', 'project.godot'];
+
+    expect(matched(SCAN_STOP_FILES_PATTERN, files)).toEqual([...files].sort());
+  });
+
+  it('matches no file that only resembles one', () => {
+    expect(matched(SCAN_STOP_FILES_PATTERN, ['addons/x/gdignore.txt', 'project.godot.bak'])).toEqual([]);
+  });
+});
+
+describe('ANY_PATH_PATTERN', () => {
+  it('matches a folder at any depth as well as a file, so the one delete VS Code reports for a folder reaches it', () => {
+    const files = ['addons/gltf_ext/ext.gdextension', '.godot/extension_list.cfg'];
+
+    expect(matched(ANY_PATH_PATTERN, files, { dot: true })).toEqual(
+      [
+        '.godot',
+        '.godot/extension_list.cfg',
+        'addons',
+        'addons/gltf_ext',
+        'addons/gltf_ext/ext.gdextension',
+      ].sort()
+    );
   });
 });

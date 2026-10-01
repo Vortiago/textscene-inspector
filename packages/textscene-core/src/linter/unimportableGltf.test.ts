@@ -1,7 +1,8 @@
 /**
  * A lint session reads each glTF a scene uses through the host's provider. A file whose `extensionsRequired`
- * names an extension Godot's importer does not read never imports (`gltf_document.cpp:7197-7202`), and the text
- * loader aborts the scene where a value names it (`resource_format_text.cpp:145-151`).
+ * names an extension Godot's importer does not read never imports (`gltf_document.cpp:7197-7202`). The text loader
+ * then fails the file's load where a sub-resource, a `[resource]` body, a `[connection]` or the first node heading uses
+ * it (`resource_format_text.cpp:146-154`), and leaves out only the node where a node uses it (`:288-289`).
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -14,6 +15,7 @@ import './index.js';
 
 const RULE = FILE_DIAGNOSTICS.unimportableGltf.ruleName;
 const PLUGIN_RULE = FILE_DIAGNOSTICS.unimportableGltfUnlessPlugin.ruleName;
+const NODE_RULE = FILE_DIAGNOSTICS.unimportableGltfInNode.ruleName;
 
 /**
  * A provider over an in-memory project that can list itself, with a `project.godot` that enables no plugin and
@@ -25,8 +27,21 @@ function project(files: Record<string, string | ArrayBuffer>): ResourceProvider 
 
 const INSTANCED_TREE = triangleGlb({ extensionsRequired: ['EXT_mesh_gpu_instancing'], instanced: true });
 
-/** A scene whose one ext_resource, on line 3, points at `path`, and whose `Tree` node instances it. */
+/**
+ * A scene whose one ext_resource, on line 3, points at `path`, and whose root heading inherits it. The loader reads
+ * that heading outside a node body, so a failed load of it fails the scene's load.
+ */
 function sceneUsing(path: string): string {
+  return `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="${path}" id="1_tree"]
+
+[node name="Tree" instance=ExtResource("1_tree")]
+`;
+}
+
+/** A scene whose one ext_resource, on line 3, points at `path`, and whose `Tree` child node instances it. */
+function sceneInstancing(path: string): string {
   return `[gd_scene format=3]
 
 [ext_resource type="PackedScene" path="${path}" id="1_tree"]
@@ -39,7 +54,8 @@ function sceneUsing(path: string): string {
 
 async function refusals(content: string, provider: ResourceProvider) {
   const diagnostics = await new Linter().lintComplete(content, provider);
-  return diagnostics.filter((d) => d.ruleName === RULE || d.ruleName === PLUGIN_RULE);
+  const rules: readonly string[] = [RULE, PLUGIN_RULE, NODE_RULE];
+  return diagnostics.filter((d) => rules.includes(d.ruleName));
 }
 
 describe('unimportable glTF', () => {
@@ -80,7 +96,7 @@ describe('unimportable glTF', () => {
     ).toHaveLength(1);
   });
 
-  it('reports a GLB named in a sub-resource value', async () => {
+  it('reports an error for a GLB named in a sub-resource value, which fails the load', async () => {
     const content = `[gd_scene format=3]
 
 [ext_resource type="PackedScene" path="res://tree.glb" id="1_tree"]
@@ -90,10 +106,12 @@ metadata/source = ExtResource("1_tree")
 
 [node name="Root" type="Node3D"]
 `;
-    expect(await refusals(content, project({ 'res://tree.glb': INSTANCED_TREE }))).toHaveLength(1);
+    expect(await refusals(content, project({ 'res://tree.glb': INSTANCED_TREE }))).toMatchObject([
+      { severity: 'error', ruleName: RULE },
+    ]);
   });
 
-  it("reports a GLB named only in a .tres file's [resource] body", async () => {
+  it("reports an error for a GLB named only in a .tres file's [resource] body", async () => {
     const content = `[gd_resource type="MeshLibrary" format=3]
 
 [ext_resource type="PackedScene" path="res://tree.glb" id="1_tree"]
@@ -101,10 +119,12 @@ metadata/source = ExtResource("1_tree")
 [resource]
 item/0/mesh = ExtResource("1_tree")
 `;
-    expect(await refusals(content, project({ 'res://tree.glb': INSTANCED_TREE }))).toHaveLength(1);
+    expect(await refusals(content, project({ 'res://tree.glb': INSTANCED_TREE }))).toMatchObject([
+      { severity: 'error', ruleName: RULE },
+    ]);
   });
 
-  it("reports a GLB named only in a [connection] heading's binds", async () => {
+  it("reports an error for a GLB named only in a [connection] heading's binds", async () => {
     const content = `[gd_scene format=3]
 
 [ext_resource type="PackedScene" path="res://tree.glb" id="1_tree"]
@@ -113,7 +133,9 @@ item/0/mesh = ExtResource("1_tree")
 
 [connection signal="ready" from="." to="." method="_on_ready" binds= [ExtResource("1_tree")]]
 `;
-    expect(await refusals(content, project({ 'res://tree.glb': INSTANCED_TREE }))).toHaveLength(1);
+    expect(await refusals(content, project({ 'res://tree.glb': INSTANCED_TREE }))).toMatchObject([
+      { severity: 'error', ruleName: RULE },
+    ]);
   });
 
   it('says the file fails to load, not a scene, for a .tres that uses the GLB', async () => {
@@ -178,6 +200,16 @@ item/0/name = "Tree"
 
   it('reports nothing for a relative path, which it does not resolve', async () => {
     expect(await refusals(sceneUsing('tree.glb'), project({ 'tree.glb': INSTANCED_TREE }))).toEqual([]);
+  });
+
+  it('reads the path of an ext_resource that also names a uid, which it does not resolve', async () => {
+    const content = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" uid="uid://b2tree" path="res://tree.glb" id="1_tree"]
+
+[node name="Tree" instance=ExtResource("1_tree")]
+`;
+    expect(await refusals(content, project({ 'res://tree.glb': INSTANCED_TREE }))).toHaveLength(1);
   });
 
   it('reads nothing for a path that is not a glTF', async () => {
@@ -296,6 +328,30 @@ describe('unimportable glTF in a project that may register a GLTFDocumentExtensi
     expect(diagnostic!.message).toContain('an autoload');
   });
 
+  it('reads only the last declaration of an id, which is the one a use loads', async () => {
+    const scene = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://old_tree.glb" id="1_tree"]
+[ext_resource type="PackedScene" path="res://tree.glb" id="1_tree"]
+
+[node name="Tree" instance=ExtResource("1_tree")]
+`;
+    const files = { 'res://old_tree.glb': INSTANCED_TREE, 'res://tree.glb': triangleGlb({}) };
+
+    expect(await refusals(scene, project(files))).toEqual([]);
+    expect(await refusals(scene, project({ ...files, 'res://tree.glb': INSTANCED_TREE }))).toHaveLength(1);
+  });
+
+  it('is a warning when the project declares an autoload whose Unicode name Godot writes as a quoted key', async () => {
+    const files = {
+      'res://tree.glb': INSTANCED_TREE,
+      'res://project.godot': '[autoload]\n\n"Größe"="*res://gltf.gd"\n',
+    };
+    const [diagnostic] = await refusals(sceneUsing('res://tree.glb'), project(files));
+
+    expect(diagnostic).toMatchObject({ severity: 'warning', ruleName: PLUGIN_RULE });
+  });
+
   it('is a warning for a provider that cannot list the project, since nothing rules a GDExtension out', async () => {
     const files = { 'res://tree.glb': INSTANCED_TREE, 'res://project.godot': PLAIN_PROJECT_FILE };
     const [diagnostic] = await refusals(sceneUsing('res://tree.glb'), unlistableProject(files));
@@ -356,6 +412,90 @@ describe('unimportable glTF in a project that may register a GLTFDocumentExtensi
     };
 
     expect(await refusals(sceneUsing('res://tree.glb'), provider)).toEqual([]);
+  });
+});
+
+describe('unimportable glTF that only a node uses', () => {
+  it('is a warning on the ext_resource heading where a child node instances it, since the scene still loads', async () => {
+    const diagnostics = await refusals(
+      sceneInstancing('res://tree.glb'),
+      project({ 'res://tree.glb': INSTANCED_TREE })
+    );
+
+    expect(diagnostics).toEqual([
+      {
+        severity: 'warning',
+        ruleName: NODE_RULE,
+        nodeName: '1_tree',
+        nodeType: 'PackedScene',
+        location: { line: 3, column: 1 },
+        message: expect.stringContaining("'EXT_mesh_gpu_instancing'"),
+      },
+    ]);
+    expect(diagnostics[0]!.message).toContain('nothing can add support');
+    expect(diagnostics[0]!.message).toContain('the editor reports a broken dependency');
+    expect(diagnostics[0]!.message).toContain('a running game loads the scene without it');
+  });
+
+  it("is a warning where only a node's property value names it", async () => {
+    const content = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://tree.glb" id="1_tree"]
+
+[node name="Root" type="Node3D"]
+metadata/tree = ExtResource("1_tree")
+`;
+    expect(await refusals(content, project({ 'res://tree.glb': INSTANCED_TREE }))).toMatchObject([
+      { severity: 'warning', ruleName: NODE_RULE },
+    ]);
+  });
+
+  it('is one warning, which names the plugin, where code in the project may add support', async () => {
+    const files = { 'res://tree.glb': INSTANCED_TREE, 'res://addons/gltf/gltf.gdextension': '' };
+    const diagnostics = await refusals(sceneInstancing('res://tree.glb'), project(files));
+
+    expect(diagnostics).toMatchObject([{ severity: 'warning', ruleName: NODE_RULE }]);
+    expect(diagnostics[0]!.message).toContain('GLTFDocumentExtension');
+    expect(diagnostics[0]!.message).toContain('a running game loads the scene without it');
+  });
+
+  it('is an error where a sub-resource also uses it, since the aborting use decides', async () => {
+    const content = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://tree.glb" id="1_tree"]
+
+[sub_resource type="MeshLibrary" id="lib"]
+metadata/source = ExtResource("1_tree")
+
+[node name="Root" type="Node3D"]
+
+[node name="Tree" parent="." instance=ExtResource("1_tree")]
+`;
+    expect(await refusals(content, project({ 'res://tree.glb': INSTANCED_TREE }))).toMatchObject([
+      { severity: 'error', ruleName: RULE },
+    ]);
+  });
+
+  it('judges each ext_resource by its own uses in one scene', async () => {
+    const content = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://tree.glb" id="1_tree"]
+[ext_resource type="PackedScene" path="res://bush.glb" id="2_bush"]
+
+[sub_resource type="MeshLibrary" id="lib"]
+metadata/source = ExtResource("1_tree")
+
+[node name="Root" type="Node3D"]
+
+[node name="Bush" parent="." instance=ExtResource("2_bush")]
+`;
+    const files = { 'res://tree.glb': INSTANCED_TREE, 'res://bush.glb': INSTANCED_TREE };
+    const diagnostics = await refusals(content, project(files));
+
+    expect(diagnostics.map((d) => [d.nodeName, d.severity, d.ruleName])).toEqual([
+      ['1_tree', 'error', RULE],
+      ['2_bush', 'warning', NODE_RULE],
+    ]);
   });
 });
 

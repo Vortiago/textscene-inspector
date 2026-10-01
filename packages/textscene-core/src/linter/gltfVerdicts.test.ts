@@ -86,6 +86,18 @@ describe('GltfVerdicts', () => {
     expect(reads()).toBe(3);
   });
 
+  it('keeps nothing for a file whose read fails under a known stamp, and reads it again next time', async () => {
+    const files: Record<string, ArrayBuffer | string> = {};
+    const { provider, reads } = counting(files, { 'res://tree.glb': '1:144' });
+    const verdicts = new GltfVerdicts();
+
+    expect(await verdicts.refused(provider, TREE)).toEqual([]);
+    files['res://tree.glb'] = INSTANCED_TREE;
+
+    expect(await verdicts.refused(provider, TREE)).toEqual(['EXT_mesh_gpu_instancing']);
+    expect(reads()).toBe(2);
+  });
+
   it('keeps one set of verdicts per provider', async () => {
     const a = counting({ 'res://tree.glb': INSTANCED_TREE }, { 'res://tree.glb': '1:144' });
     const b = counting({ 'res://tree.glb': triangleGlb({}) }, { 'res://tree.glb': '1:144' });

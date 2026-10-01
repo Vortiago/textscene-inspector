@@ -154,6 +154,34 @@ describe('StampedReads.get', () => {
     expect(await cache.get(provider, 'res://a', async () => 7)).toBe(7);
   });
 
+  it('keeps no null answer, so a file the read could not deliver is read again', async () => {
+    const { provider } = stamped({ 'res://a': '1' });
+    const cache = new StampedReads<number | null>();
+    let calls = 0;
+    const missingOnce = async () => (++calls === 1 ? null : calls);
+
+    expect(await cache.get(provider, 'res://a', missingOnce)).toBeNull();
+    expect(await cache.get(provider, 'res://a', missingOnce)).toBe(2);
+    expect(await cache.get(provider, 'res://a', missingOnce)).toBe(2);
+    expect(calls).toBe(2);
+  });
+
+  it('reads again rather than share a read still running under an older stamp', async () => {
+    const stamps: Record<string, string> = { 'res://a': '1' };
+    const { provider } = stamped(stamps);
+    const cache = new StampedReads<string>();
+    let releaseOld: (value: string) => void = () => {};
+    const old = cache.get(provider, 'res://a', () => new Promise((resolve) => (releaseOld = resolve)));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    stamps['res://a'] = '2';
+    const fresh = cache.get(provider, 'res://a', async () => 'new');
+    releaseOld('old');
+
+    expect(await old).toBe('old');
+    expect(await fresh).toBe('new');
+  });
+
   it('uses a stamp the caller started earlier, and asks the provider for none', async () => {
     const asked: string[] = [];
     const provider: ResourceProvider = {

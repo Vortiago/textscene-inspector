@@ -75,17 +75,25 @@ function glbJsonText(bytes: Uint8Array): string | null {
   );
 }
 
+/** `text` up to its first NUL, where `String::append_utf8` stops decoding (`ustring.cpp:1781`). */
+function untilNul(text: string): string {
+  const nul = text.indexOf('\0');
+  return nul === -1 ? text : text.slice(0, nul);
+}
+
 /**
  * The JSON text Godot parses from a glTF file. `_parse` chooses by the magic alone, never by the
  * file's extension (`gltf_document.cpp:6514-6530`): a GLB container, or else the whole file as UTF-8.
+ * Either text ends at its first NUL, so a JSON chunk padded with NULs still parses.
  */
 function gltfJsonText(data: ArrayBuffer | string): string | null {
-  if (typeof data === 'string') return data;
+  if (typeof data === 'string') return untilNul(data);
   const bytes = new Uint8Array(data);
   const isGlb =
     bytes.length >= GLB_MAGIC_OFFSET + UINT32_BYTES &&
     new DataView(data).getUint32(GLB_MAGIC_OFFSET, true) === GLB_MAGIC;
-  return isGlb ? glbJsonText(bytes) : new TextDecoder().decode(bytes);
+  const text = isGlb ? glbJsonText(bytes) : new TextDecoder().decode(bytes);
+  return text === null ? null : untilNul(text);
 }
 
 /**

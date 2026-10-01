@@ -30,13 +30,16 @@ tscn-lint --no-color scenes/          # no ANSI colours
 When the scene's own directory, or a directory above it, holds
 `project.godot`, `tscn-lint` resolves `res://` paths from there. It then also
 reads each `.glb` and `.gltf` file the scene uses, and reports one that requires
-a glTF extension Godot's importer does not support. Godot fails to load such a
-scene. The report is an error when `project.godot` enables no editor plugin and
-declares no autoload, and no directory Godot's editor scans holds a
-`.gdextension` file. Otherwise it is a warning, because an editor plugin, an
-autoload or a GDExtension can add support for the extension. `tscn-lint` reads
-the `.gdextension` files themselves, so a fresh checkout without `.godot/` gets
-the same answer as the editor. `tscn-lint` checks a scene outside every Godot
+a glTF extension Godot's importer does not support. Where a sub-resource, a
+`.tres` `[resource]` body, a connection or the scene's root node uses the glTF
+file, Godot fails to load the scene or resource that uses it. The report is then
+an error when `project.godot` enables no editor plugin and declares no autoload,
+and no directory Godot's editor scans holds a `.gdextension` file. Otherwise it
+is a warning, because an editor plugin, an autoload or a GDExtension can add
+support for the extension. Where only other nodes use the glTF file, the scene
+loads without it, and the report is always a warning. `tscn-lint` reads the
+`.gdextension` files themselves, so a fresh checkout without `.godot/` gets the
+same answer as the editor. `tscn-lint` checks a scene outside every Godot
 project alone.
 
 ## Output formats (`--format`)

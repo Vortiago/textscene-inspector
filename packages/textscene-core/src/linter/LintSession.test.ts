@@ -19,15 +19,16 @@ function project(files: Record<string, string | ArrayBuffer>): ResourceProvider 
   return memoryProject({ 'res://project.godot': PLAIN_PROJECT_FILE, ...files });
 }
 
-/** A scene whose `[ext_resource]` `id` for `path` sits on line `3 + blankLines`, and whose `Tree` node instances it. */
+/**
+ * A scene whose `[ext_resource]` `id` for `path` sits on line `3 + blankLines`, and whose root heading inherits it, so
+ * a refusal fails the scene's load.
+ */
 function sceneUsing(path: string, { id = '1_tree', blankLines = 0 } = {}): string {
   return `[gd_scene format=3]
 ${'\n'.repeat(blankLines)}
 [ext_resource type="PackedScene" path="${path}" id="${id}"]
 
-[node name="Root" type="Node3D"]
-
-[node name="Tree" parent="." instance=ExtResource("${id}")]
+[node name="Tree" instance=ExtResource("${id}")]
 `;
 }
 

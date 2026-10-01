@@ -5,23 +5,29 @@
  */
 
 import {
+  STRING_ARRAY_FORMS,
+  STRING_LITERAL_RE,
+  STRING_LITERAL_SOURCE,
   boolSlotValue,
   dataDirectoryPath,
+  dropTrailingComma,
   extensionListPath,
   isLocaleRightToLeft,
-  stringArrayBodies,
+  packedArrayBody,
+  splitTopLevel,
   type LayoutDirectionEnv,
 } from '../godot/index.js';
 import { unquoteLiteral } from './utils.js';
 import { parseOptionalInt } from './valueParsers.js';
 
 /**
- * A `key=value` line. The key admits `/`, Godot's subsection separator, and `.`: a
- * feature-tagged override like `renderer/rendering_method.mobile` is a real key.
+ * A `key=value` line as `parse_tag_assign_eof` reads it (`variant_parser.cpp:1932-1950`): blanks may precede the `=`,
+ * and a key is quoted where the writer quotes it, as for a Unicode autoload name (`property_name_encode`,
+ * `ustring.cpp:5056-5067`). A feature-tagged override like `renderer/rendering_method.mobile` is a real key.
  */
-const KEY_VALUE = /^([A-Za-z_][A-Za-z0-9_/.]*)=(.*)$/;
-/** A `[section]` heading. Godot's section names are bare identifiers. */
-const SECTION = /^\[([A-Za-z_][A-Za-z0-9_]*)\]$/;
+const KEY_VALUE = new RegExp(String.raw`^(${STRING_LITERAL_SOURCE}|[^\s="]+)\s*=(.*)$`);
+/** A `[section]` heading, and any `;` comment after it. Godot's section names are bare identifiers. */
+const SECTION = /^\[([A-Za-z_][A-Za-z0-9_]*)\]\s*(?:;.*)?$/;
 
 /**
  * `project.godot` settings, keyed by full setting name: a string literal's decoded text, as
@@ -56,11 +62,12 @@ export function parseProjectSettings(content: string): ProjectSettings | null {
     // continuation has no `=`. No setting this previewer reads is multi-line.
     const pair = KEY_VALUE.exec(line);
     if (!pair) continue;
-    const [, key, rawValue] = pair;
+    const [, rawKey, rawValue] = pair;
+    const key = unquoteLiteral(rawKey!);
     // Godot splits a name across heading and key: `theme/default_theme_scale` under
     // `[gui]` is `gui/theme/default_theme_scale`, as `ProjectSettings.get_setting()`
     // takes it. `config_version` above the first heading keeps its bare name.
-    settings[section ? `${section}/${key!}` : key!] = unquoteLiteral(rawValue!.trim());
+    settings[section ? `${section}/${key}` : key] = unquoteLiteral(rawValue!.trim());
     sawSetting = true;
   }
 
@@ -173,14 +180,17 @@ export function declaredAutoloads(settings: ProjectSettings | null): string[] {
 }
 
 /**
- * `editor_plugins/enabled`, the `plugin.cfg` paths the editor enables at start (`init_plugins`,
- * `editor/editor_node.cpp:1167-1173`). Empty where the project sets none, and for a value that is not
- * a list of string literals: the conversion to `Vector<String>` leaves nothing to enable. Escapes stay
- * as written, since a caller only counts the entries.
+ * Each entry of `editor_plugins/enabled`, the `plugin.cfg` paths the editor enables at start (`init_plugins`,
+ * `editor/editor_node.cpp:1166-1173`), as written. The conversion to `Vector<String>` stringifies each element
+ * (`core/variant/variant.cpp:2082-2091`), so an element that is no string literal counts too. Empty for no array.
  */
 export function enabledEditorPlugins(settings: ProjectSettings | null): string[] {
   const raw = settings?.['editor_plugins/enabled'];
-  return (raw !== undefined && stringArrayBodies(raw)) || [];
+  const body = raw === undefined ? undefined : packedArrayBody(STRING_ARRAY_FORMS, raw)?.body;
+  if (body === undefined) return [];
+  return dropTrailingComma(splitTopLevel(body)).map((entry) =>
+    STRING_LITERAL_RE.test(entry) ? entry.slice(1, -1) : entry
+  );
 }
 
 /**

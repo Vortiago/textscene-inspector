@@ -43,6 +43,13 @@ interface ProjectFacts {
   readonly listPath: string;
 }
 
+/** The facts of a `project.godot` the provider cannot deliver: it proves nothing, so code may extend the importer. */
+const UNREAD_PROJECT: ProjectFacts = {
+  mayRunCode: true,
+  dataDirectory: projectDataDirectoryPath(null),
+  listPath: projectExtensionListPath(null),
+};
+
 /** What the probe reads from the project's stamped files. */
 interface ProjectEvidence extends ProjectFacts {
   /**
@@ -55,6 +62,9 @@ interface ProjectEvidence extends ProjectFacts {
 /** Whether code in the project behind a provider may add to the importer. The project is listed only when it is called. */
 export type ImportExtensionProbe = () => Promise<boolean>;
 
+/** The answer for a provider that cannot list: it never rules a GDExtension out, so no file it reads can change it. */
+const MAY_EXTEND: ImportExtensionProbe = () => Promise.resolve(true);
+
 /** The text of `path`, or null for a file the provider does not hold or cannot read. */
 async function readText(provider: ResourceProvider, path: string): Promise<string | null> {
   const data = await loadOrNull(provider, path);
@@ -62,21 +72,25 @@ async function readText(provider: ResourceProvider, path: string): Promise<strin
   return typeof data === 'string' ? data : new TextDecoder().decode(data);
 }
 
-async function readProjectFacts(provider: ResourceProvider): Promise<ProjectFacts> {
+/** The facts of `project.godot`, or null, which a stamped read never keeps, for a file the provider cannot deliver. */
+async function readProjectFacts(provider: ResourceProvider): Promise<ProjectFacts | null> {
   const text = await readText(provider, PROJECT_FILE_PATH);
-  const settings = parseProjectSettings(text ?? '');
-  const runsCode = enabledEditorPlugins(settings).length > 0 || declaredAutoloads(settings).length > 0;
+  if (text === null) return null;
+  const settings = parseProjectSettings(text);
   return {
-    mayRunCode: text === null || runsCode,
+    mayRunCode: enabledEditorPlugins(settings).length > 0 || declaredAutoloads(settings).length > 0,
     dataDirectory: projectDataDirectoryPath(settings),
     listPath: projectExtensionListPath(settings),
   };
 }
 
-/** Whether the GDExtension list names an extension to load (`gdextension_manager.cpp:319-334`). */
-async function readListHasEntries(provider: ResourceProvider, path: string): Promise<boolean> {
+/**
+ * Whether the GDExtension list names an extension to load (`gdextension_manager.cpp:319-334`), or null, which a stamped
+ * read never keeps, for a list the provider cannot deliver.
+ */
+async function readListHasEntries(provider: ResourceProvider, path: string): Promise<boolean | null> {
   const text = await readText(provider, path);
-  return text !== null && extensionListEntries(text).length > 0;
+  return text === null ? null : extensionListEntries(text).length > 0;
 }
 
 /**
@@ -91,15 +105,16 @@ async function mayHoldGdextension(provider: ResourceProvider, dataDirectory: str
 }
 
 export class ProjectPluginProbes {
-  private readonly projects = new StampedReads<ProjectFacts>();
-  private readonly lists = new StampedReads<boolean>();
+  private readonly projects = new StampedReads<ProjectFacts | null>();
+  private readonly lists = new StampedReads<boolean | null>();
 
   /**
    * Starts reading the project files behind `provider` at once, and returns the answer. The project file and the
    * extension list are stamped in parallel, and one whose stamp is unchanged is neither read nor parsed again. The
-   * answer lists the project only when those files leave it open, so a lint that refuses no glTF lists nothing.
+   * answer lists the project only when those files leave it open. A provider that cannot list reads nothing.
    */
   probe(provider: ResourceProvider): ImportExtensionProbe {
+    if (!provider.listFiles) return MAY_EXTEND;
     const evidence = this.readEvidence(provider);
     // Awaited only when the answer is asked for: the await there still throws, and an unawaited rejection stays silent.
     evidence.catch(() => undefined);
@@ -112,7 +127,9 @@ export class ProjectPluginProbes {
   private async readEvidence(provider: ResourceProvider): Promise<ProjectEvidence> {
     const keptListPath = this.projects.peek(provider, PROJECT_FILE_PATH)?.listPath;
     const keptListStamp = keptListPath === undefined ? undefined : stampOf(provider, keptListPath);
-    const project = await this.projects.get(provider, PROJECT_FILE_PATH, () => readProjectFacts(provider));
+    const project =
+      (await this.projects.get(provider, PROJECT_FILE_PATH, () => readProjectFacts(provider))) ??
+      UNREAD_PROJECT;
     if (project.mayRunCode) return { ...project, listsExtension: false };
 
     const { listPath } = project;
@@ -123,6 +140,6 @@ export class ProjectPluginProbes {
       () => readListHasEntries(provider, listPath),
       listStamp
     );
-    return { ...project, listsExtension };
+    return { ...project, listsExtension: listsExtension ?? false };
   }
 }

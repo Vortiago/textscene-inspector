@@ -38,8 +38,11 @@ const DICT_SUB_RESOURCE_ENTRY_RE = new RegExp(`"([^"]*)"${WS}:${WS}${SUB_RESOURC
  */
 export const EXT_RESOURCE_CALL_ANYWHERE_RE = new RegExp(`ExtResource${WS}\\(`);
 
+/** The token every `ExtResource(…)` call spells, so a value without it names no id. */
+const EXT_RESOURCE_TOKEN = 'ExtResource';
+
 /** One `ExtResource(…)` call, read in place by {@link extResourceIdsIn}. Sticky, so it matches only where it is set. */
-const EXT_RESOURCE_REF_AT_RE = new RegExp(`ExtResource${WS}\\(${WS}${RESOURCE_ID}${WS}\\)`, 'y');
+const EXT_RESOURCE_REF_AT_RE = new RegExp(`${EXT_RESOURCE_TOKEN}${WS}\\(${WS}${RESOURCE_ID}${WS}\\)`, 'y');
 
 /** A character that continues an identifier, so `MyExtResource(` is not the `ExtResource` token. */
 const IDENTIFIER_CHAR_RE = /[A-Za-z0-9_]/;
@@ -50,6 +53,8 @@ const IDENTIFIER_CHAR_RE = /[A-Za-z0-9_]/;
  * whose quotes `get_token` reads with `\` escapes (`variant_parser.cpp:265-289`).
  */
 export function extResourceIdsIn(text: string): string[] {
+  // Most values name no resource, and the walk below reads every character of a multi-megabyte array.
+  if (!text.includes(EXT_RESOURCE_TOKEN)) return [];
   const ids: string[] = [];
   let inString = false;
   for (let i = 0; i < text.length; i++) {

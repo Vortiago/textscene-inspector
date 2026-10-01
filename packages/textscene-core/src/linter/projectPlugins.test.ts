@@ -64,6 +64,14 @@ describe('ProjectPluginProbes.probe', () => {
     expect(await mayExtend(denied)).toBe(true);
   });
 
+  it('reads nothing for a provider that cannot list, since no file it reads can change the answer', async () => {
+    const provider = unlistableProject({ 'res://project.godot': PLAIN_PROJECT_FILE });
+    const load = vi.spyOn(provider, 'loadResource');
+
+    expect(await mayExtend(provider)).toBe(true);
+    expect(load).not.toHaveBeenCalled();
+  });
+
   it('is true for a provider that cannot list, or whose listing gives null or rejects', async () => {
     const files = { 'res://project.godot': PLAIN_PROJECT_FILE };
     expect(await mayExtend(unlistableProject(files))).toBe(true);
@@ -198,6 +206,18 @@ describe('the kept plugin answer', () => {
     expect(asked).toEqual(['res://.godot/extension_list.cfg', 'res://project.godot']);
     releaseProject('1');
     expect(await answer).toBe(false);
+  });
+
+  it('reads the project file again after a read that could not deliver it under an unchanged stamp', async () => {
+    const files: Record<string, string> = {};
+    const { provider, reads } = stamped(files, { 'res://project.godot': '1' });
+    const probes = new ProjectPluginProbes();
+    expect(await probes.probe(provider)()).toBe(true);
+
+    files['res://project.godot'] = 'config_version=5\n';
+
+    expect(await probes.probe(provider)()).toBe(false);
+    expect(reads.filter((path) => path === 'res://project.godot')).toHaveLength(2);
   });
 
   it('reads a file with no stamp every time', async () => {

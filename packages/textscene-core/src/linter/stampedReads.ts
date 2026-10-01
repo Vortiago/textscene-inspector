@@ -15,8 +15,8 @@ export function stampOf(provider: ResourceProvider, path: string): Promise<strin
 }
 
 /**
- * The content of `path`, or null for a file the provider does not hold. A rejection counts as a miss, since the VS Code
- * and web providers throw for a missing file where the contract says null. A synchronous throw propagates.
+ * The content of `path`, or null for a file the provider does not hold. A rejection counts as a miss, since the web
+ * provider throws for a missing file where the contract says null. A synchronous throw propagates.
  */
 export function loadOrNull(
   provider: ResourceProvider,
@@ -31,10 +31,16 @@ interface Kept<T> {
   readonly value: T;
 }
 
+/** A read in flight, and the stamp it was taken under: null for a file with no stamp. */
+interface Running<T> {
+  readonly stamp: string | null;
+  readonly answer: Promise<T>;
+}
+
 /** One provider's reads: the kept answers, and the reads still running, each by `res://` path. */
 interface ProviderReads<T> {
   readonly kept: Map<string, Kept<T>>;
-  readonly running: Map<string, Promise<T>>;
+  readonly running: Map<string, Running<T>>;
 }
 
 export class StampedReads<T> {
@@ -45,13 +51,11 @@ export class StampedReads<T> {
   private readonly byProvider = new WeakMap<ResourceProvider, ProviderReads<T>>();
 
   /**
-   * The answer `read` gives for `path`, kept under the file's stamp while the stamp is unchanged. The stamp is taken
-   * before the read, so a file that changes between the two is kept under the older stamp and read again next time.
-   * A file with no stamp is read, and its older answer is forgotten. With no stamp at all, the read starts at once.
-   * A get that arrives while a get of the same path runs shares that one's answer, so concurrent lints stat and read
-   * a file once.
+   * The answer `read` gives for `path`, kept under the stamp taken before the read while that stamp is unchanged. A null
+   * answer, a file the read could not deliver, is never kept. A get shares a read of `path` still running under the
+   * same stamp, so concurrent lints read an unchanged file once. With no stamp at all, the read starts at once.
    *
-   * @param stamp - The file's stamp, when the caller started reading it earlier. A shared get ignores it.
+   * @param stamp - The file's stamp, when the caller started reading it earlier.
    */
   get(
     provider: ResourceProvider,
@@ -59,17 +63,8 @@ export class StampedReads<T> {
     read: () => Promise<T>,
     stamp?: Promise<string | null>
   ): Promise<T> {
-    const { running } = this.readsOf(provider);
-    const shared = running.get(path);
-    if (shared) return shared;
-
-    const answer = this.stampedRead(provider, path, read, stamp);
-    running.set(path, answer);
-    const settle = () => {
-      if (running.get(path) === answer) running.delete(path);
-    };
-    answer.then(settle, settle);
-    return answer;
+    if (!stamp && !provider.stamp) return this.shared(provider, path, null, read);
+    return this.stampedRead(provider, path, read, stamp ?? stampOf(provider, path));
   }
 
   /** The answer kept for `path`, whatever the file's stamp is now, or undefined for none. A running read is none. */
@@ -81,18 +76,50 @@ export class StampedReads<T> {
     provider: ResourceProvider,
     path: string,
     read: () => Promise<T>,
-    stamp: Promise<string | null> | undefined
+    stamp: Promise<string | null>
   ): Promise<T> {
-    if (!stamp && !provider.stamp) return read();
-    const current = await (stamp ?? stampOf(provider, path));
-    const { kept } = this.readsOf(provider);
-    const before = kept.get(path);
+    const current = await stamp;
+    const before = this.readsOf(provider).kept.get(path);
     if (current !== null && before?.stamp === current) return before.value;
+    return this.shared(provider, path, current, () => this.keptRead(provider, path, read, current));
+  }
 
+  /** The answer `read` gives, kept under `stamp` unless the stamp or the answer is null. */
+  private async keptRead(
+    provider: ResourceProvider,
+    path: string,
+    read: () => Promise<T>,
+    stamp: string | null
+  ): Promise<T> {
     const value = await read();
-    if (current === null) kept.delete(path);
-    else kept.set(path, { stamp: current, value });
+    const { kept } = this.readsOf(provider);
+    if (stamp === null || value === null) kept.delete(path);
+    else kept.set(path, { stamp, value });
     return value;
+  }
+
+  /**
+   * The read of `path` running under `stamp`, or a new one that `read` starts. A read under another stamp is not shared:
+   * it may answer for content the file no longer has.
+   */
+  private shared(
+    provider: ResourceProvider,
+    path: string,
+    stamp: string | null,
+    read: () => Promise<T>
+  ): Promise<T> {
+    const { running } = this.readsOf(provider);
+    const inFlight = running.get(path);
+    if (inFlight !== undefined && inFlight.stamp === stamp) return inFlight.answer;
+
+    // Through an async function, so a read that throws at once rejects like one that fails later.
+    const entry: Running<T> = { stamp, answer: (async () => read())() };
+    running.set(path, entry);
+    const settle = () => {
+      if (running.get(path) === entry) running.delete(path);
+    };
+    entry.answer.then(settle, settle);
+    return entry.answer;
   }
 
   private readsOf(provider: ResourceProvider): ProviderReads<T> {

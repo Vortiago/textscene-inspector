@@ -133,6 +133,11 @@ describe('resourceContent', () => {
     expect([...new Uint8Array(content as ArrayBuffer)]).toEqual([0x67, 0x6c, 0x54, 0x46]);
   });
 
+  it('hands over the buffer of a view that spans it whole, with no copy', () => {
+    const bytes = new Uint8Array([0x67, 0x6c, 0x54, 0x46]);
+    expect(resourceContent(bytes, 'PackedScene', 'res://tree.glb')).toBe(bytes.buffer);
+  });
+
   it('copies a view out of a larger buffer, so the other bytes stay behind', () => {
     const pool = new Uint8Array([1, 2, 3, 4, 5, 6]);
     const content = resourceContent(pool.subarray(2, 4), 'Texture2D', 'res://icon.png');

@@ -52,11 +52,25 @@ richer picture. No host exposes the switch yet.
   the texture's own `source`.
 - Upgrading three cannot widen what a model shows under `godot-importer`: the filter
   names what Godot reads, not what three reads.
-- The linter reports a used glTF file that requires an extension outside Godot's set. Code
-  in the project can register a `GLTFDocumentExtension` that adds the extension
+- The linter reports a used glTF file that requires an extension outside Godot's set. Where
+  the file is used decides what the refusal costs. The text loader raises
+  `ERR_FILE_MISSING_DEPENDENCIES` where a value names a resource that did not load
+  (`scene/resources/resource_format_text.cpp:146-154` in 4.6.3):
+  - a node body skips that error (`:288-289`), and the body also reads the next node heading.
+    A use only in such headings and bodies leaves the scene loadable. A running game loads it
+    without the node that instances the file (`packed_scene.cpp:309-311`), and a node property
+    that names the file is null. The editor turns the error off (`editor_node.cpp:8331`), so
+    it shows a broken dependency and offers to open the scene anyway (`:4747-4756`). The
+    report is a warning;
+  - every other read returns the error, and the load fails: a sub-resource body (`:647-650`),
+    a `.tres` `[resource]` body (`:776-779`), the first node heading (`:533-536`, `:647-650`),
+    and a heading after a `[connection]` or `[editable]` (`:381-384`, `:404-407`). A failed
+    `binds=` in a heading that a node body reads leaves the heading half read, and the next
+    read fails (`:381-384`). The rest of this list is about such a use.
+- Code in the project can register a `GLTFDocumentExtension` that adds the extension
   (`gltf_document.cpp:6798-6804`), and the linter cannot see which extensions such code adds.
-  The report is therefore an error only when the linter can show that the project runs no
-  such code, and a warning in every other case.
+  A use that fails the load is therefore an error only when the linter can show that the
+  project runs no such code, and a warning in every other case.
 - Before the editor's first scan imports a file, it loads each GDExtension the scan finds, then
   builds the autoloads, then enables the editor plugins (`editor/file_system/editor_file_system.cpp:310-345`
   in 4.6.3). Any of the three can register an extension. So the error needs all of these:

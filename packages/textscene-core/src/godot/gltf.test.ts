@@ -83,6 +83,16 @@ describe('readGltfRequiredExtensions', () => {
     expect(readGltfRequiredExtensions(file.buffer)).toEqual(['EXT_mesh_gpu_instancing']);
   });
 
+  it('reads the JSON up to its first NUL, where Godot stops decoding, in a GLB chunk or a text glTF', () => {
+    expect(readGltfRequiredExtensions(glb(`${REQUIRES_INSTANCING}\0\0\0`))).toEqual([
+      'EXT_mesh_gpu_instancing',
+    ]);
+    expect(readGltfRequiredExtensions(textBytes(`${REQUIRES_INSTANCING}\0junk`))).toEqual([
+      'EXT_mesh_gpu_instancing',
+    ]);
+    expect(readGltfRequiredExtensions(`${REQUIRES_INSTANCING}\0`)).toEqual(['EXT_mesh_gpu_instancing']);
+  });
+
   it('gives an empty list for a file that requires nothing', () => {
     expect(readGltfRequiredExtensions(textBytes('{"asset":{"version":"2.0"}}'))).toEqual([]);
   });

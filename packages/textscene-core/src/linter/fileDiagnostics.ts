@@ -82,27 +82,39 @@ export const FILE_DIAGNOSTICS = {
     grounding: { kind: 'engine', at: 'resource_format_text.cpp:113' },
   },
   /**
-   * A used `[ext_resource]` whose `.glb`/`.gltf` requires a glTF extension outside Godot's importer set, in a project
-   * whose readable `project.godot` enables no editor plugin and declares no autoload, and whose listing holds no
-   * GDExtension, so nothing can add the extension. The import refuses the file (`gltf_document.cpp:7197-7202`), and the
-   * text loader aborts the scene where a value names the resource (`resource_format_text.cpp:145-151`). It and the row
-   * below read other files, so only a lint session reports them.
+   * An `[ext_resource]` whose `.glb`/`.gltf` requires a glTF extension outside Godot's importer set, used where a failed
+   * load fails the file's load (`usedExtResources.ts`), in a project whose readable `project.godot` enables no editor
+   * plugin and declares no autoload, and whose listing holds no GDExtension, so nothing can add the extension. The
+   * import refuses the file (`gltf_document.cpp:7197-7202`). The cited line raises `ERR_FILE_MISSING_DEPENDENCIES` at
+   * the use, and the section's read returns it (`:533-536`, `:647-650`, `:776-779`, `:381-384`). The three glTF rows
+   * read other files, so only a lint session reports them.
    */
   unimportableGltf: {
     severity: 'error',
     ruleName: 'gltf-required-extension-unsupported',
-    grounding: { kind: 'engine', at: 'gltf_document.cpp:7197-7202' },
+    grounding: { kind: 'engine', at: 'resource_format_text.cpp:150-154' },
   },
   /**
-   * The same file in a project that enables an editor plugin, declares an autoload or holds a GDExtension, or whose
+   * The same use in a project that enables an editor plugin, declares an autoload or holds a GDExtension, or whose
    * files the linter cannot read or list. Each can register a `GLTFDocumentExtension` (`gltf_document.cpp:6731-6732`),
-   * whose extensions join the supported set (`:6798-6804`), so the refusal is likely but not certain: the engine's own
-   * message asks "Are you missing a GLTFDocumentExtension plugin?" (`:7200`).
+   * whose extensions join the supported set at the cited line, so the refusal is likely but not certain: the engine's
+   * own message asks "Are you missing a GLTFDocumentExtension plugin?" (`:7200`).
    */
   unimportableGltfUnlessPlugin: {
     severity: 'warning',
     ruleName: 'gltf-required-extension-maybe-unsupported',
-    grounding: { kind: 'engine', at: 'gltf_document.cpp:7197-7202' },
+    grounding: { kind: 'engine', at: 'gltf_document.cpp:6798-6804' },
+  },
+  /**
+   * The same file, used only in node headings and node bodies, which the cited line skips. The scene loads. A node
+   * that instances the file is missing (`packed_scene.cpp:309-311`), and a node property that names it is null. The
+   * editor runs with `abort_on_missing_resources` off (`editor_node.cpp:8331`), so it reports a broken dependency
+   * and offers to open the scene anyway (`:4747-4756`). Whatever the plugin probe answers, this is a warning.
+   */
+  unimportableGltfInNode: {
+    severity: 'warning',
+    ruleName: 'gltf-required-extension-unsupported-in-node',
+    grounding: { kind: 'engine', at: 'resource_format_text.cpp:288-289' },
   },
 } as const satisfies Record<string, RuleArm>;
 

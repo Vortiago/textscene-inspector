@@ -54,4 +54,20 @@ describe('WebResourceProvider under the linter', () => {
     );
     expect(await gltfRefusals(linter, provider)).toHaveLength(1);
   });
+
+  it('reports a refused glTF after a failed fetch of a file the renderer had already delivered', async () => {
+    const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
+    const provider = new WebResourceProvider();
+    const linter = new Linter();
+    const serveTree = async (url: string) =>
+      url === '/fixtures/tree.gltf' ? served(TREE_GLTF) : Promise.reject(new Error('missing'));
+    fetchMock.mockImplementation(serveTree);
+    await provider.loadResource('res://tree.gltf', 'PackedScene');
+
+    fetchMock.mockRejectedValue(new Error('offline'));
+    expect(await gltfRefusals(linter, provider)).toEqual([]);
+
+    fetchMock.mockImplementation(serveTree);
+    expect(await gltfRefusals(linter, provider)).toHaveLength(1);
+  });
 });

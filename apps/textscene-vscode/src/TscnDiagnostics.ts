@@ -17,7 +17,13 @@ import { error as logError } from '@textscene/core/logger';
 import { comparablePath, isWithinRoot } from '@textscene/core/resources/resPath';
 import { LintResourceProvider } from './LintResourceProvider';
 import { findEnclosingGodotProject, hasProjectFile } from './findGodotProjectRoot';
-import { EXTENSION_LIST_PATTERN, GDEXTENSION_PATTERN, PROJECT_FILE_PATTERN } from './watchPatterns';
+import {
+  ANY_PATH_PATTERN,
+  EXTENSION_LIST_PATTERN,
+  GDEXTENSION_PATTERN,
+  PROJECT_FILE_PATTERN,
+  SCAN_STOP_FILES_PATTERN,
+} from './watchPatterns';
 
 /** Fallback when `textscene.diagnostics.lintDebounceMs` is unset. */
 export const DEFAULT_LINT_DEBOUNCE_MS = 300;
@@ -157,16 +163,17 @@ export class TscnDiagnostics implements vscode.Disposable {
   private readonly _collection: vscode.DiagnosticCollection;
   private readonly _linter = new Linter();
   private readonly _disposables: vscode.Disposable[] = [];
-  /** Each linted open document, by URI. Written by `lintDocument`, deleted on close, cleared by `_clearAll`. */
+  /** Each linted open document, by URI. Written by `_recordOf`, deleted on close, cleared by `_clearAll`. */
   private readonly _documents = new Map<string, DocumentLint>();
   /**
    * One provider per project root, so the documents of a project share its verdicts. Written by `_providerFor`,
-   * cleared by `_clearAll`.
+   * deleted when its root is deleted, cleared by `_clearAll`.
    */
   private readonly _providers = new Map<string, LintResourceProvider>();
   /**
    * Whether each directory holds `project.godot`, so the walks of a project's documents share their answers.
-   * Written by `_holdsProjectFile`, cleared on any `project.godot` event and by `_clearAll`.
+   * Written by `_holdsProjectFile`, cleared on any `project.godot` event, on a delete that holds a project root, and by
+   * `_clearAll`.
    */
   private readonly _projectFileByDir = new Map<string, Promise<boolean>>();
   private _enabled: boolean;
@@ -197,12 +204,20 @@ export class TscnDiagnostics implements vscode.Disposable {
     const extensionList = vscode.workspace.createFileSystemWatcher(EXTENSION_LIST_PATTERN);
     const projectFile = vscode.workspace.createFileSystemWatcher(PROJECT_FILE_PATTERN);
     const gdextensions = vscode.workspace.createFileSystemWatcher(GDEXTENSION_PATTERN);
-    this._disposables.push(extensionList, projectFile, gdextensions);
+    const scanStopFiles = vscode.workspace.createFileSystemWatcher(SCAN_STOP_FILES_PATTERN);
+    const deletedPaths = vscode.workspace.createFileSystemWatcher(ANY_PATH_PATTERN, true, true, false);
+    this._disposables.push(extensionList, projectFile, gdextensions, scanStopFiles, deletedPaths);
+    this._disposables.push(deletedPaths.onDidDelete((uri) => this._onPathDeleted(uri)));
     this._subscribe(extensionList, (uri) => this._onDependencyChanged(uri));
     this._subscribe(projectFile, (uri) => this._onProjectFileChanged(uri));
-    // Only a GDExtension's presence counts, so its content changes nothing the lint reads.
-    const onGdextension = (uri: vscode.Uri) => this._onGdextensionAddedOrRemoved(uri);
-    this._disposables.push(gdextensions.onDidCreate(onGdextension), gdextensions.onDidDelete(onGdextension));
+    // Only these files' presence counts toward the listing, so a change to their content re-lints nothing.
+    const onListingChanged = (uri: vscode.Uri) => this._onListingChanged(uri);
+    for (const watcher of [gdextensions, scanStopFiles]) {
+      this._disposables.push(watcher.onDidCreate(onListingChanged), watcher.onDidDelete(onListingChanged));
+    }
+    this._disposables.push(
+      vscode.workspace.onDidChangeWorkspaceFolders(() => this._onWorkspaceFoldersChanged())
+    );
 
     // Lint everything already open at activation, unless diagnostics are off.
     if (this._enabled) {
@@ -223,11 +238,17 @@ export class TscnDiagnostics implements vscode.Disposable {
     }
 
     const record = this._recordOf(document);
+    const linted = document.version;
     const { now, later } = record.session.lint(document.getText(), record.provider ?? null);
     this._publish(document, record, now);
     later
       ?.then((complete) => {
-        if (complete && this._documents.get(document.uri.toString()) === record) {
+        // An edit since this lint moved the lines `complete` names, and the edit's own lint publishes again.
+        if (
+          complete &&
+          document.version === linted &&
+          this._documents.get(document.uri.toString()) === record
+        ) {
           this._publish(document, record, complete);
         }
       })
@@ -261,9 +282,10 @@ export class TscnDiagnostics implements vscode.Disposable {
 
   /**
    * Schedules a lint of each open document in the project that holds `uri` whose last lint read anything: its plugin
-   * probe lists the project's GDExtension files, so one added or removed can change its answer.
+   * probe lists the project's GDExtension files, so a GDExtension, a `.gdignore` or a nested `project.godot` added or
+   * removed can change its answer.
    */
-  private _onGdextensionAddedOrRemoved(uri: vscode.Uri): void {
+  private _onListingChanged(uri: vscode.Uri): void {
     if (!this._enabled) return;
     for (const document of vscode.workspace.textDocuments) {
       const record = this._documents.get(document.uri.toString());
@@ -272,15 +294,68 @@ export class TscnDiagnostics implements vscode.Disposable {
   }
 
   /**
+   * Reacts to a deleted file or folder. A provider rooted at or under `uri` goes, and each open document it served
+   * walks again. Each other open document whose last lint read a path under `uri`, or whose project's last listing
+   * found one, is scheduled for a lint. The other watchers cover a single file, and this covers a whole folder.
+   */
+  private _onPathDeleted(uri: vscode.Uri): void {
+    // Before the enabled check: a walk running when diagnostics went off can still fill the maps.
+    const gone = this._dropProvidersWithin(uri);
+    if (!this._enabled) return;
+    for (const document of vscode.workspace.textDocuments) {
+      const record = this._documents.get(document.uri.toString());
+      const provider = record?.provider;
+      if (!provider) continue;
+      if (gone.has(provider)) this._walk(document, record);
+      else if (this._readsUnder(record, provider, uri)) this._scheduleLint(document);
+    }
+  }
+
+  /** Forgets each provider rooted at or under `dir`, and every directory answer if one went. Returns those it forgot. */
+  private _dropProvidersWithin(dir: vscode.Uri): Set<LintResourceProvider> {
+    const gone = new Set<LintResourceProvider>();
+    for (const [key, provider] of this._providers) {
+      if (!provider.isRootedWithin(dir)) continue;
+      this._providers.delete(key);
+      gone.add(provider);
+    }
+    if (gone.size > 0) this._projectFileByDir.clear();
+    return gone;
+  }
+
+  /**
+   * Whether the last lint of `record` read a file under `dir`, or listed one: its probe may have listed the project
+   * only when it read anything, and the provider keeps the last listing.
+   */
+  private _readsUnder(record: DocumentLint, provider: LintResourceProvider, dir: vscode.Uri): boolean {
+    const { reads } = record.session;
+    const under = (path: string) => {
+      const file = provider.fileOf(path);
+      return file !== null && isWithinRoot(dir.fsPath, file.fsPath);
+    };
+    return reads.some(under) || (reads.length > 0 && provider.listed.some(under));
+  }
+
+  /**
    * Walks again for each open document under `uri`'s directory, the documents whose project the file roots or
    * would root, and lints each once its walk answers. A provider whose root is unchanged stays, verdicts included.
    */
   private _onProjectFileChanged(uri: vscode.Uri): void {
-    if (!this._enabled) return;
+    // Before the enabled check: a walk running when diagnostics went off can still fill the map.
     this._projectFileByDir.clear();
+    if (!this._enabled) return;
     const projectDir = vscode.Uri.joinPath(uri, '..').fsPath;
     for (const document of vscode.workspace.textDocuments) {
       if (!isTscnDocument(document) || !isWithinRoot(projectDir, document.uri.fsPath)) continue;
+      const record = this._documents.get(document.uri.toString());
+      if (record) this._walk(document, record);
+    }
+  }
+
+  /** Walks again for each open document, since a workspace folder added or removed can move it into or out of a project. */
+  private _onWorkspaceFoldersChanged(): void {
+    if (!this._enabled) return;
+    for (const document of vscode.workspace.textDocuments) {
       const record = this._documents.get(document.uri.toString());
       if (record) this._walk(document, record);
     }

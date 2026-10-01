@@ -54,4 +54,6 @@ export const mockWorkspace: any = {
   }),
 
   onDidChangeConfiguration: vi.fn(() => ({ dispose: vi.fn() })),
+
+  onDidChangeWorkspaceFolders: vi.fn(() => ({ dispose: vi.fn() })),
 };

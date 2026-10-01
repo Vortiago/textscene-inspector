@@ -101,6 +101,18 @@ describe('parseProjectSettings', () => {
     );
   });
 
+  it('reads a quoted key, which Godot writes for a name with a character outside printable ASCII', () => {
+    const settings = parseProjectSettings(
+      '[autoload]\n\n"Données"="*res://donnees.gd"\n"a\\"b"="*res://ab.gd"\n'
+    );
+    expect(settings).toEqual({ 'autoload/Données': '*res://donnees.gd', 'autoload/a"b': '*res://ab.gd' });
+  });
+
+  it('reads a key with blanks before its =, and a heading with a comment after it', () => {
+    const settings = parseProjectSettings('[autoload] ; the game singletons\n\nGame = "*res://game.gd"\n');
+    expect(settings).toEqual({ 'autoload/Game': '*res://game.gd' });
+  });
+
   it('ignores comments and blank lines', () => {
     const settings = parseProjectSettings('; a comment\n\n[gui]\n\n; another\nfoo=1\n');
     expect(settings).toEqual({ 'gui/foo': '1' });
@@ -308,6 +320,12 @@ describe('declaredAutoloads', () => {
     expect(declaredAutoloads(null)).toEqual([]);
   });
 
+  it('names an entry whose name Godot writes as a quoted key', () => {
+    expect(declaredAutoloads(parseProjectSettings('[autoload]\n\n"Größe"="*res://groesse.gd"\n'))).toEqual([
+      'Größe',
+    ]);
+  });
+
   it('ignores a key that only starts like the section, such as one in [autoload_prepend]', () => {
     expect(declaredAutoloads(parseProjectSettings('[autoload_prepend]\nFirst="*res://first.gd"\n'))).toEqual(
       []
@@ -342,8 +360,13 @@ describe('enabledEditorPlugins', () => {
     expect(enabledEditorPlugins(null)).toEqual([]);
   });
 
-  it('is empty for a value it cannot read as a list of strings', () => {
+  it('is empty for a value that is not an array, which converts to no entry', () => {
     expect(enabledEditorPlugins(parseProjectSettings('[editor_plugins]\nenabled=42\n'))).toEqual([]);
+  });
+
+  it('keeps an element that is no string literal, since the conversion stringifies each element', () => {
+    const settings = parseProjectSettings('[editor_plugins]\nenabled=[&"res://addons/a/plugin.cfg", 0]\n');
+    expect(enabledEditorPlugins(settings)).toEqual(['&"res://addons/a/plugin.cfg"', '0']);
   });
 });
 

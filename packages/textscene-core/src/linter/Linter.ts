@@ -1,10 +1,15 @@
 /** The linting engine for TSCN files: strict parsing, then the semantic rules. */
 
-import type { TscnExternalResource, TscnScene, TscnNode } from '../parser/types.js';
+import type { TscnScene, TscnNode } from '../parser/types.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { orphanDiagnostics } from './orphanDiagnostics.js';
 import { danglingResourceDiagnostics } from './danglingResources.js';
-import { unimportableGltfDiagnostics, usedGltfResources, type ProjectReads } from './unimportableGltf.js';
+import {
+  unimportableGltfDiagnostics,
+  usedGltfResources,
+  type ProjectReads,
+  type UsedGltf,
+} from './unimportableGltf.js';
 import { GltfVerdicts } from './gltfVerdicts.js';
 import { PLUGIN_PROBE_PATHS, ProjectPluginProbes } from './projectPlugins.js';
 import { LintSession, type GltfUse, type ProjectLint } from './LintSession.js';
@@ -75,20 +80,20 @@ export class Linter {
   /** One strict parse for both the file's own rules and the cross-file ones, as a session assembles them. */
   private lintProject(content: string, provider: ResourceProvider | null): ProjectLint {
     const { diagnostics, parsed } = this.lintFile(content);
-    const gltfResources = provider && parsed?.scene ? usedGltfResources(parsed.scene) : [];
-    if (!provider || !parsed || gltfResources.length === 0) {
+    const usedGltf = provider && parsed?.scene ? usedGltfResources(parsed.scene) : [];
+    if (!provider || !parsed || usedGltf.length === 0) {
       return { local: diagnostics, gltfUses: NO_GLTF_USES, crossFile: null, reads: [] };
     }
 
     const gltfUses = new Map<string, GltfUse>();
-    for (const resource of gltfResources) {
+    for (const { resource } of usedGltf) {
       gltfUses.set(resource.id, { path: resource.path, location: headingLocation(parsed.lines, resource) });
     }
     return {
       local: diagnostics,
       gltfUses,
-      crossFile: this.gltfDiagnostics(gltfResources, parsed.lines, provider),
-      reads: [...new Set(gltfResources.map((resource) => resource.path)), ...PLUGIN_PROBE_PATHS],
+      crossFile: this.gltfDiagnostics(usedGltf, parsed.lines, provider),
+      reads: [...new Set(usedGltf.map(({ resource }) => resource.path)), ...PLUGIN_PROBE_PATHS],
     };
   }
 
@@ -98,12 +103,12 @@ export class Linter {
    * The crash names no line, since the rule is about the whole file.
    */
   private async gltfDiagnostics(
-    resources: readonly TscnExternalResource[],
+    used: readonly UsedGltf[],
     lines: SourceLines,
     provider: ResourceProvider
   ): Promise<Diagnostic[]> {
     try {
-      return await unimportableGltfDiagnostics(resources, lines, provider, this.projectReads);
+      return await unimportableGltfDiagnostics(used, lines, provider, this.projectReads);
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       const rule = FILE_DIAGNOSTICS.unimportableGltf.ruleName;

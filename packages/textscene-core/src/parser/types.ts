@@ -68,6 +68,13 @@ export interface TscnScene {
    * so an `ExtResource` in it is a use. Absent rather than empty when no heading binds anything.
    */
   connectionBinds?: readonly string[];
+  /**
+   * The `instance=` value of each `[node]` heading that follows no other `[node]`: the first, or one after a
+   * `[connection]` or `[editable]`. Only a node body's read of the next heading skips a failed `ExtResource`
+   * (`resource_format_text.cpp:288-289`). Every other read ends the load (`:533-536`, `:647-650`, `:381-384`,
+   * `:404-407`). Absent rather than empty when no such heading instances anything.
+   */
+  instancesOutsideNodeBody?: readonly string[];
   /** Event-based resource loader, used by SceneGraph helpers. */
   resourceLoader?: ResourceLoader;
 }

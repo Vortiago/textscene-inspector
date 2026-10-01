@@ -1,7 +1,8 @@
 /**
- * Walks up from a document's directory for `project.godot`, since Godot's `res://` is always
- * project-root-relative. The preview falls back to the workspace root, and the linter takes no
- * fallback, so it reports the files the CLI reports. The walk is core's `findProjectRoot`.
+ * Walks up from a document's directory for `project.godot` (core's `findProjectRoot`), since `res://` is relative to
+ * the project root. It stops at the workspace folder: the plain-glob watchers report events inside workspace folders
+ * only, so the extension cannot keep a project above the folder current. The CLI climbs to the filesystem root. The
+ * preview falls back to the workspace root, and the linter takes no fallback.
  */
 
 import * as vscode from 'vscode';

@@ -252,9 +252,7 @@ const USES_TREE_GLB = `[gd_scene format=3]
 
 [ext_resource type="PackedScene" path="res://tree.glb" id="1_tree"]
 
-[node name="Root" type="Node3D"]
-
-[node name="Tree" parent="." instance=ExtResource("1_tree")]
+[node name="Tree" instance=ExtResource("1_tree")]
 `;
 
 describe('cross-file rules', () => {
@@ -313,6 +311,24 @@ describe('cross-file rules', () => {
     expect(exitCode).toBe(0);
     expect(files[0]!.diagnostics.map((d) => [d.severity, d.ruleName])).toEqual([
       ['warning', 'gltf-required-extension-maybe-unsupported'],
+    ]);
+  });
+
+  it('warns, and passes the run, where only a child node instances the refused glTF, since the scene still loads', async () => {
+    const scene = join(projectDir, 'game', 'scenes', 'child.tscn');
+    writeFileSync(
+      scene,
+      USES_TREE_GLB.replace(
+        '[node name="Tree" instance=ExtResource("1_tree")]',
+        '[node name="Root" type="Node3D"]\n\n[node name="Tree" parent="." instance=ExtResource("1_tree")]'
+      )
+    );
+
+    const { exitCode, files } = await collectFileDiagnostics([scene]);
+
+    expect(exitCode).toBe(0);
+    expect(files[0]!.diagnostics.map((d) => [d.severity, d.ruleName])).toEqual([
+      ['warning', 'gltf-required-extension-unsupported-in-node'],
     ]);
   });
 

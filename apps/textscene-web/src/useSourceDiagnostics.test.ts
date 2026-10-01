@@ -86,15 +86,13 @@ const INSTANCED_TREE = new Uint8Array(
   )
 ).buffer;
 
-/** A scene whose `Tree` node instances `res://tree.glb`, declared on line 3. */
+/** A scene whose root heading inherits `res://tree.glb`, declared on line 3, so a refusal fails its load. */
 const USES_TREE_GLB = [
   '[gd_scene format=3]',
   '',
   '[ext_resource type="PackedScene" path="res://tree.glb" id="1_tree"]',
   '',
-  '[node name="Root" type="Node3D"]',
-  '',
-  '[node name="Tree" parent="." instance=ExtResource("1_tree")]',
+  '[node name="Tree" instance=ExtResource("1_tree")]',
 ].join('\n');
 
 /**

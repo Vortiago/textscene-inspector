@@ -58,11 +58,18 @@ three.js, so the CLI and the VS Code extension host can bundle it alone.
 
 `Linter.lint` reads only the scene. A `LintSession`, from `Linter.session()`, also reads the
 files the scene uses, through the host's `ResourceProvider`. It reports a used `.glb` or
-`.gltf` that requires a glTF extension Godot's importer does not support, because Godot then
-fails to load the scene. The report is an error only when the project shows that no code can
-register a `GLTFDocumentExtension` that supports the extension: a readable `project.godot`
-enables no editor plugin and declares no autoload, and a listing of the project finds no
-`.gdextension` file. It is a warning in every other case (ADR-0043).
+`.gltf` that requires a glTF extension Godot's importer does not support. The tier depends on
+where the file is used (`linter/usedExtResources.ts`):
+
+- A use in a sub-resource, a `.tres` `[resource]` body, a `[connection]`'s `binds=`, or a
+  node heading that follows no other node heading, fails the load of the file that holds it. The report is an error only
+  when the project shows that no code can register a `GLTFDocumentExtension` that supports
+  the extension. That needs a readable `project.godot` that enables no editor plugin and
+  declares no autoload, and a listing of the project that finds no `.gdextension` file. In
+  every other case it is a warning (ADR-0043).
+- A use only in other node headings and node bodies leaves the scene loadable. The editor
+  reports a broken dependency, and a running game loads the scene without the resource. The
+  report is a warning.
 
 A host keeps one session per document. One strict parse serves both kinds of rule.
 `session.lint` returns `now`, the scene's own diagnostics beside the cross-file ones of the
@@ -81,27 +88,43 @@ provider's optional `stamp` gives: a file's modification time and size in the CL
 an upload serial on the web, or the corpus root for a mirror file a fetch has delivered. It
 keeps the verdict of each glTF file, and the plugin answer of `project.godot` and the
 GDExtension list, each file under its own stamp. It reads a file again only when its stamp
-changes, and every time for a provider with no `stamp`. A read of a path that is already
-running is shared, so two concurrent lints read a file once.
+changes, and every time for a provider with no `stamp`. It keeps nothing from a read that
+could not deliver the file. A read of a path that is already running under the same stamp is
+shared, so two concurrent lints read an unchanged file once.
 
 The plugin probe reads the project files beside the glTF reads. It lists the project's
 `.gdextension` files through the provider's optional `listFiles` only when a file is refused
 and those files leave the answer open. The CLI walks the directories Godot's editor scan
 enters (`resources/projectListing.ts`), once per run. VS Code lists with `findFiles` on each
-such lint. The web previewer cannot list its mirror, so its Source pane shows the warning.
+such lint. The web previewer cannot list its mirror, so its Source pane shows the warning. A
+provider without `listFiles` can never rule a GDExtension out, so the probe reads nothing for it.
 
 VS Code keeps one provider per project root, so the documents of a project share the kept
 verdicts. The extension watches each glob once. On a change to a glTF file or the GDExtension
 list, it re-lints each open document whose last lint read that file. When a `.gdextension`
-file is created or deleted, it re-lints each open document of that project whose last lint
-read a file. On a change to `project.godot`, it finds the project of each open document under
-that directory again, and re-lints it. It publishes a list only when it differs from the list
-it shows. The web previewer re-lints the Source pane after each upload or removal.
+file, a `.gdignore` or a `project.godot` is created or deleted, it re-lints each open document
+of that project whose last lint read a file. On a change to `project.godot`, it finds the
+project of each open document under that directory again, and re-lints it. A change to the
+workspace folders does the same for every open document.
+
+VS Code reports a deleted or moved folder as one event for the folder, and no event for the
+files inside it. So the extension also watches every path for deletes. On a delete, it
+re-lints each open document whose last lint read a file under that path. It also re-lints
+each open document whose project's last listing found a `.gdextension` file there. A provider
+whose project root is at or under the path goes, and its documents find their project again.
+
+VS Code publishes a list only when it differs from the list it shows. It drops a full list
+whose document an edit has changed since the lint began, because the edit's own lint
+publishes. The web previewer re-lints the Source pane after each upload or removal.
 
 The CLI and the VS Code extension root their linter providers at the nearest `project.godot`
 through `resources/resPath.ts`, and the web previewer at its corpus root. Both linter
-providers return null for a missing file or a path outside the root, so both report the same
-files. The CLI lints a scene outside every project with `lint` alone.
+providers return null for a missing file or a path outside the root. The CLI looks for
+`project.godot` up to the filesystem root. VS Code looks only up to the workspace folder,
+because its glob watchers report changes inside the workspace folders only. So for a scene
+whose `project.godot` is above its workspace folder, the CLI reports the cross-file
+diagnostics and VS Code does not. Inside one project, both report the same files. The CLI
+lints a scene outside every project with `lint` alone.
 
 ## Vertical slices and registries
 

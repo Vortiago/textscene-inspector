@@ -89,6 +89,22 @@ describe('LintResourceProvider holds', () => {
   });
 });
 
+describe('LintResourceProvider isRootedWithin', () => {
+  it('is rooted within its own root and each folder above it', () => {
+    const provider = providerForLevel();
+
+    expect(provider.isRootedWithin(createMockUri('/workspace/game'))).toBe(true);
+    expect(provider.isRootedWithin(createMockUri('/workspace'))).toBe(true);
+  });
+
+  it('is not rooted within a folder under its root, or a sibling that shares a prefix', () => {
+    const provider = providerForLevel();
+
+    expect(provider.isRootedWithin(createMockUri('/workspace/game/addons'))).toBe(false);
+    expect(provider.isRootedWithin(createMockUri('/workspace/gam'))).toBe(false);
+  });
+});
+
 describe('LintResourceProvider stamp', () => {
   /** A stat of a file on the mocked disk, with the modification time and size of its bytes. */
   function statOnDisk(uri: vscode.Uri) {
@@ -119,14 +135,14 @@ describe('LintResourceProvider stamp', () => {
   });
 });
 
-describe('LintResourceProvider listFiles', () => {
-  /** Arranges the files `findFiles` finds for each glob: the GDExtension files, and the scan's stop files. */
-  function found(gdextensions: readonly string[], stopFiles: readonly string[]): void {
-    (vscode.workspace.findFiles as Mock).mockImplementation(async (include: vscode.RelativePattern) =>
-      (include.pattern.includes('gdignore') ? stopFiles : gdextensions).map((path) => createMockUri(path))
-    );
-  }
+/** Arranges the files `findFiles` finds for each glob: the GDExtension files, and the scan's stop files. */
+function found(gdextensions: readonly string[], stopFiles: readonly string[]): void {
+  (vscode.workspace.findFiles as Mock).mockImplementation(async (include: vscode.RelativePattern) =>
+    (include.pattern.includes('gdignore') ? stopFiles : gdextensions).map((path) => createMockUri(path))
+  );
+}
 
+describe('LintResourceProvider listFiles', () => {
   it('lists each GDExtension under the project root as a res:// path, in any case', async () => {
     found(
       ['/workspace/game/bin/a.gdextension', '/workspace/game/addons/x/B.GDExtension'],
@@ -158,7 +174,7 @@ describe('LintResourceProvider listFiles', () => {
   });
 
   it('searches under the project root with no excludes, so neither files.exclude nor .gitignore hides a file', async () => {
-    found([], []);
+    found(['/workspace/game/bin/a.gdextension'], ['/workspace/game/project.godot']);
 
     await providerForLevel().listFiles('gdextension');
 
@@ -170,9 +186,53 @@ describe('LintResourceProvider listFiles', () => {
     expect(calls.map(([, exclude]) => exclude)).toEqual([null, null]);
   });
 
+  it('lists nothing after one search when it finds no GDExtension, since no stop file can then skip one', async () => {
+    found([], ['/workspace/game/project.godot']);
+
+    expect(await providerForLevel().listFiles('gdextension')).toEqual([]);
+    expect(vscode.workspace.findFiles).toHaveBeenCalledTimes(1);
+  });
+
   it('gives null when the search fails, since nothing is then proven', async () => {
     (vscode.workspace.findFiles as Mock).mockRejectedValue(new Error('search failed'));
 
     expect(await providerForLevel().listFiles('gdextension')).toBeNull();
+  });
+});
+
+describe('LintResourceProvider listed', () => {
+  it('is empty before any listing', () => {
+    expect(providerForLevel().listed).toEqual([]);
+  });
+
+  it('keeps what the last listing found, without the files the scan skips', async () => {
+    found(['/workspace/game/bin/a.gdextension', '/workspace/game/.godot/b.gdextension'], []);
+    const provider = providerForLevel();
+
+    await provider.listFiles('gdextension');
+
+    expect(provider.listed).toEqual(['res://bin/a.gdextension']);
+  });
+
+  it('keeps the last listing that answered when a later search fails', async () => {
+    found(['/workspace/game/bin/a.gdextension'], []);
+    const provider = providerForLevel();
+    await provider.listFiles('gdextension');
+
+    (vscode.workspace.findFiles as Mock).mockRejectedValue(new Error('search failed'));
+    await provider.listFiles('gdextension');
+
+    expect(provider.listed).toEqual(['res://bin/a.gdextension']);
+  });
+
+  it('is empty again after a listing that finds nothing', async () => {
+    found(['/workspace/game/bin/a.gdextension'], []);
+    const provider = providerForLevel();
+    await provider.listFiles('gdextension');
+
+    found([], []);
+    await provider.listFiles('gdextension');
+
+    expect(provider.listed).toEqual([]);
   });
 });
