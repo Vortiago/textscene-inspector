@@ -48,7 +48,12 @@ describe('<SplitContainer> — invisibility (axis-independent)', () => {
   it('renders nothing under the default theme (autohide=true)', async () => {
     const node = split({}, expandChildren('sizeFlagsHorizontal'));
     const renderer = await ReactThreeTestRenderer.create(
-      <SplitContainer {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={0} />
+      <SplitContainer
+        {...painterEnv()}
+        solveNode={node}
+        rect={{ x: 0, y: 0, w: 400, h: 60 }}
+        renderOrder={0}
+      />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });
@@ -56,7 +61,12 @@ describe('<SplitContainer> — invisibility (axis-independent)', () => {
   it('renders nothing with fewer than two sortable children, even with autohide overridden', async () => {
     const node = split({ themeOverrideConstants: { autohide: 0 } }, [solveNode('Only', 'ColorRect', {})]);
     const renderer = await ReactThreeTestRenderer.create(
-      <SplitContainer {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={0} />
+      <SplitContainer
+        {...painterEnv()}
+        solveNode={node}
+        rect={{ x: 0, y: 0, w: 400, h: 60 }}
+        renderOrder={0}
+      />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });
@@ -67,7 +77,12 @@ describe('<SplitContainer> — invisibility (axis-independent)', () => {
       expandChildren('sizeFlagsHorizontal')
     );
     const renderer = await ReactThreeTestRenderer.create(
-      <SplitContainer {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={0} />
+      <SplitContainer
+        {...painterEnv()}
+        solveNode={node}
+        rect={{ x: 0, y: 0, w: 400, h: 60 }}
+        renderOrder={0}
+      />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });
@@ -77,7 +92,12 @@ describe('<SplitContainer> — horizontal axis (vertical absent, Godot default f
   it('draws hsplitter (8x48) at the computed split offset', async () => {
     const node = split({ themeOverrideConstants: { autohide: 0 } }, expandChildren('sizeFlagsHorizontal'));
     const renderer = await ReactThreeTestRenderer.create(
-      <SplitContainer {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={5} />
+      <SplitContainer
+        {...painterEnv()}
+        solveNode={node}
+        rect={{ x: 0, y: 0, w: 400, h: 60 }}
+        renderOrder={5}
+      />
     );
 
     const meshes = renderer.scene.findAllByType('Mesh');
@@ -100,7 +120,12 @@ describe('<SplitContainer> — vertical axis (vertical: true)', () => {
       expandChildren('sizeFlagsVertical')
     );
     const renderer = await ReactThreeTestRenderer.create(
-      <SplitContainer {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 60, h: 400 }} renderOrder={5} />
+      <SplitContainer
+        {...painterEnv()}
+        solveNode={node}
+        rect={{ x: 0, y: 0, w: 60, h: 400 }}
+        renderOrder={5}
+      />
     );
 
     const meshes = renderer.scene.findAllByType('Mesh');
@@ -121,7 +146,12 @@ describe('<SplitContainer> — vertical axis (vertical: true)', () => {
       expandChildren('sizeFlagsHorizontal')
     );
     const renderer = await ReactThreeTestRenderer.create(
-      <SplitContainer {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 60, h: 400 }} renderOrder={0} />
+      <SplitContainer
+        {...painterEnv()}
+        solveNode={node}
+        rect={{ x: 0, y: 0, w: 60, h: 400 }}
+        renderOrder={0}
+      />
     );
     // Neither child expands on the split axis -> rest position 0, clamped by
     // each child's own (zero here) minimum size: draggerPos stays 0.

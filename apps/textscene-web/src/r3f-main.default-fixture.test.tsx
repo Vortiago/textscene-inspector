@@ -6,9 +6,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 
 vi.mock('@textscene/core', async () => {
-  const real = await vi.importActual<typeof import('@textscene/core')>(
-    '@textscene/core'
-  );
+  const real = await vi.importActual<typeof import('@textscene/core')>('@textscene/core');
   return {
     ...real,
     TscnCanvas: () => null,

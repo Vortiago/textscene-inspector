@@ -26,11 +26,7 @@ export interface NodeOptions {
 }
 
 /** Build one `[node ...]` heading plus its property lines (no trailing blank line). */
-export function node(
-  type: string,
-  props: Record<string, PropValue> = {},
-  options: NodeOptions = {}
-): string {
+export function node(type: string, props: Record<string, PropValue> = {}, options: NodeOptions = {}): string {
   const name = options.name ?? type;
   return heading(`name="${name}" type="${type}"`, props, options);
 }
@@ -41,10 +37,7 @@ export function node(
  * {@link override} are shapes every `*-invalid-parent` rule stays silent about,
  * and a hand copy with a wrong attribute tests nothing.
  */
-export function instanced(
-  name: string,
-  options: NodeOptions & { id?: string } = {}
-): string {
+export function instanced(name: string, options: NodeOptions & { id?: string } = {}): string {
   const id = options.id ?? PACKED_SCENE_ID;
   return heading(`name="${name}" instance=ExtResource("${id}")`, {}, options);
 }
@@ -57,11 +50,7 @@ export function override(name: string, index = 0, options: NodeOptions = {}): st
   return heading(`name="${name}" index="${index}"`, {}, options);
 }
 
-function heading(
-  attributes: string,
-  props: Record<string, PropValue>,
-  options: NodeOptions
-): string {
+function heading(attributes: string, props: Record<string, PropValue>, options: NodeOptions): string {
   // `!== undefined`, not truthiness: Godot reads an empty `parent=""`
   // differently from no `parent` at all.
   const parentAttr = options.parent !== undefined ? ` parent="${options.parent}"` : '';
@@ -73,11 +62,7 @@ function heading(
  * Build one `[sub_resource ...]` heading plus its property lines. Validated
  * through the same `findValidator` as the node half.
  */
-export function subResource(
-  type: string,
-  props: Record<string, PropValue> = {},
-  id = 'Res_1'
-): string {
+export function subResource(type: string, props: Record<string, PropValue> = {}, id = 'Res_1'): string {
   const heading = `[sub_resource type="${type}" id="${id}"]`;
   const lines = Object.entries(props).map(([key, value]) => `${key} = ${renderValue(value)}`);
   return [heading, ...lines].join('\n');
@@ -129,7 +114,7 @@ export interface DiagnosticExpectation {
  */
 function candidates(diagnostics: Diagnostic[], where: DiagnosticExpectation): Diagnostic[] {
   return diagnostics.filter(
-    d =>
+    (d) =>
       (where.ruleName === undefined || d.ruleName === where.ruleName) &&
       (where.prop === undefined || d.message.includes(where.prop))
   );
@@ -140,7 +125,7 @@ function matchesAsserted(d: Diagnostic, where: DiagnosticExpectation): boolean {
   return (
     (where.severity === undefined || d.severity === where.severity) &&
     (where.nodeType === undefined || d.nodeType === where.nodeType) &&
-    (where.contains ?? []).every(substring => d.message.includes(substring))
+    (where.contains ?? []).every((substring) => d.message.includes(substring))
   );
 }
 
@@ -165,8 +150,8 @@ export function expectDiagnostic(content: string, where: DiagnosticExpectation):
   const diagnostics = lint(content);
   expect(diagnostics.length, 'the scene produced no diagnostics at all').toBeGreaterThan(0);
   const named = candidates(diagnostics, where);
-  const matched = named.filter(d => matchesAsserted(d, where));
-  expect([...new Set(matched.map(d => d.message))], locateHint(where, named)).toHaveLength(1);
+  const matched = named.filter((d) => matchesAsserted(d, where));
+  expect([...new Set(matched.map((d) => d.message))], locateHint(where, named)).toHaveLength(1);
   return matched[0]!;
 }
 
@@ -181,20 +166,20 @@ const STRANDED_RULES: readonly string[] = [
   FILE_DIAGNOSTICS.unresolvedParentPath,
   FILE_DIAGNOSTICS.emptyParentPath,
   FILE_DIAGNOSTICS.rootDeclaresParent,
-].map(arm => arm.ruleName);
+].map((arm) => arm.ruleName);
 
 function expectEveryHeadingPlaced(diagnostics: Diagnostic[]): void {
   const stranded = diagnostics
-    .filter(d => STRANDED_RULES.includes(d.ruleName))
-    .map(d => `${d.ruleName}: ${d.nodeName}`);
+    .filter((d) => STRANDED_RULES.includes(d.ruleName))
+    .map((d) => `${d.ruleName}: ${d.nodeName}`);
   expect(stranded).toEqual([]);
 }
 
 /** Every tier that a declared arm gives `ruleName`. */
 function declaredTiers(ruleName: string): Severity[] {
   return declaredArms()
-    .filter(arm => arm.ruleName === ruleName)
-    .map(arm => arm.severity);
+    .filter((arm) => arm.ruleName === ruleName)
+    .map((arm) => arm.severity);
 }
 
 /**
@@ -230,7 +215,7 @@ export function expectNoDiagnostic(content: string, where: DiagnosticExpectation
   // other asserted fields would turn "no diagnostic for this property" into
   // "none with that node type".
   const present = candidates(diagnostics, where).filter(
-    d => severity === undefined || d.severity === severity
+    (d) => severity === undefined || d.severity === severity
   );
   expect(present.map(describe1)).toEqual([]);
 }
@@ -246,7 +231,7 @@ export function expectNoErrors(content: string, where: DiagnosticExpectation = {
 
 /** Assert at least one diagnostic of the given severity is present. */
 export function expectSeverity(content: string, severity: Severity): void {
-  expect(lint(content).some(d => d.severity === severity)).toBe(true);
+  expect(lint(content).some((d) => d.severity === severity)).toBe(true);
 }
 
 /** One rejected value plus the message substrings its diagnostic must contain. */
@@ -359,7 +344,11 @@ export function runResourcePropertyValidation(
       }
       for (const invalid of propCase.invalid ?? []) {
         it(`rejects ${renderValue(invalid.value)}`, () => {
-          const content = scene(...prefix, subResource(resourceType, { [propCase.prop]: invalid.value }), root);
+          const content = scene(
+            ...prefix,
+            subResource(resourceType, { [propCase.prop]: invalid.value }),
+            root
+          );
           expectInvalidCase(content, propCase.prop, invalid);
         });
       }
@@ -372,10 +361,7 @@ export function runResourcePropertyValidation(
  * `describe('<prop> validation')` per case, with an `it` per valid value (clean,
  * or no-error per the accept mode) and per invalid value (its diagnostic).
  */
-export function runPropertyValidation(
-  options: PropertyValidationOptions,
-  cases: PropertyCase[]
-): void {
+export function runPropertyValidation(options: PropertyValidationOptions, cases: PropertyCase[]): void {
   const { nodeType, acceptChild, prefix = [], nodeOptions = {}, baseProps } = options;
   for (const propCase of cases) {
     const mode = propCase.acceptMode ?? options.acceptMode ?? 'clean';

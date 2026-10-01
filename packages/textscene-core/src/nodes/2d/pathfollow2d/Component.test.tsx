@@ -12,11 +12,7 @@ import { parsePathFollow2D } from './parser';
 import { Path2DCurveProvider } from '../../../r3f/contexts/Path2DCurveContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
-import {
-  decodeCurve2D,
-  tessellateCurve2D,
-  type Curve2DSampler,
-} from '../../../resources/curves/curve2d';
+import { decodeCurve2D, tessellateCurve2D, type Curve2DSampler } from '../../../resources/curves/curve2d';
 import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
 
 // Straight horizontal curve (0,0) → (100,0), length 100.
@@ -29,10 +25,7 @@ function followNode(name = 'MyFollow', props: Record<string, string> = {}): Tscn
     name,
     type: 'PathFollow2D',
     children: [],
-    properties: parsePathFollow2D(
-      { type: 'node', attributes: { type: 'PathFollow2D', name } },
-      props
-    ),
+    properties: parsePathFollow2D({ type: 'node', attributes: { type: 'PathFollow2D', name } }, props),
   };
 }
 

@@ -27,13 +27,15 @@ describe('Linter', () => {
           description: 'Test semantic rule',
           category: 'validation',
         },
-        check: (context) => [{
-          severity: 'error',
-          message: 'Test semantic error',
-          nodeName: context.node.name,
-          nodeType: context.node.type,
-          ruleName: 'test-semantic-rule',
-        }],
+        check: (context) => [
+          {
+            severity: 'error',
+            message: 'Test semantic error',
+            nodeName: context.node.name,
+            nodeType: context.node.type,
+            ruleName: 'test-semantic-rule',
+          },
+        ],
       };
 
       ruleRegistry.register(testRule);
@@ -46,7 +48,7 @@ describe('Linter', () => {
       const diagnostics = linter.lint(content);
 
       expect(diagnostics.length).toBeGreaterThan(0);
-      const ruleDiagnostic = diagnostics.find(d => d.ruleName === 'test-semantic-rule');
+      const ruleDiagnostic = diagnostics.find((d) => d.ruleName === 'test-semantic-rule');
       expect(ruleDiagnostic).toBeDefined();
       expect(ruleDiagnostic!.message).toBe('Test semantic error');
     });
@@ -93,13 +95,15 @@ visible = true
           category: 'validation',
           applicableNodeTypes: ['MeshInstance3D'],
         },
-        check: (context) => [{
-          severity: 'warning',
-          message: 'MeshInstance3D specific warning',
-          nodeName: context.node.name,
-          nodeType: context.node.type,
-          ruleName: 'test-type-specific-rule',
-        }],
+        check: (context) => [
+          {
+            severity: 'warning',
+            message: 'MeshInstance3D specific warning',
+            nodeName: context.node.name,
+            nodeType: context.node.type,
+            ruleName: 'test-type-specific-rule',
+          },
+        ],
       };
 
       ruleRegistry.register(testRule);
@@ -115,7 +119,7 @@ visible = true
 
       const diagnostics = linter.lint(content);
 
-      const meshWarnings = diagnostics.filter(d => d.ruleName === 'test-type-specific-rule');
+      const meshWarnings = diagnostics.filter((d) => d.ruleName === 'test-type-specific-rule');
       expect(meshWarnings).toHaveLength(1);
       expect(meshWarnings[0]!.nodeName).toBe('Mesh');
     });
@@ -127,13 +131,15 @@ visible = true
           description: 'Test rule 1',
           category: 'validation',
         },
-        check: () => [{
-          severity: 'error',
-          message: 'Error from rule 1',
-          nodeName: 'Root',
-          nodeType: 'Node3D',
-          ruleName: 'test-rule-1',
-        }],
+        check: () => [
+          {
+            severity: 'error',
+            message: 'Error from rule 1',
+            nodeName: 'Root',
+            nodeType: 'Node3D',
+            ruleName: 'test-rule-1',
+          },
+        ],
       };
 
       const rule2: LintRule = {
@@ -142,13 +148,15 @@ visible = true
           description: 'Test rule 2',
           category: 'validation',
         },
-        check: () => [{
-          severity: 'warning',
-          message: 'Warning from rule 2',
-          nodeName: 'Root',
-          nodeType: 'Node3D',
-          ruleName: 'test-rule-2',
-        }],
+        check: () => [
+          {
+            severity: 'warning',
+            message: 'Warning from rule 2',
+            nodeName: 'Root',
+            nodeType: 'Node3D',
+            ruleName: 'test-rule-2',
+          },
+        ],
       };
 
       ruleRegistry.register(rule1);
@@ -161,8 +169,8 @@ visible = true
 
       const diagnostics = linter.lint(content);
 
-      expect(diagnostics.find(d => d.ruleName === 'test-rule-1')).toBeDefined();
-      expect(diagnostics.find(d => d.ruleName === 'test-rule-2')).toBeDefined();
+      expect(diagnostics.find((d) => d.ruleName === 'test-rule-1')).toBeDefined();
+      expect(diagnostics.find((d) => d.ruleName === 'test-rule-2')).toBeDefined();
 
       ruleRegistry['rules'].delete('test-rule-1');
       ruleRegistry['rules'].delete('test-rule-2');

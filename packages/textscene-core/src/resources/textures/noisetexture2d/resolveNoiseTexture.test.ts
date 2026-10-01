@@ -123,7 +123,12 @@ describe('resolveNoiseTexture2D — the ice.tres shape', () => {
   });
 
   it('builds again after an edit to its noise', () => {
-    const edited = parseTresFile(ICE.replace('frequency = 0.003\nfractal_type = 2\nfractal_lacunarity = 2.5', 'frequency = 0.004\nfractal_type = 2\nfractal_lacunarity = 2.5'));
+    const edited = parseTresFile(
+      ICE.replace(
+        'frequency = 0.003\nfractal_type = 2\nfractal_lacunarity = 2.5',
+        'frequency = 0.004\nfractal_type = 2\nfractal_lacunarity = 2.5'
+      )
+    );
     const before = resolveNoiseTexture2D(ALBEDO, ice.subResources);
     const after = resolveNoiseTexture2D(ALBEDO, edited.subResources);
     expect(after?.key).not.toBe(before?.key);

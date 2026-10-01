@@ -13,7 +13,8 @@ export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // has one camera and no cull masks, so no parser reads it.
       'layers',
     ],
-    reason: 'Render layers are validated for format but unused: the previewer has one camera and no cull-mask filtering, so no parser reads them.',
+    reason:
+      'Render layers are validated for format but unused: the previewer has one camera and no cull-mask filtering, so no parser reads them.',
   },
 
   Decal: {
@@ -23,7 +24,8 @@ export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // draw order among transparent surfaces.
       'sorting_offset',
     ],
-    reason: 'sorting_offset is a real serialised Decal property, so the linter checks its format, but it only tunes transparency sort order and the renderer has nothing to do with it.',
+    reason:
+      'sorting_offset is a real serialised Decal property, so the linter checks its format, but it only tunes transparency sort order and the renderer has nothing to do with it.',
   },
 
   MeshInstance3D: {
@@ -46,7 +48,8 @@ export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // mesh by. This previewer renders the rest pose.
       'blend_shapes/*',
     ],
-    reason: 'MeshInstance3D linter uses a wildcard pattern for surface_material_override/N and instance_shader_parameters/N; the parser reads the former via an Object.keys loop not captured by the scrape and has no rendering surface for the latter at all. blend_shapes/<name> is a real, unimplemented morph-target rendering gap.',
+    reason:
+      'MeshInstance3D linter uses a wildcard pattern for surface_material_override/N and instance_shader_parameters/N; the parser reads the former via an Object.keys loop not captured by the scrape and has no rendering surface for the latter at all. blend_shapes/<name> is a real, unimplemented morph-target rendering gap.',
   },
 
   // Lights: the shared validators and parseBaseLight* helpers are walked through
@@ -58,18 +61,22 @@ export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // Sky tuning the parser does not read.
       'sky_mode',
     ],
-    reason: 'DirectionalLight3D linter validates the sky mode the static renderer ignores; the Light3D base keys are covered by the Light3D entry on both sides.',
+    reason:
+      'DirectionalLight3D linter validates the sky mode the static renderer ignores; the Light3D base keys are covered by the Light3D entry on both sides.',
   },
 
   OmniLight3D: {
-    reason: 'No unique asymmetries; omni_* keys are symmetric and Light3D base keys are covered by the Light3D entry on both sides.',
+    reason:
+      'No unique asymmetries; omni_* keys are symmetric and Light3D base keys are covered by the Light3D entry on both sides.',
   },
 
   SpotLight3D: {
-    reason: 'No unique asymmetries; spot_* keys are symmetric and Light3D base keys are covered by the Light3D entry on both sides.',
+    reason:
+      'No unique asymmetries; spot_* keys are symmetric and Light3D base keys are covered by the Light3D entry on both sides.',
   },
 
   AreaLight3D: {
-    reason: 'No unique asymmetries; area_* keys are symmetric and Light3D base keys are covered by the Light3D entry on both sides.',
+    reason:
+      'No unique asymmetries; area_* keys are symmetric and Light3D base keys are covered by the Light3D entry on both sides.',
   },
 };

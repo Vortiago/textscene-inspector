@@ -241,13 +241,7 @@ describe('GraphEdit.connection_lines_thickness', () => {
  * (graph_edit.cpp:3094), and the three zoom levels (graph_edit.cpp:3086-3088).
  * Godot states no static bound for any of them, so neither does the validator.
  */
-const UNBOUNDED_FLOATS = [
-  'connection_lines_curvature',
-  'minimap_opacity',
-  'zoom',
-  'zoom_min',
-  'zoom_max',
-];
+const UNBOUNDED_FLOATS = ['connection_lines_curvature', 'minimap_opacity', 'zoom', 'zoom_min', 'zoom_max'];
 
 describe.each(UNBOUNDED_FLOATS)('GraphEdit.%s', (property) => {
   it('accepts an ordinary float', () => {

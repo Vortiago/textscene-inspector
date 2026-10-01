@@ -55,10 +55,10 @@ describe('MeshInstance3D Linter', () => {
       });
 
       it('should reject negative cast_shadow value', () => {
-        expectDiagnostic(
-          scene(node('MeshInstance3D', { cast_shadow: -1 }, { name: 'NegativeShadow' })),
-          { prop: 'cast_shadow', contains: ['cast_shadow'] }
-        );
+        expectDiagnostic(scene(node('MeshInstance3D', { cast_shadow: -1 }, { name: 'NegativeShadow' })), {
+          prop: 'cast_shadow',
+          contains: ['cast_shadow'],
+        });
       });
     });
 
@@ -93,12 +93,10 @@ describe('MeshInstance3D Linter', () => {
         invalid: [{ value: 5, contains: ['0-2'] }],
       },
       {
-          prop: 'layers',
-          valid: [1, 1048575, 0, 2000000, 2147483648, 4294967295],
-          invalid: [
-
-          ],
-        },
+        prop: 'layers',
+        valid: [1, 1048575, 0, 2000000, 2147483648, 4294967295],
+        invalid: [],
+      },
     ]);
 
     describe('material resource reference validation', () => {
@@ -113,7 +111,9 @@ describe('MeshInstance3D Linter', () => {
 
       it('should reject invalid material_override format', () => {
         expectDiagnostic(
-          scene(node('MeshInstance3D', { material_override: '"invalid_format"' }, { name: 'InvalidMaterial' })),
+          scene(
+            node('MeshInstance3D', { material_override: '"invalid_format"' }, { name: 'InvalidMaterial' })
+          ),
           { prop: 'material_override', contains: ['resource reference'] }
         );
       });
@@ -122,7 +122,11 @@ describe('MeshInstance3D Linter', () => {
         expectClean(
           scene(
             '[sub_resource type="StandardMaterial3D" id="mat_overlay"]',
-            node('MeshInstance3D', { material_overlay: 'SubResource("mat_overlay")' }, { name: 'ValidOverlay' })
+            node(
+              'MeshInstance3D',
+              { material_overlay: 'SubResource("mat_overlay")' },
+              { name: 'ValidOverlay' }
+            )
           )
         );
       });
@@ -183,7 +187,11 @@ describe('MeshInstance3D Linter', () => {
     it('should detect missing material_override resource', () => {
       expectDiagnostic(
         scene(
-          node('MeshInstance3D', { material_override: 'SubResource("nonexistent_material")' }, { name: 'MissingMaterial' })
+          node(
+            'MeshInstance3D',
+            { material_override: 'SubResource("nonexistent_material")' },
+            { name: 'MissingMaterial' }
+          )
         ),
         { prop: "'material_override'", severity: 'error' }
       );
@@ -192,7 +200,11 @@ describe('MeshInstance3D Linter', () => {
     it('should detect missing material_overlay resource', () => {
       expectDiagnostic(
         scene(
-          node('MeshInstance3D', { material_overlay: 'SubResource("nonexistent_overlay")' }, { name: 'MissingOverlay' })
+          node(
+            'MeshInstance3D',
+            { material_overlay: 'SubResource("nonexistent_overlay")' },
+            { name: 'MissingOverlay' }
+          )
         ),
         { prop: "'material_overlay'", severity: 'error' }
       );
@@ -261,17 +273,15 @@ describe('MeshInstance3D Linter', () => {
   describe('Semantic Validation (Skeleton)', () => {
     it('reports nothing for a missing, wrong-typed, empty or relative skeleton path', () => {
       expectClean(
-        scene(node('MeshInstance3D', { skeleton: 'NodePath("NonexistentSkeleton")' }, { name: 'MissingSkeleton' }))
+        scene(
+          node('MeshInstance3D', { skeleton: 'NodePath("NonexistentSkeleton")' }, { name: 'MissingSkeleton' })
+        )
       );
       expectClean(
         scene(
           node('Node3D', {}, { name: 'Root' }),
           node('Skeleton3D', {}, { name: 'MySkeleton', parent: '.' }),
-          node(
-            'MeshInstance3D',
-            { skeleton: 'NodePath("../MySkeleton")' },
-            { name: 'MyMesh', parent: '.' }
-          )
+          node('MeshInstance3D', { skeleton: 'NodePath("../MySkeleton")' }, { name: 'MyMesh', parent: '.' })
         )
       );
       expectClean(
@@ -286,7 +296,11 @@ describe('MeshInstance3D Linter', () => {
         scene(
           node('Node3D', {}, { name: 'Root' }),
           node('SpotLight3D', {}, { name: 'SpotLight3D', parent: '.' }),
-          node('MeshInstance3D', { skeleton: 'NodePath("../..")' }, { name: 'MeshInstance3D', parent: 'SpotLight3D' })
+          node(
+            'MeshInstance3D',
+            { skeleton: 'NodePath("../..")' },
+            { name: 'MeshInstance3D', parent: 'SpotLight3D' }
+          )
         )
       );
     });
@@ -300,7 +314,11 @@ describe('MeshInstance3D Linter', () => {
       expectClean(
         scene(
           '[sub_resource type="StandardMaterial3D" id="mat_1"]',
-          node('MeshInstance3D', { [`surface_material_override/${index}`]: 'SubResource("mat_1")' }, { name: 'AnyIndex' })
+          node(
+            'MeshInstance3D',
+            { [`surface_material_override/${index}`]: 'SubResource("mat_1")' },
+            { name: 'AnyIndex' }
+          )
         )
       );
     });
@@ -309,7 +327,11 @@ describe('MeshInstance3D Linter', () => {
       expectClean(
         scene(
           '[sub_resource type="StandardMaterial3D" id="mat_1"]',
-          node('MeshInstance3D', { 'surface_material_override/0': 'SubResource("mat_1")' }, { name: 'ValidIndex0' })
+          node(
+            'MeshInstance3D',
+            { 'surface_material_override/0': 'SubResource("mat_1")' },
+            { name: 'ValidIndex0' }
+          )
         )
       );
     });
@@ -318,7 +340,11 @@ describe('MeshInstance3D Linter', () => {
       expectClean(
         scene(
           '[sub_resource type="StandardMaterial3D" id="mat_1"]',
-          node('MeshInstance3D', { 'surface_material_override/31': 'SubResource("mat_1")' }, { name: 'ValidIndex31' })
+          node(
+            'MeshInstance3D',
+            { 'surface_material_override/31': 'SubResource("mat_1")' },
+            { name: 'ValidIndex31' }
+          )
         )
       );
     });
@@ -357,8 +383,8 @@ describe('MeshInstance3D Linter', () => {
       );
       // The cast_shadow and gi_mode format findings, plus the missing mesh resource.
       expect(diagnostics.length).toBeGreaterThan(1);
-      const hasCastShadowError = diagnostics.some(d => d.message.includes('cast_shadow'));
-      const hasGiModeError = diagnostics.some(d => d.message.includes('gi_mode'));
+      const hasCastShadowError = diagnostics.some((d) => d.message.includes('cast_shadow'));
+      const hasGiModeError = diagnostics.some((d) => d.message.includes('gi_mode'));
       expect(hasCastShadowError || hasGiModeError).toBe(true);
     });
 
@@ -409,7 +435,11 @@ describe('MeshInstance3D surface-override index grammar', () => {
     // and its dangling reference is real.
     expectDiagnostic(
       scene(node('MeshInstance3D', { 'surface_material_override/x1': 'SubResource("mat_missing")' })),
-      { ruleName: 'dangling-resource-reference', severity: 'error', contains: ["'surface_material_override/x1'"] }
+      {
+        ruleName: 'dangling-resource-reference',
+        severity: 'error',
+        contains: ["'surface_material_override/x1'"],
+      }
     );
   });
 });

@@ -85,9 +85,9 @@ describe('matchGlbTarget', () => {
       expect(matchGlbTarget(entries, 'Skeleton/Robot', { allowAncestor: false })?.relPath).toBe(
         'Skeleton/Robot'
       );
-      expect(
-        matchGlbTarget(entries, 'Skeleton/Skeleton3D/Robot', { allowAncestor: false })?.relPath
-      ).toBe('Skeleton/Robot');
+      expect(matchGlbTarget(entries, 'Skeleton/Skeleton3D/Robot', { allowAncestor: false })?.relPath).toBe(
+        'Skeleton/Robot'
+      );
     });
   });
 });

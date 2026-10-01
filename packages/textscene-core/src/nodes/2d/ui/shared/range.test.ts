@@ -34,14 +34,14 @@ describe('parseRange', () => {
   });
 });
 
-describe('the step default is the SUBCLASS\'s, not Range\'s', () => {
+describe("the step default is the SUBCLASS's, not Range's", () => {
   /**
    * Each Range subclass sets its own `step`, and `_calc_value` snaps to it. Measured with
    * `ClassDB.class_get_property_default_value` (Godot 4.6.3): HSlider, VSlider, SpinBox and
    * TextureProgressBar 1.0, ProgressBar 0.01, the scrollbars 0.0 (no snap). A scene that omits
    * `step` still snaps.
    */
-  it('takes the caller\'s default when the scene omits step', () => {
+  it("takes the caller's default when the scene omits step", () => {
     expect(parseRange({}, { step: 1 }).step).toBe(1);
     expect(parseRange({}, { step: 0.01 }).step).toBe(0.01);
     expect(parseRange({}, { step: 0 }).step).toBe(0);
@@ -66,13 +66,17 @@ describe('Range::_calc_value gates (range.cpp:182-200)', () => {
   // `if (!shared->allow_lesser && p_val < shared->min)` (`:197-199`): the clamp is conditional,
   // so an authored value below min survives.
   it('keeps a value below min when allow_lesser is set', () => {
-    expect(resolveRangeValue({ value: -50, minValue: 0, maxValue: 100, allowLesser: true }, undefined)).toBe(-50);
+    expect(resolveRangeValue({ value: -50, minValue: 0, maxValue: 100, allowLesser: true }, undefined)).toBe(
+      -50
+    );
     expect(resolveRangeValue({ value: -50, minValue: 0, maxValue: 100 }, undefined)).toBe(0);
   });
 
   // `if (!shared->allow_greater && p_val > shared->max - shared->page)` (`:193-195`).
   it('keeps a value above max when allow_greater is set', () => {
-    expect(resolveRangeValue({ value: 250, minValue: 0, maxValue: 100, allowGreater: true }, undefined)).toBe(250);
+    expect(resolveRangeValue({ value: 250, minValue: 0, maxValue: 100, allowGreater: true }, undefined)).toBe(
+      250
+    );
     expect(resolveRangeValue({ value: 250, minValue: 0, maxValue: 100 }, undefined)).toBe(100);
   });
 

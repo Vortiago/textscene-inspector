@@ -234,7 +234,13 @@ describe('computeTabBarDrawLayout', () => {
 
   it('returns an empty layout for zero tabs', () => {
     const layout = computeTabBarDrawLayout([], 100, 0, false, 0, 0, 16);
-    expect(layout).toEqual({ items: [], offset: 0, maxDrawnTab: 0, missingRight: false, buttonsVisible: false });
+    expect(layout).toEqual({
+      items: [],
+      offset: 0,
+      maxDrawnTab: 0,
+      missingRight: false,
+      buttonsVisible: false,
+    });
   });
 
   it('reserves incrementIconWidth + decrementIconWidth separately when they differ (a themed pair need not stay symmetric)', () => {
@@ -263,7 +269,10 @@ describe('tabBarThemeIconSize (BIND_THEME_ITEM_CUSTOM(..., close_icon, "close") 
   });
 
   it('is the themed size when the walker resolved a "close"/"increment"/"decrement" slot', () => {
-    expect(tabBarThemeIconSize({ textureSlots: { close: { x: 24, y: 24 } } }, 'close')).toEqual({ x: 24, y: 24 });
+    expect(tabBarThemeIconSize({ textureSlots: { close: { x: 24, y: 24 } } }, 'close')).toEqual({
+      x: 24,
+      y: 24,
+    });
     expect(tabBarThemeIconSize({ textureSlots: {} }, 'increment')).toEqual({ x: 16, y: 16 });
   });
 });
@@ -325,7 +334,9 @@ describe('tabBarFontSizePx', () => {
   });
 
   it('ignores a DIFFERENT size key', () => {
-    expect(tabBarFontSizePx(bar(), { themeOverrideFontSizes: { normal_font_size: 28 } }, THEME)).toBe(THEME.fontSize);
+    expect(tabBarFontSizePx(bar(), { themeOverrideFontSizes: { normal_font_size: 28 } }, THEME)).toBe(
+      THEME.fontSize
+    );
   });
 });
 

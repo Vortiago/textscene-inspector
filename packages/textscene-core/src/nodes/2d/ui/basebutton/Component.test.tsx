@@ -20,7 +20,12 @@ function baseButtonSolveNode(properties: Record<string, unknown> = {}): SolveNod
 describe('<BaseButton>', () => {
   it('renders no scene objects — BaseButton draws nothing of its own', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <BaseButton {...painterEnv()} solveNode={baseButtonSolveNode()} rect={{ x: 0, y: 0, w: 100, h: 40 }} renderOrder={0} />
+      <BaseButton
+        {...painterEnv()}
+        solveNode={baseButtonSolveNode()}
+        rect={{ x: 0, y: 0, w: 100, h: 40 }}
+        renderOrder={0}
+      />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });

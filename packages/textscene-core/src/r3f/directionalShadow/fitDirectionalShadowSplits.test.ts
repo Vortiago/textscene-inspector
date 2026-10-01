@@ -156,7 +156,9 @@ describe('fitDirectionalShadowSplits', () => {
 
   it('starts each blend a tenth short of its split’s far end', () => {
     const { slots } = fit(fitInput(declaring({ blendSplits: true })));
-    slots.slice(0, 3).forEach(([splitEnd, , , blendStart]) => expect(blendStart).toBeCloseTo(splitEnd * 0.9, 9));
+    slots
+      .slice(0, 3)
+      .forEach(([splitEnd, , , blendStart]) => expect(blendStart).toBeCloseTo(splitEnd * 0.9, 9));
   });
 
   it('widens each blending split to start where the previous split starts', () => {

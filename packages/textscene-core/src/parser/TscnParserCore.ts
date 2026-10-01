@@ -6,13 +6,7 @@
  */
 
 import { resolveDeprecatedProperty, type ResolvedProperty } from '../godot/deprecated.js';
-import type {
-  TscnScene,
-  TscnNode,
-  TscnExternalResource,
-  TscnInternalResource,
-  NodeOrigin,
-} from './types.js';
+import type { TscnScene, TscnNode, TscnExternalResource, TscnInternalResource, NodeOrigin } from './types.js';
 import {
   parseHeading,
   parseProperty,
@@ -40,10 +34,7 @@ export type SectionType = 'none' | 'node' | 'ext_resource' | 'sub_resource' | 'r
  * Builds a TscnNode from a parsed heading and its properties. The renderer uses
  * NodeRegistry. The linter builds a plain node with no three.js dependency.
  */
-export type NodeCreator = (
-  heading: ParsedHeading,
-  properties: Record<string, string>
-) => TscnNode | null;
+export type NodeCreator = (heading: ParsedHeading, properties: Record<string, string>) => TscnNode | null;
 
 /**
  * Hooks into the scanning loop for strict (linting) consumers. The observer is
@@ -277,11 +268,7 @@ export class TscnParserCore {
             // `frames` is `sprite_frames`, and `extents` is `size` doubled, so every
             // reader sees one key and one value. The observer gets both as written,
             // since a diagnostic names what is in the file, and the stored pair beside them.
-            const resolved = resolveDeprecatedProperty(
-              currentOwnerType(),
-              property.key,
-              property.value
-            );
+            const resolved = resolveDeprecatedProperty(currentOwnerType(), property.key, property.value);
             currentProperties[resolved.key] = resolved.value;
             observer?.onProperty?.({
               section: currentSection,
@@ -310,7 +297,9 @@ export class TscnParserCore {
       );
     }
 
-    logger.info(`[Parser] Parsing complete: ${origins.length} nodes, ${externalResources.length} external resources, ${internalResources.length} internal resources`);
+    logger.info(
+      `[Parser] Parsing complete: ${origins.length} nodes, ${externalResources.length} external resources, ${internalResources.length} internal resources`
+    );
 
     return {
       nodes: sceneTree,

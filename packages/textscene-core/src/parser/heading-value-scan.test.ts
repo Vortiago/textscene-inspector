@@ -146,9 +146,7 @@ describe('parseHeading recovers from a malformed attribute', () => {
   // array. The array is the only form that opens across the space: the test above
   // pins that a bare token does not.
   it('reads a bound-argument array across the space Godot writes after "binds="', () => {
-    const result = parseHeading(
-      '[connection signal="pressed" from="B" to="." method="_on" binds= [1, 2]]'
-    );
+    const result = parseHeading('[connection signal="pressed" from="B" to="." method="_on" binds= [1, 2]]');
     expect(result).not.toBeNull();
     expect(result!.attributes).toEqual({
       signal: 'pressed',

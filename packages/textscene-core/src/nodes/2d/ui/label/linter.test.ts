@@ -23,7 +23,10 @@ describe('Label autowrap under a Container — a non-finite mode is not autowrap
 describe('Label Linter (label-autowrap-needs-custom-minimum-size)', () => {
   it('warns when autowrap is enabled under a Container parent with no custom_minimum_size', () => {
     const diagnostic = expectDiagnostic(
-      scene(node('VBoxContainer', {}, { name: 'Column' }), node('Label', { autowrap_mode: 2 }, { parent: '.' })),
+      scene(
+        node('VBoxContainer', {}, { name: 'Column' }),
+        node('Label', { autowrap_mode: 2 }, { parent: '.' })
+      ),
       { ruleName: 'label-autowrap-needs-custom-minimum-size', severity: 'warning' }
     );
     expect(diagnostic.message).toContain('Column');
@@ -50,14 +53,20 @@ describe('Label Linter (label-autowrap-needs-custom-minimum-size)', () => {
   });
 
   it('stays silent when autowrap_mode is absent (defaults OFF)', () => {
-    expectNoDiagnostic(scene(node('VBoxContainer', {}, { name: 'Column' }), node('Label', {}, { parent: '.' })), {
-      ruleName: 'label-autowrap-needs-custom-minimum-size',
-    });
+    expectNoDiagnostic(
+      scene(node('VBoxContainer', {}, { name: 'Column' }), node('Label', {}, { parent: '.' })),
+      {
+        ruleName: 'label-autowrap-needs-custom-minimum-size',
+      }
+    );
   });
 
   it('stays silent when autowrap_mode is explicitly OFF (0)', () => {
     expectNoDiagnostic(
-      scene(node('VBoxContainer', {}, { name: 'Column' }), node('Label', { autowrap_mode: 0 }, { parent: '.' })),
+      scene(
+        node('VBoxContainer', {}, { name: 'Column' }),
+        node('Label', { autowrap_mode: 0 }, { parent: '.' })
+      ),
       { ruleName: 'label-autowrap-needs-custom-minimum-size' }
     );
   });
@@ -77,7 +86,10 @@ describe('Label Linter (label-autowrap-needs-custom-minimum-size)', () => {
 
   it('reaches a Container subclass parent (PanelContainer), not just the exact class', () => {
     expectDiagnostic(
-      scene(node('PanelContainer', {}, { name: 'Card' }), node('Label', { autowrap_mode: 1 }, { parent: '.' })),
+      scene(
+        node('PanelContainer', {}, { name: 'Card' }),
+        node('Label', { autowrap_mode: 1 }, { parent: '.' })
+      ),
       { ruleName: 'label-autowrap-needs-custom-minimum-size', severity: 'warning' }
     );
   });

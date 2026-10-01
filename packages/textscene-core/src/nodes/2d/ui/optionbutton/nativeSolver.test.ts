@@ -59,7 +59,7 @@ function ctx(withMeasurer = true): SolveContext {
 }
 
 describe('OPTION_BUTTON_ARROW_NATURAL_SIZE', () => {
-  it('is 12x12 — option_button_arrow.svg\'s own authored size, never clamped by icon_max_width', () => {
+  it("is 12x12 — option_button_arrow.svg's own authored size, never clamped by icon_max_width", () => {
     expect(OPTION_BUTTON_ARROW_NATURAL_SIZE).toEqual({ x: 12, y: 12 });
   });
 });
@@ -78,9 +78,13 @@ describe('theme.widgets.optionButton', () => {
   });
 });
 
-describe('resolveOptionButtonSelectedText (parity with Component.tsx\'s own bounds-guarded lookup)', () => {
+describe("resolveOptionButtonSelectedText (parity with Component.tsx's own bounds-guarded lookup)", () => {
   it('resolves items[selected].text when selected is a valid index', () => {
-    const items = [{ text: 'Easy', id: 0 }, { text: 'Normal', id: 1 }, { text: 'Hard', id: 2 }];
+    const items = [
+      { text: 'Easy', id: 0 },
+      { text: 'Normal', id: 1 },
+      { text: 'Hard', id: 2 },
+    ];
     expect(resolveOptionButtonSelectedText({ items, selected: 1 } as OptionButtonProperties)).toBe('Normal');
   });
 
@@ -107,7 +111,7 @@ describe('optionButtonMinimumSize (option_button.cpp:50-68, fit_to_longest_item=
     expect(optionButtonMinimumSize(n, ctx())).toEqual({ x: 16 + 20 + 4, y: 8 + 18 });
   });
 
-  it('uses the WIDEST item\'s text, not the selected one\'s, for the width floor', () => {
+  it("uses the WIDEST item's text, not the selected one's, for the width floor", () => {
     const items = [
       { text: 'A', id: 0 }, // 10.578125 wide
       { text: 'AB', id: 1 }, // 21.125 wide, the widest
@@ -131,9 +135,10 @@ describe('optionButtonMinimumSize (option_button.cpp:50-68, fit_to_longest_item=
 
   it('h_separation theme_override_constants wins over the theme default', () => {
     const items = [{ text: 'A', id: 0 }];
-    const result = 
-      optionButtonMinimumSize(node({ items, selected: 0, themeOverrideConstants: { h_separation: 10 } }), ctx())
-    ;
+    const result = optionButtonMinimumSize(
+      node({ items, selected: 0, themeOverrideConstants: { h_separation: 10 } }),
+      ctx()
+    );
     expect(result.x).toBe(16 + Math.ceil(A_ADVANCE) + 12 + 10);
   });
 
@@ -162,7 +167,12 @@ describe('optionButtonTextTheme', () => {
       name: 'O',
       themeOverrideColors: { font_color: { r: 1, g: 0, b: 0, a: 1 } },
     };
-    expect(optionButtonTextTheme(node(props), props, 'normal', ctx()).color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+    expect(optionButtonTextTheme(node(props), props, 'normal', ctx()).color).toEqual({
+      r: 1,
+      g: 0,
+      b: 0,
+      a: 1,
+    });
   });
 });
 

@@ -10,7 +10,7 @@ printed order.
 | `commit-msg` | `.claude/skills/conventional-commits/commit-msg.sh` | The commit header: a [Conventional Commit](https://www.conventionalcommits.org/) |
 | `pre-push` | `scripts/githooks/prePush.mjs` | The checks that match the pushed files, from `scripts/githooks/prePushPlan.mjs` |
 
-A change to the toolchain (`package.json`, the lockfile, a `tsconfig`, a vitest or eslint config, a
+A change to the toolchain (`package.json`, the lockfile, a `tsconfig`, a vitest, eslint or Prettier config, a
 workflow or a hook) runs the full `pnpm validate`. A push that changes only files no check reads
 runs nothing. `FULL_VALIDATE=1 git push` runs the full gate. CI runs the full gate on each pull request and on `main`.
 

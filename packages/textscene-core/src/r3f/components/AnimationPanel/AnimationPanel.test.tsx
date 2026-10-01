@@ -64,9 +64,7 @@ describe('AnimationPanel — clip selector (G2)', () => {
     act(() => {
       fireEvent.change(select, { target: { value: 'walk' } });
     });
-    expect(
-      (screen.getByRole('combobox', { name: /animation/i }) as HTMLSelectElement).value
-    ).toBe('walk');
+    expect((screen.getByRole('combobox', { name: /animation/i }) as HTMLSelectElement).value).toBe('walk');
   });
 });
 

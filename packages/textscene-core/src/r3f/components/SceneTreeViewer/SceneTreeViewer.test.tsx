@@ -42,9 +42,7 @@ describe('<SceneTreeViewer>', () => {
 
   it('renders the root node names', () => {
     const graph = createSceneGraphFromTscnScene({
-      nodes: [
-        makeNode('Root', 'Node3D', [makeNode('Mesh', 'MeshInstance3D')]),
-      ],
+      nodes: [makeNode('Root', 'Node3D', [makeNode('Mesh', 'MeshInstance3D')])],
     });
     render(<SceneTreeViewer />, { wrapper: withPanel(graph) });
     expect(screen.getByText('Root')).toBeTruthy();
@@ -75,9 +73,7 @@ describe('<SceneTreeViewer>', () => {
 
   it('expand button reveals children', async () => {
     const graph = createSceneGraphFromTscnScene({
-      nodes: [
-        makeNode('Root', 'Node3D', [makeNode('ChildMesh', 'MeshInstance3D')]),
-      ],
+      nodes: [makeNode('Root', 'Node3D', [makeNode('ChildMesh', 'MeshInstance3D')])],
     });
     render(<SceneTreeViewer />, { wrapper: withPanel(graph) });
 
@@ -102,11 +98,7 @@ describe('<SceneTreeViewer>', () => {
 
   it('expand-all / collapse-all toolbar buttons drive SelectionContext.expandedNodePaths', async () => {
     const graph = createSceneGraphFromTscnScene({
-      nodes: [
-        makeNode('A', 'Node3D', [
-          makeNode('B', 'Node3D', [makeNode('C', 'MeshInstance3D')]),
-        ]),
-      ],
+      nodes: [makeNode('A', 'Node3D', [makeNode('B', 'Node3D', [makeNode('C', 'MeshInstance3D')])])],
     });
 
     let captured: ReadonlySet<string> | null = null;

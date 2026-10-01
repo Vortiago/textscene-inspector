@@ -107,9 +107,7 @@ export const DIRECTIONAL_SHADOW_MODE_DEFAULT = DirectionalShadowMode.PARALLEL_4_
  * `Light3D()` sets `PARAM_SHADOW_SPLIT_1_OFFSET` to `PARAM_SHADOW_SPLIT_3_OFFSET` to these fractions
  * of the shadowed range (`scene/3d/light_3d.cpp:483-485`).
  */
-export const DIRECTIONAL_SHADOW_SPLIT_OFFSETS_DEFAULT: readonly [number, number, number] = [
-  0.1, 0.2, 0.5,
-];
+export const DIRECTIONAL_SHADOW_SPLIT_OFFSETS_DEFAULT: readonly [number, number, number] = [0.1, 0.2, 0.5];
 
 /** `DirectionalLight3D()` leaves split blending off (`scene/3d/light_3d.cpp:607`). */
 export const DIRECTIONAL_SHADOW_BLEND_SPLITS_DEFAULT = false;
@@ -171,10 +169,7 @@ export function directionalShadowSplitRange(
  * `light_storage.cpp:704` and `:711`: the four depths the shader compares a fragment's depth with.
  * `MIN(limit, j)` clamps the split index, so a light with fewer splits repeats its last far end.
  */
-export function directionalShadowSplitOffsets(
-  distances: readonly number[],
-  splitCount: number
-): number[] {
+export function directionalShadowSplitOffsets(distances: readonly number[], splitCount: number): number[] {
   const offsets: number[] = [];
   for (let j = 0; j < DIRECTIONAL_SHADOW_MAX_SPLITS; j++) {
     offsets.push(distances[Math.min(splitCount - 1, j) + 1]!);

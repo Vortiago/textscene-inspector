@@ -24,8 +24,7 @@ export async function collectCoverage() {
   // A registration entry is not coverage: an empty registerAll map is correct
   // for a type with no own members and also for an unfinished slice.
   const validated = new Set(
-    registeredTypes('declaring')
-      .filter((t) => validatorRegistry.getOwnKeys(t).length > 0)
+    registeredTypes('declaring').filter((t) => validatorRegistry.getOwnKeys(t).length > 0)
   );
 
   // Registered by the parser, declaring nothing of its own, so StrictTscnParser

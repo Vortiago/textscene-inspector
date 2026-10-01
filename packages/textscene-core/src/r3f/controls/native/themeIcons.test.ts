@@ -271,7 +271,15 @@ describe('ColorPicker/ColorPickerButton icons', () => {
 describe('GraphEdit/GraphEditMinimap icons', () => {
   // scene/theme/default_theme.cpp:1279-1285: GraphEdit registers exactly these
   // seven toolbar icon keys; :1349 registers the minimap's own resizer.
-  const ids = ['zoomOut', 'zoomIn', 'zoomReset', 'gridToggle', 'minimapToggle', 'snappingToggle', 'layout'] as const;
+  const ids = [
+    'zoomOut',
+    'zoomIn',
+    'zoomReset',
+    'gridToggle',
+    'minimapToggle',
+    'snappingToggle',
+    'layout',
+  ] as const;
 
   it.each(ids)('%s is 16x16 — every GraphEdit toolbar icon shares that authored size', (id) => {
     const svg = decodeSvg(GRAPH_EDIT_ICONS[id]);

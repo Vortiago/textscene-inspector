@@ -59,8 +59,21 @@ describe('glslFloat — values GLSL cannot spell', () => {
 describe('glslFloat — every output is a literal GLSL accepts', () => {
   it('emits a well-formed literal for the whole range these builders see', () => {
     const values = [
-      0, 1, -1, 0.5, -0.25, 0.0001, 12, 16.29, 1e21, -1e21, 1e-7, Number.NaN,
-      Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.MAX_SAFE_INTEGER,
+      0,
+      1,
+      -1,
+      0.5,
+      -0.25,
+      0.0001,
+      12,
+      16.29,
+      1e21,
+      -1e21,
+      1e-7,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+      Number.MAX_SAFE_INTEGER,
     ];
     for (const value of values) {
       expect(glslFloat(value), `glslFloat(${value})`).toMatch(GLSL_FLOAT);

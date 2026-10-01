@@ -66,7 +66,7 @@ suite('Dependency Hot-Reload E2E', () => {
     await assertNoResourceChanged(
       sentMessages,
       () => panel.handleDependencyChange(vscode.Uri.file(depChainFile('texture.png'))),
-      400,
+      400
     );
   });
 
@@ -136,7 +136,11 @@ suite('Dependency Hot-Reload E2E', () => {
 
       await waitForResourceChanged(sentMessages, RES_MISSING, 8000);
     } finally {
-      try { fs.unlinkSync(missingTexPath); } catch { /* already gone */ }
+      try {
+        fs.unlinkSync(missingTexPath);
+      } catch {
+        /* already gone */
+      }
     }
   });
 
@@ -155,10 +159,14 @@ suite('Dependency Hot-Reload E2E', () => {
       await assertNoResourceChanged(
         sentMessages,
         () => panel.handleDependencyChange(vscode.Uri.file(irrelevantPath)),
-        300,
+        300
       );
     } finally {
-      try { fs.unlinkSync(irrelevantPath); } catch { /* already gone */ }
+      try {
+        fs.unlinkSync(irrelevantPath);
+      } catch {
+        /* already gone */
+      }
     }
   });
 
@@ -205,7 +213,7 @@ async function openPanel(scenePath: string, options?: TestPanelOptions): Promise
  */
 async function handshake(
   triggerMessage: (msg: Record<string, unknown>) => void,
-  sentMessages: HostToWebviewMessage[],
+  sentMessages: HostToWebviewMessage[]
 ): Promise<void> {
   await new Promise<void>((r) => setTimeout(r, 200));
   triggerMessage({ type: 'webviewReady' });

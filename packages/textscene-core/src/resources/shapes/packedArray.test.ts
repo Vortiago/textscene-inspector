@@ -128,9 +128,9 @@ describe('parsePackedInt32Arrays — the bare inner-array spelling', () => {
 
   it('still reads the constructor spellings', () => {
     expect(parsePackedInt32Arrays('[PackedInt32Array(0, 1, 2)]')).toEqual([[0, 1, 2]]);
-    expect(
-      parsePackedInt32Arrays('Array[PackedInt32Array]([PackedInt32Array(3, 4, 5)])')
-    ).toEqual([[3, 4, 5]]);
+    expect(parsePackedInt32Arrays('Array[PackedInt32Array]([PackedInt32Array(3, 4, 5)])')).toEqual([
+      [3, 4, 5],
+    ]);
   });
 
   it('reads an empty outer array as no sub-polygons', () => {

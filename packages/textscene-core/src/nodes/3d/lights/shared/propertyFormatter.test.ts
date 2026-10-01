@@ -241,7 +241,7 @@ describe('Base Light Property Formatter', () => {
       const section = formatShadowSectionWithNormalBias(properties);
 
       expect(section.title).toBe('Shadows');
-      const normalBiasItem = section.items.find(item => item.label === 'Normal Bias');
+      const normalBiasItem = section.items.find((item) => item.label === 'Normal Bias');
       expect(normalBiasItem).toBeDefined();
       expect(normalBiasItem?.value).toBe('0.020');
     });
@@ -275,7 +275,7 @@ describe('Base Light Property Formatter', () => {
 
       const section = formatShadowSectionWithNormalBias(properties);
 
-      const normalBiasItem = section.items.find(item => item.label === 'Normal Bias');
+      const normalBiasItem = section.items.find((item) => item.label === 'Normal Bias');
       expect(normalBiasItem).toBeUndefined();
     });
 
@@ -305,7 +305,7 @@ describe('Base Light Property Formatter', () => {
 
       const section = formatShadowSectionWithNormalBias(properties);
 
-      const normalBiasItem = section.items.find(item => item.label === 'Normal Bias');
+      const normalBiasItem = section.items.find((item) => item.label === 'Normal Bias');
       expect(normalBiasItem?.value).toBe('0.003');
     });
 
@@ -319,7 +319,7 @@ describe('Base Light Property Formatter', () => {
 
       const section = formatShadowSectionWithNormalBias(properties);
 
-      const normalBiasItem = section.items.find(item => item.label === 'Normal Bias');
+      const normalBiasItem = section.items.find((item) => item.label === 'Normal Bias');
       expect(normalBiasItem?.value).toBe('-0.020');
     });
   });

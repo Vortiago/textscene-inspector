@@ -10,19 +10,14 @@ import { isWebviewToHostMessage, type WebviewToHostMessage } from './protocol';
  * `WebviewToHostMessage` type without a handler here fails to compile.
  */
 export type WebviewMessageHandlers = {
-  [K in WebviewToHostMessage['type']]: (
-    msg: Extract<WebviewToHostMessage, { type: K }>
-  ) => void;
+  [K in WebviewToHostMessage['type']]: (msg: Extract<WebviewToHostMessage, { type: K }>) => void;
 };
 
 /**
  * Routes `msg` to its handler. The production `onDidReceiveMessage` listener and
  * the tests share this function.
  */
-export function dispatchWebviewMessage(
-  msg: unknown,
-  handlers: WebviewMessageHandlers
-): void {
+export function dispatchWebviewMessage(msg: unknown, handlers: WebviewMessageHandlers): void {
   // The webview is an untrusted runtime source, and `onDidReceiveMessage` has
   // no catch around it: narrow the receiver first, or `postMessage(null)`
   // throws out of the listener.

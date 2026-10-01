@@ -63,9 +63,7 @@ describe('useRegisterViewportPass (no provider)', () => {
 describe('<ViewportPassOrchestrator>', () => {
   it('drives a registered pass with no dependencies once per frame', async () => {
     let calls = 0;
-    const renderer = await mount(
-      <Registrar path="a" pass={{ dependsOn: [], render: () => calls++ }} />
-    );
+    const renderer = await mount(<Registrar path="a" pass={{ dependsOn: [], render: () => calls++ }} />);
     await renderer.advanceFrames(1, 16);
     expect(calls).toBe(1);
     await renderer.advanceFrames(1, 16);
@@ -88,18 +86,12 @@ describe('<ViewportPassOrchestrator>', () => {
     const order: string[] = [];
     const renderer = await mount(
       <>
-        <Registrar
-          path="Outer"
-          pass={{ dependsOn: ['Outer/Middle'], render: () => order.push('Outer') }}
-        />
+        <Registrar path="Outer" pass={{ dependsOn: ['Outer/Middle'], render: () => order.push('Outer') }} />
         <Registrar
           path="Outer/Middle"
           pass={{ dependsOn: ['Outer/Middle/Inner'], render: () => order.push('Middle') }}
         />
-        <Registrar
-          path="Outer/Middle/Inner"
-          pass={{ dependsOn: [], render: () => order.push('Inner') }}
-        />
+        <Registrar path="Outer/Middle/Inner" pass={{ dependsOn: [], render: () => order.push('Inner') }} />
       </>
     );
     await renderer.advanceFrames(1, 16);
@@ -108,9 +100,7 @@ describe('<ViewportPassOrchestrator>', () => {
 
   it('unregisters on unmount, so a later frame no longer drives it', async () => {
     let calls = 0;
-    const renderer = await mount(
-      <Registrar path="a" pass={{ dependsOn: [], render: () => calls++ }} />
-    );
+    const renderer = await mount(<Registrar path="a" pass={{ dependsOn: [], render: () => calls++ }} />);
     await renderer.advanceFrames(1, 16);
     expect(calls).toBe(1);
     await renderer.update(

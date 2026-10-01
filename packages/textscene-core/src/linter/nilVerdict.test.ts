@@ -24,7 +24,7 @@ describe('nil-literal verdicts', () => {
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0]!.severity).toBe('error');
     expect(diagnostics[0]!.message).toContain('tile_set.cpp:477');
-    expect(diagnostics[0]!.message).not.toContain("zero value");
+    expect(diagnostics[0]!.message).not.toContain('zero value');
   });
 
   it('keeps it for the pattern slot too', () => {
@@ -40,7 +40,7 @@ describe('nil-literal verdicts', () => {
     // the zero value and the seam's claim is the accurate one.
     const diagnostics = lint(tileSet('tile_shape', 'null'));
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]!.message).toContain("zero value");
+    expect(diagnostics[0]!.message).toContain('zero value');
   });
 
   it('declares the verdict on the ERROR, so a forwarder keeps the message', () => {
@@ -58,8 +58,7 @@ describe('nil-literal verdicts', () => {
     // HBoxContainer::vertical is the removal case, which owns its message for a
     // different reason: the class has no such slot at all.
     const removed = validatorRegistry.findValidator('HBoxContainer', 'vertical');
-    const verdict = (v: PropertyValidator | null, key: string) =>
-      ownsNilMessage(v!(key, 'null', 1)!);
+    const verdict = (v: PropertyValidator | null, key: string) => ownsNilMessage(v!(key, 'null', 1)!);
     expect(verdict(source, 'sources/0')).toBe(true);
     expect(verdict(removed, 'vertical')).toBe(true);
     expect(verdict(shape, 'tile_shape')).toBe(false);

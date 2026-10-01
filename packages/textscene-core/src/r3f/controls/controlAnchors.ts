@@ -138,10 +138,7 @@ function presetDerivedOffsets(
  * `set_offset` gives an orphan a real size: with a zero parent rect every
  * `edge_pos` is the offset itself, floored at the combined minimum.
  */
-function orphanSizeCache(
-  state: ControlLayoutState,
-  min: { x: number; y: number }
-): { x: number; y: number } {
+function orphanSizeCache(state: ControlLayoutState, min: { x: number; y: number }): { x: number; y: number } {
   return {
     x: Math.max(state.offsets[2] - state.offsets[0], min.x),
     y: Math.max(state.offsets[3] - state.offsets[1], min.y),

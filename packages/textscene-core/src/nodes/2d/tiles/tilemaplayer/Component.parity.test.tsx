@@ -66,10 +66,7 @@ function seededTexture(): THREE.Texture {
   return tex;
 }
 
-async function render(
-  node: TscnNode,
-  options: { missingTextures?: string[]; child?: boolean } = {}
-) {
+async function render(node: TscnNode, options: { missingTextures?: string[]; child?: boolean } = {}) {
   const fake = createFakeResourceLoader();
   for (const path of [TEX, TEX2]) {
     if (options.missingTextures?.includes(path)) fake.textures.seed(path, null);
@@ -170,7 +167,9 @@ describe('TileMapLayer render parity', () => {
     // Real data change: the replaced geometry's GPU buffers are released.
     const disposeSpy = vi.fn();
     before.addEventListener('dispose', disposeSpy);
-    await r.update(tree(makeNode({ tile_map_data: 'PackedByteArray(0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)' })));
+    await r.update(
+      tree(makeNode({ tile_map_data: 'PackedByteArray(0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)' }))
+    );
     expect(disposeSpy).toHaveBeenCalled();
   });
 

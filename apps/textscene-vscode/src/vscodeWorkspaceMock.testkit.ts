@@ -20,7 +20,7 @@ export const mockWorkspace: any = {
 
     createDirectory: vi.fn().mockResolvedValue(undefined),
 
-    readDirectory: vi.fn().mockResolvedValue([])
+    readDirectory: vi.fn().mockResolvedValue([]),
   },
 
   workspaceFolders: [],
@@ -43,12 +43,12 @@ export const mockWorkspace: any = {
     onDidChange: vi.fn().mockReturnValue({ dispose: vi.fn() }),
     onDidCreate: vi.fn().mockReturnValue({ dispose: vi.fn() }),
     onDidDelete: vi.fn().mockReturnValue({ dispose: vi.fn() }),
-    dispose: vi.fn()
+    dispose: vi.fn(),
   }),
 
   getConfiguration: vi.fn().mockReturnValue({
-    get: vi.fn((_key: string, defaultValue?: unknown) => defaultValue)
+    get: vi.fn((_key: string, defaultValue?: unknown) => defaultValue),
   }),
 
-  onDidChangeConfiguration: vi.fn(() => ({ dispose: vi.fn() }))
+  onDidChangeConfiguration: vi.fn(() => ({ dispose: vi.fn() })),
 };

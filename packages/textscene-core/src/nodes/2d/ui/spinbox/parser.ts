@@ -11,10 +11,7 @@ function optionalString(value: string | undefined): string | undefined {
   return value === undefined ? undefined : unquoteString(value);
 }
 
-export function parseSpinBox(
-  heading: ParsedHeading,
-  properties: Record<string, string>
-): SpinBoxProperties {
+export function parseSpinBox(heading: ParsedHeading, properties: Record<string, string>): SpinBoxProperties {
   return {
     ...parseControl(heading, properties),
     // SpinBox sets `step = 1.0` in its constructor (`ClassDB.class_get_property_default_value`,

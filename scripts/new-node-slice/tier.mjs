@@ -33,10 +33,18 @@ export function scaffoldTier({ typeName, category, rule, dryRun }) {
   const files = tierFiles({ typeName, heirs, toSrc, rule, parentLinterImport });
 
   const wirings = rule
-    ? [wireImport(join(CORE_SRC, 'linter/index.ts'), `import '../${sliceRel}/index.linter.js';`, `'../nodes/${category}/`)]
+    ? [
+        wireImport(
+          join(CORE_SRC, 'linter/index.ts'),
+          `import '../${sliceRel}/index.linter.js';`,
+          `'../nodes/${category}/`
+        ),
+      ]
     : [];
 
-  console.log(`[new-node-slice] ${typeName} tier -> ${sliceRel}${rule ? ' (with family rule)' : ' (validators only)'}`);
+  console.log(
+    `[new-node-slice] ${typeName} tier -> ${sliceRel}${rule ? ' (with family rule)' : ' (validators only)'}`
+  );
   for (const name of files.keys()) console.log(`  create  ${sliceRel}/${name}`);
   for (const w of wirings) console.log(`  wire    ${w.filePath.slice(REPO_ROOT.length + 1)} (${w.action})`);
   if (parentLinterImport) console.log(`  inherit ${parentLinterImport}`);
@@ -52,5 +60,7 @@ export function scaffoldTier({ typeName, category, rule, dryRun }) {
   mkdirSync(sliceDir, { recursive: true });
   for (const [name, content] of files) writeFileSync(join(sliceDir, name), content);
   for (const w of wirings) if (w.content) writeFileSync(w.filePath, w.content);
-  console.log(`[new-node-slice] done. Fill ${sliceRel}/linterParser.ts from doc/classes/${typeName}.xml, and list the keys in KEYS in its test.`);
+  console.log(
+    `[new-node-slice] done. Fill ${sliceRel}/linterParser.ts from doc/classes/${typeName}.xml, and list the keys in KEYS in its test.`
+  );
 }

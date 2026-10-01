@@ -44,11 +44,17 @@ describe('MultiplayerSpawner spawn_path rule', () => {
   });
 
   it('stays silent when spawn_path resolves to a real node', () => {
-    expect(reportsOf(diagnosticsFor(scene('spawn_path = NodePath("SpawnRoot")\n')), RULE, 'warning')).toEqual([]);
+    expect(reportsOf(diagnosticsFor(scene('spawn_path = NodePath("SpawnRoot")\n')), RULE, 'warning')).toEqual(
+      []
+    );
   });
 
   it('warns when spawn_path names no node in this file', () => {
-    const warnings = reportsOf(diagnosticsFor(scene('spawn_path = NodePath("NoSuchNode")\n')), RULE, 'warning');
+    const warnings = reportsOf(
+      diagnosticsFor(scene('spawn_path = NodePath("NoSuchNode")\n')),
+      RULE,
+      'warning'
+    );
     expect(warnings).toHaveLength(1);
     expect(warnings[0]?.message).toContain('NoSuchNode');
   });
@@ -57,7 +63,11 @@ describe('MultiplayerSpawner spawn_path rule', () => {
   // child named Elsewhere (node.cpp:1941). Root has only the Spawner, so
   // `has_node` is false (multiplayer_spawner.cpp:91) and Godot warns too.
   it('warns on a relative path whose next segment names no child', () => {
-    const warnings = reportsOf(diagnosticsFor(scene('spawn_path = NodePath("../Elsewhere")\n')), RULE, 'warning');
+    const warnings = reportsOf(
+      diagnosticsFor(scene('spawn_path = NodePath("../Elsewhere")\n')),
+      RULE,
+      'warning'
+    );
     expect(warnings).toHaveLength(1);
     expect(warnings[0]?.message).toContain('Elsewhere');
   });
@@ -82,6 +92,8 @@ spawn_path = NodePath("../Level/Spawns")
   it('leaves the committed fixture warning-free', () => {
     // expectFixtureClean runs validators only; rules never reach it. This is
     // the half of the fixture's "zero warnings" claim nothing else checks.
-    expect(reportsOf(diagnosticsFor(readFixture('unit-multiplayer-spawner.tscn')), RULE, 'warning')).toEqual([]);
+    expect(reportsOf(diagnosticsFor(readFixture('unit-multiplayer-spawner.tscn')), RULE, 'warning')).toEqual(
+      []
+    );
   });
 });

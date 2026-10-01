@@ -87,9 +87,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
       expect(symbols[0]!.kind).toBe(vscode.SymbolKind.Module); // Node3D
       expect(symbols[0]!.children).toHaveLength(3);
 
-      const meshChild = symbols[0]!.children.find(c => c.name === 'Mesh');
-      const lightChild = symbols[0]!.children.find(c => c.name === 'Light');
-      const camChild = symbols[0]!.children.find(c => c.name === 'Cam');
+      const meshChild = symbols[0]!.children.find((c) => c.name === 'Mesh');
+      const lightChild = symbols[0]!.children.find((c) => c.name === 'Light');
+      const camChild = symbols[0]!.children.find((c) => c.name === 'Cam');
 
       expect(meshChild?.kind).toBe(vscode.SymbolKind.Class); // MeshInstance3D
       expect(lightChild?.kind).toBe(vscode.SymbolKind.Object); // SpotLight3D
@@ -227,8 +227,8 @@ visible = true
       const provider = new TscnDocumentSymbolProvider();
       const symbols = symbolsOf(provider, document);
 
-      const ab = symbols[0]!.children.find(c => c.name === 'AB')!;
-      const b = symbols[0]!.children.find(c => c.name === 'B')!;
+      const ab = symbols[0]!.children.find((c) => c.name === 'AB')!;
+      const b = symbols[0]!.children.find((c) => c.name === 'B')!;
 
       expect(ab.children[0]!.selectionRange.start).toBe(4);
       expect(b.children[0]!.selectionRange.start).toBe(5);
@@ -254,8 +254,8 @@ visible = true
       const provider = new TscnDocumentSymbolProvider();
       const symbols = symbolsOf(provider, document);
 
-      const foo = symbols[0]!.children.find(c => c.name === 'Foo')!;
-      const bar = symbols[0]!.children.find(c => c.name === 'Bar')!;
+      const foo = symbols[0]!.children.find((c) => c.name === 'Foo')!;
+      const bar = symbols[0]!.children.find((c) => c.name === 'Bar')!;
       const targetUnderFoo = foo.children[0]!.children[0]!;
       const targetUnderBar = bar.children[0]!.children[0]!;
 

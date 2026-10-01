@@ -49,11 +49,7 @@ const BLEND_MODES = [
 
 const CULL_MODES = [CullMode.BACK, CullMode.FRONT, CullMode.DISABLED] as const;
 
-const DEPTH_DRAW_MODES = [
-  DepthDrawMode.OPAQUE_ONLY,
-  DepthDrawMode.ALWAYS,
-  DepthDrawMode.DISABLED,
-] as const;
+const DEPTH_DRAW_MODES = [DepthDrawMode.OPAQUE_ONLY, DepthDrawMode.ALWAYS, DepthDrawMode.DISABLED] as const;
 
 /** Godot `BaseMaterial3D.DistanceFadeMode`; only PIXEL_ALPHA writes ALPHA. */
 const DISTANCE_FADE_PIXEL_ALPHA = 1;
@@ -74,9 +70,7 @@ const SLOT_GATES: Readonly<Record<TextureSlot, string | null>> = {
   anisotropy_flowmap: 'anisotropy_enabled',
 };
 
-export function decodeStandardMaterial3D(
-  properties: Record<string, string>
-): StandardMaterial3DData {
+export function decodeStandardMaterial3D(properties: Record<string, string>): StandardMaterial3DData {
   const albedo = parseColorOrUndefined(properties['albedo_color']);
   // Godot stores sRGB and its `source_color` uniform converts to linear before the
   // shader, as three's `color` expects. Not clamped: `albedo_color` has no range hint,
@@ -111,12 +105,7 @@ export function decodeStandardMaterial3D(
     TRANSPARENCY_MODES,
     `${CONTEXT}.transparency`
   );
-  const blendMode = enumOr(
-    properties['blend_mode'],
-    BlendMode.MIX,
-    BLEND_MODES,
-    `${CONTEXT}.blend_mode`
-  );
+  const blendMode = enumOr(properties['blend_mode'], BlendMode.MIX, BLEND_MODES, `${CONTEXT}.blend_mode`);
 
   // Which of Godot's two render lists this surface joins, and whether its fragments
   // reach the depth buffer. `transparency` is only one of the inputs.
@@ -180,12 +169,7 @@ export function decodeStandardMaterial3D(
     depthWrite: godotDepthWrite(alphaPass, depthInAlphaPass, depthDrawMode, depthTest),
     depthTest,
     blendMode,
-    cullMode: enumOr(
-      properties['cull_mode'],
-      CullMode.BACK,
-      CULL_MODES,
-      `${CONTEXT}.cull_mode`
-    ),
+    cullMode: enumOr(properties['cull_mode'], CullMode.BACK, CULL_MODES, `${CONTEXT}.cull_mode`),
     cullModeExplicit: properties['cull_mode'] !== undefined,
     shadingMode: properties['shading_mode'] === '0' ? 'unshaded' : 'per_pixel',
     useVertexColors: boolOr(properties['vertex_color_use_as_albedo'], false, CONTEXT),
@@ -237,10 +221,7 @@ interface AlphaPassMembership {
  * line by line. The flags are what `BaseMaterial3D::_update_shader` emits, so
  * `transparency` alone never decides either.
  */
-function alphaPassMembership(
-  properties: Record<string, string>,
-  inputs: PassInputs
-): AlphaPassMembership {
+function alphaPassMembership(properties: Record<string, string>, inputs: PassInputs): AlphaPassMembership {
   const { transparency, blendMode, refractionEnabled, depthDrawMode, depthTest } = inputs;
 
   const proximityFade = boolOr(properties['proximity_fade_enabled'], false, CONTEXT);
@@ -268,8 +249,7 @@ function alphaPassMembership(
   // Refraction samples `screen_texture`, and refraction or proximity fade samples
   // `depth_texture`.
   const hasReadScreenAlpha = refractionEnabled || proximityFade;
-  const hasBaseAlpha =
-    (usesAlpha && (!usesAlphaClip || usesAlphaAntialiasing)) || hasReadScreenAlpha;
+  const hasBaseAlpha = (usesAlpha && (!usesAlphaClip || usesAlphaAntialiasing)) || hasReadScreenAlpha;
   // `uses_blend_alpha` is true for ADD, SUB, MUL and PREMULT_ALPHA, which puts an
   // additive material in the alpha pass whatever its `transparency` says.
   const hasAlpha = hasBaseAlpha || blendMode !== BlendMode.MIX;
@@ -278,8 +258,7 @@ function alphaPassMembership(
 
   return {
     alphaPass: hasAlpha || hasReadScreenAlpha || noDepthDraw || noDepthTest,
-    depthInAlphaPass:
-      (usesDepthPrepassAlpha || usesAlphaAntialiasing) && !(noDepthDraw || noDepthTest),
+    depthInAlphaPass: (usesDepthPrepassAlpha || usesAlphaAntialiasing) && !(noDepthDraw || noDepthTest),
   };
 }
 

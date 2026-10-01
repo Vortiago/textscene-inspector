@@ -57,9 +57,7 @@ describe('a literal an INT slot cannot hold', () => {
     // through the dispatcher to reach them.
     const untagged = everyValidatorLabel(
       (validator) =>
-        validator.leaves === undefined &&
-        INT_PROSE.test(validator.accepts ?? '') &&
-        !validator.intSlot,
+        validator.leaves === undefined && INT_PROSE.test(validator.accepts ?? '') && !validator.intSlot,
       { atLeast: 2000 }
     );
     expect(untagged).toEqual([]);
@@ -123,9 +121,7 @@ describe('a literal an INT slot cannot hold', () => {
     expect(narrow.length).toBeGreaterThan(500);
 
     const silent = narrow
-      .filter(
-        ({ key, validator }) => validator(key, probe(validator.accepts!, PAST_32_BIT), 1) === null
-      )
+      .filter(({ key, validator }) => validator(key, probe(validator.accepts!, PAST_32_BIT), 1) === null)
       .map(({ at }) => at)
       .sort();
     expect(silent).toEqual([]);
@@ -142,8 +138,7 @@ describe('a literal an INT slot cannot hold', () => {
     // wrong tier and a number Godot does not hold.
     const notRefused = bytes
       .filter(
-        ({ key, validator }) =>
-          validator(key, probe(validator.accepts!, spelling), 1)?.severity !== 'error'
+        ({ key, validator }) => validator(key, probe(validator.accepts!, spelling), 1)?.severity !== 'error'
       )
       .map(({ at }) => at)
       .sort();

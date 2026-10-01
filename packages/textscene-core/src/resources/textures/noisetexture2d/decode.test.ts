@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { decodeNoiseTexture2D } from './decode';
 
 describe('decodeNoiseTexture2D', () => {
-  it('applies Godot\'s defaults to an empty resource', () => {
+  it("applies Godot's defaults to an empty resource", () => {
     // noise_texture_2d.h:47-62 (size = 512x512 at line 54).
     expect(decodeNoiseTexture2D({})).toEqual({
       width: 512,
@@ -96,5 +96,4 @@ describe('decodeNoiseTexture2D', () => {
     expect(decodeNoiseTexture2D({ seamless_blend_skirt: '0' }).seamlessBlendSkirt).toBe(0);
     expect(decodeNoiseTexture2D({ seamless_blend_skirt: '1' }).seamlessBlendSkirt).toBe(1);
   });
-
 });

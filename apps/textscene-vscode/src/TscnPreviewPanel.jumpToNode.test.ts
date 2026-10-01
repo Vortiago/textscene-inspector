@@ -6,12 +6,7 @@
 import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
 import * as vscode from 'vscode';
 import { TscnPreviewPanel } from './TscnPreviewPanel';
-import {
-  createMockUri,
-  createMockFileData,
-  MockTabInputText,
-  setupMockPanel,
-} from './test-setup';
+import { createMockUri, createMockFileData, MockTabInputText, setupMockPanel } from './test-setup';
 
 const SCENE_PATH = '/workspace/test.tscn';
 
@@ -41,9 +36,7 @@ function stubJumpTarget(documentText: string): MockEditor {
 }
 
 async function createReadyPanel(triggerMessage: (msg: { type: string }) => void): Promise<void> {
-  (vscode.workspace.fs.readFile as Mock).mockResolvedValue(
-    createMockFileData(TWO_SIBLINGS_TSCN)
-  );
+  (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(TWO_SIBLINGS_TSCN));
   TscnPreviewPanel.create(createMockUri('/extension'), createMockUri(SCENE_PATH));
   await new Promise<void>((r) => setTimeout(r, 10));
   triggerMessage({ type: 'webviewReady' });
@@ -172,10 +165,7 @@ describe('TscnPreviewPanel jumpToNode editor column', () => {
   });
 
   it('focuses the editor that already shows the scene in another column', async () => {
-    openTabs(
-      tabGroup(1, [textTab('/workspace/player.gd', true)]),
-      tabGroup(3, [textTab(SCENE_PATH, true)])
-    );
+    openTabs(tabGroup(1, [textTab('/workspace/player.gd', true)]), tabGroup(3, [textTab(SCENE_PATH, true)]));
     const { triggerMessage } = setupMockPanel();
     await createReadyPanel(triggerMessage);
 

@@ -79,8 +79,7 @@ function handRolledComposite(source: string): string | null {
  * `VECTOR3_REGEX` count, since they read the same captures. An `import`, not the bare
  * name, since `godot/number.ts` names the builder in a docblock.
  */
-const IMPORTS_TUPLE_BUILDER =
-  /import\s[^;]*\b(?:makeFloatTupleRegex|VECTOR2_REGEX|VECTOR3_REGEX)\b/;
+const IMPORTS_TUPLE_BUILDER = /import\s[^;]*\b(?:makeFloatTupleRegex|VECTOR2_REGEX|VECTOR3_REGEX)\b/;
 
 /**
  * Reading a matched capture without the shared reader, `storedInt` or `matchedFloat`
@@ -95,8 +94,7 @@ const RAW_NUMBER_PARSE = /\b(?:parseInt|parseFloat|Number)\(/;
  * items). The named readers are `matchedFloat` and `storedInt` for a vetted capture, and
  * `parseGodotFloat`/`parseGodotInt` for the rest.
  */
-const RAW_VARIANT_PARSE =
-  /\bparseFloat\(|\bparseInt\((?![^()]*(?:\([^()]*\)[^()]*)*,\s*(?:2|8|16)\s*\))/;
+const RAW_VARIANT_PARSE = /\bparseFloat\(|\bparseInt\((?![^()]*(?:\([^()]*\)[^()]*)*,\s*(?:2|8|16)\s*\))/;
 
 /**
  * A file that rebuilds the shared scalar grammar into its own `RegExp`, such as
@@ -217,13 +215,22 @@ function readerCalls(src: string, fn: string): Array<{ args: string[]; index: nu
  * `Plane` is 4 (normal xyz + d); `AABB` is position + size.
  */
 const ARITIES: ReadonlyArray<readonly [string, number]> = [
-  ['Vector2', 2], ['Vector2i', 2],
-  ['Vector3', 3], ['Vector3i', 3],
-  ['Vector4', 4], ['Vector4i', 4],
-  ['Rect2', 4], ['Rect2i', 4],
-  ['Color', 4], ['Quaternion', 4], ['Plane', 4],
-  ['AABB', 6], ['Transform2D', 6],
-  ['Basis', 9], ['Transform3D', 12], ['Projection', 16],
+  ['Vector2', 2],
+  ['Vector2i', 2],
+  ['Vector3', 3],
+  ['Vector3i', 3],
+  ['Vector4', 4],
+  ['Vector4i', 4],
+  ['Rect2', 4],
+  ['Rect2i', 4],
+  ['Color', 4],
+  ['Quaternion', 4],
+  ['Plane', 4],
+  ['AABB', 6],
+  ['Transform2D', 6],
+  ['Basis', 9],
+  ['Transform3D', 12],
+  ['Projection', 16],
 ];
 
 describe('Godot composite literal grammar', () => {
@@ -259,8 +266,7 @@ describe('Godot composite literal grammar', () => {
     // bans `parseInt`/`parseFloat` outside `godot/`, and the i-suffixed assertion owns
     // the converted spelling a slot grammar adds.
     const importers = files.filter(
-      ({ rel, src }) =>
-        IMPORTS_TUPLE_BUILDER.test(src) && rel !== 'linter/validators/floatTupleValidator.ts'
+      ({ rel, src }) => IMPORTS_TUPLE_BUILDER.test(src) && rel !== 'linter/validators/floatTupleValidator.ts'
     );
     // Anti-vacuity: the population is derived, so a refactor that stopped every
     // file importing the builder would empty it and leave this trivially green.
@@ -376,9 +382,7 @@ describe('Godot composite literal grammar', () => {
     expect(bound.size).toBeGreaterThan(0);
     const named = new RegExp(String.raw`\b(?:${[...bound].join('|')})\b`);
 
-    const population = files.filter(
-      ({ bare }) => BUILDS_I_SLOT_GRAMMAR.test(bare) || named.test(bare)
-    );
+    const population = files.filter(({ bare }) => BUILDS_I_SLOT_GRAMMAR.test(bare) || named.test(bare));
     // Anti-vacuity: the population is scraped, so a rename could empty it. Source text
     // has to ask: only a whole token in `[2^31, 2^32-1]` tells the branches apart, and a
     // `.` or `e` token already takes the double branch. The floor is the linter's two tuple

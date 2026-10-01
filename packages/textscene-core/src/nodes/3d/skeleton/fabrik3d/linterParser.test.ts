@@ -108,8 +108,15 @@ describe('FABRIK3D inherits its whole property surface', () => {
     // replace the ancestor's bound, including its radians_as_degrees handling.
     const own = validatorRegistry.getOwnKeys('FABRIK3D');
     expect(own).toEqual([]);
-    for (const inherited of ['max_iterations', 'min_distance', 'angular_delta_limit',
-      'deterministic', 'setting_count', 'mutable_bone_axes', 'transform']) {
+    for (const inherited of [
+      'max_iterations',
+      'min_distance',
+      'angular_delta_limit',
+      'deterministic',
+      'setting_count',
+      'mutable_bone_axes',
+      'transform',
+    ]) {
       expect(own, `${inherited} belongs to an ancestor`).not.toContain(inherited);
     }
   });

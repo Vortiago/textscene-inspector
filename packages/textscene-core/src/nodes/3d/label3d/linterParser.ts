@@ -11,14 +11,8 @@ import {
   BASE_MATERIAL_TEXTURE_FILTER,
 } from '../../../linter/validators/sharedEnumLabels.js';
 import { hintedBitField, maskedBitField, v } from '../../../linter/validators/index.js';
-import {
-  HORIZONTAL_ALIGNMENT,
-  VERTICAL_ALIGNMENT,
-} from '../../../linter/validators/globalScopeEnums.js';
-import {
-  MATERIAL_RENDER_PRIORITY_MIN,
-  MATERIAL_RENDER_PRIORITY_MAX,
-} from '../../../godot/index.js';
+import { HORIZONTAL_ALIGNMENT, VERTICAL_ALIGNMENT } from '../../../linter/validators/globalScopeEnums.js';
+import { MATERIAL_RENDER_PRIORITY_MIN, MATERIAL_RENDER_PRIORITY_MAX } from '../../../godot/index.js';
 import {
   AUTOWRAP_MODE,
   BREAK_TRIM_HINTED_BITS,
@@ -129,13 +123,9 @@ validatorRegistry.registerAll('Label3D', {
   }),
   // label_3d.cpp:168: PROPERTY_HINT_ENUM, 7 labels. set_structured_text_bidi_override
   // (label_3d.cpp:729-735) assigns unconditionally, no ERR_FAIL.
-  structured_text_bidi_override: v.enumInt(
-    'structured_text_bidi_override',
-    0,
-    6,
-    STRUCTURED_TEXT_PARSER,
-    { hinted: 'label_3d.cpp:168' }
-  ),
+  structured_text_bidi_override: v.enumInt('structured_text_bidi_override', 0, 6, STRUCTURED_TEXT_PARSER, {
+    hinted: 'label_3d.cpp:168',
+  }),
   // label_3d.cpp:160: PROPERTY_HINT_ENUM "Off,Arbitrary,Word,Word (Smart)",
   // the whole 4-value AutowrapMode enum. set_autowrap_mode:906-912 assigns
   // unconditionally, no ERR_FAIL.

@@ -48,9 +48,7 @@ describe('<ParallaxLayer>', () => {
     );
     const scene = renderer.scene.instance;
     scene.updateMatrixWorld(true);
-    const world = new THREE.Vector3().setFromMatrixPosition(
-      scene.getObjectByName('child')!.matrixWorld
-    );
+    const world = new THREE.Vector3().setFromMatrixPosition(scene.getObjectByName('child')!.matrixWorld);
     expect(world.x).toBe(40);
     expect(world.y).toBe(-160);
   });

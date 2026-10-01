@@ -12,17 +12,19 @@ const HALF_PI = Math.PI / 2;
 describe('parseStandardMaterial3DScalars — anisotropy flag (WI-68)', () => {
   it('parses a positive anisotropy strength with no rotation when enabled', () => {
     // A positive value → magnitude straight through, direction unrotated (0).
-    expect(
-      parseStandardMaterial3DScalars({ anisotropy_enabled: 'true', anisotropy: '0.8' })
-    ).toMatchObject({ anisotropy: 0.8, anisotropyRotation: 0 });
+    expect(parseStandardMaterial3DScalars({ anisotropy_enabled: 'true', anisotropy: '0.8' })).toMatchObject({
+      anisotropy: 0.8,
+      anisotropyRotation: 0,
+    });
   });
 
   it('maps a negative anisotropy to magnitude + a 90° perpendicular rotation', () => {
     // A negative value keeps its strength (|−0.8| → 0.8) and turns the highlight
     // perpendicular, which three.js expresses as a π/2 rotation.
-    expect(
-      parseStandardMaterial3DScalars({ anisotropy_enabled: 'true', anisotropy: '-0.8' })
-    ).toMatchObject({ anisotropy: 0.8, anisotropyRotation: expect.closeTo(HALF_PI, 5) });
+    expect(parseStandardMaterial3DScalars({ anisotropy_enabled: 'true', anisotropy: '-0.8' })).toMatchObject({
+      anisotropy: 0.8,
+      anisotropyRotation: expect.closeTo(HALF_PI, 5),
+    });
   });
 
   it('enabled but strength unset → Godot default (anisotropy 0.0, no rotation)', () => {
@@ -37,12 +39,14 @@ describe('parseStandardMaterial3DScalars — anisotropy flag (WI-68)', () => {
   it('clamps the enabled anisotropy magnitude to 0..1 (over-range saturates to 1), preserving direction', () => {
     // The three.js `anisotropy` magnitude saturates at 1. The sign still drives rotation:
     // +2.5 → magnitude 1, no rotation; −2.5 → magnitude 1, perpendicular.
-    expect(
-      parseStandardMaterial3DScalars({ anisotropy_enabled: 'true', anisotropy: '2.5' })
-    ).toMatchObject({ anisotropy: 1, anisotropyRotation: 0 });
-    expect(
-      parseStandardMaterial3DScalars({ anisotropy_enabled: 'true', anisotropy: '-2.5' })
-    ).toMatchObject({ anisotropy: 1, anisotropyRotation: expect.closeTo(HALF_PI, 5) });
+    expect(parseStandardMaterial3DScalars({ anisotropy_enabled: 'true', anisotropy: '2.5' })).toMatchObject({
+      anisotropy: 1,
+      anisotropyRotation: 0,
+    });
+    expect(parseStandardMaterial3DScalars({ anisotropy_enabled: 'true', anisotropy: '-2.5' })).toMatchObject({
+      anisotropy: 1,
+      anisotropyRotation: expect.closeTo(HALF_PI, 5),
+    });
   });
 
   it('gates on anisotropy_enabled — strength present but the flag absent → isotropic (0), no rotation', () => {
@@ -58,9 +62,10 @@ describe('parseStandardMaterial3DScalars — anisotropy flag (WI-68)', () => {
     // The unset material and an explicit anisotropy_enabled=false both
     // resolve to isotropic (no anisotropy, no rotation).
     expect(parseStandardMaterial3DScalars({})).toMatchObject({ anisotropy: 0, anisotropyRotation: 0 });
-    expect(
-      parseStandardMaterial3DScalars({ anisotropy_enabled: 'false', anisotropy: '0.8' })
-    ).toMatchObject({ anisotropy: 0, anisotropyRotation: 0 });
+    expect(parseStandardMaterial3DScalars({ anisotropy_enabled: 'false', anisotropy: '0.8' })).toMatchObject({
+      anisotropy: 0,
+      anisotropyRotation: 0,
+    });
   });
 
   it('does not suppress other scalar parsing when anisotropy is on', () => {

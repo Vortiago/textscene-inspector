@@ -55,7 +55,7 @@ function checkPointLight2D(context: RuleContext): Diagnostic[] {
       message:
         "PointLight2D has no 'texture': Godot's own editor warning is " +
         '"A texture with the shape of the light must be supplied to the ' +
-        '\'Texture\' property."',
+        "'Texture' property.\"",
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'pointlight2d-requires-texture',
@@ -85,12 +85,15 @@ function checkPointLight2D(context: RuleContext): Diagnostic[] {
 const pointLight2DValidationRule: LintRule = {
   meta: {
     name: 'valid-pointlight2d-ranges',
-    description:
-      "Validates PointLight2D has a texture, and that its z and layer range windows don't invert",
+    description: "Validates PointLight2D has a texture, and that its z and layer range windows don't invert",
     category: 'validation',
     applicableNodeTypes: ['PointLight2D'],
     emits: [
-      { ruleName: 'pointlight2d-requires-texture', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'pointlight2d-requires-texture',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
       {
         ruleName: 'pointlight2d-inverted-z-range',
         severity: 'info',

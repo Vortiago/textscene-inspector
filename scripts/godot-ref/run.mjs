@@ -243,7 +243,9 @@ function nonNegativeNumber(flag, raw) {
 }
 
 function vec2(flag, raw) {
-  const parts = String(raw).split(',').map((n) => Number(n.trim()));
+  const parts = String(raw)
+    .split(',')
+    .map((n) => Number(n.trim()));
   if (parts.length !== 2 || parts.some((n) => !Number.isInteger(n))) {
     throw new Error(`${flag} needs two comma-separated integers, got "${raw}"`);
   }
@@ -260,7 +262,9 @@ function oneOf(flag, allowed, raw) {
 }
 
 function vec3(flag, raw) {
-  const parts = String(raw).split(',').map((n) => Number(n.trim()));
+  const parts = String(raw)
+    .split(',')
+    .map((n) => Number(n.trim()));
   if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) {
     throw new Error(`${flag} needs three comma-separated numbers, got "${raw}"`);
   }
@@ -433,10 +437,7 @@ function dropSection(ini, name) {
  * The generated `project.godot`. It carries the source project's settings forward (msaa and
  * shadow quality change the picture) minus the default environment and the 3D frame size.
  */
-export function projectConfig(
-  sourceIni,
-  { width, height, pinWindowToViewport = false, runScripts = true }
-) {
+export function projectConfig(sourceIni, { width, height, pinWindowToViewport = false, runScripts = true }) {
   const drop = [
     // A project default environment would light the scene through a channel the previewer does
     // not have, and bias every comparison.
@@ -466,7 +467,7 @@ export function projectConfig(
   // An autoload runs before the scene exists, so stripping the scene's scripts misses it. Only a
   // game runs one (`main/main.cpp:4397`), never the editor this harness mirrors. An autoload that
   // sets `get_tree().get_root().theme` themes every widget, which no reader of the file reproduces.
-  const kept = (runScripts ? sourceIni ?? '' : dropSection(sourceIni ?? '', 'autoload'))
+  const kept = (runScripts ? (sourceIni ?? '') : dropSection(sourceIni ?? '', 'autoload'))
     .split('\n')
     .filter((line) => !drop.some((re) => re.test(line.trim())))
     .join('\n')
@@ -508,9 +509,7 @@ export function probePixels(buffer, probes, { patch = 1 } = {}) {
       throw new Error(`probe ${x},${y} must be integer pixel coordinates`);
     }
     if (x - reach < 0 || y - reach < 0 || x + reach >= png.width || y + reach >= png.height) {
-      throw new Error(
-        `probe ${x},${y} (patch ${patch}) falls outside the ${png.width}x${png.height} image`
-      );
+      throw new Error(`probe ${x},${y} (patch ${patch}) falls outside the ${png.width}x${png.height} image`);
     }
     const channels = [[], [], []];
     for (let dy = -reach; dy <= reach; dy++) {
@@ -536,11 +535,7 @@ const gdColor = (c) => `Color(${c[0]}, ${c[1]}, ${c[2]})`;
  * GDScript instead of a syntax error that never compiles the bootstrap.
  */
 const gdString = (s) =>
-  `"${String(s)
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, '\\n')
-    .replace(/\t/g, '\\t')}"`;
+  `"${String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\t/g, '\\t')}"`;
 
 /**
  * The bootstrap scene's script: it instantiates the target scene, picks its 2D or 3D path and
@@ -576,7 +571,7 @@ export function bootstrapScript({
         'The previewer has no driveable elapsed-time hook to meet a scene-wide instant at ' +
         'either, so the pair would not be comparable even then. Simulated time is ' +
         'therefore advanced PER SUBSYSTEM, through whatever fixed-step API Godot itself ' +
-        'exposes for it, so the instant is named in that subsystem\'s own units: an ' +
+        "exposes for it, so the instant is named in that subsystem's own units: an " +
         "emitter's `preprocess` is one such advance and is serialised in the file; " +
         '`--particles <seconds>` is the same advance asked for from outside.'
     );
@@ -1174,8 +1169,7 @@ const TIMEOUT_EXIT_CODES = new Set([124, 137]);
 let groupTimeoutAvailable = null;
 function hasGroupTimeout() {
   if (groupTimeoutAvailable === null) {
-    groupTimeoutAvailable =
-      spawnSync('timeout', ['--version'], { encoding: 'utf8' }).status === 0;
+    groupTimeoutAvailable = spawnSync('timeout', ['--version'], { encoding: 'utf8' }).status === 0;
   }
   return groupTimeoutAvailable;
 }
@@ -1228,17 +1222,31 @@ export async function renderReference({
     throw new Error(`mode must be one of ${RENDER_MODES.join('|')}, got "${mode}"`);
   }
   if (renderingDriver !== null && !DRIVER_NAMES.includes(renderingDriver)) {
-    throw new Error(
-      `renderingDriver must be one of ${DRIVER_NAMES.join('|')}, got "${renderingDriver}"`
-    );
+    throw new Error(`renderingDriver must be one of ${DRIVER_NAMES.join('|')}, got "${renderingDriver}"`);
   }
 
   const root = resolveProjectRoot(scenePath);
   const work = await mkdtemp(join(tmpdir(), 'godot-ref-'));
   try {
-    return await renderInto(work, { root, scenePath, out, width, height, previews, camera,
-      lookAt, frame, sceneCamera, sceneCameraPath, mode, boundsOut, fov, fovExplicit, particles,
-      renderingDriver });
+    return await renderInto(work, {
+      root,
+      scenePath,
+      out,
+      width,
+      height,
+      previews,
+      camera,
+      lookAt,
+      frame,
+      sceneCamera,
+      sceneCameraPath,
+      mode,
+      boundsOut,
+      fov,
+      fovExplicit,
+      particles,
+      renderingDriver,
+    });
   } finally {
     // Each run copies the whole res:// root, which on a tmpfs /tmp stays in RAM, and the
     // engine-gated tests run inside `pnpm test:unit`.
@@ -1249,8 +1257,23 @@ export async function renderReference({
 async function renderInto(
   work,
   {
-    root, scenePath, out, width, height, previews, camera, lookAt, frame, sceneCamera, sceneCameraPath,
-    mode, boundsOut, fov, fovExplicit, particles, renderingDriver,
+    root,
+    scenePath,
+    out,
+    width,
+    height,
+    previews,
+    camera,
+    lookAt,
+    frame,
+    sceneCamera,
+    sceneCameraPath,
+    mode,
+    boundsOut,
+    fov,
+    fovExplicit,
+    particles,
+    renderingDriver,
   }
 ) {
   await cp(root, work, { recursive: true, dereference: true });
@@ -1373,7 +1396,7 @@ async function main() {
     );
     console.error(
       '       [--particles seconds]  (advances every CPUParticles emitter that much ' +
-        'FURTHER through Godot\'s own settle loop, on top of any authored preprocess)'
+        "FURTHER through Godot's own settle loop, on top of any authored preprocess)"
     );
     process.exit(2);
   }

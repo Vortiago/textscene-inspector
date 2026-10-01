@@ -18,7 +18,9 @@ export class MetadataStore {
         const oldPathEntry = this.resources.get(previous.path);
         if (oldPathEntry && oldPathEntry.id === resource.id) {
           this.resources.delete(previous.path);
-          logger.info(`[MetadataStore] Evicted stale path entry: ${previous.path} (id "${resource.id}" moved to ${resource.path})`);
+          logger.info(
+            `[MetadataStore] Evicted stale path entry: ${previous.path} (id "${resource.id}" moved to ${resource.path})`
+          );
         }
       }
       this.resources.set(resource.id, resource);

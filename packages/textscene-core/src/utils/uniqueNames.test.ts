@@ -174,11 +174,8 @@ unique_name_in_owner = true
     expect(ownership.claims.has('%Hit')).toBe(false);
   });
 
-  it('lists the live paths of this root\'s own nodes that sit inside an instance', () => {
-    expect([...ownership.ownedInsideInstances]).toEqual([
-      'Player/Enemy/Added',
-      'Player/Enemy/Added/Child',
-    ]);
+  it("lists the live paths of this root's own nodes that sit inside an instance", () => {
+    expect([...ownership.ownedInsideInstances]).toEqual(['Player/Enemy/Added', 'Player/Enemy/Added/Child']);
   });
 
   it('is the table uniqueNameClaims returns', () => {

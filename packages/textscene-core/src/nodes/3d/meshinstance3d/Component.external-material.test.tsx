@@ -12,11 +12,7 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { GODOT_DEFAULT_ALBEDO } from '../../../r3f/materials/godotDefaultMaterial';
-import type {
-  TscnExternalResource,
-  TscnInternalResource,
-  TscnNode,
-} from '../../../parser/types';
+import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
@@ -100,10 +96,7 @@ describe('<MeshInstance3D> external .tres material on a primitive mesh', () => {
 
   it('loads material_override from an ExtResource .tres', async () => {
     const seeded = loadedMaterials();
-    const materials = await materialsOf(
-      makeNode({ materialOverride: 'ExtResource("1_ext")' }),
-      seeded
-    );
+    const materials = await materialsOf(makeNode({ materialOverride: 'ExtResource("1_ext")' }), seeded);
     expect(materials[0]!.color.getHex()).toBe(FIRST_HEX);
   });
 
@@ -198,7 +191,10 @@ describe('<MeshInstance3D> cast_shadow through an external .tres material', () =
  * came from: a blended material casts no shadow, and a missing map diverts to the placeholder.
  */
 describe('<MeshInstance3D> node decisions from a .tres material', () => {
-  async function meshWith(tres: string, seedTextures: (fake: ReturnType<typeof createFakeResourceLoader>) => void = () => {}) {
+  async function meshWith(
+    tres: string,
+    seedTextures: (fake: ReturnType<typeof createFakeResourceLoader>) => void = () => {}
+  ) {
     const fake = createFakeResourceLoader();
     fake.resources.seed(EXTERNAL_PATH, parseTresFile(tres));
     seedTextures(fake);
@@ -219,7 +215,7 @@ describe('<MeshInstance3D> node decisions from a .tres material', () => {
     expect(castsFrom(mesh)).toBe(false);
   });
 
-  it('shows the missing-texture placeholder when a .tres material\'s map cannot load', async () => {
+  it("shows the missing-texture placeholder when a .tres material's map cannot load", async () => {
     const tres = `[gd_resource type="StandardMaterial3D" format=3]
 
 [ext_resource type="Texture2D" path="res://absent.png" id="1_tex"]

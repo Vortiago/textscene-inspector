@@ -45,9 +45,7 @@ export interface WebviewHtmlOptions {
 
 export function generateWebviewHtml(options: WebviewHtmlOptions): string {
   const { scriptUri, nonce, cssUri, cspSource, initialConfig } = options;
-  const cssLink = cssUri
-    ? `<link rel="stylesheet" nonce="${nonce}" href="${cssUri}">`
-    : '';
+  const cssLink = cssUri ? `<link rel="stylesheet" nonce="${nonce}" href="${cssUri}">` : '';
 
   // `<` is escaped, so a config value never closes or opens a script tag. The
   // closed `viewportMode` enum cannot carry one, so this is defence in depth.

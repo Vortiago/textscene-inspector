@@ -7,9 +7,7 @@
 import { settableNonNegative } from '../../../parser/valueParsers';
 import type { CapsuleShape2DProperties } from './types';
 
-export function decodeCapsuleShape2D(
-  properties: Record<string, string>
-): CapsuleShape2DProperties {
+export function decodeCapsuleShape2D(properties: Record<string, string>): CapsuleShape2DProperties {
   const authoredRadius = settableNonNegative(properties.radius, 'CapsuleShape2D radius');
   const authoredHeight = settableNonNegative(properties.height, 'CapsuleShape2D height');
 

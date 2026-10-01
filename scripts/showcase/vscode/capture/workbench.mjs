@@ -21,7 +21,14 @@ export async function workbenchPage(browser) {
   await page.bringToFront().catch(() => {});
   if (process.env.VSC_DEBUG) {
     const attach = (p) => {
-      p.on('console', (m) => { const t = m.text(); if (/error|fail|glb|resource|scene|not text|denied|csp|worker/i.test(t) && !/Extension Host|lock file|SSE_PORT/.test(t)) console.log('  [console]', t.slice(0, 240)); });
+      p.on('console', (m) => {
+        const t = m.text();
+        if (
+          /error|fail|glb|resource|scene|not text|denied|csp|worker/i.test(t) &&
+          !/Extension Host|lock file|SSE_PORT/.test(t)
+        )
+          console.log('  [console]', t.slice(0, 240));
+      });
       p.on('pageerror', (e) => console.log('  [pageerror]', String(e).slice(0, 240)));
     };
     ctx.on('page', attach);
@@ -36,7 +43,11 @@ export async function workbenchPage(browser) {
  * silently does nothing. A click in the middle of the status bar changes no state.
  */
 async function focusWorkbench(page) {
-  const box = await page.locator(STATUS_BAR).first().boundingBox().catch(() => null);
+  const box = await page
+    .locator(STATUS_BAR)
+    .first()
+    .boundingBox()
+    .catch(() => null);
   if (box) await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await sleep(200);
 }
@@ -108,7 +119,11 @@ async function closeTab(page, label) {
 /** Show or hide the Explorer side bar, whichever the shot needs. */
 async function setSideBar(page, visible) {
   // Width, not `isVisible`: a hidden part stays in the DOM with a zero-width box.
-  const box = await page.locator(SIDE_BAR).first().boundingBox().catch(() => null);
+  const box = await page
+    .locator(SIDE_BAR)
+    .first()
+    .boundingBox()
+    .catch(() => null);
   const shown = Boolean(box && box.width > 0);
   if (shown === visible) return;
   await palette(page, 'View: Toggle Primary Side Bar Visibility');
@@ -119,9 +134,7 @@ async function setSideBar(page, visible) {
 async function previewFrames(page) {
   const found = [];
   for (const frame of page.frames()) {
-    const has = await frame
-      .evaluate(() => Boolean(document.getElementById('r3f-root')))
-      .catch(() => false); // cross-origin / detached frame
+    const has = await frame.evaluate(() => Boolean(document.getElementById('r3f-root'))).catch(() => false); // cross-origin / detached frame
     if (has) found.push(frame);
   }
   return found;
@@ -138,7 +151,10 @@ export async function frameShowing(page, nodeName) {
   for (const frame of await previewFrames(page)) {
     await expandTree(frame); // a collapsed row is not in the DOM to match against
     const has = await frame
-      .evaluate((n) => Boolean(document.querySelector(`[data-node-path$="/${n}"], [data-node-path="${n}"]`)), nodeName)
+      .evaluate(
+        (n) => Boolean(document.querySelector(`[data-node-path$="/${n}"], [data-node-path="${n}"]`)),
+        nodeName
+      )
       .catch(() => false);
     if (has) return frame;
   }

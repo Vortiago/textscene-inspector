@@ -9,10 +9,7 @@ import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import type { CSGBox3DProperties } from './types';
 import { findMesh } from '../../testing/reactThreeTestInstance';
 
-function makeNode(
-  props: Partial<CSGBox3DProperties>,
-  children: TscnNode[] = []
-): TscnNode {
+function makeNode(props: Partial<CSGBox3DProperties>, children: TscnNode[] = []): TscnNode {
   const properties: CSGBox3DProperties = {
     name: 'Box',
     size: { x: 3, y: 0.2, z: 12 },
@@ -51,10 +48,9 @@ describe('<CSGBox3D>', () => {
       type: 'StandardMaterial3D',
       data: { albedo_color: 'Color(0.4, 0.3, 0.25, 1)' },
     };
-    const renderer = await render(
-      makeNode({ materialPath: 'SubResource("StandardMaterial3D_floor")' }),
-      [material]
-    );
+    const renderer = await render(makeNode({ materialPath: 'SubResource("StandardMaterial3D_floor")' }), [
+      material,
+    ]);
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const mat = mesh.material as THREE.MeshStandardMaterial;
     // sRGB→linear conversion at parse time makes the channel darker than the raw 0.4 but still
@@ -96,9 +92,7 @@ describe('<CSGBox3D>', () => {
         </CSGBox3D>
       </SceneResourcesProvider>
     );
-    const injected = renderer.scene.find(
-      (n) => (n.instance as THREE.Object3D).name === 'injected-child'
-    );
+    const injected = renderer.scene.find((n) => (n.instance as THREE.Object3D).name === 'injected-child');
     expect(injected).toBeTruthy();
     void child;
   });

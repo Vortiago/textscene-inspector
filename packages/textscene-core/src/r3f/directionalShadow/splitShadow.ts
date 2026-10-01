@@ -135,13 +135,24 @@ export class DirectionalSplitShadow extends THREE.LightShadow<THREE.Orthographic
     const scaleY = viewport.w / this.atlasExtents.y;
     const offsetX = viewport.x / this.atlasExtents.x;
     const offsetY = viewport.y / this.atlasExtents.y;
-    const depthIsUnit =
-      camera.coordinateSystem === THREE.WebGPUCoordinateSystem || camera.reversedDepth;
+    const depthIsUnit = camera.coordinateSystem === THREE.WebGPUCoordinateSystem || camera.reversedDepth;
     this.splitMatrices[slot]!.set(
-      0.5 * scaleX, 0, 0, 0.5 * scaleX + offsetX,
-      0, 0.5 * scaleY, 0, 0.5 * scaleY + offsetY,
-      0, 0, depthIsUnit ? 1 : 0.5, depthIsUnit ? 0 : 0.5,
-      0, 0, 0, 1
+      0.5 * scaleX,
+      0,
+      0,
+      0.5 * scaleX + offsetX,
+      0,
+      0.5 * scaleY,
+      0,
+      0.5 * scaleY + offsetY,
+      0,
+      0,
+      depthIsUnit ? 1 : 0.5,
+      depthIsUnit ? 0 : 0.5,
+      0,
+      0,
+      0,
+      1
     ).multiply(this.projectionView);
   }
 

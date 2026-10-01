@@ -219,7 +219,7 @@ describe('AnimationPlayer playback (E)', () => {
     expect(targetX(renderer)).toBeCloseTo(0);
   });
 
-  it('still registers an inactive player\'s clips — Godot lists them, it only refuses to seek', async () => {
+  it("still registers an inactive player's clips — Godot lists them, it only refuses to seek", async () => {
     await mountScene({ active: false });
     expect(transport.clips).toEqual(['slide']);
   });

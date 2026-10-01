@@ -43,7 +43,14 @@ function fitInput(overrides: Partial<DirectionalShadowFitInput> = {}): Direction
     camera: perspectiveCamera(),
     ...sunAt(new THREE.Vector3(11, 12.3, -31)),
     up: new THREE.Vector3(0, 1, 0),
-    declaration: { maxDistance: 80, pancakeSize: 20, fadeStart: 0.8, depthBias: -0.0003, normalBias: 2, ...ONE_SPLIT },
+    declaration: {
+      maxDistance: 80,
+      pancakeSize: 20,
+      fadeStart: 0.8,
+      depthBias: -0.0003,
+      normalBias: 2,
+      ...ONE_SPLIT,
+    },
     shadowMapSize: MAP_SIZE,
     ...overrides,
   };
@@ -263,7 +270,9 @@ describe('orthogonalShadowFade', () => {
   });
 
   it('ends the fade at the camera far plane when it is nearer than the max distance (edge case)', () => {
-    const fade = orthogonalShadowFade(fitInput({ camera: perspectiveCamera(50), declaration: declaring(80) }));
+    const fade = orthogonalShadowFade(
+      fitInput({ camera: perspectiveCamera(50), declaration: declaring(80) })
+    );
     expect(fade.to).toBe(50);
     expect(fade.from).toBeCloseTo(40, 12);
   });

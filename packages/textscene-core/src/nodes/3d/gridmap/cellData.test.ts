@@ -36,7 +36,7 @@ describe('decodeGridMapCells', () => {
 });
 
 describe('ORTHO_BASES', () => {
-  it('has Godot\'s 24 orthogonal orientations, index 0 = identity', () => {
+  it("has Godot's 24 orthogonal orientations, index 0 = identity", () => {
     expect(ORTHO_BASES).toHaveLength(24);
     expect(ORTHO_BASES[0]).toEqual([1, 0, 0, 0, 1, 0, 0, 0, 1]);
   });

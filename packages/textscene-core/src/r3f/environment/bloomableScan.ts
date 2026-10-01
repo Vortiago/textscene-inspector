@@ -10,11 +10,7 @@ function isBloomable(material: THREE.Material, threshold: number): boolean {
   const standard = material as THREE.MeshStandardMaterial;
   const emissive = standard.emissive;
   const intensity = standard.emissiveIntensity ?? 0;
-  return (
-    !!emissive &&
-    intensity > 0 &&
-    Math.max(emissive.r, emissive.g, emissive.b) * intensity > threshold
-  );
+  return !!emissive && intensity > 0 && Math.max(emissive.r, emissive.g, emissive.b) * intensity > threshold;
 }
 
 /**

@@ -108,7 +108,13 @@ describe('installDirectionalShadowFade', () => {
 describe('writeDirectionalShadowFades', () => {
   it('writes each directional fade at its shadow index', () => {
     installDirectionalShadowFade();
-    writeDirectionalShadowFades({ directional: [{ from: 64, to: 80 }, { from: 8, to: 10 }], sun: [] });
+    writeDirectionalShadowFades({
+      directional: [
+        { from: 64, to: 80 },
+        { from: 8, to: 10 },
+      ],
+      sun: [],
+    });
     expect(Array.from(fadeBuffer().subarray(0, 4))).toEqual([64, 80, 8, 10]);
   });
 
@@ -128,7 +134,9 @@ describe('writeDirectionalShadowFades', () => {
   it('ignores a shadow past Godot’s directional light limit (edge case)', () => {
     installDirectionalShadowFade();
     const tooMany = Array.from({ length: MAX_DIRECTIONAL_LIGHTS }, () => ({ from: 1, to: 2 }));
-    expect(() => writeDirectionalShadowFades({ directional: tooMany, sun: [{ from: 3, to: 4 }] })).not.toThrow();
+    expect(() =>
+      writeDirectionalShadowFades({ directional: tooMany, sun: [{ from: 3, to: 4 }] })
+    ).not.toThrow();
     expect(fadeBuffer()).toHaveLength(MAX_DIRECTIONAL_LIGHTS * 2);
     expect(Array.from(fadeBuffer()).includes(3)).toBe(false);
   });
@@ -175,7 +183,10 @@ describe('the fade with Godot’s split lookup', () => {
   });
 
   it('keeps the fade when three’s sun lookup cannot be replaced (error case)', () => {
-    THREE.ShaderChunk[PARS] = threePars.replace('#define SUN_LIGHT_CASCADES 2', '#define SUN_LIGHT_CASCADES 3');
+    THREE.ShaderChunk[PARS] = threePars.replace(
+      '#define SUN_LIGHT_CASCADES 2',
+      '#define SUN_LIGHT_CASCADES 3'
+    );
     const pars = installBoth('fade first');
     expect(pars).toContain(`uniform vec2 ${DIRECTIONAL_SHADOW_FADE_UNIFORM}[`);
     expect(pars).not.toContain('getSunShadowSplit');

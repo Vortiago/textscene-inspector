@@ -50,10 +50,10 @@ physics_material_override = SubResource("mat_1")
       });
 
       it('should reject invalid physics_material_override format', () => {
-        expectDiagnostic(
-          scene(node('StaticBody3D', { physics_material_override: '"invalid_format"' })),
-          { prop: 'physics_material_override', contains: ['resource reference'] }
-        );
+        expectDiagnostic(scene(node('StaticBody3D', { physics_material_override: '"invalid_format"' })), {
+          prop: 'physics_material_override',
+          contains: ['resource reference'],
+        });
       });
     });
 
@@ -61,12 +61,17 @@ physics_material_override = SubResource("mat_1")
       it('should accept valid constant_linear_velocity format', () => {
         // Should have warning about non-zero velocity, but no format errors
         expectNoErrors(
-          scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(1.0, 0.0, 0.5)' }), collisionShape3d)
+          scene(
+            node('StaticBody3D', { constant_linear_velocity: 'Vector3(1.0, 0.0, 0.5)' }),
+            collisionShape3d
+          )
         );
       });
 
       it('should accept zero constant_linear_velocity', () => {
-        expectClean(scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(0, 0, 0)' }), collisionShape3d));
+        expectClean(
+          scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(0, 0, 0)' }), collisionShape3d)
+        );
       });
 
       // physics_body_3d.cpp's setter is a bare assignment and the property
@@ -78,17 +83,16 @@ physics_material_override = SubResource("mat_1")
       });
 
       it('should reject invalid constant_linear_velocity format', () => {
-        expectDiagnostic(
-          scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(1, 2)' })),
-          { prop: 'constant_linear_velocity', contains: ['Vector3 with 3 numbers'] }
-        );
+        expectDiagnostic(scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(1, 2)' })), {
+          prop: 'constant_linear_velocity',
+          contains: ['Vector3 with 3 numbers'],
+        });
       });
 
       it('should reject non-Vector3 constant_linear_velocity', () => {
-        expectDiagnostic(
-          scene(node('StaticBody3D', { constant_linear_velocity: 1.0 })),
-          { prop: 'constant_linear_velocity' }
-        );
+        expectDiagnostic(scene(node('StaticBody3D', { constant_linear_velocity: 1.0 })), {
+          prop: 'constant_linear_velocity',
+        });
       });
     });
 
@@ -96,38 +100,43 @@ physics_material_override = SubResource("mat_1")
       it('should accept valid constant_angular_velocity format', () => {
         // Should have warning about non-zero velocity, but no format errors
         expectNoErrors(
-          scene(node('StaticBody3D', { constant_angular_velocity: 'Vector3(0.0, 1.57, 0.0)' }), collisionShape3d)
+          scene(
+            node('StaticBody3D', { constant_angular_velocity: 'Vector3(0.0, 1.57, 0.0)' }),
+            collisionShape3d
+          )
         );
       });
 
       it('should accept zero constant_angular_velocity', () => {
-        expectClean(scene(node('StaticBody3D', { constant_angular_velocity: 'Vector3(0, 0, 0)' }), collisionShape3d));
+        expectClean(
+          scene(node('StaticBody3D', { constant_angular_velocity: 'Vector3(0, 0, 0)' }), collisionShape3d)
+        );
       });
 
       it('should reject invalid constant_angular_velocity format', () => {
-        expectDiagnostic(
-          scene(node('StaticBody3D', { constant_angular_velocity: 'Vector3(1)' })),
-          { prop: 'constant_angular_velocity', contains: ['Vector3 with 3 numbers'] }
-        );
+        expectDiagnostic(scene(node('StaticBody3D', { constant_angular_velocity: 'Vector3(1)' })), {
+          prop: 'constant_angular_velocity',
+          contains: ['Vector3 with 3 numbers'],
+        });
       });
     });
 
     runPropertyValidation({ nodeType: 'StaticBody3D', acceptChild: collisionShape3d }, [
       {
-          prop: 'collision_layer',
-          valid: [1, 100, 1048575, 2000000, 2147483648, 4294967295],
-          invalid: [
-{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
+        prop: 'collision_layer',
+        valid: [1, 100, 1048575, 2000000, 2147483648, 4294967295],
+        invalid: [
+          { value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
           { value: '"invalid"' },
-          ],
-        },
+        ],
+      },
       {
-          prop: 'collision_mask',
-          valid: [1, 255, 1048575, 5000000, 2147483648, 4294967295],
-          invalid: [
-{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
-          ],
-        },
+        prop: 'collision_mask',
+        valid: [1, 255, 1048575, 5000000, 2147483648, 4294967295],
+        invalid: [
+          { value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
+        ],
+      },
       {
         prop: 'collision_priority',
         valid: [0.0, 0.5, 1.0, -1.0, 100.5],
@@ -257,8 +266,8 @@ physics_material_override = SubResource("nonexistent")
       // Should have multiple errors: disable_mode, collision_layer format errors,
       // plus potentially resource not found
       expect(diagnostics.length).toBeGreaterThanOrEqual(2);
-      const hasDisableModeError = diagnostics.some(d => d.message.includes('disable_mode'));
-      const hasCollisionLayerError = diagnostics.some(d => d.message.includes('collision_layer'));
+      const hasDisableModeError = diagnostics.some((d) => d.message.includes('disable_mode'));
+      const hasCollisionLayerError = diagnostics.some((d) => d.message.includes('collision_layer'));
       expect(hasDisableModeError || hasCollisionLayerError).toBe(true);
     });
 
@@ -291,12 +300,17 @@ input_capture_on_drag = false
 
     it('should handle scientific notation in velocities', () => {
       expectNoErrors(
-        scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(1e-5, 2.5e3, -3.14e2)' }), collisionShape3d)
+        scene(
+          node('StaticBody3D', { constant_linear_velocity: 'Vector3(1e-5, 2.5e3, -3.14e2)' }),
+          collisionShape3d
+        )
       );
     });
 
     it('should handle bitmask boundaries', () => {
-      expectClean(scene(node('StaticBody3D', { collision_layer: 1048575, collision_mask: 1048575 }), collisionShape3d));
+      expectClean(
+        scene(node('StaticBody3D', { collision_layer: 1048575, collision_mask: 1048575 }), collisionShape3d)
+      );
     });
   });
 });

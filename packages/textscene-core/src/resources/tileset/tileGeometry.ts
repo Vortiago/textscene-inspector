@@ -65,8 +65,14 @@ export function buildTileGeometryArrays(
     // Corner UV grid [[TL,TR],[BL,BR]]; transpose reflects across the main
     // diagonal, then flips swap columns/rows (Godot composes in that order).
     let corners: [number, number][][] = [
-      [[uv.u0, uv.vTop], [uv.u1, uv.vTop]],
-      [[uv.u0, uv.vBottom], [uv.u1, uv.vBottom]],
+      [
+        [uv.u0, uv.vTop],
+        [uv.u1, uv.vTop],
+      ],
+      [
+        [uv.u0, uv.vBottom],
+        [uv.u1, uv.vBottom],
+      ],
     ];
     if (transpose) {
       corners = [
@@ -86,10 +92,7 @@ export function buildTileGeometryArrays(
     const top = 0 - (cy - h / 2);
     const bottom = 0 - (cy + h / 2);
     positions.set([left, top, 0, right, top, 0, left, bottom, 0, right, bottom, 0], i * 12);
-    uvs.set(
-      [...corners[0]![0]!, ...corners[0]![1]!, ...corners[1]![0]!, ...corners[1]![1]!],
-      i * 8
-    );
+    uvs.set([...corners[0]![0]!, ...corners[0]![1]!, ...corners[1]![0]!, ...corners[1]![1]!], i * 8);
 
     const v = i * 4;
     indices.set([v + 2, v + 3, v, v + 3, v + 1, v], i * 6);

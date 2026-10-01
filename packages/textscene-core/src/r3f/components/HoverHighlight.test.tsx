@@ -37,10 +37,7 @@ function findHelpers(scene: THREE.Scene): THREE.BoxHelper[] {
   return out;
 }
 
-function findHelperByColor(
-  scene: THREE.Scene,
-  colorHex: number,
-): THREE.BoxHelper | null {
+function findHelperByColor(scene: THREE.Scene, colorHex: number): THREE.BoxHelper | null {
   for (const h of findHelpers(scene)) {
     const mat = (h as unknown as { material: THREE.LineBasicMaterial }).material;
     if (mat.color.getHex() === colorHex) return h;
@@ -59,7 +56,7 @@ describe('<HoverHighlight> (WI-UX-10)', () => {
         <SelectionProvider>
           <TscnSceneContents />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     const scene = renderer.scene.instance as unknown as THREE.Scene;
@@ -77,7 +74,7 @@ describe('<HoverHighlight> (WI-UX-10)', () => {
           <HoverSeeder path="Cube" />
           <TscnSceneContents />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     const scene = renderer.scene.instance as unknown as THREE.Scene;
@@ -88,12 +85,7 @@ describe('<HoverHighlight> (WI-UX-10)', () => {
 
   it('switches the hover target when the hovered path changes', async () => {
     const graph = createSceneGraphFromTscnScene({
-      nodes: [
-        makeNode('Root', 'Node3D', [
-          makeMeshInstance('Alpha'),
-          makeMeshInstance('Beta'),
-        ]),
-      ],
+      nodes: [makeNode('Root', 'Node3D', [makeMeshInstance('Alpha'), makeMeshInstance('Beta')])],
     });
 
     const renderer = await ReactThreeTestRenderer.create(
@@ -102,7 +94,7 @@ describe('<HoverHighlight> (WI-UX-10)', () => {
           <HoverSeeder path="Root/Alpha" />
           <TscnSceneContents />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     const scene = renderer.scene.instance as unknown as THREE.Scene;
@@ -116,7 +108,7 @@ describe('<HoverHighlight> (WI-UX-10)', () => {
           <HoverSeeder path="Root/Beta" />
           <TscnSceneContents />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     const helperB = findHelperByColor(scene, 0xff8800);
@@ -136,7 +128,7 @@ describe('<HoverHighlight> (WI-UX-10)', () => {
           <HoverSeeder path="Cube" />
           <TscnSceneContents />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     const scene = renderer.scene.instance as unknown as THREE.Scene;
@@ -148,7 +140,7 @@ describe('<HoverHighlight> (WI-UX-10)', () => {
           <HoverSeeder path={null} />
           <TscnSceneContents />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     expect(findHelperByColor(scene, 0xff8800)).toBeNull();
@@ -168,7 +160,7 @@ describe('<HoverHighlight> (WI-UX-10)', () => {
           <SelectSeeder path="Cube" />
           <TscnSceneContents />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     const scene = renderer.scene.instance as unknown as THREE.Scene;

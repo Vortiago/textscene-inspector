@@ -44,9 +44,7 @@ function Harness({
 
 async function mount(props: Omit<Parameters<typeof Harness>[0], 'published'>) {
   const published: Published = [];
-  const renderer = await ReactThreeTestRenderer.create(
-    <Harness published={published} {...props} />
-  );
+  const renderer = await ReactThreeTestRenderer.create(<Harness published={published} {...props} />);
   await ReactThreeTestRenderer.act(async () => {});
   return { renderer, published };
 }

@@ -48,34 +48,26 @@ describe('<Camera3D>', () => {
   });
 
   it('applies fov property to the perspective camera', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <Camera3D node={makeNode({ fov: 60 })} />
-    );
+    const renderer = await ReactThreeTestRenderer.create(<Camera3D node={makeNode({ fov: 60 })} />);
     const cam = renderer.scene.findByType('PerspectiveCamera');
     expect(instanceAs<THREE.PerspectiveCamera>(cam).fov).toBe(60);
   });
 
   it('clamps near to >= 0.001', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <Camera3D node={makeNode({ near: 0 })} />
-    );
+    const renderer = await ReactThreeTestRenderer.create(<Camera3D node={makeNode({ near: 0 })} />);
     const cam = renderer.scene.findByType('PerspectiveCamera');
     expect(instanceAs<THREE.PerspectiveCamera>(cam).near).toBeGreaterThanOrEqual(0.001);
   });
 
   it('ensures far > near (adds 0.1 margin if needed)', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <Camera3D node={makeNode({ near: 10, far: 5 })} />
-    );
+    const renderer = await ReactThreeTestRenderer.create(<Camera3D node={makeNode({ near: 10, far: 5 })} />);
     const cam = renderer.scene.findByType('PerspectiveCamera');
     const { near, far } = instanceAs<THREE.PerspectiveCamera>(cam);
     expect(far).toBeGreaterThan(near);
   });
 
   it('uses the node name on the camera object', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <Camera3D node={makeNode({ name: 'MainCam' })} />
-    );
+    const renderer = await ReactThreeTestRenderer.create(<Camera3D node={makeNode({ name: 'MainCam' })} />);
     const cam = renderer.scene.findByProps({ name: 'MainCam' });
     expect(cam).toBeDefined();
   });

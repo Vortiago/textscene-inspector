@@ -12,7 +12,6 @@ import { hasChildOfType } from '../../../../linter/childType.js';
 
 const RULE_NAME = 'retargetmodifier3d-no-child-skeleton';
 
-
 function checkRetargetModifier3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
   const children = node.children;

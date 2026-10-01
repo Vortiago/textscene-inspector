@@ -102,8 +102,7 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
   if (refused.length > 0) {
     diagnostics.push({
       severity: 'error',
-      message:
-        `TileMap refuses Godot 3 tile data outright (tile_map.cpp:71): ${refused.join('; ')}.`,
+      message: `TileMap refuses Godot 3 tile data outright (tile_map.cpp:71): ${refused.join('; ')}.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'tilemap-unsupported-format',
@@ -122,9 +121,21 @@ const tileMapValidationRule: LintRule = {
     applicableNodeTypes: ['TileMap'],
     emits: [
       { ruleName: 'tilemap-deprecated', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      { ruleName: 'tilemap-y-sort-z-index-conflict', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      { ruleName: 'tilemap-layer-y-sort-without-node', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      { ruleName: 'tilemap-node-y-sort-without-layer', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'tilemap-y-sort-z-index-conflict',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
+      {
+        ruleName: 'tilemap-layer-y-sort-without-node',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
+      {
+        ruleName: 'tilemap-node-y-sort-without-layer',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
       {
         ruleName: 'tilemap-requires-tileset',
         severity: 'info',

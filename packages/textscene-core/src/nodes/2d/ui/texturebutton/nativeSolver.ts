@@ -11,7 +11,11 @@
  */
 import type { TscnNode } from '../../../../parser/types';
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
-import type { MinimumSizeFn, TextureSlotRequest, TextureSlotsFn } from '../../../../r3f/controls/native/solverRegistry';
+import type {
+  MinimumSizeFn,
+  TextureSlotRequest,
+  TextureSlotsFn,
+} from '../../../../r3f/controls/native/solverRegistry';
 import type { TextureRectDraw } from '../texturerect/nativeSolver';
 import type { TextureButtonProperties } from './types';
 
@@ -79,7 +83,10 @@ export function resolveTextureButtonSlot(
 export const textureButtonMinimumSize: MinimumSizeFn = (n, _ctx) => {
   const props = n.node.properties as TextureButtonProperties;
   if (props.ignoreTextureSize) return { x: 0, y: 0 };
-  const size = n.textureSlots[TEXTURE_NORMAL_KEY] ?? n.textureSlots[TEXTURE_PRESSED_KEY] ?? n.textureSlots[TEXTURE_HOVER_KEY];
+  const size =
+    n.textureSlots[TEXTURE_NORMAL_KEY] ??
+    n.textureSlots[TEXTURE_PRESSED_KEY] ??
+    n.textureSlots[TEXTURE_HOVER_KEY];
   if (!size) return { x: 0, y: 0 };
   return { x: Math.abs(size.x), y: Math.abs(size.y) };
 };
@@ -103,18 +110,38 @@ export function textureButtonDraw(
   textureSize: Vec2,
   stretchMode: number | undefined
 ): TextureRectDraw {
-  const noDraw: TextureRectDraw = { offset: { x: 0, y: 0 }, size: { x: 0, y: 0 }, region: undefined, tile: false };
+  const noDraw: TextureRectDraw = {
+    offset: { x: 0, y: 0 },
+    size: { x: 0, y: 0 },
+    region: undefined,
+    tile: false,
+  };
   if (textureSize.x <= 0 || textureSize.y <= 0) return noDraw;
 
   switch (stretchMode ?? STRETCH_KEEP) {
     case STRETCH_SCALE:
-      return { offset: { x: 0, y: 0 }, size: { x: rectSize.x, y: rectSize.y }, region: undefined, tile: false };
+      return {
+        offset: { x: 0, y: 0 },
+        size: { x: rectSize.x, y: rectSize.y },
+        region: undefined,
+        tile: false,
+      };
 
     case STRETCH_TILE:
-      return { offset: { x: 0, y: 0 }, size: { x: rectSize.x, y: rectSize.y }, region: undefined, tile: true };
+      return {
+        offset: { x: 0, y: 0 },
+        size: { x: rectSize.x, y: rectSize.y },
+        region: undefined,
+        tile: true,
+      };
 
     case STRETCH_KEEP:
-      return { offset: { x: 0, y: 0 }, size: { x: textureSize.x, y: textureSize.y }, region: undefined, tile: false };
+      return {
+        offset: { x: 0, y: 0 },
+        size: { x: textureSize.x, y: textureSize.y },
+        region: undefined,
+        tile: false,
+      };
 
     case STRETCH_KEEP_CENTERED:
       return {
@@ -141,7 +168,12 @@ export function textureButtonDraw(
         offsetX = (rectSize.x - texWidth) / 2;
         offsetY = (rectSize.y - texHeight) / 2;
       }
-      return { offset: { x: offsetX, y: offsetY }, size: { x: texWidth, y: texHeight }, region: undefined, tile: false };
+      return {
+        offset: { x: offsetX, y: offsetY },
+        size: { x: texWidth, y: texHeight },
+        region: undefined,
+        tile: false,
+      };
     }
 
     case STRETCH_KEEP_ASPECT_COVERED: {
@@ -160,6 +192,11 @@ export function textureButtonDraw(
     }
 
     default:
-      return { offset: { x: 0, y: 0 }, size: { x: textureSize.x, y: textureSize.y }, region: undefined, tile: false };
+      return {
+        offset: { x: 0, y: 0 },
+        size: { x: textureSize.x, y: textureSize.y },
+        region: undefined,
+        tile: false,
+      };
   }
 }

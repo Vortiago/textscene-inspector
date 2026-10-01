@@ -181,15 +181,11 @@ describe('the settings/ family IterateIK3D adds', () => {
 
   it('accepts a rotation_axis_vector and rejects a two-component one', () => {
     expect(check('settings/0/joints/1/rotation_axis_vector', 'Vector3(1, 0, 0)')).toBeNull();
-    expect(check('settings/0/joints/1/rotation_axis_vector', 'Vector3(1, 0)')?.severity).toBe(
-      'error'
-    );
+    expect(check('settings/0/joints/1/rotation_axis_vector', 'Vector3(1, 0)')?.severity).toBe('error');
   });
 
   it('accepts a limitation resource reference', () => {
-    expect(
-      check('settings/0/joints/1/limitation', 'SubResource("JointLimitation3D_a1b2c")')
-    ).toBeNull();
+    expect(check('settings/0/joints/1/limitation', 'SubResource("JointLimitation3D_a1b2c")')).toBeNull();
   });
 
   it.each(['0', '7'])('accepts limitation/right_axis %s', (value) => {
@@ -207,12 +203,10 @@ describe('the settings/ family IterateIK3D adds', () => {
   });
 
   it('accepts a limitation/rotation_offset quaternion', () => {
-    expect(
-      check('settings/0/joints/1/limitation/rotation_offset', 'Quaternion(0, 0, 0, 1)')
-    ).toBeNull();
-    expect(
-      check('settings/0/joints/1/limitation/rotation_offset', 'Quaternion(0, 0, 1)')?.severity
-    ).toBe('error');
+    expect(check('settings/0/joints/1/limitation/rotation_offset', 'Quaternion(0, 0, 0, 1)')).toBeNull();
+    expect(check('settings/0/joints/1/limitation/rotation_offset', 'Quaternion(0, 0, 1)')?.severity).toBe(
+      'error'
+    );
   });
 
   it('errors on a negative setting index, which _set refuses', () => {
@@ -260,9 +254,7 @@ describe('key tails IterateIK3D ignores', () => {
 
   it('applies a limitation option carrying a tail', () => {
     // `opt` is `right_axis` (:51, :54).
-    expect(check('settings/0/joints/1/limitation/right_axis/extra', '8')?.severity).toBe(
-      'warning'
-    );
+    expect(check('settings/0/joints/1/limitation/right_axis/extra', '8')?.severity).toBe('warning');
   });
 
   it('does not read an unknown limitation option as the limitation itself', () => {
@@ -270,9 +262,7 @@ describe('key tails IterateIK3D ignores', () => {
     // the tail is not ignored there and the limitation validator never judges the value.
     const limitation = check('settings/0/joints/1/limitation', '1');
     expect(limitation?.severity).toBe('error');
-    expect(check('settings/0/joints/1/limitation/extra', '1')?.message).not.toBe(
-      limitation?.message
-    );
+    expect(check('settings/0/joints/1/limitation/extra', '1')?.message).not.toBe(limitation?.message);
   });
 });
 

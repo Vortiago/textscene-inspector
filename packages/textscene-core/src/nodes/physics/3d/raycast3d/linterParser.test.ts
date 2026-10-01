@@ -204,9 +204,7 @@ describe('RayCast3D strict validators', () => {
     });
 
     it('rejects a non-numeric value as malformed', () => {
-      expect(check('debug_shape_thickness', 'thick')?.code).toBe(
-        'INVALID_DEBUG_SHAPE_THICKNESS_FORMAT'
-      );
+      expect(check('debug_shape_thickness', 'thick')?.code).toBe('INVALID_DEBUG_SHAPE_THICKNESS_FORMAT');
     });
   });
 });

@@ -45,10 +45,7 @@ describe('pickRootMostTscn', () => {
     expect(result.ambiguous).toBe(false);
     // A multi-file pick already parsed the scene and exposes the paths, so the
     // caller's resource matching does not parse again.
-    expect(result.extResourcePaths).toEqual([
-      'res://scenes/child.tscn',
-      'res://textures/bg.png',
-    ]);
+    expect(result.extResourcePaths).toEqual(['res://scenes/child.tscn', 'res://textures/bg.png']);
   });
 
   it('root-most is found regardless of file order (reversed)', () => {
@@ -138,9 +135,7 @@ describe('extResourcePaths', () => {
   });
 
   it('returns [] for a scene with no external resources', () => {
-    expect(extResourcePaths('[gd_scene format=3]\n[node name="Root" type="Node3D"]\n')).toEqual(
-      []
-    );
+    expect(extResourcePaths('[gd_scene format=3]\n[node name="Root" type="Node3D"]\n')).toEqual([]);
   });
 
   it('returns [] for unparseable text', () => {
@@ -236,10 +231,7 @@ describe('matchResourceFiles', () => {
   it('reports ambiguous match when multiple missing paths share a basename', () => {
     const file = makeFile('player.png');
     // Two missing paths share the "player.png" basename, with no ExtResource for it.
-    const missingPaths = new Set([
-      'res://textures/player.png',
-      'res://other/player.png',
-    ]);
+    const missingPaths = new Set(['res://textures/player.png', 'res://other/player.png']);
     const tscnNoPlayer = `[gd_scene load_steps=1 format=3]
 [node name="Root" type="Node3D"]
 `;

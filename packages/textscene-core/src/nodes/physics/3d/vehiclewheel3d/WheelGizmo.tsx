@@ -56,11 +56,7 @@ function buildWheelGizmo(radius: number, restLength: number): Float32Array {
     // The spring coil, wound around the suspension axis.
     for (let j = 0; j < SPRING_SECTIONS; j += 1) {
       push(ax * COIL_SCALE, ((i / 360) * section + j * section) * COIL_SCALE, ay * COIL_SCALE);
-      push(
-        bx * COIL_SCALE,
-        (((i + SKIP) / 360) * section + j * section) * COIL_SCALE,
-        by * COIL_SCALE
-      );
+      push(bx * COIL_SCALE, (((i + SKIP) / 360) * section + j * section) * COIL_SCALE, by * COIL_SCALE);
     }
   }
 

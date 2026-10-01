@@ -119,10 +119,9 @@ texture_normal = ExtResource("1_n")
   });
 
   it('does not warn on an exponent-spelled cull_mask with bits set', () => {
-    expectNoDiagnostic(
-      scene(node('Decal', { size: 'Vector3(2, 2, 2)', cull_mask: '2e1' }, { name: 'D' })),
-      { ruleName: 'decal-empty-cull-mask' }
-    );
+    expectNoDiagnostic(scene(node('Decal', { size: 'Vector3(2, 2, 2)', cull_mask: '2e1' }, { name: 'D' })), {
+      ruleName: 'decal-empty-cull-mask',
+    });
   });
 
   it('does not warn about a non-zero cull_mask', () => {

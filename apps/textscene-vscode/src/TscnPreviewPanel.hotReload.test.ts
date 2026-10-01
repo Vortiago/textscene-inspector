@@ -14,10 +14,7 @@ async function createReadyPanel(
   triggerMessage: (msg: { type: string; [key: string]: unknown }) => void
 ): Promise<TscnPreviewPanel> {
   (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
-  const panel = TscnPreviewPanel.create(
-    createMockUri('/extension'),
-    createMockUri('/workspace/scene.tscn')
-  );
+  const panel = TscnPreviewPanel.create(createMockUri('/extension'), createMockUri('/workspace/scene.tscn'));
   await new Promise<void>((r) => setTimeout(r, 10));
   triggerMessage({ type: 'webviewReady' });
   return panel;
@@ -217,13 +214,11 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
     ]);
   });
 
-  it('surfaces an error and holds the last render when the panel\'s own main scene is deleted', async () => {
+  it("surfaces an error and holds the last render when the panel's own main scene is deleted", async () => {
     const { webview, triggerMessage } = setupMockPanel();
     const panel = await createReadyPanel(triggerMessage);
     const loadTscnCalls = (): number =>
-      webview.postMessage.mock.calls.filter(
-        (c) => (c[0] as { type: string }).type === 'loadTscn'
-      ).length;
+      webview.postMessage.mock.calls.filter((c) => (c[0] as { type: string }).type === 'loadTscn').length;
     const loadsBefore = loadTscnCalls();
 
     // Main-scene file is gone; update() -> _loadTscnContent -> readFile throws.
@@ -236,9 +231,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
 
     // The panel shows an error but sends no new loadTscn, so the previous render
     // stays.
-    expect(showError).toHaveBeenCalledWith(
-      expect.stringContaining('Failed to load TSCN file')
-    );
+    expect(showError).toHaveBeenCalledWith(expect.stringContaining('Failed to load TSCN file'));
     expect(loadTscnCalls()).toBe(loadsBefore);
   });
 

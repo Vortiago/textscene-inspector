@@ -23,9 +23,7 @@ const normalize = (name: string) => name.replace(/\$\{[^}]+\}/g, '*');
 
 /** The literal values of `column` in the array literal bound to `table`. */
 function columnValues(src: string, table: string, column: string): string[] {
-  const declaration = new RegExp(
-    String.raw`const\s+${table}\s*(?::[^=]*?)?=\s*\[`
-  ).exec(src);
+  const declaration = new RegExp(String.raw`const\s+${table}\s*(?::[^=]*?)?=\s*\[`).exec(src);
   if (!declaration) return [];
   const open = declaration.index + declaration[0].length - 1;
   const body = balancedGroup(src, open);

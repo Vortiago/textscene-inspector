@@ -4,11 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { Diagnostic } from '@textscene/core/linter';
-import {
-  groupDiagnostics,
-  summarizeDiagnostics,
-  formatProblemBadge,
-} from './lineDiagnostics';
+import { groupDiagnostics, summarizeDiagnostics, formatProblemBadge } from './lineDiagnostics';
 
 /** A buffer long enough for every line these tests name. */
 const ROWS = 100;
@@ -91,7 +87,10 @@ describe('groupDiagnostics for the file-level section', () => {
   });
 
   it('never puts a locationless diagnostic on line 1, which would claim that line is at fault', () => {
-    const { byLine } = groupDiagnostics([diagnostic({ severity: 'info', message: 'file', location: undefined })], ROWS);
+    const { byLine } = groupDiagnostics(
+      [diagnostic({ severity: 'info', message: 'file', location: undefined })],
+      ROWS
+    );
     expect(byLine.size).toBe(0);
   });
 
@@ -106,11 +105,18 @@ describe('groupDiagnostics for the file-level section', () => {
   });
 
   it('keeps the highest severity and every message in order, flooring an off-union one', () => {
-    const { fileLevel } = groupDiagnostics([
-      diagnostic({ severity: 'info', message: 'a', location: undefined }),
-      diagnostic({ severity: 'error', message: 'b', location: undefined }),
-      diagnostic({ severity: 'bogus' as unknown as Diagnostic['severity'], message: 'c', location: undefined }),
-    ], ROWS);
+    const { fileLevel } = groupDiagnostics(
+      [
+        diagnostic({ severity: 'info', message: 'a', location: undefined }),
+        diagnostic({ severity: 'error', message: 'b', location: undefined }),
+        diagnostic({
+          severity: 'bogus' as unknown as Diagnostic['severity'],
+          message: 'c',
+          location: undefined,
+        }),
+      ],
+      ROWS
+    );
     expect(fileLevel).toEqual({ severity: 'error', messages: ['a', 'b', 'c'] });
   });
 
@@ -127,7 +133,10 @@ describe('groupDiagnostics for the file-level section', () => {
   });
 
   it('is null when every diagnostic names a line', () => {
-    const { fileLevel } = groupDiagnostics([diagnostic({ severity: 'error', message: 'x', location: { line: 2 } })], ROWS);
+    const { fileLevel } = groupDiagnostics(
+      [diagnostic({ severity: 'error', message: 'x', location: { line: 2 } })],
+      ROWS
+    );
     expect(fileLevel).toBeNull();
   });
 });

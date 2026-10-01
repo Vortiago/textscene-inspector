@@ -67,8 +67,7 @@ function checkOpenXRCompositionLayer(context: RuleContext): Diagnostic[] {
   // explicit `enable_hole_punch = true` with sort_order omitted still warns: the trigger is an
   // explicit opt-in, so `default-omitted` does not apply.
   const holePunchEnabled = boolSlotValue(properties.enable_hole_punch) === true;
-  const sortOrder =
-    ruleInt(properties.sort_order, 1);
+  const sortOrder = ruleInt(properties.sort_order, 1);
   if (holePunchEnabled && sortOrder !== null && sortOrder >= 0) {
     diagnostics.push({
       severity: 'warning',

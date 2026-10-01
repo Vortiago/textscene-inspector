@@ -7,11 +7,7 @@
 
 import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../solveTree';
-import {
-  allocatePaintRange,
-  WHOLE_CANVAS_RANGE,
-  type PaintRange,
-} from '../../../canvasPaintOrder';
+import { allocatePaintRange, WHOLE_CANVAS_RANGE, type PaintRange } from '../../../canvasPaintOrder';
 
 /**
  * Frozen because every node this factory builds shares them, and `readonly` is

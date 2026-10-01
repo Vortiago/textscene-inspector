@@ -13,10 +13,7 @@ function build(
   properties: Record<string, string>,
   textures?: ResolvedTextureSlots
 ): THREE.MeshStandardMaterial {
-  return buildMaterial(
-    parseStandardMaterial3DScalars(properties),
-    textures
-  ) as THREE.MeshStandardMaterial;
+  return buildMaterial(parseStandardMaterial3DScalars(properties), textures) as THREE.MeshStandardMaterial;
 }
 
 /**
@@ -291,9 +288,7 @@ describe('the imperative adapter — physical-only features', () => {
 
   it('stays a MeshStandardMaterial when every physical flag is off', () => {
     expect(
-      buildMaterial(
-        parseStandardMaterial3DScalars({ clearcoat: '1', rim: '1', anisotropy: '1' })
-      )
+      buildMaterial(parseStandardMaterial3DScalars({ clearcoat: '1', rim: '1', anisotropy: '1' }))
     ).toBeInstanceOf(THREE.MeshStandardMaterial);
   });
 });
@@ -556,15 +551,9 @@ describe('the imperative adapter — UV transform (uv1_scale / uv1_offset)', () 
   });
 
   it('survives extreme scales', () => {
-    const big = build(
-      { uv1_scale: 'Vector3(1000, 1000, 1)' },
-      { albedo_texture: loadedTexture() }
-    );
+    const big = build({ uv1_scale: 'Vector3(1000, 1000, 1)' }, { albedo_texture: loadedTexture() });
     expect(big.map!.repeat.x).toBe(1000);
-    const small = build(
-      { uv1_scale: 'Vector3(0.01, 0.01, 1)' },
-      { albedo_texture: loadedTexture() }
-    );
+    const small = build({ uv1_scale: 'Vector3(0.01, 0.01, 1)' }, { albedo_texture: loadedTexture() });
     expect(small.map!.repeat.x).toBe(0.01);
     expect(small.map!.wrapS).toBe(THREE.RepeatWrapping);
   });
@@ -607,8 +596,7 @@ describe('the imperative adapter — UV transform (uv1_scale / uv1_offset)', () 
 describe('the imperative adapter — vertex colours', () => {
   /** three declares the slot on ShaderMaterial only, so its type is not on the base. */
   function colorDefault(material: THREE.Material): number[] | undefined {
-    return (material as { defaultAttributeValues?: Record<string, number[]> })
-      .defaultAttributeValues?.color;
+    return (material as { defaultAttributeValues?: Record<string, number[]> }).defaultAttributeValues?.color;
   }
 
   it('reads COLOR as white on a mesh that supplies none', () => {

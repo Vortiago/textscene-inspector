@@ -69,14 +69,16 @@ describe('<DirectionalLight3D>', () => {
 
   it('positions light group at transform origin', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <DirectionalLight3D node={makeNode({
-        transform: {
-          basis_x: { x: 1, y: 0, z: 0 },
-          basis_y: { x: 0, y: 1, z: 0 },
-          basis_z: { x: 0, y: 0, z: 1 },
-          origin: { x: 0, y: 10, z: 0 },
-        },
-      })} />
+      <DirectionalLight3D
+        node={makeNode({
+          transform: {
+            basis_x: { x: 1, y: 0, z: 0 },
+            basis_y: { x: 0, y: 1, z: 0 },
+            basis_z: { x: 0, y: 0, z: 1 },
+            origin: { x: 0, y: 10, z: 0 },
+          },
+        })}
+      />
     );
     const group = renderer.scene.findByProps({ name: 'Sun' });
     expect(group.instance.position.y).toBe(10);

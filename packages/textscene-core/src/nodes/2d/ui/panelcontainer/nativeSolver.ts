@@ -16,15 +16,17 @@
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
 import { controlProps, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import type { ContainerLayoutFn, MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import type {
+  ContainerLayoutFn,
+  MinimumSizeFn,
+  SolveContext,
+} from '../../../../r3f/controls/native/solverRegistry';
 import { fitChildInRect, isSortableControl, SIZE_FILL } from '../shared/fitChildInRect';
-
 
 /** The resolved `theme_override_styles/panel`, or the default-theme `panel` struct. */
 function panelStyleOf(n: SolveNode, ctx: SolveContext): StyleBoxFlatData {
   return n.styleBoxes.panel ?? ctx.theme.widgets.panel;
 }
-
 
 /**
  * `PanelContainer::get_minimum_size` (`panel_container.cpp:35-51`): the

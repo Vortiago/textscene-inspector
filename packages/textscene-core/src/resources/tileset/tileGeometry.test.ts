@@ -36,16 +36,28 @@ describe('buildTileGeometryArrays', () => {
     const { positions, uvs, indices } = buildTileGeometryArrays([cell(0, 0)], source, grid, 32, 32);
 
     expect(Array.from(positions)).toEqual([
-      0, 0, 0, // TL
-      16, 0, 0, // TR
-      0, -16, 0, // BL
-      16, -16, 0, // BR
+      0,
+      0,
+      0, // TL
+      16,
+      0,
+      0, // TR
+      0,
+      -16,
+      0, // BL
+      16,
+      -16,
+      0, // BR
     ]);
     expect(Array.from(uvs)).toEqual([
-      0, 1, // TL
-      0.5, 1, // TR
-      0, 0.5, // BL
-      0.5, 0.5, // BR
+      0,
+      1, // TL
+      0.5,
+      1, // TR
+      0,
+      0.5, // BL
+      0.5,
+      0.5, // BR
     ]);
     expect(Array.from(indices)).toEqual([2, 3, 0, 3, 1, 0]);
   });
@@ -58,13 +70,7 @@ describe('buildTileGeometryArrays', () => {
     const TRANSPOSE = 0x4000;
 
     function uvsFor(alternativeId: number): number[] {
-      const { uvs } = buildTileGeometryArrays(
-        [{ ...cell(0, 0), alternativeId }],
-        thin,
-        grid,
-        32,
-        32
-      );
+      const { uvs } = buildTileGeometryArrays([{ ...cell(0, 0), alternativeId }], thin, grid, 32, 32);
       return Array.from(uvs);
     }
 
@@ -124,10 +130,14 @@ describe('buildTileGeometryArrays', () => {
     // regionPx = (4 + 2·18, 6 + 1·19, 16, 16) = (40, 25, 16, 16) of a 64×64 texture.
     const { uvs } = buildTileGeometryArrays([cell(0, 0, 2, 1)], spaced, grid, 64, 64);
     expect(Array.from(uvs)).toEqual([
-      0.625, 0.609375, // TL
-      0.875, 0.609375, // TR
-      0.625, 0.359375, // BL
-      0.875, 0.359375, // BR
+      0.625,
+      0.609375, // TL
+      0.875,
+      0.609375, // TR
+      0.625,
+      0.359375, // BL
+      0.875,
+      0.359375, // BR
     ]);
   });
 });

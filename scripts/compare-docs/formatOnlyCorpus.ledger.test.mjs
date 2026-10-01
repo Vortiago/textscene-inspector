@@ -67,9 +67,12 @@ describe('validators that cite no grounding, against the literals Godot stores',
     expect(subjects().length).toBeGreaterThan(1200);
     const labels = new Set(subjects().map((row) => row.label));
     expect(
-      ['Label.structured_text_bidi_override_options', 'Sprite2D.texture', 'Label.text', 'BaseMaterial3D.albedo_texture'].filter(
-        (label) => !labels.has(label)
-      )
+      [
+        'Label.structured_text_bidi_override_options',
+        'Sprite2D.texture',
+        'Label.text',
+        'BaseMaterial3D.albedo_texture',
+      ].filter((label) => !labels.has(label))
     ).toEqual([]);
   });
 

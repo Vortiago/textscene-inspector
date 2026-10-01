@@ -21,22 +21,14 @@ validatorRegistry.registerAll('NinePatchRect', {
   // nine_patch_rect.cpp:164-171: set_h_axis_stretch_mode assigns, with only an early return on a
   // redundant set and no ERR_FAIL_INDEX. The ADD_PROPERTY at :83 carries PROPERTY_HINT_ENUM with 3 labels,
   // so out-of-range is hinted, not enforced: a warning.
-  axis_stretch_horizontal: v.enumInt(
-    'axis_stretch_horizontal',
-    0,
-    2,
-    AXIS_STRETCH_MODE,
-    { hinted: 'nine_patch_rect.cpp:83' }
-  ),
+  axis_stretch_horizontal: v.enumInt('axis_stretch_horizontal', 0, 2, AXIS_STRETCH_MODE, {
+    hinted: 'nine_patch_rect.cpp:83',
+  }),
   // nine_patch_rect.cpp:177-184: set_v_axis_stretch_mode, shaped as the horizontal setter. ADD_PROPERTY
   // at :84. Warning.
-  axis_stretch_vertical: v.enumInt(
-    'axis_stretch_vertical',
-    0,
-    2,
-    AXIS_STRETCH_MODE,
-    { hinted: 'nine_patch_rect.cpp:84' }
-  ),
+  axis_stretch_vertical: v.enumInt('axis_stretch_vertical', 0, 2, AXIS_STRETCH_MODE, {
+    hinted: 'nine_patch_rect.cpp:84',
+  }),
 
   // nine_patch_rect.cpp:151-158: set_draw_center assigns, with only an early return on a redundant set.
   // The ADD_PROPERTY at :74 has no hint. Format-only.

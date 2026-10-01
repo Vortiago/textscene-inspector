@@ -19,7 +19,11 @@ export interface QuadGeometry {
   colors: number[];
 }
 
-function quad(w: number, h: number, corners: readonly [ControlColor, ControlColor, ControlColor, ControlColor]): QuadGeometry {
+function quad(
+  w: number,
+  h: number,
+  corners: readonly [ControlColor, ControlColor, ControlColor, ControlColor]
+): QuadGeometry {
   // Corners run top-left, top-right, bottom-right, bottom-left, as the `points` of
   // `ColorPickerShape::draw_sv_square` do (`color_picker_shape.cpp:233-238`).
   const positions = [0, 0, 0, w, 0, 0, w, -h, 0, 0, -h, 0];
@@ -49,7 +53,12 @@ export function svSquareBaseLayer(w: number, h: number): QuadGeometry {
 export function svSquareHueLayer(w: number, h: number, hue: number): QuadGeometry {
   const full = hsvToRgb(hue, 1, 1);
   const dark = hsvToRgb(hue, 1, 0);
-  return quad(w, h, [{ ...full, a: 0 }, { ...full, a: 1 }, { ...dark, a: 1 }, { ...dark, a: 0 }]);
+  return quad(w, h, [
+    { ...full, a: 0 },
+    { ...full, a: 1 },
+    { ...dark, a: 1 },
+    { ...dark, a: 0 },
+  ]);
 }
 
 /**
@@ -82,7 +91,12 @@ export function horizontalStripGeometry(w: number, h: number, stops: readonly Co
  * values with no sRGB decode.
  */
 export function linearizeStops(stops: readonly ControlColor[]): ControlColor[] {
-  return stops.map((c) => ({ r: sRGBChannelToLinear(c.r), g: sRGBChannelToLinear(c.g), b: sRGBChannelToLinear(c.b), a: c.a }));
+  return stops.map((c) => ({
+    r: sRGBChannelToLinear(c.r),
+    g: sRGBChannelToLinear(c.g),
+    b: sRGBChannelToLinear(c.b),
+    a: c.a,
+  }));
 }
 
 /**

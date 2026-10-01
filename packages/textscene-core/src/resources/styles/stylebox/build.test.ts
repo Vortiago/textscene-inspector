@@ -80,9 +80,7 @@ describe('buildStyleBoxCss', () => {
   });
 
   it('pads by the border width when no content margin is set', () => {
-    expect(css({ border_width_top: '2', border_width_bottom: '2' }).padding).toBe(
-      '2px 0px 2px 0px'
-    );
+    expect(css({ border_width_top: '2', border_width_bottom: '2' }).padding).toBe('2px 0px 2px 0px');
   });
 
   it('draws the shadow only from shadow_size 1 up', () => {

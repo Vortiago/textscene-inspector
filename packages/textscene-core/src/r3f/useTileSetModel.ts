@@ -50,7 +50,16 @@ export function useTileSetModel(tileSetRef: string | undefined): TileSetModelRes
     }
     const model = tileSetFromTres(tresResult.value);
     return model ? { model, status: 'loaded' } : { model: null, status: 'unavailable' };
-  }, [tileSetRef, ref?.type, internalResources, externalResources, resolvedPath, tresPath, tresResult.status, tresResult.value]);
+  }, [
+    tileSetRef,
+    ref?.type,
+    internalResources,
+    externalResources,
+    resolvedPath,
+    tresPath,
+    tresResult.status,
+    tresResult.value,
+  ]);
 }
 
 /**
@@ -110,19 +119,13 @@ export function useTileSetModels(
   }, [distinct, internalResources, externalResources, loader, generation]);
 
   // Stable while the resolution is: a caller memoises its expansion on this.
-  return useCallback(
-    (ref) => (ref ? resolved.get(ref) ?? UNAVAILABLE : UNAVAILABLE),
-    [resolved]
-  );
+  return useCallback((ref) => (ref ? (resolved.get(ref) ?? UNAVAILABLE) : UNAVAILABLE), [resolved]);
 }
 
 const UNAVAILABLE: TileSetModelResult = { model: null, status: 'unavailable' };
 
 /** The `.tres` an external ref names, or null for a SubResource or a non-text one. */
-function externalTresPath(
-  ref: string,
-  externalResources: readonly TscnExternalResource[]
-): string | null {
+function externalTresPath(ref: string, externalResources: readonly TscnExternalResource[]): string | null {
   const parsed = parseResourceReference(ref);
   const isExternal = parsed?.type === 'ExtResource' || ref.startsWith('res://');
   if (!isExternal) return null;

@@ -12,7 +12,12 @@ const HEADING: ParsedHeading = {
 describe('formatArea2DProperties', () => {
   it('shows monitoring/monitorable/layer/mask when explicitly set (happy path)', () => {
     const sections = formatArea2DProperties(
-      parseArea2D(HEADING, { monitoring: 'true', monitorable: 'false', collision_layer: '4', collision_mask: '1' })
+      parseArea2D(HEADING, {
+        monitoring: 'true',
+        monitorable: 'false',
+        collision_layer: '4',
+        collision_mask: '1',
+      })
     );
     expect(sections.map((s) => s.title)).toContain('Area2D');
     expect(valueOf(sections, 'Monitoring')).toBe('true');

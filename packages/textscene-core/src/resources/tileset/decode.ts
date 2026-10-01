@@ -17,13 +17,7 @@ import {
   resolveExtResourcePath,
 } from '../SubResourceResolver';
 import { TILE_SHAPE_HEXAGON, TILE_SHAPE_SQUARE } from './types';
-import type {
-  AlternativeTileModel,
-  AtlasSourceModel,
-  AtlasTileModel,
-  TileSetModel,
-  Vec2i,
-} from './types';
+import type { AlternativeTileModel, AtlasSourceModel, AtlasTileModel, TileSetModel, Vec2i } from './types';
 
 /** Context-independent view of a TileSet resource and its surroundings. */
 export interface TileSetSourceData {
@@ -81,17 +75,13 @@ export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
 
   const shape = intEnumOr(data.properties.tile_shape, 0, 'tile_shape');
   if (shape < TILE_SHAPE_SQUARE || shape > TILE_SHAPE_HEXAGON) {
-    warn(
-      `[TileSet] unknown tile_shape ${shape} — cells will place on a square grid`
-    );
+    warn(`[TileSet] unknown tile_shape ${shape} — cells will place on a square grid`);
   }
 
   return {
     shape,
     layout: intEnumOr(data.properties.tile_layout, 0, 'tile_layout') as TileSetModel['layout'],
-    offsetAxis: intEnumOr(data.properties.tile_offset_axis, 0, 'tile_offset_axis') as
-      | 0
-      | 1,
+    offsetAxis: intEnumOr(data.properties.tile_offset_axis, 0, 'tile_offset_axis') as 0 | 1,
     tileSize: tileSetVec2i(data.properties.tile_size, { x: 16, y: 16 }, 'tile_size'),
     sources,
     sourceOrder,
@@ -139,10 +129,7 @@ export function tileSetFromScene(
   });
 }
 
-function resolveAtlasSource(
-  props: Record<string, unknown>,
-  data: TileSetSourceData
-): AtlasSourceModel {
+function resolveAtlasSource(props: Record<string, unknown>, data: TileSetSourceData): AtlasSourceModel {
   const textureRef = typeof props.texture === 'string' ? props.texture : null;
   return {
     texturePath: textureRef ? data.resolveTexturePath(textureRef) : null,
@@ -212,10 +199,11 @@ function resolveTiles(props: Record<string, unknown>): Map<string, AtlasTileMode
     const prop = alt[2];
     const alternative = alternativeAt(tileAt(m[1]!, m[2]!), altId);
     if (prop === 'flip_h') alternative.flipH = typeof value === 'string' && boolSlotValue(value) === true;
-    else if (prop === 'flip_v') alternative.flipV = typeof value === 'string' && boolSlotValue(value) === true;
-    else if (prop === 'transpose') alternative.transpose = typeof value === 'string' && boolSlotValue(value) === true;
-    else if (prop === 'texture_origin')
-      alternative.textureOrigin = tileSetVec2i(value, { x: 0, y: 0 }, key);
+    else if (prop === 'flip_v')
+      alternative.flipV = typeof value === 'string' && boolSlotValue(value) === true;
+    else if (prop === 'transpose')
+      alternative.transpose = typeof value === 'string' && boolSlotValue(value) === true;
+    else if (prop === 'texture_origin') alternative.textureOrigin = tileSetVec2i(value, { x: 0, y: 0 }, key);
   }
 
   return tiles;

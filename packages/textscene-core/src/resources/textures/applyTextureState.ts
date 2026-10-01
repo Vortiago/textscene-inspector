@@ -7,11 +7,7 @@
  */
 
 import * as THREE from 'three';
-import {
-  applyTextureFilterState,
-  godotTextureFilterState,
-  textureFilterMatches,
-} from './godotTextureFilter';
+import { applyTextureFilterState, godotTextureFilterState, textureFilterMatches } from './godotTextureFilter';
 
 /** Below this, a UV transform is indistinguishable from identity. */
 const IDENTITY_EPSILON = 1e-6;
@@ -93,8 +89,7 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
   const wrapDiverges = texture.wrapS !== wrapping || texture.wrapT !== wrapping;
   // Only an authored filter diverges. Otherwise a GradientTexture2D, which has no
   // mipmaps, would clone per material and slot for a filter nobody asked for.
-  const filterDiverges =
-    state.filter !== undefined && !textureFilterMatches(texture, filterState);
+  const filterDiverges = state.filter !== undefined && !textureFilterMatches(texture, filterState);
   // A texture whose tag already matches the sampler is shared untouched.
   const colorSpaceDiverges = texture.colorSpace !== state.colorSpace;
   if (!uvDiverges && !filterDiverges && !wrapDiverges && !colorSpaceDiverges) return texture;
@@ -128,9 +123,7 @@ export function isMaterialOwnedTexture(texture: THREE.Texture): boolean {
 }
 
 function isIdentity(uv: UVTransform): boolean {
-  return (
-    near(uv.scale.x, 1) && near(uv.scale.y, 1) && near(uv.offset.x, 0) && near(uv.offset.y, 0)
-  );
+  return near(uv.scale.x, 1) && near(uv.scale.y, 1) && near(uv.offset.x, 0) && near(uv.offset.y, 0);
 }
 
 function near(value: number, target: number): boolean {

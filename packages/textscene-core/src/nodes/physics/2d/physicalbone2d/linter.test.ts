@@ -6,7 +6,16 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { node, scene, lint, expectDiagnostic, expectNoDiagnostic , instanced, override, packedScene} from '../../../../linter/testing/testkit';
+import {
+  node,
+  scene,
+  lint,
+  expectDiagnostic,
+  expectNoDiagnostic,
+  instanced,
+  override,
+  packedScene,
+} from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
@@ -25,7 +34,10 @@ describe('PhysicalBone2D Linter', () => {
 
     it('warns when the parent is neither Skeleton2D nor PhysicalBone2D', () => {
       expectDiagnostic(
-        scene(node('Node2D', {}, { name: 'Root' }), node('PhysicalBone2D', { bone2d_index: 0 }, { parent: '.' })),
+        scene(
+          node('Node2D', {}, { name: 'Root' }),
+          node('PhysicalBone2D', { bone2d_index: 0 }, { parent: '.' })
+        ),
         { ruleName: 'physicalbone2d-missing-skeleton-parent', severity: 'warning' }
       );
     });
@@ -109,7 +121,10 @@ describe('PhysicalBone2D Linter', () => {
 
     it('passes when bone2d_index is assigned', () => {
       expectNoDiagnostic(
-        scene(node('Skeleton2D', {}, { name: 'Root' }), node('PhysicalBone2D', { bone2d_index: 0 }, { parent: '.' })),
+        scene(
+          node('Skeleton2D', {}, { name: 'Root' }),
+          node('PhysicalBone2D', { bone2d_index: 0 }, { parent: '.' })
+        ),
         { ruleName: 'physicalbone2d-missing-bone-index' }
       );
     });
@@ -151,7 +166,10 @@ describe('PhysicalBone2D Linter', () => {
 
     it('does not require a Joint2D child for a top-level PhysicalBone2D (parent is the Skeleton2D)', () => {
       expectNoDiagnostic(
-        scene(node('Skeleton2D', {}, { name: 'Root' }), node('PhysicalBone2D', { bone2d_index: 0 }, { parent: '.' })),
+        scene(
+          node('Skeleton2D', {}, { name: 'Root' }),
+          node('PhysicalBone2D', { bone2d_index: 0 }, { parent: '.' })
+        ),
         { ruleName: 'physicalbone2d-missing-joint-child' }
       );
     });

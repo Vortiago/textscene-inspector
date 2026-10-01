@@ -64,8 +64,7 @@ function checkCodeEdit(context: RuleContext): Diagnostic[] {
 const codeEditDelimiterCollisionRule: LintRule = {
   meta: {
     name: 'valid-codeedit-properties',
-    description:
-      "Validates CodeEdit's delimiter_strings and delimiter_comments do not share a start key",
+    description: "Validates CodeEdit's delimiter_strings and delimiter_comments do not share a start key",
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'CodeEdit'),
     emits: [

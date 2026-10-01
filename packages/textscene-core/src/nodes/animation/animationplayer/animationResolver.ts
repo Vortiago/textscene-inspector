@@ -196,9 +196,7 @@ function parseTracks(data: Record<string, unknown>): GodotTrack[] {
 
     // `hasOwn` so a track type that collides with an Object.prototype key
     // (for example "constructor", "toString") does not resolve to an inherited member.
-    const transform3d = Object.hasOwn(TRANSFORM_3D_TRACKS, type)
-      ? TRANSFORM_3D_TRACKS[type]
-      : undefined;
+    const transform3d = Object.hasOwn(TRANSFORM_3D_TRACKS, type) ? TRANSFORM_3D_TRACKS[type] : undefined;
     if (transform3d) {
       const inner = extractNodePathInner(rawPath);
       if (inner === null) continue;
@@ -258,8 +256,7 @@ function parseKeys(keysStr: string): GodotKeyframe[] {
   if (times === null || times.length === 0) return [];
 
   const transMatch = TRANSITIONS_FIELD_RE.exec(keysStr);
-  const transitions =
-    transMatch && transMatch[1] !== undefined ? parseFloatList(transMatch[1]) : [];
+  const transitions = transMatch && transMatch[1] !== undefined ? parseFloatList(transMatch[1]) : [];
   if (transitions === null) return [];
 
   const values = parseValueArray(keysStr);
@@ -269,9 +266,7 @@ function parseKeys(keysStr: string): GodotKeyframe[] {
   // scalar property there, and hand `clipBuilder` a mixed-shape vector list whose flattened length
   // is not a multiple of `times`, so every sample would be NaN.
   if (values.length !== times.length) {
-    info(
-      `[AnimationPlayer] ${values.length} keyframe values for ${times.length} times — dropping the track`
-    );
+    info(`[AnimationPlayer] ${values.length} keyframe values for ${times.length} times — dropping the track`);
     return [];
   }
 
@@ -347,4 +342,3 @@ function numberOr(value: unknown, fallback: number): number {
   // fails every `> EPSILON` test. A value the renderer cannot use falls back to the documented default.
   return parsed === null || !Number.isFinite(parsed) ? fallback : parsed;
 }
-

@@ -10,20 +10,17 @@ import {
 
 describe('parseCPUParticles2D', () => {
   it('parses the isometric candle’s Fire emitter (happy path)', () => {
-    const result = parseCPUParticles2D(
-      heading('CPUParticles2D', { name: 'Fire', parent: 'Sprite2D' }),
-      {
-        light_mask: '128',
-        material: 'SubResource("1")',
-        position: 'Vector2(-13, -35)',
-        scale: 'Vector2(0.6, 0.6)',
-        amount: '1',
-        texture: 'ExtResource("3")',
-        lifetime: '0.8',
-        gravity: 'Vector2(0, 0)',
-        color_ramp: 'SubResource("2")',
-      }
-    );
+    const result = parseCPUParticles2D(heading('CPUParticles2D', { name: 'Fire', parent: 'Sprite2D' }), {
+      light_mask: '128',
+      material: 'SubResource("1")',
+      position: 'Vector2(-13, -35)',
+      scale: 'Vector2(0.6, 0.6)',
+      amount: '1',
+      texture: 'ExtResource("3")',
+      lifetime: '0.8',
+      gravity: 'Vector2(0, 0)',
+      color_ramp: 'SubResource("2")',
+    });
 
     expect(result.name).toBe('Fire');
     expect(result.amount).toBe(1);

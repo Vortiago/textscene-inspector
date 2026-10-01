@@ -21,12 +21,12 @@ function initialConfig(): WebviewInitialConfig {
 export function buildPanelHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
   // The ESM build in `dist/webview/` keeps lazy chunks beside the entry script,
   // so they import each other through relative URIs.
-  const scriptUri = webview.asWebviewUri(
-    vscode.Uri.joinPath(extensionUri, 'dist', 'webview', 'webview.js')
-  ).toString();
-  const cssUri = webview.asWebviewUri(
-    vscode.Uri.joinPath(extensionUri, 'dist', 'webview', 'webview.css')
-  ).toString();
+  const scriptUri = webview
+    .asWebviewUri(vscode.Uri.joinPath(extensionUri, 'dist', 'webview', 'webview.js'))
+    .toString();
+  const cssUri = webview
+    .asWebviewUri(vscode.Uri.joinPath(extensionUri, 'dist', 'webview', 'webview.css'))
+    .toString();
 
   const nonce = generateNonce();
   return generateWebviewHtml({

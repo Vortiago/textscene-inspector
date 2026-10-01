@@ -16,12 +16,7 @@ import '../3d/characterbody3d/linterParser.js';
 import '../3d/area3d/linterParser.js';
 
 /** Every member collision_object_2d.cpp binds; the 3D twin adds two. */
-const COMMON = [
-  'disable_mode',
-  'collision_layer',
-  'collision_mask',
-  'collision_priority',
-] as const;
+const COMMON = ['disable_mode', 'collision_layer', 'collision_mask', 'collision_priority'] as const;
 const KEYS_2D = [...COMMON, 'input_pickable'] as const;
 const KEYS_3D = [...COMMON, 'input_ray_pickable', 'input_capture_on_drag'] as const;
 

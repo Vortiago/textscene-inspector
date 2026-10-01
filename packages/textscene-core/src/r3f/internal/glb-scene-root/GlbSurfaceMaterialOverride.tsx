@@ -30,7 +30,11 @@ export interface GlbSurfaceMaterialOverrideProps {
  * cannot build still replaced the glTF's own, so the surface is Godot's default (ADR-0041).
  * One still loading, or one that never loads, replaces nothing, as Godot's null material does.
  */
-export function GlbSurfaceMaterialOverride({ target, source, replaces = everySurface }: GlbSurfaceMaterialOverrideProps) {
+export function GlbSurfaceMaterialOverride({
+  target,
+  source,
+  replaces = everySurface,
+}: GlbSurfaceMaterialOverrideProps) {
   const loaded = useMaterial(source);
   const ready = readyMaterial(loaded);
   const scalars = useMaterialScalars(ready);

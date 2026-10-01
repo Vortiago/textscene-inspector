@@ -99,8 +99,11 @@ describe('useNodeIcon', () => {
     expect(load).not.toHaveBeenCalled();
   });
 
-  it('falls back to the vendored default when the themed ref cannot resolve — `Control::_set`\'s NIL branch removes an invalid icon override, matching an absent one', () => {
-    const themed: ThemedIconRef = { ref: 'ExtResource("nope")', resources: { externalResources: [], internalResources: [] } };
+  it("falls back to the vendored default when the themed ref cannot resolve — `Control::_set`'s NIL branch removes an invalid icon override, matching an absent one", () => {
+    const themed: ThemedIconRef = {
+      ref: 'ExtResource("nope")',
+      resources: { externalResources: [], internalResources: [] },
+    };
     const load = vi.spyOn(THREE.TextureLoader.prototype, 'load');
 
     const { result } = renderHook(() => useNodeIcon(themed, ICON));

@@ -13,10 +13,7 @@ import { DEFAULT_ANIMATION_NAME, literalText, ruleInt } from '../../../godot/ind
  * in file order (packed_scene.cpp:369-492), so a `sprite_frames` line below `key` is
  * still null, and `set_frame_and_progress` writes nothing (animated_sprite_2d.cpp:360-362).
  */
-function spriteFramesWhenApplied(
-  rawProps: Record<string, string>,
-  key: string
-): string | undefined {
+function spriteFramesWhenApplied(rawProps: Record<string, string>, key: string): string | undefined {
   const written = Object.keys(rawProps);
   const slotAt = written.indexOf('sprite_frames');
   if (slotAt === -1 || slotAt > written.indexOf(key)) return undefined;
@@ -91,7 +88,11 @@ const animatedSprite2DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['AnimatedSprite2D'],
     emits: [
-      { ruleName: 'animatedsprite2d-requires-spriteframes', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'animatedsprite2d-requires-spriteframes',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
       {
         ruleName: 'animatedsprite2d-animation-no-spriteframes',
         severity: 'error',

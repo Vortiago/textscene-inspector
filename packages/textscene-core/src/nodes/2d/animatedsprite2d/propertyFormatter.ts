@@ -4,9 +4,7 @@ import type { PropertySection } from '../../../core/NodeRegistry';
 import type { AnimatedSprite2DProperties } from './types';
 import { formatNode2DProperties } from '../../base/node2d/propertyFormatter';
 
-export function formatAnimatedSprite2DProperties(
-  properties: AnimatedSprite2DProperties
-): PropertySection[] {
+export function formatAnimatedSprite2DProperties(properties: AnimatedSprite2DProperties): PropertySection[] {
   const sections: PropertySection[] = [];
 
   sections.push({

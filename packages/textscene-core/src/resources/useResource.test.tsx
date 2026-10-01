@@ -53,10 +53,9 @@ describe('useResource', () => {
   it('happy path: returns loaded with the cached value when the texture is already in cache', () => {
     loader.textures.cache.set('res://t.png', textureA);
 
-    const { result } = renderHook(
-      () => useResource<THREE.Texture>('res://t.png', 'texture'),
-      { wrapper: withLoader(loader) }
-    );
+    const { result } = renderHook(() => useResource<THREE.Texture>('res://t.png', 'texture'), {
+      wrapper: withLoader(loader),
+    });
 
     expect(result.current.status).toBe('loaded');
     expect(result.current.value).toBe(textureA);
@@ -70,10 +69,9 @@ describe('useResource', () => {
     });
     loader.textures.setRequestImpl(requestSpy);
 
-    const { result } = renderHook(
-      () => useResource<THREE.Texture>('res://t.png', 'texture'),
-      { wrapper: withLoader(loader) }
-    );
+    const { result } = renderHook(() => useResource<THREE.Texture>('res://t.png', 'texture'), {
+      wrapper: withLoader(loader),
+    });
 
     expect(result.current.status).toBe('pending');
     expect(result.current.value).toBeUndefined();
@@ -90,10 +88,9 @@ describe('useResource', () => {
   it('pending -> unavailable: emits failed event and the hook reports unavailable without value', () => {
     loader.textures.setRequestImpl(() => {});
 
-    const { result } = renderHook(
-      () => useResource<THREE.Texture>('res://gone.png', 'texture'),
-      { wrapper: withLoader(loader) }
-    );
+    const { result } = renderHook(() => useResource<THREE.Texture>('res://gone.png', 'texture'), {
+      wrapper: withLoader(loader),
+    });
 
     expect(result.current.status).toBe('pending');
 
@@ -109,10 +106,9 @@ describe('useResource', () => {
   it('parse-style failure messages still report unavailable (no message-sniffing)', () => {
     loader.textures.setRequestImpl(() => {});
 
-    const { result } = renderHook(
-      () => useResource<THREE.Texture>('res://broken.png', 'texture'),
-      { wrapper: withLoader(loader) }
-    );
+    const { result } = renderHook(() => useResource<THREE.Texture>('res://broken.png', 'texture'), {
+      wrapper: withLoader(loader),
+    });
 
     act(() => {
       loader.textures._fail('res://broken.png', 'failed to parse/decode image');
@@ -126,10 +122,9 @@ describe('useResource', () => {
   it('unavailable -> loaded: the late-arrival hard gate fires a loaded event after a previous failure', () => {
     loader.textures.setRequestImpl(() => {});
 
-    const { result } = renderHook(
-      () => useResource<THREE.Texture>('res://late.png', 'texture'),
-      { wrapper: withLoader(loader) }
-    );
+    const { result } = renderHook(() => useResource<THREE.Texture>('res://late.png', 'texture'), {
+      wrapper: withLoader(loader),
+    });
 
     // The hook fires its request and waits pending.
     expect(result.current.status).toBe('pending');
@@ -156,14 +151,12 @@ describe('useResource', () => {
   it('multiple consumers: two hooks reading the same path both transition on a single resolve', () => {
     loader.textures.setRequestImpl(() => {});
 
-    const consumerA = renderHook(
-      () => useResource<THREE.Texture>('res://shared.png', 'texture'),
-      { wrapper: withLoader(loader) }
-    );
-    const consumerB = renderHook(
-      () => useResource<THREE.Texture>('res://shared.png', 'texture'),
-      { wrapper: withLoader(loader) }
-    );
+    const consumerA = renderHook(() => useResource<THREE.Texture>('res://shared.png', 'texture'), {
+      wrapper: withLoader(loader),
+    });
+    const consumerB = renderHook(() => useResource<THREE.Texture>('res://shared.png', 'texture'), {
+      wrapper: withLoader(loader),
+    });
 
     expect(consumerA.result.current.status).toBe('pending');
     expect(consumerB.result.current.status).toBe('pending');
@@ -182,20 +175,15 @@ describe('useResource', () => {
 
     // One child mesh with a material, so the clone's structure and material copy both show.
     const template = new THREE.Object3D();
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(),
-      new THREE.MeshBasicMaterial({ color: 0xff0000 })
-    );
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
     template.add(mesh);
 
-    const consumerA = renderHook(
-      () => useResource<THREE.Object3D>('res://glb.glb', 'glb'),
-      { wrapper: withLoader(loader) }
-    );
-    const consumerB = renderHook(
-      () => useResource<THREE.Object3D>('res://glb.glb', 'glb'),
-      { wrapper: withLoader(loader) }
-    );
+    const consumerA = renderHook(() => useResource<THREE.Object3D>('res://glb.glb', 'glb'), {
+      wrapper: withLoader(loader),
+    });
+    const consumerB = renderHook(() => useResource<THREE.Object3D>('res://glb.glb', 'glb'), {
+      wrapper: withLoader(loader),
+    });
 
     act(() => {
       loader.glbMeshes._resolve('res://glb.glb', template);
@@ -229,10 +217,9 @@ describe('useResource', () => {
     const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: 0xff0000 }));
     template.add(mesh);
 
-    const { result, unmount } = renderHook(
-      () => useResource<THREE.Object3D>('res://glb.glb', 'glb'),
-      { wrapper: withLoader(loader) }
-    );
+    const { result, unmount } = renderHook(() => useResource<THREE.Object3D>('res://glb.glb', 'glb'), {
+      wrapper: withLoader(loader),
+    });
 
     act(() => {
       loader.glbMeshes._resolve('res://glb.glb', template);
@@ -316,9 +303,7 @@ describe('useResource', () => {
   });
 
   it('reports unavailable (with a diagnostic error string) when no ResourceLoader is provided', () => {
-    const { result } = renderHook(() =>
-      useResource<THREE.Texture>('res://t.png', 'texture')
-    );
+    const { result } = renderHook(() => useResource<THREE.Texture>('res://t.png', 'texture'));
 
     // A missing provider shares `unavailable` with a missing resource, and `error` names the cause.
     expect(result.current.status).toBe('unavailable');
@@ -329,10 +314,9 @@ describe('useResource', () => {
   it('ignores events for other paths', () => {
     loader.textures.setRequestImpl(() => {});
 
-    const { result } = renderHook(
-      () => useResource<THREE.Texture>('res://mine.png', 'texture'),
-      { wrapper: withLoader(loader) }
-    );
+    const { result } = renderHook(() => useResource<THREE.Texture>('res://mine.png', 'texture'), {
+      wrapper: withLoader(loader),
+    });
 
     expect(result.current.status).toBe('pending');
 
@@ -351,10 +335,9 @@ describe('useResource', () => {
       const before = loader.eventBus.getHandlerCount('texture', 'loaded');
       const beforeFailed = loader.eventBus.getHandlerCount('texture', 'failed');
 
-      const { unmount } = renderHook(
-        () => useResource<THREE.Texture>('res://t.png', 'texture'),
-        { wrapper: withLoader(loader) }
-      );
+      const { unmount } = renderHook(() => useResource<THREE.Texture>('res://t.png', 'texture'), {
+        wrapper: withLoader(loader),
+      });
 
       expect(loader.eventBus.getHandlerCount('texture', 'loaded')).toBe(before + 1);
       expect(loader.eventBus.getHandlerCount('texture', 'failed')).toBe(beforeFailed + 1);
@@ -417,10 +400,9 @@ describe('useResource', () => {
       loader.textures.setRequestImpl(requestSpy);
       const before = loader.eventBus.getHandlerCount('texture', 'loaded');
 
-      const { result } = renderHook(
-        () => useResource<THREE.Texture>('', 'texture'),
-        { wrapper: withLoader(loader) }
-      );
+      const { result } = renderHook(() => useResource<THREE.Texture>('', 'texture'), {
+        wrapper: withLoader(loader),
+      });
 
       expect(result.current.status).toBe('pending');
       expect(result.current.value).toBeUndefined();
@@ -435,10 +417,9 @@ describe('useResource', () => {
     it('pins the resource on mount and unpins on unmount', () => {
       loader.textures.cache.set('res://t.png', textureA);
 
-      const { unmount } = renderHook(
-        () => useResource<THREE.Texture>('res://t.png', 'texture'),
-        { wrapper: withLoader(loader) }
-      );
+      const { unmount } = renderHook(() => useResource<THREE.Texture>('res://t.png', 'texture'), {
+        wrapper: withLoader(loader),
+      });
 
       expect(loader.textures.pinCounts.get('res://t.png')).toBe(1);
 
@@ -450,14 +431,12 @@ describe('useResource', () => {
     it('two concurrent consumers each add a pin; both must unpin before count reaches zero', () => {
       loader.textures.cache.set('res://t.png', textureA);
 
-      const hookA = renderHook(
-        () => useResource<THREE.Texture>('res://t.png', 'texture'),
-        { wrapper: withLoader(loader) }
-      );
-      const hookB = renderHook(
-        () => useResource<THREE.Texture>('res://t.png', 'texture'),
-        { wrapper: withLoader(loader) }
-      );
+      const hookA = renderHook(() => useResource<THREE.Texture>('res://t.png', 'texture'), {
+        wrapper: withLoader(loader),
+      });
+      const hookB = renderHook(() => useResource<THREE.Texture>('res://t.png', 'texture'), {
+        wrapper: withLoader(loader),
+      });
 
       expect(loader.textures.pinCounts.get('res://t.png')).toBe(2);
 
@@ -496,10 +475,9 @@ describe('useResource', () => {
         </StrictMode>
       );
 
-      const { result, unmount } = renderHook(
-        () => useResource<THREE.Texture>('res://t.png', 'texture'),
-        { wrapper: StrictWrapper }
-      );
+      const { result, unmount } = renderHook(() => useResource<THREE.Texture>('res://t.png', 'texture'), {
+        wrapper: StrictWrapper,
+      });
 
       expect(loader.textures.pinCounts.get('res://t.png')).toBe(1);
       expect(result.current.status).toBe('loaded');
@@ -511,10 +489,9 @@ describe('useResource', () => {
     });
 
     it('empty path does not pin anything', () => {
-      const { unmount } = renderHook(
-        () => useResource<THREE.Texture>('', 'texture'),
-        { wrapper: withLoader(loader) }
-      );
+      const { unmount } = renderHook(() => useResource<THREE.Texture>('', 'texture'), {
+        wrapper: withLoader(loader),
+      });
 
       expect(loader.textures.pinCounts.size).toBe(0);
       unmount();

@@ -122,9 +122,7 @@ describe('the classification guard bites', () => {
     expect(v.float('width').formatOnly).toBe(true);
     expect(v.int('count').formatOnly).toBeUndefined();
     expect(v.int('count').intSlot).toEqual({ cite: 'variant.h:360-377', width: 'int32' });
-    expect(
-      v.float('fov', { min: 1, max: 179, enforced: 'camera_3d.cpp:725' }).formatOnly
-    ).toBeUndefined();
+    expect(v.float('fov', { min: 1, max: 179, enforced: 'camera_3d.cpp:725' }).formatOnly).toBeUndefined();
   });
 
   it('lets the int-slot tag classify an UNBOUNDED int, and never a bounded one', () => {
@@ -186,10 +184,9 @@ describe('the classification guard bites', () => {
     // stale and the arm that must not report would pass vacuously.
     const stillUngrounded: PropertyValidator = () => null;
     expect(
-      staleUngroundable(
-        new Set(['NoSuchType.no_such_key', 'HBoxContainer.vertical', 'Scratch.ungrounded']),
-        [{ label: 'Scratch.ungrounded', validator: stillUngrounded }]
-      )
+      staleUngroundable(new Set(['NoSuchType.no_such_key', 'HBoxContainer.vertical', 'Scratch.ungrounded']), [
+        { label: 'Scratch.ungrounded', validator: stillUngrounded },
+      ])
     ).toEqual(['HBoxContainer.vertical', 'NoSuchType.no_such_key']);
   });
 

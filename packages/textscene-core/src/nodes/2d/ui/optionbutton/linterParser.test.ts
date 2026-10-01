@@ -111,17 +111,17 @@ describe('OptionButton strict validators', () => {
   // prose, not a removal: `_validate_property` (option_button.cpp:554-558) clears their usage, and `_select`
   // still sets them through Button's setters (option_button.cpp:423-424). As SpinBox.exp_edit and FileDialog.dialog_text.
   describe('text and icon (inherited from Button, not removed)', () => {
-    it('does not register text/icon as OptionButton\'s own, and does not remove them', () => {
+    it("does not register text/icon as OptionButton's own, and does not remove them", () => {
       expect(validatorRegistry.getOwnKeys('OptionButton')).not.toContain('text');
       expect(validatorRegistry.getOwnKeys('OptionButton')).not.toContain('icon');
       expect(validatorRegistry.getUnavailableKeys('OptionButton')).not.toContain('text');
       expect(validatorRegistry.getUnavailableKeys('OptionButton')).not.toContain('icon');
     });
-    it('resolves text through Button\'s own validator', () => {
+    it("resolves text through Button's own validator", () => {
       expect(check('text', '"Pick one"')).toBeNull();
       expect(check('text', 'unquoted')).not.toBeNull();
     });
-    it('resolves icon through Button\'s own validator', () => {
+    it("resolves icon through Button's own validator", () => {
       expect(check('icon', 'SubResource("1")')).toBeNull();
       expect(check('icon', 'not-a-resource')).not.toBeNull();
     });
@@ -149,9 +149,7 @@ describe('OptionButton strict validators', () => {
   describe('the popup/item_<idx>/<leaf> family', () => {
     it('resolves a real per-item key through the indexed wildcard', () => {
       expect(validatorRegistry.findValidator('OptionButton', 'popup/item_0/text')).not.toBeNull();
-      expect(
-        validatorRegistry.findValidator('OptionButton', 'popup/item_12/disabled')
-      ).not.toBeNull();
+      expect(validatorRegistry.findValidator('OptionButton', 'popup/item_12/disabled')).not.toBeNull();
     });
 
     it('rejects a key whose index is not an integer, which the engine drops', () => {

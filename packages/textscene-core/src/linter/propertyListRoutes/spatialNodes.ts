@@ -121,5 +121,4 @@ export const spatialNodeRoutes: readonly RouteRow[] = [
     sample: 'format',
     verdict: { validated: true },
   },
-
 ];

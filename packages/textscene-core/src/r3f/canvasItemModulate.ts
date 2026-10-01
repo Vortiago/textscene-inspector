@@ -55,7 +55,10 @@ export function useCanvasItemTint(
 ): CanvasItemTint {
   const parent = useParentModulate();
   const inherited = useMemo(() => multiplyModulate(parent, props.modulate), [parent, props.modulate]);
-  const self = useMemo(() => multiplyModulate(inherited, props.self_modulate), [inherited, props.self_modulate]);
+  const self = useMemo(
+    () => multiplyModulate(inherited, props.self_modulate),
+    [inherited, props.self_modulate]
+  );
   const own = useMemo(() => multiplyModulate(self, ownMultiplier), [self, ownMultiplier]);
   const color = useGodotLinearColor(own);
   return { inherited, own, color, opacity: own.a };

@@ -5,18 +5,11 @@
 import { useEffect } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import {
-  MissingResourcesProvider,
-  useMissingResources,
-} from '../../contexts/MissingResourcesContext';
+import { MissingResourcesProvider, useMissingResources } from '../../contexts/MissingResourcesContext';
 import { MissingResourcesPanel } from './MissingResourcesPanel';
 
 /** One button steps from `missing` to `uploaded` without a remount of the provider. */
-function ReportThenMark({
-  path,
-}: {
-  path: string;
-}) {
+function ReportThenMark({ path }: { path: string }) {
   const { report, markUploaded } = useMissingResources();
   // Report missing on mount so the panel paints a missing row first.
   useEffect(() => {
@@ -24,10 +17,7 @@ function ReportThenMark({
   }, [report, path]);
   return (
     <>
-      <button
-        data-testid="trigger-upload"
-        onClick={() => markUploaded(path)}
-      >
+      <button data-testid="trigger-upload" onClick={() => markUploaded(path)}>
         upload
       </button>
     </>
@@ -97,9 +87,7 @@ describe('<MissingResourcesPanel> uploaded-state (WI-UX-6)', () => {
     );
 
     const panel = await screen.findByTestId('missing-resources-panel');
-    const removeBtn = panel.querySelector(
-      '[data-state="uploaded"] button'
-    ) as HTMLButtonElement;
+    const removeBtn = panel.querySelector('[data-state="uploaded"] button') as HTMLButtonElement;
     expect(removeBtn).toBeTruthy();
 
     await act(async () => {

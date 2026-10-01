@@ -14,7 +14,7 @@ describe('findGodotProjectRoot', () => {
     workspaceRoot = createMockUri('/workspace');
   });
 
-  it('finds project.godot in the document\'s own directory', async () => {
+  it("finds project.godot in the document's own directory", async () => {
     vscode.workspace.fs.stat.mockImplementation((uri: ReturnType<typeof createMockUri>) => {
       const path = uri.fsPath.toLowerCase().replace(/\\/g, '/');
       if (path === '/workspace/scenes/project.godot') {

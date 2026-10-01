@@ -59,7 +59,9 @@ function findArrowMesh(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
     .map((m) => m.instance as THREE.Mesh)
-    .find((m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined);
+    .find(
+      (m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined
+    );
 }
 
 describe('<OptionButton> (isolated painter contract)', () => {
@@ -117,7 +119,7 @@ describe('<OptionButton> (isolated painter contract)', () => {
     expect(findTextMesh(renderer.scene)).toBeUndefined();
   });
 
-  it('draws the SELECTED item\'s text, not the first item\'s', async () => {
+  it("draws the SELECTED item's text, not the first item's", async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <OptionButton
         {...painterEnv()}
@@ -129,7 +131,7 @@ describe('<OptionButton> (isolated painter contract)', () => {
     expect(findTextMesh(renderer.scene)).toBeDefined();
   });
 
-  it("uses control_font_color (0.875 sRGB) for the NORMAL label", async () => {
+  it('uses control_font_color (0.875 sRGB) for the NORMAL label', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <OptionButton
         {...painterEnv()}
@@ -156,31 +158,28 @@ describe('<OptionButton> (isolated painter contract)', () => {
     expect(material.uniforms.uOpacity!.value).toBeCloseTo(0.5, 5);
   });
 
-  it(
-    'applies the walker-composed tint as ONE product, reaching chrome, arrow AND text alike',
-    async () => {
-      const renderer = await ReactThreeTestRenderer.create(
-        <OptionButton
-          {...painterEnv()}
-          // The walker's own product: ambient(0.5) x self_modulate(0.5) = 0.25.
-          tint={painterTint({ r: 0.25, g: 0.25, b: 0.25, a: 1 })}
-          solveNode={solveNode({ items: ITEMS, selected: 1 })}
-          rect={RECT}
-          renderOrder={0}
-        />
-      );
-      const chromeColor = (findChromeMesh(renderer.scene)!.geometry as THREE.BufferGeometry).attributes
-        .color as THREE.BufferAttribute;
-      expect(chromeColor.getX(0)).toBeCloseTo(0.1 * 0.25, 4);
+  it('applies the walker-composed tint as ONE product, reaching chrome, arrow AND text alike', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <OptionButton
+        {...painterEnv()}
+        // The walker's own product: ambient(0.5) x self_modulate(0.5) = 0.25.
+        tint={painterTint({ r: 0.25, g: 0.25, b: 0.25, a: 1 })}
+        solveNode={solveNode({ items: ITEMS, selected: 1 })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const chromeColor = (findChromeMesh(renderer.scene)!.geometry as THREE.BufferGeometry).attributes
+      .color as THREE.BufferAttribute;
+    expect(chromeColor.getX(0)).toBeCloseTo(0.1 * 0.25, 4);
 
-      const arrowMaterial = findArrowMesh(renderer.scene)!.material as THREE.MeshBasicMaterial;
-      expect(arrowMaterial.color.r).toBeCloseTo(sRGBChannelToLinear(0.25), 4);
+    const arrowMaterial = findArrowMesh(renderer.scene)!.material as THREE.MeshBasicMaterial;
+    expect(arrowMaterial.color.r).toBeCloseTo(sRGBChannelToLinear(0.25), 4);
 
-      const textMaterial = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-      // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, then linearised.
-      expect(textMaterial.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.21875), 5);
-    }
-  );
+    const textMaterial = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
+    // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, then linearised.
+    expect(textMaterial.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.21875), 5);
+  });
 
   it('forwards renderOrder to every mesh (chrome, arrow, text)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
@@ -211,7 +210,12 @@ describe('<OptionButton> — scene-font (canvas-kind FontMetrics) text path', ()
   async function renderWithSceneFont() {
     vi.spyOn(sceneFontLoader, 'peekSceneFontMetrics').mockReturnValue(TEST_SCENE_FONT_METRICS);
     return ReactThreeTestRenderer.create(
-      <OptionButton {...painterEnv()} solveNode={solveNode({ items: ITEMS, selected: 1 })} rect={RECT} renderOrder={0} />
+      <OptionButton
+        {...painterEnv()}
+        solveNode={solveNode({ items: ITEMS, selected: 1 })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
   }
 
@@ -268,5 +272,4 @@ describe('<OptionButton> — scene-font (canvas-kind FontMetrics) text path', ()
     expect(await arrowX(false)).toBe(134);
     expect(await arrowX(true)).toBe(4);
   });
-
 });

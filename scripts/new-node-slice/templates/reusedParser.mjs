@@ -4,12 +4,11 @@
  * template literal carries its own leading whitespace into the output.
  */
 
-
 export function reusedParserFiles({ typeName, lower, camel, intent, base, toSrc, toBase, reusedParser }) {
   const files = new Map();
-    files.set(
-      'index.ts',
-      `/**
+  files.set(
+    'index.ts',
+    `/**
  * ${typeName} registration — parser.
  *
  * Reuses the ${base.component} parse; property knowledge lives in linterParser.ts${
@@ -40,15 +39,15 @@ nodeRegistry.register(${camel}Registration);
 
 export { ${camel}Registration };
 `
-    );
-    // A `pending` slice mounts the base under its own intent: `GenericNodeFallback` carries no
-    // `visible`, and an unregistered type belongs to both canvases. Only `control` opts out
-    // (`invisibleBase`).
-    if (intent === 'transform-only' || (intent === 'pending' && base.invisibleBase)) {
-      const pending = intent === 'pending';
-      files.set(
-        'index.r3f.ts',
-        `/**
+  );
+  // A `pending` slice mounts the base under its own intent: `GenericNodeFallback` carries no
+  // `visible`, and an unregistered type belongs to both canvases. Only `control` opts out
+  // (`invisibleBase`).
+  if (intent === 'transform-only' || (intent === 'pending' && base.invisibleBase)) {
+    const pending = intent === 'pending';
+    files.set(
+      'index.r3f.ts',
+      `/**
  * ${typeName} ${
    pending
      ? `draws nothing here YET — the badge reads "not implemented". The
@@ -67,12 +66,12 @@ nodeComponentRegistry.register({
 ${base.workspaceFlag ? `  ${base.workspaceFlag}\n` : ''}  renderIntent: '${intent}',
 });
 `
-      );
-    }
-    files.set(
-      `${lower}.test.ts`,
-      intent === 'transform-only'
-        ? `/**
+    );
+  }
+  files.set(
+    `${lower}.test.ts`,
+    intent === 'transform-only'
+      ? `/**
  * ${typeName} registration — it is parsed, and it draws nothing on purpose
  * (ADR-0008) rather than for want of an implementation.
  */
@@ -101,7 +100,7 @@ describe('${typeName} registration', () => {
   });
 });
 `
-        : `/**
+      : `/**
  * ${typeName} registration — parsed and validated, not yet rendered.
  *
  * Registering NO component is the point: the dispatcher falls back to
@@ -113,8 +112,12 @@ import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '${toSrc}core/NodeRegistry';
 import { nodeComponentRegistry } from '${toSrc}r3f/NodeComponentRegistry';
 import { ${reusedParser.fn} } from '${reusedParser.importPath}';
-import './index';${base.invisibleBase ? `
-import './index.r3f';` : ''}
+import './index';${
+          base.invisibleBase
+            ? `
+import './index.r3f';`
+            : ''
+        }
 
 describe('${typeName} registration', () => {
   it('registers the ${reusedParser.fn} parse it reuses', () => {
@@ -140,6 +143,6 @@ ${
 }
 });
 `
-    );
+  );
   return files;
 }

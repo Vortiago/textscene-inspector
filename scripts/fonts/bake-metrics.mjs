@@ -103,7 +103,11 @@ function bakeKerning(font) {
     }
   }
   // Sorted so the generated file is byte-stable across re-bakes.
-  return Object.fromEntries(Object.keys(kerning).sort().map((k) => [k, kerning[k]]));
+  return Object.fromEntries(
+    Object.keys(kerning)
+      .sort()
+      .map((k) => [k, kerning[k]])
+  );
 }
 
 /**
@@ -564,12 +568,16 @@ async function main() {
           const actualLines = actual.split('\n');
           const expectedLines = expected.split('\n');
           const firstDiff = actualLines.findIndex((line, i) => line !== expectedLines[i]);
-          console.error(`[bake-metrics]   first differing line: ${firstDiff === -1 ? '(length differs)' : firstDiff + 1}`);
+          console.error(
+            `[bake-metrics]   first differing line: ${firstDiff === -1 ? '(length differs)' : firstDiff + 1}`
+          );
         }
       }
     }
     if (stale) {
-      console.error('[bake-metrics] run `node scripts/fonts/bake-metrics.mjs` (no --check) to regenerate, then commit.');
+      console.error(
+        '[bake-metrics] run `node scripts/fonts/bake-metrics.mjs` (no --check) to regenerate, then commit.'
+      );
       process.exit(1);
     }
     console.log('[bake-metrics] OK: committed artifacts match a fresh bake of the vendored font.');

@@ -31,7 +31,7 @@ describe('AnimationPlayer Linter', () => {
     const withNext = (value: string) =>
       scene(node('AnimationPlayer', { 'next/walk': value }, { name: 'Anim' }));
 
-    it("accepts the StringName form Godot writes, since animation_get_next returns StringName", () => {
+    it('accepts the StringName form Godot writes, since animation_get_next returns StringName', () => {
       expectNoErrors(withNext('&"idle"'));
     });
 
@@ -48,7 +48,13 @@ describe('AnimationPlayer Linter', () => {
     // `active` and `playback_active` are one field: animation_player.cpp:59,98
     // forward the deprecated alias into set_active.
     const withActive = (properties: Record<string, string>) =>
-      scene(node('AnimationPlayer', { 'anims/idle': 'SubResource("Animation_1")', ...properties }, { name: 'Anim' }));
+      scene(
+        node(
+          'AnimationPlayer',
+          { 'anims/idle': 'SubResource("Animation_1")', ...properties },
+          { name: 'Anim' }
+        )
+      );
 
     const INACTIVE = { ruleName: 'animationplayer-inactive' };
 
@@ -64,7 +70,7 @@ describe('AnimationPlayer Linter', () => {
       expectDiagnostic(withActive({ playback_active: 'false' }), INACTIVE);
     });
 
-    it('stays quiet when the key is absent, which is Godot\'s default-true form', () => {
+    it("stays quiet when the key is absent, which is Godot's default-true form", () => {
       expectNoDiagnostic(withActive({}), INACTIVE);
     });
 
@@ -107,79 +113,76 @@ describe('AnimationPlayer Linter', () => {
       );
     });
 
-    runPropertyValidation(
-      { nodeType: 'AnimationPlayer', acceptMode: 'no-error', prefix: [ANIMATIONS] },
-      [
-        {
-          // animation_player.cpp:1048 hints "-4,4,0.001,or_less,or_greater", both
-          // ends open, and set_speed_scale (:648) is a bare assignment, so no
-          // magnitude is out of band and 0 is legal (it pauses playback).
-          prop: 'speed_scale',
-          valid: [0.001, 0.5, 1.0, 2.0, 10.0, 100.0, -1.0, 0, 0.00001, 10000],
-          invalid: [{ value: 'fast', contains: ['speed_scale', 'must be a number'] }],
-        },
-        {
-          // animation_player.cpp:823 is a bare assignment, so the hint at :1046
-          // ("0,4096,0.01,suffix:s") only warns at either end.
-          prop: 'playback_default_blend_time',
-          valid: [0, 0.1, 0.5, 1.0, 2.0, 3.0, 4096],
-          invalid: [
-            { value: 'instant', contains: ['playback_default_blend_time', 'must be a number'] },
-            {
-              value: -0.01,
-              severity: 'warning',
-              contains: ['playback_default_blend_time', 'between 0 and 4096'],
-            },
-            {
-              value: 4096.01,
-              severity: 'warning',
-              contains: ['playback_default_blend_time', 'between 0 and 4096'],
-            },
-          ],
-        },
-        {
-          prop: 'playback_process_mode',
-          valid: [0, 1, 2],
-          invalid: [
-            { value: 5, contains: ['playback_process_mode', '0-2'] },
-            { value: 'IDLE', contains: ['playback_process_mode', 'must be a number'] },
-          ],
-        },
-        {
-          prop: 'method_call_mode',
-          valid: [0, 1],
-          invalid: [
-            { value: 2, contains: ['method_call_mode', '0-1'] },
-            { value: 'DEFERRED', contains: ['method_call_mode', 'must be a number'] },
-          ],
-        },
-        {
-          prop: 'playback_active',
-          valid: ['true', 'false'],
-          with: { 'anims/test': 'SubResource("Animation_1")' },
-          invalid: [{ value: 'yes', contains: ['playback_active', 'boolean'] }],
-        },
-        {
-          // animation_player.cpp:775 (set_autoplay) is a bare assignment, and an
-          // empty StringName is Godot's own "no autoplay" state (line 150 guards
-          // on `animation_set.has(autoplay)`), so `""`/`&""` are valid, not errors.
-          prop: 'autoplay',
-          acceptMode: 'clean',
-          valid: ['"idle"', '""'],
-          with: { 'anims/idle': 'SubResource("Animation_1")' },
-          invalid: [{ value: 'idle', contains: ['autoplay'] }],
-        },
-        {
-          // animation_mixer.cpp:484 (set_root_node) is a bare assignment; an empty
-          // NodePath is accepted like any other, so only the slot's spellings are
-          // checked: the literal, or the bare string variant.cpp:746-749 converts.
-          // A StringName is not in that list.
-          prop: 'root_node',
-          valid: ['NodePath("..")', 'NodePath(".")', 'NodePath("/root/Node")', 'NodePath("")', '""'],
-          invalid: [{ value: '&""', contains: ['root_node', 'NodePath'] }],
-        },
-      ]
-    );
+    runPropertyValidation({ nodeType: 'AnimationPlayer', acceptMode: 'no-error', prefix: [ANIMATIONS] }, [
+      {
+        // animation_player.cpp:1048 hints "-4,4,0.001,or_less,or_greater", both
+        // ends open, and set_speed_scale (:648) is a bare assignment, so no
+        // magnitude is out of band and 0 is legal (it pauses playback).
+        prop: 'speed_scale',
+        valid: [0.001, 0.5, 1.0, 2.0, 10.0, 100.0, -1.0, 0, 0.00001, 10000],
+        invalid: [{ value: 'fast', contains: ['speed_scale', 'must be a number'] }],
+      },
+      {
+        // animation_player.cpp:823 is a bare assignment, so the hint at :1046
+        // ("0,4096,0.01,suffix:s") only warns at either end.
+        prop: 'playback_default_blend_time',
+        valid: [0, 0.1, 0.5, 1.0, 2.0, 3.0, 4096],
+        invalid: [
+          { value: 'instant', contains: ['playback_default_blend_time', 'must be a number'] },
+          {
+            value: -0.01,
+            severity: 'warning',
+            contains: ['playback_default_blend_time', 'between 0 and 4096'],
+          },
+          {
+            value: 4096.01,
+            severity: 'warning',
+            contains: ['playback_default_blend_time', 'between 0 and 4096'],
+          },
+        ],
+      },
+      {
+        prop: 'playback_process_mode',
+        valid: [0, 1, 2],
+        invalid: [
+          { value: 5, contains: ['playback_process_mode', '0-2'] },
+          { value: 'IDLE', contains: ['playback_process_mode', 'must be a number'] },
+        ],
+      },
+      {
+        prop: 'method_call_mode',
+        valid: [0, 1],
+        invalid: [
+          { value: 2, contains: ['method_call_mode', '0-1'] },
+          { value: 'DEFERRED', contains: ['method_call_mode', 'must be a number'] },
+        ],
+      },
+      {
+        prop: 'playback_active',
+        valid: ['true', 'false'],
+        with: { 'anims/test': 'SubResource("Animation_1")' },
+        invalid: [{ value: 'yes', contains: ['playback_active', 'boolean'] }],
+      },
+      {
+        // animation_player.cpp:775 (set_autoplay) is a bare assignment, and an
+        // empty StringName is Godot's own "no autoplay" state (line 150 guards
+        // on `animation_set.has(autoplay)`), so `""`/`&""` are valid, not errors.
+        prop: 'autoplay',
+        acceptMode: 'clean',
+        valid: ['"idle"', '""'],
+        with: { 'anims/idle': 'SubResource("Animation_1")' },
+        invalid: [{ value: 'idle', contains: ['autoplay'] }],
+      },
+      {
+        // animation_mixer.cpp:484 (set_root_node) is a bare assignment; an empty
+        // NodePath is accepted like any other, so only the slot's spellings are
+        // checked: the literal, or the bare string variant.cpp:746-749 converts.
+        // A StringName is not in that list.
+        prop: 'root_node',
+        valid: ['NodePath("..")', 'NodePath(".")', 'NodePath("/root/Node")', 'NodePath("")', '""'],
+        invalid: [{ value: '&""', contains: ['root_node', 'NodePath'] }],
+      },
+    ]);
 
     // animation_player.cpp:1038-1039: current_animation_length/current_animation_position
     // are PROPERTY_HINT_NONE + PROPERTY_USAGE_NONE with an empty setter method name, so
@@ -202,14 +205,11 @@ describe('AnimationPlayer Linter', () => {
     // animation_player.cpp:1048: speed_scale PROPERTY_HINT_RANGE
     // "-4,4,0.001,or_less,or_greater": both ends open, so no speed is out of band.
     describe('speed_scale carries no advisory', () => {
-      it.each([0.05, 0.5, 1.0, 2.0, 5.0, 50, -2.0, 0])(
-        'says nothing about speed_scale %s',
-        (speed) => {
-          expectNoDiagnostic(scene(node('AnimationPlayer', { speed_scale: speed })), {
-            prop: 'speed_scale',
-          });
-        }
-      );
+      it.each([0.05, 0.5, 1.0, 2.0, 5.0, 50, -2.0, 0])('says nothing about speed_scale %s', (speed) => {
+        expectNoDiagnostic(scene(node('AnimationPlayer', { speed_scale: speed })), {
+          prop: 'speed_scale',
+        });
+      });
     });
 
     it('says nothing about a player with no clip source at all', () => {
@@ -349,9 +349,9 @@ describe('AnimationPlayer Linter', () => {
       // negative blend time are not errors: their setters (:648, :822) are bare
       // assignments, so the blend time only warns and speed_scale is silent.
       expect(diagnostics.length).toBeGreaterThan(2);
-      expect(diagnostics.some(d => d.message.includes('playback_process_mode'))).toBe(true);
-      expect(diagnostics.some(d => d.message.includes('method_call_mode'))).toBe(true);
-      expect(diagnostics.some(d => d.message.includes('playback_active'))).toBe(true);
+      expect(diagnostics.some((d) => d.message.includes('playback_process_mode'))).toBe(true);
+      expect(diagnostics.some((d) => d.message.includes('method_call_mode'))).toBe(true);
+      expect(diagnostics.some((d) => d.message.includes('playback_active'))).toBe(true);
       expectNoErrors(content, { prop: 'speed_scale' });
     });
 

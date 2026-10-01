@@ -15,9 +15,7 @@ import type { Diagnostic, Severity } from '../types.js';
 const atTier =
   (tier: Severity) =>
   (diagnostics: readonly Diagnostic[], ruleName?: typeof STRICT_PARSER_RULE_NAME): Diagnostic[] =>
-    diagnostics.filter(
-      (d) => d.severity === tier && (ruleName === undefined || d.ruleName === ruleName)
-    );
+    diagnostics.filter((d) => d.severity === tier && (ruleName === undefined || d.ruleName === ruleName));
 
 export const errorsOf = atTier('error');
 export const warningsOf = atTier('warning');

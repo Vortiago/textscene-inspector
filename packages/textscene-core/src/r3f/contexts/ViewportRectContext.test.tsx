@@ -284,9 +284,7 @@ describe('a sub-viewport sized by a forced rect', () => {
   }
 
   it('falls back to the authored size when no container forced one', () => {
-    const { getByTestId } = mount(
-      <Sized path="Booth/View" authored={{ x: 399, y: 480 }} />
-    );
+    const { getByTestId } = mount(<Sized path="Booth/View" authored={{ x: 399, y: 480 }} />);
     expect(getByTestId('size').textContent).toBe('399x480');
   });
 

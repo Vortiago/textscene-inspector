@@ -61,7 +61,10 @@ export function fitDirectionalShadowSplits(
   const { splitCount } = declaration;
   const blends = blendsSplits(splitCount, declaration.blendSplits);
   const distances = directionalShadowSplitDistances(viewSlice(input), splitCount, declaration.splitOffsets);
-  const splitInput = { ...input, shadowMapSize: directionalShadowSplitTextureSize(splitCount, input.atlasSize) };
+  const splitInput = {
+    ...input,
+    shadowMapSize: directionalShadowSplitTextureSize(splitCount, input.atlasSize),
+  };
 
   const boxes: DirectionalShadowBox[] = [];
   for (let split = 0; split < splitCount; split++) {

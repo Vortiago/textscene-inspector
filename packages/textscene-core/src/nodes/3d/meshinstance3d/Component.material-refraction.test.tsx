@@ -84,7 +84,11 @@ describe('<MeshInstance3D> refraction material (WI-69)', () => {
     const loader = makeLoader();
     const internal: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
-      { id: 'mat', type: 'StandardMaterial3D', data: { id: 'mat', roughness: '0.4' } as Record<string, string> },
+      {
+        id: 'mat',
+        type: 'StandardMaterial3D',
+        data: { id: 'mat', roughness: '0.4' } as Record<string, string>,
+      },
     ];
 
     const renderer = await renderWith(makeNode('mat'), internal, loader);

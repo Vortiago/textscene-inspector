@@ -17,7 +17,6 @@ import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js'
 import { joinPath } from '../utils/nodePath.js';
 import { nodePathNames } from '../godot/nodePath.js';
 
-
 /**
  * Read surface for the loader's PackedScene cache. `undefined` means never
  * requested, `null` means failed, and a value is the loaded scene with the pools
@@ -25,9 +24,7 @@ import { nodePathNames } from '../godot/nodePath.js';
  * absent pool means "this cache does not know", and the walk reads it as empty.
  */
 export interface CachedSceneSource {
-  getCached: (
-    path: string
-  ) => (Partial<SceneScope> & { nodes: readonly TscnNode[] }) | null | undefined;
+  getCached: (path: string) => (Partial<SceneScope> & { nodes: readonly TscnNode[] }) | null | undefined;
 }
 
 /** Read surface for the loader's GLB cache, so the walk can descend into a GLB's internals. */
@@ -57,11 +54,9 @@ export interface LiveTreeEntry {
 export function singleSceneCache(
   path: string | null | undefined,
   scene:
-    | { nodes: readonly TscnNode[]; externalResources?: readonly TscnExternalResource[] }
-    | null
-    | undefined
+    { nodes: readonly TscnNode[]; externalResources?: readonly TscnExternalResource[] } | null | undefined
 ): CachedSceneSource {
-  return { getCached: (p) => (p === path ? scene ?? undefined : undefined) };
+  return { getCached: (p) => (p === path ? (scene ?? undefined) : undefined) };
 }
 
 /**
@@ -69,11 +64,7 @@ export function singleSceneCache(
  * collapses into its sub-scene root (Instance root merge, ADR-0013). A `.glb` or
  * multi-root instance, a non-instance and a scene not yet cached return unchanged.
  */
-export function collapseLiveNode(
-  node: TscnNode,
-  scope: SceneScope,
-  sceneCache: CachedSceneSource
-): TscnNode {
+export function collapseLiveNode(node: TscnNode, scope: SceneScope, sceneCache: CachedSceneSource): TscnNode {
   return collapseToFixedPoint(node, scope, sceneCache, (n, cached, authored) =>
     // The whole scope: the merge stamps it onto the host children it grafts,
     // and those name ids of both kinds.
@@ -176,9 +167,7 @@ export function liveChildGroups(
   sceneCache: CachedSceneSource,
   glbCache?: CachedGlbSource
 ): LiveChildGroup[] {
-  const inlineOnly = (): LiveChildGroup[] => [
-    { origin: 'inline', children: node.children, scope },
-  ];
+  const inlineOnly = (): LiveChildGroup[] => [{ origin: 'inline', children: node.children, scope }];
 
   // GLB nodes carry no instance refs, so they stay in the outer scope.
   if (node.type === GLB_SCENE_ROOT_TYPE && glbCache) {
@@ -334,12 +323,7 @@ export function walkLiveTree(
   visit: (entry: LiveTreeEntry) => void,
   descend?: (node: TscnNode) => boolean
 ): void {
-  const walk = (
-    nodes: readonly TscnNode[],
-    scope: SceneScope,
-    parentPath: string,
-    depth: number
-  ): void => {
+  const walk = (nodes: readonly TscnNode[], scope: SceneScope, parentPath: string, depth: number): void => {
     if (depth > MAX_DEPTH) return;
     for (const node of nodes) {
       const path = joinPath(parentPath, node.name);

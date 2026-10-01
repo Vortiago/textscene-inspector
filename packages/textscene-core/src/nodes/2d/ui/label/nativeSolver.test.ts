@@ -15,7 +15,12 @@ import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { panelContainerLayout, panelContainerMinimumSize } from '../panelcontainer/nativeSolver';
 import { makeBoxContainerLayout, makeBoxContainerMinimumSize } from '../shared/boxContainerSolver';
 import type { LabelProperties } from './types';
-import { shapeText, AutowrapMode, type TextLayoutResult, type TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
+import {
+  shapeText,
+  AutowrapMode,
+  type TextLayoutResult,
+  type TextLineLayout,
+} from '../../../../r3f/controls/native/text/textLayout';
 import { JustificationFlag } from '../../../../r3f/controls/native/text/textJustify';
 import {
   labelMinimumSize,
@@ -50,7 +55,12 @@ function node(props: Partial<LabelProperties>, overrides: Partial<SolveNode> = {
   return {
     ...emptySolveNode(),
     path: 'L',
-    node: { name: 'L', type: 'Label', children: [], properties: { name: 'L', ...props } as ControlProperties },
+    node: {
+      name: 'L',
+      type: 'Label',
+      children: [],
+      properties: { name: 'L', ...props } as ControlProperties,
+    },
     ...overrides,
   };
 }
@@ -126,10 +136,7 @@ describe('labelMinimumSize (label.cpp:973-998)', () => {
   });
 
   it('reads theme_override_font_sizes/font_size, not the theme default, when present', () => {
-    const withOverride = minSize(
-      node({ text: '', themeOverrideFontSizes: { font_size: 32 } }),
-      ctx()
-    );
+    const withOverride = minSize(node({ text: '', themeOverrideFontSizes: { font_size: 32 } }), ctx());
     // At size 32: ascentPx=ceil(2189*32/2048)=35, descentPx=ceil(600*32/2048)=10 -> fontHeightPx=45.
     expect(withOverride.y).toBe(45);
   });
@@ -185,7 +192,12 @@ describe('labelMinimumSize — autowrap ON reports the WRAPPED height once a pri
   });
 
   it('shapes at a TRUNCATED width (label.cpp:581 `int width = get_size().width - ...`), so a fractional box does not fit a word its whole-pixel width cannot', () => {
-    const full = shapeText('AB AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 }).widthPx;
+    const full = shapeText('AB AB', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+    }).widthPx;
     // The discriminating band: trunc(box) < full <= box. Vacuous if `full`
     // landed on a whole pixel, so pin that it did not.
     expect(Number.isInteger(full)).toBe(false);
@@ -285,7 +297,12 @@ describe('labelMinimumSize wired through the registry + full solve — the wrapp
     // margins are 12, so the card's 114 is 12 + 39 + 2 + 49 + 12.
     const VIEWPORT: Rect2 = { x: 0, y: 0, w: 668, h: 114 };
     const build = () =>
-      card(0, 2, { text: 'FIELD OPERATIONS', themeOverrideFontSizes: { font_size: 28 } }, { text: SUBTITLE, autowrapMode: 2 });
+      card(
+        0,
+        2,
+        { text: 'FIELD OPERATIONS', themeOverrideFontSizes: { font_size: 28 } },
+        { text: SUBTITLE, autowrapMode: 2 }
+      );
 
     function headerCard(): SolveNode {
       const n = build();
@@ -490,7 +507,7 @@ describe('layoutLabelLines (label.cpp:592-617 vbegin/vsep, :592-605 _get_line_re
     expect(placements[0]!.x).toBe(0);
   });
 
-  it("horizontal FILL (3), multi-line: the LAST line is NOT justified (JUSTIFICATION_SKIP_LAST_LINE, label.h:46) — earlier lines are", () => {
+  it('horizontal FILL (3), multi-line: the LAST line is NOT justified (JUSTIFICATION_SKIP_LAST_LINE, label.h:46) — earlier lines are', () => {
     const layout = layoutFor('A B\nA B');
     const naturalWidth = layout.lines[0]!.widthPx;
     const placements = layoutLabelLines(layout, 200, 200, 3, undefined);
@@ -511,7 +528,12 @@ describe('layoutLabelLines — horizontal origins vs Godot 4.6.3 (label.cpp:487-
 
   /** A one-line layout pinned to Godot's measured width of "Wave rift", so this tests the placement formula, not the atlas advances against FreeType's. */
   function lineOfWidth(widthPx: number) {
-    const layout = shapeText('Wave rift', { fontSizePx: FONT_SIZE, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
+    const layout = shapeText('Wave rift', {
+      fontSizePx: FONT_SIZE,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+    });
     return { ...layout, lines: layout.lines.map((l) => ({ ...l, widthPx })), widthPx };
   }
 
@@ -520,25 +542,50 @@ describe('layoutLabelLines — horizontal origins vs Godot 4.6.3 (label.cpp:487-
   }
 
   const CENTER_CASES: Array<[number, number]> = [
-    [200, 65], [200.5, 65], [201, 65], [201.5, 65],
-    [202, 66], [202.5, 66], [203, 66], [203.5, 66], [204, 67],
-    [260, 95], [260.25, 95], [260.75, 95],
+    [200, 65],
+    [200.5, 65],
+    [201, 65],
+    [201.5, 65],
+    [202, 66],
+    [202.5, 66],
+    [203, 66],
+    [203.5, 66],
+    [204, 67],
+    [260, 95],
+    [260.25, 95],
+    [260.75, 95],
   ];
-  it.each(CENTER_CASES)('H_CENTER at box %p places the line at Godot\'s x = %p', (boxWidthPx, expected) => {
+  it.each(CENTER_CASES)("H_CENTER at box %p places the line at Godot's x = %p", (boxWidthPx, expected) => {
     expect(originAt(boxWidthPx, 1)).toBe(expected);
   });
 
   const RIGHT_CASES: Array<[number, number]> = [
-    [200, 130], [200.5, 130], [201, 131], [201.5, 131],
-    [202, 132], [202.5, 132], [203, 133], [203.5, 133], [204, 134],
-    [260, 190], [260.25, 190], [260.75, 190],
+    [200, 130],
+    [200.5, 130],
+    [201, 131],
+    [201.5, 131],
+    [202, 132],
+    [202.5, 132],
+    [203, 133],
+    [203.5, 133],
+    [204, 134],
+    [260, 190],
+    [260.25, 190],
+    [260.75, 190],
   ];
-  it.each(RIGHT_CASES)('H_RIGHT at box %p places the line at Godot\'s x = %p', (boxWidthPx, expected) => {
+  it.each(RIGHT_CASES)("H_RIGHT at box %p places the line at Godot's x = %p", (boxWidthPx, expected) => {
     expect(originAt(boxWidthPx, 2)).toBe(expected);
   });
 
   const CENTER_NEGATIVE: Array<[number, number]> = [
-    [20, -25], [20.5, -24], [21, -24], [21.5, -24], [22, -24], [23, -23], [24, -23], [25, -22],
+    [20, -25],
+    [20.5, -24],
+    [21, -24],
+    [21.5, -24],
+    [22, -24],
+    [23, -23],
+    [24, -23],
+    [25, -22],
   ];
   it.each(CENTER_NEGATIVE)(
     'H_CENTER truncates TOWARD ZERO when the box is narrower than the line: box %s -> %s',
@@ -548,7 +595,14 @@ describe('layoutLabelLines — horizontal origins vs Godot 4.6.3 (label.cpp:487-
   );
 
   const RIGHT_NEGATIVE: Array<[number, number]> = [
-    [20, -50], [20.5, -49], [21, -49], [21.5, -48], [22, -48], [23, -47], [24, -46], [25, -45],
+    [20, -50],
+    [20.5, -49],
+    [21, -49],
+    [21.5, -48],
+    [22, -48],
+    [23, -47],
+    [24, -46],
+    [25, -45],
   ];
   it.each(RIGHT_NEGATIVE)(
     'H_RIGHT truncates TOWARD ZERO when the box is narrower than the line: box %s -> %s',
@@ -566,12 +620,20 @@ describe('layoutLabelLines — horizontal origins vs Godot 4.6.3 (label.cpp:487-
     [300, 300],
     [300.7, 300],
     [301.4, 301],
-  ])('H_FILL stretches a line to the TRUNCATED box width: box %s -> right edge %s', (boxWidthPx, expected) => {
-    const layout = shapeText('A B C\nD', { fontSizePx: FONT_SIZE, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
-    const placements = layoutLabelLines(layout, boxWidthPx, 200, 3, undefined);
-    expect(placements[0]!.x).toBe(0);
-    expect(placements[0]!.line.widthPx).toBe(expected);
-  });
+  ])(
+    'H_FILL stretches a line to the TRUNCATED box width: box %s -> right edge %s',
+    (boxWidthPx, expected) => {
+      const layout = shapeText('A B C\nD', {
+        fontSizePx: FONT_SIZE,
+        boxWidthPx: 0,
+        autowrapMode: AutowrapMode.OFF,
+        lineSpacingPx: 3,
+      });
+      const placements = layoutLabelLines(layout, boxWidthPx, 200, 3, undefined);
+      expect(placements[0]!.x).toBe(0);
+      expect(placements[0]!.line.widthPx).toBe(expected);
+    }
+  );
 
   it('a floor would put H_RIGHT a whole pixel left of the engine at every fractional difference', () => {
     expect(originAt(20.5, 2)).toBe(-49);
@@ -619,7 +681,7 @@ describe('labelMinimumSize — the shaped extent is ceiled (text_server_adv.cpp:
     // 'l' (571 units) and 'T' (1157) have odd advances, which FreeType's 26.6 grid rounds up: the pen
     // sum is 91.03125, not the 91.0 of flat scaling, and only the former ceils to 92.
     ['Threat level', 92],
-  ])('%p floors this Label at Godot\'s own whole-pixel minimum width %p', (text, expected) => {
+  ])("%p floors this Label at Godot's own whole-pixel minimum width %p", (text, expected) => {
     expect(minSize(node({ text, autowrapMode: 0 }), ctx()).x).toBe(expected);
   });
 
@@ -775,13 +837,31 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
 
   it('a ratio/chars of "show everything" (>=1, -1, or absent) is a no-op (edge case)', () => {
     const lines = [fakeLine(3)];
-    expect(applyVisibleCharsReveal(lines, { behavior: VC_GLYPHS_LTR, visibleChars: undefined, visibleRatio: 1 })[0]!.glyphs.length).toBe(3);
-    expect(applyVisibleCharsReveal(lines, { behavior: VC_CHARS_AFTER_SHAPING, visibleChars: -1, visibleRatio: undefined })[0]!.glyphs.length).toBe(3);
+    expect(
+      applyVisibleCharsReveal(lines, {
+        behavior: VC_GLYPHS_LTR,
+        visibleChars: undefined,
+        visibleRatio: 1,
+      })[0]!.glyphs.length
+    ).toBe(3);
+    expect(
+      applyVisibleCharsReveal(lines, {
+        behavior: VC_CHARS_AFTER_SHAPING,
+        visibleChars: -1,
+        visibleRatio: undefined,
+      })[0]!.glyphs.length
+    ).toBe(3);
   });
 
   it('VC_CHARS_BEFORE_SHAPING is a no-op here — it already ran pre-shape', () => {
     const lines = [fakeLine(3)];
-    expect(applyVisibleCharsReveal(lines, { behavior: VC_CHARS_BEFORE_SHAPING, visibleChars: 0, visibleRatio: 0 })[0]!.glyphs.length).toBe(3);
+    expect(
+      applyVisibleCharsReveal(lines, {
+        behavior: VC_CHARS_BEFORE_SHAPING,
+        visibleChars: 0,
+        visibleRatio: 0,
+      })[0]!.glyphs.length
+    ).toBe(3);
   });
 });
 
@@ -799,7 +879,16 @@ describe('labelEffectiveTextTheme', () => {
   });
 
   it('a valid label_settings wins OUTRIGHT, even at its own class defaults, over a node-local theme override (error path)', () => {
-    const settings = { lineSpacing: 3, fontSize: 16, fontColor: { r: 1, g: 1, b: 1, a: 1 }, outlineSize: 0, outlineColor: { r: 1, g: 1, b: 1, a: 1 }, shadowSize: 1, shadowColor: { r: 0, g: 0, b: 0, a: 0 }, shadowOffset: { x: 1, y: 1 } };
+    const settings = {
+      lineSpacing: 3,
+      fontSize: 16,
+      fontColor: { r: 1, g: 1, b: 1, a: 1 },
+      outlineSize: 0,
+      outlineColor: { r: 1, g: 1, b: 1, a: 1 },
+      shadowSize: 1,
+      shadowColor: { r: 0, g: 0, b: 0, a: 0 },
+      shadowOffset: { x: 1, y: 1 },
+    };
     expect(labelEffectiveTextTheme(themeResolved, settings)).toEqual({
       fontSizePx: 16,
       color: { r: 1, g: 1, b: 1, a: 1 },
@@ -808,7 +897,16 @@ describe('labelEffectiveTextTheme', () => {
   });
 
   it('truncates a fractional line_spacing toward zero — a real_t assigned into a C++ int (label.cpp:346)', () => {
-    const settings = { lineSpacing: 3.7, fontSize: 16, fontColor: { r: 1, g: 1, b: 1, a: 1 }, outlineSize: 0, outlineColor: { r: 1, g: 1, b: 1, a: 1 }, shadowSize: 1, shadowColor: { r: 0, g: 0, b: 0, a: 0 }, shadowOffset: { x: 1, y: 1 } };
+    const settings = {
+      lineSpacing: 3.7,
+      fontSize: 16,
+      fontColor: { r: 1, g: 1, b: 1, a: 1 },
+      outlineSize: 0,
+      outlineColor: { r: 1, g: 1, b: 1, a: 1 },
+      shadowSize: 1,
+      shadowColor: { r: 0, g: 0, b: 0, a: 0 },
+      shadowOffset: { x: 1, y: 1 },
+    };
     expect(labelEffectiveTextTheme(themeResolved, settings).lineSpacingPx).toBe(3);
   });
 });
@@ -816,39 +914,75 @@ describe('labelEffectiveTextTheme', () => {
 // Outline and shadow theme resolution (label.cpp:765-767, default_theme.cpp:385-391)
 
 describe('labelOutlineTheme', () => {
-  it('defaults to Label\'s own theme (outline_size=0, font_outline_color opaque black) absent everything (happy path)', () => {
+  it("defaults to Label's own theme (outline_size=0, font_outline_color opaque black) absent everything (happy path)", () => {
     expect(labelOutlineTheme(node({}), null)).toEqual({ size: 0, color: { r: 0, g: 0, b: 0, a: 1 } });
   });
 
   it('reads a node-local theme_override_constants/colors override (error path)', () => {
-    const n = node({}, { constants: { outline_size: 3 }, colors: { font_outline_color: { r: 1, g: 0, b: 0, a: 1 } } });
+    const n = node(
+      {},
+      { constants: { outline_size: 3 }, colors: { font_outline_color: { r: 1, g: 0, b: 0, a: 1 } } }
+    );
     expect(labelOutlineTheme(n, null)).toEqual({ size: 3, color: { r: 1, g: 0, b: 0, a: 1 } });
   });
 
   it('a valid label_settings wins OUTRIGHT over the node-local theme override (edge case)', () => {
     const n = node({}, { constants: { outline_size: 3 } });
-    const settings = { lineSpacing: 3, fontSize: 16, fontColor: { r: 1, g: 1, b: 1, a: 1 }, outlineSize: 5, outlineColor: { r: 0, g: 1, b: 0, a: 1 }, shadowSize: 1, shadowColor: { r: 0, g: 0, b: 0, a: 0 }, shadowOffset: { x: 1, y: 1 } };
+    const settings = {
+      lineSpacing: 3,
+      fontSize: 16,
+      fontColor: { r: 1, g: 1, b: 1, a: 1 },
+      outlineSize: 5,
+      outlineColor: { r: 0, g: 1, b: 0, a: 1 },
+      shadowSize: 1,
+      shadowColor: { r: 0, g: 0, b: 0, a: 0 },
+      shadowOffset: { x: 1, y: 1 },
+    };
     expect(labelOutlineTheme(n, settings)).toEqual({ size: 5, color: { r: 0, g: 1, b: 0, a: 1 } });
   });
 });
 
 describe('labelShadowTheme', () => {
-  it('defaults to Label\'s own theme (shadow_outline_size=1, transparent font_shadow_color, offset (1,1)) absent everything (happy path)', () => {
-    expect(labelShadowTheme(node({}), null)).toEqual({ size: 1, color: { r: 0, g: 0, b: 0, a: 0 }, offset: { x: 1, y: 1 } });
+  it("defaults to Label's own theme (shadow_outline_size=1, transparent font_shadow_color, offset (1,1)) absent everything (happy path)", () => {
+    expect(labelShadowTheme(node({}), null)).toEqual({
+      size: 1,
+      color: { r: 0, g: 0, b: 0, a: 0 },
+      offset: { x: 1, y: 1 },
+    });
   });
 
   it('reads node-local theme_override_constants/colors overrides (error path)', () => {
     const n = node(
       {},
-      { constants: { shadow_outline_size: 2, shadow_offset_x: 4, shadow_offset_y: 5 }, colors: { font_shadow_color: { r: 0, g: 0, b: 0, a: 0.6 } } }
+      {
+        constants: { shadow_outline_size: 2, shadow_offset_x: 4, shadow_offset_y: 5 },
+        colors: { font_shadow_color: { r: 0, g: 0, b: 0, a: 0.6 } },
+      }
     );
-    expect(labelShadowTheme(n, null)).toEqual({ size: 2, color: { r: 0, g: 0, b: 0, a: 0.6 }, offset: { x: 4, y: 5 } });
+    expect(labelShadowTheme(n, null)).toEqual({
+      size: 2,
+      color: { r: 0, g: 0, b: 0, a: 0.6 },
+      offset: { x: 4, y: 5 },
+    });
   });
 
   it('a valid label_settings wins OUTRIGHT over the node-local theme override (edge case)', () => {
     const n = node({}, { constants: { shadow_outline_size: 2 } });
-    const settings = { lineSpacing: 3, fontSize: 16, fontColor: { r: 1, g: 1, b: 1, a: 1 }, outlineSize: 0, outlineColor: { r: 1, g: 1, b: 1, a: 1 }, shadowSize: 7, shadowColor: { r: 0, g: 0, b: 0, a: 0.9 }, shadowOffset: { x: 3, y: 3 } };
-    expect(labelShadowTheme(n, settings)).toEqual({ size: 7, color: { r: 0, g: 0, b: 0, a: 0.9 }, offset: { x: 3, y: 3 } });
+    const settings = {
+      lineSpacing: 3,
+      fontSize: 16,
+      fontColor: { r: 1, g: 1, b: 1, a: 1 },
+      outlineSize: 0,
+      outlineColor: { r: 1, g: 1, b: 1, a: 1 },
+      shadowSize: 7,
+      shadowColor: { r: 0, g: 0, b: 0, a: 0.9 },
+      shadowOffset: { x: 3, y: 3 },
+    };
+    expect(labelShadowTheme(n, settings)).toEqual({
+      size: 7,
+      color: { r: 0, g: 0, b: 0, a: 0.9 },
+      offset: { x: 3, y: 3 },
+    });
   });
 });
 
@@ -890,12 +1024,19 @@ describe('layoutLabelLines — RTL layout (label.cpp:472-497)', () => {
   const FONT_SIZE = 16;
 
   function lineOfWidth(widthPx: number) {
-    const layout = shapeText('Wave rift', { fontSizePx: FONT_SIZE, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
+    const layout = shapeText('Wave rift', {
+      fontSizePx: FONT_SIZE,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+    });
     return { ...layout, lines: layout.lines.map((l) => ({ ...l, widthPx })), widthPx };
   }
 
   function originAt(alignment: number, rtl: boolean): number {
-    return layoutLabelLines(lineOfWidth(70), 200, 100, alignment, undefined, undefined, FONT_SIZE, { rtl })[0]!.x;
+    return layoutLabelLines(lineOfWidth(70), 200, 100, alignment, undefined, undefined, FONT_SIZE, {
+      rtl,
+    })[0]!.x;
   }
 
   it('H_LEFT takes the trailing edge under RTL (:481-486)', () => {
@@ -923,9 +1064,18 @@ describe('layoutLabelLines — RTL layout (label.cpp:472-497)', () => {
     // `if (rtl && autowrap_mode != AUTOWRAP_OFF)` reads `shaped_text_get_inferred_direction` (:470),
     // not `rtl_layout` (:471). `text_direction` defaults to TEXT_DIRECTION_AUTO (`label.h:70`), so `:179`
     // hands the TextServer DIRECTION_AUTO and a Latin paragraph infers LTR (`text_server_adv.cpp:7241-7247`).
-    const placements = layoutLabelLines(lineOfWidth(70), 200, 100, 3, undefined, UNJUSTIFIED_FLAGS, FONT_SIZE, {
-      rtl: true,
-    });
+    const placements = layoutLabelLines(
+      lineOfWidth(70),
+      200,
+      100,
+      3,
+      undefined,
+      UNJUSTIFIED_FLAGS,
+      FONT_SIZE,
+      {
+        rtl: true,
+      }
+    );
     expect(placements[0]!.x).toBe(0);
   });
 });

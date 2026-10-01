@@ -24,7 +24,10 @@
   border-radius: var(--tsi-radius-sm);
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.1s ease, color 0.1s ease, border-color 0.1s ease;
+  transition:
+    background 0.1s ease,
+    color 0.1s ease,
+    border-color 0.1s ease;
 }
 
 .resetButton:hover:not(:disabled),
@@ -74,7 +77,9 @@
   cursor: pointer;
   min-width: 2rem;
   text-align: center;
-  transition: background 0.1s ease, color 0.1s ease;
+  transition:
+    background 0.1s ease,
+    color 0.1s ease;
 }
 
 .segmentButton:hover:not(.active) {
@@ -107,7 +112,9 @@
   user-select: none;
   padding: 2px var(--tsi-space-1);
   border-radius: var(--tsi-radius-sm);
-  transition: color 0.1s ease, background 0.1s ease;
+  transition:
+    color 0.1s ease,
+    background 0.1s ease;
 }
 
 .checkbox:hover {

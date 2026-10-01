@@ -62,9 +62,7 @@ describe('GPUParticles3D Linter', () => {
       );
     });
 
-    runPropertyValidation(
-      { nodeType: 'GPUParticles3D', acceptChild: RESOURCES, baseProps: withMaterial },
-      [
+    runPropertyValidation({ nodeType: 'GPUParticles3D', acceptChild: RESOURCES, baseProps: withMaterial }, [
       {
         prop: 'emitting',
         valid: [true, false],
@@ -201,8 +199,7 @@ describe('GPUParticles3D Linter', () => {
           { value: 1.1, contains: ['between 0 and 1'] },
         ],
       },
-      ]
-    );
+    ]);
 
     describe('process_material validation', () => {
       it('should accept valid resource reference format', () => {
@@ -711,9 +708,8 @@ describe('GPUParticles3D Linter — the tokenizer float grammar', () => {
   it('accepts a trailing-dot visibility_aabb component', () => {
     // Isolate the strict-parser format check (a bare node also trips the
     // unrelated process_material semantic requirement).
-    expectNoErrors(
-      scene(node('GPUParticles3D', { visibility_aabb: 'AABB(0.5, 0, 0, 10., 10, 10)' })),
-      { ruleName: 'strict-parser' }
-    );
+    expectNoErrors(scene(node('GPUParticles3D', { visibility_aabb: 'AABB(0.5, 0, 0, 10., 10, 10)' })), {
+      ruleName: 'strict-parser',
+    });
   });
 });

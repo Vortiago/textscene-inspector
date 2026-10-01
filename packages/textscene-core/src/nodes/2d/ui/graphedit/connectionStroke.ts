@@ -70,7 +70,9 @@ export function connectionStrokeGeometry(
 
   const lengths: number[] = [0];
   for (let i = 1; i < n; i++) {
-    lengths.push(lengths[i - 1]! + Math.hypot(points[i]!.x - points[i - 1]!.x, points[i]!.y - points[i - 1]!.y));
+    lengths.push(
+      lengths[i - 1]! + Math.hypot(points[i]!.x - points[i - 1]!.x, points[i]!.y - points[i - 1]!.y)
+    );
   }
   const total = lengths[n - 1]! || 1;
 
@@ -94,7 +96,14 @@ export function connectionStrokeGeometry(
     const ny = tx;
 
     const core = lerpColor(fromColor, toColor, lengths[i]! / total);
-    const ringColors: readonly StrokeRGBA[] = [rimTransparent, rimColor, core, core, rimColor, rimTransparent];
+    const ringColors: readonly StrokeRGBA[] = [
+      rimTransparent,
+      rimColor,
+      core,
+      core,
+      rimColor,
+      rimTransparent,
+    ];
 
     for (let k = 0; k < RINGS_PER_POINT; k++) {
       const off = ringOffsets[k]!;

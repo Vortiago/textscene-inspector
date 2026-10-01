@@ -4,12 +4,7 @@
  */
 
 import { useCallback, useRef, useState } from 'react';
-import {
-  compareLightCullKeys,
-  lightCullKeyId,
-  sameLightCullKey,
-  type LightCullKey,
-} from './lightCullKey.js';
+import { compareLightCullKeys, lightCullKeyId, sameLightCullKey, type LightCullKey } from './lightCullKey.js';
 import type { CanvasLightSlot } from './lightPassContext.js';
 
 /** A counter of declarations, incremented for as long as each one is mounted. */
@@ -31,10 +26,7 @@ function sameKeys(a: readonly LightCullKey[], b: readonly LightCullKey[]): boole
 const EMPTY_IDS: ReadonlySet<string> = new Set();
 
 /** `useDeclarationCount` per cull tuple: it publishes which tuples have a declaration. */
-export function useKeyedDeclarationCount(): [
-  ReadonlySet<string>,
-  (key: LightCullKey) => () => void,
-] {
+export function useKeyedDeclarationCount(): [ReadonlySet<string>, (key: LightCullKey) => () => void] {
   const [ids, setIds] = useState<ReadonlySet<string>>(EMPTY_IDS);
   const counts = useRef(new Map<string, number>()).current;
 
@@ -89,10 +81,7 @@ interface LiveClass {
  * and keyed by value, since a light rebuilds its key each render. A class stands while any slot is
  * live. The lowest free ordinal is reused, so ordinals stay dense for the 8-bit stencil.
  */
-export function useLightClassRegistry(): [
-  readonly LightCullKey[],
-  (key: LightCullKey) => CanvasLightSlot,
-] {
+export function useLightClassRegistry(): [readonly LightCullKey[], (key: LightCullKey) => CanvasLightSlot] {
   const [keys, setKeys] = useState<readonly LightCullKey[]>(EMPTY_KEYS);
   const taken = useRef(new Map<string, LiveClass>()).current;
 

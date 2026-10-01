@@ -113,7 +113,9 @@ directional_shadow_max_distance = 80.0
 });
 
 describe('<DirectionalShadowFitter> on its own', () => {
-  async function mountWithLight(splitCount = 1): Promise<{ renderer: Renderer; light: THREE.DirectionalLight }> {
+  async function mountWithLight(
+    splitCount = 1
+  ): Promise<{ renderer: Renderer; light: THREE.DirectionalLight }> {
     const light = new THREE.DirectionalLight();
     light.castShadow = true;
     light.userData = directionalShadowUserData({

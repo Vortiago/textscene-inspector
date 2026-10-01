@@ -49,7 +49,10 @@ y_sort_enabled = true
   // 32px rows at y=0,4 sort to 16 and 144, 64px rows at y=1,2 to 96 and 160, which
   // interleaves them. Against the 32px grid the same two rows sort to 48 and 80, and
   // both fall below the small layer's second row.
-  for (const [i, rows] of [[0, 4], [1, 2]].entries()) {
+  for (const [i, rows] of [
+    [0, 4],
+    [1, 2],
+  ].entries()) {
     const props = layers[i]!.properties as TileMapLayerProperties;
     props.cells = cellsAt(rows);
     props.enabled = true;

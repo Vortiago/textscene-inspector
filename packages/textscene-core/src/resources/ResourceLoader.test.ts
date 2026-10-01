@@ -235,20 +235,26 @@ describe('ResourceLoader (loader-level gaps)', () => {
     });
 
     it('uses a generic "Unknown error" message when the failed event carries no Error', () => {
-      const matMeta: ExtResource = { id: '6_mat', path: 'res://materials/x.tres', type: 'StandardMaterial3D' };
+      const matMeta: ExtResource = {
+        id: '6_mat',
+        path: 'res://materials/x.tres',
+        type: 'StandardMaterial3D',
+      };
       loader.register(matMeta);
       const onResourceNeeded = vi.fn();
       loader.setOnResourceNeeded(onResourceNeeded);
 
       loader.eventBus.emit('resource', 'failed', matMeta.path);
 
-      expect(onResourceNeeded).toHaveBeenCalledWith(
-        expect.objectContaining({ error: 'Unknown error' })
-      );
+      expect(onResourceNeeded).toHaveBeenCalledWith(expect.objectContaining({ error: 'Unknown error' }));
     });
 
-    it('names a failed material .tres by its slice\'s label, though it fails on the resource bus', () => {
-      const matMeta: ExtResource = { id: '7_mat', path: 'res://materials/y.tres', type: 'StandardMaterial3D' };
+    it("names a failed material .tres by its slice's label, though it fails on the resource bus", () => {
+      const matMeta: ExtResource = {
+        id: '7_mat',
+        path: 'res://materials/y.tres',
+        type: 'StandardMaterial3D',
+      };
       loader.register(matMeta);
       const onResourceNeeded = vi.fn();
       loader.setOnResourceNeeded(onResourceNeeded);
@@ -327,9 +333,7 @@ describe('ResourceLoader (loader-level gaps)', () => {
       loader.textures.request(firstMeta.path);
       await firstFailure;
 
-      expect(onResourceNeeded).toHaveBeenCalledWith(
-        expect.objectContaining({ path: firstMeta.path })
-      );
+      expect(onResourceNeeded).toHaveBeenCalledWith(expect.objectContaining({ path: firstMeta.path }));
 
       loader.clear();
 
@@ -343,9 +347,7 @@ describe('ResourceLoader (loader-level gaps)', () => {
       loader.textures.request(secondMeta.path);
       await secondFailure;
 
-      expect(onResourceNeeded).toHaveBeenCalledWith(
-        expect.objectContaining({ path: secondMeta.path })
-      );
+      expect(onResourceNeeded).toHaveBeenCalledWith(expect.objectContaining({ path: secondMeta.path }));
     });
 
     it('still drops caches and metadata (unchanged behavior)', () => {
@@ -391,7 +393,9 @@ describe('ResourceLoader (loader-level gaps)', () => {
 
     it('stops notifying after unsubscribe', () => {
       let calls = 0;
-      const unsubscribe = loader.subscribePending(() => { calls += 1; });
+      const unsubscribe = loader.subscribePending(() => {
+        calls += 1;
+      });
       unsubscribe();
       loader.beginPending()();
       expect(calls).toBe(0);

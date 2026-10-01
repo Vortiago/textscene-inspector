@@ -29,7 +29,11 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { OverrunBehavior, overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
+import {
+  OverrunBehavior,
+  overrunFlagsForBehavior,
+  trimLineToWidth,
+} from '../../../../r3f/controls/native/text/textOverrun';
 import {
   shapeText,
   shapedTextSizeWidthPx,
@@ -116,7 +120,9 @@ const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 const DEFAULT_BORDER_COLOR: ControlColor = { r: 0.8, g: 0.8, b: 0.8, a: 1 };
 
 /** `theme->set_stylebox(panel, "ItemList", make_flat_stylebox(style_normal_color))` (`default_theme.cpp:944`): every `make_flat_stylebox` default (margin 4, corner radius 3), both scaled. */
-export function itemListPanelStyleBox(theme: Pick<NativeTheme, 'contentMargin' | 'cornerRadius'>): StyleBoxFlatData {
+export function itemListPanelStyleBox(
+  theme: Pick<NativeTheme, 'contentMargin' | 'cornerRadius'>
+): StyleBoxFlatData {
   const m = theme.contentMargin;
   return {
     bgColor: STYLE_FILL.normal,
@@ -246,7 +252,10 @@ export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult |
     // `layout.fontMetrics`, not `input.fontMetrics`: `shapeText` defaults to
     // the vendored atlas font when the caller passes none, and the trim must
     // agree with whichever metrics actually shaped these glyphs.
-    trimLineToWidth(line, widthPx, overrunFlags, { fontMetrics: layout.fontMetrics, fontSizePx: input.fontSizePx })
+    trimLineToWidth(line, widthPx, overrunFlags, {
+      fontMetrics: layout.fontMetrics,
+      fontSizePx: input.fontSizePx,
+    })
   );
   return {
     ...layout,
@@ -392,7 +401,12 @@ export function packItemListRows(input: ItemListPackInput): ItemListPackResult {
     const separators: number[] = [];
 
     for (let i = 0; i < n; i++) {
-      if (currentColumns > 1 && sizes[i]!.x + ofsX > input.fitSize && !input.autoWidth && input.wraparoundItems) {
+      if (
+        currentColumns > 1 &&
+        sizes[i]!.x + ofsX > input.fitSize &&
+        !input.autoWidth &&
+        input.wraparoundItems
+      ) {
         currentColumns = Math.max(col, 1);
         allFit = false;
         break;
@@ -467,15 +481,33 @@ export const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   const itemSizes: Vec2[] = items.map((item, i) => {
     const hasIcon = item.icon !== undefined;
-    const iconSize = itemIconPackedSize(hasIcon, n.textureSlots[itemListIconSlotKey(i)] ?? null, props.fixedIconSize, iconScale);
+    const iconSize = itemIconPackedSize(
+      hasIcon,
+      n.textureSlots[itemListIconSlotKey(i)] ?? null,
+      props.fixedIconSize,
+      iconScale
+    );
     const text = item.text ?? '';
     const hasText = text.length > 0;
     const layout =
       hasText && ctx.measureText
-        ? shapeItemListText({ text, fontSizePx, fontMetrics, iconMode, maxTextLines, fixedColumnWidth, overrunBehavior: props.textOverrunBehavior })
+        ? shapeItemListText({
+            text,
+            fontSizePx,
+            fontMetrics,
+            iconMode,
+            maxTextLines,
+            fixedColumnWidth,
+            overrunBehavior: props.textOverrunBehavior,
+          })
         : null;
-    const textSize = layout ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx } : { x: 0, y: 0 };
-    return itemMinimumSize({ hasIcon, iconSize, hasText, textSize, iconMode, maxTextLines, fixedColumnWidth }, ctx.theme);
+    const textSize = layout
+      ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
+      : { x: 0, y: 0 };
+    return itemMinimumSize(
+      { hasIcon, iconSize, hasText, textSize, iconMode, maxTextLines, fixedColumnWidth },
+      ctx.theme
+    );
   });
 
   const maxColumnWidth = itemSizes.reduce((max, s) => Math.max(max, s.x), 0);
@@ -545,7 +577,9 @@ export function itemIconDraw(
   }
 
   const textOffsetContribution =
-    iconMode === ICON_MODE_TOP ? { x: 0, y: packedIconSize.y + iconMargin } : { x: packedIconSize.x + iconMargin, y: 0 };
+    iconMode === ICON_MODE_TOP
+      ? { x: 0, y: packedIconSize.y + iconMargin }
+      : { x: packedIconSize.x + iconMargin, y: 0 };
 
   return { rect, textOffsetContribution };
 }
@@ -615,7 +649,11 @@ export interface ItemListGuideLine {
  * scrolled out of view. RTL moves a separator only while the vertical scrollbar
  * shows (`:1454-1458`), and none is drawn, so both directions share one span.
  */
-export function itemListGuideLines(iconMode: number, separators: readonly number[], contentWidth: number): ItemListGuideLine[] {
+export function itemListGuideLines(
+  iconMode: number,
+  separators: readonly number[],
+  contentWidth: number
+): ItemListGuideLine[] {
   if (iconMode === ICON_MODE_TOP) return [];
   return separators.map((y) => ({ y, width: contentWidth }));
 }
@@ -653,7 +691,11 @@ export interface ItemListRowTextXInput {
 export function itemListRowTextX(input: ItemListRowTextXInput, rtl: boolean): number {
   if (!rtl) return input.ltrX;
   let x =
-    input.controlWidthPx - input.itemRectWidthPx + input.iconWidthPx - input.ltrX + Math.max(input.hSeparation, 0);
+    input.controlWidthPx -
+    input.itemRectWidthPx +
+    input.iconWidthPx -
+    input.ltrX +
+    Math.max(input.hSeparation, 0);
   if (input.wraparoundItems) x += Math.max(input.itemRectWidthPx - input.contentWidthPx, 0);
   return x;
 }

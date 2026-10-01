@@ -31,7 +31,10 @@ export function ySortDiagnostics(
 
   // tile_map.cpp:850-858, the `y_sorted_z_index.has(...)` scan.
   const ySortedZIndices = new Set(
-    layers.filter(isLayerYSorted).map(layerZIndex).filter((z) => z !== null)
+    layers
+      .filter(isLayerYSorted)
+      .map(layerZIndex)
+      .filter((z) => z !== null)
   );
   if (
     layers.some((layer) => {

@@ -17,8 +17,7 @@ function checkGridMap(context: RuleContext): Diagnostic[] {
   if (heldResource(rawProps.mesh_library) === undefined) {
     diagnostics.push({
       severity: 'info',
-      message:
-        'GridMap has no mesh_library. It will render nothing and is not visible.',
+      message: 'GridMap has no mesh_library. It will render nothing and is not visible.',
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'gridmap-requires-mesh-library',

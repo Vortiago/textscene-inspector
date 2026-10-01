@@ -178,9 +178,7 @@ describe('SpringBoneSimulator3D strict validators', () => {
       // `_to_int` flips the sign on a `-` seen while the total is still 0
       // (ustring.cpp:2291-2292), so :42 reads `a-1` as -1 and :44 refuses it.
       expect(check('settings/a-1/joints/0/radius', '0.5')?.code).toBe('INVALID_SETTING_INDEX');
-      expect(check('settings/a-1/collisions/0', 'NodePath("A")')?.code).toBe(
-        'INVALID_SETTING_INDEX'
-      );
+      expect(check('settings/a-1/collisions/0', 'NodePath("A")')?.code).toBe('INVALID_SETTING_INDEX');
       // Both `-` flip, because a `0` digit leaves the total at 0, so this one
       // is setting 1 and the write lands.
       expect(check('settings/-0-1/joints/0/radius', '0.5')).toBeNull();
@@ -207,9 +205,7 @@ describe('SpringBoneSimulator3D strict validators', () => {
       // resolves `x` to joint 0 and the write lands there (:122).
       expect(check('settings/0/joints/x/radius/extra', '0.5')).toBeNull();
       // The segment itself still decides, and its value is still checked.
-      expect(check('settings/0/joints/0/not_a_leaf/extra', '1')?.code).toBe(
-        'INVALID_SPRING_BONE_JOINT_KEY'
-      );
+      expect(check('settings/0/joints/0/not_a_leaf/extra', '1')?.code).toBe('INVALID_SPRING_BONE_JOINT_KEY');
       expect(check('settings/0/joints/0/radius/extra', '-1')?.severity).toBe('warning');
     });
   });
@@ -335,17 +331,13 @@ describe('SpringBoneSimulator3D strict validators', () => {
     it('errors on the zero vector, which ERR_FAIL_COND refuses', () => {
       // spring_bone_simulator_3d.cpp:780 and :985.
       expect(check('settings/0/gravity/direction', 'Vector3(0, 0, 0)')?.severity).toBe('error');
-      expect(check('settings/0/joints/0/gravity_direction', 'Vector3(0, 0, 0)')?.severity).toBe(
-        'error'
-      );
+      expect(check('settings/0/joints/0/gravity_direction', 'Vector3(0, 0, 0)')?.severity).toBe('error');
     });
 
     it('errors just inside CMP_EPSILON, because the guard is is_zero_approx', () => {
       // Vector3::is_zero_approx compares each component against 0.00001
       // (vector3.cpp:149-151, math_funcs.h:554), so a hair off zero is still zero.
-      expect(check('settings/0/gravity/direction', 'Vector3(0.000001, 0, 0)')?.severity).toBe(
-        'error'
-      );
+      expect(check('settings/0/gravity/direction', 'Vector3(0.000001, 0, 0)')?.severity).toBe('error');
       expect(check('settings/0/gravity/direction', 'Vector3(0.0001, 0, 0)')).toBeNull();
     });
 

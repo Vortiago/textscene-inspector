@@ -34,9 +34,7 @@ function vector3EqualApprox(a: Vector3, b: Vector3): boolean {
 
 function checkNavigationLink3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  const properties = isValidProperties(node.properties)
-    ? (node.properties as Record<string, string>)
-    : {};
+  const properties = isValidProperties(node.properties) ? (node.properties as Record<string, string>) : {};
 
   const start = readPosition(properties, 'start_position');
   const end = readPosition(properties, 'end_position');
@@ -63,7 +61,11 @@ const navigationLink3DPositionRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['NavigationLink3D'],
     emits: [
-      { ruleName: 'navigationlink3d-start-position-equals-end-position', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'navigationlink3d-start-position-equals-end-position',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
     ],
   },
   check: checkNavigationLink3D,

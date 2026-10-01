@@ -104,9 +104,7 @@ describe('GLB driver — selection path through the real dispatcher', () => {
 
     // Selecting the GLB root row does not drive the tab: as in Godot, the clips live on the
     // AnimationPlayer child.
-    await ReactThreeTestRenderer.act(async () =>
-      selection?.setSelectedNodePath('Player/player')
-    );
+    await ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath('Player/player'));
     expect(transport.hasPlayer).toBe(false);
 
     // Select the synthesised AnimationPlayer row at its dispatcher-composed path.

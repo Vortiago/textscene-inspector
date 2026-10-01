@@ -52,12 +52,15 @@ function checkAnimatedSprite3D(context: RuleContext): Diagnostic[] {
 const animatedSprite3DValidationRule: LintRule = {
   meta: {
     name: 'valid-animatedsprite3d-properties',
-    description:
-      "Validates AnimatedSprite3D SpriteFrames references and animation names",
+    description: 'Validates AnimatedSprite3D SpriteFrames references and animation names',
     category: 'validation',
     applicableNodeTypes: ['AnimatedSprite3D'],
     emits: [
-      { ruleName: 'animatedsprite3d-requires-spriteframes', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'animatedsprite3d-requires-spriteframes',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
       {
         ruleName: 'animatedsprite3d-animation-no-spriteframes',
         severity: 'error',

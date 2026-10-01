@@ -239,7 +239,9 @@ describe('fitSceneDirectionalShadows fades', () => {
     fitSceneDirectionalShadows(scene, viewingCamera());
     const lastSplitEnd = splitSunOf(light)!.shadow._cascadeData[3]!.x;
     expect(lastFades().directional).toEqual([]);
-    expect(lastFades().sun).toEqual([{ from: expect.closeTo(lastSplitEnd * DECLARATION.fadeStart, 12), to: lastSplitEnd }]);
+    expect(lastFades().sun).toEqual([
+      { from: expect.closeTo(lastSplitEnd * DECLARATION.fadeStart, 12), to: lastSplitEnd },
+    ]);
     expect(lastSplitEnd).toBe(DECLARATION.maxDistance);
   });
 
@@ -292,7 +294,11 @@ describe('fitSceneDirectionalShadows fades', () => {
  * only where the camera's layers include it, and the children of any visible object (three r186
  * `WebGLRenderer.js:1859-1888`).
  */
-function threeRenderLights(object: THREE.Object3D, camera: THREE.Camera, lights: THREE.Light[] = []): THREE.Light[] {
+function threeRenderLights(
+  object: THREE.Object3D,
+  camera: THREE.Camera,
+  lights: THREE.Light[] = []
+): THREE.Light[] {
   if (!object.visible) return lights;
   const light = object as THREE.Light;
   if (light.isLight && object.layers.test(camera.layers)) lights.push(light);
@@ -373,7 +379,10 @@ describe('directionalShadowCasters', () => {
     const group = new THREE.Group();
     group.add(nested);
     scene.add(first, group, last);
-    expect(directionalShadowCasters(scene, viewingCamera())).toEqual({ directional: [first, nested, last], sun: [] });
+    expect(directionalShadowCasters(scene, viewingCamera())).toEqual({
+      directional: [first, nested, last],
+      sun: [],
+    });
   });
 
   it('lists a split sun apart from the directional lights', () => {
@@ -381,7 +390,10 @@ describe('directionalShadowCasters', () => {
     const directional = caster();
     const sun = new SplitSunLight();
     scene.add(sun, directional);
-    expect(directionalShadowCasters(scene, viewingCamera())).toEqual({ directional: [directional], sun: [sun] });
+    expect(directionalShadowCasters(scene, viewingCamera())).toEqual({
+      directional: [directional],
+      sun: [sun],
+    });
   });
 
   it('skips a light three draws no shadow for: non-casting, hidden, or on another layer', () => {

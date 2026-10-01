@@ -11,7 +11,10 @@ interface VsCodeApi {
 }
 
 export class WebviewResourceProvider implements ResourceProvider {
-  private pendingRequests: Map<string, { resolve: (value: string | ArrayBuffer) => void; reject: (error: Error) => void; timeoutId: number }> = new Map();
+  private pendingRequests: Map<
+    string,
+    { resolve: (value: string | ArrayBuffer) => void; reject: (error: Error) => void; timeoutId: number }
+  > = new Map();
   private requestCounter = 0;
 
   constructor(private vscode: VsCodeApi) {

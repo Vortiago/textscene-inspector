@@ -34,15 +34,17 @@ function makeChildCubeScene(): TscnScene {
   ];
   return {
     nodes: [
-      makeNode('ChildCube', 'Node3D', { children: [
-        makeNode('Cube', 'MeshInstance3D', {
-          properties: {
-            name: 'Cube',
-            mesh: 'SubResource("BoxMesh_1")',
-            surfaceMaterialOverrides: new Map([[0, 'SubResource("Material_1")']]),
-          } as Record<string, unknown>,
-        }),
-      ]}),
+      makeNode('ChildCube', 'Node3D', {
+        children: [
+          makeNode('Cube', 'MeshInstance3D', {
+            properties: {
+              name: 'Cube',
+              mesh: 'SubResource("BoxMesh_1")',
+              surfaceMaterialOverrides: new Map([[0, 'SubResource("Material_1")']]),
+            } as Record<string, unknown>,
+          }),
+        ],
+      }),
     ],
     externalResources: [],
     internalResources,
@@ -72,11 +74,9 @@ describe('NodeDispatcher — external scene node rendering', () => {
         properties: { name: 'ChildInstance' } as Record<string, unknown>,
       });
 
-      const renderer = await renderTree(
-        [instancingNode],
-        fake.loader,
-        [{ id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' }]
-      );
+      const renderer = await renderTree([instancingNode], fake.loader, [
+        { id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' },
+      ]);
 
       // Instance root merge (ADR-0013): the loaded root 'ChildCube' collapses into the
       // instance node 'ChildInstance', so the root's child mesh renders under it.
@@ -96,11 +96,9 @@ describe('NodeDispatcher — external scene node rendering', () => {
         properties: { name: 'ChildInstance' } as Record<string, unknown>,
       });
 
-      const renderer = await renderTree(
-        [instancingNode],
-        fake.loader,
-        [{ id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' }]
-      );
+      const renderer = await renderTree([instancingNode], fake.loader, [
+        { id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' },
+      ]);
 
       // The merged ChildInstance renders as a group; its mesh renders as a mesh.
       const groups = renderer.scene.findAllByType('Group');
@@ -123,11 +121,9 @@ describe('NodeDispatcher — external scene node rendering', () => {
         properties: { name: 'ChildInstance' } as Record<string, unknown>,
       });
 
-      const renderer = await renderTree(
-        [instancingNode],
-        fake.loader,
-        [{ id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' }]
-      );
+      const renderer = await renderTree([instancingNode], fake.loader, [
+        { id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' },
+      ]);
 
       const groups = renderer.scene.findAllByType('Group');
       const instancingGroup = groups.find((g) => g.instance.name === 'ChildInstance');
@@ -141,7 +137,10 @@ describe('NodeDispatcher — external scene node rendering', () => {
       let parent = cubeMesh!.instance.parent;
       let found = false;
       while (parent) {
-        if (parent === instancingGroup!.instance) { found = true; break; }
+        if (parent === instancingGroup!.instance) {
+          found = true;
+          break;
+        }
         parent = parent.parent;
       }
       expect(found).toBe(true);
@@ -164,11 +163,9 @@ describe('NodeDispatcher — external scene node rendering', () => {
         })
       );
 
-      const renderer = await renderTree(
-        nodes,
-        fake.loader,
-        [{ id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' }]
-      );
+      const renderer = await renderTree(nodes, fake.loader, [
+        { id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' },
+      ]);
 
       // Each instance collapses into its own merged node; the root level
       // 'ChildCube' is gone, leaving one 'Cube' mesh per instance.

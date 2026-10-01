@@ -41,7 +41,7 @@ export function loadCatalog() {
  */
 export function loadLintCoverage() {
   const file = join(COMPARE_DOCS, 'lint-coverage.json');
-  return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')).unsupported ?? {} : {};
+  return existsSync(file) ? (JSON.parse(readFileSync(file, 'utf8')).unsupported ?? {}) : {};
 }
 
 /**
@@ -58,5 +58,8 @@ export function loadSharedNotes() {
     (line) => line.startsWith('## ') && CATEGORY_ORDER.includes(line.slice(3))
   );
   const head = firstCategory === -1 ? lines : lines.slice(0, firstCategory);
-  return head.join('\n').replace(/^#\s+.*$/m, '').trim();
+  return head
+    .join('\n')
+    .replace(/^#\s+.*$/m, '')
+    .trim();
 }

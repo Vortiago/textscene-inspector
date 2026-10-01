@@ -5,13 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  node,
-  scene,
-  lint,
-  expectDiagnostic,
-  expectNoDiagnostic,
-} from '../../../linter/testing/testkit';
+import { node, scene, lint, expectDiagnostic, expectNoDiagnostic } from '../../../linter/testing/testkit';
 import { readFixture } from '../../../linter/testing/fixtureCheck';
 import './linterParser';
 import './linter';
@@ -128,9 +122,7 @@ describe('PopupMenu index spelling in the message', () => {
       scene(node('PopupMenu', { item_count: 2, 'item_4294967298/text': '"x"' })),
       { ruleName: 'popupmenu-item-index-out-of-range', severity: 'error' }
     );
-    expect(diagnostic.message).toContain(
-      'index(es) 4294967298 (stored as 2) fall outside item_count (2)'
-    );
+    expect(diagnostic.message).toContain('index(es) 4294967298 (stored as 2) fall outside item_count (2)');
   });
 
   it('names a zero-padded index as written, beside the plain spelling of another item', () => {
@@ -148,14 +140,11 @@ describe('PopupMenu index grammar', () => {
     // (ustring.cpp:4752), so `item_+2/text` resolves to item 2 and
     // `_get_property` drops it for being past the count
     // (property_list_helper.cpp:58).
-    expectDiagnostic(
-      scene(node('PopupMenu', { item_count: 1, 'item_+2/text': '"Autosave"' })),
-      {
-        ruleName: 'popupmenu-item-index-out-of-range',
-        severity: 'error',
-        nodeType: 'PopupMenu',
-        contains: ['2', 'item_count (1)'],
-      }
-    );
+    expectDiagnostic(scene(node('PopupMenu', { item_count: 1, 'item_+2/text': '"Autosave"' })), {
+      ruleName: 'popupmenu-item-index-out-of-range',
+      severity: 'error',
+      nodeType: 'PopupMenu',
+      contains: ['2', 'item_count (1)'],
+    });
   });
 });

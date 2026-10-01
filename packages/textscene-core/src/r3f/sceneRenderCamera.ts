@@ -27,10 +27,7 @@ const hooks = new WeakMap<THREE.Scene, SceneHook>();
  * returned disposer runs. Removing the last observer restores the scene's
  * original `onBeforeRender` so nothing is left installed on a shared object.
  */
-export function observeSceneCamera(
-  scene: THREE.Scene,
-  observer: SceneCameraObserver
-): () => void {
+export function observeSceneCamera(scene: THREE.Scene, observer: SceneCameraObserver): () => void {
   let hook = hooks.get(scene);
   if (!hook) {
     hook = { observers: new Set(), previous: scene.onBeforeRender };

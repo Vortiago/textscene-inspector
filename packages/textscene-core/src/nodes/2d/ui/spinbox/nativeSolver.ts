@@ -244,7 +244,9 @@ export function spinBoxIconColor(
  * variation falls through to the native chain (`buildThemeTypeChain`). `n`'s `"SpinBox"` scope
  * would miss `"LineEdit"`'s defaults and any project `"SpinBoxInnerLineEdit"` entry.
  */
-export function spinBoxFieldThemeScope(n: Pick<SolveNode, 'themeChain' | 'projectTheme'>): ThemeResolutionScope {
+export function spinBoxFieldThemeScope(
+  n: Pick<SolveNode, 'themeChain' | 'projectTheme'>
+): ThemeResolutionScope {
   return themeResolutionScope('LineEdit', 'SpinBoxInnerLineEdit', n.themeChain, n.projectTheme);
 }
 
@@ -265,7 +267,11 @@ export function spinBoxFieldTextTheme(
   const fontSizePx = resolveThemeFontSizeIn(scope, 'font_size', undefined, ctx.theme.fontSize);
   const fontResource = resolveThemeFontIn(scope, 'font', undefined);
   const fontMetrics = peekSceneFontMetrics(fontResource, n.path);
-  return { fontSizePx, fontMetrics, color: editable ? LINE_EDIT_DEFAULT_FONT_COLOR : LINE_EDIT_DEFAULT_UNEDITABLE_COLOR };
+  return {
+    fontSizePx,
+    fontMetrics,
+    color: editable ? LINE_EDIT_DEFAULT_FONT_COLOR : LINE_EDIT_DEFAULT_UNEDITABLE_COLOR,
+  };
 }
 
 /**

@@ -22,14 +22,7 @@ function check(property: string, value: string) {
  * The keys AnimatedSprite3D binds, read from the source. Set this or DECLARES_NOTHING, not both.
  * Leaving both unset is red on purpose: do not delete an assertion to go green.
  */
-const KEYS: string[] = [
-  'sprite_frames',
-  'animation',
-  'autoplay',
-  'frame',
-  'frame_progress',
-  'speed_scale',
-];
+const KEYS: string[] = ['sprite_frames', 'animation', 'autoplay', 'frame', 'frame_progress', 'speed_scale'];
 /** True only when the class binds no ADD_PROPERTY, beside the source line that proves it. */
 const DECLARES_NOTHING = false;
 
@@ -202,11 +195,7 @@ describe('AnimatedSprite3D strict validators', () => {
 describe('playing is a key verdict, not a value', () => {
   it('rejects the key whatever the value', () => {
     for (const value of ['true', 'false', '1']) {
-      const verdict = validatorRegistry.findValidator('AnimatedSprite3D', 'playing')?.(
-        'playing',
-        value,
-        1
-      );
+      const verdict = validatorRegistry.findValidator('AnimatedSprite3D', 'playing')?.('playing', value, 1);
       expect(verdict?.severity).toBe('error');
       expect(verdict?.message).toContain('cannot be set on AnimatedSprite3D');
     }

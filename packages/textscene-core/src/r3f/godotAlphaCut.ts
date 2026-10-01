@@ -48,8 +48,7 @@ export interface AlphaCutSurface {
 /** Godot's `mat_transparency` switch in three's terms. */
 export function alphaCutSurface({ mode, scissorThreshold, transparentFlag }: AlphaCutInput): AlphaCutSurface {
   // TRANSPARENCY_DISABLED is the initialiser the switch never reaches (`sprite_3d.cpp:284-286`).
-  if (transparentFlag === false)
-    return { alphaTest: 0, alphaHash: false, depthWrite: true, blended: false };
+  if (transparentFlag === false) return { alphaTest: 0, alphaHash: false, depthWrite: true, blended: false };
   // SCISSOR and HASH force `alpha = 1.0` past the cut (`scene_forward_clustered.glsl:1414-1416`),
   // so they land in the opaque list (`scene_shader_forward_clustered.cpp:252`), which writes depth.
   switch (mode) {

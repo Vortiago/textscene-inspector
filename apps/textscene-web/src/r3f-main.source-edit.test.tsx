@@ -50,9 +50,7 @@ const GARBAGE = 'mid-edit garbage, not a scene }{ ]] [[';
 
 const DEFAULT_FILE = 'unit-plane-mesh.tscn';
 /** The fixture the palette test switches to: any leaf but the app's default. */
-const SWITCH_TARGET = flattenLeaves(buildFixtureTree(fixtures)).find(
-  (l) => l.file !== DEFAULT_FILE
-) as Leaf;
+const SWITCH_TARGET = flattenLeaves(buildFixtureTree(fixtures)).find((l) => l.file !== DEFAULT_FILE) as Leaf;
 
 function resetPersistence() {
   try {
@@ -189,7 +187,10 @@ describe('#201 buffer reset — switching fixture / uploading replaces the buffe
   it('uploading a .tscn resets an edited buffer to the uploaded content', async () => {
     // The edited pane triggers the discard guard, and happy-dom has no window.confirm.
     // r3f-main.edit-guard.test.tsx holds the guard's own contract.
-    vi.stubGlobal('confirm', vi.fn(() => true));
+    vi.stubGlobal(
+      'confirm',
+      vi.fn(() => true)
+    );
     render(<R3FApp />);
     await waitForScene();
 
@@ -212,7 +213,10 @@ describe('#201 buffer reset — switching fixture / uploading replaces the buffe
   it('switching scenes via the palette resets an edited buffer to the new fixture', async () => {
     // The edited pane triggers the discard guard, and happy-dom has no window.confirm.
     // r3f-main.edit-guard.test.tsx holds the guard's own contract.
-    vi.stubGlobal('confirm', vi.fn(() => true));
+    vi.stubGlobal(
+      'confirm',
+      vi.fn(() => true)
+    );
     render(<R3FApp />);
     await waitForScene();
 

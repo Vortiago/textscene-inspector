@@ -30,9 +30,7 @@ describe('canvas-layer coverage', () => {
   });
 
   it('registers every one of them as a Control-walk canvas boundary', () => {
-    expect(
-      CANVAS_LAYER_TYPES.filter((type) => !controlSolverRegistry.isCanvasBoundary(type))
-    ).toEqual([]);
+    expect(CANVAS_LAYER_TYPES.filter((type) => !controlSolverRegistry.isCanvasBoundary(type))).toEqual([]);
   });
 
   it('walks every one of them in the Control tree at all', () => {

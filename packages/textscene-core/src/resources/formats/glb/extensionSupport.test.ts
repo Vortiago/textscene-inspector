@@ -20,8 +20,7 @@ function meshesOf(root: THREE.Object3D): THREE.Mesh[] {
 
 const instancedGlb = () => triangleGlb({ instanced: true });
 
-const requiringGlb = (name: string) =>
-  triangleGlb({ extensionsUsed: [name], extensionsRequired: [name] });
+const requiringGlb = (name: string) => triangleGlb({ extensionsUsed: [name], extensionsRequired: [name] });
 
 /** A material with a clearcoat, which three reads and Godot's importer does not. */
 const clearcoatGlb = () =>
@@ -43,8 +42,7 @@ const emissiveStrengthGlb = () =>
     },
   });
 
-const materialOf = (root: THREE.Object3D) =>
-  meshesOf(root)[0]!.material as THREE.MeshPhysicalMaterial;
+const materialOf = (root: THREE.Object3D) => meshesOf(root)[0]!.material as THREE.MeshPhysicalMaterial;
 
 describe('createGLBMesh under Godot’s importer rules (the default)', () => {
   it('draws an EXT_mesh_gpu_instancing node once, as a plain mesh', async () => {
@@ -54,9 +52,7 @@ describe('createGLBMesh under Godot’s importer rules (the default)', () => {
   });
 
   it('draws that node at its own transform', async () => {
-    const root = await createGLBMesh(
-      triangleGlb({ instanced: true, translation: [2, 3, 4] })
-    );
+    const root = await createGLBMesh(triangleGlb({ instanced: true, translation: [2, 3, 4] }));
     root.updateMatrixWorld(true);
     const position = new THREE.Vector3().setFromMatrixPosition(meshesOf(root)[0]!.matrixWorld);
     expect(position.toArray()).toEqual([2, 3, 4]);
@@ -84,9 +80,7 @@ describe('createGLBMesh under Godot’s importer rules (the default)', () => {
 
   it('refuses a file that requires EXT_mesh_gpu_instancing, naming it', async () => {
     await expect(
-      createGLBMesh(
-        triangleGlb({ extensionsRequired: ['EXT_mesh_gpu_instancing'], instanced: true })
-      )
+      createGLBMesh(triangleGlb({ extensionsRequired: ['EXT_mesh_gpu_instancing'], instanced: true }))
     ).rejects.toThrow(/required extension 'EXT_mesh_gpu_instancing' is not supported/);
   });
 

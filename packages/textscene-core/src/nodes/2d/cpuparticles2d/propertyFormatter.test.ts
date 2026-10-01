@@ -4,9 +4,7 @@ import { parseCPUParticles2D } from './parser';
 import { formatCPUParticles2DProperties } from './propertyFormatter';
 
 function format(raw: Record<string, string> = {}) {
-  return formatCPUParticles2DProperties(
-    parseCPUParticles2D(heading('CPUParticles2D', { name: 'Fx' }), raw)
-  );
+  return formatCPUParticles2DProperties(parseCPUParticles2D(heading('CPUParticles2D', { name: 'Fx' }), raw));
 }
 
 function section(sections: ReturnType<typeof format>, title: string) {
@@ -32,9 +30,7 @@ describe('formatCPUParticles2DProperties', () => {
 
   it('says the seed is randomised unless `use_fixed_seed` pins it', () => {
     expect(value(format({ seed: '4242' }), 'Particles', 'Seed')).toBe('randomised');
-    expect(
-      value(format({ use_fixed_seed: 'true', seed: '4242' }), 'Particles', 'Seed')
-    ).toBe('4242');
+    expect(value(format({ use_fixed_seed: 'true', seed: '4242' }), 'Particles', 'Seed')).toBe('4242');
   });
 
   it('spells out that fixed_fps = 0 means Godot’s 30 Hz fallback', () => {

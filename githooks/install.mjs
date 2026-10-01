@@ -37,7 +37,10 @@ function worktreeConfigCommands() {
   const moveBare =
     bare === undefined
       ? []
-      : [`git config --file "${commonDir}/config.worktree" core.bare ${bare}`, `${sharedConfig} --unset core.bare`];
+      : [
+          `git config --file "${commonDir}/config.worktree" core.bare ${bare}`,
+          `${sharedConfig} --unset core.bare`,
+        ];
   return [...moveBare, `${sharedConfig} extensions.worktreeConfig true`, 'pnpm install'];
 }
 
@@ -45,7 +48,9 @@ function printWorktreeConfigCommands() {
   console.warn(
     'Git hooks not installed: other worktrees share this config and extensions.worktreeConfig ' +
       'is off. Run these commands once, in this order:\n' +
-      worktreeConfigCommands().map((command) => `  ${command}`).join('\n')
+      worktreeConfigCommands()
+        .map((command) => `  ${command}`)
+        .join('\n')
   );
 }
 

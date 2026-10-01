@@ -35,9 +35,7 @@ describe('v.float', () => {
   it('accepts any number when no bounds set', () => {
     expect(v.float('offset')('offset', '-12.5', 1)).toBeNull();
     expect(v.float('offset')('offset', '0', 1)).toBeNull();
-    expect(v.float('offset')('offset', 'not-a-number', 1)?.code).toBe(
-      'INVALID_OFFSET_FORMAT'
-    );
+    expect(v.float('offset')('offset', 'not-a-number', 1)?.code).toBe('INVALID_OFFSET_FORMAT');
   });
 });
 
@@ -136,7 +134,10 @@ describe('the int combinators agree on what Godot can read', () => {
 
   // And on a fractional literal too: one engine behaviour, one verdict.
   it('agree on a fractional literal, which the INT conversion truncates', () => {
-    for (const validator of [v.int('frame', { min: 0, max: 10 }), v.strictInt('frame', { min: 0, max: 10 })]) {
+    for (const validator of [
+      v.int('frame', { min: 0, max: 10 }),
+      v.strictInt('frame', { min: 0, max: 10 }),
+    ]) {
       const diagnostic = validator('frame', '5.5', 1);
       expect(diagnostic?.severity).toBe('warning');
       expect(diagnostic?.code).toBe('INVALID_FRAME_VALUE');

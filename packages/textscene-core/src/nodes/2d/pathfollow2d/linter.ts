@@ -84,8 +84,16 @@ const pathFollow2DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['PathFollow2D'],
     emits: [
-      { ruleName: 'pathfollow2d-no-parent', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      { ruleName: 'pathfollow2d-invalid-parent', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'pathfollow2d-no-parent',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
+      {
+        ruleName: 'pathfollow2d-invalid-parent',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
       {
         ruleName: 'pathfollow2d-negative-progress',
         severity: 'info',

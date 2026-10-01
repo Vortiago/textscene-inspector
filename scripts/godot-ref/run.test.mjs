@@ -17,7 +17,8 @@ import {
   FIT_ON_OPEN_2D_STORAGE_KEY,
   VIEWPORT,
 } from '../visual/previewServer.mjs';
-import { bootstrapScript,
+import {
+  bootstrapScript,
   EDITOR_CAMERA_DIRECTION,
   EDITOR_CAMERA_DISTANCE,
   EDITOR_FOV,
@@ -69,8 +70,11 @@ function bootstrap(overrides = {}) {
  */
 describe('editor-camera constants mirror the previewer', () => {
   it('matches godotEditorCamera.ts', async () => {
-    const { editorCameraDirection, EDITOR_CAMERA_DISTANCE: coreDistance, EDITOR_CAMERA_FOV } =
-      await import('../../packages/textscene-core/src/r3f/godotEditorCamera.ts');
+    const {
+      editorCameraDirection,
+      EDITOR_CAMERA_DISTANCE: coreDistance,
+      EDITOR_CAMERA_FOV,
+    } = await import('../../packages/textscene-core/src/r3f/godotEditorCamera.ts');
     const core = editorCameraDirection();
     expect(EDITOR_CAMERA_DIRECTION[0]).toBeCloseTo(core.x, 6);
     expect(EDITOR_CAMERA_DIRECTION[1]).toBeCloseTo(core.y, 6);
@@ -80,9 +84,8 @@ describe('editor-camera constants mirror the previewer', () => {
   });
 
   it('matches frameSceneBounds.ts’s framing margin', async () => {
-    const { FRAME_MARGIN: coreMargin } = await import(
-      '../../packages/textscene-core/src/r3f/frameSceneBounds.ts'
-    );
+    const { FRAME_MARGIN: coreMargin } =
+      await import('../../packages/textscene-core/src/r3f/frameSceneBounds.ts');
     expect(FRAME_MARGIN).toBe(coreMargin);
   });
 
@@ -92,10 +95,11 @@ describe('editor-camera constants mirror the previewer', () => {
    * frame, so a one-sided edit moves the content and the two images cannot be compared.
    */
   it('matches viewport2d.ts’s project-viewport rectangle and its fit preference', async () => {
-    const { CANVAS_2D_WIDTH, CANVAS_2D_HEIGHT, FIT_ON_OPEN_2D_STORAGE_KEY: coreKey } =
-      await import(
-        '../../packages/textscene-core/src/r3f/components/Canvas2DStage/viewport2d.ts'
-      );
+    const {
+      CANVAS_2D_WIDTH,
+      CANVAS_2D_HEIGHT,
+      FIT_ON_OPEN_2D_STORAGE_KEY: coreKey,
+    } = await import('../../packages/textscene-core/src/r3f/components/Canvas2DStage/viewport2d.ts');
     expect(CANVAS_2D_CAPTURE.width).toBe(CANVAS_2D_WIDTH);
     expect(CANVAS_2D_CAPTURE.height).toBe(CANVAS_2D_HEIGHT);
     expect(FIT_ON_OPEN_2D_STORAGE_KEY).toBe(coreKey);
@@ -108,9 +112,7 @@ describe('editor-camera constants mirror the previewer', () => {
       width: VIEWPORT.width - CANVAS_CAPTURE.width,
       height: VIEWPORT.height - CANVAS_CAPTURE.height,
     };
-    expect(CANVAS_2D_CAPTURE.viewport.width - chrome.width).toBeGreaterThanOrEqual(
-      CANVAS_2D_CAPTURE.width
-    );
+    expect(CANVAS_2D_CAPTURE.viewport.width - chrome.width).toBeGreaterThanOrEqual(CANVAS_2D_CAPTURE.width);
     expect(CANVAS_2D_CAPTURE.viewport.height - chrome.height).toBeGreaterThanOrEqual(
       CANVAS_2D_CAPTURE.height
     );
@@ -482,8 +484,7 @@ describe('probePixels', () => {
  * The acceptance test: a scene with no lighting of its own comes back lit by the injected preview
  * sun and environment. Engine-gated, since `godot` and `xvfb-run` are developer tools, not CI ones.
  */
-const hasEngine =
-  spawnSync('which', ['godot']).status === 0 && spawnSync('which', ['xvfb-run']).status === 0;
+const hasEngine = spawnSync('which', ['godot']).status === 0 && spawnSync('which', ['xvfb-run']).status === 0;
 
 describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
   // On a tmpfs /tmp each render's output stays in RAM after every suite run.
@@ -589,11 +590,9 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
     });
     const buffer = await readFile(out);
     const png = PNG.sync.read(buffer);
-    const [centre] = probePixels(
-      buffer,
-      [[Math.floor(png.width / 2), Math.floor(png.height / 2)]],
-      { patch: 15 }
-    );
+    const [centre] = probePixels(buffer, [[Math.floor(png.width / 2), Math.floor(png.height / 2)]], {
+      patch: 15,
+    });
     expect(Math.min(...centre.rgb)).toBeGreaterThan(150);
   }, 180_000);
 
@@ -667,10 +666,7 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
    * is unsnapped, and the nested chain is the control. The offsets add to 2 px on whole pixels,
    * so no fill rule enters, and `patch: 1` keeps a median from straddling the 2 px measured.
    */
-  const snapScene = join(
-    REPO_ROOT,
-    'scenes/fixtures/subviewport-snap-off/unit-subviewport-snap-off.tscn'
-  );
+  const snapScene = join(REPO_ROOT, 'scenes/fixtures/subviewport-snap-off/unit-subviewport-snap-off.tscn');
   const UNSNAPPED_ONLY = [102, 62];
   const SNAPPED_ONLY = [142, 102];
   const NESTED_ARM = [504, 364];
@@ -685,11 +681,9 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
     const png = PNG.sync.read(buffer);
     expect([png.width, png.height]).toEqual([CANVAS_2D_CAPTURE.width, CANVAS_2D_CAPTURE.height]);
 
-    const [unsnapped, snapped, nested] = probePixels(
-      buffer,
-      [UNSNAPPED_ONLY, SNAPPED_ONLY, NESTED_ARM],
-      { patch: 1 }
-    );
+    const [unsnapped, snapped, nested] = probePixels(buffer, [UNSNAPPED_ONLY, SNAPPED_ONLY, NESTED_ARM], {
+      patch: 1,
+    });
     expect(unsnapped.rgb).toEqual(GREEN);
     expect(snapped.rgb).toEqual(BACKDROP);
     // The nested arm is inside a SubViewport in BOTH modes, so it must not move.
@@ -701,9 +695,7 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
     await expect(renderReference({ scene: snapScene, out, mode: '2d' })).rejects.toThrow(
       /gui\/common\/snap_controls_to_pixels/
     );
-    await expect(renderReference({ scene: snapScene, out, mode: '2d' })).rejects.toThrow(
-      /--mode 2d-root/
-    );
+    await expect(renderReference({ scene: snapScene, out, mode: '2d' })).rejects.toThrow(/--mode 2d-root/);
   }, 360_000);
 
   it('lights the scene only because of the previews — --no-previews is runtime semantics', async () => {
@@ -758,11 +750,7 @@ describe('an expired engine pass is reaped as a process group', () => {
     // `timeout` reaps the group: coreutils' `timeout.c` calls `setpgid` unless `--foreground`,
     // then signals the group on expiry.
     expect(plan.command).toBe('timeout');
-    expect(plan.argv.slice(0, 3)).toEqual([
-      '-k',
-      String(ENGINE_KILL_AFTER_S),
-      String(ENGINE_TIMEOUT_S),
-    ]);
+    expect(plan.argv.slice(0, 3)).toEqual(['-k', String(ENGINE_KILL_AFTER_S), String(ENGINE_TIMEOUT_S)]);
     // The engine still runs under a display, behind the wrapper.
     expect(plan.argv.slice(3, 5)).toEqual(['xvfb-run', '-a']);
     expect(plan.argv).toContain('godot');
@@ -859,9 +847,7 @@ describe('--rendering-driver', () => {
   });
 
   it('refuses a driver the engine does not have', () => {
-    expect(() => parseArgs(['a.tscn', '--rendering-driver', 'directx'])).toThrow(
-      /--rendering-driver/
-    );
+    expect(() => parseArgs(['a.tscn', '--rendering-driver', 'directx'])).toThrow(/--rendering-driver/);
   });
 });
 
@@ -904,9 +890,7 @@ describe('--particles advances the emitters by a named number of seconds', () =>
       expect(at).toBeGreaterThan(-1);
       expect(lines[at + 1]).toBe('\t_advance_particles(target)');
     }
-    expect(lines.some((l) => l.includes('request_particles_process(PARTICLES_PROCESS)'))).toBe(
-      true
-    );
+    expect(lines.some((l) => l.includes('request_particles_process(PARTICLES_PROCESS)'))).toBe(true);
   });
 
   it('advances CPUParticles only, since a GPU emitter has no pose on our side', () => {

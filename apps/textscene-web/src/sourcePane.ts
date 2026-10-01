@@ -26,10 +26,7 @@ function isSourcePaneState(value: unknown): value is SourcePaneState {
   if (typeof value !== 'object' || value === null) return false;
   const v = value as Record<string, unknown>;
   return (
-    typeof v.visible === 'boolean' &&
-    typeof v.width === 'number' &&
-    Number.isFinite(v.width) &&
-    v.width > 0
+    typeof v.visible === 'boolean' && typeof v.width === 'number' && Number.isFinite(v.width) && v.width > 0
   );
 }
 

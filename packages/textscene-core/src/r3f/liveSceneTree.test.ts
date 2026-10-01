@@ -54,9 +54,7 @@ describe('collectLiveNodes', () => {
     const playerScene: TscnScene = {
       nodes: [
         makeNode('Player', 'CharacterBody3D', {
-          children: [
-            makeNode('Target', 'Node3D', { children: [makeNode('Camera3D', 'Camera3D')] }),
-          ],
+          children: [makeNode('Target', 'Node3D', { children: [makeNode('Camera3D', 'Camera3D')] })],
         }),
       ],
       externalResources: [],
@@ -122,9 +120,9 @@ describe('collectLiveNodes', () => {
       externalResources: extRes,
       sceneCache: cacheOf({ 'res://sub.tscn': sub }),
     };
-    expect(
-      collectLiveNodes(roots, cached, (n) => n.type === 'Camera3D').map((c) => c.path)
-    ).toEqual(['A/Cam']);
+    expect(collectLiveNodes(roots, cached, (n) => n.type === 'Camera3D').map((c) => c.path)).toEqual([
+      'A/Cam',
+    ]);
   });
 
   describe('descend option', () => {
@@ -160,9 +158,7 @@ describe('collectLiveNodes', () => {
     it('still VISITS the rejected node itself — only its children are skipped', () => {
       const isViewport = (n: TscnNode) => n.type === 'SubViewport';
       expect(
-        collectLiveNodes(roots, ctx, isViewport, (n) => n.type !== 'SubViewport').map(
-          (e) => e.path
-        )
+        collectLiveNodes(roots, ctx, isViewport, (n) => n.type !== 'SubViewport').map((e) => e.path)
       ).toEqual(['Root/View']);
     });
   });
@@ -208,13 +204,19 @@ describe('collapseLiveNode — identity contract', () => {
   it('returns the SAME node reference for a lone GLBSceneRoot sub-scene (fallback)', () => {
     const node = makeNode('X', 'Node3D', { instance: 'ExtResource("1")' });
     const res = [ext('1', 'res://m.glb')];
-    expect(collapseLiveNode(node, scopeOf(res), cacheOf({ 'res://m.glb': single('GLBSceneRoot') }))).toBe(node);
+    expect(collapseLiveNode(node, scopeOf(res), cacheOf({ 'res://m.glb': single('GLBSceneRoot') }))).toBe(
+      node
+    );
   });
 
   it('returns a FRESH merged node (adopting the root type) for a single-root .tscn instance', () => {
     const node = makeNode('Player', 'Node3D', { instance: 'ExtResource("1")' });
     const res = [ext('1', 'res://player.tscn')];
-    const merged = collapseLiveNode(node, scopeOf(res), cacheOf({ 'res://player.tscn': single('CharacterBody3D') }));
+    const merged = collapseLiveNode(
+      node,
+      scopeOf(res),
+      cacheOf({ 'res://player.tscn': single('CharacterBody3D') })
+    );
     expect(merged).not.toBe(node);
     expect(merged.type).toBe('CharacterBody3D');
     expect(merged.name).toBe('Player');
@@ -263,9 +265,7 @@ describe('liveNodeChain — the root→target chain of EFFECTIVE nodes (for ance
   });
 
   it('agrees with resolveLiveNode on the last element', () => {
-    const roots = [
-      makeNode('A', 'Node2D', { children: [makeNode('B', 'Node2D')] }),
-    ];
+    const roots = [makeNode('A', 'Node2D', { children: [makeNode('B', 'Node2D')] })];
     const ctx: LiveTreeContext = { externalResources: [], sceneCache: cacheOf({}) };
     const chain = liveNodeChain('A/B', roots, ctx);
     expect(chain?.[chain.length - 1]).toBe(resolveLiveNode('A/B', roots, ctx));
@@ -278,9 +278,7 @@ describe('resolveLiveNode — single-node path resolution (the inspector adapter
   const EXT: TscnExternalResource[] = [ext('3_as5ck', 'res://ceiling_lamp.tscn')];
 
   it('resolves an inline node by path', () => {
-    const roots = [
-      makeNode('Hallway', 'Node3D', { children: [makeNode('Table', 'Node3D')] }),
-    ];
+    const roots = [makeNode('Hallway', 'Node3D', { children: [makeNode('Table', 'Node3D')] })];
     const node = resolveLiveNode('Hallway/Table', roots, {
       externalResources: [],
       sceneCache: cacheOf({}),
@@ -316,9 +314,7 @@ describe('resolveLiveNode — single-node path resolution (the inspector adapter
 
   it('descends into a collapsed instanced sub-scene interior (ADR-0013: no doubled root segment)', () => {
     const subScene: TscnScene = {
-      nodes: [
-        makeNode('LampBody', 'Node3D', { children: [makeNode('plafoniera', 'MeshInstance3D')] }),
-      ],
+      nodes: [makeNode('LampBody', 'Node3D', { children: [makeNode('plafoniera', 'MeshInstance3D')] })],
       externalResources: [],
       internalResources: [],
     };
@@ -675,12 +671,12 @@ describe('liveChildGroups — origin-tagged child groups with per-group scope', 
   });
 });
 
-describe('liveChildGroups — internalResources scope (a sub-scene\'s own SubResource pool)', () => {
+describe("liveChildGroups — internalResources scope (a sub-scene's own SubResource pool)", () => {
   // StyleBox resolution (buildSolveTree.ts) reads a sub-scene's own
   // `internalResources`, never the host's: ids are per-file, so two files can
   // both declare SubResource "1" for different StyleBoxes.
 
-  it('collapsed single-root instance → merged group carries the SUB-SCENE\'s own internalResources, not the host\'s', () => {
+  it("collapsed single-root instance → merged group carries the SUB-SCENE's own internalResources, not the host's", () => {
     const outer = [ext('1', 'res://player.tscn')];
     const hostInternal = [intRes('1', 'StyleBoxFlat', { bg_color: 'HOST' })];
     const subInternal = [intRes('1', 'StyleBoxFlat', { bg_color: 'SUB' })];
@@ -726,14 +722,18 @@ describe('liveChildGroups — internalResources scope (a sub-scene\'s own SubRes
       instance: 'ExtResource("1")',
       children: [makeNode('InlineChild', 'Panel')],
     });
-    const groups = liveChildGroups(node, scopeOf(outer, hostInternal), cacheOf({ 'res://multi.tscn': multi }));
+    const groups = liveChildGroups(
+      node,
+      scopeOf(outer, hostInternal),
+      cacheOf({ 'res://multi.tscn': multi })
+    );
     const inlineGroup = groups.find((g) => g.origin === 'inline')!;
     expect(inlineGroup.scope.internalResources).toBe(hostInternal);
     const subsceneGroup = groups.find((g) => g.origin === 'subscene')!;
     expect(subsceneGroup.scope.internalResources).toBe(subInternal);
   });
 
-  it('a NESTED instance resolves against ITS OWN pool at each level, never the host\'s or an intermediate ancestor\'s', () => {
+  it("a NESTED instance resolves against ITS OWN pool at each level, never the host's or an intermediate ancestor's", () => {
     // Host instances A, and A instances B. Each level declares a different
     // StyleBoxFlat under the same SubResource id "1", so the wrong level's pool
     // gives wrong data rather than a silent miss.

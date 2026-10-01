@@ -12,7 +12,14 @@ import { walkImportClosure, bareSpecifiers, tsxFiles, FRAMEWORK_BARE_RE } from '
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-const entries = ['rect.ts', 'solveTree.ts', 'nativeTheme.ts', 'solverRegistry.ts', 'controlRectSolver.ts', 'solveHandoff.ts'];
+const entries = [
+  'rect.ts',
+  'solveTree.ts',
+  'nativeTheme.ts',
+  'solverRegistry.ts',
+  'controlRectSolver.ts',
+  'solveHandoff.ts',
+];
 
 const closures = entries.map((f) => walkImportClosure(resolve(here, f), { relativeTo: here }));
 

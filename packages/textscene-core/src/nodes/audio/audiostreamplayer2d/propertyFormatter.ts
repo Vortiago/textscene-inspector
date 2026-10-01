@@ -12,10 +12,7 @@ import { audioMixingSection, audioStreamSection } from '../audioStreamSection';
 export function formatAudioStreamPlayer2DProperties(
   properties: AudioStreamPlayer2DProperties
 ): PropertySection[] {
-  const sections: PropertySection[] = [
-    audioStreamSection(properties),
-    audioMixingSection(properties),
-  ];
+  const sections: PropertySection[] = [audioStreamSection(properties), audioMixingSection(properties)];
 
   sections.push({
     title: 'Spatial',
@@ -35,9 +32,13 @@ export function formatAudioStreamPlayer2DProperties(
 
 function playbackTypeName(type: PlaybackType): string {
   switch (type) {
-    case PlaybackType.DEFAULT: return 'Default';
-    case PlaybackType.STREAM: return 'Stream';
-    case PlaybackType.SAMPLE: return 'Sample';
-    default: return 'Unknown';
+    case PlaybackType.DEFAULT:
+      return 'Default';
+    case PlaybackType.STREAM:
+      return 'Stream';
+    case PlaybackType.SAMPLE:
+      return 'Sample';
+    default:
+      return 'Unknown';
   }
 }

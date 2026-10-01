@@ -14,7 +14,11 @@ import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import { shapeText, AutowrapMode, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import {
+  shapeText,
+  AutowrapMode,
+  type TextLayoutResult,
+} from '../../../../r3f/controls/native/text/textLayout';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
@@ -104,7 +108,13 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const iconSize = useMemo(
     () =>
       activeIconNaturalSize
-        ? lineEditRightIconSize(activeIconNaturalSize, iconExpandMode, fontHeightPx, { x: rect.w, y: rect.h }, rightIconScale)
+        ? lineEditRightIconSize(
+            activeIconNaturalSize,
+            iconExpandMode,
+            fontHeightPx,
+            { x: rect.w, y: rect.h },
+            rightIconScale
+          )
         : { x: 0, y: 0 },
     [activeIconNaturalSize, iconExpandMode, fontHeightPx, rect.w, rect.h, rightIconScale]
   );
@@ -136,10 +146,15 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   // `right_icon` loads in its own scope and is retagged `NoColorSpace` for the 2D canvas
   // (`useUndecodedTexture`). `useNodeIcon` prefers a themed `"clear"` and applies the same tag.
   const { externalResources, internalResources } = solveNode.resources;
-  const { texture: rightIconRawTexture } = useTexture2D(props.rightIcon, externalResources, internalResources);
+  const { texture: rightIconRawTexture } = useTexture2D(
+    props.rightIcon,
+    externalResources,
+    internalResources
+  );
   const rightIconTexture = useUndecodedTexture(rightIconRawTexture);
   const clearIconTexture = useNodeIcon(solveNode.icons['clear'], LINE_EDIT_CLEAR_ICON);
-  const activeIconTexture = activeIcon === 'clear' ? clearIconTexture : activeIcon === 'right' ? rightIconTexture : null;
+  const activeIconTexture =
+    activeIcon === 'clear' ? clearIconTexture : activeIcon === 'right' ? rightIconTexture : null;
 
   const iconLocalColor: ControlColor =
     activeIcon === 'clear'
@@ -150,7 +165,9 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   // Point2(width - icon.width - margin_right, height/2 - icon.height/2) (line_edit.cpp:1457), where
   // `height/2` is an integer division. RTL puts the x at the left margin (line_edit.cpp:1458-1460).
   const iconPos = {
-    x: solveNode.rtl ? baseStyleBox.contentMargin.left : rect.w - iconSize.x - baseStyleBox.contentMargin.right,
+    x: solveNode.rtl
+      ? baseStyleBox.contentMargin.left
+      : rect.w - iconSize.x - baseStyleBox.contentMargin.right,
     y: Math.trunc(rect.h / 2) - iconSize.y / 2,
   };
 
@@ -193,7 +210,9 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
 
   return (
     <CanvasItemGroup ref={anchorRef}>
-      {!props.flat && <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />}
+      {!props.flat && (
+        <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
+      )}
       {layout && (
         <CanvasItemGroup position={[content.textOffset.x, -content.textOffset.y, 0]}>
           <TextRun

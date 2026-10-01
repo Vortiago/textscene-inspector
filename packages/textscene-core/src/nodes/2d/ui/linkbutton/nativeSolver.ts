@@ -20,8 +20,14 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { shapedTextSizeWidthPx, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import { getUnderlinePositionPx, getUnderlineThicknessPx } from '../../../../r3f/controls/native/text/openSansMetrics';
+import {
+  shapedTextSizeWidthPx,
+  type TextLayoutResult,
+} from '../../../../r3f/controls/native/text/textLayout';
+import {
+  getUnderlinePositionPx,
+  getUnderlineThicknessPx,
+} from '../../../../r3f/controls/native/text/openSansMetrics';
 import type { ControlColor } from '../control/types';
 import type { LinkButtonProperties } from './types';
 
@@ -95,7 +101,10 @@ export function shouldUnderline(state: LinkButtonDrawState, underlineMode: numbe
 }
 
 /** `underline_spacing` theme constant, `round(2*scale)` (`default_theme.cpp:210`). */
-export function linkButtonUnderlineSpacing(constants: SolveNode['constants'], ctx: Pick<SolveContext, 'theme'>): number {
+export function linkButtonUnderlineSpacing(
+  constants: SolveNode['constants'],
+  ctx: Pick<SolveContext, 'theme'>
+): number {
   const override = constants.underline_spacing;
   if (override !== undefined) return override;
   return Math.round(2 * ctx.theme.scale);

@@ -27,7 +27,8 @@ export const animationAndAudioAsymmetries: Readonly<Record<string, AsymmetryEntr
       // extracts anims/<name>, so such a scene shows no animations here.
       'anims/*',
     ],
-    reason: 'The AnimationMixer base has no parser of its own. libraries/libraries* are read by AnimationPlayer (directly or through a scrape-blind loop) but not by AnimationTree, which needs neither; anims/<name> is a genuine legacy-format rendering gap nothing currently closes.',
+    reason:
+      'The AnimationMixer base has no parser of its own. libraries/libraries* are read by AnimationPlayer (directly or through a scrape-blind loop) but not by AnimationTree, which needs neither; anims/<name> is a genuine legacy-format rendering gap nothing currently closes.',
   },
 
   AnimationPlayer: {
@@ -42,8 +43,10 @@ export const animationAndAudioAsymmetries: Readonly<Record<string, AsymmetryEntr
       // Editor and movie-writer plumbing: quitting the engine after a movie
       // render, and the auto-capture blend Godot runs when a playback starts.
       // Neither bears on the single frame a static preview shows.
-      'movie_quit_on_finish', 'playback_auto_capture',
-      'playback_auto_capture_duration', 'playback_auto_capture_ease_type',
+      'movie_quit_on_finish',
+      'playback_auto_capture',
+      'playback_auto_capture_duration',
+      'playback_auto_capture_ease_type',
       'playback_auto_capture_transition_type',
       // animation_player.cpp:38-39,71-73: a back-compat alias for
       // current_animation, which the parser reads. _get_property_list never
@@ -66,7 +69,8 @@ export const animationAndAudioAsymmetries: Readonly<Record<string, AsymmetryEntr
       'audio_max_polyphony',
       'callback_mode_discrete',
     ],
-    reason: 'current_animation_length/current_animation_position are getter-only and PROPERTY_USAGE_NONE in Godot, so they can never appear in a real .tscn and carry no validator; playback/play, next/<name>, blend_times and the inherited AnimationMixer members have no bearing on which single frame a static preview shows.',
+    reason:
+      'current_animation_length/current_animation_position are getter-only and PROPERTY_USAGE_NONE in Godot, so they can never appear in a real .tscn and carry no validator; playback/play, next/<name>, blend_times and the inherited AnimationMixer members have no bearing on which single frame a static preview shows.',
   },
 
   AnimationTree: {
@@ -76,14 +80,16 @@ export const animationAndAudioAsymmetries: Readonly<Record<string, AsymmetryEntr
       // preview shows the initial pose whatever the value.
       'parameters/*',
     ],
-    reason: "AnimationTree's parameters/<path> tree is live playback STATE (current blend weight, active state-machine node), not authored content a static frame renders differently for.",
+    reason:
+      "AnimationTree's parameters/<path> tree is live playback STATE (current blend weight, active state-machine node), not authored content a static frame renders differently for.",
   },
 
   AudioStreamPlayer: {
     // `mix_target` picks the output channels and `playback_type` the
     // AudioServer sampling path. Neither reaches a frame.
     linterOnly: ['mix_target', 'playback_type'],
-    reason: 'mix_target and playback_type route audio output and never reach a frame; the shared keys are read through parseAudioBase.',
+    reason:
+      'mix_target and playback_type route audio output and never reach a frame; the shared keys are read through parseAudioBase.',
   },
 
   AudioStreamPlayer2D: {
@@ -94,6 +100,7 @@ export const animationAndAudioAsymmetries: Readonly<Record<string, AsymmetryEntr
     // `playback_type` forwards into the same AudioStreamPlayerInternal setter as
     // its 2D twin's, so both carry it and neither draws anything from it.
     linterOnly: ['playback_type'],
-    reason: 'playback_type selects the AudioServer sampling path and never reaches a frame; the shared keys are read through parseAudioBase.',
+    reason:
+      'playback_type selects the AudioServer sampling path and never reaches a frame; the shared keys are read through parseAudioBase.',
   },
 };

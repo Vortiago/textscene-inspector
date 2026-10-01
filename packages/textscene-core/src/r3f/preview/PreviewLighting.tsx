@@ -32,7 +32,6 @@ import {
   previewYield,
 } from './godotPreviewLighting';
 
-
 /**
  * Where the preview sun stands. It has no scene node, so nothing is anchored to
  * its transform and the distance is free. Only the direction it lights from

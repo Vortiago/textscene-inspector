@@ -23,8 +23,7 @@ export function parseArgs(argv) {
         process.exit(2);
       }
       opts.scene = value;
-    }
-    else if (a === '--shard') opts.shard = parseShard(argv[++i]);
+    } else if (a === '--shard') opts.shard = parseShard(argv[++i]);
     else {
       console.error(`[visual] unknown argument: ${a}`);
       process.exit(2);

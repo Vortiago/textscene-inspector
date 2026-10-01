@@ -89,7 +89,12 @@ describe('codeEditGutterBand', () => {
   });
 
   it('the fold gutter costs row height / 1.2', () => {
-    const band = codeEditGutterBand({ gutterDrawFoldGutter: true } as CodeEditProperties, rowHeightPx, charWidth0Px, 1);
+    const band = codeEditGutterBand(
+      { gutterDrawFoldGutter: true } as CodeEditProperties,
+      rowHeightPx,
+      charWidth0Px,
+      1
+    );
     expect(band.foldWidthPx).toBeCloseTo(rowHeightPx / 1.2, 6);
   });
 
@@ -110,7 +115,7 @@ describe('codeEditGutterBand', () => {
 });
 
 describe('codeEditLineNumberTextXPx (text_edit.cpp:1471-1476, code_edit.cpp:1583-1587)', () => {
-  it('sits at the gutter region\'s own left edge under LTR', () => {
+  it("sits at the gutter region's own left edge under LTR", () => {
     // `ofs.x = p_region.position.x` (:1586): the region starts at gutter_offset.
     expect(codeEditLineNumberTextXPx(26, 40, 300, 18, false)).toBe(26);
   });
@@ -170,7 +175,9 @@ describe('codeEditGuidelines (code_edit.cpp:288-313)', () => {
   });
 
   it('mirrors each guideline about the control under RTL (code_edit.cpp:307)', () => {
-    expect(codeEditGuidelines([4], width, 26, 300, 320, true)).toEqual([{ xPx: 320 - 58 - 1, dimmed: false }]);
+    expect(codeEditGuidelines([4], width, 26, 300, 320, true)).toEqual([
+      { xPx: 320 - 58 - 1, dimmed: false },
+    ]);
   });
 
   it('draws nothing for an empty array (code_edit.cpp:289-291)', () => {

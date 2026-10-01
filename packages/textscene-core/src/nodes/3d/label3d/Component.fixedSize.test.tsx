@@ -43,7 +43,10 @@ function orthographic(): THREE.OrthographicCamera {
   return camera;
 }
 
-async function labelAfterFrame(raw: Record<string, string>, camera: THREE.PerspectiveCamera | THREE.OrthographicCamera) {
+async function labelAfterFrame(
+  raw: Record<string, string>,
+  camera: THREE.PerspectiveCamera | THREE.OrthographicCamera
+) {
   const renderer = await ReactThreeTestRenderer.create(
     <ViewportModeProvider initialShowLabels>
       <Label3D node={node(raw)} />
@@ -74,10 +77,7 @@ describe('<Label3D> fixed_size', () => {
     expect(far.scale.y).toBeCloseTo(5, 5);
     expect(far.scale.z).toBeCloseTo(5, 5);
 
-    const near = await labelAfterFrame(
-      { fixed_size: 'true', transform: TWO_TOWARDS_CAMERA },
-      perspective()
-    );
+    const near = await labelAfterFrame({ fixed_size: 'true', transform: TWO_TOWARDS_CAMERA }, perspective());
     expect(near.scale.x).toBeCloseTo(3, 5);
   });
 

@@ -25,7 +25,11 @@ const omniLight3DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['OmniLight3D'],
     emits: [
-      { ruleName: 'omnilight3d-projector-without-shadow', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'omnilight3d-projector-without-shadow',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
     ],
   },
   check: checkOmniLight3D,

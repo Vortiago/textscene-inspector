@@ -65,11 +65,7 @@ export function setupMockPanel(): MockPanelHarness {
       toString: () => `vscode-webview://mock/${uri.fsPath}`,
     })),
     onDidReceiveMessage: vi.fn(
-      (
-        handler: (msg: unknown) => void,
-        thisArgs?: unknown,
-        disposables?: MockSubscription[]
-      ) => {
+      (handler: (msg: unknown) => void, thisArgs?: unknown, disposables?: MockSubscription[]) => {
         messageHandler = thisArgs == null ? handler : handler.bind(thisArgs);
         disposables?.push(messageSubscription);
         return messageSubscription;
@@ -83,13 +79,11 @@ export function setupMockPanel(): MockPanelHarness {
     title: '',
     reveal: vi.fn(),
     dispose: vi.fn(),
-    onDidDispose: vi.fn(
-      (handler: () => void, thisArgs?: unknown, disposables?: MockSubscription[]) => {
-        didDisposeHandler = thisArgs == null ? handler : handler.bind(thisArgs);
-        disposables?.push(didDisposeSubscription);
-        return didDisposeSubscription;
-      }
-    ),
+    onDidDispose: vi.fn((handler: () => void, thisArgs?: unknown, disposables?: MockSubscription[]) => {
+      didDisposeHandler = thisArgs == null ? handler : handler.bind(thisArgs);
+      disposables?.push(didDisposeSubscription);
+      return didDisposeSubscription;
+    }),
   };
 
   (mockWindow.createWebviewPanel as ReturnType<typeof vi.fn>).mockReturnValue(panel);

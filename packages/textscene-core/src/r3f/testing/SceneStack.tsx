@@ -27,13 +27,7 @@ export interface SceneStackProps {
   children: ReactNode;
 }
 
-export function SceneStack({
-  scene,
-  loader,
-  workspace,
-  selectedPath = null,
-  children,
-}: SceneStackProps) {
+export function SceneStack({ scene, loader, workspace, selectedPath = null, children }: SceneStackProps) {
   const stack = (
     <ResourceLoaderProvider loader={loader}>
       <SceneResourcesProvider

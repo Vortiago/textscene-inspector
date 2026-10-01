@@ -532,9 +532,9 @@ describe('LRUCache', () => {
       const cache = new LRUCache<string>(1, onEvict);
       cache.set('a', 'A');
 
-      cache.pin('a');   // mount (count = 1)
+      cache.pin('a'); // mount (count = 1)
       cache.unpin('a'); // unmount (count = 0)
-      cache.pin('a');   // remount (count = 1)
+      cache.pin('a'); // remount (count = 1)
 
       // Must still be present and pinned.
       expect(cache.has('a')).toBe(true);

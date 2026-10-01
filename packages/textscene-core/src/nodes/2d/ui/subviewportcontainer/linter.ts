@@ -21,7 +21,7 @@ function checkSubViewportContainer(context: RuleContext): Diagnostic[] {
     diagnostics.push({
       severity: 'warning',
       message:
-        "SubViewportContainer has no SubViewport child, so it displays nothing. Add a SubViewport beneath it, or use a plain Container.",
+        'SubViewportContainer has no SubViewport child, so it displays nothing. Add a SubViewport beneath it, or use a plain Container.',
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'subviewportcontainer-no-viewport',
@@ -61,8 +61,16 @@ const subViewportContainerRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['SubViewportContainer'],
     emits: [
-      { ruleName: 'subviewportcontainer-no-viewport', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      { ruleName: 'subviewportcontainer-non-arrow-cursor', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'subviewportcontainer-no-viewport',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
+      {
+        ruleName: 'subviewportcontainer-non-arrow-cursor',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
     ],
   },
   check: checkSubViewportContainer,

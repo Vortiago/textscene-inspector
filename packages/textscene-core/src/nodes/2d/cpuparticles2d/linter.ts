@@ -9,7 +9,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { paramMinAboveMaxDiagnostics } from '../../../linter/particleParamRanges.js';
-import { ruleInt, boolSlotValue} from '../../../godot/index.js';
+import { ruleInt, boolSlotValue } from '../../../godot/index.js';
 
 /**
  * The EMISSION_SHAPE_* ordinals (enum at `cpu_particles_2d.cpp:1586`) placed by

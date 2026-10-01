@@ -59,8 +59,6 @@ describe('<AreaLight3D> energy normalisation', () => {
     const props = parseAreaLight3D(heading, {});
     expect(props.area_normalize_energy).toBe(true);
     expect(props.area_range).toBe(5);
-    expect(parseAreaLight3D(heading, { area_normalize_energy: 'false' }).area_normalize_energy).toBe(
-      false
-    );
+    expect(parseAreaLight3D(heading, { area_normalize_energy: 'false' }).area_normalize_energy).toBe(false);
   });
 });

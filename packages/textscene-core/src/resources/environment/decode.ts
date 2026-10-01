@@ -27,14 +27,16 @@ function parseGlowLevels(properties: Record<string, string>): number[] {
   });
 }
 
-export function decodeEnvironment(
-  properties: Record<string, string>
-): EnvironmentProperties {
+export function decodeEnvironment(properties: Record<string, string>): EnvironmentProperties {
   return {
     // Background
     background_mode: intOr(properties.background_mode, 0, 'background_mode') as BackgroundMode,
     background_color: colorOr(properties.background_color, { r: 0, g: 0, b: 0, a: 1 }),
-    background_energy_multiplier: floatOr(properties.background_energy_multiplier, 1.0, 'background_energy_multiplier'),
+    background_energy_multiplier: floatOr(
+      properties.background_energy_multiplier,
+      1.0,
+      'background_energy_multiplier'
+    ),
     sky: properties.sky,
 
     // Tonemapping. AgX reads its own two properties rather than `tonemap_white`
@@ -83,11 +85,7 @@ export function decodeEnvironment(
     glow_blend_mode: intOr(properties.glow_blend_mode, 1, 'glow_blend_mode'),
     glow_hdr_threshold: floatOr(properties.glow_hdr_threshold, 1.0, 'glow_hdr_threshold'),
     glow_hdr_scale: floatOr(properties.glow_hdr_scale, 2.0, 'glow_hdr_scale'),
-    glow_hdr_luminance_cap: floatOr(
-      properties.glow_hdr_luminance_cap,
-      12.0,
-      'glow_hdr_luminance_cap'
-    ),
+    glow_hdr_luminance_cap: floatOr(properties.glow_hdr_luminance_cap, 12.0, 'glow_hdr_luminance_cap'),
     glow_map_strength: floatOr(properties.glow_map_strength, 0.8, 'glow_map_strength'),
 
     // Adjustments

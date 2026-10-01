@@ -14,9 +14,7 @@ const leaf = (clip: string): AnimNode => ({ kind: 'animation', clip });
 
 describe('evaluateTree — leaf', () => {
   it('plays a single clip at full weight and unit time scale', () => {
-    expect(evaluateTree(leaf('idle'), {})).toEqual([
-      { clip: 'idle', weight: 1, timeScale: 1 },
-    ]);
+    expect(evaluateTree(leaf('idle'), {})).toEqual([{ clip: 'idle', weight: 1, timeScale: 1 }]);
   });
 
   it('returns an empty program for a null tree', () => {
@@ -174,14 +172,16 @@ describe('evaluateTree — platformer blend tree (real fixture)', () => {
 
   it('resolves and evaluates to idle at 1.5x with the authored parameter state', () => {
     const root = resolveTreeRoot('SubResource("23")', resources);
-    expect(evaluateTree(root, authoredParams)).toEqual([
-      { clip: 'idle', weight: 1, timeScale: 1.5 },
-    ]);
+    expect(evaluateTree(root, authoredParams)).toEqual([{ clip: 'idle', weight: 1, timeScale: 1.5 }]);
   });
 
   it('switches to the run clip when the run/speed branch is driven up (runtime parity)', () => {
     const root = resolveTreeRoot('SubResource("23")', resources);
-    const program = evaluateTree(root, { ...authoredParams, 'run/blend_amount': '1.0', 'speed/blend_amount': '1.0' });
+    const program = evaluateTree(root, {
+      ...authoredParams,
+      'run/blend_amount': '1.0',
+      'speed/blend_amount': '1.0',
+    });
     // run(1.0) → speed(1.0) → Animation 2 (run clip); gun/state still 0 so this branch reaches output.
     expect(program).toEqual([{ clip: 'run', weight: 1, timeScale: 1.5 }]);
   });

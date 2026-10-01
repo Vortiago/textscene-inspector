@@ -81,7 +81,9 @@ animations = [{
       const result = parser.parse(content);
 
       expect(result.errors.length).toBeGreaterThan(0);
-      const error = result.errors.find(e => e.code === 'MISSING_NODE_NAME' || e.code === 'MISSING_NODE_IDENTIFIER');
+      const error = result.errors.find(
+        (e) => e.code === 'MISSING_NODE_NAME' || e.code === 'MISSING_NODE_IDENTIFIER'
+      );
       expect(error).toBeDefined();
     });
   });

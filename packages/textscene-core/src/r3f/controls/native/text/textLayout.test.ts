@@ -88,20 +88,36 @@ describe('shapeText — autowrap WORD_SMART (BREAK_WORD_BOUND | BREAK_ADAPTIVE |
 
 describe('shapeText — uppercase transform', () => {
   it('shapes the UPPERCASED string, not the source casing', () => {
-    const layout = shapeText('abc', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, uppercase: true, lineSpacingPx: 3 });
+    const layout = shapeText('abc', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      uppercase: true,
+      lineSpacingPx: 3,
+    });
     expect(layout.lines[0]!.text).toBe('ABC');
     expect(layout.lines[0]!.glyphs.map((g) => g.char)).toEqual(['A', 'B', 'C']);
   });
 
   it('leaves the string as-is when uppercase is not requested', () => {
-    const layout = shapeText('abc', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
+    const layout = shapeText('abc', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+    });
     expect(layout.lines[0]!.text).toBe('abc');
   });
 });
 
 describe('shapeText — glyph pen positions', () => {
   it('places the first glyph at x=0 and advances by exactly its own advance', () => {
-    const layout = shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
+    const layout = shapeText('AB', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+    });
     const [a, b] = layout.lines[0]!.glyphs;
     expect(a!.x).toBe(0);
     expect(b!.x).toBeCloseTo(a!.advance, 10);
@@ -112,14 +128,19 @@ describe('shapeText — glyph pen positions', () => {
 
 describe('shapeText — a character outside the baked charset', () => {
   it(
-    'still advances the pen by the font\'s own OS/2 xAvgCharWidth fallback (9.484375px at size 16: ' +
-      '1214 * 16/2048, an independent literal — openSansMetrics.ts\'s OPEN_SANS_METRICS.averageAdvanceUnits ' +
+    "still advances the pen by the font's own OS/2 xAvgCharWidth fallback (9.484375px at size 16: " +
+      "1214 * 16/2048, an independent literal — openSansMetrics.ts's OPEN_SANS_METRICS.averageAdvanceUnits " +
       'is 1214, unitsPerEm 2048) rather than collapsing to a zero-width gap; the placement still carries ' +
       'no atlas glyph, so it draws no ink, only occupies its own width',
     () => {
       // U+03A9 OMEGA stands in for any unbaked codepoint, to pin the fallback itself. If the charset
       // ever bakes it, pick another unbaked character rather than changing the assertions.
-      const layout = shapeText('AΩB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
+      const layout = shapeText('AΩB', {
+        fontSizePx: 16,
+        boxWidthPx: 0,
+        autowrapMode: AutowrapMode.OFF,
+        lineSpacingPx: 3,
+      });
       const [a, omega, b] = layout.lines[0]!.glyphs;
       expect(omega!.glyph).toBeNull();
       expect(omega!.advance).toBeCloseTo(9.484375, 10);
@@ -134,7 +155,12 @@ describe('shapeText — preserveControl / control characters (text_server_adv.cp
   const CONTROL = '';
 
   it('without preserveControl (the default), a control character contributes ZERO width and no ink -- Godot drops it entirely (no Glyph pushed absent preserve_invalid/preserve_control, :6844)', () => {
-    const layout = shapeText(`A${CONTROL}B`, { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
+    const layout = shapeText(`A${CONTROL}B`, {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+    });
     const [a, control, b] = layout.lines[0]!.glyphs;
     expect(control!.advance).toBe(0);
     expect(control!.glyph).toBeNull();
@@ -183,7 +209,12 @@ describe('shapeText — kerning plumbing', () => {
   it('folds a kerning adjustment for an adjacent pair into the pen advance', () => {
     // -256 design units @ unitsPerEm 2048 -> -256*16/2048 = -2px at size 16.
     OPEN_SANS_METRICS.kerning.AB = -256;
-    const layout = shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
+    const layout = shapeText('AB', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+    });
     const [a, b] = layout.lines[0]!.glyphs;
     const bareAdvance = (1354 * 16) / 2048;
     expect(a!.advance).toBeCloseTo(bareAdvance - 2, 10);
@@ -217,7 +248,12 @@ describe('shapeText — fontSizePxAt (per-character size override)', () => {
       fontSizePxAt: () => 16,
       lineSpacingPx: 3,
     });
-    const flat = shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
+    const flat = shapeText('AB', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+    });
     expect(withCallback).toEqual(flat);
   });
 
@@ -240,7 +276,7 @@ describe('shapeText — fontSizePxAt (per-character size override)', () => {
     }
   });
 
-  it('line-break width accounting still uses each character\'s own (possibly smaller or larger) advance', () => {
+  it("line-break width accounting still uses each character's own (possibly smaller or larger) advance", () => {
     // Two 'A's at 40px each (80px total) overflow a 60px box on their own;
     // shrinking the second character to 8px brings the pair under budget.
     const wideLayout = shapeText('A A', {
@@ -267,12 +303,22 @@ describe('shapeText — fontSizePxAt (per-character size override)', () => {
 // (modules/text_server_adv/text_server_adv.cpp:1515-1516).
 describe('shapeText — line pitch', () => {
   it('pins line height at font size 16 to 26px (ceil(ascent)+ceil(descent)+3, not the raw float sum of 24.79)', () => {
-    const layout = shapeText('X', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
+    const layout = shapeText('X', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+    });
     expect(layout.linePitchPx).toBe(26);
   });
 
   it('reports total height as lines.length * linePitchPx', () => {
-    const layout = shapeText('AAAA\nBBBB\nCCCC', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
+    const layout = shapeText('AAAA\nBBBB\nCCCC', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+    });
     expect(layout.lines).toHaveLength(3);
     expect(layout.heightPx).toBe(3 * 26);
   });
@@ -280,7 +326,12 @@ describe('shapeText — line pitch', () => {
 
 describe('shapeText — empty text', () => {
   it('shapes to exactly one empty line', () => {
-    const layout = shapeText('', { fontSizePx: 16, boxWidthPx: 100, autowrapMode: AutowrapMode.WORD_SMART, lineSpacingPx: 3 });
+    const layout = shapeText('', {
+      fontSizePx: 16,
+      boxWidthPx: 100,
+      autowrapMode: AutowrapMode.WORD_SMART,
+      lineSpacingPx: 3,
+    });
     expect(layout.lines).toHaveLength(1);
     expect(layout.lines[0]!.text).toBe('');
     expect(layout.heightPx).toBe(26);
@@ -289,7 +340,12 @@ describe('shapeText — empty text', () => {
 
 describe('shapeText — TextLayoutResult.fontMetrics / baselineOffsetPx (the shaping/painting dispatch seam)', () => {
   it('echoes back the default OPEN_SANS_FONT_METRICS (kind "atlas") and its own ceil(ascent) as baselineOffsetPx when no fontMetrics option is given', () => {
-    const layout = shapeText('X', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
+    const layout = shapeText('X', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+    });
     expect(layout.fontMetrics?.kind).toBe('atlas');
     // ceil(2189 * 16/2048) = 18 -- OPEN_SANS_METRICS.ascent's own value, same
     // arithmetic openSansMetrics.ts's getAscentPx documents.
@@ -306,7 +362,13 @@ describe('shapeText — TextLayoutResult.fontMetrics / baselineOffsetPx (the sha
       getKerningAdjustmentUnits: () => 0,
       averageAdvanceUnits: 500,
     };
-    const layout = shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, fontMetrics: canvasMetrics, lineSpacingPx: 3 });
+    const layout = shapeText('AB', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      fontMetrics: canvasMetrics,
+      lineSpacingPx: 3,
+    });
     expect(layout.fontMetrics).toBe(canvasMetrics);
     for (const gp of layout.lines[0]!.glyphs) {
       expect(gp.glyph).toBeNull();
@@ -346,14 +408,24 @@ describe('soloLineLayout — re-wrapping one line of an already-shaped result', 
   });
 
   it('echoes the atlas metrics when the parent was shaped against them', () => {
-    const parent = shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
+    const parent = shapeText('AB', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+    });
     const solo = soloLineLayout(parent.lines[0]!, parent);
     expect(solo.fontMetrics).toBe(parent.fontMetrics);
     expect(solo.fontMetrics.kind).toBe('atlas');
   });
 
   it('takes its width from the LINE, not the parent — a multi-line parent reports its widest line', () => {
-    const parent = shapeText('WWWW\nI', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
+    const parent = shapeText('WWWW\nI', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+    });
     const narrow = soloLineLayout(parent.lines[1]!, parent);
     expect(narrow.widthPx).toBe(parent.lines[1]!.widthPx);
     expect(narrow.widthPx).toBeLessThan(parent.widthPx);
@@ -362,7 +434,12 @@ describe('soloLineLayout — re-wrapping one line of an already-shaped result', 
   });
 
   it('honours an explicit baselineOffsetPx — a RichTextLabel run shaped at its own [b]/[i] size sits at its OWN baseline, not the paragraph ascent', () => {
-    const parent = shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0 });
+    const parent = shapeText('AB', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 0,
+    });
     const solo = soloLineLayout(parent.lines[0]!, parent, 99);
     expect(solo.baselineOffsetPx).toBe(99);
     expect(solo.fontMetrics).toBe(parent.fontMetrics);
@@ -418,7 +495,8 @@ describe('shapeText — glyph advances vs real Godot (text_server_adv.cpp:6936,7
       lineSpacingPx: 3,
     });
     expect(layout.lines[0]!.glyphs.map((g) => g.advance)).toEqual([
-      9.046875, 10.171875, 6.90625, 9.21875, 9.28125, 6.328125, 4.15625, 4.46875, 9.21875, 8.546875, 9.21875, 4.46875,
+      9.046875, 10.171875, 6.90625, 9.21875, 9.28125, 6.328125, 4.15625, 4.46875, 9.21875, 8.546875, 9.21875,
+      4.46875,
     ]);
     expect(layout.widthPx).toBe(91.03125);
     expect(shapedTextSizeWidthPx(layout.widthPx)).toBe(92);
@@ -481,12 +559,14 @@ describe('shapeText — paragraphSeparator (Label::_shape)', () => {
   });
 
   it('is off by default — the callers whose engine counterpart never splits', () => {
-    expect(shapeText('a\n\nb', {
-      fontSizePx: 16,
-      boxWidthPx: 0,
-      autowrapMode: AutowrapMode.OFF,
-      lineSpacingPx: 3,
-    }).lines).toHaveLength(2);
+    expect(
+      shapeText('a\n\nb', {
+        fontSizePx: 16,
+        boxWidthPx: 0,
+        autowrapMode: AutowrapMode.OFF,
+        lineSpacingPx: 3,
+      }).lines
+    ).toHaveLength(2);
   });
 });
 
@@ -520,10 +600,17 @@ describe('shapeText — tab_stops (ShapeTextOptions.tabStopsPx, label.cpp:196-19
 describe('shapeText — autowrap_trim_flags (ShapeTextOptions.autowrapTrimFlags, label.h:45, text_server.cpp:1076-1093)', () => {
   it('undefined defaults to BOTH edge trims on, exactly like every caller before this option existed', () => {
     const withOption = shapeText('AAAA   BBBB', {
-      fontSizePx: 16, boxWidthPx: 47, autowrapMode: AutowrapMode.WORD, lineSpacingPx: 3, autowrapTrimFlags: 192,
+      fontSizePx: 16,
+      boxWidthPx: 47,
+      autowrapMode: AutowrapMode.WORD,
+      lineSpacingPx: 3,
+      autowrapTrimFlags: 192,
     });
     const withoutOption = shapeText('AAAA   BBBB', {
-      fontSizePx: 16, boxWidthPx: 47, autowrapMode: AutowrapMode.WORD, lineSpacingPx: 3,
+      fontSizePx: 16,
+      boxWidthPx: 47,
+      autowrapMode: AutowrapMode.WORD,
+      lineSpacingPx: 3,
     });
     expect(withoutOption.lines.map((l) => l.text)).toEqual(withOption.lines.map((l) => l.text));
   });
@@ -532,15 +619,23 @@ describe('shapeText — autowrap_trim_flags (ShapeTextOptions.autowrapTrimFlags,
     // "AAAA   " = 54.78125. The 4th 'B' overflows (96.96875 > 90) with the third space as the safe
     // break, and with no end trim the emitted line keeps all three spaces.
     const layout = shapeText('AAAA   BBBB', {
-      fontSizePx: 16, boxWidthPx: 90, autowrapMode: AutowrapMode.WORD, lineSpacingPx: 3, autowrapTrimFlags: 64,
+      fontSizePx: 16,
+      boxWidthPx: 90,
+      autowrapMode: AutowrapMode.WORD,
+      lineSpacingPx: 3,
+      autowrapTrimFlags: 64,
     });
     expect(layout.lines[0]!.text).toBe('AAAA   ');
     expect(layout.lines[1]!.text).toBe('BBBB');
   });
 
-  it('BREAK_TRIM_START_EDGE_SPACES off (end-only, 128) keeps a hard-break continuation\'s leading spaces (text_server.cpp:1097-1103, 1101 finalStart)', () => {
+  it("BREAK_TRIM_START_EDGE_SPACES off (end-only, 128) keeps a hard-break continuation's leading spaces (text_server.cpp:1097-1103, 1101 finalStart)", () => {
     const layout = shapeText('AAAA\n   BBBB', {
-      fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3, autowrapTrimFlags: 128,
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+      autowrapTrimFlags: 128,
     });
     expect(layout.lines[0]!.text).toBe('AAAA');
     expect(layout.lines[1]!.text).toBe('   BBBB');

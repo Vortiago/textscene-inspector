@@ -129,9 +129,7 @@ describe('parser barrel completeness', () => {
 
   it('parser/TscnParser.ts imports every slice that registers a node type', () => {
     const imported = new Set(barrelRelativeSpecifiers());
-    const missing = requiredSpecifiers().filter(
-      (spec) => !imported.has(spec) && !ALLOWLIST.includes(spec)
-    );
+    const missing = requiredSpecifiers().filter((spec) => !imported.has(spec) && !ALLOWLIST.includes(spec));
     expect(missing).toEqual([]);
   });
 
@@ -151,9 +149,7 @@ describe('parser barrel completeness', () => {
   it('reads a type name out of every entry point (sanity: the scrape still fits the source)', () => {
     // The runtime sweeps below are driven by this list, so a scrape that stops
     // matching reports [] over the types it can no longer see.
-    const blind = findParserEntryPoints(nodesRoot).filter(
-      (file) => registeredTypeNames(file).length === 0
-    );
+    const blind = findParserEntryPoints(nodesRoot).filter((file) => registeredTypeNames(file).length === 0);
     expect(blind).toEqual([]);
     expect(typeNamesOnDisk().length).toBeGreaterThan(200);
   });
@@ -163,9 +159,7 @@ describe('parser barrel completeness', () => {
   it('the barrel alone registers every type name a slice declares', () => {
     // Independent of the specifier comparison above: this one fails on an
     // import that is present but no longer reaches the registration.
-    const unregistered = typeNamesOnDisk().filter(
-      (type) => nodeRegistry.getRegistration(type) === null
-    );
+    const unregistered = typeNamesOnDisk().filter((type) => nodeRegistry.getRegistration(type) === null);
     expect(unregistered).toEqual([]);
   });
 

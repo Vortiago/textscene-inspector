@@ -110,9 +110,7 @@ describe('bindSlotTexture — colour space per Godot texture slot', () => {
     // (`material.cpp:4005`), so the sampler loses `repeat_enable` and the clamped
     // arrival is exactly what the slot wants: shared, not cloned.
     const procedural = new THREE.Texture();
-    const noRepeat = materialTextureState(
-      parseStandardMaterial3DScalars({ texture_repeat: 'false' })
-    );
+    const noRepeat = materialTextureState(parseStandardMaterial3DScalars({ texture_repeat: 'false' }));
     expect(bindSlotTexture(procedural, 'normal_texture', noRepeat)).toBe(procedural);
   });
 

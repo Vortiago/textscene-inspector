@@ -4,7 +4,9 @@ import './linterParser.js';
 
 const check = (value: string) =>
   validatorRegistry.findValidator('OpenXRCompositionLayerCylinder', 'fallback_segments')!(
-    'fallback_segments', value, 1
+    'fallback_segments',
+    value,
+    1
   );
 
 describe('fallback_segments reads the slot the engine declares', () => {

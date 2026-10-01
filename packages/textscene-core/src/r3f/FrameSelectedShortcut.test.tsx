@@ -20,13 +20,7 @@ function CameraCapture() {
 }
 
 /** Registers a real mesh at `path` and adds it to the scene through <primitive>. */
-function RegisteredMesh({
-  path,
-  position,
-}: {
-  path: string;
-  position: [number, number, number];
-}) {
+function RegisteredMesh({ path, position }: { path: string; position: [number, number, number] }) {
   const { registerNodeObject, unregisterNodeObject } = useSelection();
   const [mesh] = useState(() => {
     const m = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));

@@ -23,13 +23,7 @@ function useWorldRoot(): THREE.Object3D | null {
   return useContext(WorldRootContext);
 }
 
-export function WorldRootProvider({
-  value,
-  children,
-}: {
-  value: THREE.Object3D;
-  children: ReactNode;
-}) {
+export function WorldRootProvider({ value, children }: { value: THREE.Object3D; children: ReactNode }) {
   return <WorldRootContext.Provider value={value}>{children}</WorldRootContext.Provider>;
 }
 
@@ -64,9 +58,7 @@ export function ParentSpaceFamilyProvider({
   value: SpaceFamily | null;
   children: ReactNode;
 }) {
-  return (
-    <ParentSpaceFamilyContext.Provider value={value}>{children}</ParentSpaceFamilyContext.Provider>
-  );
+  return <ParentSpaceFamilyContext.Provider value={value}>{children}</ParentSpaceFamilyContext.Provider>;
 }
 
 /**

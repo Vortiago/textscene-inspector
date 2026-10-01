@@ -10,9 +10,7 @@ import type { RectangleShape2DProperties } from './types';
 
 const DEFAULT_SIZE = { x: 20, y: 20 };
 
-export function decodeRectangleShape2D(
-  properties: Record<string, string>
-): RectangleShape2DProperties {
+export function decodeRectangleShape2D(properties: Record<string, string>): RectangleShape2DProperties {
   return {
     size: nonNegativeSizeOr(
       vec2Or(properties.size, DEFAULT_SIZE, 'RectangleShape2D size'),

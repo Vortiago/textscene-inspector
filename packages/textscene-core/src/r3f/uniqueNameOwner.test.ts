@@ -165,15 +165,11 @@ describe('localSceneClaims', () => {
   });
 
   it('reads an instance root\u2019s own claims', () => {
-    expect(claimsFrom('Root/HudInstance/Sprite').get('%Panel')?.livePath).toBe(
-      'Root/HudInstance/Panel'
-    );
+    expect(claimsFrom('Root/HudInstance/Sprite').get('%Panel')?.livePath).toBe('Root/HudInstance/Panel');
   });
 
   it('falls back to the table of the instance\u2019s owner', () => {
-    expect(claimsFrom('Root/HudInstance/Sprite').get('%Extra')?.livePath).toBe(
-      'Root/HudInstance/Extra'
-    );
+    expect(claimsFrom('Root/HudInstance/Sprite').get('%Extra')?.livePath).toBe('Root/HudInstance/Extra');
   });
 
   it('stops at the owner: a nested instance does not reach the outer table', () => {

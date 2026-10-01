@@ -24,7 +24,8 @@ function gltfWithNodeScale(scale: number): ArrayBuffer {
   return new TextEncoder().encode(JSON.stringify(gltf)).buffer as ArrayBuffer;
 }
 
-const SIDECAR = '[remap]\n\nimporter="scene"\n\n[params]\n\nnodes/apply_root_scale=true\nnodes/root_scale=0.00999999999999999\n';
+const SIDECAR =
+  '[remap]\n\nimporter="scene"\n\n[params]\n\nnodes/apply_root_scale=true\nnodes/root_scale=0.00999999999999999\n';
 
 /**
  * Drive the processor the way the loader does: request the path, let the real
@@ -90,9 +91,7 @@ describe('createGLBProcessor — import sidecar', () => {
     // none, and the panel is for resources a scene actually declares.
     const failed = vi.fn();
     const fileEventBus = new FileEventBus({
-      loadResource: vi.fn(async (path: string) =>
-        path === GLTF_PATH ? gltfWithNodeScale(100) : null
-      ),
+      loadResource: vi.fn(async (path: string) => (path === GLTF_PATH ? gltfWithNodeScale(100) : null)),
     });
     fileEventBus.on('failed', failed);
     const eventBus = new ResourceEventBus();

@@ -51,8 +51,16 @@ const canvasItemClipAncestryRule: LintRule = {
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'CanvasItem'),
     emits: [
-      { ruleName: 'canvasitem-ancestor-clips-children', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      { ruleName: 'canvasitem-ancestor-is-canvasgroup', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'canvasitem-ancestor-clips-children',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
+      {
+        ruleName: 'canvasitem-ancestor-is-canvasgroup',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
     ],
   },
   check: checkCanvasItemClipAncestry,

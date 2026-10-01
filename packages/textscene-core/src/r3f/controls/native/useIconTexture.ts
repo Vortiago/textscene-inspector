@@ -47,7 +47,10 @@ const NO_INT_RESOURCES: readonly TscnInternalResource[] = [];
  * so one GPU texture is held. A `missing` ref falls back, as `add_theme_icon_override` (`control.cpp`)
  * refuses an invalid icon. One still loading returns `null`: the vendored icon first would flash.
  */
-export function useNodeIcon(themed: ThemedIconRef | undefined, vendoredUrl: string | null): THREE.Texture | null {
+export function useNodeIcon(
+  themed: ThemedIconRef | undefined,
+  vendoredUrl: string | null
+): THREE.Texture | null {
   const themedResult = useTexture2D(
     themed?.ref,
     themed?.resources.externalResources ?? NO_EXT_RESOURCES,

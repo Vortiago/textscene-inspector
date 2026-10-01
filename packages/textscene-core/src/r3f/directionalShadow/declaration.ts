@@ -45,9 +45,7 @@ export function directionalShadowUserData(
 }
 
 /** The light's declaration, or null for a light that made none, which the fitter leaves alone. */
-export function readDirectionalShadowDeclaration(
-  light: THREE.Object3D
-): DirectionalShadowDeclaration | null {
+export function readDirectionalShadowDeclaration(light: THREE.Object3D): DirectionalShadowDeclaration | null {
   const declaration = (light.userData as Record<string, unknown>)[DECLARATION_KEY];
   return isDeclaration(declaration) ? declaration : null;
 }

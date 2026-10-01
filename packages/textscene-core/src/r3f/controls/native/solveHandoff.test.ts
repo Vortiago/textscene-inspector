@@ -30,7 +30,7 @@ describe('defineShare', () => {
     expect(calls).toBe(1);
   });
 
-  it('recomputes for a different theme object — `theme` is not a dependency of `buildSolveTree`\'s tree memo (`buildSolveTree.ts:1068-1097`), so a `SolveNode` survives a theme change', () => {
+  it("recomputes for a different theme object — `theme` is not a dependency of `buildSolveTree`'s tree memo (`buildSolveTree.ts:1068-1097`), so a `SolveNode` survives a theme change", () => {
     let calls = 0;
     const share = defineShare(() => ({ shaped: ++calls }));
     const n = node();
@@ -113,7 +113,7 @@ describe('defineChannel', () => {
     expect(channel.open(null)).toBeUndefined();
   });
 
-  it('refuses another channel\'s sealed value — provenance is reference equality, not shape', () => {
+  it("refuses another channel's sealed value — provenance is reference equality, not shape", () => {
     const mine = defineChannel<{ draggerPos: number }>('mine');
     const theirs = defineChannel<{ draggerPos: number }>('theirs');
 
@@ -137,7 +137,7 @@ describe('defineChannel', () => {
 });
 
 describe('isSealedHandoff', () => {
-  it('recognises any channel\'s sealed value, and nothing else', () => {
+  it("recognises any channel's sealed value, and nothing else", () => {
     const channel = defineChannel<number>('c');
 
     expect(isSealedHandoff(channel.seal(1))).toBe(true);

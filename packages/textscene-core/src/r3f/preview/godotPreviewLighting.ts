@@ -50,10 +50,7 @@ export interface PreviewToggles {
  * Which previews to mount. Mirrors `_node_added`: by node type only, so a hidden
  * `DirectionalLight3D` with zero energy still takes the preview sun away.
  */
-export function previewYield(
-  sceneNodeTypes: Iterable<string>,
-  toggles: PreviewToggles
-): PreviewToggles {
+export function previewYield(sceneNodeTypes: Iterable<string>, toggles: PreviewToggles): PreviewToggles {
   let hasDirectionalLight = false;
   let hasWorldEnvironment = false;
 

@@ -73,8 +73,7 @@ export function surfaceLayout(format: number): SurfaceLayout {
     tangentFrame: compressed && hasTangent,
     positionStride,
     normalStride,
-    attributeStride:
-      (hasColor ? COLOR_BYTES : 0) + (hasUV ? uvBytes : 0) + (hasUV2 ? uvBytes : 0),
+    attributeStride: (hasColor ? COLOR_BYTES : 0) + (hasUV ? uvBytes : 0) + (hasUV2 ? uvBytes : 0),
     uvOffset: hasUV ? (hasColor ? COLOR_BYTES : 0) : -1,
   };
 }

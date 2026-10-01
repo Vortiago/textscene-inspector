@@ -155,9 +155,7 @@ export function buildPrismMeshGeometry(p: PrismMeshProperties): THREE.BufferGeom
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
   geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex(
-    point > 65535
-      ? new THREE.Uint32BufferAttribute(indices, 1)
-      : new THREE.Uint16BufferAttribute(indices, 1)
+    point > 65535 ? new THREE.Uint32BufferAttribute(indices, 1) : new THREE.Uint16BufferAttribute(indices, 1)
   );
   return geometry;
 }

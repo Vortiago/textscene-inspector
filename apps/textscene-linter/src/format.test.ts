@@ -33,9 +33,7 @@ describe('formatDiagnostics', () => {
   });
 
   it('returns a green success line for a clean file (color)', () => {
-    expect(formatDiagnostics('scenes/a.tscn', [], true)).toEqual([
-      '\x1b[32m✓ scenes/a.tscn\x1b[0m',
-    ]);
+    expect(formatDiagnostics('scenes/a.tscn', [], true)).toEqual(['\x1b[32m✓ scenes/a.tscn\x1b[0m']);
   });
 
   it('formats an errors block: header, diagnostic line, trailing blank line (no color)', () => {
@@ -204,8 +202,14 @@ describe('toJsonFindings', () => {
   });
 
   it('concatenates findings from multiple files in order', () => {
-    const fileA: FileDiagnostics = { filePath: 'a.tscn', diagnostics: [makeDiagnostic({ severity: 'error' })] };
-    const fileB: FileDiagnostics = { filePath: 'b.tscn', diagnostics: [makeDiagnostic({ severity: 'warning' })] };
+    const fileA: FileDiagnostics = {
+      filePath: 'a.tscn',
+      diagnostics: [makeDiagnostic({ severity: 'error' })],
+    };
+    const fileB: FileDiagnostics = {
+      filePath: 'b.tscn',
+      diagnostics: [makeDiagnostic({ severity: 'warning' })],
+    };
 
     const findings = toJsonFindings([fileA, fileB]);
 
@@ -252,9 +256,7 @@ describe('formatGithubAnnotations', () => {
   it('leaves line and col off an annotation whose line no editor row carries', () => {
     const file: FileDiagnostics = {
       filePath: 'bad.tscn',
-      diagnostics: [
-        makeDiagnostic({ ruleName: 'strict-parser', location: { line: 0, column: 10 } }),
-      ],
+      diagnostics: [makeDiagnostic({ ruleName: 'strict-parser', location: { line: 0, column: 10 } })],
     };
 
     const [annotation] = formatGithubAnnotations([file]);
@@ -318,7 +320,11 @@ describe('formatGithubAnnotations', () => {
   });
 
   it('emits a single ::error annotation (no line/col) for an unreadable file', () => {
-    const file: FileDiagnostics = { filePath: 'missing.tscn', diagnostics: [], readError: 'ENOENT: missing.tscn' };
+    const file: FileDiagnostics = {
+      filePath: 'missing.tscn',
+      diagnostics: [],
+      readError: 'ENOENT: missing.tscn',
+    };
 
     expect(formatGithubAnnotations([file])).toEqual([
       '::error file=missing.tscn::ENOENT: missing.tscn (file-read-error)',
@@ -326,8 +332,14 @@ describe('formatGithubAnnotations', () => {
   });
 
   it('concatenates annotations from multiple files in order', () => {
-    const fileA: FileDiagnostics = { filePath: 'a.tscn', diagnostics: [makeDiagnostic({ severity: 'error' })] };
-    const fileB: FileDiagnostics = { filePath: 'b.tscn', diagnostics: [makeDiagnostic({ severity: 'warning' })] };
+    const fileA: FileDiagnostics = {
+      filePath: 'a.tscn',
+      diagnostics: [makeDiagnostic({ severity: 'error' })],
+    };
+    const fileB: FileDiagnostics = {
+      filePath: 'b.tscn',
+      diagnostics: [makeDiagnostic({ severity: 'warning' })],
+    };
 
     const lines = formatGithubAnnotations([fileA, fileB]);
 

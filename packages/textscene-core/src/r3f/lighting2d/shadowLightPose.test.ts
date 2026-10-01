@@ -45,18 +45,20 @@ describe('sampleShadowLight', () => {
   });
 
   it('scales the rect with the node transform', () => {
-    const pose = sampleShadowLight(quadUnder({ x: 0, y: 0 }, { x: 0, y: 0 }, 200, (g) =>
-      g.scale.set(2, 0.5, 1)
-    ))!;
+    const pose = sampleShadowLight(
+      quadUnder({ x: 0, y: 0 }, { x: 0, y: 0 }, 200, (g) => g.scale.set(2, 0.5, 1))
+    )!;
     expect(pose.rect).toEqual({ minX: -200, minY: -50, maxX: 200, maxY: 50 });
   });
 
   it('bounds a rotated cookie by its corners, never by its edges', () => {
     // A 45° square's AABB grows by √2, so an axis-aligned box built from the
     // untransformed extents would under-cover it and cull a real occluder.
-    const pose = sampleShadowLight(quadUnder({ x: 0, y: 0 }, { x: 0, y: 0 }, 200, (g) => {
-      g.rotation.z = Math.PI / 4;
-    }))!;
+    const pose = sampleShadowLight(
+      quadUnder({ x: 0, y: 0 }, { x: 0, y: 0 }, 200, (g) => {
+        g.rotation.z = Math.PI / 4;
+      })
+    )!;
     expect(pose.rect.maxX).toBeCloseTo(100 * Math.SQRT2, 4);
     expect(pose.rect.minY).toBeCloseTo(-100 * Math.SQRT2, 4);
   });
@@ -83,9 +85,11 @@ describe('sampleShadowLight', () => {
   it('carries the light rotation into the inverse frame', () => {
     // A quarter-turn light: its local +X points along world +Y, so a world point
     // 100 above the light maps to local (100, 0).
-    const pose = sampleShadowLight(quadUnder({ x: 400, y: 300 }, { x: 0, y: 0 }, 200, (g) => {
-      g.rotation.z = Math.PI / 2;
-    }))!;
+    const pose = sampleShadowLight(
+      quadUnder({ x: 400, y: 300 }, { x: 0, y: 0 }, 200, (g) => {
+        g.rotation.z = Math.PI / 2;
+      })
+    )!;
     const [m00, m01, m02, m10, m11, m12] = pose.worldToLocal;
     expect(m00 * 400 + m01 * 400 + m02).toBeCloseTo(100, 6);
     expect(m10 * 400 + m11 * 400 + m12).toBeCloseTo(0, 6);

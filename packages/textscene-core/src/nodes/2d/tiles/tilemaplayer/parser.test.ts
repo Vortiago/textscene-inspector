@@ -4,10 +4,11 @@ import { parseTileMapLayer } from './parser';
 
 describe('parseTileMapLayer', () => {
   it('parses the Node2D base plus tile_set ref and enabled (happy path)', () => {
-    const result = parseTileMapLayer(
-      heading('TileMapLayer', { name: 'Layer0', parent: '.' }),
-      { position: 'Vector2(10, 20)', tile_set: 'ExtResource("1")', enabled: 'false' }
-    );
+    const result = parseTileMapLayer(heading('TileMapLayer', { name: 'Layer0', parent: '.' }), {
+      position: 'Vector2(10, 20)',
+      tile_set: 'ExtResource("1")',
+      enabled: 'false',
+    });
     expect(result.name).toBe('Layer0');
     expect(result.parent).toBe('.');
     expect(result.position).toEqual({ x: 10, y: 20 });

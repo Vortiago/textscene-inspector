@@ -17,9 +17,12 @@ describe('multiplyModulate', () => {
   });
 
   it('composes hierarchically (a parent dims its children)', () => {
-    expect(
-      multiplyModulate({ r: 0.5, g: 0.5, b: 0.5, a: 1 }, { r: 0.5, g: 0.5, b: 0.5, a: 1 })
-    ).toEqual({ r: 0.25, g: 0.25, b: 0.25, a: 1 });
+    expect(multiplyModulate({ r: 0.5, g: 0.5, b: 0.5, a: 1 }, { r: 0.5, g: 0.5, b: 0.5, a: 1 })).toEqual({
+      r: 0.25,
+      g: 0.25,
+      b: 0.25,
+      a: 1,
+    });
   });
 
   it('multiplies alpha (transparent parent → transparent child)', () => {

@@ -18,12 +18,9 @@ import { formatCode, valueCode } from './v/codes.js';
  * through ToInt32, and a `BitField<T>` is int64 with labels up to bit 35
  * (`RenderingServer::ArrayFormat`). BigInt is exact over the whole slot.
  */
-const outsideMask = (num: number, bits: number): boolean =>
-  (BigInt(num) & ~BigInt(bits)) !== 0n;
-const insideMask = (num: number, bits: number): number =>
-  Number(BigInt(num) & BigInt(bits));
-const bitIsSet = (bit: number, bits: number): boolean =>
-  (BigInt(bit) & BigInt(bits)) !== 0n;
+const outsideMask = (num: number, bits: number): boolean => (BigInt(num) & ~BigInt(bits)) !== 0n;
+const insideMask = (num: number, bits: number): number => Number(BigInt(num) & BigInt(bits));
+const bitIsSet = (bit: number, bits: number): boolean => (BigInt(bit) & BigInt(bits)) !== 0n;
 
 /** `LABEL (bit) | LABEL (bit)` for whichever of `labels` appear in `bits`. */
 function describeBits(labels: Record<number, string>, bits: number): string {
@@ -58,38 +55,41 @@ function bitField(
     grounding: { kind: 'enforced' | 'hinted'; cite: string };
   }
 ): PropertyValidator {
-  const validator = accepts((key, value, line) => {
-    // `readIntSlot`, not `IS_VALID_INT_RE`, the grammar of an index inside a key:
-    // Godot reads any number token into an INT slot, so `justification_flags =
-    // 3.0` and `= 2e1` load. `'int64'`, since `BitField<T>` is int64_t and keeps
-    // 4294967295 and 2^32 + 1 intact.
-    const read = readIntSlot(value, undefined, 'int64');
-    const num = read.stored;
-    if (num === null) {
-      return propertyError(
-        key,
-        line,
-        `Property '${name}' must be an integer, got: "${value}"`,
-        formatCode(name)
-      );
-    }
-    // A non-finite reads but does not fit, and every bit test below is false
-    // for NaN.
-    const refused = unrepresentableInt(name, key, value, line, valueCode(name), num, 'int64');
-    if (refused) return refused;
-    for (const arm of opts.arms) {
-      // `num > arm.bits` first only as a cheap reject: a value whose bits all
-      // lie inside the set cannot exceed it. `outsideMask` is what catches the
-      // in-range non-subsets a max bound would wave through, and it is exact at
-      // every width the slot holds.
-      if (num < 0 || num > arm.bits || outsideMask(num, arm.bits)) {
-        return propertyError(key, line, arm.message(num), valueCode(name), arm.severity);
+  const validator = accepts(
+    (key, value, line) => {
+      // `readIntSlot`, not `IS_VALID_INT_RE`, the grammar of an index inside a key:
+      // Godot reads any number token into an INT slot, so `justification_flags =
+      // 3.0` and `= 2e1` load. `'int64'`, since `BitField<T>` is int64_t and keeps
+      // 4294967295 and 2^32 + 1 intact.
+      const read = readIntSlot(value, undefined, 'int64');
+      const num = read.stored;
+      if (num === null) {
+        return propertyError(
+          key,
+          line,
+          `Property '${name}' must be an integer, got: "${value}"`,
+          formatCode(name)
+        );
       }
-    }
-    // Last, after every arm: a value that is both stored differently and
-    // outside the mask has the arm's diagnostic, and that outranks this one.
-    return storedNotWritten(name, key, value, line, valueCode(name), read);
-  }, `bit mask of ${describeBits(opts.labels, opts.arms[0].bits)}`);
+      // A non-finite reads but does not fit, and every bit test below is false
+      // for NaN.
+      const refused = unrepresentableInt(name, key, value, line, valueCode(name), num, 'int64');
+      if (refused) return refused;
+      for (const arm of opts.arms) {
+        // `num > arm.bits` first only as a cheap reject: a value whose bits all
+        // lie inside the set cannot exceed it. `outsideMask` is what catches the
+        // in-range non-subsets a max bound would wave through, and it is exact at
+        // every width the slot holds.
+        if (num < 0 || num > arm.bits || outsideMask(num, arm.bits)) {
+          return propertyError(key, line, arm.message(num), valueCode(name), arm.severity);
+        }
+      }
+      // Last, after every arm: a value that is both stored differently and
+      // outside the mask has the arm's diagnostic, and that outranks this one.
+      return storedNotWritten(name, key, value, line, valueCode(name), read);
+    },
+    `bit mask of ${describeBits(opts.labels, opts.arms[0].bits)}`
+  );
 
   validator.grounding = opts.grounding;
   // An INT slot: a bit field refuses a literal the tokenizer reads.
@@ -119,11 +119,7 @@ export interface MaskedBitFieldOptions {
  * @param mask - the OR of every bit the setter keeps. Written as a literal sum
  *   of the engine's constants at the call site, never as a magic number.
  */
-export function maskedBitField(
-  name: string,
-  mask: number,
-  opts: MaskedBitFieldOptions
-): PropertyValidator {
+export function maskedBitField(name: string, mask: number, opts: MaskedBitFieldOptions): PropertyValidator {
   const describe = (bits: number): string => describeBits(opts.labels, bits);
   const allNames = describe(mask);
   const { hintedBits } = opts;
@@ -172,9 +168,7 @@ export interface HintedBitFieldOptions {
 export function hintedBitField(name: string, opts: HintedBitFieldOptions): PropertyValidator {
   // OR-ed as BigInt: JS `|` coerces to int32, which turns a label at or past
   // bit 31 negative.
-  const hintedBits = Number(
-    Object.keys(opts.labels).reduce((acc, bit) => acc | BigInt(bit), 0n)
-  );
+  const hintedBits = Number(Object.keys(opts.labels).reduce((acc, bit) => acc | BigInt(bit), 0n));
   const allNames = describeBits(opts.labels, hintedBits);
 
   return bitField(name, {

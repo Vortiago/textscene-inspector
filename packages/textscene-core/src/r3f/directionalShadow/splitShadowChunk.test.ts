@@ -55,11 +55,21 @@ function runLookup(slots: SplitSlot[], depth: number, shadowBySlot = [0, 0, 0, 0
     samples.push({ slot, radiusScale });
     return shadowBySlot[slot]!;
   };
-  const body = lookupBody(godotSplitShadowChunk(threeChunk)!).replace(/\b(?:int|float|bool|vec4)\s+(?=\w+\s*=)/g, 'let ');
+  const body = lookupBody(godotSplitShadowChunk(threeChunk)!).replace(
+    /\b(?:int|float|bool|vec4)\s+(?=\w+\s*=)/g,
+    'let '
+  );
   const cascade = slots.map(([x, y, z, w]) => ({ x, y, z, w }));
   const run = new Function(
-    'smoothstep', 'mix', 'getSunShadowSplit', 'SUN_LIGHT_CASCADES', 'shadowIndex',
-    'vSunShadowWorldPosition', 'sunShadowCascade', 'shadowMap', 'sunLightShadow',
+    'smoothstep',
+    'mix',
+    'getSunShadowSplit',
+    'SUN_LIGHT_CASCADES',
+    'shadowIndex',
+    'vSunShadowWorldPosition',
+    'sunShadowCascade',
+    'shadowMap',
+    'sunLightShadow',
     body
   ) as (...args: unknown[]) => number;
   const shadow = run(smoothstep, mix, sampleSplit, 4, 0, { w: depth }, cascade, null, null);
@@ -92,7 +102,9 @@ describe('godotSplitShadowChunk', () => {
 
   it('keeps everything after the lookup (edge case)', () => {
     const patched = godotSplitShadowChunk(threeChunk)!;
-    const tail = threeChunk.slice(threeChunk.indexOf('\n\t#endif', threeChunk.indexOf('float getSunShadow(')));
+    const tail = threeChunk.slice(
+      threeChunk.indexOf('\n\t#endif', threeChunk.indexOf('float getSunShadow('))
+    );
     expect(tail).toContain('getPointShadow');
     expect(patched.endsWith(tail)).toBe(true);
   });

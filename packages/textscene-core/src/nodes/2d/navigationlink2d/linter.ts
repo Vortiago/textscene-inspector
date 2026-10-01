@@ -59,9 +59,7 @@ function isEqualApproxVector2(left: Vec2, right: Vec2): boolean {
 
 function checkNavigationLink2D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  const properties = isValidProperties(node.properties)
-    ? (node.properties as Record<string, string>)
-    : {};
+  const properties = isValidProperties(node.properties) ? (node.properties as Record<string, string>) : {};
 
   const start = readPosition(properties, 'start_position');
   const end = readPosition(properties, 'end_position');

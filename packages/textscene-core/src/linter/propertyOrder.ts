@@ -21,9 +21,7 @@ export function targetsBeforeLatestTrigger(
   triggers: readonly string[]
 ): string[] {
   const keys = Object.keys(properties);
-  const triggerIndices = triggers
-    .map((trigger) => keys.indexOf(trigger))
-    .filter((index) => index !== -1);
+  const triggerIndices = triggers.map((trigger) => keys.indexOf(trigger)).filter((index) => index !== -1);
   if (triggerIndices.length === 0) return [];
 
   const latestTriggerIndex = Math.max(...triggerIndices);

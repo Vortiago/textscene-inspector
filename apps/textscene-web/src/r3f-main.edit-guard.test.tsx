@@ -38,9 +38,7 @@ const SWITCHED_TSCN = `[gd_scene load_steps=1 format=3]
 `;
 
 const DEFAULT_FILE = 'unit-plane-mesh.tscn';
-const SWITCH_TARGET = flattenLeaves(buildFixtureTree(fixtures)).find(
-  (l) => l.file !== DEFAULT_FILE
-) as Leaf;
+const SWITCH_TARGET = flattenLeaves(buildFixtureTree(fixtures)).find((l) => l.file !== DEFAULT_FILE) as Leaf;
 
 function resetPersistence() {
   try {

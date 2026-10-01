@@ -187,17 +187,13 @@ describe('importRootScale', () => {
   });
 
   it('reports apply_root_scale = false as a root-node scale instead', () => {
-    const parsed = parseImportFile(
-      '[params]\n\nnodes/apply_root_scale=false\nnodes/root_scale=4.0\n'
-    );
+    const parsed = parseImportFile('[params]\n\nnodes/apply_root_scale=false\nnodes/root_scale=4.0\n');
     expect(importRootScale(parsed)).toEqual({ scale: 4, bake: false });
   });
 
   it('is null when the scale is 1, so an identity sidecar costs nothing', () => {
     // 24 of the 25 vendored sidecars are exactly this.
-    expect(
-      importRootScale(parseImportFile('[params]\n\nnodes/root_scale=1.0\n'))
-    ).toBeNull();
+    expect(importRootScale(parseImportFile('[params]\n\nnodes/root_scale=1.0\n'))).toBeNull();
   });
 
   it('is null for a missing sidecar, an absent key, or a non-scene importer', () => {

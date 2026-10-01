@@ -45,7 +45,11 @@ export function codeEditLineNumberDigits(lineCount: number, minDigits: number | 
 }
 
 /** `String::num_int64(line + 1).lpad(digits, padding)` (`code_edit.cpp:1569`). */
-export function codeEditLineNumberText(lineIndex: number, digits: number, zeroPad: boolean | undefined): string {
+export function codeEditLineNumberText(
+  lineIndex: number,
+  digits: number,
+  zeroPad: boolean | undefined
+): string {
   return String(lineIndex + 1).padStart(digits, zeroPad ? ZERO_PAD : SPACE_PAD);
 }
 
@@ -73,7 +77,9 @@ export function codeEditGutterBand(
   charWidth0Px: number,
   lineCount: number
 ): CodeEditGutterBand {
-  const mainDrawn = Boolean(props.gutterDrawBookmarks || props.gutterDrawBreakpoints || props.gutterDrawExecutingLines);
+  const mainDrawn = Boolean(
+    props.gutterDrawBookmarks || props.gutterDrawBreakpoints || props.gutterDrawExecutingLines
+  );
   const mainWidthPx = mainDrawn ? rowHeightPx : 0;
 
   const lineNumbersDrawn = props.gutterDrawLineNumbers === true;
@@ -156,7 +162,11 @@ export function codeEditLineNumberTextXPx(
  * minus half the text size, plus the ascent. `ofs.y - ascent` is the shaped text's box top, which
  * `<TextRun>` anchors from, so the ascent cancels.
  */
-export function codeEditGutterCellTextTopPx(rowTopPx: number, rowHeightPx: number, textHeightPx: number): number {
+export function codeEditGutterCellTextTopPx(
+  rowTopPx: number,
+  rowHeightPx: number,
+  textHeightPx: number
+): number {
   return rowTopPx + (rowHeightPx - textHeightPx) / 2;
 }
 
@@ -170,7 +180,6 @@ export const codeEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   const band = codeEditGutterBand(props, rowHeightPx, charWidth0Px, lineCount);
   return textEditMinimumSizeWith(n, ctx, props, styleBox, band.totalWidthPx, props.indentSize);
 };
-
 
 /** `code_folding_color` = `Color(0.8, 0.8, 0.8, 0.8)` (`default_theme.cpp:524`), the fold arrow's modulate. */
 export const CODE_EDIT_CODE_FOLDING_COLOR: ControlColor = { r: 0.8, g: 0.8, b: 0.8, a: 0.8 };

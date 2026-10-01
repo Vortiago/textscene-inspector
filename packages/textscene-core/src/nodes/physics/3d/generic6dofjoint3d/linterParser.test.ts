@@ -40,9 +40,7 @@ describe('Generic6DOFJoint3D strict validators', () => {
     });
 
     it('rejects a non-boolean enabled flag', () => {
-      expect(check('linear_limit_x/enabled', 'maybe')?.code).toBe(
-        'INVALID_LINEAR_LIMIT_X/ENABLED_FORMAT'
-      );
+      expect(check('linear_limit_x/enabled', 'maybe')?.code).toBe('INVALID_LINEAR_LIMIT_X/ENABLED_FORMAT');
     });
 
     it('accepts upper_distance/lower_distance unbounded (PROPERTY_HINT_NONE, no range)', () => {
@@ -205,12 +203,8 @@ describe('Generic6DOFJoint3D strict validators', () => {
       // linear_limit/damping is 0.01-16 and angular_limit/damping is too, while
       // both spring groups leave it unbounded, so one code for all four would hide
       // which bound fired.
-      expect(check('linear_limit_x/damping', '20.0')?.code).toBe(
-        'INVALID_LINEAR_LIMIT_X/DAMPING_VALUE'
-      );
-      expect(check('angular_limit_x/damping', '20.0')?.code).toBe(
-        'INVALID_ANGULAR_LIMIT_X/DAMPING_VALUE'
-      );
+      expect(check('linear_limit_x/damping', '20.0')?.code).toBe('INVALID_LINEAR_LIMIT_X/DAMPING_VALUE');
+      expect(check('angular_limit_x/damping', '20.0')?.code).toBe('INVALID_ANGULAR_LIMIT_X/DAMPING_VALUE');
       expect(check('linear_spring_x/damping', '20.0')).toBeNull();
       expect(check('angular_spring_x/damping', '20.0')).toBeNull();
     });
@@ -272,7 +266,11 @@ describe('Generic6DOFJoint3D strict validators', () => {
       // three instances even though they are distinct functions.
       const axes = ['x', 'y', 'z'].map((axis) => dispatcher(`linear_limit_${axis}/*`));
       expect(new Set(axes).size).toBe(3);
-      expect(axes.map((d) => d.grounding)).toEqual([axes[0]!.grounding, axes[0]!.grounding, axes[0]!.grounding]);
+      expect(axes.map((d) => d.grounding)).toEqual([
+        axes[0]!.grounding,
+        axes[0]!.grounding,
+        axes[0]!.grounding,
+      ]);
     });
   });
 

@@ -83,7 +83,11 @@ function rawPropertyLines(source: string): number[] {
  * it, `useControlOwnTint` included, since only the walker holds its input.
  */
 function wideTintLines(source: string): number[] {
-  return offendingLines(source, /\buseCanvasItemTint\b|\buseControlTint\b|\buseControlOwnTint\b/, EXEMPT_MARKER);
+  return offendingLines(
+    source,
+    /\buseCanvasItemTint\b|\buseControlTint\b|\buseControlOwnTint\b/,
+    EXEMPT_MARKER
+  );
 }
 
 /**
@@ -131,11 +135,15 @@ describe('Control painter view conformance', () => {
     // Another node's properties: `subviewportcontainer`'s child SubViewport.
     expect(rawPropertyLines('  const props = viewport.properties as SubViewportProperties;')).toEqual([]);
     expect(rawPropertyLines(' * `solveNode.node.properties` in a comment is not a read')).toEqual([]);
-    expect(rawPropertyLines('// painter-view-exempt: not a Control\nconst p = n.node.properties as X;')).toEqual([]);
+    expect(
+      rawPropertyLines('// painter-view-exempt: not a Control\nconst p = n.node.properties as X;')
+    ).toEqual([]);
   });
 
   it('would catch a painter resolving a tint — the check is not vacuous', () => {
-    expect(wideTintLines('  const tint = useCanvasItemTint({ modulate: WHITE, self_modulate: s });')).toEqual([1]);
+    expect(wideTintLines('  const tint = useCanvasItemTint({ modulate: WHITE, self_modulate: s });')).toEqual(
+      [1]
+    );
     expect(wideTintLines('  const tint = useControlTint(a, b);')).toEqual([1]);
     // The walker calls this hook. A painter never does.
     expect(wideTintLines('  const tint = useControlOwnTint(inherited, solveNode);')).toEqual([1]);

@@ -71,12 +71,10 @@ describe('unvalidatedByClass', () => {
     };
     const covered = new Set(['BaseMaterial3D', 'StandardMaterial3D']);
     // Widest gap first, so the row a reader sees is the one worth acting on.
-    expect(unvalidatedByClass(engine, registry({ BaseMaterial3D: ['albedo_color'] }), covered)).toEqual(
-      [
-        { cls: 'StandardMaterial3D', missing: ['albedo_color', 'roughness'] },
-        { cls: 'BaseMaterial3D', missing: ['roughness'] },
-      ]
-    );
+    expect(unvalidatedByClass(engine, registry({ BaseMaterial3D: ['albedo_color'] }), covered)).toEqual([
+      { cls: 'StandardMaterial3D', missing: ['albedo_color', 'roughness'] },
+      { cls: 'BaseMaterial3D', missing: ['roughness'] },
+    ]);
   });
 
   it('skips a class outside the covered scope', () => {

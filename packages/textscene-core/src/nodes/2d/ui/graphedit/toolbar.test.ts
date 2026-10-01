@@ -63,7 +63,13 @@ describe('graphEditToolbar item set (graph_edit.cpp:2812-2870)', () => {
   });
 
   it('drops both grid toggles AND the snapping spinbox together (:2842-2848)', () => {
-    expect(idsOf({ showGridButtons: false })).toEqual(['zoom_minus', 'zoom_reset', 'zoom_plus', 'minimap', 'arrange']);
+    expect(idsOf({ showGridButtons: false })).toEqual([
+      'zoom_minus',
+      'zoom_reset',
+      'zoom_plus',
+      'minimap',
+      'arrange',
+    ]);
   });
 
   it('drops only its own button for show_minimap_button (:2854-2857) and show_arrange_button (:2863-2866)', () => {
@@ -79,7 +85,12 @@ describe('graphEditToolbar item set (graph_edit.cpp:2812-2870)', () => {
 
   it('still draws the bare panel when show_menu is true and every item is hidden', () => {
     const bar = graphEditToolbar(
-      props({ showZoomButtons: false, showGridButtons: false, showMinimapButton: false, showArrangeButton: false }),
+      props({
+        showZoomButtons: false,
+        showGridButtons: false,
+        showMinimapButton: false,
+        showArrangeButton: false,
+      }),
       theme,
       metrics
     );
@@ -93,13 +104,13 @@ describe('graphEditToolbar item set (graph_edit.cpp:2812-2870)', () => {
 describe('graphEditToolbar geometry (PanelContainer + HBoxContainer at scale 1)', () => {
   const bar = graphEditToolbar(props({ showZoomLabel: true }), theme, metrics)!;
 
-  it('sits at the constructor\'s own hardcoded (10, 10) (graph_edit.cpp:3232)', () => {
+  it("sits at the constructor's own hardcoded (10, 10) (graph_edit.cpp:3232)", () => {
     expect(GRAPH_EDIT_MENU_POSITION).toEqual({ x: 10, y: 10 });
     expect(bar.panelRect.x).toBe(10);
     expect(bar.panelRect.y).toBe(10);
   });
 
-  it('sizes the panel to the hbox minimum plus graph_toolbar_style\'s (4,2,4,2) margins', () => {
+  it("sizes the panel to the hbox minimum plus graph_toolbar_style's (4,2,4,2) margins", () => {
     // Icon-only FlatButton: 2*4 margin + a 16px icon = 24x24 (button.cpp:481-526, default_theme.cpp:360-362).
     // SpinBox: 8 + 4*8 em + an 18px buttons block wide, 8 + 19 tall (spin_box.cpp:82-86, line_edit.cpp:2443-2477).
     // Label: max(4*8, 48) by max(18, 19) (label.cpp:973-997, 48*base_scale at graph_edit.cpp:836).
@@ -172,7 +183,11 @@ describe('graphEditToolbar disabled states (graph_edit.cpp:2445-2446)', () => {
   });
 
   it('never disables a button GraphEdit does not bind to a zoom bound', () => {
-    const all = graphEditToolbar(props({ zoomMinusDisabled: true, zoomPlusDisabled: true }), theme, metrics)!.items;
+    const all = graphEditToolbar(
+      props({ zoomMinusDisabled: true, zoomPlusDisabled: true }),
+      theme,
+      metrics
+    )!.items;
     expect(all.filter((i) => i.disabled).map((i) => i.id)).toEqual(['zoom_minus', 'zoom_plus']);
   });
 });

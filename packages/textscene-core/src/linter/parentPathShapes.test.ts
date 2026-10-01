@@ -14,7 +14,10 @@ import './index.js';
 const ORPHAN = 'unresolved-parent-path';
 
 /** `Root` plus two children, the fixtures the spelling rows address. */
-const MID = [node('Node2D', {}, { name: 'Mid', parent: '.' }), node('Node2D', {}, { name: 'Other', parent: '.' })];
+const MID = [
+  node('Node2D', {}, { name: 'Mid', parent: '.' }),
+  node('Node2D', {}, { name: 'Other', parent: '.' }),
+];
 const ROOT = node('Node2D', {}, { name: 'Root' });
 const body = (parent: string) => node('Node2D', {}, { name: 'Body', parent });
 
@@ -36,7 +39,7 @@ interface Shape {
 
 const SHAPES: Record<string, Shape> = {
   // Spellings the NodePath constructor folds away, target declared first.
-  'Mid': { godot: 'Mid/Body', source: scene(ROOT, ...MID, body('Mid')) },
+  Mid: { godot: 'Mid/Body', source: scene(ROOT, ...MID, body('Mid')) },
   './Mid': { godot: 'Mid/Body', source: scene(ROOT, ...MID, body('./Mid')) },
   'Mid/': { godot: 'Mid/Body', source: scene(ROOT, ...MID, body('Mid/')) },
   'Mid//': { godot: 'Mid/Body', source: scene(ROOT, ...MID, body('Mid//')) },
@@ -55,16 +58,27 @@ const SHAPES: Record<string, Shape> = {
 
   // Declaration order: `NODE_FROM_ID` asks the tree as it stands at this
   // heading (packed_scene.cpp:157-165), so a later name is not there yet.
-  'Mid (declared after)': { godot: 'Mid#Body', source: scene(ROOT, body('Mid'), node('Node2D', {}, { name: 'Mid', parent: '.' })) },
+  'Mid (declared after)': {
+    godot: 'Mid#Body',
+    source: scene(ROOT, body('Mid'), node('Node2D', {}, { name: 'Mid', parent: '.' })),
+  },
 
   // `%Name` is a jump into the owner's claim table, not a descent.
   '%Player (claimed above)': {
     godot: 'Player/Body',
-    source: scene(ROOT, node('Node2D', { unique_name_in_owner: true }, { name: 'Player', parent: '.' }), body('%Player')),
+    source: scene(
+      ROOT,
+      node('Node2D', { unique_name_in_owner: true }, { name: 'Player', parent: '.' }),
+      body('%Player')
+    ),
   },
   '%Player (claimed below)': {
     godot: '_Player#Body',
-    source: scene(ROOT, body('%Player'), node('Node2D', { unique_name_in_owner: true }, { name: 'Player', parent: '.' })),
+    source: scene(
+      ROOT,
+      body('%Player'),
+      node('Node2D', { unique_name_in_owner: true }, { name: 'Player', parent: '.' })
+    ),
   },
   '%Player (unclaimed)': {
     godot: '_Player#Body',
@@ -72,7 +86,10 @@ const SHAPES: Record<string, Shape> = {
   },
 
   // Ancestor opacity: whether the file can rule the intermediate name out.
-  'Ins/Inner (instance)': { godot: 'Ins/Inner/Body', source: scene(packedScene, ROOT, instanced('Ins', { parent: '.' }), body('Ins/Inner')) },
+  'Ins/Inner (instance)': {
+    godot: 'Ins/Inner/Body',
+    source: scene(packedScene, ROOT, instanced('Ins', { parent: '.' }), body('Ins/Inner')),
+  },
   'Ins/Nope (instance, absent there)': {
     godot: 'Ins_Nope#Body',
     source: scene(packedScene, ROOT, instanced('Ins', { parent: '.' }), body('Ins/Nope')),
@@ -81,16 +98,28 @@ const SHAPES: Record<string, Shape> = {
       'Only the base scene says whether it holds `Nope`, and this parser never opens it. ' +
       'Warning here would fire on every legitimate path into instanced content.',
   },
-  'Plain/Inner (plain node)': { godot: 'Plain_Inner#Body', source: scene(ROOT, node('Node2D', {}, { name: 'Plain', parent: '.' }), body('Plain/Inner')) },
+  'Plain/Inner (plain node)': {
+    godot: 'Plain_Inner#Body',
+    source: scene(ROOT, node('Node2D', {}, { name: 'Plain', parent: '.' }), body('Plain/Inner')),
+  },
   'Ins/Inner/Deep (override between)': {
     godot: 'Ins/Inner/Deep/Body',
-    source: scene(packedScene, ROOT, instanced('Ins', { parent: '.' }), override('Inner', 0, { parent: 'Ins' }), body('Ins/Inner/Deep')),
+    source: scene(
+      packedScene,
+      ROOT,
+      instanced('Ins', { parent: '.' }),
+      override('Inner', 0, { parent: 'Ins' }),
+      body('Ins/Inner/Deep')
+    ),
   },
   'Inner/Deep (override under an instanced ROOT)': {
     godot: 'Inner/Deep/Body',
     source: scene(packedScene, instanced('Root'), override('Inner', 0, { parent: '.' }), body('Inner/Deep')),
   },
-  'Ov/Child (override, no instance anywhere)': { godot: 'Ov_Child#Body', source: scene(ROOT, override('Ov', 0, { parent: '.' }), body('Ov/Child')) },
+  'Ov/Child (override, no instance anywhere)': {
+    godot: 'Ov_Child#Body',
+    source: scene(ROOT, override('Ov', 0, { parent: '.' }), body('Ov/Child')),
+  },
 };
 
 /**

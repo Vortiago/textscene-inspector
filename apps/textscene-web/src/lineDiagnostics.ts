@@ -60,10 +60,7 @@ function addTo(group: DiagnosticGroup, severity: Severity, message: string): voi
  * file-level group, never onto a synthetic line: a dot on line 1 would claim that line is at
  * fault. A line past the end is one a lint of older text named, before lines were deleted.
  */
-export function groupDiagnostics(
-  diagnostics: readonly Diagnostic[],
-  lineCount: number
-): GroupedDiagnostics {
+export function groupDiagnostics(diagnostics: readonly Diagnostic[], lineCount: number): GroupedDiagnostics {
   const byLine = new Map<number, DiagnosticGroup>();
   let fileLevel: DiagnosticGroup | null = null;
   for (const d of diagnostics) {

@@ -16,7 +16,12 @@ function solveNode(properties: Record<string, unknown>): SolveNode {
   return {
     ...emptySolveNode(),
     path: 'S',
-    node: { name: 'S', type: 'HScrollBar', children: [], properties: { name: 'S', ...properties } } as TscnNode,
+    node: {
+      name: 'S',
+      type: 'HScrollBar',
+      children: [],
+      properties: { name: 'S', ...properties },
+    } as TscnNode,
   };
 }
 
@@ -122,8 +127,10 @@ describe('<HScrollBar>', () => {
       />
     );
     const trackChannel = (r: typeof untinted) =>
-      (((r.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh).geometry as THREE.BufferGeometry)
-        .attributes.color as THREE.BufferAttribute).getX(0);
+      (
+        ((r.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh).geometry as THREE.BufferGeometry)
+          .attributes.color as THREE.BufferAttribute
+      ).getX(0);
     expect(trackChannel(untinted)).toBeGreaterThan(0);
     expect(trackChannel(tinted)).toBeCloseTo(trackChannel(untinted) * 0.5, 6);
   });

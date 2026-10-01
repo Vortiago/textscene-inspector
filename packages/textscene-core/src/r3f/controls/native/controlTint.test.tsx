@@ -65,9 +65,7 @@ describe('useControlOwnTint', () => {
     });
     // The argument stands for `useInheritedModulate`'s result, which already
     // carries this node's `modulate`; reading it a second time would give 0.125.
-    const { result } = renderHook(() =>
-      useControlOwnTint({ r: 0.5, g: 0.5, b: 0.5, a: 0.5 }, node)
-    );
+    const { result } = renderHook(() => useControlOwnTint({ r: 0.5, g: 0.5, b: 0.5, a: 0.5 }, node));
     expect(result.current.own.r).toBeCloseTo(0.25, 5);
     expect(result.current.opacity).toBeCloseTo(0.25, 5);
   });

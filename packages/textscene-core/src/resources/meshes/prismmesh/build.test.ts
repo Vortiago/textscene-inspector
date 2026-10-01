@@ -35,11 +35,7 @@ function windingNormal(geometry: THREE.BufferGeometry, t: number): number[] {
   const [a, b, c] = [p[index[t * 3]!]!, p[index[t * 3 + 1]!]!, p[index[t * 3 + 2]!]!];
   const u = [b[0]! - a[0]!, b[1]! - a[1]!, b[2]! - a[2]!];
   const v = [c[0]! - a[0]!, c[1]! - a[1]!, c[2]! - a[2]!];
-  return [
-    u[1]! * v[2]! - u[2]! * v[1]!,
-    u[2]! * v[0]! - u[0]! * v[2]!,
-    u[0]! * v[1]! - u[1]! * v[0]!,
-  ];
+  return [u[1]! * v[2]! - u[2]! * v[1]!, u[2]! * v[0]! - u[0]! * v[2]!, u[0]! * v[1]! - u[1]! * v[0]!];
 }
 
 /** The stored normal of triangle `t`'s first vertex. */
@@ -53,7 +49,7 @@ function storedNormal(geometry: THREE.BufferGeometry, t: number): number[] {
 const dot = (a: number[], b: number[]) => a[0]! * b[0]! + a[1]! * b[1]! + a[2]! * b[2]!;
 
 describe('buildPrismMeshGeometry', () => {
-  it('builds Godot\'s vertex and triangle counts for an unsubdivided prism', () => {
+  it("builds Godot's vertex and triangle counts for an unsubdivided prism", () => {
     const geometry = buildPrismMeshGeometry(prism());
 
     // (0+2)(0+2)·2 + (0+2)(0+2)·2 + (0+2)(0+2) = 20 vertices, and 8 triangles =
@@ -63,16 +59,10 @@ describe('buildPrismMeshGeometry', () => {
   });
 
   it('scales its vertex count with each subdivision axis, per Godot num_points', () => {
-    expect(buildPrismMeshGeometry(prism({ subdivideWidth: 1 })).getAttribute('position').count).toBe(
-      26
-    );
+    expect(buildPrismMeshGeometry(prism({ subdivideWidth: 1 })).getAttribute('position').count).toBe(26);
     // sh=1: (1+2)(0+2)·2 + (1+2)(0+2)·2 + (0+2)(0+2) = 12 + 12 + 4.
-    expect(
-      buildPrismMeshGeometry(prism({ subdivideHeight: 1 })).getAttribute('position').count
-    ).toBe(28);
-    expect(buildPrismMeshGeometry(prism({ subdivideDepth: 1 })).getAttribute('position').count).toBe(
-      26
-    );
+    expect(buildPrismMeshGeometry(prism({ subdivideHeight: 1 })).getAttribute('position').count).toBe(28);
+    expect(buildPrismMeshGeometry(prism({ subdivideDepth: 1 })).getAttribute('position').count).toBe(26);
   });
 
   it('fills its size box exactly, centred on the origin', () => {
@@ -99,9 +89,7 @@ describe('buildPrismMeshGeometry', () => {
     // start_x = start_pos.x + (1 - scale) * size.x * left_to_right (:1670). The
     // apex row is scale 0, so the apex sits at -size.x/2 + size.x * ltr.
     const apexX = (leftToRight: number, sizeX = 1) => {
-      const p = positionsOf(
-        buildPrismMeshGeometry(prism({ leftToRight, size: { x: sizeX, y: 1, z: 1 } }))
-      );
+      const p = positionsOf(buildPrismMeshGeometry(prism({ leftToRight, size: { x: sizeX, y: 1, z: 1 } })));
       return p.filter((v) => Math.abs(v[1]! - 0.5) < 1e-6).map((v) => v[0]!);
     };
 

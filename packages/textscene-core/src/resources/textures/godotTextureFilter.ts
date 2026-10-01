@@ -102,10 +102,7 @@ function effectiveState(texture: THREE.Texture, state: TextureFilterState): Text
 }
 
 /** Whether a texture already samples the way this state asks, so no clone is needed. */
-export function textureFilterMatches(
-  texture: THREE.Texture,
-  state: TextureFilterState
-): boolean {
+export function textureFilterMatches(texture: THREE.Texture, state: TextureFilterState): boolean {
   const wanted = effectiveState(texture, state);
   return (
     texture.magFilter === wanted.magFilter &&
@@ -116,9 +113,7 @@ export function textureFilterMatches(
 }
 
 /** The mip-free equivalent of a minification filter, for a texture with no mip chain. */
-const WITHOUT_MIPMAPS: Partial<
-  Record<THREE.MinificationTextureFilter, THREE.MinificationTextureFilter>
-> = {
+const WITHOUT_MIPMAPS: Partial<Record<THREE.MinificationTextureFilter, THREE.MinificationTextureFilter>> = {
   [THREE.NearestMipmapLinearFilter]: THREE.NearestFilter,
   [THREE.NearestMipmapNearestFilter]: THREE.NearestFilter,
   [THREE.LinearMipmapLinearFilter]: THREE.LinearFilter,
@@ -130,10 +125,7 @@ const WITHOUT_MIPMAPS: Partial<
  * filter creates no mip chain: a procedural texture never calls `generate_mipmaps`
  * (`scene/resources/gradient_texture.cpp`), so Godot samples the base level only.
  */
-export function applyTextureFilterState(
-  texture: THREE.Texture,
-  state: TextureFilterState
-): void {
+export function applyTextureFilterState(texture: THREE.Texture, state: TextureFilterState): void {
   const wanted = effectiveState(texture, state);
   texture.magFilter = wanted.magFilter;
   texture.minFilter = wanted.minFilter;

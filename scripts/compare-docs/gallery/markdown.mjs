@@ -10,8 +10,9 @@ import { isDivider, splitRow } from '../markdownTable.mjs';
 import { REPO_ROOT } from '../sheetSources.mjs';
 import { NOTES_TYPE } from './vocabulary.mjs';
 
+/** Text safe inside an element and inside a double-quoted attribute, where the panels also write it. */
 export const escapeHtml = (s) =>
-  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 /**
  * `ADR-0025` in sheet prose becomes an absolute link to the decision record.
@@ -116,15 +117,21 @@ export function renderBody(body) {
   return out.join('\n');
 }
 
+/**
+ * One Markdown table row's cells, each rendered inline inside a `tag` element. The generator's own
+ * splitter: a cell carrying an escaped `|` is one cell on both sides, so a row cannot pass the sheet
+ * and still break the page.
+ */
+function tableCells(row, tag) {
+  return splitRow(row)
+    .map((cell) => `<${tag}>${inline(cell)}</${tag}>`)
+    .join('');
+}
+
 function renderTable(rows) {
-  // The generator's own splitter: a cell carrying an escaped `|` is one cell on
-  // both sides, so a row cannot pass the sheet and still break the page.
-  const cells = splitRow;
   const body = rows.filter((r) => !isDivider(r.trim()));
   const [head, ...rest] = body;
-  const th = cells(head).map((c) => `<th>${inline(c)}</th>`).join('');
-  const trs = rest
-    .map((r) => `<tr>${cells(r).map((c) => `<td>${inline(c)}</td>`).join('')}</tr>`)
-    .join('');
+  const th = tableCells(head, 'th');
+  const trs = rest.map((r) => `<tr>${tableCells(r, 'td')}</tr>`).join('');
   return `<div class="tablewrap"><table><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table></div>`;
 }

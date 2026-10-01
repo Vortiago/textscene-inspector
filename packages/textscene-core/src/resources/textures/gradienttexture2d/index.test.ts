@@ -7,9 +7,7 @@ import { resourceSliceRegistry } from '../../sliceRegistration';
 describe('gradient slice registration', () => {
   it('claims both `Gradient` and `GradientTexture2D` for one slice (happy path)', () => {
     expect(resourceSliceRegistry.byTypeName('Gradient')?.slice).toBe('gradienttexture2d');
-    expect(resourceSliceRegistry.byTypeName('GradientTexture2D')?.slice).toBe(
-      'gradienttexture2d'
-    );
+    expect(resourceSliceRegistry.byTypeName('GradientTexture2D')?.slice).toBe('gradienttexture2d');
     expect(resourceSliceRegistry.byTypeName('Gradient')?.kind).toBe('godot-text');
   });
 

@@ -77,10 +77,7 @@ export function stripEmits(src: string): string {
  * its matching `]`, and the index of `emits:`. It is anchored to a property
  * position and needs a `[`, so an `emits:` in a comment or string cuts nothing.
  */
-function forEachEmitsArray(
-  src: string,
-  visit: (open: number, close: number, at: number) => void
-): void {
+function forEachEmitsArray(src: string, visit: (open: number, close: number, at: number) => void): void {
   const opener = /(?:^|[{,])\s*emits:\s*\[/gm;
   let index = 0;
   for (;;) {

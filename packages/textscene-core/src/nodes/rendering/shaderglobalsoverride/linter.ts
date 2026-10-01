@@ -37,7 +37,13 @@ const shaderGlobalsOverrideValidationRule: LintRule = {
       'Warns on every ShaderGlobalsOverride but the first in the scene, which are the ones Godot leaves inactive',
     category: 'validation',
     applicableNodeTypes: ['ShaderGlobalsOverride'],
-    emits: [{ ruleName: 'shaderglobalsoverride-multiple-in-scene', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: [
+      {
+        ruleName: 'shaderglobalsoverride-multiple-in-scene',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
+    ],
   },
   check: checkShaderGlobalsOverride,
 };

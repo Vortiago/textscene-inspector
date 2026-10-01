@@ -22,7 +22,12 @@ function sepNode(
   properties: Partial<ControlProperties> = {},
   internalResources: readonly TscnInternalResource[] = []
 ): SolveNode {
-  const node: TscnNode = { name: 'Sep', type, children: [], properties: { name: 'Sep', ...properties } as ControlProperties };
+  const node: TscnNode = {
+    name: 'Sep',
+    type,
+    children: [],
+    properties: { name: 'Sep', ...properties } as ControlProperties,
+  };
   return {
     ...emptySolveNode(),
     path: 'Sep',
@@ -39,7 +44,13 @@ function placementGroup(mesh: THREE.Mesh): THREE.Object3D {
 describe('<SeparatorChrome>', () => {
   it('draws the default-theme separator line at the geometry-derived rect for HSeparator', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <SeparatorChrome {...painterEnv()} orientation="horizontal" solveNode={sepNode('HSeparator')} rect={RECT} renderOrder={0} />
+      <SeparatorChrome
+        {...painterEnv()}
+        orientation="horizontal"
+        solveNode={sepNode('HSeparator')}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const geom = mesh.geometry;
@@ -73,7 +84,13 @@ describe('<SeparatorChrome>', () => {
     // `resolveStyleBoxes` (`buildSolveTree.ts`), not by hand.
     node.styleBoxes = resolveStyleBoxes(node.node, node.resources);
     const renderer = await ReactThreeTestRenderer.create(
-      <SeparatorChrome {...painterEnv()} orientation="vertical" solveNode={node} rect={RECT} renderOrder={0} />
+      <SeparatorChrome
+        {...painterEnv()}
+        orientation="vertical"
+        solveNode={node}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const geom = mesh.geometry;
@@ -106,7 +123,13 @@ describe('<SeparatorChrome>', () => {
     };
     const node: SolveNode = { ...sepNode('HSeparator'), styleBoxes: { separator: flatOverride } };
     const renderer = await ReactThreeTestRenderer.create(
-      <SeparatorChrome {...painterEnv()} orientation="horizontal" solveNode={node} rect={RECT} renderOrder={0} />
+      <SeparatorChrome
+        {...painterEnv()}
+        orientation="horizontal"
+        solveNode={node}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const geom = mesh.geometry;
@@ -119,7 +142,7 @@ describe('<SeparatorChrome>', () => {
     expect(group.position.y).toBeCloseTo(-10);
   });
 
-  it('composes tint into the default line colour, in raw sRGB, on the geometry\'s vertex colours', async () => {
+  it("composes tint into the default line colour, in raw sRGB, on the geometry's vertex colours", async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <SeparatorChrome
         {...painterEnv()}

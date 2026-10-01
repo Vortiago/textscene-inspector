@@ -34,9 +34,10 @@ describe('parseStandardMaterial3DScalars — refraction flag (WI-69)', () => {
   it('gates on refraction_enabled — scale present but the flag absent → opaque (0)', () => {
     // Godot applies refraction only when refraction_enabled is set, so without the
     // flag the material must not turn transmissive.
-    expect(
-      parseStandardMaterial3DScalars({ refraction_scale: '0.2' })
-    ).toMatchObject({ transmission: 0, refractionThickness: 0 });
+    expect(parseStandardMaterial3DScalars({ refraction_scale: '0.2' })).toMatchObject({
+      transmission: 0,
+      refractionThickness: 0,
+    });
   });
 
   it('refraction defaults to off (opaque) when no refraction properties are present', () => {

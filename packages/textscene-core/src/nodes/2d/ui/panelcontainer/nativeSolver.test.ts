@@ -11,15 +11,16 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { createSolveContext, solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
-import { controlSolverRegistry, type ContainerLayoutResult } from '../../../../r3f/controls/native/solverRegistry';
+import {
+  controlSolverRegistry,
+  type ContainerLayoutResult,
+} from '../../../../r3f/controls/native/solverRegistry';
 import type { ControlProperties } from '../control/types';
 import { panelContainerLayout, panelContainerMinimumSize } from './nativeSolver';
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 /** The `rects` half of a `ContainerLayoutResult`. */
-function rects(
-  result: ReadonlyMap<string, Rect2> | ContainerLayoutResult
-): ReadonlyMap<string, Rect2> {
+function rects(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
   return 'rects' in result ? result.rects : result;
 }
 

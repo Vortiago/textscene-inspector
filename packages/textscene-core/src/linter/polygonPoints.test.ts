@@ -26,9 +26,7 @@ describe('polygonPointCount', () => {
   });
 
   it('counts ELEMENTS in the typed Array[Vector2] spelling', () => {
-    expect(polygonPointCount('Array[Vector2]([Vector2(0, 0), Vector2(1, 0), Vector2(1, 1)])')).toBe(
-      3
-    );
+    expect(polygonPointCount('Array[Vector2]([Vector2(0, 0), Vector2(1, 0), Vector2(1, 1)])')).toBe(3);
   });
 
   it('ignores the trailing comma Godot loads as no extra element', () => {

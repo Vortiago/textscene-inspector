@@ -21,7 +21,7 @@ function key(overrides: Partial<LightCullKey> = {}): LightCullKey {
 }
 
 describe('DEFAULT_LIGHT_CULL_KEY', () => {
-  it('is Godot\'s own default light window', () => {
+  it("is Godot's own default light window", () => {
     // `scene/2d/light_2d.h:50-55`, and confirmed on the engine: a fresh
     // PointLight2D in 4.6.3 reports range_z_min=-1024 range_z_max=1024
     // range_layer_min=0 range_layer_max=0, with both cull masks at 1.
@@ -154,19 +154,14 @@ describe('sameLightCullKey', () => {
 });
 
 describe('compareLightCullKeys', () => {
-  it('orders by cull mask first, so today\'s ascending-mask classes are unmoved', () => {
+  it("orders by cull mask first, so today's ascending-mask classes are unmoved", () => {
     const sorted = [key({ itemCullMask: 2 }), key({ itemCullMask: 1 })].sort(compareLightCullKeys);
     expect(sorted.map((k) => k.itemCullMask)).toEqual([1, 2]);
   });
 
   it('breaks a tie on the window, so the order depends only on WHICH keys are present', () => {
     // A class's index picks its camera layer, so mount order must never reach it.
-    const keys = [
-      key({ zMax: 4 }),
-      key({ layerMax: 1 }),
-      key(),
-      key({ zMin: -4 }),
-    ];
+    const keys = [key({ zMax: 4 }), key({ layerMax: 1 }), key(), key({ zMin: -4 })];
     const first = [...keys].sort(compareLightCullKeys).map(lightCullKeyId);
     const second = [...keys].reverse().sort(compareLightCullKeys).map(lightCullKeyId);
     expect(second).toEqual(first);

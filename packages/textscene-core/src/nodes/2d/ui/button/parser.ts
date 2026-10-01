@@ -6,10 +6,7 @@ import type { ButtonProperties } from './types';
 import { parseControl } from '../control/parser';
 import { boolSlotValue } from '../../../../godot/index.js';
 
-export function parseButton(
-  heading: ParsedHeading,
-  properties: Record<string, string>
-): ButtonProperties {
+export function parseButton(heading: ParsedHeading, properties: Record<string, string>): ButtonProperties {
   const result: ButtonProperties = { ...parseControl(heading, properties) };
   if (properties.text !== undefined) result.text = unquoteString(properties.text);
   result.disabled = boolSlotValue(properties.disabled) === true;

@@ -1,7 +1,12 @@
 /** ItemList parser: Control base, ItemList's own members, and the `item_N/*` row family. */
 
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
-import { parseOptionalBool, parseOptionalFloat, parseOptionalInt, parseOptionalVector2i } from '../../../../parser/valueParsers';
+import {
+  parseOptionalBool,
+  parseOptionalFloat,
+  parseOptionalInt,
+  parseOptionalVector2i,
+} from '../../../../parser/valueParsers';
 import { parseControl } from '../control/parser';
 import {
   arrayLiteralBody,

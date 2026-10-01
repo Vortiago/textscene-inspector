@@ -99,7 +99,9 @@ describe('only parentType.ts holds a raw parent', () => {
     const linterTree = allSourceFiles().filter(
       (file) => file.startsWith(linterDir) || file.startsWith(nodesRoot)
     );
-    expect(offenders((s) => s.includes('overridesExistingNode'), OVERRIDE_FLAG_ALLOWED, linterTree)).toEqual([]);
+    expect(offenders((s) => s.includes('overridesExistingNode'), OVERRIDE_FLAG_ALLOWED, linterTree)).toEqual(
+      []
+    );
   });
 
   it('stays quiet on the gated form, where the parent is past the check already', () => {

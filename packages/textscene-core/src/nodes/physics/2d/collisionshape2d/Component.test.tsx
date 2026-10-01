@@ -29,7 +29,11 @@ function makeNode(shapeRef: string | undefined): TscnNode {
   return { name: 'Col', type: 'CollisionShape2D', children: [], properties };
 }
 
-async function render(showCollisions: boolean, resources: TscnInternalResource[], shapeRef: string | undefined) {
+async function render(
+  showCollisions: boolean,
+  resources: TscnInternalResource[],
+  shapeRef: string | undefined
+) {
   return ReactThreeTestRenderer.create(
     <ViewportModeProvider initialShowCollisions={showCollisions}>
       <SceneResourcesProvider internalResources={resources}>

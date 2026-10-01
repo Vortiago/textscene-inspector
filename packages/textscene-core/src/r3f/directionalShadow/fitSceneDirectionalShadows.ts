@@ -19,12 +19,7 @@ import {
 } from './fitDirectionalShadowBox.js';
 import { fitDirectionalShadowSplits, type DirectionalShadowSplits } from './fitDirectionalShadowSplits.js';
 import { writeDirectionalShadowFades, type ShadowFades } from './shadowFade.js';
-import {
-  attachSplitSun,
-  followDeclaredLight,
-  releaseSplitSun,
-  type SplitSunLight,
-} from './splitSun.js';
+import { attachSplitSun, followDeclaredLight, releaseSplitSun, type SplitSunLight } from './splitSun.js';
 import { SPLIT_CAMERA_UP } from './splitShadow.js';
 
 interface DeclaredLight {

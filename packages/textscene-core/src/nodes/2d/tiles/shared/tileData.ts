@@ -46,7 +46,9 @@ export function readTileMapDataLiteral(
   const match = PACKED_BYTE_ARRAY_RE.exec(trimmed);
   if (!match) {
     const bare = ARRAY_LITERAL_RE.exec(trimmed)?.[1]!.trim();
-    return bare === undefined || bare.startsWith('"') ? { fault: 'not-a-literal' } : { fault: null, body: bare };
+    return bare === undefined || bare.startsWith('"')
+      ? { fault: 'not-a-literal' }
+      : { fault: null, body: bare };
   }
   const body = match[1]!.trim();
   if (body.startsWith('"') && !QUOTED_BASE64_RE.test(body)) {
@@ -187,11 +189,6 @@ function decodeBytes(body: string): Uint8Array | null {
   }
   const read = readInt32Elements(body, '[TileMapLayer] tile_map_data');
   if (read === null) return null;
-  const ints = dropUnstorableRecords(
-    read,
-    CELL_BYTES,
-    HEADER_BYTES,
-    '[TileMapLayer] tile_map_data'
-  );
+  const ints = dropUnstorableRecords(read, CELL_BYTES, HEADER_BYTES, '[TileMapLayer] tile_map_data');
   return ints === null ? null : new Uint8Array(ints);
 }

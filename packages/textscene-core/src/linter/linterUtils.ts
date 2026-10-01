@@ -174,4 +174,3 @@ export function extractNodePath(value: string): string | null {
 export function isUnderInstance(roots: TscnNode[], target: TscnNode): boolean {
   return getSceneIndex(roots).underInstanceAncestor.has(target);
 }
-

@@ -12,9 +12,7 @@ describe('canvasItem registry conformance', () => {
     // By the base chain, not the `2D` suffix: `NavigationAgent2D` and
     // `NavigationObstacle2D` descend from `Node`, draw nothing, and stay out of
     // the 2D canvas.
-    const canvasItems = nodeComponentRegistry
-      .getAllTypeNames()
-      .filter((t) => descendsFrom(t, 'CanvasItem'));
+    const canvasItems = nodeComponentRegistry.getAllTypeNames().filter((t) => descendsFrom(t, 'CanvasItem'));
     // If `descendsFrom` returned false for everything, the check would pass
     // vacuously.
     expect(canvasItems.length).toBeGreaterThan(10);
@@ -25,9 +23,7 @@ describe('canvasItem registry conformance', () => {
     // The base chain, as above: Decal, FogVolume, GridMap, VoxelGI,
     // ReflectionProbe, LightmapGI and the OpenXR nodes are Node3D descendants
     // without the suffix.
-    const node3ds = nodeComponentRegistry
-      .getAllTypeNames()
-      .filter((t) => descendsFrom(t, 'Node3D'));
+    const node3ds = nodeComponentRegistry.getAllTypeNames().filter((t) => descendsFrom(t, 'Node3D'));
     expect(node3ds.length).toBeGreaterThan(10);
     expect(node3ds.filter((t) => nodeComponentRegistry.isCanvasItem(t))).toEqual([]);
   });

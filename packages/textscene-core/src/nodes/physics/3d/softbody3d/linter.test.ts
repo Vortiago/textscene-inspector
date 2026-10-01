@@ -7,7 +7,13 @@
  */
 
 import { describe, it } from 'vitest';
-import { node, scene, expectClean, expectDiagnostic, expectNoDiagnostic } from '../../../../linter/testing/testkit';
+import {
+  node,
+  scene,
+  expectClean,
+  expectDiagnostic,
+  expectNoDiagnostic,
+} from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 

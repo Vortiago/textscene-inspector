@@ -47,7 +47,11 @@ function fittedShadow(camera: THREE.PerspectiveCamera, splitCount: number): Dire
 }
 
 /** Whether `point` lands inside `rect` of the atlas, in texture coordinates, and inside its depth. */
-function landsIn(matrix: THREE.Matrix4, point: THREE.Vector3, rect: { x: number; y: number; width: number; height: number }): boolean {
+function landsIn(
+  matrix: THREE.Matrix4,
+  point: THREE.Vector3,
+  rect: { x: number; y: number; width: number; height: number }
+): boolean {
   const mapped = point.clone().applyMatrix4(matrix);
   const within = (value: number, start: number, size: number) =>
     value >= start / ATLAS_SIZE - FACE_TOLERANCE && value <= (start + size) / ATLAS_SIZE + FACE_TOLERANCE;

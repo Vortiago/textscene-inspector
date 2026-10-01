@@ -29,9 +29,7 @@ export function LightOccluder2D({ node, children }: NodeComponentProps) {
   // an effect reading a ref would see null on the mount pass.
   const [anchor, setAnchor] = useState<THREE.Group | null>(null);
 
-  const occluderResource = useSubOrExtResource(
-    properties.occluder, internalResources, externalResources
-  );
+  const occluderResource = useSubOrExtResource(properties.occluder, internalResources, externalResources);
 
   const positions = useMemo(() => {
     if (!occluderResource) return null;

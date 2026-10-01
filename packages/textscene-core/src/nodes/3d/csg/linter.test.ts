@@ -62,9 +62,7 @@ describe('CSG own-geometry-degenerate rule', () => {
     });
 
     it('reports on a 2-point polygon', () => {
-      const reports = reportsFor(
-        csgScene('CSGPolygon3D', 'polygon = PackedVector2Array(0, 0, 1, 0)\n')
-      );
+      const reports = reportsFor(csgScene('CSGPolygon3D', 'polygon = PackedVector2Array(0, 0, 1, 0)\n'));
       expect(reports).toHaveLength(1);
       expect(reports[0]?.ruleName).toBe('csgpolygon3d-insufficient-points');
       expect(reports[0]?.message).toContain('2 point');
@@ -80,9 +78,7 @@ describe('CSG own-geometry-degenerate rule', () => {
       // Counted, not decoded: `inf` is a component Godot loads and `rtos_fix` writes, so this is
       // the same 2-point polygon as the case above. The renderer decoder throws on it, and a rule
       // routed through that decoder loses the warning to the throw.
-      const reports = reportsFor(
-        csgScene('CSGPolygon3D', 'polygon = PackedVector2Array(inf, 0, 1, 1)\n')
-      );
+      const reports = reportsFor(csgScene('CSGPolygon3D', 'polygon = PackedVector2Array(inf, 0, 1, 1)\n'));
       expect(reports).toHaveLength(1);
       expect(reports[0]?.ruleName).toBe('csgpolygon3d-insufficient-points');
     });
@@ -98,7 +94,12 @@ describe('CSG own-geometry-degenerate rule', () => {
     // `size` is PROPERTY_HINT_NONE and `set_size` does not clamp, so the brush
     // is always built with 12 faces: no size is degenerate.
     it('never emits, whatever the size', () => {
-      for (const size of ['', 'size = Vector3(0, 0, 0)\n', 'size = Vector3(2, 0, 2)\n', 'size = Vector3(2, 2, 2)\n']) {
+      for (const size of [
+        '',
+        'size = Vector3(0, 0, 0)\n',
+        'size = Vector3(2, 0, 2)\n',
+        'size = Vector3(2, 2, 2)\n',
+      ]) {
         expect(reportsFor(csgScene('CSGBox3D', size))).toEqual([]);
       }
     });

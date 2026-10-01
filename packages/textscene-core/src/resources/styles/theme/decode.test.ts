@@ -2,13 +2,23 @@ import { describe, it, expect } from 'vitest';
 import { decodeThemeAddresses, resolveInlineThemeResource } from './decode';
 import type { FontResource } from '../../fonts/font/types';
 
-const FONT_A: FontResource = { kind: 'file', bytes: new ArrayBuffer(1), mimeType: 'font/ttf', fallbacks: [], properties: {} };
+const FONT_A: FontResource = {
+  kind: 'file',
+  bytes: new ArrayBuffer(1),
+  mimeType: 'font/ttf',
+  fallbacks: [],
+  properties: {},
+};
 
 describe('decodeThemeAddresses', () => {
   it('decodes default_font/default_font_size and leaves an unrecognised key raw', () => {
     const addresses = decodeThemeAddresses(
       'res://theme.tres',
-      { default_font: 'ExtResource("1")', default_font_size: '20', 'Panel/unknown_data_type/panel': 'SubResource("2")' },
+      {
+        default_font: 'ExtResource("1")',
+        default_font_size: '20',
+        'Panel/unknown_data_type/panel': 'SubResource("2")',
+      },
       [{ id: '1', path: 'res://fonts/a.ttf', type: 'FontFile' }],
       []
     );
@@ -45,10 +55,15 @@ describe('decodeThemeAddresses', () => {
     expect(addresses.typeVariations?.Fancy).toBe('Button');
   });
 
-  it('decodes <Type>/styles/<name> as a raw ref string, and carries the theme file\'s own resource pools', () => {
+  it("decodes <Type>/styles/<name> as a raw ref string, and carries the theme file's own resource pools", () => {
     const ext = [{ id: '1', path: 'res://fonts/a.ttf', type: 'FontFile' }];
     const sub = [{ id: '2', type: 'StyleBoxFlat', data: {} }];
-    const addresses = decodeThemeAddresses('res://theme.tres', { 'Panel/styles/panel': 'SubResource("2")' }, ext, sub);
+    const addresses = decodeThemeAddresses(
+      'res://theme.tres',
+      { 'Panel/styles/panel': 'SubResource("2")' },
+      ext,
+      sub
+    );
     expect(addresses.styles?.Panel?.panel).toBe('SubResource("2")');
     expect(addresses.resources).toEqual({ externalResources: ext, internalResources: sub });
   });
@@ -64,7 +79,12 @@ describe('decodeThemeAddresses', () => {
   });
 
   it('omits a colors entry whose value is not a Color literal', () => {
-    const addresses = decodeThemeAddresses('res://theme.tres', { 'Label/colors/font_color': 'not-a-color' }, [], []);
+    const addresses = decodeThemeAddresses(
+      'res://theme.tres',
+      { 'Label/colors/font_color': 'not-a-color' },
+      [],
+      []
+    );
     expect(addresses.colors?.Label).toBeUndefined();
   });
 
@@ -118,7 +138,12 @@ describe('decodeThemeAddresses', () => {
   });
 
   it('decodes <variationType>/base_type, stripping the StringName sigil and quotes', () => {
-    const addresses = decodeThemeAddresses('res://theme.tres', { 'title_panel/base_type': '&"Panel"' }, [], []);
+    const addresses = decodeThemeAddresses(
+      'res://theme.tres',
+      { 'title_panel/base_type': '&"Panel"' },
+      [],
+      []
+    );
     expect(addresses.typeVariations.title_panel).toBe('Panel');
   });
 
@@ -135,7 +160,9 @@ describe('decodeThemeAddresses', () => {
 
 describe('resolveInlineThemeResource', () => {
   it("resolves default_font and <Type>/fonts/<name> against the scene's own scope", () => {
-    const cache = { getCached: (address: string) => (address === 'res://fonts/base.ttf' ? FONT_A : undefined) };
+    const cache = {
+      getCached: (address: string) => (address === 'res://fonts/base.ttf' ? FONT_A : undefined),
+    };
     const pending = new Set<string>();
     const resource = resolveInlineThemeResource(
       {

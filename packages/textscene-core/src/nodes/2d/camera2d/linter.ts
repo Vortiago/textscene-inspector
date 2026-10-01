@@ -28,11 +28,7 @@ const countEnabledCamerasInScope = viewportScopeCounter((roots) =>
  * belongs to `v.nonNegativeFloat(…, { enforced: 'camera_2d.cpp:703' })`, grounded
  * in `MAX(0, p_speed)` (camera_2d.cpp:703, :715).
  */
-function smoothingIsFrozen(
-  rawProps: Record<string, string>,
-  enabledKey: string,
-  speedKey: string
-): boolean {
+function smoothingIsFrozen(rawProps: Record<string, string>, enabledKey: string, speedKey: string): boolean {
   const raw = rawProps[speedKey];
   if (boolSlotValue(rawProps[enabledKey]) !== true || raw === undefined) return false;
   return parseGodotFloat(raw) === 0;
@@ -41,7 +37,6 @@ function smoothingIsFrozen(
 function checkCamera2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
-
 
   // Before the properties guard: a camera with no properties is enabled.
   const rawProps = isValidProperties(node.properties) ? (node.properties as Record<string, string>) : {};

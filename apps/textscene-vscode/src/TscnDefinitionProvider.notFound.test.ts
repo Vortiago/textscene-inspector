@@ -26,11 +26,7 @@ mesh = SubResource("NonExistent")`;
       const document = createMockDocument(content);
       const position = new vscode.Position(1, 15);
 
-      const definition = provider.provideDefinition(
-        document,
-        position,
-        mockCancellationToken
-      );
+      const definition = provider.provideDefinition(document, position, mockCancellationToken);
 
       expect(definition).toBeNull();
     });
@@ -44,11 +40,7 @@ mesh = SubResource("BoxMesh_1")
       const document = createMockDocument(content);
       const position = new vscode.Position(1, 0); // Start of line, not on resource
 
-      const definition = provider.provideDefinition(
-        document,
-        position,
-        mockCancellationToken
-      );
+      const definition = provider.provideDefinition(document, position, mockCancellationToken);
 
       expect(definition).toBeNull();
     });
@@ -61,11 +53,7 @@ mesh = SubResource("BoxMesh_1")
       const document = createMockDocument(content);
       const position = new vscode.Position(0, 32); // Right after closing paren
 
-      const definition = provider.provideDefinition(
-        document,
-        position,
-        mockCancellationToken
-      );
+      const definition = provider.provideDefinition(document, position, mockCancellationToken);
 
       expect(definition).toBeNull();
     });
@@ -75,11 +63,7 @@ mesh = SubResource("BoxMesh_1")
       const document = createMockDocument(content);
       const position = new vscode.Position(0, 0);
 
-      const definition = provider.provideDefinition(
-        document,
-        position,
-        mockCancellationToken
-      );
+      const definition = provider.provideDefinition(document, position, mockCancellationToken);
 
       expect(definition).toBeNull();
     });
@@ -91,11 +75,7 @@ mesh = SubResource("BoxMesh_1")`;
       const document = createMockDocument(content);
       const position = new vscode.Position(1, 15);
 
-      const definition = provider.provideDefinition(
-        document,
-        position,
-        mockCancellationToken
-      );
+      const definition = provider.provideDefinition(document, position, mockCancellationToken);
 
       expect(definition).toBeNull();
     });
@@ -164,11 +144,7 @@ mesh = SubResource("BoxMesh_1")`;
       const document = createMockDocument(content);
       const position = new vscode.Position(0, 6); // Before "SubResource"
 
-      const definition = provider.provideDefinition(
-        document,
-        position,
-        mockCancellationToken
-      );
+      const definition = provider.provideDefinition(document, position, mockCancellationToken);
 
       expect(definition).toBeNull();
     });

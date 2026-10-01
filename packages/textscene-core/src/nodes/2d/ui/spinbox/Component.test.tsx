@@ -78,7 +78,8 @@ function findIconMeshes(scene: Rendered['scene']) {
 function fillColor(mesh: THREE.Mesh) {
   const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
   for (let i = 0; i < color.count; i++) {
-    if (color.getX(i) > 0.0001) return { r: color.getX(i), g: color.getY(i), b: color.getZ(i), a: color.getW(i) };
+    if (color.getX(i) > 0.0001)
+      return { r: color.getX(i), g: color.getY(i), b: color.getZ(i), a: color.getW(i) };
   }
   throw new Error('no fill vertex found');
 }
@@ -90,7 +91,12 @@ describe('<SpinBox> — field chrome + text', () => {
 
   it('draws the default-theme "normal" field box while editable, and formats the value with prefix/suffix', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <SpinBox {...painterEnv()} solveNode={solveNode({ prefix: '$', suffix: 'kg', value: 5, step: 1 })} rect={RECT} renderOrder={0} />
+      <SpinBox
+        {...painterEnv()}
+        solveNode={solveNode({ prefix: '$', suffix: 'kg', value: 5, step: 1 })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     const fields = findChromeMeshes(renderer.scene);
     expect(fields.length).toBe(1);
@@ -118,7 +124,12 @@ describe('<SpinBox> — field chrome + text', () => {
 
   it('draws an up_background override once one is authored', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <SpinBox {...painterEnv()} solveNode={solveNode({}, { up_background: FAKE_STYLEBOX })} rect={RECT} renderOrder={0} />
+      <SpinBox
+        {...painterEnv()}
+        solveNode={solveNode({}, { up_background: FAKE_STYLEBOX })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     expect(findChromeMeshes(renderer.scene).length).toBe(2);
   });
@@ -204,7 +215,12 @@ describe('<SpinBox> — RTL layout', () => {
 
   it('draws the field chrome at the mirrored field rect, not at the control origin (spin_box.cpp:394-395, control.cpp:1785-1787)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <SpinBox {...painterEnv()} solveNode={{ ...solveNode({ value: 5, step: 1 }), rtl: true }} rect={RECT} renderOrder={0} />
+      <SpinBox
+        {...painterEnv()}
+        solveNode={{ ...solveNode({ value: 5, step: 1 }), rtl: true }}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     const field = findChromeMeshes(renderer.scene)[0]!;
     expect(field.getWorldPosition(new THREE.Vector3()).x).toBeCloseTo(FIELD_LEFT_RTL, 5);
@@ -222,7 +238,12 @@ describe('<SpinBox> — RTL layout', () => {
     // LEFT alignment takes the trailing-edge arm under RTL, so the pen sits at
     // the field's own right edge rather than its left margin.
     const rtl = await ReactThreeTestRenderer.create(
-      <SpinBox {...painterEnv()} solveNode={{ ...solveNode({ value: 5, step: 1 }), rtl: true }} rect={RECT} renderOrder={0} />
+      <SpinBox
+        {...painterEnv()}
+        solveNode={{ ...solveNode({ value: 5, step: 1 }), rtl: true }}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     const ltr = await ReactThreeTestRenderer.create(
       <SpinBox {...painterEnv()} solveNode={solveNode({ value: 5, step: 1 })} rect={RECT} renderOrder={0} />

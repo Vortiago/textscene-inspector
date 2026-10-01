@@ -45,9 +45,7 @@ export function DetailTabs({
             ['inspector', 'Inspector'],
             ['resources', 'Resources'],
             ['cameras', 'Cameras'],
-            ...(animationTabVisible
-              ? ([['animation', 'Animation']] as Array<[DetailTab, string]>)
-              : []),
+            ...(animationTabVisible ? ([['animation', 'Animation']] as Array<[DetailTab, string]>) : []),
           ] as Array<[DetailTab, string]>
         ).map(([id, label]) => (
           <button
@@ -55,11 +53,7 @@ export function DetailTabs({
             type="button"
             role="tab"
             aria-selected={activeTab === id}
-            className={
-              activeTab === id
-                ? `${styles.paneTab} ${styles.paneTabActive}`
-                : styles.paneTab
-            }
+            className={activeTab === id ? `${styles.paneTab} ${styles.paneTabActive}` : styles.paneTab}
             onClick={() => setActiveTab(id)}
           >
             {label}
@@ -81,14 +75,9 @@ export function DetailTabs({
         {activeTab === 'resources' && (
           <div className={styles.detailsPane}>
             {onResourceUpload ? (
-              <MissingResourcesPanel
-                onUpload={onResourceUpload}
-                onRemove={onResourceRemove ?? (() => {})}
-              />
+              <MissingResourcesPanel onUpload={onResourceUpload} onRemove={onResourceRemove ?? (() => {})} />
             ) : (
-              <div className={styles.emptyState}>
-                Resource uploads aren’t available in this host.
-              </div>
+              <div className={styles.emptyState}>Resource uploads aren’t available in this host.</div>
             )}
           </div>
         )}

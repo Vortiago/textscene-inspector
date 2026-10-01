@@ -20,9 +20,7 @@ const PRODUCES_DIAGNOSTIC = /\b(?:Diagnostic|ParseError)\b/;
 // The validator layer produces diagnostics but owns the three-outcome reader:
 // turning the unstorable signal into a diagnostic is its job.
 function ownsTheReader(rel: string): boolean {
-  return (
-    rel.startsWith('linter/validators/') || rel.startsWith('godot/') || rel.endsWith('linterParser.ts')
-  );
+  return rel.startsWith('linter/validators/') || rel.startsWith('godot/') || rel.endsWith('linterParser.ts');
 }
 
 describe('rule-layer integer reads', () => {
@@ -43,9 +41,7 @@ describe('rule-layer integer reads', () => {
     // the barrel exports them. Comment-stripped, since prose naming the reader
     // is not a call to it.
     const offenders = files
-      .filter(({ src }) =>
-        /\b(?:parseGodotInt|asStoredInt|storedFromFloat)\s*\(/.test(stripComments(src))
-      )
+      .filter(({ src }) => /\b(?:parseGodotInt|asStoredInt|storedFromFloat)\s*\(/.test(stripComments(src)))
       .map(({ rel }) => rel)
       .sort();
     expect(offenders).toEqual([]);

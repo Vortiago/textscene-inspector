@@ -228,7 +228,12 @@ describe('directionalShadowSplitAtlasRect', () => {
   it('puts four splits in the quadrants in reading order', () => {
     expect(directionalShadowSplitAtlasRect(4, 1, 4096)).toEqual({ x: 2048, y: 0, width: 2048, height: 2048 });
     expect(directionalShadowSplitAtlasRect(4, 2, 4096)).toEqual({ x: 0, y: 2048, width: 2048, height: 2048 });
-    expect(directionalShadowSplitAtlasRect(4, 3, 4096)).toEqual({ x: 2048, y: 2048, width: 2048, height: 2048 });
+    expect(directionalShadowSplitAtlasRect(4, 3, 4096)).toEqual({
+      x: 2048,
+      y: 2048,
+      width: 2048,
+      height: 2048,
+    });
   });
 
   it('puts two splits in the halves of the height (edge case)', () => {

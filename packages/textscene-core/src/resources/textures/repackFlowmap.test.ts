@@ -6,11 +6,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import {
-  readFlowmapPixels,
-  repackAnisotropyFlowmap,
-  type FlowmapPixels,
-} from './repackFlowmap';
+import { readFlowmapPixels, repackAnisotropyFlowmap, type FlowmapPixels } from './repackFlowmap';
 
 /** A decoded-image-shaped object: dimensions but no raw `.data`. */
 function imageLike(width = 2, height = 1): HTMLImageElement {
@@ -100,9 +96,7 @@ describe('repackAnisotropyFlowmap', () => {
     // Stands in for what a real browser's getImageData returns for a decoded
     // PNG: a Uint8ClampedArray, no `.data` on the texture image itself.
     const texture = new THREE.Texture(imageLike());
-    const read = vi.fn(
-      (): FlowmapPixels => ({ data: new Uint8ClampedArray(SOURCE), width: 2, height: 1 })
-    );
+    const read = vi.fn((): FlowmapPixels => ({ data: new Uint8ClampedArray(SOURCE), width: 2, height: 1 }));
 
     const out = repackAnisotropyFlowmap(texture, read)!;
 

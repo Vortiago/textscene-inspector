@@ -16,8 +16,7 @@ export function probe(accepts: string, spelling: string): string {
   if (accepts.startsWith('Vector3i')) return `Vector3i(${spelling}, 0, 0)`;
   if (accepts.startsWith('Vector4i')) return `Vector4i(${spelling}, 0, 0, 0)`;
   if (accepts.startsWith('Rect2i')) return `Rect2i(${spelling}, 0, 1, 1)`;
-  if (accepts.startsWith('Dictionary literal'))
-    return `{ "cells": PackedInt32Array(${spelling}, 0, 0) }`;
+  if (accepts.startsWith('Dictionary literal')) return `{ "cells": PackedInt32Array(${spelling}, 0, 0) }`;
   if (NESTED_INT_ARRAY.test(accepts)) return `[PackedInt32Array(${spelling}, 0, 0)]`;
   if (PACKED_INT_ARRAY.test(accepts)) return `PackedInt32Array(${spelling}, 0, 0)`;
   if (accepts.startsWith('PackedByteArray')) return `PackedByteArray(${spelling}, 0, 0)`;

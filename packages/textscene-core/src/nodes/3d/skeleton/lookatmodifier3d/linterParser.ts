@@ -142,10 +142,7 @@ validatorRegistry.registerAll('LookAtModifier3D', {
     maxDeg: 360,
     hinted: 'look_at_modifier_3d.cpp:494',
   }),
-  primary_damp_threshold: dampThreshold(
-    'primary_damp_threshold',
-    'look_at_modifier_3d.cpp:495'
-  ),
+  primary_damp_threshold: dampThreshold('primary_damp_threshold', 'look_at_modifier_3d.cpp:495'),
 
   // look_at_modifier_3d.cpp:497 and :499, "0,180,0.01,radians_as_degrees": the
   // stored bound is 0..PI, the header default for both (look_at_modifier_3d.h:77,
@@ -177,10 +174,7 @@ validatorRegistry.registerAll('LookAtModifier3D', {
     maxDeg: 360,
     hinted: 'look_at_modifier_3d.cpp:502',
   }),
-  secondary_damp_threshold: dampThreshold(
-    'secondary_damp_threshold',
-    'look_at_modifier_3d.cpp:503'
-  ),
+  secondary_damp_threshold: dampThreshold('secondary_damp_threshold', 'look_at_modifier_3d.cpp:503'),
 
   // look_at_modifier_3d.cpp:505 and :507, the secondary axis's half-turn pair,
   // header defaults `Math::PI` (look_at_modifier_3d.h:84, :86), setters at

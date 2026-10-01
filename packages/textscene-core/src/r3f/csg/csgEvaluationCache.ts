@@ -14,9 +14,7 @@ import type { CsgEvaluation } from './evaluateCsgPlan';
 const MAX_ENTRIES = 16;
 
 // r3f never disposes geometry it did not create, and these were built here.
-const cache = new LRUCache<CsgEvaluation>(MAX_ENTRIES, (_key, evaluation) =>
-  evaluation.geometry.dispose()
-);
+const cache = new LRUCache<CsgEvaluation>(MAX_ENTRIES, (_key, evaluation) => evaluation.geometry.dispose());
 
 export function getCachedEvaluation(key: string): CsgEvaluation | undefined {
   return cache.get(key);

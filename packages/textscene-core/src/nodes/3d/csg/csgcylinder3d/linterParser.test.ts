@@ -60,7 +60,7 @@ radius = -1.0
   it('accepts sides at either end of the range, in silence', () => {
     for (const value of [3, 64]) {
       expect(errorsOf(linter.lint(sidesScene(value)))).toEqual([]);
-      expect(warningsOf(linter.lint(sidesScene(value))).filter(w => w.message.includes('sides'))).toEqual(
+      expect(warningsOf(linter.lint(sidesScene(value))).filter((w) => w.message.includes('sides'))).toEqual(
         []
       );
     }

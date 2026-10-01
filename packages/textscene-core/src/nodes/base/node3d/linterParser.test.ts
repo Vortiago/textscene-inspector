@@ -20,9 +20,7 @@ describe('Node3D transform validators', () => {
     });
 
     it('accepts negative and fractional components', () => {
-      expect(
-        check('transform', 'Transform3D(-1, 0, 0, 0, 0.5, 0, 0, 0, 1, 2.5, -3, 0.125)')
-      ).toBeNull();
+      expect(check('transform', 'Transform3D(-1, 0, 0, 0, 0.5, 0, 0, 0, 1, 2.5, -3, 0.125)')).toBeNull();
     });
 
     it('rejects non-numeric components', () => {
@@ -32,9 +30,7 @@ describe('Node3D transform validators', () => {
 
     it('rejects a component count other than twelve', () => {
       expect(check('transform', 'Transform3D(1, 0, 0)')).not.toBeNull();
-      expect(
-        check('transform', 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 9)')
-      ).not.toBeNull();
+      expect(check('transform', 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 9)')).not.toBeNull();
     });
 
     it('rejects a value that is not a Transform3D at all', () => {
@@ -45,12 +41,8 @@ describe('Node3D transform validators', () => {
 
   describe('global_transform', () => {
     it('is validated the same way', () => {
-      expect(
-        check('global_transform', 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)')
-      ).toBeNull();
-      expect(check('global_transform', 'Transform3D(nope)')?.code).toBe(
-        'INVALID_GLOBAL_TRANSFORM_FORMAT'
-      );
+      expect(check('global_transform', 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)')).toBeNull();
+      expect(check('global_transform', 'Transform3D(nope)')?.code).toBe('INVALID_GLOBAL_TRANSFORM_FORMAT');
     });
   });
 

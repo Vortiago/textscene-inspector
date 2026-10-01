@@ -118,7 +118,6 @@ export function intersectClipRects(a: Rect2, b: Rect2): Rect2 {
   return { x, y, w: right - x, h: bottom - y };
 }
 
-
 /**
  * Godot's whole-pixel clip rect (`renderer_canvas_cull.cpp:422-423`): position and
  * size round independently, so the far edge is `round(position) + round(size)`.

@@ -1,11 +1,6 @@
 /** Pure output formatting for the TSCN linter CLI (no I/O). */
 
-import {
-  diagnosticLine,
-  flooredSeverity,
-  type Diagnostic,
-  type Severity,
-} from '@textscene/core/linter';
+import { diagnosticLine, flooredSeverity, type Diagnostic, type Severity } from '@textscene/core/linter';
 import type { FileDiagnostics } from './lint';
 
 /**
@@ -30,11 +25,7 @@ export interface JsonFinding {
  * Clean files produce a single success line; files with diagnostics produce
  * a file-path header, one line per diagnostic, and a trailing blank line.
  */
-export function formatDiagnostics(
-  filePath: string,
-  diagnostics: Diagnostic[],
-  hasColor: boolean
-): string[] {
+export function formatDiagnostics(filePath: string, diagnostics: Diagnostic[], hasColor: boolean): string[] {
   if (diagnostics.length === 0) {
     return [formatSuccess(`✓ ${filePath}`, hasColor)];
   }

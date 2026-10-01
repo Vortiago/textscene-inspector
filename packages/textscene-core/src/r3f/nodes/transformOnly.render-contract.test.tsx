@@ -23,10 +23,7 @@ import './index';
  */
 const TRANSFORM_ONLY_3D_TYPES = nodeComponentRegistry
   .getAllTypeNames()
-  .filter(
-    (type) =>
-      nodeComponentRegistry.isTransformOnly(type) && nodeComponentRegistry.get(type) === Node3D
-  )
+  .filter((type) => nodeComponentRegistry.isTransformOnly(type) && nodeComponentRegistry.get(type) === Node3D)
   .sort();
 
 // Identity basis translated to (2, 3, 4).
@@ -84,28 +81,25 @@ describe('transform-only 3D types: rendered contract (ADR-0008)', () => {
     }
   );
 
-  it.each([...TRANSFORM_ONLY_3D_TYPES])(
-    '%s positions its children by the node transform',
-    async (type) => {
-      const child: TscnNode = {
-        name: 'Kid',
-        type: 'Node3D',
-        children: [],
-        properties: { name: 'Kid' }, // identity transform of its own
-      };
-      const renderer = await renderScene([subjectNode(type, [child])]);
-      const kid = renderer.scene.findByProps({ name: 'Kid' });
+  it.each([...TRANSFORM_ONLY_3D_TYPES])('%s positions its children by the node transform', async (type) => {
+    const child: TscnNode = {
+      name: 'Kid',
+      type: 'Node3D',
+      children: [],
+      properties: { name: 'Kid' }, // identity transform of its own
+    };
+    const renderer = await renderScene([subjectNode(type, [child])]);
+    const kid = renderer.scene.findByProps({ name: 'Kid' });
 
-      // The child renders inside the subject's transform group. The dispatcher
-      // inserts an unnamed pickable <group> per node, so walk the ancestors.
-      const ancestorNames: string[] = [];
-      for (let p = kid.instance.parent; p; p = p.parent) ancestorNames.push(p.name);
-      expect(ancestorNames).toContain('Subject');
+    // The child renders inside the subject's transform group. The dispatcher
+    // inserts an unnamed pickable <group> per node, so walk the ancestors.
+    const ancestorNames: string[] = [];
+    for (let p = kid.instance.parent; p; p = p.parent) ancestorNames.push(p.name);
+    expect(ancestorNames).toContain('Subject');
 
-      // World position = the parent's Transform3D origin: the transform is
-      // applied by the group and inherited, not re-applied per child.
-      const world = kid.instance.getWorldPosition(new THREE.Vector3());
-      expect(world.toArray()).toEqual([2, 3, 4]);
-    }
-  );
+    // World position = the parent's Transform3D origin: the transform is
+    // applied by the group and inherited, not re-applied per child.
+    const world = kid.instance.getWorldPosition(new THREE.Vector3());
+    expect(world.toArray()).toEqual([2, 3, 4]);
+  });
 });

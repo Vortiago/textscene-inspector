@@ -146,9 +146,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
     const resolvedPathNormalized = normalizeFsPath(resolvedUri.fsPath);
 
     if (!isWithinRoot(this.workspaceRootNormalized, resolvedPathNormalized)) {
-      throw new Error(
-        `Path traversal detected: ${godotPath} resolves outside workspace bounds`
-      );
+      throw new Error(`Path traversal detected: ${godotPath} resolves outside workspace bounds`);
     }
 
     return resolvedUri;

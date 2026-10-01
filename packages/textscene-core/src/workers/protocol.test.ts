@@ -20,7 +20,7 @@ describe('readJobRequest', () => {
 });
 
 describe('toJobError', () => {
-  it('keeps an error\'s name and message', () => {
+  it("keeps an error's name and message", () => {
     expect(toJobError(new RangeError('too big'))).toEqual({ name: 'RangeError', message: 'too big' });
   });
 

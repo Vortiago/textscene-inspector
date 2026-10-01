@@ -20,18 +20,14 @@ export type ForcedViewportMode = Exclude<WebviewInitialConfig['viewportMode'], '
 export type TextSceneWebviewConfig = Partial<WebviewInitialConfig>;
 
 export function readInitialConfig(): TextSceneWebviewConfig {
-  return (
-    (globalThis as { __TEXTSCENE_CONFIG__?: TextSceneWebviewConfig }).__TEXTSCENE_CONFIG__ ?? {}
-  );
+  return (globalThis as { __TEXTSCENE_CONFIG__?: TextSceneWebviewConfig }).__TEXTSCENE_CONFIG__ ?? {};
 }
 
 /**
  * `'auto'` or an absent setting gives `undefined`, which keeps Godot-parity
  * auto-select. `'2D'`/`'3D'` passes through to seed the viewport and suppress it.
  */
-export function resolveInitialViewportMode(
-  config: TextSceneWebviewConfig
-): ForcedViewportMode | undefined {
+export function resolveInitialViewportMode(config: TextSceneWebviewConfig): ForcedViewportMode | undefined {
   if (config.viewportMode === '2D' || config.viewportMode === '3D') {
     return config.viewportMode;
   }

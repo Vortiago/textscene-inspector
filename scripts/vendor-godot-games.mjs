@@ -120,4 +120,6 @@ ${rows}
 );
 
 console.log(`\n[vendor-godot-games] ${summaries.length} games, ${totalFiles} files`);
-console.log('[vendor-godot-games] now run: pnpm generate:fixtures (or use `pnpm vendor:games`, which does both)');
+console.log(
+  '[vendor-godot-games] now run: pnpm generate:fixtures (or use `pnpm vendor:games`, which does both)'
+);

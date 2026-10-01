@@ -30,9 +30,7 @@ import { nodeComponentRegistry } from '../r3f/NodeComponentRegistry.js';
 import { controlComponentRegistry } from '../r3f/controls/ControlComponentRegistry.js';
 
 function duplicateRegistrationWarnings(): string[] {
-  return warnCalls
-    .map((args) => String(args[0]))
-    .filter((msg) => /already registered/i.test(msg));
+  return warnCalls.map((args) => String(args[0])).filter((msg) => /already registered/i.test(msg));
 }
 
 describe('registration-collision guard (#217)', () => {

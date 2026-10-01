@@ -1,12 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
-import {
-  SplitSunLight,
-  attachSplitSun,
-  followDeclaredLight,
-  releaseSplitSun,
-  splitSunOf,
-} from './splitSun';
+import { SplitSunLight, attachSplitSun, followDeclaredLight, releaseSplitSun, splitSunOf } from './splitSun';
 
 describe('SplitSunLight', () => {
   it('stands on three’s sun path', () => {

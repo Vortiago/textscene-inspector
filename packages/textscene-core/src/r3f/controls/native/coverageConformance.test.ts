@@ -112,7 +112,6 @@ describe('Native Control registry coverage', () => {
       `${registered.length - missing.length}/${registered.length} registered types carry a painter`
     ).toEqual([]);
   });
-
 });
 
 describe('Control solver-registry completeness', () => {

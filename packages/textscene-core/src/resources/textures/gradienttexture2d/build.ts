@@ -17,10 +17,7 @@ import type { Gradient, GradientTexture2D } from './types';
  * Godot's size setters accept, 16384 each, and `resolveGradientTexture` draws no
  * texture where the tab cannot allocate that much.
  */
-export function rasterizeGradientTexture2D(
-  tex: GradientTexture2D,
-  gradient: Gradient
-): THREE.DataTexture {
+export function rasterizeGradientTexture2D(tex: GradientTexture2D, gradient: Gradient): THREE.DataTexture {
   const { width, height } = tex;
   const data = new Uint8Array(width * height * 4);
 

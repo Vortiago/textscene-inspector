@@ -35,28 +35,11 @@
 import * as THREE from 'three';
 import { applyCsgNormals } from '../smoothNormals';
 import { extrusionCounts } from './extrusionCounts';
-import {
-  emptyGeometry,
-  facingMatrix,
-  PATH_UP,
-  signedArea,
-  toPoints,
-  warnOnce,
-} from './polygonSweepFrames';
-import {
-  MIN_POLYGON_VERTICES,
-  PathRotation,
-  PolygonMode,
-  type CsgPolygonSpec,
-} from './polygonSweepSpec';
+import { emptyGeometry, facingMatrix, PATH_UP, signedArea, toPoints, warnOnce } from './polygonSweepFrames';
+import { MIN_POLYGON_VERTICES, PathRotation, PolygonMode, type CsgPolygonSpec } from './polygonSweepSpec';
 import { sweepFaceBuffer } from './sweepFaceBuffer';
 
-export {
-  MAX_PATH_EXTRUSIONS,
-  PathIntervalType,
-  PathRotation,
-  PolygonMode,
-} from './polygonSweepSpec';
+export { MAX_PATH_EXTRUSIONS, PathIntervalType, PathRotation, PolygonMode } from './polygonSweepSpec';
 export type { CsgPolygonPathPlan, CsgPolygonSpec } from './polygonSweepSpec';
 
 export function buildCsgPolygonGeometry(spec: CsgPolygonSpec): THREE.BufferGeometry {
@@ -177,9 +160,7 @@ export function buildCsgPolygonGeometry(spec: CsgPolygonSpec): THREE.BufferGeome
 
     if (mode === PolygonMode.DEPTH) {
       // translate_local: origin += basis * v, so the sweep runs along LOCAL -Z.
-      currentXform = currentXform
-        .clone()
-        .multiply(new THREE.Matrix4().makeTranslation(0, 0, -spec.depth));
+      currentXform = currentXform.clone().multiply(new THREE.Matrix4().makeTranslation(0, 0, -spec.depth));
     } else if (mode === PolygonMode.SPIN) {
       if (endCount === 0 && x0 === extrusions - 1) {
         // A full revolution snaps the last frame back onto the first so the surface
@@ -187,9 +168,7 @@ export function buildCsgPolygonGeometry(spec: CsgPolygonSpec): THREE.BufferGeome
         currentXform = baseXform.clone();
       } else {
         // Godot's Transform3D::rotate LEFT-multiplies: a global rotation about +Y.
-        currentXform = new THREE.Matrix4()
-          .makeRotationY(spinStep)
-          .multiply(currentXform);
+        currentXform = new THREE.Matrix4().makeRotationY(spinStep).multiply(currentXform);
       }
     } else {
       const previousOffset = x0 * extrusionStep;

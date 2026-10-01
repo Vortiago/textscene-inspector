@@ -78,7 +78,9 @@ const NDC_CORNERS: readonly (readonly [number, number])[] = [
 ];
 
 /** The camera depths the light's shadow covers (`renderer_scene_cull.cpp:2143-2149`). */
-export function viewSlice(input: Pick<DirectionalShadowFitInput, 'camera' | 'declaration'>): DirectionalShadowSlice {
+export function viewSlice(
+  input: Pick<DirectionalShadowFitInput, 'camera' | 'declaration'>
+): DirectionalShadowSlice {
   const { camera, declaration } = input;
   return directionalShadowSlice(
     camera.near,

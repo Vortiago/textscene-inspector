@@ -10,12 +10,7 @@ import {
   storedNotWritten,
   unrepresentableInt,
 } from './intSlot.js';
-import {
-  boolLiteralAsNumber,
-  boolSlotValue,
-  parseGodotFloat,
-  type IntWidth,
-} from '../../godot/index.js';
+import { boolLiteralAsNumber, boolSlotValue, parseGodotFloat, type IntWidth } from '../../godot/index.js';
 
 /**
  * The Variant-literal readers, re-exported from `src/godot/`. They live there
@@ -43,10 +38,20 @@ export function createBooleanValidator(
   return (key, value, line) => {
     const stored = boolSlotValue(value);
     if (stored === undefined) {
-      return propertyError(key, line, `Property '${propertyName}' must be a boolean (true or false), got: "${value}"`, errorCode);
+      return propertyError(
+        key,
+        line,
+        `Property '${propertyName}' must be a boolean (true or false), got: "${value}"`,
+        errorCode
+      );
     }
     return convertedSpelling(
-      propertyName, key, value, line, errorCode, String(stored),
+      propertyName,
+      key,
+      value,
+      line,
+      errorCode,
+      String(stored),
       boolLiteralAsNumber(value) === undefined
     );
   };
@@ -88,7 +93,12 @@ export function createEnumValidator(
     const read = readIntSlot(value, max);
     const num = read.stored;
     if (num === null) {
-      return propertyError(key, line, `Property '${propertyName}' must be a number, got: "${value}"`, errorCodeFormat);
+      return propertyError(
+        key,
+        line,
+        `Property '${propertyName}' must be a number, got: "${value}"`,
+        errorCodeFormat
+      );
     }
     const refused = unrepresentableInt(propertyName, key, value, line, errorCodeValue, num);
     if (refused) return refused;
@@ -98,9 +108,7 @@ export function createEnumValidator(
       enforcedEndRefusal(propertyName, enforcedMin, 'min', num) ??
       enforcedEndRefusal(propertyName, enforcedMax, 'max', num);
     if (refusal) return propertyError(key, line, refusal, errorCodeValue);
-    const outOfBand = allowed
-      ? !allowed.has(num)
-      : num < min || num > max;
+    const outOfBand = allowed ? !allowed.has(num) : num < min || num > max;
     if (outOfBand) {
       // Only the constants the bound accepts: `enumValues` is the engine's whole
       // enum, and min/max the window this class's hint opens onto it
@@ -173,20 +181,9 @@ export interface NumericRangeSpec {
 }
 
 /** `must be greater than 3` / `must be at least 3`, per exclusivity. */
-function refusalMessage(
-  propertyName: string,
-  end: EnforcedEnd,
-  side: 'min' | 'max',
-  num: number
-): string {
+function refusalMessage(propertyName: string, end: EnforcedEnd, side: 'min' | 'max', num: number): string {
   const relation =
-    side === 'min'
-      ? end.exclusive
-        ? 'greater than'
-        : 'at least'
-      : end.exclusive
-        ? 'less than'
-        : 'at most';
+    side === 'min' ? (end.exclusive ? 'greater than' : 'at least') : end.exclusive ? 'less than' : 'at most';
   // Not "refuses the write": the enforced tier covers a setter that alters the
   // value, such as a CLAMP (range.cpp:255) or a MAX (material.cpp:3087), as
   // well as one that drops it. This sentence is true of both.
@@ -239,7 +236,7 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
     // the range checks, which it never trips. `read` is null for a float slot,
     // and the truncation check at the end reads that flag.
     const read = parseAsInt ? readIntSlot(value, max, spec.width) : null;
-    const num = read ? read.stored : boolLiteralAsNumber(value) ?? parseGodotFloat(value);
+    const num = read ? read.stored : (boolLiteralAsNumber(value) ?? parseGodotFloat(value));
     // An int slot narrows a non-finite at parse time to a value the file does
     // not state (see `asStoredInt`), so it errors. A float slot stores it
     // verbatim and says nothing, as the engine does.
@@ -247,7 +244,13 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
       // The same width the read used, or an int64 slot's reader limit reports
       // as an engine alteration.
       const refused = unrepresentableInt(
-        propertyName, key, value, line, errorCodeValue, num, spec.width ?? slotWidth(max)
+        propertyName,
+        key,
+        value,
+        line,
+        errorCodeValue,
+        num,
+        spec.width ?? slotWidth(max)
       );
       if (refused) return refused;
     }
@@ -294,10 +297,14 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
     return read
       ? storedNotWritten(propertyName, key, value, line, errorCodeValue, read)
       : convertedSpelling(
-          propertyName, key, value, line, errorCodeValue, String(num),
+          propertyName,
+          key,
+          value,
+          line,
+          errorCodeValue,
+          String(num),
           boolLiteralAsNumber(value) !== undefined
         );
   };
   return validator;
 }
-

@@ -28,7 +28,6 @@ function props(n: SolveNode): ControlProperties {
   return n.node.properties as ControlProperties;
 }
 
-
 function marginsOf(n: SolveNode): { left: number; top: number; right: number; bottom: number } {
   const c = n.constants;
   return {
@@ -38,7 +37,6 @@ function marginsOf(n: SolveNode): { left: number; top: number; right: number; bo
     bottom: c.margin_bottom ?? DEFAULT_MARGIN,
   };
 }
-
 
 /**
  * `MarginContainer::get_minimum_size` (`margin_container.cpp:35-57`): the componentwise max of each

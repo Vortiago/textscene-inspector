@@ -239,9 +239,7 @@ describe('CPUParticles3D strict validators', () => {
     it('bounds emission_ring_cone_angle to 0-90 degrees (plain "degrees" hint, not radians_as_degrees)', () => {
       expect(check('emission_ring_cone_angle', '0')).toBeNull();
       expect(check('emission_ring_cone_angle', '90')).toBeNull();
-      expect(check('emission_ring_cone_angle', '90.1')?.code).toBe(
-        'INVALID_EMISSION_RING_CONE_ANGLE_VALUE'
-      );
+      expect(check('emission_ring_cone_angle', '90.1')?.code).toBe('INVALID_EMISSION_RING_CONE_ANGLE_VALUE');
     });
   });
 

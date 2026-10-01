@@ -21,7 +21,15 @@ import {
   type ContainerLayoutFn,
   type MinimumSizeFn,
 } from '../../../../r3f/controls/native/solverRegistry';
-import { SIZE_EXPAND, SIZE_FILL, SIZE_SHRINK_CENTER, SIZE_SHRINK_END, fitChildInRect, hasFlag, isSortableControl } from '../shared/fitChildInRect';
+import {
+  SIZE_EXPAND,
+  SIZE_FILL,
+  SIZE_SHRINK_CENTER,
+  SIZE_SHRINK_END,
+  fitChildInRect,
+  hasFlag,
+  isSortableControl,
+} from '../shared/fitChildInRect';
 
 // FlowContainer::AlignmentMode (flow_container.h:39-43).
 const ALIGNMENT_BEGIN = 0;
@@ -166,7 +174,10 @@ function computeLines(
   return { lines, cachedSize };
 }
 
-function buildChildMscs(entries: readonly { node: SolveNode; minSize: Vec2 }[], vertical: boolean): ChildMsc[] {
+function buildChildMscs(
+  entries: readonly { node: SolveNode; minSize: Vec2 }[],
+  vertical: boolean
+): ChildMsc[] {
   return entries.map(({ node, minSize }) => ({
     msc: { x: Math.trunc(minSize.x), y: Math.trunc(minSize.y) },
     mainExpand: hasFlag(vertical ? vFlagsOf(node) : hFlagsOf(node), SIZE_EXPAND),
@@ -332,19 +343,31 @@ export const flowContainerLayout: ContainerLayoutFn = (n, children, contentRect,
     // 222).
     if (vertical) {
       const hFlags = hFlagsOf(child);
-      if (hasFlag(hFlags, SIZE_FILL) || hasFlag(hFlags, SIZE_SHRINK_CENTER) || hasFlag(hFlags, SIZE_SHRINK_END)) {
+      if (
+        hasFlag(hFlags, SIZE_FILL) ||
+        hasFlag(hFlags, SIZE_SHRINK_CENTER) ||
+        hasFlag(hFlags, SIZE_SHRINK_END)
+      ) {
         childW = lineData.minLineHeight;
       }
       if (hasFlag(vFlagsOf(child), SIZE_EXPAND) && !isZeroApprox(lineData.stretchRatioTotal)) {
-        childH += Math.trunc((lineData.stretchAvail * childMscs[index]!.stretchRatio) / lineData.stretchRatioTotal);
+        childH += Math.trunc(
+          (lineData.stretchAvail * childMscs[index]!.stretchRatio) / lineData.stretchRatioTotal
+        );
       }
     } else {
       const vFlags = vFlagsOf(child);
-      if (hasFlag(vFlags, SIZE_FILL) || hasFlag(vFlags, SIZE_SHRINK_CENTER) || hasFlag(vFlags, SIZE_SHRINK_END)) {
+      if (
+        hasFlag(vFlags, SIZE_FILL) ||
+        hasFlag(vFlags, SIZE_SHRINK_CENTER) ||
+        hasFlag(vFlags, SIZE_SHRINK_END)
+      ) {
         childH = lineData.minLineHeight;
       }
       if (hasFlag(hFlagsOf(child), SIZE_EXPAND) && !isZeroApprox(lineData.stretchRatioTotal)) {
-        childW += Math.trunc((lineData.stretchAvail * childMscs[index]!.stretchRatio) / lineData.stretchRatioTotal);
+        childW += Math.trunc(
+          (lineData.stretchAvail * childMscs[index]!.stretchRatio) / lineData.stretchRatioTotal
+        );
       }
     }
 
@@ -357,7 +380,13 @@ export const flowContainerLayout: ContainerLayoutFn = (n, children, contentRect,
 
     out.set(
       child.path,
-      fitChildInRect({ x: rectX, y: rectY, w: childW, h: childH }, minSize, hFlagsOf(child), vFlagsOf(child), rtl)
+      fitChildInRect(
+        { x: rectX, y: rectY, w: childW, h: childH },
+        minSize,
+        hFlagsOf(child),
+        vFlagsOf(child),
+        rtl
+      )
     );
 
     if (vertical) ofsY += childH + vSep;

@@ -5,11 +5,7 @@ import { parseNode2D } from '../../base/node2d/parser';
 import { floatOr, boolOr, enumOr, intOr, vec2Or } from '../../../parser/valueParsers';
 import { colorOr } from '../../../utils/colorParser';
 import { POINT_LIGHT_2D_RANGE_DEFAULTS } from './types';
-import type {
-  PointLight2DProperties,
-  PointLight2DBlendMode,
-  PointLight2DShadowFilter,
-} from './types';
+import type { PointLight2DProperties, PointLight2DBlendMode, PointLight2DShadowFilter } from './types';
 
 export function parsePointLight2D(
   heading: ParsedHeading,

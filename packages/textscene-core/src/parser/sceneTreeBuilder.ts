@@ -161,10 +161,7 @@ function findInstanceAnchor(parentPath: string, tables: BuildTables): InstanceAn
  * nothing, which Godot re-roots, or a non-root with no `parent=`, which
  * `packed_scene.cpp:207` refuses.
  */
-export function strandedNodes(
-  all: readonly NodeOrigin[],
-  roots: readonly TscnNode[]
-): NodeOrigin[] {
+export function strandedNodes(all: readonly NodeOrigin[], roots: readonly TscnNode[]): NodeOrigin[] {
   const placed = new Set<TscnNode>();
   const walk = (nodes: readonly TscnNode[]): void => {
     for (const node of nodes) {

@@ -24,8 +24,7 @@ describe('decodeNavigationPolygon', () => {
   it('decodes several polygons sharing a vertex pool', () => {
     const data = decodeNavigationPolygon({
       vertices: 'PackedVector2Array(0, 0, 8, 0, 8, 8, 0, 8)',
-      polygons:
-        'Array[PackedInt32Array]([PackedInt32Array(0, 1, 2), PackedInt32Array(0, 2, 3)])',
+      polygons: 'Array[PackedInt32Array]([PackedInt32Array(0, 1, 2), PackedInt32Array(0, 2, 3)])',
     });
     expect(data!.polygons).toEqual([
       [0, 1, 2],
@@ -46,12 +45,8 @@ describe('decodeNavigationPolygon', () => {
 
   it('returns null when either property is absent (error path)', () => {
     expect(decodeNavigationPolygon({})).toBeNull();
-    expect(
-      decodeNavigationPolygon({ vertices: 'PackedVector2Array(0, 0, 1, 0, 1, 1)' })
-    ).toBeNull();
-    expect(
-      decodeNavigationPolygon({ polygons: '[PackedInt32Array(0, 1, 2)]' })
-    ).toBeNull();
+    expect(decodeNavigationPolygon({ vertices: 'PackedVector2Array(0, 0, 1, 0, 1, 1)' })).toBeNull();
+    expect(decodeNavigationPolygon({ polygons: '[PackedInt32Array(0, 1, 2)]' })).toBeNull();
   });
 
   it('returns null instead of throwing on malformed POLYGON indices', () => {
@@ -84,9 +79,7 @@ describe('decodeNavigationPolygon', () => {
   it('returns null when a property is not a Godot-text literal at all (error path)', () => {
     // An inline `[sub_resource]`'s data is `Record<string, unknown>`, and a non-string
     // there decodes to nothing rather than being coerced.
-    expect(
-      decodeNavigationPolygon({ vertices: 42, polygons: '[PackedInt32Array(0, 1, 2)]' })
-    ).toBeNull();
+    expect(decodeNavigationPolygon({ vertices: 42, polygons: '[PackedInt32Array(0, 1, 2)]' })).toBeNull();
   });
 
   it('returns null for empty arrays (edge case)', () => {

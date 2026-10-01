@@ -59,9 +59,7 @@ describe('BoxMesh subdivisions', () => {
     const geometry = await renderGeometry(
       sub('BoxMesh', { subdivide_width: '2', subdivide_height: '3', subdivide_depth: '4' })
     );
-    const p = params<{ widthSegments: number; heightSegments: number; depthSegments: number }>(
-      geometry
-    );
+    const p = params<{ widthSegments: number; heightSegments: number; depthSegments: number }>(geometry);
     expect(p.widthSegments).toBe(3);
     expect(p.heightSegments).toBe(4);
     expect(p.depthSegments).toBe(5);
@@ -211,7 +209,7 @@ describe('TorusMesh radii mapping', () => {
     expect(p.tubularSegments).toBe(48);
   });
 
-  it('lies flat in the XZ plane (hole facing +Y), matching Godot — not three\'s upright default', async () => {
+  it("lies flat in the XZ plane (hole facing +Y), matching Godot — not three's upright default", async () => {
     // inner=1, outer=3 → centre radius 2, tube 1. three's TorusGeometry stands upright
     // and Godot's TorusMesh lies flat, so a π/2 rotateX lays the ring in XZ
     // (max.z ≈ 3) and thin along Y (max.y ≈ 1).
@@ -236,7 +234,7 @@ describe('PrismMesh', () => {
     return xs;
   }
 
-  it('builds Godot\'s triangular prism, not a three primitive', async () => {
+  it("builds Godot's triangular prism, not a three primitive", async () => {
     const geometry = await renderGeometry(sub('PrismMesh', { size: 'Vector3(2, 1, 2)' }));
 
     // 20 vertices / 8 triangles: two triangular caps, two slanted sides, one base.
@@ -258,9 +256,7 @@ describe('PrismMesh', () => {
 
   it('skews the apex with left_to_right', async () => {
     const centred = await renderGeometry(sub('PrismMesh', { size: 'Vector3(2, 2, 2)' }));
-    const skewed = await renderGeometry(
-      sub('PrismMesh', { size: 'Vector3(2, 2, 2)', left_to_right: '0.9' })
-    );
+    const skewed = await renderGeometry(sub('PrismMesh', { size: 'Vector3(2, 2, 2)', left_to_right: '0.9' }));
 
     for (const x of apexXs(centred, 1)) expect(x).toBeCloseTo(0, 6);
     // start_x = -size.x/2 + size.x * left_to_right = -1 + 1.8.

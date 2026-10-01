@@ -152,9 +152,7 @@ export function topLevelParts(body: string): string[] {
 export function parameterList(signature: string): Array<string | null> {
   // `null` holds the slot for a destructured parameter, so every later index,
   // which the call-site lookup keys on, stays put.
-  return topLevelParts(signature).map(
-    (part) => /^\s*(?:\.\.\.)?([A-Za-z_$][\w$]*)/.exec(part)?.[1] ?? null
-  );
+  return topLevelParts(signature).map((part) => /^\s*(?:\.\.\.)?([A-Za-z_$][\w$]*)/.exec(part)?.[1] ?? null);
 }
 
 /**

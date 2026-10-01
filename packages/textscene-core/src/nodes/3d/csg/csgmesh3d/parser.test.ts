@@ -22,9 +22,7 @@ describe('parseCSGMesh3D', () => {
 
   it('defaults flip_faces to false and reads it when written', () => {
     expect(parseCSGMesh3D(heading('CSGMesh3D', { name: 'M' }), {}).flipFaces).toBe(false);
-    expect(
-      parseCSGMesh3D(heading('CSGMesh3D', { name: 'M' }), { flip_faces: 'true' }).flipFaces
-    ).toBe(true);
+    expect(parseCSGMesh3D(heading('CSGMesh3D', { name: 'M' }), { flip_faces: 'true' }).flipFaces).toBe(true);
   });
 
   it('leaves mesh undefined when unwritten', () => {

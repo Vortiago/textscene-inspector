@@ -106,38 +106,35 @@ describe('Area3D reverb/wind strict validators', () => {
       '10',
       'gusty',
     ],
-  ])(
-    '%s — %s, PROPERTY_HINT_RANGE %s',
-    (property, _cite, _hint, code, pastCeiling, nonNumeric) => {
-      it.each([
-        ['the 0 floor', '0'],
-        ['a value past the hint ceiling (or_greater opens it)', pastCeiling],
-        // or_greater leaves no ceiling for inf to trip.
-        ['inf', 'inf'],
-        // Every comparison against nan is false, so the floor never trips.
-        ['nan', 'nan'],
-      ])('accepts %s', (_label, value) => {
-        expect(check(property, value)).toBeNull();
-      });
+  ])('%s — %s, PROPERTY_HINT_RANGE %s', (property, _cite, _hint, code, pastCeiling, nonNumeric) => {
+    it.each([
+      ['the 0 floor', '0'],
+      ['a value past the hint ceiling (or_greater opens it)', pastCeiling],
+      // or_greater leaves no ceiling for inf to trip.
+      ['inf', 'inf'],
+      // Every comparison against nan is false, so the floor never trips.
+      ['nan', 'nan'],
+    ])('accepts %s', (_label, value) => {
+      expect(check(property, value)).toBeNull();
+    });
 
-      it('rejects a non-numeric value', () => {
-        const error = check(property, nonNumeric);
-        expect(error).not.toBeNull();
-        expect(error!.code).toBe(`INVALID_${code}_FORMAT`);
-      });
+    it('rejects a non-numeric value', () => {
+      const error = check(property, nonNumeric);
+      expect(error).not.toBeNull();
+      expect(error!.code).toBe(`INVALID_${code}_FORMAT`);
+    });
 
-      it.each([
-        ['just below the 0 floor', '-0.001'],
-        // `inf_neg < 0` trips the hinted floor.
-        ['inf_neg', 'inf_neg'],
-      ])('warns on %s rather than erroring', (_label, value) => {
-        const error = check(property, value);
-        expect(error).not.toBeNull();
-        expect(error!.code).toBe(`INVALID_${code}_VALUE`);
-        expect(error!.severity).toBe('warning');
-      });
-    }
-  );
+    it.each([
+      ['just below the 0 floor', '-0.001'],
+      // `inf_neg < 0` trips the hinted floor.
+      ['inf_neg', 'inf_neg'],
+    ])('warns on %s rather than erroring', (_label, value) => {
+      const error = check(property, value);
+      expect(error).not.toBeNull();
+      expect(error!.code).toBe(`INVALID_${code}_VALUE`);
+      expect(error!.severity).toBe('warning');
+    });
+  });
 
   describe('wind_source_path — area_3d.cpp:796, Variant::NODE_PATH, PROPERTY_HINT_NODE_PATH_VALID_TYPES "Node3D"', () => {
     // set_wind_source_path (:156-159) is a bare assignment: format-only.

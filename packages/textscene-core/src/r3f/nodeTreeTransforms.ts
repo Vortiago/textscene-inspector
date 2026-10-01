@@ -14,10 +14,22 @@ import { nodeEscapesParent } from './nodeEscapesParent.js';
 /** A parsed `Transform3D` as a `Matrix4`. `basis_x/y/z` are the matrix's ROWS. */
 export function transform3DToMatrix(t: Transform3D): THREE.Matrix4 {
   return new THREE.Matrix4().set(
-    t.basis_x.x, t.basis_x.y, t.basis_x.z, t.origin.x,
-    t.basis_y.x, t.basis_y.y, t.basis_y.z, t.origin.y,
-    t.basis_z.x, t.basis_z.y, t.basis_z.z, t.origin.z,
-    0, 0, 0, 1
+    t.basis_x.x,
+    t.basis_x.y,
+    t.basis_x.z,
+    t.origin.x,
+    t.basis_y.x,
+    t.basis_y.y,
+    t.basis_y.z,
+    t.origin.y,
+    t.basis_z.x,
+    t.basis_z.y,
+    t.basis_z.z,
+    t.origin.z,
+    0,
+    0,
+    0,
+    1
   );
 }
 
@@ -43,10 +55,7 @@ export function localMatrix3D(node: TscnNode): THREE.Matrix4 {
  * transform, or from the nearest `top_level` node. A Node3D composes only through a Node3D parent
  * (`node_3d.cpp:150`, `:656-660`), and `nodeEscapesParent` names the nodes that break the chain.
  */
-export function globalMatrix3D(
-  path: string,
-  nodeByPath: Map<string, TscnNode>
-): THREE.Matrix4 {
+export function globalMatrix3D(path: string, nodeByPath: Map<string, TscnNode>): THREE.Matrix4 {
   const result = new THREE.Matrix4();
   let acc = '';
   for (const segment of path.split('/')) {

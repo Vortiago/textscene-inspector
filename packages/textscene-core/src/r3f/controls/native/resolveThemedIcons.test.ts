@@ -22,7 +22,10 @@ function theme(icons: Record<string, Record<string, string>>): ThemeResource {
     constants: {},
     typeVariations: {},
     properties: {},
-    resources: { externalResources: [{ id: '1', path: 'res://icon.png', type: 'Texture2D' }], internalResources: [] },
+    resources: {
+      externalResources: [{ id: '1', path: 'res://icon.png', type: 'Texture2D' }],
+      internalResources: [],
+    },
   };
 }
 
@@ -47,7 +50,7 @@ describe('resolveThemedIcons', () => {
     expect(out.checked?.resources).toBe(NODE_SCOPE);
   });
 
-  it('falls to the ancestor Theme chain when there is no local override, resolved in THAT theme file\'s own scope', () => {
+  it("falls to the ancestor Theme chain when there is no local override, resolved in THAT theme file's own scope", () => {
     const ancestor = theme({ CheckBox: { checked: 'ExtResource("1")' } });
     const scope = themeResolutionScope('CheckBox', undefined, [ancestor], null);
     const out = resolveThemedIcons(node(), NODE_SCOPE, scope);

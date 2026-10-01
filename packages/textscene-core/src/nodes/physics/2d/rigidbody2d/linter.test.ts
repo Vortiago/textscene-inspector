@@ -99,9 +99,21 @@ max_contacts_reported = 10
         valid: [0.0, 0.5, 5.0, 15.0, -0.5, -1.0],
         invalid: [{ value: -1.5, contains: ['>= -1'] }],
       },
-      { prop: 'lock_rotation', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
-      { prop: 'freeze', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
-      { prop: 'contact_monitor', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
+      {
+        prop: 'lock_rotation',
+        valid: [true, false],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
+      },
+      {
+        prop: 'freeze',
+        valid: [true, false],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
+      },
+      {
+        prop: 'contact_monitor',
+        valid: [true, false],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
+      },
       {
         // rigid_body_2d.cpp:501, ERR_FAIL_INDEX_MSG(p_amount,
         // MAX_CONTACTS_REPORTED_2D_MAX=4096): fails on `< 0 || >= 4096`, so the
@@ -139,20 +151,25 @@ physics_material_override = SubResource("mat_1")
     });
 
     // collision_layer/mask accept 0, which warns, so use 'no-error' mode.
-    runPropertyValidation({ nodeType: 'RigidBody2D', acceptChild: collisionShape2d, acceptMode: 'no-error' }, [
-      {
+    runPropertyValidation(
+      { nodeType: 'RigidBody2D', acceptChild: collisionShape2d, acceptMode: 'no-error' },
+      [
+        {
           prop: 'collision_layer',
           valid: [0, 1, 100, 1048575, 2000000, 2147483648, 4294967295],
           invalid: [
-{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
+            { value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
           ],
         },
-      {
-        prop: 'collision_mask',
-        valid: [0, 1, 255, 1048575, 2147483648, 4294967295],
-        invalid: [{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' }],
-      },
-    ]);
+        {
+          prop: 'collision_mask',
+          valid: [0, 1, 255, 1048575, 2147483648, 4294967295],
+          invalid: [
+            { value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
+          ],
+        },
+      ]
+    );
   });
 
   describe('Semantic Validation (Mass and Damping Warnings)', () => {
@@ -274,10 +291,10 @@ physics_material_override = ExtResource("ext_mat_1")
     });
 
     it('warns when scale.y is more than 0.05 away from 1', () => {
-      expectDiagnostic(
-        scene(node('RigidBody2D', { mass: 1.0, scale: 'Vector2(1, 2)' }), collisionShape2d),
-        { ruleName: 'rigidbody2d-scale-overridden-at-runtime', severity: 'warning' }
-      );
+      expectDiagnostic(scene(node('RigidBody2D', { mass: 1.0, scale: 'Vector2(1, 2)' }), collisionShape2d), {
+        ruleName: 'rigidbody2d-scale-overridden-at-runtime',
+        severity: 'warning',
+      });
     });
 
     it('warns on a mirrored (negative) scale, since length() is unsigned', () => {
@@ -292,9 +309,7 @@ physics_material_override = ExtResource("ext_mat_1")
       const diagnostics = lint(
         scene(node('RigidBody2D', { mass: 1.0, scale: 'Vector2(-1, 1)' }), collisionShape2d)
       );
-      expect(diagnostics.filter((d) => d.ruleName === 'rigidbody2d-scale-overridden-at-runtime')).toEqual(
-        []
-      );
+      expect(diagnostics.filter((d) => d.ruleName === 'rigidbody2d-scale-overridden-at-runtime')).toEqual([]);
     });
 
     it('says nothing when scale is absent (default (1, 1))', () => {
@@ -302,9 +317,7 @@ physics_material_override = ExtResource("ext_mat_1")
     });
 
     it('says nothing when scale sits within the 0.05 tolerance', () => {
-      expectClean(
-        scene(node('RigidBody2D', { mass: 1.0, scale: 'Vector2(1.04, 0.96)' }), collisionShape2d)
-      );
+      expectClean(scene(node('RigidBody2D', { mass: 1.0, scale: 'Vector2(1.04, 0.96)' }), collisionShape2d));
     });
 
     it('quotes no number for a component narrowed at parse time', () => {
@@ -315,35 +328,36 @@ physics_material_override = ExtResource("ext_mat_1")
       const diagnostics = lint(
         scene(node('RigidBody2D', { mass: 1.0, scale: 'Vector2i(inf, 5)' }), collisionShape2d)
       );
-      expect(
-        diagnostics.filter((d) => d.ruleName === 'rigidbody2d-scale-overridden-at-runtime')
-      ).toEqual([]);
+      expect(diagnostics.filter((d) => d.ruleName === 'rigidbody2d-scale-overridden-at-runtime')).toEqual([]);
     });
 
     it('still warns for an integer spelling whose components the slot holds', () => {
       // Nothing is narrowed here, so the converted spelling reads as the (2, 2)
       // Godot widens into the float slot.
-      expectDiagnostic(
-        scene(node('RigidBody2D', { mass: 1.0, scale: 'Vector2i(2, 2)' }), collisionShape2d),
-        { ruleName: 'rigidbody2d-scale-overridden-at-runtime', severity: 'warning' }
-      );
+      expectDiagnostic(scene(node('RigidBody2D', { mass: 1.0, scale: 'Vector2i(2, 2)' }), collisionShape2d), {
+        ruleName: 'rigidbody2d-scale-overridden-at-runtime',
+        severity: 'warning',
+      });
     });
 
     // physical_bone_2d.cpp:109: PhysicalBone2D's override calls
     // `RigidBody2D::get_configuration_warnings()` unchanged, so `applicableNodeTypeMatcher`
     // reaches every RigidBody2D descendant, not only the exact type.
     it('reaches PhysicalBone2D, which inherits this check from RigidBody2D unchanged', () => {
-      expectDiagnostic(
-        scene(node('PhysicalBone2D', { scale: 'Vector2(2, 2)' }), collisionShape2d),
-        { ruleName: 'rigidbody2d-scale-overridden-at-runtime', severity: 'warning' }
-      );
+      expectDiagnostic(scene(node('PhysicalBone2D', { scale: 'Vector2(2, 2)' }), collisionShape2d), {
+        ruleName: 'rigidbody2d-scale-overridden-at-runtime',
+        severity: 'warning',
+      });
     });
   });
 
   describe('Semantic Validation (Contact Monitor)', () => {
     it('reports when max_contacts_reported set but contact_monitor=false', () => {
       expectDiagnostic(
-        scene(node('RigidBody2D', { mass: 1.0, contact_monitor: false, max_contacts_reported: 10 }), collisionShape2d),
+        scene(
+          node('RigidBody2D', { mass: 1.0, contact_monitor: false, max_contacts_reported: 10 }),
+          collisionShape2d
+        ),
         {
           ruleName: 'rigidbody2d-max-contacts-without-monitor',
           severity: 'info',
@@ -362,7 +376,10 @@ physics_material_override = ExtResource("ext_mat_1")
 
     it('should not warn when max_contacts_reported and contact_monitor=true', () => {
       expectClean(
-        scene(node('RigidBody2D', { mass: 1.0, contact_monitor: true, max_contacts_reported: 10 }), collisionShape2d)
+        scene(
+          node('RigidBody2D', { mass: 1.0, contact_monitor: true, max_contacts_reported: 10 }),
+          collisionShape2d
+        )
       );
     });
   });
@@ -409,13 +426,11 @@ physics_material_override = ExtResource("ext_mat_1")
       // The third is the missing physics material: the mass error does not stop the rule
       // phase, so a broken resource reference is reported beside it.
       expect(errors.some((d) => d.ruleName === 'dangling-resource-reference')).toBe(true);
-      expect(diagnostics.some(d => d.message.includes('linear_damp'))).toBe(false);
+      expect(diagnostics.some((d) => d.message.includes('linear_damp'))).toBe(false);
       // The body's semantic warnings arrive alongside those errors. A validator
       // error that withheld the scene would stop the rule phase running at all,
       // making this body look like an errors-only case.
-      expect(diagnostics.some((d) => d.ruleName === 'collisionobject2d-needs-collision-shape')).toBe(
-        true
-      );
+      expect(diagnostics.some((d) => d.ruleName === 'collisionobject2d-needs-collision-shape')).toBe(true);
     });
 
     it('should handle all properties together', () => {
@@ -465,7 +480,10 @@ max_contacts_reported = 10
 
     it('should handle bitmask boundaries', () => {
       expectClean(
-        scene(node('RigidBody2D', { mass: 1.0, collision_layer: 1048575, collision_mask: 1048575 }), collisionShape2d)
+        scene(
+          node('RigidBody2D', { mass: 1.0, collision_layer: 1048575, collision_mask: 1048575 }),
+          collisionShape2d
+        )
       );
     });
 
@@ -485,10 +503,8 @@ max_contacts_reported = 10
       // hint's bottom (:742), linear_damp 20 is under its open top (:763), and
       // collision_layer = 0 carries no check (RigidBody2D), so none of those
       // contribute.
-      expect(diagnostics.map(d => d.ruleName).sort()).toEqual([
-        'rigidbody2d-max-contacts-without-monitor',
-      ]);
-      expect(diagnostics.every(d => d.severity === 'info')).toBe(true);
+      expect(diagnostics.map((d) => d.ruleName).sort()).toEqual(['rigidbody2d-max-contacts-without-monitor']);
+      expect(diagnostics.every((d) => d.severity === 'info')).toBe(true);
     });
   });
 });

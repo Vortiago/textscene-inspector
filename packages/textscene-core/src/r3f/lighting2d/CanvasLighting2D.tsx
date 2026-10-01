@@ -18,24 +18,14 @@ import type { RGBA } from '../canvasItemModulate.js';
 import { ShadowCasterStage } from './ShadowCasterStage.js';
 import { CanvasLightSequenceProvider } from './useLightSequence.js';
 import { lightCullKeyId } from './lightCullKey.js';
-import {
-  CanvasLighting2DContext,
-  type CanvasLighting2D,
-} from './lightPassContext.js';
-import {
-  LIGHT_LAYER,
-  MAX_LIGHT_CLASSES,
-  SHADOW_TINT_LAYER,
-} from './lightPassLayers.js';
+import { CanvasLighting2DContext, type CanvasLighting2D } from './lightPassContext.js';
+import { LIGHT_LAYER, MAX_LIGHT_CLASSES, SHADOW_TINT_LAYER } from './lightPassLayers.js';
 import {
   useDeclarationCount,
   useKeyedDeclarationCount,
   useLightClassRegistry,
 } from './lightClassRegistry.js';
-import {
-  useAccumulationTargets,
-  useSelectedAccumulationTargets,
-} from './lightAccumulationTargets.js';
+import { useAccumulationTargets, useSelectedAccumulationTargets } from './lightAccumulationTargets.js';
 import { createSeedMaterial, LightAccumulatorSeed } from './lightSeedQuad.js';
 import { useLightAccumulationPass } from './lightAccumulationPass.js';
 
@@ -69,10 +59,7 @@ export interface CanvasLighting2DProviderProps {
   children: ReactNode;
 }
 
-export function CanvasLighting2DProvider({
-  canvasModulate,
-  children,
-}: CanvasLighting2DProviderProps) {
+export function CanvasLighting2DProvider({ canvasModulate, children }: CanvasLighting2DProviderProps) {
   const gl = useThree((s) => s.gl);
   const scene = useThree((s) => s.scene);
   const camera = useThree((s) => s.camera);

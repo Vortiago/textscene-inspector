@@ -411,19 +411,21 @@ describe('PathFollow3D Linter', () => {
       );
       expect(diagnostics.length).toBeGreaterThan(0);
 
-      const parentError = diagnostics.find(d => d.ruleName === 'pathfollow3d-invalid-parent');
+      const parentError = diagnostics.find((d) => d.ruleName === 'pathfollow3d-invalid-parent');
       expect(parentError).toBeDefined();
 
-      const progressWarning = diagnostics.find(d => d.ruleName === 'pathfollow3d-negative-progress');
+      const progressWarning = diagnostics.find((d) => d.ruleName === 'pathfollow3d-negative-progress');
       expect(progressWarning).toBeDefined();
 
-      const ratioReport = diagnostics.find(d => d.ruleName === 'pathfollow3d-progress-ratio-ignored');
+      const ratioReport = diagnostics.find((d) => d.ruleName === 'pathfollow3d-progress-ratio-ignored');
       expect(ratioReport).toBeDefined();
 
       // No oriented-mode warning: Godot's ROTATION_ORIENTED check sits in the `else` branch of
       // the parent test (path_3d.cpp:360-365), so a node that fails the parent test never
       // reaches it.
-      const orientedWarning = diagnostics.find(d => d.ruleName === 'pathfollow3d-oriented-mode-requires-up-vector');
+      const orientedWarning = diagnostics.find(
+        (d) => d.ruleName === 'pathfollow3d-oriented-mode-requires-up-vector'
+      );
       expect(orientedWarning).toBeUndefined();
     });
 

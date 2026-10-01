@@ -15,10 +15,7 @@ export function useSubOrExtResource(
   internalResources: readonly TscnInternalResource[],
   externalResources: readonly TscnExternalResource[]
 ): TscnInternalResource | undefined {
-  const inline = useMemo(
-    () => resolveSubResourceRef(ref, internalResources),
-    [ref, internalResources]
-  );
+  const inline = useMemo(() => resolveSubResourceRef(ref, internalResources), [ref, internalResources]);
 
   // Called with '' when the shape is inline or absent, to keep the hook count stable.
   const externalPath = useMemo(

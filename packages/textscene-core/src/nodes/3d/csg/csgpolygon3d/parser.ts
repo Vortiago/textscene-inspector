@@ -81,7 +81,11 @@ export function parseCSGPolygon3D(
       DEFAULTS.pathContinuousU,
       'CSGPolygon3D path_continuous_u'
     ),
-    pathUDistance: floatOr(properties.path_u_distance, DEFAULTS.pathUDistance, 'CSGPolygon3D path_u_distance'),
+    pathUDistance: floatOr(
+      properties.path_u_distance,
+      DEFAULTS.pathUDistance,
+      'CSGPolygon3D path_u_distance'
+    ),
     pathJoined: boolOr(properties.path_joined, DEFAULTS.pathJoined, 'CSGPolygon3D path_joined'),
     smoothFaces: boolOr(properties.smooth_faces, DEFAULTS.smoothFaces, 'CSGPolygon3D smooth_faces'),
     flipFaces: boolOr(properties.flip_faces, DEFAULTS.flipFaces, 'CSGPolygon3D flip_faces'),

@@ -6,10 +6,7 @@
 import { useEffect } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import {
-  MissingResourcesProvider,
-  useMissingResources,
-} from '../../contexts/MissingResourcesContext';
+import { MissingResourcesProvider, useMissingResources } from '../../contexts/MissingResourcesContext';
 import { MissingResourcesPanel } from './MissingResourcesPanel';
 
 function ReportMissingOnMount({ path }: { path: string }) {
@@ -54,9 +51,7 @@ describe('<MissingResourcesPanel>', () => {
     expect(missingRows).toHaveLength(2);
 
     const paths = Array.from(missingRows).map((r) => r.getAttribute('data-path'));
-    expect(paths).toEqual(
-      expect.arrayContaining(['res://textures/foo.png', 'res://textures/bar.png'])
-    );
+    expect(paths).toEqual(expect.arrayContaining(['res://textures/foo.png', 'res://textures/bar.png']));
   });
 
   it('upload row file-input change fires onUpload with (path, file)', async () => {
@@ -69,9 +64,7 @@ describe('<MissingResourcesPanel>', () => {
     );
 
     const panel = await screen.findByTestId('missing-resources-panel');
-    const input = panel.querySelector(
-      '[data-state="missing"] input[type="file"]'
-    ) as HTMLInputElement;
+    const input = panel.querySelector('[data-state="missing"] input[type="file"]') as HTMLInputElement;
     expect(input).toBeTruthy();
 
     const file = new File(['stub bytes'], 'foo.png', { type: 'image/png' });
@@ -216,9 +209,7 @@ describe('<MissingResourcesPanel>', () => {
     const panel = await screen.findByTestId('missing-resources-panel');
     expect(panel.querySelectorAll('[data-state="uploaded"]')).toHaveLength(1);
 
-    const removeBtn = panel.querySelector(
-      '[data-state="uploaded"] button'
-    ) as HTMLButtonElement;
+    const removeBtn = panel.querySelector('[data-state="uploaded"] button') as HTMLButtonElement;
     await act(async () => {
       fireEvent.click(removeBtn);
     });
@@ -238,9 +229,7 @@ describe('<MissingResourcesPanel>', () => {
     );
 
     const panel = await screen.findByTestId('missing-resources-panel');
-    const pathEl = panel.querySelector(
-      '[data-state="uploaded"] [title]'
-    ) as HTMLElement;
+    const pathEl = panel.querySelector('[data-state="uploaded"] [title]') as HTMLElement;
     expect(pathEl).toBeTruthy();
     expect(pathEl.getAttribute('title')).toBe(longPath);
     // The text is the full path. happy-dom cannot observe the CSS ellipsis.

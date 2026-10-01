@@ -162,7 +162,11 @@ shape = SubResource("shape_1")
     it('should detect non-existent shape resource', () => {
       const content = scene(
         node('StaticBody3D', {}, { name: 'StaticBody' }),
-        node('CollisionShape3D', { shape: 'SubResource("nonexistent")' }, { name: 'MissingResource', parent: '.' })
+        node(
+          'CollisionShape3D',
+          { shape: 'SubResource("nonexistent")' },
+          { name: 'MissingResource', parent: '.' }
+        )
       );
       const resourceError = expectDiagnostic(content, {
         ruleName: 'dangling-resource-reference',
@@ -323,7 +327,11 @@ shape = SubResource("shape_1")
         node('Node3D', {}, { name: 'Root' }),
         instanced('Body', { parent: '.' }),
         override('Inner', 0, { parent: 'Body' }),
-        node('CollisionShape3D', { shape: 'SubResource("shape_1")' }, { name: 'Collision', parent: 'Body/Inner' })
+        node(
+          'CollisionShape3D',
+          { shape: 'SubResource("shape_1")' },
+          { name: 'Collision', parent: 'Body/Inner' }
+        )
       );
       expectNoDiagnostic(instancedParent, { ruleName: 'collisionshape3d-invalid-parent' });
       expectNoDiagnostic(overrideParent, { ruleName: 'collisionshape3d-invalid-parent' });
@@ -604,9 +612,11 @@ shape = SubResource("convex_1")
       // Missing shape (error), invalid parent (warning), invalid disabled format (error), though
       // strict parser errors may stop semantic validation.
       expect(diagnostics.length).toBeGreaterThanOrEqual(1);
-      const hasShapeError = diagnostics.some(d => d.message.includes('missing required property'));
-      const hasParentWarning = diagnostics.some(d => d.message.includes('invalid-parent') || d.message.includes('should be a child'));
-      const hasDisabledError = diagnostics.some(d => d.message.includes('disabled'));
+      const hasShapeError = diagnostics.some((d) => d.message.includes('missing required property'));
+      const hasParentWarning = diagnostics.some(
+        (d) => d.message.includes('invalid-parent') || d.message.includes('should be a child')
+      );
+      const hasDisabledError = diagnostics.some((d) => d.message.includes('disabled'));
       expect(hasShapeError || hasParentWarning || hasDisabledError).toBe(true);
     });
 

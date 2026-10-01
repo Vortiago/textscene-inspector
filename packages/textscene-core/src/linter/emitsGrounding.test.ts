@@ -98,7 +98,10 @@ describe('emit grounding', () => {
         const fixed = severityFixedBy(e.grounding);
         return fixed !== undefined && fixed !== e.severity;
       })
-      .map((e) => `${e.rule}: ${e.ruleName} is ${e.severity}, its grounding fixes ${severityFixedBy(e.grounding)}`);
+      .map(
+        (e) =>
+          `${e.rule}: ${e.ruleName} is ${e.severity}, its grounding fixes ${severityFixedBy(e.grounding)}`
+      );
     expect(offTier.sort()).toEqual([]);
   });
 
@@ -195,9 +198,7 @@ describe('the grounding guard bites', () => {
     });
     expect(resolve(inert, census)).toContain('sprite_2d.cpp:98');
     expect(resolve(inert, census)).toContain('read only inside this branch');
-    expect(resolve(entry({ kind: 'engine', at: 'sprite_2d.cpp:296' }), census)).toBe(
-      'sprite_2d.cpp:296'
-    );
+    expect(resolve(entry({ kind: 'engine', at: 'sprite_2d.cpp:296' }), census)).toBe('sprite_2d.cpp:296');
   });
 
   it('reads the reason as the resolution for a no-engine-counterpart arm', () => {

@@ -27,9 +27,7 @@ const CSS_SOURCE = readFileSync(path.join(HERE, 'TscnPreviewShell.module.css'), 
 
 describe('<TscnPreviewShell> viewport controls live over the viewport, not the top bar', () => {
   it('renders the viewport toolbar inside the viewport <main>, not the <header>', () => {
-    const { container } = render(
-      <TscnPreviewShell panelId="p-300" content={MINIMAL_TSCN} />
-    );
+    const { container } = render(<TscnPreviewShell panelId="p-300" content={MINIMAL_TSCN} />);
     const header = container.querySelector('header');
     const viewport = container.querySelector('main[aria-label="Viewport"]');
     const toolbar = container.querySelector('[role="toolbar"][aria-label="Viewport controls"]');
@@ -42,9 +40,7 @@ describe('<TscnPreviewShell> viewport controls live over the viewport, not the t
   });
 
   it('marks the overlay with the stable hook the visual harness hides during capture', () => {
-    const { container } = render(
-      <TscnPreviewShell panelId="p-300-hook" content={MINIMAL_TSCN} />
-    );
+    const { container } = render(<TscnPreviewShell panelId="p-300-hook" content={MINIMAL_TSCN} />);
     // scripts/visual/run.mjs hides [data-testid="viewport-toolbar-overlay"] from
     // canvas.screenshot(), so it must be the wrapper with the panel chrome, not
     // the inner toolbar. Without the hook every golden changes.

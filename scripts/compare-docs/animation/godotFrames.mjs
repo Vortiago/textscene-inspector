@@ -49,10 +49,14 @@ export async function captureGodotFrames(fixture, framesDir, mode) {
       encoding: 'utf8',
       timeout: 300_000,
     });
-    const r = spawnSync('xvfb-run', ['-a', 'godot', '--path', work, '--quit-after', String(FRAMES * 20 + 200)], {
-      encoding: 'utf8',
-      timeout: 300_000,
-    });
+    const r = spawnSync(
+      'xvfb-run',
+      ['-a', 'godot', '--path', work, '--quit-after', String(FRAMES * 20 + 200)],
+      {
+        encoding: 'utf8',
+        timeout: 300_000,
+      }
+    );
     const got = (await readdir(framesDir)).filter((f) => /^frame_\d+\.png$/.test(f));
     if (got.length < FRAMES) {
       throw new Error(`Godot wrote ${got.length}/${FRAMES} frames.\n${r.stderr ?? ''}`);

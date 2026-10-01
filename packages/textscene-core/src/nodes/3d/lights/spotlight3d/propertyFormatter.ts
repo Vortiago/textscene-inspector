@@ -3,10 +3,7 @@
 import type { PropertySection } from '../../../../core/NodeRegistry';
 import type { SpotLight3DProperties } from './types';
 import { formatNode3DProperties } from '../../../base/node3d/propertyFormatter';
-import {
-  formatBaseLightSection,
-  formatBaseShadowSection,
-} from '../shared/propertyFormatter';
+import { formatBaseLightSection, formatBaseShadowSection } from '../shared/propertyFormatter';
 
 export function formatSpotLight3DProperties(properties: SpotLight3DProperties): PropertySection[] {
   const sections: PropertySection[] = [];

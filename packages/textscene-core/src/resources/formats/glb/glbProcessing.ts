@@ -11,8 +11,8 @@ import { withExtensionRules } from './extensionRules';
 import type { GltfExtensionRules } from './types';
 
 interface GlbModules {
-  GLTFLoader: typeof import('three/addons/loaders/GLTFLoader.js')['GLTFLoader'];
-  skeletonClone: typeof import('three/addons/utils/SkeletonUtils.js')['clone'];
+  GLTFLoader: (typeof import('three/addons/loaders/GLTFLoader.js'))['GLTFLoader'];
+  skeletonClone: (typeof import('three/addons/utils/SkeletonUtils.js'))['clone'];
 }
 
 /** Null until the first GLB load. Written only when `initPromise` resolves. */

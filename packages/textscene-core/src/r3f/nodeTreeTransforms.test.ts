@@ -22,7 +22,11 @@ describe('globalMatrix3D', () => {
   it('composes a Node3D chain root to leaf', () => {
     const origin = originOf(
       'Root/A/B',
-      [node('Root', 'Node3D', {}, translation(1, 0, 0)), node('A', 'Node3D', {}, translation(0, 2, 0)), node('B', 'Node3D', {}, translation(0, 0, 3))],
+      [
+        node('Root', 'Node3D', {}, translation(1, 0, 0)),
+        node('A', 'Node3D', {}, translation(0, 2, 0)),
+        node('B', 'Node3D', {}, translation(0, 0, 3)),
+      ],
       ['Root', 'Root/A', 'Root/A/B']
     );
     expect(origin).toEqual([1, 2, 3]);
@@ -31,7 +35,11 @@ describe('globalMatrix3D', () => {
   it('restarts below a plain Node, whose Node3D child has no Node3D parent', () => {
     const origin = originOf(
       'Root/Folder/Child',
-      [node('Root', 'Node3D', {}, translation(5, 0, 0)), node('Folder', 'Node'), node('Child', 'Node3D', {}, translation(0, 1, 0))],
+      [
+        node('Root', 'Node3D', {}, translation(5, 0, 0)),
+        node('Folder', 'Node'),
+        node('Child', 'Node3D', {}, translation(0, 1, 0)),
+      ],
       ['Root', 'Root/Folder', 'Root/Folder/Child']
     );
     expect(origin).toEqual([0, 1, 0]);

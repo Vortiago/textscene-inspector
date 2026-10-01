@@ -28,8 +28,14 @@ const DISABLE_MODE = { 0: 'REMOVE', 1: 'MAKE_STATIC', 2: 'KEEP_ACTIVE' };
  */
 const shared = (disableModeHint: string, layerHint: string, maskHint: string) => ({
   disable_mode: v.enumInt('disable_mode', 0, 2, DISABLE_MODE, { hinted: disableModeHint }),
-  collision_layer: layerBitmask('collision_layer', { hinted: layerHint, width: 'uint32' /* collision_object_2d.h:121 / collision_object_3d.h:130 */ }),
-  collision_mask: layerBitmask('collision_mask', { hinted: maskHint, width: 'uint32' /* collision_object_2d.h:124 / collision_object_3d.h:133 */ }),
+  collision_layer: layerBitmask('collision_layer', {
+    hinted: layerHint,
+    width: 'uint32' /* collision_object_2d.h:121 / collision_object_3d.h:130 */,
+  }),
+  collision_mask: layerBitmask('collision_mask', {
+    hinted: maskHint,
+    width: 'uint32' /* collision_object_2d.h:124 / collision_object_3d.h:133 */,
+  }),
   // collision_object_2d.cpp:647: a plain FLOAT, no range hint, so no bound.
   collision_priority: v.float('collision_priority'),
 });
@@ -40,7 +46,7 @@ validatorRegistry.registerAll(
   {
     // collision_object_2d.cpp:650. The 3D twin spells it `input_ray_pickable`.
     input_pickable: v.boolean('input_pickable'),
-  },
+  }
 );
 
 validatorRegistry.registerAll(
@@ -50,5 +56,5 @@ validatorRegistry.registerAll(
     // collision_object_3d.cpp:511-512. `input_capture_on_drag` is 3D-only.
     input_ray_pickable: v.boolean('input_ray_pickable'),
     input_capture_on_drag: v.boolean('input_capture_on_drag'),
-  },
+  }
 );

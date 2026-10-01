@@ -9,10 +9,7 @@ import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const shellCss = readFileSync(
-  join(__dirname, 'TscnPreviewShell.module.css'),
-  'utf-8'
-);
+const shellCss = readFileSync(join(__dirname, 'TscnPreviewShell.module.css'), 'utf-8');
 
 describe('TscnPreviewShell dock overflow (WI-UX-13)', () => {
   it('declares overflow: auto on .dockBody (defense in depth against future unbounded children)', () => {

@@ -4,18 +4,8 @@
  * the chrome: the project-viewport frame, the zoom HUD, wheel zoom and drag pan.
  * `<World2DCanvas>` draws the world with its camera glued to the stage view.
  */
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type PointerEvent as ReactPointerEvent,
-} from 'react';
-import type {
-  TscnNode,
-  TscnExternalResource,
-  TscnInternalResource,
-} from '../../../parser/types.js';
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../parser/types.js';
 import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
 import { readPersisted } from '../../hooks/usePersistedState.js';
 import {
@@ -112,9 +102,7 @@ export function Canvas2DStage({
     const r = el.getBoundingClientRect();
     if (r.width <= 0 || r.height <= 0) return;
     const margin = 56;
-    const zoom = clampZoom(
-      Math.min((r.width - margin) / canvasWidth, (r.height - margin) / canvasHeight)
-    );
+    const zoom = clampZoom(Math.min((r.width - margin) / canvasWidth, (r.height - margin) / canvasHeight));
     applyView({
       zoom,
       pan: {
@@ -186,12 +174,7 @@ export function Canvas2DStage({
       if (notches === 0) return;
       const r = el.getBoundingClientRect();
       moveView(
-        zoomViewAround(
-          viewRef.current,
-          e.clientX - r.left,
-          e.clientY - r.top,
-          ZOOM_PER_NOTCH ** -notches
-        )
+        zoomViewAround(viewRef.current, e.clientX - r.left, e.clientY - r.top, ZOOM_PER_NOTCH ** -notches)
       );
     };
     el.addEventListener('wheel', onWheel, { passive: false });
@@ -298,9 +281,7 @@ export function Canvas2DStage({
       return;
     }
     const r = touchRect.current ?? e.currentTarget.getBoundingClientRect();
-    moveView(
-      zoomViewAround(panned, centroid.x - r.left, centroid.y - r.top, zoom / view.zoom)
-    );
+    moveView(zoomViewAround(panned, centroid.x - r.left, centroid.y - r.top, zoom / view.zoom));
   };
 
   const onStagePointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {

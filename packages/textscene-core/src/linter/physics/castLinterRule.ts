@@ -75,8 +75,7 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
 
     const props = node.properties as Record<string, string>;
     const diagnostics: Diagnostic[] = [];
-    const report = (arm: RuleArm | undefined, message: string) =>
-      reportArm(diagnostics, arm, node, message);
+    const report = (arm: RuleArm | undefined, message: string) => reportArm(diagnostics, arm, node, message);
 
     // Defaults per doc/classes/{Ray,Shape}Cast{2D,3D}.xml, the same for all four:
     // collide_with_areas false, collide_with_bodies true. The default also stands
@@ -85,7 +84,10 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
     const withAreas = boolSlotValue(props.collide_with_areas) ?? false;
     const withBodies = boolSlotValue(props.collide_with_bodies) ?? true;
     if (!withAreas && !withBodies) {
-      report(arms.noCollideTarget, `${type} '${node.name}' has both 'collide_with_areas' and 'collide_with_bodies' set to false. It can never report a collision with anything.`);
+      report(
+        arms.noCollideTarget,
+        `${type} '${node.name}' has both 'collide_with_areas' and 'collide_with_bodies' set to false. It can never report a collision with anything.`
+      );
     }
 
     // `ruleInt` reads the value Godot stores; `parseInt` stops at the
@@ -94,7 +96,10 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
     // ray_cast_3d.h:100, shape_cast_3d.h:106).
     const mask = ruleInt(props.collision_mask, null, 'uint32');
     if (mask === 0) {
-      report(arms.zeroMask, `${type} '${node.name}' has 'collision_mask' set to 0. It is on no collision layers and will never detect anything.`);
+      report(
+        arms.zeroMask,
+        `${type} '${node.name}' has 'collision_mask' set to 0. It is on no collision layers and will never detect anything.`
+      );
     }
 
     if (arms.missingShape) {
@@ -102,11 +107,17 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
       // assigned.": scene/2d/physics/shape_cast_2d.cpp:407, and its 3D twin.
       const shape = resolveResourceSlot(context.scene, props.shape);
       if (shape.kind === 'empty') {
-        report(arms.missingShape, `${type} '${node.name}' has no 'shape'. It cannot interact with other objects until a ${shapeType} is assigned.`);
+        report(
+          arms.missingShape,
+          `${type} '${node.name}' has no 'shape'. It cannot interact with other objects until a ${shapeType} is assigned.`
+        );
       } else if (shape.kind === 'resolved' && descendsFromClass(shape.type, 'ConcavePolygonShape3D')) {
         // `descendsFromClass`, not an exact name: `shape_cast_3d.cpp:188` tests
         // `Object::cast_to<ConcavePolygonShape3D>(*shape)`, which a subclass passes.
-        report(arms.concaveShape, `${type} '${node.name}' uses a ConcavePolygonShape3D. Godot does not support concave shapes here and reports no collisions.`);
+        report(
+          arms.concaveShape,
+          `${type} '${node.name}' uses a ConcavePolygonShape3D. Godot does not support concave shapes here and reports no collisions.`
+        );
       }
     }
 

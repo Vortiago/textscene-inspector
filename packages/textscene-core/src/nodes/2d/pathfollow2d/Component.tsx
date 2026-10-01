@@ -13,15 +13,8 @@ import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import { useParentPath2DCurve } from '../../../r3f/contexts/Path2DCurveContext';
 import { node2dGroupProps, node2dGroupSpread } from '../../../r3f/node2dTransform';
 import { useCanvasItemRenderOrder } from '../../../r3f/contexts/PaintOrderContext';
-import {
-  accumulateCanvasItemZ,
-  useEffectiveZ,
-} from '../../../r3f/lighting2d/canvasItemPlacement';
-import {
-  Modulate2DContext,
-  multiplyModulate,
-  useParentModulate,
-} from '../../../r3f/canvasItemModulate';
+import { accumulateCanvasItemZ, useEffectiveZ } from '../../../r3f/lighting2d/canvasItemPlacement';
+import { Modulate2DContext, multiplyModulate, useParentModulate } from '../../../r3f/canvasItemModulate';
 import type { Curve2DSampler } from '../../../resources/curves/curve2d';
 import type { PathFollow2DProperties } from './types';
 
@@ -30,10 +23,7 @@ const FOLLOW_COLOR = 0xffa733;
 
 // A small diamond marker (radius 6 px) at the follow point.
 const FOLLOW_DOT_POSITIONS = new Float32Array([
-  -6, 0, 0, 0, -6, 0,
-  0, -6, 0, 6, 0, 0,
-  6, 0, 0, 0, 6, 0,
-  0, 6, 0, -6, 0, 0,
+  -6, 0, 0, 0, -6, 0, 0, -6, 0, 6, 0, 0, 6, 0, 0, 0, 6, 0, 0, 6, 0, -6, 0, 0,
 ]);
 
 export function PathFollow2D({ node, children }: NodeComponentProps) {
@@ -47,10 +37,7 @@ export function PathFollow2D({ node, children }: NodeComponentProps) {
     [parentModulate, props.modulate]
   );
 
-  const followTransform = useMemo(
-    () => computeFollowTransform(sampler, props),
-    [sampler, props]
-  );
+  const followTransform = useMemo(() => computeFollowTransform(sampler, props), [sampler, props]);
 
   const dot = gizmoVisible ? <FollowDot /> : null;
   const renderOrder = useCanvasItemRenderOrder(node, accumulateCanvasItemZ(useEffectiveZ(), props));
@@ -69,12 +56,7 @@ export function PathFollow2D({ node, children }: NodeComponentProps) {
     // This group replaces `<Node2D>`'s, so it carries the canvas draw-order key
     // `<CanvasItem2D>` would have set. three reads a drawn object's place from its
     // nearest enclosing group, and a bare one sinks the dot behind the canvas.
-    <group
-      name={node.name}
-      {...followTransform}
-      visible={props.visible !== false}
-      renderOrder={renderOrder}
-    >
+    <group name={node.name} {...followTransform} visible={props.visible !== false} renderOrder={renderOrder}>
       {dot}
       <Modulate2DContext.Provider value={modulate}>{children}</Modulate2DContext.Provider>
     </group>
@@ -90,7 +72,11 @@ function computeFollowTransform(
   sampler: Curve2DSampler | null,
   props: PathFollow2DProperties
 ):
-  | { position: [number, number, number]; rotation: [number, number, number]; scale: [number, number, number] }
+  | {
+      position: [number, number, number];
+      rotation: [number, number, number];
+      scale: [number, number, number];
+    }
   | { matrix: THREE.Matrix4; matrixAutoUpdate: false }
   | null {
   if (!sampler || sampler.length <= 0) return null;
@@ -106,14 +92,12 @@ function computeFollowTransform(
   const y = sample.y + sin * props.h_offset + cos * props.v_offset;
 
   return node2dGroupSpread(
-    node2dGroupProps(
-      {
-        position: { x, y },
-        rotation: props.rotates ? sample.angle : 0,
-        scale: props.scale,
-        skew: 0,
-      }
-    )
+    node2dGroupProps({
+      position: { x, y },
+      rotation: props.rotates ? sample.angle : 0,
+      scale: props.scale,
+      skew: 0,
+    })
   );
 }
 

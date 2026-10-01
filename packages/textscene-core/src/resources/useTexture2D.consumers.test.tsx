@@ -86,12 +86,10 @@ function mapsIn(renderer: Awaited<ReturnType<typeof provide>>): THREE.Texture[] 
 
 /** The single magenta placeholder marker, if the node fell back to one. */
 function placeholderCount(renderer: Awaited<ReturnType<typeof provide>>): number {
-  return renderer.scene
-    .findAllByType('Mesh')
-    .filter((m) => {
-      const material = (m.instance as THREE.Mesh).material as THREE.MeshBasicMaterial | undefined;
-      return material?.color?.getHexString() === 'ff00ff';
-    }).length;
+  return renderer.scene.findAllByType('Mesh').filter((m) => {
+    const material = (m.instance as THREE.Mesh).material as THREE.MeshBasicMaterial | undefined;
+    return material?.color?.getHexString() === 'ff00ff';
+  }).length;
 }
 
 function node(type: string, properties: TscnNode['properties']): TscnNode {
@@ -195,21 +193,13 @@ describe('inline GradientTexture2D reaches every Texture2D-valued slot', () => {
     // Godot 4.6.3, `unit-button-icon-gradienttexture.tscn`: probe (158, 136)
     // reads rgb(254, 214, 51), the icon's own centre, inside a button whose
     // box is rgb(51, 128, 89).
-    const n = node(
-      'Button',
-      parseButton(heading('Button'), { icon: INLINE_REF })
-    );
+    const n = node('Button', parseButton(heading('Button'), { icon: INLINE_REF }));
     const solved: SolveNode = {
       ...solveNodeFor(n),
       textureSize: { x: 256, y: 256 },
     };
     const renderer = await provide(
-      <Button
-        {...painterEnv()}
-        solveNode={solved}
-        rect={RECT}
-        renderOrder={0}
-      />,
+      <Button {...painterEnv()} solveNode={solved} rect={RECT} renderOrder={0} />,
       '2d'
     );
 

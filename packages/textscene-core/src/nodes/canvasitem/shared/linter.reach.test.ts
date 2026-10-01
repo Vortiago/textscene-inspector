@@ -25,7 +25,8 @@ describe('CanvasItem clip-ancestry rule reach', () => {
 
     for (const ruleName of ['canvasitem-ancestor-clips-children', 'canvasitem-ancestor-is-canvasgroup']) {
       const unreached = heirs.filter(
-        (t) => !ruleRegistry.getRulesForNodeType(t).some((r) => r.meta.emits?.some((e) => e.ruleName === ruleName))
+        (t) =>
+          !ruleRegistry.getRulesForNodeType(t).some((r) => r.meta.emits?.some((e) => e.ruleName === ruleName))
       );
       expect(unreached, `${ruleName} never runs on: ${unreached.join(', ')}`).toEqual([]);
     }

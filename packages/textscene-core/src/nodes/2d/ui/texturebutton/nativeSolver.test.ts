@@ -98,7 +98,7 @@ describe('textureButtonMinimumSize (texture_button.cpp:31-52)', () => {
     expect(textureButtonMinimumSize(n, ctx())).toEqual({ x: 0, y: 0 });
   });
 
-  it('is texture_normal\'s own size when present (:35-36)', () => {
+  it("is texture_normal's own size when present (:35-36)", () => {
     const n = node({}, { [TEXTURE_NORMAL_KEY]: { x: 64, y: 24 } });
     expect(textureButtonMinimumSize(n, ctx())).toEqual({ x: 64, y: 24 });
   });
@@ -109,7 +109,10 @@ describe('textureButtonMinimumSize (texture_button.cpp:31-52)', () => {
   });
 
   it('falls back to texture_hover when neither texture_normal nor texture_pressed has resolved (:38-42)', () => {
-    const n = node({}, { [TEXTURE_NORMAL_KEY]: null, [TEXTURE_PRESSED_KEY]: null, [TEXTURE_HOVER_KEY]: { x: 30, y: 12 } });
+    const n = node(
+      {},
+      { [TEXTURE_NORMAL_KEY]: null, [TEXTURE_PRESSED_KEY]: null, [TEXTURE_HOVER_KEY]: { x: 30, y: 12 } }
+    );
     expect(textureButtonMinimumSize(n, ctx())).toEqual({ x: 30, y: 12 });
   });
 

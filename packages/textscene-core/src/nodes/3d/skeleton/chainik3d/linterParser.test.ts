@@ -19,13 +19,7 @@ import { chainIkSubclassSettings } from './linterParser.js';
 const KEYS: string[] = ['settings/*'];
 /** True only when the class binds no ADD_PROPERTY, beside the source line that proves it. */
 const DECLARES_NOTHING = false;
-const LEAVES = [
-  'IterateIK3D',
-  'SplineIK3D',
-  'CCDIK3D',
-  'FABRIK3D',
-  'JacobianIK3D',
-] as const;
+const LEAVES = ['IterateIK3D', 'SplineIK3D', 'CCDIK3D', 'FABRIK3D', 'JacobianIK3D'] as const;
 
 /** One concrete key per leaf of the family, as a real scene spells it. */
 const FAMILY_KEYS = [

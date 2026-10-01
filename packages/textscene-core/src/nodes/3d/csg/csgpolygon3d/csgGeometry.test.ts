@@ -30,9 +30,7 @@ const translation = (x: number): Transform3D => ({
   origin: { x, y: 0, z: 0 },
 });
 
-function pathProperties(
-  overrides: Partial<CSGPolygon3DProperties> = {}
-): CSGPolygon3DProperties {
+function pathProperties(overrides: Partial<CSGPolygon3DProperties> = {}): CSGPolygon3DProperties {
   return {
     name: 'Poly',
     polygon: new Float32Array([0, 0, 0, 1, 1, 1, 1, 0]),

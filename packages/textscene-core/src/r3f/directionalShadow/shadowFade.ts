@@ -112,9 +112,7 @@ export interface ShadowFades {
  */
 export function writeDirectionalShadowFades(shadowFades: ShadowFades): void {
   fades.fill(0);
-  [...shadowFades.directional, ...shadowFades.sun]
-    .slice(0, MAX_DIRECTIONAL_LIGHTS)
-    .forEach((fade, index) => {
-      if (fade) fades.set([fade.from, fade.to], index * 2);
-    });
+  [...shadowFades.directional, ...shadowFades.sun].slice(0, MAX_DIRECTIONAL_LIGHTS).forEach((fade, index) => {
+    if (fade) fades.set([fade.from, fade.to], index * 2);
+  });
 }
