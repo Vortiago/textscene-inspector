@@ -3,7 +3,7 @@
 TextScene Inspector is one core library, `@textscene/core`, with three thin hosts. The core
 parses `.tscn` text, lints it and renders it. A host only supplies files and a place to draw.
 
-- [CONTEXT.md](./CONTEXT.md) defines the terms. Use them exactly.
+- [GLOSSARY.md](./GLOSSARY.md) defines the terms. Use them exactly.
 - [docs/adr/](./docs/adr/) records each decision. Start with ADR-0001 (the vertical slice and
   the React-free linter) and ADR-0002 (three registries). ADR numbers 0032 and 0033 each name
   two files, so cite those by filename.

@@ -117,7 +117,7 @@ so suite thoroughness is a `/code-review` question.
 Landing complete updates `README.md` (the node count, which `sheets.test.mjs` pins against the
 catalog, and the "What it renders" table) and the node's `comparison.md` in its slice. Fill its
 Divergences or Known limitations when the Godot-to-three.js mapping is lossy, and cite the exact
-render line. Only when relevant: `CONTEXT.md` (a new domain term, not per feature),
+render line. Only when relevant: `GLOSSARY.md` (a new domain term, not per feature),
 `docs/adr/NNNN-*.md` (an architectural decision).
 
 ## Golden image (conditional)

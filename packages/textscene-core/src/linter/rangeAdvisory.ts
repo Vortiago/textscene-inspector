@@ -2,7 +2,7 @@
  * The shared **Range advisory** combinator: a warning, never an error, when one
  * numeric property leaves a plausible band. It owns presence, parse, NaN guard and
  * direction, so each rule is a table of threshold arms that reports through one
- * warning **Rule arm** (CONTEXT.md, "Range advisory").
+ * warning **Rule arm** (GLOSSARY.md, "Range advisory").
  */
 
 import type { Diagnostic } from './types.js';

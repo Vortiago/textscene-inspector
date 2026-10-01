@@ -30,7 +30,7 @@ function checkSubViewportContainer(context: RuleContext): Diagnostic[] {
   const { node } = context;
 
   // `cast_to<SubViewport>` (subviewport_container.cpp:274), so a subclass counts, and a
-  // child whose class lives elsewhere may be one (instance-opaque linting, CONTEXT.md).
+  // child whose class lives elsewhere may be one (instance-opaque linting, GLOSSARY.md).
   if (!hasChildOfType(node, ['SubViewport'])) {
     reportArm(
       diagnostics,

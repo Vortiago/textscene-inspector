@@ -38,7 +38,7 @@ function checkScrollContainer(context: RuleContext): Diagnostic[] {
   const { node } = context;
   const children = node.children ?? [];
 
-  // Instance-opaque linting (CONTEXT.md): an `instance=` or typeless child's
+  // Instance-opaque linting (GLOSSARY.md): an `instance=` or typeless child's
   // class lives in a sub-scene the linter never opens, so the count is unknown.
   if (children.some(isTypeUnknowable)) return [];
 
