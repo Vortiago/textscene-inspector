@@ -95,7 +95,7 @@
     "fontkit": "catalog:",
     "globals": "^17.12.0",
     "happy-dom": "catalog:",
-    "lint-staged": "^17.5.1",
+    "lint-staged": "^17.6.0",
     "msdf-bmfont-xml": "catalog:",
     "playwright": "^1.63.0",
     "prettier": "catalog:",
