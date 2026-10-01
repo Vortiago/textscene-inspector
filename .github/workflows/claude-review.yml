@@ -43,11 +43,10 @@ jobs:
       # The action exchanges the OIDC token for a Claude GitHub App token.
       id-token: write
     steps:
-      # The owner's own pull request checks out its head. A comment run checks out the default
-      # branch, so a fork's code never reaches the runner, and the diff is the only copy.
+      # No `ref`: a pull_request run checks out the pull request merged into its base, and a
+      # comment run checks out the default branch. A fork's code never reaches the runner.
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event.repository.default_branch }}
           fetch-depth: 1
 
       # Inline comments carry `confirmed: true` because the classifier that filters buffered
@@ -59,7 +58,7 @@ jobs:
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
 
-            The working directory holds ${{ github.event_name == 'pull_request' && 'the pull request head' || 'the default branch, not the pull request. The new code exists only in `gh pr diff`' }}.
+            The working directory holds ${{ github.event_name == 'pull_request' && 'the pull request merged into its base branch' || 'the default branch, not the pull request. The new code exists only in `gh pr diff`' }}.
 
             1. Read REVIEW.md. It is the bar for this review, and it overrides any default
                review habit you have.
