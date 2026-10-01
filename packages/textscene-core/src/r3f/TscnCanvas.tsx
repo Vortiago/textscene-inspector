@@ -213,12 +213,12 @@ export function CameraFit() {
     // The visual harness clicks for a `-selected` capture only after the last timer.
     const timers = [150, 500, 1100].map((delay) => setTimeout(fit, delay));
 
-    // The timers guess when async content has arrived. The loader knows, so
-    // one more fit when nothing is pending frames large external meshes whole.
-    let settled = false;
+    // The timers guess when async content has arrived. The loader knows, so a
+    // fit each time nothing is pending frames large external meshes whole. Each
+    // time, not once: the count touches zero before an instanced `.glb` starts
+    // its load. The release runs in the commit that mounts the loaded mesh.
     const unsubscribe = loader?.subscribePending(() => {
-      if (settled || loader.pendingResourceCount > 0) return;
-      settled = true;
+      if (loader.pendingResourceCount > 0) return;
       if (lastSet && !get().camera.position.equals(lastSet)) return;
       fit();
     });
