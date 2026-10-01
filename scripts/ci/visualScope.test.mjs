@@ -16,6 +16,7 @@ describe('needsVisualRun', () => {
         'apps/textscene-vscode/src/extension.ts',
         'apps/textscene-linter/src/cli.ts',
         '.github/workflows/pages.yml',
+        '.github/workflows/claude-review.yml',
         'scripts/compare-docs/build-gallery.mjs',
       ])
     ).toBe(false);
