@@ -27,6 +27,8 @@ import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterL
 import { installGodotDiffuse } from './godotDiffuse.js';
 import { installGodotSplitShadow } from './directionalShadow/splitShadowChunk.js';
 import { installDirectionalShadowAtlas } from './directionalShadow/shadowAtlasChunk.js';
+import { installGodotPositionalShadow } from './positionalShadow/positionalShadowChunk.js';
+import { PositionalShadowFitter } from './positionalShadow/PositionalShadowFitter.js';
 import { TiledUploadDriver } from './tiledUpload/TiledUploadDriver.js';
 import styles from './TscnCanvas.module.css';
 
@@ -36,6 +38,7 @@ installGodotDiffuse();
 installGodotSplitShadow();
 installDirectionalShadowAtlas();
 installDirectionalShadowFade();
+installGodotPositionalShadow();
 
 /**
  * The contents of the `<Canvas>`, exported so `@react-three/test-renderer`,
@@ -73,6 +76,7 @@ export function TscnSceneContents() {
       />
       <ViewportPassOrchestrator />
       <DirectionalShadowFitter />
+      <PositionalShadowFitter />
       <SelectionHighlight />
       <HoverHighlight />
     </TiledUploadDriver>

@@ -295,6 +295,48 @@ shadow_enabled = true
     expect(splitSunOf(suns[0] as THREE.DirectionalLight)).not.toBeNull();
   });
 
+  /**
+   * Each viewport owns its positional shadow atlas (`renderer_viewport.cpp:961`), and a Viewport's
+   * is 2048 texels (`viewport.h:305`): its largest slot is 512, so an omni cube face is 256.
+   */
+  it('own world: fits a shadowed omni light in the sub-viewport’s own atlas', async () => {
+    const { renderer, gl } = await renderScene(`${scene3D('own_world_3d = true')}
+[node name="Lamp" type="OmniLight3D" parent="Viewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -5)
+omni_range = 8.0
+shadow_enabled = true
+`);
+    const portals = await scenesRenderedNextFrame(renderer, gl());
+    const [lamp] = portals.flatMap((scene) => scene.getObjectsByProperty('isPointLight', true));
+    expect((lamp as THREE.PointLight).shadow.mapSize.x).toBe(256);
+  });
+
+  it('own world: reads an authored atlas size (edge case)', async () => {
+    const { renderer, gl } =
+      await renderScene(`${scene3D('own_world_3d = true\npositional_shadow_atlas_size = 4096')}
+[node name="Lamp" type="OmniLight3D" parent="Viewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -5)
+omni_range = 8.0
+shadow_enabled = true
+`);
+    const portals = await scenesRenderedNextFrame(renderer, gl());
+    const [lamp] = portals.flatMap((scene) => scene.getObjectsByProperty('isPointLight', true));
+    expect((lamp as THREE.PointLight).shadow.mapSize.x).toBe(512);
+  });
+
+  it('own world: an atlas of size zero draws no positional shadow (error case)', async () => {
+    const { renderer, gl } =
+      await renderScene(`${scene3D('own_world_3d = true\npositional_shadow_atlas_size = 0')}
+[node name="Lamp" type="OmniLight3D" parent="Viewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -5)
+omni_range = 8.0
+shadow_enabled = true
+`);
+    const portals = await scenesRenderedNextFrame(renderer, gl());
+    const [lamp] = portals.flatMap((scene) => scene.getObjectsByProperty('isPointLight', true));
+    expect((lamp as THREE.PointLight).shadow.intensity).toBe(0);
+  });
+
   it('2D content: hooks no shadow fit on a portal that holds no 3D light (edge case)', async () => {
     const { renderer, gl } = await renderScene(`[gd_scene format=3]
 
