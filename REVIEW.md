@@ -35,9 +35,9 @@ Report a defect that the change introduces and that CI does not catch:
 ## Severity
 
 - 🔴 **Important**: a defect from "What to report". It should block the merge.
-- 🟡 **Nit**: a real but small problem, such as a misleading comment. Post at most five.
+- 🟡 **Nit**: a real but small problem, such as a misleading comment. Report at most five.
   Give the count of the rest in the summary.
-- 🟣 **Pre-existing**: a real defect in code the change touches but did not cause. Post at
+- 🟣 **Pre-existing**: a real defect in code the change touches but did not cause. Report at
   most two.
 
 ## Evidence
@@ -45,15 +45,15 @@ Report a defect that the change introduces and that CI does not catch:
 - Each finding names the input that triggers it and the wrong result it gives.
 - A claim about Godot behaviour cites the engine source as `file:line`. A claim about this
   repository cites `file:line` here.
-- Before you post a finding, read the code around it. Drop the finding if a guard, a test
+- Before you report a finding, read the code around it. Drop the finding if a guard, a test
   or a caller already handles the case.
 
-## Comments
+## Answer
 
-- Put each finding in one inline comment on the changed line. Start the comment with its
-  severity emoji.
-- Post one summary comment: the count of each severity, and one line for each Important
-  finding. With no findings, the summary says so in one line.
-- If the pull request already has a summary from an earlier Claude review, post Important
+- Give each finding its file, its line in the new code, its severity and its text. The line
+  must be one that the diff shows. The workflow adds the severity emoji.
+- Give one summary: the count of each severity, and one line for each Important finding.
+  With no findings, the summary says so in one line.
+- If the conversation already has a summary headed "Claude review", report Important
   findings only. A small fix does not earn a new round of nits.
 - Write to the Simplified Technical English rules in `.claude/rules/ste-rules.md`.
