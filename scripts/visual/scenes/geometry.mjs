@@ -37,6 +37,9 @@ export const GEOMETRY_SCENES = [
   // A Sky Only sun and a Light Only sun, both in view. Only the first draws in
   // the sky, and only the second lights the box and ground.
   { name: 'directional-light-sky-mode', file: 'unit-directional-light-sky-mode.tscn' },
+  // Nine shadowed suns, and only the ninth has energy. Godot draws eight directional
+  // lights and stops, so the ground and the post hold only the ambient light.
+  { name: 'directional-light-limit', file: 'unit-directional-light-limit.tscn' },
   // CSG `material` as an ExtResource .tres beside an inline SubResource one. A
   // resolver of the inline form alone draws the external one white, and the
   // other CSG fixtures declare theirs inline. The left box is green, the right red.

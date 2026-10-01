@@ -6,6 +6,7 @@ import {
   directionalShadowBlendStart,
   DIRECTIONAL_SHADOW_FADE_START_DEFAULT,
   directionalShadowFade,
+  directionalLightsDrawn,
   directionalLightsWithShadow,
   directionalShadowLightRect,
   directionalShadowSlice,
@@ -231,6 +232,21 @@ describe('sharesDirectionalShadowAtlas', () => {
 
   it('shares the atlas for an unknown sky mode, as only Sky Only is left out (error case)', () => {
     expect(sharesDirectionalShadowAtlas(true, 7)).toBe(true);
+  });
+});
+
+describe('directionalLightsDrawn', () => {
+  it('draws every light up to the eighth, in order', () => {
+    expect(directionalLightsDrawn(['a', 'b', 'c'])).toEqual(['a', 'b', 'c']);
+  });
+
+  it('stops at the eighth light (edge case)', () => {
+    const lights = Array.from({ length: MAX_DIRECTIONAL_LIGHTS + 1 }, (_, index) => index);
+    expect(directionalLightsDrawn(lights)).toEqual(lights.slice(0, MAX_DIRECTIONAL_LIGHTS));
+  });
+
+  it('draws no light for a scene without one (error case)', () => {
+    expect(directionalLightsDrawn([])).toEqual([]);
   });
 });
 

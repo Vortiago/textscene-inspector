@@ -96,6 +96,7 @@ export {
   DirectionalShadowMode,
   type DirectionalShadowSlice,
   blendsSplits,
+  directionalLightsDrawn,
   directionalLightsWithShadow,
   directionalShadowBlendStart,
   directionalShadowFade,

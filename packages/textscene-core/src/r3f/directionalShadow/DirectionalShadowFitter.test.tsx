@@ -188,6 +188,22 @@ describe('<DirectionalShadowFitter> on its own', () => {
     expect(light.layers.isEnabled(0)).toBe(true);
   });
 
+  it('hands a light past the eighth its layers back once unmounted (edge case)', async () => {
+    const lights = Array.from({ length: 9 }, () => declaredLight(4));
+    const renderer = await ReactThreeTestRenderer.create(
+      <>
+        {lights.map((light) => (
+          <primitive key={light.uuid} object={light} />
+        ))}
+        <DirectionalShadowFitter />
+      </>
+    );
+    renderThrough(renderer, cameraAt(0));
+    expect(lights[8]!.layers.isEnabled(0)).toBe(false);
+    await renderer.unmount();
+    expect(lights[8]!.layers.isEnabled(0)).toBe(true);
+  });
+
   it('leaves the shadow unfitted for a render through a camera without a depth range (error case)', async () => {
     const { renderer, light } = await mountWithLight();
     renderThrough(renderer, new THREE.Camera());

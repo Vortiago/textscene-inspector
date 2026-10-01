@@ -207,15 +207,23 @@ export function sharesDirectionalShadowAtlas(shadowEnabled: boolean, skyMode: nu
 }
 
 /**
+ * `renderer_scene_cull.cpp:3262`: the lights the renderer draws. `lights` are the visible
+ * directional lights on a visible layer, in scenario order. The renderer stops at the
+ * `MAX_DIRECTIONAL_LIGHTS`th, shadowed or not, so a light past it neither lights nor casts.
+ */
+export function directionalLightsDrawn<Light>(lights: readonly Light[]): Light[] {
+  return lights.slice(0, MAX_DIRECTIONAL_LIGHTS);
+}
+
+/**
  * `renderer_scene_cull.cpp:3257-3277`: the lights that share the atlas, in the order they take
- * their shares. `lights` are the visible directional lights on a visible layer, in scenario order.
- * Only the first `MAX_DIRECTIONAL_LIGHTS` of them count, shadowed or not.
+ * their shares. `lights` are as `directionalLightsDrawn` takes them.
  */
 export function directionalLightsWithShadow<Light>(
   lights: readonly Light[],
   sharesAtlas: (light: Light) => boolean
 ): Light[] {
-  return lights.slice(0, MAX_DIRECTIONAL_LIGHTS).filter(sharesAtlas);
+  return directionalLightsDrawn(lights).filter(sharesAtlas);
 }
 
 /** A rectangle of the directional shadow atlas, in texels. */

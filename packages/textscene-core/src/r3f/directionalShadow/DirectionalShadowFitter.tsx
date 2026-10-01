@@ -9,11 +9,11 @@ import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
 import { observeSceneCamera } from '../sceneRenderCamera.js';
-import { fitSceneDirectionalShadows, releaseSceneSplitSuns } from './fitSceneDirectionalShadows.js';
+import { fitSceneDirectionalShadows, releaseSceneLights } from './fitSceneDirectionalShadows.js';
 
 /**
  * Fits `scene`'s declared lights before every render of it, until unmount. Unmount hands each
- * light that drew splits its own shading back. Null fits nothing.
+ * declared light its own shading and layers back. Null fits nothing.
  */
 export function useDirectionalShadowFit(scene: THREE.Scene | null): void {
   useEffect(() => {
@@ -21,7 +21,7 @@ export function useDirectionalShadowFit(scene: THREE.Scene | null): void {
     const stopObserving = observeSceneCamera(scene, (camera) => fitSceneDirectionalShadows(scene, camera));
     return () => {
       stopObserving();
-      releaseSceneSplitSuns(scene);
+      releaseSceneLights(scene);
     };
   }, [scene]);
 }
