@@ -40,8 +40,8 @@ export interface DirectionalShadowDeclaration {
 const DECLARATION_KEY = 'directionalShadow';
 
 /**
- * The `userData` that declares `declaration`, for a JSX `userData` prop. R3F assigns the object
- * whole, so a light gets no other `userData` through this path.
+ * The `userData` entry that declares `declaration`. R3F assigns a `userData` prop whole, so a light
+ * that declares more merges every entry into the one prop.
  */
 export function directionalShadowUserData(
   declaration: DirectionalShadowDeclaration

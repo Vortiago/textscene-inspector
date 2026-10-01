@@ -1,8 +1,8 @@
 /**
  * `<SkyLayer>`: mounts a Godot sky as the scene's background and IBL. Godot's sky
- * shader draws the first four DirectionalLights' discs as `LIGHT0..3`, so the lights
- * are read from the rendered three.js scene, where an instanced or GLB light has
- * its real world transform.
+ * shader draws the discs of the first four DirectionalLights that are not Light Only as
+ * `LIGHT0..3`. The lights are read from the rendered three.js scene, where an instanced
+ * or GLB light has its real world transform.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -13,6 +13,7 @@ import { useTexture2D } from '../../resources/useTexture2D';
 import { useSceneResources } from '../SceneResourcesContext';
 import { buildSkyEnvironment, type SkyLight } from '../../resources/sky/build';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
+import { readSkyLightDeclaration } from './skyLight';
 
 export interface SkyLayerProps {
   sky: SkyProperties;
@@ -139,6 +140,8 @@ function directionalLights(scene: THREE.Scene): SkyLight[] {
     // Godot's sky sees only the render list, so a hidden light draws no disc.
     if (!isRendered(object)) return;
     const light = object as THREE.DirectionalLight;
+    const declaration = readSkyLightDeclaration(light);
+    if (declaration && !declaration.drawsInSky) return;
 
     light.getWorldPosition(from);
     light.target.getWorldPosition(to);
@@ -148,11 +151,11 @@ function directionalLights(scene: THREE.Scene): SkyLight[] {
     lights.push({
       direction: direction.normalize(),
       color: light.color.clone(),
-      // Back to Godot's `light_energy`: `sky.cpp` sets `sky_light_data.energy`
-      // from LIGHT_PARAM_ENERGY with no PI, unlike the scene shader. Every light
-      // this renderer creates goes through the scale. A GLB `KHR_lights_punctual`
-      // light does not, so its disc reads 1/PI dim.
-      energy: light.intensity / LIGHT_INTENSITY_SCALE,
+      // `sky.cpp` sets `sky_light_data.energy` from LIGHT_PARAM_ENERGY with no PI,
+      // unlike the scene shader. A light that declares no energy goes back through
+      // the scale. A GLB `KHR_lights_punctual` light never went through it, so its
+      // disc reads 1/PI dim.
+      energy: declaration?.energy ?? light.intensity / LIGHT_INTENSITY_SCALE,
       // `light_angular_distance` defaults to 0: a point sun with only the soft
       // falloff `sun_curve` gives it.
       angularRadius: 0,

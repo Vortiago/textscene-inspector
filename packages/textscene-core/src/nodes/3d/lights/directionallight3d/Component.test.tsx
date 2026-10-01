@@ -7,6 +7,7 @@ import type { DirectionalLight3DProperties } from './types';
 import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
 import { readDirectionalShadowDeclaration } from '../../../../r3f/directionalShadow/declaration';
+import { readSkyLightDeclaration } from '../../../../r3f/sky/skyLight';
 
 function makeNode(overrides: Partial<DirectionalLight3DProperties> = {}): TscnNode {
   const props: DirectionalLight3DProperties = {
@@ -204,5 +205,46 @@ describe('<DirectionalLight3D> shadow splits', () => {
     const { light, declaration } = await declared({ directional_shadow_mode: 3 });
     expect(declaration?.splitCount).toBe(0);
     expect(light.castShadow).toBe(false);
+  });
+});
+
+describe('<DirectionalLight3D> sky mode', () => {
+  const renderLight = async (overrides: Partial<DirectionalLight3DProperties>) => {
+    const renderer = await ReactThreeTestRenderer.create(<DirectionalLight3D node={makeNode(overrides)} />);
+    return instanceAs<THREE.DirectionalLight>(renderer.scene.findByType('DirectionalLight'));
+  };
+
+  it('lights surfaces and draws in the sky by default', async () => {
+    const light = await renderLight({ light_energy: 2 });
+    expect(light.intensity).toBeCloseTo(2 * LIGHT_INTENSITY_SCALE);
+    expect(readSkyLightDeclaration(light)).toEqual({ drawsInSky: true, energy: 2 });
+  });
+
+  it('lights no surface and casts no shadow when it lights only the sky (edge case)', async () => {
+    // Godot skips it for surfaces (`light_storage.cpp:632`) and shadows (`renderer_scene_cull.cpp:3268`).
+    const light = await renderLight({ light_energy: 2, shadow_enabled: true, sky_mode: 2 });
+    expect(light.intensity).toBe(0);
+    expect(light.castShadow).toBe(false);
+    expect(readSkyLightDeclaration(light)).toEqual({ drawsInSky: true, energy: 2 });
+  });
+
+  it('draws nothing in the sky when it lights only surfaces', async () => {
+    // `sky.cpp:1069`.
+    const light = await renderLight({ light_energy: 2, shadow_enabled: true, sky_mode: 1 });
+    expect(light.intensity).toBeCloseTo(2 * LIGHT_INTENSITY_SCALE);
+    expect(light.castShadow).toBe(true);
+    expect(readSkyLightDeclaration(light)?.drawsInSky).toBe(false);
+  });
+
+  it('keeps the shadow declaration beside the sky declaration', async () => {
+    const light = await renderLight({ shadow_enabled: true });
+    expect(readDirectionalShadowDeclaration(light)).not.toBeNull();
+    expect(readSkyLightDeclaration(light)).not.toBeNull();
+  });
+
+  it('lights surfaces and the sky for an unknown sky mode (error case)', async () => {
+    const light = await renderLight({ light_energy: 1, sky_mode: 7 });
+    expect(light.intensity).toBeCloseTo(LIGHT_INTENSITY_SCALE);
+    expect(readSkyLightDeclaration(light)?.drawsInSky).toBe(true);
   });
 });

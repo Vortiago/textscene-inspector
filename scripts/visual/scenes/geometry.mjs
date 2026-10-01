@@ -34,6 +34,9 @@ export const GEOMETRY_SCENES = [
   // Two orthogonal suns, so each map is half the atlas wide. The thin posts,
   // whose shadows lie across that width, cast nothing. The bars cast as under one sun.
   { name: 'directional-shadow-shared-atlas', file: 'unit-directional-shadow-shared-atlas.tscn' },
+  // A Sky Only sun and a Light Only sun, both in view. Only the first draws in
+  // the sky, and only the second lights the box and ground.
+  { name: 'directional-light-sky-mode', file: 'unit-directional-light-sky-mode.tscn' },
   // CSG `material` as an ExtResource .tres beside an inline SubResource one. A
   // resolver of the inline form alone draws the external one white, and the
   // other CSG fixtures declare theirs inline. The left box is green, the right red.

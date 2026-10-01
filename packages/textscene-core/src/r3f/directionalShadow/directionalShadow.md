@@ -178,7 +178,5 @@ split's box. The fit costs microseconds in every mode, far below the draw.
 - **Soft-shadow widening.** Godot widens the box by `tan(light_angular_distance)` times its
   depth (`:2286-2299`) to fit its soft-shadow blur. The previewer draws no angular soft shadow,
   so the box omits it.
-- **Sky Only.** Godot neither lights nor shadows a surface with a light whose `sky_mode` is
-  Sky Only (`light_storage.cpp:632`). Here it does both, with a whole atlas of its own.
 - **Last of two splits.** With blending on, Godot's last split of two blends towards a third
   slot it never set up. Here the last split never blends.

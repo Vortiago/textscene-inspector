@@ -1,0 +1,53 @@
+[gd_scene format=3 uid="uid://unitdirlightskymode"]
+
+; Moves one variable: DirectionalLight3D.sky_mode. Two suns sit low in the editor view.
+; The warm one is Sky Only: Godot draws its sun in the sky and lights no surface with it.
+; The cool one is Light Only: Godot lights the ground with it and draws no sun.
+; Every other scene keeps the default sky mode, so a light that ignores sky_mode looks
+; right there. Here such a light draws a second sun, tints the ground warm and casts a
+; second shadow.
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
+sky_top_color = Color(0.1, 0.15, 0.3, 1)
+sky_horizon_color = Color(0.5, 0.6, 0.7, 1)
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("ProceduralSkyMaterial_1")
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+ambient_light_source = 2
+ambient_light_color = Color(0.2, 0.2, 0.2, 1)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_1"]
+size = Vector2(40, 40)
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+size = Vector3(2, 2, 2)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_1")
+
+[node name="Box" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -2)
+mesh = SubResource("BoxMesh_1")
+
+[node name="SkyOnlySun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.661115, 0.0392669, -0.749256, 0, 0.99863, 0.052336, 0.750285, 0.0346001, -0.660209, 0, 0, 0)
+light_color = Color(1, 0.6, 0.3, 1)
+light_energy = 16.0
+shadow_enabled = true
+sky_mode = 2
+
+[node name="LightOnlySun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.988717, 0.00783965, -0.149589, 0, 0.99863, 0.052336, 0.149795, 0.0517455, -0.987362, 0, 0, 0)
+light_color = Color(0.6, 0.8, 1, 1)
+light_energy = 8.0
+shadow_enabled = true
+sky_mode = 1
