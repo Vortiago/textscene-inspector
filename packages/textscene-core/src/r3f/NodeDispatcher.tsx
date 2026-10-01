@@ -79,8 +79,8 @@ export interface NodeDispatcherProps {
 export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
   const { handlers } = useViewportSelection();
 
-  // Fetch the CSG library early: CameraFit's last auto-frame retry fires at
-  // 1100 ms, and a boolean result that lands later is framed out of view.
+  // Fetch the CSG library early, so a boolean result reaches the opening frame
+  // sooner: CameraFit re-frames it only once the loader has settled.
   // Evaluation lives in CsgPrimitive: skipping CSG children here strips their selection.
   useEffect(() => {
     if (nodes.some(containsCsgShape)) prefetchCsgModule();
