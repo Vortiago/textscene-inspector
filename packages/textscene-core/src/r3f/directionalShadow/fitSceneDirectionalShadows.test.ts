@@ -2,13 +2,12 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import { directionalShadowUserData, type DirectionalShadowDeclaration } from './declaration';
 import {
-  declaredLights,
-  directionalShadowAtlasShares,
   directionalShadowCasters,
   fitSceneDirectionalShadows,
-  releaseSceneSplitSuns,
-  sceneLights,
+  releaseSceneLights,
 } from './fitSceneDirectionalShadows';
+import { isDropped } from './droppedLight';
+import { sceneLights } from './lightLists';
 import { writeDirectionalShadowFades } from './shadowFade';
 import { SplitSunLight, splitSunOf } from './splitSun';
 import { WebGLLights } from 'three/src/renderers/webgl/WebGLLights.js';
@@ -216,18 +215,28 @@ describe('fitSceneDirectionalShadows with splits', () => {
   });
 });
 
-describe('releaseSceneSplitSuns', () => {
+describe('releaseSceneLights', () => {
   it('releases every split sun in the scene', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: true, splitCount: 4 });
     fitSceneDirectionalShadows(scene, viewingCamera());
-    releaseSceneSplitSuns(scene);
+    releaseSceneLights(scene);
     expect(splitSunOf(light)).toBeNull();
     expect(light.layers.isEnabled(0)).toBe(true);
   });
 
+  it('hands every dropped light its layers back', () => {
+    const scene = new THREE.Scene();
+    for (let i = 0; i < 8; i++) addDeclaredLight(scene);
+    const ninth = addDeclaredLight(scene);
+    fitted(scene);
+    releaseSceneLights(scene);
+    expect(isDropped(ninth)).toBe(false);
+    expect(ninth.layers.isEnabled(0)).toBe(true);
+  });
+
   it('leaves a scene without split suns as it is (edge case)', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: true });
-    releaseSceneSplitSuns(scene);
+    releaseSceneLights(scene);
     expect(light.children).toHaveLength(0);
     expect(light.layers.isEnabled(0)).toBe(true);
   });
@@ -235,7 +244,7 @@ describe('releaseSceneSplitSuns', () => {
   it('leaves an undeclared light’s layers alone (error case)', () => {
     const { scene, light } = sceneWithSun({ declared: false, casts: true });
     light.layers.set(3);
-    releaseSceneSplitSuns(scene);
+    releaseSceneLights(scene);
     expect(light.layers.mask).toBe(1 << 3);
   });
 });
@@ -541,13 +550,14 @@ describe('fitSceneDirectionalShadows atlas shares', () => {
     expect(light.shadow.mapSize.toArray()).toEqual([2048, 4096]);
   });
 
-  it('leaves a light that lights only the sky out of the count (edge case)', () => {
+  it('leaves a light that lights only the sky out of the count, and unfitted (edge case)', () => {
     const scene = new THREE.Scene();
-    const skyOnly = addDeclaredLight(scene, { sharesAtlas: false });
+    const skyOnly = addDeclaredLight(scene, { sharesAtlas: false, splitCount: 4 });
     const light = addDeclaredLight(scene);
     fitted(scene);
     expect(light.shadow.mapSize.toArray()).toEqual([4096, 4096]);
-    expect(skyOnly.shadow.mapSize.toArray()).toEqual([4096, 4096]);
+    expect(skyOnly.shadow.camera.left).toBe(UNFITTED.left);
+    expect(splitSunOf(skyOnly)).toBeNull();
   });
 
   it('leaves a hidden light out of the count (edge case)', () => {
@@ -560,116 +570,113 @@ describe('fitSceneDirectionalShadows atlas shares', () => {
   });
 });
 
-/** Each declared light's share of the atlas, for a render of `scene` by the test camera. */
-function sharesIn(scene: THREE.Scene) {
-  return directionalShadowAtlasShares(declaredLights(sceneLights(scene)), viewingCamera());
+/** `count` declared, casting lights with four splits each, added to `scene` in order. */
+function addSplitLights(scene: THREE.Scene, count: number): THREE.DirectionalLight[] {
+  return Array.from({ length: count }, () => addDeclaredLight(scene, { splitCount: 4 }));
 }
 
-describe('directionalShadowAtlasShares', () => {
-  it('gives the shadowed lights their shares in visible pre-order', () => {
+describe('fitSceneDirectionalShadows past Godot’s eighth light', () => {
+  it('gives a split sun to the first eight lights only, and drops the ninth', () => {
     const scene = new THREE.Scene();
-    const group = new THREE.Group();
-    const first = addDeclaredLight(scene);
-    const nested = addDeclaredLight(scene);
-    group.add(nested);
-    scene.add(group);
-    const shares = sharesIn(scene);
-    expect(shares.get(first)).toEqual({ x: 0, y: 0, width: 2048, height: 4096 });
-    expect(shares.get(nested)).toEqual({ x: 2048, y: 0, width: 2048, height: 4096 });
-  });
-
-  it('counts a split light by its own layers while its sun shades for it', () => {
-    const scene = new THREE.Scene();
-    const split = addDeclaredLight(scene, { splitCount: 4 });
-    const orthogonal = addDeclaredLight(scene);
+    const lights = addSplitLights(scene, 9);
     fitted(scene);
-    const shares = sharesIn(scene);
-    expect(shares.get(split)).toEqual({ x: 0, y: 0, width: 2048, height: 4096 });
-    expect(shares.get(orthogonal)).toEqual({ x: 2048, y: 0, width: 2048, height: 4096 });
+    expect(lights.slice(0, 8).every((light) => splitSunOf(light) !== null)).toBe(true);
+    expect(splitSunOf(lights[8]!)).toBeNull();
+    expect(isDropped(lights[8]!)).toBe(true);
   });
 
-  it('counts only the first eight visible lights, shadowed or not (edge case)', () => {
+  it('gives three no light and no shadow for the ninth light', () => {
+    const scene = new THREE.Scene();
+    const lights = addSplitLights(scene, 9);
+    fitted(scene);
+    const camera = viewingCamera();
+    const rendered = threeRenderLights(scene, camera);
+    const three = new WebGLLights({ has: () => false } as unknown as WebGLExtensions);
+    three.setup(rendered);
+    expect(rendered).not.toContain(lights[8]);
+    expect(three.state.sunShadow).toHaveLength(8);
+    expect(three.state.sunShadowMatrix).toHaveLength(32);
+    expect(three.state.directionalShadowMatrix).toHaveLength(0);
+  });
+
+  it('writes no fade for the ninth light', () => {
+    const scene = new THREE.Scene();
+    addSplitLights(scene, 9);
+    fitted(scene);
+    const { directional, sun } = writtenFades.mock.lastCall![0];
+    expect(directional).toEqual([]);
+    expect(sun).toHaveLength(8);
+  });
+
+  it('drops a ninth light even when the eight before it cast no shadow (edge case)', () => {
     const scene = new THREE.Scene();
     for (let i = 0; i < 8; i++) addDeclaredLight(scene, { sharesAtlas: false });
-    const ninth = addDeclaredLight(scene);
-    expect(sharesIn(scene).has(ninth)).toBe(false);
+    const ninth = addDeclaredLight(scene, { splitCount: 4 });
+    fitted(scene);
+    expect(isDropped(ninth)).toBe(true);
   });
 
-  it('leaves out a light on a layer the camera does not render (edge case)', () => {
+  it('releases the sun of a light that falls past the eighth (edge case)', () => {
     const scene = new THREE.Scene();
-    const otherLayer = addDeclaredLight(scene);
+    const lights = addSplitLights(scene, 9);
+    lights[0]!.visible = false;
+    fitted(scene);
+    const sun = splitSunOf(lights[8]!)!;
+    lights[0]!.visible = true;
+    fitted(scene);
+    expect(splitSunOf(lights[8]!)).toBeNull();
+    expect(sun.parent).toBeNull();
+  });
+
+  it('puts a dropped light back when a light before it hides (edge case)', () => {
+    const scene = new THREE.Scene();
+    const lights = addSplitLights(scene, 9);
+    fitted(scene);
+    lights[0]!.visible = false;
+    fitted(scene);
+    expect(isDropped(lights[8]!)).toBe(false);
+    expect(splitSunOf(lights[8]!)).not.toBeNull();
+  });
+
+  it('releases the sun of a hidden light, which three does not render (edge case)', () => {
+    const scene = new THREE.Scene();
+    const [light] = addSplitLights(scene, 1);
+    fitted(scene);
+    light!.visible = false;
+    fitted(scene);
+    expect(splitSunOf(light!)).toBeNull();
+    expect(isDropped(light!)).toBe(false);
+  });
+
+  it('keeps every sun and drop through renders by cameras on different layers (edge case)', () => {
+    const scene = new THREE.Scene();
+    const lights = addSplitLights(scene, 9);
+    scene.updateMatrixWorld();
+    const otherLayer = viewingCamera();
     otherLayer.layers.set(5);
-    const light = addDeclaredLight(scene);
-    const shares = sharesIn(scene);
-    expect(shares.has(otherLayer)).toBe(false);
-    expect(shares.get(light)).toEqual({ x: 0, y: 0, width: 4096, height: 4096 });
+    fitSceneDirectionalShadows(scene, viewingCamera());
+    const suns = lights.map(splitSunOf);
+    fitSceneDirectionalShadows(scene, otherLayer);
+    fitSceneDirectionalShadows(scene, viewingCamera());
+    expect(lights.map(splitSunOf)).toEqual(suns);
+    expect(lights.map(isDropped)).toEqual([...Array<boolean>(8).fill(false), true]);
   });
 
-  it('ignores an undeclared light (error case)', () => {
+  it('drops nothing while a scene draws eight lights', () => {
     const scene = new THREE.Scene();
-    scene.add(new THREE.DirectionalLight());
-    const light = addDeclaredLight(scene);
-    expect(sharesIn(scene).get(light)?.width).toBe(4096);
-  });
-});
-
-describe('sceneLights', () => {
-  it('lists every light in pre-order, as three visits them', () => {
-    const scene = new THREE.Scene();
-    const [first, nested, last] = [
-      new THREE.DirectionalLight(),
-      new THREE.SpotLight(),
-      new THREE.PointLight(),
-    ];
-    const group = new THREE.Group();
-    group.add(nested);
-    scene.add(first, group, last, new THREE.Mesh());
-    expect(sceneLights(scene).map(({ light }) => light)).toEqual([first, nested, last]);
+    const lights = addSplitLights(scene, 8);
+    fitted(scene);
+    expect(lights.some(isDropped)).toBe(false);
   });
 
-  it('marks a light under a hidden parent as one the render does not reach (edge case)', () => {
+  it('leaves an undeclared ninth light alone (error case)', () => {
     const scene = new THREE.Scene();
-    const parent = new THREE.Group();
-    parent.visible = false;
-    const hidden = new THREE.DirectionalLight();
-    parent.add(hidden);
-    const shown = new THREE.DirectionalLight();
-    scene.add(parent, shown);
-    expect(sceneLights(scene)).toEqual([
-      { light: hidden, isVisible: false },
-      { light: shown, isVisible: true },
-    ]);
-  });
-
-  it('answers no light for a scene without one (error case)', () => {
-    const scene = new THREE.Scene();
-    scene.add(new THREE.Mesh(), new THREE.Group());
-    expect(sceneLights(scene)).toEqual([]);
-  });
-});
-
-describe('declaredLights', () => {
-  it('keeps the declared directional lights with their declarations', () => {
-    const scene = new THREE.Scene();
-    const light = addDeclaredLight(scene);
-    expect(declaredLights(sceneLights(scene))).toEqual([
-      { light, declaration: DECLARATION, isVisible: true },
-    ]);
-  });
-
-  it('keeps a hidden declared light, so the fitter can release its sun (edge case)', () => {
-    const scene = new THREE.Scene();
-    const light = addDeclaredLight(scene);
-    light.visible = false;
-    expect(declaredLights(sceneLights(scene)).map(({ isVisible }) => isVisible)).toEqual([false]);
-  });
-
-  it('leaves out an undeclared light and a light of another kind (error case)', () => {
-    const scene = new THREE.Scene();
-    const spot = new THREE.SpotLight();
-    spot.userData = directionalShadowUserData(DECLARATION);
-    scene.add(new THREE.DirectionalLight(), spot);
-    expect(declaredLights(sceneLights(scene))).toEqual([]);
+    addSplitLights(scene, 8);
+    const undeclared = new THREE.DirectionalLight();
+    scene.add(undeclared);
+    fitted(scene);
+    expect(isDropped(undeclared)).toBe(false);
+    expect(undeclared.layers.isEnabled(0)).toBe(true);
   });
 });
 

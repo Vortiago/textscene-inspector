@@ -15,18 +15,46 @@ two or four splits by `directional_shadow_mode`. It ports Godot 4.6.3's
   shares the atlas. A DirectionalLight3D defaults to four splits
   (`light_3d.cpp:606`), and so does the editor's preview sun (`node_3d_editor_plugin.cpp:10383`).
 - `<DirectionalShadowFitter>` is mounted inside `<TscnSceneContents>`, so the web previewer,
-  the VS Code extension and the visual harness all mount it. It fits every declared, casting
-  light in the scene to the camera of each render of it. It also writes each shadow's fade for
+  the VS Code extension and the visual harness all mount it. It fits every declared light in Godot's
+  list of shadowed lights to the camera of each render of the scene. It also writes each shadow's fade for
   that render, through `scene.onBeforeRender` (`r3f/sceneRenderCamera.ts`). three calls that
   hook after it updates the world matrices and before the shadow pass. So each render gets a fit
   to its own camera: the main view, a SubViewport pass that renders the shared world, and a
   screenshot. No render order matters.
 - A 3D SubViewport that renders its own portal scene hooks that scene with
-  `useDirectionalShadowFit`. Its unmount hands every split light its own shading back.
+  `useDirectionalShadowFit`. Its unmount hands every declared light its own shading and layers
+  back.
 - The fitter sizes each declared light's shadow map to its share of the atlas, which need not be
-  square. three resizes a map when that size changes (r186 `WebGLShadowMap.js:281-285`). A light
-  that takes no share keeps a whole atlas of its own.
+  square. three resizes a map when that size changes (r186 `WebGLShadowMap.js:281-285`).
 - A light without a declaration keeps its shadow camera and its map as three built them.
+
+## Godot's light lists
+
+Godot draws the first eight visible directional lights on a visible layer, in scenario order, and
+stops there (`renderer_scene_cull.cpp:3257-3262`). Of those eight, a light whose shadow is on and
+whose `sky_mode` is not Sky Only joins `lights_with_shadow` (`:3271-3273`). Only a light in that
+list has a shadow. `lightLists.ts` builds both lists from the visible declared lights in pre-order.
+
+- A light in the shadow list casts in its share of the atlas, through a split sun when it has
+  splits.
+- A light among the eight but outside the shadow list gets no fit and no split sun. Its declarer
+  derives `castShadow` from the same declaration, so that is off.
+- A visible light past the eighth leaves three's render through its layers (`droppedLight.ts`), so
+  it neither lights nor casts, as in Godot.
+- A hidden light gets no fit and keeps no split sun, as three renders neither.
+
+Godot builds the lists per camera, from the layers that camera sees (`:3258`). The previewer maps
+neither `cull_mask` nor `layers` onto three's layers, so every camera that renders a scene sees every
+light. The main view, a SubViewport pass and a screenshot all keep three's default layer. Only the 2D
+light accumulation pass changes its camera's layers, and it renders a 2D canvas, which has no fitter.
+So the lists ignore layers, and every render of a steady scene gets the same lists.
+
+Lists per camera would cost more where two cameras differ. Each render would attach or release a
+split sun, and free and reallocate its shadow map. three keys a program by `NUM_SUN_LIGHT_SHADOWS`
+(r186 `WebGLPrograms.js:483`) and keeps each program a material compiled (`WebGLRenderer.js:2201-2223`).
+So the first change compiles every lit material again, and each later change switches every
+material's program and uploads its uniforms again, since the lights' state version moves
+(`WebGLLights.js:493-545`).
 
 ## The port
 
@@ -42,9 +70,8 @@ two or four splits by `directional_shadow_mode`. It ports Godot 4.6.3's
    the split's texture size (`:2303-2307`). The snap keeps the shadow's texel grid still while
    the camera moves.
 5. Every visible shadowed directional light shares one atlas, Godot's default directional
-   shadow size of 4096 texels square (`rendering_server.cpp:3704`). A light whose `sky_mode`
-   is Sky Only takes no share, and only the first eight directional lights count
-   (`renderer_scene_cull.cpp:3257-3282`). The atlas splits into a grid that doubles its
+   shadow size of 4096 texels square (`rendering_server.cpp:3704`). Only a light in Godot's
+   shadow list takes a share (`renderer_scene_cull.cpp:3257-3282`). The atlas splits into a grid that doubles its
    columns, then its rows, until it holds every light (`light_storage.cpp:2577-2597`). So two
    lights take its halves by width at full height.
 
@@ -82,8 +109,11 @@ each directional and sun shadow towards unshadowed by the receiver's view depth,
 - The fitter writes the buffer before each render, after it fits every light. It writes in the
   order three indexes its shadow uniforms: casting lights in visible pre-order, where the
   camera's layers include them. A light with splits fails that layer test, so its
-  `SplitSunLight` takes the light's fade at the sun's index. An undeclared caster keeps its
-  index with no fade.
+  `SplitSunLight` takes the light's fade at the sun's index. A dropped light fails it too, and
+  takes no index. An undeclared caster keeps its index with no fade.
+- The declared casters are at most eight, so they take at most eight entries. A program reads one
+  entry per shadow it samples, and binds a sampler per shadow, so the 32 entries hold every
+  shadow a program can bind.
 - A `ShaderMaterial` with `lights: true` lacks the uniform. Its shadow reads zeros, which the
   shader treats as no fade.
 - The fade and the split lookup both edit `shadowmap_pars_fragment`. The fade inserts after
@@ -134,8 +164,8 @@ with splits shades through three parts:
 - `SplitSunLight` (`splitSun.ts`), a child of the declared light on the sun path. The fitter
   attaches it with the light's first successful split fit, and then hides the declared light
   from the render through its layers. Each fit copies the declared light's colour, intensity
-  and shadow strength onto it. Mode 0, a light that stops casting, and the fitter's
-  unmount remove it and restore the declared light.
+  and shadow strength onto it. Mode 0, a light that stops casting or leaves the shadow list, and
+  the fitter's unmount remove it and restore the declared light.
 - `DirectionalSplitShadow` (`splitShadow.ts`), the sun's shadow: one orthographic camera per
   slot, and a world-to-atlas matrix per slot. Its texture holds only the light's share of the
   atlas, with the splits where Godot puts them in that share. A slot past the light's last
@@ -174,6 +204,33 @@ The shadowed lights' maps hold the whole 4096 atlas between them. three gives ea
 colour attachment beside its 24-bit depth texture, so the atlas takes about 128 MiB. Godot's
 atlas takes 32 MiB, since it stores 16-bit depth and nothing else (`rendering_server.cpp:3708`).
 A change in how many lights share the atlas resizes each light's map.
+
+### Fragment uniforms
+
+WebGL 2 guarantees 224 fragment uniform vectors (`MAX_FRAGMENT_UNIFORM_VECTORS`), and ANGLE
+packs a WebGL program's uniforms by the rule of GLSL ES 1.00 Appendix A.7. Every sun shadow
+declares four slots, since the shader finds a light's slots at `shadowIndex * SUN_LIGHT_CASCADES`.
+Each slot takes a matrix (four vectors) and a vec4. With the sun's light, its shadow and its fade, a
+shadowed sun takes about 24 vectors. An orthogonal shadow takes about 4, as three computes its
+coordinate in the vertex shader.
+
+The shadow list holds at most eight lights, so a program samples at most eight sun shadows. Packed
+from the active uniforms of a program three r186 linked in the visual harness's Chromium:
+
+| Shadowed suns | `MeshStandardMaterial` | With every map, an environment and fog |
+| --- | --- | --- |
+| 0 | 4 | 15 |
+| 1 | 31 | 38 |
+| 8 | 196 | 203 |
+| 9 | 219 | 226 |
+
+A sun with two splits costs the same as one with four. A slot count that varied by scene would
+need a define three's program key does not hold (`WebGLPrograms.js:476-483`), so a material would
+reuse a program compiled for another count.
+
+Every shadow binds its own sampler, where Godot's atlas is one texture. WebGL 2 guarantees 16
+texture units (`MAX_TEXTURE_IMAGE_UNITS`), so eight sun shadows leave eight for a material's maps
+and its environment.
 
 ## Where it differs from Godot
 

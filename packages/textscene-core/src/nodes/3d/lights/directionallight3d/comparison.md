@@ -42,6 +42,8 @@ The shadow's soft edge reaches `shadow_blur` times two atlas texels, the radius 
 
 `sky_mode` decides what the light reaches, as in Godot. A Sky Only light draws only its sun in the sky, and casts no shadow. A Light Only light lights surfaces and draws no sun in the sky.
 
+Godot draws the first eight visible directional lights in the scene and stops. A light past the eighth neither lights nor casts, here as in Godot. So at most eight directional lights cast a shadow.
+
 ## Known limitations
 
 - **Approximated** A shadow's near edge has more contrast than in Godot, where the bright sky ambient washes it out.

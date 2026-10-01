@@ -423,6 +423,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Directional Light Limit",
+    "file": "unit-directional-light-limit.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Directional Light Sky Mode",
     "file": "unit-directional-light-sky-mode.tscn",
     "category": "Other"
