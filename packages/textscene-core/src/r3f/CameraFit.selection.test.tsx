@@ -1,6 +1,6 @@
 /**
  * CameraFit is selection-inert: after the load-time fit timers (150, 500, 1100ms), only a
- * scene or camera change re-frames. The user re-frames with FrameSelectedShortcut, and
+ * scene or camera change, or the resource loader settling, re-frames. The user re-frames with FrameSelectedShortcut, and
  * scripts/visual/run.mjs clicks after the last timer. `frameSceneBounds` is mocked, so
  * calls count independently of scene geometry.
  */
