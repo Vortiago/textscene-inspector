@@ -80,8 +80,20 @@ describe('findProseViolations', () => {
       );
     });
 
+    it('skips an inline HTML comment closed by --!> (edge case)', () => {
+      expect(rules('It draws <!-- a; b --!> well.')).toEqual([]);
+    });
+
     it('skips an HTML comment', () => {
       expect(rules('<!-- compare: image=a; status=done -->\n\nIt draws.')).toEqual([]);
+    });
+
+    it('skips a multi-line HTML comment closed by --> (edge case)', () => {
+      expect(rules('<!--\nAn error; a warning.\n-->\n\nIt draws.')).toEqual([]);
+    });
+
+    it('skips a multi-line HTML comment closed by --!>, which HTML also accepts (edge case)', () => {
+      expect(rules('<!--\nAn error; a warning.\n--!>\n\nIt draws; badly.')).toEqual(['semicolon']);
     });
 
     it('skips a heading', () => {

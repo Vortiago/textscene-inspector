@@ -9,6 +9,9 @@ import { isDivider, splitRow } from './markdownTable.mjs';
 /** STE caps a sentence of description at 25 words. */
 export const MAX_SENTENCE_WORDS = 25;
 
+/** The HTML spec ends a comment at `-->` and also at `--!>` (the "incorrectly closed comment" state). */
+const HTML_COMMENT_END = /--!?>/;
+
 /** The `## Known limitations` heading, whose bullets each hold one sentence. */
 const LIMITATIONS_HEADING = 'Known limitations';
 
@@ -49,7 +52,7 @@ const spanAs = (word) => (match) => '\n'.repeat(match.split('\n').length - 1) + 
  */
 function maskInline(text) {
   return text
-    .replace(/<!--[\s\S]*?-->/g, spanAs(''))
+    .replace(new RegExp(`<!--[\\s\\S]*?${HTML_COMMENT_END.source}`, 'g'), spanAs(''))
     .replace(/(`+)[\s\S]*?\1/g, spanAs('CODE'))
     .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
@@ -62,6 +65,7 @@ function maskInline(text) {
  * table cell. Front matter, fenced code, the generated `lint:begin` section, HTML comments
  * and headings carry none. Each line keeps its 1-based number in the sheet.
  */
+
 export function proseBlocks(text) {
   const lines = text.split('\n');
   const blocks = [];
@@ -98,7 +102,7 @@ export function proseBlocks(text) {
     }
     if (trimmed.startsWith('<!--')) {
       close();
-      if (!trimmed.includes('-->')) skipUntil = /-->/;
+      if (!HTML_COMMENT_END.test(trimmed)) skipUntil = HTML_COMMENT_END;
       continue;
     }
     const heading = /^#{1,6}\s+(.*)$/.exec(trimmed);
