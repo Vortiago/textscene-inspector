@@ -89,7 +89,12 @@ describe('shadowMapCoord', () => {
   it('places an antipodal direction exactly half a turn away', () => {
     // u(theta + pi) = u(theta) + 0.5 for the box mapping: the builder relies on
     // it to pick the short arc between a segment's endpoints.
-    for (const [x, y] of [[3, 1], [1, 4], [-2, 5], [-7, -3]] as const) {
+    for (const [x, y] of [
+      [3, 1],
+      [1, 4],
+      [-2, 5],
+      [-7, -3],
+    ] as const) {
       const opposite = (shadowMapCoord(x, y) + 0.5) % 1;
       expect(shadowMapCoord(-x, -y)).toBeCloseTo(opposite, 12);
     }
@@ -180,12 +185,7 @@ describe('buildShadowPolarMap', () => {
     // A square wound as a closed occluder, the wrap edge already appended, as
     // `polygonToSegments` hands it over.
     const square: ShadowCasterEdges = {
-      segments: [
-        -80, -80, 80, -80,
-        80, -80, 80, 80,
-        80, 80, -80, 80,
-        -80, 80, -80, -80,
-      ],
+      segments: [-80, -80, 80, -80, 80, -80, 80, 80, 80, 80, -80, 80, -80, 80, -80, -80],
       cullMode: OCCLUDER_CULL_DISABLED,
     };
     const map = buildShadowPolarMap(lightAt(0, 0, RADIUS), [square]);
@@ -243,18 +243,16 @@ describe('buildShadowPolarMap', () => {
     // extent casts nothing. Both mechanisms must answer this the same way or a
     // light's shadow would change shape at `shadow_filter = NONE`.
     const rect: LightRect = { minX: -200, minY: -200, maxX: 200, maxY: 200 };
-    const outside = buildShadowPolarMap(
-      { worldToLocal: [1, 0, 0, 0, 1, 0], radius: RADIUS, rect },
-      [segment(400, -50, 400, 50)]
-    );
+    const outside = buildShadowPolarMap({ worldToLocal: [1, 0, 0, 0, 1, 0], radius: RADIUS, rect }, [
+      segment(400, -50, 400, 50),
+    ]);
     expect(outside[binOf(0.125)]).toBe(SHADOW_MAP_FAR);
 
     // The same occluder inside the rect still casts, so the rejection above is
     // the rect and not the geometry.
-    const inside = buildShadowPolarMap(
-      { worldToLocal: [1, 0, 0, 0, 1, 0], radius: RADIUS, rect },
-      [segment(100, -50, 100, 50)]
-    );
+    const inside = buildShadowPolarMap({ worldToLocal: [1, 0, 0, 0, 1, 0], radius: RADIUS, rect }, [
+      segment(100, -50, 100, 50),
+    ]);
     expect(inside[binOf(0.125)]).toBeCloseTo(100 / ZFAR, 6);
   });
 
@@ -291,8 +289,12 @@ describe('buildShadowPolarMap', () => {
     const s = Math.sin(Math.PI / 2);
     // world -> local = R(-t) * (p - origin)
     const worldToLocal: [number, number, number, number, number, number] = [
-      c, s, -(c * 400 + s * 300),
-      -s, c, -(-s * 400 + c * 300),
+      c,
+      s,
+      -(c * 400 + s * 300),
+      -s,
+      c,
+      -(-s * 400 + c * 300),
     ];
     const map = buildShadowPolarMap({ worldToLocal, radius: RADIUS, rect: UNBOUNDED }, [
       segment(350, 400, 450, 400),

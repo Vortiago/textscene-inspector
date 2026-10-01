@@ -89,7 +89,9 @@ function gutterMessages(): string[] {
   return screen.queryAllByTestId(/^gutter-dot-\d+$/).flatMap((dot) => {
     fireEvent.mouseEnter(dot);
     const line = dot.getAttribute('data-testid')!.replace('gutter-dot-', '');
-    const messages = [...screen.getByTestId(`gutter-popover-${line}`).children].map((m) => m.textContent ?? '');
+    const messages = [...screen.getByTestId(`gutter-popover-${line}`).children].map(
+      (m) => m.textContent ?? ''
+    );
     fireEvent.mouseLeave(dot);
     return messages;
   });
@@ -129,7 +131,10 @@ describe('the problem badge and the Source pane', () => {
     expect(badge()!.textContent).toBe('✖ 1 / ⚠ 2 / ℹ 2');
     expect(reachable).toHaveLength(badgeTotal());
     expect(reachable.sort()).toEqual(
-      scripted.get(MIXED_TSCN)!.map((d) => d.message).sort()
+      scripted
+        .get(MIXED_TSCN)!
+        .map((d) => d.message)
+        .sort()
     );
   });
 

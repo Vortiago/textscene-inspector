@@ -51,7 +51,14 @@ describe('<ControlQuad>', () => {
 
     const texture = new THREE.Texture();
     await renderer.update(
-      <ControlQuad width={10} height={10} color={new THREE.Color(1, 1, 1)} opacity={1} map={texture} renderOrder={0} />
+      <ControlQuad
+        width={10}
+        height={10}
+        color={new THREE.Color(1, 1, 1)}
+        opacity={1}
+        map={texture}
+        renderOrder={0}
+      />
     );
 
     expect(material().map).toBe(texture);
@@ -64,7 +71,14 @@ describe('<ControlQuad>', () => {
     const undecoded = new THREE.Texture();
     undecoded.colorSpace = THREE.NoColorSpace;
     const renderer = await ReactThreeTestRenderer.create(
-      <ControlQuad width={10} height={10} color={new THREE.Color(1, 1, 1)} opacity={1} map={undecoded} renderOrder={0} />
+      <ControlQuad
+        width={10}
+        height={10}
+        color={new THREE.Color(1, 1, 1)}
+        opacity={1}
+        map={undecoded}
+        renderOrder={0}
+      />
     );
     const material = (): THREE.MeshBasicMaterial =>
       (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
@@ -73,7 +87,14 @@ describe('<ControlQuad>', () => {
     const ownSpace = new THREE.Texture();
     ownSpace.colorSpace = THREE.SRGBColorSpace;
     await renderer.update(
-      <ControlQuad width={10} height={10} color={new THREE.Color(1, 1, 1)} opacity={1} map={ownSpace} renderOrder={0} />
+      <ControlQuad
+        width={10}
+        height={10}
+        color={new THREE.Color(1, 1, 1)}
+        opacity={1}
+        map={ownSpace}
+        renderOrder={0}
+      />
     );
 
     expect(material().defines?.DECODE_VIDEO_TEXTURE).toBeUndefined();
@@ -82,7 +103,14 @@ describe('<ControlQuad>', () => {
   it('maps a texture onto the quad when provided (edge: no texture leaves map null)', async () => {
     const texture = new THREE.Texture();
     const renderer = await ReactThreeTestRenderer.create(
-      <ControlQuad width={10} height={10} color={new THREE.Color(1, 1, 1)} opacity={1} map={texture} renderOrder={0} />
+      <ControlQuad
+        width={10}
+        height={10}
+        color={new THREE.Color(1, 1, 1)}
+        opacity={1}
+        map={texture}
+        renderOrder={0}
+      />
     );
     const mesh = renderer.scene.findByType('Mesh');
     const material = (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;

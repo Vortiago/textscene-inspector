@@ -41,10 +41,9 @@ describe('formatOmniLight3DProperties', () => {
 
   it('maps every omni_shadow_mode value to its label, including an unknown value', () => {
     const modeLabel = (mode: string) =>
-      section(
-        formatOmniLight3DProperties(props({ omni_shadow_mode: mode })),
-        'Shadows'
-      )!.items.find((i) => i.label === 'Shadow Mode')!.value;
+      section(formatOmniLight3DProperties(props({ omni_shadow_mode: mode })), 'Shadows')!.items.find(
+        (i) => i.label === 'Shadow Mode'
+      )!.value;
 
     expect(modeLabel('0')).toBe('DUAL_PARABOLOID');
     expect(modeLabel('1')).toBe('CUBE');

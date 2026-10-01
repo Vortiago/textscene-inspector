@@ -44,7 +44,12 @@ const components = (t: Transform2DColumns): number[] => [t.a, t.b, t.c, t.d, t.t
 
 const ROTATIONS = [0, -0, 0.5, -1.2, Math.PI / 2, Math.PI, -Math.PI, 3.7];
 const SKEWS = [0, 0.25, -0.5, Math.PI / 3];
-const SCALES = [{ x: 1, y: 1 }, { x: 2, y: -3 }, { x: -0.5, y: 0.25 }, { x: 0, y: 1 }];
+const SCALES = [
+  { x: 1, y: 1 },
+  { x: 2, y: -3 },
+  { x: -0.5, y: 0.25 },
+  { x: 0, y: 1 },
+];
 
 describe('transform2DFromParts', () => {
   it('builds the identity from the Node2D defaults, every zero a +0', () => {
@@ -81,7 +86,11 @@ describe('transform2DFromParts', () => {
           const engine = godotConstructor(rot, scale, skew, { x: 3, y: -4 });
           built.forEach((value, i) => {
             expect({ rot, skew, scale, i, same: value === engine[i] }).toEqual({
-              rot, skew, scale, i, same: true,
+              rot,
+              skew,
+              scale,
+              i,
+              same: true,
             });
           });
         }
@@ -203,7 +212,9 @@ describe('transform2DIsConformal', () => {
 
 describe('transform2DHasZeroSkew', () => {
   it('reads orthogonal axes as unskewed through cos and sin residue', () => {
-    expect(transform2DHasZeroSkew(transform2DFromParts(Math.PI / 3, { x: 2, y: -5 }, 0, { x: 0, y: 0 }))).toBe(true);
+    expect(
+      transform2DHasZeroSkew(transform2DFromParts(Math.PI / 3, { x: 2, y: -5 }, 0, { x: 0, y: 0 }))
+    ).toBe(true);
   });
 
   it('reads a few degrees of skew as skewed', () => {
@@ -241,9 +252,11 @@ describe('the one spelling of the Transform2D construction, product and inverse'
     expect(COLUMN_PRODUCT.test('const col0 = basisXform(a, { x: b.ax, y: b.ay });')).toBe(true);
     expect(COLUMN_PRODUCT.test('ax: p.ax * c.ax + p.bx * c.ay,')).toBe(true);
     expect(OTHER_LAYOUT.test('{ ax: 1, ay: 0, bx: 0, by: 1, ox: 0, oy: 0 }')).toBe(true);
-    expect(OTHER_LAYOUT.test('interface T {\n  ax: number;\n  ay: number;\n  bx: number;\n  by: number;\n  ox: number;\n}')).toBe(
-      true
-    );
+    expect(
+      OTHER_LAYOUT.test(
+        'interface T {\n  ax: number;\n  ay: number;\n  bx: number;\n  by: number;\n  ox: number;\n}'
+      )
+    ).toBe(true);
     expect(INVERSE.test('const inv = 1 / det;')).toBe(true);
     expect(INVERSE.test('const idet = 1/(determinant);')).toBe(true);
     expect(CONSTRUCTION.test('Math.sin(rotation)')).toBe(false);

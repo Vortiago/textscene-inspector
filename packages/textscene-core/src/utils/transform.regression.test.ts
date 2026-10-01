@@ -53,18 +53,17 @@ describe('row-major basis regression: 401f8f5 assertions vs current code', () =>
   });
 
   describe('Component.transform.test.tsx rotation basis vectors (d7a69da original WI-R3F-9)', () => {
-
     it('[d7a69da original] Rx(90°) — column-major input from d7a69da should NOT give rotation.x=+pi/2', () => {
       // Rx(+90°) written column-major is Rx(-90°) read row-major.
       const columnMajorBasis: Transform3D = {
         basis_x: { x: 1, y: 0, z: 0 },
-        basis_y: { x: 0, y: 0, z: 1 },   // column-major Rx(+90°)
+        basis_y: { x: 0, y: 0, z: 1 }, // column-major Rx(+90°)
         basis_z: { x: 0, y: -1, z: 0 },
         origin: { x: 0, y: 0, z: 0 },
       };
       const rowMajorBasis: Transform3D = {
         basis_x: { x: 1, y: 0, z: 0 },
-        basis_y: { x: 0, y: 0, z: -1 },  // row-major Rx(+90°)
+        basis_y: { x: 0, y: 0, z: -1 }, // row-major Rx(+90°)
         basis_z: { x: 0, y: 1, z: 0 },
         origin: { x: 0, y: 0, z: 0 },
       };

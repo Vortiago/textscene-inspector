@@ -7,8 +7,15 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
+
+const arms = {
+  missingProcessMaterial: groundedArm('gpuparticles2d-missing-process-material', {
+    kind: 'configuration-warning',
+  }),
+} as const satisfies RuleArms<string>;
 
 function checkGPUParticles2D(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -18,14 +25,12 @@ function checkGPUParticles2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
 
   if (resourceSlotIsEmpty(props.process_material)) {
-    diagnostics.push({
-      severity: 'warning',
-      message:
-        "GPUParticles2D has no 'process_material' assigned, so no behavior is imprinted and Godot renders it as-is (a configuration warning in the editor, not an error).",
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'gpuparticles2d-missing-process-material',
-    });
+    reportArm(
+      diagnostics,
+      arms.missingProcessMaterial,
+      node,
+      "GPUParticles2D has no 'process_material' assigned, so no behavior is imprinted and Godot renders it as-is (a configuration warning in the editor, not an error)."
+    );
   }
 
   return diagnostics;
@@ -38,9 +43,7 @@ const gpuParticles2DPreviewRule: LintRule = {
       "Flags a GPUParticles2D with no process_material, mirroring Godot's own configuration warning",
     category: 'validation',
     applicableNodeTypes: ['GPUParticles2D'],
-    emits: [
-      { ruleName: 'gpuparticles2d-missing-process-material', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-    ],
+    emits: armEmits(arms),
   },
   check: checkGPUParticles2D,
 };

@@ -24,10 +24,7 @@ export const csgMesh3DGeometry: CsgGeometryBuilder = (properties, ctx): THREE.Bu
   return resource ? buildPrimitiveMeshGeometry(resource) : null;
 };
 
-export function csgMesh3DGeometryKey(
-  properties: Record<string, unknown>,
-  ctx: CsgGeometryContext
-): string {
+export function csgMesh3DGeometryKey(properties: Record<string, unknown>, ctx: CsgGeometryContext): string {
   const p = properties as unknown as CSGMesh3DProperties;
   if (!p.mesh) return 'mesh:none';
   const ref = parseResourceReference(p.mesh);

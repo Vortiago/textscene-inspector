@@ -19,10 +19,7 @@ export type BlendProgram = ClipWeight[];
 
 const WEIGHT_EPSILON = 1e-4;
 
-export function evaluateTree(
-  root: AnimNode | null,
-  parameters: Record<string, string>
-): BlendProgram {
+export function evaluateTree(root: AnimNode | null, parameters: Record<string, string>): BlendProgram {
   if (!root) return [];
   return mergeByClip(evaluate(root, parameters, 1, 1));
 }
@@ -97,11 +94,7 @@ function mergeByClip(contributions: ClipWeight[]): BlendProgram {
   return [...byClip.values()].filter((c) => c.weight > WEIGHT_EPSILON);
 }
 
-function numberParam(
-  params: Record<string, string>,
-  key: string,
-  fallback: number
-): number {
+function numberParam(params: Record<string, string>, key: string, fallback: number): number {
   const raw = params[key];
   if (raw === undefined) return fallback;
   // Non-finite as well as unreadable: `inf`/`nan` are legal float spellings, and

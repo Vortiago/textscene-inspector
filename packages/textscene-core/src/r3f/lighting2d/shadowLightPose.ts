@@ -42,10 +42,7 @@ export interface ShadowLightPose extends ShadowLight, ShadowPolarLight {
  * space, or null while the quad is not in the tree. The quad's bounds give the
  * rect, and its parent, the CanvasItem, gives the origin and the local frame.
  */
-export function sampleShadowLight(
-  quad: THREE.Mesh | null,
-  matricesFresh = false
-): ShadowLightPose | null {
+export function sampleShadowLight(quad: THREE.Mesh | null, matricesFresh = false): ShadowLightPose | null {
   if (!quad || !quad.parent) return null;
   const geometry = quad.geometry;
   if (!geometry.boundingBox) geometry.computeBoundingBox();
@@ -69,8 +66,12 @@ export function sampleShadowLight(
   // moving the space Godot states its shadow map in.
   const e = inverse.copy(quad.parent.matrixWorld).invert().elements;
   const worldToLocal: [number, number, number, number, number, number] = [
-    e[0]!, e[4]!, e[12]!,
-    e[1]!, e[5]!, e[13]!,
+    e[0]!,
+    e[4]!,
+    e[12]!,
+    e[1]!,
+    e[5]!,
+    e[13]!,
   ];
   for (const value of worldToLocal) {
     if (!Number.isFinite(value)) return null;
@@ -140,10 +141,7 @@ function readSampleInputs(quad: THREE.Mesh, out: Float64Array): boolean {
  * three in the render loop, so the layout pass serves a still frame and the frame
  * callback an animated light, as in ShadowCasterStage.
  */
-export function useShadowLightPose(
-  quad: THREE.Mesh | null,
-  enabled: boolean
-): ShadowLightPose | null {
+export function useShadowLightPose(quad: THREE.Mesh | null, enabled: boolean): ShadowLightPose | null {
   const [pose, setPose] = useState<ShadowLightPose | null>(null);
   const published = useRef(pose);
   const inputs = useRef(new Float64Array(SAMPLE_INPUTS));

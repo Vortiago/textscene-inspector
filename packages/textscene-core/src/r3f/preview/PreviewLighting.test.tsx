@@ -44,9 +44,8 @@ const OMNI = `
 [node name="Lamp" type="OmniLight3D" parent="."]
 `;
 
-const directionalCount = (
-  renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>
-) => renderer.scene.findAllByType('DirectionalLight').length;
+const directionalCount = (renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>) =>
+  renderer.scene.findAllByType('DirectionalLight').length;
 
 describe('preview sun yielding', () => {
   it('lights a scene that brought no light of its own', async () => {
@@ -65,7 +64,9 @@ describe('preview sun yielding', () => {
   });
 
   it('yields once, however many directional lights the scene has', async () => {
-    const renderer = await render(scene(`${DIRECTIONAL}\n[node name="Fill" type="DirectionalLight3D" parent="."]\n`));
+    const renderer = await render(
+      scene(`${DIRECTIONAL}\n[node name="Fill" type="DirectionalLight3D" parent="."]\n`)
+    );
     expect(directionalCount(renderer)).toBe(2);
   });
 

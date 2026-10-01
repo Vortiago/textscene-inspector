@@ -24,10 +24,7 @@ export function SelectionHighlight() {
 
   useSceneHelper<THREE.BoxHelper>(
     () => {
-      const target =
-        selectedNodePath && nodeObjectMap
-          ? nodeObjectMap.get(selectedNodePath) ?? null
-          : null;
+      const target = selectedNodePath && nodeObjectMap ? (nodeObjectMap.get(selectedNodePath) ?? null) : null;
       if (!target) return null;
       const helper = new WorldBoxHelper(target, HIGHLIGHT_COLOR);
       helper.name = 'tscn-selection-highlight';

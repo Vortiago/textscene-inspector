@@ -15,12 +15,7 @@ export function decodeCylinderMesh(properties: Record<string, string>): Cylinder
     top_radius: floatOr(properties.top_radius, 0.5, 'CylinderMesh top_radius'),
     bottom_radius: floatOr(properties.bottom_radius, 0.5, 'CylinderMesh bottom_radius'),
     height: floatOr(properties.height, 2.0, 'CylinderMesh height'),
-    radial_segments: flooredCount(
-      properties.radial_segments,
-      4,
-      64,
-      'CylinderMesh radial_segments'
-    ),
+    radial_segments: flooredCount(properties.radial_segments, 4, 64, 'CylinderMesh radial_segments'),
     rings: settableIntOr(properties.rings, 4, { min: 0 }, 'CylinderMesh rings'),
     capTop: boolSlotValue(properties.cap_top) !== false,
     capBottom: boolSlotValue(properties.cap_bottom) !== false,

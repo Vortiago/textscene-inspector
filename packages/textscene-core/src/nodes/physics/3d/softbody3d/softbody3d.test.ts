@@ -15,7 +15,7 @@ import './index';
 import './index.r3f';
 
 describe('SoftBody3D registration', () => {
-  it('reuses MeshInstance3D\'s parser, the ancestor that reads its properties', () => {
+  it("reuses MeshInstance3D's parser, the ancestor that reads its properties", () => {
     const registration = nodeRegistry.getRegistration('SoftBody3D');
     expect(registration).not.toBeNull();
     expect(registration!.parser).toBe(parseMeshInstance3D);

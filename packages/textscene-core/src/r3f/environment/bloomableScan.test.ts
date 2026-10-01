@@ -56,7 +56,7 @@ describe('sceneHasBloomableEmissive', () => {
   it('finds an emissive in any slot of a multi-material mesh', () => {
     const mesh = new THREE.Mesh(new THREE.BufferGeometry(), [
       new THREE.MeshStandardMaterial(),
-      (emissiveMesh([3, 0, 0], 1).material as THREE.MeshStandardMaterial),
+      emissiveMesh([3, 0, 0], 1).material as THREE.MeshStandardMaterial,
     ]);
     expect(sceneHasBloomableEmissive(sceneOf(mesh), 1)).toBe(true);
   });

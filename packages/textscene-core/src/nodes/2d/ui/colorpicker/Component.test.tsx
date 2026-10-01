@@ -30,7 +30,13 @@ const ONLY_SHAPE_AND_SAMPLE = {
 
 async function meshCount(properties: Record<string, unknown>): Promise<number> {
   const renderer = await ReactThreeTestRenderer.create(
-    <ColorPicker {...painterEnv()} theme={THEME} solveNode={node(properties)} rect={{ x: 0, y: 0, w: 400, h: 400 }} renderOrder={0} />
+    <ColorPicker
+      {...painterEnv()}
+      theme={THEME}
+      solveNode={node(properties)}
+      rect={{ x: 0, y: 0, w: 400, h: 400 }}
+      renderOrder={0}
+    />
   );
   return renderer.scene.findAllByType('Mesh').length;
 }
@@ -75,7 +81,13 @@ describe('<ColorPicker> (isolated painter contract)', () => {
 
   it('colours the SV square gradient at hue=0 (pure red) unmodulated by an opaque-white tint', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ColorPicker {...painterEnv()} theme={THEME} solveNode={node({ color: 'Color(1, 0, 0, 1)', ...ONLY_SHAPE_AND_SAMPLE })} rect={{ x: 0, y: 0, w: 400, h: 400 }} renderOrder={0} />
+      <ColorPicker
+        {...painterEnv()}
+        theme={THEME}
+        solveNode={node({ color: 'Color(1, 0, 0, 1)', ...ONLY_SHAPE_AND_SAMPLE })}
+        rect={{ x: 0, y: 0, w: 400, h: 400 }}
+        renderOrder={0}
+      />
     );
     const meshes = renderer.scene.findAllByType('Mesh');
     // 0: pick box, 1: pick icon, 2: shape icon, 3: swatch, 4: sv base, 5: sv hue layer.
@@ -111,7 +123,13 @@ describe('<ColorPicker> (isolated painter contract)', () => {
 
   it('positions the cursor at the square bounds for s=0, v=1 (pure white)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ColorPicker {...painterEnv()} theme={THEME} solveNode={node({ color: 'Color(1, 1, 1, 1)', ...ONLY_SHAPE_AND_SAMPLE })} rect={{ x: 0, y: 0, w: 400, h: 400 }} renderOrder={0} />
+      <ColorPicker
+        {...painterEnv()}
+        theme={THEME}
+        solveNode={node({ color: 'Color(1, 1, 1, 1)', ...ONLY_SHAPE_AND_SAMPLE })}
+        rect={{ x: 0, y: 0, w: 400, h: 400 }}
+        renderOrder={0}
+      />
     );
     const meshes = renderer.scene.findAllByType('Mesh');
     // Cursor bg is mesh index 6 (pick box, pick icon, shape icon, swatch, base, hue, cursorBg, …).
@@ -135,8 +153,22 @@ describe('<ColorPicker> (isolated painter contract)', () => {
   });
 
   it('mode row: drops to 0 extra meshes when hidden, adds label meshes when shown', async () => {
-    const hidden = await meshCount({ pickerShape: 4, samplerVisible: false, colorModesVisible: false, slidersVisible: false, hexVisible: false, presetsVisible: false });
-    const shown = await meshCount({ pickerShape: 4, samplerVisible: false, colorModesVisible: true, slidersVisible: false, hexVisible: false, presetsVisible: false });
+    const hidden = await meshCount({
+      pickerShape: 4,
+      samplerVisible: false,
+      colorModesVisible: false,
+      slidersVisible: false,
+      hexVisible: false,
+      presetsVisible: false,
+    });
+    const shown = await meshCount({
+      pickerShape: 4,
+      samplerVisible: false,
+      colorModesVisible: true,
+      slidersVisible: false,
+      hexVisible: false,
+      presetsVisible: false,
+    });
     expect(shown).toBeGreaterThan(hidden);
   });
 
@@ -145,7 +177,14 @@ describe('<ColorPicker> (isolated painter contract)', () => {
       <ColorPicker
         {...painterEnv()}
         theme={THEME}
-        solveNode={node({ color: 'Color(1, 0, 0, 1)', pickerShape: 4, samplerVisible: false, colorModesVisible: false, hexVisible: false, presetsVisible: false })}
+        solveNode={node({
+          color: 'Color(1, 0, 0, 1)',
+          pickerShape: 4,
+          samplerVisible: false,
+          colorModesVisible: false,
+          hexVisible: false,
+          presetsVisible: false,
+        })}
         rect={{ x: 0, y: 0, w: 400, h: 400 }}
         renderOrder={0}
       />
@@ -167,14 +206,42 @@ describe('<ColorPicker> (isolated painter contract)', () => {
   });
 
   it('hex row draws a field box and its text — hex_visible default true', async () => {
-    const hidden = await meshCount({ pickerShape: 4, samplerVisible: false, colorModesVisible: false, slidersVisible: false, hexVisible: false, presetsVisible: false });
-    const shown = await meshCount({ pickerShape: 4, samplerVisible: false, colorModesVisible: false, slidersVisible: false, hexVisible: true, presetsVisible: false });
+    const hidden = await meshCount({
+      pickerShape: 4,
+      samplerVisible: false,
+      colorModesVisible: false,
+      slidersVisible: false,
+      hexVisible: false,
+      presetsVisible: false,
+    });
+    const shown = await meshCount({
+      pickerShape: 4,
+      samplerVisible: false,
+      colorModesVisible: false,
+      slidersVisible: false,
+      hexVisible: true,
+      presetsVisible: false,
+    });
     expect(shown).toBeGreaterThan(hidden);
   });
 
   it('swatches row draws its two button labels — presets_visible default true', async () => {
-    const hidden = await meshCount({ pickerShape: 4, samplerVisible: false, colorModesVisible: false, slidersVisible: false, hexVisible: false, presetsVisible: false });
-    const shown = await meshCount({ pickerShape: 4, samplerVisible: false, colorModesVisible: false, slidersVisible: false, hexVisible: false, presetsVisible: true });
+    const hidden = await meshCount({
+      pickerShape: 4,
+      samplerVisible: false,
+      colorModesVisible: false,
+      slidersVisible: false,
+      hexVisible: false,
+      presetsVisible: false,
+    });
+    const shown = await meshCount({
+      pickerShape: 4,
+      samplerVisible: false,
+      colorModesVisible: false,
+      slidersVisible: false,
+      hexVisible: false,
+      presetsVisible: true,
+    });
     expect(shown).toBeGreaterThan(hidden);
   });
 });

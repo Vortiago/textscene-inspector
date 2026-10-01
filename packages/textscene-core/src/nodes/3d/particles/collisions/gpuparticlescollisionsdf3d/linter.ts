@@ -10,6 +10,11 @@ import { ruleRegistry } from '../../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../../godot/nodeBaseTypes.js';
 import { ruleInt } from '../../../../../linter/validators/commonValidators.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../../linter/ruleArms.js';
+
+const arms = {
+  emptyBakeMask: groundedArm('gpuparticlescollisionsdf3d-empty-bake-mask', { kind: 'configuration-warning' }),
+} as const satisfies RuleArms<string>;
 
 function checkGPUParticlesCollisionSDF3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -24,13 +29,11 @@ function checkGPUParticlesCollisionSDF3D(context: RuleContext): Diagnostic[] {
   if (ruleInt(rawProps.bake_mask, null, 'uint32') !== 0) return [];
 
   return [
-    {
-      severity: 'warning',
-      message: `GPUParticlesCollisionSDF3D '${node.name}' has a Bake Mask with no bits enabled, which means baking will not produce any collision for it. Enable at least one bit in the Bake Mask property.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'gpuparticlescollisionsdf3d-empty-bake-mask',
-    },
+    armDiagnostic(
+      arms.emptyBakeMask,
+      node,
+      `GPUParticlesCollisionSDF3D '${node.name}' has a Bake Mask with no bits enabled, which means baking will not produce any collision for it. Enable at least one bit in the Bake Mask property.`
+    ),
   ];
 }
 
@@ -41,7 +44,7 @@ const gpuParticlesCollisionSDF3DBakeMaskRule: LintRule = {
       "Warns when a GPUParticlesCollisionSDF3D's Bake Mask has no bits enabled, so baking would produce no collision",
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'GPUParticlesCollisionSDF3D'),
-    emits: [{ ruleName: 'gpuparticlescollisionsdf3d-empty-bake-mask', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: armEmits(arms),
   },
   check: checkGPUParticlesCollisionSDF3D,
 };

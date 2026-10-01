@@ -37,7 +37,10 @@ describe('TscnDocumentLinkProvider', () => {
 
       const links = provider.provideDocumentLinks(document, TOKEN) as ReturnType<
         TscnDocumentLinkProvider['provideDocumentLinks']
-      > & Array<{ range: { start: { line: number; character: number }; end: { line: number; character: number } } }>;
+      > &
+        Array<{
+          range: { start: { line: number; character: number }; end: { line: number; character: number } };
+        }>;
 
       expect(links).toHaveLength(1);
       const expectedStart = line.indexOf('res://');
@@ -74,12 +77,8 @@ describe('TscnDocumentLinkProvider', () => {
 
       expect(links).toHaveLength(2);
       // Neither link swallows the closing quote/paren/comma that follows it.
-      expect(line.slice(links[0]!.range.start.character, links[0]!.range.end.character)).toBe(
-        'res://a.png'
-      );
-      expect(line.slice(links[1]!.range.start.character, links[1]!.range.end.character)).toBe(
-        'res://b.png'
-      );
+      expect(line.slice(links[0]!.range.start.character, links[0]!.range.end.character)).toBe('res://a.png');
+      expect(line.slice(links[1]!.range.start.character, links[1]!.range.end.character)).toBe('res://b.png');
     });
   });
 
@@ -101,9 +100,7 @@ describe('TscnDocumentLinkProvider', () => {
       const resolved = await provider.resolveDocumentLink!(link!, TOKEN);
 
       expect(resolved).toBeDefined();
-      expect((resolved!.target as unknown as { fsPath: string }).fsPath).toBe(
-        '/workspace/scenes/Door.tscn'
-      );
+      expect((resolved!.target as unknown as { fsPath: string }).fsPath).toBe('/workspace/scenes/Door.tscn');
     });
 
     it('resolves the target relative to a project.godot found above the document', async () => {
@@ -174,9 +171,7 @@ describe('TscnDocumentLinkProvider', () => {
     });
 
     it('leaves the target unresolved when the document has no workspace folder', async () => {
-      (vscodeMocks.workspace.getWorkspaceFolder as ReturnType<typeof vi.fn>).mockReturnValue(
-        undefined
-      );
+      (vscodeMocks.workspace.getWorkspaceFolder as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
 
       const provider = new TscnDocumentLinkProvider();
       const line = 'path="res://scenes/Door.tscn"';

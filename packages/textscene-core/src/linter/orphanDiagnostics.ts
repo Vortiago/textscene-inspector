@@ -110,12 +110,12 @@ export function orphanDiagnostics(scene: TscnScene): Diagnostic[] {
           'path does not walk (packed_scene.cpp:161-163). Those ids name nodes inside the base ' +
           'scenes, which this linter does not open, so it cannot say where the node lands.'
         : emptyParents.length > 0
-        ? 'Godot cannot load the file at all — another heading spells parent="" (see the ' +
-          'error beside this) — so nothing in it is instantiated.'
-        : refused
-          ? 'Godot refuses to instantiate the scene for another heading (see the error ' +
-            'beside this), so no re-root of this node happens.'
-          : `Godot re-parents it to the scene root and renames it "${reparentedName(declaredParent!, node.name)}".`;
+          ? 'Godot cannot load the file at all — another heading spells parent="" (see the ' +
+            'error beside this) — so nothing in it is instantiated.'
+          : refused
+            ? 'Godot refuses to instantiate the scene for another heading (see the error ' +
+              'beside this), so no re-root of this node happens.'
+            : `Godot re-parents it to the scene root and renames it "${reparentedName(declaredParent!, node.name)}".`;
       return armDiagnostic(
         FILE_DIAGNOSTICS.unresolvedParentPath,
         node,

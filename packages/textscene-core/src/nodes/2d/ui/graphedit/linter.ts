@@ -5,10 +5,24 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
 import { parseOptionalVector2 } from '../../../../parser/valueParsers.js';
 import { resolveGraphEditLoadState } from './loadOrder.js';
+
+const arms = {
+  zoomMinAboveMax: {
+    severity: 'error',
+    ruleName: 'graphedit-zoom-min-above-max',
+    grounding: { kind: 'engine', at: 'graph_edit.cpp:2480' },
+  },
+  scrollOffsetDiscarded: groundedArm('graphedit-scroll-offset-discarded', {
+    kind: 'engine-inert',
+    at: 'graph_edit.cpp:407',
+    unused: 'the authored offset never becomes the stored scroll position',
+  }),
+} as const satisfies RuleArms<string>;
 
 /**
  * Error tier (ADR-0032): `set_zoom_min` refuses `p_zoom_min > zoom_max` (scene/gui/graph_edit.cpp:2479-2480)
@@ -36,13 +50,11 @@ function checkZoomLimits(context: RuleContext): Diagnostic[] {
   if (min <= max) return [];
 
   return [
-    {
-      severity: 'error',
-      message: `GraphEdit 'zoom_min = ${minRaw}' is above 'zoom_max = ${maxRaw}'. set_zoom_min refuses a minimum above the current maximum and set_zoom_max refuses a maximum below the current minimum, so whichever the loader applies second is dropped and one of the two limits silently stays at its constructor default.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'graphedit-zoom-min-above-max',
-    },
+    armDiagnostic(
+      arms.zoomMinAboveMax,
+      node,
+      `GraphEdit 'zoom_min = ${minRaw}' is above 'zoom_max = ${maxRaw}'. set_zoom_min refuses a minimum above the current maximum and set_zoom_max refuses a maximum below the current minimum, so whichever the loader applies second is dropped and one of the two limits silently stays at its constructor default.`
+    ),
   ];
 }
 
@@ -78,42 +90,23 @@ function checkScrollOffset(context: RuleContext): Diagnostic[] {
       : '';
 
   return [
-    {
-      severity: 'info',
-      message:
-        `GraphEdit 'scroll_offset = ${raw}' does not survive the load: set_scroll_offset clamps it against ` +
+    armDiagnostic(
+      arms.scrollOffsetDiscarded,
+      node,
+      `GraphEdit 'scroll_offset = ${raw}' does not survive the load: set_scroll_offset clamps it against ` +
         `min_scroll_offset and max_scroll_offset, which no laid-out child has widened yet, so Godot stores ` +
-        `${vector2Literal(stored)} instead.${explicitDefault}`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'graphedit-scroll-offset-discarded',
-    },
+        `${vector2Literal(stored)} instead.${explicitDefault}`
+    ),
   ];
 }
 
 const graphEditPropertiesRule: LintRule = {
   meta: {
     name: 'valid-graphedit-properties',
-    description:
-      'Validates GraphEdit zoom-limit ordering and reports a scroll_offset the load clamps away',
+    description: 'Validates GraphEdit zoom-limit ordering and reports a scroll_offset the load clamps away',
     category: 'validation',
     applicableNodeTypes: ['GraphEdit'],
-    emits: [
-      {
-        ruleName: 'graphedit-zoom-min-above-max',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'graph_edit.cpp:2480' },
-      },
-      {
-        ruleName: 'graphedit-scroll-offset-discarded',
-        severity: 'info',
-        grounding: {
-          kind: 'engine-inert',
-          at: 'graph_edit.cpp:407',
-          unused: 'the authored offset never becomes the stored scroll position',
-        },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: (context) => [...checkZoomLimits(context), ...checkScrollOffset(context)],
 };

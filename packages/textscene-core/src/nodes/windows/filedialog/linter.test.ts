@@ -4,7 +4,13 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { node, scene, expectClean, expectDiagnostic, expectNoDiagnostic } from '../../../linter/testing/testkit';
+import {
+  node,
+  scene,
+  expectClean,
+  expectDiagnostic,
+  expectNoDiagnostic,
+} from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
@@ -81,9 +87,7 @@ describe('FileDialog index spelling in the message', () => {
       scene(node('FileDialog', { option_count: 2, 'option_4294967298/name': '"x"' })),
       { ruleName: 'filedialog-option-index-out-of-range', severity: 'error' }
     );
-    expect(diagnostic.message).toContain(
-      'index(es) 4294967298 (stored as 2) fall outside option_count (2)'
-    );
+    expect(diagnostic.message).toContain('index(es) 4294967298 (stored as 2) fall outside option_count (2)');
   });
 
   it('stays silent on an option inside the count whatever its spelling', () => {
@@ -99,14 +103,11 @@ describe('FileDialog index grammar', () => {
     // (ustring.cpp:4752), so `option_+2/name` resolves to option 2 and
     // `_get_property` drops it for being past the count
     // (property_list_helper.cpp:58).
-    expectDiagnostic(
-      scene(node('FileDialog', { option_count: 1, 'option_+2/name': '"Quality"' })),
-      {
-        ruleName: 'filedialog-option-index-out-of-range',
-        severity: 'error',
-        nodeType: 'FileDialog',
-        contains: ['2', 'option_count (1)'],
-      }
-    );
+    expectDiagnostic(scene(node('FileDialog', { option_count: 1, 'option_+2/name': '"Quality"' })), {
+      ruleName: 'filedialog-option-index-out-of-range',
+      severity: 'error',
+      nodeType: 'FileDialog',
+      contains: ['2', 'option_count (1)'],
+    });
   });
 });

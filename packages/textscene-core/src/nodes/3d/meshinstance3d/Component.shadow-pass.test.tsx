@@ -13,11 +13,7 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { parseTresFile } from '../../../parser/parsedResource';
 import { standardMaterialTres } from '../../../resources/materials/standardmaterial3d/testing/standardMaterial';
-import type {
-  TscnExternalResource,
-  TscnInternalResource,
-  TscnNode,
-} from '../../../parser/types';
+import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
@@ -125,16 +121,12 @@ describe('<MeshInstance3D> shadow-pass exclusion per ArrayMesh surface', () => {
 describe('<MeshInstance3D> shadow-pass exclusion under SHADOWS_ONLY', () => {
   it('casts nothing from an additive surface', async () => {
     // SHADOWS_ONLY hides the colour draw. It never adds a surface to the shadow pass.
-    const mesh = await renderMesh(
-      makeNode({ castShadow: 3, materialOverride: 'ExtResource("1_ext")' })
-    );
+    const mesh = await renderMesh(makeNode({ castShadow: 3, materialOverride: 'ExtResource("1_ext")' }));
     expect(castsFrom(mesh)).toBe(false);
   });
 
   it('draws the additive surface in no colour pass either', async () => {
-    const mesh = await renderMesh(
-      makeNode({ castShadow: 3, materialOverride: 'ExtResource("1_ext")' })
-    );
+    const mesh = await renderMesh(makeNode({ castShadow: 3, materialOverride: 'ExtResource("1_ext")' }));
     expect(drawsColour(mesh)).toBe(false);
   });
 });

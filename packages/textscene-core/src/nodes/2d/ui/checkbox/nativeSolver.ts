@@ -47,7 +47,6 @@ export const CHECKBOX_THEME_FONT_KEY = 'font';
 // pieces without importing `buttonBase.ts` a second time under a different name.
 export { fitIconSize, tintColor };
 
-
 /**
  * `BaseButton::get_draw_mode` (`scene/gui/base_button.cpp:325-358`) without input: `status.hovering`
  * and `status.press_attempt` stay false, so `DRAW_PRESSED` fires exactly when `button_pressed` is true, and `disabled`
@@ -93,7 +92,6 @@ export function checkBoxTextTheme(
   };
   return resolveTextTheme(n, props, CHECKBOX_THEME_KEYS[state], defaults);
 }
-
 
 export type CheckBoxIconKey = keyof CheckBoxIcons;
 
@@ -172,7 +170,10 @@ export function checkBoxIconMaxWidth(constants: SolveNode['constants']): number 
 }
 
 /** `h_separation`: CheckBox's default (`default_theme.cpp:308`, `round(4*scale)`) equals `theme.separation`. */
-export function checkBoxHSeparation(constants: SolveNode['constants'], ctx: Pick<SolveContext, 'theme'>): number {
+export function checkBoxHSeparation(
+  constants: SolveNode['constants'],
+  ctx: Pick<SolveContext, 'theme'>
+): number {
   return Math.max(0, constants.h_separation ?? ctx.theme.separation);
 }
 
@@ -180,7 +181,6 @@ export function checkBoxHSeparation(constants: SolveNode['constants'], ctx: Pick
 export function checkBoxCheckVOffset(constants: SolveNode['constants']): number {
   return constants.check_v_offset ?? DEFAULT_CHECK_V_OFFSET;
 }
-
 
 /**
  * `CheckBox::get_minimum_size` (`check_box.cpp:64-79`): Button's text-only floor plus the check
@@ -200,7 +200,8 @@ export const checkBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
   // `Button::get_minimum_size` (`button.cpp:492`) reads `paragraph->get_size()`, the ceiled
   // extent (`text_paragraph.cpp:601-608`, `text_server_adv.cpp:7524-7537`). The icon and
   // separation are added outside the ceil (`check_box.cpp:63-73`).
-  const measured = hasText && ctx.measureText ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
+  const measured =
+    hasText && ctx.measureText ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
   const textSize = { x: shapedTextSizeWidthPx(measured.x), y: measured.y };
 
   const iconSize = fitIconSize(checkBoxIconNaturalSize(n), checkBoxIconMaxWidth(n.constants));
@@ -214,7 +215,6 @@ export const checkBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   return { x: width, y: height };
 };
-
 
 export interface CheckBoxContentInput {
   /** The control's own solved rect size, Godot px. */

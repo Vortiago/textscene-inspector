@@ -100,10 +100,7 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
     };
   }, [vscode, loader]);
 
-  const panelId = useMemo(
-    () => `vscode-${Math.random().toString(36).slice(2, 10)}`,
-    []
-  );
+  const panelId = useMemo(() => `vscode-${Math.random().toString(36).slice(2, 10)}`, []);
 
   const handleNodeReveal = (path: string, node: TscnNode) => {
     vscode.postMessage({

@@ -27,7 +27,10 @@ export function parseColorOrUndefined(value: string | undefined): Color | undefi
   }
 
   const [r, g, b, a] = [match[1], match[2], match[3], match[4]].map((c) => matchedFloat(c)) as [
-    number, number, number, number,
+    number,
+    number,
+    number,
+    number,
   ];
   // An overflowing exponent is inside the finite grammar and outside anything a
   // channel can hold, so it takes the same path as a literal the grammar

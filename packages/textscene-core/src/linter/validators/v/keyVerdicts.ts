@@ -26,10 +26,7 @@ export const keyVerdictCombinators = {
    *
    * @param derivedFrom - what the engine computes it from, for the message.
    */
-  readOnly(
-    name: string,
-    opts: { derivedFrom: string; cite: string; code?: string }
-  ): PropertyValidator {
+  readOnly(name: string, opts: { derivedFrom: string; cite: string; code?: string }): PropertyValidator {
     // The derived code keeps any slash in the path, as `INVALID_PARAMS/BIAS_VALUE` does.
     const validator = accepts(
       (key, _value, line) =>

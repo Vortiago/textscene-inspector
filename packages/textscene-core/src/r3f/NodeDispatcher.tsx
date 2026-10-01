@@ -30,10 +30,7 @@ import { GenericNodeFallback } from './internal/generic-node-fallback/index';
 import { useViewportSelection } from './hooks/useViewportSelection.js';
 import { useCanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 import { TWO_D_UI_TYPES } from './controls/has2DUIContent.js';
-import {
-  isViewportBoundary,
-  isViewportSurface,
-} from '../nodes/viewport/subviewport/viewportBoundary.js';
+import { isViewportBoundary, isViewportSurface } from '../nodes/viewport/subviewport/viewportBoundary.js';
 import { NodePathProvider } from './contexts/NodePathContext.js';
 import { useResource, useResourceLoader } from '../resources/useResource.js';
 import { collapseLiveNode, singleSceneCache } from './liveSceneTree.js';
@@ -42,10 +39,7 @@ import {
   parseResourceReference,
   resolveInstancePath,
 } from '../resources/SubResourceResolver.js';
-import {
-  SceneResourcesProvider,
-  useSceneResources,
-} from './SceneResourcesContext.js';
+import { SceneResourcesProvider, useSceneResources } from './SceneResourcesContext.js';
 import { useSelection } from './contexts/SelectionContext.js';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder.js';
 import { ErrorBoundary } from './components/ErrorBoundary.js';
@@ -155,13 +149,7 @@ export function DispatchedNode({ node, path }: DispatchedNodeProps): ReactNode {
  * different resource or none. The provider prepends onto the ambient pool, so
  * the authoring scene wins an id both scenes hold.
  */
-function AuthoredResourceScope({
-  scope,
-  children,
-}: {
-  scope: SceneScope;
-  children: ReactNode;
-}): ReactNode {
+function AuthoredResourceScope({ scope, children }: { scope: SceneScope; children: ReactNode }): ReactNode {
   return (
     <SceneResourcesProvider
       externalResources={scope.externalResources}
@@ -195,11 +183,7 @@ interface PlainNodeProps extends DispatchedNodeProps {
  * component, with its inline children and the `extraChildren` of the instance
  * fallback. A merged instance root renders here like an authored node.
  */
-function PlainNode({
-  node,
-  path,
-  children: extraChildren,
-}: PlainNodeProps): ReactNode {
+function PlainNode({ node, path, children: extraChildren }: PlainNodeProps): ReactNode {
   // An unregistered type renders the fallback, so it stays visible.
   const Component = nodeComponentRegistry.get(node.type) ?? GenericNodeFallback;
   const { hiddenNodePaths, registerNodeObject, unregisterNodeObject } = useSelection();
@@ -315,7 +299,9 @@ function PlainNode({
                                 layer's canvas (`canvas_item.cpp:246-252`), so a node that
                                 escapes inside it stays under the layer's own group. */}
                             <WorldRoot>
-                              <CanvasRootRangesProvider value={canvasRoots}>{children}</CanvasRootRangesProvider>
+                              <CanvasRootRangesProvider value={canvasRoots}>
+                                {children}
+                              </CanvasRootRangesProvider>
                             </WorldRoot>
                           </CanvasLayerScope>
                         ) : (
@@ -363,7 +349,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   }, [loader, scenePath, instanceRef, externalResources]);
 
   const result = useResource<TscnScene>(scenePath ?? '', 'scene');
-  const loadedScene = result.status === 'loaded' ? result.value ?? null : null;
+  const loadedScene = result.status === 'loaded' ? (result.value ?? null) : null;
 
   // The same merge the tree, inspector and panels make. `effective !== node`
   // means a single root merged in. A `.glb` or multi-root scene returns `node`.
@@ -371,9 +357,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // this subtree every frame.
   const effective = useMemo(
     () =>
-      loadedScene
-        ? collapseLiveNode(node, ambientScope, singleSceneCache(scenePath, loadedScene))
-        : node,
+      loadedScene ? collapseLiveNode(node, ambientScope, singleSceneCache(scenePath, loadedScene)) : node,
     [node, ambientScope, scenePath, loadedScene]
   );
 
@@ -384,8 +368,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // gives each root a run of its own, as an authored child gets.
   const injectedRanges = useMemo(
     () =>
-      allocatePaintRange(allocateNodePaintRange(paintRange, shallow).tail, loadedScene?.nodes ?? [])
-        .children,
+      allocatePaintRange(allocateNodePaintRange(paintRange, shallow).tail, loadedScene?.nodes ?? []).children,
     [paintRange, shallow, loadedScene?.nodes]
   );
 

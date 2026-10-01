@@ -9,7 +9,12 @@ import { propertyError } from '../propertyError.js';
 import { createBooleanValidator } from '../commonValidators.js';
 import { formatCode } from './codes.js';
 import { accepts, shape } from './grounding.js';
-import { ARRAY_LITERAL_RE, JACKETED_STRING_RE, NODE_PATH_LITERAL_RE, TYPED_WRAPPER_RE } from '../../../godot/index.js';
+import {
+  ARRAY_LITERAL_RE,
+  JACKETED_STRING_RE,
+  NODE_PATH_LITERAL_RE,
+  TYPED_WRAPPER_RE,
+} from '../../../godot/index.js';
 import { arrayLiteralBody } from '../../../godot/variantParser.js';
 import { unquoteString } from '../../../parser/utils.js';
 import { valueCode } from './codes.js';
@@ -81,12 +86,7 @@ export const scalarCombinators = {
     const validator: PropertyValidator = (key, value, line) => {
       const text = stringSlotText(value);
       if (text === null) {
-        return propertyError(
-          key,
-          line,
-          `Property '${name}' must be a quoted string, got: ${value}`,
-          format
-        );
+        return propertyError(key, line, `Property '${name}' must be a quoted string, got: ${value}`, format);
       }
       const characters = [...text].length;
       if (characters > 1) {
@@ -99,7 +99,8 @@ export const scalarCombinators = {
       }
       return null;
     };
-    validator.accepts = 'quoted string (or the &"…" StringName or NodePath("…") it converts), at most one character';
+    validator.accepts =
+      'quoted string (or the &"…" StringName or NodePath("…") it converts), at most one character';
     validator.grounding = { kind: 'enforced', cite: opts.enforced };
     return validator;
   },
@@ -117,7 +118,12 @@ export const scalarCombinators = {
     const readable = (key: string, value: string, line: number) =>
       ARRAY_LITERAL_RE.test(value) || TYPED_WRAPPER_RE.test(value.trim())
         ? null
-        : propertyError(key, line, `Property '${name}' must be an Array literal like [] or ${wrapper}, got: ${value}`, format);
+        : propertyError(
+            key,
+            line,
+            `Property '${name}' must be an Array literal like [] or ${wrapper}, got: ${value}`,
+            format
+          );
     if (!typed) return shape(readable, description);
     return typedArrayLiteral(name, typed, readable, description);
   },
@@ -130,8 +136,7 @@ export const scalarCombinators = {
  * `const Array &` setter behind a `PROPERTY_HINT_ARRAY_TYPE`, a warning.
  */
 export type TypedArraySlot = { typedAs: string } & (
-  | { enforced: string; hinted?: never }
-  | { hinted: string; enforced?: never }
+  { enforced: string; hinted?: never } | { hinted: string; enforced?: never }
 );
 
 /**

@@ -61,10 +61,7 @@ describe('useResolvedEnvironment — references held in an external .tres', () =
   it('follows a sky_material held in an ExtResource (the truck town witness)', async () => {
     const resolved = await resolve(
       'SubResource("Environment_1")',
-      [
-        ENVIRONMENT_WITH_SKY,
-        { id: 'Sky_1', type: 'Sky', data: { sky_material: 'ExtResource("1_sky")' } },
-      ],
+      [ENVIRONMENT_WITH_SKY, { id: 'Sky_1', type: 'Sky', data: { sky_material: 'ExtResource("1_sky")' } }],
       [{ id: '1_sky', path: 'res://town/sky_day.tres', type: 'Material' }],
       { 'res://town/sky_day.tres': SKY_MATERIAL_TRES }
     );
@@ -125,10 +122,7 @@ describe('useResolvedEnvironment — references held in an external .tres', () =
     // Progressive fill-in: fog and tonemapping must not wait on the sky.
     const resolved = await resolve(
       'SubResource("Environment_1")',
-      [
-        ENVIRONMENT_WITH_SKY,
-        { id: 'Sky_1', type: 'Sky', data: { sky_material: 'ExtResource("1_sky")' } },
-      ],
+      [ENVIRONMENT_WITH_SKY, { id: 'Sky_1', type: 'Sky', data: { sky_material: 'ExtResource("1_sky")' } }],
       [{ id: '1_sky', path: 'res://never.tres', type: 'Material' }],
       {}
     );

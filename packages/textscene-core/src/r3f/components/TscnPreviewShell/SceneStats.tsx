@@ -23,7 +23,9 @@ export function SceneStats() {
     <div className={styles.statChips} role="group" aria-label="Scene info">
       <span className={styles.statChip} data-testid="scene-info-nodes">{`${nodeCount} nodes`}</span>
       {cameraCount > 0 && (
-        <span className={styles.statChip}>{`${cameraCount} ${cameraCount === 1 ? 'camera' : 'cameras'}`}</span>
+        <span
+          className={styles.statChip}
+        >{`${cameraCount} ${cameraCount === 1 ? 'camera' : 'cameras'}`}</span>
       )}
     </div>
   );

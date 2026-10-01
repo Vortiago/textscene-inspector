@@ -49,9 +49,7 @@ describe('compositeGlsl — the shader it emits', () => {
 
 describe('compositeGlsl — the glow gather', () => {
   it('scales the gathered buffer by glow_intensity, as gather_glow’s caller does', () => {
-    expect(body(glowOn({ glow_intensity: '0.75' }))).toContain(
-      'texture2D(godotGlowBuffer, uv).rgb * 0.75'
-    );
+    expect(body(glowOn({ glow_intensity: '0.75' }))).toContain('texture2D(godotGlowBuffer, uv).rgb * 0.75');
   });
 
   it('gives MIX the glow_mix factor in the intensity slot Godot reuses', () => {
@@ -78,9 +76,7 @@ describe('compositeGlsl — exposure', () => {
 
   it('applies exposure exactly once, whichever side of the curve blends', () => {
     for (const mode of [GlowBlendMode.SCREEN, GlowBlendMode.SOFTLIGHT, GlowBlendMode.MIX]) {
-      const occurrences = body(glowOn({ glow_blend_mode: String(mode) })).match(
-        /godotExposure/g
-      );
+      const occurrences = body(glowOn({ glow_blend_mode: String(mode) })).match(/godotExposure/g);
       expect(occurrences, `blend mode ${mode}`).toHaveLength(1);
     }
   });
@@ -169,10 +165,12 @@ describe('compositeGlsl — malformed input', () => {
     // `glow_blend_mode` is decoded leniently, so a hand-edited scene can carry
     // anything. An unknown mode must still compile.
     expect(body(glowOn({ glow_blend_mode: '99' }))).toContain('godotGlowBlend');
-    expect(compositeGlsl(glowOn({ glow_blend_mode: '99' }), {
-      mode: GodotToneMapper.FILMIC,
-      white: 1,
-    })).toContain('return color + glow;');
+    expect(
+      compositeGlsl(glowOn({ glow_blend_mode: '99' }), {
+        mode: GodotToneMapper.FILMIC,
+        white: 1,
+      })
+    ).toContain('return color + glow;');
   });
 
   it('emits no uncompilable literal for a malformed tonemap white (error path)', () => {

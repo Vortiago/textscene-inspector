@@ -75,12 +75,62 @@ const CLOSE = /^\[\/([a-zA-Z_][a-zA-Z0-9_]*)\]$/;
  * the painter does not style draws unstyled, so `[url=…]` shows the link's text.
  */
 const RECOGNISED_TAGS: ReadonlySet<string> = new Set([
-  'alm', 'b', 'bgcolor', 'br', 'cell', 'center', 'char', 'code', 'color', 'dropcap',
-  'fade', 'fgcolor', 'fill', 'font', 'font_size', 'fsi', 'hint', 'hr', 'i', 'img',
-  'indent', 'lang', 'lb', 'left', 'lre', 'lri', 'lrm', 'lro', 'ol',
-  'opentype_features', 'otf', 'outline_color', 'outline_size', 'p', 'pdf', 'pdi',
-  'pulse', 'rainbow', 'rb', 'right', 'rle', 'rli', 'rlm', 'rlo', 's', 'shake',
-  'shy', 'table', 'tornado', 'u', 'ul', 'url', 'wave', 'wj', 'zwj', 'zwnj',
+  'alm',
+  'b',
+  'bgcolor',
+  'br',
+  'cell',
+  'center',
+  'char',
+  'code',
+  'color',
+  'dropcap',
+  'fade',
+  'fgcolor',
+  'fill',
+  'font',
+  'font_size',
+  'fsi',
+  'hint',
+  'hr',
+  'i',
+  'img',
+  'indent',
+  'lang',
+  'lb',
+  'left',
+  'lre',
+  'lri',
+  'lrm',
+  'lro',
+  'ol',
+  'opentype_features',
+  'otf',
+  'outline_color',
+  'outline_size',
+  'p',
+  'pdf',
+  'pdi',
+  'pulse',
+  'rainbow',
+  'rb',
+  'right',
+  'rle',
+  'rli',
+  'rlm',
+  'rlo',
+  's',
+  'shake',
+  'shy',
+  'table',
+  'tornado',
+  'u',
+  'ul',
+  'url',
+  'wave',
+  'wj',
+  'zwj',
+  'zwnj',
 ]);
 
 /**
@@ -228,7 +278,13 @@ function decodeInlineAlignment(bits: number): ParsedImageAlignment {
   return {
     imagePoint: imagePoint === IMAGE_TO.top ? 'top' : imagePoint === IMAGE_TO.bottom ? 'bottom' : 'center',
     textPoint:
-      textPoint === TO_TEXT.top ? 'top' : textPoint === TO_TEXT.baseline ? 'baseline' : textPoint === TO_TEXT.bottom ? 'bottom' : 'center',
+      textPoint === TO_TEXT.top
+        ? 'top'
+        : textPoint === TO_TEXT.baseline
+          ? 'baseline'
+          : textPoint === TO_TEXT.bottom
+            ? 'bottom'
+            : 'center',
   };
 }
 
@@ -247,7 +303,10 @@ function parseAlignmentSubtags(value: string): ParsedImageAlignment {
     if (text !== undefined) alignment |= text;
   } else if (subtag.length === 1) {
     const image = matchImagePoint(subtag[0]!);
-    if (image !== undefined) alignment = image | (image === IMAGE_TO.top ? TO_TEXT.top : image === IMAGE_TO.bottom ? TO_TEXT.bottom : TO_TEXT.center);
+    if (image !== undefined)
+      alignment =
+        image |
+        (image === IMAGE_TO.top ? TO_TEXT.top : image === IMAGE_TO.bottom ? TO_TEXT.bottom : TO_TEXT.center);
   }
   return decodeInlineAlignment(alignment);
 }
@@ -289,7 +348,10 @@ export function parseImgTag(content: string, path: string): ParsedImgTag {
   }
 
   const colorOption = options.get('color');
-  const color = colorOption !== undefined ? resolveBBColor(colorOption, { r: 1, g: 1, b: 1, a: 1 }) : { r: 1, g: 1, b: 1, a: 1 };
+  const color =
+    colorOption !== undefined
+      ? resolveBBColor(colorOption, { r: 1, g: 1, b: 1, a: 1 })
+      : { r: 1, g: 1, b: 1, a: 1 };
   const altText = options.get('alt') ?? '';
 
   let width = 0;
@@ -313,14 +375,28 @@ export function parseImgTag(content: string, path: string): ParsedImgTag {
     const alignOption = options.get('align');
     if (alignOption !== undefined) alignment = parseAlignmentSubtags(alignOption);
     const widthOption = options.get('width');
-    if (widthOption !== undefined) ({ amount: width, inPercent: widthInPercent } = parseSizeValue(widthOption));
+    if (widthOption !== undefined)
+      ({ amount: width, inPercent: widthInPercent } = parseSizeValue(widthOption));
     const heightOption = options.get('height');
-    if (heightOption !== undefined) ({ amount: height, inPercent: heightInPercent } = parseSizeValue(heightOption));
+    if (heightOption !== undefined)
+      ({ amount: height, inPercent: heightInPercent } = parseSizeValue(heightOption));
     tooltip = options.get('tooltip') ?? '';
     pad = options.get('pad') === 'true';
   }
 
-  return { path, width, height, widthInPercent, heightInPercent, color, region, pad, tooltip, altText, alignment };
+  return {
+    path,
+    width,
+    height,
+    widthInPercent,
+    heightInPercent,
+    color,
+    region,
+    pad,
+    tooltip,
+    altText,
+    alignment,
+  };
 }
 
 function sameTags(a: readonly OpenBBCodeTag[], b: readonly OpenBBCodeTag[]): boolean {
@@ -399,7 +475,12 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
         flush();
         // A failed `ResourceLoader::load(image, "Texture2D")` (`:6034`) adds no
         // image and no glyph, but the tag still opens (`:6145`).
-        if (path !== '') runs.push({ text: IMAGE_OBJECT_CHAR, tags: [...stack], image: parseImgTag(token.slice(1, -1), path) });
+        if (path !== '')
+          runs.push({
+            text: IMAGE_OBJECT_CHAR,
+            tags: [...stack],
+            image: parseImgTag(token.slice(1, -1), path),
+          });
         stack.push({ name, value: open[2] });
         pos = imgEnd;
         continue;

@@ -52,10 +52,13 @@ describe('decodeTileMapData', () => {
 
   // `set_tile_map_data_from_array` clears the layer on empty data
   // (tile_map_layer.cpp:3216-3218), before the header check.
-  it.each(['PackedByteArray()', 'PackedByteArray("")', '[]'])('decodes the empty %s to no cells, silently', (value) => {
-    expect(decodeTileMapData(value)).toEqual([]);
-    expect(warnSpy).not.toHaveBeenCalled();
-  });
+  it.each(['PackedByteArray()', 'PackedByteArray("")', '[]'])(
+    'decodes the empty %s to no cells, silently',
+    (value) => {
+      expect(decodeTileMapData(value)).toEqual([]);
+      expect(warnSpy).not.toHaveBeenCalled();
+    }
+  );
 
   it('returns null and warns on corrupt data (truncated record, bad numbers, bad base64, unknown version)', () => {
     // 2-byte header + 13 bytes: not a whole 12-byte record.

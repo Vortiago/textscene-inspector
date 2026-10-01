@@ -17,7 +17,13 @@ import {
   waitForServer,
 } from '../visual/previewServer.mjs';
 import { installViewMatrixProbe, matricesEqual, formatMatrix } from './cameraProbe.mjs';
-import { arraysEqual, describeNodePathMismatch, expandAllTreeRows, readOutlinerPaths, selectOutlinerNode } from './outliner.mjs';
+import {
+  arraysEqual,
+  describeNodePathMismatch,
+  expandAllTreeRows,
+  readOutlinerPaths,
+  selectOutlinerNode,
+} from './outliner.mjs';
 import { findRowValue, readInspectorPanel } from './inspector.mjs';
 import { openFixture } from './openFixture.mjs';
 import { longTasksAfterFirstReply, longTasksDuringTextureWork } from './textureWorkProbe.mjs';
@@ -109,7 +115,10 @@ async function run3DScenario(browser, baseUrl) {
 }
 
 async function run2DScenario(browser, baseUrl) {
-  const { context, page, canvas, diagnostics } = await openFixture(browser, baseUrl, { fixture: FIXTURE_2D, label: '2D' });
+  const { context, page, canvas, diagnostics } = await openFixture(browser, baseUrl, {
+    fixture: FIXTURE_2D,
+    label: '2D',
+  });
 
   const settled = await settleCanvas(page, canvas);
   const dims = await canvas.evaluate((el) => ({ width: el.width, height: el.height }));
@@ -248,7 +257,10 @@ async function main() {
 
     checkSettleControl(gate, settleControl);
     const largeTexture = { inkOf: inkStats, inkFloor: INK_FLOOR_LARGE_TEXTURE };
-    checkWorkerArm(gate, 'long tasks', withWorker, { ...largeTexture, longTasksIn: longTasksDuringTextureWork });
+    checkWorkerArm(gate, 'long tasks', withWorker, {
+      ...largeTexture,
+      longTasksIn: longTasksDuringTextureWork,
+    });
     // The status clears only once the drawn map's banded upload completes, so a cleared
     // status and a reply show the `.tres` texture was built off-thread and uploaded to draw.
     checkWorkerArm(gate, 'long tasks, .tres material', fromTres, {

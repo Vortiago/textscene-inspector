@@ -11,15 +11,31 @@ import type { Diagnostic, LintRule } from './types.js';
 
 /** Reports once on every `Probe`, with no location, as every registered rule does. */
 const plain: LintRule = {
-  meta: { name: 'plain-probe', description: 'reports on Probe', category: 'validation', applicableNodeTypes: ['Probe'] },
+  meta: {
+    name: 'plain-probe',
+    description: 'reports on Probe',
+    category: 'validation',
+    applicableNodeTypes: ['Probe'],
+  },
   check: ({ node }) => [
-    { severity: 'warning', message: `seen ${node.name}`, nodeName: node.name, nodeType: node.type, ruleName: 'plain-probe' },
+    {
+      severity: 'warning',
+      message: `seen ${node.name}`,
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'plain-probe',
+    },
   ],
 };
 
 /** Places its own report, which the anchor must leave alone. */
 const placed: LintRule = {
-  meta: { name: 'placed-probe', description: 'reports on Placed', category: 'validation', applicableNodeTypes: ['Placed'] },
+  meta: {
+    name: 'placed-probe',
+    description: 'reports on Placed',
+    category: 'validation',
+    applicableNodeTypes: ['Placed'],
+  },
   check: ({ node }) => [
     {
       severity: 'info',
@@ -33,14 +49,30 @@ const placed: LintRule = {
 };
 
 /** Hands back the same object for every node it runs on. */
-const shared: Diagnostic = { severity: 'info', message: 'shared', nodeName: 'Reused', nodeType: 'Reused', ruleName: 'shared-probe' };
+const shared: Diagnostic = {
+  severity: 'info',
+  message: 'shared',
+  nodeName: 'Reused',
+  nodeType: 'Reused',
+  ruleName: 'shared-probe',
+};
 const reusing: LintRule = {
-  meta: { name: 'shared-probe', description: 'reuses one report', category: 'validation', applicableNodeTypes: ['Reused'] },
+  meta: {
+    name: 'shared-probe',
+    description: 'reuses one report',
+    category: 'validation',
+    applicableNodeTypes: ['Reused'],
+  },
   check: () => [shared],
 };
 
 const throwing: LintRule = {
-  meta: { name: 'throwing-probe', description: 'throws on Thrower', category: 'validation', applicableNodeTypes: ['Thrower'] },
+  meta: {
+    name: 'throwing-probe',
+    description: 'throws on Thrower',
+    category: 'validation',
+    applicableNodeTypes: ['Thrower'],
+  },
   check: () => {
     throw new Error('boom');
   },

@@ -14,5 +14,8 @@ validatorRegistry.registerAll('LightOccluder2D', {
   // bound, and set_occluder_light_mask (light_occluder_2d.cpp:257-260) assigns
   // unconditionally, with no ERR_FAIL and no clamp. So no bound is declared
   // (ADR-0032 "none"), only the integer format.
-  occluder_light_mask: layerBitmask('occluder_light_mask', { hinted: 'light_occluder_2d.cpp:300', width: 'int32' /* light_occluder_2d.h:102 */ }),
+  occluder_light_mask: layerBitmask('occluder_light_mask', {
+    hinted: 'light_occluder_2d.cpp:300',
+    width: 'int32' /* light_occluder_2d.h:102 */,
+  }),
 });

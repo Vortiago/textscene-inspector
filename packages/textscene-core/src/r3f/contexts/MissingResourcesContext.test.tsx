@@ -6,10 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import {
-  MissingResourcesProvider,
-  useMissingResources,
-} from './MissingResourcesContext';
+import { MissingResourcesProvider, useMissingResources } from './MissingResourcesContext';
 
 function wrap({ children }: { children: ReactNode }) {
   return <MissingResourcesProvider>{children}</MissingResourcesProvider>;
@@ -160,9 +157,7 @@ describe('MissingResourcesContext', () => {
     const observe = (paths: ReadonlySet<string>) => observed.push(paths);
     const { result } = renderHook(() => useMissingResources(), {
       wrapper: ({ children }: { children: ReactNode }) => (
-        <MissingResourcesProvider onMissingPathsChange={observe}>
-          {children}
-        </MissingResourcesProvider>
+        <MissingResourcesProvider onMissingPathsChange={observe}>{children}</MissingResourcesProvider>
       ),
     });
 

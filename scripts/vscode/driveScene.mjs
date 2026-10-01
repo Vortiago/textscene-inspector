@@ -67,9 +67,7 @@ export const REQUIRED_BUILD_OUTPUTS = ['dist/extension.js', 'dist/webview/webvie
 export function assertExtensionBuilt() {
   for (const built of REQUIRED_BUILD_OUTPUTS) {
     if (!existsSync(path.join(EXTENSION_DIR, built))) {
-      throw new Error(
-        `Missing ${built}. Run \`pnpm --filter textscene-inspector build\` first.`
-      );
+      throw new Error(`Missing ${built}. Run \`pnpm --filter textscene-inspector build\` first.`);
     }
   }
 }
@@ -116,9 +114,7 @@ function launchVscode({ binary, scene, workspace, userDataDir, port, headed, ver
   // GL needs 24-bit depth. The geometry also sizes the VS Code window and every
   // screenshot. `--server-args=` is one argv element with no shell, so its
   // spaces are safe.
-  const args = useXvfb
-    ? ['-a', '--server-args=-screen 0 1920x1080x24', binary, ...codeArgs]
-    : codeArgs;
+  const args = useXvfb ? ['-a', '--server-args=-screen 0 1920x1080x24', binary, ...codeArgs] : codeArgs;
 
   const child = spawn(command, args, {
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -197,15 +193,19 @@ async function findWorkbenchPage(browser, timeoutMs) {
   throw new Error('No workbench page appeared over CDP');
 }
 
+/** VS Code's local resource origin, as the last labels of a webview resource's hostname. */
+const LOCAL_RESOURCE_HOST_SUFFIX = '.vscode-resource.vscode-cdn.net';
+
 /**
  * Whether a URL belongs to the preview webview rather than the workbench.
- * Webview content comes from VS Code's local resource origin
- * (`<scheme>+<authority>.vscode-resource.vscode-cdn.net`), which a service
- * worker intercepts, so despite the hostname no network is involved.
+ * Webview frames load from the `vscode-webview:` scheme, and their content from
+ * VS Code's local resource origin (`<scheme>+<authority>.vscode-resource.vscode-cdn.net`),
+ * which a service worker intercepts, so despite the hostname no network is involved.
  */
 export function isWebviewUrl(url) {
-  if (!url) return false;
-  return url.startsWith('vscode-webview://') || url.includes('.vscode-resource.vscode-cdn.net');
+  if (!URL.canParse(url)) return false;
+  const { protocol, hostname } = new URL(url);
+  return protocol === 'vscode-webview:' || hostname.endsWith(LOCAL_RESOURCE_HOST_SUFFIX);
 }
 
 /** Bucket key `requestHosts` uses: the host for http(s), else the scheme. */
@@ -222,7 +222,7 @@ function requestBucketKey(url) {
  */
 export function isOfflineWebviewOrigin(key) {
   return (
-    key.endsWith('.vscode-resource.vscode-cdn.net') ||
+    key.endsWith(LOCAL_RESOURCE_HOST_SUFFIX) ||
     ['data', 'blob', 'file', 'vscode-webview', 'vscode-file'].includes(key)
   );
 }
@@ -449,9 +449,7 @@ export async function driveScene(options) {
     // `vscode-resource`/`data:` there means the preview reached the network.
     page.on('request', (request) => {
       const frameUrl = request.frame()?.url();
-      const bucket = frameUrl?.startsWith('vscode-webview://')
-        ? report.requestHosts.webview
-        : report.requestHosts.workbench;
+      const bucket = isWebviewUrl(frameUrl) ? report.requestHosts.webview : report.requestHosts.workbench;
       const key = requestBucketKey(request.url());
       bucket[key] = (bucket[key] ?? 0) + 1;
     });
@@ -462,7 +460,7 @@ export async function driveScene(options) {
         method: request.method(),
         failure: request.failure()?.errorText,
         frameUrl,
-        origin: frameUrl?.startsWith('vscode-webview://') ? 'webview' : 'workbench',
+        origin: isWebviewUrl(frameUrl) ? 'webview' : 'workbench',
       });
     });
 
@@ -499,9 +497,7 @@ export async function driveScene(options) {
           blockedURI: event.blockedURI,
           source: event.sourceFile,
         });
-        console.error(
-          `[csp-violation] ${event.effectiveDirective} blocked ${event.blockedURI}`
-        );
+        console.error(`[csp-violation] ${event.effectiveDirective} blocked ${event.blockedURI}`);
       });
     }, preserveBuffer);
     report.preserveDrawingBuffer = preserveBuffer;
@@ -644,12 +640,8 @@ export function summarizeWebview(report) {
   return {
     cspViolations: report.cspViolations.filter((entry) => entry.origin === 'webview'),
     failedRequests: report.failedRequests.filter((entry) => entry.origin === 'webview'),
-    consoleErrors: report.console.filter(
-      (entry) => entry.origin === 'webview' && entry.type === 'error'
-    ),
+    consoleErrors: report.console.filter((entry) => entry.origin === 'webview' && entry.type === 'error'),
     requestHosts: report.requestHosts.webview,
-    offendingHosts: Object.keys(report.requestHosts.webview).filter(
-      (key) => !isOfflineWebviewOrigin(key)
-    ),
+    offendingHosts: Object.keys(report.requestHosts.webview).filter((key) => !isOfflineWebviewOrigin(key)),
   };
 }

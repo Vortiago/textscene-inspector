@@ -11,9 +11,7 @@ import {
 } from './types';
 import { nodePathLiteral } from '../../../godot/index.js';
 
-export function formatAnimationTreeProperties(
-  properties: AnimationTreeProperties
-): PropertySection[] {
+export function formatAnimationTreeProperties(properties: AnimationTreeProperties): PropertySection[] {
   const sections: PropertySection[] = [];
 
   const animPlayerPath = extractNodePath(properties.anim_player);
@@ -60,26 +58,37 @@ function extractNodePath(raw: string): string {
 
 function processModeName(mode: AnimationTreeProcessMode): string {
   switch (mode) {
-    case AnimationTreeProcessMode.PHYSICS: return 'Physics';
-    case AnimationTreeProcessMode.IDLE: return 'Idle';
-    case AnimationTreeProcessMode.MANUAL: return 'Manual';
-    default: return 'Unknown';
+    case AnimationTreeProcessMode.PHYSICS:
+      return 'Physics';
+    case AnimationTreeProcessMode.IDLE:
+      return 'Idle';
+    case AnimationTreeProcessMode.MANUAL:
+      return 'Manual';
+    default:
+      return 'Unknown';
   }
 }
 
 function methodModeName(mode: CallbackModeMethod): string {
   switch (mode) {
-    case CallbackModeMethod.DEFERRED: return 'Deferred';
-    case CallbackModeMethod.IMMEDIATE: return 'Immediate';
-    default: return 'Unknown';
+    case CallbackModeMethod.DEFERRED:
+      return 'Deferred';
+    case CallbackModeMethod.IMMEDIATE:
+      return 'Immediate';
+    default:
+      return 'Unknown';
   }
 }
 
 function discreteModeName(mode: CallbackModeDiscrete): string {
   switch (mode) {
-    case CallbackModeDiscrete.DOMINANT: return 'Dominant';
-    case CallbackModeDiscrete.RECESSIVE: return 'Recessive';
-    case CallbackModeDiscrete.FORCE_CONTINUOUS: return 'Force Continuous';
-    default: return 'Unknown';
+    case CallbackModeDiscrete.DOMINANT:
+      return 'Dominant';
+    case CallbackModeDiscrete.RECESSIVE:
+      return 'Recessive';
+    case CallbackModeDiscrete.FORCE_CONTINUOUS:
+      return 'Force Continuous';
+    default:
+      return 'Unknown';
   }
 }

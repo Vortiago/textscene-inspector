@@ -50,7 +50,7 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
     // nothing configured, so it resumes from the transport as a clip switch would.
     const mixerRebuilt = prevMixerRef.current !== null && mixer !== prevMixerRef.current;
     prevMixerRef.current = mixer;
-    const action = selectedClip ? actionsRef.current.get(selectedClip) ?? null : null;
+    const action = selectedClip ? (actionsRef.current.get(selectedClip) ?? null) : null;
 
     // Clip switch: stop the previous action so only one drives at a time.
     const clipChanged = selectedClip !== prevClipRef.current;

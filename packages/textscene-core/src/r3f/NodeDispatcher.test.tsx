@@ -26,9 +26,7 @@ function makeNode(name: string, type: string, children: TscnNode[] = []): TscnNo
 }
 
 function renderWithProviders(content: React.ReactElement) {
-  return ReactThreeTestRenderer.create(
-    <SelectionProvider>{content}</SelectionProvider>
-  );
+  return ReactThreeTestRenderer.create(<SelectionProvider>{content}</SelectionProvider>);
 }
 
 describe('<NodeDispatcher>', () => {
@@ -66,9 +64,7 @@ describe('<NodeDispatcher>', () => {
     // test uses the 'Probe' type.
     nodeComponentRegistry.register({ typeName: 'Probe', Component: PathProbe });
 
-    const nodes: TscnNode[] = [
-      makeNode('Outer', 'Node3D', [makeNode('Inner', 'Probe')]),
-    ];
+    const nodes: TscnNode[] = [makeNode('Outer', 'Node3D', [makeNode('Inner', 'Probe')])];
 
     await renderWithProviders(<NodeDispatcher nodes={nodes} />);
 
@@ -80,9 +76,7 @@ describe('<NodeDispatcher>', () => {
     // wrapper tests a mesh once per ancestor. `object.__r3f.eventCount` is R3F's
     // per-object handler count.
     const nodes: TscnNode[] = [
-      makeNode('Root', 'Node3D', [
-        makeNode('Child', 'Node3D', [makeNode('Grandchild', 'Node3D')]),
-      ]),
+      makeNode('Root', 'Node3D', [makeNode('Child', 'Node3D', [makeNode('Grandchild', 'Node3D')])]),
     ];
     const renderer = await renderWithProviders(<NodeDispatcher nodes={nodes} />);
 
@@ -107,10 +101,7 @@ describe('<NodeDispatcher> per-node error boundary (#216)', () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const nodes: TscnNode[] = [
-      makeNode('Root', 'Node3D', [
-        makeNode('GoodSibling', 'Node3D'),
-        makeNode('BadNode', 'Bomb'),
-      ]),
+      makeNode('Root', 'Node3D', [makeNode('GoodSibling', 'Node3D'), makeNode('BadNode', 'Bomb')]),
     ];
     const renderer = await renderWithProviders(<NodeDispatcher nodes={nodes} />);
 
@@ -139,7 +130,7 @@ describe('<NodeDispatcher> per-node error boundary (#216)', () => {
     consoleSpy.mockRestore();
   });
 
-  it('positions the placeholder near a crashing CanvasItem (2D) node\'s authored position, not the 3D-transform origin', async () => {
+  it("positions the placeholder near a crashing CanvasItem (2D) node's authored position, not the 3D-transform origin", async () => {
     // A CanvasItem's properties have no `.transform`, so the fallback must take
     // the 2D transform math (node2dGroupProps) or land at the origin.
     function Bomb2D(_: NodeComponentProps): never {
@@ -192,7 +183,11 @@ describe('<NodeDispatcher> per-node error boundary (#216)', () => {
     function BombNoPosition(_: NodeComponentProps): never {
       throw new Error('2D node without a position exploded');
     }
-    nodeComponentRegistry.register({ typeName: 'BombNoPosition', Component: BombNoPosition, canvasItem: true });
+    nodeComponentRegistry.register({
+      typeName: 'BombNoPosition',
+      Component: BombNoPosition,
+      canvasItem: true,
+    });
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const node: TscnNode = { name: 'Bad', type: 'BombNoPosition', children: [], properties: {} };

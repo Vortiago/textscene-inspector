@@ -188,7 +188,9 @@ type ListenerArgs = Parameters<THREE.Object3D['addEventListener']>;
 function listenersAddedTo(object: THREE.Object3D, act: () => void): [ListenerArgs[0], ListenerArgs[1]][] {
   const addEventListener = vi.spyOn(object, 'addEventListener');
   act();
-  const added = addEventListener.mock.calls.map(([type, listener]) => [type, listener] as [ListenerArgs[0], ListenerArgs[1]]);
+  const added = addEventListener.mock.calls.map(
+    ([type, listener]) => [type, listener] as [ListenerArgs[0], ListenerArgs[1]]
+  );
   addEventListener.mockRestore();
   if (added.length === 0) throw new Error('expected the tracker to listen on the object');
   return added;

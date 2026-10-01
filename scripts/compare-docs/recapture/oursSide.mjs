@@ -25,7 +25,11 @@ export async function captureOurs(targets, godotModes) {
   const withMode = targets
     .map((t) => ({ ...t, mode: godotModes.get(t.image) ?? modeOfExistingGodot(t.image) }))
     .filter((t) => {
-      if (!t.mode) failures.push({ image: t.image, error: 'no godot render to take 2D/3D mode from — run without --ours first' });
+      if (!t.mode)
+        failures.push({
+          image: t.image,
+          error: 'no godot render to take 2D/3D mode from — run without --ours first',
+        });
       return t.mode;
     });
   if (!withMode.length) return failures;
@@ -56,7 +60,9 @@ export async function captureOurs(targets, godotModes) {
             if (!buffer) throw new Error(settleReason);
             const opened = await readViewportMode(page);
             if (opened !== mode) {
-              throw new Error(`previewer opened ${opened.toUpperCase()} but Godot rendered ${mode.toUpperCase()}`);
+              throw new Error(
+                `previewer opened ${opened.toUpperCase()} but Godot rendered ${mode.toUpperCase()}`
+              );
             }
             writeCaptureImage(imgPath(t.image, 'ours'), buffer, `${t.image} ours`);
             console.log('ok');

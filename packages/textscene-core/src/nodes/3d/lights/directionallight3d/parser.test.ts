@@ -167,7 +167,7 @@ describe('DirectionalLight3D Parser', () => {
       const result = parseDirectionalLight3D(h, {
         light_energy: '',
         shadow_bias: '',
-        directional_shadow_max_distance: ''
+        directional_shadow_max_distance: '',
       });
 
       // Empty strings are falsy, so defaults are used
@@ -182,7 +182,7 @@ describe('DirectionalLight3D Parser', () => {
       const result = parseDirectionalLight3D(h, {
         light_energy: '-1.5',
         shadow_bias: '-0.1',
-        directional_shadow_max_distance: '-100.0'
+        directional_shadow_max_distance: '-100.0',
       });
 
       // Parsers accept negative values (validation happens elsewhere)
@@ -204,7 +204,7 @@ describe('DirectionalLight3D Parser', () => {
 
       const result = parseDirectionalLight3D(h, {
         light_energy: '999999999.999',
-        directional_shadow_max_distance: '1e10'
+        directional_shadow_max_distance: '1e10',
       });
 
       expect(result.light_energy).toBe(999999999.999);

@@ -14,7 +14,11 @@ import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
-import { boxContainerMinimumSize, resortBoxContainer, type BoxChildInput } from '../shared/boxContainerSolver';
+import {
+  boxContainerMinimumSize,
+  resortBoxContainer,
+  type BoxChildInput,
+} from '../shared/boxContainerSolver';
 import { SIZE_FILL, SIZE_SHRINK_CENTER } from '../shared/fitChildInRect';
 import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../r3f/controls/godotDefaultTheme';
 import { spinBoxButtonsBlockWidth, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
@@ -133,7 +137,10 @@ function toolbarSpinBoxMinSize(theme: NativeTheme, metrics: ToolbarTextMetrics):
   const styleMin = { x: Math.max(normal.x, readOnly.x), y: Math.max(normal.y, readOnly.y) };
   const emWidth = metrics.measure('W').x;
   return {
-    x: styleMin.x + LINE_EDIT_MINIMUM_CHARACTER_WIDTH * emWidth + spinBoxButtonsBlockWidth(SPIN_BOX_ARROW_ICON_SIZE.x),
+    x:
+      styleMin.x +
+      LINE_EDIT_MINIMUM_CHARACTER_WIDTH * emWidth +
+      spinBoxButtonsBlockWidth(SPIN_BOX_ARROW_ICON_SIZE.x),
     y: styleMin.y + metrics.fontHeightPx,
   };
 }
@@ -198,7 +205,10 @@ export function graphEditToolbar(
     );
   }
   if (props.showGridButtons !== false) {
-    entries.push(button('toggle_grid', props.showGrid !== false), button('toggle_snapping', props.snappingEnabled !== false));
+    entries.push(
+      button('toggle_grid', props.showGrid !== false),
+      button('toggle_snapping', props.snappingEnabled !== false)
+    );
     entries.push({
       id: 'snapping_distance',
       kind: 'spinBox',
@@ -215,7 +225,11 @@ export function graphEditToolbar(
   if (props.showMinimapButton !== false) entries.push(button('minimap', isMinimapEnabled(props)));
   if (props.showArrangeButton !== false) entries.push(button('arrange', false));
 
-  const hboxMin = boxContainerMinimumSize(false, theme.separation, entries.map((e) => e.box.minSize));
+  const hboxMin = boxContainerMinimumSize(
+    false,
+    theme.separation,
+    entries.map((e) => e.box.minSize)
+  );
   const panelStyle = graphEditMenuPanelStyleBox(theme);
   const panelMargin = contentMarginSize(panelStyle);
   const panelRect: Rect2 = {

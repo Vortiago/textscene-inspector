@@ -52,9 +52,7 @@ describe('isBinaryResourceType', () => {
   it('answers true for every extension the hardcoded list carried', () => {
     for (const extension of BINARY_EXTENSIONS) {
       expect(isBinaryResourceType('Unknown', `res://assets/file${extension}`)).toBe(true);
-      expect(isBinaryResourceType('Unknown', `res://assets/FILE${extension.toUpperCase()}`)).toBe(
-        true
-      );
+      expect(isBinaryResourceType('Unknown', `res://assets/FILE${extension.toUpperCase()}`)).toBe(true);
     }
   });
 

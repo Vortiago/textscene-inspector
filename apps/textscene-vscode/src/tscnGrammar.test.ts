@@ -55,12 +55,12 @@ describe('tscn.tmLanguage.json', () => {
     expect(() => loadGrammar()).not.toThrow();
   });
 
-  it('declares the source.tscn scope registered in package.json\'s grammars contribution', () => {
+  it("declares the source.tscn scope registered in package.json's grammars contribution", () => {
     const grammar = loadGrammar();
     expect(grammar.scopeName).toBe('source.tscn');
   });
 
-  it('registers the tscn language\'s grammar scope in package.json', () => {
+  it("registers the tscn language's grammar scope in package.json", () => {
     const packageJson = JSON.parse(
       readFileSync(join(import.meta.dirname, '..', 'package.json'), 'utf-8')
     ) as {
@@ -75,9 +75,7 @@ describe('tscn.tmLanguage.json', () => {
   it('top-level patterns cover comments, headings, properties, and bare values', () => {
     const grammar = loadGrammar();
     const includes = grammar.patterns.map((p) => p.include);
-    expect(includes).toEqual(
-      expect.arrayContaining(['#comments', '#heading', '#property', '#value'])
-    );
+    expect(includes).toEqual(expect.arrayContaining(['#comments', '#heading', '#property', '#value']));
   });
 
   it('every #-reference resolves to a real repository entry (no dangling includes)', () => {
@@ -125,7 +123,7 @@ describe('tscn.tmLanguage.json', () => {
     }
   });
 
-  it('resourceCall begin pattern matches Godot\'s typed-literal constructors', () => {
+  it("resourceCall begin pattern matches Godot's typed-literal constructors", () => {
     const grammar = loadGrammar();
     const regex = new RegExp(grammar.repository.resourceCall!.begin!);
     for (const literal of [

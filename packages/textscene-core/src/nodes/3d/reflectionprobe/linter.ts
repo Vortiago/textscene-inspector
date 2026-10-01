@@ -12,6 +12,20 @@ import { matchVector3 } from '../../../linter/validators/vectorValidators.js';
 import { sign } from '../../../godot/math.js';
 import { formatReal, storedReal } from '../../../godot/real.js';
 import type { Vector3 } from '../../../parser/vectors.js';
+import { armDiagnostic, armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+
+const arms = {
+  ambientColorNoEffect: groundedArm('reflectionprobe-ambient-color-no-effect', {
+    kind: 'engine-inert',
+    at: 'scene_forward_lights_inc.glsl:998',
+    unused: 'the ambient colour is read only while the mode is AMBIENT_COLOR',
+  }),
+  originOffsetClamped: {
+    severity: 'warning',
+    ruleName: 'reflectionprobe-origin-offset-clamped',
+    grounding: { kind: 'engine', at: 'reflection_probe.cpp:99-131' },
+  },
+} as const satisfies RuleArms<string>;
 
 /** reflection_probe.h:44-48 enum AmbientMode; AMBIENT_COLOR is the last value. */
 const AMBIENT_COLOR = 2;
@@ -35,13 +49,12 @@ function checkAmbientMode(node: RuleContext['node'], props: Record<string, strin
   const diagnostics: Diagnostic[] = [];
   for (const key of AMBIENT_ONLY_KEYS) {
     if (props[key] === undefined) continue;
-    diagnostics.push({
-      severity: 'info',
-      message: `ReflectionProbe '${node.name}' sets '${key}' but 'ambient_mode' is not AMBIENT_COLOR (2), so '${key}' has no effect. It still saves and reloads fine; the editor just hides it from the inspector while another ambient mode is selected.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'reflectionprobe-ambient-color-no-effect',
-    });
+    reportArm(
+      diagnostics,
+      arms.ambientColorNoEffect,
+      node,
+      `ReflectionProbe '${node.name}' sets '${key}' but 'ambient_mode' is not AMBIENT_COLOR (2), so '${key}' has no effect. It still saves and reloads fine; the editor just hides it from the inspector while another ambient mode is selected.`
+    );
   }
   return diagnostics;
 }
@@ -52,9 +65,14 @@ const DEFAULT_SIZE: Vector3 = { x: 20, y: 20, z: 20 };
 const FACE_MARGIN = 0.01;
 const AXES = ['x', 'y', 'z'] as const;
 
-const formatVector3 = (v: Vector3): string => `Vector3(${AXES.map((axis) => formatReal(v[axis])).join(', ')})`;
+const formatVector3 = (v: Vector3): string =>
+  `Vector3(${AXES.map((axis) => formatReal(v[axis])).join(', ')})`;
 const sameReal = (a: number, b: number): boolean => a === b || (Number.isNaN(a) && Number.isNaN(b));
-const storedVector3 = (v: Vector3): Vector3 => ({ x: storedReal(v.x), y: storedReal(v.y), z: storedReal(v.z) });
+const storedVector3 = (v: Vector3): Vector3 => ({
+  x: storedReal(v.x),
+  y: storedReal(v.y),
+  z: storedReal(v.z),
+});
 
 /**
  * One setter's clamp of each `origin_offset` axis to `half_size - 0.01` against `size`
@@ -103,13 +121,11 @@ function checkOriginOffset(node: RuleContext['node'], rawProps: Record<string, s
   const { written, loaded } = replayed;
   if (AXES.every((axis) => sameReal(written[axis], loaded[axis]))) return [];
   return [
-    {
-      severity: 'warning',
-      message: `ReflectionProbe 'origin_offset' ${formatVector3(written)} loads as ${formatVector3(loaded)}: Godot clamps each axis to within half the 'size' less 0.01, against the size in effect when the file lists the offset.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'reflectionprobe-origin-offset-clamped',
-    },
+    armDiagnostic(
+      arms.originOffsetClamped,
+      node,
+      `ReflectionProbe 'origin_offset' ${formatVector3(written)} loads as ${formatVector3(loaded)}: Godot clamps each axis to within half the 'size' less 0.01, against the size in effect when the file lists the offset.`
+    ),
   ];
 }
 
@@ -127,22 +143,7 @@ const reflectionProbeValidationRule: LintRule = {
       "Flags ambient_color/ambient_color_energy authored while ambient_mode isn't AMBIENT_COLOR (legal and still serialised, but inert), and an origin_offset outside the probe's size, which Godot clamps at load",
     category: 'validation',
     applicableNodeTypes: ['ReflectionProbe'],
-    emits: [
-      {
-        ruleName: 'reflectionprobe-ambient-color-no-effect',
-        severity: 'info',
-        grounding: {
-          kind: 'engine-inert',
-          at: 'scene_forward_lights_inc.glsl:998',
-          unused: 'the ambient colour is read only while the mode is AMBIENT_COLOR',
-        },
-      },
-      {
-        ruleName: 'reflectionprobe-origin-offset-clamped',
-        severity: 'warning',
-        grounding: { kind: 'engine', at: 'reflection_probe.cpp:99-131' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkReflectionProbe,
 };

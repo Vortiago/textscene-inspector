@@ -4,13 +4,14 @@
  * its statement, and the scan skips an ambiguous claim rather than guess.
  */
 
-import { SEVERITIES } from '../types.js';
+import { SEVERITY_ORDER, type Severity } from '../types.js';
 import { afterBalanced } from './testBlocks.js';
 
 /**
  * The tier names, spelled for a regex and read off the shared roster, so a new
  * tier reaches every matcher below and not only the table tsc checks.
  */
+const SEVERITIES = Object.keys(SEVERITY_ORDER) as Severity[];
 const TIER_NAMES = SEVERITIES.join('|');
 const TIER_NAMES_CAPITALISED = SEVERITIES.map((t) => t[0]!.toUpperCase() + t.slice(1)).join('|');
 
@@ -110,8 +111,7 @@ const expectOf = (name: string): RegExp => new RegExp(`\\bexpect\\(\\s*${name}\\
 const expectOfReadOf = (name: string): RegExp => new RegExp(`\\bexpect\\(\\s*${name}\\b`);
 
 /** Whether `body` asserts that the list bound to `name` is empty. */
-const isAssertedEmpty = (body: string, name: string): boolean =>
-  assertsOn(body, expectOf(name), EMPTY_RE);
+const isAssertedEmpty = (body: string, name: string): boolean => assertsOn(body, expectOf(name), EMPTY_RE);
 
 /** Whether `body` asserts that the list bound to `name`, or a read of it, is non-empty. */
 const isAssertedNonEmpty = (body: string, name: string): boolean =>
@@ -144,8 +144,7 @@ const RULE_FIXTURE_RE = /\bmeta:\s*\{/;
 export const assertedTiers = (body: string): string[] => {
   if (RULE_FIXTURE_RE.test(body)) return [];
   const tiers = new Set<string>();
-  const claimAt = (index: number): string =>
-    body.slice(index, index + CLAIM_REACH).split(';')[0]!;
+  const claimAt = (index: number): string => body.slice(index, index + CLAIM_REACH).split(';')[0]!;
   for (const m of body.matchAll(TIER_HELPER_RE)) tiers.add(m[1]!.toLowerCase());
   for (const m of body.matchAll(TIER_LIST_RE)) {
     const tier = m[1] ?? lastArgumentTier(body, m.index + m[0].length - 1);

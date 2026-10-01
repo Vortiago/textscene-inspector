@@ -64,9 +64,7 @@ export function extResourcePaths(text: string): readonly string[] {
  * flagged `ambiguous: true`. `filesWithText` holds every `.tscn` of the batch with
  * its text.
  */
-export function pickRootMostTscn(
-  filesWithText: readonly { file: File; text: string }[]
-): RootMostTscnResult {
+export function pickRootMostTscn(filesWithText: readonly { file: File; text: string }[]): RootMostTscnResult {
   if (filesWithText.length === 0) {
     throw new Error('pickRootMostTscn requires at least one entry');
   }
@@ -96,9 +94,7 @@ export function pickRootMostTscn(
   }
 
   // Root-most candidates: tscns whose basename no other tscn in the batch references.
-  const candidates = entries.filter(
-    ({ entry }) => !referencedBasenames.has(entry.file.name.toLowerCase())
-  );
+  const candidates = entries.filter(({ entry }) => !referencedBasenames.has(entry.file.name.toLowerCase()));
   const pick = candidates[0] ?? entries[0]!;
   return { ...pick.entry, ambiguous: candidates.length !== 1, extResourcePaths: pick.paths };
 }
@@ -127,9 +123,7 @@ export function matchResourceFiles(
     const candidates = tiers
       // Dedup within the tier: a scene declaring the same res:// path in two
       // ext_resource headers is one candidate, not a fake ambiguity.
-      .map((tier) => [
-        ...new Set(tier.filter((path) => basename(path).toLowerCase() === nameLower)),
-      ])
+      .map((tier) => [...new Set(tier.filter((path) => basename(path).toLowerCase() === nameLower))])
       .find((tierMatches) => tierMatches.length > 0);
 
     if (candidates === undefined) {

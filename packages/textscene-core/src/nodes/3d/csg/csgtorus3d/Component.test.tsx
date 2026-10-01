@@ -45,10 +45,9 @@ describe('<CSGTorus3D>', () => {
       type: 'StandardMaterial3D',
       data: { albedo_color: 'Color(0.4, 0.3, 0.25, 1)' },
     };
-    const renderer = await render(
-      makeNode({ material: 'SubResource("StandardMaterial3D_ring")' }),
-      [material]
-    );
+    const renderer = await render(makeNode({ material: 'SubResource("StandardMaterial3D_ring")' }), [
+      material,
+    ]);
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const mat = mesh.material as THREE.MeshStandardMaterial;
     // sRGB to linear at parse time means the channel is darker than the raw 0.4 but
@@ -80,9 +79,7 @@ describe('<CSGTorus3D>', () => {
         </CSGTorus3D>
       </SceneResourcesProvider>
     );
-    const injected = renderer.scene.find(
-      (n) => (n.instance as THREE.Object3D).name === 'injected-child'
-    );
+    const injected = renderer.scene.find((n) => (n.instance as THREE.Object3D).name === 'injected-child');
     expect(injected).toBeTruthy();
   });
 

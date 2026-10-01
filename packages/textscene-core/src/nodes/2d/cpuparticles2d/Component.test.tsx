@@ -154,10 +154,9 @@ describe('<CPUParticles2D>', () => {
         colors: 'PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)',
       },
     };
-    const renderer = await render(
-      node({ amount: '16', color_ramp: 'SubResource("ramp")' }),
-      { internalResources: [gradient] }
-    );
+    const renderer = await render(node({ amount: '16', color_ramp: 'SubResource("ramp")' }), {
+      internalResources: [gradient],
+    });
     const color = particleMesh(renderer)!.geometry.getAttribute('color');
     const reds: number[] = [];
     for (let i = 0; i < color.count; i += 4) reds.push(color.getX(i));
@@ -174,10 +173,9 @@ describe('<CPUParticles2D>', () => {
         point_count: '2',
       },
     };
-    const withCurve = await render(
-      node({ amount: '16', scale_amount_curve: 'SubResource("shrink")' }),
-      { internalResources: [curve] }
-    );
+    const withCurve = await render(node({ amount: '16', scale_amount_curve: 'SubResource("shrink")' }), {
+      internalResources: [curve],
+    });
     const without = await render(node({ amount: '16' }));
 
     // The narrowest quad, not the pose's bounding box: the furthest particle sets
@@ -207,7 +205,13 @@ describe('<CPUParticles2D>', () => {
     // identity transform, so the 8px quad stays 8px on screen however the node
     // is scaled. Inside the scaled group that means a 8/3 local quad.
     const renderer = await render(
-      node({ scale: 'Vector2(3, 3)', local_coords: 'false', amount: '1', explosiveness: '1', gravity: 'Vector2(0, 0)' })
+      node({
+        scale: 'Vector2(3, 3)',
+        local_coords: 'false',
+        amount: '1',
+        explosiveness: '1',
+        gravity: 'Vector2(0, 0)',
+      })
     );
     const geometry = particleMesh(renderer)!.geometry;
     geometry.computeBoundingBox();
@@ -216,7 +220,13 @@ describe('<CPUParticles2D>', () => {
 
   it('lets the node’s scale reach the quads under `local_coords`', async () => {
     const renderer = await render(
-      node({ scale: 'Vector2(3, 3)', local_coords: 'true', amount: '1', explosiveness: '1', gravity: 'Vector2(0, 0)' })
+      node({
+        scale: 'Vector2(3, 3)',
+        local_coords: 'true',
+        amount: '1',
+        explosiveness: '1',
+        gravity: 'Vector2(0, 0)',
+      })
     );
     const geometry = particleMesh(renderer)!.geometry;
     geometry.computeBoundingBox();

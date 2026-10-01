@@ -34,10 +34,7 @@ export function useInheritedModulate(
   // The skipped Node2D ancestors sit between the context value and this node,
   // so they fold in that order (`SolveNode.skippedAncestors`).
   const skipped = toRGBA(skippedAncestors);
-  return useMemo(
-    () => multiplyModulate(multiplyModulate(parent, skipped), own),
-    [parent, skipped, own]
-  );
+  return useMemo(() => multiplyModulate(multiplyModulate(parent, skipped), own), [parent, skipped, own]);
 }
 
 /**

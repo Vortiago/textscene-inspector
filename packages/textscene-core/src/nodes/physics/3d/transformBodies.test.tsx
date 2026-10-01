@@ -12,16 +12,12 @@ import { Node3D } from '../../base/node3d/Component';
 import { Node } from '../../node/Component';
 
 describe('transform-only bodies render without a fallback placeholder', () => {
-  it.each([
-    'StaticBody3D',
-    'Area3D',
-    'RigidBody3D',
-    'VehicleBody3D',
-    'CharacterBody3D',
-    'Skeleton3D',
-  ])('%s reuses the Node3D transform group', (type) => {
-    expect(nodeComponentRegistry.get(type)).toBe(Node3D);
-  });
+  it.each(['StaticBody3D', 'Area3D', 'RigidBody3D', 'VehicleBody3D', 'CharacterBody3D', 'Skeleton3D'])(
+    '%s reuses the Node3D transform group',
+    (type) => {
+      expect(nodeComponentRegistry.get(type)).toBe(Node3D);
+    }
+  );
 
   it('AudioStreamPlayer reuses the base Node (zero geometry)', () => {
     expect(nodeComponentRegistry.get('AudioStreamPlayer')).toBe(Node);

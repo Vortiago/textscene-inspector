@@ -9,11 +9,7 @@ import { FileEventBus } from '../../resources/FileEventBus';
 import { ResourceLoader } from '../../resources/ResourceLoader';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import type { ResourceProvider } from '../../resources/ResourceProvider';
-import {
-  PROJECT_SETTINGS_PATH,
-  ProjectSettingsProvider,
-  useProjectSettings,
-} from './ProjectSettingsContext';
+import { PROJECT_SETTINGS_PATH, ProjectSettingsProvider, useProjectSettings } from './ProjectSettingsContext';
 
 function Probe() {
   const { themeScale, settings } = useProjectSettings();

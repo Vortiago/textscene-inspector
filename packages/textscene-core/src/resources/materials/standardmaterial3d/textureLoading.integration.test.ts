@@ -10,7 +10,12 @@ vi.mock('three', async () => {
   const actual = await vi.importActual<typeof THREE>('three');
 
   class MockTextureLoader {
-    load(_url: string, onLoad?: (texture: THREE.Texture) => void, _onProgress?: () => void, onError?: (error: Error) => void) {
+    load(
+      _url: string,
+      onLoad?: (texture: THREE.Texture) => void,
+      _onProgress?: () => void,
+      onError?: (error: Error) => void
+    ) {
       try {
         const mockTexture = new actual.Texture();
         mockTexture.colorSpace = actual.SRGBColorSpace;
@@ -29,7 +34,7 @@ vi.mock('three', async () => {
 
   return {
     ...actual,
-    TextureLoader: MockTextureLoader
+    TextureLoader: MockTextureLoader,
   };
 });
 
@@ -63,10 +68,10 @@ function createMockFileEventBus(): {
           try {
             const data = await autoLoadGetData!(path);
             cache.set(path, data);
-            listeners.get('loaded')?.forEach(handler => handler(path, data));
+            listeners.get('loaded')?.forEach((handler) => handler(path, data));
           } catch (err) {
             const error = err instanceof Error ? err : new Error(String(err));
-            listeners.get('failed')?.forEach(handler => handler(path, error));
+            listeners.get('failed')?.forEach((handler) => handler(path, error));
           }
         }, 0);
       }
@@ -84,10 +89,10 @@ function createMockFileEventBus(): {
     fileEventBus,
     simulateFileLoaded: (path: string, data: FileData) => {
       cache.set(path, data);
-      listeners.get('loaded')?.forEach(handler => handler(path, data));
+      listeners.get('loaded')?.forEach((handler) => handler(path, data));
     },
     simulateFileFailed: (path: string, error: Error) => {
-      listeners.get('failed')?.forEach(handler => handler(path, error));
+      listeners.get('failed')?.forEach((handler) => handler(path, error));
     },
     setAutoLoad: (enabled: boolean, getData?: (path: string) => FileData | Promise<FileData>) => {
       autoLoadEnabled = enabled;
@@ -138,16 +143,14 @@ describe('Texture Loading Integration', () => {
   });
 
   it('should load PNG texture and return THREE.Texture', async () => {
-    const mockPngData = new Uint8Array([
-      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-    ]);
+    const mockPngData = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
     mockFileEventBus.setAutoLoad(true, () => mockPngData.buffer);
 
     registry.register({
       id: '1_albedo',
       type: 'Texture2D',
-      path: 'res://textures/albedo.png'
+      path: 'res://textures/albedo.png',
     });
 
     const texture = await loadTextureWithEvents(registry, '1_albedo');
@@ -164,7 +167,7 @@ describe('Texture Loading Integration', () => {
     registry.register({
       id: '1',
       type: 'Texture2D',
-      path: 'res://albedo.png'
+      path: 'res://albedo.png',
     });
 
     const texture = await loadTextureWithEvents(registry, 'res://albedo.png');
@@ -183,7 +186,7 @@ describe('Texture Loading Integration', () => {
     registry.register({
       id: '1',
       type: 'Texture2D',
-      path: 'res://shared.png'
+      path: 'res://shared.png',
     });
 
     const texture1 = await loadTextureWithEvents(registry, '1');
@@ -201,7 +204,7 @@ describe('Texture Loading Integration', () => {
     registry.register({
       id: '1',
       type: 'Texture2D',
-      path: 'res://icon.svg'
+      path: 'res://icon.svg',
     });
 
     const texture = await loadTextureWithEvents(registry, '1');
@@ -218,7 +221,7 @@ describe('Texture Loading Integration', () => {
     registry.register({
       id: '1',
       type: 'Texture2D',
-      path: 'res://image.webp'
+      path: 'res://image.webp',
     });
 
     const texture = await loadTextureWithEvents(registry, '1');
@@ -235,8 +238,8 @@ describe('Texture Loading Integration', () => {
   it('should return null when resource is not a texture', async () => {
     registry.register({
       id: '1',
-      type: 'PackedScene',  // Not a texture!
-      path: 'res://scene.tscn'
+      type: 'PackedScene', // Not a texture!
+      path: 'res://scene.tscn',
     });
 
     const result = await loadTextureWithEvents(registry, '1');
@@ -251,7 +254,7 @@ describe('Texture Loading Integration', () => {
     registry.register({
       id: '1',
       type: 'Texture2D',
-      path: 'res://missing.png'
+      path: 'res://missing.png',
     });
 
     const result = await loadTextureWithEvents(registry, '1');
@@ -269,7 +272,7 @@ describe('Texture Loading Integration', () => {
     registry.register({
       id: '1_albedo',
       type: 'Texture2D',
-      path: 'res://missing.png'
+      path: 'res://missing.png',
     });
 
     const result = await loadTextureWithEvents(registry, '1_albedo');
@@ -279,7 +282,7 @@ describe('Texture Loading Integration', () => {
       path: 'res://missing.png',
       type: 'Texture2D',
       referencedBy: 'Material using texture 1_albedo',
-      error: 'File not found'
+      error: 'File not found',
     });
   });
 
@@ -296,7 +299,7 @@ describe('Texture Loading Integration', () => {
     registry.register({
       id: '1',
       type: 'Texture2D',
-      path: 'res://missing.png'
+      path: 'res://missing.png',
     });
 
     const result = await loadTextureWithEvents(registry, '1');
@@ -311,7 +314,7 @@ describe('Texture Loading Integration', () => {
     registry.register({
       id: '1_albedo',
       type: 'Texture2D',
-      path: 'res://missing.png'
+      path: 'res://missing.png',
     });
 
     const texture = await loadTextureWithEvents(registry, '1_albedo');

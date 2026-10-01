@@ -29,10 +29,7 @@ describe('computeWorldBoundingBox', () => {
   it('uses the geometry (bind) box for a SkinnedMesh, ignoring a corrupt cached SkinnedMesh.boundingBox', () => {
     const skinned = new THREE.SkinnedMesh(unitBoxGeometry(), new THREE.MeshBasicMaterial());
     // Mimic the GLTF-clone bug: a posed/cached box in a far-away frame.
-    skinned.boundingBox = new THREE.Box3(
-      new THREE.Vector3(100, 100, 100),
-      new THREE.Vector3(102, 102, 102)
-    );
+    skinned.boundingBox = new THREE.Box3(new THREE.Vector3(100, 100, 100), new THREE.Vector3(102, 102, 102));
 
     const parent = new THREE.Group();
     parent.position.set(-9.5, -3.84, 3.93); // the platformer Player's instance origin

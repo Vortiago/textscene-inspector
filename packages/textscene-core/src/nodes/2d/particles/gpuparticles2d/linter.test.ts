@@ -20,7 +20,10 @@ describe('GPUParticles2D missing-process-material rule', () => {
 
   const namesOf = (content: string) => linter.lint(content).map((d) => d.ruleName);
   const severitiesOf = (content: string, ruleName: string) =>
-    linter.lint(content).filter((d) => d.ruleName === ruleName).map((d) => d.severity);
+    linter
+      .lint(content)
+      .filter((d) => d.ruleName === ruleName)
+      .map((d) => d.severity);
 
   it('warns when process_material is absent (happy path for the rule)', () => {
     const content = scene('amount = 8\n');
@@ -64,9 +67,7 @@ describe('GPUParticles2D references that name nothing', () => {
   });
 
   it('errors on a texture id the scene never declares', () => {
-    expect(namesOf(scene('texture = ExtResource("7_missing")\n'))).toContain(
-      'dangling-resource-reference'
-    );
+    expect(namesOf(scene('texture = ExtResource("7_missing")\n'))).toContain('dangling-resource-reference');
   });
 
   it('stays quiet when the reference resolves', () => {

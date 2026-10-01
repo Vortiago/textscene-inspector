@@ -20,11 +20,7 @@ import {
   type CanvasLightClass,
 } from './CanvasLighting2D';
 import { lightCullKeyId } from './lightCullKey';
-import {
-  litQuadRenderOrder,
-  shadowStencilRef,
-  shadowVolumeRenderOrder,
-} from './ShadowVolumeMask';
+import { litQuadRenderOrder, shadowStencilRef, shadowVolumeRenderOrder } from './ShadowVolumeMask';
 import { SceneStack } from '../testing/SceneStack';
 import '../nodes'; // side-effect: registers every node's r3f component
 
@@ -120,16 +116,12 @@ function maskMeshes(renderer: Rendered): THREE.Mesh[] {
 
 /** The cookie quads, in scene order. */
 function lightQuads(renderer: Rendered): THREE.Mesh[] {
-  return meshes(renderer).filter(
-    (mesh) => !!(mesh.material as THREE.ShaderMaterial).uniforms?.uCookie
-  );
+  return meshes(renderer).filter((mesh) => !!(mesh.material as THREE.ShaderMaterial).uniforms?.uCookie);
 }
 
 /** The lit halves: the quads that carry the light's own colour. */
 function litQuads(renderer: Rendered): THREE.Mesh[] {
-  return lightQuads(renderer).filter(
-    (mesh) => !!(mesh.material as THREE.ShaderMaterial).uniforms?.uColor
-  );
+  return lightQuads(renderer).filter((mesh) => !!(mesh.material as THREE.ShaderMaterial).uniforms?.uColor);
 }
 
 describe('a shadow-enabled light with an occluder in range', () => {
@@ -223,9 +215,7 @@ describe('what does not cast', () => {
   });
 
   it('casts nothing from a hidden occluder', async () => {
-    const renderer = await render(
-      scene(`${lamp('Lamp', 400)}${caster('Caster', 576, 'visible = false\n')}`)
-    );
+    const renderer = await render(scene(`${lamp('Lamp', 400)}${caster('Caster', 576, 'visible = false\n')}`));
     expect(maskMeshes(renderer)).toHaveLength(0);
   });
 
@@ -289,9 +279,7 @@ describe('shadow_color', () => {
     // shadow read rgb(78,99,167) and rgb(207,228,255), 129 apart per channel,
     // where an albedo-scaled term differs by 135 and 146.
     const authored = await render(
-      scene(
-        `${lamp('Lamp', 400, 'shadow_color = Color(0.15, 0.35, 1, 1)\n')}${caster('Caster', 576)}`
-      )
+      scene(`${lamp('Lamp', 400, 'shadow_color = Color(0.15, 0.35, 1, 1)\n')}${caster('Caster', 576)}`)
     );
     expect(maskMeshes(authored)).toHaveLength(1);
 
@@ -347,10 +335,9 @@ describe('shadow_color', () => {
 
     expect(classes).toHaveLength(2);
     for (const lightClass of classes) {
-      expect(
-        lightClass.shadowTintLayer !== undefined,
-        `class ${lightCullKeyId(lightClass.key)}`
-      ).toBe(lightClass.shadowTintBuffer !== null);
+      expect(lightClass.shadowTintLayer !== undefined, `class ${lightCullKeyId(lightClass.key)}`).toBe(
+        lightClass.shadowTintBuffer !== null
+      );
     }
     // And it is the mask-2 class that tints, not merely one of the two.
     const tinting = classes.filter((c) => c.shadowTintLayer !== undefined);
@@ -369,9 +356,7 @@ describe('shadow_color', () => {
   });
 
   it('leaves an unshadowed light alone however shadow_color is set', async () => {
-    const renderer = await render(
-      scene(lamp('Lamp', 400, 'shadow_color = Color(0.15, 0.35, 1, 1)\n'))
-    );
+    const renderer = await render(scene(lamp('Lamp', 400, 'shadow_color = Color(0.15, 0.35, 1, 1)\n')));
     expect(lightQuads(renderer)).toHaveLength(1);
     expect((litQuads(renderer)[0]!.material as THREE.Material).stencilWrite).toBe(false);
   });
@@ -402,9 +387,7 @@ describe('shadow_filter selects the shadow mechanism', () => {
 
   it('replaces it with the polar map under PCF5, stamping no stencil at all', async () => {
     const renderer = await render(
-      scene(
-        `${lamp('Lamp', 400, 'shadow_filter = 1\nshadow_filter_smooth = 8.0\n')}${caster('Caster', 576)}`
-      )
+      scene(`${lamp('Lamp', 400, 'shadow_filter = 1\nshadow_filter_smooth = 8.0\n')}${caster('Caster', 576)}`)
     );
     expect(maskMeshes(renderer)).toHaveLength(0);
 

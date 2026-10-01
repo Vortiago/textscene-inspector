@@ -6,7 +6,10 @@ import { ShadowCastingSetting } from '../godot/rendering';
 
 /** A mesh with one surface of `materialSide`, carrying the hooks of `value`. */
 function meshCasting(value: number | undefined, materialSide: THREE.Side): THREE.Mesh {
-  const mesh = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial({ side: materialSide }));
+  const mesh = new THREE.Mesh(
+    new THREE.BufferGeometry(),
+    new THREE.MeshStandardMaterial({ side: materialSide })
+  );
   applyShadowCasting(mesh, shadowCastingEffects(value));
   mesh.updateMatrixWorld(true);
   return mesh;
@@ -50,14 +53,9 @@ describe('shadowCastingEffects', () => {
     expect(shadowCastingEffects(9)).toBe(shadowCastingEffects(ShadowCastingSetting.ON));
   });
 
-
   it('only DOUBLE_SIDED forces the depth pass to both faces', () => {
-    expect(depthSideAfterPass(ShadowCastingSetting.DOUBLE_SIDED, THREE.FrontSide)).toBe(
-      THREE.DoubleSide
-    );
-    expect(depthSideAfterPass(ShadowCastingSetting.DOUBLE_SIDED, THREE.BackSide)).toBe(
-      THREE.DoubleSide
-    );
+    expect(depthSideAfterPass(ShadowCastingSetting.DOUBLE_SIDED, THREE.FrontSide)).toBe(THREE.DoubleSide);
+    expect(depthSideAfterPass(ShadowCastingSetting.DOUBLE_SIDED, THREE.BackSide)).toBe(THREE.DoubleSide);
   });
 
   it('undoes three’s flip so every other value keeps the material’s own cull', () => {
@@ -65,7 +63,12 @@ describe('shadowCastingEffects', () => {
     // FLAG_USES_DOUBLE_SIDED_SHADOWS and otherwise falls through to the
     // material's own cull (`render_forward_clustered.cpp:395-411`). three flips
     // it as its own acne mitigation (`WebGLShadowMap.js:51`).
-    for (const value of [undefined, ShadowCastingSetting.OFF, ShadowCastingSetting.ON, ShadowCastingSetting.SHADOWS_ONLY]) {
+    for (const value of [
+      undefined,
+      ShadowCastingSetting.OFF,
+      ShadowCastingSetting.ON,
+      ShadowCastingSetting.SHADOWS_ONLY,
+    ]) {
       expect(depthSideAfterPass(value, THREE.FrontSide)).toBe(THREE.FrontSide);
       expect(depthSideAfterPass(value, THREE.BackSide)).toBe(THREE.BackSide);
     }

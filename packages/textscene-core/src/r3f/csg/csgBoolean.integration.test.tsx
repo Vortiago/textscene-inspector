@@ -212,7 +212,7 @@ radius = 0.5
     vi.resetModules();
   });
 
-  it('applies a nested combiner\'s own operation to its whole fold', async () => {
+  it("applies a nested combiner's own operation to its whole fold", async () => {
     // Block 2^3 = 8. The blade spans [0.3, 1.5]^3, so it overlaps the block in
     // [0.3, 1]^3 = 0.343. Subtracting the combiner's fold leaves 8 - 0.343; unioning
     // its child in at root level instead would give 8 + (1.728 - 0.343) = 9.385.

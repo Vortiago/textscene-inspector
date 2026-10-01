@@ -28,12 +28,7 @@ export function propertyError(
  * the branch never looked at `value` ({@link ParseError.keyVerdict}). Always an
  * error: the key names no slot, so no hint can bound it (ADR-0032).
  */
-export function keyShapeError(
-  key: string,
-  line: number,
-  message: string,
-  code: string
-): ParseError {
+export function keyShapeError(key: string, line: number, message: string, code: string): ParseError {
   return { ...propertyError(key, line, message, code), keyVerdict: true };
 }
 
@@ -43,11 +38,6 @@ export function keyShapeError(
  * "stores the type's zero" is false ({@link ParseError.nilVerdict}). Always an
  * error: the setter refuses the write (ADR-0032).
  */
-export function nilShapeError(
-  key: string,
-  line: number,
-  message: string,
-  code: string
-): ParseError {
+export function nilShapeError(key: string, line: number, message: string, code: string): ParseError {
   return { ...propertyError(key, line, message, code), nilVerdict: true };
 }

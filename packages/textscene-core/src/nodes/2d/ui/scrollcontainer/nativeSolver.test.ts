@@ -47,10 +47,7 @@ function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   };
 }
 
-function scrollContainer(
-  props: Partial<ScrollContainerProperties>,
-  children: SolveNode[]
-): SolveNode {
+function scrollContainer(props: Partial<ScrollContainerProperties>, children: SolveNode[]): SolveNode {
   return {
     ...solveNode(),
     path: 'Scroll',
@@ -349,7 +346,12 @@ describe('wired through the registry + full solve, against the real fixture numb
           name: 'Root',
           type: 'Control',
           children: [],
-          properties: { name: 'Root', anchorsPreset: 15, anchorRight: 1, anchorBottom: 1 } as ControlProperties,
+          properties: {
+            name: 'Root',
+            anchorsPreset: 15,
+            anchorRight: 1,
+            anchorBottom: 1,
+          } as ControlProperties,
         },
         children: [scroll],
       };
@@ -377,7 +379,12 @@ describe('ScrollContainer under RTL', () => {
     expect(out.vertical.visible).toBe(true);
     expect(out.horizontal.visible).toBe(true);
     expect(out.vertical.rect).toEqual({ x: 0, y: 0, w: THICKNESS, h: 200 - THICKNESS });
-    expect(out.horizontal.rect).toEqual({ x: THICKNESS, y: 200 - THICKNESS, w: 300 - THICKNESS, h: THICKNESS });
+    expect(out.horizontal.rect).toEqual({
+      x: THICKNESS,
+      y: 200 - THICKNESS,
+      w: 300 - THICKNESS,
+      h: THICKNESS,
+    });
   });
 
   it('offsets the content past the reserved vertical strip (scroll_container.cpp:350,357-363)', () => {
@@ -439,7 +446,9 @@ describe('ScrollContainer.draw_focus_border (scroll_container.cpp::_get_margins)
 
   it('adds left+right and top+bottom to the minimum size unconditionally (scroll_container.cpp:74-75)', () => {
     const child = leaf('Scroll/Child', { customMinimumSize: { x: 120, y: 60 } });
-    const n = scrollContainer({ drawFocusBorder: true, horizontalScrollMode: 0, verticalScrollMode: 0 }, [child]);
+    const n = scrollContainer({ drawFocusBorder: true, horizontalScrollMode: 0, verticalScrollMode: 0 }, [
+      child,
+    ]);
     expect(scrollContainerMinimumSize(n, ctx())).toEqual({ x: 128, y: 68 });
   });
 
@@ -447,7 +456,12 @@ describe('ScrollContainer.draw_focus_border (scroll_container.cpp::_get_margins)
     const child = leaf('Scroll/Child', { customMinimumSize: { x: 900, y: 900 } });
     const n = scrollContainer({ drawFocusBorder: true }, [child]);
     const out = scrollContainerScrollBars(n, ctx(), RECT);
-    expect(out.horizontal.rect).toEqual({ x: 4, y: 200 - 4 - THICKNESS, w: 300 - 8 - THICKNESS, h: THICKNESS });
+    expect(out.horizontal.rect).toEqual({
+      x: 4,
+      y: 200 - 4 - THICKNESS,
+      w: 300 - 8 - THICKNESS,
+      h: THICKNESS,
+    });
     expect(out.vertical.rect).toEqual({ x: 300 - 4 - THICKNESS, y: 4, w: THICKNESS, h: 200 - 8 - THICKNESS });
   });
 

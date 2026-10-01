@@ -164,10 +164,7 @@ describe('CopyTransformModifier3D strict validators', () => {
       expect(emptyLeaf!('settings/0/', '7', 1)?.code).toBe('INVALID_SETTING_KEY');
       // Handed one anyway, as the malformed-value check above hands it the pattern `settings/#/*`,
       // the dispatcher rejects it rather than forwarding an unparseable key to the base.
-      const dispatcher = validatorRegistry.findValidator(
-        'CopyTransformModifier3D',
-        'settings/0/copy'
-      );
+      const dispatcher = validatorRegistry.findValidator('CopyTransformModifier3D', 'settings/0/copy');
       expect(dispatcher!('settings/copy', '7', 1)).not.toBeNull();
       expect(dispatcher!('settings/0/', '7', 1)).not.toBeNull();
     });
@@ -178,10 +175,7 @@ describe('CopyTransformModifier3D strict validators', () => {
       // `settings/0/amount` is BoneConstraint3D::get_property_list's
       // (bone_constraint_3d.cpp:102), not this class's. Rejecting it would
       // false-positive on every real scene, so the dispatcher forwards.
-      const dispatcher = validatorRegistry.findValidator(
-        'CopyTransformModifier3D',
-        'settings/0/amount'
-      );
+      const dispatcher = validatorRegistry.findValidator('CopyTransformModifier3D', 'settings/0/amount');
       const spy = vi.spyOn(validatorRegistry, 'findValidator');
       expect(dispatcher!('settings/0/amount', '0.5', 1)).toBeNull();
       expect(spy).toHaveBeenCalledWith('BoneConstraint3D', 'settings/0/amount');

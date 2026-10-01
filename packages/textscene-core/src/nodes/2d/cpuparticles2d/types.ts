@@ -78,9 +78,8 @@ const SLOT_DETAILS: Readonly<Record<CpuParticlesParam, SlotDetails>> = {
  * (`<prefix>_min` / `_max` / `_curve`) and its {@link SLOT_DETAILS}. The parser applies
  * `def` and the formatter hides a slot that holds it, so one table keeps them agreed.
  */
-export const PARAM_SLOTS: ReadonlyArray<{ prefix: CpuParticlesParam } & SlotDetails> = CPU_PARTICLES_PARAMS.map(
-  (prefix) => ({ prefix, ...SLOT_DETAILS[prefix] })
-);
+export const PARAM_SLOTS: ReadonlyArray<{ prefix: CpuParticlesParam } & SlotDetails> =
+  CPU_PARTICLES_PARAMS.map((prefix) => ({ prefix, ...SLOT_DETAILS[prefix] }));
 
 /** One parameter slot: the random range plus the optional shaping curve. */
 export interface ParticleParam {

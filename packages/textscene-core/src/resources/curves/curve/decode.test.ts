@@ -86,19 +86,21 @@ describe('decodeCurve', () => {
     // Godot with NO points. Keeping the readable neighbours drew a curve
     // through samples the engine never produces.
     const curve = decodeCurve({
-      _data: '[Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(0.5, 1e999), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]',
+      _data:
+        '[Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(0.5, 1e999), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]',
     });
 
     expect(curve.points).toEqual([]);
     expect(sampleCurve(curve, 0.5)).toBe(0);
   });
 
-  it('lets `point_count` pad the emptied list, which is the engine\'s own result', () => {
+  it("lets `point_count` pad the emptied list, which is the engine's own result", () => {
     // `_data` is refused wholesale, then `set_point_count` pads with
     // `_add_point(Vector2())` (`curve.cpp:41-57`) whose position is clamped to
     // the domain floor (`:63`): three points at the origin, sampling 0.
     const curve = decodeCurve({
-      _data: '[Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(0.5, 1e999), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]',
+      _data:
+        '[Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(0.5, 1e999), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]',
       point_count: '3',
     });
 

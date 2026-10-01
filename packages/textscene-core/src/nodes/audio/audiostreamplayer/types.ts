@@ -8,6 +8,4 @@
 import type { NodeProperties } from '../../node/types';
 import type { AudioStreamBaseProperties } from '../types';
 
-export interface AudioStreamPlayerProperties
-  extends NodeProperties,
-    AudioStreamBaseProperties {}
+export interface AudioStreamPlayerProperties extends NodeProperties, AudioStreamBaseProperties {}

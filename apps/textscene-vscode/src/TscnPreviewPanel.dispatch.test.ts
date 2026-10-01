@@ -131,9 +131,7 @@ describe('TscnPreviewPanel webviewReady through production dispatch', () => {
 });
 
 describe('TscnPreviewPanel — all message types through fake onDidReceiveMessage', () => {
-  async function makeReadyPanel(
-    triggerMessage: (msg: unknown) => void
-  ): Promise<TscnPreviewPanel> {
+  async function makeReadyPanel(triggerMessage: (msg: unknown) => void): Promise<TscnPreviewPanel> {
     (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
     const panel = TscnPreviewPanel.create(
       createMockUri('/extension'),

@@ -61,10 +61,7 @@ describe('captureScene seam selection', () => {
       expect.any(Function)
     );
     expect(findCaptureTarget).toHaveBeenCalledWith(pages.canvas2D.page, { canvas2D: true });
-    expect(settleCanvas).toHaveBeenCalledWith(
-      pages.canvas2D.page,
-      expect.anything()
-    );
+    expect(settleCanvas).toHaveBeenCalledWith(pages.canvas2D.page, expect.anything());
     // Never touches the 3D page at all.
     expect(gotoFixture).not.toHaveBeenCalledWith(
       pages.default.page,

@@ -48,9 +48,7 @@ describe('#201 sourceGate — broken buffer retains the previous content', () =>
 
 describe('#201 sourceGate — gate is the LENIENT parser, not the linter', () => {
   it('forwards a buffer that renders but would not pass a strict lint', () => {
-    expect(resolveForwardedContent(RENDERS_BUT_LINTY_TSCN, VALID_TSCN)).toBe(
-      RENDERS_BUT_LINTY_TSCN
-    );
+    expect(resolveForwardedContent(RENDERS_BUT_LINTY_TSCN, VALID_TSCN)).toBe(RENDERS_BUT_LINTY_TSCN);
   });
 });
 

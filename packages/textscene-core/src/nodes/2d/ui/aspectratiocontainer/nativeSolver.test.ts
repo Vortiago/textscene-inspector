@@ -14,9 +14,7 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { aspectRatioContainerMinimumSize, aspectRatioContainerLayout } from './nativeSolver';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
-function asMap(
-  result: ReadonlyMap<string, Rect2> | ContainerLayoutResult
-): ReadonlyMap<string, Rect2> {
+function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
   return 'rects' in result ? result.rects : result;
 }
 
@@ -143,7 +141,11 @@ describe('aspectRatioContainerLayout', () => {
   });
 
   it("a child without SIZE_FILL shrinks to its own minimum inside the aspect rect (container.cpp:103-108, fit_child_in_rect's shrink branch)", () => {
-    const child = leaf('c1', { customMinimumSize: { x: 20, y: 20 }, sizeFlagsHorizontal: 0, sizeFlagsVertical: 0 });
+    const child = leaf('c1', {
+      customMinimumSize: { x: 20, y: 20 },
+      sizeFlagsHorizontal: 0,
+      sizeFlagsVertical: 0,
+    });
     const a = aspect({ stretchMode: 2, ratio: 1 }, [child]);
     const rects = asMap(
       aspectRatioContainerLayout(a, childEntries([child]), { x: 0, y: 0, w: 100, h: 100 }, ctx())

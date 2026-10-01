@@ -38,6 +38,6 @@ validatorRegistry.registerAll('AnimationTree', {
   // (shaderglobalsoverride/linterParser.ts), the `.tscn` alone proves only that the key exists.
   'parameters/*': shape(
     () => null,
-    "any Variant — the type comes from the live AnimationNode graph, not the .tscn"
+    'any Variant — the type comes from the live AnimationNode graph, not the .tscn'
   ),
 });

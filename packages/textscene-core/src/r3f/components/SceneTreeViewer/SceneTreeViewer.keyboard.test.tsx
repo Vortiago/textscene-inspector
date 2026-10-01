@@ -195,9 +195,7 @@ describe('<SceneTreeViewer> keyboard operability (#224)', () => {
 
   it('all treeitems stay reachable in one flat DOM query regardless of nesting depth', () => {
     const graph = createSceneGraphFromTscnScene({
-      nodes: [
-        makeNode('A', 'Node3D', [makeNode('B', 'Node3D', [makeNode('C', 'MeshInstance3D')])]),
-      ],
+      nodes: [makeNode('A', 'Node3D', [makeNode('B', 'Node3D', [makeNode('C', 'MeshInstance3D')])])],
     });
     render(<SceneTreeViewer />, { wrapper: withPanel(graph) });
 

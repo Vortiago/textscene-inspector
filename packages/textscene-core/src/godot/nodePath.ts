@@ -97,10 +97,7 @@ export interface ParentPathTree {
  * (`resource_format_text.cpp:212`) that instantiate resolves from the root with `get_node_or_null`
  * (`packed_scene.cpp:161`), so the root is the floor and paths omit its name.
  */
-export function resolveParentPath(
-  parentPath: string | undefined,
-  tree?: ParentPathTree
-): string | null {
+export function resolveParentPath(parentPath: string | undefined, tree?: ParentPathTree): string | null {
   // An empty `NodePath("")` returns nullptr (node.cpp:1894), and instantiate refuses an absolute
   // `/root/…` off-tree (node.cpp:1898). The walk adds the rest. The saver never writes a `%Name`
   // (resource_format_text.cpp:2018), yet on 4.7.2 the loader seats `parent="%Player"` under its

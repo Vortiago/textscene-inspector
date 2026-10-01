@@ -81,8 +81,11 @@ describe('diffMask', () => {
   });
 
   it('refuses captures of different sizes', () => {
-    expect(() => diffMask(png(4, 4, () => DARK), png(4, 5, () => DARK))).toThrow(
-      /Size mismatch/
-    );
+    expect(() =>
+      diffMask(
+        png(4, 4, () => DARK),
+        png(4, 5, () => DARK)
+      )
+    ).toThrow(/Size mismatch/);
   });
 });

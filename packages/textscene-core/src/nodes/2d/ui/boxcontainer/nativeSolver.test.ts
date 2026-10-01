@@ -72,7 +72,10 @@ describe('BoxContainer native layout — exact numbers', () => {
   it('BoxContainer::get_minimum_size (box_container.cpp:238-271) — main axis sums plus one separation', () => {
     // Two contexts: the minimum-size cache is keyed by path, and both roots
     // use path 'Box', so one context would return the first call's answer twice.
-    const rootH = boxRoot('BoxContainer', false, [child('A', { x: 20, y: 10 }), child('B', { x: 30, y: 15 })]);
+    const rootH = boxRoot('BoxContainer', false, [
+      child('A', { x: 20, y: 10 }),
+      child('B', { x: 30, y: 15 }),
+    ]);
     const rootV = boxRoot('BoxContainer', true, [child('A', { x: 20, y: 10 }), child('B', { x: 30, y: 15 })]);
     expect(createSolveContext(THEME).combinedMinimumSize(rootH)).toEqual({ x: 20 + 4 + 30, y: 15 });
     expect(createSolveContext(THEME).combinedMinimumSize(rootV)).toEqual({ x: 30, y: 10 + 4 + 15 });
@@ -85,7 +88,11 @@ describe('BoxContainer at vertical=X matches its fixed-axis sibling', () => {
     // trees use 'Box/A' and 'Box/B', so one context would return the first solve's values.
     const boxKids = [child('A', { x: 20, y: 10 }), child('B', { x: 30, y: 15 })];
     const vboxKids = [child('A', { x: 20, y: 10 }), child('B', { x: 30, y: 15 })];
-    const boxSolved = solveControlTree([boxRoot('BoxContainer', true, boxKids)], VIEWPORT, createSolveContext(THEME));
+    const boxSolved = solveControlTree(
+      [boxRoot('BoxContainer', true, boxKids)],
+      VIEWPORT,
+      createSolveContext(THEME)
+    );
     const vboxSolved = solveControlTree(
       [boxRoot('VBoxContainer', undefined, vboxKids)],
       VIEWPORT,

@@ -5,13 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  node,
-  scene,
-  lint,
-  expectDiagnostic,
-  expectNoDiagnostic,
-} from '../../../../linter/testing/testkit';
+import { node, scene, lint, expectDiagnostic, expectNoDiagnostic } from '../../../../linter/testing/testkit';
 import { readFixture } from '../../../../linter/testing/fixtureCheck';
 import './linterParser';
 import './linter';
@@ -58,9 +52,9 @@ describe('ItemList semantic rules', () => {
     // so a negative count is never stored and the array keeps its default 0.
     // Reporting `(-1)` names a value the engine refused, beside the validator
     // that already reported it.
-    const diagnostics = lint(
-      scene(node('ItemList', { item_count: -1, 'item_0/text': '"Sword"' }))
-    ).filter((d) => d.ruleName === 'itemlist-item-index-out-of-range');
+    const diagnostics = lint(scene(node('ItemList', { item_count: -1, 'item_0/text': '"Sword"' }))).filter(
+      (d) => d.ruleName === 'itemlist-item-index-out-of-range'
+    );
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0]!.message).toContain('item_count (0)');
   });
@@ -145,24 +139,18 @@ describe('ItemList index spelling in the message', () => {
       scene(node('ItemList', { item_count: 1, 'item_4294967297/text': '"x"' })),
       { ruleName: 'itemlist-item-index-out-of-range', severity: 'error' }
     );
-    expect(diagnostic.message).toContain(
-      'index(es) 4294967297 (stored as 1) fall outside item_count (1)'
-    );
+    expect(diagnostic.message).toContain('index(es) 4294967297 (stored as 1) fall outside item_count (1)');
   });
 
   // INT64_MIN (ustring.cpp:2284) keeps 0 in its low 32 bits, so the write lands on item 0.
   it('applies an index that saturates to INT64_MIN to item 0', () => {
-    const content = scene(
-      node('ItemList', { item_count: 1, 'item_-9999999999999999999999/text': '"x"' })
-    );
+    const content = scene(node('ItemList', { item_count: 1, 'item_-9999999999999999999999/text': '"x"' }));
     expect(lint(content).filter((d) => d.severity === 'error')).toEqual([]);
   });
 
   // INT64_MAX keeps -1, which `_get_property` refuses (property_list_helper.cpp:58).
   it('leaves an index that saturates to INT64_MAX to the negative-index refusal', () => {
-    const content = scene(
-      node('ItemList', { item_count: 2, 'item_9999999999999999999999/text': '"x"' })
-    );
+    const content = scene(node('ItemList', { item_count: 2, 'item_9999999999999999999999/text': '"x"' }));
     expectNoDiagnostic(content, { ruleName: 'itemlist-item-index-out-of-range' });
     expectDiagnostic(content, {
       severity: 'error',
@@ -186,9 +174,7 @@ describe('ItemList index spelling in the message', () => {
   });
 
   it('caps the list it names, however many items fall outside', () => {
-    const items = Object.fromEntries(
-      Array.from({ length: 40 }, (_, i) => [`item_${i + 1}/text`, '"x"'])
-    );
+    const items = Object.fromEntries(Array.from({ length: 40 }, (_, i) => [`item_${i + 1}/text`, '"x"']));
     const diagnostic = expectDiagnostic(scene(node('ItemList', { item_count: 1, ...items })), {
       ruleName: 'itemlist-item-index-out-of-range',
     });
@@ -209,14 +195,11 @@ describe('ItemList index grammar', () => {
     // `PropertyListHelper::_get_property` gates on `String::is_valid_int()`
     // (property_list_helper.cpp:53), which skips one leading `+` or `-`
     // (ustring.cpp:4752), so `item_+2/text` is item 2, past the count.
-    expectDiagnostic(
-      scene(node('ItemList', { item_count: 1, 'item_+2/text': '"Autosave"' })),
-      {
-        ruleName: 'itemlist-item-index-out-of-range',
-        severity: 'error',
-        nodeType: 'ItemList',
-        contains: ['2', 'item_count (1)'],
-      }
-    );
+    expectDiagnostic(scene(node('ItemList', { item_count: 1, 'item_+2/text': '"Autosave"' })), {
+      ruleName: 'itemlist-item-index-out-of-range',
+      severity: 'error',
+      nodeType: 'ItemList',
+      contains: ['2', 'item_count (1)'],
+    });
   });
 });

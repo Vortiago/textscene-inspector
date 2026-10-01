@@ -9,6 +9,15 @@ import { isValidProperties } from '../../../linter/linterUtils.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { isDrivenByAnimationAudioTrack } from '../sharedLinterChecks.js';
 import { boolSlotValue } from '../../../godot/index.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+
+const arms = {
+  autoplayWithoutStream: groundedArm('audiostreamplayer2d-autoplay-without-stream', {
+    kind: 'engine-inert',
+    at: 'audio_stream_player_internal.cpp:139',
+    unused: 'play_basic returns an empty playback, so autoplay produces no sound',
+  }),
+} as const satisfies RuleArms<string>;
 
 /**
  * Validate AudioStreamPlayer2D semantic rules
@@ -16,7 +25,6 @@ import { boolSlotValue } from '../../../godot/index.js';
 function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
-
 
   if (!isValidProperties(node.properties)) {
     return diagnostics;
@@ -37,13 +45,12 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
 
   // Autoplay enabled but no stream set.
   if (boolSlotValue(rawProps.autoplay) === true && streamEmpty && !drivenByAnimation) {
-    diagnostics.push({
-      severity: 'info',
-      message: `Property 'autoplay' is enabled but no 'stream' is set. Audio will not play automatically.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'audiostreamplayer2d-autoplay-without-stream',
-    });
+    reportArm(
+      diagnostics,
+      arms.autoplayWithoutStream,
+      node,
+      `Property 'autoplay' is enabled but no 'stream' is set. Audio will not play automatically.`
+    );
   }
 
   return diagnostics;
@@ -58,17 +65,7 @@ const audioStreamPlayer2DValidationRule: LintRule = {
     description: 'Validates AudioStreamPlayer2D property values and logical consistency',
     category: 'validation',
     applicableNodeTypes: ['AudioStreamPlayer2D'],
-    emits: [
-      {
-        ruleName: 'audiostreamplayer2d-autoplay-without-stream',
-        severity: 'info',
-        grounding: {
-          kind: 'engine-inert',
-          at: 'audio_stream_player_internal.cpp:139',
-          unused: 'play_basic returns an empty playback, so autoplay produces no sound',
-        },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkAudioStreamPlayer2D,
 };

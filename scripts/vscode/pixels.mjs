@@ -32,8 +32,7 @@ export function inkStats(buffer, threshold = 24) {
   const png = PNG.sync.read(buffer);
   const histogram = new Map();
   for (let i = 0; i < png.data.length; i += 4) {
-    const key =
-      (png.data[i] << 24) | (png.data[i + 1] << 16) | (png.data[i + 2] << 8) | png.data[i + 3];
+    const key = (png.data[i] << 24) | (png.data[i + 1] << 16) | (png.data[i + 2] << 8) | png.data[i + 3];
     histogram.set(key, (histogram.get(key) ?? 0) + 1);
   }
   let dominantKey = 0;

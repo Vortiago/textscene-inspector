@@ -6,11 +6,7 @@
 
 import { useMemo } from 'react';
 import { useResourceLoader } from '../resources/useResource.js';
-import {
-  cachedUniqueNameClaims,
-  uniqueNameLivePaths,
-  type UniqueNameClaim,
-} from '../utils/uniqueNames.js';
+import { cachedUniqueNameClaims, uniqueNameLivePaths, type UniqueNameClaim } from '../utils/uniqueNames.js';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { claimOwnerOf, localSceneClaims, localSceneOf, ownerClaims } from './uniqueNameOwner.js';
 import { liveTreeContext, useLiveTreeVersion } from './useLiveSceneTree.js';
@@ -49,9 +45,7 @@ function useStablePaths(
  * it, so the answer needs the whole tree. It is per owner: a name registers on
  * the claimant's owner (node.cpp:2222-2234) and resolves through the caller's (node.cpp:1930-1938).
  */
-export function useUniqueNameClaims(
-  path?: string | null
-): ReadonlyMap<string, UniqueNameClaim> | undefined {
+export function useUniqueNameClaims(path?: string | null): ReadonlyMap<string, UniqueNameClaim> | undefined {
   const live = useLiveTree(path);
   return useMemo(() => {
     if (!live) return undefined;
@@ -94,12 +88,7 @@ export function useLocalScene(path: string | null): LocalScene | undefined {
   // Keyed on the table, not the owner: the outer root's table is one cached object, while
   // the walk builds a fresh owner on every load tick.
   const claims = useMemo(() => owner && localSceneClaims(owner), [owner]);
-  const uniquePaths = useStablePaths(
-    useMemo(() => claims && uniqueNameLivePaths(claims), [claims])
-  );
+  const uniquePaths = useStablePaths(useMemo(() => claims && uniqueNameLivePaths(claims), [claims]));
   const rootPath = owner?.path ?? path?.split('/')[0];
-  return useMemo(
-    () => (rootPath ? { path: rootPath, uniquePaths } : undefined),
-    [rootPath, uniquePaths]
-  );
+  return useMemo(() => (rootPath ? { path: rootPath, uniquePaths } : undefined), [rootPath, uniquePaths]);
 }

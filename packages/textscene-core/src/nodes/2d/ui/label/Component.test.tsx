@@ -26,7 +26,8 @@ function solveNode(path: string, properties: Record<string, unknown>): SolveNode
   // painter through `n.colors`/`n.constants` (the walker folds both in
   // unconditionally), not properties.
   const colors = (properties as { themeOverrideColors?: SolveNode['colors'] }).themeOverrideColors ?? {};
-  const constants = (properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
+  const constants =
+    (properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
   return { ...emptySolveNode(), path, node: tscnNode, colors, constants };
 }
 
@@ -165,7 +166,8 @@ describe('<Label> (isolated painter contract)', () => {
   });
 
   function quadCount(renderer: Awaited<ReturnType<typeof render>>): number {
-    const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
+    const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .geometry as THREE.BufferGeometry;
     return geometry.attributes.position!.count / 4;
   }
 
@@ -223,7 +225,8 @@ describe('<Label> (isolated painter contract)', () => {
     // same shader pass, not a second draw.
     expect(outlined.scene.findAllByType('Mesh')).toHaveLength(1);
     expect(plain.scene.findAllByType('Mesh')).toHaveLength(1);
-    const outlinedMat = (outlined.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
+    const outlinedMat = (outlined.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.ShaderMaterial;
     const plainMat = (plain.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
     expect(outlinedMat.uniforms.uOutlineWidthPx!.value).toBe(2);
     expect(plainMat.uniforms.uOutlineWidthPx!.value).toBe(0);

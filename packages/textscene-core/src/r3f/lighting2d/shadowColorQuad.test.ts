@@ -6,11 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import {
-  createShadowColorQuadMaterial,
-  shadowColorContributes,
-  Light2DBlendMode,
-} from './lightQuad';
+import { createShadowColorQuadMaterial, shadowColorContributes, Light2DBlendMode } from './lightQuad';
 import { litQuadStencilProps, shadowColorQuadStencilProps, shadowStencilRef } from './ShadowVolumeMask';
 
 const BLUE = { r: 0.15, g: 0.35, b: 1, a: 1 };
@@ -33,7 +29,11 @@ describe('shadowColorContributes', () => {
 
 describe('createShadowColorQuadMaterial', () => {
   it('emits shadow_color.rgb with no cookie rgb, no light colour and no energy', () => {
-    const mat = createShadowColorQuadMaterial({ cookie: new THREE.Texture(), shadowColor: BLUE, blendMode: Light2DBlendMode.ADD });
+    const mat = createShadowColorQuadMaterial({
+      cookie: new THREE.Texture(),
+      shadowColor: BLUE,
+      blendMode: Light2DBlendMode.ADD,
+    });
     // Godot 4.6.3, `unit-lightoccluder2d-shadow-color.tscn` (surface 0.25, light (1, 0.55, 0.2) at
     // energy 1.5, shadow (0.15, 0.35, 1, 1)): rgb(79, 101, 171) over unlit 63 divides to one cookie
     // alpha per channel, 0.418 / 0.426 / 0.424, so energy and the warm colour are absent. The
@@ -44,7 +44,11 @@ describe('createShadowColorQuadMaterial', () => {
   });
 
   it('carries the shadow colour as a straight sRGB uniform', () => {
-    const mat = createShadowColorQuadMaterial({ cookie: new THREE.Texture(), shadowColor: BLUE, blendMode: Light2DBlendMode.ADD });
+    const mat = createShadowColorQuadMaterial({
+      cookie: new THREE.Texture(),
+      shadowColor: BLUE,
+      blendMode: Light2DBlendMode.ADD,
+    });
     const v = mat.uniforms.uShadowColor!.value as THREE.Vector4;
     expect([v.x, v.y, v.z, v.w]).toEqual([0.15, 0.35, 1, 1]);
   });
@@ -52,7 +56,11 @@ describe('createShadowColorQuadMaterial', () => {
   it('blends into the accumulator exactly as the lit quad does', () => {
     // `mix` replaces the light term in place, so `light_blend_compute` still runs on it: a shadow
     // under a SUB light subtracts.
-    const sub = createShadowColorQuadMaterial({ cookie: new THREE.Texture(), shadowColor: BLUE, blendMode: Light2DBlendMode.SUB });
+    const sub = createShadowColorQuadMaterial({
+      cookie: new THREE.Texture(),
+      shadowColor: BLUE,
+      blendMode: Light2DBlendMode.SUB,
+    });
     expect(sub.blendEquation).toBe(THREE.ReverseSubtractEquation);
     expect(sub.blendSrc).toBe(THREE.SrcAlphaFactor);
   });

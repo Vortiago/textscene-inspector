@@ -23,7 +23,14 @@ import {
 } from '../shared/splitContainerSolver';
 import { splitOffsetsOf, type SplitContainerProperties } from '../shared/splitContainer';
 
-export function VSplitContainer({ solveNode, tint, rect, theme, renderOrder, meta }: NativeControlComponentProps) {
+export function VSplitContainer({
+  solveNode,
+  tint,
+  rect,
+  theme,
+  renderOrder,
+  meta,
+}: NativeControlComponentProps) {
   const props = painterView<SplitContainerProperties>(solveNode);
 
   // Decided before the icon hook: hook order is fixed, so an early return cannot skip the load.
@@ -33,7 +40,10 @@ export function VSplitContainer({ solveNode, tint, rect, theme, renderOrder, met
   const drawsGrabber =
     sortable.length >= 2 && isSplitGrabberVisible(props, solveNode.constants, theme.widgets.splitContainer);
   const themeKey = splitGrabberThemeKey(solveNode.node.type, true);
-  const texture = useNodeIcon(drawsGrabber ? solveNode.icons[themeKey] : undefined, drawsGrabber ? SPLIT_CONTAINER_ICONS.vsplitter : null);
+  const texture = useNodeIcon(
+    drawsGrabber ? solveNode.icons[themeKey] : undefined,
+    drawsGrabber ? SPLIT_CONTAINER_ICONS.vsplitter : null
+  );
 
   if (!drawsGrabber || !texture) {
     return null;

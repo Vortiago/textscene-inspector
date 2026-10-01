@@ -173,7 +173,11 @@ describe('surfaceDrawHooks — instanced meshes', () => {
   it('leaves an InstancedMesh in its own pose, which would billboard about the batch origin', () => {
     // three multiplies `instanceMatrix` after `modelMatrix`, so one swapped matrix
     // would turn every instance about the batch origin, not each about its own.
-    const instanced = new THREE.InstancedMesh(new THREE.BufferGeometry(), material({ billboard_mode: '1' }), 2);
+    const instanced = new THREE.InstancedMesh(
+      new THREE.BufferGeometry(),
+      material({ billboard_mode: '1' }),
+      2
+    );
     applyShadowCasting(instanced, shadowCastingEffects(ShadowCastingSetting.ON));
     instanced.position.set(5, 6, 7);
     instanced.updateMatrixWorld(true);

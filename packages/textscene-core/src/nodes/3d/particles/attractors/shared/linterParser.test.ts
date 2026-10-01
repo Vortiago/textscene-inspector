@@ -10,7 +10,11 @@ import './linterParser.js';
 
 /** Fill from doc/classes/GPUParticlesAttractor3D.xml. Red until you do, deliberately. */
 const KEYS: string[] = ['strength', 'attenuation', 'directionality', 'cull_mask'];
-const LEAVES = ["GPUParticlesAttractorBox3D","GPUParticlesAttractorSphere3D","GPUParticlesAttractorVectorField3D"] as const;
+const LEAVES = [
+  'GPUParticlesAttractorBox3D',
+  'GPUParticlesAttractorSphere3D',
+  'GPUParticlesAttractorVectorField3D',
+] as const;
 
 describe('GPUParticlesAttractor3D shared validators', () => {
   it('registers exactly what GPUParticlesAttractor3D binds', () => {

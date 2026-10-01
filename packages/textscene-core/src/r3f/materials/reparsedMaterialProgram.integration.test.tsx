@@ -29,11 +29,7 @@ function treeFor(tscn: string, loader: ResourceLoader) {
 }
 
 /** The material at `slot` on the mesh the dispatcher rendered for `name`. */
-function materialAt(
-  scene: ReactThreeTest.ReactThreeTestInstance,
-  name: string,
-  slot = 0
-): THREE.Material {
+function materialAt(scene: ReactThreeTest.ReactThreeTestInstance, name: string, slot = 0): THREE.Material {
   const node = scene.findAllByType('Mesh').find((m) => m.instance.name === name);
   if (!node) throw new Error(`no mesh named ${name}`);
   const material = instanceAs<THREE.Mesh>(node).material;
@@ -123,9 +119,7 @@ describe('a re-parsed scene rebuilds materials whose baked program parameters mo
 
   it('MeshInstance3D secondary surface: transparency 0 → 1 at material-1', async () => {
     const fake = createFakeResourceLoader();
-    const renderer = await ReactThreeTestRenderer.create(
-      treeFor(secondarySurfaceScene('0'), fake.loader)
-    );
+    const renderer = await ReactThreeTestRenderer.create(treeFor(secondarySurfaceScene('0'), fake.loader));
     const opaque = materialAt(renderer.scene, 'Panel', 1);
     expect(opaque.transparent).toBe(false);
     const compiledVersion = opaque.version;

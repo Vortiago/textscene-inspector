@@ -50,18 +50,18 @@ describe('resolveLayoutRtl — the deterministic arms', () => {
   // `root_layout_direction` decides, and `rootRtl` is that resolved answer.
   it('INHERITED with no ancestor falls back to the root answer', () => {
     expect(resolveLayoutRtl(LAYOUT_DIRECTION_INHERITED, null, LTR_LAYOUT_ENV)).toBe(false);
-    expect(
-      resolveLayoutRtl(LAYOUT_DIRECTION_INHERITED, null, { ...LTR_LAYOUT_ENV, rootRtl: true })
-    ).toBe(true);
+    expect(resolveLayoutRtl(LAYOUT_DIRECTION_INHERITED, null, { ...LTR_LAYOUT_ENV, rootRtl: true })).toBe(
+      true
+    );
   });
 
   // `if (data.layout_dir == LAYOUT_DIRECTION_INHERITED)` guards the whole
   // climb; `force` is read inside it only under `is_part_of_edited_scene()`
   // (`control.cpp:3556-3559`), which no loaded scene satisfies.
   it('INHERITED ignores the force setting, which only an edited-scene node reads', () => {
-    expect(
-      resolveLayoutRtl(LAYOUT_DIRECTION_INHERITED, false, { ...LTR_LAYOUT_ENV, forceRtl: true })
-    ).toBe(false);
+    expect(resolveLayoutRtl(LAYOUT_DIRECTION_INHERITED, false, { ...LTR_LAYOUT_ENV, forceRtl: true })).toBe(
+      false
+    );
   });
 
   // `control.cpp:3610-3614` and `:3616-3620`.

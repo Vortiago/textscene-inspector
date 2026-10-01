@@ -130,8 +130,11 @@ describe('RigidBody2D strict validators (physics state)', () => {
       expect(check(property, 'false')).toBeNull();
     });
 
-    it.each(['can_sleep', 'sleeping', 'custom_integrator'])('converts a numeric stand-in for %s', (property) => {
-      expect(check(property, '1')?.severity).toBe('warning');
-    });
+    it.each(['can_sleep', 'sleeping', 'custom_integrator'])(
+      'converts a numeric stand-in for %s',
+      (property) => {
+        expect(check(property, '1')?.severity).toBe('warning');
+      }
+    );
   });
 });

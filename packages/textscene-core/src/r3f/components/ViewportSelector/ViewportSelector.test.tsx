@@ -42,9 +42,7 @@ describe('<ViewportSelector>', () => {
   });
 
   it('uses a custom label when provided', () => {
-    render(
-      <ViewportSelector options={options} value="a.tscn" onChange={() => {}} label="Fixture:" />
-    );
+    render(<ViewportSelector options={options} value="a.tscn" onChange={() => {}} label="Fixture:" />);
     expect(screen.getByText('Fixture:')).toBeTruthy();
   });
 });

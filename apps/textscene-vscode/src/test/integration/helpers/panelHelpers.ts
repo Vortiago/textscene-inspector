@@ -47,7 +47,7 @@ export interface TestPanelOptions {
 export function createTestPanel(
   extensionUri: vscode.Uri,
   resourceUri: vscode.Uri,
-  options: TestPanelOptions = {},
+  options: TestPanelOptions = {}
 ): TestPanel {
   const visible = options.visible ?? true;
   const sentMessages: HostToWebviewMessage[] = [];
@@ -70,7 +70,11 @@ export function createTestPanel(
       _disposables?: vscode.Disposable[]
     ) => {
       messageListeners.push(listener);
-      return { dispose: () => { /* no-op */ } };
+      return {
+        dispose: () => {
+          /* no-op */
+        },
+      };
     },
   };
 
@@ -82,16 +86,22 @@ export function createTestPanel(
     visible,
     options: {} as vscode.WebviewPanelOptions,
     viewType: TscnPreviewPanel.viewType,
-    onDidDispose: (
-      listener: () => void,
-      _thisArg?: unknown,
-      _disposables?: vscode.Disposable[]
-    ) => {
+    onDidDispose: (listener: () => void, _thisArg?: unknown, _disposables?: vscode.Disposable[]) => {
       disposeListeners.push(listener);
-      return { dispose: () => { /* no-op */ } };
+      return {
+        dispose: () => {
+          /* no-op */
+        },
+      };
     },
-    onDidChangeViewState: (_listener: unknown) => ({ dispose: () => { /* no-op */ } }),
-    reveal: (_column?: vscode.ViewColumn, _preserveFocus?: boolean) => { /* no-op */ },
+    onDidChangeViewState: (_listener: unknown) => ({
+      dispose: () => {
+        /* no-op */
+      },
+    }),
+    reveal: (_column?: vscode.ViewColumn, _preserveFocus?: boolean) => {
+      /* no-op */
+    },
     dispose: () => {
       // The real WebviewPanel is idempotent on dispose. Without this guard,
       // TscnPreviewPanel.dispose() -> fakePanel.dispose() -> onDidDispose
@@ -106,11 +116,7 @@ export function createTestPanel(
     },
   };
 
-  const panel = new TscnPreviewPanel(
-    fakePanel as unknown as vscode.WebviewPanel,
-    extensionUri,
-    resourceUri,
-  );
+  const panel = new TscnPreviewPanel(fakePanel as unknown as vscode.WebviewPanel, extensionUri, resourceUri);
 
   function triggerMessage(msg: Record<string, unknown>): void {
     for (const listener of messageListeners) {
@@ -129,7 +135,7 @@ export function createTestPanel(
 export async function waitFor(
   predicate: () => boolean,
   timeoutMs: number,
-  describeFailure?: () => string,
+  describeFailure?: () => string
 ): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -152,21 +158,18 @@ export async function waitFor(
 export async function waitForMessage(
   sentMessages: HostToWebviewMessage[],
   messageType: string,
-  timeout = 5000,
+  timeout = 5000
 ): Promise<HostToWebviewMessage> {
   await waitFor(
     () => sentMessages.some((m) => m.type === messageType),
     timeout,
-    () => `Timed out waiting for message type '${messageType}' after ${timeout}ms`,
+    () => `Timed out waiting for message type '${messageType}' after ${timeout}ms`
   );
   // waitFor threw on timeout, so the message is guaranteed present.
   return sentMessages.find((m) => m.type === messageType)!;
 }
 
-export async function waitForPanelDisposal(
-  panel: TscnPreviewPanel,
-  timeout = 5000,
-): Promise<void> {
+export async function waitForPanelDisposal(panel: TscnPreviewPanel, timeout = 5000): Promise<void> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       reject(new Error(`Panel disposal timeout after ${timeout}ms`));

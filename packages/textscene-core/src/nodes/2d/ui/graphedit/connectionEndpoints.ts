@@ -34,7 +34,13 @@ export interface ResolvedConnection {
 
 // `connections_layer->set_position(-scroll_offset)` (`graph_edit.cpp:454`) translates and never
 // scales, so a zoomed point reaches GraphEdit's local space by subtracting the unscaled `scroll_offset`.
-function endpoint(portLocal: Vec2, positionOffset: Vec2, zoom: number, scrollOffset: Vec2, color: ControlColor): ResolvedConnectionEndpoint {
+function endpoint(
+  portLocal: Vec2,
+  positionOffset: Vec2,
+  zoom: number,
+  scrollOffset: Vec2,
+  color: ControlColor
+): ResolvedConnectionEndpoint {
   const graphPos = { x: (portLocal.x + positionOffset.x) * zoom, y: (portLocal.y + positionOffset.y) * zoom };
   return { pos: { x: graphPos.x - scrollOffset.x, y: graphPos.y - scrollOffset.y }, graphPos, color };
 }

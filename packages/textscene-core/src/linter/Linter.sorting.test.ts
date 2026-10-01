@@ -46,10 +46,7 @@ describe('Linter', () => {
 
     it('should sort diagnostics by severity (errors first)', () => {
       // Registered in reverse, so the order asserted is the sort's doing.
-      register(
-        rule('test-warning-rule', 'warning', 'Warning'),
-        rule('test-error-rule', 'error', 'Error')
-      );
+      register(rule('test-warning-rule', 'warning', 'Warning'), rule('test-error-rule', 'error', 'Error'));
 
       const severities = linter.lint(ROOT_ONLY).map((d) => d.severity);
       expect(severities.indexOf('error')).toBeLessThan(severities.indexOf('warning'));
@@ -59,10 +56,7 @@ describe('Linter', () => {
       // The error/warning pair alone leaves `SEVERITY_ORDER`'s third rank free
       // to move, and it is real order: it decides which message a gutter row
       // shows and which end of the report an advisory lands at.
-      register(
-        rule('test-info-rule', 'info', 'Info'),
-        rule('test-warning-rule', 'warning', 'Warning')
-      );
+      register(rule('test-info-rule', 'info', 'Info'), rule('test-warning-rule', 'warning', 'Warning'));
 
       const messages = linter
         .lint(ROOT_ONLY)

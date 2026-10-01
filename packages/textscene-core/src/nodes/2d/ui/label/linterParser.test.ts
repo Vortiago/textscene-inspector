@@ -133,17 +133,21 @@ describe('Label strict validators', () => {
     });
 
     it('warns on BREAK_TRIM_INDENT, which the setter keeps but the hint omits', () => {
-      expectWarning(check('autowrap_trim_flags', '32'), 'sets BREAK_TRIM_INDENT (32), which the engine keeps but the inspector\'s flag list does not offer (it lists only BREAK_TRIM_START_EDGE_SPACES (64) | BREAK_TRIM_END_EDGE_SPACES (128))');
+      expectWarning(
+        check('autowrap_trim_flags', '32'),
+        "sets BREAK_TRIM_INDENT (32), which the engine keeps but the inspector's flag list does not offer (it lists only BREAK_TRIM_START_EDGE_SPACES (64) | BREAK_TRIM_END_EDGE_SPACES (128))"
+      );
     });
 
     it('rejects a negative value', () => {
-      expectError(check('autowrap_trim_flags', '-1'), 'accepts only the bits BREAK_TRIM_INDENT (32) | BREAK_TRIM_START_EDGE_SPACES (64) | BREAK_TRIM_END_EDGE_SPACES (128); -1 sets bits outside the mask, which Godot drops on assignment (Godot stores 224)');
+      expectError(
+        check('autowrap_trim_flags', '-1'),
+        'accepts only the bits BREAK_TRIM_INDENT (32) | BREAK_TRIM_START_EDGE_SPACES (64) | BREAK_TRIM_END_EDGE_SPACES (128); -1 sets bits outside the mask, which Godot drops on assignment (Godot stores 224)'
+      );
     });
 
     it('rejects a non-numeric value', () => {
-      expect(check('autowrap_trim_flags', 'not-a-number')?.code).toBe(
-        'INVALID_AUTOWRAP_TRIM_FLAGS_FORMAT'
-      );
+      expect(check('autowrap_trim_flags', 'not-a-number')?.code).toBe('INVALID_AUTOWRAP_TRIM_FLAGS_FORMAT');
     });
   });
 
@@ -152,7 +156,10 @@ describe('Label strict validators', () => {
       // set_justification_flags (label.cpp:79-93) bare-assigns with no mask, so
       // 255 loads unaltered. But label.cpp:1437 offers only {1,2,8,32,64,128},
       // so bits 4 and 16 are unreachable from the inspector: warning, not error.
-      expectWarning(check('justification_flags', '255'), 'sets a bit the inspector\'s flag list does not offer; it lists only JUSTIFICATION_KASHIDA (1) | JUSTIFICATION_WORD_BOUND (2) | JUSTIFICATION_AFTER_LAST_TAB (8) | JUSTIFICATION_SKIP_LAST_LINE (32) | JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) | JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128). Godot keeps the value, so this loads and runs, but the value is unreachable from the editor');
+      expectWarning(
+        check('justification_flags', '255'),
+        "sets a bit the inspector's flag list does not offer; it lists only JUSTIFICATION_KASHIDA (1) | JUSTIFICATION_WORD_BOUND (2) | JUSTIFICATION_AFTER_LAST_TAB (8) | JUSTIFICATION_SKIP_LAST_LINE (32) | JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) | JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128). Godot keeps the value, so this loads and runs, but the value is unreachable from the editor"
+      );
     });
 
     it('accepts 235, the OR of every bit the hint does offer', () => {
@@ -245,7 +252,7 @@ describe('Label strict validators', () => {
       }
     });
 
-    it('rejects the JavaScript-only spellings Godot\'s tokenizer cannot read', () => {
+    it("rejects the JavaScript-only spellings Godot's tokenizer cannot read", () => {
       // `READING_INT` stops at the `x` (there is no hex branch), and `Infinity`
       // is not one of the four identifiers `stor_fix` resolves.
       for (const spelling of ['0x10', 'Infinity', '+3']) {

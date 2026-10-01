@@ -34,11 +34,19 @@ import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 const W_ADVANCE = 1936 * (16 / 2048); // 15.125
 const FONT_HEIGHT = 23; // ceil(2189*16/2048) + ceil(600*16/2048)
 
-function node(props: Partial<LineEditProperties>, styleBoxes: Record<string, StyleBoxFlatData> = {}): SolveNode {
+function node(
+  props: Partial<LineEditProperties>,
+  styleBoxes: Record<string, StyleBoxFlatData> = {}
+): SolveNode {
   return {
     ...solveNode(),
     path: 'L',
-    node: { name: 'L', type: 'LineEdit', children: [], properties: { name: 'L', ...props } as LineEditProperties },
+    node: {
+      name: 'L',
+      type: 'LineEdit',
+      children: [],
+      properties: { name: 'L', ...props } as LineEditProperties,
+    },
     styleBoxes,
     // A local theme_override_colors/* reaches `resolveTextTheme` through `n.colors`, which the walker
     // fills unconditionally, not through props.
@@ -95,7 +103,7 @@ describe('lineEditMinimumSize — StyleBox content margins + minimum_character_w
   });
 
   it(
-    'takes the MAX of BOTH normal and read_only styles\' margins, regardless of the node\'s OWN editable state ' +
+    "takes the MAX of BOTH normal and read_only styles' margins, regardless of the node's OWN editable state " +
       '(`theme_cache.normal->get_minimum_size().max(theme_cache.read_only->get_minimum_size())`, line_edit.cpp:2475)',
     () => {
       const wideReadOnly = flatStyleBox({ contentMargin: { left: 20, top: 10, right: 20, bottom: 10 } });
@@ -106,8 +114,11 @@ describe('lineEditMinimumSize — StyleBox content margins + minimum_character_w
     }
   );
 
-  it('is unaffected by the node\'s own text/placeholder content — LineEdit floors width on minimum_character_width, not on what is typed', () => {
-    const withLongText = lineEditMinimumSize(node({ text: 'a much longer string than four characters' }), ctx());
+  it("is unaffected by the node's own text/placeholder content — LineEdit floors width on minimum_character_width, not on what is typed", () => {
+    const withLongText = lineEditMinimumSize(
+      node({ text: 'a much longer string than four characters' }),
+      ctx()
+    );
     const empty = lineEditMinimumSize(node({}), ctx());
     expect(withLongText).toEqual(empty);
   });
@@ -131,18 +142,14 @@ describe('lineEditMinimumSize — expand_to_text_length (line_edit.cpp:2454-2457
   const SIX_W_WIDTH = 91;
 
   it('floors width on ceil(shaped display text) + caret_width once it exceeds the 4-char floor', () => {
-    const result = 
-      lineEditMinimumSize(node({ text: 'WWWWWW', expandToTextLength: true }), ctx())
-    ;
+    const result = lineEditMinimumSize(node({ text: 'WWWWWW', expandToTextLength: true }), ctx());
     // caret_width theme constant defaults to 1 (default_theme.cpp:434); 8+91+1=100.
     expect(result.x).toBe(8 + SIX_W_WIDTH + 1);
     expect(result.y).toBe(8 + FONT_HEIGHT);
   });
 
   it('sizes to the PLACEHOLDER when text is empty — _shape() shapes whichever string using_placeholder selects', () => {
-    const result = 
-      lineEditMinimumSize(node({ placeholderText: 'WWWWWW', expandToTextLength: true }), ctx())
-    ;
+    const result = lineEditMinimumSize(node({ placeholderText: 'WWWWWW', expandToTextLength: true }), ctx());
     expect(result.x).toBe(8 + SIX_W_WIDTH + 1);
   });
 
@@ -158,14 +165,14 @@ describe('lineEditMinimumSize — expand_to_text_length (line_edit.cpp:2454-2457
     expect(withShort).toEqual(withoutFlag);
   });
 
-  it('contributes nothing without a measurer, matching the em-space width\'s own fallback', () => {
+  it("contributes nothing without a measurer, matching the em-space width's own fallback", () => {
     const result = lineEditMinimumSize(node({ text: 'WWWWWW', expandToTextLength: true }), ctx(false));
     expect(result).toEqual({ x: 8, y: 8 + FONT_HEIGHT });
   });
 });
 
 describe('lineEditMinimumSize — right_icon / clear_button_enabled contribution (line_edit.cpp:2459-2472)', () => {
-  it('adds a right_icon\'s ORIGINAL_SIZE natural width, and floors height at it when taller than the font', () => {
+  it("adds a right_icon's ORIGINAL_SIZE natural width, and floors height at it when taller than the font", () => {
     const n = { ...node({}), textureSlots: { right_icon: { x: 32, y: 40 } } };
     const result = lineEditMinimumSize(n, ctx());
     expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE + 32, 6);
@@ -227,27 +234,31 @@ describe('lineEditMinimumSize — right_icon / clear_button_enabled contribution
 
 describe('lineEditRightIconSize — LineEdit::_get_right_icon_size (line_edit.cpp:373-406)', () => {
   it('ORIGINAL_SIZE returns the natural size unchanged, ignoring scale/controlSize/fontHeight', () => {
-    expect(lineEditRightIconSize({ x: 32, y: 16 }, EXPAND_MODE_ORIGINAL_SIZE, 23, { x: 999, y: 999 }, 0.1)).toEqual({
+    expect(
+      lineEditRightIconSize({ x: 32, y: 16 }, EXPAND_MODE_ORIGINAL_SIZE, 23, { x: 999, y: 999 }, 0.1)
+    ).toEqual({
       x: 32,
       y: 16,
     });
   });
 
   it('FIT_TO_TEXT returns a square of the font height, ignoring the natural size', () => {
-    expect(lineEditRightIconSize({ x: 32, y: 16 }, EXPAND_MODE_FIT_TO_TEXT, 23, { x: 999, y: 999 }, 1)).toEqual({
+    expect(
+      lineEditRightIconSize({ x: 32, y: 16 }, EXPAND_MODE_FIT_TO_TEXT, 23, { x: 999, y: 999 }, 1)
+    ).toEqual({
       x: 23,
       y: 23,
     });
   });
 
-  it('FIT_TO_LINE_EDIT scales to the control\'s own height, preserving aspect, when it fits the width', () => {
+  it("FIT_TO_LINE_EDIT scales to the control's own height, preserving aspect, when it fits the width", () => {
     // icon_width = 32*30/16 = 60 (<= control width 100, no clamp); icon_height = 30.
     expect(
       lineEditRightIconSize({ x: 32, y: 16 }, EXPAND_MODE_FIT_TO_LINE_EDIT, 23, { x: 100, y: 30 }, 1)
     ).toEqual({ x: 60, y: 30 });
   });
 
-  it('FIT_TO_LINE_EDIT clamps to the control\'s own width once the height-driven width overflows it', () => {
+  it("FIT_TO_LINE_EDIT clamps to the control's own width once the height-driven width overflows it", () => {
     // icon_width = 32*30/16 = 60 > control width 40 -> icon_width=40, icon_height = 16*40/32 = 20.
     expect(
       lineEditRightIconSize({ x: 32, y: 16 }, EXPAND_MODE_FIT_TO_LINE_EDIT, 23, { x: 40, y: 30 }, 1)
@@ -263,10 +274,10 @@ describe('lineEditRightIconSize — LineEdit::_get_right_icon_size (line_edit.cp
   it(
     'FIT_TO_LINE_EDIT with no control size contributes (0, 0) — Control::get_size() reads ' +
       'Size2() (control.h:218) until _size_changed() runs, and get_minimum_size() never runs ' +
-      'after a resize (no update_minimum_size() call in LineEdit::_notification\'s ' +
+      "after a resize (no update_minimum_size() call in LineEdit::_notification's " +
       'NOTIFICATION_RESIZED, line_edit.cpp:1327-1330) nor is the cached result invalidated by ' +
       'one (Control::_update_minimum_size_cache/minimum_size_valid, control.cpp:1744-1757) — so ' +
-      'this icon never actually drives LineEdit\'s own minimum height, only the font does',
+      "this icon never actually drives LineEdit's own minimum height, only the font does",
     () => {
       expect(lineEditRightIconSize({ x: 32, y: 16 }, EXPAND_MODE_FIT_TO_LINE_EDIT, 23, null, 1)).toEqual({
         x: 0,
@@ -380,7 +391,9 @@ describe('lineEditTextureSlots — right_icon (own scope) + the themed "clear" i
   it('requests the "clear" theme icon only when the theme walk resolved one', () => {
     const node = { name: 'L', type: 'LineEdit', children: [], properties: { name: 'L' } };
     expect(lineEditTextureSlots(node, {})).toEqual([]);
-    const themed = { clear: { ref: 'ExtResource("1_clear")', resources: { externalResources: [], internalResources: [] } } };
+    const themed = {
+      clear: { ref: 'ExtResource("1_clear")', resources: { externalResources: [], internalResources: [] } },
+    };
     expect(lineEditTextureSlots(node, themed)).toContainEqual({
       key: 'clear',
       ref: 'ExtResource("1_clear")',
@@ -437,7 +450,12 @@ describe('lineEditTextTheme — font_color / font_uneditable_color / font_placeh
     const props = {
       themeOverrideColors: { font_placeholder_color: { r: 1, g: 0, b: 0, a: 1 } },
     } as unknown as LineEditProperties;
-    expect(lineEditTextTheme(node(props), props, 'placeholder', ctx()).color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+    expect(lineEditTextTheme(node(props), props, 'placeholder', ctx()).color).toEqual({
+      r: 1,
+      g: 0,
+      b: 0,
+      a: 1,
+    });
   });
 
   it('theme_override_font_sizes/font_size overrides the theme default for EVERY state', () => {
@@ -466,7 +484,7 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
     expect(result.textOffset.y).toBe(3);
   });
 
-  it('y_ofs includes the ACTIVE style\'s own TOP margin — `style->get_offset().y` (style_box.cpp:87-89) — not just the text/area centring term', () => {
+  it("y_ofs includes the ACTIVE style's own TOP margin — `style->get_offset().y` (style_box.cpp:87-89) — not just the text/area centring term", () => {
     // A margin-heavy style shifts y_ofs down by its own top margin, while the centring term
     // (y_area - text_height)/2 matches the LEFT case above.
     const result = layoutLineEditContent({
@@ -480,7 +498,7 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
     expect(result.textOffset.y).toBe(11);
   });
 
-  it('FILL shares LEFT\'s branch exactly (line_edit.cpp:1398-1399 falls through the same case)', () => {
+  it("FILL shares LEFT's branch exactly (line_edit.cpp:1398-1399 falls through the same case)", () => {
     const left = layoutLineEditContent({
       rectSize: { x: 200, y: 30 },
       styleMargin: MARGIN,
@@ -587,7 +605,7 @@ describe('layoutLineEditContent — right_icon/clear-button inset (line_edit.cpp
     expect(result.contentRect.w).toBe(172);
   });
 
-  it('CENTER: an icon\'s width is subtracted from the centring budget too', () => {
+  it("CENTER: an icon's width is subtracted from the centring budget too", () => {
     // total_margin=8; diff=trunc(200-8-50-20)=122; centered=trunc(122/2)=61; x=4+61=65.
     const result = layoutLineEditContent({
       rectSize: { x: 200, y: 30 },
@@ -683,44 +701,115 @@ describe('layoutLineEditContent — RTL layout (line_edit.cpp:1397-1421,1455-148
     // `MAX(margin_left, int(size.width - ceil(margin_right + text_width)))`:
     // trunc(200 - ceil(4 + 50)) = 146; MAX(4, 146) = 146.
     for (const alignment of [0, 3]) {
-      const result = layoutLineEditContent({ rectSize: BOX, styleMargin: MARGIN, alignment, textWidthPx: 50, textHeightPx: 23, rtl: true });
+      const result = layoutLineEditContent({
+        rectSize: BOX,
+        styleMargin: MARGIN,
+        alignment,
+        textWidthPx: 50,
+        textHeightPx: 23,
+        rtl: true,
+      });
       expect(result.textOffset.x).toBe(146);
     }
   });
 
   it('RIGHT takes the LEFT arm under RTL (:1415-1419)', () => {
-    const result = layoutLineEditContent({ rectSize: BOX, styleMargin: MARGIN, alignment: 2, textWidthPx: 50, textHeightPx: 23, rtl: true });
+    const result = layoutLineEditContent({
+      rectSize: BOX,
+      styleMargin: MARGIN,
+      alignment: 2,
+      textWidthPx: 50,
+      textHeightPx: 23,
+      rtl: true,
+    });
     expect(result.textOffset.x).toBe(4);
   });
 
   it('CENTER is unbranched on RTL without an icon (:1406-1414)', () => {
-    const ltr = layoutLineEditContent({ rectSize: BOX, styleMargin: MARGIN, alignment: 1, textWidthPx: 50, textHeightPx: 23 });
-    const rtl = layoutLineEditContent({ rectSize: BOX, styleMargin: MARGIN, alignment: 1, textWidthPx: 50, textHeightPx: 23, rtl: true });
+    const ltr = layoutLineEditContent({
+      rectSize: BOX,
+      styleMargin: MARGIN,
+      alignment: 1,
+      textWidthPx: 50,
+      textHeightPx: 23,
+    });
+    const rtl = layoutLineEditContent({
+      rectSize: BOX,
+      styleMargin: MARGIN,
+      alignment: 1,
+      textWidthPx: 50,
+      textHeightPx: 23,
+      rtl: true,
+    });
     expect(rtl.textOffset.x).toBe(ltr.textOffset.x);
   });
 
   it('leaves ofs_max at the right margin under RTL — the icon is subtracted only when !rtl (:1481-1483)', () => {
-    const result = layoutLineEditContent({ rectSize: BOX, styleMargin: MARGIN, alignment: 0, textWidthPx: 50, textHeightPx: 23, hasIcon: true, iconWidthPx: 16, rtl: true });
+    const result = layoutLineEditContent({
+      rectSize: BOX,
+      styleMargin: MARGIN,
+      alignment: 0,
+      textWidthPx: 50,
+      textHeightPx: 23,
+      hasIcon: true,
+      iconWidthPx: 16,
+      rtl: true,
+    });
     expect(result.ofsMaxPx).toBe(196);
   });
 
   it('floors x_ofs at the left margin PLUS the icon width under RTL (:1473-1474)', () => {
     // Alignment arm first: MAX(4, trunc(200 - ceil(4 + 190))) = MAX(4, 6) = 6;
     // then MAX(margin_left + icon_width, x_ofs) = MAX(20, 6) = 20.
-    const result = layoutLineEditContent({ rectSize: BOX, styleMargin: MARGIN, alignment: 0, textWidthPx: 190, textHeightPx: 23, hasIcon: true, iconWidthPx: 16, rtl: true });
+    const result = layoutLineEditContent({
+      rectSize: BOX,
+      styleMargin: MARGIN,
+      alignment: 0,
+      textWidthPx: 190,
+      textHeightPx: 23,
+      hasIcon: true,
+      iconWidthPx: 16,
+      rtl: true,
+    });
     expect(result.textOffset.x).toBe(20);
   });
 
   it('adds the icon width to CENTER under RTL (:1469-1471)', () => {
     // diff = trunc(200 - 8 - 50 - 16) = 126; centered = 63; x_ofs = 4 + 63 = 67; + 16 = 83.
-    const result = layoutLineEditContent({ rectSize: BOX, styleMargin: MARGIN, alignment: 1, textWidthPx: 50, textHeightPx: 23, hasIcon: true, iconWidthPx: 16, rtl: true });
+    const result = layoutLineEditContent({
+      rectSize: BOX,
+      styleMargin: MARGIN,
+      alignment: 1,
+      textWidthPx: 50,
+      textHeightPx: 23,
+      hasIcon: true,
+      iconWidthPx: 16,
+      rtl: true,
+    });
     expect(result.textOffset.x).toBe(83);
   });
 
   it('moves the clip band to the far side of the icon under RTL, keeping its LTR width', () => {
     // The drawn band is [x_ofs, ofs_max] (:1481-1483,1541): LTR [4, 180], RTL [20, 196].
-    const ltr = layoutLineEditContent({ rectSize: BOX, styleMargin: MARGIN, alignment: 0, textWidthPx: 50, textHeightPx: 23, hasIcon: true, iconWidthPx: 16 });
-    const rtl = layoutLineEditContent({ rectSize: BOX, styleMargin: MARGIN, alignment: 0, textWidthPx: 50, textHeightPx: 23, hasIcon: true, iconWidthPx: 16, rtl: true });
+    const ltr = layoutLineEditContent({
+      rectSize: BOX,
+      styleMargin: MARGIN,
+      alignment: 0,
+      textWidthPx: 50,
+      textHeightPx: 23,
+      hasIcon: true,
+      iconWidthPx: 16,
+    });
+    const rtl = layoutLineEditContent({
+      rectSize: BOX,
+      styleMargin: MARGIN,
+      alignment: 0,
+      textWidthPx: 50,
+      textHeightPx: 23,
+      hasIcon: true,
+      iconWidthPx: 16,
+      rtl: true,
+    });
     expect(ltr.contentRect.x).toBe(4);
     expect(rtl.contentRect.x).toBe(20);
     expect(rtl.contentRect.w).toBe(ltr.contentRect.w);
@@ -729,7 +818,16 @@ describe('layoutLineEditContent — RTL layout (line_edit.cpp:1397-1421,1455-148
 
 describe('lineEditCaretRect — RTL layout (line_edit.cpp:1560-1584)', () => {
   const MARGIN = { left: 4, top: 4, right: 4, bottom: 4 };
-  const BASE = { rectSize: { x: 200, y: 30 }, styleMargin: MARGIN, fontHeightPx: 23, isPlaceholder: true, textPenX: 146, rightIconRawWidthPx: 0, ofsMaxPx: 196, caretWidthPx: 1 };
+  const BASE = {
+    rectSize: { x: 200, y: 30 },
+    styleMargin: MARGIN,
+    fontHeightPx: 23,
+    isPlaceholder: true,
+    textPenX: 146,
+    rightIconRawWidthPx: 0,
+    ofsMaxPx: 196,
+    caretWidthPx: 1,
+  };
 
   it('the placeholder fallback puts LEFT/FILL at ofs_max under RTL (:1562-1568)', () => {
     for (const alignment of [0, 3]) {
@@ -742,7 +840,9 @@ describe('lineEditCaretRect — RTL layout (line_edit.cpp:1560-1584)', () => {
   });
 
   it('CENTER carries no RTL arm (:1569-1577)', () => {
-    expect(lineEditCaretRect({ ...BASE, alignment: 1, rtl: true }).x).toBe(lineEditCaretRect({ ...BASE, alignment: 1 }).x);
+    expect(lineEditCaretRect({ ...BASE, alignment: 1, rtl: true }).x).toBe(
+      lineEditCaretRect({ ...BASE, alignment: 1 }).x
+    );
   });
 
   it('real text still rides the pen x under RTL — the fallback is gated on using_placeholder (:1555)', () => {

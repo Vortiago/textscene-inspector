@@ -13,11 +13,6 @@ export function decodeTorusMesh(properties: Record<string, string>): TorusMeshPr
     innerRadius: floatOr(properties.inner_radius, 0.5, 'TorusMesh innerRadius'),
     outerRadius: floatOr(properties.outer_radius, 1.0, 'TorusMesh outerRadius'),
     rings: settableIntOr(properties.rings, 64, { min: 3 }, 'TorusMesh rings'),
-    ringSegments: settableIntOr(
-      properties.ring_segments,
-      32,
-      { min: 3 },
-      'TorusMesh ringSegments'
-    ),
+    ringSegments: settableIntOr(properties.ring_segments, 32, { min: 3 }, 'TorusMesh ringSegments'),
   };
 }

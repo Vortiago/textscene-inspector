@@ -101,9 +101,7 @@ export function slotComponents(
   readFloat: (text: string) => number = matchedFloat
 ): number[] {
   const asInt = isConvertedSpelling(floatTypeName, compositeTypeName(literal));
-  return captures.map((capture) =>
-    asInt ? (storedInt(capture) ?? NaN) : readFloat(capture ?? '')
-  );
+  return captures.map((capture) => (asInt ? (storedInt(capture) ?? NaN) : readFloat(capture ?? '')));
 }
 
 /**

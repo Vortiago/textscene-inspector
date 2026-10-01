@@ -22,7 +22,14 @@ function node(overrides: Partial<SolveNode> = {}): SolveNode {
 }
 
 function emptyTheme(): ThemeResource {
-  return { defaultFont: null, defaultFontSize: undefined, fonts: {}, fontSizes: {}, typeVariations: {}, properties: {} };
+  return {
+    defaultFont: null,
+    defaultFontSize: undefined,
+    fonts: {},
+    fontSizes: {},
+    typeVariations: {},
+    properties: {},
+  };
 }
 
 describe('resolveTextTheme', () => {
@@ -52,7 +59,12 @@ describe('resolveTextTheme', () => {
   });
 
   it('resolves size and colour independently — one overridden, the other defaulted', () => {
-    const resolved = resolveTextTheme(node(), { themeOverrideFontSizes: { font_size: 30 } }, LABEL_KEYS, DEFAULTS);
+    const resolved = resolveTextTheme(
+      node(),
+      { themeOverrideFontSizes: { font_size: 30 } },
+      LABEL_KEYS,
+      DEFAULTS
+    );
     expect(resolved).toEqual({ fontSizePx: 30, color: { r: 1, g: 1, b: 1, a: 1 } });
   });
 

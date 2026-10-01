@@ -21,7 +21,14 @@ function systemFont(): FontResource {
 }
 
 function emptyTheme(): ThemeResource {
-  return { defaultFont: null, defaultFontSize: undefined, fonts: {}, fontSizes: {}, typeVariations: {}, properties: {} };
+  return {
+    defaultFont: null,
+    defaultFontSize: undefined,
+    fonts: {},
+    fontSizes: {},
+    typeVariations: {},
+    properties: {},
+  };
 }
 
 function labelNode(overrides: Partial<SolveNode> = {}): SolveNode {

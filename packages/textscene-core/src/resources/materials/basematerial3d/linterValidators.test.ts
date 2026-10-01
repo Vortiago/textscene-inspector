@@ -197,10 +197,7 @@ describe('BaseMaterial3D Linter Validators', () => {
 
   describe('emission_energy_multiplier validator', () => {
     it('should accept a non-negative value', () => {
-      const validator = validatorRegistry.findValidator(
-        'StandardMaterial3D',
-        'emission_energy_multiplier'
-      );
+      const validator = validatorRegistry.findValidator('StandardMaterial3D', 'emission_energy_multiplier');
       expect(validator).not.toBeNull();
       expect(validator!('emission_energy_multiplier', '2.5', 1)).toBeNull();
     });
@@ -208,10 +205,7 @@ describe('BaseMaterial3D Linter Validators', () => {
     it('should warn on a negative value', () => {
       // material.cpp:3634 ("0,16,0.01,or_greater"); set_emission_energy_multiplier
       // (:2196-2203) is a bare assignment, so out-of-range is a warning (ADR-0032).
-      const validator = validatorRegistry.findValidator(
-        'StandardMaterial3D',
-        'emission_energy_multiplier'
-      );
+      const validator = validatorRegistry.findValidator('StandardMaterial3D', 'emission_energy_multiplier');
       const result = validator!('emission_energy_multiplier', '-1', 1);
       expect(result).not.toBeNull();
       expect(result!.severity).toBe('warning');
@@ -420,9 +414,7 @@ uv1_scale = Vector3(0.5, 0.5, 0.5)
       const linter = new Linter();
       const diagnostics = linter.lint(content);
 
-      const uv1ScaleErrors = diagnostics.filter(d =>
-        d.message.includes('uv1_scale')
-      );
+      const uv1ScaleErrors = diagnostics.filter((d) => d.message.includes('uv1_scale'));
       expect(uv1ScaleErrors).toHaveLength(0);
     });
 
@@ -438,8 +430,8 @@ uv1_scale = Invalid
       const linter = new Linter();
       const diagnostics = linter.lint(content);
 
-      const uv1ScaleErrors = diagnostics.filter(d =>
-        d.message.includes('uv1_scale') && d.message.includes('Vector3')
+      const uv1ScaleErrors = diagnostics.filter(
+        (d) => d.message.includes('uv1_scale') && d.message.includes('Vector3')
       );
       expect(uv1ScaleErrors.length).toBeGreaterThan(0);
       expect(uv1ScaleErrors[0]!.severity).toBe('error');
@@ -457,9 +449,7 @@ uv1_scale = Vector2(0.5, 0.5)
       const linter = new Linter();
       const diagnostics = linter.lint(content);
 
-      const uv1ScaleErrors = diagnostics.filter(d =>
-        d.message.includes('uv1_scale')
-      );
+      const uv1ScaleErrors = diagnostics.filter((d) => d.message.includes('uv1_scale'));
       expect(uv1ScaleErrors.length).toBeGreaterThan(0);
       expect(uv1ScaleErrors[0]!.severity).toBe('error');
     });
@@ -482,7 +472,7 @@ roughness = 0.3
       const linter = new Linter();
       const diagnostics = linter.lint(content);
 
-      expect(diagnostics.filter(d => d.severity === 'error')).toHaveLength(0);
+      expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0);
     });
 
     it('accepts uv1_scale with zero components, which is a format-valid Vector3', () => {
@@ -509,9 +499,7 @@ uv1_scale = Vector3(0.5 0.5 0.5)
       const linter = new Linter();
       const diagnostics = linter.lint(content);
 
-      const uv1ScaleErrors = diagnostics.filter(d =>
-        d.message.includes('uv1_scale')
-      );
+      const uv1ScaleErrors = diagnostics.filter((d) => d.message.includes('uv1_scale'));
       expect(uv1ScaleErrors.length).toBeGreaterThan(0);
       expect(uv1ScaleErrors[0]!.severity).toBe('error');
     });

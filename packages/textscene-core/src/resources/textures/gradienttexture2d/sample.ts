@@ -114,15 +114,8 @@ export function sampleGradientColor(gradient: Gradient, offset: number): Color {
   };
 }
 
-
 /** Godot's `Math::cubic_interpolate` (Catmull-Rom): `from` to `to`, with the neighbours as tangents. */
-function cubicInterpolate(
-  from: number,
-  to: number,
-  pre: number,
-  post: number,
-  weight: number
-): number {
+function cubicInterpolate(from: number, to: number, pre: number, post: number, weight: number): number {
   const w2 = weight * weight;
   const w3 = w2 * weight;
   return (

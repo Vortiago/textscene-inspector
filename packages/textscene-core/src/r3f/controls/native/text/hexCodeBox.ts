@@ -22,7 +22,10 @@ export interface HexCodeBoxRect {
 }
 
 /** `w`/`sp`/`sz` (`text_server.cpp:737-742,771-778`), shared by the advance size and the drawn geometry. */
-function hexCodeBoxCells(fontSizePx: number, codepoint: number): { byteWidth: number; spacer: number; cellPx: number } {
+function hexCodeBoxCells(
+  fontSizePx: number,
+  codepoint: number
+): { byteWidth: number; spacer: number; cellPx: number } {
   const byteWidth = codepoint <= 0xff ? 1 : codepoint <= 0xffff ? 2 : 3;
   const spacer = Math.max(0, byteWidth - 1);
   const cellPx = Math.max(1, godotRound(fontSizePx / 15));
@@ -40,7 +43,9 @@ export function hexCodeBoxAdvanceSize(fontSizePx: number, codepoint: number): Ve
 }
 
 /** `text_server.cpp:745-767`: the bitmask of a 7-segment digit's rectangles (top/upper-right/lower-right/bottom/lower-left/upper-left/middle), one entry per hex nibble 0x0-0xF. */
-const HEX_DIGIT_SEGMENTS = [0x7e, 0x30, 0x6d, 0x79, 0x33, 0x5b, 0x5f, 0x70, 0x7f, 0x7b, 0x77, 0x1f, 0x4e, 0x3d, 0x4f, 0x47];
+const HEX_DIGIT_SEGMENTS = [
+  0x7e, 0x30, 0x6d, 0x79, 0x33, 0x5b, 0x5f, 0x70, 0x7f, 0x7b, 0x77, 0x1f, 0x4e, 0x3d, 0x4f, 0x47,
+];
 
 /** `TextServer::_draw_hex_code_box_number` (`:745-767`), one digit at `(x, y)`, cell size `sz`. */
 function hexDigitRects(x: number, y: number, sz: number, nibble: number): HexCodeBoxRect[] {

@@ -16,8 +16,7 @@ export interface WorkerJobError {
 }
 
 export type WorkerJobReply =
-  | { id: number; ok: true; output: unknown }
-  | { id: number; ok: false; error: WorkerJobError };
+  { id: number; ok: true; output: unknown } | { id: number; ok: false; error: WorkerJobError };
 
 /** The request in `data`, or null for a message that is not one. */
 export function readJobRequest(data: unknown): WorkerJobRequest | null {

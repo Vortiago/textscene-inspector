@@ -119,12 +119,36 @@ custom_integrator = false
         valid: [0, 1],
         invalid: [{ value: 5, contains: ['0-1'] }],
       },
-      { prop: 'freeze', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
-      { prop: 'continuous_cd', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
-      { prop: 'contact_monitor', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
-      { prop: 'can_sleep', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
-      { prop: 'sleeping', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
-      { prop: 'custom_integrator', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
+      {
+        prop: 'freeze',
+        valid: [true, false],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
+      },
+      {
+        prop: 'continuous_cd',
+        valid: [true, false],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
+      },
+      {
+        prop: 'contact_monitor',
+        valid: [true, false],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
+      },
+      {
+        prop: 'can_sleep',
+        valid: [true, false],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
+      },
+      {
+        prop: 'sleeping',
+        valid: [true, false],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
+      },
+      {
+        prop: 'custom_integrator',
+        valid: [true, false],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
+      },
       {
         // rigid_body_3d.cpp:524, ERR_FAIL_INDEX_MSG(p_amount,
         // MAX_CONTACTS_REPORTED_3D_MAX=4096): fails on `< 0 || >= 4096`, so the
@@ -185,7 +209,6 @@ physics_material_override = SubResource("mat_1")
         );
       });
     });
-
   });
 
   describe('Semantic Validation (Mass and Damping)', () => {
@@ -297,7 +320,10 @@ physics_material_override = ExtResource("ext_mat_1")
   describe('Semantic Validation (Contact Monitor)', () => {
     it('reports when max_contacts_reported set but contact_monitor=false', () => {
       expectDiagnostic(
-        scene(node('RigidBody3D', { mass: 1.0, contact_monitor: false, max_contacts_reported: 10 }), collisionShape3d),
+        scene(
+          node('RigidBody3D', { mass: 1.0, contact_monitor: false, max_contacts_reported: 10 }),
+          collisionShape3d
+        ),
         {
           ruleName: 'rigidbody3d-max-contacts-without-monitor',
           severity: 'info',
@@ -316,7 +342,10 @@ physics_material_override = ExtResource("ext_mat_1")
 
     it('should not warn when max_contacts_reported and contact_monitor=true', () => {
       expectClean(
-        scene(node('RigidBody3D', { mass: 1.0, contact_monitor: true, max_contacts_reported: 10 }), collisionShape3d)
+        scene(
+          node('RigidBody3D', { mass: 1.0, contact_monitor: true, max_contacts_reported: 10 }),
+          collisionShape3d
+        )
       );
     });
   });
@@ -335,10 +364,7 @@ physics_material_override = ExtResource("ext_mat_1")
     it('warns when an axis deviates from 1.0 by more than 0.05', () => {
       expectDiagnostic(
         scene(
-          node(
-            'RigidBody3D',
-            { mass: 1.0, transform: 'Transform3D(1.2, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)' },
-          ),
+          node('RigidBody3D', { mass: 1.0, transform: 'Transform3D(1.2, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)' }),
           collisionShape3d
         ),
         {
@@ -380,10 +406,7 @@ physics_material_override = ExtResource("ext_mat_1")
     it('stays within tolerance comfortably under 0.05', () => {
       expectClean(
         scene(
-          node(
-            'RigidBody3D',
-            { mass: 1.0, transform: 'Transform3D(1.04, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)' },
-          ),
+          node('RigidBody3D', { mass: 1.0, transform: 'Transform3D(1.04, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)' }),
           collisionShape3d
         )
       );
@@ -464,9 +487,11 @@ custom_integrator = false
 
     it('should handle bitmask boundaries', () => {
       expectClean(
-        scene(node('RigidBody3D', { mass: 1.0, collision_layer: 1048575, collision_mask: 1048575 }), collisionShape3d)
+        scene(
+          node('RigidBody3D', { mass: 1.0, collision_layer: 1048575, collision_mask: 1048575 }),
+          collisionShape3d
+        )
       );
     });
-
   });
 });

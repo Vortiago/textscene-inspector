@@ -131,9 +131,7 @@ describe('applyGlbNodeOverrides', () => {
   it('reports only transform overrides as applied — a layers-only override moves nothing', () => {
     const root = buildTestGlbGraph(['Robot']);
 
-    const applied = applyGlbNodeOverrides(root, [
-      override('Robot', { rawProperties: { layers: '2' } }),
-    ]);
+    const applied = applyGlbNodeOverrides(root, [override('Robot', { rawProperties: { layers: '2' } })]);
 
     expect(applied.has('Robot')).toBe(false);
   });

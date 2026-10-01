@@ -166,9 +166,7 @@ describe('CPUParticles2D strict validators', () => {
     });
 
     it('reports the VALUE code, not the FORMAT one, for an out-of-hint number', () => {
-      expect(check('emission_sphere_radius', '128.01')?.code).toBe(
-        'INVALID_EMISSION_SPHERE_RADIUS_VALUE'
-      );
+      expect(check('emission_sphere_radius', '128.01')?.code).toBe('INVALID_EMISSION_SPHERE_RADIUS_VALUE');
     });
 
     it('rejects a non-numeric value (FORMAT branch, always an error)', () => {
@@ -214,12 +212,9 @@ describe('CPUParticles2D strict validators', () => {
     // `or_greater` opens the ceiling, so only the floor binds. set_param_min/
     // set_param_max (cpu_particles_2d.cpp:353, 368) ERR_FAIL_INDEX the Parameter
     // index, never the value, so the floor warns.
-    it.each(['initial_velocity_min', 'initial_velocity_max'])(
-      'accepts the floor 0 of %s',
-      (prop) => {
-        expect(check(prop, '0')).toBeNull();
-      }
-    );
+    it.each(['initial_velocity_min', 'initial_velocity_max'])('accepts the floor 0 of %s', (prop) => {
+      expect(check(prop, '0')).toBeNull();
+    });
 
     it('accepts the real values scenes/fixtures/unit-cpuparticles2d.tscn:33-34 write (90.0 / 150.0)', () => {
       expect(check('initial_velocity_min', '90.0')).toBeNull();
@@ -286,9 +281,7 @@ describe('CPUParticles2D strict validators', () => {
 
     it('accepts the real value scenes/fixtures/unit-cpu-particles-3d.tscn:36 writes for the identical PACKED_COLOR_ARRAY format', () => {
       // CPUParticles3D writes the same Vector<Color>-backed PackedColorArray.
-      expect(
-        check('emission_colors', 'PackedColorArray(1, 1, 1, 1, 1, 0, 0, 1)')
-      ).toBeNull();
+      expect(check('emission_colors', 'PackedColorArray(1, 1, 1, 1, 1, 0, 0, 1)')).toBeNull();
     });
 
     it('accepts an empty PackedColorArray — Godot serialises a zero-length array this way', () => {
@@ -300,9 +293,7 @@ describe('CPUParticles2D strict validators', () => {
     });
 
     it('rejects a malformed value (FORMAT branch, always an error)', () => {
-      expect(check('emission_colors', 'not-an-array')?.code).toBe(
-        'INVALID_EMISSION_COLORS_FORMAT'
-      );
+      expect(check('emission_colors', 'not-an-array')?.code).toBe('INVALID_EMISSION_COLORS_FORMAT');
     });
 
     it('rejects a non-numeric component', () => {

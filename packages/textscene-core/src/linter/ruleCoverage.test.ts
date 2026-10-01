@@ -139,9 +139,7 @@ describe('validator coverage meta-guard', () => {
       if (applicableNodeTypeMatcher) {
         return catalog.nodes
           .filter((n) => applicableNodeTypeMatcher(n.name))
-          .flatMap((n) =>
-            (descendants.get(n.name) ?? []).filter((d) => !applicableNodeTypeMatcher(d))
-          )
+          .flatMap((n) => (descendants.get(n.name) ?? []).filter((d) => !applicableNodeTypeMatcher(d)))
           .map((d) => `${name}: matcher misses ${d}`);
       }
       return (applicableNodeTypes ?? [])

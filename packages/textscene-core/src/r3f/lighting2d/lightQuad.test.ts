@@ -188,14 +188,11 @@ describe('createLightQuadMaterial with a shadow filter', () => {
     expect(pcf5.fragmentShader).toContain('#if SHADOW_FILTER == 2');
   });
 
-  it('generates Godot\'s exact tap offsets, not a plausible kernel', () => {
+  it("generates Godot's exact tap offsets, not a plausible kernel", () => {
     // canvas.glsl:471-475 and :479-491. A typo'd multiplier reads perfectly
     // sensibly and shifts the whole penumbra, so the literals are asserted.
-    const shader = filteredMaterial()
-      .fragmentShader;
-    const taps = [...shader.matchAll(/SHADOW_TEST\(tex_ofs([^)]*)\);/g)].map(([, arg]) =>
-      arg!.trim()
-    );
+    const shader = filteredMaterial().fragmentShader;
+    const taps = [...shader.matchAll(/SHADOW_TEST\(tex_ofs([^)]*)\);/g)].map(([, arg]) => arg!.trim());
     expect(taps).toEqual([
       // PCF13 first: the `#if` branch follows Godot's own order.
       '- uShadowPixelSize * 6.0',
@@ -223,8 +220,7 @@ describe('createLightQuadMaterial with a shadow filter', () => {
   it('takes the SHADOW_TEST comparison from canvas.glsl:454, in that order', () => {
     // `step(sd, dist)`: 1 where the stored occluder depth is at or in front of the fragment.
     // Swapping the arguments inverts every shadow.
-    const shader = filteredMaterial()
-      .fragmentShader;
+    const shader = filteredMaterial().fragmentShader;
     expect(shader).toContain('shadow += step(texture2D(uShadowMap, vec2(m_u, 0.5)).r, dist);');
   });
 
@@ -290,7 +286,11 @@ describe('createShadowColorQuadMaterial with a shadow filter', () => {
   });
 
   it('leaves the unfiltered tint quad on the stencil-partitioned shader', () => {
-    const mat = createShadowColorQuadMaterial({ cookie: new THREE.Texture(), shadowColor: TINT, blendMode: 0 });
+    const mat = createShadowColorQuadMaterial({
+      cookie: new THREE.Texture(),
+      shadowColor: TINT,
+      blendMode: 0,
+    });
     expect(mat.fragmentShader).toContain('vec4(uShadowColor.rgb, uShadowColor.a * cookie.a)');
     expect(mat.fragmentShader).not.toContain('shadowFraction');
   });

@@ -79,7 +79,7 @@ describe('fontUsesSubpixelPositioning', () => {
     expect(fontUsesSubpixelPositioning(28)).toBe(false);
   });
 
-  it('is true for a FRACTIONAL size at any magnitude — Godot\'s own int64_t size API cannot express one, and `scale != 1.0` is the branch it would take', () => {
+  it("is true for a FRACTIONAL size at any magnitude — Godot's own int64_t size API cannot express one, and `scale != 1.0` is the branch it would take", () => {
     expect(fontUsesSubpixelPositioning(28.5)).toBe(true);
   });
 });

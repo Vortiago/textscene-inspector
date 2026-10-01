@@ -118,7 +118,9 @@ describe('Node3D Parser', () => {
     });
 
     it('should handle both transform and instance', () => {
-      const heading = parseHeading('[node name="SpawnPoint" type="Node3D" parent="." instance=ExtResource("2_scene")]');
+      const heading = parseHeading(
+        '[node name="SpawnPoint" type="Node3D" parent="." instance=ExtResource("2_scene")]'
+      );
       expect(heading).not.toBeNull();
 
       const properties = {

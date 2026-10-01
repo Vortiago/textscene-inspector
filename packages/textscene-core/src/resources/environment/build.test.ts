@@ -68,7 +68,12 @@ describe('createEnvironmentSettings', () => {
 
   it('should create fog from Godot screen-space fog (fog_enabled)', () => {
     const settings = createEnvironmentSettings(
-      base({ fog_enabled: true, fog_density: 0.001, fog_light_color: { r: 0.8, g: 0.8, b: 0.9, a: 1 }, fog_mode: 1 })
+      base({
+        fog_enabled: true,
+        fog_density: 0.001,
+        fog_light_color: { r: 0.8, g: 0.8, b: 0.9, a: 1 },
+        fog_mode: 1,
+      })
     );
 
     expect(settings.fog).not.toBeNull();
@@ -91,7 +96,11 @@ describe('createEnvironmentSettings', () => {
     });
     expect(createEnvironmentSettings(base({ ambient_light_source: 1 })).ambient).toBeNull(); // DISABLED
     const colored = createEnvironmentSettings(
-      base({ ambient_light_source: 2, ambient_light_color: { r: 0.2, g: 0.2, b: 0.2, a: 1 }, ambient_light_energy: 0.5 })
+      base({
+        ambient_light_source: 2,
+        ambient_light_color: { r: 0.2, g: 0.2, b: 0.2, a: 1 },
+        ambient_light_energy: 0.5,
+      })
     );
     expect(colored.ambient?.color).toEqual({ r: 0.2, g: 0.2, b: 0.2, a: 1 });
     expect(colored.ambient?.energy).toBe(0.5);
@@ -99,7 +108,12 @@ describe('createEnvironmentSettings', () => {
 
   it('should create settings with adjustments enabled', () => {
     const settings = createEnvironmentSettings(
-      base({ adjustment_enabled: true, adjustment_brightness: 1.05, adjustment_contrast: 1.1, adjustment_saturation: 1.2 })
+      base({
+        adjustment_enabled: true,
+        adjustment_brightness: 1.05,
+        adjustment_contrast: 1.1,
+        adjustment_saturation: 1.2,
+      })
     );
 
     expect(settings.adjustments).not.toBeNull();
@@ -165,22 +179,20 @@ describe('createEnvironmentSettings — which white the tonemapper is handed', (
   it('leaves the per-curve floor to the curve, not to the settings (edge case)', () => {
     // `resolvedWhite` applies `environment_get_white`'s floors where the shader is
     // built. The settings carry the authored value unclamped.
-    expect(
-      createEnvironmentSettings(base({ tonemap_mode: 2, tonemap_white: 0.5 })).toneMapping.white
-    ).toBe(0.5);
+    expect(createEnvironmentSettings(base({ tonemap_mode: 2, tonemap_white: 0.5 })).toneMapping.white).toBe(
+      0.5
+    );
   });
 
   it('carries the AgX contrast whatever the mode — only the curve reads it', () => {
     expect(createEnvironmentSettings(base()).toneMapping.agxContrast).toBe(1.25);
     expect(
-      createEnvironmentSettings(base({ tonemap_mode: 4, tonemap_agx_contrast: 1.8 })).toneMapping
-        .agxContrast
+      createEnvironmentSettings(base({ tonemap_mode: 4, tonemap_agx_contrast: 1.8 })).toneMapping.agxContrast
     ).toBe(1.8);
     // Carried under FILMIC too: the settings describe the Environment, and the
     // mode gate lives in the curve rather than in what gets carried.
     expect(
-      createEnvironmentSettings(base({ tonemap_mode: 2, tonemap_agx_contrast: 1.8 })).toneMapping
-        .agxContrast
+      createEnvironmentSettings(base({ tonemap_mode: 2, tonemap_agx_contrast: 1.8 })).toneMapping.agxContrast
     ).toBe(1.8);
   });
 });

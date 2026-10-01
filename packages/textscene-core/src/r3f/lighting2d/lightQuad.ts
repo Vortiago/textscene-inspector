@@ -54,11 +54,9 @@ function accumulationBlend(blendMode: number): Partial<THREE.ShaderMaterialParam
     // sorts nearest-first and would reverse MIX, whose result depends on light order.
     transparent: true,
     blending: THREE.CustomBlending,
-    blendEquation:
-      blendMode === Light2DBlendMode.SUB ? THREE.ReverseSubtractEquation : THREE.AddEquation,
+    blendEquation: blendMode === Light2DBlendMode.SUB ? THREE.ReverseSubtractEquation : THREE.AddEquation,
     blendSrc: THREE.SrcAlphaFactor,
-    blendDst:
-      blendMode === Light2DBlendMode.MIX ? THREE.OneMinusSrcAlphaFactor : THREE.OneFactor,
+    blendDst: blendMode === Light2DBlendMode.MIX ? THREE.OneMinusSrcAlphaFactor : THREE.OneFactor,
     blendEquationAlpha: THREE.AddEquation,
     blendSrcAlpha: THREE.OneFactor,
     blendDstAlpha: THREE.OneFactor,
@@ -110,9 +108,7 @@ export type ShadowColorQuadOptions = {
  * the whole shadow. An authored colour draws this quad through the complementary stencil test, so
  * the pair covers the rect once. It is skipped unless `shadowColorContributes`.
  */
-export function createShadowColorQuadMaterial(
-  options: ShadowColorQuadOptions
-): THREE.ShaderMaterial {
+export function createShadowColorQuadMaterial(options: ShadowColorQuadOptions): THREE.ShaderMaterial {
   const { cookie, blendMode, shadow } = options;
   const shadowColor = shadow ? shadow.shadowColor : options.shadowColor;
   const stencil = shadow ? undefined : options.stencil;

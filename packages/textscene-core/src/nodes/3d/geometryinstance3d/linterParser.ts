@@ -112,13 +112,9 @@ validatorRegistry.registerAll('GeometryInstance3D', {
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(..., "visibility_range_fade_mode",
   // PROPERTY_HINT_ENUM, "Disabled,Self,Dependencies"). set_visibility_range_fade_mode:285-289
   // is a bare assignment.
-  visibility_range_fade_mode: v.enumInt(
-    'visibility_range_fade_mode',
-    0,
-    2,
-    VISIBILITY_RANGE_FADE_MODE,
-    { hinted: 'visual_instance_3d.cpp:619' }
-  ),
+  visibility_range_fade_mode: v.enumInt('visibility_range_fade_mode', 0, 2, VISIBILITY_RANGE_FADE_MODE, {
+    hinted: 'visual_instance_3d.cpp:619',
+  }),
 
   // VisualInstance3D declares both sorting keys `PROPERTY_USAGE_NONE`, and
   // `GeometryInstance3D::_validate_property` restores `PROPERTY_USAGE_DEFAULT`, so

@@ -8,11 +8,7 @@
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import { is2DUIType } from '../../../r3f/controls/has2DUIContent.js';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry.js';
-import {
-  liveChildGroups,
-  type CachedSceneSource,
-  type SceneScope,
-} from '../../../r3f/liveSceneTree.js';
+import { liveChildGroups, type CachedSceneSource, type SceneScope } from '../../../r3f/liveSceneTree.js';
 import { compositeCallPrefix } from '../../../godot/index.js';
 
 /**
@@ -147,11 +143,7 @@ export function resolveViewportSubtree(
   externalResources: readonly TscnExternalResource[],
   sceneCache: CachedSceneSource
 ): TscnNode {
-  const resolve = (
-    child: TscnNode,
-    scope: SceneScope,
-    depth: number
-  ): TscnNode => {
+  const resolve = (child: TscnNode, scope: SceneScope, depth: number): TscnNode => {
     if (depth >= MAX_RESOLVE_DEPTH || child.type === 'SubViewport') return child;
     const groups = liveChildGroups(child, scope, sceneCache);
     // A collapsed single-root instance (ADR-0013) becomes its sub-scene root.
@@ -167,8 +159,6 @@ export function resolveViewportSubtree(
     ...node,
     // This resolution reads no SubResource id, so it declares an empty pool
     // rather than carry one. `SceneScope` says why the two travel together.
-    children: node.children.map((child) =>
-      resolve(child, { externalResources, internalResources: [] }, 0)
-    ),
+    children: node.children.map((child) => resolve(child, { externalResources, internalResources: [] }, 0)),
   };
 }

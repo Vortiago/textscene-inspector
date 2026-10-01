@@ -6,10 +6,12 @@ import { parseLightOccluder2D } from './parser';
 
 describe('parseLightOccluder2D', () => {
   it('parses name, parent, and the 2D transform (happy path)', () => {
-    const result = parseLightOccluder2D(
-      heading('LightOccluder2D', { name: 'MyOcc', parent: '.' }),
-      { position: 'Vector2(10, 20)', rotation: '0.5', light_mask: '2', sdf_collision: 'false' }
-    );
+    const result = parseLightOccluder2D(heading('LightOccluder2D', { name: 'MyOcc', parent: '.' }), {
+      position: 'Vector2(10, 20)',
+      rotation: '0.5',
+      light_mask: '2',
+      sdf_collision: 'false',
+    });
     expect(result.name).toBe('MyOcc');
     expect(result.parent).toBe('.');
     expect(result.position).toEqual({ x: 10, y: 20 });

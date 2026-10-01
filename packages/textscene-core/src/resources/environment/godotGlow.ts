@@ -244,7 +244,6 @@ ${SOFTLIGHT_CHANNEL('b')}
 
   // `params.intensity` holds `glow_mix`, the lerp factor, and is already multiplied
   // into `glow`, so the lerp uses that same value.
-  [GlowBlendMode.MIX]: (params) => /* glsl */ `  return color * (1.0 - ${glslFloat(
-    params.intensity
-  )}) + glow;`,
+  [GlowBlendMode.MIX]: (params) =>
+    /* glsl */ `  return color * (1.0 - ${glslFloat(params.intensity)}) + glow;`,
 };

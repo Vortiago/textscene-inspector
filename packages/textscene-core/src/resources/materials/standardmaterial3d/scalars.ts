@@ -7,11 +7,7 @@
 import * as THREE from 'three';
 import { godotBlendState } from './blendState';
 import { decodeStandardMaterial3D } from './decode';
-import {
-  CullMode,
-  type StandardMaterial3DData,
-  type StandardMaterial3DScalars,
-} from './types';
+import { CullMode, type StandardMaterial3DData, type StandardMaterial3DScalars } from './types';
 
 /**
  * Godot's cull mode names the faces it discards, and three's `side` names the ones it
@@ -24,9 +20,7 @@ const SIDE: Readonly<Record<CullMode, THREE.Side>> = {
   [CullMode.DISABLED]: THREE.DoubleSide,
 };
 
-export function standardMaterial3DScalars(
-  data: StandardMaterial3DData
-): StandardMaterial3DScalars {
+export function standardMaterial3DScalars(data: StandardMaterial3DData): StandardMaterial3DScalars {
   return {
     ...godotBlendState(data.blendMode),
     color: data.albedo,

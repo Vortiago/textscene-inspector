@@ -45,9 +45,7 @@ describe('CSG shape registration', () => {
     for (const type of CSG_TYPES) {
       const registration = nodeComponentRegistry.getCsgShape(type)!;
       if (registration.geometry === null) continue;
-      expect(typeof registration.geometryKey, `${type} has a builder but no geometryKey`).toBe(
-        'function'
-      );
+      expect(typeof registration.geometryKey, `${type} has a builder but no geometryKey`).toBe('function');
     }
   });
 

@@ -47,7 +47,10 @@ validatorRegistry.registerAll('Camera3D', {
   // camera_3d.cpp:586-591, `set_keep_aspect_mode` is a bare assignment, so the hint (:672) only
   // warns.
   keep_aspect: v.enumInt('keep_aspect', 0, 1, KEEP_ASPECT, { hinted: 'camera_3d.cpp:672' }),
-  cull_mask: layerBitmask('cull_mask', { hinted: 'camera_3d.cpp:673', width: 'uint32' /* camera_3d.h:177 */ }),
+  cull_mask: layerBitmask('cull_mask', {
+    hinted: 'camera_3d.cpp:673',
+    width: 'uint32' /* camera_3d.h:177 */,
+  }),
   // camera_3d.cpp:597-605, `set_doppler_tracking` is a bare assignment.
   doppler_tracking: v.enumInt('doppler_tracking', 0, 2, DOPPLER_TRACKING, {
     hinted: 'camera_3d.cpp:679',

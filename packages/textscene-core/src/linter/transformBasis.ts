@@ -7,11 +7,7 @@
 
 import { makeFloatTupleRegex } from './validators/floatTupleValidator.js';
 import { tupleComponent } from './validators/commonValidators.js';
-import {
-  type BasisComponents,
-  basisHasUnitScale,
-  basisIsOrthonormal,
-} from '../godot/basis.js';
+import { type BasisComponents, basisHasUnitScale, basisIsOrthonormal } from '../godot/basis.js';
 
 const TRANSFORM3D_REGEX = makeFloatTupleRegex('Transform3D', 12);
 

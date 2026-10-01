@@ -36,7 +36,9 @@ function findIconMesh(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
     .map((m) => m.instance as THREE.Mesh)
-    .find((m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined);
+    .find(
+      (m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined
+    );
 }
 
 /** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor`/`uOpacity` uniforms). */
@@ -81,7 +83,7 @@ describe('<CheckBox> (isolated painter contract)', () => {
 
   it(
     'uses font_pressed_color (opaque white) for a CHECKED, non-disabled box — verified against ' +
-      'pnpm ref:godot: probe (527,298) on unit-checkbox.tscn\'s checked row reads rgb(255,255,255)',
+      "pnpm ref:godot: probe (527,298) on unit-checkbox.tscn's checked row reads rgb(255,255,255)",
     async () => {
       const renderer = await ReactThreeTestRenderer.create(
         <CheckBox
@@ -97,17 +99,14 @@ describe('<CheckBox> (isolated painter contract)', () => {
     }
   );
 
-  it(
-    'uses font_color (0.875 gray) for an UNCHECKED, non-disabled box (DRAW_NORMAL, not DRAW_PRESSED)',
-    async () => {
-      const renderer = await ReactThreeTestRenderer.create(
-        <CheckBox {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
-      );
-      const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-      expect(material.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.875), 5);
-      expect(material.uniforms.uOpacity!.value).toBeCloseTo(1, 5);
-    }
-  );
+  it('uses font_color (0.875 gray) for an UNCHECKED, non-disabled box (DRAW_NORMAL, not DRAW_PRESSED)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CheckBox {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
+    );
+    const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
+    expect(material.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.875), 5);
+    expect(material.uniforms.uOpacity!.value).toBeCloseTo(1, 5);
+  });
 
   it(
     'uses font_disabled_color (alpha 0.5) once disabled — verified against pnpm ref:godot: probe (526,350) on ' +
@@ -141,27 +140,24 @@ describe('<CheckBox> (isolated painter contract)', () => {
     expect(material.uniforms.uOpacity!.value).toBeCloseTo(0.5, 5);
   });
 
-  it(
-    'applies the walker-composed tint as ONE product, reaching the icon AND text alike',
-    async () => {
-      const renderer = await ReactThreeTestRenderer.create(
-        <CheckBox
-          {...painterEnv()}
-          // The walker's own product: ambient(0.5) x self_modulate(0.5) = 0.25.
-          tint={painterTint({ r: 0.25, g: 0.25, b: 0.25, a: 1 })}
-          solveNode={solveNode({ text: 'Hi' })}
-          rect={RECT}
-          renderOrder={0}
-        />
-      );
-      const iconMaterial = findIconMesh(renderer.scene)!.material as THREE.MeshBasicMaterial;
-      expect(iconMaterial.color.r).toBeCloseTo(sRGBChannelToLinear(0.25), 4);
+  it('applies the walker-composed tint as ONE product, reaching the icon AND text alike', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CheckBox
+        {...painterEnv()}
+        // The walker's own product: ambient(0.5) x self_modulate(0.5) = 0.25.
+        tint={painterTint({ r: 0.25, g: 0.25, b: 0.25, a: 1 })}
+        solveNode={solveNode({ text: 'Hi' })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const iconMaterial = findIconMesh(renderer.scene)!.material as THREE.MeshBasicMaterial;
+    expect(iconMaterial.color.r).toBeCloseTo(sRGBChannelToLinear(0.25), 4);
 
-      const textMaterial = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-      // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, then linearised.
-      expect(textMaterial.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.21875), 5);
-    }
-  );
+    const textMaterial = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
+    // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, then linearised.
+    expect(textMaterial.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.21875), 5);
+  });
 
   it('forwards renderOrder to every mesh (icon + text)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
@@ -181,8 +177,16 @@ describe('<CheckBox> (isolated painter contract)', () => {
           resources: {
             externalResources: [],
             internalResources: [
-              { id: 'Gradient_1', type: 'Gradient', data: { colors: 'PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1)' } },
-              { id: 'GradientTexture2D_1', type: 'GradientTexture2D', data: { gradient: 'SubResource("Gradient_1")' } },
+              {
+                id: 'Gradient_1',
+                type: 'Gradient',
+                data: { colors: 'PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1)' },
+              },
+              {
+                id: 'GradientTexture2D_1',
+                type: 'GradientTexture2D',
+                data: { gradient: 'SubResource("Gradient_1")' },
+              },
             ],
           },
         },
@@ -257,12 +261,16 @@ describe('<CheckBox> — scene-font (canvas-kind FontMetrics) text path', () => 
   it('draws the check against the RIGHT content margin under RTL', async () => {
     const iconX = async (rtl: boolean) => {
       const renderer = await ReactThreeTestRenderer.create(
-        <CheckBox {...painterEnv()} solveNode={{ ...solveNode({ text: 'On' }), rtl }} rect={RECT} renderOrder={0} />
+        <CheckBox
+          {...painterEnv()}
+          solveNode={{ ...solveNode({ text: 'On' }), rtl }}
+          rect={RECT}
+          renderOrder={0}
+        />
       );
       return findIconMesh(renderer.scene)!.parent!.position.x;
     };
     expect(await iconX(false)).toBe(4);
     expect(await iconX(true)).toBe(130);
   });
-
 });

@@ -30,9 +30,7 @@ export function CanvasLightSequenceProvider({ children }: { children: ReactNode 
   }, [lights]);
 
   return (
-    <CanvasLightSequenceContext.Provider value={sequence}>
-      {children}
-    </CanvasLightSequenceContext.Provider>
+    <CanvasLightSequenceContext.Provider value={sequence}>{children}</CanvasLightSequenceContext.Provider>
   );
 }
 

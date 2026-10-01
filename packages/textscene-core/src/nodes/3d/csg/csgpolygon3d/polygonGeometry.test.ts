@@ -138,7 +138,12 @@ describe('buildCsgPolygonGeometry', () => {
     });
 
     it('drops the caps when path_joined is on', () => {
-      const open = build({ mode: PolygonMode.PATH, pathRotation: PathRotation.POLYGON, pathInterval: 1, path: plan(4) });
+      const open = build({
+        mode: PolygonMode.PATH,
+        pathRotation: PathRotation.POLYGON,
+        pathInterval: 1,
+        path: plan(4),
+      });
       const joined = build({
         mode: PolygonMode.PATH,
         pathRotation: PathRotation.POLYGON,
@@ -152,7 +157,12 @@ describe('buildCsgPolygonGeometry', () => {
     });
 
     it('collapses collinear frames when path_simplify_angle is set', () => {
-      const detailed = build({ mode: PolygonMode.PATH, pathRotation: PathRotation.POLYGON, pathInterval: 0.25, path: plan(4) });
+      const detailed = build({
+        mode: PolygonMode.PATH,
+        pathRotation: PathRotation.POLYGON,
+        pathInterval: 0.25,
+        path: plan(4),
+      });
       const simplified = build({
         mode: PolygonMode.PATH,
         pathRotation: PathRotation.POLYGON,

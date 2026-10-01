@@ -49,7 +49,7 @@ describe('<SelectionHighlight> (WI-UX-2)', () => {
         <SelectionProvider>
           <TscnSceneContents />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     const helper = findBoxHelper(renderer.scene.instance as unknown as THREE.Scene);
@@ -67,7 +67,7 @@ describe('<SelectionHighlight> (WI-UX-2)', () => {
           <SelectSeeder path="Cube" />
           <TscnSceneContents />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     const helper = findBoxHelper(renderer.scene.instance as unknown as THREE.Scene);
@@ -78,12 +78,7 @@ describe('<SelectionHighlight> (WI-UX-2)', () => {
 
   it('switches the highlight target when the selected path changes', async () => {
     const graph = createSceneGraphFromTscnScene({
-      nodes: [
-        makeNode('Root', 'Node3D', [
-          makeMeshInstance('Alpha'),
-          makeMeshInstance('Beta'),
-        ]),
-      ],
+      nodes: [makeNode('Root', 'Node3D', [makeMeshInstance('Alpha'), makeMeshInstance('Beta')])],
     });
 
     const renderer = await ReactThreeTestRenderer.create(
@@ -92,7 +87,7 @@ describe('<SelectionHighlight> (WI-UX-2)', () => {
           <SelectSeeder path="Root/Alpha" />
           <TscnSceneContents />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     const scene = renderer.scene.instance as unknown as THREE.Scene;
@@ -107,7 +102,7 @@ describe('<SelectionHighlight> (WI-UX-2)', () => {
           <SelectSeeder path="Root/Beta" />
           <TscnSceneContents />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     const helperB = findBoxHelper(scene);
@@ -129,7 +124,7 @@ describe('<SelectionHighlight> (WI-UX-2)', () => {
           <SelectSeeder path="Cube" />
           <TscnSceneContents />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     const scene = renderer.scene.instance as unknown as THREE.Scene;
@@ -141,7 +136,7 @@ describe('<SelectionHighlight> (WI-UX-2)', () => {
           <SelectSeeder path={null} />
           <TscnSceneContents />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     expect(findBoxHelper(scene)).toBeNull();

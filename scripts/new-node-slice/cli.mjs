@@ -19,8 +19,10 @@ export function parseArgs(argv) {
   let baseGiven = false;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === '--base') { opts.base = argv[++i]; baseGiven = true; }
-    else if (a === '--intent') opts.intent = argv[++i];
+    if (a === '--base') {
+      opts.base = argv[++i];
+      baseGiven = true;
+    } else if (a === '--intent') opts.intent = argv[++i];
     else if (a === '--transform-only') {
       // A hard error, not an alias of `--intent transform-only`, so a stale invocation cannot skip
       // the render registration and the sheet status that the intent settles.
@@ -50,7 +52,8 @@ export function parseArgs(argv) {
       ['--intent', opts.intent],
       ['--base', baseGiven],
     ]) {
-      if (value) fail(`${flag} does not apply to --tier: an abstract class has no slice shape and no leaf chain.`);
+      if (value)
+        fail(`${flag} does not apply to --tier: an abstract class has no slice shape and no leaf chain.`);
     }
     if (opts.linter) fail('--linter does not apply to --tier: a tier is validators by definition.');
     return { typeName, category, ...opts };

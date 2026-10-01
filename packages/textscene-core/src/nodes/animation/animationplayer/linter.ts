@@ -9,6 +9,25 @@ import { isValidProperties } from '../../../linter/linterUtils.js';
 import { extractLibraries, isActive } from './parser.js';
 import { EXT_RESOURCE_CALL_ANYWHERE_RE, literalText } from '../../../godot/index.js';
 import { hasUnresolvableClips, resolveAnimations } from './animationResolver.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+
+const arms = {
+  autoplayMissing: groundedArm('animationplayer-autoplay-missing', {
+    kind: 'no-engine-counterpart',
+    scope: 'dangling-reference',
+    because: 'no library the file declares holds a clip under that name',
+  }),
+  currentAnimationMissing: {
+    severity: 'error',
+    ruleName: 'animationplayer-current-animation-missing',
+    grounding: { kind: 'engine', at: 'animation_player.cpp:429' },
+  },
+  inactive: groundedArm('animationplayer-inactive', {
+    kind: 'engine-inert',
+    at: 'animation_mixer.cpp:446',
+    unused: 'processing is gated on active, so autoplay and current_animation never advance',
+  }),
+} as const satisfies RuleArms<string>;
 
 /**
  * Validate AnimationPlayer semantic rules
@@ -16,7 +35,6 @@ import { hasUnresolvableClips, resolveAnimations } from './animationResolver.js'
 function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
-
 
   if (!isValidProperties(node.properties)) {
     return diagnostics;
@@ -32,9 +50,9 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   // clips in an `anims/<name>` section, Godot 4 references AnimationLibraries
   // through `libraries/<name>` keys (the empty-name default library is written
   // `libraries/`), and older 4.x files use a single `libraries` dict.
-  const hasAnimations = Object.keys(rawProps).some(key => key.startsWith('anims/'));
+  const hasAnimations = Object.keys(rawProps).some((key) => key.startsWith('anims/'));
   const hasLibraries = Object.keys(rawProps).some(
-    key => key === 'libraries' || key.startsWith('libraries/')
+    (key) => key === 'libraries' || key.startsWith('libraries/')
   );
 
   // Build the set of known clip names. Godot references a clip in the default
@@ -59,8 +77,7 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   const hasUnresolvableLibrary =
     Object.entries(rawProps).some(
       ([key, value]) =>
-        (key === 'libraries' || key.startsWith('libraries/')) &&
-        EXT_RESOURCE_CALL_ANYWHERE_RE.test(value)
+        (key === 'libraries' || key.startsWith('libraries/')) && EXT_RESOURCE_CALL_ANYWHERE_RE.test(value)
     ) || hasUnresolvableClips(extractLibraries(rawProps), scene.internalResources);
   // A resolvable but empty library is still enumerable. A file with no clip source is not: a
   // script may add the clips, so nothing here can call a reference dangling.
@@ -72,13 +89,12 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   if (canCheckExistence && rawProps.autoplay !== undefined) {
     const autoplayName = literalText(rawProps.autoplay);
     if (autoplayName.length > 0 && !knownClips.has(autoplayName)) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `AnimationPlayer 'autoplay' references animation "${autoplayName}" which may not exist. Ensure this animation is defined in the AnimationLibrary or anims/ section.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'animationplayer-autoplay-missing',
-      });
+      reportArm(
+        diagnostics,
+        arms.autoplayMissing,
+        node,
+        `AnimationPlayer 'autoplay' references animation "${autoplayName}" which may not exist. Ensure this animation is defined in the AnimationLibrary or anims/ section.`
+      );
     }
   }
 
@@ -89,13 +105,12 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   if (canCheckExistence && rawProps.current_animation !== undefined) {
     const currentName = literalText(rawProps.current_animation);
     if (currentName.length > 0 && !knownClips.has(currentName)) {
-      diagnostics.push({
-        severity: 'error',
-        message: `AnimationPlayer 'current_animation' references animation "${currentName}", which no library this file declares holds. Godot refuses the assignment, so the property loads empty.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'animationplayer-current-animation-missing',
-      });
+      reportArm(
+        diagnostics,
+        arms.currentAnimationMissing,
+        node,
+        `AnimationPlayer 'current_animation' references animation "${currentName}", which no library this file declares holds. Godot refuses the assignment, so the property loads empty.`
+      );
     }
   }
 
@@ -106,13 +121,12 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   // get_configuration_warnings() override), but seek_internal returns at once on `!active`
   // (animation_player.cpp:664), so nothing this node declares reaches the scene.
   if (!isActive(rawProps)) {
-    diagnostics.push({
-      severity: 'info',
-      message: `AnimationPlayer 'active' is set to false. Animations will not play until this is set to true at runtime.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'animationplayer-inactive',
-    });
+    reportArm(
+      diagnostics,
+      arms.inactive,
+      node,
+      `AnimationPlayer 'active' is set to false. Animations will not play until this is set to true at runtime.`
+    );
   }
 
   // `root_node` gets no diagnostic: animation_player.cpp declares it
@@ -128,34 +142,11 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
 const animationPlayerValidationRule: LintRule = {
   meta: {
     name: 'valid-animationplayer-properties',
-    description: 'Validates AnimationPlayer property values, animation references, and playback configuration',
+    description:
+      'Validates AnimationPlayer property values, animation references, and playback configuration',
     category: 'validation',
     applicableNodeTypes: ['AnimationPlayer'],
-    emits: [
-      {
-        ruleName: 'animationplayer-autoplay-missing',
-        severity: 'warning',
-        grounding: {
-          kind: 'no-engine-counterpart',
-          scope: 'dangling-reference',
-          because: 'no library the file declares holds a clip under that name',
-        },
-      },
-      {
-        ruleName: 'animationplayer-current-animation-missing',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'animation_player.cpp:429' },
-      },
-      {
-        ruleName: 'animationplayer-inactive',
-        severity: 'info',
-        grounding: {
-          kind: 'engine-inert',
-          at: 'animation_mixer.cpp:446',
-          unused: 'processing is gated on active, so autoplay and current_animation never advance',
-        },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkAnimationPlayer,
 };

@@ -1,7 +1,12 @@
 /** Parses a TextureProgressBar: the Control and Range bases plus its own members. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
-import { parseOptionalBool, parseOptionalFloat, parseOptionalInt, parseOptionalVector2 } from '../../../../parser/valueParsers';
+import {
+  parseOptionalBool,
+  parseOptionalFloat,
+  parseOptionalInt,
+  parseOptionalVector2,
+} from '../../../../parser/valueParsers';
 import { parseColorOrUndefined } from '../../../../utils/colorParser';
 import { parseControl } from '../control/parser';
 import { parseRange } from '../shared/range';

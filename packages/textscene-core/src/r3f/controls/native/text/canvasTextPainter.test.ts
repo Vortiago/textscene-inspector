@@ -30,9 +30,10 @@ function layoutFor(text: string, lineSpacingPx = 3) {
  * the painter draws at CSS `offsetXPx`/`offsetYPx` on a `deviceWidthPx` x
  * `deviceHeightPx` canvas, and the quad samples that whole canvas.
  */
-function contentOriginOnQuad(
-  canvasLayout: ReturnType<typeof computeCanvasTextCanvasLayout>
-): { x: number; y: number } {
+function contentOriginOnQuad(canvasLayout: ReturnType<typeof computeCanvasTextCanvasLayout>): {
+  x: number;
+  y: number;
+} {
   const { positions } = buildCanvasTextQuadArrays(canvasLayout);
   const [left, top] = [positions[0]!, positions[1]!];
   const [right, bottom] = [positions[3]!, positions[7]!];
@@ -167,7 +168,7 @@ describe('createCanvasTextMaterial', () => {
       'blends the ENCODED bytes of every texture it samples (`rendering/viewport/hdr_2d` default ' +
       'false, `rendering_server.cpp:3771`, `texture_storage.cpp:754`), and TextRun.tsx tags this ' +
       'raster NoColorSpace so WebGL uploads it plain instead of hardware-decoding each texel BEFORE ' +
-      "the magnification filter runs -- this define moves that decode to AFTER the filter, matching.",
+      'the magnification filter runs -- this define moves that decode to AFTER the filter, matching.',
     () => {
       const texture = new THREE.CanvasTexture(document.createElement('canvas'));
       texture.colorSpace = THREE.NoColorSpace;

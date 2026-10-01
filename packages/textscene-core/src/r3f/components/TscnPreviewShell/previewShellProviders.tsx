@@ -85,9 +85,7 @@ export function previewShellProviders({
     // The key carries `panelId`: `rootScenePath` is relative to the **Corpus root**,
     // so two projects can each hold a `res://main.tscn` and the path alone stays.
     (children) => (
-      <ProjectSettingsProvider sceneKey={`${panelId} ${rootScenePath}`}>
-        {children}
-      </ProjectSettingsProvider>
+      <ProjectSettingsProvider sceneKey={`${panelId} ${rootScenePath}`}>{children}</ProjectSettingsProvider>
     )
   );
 }

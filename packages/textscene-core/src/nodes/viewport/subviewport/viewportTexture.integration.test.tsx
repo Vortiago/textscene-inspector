@@ -31,10 +31,12 @@ async function renderScene(source: string, workspace: '2d' | '3d' = '3d') {
 /** Every material in the rendered tree, whatever depth it sits at. */
 function materials(renderer: Awaited<ReturnType<typeof renderScene>>): THREE.Material[] {
   const found: THREE.Material[] = [];
-  renderer.scene.findAll(() => true).forEach((node) => {
-    const material = (node.instance as THREE.Mesh).material;
-    if (material) found.push(...(Array.isArray(material) ? material : [material]));
-  });
+  renderer.scene
+    .findAll(() => true)
+    .forEach((node) => {
+      const material = (node.instance as THREE.Mesh).material;
+      if (material) found.push(...(Array.isArray(material) ? material : [material]));
+    });
   return found;
 }
 
@@ -159,8 +161,9 @@ texture = SubResource("ViewportTexture_1")
     const planes = renderer.scene
       .findAll(() => true)
       .map((node) => (node.instance as THREE.Mesh).geometry)
-      .filter((geometry): geometry is THREE.PlaneGeometry =>
-        (geometry as THREE.PlaneGeometry)?.type === 'PlaneGeometry'
+      .filter(
+        (geometry): geometry is THREE.PlaneGeometry =>
+          (geometry as THREE.PlaneGeometry)?.type === 'PlaneGeometry'
       );
     expect(planes.some((p) => p.parameters.width === 300 && p.parameters.height === 200)).toBe(true);
   });

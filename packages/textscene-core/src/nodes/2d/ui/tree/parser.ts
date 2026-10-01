@@ -9,10 +9,7 @@ import { parseOptionalBool, parseOptionalInt } from '../../../../parser/valuePar
 import { parseControl } from '../control/parser';
 import type { TreeProperties } from './types';
 
-export function parseTree(
-  heading: ParsedHeading,
-  properties: Record<string, string>
-): TreeProperties {
+export function parseTree(heading: ParsedHeading, properties: Record<string, string>): TreeProperties {
   return {
     ...parseControl(heading, properties),
     columns: parseOptionalInt(properties.columns),

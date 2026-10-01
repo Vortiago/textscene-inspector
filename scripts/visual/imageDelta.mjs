@@ -77,8 +77,7 @@ export function compareImages(expectedBuffer, actualBuffer, { diff = false } = {
 /** Red where the pixel moved, a faded copy of the baseline where it did not. */
 function writeDiffPixel(out, expected, i, delta) {
   if (delta > 0) {
-    const saturation =
-      DIFF_MIN_SATURATION + (1 - DIFF_MIN_SATURATION) * Math.min(1, delta / DIFF_FULL_DELTA);
+    const saturation = DIFF_MIN_SATURATION + (1 - DIFF_MIN_SATURATION) * Math.min(1, delta / DIFF_FULL_DELTA);
     out[i] = 255;
     out[i + 1] = Math.round(255 * (1 - saturation));
     out[i + 2] = out[i + 1];
@@ -86,8 +85,7 @@ function writeDiffPixel(out, expected, i, delta) {
     return;
   }
   // Rec. 601 luma, the same greyscale a diff backdrop conventionally uses.
-  const luma =
-    0.29889531 * expected[i] + 0.58662247 * expected[i + 1] + 0.11448223 * expected[i + 2];
+  const luma = 0.29889531 * expected[i] + 0.58662247 * expected[i + 1] + 0.11448223 * expected[i + 2];
   const faded = 255 + (luma - 255) * DIFF_BACKDROP_ALPHA * (expected[i + 3] / 255);
   out[i] = faded;
   out[i + 1] = faded;

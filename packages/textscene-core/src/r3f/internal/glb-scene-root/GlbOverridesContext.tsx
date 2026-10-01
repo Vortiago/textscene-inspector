@@ -19,7 +19,5 @@ export interface GlbOverridesProviderProps {
 }
 
 export function GlbOverridesProvider({ overrides, children }: GlbOverridesProviderProps) {
-  return (
-    <GlbOverridesContext.Provider value={overrides}>{children}</GlbOverridesContext.Provider>
-  );
+  return <GlbOverridesContext.Provider value={overrides}>{children}</GlbOverridesContext.Provider>;
 }

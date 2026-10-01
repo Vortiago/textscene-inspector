@@ -33,9 +33,7 @@ const NAVMESH_TRES: ParsedResource = {
   subResources: [],
 };
 
-const EXT: TscnExternalResource[] = [
-  { id: '2_nav', path: 'res://navmesh.tres', type: 'NavigationMesh' },
-];
+const EXT: TscnExternalResource[] = [{ id: '2_nav', path: 'res://navmesh.tres', type: 'NavigationMesh' }];
 
 function makeLoaderWith(path: string, tres: ParsedResource): ResourceLoader {
   const provider = new NoopProvider();

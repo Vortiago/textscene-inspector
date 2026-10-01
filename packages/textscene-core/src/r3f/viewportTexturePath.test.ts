@@ -70,9 +70,7 @@ describe('viewportTextureRegistryKey', () => {
     });
 
     it('resolves a bare %Name to the claimant, where the viewport publishes its real path', () => {
-      expect(viewportTextureRegistryKey('Root', '%View', claimed)).toBe(
-        'Root/UI/Hud/CombinedViewport'
-      );
+      expect(viewportTextureRegistryKey('Root', '%View', claimed)).toBe('Root/UI/Hud/CombinedViewport');
     });
 
     /**

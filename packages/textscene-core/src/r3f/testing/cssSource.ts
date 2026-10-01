@@ -5,6 +5,8 @@
  * from the build.
  */
 
+import { escapeRegExp } from '@textscene/dev-kit';
+
 /** The query text of every `@media` rule in `source`, in order. */
 export function mediaQueries(source: string): string[] {
   return Array.from(source.matchAll(/@media\s*([^{]+?)\s*\{/g), (m) => m[1]!);
@@ -12,7 +14,7 @@ export function mediaQueries(source: string): string[] {
 
 /** The body of the `@media <query>` block, or null when there is none. */
 export function extractMediaBlock(source: string, query: string): string | null {
-  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escaped = escapeRegExp(query);
   const match = new RegExp(`@media\\s*${escaped}\\s*\\{`).exec(source);
   if (!match) return null;
   const end = closingBrace(source, match.index + match[0].length);

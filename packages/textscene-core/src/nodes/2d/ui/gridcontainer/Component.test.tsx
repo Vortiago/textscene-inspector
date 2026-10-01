@@ -23,7 +23,12 @@ function gridSolveNode(): SolveNode {
 describe('<GridContainer>', () => {
   it('renders no scene objects — a container draws nothing of its own', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <GridContainer {...painterEnv()} solveNode={gridSolveNode()} rect={{ x: 0, y: 0, w: 100, h: 40 }} renderOrder={0} />
+      <GridContainer
+        {...painterEnv()}
+        solveNode={gridSolveNode()}
+        rect={{ x: 0, y: 0, w: 100, h: 40 }}
+        renderOrder={0}
+      />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });

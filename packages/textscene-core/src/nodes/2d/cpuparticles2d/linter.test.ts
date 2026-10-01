@@ -5,7 +5,12 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Linter } from '../../../linter/Linter';
-import { node, scene as sceneOf, expectDiagnostic, expectNoDiagnostic } from '../../../linter/testing/testkit';
+import {
+  node,
+  scene as sceneOf,
+  expectDiagnostic,
+  expectNoDiagnostic,
+} from '../../../linter/testing/testkit';
 import { errorsOf } from '../../../linter/testing/tierLists';
 import './linterParser';
 import './linter';
@@ -23,7 +28,10 @@ describe('CPUParticles2D preview rule', () => {
 
   const namesOf = (content: string) => linter.lint(content).map((d) => d.ruleName);
   const severitiesOf = (content: string, ruleName: string) =>
-    linter.lint(content).filter((d) => d.ruleName === ruleName).map((d) => d.severity);
+    linter
+      .lint(content)
+      .filter((d) => d.ruleName === ruleName)
+      .map((d) => d.severity);
 
   it('says nothing about a plain, previewable emitter (happy path)', () => {
     const diagnostics = linter.lint(scene('amount = 8\nemission_shape = 1\n'));
@@ -37,9 +45,7 @@ describe('CPUParticles2D preview rule', () => {
   ])('reports at info that emission_shape = %s (%s) draws from the global RNG', (value, label) => {
     const content = scene(`emission_shape = ${value}\n`);
     expect(namesOf(content)).toContain('cpuparticles2d-nondeterministic-emission-shape');
-    expect(severitiesOf(content, 'cpuparticles2d-nondeterministic-emission-shape')).toEqual([
-      'info',
-    ]);
+    expect(severitiesOf(content, 'cpuparticles2d-nondeterministic-emission-shape')).toEqual(['info']);
     expect(linter.lint(content)[0]!.message).toContain(label);
   });
 
@@ -85,9 +91,7 @@ describe('CPUParticles2D preview rule', () => {
   });
 
   it('stays silent when `fract_delta` is explicitly disabled', () => {
-    expect(namesOf(scene('fract_delta = false\n'))).not.toContain(
-      'cpuparticles2d-fract-delta-ignored'
-    );
+    expect(namesOf(scene('fract_delta = false\n'))).not.toContain('cpuparticles2d-fract-delta-ignored');
   });
 
   it('reports both diagnostics together when both apply', () => {
@@ -288,19 +292,27 @@ describe('CPUParticles2D min above max', () => {
   });
 
   it('reports each crossed pair on its own', () => {
-    expectDiagnostic(particles({ anim_offset_min: 0.75, anim_offset_max: 0.25, angle_min: 10, angle_max: -10 }), {
-      ruleName: RULE,
-      contains: ["'anim_offset_min' loads as 0.25"],
-    });
-    expectDiagnostic(particles({ anim_offset_min: 0.75, anim_offset_max: 0.25, angle_min: 10, angle_max: -10 }), {
-      ruleName: RULE,
-      contains: ["'angle_min' loads as -10"],
-    });
+    expectDiagnostic(
+      particles({ anim_offset_min: 0.75, anim_offset_max: 0.25, angle_min: 10, angle_max: -10 }),
+      {
+        ruleName: RULE,
+        contains: ["'anim_offset_min' loads as 0.25"],
+      }
+    );
+    expectDiagnostic(
+      particles({ anim_offset_min: 0.75, anim_offset_max: 0.25, angle_min: 10, angle_max: -10 }),
+      {
+        ruleName: RULE,
+        contains: ["'angle_min' loads as -10"],
+      }
+    );
   });
 
   it('says nothing when min is at or below max, or equal in float storage', () => {
     expectNoDiagnostic(particles({ angle_min: -30, angle_max: 30 }), { ruleName: RULE });
-    expectNoDiagnostic(particles({ scale_amount_min: '0.30000001', scale_amount_max: '0.3' }), { ruleName: RULE });
+    expectNoDiagnostic(particles({ scale_amount_min: '0.30000001', scale_amount_max: '0.3' }), {
+      ruleName: RULE,
+    });
   });
 
   it('says nothing when only one key of a pair is authored', () => {

@@ -30,18 +30,20 @@ validatorRegistry.registerAll('Light2D', {
   // but 3 real values match the 3 labels). set_blend_mode
   // (light_2d.cpp:190-192) assigns unconditionally, no ERR_FAIL_INDEX, so out
   // of range is a warning (ADR-0032).
-  blend_mode: v.enumInt(
-    'blend_mode',
-    0,
-    2,
-    { 0: 'ADD', 1: 'SUB', 2: 'MIX' },
-    { hinted: 'light_2d.cpp:307' }
-  ),
+  blend_mode: v.enumInt('blend_mode', 0, 2, { 0: 'ADD', 1: 'SUB', 2: 'MIX' }, { hinted: 'light_2d.cpp:307' }),
   // light_2d.cpp:309-310 hints the closed range CANVAS_ITEM_Z_MIN..MAX.
   // `Light2D::set_z_range_min`/`_max` only assign and forward, with no CLAMP (4.6.3
   // keeps -99999), so the bound is a warning under ADR-0032.
-  range_z_min: v.int('range_z_min', { min: CANVAS_ITEM_Z_MIN, max: CANVAS_ITEM_Z_MAX, hinted: 'light_2d.cpp:309' }),
-  range_z_max: v.int('range_z_max', { min: CANVAS_ITEM_Z_MIN, max: CANVAS_ITEM_Z_MAX, hinted: 'light_2d.cpp:310' }),
+  range_z_min: v.int('range_z_min', {
+    min: CANVAS_ITEM_Z_MIN,
+    max: CANVAS_ITEM_Z_MAX,
+    hinted: 'light_2d.cpp:309',
+  }),
+  range_z_max: v.int('range_z_max', {
+    min: CANVAS_ITEM_Z_MIN,
+    max: CANVAS_ITEM_Z_MAX,
+    hinted: 'light_2d.cpp:310',
+  }),
   // light_2d.cpp:311-312 hint the closed range RS::CANVAS_LAYER_MIN..MAX, and an
   // int64 `.tscn` literal can go past int32. `Light2D::set_layer_range_min`/`_max`
   // (light_2d.cpp:125-128, :134-137) only assign and forward to the
@@ -60,8 +62,14 @@ validatorRegistry.registerAll('Light2D', {
   // numeric bound. set_item_cull_mask (light_2d.cpp:143-145) and
   // set_item_shadow_cull_mask (light_2d.cpp:152-154) assign unconditionally, so no
   // bound is declared (ADR-0032 "none").
-  range_item_cull_mask: layerBitmask('range_item_cull_mask', { hinted: 'light_2d.cpp:313', width: 'int32' /* light_2d.h:112 */ }),
-  shadow_item_cull_mask: layerBitmask('shadow_item_cull_mask', { hinted: 'light_2d.cpp:320', width: 'int32' /* light_2d.h:115 */ }),
+  range_item_cull_mask: layerBitmask('range_item_cull_mask', {
+    hinted: 'light_2d.cpp:313',
+    width: 'int32' /* light_2d.h:112 */,
+  }),
+  shadow_item_cull_mask: layerBitmask('shadow_item_cull_mask', {
+    hinted: 'light_2d.cpp:320',
+    width: 'int32' /* light_2d.h:115 */,
+  }),
   shadow_enabled: v.boolean('shadow_enabled'),
   shadow_color: v.color('shadow_color'),
   // light_2d.cpp:318, ENUM 3 labels (matches SHADOW_FILTER_MAX=3,

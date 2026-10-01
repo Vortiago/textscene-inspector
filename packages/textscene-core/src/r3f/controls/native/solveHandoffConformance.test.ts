@@ -117,7 +117,12 @@ function handRolledOpenerLines(source: string): number[] {
 // Guard 3: every value that reaches `SolvedControl.meta` in a real solve is sealed,
 // and the class-B producers attach one unconditionally.
 
-function tscn(name: string, type: string, properties: Record<string, unknown>, children: TscnNode[] = []): TscnNode {
+function tscn(
+  name: string,
+  type: string,
+  properties: Record<string, unknown>,
+  children: TscnNode[] = []
+): TscnNode {
   return { name, type, properties, children };
 }
 
@@ -127,9 +132,7 @@ function tscn(name: string, type: string, properties: Record<string, unknown>, c
  * scroll container needs content to overflow.
  */
 function containerTree(type: string): SolveNode[] {
-  const childNodes = ['A', 'B'].map((name) =>
-    tscn(name, 'Panel', { customMinimumSize: { x: 400, y: 400 } })
-  );
+  const childNodes = ['A', 'B'].map((name) => tscn(name, 'Panel', { customMinimumSize: { x: 400, y: 400 } }));
   const root = tscn('Root', type, {}, childNodes);
   const children = childNodes.map((node, i) => ({
     ...solveNode(),
@@ -228,8 +231,12 @@ describe('solve handoff conformance', () => {
     expect(handRolledOpenerLines('  minimumSizeMeta: (n) => resolve(n).meta,')).toEqual([1]);
     // The four legitimate spellings.
     expect(handRolledOpenerLines('  const layout = scrollBarsChannel.open(meta) ?? fallback;')).toEqual([]);
-    expect(handRolledOpenerLines('  return { rects: out, meta: scrollBarsChannel.seal(layout) };')).toEqual([]);
-    expect(handRolledOpenerLines('export function X({ solveNode, rect, meta }: NativeControlComponentProps) {')).toEqual([]);
+    expect(handRolledOpenerLines('  return { rects: out, meta: scrollBarsChannel.seal(layout) };')).toEqual(
+      []
+    );
+    expect(
+      handRolledOpenerLines('export function X({ solveNode, rect, meta }: NativeControlComponentProps) {')
+    ).toEqual([]);
     expect(handRolledOpenerLines('  meta,')).toEqual([]);
     expect(handRolledOpenerLines('            meta={undefined}')).toEqual([]);
     // Prose, and the one unrelated `meta` every scan file carries.

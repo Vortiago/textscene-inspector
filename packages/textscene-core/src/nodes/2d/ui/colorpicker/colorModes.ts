@@ -85,7 +85,10 @@ export interface ColorModeChannel {
  * and `cached_saturation` hold their default 0 (`color_mode.h:69-70,144-145`),
  * which the guards of `get_slider_value` fall back to.
  */
-export function colorModeChannels(mode: number, color: ControlColor): [ColorModeChannel, ColorModeChannel, ColorModeChannel] {
+export function colorModeChannels(
+  mode: number,
+  color: ControlColor
+): [ColorModeChannel, ColorModeChannel, ColorModeChannel] {
   const normalized = colorNormalized(color);
   switch (mode) {
     case MODE_HSV: {
@@ -154,7 +157,10 @@ export function formatSliderValue(value: number, decimals: number): string {
  * value. Linear interpolates in `GRADIENT_COLOR_SPACE_LINEAR_SRGB` (`:311`), RGB in
  * `_SRGB` (`:113`). The caller linearises the Linear stops.
  */
-export function rgbChannelGradientStops(channel: number, normalized: ControlColor): [ControlColor, ControlColor] {
+export function rgbChannelGradientStops(
+  channel: number,
+  normalized: ControlColor
+): [ControlColor, ControlColor] {
   const at = (v: number): ControlColor => ({
     r: channel === 0 ? v : normalized.r,
     g: channel === 1 ? v : normalized.g,
@@ -168,7 +174,10 @@ export function rgbChannelGradientStops(channel: number, normalized: ControlColo
  * `ColorModeHSV::slider_draw`'s S and V 2-stop polygon (`color_mode.cpp:196-206`).
  * Channel 0 (H) is the rainbow strip below.
  */
-export function hsvChannelGradientStops(channel: 1 | 2, normalized: ControlColor): [ControlColor, ControlColor] {
+export function hsvChannelGradientStops(
+  channel: 1 | 2,
+  normalized: ControlColor
+): [ControlColor, ControlColor] {
   const { h, s, v } = extractHsv(normalized);
   if (channel === 1) {
     const sCol = hsvToRgb(h, 0, v);
@@ -206,7 +215,9 @@ export function okhslSaturationGradientStops(normalized: ControlColor): [Control
  * 392-411`): black, `from_ok_hsl(hue, sat, 0.5)` and `from_ok_hsl(hue, sat, 1)`,
  * as the stops at 0, 0.5 and 1.
  */
-export function okhslLightnessGradientStops(normalized: ControlColor): [ControlColor, ControlColor, ControlColor] {
+export function okhslLightnessGradientStops(
+  normalized: ControlColor
+): [ControlColor, ControlColor, ControlColor] {
   const { h, s } = srgbToOkhsl(normalized);
   return [{ r: 0, g: 0, b: 0, a: 1 }, okhslToSrgb(h, s, 0.5), okhslToSrgb(h, s, 1)];
 }
@@ -261,7 +272,11 @@ export interface HexFieldText {
 export function hexFieldText(color: ControlColor, editAlpha: boolean): HexFieldText {
   if (!isColorValidHex(color)) {
     const showAlpha = editAlpha && color.a < 1;
-    const parts = [formatSliderValue(color.r, 3), formatSliderValue(color.g, 3), formatSliderValue(color.b, 3)];
+    const parts = [
+      formatSliderValue(color.r, 3),
+      formatSliderValue(color.g, 3),
+      formatSliderValue(color.b, 3),
+    ];
     if (showAlpha) parts.push(formatSliderValue(color.a, 3));
     return { label: 'Expr', typeText: '', text: `Color(${parts.join(', ')})` };
   }
@@ -275,5 +290,8 @@ export function hexFieldText(color: ControlColor, editAlpha: boolean): HexFieldT
  * defaults to `true` (`color_picker.h:266`) and has no serialised property.
  */
 export function alphaChannelGradientStops(normalized: ControlColor): [ControlColor, ControlColor] {
-  return [{ ...normalized, a: 0 }, { ...normalized, a: 1 }];
+  return [
+    { ...normalized, a: 0 },
+    { ...normalized, a: 1 },
+  ];
 }

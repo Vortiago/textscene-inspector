@@ -48,7 +48,10 @@ export function TabContainer({
   const alignment = props.tabAlignment ?? TAB_ALIGNMENT_LEFT;
   const allTabsInFront = props.allTabsInFront ?? false;
 
-  const derivedTabs = useMemo(() => deriveTabContainerTabs(solveNode, props.tabOverrides), [solveNode, props.tabOverrides]);
+  const derivedTabs = useMemo(
+    () => deriveTabContainerTabs(solveNode, props.tabOverrides),
+    [solveNode, props.tabOverrides]
+  );
   const syntheticBar = useMemo(
     () => buildInternalTabBarNode(solveNode, derivedTabs, props, theme),
     [solveNode, derivedTabs, props, theme]

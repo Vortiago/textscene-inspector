@@ -40,9 +40,7 @@ ${props}
 
   it('stays silent once that Button opts into toggle_mode', () => {
     expect(
-      groupWarnings(
-        scene('Button', 'button_group = SubResource("ButtonGroup_1")\ntoggle_mode = true')
-      )
+      groupWarnings(scene('Button', 'button_group = SubResource("ButtonGroup_1")\ntoggle_mode = true'))
     ).toEqual([]);
   });
 
@@ -50,25 +48,19 @@ ${props}
     // check_box.cpp:172 sets it in the constructor, so Godot omits it when
     // serialising. Reading absence as false would warn on every grouped
     // CheckBox in existence.
-    expect(
-      groupWarnings(scene('CheckBox', 'button_group = SubResource("ButtonGroup_1")'))
-    ).toEqual([]);
+    expect(groupWarnings(scene('CheckBox', 'button_group = SubResource("ButtonGroup_1")'))).toEqual([]);
   });
 
   it.each(['CheckButton', 'ColorPickerButton', 'MenuButton', 'OptionButton'])(
     'stays silent on a grouped %s with no toggle_mode key',
     (type) => {
-      expect(groupWarnings(scene(type, 'button_group = SubResource("ButtonGroup_1")'))).toEqual(
-        []
-      );
+      expect(groupWarnings(scene(type, 'button_group = SubResource("ButtonGroup_1")'))).toEqual([]);
     }
   );
 
   it('warns when one of those subclasses explicitly turns toggle_mode off', () => {
     expect(
-      groupWarnings(
-        scene('CheckBox', 'button_group = SubResource("ButtonGroup_1")\ntoggle_mode = false')
-      )
+      groupWarnings(scene('CheckBox', 'button_group = SubResource("ButtonGroup_1")\ntoggle_mode = false'))
     ).toHaveLength(1);
   });
 
@@ -87,9 +79,7 @@ ${props}
       // toggle_mode true, plus Button and these two, which do not. Covering
       // both here makes the five-name set above complete against the catalog
       // rather than merely correct today.
-      expect(
-        groupWarnings(scene(type, 'button_group = SubResource("ButtonGroup_1")'))
-      ).toHaveLength(1);
+      expect(groupWarnings(scene(type, 'button_group = SubResource("ButtonGroup_1")'))).toHaveLength(1);
     }
   );
 });

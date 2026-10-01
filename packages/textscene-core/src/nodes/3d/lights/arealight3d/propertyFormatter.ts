@@ -3,10 +3,7 @@
 import type { PropertySection } from '../../../../core/NodeRegistry';
 import type { AreaLight3DProperties } from './types';
 import { formatNode3DProperties } from '../../../base/node3d/propertyFormatter';
-import {
-  formatBaseLightSection,
-  formatShadowSectionWithNormalBias,
-} from '../shared/propertyFormatter';
+import { formatBaseLightSection, formatShadowSectionWithNormalBias } from '../shared/propertyFormatter';
 
 export function formatAreaLight3DProperties(properties: AreaLight3DProperties): PropertySection[] {
   const sections: PropertySection[] = [];
@@ -14,9 +11,7 @@ export function formatAreaLight3DProperties(properties: AreaLight3DProperties): 
   // the render path show the same numbers.
   const { x: w, y: h } = properties.area_size ?? { x: 1, y: 1 };
 
-  const areaLightItems: PropertySection['items'] = [
-    { label: 'Size', value: `${w} × ${h}` },
-  ];
+  const areaLightItems: PropertySection['items'] = [{ label: 'Size', value: `${w} × ${h}` }];
 
   sections.push(formatBaseLightSection(properties, areaLightItems));
 

@@ -115,7 +115,7 @@ describe('Linter', () => {
 
       const diagnostics = linter.lint(content);
 
-      const ruleDiagnostics = diagnostics.filter(d => d.ruleName === 'test-multi-diagnostic-rule');
+      const ruleDiagnostics = diagnostics.filter((d) => d.ruleName === 'test-multi-diagnostic-rule');
       expect(ruleDiagnostics).toHaveLength(2);
 
       // Cleanup

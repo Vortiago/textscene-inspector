@@ -17,10 +17,7 @@ const SOURCES: Record<string, string> = {
     node('Node2D', {}, { name: 'Root' }),
     node('Node2D', {}, { name: 'Body', parent: 'NoSuchNode' })
   ),
-  'node-without-parent': scene(
-    node('Node2D', {}, { name: 'Root' }),
-    node('Node2D', {}, { name: 'Stray' })
-  ),
+  'node-without-parent': scene(node('Node2D', {}, { name: 'Root' }), node('Node2D', {}, { name: 'Stray' })),
   'root-declares-parent': scene(node('Node2D', {}, { name: 'A', parent: '.' })),
   'empty-parent-path': scene(
     node('Node2D', {}, { name: 'Root' }),

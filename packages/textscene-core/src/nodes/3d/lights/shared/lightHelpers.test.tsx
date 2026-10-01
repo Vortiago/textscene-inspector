@@ -11,15 +11,9 @@ import type { DirectionalLight3DProperties } from '../directionallight3d/types';
 import type { OmniLight3DProperties } from '../omnilight3d/types';
 import type { SpotLight3DProperties } from '../spotlight3d/types';
 import type { Camera3DProperties } from '../../camera3d/types';
-import {
-  KeepAspectMode,
-  ProjectionMode,
-} from '../../camera3d/types';
+import { KeepAspectMode, ProjectionMode } from '../../camera3d/types';
 import type { AudioStreamPlayer3DProperties } from '../../../audio/audiostreamplayer3d/types';
-import {
-  AttenuationModel,
-  DopplerTracking,
-} from '../../../audio/audiostreamplayer3d/types';
+import { AttenuationModel, DopplerTracking } from '../../../audio/audiostreamplayer3d/types';
 import { NodeDispatcher } from '../../../../r3f/NodeDispatcher';
 import { TscnSceneContents } from '../../../../r3f/TscnCanvas';
 import { HierarchyProvider } from '../../../../r3f/contexts/HierarchyContext';
@@ -71,7 +65,7 @@ function spotNode(name: string, overrides: Partial<SpotLight3DProperties> = {}):
 
 function findHelpersOfType<T extends THREE.Object3D>(
   scene: THREE.Scene,
-  ctor: new (...args: never[]) => T,
+  ctor: new (...args: never[]) => T
 ): T[] {
   const out: T[] = [];
   scene.traverse((o) => {
@@ -117,15 +111,14 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
     describe(c.label, () => {
       it('renders zero helpers when nothing is selected (visual-pollution fix)', async () => {
         const graph = createSceneGraphFromTscnScene({ nodes: c.nodes });
-        const rootNodes =
-          graph.scenes.get(graph.rootScene)?.nodes ?? [];
+        const rootNodes = graph.scenes.get(graph.rootScene)?.nodes ?? [];
 
         const renderer = await ReactThreeTestRenderer.create(
           <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
             <SelectionProvider>
               <NodeDispatcher nodes={rootNodes} />
             </SelectionProvider>
-          </HierarchyProvider>,
+          </HierarchyProvider>
         );
 
         const scene = renderer.scene.instance as unknown as THREE.Scene;
@@ -135,8 +128,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
 
       it('renders exactly one helper when the matching path is selected', async () => {
         const graph = createSceneGraphFromTscnScene({ nodes: c.nodes });
-        const rootNodes =
-          graph.scenes.get(graph.rootScene)?.nodes ?? [];
+        const rootNodes = graph.scenes.get(graph.rootScene)?.nodes ?? [];
 
         const renderer = await ReactThreeTestRenderer.create(
           <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
@@ -144,7 +136,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
               <SelectSeeder path={c.selectedPath} />
               <NodeDispatcher nodes={rootNodes} />
             </SelectionProvider>
-          </HierarchyProvider>,
+          </HierarchyProvider>
         );
 
         const scene = renderer.scene.instance as unknown as THREE.Scene;
@@ -154,8 +146,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
 
       it('tears the helper down when selection moves to a different node', async () => {
         const graph = createSceneGraphFromTscnScene({ nodes: c.nodes });
-        const rootNodes =
-          graph.scenes.get(graph.rootScene)?.nodes ?? [];
+        const rootNodes = graph.scenes.get(graph.rootScene)?.nodes ?? [];
 
         const renderer = await ReactThreeTestRenderer.create(
           <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
@@ -163,7 +154,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
               <SelectSeeder path={c.selectedPath} />
               <NodeDispatcher nodes={rootNodes} />
             </SelectionProvider>
-          </HierarchyProvider>,
+          </HierarchyProvider>
         );
 
         const scene = renderer.scene.instance as unknown as THREE.Scene;
@@ -175,7 +166,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
               <SelectSeeder path={c.otherPath} />
               <NodeDispatcher nodes={rootNodes} />
             </SelectionProvider>
-          </HierarchyProvider>,
+          </HierarchyProvider>
         );
 
         // Selection moved to the sibling light. The assertion counts helpers,
@@ -185,8 +176,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
 
       it('renders zero helpers when selection points at a non-light path', async () => {
         const graph = createSceneGraphFromTscnScene({ nodes: c.nodes });
-        const rootNodes =
-          graph.scenes.get(graph.rootScene)?.nodes ?? [];
+        const rootNodes = graph.scenes.get(graph.rootScene)?.nodes ?? [];
 
         const renderer = await ReactThreeTestRenderer.create(
           <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
@@ -194,7 +184,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
               <SelectSeeder path="NodeThatDoesNotExist" />
               <NodeDispatcher nodes={rootNodes} />
             </SelectionProvider>
-          </HierarchyProvider>,
+          </HierarchyProvider>
         );
 
         const scene = renderer.scene.instance as unknown as THREE.Scene;
@@ -214,7 +204,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
         <SelectionProvider>
           <NodeDispatcher nodes={rootNodes} />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     const scene = renderer.scene.instance as unknown as THREE.Scene;
@@ -235,7 +225,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
           <HoverSeeder path="Torch" />
           <TscnSceneContents />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     const scene = renderer.scene.instance as unknown as THREE.Scene;
@@ -274,7 +264,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
           <SelectSeeder path="Sun" />
           <NodeDispatcher nodes={rootNodes} />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     // The correction runs in the helper's wrapped `update()`, which
@@ -336,7 +326,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
           <SelectSeeder path="Lamp" />
           <NodeDispatcher nodes={rootNodes} />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     // The correction applies after one `useFrame` tick (see the DirectionalLight test).
@@ -395,7 +385,7 @@ describe('Camera3D gizmo — selection gating (WI-UX-14 scope expansion)', () =>
         <SelectionProvider>
           <NodeDispatcher nodes={rootNodes} />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     const scene = renderer.scene.instance as unknown as THREE.Scene;
@@ -414,7 +404,7 @@ describe('Camera3D gizmo — selection gating (WI-UX-14 scope expansion)', () =>
           <SelectSeeder path="CamA" />
           <NodeDispatcher nodes={rootNodes} />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     const scene = renderer.scene.instance as unknown as THREE.Scene;
@@ -433,7 +423,7 @@ describe('Camera3D gizmo — selection gating (WI-UX-14 scope expansion)', () =>
           <SelectSeeder path="CamA" />
           <NodeDispatcher nodes={rootNodes} />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     const scene = renderer.scene.instance as unknown as THREE.Scene;
@@ -445,7 +435,7 @@ describe('Camera3D gizmo — selection gating (WI-UX-14 scope expansion)', () =>
           <SelectSeeder path="CamB" />
           <NodeDispatcher nodes={rootNodes} />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     expect(findHelpersOfType(scene, THREE.CameraHelper)).toHaveLength(1);
@@ -479,7 +469,7 @@ describe('Camera3D gizmo — selection gating (WI-UX-14 scope expansion)', () =>
           <SelectSeeder path="Rig/RigCam" />
           <NodeDispatcher nodes={rootNodes} />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     // The correction applies after one `useFrame` tick (see the DirectionalLight test).
@@ -542,9 +532,9 @@ function audioNode(name: string, overrides: Partial<AudioStreamPlayer3DPropertie
  * through the test renderer's tree API. `THREE.Scene.traverse` cannot serve: the
  * test renderer mounts each primitive in R3F-managed groups with other parents.
  */
-function countAudioGizmoParts(
-  renderer: { scene: { findAllByType: (t: string) => { instance: THREE.Object3D }[] } },
-): { speakerGroups: number; rangeSpheres: number } {
+function countAudioGizmoParts(renderer: {
+  scene: { findAllByType: (t: string) => { instance: THREE.Object3D }[] };
+}): { speakerGroups: number; rangeSpheres: number } {
   const groups = renderer.scene.findAllByType('Group');
   const speakerGroups = groups.filter((g) => {
     const ud = g.instance.userData as { isAudioGizmoBody?: boolean };
@@ -572,7 +562,7 @@ describe('AudioStreamPlayer3D gizmo — selection gating (WI-UX-14 scope expansi
         <SelectionProvider>
           <NodeDispatcher nodes={rootNodes} />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     const { speakerGroups, rangeSpheres } = countAudioGizmoParts(renderer);
@@ -592,7 +582,7 @@ describe('AudioStreamPlayer3D gizmo — selection gating (WI-UX-14 scope expansi
           <SelectSeeder path="A" />
           <NodeDispatcher nodes={rootNodes} />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     const { speakerGroups, rangeSpheres } = countAudioGizmoParts(renderer);
@@ -613,7 +603,7 @@ describe('AudioStreamPlayer3D gizmo — selection gating (WI-UX-14 scope expansi
           <SelectSeeder path="A" />
           <NodeDispatcher nodes={rootNodes} />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     expect(countAudioGizmoParts(renderer).speakerGroups).toBe(1);
@@ -624,7 +614,7 @@ describe('AudioStreamPlayer3D gizmo — selection gating (WI-UX-14 scope expansi
           <SelectSeeder path="NotAudio" />
           <NodeDispatcher nodes={rootNodes} />
         </SelectionProvider>
-      </HierarchyProvider>,
+      </HierarchyProvider>
     );
 
     const after = countAudioGizmoParts(renderer);

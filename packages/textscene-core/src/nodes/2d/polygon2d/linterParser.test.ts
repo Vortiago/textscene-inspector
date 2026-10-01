@@ -201,17 +201,13 @@ polygons = [PackedInt32Array(0, 1, 2, 3), PackedInt32Array(4, 5, 6, 7)]
     it.each(['0', '1000'])('accepts the hint endpoint %s in silence', (value) => {
       const diagnostics = diagnose(value);
       expect(errorsOf(diagnostics)).toEqual([]);
-      expect(warningsOf(diagnostics).some((w) => w.message.includes('internal_vertex_count'))).toBe(
-        false
-      );
+      expect(warningsOf(diagnostics).some((w) => w.message.includes('internal_vertex_count'))).toBe(false);
     });
 
     it.each(['-1', '1001'])('warns, and never errors, one step past the hint at %s', (value) => {
       const diagnostics = diagnose(value);
       expect(errorsOf(diagnostics)).toEqual([]);
-      expect(warningsOf(diagnostics).some((w) => w.message.includes('internal_vertex_count'))).toBe(
-        true
-      );
+      expect(warningsOf(diagnostics).some((w) => w.message.includes('internal_vertex_count'))).toBe(true);
     });
   });
 

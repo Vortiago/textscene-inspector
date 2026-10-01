@@ -119,9 +119,15 @@ export function bezierInterpolate(
  * as the linter's scale rules and the renderer's decomposition both read the answer at exactly 0.
  */
 export function basisDeterminant(
-  a: number, b: number, c: number,
-  d: number, e: number, f: number,
-  g: number, h: number, i: number
+  a: number,
+  b: number,
+  c: number,
+  d: number,
+  e: number,
+  f: number,
+  g: number,
+  h: number,
+  i: number
 ): number {
   return a * (e * i - h * f) - d * (b * i - h * c) + g * (b * f - e * c);
 }

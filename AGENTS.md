@@ -60,6 +60,9 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See
 - Per package: `pnpm --filter @textscene/web-previewer type-check` / `test`.
 - `npx eslint <changed files>`. CI runs `eslint .`. Unused imports and variables pass
   vitest and tsc but fail CI.
+- `pnpm format:check` runs Prettier over the repository, in `validate` and in CI. `pnpm format`
+  fixes a failure, and the pre-commit hook formats the staged files. `.prettierignore` names what
+  Prettier skips: markdown, vendored files and generated output.
 - Changed `.tscn` fixtures: `pnpm build:linter && pnpm lint:tscn <files>`.
 - Changed a linter rule or validator: `pnpm lint:scenes`, in `validate` and in CI. It
   sweeps `scenes/demos` and `scenes/isometric` and fails on any error. The directory
@@ -255,6 +258,11 @@ fail on a mis-shaped slice.
   - the three scopes that describe the file rather than the engine
     (`dangling-reference`, `unresolvable-path`, `file-integrity`) warn;
   - only the `engine` kind is left to its cite.
+- A rule declares each diagnostic it reports as a **Rule arm** (`linter/ruleArms.ts`), with
+  its tier and grounding. `check` reports only through `reportArm` or `armDiagnostic`, and
+  `emits` is `armEmits(arms)`, so `emits` lists exactly what `check` reports. The ESLint
+  rule-arm guard refuses a diagnostic object written by hand. Declare an arm whose grounding
+  fixes its tier with `groundedArm(ruleName, grounding)`. Only an `engine` arm writes its tier.
 - **`ADD_PROPERTY` is one of four ways a property reaches a `.tscn`.** The others are
   `PropertyListHelper`/`register_property`, `ADD_ARRAY_COUNT` (a real serialised INT,
   `class_db.cpp:1492`, whose floor is often an `ERR_FAIL_COND` in a template in the
@@ -281,7 +289,7 @@ fail on a mis-shaped slice.
 
   The `v` DSL sets one. A hand-rolled validator must say which. `boundGrounding` fails
   on one that says none, or that claims both `formatOnly` and `grounding`. `intSlot`
-  counts only for a validator that carries no bounds of its own. Every `RangeArm`
+  counts only for a validator that carries no bounds of its own. Every `RangeThreshold`
   carries a required `cite`, checked by `rangeAdvisoryGrounding`. Both guards exist
   because a check that sees only the DSL misses a hand-rolled validator that rejects
   legal scenes.

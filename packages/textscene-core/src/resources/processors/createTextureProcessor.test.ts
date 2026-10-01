@@ -41,7 +41,13 @@ function harness(files: Record<string, ArrayBuffer | string>) {
   const failed = vi.fn();
   eventBus.on('texture', 'loaded', loaded);
   eventBus.on('texture', 'failed', failed);
-  return { fileEventBus, eventBus, loaded, failed, processor: createTextureProcessor(fileEventBus, eventBus) };
+  return {
+    fileEventBus,
+    eventBus,
+    loaded,
+    failed,
+    processor: createTextureProcessor(fileEventBus, eventBus),
+  };
 }
 
 describe('createTextureProcessor', () => {

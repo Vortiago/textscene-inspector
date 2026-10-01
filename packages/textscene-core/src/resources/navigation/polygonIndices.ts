@@ -13,18 +13,13 @@ import { warn } from '../../logger';
  */
 const MIN_POLYGON_INDICES = 3;
 
-export function drawableNavigationPolygons(
-  polygons: readonly number[][],
-  vertexCount: number
-): number[][] {
+export function drawableNavigationPolygons(polygons: readonly number[][], vertexCount: number): number[][] {
   const drawable: number[][] = [];
   for (const polygon of polygons) {
     if (polygon.length < MIN_POLYGON_INDICES) continue;
     // An index `< 0` or `>= vertex_count` rejects the whole polygon as "Corrupted
     // navigation mesh set on region" (`nav_region_builder_3d.cpp:119-141`).
-    const inRange = polygon.every(
-      (index) => Number.isInteger(index) && index >= 0 && index < vertexCount
-    );
+    const inRange = polygon.every((index) => Number.isInteger(index) && index >= 0 && index < vertexCount);
     if (!inRange) {
       warn(
         `[Navigation] Dropping a polygon whose vertex indices are out of range ` +

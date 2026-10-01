@@ -24,11 +24,7 @@ const gdColor = (c) => `Color(${c[0]}, ${c[1]}, ${c[2]})`;
  * GDScript instead of a syntax error that never compiles the bootstrap.
  */
 export const gdString = (s) =>
-  `"${String(s)
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, '\\n')
-    .replace(/\t/g, '\\t')}"`;
+  `"${String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\t/g, '\\t')}"`;
 
 /**
  * Godot's editor preview sun and preview environment, as whole top-level

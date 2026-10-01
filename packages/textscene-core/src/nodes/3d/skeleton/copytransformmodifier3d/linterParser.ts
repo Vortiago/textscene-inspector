@@ -9,10 +9,7 @@
 // settings/ leaves this class's dispatcher delegates to, and it chains on to
 // SkeletonModifier3D itself.
 import '../boneconstraint3d/linterParser.js';
-import {
-  validatorRegistry,
-  type PropertyValidator,
-} from '../../../../linter/ValidatorRegistry.js';
+import { validatorRegistry, type PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 import { settingCount } from '../shared/settingCount.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
@@ -26,11 +23,7 @@ import { boneConstraintBaseLeaves } from '../boneconstraint3d/linterParser.js';
  *
  * @param hinted - `file:line` of the `PropertyInfo` carrying the FLAGS hint.
  */
-function flagsField(
-  name: string,
-  labels: Record<number, string>,
-  hinted: string
-): PropertyValidator {
+function flagsField(name: string, labels: Record<number, string>, hinted: string): PropertyValidator {
   const named = Object.entries(labels)
     .map(([bit, label]) => `${label} (${bit})`)
     .join(' | ');

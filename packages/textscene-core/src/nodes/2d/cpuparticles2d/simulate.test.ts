@@ -156,9 +156,7 @@ describe('a restarting particle’s partial first step (comb vs. bar)', () => {
   });
 
   it('bunches the newest particles at one position with fract_delta disabled (the comb)', () => {
-    const pose = simulateFrozenPose(
-      input({ props: props({ ...streamProps, fract_delta: 'false' }) })
-    );
+    const pose = simulateFrozenPose(input({ props: props({ ...streamProps, fract_delta: 'false' }) }));
     const txOf = (index: number) => pose.find((p) => p.index === index)!.transform.tx;
 
     // Every particle that restarted this step gets the whole frame's motion, so
@@ -176,12 +174,8 @@ describe('the substituted window is one of Godot’s own settles', () => {
   // Measured: a fixture without its `preprocess` line, rendered with
   // `pnpm ref:godot … --particles <that preprocess>`, is byte-identical.
   it('matches the pose the same emitter would settle to with `preprocess = lifetime`', () => {
-    const substituted = simulateFrozenPose(
-      input({ props: props({ preprocess: '0', lifetime: '0.95' }) })
-    );
-    const authored = simulateFrozenPose(
-      input({ props: props({ preprocess: '0.95', lifetime: '0.95' }) })
-    );
+    const substituted = simulateFrozenPose(input({ props: props({ preprocess: '0', lifetime: '0.95' }) }));
+    const authored = simulateFrozenPose(input({ props: props({ preprocess: '0.95', lifetime: '0.95' }) }));
     expect(substituted).toEqual(authored);
     expect(substituted.length).toBeGreaterThan(0);
   });
@@ -197,15 +191,9 @@ describe('the substituted window is one of Godot’s own settles', () => {
     // At `fixed_fps = 30`, 0.95 s and 0.96 s are both spent as 29 whole frames
     // and land on one pose, 0.9667 s in. A shortened last step would separate
     // them. 0.9 s is 27 frames and must not land there, or any two inputs pass.
-    const substituted = simulateFrozenPose(
-      input({ props: props({ preprocess: '0', lifetime: '0.95' }) })
-    );
-    const sameBucket = simulateFrozenPose(
-      input({ props: props({ preprocess: '0.96', lifetime: '0.95' }) })
-    );
-    const earlier = simulateFrozenPose(
-      input({ props: props({ preprocess: '0.9', lifetime: '0.95' }) })
-    );
+    const substituted = simulateFrozenPose(input({ props: props({ preprocess: '0', lifetime: '0.95' }) }));
+    const sameBucket = simulateFrozenPose(input({ props: props({ preprocess: '0.96', lifetime: '0.95' }) }));
+    const earlier = simulateFrozenPose(input({ props: props({ preprocess: '0.9', lifetime: '0.95' }) }));
     expect(substituted).toEqual(sameBucket);
     expect(substituted).not.toEqual(earlier);
   });
@@ -367,8 +355,7 @@ describe('simulateFrozenPose', () => {
     const rising = simulateFrozenPose(
       input({ props: props({ amount: '8', gravity: 'Vector2(0, -400)', explosiveness: '1' }) })
     );
-    const meanY = (pose: typeof falling) =>
-      pose.reduce((sum, p) => sum + p.transform.ty, 0) / pose.length;
+    const meanY = (pose: typeof falling) => pose.reduce((sum, p) => sum + p.transform.ty, 0) / pose.length;
     expect(meanY(falling)).toBeGreaterThan(0);
     expect(meanY(rising)).toBeLessThan(0);
   });
@@ -429,9 +416,7 @@ describe('simulateFrozenPose', () => {
     const curves = NO_CURVES.slice();
     curves[CPUParticles2DParam.Scale] = shrinking;
 
-    const pose = simulateFrozenPose(
-      input({ props: props({ amount: '24', lifetime: '1' }), curves })
-    );
+    const pose = simulateFrozenPose(input({ props: props({ amount: '24', lifetime: '1' }), curves }));
     // A steady-state emitter holds particles at every age, so the curve must
     // give a range of quad sizes.
     const sizes = pose.map((p) => Math.hypot(p.transform.a, p.transform.b));
@@ -558,9 +543,7 @@ describe('simulateFrozenPose', () => {
 
   it('survives a degenerate emitter transform without producing NaN (error path)', () => {
     const singular = { a: 0, b: 0, c: 0, d: 0, tx: 5, ty: 5 };
-    const pose = simulateFrozenPose(
-      input({ props: props({ amount: '4' }), emissionTransform: singular })
-    );
+    const pose = simulateFrozenPose(input({ props: props({ amount: '4' }), emissionTransform: singular }));
     for (const particle of pose) {
       expect(Number.isFinite(particle.transform.tx)).toBe(true);
       expect(Number.isFinite(particle.transform.a)).toBe(true);

@@ -6,12 +6,17 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { VECTOR2_REGEX, tupleComponent } from '../../../linter/validators/index.js';
 import { slotComponents, slotComponentsAltered } from '../../../godot/int.js';
 import { isEqualApprox } from '../../../godot/index.js';
 
-const RULE_NAME = 'navigationlink2d-coincident-endpoints';
+const arms = {
+  coincidentEndpoints: groundedArm('navigationlink2d-coincident-endpoints', {
+    kind: 'configuration-warning',
+  }),
+} as const satisfies RuleArms<string>;
 
 interface Vec2 {
   x: number;
@@ -59,9 +64,7 @@ function isEqualApproxVector2(left: Vec2, right: Vec2): boolean {
 
 function checkNavigationLink2D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  const properties = isValidProperties(node.properties)
-    ? (node.properties as Record<string, string>)
-    : {};
+  const properties = isValidProperties(node.properties) ? (node.properties as Record<string, string>) : {};
 
   const start = readPosition(properties, 'start_position');
   const end = readPosition(properties, 'end_position');
@@ -71,13 +74,11 @@ function checkNavigationLink2D(context: RuleContext): Diagnostic[] {
   if (!isEqualApproxVector2(start, end)) return [];
 
   return [
-    {
-      severity: 'warning',
-      message: `NavigationLink2D '${node.name}' has start_position and end_position at the same point (Vector2(${start.x}, ${start.y})), so it routes nowhere. Godot's own configuration warning: "NavigationLink2D start position should be different than the end position to be useful."`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: RULE_NAME,
-    },
+    armDiagnostic(
+      arms.coincidentEndpoints,
+      node,
+      `NavigationLink2D '${node.name}' has start_position and end_position at the same point (Vector2(${start.x}, ${start.y})), so it routes nowhere. Godot's own configuration warning: "NavigationLink2D start position should be different than the end position to be useful."`
+    ),
   ];
 }
 
@@ -88,7 +89,7 @@ const navigationLink2DEndpointsRule: LintRule = {
       'Warns when NavigationLink2D start_position and end_position resolve to the same point (each defaulting to Vector2(0, 0) when omitted), so the link routes nowhere',
     category: 'validation',
     applicableNodeTypes: ['NavigationLink2D'],
-    emits: [{ ruleName: RULE_NAME, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: armEmits(arms),
   },
   check: checkNavigationLink2D,
 };

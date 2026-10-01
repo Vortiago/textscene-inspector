@@ -21,20 +21,39 @@ import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { DEFAULT_CONTENT_MARGIN } from '../../../../r3f/controls/godotDefaultTheme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { ControlColor } from '../control/types';
-import { computeGridDots, computeGridLines, GRID_PATTERN_DOTS, GRID_PATTERN_LINES, type GridDot, type GridLine } from './grid';
+import {
+  computeGridDots,
+  computeGridLines,
+  GRID_PATTERN_DOTS,
+  GRID_PATTERN_LINES,
+  type GridDot,
+  type GridLine,
+} from './grid';
 import { resolveGraphEditConnections } from './connectionEndpoints';
 import { ConnectionLine } from './ConnectionLine';
 import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
-import { shapedTextSizeWidthPx, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import {
+  shapedTextSizeWidthPx,
+  type TextLayoutResult,
+} from '../../../../r3f/controls/native/text/textLayout';
 import { formatGodotNumber, rangeStepDecimals } from '../spinbox/nativeSolver';
 import { graphEditToolbar, zoomLabelText } from './toolbar';
 import { GraphEditToolbarChrome } from './ToolbarChrome';
-import { graphEditElements, isMinimapEnabled, minimapOpacity, minimapRect, minimapTransform } from './minimap';
+import {
+  graphEditElements,
+  isMinimapEnabled,
+  minimapOpacity,
+  minimapRect,
+  minimapTransform,
+} from './minimap';
 import { GraphEditMinimapChrome } from './MinimapChrome';
 import { graphEditScrollBars, type GraphEditScrollBar } from './scrollBars';
-import { snappedControlOrigin, type ControlDrawTransform } from '../../../../r3f/controls/native/controlPixelSnap';
+import {
+  snappedControlOrigin,
+  type ControlDrawTransform,
+} from '../../../../r3f/controls/native/controlPixelSnap';
 import type { GraphEditProperties } from './types';
 
 /** `default_theme.cpp:1287`: `make_flat_stylebox(style_normal_color, 4, 4, 4, 5)`, with a larger bottom margin. */
@@ -128,13 +147,23 @@ function GridDotQuad({
 }) {
   return (
     <CanvasItemGroup position={[dot.x - 1, -(dot.y - 1), 0]}>
-      <ControlQuad width={DOT_SIZE_PX} height={DOT_SIZE_PX} color={colorQuad.color} opacity={colorQuad.opacity} renderOrder={renderOrder} />
+      <ControlQuad
+        width={DOT_SIZE_PX}
+        height={DOT_SIZE_PX}
+        color={colorQuad.color}
+        opacity={colorQuad.opacity}
+        renderOrder={renderOrder}
+      />
     </CanvasItemGroup>
   );
 }
 
 /** No bar has an authored rotation, scale or pivot: `set_anchor_and_offset` alone places each (`graph_edit.cpp:844-851`). */
-const SCROLL_BAR_DRAW_TRANSFORM: ControlDrawTransform = { rotation: 0, scale: { x: 1, y: 1 }, pivot: { x: 0, y: 0 } };
+const SCROLL_BAR_DRAW_TRANSFORM: ControlDrawTransform = {
+  rotation: 0,
+  scale: { x: 1, y: 1 },
+  pivot: { x: 0, y: 0 },
+};
 
 /** One of GraphEdit's own scrollbars: `ScrollBar::_notification(NOTIFICATION_DRAW)`'s track then grabber (`scroll_bar.cpp:295-344`). */
 function ScrollBarChrome({
@@ -160,7 +189,12 @@ function ScrollBarChrome({
     <CanvasItemGroup position={[origin.x, -origin.y, 0]}>
       <StyleBoxQuad styleBox={track} color={color} rect={bar.rect} renderOrder={renderOrder} />
       <CanvasItemGroup position={[bar.grabberRect.x, -bar.grabberRect.y, 0]}>
-        <StyleBoxQuad styleBox={grabber} color={color} rect={bar.grabberRect} renderOrder={renderOrder + 0.05} />
+        <StyleBoxQuad
+          styleBox={grabber}
+          color={color}
+          rect={bar.grabberRect}
+          renderOrder={renderOrder + 0.05}
+        />
       </CanvasItemGroup>
     </CanvasItemGroup>
   );
@@ -187,7 +221,10 @@ export function GraphEdit({
   const scrollOffsetX = props.scrollOffset?.x ?? 0;
   const scrollOffsetY = props.scrollOffset?.y ?? 0;
   const snappingDistance = props.snappingDistance ?? 20;
-  const scrollOffset = useMemo(() => ({ x: scrollOffsetX, y: scrollOffsetY }), [scrollOffsetX, scrollOffsetY]);
+  const scrollOffset = useMemo(
+    () => ({ x: scrollOffsetX, y: scrollOffsetY }),
+    [scrollOffsetX, scrollOffsetY]
+  );
 
   // `graph_edit.h:253`/`:252`: `lines_curvature = 0.5f`, `lines_thickness = 4.0f`.
   const curvature = props.connectionLinesCurvature ?? 0.5;
@@ -217,7 +254,10 @@ export function GraphEdit({
 
   const rectSize = useMemo(() => ({ x: rect.w, y: rect.h }), [rect.w, rect.h]);
   const lines = useMemo(
-    () => (showGrid && gridPattern !== GRID_PATTERN_DOTS ? computeGridLines(rectSize, scrollOffset, zoom, snappingDistance) : []),
+    () =>
+      showGrid && gridPattern !== GRID_PATTERN_DOTS
+        ? computeGridLines(rectSize, scrollOffset, zoom, snappingDistance)
+        : [],
     [showGrid, gridPattern, rectSize, scrollOffset, zoom, snappingDistance]
   );
   const dots = useMemo(
@@ -274,16 +314,32 @@ export function GraphEdit({
   return (
     <CanvasItemGroup ref={anchorRef}>
       <ControlClipProvider value={clip}>
-        <StyleBoxQuad styleBox={panelStyle} color={tint.own} rect={{ x: 0, y: 0, w: rect.w, h: rect.h }} renderOrder={renderOrder} />
+        <StyleBoxQuad
+          styleBox={panelStyle}
+          color={tint.own}
+          rect={{ x: 0, y: 0, w: rect.w, h: rect.h }}
+          renderOrder={renderOrder}
+        />
 
         {lines.map((line, i) => (
-          <GridLineQuad key={i} line={line} rect={rect} majorColor={majorColor} minorColor={minorColor} renderOrder={renderOrder} />
+          <GridLineQuad
+            key={i}
+            line={line}
+            rect={rect}
+            majorColor={majorColor}
+            minorColor={minorColor}
+            renderOrder={renderOrder}
+          />
         ))}
 
         {minorDotColor.opacity !== 0 &&
-          dots.minor.map((dot, i) => <GridDotQuad key={`m${i}`} dot={dot} colorQuad={minorDotColor} renderOrder={renderOrder} />)}
+          dots.minor.map((dot, i) => (
+            <GridDotQuad key={`m${i}`} dot={dot} colorQuad={minorDotColor} renderOrder={renderOrder} />
+          ))}
         {majorColor.opacity !== 0 &&
-          dots.major.map((dot, i) => <GridDotQuad key={`M${i}`} dot={dot} colorQuad={majorColor} renderOrder={renderOrder} />)}
+          dots.major.map((dot, i) => (
+            <GridDotQuad key={`M${i}`} dot={dot} colorQuad={majorColor} renderOrder={renderOrder} />
+          ))}
 
         {connections.map((connection, i) => (
           <ConnectionLine

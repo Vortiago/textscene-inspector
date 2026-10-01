@@ -30,18 +30,12 @@ describe('optionbutton-selected-out-of-range', () => {
   });
 
   it('reads an exponent-spelled item_count at its real size', () => {
-    expect(
-      findings(scene(node('OptionButton', { item_count: '2e1', selected: 15 })))
-    ).toHaveLength(0);
+    expect(findings(scene(node('OptionButton', { item_count: '2e1', selected: 15 })))).toHaveLength(0);
   });
 
   it('says nothing when either side is non-finite, since neither is a stored index', () => {
-    expect(findings(scene(node('OptionButton', { item_count: 'inf', selected: 15 })))).toHaveLength(
-      0
-    );
-    expect(findings(scene(node('OptionButton', { item_count: 3, selected: 'inf' })))).toHaveLength(
-      0
-    );
+    expect(findings(scene(node('OptionButton', { item_count: 'inf', selected: 15 })))).toHaveLength(0);
+    expect(findings(scene(node('OptionButton', { item_count: 3, selected: 'inf' })))).toHaveLength(0);
   });
 
   it('warns when selected equals item_count (one past the last valid index)', () => {

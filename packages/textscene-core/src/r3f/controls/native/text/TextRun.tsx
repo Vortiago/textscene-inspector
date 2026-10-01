@@ -104,10 +104,7 @@ export function buildGlyphQuadArrays(
       const br: [number, number] = [rightPx + dx(bottomPx), bottomPx];
 
       const v = quad * 4;
-      positions.set(
-        [tl[0], -tl[1], 0, tr[0], -tr[1], 0, bl[0], -bl[1], 0, br[0], -br[1], 0],
-        v * 3
-      );
+      positions.set([tl[0], -tl[1], 0, tr[0], -tr[1], 0, bl[0], -bl[1], 0, br[0], -br[1], 0], v * 3);
 
       const uv = atlasUv(glyph.x, glyph.y, glyph.width, glyph.height);
       uvs.set([uv.u0, uv.vTop, uv.u1, uv.vTop, uv.u0, uv.vBottom, uv.u1, uv.vBottom], v * 2);
@@ -400,7 +397,13 @@ export function TextRun({
       />
       {hexBoxRects.map((r, i) => (
         <CanvasItemGroup key={i} position={[r.x, -r.y, 0]}>
-          <ControlQuad width={r.w} height={r.h} color={hexBoxColor} opacity={tint.a} renderOrder={renderOrder} />
+          <ControlQuad
+            width={r.w}
+            height={r.h}
+            color={hexBoxColor}
+            opacity={tint.a}
+            renderOrder={renderOrder}
+          />
         </CanvasItemGroup>
       ))}
     </>

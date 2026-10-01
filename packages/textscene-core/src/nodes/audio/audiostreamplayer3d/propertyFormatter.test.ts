@@ -12,10 +12,7 @@ function props(raw: Record<string, string> = {}): AudioStreamPlayer3DProperties 
   return parseAudioStreamPlayer3D(heading('AudioStreamPlayer3D', { name: 'Sound' }), raw);
 }
 
-function section(
-  sections: ReturnType<typeof formatAudioStreamPlayer3DProperties>,
-  title: string
-) {
+function section(sections: ReturnType<typeof formatAudioStreamPlayer3DProperties>, title: string) {
   return sections.find((s) => s.title === title);
 }
 
@@ -65,22 +62,13 @@ describe('formatAudioStreamPlayer3DProperties', () => {
     ]);
 
     expect(
-      section(
-        formatAudioStreamPlayer3DProperties(props({ attenuation_model: '1' })),
-        'Attenuation'
-      )!.items
+      section(formatAudioStreamPlayer3DProperties(props({ attenuation_model: '1' })), 'Attenuation')!.items
     ).toContainEqual({ label: 'Model', value: 'Inverse Square' });
     expect(
-      section(
-        formatAudioStreamPlayer3DProperties(props({ attenuation_model: '2' })),
-        'Attenuation'
-      )!.items
+      section(formatAudioStreamPlayer3DProperties(props({ attenuation_model: '2' })), 'Attenuation')!.items
     ).toContainEqual({ label: 'Model', value: 'Logarithmic' });
     expect(
-      section(
-        formatAudioStreamPlayer3DProperties(props({ attenuation_model: '3' })),
-        'Attenuation'
-      )!.items
+      section(formatAudioStreamPlayer3DProperties(props({ attenuation_model: '3' })), 'Attenuation')!.items
     ).toContainEqual({ label: 'Model', value: 'Disabled' });
   });
 
@@ -116,26 +104,17 @@ describe('formatAudioStreamPlayer3DProperties', () => {
   });
 
   it('formats the Spatial section, mapping every Doppler tracking mode and the area mask in hex', () => {
-    const spatial = section(
-      formatAudioStreamPlayer3DProperties(props({ area_mask: '255' })),
-      'Spatial'
-    )!;
+    const spatial = section(formatAudioStreamPlayer3DProperties(props({ area_mask: '255' })), 'Spatial')!;
     expect(spatial.items).toEqual([
       { label: 'Doppler Tracking', value: 'Disabled' },
       { label: 'Area Mask', value: '0xff' },
     ]);
 
     expect(
-      section(
-        formatAudioStreamPlayer3DProperties(props({ doppler_tracking: '1' })),
-        'Spatial'
-      )!.items
+      section(formatAudioStreamPlayer3DProperties(props({ doppler_tracking: '1' })), 'Spatial')!.items
     ).toContainEqual({ label: 'Doppler Tracking', value: 'Idle Step' });
     expect(
-      section(
-        formatAudioStreamPlayer3DProperties(props({ doppler_tracking: '2' })),
-        'Spatial'
-      )!.items
+      section(formatAudioStreamPlayer3DProperties(props({ doppler_tracking: '2' })), 'Spatial')!.items
     ).toContainEqual({ label: 'Doppler Tracking', value: 'Physics Step' });
   });
 

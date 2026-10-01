@@ -32,12 +32,9 @@ describe('literalText', () => {
     expect(literalText('"a\\"b"')).toBe('a\\"b');
   });
 
-  it.each(['"unterminated', 'unopened"', `"mixed'`])(
-    'leaves an unmatched quote alone: %s',
-    (raw) => {
-      expect(literalText(raw)).toBe(raw);
-    }
-  );
+  it.each(['"unterminated', 'unopened"', `"mixed'`])('leaves an unmatched quote alone: %s', (raw) => {
+    expect(literalText(raw)).toBe(raw);
+  });
 
   it('trims a value that was never quoted and leaves the rest', () => {
     expect(literalText('  default  ')).toBe('default');
@@ -95,10 +92,7 @@ describe('splitTopLevel', () => {
   });
 
   it('ignores a comma nested inside parens', () => {
-    expect(splitTopLevel('Vector2(1, 2), Vector2(3, 4)')).toEqual([
-      'Vector2(1, 2)',
-      'Vector2(3, 4)',
-    ]);
+    expect(splitTopLevel('Vector2(1, 2), Vector2(3, 4)')).toEqual(['Vector2(1, 2)', 'Vector2(3, 4)']);
   });
 
   it('ignores a comma nested inside brackets', () => {

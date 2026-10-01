@@ -4,7 +4,13 @@
  */
 
 import { describe, it } from 'vitest';
-import { node, scene, expectClean, expectDiagnostic, expectNoDiagnostic } from '../../../../linter/testing/testkit';
+import {
+  node,
+  scene,
+  expectClean,
+  expectDiagnostic,
+  expectNoDiagnostic,
+} from '../../../../linter/testing/testkit';
 import './linter';
 
 describe('VSlider property-order rule', () => {

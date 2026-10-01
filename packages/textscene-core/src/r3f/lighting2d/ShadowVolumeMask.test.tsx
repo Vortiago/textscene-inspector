@@ -71,7 +71,7 @@ describe('stencil ref allocation', () => {
 });
 
 describe('render order pairing', () => {
-  it('draws a light\'s volumes before its own quad', () => {
+  it("draws a light's volumes before its own quad", () => {
     expect(shadowVolumeRenderOrder(3)).toBeLessThan(litQuadRenderOrder(3));
   });
 

@@ -13,10 +13,7 @@ import * as THREE from 'three';
 
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
-import {
-  CanvasWorkspaceProvider,
-  useCanvasWorkspace,
-} from '../../../r3f/contexts/CanvasWorkspaceContext';
+import { CanvasWorkspaceProvider, useCanvasWorkspace } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { Node } from '../../node/Component';
 import {
@@ -60,9 +57,7 @@ export function SubViewport({ node, children }: NodeComponentProps) {
   // canvas. Otherwise the offscreen pass portals it. Without a pass, the children
   // pass through on the `own_world_3d` rule, since a component renders what the
   // dispatcher hands it (subtreeConformance).
-  const rendersInline = rasterizes
-    ? kind === '3d' && !ownWorld3D && workspace === '3d'
-    : !ownWorld3D;
+  const rendersInline = rasterizes ? kind === '3d' && !ownWorld3D && workspace === '3d' : !ownWorld3D;
 
   return (
     <Node node={node}>
@@ -98,13 +93,7 @@ export function allocatableExtent(raw: number): number {
  * A separate component, so a Control-only sub-viewport mounts none of its hooks
  * and leaves the key to `ControlRasterPass.tsx`.
  */
-function OffscreenViewport({
-  node,
-  path,
-  kind,
-  rendersInline,
-  children,
-}: OffscreenViewportProps) {
+function OffscreenViewport({ node, path, kind, rendersInline, children }: OffscreenViewportProps) {
   const properties = node.properties as SubViewportProperties;
   const { size, transparent_bg: transparentBg } = properties;
   // A stretching `SubViewportContainer` overwrites the size with its own rect
@@ -125,10 +114,7 @@ function OffscreenViewport({
 
   // Carries the storage and the tonemap contracts: Godot tonemaps a
   // sub-viewport's render into its target as it tonemaps the main view's.
-  const target = useMemo(
-    () => createOffscreenTarget(width, height, node.name),
-    [width, height, node.name]
-  );
+  const target = useMemo(() => createOffscreenTarget(width, height, node.name), [width, height, node.name]);
 
   useEffect(() => () => target.dispose(), [target]);
 
@@ -161,8 +147,7 @@ function OffscreenViewport({
       );
     }
 
-    const camera =
-      kind === '3d' ? selectViewportCamera(source, path) : orthoCamera;
+    const camera = kind === '3d' ? selectViewportCamera(source, path) : orthoCamera;
 
     // A `<Camera3D>` perspective camera carries the canvas aspect (16:9). Inside
     // the viewport it frames the target rect, and it is restored after, since

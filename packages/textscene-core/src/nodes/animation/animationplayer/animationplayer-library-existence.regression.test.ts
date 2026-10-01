@@ -45,9 +45,7 @@ describe('#148 AnimationPlayer existence checks on library-based (Godot 4) scene
   });
 
   it('flags current_animation referencing a clip absent from the AnimationLibrary', () => {
-    expect(rules(linter.lint(libScene('', '&"jmp"')))).toContain(
-      'animationplayer-current-animation-missing',
-    );
+    expect(rules(linter.lint(libScene('', '&"jmp"')))).toContain('animationplayer-current-animation-missing');
   });
 
   it('does NOT flag a valid &-prefixed autoplay clip (strips the StringName marker, finds the clip)', () => {
@@ -57,7 +55,7 @@ describe('#148 AnimationPlayer existence checks on library-based (Godot 4) scene
 
   it('does NOT flag a valid &-prefixed current_animation clip', () => {
     expect(rules(linter.lint(libScene('', '&"jump"')))).not.toContain(
-      'animationplayer-current-animation-missing',
+      'animationplayer-current-animation-missing'
     );
   });
 
@@ -128,7 +126,9 @@ libraries/combat = SubResource("AnimationLibrary_combat")
 ${autoplay ? `autoplay = ${autoplay}\n` : ''}`;
 
   it('does NOT flag a valid named-library clip referenced as <lib>/<clip>', () => {
-    expect(rules(linter.lint(namedLibScene('&"combat/walk"')))).not.toContain('animationplayer-autoplay-missing');
+    expect(rules(linter.lint(namedLibScene('&"combat/walk"')))).not.toContain(
+      'animationplayer-autoplay-missing'
+    );
   });
 
   it('STILL flags a typo in a named-library clip', () => {
@@ -188,14 +188,18 @@ libraries/ = SubResource("AnimationLibrary_1")
 ${autoplay ? `autoplay = ${autoplay}\n` : ''}`;
 
   it('resolves a special-char clip name (linter ↔ renderer agree): valid not flagged, typo flagged', () => {
-    expect(rules(linter.lint(specialClipScene('&"ui:open"')))).not.toContain('animationplayer-autoplay-missing');
+    expect(rules(linter.lint(specialClipScene('&"ui:open"')))).not.toContain(
+      'animationplayer-autoplay-missing'
+    );
     expect(rules(linter.lint(specialClipScene('&"ui:shut"')))).toContain('animationplayer-autoplay-missing');
   });
 
   it('does NOT flag an empty StringName autoplay/current_animation (`&""` = Godot 4 "no clip")', () => {
     // `&""` strips to "", which means nothing is playing, not a missing clip. The guard reads the stripped name.
     expect(rules(linter.lint(libScene('&""')))).not.toContain('animationplayer-autoplay-missing');
-    expect(rules(linter.lint(libScene('', '&""')))).not.toContain('animationplayer-current-animation-missing');
+    expect(rules(linter.lint(libScene('', '&""')))).not.toContain(
+      'animationplayer-current-animation-missing'
+    );
   });
 
   // A library that resolves but is empty (`_data = {}`) is still fully enumerable, so a missing clip

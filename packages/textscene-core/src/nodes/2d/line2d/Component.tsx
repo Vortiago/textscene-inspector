@@ -8,7 +8,10 @@ import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
-import { canvasItemBlendState, type CanvasItemBlendState } from '../../../resources/materials/canvasitemmaterial/renderer';
+import {
+  canvasItemBlendState,
+  type CanvasItemBlendState,
+} from '../../../resources/materials/canvasitemmaterial/renderer';
 import type { CanvasItemLightingProps } from '../../../r3f/lighting2d/useCanvasItemLighting';
 import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmaterial/types';
 import { multiplyModulate, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
@@ -29,14 +32,7 @@ export function Line2D({ node, children }: NodeComponentProps) {
         sharpLimit: props.sharpLimit,
         roundPrecision: props.roundPrecision,
       }),
-    [
-      props.points,
-      props.width,
-      props.closed,
-      props.jointMode,
-      props.sharpLimit,
-      props.roundPrecision,
-    ]
+    [props.points, props.width, props.closed, props.jointMode, props.sharpLimit, props.roundPrecision]
   );
   useEffect(() => () => geometry?.dispose(), [geometry]);
 
@@ -228,19 +224,19 @@ function appendQuad(
   const ohy = perpY * width * 0.5;
 
   // Vertices: (p₀−n·hw), (p₀+n·hw), (p₁+n·hw), (p₁−n·hw)
-  positions[offset]       = gt_x0 - ohx;
-  positions[offset + 1]   = gt_y0 - ohy;
-  positions[offset + 2]   = 0;
+  positions[offset] = gt_x0 - ohx;
+  positions[offset + 1] = gt_y0 - ohy;
+  positions[offset + 2] = 0;
 
-  positions[offset + 3]   = gt_x0 + ohx;
-  positions[offset + 4]   = gt_y0 + ohy;
-  positions[offset + 5]   = 0;
+  positions[offset + 3] = gt_x0 + ohx;
+  positions[offset + 4] = gt_y0 + ohy;
+  positions[offset + 5] = 0;
 
-  positions[offset + 6]   = gt_x1 + ohx;
-  positions[offset + 7]   = gt_y1 + ohy;
-  positions[offset + 8]   = 0;
+  positions[offset + 6] = gt_x1 + ohx;
+  positions[offset + 7] = gt_y1 + ohy;
+  positions[offset + 8] = 0;
 
-  positions[offset + 9]   = gt_x1 - ohx;
-  positions[offset + 10]  = gt_y1 - ohy;
-  positions[offset + 11]  = 0;
+  positions[offset + 9] = gt_x1 - ohx;
+  positions[offset + 10] = gt_y1 - ohy;
+  positions[offset + 11] = 0;
 }

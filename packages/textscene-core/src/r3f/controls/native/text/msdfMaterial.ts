@@ -146,7 +146,9 @@ export function createMsdfMaterial(options: MsdfMaterialOptions): THREE.ShaderMa
       uOpacity: { value: opacity },
       uDistanceBias: { value: distanceBias },
       uPxRange: { value: pxRange },
-      uOutlineColor: { value: new THREE.Vector3(outline?.color.r ?? 0, outline?.color.g ?? 0, outline?.color.b ?? 0) },
+      uOutlineColor: {
+        value: new THREE.Vector3(outline?.color.r ?? 0, outline?.color.g ?? 0, outline?.color.b ?? 0),
+      },
       uOutlineOpacity: { value: outline?.opacity ?? 0 },
       uOutlineWidthPx: { value: outline?.widthPx ?? 0 },
     },

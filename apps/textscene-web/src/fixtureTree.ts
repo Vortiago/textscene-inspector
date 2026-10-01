@@ -71,9 +71,7 @@ function filterBranch(branch: TreeBranch, needle: string): TreeBranch | null {
 }
 
 function getOrCreateBranch(children: TreeItem[], label: string): TreeBranch {
-  const existing = children.find(
-    (c): c is TreeBranch => c.kind === 'branch' && c.label === label
-  );
+  const existing = children.find((c): c is TreeBranch => c.kind === 'branch' && c.label === label);
   if (existing) return existing;
   const created: TreeBranch = { kind: 'branch', label, children: [] };
   children.push(created);

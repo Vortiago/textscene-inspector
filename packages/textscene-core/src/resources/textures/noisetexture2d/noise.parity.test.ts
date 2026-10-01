@@ -67,9 +67,7 @@ describe('FastNoiseLite parity with Godot 4.6.3', () => {
 
   it('matches the engine with a sample offset applied', () => {
     // `get_noise_2d` adds `offset` before generating (fastnoise_lite.cpp:318-325).
-    const sample = noiseSampler(
-      decodeFastNoiseLite({ noise_type: '5', offset: 'Vector3(12, -5, 0)' })
-    );
+    const sample = noiseSampler(decodeFastNoiseLite({ noise_type: '5', offset: 'Vector3(12, -5, 0)' }));
     expect(sample(0, 0)).toBeCloseTo(0.1600944102, 6);
     expect(sample(9, 9)).toBeCloseTo(0.1846490502, 6);
   });

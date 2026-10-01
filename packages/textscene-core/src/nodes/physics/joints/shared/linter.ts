@@ -11,6 +11,15 @@ import { extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { resolveNodePath } from '../../../../linter/nodePathResolve.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
+
+// Dimension-free: `emits` is rule-level, so a per-dimension name would put
+// `joint3d-not-connected` in every PinJoint2D sheet. The dimension is
+// already on the diagnostic's `nodeType` and in its message.
+const arms = {
+  notConnected: groundedArm('joint-not-connected', { kind: 'configuration-warning' }),
+  sameBody: groundedArm('joint-same-body', { kind: 'configuration-warning' }),
+} as const satisfies RuleArms<string>;
 
 /** `'2D'` or `'3D'` for a joint type, or undefined when it is not a joint. */
 function jointDim(nodeType: string): '2D' | '3D' | undefined {
@@ -52,25 +61,21 @@ function checkJoint(context: RuleContext): Diagnostic[] {
     const which = !a && !b ? "'node_a' and 'node_b' are" : `'${!a ? 'node_a' : 'node_b'}' is`;
     const howMany = dim === '2D' ? 'two' : 'any';
     return [
-      {
-        severity: 'warning',
-        message: `${node.type} '${node.name}' is not connected to ${howMany} ${bodyType}s: ${which} unset, so the joint does nothing.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'joint-not-connected',
-      },
+      armDiagnostic(
+        arms.notConnected,
+        node,
+        `${node.type} '${node.name}' is not connected to ${howMany} ${bodyType}s: ${which} unset, so the joint does nothing.`
+      ),
     ];
   }
 
   if (sameBody) {
     return [
-      {
-        severity: 'warning',
-        message: `${node.type} '${node.name}' has 'node_a' and 'node_b' both pointing at ${a!.node?.name ?? a!.path}. A joint must connect two different ${bodyType}s.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'joint-same-body',
-      },
+      armDiagnostic(
+        arms.sameBody,
+        node,
+        `${node.type} '${node.name}' has 'node_a' and 'node_b' both pointing at ${a!.node?.name ?? a!.path}. A joint must connect two different ${bodyType}s.`
+      ),
     ];
   }
 
@@ -83,13 +88,7 @@ const jointValidationRule: LintRule = {
     description: 'Flags a joint that cannot form a constraint',
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => jointDim(nodeType) !== undefined,
-    // Dimension-free: `emits` is rule-level, so a per-dimension name would put
-    // `joint3d-not-connected` in every PinJoint2D sheet. The dimension is
-    // already on the diagnostic's `nodeType` and in its message.
-    emits: [
-      { ruleName: 'joint-not-connected', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      { ruleName: 'joint-same-body', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-    ],
+    emits: armEmits(arms),
   },
   check: checkJoint,
 };

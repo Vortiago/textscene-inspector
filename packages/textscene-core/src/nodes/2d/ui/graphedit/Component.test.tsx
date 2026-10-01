@@ -33,7 +33,13 @@ function graphEdit(properties: Partial<GraphEditProperties> = {}, children: Solv
     children: [],
     // Chrome off unless a test asks for it: the toolbar and the minimap draw
     // meshes of their own, and every assertion below counts meshes globally.
-    properties: { name: 'G', connections: [], showMenu: false, minimapEnabled: false, ...properties } as GraphEditProperties,
+    properties: {
+      name: 'G',
+      connections: [],
+      showMenu: false,
+      minimapEnabled: false,
+      ...properties,
+    } as GraphEditProperties,
   };
   return { ...emptySolveNode(), path: 'G', node, children };
 }
@@ -133,8 +139,12 @@ describe('<GraphEdit> (isolated painter contract)', () => {
 });
 
 describe('<GraphEdit> connections (graph_edit.cpp:1614-1660 _update_connections)', () => {
-  const source = graphNode('Source', new Map([[0, fullSlot({ rightEnabled: true })]]), [leafControl('Value', 20)]);
-  const sink = graphNode('Sink', new Map([[0, fullSlot({ leftEnabled: true })]]), [leafControl('Result', 20)]);
+  const source = graphNode('Source', new Map([[0, fullSlot({ rightEnabled: true })]]), [
+    leafControl('Value', 20),
+  ]);
+  const sink = graphNode('Sink', new Map([[0, fullSlot({ leftEnabled: true })]]), [
+    leafControl('Result', 20),
+  ]);
   const childRects: ReadonlyMap<string, Rect2> = new Map([
     ['Source', { x: 0, y: 0, w: 120, h: 80 }],
     ['Sink', { x: 200, y: 0, w: 120, h: 80 }],
@@ -155,7 +165,9 @@ describe('<GraphEdit> connections (graph_edit.cpp:1614-1660 _update_connections)
   });
 
   it('draws nothing extra when an endpoint node is missing', async () => {
-    const dangling: GraphEditConnection[] = [{ fromNode: 'Source', fromPort: 0, toNode: 'Nowhere', toPort: 0 }];
+    const dangling: GraphEditConnection[] = [
+      { fromNode: 'Source', fromPort: 0, toNode: 'Nowhere', toPort: 0 },
+    ];
     const renderer = await ReactThreeTestRenderer.create(
       <GraphEdit
         {...painterEnv()}
@@ -210,7 +222,9 @@ describe('<GraphEdit> constructor chrome (graph_edit.cpp:3229-3340)', () => {
   }
 
   it('always draws both scrollbars, track and grabber, below the toolbar band (graph_edit.cpp:491-492)', async () => {
-    expect(band(await render({ showMenu: false, minimapEnabled: false }), 9, TOOLBAR_BAND)).toHaveLength(SCROLL_BAR_MESHES);
+    expect(band(await render({ showMenu: false, minimapEnabled: false }), 9, TOOLBAR_BAND)).toHaveLength(
+      SCROLL_BAR_MESHES
+    );
   });
 
   it('draws the toolbar panel, each pressed toggle and the spinbox field above the whole subtree', async () => {
@@ -220,7 +234,9 @@ describe('<GraphEdit> constructor chrome (graph_edit.cpp:3229-3340)', () => {
   });
 
   it('presses toggle_grid as well once show_grid is on (graph_edit.cpp:2729-2737)', async () => {
-    expect(band(await render({ showMenu: true, showGrid: true }), TOOLBAR_BAND, MINIMAP_BAND)).toHaveLength(4);
+    expect(band(await render({ showMenu: true, showGrid: true }), TOOLBAR_BAND, MINIMAP_BAND)).toHaveLength(
+      4
+    );
   });
 
   it('draws no toolbar at all when show_menu is false (graph_edit.cpp:2812-2815)', async () => {
@@ -230,7 +246,9 @@ describe('<GraphEdit> constructor chrome (graph_edit.cpp:3229-3340)', () => {
   it('drops both grid toggles AND the spinbox together when show_grid_buttons is false (:2842-2848)', async () => {
     // Only the panel is left: every remaining button is an unpressed FlatButton,
     // whose normal stylebox is empty (default_theme.cpp:360,367).
-    expect(band(await render({ showMenu: true, showGridButtons: false }), TOOLBAR_BAND, MINIMAP_BAND)).toHaveLength(1);
+    expect(
+      band(await render({ showMenu: true, showGridButtons: false }), TOOLBAR_BAND, MINIMAP_BAND)
+    ).toHaveLength(1);
   });
 
   it('draws the minimap panel, one node rect and the camera rect when enabled', async () => {
@@ -243,7 +261,9 @@ describe('<GraphEdit> constructor chrome (graph_edit.cpp:3229-3340)', () => {
 
   it('places the minimap panel bottom-right, inset by MINIMAP_OFFSET (graph_edit.cpp:2773-2778)', async () => {
     const renderer = await render({ minimapEnabled: true });
-    const panel = band(renderer, MINIMAP_BAND).reduce((lowest, m) => (m.renderOrder < lowest.renderOrder ? m : lowest));
+    const panel = band(renderer, MINIMAP_BAND).reduce((lowest, m) =>
+      m.renderOrder < lowest.renderOrder ? m : lowest
+    );
     renderer.scene.instance.updateMatrixWorld(true);
     const world = new THREE.Vector3();
     panel.getWorldPosition(world);
@@ -262,7 +282,12 @@ describe('<GraphEdit> — clip_contents', () => {
   it("publishes exactly 4 world-space planes matching this node's own rect", async () => {
     let captured: readonly THREE.Plane[] = [];
     await ReactThreeTestRenderer.create(
-      <GraphEdit {...painterEnv()} solveNode={graphEdit()} rect={{ x: 0, y: 0, w: 300, h: 200 }} renderOrder={0}>
+      <GraphEdit
+        {...painterEnv()}
+        solveNode={graphEdit()}
+        rect={{ x: 0, y: 0, w: 300, h: 200 }}
+        renderOrder={0}
+      >
         <ClipProbe onPlanes={(p) => (captured = p)} />
       </GraphEdit>
     );
@@ -281,10 +306,12 @@ describe('<GraphEdit> — clip_contents', () => {
           graphNode('A', new Map([[0, fullSlot({ rightEnabled: true })]]), [leafControl('A/L', 20)]),
           graphNode('B', new Map([[0, fullSlot({ leftEnabled: true })]]), [leafControl('B/L', 20)]),
         ])}
-        childRects={new Map([
-          ['A', { x: 0, y: 0, w: 60, h: 40 }],
-          ['B', { x: 120, y: 0, w: 60, h: 40 }],
-        ])}
+        childRects={
+          new Map([
+            ['A', { x: 0, y: 0, w: 60, h: 40 }],
+            ['B', { x: 120, y: 0, w: 60, h: 40 }],
+          ])
+        }
         rect={RECT}
         renderOrder={0}
       />
@@ -292,7 +319,11 @@ describe('<GraphEdit> — clip_contents', () => {
     const ribbons = renderer.scene
       .findAllByType('Mesh')
       .map((m) => m.instance as THREE.Mesh)
-      .filter((m) => (m.geometry as THREE.BufferGeometry).getIndex() !== null && (m.geometry as THREE.BufferGeometry).attributes.color?.itemSize === 4);
+      .filter(
+        (m) =>
+          (m.geometry as THREE.BufferGeometry).getIndex() !== null &&
+          (m.geometry as THREE.BufferGeometry).attributes.color?.itemSize === 4
+      );
     expect(ribbons.length).toBeGreaterThan(0);
     for (const ribbon of ribbons) {
       expect((ribbon.material as THREE.Material).clippingPlanes).toHaveLength(4);

@@ -3,17 +3,13 @@
  * and the path to Object3D map. Each shell owns its own. Paths are slash-joined
  * node names without a leading `./` (R3F-contracts.md).
  */
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import type * as THREE from 'three';
-import { createExternalStore, useExternalStoreValue, type ExternalStore } from '../hooks/createExternalStore.js';
+import {
+  createExternalStore,
+  useExternalStoreValue,
+  type ExternalStore,
+} from '../hooks/createExternalStore.js';
 
 export interface SelectionContextValue {
   selectedNodePath: string | null;
@@ -65,9 +61,7 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
   const [expandedNodePaths, setExpandedNodePathsState] = useState<ReadonlySet<string>>(
     () => new Set<string>()
   );
-  const [hiddenNodePaths, setHiddenNodePathsState] = useState<ReadonlySet<string>>(
-    () => new Set<string>()
-  );
+  const [hiddenNodePaths, setHiddenNodePathsState] = useState<ReadonlySet<string>>(() => new Set<string>());
 
   const toggleExpandedNodePath = useCallback((path: string) => {
     setExpandedNodePathsState((prev) => {
@@ -101,26 +95,19 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
     setHiddenNodePathsState(new Set());
   }, []);
 
-  const nodeObjectMapRef = useRef<Map<string, THREE.Object3D>>(
-    new Map<string, THREE.Object3D>()
-  );
-  const objectPathMapRef = useRef<WeakMap<THREE.Object3D, string>>(
-    new WeakMap<THREE.Object3D, string>()
-  );
+  const nodeObjectMapRef = useRef<Map<string, THREE.Object3D>>(new Map<string, THREE.Object3D>());
+  const objectPathMapRef = useRef<WeakMap<THREE.Object3D, string>>(new WeakMap<THREE.Object3D, string>());
 
-  const registerNodeObject = useCallback(
-    (path: string, object: THREE.Object3D) => {
-      // A same-path re-registration, such as a duplicate-named sibling, drops the
-      // previous object's reverse entry, which names a path it no longer owns.
-      const previous = nodeObjectMapRef.current.get(path);
-      if (previous && previous !== object) {
-        objectPathMapRef.current.delete(previous);
-      }
-      nodeObjectMapRef.current.set(path, object);
-      objectPathMapRef.current.set(object, path);
-    },
-    []
-  );
+  const registerNodeObject = useCallback((path: string, object: THREE.Object3D) => {
+    // A same-path re-registration, such as a duplicate-named sibling, drops the
+    // previous object's reverse entry, which names a path it no longer owns.
+    const previous = nodeObjectMapRef.current.get(path);
+    if (previous && previous !== object) {
+      objectPathMapRef.current.delete(previous);
+    }
+    nodeObjectMapRef.current.set(path, object);
+    objectPathMapRef.current.set(object, path);
+  }, []);
 
   const unregisterNodeObject = useCallback((path: string) => {
     const object = nodeObjectMapRef.current.get(path);

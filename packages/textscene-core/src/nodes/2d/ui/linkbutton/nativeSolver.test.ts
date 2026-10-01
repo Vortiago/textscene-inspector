@@ -28,7 +28,12 @@ function node(props: Partial<LinkButtonProperties>): SolveNode {
   return {
     ...solveNode(),
     path: 'L',
-    node: { name: 'L', type: 'LinkButton', children: [], properties: { name: 'L', ...props } as LinkButtonProperties },
+    node: {
+      name: 'L',
+      type: 'LinkButton',
+      children: [],
+      properties: { name: 'L', ...props } as LinkButtonProperties,
+    },
     // A local theme_override_colors/* reaches `resolveTextTheme` through `n.colors`, which the walker
     // fills unconditionally, not through props.
     colors: props.themeOverrideColors ?? {},
@@ -84,7 +89,12 @@ describe('linkButtonTextTheme', () => {
       name: 'L',
       themeOverrideColors: { font_color: { r: 1, g: 0, b: 0, a: 1 } },
     };
-    expect(linkButtonTextTheme(node(props), props, 'normal', ctx()).color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+    expect(linkButtonTextTheme(node(props), props, 'normal', ctx()).color).toEqual({
+      r: 1,
+      g: 0,
+      b: 0,
+      a: 1,
+    });
   });
 });
 
@@ -173,7 +183,7 @@ describe('linkButtonMinimumSize — with text', () => {
  * so the `int` narrowing removes nothing and the line width is the ceiled pen extent.
  */
 describe('linkButtonTextPlacement', () => {
-  it('ceils the pen extent to Godot\'s own int line width', () => {
+  it("ceils the pen extent to Godot's own int line width", () => {
     expect(linkButtonTextPlacement(200, 63.4, false).lineWidthPx).toBe(64);
     expect(linkButtonTextPlacement(200, 64, false).lineWidthPx).toBe(64);
   });

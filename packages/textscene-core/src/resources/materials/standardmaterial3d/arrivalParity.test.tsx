@@ -338,7 +338,11 @@ async function renderArrival(testCase: ParityCase, arrival: Arrival): Promise<TH
     inline: {
       kind: 'inline',
       material: {
-        resource: { id: 'Mat_inline', type: testCase.resourceType ?? 'StandardMaterial3D', data: testCase.properties },
+        resource: {
+          id: 'Mat_inline',
+          type: testCase.resourceType ?? 'StandardMaterial3D',
+          data: testCase.properties,
+        },
         internalResources: [],
         externalResources: testCase.extResources ?? [],
       },
@@ -361,9 +365,7 @@ function propertyLines(properties: Record<string, string>): string[] {
 }
 
 function extResourceLines(extResources: TscnExternalResource[]): string[] {
-  return extResources.map(
-    (r) => `[ext_resource type="${r.type}" path="${r.path}" id="${r.id}"]`
-  );
+  return extResources.map((r) => `[ext_resource type="${r.type}" path="${r.path}" id="${r.id}"]`);
 }
 
 /** The material as its own `.tres` file. */
@@ -544,10 +546,7 @@ function snapshot(material: THREE.Material): MaterialSnapshot {
 }
 
 /** The bound slots as the reactive adapter's own prop names. */
-function slotProps(
-  testCase: ParityCase,
-  textures: ResolvedTextureSlots
-): StandardMaterialSlotProps {
+function slotProps(testCase: ParityCase, textures: ResolvedTextureSlots): StandardMaterialSlotProps {
   return {
     scalars: parseStandardMaterial3DScalars(testCase.properties),
     albedoMap: textures.albedo_texture ?? undefined,
@@ -613,7 +612,6 @@ describe('StandardMaterial3D arrival parity', () => {
         const inline = await renderArrival(testCase, 'inline');
         expect(snapshot(await renderArrival(testCase, '.tres::sub'))).toEqual(snapshot(inline));
       });
-
     });
   }
 
@@ -765,9 +763,7 @@ describe('StandardMaterial3D arrival parity', () => {
     }
     // `anisotropy_flowmap` is the exception: its repack reads the pixels, so its
     // pass-through is asserted on its own.
-    expect([...TEXTURE_SLOTS].filter((slot) => !exercised.has(slot))).toEqual([
-      'anisotropy_flowmap',
-    ]);
+    expect([...TEXTURE_SLOTS].filter((slot) => !exercised.has(slot))).toEqual(['anisotropy_flowmap']);
   });
 });
 
@@ -804,16 +800,12 @@ describe('uncompiled ShaderMaterial arrival parity', () => {
     expect(shader.roughness).toBeCloseTo(0.8, 5);
     expect(shader.metalness).toBeCloseTo(0.2, 5);
 
-    const defaultConstructed = surfaceOf(
-      buildMaterial(parseStandardMaterial3DScalars({}))
-    );
+    const defaultConstructed = surfaceOf(buildMaterial(parseStandardMaterial3DScalars({})));
     expect(defaultConstructed.albedoLinear.r).not.toBeCloseTo(0.6, 2);
   });
 
   it('the reactive adapter mounts that same surface for a null material', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <StandardMaterialSlot scalars={null} />
-    );
+    const renderer = await ReactThreeTestRenderer.create(<StandardMaterialSlot scalars={null} />);
     const mounted = renderer.scene.findAllByType('MeshStandardMaterial')[0];
     expect(mounted).toBeDefined();
     const built = surfaceOf(buildMaterial(null));

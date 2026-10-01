@@ -144,21 +144,12 @@ describe('ValidatorRegistry meta-guard: no shadow copies', () => {
 
   it('Light3D validators are reachable for every concrete light subclass via the base-walk', () => {
     const lightLeaves = ['DirectionalLight3D', 'OmniLight3D', 'SpotLight3D', 'AreaLight3D'];
-    const sharedKeys = [
-      'light_energy',
-      'light_color',
-      'shadow_enabled',
-      'shadow_opacity',
-      'shadow_blur',
-    ];
+    const sharedKeys = ['light_energy', 'light_color', 'shadow_enabled', 'shadow_opacity', 'shadow_blur'];
 
     for (const lightType of lightLeaves) {
       for (const key of sharedKeys) {
         const validator = validatorRegistry.findValidator(lightType, key);
-        expect(
-          validator,
-          `'${key}' should be reachable for ${lightType} via the base-walk`
-        ).not.toBeNull();
+        expect(validator, `'${key}' should be reachable for ${lightType} via the base-walk`).not.toBeNull();
       }
     }
   });

@@ -12,6 +12,13 @@ import { parentTypeVerdict } from '../../../../linter/parentType.js';
 import { VECTOR2_REGEX } from '../../../../linter/validators/index.js';
 import { ruleInt, tupleComponent } from '../../../../linter/validators/commonValidators.js';
 import { slotComponents } from '../../../../godot/int.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
+
+const arms = {
+  autowrapNeedsMinimumSize: groundedArm('label-autowrap-needs-custom-minimum-size', {
+    kind: 'configuration-warning',
+  }),
+} as const satisfies RuleArms<string>;
 
 // label.cpp:44/1435, TextServer::AutowrapMode: OFF=0, ARBITRARY=1, WORD=2, WORD_SMART=3.
 const AUTOWRAP_OFF = 0;
@@ -49,13 +56,11 @@ function checkLabelAutowrap(context: RuleContext): Diagnostic[] {
   if (verdict.kind !== 'satisfied') return [];
 
   return [
-    {
-      severity: 'warning',
-      message: `Label '${node.name}' has autowrap enabled under a Container parent ('${verdict.parent.name}') but 'custom_minimum_size' is still (0, 0). Autowrapping labels need a custom minimum size to lay out correctly inside a container.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'label-autowrap-needs-custom-minimum-size',
-    },
+    armDiagnostic(
+      arms.autowrapNeedsMinimumSize,
+      node,
+      `Label '${node.name}' has autowrap enabled under a Container parent ('${verdict.parent.name}') but 'custom_minimum_size' is still (0, 0). Autowrapping labels need a custom minimum size to lay out correctly inside a container.`
+    ),
   ];
 }
 
@@ -66,7 +71,7 @@ const labelAutowrapRule: LintRule = {
       'Flags a Label with autowrap enabled under a Container parent that still has the default (0, 0) custom_minimum_size',
     category: 'validation',
     applicableNodeTypes: ['Label'],
-    emits: [{ ruleName: 'label-autowrap-needs-custom-minimum-size', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: armEmits(arms),
   },
   check: checkLabelAutowrap,
 };

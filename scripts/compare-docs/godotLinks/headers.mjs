@@ -47,5 +47,4 @@ export function makeFetcher() {
  * The class is defined here, not only forward-declared or mentioned. Not
  * `GDSOFTCLASS(`: a class moved to that macro becomes a loud unresolved miss.
  */
-export const defines = (text, name) =>
-  text !== null && new RegExp(`GDCLASS\\(\\s*${name}\\s*,`).test(text);
+export const defines = (text, name) => text !== null && new RegExp(`GDCLASS\\(\\s*${name}\\s*,`).test(text);

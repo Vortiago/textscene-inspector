@@ -30,9 +30,7 @@ describe('a fractional literal in an INT slot', () => {
 
   it('is reported by every int slot, as a warning naming the stored int', () => {
     const silent = probed
-      .filter(({ key, validator, accepts, base }) =>
-        validator(key, probe(accepts, `${base}.5`), 1) === null
-      )
+      .filter(({ key, validator, accepts, base }) => validator(key, probe(accepts, `${base}.5`), 1) === null)
       .map(({ at, base }) => `${at} (accepts ${base}, silent on ${base}.5)`)
       .sort();
     expect(silent).toEqual([]);

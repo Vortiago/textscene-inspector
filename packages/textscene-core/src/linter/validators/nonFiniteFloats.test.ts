@@ -171,12 +171,8 @@ describe('a COMPOSITE literal with a non-finite component', () => {
   });
 
   it('still rejects a component that is neither a number nor one of the four', () => {
-    expect(v.vector3('offset')('offset', 'Vector3(0, infinity, 0)', 1)?.code).toBe(
-      'INVALID_OFFSET_FORMAT'
-    );
-    expect(v.vector3('offset')('offset', 'Vector3(0, 1.2.3, 0)', 1)?.code).toBe(
-      'INVALID_OFFSET_FORMAT'
-    );
+    expect(v.vector3('offset')('offset', 'Vector3(0, infinity, 0)', 1)?.code).toBe('INVALID_OFFSET_FORMAT');
+    expect(v.vector3('offset')('offset', 'Vector3(0, 1.2.3, 0)', 1)?.code).toBe('INVALID_OFFSET_FORMAT');
   });
 
   it.each(NON_FINITE)('READS %s in an INTEGER composite, so it is no format error', (value) => {
@@ -184,9 +180,7 @@ describe('a COMPOSITE literal with a non-finite component', () => {
     // never writes one. That bounds nothing: `_parse_construct<int32_t>`
     // (:577-592) runs the same identifier branch every constructor does, so the
     // file loads. What the serialiser emits never limits what the loader accepts.
-    expect(v.vector2i('size')('size', `Vector2i(${value}, 8)`, 1)?.code).not.toBe(
-      'INVALID_SIZE_FORMAT'
-    );
+    expect(v.vector2i('size')('size', `Vector2i(${value}, 8)`, 1)?.code).not.toBe('INVALID_SIZE_FORMAT');
   });
 
   it.each(NON_FINITE)('reports %s in an INTEGER composite as altered, not as a bound', (value) => {
@@ -209,13 +203,10 @@ describe('the widened component grammar and parseGodotFloat', () => {
   // The failure this guards is a hand-added alternative in one of the two: a
   // spelling the pattern lets through but the reader cannot turn into a number,
   // or the reverse. Both are derived from one table, and this is what says so.
-  it.each([...NON_FINITE, '1.5', '-0.25', '1e-05', '5.', '5.e2', '1e'])(
-    'both accept %o',
-    (text) => {
-      expect(component.test(text)).toBe(true);
-      expect(parseGodotFloat(text)).not.toBeNull();
-    }
-  );
+  it.each([...NON_FINITE, '1.5', '-0.25', '1e-05', '5.', '5.e2', '1e'])('both accept %o', (text) => {
+    expect(component.test(text)).toBe(true);
+    expect(parseGodotFloat(text)).not.toBeNull();
+  });
 
   it.each(['Infinity', '-Infinity', 'NaN', '+inf', '-nan', '-inf_neg', 'INF', 'inf inf', ''])(
     'both reject %o',
@@ -297,21 +288,15 @@ describe('a PACKED array element', () => {
   });
 
   it('still rejects an element that is not a float literal', () => {
-    expect(points('polygon', 'PackedVector2Array(0, 0, wide, 1)', 1)?.code).toBe(
-      'INVALID_POLYGON_FORMAT'
-    );
-    expect(points('polygon', 'PackedVector2Array(0, 0, , 1)', 1)?.code).toBe(
-      'INVALID_POLYGON_FORMAT'
-    );
+    expect(points('polygon', 'PackedVector2Array(0, 0, wide, 1)', 1)?.code).toBe('INVALID_POLYGON_FORMAT');
+    expect(points('polygon', 'PackedVector2Array(0, 0, , 1)', 1)?.code).toBe('INVALID_POLYGON_FORMAT');
   });
 
   it('rejects an element with trailing garbage that Number() and parseFloat disagree on', () => {
     // `Number('1abc')` is NaN but `parseFloat('1abc')` is 1: the grammar decides,
     // and Godot's tokenizer stops the number at `a` and then fails on the
     // unexpected identifier.
-    expect(points('polygon', 'PackedVector2Array(0, 0, 1abc, 1)', 1)?.code).toBe(
-      'INVALID_POLYGON_FORMAT'
-    );
+    expect(points('polygon', 'PackedVector2Array(0, 0, 1abc, 1)', 1)?.code).toBe('INVALID_POLYGON_FORMAT');
   });
 });
 

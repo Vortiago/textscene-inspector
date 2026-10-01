@@ -177,6 +177,25 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
       expect(error.message).toMatch(/not a text scene/i);
     });
 
+    it('refuses a run of CRLF comment lines in linear time', async () => {
+      // A `;` comment that may swallow the `\r` before its `\n` gives each line two
+      // readings, so the match time doubles per line: about a second at this length.
+      // One reading per line keeps it well under a millisecond.
+      const commentLines = 28;
+      const refused = new Promise<Error | undefined>((resolve) =>
+        eventBus.on<Error>('scene', 'failed', (_id, error) => resolve(error))
+      );
+      mockProvider.loadResource = vi.fn().mockResolvedValue(';\r\n'.repeat(commentLines) + 'x');
+      registerMetadata('s', { id: 's', path: 'res://scenes/x.tscn', type: 'PackedScene' });
+
+      const startedAt = performance.now();
+      processor.request('s');
+      const error = await refused;
+
+      expect(error?.message).toMatch(/not a text scene/i);
+      expect(performance.now() - startedAt).toBeLessThan(100);
+    });
+
     it('emits failed for previously failed scenes from cache', async () => {
       mockProvider.loadResource = vi.fn().mockRejectedValue(new Error('Initial fail'));
       registerMetadata('scene1', { id: 'scene1', path: 'res://scenes/room.tscn', type: 'PackedScene' });
@@ -335,10 +354,7 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
       await new Promise((r) => setTimeout(r, 20));
 
       expect(mockProvider.loadResource).toHaveBeenCalledWith('res://scenes/raw.tscn', 'PackedScene');
-      expect(mockProvider.loadResource).toHaveBeenCalledWith(
-        'res://scenes/typeless.tscn',
-        'PackedScene'
-      );
+      expect(mockProvider.loadResource).toHaveBeenCalledWith('res://scenes/typeless.tscn', 'PackedScene');
     });
   });
 
@@ -385,9 +401,11 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
 
   describe('clearCache during loading', () => {
     it('clears inflight set when clearCache called while loading', async () => {
-      mockProvider.loadResource = vi.fn().mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve(VALID_TSCN_CONTENT), 100))
-      );
+      mockProvider.loadResource = vi
+        .fn()
+        .mockImplementation(
+          () => new Promise((resolve) => setTimeout(() => resolve(VALID_TSCN_CONTENT), 100))
+        );
       registerMetadata('scene1', { id: 'scene1', path: 'res://scenes/room.tscn', type: 'PackedScene' });
 
       processor.request('scene1');
@@ -458,7 +476,9 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
       // also load when instanced, not only a file with the tag on line 1.
       mockProvider.loadResource = vi
         .fn()
-        .mockResolvedValue('; a documentation header\n; second line\n\n[gd_scene format=3]\n\n[node name="A" type="Node3D"]\n');
+        .mockResolvedValue(
+          '; a documentation header\n; second line\n\n[gd_scene format=3]\n\n[node name="A" type="Node3D"]\n'
+        );
       registerMetadata('scene1', { id: 'scene1', path: 'res://scenes/room.tscn', type: 'PackedScene' });
 
       const loadedHandler = vi.fn();
@@ -504,9 +524,7 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
       expect(root.name).toBe('chest');
       // The GLB path is carried verbatim on the synthesised node's
       // properties so the consumer can load it through useResource.
-      expect((root.properties as Record<string, unknown>).glbPath).toBe(
-        'res://models/chest.glb'
-      );
+      expect((root.properties as Record<string, unknown>).glbPath).toBe('res://models/chest.glb');
       // No children and no resource refs on a synthesised scene: the GLB
       // hierarchy lives inside the THREE.Object3D returned by the
       // GLBMesh processor.

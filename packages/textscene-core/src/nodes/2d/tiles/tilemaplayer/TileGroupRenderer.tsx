@@ -21,7 +21,12 @@ import { TileSourceMesh } from '../../../../r3f/TileSourceMesh.js';
 import { ySortItemId, type YSortItem } from '../../../../r3f/ySortItems.js';
 import type { YSortGroupDescription } from '../../../../r3f/NodeComponentRegistry.js';
 
-export function TileGroupRenderer({ item, layerRank, sequence, node }: {
+export function TileGroupRenderer({
+  item,
+  layerRank,
+  sequence,
+  node,
+}: {
   item: YSortItem;
   /** The canvas this row draws on, as a rank (`canvasPaintOrder.ts`). */
   layerRank: number;
@@ -52,8 +57,7 @@ export function TileGroupRenderer({ item, layerRank, sequence, node }: {
   const cells = item.tileData?.cells ?? allCells;
   // The ordinary path gates `visible` in <CanvasItem2D> and `enabled` in the body.
   // This path bypasses both, so it gates them here.
-  const drawable =
-    tileProps.visible !== false && tileProps.enabled && !!cells?.length && status === 'loaded';
+  const drawable = tileProps.visible !== false && tileProps.enabled && !!cells?.length && status === 'loaded';
 
   // One renderer mounts per tile row, so the partition is memoised: without it every
   // row re-buckets its cells on every render of the sorted list. A hidden layer still

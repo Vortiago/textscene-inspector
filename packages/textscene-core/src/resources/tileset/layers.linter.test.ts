@@ -79,9 +79,7 @@ const CASES: KeyCase[] = [
   {
     // The dispatcher's key verdicts, one family standing for all four.
     key: 'occlusion_layer_0/bogus',
-    invalid: [
-      { value: '1', severity: 'error', contains: ['Unknown', 'occlusion_layer_0/bogus'] },
-    ],
+    invalid: [{ value: '1', severity: 'error', contains: ['Unknown', 'occlusion_layer_0/bogus'] }],
   },
   {
     key: 'occlusion_layer_-1/light_mask',
@@ -90,9 +88,7 @@ const CASES: KeyCase[] = [
   {
     // `is_valid_int()` refuses this index, so `_set` resolves no layer at all.
     key: 'occlusion_layer_x/light_mask',
-    invalid: [
-      { value: '1', severity: 'error', contains: ['Unknown', 'occlusion_layer_x/light_mask'] },
-    ],
+    invalid: [{ value: '1', severity: 'error', contains: ['Unknown', 'occlusion_layer_x/light_mask'] }],
   },
   {
     // `is_valid_int()` skips one leading sign (ustring.cpp:4752), so this resolves
@@ -104,9 +100,7 @@ const CASES: KeyCase[] = [
     // Each family owns only its own leaves: `name` is a custom-data leaf (:3946),
     // so under `physics_layer_` it falls to the closing `return false` (:4007).
     key: 'physics_layer_0/name',
-    invalid: [
-      { value: '"nope"', severity: 'error', contains: ['Unknown', 'physics_layer_0/name'] },
-    ],
+    invalid: [{ value: '"nope"', severity: 'error', contains: ['Unknown', 'physics_layer_0/name'] }],
   },
 ];
 

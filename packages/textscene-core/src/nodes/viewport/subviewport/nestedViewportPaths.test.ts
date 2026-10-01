@@ -25,9 +25,7 @@ describe('collectNestedViewportPaths', () => {
     const root = node('Outer', 'SubViewport', [
       node('Container', 'SubViewportContainer', [node('Inner', 'SubViewport')]),
     ]);
-    expect(collectNestedViewportPaths(root, 'Root/Outer')).toEqual([
-      'Root/Outer/Container/Inner',
-    ]);
+    expect(collectNestedViewportPaths(root, 'Root/Outer')).toEqual(['Root/Outer/Container/Inner']);
   });
 
   it('does not descend past a found nested viewport — its own subtree is its own pass concern', () => {
@@ -38,13 +36,7 @@ describe('collectNestedViewportPaths', () => {
   });
 
   it('finds every sibling nested viewport', () => {
-    const root = node('Outer', 'SubViewport', [
-      node('A', 'SubViewport'),
-      node('B', 'SubViewport'),
-    ]);
-    expect(collectNestedViewportPaths(root, 'Root/Outer')).toEqual([
-      'Root/Outer/A',
-      'Root/Outer/B',
-    ]);
+    const root = node('Outer', 'SubViewport', [node('A', 'SubViewport'), node('B', 'SubViewport')]);
+    expect(collectNestedViewportPaths(root, 'Root/Outer')).toEqual(['Root/Outer/A', 'Root/Outer/B']);
   });
 });

@@ -137,14 +137,11 @@ describe('applyTextureState', () => {
       expect(applyTextureState(target.texture, state({}))).toBe(target.texture);
       // The same holds for the UV transform.
       expect(
-        applyTextureState(
-          target.texture,
-          state({ uv: { scale: { x: 4, y: 4 }, offset: { x: 0, y: 0 } } })
-        )
+        applyTextureState(target.texture, state({ uv: { scale: { x: 4, y: 4 }, offset: { x: 0, y: 0 } } }))
       ).toBe(target.texture);
     });
 
-    it('does not clone merely because the source diverges from Godot\'s default', () => {
+    it("does not clone merely because the source diverges from Godot's default", () => {
       // An unauthored `texture_filter` means "no opinion", not "force row 3".
       const texture = tiling();
       texture.minFilter = THREE.LinearFilter;
@@ -157,7 +154,7 @@ describe('applyTextureState', () => {
   });
 
   describe('texture_repeat', () => {
-    it('clones a clamped arrival to Repeat for the default, Godot\'s repeat', () => {
+    it("clones a clamped arrival to Repeat for the default, Godot's repeat", () => {
       // The loader ships three's clamp default. A default material asks for
       // Repeat (`BaseMaterial3D` FLAG_USE_TEXTURE_REPEAT = true), so the binding
       // clones to tile it, which guards against terrain stripes. The shared entry

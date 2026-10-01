@@ -126,13 +126,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)`;
       expect(root.children).toHaveLength(2);
 
       // First child should have 1 grandchild
-      const child1 = root.children.find(c => c.name === 'Child1');
+      const child1 = root.children.find((c) => c.name === 'Child1');
       expect(child1).toBeDefined();
       expect(child1!.children).toHaveLength(1);
       expect(child1!.children[0]!.name).toBe('GrandChild');
 
       // Second child should have no children
-      const child2 = root.children.find(c => c.name === 'Child2');
+      const child2 = root.children.find((c) => c.name === 'Child2');
       expect(child2).toBeDefined();
       expect(child2!.children).toHaveLength(0);
     });
@@ -203,7 +203,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)`;
       expect(root.children).toHaveLength(2);
 
       // Check Child1
-      const child1 = root.children.find(c => c.name === 'Child1');
+      const child1 = root.children.find((c) => c.name === 'Child1');
       expect(child1).toBeDefined();
       const child1Transform = transformOf(child1!.properties);
       if (child1Transform) {
@@ -215,7 +215,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)`;
       expect(child1!.children[0]!.name).toBe('GrandChild');
 
       // Check Child2
-      const child2 = root.children.find(c => c.name === 'Child2');
+      const child2 = root.children.find((c) => c.name === 'Child2');
       expect(child2).toBeDefined();
       const child2Transform = transformOf(child2!.properties);
       if (child2Transform) {

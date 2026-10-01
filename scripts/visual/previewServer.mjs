@@ -37,11 +37,7 @@ export {
   paintedOutChromeCss,
   warmUpGLContext,
 } from './preview/captureContext.mjs';
-export {
-  findCanvas2DFrame,
-  readViewportMode,
-  setDisplayToggle,
-} from './preview/viewportProbes.mjs';
+export { findCanvas2DFrame, readViewportMode, setDisplayToggle } from './preview/viewportProbes.mjs';
 export {
   findCanvas,
   findCaptureTarget,

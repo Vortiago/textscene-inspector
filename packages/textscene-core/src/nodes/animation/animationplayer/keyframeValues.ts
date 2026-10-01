@@ -44,7 +44,9 @@ export function parseValueArray(keysStr: string): GodotKeyframeValue[] | null {
       // `info`, not `warn`: an unmodelled Variant (`Transform3D`, a dict) and a non-finite
       // component are legal in a sound scene. Unreadable text lands here too, and
       // `parseFloatList` in animationResolver.ts warns on it in a packed array.
-      info(`[AnimationPlayer] keyframe value "${part}" is not one this renderer can key — dropping the track`);
+      info(
+        `[AnimationPlayer] keyframe value "${part}" is not one this renderer can key — dropping the track`
+      );
       return null;
     }
     values.push(value);

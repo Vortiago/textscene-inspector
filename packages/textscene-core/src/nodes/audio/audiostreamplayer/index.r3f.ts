@@ -6,4 +6,9 @@
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { Node } from '../../node/Component';
 
-nodeComponentRegistry.register({ typeName: 'AudioStreamPlayer', Component: Node, container: true, renderIntent: 'transform-only' });
+nodeComponentRegistry.register({
+  typeName: 'AudioStreamPlayer',
+  Component: Node,
+  container: true,
+  renderIntent: 'transform-only',
+});

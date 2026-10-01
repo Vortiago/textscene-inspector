@@ -38,9 +38,7 @@ function node2DProps(node: TscnNode): Node2DProperties {
 describe('CanvasItem2D', () => {
   it('renders a named group carrying the conjugated Node2D transform and z_index draw order', async () => {
     const node = makeNode({ position: 'Vector2(100, 50)', rotation: '0.5', z_index: '2' });
-    const r = await ReactThreeTestRenderer.create(
-      <CanvasItem2D node={node} props={node2DProps(node)} />
-    );
+    const r = await ReactThreeTestRenderer.create(<CanvasItem2D node={node} props={node2DProps(node)} />);
     const group = r.scene.children[0]!.instance as THREE.Group;
     expect(group.name).toBe('CI');
     expect(group.position.x).toBeCloseTo(100, 5);
@@ -53,9 +51,7 @@ describe('CanvasItem2D', () => {
 
   it('hides the group when visible is false', async () => {
     const node = makeNode({ visible: 'false' });
-    const r = await ReactThreeTestRenderer.create(
-      <CanvasItem2D node={node} props={node2DProps(node)} />
-    );
+    const r = await ReactThreeTestRenderer.create(<CanvasItem2D node={node} props={node2DProps(node)} />);
     const group = r.scene.children[0]!.instance as THREE.Group;
     expect(group.visible).toBe(false);
   });

@@ -11,8 +11,10 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import '../../../linter/index';
 
 /** How many diagnostics of one severity a scene draws, from every rule. */
-const lintCount = (severity: 'error' | 'warning') => (raw: string): number =>
-  new Linter().lint(raw).filter(d => d.severity === severity).length;
+const lintCount =
+  (severity: 'error' | 'warning') =>
+  (raw: string): number =>
+    new Linter().lint(raw).filter((d) => d.severity === severity).length;
 
 const lintErrors = lintCount('error');
 const lintWarnings = lintCount('warning');
@@ -25,9 +27,8 @@ const lintWarnings = lintCount('warning');
 function propWarnings(raw: string, prop: string): number {
   return new Linter()
     .lint(raw)
-    .filter(
-      d => d.severity === 'warning' && d.ruleName === 'strict-parser' && d.message.includes(prop)
-    ).length;
+    .filter((d) => d.severity === 'warning' && d.ruleName === 'strict-parser' && d.message.includes(prop))
+    .length;
 }
 
 describe('PointLight2D linterParser validators', () => {
@@ -49,7 +50,11 @@ describe('PointLight2D linterParser validators', () => {
   });
 
   it('rejects invalid color format', () => {
-    expect(lintErrors(`[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\ncolor = "not a color"`)).toBeGreaterThan(0);
+    expect(
+      lintErrors(
+        `[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\ncolor = "not a color"`
+      )
+    ).toBeGreaterThan(0);
   });
 
   it('accepts valid color format', () => {
@@ -64,23 +69,43 @@ describe('PointLight2D linterParser validators', () => {
   });
 
   it('accepts valid energy', () => {
-    expect(lintErrors(`[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\nenergy = 2.0`)).toBe(0);
+    expect(
+      lintErrors(
+        `[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\nenergy = 2.0`
+      )
+    ).toBe(0);
   });
 
   it('rejects invalid offset format', () => {
-    expect(lintErrors(`[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\noffset = "not a vector"`)).toBeGreaterThan(0);
+    expect(
+      lintErrors(
+        `[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\noffset = "not a vector"`
+      )
+    ).toBeGreaterThan(0);
   });
 
   it('accepts valid offset format', () => {
-    expect(lintErrors(`[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\noffset = Vector2(1, 2)`)).toBe(0);
+    expect(
+      lintErrors(
+        `[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\noffset = Vector2(1, 2)`
+      )
+    ).toBe(0);
   });
 
   it('rejects invalid texture reference format', () => {
-    expect(lintErrors(`[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\ntexture = "not a resource"`)).toBeGreaterThan(0);
+    expect(
+      lintErrors(
+        `[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\ntexture = "not a resource"`
+      )
+    ).toBeGreaterThan(0);
   });
 
   it('accepts valid texture reference format', () => {
-    expect(lintErrors(`[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\ntexture = ExtResource("1")`)).toBe(0);
+    expect(
+      lintErrors(
+        `[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\ntexture = ExtResource("1")`
+      )
+    ).toBe(0);
   });
 
   it('warns (not errors) on a negative height (light_2d.cpp:89-92 assigns unconditionally)', () => {
@@ -90,7 +115,11 @@ describe('PointLight2D linterParser validators', () => {
   });
 
   it('accepts valid height', () => {
-    expect(lintErrors(`[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\nheight = 100`)).toBe(0);
+    expect(
+      lintErrors(
+        `[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\nheight = 100`
+      )
+    ).toBe(0);
   });
 
   it('accepts a height past the hint ceiling, which is open (or_greater)', () => {
@@ -101,7 +130,9 @@ describe('PointLight2D linterParser validators', () => {
 
   it('rejects a non-numeric height', () => {
     expect(
-      lintErrors(`[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\nheight = "tall"`)
+      lintErrors(
+        `[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\nheight = "tall"`
+      )
     ).toBeGreaterThan(0);
   });
 
@@ -134,7 +165,11 @@ describe('PointLight2D linterParser validators', () => {
   });
 
   it('accepts valid texture_scale', () => {
-    expect(lintErrors(`[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\ntexture_scale = 1.5`)).toBe(0);
+    expect(
+      lintErrors(
+        `[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\ntexture_scale = 1.5`
+      )
+    ).toBe(0);
   });
 
   it('accepts the full 32-bit range on both item cull masks', () => {
@@ -147,7 +182,9 @@ describe('PointLight2D linterParser validators', () => {
 
   it('accepts a negative range_item_cull_mask (light_2d.cpp:143-145 assigns unconditionally, no range hint at all)', () => {
     expect(
-      lintErrors(`[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\nrange_item_cull_mask = -1`)
+      lintErrors(
+        `[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\nrange_item_cull_mask = -1`
+      )
     ).toBe(0);
   });
 
@@ -184,10 +221,14 @@ describe('PointLight2D linterParser validators', () => {
 
   it('rejects a non-integer range window', () => {
     expect(
-      lintErrors(`[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\nrange_z_max = "four"`)
+      lintErrors(
+        `[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\nrange_z_max = "four"`
+      )
     ).toBeGreaterThan(0);
     expect(
-      lintErrors(`[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\nrange_layer_min = abc`)
+      lintErrors(
+        `[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\nrange_layer_min = abc`
+      )
     ).toBeGreaterThan(0);
   });
 });

@@ -46,17 +46,17 @@ beforeAll(() => {
     'component.tsx': 'export const C = () => null;',
     'withComponent.ts': "import { C } from './component';\nexport const use = C;",
     'lazy.ts': [
-      "export async function load() {",
+      'export async function load() {',
       "  const three = await import('three');",
       "  const local = await import('./nested/c');",
-      "  return { three, local };",
-      "}",
+      '  return { three, local };',
+      '}',
     ].join('\n'),
     'lazyTypeOnly.ts': [
       "// A doc mention of import('react-dom') must not enter the closure.",
       "/* Nor import('./component') inside a block comment. */",
       "type Loader = typeof import('react')['createElement'];",
-      "export const marker: Loader | null = null;",
+      'export const marker: Loader | null = null;',
     ].join('\n'),
   });
 });

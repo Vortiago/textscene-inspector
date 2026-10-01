@@ -98,7 +98,10 @@ describe('emit grounding', () => {
         const fixed = severityFixedBy(e.grounding);
         return fixed !== undefined && fixed !== e.severity;
       })
-      .map((e) => `${e.rule}: ${e.ruleName} is ${e.severity}, its grounding fixes ${severityFixedBy(e.grounding)}`);
+      .map(
+        (e) =>
+          `${e.rule}: ${e.ruleName} is ${e.severity}, its grounding fixes ${severityFixedBy(e.grounding)}`
+      );
     expect(offTier.sort()).toEqual([]);
   });
 
@@ -148,17 +151,6 @@ describe('emit grounding', () => {
       .sort();
     expect(malformed).toEqual([]);
   });
-
-  it('writes no bracket into an emits string, which would break the emits scrape', () => {
-    // `ruleCoverage.test.ts` finds the end of an `emits: [ … ]` array by
-    // counting brackets. A `[` or `]` inside a `because:` desyncs that count and
-    // silently deletes real diagnostics from its scrape - the guard would then
-    // pass because it cannot see what it checks.
-    const bracketed = all
-      .filter((e) => /[[\]]/.test(resolve(e, census)) || /[[\]]/.test(e.ruleName))
-      .map((e) => `${e.rule}: ${e.ruleName}`);
-    expect(bracketed.sort()).toEqual([]);
-  });
 });
 
 describe('the grounding guard bites', () => {
@@ -195,9 +187,7 @@ describe('the grounding guard bites', () => {
     });
     expect(resolve(inert, census)).toContain('sprite_2d.cpp:98');
     expect(resolve(inert, census)).toContain('read only inside this branch');
-    expect(resolve(entry({ kind: 'engine', at: 'sprite_2d.cpp:296' }), census)).toBe(
-      'sprite_2d.cpp:296'
-    );
+    expect(resolve(entry({ kind: 'engine', at: 'sprite_2d.cpp:296' }), census)).toBe('sprite_2d.cpp:296');
   });
 
   it('reads the reason as the resolution for a no-engine-counterpart arm', () => {

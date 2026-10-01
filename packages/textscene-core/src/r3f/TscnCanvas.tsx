@@ -151,9 +151,7 @@ export function ActiveCameraSwitcher() {
       }
     });
     const target =
-      cameras.find(
-        (c) => (c.userData as { tscnPath?: string }).tscnPath === activeCameraPath
-      ) ?? null;
+      cameras.find((c) => (c.userData as { tscnPath?: string }).tscnPath === activeCameraPath) ?? null;
     if (!target) return;
     // Matched to the live canvas: a node camera mounts with a placeholder 16/9
     // aspect, and R3F re-syncs it only on a resize, which a fixed-size headless

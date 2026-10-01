@@ -10,9 +10,20 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { polygonPointCount } from '../../../linter/polygonPoints.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 
-const MISSING_MESH_RULE = 'csgmesh3d-requires-mesh';
-const INSUFFICIENT_POINTS_RULE = 'csgpolygon3d-insufficient-points';
+const arms = {
+  missingMesh: groundedArm('csgmesh3d-requires-mesh', {
+    kind: 'engine-inert',
+    at: 'csg_shape.cpp:1126',
+    unused: 'the build returns an empty brush, so the shape contributes no geometry',
+  }),
+  insufficientPoints: groundedArm('csgpolygon3d-insufficient-points', {
+    kind: 'engine-inert',
+    at: 'csg_shape.cpp:2154',
+    unused: 'the build returns an empty brush, so the shape contributes no geometry',
+  }),
+} as const satisfies RuleArms<string>;
 
 // A `CSGMesh3D` with no mesh and a `CSGPolygon3D` under 3 points build zero faces on their own
 // (`csg_shape.cpp`'s `_build_brush()` overrides). The other types carry no check: a non-positive
@@ -26,13 +37,11 @@ function checkCSGShape3D(context: RuleContext): Diagnostic[] {
   // assignment), so an empty slot is the trigger, however it is spelled.
   if (node.type === 'CSGMesh3D' && resourceSlotIsEmpty(properties.mesh)) {
     return [
-      {
-        severity: 'info',
-        message: `CSGMesh3D '${node.name}' has no mesh assigned, so it contributes no geometry to any CSG operation.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: MISSING_MESH_RULE,
-      },
+      armDiagnostic(
+        arms.missingMesh,
+        node,
+        `CSGMesh3D '${node.name}' has no mesh assigned, so it contributes no geometry to any CSG operation.`
+      ),
     ];
   }
 
@@ -43,13 +52,11 @@ function checkCSGShape3D(context: RuleContext): Diagnostic[] {
     if (points === null) return []; // malformed literal is linterParser.ts's job
     if (points < 3) {
       return [
-        {
-          severity: 'info',
-          message: `CSGPolygon3D '${node.name}' has a polygon with ${points} point(s); at least 3 are needed for a solid shape.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: INSUFFICIENT_POINTS_RULE,
-        },
+        armDiagnostic(
+          arms.insufficientPoints,
+          node,
+          `CSGPolygon3D '${node.name}' has a polygon with ${points} point(s); at least 3 are needed for a solid shape.`
+        ),
       ];
     }
   }
@@ -66,26 +73,7 @@ const csgShape3DDegenerateGeometryRule: LintRule = {
     // Every concrete CSG type. `CSGShape3D` itself is `GDREGISTER_ABSTRACT_CLASS`
     // (`modules/csg/register_types.cpp:41`) and never a node type in a `.tscn`.
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'CSGShape3D'),
-    emits: [
-      {
-        ruleName: MISSING_MESH_RULE,
-        severity: 'info',
-        grounding: {
-          kind: 'engine-inert',
-          at: 'csg_shape.cpp:1126',
-          unused: 'the build returns an empty brush, so the shape contributes no geometry',
-        },
-      },
-      {
-        ruleName: INSUFFICIENT_POINTS_RULE,
-        severity: 'info',
-        grounding: {
-          kind: 'engine-inert',
-          at: 'csg_shape.cpp:2154',
-          unused: 'the build returns an empty brush, so the shape contributes no geometry',
-        },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkCSGShape3D,
 };

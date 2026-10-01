@@ -7,12 +7,10 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { escapeRegExp } from '@textscene/dev-kit';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const shellCss = readFileSync(
-  join(__dirname, 'TscnPreviewShell.module.css'),
-  'utf-8'
-);
+const shellCss = readFileSync(join(__dirname, 'TscnPreviewShell.module.css'), 'utf-8');
 
 describe('TscnPreviewShell dock overflow (WI-UX-13)', () => {
   it('declares overflow: auto on .dockBody (defense in depth against future unbounded children)', () => {
@@ -24,7 +22,7 @@ describe('TscnPreviewShell dock overflow (WI-UX-13)', () => {
 });
 
 function extractRule(css: string, selector: string): string {
-  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escaped = escapeRegExp(selector);
   const match = css.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`));
   if (!match) {
     throw new Error(`Could not find rule for selector "${selector}" in the CSS file.`);

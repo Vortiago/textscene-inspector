@@ -59,9 +59,7 @@ describe('sceneHasBlendedSurface', () => {
 
   it('finds one in any slot of a multi-material mesh', () => {
     expect(
-      sceneHasBlendedSurface(
-        sceneOf(new THREE.Mesh(new THREE.BufferGeometry(), [opaque(), blended()]))
-      )
+      sceneHasBlendedSurface(sceneOf(new THREE.Mesh(new THREE.BufferGeometry(), [opaque(), blended()])))
     ).toBe(true);
   });
 

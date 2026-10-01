@@ -25,7 +25,7 @@ describe('VBoxContainer strict validators', () => {
     expect(base!('vertical', 'true', 1)).toBeNull();
   });
 
-  it('inherits BoxContainer\'s own keys through the base-walk', () => {
+  it("inherits BoxContainer's own keys through the base-walk", () => {
     expect(validatorRegistry.findValidator('VBoxContainer', 'alignment')).not.toBeNull();
   });
 

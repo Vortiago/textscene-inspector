@@ -51,9 +51,9 @@ describe('viewportContentKind', () => {
    * `ViewportTexture` naming the path would resolve null.
    */
   it('classifies a Control with no DOM component of its own as dom', () => {
-    expect(
-      viewportContentKind(viewport('\n[node name="Bar" type="ProgressBar" parent="Viewport"]'))
-    ).toBe('dom');
+    expect(viewportContentKind(viewport('\n[node name="Bar" type="ProgressBar" parent="Viewport"]'))).toBe(
+      'dom'
+    );
   });
 
   /**
@@ -305,9 +305,7 @@ ${extra}`);
 `);
     // The parsed graph alone still guesses 3D.
     expect(viewportContentKind(node)).toBe('3d');
-    expect(
-      viewportContentKind(resolveViewportSubtree(node, externalResources, cache))
-    ).toBe('2d');
+    expect(viewportContentKind(resolveViewportSubtree(node, externalResources, cache))).toBe('2d');
   });
 
   it('classifies an untouched instance of a 3D sub-scene as 3d', () => {
@@ -317,9 +315,7 @@ ${extra}`);
 
 [node name="Body" type="MeshInstance3D" parent="."]
 `);
-    expect(
-      viewportContentKind(resolveViewportSubtree(node, externalResources, cache))
-    ).toBe('3d');
+    expect(viewportContentKind(resolveViewportSubtree(node, externalResources, cache))).toBe('3d');
   });
 
   it('classifies an untouched instance of a Control sub-scene as dom', () => {
@@ -329,9 +325,7 @@ ${extra}`);
 
 [node name="Title" type="Label" parent="."]
 `);
-    expect(
-      viewportContentKind(resolveViewportSubtree(node, externalResources, cache))
-    ).toBe('dom');
+    expect(viewportContentKind(resolveViewportSubtree(node, externalResources, cache))).toBe('dom');
   });
 
   it('leaves the subtree alone while the sub-scene is still loading', () => {
@@ -379,9 +373,7 @@ ${extra}`);
             ? { nodes: tile.nodes, externalResources: tile.externalResources }
             : undefined,
     };
-    expect(
-      viewportContentKind(resolveViewportSubtree(node, outer.externalResources, cache))
-    ).toBe('2d');
+    expect(viewportContentKind(resolveViewportSubtree(node, outer.externalResources, cache))).toBe('2d');
   });
 
   it('does not descend into a nested sub-viewport', () => {

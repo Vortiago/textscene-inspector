@@ -1,7 +1,12 @@
 /** GraphEdit parser: Control plus the members the renderer reads (`types.ts`). */
 
 import type { ParsedHeading } from '../../../../parser/utils';
-import { parseOptionalBool, parseOptionalFloat, parseOptionalInt, parseOptionalVector2 } from '../../../../parser/valueParsers';
+import {
+  parseOptionalBool,
+  parseOptionalFloat,
+  parseOptionalInt,
+  parseOptionalVector2,
+} from '../../../../parser/valueParsers';
 import type { GraphEditProperties } from './types';
 import { parseControl } from '../control/parser';
 import { parseGraphEditConnections } from './connections';

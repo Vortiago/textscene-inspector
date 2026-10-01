@@ -162,7 +162,9 @@ describe('<ColorRect> registered through <ControlCanvasWalker> (end-to-end walke
       <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
     );
 
-    const groups = renderer.scene.findAllByType('Group').map((g) => g.instance as { visible: boolean; name: string });
+    const groups = renderer.scene
+      .findAllByType('Group')
+      .map((g) => g.instance as { visible: boolean; name: string });
     const rootGroup = groups.find((g) => g.name === 'ColorRect:Root');
     expect(rootGroup).toBeDefined();
     expect(rootGroup!.visible).toBe(false);

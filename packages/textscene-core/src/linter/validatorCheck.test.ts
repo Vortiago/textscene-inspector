@@ -61,21 +61,15 @@ describe('tier assertions', () => {
   });
 
   it('fails when the validator accepted the value', () => {
-    expect(() => expectError(check('bounces', '16'), 'at most 16')).toThrow(
-      /accepted the value/
-    );
+    expect(() => expectError(check('bounces', '16'), 'at most 16')).toThrow(/accepted the value/);
   });
 
   it('refuses an empty substring list, which would assert the tier alone', () => {
-    expect(() => expectRejected(ENFORCED(), 'error', [])).toThrow(
-      /does not identify the bound/
-    );
+    expect(() => expectRejected(ENFORCED(), 'error', [])).toThrow(/does not identify the bound/);
   });
 
   it('passes, and returns the diagnostic, when tier and message both hold', () => {
-    expect(expectError(ENFORCED(), 'at most 16', 'Godot does not store this value').severity).toBe(
-      'error'
-    );
+    expect(expectError(ENFORCED(), 'at most 16', 'Godot does not store this value').severity).toBe('error');
     expect(expectWarning(HINTED(), 'Valid values').severity).toBe('warning');
   });
 });

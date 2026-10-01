@@ -7,10 +7,19 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
+import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { parsePackedStringArray } from './arrayForms.js';
 import { passesDelimiterGuards, splitDelimiterEntry } from './delimiterEntry.js';
+
+const arms = {
+  delimiterStartKeyCollision: {
+    severity: 'error',
+    ruleName: 'codeedit-delimiter-start-key-collision',
+    grounding: { kind: 'engine', at: 'code_edit.cpp:3436' },
+  },
+} as const satisfies RuleArms<string>;
 
 /**
  * The start key of each element `_add_delimiter` would store, split as `_set_delimiters` does. An
@@ -45,18 +54,16 @@ function checkCodeEdit(context: RuleContext): Diagnostic[] {
   // `_set_delimiters` clears only its own type (code_edit.cpp:3492), so the property applied second
   // silently drops its colliding key (ADR-0032). The order is not observable here, so the message
   // names the risk rather than the winner.
-  diagnostics.push({
-    severity: 'error',
-    message:
-      `CodeEdit delimiter_strings and delimiter_comments both declare the start key(s) ${shared.map((k) => `"${k}"`).join(', ')}. ` +
+  reportArm(
+    diagnostics,
+    arms.delimiterStartKeyCollision,
+    node,
+    `CodeEdit delimiter_strings and delimiter_comments both declare the start key(s) ${shared.map((k) => `"${k}"`).join(', ')}. ` +
       'CodeEdit::_set_delimiters stores both in one shared delimiters Vector (code_edit.cpp:3490-3508), and ' +
       '_add_delimiter refuses a start key already in that Vector regardless of delimiter type ' +
       '(code_edit.cpp:3436), so whichever of the two properties Godot applies second silently drops its ' +
-      'colliding entry on load.',
-    nodeName: node.name,
-    nodeType: node.type,
-    ruleName: 'codeedit-delimiter-start-key-collision',
-  });
+      'colliding entry on load.'
+  );
 
   return diagnostics;
 }
@@ -64,17 +71,10 @@ function checkCodeEdit(context: RuleContext): Diagnostic[] {
 const codeEditDelimiterCollisionRule: LintRule = {
   meta: {
     name: 'valid-codeedit-properties',
-    description:
-      "Validates CodeEdit's delimiter_strings and delimiter_comments do not share a start key",
+    description: "Validates CodeEdit's delimiter_strings and delimiter_comments do not share a start key",
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'CodeEdit'),
-    emits: [
-      {
-        ruleName: 'codeedit-delimiter-start-key-collision',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'code_edit.cpp:3436' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkCodeEdit,
 };

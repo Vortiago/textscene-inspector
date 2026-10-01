@@ -34,7 +34,12 @@ export function formatCamera3DProperties(properties: Camera3DProperties): Proper
   });
 
   // Offsets section (only if non-zero)
-  if (properties.h_offset !== 0 || properties.v_offset !== 0 || properties.frustum_offset.x !== 0 || properties.frustum_offset.y !== 0) {
+  if (
+    properties.h_offset !== 0 ||
+    properties.v_offset !== 0 ||
+    properties.frustum_offset.x !== 0 ||
+    properties.frustum_offset.y !== 0
+  ) {
     const offsetItems: PropertySection['items'] = [];
 
     if (properties.h_offset !== 0) {
@@ -46,7 +51,7 @@ export function formatCamera3DProperties(properties: Camera3DProperties): Proper
     if (properties.frustum_offset.x !== 0 || properties.frustum_offset.y !== 0) {
       offsetItems.push({
         label: 'Frustum Offset',
-        value: `(${properties.frustum_offset.x.toFixed(2)}, ${properties.frustum_offset.y.toFixed(2)})`
+        value: `(${properties.frustum_offset.x.toFixed(2)}, ${properties.frustum_offset.y.toFixed(2)})`,
       });
     }
 

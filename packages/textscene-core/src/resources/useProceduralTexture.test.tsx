@@ -21,17 +21,13 @@ import {
   useProceduralTextures,
   type ProceduralSlot,
 } from './useProceduralTexture';
-import {
-  clearProceduralTextureCache,
-  proceduralTextureKey,
-} from './textures/proceduralTextureCache';
+import { clearProceduralTextureCache, proceduralTextureKey } from './textures/proceduralTextureCache';
 
 /** The cache exposes no pin counter, so the two entry points are wrapped, calling through. */
 const traffic = vi.hoisted(() => ({ pinned: [] as string[], unpinned: [] as string[] }));
 
 vi.mock('./textures/proceduralTextureCache', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('./textures/proceduralTextureCache')>();
+  const actual = await importOriginal<typeof import('./textures/proceduralTextureCache')>();
   return {
     ...actual,
     pinProceduralTexture: (key: string) => {
@@ -118,9 +114,7 @@ describe('useProceduralTexture', () => {
       'SubResource("ImageTexture_x")',
       'SubResource("Nothing_here")',
     ]) {
-      const { result, unmount } = renderHook(() =>
-        useProceduralTexture(ref, resources)
-      );
+      const { result, unmount } = renderHook(() => useProceduralTexture(ref, resources));
       expect(result.current, `ref: ${ref}`).toEqual({ texture: null, claimed: false, building: false });
       unmount();
     }
@@ -148,10 +142,9 @@ describe('useProceduralTexture', () => {
     const resources = scene();
     const keyA = proceduralTextureKey(resources, 'GradientTexture2D_a');
     const keyB = proceduralTextureKey(resources, 'GradientTexture2D_b');
-    const { rerender } = renderHook(
-      ({ ref }: { ref: string }) => useProceduralTexture(ref, resources),
-      { initialProps: { ref: 'SubResource("GradientTexture2D_a")' } }
-    );
+    const { rerender } = renderHook(({ ref }: { ref: string }) => useProceduralTexture(ref, resources), {
+      initialProps: { ref: 'SubResource("GradientTexture2D_a")' },
+    });
 
     rerender({ ref: 'SubResource("GradientTexture2D_b")' });
 
@@ -195,9 +188,9 @@ describe('useProceduralTexturePins', () => {
   it('ignores a rebuilt array carrying the same keys', () => {
     // Callers assemble this array in a memo whose identity turns over for
     // reasons that have nothing to do with which textures are held.
-    const { rerender } = renderHook(({ keys }: { keys: string[] }) =>
-      useProceduralTexturePins(keys), { initialProps: { keys: ['s:one'] } }
-    );
+    const { rerender } = renderHook(({ keys }: { keys: string[] }) => useProceduralTexturePins(keys), {
+      initialProps: { keys: ['s:one'] },
+    });
 
     rerender({ keys: ['s:one'] });
 
@@ -206,9 +199,9 @@ describe('useProceduralTexturePins', () => {
   });
 
   it('re-pins when the key set actually changes', () => {
-    const { rerender } = renderHook(({ keys }: { keys: string[] }) =>
-      useProceduralTexturePins(keys), { initialProps: { keys: ['s:one'] } }
-    );
+    const { rerender } = renderHook(({ keys }: { keys: string[] }) => useProceduralTexturePins(keys), {
+      initialProps: { keys: ['s:one'] },
+    });
 
     rerender({ keys: ['s:one', 's:two'] });
 
@@ -438,7 +431,10 @@ describe('useProceduralTextures with a NoiseTexture2D', () => {
   });
 });
 
-class Catch extends Component<{ onError: (error: unknown) => void; children: ReactNode }, { failed: boolean }> {
+class Catch extends Component<
+  { onError: (error: unknown) => void; children: ReactNode },
+  { failed: boolean }
+> {
   override state = { failed: false };
   static getDerivedStateFromError(): { failed: boolean } {
     return { failed: true };

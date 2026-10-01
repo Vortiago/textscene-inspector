@@ -22,7 +22,10 @@ describe('Range bounds rule', () => {
 
   const namesOf = (content: string) => linter.lint(content).map((d) => d.ruleName);
   const severitiesOf = (content: string, ruleName: string) =>
-    linter.lint(content).filter((d) => d.ruleName === ruleName).map((d) => d.severity);
+    linter
+      .lint(content)
+      .filter((d) => d.ruleName === ruleName)
+      .map((d) => d.severity);
 
   it('says nothing about an ordinary, correctly-ordered range (happy path)', () => {
     const diagnostics = linter.lint(scene('min_value = 0\nmax_value = 100\n'));
@@ -41,15 +44,11 @@ describe('Range bounds rule', () => {
     // same way (range.cpp:217, :229), so the inverted pair is rewritten in
     // either load order: the ADR-0032 error tier, not an advisory.
     const diagnostics = linter.lint(scene('min_value = 10\nmax_value = 5\n'));
-    expect(diagnostics.map((d) => [d.ruleName, d.severity])).toEqual([
-      ['range-max-below-min', 'error'],
-    ]);
+    expect(diagnostics.map((d) => [d.ruleName, d.severity])).toEqual([['range-max-below-min', 'error']]);
   });
 
   it('stays silent when max_value equals min_value — a zero-width range is legal Godot (edge case)', () => {
-    expect(namesOf(scene('min_value = 10\nmax_value = 10\n'))).not.toContain(
-      'range-max-below-min'
-    );
+    expect(namesOf(scene('min_value = 10\nmax_value = 10\n'))).not.toContain('range-max-below-min');
   });
 
   it('stays silent when only one of the pair is authored — nothing to compare (edge case)', () => {
@@ -58,9 +57,7 @@ describe('Range bounds rule', () => {
   });
 
   it('stays silent when either bound is malformed — format errors are the validator’s job, not this rule’s', () => {
-    expect(namesOf(scene('min_value = ten\nmax_value = 5\n'))).not.toContain(
-      'range-max-below-min'
-    );
+    expect(namesOf(scene('min_value = ten\nmax_value = 5\n'))).not.toContain('range-max-below-min');
   });
 
   it('leaves other node types alone', () => {
@@ -78,7 +75,10 @@ describe('Range exp_edit rule (range-exp-edit-negative-min)', () => {
 
   const namesOf = (content: string) => linter.lint(content).map((d) => d.ruleName);
   const severitiesOf = (content: string, ruleName: string) =>
-    linter.lint(content).filter((d) => d.ruleName === ruleName).map((d) => d.severity);
+    linter
+      .lint(content)
+      .filter((d) => d.ruleName === ruleName)
+      .map((d) => d.severity);
 
   it('warns when exp_edit is true with a negative min_value', () => {
     const content = scene('exp_edit = true\nmin_value = -50.0\n');
@@ -87,12 +87,8 @@ describe('Range exp_edit rule (range-exp-edit-negative-min)', () => {
   });
 
   it('stays silent when exp_edit is true but min_value is 0 or positive', () => {
-    expect(namesOf(scene('exp_edit = true\nmin_value = 0.0\n'))).not.toContain(
-      'range-exp-edit-negative-min'
-    );
-    expect(namesOf(scene('exp_edit = true\nmin_value = 5.0\n'))).not.toContain(
-      'range-exp-edit-negative-min'
-    );
+    expect(namesOf(scene('exp_edit = true\nmin_value = 0.0\n'))).not.toContain('range-exp-edit-negative-min');
+    expect(namesOf(scene('exp_edit = true\nmin_value = 5.0\n'))).not.toContain('range-exp-edit-negative-min');
   });
 
   it('stays silent when exp_edit is false, regardless of min_value', () => {
@@ -116,32 +112,22 @@ describe('Range exp_edit rule (range-exp-edit-negative-min)', () => {
 
   it('reports an inverted pair spelled with infinities', () => {
     expect(namesOf(scene('min_value = inf\nmax_value = 1.0\n'))).toContain('range-max-below-min');
-    expect(namesOf(scene('min_value = 1.0\nmax_value = inf_neg\n'))).toContain(
-      'range-max-below-min'
-    );
+    expect(namesOf(scene('min_value = 1.0\nmax_value = inf_neg\n'))).toContain('range-max-below-min');
   });
 
   it('stays silent on a nan pair, which MAX() does not collapse', () => {
     // range.cpp:217/229 run the pair through MAX(); every comparison against
     // nan is false, so nothing is clamped and there is no collapse to report.
-    expect(namesOf(scene('min_value = nan\nmax_value = 1.0\n'))).not.toContain(
-      'range-max-below-min'
-    );
-    expect(namesOf(scene('min_value = 1.0\nmax_value = nan\n'))).not.toContain(
-      'range-max-below-min'
-    );
+    expect(namesOf(scene('min_value = nan\nmax_value = 1.0\n'))).not.toContain('range-max-below-min');
+    expect(namesOf(scene('min_value = 1.0\nmax_value = nan\n'))).not.toContain('range-max-below-min');
   });
 
   it('warns on exp_edit with an infinitely negative min_value', () => {
-    expect(namesOf(scene('exp_edit = true\nmin_value = inf_neg\n'))).toContain(
-      'range-exp-edit-negative-min'
-    );
+    expect(namesOf(scene('exp_edit = true\nmin_value = inf_neg\n'))).toContain('range-exp-edit-negative-min');
   });
 
   it('stays silent on exp_edit with a nan min_value', () => {
-    expect(namesOf(scene('exp_edit = true\nmin_value = nan\n'))).not.toContain(
-      'range-exp-edit-negative-min'
-    );
+    expect(namesOf(scene('exp_edit = true\nmin_value = nan\n'))).not.toContain('range-exp-edit-negative-min');
   });
 
   it('compares an exponent-spelled bound at its real magnitude', () => {

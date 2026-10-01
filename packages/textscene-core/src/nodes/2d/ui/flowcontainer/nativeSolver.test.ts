@@ -144,10 +144,12 @@ describe('flowContainerLayout', () => {
       leaf('c3', { customMinimumSize: { x: 20, y: 10 } }),
     ];
     const f = flow('FlowContainer', { hSep: 10, vSep: 5 }, children);
-    const rects = flowContainerLayout(f, childEntries(children), { x: 0, y: 0, w: 100, h: 40 }, ctx()) as ReadonlyMap<
-      string,
-      Rect2
-    >;
+    const rects = flowContainerLayout(
+      f,
+      childEntries(children),
+      { x: 0, y: 0, w: 100, h: 40 },
+      ctx()
+    ) as ReadonlyMap<string, Rect2>;
     expect(rects.get('c1')).toEqual({ x: 0, y: 0, w: 20, h: 10 });
     expect(rects.get('c2')).toEqual({ x: 30, y: 0, w: 20, h: 10 });
     expect(rects.get('c3')).toEqual({ x: 60, y: 0, w: 20, h: 10 });
@@ -160,10 +162,12 @@ describe('flowContainerLayout', () => {
       leaf('c3', { customMinimumSize: { x: 20, y: 10 } }),
     ];
     const f = flow('FlowContainer', { hSep: 10, vSep: 5 }, children);
-    const rects = flowContainerLayout(f, childEntries(children), { x: 0, y: 0, w: 55, h: 40 }, ctx()) as ReadonlyMap<
-      string,
-      Rect2
-    >;
+    const rects = flowContainerLayout(
+      f,
+      childEntries(children),
+      { x: 0, y: 0, w: 55, h: 40 },
+      ctx()
+    ) as ReadonlyMap<string, Rect2>;
     // c1,c2 fit line0 (0+20=20, +10+20=50 <= 55); c3 would need 50+10+20=80 > 55 -> wraps.
     expect(rects.get('c1')).toEqual({ x: 0, y: 0, w: 20, h: 10 });
     expect(rects.get('c2')).toEqual({ x: 30, y: 0, w: 20, h: 10 });
@@ -175,10 +179,12 @@ describe('flowContainerLayout', () => {
   it('a single child wider than the container alone pushes an empty leading line (flow_container.cpp:96-101, only the FIRST child can do this)', () => {
     const child = leaf('c1', { customMinimumSize: { x: 20, y: 10 } });
     const f = flow('FlowContainer', { hSep: 10, vSep: 5 }, [child]);
-    const rects = flowContainerLayout(f, childEntries([child]), { x: 0, y: 0, w: 10, h: 40 }, ctx()) as ReadonlyMap<
-      string,
-      Rect2
-    >;
+    const rects = flowContainerLayout(
+      f,
+      childEntries([child]),
+      { x: 0, y: 0, w: 10, h: 40 },
+      ctx()
+    ) as ReadonlyMap<string, Rect2>;
     // line0 is empty (child_count 0, height 0); the child lands in line1,
     // shifted down by line0's own (zero-height) + v_separation gap.
     expect(rects.get('c1')).toEqual({ x: 0, y: 5, w: 20, h: 10 });
@@ -191,10 +197,12 @@ describe('flowContainerLayout', () => {
     const f = flow('FlowContainer', { hSep: 0, vSep: 0 }, [a, b]);
     // line_length = 40 + 40 = 80; stretch_avail = 100 - 80 = 20; ratio total = 1 + 2 = 3.
     // stretch_a = trunc(20 * 1 / 3) = 6; stretch_b = trunc(20 * 2 / 3) = 13.
-    const rects = flowContainerLayout(f, childEntries([a, b]), { x: 0, y: 0, w: 100, h: 40 }, ctx()) as ReadonlyMap<
-      string,
-      Rect2
-    >;
+    const rects = flowContainerLayout(
+      f,
+      childEntries([a, b]),
+      { x: 0, y: 0, w: 100, h: 40 },
+      ctx()
+    ) as ReadonlyMap<string, Rect2>;
     expect(rects.get('a')).toEqual({ x: 0, y: 0, w: 46, h: 10 });
     expect(rects.get('b')).toEqual({ x: 46, y: 0, w: 53, h: 10 });
   });
@@ -222,10 +230,12 @@ describe('flowContainerLayout', () => {
   it('ALIGNMENT_CENTER centers a single-line, non-expanding row (flow_container.cpp:175-184)', () => {
     const c0 = leaf('c0', { customMinimumSize: { x: 20, y: 10 } });
     const f = flow('FlowContainer', { hSep: 0, vSep: 0, alignment: 1 }, [c0]); // ALIGNMENT_CENTER
-    const rects = flowContainerLayout(f, childEntries([c0]), { x: 0, y: 0, w: 100, h: 40 }, ctx()) as ReadonlyMap<
-      string,
-      Rect2
-    >;
+    const rects = flowContainerLayout(
+      f,
+      childEntries([c0]),
+      { x: 0, y: 0, w: 100, h: 40 },
+      ctx()
+    ) as ReadonlyMap<string, Rect2>;
     // Single (first, filled-by-definition) line: alignment_ofs = stretch_avail * 0.5 = (100-20)*0.5 = 40.
     expect(rects.get('c0')).toEqual({ x: 40, y: 0, w: 20, h: 10 });
   });
@@ -233,10 +243,12 @@ describe('flowContainerLayout', () => {
   it('ALIGNMENT_END pushes a single-line, non-expanding row to the far edge (flow_container.cpp:186-196)', () => {
     const c0 = leaf('c0', { customMinimumSize: { x: 20, y: 10 } });
     const f = flow('FlowContainer', { hSep: 0, vSep: 0, alignment: 2 }, [c0]); // ALIGNMENT_END
-    const rects = flowContainerLayout(f, childEntries([c0]), { x: 0, y: 0, w: 100, h: 40 }, ctx()) as ReadonlyMap<
-      string,
-      Rect2
-    >;
+    const rects = flowContainerLayout(
+      f,
+      childEntries([c0]),
+      { x: 0, y: 0, w: 100, h: 40 },
+      ctx()
+    ) as ReadonlyMap<string, Rect2>;
     expect(rects.get('c0')).toEqual({ x: 80, y: 0, w: 20, h: 10 });
   });
 
@@ -247,10 +259,12 @@ describe('flowContainerLayout', () => {
       leaf('c3', { customMinimumSize: { x: 20, y: 10 } }),
     ];
     const f = flow('FlowContainer', { hSep: 10, vSep: 5, reverseFill: true }, children);
-    const rects = flowContainerLayout(f, childEntries(children), { x: 0, y: 0, w: 55, h: 100 }, ctx()) as ReadonlyMap<
-      string,
-      Rect2
-    >;
+    const rects = flowContainerLayout(
+      f,
+      childEntries(children),
+      { x: 0, y: 0, w: 55, h: 100 },
+      ctx()
+    ) as ReadonlyMap<string, Rect2>;
     // Non-reversed y's were 0, 0, 15 (see the wrap test above); reversed: h - y - childH.
     expect(rects.get('c1')).toEqual({ x: 0, y: 90, w: 20, h: 10 });
     expect(rects.get('c2')).toEqual({ x: 30, y: 90, w: 20, h: 10 });
@@ -263,10 +277,12 @@ describe('flowContainerLayout', () => {
       leaf('c2', { customMinimumSize: { x: 10, y: 20 } }),
     ];
     const f = flow('VFlowContainer', { hSep: 0, vSep: 5, reverseFill: true }, children);
-    const rects = flowContainerLayout(f, childEntries(children), { x: 0, y: 0, w: 50, h: 100 }, ctx()) as ReadonlyMap<
-      string,
-      Rect2
-    >;
+    const rects = flowContainerLayout(
+      f,
+      childEntries(children),
+      { x: 0, y: 0, w: 50, h: 100 },
+      ctx()
+    ) as ReadonlyMap<string, Rect2>;
     // Single column (no wrap): x stays flipped the same for both (contentRect.w - 0 - column_width).
     expect(rects.get('c1')).toEqual({ x: 40, y: 0, w: 10, h: 20 });
     expect(rects.get('c2')).toEqual({ x: 40, y: 25, w: 10, h: 20 });
@@ -274,7 +290,10 @@ describe('flowContainerLayout', () => {
 
   it('is empty with no sortable children', () => {
     const f = flow('FlowContainer', {}, []);
-    const rects = flowContainerLayout(f, [], { x: 0, y: 0, w: 100, h: 40 }, ctx()) as ReadonlyMap<string, Rect2>;
+    const rects = flowContainerLayout(f, [], { x: 0, y: 0, w: 100, h: 40 }, ctx()) as ReadonlyMap<
+      string,
+      Rect2
+    >;
     expect(rects.size).toBe(0);
   });
 });
@@ -290,10 +309,12 @@ describe('flowContainerLayout under RTL', () => {
       leaf('c3', { customMinimumSize: { x: 20, y: 10 } }),
     ];
     const f = { ...flow('FlowContainer', { hSep: 10, vSep: 5 }, children), rtl: true };
-    const rects = flowContainerLayout(f, childEntries(children), { x: 0, y: 0, w: 55, h: 100 }, ctx()) as ReadonlyMap<
-      string,
-      Rect2
-    >;
+    const rects = flowContainerLayout(
+      f,
+      childEntries(children),
+      { x: 0, y: 0, w: 55, h: 100 },
+      ctx()
+    ) as ReadonlyMap<string, Rect2>;
     expect(rects.get('c1')).toEqual({ x: 35, y: 0, w: 20, h: 10 });
     expect(rects.get('c2')).toEqual({ x: 5, y: 0, w: 20, h: 10 });
     expect(rects.get('c3')).toEqual({ x: 35, y: 15, w: 20, h: 10 });
@@ -305,10 +326,12 @@ describe('flowContainerLayout under RTL', () => {
       leaf('c2', { customMinimumSize: { x: 10, y: 20 } }),
     ];
     const f = { ...flow('VFlowContainer', { hSep: 0, vSep: 5 }, children), rtl: true };
-    const rects = flowContainerLayout(f, childEntries(children), { x: 0, y: 0, w: 50, h: 100 }, ctx()) as ReadonlyMap<
-      string,
-      Rect2
-    >;
+    const rects = flowContainerLayout(
+      f,
+      childEntries(children),
+      { x: 0, y: 0, w: 50, h: 100 },
+      ctx()
+    ) as ReadonlyMap<string, Rect2>;
     expect(rects.get('c1')).toEqual({ x: 40, y: 0, w: 10, h: 20 });
     expect(rects.get('c2')).toEqual({ x: 40, y: 25, w: 10, h: 20 });
   });
@@ -320,10 +343,12 @@ describe('flowContainerLayout under RTL', () => {
       leaf('c2', { customMinimumSize: { x: 10, y: 20 } }),
     ];
     const f = { ...flow('VFlowContainer', { hSep: 0, vSep: 5, reverseFill: true }, children), rtl: true };
-    const rects = flowContainerLayout(f, childEntries(children), { x: 0, y: 0, w: 50, h: 100 }, ctx()) as ReadonlyMap<
-      string,
-      Rect2
-    >;
+    const rects = flowContainerLayout(
+      f,
+      childEntries(children),
+      { x: 0, y: 0, w: 50, h: 100 },
+      ctx()
+    ) as ReadonlyMap<string, Rect2>;
     expect(rects.get('c1')).toEqual({ x: 0, y: 0, w: 10, h: 20 });
     expect(rects.get('c2')).toEqual({ x: 0, y: 25, w: 10, h: 20 });
   });
@@ -333,10 +358,12 @@ describe('flowContainerLayout under RTL', () => {
     // width back to the child's own 20 and, under RTL, offsets by 100 - 20.
     const child = leaf('c1', { customMinimumSize: { x: 20, y: 10 }, sizeFlagsHorizontal: 2 });
     const f = { ...flow('HFlowContainer', { hSep: 0, vSep: 0 }, [child]), rtl: true };
-    const rects = flowContainerLayout(f, childEntries([child]), { x: 0, y: 0, w: 100, h: 100 }, ctx()) as ReadonlyMap<
-      string,
-      Rect2
-    >;
+    const rects = flowContainerLayout(
+      f,
+      childEntries([child]),
+      { x: 0, y: 0, w: 100, h: 100 },
+      ctx()
+    ) as ReadonlyMap<string, Rect2>;
     expect(rects.get('c1')).toEqual({ x: 80, y: 0, w: 20, h: 10 });
   });
 });

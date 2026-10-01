@@ -96,14 +96,11 @@ function only(ruleName: string, content: string) {
 describe('NavigationObstacle2D global-scale check (navigation_obstacle_2d.cpp:331-333)', () => {
   it('says nothing at default scale (1, 1)', () => {
     expect(
-      only(
-        SCALE_RULE,
-        `[gd_scene format=3]\n\n[node name="Obstacle" type="NavigationObstacle2D"]\n`
-      )
+      only(SCALE_RULE, `[gd_scene format=3]\n\n[node name="Obstacle" type="NavigationObstacle2D"]\n`)
     ).toEqual([]);
   });
 
-  it('warns when the node\'s own scale.x is below 0.001', () => {
+  it("warns when the node's own scale.x is below 0.001", () => {
     expect(
       only(
         SCALE_RULE,
@@ -273,7 +270,7 @@ describe('NavigationObstacle2D global-skew check (navigation_obstacle_2d.cpp:340
     expect(only(SKEW_RULE, content)).toEqual([]);
   });
 
-  it('says nothing on a degenerate (zero-length) axis, matching Vector2::normalize()\'s zero-vector guard', () => {
+  it("says nothing on a degenerate (zero-length) axis, matching Vector2::normalize()'s zero-vector guard", () => {
     // core/math/vector2.cpp's normalize() guards `if (l != 0)`, so a zero-length
     // column normalises to the zero vector, the dot is 0, and get_skew() returns
     // exactly 0. Godot stays silent here, though the separate scale-floor check
@@ -283,7 +280,7 @@ describe('NavigationObstacle2D global-skew check (navigation_obstacle_2d.cpp:340
     expect(only(SCALE_RULE, content)).toHaveLength(1);
   });
 
-  it("says nothing when the two axes are parallel but non-zero, where SIGN(det) is 0", () => {
+  it('says nothing when the two axes are parallel but non-zero, where SIGN(det) is 0', () => {
     // Parallel columns with length: `get_skew()` multiplies by `SIGN(det)`
     // (transform_2d.cpp:74), which is exactly 0 (typedefs.h:123-126), so the skew
     // is 0 and navigation_obstacle_2d.cpp:340 (`!= 0.0`) stays silent. Composed,

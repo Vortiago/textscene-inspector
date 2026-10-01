@@ -48,11 +48,7 @@ ${blend}
 }
 
 /** `tonemap.glsl:859-899` with `FLAG_USE_GLOW` clear: exposure, then the curve. */
-function toneMapOnlyGlsl(toneMapping: {
-  mode: number;
-  white: number;
-  agxContrast?: number;
-}): string {
+function toneMapOnlyGlsl(toneMapping: { mode: number; white: number; agxContrast?: number }): string {
   return /* glsl */ `
 uniform float godotExposure;
 ${toneMappingEffectGlsl(toneMapping.mode, toneMapping.white, toneMapping.agxContrast)}

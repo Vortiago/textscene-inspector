@@ -105,19 +105,12 @@ function MissingRow({ path, onUpload }: MissingRowProps) {
   };
 
   return (
-    <div
-      className={`${styles.item} ${styles.missing}`}
-      data-state="missing"
-      data-path={path}
-    >
+    <div className={`${styles.item} ${styles.missing}`} data-state="missing" data-path={path}>
       <div className={styles.itemHead}>
         <div className={`${styles.icon} ${styles.missing}`} aria-hidden="true">
           ⚠
         </div>
-        <div
-          className={styles.path}
-          title={replacesOtherFile ? `${path} — inside ${filePath}` : path}
-        >
+        <div className={styles.path} title={replacesOtherFile ? `${path} — inside ${filePath}` : path}>
           {path}
         </div>
       </div>

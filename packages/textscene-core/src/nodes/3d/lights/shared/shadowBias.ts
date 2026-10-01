@@ -44,11 +44,7 @@ export function directionalShadowBias(
  * cube depth is projective (`shadowmap_pars_fragment.glsl.js:292`). `near / (far * (far - near))`
  * is `d(dp)/dz` at `z = far`, so nearer the light this undershoots.
  */
-export function omniShadowBias(
-  shadowBias: number | undefined,
-  near: number,
-  far: number
-): number {
+export function omniShadowBias(shadowBias: number | undefined, near: number, far: number): number {
   if (!(far > near)) return 0;
   // No `soft_shadow_scale`: `light_storage.cpp:1024` sits in the spot branch alone.
   const bias = shadowBias ?? GODOT_SHADOW_BIAS_DEFAULT.OMNI;

@@ -51,7 +51,9 @@ describe('RemoteTransform3D remote_path rule', () => {
     // `../`, because a sibling is not a child: `get_node_or_null` walks
     // `data.children.getptr(name)` from the RemoteTransform3D itself
     // (node.cpp:1941), which is also the form the inspector writes.
-    expect(reportsOf(diagnosticsFor(scene('remote_path = NodePath("../Target")\n')), RULE, 'warning')).toEqual([]);
+    expect(
+      reportsOf(diagnosticsFor(scene('remote_path = NodePath("../Target")\n')), RULE, 'warning')
+    ).toEqual([]);
   });
 
   it('warns on a bare sibling name, which resolves to nothing from this node', () => {
@@ -61,13 +63,21 @@ describe('RemoteTransform3D remote_path rule', () => {
   });
 
   it('warns when remote_path names no node in this file', () => {
-    const warnings = reportsOf(diagnosticsFor(scene('remote_path = NodePath("NoSuchNode")\n')), RULE, 'warning');
+    const warnings = reportsOf(
+      diagnosticsFor(scene('remote_path = NodePath("NoSuchNode")\n')),
+      RULE,
+      'warning'
+    );
     expect(warnings).toHaveLength(1);
     expect(warnings[0]?.message).toContain('NoSuchNode');
   });
 
   it('warns when remote_path resolves to a node that is not a Node3D', () => {
-    const warnings = reportsOf(diagnosticsFor(scene('remote_path = NodePath("../NotSpatial")\n')), RULE, 'warning');
+    const warnings = reportsOf(
+      diagnosticsFor(scene('remote_path = NodePath("../NotSpatial")\n')),
+      RULE,
+      'warning'
+    );
     expect(warnings).toHaveLength(1);
     expect(warnings[0]?.message).toContain('Node');
   });
@@ -78,6 +88,8 @@ describe('RemoteTransform3D remote_path rule', () => {
   });
 
   it('leaves the committed fixture warning-free', () => {
-    expect(reportsOf(diagnosticsFor(readFixture('unit-remote-transform-3d.tscn')), RULE, 'warning')).toEqual([]);
+    expect(reportsOf(diagnosticsFor(readFixture('unit-remote-transform-3d.tscn')), RULE, 'warning')).toEqual(
+      []
+    );
   });
 });

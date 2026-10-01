@@ -60,7 +60,7 @@ describe('GPUParticlesCollisionBox3D strict validators', () => {
     });
   });
 
-  it("delivers the inherited cull_mask through the base-walk, proving the tier import is wired", () => {
+  it('delivers the inherited cull_mask through the base-walk, proving the tier import is wired', () => {
     const validator = validatorRegistry.findValidator('GPUParticlesCollisionBox3D', 'cull_mask');
     expect(validator).not.toBeNull();
     expect(validator!('cull_mask', 'not-a-number', 1)?.code).toBeTruthy();

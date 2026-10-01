@@ -110,8 +110,7 @@ export function tileDrawInfo(
     orientation: {
       flipH: (alternative?.flipH ?? false) !== ((alternativeId & TILE_TRANSFORM_FLIP_H) !== 0),
       flipV: (alternative?.flipV ?? false) !== ((alternativeId & TILE_TRANSFORM_FLIP_V) !== 0),
-      transpose:
-        (alternative?.transpose ?? false) !== ((alternativeId & TILE_TRANSFORM_TRANSPOSE) !== 0),
+      transpose: (alternative?.transpose ?? false) !== ((alternativeId & TILE_TRANSFORM_TRANSPOSE) !== 0),
     },
     textureOrigin: alternative?.textureOrigin ?? { x: 0, y: 0 },
   };

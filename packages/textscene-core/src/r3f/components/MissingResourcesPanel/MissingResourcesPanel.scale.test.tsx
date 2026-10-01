@@ -9,17 +9,12 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import {
-  MissingResourcesProvider,
-  useMissingResources,
-} from '../../contexts/MissingResourcesContext';
+import { MissingResourcesProvider, useMissingResources } from '../../contexts/MissingResourcesContext';
 import { MissingResourcesPanel } from './MissingResourcesPanel';
+import { escapeRegExp } from '@textscene/dev-kit';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const panelCss = readFileSync(
-  join(__dirname, 'MissingResourcesPanel.module.css'),
-  'utf-8'
-);
+const panelCss = readFileSync(join(__dirname, 'MissingResourcesPanel.module.css'), 'utf-8');
 
 function ReportMissingOnMount({ path }: { path: string }) {
   const { report } = useMissingResources();
@@ -31,8 +26,9 @@ function ReportMissingOnMount({ path }: { path: string }) {
 
 describe('<MissingResourcesPanel> scale behavior (WI-UX-13)', () => {
   it('renders all 12 reported paths without truncating any row', async () => {
-    const paths = Array.from({ length: 12 }, (_, i) =>
-      `res://textures/missing-${String(i).padStart(2, '0')}.png`
+    const paths = Array.from(
+      { length: 12 },
+      (_, i) => `res://textures/missing-${String(i).padStart(2, '0')}.png`
     );
 
     render(
@@ -49,9 +45,7 @@ describe('<MissingResourcesPanel> scale behavior (WI-UX-13)', () => {
     // The cap scrolls the rows. It drops none.
     expect(missingRows).toHaveLength(12);
 
-    const paths_rendered = Array.from(missingRows).map((r) =>
-      r.getAttribute('data-path')
-    );
+    const paths_rendered = Array.from(missingRows).map((r) => r.getAttribute('data-path'));
     expect(paths_rendered).toEqual(expect.arrayContaining(paths));
   });
 
@@ -67,7 +61,7 @@ describe('<MissingResourcesPanel> scale behavior (WI-UX-13)', () => {
 
 /** The body of a top-level CSS rule. It does not walk nested rules. */
 function extractRule(css: string, selector: string): string {
-  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escaped = escapeRegExp(selector);
   const match = css.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`));
   if (!match) {
     throw new Error(`Could not find rule for selector "${selector}" in the CSS file.`);

@@ -77,12 +77,7 @@ describe('createArrayMeshProcessor', () => {
     const eventBus = new ResourceEventBus();
     const processor = createArrayMeshProcessor(file.bus, eventBus);
 
-    const loaded = eventBus.once<ArrayMeshResource>(
-      'arraymesh',
-      'loaded',
-      'res://mixed.tres',
-      1000
-    );
+    const loaded = eventBus.once<ArrayMeshResource>('arraymesh', 'loaded', 'res://mixed.tres', 1000);
     processor.request('res://mixed.tres');
     file.emitLoaded('res://mixed.tres', GOOD_THEN_UNREADABLE_TRES);
 
@@ -102,12 +97,7 @@ describe('createArrayMeshProcessor', () => {
     const eventBus = new ResourceEventBus();
     const processor = createArrayMeshProcessor(file.bus, eventBus);
 
-    const loaded = eventBus.once<ArrayMeshResource>(
-      'arraymesh',
-      'loaded',
-      'res://shifted.tres',
-      1000
-    );
+    const loaded = eventBus.once<ArrayMeshResource>('arraymesh', 'loaded', 'res://shifted.tres', 1000);
     processor.request('res://shifted.tres');
     file.emitLoaded('res://shifted.tres', UNREADABLE_THEN_GOOD_TRES);
 

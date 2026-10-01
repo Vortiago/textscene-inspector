@@ -67,10 +67,10 @@ describe('joint_constraints/* against the JointData live when the line is applie
   });
 
   it('errors on a constraint written above joint_type, naming the order', () => {
-    expectDiagnostic(
-      scene(node('PhysicalBone3D', { 'joint_constraints/bias': 0.3, joint_type: 1 })),
-      { ruleName: 'physicalbone3d-joint-constraint-without-joint', contains: ['file order'] }
-    );
+    expectDiagnostic(scene(node('PhysicalBone3D', { 'joint_constraints/bias': 0.3, joint_type: 1 })), {
+      ruleName: 'physicalbone3d-joint-constraint-without-joint',
+      contains: ['file order'],
+    });
   });
 
   it('errors under an explicit joint_type = 0 above the line, without the order hint', () => {
@@ -82,24 +82,20 @@ describe('joint_constraints/* against the JointData live when the line is applie
   });
 
   it('accepts a Pin leaf once joint_type = 1 is above it', () => {
-    expectNoDiagnostic(
-      scene(node('PhysicalBone3D', { joint_type: 1, 'joint_constraints/bias': 0.3 })),
-      { ruleName: 'physicalbone3d-joint-constraint-without-joint' }
-    );
+    expectNoDiagnostic(scene(node('PhysicalBone3D', { joint_type: 1, 'joint_constraints/bias': 0.3 })), {
+      ruleName: 'physicalbone3d-joint-constraint-without-joint',
+    });
   });
 
   // Each subclass's `_set` compares the whole key against its own leaves and
   // ends `else { return false; }` (Pin :133, Cone :202, Hinge :283, Slider
   // :391, SixDOF :466/:599), so a leaf another joint type owns is dropped.
   it('errors on a Cone leaf under a Pin joint', () => {
-    expectDiagnostic(
-      scene(node('PhysicalBone3D', { joint_type: 1, 'joint_constraints/swing_span': 10.0 })),
-      {
-        ruleName: 'physicalbone3d-joint-constraint-wrong-joint-type',
-        severity: 'error',
-        contains: ['PinJointData'],
-      }
-    );
+    expectDiagnostic(scene(node('PhysicalBone3D', { joint_type: 1, 'joint_constraints/swing_span': 10.0 })), {
+      ruleName: 'physicalbone3d-joint-constraint-wrong-joint-type',
+      severity: 'error',
+      contains: ['PinJointData'],
+    });
   });
 
   it('errors on a flat leaf under a 6DOF joint, which reads only axis-prefixed keys', () => {
@@ -111,9 +107,7 @@ describe('joint_constraints/* against the JointData live when the line is applie
 
   it('accepts an axis leaf under a 6DOF joint and a Hinge leaf under a Hinge joint', () => {
     expectNoDiagnostic(
-      scene(
-        node('PhysicalBone3D', { joint_type: 5, 'joint_constraints/x/angular_limit_upper': 10.0 })
-      ),
+      scene(node('PhysicalBone3D', { joint_type: 5, 'joint_constraints/x/angular_limit_upper': 10.0 })),
       { ruleName: 'physicalbone3d-joint-constraint-wrong-joint-type' }
     );
     expectNoDiagnostic(

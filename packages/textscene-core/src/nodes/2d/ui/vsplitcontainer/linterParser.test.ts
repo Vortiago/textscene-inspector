@@ -26,7 +26,7 @@ describe('VSplitContainer strict validators', () => {
     expect(base!('vertical', 'true', 1)).toBeNull();
   });
 
-  it('inherits SplitContainer\'s own keys through the base-walk', () => {
+  it("inherits SplitContainer's own keys through the base-walk", () => {
     expect(validatorRegistry.findValidator('VSplitContainer', 'collapsed')).not.toBeNull();
   });
 

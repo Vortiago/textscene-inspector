@@ -4,10 +4,13 @@ import { parseArea2D } from './parser';
 
 describe('parseArea2D', () => {
   it('parses the 2D transform plus monitoring/layer/mask (happy path)', () => {
-    const result = parseArea2D(
-      heading('Area2D', { name: 'Trigger', parent: '.' }),
-      { position: 'Vector2(10, 20)', monitoring: 'true', monitorable: 'false', collision_layer: '4', collision_mask: '1' }
-    );
+    const result = parseArea2D(heading('Area2D', { name: 'Trigger', parent: '.' }), {
+      position: 'Vector2(10, 20)',
+      monitoring: 'true',
+      monitorable: 'false',
+      collision_layer: '4',
+      collision_mask: '1',
+    });
     expect(result.name).toBe('Trigger');
     expect(result.parent).toBe('.');
     expect(result.position).toEqual({ x: 10, y: 20 });

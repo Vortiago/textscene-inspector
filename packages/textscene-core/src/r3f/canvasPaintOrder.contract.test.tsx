@@ -44,7 +44,10 @@ ${order === 'background-first' ? background + '\n' + sprite : sprite + '\n' + ba
  * Render world content and Controls together, exactly as `World2DContents` mounts them.
  * Each path in `texturePaths` resolves to a 32x32 texture.
  */
-async function renderWorld(tscn: string, texturePaths: readonly string[] = []): Promise<THREE.Object3D | null> {
+async function renderWorld(
+  tscn: string,
+  texturePaths: readonly string[] = []
+): Promise<THREE.Object3D | null> {
   const parsed = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
   for (const path of texturePaths) {
@@ -104,7 +107,11 @@ function drawnMeshUnder(root: THREE.Object3D | null, name: string): THREE.Object
 }
 
 /** Every mesh under the named node that is not also under `excluded`. */
-function meshesUnderExcept(root: THREE.Object3D | null, name: string, excluded: THREE.Object3D): THREE.Object3D[] {
+function meshesUnderExcept(
+  root: THREE.Object3D | null,
+  name: string,
+  excluded: THREE.Object3D
+): THREE.Object3D[] {
   const found: THREE.Object3D[] = [];
   root?.traverse((o) => {
     if (o.name !== name) return;
@@ -169,7 +176,9 @@ layer = -100
 [node name="Art" type="Polygon2D" parent="BG"]
 polygon = PackedVector2Array(0, 0, 640, 0, 640, 400)
 `);
-    expect(compareKeys(paintKey(drawnMeshUnder(root, 'Art')), paintKey(drawnMeshUnder(root, 'Ball')))).toBeLessThan(0);
+    expect(
+      compareKeys(paintKey(drawnMeshUnder(root, 'Art')), paintKey(drawnMeshUnder(root, 'Ball')))
+    ).toBeLessThan(0);
   });
 
   it('a ParallaxBackground hosts the canvas its CONTROL children draw on too', async () => {
@@ -192,7 +201,9 @@ offset_right = 640.0
 offset_bottom = 400.0
 color = Color(0.9, 0.2, 0.2, 1)
 `);
-    expect(compareKeys(paintKey(drawnMeshUnder(root, 'Art')), paintKey(drawnMeshUnder(root, 'Ball')))).toBeLessThan(0);
+    expect(
+      compareKeys(paintKey(drawnMeshUnder(root, 'Art')), paintKey(drawnMeshUnder(root, 'Ball')))
+    ).toBeLessThan(0);
   });
 
   it('a canvas item under a plain Node draws over a sibling authored after it', async () => {
@@ -218,7 +229,7 @@ polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
     ).toBeGreaterThan(0);
   });
 
-  it('a TileMap child draws over the TileMap\'s layers', async () => {
+  it("a TileMap child draws over the TileMap's layers", async () => {
     // The layers are internal children added at the front
     // (`tile_map.cpp:279`), so their draw indices come before every authored
     // child's (`node.h:585-600`) and `_cull_canvas_item` draws them first.

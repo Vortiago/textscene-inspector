@@ -170,7 +170,9 @@ describe('CSG cast_shadow', () => {
     await ReactThreeTestRenderer.act(async () => {
       fake.resources._resolve(
         'res://paint.tres',
-        parseTresFile('[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\nalbedo_color = Color(1, 0, 0, 1)\n')
+        parseTresFile(
+          '[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\nalbedo_color = Color(1, 0, 0, 1)\n'
+        )
       );
       await renderer.update(tree);
     });

@@ -7,12 +7,7 @@
  */
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import {
-  assertExtensionBuilt,
-  driveScene,
-  REPO_ROOT,
-  resolveVscodeBinary,
-} from './driveScene.mjs';
+import { assertExtensionBuilt, driveScene, REPO_ROOT, resolveVscodeBinary } from './driveScene.mjs';
 
 function parseArgs(argv) {
   const opts = {
@@ -33,30 +28,50 @@ function parseArgs(argv) {
     const arg = argv[i];
     switch (arg) {
       // Default: scripts/vscode/output/<scene-name>.
-      case '--out': opts.out = argv[++i]; break;
+      case '--out':
+        opts.out = argv[++i];
+        break;
       // The folder to open. Default: the scene's directory.
-      case '--workspace': opts.workspace = argv[++i]; break;
+      case '--workspace':
+        opts.workspace = argv[++i];
+        break;
       // The CDP port.
-      case '--port': opts.port = Number(argv[++i]); break;
+      case '--port':
+        opts.port = Number(argv[++i]);
+        break;
       // Milliseconds to wait after the canvas settles, before the capture.
-      case '--settle': opts.settle = Number(argv[++i]); break;
+      case '--settle':
+        opts.settle = Number(argv[++i]);
+        break;
       // An ES module whose default export is a self-contained function. It is
       // serialised and run inside the webview frame, and its JSON result lands
       // in report.evalResult.
-      case '--eval': opts.evalFile = argv[++i]; break;
+      case '--eval':
+        opts.evalFile = argv[++i];
+        break;
       // Uses the ambient DISPLAY instead of xvfb-run.
-      case '--headed': opts.headed = true; break;
+      case '--headed':
+        opts.headed = true;
+        break;
       // Keeps the .tscn source editor open beside the preview. By default it
       // closes, so the webview fills the window.
-      case '--split': opts.split = true; break;
+      case '--split':
+        opts.split = true;
+        break;
       // Skips the `preserveDrawingBuffer` patch, so the canvas readback reads
       // blank. It keeps the claim in `.claude/skills/drive-vscode-extension`
       // testable.
-      case '--no-preserve-buffer': opts.preserveBuffer = false; break;
+      case '--no-preserve-buffer':
+        opts.preserveBuffer = false;
+        break;
       // Keeps VS Code alive this many milliseconds after the capture, to debug.
-      case '--keep-open': opts.keepOpen = Number(argv[++i]); break;
+      case '--keep-open':
+        opts.keepOpen = Number(argv[++i]);
+        break;
       // Streams VS Code stdout and stderr.
-      case '--verbose': opts.verbose = true; break;
+      case '--verbose':
+        opts.verbose = true;
+        break;
       default:
         if (arg.startsWith('--')) throw new Error(`Unknown option: ${arg}`);
         rest.push(arg);

@@ -1,12 +1,7 @@
 /** Label3D strict validators. */
 
 import { describe, expect, it } from 'vitest';
-import {
-  node,
-  scene,
-  expectClean,
-  runPropertyValidation,
-} from '../../../linter/testing/testkit';
+import { node, scene, expectClean, runPropertyValidation } from '../../../linter/testing/testkit';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import './linterParser';
 
@@ -291,7 +286,7 @@ describe('Label3D Linter', () => {
     });
 
     describe('vertical_alignment', () => {
-it('warns on 3 (FILL) — the setter takes it, the hint lists only three labels', () => {
+      it('warns on 3 (FILL) — the setter takes it, the hint lists only three labels', () => {
         expect(check('vertical_alignment', '3')?.severity).toBe('warning');
       });
       it('rejects 4, one past the setter bound', () => {

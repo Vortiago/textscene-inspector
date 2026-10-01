@@ -7,11 +7,7 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode3D } from '../../base/node3d/parser';
 import { boolOr, enumOr, floatOr, intOr } from '../../../parser/valueParsers';
 import { parseAudioBase } from '../parseAudioBase';
-import {
-  AttenuationModel,
-  type AudioStreamPlayer3DProperties,
-  DopplerTracking,
-} from './types';
+import { AttenuationModel, type AudioStreamPlayer3DProperties, DopplerTracking } from './types';
 
 export function parseAudioStreamPlayer3D(
   heading: ParsedHeading,

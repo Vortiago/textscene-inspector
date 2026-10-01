@@ -22,13 +22,7 @@ function check(property: string, value: string) {
  * five members without `overrides=`, each with an ADD_PROPERTY in
  * collision_polygon_2d.cpp:308-314. Set this or DECLARES_NOTHING, never neither.
  */
-const KEYS: string[] = [
-  'build_mode',
-  'polygon',
-  'disabled',
-  'one_way_collision',
-  'one_way_collision_margin',
-];
+const KEYS: string[] = ['build_mode', 'polygon', 'disabled', 'one_way_collision', 'one_way_collision_margin'];
 /** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 

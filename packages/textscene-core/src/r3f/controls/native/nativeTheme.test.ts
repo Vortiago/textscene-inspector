@@ -91,9 +91,15 @@ describe('nativeTheme', () => {
         shadowOffset: { x: 0, y: 0 },
       };
       expect(theme.widgets.button.normal).toEqual({ ...shared, bgColor: { r: 0.1, g: 0.1, b: 0.1, a: 0.6 } });
-      expect(theme.widgets.button.hover).toEqual({ ...shared, bgColor: { r: 0.225, g: 0.225, b: 0.225, a: 0.6 } });
+      expect(theme.widgets.button.hover).toEqual({
+        ...shared,
+        bgColor: { r: 0.225, g: 0.225, b: 0.225, a: 0.6 },
+      });
       expect(theme.widgets.button.pressed).toEqual({ ...shared, bgColor: { r: 0, g: 0, b: 0, a: 0.6 } });
-      expect(theme.widgets.button.disabled).toEqual({ ...shared, bgColor: { r: 0.1, g: 0.1, b: 0.1, a: 0.3 } });
+      expect(theme.widgets.button.disabled).toEqual({
+        ...shared,
+        bgColor: { r: 0.1, g: 0.1, b: 0.1, a: 0.3 },
+      });
     });
 
     it('ScrollBar scroll: make_flat_stylebox(style_normal_color, ..., 10) per axis — default_theme.cpp:543-544', () => {
@@ -158,13 +164,18 @@ describe('nativeTheme', () => {
       });
     });
 
-    it('scales widget geometry (margins, corner radii) at scale 2, per make_flat_stylebox\'s Math.round(x * scale)', () => {
+    it("scales widget geometry (margins, corner radii) at scale 2, per make_flat_stylebox's Math.round(x * scale)", () => {
       const theme = nativeTheme(2);
       expect(theme.widgets.panel.cornerRadius).toEqual(uniformCorners(6));
       expect(theme.widgets.button.normal.contentMargin).toEqual(uniform(8));
       expect(theme.widgets.button.normal.cornerRadius).toEqual(uniformCorners(6));
       expect(theme.widgets.scrollBar.scrollHorizontal.cornerRadius).toEqual(uniformCorners(20));
-      expect(theme.widgets.scrollBar.scrollHorizontal.contentMargin).toEqual({ left: 0, top: 8, right: 0, bottom: 8 });
+      expect(theme.widgets.scrollBar.scrollHorizontal.contentMargin).toEqual({
+        left: 0,
+        top: 8,
+        right: 0,
+        bottom: 8,
+      });
       expect(theme.widgets.scrollBar.grabber.cornerRadius).toEqual(uniformCorners(20));
     });
 
@@ -211,7 +222,7 @@ describe('nativeTheme', () => {
 
     it(
       'LineEdit read_only: make_flat_stylebox(style_disabled_color) + the SAME 2px bottom border, ' +
-        'HALF style_pressed_color\'s alpha — default_theme.cpp:413-417',
+        "HALF style_pressed_color's alpha — default_theme.cpp:413-417",
       () => {
         const theme = nativeTheme(1);
         expect(theme.widgets.lineEdit.readOnly).toEqual({
@@ -234,7 +245,7 @@ describe('nativeTheme', () => {
       }
     );
 
-    it('scales LineEdit\'s margin/radius at scale 2, but the 2px bottom border stays UNSCALED', () => {
+    it("scales LineEdit's margin/radius at scale 2, but the 2px bottom border stays UNSCALED", () => {
       const theme = nativeTheme(2);
       expect(theme.widgets.lineEdit.normal.contentMargin).toEqual(uniform(8));
       expect(theme.widgets.lineEdit.normal.cornerRadius).toEqual(uniformCorners(6));

@@ -234,8 +234,7 @@ function programKey(props: Record<string, unknown>, cacheKey: string): string {
   // opaque default costs no token. `blending` enters only here, so on a transparent
   // material it is per-draw GL state. `alphaToCoverage` is also its own term (`:213`,
   // layer `:589`).
-  if (props.transparent === true || blending !== THREE.NormalBlending || alphaToCoverage)
-    add('blended');
+  if (props.transparent === true || blending !== THREE.NormalBlending || alphaToCoverage) add('blended');
   if (alphaToCoverage) add('a2c');
   // `alphaHash` (`:172`, published `:266`) is a plain field (`Material.js:134`).
   // `alphaTest` (`:170`) is not keyed: its `> 0` crossing bumps `version` itself

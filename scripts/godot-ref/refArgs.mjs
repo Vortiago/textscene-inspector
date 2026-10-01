@@ -18,7 +18,9 @@ function positiveNumber(flag, raw) {
 }
 
 function vec2(flag, raw) {
-  const parts = String(raw).split(',').map((n) => Number(n.trim()));
+  const parts = String(raw)
+    .split(',')
+    .map((n) => Number(n.trim()));
   if (parts.length !== 2 || parts.some((n) => !Number.isInteger(n))) {
     throw new Error(`${flag} needs two comma-separated integers, got "${raw}"`);
   }
@@ -26,7 +28,9 @@ function vec2(flag, raw) {
 }
 
 function vec3(flag, raw) {
-  const parts = String(raw).split(',').map((n) => Number(n.trim()));
+  const parts = String(raw)
+    .split(',')
+    .map((n) => Number(n.trim()));
   if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) {
     throw new Error(`${flag} needs three comma-separated numbers, got "${raw}"`);
   }

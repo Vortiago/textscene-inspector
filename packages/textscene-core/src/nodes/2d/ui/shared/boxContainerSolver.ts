@@ -18,13 +18,7 @@ import type {
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { ControlProperties } from '../control/types';
 import type { BoxContainerProperties } from './boxContainer';
-import {
-  fitChildInRect,
-  hasFlag,
-  isSortableControl,
-  SIZE_EXPAND,
-  SIZE_FILL,
-} from './fitChildInRect';
+import { fitChildInRect, hasFlag, isSortableControl, SIZE_EXPAND, SIZE_FILL } from './fitChildInRect';
 
 /** `Control` defaults both axes to `SIZE_FILL` (`control.h:229-230`). A type whose parser overrides the flag (Label's `v_size_flags`, for example) has already baked the override into its properties. */
 const DEFAULT_SIZE_FLAGS = SIZE_FILL;
@@ -38,7 +32,6 @@ export interface BoxChildInput {
   vSizeFlags: number;
   stretchRatio: number;
 }
-
 
 interface MinSizeCache {
   minSize: number;
@@ -265,9 +258,7 @@ export function makeBoxContainerLayout(vertical: boolean): ContainerLayoutFn {
 export function makeBoxContainerMinimumSize(vertical: boolean): MinimumSizeFn {
   return (n, ctx) => {
     const separation = separationOf(n, ctx);
-    const childMinSizes = n.children
-      .filter(isSortableControl)
-      .map((child) => ctx.combinedMinimumSize(child));
+    const childMinSizes = n.children.filter(isSortableControl).map((child) => ctx.combinedMinimumSize(child));
     return boxContainerMinimumSize(vertical, separation, childMinSizes);
   };
 }

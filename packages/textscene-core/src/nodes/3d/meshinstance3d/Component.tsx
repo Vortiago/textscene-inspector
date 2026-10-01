@@ -6,26 +6,12 @@
  */
 
 import * as THREE from 'three';
-import {
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-  type RefObject,
-} from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import type { MeshInstance3DProperties } from './types';
-import type {
-  TscnExternalResource,
-  TscnInternalResource,
-} from '../../../parser/types';
+import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
-import {
-  findSubResource,
-  useSceneResources,
-} from '../../../r3f/SceneResourcesContext';
+import { findSubResource, useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { findExtResource, parseResourceReference } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
@@ -75,11 +61,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
 
   // A scene's own `[sub_resource type="ArrayMesh"]` has its surfaces inlined in the
   // `.tscn`, so it decodes synchronously, with no file to fetch.
-  const sceneArrayMesh = useSceneArrayMeshGeometry(
-    meshResource,
-    internalResources,
-    externalResources
-  );
+  const sceneArrayMesh = useSceneArrayMeshGeometry(meshResource, internalResources, externalResources);
 
   // Surface 0's material, the only one a primitive mesh has. Every multi-surface mesh
   // is an ArrayMesh, which returns from its own branch below.
@@ -147,12 +129,20 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   // No mesh, an external GLB or a missing SubResource. An external ArrayMesh is not
   // unresolved: it loads asynchronously below.
   if (!meshResource && !arrayMeshPath) {
-    return <MeshShell {...shellProps} overlay={null}>{UNRESOLVED_MESH}</MeshShell>;
+    return (
+      <MeshShell {...shellProps} overlay={null}>
+        {UNRESOLVED_MESH}
+      </MeshShell>
+    );
   }
 
   if (arrayMeshPath) {
     if (arrayMeshResult.status === 'unavailable') {
-      return <MeshShell {...shellProps} overlay={null}>{UNRESOLVED_MESH}</MeshShell>;
+      return (
+        <MeshShell {...shellProps} overlay={null}>
+          {UNRESOLVED_MESH}
+        </MeshShell>
+      );
     }
     // While it loads, the shell keeps the node's descendants mounted: they do not depend
     // on the `.tres`.
@@ -160,10 +150,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
 
     return (
       <MeshShell {...shellProps}>
-        <ArrayMeshSurfaces
-          mesh={arrayMeshResult.value}
-          overrides={meshOverrides}
-        />
+        <ArrayMeshSurfaces mesh={arrayMeshResult.value} overrides={meshOverrides} />
       </MeshShell>
     );
   }

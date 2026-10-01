@@ -47,7 +47,10 @@ function isZeroApproxVec(v: Vec2): boolean {
 /** `compute_polyline_segment_dir` (`:912-930`). */
 function segmentDir(points: readonly Vec2[], index: number, previous: Vec2): Vec2 {
   if (index === points.length - 1) return previous;
-  const dir = normalized({ x: points[index + 1]!.x - points[index]!.x, y: points[index + 1]!.y - points[index]!.y });
+  const dir = normalized({
+    x: points[index + 1]!.x - points[index]!.x,
+    y: points[index + 1]!.y - points[index]!.y,
+  });
   return isZeroApproxVec(dir) ? previous : dir;
 }
 
@@ -105,7 +108,9 @@ export function polylineStrokeGeometry(
   const pointCount = points.length;
   if (pointCount < 2) return { positions: [], indices: [], colors: [] };
 
-  const loop = isEqualApprox(points[0]!.x, points[pointCount - 1]!.x) && isEqualApprox(points[0]!.y, points[pointCount - 1]!.y);
+  const loop =
+    isEqualApprox(points[0]!.x, points[pointCount - 1]!.x) &&
+    isEqualApprox(points[0]!.y, points[pointCount - 1]!.y);
   const stripSize = pointCount * 2;
   const capped = antialiased && !loop;
   const borderSize = width < 1 ? POLYLINE_FEATHER_SIZE * width : POLYLINE_FEATHER_SIZE;

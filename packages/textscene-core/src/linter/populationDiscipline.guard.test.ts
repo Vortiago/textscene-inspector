@@ -52,7 +52,14 @@ const namesBothHalves = ({ body }: { body: string }): boolean =>
   body.includes('registeredTypes') && body.includes('declarationFor');
 
 /** Every identifier any arm below asks about. */
-const TELLS = ['typesWithRegistrations', 'getTypesWithRemovals', 'registeredTypes', 'declarationFor', 'getOwnKeys', 'findValidator'];
+const TELLS = [
+  'typesWithRegistrations',
+  'getTypesWithRemovals',
+  'registeredTypes',
+  'declarationFor',
+  'getOwnKeys',
+  'findValidator',
+];
 
 /**
  * Raw text first, comments stripped only for a file that can possibly hit. The
@@ -78,7 +85,10 @@ describe('enumerating the registry belongs to one module', () => {
     // rename of every tell, or a move out of the scrape, fails loudly.
     expect(files.length).toBeGreaterThan(100);
     for (const owner of OWNERS) {
-      expect(files.some(({ at }) => at === owner), `${owner} is outside the scan`).toBe(true);
+      expect(
+        files.some(({ at }) => at === owner),
+        `${owner} is outside the scan`
+      ).toBe(true);
     }
   });
 
@@ -142,7 +152,10 @@ describe('enumerating the registry belongs to one module', () => {
     const cast = 'const v = findValidator(t, k) as PropertyValidator;';
     const annotated = 'const v: PropertyValidator | null = findValidator(t, k);';
     for (const sample of [cast, annotated]) {
-      expect(LAUNDERS.some((re) => re.test(sample)), sample).toBe(true);
+      expect(
+        LAUNDERS.some((re) => re.test(sample)),
+        sample
+      ).toBe(true);
     }
     expect(LAUNDERS.some((re) => re.test('const v = findValidator(t, k);'))).toBe(false);
     // A new validator whose body calls a lookup is not a widening of one:

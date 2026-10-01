@@ -78,7 +78,7 @@ describe('scrollBarGrabberGeometry (scroll_bar.cpp:479-517)', () => {
 });
 
 describe('scrollBarTrackRect (scroll_bar.cpp:295-317)', () => {
-  it('is the bar\'s own full rect — both icon terms are 0 in the default theme', () => {
+  it("is the bar's own full rect — both icon terms are 0 in the default theme", () => {
     expect(scrollBarTrackRect({ x: 300, y: 40 })).toEqual({ x: 0, y: 0, w: 300, h: 40 });
   });
 });

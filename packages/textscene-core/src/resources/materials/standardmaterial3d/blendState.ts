@@ -13,12 +13,7 @@ export type GodotBlendOp = 'add' | 'reverse-subtract';
 
 /** Godot `RD::BlendFactor`, only the values this table uses. */
 export type GodotBlendFactor =
-  | 'zero'
-  | 'one'
-  | 'src-alpha'
-  | 'one-minus-src-alpha'
-  | 'dst-color'
-  | 'dst-alpha';
+  'zero' | 'one' | 'src-alpha' | 'one-minus-src-alpha' | 'dst-color' | 'dst-alpha';
 
 /** One `RD::PipelineColorBlendState::Attachment`, in Godot's vocabulary. */
 export interface GodotBlendAttachment {

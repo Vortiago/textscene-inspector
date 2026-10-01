@@ -92,7 +92,14 @@ export interface ShadowVolumeMaskProps {
   tintLayer?: number | undefined;
 }
 
-export function ShadowVolumeMask({ light, casters, ordinal, sequence, layer, tintLayer }: ShadowVolumeMaskProps) {
+export function ShadowVolumeMask({
+  light,
+  casters,
+  ordinal,
+  sequence,
+  layer,
+  tintLayer,
+}: ShadowVolumeMaskProps) {
   const positions = useMemo(() => buildShadowVolumes(light, casters), [light, casters]);
 
   const geometry = useMemo(() => {

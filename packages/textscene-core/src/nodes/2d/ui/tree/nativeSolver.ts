@@ -76,7 +76,10 @@ export function pickTreeTitleButtonStyleBox(
  * `Tree::_get_title_button_height` (`tree.cpp:4616-4624`) for a blank title, since none is
  * serialised: `title_button->get_minimum_size().height`, the same for every column.
  */
-export function treeTitleButtonHeightPx(columnTitlesVisible: boolean | undefined, titleButtonBox: StyleBoxFlatData): number {
+export function treeTitleButtonHeightPx(
+  columnTitlesVisible: boolean | undefined,
+  titleButtonBox: StyleBoxFlatData
+): number {
   if (!columnTitlesVisible) return 0;
   return contentMarginSize(titleButtonBox).y;
 }

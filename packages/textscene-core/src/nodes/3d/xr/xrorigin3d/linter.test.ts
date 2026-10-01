@@ -55,7 +55,7 @@ describe('XROrigin3D rule', () => {
       expect(ruleDiagnostics(linter.lint(content), CAMERA_CHILD_RULE)).toHaveLength(1);
     });
 
-    it('does not require the camera to be a DIRECT child\'s only role — a grandchild camera still does not satisfy get_child(i)', () => {
+    it("does not require the camera to be a DIRECT child's only role — a grandchild camera still does not satisfy get_child(i)", () => {
       const content = `[gd_scene format=3]
 
 [node name="Origin" type="XROrigin3D"]

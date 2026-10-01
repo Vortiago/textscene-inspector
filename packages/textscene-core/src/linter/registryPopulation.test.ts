@@ -7,7 +7,12 @@
 import { describe, it, expect } from 'vitest';
 import { ValidatorRegistry, validatorRegistry } from './ValidatorRegistry.js';
 import type { PropertyValidator } from './propertyValidator.js';
-import { everyValidator, everyValidatorLabel, registeredKeys, registeredTypes } from './registryPopulation.js';
+import {
+  everyValidator,
+  everyValidatorLabel,
+  registeredKeys,
+  registeredTypes,
+} from './registryPopulation.js';
 import './index.js'; // side-effect: every slice registers its validators
 
 /** A validator that rejects nothing; the walk never calls it. */
@@ -29,11 +34,7 @@ describe('registeredTypes', () => {
     });
 
     expect(registeredTypes('declaring', registry)).toEqual(['Declares', 'Empty']);
-    expect([...registeredTypes('answering', registry)].sort()).toEqual([
-      'Declares',
-      'Empty',
-      'RemovesOnly',
-    ]);
+    expect([...registeredTypes('answering', registry)].sort()).toEqual(['Declares', 'Empty', 'RemovesOnly']);
   });
 });
 
@@ -113,13 +114,8 @@ describe('everyValidator', () => {
     registry.registerUnavailable('Twins', { first: reason, second: { ...reason } });
 
     // Same reason and cite, so one function.
-    expect(registry.declarationFor('Twins', 'first')).toBe(
-      registry.declarationFor('Twins', 'second')
-    );
-    expect(everyValidatorLabel(() => true, { registry })).toEqual([
-      'Twins.first',
-      'Twins.second',
-    ]);
+    expect(registry.declarationFor('Twins', 'first')).toBe(registry.declarationFor('Twins', 'second'));
+    expect(everyValidatorLabel(() => true, { registry })).toEqual(['Twins.first', 'Twins.second']);
   });
 
   it('reports a root whose validator was already reached as a leaf, in either order', () => {
@@ -141,12 +137,17 @@ describe('everyValidator', () => {
       key: 'group/leaf',
       kind: 'declaration',
     } as const;
-    for (const roots of [[group, exact], [exact, group]]) {
+    for (const roots of [
+      [group, exact],
+      [exact, group],
+    ]) {
       const found = everyValidator(() => true, { roots });
-      expect(found.filter((s) => s.depth === 0).map((s) => s.label).sort()).toEqual([
-        'Type.group/*',
-        'Type.group/leaf',
-      ]);
+      expect(
+        found
+          .filter((s) => s.depth === 0)
+          .map((s) => s.label)
+          .sort()
+      ).toEqual(['Type.group/*', 'Type.group/leaf']);
       expect(found.filter((s) => s.validator === shared && s.depth > 0).length).toBeLessThanOrEqual(1);
     }
   });
@@ -172,9 +173,7 @@ describe('everyValidator', () => {
     const roots = all.filter((s) => s.depth === 0).length;
     expect(all.length).toBeGreaterThan(roots);
     expect(all.filter((s) => s.depth >= 2).length).toBeGreaterThan(10);
-    expect(registeredTypes('answering').length).toBeGreaterThan(
-      registeredTypes('declaring').length
-    );
+    expect(registeredTypes('answering').length).toBeGreaterThan(registeredTypes('declaring').length);
     expect(registeredTypes('declaring').length).toBeGreaterThan(200);
   });
 });

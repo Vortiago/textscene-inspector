@@ -7,9 +7,25 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
+import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { hiddenOrUnknowableInTree, parentTypeVerdict, placementPhrase } from '../../../linter/parentType.js';
 import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
+
+const arms = {
+  noParent: groundedArm('pathfollow2d-no-parent', { kind: 'configuration-warning' }),
+  invalidParent: groundedArm('pathfollow2d-invalid-parent', { kind: 'configuration-warning' }),
+  negativeProgress: groundedArm('pathfollow2d-negative-progress', {
+    kind: 'engine-inert',
+    at: 'curve.cpp:1079',
+    unused: 'the sampler clamps the offset, so travel before the start moves nothing',
+  }),
+  progressRatioIgnored: {
+    severity: 'error',
+    ruleName: 'pathfollow2d-progress-ratio-ignored',
+    grounding: { kind: 'engine', at: 'path_2d.cpp:472' },
+  },
+} as const satisfies RuleArms<string>;
 
 function checkPathFollow2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -25,21 +41,19 @@ function checkPathFollow2D(context: RuleContext): Diagnostic[] {
   if (!hiddenOrUnknowableInTree(scene, node)) {
     const placement = parentTypeVerdict(scene, node, 'Path2D');
     if (placement.kind === 'root') {
-      diagnostics.push({
-        severity: 'warning',
-        message: `PathFollow2D '${node.name}' is the scene root. It only works as a direct child of a Path2D node, and follows nothing here.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'pathfollow2d-no-parent',
-      });
+      reportArm(
+        diagnostics,
+        arms.noParent,
+        node,
+        `PathFollow2D '${node.name}' is the scene root. It only works as a direct child of a Path2D node, and follows nothing here.`
+      );
     } else if (placement.kind === 'mismatch') {
-      diagnostics.push({
-        severity: 'warning',
-        message: `PathFollow2D '${node.name}' is ${placementPhrase(placement)}. It only works as a direct child of a Path2D node, and follows nothing here.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'pathfollow2d-invalid-parent',
-      });
+      reportArm(
+        diagnostics,
+        arms.invalidParent,
+        node,
+        `PathFollow2D '${node.name}' is ${placementPhrase(placement)}. It only works as a direct child of a Path2D node, and follows nothing here.`
+      );
     }
   }
 
@@ -52,26 +66,24 @@ function checkPathFollow2D(context: RuleContext): Diagnostic[] {
     // (path_2d.cpp:425), so a non-finite one never lands and this rule has
     // nothing to say about the travel it would have asked for.
     if (progress !== null && Number.isFinite(progress) && progress < 0) {
-      diagnostics.push({
-        severity: 'info',
-        message: `PathFollow2D 'progress' is negative (${progress}). Godot keeps the value, but clamps it when sampling the curve, so the follower sits at the start of the path.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'pathfollow2d-negative-progress',
-      });
+      reportArm(
+        diagnostics,
+        arms.negativeProgress,
+        node,
+        `PathFollow2D 'progress' is negative (${progress}). Godot keeps the value, but clamps it when sampling the curve, so the follower sits at the start of the path.`
+      );
     }
   }
 
   // Unconditional: `set_progress_ratio` opens with ERR_FAIL_NULL_MSG(path)
   // (path_2d.cpp:472), so every ratio drops and `progress` wins in any file order.
   if (rawProps.progress_ratio !== undefined) {
-    diagnostics.push({
-      severity: 'error',
-      message: `PathFollow2D 'progress_ratio' is set. A scene file cannot carry it: the setter needs a Path2D parent that is already in the tree, and properties are applied before the node is parented, so Godot drops it. Use 'progress' instead.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'pathfollow2d-progress-ratio-ignored',
-    });
+    reportArm(
+      diagnostics,
+      arms.progressRatioIgnored,
+      node,
+      `PathFollow2D 'progress_ratio' is set. A scene file cannot carry it: the setter needs a Path2D parent that is already in the tree, and properties are applied before the node is parented, so Godot drops it. Use 'progress' instead.`
+    );
   }
 
   return diagnostics;
@@ -83,24 +95,7 @@ const pathFollow2DValidationRule: LintRule = {
     description: 'Validates PathFollow2D parent relationship and progress values',
     category: 'validation',
     applicableNodeTypes: ['PathFollow2D'],
-    emits: [
-      { ruleName: 'pathfollow2d-no-parent', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      { ruleName: 'pathfollow2d-invalid-parent', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      {
-        ruleName: 'pathfollow2d-negative-progress',
-        severity: 'info',
-        grounding: {
-          kind: 'engine-inert',
-          at: 'curve.cpp:1079',
-          unused: 'the sampler clamps the offset, so travel before the start moves nothing',
-        },
-      },
-      {
-        ruleName: 'pathfollow2d-progress-ratio-ignored',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'path_2d.cpp:472' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkPathFollow2D,
 };

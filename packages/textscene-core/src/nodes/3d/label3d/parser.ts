@@ -9,10 +9,7 @@ import { floatOr, intOr } from '../../../parser/valueParsers';
 import { ruleInt } from '../../../godot/int.js';
 import { boolSlotValue } from '../../../godot/index.js';
 
-export function parseLabel3D(
-  heading: ParsedHeading,
-  properties: Record<string, string>
-): Label3DProperties {
+export function parseLabel3D(heading: ParsedHeading, properties: Record<string, string>): Label3DProperties {
   const baseProps = parseNode3D(heading, properties);
 
   return {
@@ -42,7 +39,9 @@ export function parseLabel3D(
 
 function parseAlphaCutMode(value: string | undefined): AlphaCutMode {
   const num = intOr(value, AlphaCutMode.DISABLED, 'alpha_cut');
-  return num >= AlphaCutMode.DISABLED && num <= AlphaCutMode.HASH ? (num as AlphaCutMode) : AlphaCutMode.DISABLED;
+  return num >= AlphaCutMode.DISABLED && num <= AlphaCutMode.HASH
+    ? (num as AlphaCutMode)
+    : AlphaCutMode.DISABLED;
 }
 
 function parseTextureFilter(value: string | undefined): TextureFilter {
@@ -61,10 +60,10 @@ function parseHorizontalAlignment(value: string | undefined): HorizontalAlignmen
 
 function parseBillboardMode(value: string | undefined): BillboardMode {
   const num = ruleInt(value);
-  if (num === null) return BillboardMode.BILLBOARD_DISABLED;  // Godot default
+  if (num === null) return BillboardMode.BILLBOARD_DISABLED; // Godot default
 
   if (num === 0) return BillboardMode.BILLBOARD_DISABLED;
   if (num === 2) return BillboardMode.BILLBOARD_FIXED_Y;
 
-  return BillboardMode.BILLBOARD_ENABLED;  // 1, and any other value
+  return BillboardMode.BILLBOARD_ENABLED; // 1, and any other value
 }

@@ -25,11 +25,8 @@ describe('LIGHT_INTENSITY_SCALE', () => {
     // 0.5) converted from sRGB to linear, and cancels. A Lambertian surface under a white
     // energy-1.0 light renders its own albedo: in scenes/fixtures/unit-light-transport-direct.tscn
     // an unshaded patch of that albedo disappears into the lit plane.
-    const albedo = 0.2140;
-    expect(threeDiffuse(albedo, 1, 1 * LIGHT_INTENSITY_SCALE)).toBeCloseTo(
-      godotDiffuse(albedo, 1, 1),
-      12
-    );
+    const albedo = 0.214;
+    expect(threeDiffuse(albedo, 1, 1 * LIGHT_INTENSITY_SCALE)).toBeCloseTo(godotDiffuse(albedo, 1, 1), 12);
     expect(threeDiffuse(albedo, 1, 1 * LIGHT_INTENSITY_SCALE)).toBeCloseTo(albedo, 12);
   });
 

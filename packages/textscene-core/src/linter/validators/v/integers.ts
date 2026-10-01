@@ -5,24 +5,11 @@
  */
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
-import {
-  markIntSlot,
-  slotWidth,
-} from '../intSlot.js';
-import {
-  createEnumValidator,
-  createNumericRangeValidator,
-} from '../commonValidators.js';
+import { markIntSlot, slotWidth } from '../intSlot.js';
+import { createEnumValidator, createNumericRangeValidator } from '../commonValidators.js';
 import { formatCode, numericRange, valueCode } from './codes.js';
-import {
-  accepts,
-  endSeverity,
-  ground,
-  type EndedGrounding,
-  type Grounding,
-} from './grounding.js';
+import { accepts, endSeverity, ground, type EndedGrounding, type Grounding } from './grounding.js';
 import type { IntOpts } from './options.js';
-
 
 export const integerCombinators = {
   /** Integer in a range, parsed as base 10. */
@@ -30,27 +17,30 @@ export const integerCombinators = {
     // One width for the read and the tag, or they disagree on every slot whose
     // ceiling exceeds INT32_MAX.
     const width = opts.width ?? slotWidth(opts.max);
-    return markIntSlot(ground(
-      accepts(
-        createNumericRangeValidator({
-          propertyName: name,
-          min: opts.min ?? null,
-          max: opts.max ?? null,
-          width,
-          enforcedMin: opts.enforcedMin,
-          enforcedMax: opts.enforcedMax,
-          parseAsInt: true,
-          message: opts.message,
-          errorCodeFormat: formatCode(name),
-          errorCodeValue: valueCode(name),
-          minSeverity: endSeverity(opts, 'min'),
-          maxSeverity: endSeverity(opts, 'max'),
-        }),
-        numericRange('integer', opts.min, opts.max, opts)
+    return markIntSlot(
+      ground(
+        accepts(
+          createNumericRangeValidator({
+            propertyName: name,
+            min: opts.min ?? null,
+            max: opts.max ?? null,
+            width,
+            enforcedMin: opts.enforcedMin,
+            enforcedMax: opts.enforcedMax,
+            parseAsInt: true,
+            message: opts.message,
+            errorCodeFormat: formatCode(name),
+            errorCodeValue: valueCode(name),
+            minSeverity: endSeverity(opts, 'min'),
+            maxSeverity: endSeverity(opts, 'max'),
+          }),
+          numericRange('integer', opts.min, opts.max, opts)
+        ),
+        opts,
+        { min: opts.min, max: opts.max, enforcedMin: opts.enforcedMin, enforcedMax: opts.enforcedMax }
       ),
-      opts,
-      { min: opts.min, max: opts.max, enforcedMin: opts.enforcedMin, enforcedMax: opts.enforcedMax }
-    ), width);
+      width
+    );
   },
 
   /** Positive integer (`>= 1`); `message` replaces the range wording. */
@@ -76,26 +66,28 @@ export const integerCombinators = {
     // The ends travel positionally here, and `endSeverity` compares the tiers by
     // value, so they are folded back in or a reachable warning band errors.
     const ended = { ...opts, min, max };
-    return markIntSlot(ground(
-      accepts(
-        createEnumValidator(
-          name,
-          min,
-          max,
-          labels,
-          formatCode(name),
-          valueCode(name),
-          endSeverity(ended, 'min'),
-          endSeverity(ended, 'max'),
-          undefined,
-          opts.enforcedMin,
-          opts.enforcedMax
+    return markIntSlot(
+      ground(
+        accepts(
+          createEnumValidator(
+            name,
+            min,
+            max,
+            labels,
+            formatCode(name),
+            valueCode(name),
+            endSeverity(ended, 'min'),
+            endSeverity(ended, 'max'),
+            undefined,
+            opts.enforcedMin,
+            opts.enforcedMax
+          ),
+          `enum ${min}-${max} (${names})`
         ),
-        `enum ${min}-${max} (${names})`
-      ),
-      opts,
-      { min, max, enforcedMin: opts.enforcedMin, enforcedMax: opts.enforcedMax }
-    ));
+        opts,
+        { min, max, enforcedMin: opts.enforcedMin, enforcedMax: opts.enforcedMax }
+      )
+    );
   },
 
   /**
@@ -111,24 +103,26 @@ export const integerCombinators = {
     const min = values[0]!;
     const max = values[values.length - 1]!;
     const names = Object.values(labels).join('/');
-    return markIntSlot(ground(
-      accepts(
-        createEnumValidator(
-          name,
-          min,
-          max,
-          labels,
-          formatCode(name),
-          valueCode(name),
-          endSeverity(opts, 'min'),
-          endSeverity(opts, 'max'),
-          new Set(values)
+    return markIntSlot(
+      ground(
+        accepts(
+          createEnumValidator(
+            name,
+            min,
+            max,
+            labels,
+            formatCode(name),
+            valueCode(name),
+            endSeverity(opts, 'min'),
+            endSeverity(opts, 'max'),
+            new Set(values)
+          ),
+          `enum ${values.join('/')} (${names})`
         ),
-        `enum ${values.join('/')} (${names})`
-      ),
-      opts,
-      { min, max, values }
-    ));
+        opts,
+        { min, max, values }
+      )
+    );
   },
 
   /** A bound-free integer slot: `int` with no range. */

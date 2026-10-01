@@ -123,7 +123,7 @@ describe.each(SEAMS)('$base settings/ seam under the full barrel', (seam) => {
       expect(validatorRegistry.findValidator(type, seam.key)).not.toBeNull();
     });
 
-    it.each(sweptKeys)("answers %s exactly as the base does", (key) => {
+    it.each(sweptKeys)('answers %s exactly as the base does', (key) => {
       // Every leaf, not just the anchor below. The subclass's dispatcher wraps
       // the base's leaf, so identity proves nothing and the diagnostic's
       // equivalence is the contract. A delegation deleted for one leaf shows here.
@@ -132,9 +132,7 @@ describe.each(SEAMS)('$base settings/ seam under the full barrel', (seam) => {
       expect(sub, `${type} does not resolve ${key}`).not.toBeNull();
       expect(base, `${seam.base} does not resolve its own ${key}`).not.toBeNull();
       for (const value of PROBES) {
-        expect(summarise(sub!(key, value, 1)), `${key} = ${value}`).toEqual(
-          summarise(base!(key, value, 1))
-        );
+        expect(summarise(sub!(key, value, 1)), `${key} = ${value}`).toEqual(summarise(base!(key, value, 1)));
       }
     });
 

@@ -36,9 +36,14 @@ describe('parseGraphEdit', () => {
     expect(p.connections).toEqual([{ fromNode: 'Source', fromPort: 0, toNode: 'Sink', toPort: 0 }]);
   });
 
-  it('parses connection_lines_antialiased, the minimap polyline\'s own flag', () => {
-    expect(parseGraphEdit(h({ name: 'G', type: 'GraphEdit' }), { connection_lines_antialiased: 'false' }).connectionLinesAntialiased).toBe(false);
-    expect(parseGraphEdit(h({ name: 'G', type: 'GraphEdit' }), {}).connectionLinesAntialiased).toBeUndefined();
+  it("parses connection_lines_antialiased, the minimap polyline's own flag", () => {
+    expect(
+      parseGraphEdit(h({ name: 'G', type: 'GraphEdit' }), { connection_lines_antialiased: 'false' })
+        .connectionLinesAntialiased
+    ).toBe(false);
+    expect(
+      parseGraphEdit(h({ name: 'G', type: 'GraphEdit' }), {}).connectionLinesAntialiased
+    ).toBeUndefined();
   });
 
   it('parses the minimap family and every toolbar visibility flag', () => {

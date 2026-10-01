@@ -8,9 +8,7 @@ describe('HierarchyContext', () => {
     const graph = createSceneGraphFromTscnScene({ nodes: [] });
     const { result } = renderHook(() => useHierarchy(), {
       wrapper: ({ children }) => (
-        <HierarchyProvider value={{ sceneGraph: graph, panelId: 'panel-a' }}>
-          {children}
-        </HierarchyProvider>
+        <HierarchyProvider value={{ sceneGraph: graph, panelId: 'panel-a' }}>{children}</HierarchyProvider>
       ),
     });
     expect(result.current.sceneGraph).toBe(graph);
@@ -20,9 +18,7 @@ describe('HierarchyContext', () => {
   it('allows sceneGraph to be null (loading state)', () => {
     const { result } = renderHook(() => useHierarchy(), {
       wrapper: ({ children }) => (
-        <HierarchyProvider value={{ sceneGraph: null, panelId: 'p' }}>
-          {children}
-        </HierarchyProvider>
+        <HierarchyProvider value={{ sceneGraph: null, panelId: 'p' }}>{children}</HierarchyProvider>
       ),
     });
     expect(result.current.sceneGraph).toBeNull();

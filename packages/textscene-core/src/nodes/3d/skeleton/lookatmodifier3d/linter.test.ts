@@ -122,6 +122,8 @@ primary_rotation_axis = 1
   it('leaves the committed fixture warning-free', () => {
     // `expectFixtureClean` runs validators only, and rules never reach it. This is
     // the half of the fixture's "zero warnings" claim nothing else checks.
-    expect(reportsOf(diagnosticsFor(readFixture('unit-look-at-modifier-3d.tscn')), RULE, 'warning')).toEqual([]);
+    expect(reportsOf(diagnosticsFor(readFixture('unit-look-at-modifier-3d.tscn')), RULE, 'warning')).toEqual(
+      []
+    );
   });
 });

@@ -32,17 +32,12 @@ export const FREELOOK_KEYS: Readonly<Record<string, keyof FreelookKeys>> = {
  * Numpad 1/3/7 (+ Ctrl for the opposite face) and Numpad 5. Returns whether the
  * view moved, so the caller owns the single `invalidate()`.
  */
-export function applyEditorViewKey(
-  event: KeyboardEvent,
-  handle: EditorControlsHandle
-): boolean {
+export function applyEditorViewKey(event: KeyboardEvent, handle: EditorControlsHandle): boolean {
   const view = VIEW_SNAP_KEYS[event.code];
   if (view) {
     // Without NumLock the numpad emits End/PageUp/…, which scroll the page.
     event.preventDefault();
-    handle.applyCursor(
-      viewSnapCursor(handle.cursor(), event.ctrlKey ? OPPOSITE_VIEW[view] : view)
-    );
+    handle.applyCursor(viewSnapCursor(handle.cursor(), event.ctrlKey ? OPPOSITE_VIEW[view] : view));
     return true;
   }
   if (event.code === 'Numpad5') {

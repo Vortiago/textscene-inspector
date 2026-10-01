@@ -63,11 +63,7 @@ describe('buildSceneTree over the whole corpus', () => {
     const player = root.children.find((c) => c.name === 'Player')!;
 
     expect(player.instance).toBeTruthy();
-    expect(player.children.map((c) => c.name).sort()).toEqual([
-      'Bullet',
-      'CoinCount',
-      'Robot',
-    ]);
+    expect(player.children.map((c) => c.name).sort()).toEqual(['Bullet', 'CoinCount', 'Robot']);
 
     const robot = player.children.find((c) => c.name === 'Robot')!;
     expect(robot.instanceSubPath).toBe('Skeleton/Skeleton3D');
@@ -95,11 +91,6 @@ describe('buildSceneTree over the whole corpus', () => {
     };
     walk(root.children);
 
-    expect(overrides.sort()).toEqual([
-      'GrassMesh',
-      'OuterGroundMesh',
-      'RacetrackMesh',
-      'RoadMesh',
-    ]);
+    expect(overrides.sort()).toEqual(['GrassMesh', 'OuterGroundMesh', 'RacetrackMesh', 'RoadMesh']);
   });
 });

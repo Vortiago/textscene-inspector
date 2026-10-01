@@ -7,8 +7,11 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 
-const MISSING_DATA_RULE = 'voxelgi-missing-data';
+const arms = {
+  missingData: groundedArm('voxelgi-missing-data', { kind: 'configuration-warning' }),
+} as const satisfies RuleArms<string>;
 
 function checkVoxelGI(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -17,13 +20,11 @@ function checkVoxelGI(context: RuleContext): Diagnostic[] {
   if (!resourceSlotIsEmpty(properties.data)) return [];
 
   return [
-    {
-      severity: 'warning',
-      message: `VoxelGI '${node.name}' has no data set, so this node is disabled. Bake static objects to enable GI.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: MISSING_DATA_RULE,
-    },
+    armDiagnostic(
+      arms.missingData,
+      node,
+      `VoxelGI '${node.name}' has no data set, so this node is disabled. Bake static objects to enable GI.`
+    ),
   ];
 }
 
@@ -33,7 +34,7 @@ const voxelGIValidationRule: LintRule = {
     description: "Mirrors VoxelGI::get_configuration_warnings' missing-data check",
     category: 'validation',
     applicableNodeTypes: ['VoxelGI'],
-    emits: [{ ruleName: MISSING_DATA_RULE, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: armEmits(arms),
   },
   check: checkVoxelGI,
 };

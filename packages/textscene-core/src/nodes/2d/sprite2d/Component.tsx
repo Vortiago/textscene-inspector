@@ -9,7 +9,10 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
-import { canvasItemBlendState, type CanvasItemBlendState } from '../../../resources/materials/canvasitemmaterial/renderer';
+import {
+  canvasItemBlendState,
+  type CanvasItemBlendState,
+} from '../../../resources/materials/canvasitemmaterial/renderer';
 import type { CanvasItemLightingProps } from '../../../r3f/lighting2d/useCanvasItemLighting';
 import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmaterial/types';
 import { frameSizePx, frameUvWindow, spriteSamplerClone } from '../../../r3f/spriteFrame';
@@ -90,9 +93,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   // A placeholder for no texture or a failed load. An unpublished ViewportTexture
   // is not missing, so the sprite draws nothing until it renders. One in an
   // unrenderable pass cycle (`cyclic`) never will, so it gets the placeholder.
-  const showPlaceholder = isViewportSlot
-    ? viewportCyclic
-    : !props.texture || textureMissing;
+  const showPlaceholder = isViewportSlot ? viewportCyclic : !props.texture || textureMissing;
 
   return (
     <CanvasItem2D
@@ -170,4 +171,3 @@ function QuadMesh({
     </mesh>
   );
 }
-

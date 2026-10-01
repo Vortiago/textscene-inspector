@@ -34,32 +34,34 @@ async function dry(args) {
 const INVOCATIONS = {
   noIntent: ['Widget3D', '3d'],
   badIntent: ['Widget3D', '3d', '--intent', 'maybe'],
-  removedFlag: [
-    'Widget3D', '3d', '--intent', 'transform-only', '--transform-only',
-  ],
-  controlRendering: [
-    'Container', '2d/ui', '--base', 'control', '--intent', 'transform-only', ],
-  transformOnly: [
-    'RayCast3D', 'physics/3d', '--intent', 'transform-only', '--linter',
-  ],
-  transformOnly2D: [
-    'RayCast2D', '2d', '--base', 'node2d', '--intent', 'transform-only', ],
-  pending: [
-    'ProgressBar', '2d/ui', '--base', 'control', '--intent', 'pending', '--linter',
-  ],
+  removedFlag: ['Widget3D', '3d', '--intent', 'transform-only', '--transform-only'],
+  controlRendering: ['Container', '2d/ui', '--base', 'control', '--intent', 'transform-only'],
+  transformOnly: ['RayCast3D', 'physics/3d', '--intent', 'transform-only', '--linter'],
+  transformOnly2D: ['RayCast2D', '2d', '--base', 'node2d', '--intent', 'transform-only'],
+  pending: ['ProgressBar', '2d/ui', '--base', 'control', '--intent', 'pending', '--linter'],
   draws: ['ShapeCast3D', '3d', '--intent', 'draws'],
   // MeshInstance3D owns a parser.ts, so `--base node3d` and the real ancestry disagree about what
   // a SoftBody3D slice reuses.
   drawsUnderTypedAncestor: ['SoftBody3D', '3d', '--intent', 'draws'],
-  controlPending: [
-    'CheckButton', '2d/ui', '--base', 'control', '--intent', 'pending', ],
+  controlPending: ['CheckButton', '2d/ui', '--base', 'control', '--intent', 'pending'],
   unknownType: ['Widget3D', '3d', '--intent', 'pending'],
   inheritsSkippingEmpty: [
-    'AspectRatioContainer', '2d/ui', '--base', 'control', '--intent', 'pending',
+    'AspectRatioContainer',
+    '2d/ui',
+    '--base',
+    'control',
+    '--intent',
+    'pending',
     '--linter',
   ],
   inheritsFromImmediateParent: [
-    'CheckButton', '2d/ui', '--base', 'control', '--intent', 'pending', '--linter',
+    'CheckButton',
+    '2d/ui',
+    '--base',
+    'control',
+    '--intent',
+    'pending',
+    '--linter',
   ],
   // A category dir no real slice occupies. The scaffold falls back from `shared/` to a type-named
   // dir when `shared/` is taken, so a real family would make the assertions depend on its state.
@@ -274,9 +276,7 @@ describe('new-node-slice intent shapes', () => {
     expect(emitted.get('types.ts')).toContain(
       "import type { MeshInstance3DProperties } from '../meshinstance3d/types';"
     );
-    expect(emitted.get('types.ts')).toContain(
-      'export type SoftBody3DProperties = MeshInstance3DProperties;'
-    );
+    expect(emitted.get('types.ts')).toContain('export type SoftBody3DProperties = MeshInstance3DProperties;');
   });
 
   it('accepts control as a base for a pending slice', () => {

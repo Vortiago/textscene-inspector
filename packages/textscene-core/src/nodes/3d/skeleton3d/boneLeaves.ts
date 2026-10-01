@@ -69,14 +69,24 @@ export const BONE_LEAVES: Readonly<Record<string, PropertyValidator>> = {
     (key, value, line) =>
       VECTOR3_REGEX.test(value)
         ? null
-        : propertyError(key, line, `Property '${key}' must be Vector3 format like Vector3(0, 0, 0), got: "${value}"`, 'INVALID_BONE_VECTOR3_FORMAT'),
+        : propertyError(
+            key,
+            line,
+            `Property '${key}' must be Vector3 format like Vector3(0, 0, 0), got: "${value}"`,
+            'INVALID_BONE_VECTOR3_FORMAT'
+          ),
     'Vector3(x, y, z)'
   ),
   scale: shape(
     (key, value, line) =>
       VECTOR3_REGEX.test(value)
         ? null
-        : propertyError(key, line, `Property '${key}' must be Vector3 format like Vector3(0, 0, 0), got: "${value}"`, 'INVALID_BONE_VECTOR3_FORMAT'),
+        : propertyError(
+            key,
+            line,
+            `Property '${key}' must be Vector3 format like Vector3(0, 0, 0), got: "${value}"`,
+            'INVALID_BONE_VECTOR3_FORMAT'
+          ),
     'Vector3(x, y, z)'
   ),
 
@@ -85,7 +95,12 @@ export const BONE_LEAVES: Readonly<Record<string, PropertyValidator>> = {
     (key, value, line) =>
       QUATERNION_REGEX.test(value)
         ? null
-        : propertyError(key, line, `Property '${key}' must be Quaternion format like Quaternion(0, 0, 0, 1), got: "${value}"`, 'INVALID_BONE_QUATERNION_FORMAT'),
+        : propertyError(
+            key,
+            line,
+            `Property '${key}' must be Quaternion format like Quaternion(0, 0, 0, 1), got: "${value}"`,
+            'INVALID_BONE_QUATERNION_FORMAT'
+          ),
     'Quaternion(x, y, z, w)'
   ),
 

@@ -31,10 +31,7 @@ export function resolveProceduralSubResource<T extends THREE.Texture>(
   ref: string | undefined,
   internalResources: readonly TscnInternalResource[],
   typeName: string,
-  rasterize: (
-    properties: Record<string, string>,
-    resources: readonly TscnInternalResource[]
-  ) => T | null
+  rasterize: (properties: Record<string, string>, resources: readonly TscnInternalResource[]) => T | null
 ): ProceduralTextureResolution<T> | null {
   const resource = findTypedSubResource(ref, internalResources, typeName);
   if (!resource) return null;

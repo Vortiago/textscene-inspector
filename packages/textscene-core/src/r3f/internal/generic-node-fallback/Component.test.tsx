@@ -20,7 +20,11 @@ describe('<GenericNodeFallback>', () => {
   it('marks the group with placeholder metadata', async () => {
     const renderer = await ReactThreeTestRenderer.create(<GenericNodeFallback node={baseNode} />);
     const group = renderer.scene.findByProps({ name: 'MysteryNode' });
-    const userData = group.instance.userData as { isPlaceholder: boolean; nodeType: string; nodeName: string };
+    const userData = group.instance.userData as {
+      isPlaceholder: boolean;
+      nodeType: string;
+      nodeName: string;
+    };
     expect(userData.isPlaceholder).toBe(true);
     expect(userData.nodeType).toBe('SomeUnrecognisedType');
     expect(userData.nodeName).toBe('MysteryNode');

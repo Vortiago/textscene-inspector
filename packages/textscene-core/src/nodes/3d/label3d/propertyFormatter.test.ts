@@ -31,19 +31,18 @@ describe('formatLabel3DProperties', () => {
   });
 
   it('reports every billboard mode name', () => {
-    expect(
-      section(formatLabel3DProperties(props({ billboard: '0' })), 'Text')!.items
-    ).toContainEqual({ label: 'Billboard', value: 'Disabled' });
-    expect(
-      section(formatLabel3DProperties(props({ billboard: '2' })), 'Text')!.items
-    ).toContainEqual({ label: 'Billboard', value: 'Y-Axis Only' });
+    expect(section(formatLabel3DProperties(props({ billboard: '0' })), 'Text')!.items).toContainEqual({
+      label: 'Billboard',
+      value: 'Disabled',
+    });
+    expect(section(formatLabel3DProperties(props({ billboard: '2' })), 'Text')!.items).toContainEqual({
+      label: 'Billboard',
+      value: 'Y-Axis Only',
+    });
   });
 
   it('formats the Color section with the modulate as rgba', () => {
-    const color = section(
-      formatLabel3DProperties(props({ modulate: 'Color(1, 0.5, 0, 1)' })),
-      'Color'
-    )!;
+    const color = section(formatLabel3DProperties(props({ modulate: 'Color(1, 0.5, 0, 1)' })), 'Color')!;
     expect(color.items).toEqual([{ label: 'Modulate', value: 'rgba(255, 128, 0, 1.00)' }]);
   });
 
@@ -61,9 +60,7 @@ describe('formatLabel3DProperties', () => {
 
   it('formats the Outline section with size and color when outline_size > 0', () => {
     const outline = section(
-      formatLabel3DProperties(
-        props({ outline_size: '8', outline_modulate: 'Color(0, 0, 0, 1)' })
-      ),
+      formatLabel3DProperties(props({ outline_size: '8', outline_modulate: 'Color(0, 0, 0, 1)' })),
       'Outline'
     )!;
     expect(outline.items).toEqual([
