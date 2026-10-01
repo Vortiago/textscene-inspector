@@ -67,8 +67,7 @@ export function Camera3D({ node, children }: NodeComponentProps) {
   // convert (Godot's get_fovy).
   const perspectiveFov =
     properties.keep_aspect === KeepAspectMode.KEEP_WIDTH
-      ? (2 * Math.atan(Math.tan((properties.fov * Math.PI) / 180 / 2) / DEFAULT_ASPECT) * 180) /
-        Math.PI
+      ? (2 * Math.atan(Math.tan((properties.fov * Math.PI) / 180 / 2) / DEFAULT_ASPECT) * 180) / Math.PI
       : properties.fov;
   return (
     <PerspectiveCamera3D
@@ -101,7 +100,18 @@ interface PerspectiveCamera3DProps {
   children?: ReactNode;
 }
 
-function PerspectiveCamera3D({ name, tscnPath, current, position, rotation, scale, fov, near, far, children }: PerspectiveCamera3DProps) {
+function PerspectiveCamera3D({
+  name,
+  tscnPath,
+  current,
+  position,
+  rotation,
+  scale,
+  fov,
+  near,
+  far,
+  children,
+}: PerspectiveCamera3DProps) {
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   useEffect(() => {
     if (cameraRef.current) {
@@ -147,7 +157,19 @@ interface OrthographicCamera3DProps {
   children?: ReactNode;
 }
 
-function OrthographicCamera3D({ name, tscnPath, current, position, rotation, scale, size, keepAspect, near, far, children }: OrthographicCamera3DProps) {
+function OrthographicCamera3D({
+  name,
+  tscnPath,
+  current,
+  position,
+  rotation,
+  scale,
+  size,
+  keepAspect,
+  near,
+  far,
+  children,
+}: OrthographicCamera3DProps) {
   const cameraRef = useRef<THREE.OrthographicCamera>(null);
   // Godot `size` is the full frustum dimension (diameter), so the half-extent
   // is size/2 (Projection::set_orthogonal divides by 2). KEEP_HEIGHT (1,

@@ -60,9 +60,7 @@ describe('dev site edition', () => {
   it('links the parity gallery beside the app', () => {
     render(<R3FApp />);
 
-    expect(screen.getByText('Parity').closest('a')?.getAttribute('href')).toBe(
-      'parity/index.html'
-    );
+    expect(screen.getByText('Parity').closest('a')?.getAttribute('href')).toBe('parity/index.html');
   });
 
   it('offers the open-sub-scene action on an instanced scene', async () => {

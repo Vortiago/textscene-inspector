@@ -207,11 +207,7 @@ describe('selectViewportCamera2D', () => {
 describe('orthoFrameForCamera2D', () => {
   /** DRAG_CENTER (Godot's default) centres the view rect on the camera. */
   it('centres the view on the camera position', () => {
-    const frame = orthoFrameForCamera2D(
-      tagOf(camera2d()),
-      { x: 400, y: 300 },
-      { x: 200, y: 100 }
-    );
+    const frame = orthoFrameForCamera2D(tagOf(camera2d()), { x: 400, y: 300 }, { x: 200, y: 100 });
     expect(frame.left).toBe(-100);
     expect(frame.right).toBe(100);
     expect(frame.top).toBe(50);

@@ -94,13 +94,7 @@ function FractionHandle({
  * The handle between the tree and the detail pane. `value` is the tree's
  * height fraction (0..1), clamped so neither section disappears.
  */
-export function MasterDetailHandle({
-  value,
-  setValue,
-}: {
-  value: number;
-  setValue: (v: number) => void;
-}) {
+export function MasterDetailHandle({ value, setValue }: { value: number; setValue: (v: number) => void }) {
   return (
     <FractionHandle
       containerOf={(handle) => handle.parentElement}
@@ -117,13 +111,7 @@ export function MasterDetailHandle({
  * of the column under the top bar, so a drag upwards grows it. It measures that column,
  * which the viewport and the sheet share.
  */
-export function SheetHandle({
-  value,
-  setValue,
-}: {
-  value: number;
-  setValue: (v: number) => void;
-}) {
+export function SheetHandle({ value, setValue }: { value: number; setValue: (v: number) => void }) {
   return (
     <FractionHandle
       containerOf={(handle) => handle.closest(`.${styles.columns}`)}

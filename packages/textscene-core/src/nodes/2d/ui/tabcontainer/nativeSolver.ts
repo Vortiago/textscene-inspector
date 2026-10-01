@@ -54,10 +54,9 @@ export function tabContainerCurrentTab(props: TabContainerProperties, tabCount: 
   // -1 fails `ERR_FAIL_COND_MSG(!_can_deselect())` unless `deselect_enabled` is on or every
   // tab is disabled or hidden (`tab_bar.cpp:1862-1873`).
   const overrides = props.tabOverrides;
-  const everyTabUnselectable = Array.from(
-    { length: tabCount },
-    (_unused, i) => overrides?.[i]
-  ).every((o) => o?.disabled === true || o?.hidden === true);
+  const everyTabUnselectable = Array.from({ length: tabCount }, (_unused, i) => overrides?.[i]).every(
+    (o) => o?.disabled === true || o?.hidden === true
+  );
   return props.deselectEnabled === true || everyTabUnselectable ? -1 : 0;
 }
 
@@ -127,7 +126,10 @@ const TAB_CONTAINER_FONT_SIZE_KEY = 'font_size';
  * `tab_separation` and `icon_max_width` forward unchanged: both default to 0, and
  * default_theme.cpp sets neither for TabContainer.
  */
-function internalTabBarThemeConstants(constants: SolveNode['constants'], theme: NativeTheme): SolveNode['constants'] {
+function internalTabBarThemeConstants(
+  constants: SolveNode['constants'],
+  theme: NativeTheme
+): SolveNode['constants'] {
   return {
     h_separation: constants.icon_separation ?? theme.separation,
     tab_separation: constants.tab_separation ?? 0,

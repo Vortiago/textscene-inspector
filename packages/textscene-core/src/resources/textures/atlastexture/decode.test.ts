@@ -128,6 +128,8 @@ describe('atlasTextureLayout', () => {
 
   it('declines a region that rounds away to nothing on either axis', () => {
     expect(atlasTextureLayout(tex('Rect2(0, 0, -5, 10)'), { width: 128, height: 128 })).toBeNull();
-    expect(atlasTextureLayout(tex('Rect2(0, 0, 16, 16)', 'Rect2(0, 0, -32, 0)'), { width: 128, height: 128 })).toBeNull();
+    expect(
+      atlasTextureLayout(tex('Rect2(0, 0, 16, 16)', 'Rect2(0, 0, -32, 0)'), { width: 128, height: 128 })
+    ).toBeNull();
   });
 });

@@ -22,7 +22,6 @@ import {
 import { SLIDER_DEFAULT_EDITABLE, sliderTickIndices } from '../shared/slider';
 import type { VSliderProperties } from './types';
 
-
 export function VSlider({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
   const props = painterView<VSliderProperties>(solveNode);
   const size = { x: rect.w, y: rect.h };

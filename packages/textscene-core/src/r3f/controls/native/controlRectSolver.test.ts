@@ -188,18 +188,54 @@ describe('solveControlTree — grow direction derived from anchors_preset', () =
   }> = [
     // TOP_LEFT: (END, END), the most common preset, guarding the table's first
     // entry: END leaves the position alone.
-    { preset: 0, label: 'TOP_LEFT', anchors: [0, 0, 0, 0], offsets: [-5, -5, 5, 5], expected: { x: -5, y: -5, w: 40, h: 40 } },
+    {
+      preset: 0,
+      label: 'TOP_LEFT',
+      anchors: [0, 0, 0, 0],
+      offsets: [-5, -5, 5, 5],
+      expected: { x: -5, y: -5, w: 40, h: 40 },
+    },
     // TOP_RIGHT: (BEGIN, END): x shifts back by the full 30px shortfall.
-    { preset: 1, label: 'TOP_RIGHT', anchors: [1, 0, 1, 0], offsets: [-5, -5, 5, 5], expected: { x: 1117, y: -5, w: 40, h: 40 } },
+    {
+      preset: 1,
+      label: 'TOP_RIGHT',
+      anchors: [1, 0, 1, 0],
+      offsets: [-5, -5, 5, 5],
+      expected: { x: 1117, y: -5, w: 40, h: 40 },
+    },
     // BOTTOM_RIGHT: (BEGIN, BEGIN): both axes shift back.
-    { preset: 3, label: 'BOTTOM_RIGHT', anchors: [1, 1, 1, 1], offsets: [-5, -5, 5, 5], expected: { x: 1117, y: 613, w: 40, h: 40 } },
+    {
+      preset: 3,
+      label: 'BOTTOM_RIGHT',
+      anchors: [1, 1, 1, 1],
+      offsets: [-5, -5, 5, 5],
+      expected: { x: 1117, y: 613, w: 40, h: 40 },
+    },
     // CENTER_TOP: (BOTH, END): x splits the shortfall (571 - 15), y holds.
-    { preset: 5, label: 'CENTER_TOP', anchors: [0.5, 0, 0.5, 0], offsets: [-5, -5, 5, 5], expected: { x: 556, y: -5, w: 40, h: 40 } },
+    {
+      preset: 5,
+      label: 'CENTER_TOP',
+      anchors: [0.5, 0, 0.5, 0],
+      offsets: [-5, -5, 5, 5],
+      expected: { x: 556, y: -5, w: 40, h: 40 },
+    },
     // CENTER_BOTTOM: (BOTH, BEGIN).
-    { preset: 7, label: 'CENTER_BOTTOM', anchors: [0.5, 1, 0.5, 1], offsets: [-5, -5, 5, 5], expected: { x: 556, y: 613, w: 40, h: 40 } },
+    {
+      preset: 7,
+      label: 'CENTER_BOTTOM',
+      anchors: [0.5, 1, 0.5, 1],
+      offsets: [-5, -5, 5, 5],
+      expected: { x: 556, y: 613, w: 40, h: 40 },
+    },
     // LEFT_WIDE: (END, BOTH), the one row whose vertical anchors span the
     // viewport, so its offsets pull the raw box back to 10px tall (319..329).
-    { preset: 9, label: 'LEFT_WIDE', anchors: [0, 0, 0, 1], offsets: [-5, 319, 5, -319], expected: { x: -5, y: 304, w: 40, h: 40 } },
+    {
+      preset: 9,
+      label: 'LEFT_WIDE',
+      anchors: [0, 0, 0, 1],
+      offsets: [-5, 319, 5, -319],
+      expected: { x: -5, y: 304, w: 40, h: 40 },
+    },
   ];
 
   for (const { preset, label, anchors, offsets, expected } of growMatrix) {
@@ -316,7 +352,16 @@ describe('solveControlTree — nested free Controls resolve against their parent
     const root = node(
       'Root',
       'Control',
-      { anchorLeft: 0, anchorTop: 0, anchorRight: 0, anchorBottom: 0, offsetLeft: 100, offsetTop: 50, offsetRight: 500, offsetBottom: 350 },
+      {
+        anchorLeft: 0,
+        anchorTop: 0,
+        anchorRight: 0,
+        anchorBottom: 0,
+        offsetLeft: 100,
+        offsetTop: 50,
+        offsetRight: 500,
+        offsetBottom: 350,
+      },
       [child]
     );
     const solved = solveControlTree([root], VIEWPORT, ctx());
@@ -340,7 +385,16 @@ describe('solveControlTree — nested free Controls resolve against their parent
     const root = node(
       'Root',
       'Control',
-      { anchorLeft: 0, anchorTop: 0, anchorRight: 0, anchorBottom: 0, offsetLeft: 0, offsetTop: 0, offsetRight: 200, offsetBottom: 100 },
+      {
+        anchorLeft: 0,
+        anchorTop: 0,
+        anchorRight: 0,
+        anchorBottom: 0,
+        offsetLeft: 0,
+        offsetTop: 0,
+        offsetRight: 200,
+        offsetBottom: 100,
+      },
       [child]
     );
     const solved = solveControlTree([root], VIEWPORT, ctx());
@@ -354,7 +408,6 @@ describe('solveControlTree — a promoted Control anchors against its DIRECT par
   afterEach(() => {
     controlSolverRegistry.clear();
   });
-
 
   // `Control::get_parent_anchorable_rect` (control.cpp:685-711) casts only the
   // direct parent (canvas_item.cpp:565-571). Only `Control` overrides
@@ -464,7 +517,7 @@ describe('solveControlTree — unregistered types are leaves with minimum size (
   });
 });
 
-describe('solveControlTree — a registered ContainerLayoutFn overrides its children\'s anchors', () => {
+describe("solveControlTree — a registered ContainerLayoutFn overrides its children's anchors", () => {
   const TYPE = 'TestSolverStackContainer';
 
   afterEach(() => {
@@ -592,7 +645,7 @@ describe('solveControlTree — a registered canvas boundary (CanvasLayer)', () =
     expect(solved.get('Root/HUD/Score')?.rect).toEqual({ x: 1032, y: 8, w: 112, h: 24 });
   });
 
-  it('takes the VIEWPORT rect, not its parent Control\'s, and sits at the viewport origin', () => {
+  it("takes the VIEWPORT rect, not its parent Control's, and sits at the viewport origin", () => {
     // A CanvasLayer is a `Node`, so `Control::get_parent_anchorable_rect`
     // (`control.cpp:685-711`) falls back to the viewport, and a full-screen HUD
     // under an offset Panel covers the screen. The boundary's parent-relative
@@ -600,12 +653,17 @@ describe('solveControlTree — a registered canvas boundary (CanvasLayer)', () =
     controlSolverRegistry.registerCanvasBoundary(BOUNDARY);
     const hud = node('Root/Panel/HUD/Hud', 'Control', { anchorsPreset: 15, anchorRight: 1, anchorBottom: 1 });
     const layer = node('Root/Panel/HUD', BOUNDARY, {}, [hud]);
-    const panel = node('Root/Panel', 'Control', {
-      offsetLeft: 100,
-      offsetTop: 50,
-      offsetRight: 300,
-      offsetBottom: 150,
-    }, [layer]);
+    const panel = node(
+      'Root/Panel',
+      'Control',
+      {
+        offsetLeft: 100,
+        offsetTop: 50,
+        offsetRight: 300,
+        offsetBottom: 150,
+      },
+      [layer]
+    );
     const root = node('Root', 'Control', { layoutMode: 3, anchorsPreset: 15 }, [panel]);
 
     const solved = solveControlTree([root], VIEWPORT, ctx());
@@ -649,7 +707,7 @@ describe('solveControlTree — the ContainerLayoutFn solve handoff', () => {
     expect(solved.get('Leaf')?.meta).toBeUndefined();
   });
 
-  it('a ContainerLayoutFn returning a bare Map (the common case) leaves the container\'s own SolvedControl.meta undefined', () => {
+  it("a ContainerLayoutFn returning a bare Map (the common case) leaves the container's own SolvedControl.meta undefined", () => {
     const TYPE = 'TestBareMapContainer';
     controlSolverRegistry.registerContainerLayout(TYPE, (_n, children) => {
       const out = new Map<string, Rect2>();
@@ -855,7 +913,12 @@ describe('solveControlTree — RTL mirrors a free Control inside its parent', ()
   });
 
   it('leaves the same rect alone under LTR', () => {
-    const root = node('Bar', 'Control', { offsetLeft: 64, offsetTop: 48, offsetRight: 464, offsetBottom: 128 });
+    const root = node('Bar', 'Control', {
+      offsetLeft: 64,
+      offsetTop: 48,
+      offsetRight: 464,
+      offsetBottom: 128,
+    });
     expect(solveControlTree([root], VIEWPORT, ctx()).get('Bar')?.rect).toEqual({
       x: 64,
       y: 48,
@@ -964,12 +1027,9 @@ describe('solveControlTree — RTL round-trips a container-assigned rect', () =>
     });
 
     const ltrChild = node('Box2/Child', 'Control', { customMinimumSize: { x: 80, y: 20 } });
-    const ltrRoot = node(
-      'Box2',
-      TYPE,
-      { offsetLeft: 0, offsetTop: 0, offsetRight: 400, offsetBottom: 200 },
-      [ltrChild]
-    );
+    const ltrRoot = node('Box2', TYPE, { offsetLeft: 0, offsetTop: 0, offsetRight: 400, offsetBottom: 200 }, [
+      ltrChild,
+    ]);
     expect(solveControlTree([ltrRoot], VIEWPORT, ctx()).get('Box2/Child')?.rect).toEqual({
       x: 10,
       y: 0,

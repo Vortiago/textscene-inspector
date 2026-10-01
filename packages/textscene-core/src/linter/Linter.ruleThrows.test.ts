@@ -36,7 +36,13 @@ const counting: LintRule = {
     category: 'validation',
   },
   check: ({ node }) => [
-    { severity: 'warning', message: 'seen', nodeName: node.name, nodeType: node.type, ruleName: 'counting-probe-rule' },
+    {
+      severity: 'warning',
+      message: 'seen',
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'counting-probe-rule',
+    },
   ],
 };
 

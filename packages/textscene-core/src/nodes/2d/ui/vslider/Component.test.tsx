@@ -74,7 +74,12 @@ describe('<VSlider>', () => {
 
   it('forwards renderOrder to every mesh it draws', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <VSlider {...painterEnv()} solveNode={solveNode({ tickCount: 3, ticksOnBorders: true })} rect={RECT} renderOrder={9} />
+      <VSlider
+        {...painterEnv()}
+        solveNode={solveNode({ tickCount: 3, ticksOnBorders: true })}
+        rect={RECT}
+        renderOrder={9}
+      />
     );
     for (const mesh of renderer.scene.findAllByType('Mesh')) {
       expect(mesh.instance.renderOrder).toBe(9);
@@ -97,8 +102,10 @@ describe('<VSlider>', () => {
     // The StyleBox parts compose in sRGB, so halving the tint halves the
     // vertex attribute the fragment shader decodes.
     const trackChannel = (r: typeof untinted) =>
-      (((r.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh).geometry as THREE.BufferGeometry)
-        .attributes.color as THREE.BufferAttribute).getX(0);
+      (
+        ((r.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh).geometry as THREE.BufferGeometry)
+          .attributes.color as THREE.BufferAttribute
+      ).getX(0);
     expect(trackChannel(untinted)).toBeGreaterThan(0);
     expect(trackChannel(tinted)).toBeCloseTo(trackChannel(untinted) * 0.5, 6);
 
@@ -106,7 +113,8 @@ describe('<VSlider>', () => {
     // already-linear tint directly.
     const grabberChannel = (r: typeof untinted) => {
       const meshes = r.scene.findAllByType('Mesh');
-      return ((meshes[meshes.length - 1]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial).color.r;
+      return ((meshes[meshes.length - 1]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial).color
+        .r;
     };
     expect(grabberChannel(untinted)).toBeCloseTo(1, 6);
     expect(grabberChannel(tinted)).toBeCloseTo(

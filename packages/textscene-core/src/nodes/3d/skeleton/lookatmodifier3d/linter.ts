@@ -19,11 +19,7 @@ const DEFAULT_FORWARD_AXIS = 4; // BONE_AXIS_PLUS_Z
 const DEFAULT_PRIMARY_ROTATION_AXIS = 1; // Vector3::AXIS_Y
 
 /** A property's value, or the engine default when the scene omits it. */
-function axisNumber(
-  properties: Record<string, string>,
-  key: string,
-  fallback: number
-): number {
+function axisNumber(properties: Record<string, string>, key: string, fallback: number): number {
   const raw = properties[key];
   if (raw === undefined) return fallback;
   const parsed = ruleInt(raw);
@@ -38,11 +34,7 @@ function checkLookAtModifier3D(context: RuleContext): Diagnostic[] {
   const properties = node.properties;
 
   const forwardAxis = axisNumber(properties, 'forward_axis', DEFAULT_FORWARD_AXIS);
-  const primaryAxis = axisNumber(
-    properties,
-    'primary_rotation_axis',
-    DEFAULT_PRIMARY_ROTATION_AXIS
-  );
+  const primaryAxis = axisNumber(properties, 'primary_rotation_axis', DEFAULT_PRIMARY_ROTATION_AXIS);
   // `look_at_with_axes` projects the forward vector onto the primary axis's plane
   // (look_at_modifier_3d.cpp:719-721), and `get_projection_vector` (:654-669) uses the two components
   // the axis does not own. A parallel pair projects to zero, so the modifier never rotates about it.
@@ -68,7 +60,13 @@ const lookAtModifier3DAxisRule: LintRule = {
       "Warns when the forward axis is parallel to the primary rotation axis, the configuration Godot's own LookAtModifier3D warning refuses",
     category: 'validation',
     applicableNodeTypes: ['LookAtModifier3D'],
-    emits: [{ ruleName: 'lookatmodifier3d-parallel-rotation-axes', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: [
+      {
+        ruleName: 'lookatmodifier3d-parallel-rotation-axes',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
+    ],
   },
   check: checkLookAtModifier3D,
 };

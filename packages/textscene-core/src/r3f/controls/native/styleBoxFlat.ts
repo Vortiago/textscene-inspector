@@ -69,10 +69,7 @@ export interface FlatStyleBoxOptions {
  * models. An option left out keeps `StyleBoxFlat`'s constructed default, as the
  * theme builder assigns only a colour, the margins and a corner radius.
  */
-export function flatStyleBox(
-  bgColor: ControlColor,
-  options: FlatStyleBoxOptions = {}
-): StyleBoxFlatData {
+export function flatStyleBox(bgColor: ControlColor, options: FlatStyleBoxOptions = {}): StyleBoxFlatData {
   const { contentMargin = NO_SIDES, cornerRadius = 0, borderWidth = 0 } = options;
   const corners =
     typeof cornerRadius === 'number'

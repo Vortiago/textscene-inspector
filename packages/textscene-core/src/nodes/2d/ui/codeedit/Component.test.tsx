@@ -134,7 +134,9 @@ describe('<CodeEdit> — line-number gutter', () => {
       const textGroups = scene
         .findAllByType('Group')
         .map((g) => g.instance)
-        .filter((g) => g.children.some((c) => ((c as THREE.Mesh).material as THREE.ShaderMaterial)?.uniforms?.uColor));
+        .filter((g) =>
+          g.children.some((c) => ((c as THREE.Mesh).material as THREE.ShaderMaterial)?.uniforms?.uColor)
+        );
       const minX = Math.min(...textGroups.map((g) => g.position.x));
       return Math.min(...textGroups.filter((g) => g.position.x === minX).map((g) => g.position.y));
     };

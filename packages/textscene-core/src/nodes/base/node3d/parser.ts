@@ -8,17 +8,15 @@ import { parseOptionalTransform } from '../../../utils/transform';
 import { parseHeadingIndex } from '../../../parser/valueParsers';
 import { boolSlotValue } from '../../../godot/index.js';
 
-export function parseNode3D(
-  heading: ParsedHeading,
-  properties: Record<string, string>
-): Node3DProperties {
+export function parseNode3D(heading: ParsedHeading, properties: Record<string, string>): Node3DProperties {
   const name = heading.attributes.name || '';
   const parent = heading.attributes.parent;
   const instance = heading.attributes.instance;
   const index = parseHeadingIndex(heading.attributes.index);
   const transform = parseOptionalTransform(properties.transform, name);
   const visible = properties.visible === undefined ? undefined : boolSlotValue(properties.visible) !== false;
-  const top_level = properties.top_level === undefined ? undefined : boolSlotValue(properties.top_level) === true;
+  const top_level =
+    properties.top_level === undefined ? undefined : boolSlotValue(properties.top_level) === true;
 
   return {
     name,

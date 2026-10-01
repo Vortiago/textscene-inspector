@@ -25,9 +25,7 @@ export function useSubSceneChildren(
   node: TscnNode,
   externalResources: readonly TscnExternalResource[]
 ): SubSceneChildren | null {
-  const scenePath = node.instance
-    ? resolveInstancePath(node.instance, externalResources)
-    : null;
+  const scenePath = node.instance ? resolveInstancePath(node.instance, externalResources) : null;
 
   // Registers the PackedScene metadata, as NodeDispatcher does. The viewport skips
   // a sub-scene it never renders, and the load then throws "Scene metadata not

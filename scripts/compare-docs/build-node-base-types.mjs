@@ -65,9 +65,7 @@ export function deriveBaseTypes(nodes) {
       if (child === 'Node' || parent === 'Object') continue;
       const existing = derived.get(child);
       if (existing !== undefined && existing !== parent) {
-        throw new Error(
-          `${child} has two different bases in the catalog: '${existing}' and '${parent}'`
-        );
+        throw new Error(`${child} has two different bases in the catalog: '${existing}' and '${parent}'`);
       }
       derived.set(child, parent);
     }

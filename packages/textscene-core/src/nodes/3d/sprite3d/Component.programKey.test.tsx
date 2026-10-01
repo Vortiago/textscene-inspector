@@ -12,7 +12,11 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnNode } from '../../../parser/types';
-import { AlphaCutMode, AxisMode, BillboardMode, type Sprite3DProperties,
+import {
+  AlphaCutMode,
+  AxisMode,
+  BillboardMode,
+  type Sprite3DProperties,
   AlphaAntiAliasing,
   TextureFilterMode,
 } from './types';
@@ -71,9 +75,7 @@ async function rebuilds(
   fake.textures.seed(TEXTURE_PATH, texture);
   const tree = (props: Partial<Sprite3DProperties>) => (
     <ResourceLoaderProvider loader={fake.loader}>
-      <SceneResourcesProvider
-        externalResources={[{ id: '1_tex', type: 'Texture2D', path: TEXTURE_PATH }]}
-      >
+      <SceneResourcesProvider externalResources={[{ id: '1_tex', type: 'Texture2D', path: TEXTURE_PATH }]}>
         <Sprite3D node={makeNode(props)} />
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
@@ -123,8 +125,6 @@ describe('<Sprite3D> keeps the compiled material for a plain uniform', () => {
   it('alpha_scissor_threshold 0 → 0.5: three bumps `version` itself', async () => {
     // Only `alphaTest` moves here, and `Material.js:494-502` bumps `version` on that zero crossing,
     // which is why it is not in the key.
-    expect(
-      await rebuilds({ ...OPAQUE_CUT, alpha_scissor_threshold: 0 }, OPAQUE_CUT)
-    ).toBe(false);
+    expect(await rebuilds({ ...OPAQUE_CUT, alpha_scissor_threshold: 0 }, OPAQUE_CUT)).toBe(false);
   });
 });

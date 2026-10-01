@@ -103,9 +103,7 @@ describe('useCorpusRoot', () => {
     applyCorpusRoot('demos/2d/platformer');
 
     const modifier = setURLModifier.mock.lastCall![0];
-    expect(modifier('res://textures/player.png')).toBe(
-      '/fixtures/demos/2d/platformer/textures/player.png'
-    );
+    expect(modifier('res://textures/player.png')).toBe('/fixtures/demos/2d/platformer/textures/player.png');
   });
 
   it('remaps res:// URLs with the new root after a root change', () => {
@@ -115,9 +113,7 @@ describe('useCorpusRoot', () => {
     applyCorpusRoot('demos/3d/fps');
 
     const modifier = setURLModifier.mock.lastCall![0];
-    expect(modifier('res://textures/player.png')).toBe(
-      '/fixtures/demos/3d/fps/textures/player.png'
-    );
+    expect(modifier('res://textures/player.png')).toBe('/fixtures/demos/3d/fps/textures/player.png');
   });
 
   it('passes non-res:// URLs through the URL modifier unchanged', () => {

@@ -15,7 +15,6 @@ function checkSoftBody3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
-
   if (!isValidProperties(node.properties)) return [];
   const rawProps = node.properties as Record<string, string>;
 
@@ -35,10 +34,16 @@ function checkSoftBody3D(context: RuleContext): Diagnostic[] {
 const softBody3DValidationRule: LintRule = {
   meta: {
     name: 'valid-softbody3d-mesh',
-    description: 'Warns when a SoftBody3D has no mesh set, matching Godot\'s own configuration warning',
+    description: "Warns when a SoftBody3D has no mesh set, matching Godot's own configuration warning",
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'SoftBody3D'),
-    emits: [{ ruleName: 'valid-softbody3d-mesh', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
+    emits: [
+      {
+        ruleName: 'valid-softbody3d-mesh',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
+    ],
   },
   check: checkSoftBody3D,
 };

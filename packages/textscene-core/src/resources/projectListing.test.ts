@@ -30,7 +30,10 @@ describe('listScannedFiles', () => {
   });
 
   it('does not enter a dot-named directory', async () => {
-    const { readDirectory, read } = tree(['res://.godot/a.gdextension', 'res://addons/.hidden/b.gdextension']);
+    const { readDirectory, read } = tree([
+      'res://.godot/a.gdextension',
+      'res://addons/.hidden/b.gdextension',
+    ]);
 
     expect(await listScannedFiles(readDirectory, 'gdextension')).toEqual([]);
     expect(read).not.toContain('res://.godot');

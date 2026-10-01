@@ -26,7 +26,7 @@ describe('blankSceneText', () => {
         '[node name="B" type="Label"]',
         'text = ""',
         'uppercase = true',
-      ].join('\n'),
+      ].join('\n')
     );
   });
 
@@ -61,10 +61,7 @@ describe('blankSceneText', () => {
   });
 
   it('blanks every label in the fixture the gate drives', () => {
-    const fixture = readFileSync(
-      path.join(REPO_ROOT, 'scenes/fixtures/unit-label-2d.tscn'),
-      'utf8',
-    );
+    const fixture = readFileSync(path.join(REPO_ROOT, 'scenes/fixtures/unit-label-2d.tscn'), 'utf8');
 
     const result = blankSceneText(fixture);
 

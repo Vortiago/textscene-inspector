@@ -48,7 +48,10 @@ function orthographic(): THREE.OrthographicCamera {
   return camera;
 }
 
-async function spriteAfterFrame(raw: Record<string, string>, camera: THREE.PerspectiveCamera | THREE.OrthographicCamera) {
+async function spriteAfterFrame(
+  raw: Record<string, string>,
+  camera: THREE.PerspectiveCamera | THREE.OrthographicCamera
+) {
   const fake = createFakeResourceLoader();
   const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
@@ -80,10 +83,7 @@ describe('<Sprite3D> fixed_size', () => {
     expect(far.scale.y).toBeCloseTo(5, 5);
     expect(far.scale.z).toBeCloseTo(5, 5);
 
-    const near = await spriteAfterFrame(
-      { fixed_size: 'true', transform: TWO_TOWARDS_CAMERA },
-      perspective()
-    );
+    const near = await spriteAfterFrame({ fixed_size: 'true', transform: TWO_TOWARDS_CAMERA }, perspective());
     expect(near.scale.x).toBeCloseTo(3, 5);
   });
 

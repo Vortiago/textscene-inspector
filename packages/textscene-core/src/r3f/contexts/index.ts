@@ -18,11 +18,7 @@ export {
   type CameraControlContextValue,
   type CameraControlProviderProps,
 } from './CameraControlContext.js';
-export {
-  NodePathProvider,
-  useNodePath,
-  type NodePathProviderProps,
-} from './NodePathContext.js';
+export { NodePathProvider, useNodePath, type NodePathProviderProps } from './NodePathContext.js';
 export {
   MissingResourcesProvider,
   useMissingResources,

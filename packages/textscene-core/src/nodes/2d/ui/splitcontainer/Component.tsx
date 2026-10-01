@@ -28,7 +28,14 @@ function verticalOf(props: SplitContainerProperties): boolean {
   return props.vertical ?? false;
 }
 
-export function SplitContainer({ solveNode, tint, rect, theme, renderOrder, meta }: NativeControlComponentProps) {
+export function SplitContainer({
+  solveNode,
+  tint,
+  rect,
+  theme,
+  renderOrder,
+  meta,
+}: NativeControlComponentProps) {
   const props = painterView<SplitContainerProperties>(solveNode);
   const vertical = verticalOf(props);
 
@@ -40,7 +47,10 @@ export function SplitContainer({ solveNode, tint, rect, theme, renderOrder, meta
     sortable.length >= 2 && isSplitGrabberVisible(props, solveNode.constants, theme.widgets.splitContainer);
   const icon = vertical ? SPLIT_CONTAINER_ICONS.vsplitter : SPLIT_CONTAINER_ICONS.hsplitter;
   const themeKey = splitGrabberThemeKey(solveNode.node.type, vertical);
-  const texture = useNodeIcon(drawsGrabber ? solveNode.icons[themeKey] : undefined, drawsGrabber ? icon : null);
+  const texture = useNodeIcon(
+    drawsGrabber ? solveNode.icons[themeKey] : undefined,
+    drawsGrabber ? icon : null
+  );
 
   if (!drawsGrabber || !texture) {
     return null;

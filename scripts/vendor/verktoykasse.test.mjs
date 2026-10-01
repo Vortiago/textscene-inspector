@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { forkedCopies, readStamp, sha256OfText, stamped } from './verktoykasse.mjs';
 
 const REPO_ROOT = resolve(import.meta.dirname, '../..');
-const STAMP = '# canonical source: a/b.sh@abc sha256:' + 'f'.repeat(64) + ' - vendored copy, do not edit here';
+const STAMP =
+  '# canonical source: a/b.sh@abc sha256:' + 'f'.repeat(64) + ' - vendored copy, do not edit here';
 
 describe('vendored Verktøykasse copies', () => {
   it('each copy still matches the canon bytes its stamp records', () => {

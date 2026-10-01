@@ -7,7 +7,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Linter } from '@textscene/core/linter';
 import { WebResourceProvider } from './WebResourceProvider';
 
-const TREE_GLTF = JSON.stringify({ asset: { version: '2.0' }, extensionsRequired: ['EXT_mesh_gpu_instancing'] });
+const TREE_GLTF = JSON.stringify({
+  asset: { version: '2.0' },
+  extensionsRequired: ['EXT_mesh_gpu_instancing'],
+});
 
 const USES_TREE = `[gd_scene format=3]
 

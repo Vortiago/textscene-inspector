@@ -26,9 +26,7 @@ const SWITCHED_TSCN = `[gd_scene load_steps=1 format=3]
 `;
 
 const DEFAULT_FILE = 'unit-plane-mesh.tscn';
-const SWITCH_TARGET = flattenLeaves(buildFixtureTree(fixtures)).find(
-  (l) => l.file !== DEFAULT_FILE
-) as Leaf;
+const SWITCH_TARGET = flattenLeaves(buildFixtureTree(fixtures)).find((l) => l.file !== DEFAULT_FILE) as Leaf;
 
 function mockFetch() {
   globalThis.fetch = vi.fn().mockImplementation((url: unknown) => {
@@ -79,9 +77,7 @@ describe('#221 deep link — ?fixture= reflects the active scene', () => {
     await waitForScene('SwitchedRoot');
 
     await waitFor(() => {
-      expect(new URLSearchParams(window.location.search).get('fixture')).toBe(
-        SWITCH_TARGET.file
-      );
+      expect(new URLSearchParams(window.location.search).get('fixture')).toBe(SWITCH_TARGET.file);
     });
   });
 
@@ -92,9 +88,7 @@ describe('#221 deep link — ?fixture= reflects the active scene', () => {
     await switchToTarget();
     await waitForScene('SwitchedRoot');
     await waitFor(() => {
-      expect(new URLSearchParams(window.location.search).get('fixture')).toBe(
-        SWITCH_TARGET.file
-      );
+      expect(new URLSearchParams(window.location.search).get('fixture')).toBe(SWITCH_TARGET.file);
     });
     first.unmount();
 

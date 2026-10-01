@@ -18,7 +18,9 @@ const repeatSizeValidator = v.vector2('repeat_size', {
   // fade pair), though the setter's MAX(nan, 0) stores 0.
   components: (parts) =>
     parts.some((component) => component < 0)
-      ? { message: `Property 'repeat_size' components must be >= 0; Godot's setter clamps a negative component up to 0 (parallax_2d.cpp:165), got: Vector2(${parts.join(', ')})` }
+      ? {
+          message: `Property 'repeat_size' components must be >= 0; Godot's setter clamps a negative component up to 0 (parallax_2d.cpp:165), got: Vector2(${parts.join(', ')})`,
+        }
       : null,
   accepts: 'Vector2(x, y), each >= 0',
   enforced: 'parallax_2d.cpp:165',

@@ -3,11 +3,7 @@
  * prose and the per-property comparison sections.
  */
 
-import {
-  COMPARE_MARKER_PATTERN,
-  compareMarkerAttrs,
-  parseFrontmatter,
-} from '../sheetSources.mjs';
+import { COMPARE_MARKER_PATTERN, compareMarkerAttrs, parseFrontmatter } from '../sheetSources.mjs';
 
 // Both from `sheetSources.mjs`'s one pattern. Unanchored finds a marker
 // anywhere on a line, such as a stray one or one with junk after `-->`.

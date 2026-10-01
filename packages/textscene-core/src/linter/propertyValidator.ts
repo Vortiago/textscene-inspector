@@ -24,11 +24,7 @@ export type ValidatorFn = (key: string, value: string, line: number) => ParseErr
  * A validator and what it declares about itself. One with neither `formatOnly`
  * nor `grounding` is unclassified, and `boundGrounding.test.ts` fails on it.
  */
-export type PropertyValidator = ((
-  key: string,
-  value: string,
-  line: number
-) => ParseError | null) & {
+export type PropertyValidator = ((key: string, value: string, line: number) => ParseError | null) & {
   /**
    * What this validator accepts, in one short phrase: `float 0–1`,
    * `enum 0–3 (OFF/ON/…)`, `Vector3(x, y, z)`, `32-bit layer mask`. The `v` DSL

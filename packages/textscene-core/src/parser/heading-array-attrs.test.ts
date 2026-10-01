@@ -23,7 +23,7 @@ describe('#150 parseHeading array-attribute capture', () => {
 
   it('keeps two array attributes on one heading separate (no over-capture)', () => {
     const result = parseHeading(
-      '[node name="X" type="Node" node_paths=PackedStringArray("p1", "p2") groups=["g1", "g2"]]',
+      '[node name="X" type="Node" node_paths=PackedStringArray("p1", "p2") groups=["g1", "g2"]]'
     );
     expect(result).not.toBeNull();
     expect(result!.attributes.node_paths).toBe('PackedStringArray("p1", "p2")');

@@ -45,9 +45,7 @@ describe('AimModifier3D strict validators', () => {
   it('covers every leaf BoneConstraint3D actually contributes', () => {
     // The sample values cannot be derived, but the key set can. Without this, a new base leaf
     // leaves the case below missing the one key that would be misreported as unknown.
-    expect(Object.keys(BASE_LEAF_KEYS).sort()).toEqual(
-      Object.keys(BONE_CONSTRAINT_SETTING_LEAVES).sort()
-    );
+    expect(Object.keys(BASE_LEAF_KEYS).sort()).toEqual(Object.keys(BONE_CONSTRAINT_SETTING_LEAVES).sort());
   });
 
   it('registers exactly what AimModifier3D binds', () => {

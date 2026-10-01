@@ -39,7 +39,9 @@ describe('NavigationRegion3D semantic rules', () => {
 
   it('errors when a navigation_mesh SubResource reference is dangling', () => {
     expectDiagnostic(
-      scene(node('NavigationRegion3D', { navigation_mesh: 'SubResource("NavMesh_absent")' }, { name: 'Region' })),
+      scene(
+        node('NavigationRegion3D', { navigation_mesh: 'SubResource("NavMesh_absent")' }, { name: 'Region' })
+      ),
       {
         ruleName: 'dangling-resource-reference',
         severity: 'error',

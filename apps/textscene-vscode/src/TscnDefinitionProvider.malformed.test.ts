@@ -27,11 +27,7 @@ describe('TscnDefinitionProvider', () => {
       const document = createMockDocument(content);
       const position = new vscode.Position(0, 15);
 
-      const definition = provider.provideDefinition(
-        document,
-        position,
-        mockCancellationToken
-      );
+      const definition = provider.provideDefinition(document, position, mockCancellationToken);
 
       expect(definition).toBeNull();
     });

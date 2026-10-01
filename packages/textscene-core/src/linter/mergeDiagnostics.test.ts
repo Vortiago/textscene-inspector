@@ -5,7 +5,13 @@ import { mergeDiagnostics, sortDiagnostics } from './mergeDiagnostics.js';
 import type { Diagnostic } from './types.js';
 
 function diagnostic(severity: string, ruleName: string): Diagnostic {
-  return { severity: severity as Diagnostic['severity'], message: ruleName, nodeName: 'n', nodeType: 't', ruleName };
+  return {
+    severity: severity as Diagnostic['severity'],
+    message: ruleName,
+    nodeName: 'n',
+    nodeType: 't',
+    ruleName,
+  };
 }
 
 describe('sortDiagnostics', () => {
@@ -20,7 +26,11 @@ describe('sortDiagnostics', () => {
   });
 
   it('ranks a severity outside the union as info', () => {
-    const sorted = sortDiagnostics([diagnostic('fatal', 'x'), diagnostic('warning', 'w'), diagnostic('info', 'i')]);
+    const sorted = sortDiagnostics([
+      diagnostic('fatal', 'x'),
+      diagnostic('warning', 'w'),
+      diagnostic('info', 'i'),
+    ]);
     expect(sorted.map((d) => d.ruleName)).toEqual(['w', 'x', 'i']);
   });
 });
@@ -30,7 +40,11 @@ describe('mergeDiagnostics', () => {
     const local = [diagnostic('warning', 'local-w'), diagnostic('info', 'local-i')];
     const crossFile = [diagnostic('error', 'cross-e')];
 
-    expect(mergeDiagnostics(local, crossFile).map((d) => d.ruleName)).toEqual(['cross-e', 'local-w', 'local-i']);
+    expect(mergeDiagnostics(local, crossFile).map((d) => d.ruleName)).toEqual([
+      'cross-e',
+      'local-w',
+      'local-i',
+    ]);
   });
 
   it('writes to neither input', () => {

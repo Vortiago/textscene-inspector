@@ -47,10 +47,7 @@ function decodeCastShadow(rawValue: string): ShadowCastingSetting {
   }
 }
 
-export function meshLibraryFromTres(
-  tres: ParsedResource,
-  selfPath: string
-): MeshLibraryModel {
+export function meshLibraryFromTres(tres: ParsedResource, selfPath: string): MeshLibraryModel {
   const extPathById = new Map(tres.extResources.map((r) => [r.id, r.path]));
   const items: MeshLibraryModel = new Map();
 
@@ -104,4 +101,3 @@ export function meshLibraryFromTres(
  * unresolved, GridMap draws its placeholder cell rather than an empty mesh.
  */
 const ADDRESSABLE_ITEM_MESH_TYPES: ReadonlySet<string> = new Set(['ArrayMesh']);
-

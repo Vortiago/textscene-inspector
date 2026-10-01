@@ -94,8 +94,7 @@ function checkScrollOffset(context: RuleContext): Diagnostic[] {
 const graphEditPropertiesRule: LintRule = {
   meta: {
     name: 'valid-graphedit-properties',
-    description:
-      'Validates GraphEdit zoom-limit ordering and reports a scroll_offset the load clamps away',
+    description: 'Validates GraphEdit zoom-limit ordering and reports a scroll_offset the load clamps away',
     category: 'validation',
     applicableNodeTypes: ['GraphEdit'],
     emits: [

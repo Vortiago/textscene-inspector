@@ -156,8 +156,7 @@ export class LRUCache<V> {
    */
   private evictOverflow(justSet: string): void {
     if (this.map.size <= this.maxEntries) return;
-    const candidates =
-      this.map.size - this.pinnedInMap - (this.isPinned(justSet) ? 0 : 1);
+    const candidates = this.map.size - this.pinnedInMap - (this.isPinned(justSet) ? 0 : 1);
     if (candidates <= 0) return;
     for (const key of this.map.keys()) {
       if (this.map.size <= this.maxEntries) return;

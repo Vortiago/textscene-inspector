@@ -14,22 +14,41 @@ function nodeWith(properties: Record<string, string>): TscnNode {
 
 describe('rangeAdvisories', () => {
   it('returns [] when properties are not a record', () => {
-    const node = { name: 'N', type: 'T', children: [], properties: null as unknown as Record<string, string> };
-    expect(rangeAdvisories(node, { x: [{ over: 10, ruleName: 'r', message: () => 'm', cite: 'light_3d.cpp:389' }] })).toEqual([]);
+    const node = {
+      name: 'N',
+      type: 'T',
+      children: [],
+      properties: null as unknown as Record<string, string>,
+    };
+    expect(
+      rangeAdvisories(node, {
+        x: [{ over: 10, ruleName: 'r', message: () => 'm', cite: 'light_3d.cpp:389' }],
+      })
+    ).toEqual([]);
   });
 
   it('skips a property that is absent from the node', () => {
     const node = nodeWith({ other: '999' });
-    expect(rangeAdvisories(node, { x: [{ over: 10, ruleName: 'r', message: () => 'm', cite: 'light_3d.cpp:389' }] })).toEqual([]);
+    expect(
+      rangeAdvisories(node, {
+        x: [{ over: 10, ruleName: 'r', message: () => 'm', cite: 'light_3d.cpp:389' }],
+      })
+    ).toEqual([]);
   });
 
   it('skips a non-numeric value', () => {
     const node = nodeWith({ x: 'not-a-number' });
-    expect(rangeAdvisories(node, { x: [{ over: 10, ruleName: 'r', message: () => 'm', cite: 'light_3d.cpp:389' }] })).toEqual([]);
+    expect(
+      rangeAdvisories(node, {
+        x: [{ over: 10, ruleName: 'r', message: () => 'm', cite: 'light_3d.cpp:389' }],
+      })
+    ).toEqual([]);
   });
 
   describe('over arm', () => {
-    const table: RangeAdvisoryTable = { x: [{ over: 10, ruleName: 'x-over', message: (v) => `x is ${v}`, cite: 'light_3d.cpp:389' }] };
+    const table: RangeAdvisoryTable = {
+      x: [{ over: 10, ruleName: 'x-over', message: (v) => `x is ${v}`, cite: 'light_3d.cpp:389' }],
+    };
 
     // `inf` is a legal literal Godot stores unaltered (variant_parser.cpp:150-155),
     // and it is above every bound. `parseFloat` reads it as NaN, which the
@@ -54,7 +73,9 @@ describe('rangeAdvisories', () => {
   });
 
   describe('under arm', () => {
-    const table: RangeAdvisoryTable = { x: [{ under: 5, ruleName: 'x-under', message: (v) => `x is ${v}`, cite: 'light_3d.cpp:389' }] };
+    const table: RangeAdvisoryTable = {
+      x: [{ under: 5, ruleName: 'x-under', message: (v) => `x is ${v}`, cite: 'light_3d.cpp:389' }],
+    };
 
     it('trips strictly below the bound', () => {
       expect(rangeAdvisories(nodeWith({ x: '4' }), table)).toHaveLength(1);
@@ -65,7 +86,9 @@ describe('rangeAdvisories', () => {
   });
 
   describe('floor on an under arm', () => {
-    const table: RangeAdvisoryTable = { x: [{ under: 1, floor: 0, ruleName: 'x-tiny', message: (v) => `x is ${v}`, cite: 'light_3d.cpp:389' }] };
+    const table: RangeAdvisoryTable = {
+      x: [{ under: 1, floor: 0, ruleName: 'x-tiny', message: (v) => `x is ${v}`, cite: 'light_3d.cpp:389' }],
+    };
 
     it('trips between the floor and the bound', () => {
       expect(rangeAdvisories(nodeWith({ x: '0.5' }), table)).toHaveLength(1);

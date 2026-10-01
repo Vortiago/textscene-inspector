@@ -15,9 +15,9 @@ describe('parseNode2D', () => {
   });
 
   it('converts rotation_degrees to radians', () => {
-    expect(
-      parseNode2D(heading('Node2D', { name: 'N' }), { rotation_degrees: '90' }).rotation
-    ).toBeCloseTo(Math.PI / 2);
+    expect(parseNode2D(heading('Node2D', { name: 'N' }), { rotation_degrees: '90' }).rotation).toBeCloseTo(
+      Math.PI / 2
+    );
   });
 
   it('applies Godot defaults (pos 0, rot 0, scale 1, z_as_relative true)', () => {
@@ -47,9 +47,7 @@ describe('parseNode2D', () => {
   });
 
   it('warns and falls back to 1 on an invalid light_mask', () => {
-    expect(
-      parseNode2D(heading('Node2D', { name: 'N' }), { light_mask: 'nonsense' }).light_mask
-    ).toBe(1);
+    expect(parseNode2D(heading('Node2D', { name: 'N' }), { light_mask: 'nonsense' }).light_mask).toBe(1);
   });
 
   it('transform= wins over discrete props and is decomposed', () => {

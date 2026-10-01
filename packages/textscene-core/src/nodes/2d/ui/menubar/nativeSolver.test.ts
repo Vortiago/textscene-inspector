@@ -11,7 +11,12 @@ import type { SolveContext } from '../../../../r3f/controls/native/solverRegistr
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { MenuBarProperties } from './types';
-import { layoutMenuBarItems, menuBarMinimumSize, menuBarTitleShapes, type MenuBarTitle } from './nativeSolver';
+import {
+  layoutMenuBarItems,
+  menuBarMinimumSize,
+  menuBarTitleShapes,
+  type MenuBarTitle,
+} from './nativeSolver';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const MARGIN = 8; // content_margin 4, both sides.
@@ -64,7 +69,7 @@ describe('menuBarMinimumSize', () => {
     });
   });
 
-  it('prefers the PopupMenu child\'s own `title` over its node name', () => {
+  it("prefers the PopupMenu child's own `title` over its node name", () => {
     const titles = menuBarTitleShapes(node([popup('SomeInternalName', 'A')]), nativeTheme(1));
     expect(titles[0]?.layout.widthPx).toBeCloseTo(1354 * (16 / 2048), 6);
   });

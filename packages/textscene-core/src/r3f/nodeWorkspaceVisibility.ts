@@ -6,10 +6,7 @@
 
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { is2DUIType } from './controls/has2DUIContent.js';
-import {
-  isViewportBoundary,
-  isViewportSurface,
-} from '../nodes/viewport/subviewport/viewportBoundary.js';
+import { isViewportBoundary, isViewportSurface } from '../nodes/viewport/subviewport/viewportBoundary.js';
 import type { CanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 
 /**
@@ -18,9 +15,7 @@ import type { CanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
  * `own_world_3d` (ADR-0030).
  */
 export function isCanvasItemNode(type: string): boolean {
-  return (
-    !isViewportSurface(type) && (nodeComponentRegistry.isCanvasItem(type) || is2DUIType(type))
-  );
+  return !isViewportSurface(type) && (nodeComponentRegistry.isCanvasItem(type) || is2DUIType(type));
 }
 
 export function drawsInWorkspace(type: string, workspace: CanvasWorkspace): boolean {

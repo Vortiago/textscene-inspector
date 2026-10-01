@@ -13,7 +13,11 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import { AutowrapMode, shapeText, shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
+import {
+  AutowrapMode,
+  shapeText,
+  shapedTextSizeWidthPx,
+} from '../../../../r3f/controls/native/text/textLayout';
 import { isCanvasFontMetrics } from '../../../../r3f/controls/native/text/runtimeFontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 // A 2D Control outlines text through the same TextServer path as Label3D.
@@ -47,7 +51,13 @@ export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: Nativ
 
   const fillRect = indeterminate
     ? progressBarIndeterminateFillRect(size, props.fillMode, solveNode.rtl)
-    : progressBarFillRect(size, props.fillMode, rangeRatio(props, orderedKeys), contentMarginSize(fillBox), solveNode.rtl);
+    : progressBarFillRect(
+        size,
+        props.fillMode,
+        rangeRatio(props, orderedKeys),
+        contentMarginSize(fillBox),
+        solveNode.rtl
+      );
 
   // `progress_bar.cpp:109`: the indeterminate branch returns before the
   // percentage block, whatever `show_percentage` says.
@@ -87,7 +97,10 @@ export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: Nativ
   // `tint.own` is raw sRGB: each `<StyleBoxQuad>` takes it as is, and it
   // multiplies into the font and outline colours before their one linear conversion.
   const tintedFontColor = useMemo(() => multiplyModulate(fontColorSrgb, tint.own), [fontColorSrgb, tint.own]);
-  const tintedOutlineColor = useMemo(() => multiplyModulate(outlineColorSrgb, tint.own), [outlineColorSrgb, tint.own]);
+  const tintedOutlineColor = useMemo(
+    () => multiplyModulate(outlineColorSrgb, tint.own),
+    [outlineColorSrgb, tint.own]
+  );
 
   // `progress_bar.cpp:180`: `font_outline_size > 0 && font_outline_color.a > 0`.
   const hasOutline = outlineSize > 0 && outlineColorSrgb.a > 0 && layout !== null;

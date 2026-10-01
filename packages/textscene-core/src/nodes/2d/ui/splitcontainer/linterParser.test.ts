@@ -99,7 +99,7 @@ describe('SplitContainer strict validators', () => {
       expect(check('split_offsets', 'PackedInt32Array(+3, 0)')).not.toBeNull();
     });
 
-    it('rejects an element Godot\'s tokenizer cannot read', () => {
+    it("rejects an element Godot's tokenizer cannot read", () => {
       expect(check('split_offsets', 'PackedInt32Array(0, nope)')).not.toBeNull();
     });
 

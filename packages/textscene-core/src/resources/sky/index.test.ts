@@ -7,12 +7,7 @@ import { resourceSliceRegistry } from '../sliceRegistration';
 // by name, not `all()`: its contents depend on which other slice indexes load.
 describe('sky slice registration', () => {
   it('claims the Sky indirection and all three materials as ONE slice (happy path)', () => {
-    for (const typeName of [
-      'Sky',
-      'ProceduralSkyMaterial',
-      'PanoramaSkyMaterial',
-      'PhysicalSkyMaterial',
-    ]) {
+    for (const typeName of ['Sky', 'ProceduralSkyMaterial', 'PanoramaSkyMaterial', 'PhysicalSkyMaterial']) {
       const registration = resourceSliceRegistry.byTypeName(typeName);
       expect(registration?.slice, typeName).toBe('sky');
       expect(registration?.kind, typeName).toBe('godot-text');
@@ -22,11 +17,7 @@ describe('sky slice registration', () => {
   it('routes the sky MATERIALS to the resource slot, not the material one', () => {
     // The material processor builds THREE materials and cannot decode a sky, so
     // an external `ProceduralSkyMaterial.tres` must reach `useSubOrExtResource`.
-    for (const typeName of [
-      'ProceduralSkyMaterial',
-      'PanoramaSkyMaterial',
-      'PhysicalSkyMaterial',
-    ]) {
+    for (const typeName of ['ProceduralSkyMaterial', 'PanoramaSkyMaterial', 'PhysicalSkyMaterial']) {
       expect(resourceSliceRegistry.busTypeFor(typeName), typeName).toBe('resource');
     }
   });

@@ -140,8 +140,8 @@ export function commentSpans(
         } else if (r === ']') {
           inClass = false;
           j++;
-        }
-        else if (r === '\n') break; // unterminated: not a regex after all
+        } else if (r === '\n')
+          break; // unterminated: not a regex after all
         else if (r === '/' && !inClass) {
           j++;
           break;

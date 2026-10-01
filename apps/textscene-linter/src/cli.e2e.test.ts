@@ -94,9 +94,7 @@ afterAll(() => {
 
 describe('CLI end-to-end', () => {
   it('reports the package.json version for --version (no hardcoded literal)', () => {
-    const pkg = JSON.parse(
-      readFileSync(join(packageDir, 'package.json'), 'utf-8')
-    ) as { version: string };
+    const pkg = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf-8')) as { version: string };
     const result = runCli(['--version']);
 
     expect(result.status).toBe(0);
@@ -217,7 +215,9 @@ describe('CLI --format output modes', () => {
 
     expect(result.status).toBe(0);
     const findings = JSON.parse(result.stdout) as Array<{ file: string; severity: string; rule: string }>;
-    expect(findings).toContainEqual(expect.objectContaining({ file: infoPath, severity: 'info', rule: 'csgmesh3d-requires-mesh' }));
+    expect(findings).toContainEqual(
+      expect.objectContaining({ file: infoPath, severity: 'info', rule: 'csgmesh3d-requires-mesh' })
+    );
   });
 
   it('rejects an unknown --format value with a non-zero, non-1 exit code and no partial output', () => {
@@ -255,7 +255,10 @@ describe('CLI --format output modes', () => {
   });
 
   it('an explicit --format text overrides GITHUB_ACTIONS auto-detection', () => {
-    const result = runCli(['--no-color', '--format', 'text', badPath], { ...process.env, GITHUB_ACTIONS: 'true' });
+    const result = runCli(['--no-color', '--format', 'text', badPath], {
+      ...process.env,
+      GITHUB_ACTIONS: 'true',
+    });
 
     expect(result.status).toBe(1);
     expect(result.stdout).toContain('(strict-parser)');

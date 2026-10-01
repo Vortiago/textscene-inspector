@@ -98,10 +98,7 @@ describe('a grafted node resolves SubResource ids against its authoring scene', 
     const material = (
       Array.isArray(mesh!.material) ? mesh!.material[0] : mesh!.material
     ) as THREE.MeshStandardMaterial;
-    const linear = material.color.getRGB(
-      { r: 0, g: 0, b: 0 } as THREE.Color,
-      THREE.LinearSRGBColorSpace
-    );
+    const linear = material.color.getRGB({ r: 0, g: 0, b: 0 } as THREE.Color, THREE.LinearSRGBColorSpace);
 
     expect(linear.r).toBeCloseTo(1, 5);
     expect(linear.b).toBeCloseTo(0, 5);

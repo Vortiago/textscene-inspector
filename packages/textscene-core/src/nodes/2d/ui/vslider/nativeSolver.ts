@@ -4,7 +4,11 @@
  */
 
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
-import type { MinimumSizeFn, TextureSlotRequest, TextureSlotsFn } from '../../../../r3f/controls/native/solverRegistry';
+import type {
+  MinimumSizeFn,
+  TextureSlotRequest,
+  TextureSlotsFn,
+} from '../../../../r3f/controls/native/solverRegistry';
 import { sliderGrabberIconSize, sliderMinimumSize } from '../shared/sliderSolver';
 
 /** `grabber_icon` (`Theme::DATA_TYPE_ICON` under key `"grabber"`): the one themeable slot the min-size solve reads. */

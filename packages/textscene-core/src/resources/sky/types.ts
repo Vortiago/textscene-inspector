@@ -43,7 +43,4 @@ export interface PhysicalSkyProperties {
   energy_multiplier: number;
 }
 
-export type SkyProperties =
-  | ProceduralSkyProperties
-  | PanoramaSkyProperties
-  | PhysicalSkyProperties;
+export type SkyProperties = ProceduralSkyProperties | PanoramaSkyProperties | PhysicalSkyProperties;

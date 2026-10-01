@@ -3,14 +3,18 @@
  * `<ResourceLoaderProvider>`, so node components load resources with `useResource()`.
  * The shell's `<MissingResourcesPanel>` takes one upload per missing path.
  */
-import { useCallback, useMemo, useReducer, useRef, useState, type ChangeEvent, type CSSProperties } from 'react';
+import {
+  useCallback,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type CSSProperties,
+} from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
-import {
-  resourceFilePath,
-  ResourceLoaderProvider,
-  TscnPreviewShell,
-} from '@textscene/core';
+import { resourceFilePath, ResourceLoaderProvider, TscnPreviewShell } from '@textscene/core';
 import { fixtures } from './fixturesAll';
 import { corpusRootFor, resToFixtureFile, fixtureFileToRes } from './corpusRoot';
 import { useCorpusRoot } from './useCorpusRoot';
@@ -60,19 +64,26 @@ export function R3FApp() {
   const applyCorpusRoot = useCorpusRoot(pipeline);
 
   // `onBeforeSwap` is read from a ref, so a plain function serves, not a useCallback.
-  const { buffer, forwardedContent, renderedFixtureFile, isFetching: isFetchingFixture, loadError, onBufferChange: handleSourceChange, replace, clearRender, reload, editedSinceLoad } =
-    useSceneSource({
-      fixtureFile,
-      uploadedTscnName,
-      onBeforeSwap: (file) => applyCorpusRoot(corpusRootFor(file, fixtures)),
-    });
+  const {
+    buffer,
+    forwardedContent,
+    renderedFixtureFile,
+    isFetching: isFetchingFixture,
+    loadError,
+    onBufferChange: handleSourceChange,
+    replace,
+    clearRender,
+    reload,
+    editedSinceLoad,
+  } = useSceneSource({
+    fixtureFile,
+    uploadedTscnName,
+    onBeforeSwap: (file) => applyCorpusRoot(corpusRootFor(file, fixtures)),
+  });
 
   // The corpus root of the scene on screen. During a fetch the selection has moved on
   // while the previous scene and its res:// namespace are still live.
-  const resourceRoot = useMemo(
-    () => corpusRootFor(renderedFixtureFile, fixtures),
-    [renderedFixtureFile]
-  );
+  const resourceRoot = useMemo(() => corpusRootFor(renderedFixtureFile, fixtures), [renderedFixtureFile]);
 
   /**
    * Cross a corpus boundary with the viewport empty (`useCorpusRoot` says why). Every
@@ -97,8 +108,11 @@ export function R3FApp() {
       'Discard your Source-pane edits? They are not saved anywhere — use "Download .tscn" first to keep them.'
     );
 
-  const { effectiveError: effectiveLoadError, reportUploadError, clearUploadError } =
-    useUploadError(loadError);
+  const {
+    effectiveError: effectiveLoadError,
+    reportUploadError,
+    clearUploadError,
+  } = useUploadError(loadError);
 
   // Latest missing-paths set, fed by the shell's onMissingPathsChange. A ref,
   // not state, so handleFilesUpload (outside MissingResourcesProvider) reads
@@ -113,8 +127,11 @@ export function R3FApp() {
   // Counts uploads and removals, so the Source pane lints the unchanged buffer again: a
   // cross-file rule may read the file that changed.
   const [uploadRevision, bumpUploadRevision] = useReducer((count: number) => count + 1, 0);
-  const { diagnosticsByLine, fileDiagnostics, problemBadge, lineCount } =
-    useSourceDiagnostics(buffer, provider, uploadRevision);
+  const { diagnosticsByLine, fileDiagnostics, problemBadge, lineCount } = useSourceDiagnostics(
+    buffer,
+    provider,
+    uploadRevision
+  );
   const [gutterScrollTop, setGutterScrollTop] = useState(0);
 
   const options = useMemo(() => fixtureOptions(uploadedTscnName), [uploadedTscnName]);
@@ -169,8 +186,9 @@ export function R3FApp() {
     clearUploadError,
   });
 
-  const { dragActive, handleDragEnter, handleDragOver, handleDragLeave, handleDrop } =
-    useFileDrop((files) => void handleFilesUpload(files));
+  const { dragActive, handleDragEnter, handleDragOver, handleDragLeave, handleDrop } = useFileDrop(
+    (files) => void handleFilesUpload(files)
+  );
 
   function handleBufferChange(e: ChangeEvent<HTMLTextAreaElement>) {
     const newValue = e.target.value;
@@ -241,11 +259,7 @@ export function R3FApp() {
                 </button>
               </div>
               <div className={styles.sourceBody}>
-                <SourceGutter
-                  lineCount={lineCount}
-                  byLine={diagnosticsByLine}
-                  scrollTop={gutterScrollTop}
-                />
+                <SourceGutter lineCount={lineCount} byLine={diagnosticsByLine} scrollTop={gutterScrollTop} />
                 <textarea
                   className={styles.sourceTextarea}
                   value={buffer}
@@ -315,9 +329,8 @@ export function R3FApp() {
                 role="alert"
                 className={styles.unrenderableNotice}
               >
-                <strong>Nothing has rendered yet.</strong> The pasted/typed content doesn't parse
-                as a valid .tscn scene — fix the errors marked in the Source pane's gutter to see
-                a preview.
+                <strong>Nothing has rendered yet.</strong> The pasted/typed content doesn't parse as a valid
+                .tscn scene — fix the errors marked in the Source pane's gutter to see a preview.
               </div>
             )
           )}

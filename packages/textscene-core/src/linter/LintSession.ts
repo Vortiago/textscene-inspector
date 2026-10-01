@@ -73,7 +73,9 @@ export class LintSession {
   private newest: symbol | null = null;
   private newestReads: readonly string[] = [];
 
-  constructor(private readonly lintProject: (content: string, provider: ResourceProvider | null) => ProjectLint) {}
+  constructor(
+    private readonly lintProject: (content: string, provider: ResourceProvider | null) => ProjectLint
+  ) {}
 
   /**
    * The `res://` paths the newest lint's cross-file rules read, or may read: the glTF files it uses and the project

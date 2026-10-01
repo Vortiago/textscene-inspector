@@ -214,10 +214,11 @@ describe('AnimationTree Linter', () => {
   describe('Semantic Validation', () => {
     describe('tree_root warnings', () => {
       it('should warn when tree_root is not set', () => {
-        expectDiagnostic(
-          scene(node('AnimationTree', { anim_player: 'NodePath("../AnimationPlayer")' })),
-          { prop: 'tree_root', severity: 'warning', contains: ['not set', 'root animation node'] }
-        );
+        expectDiagnostic(scene(node('AnimationTree', { anim_player: 'NodePath("../AnimationPlayer")' })), {
+          prop: 'tree_root',
+          severity: 'warning',
+          contains: ['not set', 'root animation node'],
+        });
       });
 
       it('should error when tree_root resource does not exist', () => {
@@ -486,7 +487,9 @@ describe('AnimationTree Linter', () => {
   describe('Edge Cases', () => {
     it('should handle AnimationTree with no properties', () => {
       const diagnostics = lint(scene(node('AnimationTree')));
-      const treeRootWarning = diagnostics.find(d => d.message.includes('tree_root') && d.message.includes('not set'));
+      const treeRootWarning = diagnostics.find(
+        (d) => d.message.includes('tree_root') && d.message.includes('not set')
+      );
       expect(treeRootWarning).toBeDefined();
     });
 
@@ -498,21 +501,25 @@ describe('AnimationTree Linter', () => {
           // second root, which the tree build drops, so no rule below would run.
           node('Node3D', {}, { name: 'Root' }),
           node('AnimationPlayer', {}, { name: 'Player', parent: '.' }),
-          node('AnimationTree', {
-            tree_root: 'SubResource("BlendTree_1")',
-            anim_player: 'NodePath("../Player")',
-            active: true,
-            process_callback: 1,
-            callback_mode_process: 1,
-            callback_mode_method: 0,
-            callback_mode_discrete: 1,
-            root_node: 'NodePath("..")',
-            root_motion_track: 'NodePath("")',
-            root_motion_local: false,
-            deterministic: false,
-            reset_on_save: true,
-            audio_max_polyphony: 32,
-          }, { parent: '.' })
+          node(
+            'AnimationTree',
+            {
+              tree_root: 'SubResource("BlendTree_1")',
+              anim_player: 'NodePath("../Player")',
+              active: true,
+              process_callback: 1,
+              callback_mode_process: 1,
+              callback_mode_method: 0,
+              callback_mode_discrete: 1,
+              root_node: 'NodePath("..")',
+              root_motion_track: 'NodePath("")',
+              root_motion_local: false,
+              deterministic: false,
+              reset_on_save: true,
+              audio_max_polyphony: 32,
+            },
+            { parent: '.' }
+          )
         )
       );
     });
@@ -531,12 +538,14 @@ describe('AnimationTree Linter', () => {
         )
       );
       expect(diagnostics.length).toBeGreaterThan(4);
-      const hasTreeRootError = diagnostics.some(d => d.message.includes('tree_root'));
-      const hasAnimPlayerError = diagnostics.some(d => d.message.includes('anim_player'));
-      const hasActiveError = diagnostics.some(d => d.message.includes('active'));
-      const hasProcessError = diagnostics.some(d => d.message.includes('process_callback'));
-      const hasPolyphonyError = diagnostics.some(d => d.message.includes('audio_max_polyphony'));
-      expect(hasTreeRootError && hasAnimPlayerError && hasActiveError && hasProcessError && hasPolyphonyError).toBe(true);
+      const hasTreeRootError = diagnostics.some((d) => d.message.includes('tree_root'));
+      const hasAnimPlayerError = diagnostics.some((d) => d.message.includes('anim_player'));
+      const hasActiveError = diagnostics.some((d) => d.message.includes('active'));
+      const hasProcessError = diagnostics.some((d) => d.message.includes('process_callback'));
+      const hasPolyphonyError = diagnostics.some((d) => d.message.includes('audio_max_polyphony'));
+      expect(
+        hasTreeRootError && hasAnimPlayerError && hasActiveError && hasProcessError && hasPolyphonyError
+      ).toBe(true);
     });
 
     it('should handle ExtResource for tree_root', () => {

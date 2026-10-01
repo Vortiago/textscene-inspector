@@ -14,12 +14,7 @@ vi.mock('./sourceGate', () => ({
 }));
 
 import { useSceneSource } from './useSceneSource';
-import {
-  FIXTURE_TSCN,
-  UPLOADED_TSCN,
-  mockFetchFail,
-  mockFetchOk,
-} from './useSceneSource.testkit';
+import { FIXTURE_TSCN, UPLOADED_TSCN, mockFetchFail, mockFetchOk } from './useSceneSource.testkit';
 
 beforeEach(() => {
   try {

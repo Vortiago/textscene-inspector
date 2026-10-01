@@ -21,10 +21,7 @@ const OWN_COLOR = 0x123456;
 
 function makeFakeGlb(): THREE.Object3D {
   const root = new THREE.Group();
-  const body = new THREE.Mesh(
-    new THREE.BoxGeometry(),
-    new THREE.MeshStandardMaterial({ color: OWN_COLOR })
-  );
+  const body = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshStandardMaterial({ color: OWN_COLOR }));
   body.name = 'body';
   root.add(body);
   return root;

@@ -7,14 +7,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode3D } from '../../base/node3d/parser';
 import { parseColor } from '../../../utils/colorParser';
-import {
-  boolOr,
-  enumOr,
-  floatOr,
-  intOr,
-  parseOptionalRect2,
-  vec2Or,
-} from '../../../parser/valueParsers';
+import { boolOr, enumOr, floatOr, intOr, parseOptionalRect2, vec2Or } from '../../../parser/valueParsers';
 import {
   AlphaAntiAliasing,
   AlphaCutMode,
@@ -46,11 +39,7 @@ export function parseSprite3D(
       AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS,
       AlphaCutMode.ALPHA_CUT_HASH,
     ]),
-    axis: enumOr(properties.axis, AxisMode.AXIS_Y, [
-      AxisMode.AXIS_X,
-      AxisMode.AXIS_Y,
-      AxisMode.AXIS_Z,
-    ]),
+    axis: enumOr(properties.axis, AxisMode.AXIS_Y, [AxisMode.AXIS_X, AxisMode.AXIS_Y, AxisMode.AXIS_Z]),
     pixel_size: floatOr(properties.pixel_size, 0.01),
     transparency: floatOr(properties.transparency, 0),
     // The grid and frame Godot holds after replaying the body in file order:
@@ -74,7 +63,11 @@ export function parseSprite3D(
     no_depth_test: boolOr(properties.no_depth_test, false, 'Sprite3D no_depth_test'),
     fixed_size: boolOr(properties.fixed_size, false, 'Sprite3D fixed_size'),
     // `sprite_3d.h:89-94`.
-    alpha_scissor_threshold: floatOr(properties.alpha_scissor_threshold, 0.5, 'Sprite3D alpha_scissor_threshold'),
+    alpha_scissor_threshold: floatOr(
+      properties.alpha_scissor_threshold,
+      0.5,
+      'Sprite3D alpha_scissor_threshold'
+    ),
     alpha_hash_scale: floatOr(properties.alpha_hash_scale, 1, 'Sprite3D alpha_hash_scale'),
     alpha_antialiasing_mode: enumOr(
       properties.alpha_antialiasing_mode,
@@ -86,7 +79,11 @@ export function parseSprite3D(
       ],
       'Sprite3D alpha_antialiasing_mode'
     ),
-    alpha_antialiasing_edge: floatOr(properties.alpha_antialiasing_edge, 0, 'Sprite3D alpha_antialiasing_edge'),
+    alpha_antialiasing_edge: floatOr(
+      properties.alpha_antialiasing_edge,
+      0,
+      'Sprite3D alpha_antialiasing_edge'
+    ),
     texture_filter: enumOr(
       properties.texture_filter,
       TextureFilterMode.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS,

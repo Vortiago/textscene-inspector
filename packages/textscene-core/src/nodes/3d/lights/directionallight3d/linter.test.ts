@@ -47,10 +47,7 @@ describe('DirectionalLight3D Linter', () => {
       {
         prop: 'light_color',
         valid: ['Color(0.95, 0.9, 0.85, 1)'],
-        invalid: [
-          { value: 'RGB(1, 1, 1)', contains: ['Color'] },
-          { value: 'Color(1, 1, 1)' },
-        ],
+        invalid: [{ value: 'RGB(1, 1, 1)', contains: ['Color'] }, { value: 'Color(1, 1, 1)' }],
       },
       {
         prop: 'light_indirect_energy',
@@ -155,12 +152,10 @@ describe('DirectionalLight3D Linter', () => {
         invalid: [{ value: 5, contains: ['0-2'] }],
       },
       {
-          prop: 'light_cull_mask',
-          valid: [1, 100, 1048575, 0, 2000000, 2147483648, 4294967295],
-          invalid: [
-
-          ],
-        },
+        prop: 'light_cull_mask',
+        valid: [1, 100, 1048575, 0, 2000000, 2147483648, 4294967295],
+        invalid: [],
+      },
       {
         prop: 'sky_mode',
         valid: [0, 1, 2],
@@ -222,7 +217,11 @@ describe('DirectionalLight3D Linter', () => {
     describe('shadow split ordering', () => {
       it('reports nothing whatever the order', () => {
         const cases: Record<string, number>[] = [
-          { directional_shadow_split_1: 0.1, directional_shadow_split_2: 0.3, directional_shadow_split_3: 0.7 },
+          {
+            directional_shadow_split_1: 0.1,
+            directional_shadow_split_2: 0.3,
+            directional_shadow_split_3: 0.7,
+          },
           { directional_shadow_split_1: 0.5, directional_shadow_split_2: 0.3 },
           { directional_shadow_split_2: 0.7, directional_shadow_split_3: 0.5 },
           { directional_shadow_split_1: 0.8, directional_shadow_split_3: 0.6 },
@@ -238,14 +237,11 @@ describe('DirectionalLight3D Linter', () => {
     // "0,8192,0.1,or_greater,exp": the high end is open, so 15000 is in band.
     describe('negative shadow distance warning', () => {
       it('should warn on negative shadow_max_distance', () => {
-        expectDiagnostic(
-          scene(node('DirectionalLight3D', { directional_shadow_max_distance: -1 })),
-          {
-            prop: 'directional_shadow_max_distance',
-            severity: 'warning',
-            contains: ['non-negative', '-1'],
-          }
-        );
+        expectDiagnostic(scene(node('DirectionalLight3D', { directional_shadow_max_distance: -1 })), {
+          prop: 'directional_shadow_max_distance',
+          severity: 'warning',
+          contains: ['non-negative', '-1'],
+        });
       });
 
       it('accepts the hint floor of 0', () => {
@@ -253,17 +249,15 @@ describe('DirectionalLight3D Linter', () => {
       });
 
       it('should not warn above the open top of the hint', () => {
-        expectNoDiagnostic(
-          scene(node('DirectionalLight3D', { directional_shadow_max_distance: 15000 })),
-          { prop: 'directional_shadow_max_distance' }
-        );
+        expectNoDiagnostic(scene(node('DirectionalLight3D', { directional_shadow_max_distance: 15000 })), {
+          prop: 'directional_shadow_max_distance',
+        });
       });
 
       it('should not warn on reasonable shadow_max_distance', () => {
-        expectNoDiagnostic(
-          scene(node('DirectionalLight3D', { directional_shadow_max_distance: 500 })),
-          { prop: 'directional_shadow_max_distance' }
-        );
+        expectNoDiagnostic(scene(node('DirectionalLight3D', { directional_shadow_max_distance: 500 })), {
+          prop: 'directional_shadow_max_distance',
+        });
       });
     });
 
@@ -313,7 +307,7 @@ describe('DirectionalLight3D Linter', () => {
           )
         );
         const modeWarning = diagnostics.find(
-          d => d.message.includes('shadow mode') && d.message.includes('split')
+          (d) => d.message.includes('shadow mode') && d.message.includes('split')
         );
         expect(modeWarning).toBeUndefined();
       });
@@ -382,8 +376,8 @@ describe('DirectionalLight3D Linter', () => {
       // here reaches the error tier.
       expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0);
       const warnings = diagnostics.filter((d) => d.severity === 'warning');
-      const hasModeWarning = warnings.some(d => d.message.includes('directional_shadow_mode'));
-      const hasOpacityWarning = warnings.some(d => d.message.includes('shadow_opacity'));
+      const hasModeWarning = warnings.some((d) => d.message.includes('directional_shadow_mode'));
+      const hasOpacityWarning = warnings.some((d) => d.message.includes('shadow_opacity'));
       expect(hasModeWarning && hasOpacityWarning).toBe(true);
     });
 
@@ -409,8 +403,8 @@ describe('DirectionalLight3D Linter', () => {
         )
       );
       expect(diagnostics.length).toBeGreaterThan(0);
-      const hasWarnings = diagnostics.some(d => d.severity === 'warning');
-      const hasErrors = diagnostics.some(d => d.severity === 'error');
+      const hasWarnings = diagnostics.some((d) => d.severity === 'warning');
+      const hasErrors = diagnostics.some((d) => d.severity === 'error');
       expect(hasWarnings).toBe(true);
       expect(hasErrors).toBe(true);
     });

@@ -190,7 +190,13 @@ export function simplifyResPath(path: string): string {
   if (separator <= 0 || !/^[A-Za-z0-9]+$/.test(path.slice(0, separator))) return path;
   const drive = path.slice(0, separator + 3);
   const rest = path.slice(separator + 3);
-  return drive + rest.split('/').filter((part) => part !== '').join('/');
+  return (
+    drive +
+    rest
+      .split('/')
+      .filter((part) => part !== '')
+      .join('/')
+  );
 }
 
 /**

@@ -33,10 +33,7 @@ describe('the Out of range cell', () => {
     it('names the setter end and the band the hint still owns', () => {
       // The refusal starts below the hint's floor, so values between warn.
       expect(
-        outOfRangeCell(
-          { min: 'warning', max: 'warning' },
-          { min: 1, max: 16384, enforcedMin: { at: 0 } }
-        )
+        outOfRangeCell({ min: 'warning', max: 'warning' }, { min: 1, max: 16384, enforcedMin: { at: 0 } })
       ).toBe('error below 0, warning below 1, warning above 16384');
     });
 
@@ -66,10 +63,7 @@ describe('the Out of range cell', () => {
         )
       ).toBe('warning below 0, error at or above 4096');
       expect(
-        outOfRangeCell(
-          { min: 'warning', max: 'warning' },
-          { min: 0, max: 100, enforcedMax: { at: 200 } }
-        )
+        outOfRangeCell({ min: 'warning', max: 'warning' }, { min: 0, max: 100, enforcedMax: { at: 200 } })
       ).toBe('warning below 0, warning above 100, error above 200');
     });
   });

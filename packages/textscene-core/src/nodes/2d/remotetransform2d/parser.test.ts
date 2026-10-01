@@ -15,10 +15,9 @@ describe('parseRemoteTransform2D', () => {
   });
 
   it('falls back to the identity transform on a malformed transform (error path)', () => {
-    const result = parseRemoteTransform2D(
-      heading('RemoteTransform2D', { name: 'Bad' }),
-      { transform: 'Transform2D(not, valid)' }
-    );
+    const result = parseRemoteTransform2D(heading('RemoteTransform2D', { name: 'Bad' }), {
+      transform: 'Transform2D(not, valid)',
+    });
     expect(result.position).toEqual({ x: 0, y: 0 });
     expect(result.scale).toEqual({ x: 1, y: 1 });
   });

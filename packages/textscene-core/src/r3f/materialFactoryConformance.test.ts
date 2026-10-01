@@ -317,9 +317,7 @@ describe('Material factory conformance', () => {
   it('constructs no mesh around a material outside the named exemptions', () => {
     const offenders = MESH_ARGUMENT_SITES.filter(
       ({ file }) => CONSTRUCTED_MOUNT_EXEMPTIONS[repoPath(file)] === undefined
-    ).flatMap(({ file, mounts }) =>
-      mounts.map(({ line, mesh }) => `${repoPath(file)}:${line} (${mesh})`)
-    );
+    ).flatMap(({ file, mounts }) => mounts.map(({ line, mesh }) => `${repoPath(file)}:${line} (${mesh})`));
 
     expect(
       offenders,
@@ -330,9 +328,7 @@ describe('Material factory conformance', () => {
   it('mounts no material off the tag outside the named exemptions', () => {
     const offenders = OFF_TAG_SITES.filter(
       ({ file }) => OFF_TAG_EXEMPTIONS[repoPath(file)] === undefined
-    ).flatMap(({ file, mounts }) =>
-      mounts.map(({ line, shape }) => `${repoPath(file)}:${line} (${shape})`)
-    );
+    ).flatMap(({ file, mounts }) => mounts.map(({ line, shape }) => `${repoPath(file)}:${line} (${shape})`));
 
     expect(
       offenders,
@@ -344,28 +340,36 @@ describe('Material factory conformance', () => {
     const live = new Set(CONSTRUCTOR_SITES.map(({ file }) => repoPath(file)));
     const stale = Object.keys(IMPERATIVE_EXEMPTIONS).filter((file) => !live.has(file));
 
-    expect(stale, `these exemptions no longer describe anything — drop them: ${stale.join(', ')}`).toEqual([]);
+    expect(stale, `these exemptions no longer describe anything — drop them: ${stale.join(', ')}`).toEqual(
+      []
+    );
   });
 
   it('keeps no exemption that has stopped assigning into a slot', () => {
     const live = new Set(ASSIGNMENT_SITES.map(({ file }) => repoPath(file)));
     const stale = Object.keys(ASSIGNED_MOUNT_EXEMPTIONS).filter((file) => !live.has(file));
 
-    expect(stale, `these exemptions no longer describe anything — drop them: ${stale.join(', ')}`).toEqual([]);
+    expect(stale, `these exemptions no longer describe anything — drop them: ${stale.join(', ')}`).toEqual(
+      []
+    );
   });
 
   it('keeps no exemption that has stopped constructing a mesh around a material', () => {
     const live = new Set(MESH_ARGUMENT_SITES.map(({ file }) => repoPath(file)));
     const stale = Object.keys(CONSTRUCTED_MOUNT_EXEMPTIONS).filter((file) => !live.has(file));
 
-    expect(stale, `these exemptions no longer describe anything — drop them: ${stale.join(', ')}`).toEqual([]);
+    expect(stale, `these exemptions no longer describe anything — drop them: ${stale.join(', ')}`).toEqual(
+      []
+    );
   });
 
   it('keeps no exemption that has stopped mounting off the tag', () => {
     const live = new Set(OFF_TAG_SITES.map(({ file }) => repoPath(file)));
     const stale = Object.keys(OFF_TAG_EXEMPTIONS).filter((file) => !live.has(file));
 
-    expect(stale, `these exemptions no longer describe anything — drop them: ${stale.join(', ')}`).toEqual([]);
+    expect(stale, `these exemptions no longer describe anything — drop them: ${stale.join(', ')}`).toEqual(
+      []
+    );
   });
 
   it('reads every host element whole — no comment truncates one', () => {
@@ -398,7 +402,9 @@ describe('Material factory conformance', () => {
     // Two different bags: the key would describe a material that does not exist.
     expect(rawMaterialTagLines('  <meshBasicMaterial key={a.key} {...b.props} />')).toEqual([1]);
     // A prop value holding a `>` does not close the tag early.
-    expect(rawMaterialTagLines('  <meshBasicMaterial visible={a > b} key={p.key} {...p.props} />')).toEqual([1]);
+    expect(rawMaterialTagLines('  <meshBasicMaterial visible={a > b} key={p.key} {...p.props} />')).toEqual([
+      1,
+    ]);
     expect(rawMaterialTagLines('  <meshBasicMaterialish key={p.key} {...p.props} />')).toEqual([]);
     expect(rawMaterialTagLines(' * `<meshBasicMaterial map={tex} />` in a comment is not a use')).toEqual([]);
     expect(rawMaterialTagLines('  <mesh /> // <meshBasicMaterial map={tex} /> in prose')).toEqual([]);
@@ -410,7 +416,9 @@ describe('Material factory conformance', () => {
 
     // The prop itself, whatever the value is called.
     expect(mounts('  <mesh geometry={g} material={m} />')).toEqual(['1:material prop']);
-    expect(mounts('  <mesh\n    material={built[i]}\n    renderOrder={2}\n  />')).toEqual(['1:material prop']);
+    expect(mounts('  <mesh\n    material={built[i]}\n    renderOrder={2}\n  />')).toEqual([
+      '1:material prop',
+    ]);
     // Writing through a mounted material is the same defect one level down.
     expect(mounts('  <mesh material-transparent={true} />')).toEqual(['1:material prop']);
     // A spread could carry `material`, `object` or `attach` and name none of them.
@@ -447,14 +455,20 @@ describe('Material factory conformance', () => {
     expect(materialConstructorLines('  return new ShaderMaterial({ vertexShader });')).toEqual([1]);
     expect(materialConstructorLines('  const m = new THREE.MeshPhysicalMaterial();')).toEqual([1]);
     expect(materialConstructorLines('  const by = new Map<string, THREE.Material>();')).toEqual([]);
-    expect(materialConstructorLines(' * `new THREE.ShaderMaterial({ ... })` in a comment is not a use')).toEqual([]);
+    expect(
+      materialConstructorLines(' * `new THREE.ShaderMaterial({ ... })` in a comment is not a use')
+    ).toEqual([]);
     // No opt-out: only the named-file list exempts a construction.
-    expect(materialConstructorLines('// safe: fresh every time\nnew THREE.MeshBasicMaterial();')).toEqual([2]);
+    expect(materialConstructorLines('// safe: fresh every time\nnew THREE.MeshBasicMaterial();')).toEqual([
+      2,
+    ]);
   });
 
   it('would catch an assignment into a material slot — the check is not vacuous', () => {
     expect(materialAssignmentLines('  mesh.material = built;')).toEqual([1]);
-    expect(materialAssignmentLines('  for (const [m, previous] of restore) m.material = previous;')).toEqual([1]);
+    expect(materialAssignmentLines('  for (const [m, previous] of restore) m.material = previous;')).toEqual([
+      1,
+    ]);
     expect(materialAssignmentLines('  node.material[0] = fresh;')).toEqual([1]);
     expect(materialAssignmentLines('  scene.overrideMaterial = depthOnly;')).toEqual([1]);
     expect(materialAssignmentLines('  mesh.customDepthMaterial = shadow;')).toEqual([1]);
@@ -511,7 +525,10 @@ describe('Material factory conformance', () => {
     // Each root separately: `packages/` alone would clear the floor, so `apps/`
     // or `scripts/` could drop out of the walk unnoticed.
     for (const dir of SCANNED_ROOTS) {
-      expect(SOURCES.some(({ file }) => repoPath(file).startsWith(`${dir}/`)), dir).toBe(true);
+      expect(
+        SOURCES.some(({ file }) => repoPath(file).startsWith(`${dir}/`)),
+        dir
+      ).toBe(true);
     }
     expect(SOURCES.length).toBeGreaterThanOrEqual(1000);
     // Each renderer subtree separately: `r3f/` alone would clear a total.

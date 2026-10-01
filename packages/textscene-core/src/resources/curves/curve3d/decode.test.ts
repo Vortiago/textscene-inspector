@@ -44,18 +44,22 @@ describe('decodeCurve3D', () => {
   // is a strict source for PACKED_VECTOR3_ARRAY (variant.cpp:449-478), so both
   // array spellings load the same two points.
   it('reads the bare-array and typed-array spellings of points', () => {
-    const bare = decodeCurve3D(body(
-      '[Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(10, 0, 0)]',
-      {},
-      '[0, 0]'
-    ));
+    const bare = decodeCurve3D(
+      body(
+        '[Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(10, 0, 0)]',
+        {},
+        '[0, 0]'
+      )
+    );
     expect(bare).toHaveLength(2);
     expect(bare[1]!.position).toEqual({ x: 10, y: 0, z: 0 });
-    const typed = decodeCurve3D(body(
-      'Array[Vector3]([Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(10, 0, 0)])',
-      {},
-      'Array[float]([0, 0])'
-    ));
+    const typed = decodeCurve3D(
+      body(
+        'Array[Vector3]([Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(10, 0, 0)])',
+        {},
+        'Array[float]([0, 0])'
+      )
+    );
     expect(typed).toHaveLength(2);
   });
 

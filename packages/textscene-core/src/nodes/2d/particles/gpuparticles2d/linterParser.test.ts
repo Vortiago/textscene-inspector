@@ -54,7 +54,7 @@ describe('GPUParticles2D strict validators', () => {
       expect(check('draw_order', '-1')?.severity).toBe('warning');
     });
 
-    it('warns (not errors) on the value CPUParticles2D\'s platformer demo ships for the identically-named property', () => {
+    it("warns (not errors) on the value CPUParticles2D's platformer demo ships for the identically-named property", () => {
       // The setter has no guard, so any int passes the format check and only
       // warns.
       const warning = check('draw_order', '215832976');
@@ -420,9 +420,7 @@ describe('GPUParticles2D strict validators', () => {
       expect(check('trail_section_subdivisions', 'd')?.code).toBe(
         'INVALID_TRAIL_SECTION_SUBDIVISIONS_FORMAT'
       );
-      expect(check('trail_section_subdivisions', '0')?.code).toBe(
-        'INVALID_TRAIL_SECTION_SUBDIVISIONS_VALUE'
-      );
+      expect(check('trail_section_subdivisions', '0')?.code).toBe('INVALID_TRAIL_SECTION_SUBDIVISIONS_VALUE');
       expect(check('trail_section_subdivisions', '1025')?.code).toBe(
         'INVALID_TRAIL_SECTION_SUBDIVISIONS_VALUE'
       );

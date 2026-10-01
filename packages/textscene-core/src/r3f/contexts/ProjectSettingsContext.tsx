@@ -5,14 +5,7 @@
  * The default (no settings, theme scale 1.0) needs no provider.
  */
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   parseProjectSettings,
   projectThemeScale,
@@ -104,9 +97,7 @@ export function ProjectSettingsProvider({ children, sceneKey }: ProjectSettingsP
     [settings]
   );
 
-  return (
-    <ProjectSettingsContext.Provider value={value}>{children}</ProjectSettingsContext.Provider>
-  );
+  return <ProjectSettingsContext.Provider value={value}>{children}</ProjectSettingsContext.Provider>;
 }
 
 /** The active scene's project settings. Safe without a provider. */

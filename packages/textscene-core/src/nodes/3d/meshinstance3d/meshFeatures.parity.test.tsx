@@ -20,7 +20,8 @@ async function geomFor(resource: TscnInternalResource): Promise<THREE.BufferGeom
   );
   return (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
 }
-const params = (g: THREE.BufferGeometry) => (g as unknown as { parameters: Record<string, number> }).parameters;
+const params = (g: THREE.BufferGeometry) =>
+  (g as unknown as { parameters: Record<string, number> }).parameters;
 
 describe('mesh feature parity — parsers', () => {
   it('BoxMesh parses subdivide_width/height/depth (default 0)', () => {
@@ -44,12 +45,20 @@ describe('mesh feature parity — parsers', () => {
 
 describe('mesh feature parity — geometry', () => {
   it('PlaneMesh subdivide_width=1 → 2 width segments (N+1)', async () => {
-    const g = await geomFor({ id: 'P', type: 'PlaneMesh', data: { size: 'Vector2(4, 4)', subdivide_width: '1' } });
+    const g = await geomFor({
+      id: 'P',
+      type: 'PlaneMesh',
+      data: { size: 'Vector2(4, 4)', subdivide_width: '1' },
+    });
     expect(params(g).widthSegments).toBe(2);
   });
 
   it('BoxMesh subdivide_width=2 → 3 width segments (N+1)', async () => {
-    const g = await geomFor({ id: 'B', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)', subdivide_width: '2' } });
+    const g = await geomFor({
+      id: 'B',
+      type: 'BoxMesh',
+      data: { size: 'Vector3(1, 1, 1)', subdivide_width: '2' },
+    });
     expect(params(g).widthSegments).toBe(3);
   });
 
@@ -59,12 +68,20 @@ describe('mesh feature parity — geometry', () => {
   });
 
   it('CylinderMesh cap_top=false + cap_bottom=false → openEnded', async () => {
-    const g = await geomFor({ id: 'C', type: 'CylinderMesh', data: { cap_top: 'false', cap_bottom: 'false' } });
+    const g = await geomFor({
+      id: 'C',
+      type: 'CylinderMesh',
+      data: { cap_top: 'false', cap_bottom: 'false' },
+    });
     expect(params(g).openEnded).toBe(true);
   });
 
   it('PrismMesh subdivide_height=2 → two extra vertex rows (Godot num_points)', async () => {
-    const g = await geomFor({ id: 'Pr', type: 'PrismMesh', data: { size: 'Vector3(1, 1, 1)', subdivide_height: '2' } });
+    const g = await geomFor({
+      id: 'Pr',
+      type: 'PrismMesh',
+      data: { size: 'Vector3(1, 1, 1)', subdivide_height: '2' },
+    });
     // (2+2)(0+2)·2 + (2+2)(0+2)·2 + (0+2)(0+2) = 36.
     expect(g.getAttribute('position').count).toBe(36);
   });

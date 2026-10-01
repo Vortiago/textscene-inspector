@@ -30,7 +30,12 @@ interface GridExtent {
 }
 
 /** `graph_edit.cpp:1896-1900`: `offset = scroll_offset / zoom`, `size = get_size() / zoom`, both floored per axis before the loop bounds. */
-function computeExtent(rectSize: Vec2, scrollOffset: Vec2, zoom: number, snappingDistance: number): GridExtent {
+function computeExtent(
+  rectSize: Vec2,
+  scrollOffset: Vec2,
+  zoom: number,
+  snappingDistance: number
+): GridExtent {
   const offsetGraphX = scrollOffset.x / zoom;
   const offsetGraphY = scrollOffset.y / zoom;
   const sizeGraphX = rectSize.x / zoom;
@@ -96,7 +101,10 @@ export function computeGridDots(
   const minor: GridDot[] = [];
   for (let i = e.fromX; i < e.fromX + e.lenX; i++) {
     for (let j = e.fromY; j < e.fromY + e.lenY; j++) {
-      if (Math.abs(i) % GRID_MINOR_STEPS_PER_MAJOR_DOT === 0 && Math.abs(j) % GRID_MINOR_STEPS_PER_MAJOR_DOT === 0) {
+      if (
+        Math.abs(i) % GRID_MINOR_STEPS_PER_MAJOR_DOT === 0 &&
+        Math.abs(j) % GRID_MINOR_STEPS_PER_MAJOR_DOT === 0
+      ) {
         continue;
       }
       minor.push({ x: i * snappingDistance * zoom - e.offsetX, y: j * snappingDistance * zoom - e.offsetY });

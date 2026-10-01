@@ -123,7 +123,16 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
         });
         return { disabled: tab.disabled, hidden: tab.hidden === true, naturalWidth, naturalTextWidth };
       }),
-    [computed, overrides, defaults, hSeparation, closeDisplayPolicy, currentTab, closeButtonMargin.left, closeIconSize.x]
+    [
+      computed,
+      overrides,
+      defaults,
+      hSeparation,
+      closeDisplayPolicy,
+      currentTab,
+      closeButtonMargin.left,
+      closeIconSize.x,
+    ]
   );
 
   const drawLayout = useMemo(
@@ -138,7 +147,16 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
         incrementIconSize.x,
         decrementIconSize.x
       ),
-    [drawInputs, rect.w, alignment, clipTabs, maxTabWidth, tabSeparation, incrementIconSize.x, decrementIconSize.x]
+    [
+      drawInputs,
+      rect.w,
+      alignment,
+      clipTabs,
+      maxTabWidth,
+      tabSeparation,
+      incrementIconSize.x,
+      decrementIconSize.x,
+    ]
   );
 
   const closeIconTexture = useNodeIcon(solveNode.icons.close, TAB_BAR_ICONS.close);
@@ -170,10 +188,21 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
   return (
     <>
       {unselectedItems.map((item) => (
-        <TabBarTabChrome key={item.index} item={item} entry={computed[item.index]!} closeDisplayPolicy={closeDisplayPolicy} {...commonChromeProps} />
+        <TabBarTabChrome
+          key={item.index}
+          item={item}
+          entry={computed[item.index]!}
+          closeDisplayPolicy={closeDisplayPolicy}
+          {...commonChromeProps}
+        />
       ))}
       {currentItem && (
-        <TabBarTabChrome item={currentItem} entry={computed[currentItem.index]!} closeDisplayPolicy={closeDisplayPolicy} {...commonChromeProps} />
+        <TabBarTabChrome
+          item={currentItem}
+          entry={computed[currentItem.index]!}
+          closeDisplayPolicy={closeDisplayPolicy}
+          {...commonChromeProps}
+        />
       )}
       {drawLayout.buttonsVisible && (
         <ScrollArrows

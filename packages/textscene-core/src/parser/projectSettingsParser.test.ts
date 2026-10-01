@@ -175,8 +175,7 @@ describe('projectViewportSize', () => {
    * A zero-width viewport cannot be laid out, and it divides by zero in the stage's fit.
    */
   it('rejects a non-positive or non-finite value', () => {
-    const width = (raw: string) =>
-      projectViewportSize({ 'display/window/size/viewport_width': raw }).width;
+    const width = (raw: string) => projectViewportSize({ 'display/window/size/viewport_width': raw }).width;
     expect(width('0')).toBe(1152);
     expect(width('-800')).toBe(1152);
     expect(width('wide')).toBe(1152);
@@ -197,7 +196,7 @@ describe('projectViewportSize', () => {
 });
 
 describe('projectLayoutDirectionEnv', () => {
-  it('answers Godot\'s own defaults without a project file', () => {
+  it("answers Godot's own defaults without a project file", () => {
     // Both default off and 0 (`core/config/project_settings.cpp:1797-1798`). Arm 0 is
     // "Based on Application Locale", and with no `internationalization/locale/test`
     // that is the OS locale, which this previewer cannot read.
@@ -253,9 +252,9 @@ describe('projectLayoutDirectionEnv', () => {
   });
 
   it('leaves the system-locale answer false — the host locale is not in the scene', () => {
-    expect(
-      projectLayoutDirectionEnv({ 'internationalization/locale/test': 'ar' }).systemLocaleRtl
-    ).toBe(false);
+    expect(projectLayoutDirectionEnv({ 'internationalization/locale/test': 'ar' }).systemLocaleRtl).toBe(
+      false
+    );
   });
 
   it('ignores a blank test locale, which `setup()` strips before testing it', () => {
@@ -310,7 +309,9 @@ describe('declaredAutoloads', () => {
   });
 
   it('ignores a key that only starts like the section, such as one in [autoload_prepend]', () => {
-    expect(declaredAutoloads(parseProjectSettings('[autoload_prepend]\nFirst="*res://first.gd"\n'))).toEqual([]);
+    expect(declaredAutoloads(parseProjectSettings('[autoload_prepend]\nFirst="*res://first.gd"\n'))).toEqual(
+      []
+    );
   });
 });
 
@@ -319,7 +320,10 @@ describe('enabledEditorPlugins', () => {
     const settings = parseProjectSettings(
       '[editor_plugins]\n\nenabled=PackedStringArray("res://addons/a/plugin.cfg", "res://addons/b/plugin.cfg")\n'
     );
-    expect(enabledEditorPlugins(settings)).toEqual(['res://addons/a/plugin.cfg', 'res://addons/b/plugin.cfg']);
+    expect(enabledEditorPlugins(settings)).toEqual([
+      'res://addons/a/plugin.cfg',
+      'res://addons/b/plugin.cfg',
+    ]);
   });
 
   it('reads a bare array, which the setting converts to its PackedStringArray', () => {
@@ -328,7 +332,9 @@ describe('enabledEditorPlugins', () => {
   });
 
   it('is empty for an empty list', () => {
-    expect(enabledEditorPlugins(parseProjectSettings('[editor_plugins]\nenabled=PackedStringArray()\n'))).toEqual([]);
+    expect(
+      enabledEditorPlugins(parseProjectSettings('[editor_plugins]\nenabled=PackedStringArray()\n'))
+    ).toEqual([]);
   });
 
   it('is empty for a project that enables none, and for no project file', () => {
@@ -344,7 +350,9 @@ describe('enabledEditorPlugins', () => {
 describe('projectExtensionListPath', () => {
   it('is under res://.godot by default', () => {
     expect(projectExtensionListPath(null)).toBe('res://.godot/extension_list.cfg');
-    expect(projectExtensionListPath(parseProjectSettings('config_version=5\n'))).toBe('res://.godot/extension_list.cfg');
+    expect(projectExtensionListPath(parseProjectSettings('config_version=5\n'))).toBe(
+      'res://.godot/extension_list.cfg'
+    );
   });
 
   it('is under res://godot when the project turns the hidden data directory off', () => {

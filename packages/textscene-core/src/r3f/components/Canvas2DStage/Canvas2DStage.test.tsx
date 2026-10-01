@@ -56,27 +56,22 @@ vi.mock('../../contexts/ProjectSettingsContext', async (importOriginal) => {
 });
 
 import { Canvas2DStage } from './Canvas2DStage';
-import {
-  CameraControlProvider,
-  useCameraControl,
-} from '../../contexts/CameraControlContext';
+import { CameraControlProvider, useCameraControl } from '../../contexts/CameraControlContext';
 import { FIT_ON_OPEN_2D_STORAGE_KEY } from './viewport2d';
 import type { TscnNode } from '../../../parser/types';
 
 /** happy-dom reports a zero-sized rect, and `fit()` returns early on one. */
 function sizeEveryElement(width: number, height: number) {
-  return vi
-    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockReturnValue({
-      width,
-      height,
-      left: 0,
-      top: 0,
-      right: width,
-      bottom: height,
-      x: 0,
-      y: 0,
-    } as DOMRect);
+  return vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    width,
+    height,
+    left: 0,
+    top: 0,
+    right: width,
+    bottom: height,
+    x: 0,
+    y: 0,
+  } as DOMRect);
 }
 
 afterEach(() => {
@@ -95,12 +90,7 @@ function makeNode(name: string): TscnNode {
 
 function renderStage(nodes: TscnNode[] = []) {
   const utils = render(
-    <Canvas2DStage
-      nodes={nodes}
-      internalResources={[]}
-      externalResources={[]}
-      scenePath={SCENE_PATH}
-    />
+    <Canvas2DStage nodes={nodes} internalResources={[]} externalResources={[]} scenePath={SCENE_PATH} />
   );
   const stage = screen.getByLabelText('2D canvas');
   // The frame is the dimension badge's parent: module-class hashing makes a
@@ -117,10 +107,7 @@ function zoomLabel(): string {
  * happy-dom drops `clientX`/`clientY` from a `WheelEvent`, which makes the zoom
  * anchor `NaN`. They are defined on the instance instead.
  */
-function wheelAt(
-  target: Element,
-  init: { deltaY: number; clientX?: number; clientY?: number }
-): void {
+function wheelAt(target: Element, init: { deltaY: number; clientX?: number; clientY?: number }): void {
   const event = new WheelEvent('wheel', {
     deltaY: init.deltaY,
     bubbles: true,
@@ -149,10 +136,7 @@ function touch(
 function FrameProbe() {
   const cam = useCameraControl();
   return (
-    <button
-      type="button"
-      onClick={() => cam.requestFrame2D({ center: { x: 300, y: 200 }, zoom: 2 })}
-    >
+    <button type="button" onClick={() => cam.requestFrame2D({ center: { x: 300, y: 200 }, zoom: 2 })}>
       frame camera
     </button>
   );
@@ -405,12 +389,7 @@ describe('<Canvas2DStage>', () => {
     render(
       <CameraControlProvider>
         <FrameProbe />
-        <Canvas2DStage
-          nodes={[]}
-          internalResources={[]}
-          externalResources={[]}
-          scenePath={SCENE_PATH}
-        />
+        <Canvas2DStage nodes={[]} internalResources={[]} externalResources={[]} scenePath={SCENE_PATH} />
       </CameraControlProvider>
     );
     const stage = screen.getByLabelText('2D canvas');
@@ -505,12 +484,7 @@ describe('<Canvas2DStage> fit on open: load time', () => {
     return (
       <CameraControlProvider>
         <FrameProbe />
-        <Canvas2DStage
-          nodes={nodes}
-          internalResources={[]}
-          externalResources={[]}
-          scenePath={scenePath}
-        />
+        <Canvas2DStage nodes={nodes} internalResources={[]} externalResources={[]} scenePath={scenePath} />
       </CameraControlProvider>
     );
   }
@@ -541,12 +515,7 @@ describe('<Canvas2DStage> fit on open: load time', () => {
           look through
         </button>
         {is2D && (
-          <Canvas2DStage
-            nodes={[]}
-            internalResources={[]}
-            externalResources={[]}
-            scenePath={SCENE_PATH}
-          />
+          <Canvas2DStage nodes={[]} internalResources={[]} externalResources={[]} scenePath={SCENE_PATH} />
         )}
       </>
     );

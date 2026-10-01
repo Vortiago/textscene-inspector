@@ -67,7 +67,10 @@ function directoryReader(root: string): (resDirectory: string) => Promise<Direct
       readRealPaths.add(real);
       const entries = await readdir(directory, { withFileTypes: true });
       return Promise.all(
-        entries.map(async (entry) => ({ name: entry.name, isDirectory: await isDirectoryEntry(directory, entry) }))
+        entries.map(async (entry) => ({
+          name: entry.name,
+          isDirectory: await isDirectoryEntry(directory, entry),
+        }))
       );
     } catch {
       // The scan skips a directory it cannot enter (`editor_file_system.cpp:1201-1202`).

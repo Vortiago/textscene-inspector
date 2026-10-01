@@ -31,7 +31,8 @@ mesh = SubResource("mesh_1")
       expect(mockCreator).toHaveBeenCalledTimes(2);
 
       // First call: Root node
-      expect(mockCreator).toHaveBeenNthCalledWith(1,
+      expect(mockCreator).toHaveBeenNthCalledWith(
+        1,
         expect.objectContaining({
           type: 'node',
           attributes: expect.objectContaining({
@@ -43,7 +44,8 @@ mesh = SubResource("mesh_1")
       );
 
       // Second call: Child node
-      expect(mockCreator).toHaveBeenNthCalledWith(2,
+      expect(mockCreator).toHaveBeenNthCalledWith(
+        2,
         expect.objectContaining({
           type: 'node',
           attributes: expect.objectContaining({
@@ -84,14 +86,11 @@ cast_shadow = 1
 
       parser.parse(content, mockCreator);
 
-      expect(mockCreator).toHaveBeenCalledWith(
-        expect.any(Object),
-        {
-          mesh: 'SubResource("mesh_1")',
-          transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)',
-          cast_shadow: '1',
-        }
-      );
+      expect(mockCreator).toHaveBeenCalledWith(expect.any(Object), {
+        mesh: 'SubResource("mesh_1")',
+        transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)',
+        cast_shadow: '1',
+      });
     });
   });
 
@@ -205,12 +204,12 @@ item/0/mesh = ExtResource("1_tree")
       expect(scene.nodes[0]?.children).toHaveLength(2);
 
       // Find Child1 and Child2 (order may vary)
-      const childNames = scene.nodes[0]?.children.map(c => c.name);
+      const childNames = scene.nodes[0]?.children.map((c) => c.name);
       expect(childNames).toContain('Child1');
       expect(childNames).toContain('Child2');
 
       // Find Child1 and verify it has GrandChild
-      const child1 = scene.nodes[0]?.children.find(c => c.name === 'Child1');
+      const child1 = scene.nodes[0]?.children.find((c) => c.name === 'Child1');
       expect(child1).toBeDefined();
       expect(child1?.children).toHaveLength(1);
       expect(child1?.children[0]?.name).toBe('GrandChild');
@@ -586,12 +585,7 @@ frames = SubResource("sf")
         'sub_resource',
         5
       );
-      expect(onSectionStart).toHaveBeenNthCalledWith(
-        4,
-        expect.objectContaining({ type: 'node' }),
-        'node',
-        7
-      );
+      expect(onSectionStart).toHaveBeenNthCalledWith(4, expect.objectContaining({ type: 'node' }), 'node', 7);
     });
 
     describe('onSectionBuilt', () => {

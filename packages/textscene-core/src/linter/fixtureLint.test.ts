@@ -39,10 +39,7 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     reason: 'exists to show unsupported types; the Area3D has no shape on purpose',
   },
   'unit-cpuparticles2d-unpreviewable.tscn': {
-    rules: [
-      'cpuparticles2d-nondeterministic-emission-shape',
-      'cpuparticles2d-fract-delta-ignored',
-    ],
+    rules: ['cpuparticles2d-nondeterministic-emission-shape', 'cpuparticles2d-fract-delta-ignored'],
     reason: 'named for the two advisories it carries; they are the fixture',
   },
   'unit-label-autowrap-in-container.tscn': {
@@ -52,15 +49,18 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
   },
   'unit-instance-child.tscn': {
     rules: ['collisionobject3d-needs-collision-shape'],
-    reason: "the Area3D root is a coin pickup whose shape comes from the scene that instances it; the fixture is about the instanced child's transform",
+    reason:
+      "the Area3D root is a coin pickup whose shape comes from the scene that instances it; the fixture is about the instanced child's transform",
   },
   'unit-csg-combiner.tscn': {
     rules: ['collisionobject3d-needs-collision-shape'],
-    reason: 'the StaticBody3D holds CSG geometry rather than a CollisionShape3D; the fixture is about CSG boolean output, not collision',
+    reason:
+      'the StaticBody3D holds CSG geometry rather than a CollisionShape3D; the fixture is about CSG boolean output, not collision',
   },
   'unit-csg-mesh.tscn': {
     rules: ['csgmesh3d-requires-mesh'],
-    reason: 'the NoMesh node is deliberately meshless, to pin that Godot renders nothing rather than crashing or showing a placeholder',
+    reason:
+      'the NoMesh node is deliberately meshless, to pin that Godot renders nothing rather than crashing or showing a placeholder',
   },
   'unit-animation-tree-stateless.tscn': {
     rules: ['animationtree-inactive'],
@@ -78,11 +78,13 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
   },
   'unit-graph-edit-scroll-offset-clamped.tscn': {
     rules: ['graphedit-scroll-offset-discarded'],
-    reason: 'named for it: the fixture exists to move scroll_offset onto the clamp branch the advisory reports',
+    reason:
+      'named for it: the fixture exists to move scroll_offset onto the clamp branch the advisory reports',
   },
   'unit-tile-map.tscn': {
     rules: ['tilemap-deprecated'],
-    reason: 'TileMap itself is unconditionally deprecated (tile_map.cpp:843); the fixture demonstrates the legacy type, not a defect',
+    reason:
+      'TileMap itself is unconditionally deprecated (tile_map.cpp:843); the fixture demonstrates the legacy type, not a defect',
   },
 };
 
@@ -94,9 +96,9 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
  */
 const INTEGRATION_FIXTURES_WITH_ERRORS: ReadonlySet<string> = new Set(
   (
-    JSON.parse(
-      readFileSync(join(scenesRoot, 'fixtures', 'negative-fixtures.json'), 'utf8')
-    ) as { files: string[] }
+    JSON.parse(readFileSync(join(scenesRoot, 'fixtures', 'negative-fixtures.json'), 'utf8')) as {
+      files: string[];
+    }
   ).files
 );
 
@@ -123,7 +125,9 @@ function tscnFiles(dir: string): string[] {
  */
 function projectRootOf(path: string): Promise<string | null> {
   const isFixturesDir = (dir: string) => resolve(dir) === fixturesDir;
-  return findProjectRoot(dirname(path), parentDir, isFixturesDir, async (dir) => existsSync(projectFileIn(dir)));
+  return findProjectRoot(dirname(path), parentDir, isFixturesDir, async (dir) =>
+    existsSync(projectFileIn(dir))
+  );
 }
 
 /** The entries of the directory a `res://` path names under `root`, as the CLI's walk reads them. */
@@ -147,7 +151,8 @@ function projectProvider(root: string): ResourceProvider {
       if (file === null || !existsSync(file)) return null;
       return resourceContent(readFileSync(file), type, resPath);
     },
-    listFiles: (extension) => listScannedFiles(async (directory) => readDirectoryUnder(root, directory), extension),
+    listFiles: (extension) =>
+      listScannedFiles(async (directory) => readDirectoryUnder(root, directory), extension),
   };
 }
 

@@ -16,7 +16,9 @@ import { isZeroApprox } from '../../../godot/index.js';
 const scaleValidator = v.vector2('scale', {
   components: ([x, y]) =>
     isZeroApprox(x!) || isZeroApprox(y!)
-      ? { message: `Property 'scale' must have non-zero values, got: Vector2(${x}, ${y}). Zero scale causes rendering issues.` }
+      ? {
+          message: `Property 'scale' must have non-zero values, got: Vector2(${x}, ${y}). Zero scale causes rendering issues.`,
+        }
       : null,
   accepts: 'Vector2(x, y), no (near-)zero component',
   enforced: 'node_2d.cpp:194',

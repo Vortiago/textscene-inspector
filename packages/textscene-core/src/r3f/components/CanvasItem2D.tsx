@@ -12,21 +12,11 @@ import { node2dGroupMatrix, node2dGroupProps, node2dGroupSpread } from '../node2
 import { CanvasSpaceProvider, useCanvasSpace } from '../canvasRootScope';
 import { Modulate2DContext, useCanvasItemTint, type CanvasItemTint } from '../canvasItemModulate';
 import { useCanvasModulateFor } from '../canvasModulate';
-import {
-  useCanvasItemLighting,
-  type CanvasItemLightingProps,
-} from '../lighting2d/useCanvasItemLighting';
-import {
-  EffectiveZProvider,
-  accumulateCanvasItemZ,
-  useEffectiveZ,
-} from '../lighting2d/canvasItemPlacement';
+import { useCanvasItemLighting, type CanvasItemLightingProps } from '../lighting2d/useCanvasItemLighting';
+import { EffectiveZProvider, accumulateCanvasItemZ, useEffectiveZ } from '../lighting2d/canvasItemPlacement';
 import { useCanvasItemRenderOrder } from '../contexts/PaintOrderContext';
 import { CanvasItemKeyProvider } from './CanvasItemGroup';
-import {
-  CanvasItemMaterialProvider,
-  useCanvasItemMaterial,
-} from './canvasItemMaterialContext';
+import { CanvasItemMaterialProvider, useCanvasItemMaterial } from './canvasItemMaterialContext';
 import type { CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
 
 export interface CanvasItem2DProps {
@@ -81,12 +71,7 @@ export function CanvasItem2D({ node, props, body, children }: CanvasItem2DProps)
   const renderOrder = useCanvasItemRenderOrder(node, effectiveZ);
 
   return (
-    <group
-      name={node.name}
-      {...transform}
-      visible={props.visible !== false}
-      renderOrder={renderOrder}
-    >
+    <group name={node.name} {...transform} visible={props.visible !== false} renderOrder={renderOrder}>
       <CanvasItemKeyProvider value={renderOrder}>{body?.(tint, material, lighting)}</CanvasItemKeyProvider>
       <Modulate2DContext.Provider value={tint.inherited}>
         {/* Descendants inherit through `use_parent_material` what this node

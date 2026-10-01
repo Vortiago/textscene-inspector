@@ -11,10 +11,7 @@ export function createMockDocument(content: string): vscode.TextDocument {
   return {
     getText: () => content,
     lineAt: (lineOrPosition: number | vscode.Position) => {
-      const lineNumber =
-        typeof lineOrPosition === 'number'
-          ? lineOrPosition
-          : lineOrPosition.line;
+      const lineNumber = typeof lineOrPosition === 'number' ? lineOrPosition : lineOrPosition.line;
       return {
         text: lines[lineNumber] || '',
         lineNumber: lineNumber,

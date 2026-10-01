@@ -77,9 +77,7 @@ describe('resolveFixture', () => {
 
 describe('catalogName', () => {
   it('flattens scenes/fixtures to a bare filename', () => {
-    expect(catalogName(`${REPO_ROOT}/scenes/fixtures/unit-plane-mesh.tscn`)).toBe(
-      'unit-plane-mesh.tscn'
-    );
+    expect(catalogName(`${REPO_ROOT}/scenes/fixtures/unit-plane-mesh.tscn`)).toBe('unit-plane-mesh.tscn');
   });
 
   it('keeps every other subtree as a path relative to scenes/', () => {
@@ -278,4 +276,3 @@ describe('diffAll', () => {
     expect(results[1].changedPixels).toBe(0);
   });
 });
-

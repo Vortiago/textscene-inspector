@@ -27,9 +27,7 @@ function open(mode: '2D' | '3D' = '3D') {
 describe('<ViewportControlsHelp>', () => {
   it('shows the summary bindings without being opened', () => {
     render(<ViewportControlsHelp mode="3D" />);
-    expect(screen.getByTestId('viewport-controls-hint').textContent).toContain(
-      controlsFor('3D').summary
-    );
+    expect(screen.getByTestId('viewport-controls-hint').textContent).toContain(controlsFor('3D').summary);
     expect(screen.queryByTestId('viewport-controls-panel')).toBeNull();
   });
 

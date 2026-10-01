@@ -10,20 +10,20 @@ import { RESOURCE_FILES_PATTERN } from './watchPatterns';
 
 vi.mock('./TscnPreviewPanel', () => ({
   TscnPreviewPanel: {
-    create: vi.fn()
-  }
+    create: vi.fn(),
+  },
 }));
 
 // TscnDiagnostics has its own unit tests.
 vi.mock('./TscnDiagnostics', () => ({
   TscnDiagnostics: vi.fn(function (this: { dispose: ReturnType<typeof vi.fn> }) {
     this.dispose = vi.fn();
-  })
+  }),
 }));
 
 vi.mock('./logger', () => ({
   initLogger: vi.fn(),
-  dispose: vi.fn()
+  dispose: vi.fn(),
 }));
 
 describe('Extension', () => {
@@ -44,7 +44,7 @@ describe('Extension', () => {
 
     mockContext = {
       extensionUri: createMockUri('/extension'),
-      subscriptions: []
+      subscriptions: [],
     };
 
     mockPanel = {
@@ -56,15 +56,17 @@ describe('Extension', () => {
         return { dispose: vi.fn() };
       }),
       handleDependencyChange: vi.fn().mockResolvedValue(undefined),
-      resource: createMockUri('/workspace/test.tscn')
+      resource: createMockUri('/workspace/test.tscn'),
     };
 
     (TscnPreviewPanel.create as Mock).mockReturnValue(mockPanel);
 
-    (vscode.commands.registerCommand as Mock) = vi.fn((command: string, handler: (...args: unknown[]) => unknown) => {
-      commandHandlers.set(command, handler);
-      return { dispose: vi.fn() };
-    });
+    (vscode.commands.registerCommand as Mock) = vi.fn(
+      (command: string, handler: (...args: unknown[]) => unknown) => {
+        commandHandlers.set(command, handler);
+        return { dispose: vi.fn() };
+      }
+    );
 
     (vscode.workspace.onDidSaveTextDocument as Mock) = vi.fn((handler: (...args: unknown[]) => unknown) => {
       saveDocumentHandlers.push(handler);
@@ -115,9 +117,7 @@ describe('Extension', () => {
     it('should register onDidSaveTextDocument listener', () => {
       activate(mockContext);
 
-      expect(vscode.workspace.onDidSaveTextDocument).toHaveBeenCalledWith(
-        expect.any(Function)
-      );
+      expect(vscode.workspace.onDidSaveTextDocument).toHaveBeenCalledWith(expect.any(Function));
     });
 
     it('should add disposables to context subscriptions', () => {
@@ -140,11 +140,11 @@ describe('Extension', () => {
     it('should create panel when active editor has .tscn file', () => {
       const mockDocument = {
         uri: createMockUri('/workspace/scene.tscn'),
-        fileName: '/workspace/scene.tscn'
+        fileName: '/workspace/scene.tscn',
       };
 
       (vscode.window.activeTextEditor as any) = {
-        document: mockDocument
+        document: mockDocument,
       };
 
       activate(mockContext);
@@ -152,10 +152,7 @@ describe('Extension', () => {
       const commandHandler = commandHandlers.get('textscene.openPreviewToSide');
       commandHandler?.();
 
-      expect(TscnPreviewPanel.create).toHaveBeenCalledWith(
-        mockContext.extensionUri,
-        mockDocument.uri
-      );
+      expect(TscnPreviewPanel.create).toHaveBeenCalledWith(mockContext.extensionUri, mockDocument.uri);
     });
 
     // VS Code passes the clicked resource as the handler's first argument for
@@ -216,9 +213,7 @@ describe('Extension', () => {
       commandHandlers.get('textscene.openPreviewToSide')?.(createMockUri('/workspace/notes.txt'));
 
       expect(TscnPreviewPanel.create).not.toHaveBeenCalled();
-      expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-        'Open a .tscn file to preview it.'
-      );
+      expect(vscode.window.showInformationMessage).toHaveBeenCalledWith('Open a .tscn file to preview it.');
     });
 
     it('should show info message when no active editor', () => {
@@ -229,9 +224,7 @@ describe('Extension', () => {
       const commandHandler = commandHandlers.get('textscene.openPreviewToSide');
       commandHandler?.();
 
-      expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-        'Open a .tscn file to preview it.'
-      );
+      expect(vscode.window.showInformationMessage).toHaveBeenCalledWith('Open a .tscn file to preview it.');
       expect(TscnPreviewPanel.create).not.toHaveBeenCalled();
     });
 
@@ -239,8 +232,8 @@ describe('Extension', () => {
       (vscode.window.activeTextEditor as any) = {
         document: {
           uri: createMockUri('/workspace/other.txt'),
-          fileName: '/workspace/other.txt'
-        }
+          fileName: '/workspace/other.txt',
+        },
       };
 
       activate(mockContext);
@@ -248,20 +241,18 @@ describe('Extension', () => {
       const commandHandler = commandHandlers.get('textscene.openPreviewToSide');
       commandHandler?.();
 
-      expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-        'Open a .tscn file to preview it.'
-      );
+      expect(vscode.window.showInformationMessage).toHaveBeenCalledWith('Open a .tscn file to preview it.');
       expect(TscnPreviewPanel.create).not.toHaveBeenCalled();
     });
 
     it('should reveal existing panel instead of creating new one', () => {
       const mockDocument = {
         uri: createMockUri('/workspace/scene.tscn'),
-        fileName: '/workspace/scene.tscn'
+        fileName: '/workspace/scene.tscn',
       };
 
       (vscode.window.activeTextEditor as any) = {
-        document: mockDocument
+        document: mockDocument,
       };
 
       activate(mockContext);
@@ -287,8 +278,8 @@ describe('Extension', () => {
       (vscode.window.activeTextEditor as any) = {
         document: {
           uri: createMockUri('/workspace/file1.tscn'),
-          fileName: '/workspace/file1.tscn'
-        }
+          fileName: '/workspace/file1.tscn',
+        },
       };
       commandHandler?.();
 
@@ -299,8 +290,8 @@ describe('Extension', () => {
       (vscode.window.activeTextEditor as any) = {
         document: {
           uri: createMockUri('/workspace/file2.tscn'),
-          fileName: '/workspace/file2.tscn'
-        }
+          fileName: '/workspace/file2.tscn',
+        },
       };
       commandHandler?.();
 
@@ -312,11 +303,11 @@ describe('Extension', () => {
     it('should remove panel from tracking when disposed', () => {
       const mockDocument = {
         uri: createMockUri('/workspace/scene.tscn'),
-        fileName: '/workspace/scene.tscn'
+        fileName: '/workspace/scene.tscn',
       };
 
       (vscode.window.activeTextEditor as any) = {
-        document: mockDocument
+        document: mockDocument,
       };
 
       activate(mockContext);
@@ -338,11 +329,11 @@ describe('Extension', () => {
     it('should register dispose callback when panel created', () => {
       const mockDocument = {
         uri: createMockUri('/workspace/scene.tscn'),
-        fileName: '/workspace/scene.tscn'
+        fileName: '/workspace/scene.tscn',
       };
 
       (vscode.window.activeTextEditor as any) = {
-        document: mockDocument
+        document: mockDocument,
       };
 
       activate(mockContext);
@@ -358,11 +349,11 @@ describe('Extension', () => {
     it('should update panel when .tscn file is saved', () => {
       const mockDocument = {
         uri: createMockUri('/workspace/scene.tscn'),
-        fileName: '/workspace/scene.tscn'
+        fileName: '/workspace/scene.tscn',
       };
 
       (vscode.window.activeTextEditor as any) = {
-        document: mockDocument
+        document: mockDocument,
       };
 
       activate(mockContext);
@@ -372,7 +363,7 @@ describe('Extension', () => {
       commandHandler?.();
 
       // Simulate file save
-      saveDocumentHandlers.forEach(handler => handler(mockDocument));
+      saveDocumentHandlers.forEach((handler) => handler(mockDocument));
 
       expect(mockPanel.update).toHaveBeenCalledWith(mockDocument.uri);
     });
@@ -380,11 +371,11 @@ describe('Extension', () => {
     it('should not update panel when non-.tscn file is saved', () => {
       const tscnDocument = {
         uri: createMockUri('/workspace/scene.tscn'),
-        fileName: '/workspace/scene.tscn'
+        fileName: '/workspace/scene.tscn',
       };
 
       (vscode.window.activeTextEditor as any) = {
-        document: tscnDocument
+        document: tscnDocument,
       };
 
       activate(mockContext);
@@ -396,10 +387,10 @@ describe('Extension', () => {
       // Save different file type
       const otherDocument = {
         uri: createMockUri('/workspace/other.txt'),
-        fileName: '/workspace/other.txt'
+        fileName: '/workspace/other.txt',
       };
 
-      saveDocumentHandlers.forEach(handler => handler(otherDocument));
+      saveDocumentHandlers.forEach((handler) => handler(otherDocument));
 
       expect(mockPanel.update).not.toHaveBeenCalled();
     });
@@ -410,10 +401,10 @@ describe('Extension', () => {
       // Save file without opening panel
       const mockDocument = {
         uri: createMockUri('/workspace/scene.tscn'),
-        fileName: '/workspace/scene.tscn'
+        fileName: '/workspace/scene.tscn',
       };
 
-      saveDocumentHandlers.forEach(handler => handler(mockDocument));
+      saveDocumentHandlers.forEach((handler) => handler(mockDocument));
 
       // Should not throw or crash
       expect(mockPanel.update).not.toHaveBeenCalled();
@@ -440,7 +431,7 @@ describe('Extension', () => {
       expect(mockPanel.handleDependencyChange).toHaveBeenCalledWith(depUri);
     });
 
-    it('re-reads a panel\'s own main scene (external change) instead of treating it as a dependency', async () => {
+    it("re-reads a panel's own main scene (external change) instead of treating it as a dependency", async () => {
       activate(mockContext);
       openPanelFor('/workspace/scene.tscn');
 

@@ -17,10 +17,7 @@ import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import { useLiveTreeVersion } from '../../../r3f/useLiveSceneTree';
 import { useResourceLoader } from '../../../resources/useResource';
 import { useTexture2D } from '../../../resources/useTexture2D';
-import {
-  applyTextureState,
-  isMaterialOwnedTexture,
-} from '../../../resources/textures/applyTextureState';
+import { applyTextureState, isMaterialOwnedTexture } from '../../../resources/textures/applyTextureState';
 import type { Color } from '../../../utils/colorParser';
 import type { Vector3 } from '../../../parser/vectors';
 import type { DecalProperties } from './types';

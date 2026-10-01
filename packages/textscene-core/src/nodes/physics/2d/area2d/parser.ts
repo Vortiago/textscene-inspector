@@ -5,10 +5,7 @@ import type { Area2DProperties } from './types';
 import { parseNode2D } from '../../../base/node2d/parser';
 import { parseOptionalBool, parseOptionalInt } from '../../../../parser/valueParsers';
 
-export function parseArea2D(
-  heading: ParsedHeading,
-  properties: Record<string, string>
-): Area2DProperties {
+export function parseArea2D(heading: ParsedHeading, properties: Record<string, string>): Area2DProperties {
   const node2d = parseNode2D(heading, properties);
   const result: Area2DProperties = { ...node2d };
 

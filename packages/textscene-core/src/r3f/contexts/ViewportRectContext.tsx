@@ -42,7 +42,7 @@ export function useRegisterViewportRect(): RegisterViewportRect {
  */
 export function useViewportRect(path: string | null): ViewportRect | null {
   const rects = useContext(ViewportRectsContext);
-  return path === null ? null : rects.get(path) ?? null;
+  return path === null ? null : (rects.get(path) ?? null);
 }
 
 export function ViewportRectProvider({ children }: { children: ReactNode }) {

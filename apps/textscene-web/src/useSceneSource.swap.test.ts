@@ -50,8 +50,7 @@ describe('onBeforeSwap — the only moment resource resolution may be re-pointed
       useSceneSource({
         fixtureFile: 'unit-plane-mesh.tscn',
         uploadedTscnName: null,
-        onBeforeSwap: (file) =>
-          calls.push({ file, forwardedAtCall: result.current.forwardedContent }),
+        onBeforeSwap: (file) => calls.push({ file, forwardedAtCall: result.current.forwardedContent }),
       })
     );
 
@@ -127,14 +126,11 @@ describe('onBeforeSwap — the only moment resource resolution may be re-pointed
     await waitFor(() => {
       expect(result.current.buffer).toBe(FIXTURE_TSCN);
     });
-    const callsAfterLoad = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls
-      .length;
+    const callsAfterLoad = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.length;
 
     rerender();
     rerender();
 
-    expect(
-      (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.length
-    ).toBe(callsAfterLoad);
+    expect((globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.length).toBe(callsAfterLoad);
   });
 });

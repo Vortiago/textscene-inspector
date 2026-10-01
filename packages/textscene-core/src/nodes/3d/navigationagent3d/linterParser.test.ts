@@ -206,7 +206,10 @@ describe('NavigationAgent3D strict validators', () => {
       expect(check('path_metadata_flags', '7')).toBeNull();
     });
     it('warns on a bit outside the hinted 3 (bare assignment keeps it, cpp:561-567)', () => {
-      expectWarning(check('path_metadata_flags', '8'), 'sets a bit the inspector\'s flag list does not offer; it lists only PATH_METADATA_INCLUDE_TYPES (1) | PATH_METADATA_INCLUDE_RIDS (2) | PATH_METADATA_INCLUDE_OWNERS (4). Godot keeps the value, so this loads and runs, but the value is unreachable from the editor');
+      expectWarning(
+        check('path_metadata_flags', '8'),
+        "sets a bit the inspector's flag list does not offer; it lists only PATH_METADATA_INCLUDE_TYPES (1) | PATH_METADATA_INCLUDE_RIDS (2) | PATH_METADATA_INCLUDE_OWNERS (4). Godot keeps the value, so this loads and runs, but the value is unreachable from the editor"
+      );
     });
     it('accepts zero, no flags (edge)', () => {
       expect(check('path_metadata_flags', '0')).toBeNull();

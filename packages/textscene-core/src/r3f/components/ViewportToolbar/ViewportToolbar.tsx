@@ -148,9 +148,7 @@ export function ViewportToolbar() {
   // scene supplies its own, so no preview doubles the scene's light (ADR-0025).
   const yielding = useLiveSceneNodes(YIELDS_A_PREVIEW);
   const sceneHasSun = yielding.some((entry) => entry.node.type === PREVIEW_SUN_YIELD_TYPE);
-  const sceneHasEnvironment = yielding.some(
-    (entry) => entry.node.type === PREVIEW_ENVIRONMENT_YIELD_TYPE
-  );
+  const sceneHasEnvironment = yielding.some((entry) => entry.node.type === PREVIEW_ENVIRONMENT_YIELD_TYPE);
 
   function handleScreenshot() {
     const dataUrl = camera?.takeScreenshot();

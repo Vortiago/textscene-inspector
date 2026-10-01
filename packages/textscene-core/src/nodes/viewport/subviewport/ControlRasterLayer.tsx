@@ -17,11 +17,7 @@ export interface ControlRasterLayerProps {
   externalResources: readonly TscnExternalResource[];
 }
 
-export function ControlRasterLayer({
-  nodes,
-  internalResources,
-  externalResources,
-}: ControlRasterLayerProps) {
+export function ControlRasterLayer({ nodes, internalResources, externalResources }: ControlRasterLayerProps) {
   const viewports = useControlRasterViewports(nodes, internalResources, externalResources);
   if (viewports.length === 0) return null;
   return (

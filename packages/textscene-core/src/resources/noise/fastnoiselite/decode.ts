@@ -65,17 +65,35 @@ const WARP_FRACTAL_TYPES = [
 
 export function decodeFastNoiseLite(properties: Record<string, string>): FastNoiseLiteData {
   return {
-    noiseType: enumOr(properties.noise_type, NoiseType.SIMPLEX_SMOOTH, NOISE_TYPES, 'FastNoiseLite noise_type'),
+    noiseType: enumOr(
+      properties.noise_type,
+      NoiseType.SIMPLEX_SMOOTH,
+      NOISE_TYPES,
+      'FastNoiseLite noise_type'
+    ),
     seed: intOr(properties.seed, 0, 'FastNoiseLite seed'),
     frequency: floatOr(properties.frequency, 0.01, 'FastNoiseLite frequency'),
     offset: vec3(properties.offset),
 
-    fractalType: enumOr(properties.fractal_type, NoiseFractalType.FBM, FRACTAL_TYPES, 'FastNoiseLite fractal_type'),
+    fractalType: enumOr(
+      properties.fractal_type,
+      NoiseFractalType.FBM,
+      FRACTAL_TYPES,
+      'FastNoiseLite fractal_type'
+    ),
     fractalOctaves: intOr(properties.fractal_octaves, 5, 'FastNoiseLite fractal_octaves'),
     fractalLacunarity: floatOr(properties.fractal_lacunarity, 2, 'FastNoiseLite fractal_lacunarity'),
     fractalGain: floatOr(properties.fractal_gain, 0.5, 'FastNoiseLite fractal_gain'),
-    fractalWeightedStrength: floatOr(properties.fractal_weighted_strength, 0, 'FastNoiseLite fractal_weighted_strength'),
-    fractalPingPongStrength: floatOr(properties.fractal_ping_pong_strength, 2, 'FastNoiseLite fractal_ping_pong_strength'),
+    fractalWeightedStrength: floatOr(
+      properties.fractal_weighted_strength,
+      0,
+      'FastNoiseLite fractal_weighted_strength'
+    ),
+    fractalPingPongStrength: floatOr(
+      properties.fractal_ping_pong_strength,
+      2,
+      'FastNoiseLite fractal_ping_pong_strength'
+    ),
 
     cellularDistanceFunction: enumOr(
       properties.cellular_distance_function,
@@ -92,18 +110,39 @@ export function decodeFastNoiseLite(properties: Record<string, string>): FastNoi
     cellularJitter: floatOr(properties.cellular_jitter, 1, 'FastNoiseLite cellular_jitter'),
 
     domainWarpEnabled: boolOr(properties.domain_warp_enabled, false, 'FastNoiseLite domain_warp_enabled'),
-    domainWarpType: enumOr(properties.domain_warp_type, DomainWarpType.SIMPLEX, WARP_TYPES, 'FastNoiseLite domain_warp_type'),
+    domainWarpType: enumOr(
+      properties.domain_warp_type,
+      DomainWarpType.SIMPLEX,
+      WARP_TYPES,
+      'FastNoiseLite domain_warp_type'
+    ),
     domainWarpAmplitude: floatOr(properties.domain_warp_amplitude, 30, 'FastNoiseLite domain_warp_amplitude'),
-    domainWarpFrequency: floatOr(properties.domain_warp_frequency, 0.05, 'FastNoiseLite domain_warp_frequency'),
+    domainWarpFrequency: floatOr(
+      properties.domain_warp_frequency,
+      0.05,
+      'FastNoiseLite domain_warp_frequency'
+    ),
     domainWarpFractalType: enumOr(
       properties.domain_warp_fractal_type,
       DomainWarpFractalType.PROGRESSIVE,
       WARP_FRACTAL_TYPES,
       'FastNoiseLite domain_warp_fractal_type'
     ),
-    domainWarpFractalOctaves: intOr(properties.domain_warp_fractal_octaves, 5, 'FastNoiseLite domain_warp_fractal_octaves'),
-    domainWarpFractalLacunarity: floatOr(properties.domain_warp_fractal_lacunarity, 6, 'FastNoiseLite domain_warp_fractal_lacunarity'),
-    domainWarpFractalGain: floatOr(properties.domain_warp_fractal_gain, 0.5, 'FastNoiseLite domain_warp_fractal_gain'),
+    domainWarpFractalOctaves: intOr(
+      properties.domain_warp_fractal_octaves,
+      5,
+      'FastNoiseLite domain_warp_fractal_octaves'
+    ),
+    domainWarpFractalLacunarity: floatOr(
+      properties.domain_warp_fractal_lacunarity,
+      6,
+      'FastNoiseLite domain_warp_fractal_lacunarity'
+    ),
+    domainWarpFractalGain: floatOr(
+      properties.domain_warp_fractal_gain,
+      0.5,
+      'FastNoiseLite domain_warp_fractal_gain'
+    ),
   };
 }
 

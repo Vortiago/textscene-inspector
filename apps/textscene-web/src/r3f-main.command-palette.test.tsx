@@ -33,11 +33,8 @@ const PICKED_TSCN = `[gd_scene load_steps=1 format=3]
 [node name="PickedRoot" type="Node3D"]
 `;
 
-
 const DEFAULT_FILE = 'unit-plane-mesh.tscn';
-const NON_DEFAULT_LEAVES = flattenLeaves(buildFixtureTree(fixtures)).filter(
-  (l) => l.file !== DEFAULT_FILE
-);
+const NON_DEFAULT_LEAVES = flattenLeaves(buildFixtureTree(fixtures)).filter((l) => l.file !== DEFAULT_FILE);
 /** Two leaves far apart in the flattened list, so no label overlaps by accident. */
 const TARGET_A = NON_DEFAULT_LEAVES[0] as Leaf;
 const TARGET_B = NON_DEFAULT_LEAVES[NON_DEFAULT_LEAVES.length - 1] as Leaf;
@@ -170,9 +167,7 @@ describe('command palette — search focus and query reset', () => {
     await waitFor(() => expect(queryDialog()).toBeNull());
 
     openPalette();
-    const reopenedSearch = (await screen.findByLabelText(
-      'Filter built-in scenes'
-    )) as HTMLInputElement;
+    const reopenedSearch = (await screen.findByLabelText('Filter built-in scenes')) as HTMLInputElement;
 
     expect(reopenedSearch.value).toBe('');
   });

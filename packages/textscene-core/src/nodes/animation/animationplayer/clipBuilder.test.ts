@@ -108,7 +108,12 @@ describe('buildClip — rotation (C2/C3)', () => {
 
   it('maps a scalar 2D rotation track to a negated <path>.rotation[z] (diag(1,-1,1) conjugation)', () => {
     const clip = build(
-      anim('a', 1, [track('rotation', [{ time: 0, value: 0, transition: 1 }, { time: 1, value: 1.5708, transition: 1 }])])
+      anim('a', 1, [
+        track('rotation', [
+          { time: 0, value: 0, transition: 1 },
+          { time: 1, value: 1.5708, transition: 1 },
+        ]),
+      ])
     );
     const t = findTrack(clip, 'Root/Target.rotation[z]');
     expect(t).toBeDefined();
@@ -202,7 +207,10 @@ describe('buildClip — a track names its target by scene path', () => {
     ['../Sibling', 'Root/Sibling'],
     ['Child/../../Sibling', 'Root/Sibling'],
   ])('names %j from the root at Root/Player as %j', (targetPath, scenePath) => {
-    const clip = build(anim('a', 1, [track('position', [{ time: 0, value: [1, 2, 3], transition: 1 }], targetPath)]), 'Root/Player');
+    const clip = build(
+      anim('a', 1, [track('position', [{ time: 0, value: [1, 2, 3], transition: 1 }], targetPath)]),
+      'Root/Player'
+    );
     expect(clip.tracks.map((t) => t.name)).toEqual([`${scenePath}.position`]);
   });
 
@@ -223,10 +231,14 @@ describe('buildClip — a track names its target by scene path', () => {
     const root = new Object3D();
     const clip = build(
       anim('move', 2, [
-        track('position', [
-          { time: 0, value: [0, 0, 0], transition: 1 },
-          { time: 2, value: [0, 4, 0], transition: 1 },
-        ], '.'),
+        track(
+          'position',
+          [
+            { time: 0, value: [0, 0, 0], transition: 1 },
+            { time: 2, value: [0, 4, 0], transition: 1 },
+          ],
+          '.'
+        ),
       ])
     );
     mixerFor(clip, root, new Map([['Root', root]])).update(1);
@@ -239,10 +251,14 @@ describe('buildClip — a track names its target by scene path', () => {
     root.add(target);
     const clip = build(
       anim('move', 2, [
-        track('position', [
-          { time: 0, value: [0, 0, 0], transition: 1 },
-          { time: 2, value: [0, 0, 8], transition: 1 },
-        ], 'Child/Target'),
+        track(
+          'position',
+          [
+            { time: 0, value: [0, 0, 0], transition: 1 },
+            { time: 2, value: [0, 0, 8], transition: 1 },
+          ],
+          'Child/Target'
+        ),
       ])
     );
     mixerFor(clip, root, new Map([['Root/Child/Target', target]])).update(1);
@@ -252,9 +268,7 @@ describe('buildClip — a track names its target by scene path', () => {
 
 describe('buildClip — scale (C4) and 2D decomposition', () => {
   it('maps a Vector3 scale track to <path>.scale', () => {
-    const clip = build(
-      anim('a', 1, [track('scale', [{ time: 0, value: [2, 2, 2], transition: 1 }])])
-    );
+    const clip = build(anim('a', 1, [track('scale', [{ time: 0, value: [2, 2, 2], transition: 1 }])]));
     expect(findTrack(clip, 'Root/Target.scale')).toBeDefined();
   });
 

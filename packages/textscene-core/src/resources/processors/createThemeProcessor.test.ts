@@ -40,8 +40,16 @@ function setup(files: Record<string, string | ArrayBuffer>, loadFont: FontLoader
 
 describe('createThemeProcessor', () => {
   it('resolves default_font through the injected loadFont and decodes default_font_size', async () => {
-    const font: FontResource = { kind: 'file', bytes: new ArrayBuffer(1), mimeType: 'font/ttf', fallbacks: [], properties: {} };
-    const loadFont: FontLoaderFn = vi.fn(async (address) => (address === 'res://fonts/base.ttf' ? font : null));
+    const font: FontResource = {
+      kind: 'file',
+      bytes: new ArrayBuffer(1),
+      mimeType: 'font/ttf',
+      fallbacks: [],
+      properties: {},
+    };
+    const loadFont: FontLoaderFn = vi.fn(async (address) =>
+      address === 'res://fonts/base.ttf' ? font : null
+    );
     const { processor, eventBus } = setup({ 'res://theme.tres': THEME_TRES }, loadFont);
 
     const loaded = eventBus.once<ThemeResource>('theme', 'loaded', 'res://theme.tres', 2000);

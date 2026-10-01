@@ -92,7 +92,12 @@ export function createVector2iValidator(
   return (key, value, line) => {
     const match = VECTOR2I_REGEX.exec(value);
     if (!match) {
-      return propertyError(key, line, `Property '${propertyName}' must be Vector2i(x, y) — or the Vector2 spelling Godot converts into it — got: "${value}"`, errorCodeFormat);
+      return propertyError(
+        key,
+        line,
+        `Property '${propertyName}' must be Vector2i(x, y) — or the Vector2 spelling Godot converts into it — got: "${value}"`,
+        errorCodeFormat
+      );
     }
 
     // A non-finite component reads but does not fit: `_parse_construct<int32_t>`
@@ -124,7 +129,13 @@ export function createVector2iValidator(
         // Per-node tests assert a substring of the 0 case's wording.
         const requirement =
           minComponent === 0 ? 'must have non-negative values' : `must have components >= ${minComponent}`;
-        return propertyError(key, line, `Property '${propertyName}' ${requirement}, got: Vector2i(${x}, ${y})`, errorCodeValue, valueSeverity);
+        return propertyError(
+          key,
+          line,
+          `Property '${propertyName}' ${requirement}, got: Vector2i(${x}, ${y})`,
+          errorCodeValue,
+          valueSeverity
+        );
       }
     }
 
@@ -151,13 +162,7 @@ export function createRect2Validator(
   propertyName: string,
   errorCode: string = 'INVALID_FORMAT'
 ): (key: string, value: string, line: number) => ParseError | null {
-  return floatTupleValidator(
-    propertyName,
-    'Rect2',
-    4,
-    'Rect2 format like Rect2(0, 0, 100, 100)',
-    errorCode
-  );
+  return floatTupleValidator(propertyName, 'Rect2', 4, 'Rect2 format like Rect2(0, 0, 100, 100)', errorCode);
 }
 
 /** A `Transform3D(12 floats)` format validator. */

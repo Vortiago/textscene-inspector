@@ -18,8 +18,7 @@ import { allSourceFiles, srcRoot, walk } from './testing/ruleNameScrape.js';
 const REGISTRATION_FILENAMES = new Set(['linterParser.ts', 'linterValidators.ts']);
 
 /** Every registration module under `src/`, at any depth. */
-const findRegistrationModules = (): string[] =>
-  walk(srcRoot, (name) => REGISTRATION_FILENAMES.has(name));
+const findRegistrationModules = (): string[] => walk(srcRoot, (name) => REGISTRATION_FILENAMES.has(name));
 
 /** Every non-test source module, so the population can be checked complete. */
 const findSourceModules = (): string[] => allSourceFiles();
@@ -32,8 +31,7 @@ const REGISTRATION_CALL = /\bvalidatorRegistry\.register(?:All|Unavailable)\(/;
  * sibling's parser does not register the file's own chain. The two names are enumerated: a wildcard would take in a
  * node slice's `linter.js` and a resource slice's `backgroundValidators.js`, which register nothing.
  */
-const REGISTRATION_IMPORT =
-  /^import\s+(?:[^;]*?\sfrom\s+)?'([^']*linter(?:Parser|Validators)\.js)';/gm;
+const REGISTRATION_IMPORT = /^import\s+(?:[^;]*?\sfrom\s+)?'([^']*linter(?:Parser|Validators)\.js)';/gm;
 
 function importedRegistrationModules(source: string): string[] {
   return [...source.matchAll(REGISTRATION_IMPORT)].map((m) => m[1]!);
@@ -143,18 +141,16 @@ describe('base-chain imports', () => {
     expect(importedRegistrationModules("import '../../base/node2d/linterParser.js';")).toEqual([
       '../../base/node2d/linterParser.js',
     ]);
-    expect(importedRegistrationModules("import { LEAVES } from '../base/linterParser.js';")).toEqual(
-      ['../base/linterParser.js']
-    );
+    expect(importedRegistrationModules("import { LEAVES } from '../base/linterParser.js';")).toEqual([
+      '../base/linterParser.js',
+    ]);
     expect(importedRegistrationModules("import '../material/linterValidators.js';")).toEqual([
       '../material/linterValidators.js',
     ]);
     expect(importedRegistrationModules("import { v } from '../validators/index.js';")).toEqual([]);
     // A resource slice's key modules end in `Validators.js` and register nothing;
     // collecting one would report a chain that does not exist.
-    expect(importedRegistrationModules("import { bg } from './backgroundValidators.js';")).toEqual(
-      []
-    );
+    expect(importedRegistrationModules("import { bg } from './backgroundValidators.js';")).toEqual([]);
     // Several slices import two ancestors (a tier plus a spatial base); all must
     // be collected, or resolving against the computed one becomes a coin flip.
     expect(

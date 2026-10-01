@@ -11,11 +11,7 @@ import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../index';
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
-import type {
-  TscnExternalResource,
-  TscnInternalResource,
-  TscnNode,
-} from '../../../parser/types';
+import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { wallQuadSurface } from '../../../resources/testing/arrayMeshSurfaces';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
@@ -85,9 +81,7 @@ function makeNode({ mesh, materialOverride, overrides }: NodeSpec): TscnNode {
   const properties: MeshInstance3DProperties = {
     name: 'Wheel',
     mesh,
-    surfaceMaterialOverrides: new Map(
-      Object.entries(overrides ?? {}).map(([k, v]) => [Number(k), v])
-    ),
+    surfaceMaterialOverrides: new Map(Object.entries(overrides ?? {}).map(([k, v]) => [Number(k), v])),
   } as MeshInstance3DProperties;
   if (materialOverride) properties.materialOverride = materialOverride;
   return { name: 'Wheel', type: 'MeshInstance3D', children: [], properties };
@@ -109,10 +103,7 @@ async function renderSettled(
 ): Promise<THREE.Material[]> {
   const tree = (
     <ResourceLoaderProvider loader={loader}>
-      <SceneResourcesProvider
-        internalResources={internalResources}
-        externalResources={MESH_EXT}
-      >
+      <SceneResourcesProvider internalResources={internalResources} externalResources={MESH_EXT}>
         <MeshInstance3D node={node} />
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
@@ -225,10 +216,7 @@ describe('<MeshInstance3D> ArrayMesh material overrides', () => {
         mesh: 'SubResource("ArrayMesh_inline")',
         overrides: { 1: 'SubResource("Mat_green")' },
       }),
-      [
-        ...SCENE_MATERIALS,
-        inlineTwoSurfaceMesh('ArrayMesh_inline', ['Mat_red', 'Mat_blue']),
-      ]
+      [...SCENE_MATERIALS, inlineTwoSurfaceMesh('ArrayMesh_inline', ['Mat_red', 'Mat_blue'])]
     );
 
     expect(materials).toHaveLength(2);

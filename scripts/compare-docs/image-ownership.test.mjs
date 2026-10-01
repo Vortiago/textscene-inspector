@@ -53,11 +53,7 @@ describe('every published image goes through the guarded writer', () => {
   const here = dirname(fileURLToPath(import.meta.url));
   // The modules that actually hold the write, not the CLI entry points that
   // delegate to them.
-  const WRITERS = [
-    'recapture/oursSide.mjs',
-    'capture/oursSide.mjs',
-    'capture-complex.mjs',
-  ];
+  const WRITERS = ['recapture/oursSide.mjs', 'capture/oursSide.mjs', 'capture-complex.mjs'];
 
   it.each(WRITERS)('%s writes captures through writeCaptureImage', (file) => {
     expect(readFileSync(join(here, file), 'utf8')).toContain('writeCaptureImage(');

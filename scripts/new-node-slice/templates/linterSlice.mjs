@@ -6,9 +6,9 @@
 
 export function linterFiles({ typeName, lower, chain, kebabName, base, toSrc, parentLinterImport }) {
   const files = new Map();
-    files.set(
-      'linterParser.ts',
-      `/**
+  files.set(
+    'linterParser.ts',
+    `/**
  * ${typeName} strict validators for linting.
  *
  * Declare only ${typeName}'s OWN members — the ones doc/classes/${typeName}.xml
@@ -21,19 +21,19 @@ ${base.hasLinterParser ? `import '${parentLinterImport}';\n` : ''}import { valid
 
 validatorRegistry.registerAll('${typeName}', {});
 `
-    );
-    files.set(
-      'index.linter.ts',
-      `/**
+  );
+  files.set(
+    'index.linter.ts',
+    `/**
  * ${lower} linter registration - imports linter components to trigger self-registration.
  */
 
 import './linterParser.js';
 `
-    );
-    files.set(
-      'linterParser.test.ts',
-      `/**
+  );
+  files.set(
+    'linterParser.test.ts',
+    `/**
  * ${typeName} strict validators — format and range checks.
  *
  * Asserted through \`validatorRegistry\` rather than by linting a \`.tscn\`: the
@@ -133,6 +133,6 @@ describe('${typeName} strict validators', () => {
   });
 });
 `
-    );
+  );
   return files;
 }

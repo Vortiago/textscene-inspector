@@ -36,7 +36,7 @@ const RAMP: Gradient = {
 };
 
 describe('noiseImage', () => {
-  it('normalizes to the field\'s own min/max (Godot\'s default)', () => {
+  it("normalizes to the field's own min/max (Godot's default)", () => {
     // noise.cpp:87-136: the whole image is sampled, then rescaled, so the darkest
     // pixel is 0 and the brightest 255 whatever the raw range.
     const image = noiseImage((x) => x / 100, 4, 1, false, true);
@@ -131,7 +131,7 @@ describe('seamlessNoiseImage', () => {
 });
 
 describe('modulateWithGradient', () => {
-  it('maps each pixel\'s luminance through the ramp', () => {
+  it("maps each pixel's luminance through the ramp", () => {
     // noise_texture_2d.cpp:183-198. A grayscale pixel's luminance is its own
     // value, so 0 takes the ramp's first colour and 255 its last.
     const rgba = modulateWithGradient(new Uint8Array([0, 255]), RAMP);
@@ -170,7 +170,6 @@ describe('bumpMapToNormalMap', () => {
     ]);
   });
 
-
   it('reads a raw grayscale field at stride 1 identically to its RGBA expansion', () => {
     // The no-ramp path skips grayToRgba. The stride keeps both forms of one height
     // field byte-identical as normals.
@@ -204,18 +203,14 @@ describe('noiseTexture2DPixels in a noiseDataTexture', () => {
   }
 
   it('produces a DataTexture of the declared size', () => {
-    const texture = rasterized(
-      decodeNoiseTexture2D({ width: '16', height: '8' }),
-      noise,
-      null
-    );
+    const texture = rasterized(decodeNoiseTexture2D({ width: '16', height: '8' }), noise, null);
     expect(texture).toBeInstanceOf(THREE.DataTexture);
     expect(texture.image.width).toBe(16);
     expect(texture.image.height).toBe(8);
     expect(texture.image.data).toHaveLength(16 * 8 * 4);
   });
 
-  it('writes rows bottom-up so it matches a file-backed texture\'s orientation', () => {
+  it("writes rows bottom-up so it matches a file-backed texture's orientation", () => {
     // flipY does not apply to a typed-array source, so Godot's top row lands last
     // in the buffer.
     const tex = decodeNoiseTexture2D({ width: '1', height: '2' });
@@ -226,7 +221,7 @@ describe('noiseTexture2DPixels in a noiseDataTexture', () => {
     expect(data[4]).toBe(topRowValue);
   });
 
-  it('runs colour ramp then bump conversion, in Godot\'s order', () => {
+  it("runs colour ramp then bump conversion, in Godot's order", () => {
     // noise_texture_2d.cpp:170-175: modulate first, then bump_map_to_normal_map,
     // so the normal map comes from the ramped red channel.
     const texture = rasterized(
@@ -275,11 +270,10 @@ describe('noiseTexture2DPixels in a noiseDataTexture', () => {
   it('produces a different field for a different seed', () => {
     const tex = decodeNoiseTexture2D({ width: '8', height: '8' });
     const a = rasterized(tex, noise, null).image.data as Uint8Array;
-    const b = rasterized(tex, decodeFastNoiseLite({ frequency: '0.05', seed: '99' }), null)
-      .image.data as Uint8Array;
+    const b = rasterized(tex, decodeFastNoiseLite({ frequency: '0.05', seed: '99' }), null).image
+      .data as Uint8Array;
     expect([...a]).not.toEqual([...b]);
   });
-
 });
 
 describe('noiseTextureFits', () => {

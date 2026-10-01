@@ -4,10 +4,10 @@ import { parseParallaxLayer } from './parser';
 
 describe('parseParallaxLayer', () => {
   it('parses name, parent, and the 2D transform (happy path)', () => {
-    const result = parseParallaxLayer(
-      heading('ParallaxLayer', { name: 'MyParallaxLayer', parent: '.' }),
-      { position: 'Vector2(10, 20)', rotation: '0.5' }
-    );
+    const result = parseParallaxLayer(heading('ParallaxLayer', { name: 'MyParallaxLayer', parent: '.' }), {
+      position: 'Vector2(10, 20)',
+      rotation: '0.5',
+    });
     expect(result.name).toBe('MyParallaxLayer');
     expect(result.parent).toBe('.');
     expect(result.position).toEqual({ x: 10, y: 20 });
@@ -15,10 +15,9 @@ describe('parseParallaxLayer', () => {
   });
 
   it('falls back to the identity transform on a malformed transform (error path)', () => {
-    const result = parseParallaxLayer(
-      heading('ParallaxLayer', { name: 'Bad' }),
-      { transform: 'Transform2D(not, valid)' }
-    );
+    const result = parseParallaxLayer(heading('ParallaxLayer', { name: 'Bad' }), {
+      transform: 'Transform2D(not, valid)',
+    });
     expect(result.position).toEqual({ x: 0, y: 0 });
     expect(result.scale).toEqual({ x: 1, y: 1 });
   });

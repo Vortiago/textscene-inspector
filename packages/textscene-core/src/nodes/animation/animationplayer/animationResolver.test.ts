@@ -33,9 +33,7 @@ describe('resolveAnimations — library resolution (B1)', () => {
   });
 
   it('skips a clip whose Animation SubResource is missing', () => {
-    const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"idle": SubResource("Anim_idle")\n}' }),
-    ];
+    const internal = [res('Lib', 'AnimationLibrary', { _data: '{\n"idle": SubResource("Anim_idle")\n}' })];
     expect(resolveAnimations(DEFAULT_LIB, internal)).toEqual([]);
   });
 });
@@ -112,7 +110,10 @@ describe('resolveAnimations — keyframe values (B4)', () => {
       }),
     ];
     const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
-    expect(anim.tracks[0]!.keys.map((k) => k.value)).toEqual([[1, 2, 3], [4, 5, 6]]);
+    expect(anim.tracks[0]!.keys.map((k) => k.value)).toEqual([
+      [1, 2, 3],
+      [4, 5, 6],
+    ]);
   });
 
   it('decodes Vector2 and scalar float keyframe values', () => {
@@ -405,7 +406,10 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
     const t = anim.tracks[0]!;
     expect(t).toMatchObject({ type: 'position_3d', targetPath: 'Mesh', property: 'position', interp: 1 });
     expect(t.keys.map((k) => k.time)).toEqual([0, 0.5]);
-    expect(t.keys.map((k) => k.value)).toEqual([[0, 0, 0], [1, 2, 3]]);
+    expect(t.keys.map((k) => k.value)).toEqual([
+      [0, 0, 0],
+      [1, 2, 3],
+    ]);
   });
 
   it('decodes a scale_3d flat key array to Vector3 values on the scale property', () => {
@@ -577,7 +581,10 @@ libraries = {
     expect(anims).toHaveLength(1);
     const t = anims[0]!.tracks[0]!;
     expect(t).toMatchObject({ targetPath: 'Mesh', property: 'position' });
-    expect(t.keys.map((k) => k.value)).toEqual([[0, 0, 0], [0, 2, 0]]);
+    expect(t.keys.map((k) => k.value)).toEqual([
+      [0, 0, 0],
+      [0, 2, 0],
+    ]);
   });
 });
 

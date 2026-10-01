@@ -33,8 +33,7 @@ export function readyMaterial(loaded: LoadedMaterial): MaterialResource | null {
 
 /** What `source` loads to. A ShaderMaterial is declined with a warning (ADR-0041). */
 export function useMaterial(source: MaterialSource | undefined): LoadedMaterial {
-  const { filePath, subResourceId } =
-    source?.kind === 'file' ? parseSubResourcePath(source.path) : NO_FILE;
+  const { filePath, subResourceId } = source?.kind === 'file' ? parseSubResourcePath(source.path) : NO_FILE;
   // Called with '' for an inline source, to keep the hook count stable.
   const file = useResource<ParsedResource>(filePath, 'resource').value;
 
@@ -46,7 +45,11 @@ export function useMaterial(source: MaterialSource | undefined): LoadedMaterial 
   const inlineExternal = inline?.externalResources;
   const loaded = useMemo((): LoadedMaterial => {
     if (inlineResource && inlineInternal && inlineExternal) {
-      return ready({ resource: inlineResource, internalResources: inlineInternal, externalResources: inlineExternal });
+      return ready({
+        resource: inlineResource,
+        internalResources: inlineInternal,
+        externalResources: inlineExternal,
+      });
     }
     if (!filePath || !file) return ABSENT;
     const resource = materialBody(file, filePath, subResourceId);

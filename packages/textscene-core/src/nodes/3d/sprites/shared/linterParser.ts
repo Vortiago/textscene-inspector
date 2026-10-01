@@ -13,10 +13,7 @@ import {
   LABEL_SPRITE_ALPHA_CUT,
   BASE_MATERIAL_TEXTURE_FILTER,
 } from '../../../../linter/validators/sharedEnumLabels.js';
-import {
-  MATERIAL_RENDER_PRIORITY_MIN,
-  MATERIAL_RENDER_PRIORITY_MAX,
-} from '../../../../godot/index.js';
+import { MATERIAL_RENDER_PRIORITY_MIN, MATERIAL_RENDER_PRIORITY_MAX } from '../../../../godot/index.js';
 
 // sprite_3d.cpp:685 hints only 3 labels ("Disabled,Enabled,Y-Billboard"), and
 // set_billboard_mode:597-598 `ERR_FAIL_INDEX(p_mode, 3); // Cannot use BILLBOARD_PARTICLES.` excludes

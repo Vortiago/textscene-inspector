@@ -8,9 +8,7 @@ import '../nodes/3d/camera3d/index';
 import type { GridMapProperties } from '../nodes/3d/gridmap/types';
 import type { Camera3DProperties } from '../nodes/3d/camera3d/types';
 
-function node(
-  partial: Partial<TscnNode> & { name: string; type: string }
-): TscnNode {
+function node(partial: Partial<TscnNode> & { name: string; type: string }): TscnNode {
   return { children: [], properties: {}, ...partial };
 }
 

@@ -111,9 +111,7 @@ describe('decodeArrayMesh', () => {
     // material lives in a different document from the previewed scene, so only
     // its owning file plus its id can find it.
     const mesh = decodeArrayMesh(OWN_MATERIAL_TRES, 'res://vehicles/meshes/wheel.tres');
-    expect(mesh.surfaces[0]!.materialPath).toBe(
-      'res://vehicles/meshes/wheel.tres::StandardMaterial3D_shvqh'
-    );
+    expect(mesh.surfaces[0]!.materialPath).toBe('res://vehicles/meshes/wheel.tres::StandardMaterial3D_shvqh');
   });
 
   it("resolves a surface's material named by the old-style integer index", () => {
@@ -127,10 +125,7 @@ describe('decodeArrayMesh', () => {
     // A `.tres` can hold several ArrayMeshes: the `[resource]` one plus, for
     // example, its `shadow_mesh` as a `[sub_resource]`. Addressed by id, the
     // sub-resource's `_surfaces` is read, not the file body's other mesh.
-    const mesh = decodeArrayMesh(
-      NESTED_MESH_TRES,
-      'res://vehicles/meshes/wheel.tres::ArrayMesh_shadow'
-    );
+    const mesh = decodeArrayMesh(NESTED_MESH_TRES, 'res://vehicles/meshes/wheel.tres::ArrayMesh_shadow');
     expect(mesh.surfaces).toHaveLength(1);
     // Only the sub-resource surface carries no material at all.
     expect(mesh.surfaces[0]!.materialPath).toBeUndefined();
@@ -156,10 +151,7 @@ describe('decodeArrayMesh', () => {
 
   it('throws when a sub-resource path names something that is not a mesh', () => {
     expect(() =>
-      decodeArrayMesh(
-        OWN_MATERIAL_TRES,
-        'res://vehicles/meshes/wheel.tres::StandardMaterial3D_shvqh'
-      )
+      decodeArrayMesh(OWN_MATERIAL_TRES, 'res://vehicles/meshes/wheel.tres::StandardMaterial3D_shvqh')
     ).toThrow();
 
     expect(String(warnSpy.mock.calls[0]![0])).toContain('StandardMaterial3D');
@@ -272,8 +264,8 @@ describe('compressed attribute layout', () => {
 
     expect(surface.positions).toHaveLength(4 * 3);
     expect(Array.from(surface.positions).map((p) => Number(p.toFixed(6)))).toEqual([
-      0.519531, 0.180053, 1.341797, 0.416992, 0.117615, 1.361328, 0.431884, 0.184692, 1.339844,
-      0.518555, 0.114807, 1.363281,
+      0.519531, 0.180053, 1.341797, 0.416992, 0.117615, 1.361328, 0.431884, 0.184692, 1.339844, 0.518555,
+      0.114807, 1.363281,
     ]);
   });
 
@@ -517,9 +509,7 @@ describe('undecodable surfaces', () => {
     );
 
     expect(() => decodeArrayMesh(shortIndices, 'res://mesh.tres')).toThrow();
-    expect(
-      warnSpy.mock.calls.some((c: unknown[]) => String(c[0]).includes('index_data'))
-    ).toBe(true);
+    expect(warnSpy.mock.calls.some((c: unknown[]) => String(c[0]).includes('index_data'))).toBe(true);
   });
 
   it('warns with the surface name and format when it drops a surface', () => {
@@ -709,9 +699,7 @@ describe('non-triangle primitives', () => {
   it('fails loudly when every surface is a non-triangle primitive', () => {
     // Nothing renderable came out, so this must not cache an empty geometry as a
     // success. The message names the primitive as the reason, not a byte defect.
-    expect(() => decodeArrayMesh(LINE_STRIP_ONLY_TRES, 'res://mesh.tres')).toThrow(
-      /non-triangle/
-    );
+    expect(() => decodeArrayMesh(LINE_STRIP_ONLY_TRES, 'res://mesh.tres')).toThrow(/non-triangle/);
   });
 
   it('keeps decoding a surface that omits `primitive` (Godot writes 3 for triangles)', () => {

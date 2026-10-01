@@ -65,7 +65,7 @@ function paneTextarea() {
  * or a class name with "mono". happy-dom applies no CSS-module cascade. */
 function isMonospace(ta: HTMLTextAreaElement) {
   const inline = ta.getAttribute('style') ?? '';
-  const computed = (globalThis.getComputedStyle?.(ta)?.fontFamily ?? '');
+  const computed = globalThis.getComputedStyle?.(ta)?.fontFamily ?? '';
   return /mono/i.test(inline) || /mono/i.test(computed) || /mono/i.test(ta.className);
 }
 

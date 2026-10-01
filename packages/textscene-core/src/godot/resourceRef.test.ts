@@ -217,7 +217,9 @@ describe('extResourceIdsIn', () => {
   });
 
   it('skips a reference spelled inside a string, which the loader never resolves', () => {
-    expect(extResourceIdsIn('["ExtResource(\\"a\\")", &"ExtResource(\\"b\\")", ExtResource("c")]')).toEqual(['c']);
+    expect(extResourceIdsIn('["ExtResource(\\"a\\")", &"ExtResource(\\"b\\")", ExtResource("c")]')).toEqual([
+      'c',
+    ]);
   });
 
   it('keeps reading after a string that ends in an escaped backslash', () => {

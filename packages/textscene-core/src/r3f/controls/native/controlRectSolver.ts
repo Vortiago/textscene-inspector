@@ -11,7 +11,13 @@
  */
 
 import type { Rect2, Vec2 } from './rect';
-import { controlLayoutOrder, controlProps, isPromotedControl, sortableView, type SolveNode } from './solveTree';
+import {
+  controlLayoutOrder,
+  controlProps,
+  isPromotedControl,
+  sortableView,
+  type SolveNode,
+} from './solveTree';
 import type { NativeTheme } from './nativeTheme';
 import {
   controlSolverRegistry,
@@ -42,7 +48,11 @@ export interface SolvedControl {
  * since `get_anchorable_rect` (`:1563-1566`) is `Rect2(Point2(), size)`, so every
  * rect is parent-relative. {@link mirrorRectRtl} is the RTL arm, after the floor.
  */
-function computeAnchoredRect(anchors: [number, number, number, number], offsets: [number, number, number, number], parentRect: Rect2): Rect2 {
+function computeAnchoredRect(
+  anchors: [number, number, number, number],
+  offsets: [number, number, number, number],
+  parentRect: Rect2
+): Rect2 {
   const [al, at, ar, ab] = anchors;
   const [offsetLeft, offsetTop, offsetRight, offsetBottom] = offsets;
 
@@ -133,9 +143,10 @@ function parentAnchorableRect(n: SolveNode, parentRect: Rect2): Rect2 {
  * `instanceof Map`: TS cannot narrow a `ReadonlyMap` with `instanceof`, and no
  * `Map` has a `rects` own property, so the test is exact.
  */
-function normalizeContainerLayoutResult(
-  result: ReadonlyMap<string, Rect2> | ContainerLayoutResult
-): { rects: ReadonlyMap<string, Rect2>; meta: SealedHandoff | undefined } {
+function normalizeContainerLayoutResult(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): {
+  rects: ReadonlyMap<string, Rect2>;
+  meta: SealedHandoff | undefined;
+} {
   if ('rects' in result) return { rects: result.rects, meta: result.meta };
   return { rects: result, meta: undefined };
 }
@@ -215,12 +226,7 @@ function hasSizeDependentMinimum(roots: readonly SolveNode[]): boolean {
 
 // --- Phase 2: top-down rect assignment ---------------------------------------
 
-function record(
-  n: SolveNode,
-  rect: Rect2,
-  minSize: Vec2,
-  out: Map<string, SolvedControl>
-): void {
+function record(n: SolveNode, rect: Rect2, minSize: Vec2, out: Map<string, SolvedControl>): void {
   out.set(n.path, { rect, minSize });
 }
 
@@ -285,10 +291,12 @@ function dispatchChildren(
     solveFree(child, rect, origin, viewport, ctx, out);
   }
 
-  const childEntries = n.children.filter((child) => !isPromotedControl(child)).map((child) => ({
-    node: child,
-    minSize: ctx.combinedMinimumSize(child),
-  }));
+  const childEntries = n.children
+    .filter((child) => !isPromotedControl(child))
+    .map((child) => ({
+      node: child,
+      minSize: ctx.combinedMinimumSize(child),
+    }));
   // No container registers chrome yet; one that does insets its own content
   // rect before calling its ContainerLayoutFn.
   const { rects: childRects, meta: containerMeta } = normalizeContainerLayoutResult(
@@ -317,7 +325,12 @@ function dispatchChildren(
       // mirror above puts a fitting child straight back. Only a child that
       // outgrows its cell moves, and then its grow direction is mirrored too.
       const unmirrored = child.rtl ? mirrorRectRtl(assigned, rect.w) : assigned;
-      const floored = floorAtMinimumSize(unmirrored, minSize, childLayout.growHorizontal, childLayout.growVertical);
+      const floored = floorAtMinimumSize(
+        unmirrored,
+        minSize,
+        childLayout.growHorizontal,
+        childLayout.growVertical
+      );
       childRect = child.rtl ? mirrorRectRtl(floored, rect.w) : floored;
     }
     record(child, childRect, minSize, out);

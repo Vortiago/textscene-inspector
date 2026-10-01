@@ -9,18 +9,11 @@ import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D';
 import { canvasItemBlendState } from '../../../../resources/materials/canvasitemmaterial/renderer';
 import { CanvasItemBlendMode } from '../../../../resources/materials/canvasitemmaterial/types';
-import {
-  multiplyModulate,
-  type CanvasItemTint,
-} from '../../../../r3f/canvasItemModulate';
+import { multiplyModulate, type CanvasItemTint } from '../../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { drawnSources } from '../../../../r3f/drawnSources';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
-import {
-  allocateNodePaintRange,
-  canvasRenderOrder,
-  packPaintRanges,
-} from '../../../../r3f/canvasPaintOrder';
+import { allocateNodePaintRange, canvasRenderOrder, packPaintRanges } from '../../../../r3f/canvasPaintOrder';
 import { useLayerRank, usePaintRange } from '../../../../r3f/contexts/PaintOrderContext';
 import {
   accumulateCanvasItemZ,
@@ -47,7 +40,11 @@ export function TileMap({ node, children }: NodeComponentProps) {
   // children. Packed, so a squeezed run clamps them inside it.
   const layerSequences = useMemo(() => {
     const { front } = allocateNodePaintRange(paintRange, node);
-    return packPaintRanges(front, props.layers.map(() => 1), front.base).map((run) => run.base);
+    return packPaintRanges(
+      front,
+      props.layers.map(() => 1),
+      front.base
+    ).map((run) => run.base);
   }, [paintRange, node, props.layers]);
 
   // Stable (layer × source) partition: parsed layers never change identity,

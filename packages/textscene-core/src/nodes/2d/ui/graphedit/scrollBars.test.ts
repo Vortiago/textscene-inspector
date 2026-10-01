@@ -54,7 +54,12 @@ describe('graphEditScrollBars', () => {
   });
 
   it('hides both bars for a zero-extent GraphEdit, where range never exceeds page', () => {
-    const degenerate = graphEditScrollBars({ x: 0, y: 0 }, { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } }, { x: 0, y: 0 }, theme);
+    const degenerate = graphEditScrollBars(
+      { x: 0, y: 0 },
+      { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } },
+      { x: 0, y: 0 },
+      theme
+    );
     expect(degenerate.horizontal.visible).toBe(false);
     expect(degenerate.vertical.visible).toBe(false);
   });

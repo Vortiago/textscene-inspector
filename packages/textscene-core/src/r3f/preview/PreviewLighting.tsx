@@ -27,7 +27,6 @@ import {
   previewYield,
 } from './godotPreviewLighting';
 
-
 /**
  * Where the preview sun stands. It has no scene node, so unlike an authored
  * light nothing is anchored to its transform and the distance is free; the

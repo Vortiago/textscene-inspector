@@ -42,11 +42,7 @@ export type ParentVerdict =
  * Resolve `node`'s parent against `wantedType`, subclasses included, with the unknowable
  * exemption in one place, since a hand-written copy at a call site can drop it.
  */
-export function parentTypeVerdict(
-  scene: TscnScene,
-  node: TscnNode,
-  wantedType: string
-): ParentVerdict {
+export function parentTypeVerdict(scene: TscnScene, node: TscnNode, wantedType: string): ParentVerdict {
   const step = knownParent(scene, node);
   if (step.kind !== 'known') return step;
   const { parent } = step;
@@ -139,11 +135,7 @@ export function searchAncestors<T>(
  * `n = n->get_parent()` to the top with no type test, so an unclassifiable ancestor is
  * skipped. A chain-terminating walk declines instead, since the skipped one might end it.
  */
-export function sweepAncestors(
-  scene: TscnScene,
-  node: TscnNode,
-  visit: (ancestor: TscnNode) => void
-): void {
+export function sweepAncestors(scene: TscnScene, node: TscnNode, visit: (ancestor: TscnNode) => void): void {
   // A skipped ancestor can only add a hit, never withdraw one, so nothing is reported
   // about it. The engine's early exit once every warning fired (`canvas_item.cpp:1321-1325`)
   // is an optimisation with nothing observable riding on it.

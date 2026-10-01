@@ -54,7 +54,12 @@ function flatBox(
     bgColor,
     borderColor,
     borderWidth: { left: borderWidth, top: borderWidth, right: borderWidth, bottom: borderWidth },
-    cornerRadius: { topLeft: cornerRadius, topRight: cornerRadius, bottomRight: cornerRadius, bottomLeft: cornerRadius },
+    cornerRadius: {
+      topLeft: cornerRadius,
+      topRight: cornerRadius,
+      bottomRight: cornerRadius,
+      bottomLeft: cornerRadius,
+    },
     expandMargin: { left: 0, top: expandTop, right: 0, bottom: 0 },
     contentMargin: margin,
     drawCenter: true,
@@ -87,8 +92,22 @@ function defaultStyles(theme: NativeTheme) {
   };
   const borderWidth = Math.round(2 * scale);
   const expandTop = Math.round(38 * scale);
-  const panel = flatBox(theme.styleFill.pressed, theme.styleFill.pressed, borderWidth, panelMargin, expandTop, theme.cornerRadius);
-  const panelSelected = flatBox(theme.styleFill.pressed, theme.styleFill.hover, borderWidth, panelMargin, expandTop, theme.cornerRadius);
+  const panel = flatBox(
+    theme.styleFill.pressed,
+    theme.styleFill.pressed,
+    borderWidth,
+    panelMargin,
+    expandTop,
+    theme.cornerRadius
+  );
+  const panelSelected = flatBox(
+    theme.styleFill.pressed,
+    theme.styleFill.hover,
+    borderWidth,
+    panelMargin,
+    expandTop,
+    theme.cornerRadius
+  );
   // `make_empty_stylebox(4, 4, 4, 4)`: draws nothing, margin `default_margin`.
   const titlebarMargin = {
     left: theme.contentMargin,
@@ -163,7 +182,10 @@ export const graphFrameLayout: ContainerLayoutFn = (n, children, contentRect, ct
   const offset = { x: panel.contentMargin.left, y: panel.contentMargin.top + titlebarBand.rect.h };
   const size = {
     w: Math.max(0, contentRect.w - panel.contentMargin.left - panel.contentMargin.right),
-    h: Math.max(0, contentRect.h - panel.contentMargin.top - panel.contentMargin.bottom - titlebarBand.rect.h),
+    h: Math.max(
+      0,
+      contentRect.h - panel.contentMargin.top - panel.contentMargin.bottom - titlebarBand.rect.h
+    ),
   };
   const rawRect: Rect2 = { x: offset.x, y: offset.y, w: size.w, h: size.h };
 

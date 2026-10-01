@@ -15,32 +15,47 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'baked_meshes',
       // Physics and navigation built from the cells, plus the octree
       // partitioning size. None of them decide what is drawn where.
-      'bake_navigation', 'cell_octant_size', 'collision_layer',
-      'collision_mask', 'collision_priority', 'physics_material',
+      'bake_navigation',
+      'cell_octant_size',
+      'collision_layer',
+      'collision_mask',
+      'collision_priority',
+      'physics_material',
     ],
     renderGap: [
       // Multiplies the cell size into the render transform
       // (grid_map.cpp:687, :1333), so a non-unit scale moves every tile.
       'cell_scale',
     ],
-    reason: 'data is a packed cell dictionary decoded by a bespoke helper (extractCells) - now symmetric on both sides; baked_meshes is a rendering-optimisation cache, and the physics/navigation/octant keys never reach a frame. cell_scale does and is unread.',
+    reason:
+      'data is a packed cell dictionary decoded by a bespoke helper (extractCells) - now symmetric on both sides; baked_meshes is a rendering-optimisation cache, and the physics/navigation/octant keys never reach a frame. cell_scale does and is unread.',
   },
 
   Label3D: {
     renderGap: [
       // Text shaping: the font, the locale and BiDi settings the TextServer
       // shapes glyphs by, and the case transform.
-      'font', 'language', 'text_direction', 'structured_text_bidi_override',
-      'structured_text_bidi_override_options', 'uppercase',
+      'font',
+      'language',
+      'text_direction',
+      'structured_text_bidi_override',
+      'structured_text_bidi_override_options',
+      'uppercase',
       // Wrapping: this splits on a literal newline only, so the wrap mode, its
       // trim flags, the justification flags and the wrap width are all unread.
-      'autowrap_mode', 'autowrap_trim_flags', 'justification_flags', 'width',
+      'autowrap_mode',
+      'autowrap_trim_flags',
+      'justification_flags',
+      'width',
       // Placement relative to the node origin.
-      'offset', 'vertical_alignment',
+      'offset',
+      'vertical_alignment',
       // Material behaviour: lighting response, the alpha-hash scale and the
       // alpha antialiasing pair.
       'shaded',
-      'alpha_hash_scale', 'alpha_antialiasing_mode', 'alpha_antialiasing_edge',
+      'alpha_hash_scale',
+      'alpha_antialiasing_mode',
+      'alpha_antialiasing_edge',
     ],
     reason:
       'double_sided is the one own property both parsed and validated; everything else Label3D declares is a real render input the previewer does not read, so the whole set is a render gap rather than deliberate scope.',
@@ -63,7 +78,8 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // editor plugin reads this property for it, and Path3D.tsx hardcodes white.
       'debug_custom_color',
     ],
-    reason: 'debug_custom_color tints the curve gizmo the editor draws and this previewer reproduces; the component hardcodes its colour instead.',
+    reason:
+      'debug_custom_color tints the curve gizmo the editor draws and this previewer reproduces; the component hardcodes its colour instead.',
   },
 
   Camera3D: {
@@ -71,9 +87,12 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // Per-camera overrides of the world environment, the exposure and DOF
       // attributes, and the Compositor stack. All three change the image, and no
       // Environment or Compositor resource slice exists to hang them on.
-      'environment', 'attributes', 'compositor',
+      'environment',
+      'attributes',
+      'compositor',
     ],
-    reason: 'A camera can override the environment, carry its own exposure and depth-of-field attributes, and run a compositor stack; the previewer implements none of the three.',
+    reason:
+      'A camera can override the environment, carry its own exposure and depth-of-field attributes, and run a compositor stack; the previewer implements none of the three.',
   },
 
   WorldEnvironment: {
@@ -82,7 +101,8 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // bound from the identical PropertyInfo.
       'compositor',
     ],
-    reason: 'compositor is the scene-wide post-process stack, declared identically to Camera3D.compositor and unimplemented in the same way.',
+    reason:
+      'compositor is the scene-wide post-process stack, declared identically to Camera3D.compositor and unimplemented in the same way.',
   },
 
   CollisionShape3D: {
@@ -101,14 +121,28 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // Pathfinding and avoidance state handed to NavigationServer3D, run
       // against a live navigation map the previewer does not simulate, and the
       // `debug_*` set behind DEBUG_ENABLED and the navigation-debug flag (ADR-0018).
-      'avoidance_priority', 'debug_enabled', 'debug_path_custom_color',
-      'debug_path_custom_point_size', 'debug_use_custom', 'keep_y_velocity',
-      'neighbor_distance', 'path_height_offset', 'path_max_distance',
-      'path_metadata_flags', 'path_postprocessing', 'path_return_max_length',
-      'path_return_max_radius', 'path_search_max_distance',
-      'path_search_max_polygons', 'pathfinding_algorithm', 'simplify_epsilon',
-      'simplify_path', 'time_horizon_agents', 'time_horizon_obstacles',
-      'use_3d_avoidance', 'velocity',
+      'avoidance_priority',
+      'debug_enabled',
+      'debug_path_custom_color',
+      'debug_path_custom_point_size',
+      'debug_use_custom',
+      'keep_y_velocity',
+      'neighbor_distance',
+      'path_height_offset',
+      'path_max_distance',
+      'path_metadata_flags',
+      'path_postprocessing',
+      'path_return_max_length',
+      'path_return_max_radius',
+      'path_search_max_distance',
+      'path_search_max_polygons',
+      'pathfinding_algorithm',
+      'simplify_epsilon',
+      'simplify_path',
+      'time_horizon_agents',
+      'time_horizon_obstacles',
+      'use_3d_avoidance',
+      'velocity',
     ],
     reason:
       "NavigationAgent3D's pathfinding and avoidance parameters are simulation inputs to NavigationServer3D, and its debug_* set draws only under DEBUG_ENABLED; neither changes a still frame, so parser.ts reads none of them.",
@@ -119,7 +153,8 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // `velocity` feeds avoidance state, and `vertices` shapes the avoidance
       // region and carves the navigation mesh. The static obstacle's debug draw
       // (navigation_obstacle_3d.cpp:632) needs DEBUG_ENABLED and the avoidance flag.
-      'velocity', 'vertices',
+      'velocity',
+      'vertices',
     ],
     reason:
       "NavigationObstacle3D's velocity and vertices are avoidance-simulation and nav-mesh-carving inputs, drawn only under the debug flags, so parser.ts reads neither.",
@@ -129,7 +164,10 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   CSGShape3D: {
     linterOnly: [
       // Physics only: no frozen frame changes with them.
-      'use_collision', 'collision_layer', 'collision_mask', 'collision_priority',
+      'use_collision',
+      'collision_layer',
+      'collision_mask',
+      'collision_priority',
     ],
     renderGap: [
       // csg_shape.cpp:692-694 skips MikkTSpace when false, so a normal-mapped
@@ -137,7 +175,8 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // tangents.
       'calculate_tangents',
     ],
-    reason: 'The CSG base has no parser; the collision keys drive physics only, and calculate_tangents = false changes normal-mapped shading the previewer does not reproduce.',
+    reason:
+      'The CSG base has no parser; the collision keys drive physics only, and calculate_tangents = false changes normal-mapped shading the previewer does not reproduce.',
   },
 
   // A transform-only slice with no parser.ts, so every key is linter-only here
@@ -145,19 +184,29 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   // renders. The rest tune baking, culling and draw order.
   GeometryInstance3D: {
     linterOnly: [
-      'cast_shadow', 'gi_mode', 'gi_lightmap_texel_scale', 'lod_bias',
-      'custom_aabb', 'extra_cull_margin', 'ignore_occlusion_culling',
-      'material_override', 'material_overlay', 'transparency',
-      'sorting_offset', 'sorting_use_aabb_center',
-      'visibility_range_begin', 'visibility_range_begin_margin',
-      'visibility_range_end', 'visibility_range_end_margin',
+      'cast_shadow',
+      'gi_mode',
+      'gi_lightmap_texel_scale',
+      'lod_bias',
+      'custom_aabb',
+      'extra_cull_margin',
+      'ignore_occlusion_culling',
+      'material_override',
+      'material_overlay',
+      'transparency',
+      'sorting_offset',
+      'sorting_use_aabb_center',
+      'visibility_range_begin',
+      'visibility_range_begin_margin',
+      'visibility_range_end',
+      'visibility_range_end_margin',
       'visibility_range_fade_mode',
       // visual_instance_3d.cpp:301-364: CanvasItem's InstanceUniforms class on
       // the 3D RenderingServer. No ShaderMaterial slice exists to reflect a
       // uniform override onto.
       'instance_shader_parameters/*',
     ],
-    reason: 'The geometry base has no parser of its own, so every key it registers is linter-only there; each leaf parser reads the subset it renders, the bake/cull/draw-order settings are a static preview cannot honour, and instance_shader_parameters has no ShaderMaterial rendering surface to land on at all.',
+    reason:
+      'The geometry base has no parser of its own, so every key it registers is linter-only there; each leaf parser reads the subset it renders, the bake/cull/draw-order settings are a static preview cannot honour, and instance_shader_parameters has no ShaderMaterial rendering surface to land on at all.',
   },
-
 };

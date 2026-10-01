@@ -37,7 +37,6 @@ const AUTO_CAPTURE_TRANSITION_TYPE = {
 };
 const AUTO_CAPTURE_EASE_TYPE = { 0: 'IN', 1: 'OUT', 2: 'IN_OUT', 3: 'OUT_IN' };
 
-
 /**
  * `blend_times`: a flat Array of (from: StringName, to: StringName, time: float) triples
  * (animation_player.cpp:79-92 builds it, :43-53 reads it). A length not a multiple of 3 drops the

@@ -91,7 +91,10 @@ describe('foldableContainerMinimumSize', () => {
 
   it('unfolded with a title adds the h_separation + text width/height (OVERRUN_NO_TRIMMING default)', () => {
     const title = titleShape(node({ folded: false, title: 'A' }));
-    expect(title.size).toEqual({ x: MARGIN + ARROW + H_SEP + A_WIDTH, y: MARGIN + Math.max(FONT_HEIGHT, ARROW) });
+    expect(title.size).toEqual({
+      x: MARGIN + ARROW + H_SEP + A_WIDTH,
+      y: MARGIN + Math.max(FONT_HEIGHT, ARROW),
+    });
   });
 
   it('a non-zero title_text_overrun_behavior drops the text WIDTH but keeps its height', () => {
@@ -136,12 +139,7 @@ describe('foldableContainerLayout', () => {
   it('fits the content BELOW the title bar at title_position TOP (default)', () => {
     const container = node({ folded: false, title: 'A' });
     const child = node({}, [], 'Child');
-    const rects = layoutRects(
-      container,
-      [{ node: child, minSize: { x: 10, y: 10 } }],
-      RECT,
-      ctx()
-    );
+    const rects = layoutRects(container, [{ node: child, minSize: { x: 10, y: 10 } }], RECT, ctx());
     const titleHeight = MARGIN + Math.max(FONT_HEIGHT, ARROW); // 31
     const rect = rects.get('Child')!;
     expect(rect.y).toBe(4 + titleHeight);
@@ -152,12 +150,7 @@ describe('foldableContainerLayout', () => {
   it('fits the content ABOVE the title bar at title_position BOTTOM', () => {
     const container = node({ folded: false, title: 'A', titlePosition: 1 });
     const child = node({}, [], 'Child');
-    const rects = layoutRects(
-      container,
-      [{ node: child, minSize: { x: 10, y: 10 } }],
-      RECT,
-      ctx()
-    );
+    const rects = layoutRects(container, [{ node: child, minSize: { x: 10, y: 10 } }], RECT, ctx());
     const rect = rects.get('Child')!;
     expect(rect.y).toBe(4);
   });

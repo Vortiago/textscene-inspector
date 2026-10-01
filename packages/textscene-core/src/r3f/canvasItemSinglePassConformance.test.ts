@@ -99,7 +99,9 @@ describe('Canvas-item single-pass conformance', () => {
     expect(unroutedDoubleSideLines('  ...canvasItemFacing(side),')).toEqual([]);
     expect(unroutedDoubleSideLines(' * `THREE.DoubleSide` in a comment is not a use')).toEqual([]);
     expect(unroutedDoubleSideLines('/** `THREE.DoubleSide` in a one-line doc comment */')).toEqual([]);
-    expect(unroutedDoubleSideLines('// facing-split-intended: a real shell\nside={THREE.DoubleSide}')).toEqual([]);
+    expect(
+      unroutedDoubleSideLines('// facing-split-intended: a real shell\nside={THREE.DoubleSide}')
+    ).toEqual([]);
   });
 
   it('reads the whole 2D render tree, so a new painter cannot escape unnoticed', () => {
@@ -109,7 +111,9 @@ describe('Canvas-item single-pass conformance', () => {
   it('cannot reach a 3D material', () => {
     const scanned = scannedSources().map(({ file }) => repoPath(file));
     expect(
-      scanned.filter((file) => /\/nodes\/(3d|base\/node3d)\/|\/r3f\/(materials|csg|environment|sky)\//.test(file))
+      scanned.filter((file) =>
+        /\/nodes\/(3d|base\/node3d)\/|\/r3f\/(materials|csg|environment|sky)\//.test(file)
+      )
     ).toEqual([]);
   });
 });

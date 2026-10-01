@@ -19,9 +19,7 @@ afterEach(() => {
   warnSpy.mockRestore();
 });
 
-const externals: TscnExternalResource[] = [
-  { id: '2', type: 'Texture2D', path: 'res://tiles.png' },
-];
+const externals: TscnExternalResource[] = [{ id: '2', type: 'Texture2D', path: 'res://tiles.png' }];
 
 const internals: TscnInternalResource[] = [
   {
@@ -151,9 +149,7 @@ describe('tileSetFromScene', () => {
     expect(model!.sources.size).toBe(0);
     expect(model!.sourceOrder).toEqual([]);
     // With the engine's grammar the key reaches the reader, so the drop is reported.
-    const idWarns = warnSpy.mock.calls.filter((c: unknown[]) =>
-      String(c[0]).includes('negative source id')
-    );
+    const idWarns = warnSpy.mock.calls.filter((c: unknown[]) => String(c[0]).includes('negative source id'));
     expect(idWarns).toHaveLength(1);
   });
 
@@ -444,6 +440,9 @@ describe('a Godot-3 texture_offset', () => {
       '[gd_scene format=3]\n\n[sub_resource type="TileSetAtlasSource" id="a"]\n0:0/0 = 0\n0:0/0/texture_offset = Vector2i(3, 4)\n\n[sub_resource type="TileSet" id="ts"]\nsources/0 = SubResource("a")\n\n[node name="R" type="Node"]\n'
     );
     const model = tileSetFromScene('SubResource("ts")', scene.internalResources, []);
-    expect(model!.sources.get(0)!.tiles.get('0:0')!.alternatives.get(0)!.textureOrigin).toEqual({ x: 3, y: 4 });
+    expect(model!.sources.get(0)!.tiles.get('0:0')!.alternatives.get(0)!.textureOrigin).toEqual({
+      x: 3,
+      y: 4,
+    });
   });
 });

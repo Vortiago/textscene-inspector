@@ -49,7 +49,12 @@ const A_PLUGIN_MAY_ADD =
   'adds support, the import fails, and Godot fails to load the file.';
 
 /** One refusal on its `[ext_resource]` heading, under `arm`, its message closed by `outcome`. */
-function report(arm: RuleArm, { resource, unsupported }: Refusal, lines: SourceLines, outcome: string): Diagnostic {
+function report(
+  arm: RuleArm,
+  { resource, unsupported }: Refusal,
+  lines: SourceLines,
+  outcome: string
+): Diagnostic {
   const refused = `ExtResource("${resource.id}") loads ${resource.path}, whose ${gltfRefusalMessage(unsupported)}.`;
   const location = headingLocation(lines, resource);
   return armDiagnostic(arm, { name: resource.id, type: resource.type }, refused + outcome, location);
@@ -74,7 +79,10 @@ export async function unimportableGltfDiagnostics(
 ): Promise<Diagnostic[]> {
   const mayBeExtended = reads.plugins.probe(provider);
   const found = await Promise.all(
-    resources.map(async (resource) => ({ resource, unsupported: await reads.verdicts.refused(provider, resource) }))
+    resources.map(async (resource) => ({
+      resource,
+      unsupported: await reads.verdicts.refused(provider, resource),
+    }))
   );
   const refusals = found.filter(({ unsupported }) => unsupported.length > 0);
   if (refusals.length === 0) return [];

@@ -52,9 +52,7 @@ describe('isBinaryResourceType', () => {
   it('answers true for every extension the hardcoded list carried', () => {
     for (const extension of BINARY_EXTENSIONS) {
       expect(isBinaryResourceType('Unknown', `res://assets/file${extension}`)).toBe(true);
-      expect(isBinaryResourceType('Unknown', `res://assets/FILE${extension.toUpperCase()}`)).toBe(
-        true
-      );
+      expect(isBinaryResourceType('Unknown', `res://assets/FILE${extension.toUpperCase()}`)).toBe(true);
     }
   });
 
@@ -125,7 +123,11 @@ describe('resourceContent', () => {
   });
 
   it('hands a binary resource back as an ArrayBuffer holding exactly its bytes', () => {
-    const content = resourceContent(new Uint8Array([0x67, 0x6c, 0x54, 0x46]), 'PackedScene', 'res://tree.glb');
+    const content = resourceContent(
+      new Uint8Array([0x67, 0x6c, 0x54, 0x46]),
+      'PackedScene',
+      'res://tree.glb'
+    );
 
     expect(content).toBeInstanceOf(ArrayBuffer);
     expect([...new Uint8Array(content as ArrayBuffer)]).toEqual([0x67, 0x6c, 0x54, 0x46]);

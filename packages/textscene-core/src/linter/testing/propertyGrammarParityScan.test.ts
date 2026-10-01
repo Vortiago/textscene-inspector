@@ -114,15 +114,10 @@ describe('scrapeParserReads', () => {
         'export const parseHelperBase = (properties) => ({',
         '  helper: properties.helper_key, ...parseDeeper(properties) });',
       ].join('\n'),
-      'shared/deeper.ts': "export const parseDeeper = (properties) => ({ deep: properties.deep_key });",
-      'node/parser.ts': "export const parseNode = (heading, properties) => ({ base: properties.base_key });",
+      'shared/deeper.ts': 'export const parseDeeper = (properties) => ({ deep: properties.deep_key });',
+      'node/parser.ts': 'export const parseNode = (heading, properties) => ({ base: properties.base_key });',
     });
-    expect([...scrapeParserReads(parser)].sort()).toEqual([
-      'base_key',
-      'deep_key',
-      'helper_key',
-      'own_key',
-    ]);
+    expect([...scrapeParserReads(parser)].sort()).toEqual(['base_key', 'deep_key', 'helper_key', 'own_key']);
   });
 
   it('ignores an imported name that is never called with the bag, and a bare specifier', () => {
@@ -140,15 +135,18 @@ describe('scrapeParserReads', () => {
 
   it('terminates on an import cycle', () => {
     const parser = seed({
-      'slice/parser.ts': "import { parseB } from './b'; export const parseA = (properties) => parseB(properties) ?? properties.a;",
-      'slice/b.ts': "import { parseA } from './parser'; export const parseB = (properties) => parseA(properties) ?? properties.b;",
+      'slice/parser.ts':
+        "import { parseB } from './b'; export const parseA = (properties) => parseB(properties) ?? properties.a;",
+      'slice/b.ts':
+        "import { parseA } from './parser'; export const parseB = (properties) => parseA(properties) ?? properties.b;",
     });
     expect([...scrapeParserReads(parser)].sort()).toEqual(['a', 'b']);
   });
 
   it('throws on a followed import that resolves to no file', () => {
     const parser = seed({
-      'slice/parser.ts': "import { parseGone } from './gone'; export const p = (properties) => parseGone(properties);",
+      'slice/parser.ts':
+        "import { parseGone } from './gone'; export const p = (properties) => parseGone(properties);",
     });
     expect(() => scrapeParserReads(parser)).toThrow(/gone/);
   });

@@ -47,7 +47,9 @@ function coneTriangles(segments = 8): Array<[THREE.Vector3, THREE.Vector3, THREE
     const a = (i / segments) * Math.PI * 2;
     return v(0.4 * Math.cos(a), -0.5, 0.4 * Math.sin(a));
   });
-  return ring.map((p, i) => [apex, p, ring[(i + 1) % segments]!] as [THREE.Vector3, THREE.Vector3, THREE.Vector3]);
+  return ring.map(
+    (p, i) => [apex, p, ring[(i + 1) % segments]!] as [THREE.Vector3, THREE.Vector3, THREE.Vector3]
+  );
 }
 
 describe('applyCsgNormals', () => {
@@ -66,7 +68,11 @@ describe('applyCsgNormals', () => {
     it('gives all three vertices of a triangle that triangle own plane normal', () => {
       const geometry = applyCsgNormals(soupOf(coneTriangles(), { smooth: false }));
       for (let t = 0; t < 8; t++) {
-        const [a, b, c] = [normalAt(geometry, t * 3), normalAt(geometry, t * 3 + 1), normalAt(geometry, t * 3 + 2)];
+        const [a, b, c] = [
+          normalAt(geometry, t * 3),
+          normalAt(geometry, t * 3 + 1),
+          normalAt(geometry, t * 3 + 2),
+        ];
         expect(a.distanceTo(b)).toBeLessThan(1e-6);
         expect(b.distanceTo(c)).toBeLessThan(1e-6);
       }

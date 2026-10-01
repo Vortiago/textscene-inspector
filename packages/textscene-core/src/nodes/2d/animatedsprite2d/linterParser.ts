@@ -6,7 +6,6 @@ import '../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
-
 validatorRegistry.registerAll('AnimatedSprite2D', {
   // `frames`, the pre-4.0 spelling, reaches the same slot: `_set` hands it to
   // `set_sprite_frames` (animated_sprite_2d.cpp:616-618, `#ifndef DISABLE_DEPRECATED`).

@@ -95,10 +95,7 @@ describe('CanvasModulate slice — behavioral contract (RED until shipped)', () 
 
   it('parses the CanvasModulate color into a typed {r,g,b,a}', () => {
     // The base-Node fallback keeps `color` as a raw string → RED now.
-    const p = parseCMNode(tintScene('color = Color(0.4, 0.6, 0.9, 1)')).properties as Record<
-      string,
-      unknown
-    >;
+    const p = parseCMNode(tintScene('color = Color(0.4, 0.6, 0.9, 1)')).properties as Record<string, unknown>;
     const c = p.color as { r: number; g: number; b: number; a: number };
     expect(c?.r).toBeCloseTo(0.4, 5);
     expect(c?.g).toBeCloseTo(0.6, 5);
@@ -135,9 +132,7 @@ describe('CanvasModulate slice — behavioral contract (RED until shipped)', () 
   it('tints a SIBLING CanvasItem — a childless CanvasModulate still governs the canvas', async () => {
     if (!requireComp()) return;
     // A subtree-scoped modulate tints nothing here, leaving the white polygon at 1,1,1 → RED.
-    const mat = firstMeshMaterial(
-      await renderScene(siblingTintScene('color = Color(0.4, 0.6, 0.9, 1)'))
-    );
+    const mat = firstMeshMaterial(await renderScene(siblingTintScene('color = Color(0.4, 0.6, 0.9, 1)')));
     expect(mat, 'a sibling Polygon2D mesh should render beside CanvasModulate').toBeDefined();
     const lin = godotColorToLinear({ r: 0.4, g: 0.6, b: 0.9 });
     expect(mat!.color.r).toBeCloseTo(lin.r, 3);
@@ -155,7 +150,7 @@ describe('CanvasModulate slice — behavioral contract (RED until shipped)', () 
     expect(mat!.color.r).not.toBeCloseTo(squared.r, 3);
   });
 
-  it('an Unshaded item skips the canvas tint, as Godot\'s base pass does', async () => {
+  it("an Unshaded item skips the canvas tint, as Godot's base pass does", async () => {
     if (!requireComp()) return;
     // canvas.glsl guards the multiply: `#elif !defined(MODE_UNSHADED)
     // color *= canvas_modulation;`, so light_mode = 1 keeps its authored
@@ -229,6 +224,9 @@ color = Color(0.4, 0.6, 0.9, 1)
   it('ships co-located parser + Component render tests for the slice', () => {
     const slice = resolve(repoRoot(), 'packages/textscene-core/src/nodes/2d/canvasmodulate');
     expect(existsSync(resolve(slice, 'parser.test.ts')), 'canvasmodulate/parser.test.ts missing').toBe(true);
-    expect(existsSync(resolve(slice, 'Component.test.tsx')), 'canvasmodulate/Component.test.tsx missing').toBe(true);
+    expect(
+      existsSync(resolve(slice, 'Component.test.tsx')),
+      'canvasmodulate/Component.test.tsx missing'
+    ).toBe(true);
   });
 });

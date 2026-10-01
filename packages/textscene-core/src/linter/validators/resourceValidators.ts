@@ -28,7 +28,12 @@ export function createResourceReferenceValidator(
     // `can_convert_strict` allows NIL -> OBJECT (variant.cpp:543), and a `Ref<T>`
     // setter takes an invalid Ref. Whether the slot should be filled is a rule's question.
     if (!isNilLiteral(value) && resourceRef(value) === null && !isPathResourceLiteral(value)) {
-      return propertyError(key, line, `Property '${propertyName}' must be a resource reference like SubResource("id"), ExtResource("id") or Resource("path"), or null, got: "${value}"`, errorCode);
+      return propertyError(
+        key,
+        line,
+        `Property '${propertyName}' must be a resource reference like SubResource("id"), ExtResource("id") or Resource("path"), or null, got: "${value}"`,
+        errorCode
+      );
     }
     return null;
   };
@@ -48,7 +53,12 @@ export function createNodePathValidator(
 ): (key: string, value: string, line: number) => ParseError | null {
   return (key, value, line) => {
     if (nodePathLiteral(value) === null) {
-      return propertyError(key, line, `Property '${propertyName}' must be a NodePath like NodePath("path/to/node") or a quoted string, got: "${value}"`, errorCode);
+      return propertyError(
+        key,
+        line,
+        `Property '${propertyName}' must be a NodePath like NodePath("path/to/node") or a quoted string, got: "${value}"`,
+        errorCode
+      );
     }
     return null;
   };

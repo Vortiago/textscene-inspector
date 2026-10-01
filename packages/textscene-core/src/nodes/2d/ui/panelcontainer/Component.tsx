@@ -10,5 +10,7 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 // walker draws the children as siblings, applies the pivot transform and
 // owns `visible === false`.
 export function PanelContainer({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
-  return <PanelChrome solveNode={solveNode} tint={tint} rect={rect} theme={theme} renderOrder={renderOrder} />;
+  return (
+    <PanelChrome solveNode={solveNode} tint={tint} rect={rect} theme={theme} renderOrder={renderOrder} />
+  );
 }

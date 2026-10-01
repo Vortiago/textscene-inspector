@@ -116,7 +116,9 @@ export class WebResourceProvider implements ResourceProvider {
             throw new Error(`Resource not found: ${path}`);
           }
 
-          const content = isBinaryResourceType(type, path) ? await response.arrayBuffer() : await response.text();
+          const content = isBinaryResourceType(type, path)
+            ? await response.arrayBuffer()
+            : await response.text();
           this.deliveredMirrorFiles.add(mirrorKey);
           info(`[WebResourceProvider] Successfully loaded ${type}: ${path}`);
           return content;

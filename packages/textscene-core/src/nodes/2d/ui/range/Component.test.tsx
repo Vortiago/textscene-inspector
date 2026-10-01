@@ -20,7 +20,12 @@ function rangeSolveNode(properties: Record<string, unknown> = {}): SolveNode {
 describe('<Range>', () => {
   it('renders no scene objects — Range draws nothing of its own', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <Range {...painterEnv()} solveNode={rangeSolveNode()} rect={{ x: 0, y: 0, w: 100, h: 40 }} renderOrder={0} />
+      <Range
+        {...painterEnv()}
+        solveNode={rangeSolveNode()}
+        rect={{ x: 0, y: 0, w: 100, h: 40 }}
+        renderOrder={0}
+      />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });

@@ -17,7 +17,11 @@ const HFRAMES = 4;
 
 function spriteAt(frame: number) {
   const heading = { type: 'node', attributes: { type: 'Sprite3D', name: 'S' } };
-  const properties = parseSprite3D(heading, { texture: SHEET_REF, hframes: String(HFRAMES), frame: String(frame) });
+  const properties = parseSprite3D(heading, {
+    texture: SHEET_REF,
+    hframes: String(HFRAMES),
+    frame: String(frame),
+  });
   return <Sprite3D node={{ name: 'S', type: 'Sprite3D', children: [], properties }} />;
 }
 
@@ -45,7 +49,7 @@ describe('Sprite3D over a sheet that uploads in bands', () => {
     expect(sprite.gpu.rowsCopied()).toBe(SHEET_HEIGHT);
   });
 
-  it('shows the new frame\'s window over the uploaded sheet, with no copy', async () => {
+  it("shows the new frame's window over the uploaded sheet, with no copy", async () => {
     const sprite = await mountSheetSprite(spriteAt);
     for (let band = 0; band < SHEET_BANDS; band += 1) await sprite.tick();
     await sprite.showFrame(2);

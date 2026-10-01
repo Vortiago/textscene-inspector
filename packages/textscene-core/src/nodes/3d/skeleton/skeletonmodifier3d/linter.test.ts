@@ -122,6 +122,8 @@ describe('SkeletonModifier3D parent rule', () => {
   });
 
   it('leaves the committed retarget-modifier fixture clean (already under Skeleton3D)', () => {
-    expect(reportsOf(linter.lint(readFixture('unit-retarget-modifier-3d.tscn')), RULE, 'warning')).toEqual([]);
+    expect(reportsOf(linter.lint(readFixture('unit-retarget-modifier-3d.tscn')), RULE, 'warning')).toEqual(
+      []
+    );
   });
 });

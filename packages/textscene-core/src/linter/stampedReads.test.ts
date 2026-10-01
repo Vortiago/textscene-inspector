@@ -113,7 +113,10 @@ describe('StampedReads.get', () => {
     const cache = new StampedReads<string | ArrayBuffer | null>();
     const read = () => provider.loadResource('res://a');
 
-    const answers = await Promise.all([cache.get(provider, 'res://a', read), cache.get(provider, 'res://a', read)]);
+    const answers = await Promise.all([
+      cache.get(provider, 'res://a', read),
+      cache.get(provider, 'res://a', read),
+    ]);
 
     expect(answers).toEqual(['text', 'text']);
     expect(loads).toBe(1);
@@ -193,7 +196,9 @@ describe('stampOf', () => {
 describe('loadOrNull', () => {
   it('is the content, or null for a rejected read', async () => {
     expect(await loadOrNull({ loadResource: async () => 'text' }, 'res://a')).toBe('text');
-    expect(await loadOrNull({ loadResource: () => Promise.reject(new Error('missing')) }, 'res://a')).toBeNull();
+    expect(
+      await loadOrNull({ loadResource: () => Promise.reject(new Error('missing')) }, 'res://a')
+    ).toBeNull();
   });
 
   it('lets a synchronous throw, a provider bug, through', () => {

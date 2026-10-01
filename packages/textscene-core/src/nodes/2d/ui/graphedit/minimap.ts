@@ -232,7 +232,12 @@ export function graphEditElements(
 ): GraphEditElementView {
   const boxes: { key: string; box: GraphElementBox; type: string; visible: boolean; node: SolveNode }[] = [];
   for (const child of sortableView(graphEdit).children) {
-    if (child.node.type !== 'GraphNode' && child.node.type !== 'GraphFrame' && child.node.type !== 'GraphElement') continue;
+    if (
+      child.node.type !== 'GraphNode' &&
+      child.node.type !== 'GraphFrame' &&
+      child.node.type !== 'GraphElement'
+    )
+      continue;
     const childRect = childRects.get(child.path);
     if (!childRect) continue;
     boxes.push({
@@ -264,5 +269,12 @@ export function graphEditElements(
     }
   }
 
-  return { bounds: graphScrollBounds(boxes.map((e) => e.box), zoom, graphEditSize), minimapElements };
+  return {
+    bounds: graphScrollBounds(
+      boxes.map((e) => e.box),
+      zoom,
+      graphEditSize
+    ),
+    minimapElements,
+  };
 }

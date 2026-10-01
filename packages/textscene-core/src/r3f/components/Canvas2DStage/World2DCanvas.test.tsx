@@ -72,7 +72,13 @@ describe('World2DContents tiled uploads', () => {
     const tick = vi.spyOn(TiledUploadQueue.prototype, 'tick');
     const rendered = await ReactThreeTestRenderer.create(
       <SelectionProvider>
-        <World2DContents nodes={[]} internalResources={[]} externalResources={[]} pan={{ x: 0, y: 0 }} zoom={1} />
+        <World2DContents
+          nodes={[]}
+          internalResources={[]}
+          externalResources={[]}
+          pan={{ x: 0, y: 0 }}
+          zoom={1}
+        />
       </SelectionProvider>
     );
     tick.mockClear();

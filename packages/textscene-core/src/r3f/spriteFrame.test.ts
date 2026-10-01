@@ -171,7 +171,7 @@ describe('frameUvWindow — region_rect larger than its texture', () => {
   });
 });
 
-describe('spriteWrapMode — Godot\'s own texture_repeat derivation', () => {
+describe("spriteWrapMode — Godot's own texture_repeat derivation", () => {
   /**
    * `sprite_3d.cpp:163` decides repeat from the frame's UV corners alone, on strict
    * `< 0.0` / `> 1.0` tests, so a window touching the edge clamps. Flips swap the

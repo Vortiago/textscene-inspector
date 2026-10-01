@@ -22,7 +22,11 @@ describe('CSGMesh3D strict validators', () => {
 
   it('passes a mesh with a material and an operation', () => {
     const content = scene(
-      ['mesh = SubResource("BoxMesh_1")', 'material = SubResource("StandardMaterial3D_1")', 'operation = 2'].join('\n')
+      [
+        'mesh = SubResource("BoxMesh_1")',
+        'material = SubResource("StandardMaterial3D_1")',
+        'operation = 2',
+      ].join('\n')
     );
     expect(errorsOf(linter.lint(content), STRICT_PARSER_RULE_NAME)).toEqual([]);
   });

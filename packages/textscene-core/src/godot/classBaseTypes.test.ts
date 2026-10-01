@@ -10,9 +10,7 @@ import { RESOURCE_BASE_TYPES_GENERATED } from './resourceBaseTypes.generated.js'
 
 describe('CLASS_BASE_TYPES', () => {
   it('merges two disjoint hierarchies, so nothing is overwritten', () => {
-    const shared = Object.keys(NODE_BASE_TYPES).filter(
-      (name) => name in RESOURCE_BASE_TYPES_GENERATED
-    );
+    const shared = Object.keys(NODE_BASE_TYPES).filter((name) => name in RESOURCE_BASE_TYPES_GENERATED);
     expect(shared).toEqual([]);
     expect(Object.keys(CLASS_BASE_TYPES)).toHaveLength(
       Object.keys(NODE_BASE_TYPES).length + Object.keys(RESOURCE_BASE_TYPES_GENERATED).length

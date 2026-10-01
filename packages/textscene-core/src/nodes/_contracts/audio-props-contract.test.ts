@@ -112,7 +112,7 @@ describe('#147 AudioStreamPlayer / AudioStreamPlayer2D audio properties — beha
   it('flags an invalid bus on the plain AudioStreamPlayer, accepts a valid one', () => {
     expect(
       errorsMatching(BAD_BUS, /bus/i).length,
-      'plain AudioStreamPlayer must reject an unquoted bus (missing bus validator)',
+      'plain AudioStreamPlayer must reject an unquoted bus (missing bus validator)'
     ).toBeGreaterThan(0);
     expect(errorsMatching(GOOD_BUS, /bus/i), 'a valid quoted bus must not be flagged').toHaveLength(0);
   });
@@ -121,7 +121,7 @@ describe('#147 AudioStreamPlayer / AudioStreamPlayer2D audio properties — beha
   it('flags an invalid playing on the plain AudioStreamPlayer', () => {
     expect(
       errorsMatching(BAD_PLAYING, /playing/i).length,
-      'plain AudioStreamPlayer must reject a non-boolean playing (missing playing validator)',
+      'plain AudioStreamPlayer must reject a non-boolean playing (missing playing validator)'
     ).toBeGreaterThan(0);
   });
 
@@ -136,7 +136,7 @@ describe('#147 AudioStreamPlayer / AudioStreamPlayer2D audio properties — beha
     expect(sections.length, 'the formatter should emit at least one inspector section').toBeGreaterThan(0);
     expect(
       /volume|bus|autoplay|stream/.test(JSON.stringify(sections).toLowerCase()),
-      'the formatter should surface the audio properties',
+      'the formatter should surface the audio properties'
     ).toBe(true);
 
     // The 2D formatter's OUTPUT (not just its presence) must surface the audio
@@ -144,18 +144,20 @@ describe('#147 AudioStreamPlayer / AudioStreamPlayer2D audio properties — beha
     const props2 = firstOfType(TWO_D_WITNESS, 'AudioStreamPlayer2D').properties;
     const sections2 = reg2!.propertyFormatter!(props2);
     const json2 = JSON.stringify(sections2).toLowerCase();
-    expect(sections2.length, 'the 2D formatter should emit at least one inspector section').toBeGreaterThan(0);
+    expect(sections2.length, 'the 2D formatter should emit at least one inspector section').toBeGreaterThan(
+      0
+    );
     expect(
       /volume|bus|autoplay|stream/.test(json2),
-      'the 2D formatter should surface the audio properties',
+      'the 2D formatter should surface the audio properties'
     ).toBe(true);
     expect(
       json2.includes('unlimited'),
-      'AudioStreamPlayer2D max_distance is a finite pixel distance, never the 3D-only "Unlimited"',
+      'AudioStreamPlayer2D max_distance is a finite pixel distance, never the 3D-only "Unlimited"'
     ).toBe(false);
     expect(
       json2.includes('2000.00'),
-      'the witnessed AudioStreamPlayer2D (max_distance omitted) should render its 2000 default',
+      'the witnessed AudioStreamPlayer2D (max_distance omitted) should render its 2000 default'
     ).toBe(true);
   });
 
@@ -166,17 +168,23 @@ describe('#147 AudioStreamPlayer / AudioStreamPlayer2D audio properties — beha
     const candidates = readdirSync(dir)
       .filter((f) => f.endsWith('.tscn'))
       .filter((f) => /type="AudioStreamPlayer"/.test(readFileSync(resolve(dir, f), 'utf8')));
-    expect(candidates.length, 'a scenes/fixtures/*.tscn must contain a plain AudioStreamPlayer').toBeGreaterThan(0);
+    expect(
+      candidates.length,
+      'a scenes/fixtures/*.tscn must contain a plain AudioStreamPlayer'
+    ).toBeGreaterThan(0);
     const fixture = candidates.find((f) => {
       const p = (firstOfTypeOrNull(readFileSync(resolve(dir, f), 'utf8'), 'AudioStreamPlayer')?.properties ??
         {}) as Record<string, unknown>;
       return typeof p.volume_db === 'number' || typeof p.autoplay === 'boolean';
     });
-    expect(fixture, 'a fixture AudioStreamPlayer must expose typed audio props (volume_db/autoplay)').toBeTruthy();
+    expect(
+      fixture,
+      'a fixture AudioStreamPlayer must expose typed audio props (volume_db/autoplay)'
+    ).toBeTruthy();
     const manifest = readFileSync(resolve(repoRoot(), 'apps/textscene-web/src/fixtures.ts'), 'utf8');
     expect(
       manifest.includes(fixture as string),
-      `fixture ${fixture} must be registered in fixtures.ts — run pnpm generate:fixtures`,
+      `fixture ${fixture} must be registered in fixtures.ts — run pnpm generate:fixtures`
     ).toBe(true);
   });
 
@@ -185,11 +193,11 @@ describe('#147 AudioStreamPlayer / AudioStreamPlayer2D audio properties — beha
     const base = resolve(repoRoot(), 'packages/textscene-core/src/nodes/audio');
     expect(
       existsSync(resolve(base, 'audiostreamplayer/parser.test.ts')),
-      'audiostreamplayer/parser.test.ts missing',
+      'audiostreamplayer/parser.test.ts missing'
     ).toBe(true);
     expect(
       existsSync(resolve(base, 'audiostreamplayer2d/parser.test.ts')),
-      'audiostreamplayer2d/parser.test.ts missing',
+      'audiostreamplayer2d/parser.test.ts missing'
     ).toBe(true);
   });
 });

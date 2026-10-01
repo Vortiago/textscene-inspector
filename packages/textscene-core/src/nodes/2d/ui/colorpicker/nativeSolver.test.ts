@@ -91,7 +91,7 @@ describe('colorPickerScale', () => {
     expect(colorPickerScale(THEME)).toBe(1);
   });
 
-  it('reads the theme\'s own raw scale', () => {
+  it("reads the theme's own raw scale", () => {
     expect(colorPickerScale({ scale: 2 })).toBe(2);
   });
 });
@@ -123,7 +123,12 @@ describe('colorPickerRows', () => {
   });
 
   it('draws no shape row for any picker_shape but SHAPE_HSV_RECTANGLE, keeping the row a (zero-height) stacking slot', () => {
-    const wheel = colorPickerRows(400, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 1, samplerVisible: true }, null);
+    const wheel = colorPickerRows(
+      400,
+      THEME,
+      { ...ALL_ROWS_HIDDEN, pickerShape: 1, samplerVisible: true },
+      null
+    );
     expect(wheel.shape).toBeNull();
     expect(wheel.sample).toEqual({ x: 0, y: 4, w: 400, h: 24 });
   });
@@ -169,29 +174,38 @@ describe('colorPickerRows', () => {
     expect(rows.sliderRowCount).toBe(4);
   });
 
-  it('swatches row 1 floors to menu_btn\'s own 16px icon height even with no text measurer', () => {
+  it("swatches row 1 floors to menu_btn's own 16px icon height even with no text measurer", () => {
     // The `palette_box` row is as tall as max(btn_preset text, menu_btn icon), also
     // with no `measure`. The `btn_recent_preset` row and its separation still follow.
-    const rows = colorPickerRows(400, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 4, presetsVisible: true }, null);
+    const rows = colorPickerRows(
+      400,
+      THEME,
+      { ...ALL_ROWS_HIDDEN, pickerShape: 4, presetsVisible: true },
+      null
+    );
     expect(rows.swatches!.h).toBe(28); // 24 (row1, menu_btn nat: icon(16)+button.normal margin(8)) + 4 (separation) + 0 (row2, text contributes nothing)
   });
 });
 
 describe('colorPickerMinimumSize', () => {
-  it('sums every visible row plus internal_margin\'s own content_margin on every side — color_picker.cpp:161-166', () => {
+  it("sums every visible row plus internal_margin's own content_margin on every side — color_picker.cpp:161-166", () => {
     const ctx: SolveContext = { theme: THEME, measureText, combinedMinimumSize: () => ({ x: 0, y: 0 }) };
     expect(colorPickerMinimumSize(node({}), ctx)).toEqual({ x: 298, y: 568 });
   });
 
   it('drops the shape row contribution once picker_shape selects an undrawn shape', () => {
-    expect(
-      colorPickerMinimumSize(node({ pickerShape: 2, ...ALL_ROWS_HIDDEN }), CTX)
-    ).toEqual({ x: 8, y: 8 });
+    expect(colorPickerMinimumSize(node({ pickerShape: 2, ...ALL_ROWS_HIDDEN }), CTX)).toEqual({ x: 8, y: 8 });
   });
 
   it('each row-visibility flag moves the minimum size', () => {
     const baseY = minHeight(colorPickerMinimumSize(node({}), CTX));
-    for (const flag of ['samplerVisible', 'colorModesVisible', 'slidersVisible', 'hexVisible', 'presetsVisible'] as const) {
+    for (const flag of [
+      'samplerVisible',
+      'colorModesVisible',
+      'slidersVisible',
+      'hexVisible',
+      'presetsVisible',
+    ] as const) {
       const withoutRow = minHeight(colorPickerMinimumSize(node({ [flag]: false }), CTX));
       expect(withoutRow, `${flag}=false must lower the minimum height`).toBeLessThan(baseY);
     }
@@ -289,7 +303,7 @@ describe('colorPickerHexFieldMinWidth', () => {
 
 describe('colorPickerMenuButtonSize', () => {
   // button.cpp:481-523: icon(16) + flat_button_normal's margin (button_normal's own, 4+4 per axis).
-  it('is the 16px menu_option icon plus button.normal\'s own content margin', () => {
+  it("is the 16px menu_option icon plus button.normal's own content margin", () => {
     expect(colorPickerMenuButtonSize(THEME)).toEqual({ x: 24, y: 24 });
   });
 });
@@ -299,7 +313,7 @@ describe('colorPickerLabelColumnWidth', () => {
     expect(colorPickerLabelColumnWidth(THEME, measure, ['R', 'G', 'B'])).toBe(10);
   });
 
-  it('widens to the widest label\'s own shaped text past the 10px floor', () => {
+  it("widens to the widest label's own shaped text past the 10px floor", () => {
     const wide = (text: string) => ({ x: text.length * 15, y: 20 });
     expect(colorPickerLabelColumnWidth(THEME, wide, ['R', 'G', 'B'])).toBe(15);
   });
@@ -322,14 +336,21 @@ describe('colorPickerModeButtonStyleBox', () => {
   });
 
   it('both states share the same content margin (10,4,10,4)', () => {
-    expect(colorPickerModeButtonStyleBox(THEME, false).contentMargin).toEqual(colorPickerModeButtonStyleBox(THEME, true).contentMargin);
+    expect(colorPickerModeButtonStyleBox(THEME, false).contentMargin).toEqual(
+      colorPickerModeButtonStyleBox(THEME, true).contentMargin
+    );
   });
 });
 
 describe('colorPickerSliderBoxRect', () => {
   // slider.cpp:35-44 (Slider::get_minimum_size), SIZE_SHRINK_CENTER within the taller grid cell.
   it('centres the slider at its own natural height inside a taller cell', () => {
-    expect(colorPickerSliderBoxRect({ x: 0, y: 0, w: 400, h: 28 }, THEME, { x: 16, y: 16 })).toEqual({ x: 0, y: 6, w: 400, h: 16 }); // (28-16)/2
+    expect(colorPickerSliderBoxRect({ x: 0, y: 0, w: 400, h: 28 }, THEME, { x: 16, y: 16 })).toEqual({
+      x: 0,
+      y: 6,
+      w: 400,
+      h: 16,
+    }); // (28-16)/2
   });
 
   // control.h fit_child_in_rect uses Math::floor, so an odd remainder floors down.
@@ -368,7 +389,7 @@ describe('colorPickerChannelGrabberRect', () => {
 });
 
 describe('sliderGridRowRects', () => {
-  it('splits label(10)/slider(fill)/value(48) per row, stacked with the grid\'s own v_separation — color_picker.cpp:2172-2180', () => {
+  it("splits label(10)/slider(fill)/value(48) per row, stacked with the grid's own v_separation — color_picker.cpp:2172-2180", () => {
     // The caller supplies labelWidth and valueWidth. This test covers the column split only.
     const rows = sliderGridRowRects({ x: 0, y: 0, w: 400, h: 156 }, 5, THEME, 10, 48);
     expect(rows).toHaveLength(5);
@@ -428,7 +449,7 @@ describe('RTL rows (box_container.cpp:184-192, grid_container.cpp:193-197,218-22
     expect(cols.recentColorsButton).toEqual({ x: 0, y: 24, w: 400, h: 20 });
   });
 
-  it('sliderGridRowRects starts each row at the grid\'s right edge and walks left', () => {
+  it("sliderGridRowRects starts each row at the grid's right edge and walks left", () => {
     // `col_ofs = get_size().width` (400): label(10) at 390, col_ofs 386;
     // slider(334) at 52, col_ofs 48; value(48) at 0.
     const rows = sliderGridRowRects({ x: 0, y: 0, w: 400, h: 156 }, 5, THEME, 10, 48, true);
@@ -459,8 +480,12 @@ describe('RTL rows (box_container.cpp:184-192, grid_container.cpp:193-197,218-22
   });
 
   it('leaves every row where it was under LTR', () => {
-    expect(hexRowColumns({ x: 0, y: 0, w: 400, h: 28 }, THEME, false)).toEqual(hexRowColumns({ x: 0, y: 0, w: 400, h: 28 }, THEME));
-    expect(sampleRowColumns({ x: 0, y: 0, w: 400, h: 24 }, THEME, 0, false)).toEqual(sampleRowColumns({ x: 0, y: 0, w: 400, h: 24 }, THEME, 0));
+    expect(hexRowColumns({ x: 0, y: 0, w: 400, h: 28 }, THEME, false)).toEqual(
+      hexRowColumns({ x: 0, y: 0, w: 400, h: 28 }, THEME)
+    );
+    expect(sampleRowColumns({ x: 0, y: 0, w: 400, h: 24 }, THEME, 0, false)).toEqual(
+      sampleRowColumns({ x: 0, y: 0, w: 400, h: 24 }, THEME, 0)
+    );
   });
 });
 

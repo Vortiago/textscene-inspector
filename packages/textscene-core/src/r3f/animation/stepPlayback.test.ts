@@ -52,9 +52,7 @@ describe('stepPlayback — playing → playing', () => {
   });
 
   it('emits ensure-playing with resume=true on clip switch mid-playback', () => {
-    const result = stepPlayback(
-      input({ prevState: 'playing', state: 'playing', clipChanged: true })
-    );
+    const result = stepPlayback(input({ prevState: 'playing', state: 'playing', clipChanged: true }));
     expect(result.command).toBe('ensure-playing');
     expect(result.resume).toBe(true);
     expect(result.flushTime).toBe(false);
@@ -63,9 +61,7 @@ describe('stepPlayback — playing → playing', () => {
 
 describe('stepPlayback — playing → paused', () => {
   it('emits hold-paused + flushTime=true so the paused readout is never stale', () => {
-    const result = stepPlayback(
-      input({ prevState: 'playing', state: 'paused', liveTime: 0.42 })
-    );
+    const result = stepPlayback(input({ prevState: 'playing', state: 'paused', liveTime: 0.42 }));
     expect(result.command).toBe('hold-paused');
     expect(result.resume).toBe(false);
     // The flush fires without a liveTime too: the adapter owns the null guard.
@@ -73,9 +69,7 @@ describe('stepPlayback — playing → paused', () => {
   });
 
   it('still emits flushTime=true when liveTime is null (adapter guards the null)', () => {
-    const result = stepPlayback(
-      input({ prevState: 'playing', state: 'paused', liveTime: null })
-    );
+    const result = stepPlayback(input({ prevState: 'playing', state: 'paused', liveTime: null }));
     expect(result.command).toBe('hold-paused');
     expect(result.flushTime).toBe(true);
   });
@@ -92,7 +86,9 @@ describe('stepPlayback — stopped → paused', () => {
 
 describe('stepPlayback — paused → paused', () => {
   it('emits hold-paused when the scrub position has not moved', () => {
-    const result = stepPlayback(input({ prevState: 'paused', state: 'paused', prevTime: 0.3, transportTime: 0.3 }));
+    const result = stepPlayback(
+      input({ prevState: 'paused', state: 'paused', prevTime: 0.3, transportTime: 0.3 })
+    );
     expect(result.command).toBe('hold-paused');
     expect(result.resume).toBe(false);
     expect(result.flushTime).toBe(false);
@@ -125,9 +121,7 @@ describe('stepPlayback — paused → paused', () => {
 
 describe('stepPlayback — playing → stopped', () => {
   it('emits stop-and-restore with flushTime=false (transport already reset the playhead)', () => {
-    const result = stepPlayback(
-      input({ prevState: 'playing', state: 'stopped', liveTime: 0.42 })
-    );
+    const result = stepPlayback(input({ prevState: 'playing', state: 'stopped', liveTime: 0.42 }));
     expect(result.command).toBe('stop-and-restore');
     expect(result.resume).toBe(false);
     // Deliberate: stop() resets transport.time to 0; flushing the pre-stop
@@ -156,16 +150,12 @@ describe('stepPlayback — stopped → stopped (no-op)', () => {
 
 describe('stepPlayback — clip switch during playback', () => {
   it('sets resume=true so the adapter re-seeds the local clock', () => {
-    const result = stepPlayback(
-      input({ prevState: 'playing', state: 'playing', clipChanged: true })
-    );
+    const result = stepPlayback(input({ prevState: 'playing', state: 'playing', clipChanged: true }));
     expect(result.resume).toBe(true);
   });
 
   it('does NOT set resume when the clip is unchanged during playback', () => {
-    const result = stepPlayback(
-      input({ prevState: 'playing', state: 'playing', clipChanged: false })
-    );
+    const result = stepPlayback(input({ prevState: 'playing', state: 'playing', clipChanged: false }));
     expect(result.resume).toBe(false);
   });
 });
@@ -174,15 +164,15 @@ describe('stepPlayback — full transition table', () => {
   type Row = [PlayState, PlayState, string, boolean, boolean];
   const table: Row[] = [
     // prevState       state         command             resume  flushTime
-    ['stopped',  'stopped',  'none',             false,  false],
-    ['stopped',  'playing',  'ensure-playing',   true,   false],
-    ['stopped',  'paused',   'hold-paused',      false,  false],
-    ['playing',  'stopped',  'stop-and-restore', false,  false],
-    ['playing',  'playing',  'ensure-playing',   false,  false],
-    ['playing',  'paused',   'hold-paused',      false,  true],
-    ['paused',   'stopped',  'stop-and-restore', false,  false],
-    ['paused',   'playing',  'ensure-playing',   true,   false],
-    ['paused',   'paused',   'hold-paused',      false,  false],
+    ['stopped', 'stopped', 'none', false, false],
+    ['stopped', 'playing', 'ensure-playing', true, false],
+    ['stopped', 'paused', 'hold-paused', false, false],
+    ['playing', 'stopped', 'stop-and-restore', false, false],
+    ['playing', 'playing', 'ensure-playing', false, false],
+    ['playing', 'paused', 'hold-paused', false, true],
+    ['paused', 'stopped', 'stop-and-restore', false, false],
+    ['paused', 'playing', 'ensure-playing', true, false],
+    ['paused', 'paused', 'hold-paused', false, false],
   ];
 
   for (const [prevState, state, command, resume, flushTime] of table) {

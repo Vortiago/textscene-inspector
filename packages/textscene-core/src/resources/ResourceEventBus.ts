@@ -44,11 +44,7 @@ export class ResourceEventBus {
    * @param eventType - Type of event (requested, loading, loaded, failed)
    * @param handler - Callback function receiving (id, data)
    */
-  on<T = unknown>(
-    resourceType: ResourceType,
-    eventType: ResourceEventType,
-    handler: EventHandler<T>
-  ): void {
+  on<T = unknown>(resourceType: ResourceType, eventType: ResourceEventType, handler: EventHandler<T>): void {
     const key = `${resourceType}:${eventType}`;
     if (!this.handlers.has(key)) {
       this.handlers.set(key, new Set());
@@ -56,21 +52,12 @@ export class ResourceEventBus {
     this.handlers.get(key)!.add(handler as EventHandler<unknown>);
   }
 
-  off<T = unknown>(
-    resourceType: ResourceType,
-    eventType: ResourceEventType,
-    handler: EventHandler<T>
-  ): void {
+  off<T = unknown>(resourceType: ResourceType, eventType: ResourceEventType, handler: EventHandler<T>): void {
     const key = `${resourceType}:${eventType}`;
     this.handlers.get(key)?.delete(handler as EventHandler<unknown>);
   }
 
-  emit<T = unknown>(
-    resourceType: ResourceType,
-    eventType: ResourceEventType,
-    id: string,
-    data?: T
-  ): void {
+  emit<T = unknown>(resourceType: ResourceType, eventType: ResourceEventType, id: string, data?: T): void {
     const key = `${resourceType}:${eventType}`;
     const handlers = this.handlers.get(key);
     if (handlers) {

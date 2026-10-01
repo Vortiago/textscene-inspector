@@ -33,9 +33,7 @@ function shellEl(panelId: string): HTMLElement {
 
 function modeButton(shell: HTMLElement, label: '2D' | '3D'): HTMLButtonElement {
   const segment = shell.querySelector('[role="group"][aria-label="Viewport dimension"]');
-  const button = Array.from(segment?.querySelectorAll('button') ?? []).find(
-    (b) => b.textContent === label
-  );
+  const button = Array.from(segment?.querySelectorAll('button') ?? []).find((b) => b.textContent === label);
   expect(button).toBeTruthy();
   return button as HTMLButtonElement;
 }
@@ -50,9 +48,7 @@ describe('<TscnPreviewShell> initialViewportMode', () => {
   });
 
   it('forces 2D and suppresses auto-select for a Node3D root that would otherwise claim 3D', async () => {
-    render(
-      <TscnPreviewShell panelId="forced-2d" content={NODE3D_ROOT} initialViewportMode="2D" />
-    );
+    render(<TscnPreviewShell panelId="forced-2d" content={NODE3D_ROOT} initialViewportMode="2D" />);
     const shell = shellEl('forced-2d');
     await screen.findAllByText('Root');
 
@@ -62,9 +58,7 @@ describe('<TscnPreviewShell> initialViewportMode', () => {
   });
 
   it('forces 3D and suppresses auto-select for a Node2D root that would otherwise claim 2D', async () => {
-    render(
-      <TscnPreviewShell panelId="forced-3d" content={NODE2D_ROOT} initialViewportMode="3D" />
-    );
+    render(<TscnPreviewShell panelId="forced-3d" content={NODE2D_ROOT} initialViewportMode="3D" />);
     const shell = shellEl('forced-3d');
     await screen.findAllByText('Root');
 
@@ -73,9 +67,7 @@ describe('<TscnPreviewShell> initialViewportMode', () => {
   });
 
   it('still lets the user manually toggle away from a forced initial mode', async () => {
-    render(
-      <TscnPreviewShell panelId="forced-then-toggle" content={NODE3D_ROOT} initialViewportMode="2D" />
-    );
+    render(<TscnPreviewShell panelId="forced-then-toggle" content={NODE3D_ROOT} initialViewportMode="2D" />);
     const shell = shellEl('forced-then-toggle');
     await screen.findAllByText('Root');
     expect(modeButton(shell, '2D').getAttribute('aria-pressed')).toBe('true');

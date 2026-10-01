@@ -158,8 +158,8 @@ describe('parseControl — layout_direction', () => {
   it('truncates a float literal the way the INT slot does', () => {
     // `_to_int` runs before the setter (`core/variant/variant.h:360-377`), so
     // `set_layout_direction` never sees the fraction.
-    expect(
-      parseControl(heading('Control', { name: 'C' }), { layout_direction: '2.9' }).layoutDirection
-    ).toBe(2);
+    expect(parseControl(heading('Control', { name: 'C' }), { layout_direction: '2.9' }).layoutDirection).toBe(
+      2
+    );
   });
 });

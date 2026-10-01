@@ -161,7 +161,11 @@ describe('worldShadowCasters', () => {
     const registry = createShadowCasterRegistry();
     registry.add(caster(new THREE.Group(), { occluderLightMask: 2 }));
     registry.add(caster(new THREE.Group(), { occluderLightMask: 4 }));
-    expect(worldShadowCasters(registry).map((c) => c.occluderLightMask).sort()).toEqual([2, 4]);
+    expect(
+      worldShadowCasters(registry)
+        .map((c) => c.occluderLightMask)
+        .sort()
+    ).toEqual([2, 4]);
   });
 
   it('drops a caster whose occluder_light_mask misses the light', () => {

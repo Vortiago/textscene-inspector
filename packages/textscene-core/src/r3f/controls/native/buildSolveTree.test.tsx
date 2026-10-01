@@ -141,7 +141,10 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
     // A multi-root instance never collapses (ADR-0013): the instance node stays,
     // its loaded roots in sub-scene scope and host-authored children in outer scope.
     const loader = createFakeResourceLoader();
-    loader.scenes.seed(LAYER_PATH, scene([label('First', { text: 'FIRST ROOT' }), label('Second', { text: 'SECOND ROOT' })]));
+    loader.scenes.seed(
+      LAYER_PATH,
+      scene([label('First', { text: 'FIRST ROOT' }), label('Second', { text: 'SECOND ROOT' })])
+    );
 
     const hostChild = label('HostAdded', { text: 'HOST TEXT' });
     const nodes = [instanceOf('Hud', '1_layer', 'Control')];
@@ -194,10 +197,9 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
       { id: '1', type: 'StyleBoxFlat', data: { bg_color: 'Color(0.9, 0.9, 0.9, 1)' } },
     ];
 
-    const { result } = renderHook(
-      () => useBuildSolveTree(nodes, externalResources, internalResources),
-      { wrapper: wrapperFor(loader.loader) }
-    );
+    const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, internalResources), {
+      wrapper: wrapperFor(loader.loader),
+    });
 
     const solved = result.current.tree[0]!;
     expect(solved.styleBoxes.panel?.bgColor).toEqual({ r: 0.1, g: 0.2, b: 0.3, a: 1 });
@@ -271,7 +273,9 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
     const iconPath = 'res://icon.png';
     loader.textures.seed(iconPath, { image: { width: 24, height: 24 } } as unknown as THREE.Texture);
 
-    const nodes = [node('IconButton', 'Button', { properties: { name: 'IconButton', icon: 'ExtResource("1")' } })];
+    const nodes = [
+      node('IconButton', 'Button', { properties: { name: 'IconButton', icon: 'ExtResource("1")' } }),
+    ];
     const externalResources = [{ id: '1', path: iconPath, type: 'Texture2D' }];
 
     const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, []), {
@@ -402,7 +406,9 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
     expect(result.current.tree[0]?.textureSize).toBeNull();
 
     await act(async () => {
-      loader.textures._resolve(texturePath, { image: { width: 320, height: 160 } } as unknown as THREE.Texture);
+      loader.textures._resolve(texturePath, {
+        image: { width: 320, height: 160 },
+      } as unknown as THREE.Texture);
     });
 
     expect(result.current.generation).toBeGreaterThan(initialGeneration);
@@ -456,7 +462,12 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
 /** A Node2D-shaped node with every transform field stated. */
 function node2D(
   name: string,
-  transform: { position?: { x: number; y: number }; rotation?: number; scale?: { x: number; y: number }; skew?: number },
+  transform: {
+    position?: { x: number; y: number };
+    rotation?: number;
+    scale?: { x: number; y: number };
+    skew?: number;
+  },
   extra: Partial<TscnNode> = {}
 ): TscnNode {
   const { properties: extraProperties, ...rest } = extra;
@@ -478,7 +489,14 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
     // core/math/transform_2d.h:249-254, rotation=0 scale=(1,1): a=1,b=0,c=0,d=1.
     const nodes = [node2D('N', { position: { x: 100, y: 50 } }, { children: [label('L')] })];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
-    expect(result.current.tree[0]!.skippedAncestors!.transform).toEqual({ a: 1, b: 0, c: 0, d: 1, tx: 100, ty: 50 });
+    expect(result.current.tree[0]!.skippedAncestors!.transform).toEqual({
+      a: 1,
+      b: 0,
+      c: 0,
+      d: 1,
+      tx: 100,
+      ty: 50,
+    });
   });
 
   it('rotation only', async () => {
@@ -499,14 +517,25 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
     // core/math/transform_2d.h:249-254 at rot=0, skew=0: a=scale.x, d=scale.y.
     const nodes = [node2D('N', { scale: { x: 2, y: 3 } }, { children: [label('L')] })];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
-    expect(result.current.tree[0]!.skippedAncestors!.transform).toEqual({ a: 2, b: 0, c: 0, d: 3, tx: 0, ty: 0 });
+    expect(result.current.tree[0]!.skippedAncestors!.transform).toEqual({
+      a: 2,
+      b: 0,
+      c: 0,
+      d: 3,
+      tx: 0,
+      ty: 0,
+    });
   });
 
   it('translation + rotation + scale together', async () => {
     // core/math/transform_2d.h:249-254 at rot=PI/2, scale=(2,3), skew=0:
     // a=cos(PI/2)*2=0, b=sin(PI/2)*2=2, c=-sin(PI/2)*3=-3, d=cos(PI/2)*3=0.
     const nodes = [
-      node2D('N', { position: { x: 10, y: 20 }, rotation: Math.PI / 2, scale: { x: 2, y: 3 } }, { children: [label('L')] }),
+      node2D(
+        'N',
+        { position: { x: 10, y: 20 }, rotation: Math.PI / 2, scale: { x: 2, y: 3 } },
+        { children: [label('L')] }
+      ),
     ];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
     const t = result.current.tree[0]!.skippedAncestors!.transform;
@@ -521,9 +550,13 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
   it('composes two chained Node2D ancestors, outer first — Transform2D::operator*, core/math/transform_2d.cpp:198-217', async () => {
     // Outer only translates and inner only rotates, so the composed origin is the
     // outer's and the basis the inner's: both multiplied, neither masked.
-    const outer = node2D('Outer', { position: { x: 100, y: 50 } }, {
-      children: [node2D('Inner', { rotation: Math.PI / 2 }, { children: [label('L')] })],
-    });
+    const outer = node2D(
+      'Outer',
+      { position: { x: 100, y: 50 } },
+      {
+        children: [node2D('Inner', { rotation: Math.PI / 2 }, { children: [label('L')] })],
+      }
+    );
     const { result } = renderHook(() => useBuildSolveTree([outer], [], []));
     const t = result.current.tree[0]!.skippedAncestors!.transform;
     expect(t.a).toBeCloseTo(0, 10);
@@ -540,9 +573,13 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
     // cast, so the RenderingServer parents past it at the canvas root, never
     // at the Node2D further up (`_enter_canvas`, canvas_item.cpp:234-285).
     const nodes = [
-      node2D('N', { rotation: Math.PI / 2 }, {
-        children: [node('Group', 'Node', { children: [label('L')] })],
-      }),
+      node2D(
+        'N',
+        { rotation: Math.PI / 2 },
+        {
+          children: [node('Group', 'Node', { children: [label('L')] })],
+        }
+      ),
     ];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
     expect(result.current.tree[0]!.skippedAncestors).toBeNull();
@@ -552,9 +589,13 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
     // CanvasLayer derives from Node, so `get_parent_item()` never climbs it: its
     // children parent at `canvas_layer->get_canvas()` (canvas_item.cpp:263-267).
     const nodes = [
-      node2D('N', { rotation: Math.PI / 2 }, {
-        children: [node('Layer', 'CanvasLayer', { children: [label('L')] })],
-      }),
+      node2D(
+        'N',
+        { rotation: Math.PI / 2 },
+        {
+          children: [node('Layer', 'CanvasLayer', { children: [label('L')] })],
+        }
+      ),
     ];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
     const layer = result.current.tree[0]!;
@@ -565,9 +606,13 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
 
   it("carries only the Node2D ancestor's transform, never folding in the Control's OWN `rotation` — that is ControlCanvasWalker's job", async () => {
     const nodes = [
-      node2D('N', { position: { x: 100, y: 0 }, rotation: Math.PI / 2 }, {
-        children: [control('C', { rotation: Math.PI / 2 })],
-      }),
+      node2D(
+        'N',
+        { position: { x: 100, y: 0 }, rotation: Math.PI / 2 },
+        {
+          children: [control('C', { rotation: Math.PI / 2 })],
+        }
+      ),
     ];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
     const t = result.current.tree[0]!.skippedAncestors!.transform;
@@ -580,37 +625,53 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
   });
 
   it("multiplies a skipped Node2D ancestor's `modulate` componentwise — `_cull_canvas_item`, renderer_canvas_cull.cpp", async () => {
-    const outer = node2D('Outer', {}, {
-      properties: { modulate: { r: 0.5, g: 1, b: 1, a: 0.5 } },
-      children: [
-        node2D('Inner', {}, {
-          properties: { modulate: { r: 0.5, g: 0.25, b: 1, a: 1 } },
-          children: [label('L')],
-        }),
-      ],
-    });
+    const outer = node2D(
+      'Outer',
+      {},
+      {
+        properties: { modulate: { r: 0.5, g: 1, b: 1, a: 0.5 } },
+        children: [
+          node2D(
+            'Inner',
+            {},
+            {
+              properties: { modulate: { r: 0.5, g: 0.25, b: 1, a: 1 } },
+              children: [label('L')],
+            }
+          ),
+        ],
+      }
+    );
     const { result } = renderHook(() => useBuildSolveTree([outer], [], []));
     expect(result.current.tree[0]!.skippedAncestors!.modulate).toEqual({ r: 0.25, g: 0.25, b: 1, a: 0.5 });
   });
 
   it("never propagates a skipped ancestor's `self_modulate` — own pixels only, and the Node2D paints none", async () => {
     const nodes = [
-      node2D('N', {}, {
-        properties: { self_modulate: { r: 0, g: 0, b: 0, a: 0 } },
-        children: [label('L')],
-      }),
+      node2D(
+        'N',
+        {},
+        {
+          properties: { self_modulate: { r: 0, g: 0, b: 0, a: 0 } },
+          children: [label('L')],
+        }
+      ),
     ];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
     expect(result.current.tree[0]!.skippedAncestors!.modulate).toEqual({ r: 1, g: 1, b: 1, a: 1 });
   });
 
   it("collects each skipped ancestor's z STEP, outermost first — `p_z` clamps per item (renderer_canvas_cull.cpp:430-434)", async () => {
-    const outer = node2D('Outer', {}, {
-      properties: { z_index: 5 },
-      children: [
-        node2D('Inner', {}, { properties: { z_index: 3, z_as_relative: false }, children: [label('L')] }),
-      ],
-    });
+    const outer = node2D(
+      'Outer',
+      {},
+      {
+        properties: { z_index: 5 },
+        children: [
+          node2D('Inner', {}, { properties: { z_index: 3, z_as_relative: false }, children: [label('L')] }),
+        ],
+      }
+    );
     const { result } = renderHook(() => useBuildSolveTree([outer], [], []));
     expect(result.current.tree[0]!.skippedAncestors!.z).toEqual([
       { zIndex: 5, zAsRelative: true },
@@ -643,10 +704,14 @@ describe('useBuildSolveTree — `parent_visible_in_tree` follows the SCENE tree,
   });
 
   it('ANDs two chained Node2D ancestors — a hidden OUTER hides through a visible inner', () => {
-    const outer = node2D('Outer', {}, {
-      properties: { visible: false },
-      children: [node2D('Inner', {}, { children: [label('L')] })],
-    });
+    const outer = node2D(
+      'Outer',
+      {},
+      {
+        properties: { visible: false },
+        children: [node2D('Inner', {}, { children: [label('L')] })],
+      }
+    );
     const { result } = renderHook(() => useBuildSolveTree([outer], [], []));
     expect(result.current.tree[0]!.parentVisibleInTree).toBe(false);
   });
@@ -664,10 +729,14 @@ describe('useBuildSolveTree — `parent_visible_in_tree` follows the SCENE tree,
     // top_level child (canvas_item.cpp:103-108).
     const nodes = [
       control('Root', {}, [
-        node2D('N', {}, {
-          properties: { visible: false },
-          children: [label('Floating', { topLevel: true })],
-        }),
+        node2D(
+          'N',
+          {},
+          {
+            properties: { visible: false },
+            children: [label('Floating', { topLevel: true })],
+          }
+        ),
       ]),
     ];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
@@ -712,7 +781,7 @@ describe('useBuildSolveTree — `parent_visible_in_tree` follows the SCENE tree,
     expect(result.current.tree[0]!.parentVisibleInTree).toBe(true);
   });
 
-  it("reads the `visible` a container WROTE, not the authored one", () => {
+  it('reads the `visible` a container WROTE, not the authored one', () => {
     // `FoldableContainer::_notification`'s `c->set_visible(!folded)`
     // (foldable_container.cpp:376-386) runs before anything reads the flag, so
     // the page's own subtree inherits the written value.
@@ -735,9 +804,7 @@ describe('useBuildSolveTree — a Control whose CanvasItem chain is broken becom
   // anchors against the viewport: a root of this forest.
 
   it('surfaces a Control separated from its ancestor Control by a plain `Node` as a second root', () => {
-    const nodes = [
-      control('Root', { anchors_preset: 15 }),
-    ];
+    const nodes = [control('Root', { anchors_preset: 15 })];
     (nodes[0] as TscnNode).children = [node('Holder', 'Node', { children: [label('Promoted')] })];
 
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
@@ -761,9 +828,13 @@ describe('useBuildSolveTree — a Control whose CanvasItem chain is broken becom
   it('keeps a top_level Control clear of the Node2D ancestors it sits under', () => {
     // `get_parent_item()` returns before the parent cast (canvas_item.cpp:565-571),
     // so the Node2D between them composes onto nothing, unlike for a promoted Control.
-    const anchor = node2D('Anchor', { position: { x: 30, y: 40 } }, {
-      children: [label('Floating', { topLevel: true })],
-    });
+    const anchor = node2D(
+      'Anchor',
+      { position: { x: 30, y: 40 } },
+      {
+        children: [label('Floating', { topLevel: true })],
+      }
+    );
     const root = control('Root', { anchors_preset: 15 });
     (root as TscnNode).children = [anchor];
 
@@ -800,7 +871,14 @@ describe('useBuildSolveTree — a Control whose CanvasItem chain is broken becom
 
     const { result } = renderHook(() => useBuildSolveTree([root], [], []));
     expect(result.current.tree.map((n) => n.path)).toEqual(['Root', 'Root/Holder/Anchor/Promoted']);
-    expect(result.current.tree[1]!.skippedAncestors!.transform).toEqual({ a: 1, b: 0, c: 0, d: 1, tx: 30, ty: 40 });
+    expect(result.current.tree[1]!.skippedAncestors!.transform).toEqual({
+      a: 1,
+      b: 0,
+      c: 0,
+      d: 1,
+      tx: 30,
+      ty: 40,
+    });
   });
 
   it('draws after the whole subtree of the root it was hoisted out of', () => {
@@ -879,7 +957,13 @@ anchors_preset = 15
   });
 });
 
-const FONT_A: FontResource = { kind: 'file', bytes: new ArrayBuffer(1), mimeType: 'font/ttf', fallbacks: [], properties: {} };
+const FONT_A: FontResource = {
+  kind: 'file',
+  bytes: new ArrayBuffer(1),
+  mimeType: 'font/ttf',
+  fallbacks: [],
+  properties: {},
+};
 
 /** An empty `ThemeResource`, overridden per test. */
 function theme(overrides: Partial<ThemeResource> = {}): ThemeResource {
@@ -905,7 +989,7 @@ describe('useBuildSolveTree — ExtResource lookups', () => {
     return [...filler, last];
   }
 
-  it("reads each ExtResource entry once however many Controls name the same theme", () => {
+  it('reads each ExtResource entry once however many Controls name the same theme', () => {
     const loader = createFakeResourceLoader();
     const shared = theme({ defaultFontSize: 24 });
     loader.themes.seed('res://theme.tres', shared);
@@ -1195,7 +1279,11 @@ describe('useBuildSolveTree — theme resolution', () => {
 describe('useBuildSolveTree — theme StyleBox/Color/Constant resolution', () => {
   it("a themed widget picks the ancestor Theme's StyleBox over nothing, when it authors no local override", () => {
     const loader = createFakeResourceLoader();
-    const flatBox: TscnInternalResource = { id: 'flat1', type: 'StyleBoxFlat', data: { bg_color: 'Color(1, 0, 0, 1)' } };
+    const flatBox: TscnInternalResource = {
+      id: 'flat1',
+      type: 'StyleBoxFlat',
+      data: { bg_color: 'Color(1, 0, 0, 1)' },
+    };
     loader.themes.seed(
       'res://theme.tres',
       theme({
@@ -1216,8 +1304,16 @@ describe('useBuildSolveTree — theme StyleBox/Color/Constant resolution', () =>
 
   it('a local theme_override_styles/* still beats both the ancestor Theme and the local override on a farther ancestor', () => {
     const loader = createFakeResourceLoader();
-    const themedBox: TscnInternalResource = { id: 'flat1', type: 'StyleBoxFlat', data: { bg_color: 'Color(1, 0, 0, 1)' } };
-    const localBox: TscnInternalResource = { id: 'flat2', type: 'StyleBoxFlat', data: { bg_color: 'Color(0, 1, 0, 1)' } };
+    const themedBox: TscnInternalResource = {
+      id: 'flat1',
+      type: 'StyleBoxFlat',
+      data: { bg_color: 'Color(1, 0, 0, 1)' },
+    };
+    const localBox: TscnInternalResource = {
+      id: 'flat2',
+      type: 'StyleBoxFlat',
+      data: { bg_color: 'Color(0, 1, 0, 1)' },
+    };
     loader.themes.seed(
       'res://theme.tres',
       theme({
@@ -1254,10 +1350,10 @@ describe('useBuildSolveTree — theme StyleBox/Color/Constant resolution', () =>
     const nodes = [node('Root', 'Panel', { properties: { name: 'Root', theme: 'ExtResource("1_theme")' } })];
     (nodes[0] as TscnNode).children = [
       node('Child', 'Panel', {
-        properties: { name: 'Child', themeOverrideColors: { font_color: { r: 1, g: 1, b: 1, a: 1 } } } as Record<
-          string,
-          unknown
-        >,
+        properties: {
+          name: 'Child',
+          themeOverrideColors: { font_color: { r: 1, g: 1, b: 1, a: 1 } },
+        } as Record<string, unknown>,
       }),
     ];
     const externalResources = [{ id: '1_theme', path: 'res://theme.tres', type: 'Theme' }];
@@ -1273,9 +1369,14 @@ describe('useBuildSolveTree — theme StyleBox/Color/Constant resolution', () =>
   });
 
   it('an empty ancestor Theme contributes nothing, and a Theme constant reaches SolveNode.constants unscaled from the PROJECT theme', async () => {
-    const projectGodot = ['config_version=5', '', '[gui]', '', 'theme/custom="res://project_theme.tres"', ''].join(
-      '\n'
-    );
+    const projectGodot = [
+      'config_version=5',
+      '',
+      '[gui]',
+      '',
+      'theme/custom="res://project_theme.tres"',
+      '',
+    ].join('\n');
     const themeTres = [
       '[gd_resource type="Theme" load_steps=1 format=3]',
       '',
@@ -1346,7 +1447,7 @@ describe('useBuildSolveTree — an inline procedural texture moves the solved re
     return (solved.get('Root/Column')?.rect.y ?? NaN) + (solved.get(path)?.rect.y ?? NaN);
   }
 
-  it('gives a TextureRect the gradient\'s 160 px height and pushes its sibling to y = 288', () => {
+  it("gives a TextureRect the gradient's 160 px height and pushes its sibling to y = 288", () => {
     const solved = solveTscn(`[gd_scene load_steps=3 format=3]
 
 [sub_resource type="Gradient" id="Gradient_ramp"]
@@ -1584,10 +1685,9 @@ describe('useBuildSolveTree — requesting an uncached sub-scene', () => {
     const requested: string[] = [];
     loader.scenes.setRequestImpl((path) => requested.push(path));
 
-    renderHook(
-      () => useBuildSolveTree([node('Hud', 'Node', { instance: LAYER_PATH })], [], []),
-      { wrapper: wrapperFor(loader.loader) }
-    );
+    renderHook(() => useBuildSolveTree([node('Hud', 'Node', { instance: LAYER_PATH })], [], []), {
+      wrapper: wrapperFor(loader.loader),
+    });
 
     expect(requested).toContain(LAYER_PATH);
     expect(loader.registerCalls).toHaveLength(0);
@@ -1620,7 +1720,12 @@ describe('useBuildSolveTree — requesting an uncached sub-scene', () => {
     loader.scenes.setRequestImpl((path) => requested.push(path));
 
     renderHook(
-      () => useBuildSolveTree([instanceOf('Hud', '1_layer')], [{ id: '1_layer', path: LAYER_PATH, type: 'PackedScene' }], []),
+      () =>
+        useBuildSolveTree(
+          [instanceOf('Hud', '1_layer')],
+          [{ id: '1_layer', path: LAYER_PATH, type: 'PackedScene' }],
+          []
+        ),
       { wrapper: wrapperFor(loader.loader) }
     );
 
@@ -1697,7 +1802,7 @@ describe('useBuildSolveTree — per-type texture slots (registerTextureSlots)', 
 
   it(
     "resolves an ExtResource(AtlasTexture) '.tres' slot's own region size through the RESOURCE bus — " +
-      'the generic single-slot fallback (TextureRect\'s `texture`) shares the same per-ref resolution registered types do',
+      "the generic single-slot fallback (TextureRect's `texture`) shares the same per-ref resolution registered types do",
     async () => {
       const loader = createFakeResourceLoader();
       const tresPath = 'res://icons/keyboard_arrow_left.tres';
@@ -1713,7 +1818,9 @@ region = Rect2(32, 32, 64, 64)
 `);
 
       const nodes = [
-        node('Portrait', 'TextureRect', { properties: { name: 'Portrait', texture: 'ExtResource("1_atlas")' } }),
+        node('Portrait', 'TextureRect', {
+          properties: { name: 'Portrait', texture: 'ExtResource("1_atlas")' },
+        }),
       ];
       const externalResources = [{ id: '1_atlas', path: tresPath, type: 'AtlasTexture' }];
 
@@ -2012,7 +2119,11 @@ visible = false
       () => useBuildSolveTree(scene.nodes, scene.externalResources, scene.internalResources),
       { wrapper: wrapperFor(loader.loader) }
     );
-    return solveControlTree(result.current.tree, { x: 0, y: 0, w: 1152, h: 648 }, createSolveContext(nativeTheme(1)));
+    return solveControlTree(
+      result.current.tree,
+      { x: 0, y: 0, w: 1152, h: 648 },
+      createSolveContext(nativeTheme(1))
+    );
   }
 
   it('gives an unfolded container’s authored-invisible child the inner rect, `size.x` minus both panel margins (foldable_container.cpp:366-368)', () => {

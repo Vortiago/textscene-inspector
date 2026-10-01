@@ -9,8 +9,7 @@ import { StrictTscnParser } from './StrictTscnParser.js';
 // The barrel, so every slice has registered its validators.
 import './index.js';
 
-const lint = (body: string) =>
-  new StrictTscnParser().parse(`[gd_scene format=3]\n\n${body}\n`).errors;
+const lint = (body: string) => new StrictTscnParser().parse(`[gd_scene format=3]\n\n${body}\n`).errors;
 
 describe('a transforming arm with no validator of its own', () => {
   it('Decal extents outside the size floor draws the size error under the written key', () => {
@@ -91,30 +90,137 @@ describe('a pure rename validated through the fallback', () => {
     ['Label', 'valign', 'vertical_alignment', '4', 'error', '1', 'label.cpp:1002 → :1085'],
     ['RichTextLabel', 'bbcode_text', 'text', 'bold', 'error', '"[b]bold[/b]"', 'rich_text_label.cpp:7563'],
     ['PointLight2D', 'mode', 'blend_mode', '9', 'warning', '1', 'light_2d.cpp:457 → :307 hint'],
-    ['NavigationRegion2D', 'navpoly', 'navigation_polygon', 'res://nav.tres', 'error', 'null', 'navigation_region_2d.cpp:361'],
-    ['NavigationRegion3D', 'navmesh', 'navigation_mesh', 'res://nav.tres', 'error', 'null', 'navigation_region_3d.cpp:312'],
-    ['NavigationLink2D', 'start_location', 'start_position', 'Vector2(1)', 'error', 'Vector2(1, 2)', 'navigation_link_2d.cpp:84'],
-    ['NavigationLink2D', 'end_location', 'end_position', 'Vector2(1)', 'error', 'Vector2(inf, nan)', 'navigation_link_2d.cpp:88'],
-    ['NavigationLink3D', 'start_location', 'start_position', 'Vector3(1, 2)', 'error', 'Vector3(1, 2, 3)', 'navigation_link_3d.cpp:223'],
-    ['NavigationLink3D', 'end_location', 'end_position', 'Vector3(1, 2)', 'error', 'Vector3(inf, -inf, nan)', 'navigation_link_3d.cpp:227'],
-    ['NavigationAgent2D', 'target_location', 'target_position', 'Vector2(4)', 'error', 'Vector2(4, 5)', 'navigation_agent_2d.cpp:206'],
-    ['NavigationAgent2D', 'time_horizon', 'time_horizon_agents', '-1', 'error', '0', 'navigation_agent_2d.cpp:202 → :602'],
-    ['NavigationAgent3D', 'target_location', 'target_position', 'Vector3(4, 5)', 'error', 'Vector3(4, 5, 6)', 'navigation_agent_3d.cpp:217'],
-    ['NavigationAgent3D', 'time_horizon', 'time_horizon_agents', '-1', 'error', '0', 'navigation_agent_3d.cpp:213 → :666'],
-    ['NavigationAgent3D', 'agent_height_offset', 'path_height_offset', '-101', 'warning', '-100', 'navigation_agent_3d.cpp:221 → :157 hint'],
-    ['AnimatedSprite2D', 'frames', 'sprite_frames', 'res://frames.tres', 'error', 'null', 'animated_sprite_2d.cpp:617'],
-    ['AnimatedSprite3D', 'frames', 'sprite_frames', 'res://frames.tres', 'error', 'null', 'sprite_3d.cpp:1495'],
+    [
+      'NavigationRegion2D',
+      'navpoly',
+      'navigation_polygon',
+      'res://nav.tres',
+      'error',
+      'null',
+      'navigation_region_2d.cpp:361',
+    ],
+    [
+      'NavigationRegion3D',
+      'navmesh',
+      'navigation_mesh',
+      'res://nav.tres',
+      'error',
+      'null',
+      'navigation_region_3d.cpp:312',
+    ],
+    [
+      'NavigationLink2D',
+      'start_location',
+      'start_position',
+      'Vector2(1)',
+      'error',
+      'Vector2(1, 2)',
+      'navigation_link_2d.cpp:84',
+    ],
+    [
+      'NavigationLink2D',
+      'end_location',
+      'end_position',
+      'Vector2(1)',
+      'error',
+      'Vector2(inf, nan)',
+      'navigation_link_2d.cpp:88',
+    ],
+    [
+      'NavigationLink3D',
+      'start_location',
+      'start_position',
+      'Vector3(1, 2)',
+      'error',
+      'Vector3(1, 2, 3)',
+      'navigation_link_3d.cpp:223',
+    ],
+    [
+      'NavigationLink3D',
+      'end_location',
+      'end_position',
+      'Vector3(1, 2)',
+      'error',
+      'Vector3(inf, -inf, nan)',
+      'navigation_link_3d.cpp:227',
+    ],
+    [
+      'NavigationAgent2D',
+      'target_location',
+      'target_position',
+      'Vector2(4)',
+      'error',
+      'Vector2(4, 5)',
+      'navigation_agent_2d.cpp:206',
+    ],
+    [
+      'NavigationAgent2D',
+      'time_horizon',
+      'time_horizon_agents',
+      '-1',
+      'error',
+      '0',
+      'navigation_agent_2d.cpp:202 → :602',
+    ],
+    [
+      'NavigationAgent3D',
+      'target_location',
+      'target_position',
+      'Vector3(4, 5)',
+      'error',
+      'Vector3(4, 5, 6)',
+      'navigation_agent_3d.cpp:217',
+    ],
+    [
+      'NavigationAgent3D',
+      'time_horizon',
+      'time_horizon_agents',
+      '-1',
+      'error',
+      '0',
+      'navigation_agent_3d.cpp:213 → :666',
+    ],
+    [
+      'NavigationAgent3D',
+      'agent_height_offset',
+      'path_height_offset',
+      '-101',
+      'warning',
+      '-100',
+      'navigation_agent_3d.cpp:221 → :157 hint',
+    ],
+    [
+      'AnimatedSprite2D',
+      'frames',
+      'sprite_frames',
+      'res://frames.tres',
+      'error',
+      'null',
+      'animated_sprite_2d.cpp:617',
+    ],
+    [
+      'AnimatedSprite3D',
+      'frames',
+      'sprite_frames',
+      'res://frames.tres',
+      'error',
+      'null',
+      'sprite_3d.cpp:1495',
+    ],
     ['Bone2D', 'default_length', 'length', '0.5', 'warning', '1', 'skeleton_2d.cpp:48-49 → :88 hint'],
   ];
 
-  it.each(ROWS)('%s.%s validates as %s (%s → %s; legal %s; %s)', (type, key, canonical, refused, severity, legal) => {
-    const errors = lint(`[node name="N" type="${type}"]\n${key} = ${refused}`);
-    expect(errors).toHaveLength(1);
-    expect(errors[0]!.severity).toBe(severity);
-    expect(errors[0]!.message).toContain(applied(key, canonical, refused));
-    expect(errors[0]!.column).toBe(key.length + 3);
-    expect(lint(`[node name="N" type="${type}"]\n${key} = ${legal}`)).toEqual([]);
-  });
+  it.each(ROWS)(
+    '%s.%s validates as %s (%s → %s; legal %s; %s)',
+    (type, key, canonical, refused, severity, legal) => {
+      const errors = lint(`[node name="N" type="${type}"]\n${key} = ${refused}`);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]!.severity).toBe(severity);
+      expect(errors[0]!.message).toContain(applied(key, canonical, refused));
+      expect(errors[0]!.column).toBe(key.length + 3);
+      expect(lint(`[node name="N" type="${type}"]\n${key} = ${legal}`)).toEqual([]);
+    }
+  );
 
   it('a value the arm refuses is dropped by Godot and draws nothing', () => {
     // rich_text_label.cpp:7563 forwards only a non-empty string; light_2d.cpp:457

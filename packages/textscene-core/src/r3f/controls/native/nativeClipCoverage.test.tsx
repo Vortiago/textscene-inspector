@@ -112,7 +112,8 @@ describe('local clipping is enabled on every canvas that draws Controls', () => 
     // Line comments stripped first, and `<Canvas\s` rather than `<Canvas\b`:
     // both files name `<Canvas>` in prose, and a `>` in a comment would end the
     // non-greedy match before the props.
-    const canvasTag = /<Canvas\s[\s\S]*?>/.exec(readFileSync(path, 'utf8').replace(/\/\/.*$/gm, ''))?.[0] ?? '';
+    const canvasTag =
+      /<Canvas\s[\s\S]*?>/.exec(readFileSync(path, 'utf8').replace(/\/\/.*$/gm, ''))?.[0] ?? '';
     expect(canvasTag).not.toBe('');
     expect(canvasTag).toMatch(/localClippingEnabled:\s*true/);
   });

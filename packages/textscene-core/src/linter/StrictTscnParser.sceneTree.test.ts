@@ -30,11 +30,11 @@ describe('StrictTscnParser', () => {
       expect(result.errors).toHaveLength(0);
       expect(result.scene!.nodes[0]!.children).toHaveLength(2);
       // Children are added in the order they are processed (backward iteration).
-      const childNames = result.scene!.nodes[0]!.children.map(c => c.name);
+      const childNames = result.scene!.nodes[0]!.children.map((c) => c.name);
       expect(childNames).toContain('Child1');
       expect(childNames).toContain('Child2');
 
-      const child1 = result.scene!.nodes[0]!.children.find(c => c.name === 'Child1')!;
+      const child1 = result.scene!.nodes[0]!.children.find((c) => c.name === 'Child1')!;
       expect(child1.children).toHaveLength(1);
       expect(child1.children[0]!.name).toBe('GrandChild');
     });

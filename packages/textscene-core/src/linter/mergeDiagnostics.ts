@@ -17,6 +17,9 @@ export function sortDiagnostics(diagnostics: Diagnostic[]): Diagnostic[] {
 }
 
 /** A new list of `local` and `crossFile` together, sorted by severity. Neither input changes. */
-export function mergeDiagnostics(local: readonly Diagnostic[], crossFile: readonly Diagnostic[]): Diagnostic[] {
+export function mergeDiagnostics(
+  local: readonly Diagnostic[],
+  crossFile: readonly Diagnostic[]
+): Diagnostic[] {
   return sortDiagnostics(local.concat(crossFile));
 }

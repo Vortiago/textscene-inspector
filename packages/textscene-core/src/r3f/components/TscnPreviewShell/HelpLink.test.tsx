@@ -6,9 +6,7 @@ describe('<HelpLink> (#224)', () => {
   it('renders an external link to the README documentation section', () => {
     render(<HelpLink />);
     const link = screen.getByRole('link', { name: /help and documentation/i });
-    expect(link.getAttribute('href')).toBe(
-      'https://github.com/Vortiago/textscene-inspector#documentation'
-    );
+    expect(link.getAttribute('href')).toBe('https://github.com/Vortiago/textscene-inspector#documentation');
   });
 
   it('opens in a new tab without leaking a window.opener reference', () => {

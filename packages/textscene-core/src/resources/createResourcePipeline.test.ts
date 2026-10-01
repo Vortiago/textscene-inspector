@@ -5,11 +5,7 @@ import { FakeWorker } from '../workers/fakeWorker.testkit';
 import { createResourcePipeline } from './createResourcePipeline';
 import { ResourceLoader } from './ResourceLoader';
 import type { ResourceProvider } from './ResourceProvider';
-import {
-  containsInstancedMesh,
-  instancedGlbProvider,
-  loadInstancedGlb,
-} from './formats/glb/testing/loadGlb';
+import { containsInstancedMesh, instancedGlbProvider, loadInstancedGlb } from './formats/glb/testing/loadGlb';
 
 const fakeProvider: ResourceProvider = {
   loadResource: async () => null,

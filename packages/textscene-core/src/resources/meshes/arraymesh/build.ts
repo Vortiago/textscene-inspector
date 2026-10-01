@@ -19,8 +19,7 @@ export function buildArrayMeshGeometry(mesh: ArrayMeshData): THREE.BufferGeometr
   const positions = new Float32Array(totalVertices * 3);
   const uvs = hasUV ? new Float32Array(totalVertices * 2) : undefined;
   const normals = useDecodedNormals ? new Float32Array(totalVertices * 3) : undefined;
-  const indices =
-    totalVertices > 65535 ? new Uint32Array(totalIndices) : new Uint16Array(totalIndices);
+  const indices = totalVertices > 65535 ? new Uint32Array(totalIndices) : new Uint16Array(totalIndices);
 
   let vertexBase = 0;
   let indexBase = 0;

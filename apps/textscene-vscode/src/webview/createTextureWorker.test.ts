@@ -44,11 +44,14 @@ describe('textureWorkerFactory', () => {
   });
 
   it('rejects when the worker cannot start, so the runner falls back in-thread', async () => {
-    vi.stubGlobal('Worker', class {
-      constructor() {
-        throw new Error('blocked by worker-src');
+    vi.stubGlobal(
+      'Worker',
+      class {
+        constructor() {
+          throw new Error('blocked by worker-src');
+        }
       }
-    });
+    );
     const createWorker = textureWorkerFactory(async () => ({ default: '' }));
     await expect(createWorker()).rejects.toThrow('blocked by worker-src');
   });

@@ -59,9 +59,12 @@ describe('NavigationLink2D semantic rules', () => {
   it('stays quiet on a malformed value, leaving it to the format validator', () => {
     // linterParser.ts already reports INVALID_START_POSITION_FORMAT for this.
     // The rule must not also fire off a resolved-to-null comparison.
-    expectNoDiagnostic(scene(node('NavigationLink2D', { start_position: 'not-a-vector', end_position: 'Vector2(0, 0)' })), {
-      ruleName: RULE_NAME,
-    });
+    expectNoDiagnostic(
+      scene(node('NavigationLink2D', { start_position: 'not-a-vector', end_position: 'Vector2(0, 0)' })),
+      {
+        ruleName: RULE_NAME,
+      }
+    );
   });
 
   it('carries zero diagnostics on the committed fixture, through the real Linter', () => {

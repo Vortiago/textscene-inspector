@@ -12,12 +12,16 @@ describe('spaceFamilyOf', () => {
     expect(spaceFamilyOf(type)).toBe(family);
   });
 
-  it.each([['Node'], ['Timer'], ['AnimationPlayer'], ['CanvasLayer'], ['SubViewport'], ['NavigationAgent3D']])(
-    'puts %s in no family: it carries no transform or visibility of its own',
-    (type) => {
-      expect(spaceFamilyOf(type)).toBeNull();
-    }
-  );
+  it.each([
+    ['Node'],
+    ['Timer'],
+    ['AnimationPlayer'],
+    ['CanvasLayer'],
+    ['SubViewport'],
+    ['NavigationAgent3D'],
+  ])('puts %s in no family: it carries no transform or visibility of its own', (type) => {
+    expect(spaceFamilyOf(type)).toBeNull();
+  });
 
   it('puts a class the catalog does not know in no family', () => {
     expect(spaceFamilyOf('GLBSceneRoot')).toBeNull();

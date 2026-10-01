@@ -3,13 +3,7 @@
  * reads only its props and the shell's missing-resources context.
  */
 
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ChangeEvent,
-} from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useMissingResources, type ViewportSelectorOption } from '@textscene/core';
 import { fixtures } from './fixturesAll';
 import { FixtureTreeView } from './FixtureTree';
@@ -76,8 +70,7 @@ export function Toolbar({
   // sentinel.
   const scenes = useMemo(() => options.filter((o) => o.value !== NO_FIXTURE), [options]);
 
-  const currentLabel =
-    uploadedTscnName ?? scenes.find((o) => o.value === fixtureFile)?.label ?? 'No scene';
+  const currentLabel = uploadedTscnName ?? scenes.find((o) => o.value === fixtureFile)?.label ?? 'No scene';
 
   // Ctrl/Cmd+K toggles the palette; Escape closes it.
   useEffect(() => {
@@ -157,11 +150,7 @@ export function Toolbar({
       >
         <SceneGlyph />
         {uploadedTscnName ? (
-          <span
-            className={styles.sceneName}
-            data-testid="uploaded-tscn-label"
-            title={uploadedTscnName}
-          >
+          <span className={styles.sceneName} data-testid="uploaded-tscn-label" title={uploadedTscnName}>
             {uploadedTscnName}
           </span>
         ) : (
@@ -229,11 +218,7 @@ export function Toolbar({
           <div className={styles.backdrop} onClick={() => setOpen(false)} aria-hidden />
           <div className={styles.palette} role="dialog" aria-label="Open or switch scene">
             {/* This primary action opens the user's .tscn. */}
-            <button
-              type="button"
-              className={styles.openDisk}
-              onClick={() => tscnInputRef.current?.click()}
-            >
+            <button type="button" className={styles.openDisk} onClick={() => tscnInputRef.current?.click()}>
               <span className={styles.openDiskIcon} aria-hidden>
                 ⤓
               </span>

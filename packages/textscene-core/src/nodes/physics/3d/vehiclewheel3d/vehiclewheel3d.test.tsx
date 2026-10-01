@@ -60,8 +60,7 @@ describe('VehicleWheel3D registration', () => {
 
   it('is a real registration, not the generic placeholder fallback', async () => {
     const renderer = await render(wheelNode());
-    expect(renderer.scene.findByProps({ name: 'Wheel1' }).instance.userData.isPlaceholder)
-      .toBeUndefined();
+    expect(renderer.scene.findByProps({ name: 'Wheel1' }).instance.userData.isPlaceholder).toBeUndefined();
   });
 
   it('parses its wheel properties through the real TscnParser', () => {
@@ -88,9 +87,9 @@ describe('VehicleWheel3D registration', () => {
   it('surfaces its configuration to the inspector via a property formatter', () => {
     const registration = nodeRegistry.getRegistration('VehicleWheel3D');
     expect(registration?.propertyFormatter).toBeDefined();
-    const titles = registration!
-      .propertyFormatter!({ name: 'Wheel1', wheel_radius: 0.25 })
-      .map((s) => s.title);
+    const titles = registration!.propertyFormatter!({ name: 'Wheel1', wheel_radius: 0.25 }).map(
+      (s) => s.title
+    );
     expect(titles).toContain('Wheel');
   });
 

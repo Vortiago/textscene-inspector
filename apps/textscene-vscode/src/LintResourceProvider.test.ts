@@ -72,7 +72,9 @@ describe('LintResourceProvider', () => {
   });
 
   it('names the workspace file of a res:// path, and nothing for one that escapes the root', () => {
-    expect(providerForLevel().fileOf('res://models/tree.glb')?.fsPath).toBe('/workspace/game/models/tree.glb');
+    expect(providerForLevel().fileOf('res://models/tree.glb')?.fsPath).toBe(
+      '/workspace/game/models/tree.glb'
+    );
     expect(providerForLevel().fileOf('res://../secret.txt')).toBeNull();
     expect(providerForLevel().fileOf('/workspace/secret.txt')).toBeNull();
   });
@@ -97,7 +99,7 @@ describe('LintResourceProvider stamp', () => {
     (vscode.workspace.fs.stat as Mock).mockImplementation(statOnDisk);
   });
 
-  it("stamps a file under the project root with its modification time and size", async () => {
+  it('stamps a file under the project root with its modification time and size', async () => {
     expect(await providerForLevel().stamp('res://models/tree.glb')).toBe('1700000000000:4');
   });
 
@@ -125,8 +127,11 @@ describe('LintResourceProvider listFiles', () => {
     );
   }
 
-  it("lists each GDExtension under the project root as a res:// path, in any case", async () => {
-    found(['/workspace/game/bin/a.gdextension', '/workspace/game/addons/x/B.GDExtension'], ['/workspace/game/project.godot']);
+  it('lists each GDExtension under the project root as a res:// path, in any case', async () => {
+    found(
+      ['/workspace/game/bin/a.gdextension', '/workspace/game/addons/x/B.GDExtension'],
+      ['/workspace/game/project.godot']
+    );
 
     expect(await providerForLevel().listFiles('gdextension')).toEqual([
       'res://bin/a.gdextension',
@@ -142,7 +147,11 @@ describe('LintResourceProvider listFiles', () => {
         '/workspace/game/ignored/deep/c.gdextension',
         '/workspace/game/kept/d.gdextension',
       ],
-      ['/workspace/game/project.godot', '/workspace/game/vendor/other/project.godot', '/workspace/game/ignored/.gdignore']
+      [
+        '/workspace/game/project.godot',
+        '/workspace/game/vendor/other/project.godot',
+        '/workspace/game/ignored/.gdignore',
+      ]
     );
 
     expect(await providerForLevel().listFiles('gdextension')).toEqual(['res://kept/d.gdextension']);

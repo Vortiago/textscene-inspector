@@ -39,7 +39,11 @@ const gpuParticles2DPreviewRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['GPUParticles2D'],
     emits: [
-      { ruleName: 'gpuparticles2d-missing-process-material', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'gpuparticles2d-missing-process-material',
+        severity: 'warning',
+        grounding: { kind: 'configuration-warning' },
+      },
     ],
   },
   check: checkGPUParticles2D,

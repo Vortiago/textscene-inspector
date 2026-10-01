@@ -56,9 +56,7 @@ function gltfJson({
         mesh: 0,
         ...(translation ? { translation } : {}),
         ...(extras ? { extras } : {}),
-        ...(instanced
-          ? { extensions: { [INSTANCING]: { attributes: { TRANSLATION: 1 } } } }
-          : {}),
+        ...(instanced ? { extensions: { [INSTANCING]: { attributes: { TRANSLATION: 1 } } } } : {}),
       },
     ],
     meshes: [{ primitives: [{ attributes: { POSITION: 0 }, ...(material ? { material: 0 } : {}) }] }],

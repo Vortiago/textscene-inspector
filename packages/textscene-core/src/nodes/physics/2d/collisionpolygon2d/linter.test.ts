@@ -103,11 +103,7 @@ describe('CollisionPolygon2D Linter', () => {
     expectDiagnostic(
       scene(
         node('StaticBody2D', {}, { name: 'Root' }),
-        node(
-          'CollisionPolygon2D',
-          { polygon: 'PackedVector2Array(0, 0, 10, 10)' },
-          { parent: '.' }
-        )
+        node('CollisionPolygon2D', { polygon: 'PackedVector2Array(0, 0, 10, 10)' }, { parent: '.' })
       ),
       {
         ruleName: 'collisionpolygon2d-insufficient-points',
@@ -153,11 +149,7 @@ describe('CollisionPolygon2D Linter', () => {
     expectDiagnostic(
       scene(
         node('StaticBody2D', {}, { name: 'Root' }),
-        node(
-          'CollisionPolygon2D',
-          { build_mode: 1, polygon: 'PackedVector2Array(0, 0)' },
-          { parent: '.' }
-        )
+        node('CollisionPolygon2D', { build_mode: 1, polygon: 'PackedVector2Array(0, 0)' }, { parent: '.' })
       ),
       {
         ruleName: 'collisionpolygon2d-insufficient-points',
@@ -196,11 +188,7 @@ describe('CollisionPolygon2D Linter', () => {
     expectDiagnostic(
       scene(
         node('Area2D', {}, { name: 'Root' }),
-        node(
-          'CollisionPolygon2D',
-          { polygon: validPolygon, one_way_collision: true },
-          { parent: '.' }
-        )
+        node('CollisionPolygon2D', { polygon: validPolygon, one_way_collision: true }, { parent: '.' })
       ),
       { ruleName: 'collisionpolygon2d-one-way-ignored', severity: 'warning', contains: ['Area2D'] }
     );
@@ -210,11 +198,7 @@ describe('CollisionPolygon2D Linter', () => {
     expectNoDiagnostic(
       scene(
         node('StaticBody2D', {}, { name: 'Root' }),
-        node(
-          'CollisionPolygon2D',
-          { polygon: validPolygon, one_way_collision: true },
-          { parent: '.' }
-        )
+        node('CollisionPolygon2D', { polygon: validPolygon, one_way_collision: true }, { parent: '.' })
       ),
       { ruleName: 'collisionpolygon2d-one-way-ignored' }
     );
@@ -224,11 +208,7 @@ describe('CollisionPolygon2D Linter', () => {
     expectNoDiagnostic(
       scene(
         node('Area2D', {}, { name: 'Root' }),
-        node(
-          'CollisionPolygon2D',
-          { polygon: validPolygon, one_way_collision: false },
-          { parent: '.' }
-        )
+        node('CollisionPolygon2D', { polygon: validPolygon, one_way_collision: false }, { parent: '.' })
       ),
       { ruleName: 'collisionpolygon2d-one-way-ignored' }
     );

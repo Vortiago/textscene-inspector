@@ -60,5 +60,4 @@ export const shaderParameterRoutes: readonly RouteRow[] = [
         "GDVIRTUAL-supplied by third-party OpenXRExtensionWrapper subclasses whose only constraint is containing a '/' (openxr_composition_layer.cpp:712-715); zero such wrappers ship in this checkout, so no fixed prefix exists to register a wildcard against and no concrete key would ever reach this build's linter",
     },
   },
-
 ];

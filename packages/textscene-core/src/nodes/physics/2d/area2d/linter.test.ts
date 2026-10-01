@@ -45,7 +45,11 @@ describe('Area2D Linter', () => {
     });
 
     runPropertyValidation({ nodeType: 'Area2D', acceptChild: collisionShape2d }, [
-      { prop: 'monitoring', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
+      {
+        prop: 'monitoring',
+        valid: [true, false],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
+      },
       { prop: 'monitorable', valid: [true, false], invalid: [{ value: '"yes"', contains: ['boolean'] }] },
       {
         prop: 'gravity_space_override',
@@ -72,15 +76,15 @@ describe('Area2D Linter', () => {
         // 0 is the default and legal: constant point gravity (range hint
         // "0,1024,0.001,or_greater").
         valid: [10.5, 0],
-        invalid: [
-          { value: -5.0, contains: ['at least 0'] },
-          { value: '"far"' },
-        ],
+        invalid: [{ value: -5.0, contains: ['at least 0'] }, { value: '"far"' }],
       },
       {
         prop: 'gravity_direction',
         valid: ['Vector2(0, 1)'],
-        invalid: [{ value: 'Vector2(0, 1, 0)', contains: ['Vector2 with 2 numbers'] }, { value: 'Vector2(1)' }],
+        invalid: [
+          { value: 'Vector2(0, 1, 0)', contains: ['Vector2 with 2 numbers'] },
+          { value: 'Vector2(1)' },
+        ],
       },
       { prop: 'gravity', valid: [9.8, -9.8, 0.0], invalid: [{ value: '"heavy"' }] },
       {
@@ -118,20 +122,20 @@ describe('Area2D Linter', () => {
       },
       { prop: 'audio_bus_name', valid: ['"Master"', '"SFX"'] },
       {
-          prop: 'collision_layer',
-          valid: [1, 100, 1048575, 2000000, 2147483648, 4294967295],
-          invalid: [
-{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
+        prop: 'collision_layer',
+        valid: [1, 100, 1048575, 2000000, 2147483648, 4294967295],
+        invalid: [
+          { value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
           { value: '"layer1"' },
-          ],
-        },
+        ],
+      },
       {
-          prop: 'collision_mask',
-          valid: [1, 255, 1048575, 5000000, 2147483648, 4294967295],
-          invalid: [
-{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
-          ],
-        },
+        prop: 'collision_mask',
+        valid: [1, 255, 1048575, 5000000, 2147483648, 4294967295],
+        invalid: [
+          { value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
+        ],
+      },
       {
         prop: 'disable_mode',
         valid: [0, 1, 2],
@@ -211,11 +215,15 @@ describe('Area2D Linter', () => {
     });
 
     it('should pass when gravity_point is true and gravity_point_unit_distance is set', () => {
-      expectClean(scene(node('Area2D', { gravity_point: true, gravity_point_unit_distance: 10.0 }), collisionShape2d));
+      expectClean(
+        scene(node('Area2D', { gravity_point: true, gravity_point_unit_distance: 10.0 }), collisionShape2d)
+      );
     });
 
     it('should pass an explicit 0.0 unit distance (the default, constant gravity)', () => {
-      expectClean(scene(node('Area2D', { gravity_point: true, gravity_point_unit_distance: 0.0 }), collisionShape2d));
+      expectClean(
+        scene(node('Area2D', { gravity_point: true, gravity_point_unit_distance: 0.0 }), collisionShape2d)
+      );
     });
 
     it('should not check gravity_point_unit_distance when gravity_point is false', () => {
@@ -316,7 +324,9 @@ describe('Area2D Linter', () => {
     });
 
     it('should handle bitmask boundaries', () => {
-      expectClean(scene(node('Area2D', { collision_layer: 1048575, collision_mask: 1048575 }), collisionShape2d));
+      expectClean(
+        scene(node('Area2D', { collision_layer: 1048575, collision_mask: 1048575 }), collisionShape2d)
+      );
     });
 
     it('should combine format and semantic errors', () => {
@@ -331,9 +341,11 @@ describe('Area2D Linter', () => {
         )
       );
       expect(diagnostics.length).toBeGreaterThan(0);
-      const hasFormatError = diagnostics.some(d => d.message.includes('greater than 0'));
-      const hasSemanticError = diagnostics.some(d => d.ruleName === 'area2d-detects-nothing');
-      const hasMissingShape = diagnostics.some(d => d.ruleName === 'collisionobject2d-needs-collision-shape');
+      const hasFormatError = diagnostics.some((d) => d.message.includes('greater than 0'));
+      const hasSemanticError = diagnostics.some((d) => d.ruleName === 'area2d-detects-nothing');
+      const hasMissingShape = diagnostics.some(
+        (d) => d.ruleName === 'collisionobject2d-needs-collision-shape'
+      );
       expect(hasFormatError || hasSemanticError || hasMissingShape).toBe(true);
     });
 

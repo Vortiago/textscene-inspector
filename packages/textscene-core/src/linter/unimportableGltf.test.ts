@@ -44,7 +44,10 @@ async function refusals(content: string, provider: ResourceProvider) {
 
 describe('unimportable glTF', () => {
   it('reports an error on the ext_resource heading of a used GLB that requires EXT_mesh_gpu_instancing', async () => {
-    const diagnostics = await refusals(sceneUsing('res://tree.glb'), project({ 'res://tree.glb': INSTANCED_TREE }));
+    const diagnostics = await refusals(
+      sceneUsing('res://tree.glb'),
+      project({ 'res://tree.glb': INSTANCED_TREE })
+    );
 
     expect(diagnostics).toEqual([
       {
@@ -72,7 +75,9 @@ describe('unimportable glTF', () => {
   });
 
   it('matches the file extension case-insensitively, as the importer does', async () => {
-    expect(await refusals(sceneUsing('res://TREE.GLB'), project({ 'res://TREE.GLB': INSTANCED_TREE }))).toHaveLength(1);
+    expect(
+      await refusals(sceneUsing('res://TREE.GLB'), project({ 'res://TREE.GLB': INSTANCED_TREE }))
+    ).toHaveLength(1);
   });
 
   it('reports a GLB named in a sub-resource value', async () => {
@@ -137,7 +142,10 @@ item/0/name = "Tree"
   });
 
   it('reports nothing for a file whose required extensions Godot imports', async () => {
-    const tree = triangleGlb({ extensionsUsed: ['KHR_texture_transform'], extensionsRequired: ['KHR_texture_transform'] });
+    const tree = triangleGlb({
+      extensionsUsed: ['KHR_texture_transform'],
+      extensionsRequired: ['KHR_texture_transform'],
+    });
     expect(await refusals(sceneUsing('res://tree.glb'), project({ 'res://tree.glb': tree }))).toEqual([]);
   });
 
@@ -153,7 +161,9 @@ item/0/name = "Tree"
   });
 
   it('reports nothing for a file whose JSON Godot cannot read', async () => {
-    expect(await refusals(sceneUsing('res://tree.gltf'), project({ 'res://tree.gltf': '{"asset": ' }))).toEqual([]);
+    expect(
+      await refusals(sceneUsing('res://tree.gltf'), project({ 'res://tree.gltf': '{"asset": ' }))
+    ).toEqual([]);
   });
 
   it('reports nothing for an ext_resource no value uses', async () => {
@@ -248,7 +258,9 @@ omni_range = -1.0
 
   it('declines a legacy-format file whole, as the file-local lint does', () => {
     const content = sceneUsing('res://tree.glb').replace('format=3', 'format=2');
-    const { now, later } = new Linter().session().lint(content, project({ 'res://tree.glb': INSTANCED_TREE }));
+    const { now, later } = new Linter()
+      .session()
+      .lint(content, project({ 'res://tree.glb': INSTANCED_TREE }));
 
     expect(now).toEqual(new Linter().lint(content));
     expect(later).toBeNull();
@@ -261,7 +273,9 @@ describe('unimportable glTF in a project that may register a GLTFDocumentExtensi
     const [diagnostic] = await refusals(sceneUsing('res://tree.glb'), project(files));
 
     expect(diagnostic).toMatchObject({ severity: 'error', ruleName: RULE });
-    expect(diagnostic!.message).toContain('enables no editor plugin, declares no autoload and holds no GDExtension');
+    expect(diagnostic!.message).toContain(
+      'enables no editor plugin, declares no autoload and holds no GDExtension'
+    );
   });
 
   it('is a warning when the project holds a .gdextension file anywhere, with no .godot directory', async () => {
@@ -272,7 +286,10 @@ describe('unimportable glTF in a project that may register a GLTFDocumentExtensi
   });
 
   it('is a warning when the project declares an autoload, which a tool script can make register one', async () => {
-    const files = { 'res://tree.glb': INSTANCED_TREE, 'res://project.godot': '[autoload]\n\nGltf="*res://gltf.gd"\n' };
+    const files = {
+      'res://tree.glb': INSTANCED_TREE,
+      'res://project.godot': '[autoload]\n\nGltf="*res://gltf.gd"\n',
+    };
     const [diagnostic] = await refusals(sceneUsing('res://tree.glb'), project(files));
 
     expect(diagnostic).toMatchObject({ severity: 'warning', ruleName: PLUGIN_RULE });
@@ -287,13 +304,19 @@ describe('unimportable glTF in a project that may register a GLTFDocumentExtensi
   });
 
   it('is a warning for a project whose project.godot it cannot read', async () => {
-    const [diagnostic] = await refusals(sceneUsing('res://tree.glb'), memoryProject({ 'res://tree.glb': INSTANCED_TREE }));
+    const [diagnostic] = await refusals(
+      sceneUsing('res://tree.glb'),
+      memoryProject({ 'res://tree.glb': INSTANCED_TREE })
+    );
 
     expect(diagnostic).toMatchObject({ severity: 'warning', ruleName: PLUGIN_RULE });
   });
 
   it('lists the project only when a glTF is refused', async () => {
-    const tree = triangleGlb({ extensionsUsed: ['KHR_texture_transform'], extensionsRequired: ['KHR_texture_transform'] });
+    const tree = triangleGlb({
+      extensionsUsed: ['KHR_texture_transform'],
+      extensionsRequired: ['KHR_texture_transform'],
+    });
     const provider = project({ 'res://tree.glb': tree });
     const list = vi.spyOn(provider, 'listFiles' as never) as unknown as ReturnType<typeof vi.fn>;
 
@@ -305,7 +328,8 @@ describe('unimportable glTF in a project that may register a GLTFDocumentExtensi
   it('is a warning when the project enables an editor plugin, which may register one', async () => {
     const files = {
       'res://tree.glb': INSTANCED_TREE,
-      'res://project.godot': '[editor_plugins]\n\nenabled=PackedStringArray("res://addons/gltf_instancing/plugin.cfg")\n',
+      'res://project.godot':
+        '[editor_plugins]\n\nenabled=PackedStringArray("res://addons/gltf_instancing/plugin.cfg")\n',
     };
     const diagnostics = await refusals(sceneUsing('res://tree.glb'), project(files));
 
@@ -323,7 +347,10 @@ describe('unimportable glTF in a project that may register a GLTFDocumentExtensi
   });
 
   it('does not wait for the project files when nothing is refused', async () => {
-    const tree = triangleGlb({ extensionsUsed: ['KHR_texture_transform'], extensionsRequired: ['KHR_texture_transform'] });
+    const tree = triangleGlb({
+      extensionsUsed: ['KHR_texture_transform'],
+      extensionsRequired: ['KHR_texture_transform'],
+    });
     const provider: ResourceProvider = {
       loadResource: (path) => (path === 'res://tree.glb' ? Promise.resolve(tree) : new Promise(() => {})),
     };

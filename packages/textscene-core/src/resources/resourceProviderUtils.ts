@@ -63,7 +63,9 @@ export function isBinaryResourceType(type: string, path?: string): boolean {
  * small file into.
  */
 export function resourceContent(bytes: Uint8Array, type: string, path: string): string | ArrayBuffer {
-  return isBinaryResourceType(type, path) ? new Uint8Array(bytes).buffer : new TextDecoder('utf-8').decode(bytes);
+  return isBinaryResourceType(type, path)
+    ? new Uint8Array(bytes).buffer
+    : new TextDecoder('utf-8').decode(bytes);
 }
 
 /**

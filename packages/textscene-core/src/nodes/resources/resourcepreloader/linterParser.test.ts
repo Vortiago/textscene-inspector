@@ -86,17 +86,12 @@ describe('ResourcePreloader strict validators', () => {
     });
 
     it('accepts one SubResource entry', () => {
-      expect(
-        check('resources', '[PackedStringArray("a"), [SubResource("Resource_1")]]')
-      ).toBeNull();
+      expect(check('resources', '[PackedStringArray("a"), [SubResource("Resource_1")]]')).toBeNull();
     });
 
     it('accepts multiple entries mixing SubResource and ExtResource', () => {
       expect(
-        check(
-          'resources',
-          '[PackedStringArray("a", "b"), [SubResource("Resource_1"), ExtResource("1_tex")]]'
-        )
+        check('resources', '[PackedStringArray("a", "b"), [SubResource("Resource_1"), ExtResource("1_tex")]]')
       ).toBeNull();
     });
 
@@ -111,19 +106,13 @@ describe('ResourcePreloader strict validators', () => {
     });
 
     it('rejects a top-level array with three elements — resource_preloader.cpp:36 drops the whole write', () => {
-      const result = check(
-        'resources',
-        '[PackedStringArray("a"), [SubResource("Resource_1")], 3]'
-      );
+      const result = check('resources', '[PackedStringArray("a"), [SubResource("Resource_1")], 3]');
       expect(result).not.toBeNull();
       expect(result?.code).toBe('INVALID_RESOURCES_SHAPE');
     });
 
     it('rejects mismatched name/resource counts — resource_preloader.cpp:40 drops the whole write', () => {
-      const result = check(
-        'resources',
-        '[PackedStringArray("a", "b"), [SubResource("Resource_1")]]'
-      );
+      const result = check('resources', '[PackedStringArray("a", "b"), [SubResource("Resource_1")]]');
       expect(result).not.toBeNull();
       expect(result?.code).toBe('INVALID_RESOURCES_COUNT_MISMATCH');
     });
@@ -141,18 +130,13 @@ describe('ResourcePreloader strict validators', () => {
     });
 
     it('rejects an unquoted name', () => {
-      const result = check(
-        'resources',
-        '[PackedStringArray(a), [SubResource("Resource_1")]]'
-      );
+      const result = check('resources', '[PackedStringArray(a), [SubResource("Resource_1")]]');
       expect(result).not.toBeNull();
       expect(result?.code).toBe('INVALID_RESOURCES_FORMAT');
     });
 
     it('accepts a bare Array of strings for element 0 — Variant::operator PackedStringArray() converts it too', () => {
-      expect(
-        check('resources', '[["a"], [SubResource("Resource_1")]]')
-      ).toBeNull();
+      expect(check('resources', '[["a"], [SubResource("Resource_1")]]')).toBeNull();
     });
 
     it('rejects a first element that is neither PackedStringArray nor an Array', () => {

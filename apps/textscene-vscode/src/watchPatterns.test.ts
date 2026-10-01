@@ -32,7 +32,13 @@ function matched(pattern: string, files: readonly string[]): string[] {
 
 describe('RESOURCE_FILES_PATTERN', () => {
   it('matches a glTF file in any case, mixed case included', () => {
-    const files = ['models/Tree.Glb', 'models/tree.glb', 'models/TREE.GLB', 'models/Rock.glTF', 'models/rock.gltf'];
+    const files = [
+      'models/Tree.Glb',
+      'models/tree.glb',
+      'models/TREE.GLB',
+      'models/Rock.glTF',
+      'models/rock.gltf',
+    ];
 
     expect(matched(RESOURCE_FILES_PATTERN, files)).toEqual([...files].sort());
   });

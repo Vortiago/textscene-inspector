@@ -4,12 +4,7 @@
  * shows only in a golden image.
  */
 import { describe, expect, it } from 'vitest';
-import {
-  channelToByte,
-  linearChannelToSRGB,
-  sRGBChannelToLinear,
-  sRGBToLinearRGB,
-} from './colorSpace';
+import { channelToByte, linearChannelToSRGB, sRGBChannelToLinear, sRGBToLinearRGB } from './colorSpace';
 
 const BYTES = Array.from({ length: 256 }, (_, byte) => byte);
 

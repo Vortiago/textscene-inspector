@@ -77,10 +77,7 @@ export function useSourceDiagnostics(
   // The live `lineCount`, not the linted one: until the debounced lint catches up, a line
   // deleted since has no gutter row, so its finding shows in the file-level section.
   const grouped = useMemo(() => groupDiagnostics(diagnostics, lineCount), [diagnostics, lineCount]);
-  const problemBadge = useMemo(
-    () => formatProblemBadge(summarizeDiagnostics(diagnostics)),
-    [diagnostics]
-  );
+  const problemBadge = useMemo(() => formatProblemBadge(summarizeDiagnostics(diagnostics)), [diagnostics]);
 
   return {
     diagnosticsByLine: grouped.byLine,

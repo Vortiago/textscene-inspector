@@ -12,11 +12,7 @@ import {
   CanvasItemLightMode,
   type CanvasItemMaterialProperties,
 } from '../../resources/materials/canvasitemmaterial/types.js';
-import {
-  MAX_LIGHT_CLASSES,
-  useCanvasLighting2D,
-  useRegisterLightOnlyItem,
-} from './CanvasLighting2D.js';
+import { MAX_LIGHT_CLASSES, useCanvasLighting2D, useRegisterLightOnlyItem } from './CanvasLighting2D.js';
 import {
   canvasItemLightingProps,
   type CanvasItemLightingProps,
@@ -106,11 +102,7 @@ export function useCanvasItemLighting(
   // The provider owns these textures and this vector, so a resize or a
   // reallocation reaches every item without a re-render.
   bound.resolution.value = resolution;
-  (bound.canvasModulate.value as THREE.Vector3).set(
-    canvasModulate.r,
-    canvasModulate.g,
-    canvasModulate.b
-  );
+  (bound.canvasModulate.value as THREE.Vector3).set(canvasModulate.r, canvasModulate.g, canvasModulate.b);
   // The mode rides the uniforms too: a re-parse changes `light_mode` under a
   // mounted item, and three would keep the program it first compiled.
   bound.lightMode.value = lightMode;

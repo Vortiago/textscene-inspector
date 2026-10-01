@@ -23,7 +23,10 @@ describe('GraphElement selection rule', () => {
 
   const namesOf = (content: string) => linter.lint(content).map((d) => d.ruleName);
   const severitiesOf = (content: string, ruleName: string) =>
-    linter.lint(content).filter((d) => d.ruleName === ruleName).map((d) => d.severity);
+    linter
+      .lint(content)
+      .filter((d) => d.ruleName === ruleName)
+      .map((d) => d.severity);
 
   it('says nothing about an ordinary, consistent GraphElement (happy path)', () => {
     const diagnostics = linter.lint(scene('selectable = true\nselected = true\n'));
@@ -59,12 +62,8 @@ describe('GraphElement selection rule', () => {
   });
 
   it('stays silent when only one of the pair is authored — nothing to compare (edge case)', () => {
-    expect(namesOf(scene('selected = true\n'))).not.toContain(
-      'graph-element-selected-not-selectable'
-    );
-    expect(namesOf(scene('selectable = false\n'))).not.toContain(
-      'graph-element-selected-not-selectable'
-    );
+    expect(namesOf(scene('selected = true\n'))).not.toContain('graph-element-selected-not-selectable');
+    expect(namesOf(scene('selectable = false\n'))).not.toContain('graph-element-selected-not-selectable');
   });
 
   it('stays silent when either value is malformed — format errors are the validator’s job, not this rule’s', () => {

@@ -26,12 +26,18 @@ describe('ProjectPluginProbes.probe', () => {
   });
 
   it('is true for a project that holds a .gdextension file anywhere, with no .godot directory', async () => {
-    const files = { 'res://project.godot': PLAIN_PROJECT_FILE, 'res://addons/gltf/bin/Importer.GDExtension': '' };
+    const files = {
+      'res://project.godot': PLAIN_PROJECT_FILE,
+      'res://addons/gltf/bin/Importer.GDExtension': '',
+    };
     expect(await mayExtend(memoryProject(files))).toBe(true);
   });
 
   it('is true for a project whose extension list names a GDExtension the listing does not find', async () => {
-    const files = { 'res://project.godot': PLAIN_PROJECT_FILE, 'res://.godot/extension_list.cfg': 'res://a.gdextension\n' };
+    const files = {
+      'res://project.godot': PLAIN_PROJECT_FILE,
+      'res://.godot/extension_list.cfg': 'res://a.gdextension\n',
+    };
     expect(await mayExtend(memoryProject(files))).toBe(true);
   });
 
@@ -51,7 +57,10 @@ describe('ProjectPluginProbes.probe', () => {
 
   it('is true when the project file is missing or unreadable, since nothing is then proven', async () => {
     expect(await mayExtend(memoryProject({}))).toBe(true);
-    const denied: ResourceProvider = { loadResource: () => Promise.reject(new Error('denied')), listFiles: async () => [] };
+    const denied: ResourceProvider = {
+      loadResource: () => Promise.reject(new Error('denied')),
+      listFiles: async () => [],
+    };
     expect(await mayExtend(denied)).toBe(true);
   });
 
@@ -121,7 +130,10 @@ describe('the kept plugin answer', () => {
   }
 
   it('does not read an unchanged project file again', async () => {
-    const { provider, reads } = stamped({ 'res://project.godot': PLUGIN_ENABLED }, { 'res://project.godot': '1' });
+    const { provider, reads } = stamped(
+      { 'res://project.godot': PLUGIN_ENABLED },
+      { 'res://project.godot': '1' }
+    );
     const probes = new ProjectPluginProbes();
 
     expect(await probes.probe(provider)()).toBe(true);
@@ -157,12 +169,19 @@ describe('the kept plugin answer', () => {
     stamps['res://.godot/extension_list.cfg'] = 'b';
 
     expect(await probes.probe(provider)()).toBe(true);
-    expect(reads).toEqual(['res://project.godot', 'res://.godot/extension_list.cfg', 'res://.godot/extension_list.cfg']);
+    expect(reads).toEqual([
+      'res://project.godot',
+      'res://.godot/extension_list.cfg',
+      'res://.godot/extension_list.cfg',
+    ]);
   });
 
   it('stamps the kept extension list beside the project file, not after it', async () => {
     const files = { 'res://project.godot': 'config_version=5\n', 'res://.godot/extension_list.cfg': '\n' };
-    const { provider } = stamped(files, { 'res://project.godot': '1', 'res://.godot/extension_list.cfg': 'a' });
+    const { provider } = stamped(files, {
+      'res://project.godot': '1',
+      'res://.godot/extension_list.cfg': 'a',
+    });
     const probes = new ProjectPluginProbes();
     await probes.probe(provider)();
 
@@ -170,7 +189,9 @@ describe('the kept plugin answer', () => {
     let releaseProject: (stamp: string) => void = () => {};
     provider.stamp = (path) => {
       asked.push(path);
-      return path === 'res://project.godot' ? new Promise((resolve) => (releaseProject = resolve)) : Promise.resolve('a');
+      return path === 'res://project.godot'
+        ? new Promise((resolve) => (releaseProject = resolve))
+        : Promise.resolve('a');
     };
     const answer = probes.probe(provider)();
 

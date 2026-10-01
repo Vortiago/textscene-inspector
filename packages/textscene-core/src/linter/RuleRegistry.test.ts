@@ -43,9 +43,7 @@ describe('RuleRegistry', () => {
       registry.register(rule1);
       registry.register(rule2);
 
-      expect(loggerWarn).toHaveBeenCalledWith(
-        'Rule "duplicate-rule" is already registered. Overwriting.'
-      );
+      expect(loggerWarn).toHaveBeenCalledWith('Rule "duplicate-rule" is already registered. Overwriting.');
       expect(registry.getRule('duplicate-rule')).toBe(rule2);
 
       loggerWarn.mockRestore();

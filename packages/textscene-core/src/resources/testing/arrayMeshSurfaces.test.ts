@@ -10,12 +10,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { repoPath, walkSources } from '../../r3f/testing/sourceScan';
 import { repoRoot } from '../../parser/testing/parserKit';
-import {
-  headlightsSurface,
-  truncatedSurface,
-  wallQuadSurface,
-  wallQuadSurfaces,
-} from './arrayMeshSurfaces';
+import { headlightsSurface, truncatedSurface, wallQuadSurface, wallQuadSurfaces } from './arrayMeshSurfaces';
 
 const SRC_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const SHARED_MODULE = 'packages/textscene-core/src/resources/testing/arrayMeshSurfaces.ts';

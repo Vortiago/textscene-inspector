@@ -81,8 +81,20 @@ describe('measureText', () => {
     const wide = measureText('AB', 16, 0, WIDE_FONT_METRICS);
     expect(wide.x).not.toBeCloseTo(openSans.x, 5);
     expect(wide).toEqual({
-      x: shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0, fontMetrics: WIDE_FONT_METRICS }).widthPx,
-      y: shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0, fontMetrics: WIDE_FONT_METRICS }).heightPx,
+      x: shapeText('AB', {
+        fontSizePx: 16,
+        boxWidthPx: 0,
+        autowrapMode: AutowrapMode.OFF,
+        lineSpacingPx: 0,
+        fontMetrics: WIDE_FONT_METRICS,
+      }).widthPx,
+      y: shapeText('AB', {
+        fontSizePx: 16,
+        boxWidthPx: 0,
+        autowrapMode: AutowrapMode.OFF,
+        lineSpacingPx: 0,
+        fontMetrics: WIDE_FONT_METRICS,
+      }).heightPx,
     });
   });
 

@@ -59,10 +59,7 @@ function mockPointerEventWithSpy(
 }
 
 function setup() {
-  return renderHook(
-    () => ({ vp: useViewportSelection(), sel: useSelection() }),
-    { wrapper: wrap }
-  );
+  return renderHook(() => ({ vp: useViewportSelection(), sel: useSelection() }), { wrapper: wrap });
 }
 
 /** Registers a fresh Object3D at `path` and returns it for use in mock events. */

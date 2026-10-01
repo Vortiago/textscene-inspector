@@ -16,20 +16,22 @@ function Bomb({ shouldThrow }: { shouldThrow: boolean }) {
 function BombHarness({ initialShouldThrow }: { initialShouldThrow: boolean }) {
   const [shouldThrow, setShouldThrow] = useState(initialShouldThrow);
   return (
-    <ErrorBoundary fallback={(error, reset) => (
-      <div>
-        <span data-testid="error-message">{error.message}</span>
-        <button
-          type="button"
-          onClick={() => {
-            setShouldThrow(false);
-            reset();
-          }}
-        >
-          Retry
-        </button>
-      </div>
-    )}>
+    <ErrorBoundary
+      fallback={(error, reset) => (
+        <div>
+          <span data-testid="error-message">{error.message}</span>
+          <button
+            type="button"
+            onClick={() => {
+              setShouldThrow(false);
+              reset();
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+    >
       <Bomb shouldThrow={shouldThrow} />
     </ErrorBoundary>
   );

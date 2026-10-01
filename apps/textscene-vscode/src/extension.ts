@@ -46,11 +46,11 @@ export function activate(context: vscode.ExtensionContext) {
       // `.fsPath` is `undefined` yet counts as handed a resource, previewing nothing.
       const clicked = isUri(resource) ? resource : undefined;
       const activeEditor = vscode.window.activeTextEditor;
-      const target =
-        clicked?.fsPath?.endsWith('.tscn') ? clicked
-        : !clicked && activeEditor?.document.fileName.endsWith('.tscn') ?
-          activeEditor.document.uri
-        : undefined;
+      const target = clicked?.fsPath?.endsWith('.tscn')
+        ? clicked
+        : !clicked && activeEditor?.document.fileName.endsWith('.tscn')
+          ? activeEditor.document.uri
+          : undefined;
 
       if (target) {
         getOrCreatePanel(target);
@@ -61,28 +61,18 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.languages.registerDocumentSymbolProvider(
-      { language: 'tscn' },
-      new TscnDocumentSymbolProvider(),
-      {
-        label: 'TSCN Scene Hierarchy',
-      }
-    )
+    vscode.languages.registerDocumentSymbolProvider({ language: 'tscn' }, new TscnDocumentSymbolProvider(), {
+      label: 'TSCN Scene Hierarchy',
+    })
   );
 
   context.subscriptions.push(
-    vscode.languages.registerDefinitionProvider(
-      { language: 'tscn' },
-      new TscnDefinitionProvider()
-    )
+    vscode.languages.registerDefinitionProvider({ language: 'tscn' }, new TscnDefinitionProvider())
   );
 
   // Turn `res://` references into clickable links that open the target file.
   context.subscriptions.push(
-    vscode.languages.registerDocumentLinkProvider(
-      { language: 'tscn' },
-      new TscnDocumentLinkProvider()
-    )
+    vscode.languages.registerDocumentLinkProvider({ language: 'tscn' }, new TscnDocumentLinkProvider())
   );
 
   // External resource changes: materials (.tres), textures (png/jpg/webp/svg), glTF
@@ -106,10 +96,7 @@ export function activate(context: vscode.ExtensionContext) {
   // edit (git pull, branch switch) that fires no save event. The content-diff guard
   // in update() drops the in-editor save that onDidSaveTextDocument already
   // handled. Every other panel re-fetches the file as a dependency or sub-scene.
-  const handleResourceChange = async (
-    uri: vscode.Uri,
-    deleted = false,
-  ): Promise<void> => {
+  const handleResourceChange = async (uri: vscode.Uri, deleted = false): Promise<void> => {
     const changedKey = uri.toString();
     await Promise.all(
       [...panels].map(([panelKey, panel]) => {

@@ -4,10 +4,10 @@ import { parseCollisionShape2D } from './parser';
 
 describe('parseCollisionShape2D', () => {
   it('parses the shape reference and disabled flag (happy path)', () => {
-    const result = parseCollisionShape2D(
-      heading('CollisionShape2D', { name: 'Shape', parent: '.' }),
-      { shape: 'SubResource("CircleShape2D_1")', disabled: 'true' }
-    );
+    const result = parseCollisionShape2D(heading('CollisionShape2D', { name: 'Shape', parent: '.' }), {
+      shape: 'SubResource("CircleShape2D_1")',
+      disabled: 'true',
+    });
     expect(result.name).toBe('Shape');
     expect(result.shape).toBe('SubResource("CircleShape2D_1")');
     expect(result.disabled).toBe(true);

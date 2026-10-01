@@ -24,8 +24,11 @@ export function formatCamera2DProperties(properties: Camera2DProperties): Proper
 
 function anchorModeName(mode: number): string {
   switch (mode) {
-    case Camera2DAnchorMode.FIXED_TOP_LEFT: return 'Fixed Top-Left';
-    case Camera2DAnchorMode.DRAG_CENTER: return 'Drag Center';
-    default: return 'Unknown';
+    case Camera2DAnchorMode.FIXED_TOP_LEFT:
+      return 'Fixed Top-Left';
+    case Camera2DAnchorMode.DRAG_CENTER:
+      return 'Drag Center';
+    default:
+      return 'Unknown';
   }
 }

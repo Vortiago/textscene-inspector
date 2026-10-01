@@ -59,7 +59,6 @@ export function pickButtonStyleBox(
   return overrides[state] ?? defaults[state];
 }
 
-
 /** The same componentwise multiply as `tintStyleBox`'s two colours, for a single `ControlColor` (font/icon modulate). */
 export function tintColor(base: ControlColor, tint: RGBA): ControlColor {
   return multiplyModulate(base, tint);
@@ -112,11 +111,7 @@ export function shapeButtonLabel(
  * The ascent is a whole pixel, so the floor moves ahead of it. Unfloored, a half
  * pixel lands on a boundary WebGL resolves upward, a row above Godot.
  */
-export function centredTextTopPx(
-  boxHeightPx: number,
-  textHeightPx: number,
-  topInsetPx: number
-): number {
+export function centredTextTopPx(boxHeightPx: number, textHeightPx: number, topInsetPx: number): number {
   return Math.floor((boxHeightPx - textHeightPx) / 2 + topInsetPx);
 }
 

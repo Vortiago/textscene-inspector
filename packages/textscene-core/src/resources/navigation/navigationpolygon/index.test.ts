@@ -16,16 +16,12 @@ describe('navigationpolygon slice registration', () => {
     // Matches the label `useSubOrExtResource` passes to `useResource`, so a
     // failed .tres aggregates under the same missing-resources row.
     expect(resourceSliceRegistry.busTypeFor('NavigationPolygon')).toBe('resource');
-    expect(resourceSliceRegistry.byTypeName('NavigationPolygon')?.failureLabel).toBe(
-      'Resource'
-    );
+    expect(resourceSliceRegistry.byTypeName('NavigationPolygon')?.failureLabel).toBe('Resource');
   });
 
   it('claims no file extension — it arrives inside a .tscn or .tres (edge case)', () => {
     expect(resourceSliceRegistry.byTypeName('NavigationPolygon')?.extensions).toBeUndefined();
-    expect(
-      resourceSliceRegistry.byTypeName('NavigationPolygon')?.binaryBytes
-    ).toBeUndefined();
+    expect(resourceSliceRegistry.byTypeName('NavigationPolygon')?.binaryBytes).toBeUndefined();
   });
 
   it('claims the resource, not the region node that holds it (error path)', () => {

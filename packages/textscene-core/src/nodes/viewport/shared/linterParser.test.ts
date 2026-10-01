@@ -187,7 +187,12 @@ describe('Viewport shared validators', () => {
       expect(rejected!.severity).toBe('error');
     });
 
-    it.each(['positional_shadow_atlas_quad_0', 'positional_shadow_atlas_quad_1', 'positional_shadow_atlas_quad_2', 'positional_shadow_atlas_quad_3'])(
+    it.each([
+      'positional_shadow_atlas_quad_0',
+      'positional_shadow_atlas_quad_1',
+      'positional_shadow_atlas_quad_2',
+      'positional_shadow_atlas_quad_3',
+    ])(
       'accepts %s 6 (1024 Shadows); rejects 7, past SHADOW_ATLAS_QUADRANT_SUBDIV_MAX (viewport.cpp:1413)',
       (key) => {
         const validator = find(key);
@@ -264,17 +269,14 @@ describe('Viewport shared validators', () => {
       expect(warned!.severity).toBe('warning');
     });
 
-    it.each([
-      'anisotropic_filtering_level',
-      'debug_draw',
-      'scaling_3d_mode',
-      'vrs_mode',
-      'vrs_update_mode',
-    ])('warns at -1 on %s: a label-list hint starts at index 0, and no setter refuses it', (key) => {
-      const warned = find(key)(key, '-1', 1);
-      expect(warned).not.toBeNull();
-      expect(warned!.severity).toBe('warning');
-    });
+    it.each(['anisotropic_filtering_level', 'debug_draw', 'scaling_3d_mode', 'vrs_mode', 'vrs_update_mode'])(
+      'warns at -1 on %s: a label-list hint starts at index 0, and no setter refuses it',
+      (key) => {
+        const warned = find(key)(key, '-1', 1);
+        expect(warned).not.toBeNull();
+        expect(warned!.severity).toBe('warning');
+      }
+    );
   });
 
   describe('mesh_lod_threshold: hinted RANGE "0,1024,0.1" (viewport.cpp:5171), both ends warning', () => {
@@ -399,7 +401,7 @@ describe('Viewport shared validators', () => {
       expect(validator('scaling_3d_scale', '-inf', 1)!.severity).toBe('error');
     });
 
-    it('accepts nan: CLAMP\'s own comparisons are false against nan, so Godot stores it unaltered too', () => {
+    it("accepts nan: CLAMP's own comparisons are false against nan, so Godot stores it unaltered too", () => {
       expect(find('scaling_3d_scale')('scaling_3d_scale', 'nan', 1)).toBeNull();
     });
   });
@@ -430,13 +432,10 @@ describe('Viewport shared validators', () => {
       }
     );
 
-    it.each(['gui_drag_threshold', 'positional_shadow_atlas_size'])(
-      'rejects a non-numeric %s',
-      (key) => {
-        const validator = find(key);
-        expect(validator(key, 'garbage', 1)).not.toBeNull();
-      }
-    );
+    it.each(['gui_drag_threshold', 'positional_shadow_atlas_size'])('rejects a non-numeric %s', (key) => {
+      const validator = find(key);
+      expect(validator(key, 'garbage', 1)).not.toBeNull();
+    });
   });
 
   describe('Resource references (format-only): vrs_texture, world_3d', () => {

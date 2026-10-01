@@ -47,9 +47,7 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
   // Null when a scan cannot decide: nothing could glow, or every pixel glows. One nullable value,
   // not a threshold and a flag, since a threshold of 0 means "everything blooms".
   const scanThreshold =
-    glowParams && !glowNeedsEveryPixel(glowParams)
-      ? unexposedBrightPassThreshold(glowParams)
-      : null;
+    glowParams && !glowNeedsEveryPixel(glowParams) ? unexposedBrightPassThreshold(glowParams) : null;
   const hasBloomable = useSceneHasBloomableEmissive(scanThreshold);
   const hasBlended = useSceneHasBlendedSurface();
   const activeGlow = glowParams && (scanThreshold === null || hasBloomable) ? glowParams : null;
@@ -59,9 +57,7 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
   return (
     <>
       <EnvironmentApplier settings={settings} hasSky={!!sky} suppressToneMapping={!!composited} />
-      {composited && (
-        <ToneMapLayer glow={composited.glow} toneMapping={settings.toneMapping} />
-      )}
+      {composited && <ToneMapLayer glow={composited.glow} toneMapping={settings.toneMapping} />}
       {sky && (showsSky || skyAmbient) && (
         <>
           <SkyLayer
@@ -97,9 +93,7 @@ function useSceneHasBloomableEmissive(threshold: number | null): boolean {
   return useLatchedSceneScan(
     useMemo(
       () =>
-        threshold === null
-          ? null
-          : (scene: THREE.Object3D) => sceneHasBloomableEmissive(scene, threshold),
+        threshold === null ? null : (scene: THREE.Object3D) => sceneHasBloomableEmissive(scene, threshold),
       [threshold]
     )
   );
@@ -155,8 +149,7 @@ function EnvironmentApplier({ settings, hasSky, suppressToneMapping }: Environme
   const gl = useThree((state) => state.gl);
 
   const mode = settings.background.mode;
-  const showBackgroundColor =
-    mode === BackgroundMode.BG_COLOR || mode === BackgroundMode.BG_CLEAR_COLOR;
+  const showBackgroundColor = mode === BackgroundMode.BG_COLOR || mode === BackgroundMode.BG_CLEAR_COLOR;
 
   useEffect(() => {
     const previousBackground = scene.background;
@@ -191,15 +184,7 @@ function EnvironmentApplier({ settings, hasSky, suppressToneMapping }: Environme
       },
       scene
     );
-  }, [
-    gl,
-    scene,
-    toneMapMode,
-    toneMapExposure,
-    toneMapWhite,
-    toneMapAgxContrast,
-    suppressToneMapping,
-  ]);
+  }, [gl, scene, toneMapMode, toneMapExposure, toneMapWhite, toneMapAgxContrast, suppressToneMapping]);
 
   const fog = settings.fog;
   useEffect(() => {

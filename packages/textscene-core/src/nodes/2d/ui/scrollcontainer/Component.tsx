@@ -89,7 +89,6 @@ function ScrollHintChrome({
   );
 }
 
-
 /**
  * A ScrollBar's `ControlDrawTransform`. `_update_scrollbar_position` places the
  * bars through `set_anchor_and_offset` alone, so they carry no rotation, scale
@@ -123,7 +122,14 @@ interface ScrollBarChromeProps {
  * `snappedControlOrigin` apart from the container, while `bar.rect` stays at
  * full precision for the reservation arithmetic.
  */
-function ScrollBarChrome({ bar, track, grabber, color, chromeRenderOrder, snapToPixels }: ScrollBarChromeProps) {
+function ScrollBarChrome({
+  bar,
+  track,
+  grabber,
+  color,
+  chromeRenderOrder,
+  snapToPixels,
+}: ScrollBarChromeProps) {
   if (!bar.visible) return null;
   const origin = snappedControlOrigin(bar.rect, SCROLL_BAR_DRAW_TRANSFORM, snapToPixels);
   // A group carries the position. `StyleBoxQuad` takes only the size and flips y.
@@ -136,7 +142,12 @@ function ScrollBarChrome({ bar, track, grabber, color, chromeRenderOrder, snapTo
         position={[bar.grabberRect.x, -bar.grabberRect.y, 0]}
         renderOrder={chromeRenderOrder + 0.5}
       >
-        <StyleBoxQuad styleBox={grabber} color={color} rect={bar.grabberRect} renderOrder={chromeRenderOrder + 0.5} />
+        <StyleBoxQuad
+          styleBox={grabber}
+          color={color}
+          rect={bar.grabberRect}
+          renderOrder={chromeRenderOrder + 0.5}
+        />
       </CanvasItemGroup>
     </CanvasItemGroup>
   );

@@ -22,9 +22,7 @@ describe('TscnPreviewPanel webview-ready handshake', () => {
   it('caches the initial loadTscn payload until the webview signals ready', async () => {
     const { webview, triggerMessage } = setupMockPanel();
 
-    (vscode.workspace.fs.readFile as Mock).mockResolvedValue(
-      createMockFileData(MINIMAL_TSCN)
-    );
+    (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
 
     const extensionUri = createMockUri('/extension');
     const resourceUri = createMockUri('/workspace/test.tscn');
@@ -51,9 +49,7 @@ describe('TscnPreviewPanel webview-ready handshake', () => {
   it('posts subsequent loadTscn directly once the webview is ready', async () => {
     const { webview, triggerMessage } = setupMockPanel();
 
-    (vscode.workspace.fs.readFile as Mock).mockResolvedValue(
-      createMockFileData(MINIMAL_TSCN)
-    );
+    (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
 
     const extensionUri = createMockUri('/extension');
     const resourceUri = createMockUri('/workspace/test.tscn');
@@ -67,9 +63,7 @@ describe('TscnPreviewPanel webview-ready handshake', () => {
     webview.postMessage.mockClear();
 
     const updatedContent = MINIMAL_TSCN + '\n[node name="Added" type="Node3D" parent="."]';
-    (vscode.workspace.fs.readFile as Mock).mockResolvedValue(
-      createMockFileData(updatedContent)
-    );
+    (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(updatedContent));
 
     panel.update(resourceUri);
     await new Promise<void>((r) => setTimeout(r, 10));
@@ -85,9 +79,7 @@ describe('TscnPreviewPanel webview-ready handshake', () => {
   it('replays the current text on a remount ready, not only the first one', async () => {
     const { webview, triggerMessage } = setupMockPanel();
 
-    (vscode.workspace.fs.readFile as Mock).mockResolvedValue(
-      createMockFileData(MINIMAL_TSCN)
-    );
+    (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
 
     const resourceUri = createMockUri('/workspace/test.tscn');
     const panel = TscnPreviewPanel.create(createMockUri('/extension'), resourceUri);

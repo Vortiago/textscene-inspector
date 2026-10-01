@@ -4,7 +4,12 @@ import type { ParsedHeading } from '../../../../parser/utils';
 import { unquoteStringName } from '../../../../parser/utils';
 import type { ControlProperties, ControlColor } from './types';
 import { parseColorOrUndefined } from '../../../../utils/colorParser';
-import { intOr, parseOptionalFloat, parseOptionalVector2, parseHeadingIndex } from '../../../../parser/valueParsers';
+import {
+  intOr,
+  parseOptionalFloat,
+  parseOptionalVector2,
+  parseHeadingIndex,
+} from '../../../../parser/valueParsers';
 import { LAYOUT_DIRECTION_INHERITED } from '../../../../godot/index.js';
 import { boolSlotValue } from '../../../../godot/index.js';
 
@@ -68,10 +73,7 @@ function parseThemeTypeVariation(value: string | undefined): string | undefined 
   return name === '' ? undefined : name;
 }
 
-export function parseControl(
-  heading: ParsedHeading,
-  properties: Record<string, string>
-): ControlProperties {
+export function parseControl(heading: ParsedHeading, properties: Record<string, string>): ControlProperties {
   const result: ControlProperties = { name: heading.attributes.name || '' };
 
   if (heading.attributes.parent) result.parent = heading.attributes.parent;
@@ -116,16 +118,8 @@ export function parseControl(
   result.showBehindParent = boolSlotValue(properties.show_behind_parent) === true;
   result.topLevel = boolSlotValue(properties.top_level) === true;
   result.lightMask = intOr(properties.light_mask, 1, `${result.name || 'Control'}.light_mask`);
-  result.textureFilter = intOr(
-    properties.texture_filter,
-    0,
-    `${result.name || 'Control'}.texture_filter`
-  );
-  result.textureRepeat = intOr(
-    properties.texture_repeat,
-    0,
-    `${result.name || 'Control'}.texture_repeat`
-  );
+  result.textureFilter = intOr(properties.texture_filter, 0, `${result.name || 'Control'}.texture_filter`);
+  result.textureRepeat = intOr(properties.texture_repeat, 0, `${result.name || 'Control'}.texture_repeat`);
 
   Object.assign(result, parseThemeOverrides(properties));
 

@@ -6,7 +6,13 @@
  */
 
 import { describe, it } from 'vitest';
-import { node, scene, expectClean, expectDiagnostic, expectNoDiagnostic } from '../../../linter/testing/testkit';
+import {
+  node,
+  scene,
+  expectClean,
+  expectDiagnostic,
+  expectNoDiagnostic,
+} from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
@@ -24,14 +30,22 @@ navigation_polygon = ExtResource("1_nav")
 
     it('errors when a navigation_polygon ExtResource reference is dangling', () => {
       expectDiagnostic(
-        scene(node('NavigationRegion2D', { navigation_polygon: 'ExtResource("9_missing")' }, { name: 'Region' })),
+        scene(
+          node('NavigationRegion2D', { navigation_polygon: 'ExtResource("9_missing")' }, { name: 'Region' })
+        ),
         { ruleName: 'dangling-resource-reference', severity: 'error', nodeType: 'NavigationRegion2D' }
       );
     });
 
     it('errors when a navigation_polygon SubResource reference is dangling', () => {
       expectDiagnostic(
-        scene(node('NavigationRegion2D', { navigation_polygon: 'SubResource("NavPoly_absent")' }, { name: 'Region' })),
+        scene(
+          node(
+            'NavigationRegion2D',
+            { navigation_polygon: 'SubResource("NavPoly_absent")' },
+            { name: 'Region' }
+          )
+        ),
         { ruleName: 'dangling-resource-reference', severity: 'error' }
       );
     });

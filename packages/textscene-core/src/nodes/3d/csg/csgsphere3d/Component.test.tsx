@@ -49,10 +49,9 @@ describe('<CSGSphere3D>', () => {
       type: 'StandardMaterial3D',
       data: { albedo_color: 'Color(0.4, 0.3, 0.25, 1)' },
     };
-    const renderer = await render(
-      makeNode({ materialPath: 'SubResource("StandardMaterial3D_sphere")' }),
-      [material]
-    );
+    const renderer = await render(makeNode({ materialPath: 'SubResource("StandardMaterial3D_sphere")' }), [
+      material,
+    ]);
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const mat = mesh.material as THREE.MeshStandardMaterial;
     expect(mat.color.r).toBeGreaterThan(0);
@@ -91,9 +90,7 @@ describe('<CSGSphere3D>', () => {
         </CSGSphere3D>
       </SceneResourcesProvider>
     );
-    const injected = renderer.scene.find(
-      (n) => (n.instance as THREE.Object3D).name === 'injected-child'
-    );
+    const injected = renderer.scene.find((n) => (n.instance as THREE.Object3D).name === 'injected-child');
     expect(injected).toBeTruthy();
   });
 });

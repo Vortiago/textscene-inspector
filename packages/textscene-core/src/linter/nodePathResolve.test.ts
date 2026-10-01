@@ -8,11 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { resolveNodePath } from './nodePathResolve.js';
 import type { TscnNode, TscnScene } from '../parser/types.js';
 
-function node(
-  name: string,
-  children: TscnNode[] = [],
-  extra: Partial<TscnNode> = {}
-): TscnNode {
+function node(name: string, children: TscnNode[] = [], extra: Partial<TscnNode> = {}): TscnNode {
   const built = { name, type: 'Node3D', properties: {}, children, ...extra } as TscnNode;
   // Mirror `properties` into `rawProperties` the way `createSimpleNode` does, so
   // these literals model a node a parser could have produced. Anything reading the
@@ -127,9 +123,7 @@ describe('resolveNodePath', () => {
     });
 
     it('still reports a miss reached through such a ".."', () => {
-      const tree = node('Root', [
-        node('Mid', [node('Leaf')], { type: '', overridesExistingNode: true }),
-      ]);
+      const tree = node('Root', [node('Mid', [node('Leaf')], { type: '', overridesExistingNode: true })]);
       const scene = sceneOf(tree);
       expect(resolveNodePath(scene, pick([tree], 'Leaf'), '../Nope')).toEqual({
         status: 'unknowable',
@@ -216,9 +210,7 @@ describe('resolveNodePath', () => {
     });
 
     it('still finds an authored child under an instance (an editable override)', () => {
-      const tree = node('Root', [
-        node('Enemy', [node('Extra')], { instance: 'ExtResource("1_enemy")' }),
-      ]);
+      const tree = node('Root', [node('Enemy', [node('Extra')], { instance: 'ExtResource("1_enemy")' })]);
       const scene = sceneOf(tree);
       expect(resolveNodePath(scene, tree, 'Enemy/Extra')).toEqual({
         status: 'found',
@@ -239,9 +231,7 @@ describe('resolveNodePath', () => {
     });
 
     it('declines when the referencing node itself sits under an instance', () => {
-      const tree = node('Root', [
-        node('Enemy', [node('Inner')], { instance: 'ExtResource("1_enemy")' }),
-      ]);
+      const tree = node('Root', [node('Enemy', [node('Inner')], { instance: 'ExtResource("1_enemy")' })]);
       const scene = sceneOf(tree);
       expect(resolveNodePath(scene, pick([tree], 'Inner'), 'Nope')).toEqual({
         status: 'unknowable',

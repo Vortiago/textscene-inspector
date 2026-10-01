@@ -12,7 +12,10 @@ import './linterParser';
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
   const validator = validatorRegistry.findValidator('GPUParticlesCollisionHeightField3D', property);
-  expect(validator, `no validator registered for GPUParticlesCollisionHeightField3D.${property}`).not.toBeNull();
+  expect(
+    validator,
+    `no validator registered for GPUParticlesCollisionHeightField3D.${property}`
+  ).not.toBeNull();
   return validator!(property, value, 1);
 }
 

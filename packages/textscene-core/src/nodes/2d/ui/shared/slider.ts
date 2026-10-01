@@ -29,10 +29,7 @@ export const SLIDER_DEFAULT_TICK_COUNT = 0;
 export const SLIDER_DEFAULT_EDITABLE = true;
 
 /** Control + Range bases plus Slider's own tick/editable properties. */
-export function parseSlider(
-  heading: ParsedHeading,
-  properties: Record<string, string>
-): SliderProperties {
+export function parseSlider(heading: ParsedHeading, properties: Record<string, string>): SliderProperties {
   return {
     ...parseControl(heading, properties),
     // HSlider and VSlider both set `step = 1.0` in their constructors

@@ -6,7 +6,7 @@
 
 import type { Diagnostic } from '../../../../linter/types.js';
 import type { TscnNode } from '../../../../parser/types.js';
-import { resourceRef, boolSlotValue} from '../../../../godot/index.js';
+import { resourceRef, boolSlotValue } from '../../../../godot/index.js';
 
 /**
  * "Projector texture only works with shadows active." (light_3d.cpp:623-625, :659-661):
@@ -14,10 +14,7 @@ import { resourceRef, boolSlotValue} from '../../../../godot/index.js';
  * the serialised key (light_3d.cpp:393). `rulePrefix` is the node-type slug, so each
  * light keeps its own `<prefix>-projector-without-shadow` rule.
  */
-export function projectorWithoutShadowDiagnostic(
-  node: TscnNode,
-  rulePrefix: string
-): Diagnostic | null {
+export function projectorWithoutShadowDiagnostic(node: TscnNode, rulePrefix: string): Diagnostic | null {
   const properties = node.properties as unknown as Record<string, string>;
   // A parseable reference, not merely a present key: Godot's reader rejects a
   // malformed value, so no projector is set, and the validator already reports it.

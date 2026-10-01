@@ -136,7 +136,10 @@ background_mode = 1
 `);
 
     expect(lines.size).toBe(1);
-    expect(lines.get(scene!.mainResource!)).toEqual({ heading: 3, properties: new Map([['background_mode', 4]]) });
+    expect(lines.get(scene!.mainResource!)).toEqual({
+      heading: 3,
+      properties: new Map([['background_mode', 4]]),
+    });
   });
 
   it('holds exactly one entry for every node of the tree', () => {

@@ -97,20 +97,7 @@ export function buildCanvasTextQuadArrays(canvasLayout: CanvasTextCanvasLayout):
   const bottom = canvasLayout.canvasHeightPx - canvasLayout.offsetYPx;
 
   // Vertex order TL, TR, BL, BR, as in buildGlyphQuadArrays.
-  const positions = new Float32Array([
-    left,
-    -top,
-    0,
-    right,
-    -top,
-    0,
-    left,
-    -bottom,
-    0,
-    right,
-    -bottom,
-    0,
-  ]);
+  const positions = new Float32Array([left, -top, 0, right, -top, 0, left, -bottom, 0, right, -bottom, 0]);
   // flipY=true: v=1 at the texture's own top row (image-space y=0).
   const uvs = new Float32Array([0, 1, 1, 1, 0, 0, 1, 0]);
   const indices = new Uint32Array([2, 3, 0, 3, 1, 0]);

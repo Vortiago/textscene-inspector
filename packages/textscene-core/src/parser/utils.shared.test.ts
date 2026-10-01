@@ -5,12 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  isIncompleteValue,
-  stripLineComment,
-  unquoteLiteral,
-  unquoteString,
-} from './utils';
+import { isIncompleteValue, stripLineComment, unquoteLiteral, unquoteString } from './utils';
 
 describe('isIncompleteValue', () => {
   it('flags an open string', () => {
@@ -28,9 +23,7 @@ describe('isIncompleteValue', () => {
     expect(isIncompleteValue('[{"a": 1}]')).toBe(false);
   });
   it('accepts the full accumulated SpriteFrames value as complete', () => {
-    expect(
-      isIncompleteValue('[{"frames": [{"texture": ExtResource("2")}], "name": &"right"}]')
-    ).toBe(false);
+    expect(isIncompleteValue('[{"frames": [{"texture": ExtResource("2")}], "name": &"right"}]')).toBe(false);
   });
   it('ignores brackets inside strings', () => {
     expect(isIncompleteValue('"a [ b { c"')).toBe(false);

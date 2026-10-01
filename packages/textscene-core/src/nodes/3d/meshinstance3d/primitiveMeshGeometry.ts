@@ -49,9 +49,7 @@ const BUILDERS: Record<string, (data: Record<string, string>) => THREE.BufferGeo
 };
 
 /** Null for an unknown, external (GLB) or unresolvable type, or a mesh Godot would refuse to build. */
-export function buildPrimitiveMeshGeometry(
-  resource: TscnInternalResource
-): THREE.BufferGeometry | null {
+export function buildPrimitiveMeshGeometry(resource: TscnInternalResource): THREE.BufferGeometry | null {
   // hasOwn: the key is a `[sub_resource type=…]` the file chooses, and bare
   // indexing hands back `Object` for `constructor` or throws for `valueOf`.
   const build = Object.hasOwn(BUILDERS, resource.type) ? BUILDERS[resource.type] : undefined;

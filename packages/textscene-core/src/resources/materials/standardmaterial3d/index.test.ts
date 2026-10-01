@@ -7,12 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  bareSpecifiers,
-  FRAMEWORK_BARE_RE,
-  tsxFiles,
-  walkImportClosure,
-} from '@textscene/dev-kit';
+import { bareSpecifiers, FRAMEWORK_BARE_RE, tsxFiles, walkImportClosure } from '@textscene/dev-kit';
 import './index';
 import { resourceSliceRegistry } from '../../sliceRegistration';
 
@@ -34,9 +29,7 @@ describe('standardmaterial3d slice registration', () => {
   it('claims ShaderMaterial too, so it reaches the uncompiled-shader fallback', () => {
     // A shader this previewer does not render draws Godot's default surface (ADR-0041).
     // Without the claim, routing finds no slice and the shader shows as missing.
-    expect(resourceSliceRegistry.byTypeName('ShaderMaterial')?.slice).toBe(
-      'standardmaterial3d'
-    );
+    expect(resourceSliceRegistry.byTypeName('ShaderMaterial')?.slice).toBe('standardmaterial3d');
   });
 
   it('routes both claimed types to the resource bus, so a reload reaches every material slot', () => {
@@ -59,16 +52,14 @@ describe('standardmaterial3d slice registration', () => {
     // asserts it, rather than assuming erasure.
     const closure = walkImportClosure(resolve(here, 'index.ts'));
     expect(tsxFiles(closure)).toEqual([]);
-    expect(
-      bareSpecifiers(closure).filter((spec) => FRAMEWORK_BARE_RE.some((re) => re.test(spec)))
-    ).toEqual([]);
+    expect(bareSpecifiers(closure).filter((spec) => FRAMEWORK_BARE_RE.some((re) => re.test(spec)))).toEqual(
+      []
+    );
   });
 
   it('does not claim a material type it cannot build', () => {
     // ORMMaterial3D is a real Godot type this slice does not decode; claiming it
     // would route a file the loader then refuses.
-    expect(resourceSliceRegistry.byTypeName('ORMMaterial3D')?.slice).not.toBe(
-      'standardmaterial3d'
-    );
+    expect(resourceSliceRegistry.byTypeName('ORMMaterial3D')?.slice).not.toBe('standardmaterial3d');
   });
 });

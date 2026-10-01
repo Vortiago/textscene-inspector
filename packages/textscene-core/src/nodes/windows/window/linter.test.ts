@@ -5,7 +5,14 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { lint, node, scene, expectClean, expectDiagnostic, expectNoDiagnostic } from '../../../linter/testing/testkit';
+import {
+  lint,
+  node,
+  scene,
+  expectClean,
+  expectDiagnostic,
+  expectNoDiagnostic,
+} from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
@@ -13,26 +20,20 @@ const windowScene = (props: Record<string, number | string>): string => scene(no
 
 describe('Window semantic rules', () => {
   it('reports when max_size is smaller than min_size in some dimension', () => {
-    expectDiagnostic(
-      windowScene({ min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(200, 600)' }),
-      {
-        ruleName: 'window-max-size-below-min-size',
-        severity: 'info',
-        nodeType: 'Window',
-        contains: ['max_size', 'min_size'],
-      }
-    );
+    expectDiagnostic(windowScene({ min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(200, 600)' }), {
+      ruleName: 'window-max-size-below-min-size',
+      severity: 'info',
+      nodeType: 'Window',
+      contains: ['max_size', 'min_size'],
+    });
   });
 
   it('reports when max_size is smaller than min_size in both dimensions', () => {
-    expectDiagnostic(
-      windowScene({ min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(100, 100)' }),
-      {
-        ruleName: 'window-max-size-below-min-size',
-        severity: 'info',
-        nodeType: 'Window',
-      }
-    );
+    expectDiagnostic(windowScene({ min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(100, 100)' }), {
+      ruleName: 'window-max-size-below-min-size',
+      severity: 'info',
+      nodeType: 'Window',
+    });
   });
 
   it('reports nothing when max_size is at or above min_size', () => {
@@ -77,10 +78,11 @@ describe('Window sizes with a converted component no int32 holds', () => {
   });
 
   it('still reports on the canonical spelling of the same digits', () => {
-    expectDiagnostic(
-      windowScene({ min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(4294967295, 600)' }),
-      { ruleName: 'window-max-size-below-min-size', severity: 'info', contains: ['Vector2i(-1, 600)'] }
-    );
+    expectDiagnostic(windowScene({ min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(4294967295, 600)' }), {
+      ruleName: 'window-max-size-below-min-size',
+      severity: 'info',
+      contains: ['Vector2i(-1, 600)'],
+    });
   });
 });
 
@@ -146,7 +148,11 @@ describe('Window size clamped by min_size and max_size', () => {
   });
 
   it('keeps a cap that a later min_size invalidates, then floors the capped size', () => {
-    const body = { size: 'Vector2i(500, 500)', max_size: 'Vector2i(300, 300)', min_size: 'Vector2i(400, 400)' };
+    const body = {
+      size: 'Vector2i(500, 500)',
+      max_size: 'Vector2i(300, 300)',
+      min_size: 'Vector2i(400, 400)',
+    };
     expectDiagnostic(windowScene(body), {
       ruleName: RULE,
       contains: ['Vector2i(500, 500)', 'Vector2i(400, 400)'],
@@ -154,13 +160,25 @@ describe('Window size clamped by min_size and max_size', () => {
   });
 
   it('says nothing when the same three keys list size last, since the invalid max_size never caps', () => {
-    const body = { min_size: 'Vector2i(400, 400)', max_size: 'Vector2i(300, 300)', size: 'Vector2i(500, 500)' };
+    const body = {
+      min_size: 'Vector2i(400, 400)',
+      max_size: 'Vector2i(300, 300)',
+      size: 'Vector2i(500, 500)',
+    };
     expectNoDiagnostic(windowScene(body), { ruleName: RULE });
   });
 
   it('says nothing for a size inside the limits or equal to them', () => {
-    const inside = { size: 'Vector2i(500, 400)', min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(800, 600)' };
-    const onEdge = { size: 'Vector2i(400, 600)', min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(800, 600)' };
+    const inside = {
+      size: 'Vector2i(500, 400)',
+      min_size: 'Vector2i(400, 300)',
+      max_size: 'Vector2i(800, 600)',
+    };
+    const onEdge = {
+      size: 'Vector2i(400, 600)',
+      min_size: 'Vector2i(400, 300)',
+      max_size: 'Vector2i(800, 600)',
+    };
     expectNoDiagnostic(windowScene(inside), { ruleName: RULE });
     expectNoDiagnostic(windowScene(onEdge), { ruleName: RULE });
   });
@@ -184,10 +202,9 @@ describe('Window size clamped by min_size and max_size', () => {
   });
 
   it('says nothing about a limit no int32 holds', () => {
-    expectNoDiagnostic(
-      windowScene({ size: 'Vector2i(10, 10)', min_size: 'Vector2(4294967295, 600)' }),
-      { ruleName: RULE }
-    );
+    expectNoDiagnostic(windowScene({ size: 'Vector2i(10, 10)', min_size: 'Vector2(4294967295, 600)' }), {
+      ruleName: RULE,
+    });
   });
 
   it('reaches the whole Window family', () => {

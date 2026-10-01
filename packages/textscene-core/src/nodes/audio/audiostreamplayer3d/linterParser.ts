@@ -98,7 +98,10 @@ validatorRegistry.registerAll('AudioStreamPlayer3D', {
     enforced: { min: 'audio_stream_player_3d.cpp:777' },
   }),
   // Bare uint32_t assignment (:669): the parameter type is the ceiling.
-  area_mask: layerBitmask('area_mask', { hinted: 'audio_stream_player_3d.cpp:895', width: 'uint32' /* audio_stream_player_3d.h:175 */ }),
+  area_mask: layerBitmask('area_mask', {
+    hinted: 'audio_stream_player_3d.cpp:895',
+    width: 'uint32' /* audio_stream_player_3d.h:175 */,
+  }),
   emission_angle_enabled: v.boolean('emission_angle_enabled'),
   // Two tiers: audio_stream_player_3d.cpp:687 ERR_FAIL_CONDs `p_angle < 0 || p_angle > 90`, while
   // the hint at :899 reads "0.1,90,0.1,degrees", a unit label, not `radians_as_degrees`. So [0, 0.1)

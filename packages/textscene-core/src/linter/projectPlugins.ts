@@ -12,14 +12,23 @@ import {
   projectDataDirectoryPath,
   projectExtensionListPath,
 } from '../parser/projectSettingsParser.js';
-import { GDEXTENSION_FILE_EXTENSION, PROJECT_FILE_PATH, extensionListEntries, extensionListPath } from '../godot/index.js';
+import {
+  GDEXTENSION_FILE_EXTENSION,
+  PROJECT_FILE_PATH,
+  extensionListEntries,
+  extensionListPath,
+} from '../godot/index.js';
 import { StampedReads, loadOrNull, stampOf } from './stampedReads.js';
 
 /**
  * Every `res://` path the probe may read: the project file, and the extension list under either data directory, since
  * which one it reads depends on the project file.
  */
-export const PLUGIN_PROBE_PATHS: readonly string[] = [PROJECT_FILE_PATH, extensionListPath(true), extensionListPath(false)];
+export const PLUGIN_PROBE_PATHS: readonly string[] = [
+  PROJECT_FILE_PATH,
+  extensionListPath(true),
+  extensionListPath(false),
+];
 
 /** What the probe reads from `project.godot`. */
 interface ProjectFacts {
@@ -108,7 +117,12 @@ export class ProjectPluginProbes {
 
     const { listPath } = project;
     const listStamp = listPath === keptListPath ? keptListStamp : undefined;
-    const listsExtension = await this.lists.get(provider, listPath, () => readListHasEntries(provider, listPath), listStamp);
+    const listsExtension = await this.lists.get(
+      provider,
+      listPath,
+      () => readListHasEntries(provider, listPath),
+      listStamp
+    );
     return { ...project, listsExtension };
   }
 }

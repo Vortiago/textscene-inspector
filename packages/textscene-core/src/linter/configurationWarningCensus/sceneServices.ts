@@ -12,7 +12,8 @@ export const sceneServiceWarnings: Readonly<Record<string, readonly WarningRow[]
       says: 'a valid Spawn Path NodePath must be set',
       verdict: {
         declined: 'default-omitted',
-        because: 'spawn_path field-initialises to NodePath("") (multiplayer_spawner.h:54), which is the trigger itself',
+        because:
+          'spawn_path field-initialises to NodePath("") (multiplayer_spawner.h:54), which is the trigger itself',
       },
     },
     {
@@ -28,7 +29,8 @@ export const sceneServiceWarnings: Readonly<Record<string, readonly WarningRow[]
       says: 'a valid Root Path NodePath must be set',
       verdict: {
         declined: 'default-omitted',
-        because: 'root_path field-initialises to NodePath("..") (multiplayer_synchronizer.h:55), not empty, so absence is not the trigger',
+        because:
+          'root_path field-initialises to NodePath("..") (multiplayer_synchronizer.h:55), not empty, so absence is not the trigger',
       },
     },
     {

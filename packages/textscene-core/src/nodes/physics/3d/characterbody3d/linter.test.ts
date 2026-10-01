@@ -62,20 +62,28 @@ describe('CharacterBody3D Linter', () => {
         valid: ['Vector3(1.5, -2.3, 0.5)'],
         invalid: [{ value: 'Vector2(1, 2)' }],
       },
-      { prop: 'floor_stop_on_slope', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
-      { prop: 'floor_constant_speed', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
-      { prop: 'floor_block_on_wall', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
+      {
+        prop: 'floor_stop_on_slope',
+        valid: [true, false],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
+      },
+      {
+        prop: 'floor_constant_speed',
+        valid: [true, false],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
+      },
+      {
+        prop: 'floor_block_on_wall',
+        valid: [true, false],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
+      },
       {
         // Godot hints "0,180,0.1,radians_as_degrees" with no `or_greater`, so
         // PI is the last legal value, and a table stopping at PI/2 rejects the
         // upper half of the range as an error.
         prop: 'floor_max_angle',
         valid: [0, 0.785398, 1.5708, 3.14159],
-        invalid: [
-          { value: 4.0, contains: ['radians'] },
-          { value: -0.5 },
-          { value: '"45 degrees"' },
-        ],
+        invalid: [{ value: 4.0, contains: ['radians'] }, { value: -0.5 }, { value: '"45 degrees"' }],
       },
       {
         prop: 'wall_min_slide_angle',
@@ -144,14 +152,11 @@ describe('CharacterBody3D Linter', () => {
       });
 
       it('should warn just below the hint floor', () => {
-        expectDiagnostic(
-          scene(node('CharacterBody3D', { safe_margin: 0.0009 }), collisionShape3d),
-          {
-            prop: 'safe_margin',
-            severity: 'warning',
-            contains: ['between 0.001 and 256'],
-          }
-        );
+        expectDiagnostic(scene(node('CharacterBody3D', { safe_margin: 0.0009 }), collisionShape3d), {
+          prop: 'safe_margin',
+          severity: 'warning',
+          contains: ['between 0.001 and 256'],
+        });
       });
 
       it('should warn about safe_margin above the hint', () => {
@@ -163,14 +168,11 @@ describe('CharacterBody3D Linter', () => {
       });
 
       it('should warn just above the hint ceiling', () => {
-        expectDiagnostic(
-          scene(node('CharacterBody3D', { safe_margin: 256.001 }), collisionShape3d),
-          {
-            prop: 'safe_margin',
-            severity: 'warning',
-            contains: ['between 0.001 and 256'],
-          }
-        );
+        expectDiagnostic(scene(node('CharacterBody3D', { safe_margin: 256.001 }), collisionShape3d), {
+          prop: 'safe_margin',
+          severity: 'warning',
+          contains: ['between 0.001 and 256'],
+        });
       });
 
       it.each([0.001, 0.5, 256])('says nothing about safe_margin %s', (margin) => {
@@ -330,10 +332,7 @@ describe('CharacterBody3D Linter', () => {
 
     it('reports when slide_on_ceiling is set in FLOATING mode', () => {
       expectDiagnostic(
-        scene(
-          node('CharacterBody3D', { motion_mode: 1, slide_on_ceiling: false }),
-          collisionShape3d
-        ),
+        scene(node('CharacterBody3D', { motion_mode: 1, slide_on_ceiling: false }), collisionShape3d),
         {
           ruleName: 'characterbody3d-slide-on-ceiling-in-floating-mode',
           severity: 'info',
@@ -344,10 +343,7 @@ describe('CharacterBody3D Linter', () => {
 
     it('leaves slide_on_ceiling alone in GROUNDED mode, where its four reads live', () => {
       expectNoDiagnostic(
-        scene(
-          node('CharacterBody3D', { motion_mode: 0, slide_on_ceiling: false }),
-          collisionShape3d
-        ),
+        scene(node('CharacterBody3D', { motion_mode: 0, slide_on_ceiling: false }), collisionShape3d),
         { ruleName: 'characterbody3d-slide-on-ceiling-in-floating-mode' }
       );
     });
@@ -356,15 +352,11 @@ describe('CharacterBody3D Linter', () => {
       // The 2D twin's `_validate_property` hides it in GROUNDED
       // (character_body_2d.cpp:676). character_body_3d.cpp has no such `else`.
       expectNoErrors(
-        scene(
-          node('CharacterBody3D', { motion_mode: 0, wall_min_slide_angle: 0.5 }),
-          collisionShape3d
-        )
+        scene(node('CharacterBody3D', { motion_mode: 0, wall_min_slide_angle: 0.5 }), collisionShape3d)
       );
-      expectNoDiagnostic(
-        scene(node('CharacterBody3D', { wall_min_slide_angle: 0.5 }), collisionShape3d),
-        { ruleName: 'characterbody3d-wall-min-slide-angle-in-grounded-mode' }
-      );
+      expectNoDiagnostic(scene(node('CharacterBody3D', { wall_min_slide_angle: 0.5 }), collisionShape3d), {
+        ruleName: 'characterbody3d-wall-min-slide-angle-in-grounded-mode',
+      });
     });
 
     it('reports a zero up_direction once — the validator, with no rule beside it', () => {
@@ -382,7 +374,6 @@ describe('CharacterBody3D Linter', () => {
     it('stays quiet when collision_layer is 0', () => {
       expectClean(scene(node('CharacterBody3D', { collision_layer: 0 }), collisionShape3d));
     });
-
   });
 
   describe('Edge Cases', () => {
@@ -479,12 +470,12 @@ describe('CharacterBody3D Linter', () => {
         )
       );
       expect(diagnostics.length).toBeGreaterThanOrEqual(2);
-      const errors = diagnostics.filter(d => d.severity === 'error');
+      const errors = diagnostics.filter((d) => d.severity === 'error');
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors.some(d => d.message.includes('max_slides'))).toBe(true);
+      expect(errors.some((d) => d.message.includes('max_slides'))).toBe(true);
       // No collision_layer diagnostic: -1 is a legal 32-bit mask.
-      expect(diagnostics.find(d => d.message.includes('collision_layer'))).toBeUndefined();
-      const motionModeDiagnostic = diagnostics.find(d => d.message.includes('motion_mode'));
+      expect(diagnostics.find((d) => d.message.includes('collision_layer'))).toBeUndefined();
+      const motionModeDiagnostic = diagnostics.find((d) => d.message.includes('motion_mode'));
       expect(motionModeDiagnostic).toBeDefined();
       expect(motionModeDiagnostic?.severity).toBe('warning');
     });

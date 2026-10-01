@@ -29,7 +29,11 @@ describe('buildGlbHierarchy', () => {
 
   it('disambiguates duplicate sibling names with @n', () => {
     const root = new THREE.Group();
-    root.add(named(new THREE.Mesh(), 'body'), named(new THREE.Mesh(), 'body'), named(new THREE.Mesh(), 'body'));
+    root.add(
+      named(new THREE.Mesh(), 'body'),
+      named(new THREE.Mesh(), 'body'),
+      named(new THREE.Mesh(), 'body')
+    );
     expect(buildGlbHierarchy(root).map((n) => n.relPath)).toEqual(['body', 'body@1', 'body@2']);
   });
 

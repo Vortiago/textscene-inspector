@@ -79,7 +79,7 @@ describe('launchIntegrationTests', () => {
         paths: fakePaths('/repo/apps/textscene-vscode/.test-workspace'),
         prepareWorkspace: () => {},
         launch: () => Promise.reject(new Error('host exited 1')),
-      }),
+      })
     ).rejects.toThrow('host exited 1');
   });
 });

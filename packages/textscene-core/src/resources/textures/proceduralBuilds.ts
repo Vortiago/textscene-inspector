@@ -75,16 +75,23 @@ export function resolveProceduralSubResourceAsync(
  * Written by `plannedBuild`, once per parse and sub-resource. Each consumer of a texture
  * looks it up on every parse, and a plan decodes the resource and serialises its input.
  */
-const plansByParse = new WeakMap<readonly TscnInternalResource[], Map<TscnInternalResource, ProceduralBuildPlan | null>>();
+const plansByParse = new WeakMap<
+  readonly TscnInternalResource[],
+  Map<TscnInternalResource, ProceduralBuildPlan | null>
+>();
 
 function plannedBuild(
   resource: TscnInternalResource,
   internalResources: readonly TscnInternalResource[],
-  plan: (properties: Record<string, string>, resources: readonly TscnInternalResource[]) => ProceduralBuildPlan | null
+  plan: (
+    properties: Record<string, string>,
+    resources: readonly TscnInternalResource[]
+  ) => ProceduralBuildPlan | null
 ): ProceduralBuildPlan | null {
   let plans = plansByParse.get(internalResources);
   if (!plans) plansByParse.set(internalResources, (plans = new Map()));
-  if (!plans.has(resource)) plans.set(resource, plan(resource.data as Record<string, string>, internalResources));
+  if (!plans.has(resource))
+    plans.set(resource, plan(resource.data as Record<string, string>, internalResources));
   return plans.get(resource) ?? null;
 }
 

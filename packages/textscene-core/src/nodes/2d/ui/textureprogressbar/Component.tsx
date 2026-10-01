@@ -94,7 +94,13 @@ function useCroppedTexture(
   const crop = region && textureSize ? cropWindow(region, textureSize) : null;
   const [repeatX, repeatY, offsetX, offsetY] = crop ?? [];
   const cropped = useMemo(() => {
-    if (!texture || repeatX === undefined || repeatY === undefined || offsetX === undefined || offsetY === undefined) {
+    if (
+      !texture ||
+      repeatX === undefined ||
+      repeatY === undefined ||
+      offsetX === undefined ||
+      offsetY === undefined
+    ) {
       return null;
     }
     const cloned = texture.clone();
@@ -128,7 +134,12 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
 
   const { externalResources, internalResources } = solveNode.resources;
   const underTexture = useLayerTexture(props.textureUnder, externalResources, internalResources, filter);
-  const progressTexture = useLayerTexture(props.textureProgress, externalResources, internalResources, filter);
+  const progressTexture = useLayerTexture(
+    props.textureProgress,
+    externalResources,
+    internalResources,
+    filter
+  );
   const overTexture = useLayerTexture(props.textureOver, externalResources, internalResources, filter);
 
   const underSize = naturalSize(underTexture);
@@ -141,26 +152,39 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
   const stretchMarginRight = props.stretchMarginRight ?? 0;
   const stretchMarginBottom = props.stretchMarginBottom ?? 0;
   const stretchMargin: NinePatchMargin = useMemo(
-    () => ({ left: stretchMarginLeft, top: stretchMarginTop, right: stretchMarginRight, bottom: stretchMarginBottom }),
+    () => ({
+      left: stretchMarginLeft,
+      top: stretchMarginTop,
+      right: stretchMarginRight,
+      bottom: stretchMarginBottom,
+    }),
     [stretchMarginLeft, stretchMarginTop, stretchMarginRight, stretchMarginBottom]
   );
   const controlSize: Vec2 = useMemo(() => ({ x: rect.w, y: rect.h }), [rect.w, rect.h]);
 
   // `tint_under`/`tint_progress`/`tint_over` (raw sRGB) multiply into `tint.own` before the one
   // sRGB-to-linear conversion, as Button's icon does (`buttonBase.ts`).
-  const underColorSrgb = useMemo(() => multiplyModulate(props.tintUnder ?? WHITE, tint.own), [props.tintUnder, tint.own]);
+  const underColorSrgb = useMemo(
+    () => multiplyModulate(props.tintUnder ?? WHITE, tint.own),
+    [props.tintUnder, tint.own]
+  );
   const progressColorSrgb = useMemo(
     () => multiplyModulate(props.tintProgress ?? WHITE, tint.own),
     [props.tintProgress, tint.own]
   );
-  const overColorSrgb = useMemo(() => multiplyModulate(props.tintOver ?? WHITE, tint.own), [props.tintOver, tint.own]);
+  const overColorSrgb = useMemo(
+    () => multiplyModulate(props.tintOver ?? WHITE, tint.own),
+    [props.tintOver, tint.own]
+  );
   const underColor = useGodotLinearColor(underColorSrgb);
   const progressColor = useGodotLinearColor(progressColorSrgb);
   const overColor = useGodotLinearColor(overColorSrgb);
 
   const fillMode = normalizeTextureProgressBarFillMode(props.fillMode);
   const isRadialMode =
-    fillMode === FILL_CLOCKWISE || fillMode === FILL_COUNTER_CLOCKWISE || fillMode === FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE;
+    fillMode === FILL_CLOCKWISE ||
+    fillMode === FILL_COUNTER_CLOCKWISE ||
+    fillMode === FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE;
   const ratio = rangeRatio(props, controlLayoutOrder(solveNode));
   const progressOffset = props.textureProgressOffset ?? ZERO;
 
@@ -202,7 +226,14 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
 
   const progressNinePatch = useMemo(() => {
     if (!progressTexture || !progressSize || !ninePatchStretch || isRadialMode) return null;
-    const draw = drawNinePatchStretched(progressSize, stretchMargin, fillMode, ratio, controlSize, progressOffset);
+    const draw = drawNinePatchStretched(
+      progressSize,
+      stretchMargin,
+      fillMode,
+      ratio,
+      controlSize,
+      progressOffset
+    );
     return {
       draw,
       geometry: ninePatchGeometry({
@@ -216,7 +247,17 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
         drawCenter: true,
       }),
     };
-  }, [progressTexture, progressSize, ninePatchStretch, isRadialMode, stretchMargin, fillMode, ratio, controlSize, progressOffset]);
+  }, [
+    progressTexture,
+    progressSize,
+    ninePatchStretch,
+    isRadialMode,
+    stretchMargin,
+    fillMode,
+    ratio,
+    controlSize,
+    progressOffset,
+  ]);
 
   // Radial: `s = get_size()` under nine_patch_stretch (`:459-461`), else the texture's own size.
   const radialSize = ninePatchStretch ? controlSize : progressSize;
@@ -241,41 +282,95 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
   return (
     <>
       {underTexture && underSize && !ninePatchStretch && (
-        <ControlQuad renderOrder={renderOrder} width={underSize.x} height={underSize.y} color={underColor} opacity={underColorSrgb.a} map={underTexture} />
+        <ControlQuad
+          renderOrder={renderOrder}
+          width={underSize.x}
+          height={underSize.y}
+          color={underColor}
+          opacity={underColorSrgb.a}
+          map={underTexture}
+        />
       )}
       {underNinePatch && (
         <CanvasItemGroup position={[underNinePatch.draw.dstOffset.x, -underNinePatch.draw.dstOffset.y, 0]}>
-          <TexturedFillMesh geometry={underNinePatch.geometry} texture={underTexture!} color={underColor} opacity={underColorSrgb.a} renderOrder={renderOrder} />
+          <TexturedFillMesh
+            geometry={underNinePatch.geometry}
+            texture={underTexture!}
+            color={underColor}
+            opacity={underColorSrgb.a}
+            renderOrder={renderOrder}
+          />
         </CanvasItemGroup>
       )}
 
       {progressNinePatch && (
-        <CanvasItemGroup position={[progressNinePatch.draw.dstOffset.x, -progressNinePatch.draw.dstOffset.y, 0]}>
-          <TexturedFillMesh geometry={progressNinePatch.geometry} texture={progressTexture!} color={progressColor} opacity={progressColorSrgb.a} renderOrder={renderOrder} />
+        <CanvasItemGroup
+          position={[progressNinePatch.draw.dstOffset.x, -progressNinePatch.draw.dstOffset.y, 0]}
+        >
+          <TexturedFillMesh
+            geometry={progressNinePatch.geometry}
+            texture={progressTexture!}
+            color={progressColor}
+            opacity={progressColorSrgb.a}
+            renderOrder={renderOrder}
+          />
         </CanvasItemGroup>
       )}
       {isRadialMode && radialVal !== null && radialVal >= 1 && progressTexture && radialSize && (
         <CanvasItemGroup position={[progressOffset.x, -progressOffset.y, 0]}>
-          <ControlQuad renderOrder={renderOrder} width={radialSize.x} height={radialSize.y} color={progressColor} opacity={progressColorSrgb.a} map={progressTexture} />
+          <ControlQuad
+            renderOrder={renderOrder}
+            width={radialSize.x}
+            height={radialSize.y}
+            color={progressColor}
+            opacity={progressColorSrgb.a}
+            map={progressTexture}
+          />
         </CanvasItemGroup>
       )}
       {radialGeometry && progressTexture && (
         <CanvasItemGroup position={[progressOffset.x, -progressOffset.y, 0]}>
-          <TexturedFillMesh geometry={radialGeometry} texture={progressTexture} color={progressColor} opacity={progressColorSrgb.a} renderOrder={renderOrder} />
+          <TexturedFillMesh
+            geometry={radialGeometry}
+            texture={progressTexture}
+            color={progressColor}
+            opacity={progressColorSrgb.a}
+            renderOrder={renderOrder}
+          />
         </CanvasItemGroup>
       )}
       {progressLinear && progressCropped && (
         <CanvasItemGroup position={[progressLinear.offset.x, -progressLinear.offset.y, 0]}>
-          <ControlQuad renderOrder={renderOrder} width={progressLinear.size.x} height={progressLinear.size.y} color={progressColor} opacity={progressColorSrgb.a} map={progressCropped} />
+          <ControlQuad
+            renderOrder={renderOrder}
+            width={progressLinear.size.x}
+            height={progressLinear.size.y}
+            color={progressColor}
+            opacity={progressColorSrgb.a}
+            map={progressCropped}
+          />
         </CanvasItemGroup>
       )}
 
       {overTexture && overSize && !ninePatchStretch && (
-        <ControlQuad renderOrder={renderOrder} width={overSize.x} height={overSize.y} color={overColor} opacity={overColorSrgb.a} map={overTexture} />
+        <ControlQuad
+          renderOrder={renderOrder}
+          width={overSize.x}
+          height={overSize.y}
+          color={overColor}
+          opacity={overColorSrgb.a}
+          map={overTexture}
+        />
       )}
       {overNinePatch && (
         <CanvasItemGroup position={[overNinePatch.draw.dstOffset.x, -overNinePatch.draw.dstOffset.y, 0]}>
-          <TexturedFillMesh geometry={overNinePatch.geometry} texture={overTexture!} color={overColor} opacity={overColorSrgb.a} renderOrder={renderOrder} />
+          <TexturedFillMesh
+            geometry={overNinePatch.geometry}
+            texture={overTexture!}
+            color={overColor}
+            opacity={overColorSrgb.a}
+            renderOrder={renderOrder}
+          />
         </CanvasItemGroup>
       )}
     </>

@@ -62,13 +62,7 @@ export function useLayerRank(layer: number): number {
   return layerRankOf(useContext(LayerRankContext), layer);
 }
 
-export function LayerRanksProvider({
-  value,
-  children,
-}: {
-  value: readonly number[];
-  children: ReactNode;
-}) {
+export function LayerRanksProvider({ value, children }: { value: readonly number[]; children: ReactNode }) {
   return <LayerRankContext.Provider value={value}>{children}</LayerRankContext.Provider>;
 }
 

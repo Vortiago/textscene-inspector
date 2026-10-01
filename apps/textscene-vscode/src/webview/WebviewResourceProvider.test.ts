@@ -17,11 +17,13 @@ describe('WebviewResourceProvider', () => {
   beforeEach(() => {
     messageListeners = [];
 
-    vi.spyOn(window, 'addEventListener').mockImplementation((event: string, listener: EventListenerOrEventListenerObject) => {
-      if (event === 'message' && typeof listener === 'function') {
-        messageListeners.push(listener as (event: MessageEvent) => void);
+    vi.spyOn(window, 'addEventListener').mockImplementation(
+      (event: string, listener: EventListenerOrEventListenerObject) => {
+        if (event === 'message' && typeof listener === 'function') {
+          messageListeners.push(listener as (event: MessageEvent) => void);
+        }
       }
-    });
+    );
 
     vi.spyOn(window, 'setTimeout');
     vi.spyOn(window, 'clearTimeout');
@@ -29,7 +31,7 @@ describe('WebviewResourceProvider', () => {
     mockVsCode = {
       postMessage: vi.fn<(message: unknown) => void>(),
       getState: vi.fn<() => unknown>(),
-      setState: vi.fn<(state: unknown) => void>()
+      setState: vi.fn<(state: unknown) => void>(),
     };
 
     provider = new WebviewResourceProvider(mockVsCode);
@@ -41,15 +43,12 @@ describe('WebviewResourceProvider', () => {
 
   function simulateExtensionMessage(data: unknown) {
     const event = { data } as MessageEvent;
-    messageListeners.forEach(listener => listener(event));
+    messageListeners.forEach((listener) => listener(event));
   }
 
   describe('Constructor', () => {
     it('should register message listener on construction', () => {
-      expect(window.addEventListener).toHaveBeenCalledWith(
-        'message',
-        expect.any(Function)
-      );
+      expect(window.addEventListener).toHaveBeenCalledWith('message', expect.any(Function));
       expect(messageListeners).toHaveLength(1);
     });
 
@@ -59,7 +58,7 @@ describe('WebviewResourceProvider', () => {
 
       expect(mockVsCode.postMessage).toHaveBeenCalledWith(
         expect.objectContaining({
-          requestId: 'resource_0'
+          requestId: 'resource_0',
         })
       );
     });
@@ -73,14 +72,14 @@ describe('WebviewResourceProvider', () => {
         type: 'loadResource',
         path: 'res://test.txt',
         resourceType: 'Resource',
-        requestId: 'resource_0'
+        requestId: 'resource_0',
       });
 
       simulateExtensionMessage({
         type: 'resourceLoaded',
         requestId: 'resource_0',
         content: 'text content',
-        isBinary: false
+        isBinary: false,
       });
 
       const result = await loadPromise;
@@ -91,16 +90,32 @@ describe('WebviewResourceProvider', () => {
       const promise1 = provider.loadResource('res://file1.txt', 'Resource');
       const promise2 = provider.loadResource('res://file2.txt', 'Resource');
 
-      expect(mockVsCode.postMessage).toHaveBeenNthCalledWith(1, expect.objectContaining({
-        requestId: 'resource_0'
-      }));
+      expect(mockVsCode.postMessage).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          requestId: 'resource_0',
+        })
+      );
 
-      expect(mockVsCode.postMessage).toHaveBeenNthCalledWith(2, expect.objectContaining({
-        requestId: 'resource_1'
-      }));
+      expect(mockVsCode.postMessage).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          requestId: 'resource_1',
+        })
+      );
 
-      simulateExtensionMessage({ type: 'resourceLoaded', requestId: 'resource_0', content: 'a', isBinary: false });
-      simulateExtensionMessage({ type: 'resourceLoaded', requestId: 'resource_1', content: 'b', isBinary: false });
+      simulateExtensionMessage({
+        type: 'resourceLoaded',
+        requestId: 'resource_0',
+        content: 'a',
+        isBinary: false,
+      });
+      simulateExtensionMessage({
+        type: 'resourceLoaded',
+        requestId: 'resource_1',
+        content: 'b',
+        isBinary: false,
+      });
 
       await Promise.all([promise1, promise2]);
     });
@@ -114,7 +129,7 @@ describe('WebviewResourceProvider', () => {
         type: 'resourceLoaded',
         requestId: 'resource_0',
         content: 'content',
-        isBinary: false
+        isBinary: false,
       });
 
       await loadPromise;
@@ -134,7 +149,7 @@ describe('WebviewResourceProvider', () => {
         type: 'resourceLoaded',
         requestId: 'resource_0',
         content: base64,
-        isBinary: true
+        isBinary: true,
       });
 
       const result = await loadPromise;
@@ -157,7 +172,7 @@ describe('WebviewResourceProvider', () => {
         type: 'resourceLoaded',
         requestId: 'resource_0',
         content: base64,
-        isBinary: true
+        isBinary: true,
       });
 
       const result = await loadPromise;
@@ -176,7 +191,7 @@ describe('WebviewResourceProvider', () => {
         type: 'resourceLoaded',
         requestId: 'resource_0',
         content: btoa('test'),
-        isBinary: true
+        isBinary: true,
       });
 
       await loadPromise;
@@ -192,7 +207,7 @@ describe('WebviewResourceProvider', () => {
       simulateExtensionMessage({
         type: 'resourceLoadError',
         requestId: 'resource_0',
-        error: 'File not found'
+        error: 'File not found',
       });
 
       await expect(loadPromise).rejects.toThrow('File not found');
@@ -206,7 +221,7 @@ describe('WebviewResourceProvider', () => {
       simulateExtensionMessage({
         type: 'resourceLoadError',
         requestId: 'resource_0',
-        error: 'Load failed'
+        error: 'Load failed',
       });
 
       await expect(loadPromise).rejects.toThrow();
@@ -232,7 +247,7 @@ describe('WebviewResourceProvider', () => {
         type: 'resourceLoaded',
         requestId: 'resource_0',
         content: 'content',
-        isBinary: false
+        isBinary: false,
       });
 
       await loadPromise;
@@ -242,7 +257,7 @@ describe('WebviewResourceProvider', () => {
         type: 'resourceLoaded',
         requestId: 'resource_0',
         content: 'duplicate',
-        isBinary: false
+        isBinary: false,
       });
 
       // Should not throw
@@ -266,7 +281,7 @@ describe('WebviewResourceProvider', () => {
         type: 'resourceLoaded',
         requestId: 'resource_0',
         content: 'content',
-        isBinary: false
+        isBinary: false,
       });
 
       await expect(loadPromise).resolves.toBe('content');
@@ -280,9 +295,24 @@ describe('WebviewResourceProvider', () => {
       const promise3 = provider.loadResource('res://file3.txt', 'Resource');
 
       // Respond out of order
-      simulateExtensionMessage({ type: 'resourceLoaded', requestId: 'resource_2', content: 'content3', isBinary: false });
-      simulateExtensionMessage({ type: 'resourceLoaded', requestId: 'resource_0', content: 'content1', isBinary: false });
-      simulateExtensionMessage({ type: 'resourceLoaded', requestId: 'resource_1', content: 'content2', isBinary: false });
+      simulateExtensionMessage({
+        type: 'resourceLoaded',
+        requestId: 'resource_2',
+        content: 'content3',
+        isBinary: false,
+      });
+      simulateExtensionMessage({
+        type: 'resourceLoaded',
+        requestId: 'resource_0',
+        content: 'content1',
+        isBinary: false,
+      });
+      simulateExtensionMessage({
+        type: 'resourceLoaded',
+        requestId: 'resource_1',
+        content: 'content2',
+        isBinary: false,
+      });
 
       const results = await Promise.all([promise1, promise2, promise3]);
 
@@ -294,9 +324,19 @@ describe('WebviewResourceProvider', () => {
       const promise2 = provider.loadResource('res://fail.txt', 'Resource');
       const promise3 = provider.loadResource('res://success2.txt', 'Resource');
 
-      simulateExtensionMessage({ type: 'resourceLoaded', requestId: 'resource_0', content: 'ok1', isBinary: false });
+      simulateExtensionMessage({
+        type: 'resourceLoaded',
+        requestId: 'resource_0',
+        content: 'ok1',
+        isBinary: false,
+      });
       simulateExtensionMessage({ type: 'resourceLoadError', requestId: 'resource_1', error: 'Failed' });
-      simulateExtensionMessage({ type: 'resourceLoaded', requestId: 'resource_2', content: 'ok2', isBinary: false });
+      simulateExtensionMessage({
+        type: 'resourceLoaded',
+        requestId: 'resource_2',
+        content: 'ok2',
+        isBinary: false,
+      });
 
       const result1 = await promise1;
       await expect(promise2).rejects.toThrow('Failed');

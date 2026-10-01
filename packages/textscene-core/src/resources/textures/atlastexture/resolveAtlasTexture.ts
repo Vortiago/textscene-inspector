@@ -40,10 +40,7 @@ export function resolveAtlasTextureRef(
  * The AtlasTexture reference a loaded `.tres` at `path` names, in the inline
  * form's shape, or null when the file's header names another type.
  */
-export function decodeExtAtlasTextureRef(
-  path: string,
-  tres: ParsedResource
-): AtlasTextureReference | null {
+export function decodeExtAtlasTextureRef(path: string, tres: ParsedResource): AtlasTextureReference | null {
   if (tres.resourceType !== ATLAS_TEXTURE_TYPE) return null;
   return { id: path, texture: decodeAtlasTexture(tres.properties) };
 }

@@ -110,9 +110,7 @@ describe('worldClipRect', () => {
   it('resolves a scaled, translated anchor into absolute canvas pixels (+Y down)', () => {
     // The world group sits at Godot (600, 340); the anchor at local (79, 17)
     // scaled 1.25 lands at 600 + 98.75 and 340 + 21.25.
-    const m = matrix([600, -340], 1.25).multiply(
-      new THREE.Matrix4().makeTranslation(79, -17, 0)
-    );
+    const m = matrix([600, -340], 1.25).multiply(new THREE.Matrix4().makeTranslation(79, -17, 0));
     expect(worldClipRect(rect, m)).toEqual({ x: 698.75, y: 361.25, w: 402.5, h: 243.75 });
   });
 
@@ -273,11 +271,7 @@ describe('useWorldClipPlanes', () => {
   it('rounds in Godot canvas space, not in the +Y-up world the planes live in', async () => {
     let captured: readonly THREE.Plane[] = [];
     await ReactThreeTestRenderer.create(
-      <Harness
-        rect={{ x: 0, y: 20.5, w: 100, h: 100.5 }}
-        world={[0, 0]}
-        onPlanes={(p) => (captured = p)}
-      />
+      <Harness rect={{ x: 0, y: 20.5, w: 100, h: 100.5 }} world={[0, 0]} onPlanes={(p) => (captured = p)} />
     );
     // Godot space: round(20.5) = 21 and round(100.5) = 101, so the bottom edge
     // is 122. Rounding the +Y-up position (the BOTTOM, -121) instead would put

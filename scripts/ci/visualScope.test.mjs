@@ -22,9 +22,7 @@ describe('needsVisualRun', () => {
   });
 
   it('runs for a node slice that renders', () => {
-    expect(
-      needsVisualRun(['packages/textscene-core/src/nodes/3d/meshinstance3d/Component.tsx'])
-    ).toBe(true);
+    expect(needsVisualRun(['packages/textscene-core/src/nodes/3d/meshinstance3d/Component.tsx'])).toBe(true);
   });
 
   it('runs for the shared renderer, the web app and the lockfile', () => {
@@ -44,9 +42,7 @@ describe('needsVisualRun', () => {
   });
 
   it('runs when one file of many renders', () => {
-    expect(needsVisualRun(['README.md', 'packages/textscene-core/src/r3f/TscnCanvas.tsx'])).toBe(
-      true
-    );
+    expect(needsVisualRun(['README.md', 'packages/textscene-core/src/r3f/TscnCanvas.tsx'])).toBe(true);
   });
 
   it('runs for an empty diff', () => {

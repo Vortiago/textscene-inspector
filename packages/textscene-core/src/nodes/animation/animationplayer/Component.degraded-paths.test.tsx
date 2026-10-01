@@ -13,7 +13,11 @@ import {
   useAnimationTransport,
   type AnimationTransport,
 } from '../../../r3f/contexts/AnimationTransportContext';
-import { SelectionProvider, useOptionalSelection, type SelectionContextValue } from '../../../r3f/contexts/SelectionContext';
+import {
+  SelectionProvider,
+  useOptionalSelection,
+  type SelectionContextValue,
+} from '../../../r3f/contexts/SelectionContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { AnimationPlayerProperties } from './types';

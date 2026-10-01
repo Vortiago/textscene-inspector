@@ -27,9 +27,7 @@ function staticImportSpecifiers(src: string): string[] {
 describe('InternalTextLabel bundle boundary (troika stays out of the initial chunk)', () => {
   it('does not statically import drei Text (or troika-three-text directly)', () => {
     const specifiers = staticImportSpecifiers(source);
-    const eager = specifiers.filter(
-      (s) => /@react-three\/drei/.test(s) || /troika-three-text/.test(s)
-    );
+    const eager = specifiers.filter((s) => /@react-three\/drei/.test(s) || /troika-three-text/.test(s));
     expect(eager).toEqual([]);
   });
 
@@ -38,9 +36,7 @@ describe('InternalTextLabel bundle boundary (troika stays out of the initial chu
   });
 
   it('still renders null under vitest (no font-fetch, no unhandled rejection)', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <InternalTextLabel text="hello" />
-    );
+    const renderer = await ReactThreeTestRenderer.create(<InternalTextLabel text="hello" />);
     expect(renderer.scene.children).toHaveLength(0);
   });
 });

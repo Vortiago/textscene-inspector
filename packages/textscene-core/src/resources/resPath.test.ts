@@ -113,7 +113,11 @@ describe('parentDir', () => {
 });
 
 /** An upward walk over string paths that `isStop` ends. */
-function walk(start: string, hasProjectFile: (dir: string) => Promise<boolean>, isStop = (_dir: string) => false) {
+function walk(
+  start: string,
+  hasProjectFile: (dir: string) => Promise<boolean>,
+  isStop = (_dir: string) => false
+) {
   return findProjectRoot(start, parentDir, isStop, hasProjectFile);
 }
 

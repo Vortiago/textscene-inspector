@@ -79,7 +79,10 @@ describe('useSourceDiagnostics', () => {
 /** The committed GLB that requires EXT_mesh_gpu_instancing, which Godot's glTF importer refuses. */
 const INSTANCED_TREE = new Uint8Array(
   readFileSync(
-    join(import.meta.dirname, '../../../scenes/fixtures/gltf-unsupported-required-extension/instanced-tree.glb')
+    join(
+      import.meta.dirname,
+      '../../../scenes/fixtures/gltf-unsupported-required-extension/instanced-tree.glb'
+    )
   )
 ).buffer;
 

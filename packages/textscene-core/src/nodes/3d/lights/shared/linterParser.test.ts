@@ -81,154 +81,150 @@ describe('Light3D shared validators', () => {
         ],
       },
       [
-      {
-        // light_3d.cpp:389 hints "0,16,0.001,or_greater", and Light3D::set_param:36
-        // guards the param index rather than the value, so a negative energy is
-        // loaded as written: it warns, it does not error. `or_greater` opens the
-        // ceiling, so 150 is in band.
-        prop: 'light_energy',
-        valid: [1.0, 0, 150],
-        invalid: [
-          { value: 'bad', contains: ['must be a number'] },
-          { value: '-0.5', contains: ['non-negative'], severity: 'warning' },
-        ],
-      },
-      {
-        prop: 'light_color',
-        valid: ['Color(1, 1, 1, 1)'],
-        invalid: [
-          { value: 'RGB(1, 1, 1)', contains: ['Color'] },
-          { value: 'Color(1, 1, 1)' },
-        ],
-      },
-      {
-        prop: 'shadow_enabled',
-        valid: [true, false],
-        invalid: [{ value: 'yes', contains: ['boolean'] }],
-      },
-      {
-        prop: 'shadow_opacity',
-        valid: [0, 0.5, 1],
-        invalid: [
-          { value: -0.1, contains: ['between 0 and 1'] },
-          { value: 1.5, contains: ['between 0 and 1'] },
-        ],
-      },
-      {
-        // light_3d.cpp:406 hints "-16,16,0.001" (both ends closed), warning-only
-        // since set_param:36 only guards the param index.
-        prop: 'shadow_transmittance_bias',
-        valid: [-16, 0, 16],
-        invalid: [
-          { value: -17, contains: ['between -16 and 16'] },
-          { value: 17, contains: ['between -16 and 16'] },
-        ],
-      },
-      {
-          prop: 'light_cull_mask',
-          valid: [1, 1048575, 0, 2000000, 2147483648, 4294967295],
+        {
+          // light_3d.cpp:389 hints "0,16,0.001,or_greater", and Light3D::set_param:36
+          // guards the param index rather than the value, so a negative energy is
+          // loaded as written: it warns, it does not error. `or_greater` opens the
+          // ceiling, so 150 is in band.
+          prop: 'light_energy',
+          valid: [1.0, 0, 150],
           invalid: [
-
+            { value: 'bad', contains: ['must be a number'] },
+            { value: '-0.5', contains: ['non-negative'], severity: 'warning' },
           ],
         },
-      {
-        // light_3d.cpp:385 hints "0,100000.0,0.01,or_greater,suffix:lm", and
-        // Light3D::set_param:36 guards the param index rather than the value,
-        // so a negative reading loads and warns rather than errors.
-        prop: 'light_intensity_lumens',
-        valid: [0, 100000, '-5'],
-        acceptMode: 'no-error',
-        invalid: [{ value: 'bad', contains: ['must be a number'] }],
-      },
-      {
-        // light_3d.cpp:386 hints "0,150000.0,0.01,or_greater,suffix:lx".
-        prop: 'light_intensity_lux',
-        valid: [0, 150000, '-5'],
-        acceptMode: 'no-error',
-        invalid: [{ value: 'bad', contains: ['must be a number'] }],
-      },
-      {
-        // light_3d.cpp:387 hints "1000,15000.0,1.0,suffix:k", both ends closed
-        // (no or_greater/or_less). set_temperature (light_3d.cpp:257) is a bare
-        // assignment, so out-of-hint is a warning, not an error.
-        prop: 'light_temperature',
-        valid: [1000, 15000, 6500],
-        acceptMode: 'no-error',
-        invalid: [{ value: 'bad', contains: ['must be a number'] }],
-      },
-      {
-        // light_3d.cpp:393, PROPERTY_HINT_RESOURCE_TYPE "Texture2D,-Animated…".
-        // Format only, like every other single Texture2D reference property
-        // (Decal.texture_albedo, Sprite3D.texture).
-        prop: 'light_projector',
-        valid: ['ExtResource("1_a")', 'SubResource("Texture_1")'],
-        invalid: [{ value: '"not_a_reference"', contains: ['light_projector'] }],
-      },
-      {
-        // light_3d.cpp:394 hints "0,1,0.001,or_greater,suffix:m". set_param:36
-        // guards the index, not the value, so a size past the hint is a warning.
-        prop: 'light_size',
-        valid: [0, 1, 4],
-        acceptMode: 'no-error',
-        invalid: [{ value: 'bad', contains: ['must be a number'] }],
-      },
-      {
-        // light_3d.cpp:395 hints "0,90,0.01,degrees", both ends closed. The
-        // bare "degrees" token is a display-only suffix, not "radians_as_degrees",
-        // so the stored value is already degrees and the hint bound applies
-        // unconverted.
-        prop: 'light_angular_distance',
-        valid: [0, 90, 45],
-        acceptMode: 'no-error',
-        invalid: [{ value: 'bad', contains: ['must be a number'] }],
-      },
-      {
-        // light_3d.cpp:409, PROPERTY_HINT_LAYERS_3D_RENDER. set_shadow_caster_mask
-        // (light_3d.cpp:148) is a bare assignment, so the 32-checkbox widget
-        // width is a warning like light_cull_mask, never an error.
-        prop: 'shadow_caster_mask',
-        valid: [1, 1048575, 0, 2000000, 2147483648, 4294967295],
-        invalid: [{ value: 'bad', contains: ['must be a number'] }],
-      },
-      {
-        // light_3d.cpp:412, PROPERTY_HINT_GROUP_ENABLE: a checkable-group
-        // marker for the inspector, not a value constraint (object.h:93).
-        prop: 'distance_fade_enabled',
-        valid: [true, false],
-        invalid: [{ value: 'yes', contains: ['boolean'] }],
-      },
-      {
-        // light_3d.cpp:413, PROPERTY_HINT_RANGE "0.0,4096.0,0.01,or_greater,suffix:m".
-        // set_distance_fade_begin (light_3d.cpp:85) is a bare assignment.
-        prop: 'distance_fade_begin',
-        valid: [0, 4096, '-1'],
-        acceptMode: 'no-error',
-        invalid: [{ value: 'bad', contains: ['must be a number'] }],
-      },
-      {
-        // light_3d.cpp:414, same hint shape as distance_fade_begin.
-        // set_distance_fade_shadow (light_3d.cpp:94) is a bare assignment.
-        prop: 'distance_fade_shadow',
-        valid: [0, 4096, '-1'],
-        acceptMode: 'no-error',
-        invalid: [{ value: 'bad', contains: ['must be a number'] }],
-      },
-      {
-        // light_3d.cpp:415, same hint shape as distance_fade_begin.
-        // set_distance_fade_length (light_3d.cpp:103) is a bare assignment.
-        prop: 'distance_fade_length',
-        valid: [0, 4096, '-1'],
-        acceptMode: 'no-error',
-        invalid: [{ value: 'bad', contains: ['must be a number'] }],
-      },
-      {
-        // light_3d.cpp:418, PROPERTY_HINT_NONE (no hint at all). set_editor_only
-        // (light_3d.cpp:315) is a bare assignment, so this is a format-only bool.
-        prop: 'editor_only',
-        valid: [true, false],
-        invalid: [{ value: 'yes', contains: ['boolean'] }],
-      },
-    ]);
+        {
+          prop: 'light_color',
+          valid: ['Color(1, 1, 1, 1)'],
+          invalid: [{ value: 'RGB(1, 1, 1)', contains: ['Color'] }, { value: 'Color(1, 1, 1)' }],
+        },
+        {
+          prop: 'shadow_enabled',
+          valid: [true, false],
+          invalid: [{ value: 'yes', contains: ['boolean'] }],
+        },
+        {
+          prop: 'shadow_opacity',
+          valid: [0, 0.5, 1],
+          invalid: [
+            { value: -0.1, contains: ['between 0 and 1'] },
+            { value: 1.5, contains: ['between 0 and 1'] },
+          ],
+        },
+        {
+          // light_3d.cpp:406 hints "-16,16,0.001" (both ends closed), warning-only
+          // since set_param:36 only guards the param index.
+          prop: 'shadow_transmittance_bias',
+          valid: [-16, 0, 16],
+          invalid: [
+            { value: -17, contains: ['between -16 and 16'] },
+            { value: 17, contains: ['between -16 and 16'] },
+          ],
+        },
+        {
+          prop: 'light_cull_mask',
+          valid: [1, 1048575, 0, 2000000, 2147483648, 4294967295],
+          invalid: [],
+        },
+        {
+          // light_3d.cpp:385 hints "0,100000.0,0.01,or_greater,suffix:lm", and
+          // Light3D::set_param:36 guards the param index rather than the value,
+          // so a negative reading loads and warns rather than errors.
+          prop: 'light_intensity_lumens',
+          valid: [0, 100000, '-5'],
+          acceptMode: 'no-error',
+          invalid: [{ value: 'bad', contains: ['must be a number'] }],
+        },
+        {
+          // light_3d.cpp:386 hints "0,150000.0,0.01,or_greater,suffix:lx".
+          prop: 'light_intensity_lux',
+          valid: [0, 150000, '-5'],
+          acceptMode: 'no-error',
+          invalid: [{ value: 'bad', contains: ['must be a number'] }],
+        },
+        {
+          // light_3d.cpp:387 hints "1000,15000.0,1.0,suffix:k", both ends closed
+          // (no or_greater/or_less). set_temperature (light_3d.cpp:257) is a bare
+          // assignment, so out-of-hint is a warning, not an error.
+          prop: 'light_temperature',
+          valid: [1000, 15000, 6500],
+          acceptMode: 'no-error',
+          invalid: [{ value: 'bad', contains: ['must be a number'] }],
+        },
+        {
+          // light_3d.cpp:393, PROPERTY_HINT_RESOURCE_TYPE "Texture2D,-Animated…".
+          // Format only, like every other single Texture2D reference property
+          // (Decal.texture_albedo, Sprite3D.texture).
+          prop: 'light_projector',
+          valid: ['ExtResource("1_a")', 'SubResource("Texture_1")'],
+          invalid: [{ value: '"not_a_reference"', contains: ['light_projector'] }],
+        },
+        {
+          // light_3d.cpp:394 hints "0,1,0.001,or_greater,suffix:m". set_param:36
+          // guards the index, not the value, so a size past the hint is a warning.
+          prop: 'light_size',
+          valid: [0, 1, 4],
+          acceptMode: 'no-error',
+          invalid: [{ value: 'bad', contains: ['must be a number'] }],
+        },
+        {
+          // light_3d.cpp:395 hints "0,90,0.01,degrees", both ends closed. The
+          // bare "degrees" token is a display-only suffix, not "radians_as_degrees",
+          // so the stored value is already degrees and the hint bound applies
+          // unconverted.
+          prop: 'light_angular_distance',
+          valid: [0, 90, 45],
+          acceptMode: 'no-error',
+          invalid: [{ value: 'bad', contains: ['must be a number'] }],
+        },
+        {
+          // light_3d.cpp:409, PROPERTY_HINT_LAYERS_3D_RENDER. set_shadow_caster_mask
+          // (light_3d.cpp:148) is a bare assignment, so the 32-checkbox widget
+          // width is a warning like light_cull_mask, never an error.
+          prop: 'shadow_caster_mask',
+          valid: [1, 1048575, 0, 2000000, 2147483648, 4294967295],
+          invalid: [{ value: 'bad', contains: ['must be a number'] }],
+        },
+        {
+          // light_3d.cpp:412, PROPERTY_HINT_GROUP_ENABLE: a checkable-group
+          // marker for the inspector, not a value constraint (object.h:93).
+          prop: 'distance_fade_enabled',
+          valid: [true, false],
+          invalid: [{ value: 'yes', contains: ['boolean'] }],
+        },
+        {
+          // light_3d.cpp:413, PROPERTY_HINT_RANGE "0.0,4096.0,0.01,or_greater,suffix:m".
+          // set_distance_fade_begin (light_3d.cpp:85) is a bare assignment.
+          prop: 'distance_fade_begin',
+          valid: [0, 4096, '-1'],
+          acceptMode: 'no-error',
+          invalid: [{ value: 'bad', contains: ['must be a number'] }],
+        },
+        {
+          // light_3d.cpp:414, same hint shape as distance_fade_begin.
+          // set_distance_fade_shadow (light_3d.cpp:94) is a bare assignment.
+          prop: 'distance_fade_shadow',
+          valid: [0, 4096, '-1'],
+          acceptMode: 'no-error',
+          invalid: [{ value: 'bad', contains: ['must be a number'] }],
+        },
+        {
+          // light_3d.cpp:415, same hint shape as distance_fade_begin.
+          // set_distance_fade_length (light_3d.cpp:103) is a bare assignment.
+          prop: 'distance_fade_length',
+          valid: [0, 4096, '-1'],
+          acceptMode: 'no-error',
+          invalid: [{ value: 'bad', contains: ['must be a number'] }],
+        },
+        {
+          // light_3d.cpp:418, PROPERTY_HINT_NONE (no hint at all). set_editor_only
+          // (light_3d.cpp:315) is a bare assignment, so this is a format-only bool.
+          prop: 'editor_only',
+          valid: [true, false],
+          invalid: [{ value: 'yes', contains: ['boolean'] }],
+        },
+      ]
+    );
   });
 
   describe('shadow_bias / shadow_normal_bias / shadow_blur: hint bound tightened to "0,10,0.001"', () => {

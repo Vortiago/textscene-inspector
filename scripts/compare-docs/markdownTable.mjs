@@ -38,9 +38,7 @@ export function tableLines(header, rows) {
     const line = `| ${cells.map(escapeCell).join(' | ')} |`;
     const got = splitRow(line).length;
     if (got !== header.length) {
-      throw new Error(
-        `generated row renders ${got} cell(s) into a ${header.length}-column table: ${line}`
-      );
+      throw new Error(`generated row renders ${got} cell(s) into a ${header.length}-column table: ${line}`);
     }
     lines.push(line);
   }

@@ -136,7 +136,15 @@ export function CodeEdit(props: NativeControlComponentProps) {
         solveNode.rtl
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [codeEditProps.lineLengthGuidelines, fontSizePx, fontMetrics, drawBand.xMarginBeginPx, drawBand.xMarginEndPx, rect.w, solveNode.rtl]
+    [
+      codeEditProps.lineLengthGuidelines,
+      fontSizePx,
+      fontMetrics,
+      drawBand.xMarginBeginPx,
+      drawBand.xMarginEndPx,
+      rect.w,
+      solveNode.rtl,
+    ]
   );
   const guidelineColor = useMemo(
     () => multiplyModulate(tint.own, CODE_EDIT_LINE_LENGTH_GUIDELINE_COLOR),
@@ -163,7 +171,10 @@ export function CodeEdit(props: NativeControlComponentProps) {
     () => multiplyModulate(tint.own, CODE_EDIT_CODE_REGION_ICON_COLOR),
     [tint.own]
   );
-  const canFoldIcon = useNodeIcon(solveNode.icons.can_fold, band.foldDrawn ? CODE_EDIT_FOLD_ICONS.canFold : null);
+  const canFoldIcon = useNodeIcon(
+    solveNode.icons.can_fold,
+    band.foldDrawn ? CODE_EDIT_FOLD_ICONS.canFold : null
+  );
   const canFoldRegionIcon = useNodeIcon(
     solveNode.icons.can_fold_code_region,
     band.foldDrawn ? CODE_EDIT_FOLD_ICONS.canFoldCodeRegion : null
@@ -220,7 +231,11 @@ export function CodeEdit(props: NativeControlComponentProps) {
         })}
       {band.lineNumbersDrawn &&
         lineLayouts.map(({ startRow }, lineIndex) => {
-          const text = codeEditLineNumberText(lineIndex, band.lineNumberDigits, codeEditProps.gutterZeroPadLineNumbers);
+          const text = codeEditLineNumberText(
+            lineIndex,
+            band.lineNumberDigits,
+            codeEditProps.gutterZeroPadLineNumbers
+          );
           const layout = shapeText(text, {
             fontSizePx,
             boxWidthPx: 0,
@@ -230,13 +245,24 @@ export function CodeEdit(props: NativeControlComponentProps) {
           });
           // The gutter cell is the row's own band (`text_edit.cpp:1448`), so
           // it starts where the band does, not at the control's top edge.
-          const rowTopPx = textEditRowBandTopPx(startRow, rowHeightPx, styleBox.contentMargin.top, theme.separation);
+          const rowTopPx = textEditRowBandTopPx(
+            startRow,
+            rowHeightPx,
+            styleBox.contentMargin.top,
+            theme.separation
+          );
           const textTopPx = codeEditGutterCellTextTopPx(rowTopPx, rowHeightPx, layout.heightPx);
           return (
             <CanvasItemGroup
               key={lineIndex}
               position={[
-                codeEditLineNumberTextXPx(lineNumberGutterXPx, band.lineNumberWidthPx, rect.w, layout.widthPx, solveNode.rtl),
+                codeEditLineNumberTextXPx(
+                  lineNumberGutterXPx,
+                  band.lineNumberWidthPx,
+                  rect.w,
+                  layout.widthPx,
+                  solveNode.rtl
+                ),
                 -textTopPx,
                 0,
               ]}

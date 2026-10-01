@@ -52,16 +52,9 @@ export interface MissingResourcesProviderProps {
   onMissingPathsChange?: (paths: ReadonlySet<string>) => void;
 }
 
-export function MissingResourcesProvider({
-  children,
-  onMissingPathsChange,
-}: MissingResourcesProviderProps) {
-  const [missingPaths, setMissingPaths] = useState<ReadonlySet<string>>(
-    () => new Set<string>()
-  );
-  const [uploadedPaths, setUploadedPaths] = useState<ReadonlySet<string>>(
-    () => new Set<string>()
-  );
+export function MissingResourcesProvider({ children, onMissingPathsChange }: MissingResourcesProviderProps) {
+  const [missingPaths, setMissingPaths] = useState<ReadonlySet<string>>(() => new Set<string>());
+  const [uploadedPaths, setUploadedPaths] = useState<ReadonlySet<string>>(() => new Set<string>());
 
   // The actions have empty deps, so an effect that depends on one does not
   // re-run on each state change. An effect on the whole context object loops,
@@ -140,11 +133,7 @@ export function MissingResourcesProvider({
     [missingPaths, uploadedPaths, report, clear, markUploaded, removeUploaded]
   );
 
-  return (
-    <MissingResourcesContext.Provider value={value}>
-      {children}
-    </MissingResourcesContext.Provider>
-  );
+  return <MissingResourcesContext.Provider value={value}>{children}</MissingResourcesContext.Provider>;
 }
 
 export function useMissingResources(): MissingResourcesContextValue {

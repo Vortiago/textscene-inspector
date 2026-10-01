@@ -56,6 +56,8 @@ Install a `.vsix` with **Extensions: Install from VSIX…**.
 | `pnpm test:vscode:csp` | Text renders in the real VS Code webview, offline, under its CSP |
 | `pnpm --filter textscene-inspector test:integration` | VS Code integration tests |
 | `pnpm lint` | ESLint |
+| `pnpm format` | Format the code with Prettier |
+| `pnpm format:check` | Check the formatting, as CI does |
 | `pnpm type-check` | Type check |
 | `pnpm clean` | Remove build output |
 

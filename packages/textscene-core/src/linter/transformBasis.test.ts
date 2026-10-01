@@ -10,8 +10,7 @@ import { hasNonUnitScale3D, isOrthonormalTransform, transform3DBasis } from './t
 const IDENTITY = 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)';
 
 /** One non-finite component in the first basis row, the rest identity. */
-const withFirstComponent = (text: string) =>
-  `Transform3D(${text}, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)`;
+const withFirstComponent = (text: string) => `Transform3D(${text}, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)`;
 
 describe('transform3DBasis', () => {
   it('reads the nine row-major basis components, dropping the origin', () => {

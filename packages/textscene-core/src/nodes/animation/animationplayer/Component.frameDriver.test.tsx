@@ -16,10 +16,7 @@ import {
   useAnimationTransport,
   type AnimationTransport,
 } from '../../../r3f/contexts/AnimationTransportContext';
-import {
-  useOptionalSelection,
-  type SelectionContextValue,
-} from '../../../r3f/contexts/SelectionContext';
+import { useOptionalSelection, type SelectionContextValue } from '../../../r3f/contexts/SelectionContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
@@ -45,8 +42,7 @@ const INTERNAL: TscnInternalResource[] = [
       length: '0.4',
       'tracks/0/type': '"value"',
       'tracks/0/path': 'NodePath("Sprite2D:frame")',
-      'tracks/0/keys':
-        '{\n"times": PackedFloat32Array(0, 0.1, 0.2, 0.3),\n"values": [0, 1, 2, 3]\n}',
+      'tracks/0/keys': '{\n"times": PackedFloat32Array(0, 0.1, 0.2, 0.3),\n"values": [0, 1, 2, 3]\n}',
     },
   },
   { id: 'B', type: 'Animation', data: { length: '0.4' } },

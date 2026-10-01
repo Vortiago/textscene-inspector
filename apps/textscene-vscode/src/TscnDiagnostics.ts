@@ -81,10 +81,7 @@ export function toVsCodeDiagnostic(
   return result;
 }
 
-function rangeForDiagnostic(
-  diagnostic: TscnLintDiagnostic,
-  document: DocumentLineSource
-): vscode.Range {
+function rangeForDiagnostic(diagnostic: TscnLintDiagnostic, document: DocumentLineSource): vscode.Range {
   const line = diagnosticLine(diagnostic);
   if (line === undefined) {
     return new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0));
@@ -95,8 +92,7 @@ function rangeForDiagnostic(
   const lineLength = document.lineAt(lineIndex).text.length;
 
   const column = diagnostic.location?.column;
-  const startCharacter =
-    typeof column === 'number' ? clamp(column - 1, 0, lineLength) : 0;
+  const startCharacter = typeof column === 'number' ? clamp(column - 1, 0, lineLength) : 0;
 
   return new vscode.Range(
     new vscode.Position(lineIndex, startCharacter),
@@ -240,7 +236,11 @@ export class TscnDiagnostics implements vscode.Disposable {
   }
 
   private _subscribe(events: FileEvents, handler: (uri: vscode.Uri) => void): void {
-    this._disposables.push(events.onDidCreate(handler), events.onDidChange(handler), events.onDidDelete(handler));
+    this._disposables.push(
+      events.onDidCreate(handler),
+      events.onDidChange(handler),
+      events.onDidDelete(handler)
+    );
   }
 
   /** Schedules a lint of each open document whose last lint read `uri`, debounced like an edit. */
@@ -304,7 +304,9 @@ export class TscnDiagnostics implements vscode.Disposable {
   private async _providerFor(document: vscode.TextDocument): Promise<LintResourceProvider | null> {
     const folder = vscode.workspace.getWorkspaceFolder(document.uri);
     if (!folder) return null;
-    const root = await findEnclosingGodotProject(folder.uri, document.uri, (dir) => this._holdsProjectFile(dir));
+    const root = await findEnclosingGodotProject(folder.uri, document.uri, (dir) =>
+      this._holdsProjectFile(dir)
+    );
     if (root === null) return null;
     const key = root.toString();
     let provider = this._providers.get(key);

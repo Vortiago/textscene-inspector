@@ -214,7 +214,8 @@ describe('test titles name the tier they assert', () => {
   });
 
   it('reads a title through the quote it opens with, not the first quote it meets', () => {
-    const src = "it('reports nothing when max_size is Vector2i(0, 0) (the \"no maximum\" sentinel)', () => {});";
+    const src =
+      'it(\'reports nothing when max_size is Vector2i(0, 0) (the "no maximum" sentinel)\', () => {});';
 
     expect(blocksIn('synthetic.test.ts', src)[0]?.title).toBe(
       'reports nothing when max_size is Vector2i(0, 0) (the "no maximum" sentinel)'

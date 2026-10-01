@@ -38,9 +38,7 @@ describe('buildCsgBoxGeometry', () => {
     for (let i = 0; i < n.count; i++) {
       seen.add([n.getX(i), n.getY(i), n.getZ(i)].map((v) => Math.round(v)).join(','));
     }
-    expect(seen).toEqual(
-      new Set(['1,0,0', '-1,0,0', '0,1,0', '0,-1,0', '0,0,1', '0,0,-1'])
-    );
+    expect(seen).toEqual(new Set(['1,0,0', '-1,0,0', '0,1,0', '0,-1,0', '0,0,1', '0,0,-1']));
   });
 
   it('keeps every face flat: a box has no smooth_faces property', () => {

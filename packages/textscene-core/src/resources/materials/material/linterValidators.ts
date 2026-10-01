@@ -7,10 +7,7 @@
 import '../../resource/linterValidators.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-import {
-  MATERIAL_RENDER_PRIORITY_MAX,
-  MATERIAL_RENDER_PRIORITY_MIN,
-} from '../../../godot/rendering.js';
+import { MATERIAL_RENDER_PRIORITY_MAX, MATERIAL_RENDER_PRIORITY_MIN } from '../../../godot/rendering.js';
 
 validatorRegistry.registerAll('Material', {
   // material.cpp:167 hints the range from RENDER_PRIORITY_MIN/MAX, and

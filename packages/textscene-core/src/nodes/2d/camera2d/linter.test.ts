@@ -365,7 +365,9 @@ describe('Camera2D Linter', () => {
 
       it('should not warn when limits are consistent', () => {
         expectClean(
-          scene(node('Camera2D', { limit_left: -1000, limit_right: 1000, limit_top: -500, limit_bottom: 500 }))
+          scene(
+            node('Camera2D', { limit_left: -1000, limit_right: 1000, limit_top: -500, limit_bottom: 500 })
+          )
         );
       });
     });
@@ -374,11 +376,14 @@ describe('Camera2D Linter', () => {
       it('reports when position_smoothing_speed is zero, the value Godot keeps', () => {
         // MAX(0, 0) is 0, so nothing is refused or altered. The zero makes the
         // interpolation factor zero (camera_2d.cpp:199-200).
-        expectDiagnostic(scene(node('Camera2D', { position_smoothing_enabled: true, position_smoothing_speed: 0 })), {
-          ruleName: 'camera2d-smoothing-speed-zero',
-          severity: 'info',
-          contains: ['position_smoothing_speed'],
-        });
+        expectDiagnostic(
+          scene(node('Camera2D', { position_smoothing_enabled: true, position_smoothing_speed: 0 })),
+          {
+            ruleName: 'camera2d-smoothing-speed-zero',
+            severity: 'info',
+            contains: ['position_smoothing_speed'],
+          }
+        );
       });
 
       // A negative speed is the validator's job: `MAX(0, p_speed)` refuses it, and
@@ -398,7 +403,9 @@ describe('Camera2D Linter', () => {
       );
 
       it('should not warn when position_smoothing_enabled with valid speed', () => {
-        expectClean(scene(node('Camera2D', { position_smoothing_enabled: true, position_smoothing_speed: 5.0 })));
+        expectClean(
+          scene(node('Camera2D', { position_smoothing_enabled: true, position_smoothing_speed: 5.0 }))
+        );
       });
     });
 
@@ -406,11 +413,14 @@ describe('Camera2D Linter', () => {
       it('reports when rotation_smoothing_speed is zero, the value Godot keeps', () => {
         // Mirror of the position case: MAX(0, 0) stores 0, and the zero step
         // pins lerp_angle where it started (camera_2d.cpp:216-217).
-        expectDiagnostic(scene(node('Camera2D', { rotation_smoothing_enabled: true, rotation_smoothing_speed: 0 })), {
-          ruleName: 'camera2d-rotation-smoothing-speed-zero',
-          severity: 'info',
-          contains: ['rotation_smoothing_speed'],
-        });
+        expectDiagnostic(
+          scene(node('Camera2D', { rotation_smoothing_enabled: true, rotation_smoothing_speed: 0 })),
+          {
+            ruleName: 'camera2d-rotation-smoothing-speed-zero',
+            severity: 'info',
+            contains: ['rotation_smoothing_speed'],
+          }
+        );
       });
 
       it.each([-2.5, '-inf', 'inf_neg'])(
@@ -427,10 +437,11 @@ describe('Camera2D Linter', () => {
       );
 
       it('should not warn when rotation_smoothing_enabled with valid speed', () => {
-        expectClean(scene(node('Camera2D', { rotation_smoothing_enabled: true, rotation_smoothing_speed: 5.0 })));
+        expectClean(
+          scene(node('Camera2D', { rotation_smoothing_enabled: true, rotation_smoothing_speed: 5.0 }))
+        );
       });
     });
-
   });
 
   describe('Edge Cases', () => {
@@ -531,7 +542,9 @@ describe('Camera2D Linter', () => {
           node('Camera2D', { enabled: true }, { name: 'Camera2', parent: 'Holder' })
         )
       );
-      const reports = diagnostics.filter(d => d.severity === 'info' && d.message.includes('Multiple enabled'));
+      const reports = diagnostics.filter(
+        (d) => d.severity === 'info' && d.message.includes('Multiple enabled')
+      );
       expect(reports.length).toBeGreaterThan(0);
     });
 
@@ -547,7 +560,7 @@ describe('Camera2D Linter', () => {
           node('Camera2D', { enabled: false }, { name: 'DisabledCamera', parent: '.' })
         )
       );
-      const cameraWarnings = diagnostics.filter(d => d.message.includes('Multiple enabled'));
+      const cameraWarnings = diagnostics.filter((d) => d.message.includes('Multiple enabled'));
       expect(cameraWarnings).toHaveLength(0);
     });
   });

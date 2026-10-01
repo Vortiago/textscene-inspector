@@ -64,13 +64,17 @@ describe('LintSession.lint', () => {
   it('moves a kept diagnostic onto the line its [ext_resource] moved to', async () => {
     const session = await sessionAfterRefusal();
 
-    expect(refusalLines(session.lint(sceneUsing('res://tree.glb', { blankLines: 2 }), TREE_PROJECT).now)).toEqual([5]);
+    expect(
+      refusalLines(session.lint(sceneUsing('res://tree.glb', { blankLines: 2 }), TREE_PROJECT).now)
+    ).toEqual([5]);
   });
 
   it('drops a kept diagnostic whose [ext_resource] id is gone', async () => {
     const session = await sessionAfterRefusal();
 
-    expect(refusalLines(session.lint(sceneUsing('res://tree.glb', { id: '2_tree' }), TREE_PROJECT).now)).toEqual([]);
+    expect(
+      refusalLines(session.lint(sceneUsing('res://tree.glb', { id: '2_tree' }), TREE_PROJECT).now)
+    ).toEqual([]);
   });
 
   it('drops a kept diagnostic whose [ext_resource] now names another file', async () => {
@@ -143,7 +147,9 @@ describe('LintSession.reads', () => {
 
 describe('Linter.lintComplete', () => {
   it('is the full list in one answer', async () => {
-    expect(refusalLines(await new Linter().lintComplete(sceneUsing('res://tree.glb'), TREE_PROJECT))).toEqual([3]);
+    expect(refusalLines(await new Linter().lintComplete(sceneUsing('res://tree.glb'), TREE_PROJECT))).toEqual(
+      [3]
+    );
   });
 
   it('is the file-local lint with no provider', async () => {

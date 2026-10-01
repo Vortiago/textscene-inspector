@@ -119,7 +119,9 @@ describe('<TextEdit> — per-line text', () => {
       scene
         .findAllByType('Group')
         .map((g) => g.instance)
-        .filter((g) => g.children.some((c) => ((c as THREE.Mesh).material as THREE.ShaderMaterial)?.uniforms?.uColor))
+        .filter((g) =>
+          g.children.some((c) => ((c as THREE.Mesh).material as THREE.ShaderMaterial)?.uniforms?.uColor)
+        )
         .map((g) => g.position.y)
         .sort((a, b) => b - a);
     const blankRows = yOffsets(withBlank.scene);
@@ -134,9 +136,16 @@ describe('<TextEdit> — per-line text', () => {
       <TextEdit {...painterEnv()} solveNode={solveNode({ text: 'AB' })} rect={RECT} renderOrder={0} />
     );
     const boxed = await ReactThreeTestRenderer.create(
-      <TextEdit {...painterEnv()} solveNode={solveNode({ text: 'AB', drawControlChars: true })} rect={RECT} renderOrder={0} />
+      <TextEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'AB', drawControlChars: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
-    expect(boxed.scene.findAllByType('Mesh').length).toBeGreaterThan(dropped.scene.findAllByType('Mesh').length);
+    expect(boxed.scene.findAllByType('Mesh').length).toBeGreaterThan(
+      dropped.scene.findAllByType('Mesh').length
+    );
   });
 
   it('wraps one long line into multiple rows once wrap_mode is BOUNDARY(1)', async () => {
@@ -145,7 +154,12 @@ describe('<TextEdit> — per-line text', () => {
       <TextEdit {...painterEnv()} solveNode={solveNode({ text: longText })} rect={RECT} renderOrder={0} />
     );
     const wrapped = await ReactThreeTestRenderer.create(
-      <TextEdit {...painterEnv()} solveNode={solveNode({ text: longText, wrapMode: 1 })} rect={RECT} renderOrder={0} />
+      <TextEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: longText, wrapMode: 1 })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     expect(findTextMeshes(off.scene)).toHaveLength(1);
     expect(findTextMeshes(wrapped.scene).length).toBeGreaterThan(1);
@@ -243,7 +257,9 @@ describe('<TextEdit> — clipping', () => {
     const planes = material.clippingPlanes!;
     expect(planes.length).toBeGreaterThanOrEqual(4);
     const insideWholeRectButPastLineEditContentMargin = new THREE.Vector3(RECT.w - 1, -1, 0);
-    expect(planes.every((p) => p.distanceToPoint(insideWholeRectButPastLineEditContentMargin) >= 0)).toBe(true);
+    expect(planes.every((p) => p.distanceToPoint(insideWholeRectButPastLineEditContentMargin) >= 0)).toBe(
+      true
+    );
   });
 });
 
@@ -319,7 +335,12 @@ describe('<TextEdit> — RTL layout', () => {
     // The two rows differ in length, so a single mirrored band value cannot
     // produce both: each must step back by its own shaped width.
     const renderer = await ReactThreeTestRenderer.create(
-      <TextEdit {...painterEnv()} solveNode={{ ...solveNode({ text: 'Wave rift over quiet stone\nAmber' }), rtl: true }} rect={RECT} renderOrder={0} />
+      <TextEdit
+        {...painterEnv()}
+        solveNode={{ ...solveNode({ text: 'Wave rift over quiet stone\nAmber' }), rtl: true }}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     const xs = findTextMeshes(renderer.scene).map((m) => m.getWorldPosition(new THREE.Vector3()).x);
     expect(xs.length).toBe(2);
@@ -329,7 +350,12 @@ describe('<TextEdit> — RTL layout', () => {
 
   it('stacks every row flush at the band start under LTR', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <TextEdit {...painterEnv()} solveNode={solveNode({ text: 'Wave rift over quiet stone\nAmber' })} rect={RECT} renderOrder={0} />
+      <TextEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'Wave rift over quiet stone\nAmber' })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     const xs = findTextMeshes(renderer.scene).map((m) => m.getWorldPosition(new THREE.Vector3()).x);
     expect(xs[0]).toBeCloseTo(xs[1]!, 5);
@@ -347,11 +373,18 @@ describe('<TextEdit> — text clip band', () => {
     // offset would clip at twice that offset and hide the text outright.
     const planesOf = async (rect: Rect2) => {
       const renderer = await ReactThreeTestRenderer.create(
-        <TextEdit {...painterEnv()} solveNode={solveNode({ text: 'Wave rift' })} rect={rect} renderOrder={0} />
+        <TextEdit
+          {...painterEnv()}
+          solveNode={solveNode({ text: 'Wave rift' })}
+          rect={rect}
+          renderOrder={0}
+        />
       );
       const mesh = findTextMeshes(renderer.scene)[0]!;
       return ((mesh.material as THREE.ShaderMaterial).clippingPlanes ?? []).map((p) => p.constant);
     };
-    expect(await planesOf({ x: 0, y: 200, w: 300, h: 100 })).toEqual(await planesOf({ x: 0, y: 0, w: 300, h: 100 }));
+    expect(await planesOf({ x: 0, y: 200, w: 300, h: 100 })).toEqual(
+      await planesOf({ x: 0, y: 0, w: 300, h: 100 })
+    );
   });
 });

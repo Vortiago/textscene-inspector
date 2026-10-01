@@ -5,14 +5,7 @@
  * reactive, since targets arrive after first paint. Both work without a provider.
  */
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import type * as THREE from 'three';
 
 export interface ViewportTextureEntry {
@@ -31,12 +24,10 @@ export type RegisterViewportTexture = (path: string, entry: ViewportTextureEntry
 const NO_OP_REGISTER: RegisterViewportTexture = () => () => {};
 const EMPTY: ReadonlyMap<string, ViewportTextureEntry> = new Map();
 
-const RegisterViewportTextureContext =
-  createContext<RegisterViewportTexture>(NO_OP_REGISTER);
+const RegisterViewportTextureContext = createContext<RegisterViewportTexture>(NO_OP_REGISTER);
 RegisterViewportTextureContext.displayName = 'RegisterViewportTextureContext';
 
-const ViewportTexturesContext =
-  createContext<ReadonlyMap<string, ViewportTextureEntry>>(EMPTY);
+const ViewportTexturesContext = createContext<ReadonlyMap<string, ViewportTextureEntry>>(EMPTY);
 ViewportTexturesContext.displayName = 'ViewportTexturesContext';
 
 /** Stable publisher, for `<SubViewport>`. */
@@ -57,13 +48,11 @@ export function usePublishViewportTexture(path: string, entry: ViewportTextureEn
 /** The target published at `path`, or null. */
 export function useViewportTexture(path: string | null): ViewportTextureEntry | null {
   const targets = useContext(ViewportTexturesContext);
-  return path === null ? null : targets.get(path) ?? null;
+  return path === null ? null : (targets.get(path) ?? null);
 }
 
 export function ViewportTextureProvider({ children }: { children: ReactNode }) {
-  const [targets, setTargets] = useState<ReadonlyMap<string, ViewportTextureEntry>>(
-    () => new Map()
-  );
+  const [targets, setTargets] = useState<ReadonlyMap<string, ViewportTextureEntry>>(() => new Map());
 
   const registerViewportTexture = useCallback<RegisterViewportTexture>((path, entry) => {
     setTargets((prev) => {
@@ -84,9 +73,7 @@ export function ViewportTextureProvider({ children }: { children: ReactNode }) {
 
   return (
     <RegisterViewportTextureContext.Provider value={registerViewportTexture}>
-      <ViewportTexturesContext.Provider value={targets}>
-        {children}
-      </ViewportTexturesContext.Provider>
+      <ViewportTexturesContext.Provider value={targets}>{children}</ViewportTexturesContext.Provider>
     </RegisterViewportTextureContext.Provider>
   );
 }

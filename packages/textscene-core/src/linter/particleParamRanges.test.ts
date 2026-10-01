@@ -7,7 +7,9 @@ const node = { name: 'Fx', type: 'CPUParticles2D' } as TscnNode;
 
 describe('paramMinAboveMaxDiagnostics', () => {
   it('reports a crossed pair as a warning under the given prefix', () => {
-    expect(paramMinAboveMaxDiagnostics(node, { angle_min: '10', angle_max: '-10' }, 'cpuparticles2d')).toEqual([
+    expect(
+      paramMinAboveMaxDiagnostics(node, { angle_min: '10', angle_max: '-10' }, 'cpuparticles2d')
+    ).toEqual([
       {
         severity: 'warning',
         message:

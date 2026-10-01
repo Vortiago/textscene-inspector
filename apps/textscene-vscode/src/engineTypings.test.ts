@@ -7,9 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const manifest = JSON.parse(
-  readFileSync(join(import.meta.dirname, '..', 'package.json'), 'utf8')
-) as {
+const manifest = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'package.json'), 'utf8')) as {
   engines: { vscode: string };
   devDependencies: Record<string, string>;
 };

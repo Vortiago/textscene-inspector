@@ -54,16 +54,16 @@ describe('TileMapLayer lint rules', () => {
         TILESET_RESOURCES
       )
     );
-    const onTileData = diagnostics.filter(
-      (d) => d.severity === 'error' && /tile_map_data/.test(d.message)
-    );
+    const onTileData = diagnostics.filter((d) => d.severity === 'error' && /tile_map_data/.test(d.message));
     expect(onTileData).toHaveLength(1);
     expect(onTileData[0]?.message).toContain('base64');
   });
 
   // tile_map_layer.cpp:3216-3218: empty data clears the layer, no error.
   it.each(['PackedByteArray()', '[]'])('stays silent on the empty tile data %s', (data) => {
-    const diagnostics = lint(scene(`tile_set = SubResource("TileSet_a")\ntile_map_data = ${data}`, TILESET_RESOURCES));
+    const diagnostics = lint(
+      scene(`tile_set = SubResource("TileSet_a")\ntile_map_data = ${data}`, TILESET_RESOURCES)
+    );
     expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
   });
 
@@ -73,10 +73,10 @@ describe('TileMapLayer lint rules', () => {
   });
 
   it('errors when the tile_set reference cannot be resolved (dangling id)', () => {
-    expectDiagnostic(
-      scene(`tile_set = SubResource("TileSet_gone")\ntile_map_data = ${VALID_DATA}`),
-      { ruleName: 'dangling-resource-reference', severity: 'error' }
-    );
+    expectDiagnostic(scene(`tile_set = SubResource("TileSet_gone")\ntile_map_data = ${VALID_DATA}`), {
+      ruleName: 'dangling-resource-reference',
+      severity: 'error',
+    });
   });
 
   it('accepts a complete TileMapLayer without tile diagnostics', () => {

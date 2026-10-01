@@ -85,15 +85,11 @@ describe('resolveNodePathLiteral with unique names', () => {
   const claims = new Map([['%Target', 'Root/Target']]);
 
   it('resolves a unique name to the claiming node, ignoring where it was written', () => {
-    expect(resolveNodePathLiteral('Root/Deep/Relay', 'NodePath("%Target")', claims)).toBe(
-      'Root/Target'
-    );
+    expect(resolveNodePathLiteral('Root/Deep/Relay', 'NodePath("%Target")', claims)).toBe('Root/Target');
   });
 
   it('descends from the claimed node', () => {
-    expect(resolveNodePathLiteral('Root/Relay', 'NodePath("%Target/Mesh")', claims)).toBe(
-      'Root/Target/Mesh'
-    );
+    expect(resolveNodePathLiteral('Root/Relay', 'NodePath("%Target/Mesh")', claims)).toBe('Root/Target/Mesh');
   });
 
   it('jumps rather than appends, so a following `..` steps up from the CLAIMED node', () => {
@@ -103,9 +99,7 @@ describe('resolveNodePathLiteral with unique names', () => {
   });
 
   it('resolves a unique name reached part-way through a walk', () => {
-    expect(resolveNodePathLiteral('Root/Relay', 'NodePath("../%Target")', claims)).toBe(
-      'Root/Target'
-    );
+    expect(resolveNodePathLiteral('Root/Relay', 'NodePath("../%Target")', claims)).toBe('Root/Target');
   });
 
   it('returns null when no node claims the name', () => {
@@ -117,9 +111,7 @@ describe('resolveNodePathLiteral with unique names', () => {
   });
 
   it('leaves an ordinary relative path alone', () => {
-    expect(resolveNodePathLiteral('Root/Relay', 'NodePath("../Sibling")', claims)).toBe(
-      'Root/Sibling'
-    );
+    expect(resolveNodePathLiteral('Root/Relay', 'NodePath("../Sibling")', claims)).toBe('Root/Sibling');
   });
 });
 

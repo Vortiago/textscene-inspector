@@ -8,9 +8,6 @@ import type { ParsedHeading } from '../../../../parser/utils';
 import { parseSlider } from '../shared/slider';
 import type { VSliderProperties } from './types';
 
-export function parseVSlider(
-  heading: ParsedHeading,
-  properties: Record<string, string>
-): VSliderProperties {
+export function parseVSlider(heading: ParsedHeading, properties: Record<string, string>): VSliderProperties {
   return parseSlider(heading, properties);
 }

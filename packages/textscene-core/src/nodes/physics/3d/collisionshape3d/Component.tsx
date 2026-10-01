@@ -31,9 +31,7 @@ export function CollisionShape3D({ node, children }: NodeComponentProps) {
 
   return (
     <group name={node.name} position={position} rotation={rotation} scale={scale}>
-      {showCollisions && shapeResource ? (
-        <CollisionGizmo shape={shapeResource} color={debugColor} />
-      ) : null}
+      {showCollisions && shapeResource ? <CollisionGizmo shape={shapeResource} color={debugColor} /> : null}
       {children}
     </group>
   );

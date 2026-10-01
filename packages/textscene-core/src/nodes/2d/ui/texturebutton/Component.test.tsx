@@ -85,7 +85,9 @@ function findQuad(scene: Awaited<ReturnType<typeof render>>['scene']) {
   return scene
     .findAllByType('Mesh')
     .map((m) => m.instance as THREE.Mesh)
-    .find((m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined);
+    .find(
+      (m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined
+    );
 }
 
 describe('<TextureButton> (isolated painter contract)', () => {

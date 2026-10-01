@@ -84,8 +84,12 @@ export async function runLongTaskArms(baseUrl) {
   try {
     const withWorker = await runLongTaskScenario(browser, baseUrl, LARGE_FIXTURE, []);
     const fromTres = await runLongTaskScenario(browser, baseUrl, LARGE_TRES_FIXTURE, []);
-    const blocked = await runLongTaskScenario(browser, baseUrl, LARGE_FIXTURE, [[installWorkerBlock, undefined]]);
-    const stalled = await runLongTaskScenario(browser, baseUrl, LARGE_FIXTURE, [[installReplyStall, REPLY_STALL_MS]]);
+    const blocked = await runLongTaskScenario(browser, baseUrl, LARGE_FIXTURE, [
+      [installWorkerBlock, undefined],
+    ]);
+    const stalled = await runLongTaskScenario(browser, baseUrl, LARGE_FIXTURE, [
+      [installReplyStall, REPLY_STALL_MS],
+    ]);
     return { withWorker, fromTres, blocked, stalled };
   } finally {
     await browser.close();
@@ -97,7 +101,12 @@ export async function runLongTaskArms(baseUrl) {
  * long tasks until the texture work status has come and gone.
  */
 async function runLongTaskScenario(browser, baseUrl, fixture, initScripts) {
-  const { context, page, canvas, diagnostics } = await openProbedFixture(browser, baseUrl, fixture, initScripts);
+  const { context, page, canvas, diagnostics } = await openProbedFixture(
+    browser,
+    baseUrl,
+    fixture,
+    initScripts
+  );
   await page.waitForFunction(
     () => {
       const probe = window.__textureWorkProbe;
@@ -148,7 +157,10 @@ export function checkSettleControl(gate, { baseline, delayed, unwaited }) {
 export function checkWorkerArm(gate, label, arm, { inkOf, inkFloor, longTasksIn }) {
   const during = longTasksIn(arm.probe, LONG_TASK_LIMIT_MS);
   gate.check(during !== null, `[${label}] the texture work status never came and went: nothing was measured`);
-  gate.check(arm.probe.replies > 0, `[${label}] no job worker answered: the build did not run off the main thread`);
+  gate.check(
+    arm.probe.replies > 0,
+    `[${label}] no job worker answered: the build did not run off the main thread`
+  );
   gate.check(
     during !== null && during.length === 0,
     `[${label}] ${during?.length} task(s) over ${LONG_TASK_LIMIT_MS} ms while the texture built and uploaded: ` +

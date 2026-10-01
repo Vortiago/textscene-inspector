@@ -16,13 +16,9 @@ const DIRECTIONAL_SHADOW_MODE = {
 const SKY_MODE = { 0: 'LIGHT_AND_SKY', 1: 'LIGHT_ONLY', 2: 'SKY_ONLY' };
 
 validatorRegistry.registerAll('DirectionalLight3D', {
-  directional_shadow_mode: v.enumInt(
-    'directional_shadow_mode',
-    0,
-    2,
-    DIRECTIONAL_SHADOW_MODE,
-    { hinted: 'light_3d.cpp:578' }
-  ),
+  directional_shadow_mode: v.enumInt('directional_shadow_mode', 0, 2, DIRECTIONAL_SHADOW_MODE, {
+    hinted: 'light_3d.cpp:578',
+  }),
   directional_shadow_split_1: v.float('directional_shadow_split_1', {
     min: 0,
     max: 1,

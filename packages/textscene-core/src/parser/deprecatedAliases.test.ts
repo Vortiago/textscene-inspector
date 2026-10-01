@@ -15,7 +15,9 @@ const parse = (body: string) => new TscnParser().parse(`[gd_scene format=3]\n\n$
 describe('extents → size * 2 through the scan', () => {
   it('BoxShape3D extents = Vector3(3, 1, 3) decodes as size (6, 2, 6)', () => {
     // box_shape_3d.cpp:81-83; measured on 4.6.3.
-    const scene = parse('[sub_resource type="BoxShape3D" id="1"]\nextents = Vector3(3, 1, 3)\n\n[node name="R" type="Node"]');
+    const scene = parse(
+      '[sub_resource type="BoxShape3D" id="1"]\nextents = Vector3(3, 1, 3)\n\n[node name="R" type="Node"]'
+    );
     const data = scene.internalResources[0]!.data as Record<string, string>;
     expect(data.size).toBe('Vector3(6, 2, 6)');
     expect(data.extents).toBeUndefined();
@@ -24,7 +26,9 @@ describe('extents → size * 2 through the scan', () => {
 
   it('RectangleShape2D extents = Vector2(16, 8) decodes as size (32, 16)', () => {
     // rectangle_shape_2d.cpp:42-44; measured on 4.6.3.
-    const scene = parse('[sub_resource type="RectangleShape2D" id="1"]\nextents = Vector2(16, 8)\n\n[node name="R" type="Node"]');
+    const scene = parse(
+      '[sub_resource type="RectangleShape2D" id="1"]\nextents = Vector2(16, 8)\n\n[node name="R" type="Node"]'
+    );
     const data = scene.internalResources[0]!.data as Record<string, string>;
     expect(decodeRectangleShape2D(data).size).toEqual({ x: 32, y: 16 });
   });

@@ -8,8 +8,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { parseTransform3D, decomposeTransform3D } from './transform';
 
-const ROOM_GEOM =
-  'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0010881424, 0.0035161972, 0.0035357475)';
+const ROOM_GEOM = 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0010881424, 0.0035161972, 0.0035357475)';
 const RG_O = { x: -0.0010881424, y: 0.0035161972, z: 0.0035357475 };
 const IDENTITY = 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)';
 
@@ -65,8 +64,7 @@ describe('ceiling-lamp nested-instance composition — regression suite', () => 
   );
 
   it('plafoniera (uniform scale 0.18924935) sits at the lamp origin and keeps its scale', () => {
-    const plafoniera =
-      'Transform3D(0.18924935, 0, 0, 0, 0.18924935, 0, 0, 0, 0.18924935, 0, 0, 0)';
+    const plafoniera = 'Transform3D(0.18924935, 0, 0, 0, 0.18924935, 0, 0, 0, 0.18924935, 0, 0, 0)';
     const worldM = rgWorld.clone().multiply(matrixFor(LAMPS[0]!.transform)).multiply(matrixFor(plafoniera));
 
     const pos = new THREE.Vector3().setFromMatrixPosition(worldM);

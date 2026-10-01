@@ -116,10 +116,9 @@ describe('Skeleton3D Linter', () => {
       });
 
       it('should accept valid bone rotation (Quaternion)', () => {
-        expectNoErrors(
-          scene(node('Skeleton3D', { 'bones/1/rotation': 'Quaternion(0, 0.707, 0, 0.707)' })),
-          { ruleName: 'strict-parser' }
-        );
+        expectNoErrors(scene(node('Skeleton3D', { 'bones/1/rotation': 'Quaternion(0, 0.707, 0, 0.707)' })), {
+          ruleName: 'strict-parser',
+        });
       });
 
       it('should accept valid bone scale (Vector3)', () => {
@@ -184,10 +183,9 @@ describe('Skeleton3D Linter', () => {
 
       // `-4294967296` keeps 0 in its low 32 bits, a slot a file reaches, so phase 1 has no claim.
       it('should accept a bone index that wraps to a reachable slot', () => {
-        expectNoDiagnostic(
-          scene(node('Skeleton3D', { 'bones/-4294967296/position': 'Vector3(0, 0, 0)' })),
-          { prop: 'Bone index' }
-        );
+        expectNoDiagnostic(scene(node('Skeleton3D', { 'bones/-4294967296/position': 'Vector3(0, 0, 0)' })), {
+          prop: 'Bone index',
+        });
       });
 
       // `to_int` flips the sign on a `-` seen while the total is still 0 (ustring.cpp:2291-2292),
@@ -254,12 +252,9 @@ describe('Skeleton3D Linter', () => {
       // tier. The ceiling is `bones.size() - 1`, sibling state no per-property validator can see.
       describe('bone parent (skeleton_3d.cpp:721, :722)', () => {
         it('accepts the -1 root sentinel and a real parent index', () => {
-          expectNoErrors(
-            scene(
-              node('Skeleton3D', { 'bones/0/parent': '-1', 'bones/1/parent': '0' })
-            ),
-            { ruleName: 'strict-parser' }
-          );
+          expectNoErrors(scene(node('Skeleton3D', { 'bones/0/parent': '-1', 'bones/1/parent': '0' })), {
+            ruleName: 'strict-parser',
+          });
         });
 
         it('rejects a parent below the -1 sentinel', () => {
@@ -356,10 +351,9 @@ describe('Skeleton3D Linter', () => {
         // (:105), so the key is never part of the leaf name. `_get_property_list` writes this shape
         // (:204).
         it('accepts a bone_meta key below the leaf', () => {
-          expectNoErrors(
-            scene(node('Skeleton3D', { 'bones/0/bone_meta/custom_tag': '"spine"' })),
-            { ruleName: 'strict-parser' }
-          );
+          expectNoErrors(scene(node('Skeleton3D', { 'bones/0/bone_meta/custom_tag': '"spine"' })), {
+            ruleName: 'strict-parser',
+          });
         });
 
         // Slice 3 of `bones/0/bone_meta` is empty, and `set_bone_meta` (skeleton_3d.cpp:686) guards
@@ -374,10 +368,9 @@ describe('Skeleton3D Linter', () => {
         // is ignored rather than refused: `set_bone_pose_position` still gets
         // this Vector3 (skeleton_3d.cpp:99).
         it('accepts a trailing segment the dispatch never reads', () => {
-          expectNoErrors(
-            scene(node('Skeleton3D', { 'bones/0/position/ignored': 'Vector3(0, 1, 0)' })),
-            { ruleName: 'strict-parser' }
-          );
+          expectNoErrors(scene(node('Skeleton3D', { 'bones/0/position/ignored': 'Vector3(0, 1, 0)' })), {
+            ruleName: 'strict-parser',
+          });
         });
       });
 
@@ -500,14 +493,11 @@ describe('Skeleton3D Linter', () => {
       });
 
       it('reports a name that skips a bone slot', () => {
-        expectDiagnostic(
-          scene(node('Skeleton3D', { 'bones/0/name': '"Root"', 'bones/2/name': '"Head"' })),
-          {
-            ruleName: 'skeleton3d-bone-name-order',
-            severity: 'error',
-            contains: ['bones/2/name'],
-          }
-        );
+        expectDiagnostic(scene(node('Skeleton3D', { 'bones/0/name': '"Root"', 'bones/2/name': '"Head"' })), {
+          ruleName: 'skeleton3d-bone-name-order',
+          severity: 'error',
+          contains: ['bones/2/name'],
+        });
       });
 
       it('reports a skeleton whose first bone is not bone 0', () => {
@@ -522,14 +512,11 @@ describe('Skeleton3D Linter', () => {
       // and every later slot shifts. The count models it, or the next name would report a refusal
       // that never happened.
       it('reports a duplicate bone name', () => {
-        expectDiagnostic(
-          scene(node('Skeleton3D', { 'bones/0/name': '"Root"', 'bones/1/name': '"Root"' })),
-          {
-            ruleName: 'skeleton3d-duplicate-bone-name',
-            severity: 'error',
-            contains: ['bones/1/name', 'Root'],
-          }
-        );
+        expectDiagnostic(scene(node('Skeleton3D', { 'bones/0/name': '"Root"', 'bones/1/name': '"Root"' })), {
+          ruleName: 'skeleton3d-duplicate-bone-name',
+          severity: 'error',
+          contains: ['bones/1/name', 'Root'],
+        });
       });
 
       // Phase 1 already reports the :605 refusal on this key; the ordering rule
@@ -547,9 +534,7 @@ describe('Skeleton3D Linter', () => {
       // `4294967296` is bone 0 and Godot adds both bones in order.
       it('adds the bones an index that wraps past 32 bits lands on, in order', () => {
         expectNoDiagnostic(
-          scene(
-            node('Skeleton3D', { 'bones/4294967296/name': '"Root"', 'bones/1/name': '"Child"' })
-          ),
+          scene(node('Skeleton3D', { 'bones/4294967296/name': '"Root"', 'bones/1/name': '"Child"' })),
           { ruleName: 'skeleton3d-bone-name-order' }
         );
       });
@@ -640,27 +625,27 @@ describe('Skeleton3D Linter', () => {
         )
       );
       expect(diagnostics.length).toBeGreaterThanOrEqual(2);
-      const warnings = diagnostics.filter(d => d.severity === 'warning');
+      const warnings = diagnostics.filter((d) => d.severity === 'warning');
       expect(warnings.length).toBeGreaterThan(0);
     });
 
     it('should handle skeleton with all properties correctly set', () => {
       expectClean(
         scene(
-          node('Skeleton3D', {
-            motion_scale: '1.0',
-            show_rest_only: false,
-            animate_physical_bones: false,
-            modifier_callback_mode_process: 1,
-            'bones/0/position': 'Vector3(0, 0, 0)',
-            'bones/0/rotation': 'Quaternion(0, 0, 0, 1)',
-            'bones/0/scale': 'Vector3(1, 1, 1)',
-          }, { name: 'CompleteSkeleton' }),
           node(
-            'MeshInstance3D',
-            { skeleton: 'NodePath("..")' },
-            { name: 'CharacterMesh', parent: '.' }
-          )
+            'Skeleton3D',
+            {
+              motion_scale: '1.0',
+              show_rest_only: false,
+              animate_physical_bones: false,
+              modifier_callback_mode_process: 1,
+              'bones/0/position': 'Vector3(0, 0, 0)',
+              'bones/0/rotation': 'Quaternion(0, 0, 0, 1)',
+              'bones/0/scale': 'Vector3(1, 1, 1)',
+            },
+            { name: 'CompleteSkeleton' }
+          ),
+          node('MeshInstance3D', { skeleton: 'NodePath("..")' }, { name: 'CharacterMesh', parent: '.' })
         )
       );
     });
@@ -668,15 +653,19 @@ describe('Skeleton3D Linter', () => {
     it('should handle complex bone hierarchy', () => {
       expectNoErrors(
         scene(
-          node('Skeleton3D', {
-            'bones/0/position': 'Vector3(0, 0, 0)',
-            'bones/0/rotation': 'Quaternion(0, 0, 0, 1)',
-            'bones/1/position': 'Vector3(0, 1, 0)',
-            'bones/1/rotation': 'Quaternion(0, 0.707, 0, 0.707)',
-            'bones/2/position': 'Vector3(0, 2, 0)',
-            'bones/2/rotation': 'Quaternion(0, 0, 0, 1)',
-            'bones/2/scale': 'Vector3(0.5, 0.5, 0.5)',
-          }, { name: 'ComplexSkeleton' }),
+          node(
+            'Skeleton3D',
+            {
+              'bones/0/position': 'Vector3(0, 0, 0)',
+              'bones/0/rotation': 'Quaternion(0, 0, 0, 1)',
+              'bones/1/position': 'Vector3(0, 1, 0)',
+              'bones/1/rotation': 'Quaternion(0, 0.707, 0, 0.707)',
+              'bones/2/position': 'Vector3(0, 2, 0)',
+              'bones/2/rotation': 'Quaternion(0, 0, 0, 1)',
+              'bones/2/scale': 'Vector3(0.5, 0.5, 0.5)',
+            },
+            { name: 'ComplexSkeleton' }
+          ),
           node('MeshInstance3D', { skeleton: 'NodePath("..")' }, { name: 'Mesh', parent: '.' })
         ),
         { ruleName: 'strict-parser' }
@@ -715,10 +704,14 @@ describe('Skeleton3D Linter', () => {
     it('should handle scientific notation in bone transforms', () => {
       expectNoErrors(
         scene(
-          node('Skeleton3D', {
-            'bones/0/position': 'Vector3(1.5e-3, 2.0e+2, -3.14e1)',
-            'bones/0/rotation': 'Quaternion(1e-5, 0, 0, 1.0)',
-          }, { name: 'ScientificBones' })
+          node(
+            'Skeleton3D',
+            {
+              'bones/0/position': 'Vector3(1.5e-3, 2.0e+2, -3.14e1)',
+              'bones/0/rotation': 'Quaternion(1e-5, 0, 0, 1.0)',
+            },
+            { name: 'ScientificBones' }
+          )
         ),
         { ruleName: 'strict-parser' }
       );
@@ -728,9 +721,8 @@ describe('Skeleton3D Linter', () => {
 
 describe('Skeleton3D Linter — the tokenizer float grammar', () => {
   it('accepts a trailing-dot bone rotation component', () => {
-    expectNoErrors(
-      scene(node('Skeleton3D', { 'bones/0/rotation': 'Quaternion(0.5, 0, 0, 1.)' })),
-      { ruleName: 'strict-parser' }
-    );
+    expectNoErrors(scene(node('Skeleton3D', { 'bones/0/rotation': 'Quaternion(0.5, 0, 0, 1.)' })), {
+      ruleName: 'strict-parser',
+    });
   });
 });

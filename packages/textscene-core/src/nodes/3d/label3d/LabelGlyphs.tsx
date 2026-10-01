@@ -6,11 +6,7 @@
  */
 import { useMemo, useSyncExternalStore } from 'react';
 import * as THREE from 'three';
-import {
-  AutowrapMode,
-  shapeText,
-  soloLineLayout,
-} from '../../../r3f/controls/native/text/textLayout';
+import { AutowrapMode, shapeText, soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../r3f/controls/native/text/TextRun';
 import {
   onSceneFontMetricsSettled,
@@ -53,8 +49,7 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
   // One `<TextRun>` per line: Godot aligns each line by its own width
   // (`label_3d.cpp:588-599`).
   const placements = useMemo(
-    () =>
-      layoutLabel3DLines(layout, properties.horizontal_alignment, properties.line_spacing),
+    () => layoutLabel3DLines(layout, properties.horizontal_alignment, properties.line_spacing),
     [layout, properties.horizontal_alignment, properties.line_spacing]
   );
 

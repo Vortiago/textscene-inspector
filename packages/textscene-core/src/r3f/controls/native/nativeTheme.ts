@@ -7,7 +7,12 @@
 
 import type { ControlColor } from '../../../nodes/2d/ui/control/types';
 import { flatStyleBox as makeFlatStyleBox } from './styleBoxFlat';
-import { LINE_EDIT_BORDER_BOTTOM_WIDTH, scaledGodotTheme, STYLE_FILL, type ScaledGodotTheme } from '../godotDefaultTheme';
+import {
+  LINE_EDIT_BORDER_BOTTOM_WIDTH,
+  scaledGodotTheme,
+  STYLE_FILL,
+  type ScaledGodotTheme,
+} from '../godotDefaultTheme';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 
 /**

@@ -98,7 +98,9 @@ describe('GltfVerdicts', () => {
   });
 
   it('refuses nothing for a file the provider does not hold, or one whose read rejects', async () => {
-    const rejecting: ResourceProvider = { loadResource: () => Promise.reject(new Error('Resource not found')) };
+    const rejecting: ResourceProvider = {
+      loadResource: () => Promise.reject(new Error('Resource not found')),
+    };
     const verdicts = new GltfVerdicts();
 
     expect(await verdicts.refused(counting({}).provider, TREE)).toEqual([]);

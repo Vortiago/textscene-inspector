@@ -18,9 +18,12 @@ describe('isColorString', () => {
     }
   );
 
-  it.each(['', '#', 'ff00f', 'ff00000', 'gg0000', 'not a color', 'reddish'])('refuses %j, which named() fails on', (text) => {
-    expect(isColorString(text)).toBe(false);
-  });
+  it.each(['', '#', 'ff00f', 'ff00000', 'gg0000', 'not a color', 'reddish'])(
+    'refuses %j, which named() fails on',
+    (text) => {
+      expect(isColorString(text)).toBe(false);
+    }
+  );
 
   it('holds every name in color_names.inc', () => {
     expect(NAMED_COLOR_COUNT).toBe(146);

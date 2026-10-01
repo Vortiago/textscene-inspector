@@ -25,7 +25,14 @@ export interface AlphaCheckerboardQuadProps {
   themed?: ThemedIconRef;
 }
 
-export function AlphaCheckerboardQuad({ width, height, color, opacity, renderOrder, themed }: AlphaCheckerboardQuadProps) {
+export function AlphaCheckerboardQuad({
+  width,
+  height,
+  color,
+  opacity,
+  renderOrder,
+  themed,
+}: AlphaCheckerboardQuadProps) {
   // `useNodeIcon` clones a themed ref or loads the vendored fallback per input, so this instance
   // is ours to mutate without a `.clone()`.
   const texture = useNodeIcon(themed, MINI_CHECKERBOARD_ICON);
@@ -50,5 +57,14 @@ export function AlphaCheckerboardQuad({ width, height, color, opacity, renderOrd
 
   if (width <= 0 || height <= 0 || !tiled) return null;
 
-  return <ControlQuad width={width} height={height} color={color} opacity={opacity} map={tiled} renderOrder={renderOrder} />;
+  return (
+    <ControlQuad
+      width={width}
+      height={height}
+      color={color}
+      opacity={opacity}
+      map={tiled}
+      renderOrder={renderOrder}
+    />
+  );
 }

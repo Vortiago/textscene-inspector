@@ -19,7 +19,10 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import { shapedTextSizeWidthPx, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import {
+  shapedTextSizeWidthPx,
+  type TextLayoutResult,
+} from '../../../../r3f/controls/native/text/textLayout';
 import { GRAPH_EDIT_ICONS, GRAPH_EDIT_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { SPIN_BOX_ICONS } from '../spinbox/icons';
 import { spinBoxLayout, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
@@ -49,7 +52,6 @@ const ICON_DISABLED_ALPHA = 0.4;
 function flatButtonPressedStyleBox(base: StyleBoxFlatData): StyleBoxFlatData {
   return { ...base, bgColor: { ...base.bgColor, a: base.bgColor.a * 0.85 } };
 }
-
 
 export interface GraphEditToolbarProps {
   toolbar: GraphEditToolbar;
@@ -110,18 +112,42 @@ interface ToolbarTextProps {
 }
 
 /** One run of text, vertically centred in `rect`. */
-function ToolbarText({ rect, layout, fontSizePx, tint, clippingPlanes, renderOrder, centred, inset = 0 }: ToolbarTextProps) {
+function ToolbarText({
+  rect,
+  layout,
+  fontSizePx,
+  tint,
+  clippingPlanes,
+  renderOrder,
+  centred,
+  inset = 0,
+}: ToolbarTextProps) {
   const width = shapedTextSizeWidthPx(layout.widthPx);
   const x = centred ? Math.max(0, (rect.w - width) / 2) : inset;
   const y = Math.max(0, (rect.h - layout.heightPx) / 2);
   return (
     <CanvasItemGroup position={[rect.x + x, -(rect.y + y), 0]}>
-      <TextRun layout={layout} fontSizePx={fontSizePx} tint={tint} clippingPlanes={clippingPlanes} renderOrder={renderOrder} />
+      <TextRun
+        layout={layout}
+        fontSizePx={fontSizePx}
+        tint={tint}
+        clippingPlanes={clippingPlanes}
+        renderOrder={renderOrder}
+      />
     </CanvasItemGroup>
   );
 }
 
-export function GraphEditToolbarChrome({ toolbar, icons, theme, tint, text, shape, rtl, renderOrder }: GraphEditToolbarProps) {
+export function GraphEditToolbarChrome({
+  toolbar,
+  icons,
+  theme,
+  tint,
+  text,
+  shape,
+  rtl,
+  renderOrder,
+}: GraphEditToolbarProps) {
   const panelStyle = useMemo(() => graphEditMenuPanelStyleBox(theme), [theme]);
   const pressedStyle = useMemo(() => flatButtonPressedStyleBox(theme.widgets.button.pressed), [theme]);
   const labelColor = useMemo(() => multiplyModulate(tint.own, LABEL_FONT_COLOR), [tint.own]);
@@ -254,4 +280,3 @@ export function GraphEditToolbarChrome({ toolbar, icons, theme, tint, text, shap
     </CanvasItemGroup>
   );
 }
-

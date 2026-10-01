@@ -36,18 +36,32 @@ describe('graphElementMinimumSize', () => {
     // graph_element.cpp:59-73.
     const a = leaf('a', { customMinimumSize: { x: 40, y: 10 } });
     const b = leaf('b', { customMinimumSize: { x: 20, y: 30 } });
-    const n = { ...solveNode(), path: 'G', node: { name: 'G', type: 'GraphElement', children: [], properties: {} as ControlProperties }, children: [a, b] };
+    const n = {
+      ...solveNode(),
+      path: 'G',
+      node: { name: 'G', type: 'GraphElement', children: [], properties: {} as ControlProperties },
+      children: [a, b],
+    };
     expect(graphElementMinimumSize(n, ctx())).toEqual({ x: 40, y: 30 });
   });
 
   it('is (0, 0) with no children', () => {
-    const n = { ...solveNode(), path: 'G', node: { name: 'G', type: 'GraphElement', children: [], properties: {} as ControlProperties } };
+    const n = {
+      ...solveNode(),
+      path: 'G',
+      node: { name: 'G', type: 'GraphElement', children: [], properties: {} as ControlProperties },
+    };
     expect(graphElementMinimumSize(n, ctx())).toEqual({ x: 0, y: 0 });
   });
 
   it('counts a HIDDEN child — SortableVisibilityMode::IGNORE (graph_element.cpp:62)', () => {
     const hiddenChild: SolveNode = { ...leaf('h', { customMinimumSize: { x: 100, y: 5 } }), hidden: true };
-    const n = { ...solveNode(), path: 'G', node: { name: 'G', type: 'GraphElement', children: [], properties: {} as ControlProperties }, children: [hiddenChild] };
+    const n = {
+      ...solveNode(),
+      path: 'G',
+      node: { name: 'G', type: 'GraphElement', children: [], properties: {} as ControlProperties },
+      children: [hiddenChild],
+    };
     expect(graphElementMinimumSize(n, ctx())).toEqual({ x: 100, y: 5 });
   });
 });
@@ -57,7 +71,12 @@ describe('graphElementLayout', () => {
     // graph_element.cpp:47-57: no chrome, no margin.
     const a = leaf('a', { customMinimumSize: { x: 10, y: 10 } });
     const contentRect: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
-    const n = { ...solveNode(), path: 'G', node: { name: 'G', type: 'GraphElement', children: [], properties: {} as ControlProperties }, children: [a] };
+    const n = {
+      ...solveNode(),
+      path: 'G',
+      node: { name: 'G', type: 'GraphElement', children: [], properties: {} as ControlProperties },
+      children: [a],
+    };
     const rects = asMap(graphElementLayout(n, [{ node: a, minSize: { x: 10, y: 10 } }], contentRect, ctx()));
     // Default SIZE_FILL on both axes: stretches to fill.
     expect(rects.get('a')).toEqual({ x: 0, y: 0, w: 200, h: 100 });
@@ -66,15 +85,31 @@ describe('graphElementLayout', () => {
   it('skips an invisible child — default SortableVisibilityMode::VISIBLE_IN_TREE (graph_element.cpp:51)', () => {
     const hiddenChild: SolveNode = { ...leaf('h', {}), hidden: true };
     const contentRect: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
-    const n = { ...solveNode(), path: 'G', node: { name: 'G', type: 'GraphElement', children: [], properties: {} as ControlProperties }, children: [hiddenChild] };
-    const rects = asMap(graphElementLayout(n, [{ node: hiddenChild, minSize: { x: 0, y: 0 } }], contentRect, ctx()));
+    const n = {
+      ...solveNode(),
+      path: 'G',
+      node: { name: 'G', type: 'GraphElement', children: [], properties: {} as ControlProperties },
+      children: [hiddenChild],
+    };
+    const rects = asMap(
+      graphElementLayout(n, [{ node: hiddenChild, minSize: { x: 0, y: 0 } }], contentRect, ctx())
+    );
     expect(rects.has('h')).toBe(false);
   });
 
   it('shrinks a SHRINK_BEGIN child to its own minimum size at the origin', () => {
-    const a = leaf('a', { sizeFlagsHorizontal: 0, sizeFlagsVertical: 0, customMinimumSize: { x: 10, y: 10 } });
+    const a = leaf('a', {
+      sizeFlagsHorizontal: 0,
+      sizeFlagsVertical: 0,
+      customMinimumSize: { x: 10, y: 10 },
+    });
     const contentRect: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
-    const n = { ...solveNode(), path: 'G', node: { name: 'G', type: 'GraphElement', children: [], properties: {} as ControlProperties }, children: [a] };
+    const n = {
+      ...solveNode(),
+      path: 'G',
+      node: { name: 'G', type: 'GraphElement', children: [], properties: {} as ControlProperties },
+      children: [a],
+    };
     const rects = asMap(graphElementLayout(n, [{ node: a, minSize: { x: 10, y: 10 } }], contentRect, ctx()));
     expect(rects.get('a')).toEqual({ x: 0, y: 0, w: 10, h: 10 });
   });
@@ -93,7 +128,12 @@ describe('graphElementLayout under RTL', () => {
       rtl: true,
     };
     const rects = asMap(
-      graphElementLayout(n, [{ node: child, minSize: { x: 30, y: 10 } }], { x: 0, y: 0, w: 100, h: 50 }, ctx())
+      graphElementLayout(
+        n,
+        [{ node: child, minSize: { x: 30, y: 10 } }],
+        { x: 0, y: 0, w: 100, h: 50 },
+        ctx()
+      )
     );
     expect(rects.get('c')).toEqual({ x: 70, y: 0, w: 30, h: 50 });
   });

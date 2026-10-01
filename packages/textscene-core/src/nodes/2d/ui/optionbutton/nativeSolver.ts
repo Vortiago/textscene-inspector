@@ -52,7 +52,12 @@ export const OPTION_BUTTON_THEME_FONT_KEY = 'font';
 /** `control_font_color` (`default_theme.cpp:101`), OptionButton's `font_color` default (`:240`). */
 export const OPTION_BUTTON_DEFAULT_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
 /** `control_font_disabled_color = control_font_color * Color(1, 1, 1, 0.5)` (`:106`), OptionButton's `font_disabled_color` default (`:245`). */
-export const OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
+export const OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR: ControlColor = {
+  r: 0.875,
+  g: 0.875,
+  b: 0.875,
+  a: 0.5,
+};
 
 const OPTION_BUTTON_THEME_KEYS: Record<ButtonDrawState, TextThemeKeys> = {
   normal: { sizeKey: 'font_size', colorKey: 'font_color' },
@@ -68,7 +73,8 @@ export function optionButtonTextTheme(
 ): ResolvedTextTheme {
   const defaults: TextThemeDefaults = {
     fontSizePx: ctx.theme.fontSize,
-    color: state === 'disabled' ? OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR : OPTION_BUTTON_DEFAULT_FONT_COLOR,
+    color:
+      state === 'disabled' ? OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR : OPTION_BUTTON_DEFAULT_FONT_COLOR,
   };
   return resolveTextTheme(n, props, OPTION_BUTTON_THEME_KEYS[state], defaults);
 }
@@ -114,7 +120,10 @@ export function optionButtonArrowSize(n: Pick<SolveNode, 'textureSlots'>): Vec2 
 }
 
 /** `h_separation`: OptionButton's default (`default_theme.cpp:249`, `round(4*scale)`) equals `theme.separation`. */
-export function optionButtonHSeparation(constants: SolveNode['constants'], ctx: Pick<SolveContext, 'theme'>): number {
+export function optionButtonHSeparation(
+  constants: SolveNode['constants'],
+  ctx: Pick<SolveContext, 'theme'>
+): number {
   return Math.max(0, constants.h_separation ?? ctx.theme.separation);
 }
 

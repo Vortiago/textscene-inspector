@@ -63,7 +63,12 @@ describe('<PanelContainer> (isolated painter contract)', () => {
   it('draws the resolved theme_override_styles/panel override, not the default fill, when one is present', async () => {
     const override = styleBox({ bgColor: { r: 0.9, g: 0.1, b: 0.1, a: 1 } });
     const renderer = await ReactThreeTestRenderer.create(
-      <PanelContainer {...painterEnv()} solveNode={solveNode({}, { panel: override })} rect={RECT} renderOrder={0} />
+      <PanelContainer
+        {...painterEnv()}
+        solveNode={solveNode({}, { panel: override })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     const color = geom.attributes.color as THREE.BufferAttribute;
@@ -87,7 +92,8 @@ describe('<PanelContainer> (isolated painter contract)', () => {
   it('composes self_modulate onto the panel fill, in sRGB, with a single linear conversion', async () => {
     const flat = styleBox({ bgColor: { r: 0.8, g: 0.8, b: 0.8, a: 1 } });
     const renderer = await ReactThreeTestRenderer.create(
-      <PanelContainer {...painterEnv()}
+      <PanelContainer
+        {...painterEnv()}
         tint={painterTint({ r: 0.5, g: 0.5, b: 0.5, a: 1 })}
         solveNode={solveNode({}, { panel: flat })}
         rect={RECT}
@@ -103,7 +109,8 @@ describe('<PanelContainer> (isolated painter contract)', () => {
   it('applies the walker-composed tint to the panel fill exactly once', async () => {
     const flat = styleBox({ bgColor: { r: 1, g: 1, b: 1, a: 1 } });
     const renderer = await ReactThreeTestRenderer.create(
-      <PanelContainer {...painterEnv()}
+      <PanelContainer
+        {...painterEnv()}
         // The walker's own product: ambient(0.5) x self_modulate(0.5) = 0.25.
         tint={painterTint({ r: 0.25, g: 0.25, b: 0.25, a: 1 })}
         solveNode={solveNode({}, { panel: flat })}
@@ -131,7 +138,9 @@ describe('<PanelContainer> registered through <ControlCanvasWalker> (end-to-end 
       <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
     );
 
-    const groups = renderer.scene.findAllByType('Group').map((g) => g.instance as { visible: boolean; name: string });
+    const groups = renderer.scene
+      .findAllByType('Group')
+      .map((g) => g.instance as { visible: boolean; name: string });
     const rootGroup = groups.find((g) => g.name === 'PanelContainer:MyPanelContainer');
     expect(rootGroup).toBeDefined();
     expect(rootGroup!.visible).toBe(false);

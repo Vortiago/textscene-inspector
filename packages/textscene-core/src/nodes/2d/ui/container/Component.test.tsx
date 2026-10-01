@@ -26,7 +26,12 @@ function containerSolveNode(): SolveNode {
 describe('<Container>', () => {
   it('renders no scene objects — a bare Container draws nothing of its own', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <Container {...painterEnv()} solveNode={containerSolveNode()} rect={{ x: 0, y: 0, w: 100, h: 40 }} renderOrder={0} />
+      <Container
+        {...painterEnv()}
+        solveNode={containerSolveNode()}
+        rect={{ x: 0, y: 0, w: 100, h: 40 }}
+        renderOrder={0}
+      />
     );
     expect(renderer.scene.children).toHaveLength(0);
   });

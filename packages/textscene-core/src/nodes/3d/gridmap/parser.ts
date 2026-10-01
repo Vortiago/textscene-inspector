@@ -31,9 +31,7 @@ function extractCells(dataProperty: string | undefined): string {
  * off, so an absent key means true. Nothing overridden returns
  * DEFAULT_CELL_CENTER.
  */
-function parseCellCenter(
-  properties: Record<string, string>
-): GridMapProperties['cellCenter'] {
+function parseCellCenter(properties: Record<string, string>): GridMapProperties['cellCenter'] {
   if (
     properties.cell_center_x === undefined &&
     properties.cell_center_y === undefined &&
@@ -48,10 +46,7 @@ function parseCellCenter(
   };
 }
 
-export function parseGridMap(
-  heading: ParsedHeading,
-  properties: Record<string, string>
-): GridMapProperties {
+export function parseGridMap(heading: ParsedHeading, properties: Record<string, string>): GridMapProperties {
   const baseProperties = parseNode3D(heading, properties);
 
   let cellSize = DEFAULT_CELL_SIZE;

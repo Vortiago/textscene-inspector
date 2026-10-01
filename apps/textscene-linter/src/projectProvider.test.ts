@@ -41,7 +41,9 @@ describe('projectProviderFor', () => {
 
   it('reads a text resource as a string', async () => {
     const provider = await projectProviderFor(scenePath);
-    expect(await provider!.loadResource('res://scenes/level.tscn', 'PackedScene')).toBe('[gd_scene format=3]\n');
+    expect(await provider!.loadResource('res://scenes/level.tscn', 'PackedScene')).toBe(
+      '[gd_scene format=3]\n'
+    );
   });
 
   it('gives null for a file the project does not hold', async () => {
@@ -66,7 +68,7 @@ describe('projectProviderFor', () => {
 });
 
 describe('projectProviderFor stamp', () => {
-  it("stamps a file with its modification time and size", async () => {
+  it('stamps a file with its modification time and size', async () => {
     const provider = await projectProviderFor(scenePath);
     const file = join(projectDir, 'models', 'tree.glb');
     const { mtimeMs, size } = statSync(file);

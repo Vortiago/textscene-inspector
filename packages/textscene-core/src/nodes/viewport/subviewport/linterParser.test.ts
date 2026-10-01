@@ -5,13 +5,7 @@
  */
 
 import { describe, it } from 'vitest';
-import {
-  node,
-  scene,
-  expectClean,
-  expectDiagnostic,
-  expectNoErrors,
-} from '../../../linter/testing/testkit';
+import { node, scene, expectClean, expectDiagnostic, expectNoErrors } from '../../../linter/testing/testkit';
 import './linterParser';
 
 describe('SubViewport linter', () => {

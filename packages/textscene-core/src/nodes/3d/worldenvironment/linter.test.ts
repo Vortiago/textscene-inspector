@@ -5,12 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  lint,
-  expectClean,
-  expectDiagnostic,
-  expectNoDiagnostic,
-} from '../../../linter/testing/testkit';
+import { lint, expectClean, expectDiagnostic, expectNoDiagnostic } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 // The Environment slice's validators: the `sky` slot inside the sub-resource.
@@ -529,14 +524,14 @@ environment = SubResource("env_1")
 `);
       expect(diagnostics.length).toBeGreaterThan(0);
 
-      const envError = diagnostics.find(d => d.message.includes("'environment'"));
+      const envError = diagnostics.find((d) => d.message.includes("'environment'"));
       expect(envError).toBeDefined();
 
-      const camWarning = diagnostics.find(d => d.message.includes("'camera_attributes'"));
+      const camWarning = diagnostics.find((d) => d.message.includes("'camera_attributes'"));
       expect(camWarning).toBeDefined();
 
       // Should have multiple WorldEnvironment warning
-      const multipleWarning = diagnostics.find(d => d.ruleName === 'single-worldenvironment');
+      const multipleWarning = diagnostics.find((d) => d.ruleName === 'single-worldenvironment');
       expect(multipleWarning).toBeDefined();
     });
 
@@ -639,9 +634,8 @@ environment = SubResource("env_1")
 [node name="NotWorldEnv" type="Node3D"]
 `);
       // Should not produce WorldEnvironment-specific errors
-      const worldEnvErrors = diagnostics.filter(d =>
-        d.ruleName?.includes('worldenvironment') ||
-        d.nodeType === 'WorldEnvironment'
+      const worldEnvErrors = diagnostics.filter(
+        (d) => d.ruleName?.includes('worldenvironment') || d.nodeType === 'WorldEnvironment'
       );
       expect(worldEnvErrors).toHaveLength(0);
     });
@@ -662,14 +656,13 @@ environment = SubResource("nonexistent")
       expect(diagnostics.length).toBeGreaterThan(0);
 
       // Should have resource not found error for InvalidWorldEnv
-      const resourceError = diagnostics.find(d =>
-        d.nodeName === 'InvalidWorldEnv' &&
-        d.message.includes("'environment'")
+      const resourceError = diagnostics.find(
+        (d) => d.nodeName === 'InvalidWorldEnv' && d.message.includes("'environment'")
       );
       expect(resourceError).toBeDefined();
 
       // Should also have multiple WorldEnvironment warning
-      const multipleWarning = diagnostics.find(d => d.ruleName === 'single-worldenvironment');
+      const multipleWarning = diagnostics.find((d) => d.ruleName === 'single-worldenvironment');
       expect(multipleWarning).toBeDefined();
     });
   });

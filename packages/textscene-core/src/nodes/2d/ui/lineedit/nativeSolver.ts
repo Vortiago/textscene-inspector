@@ -18,7 +18,11 @@ import type {
 import type { SolveNode, ThemedIconRef } from '../../../../r3f/controls/native/solveTree';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { shapeText, shapedTextSizeWidthPx, AutowrapMode } from '../../../../r3f/controls/native/text/textLayout';
+import {
+  shapeText,
+  shapedTextSizeWidthPx,
+  AutowrapMode,
+} from '../../../../r3f/controls/native/text/textLayout';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -109,7 +113,10 @@ export function lineEditTextTheme(
   state: LineEditTextState,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
-  const defaults: TextThemeDefaults = { fontSizePx: ctx.theme.fontSize, color: LINE_EDIT_DEFAULT_COLORS[state] };
+  const defaults: TextThemeDefaults = {
+    fontSizePx: ctx.theme.fontSize,
+    color: LINE_EDIT_DEFAULT_COLORS[state],
+  };
   return resolveTextTheme(n, props, LINE_EDIT_THEME_KEYS[state], defaults);
 }
 
@@ -163,7 +170,10 @@ export function lineEditRightIconSize(
  * `'right_icon'`, and the `clear` theme icon (`BIND_THEME_ITEM_CUSTOM` line_edit.cpp:3547), keyed
  * `'clear'` once the theme walk resolves one, as `checkbox/nativeSolver.ts`'s `checkBoxTextureSlots` does.
  */
-export const lineEditTextureSlots: TextureSlotsFn = (node: TscnNode, themedIcons: Readonly<Record<string, ThemedIconRef>> = {}) => {
+export const lineEditTextureSlots: TextureSlotsFn = (
+  node: TscnNode,
+  themedIcons: Readonly<Record<string, ThemedIconRef>> = {}
+) => {
   const props = node.properties as LineEditProperties;
   const requests: TextureSlotRequest[] = [];
   if (props.rightIcon !== undefined) requests.push({ key: 'right_icon', ref: props.rightIcon });
@@ -230,7 +240,13 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   const rightIconNaturalSize = n.textureSlots['right_icon'];
   if (rightIconNaturalSize) {
-    const size = lineEditRightIconSize(rightIconNaturalSize, iconExpandMode, fontHeightPx, controlSize, rightIconScale);
+    const size = lineEditRightIconSize(
+      rightIconNaturalSize,
+      iconExpandMode,
+      fontHeightPx,
+      controlSize,
+      rightIconScale
+    );
     height = Math.max(height, size.y);
     iconMaxWidth = size.x;
   }
@@ -238,7 +254,13 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   // without text: `get_minimum_size` has no `using_placeholder` gate, unlike the draw path.
   if (props.clearButtonEnabled) {
     const clearNaturalSize = n.textureSlots['clear'] ?? LINE_EDIT_CLEAR_ICON_NATURAL_SIZE;
-    const size = lineEditRightIconSize(clearNaturalSize, iconExpandMode, fontHeightPx, controlSize, rightIconScale);
+    const size = lineEditRightIconSize(
+      clearNaturalSize,
+      iconExpandMode,
+      fontHeightPx,
+      controlSize,
+      rightIconScale
+    );
     height = Math.max(height, size.y);
     iconMaxWidth = Math.max(iconMaxWidth, size.x);
   }
@@ -292,10 +314,22 @@ export interface LineEditContentLayout {
  * rounds a negative intermediate the other way.
  */
 export function layoutLineEditContent(input: LineEditContentInput): LineEditContentLayout {
-  const { rectSize, styleMargin, alignment, textWidthPx, textHeightPx, hasIcon = false, iconWidthPx = 0, rtl = false } = input;
+  const {
+    rectSize,
+    styleMargin,
+    alignment,
+    textWidthPx,
+    textHeightPx,
+    hasIcon = false,
+    iconWidthPx = 0,
+    rtl = false,
+  } = input;
 
   /** The LEFT/FILL and RIGHT arms, which `is_layout_rtl()` swaps (`:1397-1421`, `:1399-1403,1415-1419`). */
-  const trailingEdgeX = Math.max(styleMargin.left, Math.trunc(rectSize.x - Math.ceil(styleMargin.right + textWidthPx)));
+  const trailingEdgeX = Math.max(
+    styleMargin.left,
+    Math.trunc(rectSize.x - Math.ceil(styleMargin.right + textWidthPx))
+  );
 
   let xOfs: number;
   switch (alignment) {
@@ -376,7 +410,18 @@ export function lineEditCaretRect(input: {
   /** `is_layout_rtl()` (`SolveNode.rtl`). Defaults `false`. */
   rtl?: boolean;
 }): Rect2 {
-  const { rectSize, styleMargin, alignment, fontHeightPx, isPlaceholder, textPenX, rightIconRawWidthPx, ofsMaxPx, caretWidthPx, rtl = false } = input;
+  const {
+    rectSize,
+    styleMargin,
+    alignment,
+    fontHeightPx,
+    isPlaceholder,
+    textPenX,
+    rightIconRawWidthPx,
+    ofsMaxPx,
+    caretWidthPx,
+    rtl = false,
+  } = input;
 
   const yArea = Math.trunc(rectSize.y - styleMargin.top - styleMargin.bottom);
   const y = Math.trunc(styleMargin.top + (yArea - fontHeightPx) / 2);

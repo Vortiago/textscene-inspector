@@ -15,12 +15,8 @@ describe('OpenXRBindingModifierEditor strict validators', () => {
   });
 
   it('resolves inherited Control/CanvasItem keys through the base-walk', () => {
-    expect(
-      validatorRegistry.findValidator('OpenXRBindingModifierEditor', 'anchor_right')
-    ).not.toBeNull();
-    expect(
-      validatorRegistry.findValidator('OpenXRBindingModifierEditor', 'modulate')
-    ).not.toBeNull();
+    expect(validatorRegistry.findValidator('OpenXRBindingModifierEditor', 'anchor_right')).not.toBeNull();
+    expect(validatorRegistry.findValidator('OpenXRBindingModifierEditor', 'modulate')).not.toBeNull();
     expect(
       validatorRegistry.findValidator('OpenXRBindingModifierEditor', 'size_flags_horizontal')
     ).not.toBeNull();

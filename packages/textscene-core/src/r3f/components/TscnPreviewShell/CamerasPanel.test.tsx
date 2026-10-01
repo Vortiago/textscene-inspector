@@ -7,14 +7,8 @@ import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { CamerasPanel } from './CamerasPanel';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import {
-  CameraControlProvider,
-  useCameraControl,
-} from '../../contexts/CameraControlContext';
-import {
-  ViewportModeProvider,
-  useViewportMode,
-} from '../../contexts/ViewportModeContext';
+import { CameraControlProvider, useCameraControl } from '../../contexts/CameraControlContext';
+import { ViewportModeProvider, useViewportMode } from '../../contexts/ViewportModeContext';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
 import { TscnParser } from '../../../parser/TscnParser';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
@@ -115,9 +109,7 @@ describe('<CamerasPanel> with cameras inside instanced sub-scenes', () => {
     const playerScene: TscnScene = {
       nodes: [
         makeNode('Player', 'CharacterBody3D', {
-          children: [
-            makeNode('Target', 'Node3D', { children: [makeNode('FollowCam', 'Camera3D')] }),
-          ],
+          children: [makeNode('Target', 'Node3D', { children: [makeNode('FollowCam', 'Camera3D')] })],
         }),
       ],
       externalResources: [],
@@ -214,9 +206,7 @@ describe('<CamerasPanel> with a Camera3D subclass', () => {
     fireEvent.click(row);
 
     // `data-active` marks only a 3D row. A 2D row switches the workspace instead.
-    expect(screen.getByRole('button', { name: /Headset/ }).getAttribute('data-active')).toBe(
-      'true'
-    );
+    expect(screen.getByRole('button', { name: /Headset/ }).getAttribute('data-active')).toBe('true');
     expect(screen.getByTestId('probe').getAttribute('data-mode')).not.toBe('2D');
   });
 });

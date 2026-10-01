@@ -55,13 +55,16 @@ export class LintResourceProvider implements ResourceProvider {
    * when the search fails.
    */
   async listFiles(extension: string): Promise<string[] | null> {
-    const search = (glob: string) => vscode.workspace.findFiles(new vscode.RelativePattern(this.projectRoot, glob), null);
+    const search = (glob: string) =>
+      vscode.workspace.findFiles(new vscode.RelativePattern(this.projectRoot, glob), null);
     try {
       const [candidates, stopFiles] = await Promise.all([
         search(`**/*.${anyCase(extension)}`),
         search(`**/{${SCAN_STOP_FILES.join(',')}}`),
       ]);
-      const skipped = new Set(stopFiles.map((file) => parentResPath(this.resPathOf(file))).filter((dir) => dir !== ROOT));
+      const skipped = new Set(
+        stopFiles.map((file) => parentResPath(this.resPathOf(file))).filter((dir) => dir !== ROOT)
+      );
       return candidates.map((file) => this.resPathOf(file)).filter((path) => isScannedPath(path, skipped));
     } catch {
       // A search that fails proves nothing, which the linter reads as "may hold one".

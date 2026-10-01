@@ -27,9 +27,7 @@ export function formatNode2DProperties(properties: Node2DProperties): PropertySe
     ],
   });
 
-  const rotationItems: PropertySection['items'] = [
-    { label: 'Angle', value: radToDeg(properties.rotation) },
-  ];
+  const rotationItems: PropertySection['items'] = [{ label: 'Angle', value: radToDeg(properties.rotation) }];
   if (properties.skew !== 0) {
     rotationItems.push({ label: 'Skew', value: radToDeg(properties.skew) });
   }

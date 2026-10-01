@@ -17,9 +17,7 @@ export function CanvasWorkspaceProvider({
   workspace: CanvasWorkspace;
   children: ReactNode;
 }) {
-  return (
-    <CanvasWorkspaceContext.Provider value={workspace}>{children}</CanvasWorkspaceContext.Provider>
-  );
+  return <CanvasWorkspaceContext.Provider value={workspace}>{children}</CanvasWorkspaceContext.Provider>;
 }
 
 export function useCanvasWorkspace(): CanvasWorkspace {

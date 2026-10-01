@@ -88,19 +88,16 @@ describe('parseAnimationPlayer properties', () => {
     ['callback_mode_process', '2', 'playback_process_mode', '0', AnimationProcessMode.MANUAL],
     ['callback_mode_method', '1', 'method_call_mode', '0', MethodCallMode.IMMEDIATE],
     ['active', 'true', 'playback_active', 'false', true],
-  ] as const)('prefers %s over the deprecated %s when a scene carries both', (
-    canonical,
-    canonicalRaw,
-    deprecated,
-    deprecatedRaw,
-    expected
-  ) => {
-    const props = parseAnimationPlayer(HEADING, {
-      [canonical]: canonicalRaw,
-      [deprecated]: deprecatedRaw,
-    });
-    expect(props[canonical]).toBe(expected);
-  });
+  ] as const)(
+    'prefers %s over the deprecated %s when a scene carries both',
+    (canonical, canonicalRaw, deprecated, deprecatedRaw, expected) => {
+      const props = parseAnimationPlayer(HEADING, {
+        [canonical]: canonicalRaw,
+        [deprecated]: deprecatedRaw,
+      });
+      expect(props[canonical]).toBe(expected);
+    }
+  );
 
   it('strips quotes from autoplay animation name', () => {
     const props = parseAnimationPlayer(HEADING, { autoplay: '"idle"' });

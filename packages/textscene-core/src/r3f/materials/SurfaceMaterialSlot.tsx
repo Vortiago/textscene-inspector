@@ -35,7 +35,6 @@ import type { MaterialTextureMaps } from './materialTextureMaps';
 
 export type { MaterialTextureMaps };
 
-
 export interface ResolvedMaterialTextures {
   maps: MaterialTextureMaps;
   /**
@@ -86,23 +85,11 @@ export function useMaterialTextures(
   // `useResource` even when it has no path. The hook treats `''` as a no-op.
   const albedoStatus = useResource<THREE.Texture>(textureRequests.albedo_texture ?? '', 'texture');
   const normalStatus = useResource<THREE.Texture>(textureRequests.normal_texture ?? '', 'texture');
-  const roughnessStatus = useResource<THREE.Texture>(
-    textureRequests.roughness_texture ?? '',
-    'texture'
-  );
-  const metallicStatus = useResource<THREE.Texture>(
-    textureRequests.metallic_texture ?? '',
-    'texture'
-  );
-  const emissionStatus = useResource<THREE.Texture>(
-    textureRequests.emission_texture ?? '',
-    'texture'
-  );
+  const roughnessStatus = useResource<THREE.Texture>(textureRequests.roughness_texture ?? '', 'texture');
+  const metallicStatus = useResource<THREE.Texture>(textureRequests.metallic_texture ?? '', 'texture');
+  const emissionStatus = useResource<THREE.Texture>(textureRequests.emission_texture ?? '', 'texture');
   const aoStatus = useResource<THREE.Texture>(textureRequests.ao_texture ?? '', 'texture');
-  const heightmapStatus = useResource<THREE.Texture>(
-    textureRequests.heightmap_texture ?? '',
-    'texture'
-  );
+  const heightmapStatus = useResource<THREE.Texture>(textureRequests.heightmap_texture ?? '', 'texture');
   const anisotropyFlowmapStatus = useResource<THREE.Texture>(
     textureRequests.anisotropy_flowmap ?? '',
     'texture'
@@ -153,7 +140,10 @@ export function useMaterialTextures(
     if (!scalars.triplanar || !triplanarMesh) return state;
     // PARITY LIMITATION (uv1_offset + world-triplanar): three applies `offset`
     // in UV space, Godot's world-triplanar offset is in world units.
-    return { ...state, uv: { scale: triplanarPlaneScale(triplanarMesh, scalars.uv1Scale), offset: scalars.uv1Offset } };
+    return {
+      ...state,
+      uv: { scale: triplanarPlaneScale(triplanarMesh, scalars.uv1Scale), offset: scalars.uv1Offset },
+    };
   }, [scalars, triplanarMesh]);
 
   // A ViewportTexture albedo names a `<SubViewport>`, not a file: it resolves

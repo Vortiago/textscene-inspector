@@ -23,11 +23,7 @@ type ValidatorGroup = Readonly<Record<string, PropertyValidator>>;
  * Throws on a key `keys` repeats, or one `own` already holds. Checked before anything is stored, so a
  * refused call registers nothing.
  */
-function refuseRedeclaration(
-  nodeType: string,
-  keys: readonly string[],
-  own: ValidatorGroup
-): void {
+function refuseRedeclaration(nodeType: string, keys: readonly string[], own: ValidatorGroup): void {
   const declared = new Set(Object.keys(own));
   for (const key of keys) {
     if (declared.has(key)) {
@@ -136,8 +132,8 @@ export class ValidatorRegistry {
    *   declaration asks {@link ValidatorRegistry.declarationFor} instead.
    */
   declarationFor(nodeType: string, propertyKey: string): PropertyValidator | null {
-      return resolveDeclaration(this.tables, nodeType, propertyKey);
-    }
+    return resolveDeclaration(this.tables, nodeType, propertyKey);
+  }
 
   /**
    * The same resolution, as something to call. A `PropertyValidator` is a `ValidatorFn` with tags, so the narrowing needs

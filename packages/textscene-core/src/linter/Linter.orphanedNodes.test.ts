@@ -294,10 +294,7 @@ describe('a parent path this file never defines', () => {
     // `packed_scene.cpp:220` fails at i == 0 on the missing base scene, before
     // any node is built. Verified against Godot 4.7.2: instantiate returns null
     // with `"root node Root in an instance, but there's no base scene."`
-    const source = scene(
-      '[node name="Root"]',
-      node('StaticBody2D', {}, { name: 'Body', parent: 'Gone' })
-    );
+    const source = scene('[node name="Root"]', node('StaticBody2D', {}, { name: 'Body', parent: 'Gone' }));
     const orphan = orphansIn(source)[0];
     expect(orphan?.message).toContain('refuses');
     expect(orphan?.message).not.toContain('renames');
@@ -323,8 +320,7 @@ describe('a parent path this file never defines', () => {
 });
 
 describe('a root heading that declares a parent', () => {
-  const rootErrors = (source: string) =>
-    lint(source).filter((d) => d.ruleName === 'root-declares-parent');
+  const rootErrors = (source: string) => lint(source).filter((d) => d.ruleName === 'root-declares-parent');
 
   it('is an error naming the heading and the parent it declares', () => {
     const errors = rootErrors(ROOTLESS);
@@ -399,10 +395,7 @@ describe('a vanished path beside an instantiate refusal', () => {
 
   it('does not claim a re-root when the root declares a parent', () => {
     const [orphan] = orphansIn(
-      scene(
-        node('Node2D', {}, { name: 'A', parent: '.' }),
-        node('Node2D', {}, { name: 'C', parent: 'Nope' })
-      )
+      scene(node('Node2D', {}, { name: 'A', parent: '.' }), node('Node2D', {}, { name: 'C', parent: 'Nope' }))
     );
     expect(orphan?.nodeName).toBe('C');
     expect(orphan?.message).not.toContain('re-parents');

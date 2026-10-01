@@ -66,9 +66,7 @@ describe('godotTextureFilterState', () => {
 
   it("matches a fresh THREE.Texture's own defaults, so an unauthored filter is a no-op", () => {
     // A material that does not author texture_filter renders byte-identically.
-    expect(textureFilterMatches(new THREE.Texture(), godotTextureFilterState(undefined))).toBe(
-      true
-    );
+    expect(textureFilterMatches(new THREE.Texture(), godotTextureFilterState(undefined))).toBe(true);
   });
 });
 

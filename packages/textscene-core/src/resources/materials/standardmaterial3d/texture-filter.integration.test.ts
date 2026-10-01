@@ -16,10 +16,7 @@ function build(
   properties: Record<string, string>,
   textures: ResolvedTextureSlots
 ): THREE.MeshStandardMaterial {
-  return buildMaterial(
-    parseStandardMaterial3DScalars(properties),
-    textures
-  ) as THREE.MeshStandardMaterial;
+  return buildMaterial(parseStandardMaterial3DScalars(properties), textures) as THREE.MeshStandardMaterial;
 }
 
 /**

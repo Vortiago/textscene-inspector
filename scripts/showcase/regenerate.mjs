@@ -7,12 +7,7 @@
  *   node scripts/showcase/regenerate.mjs
  */
 
-import {
-  assertPortFree,
-  killPreviewGroup,
-  startPreview,
-  waitForServer,
-} from '../visual/previewServer.mjs';
+import { assertPortFree, killPreviewGroup, startPreview, waitForServer } from '../visual/previewServer.mjs';
 import { recordShowcase } from './record.mjs';
 import { scenarios } from './scenarios.mjs';
 import { readFixtureLookup } from '../fixtureManifest.mjs';

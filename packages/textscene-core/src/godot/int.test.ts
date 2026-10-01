@@ -156,7 +156,10 @@ describe('ruleInt', () => {
 
 describe('slotComponentsAltered — a composite in a FLOAT slot', () => {
   const parts = (literal: string): string[] =>
-    /\(([^)]*)\)/.exec(literal)![1]!.split(',').map((part) => part.trim());
+    /\(([^)]*)\)/
+      .exec(literal)![1]!
+      .split(',')
+      .map((part) => part.trim());
   const altered = (literal: string, slot = 'Vector3'): boolean =>
     slotComponentsAltered(literal, slot, parts(literal));
 

@@ -14,15 +14,38 @@ import { TEXTURE_WORKER_MODULE, textureWorkerPlugin } from './textureWorkerPlugi
 /** A seamless ridged field, as core's decoders give it: the job input is plain data. */
 const NOISE_JOB_INPUT = {
   tex: {
-    width: 33, height: 17, invert: false, normalize: true, seamless: true, seamlessBlendSkirt: 0.1,
-    asNormalMap: false, bumpStrength: 8, noise: null, colorRamp: null,
+    width: 33,
+    height: 17,
+    invert: false,
+    normalize: true,
+    seamless: true,
+    seamlessBlendSkirt: 0.1,
+    asNormalMap: false,
+    bumpStrength: 8,
+    noise: null,
+    colorRamp: null,
   },
   noise: {
-    noiseType: 1, seed: 7, frequency: 0.08, offset: { x: 0, y: 0, z: 0 }, fractalType: 2,
-    fractalOctaves: 5, fractalLacunarity: 2, fractalGain: 0.5, fractalWeightedStrength: 0,
-    fractalPingPongStrength: 2, cellularDistanceFunction: 0, cellularReturnType: 1, cellularJitter: 1,
-    domainWarpEnabled: false, domainWarpType: 0, domainWarpAmplitude: 30, domainWarpFrequency: 0.05,
-    domainWarpFractalType: 1, domainWarpFractalOctaves: 5, domainWarpFractalLacunarity: 6,
+    noiseType: 1,
+    seed: 7,
+    frequency: 0.08,
+    offset: { x: 0, y: 0, z: 0 },
+    fractalType: 2,
+    fractalOctaves: 5,
+    fractalLacunarity: 2,
+    fractalGain: 0.5,
+    fractalWeightedStrength: 0,
+    fractalPingPongStrength: 2,
+    cellularDistanceFunction: 0,
+    cellularReturnType: 1,
+    cellularJitter: 1,
+    domainWarpEnabled: false,
+    domainWarpType: 0,
+    domainWarpAmplitude: 30,
+    domainWarpFrequency: 0.05,
+    domainWarpFractalType: 1,
+    domainWarpFractalOctaves: 5,
+    domainWarpFractalLacunarity: 6,
     domainWarpFractalGain: 0.5,
   },
   colorRamp: null,
@@ -70,7 +93,8 @@ async function builtWorkerSource(): Promise<string> {
   });
   const sandbox: { __source?: string } = {};
   vm.runInNewContext(result.outputFiles[0]!.text, { globalThis: sandbox });
-  if (typeof sandbox.__source !== 'string') throw new Error('expected the bundle to embed a worker source string');
+  if (typeof sandbox.__source !== 'string')
+    throw new Error('expected the bundle to embed a worker source string');
   return sandbox.__source;
 }
 
@@ -81,7 +105,7 @@ describe('textureWorkerPlugin', () => {
     expect(source).not.toMatch(/\brequire\(/);
   }, 60_000);
 
-  it('embeds a worker that answers a noise job with the bytes core\'s own job gives', async () => {
+  it("embeds a worker that answers a noise job with the bytes core's own job gives", async () => {
     const source = await builtWorkerSource();
     const embedded = answer((self) =>
       vm.runInNewContext(source, { self, Math, Float32Array, Uint8Array, Int32Array, Error, RangeError })

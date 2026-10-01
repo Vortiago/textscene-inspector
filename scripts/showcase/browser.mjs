@@ -31,7 +31,8 @@ export function launchGpuCompositedBrowser() {
 
 function launchWithArgs(args) {
   return chromium.launch({
-    channel: process.env.SHOWCASE_CHANNEL === 'bundled' ? undefined : process.env.SHOWCASE_CHANNEL || 'chrome',
+    channel:
+      process.env.SHOWCASE_CHANNEL === 'bundled' ? undefined : process.env.SHOWCASE_CHANNEL || 'chrome',
     headless: true,
     args,
   });

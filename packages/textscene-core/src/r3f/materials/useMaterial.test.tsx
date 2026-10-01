@@ -79,7 +79,7 @@ describe('useMaterial', () => {
     expect(first.status).toBe('ready');
   });
 
-  it('reads a whole .tres as its [resource] body and the file\'s own tables', () => {
+  it("reads a whole .tres as its [resource] body and the file's own tables", () => {
     const { result, fake } = renderMaterial({ kind: 'file', path: TRES_PATH }, { [TRES_PATH]: PAINT_TRES });
     const parsed = fake.resources.getCached(TRES_PATH)!;
     const loaded = readyMaterial(result.current);
@@ -93,7 +93,7 @@ describe('useMaterial', () => {
     expect(loaded?.externalResources).toBe(parsed.extResources);
   });
 
-  it('reads a sub-resource address as that [sub_resource], with its file\'s tables', () => {
+  it("reads a sub-resource address as that [sub_resource], with its file's tables", () => {
     const { result, fake } = renderMaterial(
       { kind: 'file', path: `${TRES_PATH}::Inner_mat` },
       { [TRES_PATH]: PAINT_TRES }
@@ -120,12 +120,15 @@ describe('useMaterial', () => {
   });
 
   it('answers absent for a sub-resource the file does not declare', () => {
-    const { result } = renderMaterial({ kind: 'file', path: `${TRES_PATH}::Missing` }, { [TRES_PATH]: PAINT_TRES });
+    const { result } = renderMaterial(
+      { kind: 'file', path: `${TRES_PATH}::Missing` },
+      { [TRES_PATH]: PAINT_TRES }
+    );
 
     expect(result.current).toEqual({ status: 'absent' });
   });
 
-  it('declines a material type it does not build: Godot\'s default surface', () => {
+  it("declines a material type it does not build: Godot's default surface", () => {
     const orm = PAINT_TRES.replace('type="StandardMaterial3D" load_steps', 'type="ORMMaterial3D" load_steps');
     const { result } = renderMaterial({ kind: 'file', path: TRES_PATH }, { [TRES_PATH]: orm });
 
@@ -135,7 +138,10 @@ describe('useMaterial', () => {
   it('declines a ShaderMaterial with one warning, from either arrival', () => {
     const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const fromScene = renderMaterial(inline('Shader_fx'));
-    const shaderTres = PAINT_TRES.replace('type="StandardMaterial3D" load_steps', 'type="ShaderMaterial" load_steps');
+    const shaderTres = PAINT_TRES.replace(
+      'type="StandardMaterial3D" load_steps',
+      'type="ShaderMaterial" load_steps'
+    );
     const fromFile = renderMaterial({ kind: 'file', path: TRES_PATH }, { [TRES_PATH]: shaderTres });
 
     expect(fromScene.result.current).toEqual({ status: 'declined', type: 'ShaderMaterial' });

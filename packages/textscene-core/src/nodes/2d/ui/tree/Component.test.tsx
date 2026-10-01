@@ -81,7 +81,12 @@ describe('<Tree> — column header row', () => {
 
   it('draws one header cell per column once column_titles_visible is set (default columns = 1)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <Tree {...painterEnv()} solveNode={solveNode({ columnTitlesVisible: true })} rect={RECT} renderOrder={0} />
+      <Tree
+        {...painterEnv()}
+        solveNode={solveNode({ columnTitlesVisible: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     // 1 panel mesh + 1 header cell.
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(2);
@@ -122,7 +127,12 @@ describe('<Tree> — column header row', () => {
     // The painter floors columns at 1 even for an unvalidated value, so a Tree
     // with column_titles_visible=true shows at least one header cell.
     const renderer = await ReactThreeTestRenderer.create(
-      <Tree {...painterEnv()} solveNode={solveNode({ columns: 0, columnTitlesVisible: true })} rect={RECT} renderOrder={0} />
+      <Tree
+        {...painterEnv()}
+        solveNode={solveNode({ columns: 0, columnTitlesVisible: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(2);
   });

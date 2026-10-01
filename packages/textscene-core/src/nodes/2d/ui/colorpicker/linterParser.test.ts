@@ -291,7 +291,7 @@ describe('ColorPicker strict validators', () => {
       expect(validator!('vertical', 'false', 1)).not.toBeNull();
     });
 
-    it('inherits BoxContainer\'s own keys (alignment) through the base-walk', () => {
+    it("inherits BoxContainer's own keys (alignment) through the base-walk", () => {
       expect(check('alignment', '1')).toBeNull();
     });
   });

@@ -82,10 +82,7 @@ export interface YSortGroupRegistration {
 }
 
 /** Every pass takes the parsed roots and hands back the roots to build from. */
-export type ScenePass = (
-  nodes: TscnNode[],
-  internalResources: readonly TscnInternalResource[]
-) => TscnNode[];
+export type ScenePass = (nodes: TscnNode[], internalResources: readonly TscnInternalResource[]) => TscnNode[];
 
 /**
  * `transforms` passes move nodes; `paths` passes read where nodes ended up, so
@@ -101,9 +98,7 @@ const SCENE_PASS_STAGES: readonly ScenePassRegistration['stage'][] = ['transform
 class NodeComponentRegistryImpl {
   // The whole registration is stored and answers every flag, so a new flag needs no
   // plumbing in `register` or `clear`.
-  private readonly registry = createTypeRegistry<NodeComponentRegistration>(
-    'NodeComponentRegistry'
-  );
+  private readonly registry = createTypeRegistry<NodeComponentRegistration>('NodeComponentRegistry');
 
   register(registration: NodeComponentRegistration): void {
     this.registry.register(registration.typeName, registration);

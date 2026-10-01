@@ -37,9 +37,7 @@ function makeNode(overrides: Partial<AnimationPlayerProperties> = {}): TscnNode 
 
 describe('<AnimationPlayer>', () => {
   it('renders without crashing with default props', async () => {
-    await expect(
-      ReactThreeTestRenderer.create(<AnimationPlayer node={makeNode()} />)
-    ).resolves.toBeDefined();
+    await expect(ReactThreeTestRenderer.create(<AnimationPlayer node={makeNode()} />)).resolves.toBeDefined();
   });
 
   it('mounts a group tagged with nodeType AnimationPlayer', async () => {
@@ -84,9 +82,7 @@ describe('<AnimationPlayer>', () => {
   });
 
   it('renders no visible meshes of its own (is a pure container)', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <AnimationPlayer node={makeNode()} />
-    );
+    const renderer = await ReactThreeTestRenderer.create(<AnimationPlayer node={makeNode()} />);
     const meshes = renderer.scene.findAllByType('Mesh');
     expect(meshes).toHaveLength(0);
   });

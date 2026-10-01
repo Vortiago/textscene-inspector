@@ -179,9 +179,7 @@ async function captureOurs(scenes) {
 
 async function main() {
   const args = parseCaptureFlags(process.argv.slice(2));
-  const scenes = args.only
-    ? COMPLEX_SCENES.filter((c) => c.slug.includes(args.only))
-    : COMPLEX_SCENES;
+  const scenes = args.only ? COMPLEX_SCENES.filter((c) => c.slug.includes(args.only)) : COMPLEX_SCENES;
   if (scenes.length === 0) throw new Error(`No complex scene matches --only ${args.only}`);
   if (args.godot) await captureGodot(scenes);
   let failures = [];

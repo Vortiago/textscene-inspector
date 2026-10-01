@@ -50,8 +50,16 @@ const hingeLeaves = (p: string): Leaves => ({
     lower: 'physical_bone_3d.cpp:318',
     softness: 'physical_bone_3d.cpp:320',
   }),
-  angular_limit_bias: v.float(`${p}angular_limit_bias`, { min: 0.01, max: 0.99, hinted: 'physical_bone_3d.cpp:319' }),
-  angular_limit_relaxation: v.float(`${p}angular_limit_relaxation`, { min: 0.01, max: 16, hinted: 'physical_bone_3d.cpp:321' }),
+  angular_limit_bias: v.float(`${p}angular_limit_bias`, {
+    min: 0.01,
+    max: 0.99,
+    hinted: 'physical_bone_3d.cpp:319',
+  }),
+  angular_limit_relaxation: v.float(`${p}angular_limit_relaxation`, {
+    min: 0.01,
+    max: 16,
+    hinted: 'physical_bone_3d.cpp:321',
+  }),
 });
 
 // SliderJointData::_get_property_list: physical_bone_3d.cpp:432-442.
@@ -59,16 +67,36 @@ const hingeLeaves = (p: string): Leaves => ({
 const sliderLeaves = (p: string): Leaves => ({
   linear_limit_upper: v.float(`${p}linear_limit_upper`),
   linear_limit_lower: v.float(`${p}linear_limit_lower`),
-  linear_limit_softness: v.float(`${p}linear_limit_softness`, { min: 0.01, max: 16.0, hinted: 'physical_bone_3d.cpp:434' }),
-  linear_limit_restitution: v.float(`${p}linear_limit_restitution`, { min: 0.01, max: 16.0, hinted: 'physical_bone_3d.cpp:435' }),
-  linear_limit_damping: v.float(`${p}linear_limit_damping`, { min: 0, max: 16.0, hinted: 'physical_bone_3d.cpp:436' }),
+  linear_limit_softness: v.float(`${p}linear_limit_softness`, {
+    min: 0.01,
+    max: 16.0,
+    hinted: 'physical_bone_3d.cpp:434',
+  }),
+  linear_limit_restitution: v.float(`${p}linear_limit_restitution`, {
+    min: 0.01,
+    max: 16.0,
+    hinted: 'physical_bone_3d.cpp:435',
+  }),
+  linear_limit_damping: v.float(`${p}linear_limit_damping`, {
+    min: 0,
+    max: 16.0,
+    hinted: 'physical_bone_3d.cpp:436',
+  }),
   ...angularLimitLeaves(p, {
     upper: 'physical_bone_3d.cpp:438',
     lower: 'physical_bone_3d.cpp:439',
     softness: 'physical_bone_3d.cpp:440',
   }),
-  angular_limit_restitution: v.float(`${p}angular_limit_restitution`, { min: 0.01, max: 16.0, hinted: 'physical_bone_3d.cpp:441' }),
-  angular_limit_damping: v.float(`${p}angular_limit_damping`, { min: 0, max: 16.0, hinted: 'physical_bone_3d.cpp:442' }),
+  angular_limit_restitution: v.float(`${p}angular_limit_restitution`, {
+    min: 0.01,
+    max: 16.0,
+    hinted: 'physical_bone_3d.cpp:441',
+  }),
+  angular_limit_damping: v.float(`${p}angular_limit_damping`, {
+    min: 0,
+    max: 16.0,
+    hinted: 'physical_bone_3d.cpp:442',
+  }),
 });
 
 /** SixDOFJointData::_get_property_list: physical_bone_3d.cpp:680-704, one copy per axis. */
@@ -76,12 +104,20 @@ const sixDofLeaves = (p: string): Leaves => ({
   linear_limit_enabled: v.boolean(`${p}linear_limit_enabled`),
   linear_limit_upper: v.float(`${p}linear_limit_upper`),
   linear_limit_lower: v.float(`${p}linear_limit_lower`),
-  linear_limit_softness: v.float(`${p}linear_limit_softness`, { min: 0.01, max: 16, hinted: 'physical_bone_3d.cpp:688' }),
+  linear_limit_softness: v.float(`${p}linear_limit_softness`, {
+    min: 0.01,
+    max: 16,
+    hinted: 'physical_bone_3d.cpp:688',
+  }),
   linear_spring_enabled: v.boolean(`${p}linear_spring_enabled`),
   linear_spring_stiffness: v.float(`${p}linear_spring_stiffness`),
   linear_spring_damping: v.float(`${p}linear_spring_damping`),
   linear_equilibrium_point: v.float(`${p}linear_equilibrium_point`),
-  linear_restitution: v.float(`${p}linear_restitution`, { min: 0.01, max: 16, hinted: 'physical_bone_3d.cpp:693' }),
+  linear_restitution: v.float(`${p}linear_restitution`, {
+    min: 0.01,
+    max: 16,
+    hinted: 'physical_bone_3d.cpp:693',
+  }),
   linear_damping: v.float(`${p}linear_damping`, { min: 0.01, max: 16, hinted: 'physical_bone_3d.cpp:694' }),
   angular_limit_enabled: v.boolean(`${p}angular_limit_enabled`),
   ...angularLimitLeaves(p, {
@@ -89,7 +125,11 @@ const sixDofLeaves = (p: string): Leaves => ({
     lower: 'physical_bone_3d.cpp:697',
     softness: 'physical_bone_3d.cpp:698',
   }),
-  angular_restitution: v.float(`${p}angular_restitution`, { min: 0.01, max: 16, hinted: 'physical_bone_3d.cpp:699' }),
+  angular_restitution: v.float(`${p}angular_restitution`, {
+    min: 0.01,
+    max: 16,
+    hinted: 'physical_bone_3d.cpp:699',
+  }),
   angular_damping: v.float(`${p}angular_damping`, { min: 0.01, max: 16, hinted: 'physical_bone_3d.cpp:700' }),
   erp: v.float(`${p}erp`),
   angular_spring_enabled: v.boolean(`${p}angular_spring_enabled`),
@@ -151,7 +191,9 @@ const LEAF_NAMES = new Map<JointType, ReadonlySet<string>>(
  */
 export function jointConstraintOwners(key: string): ReadonlySet<JointType> | null {
   const { axis, leaf } = splitKey(key);
-  const owners = (axis === '' ? FLAT_TYPES : ([5] as const)).filter((type) => LEAF_NAMES.get(type)!.has(leaf));
+  const owners = (axis === '' ? FLAT_TYPES : ([5] as const)).filter((type) =>
+    LEAF_NAMES.get(type)!.has(leaf)
+  );
   return owners.length === 0 ? null : new Set(owners);
 }
 
@@ -180,6 +222,4 @@ export const jointConstraintsValidator: PropertyValidator = accepts((key, value,
 // unrecognised leaf name, a format concern. Every magnitude bound lives in the
 // leaf tables, so all four are exposed for the sweep to recurse through.
 jointConstraintsValidator.formatOnly = true;
-jointConstraintsValidator.leaves = [...LEAF_TABLES.values()].flatMap((table) =>
-  Object.values(table)
-);
+jointConstraintsValidator.leaves = [...LEAF_TABLES.values()].flatMap((table) => Object.values(table));

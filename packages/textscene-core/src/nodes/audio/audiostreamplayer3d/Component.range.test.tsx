@@ -100,10 +100,7 @@ describe('<AudioStreamPlayer3D> audible-range gizmo', () => {
   });
 
   it('still draws for a DISABLED model when max_distance is set', async () => {
-    expect(rangeRadius(await render({ attenuation_model: '3', max_distance: '30' }))).toBeCloseTo(
-      30,
-      5
-    );
+    expect(rangeRadius(await render({ attenuation_model: '3', max_distance: '30' }))).toBeCloseTo(30, 5);
   });
 });
 

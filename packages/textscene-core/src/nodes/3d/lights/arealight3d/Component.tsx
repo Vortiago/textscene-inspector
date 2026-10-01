@@ -33,18 +33,11 @@ export function AreaLight3D({ node, children }: NodeComponentProps) {
   // scales with area for the same reason, so the same division applies here.
   const area = width * height;
   const normalize = properties.area_normalize_energy && area > 0;
-  const intensity =
-    (properties.light_energy * LIGHT_INTENSITY_SCALE) / (normalize ? area : 1);
+  const intensity = (properties.light_energy * LIGHT_INTENSITY_SCALE) / (normalize ? area : 1);
 
   return (
     <group name={node.name} position={position} rotation={rotation} scale={scale}>
-      <rectAreaLight
-        ref={lightRef}
-        color={color}
-        intensity={intensity}
-        width={width}
-        height={height}
-      />
+      <rectAreaLight ref={lightRef} color={color} intensity={intensity} width={width} height={height} />
       {children}
     </group>
   );

@@ -46,21 +46,28 @@ function dataTexture(width: number, height: number): THREE.DataTexture {
 }
 
 describe('webglUploadRenderer', () => {
-  it('writes only the band\'s own rows, at their place in the level', () => {
+  it("writes only the band's own rows, at their place in the level", () => {
     const { renderer, gl } = fakeThreeRenderer();
     const texture = dataTexture(8, 6);
     webglUploadRenderer(renderer).writeRows(texture, 2, 5);
 
     const [target, level, x, y, width, rows, format, type, pixels] = gl.texSubImage2D.mock.calls[0]!;
     expect([target, level, x, y, width, rows, format, type]).toEqual([
-      GL.TEXTURE_2D, 0, 0, 2, 8, 3, GL.RGBA, GL.UNSIGNED_BYTE,
+      GL.TEXTURE_2D,
+      0,
+      0,
+      2,
+      8,
+      3,
+      GL.RGBA,
+      GL.UNSIGNED_BYTE,
     ]);
     const data = texture.image.data as Uint8Array;
     expect(pixels).toEqual(data.subarray(2 * 8 * 4, 5 * 8 * 4));
     expect((pixels as Uint8Array).buffer).toBe(data.buffer);
   });
 
-  it('writes a flipped texture\'s band at its mirrored rows, where the whole-image flip puts them', () => {
+  it("writes a flipped texture's band at its mirrored rows, where the whole-image flip puts them", () => {
     const { renderer, gl } = fakeThreeRenderer();
     const texture = dataTexture(8, 6);
     texture.flipY = true;
@@ -79,7 +86,7 @@ describe('webglUploadRenderer', () => {
     expect(state.bindTexture).toHaveBeenCalledWith(GL.TEXTURE_2D, handle, GL.TEXTURE0);
   });
 
-  it('unpacks as three does for the texture, with no row window, through three\'s own state cache', () => {
+  it("unpacks as three does for the texture, with no row window, through three's own state cache", () => {
     const { renderer, state } = fakeThreeRenderer();
     const texture = dataTexture(8, 6);
     texture.flipY = true;
@@ -111,7 +118,7 @@ describe('webglUploadRenderer', () => {
     expect(gl.getParameter).not.toHaveBeenCalled();
   });
 
-  it('generates the mip chain from the filled level of the texture\'s own storage', () => {
+  it("generates the mip chain from the filled level of the texture's own storage", () => {
     const { renderer, gl, state, handle } = fakeThreeRenderer();
     webglUploadRenderer(renderer).generateMipmaps(dataTexture(8, 6));
 

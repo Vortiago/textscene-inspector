@@ -30,9 +30,7 @@ describe('deep overrides through mergeInstanceRoot', () => {
 
     const instanceNode = host.nodes[0]!;
     expect(instanceNode.children.map((c) => c.name)).toEqual(['SplitscreenButton']);
-    expect(instanceNode.children[0]!.instanceSubPath).toBe(
-      'ColorRect/CenterContainer/VBoxContainer'
-    );
+    expect(instanceNode.children[0]!.instanceSubPath).toBe('ColorRect/CenterContainer/VBoxContainer');
 
     const merged = mergeInstanceRoot(instanceNode, sub)!;
     const box = find([merged], 'VBoxContainer')!;
@@ -66,9 +64,7 @@ describe('deep overrides through mergeInstanceRoot', () => {
     expect(bodies[0]!.rawProperties?.texture).toBe(body.rawProperties?.texture);
     // And the typed properties, which components read: merging the raw map alone
     // renders as if the override never existed.
-    expect((bodies[0]!.properties as { texture?: string }).texture).toBe(
-      body.rawProperties?.texture
-    );
+    expect((bodies[0]!.properties as { texture?: string }).texture).toBe(body.rawProperties?.texture);
   });
 
   it('stamps the host resource table onto a grafted node', () => {

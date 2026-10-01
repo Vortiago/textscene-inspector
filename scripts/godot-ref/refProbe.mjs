@@ -23,9 +23,7 @@ export function probePixels(buffer, probes, { patch = 1 } = {}) {
       throw new Error(`probe ${x},${y} must be integer pixel coordinates`);
     }
     if (x - reach < 0 || y - reach < 0 || x + reach >= png.width || y + reach >= png.height) {
-      throw new Error(
-        `probe ${x},${y} (patch ${patch}) falls outside the ${png.width}x${png.height} image`
-      );
+      throw new Error(`probe ${x},${y} (patch ${patch}) falls outside the ${png.width}x${png.height} image`);
     }
     const channels = [[], [], []];
     for (let dy = -reach; dy <= reach; dy++) {

@@ -18,7 +18,11 @@ export function stampOf(provider: ResourceProvider, path: string): Promise<strin
  * The content of `path`, or null for a file the provider does not hold. A rejection counts as a miss, since the VS Code
  * and web providers throw for a missing file where the contract says null. A synchronous throw propagates.
  */
-export function loadOrNull(provider: ResourceProvider, path: string, type?: string): Promise<string | ArrayBuffer | null> {
+export function loadOrNull(
+  provider: ResourceProvider,
+  path: string,
+  type?: string
+): Promise<string | ArrayBuffer | null> {
   return provider.loadResource(path, type).catch(() => null);
 }
 
@@ -49,7 +53,12 @@ export class StampedReads<T> {
    *
    * @param stamp - The file's stamp, when the caller started reading it earlier. A shared get ignores it.
    */
-  get(provider: ResourceProvider, path: string, read: () => Promise<T>, stamp?: Promise<string | null>): Promise<T> {
+  get(
+    provider: ResourceProvider,
+    path: string,
+    read: () => Promise<T>,
+    stamp?: Promise<string | null>
+  ): Promise<T> {
     const { running } = this.readsOf(provider);
     const shared = running.get(path);
     if (shared) return shared;

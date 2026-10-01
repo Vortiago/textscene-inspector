@@ -25,7 +25,12 @@ function node(
   return {
     ...emptySolveNode(),
     path: 'P',
-    node: { name: 'P', type: 'ProgressBar', children: [], properties: { name: 'P', ...props } as ControlProperties },
+    node: {
+      name: 'P',
+      type: 'ProgressBar',
+      children: [],
+      properties: { name: 'P', ...props } as ControlProperties,
+    },
     styleBoxes,
   };
 }
@@ -70,7 +75,10 @@ describe('progressBarMinimumSize (progress_bar.cpp:37-48)', () => {
       shadowSize: 0,
       shadowOffset: { x: 0, y: 0 },
     };
-    expect(minSize({ showPercentage: false }, { background: zeroMargin, fill: zeroMargin })).toEqual({ x: 1, y: 1 });
+    expect(minSize({ showPercentage: false }, { background: zeroMargin, fill: zeroMargin })).toEqual({
+      x: 1,
+      y: 1,
+    });
   });
 
   it('maxes an overridden fill stylebox margin against the (default) background margin', () => {
@@ -100,7 +108,11 @@ describe('progressBarMinimumSize (progress_bar.cpp:37-48)', () => {
   });
 
   it('a null ctx.measureText (no text engine wired) leaves the percentage text out of the floor: margin only, no maxf(1) either', () => {
-    const result = progressBarMinimumSize(node({}), { theme: nativeTheme(1), measureText: null, combinedMinimumSize: () => ({ x: 0, y: 0 }) });
+    const result = progressBarMinimumSize(node({}), {
+      theme: nativeTheme(1),
+      measureText: null,
+      combinedMinimumSize: () => ({ x: 0, y: 0 }),
+    });
     const size = 'size' in result ? result.size : result;
     expect(size).toEqual({ x: 4, y: 4 }); // background/fill's own content margin, untouched by text or the show_percentage=false floor
   });
@@ -122,7 +134,7 @@ describe('progressBarPercentRatio (progress_bar.cpp:149-166)', () => {
     ).toBeCloseTo(0.5, 9);
   });
 
-  it('exp_edit with a NEGATIVE min_value falls back to the plain fraction (progress_bar.cpp:155\'s min() >= 0 gate)', () => {
+  it("exp_edit with a NEGATIVE min_value falls back to the plain fraction (progress_bar.cpp:155's min() >= 0 gate)", () => {
     expect(
       progressBarPercentRatio({ value: 50, minValue: -10, maxValue: 100, expEdit: true }, undefined)
     ).toBeCloseTo(60 / 110, 9);
@@ -131,30 +143,65 @@ describe('progressBarPercentRatio (progress_bar.cpp:149-166)', () => {
 
 describe('progressBarIndeterminateFillRect (progress_bar.cpp:69-110, always the "centre it" frame)', () => {
   it('FILL_TOP_TO_BOTTOM at (100, 32): fill_size=64, ifp=82, rect (0,18,100,14)', () => {
-    expect(progressBarIndeterminateFillRect({ x: 100, y: 32 }, 2, false)).toEqual({ x: 0, y: 18, w: 100, h: 14 });
+    expect(progressBarIndeterminateFillRect({ x: 100, y: 32 }, 2, false)).toEqual({
+      x: 0,
+      y: 18,
+      w: 100,
+      h: 14,
+    });
   });
 
   it('FILL_BOTTOM_TO_TOP at (100, 32): the mirror image, rect (0,0,100,14)', () => {
-    expect(progressBarIndeterminateFillRect({ x: 100, y: 32 }, 3, false)).toEqual({ x: 0, y: 0, w: 100, h: 14 });
+    expect(progressBarIndeterminateFillRect({ x: 100, y: 32 }, 3, false)).toEqual({
+      x: 0,
+      y: 0,
+      w: 100,
+      h: 14,
+    });
   });
 
   it('FILL_BEGIN_TO_END vs FILL_END_TO_BEGIN at (32, 100) diverge in x (32 is the MINOR axis here)', () => {
-    expect(progressBarIndeterminateFillRect({ x: 32, y: 100 }, 0, false)).toEqual({ x: 18, y: 0, w: 14, h: 100 });
-    expect(progressBarIndeterminateFillRect({ x: 32, y: 100 }, 1, false)).toEqual({ x: 0, y: 0, w: 14, h: 100 });
+    expect(progressBarIndeterminateFillRect({ x: 32, y: 100 }, 0, false)).toEqual({
+      x: 18,
+      y: 0,
+      w: 14,
+      h: 100,
+    });
+    expect(progressBarIndeterminateFillRect({ x: 32, y: 100 }, 1, false)).toEqual({
+      x: 0,
+      y: 0,
+      w: 14,
+      h: 100,
+    });
   });
 
-  it('an out-of-range fill_mode draws as FILL_BEGIN_TO_END (set_fill_mode\'s ERR_FAIL_INDEX refuses the write, progress_bar.cpp:199-203)', () => {
-    expect(progressBarIndeterminateFillRect({ x: 100, y: 32 }, 4, false)).toEqual({ x: 18, y: 0, w: 64, h: 32 });
+  it("an out-of-range fill_mode draws as FILL_BEGIN_TO_END (set_fill_mode's ERR_FAIL_INDEX refuses the write, progress_bar.cpp:199-203)", () => {
+    expect(progressBarIndeterminateFillRect({ x: 100, y: 32 }, 4, false)).toEqual({
+      x: 18,
+      y: 0,
+      w: 64,
+      h: 32,
+    });
   });
 });
 
 describe('progressBarFillRect (progress_bar.cpp:112-147)', () => {
   it('FILL_BEGIN_TO_END grows from the left', () => {
-    expect(progressBarFillRect({ x: 100, y: 20 }, 0, 0.5, { x: 4, y: 4 }, false)).toEqual({ x: 0, y: 0, w: 52, h: 20 });
+    expect(progressBarFillRect({ x: 100, y: 20 }, 0, 0.5, { x: 4, y: 4 }, false)).toEqual({
+      x: 0,
+      y: 0,
+      w: 52,
+      h: 20,
+    });
   });
 
-  it('FILL_END_TO_BEGIN grows from the right (mirrors FILL_BEGIN_TO_END\'s width, opposite x)', () => {
-    expect(progressBarFillRect({ x: 100, y: 20 }, 1, 0.5, { x: 4, y: 4 }, false)).toEqual({ x: 48, y: 0, w: 52, h: 20 });
+  it("FILL_END_TO_BEGIN grows from the right (mirrors FILL_BEGIN_TO_END's width, opposite x)", () => {
+    expect(progressBarFillRect({ x: 100, y: 20 }, 1, 0.5, { x: 4, y: 4 }, false)).toEqual({
+      x: 48,
+      y: 0,
+      w: 52,
+      h: 20,
+    });
   });
 
   it('a zero ratio draws nothing (p <= 0)', () => {
@@ -162,15 +209,30 @@ describe('progressBarFillRect (progress_bar.cpp:112-147)', () => {
   });
 
   it('FILL_TOP_TO_BOTTOM grows downward', () => {
-    expect(progressBarFillRect({ x: 20, y: 100 }, 2, 0.3, { x: 4, y: 6 }, false)).toEqual({ x: 0, y: 0, w: 20, h: 34 });
+    expect(progressBarFillRect({ x: 20, y: 100 }, 2, 0.3, { x: 4, y: 6 }, false)).toEqual({
+      x: 0,
+      y: 0,
+      w: 20,
+      h: 34,
+    });
   });
 
   it('FILL_BOTTOM_TO_TOP grows upward', () => {
-    expect(progressBarFillRect({ x: 20, y: 100 }, 3, 0.3, { x: 4, y: 6 }, false)).toEqual({ x: 0, y: 66, w: 20, h: 34 });
+    expect(progressBarFillRect({ x: 20, y: 100 }, 3, 0.3, { x: 4, y: 6 }, false)).toEqual({
+      x: 0,
+      y: 66,
+      w: 20,
+      h: 34,
+    });
   });
 
-  it('an out-of-range fill_mode draws as FILL_BEGIN_TO_END (set_fill_mode\'s ERR_FAIL_INDEX refuses the write, progress_bar.cpp:199-203)', () => {
-    expect(progressBarFillRect({ x: 100, y: 20 }, 4, 0.5, { x: 4, y: 4 }, false)).toEqual({ x: 0, y: 0, w: 52, h: 20 });
+  it("an out-of-range fill_mode draws as FILL_BEGIN_TO_END (set_fill_mode's ERR_FAIL_INDEX refuses the write, progress_bar.cpp:199-203)", () => {
+    expect(progressBarFillRect({ x: 100, y: 20 }, 4, 0.5, { x: 4, y: 4 }, false)).toEqual({
+      x: 0,
+      y: 0,
+      w: 52,
+      h: 20,
+    });
   });
 });
 

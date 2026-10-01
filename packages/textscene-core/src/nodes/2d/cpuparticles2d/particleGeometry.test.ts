@@ -66,25 +66,17 @@ describe('buildParticleGeometry', () => {
   });
 
   it('carries a four-component colour attribute, alpha included', () => {
-    const geometry = buildParticleGeometry(
-      [particle({ color: { r: 1, g: 1, b: 1, a: 0.25 } })],
-      2,
-      2
-    )!;
+    const geometry = buildParticleGeometry([particle({ color: { r: 1, g: 1, b: 1, a: 0.25 } })], 2, 2)!;
     const color = geometry.getAttribute('color');
     expect(color.itemSize).toBe(4);
     expect(color.getW(0)).toBeCloseTo(0.25, 6);
   });
 
   it('converts the particle colour from sRGB to the linear working space', () => {
-    const geometry = buildParticleGeometry(
-      [particle({ color: { r: 0.5, g: 0.5, b: 0.5, a: 1 } })],
-      2,
-      2
-    )!;
+    const geometry = buildParticleGeometry([particle({ color: { r: 0.5, g: 0.5, b: 0.5, a: 1 } })], 2, 2)!;
     const color = geometry.getAttribute('color');
     // sRGB 0.5 decodes to ~0.214 linear. An unconverted 0.5 would read washed out.
-    expect(color.getX(0)).toBeCloseTo(0.2140, 3);
+    expect(color.getX(0)).toBeCloseTo(0.214, 3);
   });
 
   it('keeps pose order, which is what draw_order decides', () => {
@@ -173,12 +165,7 @@ describe('buildParticleGeometry', () => {
     });
 
     it('treats a zero frame count as one cell rather than dividing by zero (error path)', () => {
-      const geometry = buildParticleGeometry(
-        [particle()],
-        20,
-        20,
-        { hFrames: 0, vFrames: 0, loop: false }
-      )!;
+      const geometry = buildParticleGeometry([particle()], 20, 20, { hFrames: 0, vFrames: 0, loop: false })!;
       geometry.computeBoundingBox();
       expect(geometry.boundingBox!.max.x - geometry.boundingBox!.min.x).toBeCloseTo(20, 6);
     });

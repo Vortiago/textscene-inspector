@@ -9,7 +9,8 @@ import { posix } from 'node:path';
 
 /** The list names a fixture by its basename, wherever it sits under `scenes/fixtures`. */
 const NEGATIVE_FIXTURES = new Set(
-  JSON.parse(readFileSync(new URL('../../scenes/fixtures/negative-fixtures.json', import.meta.url), 'utf8')).files
+  JSON.parse(readFileSync(new URL('../../scenes/fixtures/negative-fixtures.json', import.meta.url), 'utf8'))
+    .files
 );
 
 /**

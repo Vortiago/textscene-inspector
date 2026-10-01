@@ -67,8 +67,6 @@ export function flatten(scene: TscnScene): TscnNode[] {
  * narrow: the `Record<string, unknown>` arm keeps it `unknown`, which a truthy check
  * narrows only to `{}`.
  */
-export function transformOf(
-  properties: Node3DProperties | Record<string, unknown>
-): Transform3D | undefined {
+export function transformOf(properties: Node3DProperties | Record<string, unknown>): Transform3D | undefined {
   return 'transform' in properties ? (properties as Node3DProperties).transform : undefined;
 }

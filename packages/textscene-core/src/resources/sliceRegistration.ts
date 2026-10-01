@@ -11,14 +11,7 @@
  * types share the generic `resource` slot (a ParsedResource) and give it
  * meaning in their own decode.
  */
-export type ResourceBusType =
-  | 'texture'
-  | 'scene'
-  | 'glb'
-  | 'resource'
-  | 'arraymesh'
-  | 'font'
-  | 'theme';
+export type ResourceBusType = 'texture' | 'scene' | 'glb' | 'resource' | 'arraymesh' | 'font' | 'theme';
 
 export interface ResourceSliceRegistration {
   /** Slice folder name under `resources/<category>/`, for example 'standardmaterial3d'. */
@@ -77,13 +70,10 @@ export function registerResourceSlice(registration: ResourceSliceRegistration): 
 }
 
 export const resourceSliceRegistry = {
-  byTypeName: (typeName: string): ResourceSliceRegistration | null =>
-    byTypeName.get(typeName) ?? null,
-  byExtension: (extension: string): ResourceSliceRegistration | null =>
-    byExtension.get(extension) ?? null,
+  byTypeName: (typeName: string): ResourceSliceRegistration | null => byTypeName.get(typeName) ?? null,
+  byExtension: (extension: string): ResourceSliceRegistration | null => byExtension.get(extension) ?? null,
   /** The processor slot for a type name. Null means unroutable. */
-  busTypeFor: (typeName: string): ResourceBusType | null =>
-    byTypeName.get(typeName)?.busType ?? null,
+  busTypeFor: (typeName: string): ResourceBusType | null => byTypeName.get(typeName)?.busType ?? null,
   /** Whether the slice claiming `busType` marks its values clone-per-consumer. */
   clonesPerConsumer: (busType: ResourceBusType): boolean =>
     all.some((r) => r.busType === busType && r.clonePerConsumer === true),

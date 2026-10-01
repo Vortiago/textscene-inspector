@@ -15,11 +15,7 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
 import { wallQuadSurfaces } from '../../../resources/testing/arrayMeshSurfaces';
-import type {
-  TscnExternalResource,
-  TscnInternalResource,
-  TscnNode,
-} from '../../../parser/types';
+import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 
 const ALBEDO_PATH = 'res://textures/albedo.png';
@@ -60,10 +56,7 @@ async function render(opts: {
   ];
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
-      <SceneResourcesProvider
-        internalResources={internalResources}
-        externalResources={EXTERNALS}
-      >
+      <SceneResourcesProvider internalResources={internalResources} externalResources={EXTERNALS}>
         <MeshInstance3D node={node(opts.overrides)} />
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
@@ -114,7 +107,7 @@ describe('scene material texture slots past surface 0', () => {
   });
 });
 
-describe('inline ArrayMesh surfaces resolve their scene material\'s textures', () => {
+describe("inline ArrayMesh surfaces resolve their scene material's textures", () => {
   it('binds albedo_texture on a surface whose material is a scene sub-resource', async () => {
     const fake = createFakeResourceLoader();
     const texture = new THREE.Texture();
@@ -142,13 +135,8 @@ describe('inline ArrayMesh surfaces resolve their scene material\'s textures', (
     };
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider
-          internalResources={internalResources}
-          externalResources={EXTERNALS}
-        >
-          <MeshInstance3D
-            node={{ name: 'Baked', type: 'MeshInstance3D', children: [], properties }}
-          />
+        <SceneResourcesProvider internalResources={internalResources} externalResources={EXTERNALS}>
+          <MeshInstance3D node={{ name: 'Baked', type: 'MeshInstance3D', children: [], properties }} />
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     );

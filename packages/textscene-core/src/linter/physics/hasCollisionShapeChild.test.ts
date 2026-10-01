@@ -26,9 +26,7 @@ describe('hasCollisionShapeChild', () => {
     // `CollisionPolygon2D::_notification` calls
     // `collision_object->create_shape_owner(this)` (collision_polygon_2d.cpp:100),
     // the identical mechanism CollisionShape2D uses; the 3D class does the same.
-    expect(hasCollisionShapeChild(node('Body', [node(`CollisionPolygon${dim}`)]), dim)).toBe(
-      true
-    );
+    expect(hasCollisionShapeChild(node('Body', [node(`CollisionPolygon${dim}`)]), dim)).toBe(true);
   });
 
   // An `instance=` heading names a PackedScene, so the parser leaves the

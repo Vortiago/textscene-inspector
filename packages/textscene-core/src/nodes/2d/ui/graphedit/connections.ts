@@ -9,11 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import {
-  arrayLiteralBody,
-  dictNumberField,
-  dictStringField,
-} from '../../../../godot/variantParser.js';
+import { arrayLiteralBody, dictNumberField, dictStringField } from '../../../../godot/variantParser.js';
 import { unquoteStringName } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
 import type { GraphEditConnection } from './types';

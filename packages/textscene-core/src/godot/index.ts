@@ -88,7 +88,12 @@ export {
   extensionListPath,
   dataDirectoryPath,
 } from './project.js';
-export { GDEXTENSION_FILE_EXTENSION, SCAN_STOP_FILES, isScannedDirectoryName, isScannedPath } from './editorScan.js';
+export {
+  GDEXTENSION_FILE_EXTENSION,
+  SCAN_STOP_FILES,
+  isScannedDirectoryName,
+  isScannedPath,
+} from './editorScan.js';
 export { GRADIENT_TEXTURE_MAX_SIZE, IMAGE_MAX_PIXELS } from './texture.js';
 export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX, CLIP_CHILDREN_MODES } from './canvasItem.js';
 export {
@@ -171,10 +176,7 @@ export {
 export { CLASS_BASE_TYPES, descendsFromClass } from './classBaseTypes.js';
 export { INSTANCE_PLACEHOLDER_TYPE } from './packedScene.js';
 export { nodePathNames } from './nodePath.js';
-export {
-  GODOT_TEXT_RESOURCE_EXTENSIONS,
-  isGodotTextResourcePath,
-} from './resourceFormats.js';
+export { GODOT_TEXT_RESOURCE_EXTENSIONS, isGodotTextResourcePath } from './resourceFormats.js';
 export { boolSlotValue, boolLiteralAsNumber } from './variantBool.js';
 export {
   packedArrayBody,

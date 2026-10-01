@@ -18,7 +18,6 @@ import {
 } from '../../../../linter/validators/textServerEnums.js';
 import { HORIZONTAL_ALIGNMENT } from '../../../../linter/validators/globalScopeEnums.js';
 
-
 validatorRegistry.registerAll('Button', {
   // button.cpp:809, PROPERTY_HINT_MULTILINE_TEXT, no length bound.
   text: v.quotedString('text'),

@@ -10,11 +10,7 @@ import type { NodeComponentProps } from '../../NodeComponentRegistry';
 import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../components/MissingResourcePlaceholder';
 import { useGlbOverrides } from './GlbOverridesContext';
-import {
-  applyGlbNodeOverrides,
-  isApplicableGlbOverride,
-  resolveGlbOverrideTarget,
-} from './glbNodeOverrides';
+import { applyGlbNodeOverrides, isApplicableGlbOverride, resolveGlbOverrideTarget } from './glbNodeOverrides';
 import { flattenGlbObjects, GLB_ANIMATION_PLAYER_NAME, type GlbObjectEntry } from './glbHierarchy';
 import { useAnimationTransport, type PlayState } from '../../contexts/AnimationTransportContext';
 import { useNodePath } from '../../contexts/NodePathContext';
@@ -44,7 +40,6 @@ interface GLBSceneRootProperties {
   /** The ExtResource's `res://` path to the .glb or .gltf file, verbatim. */
   glbPath: string;
 }
-
 
 export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   // createSceneProcessor fills `properties` as a Record, so cast through unknown.
@@ -105,8 +100,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   useEffect(() => {
     if (nodePath === null) return;
     for (const { relPath, object: obj } of entries) {
-      obj.visible =
-        !(hiddenNodePaths?.has(joinPath(nodePath, relPath)) ?? false) && !overrideHidden.has(obj);
+      obj.visible = !(hiddenNodePaths?.has(joinPath(nodePath, relPath)) ?? false) && !overrideHidden.has(obj);
     }
   }, [entries, nodePath, hiddenNodePaths, overrideHidden]);
 
@@ -114,8 +108,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   // synthesises, so selecting that child, not the GLB root, activates the driver.
   const transport = useAnimationTransport();
   const selectedNodePath = selection?.selectedNodePath ?? null;
-  const animationPlayerPath =
-    nodePath !== null ? joinPath(nodePath, GLB_ANIMATION_PLAYER_NAME) : null;
+  const animationPlayerPath = nodePath !== null ? joinPath(nodePath, GLB_ANIMATION_PLAYER_NAME) : null;
   const isActive = animationPlayerPath !== null && animationPlayerPath === selectedNodePath;
 
   const { clips, durations } = useMemo(() => {
@@ -166,8 +159,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
     actionsRef,
     // Native glTF clips have no loop_mode and repeat for ever, so 'auto' and 'loop' repeat. The
     // preview loop override can force one clamped pass.
-    configureAction: (action) =>
-      applyLoopOverride(action, transport.loopOverride, LOOP_REPEAT_SETTINGS),
+    configureAction: (action) => applyLoopOverride(action, transport.loopOverride, LOOP_REPEAT_SETTINGS),
     reconfigureKey: transport.loopOverride,
     reportTime: transport.reportTime,
     restore,

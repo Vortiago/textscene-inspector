@@ -14,8 +14,7 @@ const procedural = (overrides: Partial<ProceduralSkyProperties> = {}) => ({
   ...overrides,
 });
 
-const value = (uniforms: Record<string, { value: unknown }>, name: string) =>
-  uniforms[name]?.value;
+const value = (uniforms: Record<string, { value: unknown }>, name: string) => uniforms[name]?.value;
 
 describe('skyUniforms — ProceduralSkyMaterial curve conversions', () => {
   it('reproduces the shader’s declared defaults from Godot’s authored defaults', () => {
@@ -38,22 +37,17 @@ describe('skyUniforms — ProceduralSkyMaterial curve conversions', () => {
 
   it('uploads the cosine of sun_angle_max, so 0 degrees is a point and 90 a hemisphere', () => {
     expect(value(skyUniforms(procedural({ sun_angle_max: 0 }), []), 'sun_angle_max')).toBeCloseTo(1);
-    expect(value(skyUniforms(procedural({ sun_angle_max: 90 }), []), 'sun_angle_max')).toBeCloseTo(
-      0
-    );
+    expect(value(skyUniforms(procedural({ sun_angle_max: 90 }), []), 'sun_angle_max')).toBeCloseTo(0);
   });
 });
 
 describe('skyUniforms — colours', () => {
   it('converts Godot sRGB colours into three’s linear working space', () => {
-    const u = skyUniforms(
-      procedural({ sky_top_color: { r: 0.5, g: 0.5, b: 0.5, a: 1 } }),
-      []
-    );
+    const u = skyUniforms(procedural({ sky_top_color: { r: 0.5, g: 0.5, b: 0.5, a: 1 } }), []);
     const top = value(u, 'sky_top_color') as THREE.Color;
     // sRGB 0.5 is ~0.214 linear. A shader fed the raw 0.5 renders visibly
     // brighter than Godot, which uploads `source_color` uniforms converted.
-    expect(top.r).toBeCloseTo(0.2140, 3);
+    expect(top.r).toBeCloseTo(0.214, 3);
   });
 
   it('pre-multiplies the sky colours by sky_energy_multiplier', () => {
@@ -66,10 +60,7 @@ describe('skyUniforms — colours', () => {
   });
 
   it('pre-multiplies the ground colours by ground_energy_multiplier, not the sky’s', () => {
-    const u = skyUniforms(
-      procedural({ sky_energy_multiplier: 4, ground_energy_multiplier: 2 }),
-      []
-    );
+    const u = skyUniforms(procedural({ sky_energy_multiplier: 4, ground_energy_multiplier: 2 }), []);
     const base = skyUniforms(procedural(), []);
     const ground = value(u, 'ground_bottom_color') as THREE.Color;
     const groundBase = value(base, 'ground_bottom_color') as THREE.Color;

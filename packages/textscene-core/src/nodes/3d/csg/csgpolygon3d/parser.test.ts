@@ -98,9 +98,12 @@ describe('parseCSGPolygon3D', () => {
   });
 
   it('draws nothing for a non-finite vertex, rather than one at the origin', () => {
-    const r = parseCSGPolygon3D({ type: 'node', attributes: {} }, {
-      polygon: 'PackedVector2Array(0, 0, inf, 4)',
-    });
+    const r = parseCSGPolygon3D(
+      { type: 'node', attributes: {} },
+      {
+        polygon: 'PackedVector2Array(0, 0, inf, 4)',
+      }
+    );
     expect(r.polygon.length).toBe(0);
   });
 

@@ -123,16 +123,11 @@ interface FrameWindow extends UvWindow {
  * window leaves `[0, 1]`, on strict tests. Flips only swap the box's diagonal,
  * and our v-window is Godot's mirrored about 0.5, which the test is symmetric under.
  */
-export function spriteWrapMode(
-  texture: THREE.Texture | undefined,
-  props: SpriteFrameProps
-): SpriteWrapMode {
+export function spriteWrapMode(texture: THREE.Texture | undefined, props: SpriteFrameProps): SpriteWrapMode {
   if (!texture) return 'clamp';
   const uv = frameUvWindow(texture, props);
   const outside = (min: number, size: number): boolean => min < 0 || min + size > 1;
-  return outside(uv.offset.x, uv.repeat.x) || outside(uv.offset.y, uv.repeat.y)
-    ? 'repeat'
-    : 'clamp';
+  return outside(uv.offset.x, uv.repeat.x) || outside(uv.offset.y, uv.repeat.y) ? 'repeat' : 'clamp';
 }
 
 /** The region-then-frame-grid composition, over an identity window. */

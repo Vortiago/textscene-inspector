@@ -43,7 +43,7 @@ export class RuleRegistry {
     const cached = this.rulesForNodeTypeCache.get(nodeType);
     if (cached) return cached;
 
-    const matched = this.getRules().filter(rule => {
+    const matched = this.getRules().filter((rule) => {
       const { applicableNodeTypes, applicableNodeTypeMatcher } = rule.meta;
       // A predicate matcher decides applicability on its own.
       if (applicableNodeTypeMatcher) {

@@ -12,11 +12,7 @@ import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import type { Marker3DProperties } from './types';
 
 // Per-vertex axis colours, X red, Y green, Z blue, whatever the size.
-const AXIS_COLORS = new Float32Array([
-  1, 0, 0, 1, 0, 0,
-  0, 1, 0, 0, 1, 0,
-  0, 0, 1, 0, 0, 1,
-]);
+const AXIS_COLORS = new Float32Array([1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1]);
 
 export function Marker3D({ node, children }: NodeComponentProps) {
   const props = node.properties as Marker3DProperties;
@@ -33,11 +29,7 @@ function AxisCross({ extents }: { extents: number }) {
   // Three axis lines through the origin: X, Y, Z.
   const positions = useMemo(() => {
     const e = extents > 0 ? extents : 0.25;
-    return new Float32Array([
-      -e, 0, 0, e, 0, 0,
-      0, -e, 0, 0, e, 0,
-      0, 0, -e, 0, 0, e,
-    ]);
+    return new Float32Array([-e, 0, 0, e, 0, 0, 0, -e, 0, 0, e, 0, 0, 0, -e, 0, 0, e]);
   }, [extents]);
   return <GizmoLine positions={positions} colors={AXIS_COLORS} />;
 }

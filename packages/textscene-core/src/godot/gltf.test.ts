@@ -17,7 +17,11 @@ describe('unsupportedRequiredGltfExtensions', () => {
 
   it('names each required extension Godot does not import', () => {
     expect(
-      unsupportedRequiredGltfExtensions(['EXT_mesh_gpu_instancing', 'KHR_texture_transform', 'KHR_draco_mesh_compression'])
+      unsupportedRequiredGltfExtensions([
+        'EXT_mesh_gpu_instancing',
+        'KHR_texture_transform',
+        'KHR_draco_mesh_compression',
+      ])
     ).toEqual(['EXT_mesh_gpu_instancing', 'KHR_draco_mesh_compression']);
   });
 
@@ -64,7 +68,9 @@ describe('readGltfRequiredExtensions', () => {
 
   it('reads a file as text when it lacks the GLB magic, whatever it is named', () => {
     // `_parse` decides on the first four bytes alone (`gltf_document.cpp:6514-6523`).
-    expect(readGltfRequiredExtensions(textBytes(`  ${REQUIRES_INSTANCING}`))).toEqual(['EXT_mesh_gpu_instancing']);
+    expect(readGltfRequiredExtensions(textBytes(`  ${REQUIRES_INSTANCING}`))).toEqual([
+      'EXT_mesh_gpu_instancing',
+    ]);
   });
 
   it('reads the JSON chunk alone, not the chunks after it', () => {
@@ -108,10 +114,9 @@ describe('readGltfRequiredExtensions', () => {
 
 describe('requiredGltfExtensions', () => {
   it('reads each string entry of extensionsRequired as written', () => {
-    expect(requiredGltfExtensions({ extensionsRequired: ['EXT_mesh_gpu_instancing', 'KHR_texture_transform'] })).toEqual([
-      'EXT_mesh_gpu_instancing',
-      'KHR_texture_transform',
-    ]);
+    expect(
+      requiredGltfExtensions({ extensionsRequired: ['EXT_mesh_gpu_instancing', 'KHR_texture_transform'] })
+    ).toEqual(['EXT_mesh_gpu_instancing', 'KHR_texture_transform']);
   });
 
   it('keeps a non-string entry, which Godot stringifies into a name no importer supports', () => {

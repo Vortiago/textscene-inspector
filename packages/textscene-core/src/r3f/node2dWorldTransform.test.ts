@@ -74,9 +74,7 @@ describe('node2dWorldPosition', () => {
       externalResources: [],
       internalResources: [],
     };
-    const roots = [
-      tnode('World', {}, [tnode('Player', n2d(100, 50), [], { instance: 'ExtResource("p")' })]),
-    ];
+    const roots = [tnode('World', {}, [tnode('Player', n2d(100, 50), [], { instance: 'ExtResource("p")' })])];
     const ctx: LiveTreeContext = {
       externalResources: [ext('p', 'res://player.tscn')],
       sceneCache: cacheOf({ 'res://player.tscn': playerScene }),

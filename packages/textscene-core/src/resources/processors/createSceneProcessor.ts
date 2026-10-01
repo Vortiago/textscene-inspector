@@ -15,9 +15,10 @@ import { isGltfPath } from '../../godot/gltf';
 /**
  * The `[gd_scene]` tag after any leading `;` comment and blank lines, which Godot
  * and the top-level parser both allow, so a scene that renders at top level also
- * loads when instanced. Anything else up front (HTML 404, stray text) fails.
+ * loads when instanced. Anything else up front (HTML 404, stray text) fails. A comment
+ * stops before `\r`, so each line has one reading and the match stays linear.
  */
-const SCENE_HEADER = /^(?:[ \t]*(?:;[^\n]*)?\r?\n)*[ \t]*\[gd_scene/;
+const SCENE_HEADER = /^(?:[ \t]*(?:;[^\r\n]*)?\r?\n)*[ \t]*\[gd_scene/;
 
 export interface SceneProcessorOptions {
   eventBus: ResourceEventBus;
@@ -56,9 +57,7 @@ export function createSceneProcessor({
         throw new Error(`Scene metadata not found: ${idOrPath}`);
       }
       if (metadata.type && metadata.type !== 'PackedScene') {
-        throw new Error(
-          `Not a PackedScene resource: ${idOrPath} (type: ${metadata.type})`
-        );
+        throw new Error(`Not a PackedScene resource: ${idOrPath} (type: ${metadata.type})`);
       }
       const provider = getProvider();
       if (!provider) {
@@ -73,9 +72,7 @@ export function createSceneProcessor({
       // so the registered path's extension decides how to make a TscnScene.
       if (isGltfPath(metadata.path)) {
         if (!(content instanceof ArrayBuffer)) {
-          throw new Error(
-            `GLB/GLTF must be binary content, got ${typeof content}: ${metadata.path}`
-          );
+          throw new Error(`GLB/GLTF must be binary content, got ${typeof content}: ${metadata.path}`);
         }
         return synthesiseGLBScene(metadata.path);
       }

@@ -375,10 +375,7 @@ describe('CodeEdit strict validators', () => {
   describe('auto_brace_completion_pairs (Dictionary of symbol-only string pairs)', () => {
     it('accepts the documented default', () => {
       expect(
-        check(
-          'auto_brace_completion_pairs',
-          '{ "\\"": "\\"", "\'": "\'", "(": ")", "[": "]", "{": "}" }'
-        )
+        check('auto_brace_completion_pairs', '{ "\\"": "\\"", "\'": "\'", "(": ")", "[": "]", "{": "}" }')
       ).toBeNull();
     });
 
