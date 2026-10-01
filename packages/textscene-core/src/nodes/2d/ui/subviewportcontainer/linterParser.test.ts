@@ -26,7 +26,7 @@ describe('SubViewportContainer validators', () => {
     it('rejects a non-boolean value', () => {
       const error = check('mouse_target', 'sure');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 });

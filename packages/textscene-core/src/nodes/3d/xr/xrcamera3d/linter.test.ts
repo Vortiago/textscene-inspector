@@ -43,7 +43,7 @@ describe('XRCamera3D parent rule', () => {
     const found = ruleDiagnostics(linter.lint(content));
     expect(found).toHaveLength(1);
     expect(found[0]!.ruleName).toBe(PARENT_RULE);
-    expect(found[0]!.severity).toBe('warning');
+    expect(found[0]).toBeAtTier('warning');
     expect(found[0]!.message).toContain('Node3D');
   });
 

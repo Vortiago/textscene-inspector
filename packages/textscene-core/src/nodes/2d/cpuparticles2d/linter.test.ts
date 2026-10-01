@@ -11,7 +11,7 @@ import {
   expectDiagnostic,
   expectNoDiagnostic,
 } from '../../../linter/testing/testkit';
-import { errorsOf } from '../../../linter/testing/tierLists';
+import { errorsOf, reportsOf } from '../../../linter/testing/tierLists';
 import './linterParser';
 import './linter';
 
@@ -27,11 +27,6 @@ describe('CPUParticles2D preview rule', () => {
   });
 
   const namesOf = (content: string) => linter.lint(content).map((d) => d.ruleName);
-  const severitiesOf = (content: string, ruleName: string) =>
-    linter
-      .lint(content)
-      .filter((d) => d.ruleName === ruleName)
-      .map((d) => d.severity);
 
   it('says nothing about a plain, previewable emitter (happy path)', () => {
     const diagnostics = linter.lint(scene('amount = 8\nemission_shape = 1\n'));
@@ -45,7 +40,9 @@ describe('CPUParticles2D preview rule', () => {
   ])('reports at info that emission_shape = %s (%s) draws from the global RNG', (value, label) => {
     const content = scene(`emission_shape = ${value}\n`);
     expect(namesOf(content)).toContain('cpuparticles2d-nondeterministic-emission-shape');
-    expect(severitiesOf(content, 'cpuparticles2d-nondeterministic-emission-shape')).toEqual(['info']);
+    expect(
+      reportsOf(linter.lint(content), 'cpuparticles2d-nondeterministic-emission-shape', 'info')
+    ).toHaveLength(1);
     expect(linter.lint(content)[0]!.message).toContain(label);
   });
 
@@ -81,7 +78,7 @@ describe('CPUParticles2D preview rule', () => {
   it('reports when `fract_delta` is explicitly enabled', () => {
     const content = scene('fract_delta = true\n');
     expect(namesOf(content)).toContain('cpuparticles2d-fract-delta-ignored');
-    expect(severitiesOf(content, 'cpuparticles2d-fract-delta-ignored')).toEqual(['info']);
+    expect(reportsOf(linter.lint(content), 'cpuparticles2d-fract-delta-ignored', 'info')).toHaveLength(1);
   });
 
   it('stays silent when `fract_delta` is omitted, though Godot defaults it TRUE', () => {
@@ -102,7 +99,7 @@ describe('CPUParticles2D preview rule', () => {
 
   it('never raises an ERROR — both conditions are legal Godot (severity contract)', () => {
     const diagnostics = linter.lint(scene('emission_shape = 6\nfract_delta = true\n'));
-    expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    expect(errorsOf(diagnostics)).toEqual([]);
   });
 
   it('leaves other node types alone (edge case)', () => {
@@ -171,7 +168,7 @@ describe('CPUParticles2D strict validators', () => {
     const diagnostics = linter.lint(scene('explosiveness = 4.0\n'));
     expect(errorsOf(linter.lint(scene('explosiveness = 4.0\n')))).toEqual([]);
     const warning = diagnostics.find((d) => d.message.includes('explosiveness'));
-    expect(warning?.severity).toBe('warning');
+    expect(warning).toBeAtTier('warning');
   });
 
   it('warns (not errors) on a spread beyond 180 degrees', () => {
@@ -180,7 +177,7 @@ describe('CPUParticles2D strict validators', () => {
     const diagnostics = linter.lint(scene('spread = 400.0\n'));
     expect(errorsOf(linter.lint(scene('spread = 400.0\n')))).toEqual([]);
     const warning = diagnostics.find((d) => d.message.includes('spread'));
-    expect(warning?.severity).toBe('warning');
+    expect(warning).toBeAtTier('warning');
   });
 
   it('rejects an emission_shape outside the enum', () => {
@@ -231,7 +228,7 @@ describe('CPUParticles2D dangling texture', () => {
       .lint(content)
       .filter((d) => d.ruleName === 'dangling-resource-reference');
     expect(found).toHaveLength(1);
-    expect(found[0]!.severity).toBe('error');
+    expect(found[0]).toBeAtTier('error');
   });
 
   it('says nothing when the referenced texture is declared', () => {

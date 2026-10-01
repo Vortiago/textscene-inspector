@@ -94,7 +94,7 @@ describe('MultiplayerSpawner strict validators', () => {
     expect(check('spawn_limit', '0')).toBeNull();
     expect(check('spawn_limit', '1024')).toBeNull();
     expect(check('spawn_limit', '999999')).toBeNull();
-    expect(check('spawn_limit', '-1')?.severity).toBe('warning');
+    expect(check('spawn_limit', '-1')).toBeAtTier('warning');
   });
 
   it('accepts the typed and bare spellings the slot converts', () => {

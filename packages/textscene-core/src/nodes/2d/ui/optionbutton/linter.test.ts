@@ -41,7 +41,7 @@ describe('optionbutton-selected-out-of-range', () => {
   it('warns when selected equals item_count (one past the last valid index)', () => {
     const found = findings(scene(node('OptionButton', { item_count: 3, selected: 3 })));
     expect(found).toHaveLength(1);
-    expect(found[0]?.severity).toBe('warning');
+    expect(found[0]).toBeAtTier('warning');
   });
 
   it('warns when selected exceeds item_count', () => {

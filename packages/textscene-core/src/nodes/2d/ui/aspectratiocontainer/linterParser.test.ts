@@ -58,7 +58,7 @@ describe('AspectRatioContainer strict validators', () => {
     it('warns below the floor rather than erroring', () => {
       const error = check('ratio', '0.0');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('rejects a non-numeric value', () => {
@@ -90,13 +90,13 @@ describe('AspectRatioContainer strict validators', () => {
     it('warns on a value beyond the enum (4) rather than erroring', () => {
       const error = check('stretch_mode', '4');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('warns on a negative value', () => {
       const error = check('stretch_mode', '-1');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -119,7 +119,7 @@ describe('AspectRatioContainer strict validators', () => {
     it('warns on a value beyond the enum (3) rather than erroring', () => {
       const error = check('alignment_horizontal', '3');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -142,7 +142,7 @@ describe('AspectRatioContainer strict validators', () => {
     it('warns on a negative value rather than erroring', () => {
       const error = check('alignment_vertical', '-1');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 

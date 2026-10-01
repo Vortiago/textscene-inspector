@@ -56,7 +56,7 @@ describe('test-kit diagnostic lookup', () => {
   });
 
   it('leaves an unambiguous `where` alone', () => {
-    expect(expectDiagnostic(ONE_RESOURCE_SLOT, { prop: 'resource reference' }).severity).toBe('error');
+    expect(expectDiagnostic(ONE_RESOURCE_SLOT, { prop: 'resource reference' })).toBeAtTier('error');
   });
 
   it('still fails when nothing matches, and says so differently', () => {

@@ -15,6 +15,7 @@ import { parseHeading } from '../parser/utils.js';
 import { FILE_DIAGNOSTIC_NAMES } from './fileDiagnostics.js';
 import type { Diagnostic } from './types.js';
 import './index.js';
+import { errorsOf } from './testing/tierLists';
 
 const here = dirname(fileURLToPath(import.meta.url)); // .../packages/textscene-core/src/linter
 const scenesRoot = resolve(here, '../../../../scenes');
@@ -124,7 +125,7 @@ function diagnosticsFor(dir: string, file: string): Diagnostic[] {
 }
 
 function lintFile(dir: string, file: string): { errors: number; messages: string[] } {
-  const errors = diagnosticsFor(dir, file).filter((d) => d.severity === 'error');
+  const errors = errorsOf(diagnosticsFor(dir, file));
   return { errors: errors.length, messages: errors.map((e) => `${file}: ${e.message}`) };
 }
 

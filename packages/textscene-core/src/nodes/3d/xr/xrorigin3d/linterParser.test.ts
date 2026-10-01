@@ -97,13 +97,13 @@ describe('XROrigin3D strict validators', () => {
     it('errors below the floor XRServer::set_world_scale clamps to (xr_server.cpp:126-127)', () => {
       const error = check('world_scale', '0.001');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('errors above the ceiling XRServer::set_world_scale clamps to (xr_server.cpp:128-129)', () => {
       const error = check('world_scale', '2000');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 

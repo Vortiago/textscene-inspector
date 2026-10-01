@@ -21,6 +21,7 @@ import { createFakeResourceLoader } from '../../resources/testing/createFakeReso
 import { godotColorToLinear } from '../../r3f/godotColor';
 import { CanvasLighting2DProvider, LIGHT_LAYER } from '../../r3f/lighting2d/CanvasLighting2D';
 import { SceneStack } from '../../r3f/testing/SceneStack';
+import { errorsOf } from '../../linter/testing/tierLists';
 import '../../r3f/nodes'; // side-effect: registers every node's r3f component
 import '../../linter/index'; // side-effect: registers every node's linter validators
 
@@ -85,7 +86,7 @@ function lightMaterials(renderer: TestRenderer): THREE.ShaderMaterial[] {
 }
 
 function lintErrorCount(raw: string): number {
-  return new Linter().lint(raw).filter((d) => d.severity === 'error').length;
+  return errorsOf(new Linter().lint(raw)).length;
 }
 
 /**
@@ -231,7 +232,7 @@ enabled = false
     expect(withLight.length, 'a scenes/fixtures/*.tscn must use PointLight2D').toBeGreaterThan(0);
     const raw = readFileSync(resolve(dir, withLight[0] as string), 'utf8');
     expect(flatten(new TscnParser().parse(raw)).some((n) => n.type === 'PointLight2D')).toBe(true);
-    const errors = new Linter().lint(raw).filter((d) => d.severity === 'error');
+    const errors = errorsOf(new Linter().lint(raw));
     expect(errors, `fixture ${withLight[0]} lints with errors: ${JSON.stringify(errors)}`).toHaveLength(0);
   });
 

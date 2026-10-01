@@ -46,19 +46,19 @@ describe('ScrollBar shared validators', () => {
     it('rejects -2 as a WARNING, since only the hint states the bound', () => {
       const error = check('VScrollBar', 'custom_step', '-2');
       expect(error).not.toBeNull();
-      expect(error!.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('rejects 4097 as a WARNING, one past the hint ceiling', () => {
       const error = check('VScrollBar', 'custom_step', '4097');
       expect(error).not.toBeNull();
-      expect(error!.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('rejects a malformed value as an ERROR, from the format branch', () => {
       const error = check('HScrollBar', 'custom_step', 'abc');
       expect(error).not.toBeNull();
-      expect(error!.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 });

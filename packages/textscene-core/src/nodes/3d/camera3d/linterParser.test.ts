@@ -78,17 +78,17 @@ describe('Camera3D size', () => {
     // `<= CMP_EPSILON`, not `<`. An inclusive floor at the same constant
     // accepts exactly the value the setter drops.
     const err = check('size', '1e-05');
-    expect(err?.severity).toBe('error');
+    expect(err).toBeAtTier('error');
   });
 
   it('errors below the setter floor', () => {
-    expect(check('size', '0')?.severity).toBe('error');
-    expect(check('size', '-5.0')?.severity).toBe('error');
+    expect(check('size', '0')).toBeAtTier('error');
+    expect(check('size', '-5.0')).toBeAtTier('error');
   });
 
   it('warns between the setter floor and the hint floor', () => {
     const err = check('size', '0.0005');
-    expect(err?.severity).toBe('warning');
+    expect(err).toBeAtTier('warning');
   });
 
   it('accepts from the hint floor up, with the ceiling left open by or_greater', () => {

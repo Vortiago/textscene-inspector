@@ -94,19 +94,19 @@ describe('build_mode', () => {
   it('rejects a non-numeric value as an error', () => {
     const result = check('build_mode', 'Solids');
     expect(result).not.toBeNull();
-    expect(result?.severity).toBe('error');
+    expect(result).toBeAtTier('error');
   });
 
   it('rejects an out-of-range value as an error (setter guard refuses it)', () => {
     const result = check('build_mode', '2');
     expect(result).not.toBeNull();
-    expect(result?.severity).toBe('error');
+    expect(result).toBeAtTier('error');
   });
 
   it('rejects a negative value as an error (ERR_FAIL_INDEX also refuses index < 0)', () => {
     const result = check('build_mode', '-1');
     expect(result).not.toBeNull();
-    expect(result?.severity).toBe('error');
+    expect(result).toBeAtTier('error');
   });
 });
 
@@ -125,7 +125,7 @@ describe('polygon', () => {
   it('rejects a non-numeric element as an error', () => {
     const result = check('polygon', 'PackedVector2Array(a, b)');
     expect(result).not.toBeNull();
-    expect(result?.severity).toBe('error');
+    expect(result).toBeAtTier('error');
   });
 
   it('accepts an odd element count (VariantParser drops the trailing coordinate via integer division, variant_parser.cpp:1555)', () => {
@@ -185,18 +185,18 @@ describe('one_way_collision_margin', () => {
   it('rejects a non-numeric value as an error', () => {
     const result = check('one_way_collision_margin', 'wide');
     expect(result).not.toBeNull();
-    expect(result?.severity).toBe('error');
+    expect(result).toBeAtTier('error');
   });
 
   it('accepts a value below the hinted floor as a warning only (setter never checks it)', () => {
     const result = check('one_way_collision_margin', '-1');
     expect(result).not.toBeNull();
-    expect(result?.severity).toBe('warning');
+    expect(result).toBeAtTier('warning');
   });
 
   it('accepts a value above the hinted 128 ceiling as a warning only (setter never checks it)', () => {
     const result = check('one_way_collision_margin', '200');
     expect(result).not.toBeNull();
-    expect(result?.severity).toBe('warning');
+    expect(result).toBeAtTier('warning');
   });
 });

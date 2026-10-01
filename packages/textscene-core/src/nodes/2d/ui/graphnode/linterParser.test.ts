@@ -68,19 +68,19 @@ describe('GraphNode strict validators', () => {
     it('errors at FOCUS_NONE=0 (ERR_FAIL_COND refuses it here, unlike plain Control.focus_mode)', () => {
       const result = check('slots_focus_mode', '0');
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
 
     it('errors above the enforced range', () => {
       const result = check('slots_focus_mode', '4');
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
 
     it('errors below zero', () => {
       const result = check('slots_focus_mode', '-1');
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
   });
 
@@ -143,7 +143,7 @@ describe('GraphNode strict validators', () => {
     it('errors on a negative slot index — GraphNode::set_slot refuses it (graph_node.cpp:706)', () => {
       const result = check('slot/-1/left_enabled', 'true');
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
 
     it('rejects a key with no leaf segment at all', () => {

@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 import { chainIkSubclassSettings } from './linterParser.js';
+import { expectError } from '../../../../linter/testing/validatorCheck.js';
 
 /**
  * Every key ChainIK3D registers. It has no `ADD_PROPERTY`: `_set` (chain_ik_3d.cpp:33), `_get` (:69)
@@ -67,8 +68,7 @@ describe('ChainIK3D settings index', () => {
   it('rejects a negative setting index', () => {
     // ERR_FAIL_INDEX_V(which, (int)settings.size(), false) at chain_ik_3d.cpp:39.
     const error = check('settings/-1/root_bone_name', '"Head"');
-    expect(error?.severity).toBe('error');
-    expect(error?.message).toContain('-1');
+    expectError(error, '-1');
   });
 
   it('accepts an index past the live setting count, which no per-property rule can see', () => {
@@ -81,7 +81,7 @@ describe('ChainIK3D settings index', () => {
     // and the write lands there. The key is not refused, and the leaf bound
     // still applies to the value that lands.
     expect(check('settings/x/root_bone_name', '"Head"')).toBeNull();
-    expect(check('settings/x/root_bone', '-5')?.severity).toBe('error');
+    expect(check('settings/x/root_bone', '-5')).toBeAtTier('error');
   });
 
   it('rejects an index to_int resolves as negative, however it is spelled', () => {
@@ -89,7 +89,7 @@ describe('ChainIK3D settings index', () => {
     // total is still 0 (ustring.cpp:2291-2292), so chain_ik_3d.cpp:37 reads
     // `a-1` as -1 and the ERR_FAIL_INDEX_V at :39 refuses it.
     const error = check('settings/a-1/root_bone_name', '"Head"');
-    expect(error?.severity).toBe('error');
+    expect(error).toBeAtTier('error');
     expect(error?.code).toBe('INVALID_SETTINGS_INDEX');
   });
 
@@ -98,7 +98,7 @@ describe('ChainIK3D settings index', () => {
     // write lands: only the leaf bound is left to refuse the value.
     expect(check('settings/-0-1/root_bone_name', '"Head"')).toBeNull();
     const error = check('settings/-0-1/root_bone', '-5');
-    expect(error?.severity).toBe('error');
+    expect(error).toBeAtTier('error');
     expect(error?.code).not.toBe('INVALID_SETTINGS_INDEX');
   });
 
@@ -115,7 +115,7 @@ describe('ChainIK3D empty setting index', () => {
   it('checks a leaf under an empty index, which "".to_int() reads as setting 0', () => {
     // `get_slicec('/', 1).to_int()` (chain_ik_3d.cpp:37) of an empty segment is 0 (ustring.cpp:2304-2305),
     // so set_root_bone runs and clamps the value (:186-188).
-    expect(check('settings//root_bone', '-2')?.severity).toBe('error');
+    expect(check('settings//root_bone', '-2')).toBeAtTier('error');
     expect(check('settings//root_bone', '3')).toBeNull();
   });
 });
@@ -124,10 +124,10 @@ describe('ChainIK3D key tails', () => {
   it('checks a leaf carrying a tail, since _set reads one segment', () => {
     // `what = path.get_slicec('/', 2)` (chain_ik_3d.cpp:38) is `root_bone`, so set_root_bone
     // runs and clamps the value (:186-188).
-    expect(check('settings/0/root_bone/extra', '-2')?.severity).toBe('error');
+    expect(check('settings/0/root_bone/extra', '-2')).toBeAtTier('error');
     expect(check('settings/0/root_bone/extra', '3')).toBeNull();
     // `opt = path.get_slicec('/', 3)` (:48) is `length`, so set_end_bone_length runs.
-    expect(check('settings/0/end_bone/length/extra', '-1')?.severity).toBe('warning');
+    expect(check('settings/0/end_bone/length/extra', '-1')).toBeAtTier('warning');
   });
 
   it('does not read an unknown end_bone option as end_bone itself', () => {
@@ -182,7 +182,7 @@ describe('ChainIK3D bone name leaves', () => {
   );
 
   it('rejects an unquoted bone name', () => {
-    expect(check('settings/0/root_bone_name', 'Head')?.severity).toBe('error');
+    expect(check('settings/0/root_bone_name', 'Head')).toBeAtTier('error');
   });
 });
 
@@ -198,11 +198,11 @@ describe('ChainIK3D bone index leaves', () => {
 
   it.each(['settings/0/root_bone', 'settings/0/end_bone'])('errors below -1 for %s', (key) => {
     // chain_ik_3d.cpp:186-188 / :223-225 force any bone <= -1 back to -1.
-    expect(check(key, '-2')?.severity).toBe('error');
+    expect(check(key, '-2')).toBeAtTier('error');
   });
 
   it('warns that a non-integer bone index is truncated', () => {
-    expect(check('settings/0/root_bone', '1.5')?.severity).toBe('warning');
+    expect(check('settings/0/root_bone', '1.5')).toBeAtTier('warning');
   });
 });
 
@@ -213,7 +213,7 @@ describe('ChainIK3D extend_end_bone', () => {
   });
 
   it('rejects a non-boolean', () => {
-    expect(check('settings/0/extend_end_bone', '1')?.severity).toBe('warning');
+    expect(check('settings/0/extend_end_bone', '1')).toBeAtTier('warning');
   });
 });
 
@@ -228,8 +228,8 @@ describe('ChainIK3D end_bone/direction', () => {
   it('warns past the enum, which the setter still stores', () => {
     // PROPERTY_HINT_ENUM (chain_ik_3d.cpp:131) constrains the inspector only;
     // set_end_bone_direction (:260) casts straight through.
-    expect(check('settings/0/end_bone/direction', '7')?.severity).toBe('warning');
-    expect(check('settings/0/end_bone/direction', '-1')?.severity).toBe('warning');
+    expect(check('settings/0/end_bone/direction', '7')).toBeAtTier('warning');
+    expect(check('settings/0/end_bone/direction', '-1')).toBeAtTier('warning');
   });
 });
 
@@ -244,7 +244,7 @@ describe('ChainIK3D end_bone/length', () => {
 
   it('warns below the hint floor, which the setter still stores', () => {
     // set_end_bone_length (chain_ik_3d.cpp:281) assigns unconditionally.
-    expect(check('settings/0/end_bone/length', '-0.5')?.severity).toBe('warning');
+    expect(check('settings/0/end_bone/length', '-0.5')).toBeAtTier('warning');
   });
 
   it('accepts inf, which Godot writes and reloads', () => {
@@ -262,7 +262,7 @@ describe('ChainIK3D joint_count', () => {
 
   it('errors on a negative count', () => {
     // ERR_FAIL_COND(p_count < 0) at chain_ik_3d.cpp:333.
-    expect(check('settings/0/joint_count', '-1')?.severity).toBe('error');
+    expect(check('settings/0/joint_count', '-1')).toBeAtTier('error');
   });
 });
 
@@ -271,8 +271,7 @@ describe('ChainIK3D derived joint leaves', () => {
     'errors on %s, which no _set branch accepts',
     (key) => {
       const error = check(key, '"Head"');
-      expect(error?.severity).toBe('error');
-      expect(error?.message).toContain('read-only');
+      expectError(error, 'read-only');
     }
   );
 
@@ -281,8 +280,7 @@ describe('ChainIK3D derived joint leaves', () => {
     // `return false` (chain_ik_3d.cpp:62-63) and the index text decides
     // nothing.
     const error = check('settings/0/joints/x/bone', '"Head"');
-    expect(error?.severity).toBe('error');
-    expect(error?.message).toContain('read-only');
+    expectError(error, 'read-only');
   });
 
   it('says nothing about a joint leaf a subclass adds', () => {

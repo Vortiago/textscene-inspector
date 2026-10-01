@@ -15,6 +15,7 @@ import {
 } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
+import { errorsOf, infosOf } from '../../../linter/testing/tierLists';
 
 /** Every range-window test below is about the windows, not the texture. */
 const WITH_TEXTURE = { texture: 'ExtResource("1")' };
@@ -65,7 +66,7 @@ describe('PointLight2D linter', () => {
     );
   });
 
-  it('never raises an error, so a fixture carrying one still lints clean', () => {
+  it('reports an inverted pair at info, never as an error, so a fixture carrying one still lints clean', () => {
     const diagnostics = lint(
       scene(
         node('PointLight2D', {
@@ -77,8 +78,8 @@ describe('PointLight2D linter', () => {
         })
       )
     );
-    expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
-    expect(diagnostics.filter((d) => d.severity === 'info')).toHaveLength(2);
+    expect(errorsOf(diagnostics)).toEqual([]);
+    expect(infosOf(diagnostics)).toHaveLength(2);
   });
 
   it("accepts a single-value window, which is Godot's own layer default", () => {

@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 // rules on import, so a direct import lints every scene into silence and the
 // suppression assertions below would pass against nothing.
 import { Linter } from './index.js';
+import { errorsOf } from './testing/tierLists';
 
 /** A scene that lints loudly: an unknown property and a dangling resource id. */
 const BODY = `
@@ -28,7 +29,7 @@ describe('a legacy format header', () => {
 
     const diagnostics = linter.lint(`[gd_scene format=2]\n${BODY}`);
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]?.severity).toBe('info');
+    expect(diagnostics[0]).toBeAtTier('info');
     expect(diagnostics[0]?.ruleName).toBe('legacy-format-version');
     expect(diagnostics[0]?.location?.line).toBe(1);
     expect(diagnostics[0]?.message).toContain('format=2');
@@ -103,6 +104,6 @@ mass = -5
   it.each([0, -1])('format=%i is linted, not declined as legacy', (format) => {
     const diagnostics = linter.lint(`[gd_scene format=${format}]\n${BODY}`);
     expect(diagnostics.some((d) => d.ruleName === 'legacy-format-version')).toBe(false);
-    expect(diagnostics.some((d) => d.severity === 'error' && d.message.includes('mass'))).toBe(true);
+    expect(errorsOf(diagnostics).some((d) => d.message.includes('mass'))).toBe(true);
   });
 });

@@ -12,6 +12,7 @@ import {
 } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
+import { errorsOf } from '../../../linter/testing/tierLists';
 
 /** A SpriteFrames sub-resource so AnimatedSprite2D nodes can reference an existing resource. */
 const spriteFrames = '[sub_resource type="SpriteFrames" id="frames_1"]';
@@ -168,8 +169,8 @@ describe('AnimatedSprite2D Linter', () => {
         )
       );
       expect(diagnostics).toHaveLength(1);
+      expect(diagnostics[0]).toBeAtTier('error');
       expect(diagnostics[0]).toMatchObject({
-        severity: 'error',
         nodeName: 'MissingSpriteFrames',
         nodeType: 'AnimatedSprite2D',
         ruleName: 'dangling-resource-reference',
@@ -221,7 +222,7 @@ describe('AnimatedSprite2D Linter', () => {
       expect(
         diagnostics.filter((d) => d.ruleName === 'animatedsprite2d-animation-no-spriteframes')
       ).toHaveLength(0);
-      expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0);
+      expect(errorsOf(diagnostics)).toHaveLength(0);
     });
 
     it('should pass when both animation and sprite_frames are set', () => {
@@ -388,7 +389,7 @@ animation = &"idle"
 `;
 
   it('resolves to sprite_frames, so no rule fires', () => {
-    expect(lint(scene).filter((d) => d.severity === 'error')).toEqual([]);
+    expect(errorsOf(lint(scene))).toEqual([]);
   });
 
   it('does not ask for a sprite_frames that is already set', () => {

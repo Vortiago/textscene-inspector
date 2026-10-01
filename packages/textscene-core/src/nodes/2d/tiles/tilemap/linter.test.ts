@@ -153,7 +153,8 @@ describe('format, read as it stood when each layer loaded', () => {
     );
     expect(diagnostics.filter((d) => d.ruleName === 'tilemap-unsupported-format')).toEqual([]);
     const onFormat = diagnostics.filter((d) => d.message.includes("'format'"));
-    expect(onFormat.map((d) => d.severity)).toEqual(['error']);
+    expect(onFormat).toHaveLength(1);
+    expect(onFormat).toBeAllAtTier('error');
     expect(onFormat[0]!.message).toContain('dropped');
     expect(diagnostics.filter((d) => d.ruleName === 'tilemap-invalid-tile-data')).toHaveLength(1);
   });

@@ -93,8 +93,8 @@ describe('v.int', () => {
   // warns. It is judged after the bounds, so `0.9` under a floor of 1 keeps
   // its range error.
   it('warns that a float literal is truncated toward zero', () => {
-    expect(v.int('frame', { min: 0, max: 10 })('frame', '5.9', 1)?.severity).toBe('warning');
-    expect(v.int('frame', { min: 1, max: 10 })('frame', '0.9', 1)?.severity).toBe('error');
+    expect(v.int('frame', { min: 0, max: 10 })('frame', '5.9', 1)).toBeAtTier('warning');
+    expect(v.int('frame', { min: 1, max: 10 })('frame', '0.9', 1)).toBeAtTier('error');
   });
 });
 
@@ -111,8 +111,8 @@ describe('the int combinators agree on what Godot can read', () => {
     // `Vector2i(inf, 8)` and its three siblings all store `(-2147483648, 8)`:
     // the narrowing at parse time is an alteration, the error tier. A float
     // slot stores it verbatim and stays silent, the case directly below.
-    expect(v.int('frame')('frame', literal, 1)?.severity).toBe('error');
-    expect(v.strictInt('frame')('frame', literal, 1)?.severity).toBe('error');
+    expect(v.int('frame')('frame', literal, 1)).toBeAtTier('error');
+    expect(v.strictInt('frame')('frame', literal, 1)).toBeAtTier('error');
     expect(v.float('weight')('weight', literal, 1)).toBeNull();
   });
 
@@ -121,7 +121,7 @@ describe('the int combinators agree on what Godot can read', () => {
     // only the alteration is portable, and `nan` and `inf` read alike.
     for (const literal of ['inf', 'nan']) {
       const reported = v.int('frame', { min: 0, max: 10 })('frame', literal, 1);
-      expect(reported?.severity).toBe('error');
+      expect(reported).toBeAtTier('error');
       expect(reported?.message).not.toContain('2147483648');
       expect(reported?.message).toContain('integer slot');
     }
@@ -139,7 +139,7 @@ describe('the int combinators agree on what Godot can read', () => {
       v.strictInt('frame', { min: 0, max: 10 }),
     ]) {
       const diagnostic = validator('frame', '5.5', 1);
-      expect(diagnostic?.severity).toBe('warning');
+      expect(diagnostic).toBeAtTier('warning');
       expect(diagnostic?.code).toBe('INVALID_FRAME_VALUE');
     }
   });

@@ -13,6 +13,7 @@ import {
   runPropertyValidation,
 } from '../../../../linter/testing/testkit';
 import './linterParser';
+import { errorsOf, warningsOf } from '../../../../linter/testing/tierLists';
 
 describe('AreaLight3D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -86,15 +87,13 @@ describe('AreaLight3D Linter', () => {
     describe('light energy warnings', () => {
       it('warns rather than errors on negative light_energy', () => {
         const diagnostics = lint(scene(node('AreaLight3D', { light_energy: -0.005, area_range: 2.0 })));
-        expect(diagnostics.some((d) => d.severity === 'warning' && d.message.includes('light_energy'))).toBe(
-          true
-        );
-        expect(diagnostics.some((d) => d.severity === 'error')).toBe(false);
+        expect(warningsOf(diagnostics).some((d) => d.message.includes('light_energy'))).toBe(true);
+        expect(errorsOf(diagnostics)).toEqual([]);
       });
 
       it.each([0, 0.005, 1.5, 150])('says nothing about light_energy %s', (energy) => {
         const diagnostics = lint(scene(node('AreaLight3D', { light_energy: energy, area_range: 2.0 })));
-        expect(diagnostics.some((d) => d.severity === 'warning')).toBe(false);
+        expect(warningsOf(diagnostics)).toEqual([]);
       });
     });
 

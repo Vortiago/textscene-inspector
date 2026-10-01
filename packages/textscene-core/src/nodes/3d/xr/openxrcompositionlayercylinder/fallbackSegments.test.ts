@@ -12,7 +12,7 @@ const check = (value: string) =>
 describe('fallback_segments reads the slot the engine declares', () => {
   it('refuses exactly 0, the one value the guard names', () => {
     // ERR_FAIL_COND(p_fallback_segments == 0), openxr_composition_layer_cylinder.cpp:170
-    expect(check('0')?.severity).toBe('error');
+    expect(check('0')).toBeAtTier('error');
   });
 
   it('accepts a value above INT32_MAX, which the unsigned slot holds', () => {

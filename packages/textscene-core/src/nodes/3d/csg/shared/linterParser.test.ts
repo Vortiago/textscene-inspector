@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { Linter } from '../../../../linter/Linter.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import './linterParser.js';
+import { errorsOf } from '../../../../linter/testing/tierLists';
 
 /** Every key csg_shape.cpp:1040-1051 binds on CSGShape3D. */
 const KEYS = [
@@ -56,13 +57,13 @@ describe('CSGShape3D shared validators', () => {
     // csg_shape.cpp:1040 hints "Union,Intersection,Subtraction";
     // set_operation:933-937 assigns straight through.
     for (const legal of ['0', '1', '2']) expect(check('operation', legal)).toBeNull();
-    expect(check('operation', '5')?.severity).toBe('warning');
+    expect(check('operation', '5')).toBeAtTier('warning');
   });
 
   it.each(['use_collision', 'calculate_tangents'])('%s takes only a bool literal', (key) => {
     expect(check(key, 'true')).toBeNull();
     expect(check(key, 'false')).toBeNull();
-    expect(check(key, '"banana"')?.severity).toBe('error');
+    expect(check(key, '"banana"')).toBeAtTier('error');
   });
 
   it.each(['collision_layer', 'collision_mask'])('%s is a 32-bit layer mask', (key) => {
@@ -70,21 +71,21 @@ describe('CSGShape3D shared validators', () => {
     // uint32_t (csg_shape.h:72-73) unguarded, so 0 and all-on are both legal.
     expect(check(key, '0')).toBeNull();
     expect(check(key, '4294967295')).toBeNull();
-    expect(check(key, '"banana"')?.severity).toBe('error');
+    expect(check(key, '"banana"')).toBeAtTier('error');
     // Bit 33 does not exist in the slot.
-    expect(check(key, '4294967296')?.severity).toBe('error');
+    expect(check(key, '4294967296')).toBeAtTier('error');
   });
 
   it('collision_priority is an unbounded float', () => {
     // csg_shape.cpp:1051 declares it with no hint; set_collision_priority:188-193
     // is a bare assignment.
     expect(check('collision_priority', '-3.5')).toBeNull();
-    expect(check('collision_priority', '"banana"')?.severity).toBe('error');
+    expect(check('collision_priority', '"banana"')).toBeAtTier('error');
   });
 
   it('a whole-scene lint reports the malformed values', () => {
     const diagnostics = new Linter().lint(scene('use_collision = "banana"\ncollision_layer = "banana"'));
-    const errors = diagnostics.filter((d) => d.severity === 'error').map((d) => d.message);
+    const errors = errorsOf(diagnostics).map((d) => d.message);
     expect(errors.some((m) => m.includes('use_collision'))).toBe(true);
     expect(errors.some((m) => m.includes('collision_layer'))).toBe(true);
   });

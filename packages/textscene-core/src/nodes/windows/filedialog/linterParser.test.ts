@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import './linterParser';
+import { expectError } from '../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -52,12 +53,11 @@ describe('FileDialog strict validators', () => {
 
     it('rejects 5 as an error (set_file_mode ERR_FAIL_INDEXes at 5)', () => {
       const error = check('file_mode', '5');
-      expect(error?.severity).toBe('error');
-      expect(error?.message).toContain('0-4');
+      expectError(error, '0-4');
     });
 
     it('rejects a negative index as an error', () => {
-      expect(check('file_mode', '-1')?.severity).toBe('error');
+      expect(check('file_mode', '-1')).toBeAtTier('error');
     });
   });
 
@@ -69,8 +69,7 @@ describe('FileDialog strict validators', () => {
 
     it('rejects 2 as an error (set_display_mode ERR_FAIL_INDEXes at DISPLAY_MAX = 2)', () => {
       const error = check('display_mode', '2');
-      expect(error?.severity).toBe('error');
-      expect(error?.message).toContain('0-1');
+      expectError(error, '0-1');
     });
   });
 
@@ -83,8 +82,7 @@ describe('FileDialog strict validators', () => {
 
     it('rejects 3 as an error (set_access ERR_FAIL_INDEXes at 3)', () => {
       const error = check('access', '3');
-      expect(error?.severity).toBe('error');
-      expect(error?.message).toContain('0-2');
+      expectError(error, '0-2');
     });
   });
 
@@ -174,8 +172,7 @@ describe('FileDialog strict validators', () => {
 
     it('rejects a negative count as an error (set_option_count ERR_FAIL_CONDs below 0)', () => {
       const error = check('option_count', '-1');
-      expect(error?.severity).toBe('error');
-      expect(error?.message).toContain('non-negative');
+      expectError(error, 'non-negative');
     });
   });
 
@@ -193,7 +190,7 @@ describe('FileDialog strict validators', () => {
       // index `is_valid_int()` (property_list_helper.cpp:53-55), so `_set`
       // returns false and Godot drops the write.
       expect(check('option_x/name', '"Format"')?.code).toBe('INVALID_OPTION_KEY');
-      expect(check('option_1.5/name', '"Format"')?.severity).toBe('error');
+      expect(check('option_1.5/name', '"Format"')).toBeAtTier('error');
     });
 
     it('errors on a negative option default, floored by both CLAMP branches', () => {
@@ -201,7 +198,7 @@ describe('FileDialog strict validators', () => {
       // to (0, values.size() - 1) when it has (file_dialog.cpp:2011-2015). The
       // ceiling depends on the sibling `values`, which a per-key validator
       // cannot see. The floor of 0 does not.
-      expect(check('option_0/default', '-1')?.severity).toBe('error');
+      expect(check('option_0/default', '-1')).toBeAtTier('error');
       expect(check('option_0/default', '0')).toBeNull();
     });
 
@@ -215,7 +212,7 @@ describe('FileDialog strict validators', () => {
       // leaf known, so `INVALID_OPTION_KEY`'s "unknown property" wording would name
       // the wrong half of the key. The semantic rule leaves this band here.
       const error = check('option_-1/name', '"Extra"');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_OPTION_INDEX');
       expect(error?.message).toContain('-1');
     });

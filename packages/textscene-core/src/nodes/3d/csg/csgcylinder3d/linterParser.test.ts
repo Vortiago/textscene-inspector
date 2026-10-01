@@ -60,9 +60,7 @@ radius = -1.0
   it('accepts sides at either end of the range, in silence', () => {
     for (const value of [3, 64]) {
       expect(errorsOf(linter.lint(sidesScene(value)))).toEqual([]);
-      expect(warningsOf(linter.lint(sidesScene(value))).filter((w) => w.message.includes('sides'))).toEqual(
-        []
-      );
+      expect(linter.lint(sidesScene(value)).filter((d) => d.message.includes('sides'))).toEqual([]);
     }
   });
 
@@ -84,6 +82,6 @@ cone = 3
     // the diagnostic is about the spelling Godot writes back, not a refusal.
     const found = linter.lint(content).filter((d) => d.message.includes('cone'));
     expect(found.length).toBeGreaterThan(0);
-    expect(found[0]!.severity).toBe('warning');
+    expect(found[0]).toBeAtTier('warning');
   });
 });

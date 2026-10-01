@@ -98,13 +98,13 @@ describe('VoxelGI strict validators', () => {
     it('rejects 4 (SUBDIV_MAX itself) as an error, refused by ERR_FAIL_INDEX', () => {
       const result = check('subdiv', '4');
       expect(result).not.toBeNull();
-      expect(result?.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
 
     it('rejects a negative index as an error', () => {
       const result = check('subdiv', '-1');
       expect(result).not.toBeNull();
-      expect(result?.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
   });
 
@@ -124,7 +124,7 @@ describe('VoxelGI strict validators', () => {
     it('flags a component below 1.0 as an error — set_size alters rather than refuses it', () => {
       const result = check('size', 'Vector3(0.5, 20, 20)');
       expect(result).not.toBeNull();
-      expect(result?.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
 
     it('accepts +inf on a component — maxf(inf, 1.0) leaves it unchanged', () => {

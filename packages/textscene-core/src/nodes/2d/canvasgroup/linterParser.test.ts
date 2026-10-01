@@ -86,13 +86,13 @@ describe('CanvasGroup strict validators', () => {
 
     it('rejects a non-numeric value as a format error', () => {
       const error = check(prop, 'not-a-number');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('errors on a negative value: the setter refuses it outright', () => {
       // canvas_group.cpp:34 / :47 `ERR_FAIL_COND(p_*_margin < 0.0)`.
       const error = check(prop, '-1');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 
@@ -104,7 +104,7 @@ describe('CanvasGroup strict validators', () => {
 
     it('rejects anything else', () => {
       const error = check('use_mipmaps', '1');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 });

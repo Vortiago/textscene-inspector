@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
 import './linterParser';
+import { expectError } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -66,15 +67,14 @@ describe('VideoStreamPlayer strict validators', () => {
 
     it('rejects a track index that is not a number', () => {
       const error = check('audio_track', 'first');
-      expect(error?.severity).toBe('error');
-      expect(error?.message).toContain('audio_track');
+      expectError(error, 'audio_track');
     });
 
     it('only warns outside the span, because set_audio_track assigns straight through', () => {
       // video_stream_player.cpp:399, `audio_track = p_track;`, no clamp, so the
       // "0,128,1" hint at video_stream_player.cpp:573 binds the inspector only.
-      expect(check('audio_track', '-1')?.severity).toBe('warning');
-      expect(check('audio_track', '129')?.severity).toBe('warning');
+      expect(check('audio_track', '-1')).toBeAtTier('warning');
+      expect(check('audio_track', '129')).toBeAtTier('warning');
     });
   });
 
@@ -87,16 +87,15 @@ describe('VideoStreamPlayer strict validators', () => {
 
     it('rejects a buffer size that is not a number', () => {
       const error = check('buffering_msec', 'half a second');
-      expect(error?.severity).toBe('error');
-      expect(error?.message).toContain('buffering_msec');
+      expectError(error, 'buffering_msec');
     });
 
     it('only warns outside the span, because set_buffering_msec assigns straight through', () => {
       // video_stream_player.cpp:391, `buffering_ms = p_msec;`. The value reaches
       // AudioRBResampler::setup, which rounds a ring-buffer SIZE from it without
       // touching the stored property, so nothing enforces the hint's ends.
-      expect(check('buffering_msec', '0')?.severity).toBe('warning');
-      expect(check('buffering_msec', '5000')?.severity).toBe('warning');
+      expect(check('buffering_msec', '0')).toBeAtTier('warning');
+      expect(check('buffering_msec', '5000')).toBeAtTier('warning');
     });
   });
 
@@ -117,15 +116,13 @@ describe('VideoStreamPlayer strict validators', () => {
 
     it('rejects a speed that is not a number', () => {
       const error = check('speed_scale', 'double');
-      expect(error?.severity).toBe('error');
-      expect(error?.message).toContain('speed_scale');
+      expectError(error, 'speed_scale');
     });
 
     it('errors below zero, which the setter refuses outright', () => {
       // video_stream_player.cpp:437, `ERR_FAIL_COND(p_speed_scale < 0.0);`
       const error = check('speed_scale', '-0.5');
-      expect(error?.severity).toBe('error');
-      expect(error?.message).toContain('non-negative');
+      expectError(error, 'non-negative');
     });
   });
 
@@ -141,22 +138,21 @@ describe('VideoStreamPlayer strict validators', () => {
 
     it('rejects a volume that is not a number', () => {
       const error = check('volume_db', 'loud');
-      expect(error?.severity).toBe('error');
-      expect(error?.message).toContain('volume_db');
+      expectError(error, 'volume_db');
     });
 
     it('errors below -80, where the setter collapses the value to silence', () => {
       // video_stream_player.cpp:421-422, `if (p_db < -79) { set_volume(0); }`, and
       // get_volume_db then returns -80 (video_stream_player.cpp:429-430), so a
       // quieter value is not the value that survives the load.
-      expect(check('volume_db', '-96.0')?.severity).toBe('error');
+      expect(check('volume_db', '-96.0')).toBeAtTier('error');
     });
 
     it('only warns above 24, where the setter converts straight through', () => {
       // The else branch, video_stream_player.cpp:424, stores db_to_linear(p_db)
       // with no ceiling, so "-80,24,0.01,suffix:dB" at video_stream_player.cpp:575
       // binds the inspector slider only.
-      expect(check('volume_db', '40.0')?.severity).toBe('warning');
+      expect(check('volume_db', '40.0')).toBeAtTier('warning');
     });
   });
 
@@ -176,13 +172,13 @@ describe('VideoStreamPlayer strict validators', () => {
     it('rejects a non-boolean literal on every flag', () => {
       for (const flag of FLAGS) {
         const error = check(flag, '1');
-        expect(error?.severity, flag).toBe('warning');
+        expect(error, flag).toBeAtTier('warning');
         expect(error?.message, flag).toContain(flag);
       }
     });
 
     it('rejects a capitalised literal, which the TSCN grammar does not read', () => {
-      expect(check('expand', 'True')?.severity).toBe('error');
+      expect(check('expand', 'True')).toBeAtTier('error');
     });
   });
 
@@ -195,8 +191,7 @@ describe('VideoStreamPlayer strict validators', () => {
 
     it('rejects an unquoted bus name', () => {
       const error = check('bus', 'Master');
-      expect(error?.severity).toBe('error');
-      expect(error?.message).toContain('bus');
+      expectError(error, 'bus');
     });
 
     it('does not judge which bus names exist, because the scene cannot know', () => {
@@ -217,12 +212,11 @@ describe('VideoStreamPlayer strict validators', () => {
 
     it('rejects a bare path where a reference belongs', () => {
       const error = check('stream', '"res://video/intro.ogv"');
-      expect(error?.severity).toBe('error');
-      expect(error?.message).toContain('stream');
+      expectError(error, 'stream');
     });
 
     it('rejects a truncated reference', () => {
-      expect(check('stream', 'ExtResource(')?.severity).toBe('error');
+      expect(check('stream', 'ExtResource(')).toBeAtTier('error');
     });
   });
 

@@ -7,6 +7,7 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';
 import '../../../linter/index.js';
+import { errorsOf } from '../../../linter/testing/tierLists';
 
 function lint(curveData: string) {
   const content = `[gd_scene load_steps=2 format=3]
@@ -34,7 +35,7 @@ function bareSix(): string {
 }
 
 function curveErrors(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.severity === 'error' && d.ruleName === 'curve3d-loadable');
+  return errorsOf(diagnostics).filter((d) => d.ruleName === 'curve3d-loadable');
 }
 
 describe('curve3d-loadable', () => {

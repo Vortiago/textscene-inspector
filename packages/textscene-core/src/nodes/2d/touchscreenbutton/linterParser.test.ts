@@ -187,11 +187,11 @@ describe('TouchScreenButton strict validators', () => {
       // touch_screen_button.cpp:374-377 has no ERR_FAIL_INDEX and the header enum
       // (touch_screen_button.h:42-45) has no MAX sentinel. Only the PROPERTY_HINT_ENUM
       // at cpp:442 states the bound, so this is a warning (ADR-0032), not an error.
-      expect(check('visibility_mode', '2')?.severity).toBe('warning');
+      expect(check('visibility_mode', '2')).toBeAtTier('warning');
     });
 
     it('warns below the hint range too, the same bare-string grounding covering both ends', () => {
-      expect(check('visibility_mode', '-1')?.severity).toBe('warning');
+      expect(check('visibility_mode', '-1')).toBeAtTier('warning');
     });
 
     it('rejects a non-numeric value', () => {

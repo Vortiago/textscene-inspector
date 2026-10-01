@@ -83,10 +83,10 @@ describe('OpenXRCompositionLayerCylinder strict validators', () => {
       expect(check('radius', '0.5')).toBeNull();
     });
     it('errors at exactly 0', () => {
-      expect(check('radius', '0')?.severity).toBe('error');
+      expect(check('radius', '0')).toBeAtTier('error');
     });
     it('errors below 0', () => {
-      expect(check('radius', '-1')?.severity).toBe('error');
+      expect(check('radius', '-1')).toBeAtTier('error');
     });
   });
 
@@ -96,8 +96,8 @@ describe('OpenXRCompositionLayerCylinder strict validators', () => {
     // stricter of the two and refuses every value the hint would warn on: there
     // is no warned band under the floor.
     it('errors at 0', () => {
-      expect(check('aspect_ratio', '0')?.severity).toBe('error');
-      expect(check('aspect_ratio', '-1')?.severity).toBe('error');
+      expect(check('aspect_ratio', '0')).toBeAtTier('error');
+      expect(check('aspect_ratio', '-1')).toBeAtTier('error');
     });
 
     it('accepts the smallest positive value the setter allows', () => {
@@ -107,7 +107,7 @@ describe('OpenXRCompositionLayerCylinder strict validators', () => {
     // never caps it.
     it('accepts the hinted ceiling and warns past it', () => {
       expect(check('aspect_ratio', '100')).toBeNull();
-      expect(check('aspect_ratio', '101')?.severity).toBe('warning');
+      expect(check('aspect_ratio', '101')).toBeAtTier('warning');
     });
   });
 
@@ -119,8 +119,8 @@ describe('OpenXRCompositionLayerCylinder strict validators', () => {
       expect(check('central_angle', '1000')).toBeNull();
     });
     it('errors at 0 and below', () => {
-      expect(check('central_angle', '0')?.severity).toBe('error');
-      expect(check('central_angle', '-0.5')?.severity).toBe('error');
+      expect(check('central_angle', '0')).toBeAtTier('error');
+      expect(check('central_angle', '-0.5')).toBeAtTier('error');
     });
   });
 
@@ -130,7 +130,7 @@ describe('OpenXRCompositionLayerCylinder strict validators', () => {
       expect(check('fallback_segments', '16')).toBeNull();
     });
     it('errors at exactly 0', () => {
-      expect(check('fallback_segments', '0')?.severity).toBe('error');
+      expect(check('fallback_segments', '0')).toBeAtTier('error');
     });
     it('does not report a floor of 1, which no engine line states', () => {
       // The parameter is uint32_t, so `-1` narrows to 4294967295 before the `== 0` guard runs:

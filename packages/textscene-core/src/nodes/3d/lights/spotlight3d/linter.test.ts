@@ -431,7 +431,7 @@ describe('SpotLight3D Linter', () => {
       // shadow_opacity (light_3d.cpp:407) is a hint behind Light3D::set_param's
       // index-only guard, same as every other bound here, so nothing in this
       // scene can be an error (ADR-0032).
-      expect(diagnostics.every((d) => d.severity === 'warning')).toBe(true);
+      expect(diagnostics).toBeAllAtTier('warning');
     });
 
     it('should handle only spot-specific properties', () => {
@@ -473,7 +473,7 @@ describe('SpotLight3D Linter', () => {
       // Three properties below their hints warn; the two attenuations have no
       // hint band at all (light_3d.cpp:673/:675) and stay silent.
       expect(diagnostics).toHaveLength(3);
-      expect(diagnostics.every((d) => d.severity === 'warning')).toBe(true);
+      expect(diagnostics).toBeAllAtTier('warning');
       expect(
         ['light_energy', 'spot_range', 'spot_angle'].filter(
           (property) => !diagnostics.some((d) => d.message.includes(property))

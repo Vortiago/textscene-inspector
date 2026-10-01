@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import './linterParser';
+import { expectWarning } from '../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -33,14 +34,13 @@ describe('CPUParticles2D strict validators', () => {
     // while the hint (:1495, "0.01,600.0,0.01,or_greater,exp,suffix:s") floors
     // at 0.01 and opens the ceiling.
     it('errors at or below the floor the setter refuses', () => {
-      expect(check('lifetime', '0')?.severity).toBe('error');
-      expect(check('lifetime', '-1')?.severity).toBe('error');
+      expect(check('lifetime', '0')).toBeAtTier('error');
+      expect(check('lifetime', '-1')).toBeAtTier('error');
     });
 
     it('warns between the refused floor and the hinted one', () => {
       const warning = check('lifetime', '0.005');
-      expect(warning?.severity).toBe('warning');
-      expect(warning?.message).toContain('0.01');
+      expectWarning(warning, '0.01');
     });
 
     it('accepts the hint floor and anything past the open ceiling', () => {
@@ -68,11 +68,11 @@ describe('CPUParticles2D strict validators', () => {
     });
 
     it('warns just above 1, which set_draw_order does not ERR_FAIL_INDEX', () => {
-      expect(check('draw_order', '2')?.severity).toBe('warning');
+      expect(check('draw_order', '2')).toBeAtTier('warning');
     });
 
     it('warns just below 0', () => {
-      expect(check('draw_order', '-1')?.severity).toBe('warning');
+      expect(check('draw_order', '-1')).toBeAtTier('warning');
     });
 
     it('warns (not errors) on the value scenes/demos/2d/platformer/enemy/enemy.tscn:296 ships (`draw_order = 215832976`)', () => {
@@ -80,7 +80,7 @@ describe('CPUParticles2D strict validators', () => {
       // the engine opens without complaint.
       const warning = check('draw_order', '215832976');
       expect(warning?.code).toBe('INVALID_DRAW_ORDER_VALUE');
-      expect(warning?.severity).toBe('warning');
+      expect(warning).toBeAtTier('warning');
     });
 
     it('is NOT the same enum as GPUParticles2D.draw_order, which accepts a third value (2) this one warns on', () => {
@@ -88,7 +88,7 @@ describe('CPUParticles2D strict validators', () => {
       // CPUParticles2D's DrawOrder (cpu_particles_2d.h:43-45) has only Index and
       // Lifetime, so 2 is out of range here.
       const warning = check('draw_order', '2');
-      expect(warning?.severity).toBe('warning');
+      expect(warning).toBeAtTier('warning');
     });
   });
 
@@ -105,8 +105,8 @@ describe('CPUParticles2D strict validators', () => {
     it.each(['hue_variation_min', 'hue_variation_max'])(
       'warns one hint step (0.01) past either endpoint of %s',
       (prop) => {
-        expect(check(prop, '-1.01')?.severity).toBe('warning');
-        expect(check(prop, '1.01')?.severity).toBe('warning');
+        expect(check(prop, '-1.01')).toBeAtTier('warning');
+        expect(check(prop, '1.01')).toBeAtTier('warning');
       }
     );
 
@@ -131,8 +131,8 @@ describe('CPUParticles2D strict validators', () => {
     });
 
     it('warns one hint step (1) past either endpoint', () => {
-      expect(check('fixed_fps', '-1')?.severity).toBe('warning');
-      expect(check('fixed_fps', '1001')?.severity).toBe('warning');
+      expect(check('fixed_fps', '-1')).toBeAtTier('warning');
+      expect(check('fixed_fps', '1001')).toBeAtTier('warning');
     });
 
     it('reports the VALUE code, not the FORMAT one, for an out-of-hint number', () => {
@@ -142,7 +142,7 @@ describe('CPUParticles2D strict validators', () => {
     it('rejects a non-numeric value (FORMAT branch, always an error)', () => {
       const error = check('fixed_fps', 'fast');
       expect(error?.code).toBe('INVALID_FIXED_FPS_FORMAT');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 
@@ -161,8 +161,8 @@ describe('CPUParticles2D strict validators', () => {
     });
 
     it('warns one hint step (0.01) past either endpoint', () => {
-      expect(check('emission_sphere_radius', '0')?.severity).toBe('warning');
-      expect(check('emission_sphere_radius', '128.01')?.severity).toBe('warning');
+      expect(check('emission_sphere_radius', '0')).toBeAtTier('warning');
+      expect(check('emission_sphere_radius', '128.01')).toBeAtTier('warning');
     });
 
     it('reports the VALUE code, not the FORMAT one, for an out-of-hint number', () => {
@@ -172,7 +172,7 @@ describe('CPUParticles2D strict validators', () => {
     it('rejects a non-numeric value (FORMAT branch, always an error)', () => {
       const error = check('emission_sphere_radius', 'wide');
       expect(error?.code).toBe('INVALID_EMISSION_SPHERE_RADIUS_FORMAT');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 
@@ -193,7 +193,7 @@ describe('CPUParticles2D strict validators', () => {
       // seed is uint32_t, so -1 is 4294967295, the ceiling the hint names.
       // 4294967296 is a bit the slot drops, which the file then misstates.
       expect(check('seed', '-1')).toBeNull();
-      expect(check('seed', '4294967296')?.severity).toBe('error');
+      expect(check('seed', '4294967296')).toBeAtTier('error');
     });
 
     it('reports the VALUE code, not the FORMAT one, for an out-of-hint number', () => {
@@ -203,7 +203,7 @@ describe('CPUParticles2D strict validators', () => {
     it('warns that a fractional value is truncated', () => {
       const error = check('seed', '4.5');
       expect(error?.code).toBe('INVALID_SEED_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -233,14 +233,14 @@ describe('CPUParticles2D strict validators', () => {
       (prop) => {
         const warning = check(prop, '-0.01');
         expect(warning?.code).toBe(`INVALID_${prop.toUpperCase()}_VALUE`);
-        expect(warning?.severity).toBe('warning');
+        expect(warning).toBeAtTier('warning');
       }
     );
 
     it('rejects a non-numeric value (FORMAT branch, always an error)', () => {
       const error = check('initial_velocity_min', 'fast');
       expect(error?.code).toBe('INVALID_INITIAL_VELOCITY_MIN_FORMAT');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 
@@ -260,8 +260,8 @@ describe('CPUParticles2D strict validators', () => {
     it.each(['anim_offset_min', 'anim_offset_max'])(
       'warns one hint step (0.0001) past either endpoint of %s',
       (prop) => {
-        expect(check(prop, '-0.0001')?.severity).toBe('warning');
-        expect(check(prop, '1.0001')?.severity).toBe('warning');
+        expect(check(prop, '-0.0001')).toBeAtTier('warning');
+        expect(check(prop, '1.0001')).toBeAtTier('warning');
       }
     );
 

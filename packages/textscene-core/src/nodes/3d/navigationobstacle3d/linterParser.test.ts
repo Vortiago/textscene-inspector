@@ -98,21 +98,21 @@ describe('radius', () => {
   it('rejects a negative value as an error (setter refuses it)', () => {
     const result = check('radius', '-1.0');
     expect(result).not.toBeNull();
-    expect(result?.severity).toBe('error');
+    expect(result).toBeAtTier('error');
   });
 
   it('accepts a value above the hinted 100 ceiling as a warning only (setter never checks the ceiling)', () => {
     const result = check('radius', '150.0');
     expect(result).not.toBeNull();
-    expect(result?.severity).toBe('warning');
+    expect(result).toBeAtTier('warning');
   });
 
   it('warns on positive infinity: `inf > 100` trips the hinted ceiling, the setter never checks it', () => {
-    expect(check('radius', 'inf')?.severity).toBe('warning');
+    expect(check('radius', 'inf')).toBeAtTier('warning');
   });
 
   it('errors on negative infinity: `inf_neg < 0.0` trips the enforced floor exactly like any other negative', () => {
-    expect(check('radius', 'inf_neg')?.severity).toBe('error');
+    expect(check('radius', 'inf_neg')).toBeAtTier('error');
   });
 
   it('accepts nan: every comparison against nan is false, so neither bound trips', () => {
@@ -130,21 +130,21 @@ describe('height', () => {
   it('rejects a negative value as an error (setter refuses it)', () => {
     const result = check('height', '-1.0');
     expect(result).not.toBeNull();
-    expect(result?.severity).toBe('error');
+    expect(result).toBeAtTier('error');
   });
 
   it('accepts a value above the hinted 100 ceiling as a warning only (setter never checks the ceiling)', () => {
     const result = check('height', '150.0');
     expect(result).not.toBeNull();
-    expect(result?.severity).toBe('warning');
+    expect(result).toBeAtTier('warning');
   });
 
   it('warns on positive infinity: `inf > 100` trips the hinted ceiling, the setter never checks it', () => {
-    expect(check('height', 'inf')?.severity).toBe('warning');
+    expect(check('height', 'inf')).toBeAtTier('warning');
   });
 
   it('errors on negative infinity: `inf_neg < 0.0` trips the enforced floor exactly like any other negative', () => {
-    expect(check('height', 'inf_neg')?.severity).toBe('error');
+    expect(check('height', 'inf_neg')).toBeAtTier('error');
   });
 
   it('accepts nan: every comparison against nan is false, so neither bound trips', () => {
@@ -167,7 +167,7 @@ describe('vertices', () => {
   it('rejects a non-numeric element', () => {
     const result = check('vertices', 'PackedVector3Array(a, b, c)');
     expect(result).not.toBeNull();
-    expect(result?.severity).toBe('error');
+    expect(result).toBeAtTier('error');
   });
 
   it('accepts a count that is not a multiple of 3 (VariantParser drops the remainder via integer division, variant_parser.cpp:1573)', () => {
@@ -248,7 +248,7 @@ describe('avoidance_layers', () => {
   it('rejects a non-numeric value as an error', () => {
     const result = check('avoidance_layers', 'abc');
     expect(result).not.toBeNull();
-    expect(result?.severity).toBe('error');
+    expect(result).toBeAtTier('error');
   });
 
   it('accepts a negative value: the uint32_t reinterpretation loses nothing', () => {

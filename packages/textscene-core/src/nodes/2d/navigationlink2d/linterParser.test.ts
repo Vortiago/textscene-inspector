@@ -114,7 +114,7 @@ describe('NavigationLink2D strict validators', () => {
       // The format branch is always an error, hinted or not.
       const result = check('navigation_layers', 'not-a-number');
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
 
     it('takes -1, and errors only past the 32-bit mask', () => {
@@ -122,7 +122,7 @@ describe('NavigationLink2D strict validators', () => {
       // uint32_t assignment with no ERR_FAIL, and PROPERTY_HINT_LAYERS_2D_NAVIGATION
       // (:75) renders every 32-bit pattern, this one included.
       expect(check('navigation_layers', '-1')).toBeNull();
-      expect(check('navigation_layers', '4294967296')?.severity).toBe('error');
+      expect(check('navigation_layers', '4294967296')).toBeAtTier('error');
     });
   });
 
@@ -160,13 +160,13 @@ describe('NavigationLink2D strict validators', () => {
       // navigation_link_2d.cpp:310, ERR_FAIL_COND_MSG(p_enter_cost < 0.0, ...).
       const result = check('enter_cost', '-1');
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
 
     it('errors on -inf, since -inf < 0.0 trips the same guard', () => {
       const result = check('enter_cost', '-inf');
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
   });
 
@@ -184,13 +184,13 @@ describe('NavigationLink2D strict validators', () => {
       // navigation_link_2d.cpp:321, ERR_FAIL_COND_MSG(p_travel_cost < 0.0, ...).
       const result = check('travel_cost', '-1');
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
 
     it('errors on -inf, since -inf < 0.0 trips the same guard', () => {
       const result = check('travel_cost', '-inf');
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
   });
 });

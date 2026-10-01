@@ -41,17 +41,17 @@ describe('a PackedVector2Array slot', () => {
   it('still reports an element that is not a Vector2', () => {
     // A reshaping conversion, which `godot/variantConversion.ts` leaves out of
     // the accepted table on purpose; the arity check is what catches it.
-    expect(at('[Vector3(0, 0, 0)]')?.severity).toBe('error');
-    expect(at('[Vector2i(0, 0, 0)]')?.severity).toBe('error');
-    expect(at('[oops]')?.severity).toBe('error');
+    expect(at('[Vector3(0, 0, 0)]')).toBeAtTier('error');
+    expect(at('[Vector2i(0, 0, 0)]')).toBeAtTier('error');
+    expect(at('[oops]')).toBeAtTier('error');
   });
 
   it('still reports a non-numeric component in the packed spelling', () => {
-    expect(at('PackedVector2Array(0, oops)')?.severity).toBe('error');
+    expect(at('PackedVector2Array(0, oops)')).toBeAtTier('error');
   });
 
   it('reports a value that is no array at all', () => {
-    expect(at('Vector2(0, 0)')?.severity).toBe('error');
+    expect(at('Vector2(0, 0)')).toBeAtTier('error');
   });
 });
 
@@ -66,7 +66,7 @@ describe('a PackedFloat32Array slot', () => {
   });
 
   it('still reports a non-numeric element', () => {
-    expect(f('[0, oops]')?.severity).toBe('error');
+    expect(f('[0, oops]')).toBeAtTier('error');
   });
 });
 

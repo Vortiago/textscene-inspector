@@ -88,7 +88,7 @@ describe('VehicleBody3D strict validators', () => {
     it('warns past ±π radians (the ±180 degree bound converted) rather than erroring', () => {
       const error = check('steering', '4.0');
       expect(error?.code).toBe('INVALID_STEERING_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 });

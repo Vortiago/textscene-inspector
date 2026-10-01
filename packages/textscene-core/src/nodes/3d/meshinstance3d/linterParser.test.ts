@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import './linterParser';
+import { expectWarning } from '../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -43,12 +44,11 @@ describe('MeshInstance3D strict validators', () => {
 
     it('warns rather than errors outside the hint (mesh_instance_3d.cpp:103, set_blend_shape_value has no clamp)', () => {
       const error = check('blend_shapes/Smile', '1.5');
-      expect(error?.severity).toBe('warning');
-      expect(error?.message).toContain('blend_shapes');
+      expectWarning(error, 'blend_shapes');
     });
 
     it('rejects a non-numeric value', () => {
-      expect(check('blend_shapes/Smile', 'not-a-float')?.severity).toBe('error');
+      expect(check('blend_shapes/Smile', 'not-a-float')).toBeAtTier('error');
     });
 
     it('resolves any blend-shape name, since the family is dynamic', () => {

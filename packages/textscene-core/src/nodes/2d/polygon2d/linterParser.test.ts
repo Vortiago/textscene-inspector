@@ -107,7 +107,7 @@ polygons = [PackedInt32Array(0, 1, 2, 3), PackedInt32Array(4, 5, 6, 7)]
       const content = `[gd_scene format=3]\n\n[node name="P" type="Polygon2D"]\npolygons = [PackedVector2Array(0, 0)]\n`;
       const diagnostics = linter.lint(content);
       expect(errorsOf(diagnostics)).toEqual([]);
-      const warning = diagnostics.find((d) => d.severity === 'warning' && d.message.includes('polygons'));
+      const warning = warningsOf(diagnostics).find((d) => d.message.includes('polygons'));
       expect(warning?.message).toContain('polygon_2d.cpp:720');
     });
 
@@ -177,7 +177,7 @@ polygons = [PackedInt32Array(0, 1, 2, 3), PackedInt32Array(4, 5, 6, 7)]
       // 100.0 is the engine default (polygon_2d.h:61), so it must stay silent too.
       const diagnostics = diagnose(value);
       expect(errorsOf(diagnostics)).toEqual([]);
-      expect(warningsOf(diagnostics).some((w) => w.message.includes('invert_border'))).toBe(false);
+      expect(diagnostics.some((d) => d.message.includes('invert_border'))).toBe(false);
     });
 
     it.each(['0.0', '16384.1'])('warns, and never errors, one step past the hint at %s', (value) => {
@@ -201,7 +201,7 @@ polygons = [PackedInt32Array(0, 1, 2, 3), PackedInt32Array(4, 5, 6, 7)]
     it.each(['0', '1000'])('accepts the hint endpoint %s in silence', (value) => {
       const diagnostics = diagnose(value);
       expect(errorsOf(diagnostics)).toEqual([]);
-      expect(warningsOf(diagnostics).some((w) => w.message.includes('internal_vertex_count'))).toBe(false);
+      expect(diagnostics.some((d) => d.message.includes('internal_vertex_count'))).toBe(false);
     });
 
     it.each(['-1', '1001'])('warns, and never errors, one step past the hint at %s', (value) => {
@@ -237,7 +237,7 @@ bones = ["Hip", PackedFloat32Array(0, 0, 0), "Hip/Chest", PackedFloat32Array(1, 
     it('errors on an odd element count (polygon_2d.cpp:589, ERR_FAIL_COND drops the write)', () => {
       const content = `[gd_scene format=3]\n\n[node name="P" type="Polygon2D"]\nbones = ["Hip", PackedFloat32Array(0, 0, 0), "Orphan"]\n`;
       const found = linter.lint(content).find((d) => d.message.includes('bones'));
-      expect(found?.severity).toBe('error');
+      expect(found).toBeAtTier('error');
       expect(found?.message).toContain('even element count');
     });
 

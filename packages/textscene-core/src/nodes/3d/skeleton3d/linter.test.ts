@@ -13,6 +13,7 @@ import {
 } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
+import { errorsOf, warningsOf } from '../../../linter/testing/tierLists';
 
 describe('Skeleton3D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -404,7 +405,7 @@ describe('Skeleton3D Linter', () => {
       // `motion_scale validation`.
       it('reports the refused value exactly once', () => {
         const diagnostics = lint(scene(node('Skeleton3D', { motion_scale: '-1.0' })));
-        const errors = diagnostics.filter((d) => d.severity === 'error');
+        const errors = errorsOf(diagnostics);
         expect(errors).toHaveLength(1);
         expect(errors[0]?.message).toContain('greater than 0');
       });
@@ -625,7 +626,7 @@ describe('Skeleton3D Linter', () => {
         )
       );
       expect(diagnostics.length).toBeGreaterThanOrEqual(2);
-      const warnings = diagnostics.filter((d) => d.severity === 'warning');
+      const warnings = warningsOf(diagnostics);
       expect(warnings.length).toBeGreaterThan(0);
     });
 

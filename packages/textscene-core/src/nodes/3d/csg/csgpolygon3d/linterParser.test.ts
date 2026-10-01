@@ -133,7 +133,7 @@ describe('CSGPolygon3D strict validators', () => {
   ])('accepts the hint floor %s in silence', (line, property) => {
     const diagnostics = linter.lint(scene(line));
     expect(errorsOf(diagnostics)).toEqual([]);
-    expect(warningsOf(diagnostics).some((w) => w.message.includes(property))).toBe(false);
+    expect(diagnostics.some((d) => d.message.includes(property))).toBe(false);
   });
 
   it.each(['spin_sides = 3', 'spin_sides = 64'])('accepts the endpoint %s in silence', (line) => {
@@ -143,7 +143,7 @@ describe('CSGPolygon3D strict validators', () => {
     // error list empty.
     const diagnostics = linter.lint(scene(line));
     expect(errorsOf(diagnostics)).toEqual([]);
-    expect(warningsOf(diagnostics).some((w) => w.message.includes('spin_sides'))).toBe(false);
+    expect(diagnostics.some((d) => d.message.includes('spin_sides'))).toBe(false);
   });
 
   it('accepts path_u_distance = 0, which Godot allows and means no U scaling', () => {

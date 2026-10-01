@@ -8,6 +8,7 @@ import { describe, it, expect } from 'vitest';
 import { Linter } from '../Linter.js';
 import { FILE_DIAGNOSTICS, STRICT_PARSER_RULE_NAME } from '../fileDiagnostics.js';
 import { declaredArms } from './declaredArms.js';
+import { recordTier } from './titleTier.js';
 import type { Diagnostic, Severity } from '../types.js';
 
 /** A property value: rendered verbatim if a string, else `String(value)`. */
@@ -147,6 +148,7 @@ function locateHint(where: DiagnosticExpectation, named: Diagnostic[]): string {
  * reports once per node repeats the same sentence.
  */
 export function expectDiagnostic(content: string, where: DiagnosticExpectation): Diagnostic {
+  if (where.severity !== undefined) recordTier(where.severity);
   const diagnostics = lint(content);
   expect(diagnostics.length, 'the scene produced no diagnostics at all').toBeGreaterThan(0);
   const named = candidates(diagnostics, where);
@@ -231,6 +233,7 @@ export function expectNoErrors(content: string, where: DiagnosticExpectation = {
 
 /** Assert at least one diagnostic of the given severity is present. */
 export function expectSeverity(content: string, severity: Severity): void {
+  recordTier(severity);
   expect(lint(content).some((d) => d.severity === severity)).toBe(true);
 }
 

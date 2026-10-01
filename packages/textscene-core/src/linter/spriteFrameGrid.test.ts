@@ -35,8 +35,8 @@ describe('spriteFrameArms', () => {
 describe('spriteFrameDiagnostics', () => {
   it('reports a refused frame through the frame-range arm', () => {
     const [diagnostic] = spriteFrameDiagnostics(node, { hframes: '2', frame: '5' }, arms);
+    expect(diagnostic).toBeAtTier('error');
     expect(diagnostic).toMatchObject({
-      severity: 'error',
       ruleName: 'sprite2d-frame-range',
       nodeName: 'Hero',
       nodeType: 'Sprite2D',

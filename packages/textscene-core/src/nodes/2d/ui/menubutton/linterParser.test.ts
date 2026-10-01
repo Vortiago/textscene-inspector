@@ -48,7 +48,7 @@ describe('MenuButton strict validators', () => {
       expect(check('item_count', 'many')?.code).toBe('INVALID_ITEM_COUNT_FORMAT');
     });
     it('errors below 0: set_item_count is ERR_FAIL_COND(p_count < 0) (menu_button.cpp:124)', () => {
-      expect(check('item_count', '-1')?.severity).toBe('error');
+      expect(check('item_count', '-1')).toBeAtTier('error');
     });
   });
 
@@ -92,7 +92,7 @@ describe('MenuButton strict validators', () => {
       // routes to the dispatcher instead of resolving to no validator.
       const nonNumeric = validatorRegistry.findValidator('MenuButton', 'popup/item_x/text');
       expect(nonNumeric).not.toBeNull();
-      expect(nonNumeric!('popup/item_x/text', '"x"', 1)?.severity).toBe('error');
+      expect(nonNumeric!('popup/item_x/text', '"x"', 1)).toBeAtTier('error');
       // A negative index is well formed: is_valid_int accepts the sign (property_list_helper.cpp:52),
       // and the index < 0 guard refuses it (:57). It must reach the dispatcher, or a dropped write reads clean.
       const negative = validatorRegistry.findValidator('MenuButton', 'popup/item_-1/text');
@@ -140,12 +140,12 @@ describe('MenuButton strict validators', () => {
 
     it('errors on an out-of-range checkable: _set_item_checkable_type drops an unmatched value (popup_menu.cpp:62-73)', () => {
       const error = dispatcher!('popup/item_0/checkable', '3', 1);
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('warns on a negative id: set_item_id assigns straight through (popup_menu.cpp:2099)', () => {
       const error = dispatcher!('popup/item_0/id', '-1', 1);
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('rejects a malformed checked/disabled/separator value', () => {
@@ -156,7 +156,7 @@ describe('MenuButton strict validators', () => {
 
     it('errors on a negative item index: property_list_helper.cpp:58 refuses it entirely', () => {
       const error = dispatcher!('popup/item_-1/text', '"Open"', 1);
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_ITEM_INDEX');
     });
 

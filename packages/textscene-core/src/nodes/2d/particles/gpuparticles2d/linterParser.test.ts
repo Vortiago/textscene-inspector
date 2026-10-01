@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import './linterParser';
+import { expectWarning } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -47,11 +48,11 @@ describe('GPUParticles2D strict validators', () => {
     });
 
     it('warns just above 2, which set_draw_order does not ERR_FAIL_INDEX', () => {
-      expect(check('draw_order', '3')?.severity).toBe('warning');
+      expect(check('draw_order', '3')).toBeAtTier('warning');
     });
 
     it('warns just below 0', () => {
-      expect(check('draw_order', '-1')?.severity).toBe('warning');
+      expect(check('draw_order', '-1')).toBeAtTier('warning');
     });
 
     it("warns (not errors) on the value CPUParticles2D's platformer demo ships for the identically-named property", () => {
@@ -59,7 +60,7 @@ describe('GPUParticles2D strict validators', () => {
       // warns.
       const warning = check('draw_order', '215832976');
       expect(warning?.code).toBe('INVALID_DRAW_ORDER_VALUE');
-      expect(warning?.severity).toBe('warning');
+      expect(warning).toBeAtTier('warning');
     });
   });
 
@@ -100,13 +101,13 @@ describe('GPUParticles2D strict validators', () => {
     it('rejects 0 as an error, which set_amount ERR_FAILs', () => {
       const error = check('amount', '0');
       expect(error?.code).toBe('INVALID_AMOUNT_VALUE');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('warns (not errors) above the hint-only ceiling', () => {
       const warning = check('amount', '1000001');
       expect(warning?.code).toBe('INVALID_AMOUNT_VALUE');
-      expect(warning?.severity).toBe('warning');
+      expect(warning).toBeAtTier('warning');
     });
   });
 
@@ -130,11 +131,11 @@ describe('GPUParticles2D strict validators', () => {
     it('warns (not errors) above 1', () => {
       const warning = check('amount_ratio', '1.5');
       expect(warning?.code).toBe('INVALID_AMOUNT_RATIO_VALUE');
-      expect(warning?.severity).toBe('warning');
+      expect(warning).toBeAtTier('warning');
     });
 
     it('warns (not errors) on a negative value', () => {
-      expect(check('amount_ratio', '-0.1')?.severity).toBe('warning');
+      expect(check('amount_ratio', '-0.1')).toBeAtTier('warning');
     });
   });
 
@@ -186,8 +187,7 @@ describe('GPUParticles2D strict validators', () => {
 
     it('warns below the hint floor, which the setter does not reject', () => {
       const warning = check('lifetime', '0.001');
-      expect(warning?.severity).toBe('warning');
-      expect(warning?.message).toContain('0.01');
+      expectWarning(warning, '0.01');
     });
 
     it('rejects a non-numeric value', () => {
@@ -197,7 +197,7 @@ describe('GPUParticles2D strict validators', () => {
     it('rejects zero as an error, which set_lifetime ERR_FAILs', () => {
       const error = check('lifetime', '0');
       expect(error?.code).toBe('INVALID_LIFETIME_VALUE');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('rejects a negative value as an error', () => {
@@ -222,7 +222,7 @@ describe('GPUParticles2D strict validators', () => {
     it('rejects above 1 as an error, which set_interp_to_end CLAMPs (gpu_particles_2d.cpp:210-211)', () => {
       const error = check('interp_to_end', '1.5');
       expect(error?.code).toBe('INVALID_INTERP_TO_END_VALUE');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 
@@ -246,7 +246,7 @@ describe('GPUParticles2D strict validators', () => {
     it('warns (not errors) on a negative value', () => {
       const warning = check('preprocess', '-1');
       expect(warning?.code).toBe('INVALID_PREPROCESS_VALUE');
-      expect(warning?.severity).toBe('warning');
+      expect(warning).toBeAtTier('warning');
     });
   });
 
@@ -269,11 +269,11 @@ describe('GPUParticles2D strict validators', () => {
     it('warns (not errors) above the hint ceiling', () => {
       const warning = check('speed_scale', '64.5');
       expect(warning?.code).toBe('INVALID_SPEED_SCALE_VALUE');
-      expect(warning?.severity).toBe('warning');
+      expect(warning).toBeAtTier('warning');
     });
 
     it('warns (not errors) on a negative value', () => {
-      expect(check('speed_scale', '-1')?.severity).toBe('warning');
+      expect(check('speed_scale', '-1')).toBeAtTier('warning');
     });
   });
 
@@ -289,7 +289,7 @@ describe('GPUParticles2D strict validators', () => {
       expect(check(property, 'n')?.code).toBe(`INVALID_${property.toUpperCase()}_FORMAT`);
       const outOfRange = check(property, '1.1');
       expect(outOfRange?.code).toBe(`INVALID_${property.toUpperCase()}_VALUE`);
-      expect(outOfRange?.severity).toBe('warning');
+      expect(outOfRange).toBeAtTier('warning');
     });
   });
 
@@ -317,7 +317,7 @@ describe('GPUParticles2D strict validators', () => {
     it('errors above UINT32_MAX, where the slot drops the extra bit', () => {
       const warning = check('seed', '4294967296');
       expect(warning?.code).toBe('INVALID_SEED_VALUE');
-      expect(warning?.severity).toBe('error');
+      expect(warning).toBeAtTier('error');
     });
   });
 
@@ -341,7 +341,7 @@ describe('GPUParticles2D strict validators', () => {
     it('warns (not errors) above the hint ceiling', () => {
       const warning = check('fixed_fps', '1001');
       expect(warning?.code).toBe('INVALID_FIXED_FPS_VALUE');
-      expect(warning?.severity).toBe('warning');
+      expect(warning).toBeAtTier('warning');
     });
   });
 
@@ -365,7 +365,7 @@ describe('GPUParticles2D strict validators', () => {
     it('warns (not errors) on a negative value', () => {
       const warning = check('collision_base_size', '-0.1');
       expect(warning?.code).toBe('INVALID_COLLISION_BASE_SIZE_VALUE');
-      expect(warning?.severity).toBe('warning');
+      expect(warning).toBeAtTier('warning');
     });
   });
 
@@ -395,7 +395,7 @@ describe('GPUParticles2D strict validators', () => {
       expect(check('trail_lifetime', 't')?.code).toBe('INVALID_TRAIL_LIFETIME_FORMAT');
       const belowFloor = check('trail_lifetime', '0.001');
       expect(belowFloor?.code).toBe('INVALID_TRAIL_LIFETIME_VALUE');
-      expect(belowFloor?.severity).toBe('error');
+      expect(belowFloor).toBeAtTier('error');
     });
 
     it('accepts trail_sections within 2..128 and errors outside it', () => {
@@ -408,8 +408,8 @@ describe('GPUParticles2D strict validators', () => {
       expect(check('trail_sections', 's')?.code).toBe('INVALID_TRAIL_SECTIONS_FORMAT');
       const belowMin = check('trail_sections', '1');
       expect(belowMin?.code).toBe('INVALID_TRAIL_SECTIONS_VALUE');
-      expect(belowMin?.severity).toBe('error');
-      expect(check('trail_sections', '129')?.severity).toBe('error');
+      expect(belowMin).toBeAtTier('error');
+      expect(check('trail_sections', '129')).toBeAtTier('error');
     });
 
     it('accepts trail_section_subdivisions within 1..1024 and rejects outside it', () => {

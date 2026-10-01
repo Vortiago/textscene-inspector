@@ -43,12 +43,12 @@ describe('TabContainer strict validators', () => {
 
     it('rejects 3 as an error: ALIGNMENT_MAX enforces the ceiling', () => {
       const error = check('tab_alignment', '3');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('rejects a negative value as an error', () => {
       const error = check('tab_alignment', '-1');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 
@@ -65,7 +65,7 @@ describe('TabContainer strict validators', () => {
 
     it('rejects -2 as an error: below the enforced floor', () => {
       const error = check('current_tab', '-2');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('accepts the hint ceiling exactly (4096, tab_container.cpp:1209)', () => {
@@ -75,7 +75,7 @@ describe('TabContainer strict validators', () => {
     it('warns above 4096: the setter assigns through, only the hint names that end', () => {
       const diagnostic = check('current_tab', '4097');
       expect(diagnostic).not.toBeNull();
-      expect(diagnostic?.severity).toBe('warning');
+      expect(diagnostic).toBeAtTier('warning');
     });
   });
 
@@ -92,7 +92,7 @@ describe('TabContainer strict validators', () => {
 
     it('rejects 2 as an error: POSITION_MAX enforces the ceiling', () => {
       const error = check('tabs_position', '2');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 
@@ -217,12 +217,12 @@ describe('TabContainer strict validators', () => {
 
     it('warns on 3: Control::set_focus_mode accepts Accessibility, but no label names it here', () => {
       const error = check('tab_focus_mode', '3');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('rejects a negative value as a warning too, since the enum bound has one severity', () => {
       const error = check('tab_focus_mode', '-1');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -265,13 +265,13 @@ describe('TabContainer strict validators', () => {
 
     it('rejects an unrecognised leaf (tooltip belongs to TabBar, not TabContainer)', () => {
       const error = check('tab_0/tooltip', '"nope"');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_TABCONTAINER_TAB_KEY');
     });
 
     it('rejects a negative tab index (property_list_helper.cpp:58)', () => {
       const error = check('tab_-1/title', '"X"');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_TABCONTAINER_TAB_INDEX');
     });
 

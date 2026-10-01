@@ -72,7 +72,7 @@ describe('range advisory grounding', () => {
     const table: RangeAdvisoryTable = {
       range: [{ over: 1, message: () => 'm', cite: 'light_3d.cpp:389' }],
     };
-    expect(rangeAdvisories(node({ range: '5' }), table, arm)[0]?.severity).toBe('warning');
+    expect(rangeAdvisories(node({ range: '5' }), table, arm)[0]).toBeAtTier('warning');
   });
 
   it('still trips the threshold it cites', () => {

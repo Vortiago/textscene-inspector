@@ -151,8 +151,8 @@ describe('CollisionPolygon3D.margin', () => {
   it('warns rather than errors outside the hint, since set_margin has no clamp or ERR_FAIL', () => {
     // collision_polygon_3d.cpp:228-233 assigns `margin = p_margin` unconditionally.
     // PROPERTY_HINT_RANGE only constrains the inspector slider.
-    expect(check('margin', '0')?.severity).toBe('warning');
-    expect(check('margin', '10.5')?.severity).toBe('warning');
+    expect(check('margin', '0')).toBeAtTier('warning');
+    expect(check('margin', '10.5')).toBeAtTier('warning');
   });
 
   it('rejects a non-numeric value', () => {

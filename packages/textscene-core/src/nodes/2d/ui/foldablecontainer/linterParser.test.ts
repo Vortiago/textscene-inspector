@@ -62,13 +62,13 @@ describe('FoldableContainer strict validators', () => {
     it('errors above the enforced range (ERR_FAIL_INDEX rejects FILL=3)', () => {
       const result = check('title_alignment', '3');
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
 
     it('errors below the enforced range', () => {
       const result = check('title_alignment', '-1');
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
   });
 
@@ -81,7 +81,7 @@ describe('FoldableContainer strict validators', () => {
     it('errors at POSITION_MAX', () => {
       const result = check('title_position', '2');
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
   });
 
@@ -95,7 +95,7 @@ describe('FoldableContainer strict validators', () => {
     it('warns beyond the hint, since the setter never ERR_FAILs', () => {
       const result = check('title_text_overrun_behavior', '5');
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('warning');
+      expect(result).toBeAtTier('warning');
     });
   });
 
@@ -123,13 +123,13 @@ describe('FoldableContainer strict validators', () => {
     it('errors at -1, unlike Button which special-cases it as legal', () => {
       const result = check('title_text_direction', '-1');
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
 
     it('errors above the enforced range', () => {
       const result = check('title_text_direction', '4');
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeAtTier('error');
     });
   });
 

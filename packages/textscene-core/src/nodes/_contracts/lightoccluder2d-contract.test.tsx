@@ -18,6 +18,7 @@ import { nodeComponentRegistry } from '../../r3f/NodeComponentRegistry';
 import { NodeDispatcher } from '../../r3f/NodeDispatcher';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { SceneStack } from '../../r3f/testing/SceneStack';
+import { errorsOf } from '../../linter/testing/tierLists';
 import '../../r3f/nodes'; // side-effect: registers every node's r3f component
 import '../../linter/index'; // side-effect: registers every node's linter validators
 
@@ -94,7 +95,7 @@ function firstLineVertices(renderer: TestRenderer): [number, number][] {
 }
 
 function lintErrorCount(raw: string): number {
-  return new Linter().lint(raw).filter((d) => d.severity === 'error').length;
+  return errorsOf(new Linter().lint(raw)).length;
 }
 
 function requireComp(): boolean {
@@ -204,7 +205,7 @@ occluder = ExtResource("1_occ")
     expect(withOcc.length, 'a scenes/fixtures/*.tscn must use LightOccluder2D').toBeGreaterThan(0);
     const raw = readFileSync(resolve(dir, withOcc[0] as string), 'utf8');
     expect(flatten(new TscnParser().parse(raw)).some((n) => n.type === 'LightOccluder2D')).toBe(true);
-    const errors = new Linter().lint(raw).filter((d) => d.severity === 'error');
+    const errors = errorsOf(new Linter().lint(raw));
     expect(errors, `fixture ${withOcc[0]} lints with errors: ${JSON.stringify(errors)}`).toHaveLength(0);
   });
 

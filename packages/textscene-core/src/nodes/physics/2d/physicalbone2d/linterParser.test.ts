@@ -72,19 +72,19 @@ describe('PhysicalBone2D strict validators', () => {
     it('rejects the unassigned sentinel -1 as an error (set_bone2d_index refuses)', () => {
       const error = check('bone2d_index', '-1');
       expect(error?.code).toBe('INVALID_BONE2D_INDEX_VALUE');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('rejects below 0 as an error', () => {
       const error = check('bone2d_index', '-2');
       expect(error?.code).toBe('INVALID_BONE2D_INDEX_VALUE');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('warns above the 1000 cap rather than erroring', () => {
       const error = check('bone2d_index', '1001');
       expect(error?.code).toBe('INVALID_BONE2D_INDEX_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 

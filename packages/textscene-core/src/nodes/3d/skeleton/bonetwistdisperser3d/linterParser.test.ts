@@ -78,7 +78,7 @@ describe('mutable_bone_axes', () => {
   });
 
   it('rejects a non-boolean', () => {
-    expect(check('mutable_bone_axes', 'yes')?.severity).toBe('error');
+    expect(check('mutable_bone_axes', 'yes')).toBeAtTier('error');
   });
 });
 
@@ -90,11 +90,11 @@ describe('setting_count', () => {
 
   it('errors on a negative count, which ERR_FAIL_COND refuses', () => {
     // bone_twist_disperser_3d.cpp:650, the setter returns before resizing.
-    expect(check('setting_count', '-1')?.severity).toBe('error');
+    expect(check('setting_count', '-1')).toBeAtTier('error');
   });
 
   it('warns that a non-integer count is truncated', () => {
-    expect(check('setting_count', '1.5')?.severity).toBe('warning');
+    expect(check('setting_count', '1.5')).toBeAtTier('warning');
   });
 });
 
@@ -112,14 +112,14 @@ describe('the settings/<i>/ family shape', () => {
     // ERR_FAIL_INDEX_V(which, settings.size(), false), :39.
     const error = check('settings/-1/root_bone', '0');
     expect(error?.code).toBe('INVALID_SETTING_INDEX');
-    expect(error?.severity).toBe('error');
+    expect(error).toBeAtTier('error');
   });
 
   it('errors on a negative joint index', () => {
     // ERR_FAIL_INDEX(p_joint, joints.size()) inside set_joint_twist_amount, :502.
     const error = check('settings/0/joints/-2/twist_amount', '0.5');
     expect(error?.code).toBe('INVALID_JOINT_INDEX');
-    expect(error?.severity).toBe('error');
+    expect(error).toBeAtTier('error');
   });
 
   it('rejects a nested setting index to_int resolves as negative', () => {
@@ -152,7 +152,7 @@ describe('the settings/<i>/ family shape', () => {
   });
 
   it('still checks the leaf value under a non-numeric index', () => {
-    expect(check('settings/x/root_bone', '-9')?.severity).toBe('error');
+    expect(check('settings/x/root_bone', '-9')).toBeAtTier('error');
   });
 });
 
@@ -160,7 +160,7 @@ describe('the bone identity leaves', () => {
   it('accepts a quoted bone name and rejects a bare one', () => {
     expect(check('settings/0/root_bone_name', '"UpperArm"')).toBeNull();
     expect(check('settings/0/end_bone_name', '"Hand"')).toBeNull();
-    expect(check('settings/0/root_bone_name', 'UpperArm')?.severity).toBe('error');
+    expect(check('settings/0/root_bone_name', 'UpperArm')).toBeAtTier('error');
   });
 
   it('accepts the -1 unset sentinel and a real index', () => {
@@ -173,12 +173,12 @@ describe('the bone identity leaves', () => {
   it('errors below -1, which the setter rewrites to -1', () => {
     // bone_twist_disperser_3d.cpp:266-268 and :303-305, re-run from
     // _validate_bone_names (:573-574, :579-580) once a skeleton exists.
-    expect(check('settings/0/root_bone', '-2')?.severity).toBe('error');
-    expect(check('settings/0/end_bone', '-5')?.severity).toBe('error');
+    expect(check('settings/0/root_bone', '-2')).toBeAtTier('error');
+    expect(check('settings/0/end_bone', '-5')).toBeAtTier('error');
   });
 
   it('warns that a fractional bone index is truncated', () => {
-    expect(check('settings/0/root_bone', '3.5')?.severity).toBe('warning');
+    expect(check('settings/0/root_bone', '3.5')).toBeAtTier('warning');
   });
 });
 
@@ -186,7 +186,7 @@ describe('the end-bone tail leaves', () => {
   it('accepts both booleans for extend_end_bone', () => {
     expect(check('settings/0/extend_end_bone', 'true')).toBeNull();
     expect(check('settings/0/extend_end_bone', 'false')).toBeNull();
-    expect(check('settings/0/extend_end_bone', '1')?.severity).toBe('warning');
+    expect(check('settings/0/extend_end_bone', '1')).toBeAtTier('warning');
   });
 
   it('accepts every BoneDirection constant', () => {
@@ -198,8 +198,8 @@ describe('the end-bone tail leaves', () => {
   it('warns rather than errors outside the enum hint', () => {
     // :149 is PROPERTY_HINT_ENUM. set_end_bone_direction (:333-336) stores the
     // static_cast unchecked, so the value loads and only the dropdown refuses it.
-    expect(check('settings/0/end_bone_direction', '7')?.severity).toBe('warning');
-    expect(check('settings/0/end_bone_direction', '-1')?.severity).toBe('warning');
+    expect(check('settings/0/end_bone_direction', '7')).toBeAtTier('warning');
+    expect(check('settings/0/end_bone_direction', '-1')).toBeAtTier('warning');
   });
 
   it('resolves through the one dispatcher that owns the sheet Accepts column', () => {
@@ -227,7 +227,7 @@ describe('the twist-source leaves', () => {
   });
 
   it('rejects a quaternion of the wrong arity', () => {
-    expect(check('settings/0/twist_from', 'Quaternion(0, 0, 1)')?.severity).toBe('error');
+    expect(check('settings/0/twist_from', 'Quaternion(0, 0, 1)')).toBeAtTier('error');
   });
 });
 
@@ -241,7 +241,7 @@ describe('the disperse-mode leaves', () => {
   it('warns rather than errors outside the enum hint', () => {
     // :154 is PROPERTY_HINT_ENUM "Even,Weighted,Custom". set_disperse_mode
     // (:411-415) stores the static_cast unchecked.
-    expect(check('settings/0/disperse_mode', '3')?.severity).toBe('warning');
+    expect(check('settings/0/disperse_mode', '3')).toBeAtTier('warning');
   });
 
   it('accepts weight_position across the closed hint range', () => {
@@ -253,12 +253,12 @@ describe('the disperse-mode leaves', () => {
   it('warns at BOTH ends of weight_position, since neither is open', () => {
     // :155 is PROPERTY_HINT_RANGE "0,1,0.001" with no or_greater and no
     // or_less. set_weight_position (:422-425) assigns straight through.
-    expect(check('settings/0/weight_position', '-0.5')?.severity).toBe('warning');
-    expect(check('settings/0/weight_position', '1.5')?.severity).toBe('warning');
+    expect(check('settings/0/weight_position', '-0.5')).toBeAtTier('warning');
+    expect(check('settings/0/weight_position', '1.5')).toBeAtTier('warning');
   });
 
   it('rejects a non-numeric weight_position as an error', () => {
-    expect(check('settings/0/weight_position', 'half')?.severity).toBe('error');
+    expect(check('settings/0/weight_position', 'half')).toBeAtTier('error');
   });
 });
 
@@ -277,7 +277,7 @@ describe('damping_curve', () => {
   });
 
   it('rejects a token neither writer branch produces', () => {
-    expect(check('settings/0/damping_curve', '"res://curve.tres"')?.severity).toBe('error');
+    expect(check('settings/0/damping_curve', '"res://curve.tres"')).toBeAtTier('error');
   });
 });
 
@@ -289,11 +289,11 @@ describe('joint_count', () => {
 
   it('errors on a negative count, which ERR_FAIL_COND refuses', () => {
     // set_joint_count, bone_twist_disperser_3d.cpp:487.
-    expect(check('settings/0/joint_count', '-1')?.severity).toBe('error');
+    expect(check('settings/0/joint_count', '-1')).toBeAtTier('error');
   });
 
   it('warns that a fractional count is truncated', () => {
-    expect(check('settings/0/joint_count', '2.5')?.severity).toBe('warning');
+    expect(check('settings/0/joint_count', '2.5')).toBeAtTier('warning');
   });
 });
 
@@ -320,7 +320,7 @@ describe('joints/<j>/twist_amount', () => {
   });
 
   it('still rejects a non-numeric amount', () => {
-    expect(check('settings/0/joints/0/twist_amount', 'lots')?.severity).toBe('error');
+    expect(check('settings/0/joints/0/twist_amount', 'lots')).toBeAtTier('error');
   });
 
   it('rejects an unrecognised joint leaf', () => {
@@ -343,7 +343,7 @@ describe('the derived read-only leaves', () => {
   it('refuses every value of reference_bone_name', () => {
     const error = check('settings/0/reference_bone_name', '"LowerArm"');
     expect(error?.code).toBe('INVALID_SETTING_READONLY');
-    expect(error?.severity).toBe('error');
+    expect(error).toBeAtTier('error');
   });
 
   it('refuses every value of the joint bone pair', () => {

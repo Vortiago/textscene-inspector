@@ -82,7 +82,7 @@ describe('Area3D reverb/wind strict validators', () => {
       const error = check(property, value);
       expect(error).not.toBeNull();
       expect(error!.code).toBe(`INVALID_${code}_VALUE`);
-      expect(error!.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -132,7 +132,7 @@ describe('Area3D reverb/wind strict validators', () => {
       const error = check(property, value);
       expect(error).not.toBeNull();
       expect(error!.code).toBe(`INVALID_${code}_VALUE`);
-      expect(error!.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 

@@ -14,6 +14,7 @@ import {
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import './linterParser';
 import '../../../base/node3d/linterParser.js';
+import { expectWarning } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a Light3D validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -243,8 +244,7 @@ describe('Light3D shared validators', () => {
       'warns rather than errors above the hint max on %s (25)',
       (property) => {
         const error = check(property, '25');
-        expect(error?.severity).toBe('warning');
-        expect(error?.message).toContain(property);
+        expectWarning(error, property);
       }
     );
 
@@ -252,8 +252,7 @@ describe('Light3D shared validators', () => {
       'warns rather than errors below the hint min on %s (-1)',
       (property) => {
         const error = check(property, '-1');
-        expect(error?.severity).toBe('warning');
-        expect(error?.message).toContain(property);
+        expectWarning(error, property);
       }
     );
   });
@@ -269,34 +268,29 @@ describe('Light3D shared validators', () => {
 
     it('warns rather than errors below the floor', () => {
       const error = check('light_energy', '-0.001');
-      expect(error?.severity).toBe('warning');
-      expect(error?.message).toContain('light_energy');
+      expectWarning(error, 'light_energy');
     });
   });
 
   describe('light_temperature and light_angular_distance: closed hint bounds fire on both ends', () => {
     it('warns above the light_temperature max (light_3d.cpp:387, "1000,15000.0,1.0")', () => {
       const error = check('light_temperature', '15001');
-      expect(error?.severity).toBe('warning');
-      expect(error?.message).toContain('light_temperature');
+      expectWarning(error, 'light_temperature');
     });
 
     it('warns below the light_temperature min', () => {
       const error = check('light_temperature', '999');
-      expect(error?.severity).toBe('warning');
-      expect(error?.message).toContain('light_temperature');
+      expectWarning(error, 'light_temperature');
     });
 
     it('warns above the light_angular_distance max (light_3d.cpp:395, "0,90,0.01,degrees")', () => {
       const error = check('light_angular_distance', '91');
-      expect(error?.severity).toBe('warning');
-      expect(error?.message).toContain('light_angular_distance');
+      expectWarning(error, 'light_angular_distance');
     });
 
     it('warns below the light_angular_distance min', () => {
       const error = check('light_angular_distance', '-1');
-      expect(error?.severity).toBe('warning');
-      expect(error?.message).toContain('light_angular_distance');
+      expectWarning(error, 'light_angular_distance');
     });
   });
 

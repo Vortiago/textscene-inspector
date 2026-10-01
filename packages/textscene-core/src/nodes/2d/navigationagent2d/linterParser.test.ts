@@ -306,7 +306,7 @@ describe('NavigationAgent2D strict validators', () => {
     it.each(['0', '0.005'])('warns on %s, inside the hint-only band', (value) => {
       const err = check('radius', value);
       expect(err).not.toBeNull();
-      expect(err!.severity).toBe('warning');
+      expect(err).toBeAtTier('warning');
     });
     it('accepts the hint floor 0.01 in silence', () => {
       expect(check('radius', '0.01')).toBeNull();
@@ -373,7 +373,7 @@ describe('NavigationAgent2D strict validators', () => {
     it.each(['0', '0.005'])('warns on %s, inside the hint-only band', (value) => {
       const err = check('max_speed', value);
       expect(err).not.toBeNull();
-      expect(err!.severity).toBe('warning');
+      expect(err).toBeAtTier('warning');
     });
     it('accepts the hint floor 0.01 in silence', () => {
       expect(check('max_speed', '0.01')).toBeNull();

@@ -90,7 +90,7 @@ describe('Parallax2D strict validators', () => {
     it('rejects a non-Vector2 value', () => {
       const error = check('scroll_scale', 'not-a-vector');
       expect(error?.code).toBe('INVALID_SCROLL_SCALE_FORMAT');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('accepts a negative or zero value — PROPERTY_HINT_LINK is a UI toggle, not a range, and set_scroll_scale (parallax_2d.cpp:152-154) assigns straight through', () => {
@@ -106,7 +106,7 @@ describe('Parallax2D strict validators', () => {
     it('rejects a non-Vector2 value', () => {
       const error = check('scroll_offset', 'not-a-vector');
       expect(error?.code).toBe('INVALID_SCROLL_OFFSET_FORMAT');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('accepts a negative value — set_scroll_offset (parallax_2d.cpp:190-196) assigns straight through', () => {
@@ -126,13 +126,13 @@ describe('Parallax2D strict validators', () => {
     it('rejects a non-Vector2 value', () => {
       const error = check('repeat_size', 'not-a-vector');
       expect(error?.code).toBe('INVALID_REPEAT_SIZE_FORMAT');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('errors on a negative component — the setter clamps it up to 0 (parallax_2d.cpp:165)', () => {
       const error = check('repeat_size', 'Vector2(-1, 0)');
       expect(error?.code).toBe('INVALID_REPEAT_SIZE_VALUE');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('accepts `nan` silently — `nan < 0` is false, even though MAX(nan, 0) in the setter itself resolves to 0', () => {
@@ -142,7 +142,7 @@ describe('Parallax2D strict validators', () => {
     it('errors on `-inf` the same way as any other negative component — MAX(-inf, 0) is 0', () => {
       const error = check('repeat_size', 'Vector2(-inf, 0)');
       expect(error?.code).toBe('INVALID_REPEAT_SIZE_VALUE');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 
@@ -154,7 +154,7 @@ describe('Parallax2D strict validators', () => {
     it('rejects a non-Vector2 value', () => {
       const error = check('autoscroll', 'not-a-vector');
       expect(error?.code).toBe('INVALID_AUTOSCROLL_FORMAT');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('accepts a negative value — set_autoscroll (parallax_2d.cpp:204-211) assigns straight through', () => {
@@ -175,19 +175,19 @@ describe('Parallax2D strict validators', () => {
     it('warns that a non-integer value is truncated', () => {
       const error = check('repeat_times', '5.5');
       expect(error?.code).toBe('INVALID_REPEAT_TIMES_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('errors below the floor — set_repeat_times clamps up to 1 (parallax_2d.cpp:181)', () => {
       const error = check('repeat_times', '0');
       expect(error?.code).toBe('INVALID_REPEAT_TIMES_VALUE');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('errors on a negative value the same way', () => {
       const error = check('repeat_times', '-3');
       expect(error?.code).toBe('INVALID_REPEAT_TIMES_VALUE');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 
@@ -200,7 +200,7 @@ describe('Parallax2D strict validators', () => {
     it('rejects a non-Vector2 value', () => {
       const error = check('limit_begin', 'not-a-vector');
       expect(error?.code).toBe('INVALID_LIMIT_BEGIN_FORMAT');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('accepts a value above its paired limit_end — set_limit_begin (parallax_2d.cpp:233-235) assigns straight through and _update_scroll silently skips an inverted axis', () => {
@@ -217,7 +217,7 @@ describe('Parallax2D strict validators', () => {
     it('rejects a non-Vector2 value', () => {
       const error = check('limit_end', 'not-a-vector');
       expect(error?.code).toBe('INVALID_LIMIT_END_FORMAT');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('accepts a value below its paired limit_begin — set_limit_end (parallax_2d.cpp:241-243) assigns straight through', () => {
@@ -237,7 +237,7 @@ describe('Parallax2D strict validators', () => {
     it('rejects a non-boolean value', () => {
       const error = check('follow_viewport', 'yes');
       expect(error?.code).toBe('INVALID_FOLLOW_VIEWPORT_FORMAT');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 
@@ -253,7 +253,7 @@ describe('Parallax2D strict validators', () => {
     it('rejects a non-boolean value', () => {
       const error = check('ignore_camera_scroll', 'yes');
       expect(error?.code).toBe('INVALID_IGNORE_CAMERA_SCROLL_FORMAT');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 
@@ -265,7 +265,7 @@ describe('Parallax2D strict validators', () => {
     it('rejects a non-Vector2 value', () => {
       const error = check('screen_offset', 'not-a-vector');
       expect(error?.code).toBe('INVALID_SCREEN_OFFSET_FORMAT');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('accepts a negative value — set_screen_offset (parallax_2d.cpp:219-225) assigns straight through', () => {

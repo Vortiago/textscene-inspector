@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
 import './linterParser';
+import { expectError } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -99,7 +100,7 @@ describe('SpringBoneSimulator3D strict validators', () => {
     // SkeletonModifier3D and a shadow here would duplicate the rule.
     expect(validatorRegistry.getOwnKeys('SpringBoneSimulator3D')).not.toContain('influence');
     expect(check('influence', '0.5')).toBeNull();
-    expect(check('influence', '2')?.severity).toBe('warning');
+    expect(check('influence', '2')).toBeAtTier('warning');
     expect(check('active', 'true')).toBeNull();
   });
 
@@ -134,7 +135,7 @@ describe('SpringBoneSimulator3D strict validators', () => {
     });
 
     it('rejects a non-Vector3', () => {
-      expect(check('external_force', 'Vector2(1, 2)')?.severity).toBe('error');
+      expect(check('external_force', 'Vector2(1, 2)')).toBeAtTier('error');
     });
   });
 
@@ -146,19 +147,18 @@ describe('SpringBoneSimulator3D strict validators', () => {
 
     it('errors below zero, where ERR_FAIL_COND refuses the write', () => {
       // spring_bone_simulator_3d.cpp:841.
-      expect(check('setting_count', '-1')?.severity).toBe('error');
+      expect(check('setting_count', '-1')).toBeAtTier('error');
     });
 
     it('warns that a fractional count is truncated', () => {
-      expect(check('setting_count', '1.5')?.severity).toBe('warning');
+      expect(check('setting_count', '1.5')).toBeAtTier('warning');
     });
   });
 
   describe('the settings/<i>/ index', () => {
     it('errors on a negative index, which _set refuses outright', () => {
       const error = check('settings/-1/root_bone_name', '"Head"');
-      expect(error?.severity).toBe('error');
-      expect(error?.message).toContain('spring_bone_simulator_3d.cpp:44');
+      expectError(error, 'spring_bone_simulator_3d.cpp:44');
     });
 
     it('leaves a non-numeric index alone, because to_int resolves it', () => {
@@ -169,8 +169,8 @@ describe('SpringBoneSimulator3D strict validators', () => {
     });
 
     it('carries the negative-index error into the nested sub-arrays too', () => {
-      expect(check('settings/-2/joints/0/radius', '0.5')?.severity).toBe('error');
-      expect(check('settings/-2/collisions/0', 'NodePath("A")')?.severity).toBe('error');
+      expect(check('settings/-2/joints/0/radius', '0.5')).toBeAtTier('error');
+      expect(check('settings/-2/collisions/0', 'NodePath("A")')).toBeAtTier('error');
     });
 
     it('rejects a nested index to_int resolves as negative, however it is spelled', () => {
@@ -186,7 +186,7 @@ describe('SpringBoneSimulator3D strict validators', () => {
 
     it('rejects an unrecognised top-level leaf, since no subclass extends this family', () => {
       const error = check('settings/0/not_a_leaf', '1');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_SPRING_BONE_SETTING_KEY');
     });
 
@@ -206,7 +206,7 @@ describe('SpringBoneSimulator3D strict validators', () => {
       expect(check('settings/0/joints/x/radius/extra', '0.5')).toBeNull();
       // The segment itself still decides, and its value is still checked.
       expect(check('settings/0/joints/0/not_a_leaf/extra', '1')?.code).toBe('INVALID_SPRING_BONE_JOINT_KEY');
-      expect(check('settings/0/joints/0/radius/extra', '-1')?.severity).toBe('warning');
+      expect(check('settings/0/joints/0/radius/extra', '-1')).toBeAtTier('warning');
     });
   });
 
@@ -214,14 +214,14 @@ describe('SpringBoneSimulator3D strict validators', () => {
     it('ignores whatever follows the option segment', () => {
       // `opt = path.get_slicec('/', 3)` (:80) is `value`, so set_radius runs.
       expect(check('settings/0/radius/value/extra', '0.5')).toBeNull();
-      expect(check('settings/0/radius/value/extra', '-1')?.severity).toBe('warning');
+      expect(check('settings/0/radius/value/extra', '-1')).toBeAtTier('warning');
     });
 
     it('applies an empty setting index to setting 0, as "".to_int() does', () => {
       // `get_slicec('/', 1).to_int()` (:42) of an empty segment is 0 (ustring.cpp:2304-2305).
       expect(check('settings//radius/value', '0.5')).toBeNull();
-      expect(check('settings//radius/value', '-1')?.severity).toBe('warning');
-      expect(check('settings/0/joints//radius', '-1')?.severity).toBe('warning');
+      expect(check('settings//radius/value', '-1')).toBeAtTier('warning');
+      expect(check('settings/0/joints//radius', '-1')).toBeAtTier('warning');
     });
 
     it('refuses an option the branch does not know', () => {
@@ -242,7 +242,7 @@ describe('SpringBoneSimulator3D strict validators', () => {
       // spring_bone_simulator_3d.cpp:460-462 / :497-499. Both are re-run by
       // _validate_bone_names (:1355-1369) once the skeleton exists.
       for (const leaf of ['root_bone', 'end_bone']) {
-        expect(check(`settings/0/${leaf}`, '-2')?.severity).toBe('error');
+        expect(check(`settings/0/${leaf}`, '-2')).toBeAtTier('error');
       }
     });
 
@@ -255,27 +255,27 @@ describe('SpringBoneSimulator3D strict validators', () => {
     });
 
     it('warns that a fractional bone index is truncated', () => {
-      expect(check('settings/0/root_bone', '0.5')?.severity).toBe('warning');
+      expect(check('settings/0/root_bone', '0.5')).toBeAtTier('warning');
     });
   });
 
   describe('the hinted ranges', () => {
     it('warns below zero on end_bone/length, whose setter assigns straight through', () => {
       // "0,1,0.001,or_greater,suffix:m" (:299): a hint, not a guard.
-      expect(check('settings/0/end_bone/length', '-0.1')?.severity).toBe('warning');
+      expect(check('settings/0/end_bone/length', '-0.1')).toBeAtTier('warning');
       expect(check('settings/0/end_bone/length', '5')).toBeNull();
     });
 
     it('warns below zero on the shared radius, stiffness and drag', () => {
-      expect(check('settings/0/radius/value', '-1')?.severity).toBe('warning');
-      expect(check('settings/0/stiffness/value', '-1')?.severity).toBe('warning');
-      expect(check('settings/0/drag/value', '-1')?.severity).toBe('warning');
+      expect(check('settings/0/radius/value', '-1')).toBeAtTier('warning');
+      expect(check('settings/0/stiffness/value', '-1')).toBeAtTier('warning');
+      expect(check('settings/0/drag/value', '-1')).toBeAtTier('warning');
     });
 
     it('warns below zero on the per-joint radius, stiffness and drag', () => {
-      expect(check('settings/0/joints/2/radius', '-1')?.severity).toBe('warning');
-      expect(check('settings/0/joints/2/stiffness', '-1')?.severity).toBe('warning');
-      expect(check('settings/0/joints/2/drag', '-1')?.severity).toBe('warning');
+      expect(check('settings/0/joints/2/radius', '-1')).toBeAtTier('warning');
+      expect(check('settings/0/joints/2/stiffness', '-1')).toBeAtTier('warning');
+      expect(check('settings/0/joints/2/drag', '-1')).toBeAtTier('warning');
     });
 
     it('leaves the open ceilings alone', () => {
@@ -299,18 +299,18 @@ describe('SpringBoneSimulator3D strict validators', () => {
   describe('the enums', () => {
     it('warns outside the BoneDirection hint on end_bone/direction', () => {
       expect(check('settings/0/end_bone/direction', '6')).toBeNull();
-      expect(check('settings/0/end_bone/direction', '7')?.severity).toBe('warning');
+      expect(check('settings/0/end_bone/direction', '7')).toBeAtTier('warning');
     });
 
     it('warns outside the CenterFrom hint on center_from', () => {
       expect(check('settings/0/center_from', '2')).toBeNull();
-      expect(check('settings/0/center_from', '3')?.severity).toBe('warning');
+      expect(check('settings/0/center_from', '3')).toBeAtTier('warning');
     });
 
     it('warns outside the RotationAxis hint at both levels', () => {
       expect(check('settings/0/rotation_axis', '4')).toBeNull();
-      expect(check('settings/0/rotation_axis', '5')?.severity).toBe('warning');
-      expect(check('settings/0/joints/1/rotation_axis', '5')?.severity).toBe('warning');
+      expect(check('settings/0/rotation_axis', '5')).toBeAtTier('warning');
+      expect(check('settings/0/joints/1/rotation_axis', '5')).toBeAtTier('warning');
     });
   });
 
@@ -323,21 +323,21 @@ describe('SpringBoneSimulator3D strict validators', () => {
     });
 
     it('rejects anything that is neither', () => {
-      expect(check('settings/0/radius/damping_curve', '0.5')?.severity).toBe('error');
+      expect(check('settings/0/radius/damping_curve', '0.5')).toBeAtTier('error');
     });
   });
 
   describe('the gravity directions', () => {
     it('errors on the zero vector, which ERR_FAIL_COND refuses', () => {
       // spring_bone_simulator_3d.cpp:780 and :985.
-      expect(check('settings/0/gravity/direction', 'Vector3(0, 0, 0)')?.severity).toBe('error');
-      expect(check('settings/0/joints/0/gravity_direction', 'Vector3(0, 0, 0)')?.severity).toBe('error');
+      expect(check('settings/0/gravity/direction', 'Vector3(0, 0, 0)')).toBeAtTier('error');
+      expect(check('settings/0/joints/0/gravity_direction', 'Vector3(0, 0, 0)')).toBeAtTier('error');
     });
 
     it('errors just inside CMP_EPSILON, because the guard is is_zero_approx', () => {
       // Vector3::is_zero_approx compares each component against 0.00001
       // (vector3.cpp:149-151, math_funcs.h:554), so a hair off zero is still zero.
-      expect(check('settings/0/gravity/direction', 'Vector3(0.000001, 0, 0)')?.severity).toBe('error');
+      expect(check('settings/0/gravity/direction', 'Vector3(0.000001, 0, 0)')).toBeAtTier('error');
       expect(check('settings/0/gravity/direction', 'Vector3(0.0001, 0, 0)')).toBeNull();
     });
 
@@ -351,7 +351,7 @@ describe('SpringBoneSimulator3D strict validators', () => {
     });
 
     it('rejects a non-Vector3', () => {
-      expect(check('settings/0/gravity/direction', '"down"')?.severity).toBe('error');
+      expect(check('settings/0/gravity/direction', '"down"')).toBeAtTier('error');
     });
   });
 
@@ -366,8 +366,8 @@ describe('SpringBoneSimulator3D strict validators', () => {
     });
 
     it('still checks their format', () => {
-      expect(check('settings/0/joints/0/bone', '1.5')?.severity).toBe('warning');
-      expect(check('settings/0/joints/0/bone_name', 'Bone3')?.severity).toBe('error');
+      expect(check('settings/0/joints/0/bone', '1.5')).toBeAtTier('warning');
+      expect(check('settings/0/joints/0/bone_name', 'Bone3')).toBeAtTier('error');
     });
   });
 
@@ -380,7 +380,7 @@ describe('SpringBoneSimulator3D strict validators', () => {
     // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
     it('rejects a non-NodePath', () => {
       expect(check('settings/0/collisions/0', '"Sphere"')).toBeNull();
-      expect(check('settings/0/collisions/0', '&"Sphere"')?.severity).toBe('error');
+      expect(check('settings/0/collisions/0', '&"Sphere"')).toBeAtTier('error');
     });
 
     it('ignores whatever follows a collision index', () => {
@@ -391,7 +391,7 @@ describe('SpringBoneSimulator3D strict validators', () => {
       // The value is judged as on the bare key: STRING converts strictly to
       // NODE_PATH (variant.cpp:746-749), STRING_NAME does not.
       expect(check('settings/0/collisions/0/extra', '"Sphere"')).toBeNull();
-      expect(check('settings/0/collisions/0/extra', '&"Sphere"')?.severity).toBe('error');
+      expect(check('settings/0/collisions/0/extra', '&"Sphere"')).toBeAtTier('error');
     });
 
     it('reads a missing collision index as collision 0', () => {
@@ -400,7 +400,7 @@ describe('SpringBoneSimulator3D strict validators', () => {
       expect(check('settings/0/collisions', 'NodePath("Sphere")')).toBeNull();
       expect(check('settings/0/collisions/', 'NodePath("Sphere")')).toBeNull();
       expect(check('settings/0/exclude_collisions', 'NodePath("Sphere")')).toBeNull();
-      expect(check('settings/0/collisions', '&"Sphere"')?.severity).toBe('error');
+      expect(check('settings/0/collisions', '&"Sphere"')).toBeAtTier('error');
     });
 
     it('still refuses a leaf that only starts like a collision list', () => {
@@ -415,9 +415,9 @@ describe('SpringBoneSimulator3D strict validators', () => {
       // LocalVector<NodePath>::resize, sized `U = uint32_t` (local_vector.h:44, :188). A negative
       // int wraps to about 4.29 billion and trips `CRASH_COND_MSG(!data, "Out of memory")`
       // (local_vector.h:179), or the disabled list's setter drops it: no round-trip.
-      expect(check('settings/0/collision_count', '-1')?.severity).toBe('error');
-      expect(check('settings/0/exclude_collision_count', '-1')?.severity).toBe('error');
-      expect(check('settings/0/joint_count', '-1')?.severity).toBe('error');
+      expect(check('settings/0/collision_count', '-1')).toBeAtTier('error');
+      expect(check('settings/0/exclude_collision_count', '-1')).toBeAtTier('error');
+      expect(check('settings/0/joint_count', '-1')).toBeAtTier('error');
     });
   });
 });

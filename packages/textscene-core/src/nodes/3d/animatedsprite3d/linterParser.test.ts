@@ -196,7 +196,7 @@ describe('playing is a key verdict, not a value', () => {
   it('rejects the key whatever the value', () => {
     for (const value of ['true', 'false', '1']) {
       const verdict = validatorRegistry.findValidator('AnimatedSprite3D', 'playing')?.('playing', value, 1);
-      expect(verdict?.severity).toBe('error');
+      expect(verdict).toBeAtTier('error');
       expect(verdict?.message).toContain('cannot be set on AnimatedSprite3D');
     }
   });
@@ -206,7 +206,7 @@ describe('playing is a key verdict, not a value', () => {
       d.message.includes("'playing'")
     );
     expect(found).toHaveLength(1);
-    expect(found[0]!.severity).toBe('error');
+    expect(found[0]).toBeAtTier('error');
     expect(found[0]!.message).toContain('play() starts playback');
   });
 

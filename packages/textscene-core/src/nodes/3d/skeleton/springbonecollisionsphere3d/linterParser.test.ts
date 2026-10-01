@@ -81,13 +81,13 @@ describe('SpringBoneCollisionSphere3D.radius', () => {
     // wrongly `enforced` bound.
     const diagnostic = check('radius', '-0.5');
     expect(diagnostic).not.toBeNull();
-    expect(diagnostic!.severity).toBe('warning');
+    expect(diagnostic).toBeAtTier('warning');
   });
 
   it('keeps a malformed radius an error whatever the bound is grounded in', () => {
     const diagnostic = check('radius', 'wide');
     expect(diagnostic).not.toBeNull();
-    expect(diagnostic!.severity).toBe('error');
+    expect(diagnostic).toBeAtTier('error');
   });
 
   it('grounds the floor in the hint, not in the setter', () => {
