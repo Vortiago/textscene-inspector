@@ -109,9 +109,9 @@ describe('PopupMenu strict validators', () => {
     });
     it('rejects 0 and below as an error: set_submenu_popup_delay clamps it to 0.01 (popup_menu.cpp:3041-3042)', () => {
       const atZero = check('submenu_popup_delay', '0');
-      expect(atZero?.severity).toBe('error');
+      expect(atZero).toBeAtTier('error');
       const negative = check('submenu_popup_delay', '-1');
-      expect(negative?.severity).toBe('error');
+      expect(negative).toBeAtTier('error');
     });
   });
 
@@ -129,7 +129,7 @@ describe('PopupMenu strict validators', () => {
       // A hint-tier bound IS the hint, gap included. set_system_menu
       // (popup_menu.cpp:185-193) assigns it straight through, which is what
       // keeps this a warning rather than an error.
-      expect(check('system_menu_id', '1')?.severity).toBe('warning');
+      expect(check('system_menu_id', '1')).toBeAtTier('warning');
     });
     it('names the ids it will take, and not the one it skips', () => {
       const message = check('system_menu_id', '6')?.message ?? '';
@@ -140,7 +140,7 @@ describe('PopupMenu strict validators', () => {
       expect(check('system_menu_id', 'dock')?.code).toBe('INVALID_SYSTEM_MENU_ID_FORMAT');
     });
     it('warns outside 0-5: set_system_menu assigns unconditionally (popup_menu.cpp:185-193), so this is hinted not enforced', () => {
-      expect(check('system_menu_id', '6')?.severity).toBe('warning');
+      expect(check('system_menu_id', '6')).toBeAtTier('warning');
     });
   });
 
@@ -153,7 +153,7 @@ describe('PopupMenu strict validators', () => {
       expect(check('item_count', 'many')?.code).toBe('INVALID_ITEM_COUNT_FORMAT');
     });
     it('errors below 0: set_item_count is ERR_FAIL_COND(p_count < 0) (popup_menu.cpp:2698)', () => {
-      expect(check('item_count', '-1')?.severity).toBe('error');
+      expect(check('item_count', '-1')).toBeAtTier('error');
     });
   });
 
@@ -188,7 +188,7 @@ describe('PopupMenu strict validators', () => {
       // dispatcher to report that, so it routes rather than resolving to no validator.
       const nonNumeric = validatorRegistry.findValidator('PopupMenu', 'item_x/text');
       expect(nonNumeric).not.toBeNull();
-      expect(nonNumeric!('item_x/text', '"x"', 1)?.severity).toBe('error');
+      expect(nonNumeric!('item_x/text', '"x"', 1)).toBeAtTier('error');
       // A negative index is well formed: is_valid_int accepts the sign
       // (property_list_helper.cpp:52) and the index < 0 guard rejects it at :57. It must
       // reach the dispatcher, or a key the engine drops reads as clean.
@@ -234,12 +234,12 @@ describe('PopupMenu strict validators', () => {
 
     it('errors on an out-of-range checkable: _set_item_checkable_type drops an unmatched value (popup_menu.cpp:62-73)', () => {
       const error = dispatcher!('item_0/checkable', '3', 1);
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('warns on a negative id: set_item_id assigns straight through (popup_menu.cpp:2099)', () => {
       const error = dispatcher!('item_0/id', '-1', 1);
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('rejects a malformed checked/disabled/separator value', () => {
@@ -250,7 +250,7 @@ describe('PopupMenu strict validators', () => {
 
     it('errors on a negative item index: property_list_helper.cpp:58 refuses it entirely', () => {
       const error = dispatcher!('item_-1/text', '"Open"', 1);
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_ITEM_INDEX');
     });
 

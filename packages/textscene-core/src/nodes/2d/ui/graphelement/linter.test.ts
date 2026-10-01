@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { Linter } from '../../../../linter/Linter';
 import './linterParser';
 import './linter';
+import { reportsOf } from '../../../../linter/testing/tierLists';
 
 function scene(body: string): string {
   return `[gd_scene format=3]\n\n[node name="Root" type="Control"]\n\n[node name="MyGraphElement" type="GraphElement" parent="."]\n${body}`;
@@ -22,11 +23,6 @@ describe('GraphElement selection rule', () => {
   });
 
   const namesOf = (content: string) => linter.lint(content).map((d) => d.ruleName);
-  const severitiesOf = (content: string, ruleName: string) =>
-    linter
-      .lint(content)
-      .filter((d) => d.ruleName === ruleName)
-      .map((d) => d.severity);
 
   it('says nothing about an ordinary, consistent GraphElement (happy path)', () => {
     const diagnostics = linter.lint(scene('selectable = true\nselected = true\n'));
@@ -36,7 +32,7 @@ describe('GraphElement selection rule', () => {
   it('errors when selected = true is authored alongside selectable = false', () => {
     const content = scene('selectable = false\nselected = true\n');
     expect(namesOf(content)).toContain('graph-element-selected-not-selectable');
-    expect(severitiesOf(content, 'graph-element-selected-not-selectable')).toEqual(['error']);
+    expect(reportsOf(linter.lint(content), 'graph-element-selected-not-selectable', 'error')).toHaveLength(1);
     expect(linter.lint(content)[0]!.message).toContain('selectable');
   });
 
@@ -50,9 +46,8 @@ describe('GraphElement selection rule', () => {
     // (graph_element.cpp:207), so the authored `selected` is overwritten: the
     // ADR-0032 error tier, and the only diagnostic this scene should produce.
     const diagnostics = linter.lint(scene('selectable = false\nselected = true\n'));
-    expect(diagnostics.map((d) => [d.ruleName, d.severity])).toEqual([
-      ['graph-element-selected-not-selectable', 'error'],
-    ]);
+    expect(diagnostics).toBeAllAtTier('error');
+    expect(diagnostics.map((d) => d.ruleName)).toEqual(['graph-element-selected-not-selectable']);
   });
 
   it('stays silent when selectable = false and selected = false — nothing forced, nothing to warn about (edge case)', () => {

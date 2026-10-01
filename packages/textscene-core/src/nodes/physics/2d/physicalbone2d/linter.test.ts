@@ -18,6 +18,7 @@ import {
 } from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
+import { errorsOf } from '../../../../linter/testing/tierLists';
 
 const here = dirname(fileURLToPath(import.meta.url));
 // .../src/nodes/physics/2d/physicalbone2d -> repo root is 7 levels up.
@@ -97,7 +98,7 @@ describe('PhysicalBone2D Linter', () => {
         (d) => d.ruleName === 'physicalbone2d-missing-skeleton-parent' && d.nodeName === 'Lower'
       );
       expect(lower).toBeDefined();
-      expect(lower?.severity).toBe('warning');
+      expect(lower).toBeAtTier('warning');
     });
   });
 
@@ -177,7 +178,7 @@ describe('PhysicalBone2D Linter', () => {
 
   it('lints the shipped fixture clean — zero errors, zero PhysicalBone2D diagnostics at all', () => {
     const diagnostics = lint(readFileSync(FIXTURE, 'utf8'));
-    expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    expect(errorsOf(diagnostics)).toEqual([]);
     expect(diagnostics.filter((d) => d.nodeType === 'PhysicalBone2D')).toEqual([]);
   });
 });

@@ -99,13 +99,13 @@ describe('TextureProgressBar strict validators', () => {
     it('rejects 9 as an error — the setter refuses the write outright', () => {
       const err = check('fill_mode', '9');
       expect(err).not.toBeNull();
-      expect(err!.severity).toBe('error');
+      expect(err).toBeAtTier('error');
     });
 
     it('rejects -1 as an error', () => {
       const err = check('fill_mode', '-1');
       expect(err).not.toBeNull();
-      expect(err!.severity).toBe('error');
+      expect(err).toBeAtTier('error');
     });
   });
 
@@ -156,13 +156,13 @@ describe('TextureProgressBar strict validators', () => {
     it('rejects 400 as an error — CLAMP alters rather than merely hints the bound', () => {
       const err = check('radial_fill_degrees', '400');
       expect(err).not.toBeNull();
-      expect(err!.severity).toBe('error');
+      expect(err).toBeAtTier('error');
     });
 
     it('rejects -10 as an error', () => {
       const err = check('radial_fill_degrees', '-10');
       expect(err).not.toBeNull();
-      expect(err!.severity).toBe('error');
+      expect(err).toBeAtTier('error');
     });
   });
 
@@ -183,13 +183,13 @@ describe('TextureProgressBar strict validators', () => {
     it('rejects 400 as an error — fposmodp wraps rather than merely hints the bound', () => {
       const err = check('radial_initial_angle', '400');
       expect(err).not.toBeNull();
-      expect(err!.severity).toBe('error');
+      expect(err).toBeAtTier('error');
     });
 
     it('rejects -10 as an error', () => {
       const err = check('radial_initial_angle', '-10');
       expect(err).not.toBeNull();
-      expect(err!.severity).toBe('error');
+      expect(err).toBeAtTier('error');
     });
   });
 
@@ -215,13 +215,13 @@ describe('TextureProgressBar strict validators', () => {
     it('warns above 16384 — only the hint states the ceiling, set_stretch_margin assigns straight through', () => {
       const err = check(property, '20000');
       expect(err).not.toBeNull();
-      expect(err!.severity).toBe('warning');
+      expect(err).toBeAtTier('warning');
     });
 
     it('warns below 0 — only the hint states the floor', () => {
       const err = check(property, '-5');
       expect(err).not.toBeNull();
-      expect(err!.severity).toBe('warning');
+      expect(err).toBeAtTier('warning');
     });
   });
 

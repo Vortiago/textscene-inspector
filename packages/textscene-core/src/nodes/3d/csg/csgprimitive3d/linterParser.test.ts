@@ -36,7 +36,7 @@ describe('CSGPrimitive3D shared validators', () => {
     // set_flip_faces:1105-1112 assigns straight through.
     const validator = validatorRegistry.findValidator('CSGTorus3D', 'flip_faces')!;
     expect(validator('flip_faces', 'true', 1)).toBeNull();
-    expect(validator('flip_faces', '"banana"', 1)?.severity).toBe('error');
+    expect(validator('flip_faces', '"banana"', 1)).toBeAtTier('error');
   });
 
   it('does not reach the combiner', () => {

@@ -117,7 +117,7 @@ describe('playing is a key verdict, not a value', () => {
   it('rejects the key whatever the value', () => {
     for (const value of ['true', 'false', '1']) {
       const verdict = validatorRegistry.findValidator('AnimatedSprite2D', 'playing')?.('playing', value, 1);
-      expect(verdict?.severity).toBe('error');
+      expect(verdict).toBeAtTier('error');
       expect(verdict?.message).toContain('cannot be set on AnimatedSprite2D');
     }
   });

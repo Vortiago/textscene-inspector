@@ -88,7 +88,7 @@ describe('ModifierBoneTarget3D strict validators', () => {
       // grounds, since a warning alone would leave the value intact. The `bone = -1`
       // on :60 is: the write is altered, which ADR-0032 puts in the error tier.
       const error = check('bone', '-2');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_BONE_VALUE');
     });
 

@@ -49,13 +49,13 @@ describe('GPUParticles3D strict validators', () => {
     it('errors at 0, one step below the floor ERR_FAIL_COND_MSG(p_amount < 1) refuses', () => {
       const error = check('amount', '0');
       expect(error?.code).toBe('INVALID_AMOUNT_VALUE');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('warns at 1000001, one step above the hint-only ceiling no setter guard bounds', () => {
       const warning = check('amount', '1000001');
       expect(warning?.code).toBe('INVALID_AMOUNT_VALUE');
-      expect(warning?.severity).toBe('warning');
+      expect(warning).toBeAtTier('warning');
     });
   });
 
@@ -79,13 +79,13 @@ describe('GPUParticles3D strict validators', () => {
     it('warns just above the ceiling 1', () => {
       const warning = check('amount_ratio', '1.0001');
       expect(warning?.code).toBe('INVALID_AMOUNT_RATIO_VALUE');
-      expect(warning?.severity).toBe('warning');
+      expect(warning).toBeAtTier('warning');
     });
 
     it('warns just below the floor 0', () => {
       const warning = check('amount_ratio', '-0.0001');
       expect(warning?.code).toBe('INVALID_AMOUNT_RATIO_VALUE');
-      expect(warning?.severity).toBe('warning');
+      expect(warning).toBeAtTier('warning');
     });
 
     it('accepts nan — variant_parser.cpp:150-155 writes it and no comparison against NaN ever trips', () => {
@@ -93,12 +93,12 @@ describe('GPUParticles3D strict validators', () => {
     });
 
     it('warns (not errors) on inf, which trips the hinted ceiling like any other value above 1', () => {
-      expect(check('amount_ratio', 'inf')?.severity).toBe('warning');
+      expect(check('amount_ratio', 'inf')).toBeAtTier('warning');
     });
 
     it('warns (not errors) on -inf / inf_neg, which trip the hinted floor', () => {
-      expect(check('amount_ratio', '-inf')?.severity).toBe('warning');
-      expect(check('amount_ratio', 'inf_neg')?.severity).toBe('warning');
+      expect(check('amount_ratio', '-inf')).toBeAtTier('warning');
+      expect(check('amount_ratio', 'inf_neg')).toBeAtTier('warning');
     });
   });
 
@@ -128,7 +128,7 @@ describe('GPUParticles3D strict validators', () => {
     it('errors just above UINT32_MAX, where the slot drops the extra bit', () => {
       const warning = check('seed', '4294967296');
       expect(warning?.code).toBe('INVALID_SEED_VALUE');
-      expect(warning?.severity).toBe('error');
+      expect(warning).toBeAtTier('error');
     });
 
     it('takes -1, the uint32 spelling of the ceiling the hint names', () => {
@@ -171,13 +171,13 @@ describe('GPUParticles3D strict validators', () => {
     it('warns just above 4, where the hint label list runs out but no setter refuses', () => {
       const warning = check('transform_align', '5');
       expect(warning?.code).toBe('INVALID_TRANSFORM_ALIGN_VALUE');
-      expect(warning?.severity).toBe('warning');
+      expect(warning).toBeAtTier('warning');
     });
 
     it('warns below 0, the same hint bound from the other end', () => {
       const warning = check('transform_align', '-1');
       expect(warning?.code).toBe('INVALID_TRANSFORM_ALIGN_VALUE');
-      expect(warning?.severity).toBe('warning');
+      expect(warning).toBeAtTier('warning');
     });
   });
 
@@ -201,13 +201,13 @@ describe('GPUParticles3D strict validators', () => {
     it('errors at 0, which ERR_FAIL_COND(p_count < 1) refuses — the hint says 0 is legal, the setter disagrees', () => {
       const error = check('draw_passes', '0');
       expect(error?.code).toBe('INVALID_DRAW_PASSES_VALUE');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('warns just above the hint-only ceiling of 4, which no setter guard bounds', () => {
       const warning = check('draw_passes', '5');
       expect(warning?.code).toBe('INVALID_DRAW_PASSES_VALUE');
-      expect(warning?.severity).toBe('warning');
+      expect(warning).toBeAtTier('warning');
     });
   });
 

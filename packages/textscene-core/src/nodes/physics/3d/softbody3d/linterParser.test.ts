@@ -82,7 +82,7 @@ describe('SoftBody3D strict validators', () => {
     it('warns on a negative value rather than erroring (set_damping_coefficient has no guard)', () => {
       const error = check('damping_coefficient', '-0.1');
       expect(error?.code).toBe('INVALID_DAMPING_COEFFICIENT_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('accepts a value far beyond the editor slider extent (or_greater)', () => {
@@ -106,7 +106,7 @@ describe('SoftBody3D strict validators', () => {
     it('warns on a value outside SoftBody3D.DisableMode rather than erroring (bare assignment)', () => {
       const error = check('disable_mode', '2');
       expect(error?.code).toBe('INVALID_DISABLE_MODE_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -126,7 +126,7 @@ describe('SoftBody3D strict validators', () => {
     it('warns above 1 rather than erroring (set_drag_coefficient has no guard)', () => {
       const error = check('drag_coefficient', '1.1');
       expect(error?.code).toBe('INVALID_DRAG_COEFFICIENT_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -146,7 +146,7 @@ describe('SoftBody3D strict validators', () => {
     it('warns above 1 rather than erroring (set_linear_stiffness has no guard)', () => {
       const error = check('linear_stiffness', '1.1');
       expect(error?.code).toBe('INVALID_LINEAR_STIFFNESS_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -221,13 +221,13 @@ describe('SoftBody3D strict validators', () => {
     it('warns on 0, below the lower bound, rather than erroring (set_simulation_precision has no guard)', () => {
       const error = check('simulation_precision', '0');
       expect(error?.code).toBe('INVALID_SIMULATION_PRECISION_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('warns above 100 rather than erroring', () => {
       const error = check('simulation_precision', '101');
       expect(error?.code).toBe('INVALID_SIMULATION_PRECISION_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -246,7 +246,7 @@ describe('SoftBody3D strict validators', () => {
       // `ERR_FAIL_COND(p_val < 0.0)` and the default server is that one.
       const error = check('total_mass', '-0.1');
       expect(error?.code).toBe('INVALID_TOTAL_MASS_VALUE');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('accepts a value far beyond the editor slider extent (or_greater)', () => {
@@ -269,7 +269,7 @@ describe('SoftBody3D strict validators', () => {
 
     // variant_parser.cpp:1428-1430 narrows toward zero; Godot loads point 1.
     it('warns that a float element is truncated rather than refusing it', () => {
-      expect(check('pinned_points', '[0, 1.5]')?.severity).toBe('warning');
+      expect(check('pinned_points', '[0, 1.5]')).toBeAtTier('warning');
     });
 
     it('still rejects an element Godot cannot tokenise at all', () => {
@@ -324,7 +324,7 @@ describe('SoftBody3D strict validators', () => {
 
     it('rejects an unrecognised leaf name', () => {
       const error = checkAttachment('attachments/0/not_a_real_leaf', '1');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_ATTACHMENT_KEY');
     });
   });

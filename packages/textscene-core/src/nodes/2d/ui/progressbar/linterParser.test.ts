@@ -45,13 +45,13 @@ describe('ProgressBar strict validators', () => {
     it('rejects 4 — FILL_MODE_MAX, refused by ERR_FAIL_INDEX(p_fill, FILL_MODE_MAX)', () => {
       const error = check('fill_mode', '4');
       expect(error).not.toBeNull();
-      expect(error!.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('rejects a negative index — ERR_FAIL_INDEX has no open floor', () => {
       const error = check('fill_mode', '-1');
       expect(error).not.toBeNull();
-      expect(error!.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 

@@ -16,33 +16,33 @@ describe('the two tiers behave differently', () => {
   it('an enforced bound rejects out-of-range as an error', () => {
     // Godot's own guard, so the value genuinely does not reach the engine.
     const validator = v.float('fov', { min: 1, max: 179, enforced: 'camera_3d.cpp:725' });
-    expect(validator('fov', '250', 1)?.severity).toBe('error');
+    expect(validator('fov', '250', 1)).toBeAtTier('error');
     expect(validator.grounding).toEqual({ kind: 'enforced', cite: 'camera_3d.cpp:725' });
   });
 
   it('a hinted bound reports out-of-range as a warning', () => {
     // The inspector will not offer it, but a .tscn carrying it loads and runs.
     const validator = v.float('near', { min: 0.001, hinted: 'camera_3d.cpp:685' });
-    expect(validator('near', '0.0001', 1)?.severity).toBe('warning');
+    expect(validator('near', '0.0001', 1)).toBeAtTier('warning');
     expect(validator.grounding).toEqual({ kind: 'hinted', cite: 'camera_3d.cpp:685' });
   });
 
   it('keeps a FORMAT failure an error whatever the grounding', () => {
     // An unparseable value is malformed regardless of what Godot would accept.
     const validator = v.float('near', { min: 0.001, hinted: 'camera_3d.cpp:685' });
-    expect(validator('near', 'not-a-number', 1)?.severity).toBe('error');
+    expect(validator('near', 'not-a-number', 1)).toBeAtTier('error');
   });
 
   it('applies the same split to an enum', () => {
     const hinted = v.enumInt('mode', 0, 2, { 0: 'A', 1: 'B', 2: 'C' }, { hinted: 'x.cpp:10' });
-    expect(hinted('mode', '9', 1)?.severity).toBe('warning');
+    expect(hinted('mode', '9', 1)).toBeAtTier('warning');
     const enforced = v.enumInt('mode', 0, 2, { 0: 'A', 1: 'B', 2: 'C' }, { enforced: 'x.cpp:11' });
-    expect(enforced('mode', '9', 1)?.severity).toBe('error');
+    expect(enforced('mode', '9', 1)).toBeAtTier('error');
   });
 
   it('leaves an un-audited bound erroring, as it did before the split', () => {
     const validator = v.float('legacy', { min: 0 });
-    expect(validator('legacy', '-1', 1)?.severity).toBe('error');
+    expect(validator('legacy', '-1', 1)).toBeAtTier('error');
     expect(validator.grounding).toBeUndefined();
   });
 });
@@ -57,8 +57,8 @@ describe('per-end grounding', () => {
       enforced: { min: 'physical_bone_2d.cpp:229' },
       hinted: { max: 'physical_bone_2d.cpp:283' },
     });
-    expect(validator('bone2d_index', '-1', 1)?.severity).toBe('error');
-    expect(validator('bone2d_index', '1001', 1)?.severity).toBe('warning');
+    expect(validator('bone2d_index', '-1', 1)).toBeAtTier('error');
+    expect(validator('bone2d_index', '1001', 1)).toBeAtTier('warning');
   });
 
   it('grounds every bounded combinator, not just float and int', () => {
@@ -78,11 +78,11 @@ describe('per-end grounding', () => {
   });
 
   it('reports a hinted violation as a warning through those combinators too', () => {
-    expect(v.nonNegativeFloat('n', { hinted: 'b.cpp:2' })('n', '-1', 1)?.severity).toBe('warning');
-    expect(v.positiveInt('i', undefined, { hinted: 'd.cpp:4' })('i', '0', 1)?.severity).toBe('warning');
-    expect(
-      v.boundedVector3('vec', { min: 0, hinted: 'f.cpp:6' })('vec', 'Vector3(-1, 0, 0)', 1)?.severity
-    ).toBe('warning');
+    expect(v.nonNegativeFloat('n', { hinted: 'b.cpp:2' })('n', '-1', 1)).toBeAtTier('warning');
+    expect(v.positiveInt('i', undefined, { hinted: 'd.cpp:4' })('i', '0', 1)).toBeAtTier('warning');
+    expect(v.boundedVector3('vec', { min: 0, hinted: 'f.cpp:6' })('vec', 'Vector3(-1, 0, 0)', 1)).toBeAtTier(
+      'warning'
+    );
   });
 
   it('splits float and int the same way strictInt does', () => {
@@ -94,8 +94,8 @@ describe('per-end grounding', () => {
       enforced: { min: 'visual_instance_3d.cpp:377' },
       hinted: { max: 'visual_instance_3d.cpp:602' },
     });
-    expect(floatV('extra_cull_margin', '-1', 1)?.severity).toBe('error');
-    expect(floatV('extra_cull_margin', '20000', 1)?.severity).toBe('warning');
+    expect(floatV('extra_cull_margin', '-1', 1)).toBeAtTier('error');
+    expect(floatV('extra_cull_margin', '20000', 1)).toBeAtTier('warning');
 
     const intV = v.int('sides', {
       min: 3,
@@ -103,8 +103,8 @@ describe('per-end grounding', () => {
       enforced: { min: 'csg_shape.cpp:1876' },
       hinted: { max: 'csg_shape.cpp:1849' },
     });
-    expect(intV('sides', '2', 1)?.severity).toBe('error');
-    expect(intV('sides', '65', 1)?.severity).toBe('warning');
+    expect(intV('sides', '2', 1)).toBeAtTier('error');
+    expect(intV('sides', '65', 1)).toBeAtTier('warning');
   });
 
   it('splits enumInt per end too, rather than collapsing both to error', () => {
@@ -117,8 +117,8 @@ describe('per-end grounding', () => {
       { 1: 'A', 2: 'B', 3: 'C' },
       { enforced: { min: 'x.cpp:10' }, hinted: { max: 'x.cpp:11' } }
     );
-    expect(split('mode', '0', 1)?.severity).toBe('error');
-    expect(split('mode', '4', 1)?.severity).toBe('warning');
+    expect(split('mode', '0', 1)).toBeAtTier('error');
+    expect(split('mode', '4', 1)).toBeAtTier('warning');
   });
 
   it('splits boundedVector3 per end too', () => {
@@ -128,8 +128,8 @@ describe('per-end grounding', () => {
       enforced: { min: 'gpu_particles_collision_3d.cpp:97' },
       hinted: { max: 'gpu_particles_collision_3d.cpp:101' },
     });
-    expect(split('size', 'Vector3(0, 1, 1)', 1)?.severity).toBe('error');
-    expect(split('size', 'Vector3(2048, 1, 1)', 1)?.severity).toBe('warning');
+    expect(split('size', 'Vector3(0, 1, 1)', 1)).toBeAtTier('error');
+    expect(split('size', 'Vector3(2048, 1, 1)', 1)).toBeAtTier('warning');
   });
 
   it('keeps BOTH citations when the ends are grounded differently', () => {

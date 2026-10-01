@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { Linter } from '../../../../linter/Linter';
 import './linterParser';
 import './linter';
+import { errorsOf, reportsOf } from '../../../../linter/testing/tierLists';
 
 function scene(body: string): string {
   return `[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n[node name="Fx" type="GPUParticles2D" parent="."]\n${body}`;
@@ -19,16 +20,13 @@ describe('GPUParticles2D missing-process-material rule', () => {
   });
 
   const namesOf = (content: string) => linter.lint(content).map((d) => d.ruleName);
-  const severitiesOf = (content: string, ruleName: string) =>
-    linter
-      .lint(content)
-      .filter((d) => d.ruleName === ruleName)
-      .map((d) => d.severity);
 
   it('warns when process_material is absent (happy path for the rule)', () => {
     const content = scene('amount = 8\n');
     expect(namesOf(content)).toContain('gpuparticles2d-missing-process-material');
-    expect(severitiesOf(content, 'gpuparticles2d-missing-process-material')).toEqual(['warning']);
+    expect(
+      reportsOf(linter.lint(content), 'gpuparticles2d-missing-process-material', 'warning')
+    ).toHaveLength(1);
   });
 
   it('stays silent when process_material is a SubResource reference', () => {
@@ -43,7 +41,7 @@ describe('GPUParticles2D missing-process-material rule', () => {
 
   it('never raises an ERROR — a missing process_material is legal Godot (severity contract)', () => {
     const diagnostics = linter.lint(scene(''));
-    expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    expect(errorsOf(diagnostics)).toEqual([]);
   });
 
   it('leaves other node types alone (edge case)', () => {

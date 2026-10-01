@@ -14,6 +14,7 @@ import {
 } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
+import { errorsOf } from '../../../linter/testing/tierLists';
 
 /** A texture the node can reference so the `sprite3d-requires-texture` rule stays quiet. */
 const textureRef = 'SubResource("tex_1")';
@@ -166,8 +167,8 @@ pixel_size = 0.01
         scene(node('Sprite3D', { texture: 'SubResource("nonexistent")' }, { name: 'MissingTexture' }))
       );
       expect(diagnostics).toHaveLength(1);
+      expect(diagnostics[0]).toBeAtTier('error');
       expect(diagnostics[0]).toMatchObject({
-        severity: 'error',
         nodeName: 'MissingTexture',
         nodeType: 'Sprite3D',
         ruleName: 'dangling-resource-reference',
@@ -433,7 +434,7 @@ describe('Sprite3D frame_coords with a converted component no int32 holds', () =
       scene(node('Sprite3D', { texture: 1, hframes: 4, vframes: 3, frame_coords: 'Vector2(4294967295, 5)' }))
     );
     expect(diagnostics.filter((d) => d.ruleName === 'sprite3d-frame-coords-range')).toEqual([]);
-    expect(diagnostics.some((d) => d.severity === 'error' && d.message.includes('frame_coords'))).toBe(true);
+    expect(errorsOf(diagnostics).some((d) => d.message.includes('frame_coords'))).toBe(true);
   });
 
   it('still reports the row on the canonical spelling of the same digits', () => {

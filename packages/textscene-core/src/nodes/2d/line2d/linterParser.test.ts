@@ -131,37 +131,37 @@ width = wide
     it('errors below the enforced round_precision floor (line_2d.cpp:255-256)', () => {
       const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\nround_precision = 0\n`;
       const found = linter.lint(content).find((d) => d.message.includes('round_precision'));
-      expect(found?.severity).toBe('error');
+      expect(found).toBeAtTier('error');
     });
 
     it('warns above the hinted round_precision ceiling (line_2d.cpp:409)', () => {
       const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\nround_precision = 64\n`;
       const found = linter.lint(content).find((d) => d.message.includes('round_precision'));
-      expect(found?.severity).toBe('warning');
+      expect(found).toBeAtTier('warning');
     });
 
     it('warns on an out-of-range joint_mode (line_2d.cpp:404, no ERR_FAIL_INDEX)', () => {
       const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\njoint_mode = 9\n`;
       const found = linter.lint(content).find((d) => d.message.includes('joint_mode'));
-      expect(found?.severity).toBe('warning');
+      expect(found).toBeAtTier('warning');
     });
 
     it('warns on an out-of-range texture_mode (line_2d.cpp:402, no ERR_FAIL_INDEX)', () => {
       const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\ntexture_mode = 9\n`;
       const found = linter.lint(content).find((d) => d.message.includes('texture_mode'));
-      expect(found?.severity).toBe('warning');
+      expect(found).toBeAtTier('warning');
     });
 
     it('warns on an out-of-range begin_cap_mode (line_2d.cpp:405, no ERR_FAIL_INDEX)', () => {
       const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\nbegin_cap_mode = 9\n`;
       const found = linter.lint(content).find((d) => d.message.includes('begin_cap_mode'));
-      expect(found?.severity).toBe('warning');
+      expect(found).toBeAtTier('warning');
     });
 
     it('warns on an out-of-range end_cap_mode (line_2d.cpp:406, no ERR_FAIL_INDEX)', () => {
       const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\nend_cap_mode = 9\n`;
       const found = linter.lint(content).find((d) => d.message.includes('end_cap_mode'));
-      expect(found?.severity).toBe('warning');
+      expect(found).toBeAtTier('warning');
     });
 
     describe.each([
@@ -177,7 +177,7 @@ width = wide
       it('warns (not errors) at 3, the first value past the hint — the setter assigns unconditionally', () => {
         const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\n${prop} = 3\n`;
         const found = linter.lint(content).find((d) => d.message.includes(prop));
-        expect(found?.severity).toBe('warning');
+        expect(found).toBeAtTier('warning');
       });
     });
   });

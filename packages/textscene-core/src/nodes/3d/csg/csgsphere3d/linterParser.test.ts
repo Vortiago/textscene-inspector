@@ -71,7 +71,7 @@ describe('CSGSphere3D strict validators', () => {
     // a drifted `min` still leaves errors empty.
     const diagnostics = linter.lint(scene(line));
     expect(errorsOf(diagnostics)).toEqual([]);
-    expect(warningsOf(diagnostics).some((w) => w.message.includes(property))).toBe(false);
+    expect(diagnostics.some((d) => d.message.includes(property))).toBe(false);
   });
 
   it.each([
@@ -83,7 +83,7 @@ describe('CSGSphere3D strict validators', () => {
   ])('accepts the hinted ceiling %s in silence', (line, property) => {
     const diagnostics = linter.lint(scene(line));
     expect(errorsOf(diagnostics)).toEqual([]);
-    expect(warningsOf(diagnostics).some((w) => w.message.includes(property))).toBe(false);
+    expect(diagnostics.some((d) => d.message.includes(property))).toBe(false);
   });
 
   it.each([

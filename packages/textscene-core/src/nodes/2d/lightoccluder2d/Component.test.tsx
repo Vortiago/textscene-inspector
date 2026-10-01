@@ -30,6 +30,7 @@ import { parseOccluderCullMode, polygonToSegments } from './polygonShapes';
 import '../../2d/lightoccluder2d/index';
 import '../../2d/lightoccluder2d/index.r3f';
 import '../../../linter/index';
+import { errorsOf } from '../../../linter/testing/tierLists';
 
 describe('polygonToSegments', () => {
   it('returns null for fewer than 2 points', () => {
@@ -202,7 +203,7 @@ describe('LightOccluder2D fixture is lint-clean', () => {
     const { readFileSync } = await import('node:fs');
     const { resolve } = await import('node:path');
     const raw = readFileSync(resolve(fixturesDir(), 'unit-lightoccluder2d.tscn'), 'utf8');
-    const errors = new Linter().lint(raw).filter((d) => d.severity === 'error');
+    const errors = errorsOf(new Linter().lint(raw));
     expect(errors).toHaveLength(0);
   });
 });

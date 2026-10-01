@@ -66,7 +66,7 @@ describe('OpenXRRenderModelManager strict validators', () => {
       // openxr_render_model_manager.cpp:228-230: `tracker = p_tracker;` runs
       // before any guard, and the only guard (cpp:248) neither runs at
       // scene-load time nor reverts the assignment when it does.
-      expect(check('tracker', '4')?.severity).toBe('warning');
+      expect(check('tracker', '4')).toBeAtTier('warning');
     });
   });
 

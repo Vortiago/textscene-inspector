@@ -87,8 +87,8 @@ describe('VisibleOnScreenEnabler2D.enable_mode', () => {
   it('warns outside the enum rather than erroring, since the setter bare-assigns', () => {
     // set_enable_mode has no ERR_FAIL_INDEX, so the value loads and only the
     // inspector dropdown excludes it.
-    expect(check('enable_mode', '3')?.severity).toBe('warning');
-    expect(check('enable_mode', '-1')?.severity).toBe('warning');
+    expect(check('enable_mode', '3')).toBeAtTier('warning');
+    expect(check('enable_mode', '-1')).toBeAtTier('warning');
   });
 
   it('rejects a non-integer mode', () => {

@@ -92,13 +92,13 @@ describe('radius', () => {
   it('rejects a negative value as an error (setter refuses it)', () => {
     const result = check('radius', '-1.0');
     expect(result).not.toBeNull();
-    expect(result?.severity).toBe('error');
+    expect(result).toBeAtTier('error');
   });
 
   it('accepts a value above the hinted 500 ceiling as a warning only (setter never checks the ceiling)', () => {
     const result = check('radius', '600.0');
     expect(result).not.toBeNull();
-    expect(result?.severity).toBe('warning');
+    expect(result).toBeAtTier('warning');
   });
 
   // Both endpoints, from both sides: a mid-range accept plus a far
@@ -113,7 +113,7 @@ describe('radius', () => {
     // this from the format branch, which also reports 'error'.
     const result = check('radius', '-0.01');
     expect(result?.code).toBe('INVALID_RADIUS_VALUE');
-    expect(result?.severity).toBe('error');
+    expect(result).toBeAtTier('error');
   });
 
   it('accepts the hinted ceiling 500 itself', () => {
@@ -124,7 +124,7 @@ describe('radius', () => {
   it('warns one hint step above the ceiling', () => {
     const result = check('radius', '500.01');
     expect(result?.code).toBe('INVALID_RADIUS_VALUE');
-    expect(result?.severity).toBe('warning');
+    expect(result).toBeAtTier('warning');
   });
 });
 
@@ -137,7 +137,7 @@ describe('vertices', () => {
   it('rejects a non-numeric element', () => {
     const result = check('vertices', 'PackedVector2Array(a, b)');
     expect(result).not.toBeNull();
-    expect(result?.severity).toBe('error');
+    expect(result).toBeAtTier('error');
   });
 
   it('accepts an odd element count (VariantParser drops the trailing coordinate via integer division, variant_parser.cpp:1555)', () => {
@@ -219,7 +219,7 @@ describe('avoidance_layers', () => {
   it('rejects a non-numeric value as an error', () => {
     const result = check('avoidance_layers', 'abc');
     expect(result).not.toBeNull();
-    expect(result?.severity).toBe('error');
+    expect(result).toBeAtTier('error');
   });
 
   it('accepts a negative value: the uint32_t reinterpretation loses nothing', () => {

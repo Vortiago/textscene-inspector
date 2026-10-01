@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { Linter } from '../../../../linter/Linter';
 import './linterParser';
 import './linter';
+import { errorsOf, reportsOf } from '../../../../linter/testing/tierLists';
 
 function scene(body: string): string {
   return `[gd_scene format=3]\n\n[node name="Root" type="Control"]\n\n[node name="MyRange" type="Range" parent="."]\n${body}`;
@@ -21,11 +22,6 @@ describe('Range bounds rule', () => {
   });
 
   const namesOf = (content: string) => linter.lint(content).map((d) => d.ruleName);
-  const severitiesOf = (content: string, ruleName: string) =>
-    linter
-      .lint(content)
-      .filter((d) => d.ruleName === ruleName)
-      .map((d) => d.severity);
 
   it('says nothing about an ordinary, correctly-ordered range (happy path)', () => {
     const diagnostics = linter.lint(scene('min_value = 0\nmax_value = 100\n'));
@@ -35,7 +31,7 @@ describe('Range bounds rule', () => {
   it('errors when max_value is below min_value', () => {
     const content = scene('min_value = 10\nmax_value = 5\n');
     expect(namesOf(content)).toContain('range-max-below-min');
-    expect(severitiesOf(content, 'range-max-below-min')).toEqual(['error']);
+    expect(reportsOf(linter.lint(content), 'range-max-below-min', 'error')).toHaveLength(1);
     expect(linter.lint(content)[0]!.message).toContain('max_value');
   });
 
@@ -44,7 +40,8 @@ describe('Range bounds rule', () => {
     // same way (range.cpp:217, :229), so the inverted pair is rewritten in
     // either load order: the ADR-0032 error tier, not an advisory.
     const diagnostics = linter.lint(scene('min_value = 10\nmax_value = 5\n'));
-    expect(diagnostics.map((d) => [d.ruleName, d.severity])).toEqual([['range-max-below-min', 'error']]);
+    expect(diagnostics).toBeAllAtTier('error');
+    expect(diagnostics.map((d) => d.ruleName)).toEqual(['range-max-below-min']);
   });
 
   it('stays silent when max_value equals min_value — a zero-width range is legal Godot (edge case)', () => {
@@ -74,16 +71,11 @@ describe('Range exp_edit rule (range-exp-edit-negative-min)', () => {
   });
 
   const namesOf = (content: string) => linter.lint(content).map((d) => d.ruleName);
-  const severitiesOf = (content: string, ruleName: string) =>
-    linter
-      .lint(content)
-      .filter((d) => d.ruleName === ruleName)
-      .map((d) => d.severity);
 
   it('warns when exp_edit is true with a negative min_value', () => {
     const content = scene('exp_edit = true\nmin_value = -50.0\n');
     expect(namesOf(content)).toContain('range-exp-edit-negative-min');
-    expect(severitiesOf(content, 'range-exp-edit-negative-min')).toEqual(['warning']);
+    expect(reportsOf(linter.lint(content), 'range-exp-edit-negative-min', 'warning')).toHaveLength(1);
   });
 
   it('stays silent when exp_edit is true but min_value is 0 or positive', () => {
@@ -107,7 +99,7 @@ describe('Range exp_edit rule (range-exp-edit-negative-min)', () => {
 
   it('never raises an ERROR — this is a hinted advisory, not an engine-enforced bound', () => {
     const diagnostics = linter.lint(scene('exp_edit = true\nmin_value = -50.0\n'));
-    expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    expect(errorsOf(diagnostics)).toEqual([]);
   });
 
   it('reports an inverted pair spelled with infinities', () => {

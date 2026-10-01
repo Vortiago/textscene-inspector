@@ -16,6 +16,7 @@ import type { TscnNode } from '../../parser/types';
 import { fixturesDir, flatten, repoRoot } from '../../parser/testing/parserKit';
 import { nodeRegistry } from '../../core/NodeRegistry';
 import { Linter } from '../../linter/Linter';
+import { errorsOf } from '../../linter/testing/tierLists';
 import '../../linter/index'; // side-effect: registers every node's linter validators
 
 function firstOfType(src: string, type: string): TscnNode {
@@ -25,9 +26,8 @@ function firstOfType(src: string, type: string): TscnNode {
 }
 
 function errorsMatching(src: string, re: RegExp): string[] {
-  return new Linter()
-    .lint(src)
-    .filter((d) => d.severity === 'error' && re.test(d.message))
+  return errorsOf(new Linter().lint(src))
+    .filter((d) => re.test(d.message))
     .map((d) => d.message);
 }
 

@@ -7,6 +7,7 @@ import { Linter } from '../../../../linter/Linter';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { errorsOf } from '../../../../linter/testing/tierLists';
 import './linterParser';
+import { expectWarning } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -134,7 +135,7 @@ tile_set = NotARef(1)
     it('errors at 0, the first value the ERR_FAIL_COND_MSG floor refuses', () => {
       const error = check('rendering_quadrant_size', '0');
       expect(error).not.toBeNull();
-      expect(error!.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it("accepts an arbitrarily large size — no RANGE hint means no ceiling at all, unlike TileMap's hinted 128 (tile_map.cpp:996)", () => {
@@ -150,7 +151,7 @@ tile_set = NotARef(1)
     it('errors at 0, the first value the ERR_FAIL_COND_MSG floor refuses', () => {
       const error = check('physics_quadrant_size', '0');
       expect(error).not.toBeNull();
-      expect(error!.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('accepts an arbitrarily large size — no RANGE hint means no ceiling', () => {
@@ -168,13 +169,13 @@ tile_set = NotARef(1)
     it('warns below 0, the first value outside the hint — hint constrains the inspector widget, not the setter', () => {
       const error = check('collision_visibility_mode', '-1');
       expect(error).not.toBeNull();
-      expect(error!.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('warns above 2, the first value outside the hint', () => {
       const error = check('collision_visibility_mode', '3');
       expect(error).not.toBeNull();
-      expect(error!.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -188,13 +189,13 @@ tile_set = NotARef(1)
     it('warns below 0, the first value outside the hint', () => {
       const error = check('navigation_visibility_mode', '-1');
       expect(error).not.toBeNull();
-      expect(error!.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('warns above 2, the first value outside the hint', () => {
       const error = check('navigation_visibility_mode', '3');
       expect(error).not.toBeNull();
-      expect(error!.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 });
@@ -223,7 +224,7 @@ describe('tile_map_data element storage', () => {
     'reports an element outside a byte as an error (%s)',
     (element) => {
       const diagnostic = validator('tile_map_data', `PackedByteArray(0, 0, ${element}, 0)`, 1);
-      expect(diagnostic?.severity).toBe('error');
+      expect(diagnostic).toBeAtTier('error');
       expect(diagnostic?.code).toBe('INVALID_TILE_MAP_DATA_VALUE');
       expect(diagnostic?.message).toContain(element);
     }
@@ -241,8 +242,7 @@ describe('tile_map_data element storage', () => {
     // `uint8_t(1.5)` is 1, defined and nameable: the truncation tier, which the
     // narrower band must not swallow.
     const diagnostic = validator('tile_map_data', 'PackedByteArray(1.5, 0)', 1);
-    expect(diagnostic?.severity).toBe('warning');
-    expect(diagnostic?.message).toContain('stores 1');
+    expectWarning(diagnostic, 'stores 1');
   });
 
   it('accepts both ends of the byte range', () => {

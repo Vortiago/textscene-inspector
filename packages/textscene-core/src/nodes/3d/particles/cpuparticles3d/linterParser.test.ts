@@ -8,6 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import './linterParser';
+import { expectWarning } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -58,15 +59,14 @@ describe('CPUParticles3D strict validators', () => {
 
     it('rejects lifetime the setter refuses', () => {
       expect(check('lifetime', '0')?.code).toBe('INVALID_LIFETIME_VALUE');
-      expect(check('lifetime', '0')?.severity).toBe('error');
+      expect(check('lifetime', '0')).toBeAtTier('error');
     });
 
     // set_lifetime (:92) refuses `<= 0` and the hint (:1558) floors at 0.01, so Godot
     // loads (0, 0.01) and the inspector excludes it.
     it('warns between the refused floor and the hinted one', () => {
       const warning = check('lifetime', '0.005');
-      expect(warning?.severity).toBe('warning');
-      expect(warning?.message).toContain('0.01');
+      expectWarning(warning, '0.01');
     });
 
     it('accepts a boolean one_shot', () => {

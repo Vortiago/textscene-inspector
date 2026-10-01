@@ -44,7 +44,7 @@ bone_idx = 0
     const found = ruleDiagnostics(linter.lint(content));
     expect(found).toHaveLength(1);
     expect(found[0]!.ruleName).toBe(PARENT_RULE);
-    expect(found[0]!.severity).toBe('warning');
+    expect(found[0]).toBeAtTier('warning');
     expect(found[0]!.message).toContain('Node3D');
   });
 
@@ -83,7 +83,7 @@ use_external_skeleton = true
     const found = ruleDiagnostics(linter.lint(content));
     expect(found).toHaveLength(1);
     expect(found[0]!.ruleName).toBe(EXTERNAL_RULE);
-    expect(found[0]!.severity).toBe('warning');
+    expect(found[0]).toBeAtTier('warning');
   });
 
   // `_update_external_skeleton_cache` fills the cache only when `has_node` is

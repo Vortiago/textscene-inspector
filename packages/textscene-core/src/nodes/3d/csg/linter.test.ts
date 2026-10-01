@@ -47,7 +47,7 @@ describe('CSG own-geometry-degenerate rule', () => {
     it('reports when mesh is absent', () => {
       const reports = reportsFor(csgScene('CSGMesh3D', ''));
       expect(reports).toHaveLength(1);
-      expect(reports[0]?.severity).toBe('info');
+      expect(reports[0]).toBeAtTier('info');
       expect(reports[0]?.ruleName).toBe('csgmesh3d-requires-mesh');
     });
 

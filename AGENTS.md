@@ -13,6 +13,7 @@ Godot `.tscn` parser, linter and renderer (react-three-fiber over three.js). pnp
 - GLOSSARY.md: the domain terms. Use them exactly.
 - REFERENCES.md: doc links, Context7 library IDs.
 - RELEASING.md: how to release a package.
+- REVIEW.md: the bar for the Claude review of a pull request (`claude-review.yml`).
 - docs/adr/: decisions. Respect them in the areas they govern.
 
 ## Work items = GitHub issues
@@ -314,6 +315,10 @@ fail on a mis-shaped slice.
   same seam.
 - Tests: happy + error + edge per public method, co-located. Prefix intentionally-unused
   params with `_`.
+- Assert a diagnostic's tier with `toBeAtTier`, `toBeAllAtTier`, or a test-kit or
+  `tierLists.ts` helper. Each records the tier it asserts, and the core setup file fails a
+  test whose title names a tier its test does not assert. ESLint refuses `expect(d.severity)`
+  in a core test, since it records nothing.
 - Self-registration on import: never edit central files beyond the aggregation imports.
   Keep the web previewer and the VS Code extension at parity through the shared core.
 - **Engine facts live in `packages/textscene-core/src/godot/`, which imports

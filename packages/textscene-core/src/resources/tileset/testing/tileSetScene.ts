@@ -41,8 +41,7 @@ export function expectDiagnostic(
   const diagnostics = lint(content);
   expect(diagnostics).toHaveLength(1);
   const found = diagnostics[0];
-  expect(found).toBeDefined();
-  expect(found!.severity).toBe(where.severity);
+  expect(found).toBeAtTier(where.severity);
   for (const substring of where.contains) expect(found!.message).toContain(substring);
   return found!;
 }

@@ -99,20 +99,18 @@ describe('OpenXRCompositionLayer shared validators', () => {
     it('accepts an in-range swapchain_state_min_filter and reports the range as a warning out of range', () => {
       expect(check('OpenXRCompositionLayerQuad', 'swapchain_state_min_filter', '2')).toBeNull();
       const error = check('OpenXRCompositionLayerQuad', 'swapchain_state_min_filter', '3');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
     it('accepts the widest enum (swizzle, 0-5) and warns past it', () => {
       expect(check('OpenXRCompositionLayerQuad', 'swapchain_state_red_swizzle', '5')).toBeNull();
-      expect(check('OpenXRCompositionLayerQuad', 'swapchain_state_red_swizzle', '6')?.severity).toBe(
-        'warning'
-      );
+      expect(check('OpenXRCompositionLayerQuad', 'swapchain_state_red_swizzle', '6')).toBeAtTier('warning');
     });
   });
 
   describe('swapchain_state_max_anisotropy', () => {
     it('accepts the hinted range and warns outside it', () => {
       expect(check('OpenXRCompositionLayerQuad', 'swapchain_state_max_anisotropy', '16')).toBeNull();
-      expect(check('OpenXRCompositionLayerQuad', 'swapchain_state_max_anisotropy', '17')?.severity).toBe(
+      expect(check('OpenXRCompositionLayerQuad', 'swapchain_state_max_anisotropy', '17')).toBeAtTier(
         'warning'
       );
     });

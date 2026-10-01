@@ -51,13 +51,13 @@ describe('Slider shared validators', () => {
     it('rejects 4097 with a WARNING, since neither end is softened by or_greater and set_ticks (slider.cpp:386-392) assigns straight through', () => {
       const error = check('HSlider', 'tick_count', '4097');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('rejects a negative count, also a WARNING (slider.cpp:467)', () => {
       const error = check('VSlider', 'tick_count', '-1');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 

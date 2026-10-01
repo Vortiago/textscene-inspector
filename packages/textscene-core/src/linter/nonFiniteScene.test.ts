@@ -7,13 +7,14 @@
 import { describe, expect, it } from 'vitest';
 import { Linter } from './Linter.js';
 import './index.js';
+import { errorsOf } from './testing/tierLists';
 
 /**
  * The error diagnostics only. A malformed literal is always an error, while the
  * scene also draws unrelated "no texture" and "no shape" advisories.
  */
 function lintErrors(content: string) {
-  return new Linter().lint(content).filter((d) => d.severity === 'error');
+  return errorsOf(new Linter().lint(content));
 }
 
 describe('a scene Godot wrote with non-finite components', () => {

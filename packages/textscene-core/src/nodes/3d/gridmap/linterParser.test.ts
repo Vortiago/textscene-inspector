@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import './linterParser';
+import { expectWarning } from '../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -34,7 +35,7 @@ describe('GridMap strict validators', () => {
 
     it('rejects a cells count that is not a multiple of 3 (grid_map.cpp:71, ERR_FAIL_COND_V)', () => {
       const error = check('data', '{\n"cells": PackedInt32Array(0, 0)\n}');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_DATA_CELLS_COUNT');
     });
 
@@ -54,7 +55,7 @@ describe('GridMap strict validators', () => {
 
     it('rejects a null entry (grid_map.cpp:97, ERR_CONTINUE silently drops it and shifts every later index)', () => {
       const error = check('baked_meshes', '[SubResource("ArrayMesh_1"), null]');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_BAKED_MESHES_ENTRY');
     });
 
@@ -103,25 +104,25 @@ describe('GridMap strict validators', () => {
       const error = check('cell_octant_size', '0');
       expect(error).not.toBeNull();
       expect(error!.code).toBe('INVALID_CELL_OCTANT_SIZE_VALUE');
-      expect(error!.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('warns on a negative value (the setter only refuses exactly 0, not negatives)', () => {
       const error = check('cell_octant_size', '-5');
       expect(error).not.toBeNull();
       expect(error!.code).toBe('INVALID_CELL_OCTANT_SIZE_VALUE');
-      expect(error!.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('warns beyond the 1024 hint ceiling rather than erroring', () => {
       const error = check('cell_octant_size', '2000');
       expect(error).not.toBeNull();
       expect(error!.code).toBe('INVALID_CELL_OCTANT_SIZE_VALUE');
-      expect(error!.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('warns one step above the ceiling, the hint step being 1', () => {
-      expect(check('cell_octant_size', '1025')?.severity).toBe('warning');
+      expect(check('cell_octant_size', '1025')).toBeAtTier('warning');
     });
 
     it('records both hint ends as its bound, at the hinted tier', () => {
@@ -193,7 +194,7 @@ describe('GridMap strict validators', () => {
       const error = check(property, '4294967296');
       expect(error).not.toBeNull();
       expect(error!.code).toBe(`INVALID_${code}_VALUE`);
-      expect(error!.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
   });
 
@@ -258,7 +259,6 @@ describe('a fractional cell element beside a grounded error', () => {
 
   it('reports the truncation once nothing stronger applies', () => {
     const diagnostic = check('{ "cells": PackedInt32Array(1.5, 2, 3) }');
-    expect(diagnostic?.severity).toBe('warning');
-    expect(diagnostic?.message).toContain('1.5');
+    expectWarning(diagnostic, '1.5');
   });
 });

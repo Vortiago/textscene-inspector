@@ -44,7 +44,7 @@ describe('groundedArm', () => {
 
   it('takes the severity an inert value fixes', () => {
     const arm = groundedArm('x-y', { kind: 'engine-inert', at: 'a.cpp:1', unused: 'nothing reads it' });
-    expect(arm.severity).toBe('info');
+    expect(arm).toBeAtTier('info');
   });
 
   it('takes the severity a scope outside the engine fixes', () => {
@@ -53,7 +53,7 @@ describe('groundedArm', () => {
       scope: 'linter-failure',
       because: 'it threw',
     });
-    expect(arm.severity).toBe('error');
+    expect(arm).toBeAtTier('error');
   });
 });
 

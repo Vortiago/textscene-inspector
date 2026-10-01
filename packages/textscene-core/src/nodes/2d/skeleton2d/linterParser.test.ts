@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../linter/testing/fixtureCheck';
 import './linterParser';
+import { expectError } from '../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -62,8 +63,7 @@ describe('Skeleton2D strict validators', () => {
     it('rejects a value that is not a resource reference at all', () => {
       const error = check('modification_stack', '"res://stack.tres"');
       expect(error).not.toBeNull();
-      expect(error!.severity).toBe('error');
-      expect(error!.message).toContain('modification_stack');
+      expectError(error, 'modification_stack');
     });
 
     it('accepts the old-style integer index (resource_format_text.cpp:128)', () => {

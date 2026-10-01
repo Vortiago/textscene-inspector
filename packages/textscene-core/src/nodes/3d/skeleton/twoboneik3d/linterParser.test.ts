@@ -101,7 +101,7 @@ describe('TwoBoneIK3D.setting_count', () => {
     // `_set_setting_count` opens with ERR_FAIL_COND(p_count < 0)
     // (ik_modifier_3d.h:98), so the write is refused outright.
     const error = check('setting_count', '-1');
-    expect(error?.severity).toBe('error');
+    expect(error).toBeAtTier('error');
   });
 
   it('rejects a non-integer count', () => {
@@ -138,13 +138,13 @@ describe('TwoBoneIK3D settings/<i>/ key shape', () => {
     // ERR_FAIL_INDEX_V(which, settings.size(), false), two_bone_ik_3d.cpp:39.
     const error = check('settings/-1/target_node', 'NodePath("../Target")');
     expect(error?.code).toBe('INVALID_SETTING_INDEX');
-    expect(error?.severity).toBe('error');
+    expect(error).toBeAtTier('error');
   });
 
   it('rejects a negative index on a four-segment end_bone key', () => {
     const error = check('settings/-1/end_bone/length', '0.5');
     expect(error?.code).toBe('INVALID_SETTING_INDEX');
-    expect(error?.severity).toBe('error');
+    expect(error).toBeAtTier('error');
   });
 
   it("accepts an index far past the current setting_count, which is the rule's job", () => {
@@ -196,15 +196,15 @@ describe('TwoBoneIK3D settings/<i>/ leaves', () => {
     // the value loads and only the inspector dropdown excludes it.
     expect(check('settings/0/pole_direction', '0')).toBeNull();
     expect(check('settings/0/pole_direction', '7')).toBeNull();
-    expect(check('settings/0/pole_direction', '8')?.severity).toBe('warning');
-    expect(check('settings/0/pole_direction', '-1')?.severity).toBe('warning');
+    expect(check('settings/0/pole_direction', '8')).toBeAtTier('warning');
+    expect(check('settings/0/pole_direction', '-1')).toBeAtTier('warning');
   });
 
   it('warns on an end_bone/direction outside the 7-value enum', () => {
     // PROPERTY_HINT_ENUM "+X,-X,+Y,-Y,+Z,-Z,FromParent" (two_bone_ik_3d.cpp:152).
     expect(check('settings/0/end_bone/direction', '0')).toBeNull();
     expect(check('settings/0/end_bone/direction', '6')).toBeNull();
-    expect(check('settings/0/end_bone/direction', '7')?.severity).toBe('warning');
+    expect(check('settings/0/end_bone/direction', '7')).toBeAtTier('warning');
   });
 
   it('warns on a negative end_bone/length and accepts any positive one', () => {
@@ -213,7 +213,7 @@ describe('TwoBoneIK3D settings/<i>/ leaves', () => {
     expect(check('settings/0/end_bone/length', '0')).toBeNull();
     expect(check('settings/0/end_bone/length', '0.1')).toBeNull();
     expect(check('settings/0/end_bone/length', '1000')).toBeNull();
-    expect(check('settings/0/end_bone/length', '-0.5')?.severity).toBe('warning');
+    expect(check('settings/0/end_bone/length', '-0.5')).toBeAtTier('warning');
   });
 
   it('accepts inf on end_bone/length, which set_end_bone_length never refuses', () => {

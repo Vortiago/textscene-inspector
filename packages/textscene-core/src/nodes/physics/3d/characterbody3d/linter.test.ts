@@ -15,6 +15,7 @@ import {
 import './linterParser';
 import './linter';
 import '../shared/linter';
+import { errorsOf } from '../../../../linter/testing/tierLists';
 
 describe('CharacterBody3D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -364,7 +365,7 @@ describe('CharacterBody3D Linter', () => {
         scene(node('CharacterBody3D', { up_direction: 'Vector3(0, 0, 0)' }), collisionShape3d)
       );
       expect(diagnostics).toHaveLength(1);
-      expect(diagnostics[0]?.severity).toBe('error');
+      expect(diagnostics[0]).toBeAtTier('error');
       expect(diagnostics[0]?.message).toContain('up_direction');
     });
   });
@@ -470,14 +471,14 @@ describe('CharacterBody3D Linter', () => {
         )
       );
       expect(diagnostics.length).toBeGreaterThanOrEqual(2);
-      const errors = diagnostics.filter((d) => d.severity === 'error');
+      const errors = errorsOf(diagnostics);
       expect(errors.length).toBeGreaterThan(0);
       expect(errors.some((d) => d.message.includes('max_slides'))).toBe(true);
       // No collision_layer diagnostic: -1 is a legal 32-bit mask.
       expect(diagnostics.find((d) => d.message.includes('collision_layer'))).toBeUndefined();
       const motionModeDiagnostic = diagnostics.find((d) => d.message.includes('motion_mode'));
       expect(motionModeDiagnostic).toBeDefined();
-      expect(motionModeDiagnostic?.severity).toBe('warning');
+      expect(motionModeDiagnostic).toBeAtTier('warning');
     });
 
     it('should handle zero values correctly', () => {

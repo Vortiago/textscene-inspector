@@ -89,7 +89,7 @@ describe('AudioListener3D current', () => {
   it('rejects a non-bool as an error (format)', () => {
     const result = check('current', 'yes');
     expect(result).not.toBeNull();
-    expect(result?.severity).toBe('error');
+    expect(result).toBeAtTier('error');
   });
 });
 
@@ -103,18 +103,18 @@ describe('AudioListener3D doppler_tracking', () => {
   it('rejects a non-numeric value as an error (format, not range)', () => {
     const result = check('doppler_tracking', 'definitely-not-a-valid-value');
     expect(result).not.toBeNull();
-    expect(result?.severity).toBe('error');
+    expect(result).toBeAtTier('error');
   });
 
   it('accepts an out-of-range int as a WARNING only — set_doppler_tracking (audio_listener_3d.cpp:146-158) is a bare assignment behind an equality early-return, never an ERR_FAIL_INDEX, so only the ADD_PROPERTY hint (cpp:172) grounds this, not enforcement (ADR-0032)', () => {
     const result = check('doppler_tracking', '3');
     expect(result).not.toBeNull();
-    expect(result?.severity).toBe('warning');
+    expect(result).toBeAtTier('warning');
   });
 
   it('warns the same way on the low end (edge, no MAX sentinel in the header so 2 is the only real ceiling)', () => {
     const result = check('doppler_tracking', '-1');
     expect(result).not.toBeNull();
-    expect(result?.severity).toBe('warning');
+    expect(result).toBeAtTier('warning');
   });
 });

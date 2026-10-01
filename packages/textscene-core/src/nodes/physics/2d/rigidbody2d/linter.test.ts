@@ -13,6 +13,7 @@ import {
 import './linterParser';
 import './linter';
 import '../shared/linter';
+import { errorsOf } from '../../../../linter/testing/tierLists';
 
 describe('RigidBody2D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -420,7 +421,7 @@ physics_material_override = ExtResource("ext_mat_1")
       // One strict-parser error, mass <= 0 (rigid_body_2d.cpp:318). linear_damp
       // = -1 is legal in 2D (:425 rejects only < -1), and collision_layer = -5
       // says nothing at all: it is a 32-bit pattern the checkbox grid renders.
-      const errors = diagnostics.filter((d) => d.severity === 'error');
+      const errors = errorsOf(diagnostics);
       expect(errors).toHaveLength(2);
       expect(diagnostics.find((d) => d.message.includes('collision_layer'))).toBeUndefined();
       // The third is the missing physics material: the mass error does not stop the rule
@@ -504,7 +505,7 @@ max_contacts_reported = 10
       // collision_layer = 0 carries no check (RigidBody2D), so none of those
       // contribute.
       expect(diagnostics.map((d) => d.ruleName).sort()).toEqual(['rigidbody2d-max-contacts-without-monitor']);
-      expect(diagnostics.every((d) => d.severity === 'info')).toBe(true);
+      expect(diagnostics).toBeAllAtTier('info');
     });
   });
 });

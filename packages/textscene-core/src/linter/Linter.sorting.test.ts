@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { Linter } from './Linter.js';
 import { ruleRegistry } from './RuleRegistry.js';
 import type { Diagnostic, LintRule } from './types.js';
+import { warningsOf } from './testing/tierLists';
 
 const ROOT_ONLY = `[gd_scene load_steps=1 format=3]
 
@@ -92,7 +93,7 @@ describe('Linter', () => {
 
       // The severity-only comparator is a stable sort, so equal-severity
       // diagnostics keep the order their rules were registered in.
-      const warnings = linter.lint(ROOT_ONLY).filter((d) => d.severity === 'warning');
+      const warnings = warningsOf(linter.lint(ROOT_ONLY));
       expect(warnings.map((d) => d.message)).toEqual(['Warning 1', 'Warning 2']);
     });
   });

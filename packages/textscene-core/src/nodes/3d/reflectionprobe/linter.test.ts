@@ -36,7 +36,7 @@ describe('ReflectionProbe semantic rules', () => {
   it('reports when ambient_color is set but ambient_mode is AMBIENT_DISABLED', () => {
     const diagnostics = checkProbe('ambient_mode = 0\nambient_color = Color(1, 0, 0, 1)\n');
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]?.severity).toBe('info');
+    expect(diagnostics[0]).toBeAtTier('info');
     expect(diagnostics[0]?.ruleName).toBe('reflectionprobe-ambient-color-no-effect');
     expect(diagnostics[0]?.message).toContain('ambient_color');
     expect(diagnostics[0]?.message).toContain('no effect');
@@ -52,7 +52,7 @@ describe('ReflectionProbe semantic rules', () => {
       'ambient_mode = 1\nambient_color = Color(1, 0, 0, 1)\nambient_color_energy = 2.0\n'
     );
     expect(diagnostics).toHaveLength(2);
-    expect(diagnostics.every((d) => d.severity === 'info')).toBe(true);
+    expect(diagnostics).toBeAllAtTier('info');
   });
 
   it('is silent when ambient_mode is AMBIENT_COLOR', () => {
@@ -77,9 +77,10 @@ describe('ReflectionProbe semantic rules', () => {
  */
 describe('ReflectionProbe origin_offset clamped by size', () => {
   it('warns that an offset outside the size loads clamped, keeping each sign', () => {
-    expect(checkProbe('size = Vector3(2, 2, 2)\norigin_offset = Vector3(5, 0, -5)\n')).toEqual([
+    const diagnostics = checkProbe('size = Vector3(2, 2, 2)\norigin_offset = Vector3(5, 0, -5)\n');
+    expect(diagnostics).toBeAllAtTier('warning');
+    expect(diagnostics).toEqual([
       expect.objectContaining({
-        severity: 'warning',
         ruleName: 'reflectionprobe-origin-offset-clamped',
         message: expect.stringMatching(/Vector3\(5, 0, -5\) loads as Vector3\(0\.99, 0, -0\.99\)/),
       }),

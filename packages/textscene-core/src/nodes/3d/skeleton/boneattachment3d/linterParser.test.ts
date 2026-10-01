@@ -96,7 +96,7 @@ describe('BoneAttachment3D strict validators', () => {
       // set_bone_idx (bone_attachment_3d.cpp:190-214), once a Skeleton3D resolves, rewrites anything
       // `<= -1` or past the bone count to -1 (cpp:201). -2 is altered to -1: ADR-0032's enforced tier,
       // as ChainIK3D, ModifierBoneTarget3D and LimitAngularVelocityModifier3D ground the same setter.
-      expect(check('bone_idx', '-2')?.severity).toBe('error');
+      expect(check('bone_idx', '-2')).toBeAtTier('error');
     });
 
     it('accepts a huge index, since the ceiling is a live bone count', () => {

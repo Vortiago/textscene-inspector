@@ -53,16 +53,16 @@ describe('GridContainer strict validators', () => {
       // grid_container.cpp:244, ERR_FAIL_COND(p_columns < 1): the write never
       // lands, so this is the enforced tier rather than the hint's.
       const error = check('columns', '0');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('errors on a negative value for the same reason', () => {
-      expect(check('columns', '-3')?.severity).toBe('error');
+      expect(check('columns', '-3')).toBeAtTier('error');
     });
 
     it('only warns above 1024, since nothing in the setter reads the ceiling', () => {
       const diagnostic = check('columns', '2000');
-      expect(diagnostic?.severity).toBe('warning');
+      expect(diagnostic).toBeAtTier('warning');
     });
 
     it('rejects a non-integer value', () => {

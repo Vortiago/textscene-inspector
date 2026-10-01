@@ -197,7 +197,7 @@ curve = ExtResource("curve_ext")
 
       const curveError = diagnostics.find((d) => d.nodeName === 'Path3D1' && d.message.includes("'curve'"));
       expect(curveError).toBeDefined();
-      expect(curveError?.severity).toBe('error');
+      expect(curveError).toBeAtTier('error');
     });
 
     it('should validate Path3D with valid curve and PathFollow3D child', () => {

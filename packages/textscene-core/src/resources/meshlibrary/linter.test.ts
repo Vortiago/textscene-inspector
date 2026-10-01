@@ -51,11 +51,11 @@ describe('MeshLibrary item family', () => {
   });
 
   it('rejects a value the leaf cannot hold', () => {
-    expect(check('item/0/name', 'Floor')?.severity).toBe('error');
-    expect(check('item/0/mesh', '"res://floor.tres"')?.severity).toBe('error');
-    expect(check('item/0/mesh_transform', 'Transform3D(1, 0, 0)')?.severity).toBe('error');
-    expect(check('item/0/shapes', '5')?.severity).toBe('error');
-    expect(check('item/0/navigation_layers', 'all')?.severity).toBe('error');
+    expect(check('item/0/name', 'Floor')).toBeAtTier('error');
+    expect(check('item/0/mesh', '"res://floor.tres"')).toBeAtTier('error');
+    expect(check('item/0/mesh_transform', 'Transform3D(1, 0, 0)')).toBeAtTier('error');
+    expect(check('item/0/shapes', '5')).toBeAtTier('error');
+    expect(check('item/0/navigation_layers', 'all')).toBeAtTier('error');
   });
 
   /**
@@ -66,9 +66,9 @@ describe('MeshLibrary item family', () => {
    */
   it('errors on a mesh_cast_shadow Godot rewrites to ON', () => {
     const out = check('item/0/mesh_cast_shadow', '4');
-    expect(out?.severity).toBe('error');
+    expect(out).toBeAtTier('error');
     expect(out?.message).toContain('SHADOWS_ONLY');
-    expect(check('item/0/mesh_cast_shadow', '-1')?.severity).toBe('error');
+    expect(check('item/0/mesh_cast_shadow', '-1')).toBeAtTier('error');
   });
 
   /**
@@ -82,7 +82,7 @@ describe('MeshLibrary item family', () => {
     expect(check('item/0/shapes', `[SubResource("BoxShape3D_a"), ${identity}]`)).toBeNull();
 
     const out = check('item/0/shapes', '[SubResource("BoxShape3D_a")]');
-    expect(out?.severity).toBe('error');
+    expect(out).toBeAtTier('error');
     expect(out?.message).toContain('pairs');
   });
 
@@ -100,7 +100,7 @@ describe('MeshLibrary item family', () => {
     // Counted off the WRAPPED body: `slice(1, -1)` would read
     // `rray[Variant]([SubResource("BoxShape3D_a")]` and see one element too.
     const out = check('item/0/shapes', 'Array[Variant]([SubResource("BoxShape3D_a")])');
-    expect(out?.severity).toBe('error');
+    expect(out).toBeAtTier('error');
     expect(out?.message).toContain('got 1');
   });
 
@@ -129,7 +129,7 @@ describe('MeshLibrary item family', () => {
 
   it('reports a leaf `_set` does not recognise, which returns false (:94-95)', () => {
     const out = check('item/0/bogus', '"x"');
-    expect(out?.severity).toBe('error');
+    expect(out).toBeAtTier('error');
     expect(out?.message).toContain('item/0/bogus');
   });
 
@@ -198,7 +198,7 @@ describe('MeshLibrary item family', () => {
 
     const diagnostics = lint(scene(subResource('MeshLibrary', { 'item/0/mesh_cast_shadow': 9 })));
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]?.severity).toBe('error');
+    expect(diagnostics[0]).toBeAtTier('error');
     expect(diagnostics[0]?.message).toContain('mesh_cast_shadow');
   });
 });

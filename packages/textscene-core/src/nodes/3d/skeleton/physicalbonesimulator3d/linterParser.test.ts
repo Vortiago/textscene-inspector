@@ -69,8 +69,8 @@ describe('PhysicalBoneSimulator3D strict validators', () => {
       // skeleton_modifier_3d.cpp:161 hints influence as "0,1,0.001" over a bare
       // assignment, so out of range warns and a non-number is a format error.
       expect(check('influence', '0.75')).toBeNull();
-      expect(check('influence', '2')?.severity).toBe('warning');
-      expect(check('influence', 'most-of-it')?.severity).toBe('error');
+      expect(check('influence', '2')).toBeAtTier('warning');
+      expect(check('influence', 'most-of-it')).toBeAtTier('error');
     });
   });
 });

@@ -44,7 +44,7 @@ describe('XROrigin3D rule', () => {
 `;
       const found = ruleDiagnostics(linter.lint(content), CAMERA_CHILD_RULE);
       expect(found).toHaveLength(1);
-      expect(found[0]!.severity).toBe('warning');
+      expect(found[0]).toBeAtTier('warning');
     });
 
     it('warns when the origin has no children at all', () => {
@@ -146,7 +146,7 @@ transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)
 `;
       const found = ruleDiagnostics(linter.lint(content), SCALE_RULE);
       expect(found).toHaveLength(1);
-      expect(found[0]!.severity).toBe('warning');
+      expect(found[0]).toBeAtTier('warning');
     });
 
     it('warns on a non-uniformly scaled transform', () => {

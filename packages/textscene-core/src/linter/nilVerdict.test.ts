@@ -22,7 +22,7 @@ describe('nil-literal verdicts', () => {
     // so a cleared slot adds no source at all.
     const diagnostics = lint(tileSet('sources/0', 'null'));
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]!.severity).toBe('error');
+    expect(diagnostics[0]).toBeAtTier('error');
     expect(diagnostics[0]!.message).toContain('tile_set.cpp:477');
     expect(diagnostics[0]!.message).not.toContain('zero value');
   });

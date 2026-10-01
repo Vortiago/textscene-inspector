@@ -99,8 +99,8 @@ describe('Viewport shared validators', () => {
     // msaa_2d below.
     const validator = validatorRegistry.findValidator(nodeType, 'msaa_3d')!;
     for (const value of ['0', '1', '2', '3']) expect(validator('msaa_3d', value, 1)).toBeNull();
-    expect(validator('msaa_3d', '4', 1)?.severity).toBe('error');
-    expect(validator('msaa_3d', '-1', 1)?.severity).toBe('error');
+    expect(validator('msaa_3d', '4', 1)).toBeAtTier('error');
+    expect(validator('msaa_3d', '-1', 1)).toBeAtTier('error');
   });
 
   it('leaves SubViewport-only members off the shared set', () => {
@@ -133,7 +133,7 @@ describe('Viewport shared validators', () => {
       for (const value of ['0', '1', '2', '3']) expect(validator('msaa_2d', value, 1)).toBeNull();
       const rejected = validator('msaa_2d', '4', 1);
       expect(rejected).not.toBeNull();
-      expect(rejected!.severity).toBe('error');
+      expect(rejected).toBeAtTier('error');
     });
 
     it('accepts canvas_item_default_texture_filter 4 (PARENT_NODE, added in 4.7); rejects 5 and -1, both outside DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_MAX', () => {
@@ -147,7 +147,7 @@ describe('Viewport shared validators', () => {
       for (const value of ['5', '-1']) {
         const rejected = validator('canvas_item_default_texture_filter', value, 1);
         expect(rejected).not.toBeNull();
-        expect(rejected!.severity).toBe('error');
+        expect(rejected).toBeAtTier('error');
       }
     });
 
@@ -160,7 +160,7 @@ describe('Viewport shared validators', () => {
       }
       const rejected = validator('canvas_item_default_texture_repeat', '4', 1);
       expect(rejected).not.toBeNull();
-      expect(rejected!.severity).toBe('error');
+      expect(rejected).toBeAtTier('error');
     });
 
     it('accepts screen_space_aa 2 (SMAA); rejects 3, past SCREEN_SPACE_AA_MAX (viewport.cpp:3778)', () => {
@@ -168,7 +168,7 @@ describe('Viewport shared validators', () => {
       for (const value of ['0', '1', '2']) expect(validator('screen_space_aa', value, 1)).toBeNull();
       const rejected = validator('screen_space_aa', '3', 1);
       expect(rejected).not.toBeNull();
-      expect(rejected!.severity).toBe('error');
+      expect(rejected).toBeAtTier('error');
     });
 
     it('accepts sdf_oversize 3 (200%); rejects 4, past SDF_OVERSIZE_MAX (viewport.cpp:4202)', () => {
@@ -176,7 +176,7 @@ describe('Viewport shared validators', () => {
       for (const value of ['0', '1', '2', '3']) expect(validator('sdf_oversize', value, 1)).toBeNull();
       const rejected = validator('sdf_oversize', '4', 1);
       expect(rejected).not.toBeNull();
-      expect(rejected!.severity).toBe('error');
+      expect(rejected).toBeAtTier('error');
     });
 
     it('accepts sdf_scale 2 (25%); rejects 3, past SDF_SCALE_MAX (viewport.cpp:4214)', () => {
@@ -184,7 +184,7 @@ describe('Viewport shared validators', () => {
       for (const value of ['0', '1', '2']) expect(validator('sdf_scale', value, 1)).toBeNull();
       const rejected = validator('sdf_scale', '3', 1);
       expect(rejected).not.toBeNull();
-      expect(rejected!.severity).toBe('error');
+      expect(rejected).toBeAtTier('error');
     });
 
     it.each([
@@ -201,7 +201,7 @@ describe('Viewport shared validators', () => {
         }
         const rejected = validator(key, '7', 1);
         expect(rejected).not.toBeNull();
-        expect(rejected!.severity).toBe('error');
+        expect(rejected).toBeAtTier('error');
       }
     );
 
@@ -219,7 +219,7 @@ describe('Viewport shared validators', () => {
     ])('errors at -1 on %s: ERR_FAIL_INDEX refuses `m_index < 0` as well (error_macros.h:138)', (key) => {
       const rejected = find(key)(key, '-1', 1);
       expect(rejected).not.toBeNull();
-      expect(rejected!.severity).toBe('error');
+      expect(rejected).toBeAtTier('error');
     });
   });
 
@@ -231,7 +231,7 @@ describe('Viewport shared validators', () => {
       }
       const warned = validator('anisotropic_filtering_level', '5', 1);
       expect(warned).not.toBeNull();
-      expect(warned!.severity).toBe('warning');
+      expect(warned).toBeAtTier('warning');
     });
 
     it('accepts debug_draw 26 (Internal Buffer); warns at 27, one past the 27-label hint (viewport.cpp:5172)', () => {
@@ -240,7 +240,7 @@ describe('Viewport shared validators', () => {
       expect(validator('debug_draw', '26', 1)).toBeNull();
       const warned = validator('debug_draw', '27', 1);
       expect(warned).not.toBeNull();
-      expect(warned!.severity).toBe('warning');
+      expect(warned).toBeAtTier('warning');
     });
 
     it('accepts scaling_3d_mode 4 (MetalFX Temporal); warns at 5, past SCALING_3D_MODE_MAX hint (viewport.cpp:5177)', () => {
@@ -250,7 +250,7 @@ describe('Viewport shared validators', () => {
       }
       const warned = validator('scaling_3d_mode', '5', 1);
       expect(warned).not.toBeNull();
-      expect(warned!.severity).toBe('warning');
+      expect(warned).toBeAtTier('warning');
     });
 
     it('accepts vrs_mode 2 (XR); warns at 3, past VRS_MAX hint (viewport.cpp:5183)', () => {
@@ -258,7 +258,7 @@ describe('Viewport shared validators', () => {
       for (const value of ['0', '1', '2']) expect(validator('vrs_mode', value, 1)).toBeNull();
       const warned = validator('vrs_mode', '3', 1);
       expect(warned).not.toBeNull();
-      expect(warned!.severity).toBe('warning');
+      expect(warned).toBeAtTier('warning');
     });
 
     it('accepts vrs_update_mode 2 (Always); warns at 3, past VRS_UPDATE_MAX hint (viewport.cpp:5184)', () => {
@@ -266,7 +266,7 @@ describe('Viewport shared validators', () => {
       for (const value of ['0', '1', '2']) expect(validator('vrs_update_mode', value, 1)).toBeNull();
       const warned = validator('vrs_update_mode', '3', 1);
       expect(warned).not.toBeNull();
-      expect(warned!.severity).toBe('warning');
+      expect(warned).toBeAtTier('warning');
     });
 
     it.each(['anisotropic_filtering_level', 'debug_draw', 'scaling_3d_mode', 'vrs_mode', 'vrs_update_mode'])(
@@ -274,7 +274,7 @@ describe('Viewport shared validators', () => {
       (key) => {
         const warned = find(key)(key, '-1', 1);
         expect(warned).not.toBeNull();
-        expect(warned!.severity).toBe('warning');
+        expect(warned).toBeAtTier('warning');
       }
     );
   });
@@ -290,10 +290,10 @@ describe('Viewport shared validators', () => {
       const validator = find('mesh_lod_threshold');
       const low = validator('mesh_lod_threshold', '-1', 1);
       expect(low).not.toBeNull();
-      expect(low!.severity).toBe('warning');
+      expect(low).toBeAtTier('warning');
       const high = validator('mesh_lod_threshold', '1025', 1);
       expect(high).not.toBeNull();
-      expect(high!.severity).toBe('warning');
+      expect(high).toBeAtTier('warning');
     });
 
     it('accepts every legal float literal Godot writes: inf, -inf, inf_neg, nan', () => {
@@ -301,9 +301,9 @@ describe('Viewport shared validators', () => {
       // inf/-inf breach the hint and warn, nan compares false against both ends
       // and passes through with no diagnostic at all.
       const validator = find('mesh_lod_threshold');
-      expect(validator('mesh_lod_threshold', 'inf', 1)!.severity).toBe('warning');
-      expect(validator('mesh_lod_threshold', '-inf', 1)!.severity).toBe('warning');
-      expect(validator('mesh_lod_threshold', 'inf_neg', 1)!.severity).toBe('warning');
+      expect(validator('mesh_lod_threshold', 'inf', 1)).toBeAtTier('warning');
+      expect(validator('mesh_lod_threshold', '-inf', 1)).toBeAtTier('warning');
+      expect(validator('mesh_lod_threshold', 'inf_neg', 1)).toBeAtTier('warning');
       expect(validator('mesh_lod_threshold', 'nan', 1)).toBeNull();
     });
   });
@@ -319,10 +319,10 @@ describe('Viewport shared validators', () => {
       const validator = find('texture_mipmap_bias');
       const low = validator('texture_mipmap_bias', '-2.001', 1);
       expect(low).not.toBeNull();
-      expect(low!.severity).toBe('warning');
+      expect(low).toBeAtTier('warning');
       const high = validator('texture_mipmap_bias', '2.001', 1);
       expect(high).not.toBeNull();
-      expect(high!.severity).toBe('warning');
+      expect(high).toBeAtTier('warning');
     });
 
     it('accepts nan, since it compares false against both ends of the bare-assign setter', () => {
@@ -338,7 +338,7 @@ describe('Viewport shared validators', () => {
     it('warns just under the floor: -0.0001', () => {
       const warned = find('oversampling_override')('oversampling_override', '-0.0001', 1);
       expect(warned).not.toBeNull();
-      expect(warned!.severity).toBe('warning');
+      expect(warned).toBeAtTier('warning');
     });
 
     it('accepts inf: `or_greater` opens the ceiling, so nothing bounds the top', () => {
@@ -356,19 +356,19 @@ describe('Viewport shared validators', () => {
     it('errors just under the floor: -0.001 (set_fsr_sharpness clamps it to 0)', () => {
       const rejected = find('fsr_sharpness')('fsr_sharpness', '-0.001', 1);
       expect(rejected).not.toBeNull();
-      expect(rejected!.severity).toBe('error');
+      expect(rejected).toBeAtTier('error');
     });
 
     it('warns just past the ceiling: 2.001 (the setter never checks it, only the hint does)', () => {
       const warned = find('fsr_sharpness')('fsr_sharpness', '2.001', 1);
       expect(warned).not.toBeNull();
-      expect(warned!.severity).toBe('warning');
+      expect(warned).toBeAtTier('warning');
     });
 
     it('errors on -inf (below the enforced floor) and warns on inf (above the hinted ceiling only)', () => {
       const validator = find('fsr_sharpness');
-      expect(validator('fsr_sharpness', '-inf', 1)!.severity).toBe('error');
-      expect(validator('fsr_sharpness', 'inf', 1)!.severity).toBe('warning');
+      expect(validator('fsr_sharpness', '-inf', 1)).toBeAtTier('error');
+      expect(validator('fsr_sharpness', 'inf', 1)).toBeAtTier('warning');
     });
   });
 
@@ -381,24 +381,24 @@ describe('Viewport shared validators', () => {
 
     it('warns on [0.1, 0.25): the CLAMP stores it unaltered, the hint at :5178 excludes it', () => {
       const validator = find('scaling_3d_scale');
-      expect(validator('scaling_3d_scale', '0.1', 1)!.severity).toBe('warning');
-      expect(validator('scaling_3d_scale', '0.2', 1)!.severity).toBe('warning');
+      expect(validator('scaling_3d_scale', '0.1', 1)).toBeAtTier('warning');
+      expect(validator('scaling_3d_scale', '0.2', 1)).toBeAtTier('warning');
     });
 
     it('errors just outside the clamp: 0.099 and 2.001', () => {
       const validator = find('scaling_3d_scale');
       const low = validator('scaling_3d_scale', '0.099', 1);
       expect(low).not.toBeNull();
-      expect(low!.severity).toBe('error');
+      expect(low).toBeAtTier('error');
       const high = validator('scaling_3d_scale', '2.001', 1);
       expect(high).not.toBeNull();
-      expect(high!.severity).toBe('error');
+      expect(high).toBeAtTier('error');
     });
 
     it('errors on inf and -inf, which CLAMP pulls in just like any other out-of-range value', () => {
       const validator = find('scaling_3d_scale');
-      expect(validator('scaling_3d_scale', 'inf', 1)!.severity).toBe('error');
-      expect(validator('scaling_3d_scale', '-inf', 1)!.severity).toBe('error');
+      expect(validator('scaling_3d_scale', 'inf', 1)).toBeAtTier('error');
+      expect(validator('scaling_3d_scale', '-inf', 1)).toBeAtTier('error');
     });
 
     it("accepts nan: CLAMP's own comparisons are false against nan, so Godot stores it unaltered too", () => {
@@ -418,7 +418,7 @@ describe('Viewport shared validators', () => {
       expect(validator('canvas_cull_mask', '-1', 1)).toBeNull();
       const high = validator('canvas_cull_mask', '4294967296', 1);
       expect(high).not.toBeNull();
-      expect(high!.severity).toBe('error');
+      expect(high).toBeAtTier('error');
     });
   });
 

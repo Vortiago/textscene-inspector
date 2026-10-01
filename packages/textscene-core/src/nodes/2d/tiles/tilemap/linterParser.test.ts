@@ -7,11 +7,12 @@ import { Linter } from '../../../../linter/Linter';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { errorsOf } from '../../../../linter/testing/tierLists';
 import './linterParser';
+import { expectError } from '../../../../linter/testing/validatorCheck.js';
 
 describe('tile_data with an element no int32 holds', () => {
   it('errors, where the grammar alone was silent', () => {
     const v = validatorRegistry.findValidator('TileMap', 'layer_0/tile_data')!;
-    expect(v('layer_0/tile_data', 'PackedInt32Array(inf, 0, 0)', 1)?.severity).toBe('error');
+    expect(v('layer_0/tile_data', 'PackedInt32Array(inf, 0, 0)', 1)).toBeAtTier('error');
     expect(v('layer_0/tile_data', 'PackedInt32Array(0, 0, 0)', 1)).toBeNull();
   });
 });
@@ -65,16 +66,15 @@ tile_set = NotARef(1)
 
     it('errors on a FLOAT spelling as a dropped write, not a truncation', () => {
       const error = checkTopLevel('format', '1.0');
-      expect(error?.severity).toBe('error');
-      expect(error?.message).toContain('dropped');
+      expectError(error, 'dropped');
     });
 
     it('errors on a BOOL spelling the same way', () => {
-      expect(checkTopLevel('format', 'true')?.severity).toBe('error');
+      expect(checkTopLevel('format', 'true')).toBeAtTier('error');
     });
 
     it('errors on text the tokenizer cannot read', () => {
-      expect(checkTopLevel('format', 'abc')?.severity).toBe('error');
+      expect(checkTopLevel('format', 'abc')).toBeAtTier('error');
     });
   });
 
@@ -111,7 +111,7 @@ tile_set = NotARef(1)
 
     it('errors on z_index outside the enforced range (canvas_item.cpp:668)', () => {
       const error = check('layer_1/z_index', '4097');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('accepts a PackedInt32Array tile_data literal', () => {
@@ -124,13 +124,13 @@ tile_set = NotARef(1)
 
     it('rejects an unrecognised leaf', () => {
       const error = check('layer_0/not_a_real_leaf', '1');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_TILEMAP_LAYER_KEY');
     });
 
     it('rejects a negative layer index (property_list_helper.cpp:58)', () => {
       const error = check('layer_-1/name', '"X"');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
       expect(error?.code).toBe('INVALID_TILEMAP_LAYER_INDEX');
     });
   });
@@ -162,13 +162,13 @@ tile_set = NotARef(1)
     it('warns below 0, the first value outside the hint — the setter forwards it to every layer unaltered', () => {
       const error = checkTopLevel('collision_visibility_mode', '-1');
       expect(error).not.toBeNull();
-      expect(error!.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('warns above 2, the first value outside the hint', () => {
       const error = checkTopLevel('collision_visibility_mode', '3');
       expect(error).not.toBeNull();
-      expect(error!.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -182,13 +182,13 @@ tile_set = NotARef(1)
     it('warns below 0, the first value outside the hint', () => {
       const error = checkTopLevel('navigation_visibility_mode', '-1');
       expect(error).not.toBeNull();
-      expect(error!.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('warns above 2, the first value outside the hint', () => {
       const error = checkTopLevel('navigation_visibility_mode', '3');
       expect(error).not.toBeNull();
-      expect(error!.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -205,13 +205,13 @@ tile_set = NotARef(1)
 
     it('errors at 0, the first value the ERR_FAIL_COND_MSG floor refuses', () => {
       const error = checkTopLevel('rendering_quadrant_size', '0');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it("warns above the hinted 128 ceiling — the setter never checks it (tile_map.cpp:996), unlike TileMapLayer's own rendering_quadrant_size which has no ceiling at all", () => {
       const error = checkTopLevel('rendering_quadrant_size', '129');
       expect(error).not.toBeNull();
-      expect(error!.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 });

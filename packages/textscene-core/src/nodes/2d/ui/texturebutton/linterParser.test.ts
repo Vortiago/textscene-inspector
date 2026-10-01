@@ -88,7 +88,7 @@ describe('TextureButton strict validators', () => {
     it('a value beyond the enum (7) is only a WARNING, since set_stretch_mode (texture_button.cpp:383-390) assigns straight through with no ERR_FAIL_INDEX and the ADD_PROPERTY hint (texture_button.cpp:282) only constrains the editor', () => {
       const error = check('stretch_mode', '7');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('rejects a non-numeric value', () => {

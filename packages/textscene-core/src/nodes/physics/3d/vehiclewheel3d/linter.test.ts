@@ -14,6 +14,7 @@ import {
 import '../../../base/node3d/linterParser';
 import './linterParser';
 import './linter';
+import { errorsOf } from '../../../../linter/testing/tierLists';
 
 /** Every wheel in the corpus hangs off a VehicleBody3D; so does every valid one. */
 const vehicleBody = node('VehicleBody3D', {}, { name: 'Vehicle' });
@@ -151,7 +152,7 @@ describe('VehicleWheel3D Linter', () => {
           )
         )
       );
-      expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0);
+      expect(errorsOf(diagnostics)).toHaveLength(0);
     });
   });
 });

@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import './linterParser';
+import { expectWarning } from '../../../../linter/testing/validatorCheck.js';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -24,7 +25,7 @@ function check(property: string, value: string) {
 function expectRangeWarning(key: string, value: string) {
   const error = check(key, value);
   expect(error?.code, `${key} = ${value}`).toBe(`INVALID_${key.toUpperCase()}_VALUE`);
-  expect(error?.severity, `${key} = ${value}`).toBe('warning');
+  expect(error, `${key} = ${value}`).toBeAtTier('warning');
 }
 
 /**
@@ -83,7 +84,7 @@ describe('PhysicalBone3D strict validators', () => {
     it('warns past the last constant rather than erroring (set_joint_type has no ERR_FAIL)', () => {
       const error = check('joint_type', '6');
       expect(error?.code).toBe('INVALID_JOINT_TYPE_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('rejects a non-numeric value', () => {
@@ -134,16 +135,15 @@ describe('PhysicalBone3D strict validators', () => {
 
     it('rejects a value the setter refuses', () => {
       expect(check('mass', '0')?.code).toBe('INVALID_MASS_VALUE');
-      expect(check('mass', '0')?.severity).toBe('error');
-      expect(check('mass', '-1')?.severity).toBe('error');
+      expect(check('mass', '0')).toBeAtTier('error');
+      expect(check('mass', '-1')).toBeAtTier('error');
     });
 
     // set_mass (:1190) refuses `<= 0` while the hint's floor is 0.01, so
     // (0, 0.01) loads into Godot and the inspector still excludes it.
     it('warns between the refused floor and the hinted one', () => {
       const warning = check('mass', '0.005');
-      expect(warning?.severity).toBe('warning');
-      expect(warning?.message).toContain('0.01');
+      expectWarning(warning, '0.01');
     });
 
     it('rejects a non-numeric value', () => {
@@ -203,7 +203,7 @@ describe('PhysicalBone3D strict validators', () => {
       (prop) => {
         const error = check(prop, '2');
         expect(error?.code).toBe(`INVALID_${prop.toUpperCase()}_VALUE`);
-        expect(error?.severity).toBe('warning');
+        expect(error).toBeAtTier('warning');
       }
     );
   });
@@ -414,13 +414,13 @@ describe('PhysicalBone3D strict validators', () => {
     it('refuses a Cone leaf under an axis prefix', () => {
       const error = check('joint_constraints/x/swing_span', '10.0');
       expect(error?.code).toBe('INVALID_JOINT_CONSTRAINTS_KEY');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('refuses a SixDOF-only leaf on the bare prefix', () => {
       const error = check('joint_constraints/erp', '0.5');
       expect(error?.code).toBe('INVALID_JOINT_CONSTRAINTS_KEY');
-      expect(error?.severity).toBe('error');
+      expect(error).toBeAtTier('error');
     });
 
     it('keeps a leaf both tables declare (Hinge :252, Slider :360, SixDOF :538 angular_limit_upper) in both', () => {
@@ -455,9 +455,7 @@ describe('PhysicalBone3D strict validators', () => {
       for (const axis of ['', 'x/', 'y/', 'z/']) {
         expect(check(`joint_constraints/${axis}angular_limit_softness`, '0.01'), axis).toBeNull();
         expect(check(`joint_constraints/${axis}angular_limit_softness`, '16'), axis).toBeNull();
-        expect(check(`joint_constraints/${axis}angular_limit_softness`, '16.01')?.severity, axis).toBe(
-          'warning'
-        );
+        expect(check(`joint_constraints/${axis}angular_limit_softness`, '16.01'), axis).toBeAtTier('warning');
       }
     });
   });

@@ -22,8 +22,8 @@ describe('dangling-resource-reference', () => {
   it('reports one error naming the key and the id for a SubResource nobody declares', () => {
     const diagnostics = lint(scene(node('CSGBox3D', { material: 'SubResource("nope")' })));
     expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]).toBeAtTier('error');
     expect(diagnostics[0]).toMatchObject({
-      severity: 'error',
       ruleName: RULE,
       nodeName: 'CSGBox3D',
       nodeType: 'CSGBox3D',
@@ -35,7 +35,8 @@ describe('dangling-resource-reference', () => {
   it('reports the ExtResource twin the same way', () => {
     const diagnostics = lint(scene(node('CSGBox3D', { material: 'ExtResource("nope")' })));
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toMatchObject({ severity: 'error', ruleName: RULE });
+    expect(diagnostics[0]).toBeAtTier('error');
+    expect(diagnostics[0]).toMatchObject({ ruleName: RULE });
     expect(diagnostics[0]!.message).toContain('ExtResource("nope")');
   });
 
@@ -85,7 +86,8 @@ describe('dangling-resource-reference', () => {
       scene(node('StaticBody2D'), node('CollisionShape2D', { shape: 'SubResource(3)' }, { parent: '.' }))
     );
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toMatchObject({ severity: 'error', ruleName: RULE });
+    expect(diagnostics[0]).toBeAtTier('error');
+    expect(diagnostics[0]).toMatchObject({ ruleName: RULE });
     expect(diagnostics[0]!.message).toContain('SubResource(3)');
   });
 

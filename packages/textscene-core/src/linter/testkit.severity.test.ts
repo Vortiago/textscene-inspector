@@ -35,15 +35,15 @@ describe('test-kit severity assertions', () => {
   });
 
   it('passes when the claimed tier matches the diagnostic', () => {
-    expect(expectDiagnostic(HINTED_WARNING, { prop: 'drag_left_margin', severity: 'warning' }).severity).toBe(
+    expect(expectDiagnostic(HINTED_WARNING, { prop: 'drag_left_margin', severity: 'warning' })).toBeAtTier(
       'warning'
     );
-    expect(expectDiagnostic(ENFORCED_ERROR, { prop: 'zoom', severity: 'error' }).severity).toBe('error');
+    expect(expectDiagnostic(ENFORCED_ERROR, { prop: 'zoom', severity: 'error' })).toBeAtTier('error');
   });
 
   it('is additive: omitting severity passes against either tier', () => {
-    expect(expectDiagnostic(HINTED_WARNING, { prop: 'drag_left_margin' }).severity).toBe('warning');
-    expect(expectDiagnostic(ENFORCED_ERROR, { prop: 'zoom' }).severity).toBe('error');
+    expect(expectDiagnostic(HINTED_WARNING, { prop: 'drag_left_margin' })).toBeAtTier('warning');
+    expect(expectDiagnostic(ENFORCED_ERROR, { prop: 'zoom' })).toBeAtTier('error');
   });
 });
 
@@ -62,16 +62,16 @@ describe('InvalidCase.severity forwarding', () => {
 
   it('forwards a matching claim, which passes and returns the diagnostic', () => {
     expect(
-      expectInvalidCase(HINTED_WARNING, 'drag_left_margin', { value: 1.5, severity: 'warning' }).severity
-    ).toBe('warning');
+      expectInvalidCase(HINTED_WARNING, 'drag_left_margin', { value: 1.5, severity: 'warning' })
+    ).toBeAtTier('warning');
     expect(
-      expectInvalidCase(ENFORCED_ERROR, 'zoom', { value: 'Vector2(0, 1)', severity: 'error' }).severity
-    ).toBe('error');
+      expectInvalidCase(ENFORCED_ERROR, 'zoom', { value: 'Vector2(0, 1)', severity: 'error' })
+    ).toBeAtTier('error');
   });
 
   it('leaves a case that declares no severity asserting nothing about the tier', () => {
-    expect(expectInvalidCase(HINTED_WARNING, 'drag_left_margin', { value: 1.5 }).severity).toBe('warning');
-    expect(expectInvalidCase(ENFORCED_ERROR, 'zoom', { value: 'Vector2(0, 1)' }).severity).toBe('error');
+    expect(expectInvalidCase(HINTED_WARNING, 'drag_left_margin', { value: 1.5 })).toBeAtTier('warning');
+    expect(expectInvalidCase(ENFORCED_ERROR, 'zoom', { value: 'Vector2(0, 1)' })).toBeAtTier('error');
   });
 
   it('still forwards ruleName and contains beside the severity', () => {

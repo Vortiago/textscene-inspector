@@ -109,14 +109,14 @@ describe('ShapeCast3D strict validators', () => {
       const error = check('margin', '-0.01');
       expect(error).not.toBeNull();
       expect(error!.code).toBe('INVALID_MARGIN_VALUE');
-      expect(error!.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
 
     it('warns beyond the 100 cap (no or_greater on this hint) rather than erroring', () => {
       const error = check('margin', '100.01');
       expect(error).not.toBeNull();
       expect(error!.code).toBe('INVALID_MARGIN_VALUE');
-      expect(error!.severity).toBe('warning');
+      expect(error).toBeAtTier('warning');
     });
   });
 
@@ -161,7 +161,7 @@ describe('ShapeCast3D strict validators', () => {
       // The 32-checkbox widget renders every 32-bit pattern, and Godot
       // stores -1 as all layers on, so nothing fires inside the band.
       expect(check('collision_mask', '-1')).toBeNull();
-      expect(check('collision_mask', '4294967296')?.severity).toBe('error');
+      expect(check('collision_mask', '4294967296')).toBeAtTier('error');
     });
 
     it('rejects a mask beyond the 32-bit range', () => {

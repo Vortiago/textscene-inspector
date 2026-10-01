@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { Linter } from '../../../../linter/Linter.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import './linterParser.js';
+import { errorsOf } from '../../../../linter/testing/tierLists';
 
 /** The six BOOL keys physics_body_3d.cpp:46-51 bind on PhysicsBody3D. */
 const KEYS = [
@@ -48,7 +49,7 @@ describe('PhysicsBody3D shared validators', () => {
     const validator = validatorRegistry.findValidator('RigidBody3D', key)!;
     expect(validator(key, 'true', 1)).toBeNull();
     expect(validator(key, 'false', 1)).toBeNull();
-    expect(validator(key, '"banana"', 1)?.severity).toBe('error');
+    expect(validator(key, '"banana"', 1)).toBeAtTier('error');
   });
 
   it('a whole-scene lint reports a malformed axis lock', () => {
@@ -57,7 +58,7 @@ describe('PhysicsBody3D shared validators', () => {
 [node name="Body" type="RigidBody3D"]
 axis_lock_linear_x = "banana"
 `);
-    const errors = diagnostics.filter((d) => d.severity === 'error').map((d) => d.message);
+    const errors = errorsOf(diagnostics).map((d) => d.message);
     expect(errors.some((m) => m.includes('axis_lock_linear_x'))).toBe(true);
   });
 

@@ -68,11 +68,11 @@ describe('max_iterations', () => {
     // set_max_iterations (iterate_ik_3d.cpp:169-171) is a bare assignment, so
     // ADR-0032 makes the hint's floor a warning rather than an error.
     const diagnostic = check('max_iterations', '-1');
-    expect(diagnostic?.severity).toBe('warning');
+    expect(diagnostic).toBeAtTier('warning');
   });
 
   it('rejects a non-integer as a format problem', () => {
-    expect(check('max_iterations', 'four')?.severity).toBe('error');
+    expect(check('max_iterations', 'four')).toBeAtTier('error');
   });
 });
 
@@ -89,7 +89,7 @@ describe('min_distance', () => {
   });
 
   it('warns below the hinted floor', () => {
-    expect(check('min_distance', '-0.5')?.severity).toBe('warning');
+    expect(check('min_distance', '-0.5')).toBeAtTier('warning');
   });
 });
 
@@ -116,7 +116,7 @@ describe('angular_delta_limit', () => {
 
   it('warns rather than errors, since the setter assigns straight through', () => {
     // set_angular_delta_limit (iterate_ik_3d.cpp:185-187) is a bare assignment.
-    expect(check('angular_delta_limit', '3.2')?.severity).toBe('warning');
+    expect(check('angular_delta_limit', '3.2')).toBeAtTier('warning');
   });
 
   it('accepts a zero-degree float32 round-trip that lands just under the floor', () => {
@@ -127,7 +127,7 @@ describe('angular_delta_limit', () => {
   });
 
   it('warns below zero', () => {
-    expect(check('angular_delta_limit', '-0.5')?.severity).toBe('warning');
+    expect(check('angular_delta_limit', '-0.5')).toBeAtTier('warning');
   });
 });
 
@@ -137,7 +137,7 @@ describe('deterministic', () => {
   });
 
   it('rejects a non-boolean', () => {
-    expect(check('deterministic', '1')?.severity).toBe('warning');
+    expect(check('deterministic', '1')).toBeAtTier('warning');
   });
 });
 
@@ -152,7 +152,7 @@ describe('setting_count', () => {
     // shared template _set_setting_count (ik_modifier_3d.h:98) and is therefore
     // an error, not a warning.
     const diagnostic = check('setting_count', '-1');
-    expect(diagnostic?.severity).toBe('error');
+    expect(diagnostic).toBeAtTier('error');
   });
 });
 
@@ -164,7 +164,7 @@ describe('the settings/ family IterateIK3D adds', () => {
   // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
   it('rejects a target_node that is a StringName', () => {
     expect(check('settings/0/target_node', '"../Target"')).toBeNull();
-    expect(check('settings/0/target_node', '&"../Target"')?.severity).toBe('error');
+    expect(check('settings/0/target_node', '&"../Target"')).toBeAtTier('error');
   });
 
   it.each(['0', '1', '2', '3', '4'])('accepts rotation_axis %s', (value) => {
@@ -176,12 +176,12 @@ describe('the settings/ family IterateIK3D adds', () => {
   it('warns on a rotation_axis outside the enum', () => {
     // set_joint_rotation_axis (iterate_ik_3d.cpp:216-227) stores the value
     // unaltered, so the enum hint warns rather than errors.
-    expect(check('settings/0/joints/1/rotation_axis', '5')?.severity).toBe('warning');
+    expect(check('settings/0/joints/1/rotation_axis', '5')).toBeAtTier('warning');
   });
 
   it('accepts a rotation_axis_vector and rejects a two-component one', () => {
     expect(check('settings/0/joints/1/rotation_axis_vector', 'Vector3(1, 0, 0)')).toBeNull();
-    expect(check('settings/0/joints/1/rotation_axis_vector', 'Vector3(1, 0)')?.severity).toBe('error');
+    expect(check('settings/0/joints/1/rotation_axis_vector', 'Vector3(1, 0)')).toBeAtTier('error');
   });
 
   it('accepts a limitation resource reference', () => {
@@ -195,7 +195,7 @@ describe('the settings/ family IterateIK3D adds', () => {
   });
 
   it('warns on a limitation/right_axis outside the enum', () => {
-    expect(check('settings/0/joints/1/limitation/right_axis', '8')?.severity).toBe('warning');
+    expect(check('settings/0/joints/1/limitation/right_axis', '8')).toBeAtTier('warning');
   });
 
   it('accepts a limitation/right_axis_vector', () => {
@@ -204,7 +204,7 @@ describe('the settings/ family IterateIK3D adds', () => {
 
   it('accepts a limitation/rotation_offset quaternion', () => {
     expect(check('settings/0/joints/1/limitation/rotation_offset', 'Quaternion(0, 0, 0, 1)')).toBeNull();
-    expect(check('settings/0/joints/1/limitation/rotation_offset', 'Quaternion(0, 0, 1)')?.severity).toBe(
+    expect(check('settings/0/joints/1/limitation/rotation_offset', 'Quaternion(0, 0, 1)')).toBeAtTier(
       'error'
     );
   });
@@ -213,7 +213,7 @@ describe('the settings/ family IterateIK3D adds', () => {
     // ERR_FAIL_INDEX_V(which, settings.size(), false) at iterate_ik_3d.cpp:39
     // runs before any leaf is reached, so the write never lands.
     const diagnostic = check('settings/-1/target_node', 'NodePath("../Target")');
-    expect(diagnostic?.severity).toBe('error');
+    expect(diagnostic).toBeAtTier('error');
   });
 
   it('errors on a setting index to_int resolves as negative, however it is spelled', () => {
@@ -229,11 +229,11 @@ describe('the settings/ family IterateIK3D adds', () => {
   it('applies the joint leaf under an index to_int resolves', () => {
     // The joint index is read with the same bare `to_int` (:44), so
     // `joints/x/` is joint 0 and the value lands on it.
-    expect(check('settings/x/joints/y/rotation_axis', '9')?.severity).toBe('warning');
+    expect(check('settings/x/joints/y/rotation_axis', '9')).toBeAtTier('warning');
   });
 
   it('reaches the family through the base-walk on a real leaf type', () => {
-    expect(check('settings/0/joints/1/rotation_axis', '9', 'FABRIK3D')?.severity).toBe('warning');
+    expect(check('settings/0/joints/1/rotation_axis', '9', 'FABRIK3D')).toBeAtTier('warning');
   });
 });
 
@@ -243,25 +243,25 @@ describe('key tails IterateIK3D ignores', () => {
   it('applies a target_node carrying a tail', () => {
     // `what` is `target_node` (:41).
     expect(check('settings/0/target_node/extra', 'NodePath("../Target")')).toBeNull();
-    expect(check('settings/0/target_node/extra', '&"../Target"')?.severity).toBe('error');
+    expect(check('settings/0/target_node/extra', '&"../Target"')).toBeAtTier('error');
   });
 
   it('applies a joint leaf carrying a tail, and still checks its value', () => {
     // `prop` is `rotation_axis` (:45).
     expect(check('settings/0/joints/1/rotation_axis/extra', '2')).toBeNull();
-    expect(check('settings/0/joints/1/rotation_axis/extra', '9')?.severity).toBe('warning');
+    expect(check('settings/0/joints/1/rotation_axis/extra', '9')).toBeAtTier('warning');
   });
 
   it('applies a limitation option carrying a tail', () => {
     // `opt` is `right_axis` (:51, :54).
-    expect(check('settings/0/joints/1/limitation/right_axis/extra', '8')?.severity).toBe('warning');
+    expect(check('settings/0/joints/1/limitation/right_axis/extra', '8')).toBeAtTier('warning');
   });
 
   it('does not read an unknown limitation option as the limitation itself', () => {
     // The `limitation` branch reads `opt` below it and returns false on `extra` (:61), so
     // the tail is not ignored there and the limitation validator never judges the value.
     const limitation = check('settings/0/joints/1/limitation', '1');
-    expect(limitation?.severity).toBe('error');
+    expect(limitation).toBeAtTier('error');
     expect(check('settings/0/joints/1/limitation/extra', '1')?.message).not.toBe(limitation?.message);
   });
 });
@@ -271,9 +271,9 @@ describe('an empty setting index', () => {
     // `get_slicec('/', 1).to_int()` (iterate_ik_3d.cpp:37) of an empty segment is 0
     // (ustring.cpp:2304-2305), so the write lands on setting 0 like any other.
     expect(check('settings//target_node', 'NodePath("../Target")')).toBeNull();
-    expect(check('settings//target_node', '&"../Target"')?.severity).toBe('error');
-    expect(check('settings//root_bone', '-2')?.severity).toBe('error');
-    expect(check('settings//joints//rotation_axis', '9')?.severity).toBe('warning');
+    expect(check('settings//target_node', '&"../Target"')).toBeAtTier('error');
+    expect(check('settings//root_bone', '-2')).toBeAtTier('error');
+    expect(check('settings//joints//rotation_axis', '9')).toBeAtTier('warning');
   });
 });
 
@@ -300,7 +300,7 @@ describe('the settings/ keys ChainIK3D owns', () => {
     // `linter/ikSettingsSeam.test.ts` uses this leaf as its canary under the full barrel, and pinning
     // it here shows a hand-back regression in this scoped run too. root_bone is clamped to -1
     // (chain_ik_3d.cpp:186-188), so -2 is an error and 3 is clean.
-    expect(check('settings/0/root_bone', '-2', 'CCDIK3D')?.severity).toBe('error');
+    expect(check('settings/0/root_bone', '-2', 'CCDIK3D')).toBeAtTier('error');
     expect(check('settings/0/root_bone', '3', 'CCDIK3D')).toBeNull();
   });
 });

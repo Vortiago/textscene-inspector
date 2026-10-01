@@ -60,7 +60,7 @@ carve_navigation_mesh = true
 `;
     const warnings = reportsOf(linter.lint(content));
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]!.severity).toBe('info');
+    expect(warnings[0]).toBeAtTier('info');
     expect(warnings[0]!.message).toContain('affect_navigation_mesh');
   });
 
