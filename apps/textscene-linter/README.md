@@ -65,6 +65,9 @@ project alone.
 - `github`: GitHub Actions annotations on the diff. It is the default when
   `$GITHUB_ACTIONS=true`.
 
+Every format writes a control character from a scene, such as ESC, as a
+visible escape (`\u001b`), so a scene cannot send a command to your terminal.
+
 ## Exit codes
 
 | Code | Meaning |

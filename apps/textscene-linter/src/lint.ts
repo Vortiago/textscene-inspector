@@ -5,7 +5,7 @@ import { readFile } from 'fs/promises';
 import { join, resolve } from 'path';
 import { Linter, type Diagnostic } from '@textscene/core/linter';
 import { isGodotTextResourcePath } from '@textscene/core/godot';
-import { formatDiagnostics, formatError } from './format';
+import { escapeControlCharacters, formatDiagnostics, formatError } from './format';
 import { projectProviderFor } from './projectProvider';
 
 /** Lint outcome for a single file, with output split by target stream. */
@@ -136,7 +136,8 @@ function hasErrorSeverity(result: FileDiagnostics): boolean {
 /**
  * Lint a single TSCN file for the default (ANSI/plain text) CLI output.
  * Read failures are reported as stderr lines rather than thrown, and count
- * as errors.
+ * as errors. The path and the read error reach stderr with their control
+ * characters escaped.
  */
 export async function lintFile(filePath: string, hasColor: boolean): Promise<FileLintResult> {
   const result = await lintFileDiagnostics(filePath);
@@ -146,8 +147,8 @@ export async function lintFile(filePath: string, hasColor: boolean): Promise<Fil
       filePath,
       stdoutLines: [],
       stderrLines: [
-        formatError(`Failed to lint ${filePath}:`, hasColor),
-        formatError(`  ${result.readError}`, hasColor),
+        formatError(`Failed to lint ${escapeControlCharacters(filePath)}:`, hasColor),
+        formatError(`  ${escapeControlCharacters(result.readError)}`, hasColor),
       ],
       hasErrors: true,
     };
