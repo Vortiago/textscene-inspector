@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, it, expect } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import {
@@ -14,6 +14,7 @@ import {
   integrationLaunchPaths,
   launchIntegrationTests,
   SUITE_STARTED_MARKER_ENV,
+  vscodeTestVersion,
   type IntegrationLaunchOptions,
   type IntegrationLaunchPaths,
 } from './test/integration/integrationLaunch';
@@ -56,6 +57,35 @@ describe('integrationLaunchPaths', () => {
     expect(integrationLaunchOptions(paths).extensionTestsEnv).toEqual({
       [SUITE_STARTED_MARKER_ENV]: paths.suiteStartedMarker,
     });
+  });
+});
+
+describe('vscodeTestVersion', () => {
+  it('runs on the latest stable VS Code when nothing names a version', () => {
+    expect(vscodeTestVersion(undefined, '^1.85.0')).toBe('stable');
+    expect(vscodeTestVersion('', '^1.85.0')).toBe('stable');
+  });
+
+  it('resolves min to the floor of the engines.vscode range', () => {
+    expect(vscodeTestVersion('min', '^1.85.0')).toBe('1.85.0');
+  });
+
+  it('passes an explicit version or channel through unchanged', () => {
+    expect(vscodeTestVersion('1.90.2', '^1.85.0')).toBe('1.90.2');
+    expect(vscodeTestVersion('insiders', '^1.85.0')).toBe('insiders');
+  });
+
+  it('refuses min when the engines range has no single floor', () => {
+    expect(() => vscodeTestVersion('min', '>=1.85.0 <2.0.0')).toThrow(
+      'expected engines.vscode as ^major.minor.patch, got >=1.85.0 <2.0.0'
+    );
+  });
+});
+
+describe('the extension manifest', () => {
+  it('declares an engines.vscode range that min resolves', () => {
+    const manifest = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'package.json'), 'utf8'));
+    expect(vscodeTestVersion('min', manifest.engines.vscode)).toMatch(/^\d+\.\d+\.\d+$/);
   });
 });
 

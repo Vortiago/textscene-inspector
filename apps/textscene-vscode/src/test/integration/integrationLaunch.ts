@@ -12,6 +12,28 @@ import * as path from 'path';
 /** The variable that names the suite's start marker inside the extension host. */
 export const SUITE_STARTED_MARKER_ENV = 'TEXTSCENE_SUITE_STARTED_MARKER';
 
+/** The variable that picks the VS Code build the suite runs on. */
+export const VSCODE_VERSION_ENV = 'TEXTSCENE_VSCODE_VERSION';
+
+/**
+ * The value of `VSCODE_VERSION_ENV` that names the oldest VS Code the manifest
+ * accepts, so CI tests the `engines.vscode` floor without repeating its number.
+ */
+export const ENGINES_FLOOR = 'min';
+
+/**
+ * Resolves the requested build to a version `@vscode/test-electron` downloads.
+ * Nothing requested means `stable`. `min` means the floor of `enginesRange`, the
+ * manifest's `engines.vscode`. Any other value, `insiders` or `1.90.0`, passes through.
+ */
+export function vscodeTestVersion(requested: string | undefined, enginesRange: string): string {
+  if (!requested) return 'stable';
+  if (requested !== ENGINES_FLOOR) return requested;
+  const floor = /^\^(\d+\.\d+\.\d+)$/.exec(enginesRange)?.[1];
+  if (!floor) throw new Error(`expected engines.vscode as ^major.minor.patch, got ${enginesRange}`);
+  return floor;
+}
+
 /** The subset of `@vscode/test-electron`'s options this runner supplies. */
 export interface IntegrationLaunchOptions {
   extensionDevelopmentPath: string;
