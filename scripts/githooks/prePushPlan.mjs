@@ -1,7 +1,6 @@
 /**
- * The checks a push needs, from the files it changes. The push runs only the static checks: CI
- * runs the tests, the builds and the packaging on each pull request, and the pre-commit hook has
- * already run the tests related to each staged file.
+ * The checks a push needs, from the files it changes. The push runs only the static checks. CI
+ * runs the tests, the builds and the packaging on each pull request.
  */
 
 /**

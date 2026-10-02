@@ -6,12 +6,12 @@ printed order.
 
 | Hook | Runs | Checks |
 | --- | --- | --- |
-| `pre-commit` | `pnpm exec lint-staged` | The staged files, as [`lint-staged.config.mjs`](../lint-staged.config.mjs) sets |
+| `pre-commit` | `pnpm exec lint-staged` | eslint and Prettier on the staged files, and the scene lint, as [`lint-staged.config.mjs`](../lint-staged.config.mjs) sets |
 | `commit-msg` | `.claude/skills/conventional-commits/commit-msg.sh` | The commit header: a [Conventional Commit](https://www.conventionalcommits.org/) |
 | `pre-push` | `scripts/githooks/prePush.mjs` | The static checks that match the pushed files, from `scripts/githooks/prePushPlan.mjs` |
 
-The pre-push hook runs no tests, no build and no packaging. CI runs them on each pull request and
-on `main`, and the pre-commit hook has already run the tests related to each staged file.
+Neither hook runs tests, a build or packaging. CI runs them on each pull request and on `main`.
+To run the tests that a change touches before you push, run `pnpm exec vitest related --run <files>`.
 
 A change to the toolchain (`package.json`, the lockfile, a `tsconfig`, a vitest, eslint or
 Prettier config, or a hook) runs the static checks over the whole repository: `format:check`,
