@@ -40,6 +40,13 @@ describe('planChecks', () => {
     expect(plan(['scripts/githooks/negativeFixtures.mjs'])).toEqual(STATIC_GATE);
   });
 
+  it('runs the tests beside a toolchain change after the static checks', () => {
+    const testsBeside = () => ['scripts/githooks/prePushPlan.test.mjs'];
+    expect(
+      plan(['githooks/pre-push', 'scripts/githooks/prePushPlan.mjs'], [], undefined, testsBeside)
+    ).toEqual([...STATIC_GATE, 'pnpm exec vitest run scripts/githooks/prePushPlan.test.mjs']);
+  });
+
   it('type-checks and lints a TypeScript change', () => {
     expect(plan(['packages/textscene-core/src/a.ts'])).toEqual([
       'pnpm type-check:all',

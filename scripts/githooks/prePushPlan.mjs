@@ -42,7 +42,9 @@ export const STATIC_GATE = [
  */
 export function planChecks({ changed, deleted, isNegativeFixture, testsBeside }) {
   const all = [...changed, ...deleted];
-  if (all.some((path) => TOOLCHAIN.test(path))) return STATIC_GATE;
+  const tests = [...new Set(changed.filter((path) => TESTABLE.test(path)).flatMap(testsBeside))];
+  const runTests = tests.length > 0 ? [['pnpm', 'exec', 'vitest', 'run', ...tests]] : [];
+  if (all.some((path) => TOOLCHAIN.test(path))) return [...STATIC_GATE, ...runTests];
 
   const plan = [];
   // `type-check:all` builds the packages first, which the generated-docs checks also need.
@@ -52,8 +54,7 @@ export function planChecks({ changed, deleted, isNegativeFixture, testsBeside })
   if (linted.length > 0) plan.push(['npx', 'eslint', ...linted]);
   const formatted = changed.filter((path) => FORMATTED.test(path));
   if (formatted.length > 0) plan.push(['pnpm', 'exec', 'prettier', '--check', ...formatted]);
-  const tests = [...new Set(changed.filter((path) => TESTABLE.test(path)).flatMap(testsBeside))];
-  if (tests.length > 0) plan.push(['pnpm', 'exec', 'vitest', 'run', ...tests]);
+  plan.push(...runTests);
 
   const scenes = changed.filter((path) => SCENE.test(path) && !isNegativeFixture(path));
   if (scenes.length > 0) plan.push(['pnpm', 'build:linter'], ['pnpm', 'lint:tscn', ...scenes]);

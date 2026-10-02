@@ -17,7 +17,7 @@ on each pull request and on `main`. To run every test that imports a file, run
 
 A change to the toolchain (`package.json`, the lockfile, a `tsconfig`, a vitest, eslint or
 Prettier config, or a hook) runs the static checks over the whole repository: `format:check`,
-`lint`, `type-check:all` and `type-check:tests`. A push that changes only files no check reads
+`lint`, `type-check:all` and `type-check:tests`. It still runs the tests beside the pushed files. A push that changes only files no check reads
 runs nothing. `FULL_VALIDATE=1 git push` runs the full `pnpm validate`.
 
 ## Skip the hooks
