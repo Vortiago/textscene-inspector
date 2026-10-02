@@ -46,10 +46,19 @@ If the question is "did text paint under the CSP", use the gate: it answers in o
 
 ## The gate
 
-`pnpm test:vscode:csp` drives three scenes, one launch each: `unit-label-2d.tscn`
-as committed, a text-free twin, and `unit-noisetexture2d.tscn`. The gate derives
-the twin at run time by emptying every `text = "…"`, so it cannot drift from the
-fixture.
+`pnpm test:vscode:csp` drives eight runs, one launch each:
+- `unit-label-2d.tscn` as committed, and a text-free twin.
+- `unit-noisetexture2d.tscn`.
+- `unit-arraymesh.tscn`, edited on disk mid-run, and the edited scene opened cold.
+- `unit-box-mesh.tscn`, and a twin with the box hidden.
+- The truck town lamp, a text glTF with an external buffer and texture.
+
+The gate derives each twin at run time (`sceneText.mjs`), so it cannot drift from
+the fixture.
+
+`TEXTSCENE_VSCODE_VERSION` picks the VS Code build, as in the extension's own
+suites: `stable` when unset, the `engines.vscode` floor (1.85.0) for `min`. CI
+runs the gate on both.
 
 Each run must show:
 - The preview opened through the contributed command.
@@ -58,6 +67,8 @@ Each run must show:
 - Zero CSP violations, failed requests and console errors **in the webview frame**.
 
 In the noise run, a job worker started and replied inside the webview, the texture work status cleared, and ink is ≥ 1000 (ADR-0042). The in-thread fallback draws the same pixels, so only the reply shows the worker ran.
+
+Across the box pair, at least 2000 pixels differ, and their mean blue over mean red is at most 0.5. The albedo's own ratio is 0.25, and a material that lost its colour draws grey or white near 1. The default environment draws a sky, so ink alone cannot show that a 3D mesh drew: only the twin can. On VS Code 1.140.0, Linux and Xvfb, the gate measures 23,258 box pixels on a 565x430 canvas, with a ratio of 0.30.
 
 Across the label pair, ink is ≥ 100 with text and exactly 0 without. On VS Code 1.131.0, Linux and Xvfb, the gate measures a 235x357 canvas with 252 ink with text and 0 without, identical across runs, and the webview's only request host is `file+.vscode-resource.vscode-cdn.net`. The canvas scales with the virtual display, so the floor of 100 sits far below 252. The failure it guards takes ink to 0 on any display.
 
@@ -75,7 +86,13 @@ The gate runs no layout commands, because each `palette()` call is a fuzzy match
   `apps/textscene-vscode/.vscode-test/vscode-<platform>-<version>/code`. A
   `test:integration` run puts it there. The gate falls back to
   `downloadAndUnzipVSCode` into the same cache. The CLI does not download: it
-  fails fast and tells you to run the suite once.
+  takes the cached build of the requested version, the newest for `stable`, and
+  fails fast when there is none.
+- **VS Code 1.85 refuses one of Playwright's attach calls.** Its Electron 25
+  answers `Browser.setDownloadBehavior` with "Browser context management is not
+  supported", and `connectOverCDP` drops the connection. The driver then attaches
+  through `cdpRelay.mjs`, a local relay that answers that call and passes the
+  rest through.
 - **`xvfb-run`** wraps the launch when `--headed` is absent. Software GL is
   mandatory under it: without `--no-sandbox --disable-gpu-sandbox` and
   `SWIFTSHADER_GL_ARGS` (from `scripts/showcase/browser.mjs`), every WebGL
@@ -166,7 +183,8 @@ binary on each platform. Use it for a picture of committed example scenes. Use
 `drive-vscode.mjs` for a number.
 
 CI runs two VS Code jobs, both in `integration-tests`: the extension-host suite
-on all three operating systems, and `pnpm test:vscode:csp` on Linux only. The
+on all three operating systems, and `pnpm test:vscode:csp` on Linux only, on
+stable and on the `engines.vscode` floor. The
 CLI and the showcase capture do not run in CI. The gate is Linux-only because
 the driver is verified only under Xvfb: its `--headed` path and the macOS and
 Windows window and binary layouts are unverified.

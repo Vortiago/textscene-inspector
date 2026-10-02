@@ -216,10 +216,11 @@ jobs:
       - if: runner.os != 'Linux'
         run: pnpm --filter textscene-inspector test:integration
 
-      # Proves that text paints inside the webview, which the extension host suite cannot
-      # see. The driver starts its own xvfb-run and uses VS Code's Chromium. It runs on
-      # Linux only, because nobody has verified its window and binary layout elsewhere.
-      - if: runner.os == 'Linux' && matrix.vscode == 'stable'
+      # Proves that the preview draws inside the webview, which the extension host suite
+      # cannot see, on the job's VS Code build. The driver starts its own xvfb-run and
+      # uses VS Code's Chromium. It runs on Linux only, because nobody has verified its
+      # window and binary layout elsewhere.
+      - if: runner.os == 'Linux'
         run: pnpm test:vscode:csp
 
       - if: failure()

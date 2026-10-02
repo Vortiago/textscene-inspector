@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { blankSceneText } from './sceneText.mjs';
+import { blankSceneText, hideSceneNode } from './sceneText.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -67,5 +67,46 @@ describe('blankSceneText', () => {
 
     expect(result.replacements).toBeGreaterThan(0);
     expect(result.source).not.toMatch(/text = "[^"]/);
+  });
+});
+
+describe('hideSceneNode', () => {
+  it('hides the named node under its own header', () => {
+    const source = [
+      '[node name="Root" type="Node3D"]',
+      '',
+      '[node name="Box" type="MeshInstance3D" parent="."]',
+      'mesh = SubResource("BoxMesh_1")',
+    ].join('\n');
+
+    expect(hideSceneNode(source, 'Box')).toBe(
+      [
+        '[node name="Root" type="Node3D"]',
+        '',
+        '[node name="Box" type="MeshInstance3D" parent="."]',
+        'visible = false',
+        'mesh = SubResource("BoxMesh_1")',
+      ].join('\n')
+    );
+  });
+
+  it('throws when no node has the name', () => {
+    expect(() => hideSceneNode('[node name="Root" type="Node3D"]\n', 'Box')).toThrow(
+      'expected a [node name="Box"] header, found none'
+    );
+  });
+
+  it('matches a name with a regex character literally', () => {
+    const source = '[node name="BoxA" type="Node3D"]\n[node name="Box." type="Node3D"]\n';
+
+    expect(hideSceneNode(source, 'Box.')).toBe(
+      '[node name="BoxA" type="Node3D"]\n[node name="Box." type="Node3D"]\nvisible = false\n'
+    );
+  });
+
+  it('hides the box in the fixture the gate drives', () => {
+    const fixture = readFileSync(path.join(REPO_ROOT, 'scenes/fixtures/unit-box-mesh.tscn'), 'utf8');
+
+    expect(hideSceneNode(fixture, 'Box')).toMatch(/\[node name="Box"[^\n]*\]\nvisible = false\n/);
   });
 });
