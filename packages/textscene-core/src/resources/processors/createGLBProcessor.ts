@@ -10,7 +10,7 @@ import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
 import { createGLBMesh, forEachSurfaceMaterial, tagImportMaterial } from '../formats/glb/glbProcessing';
 import { isGltfPath } from '../../godot/gltf';
-import { gltfResourcePath, isGlbContainer, packGltfAsGlb, type GltfJson } from '../formats/glb/gltfResources';
+import { gltfResourcePath, selfContainedGlb } from '../formats/glb/gltfResources';
 import { applyRootScale } from '../formats/glb/rootScale';
 import type { GltfExtensionRules } from '../formats/glb/types';
 import { stampVisualLayers } from '../../r3f/visualLayers';
@@ -42,19 +42,20 @@ function disposeGLBMesh(mesh: THREE.Object3D): void {
 }
 
 /**
- * A `.glb` as it is, or a text `.gltf` packed with its external buffers and images into
- * one GLB. Each is read through the byte layer and recorded, so editing it reloads the glTF.
+ * The glTF at `path` as a GLB that carries its external buffers and images: each is read
+ * through the byte layer and recorded, so editing it reloads the glTF.
  */
-async function glbBytes(
+function glbBytes(
   path: string,
   data: ArrayBuffer,
   fileEventBus: FileEventBus | undefined,
   dependencies: DependencyGraph
 ): Promise<ArrayBuffer> {
-  if (isGlbContainer(data)) return data;
-  const json = JSON.parse(new TextDecoder().decode(data)) as GltfJson;
-  return packGltfAsGlb(json, async (uri) => {
+  return selfContainedGlb(data, async (uri) => {
     const resourcePath = gltfResourcePath(path, uri);
+    if (resourcePath === null) {
+      throw new Error(`glTF ${path} needs ${uri}, which climbs above res://`);
+    }
     dependencies.record({ busType: 'glb', key: path }, resourcePath);
     const bytes = await fileEventBus?.tryLoad(resourcePath, 'GltfResource');
     if (!(bytes instanceof ArrayBuffer)) {
@@ -171,7 +172,6 @@ export function createGLBProcessor(
       const object = await createGLBMesh(
         await glbBytes(path, data as ArrayBuffer, fileEventBus, dependencies),
         {
-          manager: eventBus.getThreeManager(),
           extensionRules,
         }
       );

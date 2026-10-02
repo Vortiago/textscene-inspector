@@ -14,8 +14,8 @@ const GLTF_PATH = 'res://props/tri/tri.gltf';
 const BIN_PATH = 'res://props/tri/tri%20data.bin';
 const BIN_RES_PATH = 'res://props/tri/tri data.bin';
 
-/** One triangle, its positions in an external buffer named with a percent-encoded space. */
-function triangleGltf(): ArrayBuffer {
+/** One triangle, its positions in the external buffer `uri` names: a percent-encoded space by default. */
+function triangleGltf(uri = BIN_PATH.slice('res://props/tri/'.length)): ArrayBuffer {
   const gltf = {
     asset: { version: '2.0' },
     scenes: [{ nodes: [0] }],
@@ -26,7 +26,7 @@ function triangleGltf(): ArrayBuffer {
       { bufferView: 0, componentType: 5126, count: 3, type: 'VEC3', min: [0, 0, 0], max: [1, 1, 0] },
     ],
     bufferViews: [{ buffer: 0, byteLength: 36 }],
-    buffers: [{ uri: BIN_PATH.slice('res://props/tri/'.length), byteLength: 36 }],
+    buffers: [{ uri, byteLength: 36 }],
   };
   return new TextEncoder().encode(JSON.stringify(gltf)).buffer as ArrayBuffer;
 }
@@ -34,7 +34,13 @@ function triangleGltf(): ArrayBuffer {
 const positions = () => new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]).buffer;
 
 function harness(files: Record<string, ArrayBuffer>) {
-  const fileEventBus = new FileEventBus({ loadResource: async (path: string) => files[path] ?? null });
+  const requested: string[] = [];
+  const fileEventBus = new FileEventBus({
+    loadResource: async (path: string) => {
+      requested.push(path);
+      return files[path] ?? null;
+    },
+  });
   const eventBus = new ResourceEventBus();
   const dependencies = new DependencyGraph();
   const processor = createGLBProcessor(fileEventBus, eventBus, dependencies);
@@ -43,7 +49,7 @@ function harness(files: Record<string, ArrayBuffer>) {
     eventBus.on<Error>('glb', 'failed', (_path, error) => resolve({ error }));
   });
   processor.request(GLTF_PATH);
-  return { settled, dependencies };
+  return { settled, dependencies, requested };
 }
 
 describe('createGLBProcessor with a text glTF’s external buffer', () => {
@@ -73,5 +79,14 @@ describe('createGLBProcessor with a text glTF’s external buffer', () => {
     const { error } = await settled;
 
     expect(error?.message).toContain(BIN_RES_PATH);
+  });
+
+  it('fails without a read for a buffer that climbs above res://', async () => {
+    const { settled, requested } = harness({ [GLTF_PATH]: triangleGltf('../../../outside.bin') });
+
+    const { error } = await settled;
+
+    expect(error?.message).toContain('climbs above res://');
+    expect(requested).toEqual([GLTF_PATH]);
   });
 });

@@ -4,8 +4,9 @@
  * renders `<TscnPreviewShell>`.
  */
 
-import { describe, it, expect } from 'vitest';
-import { generateWebviewHtml } from './webviewHtml';
+import { webcrypto } from 'node:crypto';
+import { afterEach, describe, it, expect, vi } from 'vitest';
+import { generateNonce, generateWebviewHtml } from './webviewHtml';
 
 const BASE_OPTIONS = {
   scriptUri: 'https://example.test/webview.js',
@@ -80,5 +81,31 @@ describe('generateWebviewHtml CSP', () => {
     expect(policy).not.toContain('connect-src');
     expect(policy).not.toContain('font-src');
     expect(policy).not.toContain('child-src');
+  });
+});
+
+describe('generateNonce', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('gives 32 lowercase hex digits, 128 random bits', () => {
+    expect(generateNonce()).toMatch(/^[0-9a-f]{32}$/);
+  });
+
+  it('draws on crypto.getRandomValues, never Math.random', () => {
+    const mathRandom = vi.spyOn(Math, 'random');
+    const getRandomValues = vi.spyOn(webcrypto, 'getRandomValues');
+
+    generateNonce();
+
+    expect(getRandomValues).toHaveBeenCalled();
+    expect(mathRandom).not.toHaveBeenCalled();
+  });
+
+  it('gives a different nonce on each call', () => {
+    const nonces = new Set(Array.from({ length: 100 }, () => generateNonce()));
+
+    expect(nonces.size).toBe(100);
   });
 });

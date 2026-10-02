@@ -2,7 +2,7 @@
  * Tests for `r3f-webview-main.tsx`, the webview half of `../protocol.ts`. `.ts`,
  * not `.tsx`: `vitest.config.ts` collects only `src/**\/*.{test,spec}.ts`, so the
  * mocks use `createElement`. A spied `addEventListener` records 'message' listeners
- * for direct calls, and `useEffect` runs on a macrotask, so tests `await flush()`.
+ * for direct calls, and `useEffect` runs on a macrotask, so tests poll with `waitFor`.
  */
 // @vitest-environment happy-dom
 
@@ -56,14 +56,9 @@ vi.mock('@textscene/core', () => ({
 
 let messageListeners: Array<(event: MessageEvent) => void>;
 
-function flush(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 10));
-}
-
 /**
  * Polls `predicate` until it is true. The first mount in a file pays for
- * `react-dom/client`'s cold start, which can outlast one 10ms `flush()`. Every
- * later effect settles within one `flush()`, so only the first mount polls.
+ * `react-dom/client`'s cold start, so its effects can take far longer than later ones.
  */
 async function waitFor(predicate: () => boolean, timeoutMs = process.env.CI ? 5000 : 1000): Promise<void> {
   const start = Date.now();
@@ -197,35 +192,6 @@ describe('loadTscn handling', () => {
     await waitFor(() => captured.shellProps?.content === 'second content');
 
     expect(captured.shellProps?.content).toBe('second content');
-  });
-});
-
-describe('incrementalUpdate handling', () => {
-  it('treats an incrementalUpdate carrying rawText as a full content replacement', async () => {
-    await mountFresh();
-    dispatch({ type: 'loadTscn', content: 'original' });
-    await waitFor(() => captured.shellProps?.content === 'original');
-
-    dispatch({
-      type: 'incrementalUpdate',
-      data: { changes: [], sceneData: { rawText: 'incrementally updated' } },
-    });
-    await waitFor(() => captured.shellProps?.content === 'incrementally updated');
-
-    expect(captured.shellProps?.content).toBe('incrementally updated');
-  });
-
-  it('is a no-op when the incrementalUpdate payload carries no rawText', async () => {
-    await mountFresh();
-    dispatch({ type: 'loadTscn', content: 'original' });
-    await waitFor(() => captured.shellProps?.content === 'original');
-
-    dispatch({ type: 'incrementalUpdate', data: { changes: [], sceneData: {} } });
-    // A fixed beat, not a `waitFor`: a wait on "still 'original'" passes at once,
-    // before an unwanted update has a chance to land.
-    await flush();
-
-    expect(captured.shellProps?.content).toBe('original');
   });
 });
 

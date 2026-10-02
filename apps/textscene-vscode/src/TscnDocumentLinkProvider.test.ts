@@ -170,6 +170,40 @@ describe('TscnDocumentLinkProvider', () => {
       );
     });
 
+    it('gives no link for a res:// path that climbs out of the project root', async () => {
+      (vscodeMocks.workspace.getWorkspaceFolder as ReturnType<typeof vi.fn>).mockReturnValue({
+        uri: createMockUri('/workspace'),
+      });
+      vscodeMocks.workspace.fs.stat.mockRejectedValue(new Error('Not found'));
+
+      const provider = new TscnDocumentLinkProvider();
+      const document = makeDocument('path="res://../../../../home/user/.ssh/id_rsa"');
+      const [link] = provider.provideDocumentLinks(document, TOKEN) as unknown as Array<
+        Parameters<NonNullable<TscnDocumentLinkProvider['resolveDocumentLink']>>[0]
+      >;
+
+      const resolved = await provider.resolveDocumentLink!(link!, TOKEN);
+
+      expect(resolved).toBeUndefined();
+    });
+
+    it('resolves a res:// path whose ".." stays inside the project root', async () => {
+      (vscodeMocks.workspace.getWorkspaceFolder as ReturnType<typeof vi.fn>).mockReturnValue({
+        uri: createMockUri('/workspace'),
+      });
+      vscodeMocks.workspace.fs.stat.mockRejectedValue(new Error('Not found'));
+
+      const provider = new TscnDocumentLinkProvider();
+      const document = makeDocument('path="res://scenes/../props/crate.png"');
+      const [link] = provider.provideDocumentLinks(document, TOKEN) as unknown as Array<
+        Parameters<NonNullable<TscnDocumentLinkProvider['resolveDocumentLink']>>[0]
+      >;
+
+      const resolved = await provider.resolveDocumentLink!(link!, TOKEN);
+
+      expect((resolved!.target as unknown as { fsPath: string }).fsPath).toBe('/workspace/props/crate.png');
+    });
+
     it('leaves the target unresolved when the document has no workspace folder', async () => {
       (vscodeMocks.workspace.getWorkspaceFolder as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
 

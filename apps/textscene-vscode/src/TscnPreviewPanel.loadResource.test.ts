@@ -1,11 +1,13 @@
 /**
  * Unit tests for `TscnPreviewPanel`'s `loadResource` handling: the chunked
  * ArrayBuffer-to-base64 loop (`chunkSize = 8192`) across chunk boundaries, and the
- * `resourceLoadError` paths (`No workspace folder found`, and a failed read).
+ * `resourceLoadError` paths (`No workspace folder found`, a failed read, and a file
+ * over the size limit).
  */
-import { describe, expect, it, type Mock } from 'vitest';
+import { afterEach, describe, expect, it, type Mock } from 'vitest';
 import * as vscode from 'vscode';
 import { TscnPreviewPanel } from './TscnPreviewPanel';
+import { MAX_READ_BYTES } from './readWorkspaceFile';
 import { createMockUri, createMockFileData, setupMockPanel, type MockWebview } from './test-setup';
 
 const MINIMAL_TSCN = '[gd_scene format=3]\n[node name="Root" type="Node3D"]';
@@ -137,6 +139,40 @@ describe('TscnPreviewPanel loadResource — binary encoding', () => {
 });
 
 describe('TscnPreviewPanel loadResource — error paths', () => {
+  afterEach(() => {
+    (vscode.workspace.fs.stat as Mock).mockResolvedValue({ type: 1, size: 0, ctime: 0, mtime: 0 });
+  });
+
+  it('posts resourceLoadError, and reads none of it, for a resource over the size limit', async () => {
+    const { webview, triggerMessage } = setupMockPanel();
+    await createReadyPanel(triggerMessage);
+    (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
+      uri: createMockUri('/workspace'),
+    });
+    (vscode.workspace.fs.stat as Mock).mockResolvedValue({
+      type: 1,
+      size: MAX_READ_BYTES + 1,
+      ctime: 0,
+      mtime: 0,
+    });
+    (vscode.workspace.fs.readFile as Mock).mockClear();
+
+    triggerMessage({
+      type: 'loadResource',
+      path: 'res://models/huge.glb',
+      resourceType: 'PackedScene',
+      requestId: 'req-huge',
+    });
+    await new Promise<void>((r) => setTimeout(r, 10));
+
+    const errors = errorMessages(webview);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]!.requestId).toBe('req-huge');
+    expect(errors[0]!.error).toMatch(/Failed to load resource: res:\/\/models\/huge\.glb \(.*over the limit/);
+    expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
+    expect(loadedMessages(webview)).toHaveLength(0);
+  });
+
   it('posts resourceLoadError "No workspace folder found" when the resource has no owning workspace', async () => {
     const { webview, triggerMessage } = setupMockPanel();
     await createReadyPanel(triggerMessage);

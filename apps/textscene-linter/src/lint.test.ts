@@ -110,6 +110,16 @@ describe('lintFile', () => {
     expect(result.stderrLines[1]).toContain('ENOENT');
   });
 
+  it('escapes control characters in the path and the read error on stderr', async () => {
+    const hostilePath = `${missingPath}\x1b]0;pwned\x07`;
+
+    const result = await lintFile(hostilePath, false);
+
+    expect(result.stderrLines.join('\n')).not.toContain('\x1b');
+    expect(result.stderrLines[0]).toBe(`Failed to lint ${missingPath}\\u001b]0;pwned\\u0007:`);
+    expect(result.stderrLines[1]).toContain(`${missingPath}\\u001b]0;pwned\\u0007`);
+  });
+
   it('applies color codes to the error output when color is enabled', async () => {
     const result = await lintFile(missingPath, true);
 

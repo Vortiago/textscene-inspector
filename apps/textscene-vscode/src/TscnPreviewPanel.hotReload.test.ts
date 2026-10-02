@@ -123,6 +123,9 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
     });
     const stat = vscode.workspace.fs.stat as Mock;
     stat.mockClear();
+    // Each read also stats the file it reads, so only the walk's stats of project.godot count.
+    const projectFileStats = () =>
+      stat.mock.calls.filter(([uri]) => (uri as vscode.Uri).fsPath.endsWith('project.godot')).length;
 
     triggerMessage({
       type: 'loadResource',
@@ -131,7 +134,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
       requestId: 'r1',
     });
     await new Promise<void>((r) => setTimeout(r, 10));
-    const callsAfterFirst = stat.mock.calls.length;
+    const callsAfterFirst = projectFileStats();
     expect(callsAfterFirst).toBeGreaterThan(0);
 
     triggerMessage({
@@ -144,7 +147,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
 
     // The second resource request reuses the panel's cached provider/project
     // root instead of re-walking the filesystem for it.
-    expect(stat).toHaveBeenCalledTimes(callsAfterFirst);
+    expect(projectFileStats()).toBe(callsAfterFirst);
   });
 
   it('clears the cached resource provider when update() receives a different document', async () => {

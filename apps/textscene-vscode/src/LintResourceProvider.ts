@@ -11,6 +11,8 @@ import { resourceContent } from '@textscene/core/resources/resourceProviderUtils
 import { isScannedPath } from '@textscene/core/godot';
 import { anyCase } from './anyCaseGlob';
 import { SCAN_STOP_FILES_PATTERN } from './watchPatterns';
+import { HOST_PATH_CASE } from './hostPathCase';
+import { readWorkspaceFile } from './readWorkspaceFile';
 
 const ROOT = 'res://';
 
@@ -37,9 +39,10 @@ export class LintResourceProvider implements ResourceProvider {
     if (file === null) return null;
     let bytes: Uint8Array;
     try {
-      bytes = await vscode.workspace.fs.readFile(file);
+      bytes = await readWorkspaceFile(file);
     } catch {
-      // A missing dependency is the missing-resource path, which the provider contract spells as null.
+      // A missing dependency, and one the host refuses to read, is the missing-resource path, which the provider
+      // contract spells as null.
       return null;
     }
     return resourceContent(bytes, type, resPath);
@@ -91,12 +94,12 @@ export class LintResourceProvider implements ResourceProvider {
 
   /** Whether `file` lies under the project root. */
   holds(file: vscode.Uri): boolean {
-    return isWithinRoot(this.projectRoot.fsPath, file.fsPath);
+    return isWithinRoot(this.projectRoot.fsPath, file.fsPath, HOST_PATH_CASE);
   }
 
   /** Whether the project root is `dir` or lies under it. */
   isRootedWithin(dir: vscode.Uri): boolean {
-    return isWithinRoot(dir.fsPath, this.projectRoot.fsPath);
+    return isWithinRoot(dir.fsPath, this.projectRoot.fsPath, HOST_PATH_CASE);
   }
 
   /** The workspace file `resPath` names, or null for a path that is not `res://` or escapes the project. */
