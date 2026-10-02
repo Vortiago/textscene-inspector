@@ -126,13 +126,6 @@ export function viewportContentKind(node: TscnNode): ViewportContentKind {
 }
 
 /**
- * How deep the resolver follows instances-of-instances. Godot itself has no
- * limit. This one exists so a cyclic sub-scene reference (a scene the parser
- * accepts and Godot rejects at import) cannot hang the render.
- */
-const MAX_RESOLVE_DEPTH = 32;
-
-/**
  * The sub-viewport's subtree with its instances resolved, the input
  * `viewportContentKind` wants: a parsed `instance=` child is a childless `Node`
  * whatever its world. `liveChildGroups` gives each group the ExtResource scope its
@@ -143,14 +136,14 @@ export function resolveViewportSubtree(
   externalResources: readonly TscnExternalResource[],
   sceneCache: CachedSceneSource
 ): TscnNode {
-  const resolve = (child: TscnNode, scope: SceneScope, depth: number): TscnNode => {
-    if (depth >= MAX_RESOLVE_DEPTH || child.type === 'SubViewport') return child;
+  const resolve = (child: TscnNode, scope: SceneScope): TscnNode => {
+    if (child.type === 'SubViewport') return child;
     const groups = liveChildGroups(child, scope, sceneCache);
     // A collapsed single-root instance (ADR-0013) becomes its sub-scene root.
     // Every other origin leaves the node's own identity alone.
     const effective = groups.find((group) => group.origin === 'merged')?.mergedNode ?? child;
     const children = groups.flatMap((group) =>
-      group.children.map((grandchild) => resolve(grandchild, group.scope, depth + 1))
+      group.children.map((grandchild) => resolve(grandchild, group.scope))
     );
     return { ...effective, children };
   };
@@ -159,6 +152,6 @@ export function resolveViewportSubtree(
     ...node,
     // This resolution reads no SubResource id, so it declares an empty pool
     // rather than carry one. `SceneScope` says why the two travel together.
-    children: node.children.map((child) => resolve(child, { externalResources, internalResources: [] }, 0)),
+    children: node.children.map((child) => resolve(child, { externalResources, internalResources: [] })),
   };
 }
