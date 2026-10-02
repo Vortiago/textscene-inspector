@@ -144,6 +144,8 @@
     "pretest:integration": "pnpm --filter @textscene/core build && node esbuild.config.mjs && tsc -p tsconfig.test.json",
     "test:integration": "node ./dist/test/integration/runTests.js",
     "test:integration:debug": "node --inspect-brk ./dist/test/integration/runTests.js",
+    "pretest:installed": "pnpm --filter @textscene/core build && node esbuild.config.mjs && tsc -p tsconfig.test.json",
+    "test:installed": "node ./dist/test/installed/runInstalledTests.js",
     "test:web": "vscode-test-web --browserType=chromium --headless --extensionDevelopmentPath=. .test-workspace-web",
     "pretype-check": "pnpm --filter @textscene/core build",
     "type-check": "tsc --noEmit",
