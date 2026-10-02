@@ -182,6 +182,9 @@ importers:
       wawoff2:
         specifier: 'catalog:'
         version: 2.0.1
+      ws:
+        specifier: ^8.21.1
+        version: 8.21.1
 
   apps/textscene-linter:
     dependencies:

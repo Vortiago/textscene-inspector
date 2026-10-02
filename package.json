@@ -98,13 +98,14 @@
     "lint-staged": "^17.6.0",
     "msdf-bmfont-xml": "catalog:",
     "playwright": "^1.63.0",
-    "prettier": "catalog:",
     "pngjs": "^7.0.0",
+    "prettier": "catalog:",
     "publint": "^0.3.24",
     "rimraf": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",
-    "wawoff2": "catalog:"
+    "wawoff2": "catalog:",
+    "ws": "^8.21.1"
   },
   "pnpm": {
     "overrides": {
