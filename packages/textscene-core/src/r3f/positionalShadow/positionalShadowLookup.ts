@@ -4,38 +4,15 @@
  * `positionalShadowChunk.ts` puts each where three's own lookup stood.
  */
 
-import { SOFT_LOW_SHADOW_SAMPLES, vogelDisk } from '../../godot/softShadowKernel.js';
-import { FRAMEBUFFER_HEIGHT_UNIFORM } from './framebufferRows.js';
+import { SOFT_SHADOW_FILTER } from '../shadowFilter/softShadowFilter.js';
 import { POSITIONAL_SHADOW_ATLAS_UNIFORM } from './shadowAtlasTarget.js';
 
 const ATLAS = POSITIONAL_SHADOW_ATLAS_UNIFORM;
 
-/** A float literal GLSL reads back as the same float32. */
-function glslFloat(value: number): string {
-  const text = String(value);
-  return /[.e]/.test(text) ? text : `${text}.0`;
-}
-
-const KERNEL = vogelDisk(SOFT_LOW_SHADOW_SAMPLES)
-  .map(([x, y]) => `vec2( ${glslFloat(x)}, ${glslFloat(y)} )`)
-  .join(', ');
-
-/**
- * The atlas, the kernel and its turn, shared by both lookups. The turn is `quick_hash` of the
- * fragment's position (`:278-281`, `:343-350`), with no TAA frame to offset it, and with its rows
- * counted from the top, as Godot's are (`framebufferRows.ts`).
- */
+/** The atlas and Godot's soft shadow filter, shared by both lookups. */
 export const ATLAS_SAMPLING = `
 		uniform sampler2DShadow ${ATLAS};
-		uniform float ${FRAMEBUFFER_HEIGHT_UNIFORM}[ 1 ];
-		const vec2 GODOT_SOFT_SHADOW_KERNEL[ ${SOFT_LOW_SHADOW_SAMPLES} ] = vec2[]( ${KERNEL} );
-		mat2 godotDiskRotation() {
-			vec2 fragCoord = vec2( gl_FragCoord.x, ${FRAMEBUFFER_HEIGHT_UNIFORM}[ 0 ] - gl_FragCoord.y );
-			float r = fract( 52.9829189 * fract( dot( fragCoord, vec2( 0.06711056, 0.00583715 ) ) ) ) * PI2;
-			float sr = sin( r );
-			float cr = cos( r );
-			return mat2( vec2( cr, - sr ), vec2( sr, cr ) );
-		}
+${SOFT_SHADOW_FILTER}
 		vec2 godotAtlasTexel() {
 			return 1.0 / vec2( textureSize( ${ATLAS}, 0 ) );
 		}
@@ -64,14 +41,8 @@ export const SPOT_LOOKUP = `
 		}
 		float godotSpotShadow( vec4 shadowCoord, float softShadowScale, float shadowIntensity ) {
 			vec3 coord = shadowCoord.xyz / shadowCoord.w;
-			vec2 pixelSize = softShadowScale * godotAtlasTexel();
-			mat2 rotation = godotDiskRotation();
-			float shadow = 0.0;
-			for ( int i = 0; i < ${SOFT_LOW_SHADOW_SAMPLES}; i ++ ) {
-				vec2 tap = coord.xy + pixelSize * ( rotation * GODOT_SOFT_SHADOW_KERNEL[ i ] );
-				shadow += texture( ${ATLAS}, vec3( tap, coord.z ) );
-			}
-			return mix( 1.0, shadow / ${glslFloat(SOFT_LOW_SHADOW_SAMPLES)}, shadowIntensity );
+			float shadow = godotPcf( ${ATLAS}, softShadowScale * godotAtlasTexel(), coord );
+			return mix( 1.0, shadow, shadowIntensity );
 		}
 `;
 
@@ -89,7 +60,7 @@ export const OMNI_LOOKUP = `
 			mat2 rotation = godotDiskRotation();
 			vec2 offsetScale = blurScale * 2.0 * godotAtlasTexel() / uvRect.zw;
 			float shadow = 0.0;
-			for ( int i = 0; i < ${SOFT_LOW_SHADOW_SAMPLES}; i ++ ) {
+			for ( int i = 0; i < GODOT_SOFT_SHADOW_SAMPLES; i ++ ) {
 				vec2 tap = coord + offsetScale * ( rotation * GODOT_SOFT_SHADOW_KERNEL[ i ] );
 				float lengthSquared = dot( tap, tap );
 				bool doFlip = lengthSquared > 1.0;
@@ -98,7 +69,7 @@ export const OMNI_LOOKUP = `
 				if ( doFlip ) tap += flipOffset;
 				shadow += texture( ${ATLAS}, vec3( tap, depth ) );
 			}
-			return shadow / ${glslFloat(SOFT_LOW_SHADOW_SAMPLES)};
+			return shadow * ( 1.0 / float( GODOT_SOFT_SHADOW_SAMPLES ) );
 		}
 		float godotOmniShadow( mat4 shadowMatrix, vec3 localVert, vec3 localNormal, PointLightShadow pointShadow ) {
 			vec2 texel = godotAtlasTexel();

@@ -1,9 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { FRAMEBUFFER_HEIGHT_UNIFORM, framebufferHeight, writeFramebufferHeight } from './framebufferRows';
+import {
+  FRAMEBUFFER_HEIGHT_UNIFORM,
+  framebufferHeight,
+  installFramebufferHeightUniform,
+  writeFramebufferHeight,
+} from './framebufferRows';
 
 afterEach(() => {
-  delete THREE.ShaderLib.standard.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM];
+  for (const shader of Object.values(THREE.ShaderLib)) delete shader.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM];
+  delete (THREE.UniformsLib.lights as Record<string, THREE.IUniform>)[FRAMEBUFFER_HEIGHT_UNIFORM];
 });
 
 /** The part of a renderer the height reads. */
@@ -38,5 +44,21 @@ describe('writeFramebufferHeight', () => {
     vi.resetModules();
     const reloaded = await import('./framebufferRows');
     expect(reloaded.framebufferHeight).toBe(framebufferHeight);
+  });
+});
+
+describe('installFramebufferHeightUniform', () => {
+  it('gives every lit built-in material and three’s light uniforms the one buffer', () => {
+    installFramebufferHeightUniform();
+    for (const name of ['lambert', 'phong', 'standard', 'physical', 'toon', 'shadow']) {
+      expect(THREE.ShaderLib[name]!.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM]!.value).toBe(framebufferHeight);
+    }
+    const merged = THREE.UniformsUtils.merge([THREE.UniformsLib.lights]);
+    expect(merged[FRAMEBUFFER_HEIGHT_UNIFORM]!.value).toBe(framebufferHeight);
+  });
+
+  it('leaves an unlit material alone (edge case)', () => {
+    installFramebufferHeightUniform();
+    expect(THREE.ShaderLib.basic.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM]).toBeUndefined();
   });
 });

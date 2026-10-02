@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { warn } from '../../logger.js';
 import { ATLAS_SAMPLING, OMNI_LOOKUP, SPOT_LOOKUP } from './positionalShadowLookup.js';
-import { FRAMEBUFFER_HEIGHT_UNIFORM, framebufferHeight } from './framebufferRows.js';
+import { installFramebufferHeightUniform } from '../shadowFilter/framebufferRows.js';
 import { POSITIONAL_SHADOW_ATLAS_UNIFORM, positionalShadowAtlasDepth } from './shadowAtlasTarget.js';
 
 type ChunkName =
@@ -134,9 +134,9 @@ export function positionalShadowChunks(chunks: PositionalShadowChunks): Position
 
 /**
  * Replaces three's chunks and gives the atlas and framebuffer height uniforms to every built-in lit
- * material and to `UniformsLib.lights`, for every program compiled after the call. A three release that rewrites any
- * edited text keeps all its own chunks, and `positionalShadowChunk.test.ts` fails on that release.
- * A second call changes nothing.
+ * material and to `UniformsLib.lights`, for every program compiled after the call. A three release
+ * that rewrites any edited text keeps all its own chunks, and `positionalShadowChunk.test.ts` fails
+ * on that release. A second call changes nothing.
  */
 export function installGodotPositionalShadow(): void {
   const current: PositionalShadowChunks = {
@@ -157,6 +157,6 @@ export function installGodotPositionalShadow(): void {
     .filter((uniforms) => 'pointLightShadows' in uniforms);
   for (const uniforms of [...lit, THREE.UniformsLib.lights as Record<string, THREE.IUniform>]) {
     uniforms[POSITIONAL_SHADOW_ATLAS_UNIFORM] = { value: positionalShadowAtlasDepth() };
-    uniforms[FRAMEBUFFER_HEIGHT_UNIFORM] = { value: framebufferHeight };
   }
+  installFramebufferHeightUniform();
 }

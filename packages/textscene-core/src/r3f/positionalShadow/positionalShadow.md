@@ -103,10 +103,11 @@ writes it after the copy. three hands each light's own matrix to the lit program
   `:1157-1160`), as `godot/softShadowKernel.ts` computes them.
 - The kernel's turn: `quick_hash` of the fragment's position (`:278-281`, `:343-350`). Vulkan counts
   `gl_FragCoord` rows from the top and WebGL from the bottom, so the lookups count from the top of
-  the framebuffer the render draws into (`framebufferRows.ts`). The same pixel then takes the same
-  turn as in Godot.
+  the framebuffer the render draws into (`../shadowFilter/framebufferRows.ts`). The same pixel then
+  takes the same turn as in Godot.
 
-The directional lookups keep three's five-tap kernel (`../directionalShadow/directionalShadow.md`).
+The kernel, its turn and the spot PCF are one GLSL block in `../shadowFilter/softShadowFilter.ts`,
+which the directional lookup shares (`../directionalShadow/directionalShadow.md`).
 
 ## Texture units
 

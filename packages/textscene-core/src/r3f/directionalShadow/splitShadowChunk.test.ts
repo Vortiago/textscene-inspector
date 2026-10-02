@@ -3,8 +3,12 @@
  * rewrites the chunk fails here and not in a golden, and its split selection by running the
  * patched `getSunShadow` body as JavaScript through a shim of the few GLSL words it uses.
  */
+import { createRequire } from 'node:module';
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { SOFT_SHADOW_FILTER } from '../shadowFilter/softShadowFilter';
+import { FRAMEBUFFER_HEIGHT_UNIFORM, framebufferHeight } from '../shadowFilter/framebufferRows';
 import { godotSplitShadowChunk, installGodotSplitShadow } from './splitShadowChunk';
 import { NO_BLEND, type SplitSlot } from './fitDirectionalShadowSplits';
 import { warningsOf } from '../testing/logWarnings';
@@ -16,7 +20,20 @@ const THREE_CASCADE_WALK = 'for ( int i = SUN_LIGHT_CASCADES - 1; i >= 0; i -- )
 
 afterEach(() => {
   THREE.ShaderChunk[CHUNK] = threeChunk;
+  for (const shader of Object.values(THREE.ShaderLib)) delete shader.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM];
+  delete (THREE.UniformsLib.lights as Record<string, THREE.IUniform>)[FRAMEBUFFER_HEIGHT_UNIFORM];
 });
+
+/** three's own module source. Its exports map exposes `"./src/*"`. */
+function threeSource(path: string): string {
+  return readFileSync(createRequire(import.meta.url).resolve(`three/src/${path}`), 'utf8');
+}
+
+/** The source of the patched per-split lookup, from its signature to the sun lookup after it. */
+function splitLookup(chunk: string): string {
+  const start = chunk.indexOf('float getSunShadowSplit(');
+  return chunk.slice(start, chunk.indexOf('float getSunShadow(', start));
+}
 
 interface Sample {
   slot: number;
@@ -115,6 +132,73 @@ describe('godotSplitShadowChunk', () => {
   });
 });
 
+describe('the patched split PCF', () => {
+  it('declares Godot’s soft shadow filter before the lookup that calls it', () => {
+    const patched = godotSplitShadowChunk(threeChunk)!;
+    const filter = patched.indexOf(SOFT_SHADOW_FILTER);
+    expect(filter).toBeGreaterThan(0);
+    expect(filter).toBeLessThan(patched.indexOf('float godotSunShadow('));
+    expect(patched.indexOf('float godotSunShadow(')).toBeLessThan(
+      patched.indexOf('float getSunShadowSplit(')
+    );
+  });
+
+  it('samples each split through Godot’s PCF under PCF shadows', () => {
+    const lookup = splitLookup(godotSplitShadowChunk(threeChunk)!);
+    expect(lookup).toMatch(/#if defined\( SHADOWMAP_TYPE_PCF \)\s+return godotSunShadow\(/);
+  });
+
+  it('spans soft_shadow_scale texels of the whole atlas, narrowed by the split’s blur factor', () => {
+    const patched = godotSplitShadowChunk(threeChunk)!;
+    expect(patched).toContain('godotPcf( atlas, ( vec2( 1.0 ) / atlasSize ) * softShadowScale, coord )');
+    expect(splitLookup(patched)).toContain('sunLightShadow.shadowRadius * radiusScale,');
+  });
+
+  it('keeps three’s own lookup for a map that is not PCF (edge case)', () => {
+    const lookup = splitLookup(godotSplitShadowChunk(threeChunk)!);
+    expect(lookup).toMatch(/#else\s+return getShadow\(/);
+  });
+
+  it('leaves a receiver outside the atlas or past its far plane unshadowed (error case)', () => {
+    const patched = godotSplitShadowChunk(threeChunk)!;
+    expect(patched).toContain(
+      'bool inFrustum = coord.x >= 0.0 && coord.x <= 1.0 && coord.y >= 0.0 && coord.y <= 1.0;'
+    );
+    expect(patched).toContain('if ( ! ( inFrustum && coord.z <= 1.0 ) ) return 1.0;');
+  });
+});
+
+describe('three’s sun shadow, as the split PCF relies on it', () => {
+  it('uploads the whole atlas as a sun shadow’s map size', () => {
+    expect(threeSource('renderers/webgl/WebGLLights.js')).toContain(
+      'shadowUniforms.shadowMapSize.copy( shadow.mapSize ).multiply( shadow.getFrameExtents() );'
+    );
+  });
+
+  it('biases, bounds and blends a PCF lookup as the port does', () => {
+    const pcf = threeChunk.slice(
+      threeChunk.indexOf('float getShadow( sampler2DShadow shadowMap,'),
+      threeChunk.indexOf('#elif defined( SHADOWMAP_TYPE_VSM )')
+    );
+    expect(pcf).toContain(
+      'float getShadow( sampler2DShadow shadowMap, vec2 shadowMapSize, float shadowIntensity, float shadowBias, float shadowRadius, vec4 shadowCoord ) {'
+    );
+    expect(pcf).toContain('shadowCoord.xyz /= shadowCoord.w;');
+    expect(pcf).toContain('shadowCoord.z += shadowBias;');
+    expect(pcf).toContain(
+      'bool inFrustum = shadowCoord.x >= 0.0 && shadowCoord.x <= 1.0 && shadowCoord.y >= 0.0 && shadowCoord.y <= 1.0;'
+    );
+    expect(pcf).toContain('bool frustumTest = inFrustum && shadowCoord.z <= 1.0;');
+    expect(pcf).toContain('return mix( 1.0, shadow, shadowIntensity );');
+  });
+
+  it('takes the same arguments in the lookup it keeps for another map type (edge case)', () => {
+    expect(threeChunk).toContain(
+      'float getShadow( sampler2D shadowMap, vec2 shadowMapSize, float shadowIntensity, float shadowBias, float shadowRadius, vec4 shadowCoord ) {'
+    );
+  });
+});
+
 describe('the patched split lookup', () => {
   it('picks the first split whose far end lies past the fragment', () => {
     expect(runLookup(fourSplits(), 5).samples[0]!.slot).toBe(0);
@@ -189,6 +273,11 @@ describe('installGodotSplitShadow', () => {
   it('replaces three’s chunk with the patched one', () => {
     installGodotSplitShadow();
     expect(THREE.ShaderChunk[CHUNK]).toBe(godotSplitShadowChunk(threeChunk));
+  });
+
+  it('gives every lit built-in material the framebuffer height the filter reads', () => {
+    installGodotSplitShadow();
+    expect(THREE.ShaderLib.standard.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM]!.value).toBe(framebufferHeight);
   });
 
   it('patches the chunk once, and warns nothing, when called twice (edge case)', () => {
