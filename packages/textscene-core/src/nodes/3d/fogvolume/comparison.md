@@ -33,4 +33,4 @@ The lenient parser reuses `parseNode3D`, which reads only `transform` and `visib
 
 ## Known limitations
 
-- **Not drawn** Godot fills the volume with fog. Here the region is empty.
+- **Not drawn** Godot fills the volume with fog, but here the region is empty.

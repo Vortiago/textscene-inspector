@@ -13,11 +13,11 @@ ItemList is a scrollable list of selectable rows, each an optional icon and a la
 one or more columns. The previewer draws the panel and every row's icon and text, packed
 by `max_columns`/`same_column_width`/`fixed_column_width`/`icon_mode`. A disabled row's
 icon and text are dimmed. Outside TOP icon mode, a row or column guide line marks every
-packed separator. A right-to-left list mirrors each row's icon inside the list's width
-and re-derives its label's pen, which lands at a different distance from the icon than
-the left-to-right pen.
+packed separator. A right-to-left list mirrors each row's icon inside the list's width.
+Its label's pen is re-derived and lands at a different distance from the icon than the
+left-to-right pen.
 
-No row is drawn selected, hovered or under a cursor highlight: `selected`, the current
+No row is drawn selected, hovered or under a cursor highlight. `selected`, the current
 index and a live hover or focus state are never part of a `.tscn`.
 
 ## Linting
@@ -73,44 +73,30 @@ Godot's `ERR_FAIL_COND_V` does before `clear()` runs.
 
 ## Known limitations
 
-- **Not drawn** The scroll-hint icon (`scroll_hint_mode`). Its TOP condition
-  (`v_scroll_value > 1`) needs a live scroll position that no static file has, and the
-  icon is not vendored here.
-- **Not drawn** The `focus` StyleBox, and every selected, hovered or cursor row
-  background. None is reachable from a static file: `selected`, the current index and
-  hover or focus are not `.tscn` properties.
+- **Not drawn** The scroll-hint icon (`scroll_hint_mode`), which needs a live scroll
+  position that no static file has.
+- **Not drawn** The `focus` StyleBox and every selected, hovered or cursor row
+  background, since hover, focus, `selected` and the current index are not `.tscn`
+  properties.
 - **Not drawn** `custom_bg_color`/`custom_fg_color`/`icon_modulate`/`icon_region`/
-  `icon_transposed` are real `Item` members, but none is a
-  `PropertyListHelper`-registered leaf, so a `.tscn` cannot author them. The render is
-  complete for what the file can say, so this is not a gap.
-- **Approximated** A TOP-icon-mode, multi-line label wraps at word boundaries only. Godot
-  also falls back to a mid-word (grapheme) break when a single word overflows its column.
-  The shared text engine has no such combined mode, so an unbreakable long word
-  overflows here.
-- **Approximated** A row's text is shaped once, at the width that
-  `auto_width`/`auto_height` sizing uses. A `same_column_width` or dynamically fit column
-  whose final width differs from that (not pinned by `fixed_column_width`) keeps those
-  glyphs, where Godot re-wraps them at the final width.
-- **Approximated** `max_text_lines` sizes a row's reserved text height but does not cap
-  the number of wrapped lines drawn. A paragraph that wraps past it keeps every line,
-  where Godot collapses the tail into an ellipsis on the last visible line.
-- **Approximated** Right-to-left shaping. `_shape_text` hands `is_layout_rtl()` to the
-  TextServer as each item's paragraph direction (`item_list.cpp:41-45`). This previewer
-  has no bidi pass, so a right-to-left script draws in logical order. Every layout
-  branch of the flag is ported.
-- **Not drawn** Both scrollbars. A right-to-left list moves the vertical one to the
-  leading edge, which shifts every row guide line by its width
-  (`item_list.cpp:1454-1458`) and takes the same width off the packing `fit_size`
-  (`:1862-1864`). With no scrollbar drawn, neither applies.
-- **Approximated** A TOP-mode line wider than its box. Godot's CENTER alignment falls
-  back to `width - line_width` once the paragraph direction is right-to-left
-  (`text_paragraph.cpp:907-914`), which pulls the line to the trailing edge. This
-  previewer leaves it at the box origin. Only the word-break limitation above reaches
-  that case, and it already makes the width of such a line wrong.
+  `icon_transposed` are real `Item` members that a `.tscn` cannot author, since none is a
+  `PropertyListHelper`-registered leaf.
+- **Approximated** A TOP-icon-mode, multi-line label wraps at word boundaries only, so a
+  long word overflows its column where Godot breaks it mid-word.
+- **Approximated** A row's text is shaped once, at its `auto_width`/`auto_height` width,
+  so a column of another width keeps lines that Godot re-wraps.
+- **Approximated** `max_text_lines` reserves a row's text height but does not cap its
+  lines, where Godot collapses the tail into an ellipsis on the last visible line.
+- **Approximated** A right-to-left script draws in logical order, since the previewer has
+  no bidirectional pass, though every layout branch of `is_layout_rtl()` is ported.
+- **Not drawn** Both scrollbars, along with the row-guide shift and narrower packing that
+  a right-to-left vertical scrollbar causes (`item_list.cpp:1454-1458`, `:1862-1864`).
+- **Approximated** A right-to-left, CENTER-aligned TOP-mode line wider than its box stays
+  at the box origin, where Godot pulls it to the trailing edge
+  (`text_paragraph.cpp:907-914`).
 - **Needs runtime** The right-to-left arms of `get_item_at_position`
   (`item_list.cpp:1975,1986`) and `is_pos_at_end_of_items` (`:2021-2023`) answer mouse
   hits under a live cursor, which a static preview does not have.
-- **Approximated** `text_overrun_behavior` trims each row against the width the
-  minimum-size pass shaped at (`fixed_column_width`, or unconstrained when unset). This
-  is the same shape-once scope as the `same_column_width` limitation above, so a row
-  that is narrower at draw time is not re-trimmed to its final width.
+- **Approximated** `text_overrun_behavior` trims each row at its minimum-size width
+  (`fixed_column_width`, or unconstrained when unset), so a row narrower at draw time is
+  not re-trimmed.

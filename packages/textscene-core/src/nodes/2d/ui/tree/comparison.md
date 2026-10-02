@@ -58,13 +58,10 @@ item-less Tree draws. A script creates the rows and cells, so they never reach t
 
 ## Known limitations
 
-- **Not drawn** Godot draws the rows, columns and fold arrows. The previewer draws
+- **Not drawn** Godot draws the rows, columns and fold arrows, but the previewer draws
   nothing for this node.
-- **Approximated** Right-to-left shaping. Each column title's paragraph direction follows
-  `is_layout_rtl()` (`tree.cpp:2155`), and this previewer has no bidi pass. No title is
-  ever serialised, so the header cells are blank either way and nothing of it shows.
-- **Needs runtime** Godot's right-to-left arms of `get_column_at_position`
-  (`tree.cpp:6426`), `get_drop_section_at_position` (`:6458`), `get_item_at_position`
-  (`:6508`) and `get_tooltip` (`:6568`) answer mouse hits, and `gui_input` swaps the
-  `ui_left`/`ui_right` actions (`:3794,3812`). All of them need a live cursor or
-  keyboard, and a static preview has neither.
+- **Approximated** Column titles get no right-to-left shaping, which never shows because no
+  title is serialised and the header cells are blank.
+- **Needs runtime** The right-to-left arms of `get_column_at_position` (`tree.cpp:6426`),
+  `get_drop_section_at_position` (`:6458`), `get_item_at_position` (`:6508`),
+  `get_tooltip` (`:6568`) and `gui_input` (`:3794,3812`) need a live cursor or keyboard.

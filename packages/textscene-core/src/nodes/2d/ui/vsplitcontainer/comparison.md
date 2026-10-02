@@ -30,5 +30,5 @@ Strict parsing format-checks the inherited set (10 inherited from SplitContainer
 |  | `control-property-order` | warning |
 <!-- lint:end -->
 
-Identical to HSplitContainer's. The three properties SplitContainer adds are plain scalars Godot clamps or ignores at layout time, so a malformed `split_offset` leaves the property undefined and the Godot default of 0 applies.
+Identical to HSplitContainer's. The three properties SplitContainer adds are plain scalars Godot clamps or ignores at layout time. A malformed `split_offset` leaves the property undefined, and the Godot default of 0 applies.
 

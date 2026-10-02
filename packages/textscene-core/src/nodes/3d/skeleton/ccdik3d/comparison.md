@@ -10,7 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # CCDIK3D
 
-Cyclic coordinate descent inverse kinematics: it rotates a bone chain joint by joint, from the far end back to the root, until the tip reaches the target. It is a solver and draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008).
+Cyclic coordinate descent inverse kinematics. It rotates a bone chain joint by joint, from the far end back to the root, until the tip reaches the target. It is a solver and draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008).
 
 ## Linting
 

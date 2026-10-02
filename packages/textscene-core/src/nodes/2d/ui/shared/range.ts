@@ -5,7 +5,7 @@
  */
 
 import { parseOptionalBool, parseOptionalFloat } from '../../../../parser/valueParsers';
-import { isEqualApprox } from '../../../../godot/index.js';
+import { isEqualApprox, snapped } from '../../../../godot/index.js';
 
 export interface RangeProperties {
   /** Current value. Godot default 0. */
@@ -124,8 +124,9 @@ interface RangeSimState {
  */
 function calcValue(val: number, min: number, max: number, page: number, gates: RangeValueGates = {}): number {
   let v = val;
-  // Measured from `min`, so a range starting at 0.1 with step 0.2 snaps to
-  // 0.1/0.3/0.5 rather than to multiples of 0.2 (`range.cpp:184-186`).
+  // Measured from `min`, so a range starting at 0.1 with step 0.2 snaps to 0.1/0.3/0.5 rather than
+  // to multiples of 0.2 (`range.cpp:184-186`). `_snapped_r128` (`range.cpp:35-70`) matches
+  // `Math::snapped` wherever a double holds the result exactly.
   if (gates.step !== undefined && gates.step > 0) v = snapped(v - min, gates.step) + min;
   if (gates.rounded) v = Math.round(v);
   if (!gates.allowGreater && v > max - page) v = max - page;
@@ -139,11 +140,6 @@ interface RangeValueGates {
   rounded?: boolean;
   allowGreater?: boolean;
   allowLesser?: boolean;
-}
-
-/** `Math::snapped` (`core/math/math_funcs.h`): `_snapped_r128`'s fallback, and its answer wherever a double holds the result exactly. */
-function snapped(value: number, step: number): number {
-  return Math.floor(value / step + 0.5) * step;
 }
 
 /** Every `_calc_value` gate a node authored, read once per call site. */

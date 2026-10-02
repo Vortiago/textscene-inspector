@@ -33,4 +33,4 @@ Strict parsing format-checks these `Path3D` properties, plus 17 inherited from N
 
 ## Known limitations
 
-- **Editor only** The curve polyline draws only for the selected node. Godot draws no path line while running either.
+- **Editor only** The curve polyline draws only for the selected node, and Godot draws no path line while running.

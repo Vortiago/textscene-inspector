@@ -27,9 +27,8 @@ walk. It draws these parts:
   `HSlider` chrome under its gradient band, with the `bar_arrow` grabber that
   `_reset_sliders_theme` sets (`color_picker.cpp:628-651`). Intensity keeps the default
   circle grabber, since that override skips it.
-- The value `SpinBox` of each row, drawn at the real width of its `LineEdit` field
-  (`spin_box.cpp:82-86`), with the `up`/`down` stepper icons in the buttons block beside
-  it.
+- The value `SpinBox` of each row, at the real width of its `LineEdit` field
+  (`spin_box.cpp:82-86`), with the `up`/`down` stepper icons beside it.
 - The hex/expression field.
 - The swatches rows: a collapsed "Swatches" toggle with its `folded_arrow` and a menu
   button, and a "Recent Colors" toggle. Neither toggle changes state. This is all a
@@ -83,23 +82,16 @@ raw `Color()` member default, because `ColorPicker::ColorPicker()` calls
 
 ## Known limitations
 
-- **Shader missing** A `picker_shape` other than `0` (HSV Rectangle) selects a
-  shader-backed shape (wheel, VHS/OKHSL circle, either OK rectangle) that this previewer
-  does not reproduce. Only the sample row and the zero-height stacking slot of the shape
-  row draw. `SHAPE_NONE` (4) draws nothing in Godot too, so it is not a gap.
-- **Not drawn** The `script` icon of `text_type` (`theme_cache.color_script`,
-  `color_picker.cpp:1324`). It is reachable only once `text_is_constructor` turns true,
-  for an HDR or negative `color` (see the doc of `hexFieldText`). Its box (`StyleBoxEmpty`, drawn but invisible) and its `""` text still
-  render correctly.
+- **Shader missing** A `picker_shape` other than `0` (HSV Rectangle) or `4` (none) selects
+  a shader-backed shape (wheel, VHS/OKHSL circle, either OK rectangle), so only the sample
+  row draws.
+- **Not drawn** The `script` icon of `text_type` (`color_picker.cpp:1324`), which shows only
+  for an HDR or negative `color`.
 - **Approximated** The HSV hue channel row (`color_mode = MODE_HSV`, slider index 0)
-  draws a flat grey base at full opacity. `ColorModeHSV::slider_draw` blends a
-  rainbow-texture overlay in at `alpha = saturation` (`color_mode.cpp:218-221`).
-- **Approximated** The slider-row width term of `colorPickerMinimumSize` floors the
-  channel-label column to `label_width` (10px), not to the shaped width of the widest
-  label (see the doc of `colorPickerLabelColumnWidth`). The right label set comes from
-  `colorPickerSliderLabels` (`colorModes.ts`), which imports this module, so using it
-  there makes an import cycle. The rendered slider grid (`Component.tsx`) uses the real
-  widened column. Only the minimum-size calculation keeps the floor, and the 290px floor
-  of the shape row sets this node's minimum width in every shipped fixture.
+  draws a flat grey base with no rainbow overlay, where Godot blends one in at
+  `alpha = saturation` (`color_mode.cpp:218-221`).
+- **Approximated** The minimum-size calculation floors the channel-label column at
+  `label_width` (10px), not the widest label's width, which the shape row's 290px floor
+  hides in every fixture.
 - **Not drawn** Focus rings (`draw_focus_rect`/`draw_focus_circle`): a static previewer
   has no focus.

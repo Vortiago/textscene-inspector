@@ -10,9 +10,9 @@ renders_as: a panel StyleBox behind the current page, topped by an internal TabB
 # TabContainer
 
 TabContainer arranges its children into a tabbed view, showing only the active tab's
-child. The previewer draws the `panel` StyleBox behind the content band, positions the
-current page below (or above) the strip, and draws the strip itself through the same
-painter TabBar uses for its own.
+child. The previewer draws the `panel` StyleBox behind the content band and positions the
+current page below (or above) the strip. It draws the strip through the same painter
+TabBar uses.
 
 ## Linting
 
@@ -52,14 +52,11 @@ and applies no walk ceiling.
 
 ## Known limitations
 
-- **Approximated** The selected tab's `font_selected_color` and its `tab_selected`
-  StyleBox are not distinguished from the unselected ones, so the current tab
-  reads as the same colour and box as its neighbours. Its position, width and
-  the underline above it are exact. This is the only difference a tab fixture
-  measures against Godot.
-- **Approximated** A tab title's paragraph direction is not applied, so under
-  `layout_direction = 3` a right-to-left script keeps left-to-right glyph order.
-  Where the strip and each tab in it sit does follow the layout direction.
+- **Approximated** The current tab draws in the unselected colour and StyleBox instead of
+  `font_selected_color` and `tab_selected`, though its position, width and underline are
+  exact.
+- **Approximated** Under `layout_direction = 3`, a tab title in a right-to-left script
+  keeps left-to-right glyph order, while the strip and its tabs still mirror.
 - **Approximated** `tab_alignment = Right` never reclaims the strip's `side_margin`
   gutter when its own tabs overflow and scroll, a narrow case Godot's own
   `_update_margins` special-cases.

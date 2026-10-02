@@ -47,4 +47,4 @@ The numeric keys (`fov`, `size`, `near`, `far`, `h_offset`, `v_offset`, `frustum
 
 ## Known limitations
 
-- **Editor only** The frustum gizmo appears only in Godot's editor. Here it is selection-gated.
+- **Editor only** The frustum gizmo appears only in Godot's editor, but here it is selection-gated.

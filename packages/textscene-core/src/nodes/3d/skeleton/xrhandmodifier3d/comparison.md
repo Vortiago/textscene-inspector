@@ -33,4 +33,4 @@ XRHandModifier3D reuses `parseNode3D`, which reads only `transform` and `visible
 
 ## Known limitations
 
-- **Needs runtime** Godot poses the hand from a live XR tracker. Here nothing moves.
+- **Needs runtime** Godot poses the hand from a live XR tracker, but here nothing moves.

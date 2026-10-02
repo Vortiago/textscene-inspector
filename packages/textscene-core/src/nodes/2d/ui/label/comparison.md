@@ -59,8 +59,8 @@ The lenient parser reads `text`, `horizontal_alignment`, `vertical_alignment`,
 `justification_flags`, `tab_stops`, `autowrap_trim_flags`, `paragraph_separator`,
 `lines_skipped`, `max_lines_visible`, `label_settings`, `visible_characters`,
 `visible_ratio` and `visible_characters_behavior`. An out-of-range or unparseable
-alignment becomes `undefined` with no warning, `uppercase` turns on only for a value
-that reads as `true`, `ellipsis_char` keeps only its first character, and a malformed
+alignment becomes `undefined` with no warning. `uppercase` turns on only for a value
+that reads as `true`. `ellipsis_char` keeps only its first character, and a malformed
 `tab_stops` literal leaves tab stops unset.
 
 `visible_characters` and `visible_ratio` derive each other as
@@ -78,40 +78,23 @@ is already applied. Every real Godot save guarantees that, since `text` is the f
   the wrap is what makes the scrollbar appear.
 - **Not drawn** `BREAK_TRIM_INDENT` (an `autowrap_trim_flags` bit): a wrapped
   continuation line does not reserve the leading tab/space indent Godot re-applies to it.
-- **Approximated** A Label combining `HORIZONTAL_ALIGNMENT_FILL`, autowrap OFF and a
-  trimming `text_overrun_behavior` does not re-justify the trimmed remainder out to the
-  box edge (`JUSTIFICATION_CONSTRAIN_ELLIPSIS`). The ellipsis lands right after the last
-  kept glyph.
-- **Not drawn** The `font` and `paragraph_spacing` of `label_settings`, and its
-  stacked-outline and stacked-shadow arrays. `font` needs a by-reference font-metrics
-  resolution that this previewer's text engine does not have (it has only a node's theme
-  chain, `resolveNodeFontMetrics`). So every Label shapes in its theme font, whatever
-  `label_settings.font` says. `outline_size`/`outline_color` and
-  `shadow_size`/`shadow_color`/`shadow_offset` draw, as do the theme's
-  `font_outline_color`/`outline_size`/`font_shadow_color`/`shadow_offset_x`/
-  `shadow_offset_y`/`shadow_outline_size`. Only the stacked variants of both do not draw.
-- **Approximated** A `visible_characters_behavior` other than the default
-  (`VC_CHARS_AFTER_SHAPING`, `VC_GLYPHS_AUTO/LTR/RTL`) counts glyphs as a proxy for
-  Godot's per-glyph character or glyph indices. The two agree in this engine's atlas
-  shaping (no ligatures), except across a line's trimmed edge space. Label's always-on
-  `BREAK_TRIM_START/END_EDGE_SPACES` drops that character from the draw and leaves no
-  index for the counters of these behaviours. So the reveal count drifts by one per
-  trimmed edge past the first.
-- **Not drawn** The doubled-backslash escapes of `paragraph_separator`, for example a
-  literal `"\\n"` authored to mean a real newline. Godot runs `String::c_unescape()` on
-  the property (label.cpp:158) on top of the string-literal unescape of the `.tscn`
-  format. No shared reader for `c_unescape()` exists in this codebase, so the value stays
-  as the file's quoting decoded it.
-- **Not drawn** The extra line-count clamp of `get_layout_data` to the number of lines
-  that fit the control's rect height (label.cpp:533-548). It is always active,
-  independent of `lines_skipped`/`max_lines_visible`. A Label taller than its rect
-  overflows visibly here, where Godot drops its lowest lines.
-- **Not drawn** The RTL arm of `HORIZONTAL_ALIGNMENT_FILL` (label.cpp:472-478) and
-  the RTL ellipsis side, which puts the ellipsis before the kept glyphs and trims
-  the head of the line (label.h:198-241, text_server_adv.cpp:6053-6064). Both read
-  the shaped paragraph direction, which only `text_direction` sets. Its default is
-  `TEXT_DIRECTION_AUTO` (label.h:70), so `layout_direction` never reaches them
-  (:177-181). The LEFT/RIGHT swap (:481-497) and the reveal end of `VC_GLYPHS_AUTO`
-  (:779-780) read `is_layout_rtl()` and do draw.
+- **Approximated** A FILL-aligned Label with autowrap OFF and a trimming
+  `text_overrun_behavior` puts the ellipsis after the last kept glyph, where Godot
+  re-justifies the line.
+- **Not drawn** `label_settings.font`, so every Label shapes in its theme font.
+- **Not drawn** `label_settings.paragraph_spacing`.
+- **Not drawn** The stacked-outline and stacked-shadow arrays of `label_settings`, while
+  its single outline and shadow and the theme's own draw.
+- **Approximated** A non-default `visible_characters_behavior` counts glyphs as a proxy
+  for Godot's indices, so the reveal count drifts by one per trimmed line-edge space past
+  the first.
+- **Not drawn** The doubled-backslash escapes of `paragraph_separator`, so a literal
+  `"\\n"` stays two characters where Godot's `String::c_unescape()` (label.cpp:158) makes
+  it a newline.
+- **Not drawn** The line-count clamp of `get_layout_data` (label.cpp:533-548), so text
+  taller than the rect overflows it here, where Godot drops the lowest lines.
+- **Not drawn** The right-to-left arm of `HORIZONTAL_ALIGNMENT_FILL` (label.cpp:472-478)
+  and the leading-edge ellipsis (label.h:198-241), which only a non-default
+  `text_direction` reaches.
 - **Not drawn** Bidirectional reordering of a mixed-direction paragraph
   (text_server_adv.cpp:5374): the bundled atlas covers no RTL script.

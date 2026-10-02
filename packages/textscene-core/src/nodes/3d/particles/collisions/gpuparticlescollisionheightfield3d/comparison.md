@@ -34,4 +34,4 @@ The lenient parser reuses `parseNode3D`, which reads only `transform` and `visib
 
 ## Known limitations
 
-- **Needs runtime** Godot stops a live particle cloud at the heightmap. Here there is no cloud to stop.
+- **Needs runtime** Godot stops a live particle cloud at the heightmap, but here there is no cloud to stop.

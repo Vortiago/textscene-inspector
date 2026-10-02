@@ -35,4 +35,4 @@ SpringBoneCollision3D registers `parseNode3D` directly, so `bone_name`, `bone`, 
 
 ## Known limitations
 
-- **Editor only** The collider gizmo appears only in Godot's editor. Here it is absent.
+- **Editor only** The collider gizmo appears only in Godot's editor, but here it is absent.

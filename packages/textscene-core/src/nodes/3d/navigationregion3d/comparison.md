@@ -33,8 +33,8 @@ Strict parsing format-checks these `NavigationRegion3D` properties, plus 17 inhe
 | `valid-navigationregion3d-resources` | `navigationregion3d-requires-navigation-mesh` | warning |
 <!-- lint:end -->
 
-`navigation_mesh` is assigned straight from the raw property string with no format check, so a malformed reference strict rejects is stored as written and fails only in the downstream resource lookup.
+The lenient parser assigns `navigation_mesh` straight from the raw property string with no format check. A malformed reference that strict rejects is stored as written and fails only at the resource lookup.
 
 ## Known limitations
 
-- **Editor only** Godot draws the navigation mesh only as an editor overlay, so the reference image shows none. Here the overlay is drawn by default.
+- **Editor only** Godot draws the navigation mesh only as an editor overlay, so the reference image shows none, while the previewer draws it by default.

@@ -10,7 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # BoneTwistDisperser3D
 
-Spreads one bone's twist back up its parent chain, so a wrist rotation becomes a smooth spiral through the forearm. It changes only the twist about each joint's axis and draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
+Spreads one bone's twist back up its parent chain, so a wrist rotation becomes a smooth spiral through the forearm. It changes only the twist about each joint's axis and draws nothing at runtime. The previewer renders it as a transform-only group (ADR-0008), and its children still show.
 
 ## Linting
 

@@ -10,7 +10,7 @@ renders_as: a transform-only group
 
 # ModifierBoneTarget3D
 
-Attaches itself to one bone of its parent Skeleton3D and copies that bone's global pose onto its own transform each pass, so another modifier can aim at it. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
+Attaches itself to one bone of its parent Skeleton3D and copies that bone's global pose onto its own transform each pass. Another modifier can then aim at it. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
 
 ## Linting
 

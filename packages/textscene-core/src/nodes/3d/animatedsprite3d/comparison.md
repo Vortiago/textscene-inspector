@@ -41,4 +41,4 @@ The lenient parser reuses `parseNode3D` unchanged, so it reads only `transform` 
 
 ## Known limitations
 
-- **Not drawn** Godot shows the current animation frame. Here the quad is absent.
+- **Not drawn** Godot shows the current animation frame, but here the quad is absent.

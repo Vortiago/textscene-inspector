@@ -10,8 +10,8 @@ renders_as: a Node2D transform group, repeated once per mirrored axis
 # ParallaxLayer
 
 ParallaxLayer is a Node2D that its parent ParallaxBackground is allowed to move. The
-previewer keeps the authored pose on an ordinary Node2D, puts the scroll on a wrapper,
-and draws the subtree once more along each `motion_mirroring` axis.
+previewer keeps the authored pose on an ordinary Node2D and puts the scroll on a wrapper.
+It draws the subtree once more along each `motion_mirroring` axis.
 
 ## Linting
 
@@ -39,6 +39,6 @@ negative `motion_mirroring` component is clamped to `0`, as `set_mirroring` does
 ## Known limitations
 
 - **Needs runtime** `motion_scale` and `motion_offset` move the layer only while a
-  Camera2D is current, in Godot as much as here. A still frame shows the authored pose.
+  Camera2D is current, so a still frame shows the authored pose, as in Godot.
 - **Approximated** Picking a mirrored copy selects the ParallaxLayer, not the copied
   child.

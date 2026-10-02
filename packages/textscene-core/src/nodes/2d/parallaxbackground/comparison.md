@@ -40,7 +40,8 @@ other `scroll_*` vectors to `Vector2(0, 0)` and `follow_viewport_scale` to `1`.
 
 ## Known limitations
 
-- **Needs runtime** The whole `scroll_*` surface is inert until a Camera2D is current,
-  in Godot as much as here. It acts only inside a sub-viewport that frames through one.
+- **Needs runtime** In Godot and here, the whole `scroll_*` surface acts only while a
+  Camera2D is current, inside a sub-viewport that frames through one.
 - **Approximated** `scroll_offset` and `follow_viewport_scale` are parsed but never
-  applied. `scroll_ignore_camera_zoom` shows only at a camera zoom other than 1.
+  applied.
+- **Approximated** `scroll_ignore_camera_zoom` shows only at a camera zoom other than 1.

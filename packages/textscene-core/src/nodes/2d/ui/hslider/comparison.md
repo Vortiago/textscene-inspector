@@ -36,7 +36,6 @@ and a malformed `tick_count` draws no ticks.
 
 ## Known limitations
 
-- **Not drawn** Slider's RTL arms that need pointer or gamepad state: the drag
-  origin and motion (slider.cpp:77,116), the `ui_left`/`ui_right` step (:144,160)
-  and its joypad repeat (:216,224). The `grabber_area` fill and the grabber icon
-  (:331-339,363) both follow the layout direction.
+- **Not drawn** Slider's right-to-left drag origin and motion (slider.cpp:77,116),
+  `ui_left`/`ui_right` step (:144,160) and joypad repeat (:216,224), which need pointer
+  or gamepad state.

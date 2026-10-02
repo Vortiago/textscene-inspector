@@ -48,6 +48,5 @@ the raw reference string, so a dangling reference draws no tiles. Malformed
 
 ## Known limitations
 
-- **Approximated** Cells batch one mesh per atlas source, so cells from different
-  sources are not interleaved per cell. Sources draw in appearance order, each nudged in
-  z.
+- **Approximated** Cells batch one mesh per atlas source and the sources draw in
+  appearance order, so cells from different sources do not interleave.

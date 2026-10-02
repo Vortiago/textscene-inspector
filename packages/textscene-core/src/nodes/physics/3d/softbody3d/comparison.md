@@ -47,4 +47,4 @@ The lenient parser reuses `parseNode3D`, which reads only `transform` and `visib
 
 ## Known limitations
 
-- **Not drawn** Godot draws the soft mesh. The previewer draws nothing for it.
+- **Not drawn** Godot draws the soft mesh, but the previewer draws nothing for it.

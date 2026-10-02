@@ -9,7 +9,7 @@ renders_as: a THREE.DirectionalLight
 
 # DirectionalLight3D
 
-A parallel light, like sunlight, lighting every surface from one fixed direction. The previewer emits a `THREE.DirectionalLight` aimed down the node's local -Z and casts a shadow map when `shadow_enabled` is set.
+A sun-like light that lights every surface from one direction, down the node's local -Z. The previewer draws a `THREE.DirectionalLight` with Godot's shadow, fitted to the camera in one, two or four splits. Each shadow draws into its share of one atlas texture and fades out at `directional_shadow_max_distance`. Every lit surface samples that one texture, as in Godot, so eight shadowed lights take one texture unit.
 
 ## Linting
 
@@ -36,8 +36,16 @@ Strict parsing format-checks these `DirectionalLight3D` properties, plus 27 inhe
 | `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |
 <!-- lint:end -->
 
-The lenient parser reads only `directional_shadow_mode` and `directional_shadow_max_distance`, through `parseOptionalInt` and `parseOptionalFloat`, which return `undefined` with no warning when absent or unparseable. The other seven keys are never read, so an out-of-order shadow split strict rejects never reaches the renderer.
+The lenient parser reads the shadow mode, the three split offsets, the max distance, the pancake size, the fade start, `directional_shadow_blend_splits` and `sky_mode`. An absent, unparseable or non-finite value takes Godot's default. The defaults are four splits at 0.1, 0.2 and 0.5, no blending, and a fade from 0.8 of the distance. An out-of-range split offset or fade start reaches the renderer as written, as Godot's setter keeps it.
+
+The shadow's soft edge takes the four taps of Godot's default Soft Low filter, with the same dither as Godot. The filter reaches `shadow_blur` times two atlas texels.
+
+`sky_mode` decides what the light reaches, as in Godot. A Sky Only light draws only its sun in the sky, and casts no shadow. A Light Only light lights surfaces and draws no sun in the sky.
+
+Godot draws the first eight visible directional lights in the scene and stops. A light past the eighth neither lights nor casts, here as in Godot. So at most eight directional lights cast a shadow.
 
 ## Known limitations
 
-- **Approximated** The shadow's near edge shows more contrast here, where Godot's bright sky ambient washes it out.
+- **Approximated** A shadow's near edge has more contrast than in Godot, where the bright sky ambient washes it out.
+- **Approximated** A caster more than one view diameter towards the sun casts no shadow, where Godot still draws it.
+- **Approximated** The editor camera's clip planes follow the framing, so the shadow's splits and fade can end nearer or further than in Godot's editor.

@@ -9,7 +9,7 @@ renders_as: children flowed left to right, wrapping to a new row
 
 # HFlowContainer
 
-HFlowContainer is a FlowContainer fixed to the horizontal axis: children flow left to
+HFlowContainer is a FlowContainer fixed to the horizontal axis. Children flow left to
 right and wrap to a new row when the current one runs out of width. It draws nothing
 itself. A right-to-left `layout_direction` mirrors every row horizontally.
 
@@ -38,6 +38,5 @@ orientation to horizontal. Only strict rejects the key.
 
 ## Known limitations
 
-- **Approximated** A TextureRect child using a `Fit` expand mode inside a multi-line
-  flow is sized like any other child. Godot keeps the child's size from the previous
-  frame, which a static render cannot reproduce.
+- **Approximated** A TextureRect child with a `Fit` expand mode inside a multi-line
+  flow is sized like any other child, where Godot keeps its previous frame's size.

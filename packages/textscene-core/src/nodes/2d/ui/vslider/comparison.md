@@ -30,4 +30,4 @@ Strict parsing format-checks the inherited set (5 inherited from Slider, 9 inher
 | `vslider-property-order` | `vslider-property-order` | warning |
 <!-- lint:end -->
 
-The lenient parser has no strict counterpart for the `Range` and `Slider` keys. An unparseable `value`, `min_value` or `max_value` becomes `undefined` and Godot's defaults of 0, 0 and 100 apply, so a typo'd `value` draws the grabber at the bottom. Out-of-range values are clamped silently, as the engine does.
+The lenient parser has no strict counterpart for the `Range` and `Slider` keys. An unparseable `value`, `min_value` or `max_value` becomes `undefined`, and Godot's defaults of 0, 0 and 100 apply. A misspelt `value` then draws the grabber at the bottom. Out-of-range values are clamped silently, as the engine does.

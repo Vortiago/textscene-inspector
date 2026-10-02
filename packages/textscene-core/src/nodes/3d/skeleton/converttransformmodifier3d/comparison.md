@@ -10,7 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # ConvertTransformModifier3D
 
-Reads one scalar off a reference bone or node: a position, a roll or a scale. It remaps that value from the reference range onto the apply range and writes it back as a different kind of transform on the apply bone. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
+Reads one scalar off a reference bone or node: a position, a roll or a scale. It remaps that value from the reference range onto the apply range, and writes it as another kind of transform on the apply bone. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
 
 ## Linting
 

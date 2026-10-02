@@ -35,4 +35,4 @@ GPUParticlesCollisionSDF3D registers `parseNode3D` directly, which reads only `t
 
 ## Known limitations
 
-- **Needs runtime** Godot stops a live particle cloud at the baked field. Here there is no cloud to stop.
+- **Needs runtime** Godot stops a live particle cloud at the baked field, but here there is no cloud to stop.

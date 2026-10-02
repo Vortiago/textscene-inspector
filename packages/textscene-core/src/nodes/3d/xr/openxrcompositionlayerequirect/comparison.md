@@ -37,4 +37,4 @@ The lenient parser reuses `parseNode3D`, which reads only `transform` and `visib
 
 ## Known limitations
 
-- **Not drawn** Godot draws the fallback sphere section outside an XR session. The previewer draws nothing for it.
+- **Not drawn** Godot draws the fallback sphere section outside an XR session, but the previewer draws nothing for it.

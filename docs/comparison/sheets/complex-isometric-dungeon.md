@@ -24,10 +24,10 @@ Draw order and the light pass match.
 ## Known limitations
 
 - **Needs runtime** The candle flames and sparks draw here and not in Godot (see Candle).
-- **Approximated** The area around the pillar right of centre is brighter than Godot's.
-  The cause is not known.
-- **Approximated** Some brighter areas are darker and bluer than Godot's. The cause is not
-  known.
+- **Approximated** The area around the pillar right of centre is brighter than Godot's,
+  for a cause not yet known.
+- **Approximated** Some brighter areas are darker and bluer than Godot's, for a cause not
+  yet known.
 
 ## The pieces on their own
 

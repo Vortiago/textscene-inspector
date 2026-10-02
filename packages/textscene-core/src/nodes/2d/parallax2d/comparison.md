@@ -44,5 +44,5 @@ as a well-formed one.
 
 ## Known limitations
 
-- **Not drawn** The scroll offset and repeats Godot applies to the children are not
-  reproduced. The children draw once, at their authored transform.
+- **Not drawn** The children draw once, at their authored transform, without the scroll
+  offset and repeats Godot applies to them.

@@ -69,4 +69,4 @@ The smoothing, drag and `editor_draw_*` keys are never read.
 ## Known limitations
 
 - **Approximated** The main 2D stage opens on the whole scene rather than the enabled
-  camera's view. A Cameras panel row frames the stage through the camera on request.
+  camera's view, which a Cameras panel row shows on request.

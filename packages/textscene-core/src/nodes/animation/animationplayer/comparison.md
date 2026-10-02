@@ -46,6 +46,6 @@ Strict parsing format-checks these `AnimationPlayer` properties, plus 13 inherit
 
 ## Known limitations
 
-- **Not drawn** Only transform and value tracks play. `bezier`, `method`, `audio` and nested `animation` tracks are parsed and ignored (ADR-0011).
+- **Not drawn** Only transform and value tracks play, so `bezier`, `method`, `audio` and nested `animation` tracks are parsed and ignored (ADR-0011).
 - **Approximated** Cubic interpolation and per-key `transition` easing play as linear, so an eased clip reaches the same poses on a different curve (ADR-0017).
 - **Approximated** A track path resolves by node name, so two same-named siblings under the root are ambiguous, and a track above the root is dropped.

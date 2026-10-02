@@ -33,4 +33,4 @@ SpringBoneCollisionSphere3D registers `parseNode3D` directly, so neither `radius
 
 ## Known limitations
 
-- **Editor only** The sphere gizmo appears only in Godot's editor. Here it is absent.
+- **Editor only** The sphere gizmo appears only in Godot's editor, but here it is absent.

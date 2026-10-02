@@ -27,4 +27,4 @@ OpenXRVisibilityMask declares no property of its own. The lenient parser reuses 
 
 ## Known limitations
 
-- **Not drawn** Godot blacks out the lens-distortion region in an XR session. The previewer draws nothing for it.
+- **Not drawn** Godot blacks out the lens-distortion region in an XR session, but the previewer draws nothing for it.

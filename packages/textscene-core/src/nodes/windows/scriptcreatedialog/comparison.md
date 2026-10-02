@@ -28,4 +28,4 @@ ScriptCreateDialog declares no property of its own, so the lenient `Node` reader
 
 ## Known limitations
 
-- **Not drawn** Godot displays the dialog inside the editor. The previewer draws nothing for it.
+- **Not drawn** Godot displays the dialog inside the editor, but the previewer draws nothing for it.

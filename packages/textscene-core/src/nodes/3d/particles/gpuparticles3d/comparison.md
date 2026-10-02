@@ -67,4 +67,4 @@ GPUParticles3D registers `parseNode3D` directly, so `amount`, `lifetime`, `proce
 
 ## Known limitations
 
-- **Not drawn** Godot draws the burst of orange emissive spheres mid-flight. Here only the sky and ground appear.
+- **Not drawn** Godot draws the burst of orange emissive spheres mid-flight, but here only the sky and ground appear.

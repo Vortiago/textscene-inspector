@@ -209,6 +209,10 @@ separate pass (ADR-0030).
 orchestrator, which runs them in dependency order from a single `useFrame`
 (`ViewportPassRegistryContext.tsx`).
 
+**Shadows.** A light only declares its shadow on `userData`. `<SceneShadowFitter>` fits every
+declared shadow to the camera of each render, in Godot's directional and positional atlases
+(`r3f/directionalShadow/directionalShadow.md`, `r3f/positionalShadow/positionalShadow.md`).
+
 **Axis conventions.** Godot and three.js disagree in three places. Each is converted where
 Godot data becomes a three.js object, never in a parser:
 
