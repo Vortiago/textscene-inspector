@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  GLB_BIN_CHUNK,
   GLB_JSON_CHUNK,
   GLB_MAGIC,
   gltfRefusalMessage,
@@ -8,7 +9,6 @@ import {
   requiredGltfExtensions,
   unsupportedRequiredGltfExtensions,
 } from './gltf';
-import { BIN_CHUNK } from '../resources/formats/glb/testing/triangleGlb';
 
 describe('unsupportedRequiredGltfExtensions', () => {
   it('passes a file whose required extensions Godot all imports', () => {
@@ -76,7 +76,7 @@ describe('readGltfRequiredExtensions', () => {
   it('reads the JSON chunk alone, not the chunks after it', () => {
     const json = new Uint8Array(glb(REQUIRES_INSTANCING));
     const bin = new Uint8Array(8);
-    new DataView(bin.buffer).setUint32(4, BIN_CHUNK, true);
+    new DataView(bin.buffer).setUint32(4, GLB_BIN_CHUNK, true);
     const file = new Uint8Array(json.length + bin.length);
     file.set(json);
     file.set(bin, json.length);
@@ -106,7 +106,7 @@ describe('readGltfRequiredExtensions', () => {
   });
 
   it('gives an empty list for a GLB whose first chunk is not JSON', () => {
-    expect(readGltfRequiredExtensions(glb(REQUIRES_INSTANCING, BIN_CHUNK))).toEqual([]);
+    expect(readGltfRequiredExtensions(glb(REQUIRES_INSTANCING, GLB_BIN_CHUNK))).toEqual([]);
   });
 
   it('gives an empty list for text that is not JSON', () => {

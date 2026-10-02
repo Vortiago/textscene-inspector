@@ -468,17 +468,27 @@ describe('TscnDiagnostics', () => {
       }
       pendingReads = [];
       (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({ uri: createMockUri('/workspace') });
-      (vscode.workspace.fs.stat as Mock).mockImplementation((uri: vscode.Uri) =>
-        uri.fsPath === '/workspace/project.godot'
-          ? Promise.resolve({ type: 1, ctime: 0, mtime: 0, size: 1 })
-          : Promise.reject(new Error('Not found'))
-      );
+      // The GLB's modification time moves each time a read of it settles, so each lint reads it again, while lints
+      // that overlap share one read.
+      let glbMtime = 0;
+      (vscode.workspace.fs.stat as Mock).mockImplementation((uri: vscode.Uri) => {
+        if (uri.fsPath === '/workspace/project.godot')
+          return Promise.resolve({ type: 1, ctime: 0, mtime: 0, size: 1 });
+        if (uri.fsPath === '/workspace/tree.glb')
+          return Promise.resolve({ type: 1, ctime: 0, mtime: glbMtime, size: INSTANCED_TREE.length });
+        return Promise.reject(new Error('Not found'));
+      });
       // A project file that lets nothing add to the importer, and a listing (`findFiles`) that finds no GDExtension.
       (vscode.workspace.fs.readFile as Mock).mockImplementation((uri: vscode.Uri) => {
         if (uri.fsPath === '/workspace/project.godot')
           return Promise.resolve(createMockFileData('config_version=5\n'));
         return uri.fsPath === '/workspace/tree.glb'
-          ? new Promise((resolve) => pendingReads.push(() => resolve(INSTANCED_TREE)))
+          ? new Promise((resolve) =>
+              pendingReads.push(() => {
+                glbMtime++;
+                resolve(INSTANCED_TREE);
+              })
+            )
           : Promise.reject(new Error(`Not found: ${uri.fsPath}`));
       });
       (vscode.workspace.findFiles as Mock).mockResolvedValue([]);
@@ -865,7 +875,7 @@ describe('TscnDiagnostics', () => {
       );
       (vscode.workspace.getWorkspaceFolder as Mock).mockImplementation(folderOf);
       (vscode.workspace.fs.stat as Mock).mockImplementation((uri: vscode.Uri) =>
-        uri.fsPath === '/workspace/project.godot'
+        ['/workspace/project.godot', '/workspace/tree.glb'].includes(uri.fsPath)
           ? Promise.resolve({ type: 1, ctime: 0, mtime: 0, size: 1 })
           : Promise.reject(new Error('Not found'))
       );
@@ -1100,6 +1110,8 @@ describe('TscnDiagnostics', () => {
         if (uri.fsPath === '/workspace/scenes/project.godot') {
           return new Promise((_resolve, reject) => (releaseScenes = () => reject(new Error('Not found'))));
         }
+        if (uri.fsPath === '/workspace/tree.glb')
+          return Promise.resolve({ type: 1, ctime: 0, mtime: 0, size: 1 });
         return uri.fsPath === '/workspace/project.godot' && hasRootProject
           ? Promise.resolve({ type: 1, ctime: 0, mtime: 0, size: 1 })
           : Promise.reject(new Error('Not found'));
@@ -1115,7 +1127,7 @@ describe('TscnDiagnostics', () => {
       hasRootProject = true;
       fire('create', '/workspace/project.godot');
       (vscode.workspace.fs.stat as Mock).mockImplementation((uri: vscode.Uri) =>
-        uri.fsPath === '/workspace/project.godot'
+        ['/workspace/project.godot', '/workspace/tree.glb'].includes(uri.fsPath)
           ? Promise.resolve({ type: 1, ctime: 0, mtime: 0, size: 1 })
           : Promise.reject(new Error('Not found'))
       );

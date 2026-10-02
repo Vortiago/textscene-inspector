@@ -5,13 +5,14 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { cloneWithMaterials, createGLBMesh, disposeClonedMaterials, initGlbModules } from './glbProcessing';
 // Statically, so the identity check below is immune to the `vi.resetModules()` calls in
 // this file: a dynamic import after a reset yields a fresh instance.
 import * as processingShim from '../../processing/glbProcessing';
 import { standardMaterial } from '../../materials/standardmaterial3d/testing/standardMaterial';
+import { glbOfChunks, jsonChunk } from './testing/triangleGlb';
 import {
   castsFrom,
   drawColourGroup,
@@ -92,6 +93,54 @@ describe('createGLBMesh', () => {
     const names = object.animations.map((c) => c.name);
 
     expect(names).toEqual(expect.arrayContaining(['idle', 'run', 'jump', 'walk', 'falling']));
+  });
+});
+
+describe('createGLBMesh with a URI the GLB names', () => {
+  /** One triangle whose positions live in the buffer `uri` names. */
+  function triangleNaming(uri: string): ArrayBuffer {
+    return glbOfChunks([
+      jsonChunk({
+        asset: { version: '2.0' },
+        scenes: [{ nodes: [0] }],
+        scene: 0,
+        nodes: [{ mesh: 0 }],
+        meshes: [{ primitives: [{ attributes: { POSITION: 0 } }] }],
+        accessors: [{ bufferView: 0, componentType: 5126, count: 3, type: 'VEC3' }],
+        bufferViews: [{ buffer: 0, byteLength: 36 }],
+        buffers: [{ uri, byteLength: 36 }],
+      }),
+    ]);
+  }
+
+  const positionsDataUri = () =>
+    `data:application/octet-stream;base64,${Buffer.from(new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]).buffer).toString('base64')}`;
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('reads a data URI', async () => {
+    const object = await createGLBMesh(triangleNaming(positionsDataUri()));
+
+    const mesh = object.getObjectByProperty('isMesh', true) as THREE.Mesh;
+    expect(mesh.geometry.getAttribute('position').count).toBe(3);
+  });
+
+  it('refuses a remote URI without a fetch', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+    await expect(createGLBMesh(triangleNaming('https://attacker.example/beacon.bin'))).rejects.toThrow(
+      'refuses https://attacker.example/beacon.bin'
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('refuses a relative URI, which would resolve against the page', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+    await expect(createGLBMesh(triangleNaming('tri.bin'))).rejects.toThrow('refuses tri.bin');
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
 
