@@ -109,6 +109,9 @@ catalogs:
       specifier: ^2.0.1
       version: 2.0.1
 
+overrides:
+  '@vscode/test-web>playwright': ^1.63.0
+
 importers:
 
   .:
@@ -2163,11 +2166,6 @@ packages:
     resolution: {integrity: sha512-zJ2mQYM18rEFOudeV4GShTGIQ7RbzA7ozbU9I/XBpm7kqgMywgmylMwXHxZJmkVoYkna9d2pVXVXPdYTP9ej8Q==}
     engines: {node: '>= 0.6'}
 
-  fsevents@2.3.2:
-    resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
-    engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
-    os: [darwin]
-
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
@@ -3006,18 +3004,8 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright-core@1.62.0:
-    resolution: {integrity: sha512-nsNRyq0r2zsG8AcRHWknc9QRA5XCueC7gWMrs+Gx2tlZn9hcl8zudfh00lhJPY1DE7NmZ6bDsT9g2yey8mXljA==}
-    engines: {node: '>=20'}
-    hasBin: true
-
   playwright-core@1.63.0:
     resolution: {integrity: sha512-rYCsBF/M5HjUch52bbtVONEFjv6Xu8sm8h72dNlR5bzIE1fvC/bxgspzkjSfU+MweEMmPM8KJebG6nnyxo5mCg==}
-    engines: {node: '>=20'}
-    hasBin: true
-
-  playwright@1.62.0:
-    resolution: {integrity: sha512-Z14dG305dgaLu6foB1TXQagFiW8JfSUIUaUuPaKQ6NtBPKF1P/qXcqfh6c6K/icPqdy37JmjbiBXf6JNg6Sylw==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -5016,7 +5004,7 @@ snapshots:
       koa-mount: 4.2.0
       koa-static: 5.0.0
       minimist: 1.2.8
-      playwright: 1.62.0
+      playwright: 1.63.0
       tar-fs: 3.1.2
       tinyglobby: 0.2.17
       vscode-uri: 3.1.0
@@ -5675,9 +5663,6 @@ snapshots:
       unicode-trie: 2.0.0
 
   fresh@0.5.2: {}
-
-  fsevents@2.3.2:
-    optional: true
 
   fsevents@2.3.3:
     optional: true
@@ -6541,15 +6526,7 @@ snapshots:
 
   playwright-core@1.61.1: {}
 
-  playwright-core@1.62.0: {}
-
   playwright-core@1.63.0: {}
-
-  playwright@1.62.0:
-    dependencies:
-      playwright-core: 1.62.0
-    optionalDependencies:
-      fsevents: 2.3.2
 
   playwright@1.63.0:
     dependencies:
