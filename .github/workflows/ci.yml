@@ -285,6 +285,26 @@ jobs:
 
       - run: xvfb-run -a pnpm --filter textscene-inspector test:installed
 
+  # Runs the extension in VS Code for the Web, as vscode.dev does: the web extension host loads
+  # the browser build in a worker. A Node builtin or a throw in that build fails here only.
+  web:
+    name: VS Code for the Web
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+
+      # The root package pins the Playwright that @vscode/test-web launches, so this cache is
+      # the one the other browser jobs use.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: npx playwright install chromium --with-deps
+
+      - run: pnpm --filter textscene-inspector test:web
+
   # The one check that branch protection requires, so a new or renamed job needs no settings change.
   # Turns a skip that visualScope asked for into a pass, so ci-ok can keep failing on any
   # skipped job.
@@ -304,7 +324,7 @@ jobs:
   ci-ok:
     name: CI passed
     if: always()
-    needs: [static, unit, build, visual, e2e-web, integration, vsix, installed]
+    needs: [static, unit, build, visual, e2e-web, integration, vsix, installed, web]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:

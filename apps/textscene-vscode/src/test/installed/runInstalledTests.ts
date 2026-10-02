@@ -20,7 +20,7 @@ import {
   vsixFileName,
   type InstalledLaunchPaths,
 } from './installedLaunch';
-import { writeInstalledWorkspace } from './installedWorkspace';
+import { writeSmokeProject } from '../smokeProject/writeSmokeProject';
 
 async function main() {
   const appRoot = path.resolve(__dirname, '../../../');
@@ -51,7 +51,7 @@ function prepareCleanProfile(paths: InstalledLaunchPaths): void {
   fs.rmSync(paths.root, { recursive: true, force: true });
   fs.mkdirSync(paths.suiteHostPath, { recursive: true });
   fs.writeFileSync(path.join(paths.suiteHostPath, 'package.json'), JSON.stringify(SUITE_HOST_MANIFEST));
-  writeInstalledWorkspace(paths.workspaceRoot);
+  writeSmokeProject(paths.workspaceRoot);
 }
 
 main().catch((err) => {
