@@ -71,8 +71,8 @@ missing-resources row).
   meshes) keeps its claims table in the helper's co-located test: one table per family,
   which the conformance guard accepts.
 - **Routing by claims**: `CanvasItemMaterial`, the three sky materials (which the
-  material bus throws on) and Environment/SpriteFrames/Navigation* (which `provideFile`
-  cannot route without a claim) each have a claim. `StyleBoxTexture` is unclaimed on
+  material bus throws on) and Environment/SpriteFrames/Navigation* (which have no bus
+  without a claim) each have a claim. `StyleBoxTexture` is unclaimed on
   purpose. No decode exists, and a claim is a promise of one, so it takes the null-route
   fallback and does not fail inside the image decoder.
 - **A Font is two slices, and the split is load-bearing.** The three type names

@@ -387,7 +387,7 @@ A user file that fulfils one `res://` reference, added from a **Missing resource
 _Avoid_: **Uploaded scene** for this.
 
 **Multi-file matching**:
-The one-gesture drop or select contract: the root-most `.tscn` becomes the **Uploaded scene**, and every other file fulfils a `res://` reference by case-insensitive basename.
+The one-gesture drop or select contract: the root-most `.tscn` becomes the **Uploaded scene**, and every other file, an **Import sidecar** or `project.godot` included, fulfils a `res://` reference by case-insensitive basename.
 _Avoid_: "import wizard".
 
 **Missing resource**:

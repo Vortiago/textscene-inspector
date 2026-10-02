@@ -18,7 +18,7 @@ describe('arraymesh slice registration', () => {
   });
 
   it('routes ArrayMesh to the arraymesh processor slot, not the generic resource slot', () => {
-    expect(resourceSliceRegistry.busTypeFor('ArrayMesh')).toBe('arraymesh');
+    expect(resourceSliceRegistry.byTypeName('ArrayMesh')?.busType ?? null).toBe('arraymesh');
   });
 
   it('claims no file extension — `.tres` is the shared Godot-text container', () => {

@@ -12,7 +12,7 @@ describe('labelsettings slice registration', () => {
   });
 
   it('routes `LabelSettings` to the generic resource slot with the Resource failure label', () => {
-    expect(resourceSliceRegistry.busTypeFor('LabelSettings')).toBe('resource');
+    expect(resourceSliceRegistry.byTypeName('LabelSettings')?.busType ?? null).toBe('resource');
     expect(resourceSliceRegistry.byTypeName('LabelSettings')?.failureLabel).toBe('Resource');
   });
 

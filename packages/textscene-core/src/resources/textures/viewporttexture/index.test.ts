@@ -17,12 +17,12 @@ describe('viewporttexture slice registration', () => {
   });
 
   it('routes to NO bus slot — the loader never fetches a file for it', () => {
-    expect(resourceSliceRegistry.busTypeFor('ViewportTexture')).toBeNull();
+    expect(resourceSliceRegistry.byTypeName('ViewportTexture')?.busType ?? null).toBeNull();
   });
 
   it('is distinguishable from an unclaimed type by the claim itself, not by its bus', () => {
-    // `busTypeFor` returns null for both "registered, unroutable" and "unknown", so
-    // a router consults `byTypeName` to tell a ViewportTexture from an unsupported type.
+    // Neither has a bus, so only the claim itself tells a ViewportTexture from an
+    // unsupported type.
     expect(resourceSliceRegistry.byTypeName('NotARealResourceType')).toBeNull();
     expect(resourceSliceRegistry.byTypeName('ViewportTexture')).not.toBeNull();
   });

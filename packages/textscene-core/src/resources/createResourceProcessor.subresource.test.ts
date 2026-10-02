@@ -107,9 +107,8 @@ describe('createResourceProcessor with a sub-resource path', () => {
     processor.clearCache('res://wheel.tres');
 
     expect(processor.getCached('res://wheel.tres::StandardMaterial3D_shvqh')).toBeUndefined();
-    // A per-path clear is otherwise silent, since its caller re-requests the path.
-    // Nobody re-requests a sub-resource, so without the announcement a mounted
-    // consumer serves the stale value after a **Dependency hot-reload**.
+    // Without the announcement a mounted consumer serves the stale value after
+    // a **Dependency hot-reload**.
     expect(invalidated).toHaveBeenCalledWith('res://wheel.tres::StandardMaterial3D_shvqh', undefined);
   });
 

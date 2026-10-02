@@ -553,6 +553,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Gltf External",
+    "file": "unit-gltf-external.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Gpu Particles 2d",
     "file": "unit-gpu-particles-2d.tscn",
     "category": "Other"

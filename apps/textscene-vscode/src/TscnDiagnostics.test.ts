@@ -202,6 +202,7 @@ describe('TscnDiagnostics', () => {
   function newDiagnostics(): TscnDiagnostics {
     return new TscnDiagnostics(
       vscode.workspace.createFileSystemWatcher(RESOURCE_FILES_PATTERN),
+      vscode.workspace.createFileSystemWatcher(PROJECT_FILE_PATTERN),
       collection as unknown as vscode.DiagnosticCollection
     );
   }
@@ -212,7 +213,10 @@ describe('TscnDiagnostics', () => {
   });
 
   it('creates its own diagnostic collection when none is injected', () => {
-    const diagnostics = new TscnDiagnostics(vscode.workspace.createFileSystemWatcher(RESOURCE_FILES_PATTERN));
+    const diagnostics = new TscnDiagnostics(
+      vscode.workspace.createFileSystemWatcher(RESOURCE_FILES_PATTERN),
+      vscode.workspace.createFileSystemWatcher(PROJECT_FILE_PATTERN)
+    );
 
     expect(vscode.languages.createDiagnosticCollection).toHaveBeenCalledWith('tscn');
     diagnostics.dispose();
@@ -874,7 +878,7 @@ describe('TscnDiagnostics', () => {
       (vscode.workspace.fs.stat as Mock).mockResolvedValue({ type: 1, size: 0, ctime: 0, mtime: 0 });
     });
 
-    it('watches project.godot, the GDExtension list, .gdextension files, scan stop files and deleted paths itself, and glTF files through the resource watcher', () => {
+    it('watches the GDExtension list, .gdextension files, scan stop files and deleted paths itself, and glTF files and project.godot through the extension’s watchers', () => {
       const diagnostics = newDiagnostics();
 
       expect(watchers.map((w) => w.pattern).sort()).toEqual(
@@ -1261,14 +1265,15 @@ describe('TscnDiagnostics', () => {
       diagnostics.dispose();
     });
 
-    it('disposes the watchers it creates with itself, and leaves the resource watcher to its owner', () => {
+    it('disposes the watchers it creates with itself, and leaves the resource and project watchers to their owner', () => {
       const diagnostics = newDiagnostics();
+      const ownedElsewhere = [RESOURCE_FILES_PATTERN, PROJECT_FILE_PATTERN];
 
       diagnostics.dispose();
 
       expect(watchers).toHaveLength(6);
       for (const watcher of watchers) {
-        expect(watcher.dispose).toHaveBeenCalledTimes(watcher.pattern === RESOURCE_FILES_PATTERN ? 0 : 1);
+        expect(watcher.dispose).toHaveBeenCalledTimes(ownedElsewhere.includes(watcher.pattern) ? 0 : 1);
       }
     });
   });

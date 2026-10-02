@@ -1,6 +1,6 @@
 /**
  * Unit tests for dependency hot-reload. A changed dependency (texture, `.tres`,
- * instanced sub-scene) leaves the main `.tscn` unchanged, so the panel posts
+ * instanced sub-scene, sidecar, font, `project.godot`) leaves the main `.tscn` unchanged, so the panel posts
  * `resourceChanged` and the webview re-fetches only that resource.
  */
 import { describe, expect, it, type Mock } from 'vitest';
@@ -77,6 +77,29 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
     expect(resourceChangedCalls(webview)).toEqual([
       { type: 'resourceChanged', path: 'res://textures/wood.png' },
     ]);
+  });
+
+  it.each([
+    [
+      'an import sidecar',
+      'res://models/ship.glb.import',
+      '/workspace/models/ship.glb.import',
+      'ImportSidecar',
+    ],
+    ['project.godot', 'res://project.godot', '/workspace/project.godot', 'ProjectSettings'],
+    ['a font file', 'res://fonts/body.ttf', '/workspace/fonts/body.ttf', 'FontFile'],
+  ])('posts resourceChanged for %s the webview read', async (_kind, resPath, fsPath, resourceType) => {
+    const { webview, triggerMessage } = setupMockPanel();
+    const panel = await createReadyPanel(triggerMessage);
+    (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
+      uri: createMockUri('/workspace'),
+    });
+    triggerMessage({ type: 'loadResource', path: resPath, resourceType, requestId: 'r1' });
+    await new Promise<void>((r) => setTimeout(r, 10));
+
+    await panel.handleDependencyChange(createMockUri(fsPath));
+
+    expect(resourceChangedCalls(webview)).toEqual([{ type: 'resourceChanged', path: resPath }]);
   });
 
   it('does not post resourceChanged for a file the scene never requested (relevance gate)', async () => {

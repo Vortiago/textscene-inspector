@@ -2,16 +2,10 @@
  * The corpus ↔ res:// boundary: `corpusRootFor` derives which public/fixtures
  * subtree a fixture file maps onto; `resToFixtureFile` / `fixtureFileToRes` are
  * the inverse pair between a res:// path and its fixtures file; `fixtureUrlForRes`
- * / `fixtureUrlForGltfUri` derive the fetch URL (the latter decodes glTF URIs).
+ * derives the fetch URL.
  */
 import { describe, it, expect } from 'vitest';
-import {
-  corpusRootFor,
-  resToFixtureFile,
-  fixtureFileToRes,
-  fixtureUrlForRes,
-  fixtureUrlForGltfUri,
-} from './corpusRoot';
+import { corpusRootFor, resToFixtureFile, fixtureFileToRes, fixtureUrlForRes } from './corpusRoot';
 import type { Fixture } from './fixtures';
 
 const manifest: Fixture[] = [
@@ -109,19 +103,5 @@ describe('fixtureUrlForRes', () => {
   it('passes non-res URLs through untouched', () => {
     expect(fixtureUrlForRes('blob:abc', 'demos/2d/x')).toBe('blob:abc');
     expect(fixtureUrlForRes('/already/mapped.png', '')).toBe('/already/mapped.png');
-  });
-});
-
-describe('fixtureUrlForGltfUri', () => {
-  it('decodes URI-encoded glTF dependency paths (textures%2Fgrass.webp)', () => {
-    // glTF URIs are percent-encoded per spec; the mirrored files use real
-    // directory separators.
-    expect(fixtureUrlForGltfUri('res://town/textures%2Fgrass_lossy.webp', 'demos/3d/truck_town')).toBe(
-      '/fixtures/demos/3d/truck_town/town/textures/grass_lossy.webp'
-    );
-  });
-
-  it('passes non-res URLs through untouched', () => {
-    expect(fixtureUrlForGltfUri('blob:abc', 'demos/2d/x')).toBe('blob:abc');
   });
 });

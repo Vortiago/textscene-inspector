@@ -21,7 +21,6 @@ import {
   ANY_PATH_PATTERN,
   EXTENSION_LIST_PATTERN,
   GDEXTENSION_PATTERN,
-  PROJECT_FILE_PATTERN,
   SCAN_STOP_FILES_PATTERN,
 } from './watchPatterns';
 
@@ -182,9 +181,11 @@ export class TscnDiagnostics implements vscode.Disposable {
   /**
    * @param resourceFiles - The events of the extension's resource-file watcher, which the glTF files a lint reads
    *   are among
+   * @param projectFile - The events of the extension's `project.godot` watcher, which the previews share
    */
   constructor(
     resourceFiles: FileEvents,
+    projectFile: FileEvents,
     collection: vscode.DiagnosticCollection = vscode.languages.createDiagnosticCollection('tscn')
   ) {
     this._collection = collection;
@@ -202,11 +203,10 @@ export class TscnDiagnostics implements vscode.Disposable {
     );
     this._subscribe(resourceFiles, (uri) => this._onDependencyChanged(uri));
     const extensionList = vscode.workspace.createFileSystemWatcher(EXTENSION_LIST_PATTERN);
-    const projectFile = vscode.workspace.createFileSystemWatcher(PROJECT_FILE_PATTERN);
     const gdextensions = vscode.workspace.createFileSystemWatcher(GDEXTENSION_PATTERN);
     const scanStopFiles = vscode.workspace.createFileSystemWatcher(SCAN_STOP_FILES_PATTERN);
     const deletedPaths = vscode.workspace.createFileSystemWatcher(ANY_PATH_PATTERN, true, true, false);
-    this._disposables.push(extensionList, projectFile, gdextensions, scanStopFiles, deletedPaths);
+    this._disposables.push(extensionList, gdextensions, scanStopFiles, deletedPaths);
     this._disposables.push(deletedPaths.onDidDelete((uri) => this._onPathDeleted(uri)));
     this._subscribe(extensionList, (uri) => this._onDependencyChanged(uri));
     this._subscribe(projectFile, (uri) => this._onProjectFileChanged(uri));

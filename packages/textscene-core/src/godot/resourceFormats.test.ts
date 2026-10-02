@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { GODOT_TEXT_RESOURCE_EXTENSIONS, isGodotTextResourcePath } from './resourceFormats.js';
+import {
+  GODOT_TEXT_RESOURCE_EXTENSIONS,
+  importSidecarPath,
+  isGodotTextResourcePath,
+} from './resourceFormats.js';
+
+describe('importSidecarPath', () => {
+  it('appends .import to the asset path, as the importer does', () => {
+    expect(importSidecarPath('res://models/ship.glb')).toBe('res://models/ship.glb.import');
+  });
+});
 
 describe('GODOT_TEXT_RESOURCE_EXTENSIONS', () => {
   it('is exactly the pair the text loader registers', () => {

@@ -415,6 +415,53 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
     expect(result.current.tree[0]?.textureSize).toEqual({ x: 320, y: 160 });
   });
 
+  it('requests a texture again when its file changes, and keeps the old size until the new one arrives', async () => {
+    const loader = createFakeResourceLoader();
+    const texturePath = 'res://portrait.png';
+    const nodes = [
+      node('Portrait', 'TextureRect', { properties: { name: 'Portrait', texture: 'ExtResource("1")' } }),
+    ];
+    const externalResources = [{ id: '1', path: texturePath, type: 'Texture2D' }];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+    await act(async () => {
+      loader.textures._resolve(texturePath, {
+        image: { width: 320, height: 160 },
+      } as unknown as THREE.Texture);
+    });
+    const requested: string[] = [];
+    loader.textures.setRequestImpl((path) => requested.push(path));
+
+    await act(async () => loader.loader.provideFile(texturePath));
+
+    expect(requested).toContain(texturePath);
+    expect(result.current.tree[0]?.textureSize).toEqual({ x: 320, y: 160 });
+
+    await act(async () => {
+      loader.textures._resolve(texturePath, {
+        image: { width: 640, height: 80 },
+      } as unknown as THREE.Texture);
+    });
+
+    expect(result.current.tree[0]?.textureSize).toEqual({ x: 640, y: 80 });
+  });
+
+  it('leaves an invalidated texture alone when the tree never read it', async () => {
+    const loader = createFakeResourceLoader();
+    const nodes = [
+      node('Portrait', 'TextureRect', { properties: { name: 'Portrait', texture: 'ExtResource("1")' } }),
+    ];
+    const externalResources = [{ id: '1', path: 'res://portrait.png', type: 'Texture2D' }];
+    renderHook(() => useBuildSolveTree(nodes, externalResources, []), { wrapper: wrapperFor(loader.loader) });
+    const requested: string[] = [];
+    loader.textures.setRequestImpl((path) => requested.push(path));
+
+    await act(async () => loader.eventBus.emit('texture', 'invalidated', 'res://elsewhere.png'));
+
+    expect(requested).toEqual([]);
+  });
+
   it('generation bumps when a not-yet-cached sub-scene arrives, and the tree picks it up', async () => {
     const loader = createFakeResourceLoader();
     const nodes = [instanceOf('Hud', '1_layer')];

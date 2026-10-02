@@ -98,7 +98,7 @@ export function createSceneProcessor({
 /**
  * A `TscnScene` whose only root is a `GLBSceneRoot`, which loads the GLB through
  * `useResource('GLBMesh', path)`. Loading it here would block `'loaded'` on a
- * second fetch with no way to re-trigger on `provideFile`, and the dispatcher gives
+ * second fetch that no `invalidated` reaches, and the dispatcher gives
  * the GLB the same late-arrival, dispose and missing-resource paths as the rest.
  */
 export function synthesiseGLBScene(glbPath: string): TscnScene {

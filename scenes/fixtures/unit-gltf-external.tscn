@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3]
+
+; One variable: whether a text `.gltf` reaches its external files. The quad's geometry lives in
+; `quad.bin` and its base colour in `checker.png`, beside the glTF. A load that misses the buffer
+; draws the missing placeholder, and one that misses the image draws the quad untextured, which
+; no `.glb` scene can show, since a `.glb` carries both inside it.
+
+[ext_resource type="PackedScene" path="res://meshes/unit-gltf-external/quad.gltf" id="1_quad"]
+
+[node name="GltfExternal" type="Node3D"]
+
+[node name="Quad" parent="." instance=ExtResource("1_quad")]

@@ -23,3 +23,14 @@ export function isGodotTextResourcePath(path: string): boolean {
   const lower = path.toLowerCase();
   return GODOT_TEXT_RESOURCE_EXTENSIONS.some((extension) => lower.endsWith(extension));
 }
+
+/**
+ * An **Import sidecar**'s suffix. The importer opens an asset's sidecar at the asset path plus this
+ * (`FileAccess::open(p_path + ".import", …)`, resource_importer.cpp:45), so the pair is a plain suffix.
+ */
+export const IMPORT_SIDECAR_SUFFIX = '.import';
+
+/** The **Import sidecar** of the asset at `assetPath`. */
+export function importSidecarPath(assetPath: string): string {
+  return assetPath + IMPORT_SIDECAR_SUFFIX;
+}

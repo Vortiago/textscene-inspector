@@ -61,7 +61,9 @@ const CARRIES_ITS_PAYLOAD: {
     isString(m.nodeName) &&
     (m.path === undefined || isString(m.path)) &&
     (m.parent === undefined || isString(m.parent)),
-  loadResource: (m) => isString(m.path) && isString(m.resourceType) && isString(m.requestId),
+  // `resourceType` only when present: the byte layer requests a file it knows no type for.
+  loadResource: (m) =>
+    isString(m.path) && (m.resourceType === undefined || isString(m.resourceType)) && isString(m.requestId),
   resourceNeeded: (m) => typeof m.resource === 'object' && m.resource !== null,
   log: (m) => isString(m.level) && isString(m.message) && Array.isArray(m.args),
 };

@@ -5,6 +5,7 @@
  * `createFileIngest` states the contract.
  */
 import { TscnParser } from '@textscene/core';
+import { importSidecarPath, PROJECT_FILE_PATH } from '@textscene/core/godot';
 
 /** A non-`.tscn` file matched to the `res://` path it fulfills. */
 export interface ResourceFileMatch {
@@ -47,6 +48,11 @@ export interface RootMostTscnResult {
 function basename(path: string): string {
   const idx = path.lastIndexOf('/');
   return idx === -1 ? path : path.slice(idx + 1);
+}
+
+/** `paths`, each followed by its **Import sidecar**, a file the asset is read with by convention. */
+function withSidecars(paths: readonly string[]): string[] {
+  return paths.flatMap((path) => [path, importSidecarPath(path)]);
 }
 
 /** All ExtResource paths of a scene text, or `[]` when the text does not parse. */
@@ -101,9 +107,9 @@ export function pickRootMostTscn(filesWithText: readonly { file: File; text: str
 
 /**
  * Matches each file in `others` to a `res://` path by case-insensitive basename:
- * first the active scene's `extResourcePaths` (`[]` with no scene), then
- * `missingPaths`. A basename shared in the winning tier takes the first candidate
- * and lands in `ambiguousMatches`, and a file matching nothing in `unmatched`.
+ * first the active scene's `extResourcePaths` (`[]` with no scene) and `project.godot`,
+ * then `missingPaths`, each path with its import sidecar. A basename shared in the winning
+ * tier takes the first candidate, and a file matching nothing lands in `unmatched`.
  */
 export function matchResourceFiles(
   extResources: readonly string[],
@@ -116,7 +122,7 @@ export function matchResourceFiles(
 
   // Priority tiers: the first tier with any basename match wins for a file
   // (first-declared candidate wins within the tier).
-  const tiers = [extResources, Array.from(missingPaths)];
+  const tiers = [[...withSidecars(extResources), PROJECT_FILE_PATH], withSidecars(Array.from(missingPaths))];
 
   for (const file of others) {
     const nameLower = file.name.toLowerCase();

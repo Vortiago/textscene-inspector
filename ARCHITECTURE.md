@@ -152,8 +152,8 @@ flowchart TD
 | `ResourceLoader` | Owns the processors and the `ExtResource` table |
 | `useResource` | The only API a component sees. It never suspends. |
 
-- **Late arrival.** `loader.provideFile(path)` loads an uploaded file again, and the hook
-  flips to `loaded` with no remount.
+- **Late arrival.** `loader.provideFile(path)` announces every resource built from or reading
+  the file as `invalidated`, and each hook loads it again with no remount.
 - **Sub-resource paths.** `res://file.tres::SubId` addresses a resource inside a `.tres`.
   Only `resources/subResourcePath.ts` writes `::`.
 - **Imports.** `.import` sidecars and `project.godot` load through `tryLoad` (ADR-0028).

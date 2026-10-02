@@ -21,8 +21,8 @@ describe('stylebox slice registration', () => {
   });
 
   it('routes both to the resource processor (a ParsedResource, not a texture)', () => {
-    expect(resourceSliceRegistry.busTypeFor('StyleBoxFlat')).toBe('resource');
-    expect(resourceSliceRegistry.busTypeFor('StyleBoxEmpty')).toBe('resource');
+    expect(resourceSliceRegistry.byTypeName('StyleBoxFlat')?.busType ?? null).toBe('resource');
+    expect(resourceSliceRegistry.byTypeName('StyleBoxEmpty')?.busType ?? null).toBe('resource');
   });
 
   it('leaves the box types it cannot decode unclaimed', () => {

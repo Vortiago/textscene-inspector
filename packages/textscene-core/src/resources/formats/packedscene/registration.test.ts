@@ -12,7 +12,7 @@ describe('packedscene slice registration', () => {
     const registration = resourceSliceRegistry.byTypeName('PackedScene');
     expect(registration?.slice).toBe('packedscene');
     expect(registration?.kind).toBe('foreign-format');
-    expect(resourceSliceRegistry.busTypeFor('PackedScene')).toBe('scene');
+    expect(resourceSliceRegistry.byTypeName('PackedScene')?.busType ?? null).toBe('scene');
     expect(registration?.failureLabel).toBe('Node instance of scene');
   });
 

@@ -68,6 +68,10 @@ export const GEOMETRY_SCENES = [
   { name: 'area-light-normalize', file: 'unit-area-light-normalize.tscn' },
   // External ArrayMesh .tres: a decoded quad with Godot's packed normals.
   { name: 'arraymesh', file: 'unit-arraymesh.tscn' },
+  // A text .gltf whose buffer and base colour image are separate files, which
+  // no .glb scene has. A missed buffer draws the placeholder, a missed image an
+  // untextured quad, so the checker shows both arrived.
+  { name: 'gltf-external', file: 'unit-gltf-external.tscn' },
   // The same quad with a four-band atlas pins V orientation, which the
   // material-less `arraymesh` cannot see. Godot's V origin is the image top and
   // textures load with flipY=true, so a pass-through V samples upside down.

@@ -13,7 +13,7 @@ describe('codehighlighter slice registration', () => {
     const registration = resourceSliceRegistry.byTypeName('CodeHighlighter');
     expect(registration?.slice).toBe('codehighlighter');
     expect(registration?.kind).toBe('godot-text');
-    expect(resourceSliceRegistry.busTypeFor('CodeHighlighter')).toBe('resource');
+    expect(resourceSliceRegistry.byTypeName('CodeHighlighter')?.busType ?? null).toBe('resource');
     expect(registration?.failureLabel).toBe('Resource');
   });
 
