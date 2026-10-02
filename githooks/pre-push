@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Run the static checks that match the pushed changes. CI runs the tests and the full gate.
+# Run the static checks and the tests beside the pushed changes. CI runs the full gate.
 # `FULL_VALIDATE=1 git push` runs the full `pnpm validate` here too.
 
 # HUSKY=0 skips the hook. Existing tools already set that name.

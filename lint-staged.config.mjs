@@ -1,6 +1,6 @@
 /**
  * The pre-commit hook's checks, over the staged files only: lint and format, so a commit takes
- * seconds. The pre-push hook runs the type checks, and CI runs the tests and the full gate.
+ * seconds. The pre-push hook runs the type checks and the nearby tests, and CI runs the full gate.
  */
 
 import { isNegativeFixture } from './scripts/githooks/negativeFixtures.mjs';

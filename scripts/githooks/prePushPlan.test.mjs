@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { planChecks } from './prePushPlan.mjs';
 
-const plan = (changed, deleted = [], isNegativeFixture = () => false) =>
-  planChecks({ changed, deleted, isNegativeFixture }).map((command) => command.join(' '));
+const plan = (changed, deleted = [], isNegativeFixture = () => false, testsBeside = () => []) =>
+  planChecks({ changed, deleted, isNegativeFixture, testsBeside }).map((command) => command.join(' '));
 
 /** A negative-fixture predicate over the one fixture `edge-a.tscn`, wherever it sits. */
 const isEdgeA = (path) => path.split('/').at(-1) === 'edge-a.tscn';
@@ -40,12 +40,27 @@ describe('planChecks', () => {
     expect(plan(['scripts/githooks/negativeFixtures.mjs'])).toEqual(STATIC_GATE);
   });
 
-  it('type-checks and lints a TypeScript change without running its tests', () => {
+  it('type-checks and lints a TypeScript change', () => {
     expect(plan(['packages/textscene-core/src/a.ts'])).toEqual([
       'pnpm type-check:all',
       'pnpm type-check:tests',
       'npx eslint packages/textscene-core/src/a.ts',
       'pnpm exec prettier --check packages/textscene-core/src/a.ts',
+    ]);
+  });
+
+  it('runs the tests beside each changed file once', () => {
+    const testsBeside = (path) => (path.endsWith('.test.mjs') ? [path] : [path.replace('.mjs', '.test.mjs')]);
+    expect(plan(['scripts/x.mjs', 'scripts/x.test.mjs'], [], undefined, testsBeside)).toEqual([
+      'npx eslint scripts/x.mjs scripts/x.test.mjs',
+      'pnpm exec prettier --check scripts/x.mjs scripts/x.test.mjs',
+      'pnpm exec vitest run scripts/x.test.mjs',
+    ]);
+  });
+
+  it('runs no tests for a stylesheet', () => {
+    expect(plan(['packages/textscene-core/src/a.css'], [], undefined, () => ['never.test.ts'])).toEqual([
+      'pnpm exec prettier --check packages/textscene-core/src/a.css',
     ]);
   });
 

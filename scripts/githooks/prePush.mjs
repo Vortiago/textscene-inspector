@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * The pre-push hook: runs the static checks `planChecks` picks for the pushed commits. Git writes
+ * The pre-push hook: runs the checks `planChecks` picks for the pushed commits. Git writes
  * one line per pushed ref on stdin: `<local ref> <local sha> <remote ref> <remote sha>`.
  * `FULL_VALIDATE=1 git push` runs the full `pnpm validate` instead, tests and packaging included.
  */
@@ -8,6 +8,7 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import process from 'node:process';
+import { readTestsBeside } from './colocatedTests.mjs';
 import { isNegativeFixture } from './negativeFixtures.mjs';
 import { planChecks, STATIC_GATE } from './prePushPlan.mjs';
 
@@ -66,7 +67,9 @@ function run(command) {
 function planPush() {
   if (process.env.FULL_VALIDATE === '1') return [['pnpm', 'validate']];
   const files = pushedFiles(readFileSync(0, 'utf8'));
-  return files === undefined ? STATIC_GATE : planChecks({ ...files, isNegativeFixture });
+  return files === undefined
+    ? STATIC_GATE
+    : planChecks({ ...files, isNegativeFixture, testsBeside: readTestsBeside });
 }
 
 function main() {

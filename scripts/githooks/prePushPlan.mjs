@@ -1,6 +1,7 @@
 /**
- * The checks a push needs, from the files it changes. The push runs only the static checks. CI
- * runs the tests, the builds and the packaging on each pull request.
+ * The checks a push needs, from the files it changes. The push runs the static checks and the
+ * tests beside each changed file. CI runs the whole suite, the builds and the packaging on each
+ * pull request.
  */
 
 /**
@@ -13,6 +14,7 @@ const TOOLCHAIN =
   /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|eslint\.config\.js|prettier\.config\.mjs|\.prettierignore|lint-staged\.config\.mjs|vitest\.(?:config|shared)\.ts|githooks\/.*|scripts\/githooks\/negativeFixtures\.mjs)$|(?:^|\/)(?:package\.json|tsconfig[^/]*\.json|vitest\.config\.ts)$/;
 
 const TYPED = /\.(?:ts|tsx)$/;
+const TESTABLE = /\.(?:ts|tsx|js|mjs|cjs)$/;
 const LINTED_CODE = /\.(?:ts|tsx|js|mjs|cjs)$/;
 /** What Prettier formats here. Markdown is not: `.prettierignore` leaves it to the STE rules. */
 const FORMATTED = /\.(?:ts|tsx|js|mjs|cjs|css|json|ya?ml|html)$/;
@@ -36,8 +38,9 @@ export const STATIC_GATE = [
  * The commands, in order, for a push that changes `changed` (paths that still exist) and deletes
  * `deleted`. Each command is an argv array. An empty list means the push needs no check.
  * `isNegativeFixture` tells a scene that exists to error, which the plan does not lint.
+ * `testsBeside` gives the test files beside a changed file, which the plan runs.
  */
-export function planChecks({ changed, deleted, isNegativeFixture }) {
+export function planChecks({ changed, deleted, isNegativeFixture, testsBeside }) {
   const all = [...changed, ...deleted];
   if (all.some((path) => TOOLCHAIN.test(path))) return STATIC_GATE;
 
@@ -49,6 +52,8 @@ export function planChecks({ changed, deleted, isNegativeFixture }) {
   if (linted.length > 0) plan.push(['npx', 'eslint', ...linted]);
   const formatted = changed.filter((path) => FORMATTED.test(path));
   if (formatted.length > 0) plan.push(['pnpm', 'exec', 'prettier', '--check', ...formatted]);
+  const tests = [...new Set(changed.filter((path) => TESTABLE.test(path)).flatMap(testsBeside))];
+  if (tests.length > 0) plan.push(['pnpm', 'exec', 'vitest', 'run', ...tests]);
 
   const scenes = changed.filter((path) => SCENE.test(path) && !isNegativeFixture(path));
   if (scenes.length > 0) plan.push(['pnpm', 'build:linter'], ['pnpm', 'lint:tscn', ...scenes]);
