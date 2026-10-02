@@ -110,22 +110,30 @@ export interface IntegrationLaunchDeps {
  */
 export async function launchIntegrationTests(deps: IntegrationLaunchDeps): Promise<void> {
   deps.prepareWorkspace(deps.paths.workspaceRoot);
-  try {
-    await launchOnce(deps);
-  } catch (err) {
-    if (fs.existsSync(deps.paths.suiteStartedMarker)) throw err;
-    console.warn(`[IntegrationLaunch] VS Code exited before the suite started (${err}). Relaunching once.`);
-    await launchOnce(deps);
-  }
+  await relaunchIfHostExitsEarly(deps.paths.suiteStartedMarker, () =>
+    deps.launch(integrationLaunchOptions(deps.paths))
+  );
 }
 
 /**
+ * Runs `launch`, and once more when it fails before the suite writes `suiteStartedMarker`.
  * VS Code exits with code 1 on the first unresponsive window of a CLI test run
- * (`windowImpl.ts:1020-1022`, 1.140.0). On a CI runner the window can stall before
- * the workbench opens, so that exit comes before any test has run, and a second
- * launch is the same run. A failure after the suite starts is never retried.
+ * (`windowImpl.ts:1020-1022`, 1.140.0), and a stalled CI window hits that before any test
+ * runs. A failure after the suite starts is never retried.
  */
-async function launchOnce(deps: IntegrationLaunchDeps): Promise<void> {
-  fs.rmSync(deps.paths.suiteStartedMarker, { force: true });
-  await deps.launch(integrationLaunchOptions(deps.paths));
+export async function relaunchIfHostExitsEarly(
+  suiteStartedMarker: string,
+  launch: () => Promise<unknown>
+): Promise<void> {
+  const launchOnce = async () => {
+    fs.rmSync(suiteStartedMarker, { force: true });
+    await launch();
+  };
+  try {
+    await launchOnce();
+  } catch (err) {
+    if (fs.existsSync(suiteStartedMarker)) throw err;
+    console.warn(`[IntegrationLaunch] VS Code exited before the suite started (${err}). Relaunching once.`);
+    await launchOnce();
+  }
 }
