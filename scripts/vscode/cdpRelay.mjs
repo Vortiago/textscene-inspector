@@ -73,7 +73,8 @@ export async function startCdpRelay(upstreamPort) {
       response.writeHead(upstream.status, { 'content-type': 'application/json' });
       response.end(body);
     } catch (error) {
-      response.writeHead(502);
+      // Plain text, so a reader never renders the error as HTML.
+      response.writeHead(502, { 'content-type': 'text/plain; charset=utf-8' });
       response.end(`CDP relay could not reach port ${upstreamPort}: ${error}`);
     }
   });

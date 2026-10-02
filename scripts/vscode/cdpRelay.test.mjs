@@ -142,5 +142,6 @@ describe('startCdpRelay', () => {
     const response = await fetch(`http://127.0.0.1:${relay.port}/json/version`);
 
     expect(response.status).toBe(502);
+    expect(response.headers.get('content-type')).toBe('text/plain; charset=utf-8');
   });
 });
