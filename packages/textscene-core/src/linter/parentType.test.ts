@@ -6,7 +6,13 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { knownParent, parentIdentity, parentTypeVerdict, placementPhrase } from './parentType.js';
+import {
+  knownParent,
+  parentIdentity,
+  parentLookup,
+  parentTypeVerdict,
+  placementPhrase,
+} from './parentType.js';
 import { byName } from './testing/sceneNodes.js';
 import { TscnParser } from '../parser/TscnParser.js';
 
@@ -17,7 +23,7 @@ import { TscnParser } from '../parser/TscnParser.js';
  */
 const parse = (source: string) => new TscnParser().parse(source);
 
-describe('the two doors to a parent', () => {
+describe('the doors to a parent', () => {
   const overridden = () =>
     parse(
       `[gd_scene format=3]
@@ -67,6 +73,21 @@ describe('the two doors to a parent', () => {
 `
     );
     expect(parentTypeVerdict(scene, byName(scene.nodes, 'Shape'), 'CollisionObject3D').kind).toBe('mismatch');
+  });
+
+  it('parentLookup declines a parent another tree found, by the same knowability test', () => {
+    const scene = overridden();
+    expect(parentLookup(byName(scene.nodes, 'Mid')).kind).toBe('unknowable');
+  });
+
+  it('parentLookup hands back a parent whose type the file states', () => {
+    const scene = overridden();
+    const root = byName(scene.nodes, 'Root');
+    expect(parentLookup(root)).toEqual({ kind: 'known', parent: root });
+  });
+
+  it('parentLookup reads a missing parent as the root', () => {
+    expect(parentLookup(undefined).kind).toBe('root');
   });
 
   it('parentIdentity hands the same node back, because identity is knowable', () => {
