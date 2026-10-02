@@ -237,8 +237,8 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
 
 /**
  * The viewport's own positional shadow atlas, as Godot keeps one per viewport. A main view and this
- * pass that give a light different slots each keep their own map, so a steady scene never
- * reallocates one per render. One shared map would reallocate on every render the two disagree on.
+ * pass that give an omni light different slots each keep their own cube, so a steady scene never
+ * reallocates one per render. One shared cube would reallocate on every render the two disagree on.
  */
 function useViewportShadowAtlas(properties: SubViewportProperties): ViewportShadowAtlas {
   const {

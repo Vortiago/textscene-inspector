@@ -136,7 +136,9 @@ export {
   texelPaddedRadius,
 } from './directionalShadow.js';
 export { SHADOW_BLUR_DEFAULT, SOFT_LOW_QUALITY_RADIUS, softShadowScale } from './softShadowScale.js';
+export { SOFT_LOW_SHADOW_SAMPLES, vogelDisk } from './softShadowKernel.js';
 export {
+  POSITIONAL_SHADOW_ATLAS_DEPTH_BITS,
   POSITIONAL_SHADOW_ATLAS_SIZE_DEFAULT,
   POSITIONAL_SHADOW_QUADRANT_SUBDIV_DEFAULT,
   POSITIONAL_SHADOW_QUADRANT_SUBDIV_SHADOWS,
@@ -145,11 +147,11 @@ export {
   ROOT_POSITIONAL_SHADOW_ATLAS,
   VIEWPORT_POSITIONAL_SHADOW_ATLAS_SIZE_DEFAULT,
   omniShadowCubeSize,
-  omniShadowKernelAngle,
   positionalShadowQuadrantSubdivision,
   viewportPositionalShadowAtlas,
   type PositionalShadowAtlasSettings,
   type PositionalShadowRequest,
+  type PositionalShadowSlot,
 } from './positionalShadowAtlas.js';
 export {
   POSITIONAL_SHADOW_NORMAL_BIAS_DEFAULT,

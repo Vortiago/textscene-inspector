@@ -117,8 +117,8 @@ describe('<OmniLight3D> shadow fit', () => {
     renderThrough(renderer);
     const light = instanceAs<THREE.PointLight>(renderer.scene.findByType('PointLight'));
     expect(light.shadow.mapSize.x).toBe(512);
-    // soft_shadow_scale 2 over the 1024 slot's inset paraboloid, in texels of a 512 face.
-    expect(light.shadow.radius).toBeCloseTo((4 / 1022) * 512, 12);
+    // Godot's soft_shadow_scale: shadow_blur 1 times the Soft Low radius of 2.
+    expect(light.shadow.radius).toBe(2);
     // The default normal bias of 1, times ten texels of the 1024 slot.
     expect(light.shadow.normalBias).toBeCloseTo(10 / 1024, 12);
   });
@@ -129,7 +129,7 @@ describe('<OmniLight3D> shadow fit', () => {
     );
     renderThrough(renderer);
     const light = instanceAs<THREE.PointLight>(renderer.scene.findByType('PointLight'));
-    expect(light.shadow.radius).toBeCloseTo((12 / 1022) * 512, 12);
+    expect(light.shadow.radius).toBe(6);
     expect(light.shadow.normalBias).toBeCloseTo(20 / 1024, 12);
   });
 

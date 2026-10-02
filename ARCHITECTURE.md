@@ -224,8 +224,10 @@ SubViewport with its own portal scene hooks that scene the same way
 
 **Positional shadows.** An omni or spot light hooks each render of its scene the same way, through
 `usePositionalShadowFit`. Godot gives the light a slot in its positional shadow atlas by how much
-of the view the light's range covers, so the hook sizes the light's map to that slot and its PCF
-kernel to the slot's texels (`r3f/positionalShadow/`).
+of the view the light's range covers. Every omni and spot shadow lies in one atlas texture, which
+every lit program samples through one sampler. A spot light draws straight into its slot. An omni
+light renders a cube, and the renderer's shadow pass copies it into two paraboloids in neighbouring
+slots, as Godot's default Cube mode does (`r3f/positionalShadow/positionalShadow.md`).
 
 **Axis conventions.** Godot and three.js disagree in three places. Each is converted where
 Godot data becomes a three.js object, never in a parser:

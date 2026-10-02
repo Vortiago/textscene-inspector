@@ -6,7 +6,6 @@ import {
   ROOT_POSITIONAL_SHADOW_ATLAS,
   VIEWPORT_POSITIONAL_SHADOW_ATLAS_SIZE_DEFAULT,
   omniShadowCubeSize,
-  omniShadowKernelAngle,
   positionalShadowQuadrantSubdivision,
   viewportPositionalShadowAtlas,
   type PositionalShadowRequest,
@@ -31,7 +30,10 @@ function rootAfter(requests: PositionalShadowRequest<string>[]): PositionalShado
 }
 
 /** The slot of a lone spot light that covers `coverage` of the screen. */
-const loneSlot = (coverage: number) => rootAfter([spot('lamp', coverage)]).slotSize('lamp');
+const loneSlot = (coverage: number) => slotSizeOf(rootAfter([spot('lamp', coverage)]), 'lamp');
+
+/** The side of the slot `owner` holds, or null for none. */
+const slotSizeOf = (atlas: PositionalShadowAtlas<string>, owner: string) => atlas.slot(owner)?.size ?? null;
 
 const names = (prefix: string, count: number) => Array.from({ length: count }, (_, i) => `${prefix}${i}`);
 
@@ -107,11 +109,11 @@ describe('PositionalShadowAtlas, one light', () => {
   it('gives no slot in an atlas of size zero (error case)', () => {
     const atlas = new PositionalShadowAtlas<string>({ size: 0, quadrantShadows: [4, 4, 16, 64] });
     atlas.allocate([spot('lamp')], 0);
-    expect(atlas.slotSize('lamp')).toBeNull();
+    expect(slotSizeOf(atlas, 'lamp')).toBeNull();
   });
 
   it('gives no slot to a light that never asked (edge case)', () => {
-    expect(rootAfter([]).slotSize('lamp')).toBeNull();
+    expect(slotSizeOf(rootAfter([]), 'lamp')).toBeNull();
   });
 });
 
@@ -119,41 +121,41 @@ describe('PositionalShadowAtlas, a full quadrant', () => {
   it('moves the ninth spot light to a smaller slot, in the order the lights ask', () => {
     const lights = names('spot', 9);
     const atlas = rootAfter(lights.map((name) => spot(name)));
-    expect(lights.slice(0, 8).map((name) => atlas.slotSize(name))).toEqual(Array(8).fill(1024));
-    expect(atlas.slotSize('spot8')).toBe(512);
+    expect(lights.slice(0, 8).map((name) => slotSizeOf(atlas, name))).toEqual(Array(8).fill(1024));
+    expect(slotSizeOf(atlas, 'spot8')).toBe(512);
   });
 
   it('gives an omni light two slots, so the fifth omni light takes a smaller slot', () => {
     const lights = names('omni', 5);
     const atlas = rootAfter(lights.map((name) => omni(name)));
-    expect(lights.slice(0, 4).map((name) => atlas.slotSize(name))).toEqual(Array(4).fill(1024));
-    expect(atlas.slotSize('omni4')).toBe(512);
+    expect(lights.slice(0, 4).map((name) => slotSizeOf(atlas, name))).toEqual(Array(4).fill(1024));
+    expect(slotSizeOf(atlas, 'omni4')).toBe(512);
   });
 
   it('fills the 1024 quadrants with omni pairs before a spot light can take one (edge case)', () => {
     const atlas = rootAfter([...names('omni', 4).map((name) => omni(name)), spot('spot')]);
-    expect(atlas.slotSize('spot')).toBe(512);
+    expect(slotSizeOf(atlas, 'spot')).toBe(512);
   });
 
   it('gives a light no slot once every quadrant that holds it is full (error case)', () => {
     const atlas = new PositionalShadowAtlas<string>({ size: 4096, quadrantShadows: [1, 0, 0, 0] });
     atlas.allocate([spot('first'), spot('second')], 0);
-    expect(atlas.slotSize('first')).toBe(2048);
-    expect(atlas.slotSize('second')).toBeNull();
+    expect(slotSizeOf(atlas, 'first')).toBe(2048);
+    expect(slotSizeOf(atlas, 'second')).toBeNull();
   });
 
   it('never gives an omni light the last slot of a quadrant alone (edge case)', () => {
     const atlas = new PositionalShadowAtlas<string>({ size: 4096, quadrantShadows: [1, 0, 0, 0] });
     atlas.allocate([omni('lamp')], 0);
-    expect(atlas.slotSize('lamp')).toBeNull();
+    expect(slotSizeOf(atlas, 'lamp')).toBeNull();
   });
 
   it('keeps the slots from render to render while the scene holds still', () => {
     const requests = names('spot', 9).map((name) => spot(name));
     const atlas = rootAfter(requests);
     atlas.allocate(requests, POSITIONAL_SHADOW_REALLOC_TOLERANCE_MSEC * 10);
-    expect(atlas.slotSize('spot0')).toBe(1024);
-    expect(atlas.slotSize('spot8')).toBe(512);
+    expect(slotSizeOf(atlas, 'spot0')).toBe(1024);
+    expect(slotSizeOf(atlas, 'spot8')).toBe(512);
   });
 });
 
@@ -168,8 +170,8 @@ describe('PositionalShadowAtlas, reallocation', () => {
         .map((name) => spot(name)),
       later
     );
-    expect(atlas.slotSize('spot8')).toBe(1024);
-    expect(atlas.slotSize('spot0')).toBeNull();
+    expect(slotSizeOf(atlas, 'spot8')).toBe(1024);
+    expect(slotSizeOf(atlas, 'spot0')).toBeNull();
   });
 
   it('keeps a light in its slot within the tolerance (edge case)', () => {
@@ -180,14 +182,14 @@ describe('PositionalShadowAtlas, reallocation', () => {
         .map((name) => spot(name)),
       POSITIONAL_SHADOW_REALLOC_TOLERANCE_MSEC
     );
-    expect(atlas.slotSize('spot8')).toBe(512);
-    expect(atlas.slotSize('spot0')).toBe(1024);
+    expect(slotSizeOf(atlas, 'spot8')).toBe(512);
+    expect(slotSizeOf(atlas, 'spot0')).toBe(1024);
   });
 
   it('moves a light whose coverage shrank to a smaller slot once the tolerance passes', () => {
     const atlas = rootAfter([spot('lamp', 1)]);
     atlas.allocate([spot('lamp', 0.1)], later);
-    expect(atlas.slotSize('lamp')).toBe(256);
+    expect(slotSizeOf(atlas, 'lamp')).toBe(256);
   });
 
   it('frees a released light’s slot for the next light (edge case)', () => {
@@ -195,7 +197,7 @@ describe('PositionalShadowAtlas, reallocation', () => {
     const atlas = rootAfter(lights.slice(0, 8));
     atlas.release('spot0');
     atlas.allocate(lights.slice(1), 0);
-    expect(atlas.slotSize('spot8')).toBe(1024);
+    expect(slotSizeOf(atlas, 'spot8')).toBe(1024);
     expect(atlas.ownersHoldingSlots()).not.toContain('spot0');
   });
 
@@ -203,7 +205,7 @@ describe('PositionalShadowAtlas, reallocation', () => {
     const lights = names('spot', 9).map((name) => spot(name));
     const atlas = rootAfter(lights);
     atlas.allocate(lights, later);
-    expect(atlas.slotSize('spot8')).toBe(512);
+    expect(slotSizeOf(atlas, 'spot8')).toBe(512);
   });
 });
 
@@ -221,20 +223,26 @@ describe('omniShadowCubeSize', () => {
   });
 });
 
-describe('omniShadowKernelAngle', () => {
-  it('spreads the default soft shadow scale over the inset paraboloid of the largest slot', () => {
-    expect(omniShadowKernelAngle(2, 1024)).toBeCloseTo(4 / 1022, 12);
+describe('PositionalShadowAtlas.slot', () => {
+  it('places a spot light’s slot in the most subdivided quadrant it fits, in texels', () => {
+    // The root's third quadrant (16 shadows) sits at (0, 2048), and its fourth (64) at (2048, 2048).
+    const atlas = rootAfter([spot('lamp', 0.2)]);
+    expect(atlas.slot('lamp')).toEqual({ x: 0, y: 2048, size: 512, paraboloidStep: null });
   });
 
-  it('widens as the slot shrinks', () => {
-    expect(omniShadowKernelAngle(2, 256)).toBeGreaterThan(omniShadowKernelAngle(2, 1024) * 4);
+  it('gives an omni light its second paraboloid in the next slot along the row', () => {
+    // The root takes a 1024 pair from its second quadrant first, at (2048, 0).
+    const atlas = rootAfter([omni('lamp')]);
+    expect(atlas.slot('lamp')).toEqual({ x: 2048, y: 0, size: 1024, paraboloidStep: [1, 0] });
   });
 
-  it('is zero for a light with no blur (edge case)', () => {
-    expect(omniShadowKernelAngle(0, 1024)).toBe(0);
+  it('wraps an omni light’s second paraboloid to the next row after a row’s last slot (edge case)', () => {
+    const atlas = new PositionalShadowAtlas<string>({ size: 4096, quadrantShadows: [4, 0, 0, 0] });
+    atlas.allocate([spot('first'), omni('lamp')], 0);
+    expect(atlas.slot('lamp')).toEqual({ x: 1024, y: 0, size: 1024, paraboloidStep: [-1, 1] });
   });
 
-  it('passes a non-finite scale through (error case)', () => {
-    expect(omniShadowKernelAngle(Number.NaN, 1024)).toBeNaN();
+  it('is null for a light without a slot (error case)', () => {
+    expect(rootAfter([]).slot('lamp')).toBeNull();
   });
 });

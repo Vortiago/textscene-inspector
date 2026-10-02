@@ -226,16 +226,17 @@ patch `TscnCanvas` installs, for a light with four splits:
 
 | Shadowed suns | `MeshStandardMaterial` | `MeshPhysicalMaterial` with seven maps, an environment and transmission | The same, with an omni and a spot shadow |
 | --- | --- | --- | --- |
-| 0 | 1 | 10 | 12 |
-| 1 | 2 | 11 | 13 |
-| 4 | 2 | 11 | 13 |
-| 8 | 2 | 11 | 13 |
+| 0 | 1 | 10 | 11 |
+| 1 | 2 | 11 | 12 |
+| 4 | 2 | 11 | 12 |
+| 8 | 2 | 11 | 12 |
 
-A light with one split counts the same. The one unit of a plain material is three's `dfgLUT`. Every
-omni and spot shadow still binds a unit of its own, where Godot keeps them in one positional atlas.
+A light with one split counts the same. The one unit of a plain material is three's `dfgLUT`. The
+omni and spot shadows share the one unit of the positional shadow atlas
+(`../positionalShadow/positionalShadow.md`).
 
 A sampler per sun would take 9 units with eight suns and the plain material, 18 with the physical
-one, and 20 with the omni and spot shadows too. A GPU with only 16 units fails to link the last
+one, and one more with any omni or spot shadow. A GPU with only 16 units fails to link the last
 two, and the scene draws nothing lit.
 
 ### The other designs

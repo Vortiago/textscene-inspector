@@ -32,11 +32,10 @@ Strict parsing format-checks these `OmniLight3D` properties, plus 27 inherited f
 
 The lenient parser falls back silently when `omni_range` or `omni_attenuation` is absent. When one is unparseable, it warns and falls back to `5.0` and `1.0`. `omni_shadow_mode` goes through `parseOptionalInt`, so an absent or invalid value quietly becomes `undefined`.
 
-The shadow map takes the slot that Godot's positional shadow atlas gives the light for the camera. A light that covers less of the view gets a smaller slot and a coarser, softer shadow. When other lights fill the larger slots, a light earlier in the scene tree takes a smaller slot, as in Godot. A sub-viewport gives its lights slots in its own atlas. The soft edge spans the angle of `shadow_blur` times two texels of that slot, the radius of Godot's default Soft Low filter. `shadow_bias` and `shadow_normal_bias` move the receiver as Godot's lookup does, so the shadow edge sits where Godot puts it.
+Godot's positional shadow atlas gives the light two slots for the camera. As in Godot's default Cube mode, each slot holds one paraboloid of the shadow. A light that covers less of the view gets smaller slots and a coarser, softer shadow. When other lights fill the larger slots, a light earlier in the scene tree takes smaller slots, as in Godot. A sub-viewport gives its lights slots in its own atlas. Every omni and spot shadow lies in one atlas texture, so many shadowed lights fit beside a material with many textures. The soft edge takes the four taps of Godot's default Soft Low filter, with the same dither as Godot. The filter spans `shadow_blur` times two texels of the paraboloid. `shadow_bias` and `shadow_normal_bias` move the receiver as Godot's lookup does, so the shadow edge sits where Godot puts it.
 
 ## Known limitations
 
 - **Approximated** Distance falloff follows three's inverse-square curve rather than Godot's, so the mid-range brightness differs.
-- **Approximated** The soft edge takes five filter taps on a cube map, where Godot takes four on two paraboloids, so its dither pattern differs.
-- **Approximated** At a large `shadow_blur`, the grain where a surface shadows itself covers another area than in Godot, so the soft edge sits inside Godot's.
+- **Approximated** `omni_shadow_mode` Dual Paraboloid draws as Cube mode does, so the edge of a coarse caster's shadow can sit apart from Godot's.
 - **Editor only** The wireframe sphere gizmo appears only in Godot's editor, but here it is selection-gated.

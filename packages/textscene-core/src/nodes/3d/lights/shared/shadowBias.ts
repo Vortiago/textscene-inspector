@@ -24,14 +24,14 @@ export function directionalShadowBias(
 }
 
 /**
- * In world units, for the omni lookup Godot's shader runs (`positionalShadowChunk.ts`). No
+ * In world units, for the omni lookup Godot's shader runs (`positionalShadowLookup.ts`). No
  * `soft_shadow_scale`: `light_storage.cpp:1024` sits in the spot branch alone.
  */
 export function omniShadowBias(shadowBias: number | undefined): number {
   return omniShadowDepthBias(shadowBias ?? GODOT_SHADOW_BIAS_DEFAULT.OMNI);
 }
 
-/** In Godot's reversed clip depth, for the spot lookup Godot's shader runs (`positionalShadowChunk.ts`). */
+/** In Godot's reversed clip depth, for the spot lookup Godot's shader runs (`positionalShadowLookup.ts`). */
 export function spotShadowBias(shadowBias: number | undefined, shadowBlur: number | undefined): number {
   return spotShadowDepthBias(shadowBias ?? GODOT_SHADOW_BIAS_DEFAULT.SPOT, softShadowScale(shadowBlur));
 }

@@ -1,7 +1,8 @@
 /**
- * One viewport's positional shadow atlas: the slots Godot's atlas gives its lights, and the map each
- * light renders into for that viewport. A light two viewports render holds a map for each, as Godot
- * holds a slot in each atlas. One map per light would reallocate whenever the two slots differ.
+ * One viewport's positional shadow atlas: the slots Godot's atlas gives its lights, laid out in the
+ * shared atlas texture (`shadowAtlasTarget.ts`), and the cube each omni light renders for that
+ * viewport. A light two viewports render holds a cube for each, as Godot holds a slot in each atlas.
+ * One cube per light would reallocate whenever the two slots differ.
  */
 
 import type * as THREE from 'three';
@@ -9,12 +10,14 @@ import {
   PositionalShadowAtlas,
   type PositionalShadowAtlasSettings,
   type PositionalShadowRequest,
+  type PositionalShadowSlot,
 } from '../../godot/positionalShadowAtlas.js';
+import { holdPositionalShadowAtlas, releasePositionalShadowAtlas } from './shadowAtlasTarget.js';
 
 /** An omni or spot light. */
 export type PositionalLight = THREE.PointLight | THREE.SpotLight;
 
-/** A map three renders a light's shadow into: a 2D target for a spot light, a cube for an omni. */
+/** The cube three renders an omni light's shadow into. */
 type ShadowMap = NonNullable<THREE.LightShadow['map']>;
 
 /** Written only by `ViewportShadowAtlas.bind`. Cleared for a shadow when its atlas is disposed. */
@@ -22,13 +25,14 @@ const boundAtlas = new WeakMap<THREE.LightShadow, ViewportShadowAtlas>();
 
 export class ViewportShadowAtlas {
   private readonly slots: PositionalShadowAtlas<PositionalLight>;
-  /** The maps this viewport's lights rendered last, kept while another viewport renders them. */
+  /** The cubes this viewport's lights rendered last, kept while another viewport renders them. */
   private readonly parkedMaps = new Map<THREE.LightShadow, ShadowMap>();
-  /** The shadows whose map is this viewport's now. */
+  /** The shadows whose cube is this viewport's now. */
   private readonly boundShadows = new Set<THREE.LightShadow>();
 
   constructor(settings: PositionalShadowAtlasSettings) {
     this.slots = new PositionalShadowAtlas(settings);
+    holdPositionalShadowAtlas(this, this.slots.size);
   }
 
   /** One render's allocation, in Godot's order (`PositionalShadowAtlas.allocate`). */
@@ -36,14 +40,14 @@ export class ViewportShadowAtlas {
     this.slots.allocate(requests, tickMsec);
   }
 
-  /** The side of the slot the light holds, or null when it holds none. */
-  slotSize(light: PositionalLight): number | null {
-    return this.slots.slotSize(light);
+  /** The slot the light holds, or null when it holds none. */
+  slot(light: PositionalLight): PositionalShadowSlot | null {
+    return this.slots.slot(light);
   }
 
   /**
-   * Gives the shadow the map it rendered last for this viewport, and parks the map it holds for the
-   * viewport that rendered it before. A map three allocated before any viewport bound it stays.
+   * Gives an omni light's shadow the cube it rendered last for this viewport, and parks the cube it
+   * holds for the viewport that rendered it before. A cube made before any viewport bound it stays.
    */
   bind(shadow: THREE.LightShadow): void {
     const current = boundAtlas.get(shadow);
@@ -58,7 +62,7 @@ export class ViewportShadowAtlas {
   }
 
   /**
-   * Frees the slot and the parked map of every light that left the scene. A bound map stays with its
+   * Frees the slot and the parked cube of every light that left the scene. A bound cube stays with its
    * light, which disposes it when it unmounts.
    */
   retain(lights: ReadonlySet<PositionalLight>): void {
@@ -76,11 +80,15 @@ export class ViewportShadowAtlas {
     }
   }
 
-  /** Disposes every parked map. A bound map stays with its light, and the next viewport adopts it. */
+  /**
+   * Disposes every parked cube and lets go of the atlas texture. A bound cube stays with its light, and
+   * the next viewport adopts it.
+   */
   dispose(): void {
     for (const map of this.parkedMaps.values()) map.dispose();
     this.parkedMaps.clear();
     for (const shadow of this.boundShadows) this.unbind(shadow);
+    releasePositionalShadowAtlas(this);
   }
 
   private park(shadow: THREE.LightShadow): void {
