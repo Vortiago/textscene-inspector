@@ -1,44 +1,30 @@
 # Contributing
 
-A change starts as an issue and lands as one pull request that passes the gates: the
-checks each kind of change must pass.
-
 ## Set up
 
-Follow [Build from source](README.md#build-from-source) in the README. `pnpm install` also points git at
-the hooks in `githooks/`. [githooks/README.md](githooks/README.md) explains them.
+Follow [Build from source](README.md#build-from-source). `pnpm install` also enables the hooks in `githooks/` ([githooks/README.md](githooks/README.md)).
 
 ## Pick the work
 
-1. Find or open an issue for the change.
-2. For a large change, wait until the maintainer agrees to the issue. A design the
-   maintainer rejects wastes your work.
+1. Find or open an issue.
+2. For a large change, wait for the maintainer to agree.
 
 ## Make the change
 
-Read [AGENTS.md](AGENTS.md) first. It lists the gates for each kind of change and the
-project conventions. [ARCHITECTURE.md](ARCHITECTURE.md) explains the structure.
-
+- Follow the gates and conventions in [AGENTS.md](AGENTS.md). [ARCHITECTURE.md](ARCHITECTURE.md) has the structure.
 - Put each test next to the file it tests.
-- Write code comments and docs to the rules in [.claude/rules/](.claude/rules/): Clean Code
-  and Simplified Technical English.
+- Write code and docs to the rules in [.claude/rules/](.claude/rules/).
 
 ## Check it
 
-Run the gates that AGENTS.md lists for your change. The pre-push hook runs the checks that match
-the pushed files, and CI runs the full gate. To run the full gate yourself:
-
-```bash
-pnpm validate
-```
+Run the AGENTS.md gates for your change. `pnpm validate` runs the full gate, as CI does.
 
 ## Open the pull request
 
-- Use a [Conventional Commits](https://www.conventionalcommits.org/) title, for example
-  `fix(parser): read a negative index`. The `commit-msg` hook checks each commit message.
+- Use a [Conventional Commits](https://www.conventionalcommits.org/) title, for example `fix(parser): read a negative index`.
 - End the description with `Closes #<issue>`.
-- Keep one change in one pull request.
+- Keep one change per pull request.
 
 ## Report a vulnerability
 
-Do not open a public issue. Follow [SECURITY.md](SECURITY.md).
+Follow [SECURITY.md](SECURITY.md), not a public issue.
