@@ -3,13 +3,13 @@
  * `r3f-webview-main.tsx` mounts into, and the script and stylesheet tags.
  */
 
+/** The bytes of a CSP nonce: 128 bits, the least the CSP specification recommends. */
+const NONCE_BYTES = 16;
+
+/** A CSP nonce as hex, from `crypto.getRandomValues`, which the Node and web extension hosts both provide. */
 export function generateNonce(): string {
-  let text = '';
-  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  for (let i = 0; i < 32; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
+  const bytes = globalThis.crypto.getRandomValues(new Uint8Array(NONCE_BYTES));
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 /**

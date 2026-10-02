@@ -7,6 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vite
 import * as vscode from 'vscode';
 import { setLogAdapter } from '@textscene/core/logger';
 import { LintResourceProvider } from './LintResourceProvider';
+import { MAX_READ_BYTES } from './readWorkspaceFile';
+import { HOST_PATH_CASE } from './hostPathCase';
 import { createMockFileData, createMockUri } from './test-setup';
 
 /** Files on the mocked workspace disk, by fsPath. The project root is `/workspace/game`. */
@@ -26,8 +28,13 @@ function providerForLevel(): LintResourceProvider {
   return new LintResourceProvider(createMockUri('/workspace/game'));
 }
 
+/** A stat of a regular file on the mocked disk, with the modification time and size of its bytes. */
+function statOnDisk(uri: vscode.Uri) {
+  return onDisk(uri).then((bytes) => ({ type: 1, ctime: 0, mtime: 1_700_000_000_000, size: bytes.length }));
+}
+
 beforeEach(() => {
-  (vscode.workspace.fs.stat as Mock).mockImplementation(onDisk);
+  (vscode.workspace.fs.stat as Mock).mockImplementation(statOnDisk);
   (vscode.workspace.fs.readFile as Mock).mockImplementation(onDisk);
 });
 
@@ -71,6 +78,25 @@ describe('LintResourceProvider', () => {
     expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
   });
 
+  it('gives null for a file over the size limit, and reads none of it', async () => {
+    (vscode.workspace.fs.stat as Mock).mockResolvedValue({
+      type: 1,
+      ctime: 0,
+      mtime: 0,
+      size: MAX_READ_BYTES + 1,
+    });
+
+    expect(await providerForLevel().loadResource('res://models/tree.glb', 'PackedScene')).toBeNull();
+    expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
+  });
+
+  it('gives null for a symbolic link, and reads nothing through it', async () => {
+    (vscode.workspace.fs.stat as Mock).mockResolvedValue({ type: 1 | 64, ctime: 0, mtime: 0, size: 4 });
+
+    expect(await providerForLevel().loadResource('res://models/tree.glb', 'PackedScene')).toBeNull();
+    expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
+  });
+
   it('names the workspace file of a res:// path, and nothing for one that escapes the root', () => {
     expect(providerForLevel().fileOf('res://models/tree.glb')?.fsPath).toBe(
       '/workspace/game/models/tree.glb'
@@ -87,6 +113,13 @@ describe('LintResourceProvider holds', () => {
     expect(provider.holds(createMockUri('/workspace/game/bin/a.gdextension'))).toBe(true);
     expect(provider.holds(createMockUri('/workspace/other/a.gdextension'))).toBe(false);
   });
+
+  it.runIf(HOST_PATH_CASE === 'sensitive')(
+    'holds no file in a sibling whose name differs from the root only in case, on a case-sensitive host',
+    () => {
+      expect(providerForLevel().holds(createMockUri('/workspace/Game/a.gdextension'))).toBe(false);
+    }
+  );
 });
 
 describe('LintResourceProvider isRootedWithin', () => {
@@ -106,15 +139,6 @@ describe('LintResourceProvider isRootedWithin', () => {
 });
 
 describe('LintResourceProvider stamp', () => {
-  /** A stat of a file on the mocked disk, with the modification time and size of its bytes. */
-  function statOnDisk(uri: vscode.Uri) {
-    return onDisk(uri).then((bytes) => ({ type: 1, ctime: 0, mtime: 1_700_000_000_000, size: bytes.length }));
-  }
-
-  beforeEach(() => {
-    (vscode.workspace.fs.stat as Mock).mockImplementation(statOnDisk);
-  });
-
   it('stamps a file under the project root with its modification time and size', async () => {
     expect(await providerForLevel().stamp('res://models/tree.glb')).toBe('1700000000000:4');
   });

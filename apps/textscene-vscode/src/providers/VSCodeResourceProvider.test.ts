@@ -2,7 +2,25 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { VSCodeResourceProvider } from './VSCodeResourceProvider';
+import { MAX_READ_BYTES } from '../readWorkspaceFile';
+import { HOST_PATH_CASE } from '../hostPathCase';
 import { createMockUri, createMockFileData, vscode } from '../test-setup';
+
+const FILE = 1;
+const SYMBOLIC_LINK = 64;
+
+/**
+ * A `stat` that finds a `project.godot` only at `projectFile`, and every other path as a regular file of `size` bytes,
+ * so `readFile` alone decides whether a resource exists.
+ */
+function statWithProjectAt(projectFile: string | null, fileStat = { type: FILE, size: 100 }) {
+  return (uri: ReturnType<typeof createMockUri>) => {
+    const path = uri.fsPath.replace(/\\/g, '/');
+    if (path.endsWith('/project.godot') && path !== projectFile)
+      return Promise.reject(new Error('Not found'));
+    return Promise.resolve({ ...fileStat, ctime: 0, mtime: 0 });
+  };
+}
 
 describe('VSCodeResourceProvider', () => {
   let provider: VSCodeResourceProvider;
@@ -14,14 +32,7 @@ describe('VSCodeResourceProvider', () => {
     documentUri = createMockUri('/workspace/scenes/test.tscn');
     provider = new VSCodeResourceProvider(workspaceRoot, documentUri);
 
-    // project.godot exists at the workspace root.
-    vscode.workspace.fs.stat.mockImplementation((uri: ReturnType<typeof createMockUri>) => {
-      const path = uri.fsPath.toLowerCase().replace(/\\/g, '/');
-      if (path.endsWith('project.godot') && path.startsWith('/workspace/project.godot')) {
-        return Promise.resolve({ type: 1, ctime: 0, mtime: 0, size: 100 });
-      }
-      return Promise.reject(new Error('Not found'));
-    });
+    vscode.workspace.fs.stat.mockImplementation(statWithProjectAt('/workspace/project.godot'));
   });
 
   describe('Path Resolution', () => {
@@ -53,7 +64,7 @@ describe('VSCodeResourceProvider', () => {
       // res:// is always project-root-relative in Godot. With no project.godot, the
       // provider falls back to the workspace root, not the scene's own folder,
       // where res://assets/X.glb 404s.
-      vscode.workspace.fs.stat.mockRejectedValue(new Error('Not found')); // no project.godot anywhere
+      vscode.workspace.fs.stat.mockImplementation(statWithProjectAt(null));
       const subdirDoc = createMockUri('/workspace/Scenes/Level1/Level1.tscn');
       const subdirProvider = new VSCodeResourceProvider(workspaceRoot, subdirDoc);
 
@@ -87,11 +98,7 @@ describe('VSCodeResourceProvider', () => {
     it('refuses a path that climbs out of the project root in the document-relative fallback too', async () => {
       // project.godot at /workspace/game: `res://../other.png` escapes it, while the
       // document-relative spelling lands at /workspace/game/other.png, inside the workspace.
-      vscode.workspace.fs.stat.mockImplementation((uri: ReturnType<typeof createMockUri>) =>
-        uri.fsPath.replace(/\\/g, '/') === '/workspace/game/project.godot'
-          ? Promise.resolve({ type: 1, ctime: 0, mtime: 0, size: 100 })
-          : Promise.reject(new Error('Not found'))
-      );
+      vscode.workspace.fs.stat.mockImplementation(statWithProjectAt('/workspace/game/project.godot'));
       const gameProvider = new VSCodeResourceProvider(
         workspaceRoot,
         createMockUri('/workspace/game/scenes/level.tscn')
@@ -131,6 +138,21 @@ describe('VSCodeResourceProvider', () => {
 
       expect(readUri?.fsPath.replace(/\\/g, '/')).toBe('/workspace/textures/wood.png');
     });
+
+    it.runIf(HOST_PATH_CASE === 'sensitive')(
+      'refuses a sibling of the workspace whose name differs only in case, on a case-sensitive host',
+      async () => {
+        const gameProvider = new VSCodeResourceProvider(
+          createMockUri('/w/Game'),
+          createMockUri('/w/Game/scenes/level.tscn')
+        );
+
+        await expect(gameProvider.loadResource('../../game/secret.txt', 'TextFile')).rejects.toThrow(
+          /Failed to load resource/
+        );
+        expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
+      }
+    );
 
     it('refuses a relative path that climbs out of the workspace', async () => {
       await expect(provider.loadResource('../../secrets/key.pem', 'TextFile')).rejects.toThrow(
@@ -176,6 +198,39 @@ describe('VSCodeResourceProvider', () => {
       await expect(provider.loadResource('res://missing.tscn', 'PackedScene')).rejects.toThrow(
         /Failed to load resource.*missing\.tscn/
       );
+    });
+  });
+
+  describe('Read Limits', () => {
+    it('refuses a resource over the size limit and reads none of it', async () => {
+      vscode.workspace.fs.stat.mockImplementation(
+        statWithProjectAt('/workspace/project.godot', { type: FILE, size: MAX_READ_BYTES + 1 })
+      );
+
+      await expect(provider.loadResource('res://models/huge.glb', 'PackedScene')).rejects.toThrow(
+        /Failed to load resource: res:\/\/models\/huge\.glb \(.*over the limit/
+      );
+      expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
+    });
+
+    it('refuses a resource that is a symbolic link and reads nothing through it', async () => {
+      vscode.workspace.fs.stat.mockImplementation(
+        statWithProjectAt('/workspace/project.godot', { type: FILE | SYMBOLIC_LINK, size: 100 })
+      );
+
+      await expect(provider.loadResource('res://textures/a.png', 'Texture2D')).rejects.toThrow(
+        /symbolic link/
+      );
+      expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
+    });
+
+    it('reads a resource exactly at the size limit', async () => {
+      vscode.workspace.fs.stat.mockImplementation(
+        statWithProjectAt('/workspace/project.godot', { type: FILE, size: MAX_READ_BYTES })
+      );
+      vscode.workspace.fs.readFile.mockResolvedValueOnce(createMockFileData('scene'));
+
+      expect(await provider.loadResource('res://big.tscn', 'PackedScene')).toBe('scene');
     });
   });
 
