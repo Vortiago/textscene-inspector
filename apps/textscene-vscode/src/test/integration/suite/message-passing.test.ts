@@ -123,51 +123,6 @@ suite('Message Passing Tests', () => {
     assert.ok(responseMessage, 'Should send resourceLoaded or resourceLoadError message');
   });
 
-  test('Should handle resourceNeeded message from webview', async function () {
-    this.timeout(10000);
-
-    const fixturePath = getFixturePath('unit-empty-scene.tscn');
-    const extensionUri = getExtensionUri();
-
-    const { panel, triggerMessage } = createTestPanel(extensionUri, fixturePath);
-
-    assertPanelActive(panel);
-
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    triggerMessage({ type: 'webviewReady' });
-
-    // resourceNeeded logs to the output channel and does not throw.
-    triggerMessage({
-      type: 'resourceNeeded',
-      resource: {
-        path: 'res://missing-texture.png',
-        type: 'Texture2D',
-        referencedBy: 'TestNode',
-        error: 'File not found',
-      },
-    });
-
-    assertPanelActive(panel);
-  });
-
-  test('Should handle error message from webview', async function () {
-    this.timeout(10000);
-
-    const fixturePath = getFixturePath('unit-empty-scene.tscn');
-    const extensionUri = getExtensionUri();
-
-    const { panel, triggerMessage } = createTestPanel(extensionUri, fixturePath);
-
-    assertPanelActive(panel);
-
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    triggerMessage({ type: 'webviewReady' });
-
-    triggerMessage({ type: 'error', message: 'Test error from webview' });
-
-    assertPanelActive(panel);
-  });
-
   test('Should post a new loadTscn when updated to a different scene', async function () {
     this.timeout(10000);
 

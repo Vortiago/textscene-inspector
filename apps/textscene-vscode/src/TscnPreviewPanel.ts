@@ -10,7 +10,7 @@ import { VSCodeResourceProvider } from './providers/VSCodeResourceProvider';
 import { buildPanelHtml } from './panelHtml';
 import { dispatchWebviewMessage, type WebviewMessageHandlers } from './webviewDispatch';
 import { jumpToNodeDefinition } from './jumpToNodeDefinition';
-import { relayMissingResource, relayWebviewLog } from './hostLogRelay';
+import { relayWebviewLog } from './hostLogRelay';
 import { encodeResourceResponse } from './wireCodec';
 
 export { dispatchWebviewMessage } from './webviewDispatch';
@@ -96,17 +96,11 @@ export class TscnPreviewPanel {
           this._postMessageToWebview({ type: 'loadTscn', content: this._previousContent });
         }
       },
-      error: (msg) => {
-        vscode.window.showErrorMessage(msg.message);
-      },
       jumpToNode: (msg) => {
         void jumpToNodeDefinition(this._currentResource, msg.nodeName, msg.parent, this._panel.viewColumn);
       },
       loadResource: (msg) => {
         void this._handleLoadResource(msg.path, msg.resourceType, msg.requestId);
-      },
-      resourceNeeded: (msg) => {
-        relayMissingResource(msg.resource);
       },
       log: (msg) => {
         relayWebviewLog(msg.level, msg.message, msg.args);

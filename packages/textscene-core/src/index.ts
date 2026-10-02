@@ -12,7 +12,6 @@ export type { LogAdapter, LogLevel } from './logger';
 
 // Types
 export type { TscnScene, TscnNode, MissingResource, ResourceNeededCallback } from './parser/types';
-export type { NodeChange, NodeChangeType, IncrementalUpdateData } from './types/changes';
 export type { ResourceProvider } from './resources/ResourceProvider';
 
 // Resource provider utilities
