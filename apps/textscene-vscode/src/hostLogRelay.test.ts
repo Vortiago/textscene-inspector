@@ -1,14 +1,14 @@
 /**
- * Webview `log` and `resourceNeeded` messages onto the host output channel.
+ * Webview `log` messages onto the host output channel.
  *
  * `logger.ts` opens the channel with `{ log: true }`, so it is a `LogOutputChannel`
  * with one method per level. A mock with only `appendLine` reaches none of them.
  */
 import { describe, expect, it, beforeEach, afterEach, type Mock } from 'vitest';
-import { relayMissingResource, relayWebviewLog } from './hostLogRelay';
+import { relayWebviewLog } from './hostLogRelay';
 import { getChannel, initLogger, dispose as disposeLogger } from './logger';
 
-type ChannelSpies = Record<'trace' | 'debug' | 'info' | 'warn' | 'error' | 'show', Mock>;
+type ChannelSpies = Record<'trace' | 'debug' | 'info' | 'warn' | 'error', Mock>;
 
 function channel(): ChannelSpies {
   return getChannel() as unknown as ChannelSpies;
@@ -59,29 +59,5 @@ describe('relayWebviewLog', () => {
     disposeLogger();
 
     expect(() => relayWebviewLog('info', 'dropped', [])).not.toThrow();
-  });
-});
-
-describe('relayMissingResource', () => {
-  const MISSING = {
-    path: 'res://icon.png',
-    type: 'Texture2D',
-    referencedBy: 'Sprite2D',
-    error: 'File not found',
-  };
-
-  it('warns the path, the referencing node and the error, then reveals the channel', () => {
-    relayMissingResource(MISSING);
-
-    expect(channel().warn).toHaveBeenNthCalledWith(1, 'Missing resource: res://icon.png (Texture2D)');
-    expect(channel().warn).toHaveBeenNthCalledWith(2, '  Referenced by node: Sprite2D');
-    expect(channel().warn).toHaveBeenNthCalledWith(3, '  Error: File not found');
-    expect(channel().show).toHaveBeenCalledWith(true);
-  });
-
-  it('is a no-op before the logger is initialised', () => {
-    disposeLogger();
-
-    expect(() => relayMissingResource(MISSING)).not.toThrow();
   });
 });

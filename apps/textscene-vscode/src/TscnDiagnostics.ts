@@ -15,6 +15,7 @@ import {
 import { isGodotTextResourcePath } from '@textscene/core/godot';
 import { error as logError } from '@textscene/core/logger';
 import { comparablePath, isWithinRoot } from '@textscene/core/resources/resPath';
+import { HOST_PATH_CASE } from './hostPathCase';
 import { LintResourceProvider } from './LintResourceProvider';
 import { findEnclosingGodotProject, hasProjectFile } from './findGodotProjectRoot';
 import {
@@ -331,7 +332,7 @@ export class TscnDiagnostics implements vscode.Disposable {
     const { reads } = record.session;
     const under = (path: string) => {
       const file = provider.fileOf(path);
-      return file !== null && isWithinRoot(dir.fsPath, file.fsPath);
+      return file !== null && isWithinRoot(dir.fsPath, file.fsPath, HOST_PATH_CASE);
     };
     return reads.some(under) || (reads.length > 0 && provider.listed.some(under));
   }
@@ -346,7 +347,8 @@ export class TscnDiagnostics implements vscode.Disposable {
     if (!this._enabled) return;
     const projectDir = vscode.Uri.joinPath(uri, '..').fsPath;
     for (const document of vscode.workspace.textDocuments) {
-      if (!isTscnDocument(document) || !isWithinRoot(projectDir, document.uri.fsPath)) continue;
+      if (!isTscnDocument(document) || !isWithinRoot(projectDir, document.uri.fsPath, HOST_PATH_CASE))
+        continue;
       const record = this._documents.get(document.uri.toString());
       if (record) this._walk(document, record);
     }

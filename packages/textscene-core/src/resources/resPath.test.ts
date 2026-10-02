@@ -5,6 +5,7 @@ import {
   isWithinRoot,
   normalizeRelativePath,
   parentDir,
+  pathCaseOf,
   projectFileIn,
   resRelativePath,
   resolveResPath,
@@ -31,17 +32,40 @@ describe('comparablePath', () => {
 
 describe('isWithinRoot', () => {
   it('holds the root itself and every path under it', () => {
-    expect(isWithinRoot('/proj', '/proj')).toBe(true);
-    expect(isWithinRoot('/proj', '/proj/scenes/a.tscn')).toBe(true);
+    expect(isWithinRoot('/proj', '/proj', 'sensitive')).toBe(true);
+    expect(isWithinRoot('/proj', '/proj/scenes/a.tscn', 'sensitive')).toBe(true);
   });
 
   it('refuses a sibling whose name only starts with the root', () => {
-    expect(isWithinRoot('/proj', '/proj-other/a.tscn')).toBe(false);
+    expect(isWithinRoot('/proj', '/proj-other/a.tscn', 'sensitive')).toBe(false);
+  });
+
+  it('refuses a sibling whose name differs from the root only in case, on a case-sensitive filesystem', () => {
+    expect(isWithinRoot('/w/Game', '/w/game/secret.txt', 'sensitive')).toBe(false);
   });
 
   it('compares Windows drive letters and separators case-insensitively', () => {
-    expect(isWithinRoot('C:\\Proj', 'c:/proj/Scenes/a.tscn')).toBe(true);
-    expect(isWithinRoot('c:/', 'C:\\proj')).toBe(true);
+    expect(isWithinRoot('C:\\Proj', 'c:/proj/Scenes/a.tscn', 'insensitive')).toBe(true);
+    expect(isWithinRoot('c:/', 'C:\\proj', 'insensitive')).toBe(true);
+  });
+
+  it('reads backslashes as separators on a case-sensitive filesystem too', () => {
+    expect(isWithinRoot('/w/Game', '/w/Game\\scenes\\a.tscn', 'sensitive')).toBe(true);
+  });
+});
+
+describe('pathCaseOf', () => {
+  it('ignores case on Windows and macOS, whose default filesystems do', () => {
+    expect(pathCaseOf('win32')).toBe('insensitive');
+    expect(pathCaseOf('darwin')).toBe('insensitive');
+  });
+
+  it('counts case on Linux', () => {
+    expect(pathCaseOf('linux')).toBe('sensitive');
+  });
+
+  it('counts case on an unknown platform, such as a web worker with no process', () => {
+    expect(pathCaseOf(undefined)).toBe('sensitive');
   });
 });
 

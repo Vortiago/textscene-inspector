@@ -32,10 +32,26 @@ export function comparablePath(path: string): string {
   return forwardSlashes(path).toLowerCase();
 }
 
-/** Whether `candidate` is `root` or under it. The separator is the boundary, so `/proj-other` is not under `/proj`. */
-export function isWithinRoot(root: string, candidate: string): boolean {
-  const rootKey = comparablePath(root);
-  const candidateKey = comparablePath(candidate);
+/** Whether a host's filesystem tells apart two spellings of a path that differ only in case. */
+export type PathCase = 'sensitive' | 'insensitive';
+
+/**
+ * The path case of the default filesystem on `platform`, a Node `process.platform` value. Windows and macOS ignore
+ * case. Any other platform, and an unknown one such as a web worker's, counts case: a refused path is safer than a
+ * sibling outside the root.
+ */
+export function pathCaseOf(platform: string | undefined): PathCase {
+  return platform === 'win32' || platform === 'darwin' ? 'insensitive' : 'sensitive';
+}
+
+/**
+ * Whether `candidate` is `root` or under it. The separator is the boundary, so `/proj-other` is not under `/proj`.
+ * Case counts unless `pathCase` is insensitive, so on Linux `/w/game` is not under `/w/Game`.
+ */
+export function isWithinRoot(root: string, candidate: string, pathCase: PathCase): boolean {
+  const keyOf = pathCase === 'insensitive' ? comparablePath : forwardSlashes;
+  const rootKey = keyOf(root);
+  const candidateKey = keyOf(candidate);
   if (candidateKey === rootKey) return true;
   const prefix = rootKey.endsWith('/') ? rootKey : `${rootKey}/`;
   return candidateKey.startsWith(prefix);

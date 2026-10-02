@@ -52,6 +52,8 @@ const extensionWebOptions = {
   ...extensionOptions,
   outfile: 'dist/extension.web.js',
   platform: 'browser',
+  // The one Node builtin the host graph imports: a web host has the same API on the global.
+  alias: { 'node:crypto': './src/webCrypto.browser.ts' },
   target: 'es2020',
 };
 
@@ -97,10 +99,11 @@ const webviewOptions = {
 };
 
 /**
- * Integration-test build. The extension host loads suite/index by path, and it
- * globs `**\/*.test.js` beside itself, so each runtime-loaded file is its own
- * entry and the suites are globbed. Their imports, core included, are bundled:
- * core's dist is bundler-only ESM (extensionless imports), which Node cannot load.
+ * Build of the extension host suites, integration and installed. The extension host
+ * loads each suite/index by path, and it globs `**\/*.test.js` beside itself, so each
+ * runtime-loaded file is its own entry and the suites are globbed. Their imports, core
+ * included, are bundled: core's dist is bundler-only ESM (extensionless imports), which
+ * Node cannot load.
  * Mocha and glob are bundled too: mocha 12 is ESM-only at its entry, and the Node 18
  * inside VS Code 1.85, the `engines.vscode` floor, cannot `require` it.
  *
@@ -111,6 +114,9 @@ const testOptions = {
     'src/test/integration/runTests.ts',
     'src/test/integration/suite/index.ts',
     ...globSync('src/test/integration/suite/*.test.ts'),
+    'src/test/installed/runInstalledTests.ts',
+    'src/test/installed/suite/index.ts',
+    ...globSync('src/test/installed/suite/*.test.ts'),
   ],
   bundle: true,
   outdir: 'dist',

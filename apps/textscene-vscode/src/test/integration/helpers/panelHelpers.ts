@@ -6,6 +6,7 @@
 import * as vscode from 'vscode';
 import { TscnPreviewPanel } from '../../../TscnPreviewPanel';
 import type { HostToWebviewMessage } from '../../../protocol';
+import { waitFor } from '../../waitFor';
 
 const EXTENSION_ID = 'vortiago.textscene-inspector';
 
@@ -125,34 +126,6 @@ export function createTestPanel(
   }
 
   return { panel, sentMessages, triggerMessage };
-}
-
-/**
- * Polls every 50ms until `predicate()` is true or `timeoutMs` elapses, and returns
- * whether it held. Every integration-test wait builds on it. With
- * `describeFailure`, a timeout throws its message instead of returning `false`.
- */
-export async function waitFor(
-  predicate: () => boolean,
-  timeoutMs: number,
-  describeFailure?: () => string
-): Promise<boolean> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (predicate()) {
-      return true;
-    }
-    await new Promise((r) => setTimeout(r, 50));
-  }
-  // The condition can come true during the last sleep, which a loaded CI runner
-  // otherwise reports as a timeout.
-  if (predicate()) {
-    return true;
-  }
-  if (describeFailure) {
-    throw new Error(describeFailure());
-  }
-  return false;
 }
 
 export async function waitForMessage(

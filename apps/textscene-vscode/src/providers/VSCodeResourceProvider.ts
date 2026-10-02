@@ -11,6 +11,8 @@ import {
   resRelativePath,
 } from '@textscene/core/resources/resPath';
 import { findGodotProjectRoot } from '../findGodotProjectRoot';
+import { HOST_PATH_CASE } from '../hostPathCase';
+import { readWorkspaceFile } from '../readWorkspaceFile';
 
 export class VSCodeResourceProvider implements ResourceProvider {
   private projectRoot: vscode.Uri | null = null;
@@ -44,7 +46,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
       try {
         const fallbackPath = this.documentRelativeUri(resourcePath);
 
-        if (fallbackPath && isWithinRoot(this.workspaceRoot.fsPath, fallbackPath.fsPath)) {
+        if (fallbackPath && isWithinRoot(this.workspaceRoot.fsPath, fallbackPath.fsPath, HOST_PATH_CASE)) {
           info(`[VSCodeResourceProvider] Trying fallback path: ${fallbackPath.fsPath}`);
           this.servedResources.set(comparablePath(fallbackPath.fsPath), resourcePath);
           return await this.readContent(fallbackPath, resourcePath, type);
@@ -61,7 +63,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
 
   /**
    * Reads a resolved fsPath into the shape `loadResource` returns, for both
-   * branches. A `readFile` failure propagates unchanged, so the primary branch
+   * branches. A refused or failed read propagates unchanged, so the primary branch
    * falls through to the fallback, and the fallback to the final error.
    */
   private async readContent(
@@ -69,7 +71,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
     resourcePath: string,
     type: string | undefined
   ): Promise<string | ArrayBuffer> {
-    const fileData = await vscode.workspace.fs.readFile(fsPath);
+    const fileData = await readWorkspaceFile(fsPath);
     info(`[VSCodeResourceProvider] Read ${fileData.byteLength} bytes`);
     return resourceContent(fileData, type, resourcePath);
   }
@@ -84,9 +86,27 @@ export class VSCodeResourceProvider implements ResourceProvider {
     return this.servedResources.get(comparablePath(fileUri.fsPath)) ?? null;
   }
 
+  /** Every `res://` path `loadResource` served, each once, for a caller that must re-fetch them all. */
+  getServedResPaths(): string[] {
+    return [...new Set(this.servedResources.values())];
+  }
+
+  /**
+   * Whether a fresh walk finds another project root than the cached one, after a
+   * `project.godot` was created, moved or deleted. False before any load cached a
+   * root, since no resource was then resolved against one.
+   */
+  async hasProjectRootMoved(): Promise<boolean> {
+    if (!this.projectRoot) {
+      return false;
+    }
+    const currentRoot = await findGodotProjectRoot(this.workspaceRoot, this.documentUri);
+    return comparablePath(currentRoot.fsPath) !== comparablePath(this.projectRoot.fsPath);
+  }
+
   /**
    * The Godot project root from the shared `findGodotProjectRoot`, cached for this
-   * provider's lifetime.
+   * provider's lifetime. `hasProjectRootMoved` tells the owner when to replace it.
    */
   private async findProjectRoot(): Promise<vscode.Uri> {
     if (this.projectRoot) {
@@ -125,7 +145,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
 
     const resolvedUri = vscode.Uri.joinPath(await this.findProjectRoot(), relativePath);
 
-    if (!isWithinRoot(this.workspaceRoot.fsPath, resolvedUri.fsPath)) {
+    if (!isWithinRoot(this.workspaceRoot.fsPath, resolvedUri.fsPath, HOST_PATH_CASE)) {
       throw new Error(`Path traversal detected: ${godotPath} resolves outside workspace bounds`);
     }
 

@@ -34,10 +34,6 @@ export function initLogger(name: string): void {
   setLogAdapter(new VscodeLogAdapter(logChannel));
 }
 
-export function show(): void {
-  logChannel?.show(true);
-}
-
 export function getChannel(): vscode.LogOutputChannel | null {
   return logChannel;
 }
