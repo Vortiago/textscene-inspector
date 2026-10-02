@@ -1,16 +1,16 @@
 ---
 type: SpringBoneCollisionCapsule3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-spring-bone-collision-capsule-3d.tscn
 # image: unit-spring-bone-collision-capsule-3d
 visual: false
-renders_as: a transform-only group
+renders_as: nothing yet, Godot's spring solver collides bones with it, the previewer does not
 ---
 
 # SpringBoneCollisionCapsule3D
 
-The capsule-shaped collider a SpringBoneSimulator3D consults while resolving its spring bones. The capsule exists only as an editor gizmo, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
+The capsule-shaped collider a SpringBoneSimulator3D consults while resolving its spring bones. The previewer runs no spring solver (ADR-0045), so the capsule guards nothing, and the node mounts as its base with its children still showing.
 
 ## Linting
 
@@ -35,4 +35,5 @@ SpringBoneCollisionCapsule3D registers `parseNode3D` directly, so `radius`, `hei
 
 ## Known limitations
 
+- **Needs runtime** Godot's SpringBoneSimulator3D resolves its bones against this capsule each frame. Here the bones hold their rest pose, so the capsule guards nothing.
 - **Editor only** The capsule gizmo appears only in Godot's editor. Here it is absent.

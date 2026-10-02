@@ -1,7 +1,7 @@
 ---
 type: RemoteTransform3D
 category: 3D
-status: linter-only
+status: limitation
 fixture: unit-remote-transform-3d.tscn
 image: unit-remote-transform-3d
 renders_as: nothing (a transform-only group that drives its target)

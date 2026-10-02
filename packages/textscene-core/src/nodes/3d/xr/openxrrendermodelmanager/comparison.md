@@ -1,16 +1,16 @@
 ---
 type: OpenXRRenderModelManager
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-open-xr-render-model-manager.tscn
 # image: unit-open-xr-render-model-manager
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: nothing yet, Godot spawns a render model per tracked device, the previewer does not
 ---
 
 # OpenXRRenderModelManager
 
-Watches the OpenXR runtime for active devices and spawns `OpenXRRenderModel` children for them at runtime. Nothing it manages exists before then, so the previewer renders it as a transform-only group (ADR-0008).
+Watches the OpenXR runtime for active devices and spawns `OpenXRRenderModel` children for them at runtime. Only a live XR session reports devices, and the previewer runs no session, so it spawns nothing (ADR-0045).
 
 ## Linting
 

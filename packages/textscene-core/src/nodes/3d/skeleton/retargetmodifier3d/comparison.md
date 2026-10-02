@@ -1,16 +1,16 @@
 ---
 type: RetargetModifier3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-retarget-modifier-3d.tscn
 # image: unit-retarget-modifier-3d
 visual: false
-renders_as: a transform-only group
+renders_as: nothing yet, Godot retargets poses onto child skeletons, the previewer does not
 ---
 
 # RetargetModifier3D
 
-Copies the parent Skeleton3D's pose onto the Skeleton3D nodes beneath it, remapping through a `SkeletonProfile` so two rigs can share one animation. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
+Copies the parent Skeleton3D's pose onto the Skeleton3D nodes beneath it, remapping through a `SkeletonProfile` so two rigs can share one animation. Godot runs that retarget each frame, and the previewer does not yet (ADR-0045): the bones hold their rest pose.
 
 ## Linting
 

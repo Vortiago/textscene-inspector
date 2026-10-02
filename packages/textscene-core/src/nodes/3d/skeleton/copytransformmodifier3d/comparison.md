@@ -1,16 +1,16 @@
 ---
 type: CopyTransformModifier3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-copy-transform-modifier-3d.tscn
 # image: unit-copy-transform-modifier-3d
 visual: false
-renders_as: a transform-only group
+renders_as: nothing yet, Godot copies a reference transform onto an apply bone, the previewer does not
 ---
 
 # CopyTransformModifier3D
 
-Copies a reference bone's or node's transform onto an apply bone each frame, masked per component and per axis by its `settings/<i>/` entries. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
+Copies a reference bone's or node's transform onto an apply bone each frame, masked per component and per axis by its `settings/<i>/` entries. Godot runs that copy, and the previewer does not yet (ADR-0045): the bones hold their rest pose.
 
 ## Linting
 

@@ -1,16 +1,16 @@
 ---
 type: LookAtModifier3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-look-at-modifier-3d.tscn
 # image: unit-look-at-modifier-3d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: nothing yet, Godot rotates a bone to face its target, the previewer does not
 ---
 
 # LookAtModifier3D
 
-Rotates one skeleton bone to face a target node, with optional angle limits and timed interpolation. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
+Rotates one skeleton bone to face a target node, with optional angle limits and timed interpolation. Godot runs that drive each frame, and the previewer does not yet (ADR-0045): the bones hold their rest pose.
 
 ## Linting
 

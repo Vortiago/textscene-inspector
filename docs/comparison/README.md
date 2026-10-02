@@ -54,7 +54,7 @@ reproduced:
 
 ## 3D
 
-- [AimModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/aimmodifier3d/comparison.md): nothing (a transform-only group)
+- [AimModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/aimmodifier3d/comparison.md): nothing yet, Godot rotates a bone toward its target, the previewer does not
 - [AnimatableBody3D](../../packages/textscene-core/src/nodes/physics/3d/animatablebody3d/comparison.md): nothing (a transform-only group)
 - [AnimatedSprite3D](../../packages/textscene-core/src/nodes/3d/animatedsprite3d/comparison.md): invisible transform-only fallback
 - [AnimationPlayer](../../packages/textscene-core/src/nodes/animation/animationplayer/comparison.md): no geometry of its own, a working driver of other nodes' properties
@@ -63,17 +63,17 @@ reproduced:
 - [AreaLight3D](../../packages/textscene-core/src/nodes/3d/lights/arealight3d/comparison.md): a THREE.RectAreaLight
 - [AudioListener3D](../../packages/textscene-core/src/nodes/3d/audiolistener3d/comparison.md): nothing (a transform-only group)
 - [AudioStreamPlayer3D](../../packages/textscene-core/src/nodes/audio/audiostreamplayer3d/comparison.md): a selection-gated speaker gizmo
-- [BoneAttachment3D](../../packages/textscene-core/src/nodes/3d/skeleton/boneattachment3d/comparison.md): a transform-only group
-- [BoneConstraint3D](../../packages/textscene-core/src/nodes/3d/skeleton/boneconstraint3d/comparison.md): nothing (a transform-only group)
-- [BoneTwistDisperser3D](../../packages/textscene-core/src/nodes/3d/skeleton/bonetwistdisperser3d/comparison.md): nothing (a transform-only group)
+- [BoneAttachment3D](../../packages/textscene-core/src/nodes/3d/skeleton/boneattachment3d/comparison.md): nothing yet, Godot rides it on its bone each frame, the previewer parks it at its authored transform
+- [BoneConstraint3D](../../packages/textscene-core/src/nodes/3d/skeleton/boneconstraint3d/comparison.md): nothing yet, Godot applies its bone constraints each frame, the previewer does not
+- [BoneTwistDisperser3D](../../packages/textscene-core/src/nodes/3d/skeleton/bonetwistdisperser3d/comparison.md): nothing yet, Godot disperses one bone's twist up its chain, the previewer does not
 - [Camera3D](../../packages/textscene-core/src/nodes/3d/camera3d/comparison.md): a selection-gated frustum gizmo
-- [CCDIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/ccdik3d/comparison.md): nothing (a transform-only group)
+- [CCDIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/ccdik3d/comparison.md): nothing yet, Godot solves its chain onto the target each frame, the previewer does not
 - [CharacterBody3D](../../packages/textscene-core/src/nodes/physics/3d/characterbody3d/comparison.md): a transform-only Node3D group
 - [CollisionPolygon3D](../../packages/textscene-core/src/nodes/physics/3d/collisionpolygon3d/comparison.md): nothing (a transform-only group)
 - [CollisionShape3D](../../packages/textscene-core/src/nodes/physics/3d/collisionshape3d/comparison.md): a toggle-gated collision wireframe
 - [ConeTwistJoint3D](../../packages/textscene-core/src/nodes/physics/3d/conetwistjoint3d/comparison.md): nothing (a transform-only group)
-- [ConvertTransformModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/converttransformmodifier3d/comparison.md): nothing (a transform-only group)
-- [CopyTransformModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/copytransformmodifier3d/comparison.md): a transform-only group
+- [ConvertTransformModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/converttransformmodifier3d/comparison.md): nothing yet, Godot remaps a reference value onto an apply bone, the previewer does not
+- [CopyTransformModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/copytransformmodifier3d/comparison.md): nothing yet, Godot copies a reference transform onto an apply bone, the previewer does not
 - [CPUParticles3D](../../packages/textscene-core/src/nodes/3d/particles/cpuparticles3d/comparison.md): nothing yet, not implemented
 - [CSGBox3D](../../packages/textscene-core/src/nodes/3d/csg/csgbox3d/comparison.md): a solid box mesh
 - [CSGCombiner3D](../../packages/textscene-core/src/nodes/3d/csg/csgcombiner3d/comparison.md): a grouping node whose children fold into one solid
@@ -84,7 +84,7 @@ reproduced:
 - [CSGTorus3D](../../packages/textscene-core/src/nodes/3d/csg/csgtorus3d/comparison.md): a solid torus mesh
 - [Decal](../../packages/textscene-core/src/nodes/3d/decal/comparison.md): a texture projected onto the surfaces its box intersects
 - [DirectionalLight3D](../../packages/textscene-core/src/nodes/3d/lights/directionallight3d/comparison.md): a THREE.DirectionalLight
-- [FABRIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/fabrik3d/comparison.md): nothing (a transform-only group)
+- [FABRIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/fabrik3d/comparison.md): nothing yet, Godot drags its chain onto the target each frame, the previewer does not
 - [FogVolume](../../packages/textscene-core/src/nodes/3d/fogvolume/comparison.md): invisible transform-only fallback
 - [Generic6DOFJoint3D](../../packages/textscene-core/src/nodes/physics/3d/generic6dofjoint3d/comparison.md): nothing (a transform-only group)
 - [GeometryInstance3D](../../packages/textscene-core/src/nodes/3d/geometryinstance3d/comparison.md): a transform-only group
@@ -99,15 +99,15 @@ reproduced:
 - [GridMap](../../packages/textscene-core/src/nodes/3d/gridmap/comparison.md): a THREE.InstancedMesh per MeshLibrary item, or a mesh per cell when its material billboards
 - [HingeJoint3D](../../packages/textscene-core/src/nodes/physics/3d/hingejoint3d/comparison.md): nothing (a transform-only group)
 - [ImporterMeshInstance3D](../../packages/textscene-core/src/nodes/3d/importermeshinstance3d/comparison.md): nothing (a transform-only group)
-- [JacobianIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/jacobianik3d/comparison.md): nothing (a transform-only group)
+- [JacobianIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/jacobianik3d/comparison.md): nothing yet, Godot converges its chain onto the target each frame, the previewer does not
 - [Label3D](../../packages/textscene-core/src/nodes/3d/label3d/comparison.md): canvas-rasterised glyph quads, billboard-able
 - [LightmapGI](../../packages/textscene-core/src/nodes/3d/lightmapgi/comparison.md): invisible transform-only fallback
 - [LightmapProbe](../../packages/textscene-core/src/nodes/3d/lightmapprobe/comparison.md): invisible transform-only fallback
-- [LimitAngularVelocityModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/limitangularvelocitymodifier3d/comparison.md): nothing (a transform-only group)
-- [LookAtModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/lookatmodifier3d/comparison.md): nothing (a transform-only group)
+- [LimitAngularVelocityModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/limitangularvelocitymodifier3d/comparison.md): nothing yet, Godot caps how fast its bones may turn, the previewer does not
+- [LookAtModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/lookatmodifier3d/comparison.md): nothing yet, Godot rotates a bone to face its target, the previewer does not
 - [Marker3D](../../packages/textscene-core/src/nodes/3d/marker3d/comparison.md): a selection-gated axis-cross gizmo
 - [MeshInstance3D](../../packages/textscene-core/src/nodes/3d/meshinstance3d/comparison.md): a THREE.Mesh
-- [ModifierBoneTarget3D](../../packages/textscene-core/src/nodes/3d/skeleton/modifierbonetarget3d/comparison.md): a transform-only group
+- [ModifierBoneTarget3D](../../packages/textscene-core/src/nodes/3d/skeleton/modifierbonetarget3d/comparison.md): nothing yet, Godot mirrors its bone onto its transform, the previewer does not
 - [MultiMeshInstance3D](../../packages/textscene-core/src/nodes/3d/multimeshinstance3d/comparison.md): nothing yet, Godot draws a batch of mesh instances, the previewer does not
 - [NavigationAgent3D](../../packages/textscene-core/src/nodes/3d/navigationagent3d/comparison.md): nothing (non-visual navigation helper)
 - [NavigationLink3D](../../packages/textscene-core/src/nodes/3d/navigationlink3d/comparison.md): nothing (a transform-only group)
@@ -119,39 +119,39 @@ reproduced:
 - [OpenXRCompositionLayerCylinder](../../packages/textscene-core/src/nodes/3d/xr/openxrcompositionlayercylinder/comparison.md): nothing yet, outside an OpenXR session Godot draws a curved cylinder section, the previewer does not
 - [OpenXRCompositionLayerEquirect](../../packages/textscene-core/src/nodes/3d/xr/openxrcompositionlayerequirect/comparison.md): nothing yet, outside an OpenXR session Godot draws an equirectangular sphere section, the previewer does not
 - [OpenXRCompositionLayerQuad](../../packages/textscene-core/src/nodes/3d/xr/openxrcompositionlayerquad/comparison.md): nothing yet, outside an OpenXR session Godot draws a flat quad, the previewer does not
-- [OpenXRHand](../../packages/textscene-core/src/nodes/3d/xr/openxrhand/comparison.md): nothing (a transform-only group)
-- [OpenXRRenderModel](../../packages/textscene-core/src/nodes/3d/xr/openxrrendermodel/comparison.md): nothing (a transform-only group)
-- [OpenXRRenderModelManager](../../packages/textscene-core/src/nodes/3d/xr/openxrrendermodelmanager/comparison.md): nothing (a transform-only group)
+- [OpenXRHand](../../packages/textscene-core/src/nodes/3d/xr/openxrhand/comparison.md): nothing yet, Godot poses hand bones from tracking, the previewer does not
+- [OpenXRRenderModel](../../packages/textscene-core/src/nodes/3d/xr/openxrrendermodel/comparison.md): nothing yet, Godot mounts the runtime's glTF model as a child, the previewer does not
+- [OpenXRRenderModelManager](../../packages/textscene-core/src/nodes/3d/xr/openxrrendermodelmanager/comparison.md): nothing yet, Godot spawns a render model per tracked device, the previewer does not
 - [OpenXRVisibilityMask](../../packages/textscene-core/src/nodes/3d/xr/openxrvisibilitymask/comparison.md): invisible transform-only fallback
 - [Path3D](../../packages/textscene-core/src/nodes/paths/path3d/comparison.md): a selection-gated curve gizmo
 - [PathFollow3D](../../packages/textscene-core/src/nodes/paths/pathfollow3d/comparison.md): a curve-positioned transform group
 - [PhysicalBone3D](../../packages/textscene-core/src/nodes/physics/3d/physicalbone3d/comparison.md): nothing (a transform-only group)
-- [PhysicalBoneSimulator3D](../../packages/textscene-core/src/nodes/3d/skeleton/physicalbonesimulator3d/comparison.md): nothing (a transform-only group)
+- [PhysicalBoneSimulator3D](../../packages/textscene-core/src/nodes/3d/skeleton/physicalbonesimulator3d/comparison.md): nothing yet, Godot drives its ragdoll through the physics server, the previewer does not
 - [PinJoint3D](../../packages/textscene-core/src/nodes/physics/3d/pinjoint3d/comparison.md): nothing (a transform-only group)
 - [RayCast3D](../../packages/textscene-core/src/nodes/physics/3d/raycast3d/comparison.md): nothing (a transform-only group)
 - [ReflectionProbe](../../packages/textscene-core/src/nodes/3d/reflectionprobe/comparison.md): invisible transform-only fallback
 - [RemoteTransform3D](../../packages/textscene-core/src/nodes/3d/remotetransform3d/comparison.md): nothing (a transform-only group that drives its target)
-- [RetargetModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/retargetmodifier3d/comparison.md): a transform-only group
+- [RetargetModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/retargetmodifier3d/comparison.md): nothing yet, Godot retargets poses onto child skeletons, the previewer does not
 - [RigidBody3D](../../packages/textscene-core/src/nodes/physics/3d/rigidbody3d/comparison.md): an invisible transform-only group
 - [RootMotionView](../../packages/textscene-core/src/nodes/3d/rootmotionview/comparison.md): nothing (a transform-only group)
 - [ShapeCast3D](../../packages/textscene-core/src/nodes/physics/3d/shapecast3d/comparison.md): nothing (a transform-only group)
-- [Skeleton3D](../../packages/textscene-core/src/nodes/3d/skeleton3d/comparison.md): a transform-only group
-- [SkeletonIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonik3d/comparison.md): nothing (a transform-only group)
-- [SkeletonModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonmodifier3d/comparison.md): a transform-only group
+- [Skeleton3D](../../packages/textscene-core/src/nodes/3d/skeleton3d/comparison.md): nothing yet, Godot poses its bones and deforms bound meshes, the previewer does not
+- [SkeletonIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonik3d/comparison.md): nothing yet, Godot solves its deprecated chain onto the target, the previewer does not
+- [SkeletonModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonmodifier3d/comparison.md): nothing yet, Godot runs its bone-pose pass each frame, the previewer does not
 - [SliderJoint3D](../../packages/textscene-core/src/nodes/physics/3d/sliderjoint3d/comparison.md): nothing (a transform-only group)
 - [SoftBody3D](../../packages/textscene-core/src/nodes/physics/3d/softbody3d/comparison.md): nothing yet, Godot draws a deformable mesh, the previewer does not
-- [SplineIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/splineik3d/comparison.md): nothing (a transform-only group)
+- [SplineIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/splineik3d/comparison.md): nothing yet, Godot lays its bone chain along the path, the previewer does not
 - [SpotLight3D](../../packages/textscene-core/src/nodes/3d/lights/spotlight3d/comparison.md): a THREE.SpotLight
 - [SpringArm3D](../../packages/textscene-core/src/nodes/physics/3d/springarm3d/comparison.md): a transform-only group
-- [SpringBoneCollision3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollision3d/comparison.md): a transform-only group
-- [SpringBoneCollisionCapsule3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollisioncapsule3d/comparison.md): a transform-only group
-- [SpringBoneCollisionPlane3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollisionplane3d/comparison.md): a transform-only group
-- [SpringBoneCollisionSphere3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollisionsphere3d/comparison.md): a transform-only group
-- [SpringBoneSimulator3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonesimulator3d/comparison.md): nothing (a transform-only group)
+- [SpringBoneCollision3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollision3d/comparison.md): nothing yet, Godot's spring solver collides bones with it, the previewer does not
+- [SpringBoneCollisionCapsule3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollisioncapsule3d/comparison.md): nothing yet, Godot's spring solver collides bones with it, the previewer does not
+- [SpringBoneCollisionPlane3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollisionplane3d/comparison.md): nothing yet, Godot's spring solver pushes bones off its plane, the previewer does not
+- [SpringBoneCollisionSphere3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollisionsphere3d/comparison.md): nothing yet, Godot's spring solver collides bones with it, the previewer does not
+- [SpringBoneSimulator3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonesimulator3d/comparison.md): nothing yet, Godot wobbles its bone chains each frame, the previewer does not
 - [Sprite3D](../../packages/textscene-core/src/nodes/3d/sprite3d/comparison.md): a textured THREE.Mesh quad
 - [StaticBody3D](../../packages/textscene-core/src/nodes/physics/3d/staticbody3d/comparison.md): a transform-only group
 - [SubViewport](../../packages/textscene-core/src/nodes/viewport/subviewport/comparison.md): an offscreen render target, plus a boundary that scopes its canvas subtree
-- [TwoBoneIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/twoboneik3d/comparison.md): nothing (a transform-only group)
+- [TwoBoneIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/twoboneik3d/comparison.md): nothing yet, Godot poses its two-bone chain onto the target, the previewer does not
 - [VehicleBody3D](../../packages/textscene-core/src/nodes/physics/3d/vehiclebody3d/comparison.md): an invisible transform-only group
 - [VehicleWheel3D](../../packages/textscene-core/src/nodes/physics/3d/vehiclewheel3d/comparison.md): a transform group with a selection-gated wheel gizmo
 - [VisibleOnScreenEnabler3D](../../packages/textscene-core/src/nodes/3d/visibleonscreenenabler3d/comparison.md): nothing (a transform-only group)
@@ -160,11 +160,11 @@ reproduced:
 - [VoxelGI](../../packages/textscene-core/src/nodes/3d/voxelgi/comparison.md): an invisible transform-only fallback
 - [WorldEnvironment](../../packages/textscene-core/src/nodes/3d/worldenvironment/comparison.md): the scene's background and environment lighting
 - [XRAnchor3D](../../packages/textscene-core/src/nodes/3d/xr/xranchor3d/comparison.md): nothing (a transform-only group)
-- [XRBodyModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/xrbodymodifier3d/comparison.md): a transform-only group
+- [XRBodyModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/xrbodymodifier3d/comparison.md): nothing yet, Godot poses bones from an XR body tracker, the previewer does not
 - [XRCamera3D](../../packages/textscene-core/src/nodes/3d/xr/xrcamera3d/comparison.md): a selection-gated frustum gizmo, as Camera3D
 - [XRController3D](../../packages/textscene-core/src/nodes/3d/xr/xrcontroller3d/comparison.md): nothing (a transform-only group)
-- [XRFaceModifier3D](../../packages/textscene-core/src/nodes/3d/xr/xrfacemodifier3d/comparison.md): nothing (a transform-only group)
-- [XRHandModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/xrhandmodifier3d/comparison.md): nothing (a transform-only group)
+- [XRFaceModifier3D](../../packages/textscene-core/src/nodes/3d/xr/xrfacemodifier3d/comparison.md): nothing yet, Godot writes tracked face poses into blend shapes, the previewer does not
+- [XRHandModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/xrhandmodifier3d/comparison.md): nothing yet, Godot poses bones from an XR hand tracker, the previewer does not
 - [XRNode3D](../../packages/textscene-core/src/nodes/3d/xr/xrnode3d/comparison.md): nothing (a transform-only group)
 - [XROrigin3D](../../packages/textscene-core/src/nodes/3d/xr/xrorigin3d/comparison.md): nothing (a transform-only group)
 

@@ -1,16 +1,16 @@
 ---
 type: SplineIK3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-spline-ik-3d.tscn
 # image: unit-spline-ik-3d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: nothing yet, Godot lays its bone chain along the path, the previewer does not
 ---
 
 # SplineIK3D
 
-Aligns a chain of bones along a `Path3D`, laying each joint down the curve and twisting it to the curve's point tilt. It is a solver and draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008).
+Aligns a chain of bones along a `Path3D`, laying each joint down the curve and twisting it to the curve's point tilt. Godot runs the solver each frame, and the previewer does not yet (ADR-0045): the bones hold their rest pose.
 
 ## Linting
 

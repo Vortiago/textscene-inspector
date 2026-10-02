@@ -309,7 +309,7 @@ _Avoid_: using it to describe intended behaviour.
 
 **Transform-only group**:
 A node rendered as an invisible `<group>` that positions its children but draws nothing itself.
-This is the render intent for every non-visual type. Physics bodies (`StaticBody3D`, `RigidBody3D`, `CharacterBody3D`, `Area3D`), `Skeleton3D`, `Path3D` and `PathFollow3D`, the `Node3D` and `Node2D` bases, and the fallback for unsupported types all take it. No simulation, and no geometry of its own that it draws (ADR-0005, ADR-0008). A **geometry contributor** is the one kind that has own geometry. It still draws nothing, because its **CSG root** consumes its solid (ADR-0027).
+This is the render intent for a non-visual type whose Godot effect is nil or already implemented. Physics bodies (`StaticBody3D`, `RigidBody3D`, `CharacterBody3D`, `Area3D`), the `Node3D` and `Node2D` bases, and the fallback for unsupported types all take it. (`Path3D` and `PathFollow3D` register `draws` for their selection-gated gizmos, ADR-0018.) No simulation, and no geometry of its own that it draws (ADR-0005, ADR-0008). A **geometry contributor** is the one kind that has own geometry. It still draws nothing, because its **CSG root** consumes its solid (ADR-0027).
 _Avoid_: "physics body" implying simulation. "transform container" (collides with Godot's Container Controls). "placeholder" (there is no visible grey-box placeholder, ADR-0008).
 
 **Render intent**:
@@ -318,9 +318,14 @@ Three invisible roles are **not** inert. The **AnimationPlayer** draws nothing i
 _Avoid_: "placeholder" or "not implemented" (an invisible node may be fully intended). "inert" for AnimationPlayer, a geometry contributor, or a sub-viewport.
 
 **Pending** (render intent):
-A node type that is parsed and lint-checked but not drawn yet.
-It registers under its base with `renderIntent: 'pending'`, so `visible` and workspace placement survive, and its sheet status is `unimplemented`. It is the one intent that names unfinished work. The `useResource` load status of the same name is a different thing: a resource whose load has not resolved.
-_Avoid_: bare "pending" for a resource load (say "load pending"). An unregistered type as a stand-in for pending.
+A node type whose Godot runtime effect, an own visual or a **drive** of other nodes, the previewer does not implement yet.
+It registers under its base with `renderIntent: 'pending'`, so `visible` and workspace placement survive, and its sheet status is `unimplemented` (ADR-0045). It is the one intent that names unfinished work. The `useResource` load status of the same name is a different thing: a resource whose load has not resolved.
+_Avoid_: bare "pending" for a resource load (say "load pending"). An unregistered type as a stand-in for pending. Calling a pending type "complete while invisible" (that is ADR-0008's claim for a nil-effect type).
+
+**Driver**:
+A node with no geometry of its own whose runtime effect is to move, deform or animate other nodes: AnimationPlayer, RemoteTransform3D, SkeletonModifier3D.
+An implemented driver's sheet compares its effect on `done` or `limitation`; a drive the previewer does not run registers **Pending** and is `unimplemented`, never `linter-only` (ADR-0045).
+_Avoid_: "controller" (collides with `XRController3D`). Calling a driver "inert" or "visual".
 
 **Editor cursor** (`r3f/godotEditorCursor.ts`):
 Godot's `Cursor`: an orbit focus point plus the pitch, yaw and radius of the eye around it.

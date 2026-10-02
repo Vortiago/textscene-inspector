@@ -172,8 +172,9 @@ because `scripts/compare-docs/sheets.test.mjs` asserts they agree:
 - `draws` gets its own types, parser and Component, and the sheet status `unreviewed`.
 - `transform-only` reuses the base, registers `renderIntent: 'transform-only'`, and gets
   `linter-only` (ADR-0008).
-- `pending` is parsed but not drawn. It registers the base under
-  `renderIntent: 'pending'` (except `--base control`) and gets `unimplemented`.
+- `pending` means its Godot effect, own visual or driving, is missing (ADR-0045). It
+  registers the base under `renderIntent: 'pending'` (except `--base control`) and
+  gets `unimplemented`.
 
 The badge reads the declared intent, never the absence of a registration. Dropping the
 registration also drops `visible` and puts the type in both workspaces.

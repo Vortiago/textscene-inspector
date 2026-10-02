@@ -1,16 +1,16 @@
 ---
 type: SpringBoneCollisionPlane3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-spring-bone-collision-plane-3d.tscn
 # image: unit-spring-bone-collision-plane-3d
 visual: false
-renders_as: a transform-only group
+renders_as: nothing yet, Godot's spring solver pushes bones off its plane, the previewer does not
 ---
 
 # SpringBoneCollisionPlane3D
 
-An infinite plane that pushes a SpringBoneSimulator3D's bones back along its normal, +Y after the node's rotation. It draws nothing at runtime and its shape exists only as an editor gizmo, so the previewer renders it as a transform-only group (ADR-0008).
+An infinite plane that pushes a SpringBoneSimulator3D's bones back along its normal, +Y after the node's rotation. The previewer runs no spring solver (ADR-0045), so the plane pushes nothing, and the node mounts as its base.
 
 ## Linting
 
@@ -28,4 +28,5 @@ SpringBoneCollisionPlane3D binds no property of its own and registers `parseNode
 
 ## Known limitations
 
+- **Needs runtime** Godot's SpringBoneSimulator3D pushes its bones off this plane each frame. Here the bones hold their rest pose, so the plane pushes nothing.
 - **Editor only** The plane gizmo appears only in Godot's editor. Here it is absent.

@@ -1,16 +1,16 @@
 ---
 type: ConvertTransformModifier3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-convert-transform-modifier-3d.tscn
 # image: unit-convert-transform-modifier-3d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: nothing yet, Godot remaps a reference value onto an apply bone, the previewer does not
 ---
 
 # ConvertTransformModifier3D
 
-Reads one scalar off a reference bone or node: a position, a roll or a scale. It remaps that value from the reference range onto the apply range and writes it back as a different kind of transform on the apply bone. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
+Reads one scalar off a reference bone or node, remaps it from the reference range onto the apply range, and writes it back as a different kind of transform on the apply bone. Godot runs that write each frame, and the previewer does not yet (ADR-0045): the bones hold their rest pose.
 
 ## Linting
 

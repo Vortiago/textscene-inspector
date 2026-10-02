@@ -1,16 +1,16 @@
 ---
 type: SkeletonModifier3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-skeleton-modifier-3d.tscn
 # image: unit-skeleton-modifier-3d
 visual: false
-renders_as: a transform-only group
+renders_as: nothing yet, Godot runs its bone-pose pass each frame, the previewer does not
 ---
 
 # SkeletonModifier3D
 
-The base class custom skeleton modifiers derive from, feeding a parent Skeleton3D's bone poses each frame. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
+The base class custom skeleton modifiers derive from, feeding a parent Skeleton3D's bone poses each frame. Godot runs that pass, and the previewer does not yet (ADR-0045): the bones hold their rest pose.
 
 ## Linting
 

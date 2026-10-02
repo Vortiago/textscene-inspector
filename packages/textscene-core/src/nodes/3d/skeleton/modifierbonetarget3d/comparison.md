@@ -1,16 +1,16 @@
 ---
 type: ModifierBoneTarget3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-modifier-bone-target-3d.tscn
 # image: unit-modifier-bone-target-3d
 visual: false
-renders_as: a transform-only group
+renders_as: nothing yet, Godot mirrors its bone onto its transform, the previewer does not
 ---
 
 # ModifierBoneTarget3D
 
-Attaches itself to one bone of its parent Skeleton3D and copies that bone's global pose onto its own transform each pass, so another modifier can aim at it. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
+Attaches itself to one bone of its parent Skeleton3D and copies that bone's global pose onto its own transform each pass, so another modifier can aim at it. Godot runs that copy each frame, and the previewer does not yet (ADR-0045): the node sits at the transform the scene file states.
 
 ## Linting
 

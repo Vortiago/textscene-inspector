@@ -1,6 +1,7 @@
 /**
- * BoneConstraint3D registration: the parser. A non-visual node, it renders as a transform-only group
- * (ADR-0008) through the Node3D transform parse, and index.r3f.ts reuses the Node3D component.
+ * BoneConstraint3D registration: the parser. A non-visual node whose Godot effect is not
+ * implemented here yet (ADR-0045), it parses through the Node3D transform parse, and
+ * index.r3f.ts reuses the Node3D component as `pending`.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

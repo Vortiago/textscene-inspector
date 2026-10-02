@@ -1,16 +1,16 @@
 ---
 type: FABRIK3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-fabrik-3d.tscn
 # image: unit-fabrik-3d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: nothing yet, Godot drags its chain onto the target each frame, the previewer does not
 ---
 
 # FABRIK3D
 
-The position-based IK solver: each frame it drags a bone chain onto its target with a backward reaching pass and a forward one, writing the result into the parent Skeleton3D's poses. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
+The position-based IK solver: each frame it drags a bone chain onto its target with a backward reaching pass and a forward one, writing the result into the parent Skeleton3D's poses. Godot runs the solver, and the previewer does not yet (ADR-0045): the bones hold their rest pose.
 
 ## Linting
 

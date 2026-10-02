@@ -1,16 +1,16 @@
 ---
 type: PhysicalBoneSimulator3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-physical-bone-simulator-3d.tscn
 # image: unit-physical-bone-simulator-3d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: nothing yet, Godot drives its ragdoll through the physics server, the previewer does not
 ---
 
 # PhysicalBoneSimulator3D
 
-The ragdoll driver: it hands the `PhysicalBone3D` nodes beneath it to the physics server and writes their poses back onto a parent Skeleton3D each frame. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
+The ragdoll driver: it hands the `PhysicalBone3D` nodes beneath it to the physics server and writes their poses back onto a parent Skeleton3D each frame. Godot runs that loop, and the previewer does not simulate it (ADR-0045): the bones hold their rest pose.
 
 ## Linting
 

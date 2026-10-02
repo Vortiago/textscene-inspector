@@ -1,16 +1,16 @@
 ---
 type: OpenXRRenderModel
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-open-xr-render-model.tscn
 # image: unit-open-xr-render-model
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: nothing yet, Godot mounts the runtime's glTF model as a child, the previewer does not
 ---
 
 # OpenXRRenderModel
 
-Asks the OpenXR runtime for a glTF model of the device the player holds and adds it as a child at play time. Nothing in a `.tscn` describes that model, so the previewer renders the node as a transform-only group (ADR-0008).
+Asks the OpenXR runtime for a glTF model of the device the player holds and adds it as a child at play time. Only a live XR session answers, and the previewer runs no session, so no model is mounted (ADR-0045).
 
 ## Linting
 

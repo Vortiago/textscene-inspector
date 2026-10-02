@@ -1,16 +1,16 @@
 ---
 type: BoneAttachment3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-bone-attachment-3d.tscn
 # image: unit-bone-attachment-3d
 visual: false
-renders_as: a transform-only group
+renders_as: nothing yet, Godot rides it on its bone each frame, the previewer parks it at its authored transform
 ---
 
 # BoneAttachment3D
 
-Copies one bone's global pose onto itself so its children ride that bone, or with `override_pose` on pushes its own transform back onto the bone. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) at the transform the scene file states.
+Copies one bone's global pose onto itself so its children ride that bone, or with `override_pose` on pushes its own transform back onto the bone. Godot updates that relay every frame, and the previewer does not yet (ADR-0045): the node sits at the transform the scene file states.
 
 ## Linting
 

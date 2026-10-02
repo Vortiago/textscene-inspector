@@ -1,16 +1,16 @@
 ---
 type: SpringBoneCollisionSphere3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-spring-bone-collision-sphere-3d.tscn
 # image: unit-spring-bone-collision-sphere-3d
 visual: false
-renders_as: a transform-only group
+renders_as: nothing yet, Godot's spring solver collides bones with it, the previewer does not
 ---
 
 # SpringBoneCollisionSphere3D
 
-The sphere collider a SpringBoneSimulator3D consults while resolving its spring bones. The sphere is an editor gizmo only, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
+The sphere collider a SpringBoneSimulator3D consults while resolving its spring bones. The previewer runs no spring solver (ADR-0045), so the sphere guards nothing, and the node mounts as its base with its children still showing.
 
 ## Linting
 
@@ -33,4 +33,5 @@ SpringBoneCollisionSphere3D registers `parseNode3D` directly, so neither `radius
 
 ## Known limitations
 
+- **Needs runtime** Godot's SpringBoneSimulator3D resolves its bones against this sphere each frame. Here the bones hold their rest pose, so the sphere guards nothing.
 - **Editor only** The sphere gizmo appears only in Godot's editor. Here it is absent.

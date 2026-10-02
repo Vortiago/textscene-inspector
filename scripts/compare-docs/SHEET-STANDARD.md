@@ -195,8 +195,8 @@ dot and a header or section badge. A node's badge **rolls up to its worst sectio
 | --- | --- |
 | `done` | Faithful to Godot, verified by eye. Green. **Never the default. Earn it.** |
 | `limitation` | Renders, but with a known divergence (a three.js constraint). Orange. |
-| `unimplemented` | Should render, and does not yet. Red. |
-| `linter-only` | Draws nothing **itself** and has no downstream effect to compare either. Parsed, validated, complete. Blue. |
+| `unimplemented` | Godot has a runtime effect for it, an own draw or a drive, and the previewer does not implement it yet. Red. |
+| `linter-only` | The runtime effect is nil: no geometry of its own and nothing it moves. Parsed, validated, complete. Blue. |
 | `unreviewed` | Not yet assessed against Godot. Grey. **The default.** |
 
 `done` is the strong claim. Reserve it for a feature you have looked at and found
@@ -209,7 +209,8 @@ has to look. The status is **checked, not trusted**. A
 `renderIntent: 'transform-only'` registration in the slice's `index.r3f.ts` must
 back the sheet, and `sheets.test.mjs` asserts that. Judge by runtime output only.
 An editor-only or selection-gated gizmo (ADR-0018) does not make a node visual,
-and a node that should draw but does not yet is `unimplemented`, never this.
+and a node that should draw **or drive** but does not yet is `unimplemented`,
+never this.
 
 An `unimplemented` slice may still register its base component, under
 `renderIntent: 'pending'`. The status follows the declared intent, not the
@@ -217,12 +218,13 @@ presence of a file. A slice that registers nothing also loses the node's
 `visible` flag and puts the node in both workspaces, so the two questions stay
 apart.
 
-**"Draws nothing" is not the same as "nothing to compare."** A driver (an
-AnimationPlayer, an AnimationTree, a RemoteTransform3D) has no geometry of its own
-but moves something you can watch. It belongs on the normal `done`/`limitation`
-scale, and its sheet compares that effect. The registry flag stays
-`transform-only`, because it is a claim about the node's own geometry. Only the
-status differs. Reserve `linter-only` for a node whose runtime effect is nil.
+**"Draws nothing" is not the same as "nothing to compare."** A **driver** (an
+AnimationPlayer, an AnimationTree, a RemoteTransform3D, a `SkeletonModifier3D`)
+has no geometry of its own but moves something you can watch. An implemented
+drive belongs on the normal `done`/`limitation` scale, and its sheet compares
+that effect. A drive the previewer does not run is a gap: the slice registers
+`pending` and its sheet is `unimplemented`, like any missing visual (ADR-0045).
+Reserve `linter-only` for a node whose runtime effect is nil.
 
 ## Current state only: a sheet is not a changelog
 
