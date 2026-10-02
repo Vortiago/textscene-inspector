@@ -25,6 +25,12 @@ export class TscnPreviewPanel {
   private _currentResource: vscode.Uri;
   /** Last text read off disk: both the re-read diff and the ready replay read it. */
   private _previousContent: string | undefined;
+  /**
+   * Written only by `_loadTscnContent`, which takes the next number per read. A save
+   * starts two reads (the save event and the watcher), so a read that finishes
+   * after a later one must not apply its older text.
+   */
+  private _latestLoad = 0;
   private _onDidDispose: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidDispose: vscode.Event<void> = this._onDidDispose.event;
 
@@ -198,8 +204,12 @@ export class TscnPreviewPanel {
   }
 
   private async _loadTscnContent(resource: vscode.Uri) {
+    const load = ++this._latestLoad;
     try {
       const fileContent = await vscode.workspace.fs.readFile(resource);
+      if (load !== this._latestLoad) {
+        return;
+      }
       const textContent = new TextDecoder().decode(fileContent);
 
       if (this._previousContent === textContent) {
@@ -215,6 +225,10 @@ export class TscnPreviewPanel {
         this._postMessageToWebview({ type: 'loadTscn', content: textContent });
       }
     } catch (error) {
+      // A later read decides what the preview shows, so its result is the one to report.
+      if (load !== this._latestLoad) {
+        return;
+      }
       vscode.window.showErrorMessage(
         `Failed to load TSCN file: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
