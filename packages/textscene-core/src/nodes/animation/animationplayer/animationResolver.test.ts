@@ -6,8 +6,10 @@
 import { describe, it, expect } from 'vitest';
 import type { TscnInternalResource } from '../../../parser/types';
 import { hasUnresolvableClips, resolveAnimations, resolveAudioTrackPaths } from './animationResolver';
+import type { GodotAnimation } from './animationResolver';
 import type { AnimationLibraryRef, AnimationPlayerProperties } from './types';
 import { TscnParser } from '../../../parser/TscnParser';
+import { LINEAR_SCAN_CEILING_MS, msToRead, unclosedCalls } from '../../../godot/testing/unclosedCalls';
 
 function res(id: string, type: string, data: Record<string, string>): TscnInternalResource {
   return { id, type, data };
@@ -686,5 +688,34 @@ describe('resolveAnimations — a disabled track', () => {
 
   it('lists no audio target for a disabled audio track', () => {
     expect(resolveAudioTrackPaths(DEFAULT_LIB, withTrackEnabled('false'))).toEqual([]);
+  });
+});
+
+describe('resolveAnimations — a crafted keys value of unclosed calls', () => {
+  /** The animations one track on `path` resolves to, with `keys` as its raw keys value. */
+  function resolveTrack(type: string, path: string, keys: string): GodotAnimation[] {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        'tracks/0/type': `"${type}"`,
+        'tracks/0/path': `NodePath("${path}")`,
+        'tracks/0/keys': keys,
+      }),
+    ];
+    return resolveAnimations(DEFAULT_LIB, internal);
+  }
+
+  it('reads a value track of unclosed times calls in linear time (edge case)', () => {
+    const keys = unclosedCalls('"times":PackedFloat32Array(');
+    const read = (value: string) => resolveTrack('value', 'Mesh:position', value);
+    expect(read(keys)[0]!.tracks).toEqual([]);
+    expect(msToRead(read, keys)).toBeLessThan(LINEAR_SCAN_CEILING_MS);
+  });
+
+  it('reads a position_3d track of unclosed calls in linear time (edge case)', () => {
+    const keys = unclosedCalls('PackedFloat32Array(');
+    const read = (value: string) => resolveTrack('position_3d', 'Mesh', value);
+    expect(read(keys)[0]!.tracks).toEqual([]);
+    expect(msToRead(read, keys)).toBeLessThan(LINEAR_SCAN_CEILING_MS);
   });
 });

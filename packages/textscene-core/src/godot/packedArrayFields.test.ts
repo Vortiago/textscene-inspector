@@ -1,23 +1,43 @@
 import { describe, expect, it } from 'vitest';
 import { dictPackedField, packedFloatCount } from './packedArrayFields';
 import { packedArrayForms } from './variantParser';
+import { LINEAR_SCAN_CEILING_MS, msToRead, unclosedCalls } from './testing/unclosedCalls';
 
 const VECTOR2_FORMS = packedArrayForms('PackedVector2Array');
 
 describe('dictPackedField', () => {
-  const field = dictPackedField('points', 'PackedVector2Array');
+  const readPoints = dictPackedField('points', 'PackedVector2Array');
 
-  it('captures the value of the key in each spelling', () => {
-    expect(field.exec('{"points": PackedVector2Array(1, 2)}')?.[1]).toBe('PackedVector2Array(1, 2)');
-    expect(field.exec('{"points": [Vector2(1, 2)]}')?.[1]).toBe('[Vector2(1, 2)]');
-    expect(field.exec('{"points": Array[Vector2]([Vector2(1, 2)])}')?.[1]).toBe(
-      'Array[Vector2]([Vector2(1, 2)])'
+  it('reads the value of the key in each spelling', () => {
+    expect(readPoints('{"points": PackedVector2Array(1, 2)}')).toBe('PackedVector2Array(1, 2)');
+    expect(readPoints('{"points": [Vector2(1, 2)]}')).toBe('[Vector2(1, 2)]');
+    expect(readPoints('{"points": Array[Vector2]([Vector2(1, 2)])}')).toBe('Array[Vector2]([Vector2(1, 2)])');
+  });
+
+  it('reads nothing for another key or another packed type', () => {
+    expect(readPoints('{"tilts": PackedVector2Array(1, 2)}')).toBeNull();
+    expect(readPoints('{"points": PackedVector3Array(1, 2, 3)}')).toBeNull();
+  });
+
+  it('reads the first key whose value is one of the spellings (edge case)', () => {
+    expect(readPoints('{"points": 5, "points": [Vector2(1, 2)]}')).toBe('[Vector2(1, 2)]');
+    expect(readPoints('{"points": PackedVector2Array(1, "points": [Vector2(3, 4)]}')).toBe(
+      'PackedVector2Array(1, "points": [Vector2(3, 4)'
     );
   });
 
-  it('matches nothing for another key or another packed type', () => {
-    expect(field.exec('{"tilts": PackedVector2Array(1, 2)}')).toBeNull();
-    expect(field.exec('{"points": PackedVector3Array(1, 2, 3)}')).toBeNull();
+  it('reads a bracketed value after a packed call that never closes (edge case)', () => {
+    expect(readPoints('{"points": [Vector2(1, 2), "points": PackedVector2Array(3, "points": []}')).toBe('[]');
+  });
+
+  it.each([
+    ['packed', '"points":PackedVector2Array('],
+    ['typed', '"points":Array[Vector2](['],
+    ['bare', '"points":['],
+  ])('reads a crafted value of unclosed %s openers in linear time (edge case)', (_spelling, opener) => {
+    const value = unclosedCalls(opener);
+    expect(readPoints(value)).toBeNull();
+    expect(msToRead(readPoints, value)).toBeLessThan(LINEAR_SCAN_CEILING_MS);
   });
 });
 

@@ -318,6 +318,25 @@ ${extra}`);
     expect(viewportContentKind(resolveViewportSubtree(node, externalResources, cache))).toBe('3d');
   });
 
+  it('ends at a sub-scene that instances itself, keeping the repeated instance childless', () => {
+    const { node, externalResources, cache } = scene(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://sub.tscn" id="1"]
+
+[node name="Loop" type="Node2D"]
+
+[node name="Again" parent="." instance=ExtResource("1")]
+
+[node name="AndAgain" parent="." instance=ExtResource("1")]
+`);
+    const instanced = resolveViewportSubtree(node, externalResources, cache).children[0]!;
+    expect(instanced.type).toBe('Node2D');
+    expect(instanced.children.map((child) => [child.name, child.children.length])).toEqual([
+      ['Again', 0],
+      ['AndAgain', 0],
+    ]);
+  });
+
   it('classifies an untouched instance of a Control sub-scene as dom', () => {
     const { node, externalResources, cache } = scene(`[gd_scene format=3]
 

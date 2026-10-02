@@ -62,54 +62,65 @@ export function singleSceneCache(
 /**
  * The node as the tree and viewport render it: a single-root `.tscn` instance
  * collapses into its sub-scene root (Instance root merge, ADR-0013). A `.glb` or
- * multi-root instance, a non-instance and a scene not yet cached return unchanged.
+ * multi-root instance, a non-instance, a scene not yet cached and a scene already
+ * in `scope.instancedScenePaths` (cyclic instancing) return unchanged.
  */
 export function collapseLiveNode(node: TscnNode, scope: SceneScope, sceneCache: CachedSceneSource): TscnNode {
-  return collapseToFixedPoint(node, scope, sceneCache, (n, cached, authored) =>
-    // The whole scope: the merge stamps it onto the host children it grafts,
-    // and those name ids of both kinds.
-    mergeInstanceRoot(n, cached, authored)
-  );
+  return collapseToFixedPoint(node, scope, sceneCache).node;
+}
+
+/** What {@link collapseToFixedPoint} reached. */
+interface Collapse {
+  node: TscnNode;
+  /**
+   * The scope the collapsed node's sub-scene content resolves against: the pools of
+   * the last scene merged, and every merged scene appended to the enclosing ones.
+   * The caller's scope when nothing merged.
+   */
+  contentScope: SceneScope;
 }
 
 /**
  * Collapse an instance chain to a fixed point, not one level. A host override
  * such as `visible = false` on a heading with no `type=` stays in
  * `rawProperties` until a level with a real type re-parses it, so one level
- * loses it. A seen-set on the scene path stops a scene that instances itself.
+ * loses it. The chain stops at a scene that already encloses the node or that it
+ * merged already, so a scene that instances itself ends.
  */
-function collapseToFixedPoint(
-  node: TscnNode,
-  scope: SceneScope,
-  sceneCache: CachedSceneSource,
-  merge: (
-    n: TscnNode,
-    cached: Partial<SceneScope> & { nodes: readonly TscnNode[] },
-    authored: SceneScope
-  ) => TscnNode | null
-): TscnNode {
+function collapseToFixedPoint(node: TscnNode, scope: SceneScope, sceneCache: CachedSceneSource): Collapse {
   let current = node;
   // Advances with the chain: after a merge the `instance` ref is the sub-scene
   // root's own and names an id in that file's pool. The host's scope finds
   // nothing and stops the collapse one level early.
   let currentScope = scope;
-  let seen: Set<string> | undefined;
+  let instancedScenePaths = authoredScope(node, scope).instancedScenePaths ?? [];
   while (current.instance) {
     const authored = authoredScope(current, currentScope);
     const scenePath = resolveInstancePath(current.instance, authored.externalResources);
-    if (!scenePath || seen?.has(scenePath)) return current;
+    if (!scenePath || instancedScenePaths.includes(scenePath)) break;
     const cached = sceneCache.getCached(scenePath);
-    if (!cached) return current;
-    const merged = merge(current, cached, authored);
-    if (!merged) return current;
-    (seen ??= new Set()).add(scenePath);
+    if (!cached) break;
+    // The whole scope: the merge stamps it onto the host children it grafts,
+    // and those name ids of both kinds.
+    const merged = mergeInstanceRoot(current, cached, authored);
+    if (!merged) break;
+    instancedScenePaths = [...instancedScenePaths, scenePath];
     current = merged;
-    currentScope = {
-      externalResources: cached.externalResources ?? [],
-      internalResources: cached.internalResources ?? [],
-    };
+    currentScope = contentScopeOf(cached, instancedScenePaths);
   }
-  return current;
+  return { node: current, contentScope: currentScope };
+}
+
+/**
+ * The scope a loaded sub-scene's own nodes resolve against. An absent pool reads
+ * as empty, never as the caller's: these ids belong to the sub-scene's file.
+ */
+function contentScopeOf(cached: Partial<SceneScope>, instancedScenePaths: readonly string[]): SceneScope {
+  return {
+    externalResources: cached.externalResources ?? [],
+    internalResources: cached.internalResources ?? [],
+    instancedScenePaths,
+  };
 }
 
 /**
@@ -159,7 +170,9 @@ export interface LiveChildGroup {
  * What is below a node: one `inline` group for a non-instance, one `merged`
  * group for a single-root instance, `inline` plus `subscene` for a multi-root or
  * GLB instance, and one `glb` group for a GLBSceneRoot. `scope` is the caller's
- * own. A sub-scene's groups read the sub-scene's scope from the cache.
+ * own. A sub-scene's groups read the sub-scene's pools from the cache, and their
+ * `instancedScenePaths` gain the sub-scene. An instance of a scene that already
+ * encloses it (cyclic instancing) gets one `inline` group.
  */
 export function liveChildGroups(
   node: TscnNode,
@@ -180,25 +193,27 @@ export function liveChildGroups(
 
   if (!node.instance) return inlineOnly();
 
-  const scenePath = resolveInstancePath(node.instance, authoredScope(node, scope).externalResources);
+  const authored = authoredScope(node, scope);
+  const scenePath = resolveInstancePath(node.instance, authored.externalResources);
   if (!scenePath) return inlineOnly();
+
+  // Cyclic instancing: Godot never loads the scene here, so nothing of it is below.
+  const enclosingScenePaths = authored.instancedScenePaths ?? [];
+  if (enclosingScenePaths.includes(scenePath)) return inlineOnly();
 
   const cached = sceneCache.getCached(scenePath);
   if (!cached) return inlineOnly();
 
-  // An absent pool reads as empty, never as the caller's: these ids belong to
-  // the sub-scene's file.
-  const subScope: SceneScope = {
-    externalResources: cached.externalResources ?? [],
-    internalResources: cached.internalResources ?? [],
-  };
-
-  const merged = mergeInstanceRoot(node, cached, scope);
-  if (merged) {
-    const collapsed = collapseToFixedPoint(merged, subScope, sceneCache, (n, inner, authored) =>
-      mergeInstanceRoot(n, inner, authored)
-    );
-    return [{ origin: 'merged', children: collapsed.children, scope: subScope, mergedNode: collapsed }];
+  const collapse = collapseToFixedPoint(node, scope, sceneCache);
+  if (collapse.node !== node) {
+    return [
+      {
+        origin: 'merged',
+        children: collapse.node.children,
+        scope: collapse.contentScope,
+        mergedNode: collapse.node,
+      },
+    ];
   }
 
   // Inline children are authored in the host scene, so they keep the outer scope.
@@ -206,7 +221,11 @@ export function liveChildGroups(
   if (node.children.length > 0) {
     groups.push({ origin: 'inline', children: node.children, scope });
   }
-  groups.push({ origin: 'subscene', children: cached.nodes, scope: subScope });
+  groups.push({
+    origin: 'subscene',
+    children: cached.nodes,
+    scope: contentScopeOf(cached, [...enclosingScenePaths, scenePath]),
+  });
   return groups;
 }
 
@@ -313,9 +332,6 @@ export function resolveLiveNode(
   return resolveLiveEntry(path, roots, ctx)?.node ?? null;
 }
 
-/** Guards against a cyclic cache, which Godot's editor forbids authoring. Real scenes nest a few levels. */
-const MAX_DEPTH = 100;
-
 /** Depth-first walk of the live tree, calling `visit` with each collapsed node and its full path. */
 export function walkLiveTree(
   roots: readonly TscnNode[],
@@ -323,8 +339,7 @@ export function walkLiveTree(
   visit: (entry: LiveTreeEntry) => void,
   descend?: (node: TscnNode) => boolean
 ): void {
-  const walk = (nodes: readonly TscnNode[], scope: SceneScope, parentPath: string, depth: number): void => {
-    if (depth > MAX_DEPTH) return;
+  const walk = (nodes: readonly TscnNode[], scope: SceneScope, parentPath: string): void => {
     for (const node of nodes) {
       const path = joinPath(parentPath, node.name);
       const effective = collapseLiveNode(node, scope, ctx.sceneCache);
@@ -334,11 +349,11 @@ export function walkLiveTree(
       if (descend && !descend(effective)) continue;
       const groups = liveChildGroups(node, scope, ctx.sceneCache, ctx.glbCache);
       for (const group of groups) {
-        walk(group.children, group.scope, path, depth + 1);
+        walk(group.children, group.scope, path);
       }
     }
   };
-  walk(roots, rootScope(ctx), '', 0);
+  walk(roots, rootScope(ctx), '');
 }
 
 /**

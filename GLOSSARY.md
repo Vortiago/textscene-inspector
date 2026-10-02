@@ -321,6 +321,11 @@ The collapse of a single-root `.tscn` instance, where the instance Node becomes 
 Every consumer calls `collapseLiveNode` so node paths agree, and a `.glb` or multi-root instance is not merged.
 _Avoid_: "wrapper node", "prefab flattening", "compose". A merge decision derived again in a consumer.
 
+**Cyclic instancing** (`SceneScope.instancedScenePaths`):
+An instance of a PackedScene that already encloses it, directly or through other instances.
+Godot's loader refuses it, so the **Live scene tree** keeps the instance as a leaf and the viewport draws the magenta placeholder of a failed load.
+_Avoid_: "recursive scene". A depth limit to stop it.
+
 **Sprite-frame composition** (`r3f/spriteFrame.ts`):
 The shared region_rect plus hframes/vframes UV maths for SpriteBase nodes, which each slice calls with its own wrap mode (`SpriteWrapMode`).
 _Avoid_: region or frames maths inlined in a slice. A default wrap mode. "clip" or "crop" for an oversized region.

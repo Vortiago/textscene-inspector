@@ -94,6 +94,8 @@ export const parsePackedColorArray = float32Reader(PACKED_COLOR_ARRAY);
 /** One `[...]` group nested inside an outer array, its body captured. */
 const BARE_INNER_ARRAY_RE = /\[([^[\]]*)\]/g;
 
+const PACKED_INT32_CALLS = packedArrayCallAnywhere('PackedInt32Array');
+
 /**
  * Every sub-array of indices, in each spelling Godot loads: `[PackedInt32Array(...), ...]`,
  * `Array[PackedInt32Array]([PackedInt32Array(...), ...])`, and `[[0, 1, 2], [0, 2, 3]]`.
@@ -101,43 +103,35 @@ const BARE_INNER_ARRAY_RE = /\[([^[\]]*)\]/g;
  * takes a `const Array &`), measured on 4.6.3 as two sub-polygons.
  */
 export function parsePackedInt32Arrays(value: string): number[][] {
-  const result: number[][] = [];
-  const constructor = packedArrayCallAnywhere('PackedInt32Array', true);
-  constructor.lastIndex = 0;
-  let re = constructor;
-  let scanned = value;
-  if (!constructor.test(value)) {
-    // The outer brackets go first: a `[...]` scan over the whole value matches
-    // them, so `[]` would read as one empty sub-polygon. `Array[T]([…])` loads too
-    // (`can_convert_strict` lists ARRAY for every PACKED_* type), and unwrapping
-    // it leaves the body the bare form scans.
-    const outer = arrayLiteralBody(value);
-    if (outer === null) return [];
-    scanned = outer;
-    re = BARE_INNER_ARRAY_RE;
-  }
-  re.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = re.exec(scanned)) !== null) {
-    const body = match[1]!.trim();
-    if (body === '') {
-      result.push([]);
-      continue;
+  return subArrayBodies(value).map((body) => parseIndices(body.trim(), value));
+}
+
+/** The body of each sub-array, in whichever spelling the value holds. */
+function subArrayBodies(value: string): string[] {
+  const calls = PACKED_INT32_CALLS.all(value);
+  if (calls.length > 0) return calls;
+  // The outer brackets go first: a `[...]` scan over the whole value matches
+  // them, so `[]` would read as one empty sub-polygon. `Array[T]([…])` loads too
+  // (`can_convert_strict` lists ARRAY for every PACKED_* type), and unwrapping
+  // it leaves the body the bare form scans.
+  const outer = arrayLiteralBody(value);
+  if (outer === null) return [];
+  return Array.from(outer.matchAll(BARE_INNER_ARRAY_RE), (match) => match[1]!);
+}
+
+/** One sub-array's indices. `value` is the whole slot, for the error message. */
+function parseIndices(body: string, value: string): number[] {
+  if (body === '') return [];
+  return body.split(',').map((s) => {
+    const num = parseGodotInt(s);
+    // A body Godot's tokenizer refuses throws rather than become a NaN
+    // index, and `2e1` reads as the 20 Godot loads. A non-finite would clear
+    // every range check and index arbitrary geometry.
+    if (num === null || !Number.isFinite(num)) {
+      throw new Error(`Invalid number in PackedInt32Array: ${value}`);
     }
-    result.push(
-      body.split(',').map((s) => {
-        const num = parseGodotInt(s);
-        // A body Godot's tokenizer refuses throws rather than become a NaN
-        // index, and `2e1` reads as the 20 Godot loads. A non-finite would clear
-        // every range check and index arbitrary geometry.
-        if (num === null || !Number.isFinite(num)) {
-          throw new Error(`Invalid number in PackedInt32Array: ${value}`);
-        }
-        return num;
-      })
-    );
-  }
-  return result;
+    return num;
+  });
 }
 
 /**

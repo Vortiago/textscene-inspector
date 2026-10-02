@@ -235,6 +235,25 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
     expect(found[0]!.externalResources).toBe(host.externalResources);
   });
 
+  it('ends at a scene that instances itself, finding its sub-viewport once per level', () => {
+    const self = parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://self.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Hud" type="SubViewport" parent="."]
+
+[node name="Panel" type="Panel" parent="Hud"]
+
+[node name="A" parent="." instance=ExtResource("1")]
+
+[node name="B" parent="." instance=ExtResource("1")]
+`);
+    const found = collect(self, cache({ 'res://self.tscn': self }));
+    expect(found.map((v) => v.path)).toEqual(['Root/Hud', 'Root/A/Hud', 'Root/B/Hud']);
+  });
+
   it('returns nothing for an empty tree rather than throwing', () => {
     expect(
       collectControlRasterViewports([], NO_SCENES, {

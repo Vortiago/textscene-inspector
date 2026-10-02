@@ -141,7 +141,8 @@ export interface TscnExternalResource {
 }
 
 /**
- * The resource scope a subtree resolves its ids against: both pools, always together.
+ * The resource scope a subtree resolves its ids against: both pools, always together,
+ * and the instanced scenes that enclose it.
  * Ids are per file and per kind, and one property block can name `ExtResource("2")` and
  * `SubResource("1")`. One type makes it impossible to pass one pool and forget the
  * other, which resolves half the ids against nothing.
@@ -149,6 +150,12 @@ export interface TscnExternalResource {
 export interface SceneScope {
   readonly externalResources: readonly TscnExternalResource[];
   readonly internalResources: readonly TscnInternalResource[];
+  /**
+   * The `res://` paths of the PackedScenes whose instances enclose this subtree,
+   * outermost first. Absent means none. An instance of a path already here is cyclic
+   * instancing: Godot's loader returns null for it (`resource_loader.cpp:838-845`).
+   */
+  readonly instancedScenePaths?: readonly string[];
 }
 
 export interface TscnInternalResource {

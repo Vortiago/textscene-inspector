@@ -71,41 +71,82 @@ export function compositeCallPrefix(...typeNames: readonly string[]): RegExp {
   return new RegExp(`^${WS}(?:${typeNames.join('|')})${WS}\\(`);
 }
 
-/** A `TypeName(…)` call inside a larger value, the body captured up to the first `)`. */
-function callBody(typeName: string): string {
-  return `${typeName}${WS}\\(([^)]*)\\)`;
+/** Reads the `TypeName(…)` calls inside a larger value, each body up to its first `)`. */
+export interface CallBodyReader {
+  /** The first body, or null when the value holds no closed call. */
+  first(text: string): string | null;
+  /** Every body, in order. */
+  all(text: string): string[];
+}
+
+/** One call body, and the index just past its `)`. */
+interface CallBody {
+  body: string;
+  end: number;
 }
 
 /**
- * The same call anywhere in a larger value. `[1]` is the body, which stops at the first `)`. Pass `global` for a
- * repeated scan: a `g`-flagged RegExp carries `lastIndex`, so each caller needs its own instance.
+ * The first call `opener` starts at or after `from`, its body up to the first `)`, or null when none closes.
+ * `opener` is a `g` pattern that ends at the `(`. A call with no `)` after it ends the scan: no later call can find
+ * one either, where an unanchored `\(([^)]*)\)` search rescans to the end from every opener, in quadratic time.
  */
-export function packedArrayCallAnywhere(typeName: string, global = false): RegExp {
-  return new RegExp(callBody(typeName), global ? 'g' : '');
+function nextCallBody(opener: RegExp, text: string, from: number): CallBody | null {
+  opener.lastIndex = from;
+  if (!opener.test(text)) return null;
+  const bodyStart = opener.lastIndex;
+  const close = text.indexOf(')', bodyStart);
+  return close === -1 ? null : { body: text.slice(bodyStart, close), end: close + 1 };
+}
+
+/** A {@link CallBodyReader} over the calls `openerSource` opens, the pattern ending at the `(`. */
+function callBodyReader(openerSource: string): CallBodyReader {
+  // One `g` instance per reader: each scan sets `lastIndex` before every read and runs to its end synchronously.
+  const opener = new RegExp(openerSource, 'g');
+  return {
+    first: (text) => nextCallBody(opener, text, 0)?.body ?? null,
+    all: (text) => {
+      const bodies: string[] = [];
+      for (
+        let call = nextCallBody(opener, text, 0);
+        call !== null;
+        call = nextCallBody(opener, text, call.end)
+      ) {
+        bodies.push(call.body);
+      }
+      return bodies;
+    },
+  };
+}
+
+/** The `TypeName(…)` calls anywhere in a larger value. Linear in the value's length, as {@link nextCallBody} says. */
+export function packedArrayCallAnywhere(typeName: string): CallBodyReader {
+  return callBodyReader(`${typeName}${WS}\\(`);
 }
 
 /**
- * A Dictionary field whose value is one `TypeName(…)` call, `[1]` the body up to the first `)`:
+ * The body of the first `TypeName(…)` call a Dictionary key holds, up to the first `)`, or null when it holds none:
  * the constructor spelling the writer emits. A packed read such as `d["cells"]` (grid_map.cpp:67)
- * also converts `[…]` and `Array[T]([…])` (variant.cpp:2094-2098), which this does not match:
+ * also converts `[…]` and `Array[T]([…])` (variant.cpp:2094-2098), which this does not read:
  * `dictPackedField` (`packedArrayFields.ts`) reads all three.
  */
-export function dictCallField(key: string, typeName: string): RegExp {
-  return new RegExp(`"${key}"${WS}:${WS}${callBody(typeName)}`);
+export function dictCallField(key: string, typeName: string): (text: string) => string | null {
+  return callBodyReader(`"${key}"${WS}:${WS}${typeName}${WS}\\(`).first;
 }
 
 /**
  * A Dictionary field whose value is a `PackedByteArray(…)` call, `[1]` the base64 text the writer
  * quotes for a non-empty array (variant_parser.cpp:2410-2413). The quoted body is optional, so the
- * key's first call decides, as in {@link dictCallField}: `[1]` is undefined for an empty call and
- * for the compat list of bytes. Base64 holds no `"` or `)`, so the body ends where that one does.
+ * key's first call decides: `[1]` is undefined for an empty call and for the compat list of bytes.
+ * Base64 holds no `"` or `)`, so the body ends where that one does, and the optional body keeps the
+ * search linear: the first call matches whether or not its body does.
  */
 export function dictBase64Field(key: string): RegExp {
   return new RegExp(`"${key}"${WS}:${WS}PackedByteArray${WS}\\((?:${WS}"([^")]*)"${WS}\\))?`);
 }
 
 /**
- * A field of a serialised Dictionary whose value is a number, `[1]` the literal (`global` as for {@link packedArrayCallAnywhere}).
+ * A field of a serialised Dictionary whose value is a number, `[1]` the literal. Pass `global` for a repeated scan: a
+ * `g`-flagged RegExp carries `lastIndex`, so each caller needs its own instance.
  * The value runs to its `,`/`}`, so `1.2.3` matches nothing instead of reading `1.2`. The grammar is the writer's, `inf` included:
  * a caller that cannot use `inf` rejects it, but one that stopped matching there would pair later values with the wrong keys.
  * It lives here because `godotLiteralGrammar.guard.test.ts` forbids a second reader of the scalar grammar.
