@@ -1,10 +1,10 @@
 /** SpotLight3D node data. */
 
 import type { Node3DProperties } from '../../../base/node3d/types';
-import type { BaseLightProperties } from '../shared/types';
+import type { BaseLightWithNormalBias } from '../shared/types';
 
 /** SpotLight3D properties: Light3D plus the cone. */
-export interface SpotLight3DProperties extends Node3DProperties, BaseLightProperties {
+export interface SpotLight3DProperties extends Node3DProperties, BaseLightWithNormalBias {
   /** Maximum distance the light reaches */
   spot_range: number;
 

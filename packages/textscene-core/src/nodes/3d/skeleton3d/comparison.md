@@ -40,4 +40,4 @@ Skeleton3D registers `parseNode3D` directly, so `motion_scale`, `show_rest_only`
 
 ## Known limitations
 
-- **Editor only** The bone gizmo appears only in Godot's editor. Here it is absent.
+- **Editor only** The bone gizmo appears only in Godot's editor, but here it is absent.

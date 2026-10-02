@@ -9,8 +9,8 @@ renders_as: children flowed along one axis and wrapped into lines
 
 # FlowContainer
 
-FlowContainer lays its children out along one axis, wraps to a new line when the
-current one runs out of room, and aligns each line per `alignment`. It draws nothing
+FlowContainer lays its children out along one axis and wraps to a new line when the
+current one runs out of room. It aligns each line per `alignment`. It draws nothing
 itself. A right-to-left `layout_direction` mirrors each line horizontally. On a vertical
 flow, that mirror and `reverse_fill` act on the same axis, so setting both cancels out.
 
@@ -42,6 +42,5 @@ subclasses hide it. The solver resolves the orientation of `HFlowContainer` and
 
 ## Known limitations
 
-- **Approximated** A TextureRect child using a `Fit` expand mode inside a multi-line
-  flow is sized like any other child. Godot keeps the child's size from the previous
-  frame, which a static render cannot reproduce.
+- **Approximated** A TextureRect child with a `Fit` expand mode inside a multi-line
+  flow is sized like any other child, where Godot keeps its previous frame's size.

@@ -10,7 +10,7 @@ renders_as: nothing at runtime, a selection-gated curve gizmo
 
 # Path2D
 
-Path2D carries a `Curve2D` for children to follow. It has no runtime visual, and the
+Path2D carries a `Curve2D` for children to follow. It has no runtime visual. The
 previewer draws the curve only as a selection-gated white polyline (ADR-0018), so a
 plain capture is empty on both sides.
 

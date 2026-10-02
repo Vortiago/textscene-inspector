@@ -43,4 +43,4 @@ The lenient parser registers the generic `parseNode`, which never reads `item_0/
 
 ## Known limitations
 
-- **Not drawn** Godot displays the menu once popped up. The previewer draws nothing for it.
+- **Not drawn** Godot displays the menu once popped up, but the previewer draws nothing for it.

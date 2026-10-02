@@ -53,5 +53,5 @@ bodywork (`Decal.cull_mask`). The shading matches.
 
 ## Known limitations
 
-- **Not drawn** A typed node placed inside instanced content does not render. A type-less
-  override does. The town uses only overrides.
+- **Not drawn** A typed node placed inside instanced content does not render, where a
+  type-less override does, and the town uses only overrides.

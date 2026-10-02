@@ -35,5 +35,5 @@ with no warning. Nothing reads it back, since no render component exists.
 
 ## Known limitations
 
-- **Not drawn** Godot draws the batch of textured instances. The previewer draws nothing
-  for this node.
+- **Not drawn** Godot draws the batch of textured instances, but the previewer draws
+  nothing for this node.

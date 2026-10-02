@@ -9,7 +9,7 @@ renders_as: a curve-positioned transform group
 
 # PathFollow3D
 
-Positions its children a set distance along its parent Path3D's curve. The previewer samples the curve and drives a transform group to that point, so the orange box lands at the bottom of the U in both frames.
+Positions its children a set distance along its parent Path3D's curve. The previewer samples the curve and drives a transform group to that point. The orange box lands at the bottom of the U in both frames.
 
 ## Linting
 

@@ -114,6 +114,26 @@ describe('SpotLight3D Parser', () => {
       expect(result.light_energy).toBe(1.2);
     });
 
+    it('parses shadow_normal_bias, which the spot lookup reads', () => {
+      const result = parseSpotLight3D(heading('SpotLight3D', { name: 'SpotLight' }), {
+        shadow_normal_bias: '2.5',
+      });
+      expect(result.shadow_normal_bias).toBe(2.5);
+    });
+
+    it('leaves an absent shadow_normal_bias unset, so the Light3D default applies (edge case)', () => {
+      expect(
+        parseSpotLight3D(heading('SpotLight3D', { name: 'SpotLight' }), {}).shadow_normal_bias
+      ).toBeUndefined();
+    });
+
+    it('leaves an unreadable shadow_normal_bias unset (error case)', () => {
+      const result = parseSpotLight3D(heading('SpotLight3D', { name: 'SpotLight' }), {
+        shadow_normal_bias: 'x',
+      });
+      expect(result.shadow_normal_bias).toBeUndefined();
+    });
+
     it('falls back to defaults on garbage input (never NaN) and warns', () => {
       const h = heading('SpotLight3D', { name: 'SpotLight', parent: '.' });
       const result = parseSpotLight3D(h, {

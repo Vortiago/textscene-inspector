@@ -9,7 +9,7 @@ renders_as: children flowed down a column, wrapping to a new column
 
 # VFlowContainer
 
-VFlowContainer is a FlowContainer fixed to the vertical axis: children flow top to
+VFlowContainer is a FlowContainer fixed to the vertical axis. Children flow top to
 bottom and wrap to a new column when the current one runs out of height. It draws
 nothing itself. A right-to-left `layout_direction` mirrors the column order, and cancels
 with `reverse_fill` when both are set.
@@ -38,6 +38,5 @@ this node's own type, not the property, to fix its orientation as vertical.
 
 ## Known limitations
 
-- **Approximated** A TextureRect child using a `Fit` expand mode inside a multi-line
-  flow is sized like any other child. Godot keeps its previous frame's size, which a
-  static render has no analogue for.
+- **Approximated** A TextureRect child with a `Fit` expand mode inside a multi-line
+  flow is sized like any other child, where Godot keeps its previous frame's size.

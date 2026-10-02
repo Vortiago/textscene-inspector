@@ -33,4 +33,4 @@ The lenient parser never runs `multimesh`'s validator. Given `multimesh = "res:/
 
 ## Known limitations
 
-- **Not drawn** Godot draws every instance in the `multimesh`. Here none appears.
+- **Not drawn** Godot draws every instance in the `multimesh`, but here none appears.

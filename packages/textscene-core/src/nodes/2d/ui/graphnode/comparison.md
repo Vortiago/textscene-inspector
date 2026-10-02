@@ -11,8 +11,8 @@ renders_as: a titled panel with slot rows and left/right port icons
 
 GraphNode is a titled container inside a GraphEdit whose children become slots with
 input and output ports. The previewer draws its panel/titlebar StyleBoxes, the title
-text, one left/right port icon per enabled slot side, each slot's own StyleBox when
-`draw_stylebox` is set, and the resize handle when `resizable` is set.
+text and one left/right port icon per enabled slot side. It adds each slot's own StyleBox
+when `draw_stylebox` is set, and the resize handle when `resizable` is set.
 
 ## Linting
 

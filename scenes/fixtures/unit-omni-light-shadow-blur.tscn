@@ -1,0 +1,37 @@
+[gd_scene load_steps=4 format=3 uid="uid://unitomnilightshadowblur"]
+
+; Moves the omni light's PCF kernel. `shadow_blur = 4` widens the kernel to eight atlas texels of
+; Godot's positional shadow atlas, so the board's straight shadow edge fades over a band the width of
+; a hand. The dark sun only keeps the editor's preview sun out, so the omni light casts the only
+; shadow. In every other golden an omni shadow keeps the default blur, a soft edge a pixel or two wide
+; that a wrong kernel moves by less than the sun's shadow beside it.
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(3, 3)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_board"]
+size = Vector3(1.5, 0.05, 3)
+
+[node name="Root" type="Node3D"]
+
+[node name="DarkSun" type="DirectionalLight3D" parent="."]
+light_energy = 0.0
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("StandardMaterial3D_ground")
+
+[node name="Board" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.75, 1, 0)
+mesh = SubResource("BoxMesh_board")
+
+[node name="OmniLight3D" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 3, 0)
+light_energy = 3.0
+shadow_enabled = true
+shadow_blur = 4.0
+omni_range = 8.0

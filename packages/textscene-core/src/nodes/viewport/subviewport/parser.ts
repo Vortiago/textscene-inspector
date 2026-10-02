@@ -5,7 +5,7 @@
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
-import { boolOr, enumOr, vec2iOr } from '../../../parser/valueParsers';
+import { boolOr, enumOr, parseOptionalInt, vec2iOr } from '../../../parser/valueParsers';
 import { parseNode } from '../../node/parser';
 import {
   CLEAR_MODE_ALWAYS,
@@ -76,5 +76,10 @@ export function parseSubViewport(
       context
     ),
     gui_embed_subwindows: boolOr(properties.gui_embed_subwindows, false, context),
+    positional_shadow_atlas_size: parseOptionalInt(properties.positional_shadow_atlas_size),
+    positional_shadow_atlas_quad_0: parseOptionalInt(properties.positional_shadow_atlas_quad_0),
+    positional_shadow_atlas_quad_1: parseOptionalInt(properties.positional_shadow_atlas_quad_1),
+    positional_shadow_atlas_quad_2: parseOptionalInt(properties.positional_shadow_atlas_quad_2),
+    positional_shadow_atlas_quad_3: parseOptionalInt(properties.positional_shadow_atlas_quad_3),
   };
 }

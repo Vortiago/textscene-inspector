@@ -19,7 +19,7 @@ export function parseBaseLightProperties(properties: Record<string, string>): Ba
   };
 }
 
-/** The shared properties plus shadow_normal_bias, for DirectionalLight3D and OmniLight3D. */
+/** The shared properties plus shadow_normal_bias, for the light types whose shadow reads it. */
 export function parseBaseLightWithNormalBias(properties: Record<string, string>): BaseLightWithNormalBias {
   return {
     ...parseBaseLightProperties(properties),

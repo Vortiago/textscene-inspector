@@ -36,4 +36,4 @@ Strict parsing format-checks these `CSGCylinder3D` properties, plus 1 inherited 
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-The lenient parser falls back silently when a key is absent, and warns then falls back when it is unparseable: `radius` to `0.5`, `height` to `2.0`, `sides` to `8`. `cone` is a raw `=== 'true'` comparison, so any other value silently becomes `false`. `operation` is read with `parseOptionalInt` and warns neither way.
+The lenient parser falls back silently when a key is absent. When a key is unparseable, it warns and falls back: `radius` to `0.5`, `height` to `2.0`, `sides` to `8`. `cone` is a raw `=== 'true'` comparison, so any other value silently becomes `false`. `operation` is read with `parseOptionalInt` and warns neither way.

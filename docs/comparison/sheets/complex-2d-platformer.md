@@ -22,6 +22,6 @@ coins, rocks, mushrooms and crab enemies.
 ## Known limitations
 
 - **Approximated** A platform underside and its vines show along the top edge, where Godot
-  shows sky. The cause is not known.
+  shows sky, for a cause not yet known.
 - **Approximated** The lower-right platform stops short of the right edge, and its tree
-  crown is cut. The cause is not known.
+  crown is cut, for a cause not yet known.

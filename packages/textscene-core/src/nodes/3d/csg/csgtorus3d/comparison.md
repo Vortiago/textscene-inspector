@@ -9,7 +9,7 @@ renders_as: a solid torus mesh
 
 # CSGTorus3D
 
-Godot's constructive-solid-geometry torus: a ring lying in XZ with the hole on +Y. The previewer builds it from a port of Godot's own `_build_brush`, so the tessellation and the `smooth_faces` normals match per vertex, and the boolean `operation` is evaluated (ADR-0027).
+Godot's constructive-solid-geometry torus: a ring lying in XZ with the hole on +Y. The previewer builds it from a port of Godot's own `_build_brush`, so the tessellation and the `smooth_faces` normals match per vertex. It evaluates the boolean `operation` (ADR-0027).
 
 ## Linting
 

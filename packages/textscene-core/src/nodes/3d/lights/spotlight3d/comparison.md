@@ -32,11 +32,12 @@ Strict parsing format-checks these `SpotLight3D` properties, plus 27 inherited f
 | `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |
 <!-- lint:end -->
 
-The lenient parser falls back silently when a key is absent, and warns then falls back when it is unparseable: `spot_range` to `5.0`, `spot_angle` to `45.0`, `spot_attenuation` to `1.0`, `spot_angle_attenuation` to `1.0`.
+The lenient parser falls back silently when a key is absent. When a key is unparseable, it warns and falls back: `spot_range` to `5.0`, `spot_angle` to `45.0`, `spot_attenuation` to `1.0`, `spot_angle_attenuation` to `1.0`.
+
+Godot's positional shadow atlas gives the light one slot for the camera, and the shadow takes it. A light that covers less of the view gets a smaller slot and a coarser, softer shadow. When other lights fill the larger slots, a light earlier in the scene tree takes a smaller slot, as in Godot. A sub-viewport gives its lights slots in its own atlas. Every omni and spot shadow lies in one atlas texture, so many shadowed lights fit beside a material with many textures. The soft edge takes the four taps of Godot's default Soft Low filter, with the same dither as Godot. The filter spans `shadow_blur` times two texels of the atlas. `shadow_bias` and `shadow_normal_bias` move the receiver as Godot's lookup does, so the shadow edge sits where Godot puts it.
 
 ## Known limitations
 
 - **Approximated** Distance falloff follows three's inverse-square curve rather than Godot's, so the lit pool near the cube reads slightly brighter.
 - **Approximated** `spot_angle_attenuation` maps onto three's single `penumbra` value, so the cone-edge softness curve differs.
-- **Approximated** The shadow's penumbra is a little lighter and grainier than Godot's filtered edge.
-- **Editor only** The wireframe cone gizmo appears only in Godot's editor. Here it is selection-gated.
+- **Editor only** The wireframe cone gizmo appears only in Godot's editor, but here it is selection-gated.

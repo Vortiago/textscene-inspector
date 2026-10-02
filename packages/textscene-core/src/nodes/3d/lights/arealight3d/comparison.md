@@ -30,7 +30,7 @@ Strict parsing format-checks these `AreaLight3D` properties, plus 27 inherited f
 | `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |
 <!-- lint:end -->
 
-The lenient parser falls back silently when a key is absent, and warns then falls back when it is unparseable: `area_range` to `5.0`, `area_size` to `Vector2(1, 1)`, `area_normalize_energy` to `true`.
+The lenient parser falls back silently when a key is absent. When a key is unparseable, it warns and falls back: `area_range` to `5.0`, `area_size` to `Vector2(1, 1)`, `area_normalize_energy` to `true`.
 
 ## Known limitations
 

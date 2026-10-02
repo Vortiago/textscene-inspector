@@ -28,4 +28,4 @@ Popup declares no property of its own. The lenient parser registers the plain `N
 
 ## Known limitations
 
-- **Not drawn** Godot displays the popup once shown. The previewer draws nothing for it.
+- **Not drawn** Godot displays the popup once shown, but the previewer draws nothing for it.

@@ -28,4 +28,4 @@ PopupPanel declares no property of its own. The lenient parser registers the pla
 
 ## Known limitations
 
-- **Not drawn** Godot displays the panel once shown. The previewer draws nothing for it.
+- **Not drawn** Godot displays the panel once shown, but the previewer draws nothing for it.

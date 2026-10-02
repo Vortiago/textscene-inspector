@@ -41,7 +41,7 @@ Strict parsing format-checks these `RemoteTransform2D` properties, plus 12 inher
 
 ## Known limitations
 
-- **Approximated** `use_global_coordinates = false` is a no-op on a static load. Only
+- **Approximated** `use_global_coordinates = false` is a no-op on a static load, so only
   the default global drive repositions the target.
 - **Approximated** A `remote_path` crossing into or out of an instanced sub-scene is
   left unresolved.

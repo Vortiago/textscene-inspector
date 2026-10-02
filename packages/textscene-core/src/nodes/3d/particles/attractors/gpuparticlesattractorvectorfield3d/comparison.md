@@ -27,8 +27,8 @@ Strict parsing format-checks these `GPUParticlesAttractorVectorField3D` properti
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`. A `size` below `0.01` or a `texture` that is not a `Texture3D` parses with no warning, and strict checks only that `texture` is a resource reference.
+The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`. A `size` below `0.01` or a `texture` that is not a `Texture3D` parses with no warning. Strict checks only that `texture` is a resource reference.
 
 ## Known limitations
 
-- **Needs runtime** Godot steers a live particle cloud by the field texture. Here there is no cloud to steer.
+- **Needs runtime** Godot steers a live particle cloud by the field texture, but here there is no cloud to steer.

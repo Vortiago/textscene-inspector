@@ -423,6 +423,31 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Directional Light Limit",
+    "file": "unit-directional-light-limit.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Directional Light Sky Mode",
+    "file": "unit-directional-light-sky-mode.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Directional Shadow Fade",
+    "file": "unit-directional-shadow-fade.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Directional Shadow Shared Atlas",
+    "file": "unit-directional-shadow-shared-atlas.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Directional Shadow Splits",
+    "file": "unit-directional-shadow-splits.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Environment Sky Tonemap",
     "file": "unit-environment-sky-tonemap.tscn",
     "category": "Other"
@@ -1038,6 +1063,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Omni Light Shadow Blur",
+    "file": "unit-omni-light-shadow-blur.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Open Xr Binding Modifier Editor",
     "file": "unit-open-xr-binding-modifier-editor.tscn",
     "category": "Other"
@@ -1385,6 +1415,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Spot Light 3d",
     "file": "unit-spot-light-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Spot Light Shadow Blur",
+    "file": "unit-spot-light-shadow-blur.tscn",
     "category": "Other"
   },
   {

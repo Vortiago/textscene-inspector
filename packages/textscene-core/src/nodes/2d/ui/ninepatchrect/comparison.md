@@ -10,7 +10,7 @@ renders_as: a 9-sliced textured quad in the control's rect
 # NinePatchRect
 
 NinePatchRect splits its `texture` into nine cells by the four `patch_margin_*`
-values, drawing the four corners at native size while the edges and centre stretch or
+values. The four corners draw at native size, while the edges and centre stretch or
 tile per `axis_stretch_horizontal`/`axis_stretch_vertical`. `region_rect` windows the
 source texture, and `draw_center` omits the centre cell entirely.
 

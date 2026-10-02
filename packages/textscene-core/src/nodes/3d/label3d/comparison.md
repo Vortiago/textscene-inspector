@@ -9,7 +9,7 @@ renders_as: canvas-rasterised glyph quads, billboard-able
 
 # Label3D
 
-Draws a single line of text on a flat plane in 3D space. The previewer rasterises each label to a canvas texture, maps it onto a transparent plane sized by `pixel_size`, tints it by `modulate` and orients it by the node's `billboard` mode.
+Draws a single line of text on a flat plane in 3D space. The previewer rasterises each label to a canvas texture and maps it onto a transparent plane sized by `pixel_size`. It tints the plane by `modulate` and orients it by the node's `billboard` mode.
 
 ## Linting
 

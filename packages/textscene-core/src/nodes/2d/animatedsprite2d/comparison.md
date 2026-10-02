@@ -48,5 +48,5 @@ with no warning. `centered` falls back to `true`, `flip_h` and `flip_v` to `fals
 
 ## Known limitations
 
-- **Needs runtime** An `autoplay` clip does not run on its own. The sprite shows its
+- **Needs runtime** An `autoplay` clip does not run on its own, so the sprite shows its
   authored `frame` until it is selected and the transport plays it.
