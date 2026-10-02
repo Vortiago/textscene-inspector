@@ -1,13 +1,16 @@
 /** Mocha setup for the integration tests. */
+import * as fs from 'fs';
 import * as path from 'path';
 import Mocha from 'mocha';
 import { glob } from 'glob';
+import { SUITE_STARTED_MARKER_ENV } from '../integrationLaunch';
 
 /**
  * The launcher populates the test workspace, not this: the window has already
  * resolved its workspace folder (`integrationLaunch.ts`).
  */
 export async function run(): Promise<void> {
+  markSuiteStarted();
   const mocha = new Mocha({
     ui: 'tdd', // suite() and test()
     color: true,
@@ -38,4 +41,10 @@ export async function run(): Promise<void> {
         reject(err);
       });
   });
+}
+
+/** Tells the launcher that a test may run from here on, so it never relaunches. */
+function markSuiteStarted(): void {
+  const marker = process.env[SUITE_STARTED_MARKER_ENV];
+  if (marker) fs.writeFileSync(marker, '');
 }
