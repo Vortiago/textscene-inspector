@@ -1,4 +1,9 @@
-/** SkeletonModifier3D registration: it is parsed, and it draws nothing on purpose (ADR-0008). */
+/**
+ * SkeletonModifier3D registration: it is parsed, and its place as the base of every node that
+ * rewrites a Skeleton3D's bone poses is a gap (ADR-0045), not a nil effect. It registers
+ * `pending` on the Node3D component, so children keep their transform space while the badge
+ * reads a gap.
+ */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry';
@@ -19,7 +24,7 @@ describe('SkeletonModifier3D registration', () => {
     expect(nodeComponentRegistry.get('SkeletonModifier3D')).toBe(Node3D);
   });
 
-  it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('SkeletonModifier3D')).toBe(true);
+  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
+    expect(nodeComponentRegistry.renderIntentOf('SkeletonModifier3D')).toBe('pending');
   });
 });

@@ -1,6 +1,7 @@
 /**
- * BoneAttachment3D registration: it is parsed, and it draws nothing on purpose (ADR-0008), not for
- * want of an implementation.
+ * BoneAttachment3D registration: it is parsed, and its drive of children onto its bone each
+ * update is a gap (ADR-0045), not a nil effect. It registers `pending` on the Node3D component,
+ * so children keep their transform space while the badge reads a gap.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -22,7 +23,7 @@ describe('BoneAttachment3D registration', () => {
     expect(nodeComponentRegistry.get('BoneAttachment3D')).toBe(Node3D);
   });
 
-  it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('BoneAttachment3D')).toBe(true);
+  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
+    expect(nodeComponentRegistry.renderIntentOf('BoneAttachment3D')).toBe('pending');
   });
 });

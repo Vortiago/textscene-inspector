@@ -13,6 +13,7 @@ import { dirname, join, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { isDivider, splitRow } from './markdownTable.mjs';
+import { RUNTIME_EFFECT_NODE_TYPES } from './runtimeEffectNodes.data.mjs';
 import {
   LINT_EXEMPT_CATEGORIES as LINT_EXEMPT,
   collectSheetFiles,
@@ -348,7 +349,11 @@ describe('comparison sheets', () => {
       if (!typesRegisteredBy(candidate).includes(type)) continue;
       const source = readFileSync(candidate, 'utf8');
       const intent = /renderIntent:\s*'([a-z-]+)'/.exec(source);
-      return { file: candidate, intent: intent ? intent[1] : 'draws' };
+      return {
+        file: candidate,
+        intent: intent ? intent[1] : 'draws',
+        scenePass: /scenePass:/.test(source),
+      };
     }
     return null;
   }
@@ -367,6 +372,9 @@ describe('comparison sheets', () => {
           // A `pending` registration mounts a base component while the node's
           // own visual is missing: a registered gap.
           pending: registration?.intent === 'pending',
+          // A `scenePass` applies an effect to other nodes, so the sheet has an
+          // effect to compare: it is not the nil-effect claim `linter-only` is.
+          scenePass: registration?.scenePass === true,
         };
       });
 
@@ -426,6 +434,36 @@ describe('comparison sheets', () => {
         .filter((s) => s.pending && s.meta.status !== 'unimplemented')
         .map((s) => `${s.label}: registers pending but its status is '${s.meta.status}'`);
       expect(bad).toEqual([]);
+    });
+
+    it('gives no node with a Godot runtime effect the `linter-only` status', () => {
+      // `linter-only` claims the runtime effect is nil (ADR-0045). A node that
+      // draws or drives in Godot has one, so its sheet belongs on the assessment
+      // scale, not on the nil claim, whether or not the previewer implements it.
+      const byType = new Map(sheets.filter((s) => s.meta.type).map((s) => [s.meta.type, s]));
+      const matched = [];
+      const bad = [];
+      for (const { type, effect } of RUNTIME_EFFECT_NODE_TYPES) {
+        const sheet = byType.get(type);
+        if (!sheet) continue;
+        matched.push(type);
+        if (sheet.meta.status === 'linter-only') {
+          bad.push(`${sheet.label}: ${effect} in Godot but claims linter-only`);
+        }
+      }
+      // Non-vacuity floor: the list must actually meet the corpus, or renamed
+      // types would empty the check silently.
+      expect(matched.length).toBeGreaterThan(20);
+      expect(bad.sort()).toEqual([]);
+    });
+
+    it('never calls a registration with a scene pass `linter-only`', () => {
+      // A `scenePass` acts on other nodes (the RemoteTransform relay), so the
+      // sheet compares that effect: `done` or `limitation`, never the nil claim.
+      const bad = sliceSheets
+        .filter((s) => s.scenePass && s.meta.status === 'linter-only')
+        .map((s) => `${s.label}: registers a scene pass but claims linter-only`);
+      expect(bad.sort()).toEqual([]);
     });
   });
 });

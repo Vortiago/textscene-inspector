@@ -1,6 +1,7 @@
 /**
- * JacobianIK3D registration: it is parsed, and it draws nothing on purpose (ADR-0008), not for
- * want of an implementation.
+ * JacobianIK3D registration: it is parsed, and its solve of the bone chain into the parent
+ * Skeleton3D's poses is a gap (ADR-0045), not a nil effect. It registers `pending` on the
+ * Node3D component, so children keep their transform space while the badge reads a gap.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -22,7 +23,7 @@ describe('JacobianIK3D registration', () => {
     expect(nodeComponentRegistry.get('JacobianIK3D')).toBe(Node3D);
   });
 
-  it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('JacobianIK3D')).toBe(true);
+  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
+    expect(nodeComponentRegistry.renderIntentOf('JacobianIK3D')).toBe('pending');
   });
 });

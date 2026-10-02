@@ -1,6 +1,7 @@
 /**
- * LimitAngularVelocityModifier3D registration: it is parsed, and it draws nothing on purpose (ADR-0008), not for
- * want of an implementation.
+ * LimitAngularVelocityModifier3D registration: it is parsed, and its post-process of the parent
+ * Skeleton3D's bone poses is a gap (ADR-0045), not a nil effect. It registers `pending` on the
+ * Node3D component, so children keep their transform space while the badge reads a gap.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -22,7 +23,7 @@ describe('LimitAngularVelocityModifier3D registration', () => {
     expect(nodeComponentRegistry.get('LimitAngularVelocityModifier3D')).toBe(Node3D);
   });
 
-  it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('LimitAngularVelocityModifier3D')).toBe(true);
+  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
+    expect(nodeComponentRegistry.renderIntentOf('LimitAngularVelocityModifier3D')).toBe('pending');
   });
 });
