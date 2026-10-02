@@ -65,6 +65,16 @@ describe('planChecks', () => {
     ]);
   });
 
+  it('leaves the extension host suite to CI, since vitest excludes it', () => {
+    const suite = 'apps/textscene-vscode/src/test/integration/suite/a.test.ts';
+    expect(plan([suite], [], undefined, (path) => [path])).toEqual([
+      'pnpm type-check:all',
+      'pnpm type-check:tests',
+      `npx eslint ${suite}`,
+      `pnpm exec prettier --check ${suite}`,
+    ]);
+  });
+
   it('runs no tests for a stylesheet', () => {
     expect(plan(['packages/textscene-core/src/a.css'], [], undefined, () => ['never.test.ts'])).toEqual([
       'pnpm exec prettier --check packages/textscene-core/src/a.css',

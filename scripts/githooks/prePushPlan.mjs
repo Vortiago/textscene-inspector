@@ -22,6 +22,11 @@ const SCENE = /\.(?:tscn|tres)$/;
 /** Markdown that the generated-docs checks read or write. */
 const GENERATED_DOCS_INPUT = /(?:^|\/)comparison\.md$|^docs\/comparison\//;
 const VENDORED = /^\.claude\/(?:skills\/conventional-commits\/|rules\/|agents\/ste-review\.md$)/;
+/**
+ * The mocha suite that runs inside a VS Code window. Vitest excludes it and finds no test file in
+ * it, which fails the run. CI runs it in its integration job.
+ */
+const EXTENSION_HOST_SUITE = /^apps\/textscene-vscode\/src\/test\/integration\//;
 
 /**
  * The repository-wide static checks, in the order of the CI `static` job: fastest first.
@@ -42,7 +47,9 @@ export const STATIC_GATE = [
  */
 export function planChecks({ changed, deleted, isNegativeFixture, testsBeside }) {
   const all = [...changed, ...deleted];
-  const tests = [...new Set(changed.filter((path) => TESTABLE.test(path)).flatMap(testsBeside))];
+  const tests = [...new Set(changed.filter((path) => TESTABLE.test(path)).flatMap(testsBeside))].filter(
+    (path) => !EXTENSION_HOST_SUITE.test(path)
+  );
   const runTests = tests.length > 0 ? [['pnpm', 'exec', 'vitest', 'run', ...tests]] : [];
   if (all.some((path) => TOOLCHAIN.test(path))) return [...STATIC_GATE, ...runTests];
 
