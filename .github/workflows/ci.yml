@@ -191,13 +191,21 @@ jobs:
           SHOWCASE_CHANNEL: bundled
 
   integration:
-    name: Integration tests (${{ matrix.os }})
+    name: Integration tests (${{ matrix.os }}, VS Code ${{ matrix.vscode }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        vscode: [stable]
+        # `min` is the floor of engines.vscode, the oldest VS Code the marketplace
+        # installs the extension on. An API newer than the floor fails here only.
+        include:
+          - os: ubuntu-latest
+            vscode: min
+    env:
+      TEXTSCENE_VSCODE_VERSION: ${{ matrix.vscode }}
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -211,13 +219,13 @@ jobs:
       # Proves that text paints inside the webview, which the extension host suite cannot
       # see. The driver starts its own xvfb-run and uses VS Code's Chromium. It runs on
       # Linux only, because nobody has verified its window and binary layout elsewhere.
-      - if: runner.os == 'Linux'
+      - if: runner.os == 'Linux' && matrix.vscode == 'stable'
         run: pnpm test:vscode:csp
 
       - if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: integration-test-results-${{ matrix.os }}
+          name: integration-test-results-${{ matrix.os }}-${{ matrix.vscode }}
           path: |
             apps/textscene-vscode/.test-workspace/
             apps/textscene-vscode/out/
