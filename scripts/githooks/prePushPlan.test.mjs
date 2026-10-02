@@ -65,8 +65,10 @@ describe('planChecks', () => {
     ]);
   });
 
-  it('leaves the extension host suite to CI, since vitest excludes it', () => {
-    const suite = 'apps/textscene-vscode/src/test/integration/suite/a.test.ts';
+  it.each([
+    'apps/textscene-vscode/src/test/integration/suite/a.test.ts',
+    'apps/textscene-vscode/src/test/installed/suite/a.test.ts',
+  ])('leaves the extension host suite %s to CI, since vitest excludes it', (suite) => {
     expect(plan([suite], [], undefined, (path) => [path])).toEqual([
       'pnpm type-check:all',
       'pnpm type-check:tests',
