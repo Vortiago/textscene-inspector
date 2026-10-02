@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 import { AtlasOmniShadow } from './atlasOmniShadow.js';
-import { writeFramebufferHeight } from './framebufferRows.js';
+import { writeFramebufferHeight } from '../shadowFilter/framebufferRows.js';
 import { OmniShadowCopy } from './omniShadowCopy.js';
 
 type ShadowPass = THREE.WebGLShadowMap['render'];

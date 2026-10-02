@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { AtlasOmniShadow } from './atlasOmniShadow';
-import { framebufferHeight } from './framebufferRows';
+import { framebufferHeight } from '../shadowFilter/framebufferRows';
 import { OmniShadowCopy } from './omniShadowCopy';
 import { installPositionalShadowPass } from './positionalShadowPass';
 import { holdPositionalShadowAtlas } from './shadowAtlasTarget';

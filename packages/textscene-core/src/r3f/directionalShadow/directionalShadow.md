@@ -4,7 +4,8 @@ The fitter fits each shadow-casting directional light's shadow to the viewing ca
 two or four splits by `directional_shadow_mode`. It ports Godot 4.6.3's
 `RendererSceneCull::_light_instance_setup_directional_shadow`
 (`servers/rendering/renderer_scene_cull.cpp:2134-2353`), the split lookup of
-`scene_forward_clustered.glsl:2403-2478` and the distance fade of `:2491`.
+`scene_forward_clustered.glsl:2403-2478`, the distance fade of `:2491` and the PCF of
+`scene_forward_lights_inc.glsl:283-308`.
 
 ## Who does what
 
@@ -135,20 +136,30 @@ band, where its weight is above zero. An orthogonal light never blends
 ## The filter
 
 Godot's PCF kernel is a Vogel disk whose radius is `soft_shadow_scale` atlas texels on each axis
-(`scene_forward_clustered.glsl:2443`, `scene_forward_lights_inc.glsl:283-307`). For a light
+(`scene_forward_clustered.glsl:2443`, `scene_forward_lights_inc.glsl:283-308`). For a light
 without an angular size, `soft_shadow_scale` is `shadow_blur` times the quality radius
 (`light_storage.cpp:697-703`), which is 2 at the default Soft Low quality
 (`renderer_scene_render_rd.cpp:1204-1207`). So the default kernel reaches two texels. The fitter
 writes that radius to the light's `shadow.radius` before each render (`godot/softShadowScale.ts`),
 and a split sun copies it.
 
-three r186 scales both axes of the kernel by one texel of the map's width. Every share lies in one
-square atlas, so a texel is as tall as it is wide, and the kernel spans `soft_shadow_scale` atlas
-texels on each axis, as Godot's does.
+`splitShadowChunk.ts` replaces three's five-tap PCF with Godot's `sample_directional_pcf_shadow`
+for each split it samples:
 
-three's disk takes five taps, and Godot's Soft Low disk takes four. Both rotate the disk per pixel
-by the same interleaved gradient noise, in opposite senses. So the soft edge's dither differs, and
-its mean over a few pixels matches.
+- The kernel is the four taps of `get_vogel_disk` at Soft Low, the default directional quality
+  (`rendering_server.cpp:3706`, `renderer_scene_render_rd.cpp:1204-1207`, `:1228`). The positional
+  lookups take the same disk.
+- The kernel turns per fragment by `quick_hash` of its position, with its rows counted from the top
+  of the framebuffer, as Vulkan's are (`scene_forward_lights_inc.glsl:278-281`, `:292-298`).
+  The renderer's shadow pass records that framebuffer's height before each draw
+  (`../positionalShadow/positionalShadowPass.ts`), and `TscnCanvas` mounts it beside this fitter.
+- The pixel size is one texel of the whole atlas times `soft_shadow_scale` and the split's blur
+  factor. three uploads a sun shadow's map size as the atlas's size (`WebGLLights.js:305`).
+
+The kernel, the turn and the PCF are one GLSL block in `../shadowFilter/softShadowFilter.ts`,
+which the omni and spot lookups share. So the soft edge's dither matches Godot's pixel for pixel
+where the shadow map matches. The lookup keeps three's test that leaves a receiver outside the atlas
+or past its far plane unshadowed. A map type other than PCF keeps three's own lookup.
 
 ## The three.js design
 
@@ -167,7 +178,7 @@ shades through three parts, whatever its split count:
   the splits where Godot puts them in that share. A slot past the light's last split draws nothing
   and repeats the last split's matrix.
 - `splitShadowChunk.ts`, which replaces three's cascade walk in `shadowmap_pars_fragment` with
-  Godot's split lookup, and gives every sun four slots. It installs once at import of
+  Godot's split lookup and PCF, and gives every sun four slots. It installs once at import of
   `TscnCanvas.tsx`, before any program compiles.
 
 `fitDirectionalShadowSplits.ts` holds the maths. It fits one box per split through

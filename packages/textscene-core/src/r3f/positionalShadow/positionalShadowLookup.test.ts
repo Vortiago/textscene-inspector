@@ -1,30 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { SOFT_LOW_SHADOW_SAMPLES, vogelDisk } from '../../godot/softShadowKernel';
 import { ATLAS_SAMPLING, OMNI_LOOKUP, SPOT_LOOKUP } from './positionalShadowLookup';
-
-/** The float literals of the kernel the GLSL declares. */
-function kernelLiterals(): number[] {
-  const kernel = /GODOT_SOFT_SHADOW_KERNEL\[ \d+ \] = vec2\[\]\((.*)\);/.exec(ATLAS_SAMPLING)![1]!;
-  return [...kernel.matchAll(/vec2\( (\S+), (\S+) \)/g)].flatMap((match) => [
-    Number(match[1]),
-    Number(match[2]),
-  ]);
-}
+import { SOFT_SHADOW_FILTER } from '../shadowFilter/softShadowFilter';
+import { POSITIONAL_SHADOW_ATLAS_UNIFORM } from './shadowAtlasTarget';
 
 describe('the positional shadow lookups', () => {
-  it('declare Godot’s Soft Low kernel, each tap the float Godot stores', () => {
-    expect(kernelLiterals()).toEqual(vogelDisk(SOFT_LOW_SHADOW_SAMPLES).flat());
+  it('declare the atlas beside Godot’s soft shadow filter', () => {
+    expect(ATLAS_SAMPLING).toContain(`uniform sampler2DShadow ${POSITIONAL_SHADOW_ATLAS_UNIFORM};`);
+    expect(ATLAS_SAMPLING).toContain(SOFT_SHADOW_FILTER);
   });
 
-  it('take every tap of the kernel, in both lookups', () => {
-    for (const lookup of [SPOT_LOOKUP, OMNI_LOOKUP]) {
-      expect(lookup).toContain(`for ( int i = 0; i < ${SOFT_LOW_SHADOW_SAMPLES}; i ++ )`);
-    }
+  it('sample the spot shadow through the filter, over soft_shadow_scale atlas texels', () => {
+    expect(SPOT_LOOKUP).toContain(
+      `godotPcf( ${POSITIONAL_SHADOW_ATLAS_UNIFORM}, softShadowScale * godotAtlasTexel(), coord )`
+    );
   });
 
-  it('write every kernel value as a float GLSL accepts (edge case)', () => {
-    const kernel = /vec2\[\]\((.*)\);/.exec(ATLAS_SAMPLING)![1]!;
-    expect(kernel).not.toMatch(/[(, ]-?\d+ [,)]/);
+  it('take every tap of the kernel on the paraboloids', () => {
+    expect(OMNI_LOOKUP).toContain('for ( int i = 0; i < GODOT_SOFT_SHADOW_SAMPLES; i ++ )');
+    expect(OMNI_LOOKUP).toContain('rotation * GODOT_SOFT_SHADOW_KERNEL[ i ]');
   });
 
   it('reach the other paraboloid only for a tap past the unit disc (error case)', () => {
