@@ -125,24 +125,39 @@ function decodeImagesInImageElements(parser: GLTFParser): GLTFLoaderPlugin {
   return { name: 'textscene_image_element_textures' };
 }
 
+/** The URLs the glTF loader makes from bytes it already holds: an image's `blob:` and a `data:` URI. */
+const IN_MEMORY_URL = /^(?:blob|data):/i;
+
+/**
+ * A loading manager that refuses every URL but an in-memory one, so a URI the processor
+ * did not pack into the GLB throws before a request. The throw rejects the load.
+ */
+function inMemoryOnlyManager(): THREE.LoadingManager {
+  const manager = new THREE.LoadingManager();
+  manager.setURLModifier((url) => {
+    if (IN_MEMORY_URL.test(url)) return url;
+    throw new Error(`[glbProcessing] The glTF loader refuses ${url}: a glTF loads only the bytes it carries`);
+  });
+  return manager;
+}
+
 // Functions that require the lazy-loaded addons.
 
 export interface GlbLoadOptions {
-  manager?: THREE.LoadingManager;
   /** Defaults to `godot-importer`. */
   extensionRules?: GltfExtensionRules;
 }
 
 /**
- * Create a THREE.Object3D from a GLB, whose resources it carries: `glbBytes` in the
- * processor packs a text `.gltf` first, so nothing is fetched.
+ * Create a THREE.Object3D from a GLB that carries its buffers and images, as `glbBytes` in
+ * the processor packs every glTF. The loader fetches nothing, and refuses a URI left in it.
  */
 export async function createGLBMesh(
   data: ArrayBuffer,
-  { manager, extensionRules = 'godot-importer' }: GlbLoadOptions = {}
+  { extensionRules = 'godot-importer' }: GlbLoadOptions = {}
 ): Promise<THREE.Object3D> {
   const { GLTFLoader } = await initGlbModules();
-  const loader = withExtensionRules(new GLTFLoader(manager), extensionRules).register(
+  const loader = withExtensionRules(new GLTFLoader(inMemoryOnlyManager()), extensionRules).register(
     decodeImagesInImageElements
   );
   const gltf = await loader.parseAsync(data, '');

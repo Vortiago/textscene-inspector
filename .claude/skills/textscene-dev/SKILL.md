@@ -176,8 +176,10 @@ panel.webview.postMessage({
 **Webview → extension:**
 ```typescript
 vscode.postMessage({
-  type: 'error',
-  message: 'Failed to parse scene'
+  type: 'jumpToNode',
+  nodeName: 'Leaf',
+  path: 'Root/Leaf',
+  parent: '.'
 });
 ```
 

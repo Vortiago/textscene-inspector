@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CURVE2D_DATA, CURVE3D_DATA, bezierRefusalProblem, readBezierData } from './bezierData';
+import { LINEAR_SCAN_CEILING_MS, msToRead, unclosedCalls } from '../../../godot/testing/unclosedCalls';
 
 describe('readBezierData', () => {
   it('loads a whole number of control points in each spelling, with its points text', () => {
@@ -49,6 +50,13 @@ describe('readBezierData', () => {
 
   it('checks "points" before "tilts", as `_set_data` does (edge case)', () => {
     expect(readBezierData('{}', CURVE3D_DATA).refusal).toEqual({ kind: 'missing-key', key: 'points' });
+  });
+
+  it('reads a crafted value of unclosed points calls in linear time (edge case)', () => {
+    const data = unclosedCalls('"points":PackedVector3Array(');
+    const read = (value: string) => readBezierData(value, CURVE3D_DATA);
+    expect(read(data)).toEqual({ refusal: { kind: 'missing-key', key: 'points' } });
+    expect(msToRead(read, data)).toBeLessThan(LINEAR_SCAN_CEILING_MS);
   });
 });
 

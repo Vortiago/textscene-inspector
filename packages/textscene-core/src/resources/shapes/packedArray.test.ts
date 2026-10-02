@@ -10,6 +10,7 @@ import {
   parsePackedInt32Arrays,
   fanTriangulate,
 } from './packedArray';
+import { LINEAR_SCAN_CEILING_MS, msToRead, unclosedCalls } from '../../godot/testing/unclosedCalls';
 
 describe('parsePackedVector3Array', () => {
   it('parses flat x,y,z triples', () => {
@@ -58,6 +59,12 @@ describe('parsePackedInt32Arrays', () => {
       [2, 1, 3],
       [3, 1, 0],
     ]);
+  });
+
+  it('reads a crafted value of unclosed calls in linear time (edge case)', () => {
+    const value = unclosedCalls('PackedInt32Array(');
+    expect(parsePackedInt32Arrays(value)).toEqual([]);
+    expect(msToRead(parsePackedInt32Arrays, value)).toBeLessThan(LINEAR_SCAN_CEILING_MS);
   });
 
   it('reads an element the way Godot narrows it, not the way parseInt stops', () => {

@@ -6,7 +6,7 @@
 
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { waitFor } from '../helpers/panelHelpers';
+import { waitFor } from '../../waitFor';
 import { openProjectDocument, removeGodotProject, writeGodotProject } from '../helpers/godotProjectHelpers';
 
 const EXTENSION_ID = 'vortiago.textscene-inspector';

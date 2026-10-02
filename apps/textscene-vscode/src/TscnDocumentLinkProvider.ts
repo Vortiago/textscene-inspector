@@ -4,7 +4,7 @@
  */
 
 import * as vscode from 'vscode';
-import { stripResPrefix } from '@textscene/core/resources/resourceProviderUtils';
+import { resRelativePath } from '@textscene/core/resources/resPath';
 import { findGodotProjectRoot } from './findGodotProjectRoot';
 
 /** Matches a `res://` reference up to the next quote, whitespace, or closing paren. */
@@ -71,7 +71,8 @@ export class TscnDocumentLinkProvider implements vscode.DocumentLinkProvider<Tsc
   /**
    * Resolves the link the user hovers or clicks through the `findGodotProjectRoot`
    * walk the preview panel shares. A document outside every workspace folder has no
-   * project root, so its link stays unresolved rather than guessed.
+   * project root, and a path that climbs out of the root names no project file, so
+   * neither gets a target.
    */
   async resolveDocumentLink(
     link: TscnResourceDocumentLink,
@@ -81,9 +82,12 @@ export class TscnDocumentLinkProvider implements vscode.DocumentLinkProvider<Tsc
     if (!workspaceFolder) {
       return undefined;
     }
+    const relativePath = resRelativePath(link.resourcePath);
+    if (relativePath === null) {
+      return undefined;
+    }
 
     const projectRoot = await this._resolveProjectRoot(workspaceFolder, link.documentUri);
-    const relativePath = stripResPrefix(link.resourcePath);
     link.target = vscode.Uri.joinPath(projectRoot, relativePath);
     return link;
   }

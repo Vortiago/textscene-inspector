@@ -244,19 +244,19 @@ function parseNodePath(raw: string): { targetPath: string; property: string } | 
 
 // A value track's key Dictionary fields, which `Animation::_set` reads as `Vector<real_t>`
 // (animation.cpp:267, :285).
-const TIMES_FIELD_RE = dictCallField('times', 'PackedFloat32Array');
-const TRANSITIONS_FIELD_RE = dictCallField('transitions', 'PackedFloat32Array');
+const readTimesField = dictCallField('times', 'PackedFloat32Array');
+const readTransitionsField = dictCallField('transitions', 'PackedFloat32Array');
 
 function parseKeys(keysStr: string): GodotKeyframe[] {
   if (keysStr.length === 0) return [];
 
-  const timesMatch = TIMES_FIELD_RE.exec(keysStr);
-  if (!timesMatch || timesMatch[1] === undefined) return [];
-  const times = parseFloatList(timesMatch[1]);
+  const timesBody = readTimesField(keysStr);
+  if (timesBody === null) return [];
+  const times = parseFloatList(timesBody);
   if (times === null || times.length === 0) return [];
 
-  const transMatch = TRANSITIONS_FIELD_RE.exec(keysStr);
-  const transitions = transMatch && transMatch[1] !== undefined ? parseFloatList(transMatch[1]) : [];
+  const transitionsBody = readTransitionsField(keysStr);
+  const transitions = transitionsBody === null ? [] : parseFloatList(transitionsBody);
   if (transitions === null) return [];
 
   const values = parseValueArray(keysStr);
@@ -277,7 +277,7 @@ function parseKeys(keysStr: string): GodotKeyframe[] {
   }));
 }
 
-const PACKED_FLOAT_ARRAY_RE = packedArrayCallAnywhere('PackedFloat32Array');
+const PACKED_FLOAT32_CALLS = packedArrayCallAnywhere('PackedFloat32Array');
 
 /**
  * Decode a 3D transform track's flat key array, `PackedFloat32Array(time, transition, c0, c1, …)`,
@@ -285,10 +285,10 @@ const PACKED_FLOAT_ARRAY_RE = packedArrayCallAnywhere('PackedFloat32Array');
  * quaternion). `parseKeys` decodes the `value` track's `{ "times": …, "values": … }` dict form.
  */
 function parseFlatTransformKeys(keysStr: string, components: number): GodotKeyframe[] {
-  const match = PACKED_FLOAT_ARRAY_RE.exec(keysStr);
-  if (!match || match[1] === undefined) return [];
+  const body = PACKED_FLOAT32_CALLS.first(keysStr);
+  if (body === null) return [];
 
-  const nums = parseFloatList(match[1]);
+  const nums = parseFloatList(body);
   if (nums === null) return [];
   const stride = 2 + components;
   // Arity is all-or-nothing, as in the engine: `Animation::_set` opens each flat-track branch with

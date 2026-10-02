@@ -5,12 +5,13 @@
  */
 
 import * as vscode from 'vscode';
+import { PROJECT_FILE_NAME } from '@textscene/core/godot';
 import type { HostToWebviewMessage } from './protocol';
 import { VSCodeResourceProvider } from './providers/VSCodeResourceProvider';
 import { buildPanelHtml } from './panelHtml';
 import { dispatchWebviewMessage, type WebviewMessageHandlers } from './webviewDispatch';
 import { jumpToNodeDefinition } from './jumpToNodeDefinition';
-import { relayMissingResource, relayWebviewLog } from './hostLogRelay';
+import { relayWebviewLog } from './hostLogRelay';
 import { encodeResourceResponse } from './wireCodec';
 
 export { dispatchWebviewMessage } from './webviewDispatch';
@@ -25,6 +26,12 @@ export class TscnPreviewPanel {
   private _currentResource: vscode.Uri;
   /** Last text read off disk: both the re-read diff and the ready replay read it. */
   private _previousContent: string | undefined;
+  /**
+   * Written only by `_loadTscnContent`, which takes the next number per read. A save
+   * starts two reads (the save event and the watcher), so a read that finishes
+   * after a later one must not apply its older text.
+   */
+  private _latestLoad = 0;
   private _onDidDispose: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidDispose: vscode.Event<void> = this._onDidDispose.event;
 
@@ -40,7 +47,8 @@ export class TscnPreviewPanel {
   /**
    * Cached per panel, so `findProjectRoot`'s walk and the served `fsPath -> res://`
    * map (`VSCodeResourceProvider.getServedResPath`) survive across requests and
-   * dependency changes. `update()` discards it only when the document changes.
+   * dependency changes. `update()` discards it when the document changes, and
+   * `handleDependencyChange` when a `project.godot` change moves the project root.
    */
   private _resourceProvider: VSCodeResourceProvider | null = null;
 
@@ -90,17 +98,11 @@ export class TscnPreviewPanel {
           this._postMessageToWebview({ type: 'loadTscn', content: this._previousContent });
         }
       },
-      error: (msg) => {
-        vscode.window.showErrorMessage(msg.message);
-      },
       jumpToNode: (msg) => {
         void jumpToNodeDefinition(this._currentResource, msg.nodeName, msg.parent, this._panel.viewColumn);
       },
       loadResource: (msg) => {
         void this._handleLoadResource(msg.path, msg.resourceType, msg.requestId);
-      },
-      resourceNeeded: (msg) => {
-        relayMissingResource(msg.resource);
       },
       log: (msg) => {
         relayWebviewLog(msg.level, msg.message, msg.args);
@@ -170,6 +172,7 @@ export class TscnPreviewPanel {
    * Tells the webview to re-fetch a watched dependency that changed on disk, since
    * the unchanged scene text makes `_loadTscnContent` no-op. A path missing from
    * the served-resources map was never requested, so it has nothing to invalidate.
+   * A `project.godot` that moves the project root re-fetches every served path.
    */
   public async handleDependencyChange(fileUri: vscode.Uri): Promise<void> {
     // A webview that is not ready yet loads everything fresh on mount.
@@ -180,8 +183,28 @@ export class TscnPreviewPanel {
     if (!provider) {
       return;
     }
+    if (isProjectFile(fileUri) && (await provider.hasProjectRootMoved())) {
+      this._reloadUnderMovedRoot(provider);
+      return;
+    }
     const resPath = provider.getServedResPath(fileUri);
     if (resPath) {
+      this.invalidateResource(resPath);
+    }
+  }
+
+  /**
+   * Drops a provider whose project root moved, and asks the webview to re-fetch every
+   * path it served: each `res://` path now names a file under the new root.
+   */
+  private _reloadUnderMovedRoot(provider: VSCodeResourceProvider): void {
+    // `update()` can replace the provider during the walk, and its successor
+    // resolves against the current root already.
+    if (this._resourceProvider !== provider) {
+      return;
+    }
+    this._resourceProvider = null;
+    for (const resPath of provider.getServedResPaths()) {
       this.invalidateResource(resPath);
     }
   }
@@ -198,8 +221,12 @@ export class TscnPreviewPanel {
   }
 
   private async _loadTscnContent(resource: vscode.Uri) {
+    const load = ++this._latestLoad;
     try {
       const fileContent = await vscode.workspace.fs.readFile(resource);
+      if (load !== this._latestLoad) {
+        return;
+      }
       const textContent = new TextDecoder().decode(fileContent);
 
       if (this._previousContent === textContent) {
@@ -215,6 +242,10 @@ export class TscnPreviewPanel {
         this._postMessageToWebview({ type: 'loadTscn', content: textContent });
       }
     } catch (error) {
+      // A later read decides what the preview shows, so its result is the one to report.
+      if (load !== this._latestLoad) {
+        return;
+      }
       vscode.window.showErrorMessage(
         `Failed to load TSCN file: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
@@ -253,4 +284,9 @@ export class TscnPreviewPanel {
     if (this._disposed) return;
     this._panel.webview.postMessage(message);
   }
+}
+
+/** Whether `fileUri` names a `project.godot`, whose directory is the `res://` root. */
+function isProjectFile(fileUri: vscode.Uri): boolean {
+  return fileUri.path.split('/').pop() === PROJECT_FILE_NAME;
 }
