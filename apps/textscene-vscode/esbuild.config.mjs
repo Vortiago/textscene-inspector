@@ -101,6 +101,8 @@ const webviewOptions = {
  * globs `**\/*.test.js` beside itself, so each runtime-loaded file is its own
  * entry and the suites are globbed. Their imports, core included, are bundled:
  * core's dist is bundler-only ESM (extensionless imports), which Node cannot load.
+ * Mocha and glob are bundled too: mocha 12 is ESM-only at its entry, and the Node 18
+ * inside VS Code 1.85, the `engines.vscode` floor, cannot `require` it.
  *
  * @type {esbuild.BuildOptions}
  */
@@ -112,13 +114,16 @@ const testOptions = {
   ],
   bundle: true,
   outdir: 'dist',
-  external: ['vscode', 'mocha', 'glob'],
+  external: ['vscode'],
   format: 'cjs',
   platform: 'node',
   target: 'node16',
   sourcemap: true,
   minify: false,
   logLevel: 'info',
+  // Mocha resolves its parallel-mode worker by path. The suite runs serially, so
+  // the worker is never loaded.
+  logOverride: { 'require-resolve-not-external': 'silent' },
   outbase: 'src',
 };
 
