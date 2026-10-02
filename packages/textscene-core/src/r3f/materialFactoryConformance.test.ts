@@ -177,6 +177,8 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the glow pyramid passes: shaders fixed at construction, only uniforms move, disposed with the effect',
   'packages/textscene-core/src/r3f/lighting2d/lightSeedQuad.tsx':
     'the accumulator seed quad: fixed shaders, one uniform, one instance per accumulator',
+  'packages/textscene-core/src/r3f/positionalShadow/omniShadowCopy.ts':
+    'the cube-to-paraboloid copy: shaders fixed at construction, only uniforms move, one instance per renderer',
   'packages/textscene-core/src/r3f/testing/threePasses.ts':
     "a test stand-in for three's shared `_depthMaterial`, read by a probe and never rendered, so never compiled",
   'packages/textscene-core/src/r3f/lighting2d/lightQuad.ts':
@@ -255,6 +257,8 @@ const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the projection meshes and the material they carry are built by one effect and replaced together, so neither can outlive an input the other was built from',
   'packages/textscene-core/src/r3f/environment/GodotToneMapEffect.ts':
     'the screen quad: its pass materials have their shaders fixed at construction, and it is disposed with the effect',
+  'packages/textscene-core/src/r3f/positionalShadow/omniShadowCopy.ts':
+    'the copy quad: its material has its shaders fixed at construction, and only its uniforms move',
   'packages/textscene-core/src/resources/sky/build.ts':
     'the sky cube: built once, consumed by a single cube render, disposed with the environment',
 };

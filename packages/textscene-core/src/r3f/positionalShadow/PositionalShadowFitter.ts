@@ -10,6 +10,7 @@ import type * as THREE from 'three';
 import { ROOT_POSITIONAL_SHADOW_ATLAS } from '../../godot/positionalShadowAtlas.js';
 import { observeSceneCamera } from '../sceneRenderCamera.js';
 import { fitScenePositionalShadows } from './fitScenePositionalShadows.js';
+import { installPositionalShadowPass } from './positionalShadowPass.js';
 import { activeShadowAtlas, ViewportShadowAtlas } from './viewportShadowAtlas.js';
 
 /**
@@ -30,8 +31,13 @@ export function usePositionalShadowFit(scene: THREE.Scene | null): void {
   }, [scene]);
 }
 
-/** Mounted once per canvas, for the canvas's own scene. */
+/**
+ * Mounted once per canvas, for the canvas's own scene. Its renderer's shadow pass copies each omni
+ * light's cube into the atlas, for every scene the renderer draws.
+ */
 export function PositionalShadowFitter() {
+  const renderer = useThree((state) => state.gl);
+  useEffect(() => installPositionalShadowPass(renderer), [renderer]);
   usePositionalShadowFit(useThree((state) => state.scene));
   return null;
 }

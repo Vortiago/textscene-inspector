@@ -6,7 +6,10 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { useThree } from '@react-three/fiber';
+import { AtlasSpotShadow } from './atlasSpotShadow';
 import { PositionalShadowFitter } from './PositionalShadowFitter';
+import { positionalShadowAtlas } from './shadowAtlasTarget';
 import { positionalShadowUserData } from './declaration';
 import { renderWithShadowAtlas, ViewportShadowAtlas } from './viewportShadowAtlas';
 import { ROOT_POSITIONAL_SHADOW_ATLAS } from '../../godot/positionalShadowAtlas';
@@ -108,6 +111,14 @@ function declaredSpot(): THREE.SpotLight {
   return light;
 }
 
+/** A casting omni light that declares its shadow, at the origin. */
+function declaredOmni(): THREE.PointLight {
+  const light = new THREE.PointLight(0xffffff, 1, 8);
+  light.castShadow = true;
+  light.userData = positionalShadowUserData({ normalBias: 1, softShadowScale: 2 });
+  return light;
+}
+
 /** Looks down -z from `depth` in front of the origin, with a square 90-degree view. */
 function cameraAt(depth: number): THREE.PerspectiveCamera {
   const camera = new THREE.PerspectiveCamera(90, 1, 0.05, 1000);
@@ -134,20 +145,51 @@ describe('<PositionalShadowFitter> on its own', () => {
     expect(light.shadow.mapSize.x).toBe(ROOT_POSITIONAL_SHADOW_ATLAS.size / 4);
   });
 
-  it('fits a SubViewport pass in that viewport’s own atlas, and keeps each viewport’s map', async () => {
+  it('fits a SubViewport pass in that viewport’s own atlas, and keeps each viewport’s omni cube', async () => {
+    const light = declaredOmni();
+    const renderer = await ReactThreeTestRenderer.create(
+      <>
+        <primitive object={light} />
+        <PositionalShadowFitter />
+      </>
+    );
+    const subViewport = new ViewportShadowAtlas({ size: 2048, quadrantShadows: [4, 4, 16, 64] });
+    renderThrough(renderer, cameraAt(5));
+    const rootCube = light.shadow.map;
+    expect(rootCube!.width).toBe(512);
+    renderWithShadowAtlas(subViewport, () => renderThrough(renderer, cameraAt(5)));
+    expect(light.shadow.map!.width).toBe(256);
+    renderThrough(renderer, cameraAt(5));
+    // The steady scene reallocates nothing: the main view finds its own cube again.
+    expect(light.shadow.map).toBe(rootCube);
+    subViewport.dispose();
+  });
+
+  it('draws every spot shadow into the one atlas texture, whichever viewport renders it', async () => {
     const { renderer, light } = await mountWithLight();
     const subViewport = new ViewportShadowAtlas({ size: 2048, quadrantShadows: [4, 4, 16, 64] });
     renderThrough(renderer, cameraAt(5));
-    const rootMap = new THREE.WebGLRenderTarget(1024, 1024);
-    light.shadow.map = rootMap;
+    expect(light.shadow).toBeInstanceOf(AtlasSpotShadow);
+    expect(light.shadow.map).toBe(positionalShadowAtlas());
     renderWithShadowAtlas(subViewport, () => renderThrough(renderer, cameraAt(5)));
+    expect(light.shadow.map).toBe(positionalShadowAtlas());
     expect(light.shadow.mapSize.x).toBe(512);
-    expect(light.shadow.map).toBeNull();
-    light.shadow.map = new THREE.WebGLRenderTarget(512, 512);
-    renderThrough(renderer, cameraAt(5));
-    // The steady scene reallocates nothing: the main view finds its own map again.
-    expect(light.shadow.map).toBe(rootMap);
-    expect(light.shadow.mapSize.x).toBe(1024);
+    subViewport.dispose();
+  });
+
+  it('wraps the canvas renderer’s shadow pass, so each omni cube reaches the atlas', async () => {
+    let gl: THREE.WebGLRenderer | null = null;
+    function CaptureRenderer() {
+      gl = useThree((state) => state.gl);
+      return null;
+    }
+    await ReactThreeTestRenderer.create(
+      <>
+        <CaptureRenderer />
+        <PositionalShadowFitter />
+      </>
+    );
+    expect(Symbol.for('textscene.positionalShadowPass') in gl!.shadowMap).toBe(true);
   });
 
   it('fits nothing for a light that declared nothing (edge case)', async () => {

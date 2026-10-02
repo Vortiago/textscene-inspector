@@ -9,6 +9,7 @@ import type { PositionalShadowRequest } from '../../godot/positionalShadowAtlas.
 import { isViewingCamera, type ViewingCamera } from '../directionalShadow/fitDirectionalShadowBox.js';
 import { sceneLights, type SceneLight } from '../directionalShadow/lightLists.js';
 import { readPositionalShadowDeclaration, type PositionalShadowDeclaration } from './declaration.js';
+import { adoptAtlasShadow } from './adoptAtlasShadow.js';
 import { fitPositionalShadow } from './fitPositionalShadow.js';
 import { omniShadowCoverage, spotShadowCoverage } from './shadowCoverage.js';
 import type { PositionalLight, ViewportShadowAtlas } from './viewportShadowAtlas.js';
@@ -34,8 +35,9 @@ export function fitScenePositionalShadows(
   atlas.retain(new Set(declared.map(({ light }) => light)));
   atlas.allocate(slotRequests(declared, camera), tickMsec);
   for (const { light, declaration } of declared) {
-    atlas.bind(light.shadow);
-    fitPositionalShadow(light, atlas.slotSize(light), declaration);
+    const atlasLight = adoptAtlasShadow(light);
+    if (!isSpotLight(atlasLight)) atlas.bind(atlasLight.shadow);
+    fitPositionalShadow(atlasLight, atlas.slot(light), declaration);
   }
 }
 

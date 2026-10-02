@@ -2,7 +2,8 @@
  * Godot's `soft_shadow_scale` for a light without a size: the radius of its PCF kernel in atlas
  * texels, and the factor its directional and spot depth bias carry
  * (`servers/rendering/renderer_rd/storage_rd/light_storage.cpp:697-703`, `:723`, `:986-999`,
- * `:1019-1024`). An omni light spreads that radius over a paraboloid (`godot/positionalShadowAtlas.ts`).
+ * `:1019-1024`). An omni light spreads that radius over a paraboloid
+ * (`scene_forward_lights_inc.glsl:354`, `:597`).
  */
 
 /** `Light3D()` sets `PARAM_SHADOW_BLUR` to 1 (`scene/3d/light_3d.cpp:489`). */

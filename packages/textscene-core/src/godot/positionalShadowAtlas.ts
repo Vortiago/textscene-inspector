@@ -95,21 +95,21 @@ export function positionalShadowQuadrantSubdivision(shadows: number): number {
 }
 
 /**
+ * The atlas stores 16-bit depth: `rendering/lights_and_shadows/positional_shadow/atlas_16_bits`
+ * defaults to true (`servers/rendering/rendering_server.cpp:3712`), as does a `Viewport`'s own
+ * setting (`scene/main/viewport.h:306`), and that picks `DATA_FORMAT_D16_UNORM`
+ * (`light_storage.cpp:2531-2533`).
+ */
+export const POSITIONAL_SHADOW_ATLAS_DEPTH_BITS = 16;
+
+/**
  * The side of each cube face an omni light renders before Godot copies the cube into its two slots,
- * one paraboloid per slot (`render_forward_clustered.cpp:2680`, `:2732-2734`). A paraboloid's texel
- * at the pole spans the same angle as a cube face's at its centre.
+ * one paraboloid per slot (`render_forward_clustered.cpp:2680`, `:2732-2734`). The default
+ * `omni_shadow_mode` is Cube (`scene/3d/light_3d.cpp:647-650`). A paraboloid's texel at the pole
+ * spans the same angle as a cube face's at its centre.
  */
 export function omniShadowCubeSize(slotSize: number): number {
   return slotSize / 2;
-}
-
-/**
- * The radius, in radians, of an omni light's PCF kernel: `soft_shadow_scale / (1 + |z|)` texels of a
- * paraboloid inset by a texel per side (`scene_forward_lights_inc.glsl:354`, `:476-478`, `:597`), each
- * `(1 + |z|) * 2 / (slot - 2)` radians wide, so the angle is the same in every direction.
- */
-export function omniShadowKernelAngle(softShadowScale: number, slotSize: number): number {
-  return (2 * softShadowScale) / (slotSize - 2);
 }
 
 /** A light that asks the atlas for a slot in one render. */
@@ -131,6 +131,21 @@ interface Quadrant<Owner> {
   slots: Slot<Owner>[];
 }
 
+/** Where a light's shadow lies in its viewport's atlas, in texels. */
+export interface PositionalShadowSlot {
+  /** The slot's corner nearest the atlas's origin. */
+  x: number;
+  y: number;
+  /** The slot's side. */
+  size: number;
+  /**
+   * For an omni light, the step in slots from the slot of its first paraboloid to that of its
+   * second: the next slot, or the first of the next row after a row's last slot
+   * (`light_storage.h:683-691`). Null for a spot light.
+   */
+  paraboloidStep: readonly [number, number] | null;
+}
+
 interface Ownership {
   quadrant: number;
   slot: number;
@@ -148,7 +163,8 @@ interface Found {
  * (`light_storage.cpp:2155-2509`). An owner is any value that names one light.
  */
 export class PositionalShadowAtlas<Owner> {
-  private readonly size: number;
+  /** The atlas's side in texels, a power of two (`light_storage.cpp:2159`). */
+  readonly size: number;
   private readonly quadrants: Quadrant<Owner>[] = [0, 1, 2, 3].map(() => ({ subdivision: 0, slots: [] }));
   private readonly sizeOrder = [0, 1, 2, 3];
   private smallestSubdiv = 0;
@@ -176,11 +192,23 @@ export class PositionalShadowAtlas<Owner> {
     for (const request of requests) this.updateLight(request, tickMsec);
   }
 
-  /** The side, in texels, of the slot `owner` holds, or null when it holds none. */
-  slotSize(owner: Owner): number | null {
+  /**
+   * The slot `owner` holds, or null when it holds none: `light_instance_get_shadow_atlas_rect`
+   * (`light_storage.h:663-697`) in texels.
+   */
+  slot(owner: Owner): PositionalShadowSlot | null {
     const ownership = this.owners.get(owner);
     if (!ownership) return null;
-    return Math.trunc(this.quadSize() / this.quadrants[ownership.quadrant]!.subdivision);
+    const { subdivision } = this.quadrants[ownership.quadrant]!;
+    const quadSize = this.quadSize();
+    const size = Math.trunc(quadSize / subdivision);
+    const isRowEnd = (ownership.slot + 1) % subdivision === 0;
+    return {
+      x: (ownership.quadrant & 1) * quadSize + (ownership.slot % subdivision) * size,
+      y: (ownership.quadrant >> 1) * quadSize + Math.trunc(ownership.slot / subdivision) * size,
+      size,
+      paraboloidStep: ownership.isOmni ? (isRowEnd ? [1 - subdivision, 1] : [1, 0]) : null,
+    };
   }
 
   /** Frees a light's slots, as freeing the light instance does. */
