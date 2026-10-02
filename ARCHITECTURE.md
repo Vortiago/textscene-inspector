@@ -209,29 +209,9 @@ separate pass (ADR-0030).
 orchestrator, which runs them in dependency order from a single `useFrame`
 (`ViewportPassRegistryContext.tsx`).
 
-**Directional shadows.** As in Godot, the renderer owns a directional light's shadow box, and
-the light does not. A light only declares its shadow parameters on `userData`.
-`<SceneShadowFitter>` hooks each render of the scene (`scene.onBeforeRender`) and fits
-each declared light's shadow to that render's camera. The shadowed lights share Godot's
-one directional shadow atlas: one texture, which every lit program samples through one sampler.
-
-A shadowed light shades through a child sun light, in one, two or four splits. The sun draws one
-fitted box per split into the light's share, and a patched shader chunk picks the split by view
-depth. Every directional shadow fades out over the far end of its last split. A patched lighting
-chunk applies the fade from one shared buffer, which the fitter writes before each render. A 3D
-SubViewport with its own portal scene hooks that scene the same way
-(`r3f/directionalShadow/directionalShadow.md`).
-
-**Positional shadows.** The same hook fits an omni or spot light in each render of its scene, after
-the directional fit and from the same walk of the scene's lights. Godot gives the light a slot in its positional shadow atlas by how much
-of the view the light's range covers. Every omni and spot shadow lies in one atlas texture, which
-every lit program samples through one sampler. A spot light draws straight into its slot. An omni
-light renders a cube, and the renderer's shadow pass copies it into two paraboloids in neighbouring
-slots, as Godot's default Cube mode does (`r3f/positionalShadow/positionalShadow.md`).
-
-**Shadow filter.** Every directional, omni and spot lookup filters through Godot's Soft Low PCF:
-four taps of a Vogel disk, turned per pixel by Godot's hash with rows counted from the top of the
-framebuffer. So a soft edge dithers as Godot's does (`r3f/shadowFilter/`).
+**Shadows.** A light only declares its shadow on `userData`. `<SceneShadowFitter>` fits every
+declared shadow to the camera of each render, in Godot's directional and positional atlases
+(`r3f/directionalShadow/directionalShadow.md`, `r3f/positionalShadow/positionalShadow.md`).
 
 **Axis conventions.** Godot and three.js disagree in three places. Each is converted where
 Godot data becomes a three.js object, never in a parser:
