@@ -8,6 +8,12 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 
 /**
+ * On Windows, VS Code can still hold a file of a project whose editors just closed, and
+ * the removal fails with ENOTEMPTY. Node retries that error, and EBUSY and EPERM, with these.
+ */
+const REMOVE_OPTIONS: fs.RmOptions = { recursive: true, force: true, maxRetries: 10, retryDelay: 100 };
+
+/**
  * The absolute fsPath of the project named `name` in the test workspace. `__dirname`
  * is the bundle's output directory, four levels below the app root.
  */
@@ -23,7 +29,7 @@ export function godotProjectDir(name: string): string {
  */
 export function writeGodotProject(name: string, files: Record<string, string>): void {
   const dir = godotProjectDir(name);
-  fs.rmSync(dir, { recursive: true, force: true });
+  fs.rmSync(dir, REMOVE_OPTIONS);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(
     path.join(dir, 'project.godot'),
@@ -38,7 +44,7 @@ export function writeGodotProject(name: string, files: Record<string, string>): 
 
 /** Call in `suiteTeardown`. */
 export function removeGodotProject(name: string): void {
-  fs.rmSync(godotProjectDir(name), { recursive: true, force: true });
+  fs.rmSync(godotProjectDir(name), REMOVE_OPTIONS);
 }
 
 /** Opens a file of the project as a text document, which activates the extension on `onLanguage:tscn`. */
