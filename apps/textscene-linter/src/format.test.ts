@@ -5,6 +5,7 @@ import type { Diagnostic } from '@textscene/core/linter';
 import type { FileDiagnostics } from './lint';
 import {
   formatDiagnostics,
+  escapeControlCharacters,
   formatDim,
   formatError,
   formatFilePath,
@@ -72,6 +73,26 @@ describe('formatDiagnostics', () => {
       '  ✖ \x1b[31merror\x1b[0m \x1b[2m[Camera3D:Camera]\x1b[0m Something is wrong \x1b[2m(camera3d-missing-fov)\x1b[0m',
       '',
     ]);
+  });
+
+  it('escapes control characters in the node name, node type, message and path, never the colour codes', () => {
+    const hostile = makeDiagnostic({
+      nodeName: 'R\x1b]0;pwned\x07\x1b[2J',
+      nodeType: 'Node\x9b3D',
+      message: 'got: "\x1b]52;c;aGVsbG8=\x07"',
+    });
+
+    const lines = formatDiagnostics('bad\x1b[2J.tscn', [hostile], true);
+
+    expect(lines).toEqual([
+      '\x1b[1mbad\\u001b[2J.tscn\x1b[0m',
+      '  ✖ \x1b[31merror\x1b[0m \x1b[2m[Node\\u009b3D:R\\u001b]0;pwned\\u0007\\u001b[2J]\x1b[0m got: "\\u001b]52;c;aGVsbG8=\\u0007" \x1b[2m(camera3d-missing-fov)\x1b[0m',
+      '',
+    ]);
+  });
+
+  it('escapes control characters in the path of a clean file', () => {
+    expect(formatDiagnostics('a\x1b[2J.tscn', [], false)).toEqual(['✓ a\\u001b[2J.tscn']);
   });
 
   it('formats one line per diagnostic with a single trailing blank line', () => {
@@ -229,6 +250,18 @@ describe('formatJson', () => {
     expect(json).toContain('\n'); // pretty-printed, not a single line
   });
 
+  it('escapes DEL and the C1 controls, which JSON.stringify passes through raw', () => {
+    const file: FileDiagnostics = {
+      filePath: 'a.tscn',
+      diagnostics: [makeDiagnostic({ message: 'csi \x9b2J del \x7f esc \x1b' })],
+    };
+
+    const json = formatJson([file]);
+
+    expect(json).toContain('csi \\u009b2J del \\u007f esc \\u001b');
+    expect(toJsonFindings([file])).toEqual(JSON.parse(json));
+  });
+
   it('produces an empty JSON array for no files', () => {
     expect(JSON.parse(formatJson([]))).toEqual([]);
   });
@@ -313,6 +346,28 @@ describe('formatGithubAnnotations', () => {
     expect(formatGithubAnnotations([file])[0]).toContain('100%25 broken%0D%0Asee above');
   });
 
+  it('escapes control characters other than CR and LF in the message and the file path', () => {
+    const file: FileDiagnostics = {
+      filePath: 'a\x1b[2J.tscn',
+      diagnostics: [makeDiagnostic({ message: 'got \x1b]52;c;aGVsbG8=\x07 and \x9b2J' })],
+    };
+
+    expect(formatGithubAnnotations([file])).toEqual([
+      '::error file=a\\u001b[2J.tscn::got \\u001b]52;c;aGVsbG8=\\u0007 and \\u009b2J (camera3d-missing-fov)',
+    ]);
+  });
+
+  it('keeps a workflow command in the message on the annotation line, as data', () => {
+    const file: FileDiagnostics = {
+      filePath: 'a.tscn',
+      diagnostics: [makeDiagnostic({ message: 'x\n::add-mask::secret' })],
+    };
+
+    const lines = formatGithubAnnotations([file]);
+
+    expect(lines).toEqual(['::error file=a.tscn::x%0A::add-mask::secret (camera3d-missing-fov)']);
+  });
+
   it('escapes colons and commas in the file path property', () => {
     const file: FileDiagnostics = { filePath: 'C:/scenes/a,b.tscn', diagnostics: [makeDiagnostic()] };
 
@@ -353,10 +408,32 @@ describe('formatGithubAnnotations', () => {
   });
 });
 
+describe('escapeControlCharacters', () => {
+  it('leaves printable text, tab and non-ASCII letters as they are', () => {
+    expect(escapeControlCharacters('Node3D\tÆøå ✓')).toBe('Node3D\tÆøå ✓');
+  });
+
+  it('writes ESC, BEL, CR, LF, DEL and the C1 CSI as visible \\u escapes', () => {
+    expect(escapeControlCharacters('\x1b\x07\r\n\x7f\x9b')).toBe(
+      '\\u001b\\u0007\\u000d\\u000a\\u007f\\u009b'
+    );
+  });
+
+  it('escapes the ends of the control ranges and NUL, and returns an empty string as is', () => {
+    expect(escapeControlCharacters('\x00\x1f\x80\x9f\xa0')).toBe('\\u0000\\u001f\\u0080\\u009f\xa0');
+    expect(escapeControlCharacters('')).toBe('');
+  });
+});
+
 describe('simple formatters', () => {
   it('formatFilePath bolds only when color is on', () => {
     expect(formatFilePath('a.tscn', true)).toBe('\x1b[1ma.tscn\x1b[0m');
     expect(formatFilePath('a.tscn', false)).toBe('a.tscn');
+  });
+
+  it('formatFilePath escapes control characters in the path, with color on or off', () => {
+    expect(formatFilePath('a\x1b]0;t\x07.tscn', true)).toBe('\x1b[1ma\\u001b]0;t\\u0007.tscn\x1b[0m');
+    expect(formatFilePath('a\x1b]0;t\x07.tscn', false)).toBe('a\\u001b]0;t\\u0007.tscn');
   });
 
   it('formatSuccess is green only when color is on', () => {

@@ -6,7 +6,7 @@
 
 import * as path from 'path';
 import * as fs from 'fs';
-import { waitFor } from './panelHelpers';
+import { waitFor } from '../../waitFor';
 import type { HostToWebviewMessage } from '../../../protocol';
 
 /**

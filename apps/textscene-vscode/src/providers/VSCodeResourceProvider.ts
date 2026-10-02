@@ -86,9 +86,27 @@ export class VSCodeResourceProvider implements ResourceProvider {
     return this.servedResources.get(comparablePath(fileUri.fsPath)) ?? null;
   }
 
+  /** Every `res://` path `loadResource` served, each once, for a caller that must re-fetch them all. */
+  getServedResPaths(): string[] {
+    return [...new Set(this.servedResources.values())];
+  }
+
+  /**
+   * Whether a fresh walk finds another project root than the cached one, after a
+   * `project.godot` was created, moved or deleted. False before any load cached a
+   * root, since no resource was then resolved against one.
+   */
+  async hasProjectRootMoved(): Promise<boolean> {
+    if (!this.projectRoot) {
+      return false;
+    }
+    const currentRoot = await findGodotProjectRoot(this.workspaceRoot, this.documentUri);
+    return comparablePath(currentRoot.fsPath) !== comparablePath(this.projectRoot.fsPath);
+  }
+
   /**
    * The Godot project root from the shared `findGodotProjectRoot`, cached for this
-   * provider's lifetime.
+   * provider's lifetime. `hasProjectRootMoved` tells the owner when to replace it.
    */
   private async findProjectRoot(): Promise<vscode.Uri> {
     if (this.projectRoot) {

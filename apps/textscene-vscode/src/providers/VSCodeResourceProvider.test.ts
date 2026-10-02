@@ -335,4 +335,80 @@ describe('VSCodeResourceProvider', () => {
       expect(resPath).toBe('res://textures/wood.png');
     });
   });
+
+  describe('getServedResPaths', () => {
+    it('lists each res:// path once, though two fsPaths served it', async () => {
+      vscode.workspace.fs.readFile.mockResolvedValue(createMockFileData('texture data'));
+      await provider.loadResource('res://textures/wood.png', 'Texture2D');
+      await provider.loadResource('res://icon.png', 'Texture2D');
+      // Read through the fallback too: `/workspace/scenes/icon.png` serves the same path.
+      vscode.workspace.fs.readFile.mockImplementation((uri: ReturnType<typeof createMockUri>) =>
+        uri.fsPath === '/workspace/icon.png'
+          ? Promise.reject(new Error('Not found'))
+          : Promise.resolve(createMockFileData('icon-bytes'))
+      );
+      await provider.loadResource('res://icon.png', 'Texture2D');
+
+      expect(provider.getServedResPaths().sort()).toEqual(['res://icon.png', 'res://textures/wood.png']);
+    });
+
+    it('lists a path whose read failed, since its file can still appear', async () => {
+      vscode.workspace.fs.readFile.mockRejectedValue(new Error('ENOENT'));
+
+      await expect(provider.loadResource('res://textures/missing.png', 'Texture2D')).rejects.toThrow();
+
+      expect(provider.getServedResPaths()).toEqual(['res://textures/missing.png']);
+    });
+
+    it('lists nothing before the first load', () => {
+      expect(provider.getServedResPaths()).toEqual([]);
+    });
+  });
+
+  describe('hasProjectRootMoved', () => {
+    /** Answers `stat` for `project.godot` in exactly these directories. */
+    function projectFilesIn(...dirs: string[]): void {
+      vscode.workspace.fs.stat.mockImplementation((uri: ReturnType<typeof createMockUri>) =>
+        dirs.some((dir) => uri.fsPath === `${dir}/project.godot`)
+          ? Promise.resolve({ type: 1, ctime: 0, mtime: 0, size: 100 })
+          : Promise.reject(new Error('Not found'))
+      );
+    }
+
+    async function serveOneResource(): Promise<void> {
+      vscode.workspace.fs.readFile.mockResolvedValue(createMockFileData('texture data'));
+      await provider.loadResource('res://textures/wood.png', 'Texture2D');
+    }
+
+    it('is true once a project.godot appears nearer the document than the cached root', async () => {
+      await serveOneResource();
+      projectFilesIn('/workspace', '/workspace/scenes');
+
+      expect(await provider.hasProjectRootMoved()).toBe(true);
+    });
+
+    it('is true once the cached root loses its project.godot', async () => {
+      const nestedDocument = createMockUri('/workspace/game/scenes/test.tscn');
+      provider = new VSCodeResourceProvider(workspaceRoot, nestedDocument);
+      projectFilesIn('/workspace/game');
+      await serveOneResource();
+      projectFilesIn();
+
+      expect(await provider.hasProjectRootMoved()).toBe(true);
+    });
+
+    it('is false while the cached root still holds the nearest project.godot', async () => {
+      await serveOneResource();
+      projectFilesIn('/workspace', '/workspace/other');
+
+      expect(await provider.hasProjectRootMoved()).toBe(false);
+    });
+
+    it('is false before any load resolved a root, and walks nothing', async () => {
+      vscode.workspace.fs.stat.mockClear();
+
+      expect(await provider.hasProjectRootMoved()).toBe(false);
+      expect(vscode.workspace.fs.stat).not.toHaveBeenCalled();
+    });
+  });
 });
