@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { gltfResourcePath, packGltfAsGlb, type GltfJson } from './gltfResources';
-
-const GLB_MAGIC = 0x46546c67;
-const JSON_CHUNK = 0x4e4f534a;
-const BIN_CHUNK = 0x004e4942;
+import { gltfResourcePath, packGltfAsGlb, selfContainedGlb, type GltfJson } from './gltfResources';
+import { GLB_BIN_CHUNK, GLB_JSON_CHUNK, GLB_MAGIC } from '../../../godot/gltf';
+import { binChunk, glbOfChunks, jsonChunk } from './testing/triangleGlb';
 
 /** The JSON and the BIN chunk of a GLB, after checking its framing. */
 function unpack(glb: ArrayBuffer): { json: GltfJson; bin: Uint8Array } {
@@ -12,12 +10,12 @@ function unpack(glb: ArrayBuffer): { json: GltfJson; bin: Uint8Array } {
   expect(view.getUint32(4, true)).toBe(2);
   expect(view.getUint32(8, true)).toBe(glb.byteLength);
   const jsonLength = view.getUint32(12, true);
-  expect(view.getUint32(16, true)).toBe(JSON_CHUNK);
+  expect(view.getUint32(16, true)).toBe(GLB_JSON_CHUNK);
   expect(jsonLength % 4).toBe(0);
   const json = JSON.parse(new TextDecoder().decode(new Uint8Array(glb, 20, jsonLength))) as GltfJson;
   const binStart = 20 + jsonLength;
   const binLength = view.getUint32(binStart, true);
-  expect(view.getUint32(binStart + 4, true)).toBe(BIN_CHUNK);
+  expect(view.getUint32(binStart + 4, true)).toBe(GLB_BIN_CHUNK);
   expect(binLength % 4).toBe(0);
   return { json, bin: new Uint8Array(glb, binStart + 8, binLength) };
 }
@@ -154,5 +152,104 @@ describe('packGltfAsGlb', () => {
     const json: GltfJson = { asset: { version: '2.0' }, buffers: [{ uri: 'gone.bin', byteLength: 4 }] };
 
     await expect(packGltfAsGlb(json, readUri)).rejects.toThrow('gone.bin');
+  });
+});
+
+describe('selfContainedGlb', () => {
+  const positions = () => new Uint8Array([1, 2, 3, 4]);
+
+  it('reads a GLB’s external image through readUri and carries it in the binary chunk', async () => {
+    const { readUri, read } = reader({ 'https://attacker.example/beacon.png': bytes(0x89, 0x50) });
+    const glb = glbOfChunks([
+      jsonChunk({
+        asset: { version: '2.0' },
+        buffers: [{ byteLength: 4 }],
+        bufferViews: [{ buffer: 0, byteLength: 4 }],
+        images: [{ uri: 'https://attacker.example/beacon.png' }],
+      }),
+      binChunk(positions()),
+    ]);
+
+    const { json: packed, bin } = unpack(await selfContainedGlb(glb, readUri));
+
+    expect(read).toEqual(['https://attacker.example/beacon.png']);
+    expect(packed.buffers).toEqual([{ byteLength: 8 }]);
+    expect(packed.images).toEqual([{ bufferView: 1, mimeType: 'image/png' }]);
+    expect([...bin.slice(0, 6)]).toEqual([1, 2, 3, 4, 0x89, 0x50]);
+  });
+
+  it('keeps a GLB’s own binary chunk first and appends an external buffer after it', async () => {
+    const { readUri } = reader({ 'extra.bin': bytes(9, 9) });
+    const glb = glbOfChunks([
+      jsonChunk({
+        asset: { version: '2.0' },
+        buffers: [{ byteLength: 4 }, { uri: 'extra.bin', byteLength: 2 }],
+        bufferViews: [
+          { buffer: 0, byteLength: 4 },
+          { buffer: 1, byteLength: 2 },
+        ],
+      }),
+      binChunk(positions()),
+    ]);
+
+    const { json: packed, bin } = unpack(await selfContainedGlb(glb, readUri));
+
+    expect(packed.bufferViews).toEqual([
+      { buffer: 0, byteOffset: 0, byteLength: 4 },
+      { buffer: 0, byteOffset: 4, byteLength: 2 },
+    ]);
+    expect([...bin.slice(0, 6)]).toEqual([1, 2, 3, 4, 9, 9]);
+  });
+
+  it('returns a GLB that names no URI as it is', async () => {
+    const { readUri, read } = reader({});
+    const glb = glbOfChunks([
+      jsonChunk({ asset: { version: '2.0' }, buffers: [{ byteLength: 4 }] }),
+      binChunk(positions()),
+    ]);
+
+    expect(await selfContainedGlb(glb, readUri)).toBe(glb);
+    expect(read).toEqual([]);
+  });
+
+  it('reads the last JSON chunk, the one the glTF loader reads', async () => {
+    const { readUri, read } = reader({ 'beacon.png': bytes(0x89, 0x50) });
+    const glb = glbOfChunks([
+      jsonChunk({ asset: { version: '2.0' } }),
+      jsonChunk({ asset: { version: '2.0' }, images: [{ uri: 'beacon.png' }] }),
+    ]);
+
+    const { json: packed } = unpack(await selfContainedGlb(glb, readUri));
+
+    expect(read).toEqual(['beacon.png']);
+    expect(packed.images).toEqual([{ bufferView: 0, mimeType: 'image/png' }]);
+  });
+
+  it('packs a text glTF', async () => {
+    const { readUri } = reader({ 'scene.bin': bytes(1, 2, 3, 4) });
+    const gltf = { asset: { version: '2.0' }, buffers: [{ uri: 'scene.bin', byteLength: 4 }] };
+
+    const { json: packed } = unpack(
+      await selfContainedGlb(new TextEncoder().encode(JSON.stringify(gltf)).buffer, readUri)
+    );
+
+    expect(packed.buffers).toEqual([{ byteLength: 4 }]);
+  });
+
+  it('fails naming the URI a GLB names and readUri cannot read', async () => {
+    const { readUri } = reader({});
+    const glb = glbOfChunks([
+      jsonChunk({ asset: { version: '2.0' }, buffers: [{ uri: 'gone.bin', byteLength: 4 }] }),
+    ]);
+
+    await expect(selfContainedGlb(glb, readUri)).rejects.toThrow('gone.bin');
+  });
+
+  it('fails for a GLB with no JSON chunk', async () => {
+    const { readUri } = reader({});
+
+    await expect(selfContainedGlb(glbOfChunks([binChunk(positions())]), readUri)).rejects.toThrow(
+      'JSON chunk'
+    );
   });
 });

@@ -1,12 +1,10 @@
 /**
  * A binary glTF built in memory: one triangle mesh on one node, with the file's
- * extension lists and the node's extensions left to the caller.
+ * extension lists and the node's extensions left to the caller. The chunk builders
+ * under it write any GLB a test needs.
  */
 
-import { GLB_JSON_CHUNK, GLB_MAGIC } from '../../../../godot/gltf';
-
-/** `BIN\0` as a chunk type. Godot reads only the JSON chunk to judge a file, so this one is the builder's alone. */
-export const BIN_CHUNK = 0x004e4942;
+import { GLB_BIN_CHUNK, GLB_JSON_CHUNK, GLB_MAGIC } from '../../../../godot/gltf';
 
 /** One float32 VEC3 per vertex, and one per instance for the instancing extension. */
 const TRIANGLE = [0, 0, 0, 1, 0, 0, 0, 1, 0];
@@ -80,21 +78,40 @@ function padded(bytes: Uint8Array, pad: number): Uint8Array {
   return out;
 }
 
-export function triangleGlb(options: TriangleGlb = {}): ArrayBuffer {
-  const json = padded(new TextEncoder().encode(JSON.stringify(gltfJson(options))), 0x20);
-  const bin = new Uint8Array(new Float32Array([...TRIANGLE, ...INSTANCE_OFFSETS]).buffer);
-  const total = 12 + 8 + json.length + 8 + bin.length;
+export interface GlbChunk {
+  type: number;
+  bytes: Uint8Array;
+}
+
+/** A JSON chunk holding `json`, padded with spaces as the container requires. */
+export function jsonChunk(json: object): GlbChunk {
+  return { type: GLB_JSON_CHUNK, bytes: padded(new TextEncoder().encode(JSON.stringify(json)), 0x20) };
+}
+
+/** A BIN chunk holding `bytes`, padded with zeros. */
+export function binChunk(bytes: Uint8Array): GlbChunk {
+  return { type: GLB_BIN_CHUNK, bytes: padded(bytes, 0) };
+}
+
+/** A GLB container of `chunks` in the order given, so a test can write one a valid file never has. */
+export function glbOfChunks(chunks: GlbChunk[]): ArrayBuffer {
+  const total = chunks.reduce((length, chunk) => length + 8 + chunk.bytes.length, 12);
   const glb = new ArrayBuffer(total);
   const view = new DataView(glb);
   view.setUint32(0, GLB_MAGIC, true);
   view.setUint32(4, 2, true);
   view.setUint32(8, total, true);
-  view.setUint32(12, json.length, true);
-  view.setUint32(16, GLB_JSON_CHUNK, true);
-  new Uint8Array(glb, 20, json.length).set(json);
-  const binHeader = 20 + json.length;
-  view.setUint32(binHeader, bin.length, true);
-  view.setUint32(binHeader + 4, BIN_CHUNK, true);
-  new Uint8Array(glb, binHeader + 8, bin.length).set(bin);
+  let offset = 12;
+  for (const { type, bytes } of chunks) {
+    view.setUint32(offset, bytes.length, true);
+    view.setUint32(offset + 4, type, true);
+    new Uint8Array(glb, offset + 8, bytes.length).set(bytes);
+    offset += 8 + bytes.length;
+  }
   return glb;
+}
+
+export function triangleGlb(options: TriangleGlb = {}): ArrayBuffer {
+  const positions = new Uint8Array(new Float32Array([...TRIANGLE, ...INSTANCE_OFFSETS]).buffer);
+  return glbOfChunks([jsonChunk(gltfJson(options)), binChunk(positions)]);
 }

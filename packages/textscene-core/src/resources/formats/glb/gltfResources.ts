@@ -1,8 +1,9 @@
 /**
- * A text glTF's external buffers and images, read through the resource provider and
- * packed with its JSON into one GLB, so the glTF loader fetches nothing. The VS Code
- * webview's CSP refuses every fetch, and a provider, not a URL, owns a `res://` file.
- * THREE-free, so it runs and tests without a renderer.
+ * A glTF's external buffers and images, read through the resource provider and packed
+ * with its JSON into one GLB, so the glTF loader fetches nothing. The VS Code webview's
+ * CSP refuses every fetch, a provider, not a URL, owns a `res://` file, and a URI in a
+ * crafted file must not make the viewer request it. THREE-free, so it runs and tests
+ * without a renderer.
  */
 
 import { fileExtension } from '../../fileExtension';
@@ -32,8 +33,14 @@ const IMAGE_MIME_TYPES: Record<string, string> = {
   '.ktx2': 'image/ktx2',
 };
 
+/** The GLB file header: magic, version and total length, each a little-endian `uint32`. */
+const GLB_HEADER_BYTES = 12;
+const GLB_TOTAL_LENGTH_OFFSET = 8;
+/** A GLB chunk header: the chunk's length, then its type. */
+const GLB_CHUNK_HEADER_BYTES = 8;
+
 /** Whether `data` is a binary glTF container, as against a text `.gltf`. */
-export function isGlbContainer(data: ArrayBuffer): boolean {
+function isGlbContainer(data: ArrayBuffer): boolean {
   return data.byteLength >= 4 && new DataView(data).getUint32(0, true) === GLB_MAGIC;
 }
 
@@ -86,21 +93,73 @@ class BinaryChunk {
   }
 }
 
+/** Reads a non-data URI a glTF names, and throws when it cannot. */
+export type ReadUri = (uri: string) => Promise<ArrayBuffer>;
+
+/** A GLB container's JSON document and the bytes of its binary chunk. */
+interface GlbChunks {
+  json: GltfJson;
+  bin: Uint8Array;
+}
+
+/**
+ * The JSON and binary chunk three's glTF loader reads: it walks every chunk to the header's
+ * total length and keeps the last of each type (`GLTFBinaryExtension` in `GLTFLoader.js`).
+ * This walks the same way, so both read one document. Throws where the loader throws.
+ */
+function glbChunks(glb: ArrayBuffer): GlbChunks {
+  const contentsLength = new DataView(glb).getUint32(GLB_TOTAL_LENGTH_OFFSET, true) - GLB_HEADER_BYTES;
+  const chunks = new DataView(glb, GLB_HEADER_BYTES);
+  let text: string | null = null;
+  let bin = new Uint8Array();
+  for (let index = 0; index < contentsLength;) {
+    const length = chunks.getUint32(index, true);
+    const type = chunks.getUint32(index + 4, true);
+    const body = new Uint8Array(glb, GLB_HEADER_BYTES + index + GLB_CHUNK_HEADER_BYTES, length);
+    if (type === GLB_JSON_CHUNK) text = new TextDecoder().decode(body);
+    else if (type === GLB_BIN_CHUNK) bin = body;
+    index += GLB_CHUNK_HEADER_BYTES + length;
+  }
+  if (text === null) throw new Error('GLB has no JSON chunk');
+  return { json: JSON.parse(text) as GltfJson, bin };
+}
+
+/** Whether a buffer or an image names its bytes by `uri`, which the glTF loader would fetch. */
+function namesUri(json: GltfJson): boolean {
+  return [...(json.buffers ?? []), ...(json.images ?? [])].some((entry) => entry.uri !== undefined);
+}
+
+/**
+ * `data` as a GLB that carries every buffer and image it names: a text glTF packed, a GLB
+ * that names a `uri` repacked, and any other GLB as it is. The glTF loader then fetches nothing.
+ */
+export async function selfContainedGlb(data: ArrayBuffer, readUri: ReadUri): Promise<ArrayBuffer> {
+  if (!isGlbContainer(data)) {
+    const json = JSON.parse(new TextDecoder().decode(data)) as GltfJson;
+    return packGltfAsGlb(json, readUri);
+  }
+  const { json, bin } = glbChunks(data);
+  return namesUri(json) ? packGltfAsGlb(json, readUri, bin) : data;
+}
+
 /**
  * `json` as a GLB: every buffer and every image with a `uri` moves into the one
- * binary chunk, and the buffer views point into it. `readUri` reads a non-data URI and
- * throws when it cannot. The input is not changed.
+ * binary chunk, and the buffer views point into it. `glbBin` is the binary chunk of the
+ * GLB that `json` came from, which the first buffer names when it has no `uri`. The
+ * input is not changed.
  */
 export async function packGltfAsGlb(
   json: GltfJson,
-  readUri: (uri: string) => Promise<ArrayBuffer>
+  readUri: ReadUri,
+  glbBin: Uint8Array = new Uint8Array()
 ): Promise<ArrayBuffer> {
   const read = async (uri: string): Promise<Uint8Array> =>
     uri.startsWith('data:') ? dataUriBytes(uri) : new Uint8Array(await readUri(uri));
   const chunk = new BinaryChunk();
   const bufferOffsets: number[] = [];
-  for (const buffer of json.buffers ?? []) {
-    bufferOffsets.push(buffer.uri === undefined ? chunk.length : chunk.append(await read(buffer.uri)));
+  for (const [index, buffer] of (json.buffers ?? []).entries()) {
+    const ownBytes = index === 0 ? glbBin : new Uint8Array();
+    bufferOffsets.push(chunk.append(buffer.uri === undefined ? ownBytes : await read(buffer.uri)));
   }
   const bufferViews = (json.bufferViews ?? []).map((view) => ({
     ...view,
