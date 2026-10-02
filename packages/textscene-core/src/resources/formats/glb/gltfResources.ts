@@ -6,6 +6,7 @@
  */
 
 import { fileExtension } from '../../fileExtension';
+import { normalizeRelativePath, RES_SCHEME } from '../../resPath';
 import { GLB_BIN_CHUNK, GLB_JSON_CHUNK, GLB_MAGIC } from '../../../godot/gltf';
 
 /** The parts of a glTF document this packs; every other member passes through untouched. */
@@ -36,14 +37,15 @@ export function isGlbContainer(data: ArrayBuffer): boolean {
   return data.byteLength >= 4 && new DataView(data).getUint32(0, true) === GLB_MAGIC;
 }
 
-/** The `res://` path a glTF URI names: percent-decoded, relative to the glTF's own directory. */
-export function gltfResourcePath(gltfPath: string, uri: string): string {
-  const segments = gltfPath.split('/').slice(0, -1);
-  for (const segment of percentDecoded(uri).split('/')) {
-    if (segment === '..') segments.pop();
-    else if (segment !== '.') segments.push(segment);
-  }
-  return segments.join('/');
+/**
+ * The `res://` path a glTF URI names: percent-decoded, relative to the glTF's own directory.
+ * Null for a URI that climbs above `res://`, which names no project file.
+ */
+export function gltfResourcePath(gltfPath: string, uri: string): string | null {
+  const scheme = gltfPath.startsWith(RES_SCHEME) ? RES_SCHEME : '';
+  const directory = gltfPath.slice(scheme.length).split('/').slice(0, -1).join('/');
+  const relative = normalizeRelativePath(`${directory}/${percentDecoded(uri)}`);
+  return relative === null ? null : scheme + relative;
 }
 
 /** `uri` percent-decoded, or as written when an escape is malformed. */

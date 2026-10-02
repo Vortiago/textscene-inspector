@@ -57,6 +57,18 @@ describe('gltfResourcePath', () => {
       'res://town/shared/palette.png'
     );
   });
+
+  it('drops an empty segment', () => {
+    expect(gltfResourcePath('res://town/model.gltf', 'textures//grass.webp')).toBe(
+      'res://town/textures/grass.webp'
+    );
+  });
+
+  it('gives null for a URI that climbs above res://', () => {
+    expect(gltfResourcePath('res://model.gltf', '../model.bin')).toBeNull();
+    expect(gltfResourcePath('res://model.gltf', '../../model.bin')).toBeNull();
+    expect(gltfResourcePath('res://town/model.gltf', '../%2E%2E/model.bin')).toBeNull();
+  });
 });
 
 describe('packGltfAsGlb', () => {

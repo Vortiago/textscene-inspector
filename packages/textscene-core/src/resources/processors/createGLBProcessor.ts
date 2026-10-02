@@ -55,6 +55,9 @@ async function glbBytes(
   const json = JSON.parse(new TextDecoder().decode(data)) as GltfJson;
   return packGltfAsGlb(json, async (uri) => {
     const resourcePath = gltfResourcePath(path, uri);
+    if (resourcePath === null) {
+      throw new Error(`glTF ${path} needs ${uri}, which climbs above res://`);
+    }
     dependencies.record({ busType: 'glb', key: path }, resourcePath);
     const bytes = await fileEventBus?.tryLoad(resourcePath, 'GltfResource');
     if (!(bytes instanceof ArrayBuffer)) {

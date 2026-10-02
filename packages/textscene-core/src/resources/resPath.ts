@@ -6,7 +6,7 @@
 
 import { PROJECT_FILE_NAME } from '../godot/project.js';
 
-const RES_SCHEME = 'res://';
+export const RES_SCHEME = 'res://';
 
 /**
  * `path` without its trailing slashes. A loop, not `/\/+$/`: that regex backtracks quadratically on a
