@@ -7,7 +7,6 @@ import {
   DIRECTIONAL_SHADOW_FADE_START_DEFAULT,
   directionalShadowFade,
   directionalLightsDrawn,
-  directionalLightsWithShadow,
   directionalShadowLightRect,
   directionalShadowSlice,
   directionalShadowSnapStep,
@@ -247,26 +246,6 @@ describe('directionalLightsDrawn', () => {
 
   it('draws no light for a scene without one (error case)', () => {
     expect(directionalLightsDrawn([])).toEqual([]);
-  });
-});
-
-describe('directionalLightsWithShadow', () => {
-  const shadowed = (light: string) => light.startsWith('shadowed');
-
-  it('keeps the shadowed lights in order', () => {
-    expect(directionalLightsWithShadow(['shadowed-a', 'plain', 'shadowed-b'], shadowed)).toEqual([
-      'shadowed-a',
-      'shadowed-b',
-    ]);
-  });
-
-  it('counts only the first eight lights, shadowed or not (edge case)', () => {
-    const lights = [...Array.from({ length: MAX_DIRECTIONAL_LIGHTS }, () => 'plain'), 'shadowed-ninth'];
-    expect(directionalLightsWithShadow(lights, shadowed)).toEqual([]);
-  });
-
-  it('returns no light for a scene without one (error case)', () => {
-    expect(directionalLightsWithShadow([], shadowed)).toEqual([]);
   });
 });
 

@@ -15,15 +15,16 @@ two or four splits by `directional_shadow_mode`. It ports Godot 4.6.3's
   `directional_shadow_blend_splits`, `directional_shadow_fade_start` and whether the light
   shares the atlas. A DirectionalLight3D defaults to four splits
   (`light_3d.cpp:606`), and so does the editor's preview sun (`node_3d_editor_plugin.cpp:10383`).
-- `<DirectionalShadowFitter>` is mounted inside `<TscnSceneContents>`, so the web previewer,
-  the VS Code extension and the visual harness all mount it. It fits every declared light in Godot's
-  list of shadowed lights to the camera of each render of the scene. It also writes each shadow's fade for
-  that render, through `scene.onBeforeRender` (`r3f/sceneRenderCamera.ts`). three calls that
-  hook after it updates the world matrices and before the shadow pass. So each render gets a fit
-  to its own camera: the main view, a SubViewport pass that renders the shared world, and a
-  screenshot. No render order matters.
+- `<SceneShadowFitter>` (`../SceneShadowFitter.tsx`) is mounted inside `<TscnSceneContents>`, so
+  the web previewer, the VS Code extension and the visual harness all mount it. It fits every
+  declared light in Godot's list of shadowed lights to the camera of each render of the scene. It
+  also writes each shadow's fade for that render, through `scene.onBeforeRender`
+  (`r3f/sceneRenderCamera.ts`). three calls that hook after it updates the world matrices and before
+  the shadow pass. So each render gets a fit to its own camera: the main view, a SubViewport pass
+  that renders the shared world, and a screenshot. No render order matters. The positional fit runs
+  after this one, from the same walk of the scene's lights (`../positionalShadow/positionalShadow.md`).
 - A 3D SubViewport that renders its own portal scene hooks that scene with
-  `useDirectionalShadowFit`. Its unmount hands every declared light its own shading and layers
+  `useSceneShadowFit`. Its unmount hands every declared light its own shading and layers
   back.
 - Every light in the shadow list draws into its share of one atlas texture (`shadowAtlas.ts`), and
   every lit program samples that texture through one sampler (`shadowAtlasChunk.ts`).
@@ -101,7 +102,8 @@ each directional and sun shadow towards unshadowed by the receiver's view depth,
   and a small `fade_start` reaches into the nearer splits too.
 - `installDirectionalShadowFade` runs once, when `TscnCanvas` is imported. It declares one
   `vec2` uniform array outside both of three's shadow blocks, with an entry per directional
-  shadow and per sun shadow. It gives every built-in lit material that uniform.
+  shadow and per sun shadow. It gives every built-in lit material and `UniformsLib.lights` that
+  uniform.
 - The uniform's value is one shared `Float32Array`. `UniformsUtils.cloneUniforms` keeps a typed
   array by reference, so each material's clone reads the same buffer. The buffer has 32 entries.
   The sun shadows are at most eight. An undeclared directional light binds its own sampler, so
@@ -113,11 +115,12 @@ each directional and sun shadow towards unshadowed by the receiver's view depth,
   camera's layers include them. A light in the shadow list fails that layer test, so its
   `SplitSunLight` takes the light's fade at the sun's index. A dropped light fails it too, and
   takes no index. An undeclared caster keeps its index with no fade.
-- A `ShaderMaterial` with `lights: true` lacks the uniform. Its shadow reads zeros, which the
-  shader treats as no fade.
-- The fade and the split lookup both edit `shadowmap_pars_fragment`. The fade inserts after
-  `#ifdef USE_SHADOWMAP`, and the split lookup rewrites only the sun block, so either install
-  order gives the same chunk. Each install changes nothing on a second call.
+- A `ShaderMaterial` with `lights: true` that does not merge `UniformsLib.lights` lacks the
+  uniform. Its shadow reads zeros, which the shader treats as no fade.
+- The fade, the soft shadow filter and the split lookup all edit `shadowmap_pars_fragment`. The
+  fade inserts after `#ifdef USE_SHADOWMAP`, the filter inserts ahead of the sun block, and the
+  split lookup rewrites only the sun block, so every install order gives the same chunk. Each
+  install changes nothing on a second call.
 
 ## The split lookup
 
@@ -157,8 +160,9 @@ for each split it samples:
   factor. three uploads a sun shadow's map size as the atlas's size (`WebGLLights.js:305`).
 
 The kernel, the turn and the PCF are one GLSL block in `../shadowFilter/softShadowFilter.ts`,
-which the omni and spot lookups share. So the soft edge's dither matches Godot's pixel for pixel
-where the shadow map matches. The lookup keeps three's test that leaves a receiver outside the atlas
+which the omni and spot lookups share. `installSoftShadowFilter` puts it in
+`shadowmap_pars_fragment` once, ahead of every shadow block, and both lookups' installs call it
+first. So the soft edge's dither matches Godot's pixel for pixel where the shadow map matches. The lookup keeps three's test that leaves a receiver outside the atlas
 or past its far plane unshadowed. A map type other than PCF keeps three's own lookup.
 
 ## The three.js design

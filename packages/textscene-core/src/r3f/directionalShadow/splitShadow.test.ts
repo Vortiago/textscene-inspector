@@ -10,6 +10,7 @@ import { DirectionalSplitShadow, SPLIT_CAMERA_UP, SPLIT_SLOTS } from './splitSha
 import { directionalShadowAtlasDepth } from './shadowAtlas';
 import { directionalShadowUserData } from './declaration';
 import { fitSceneDirectionalShadows } from './fitSceneDirectionalShadows';
+import { sceneLights } from './lightLists';
 import { cameraSliceCorners } from './fitDirectionalShadowBox';
 import { splitSunOf } from './splitSun';
 import {
@@ -65,7 +66,7 @@ function fittedShadow(
   const lights = Array.from({ length: lightCount }, () => declaredSplitLight(splitCount));
   for (const light of lights) scene.add(light, light.target);
   scene.updateMatrixWorld();
-  fitSceneDirectionalShadows(scene, camera);
+  fitSceneDirectionalShadows(scene, camera, sceneLights(scene));
   const sun = splitSunOf(lights[lightCount - 1]!)!;
   sun.shadow.updateMatrices(sun);
   return sun.shadow;
@@ -145,6 +146,32 @@ describe('DirectionalSplitShadow.setSplits', () => {
         expect(shadow.mapSize.clone().multiply(shadow.getFrameExtents()).toArray()).toEqual([4096, 4096]);
       }
     }
+  });
+
+  it('writes back the split size three shrank, when the layout is unchanged (edge case)', () => {
+    // three shrinks `mapSize` when the atlas exceeds `MAX_TEXTURE_SIZE` (r186 `WebGLShadowMap.js:180-198`).
+    const shadow = new DirectionalSplitShadow();
+    shadow.setSplits(4, SECOND_OF_TWO);
+    shadow.mapSize.set(512, 1024);
+    shadow.setSplits(4, SECOND_OF_TWO);
+    expect(shadow.mapSize.toArray()).toEqual([1024, 2048]);
+    expect(shadow.getViewport(1).toArray()).toEqual([3, 0, 1, 1]);
+  });
+
+  it('lays the splits out again when the share moves (edge case)', () => {
+    const shadow = new DirectionalSplitShadow();
+    shadow.setSplits(4, WHOLE_ATLAS);
+    shadow.setSplits(4, { ...WHOLE_ATLAS, x: 2048, width: 2048 });
+    expect(shadow.mapSize.toArray()).toEqual([1024, 2048]);
+    expect(shadow.getViewport(1).toArray()).toEqual([3, 0, 1, 1]);
+  });
+
+  it('lays the splits out again when the split count changes (edge case)', () => {
+    const shadow = new DirectionalSplitShadow();
+    shadow.setSplits(4, WHOLE_ATLAS);
+    shadow.setSplits(2, WHOLE_ATLAS);
+    expect(shadow.mapSize.toArray()).toEqual([4096, 2048]);
+    expect(shadow.getViewport(2).toArray()).toEqual([0, 0, 0, 0]);
   });
 
   it('keeps four slots for every split count, as the shader expects (edge case)', () => {

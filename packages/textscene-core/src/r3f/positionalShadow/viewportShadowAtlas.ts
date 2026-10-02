@@ -69,14 +69,13 @@ export class ViewportShadowAtlas {
     for (const owner of this.slots.ownersHoldingSlots()) {
       if (!lights.has(owner)) this.slots.release(owner);
     }
-    const shadows = new Set<THREE.LightShadow>([...lights].map((light) => light.shadow));
     for (const [shadow, map] of this.parkedMaps) {
-      if (shadows.has(shadow)) continue;
+      if (isShadowOfAny(lights, shadow)) continue;
       map.dispose();
       this.parkedMaps.delete(shadow);
     }
     for (const shadow of this.boundShadows) {
-      if (!shadows.has(shadow)) this.unbind(shadow);
+      if (!isShadowOfAny(lights, shadow)) this.unbind(shadow);
     }
   }
 
@@ -100,6 +99,12 @@ export class ViewportShadowAtlas {
     this.boundShadows.delete(shadow);
     if (boundAtlas.get(shadow) === this) boundAtlas.delete(shadow);
   }
+}
+
+/** A loop, not a set of the shadows: the fit retains on every render. */
+function isShadowOfAny(lights: ReadonlySet<PositionalLight>, shadow: THREE.LightShadow): boolean {
+  for (const light of lights) if (light.shadow === shadow) return true;
+  return false;
 }
 
 /** Pushed only by `renderWithShadowAtlas` around one render, and popped when that render returns. */

@@ -1,22 +1,23 @@
 /**
- * The fitter as the hosts mount it: inside `<TscnSceneContents>`, fitting the
- * preview sun and an authored sun before each render. The test renderer draws
- * nothing, so `renderThrough` plays the part of `WebGLRenderer.render`.
+ * The fitter's directional fit as the hosts mount it: inside `<TscnSceneContents>`, fitting the
+ * preview sun and an authored sun before each render. The test renderer draws nothing, so
+ * `renderThrough` plays the part of `WebGLRenderer.render`.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { DirectionalShadowFitter, useDirectionalShadowFit } from './DirectionalShadowFitter';
-import { directionalShadowUserData } from './declaration';
-import { splitSunOf } from './splitSun';
-import { TscnSceneContents } from '../TscnCanvas';
-import { HierarchyProvider } from '../contexts/HierarchyContext';
-import { SelectionProvider } from '../contexts/SelectionContext';
-import { ViewportModeProvider } from '../contexts/ViewportModeContext';
-import { createSceneGraphFromTscnScene } from '../../core/SceneGraph';
-import { TscnParser } from '../../parser/TscnParser';
+import { SceneShadowFitter, useSceneShadowFit } from './SceneShadowFitter';
+import { directionalShadowUserData } from './directionalShadow/declaration';
+import { splitSunOf } from './directionalShadow/splitSun';
+import { positionalShadowUserData } from './positionalShadow/declaration';
+import { TscnSceneContents } from './TscnCanvas';
+import { HierarchyProvider } from './contexts/HierarchyContext';
+import { SelectionProvider } from './contexts/SelectionContext';
+import { ViewportModeProvider } from './contexts/ViewportModeContext';
+import { createSceneGraphFromTscnScene } from '../core/SceneGraph';
+import { TscnParser } from '../parser/TscnParser';
 
-import '../nodes/index';
+import './nodes/index';
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
@@ -68,7 +69,7 @@ function firstSplitLeft(light: THREE.DirectionalLight): number | null {
   return splitSunOf(light)?.shadow.getCamera(0).left ?? null;
 }
 
-describe('<DirectionalShadowFitter> in the scene contents', () => {
+describe('<SceneShadowFitter> directional fit in the scene contents', () => {
   it('fits the preview sun in four splits before a render', async () => {
     const renderer = await renderScene(scene('\n[node name="Cube" type="MeshInstance3D" parent="."]\n'));
     renderThrough(renderer, cameraAt(0));
@@ -138,7 +139,7 @@ function declaredLight(splitCount: number): THREE.DirectionalLight {
   return light;
 }
 
-describe('<DirectionalShadowFitter> on its own', () => {
+describe('<SceneShadowFitter> directional fit on its own', () => {
   async function mountWithLight(
     splitCount = 1
   ): Promise<{ renderer: Renderer; light: THREE.DirectionalLight }> {
@@ -146,7 +147,7 @@ describe('<DirectionalShadowFitter> on its own', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <>
         <primitive object={light} />
-        <DirectionalShadowFitter />
+        <SceneShadowFitter />
       </>
     );
     return { renderer, light };
@@ -202,7 +203,7 @@ describe('<DirectionalShadowFitter> on its own', () => {
         {lights.map((light) => (
           <primitive key={light.uuid} object={light} />
         ))}
-        <DirectionalShadowFitter />
+        <SceneShadowFitter />
       </>
     );
     renderThrough(renderer, cameraAt(0));
@@ -218,14 +219,14 @@ describe('<DirectionalShadowFitter> on its own', () => {
   });
 
   it('renders nothing into the scene', async () => {
-    const renderer = await ReactThreeTestRenderer.create(<DirectionalShadowFitter />);
+    const renderer = await ReactThreeTestRenderer.create(<SceneShadowFitter />);
     expect(renderer.scene.children).toHaveLength(0);
   });
 });
 
-describe('useDirectionalShadowFit', () => {
+describe('useSceneShadowFit', () => {
   function FitScene({ scene }: { scene: THREE.Scene | null }) {
-    useDirectionalShadowFit(scene);
+    useSceneShadowFit(scene);
     return null;
   }
 
@@ -237,6 +238,21 @@ describe('useDirectionalShadowFit', () => {
     own.updateMatrixWorld();
     (own.onBeforeRender as (...args: unknown[]) => void).call(own, null, own, cameraAt(0), null);
     expect(splitSunOf(light)).not.toBeNull();
+  });
+
+  it('fits a directional and a spot light in the same render', async () => {
+    const own = new THREE.Scene();
+    const sun = declaredLight(1);
+    const spot = new THREE.SpotLight(0xffffff, 1, 8, Math.PI / 4);
+    spot.castShadow = true;
+    spot.userData = positionalShadowUserData({ normalBias: 1, softShadowScale: 2 });
+    spot.shadow.mapSize.set(64, 64);
+    own.add(sun, spot, spot.target);
+    await ReactThreeTestRenderer.create(<FitScene scene={own} />);
+    own.updateMatrixWorld();
+    (own.onBeforeRender as (...args: unknown[]) => void).call(own, null, own, cameraAt(0), null);
+    expect(splitSunOf(sun)).not.toBeNull();
+    expect(spot.shadow.mapSize.x).not.toBe(64);
   });
 
   it('fits nothing for a null scene (edge case)', async () => {

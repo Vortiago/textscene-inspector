@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   POSITIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
-  omniShadowDepthBias,
   positionalLightBounds,
   positionalShadowNear,
   positionalShadowNormalBias,
@@ -40,20 +39,6 @@ describe('positionalShadowNormalBias', () => {
 
   it('is infinite for a slot of no texels (error case)', () => {
     expect(positionalShadowNormalBias(1, 0)).toBe(Number.POSITIVE_INFINITY);
-  });
-});
-
-describe('omniShadowDepthBias', () => {
-  it('keeps the authored bias, in world units', () => {
-    expect(omniShadowDepthBias(0.1)).toBe(0.1);
-  });
-
-  it('keeps a negative bias, which pulls the receiver away (edge case)', () => {
-    expect(omniShadowDepthBias(-0.2)).toBe(-0.2);
-  });
-
-  it('passes a non-finite bias through (error case)', () => {
-    expect(omniShadowDepthBias(Number.NaN)).toBeNaN();
   });
 });
 

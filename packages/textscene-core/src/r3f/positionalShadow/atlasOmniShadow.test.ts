@@ -50,6 +50,25 @@ describe('AtlasOmniShadow.fitCube', () => {
   });
 });
 
+describe('AtlasOmniShadow.place', () => {
+  it('takes the slot and renders each cube face at half its side', () => {
+    const shadow = new AtlasOmniShadow();
+    const slot = { x: 2048, y: 0, size: 1024, paraboloidStep: [1, 0] as const };
+    shadow.place(slot);
+    expect(shadow.slot).toBe(slot);
+    expect((shadow.map as THREE.WebGLCubeRenderTarget).width).toBe(512);
+  });
+
+  it('keeps its cube for a null slot (edge case)', () => {
+    const shadow = new AtlasOmniShadow();
+    shadow.place({ x: 0, y: 0, size: 512, paraboloidStep: [1, 0] });
+    const cube = shadow.map;
+    shadow.place(null);
+    expect(shadow.slot).toBeNull();
+    expect(shadow.map).toBe(cube);
+  });
+});
+
 describe('AtlasOmniShadow.writeLookupMatrix', () => {
   it('maps the world into the light’s own space, without its scale', () => {
     const light = turnedLight();

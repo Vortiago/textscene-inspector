@@ -7,6 +7,7 @@
 
 import * as THREE from 'three';
 import type { PositionalShadowSlot } from '../../godot/positionalShadowAtlas.js';
+import { lightPoseMatrix } from './lightPose.js';
 import { positionalShadowAtlas } from './shadowAtlasTarget.js';
 
 const VERTEX = /* glsl */ `
@@ -87,6 +88,9 @@ void main() {
 /** The first paraboloid looks down the light's -Z, and the second down its +Z (`cube_to_dp.glsl`). */
 const PARABOLOID_SIGNS = [-1, 1] as const;
 
+/** Written only by `OmniShadowCopy.copy`, and valid only inside that call. */
+const scratchLightPose = new THREE.Matrix4();
+
 export class OmniShadowCopy {
   private readonly material = new THREE.ShaderMaterial({
     vertexShader: VERTEX,
@@ -127,11 +131,12 @@ export class OmniShadowCopy {
     uniforms.zNear!.value = light.shadow.camera.near;
     uniforms.zFar!.value = light.shadow.camera.far;
     uniforms.texelSize!.value = 1 / slot.size;
-    (uniforms.lightToWorld!.value as THREE.Matrix3).setFromMatrix4(lightRotation(light));
-    PARABOLOID_SIGNS.forEach((sign, paraboloid) => {
-      uniforms.paraboloidSign!.value = sign;
+    // `setFromMatrix4` keeps the pose's rotation and drops its translation.
+    (uniforms.lightToWorld!.value as THREE.Matrix3).setFromMatrix4(lightPoseMatrix(light, scratchLightPose));
+    for (let paraboloid = 0; paraboloid < PARABOLOID_SIGNS.length; paraboloid++) {
+      uniforms.paraboloidSign!.value = PARABOLOID_SIGNS[paraboloid];
       this.drawInto(renderer, slot, paraboloid);
-    });
+    }
   }
 
   dispose(): void {
@@ -164,11 +169,4 @@ export class OmniShadowCopy {
       renderer.info.autoReset = autoReset;
     }
   }
-}
-
-/** The light's rotation in the world, without its scale (`renderer_scene_cull.cpp:2358-2359`). */
-function lightRotation(light: THREE.Object3D): THREE.Matrix4 {
-  const rotation = new THREE.Quaternion();
-  light.matrixWorld.decompose(new THREE.Vector3(), rotation, new THREE.Vector3());
-  return new THREE.Matrix4().makeRotationFromQuaternion(rotation);
 }

@@ -4,7 +4,7 @@
  * Godot's renderer owns directional shadow setup.
  */
 
-import type * as THREE from 'three';
+import { userDataDeclaration } from '../userDataDeclaration.js';
 
 export interface DirectionalShadowDeclaration {
   /** `directional_shadow_max_distance`. Zero or less leaves the camera's far plane in charge. */
@@ -38,29 +38,9 @@ export interface DirectionalShadowDeclaration {
   sharesAtlas: boolean;
 }
 
-/** The `userData` key. One key, so a light carries one declaration. */
-const DECLARATION_KEY = 'directionalShadow';
-
-/**
- * The `userData` entry that declares `declaration`. R3F assigns a `userData` prop whole, so a light
- * that declares more merges every entry into the one prop.
- */
-export function directionalShadowUserData(
-  declaration: DirectionalShadowDeclaration
-): Record<string, unknown> {
-  return { [DECLARATION_KEY]: declaration };
-}
-
-/** The light's declaration, or null for a light that made none, which the fitter leaves alone. */
-export function readDirectionalShadowDeclaration(light: THREE.Object3D): DirectionalShadowDeclaration | null {
-  const declaration = (light.userData as Record<string, unknown>)[DECLARATION_KEY];
-  return isDeclaration(declaration) ? declaration : null;
-}
-
-function isDeclaration(value: unknown): value is DirectionalShadowDeclaration {
-  if (typeof value !== 'object' || value === null) return false;
-  const candidate = value as Record<string, unknown>;
-  return (
+const declaration = userDataDeclaration<DirectionalShadowDeclaration>(
+  'directionalShadow',
+  (candidate) =>
     typeof candidate.maxDistance === 'number' &&
     typeof candidate.pancakeSize === 'number' &&
     typeof candidate.fadeStart === 'number' &&
@@ -71,5 +51,10 @@ function isDeclaration(value: unknown): value is DirectionalShadowDeclaration {
     Array.isArray(candidate.splitOffsets) &&
     typeof candidate.blendSplits === 'boolean' &&
     typeof candidate.sharesAtlas === 'boolean'
-  );
-}
+);
+
+/** The `userData` entry that declares a light's shadow, to merge into the light's `userData`. */
+export const directionalShadowUserData = declaration.userData;
+
+/** The light's declaration, or null for a light that made none, which the fitter leaves alone. */
+export const readDirectionalShadowDeclaration = declaration.read;

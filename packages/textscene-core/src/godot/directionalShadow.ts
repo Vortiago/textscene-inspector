@@ -215,17 +215,6 @@ export function directionalLightsDrawn<Light>(lights: readonly Light[]): Light[]
   return lights.slice(0, MAX_DIRECTIONAL_LIGHTS);
 }
 
-/**
- * `renderer_scene_cull.cpp:3257-3277`: the lights that share the atlas, in the order they take
- * their shares. `lights` are as `directionalLightsDrawn` takes them.
- */
-export function directionalLightsWithShadow<Light>(
-  lights: readonly Light[],
-  sharesAtlas: (light: Light) => boolean
-): Light[] {
-  return directionalLightsDrawn(lights).filter(sharesAtlas);
-}
-
 /** A rectangle of the directional shadow atlas, in texels. */
 export interface DirectionalShadowAtlasRect {
   x: number;

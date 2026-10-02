@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { freeShadowMap } from './shadowMapAllocation.js';
+import { hideLight, ownLayerMask, showLight } from './hiddenLight.js';
 import { DirectionalSplitShadow } from './splitShadow.js';
 
 export class SplitSunLight extends THREE.Light {
@@ -36,9 +36,16 @@ export class SplitSunLight extends THREE.Light {
   }
 }
 
-/** Nothing for a light that has no split sun. */
+/**
+ * Each light's split sun. Written only by `attachSplitSun` and `releaseSplitSun`, so the fitter
+ * finds a sun without a search of the light's children on every render.
+ */
+const splitSuns = new WeakMap<THREE.DirectionalLight, SplitSunLight>();
+
+/** Nothing for a light that has no split sun, or whose sun something else took off it. */
 export function splitSunOf(light: THREE.DirectionalLight): SplitSunLight | null {
-  return (light.children.find((child) => child instanceof SplitSunLight) as SplitSunLight) ?? null;
+  const sun = splitSuns.get(light);
+  return sun?.parent === light ? sun : null;
 }
 
 /** The light's split sun, attached on the first call. The declared light stops shading then. */
@@ -46,14 +53,11 @@ export function attachSplitSun(light: THREE.DirectionalLight): SplitSunLight {
   const existing = splitSunOf(light);
   if (existing) return existing;
   const sun = new SplitSunLight();
-  // The sun renders on the light's own layers, and release hands them back to the light.
-  sun.layers.mask = light.layers.mask;
-  // A light that fails the camera's layer test never enters the render's light list
-  // (`WebGLRenderer.js:1864-1888`), while its children still do.
-  light.layers.disableAll();
-  // The hidden light draws no shadow, so a map it drew before the sun attached only holds memory.
-  freeShadowMap(light.shadow);
+  // The sun renders on the light's own layers while the light is hidden.
+  sun.layers.mask = ownLayerMask(light);
+  hideLight(light);
   light.add(sun);
+  splitSuns.set(light, sun);
   // A light leaves the scene before the fitter can see it go, so it lets go of its own sun's share.
   light.addEventListener('removed', releaseRemovedLight);
   return sun;
@@ -64,7 +68,8 @@ export function releaseSplitSun(light: THREE.DirectionalLight): void {
   const sun = splitSunOf(light);
   if (!sun) return;
   light.removeEventListener('removed', releaseRemovedLight);
-  light.layers.mask = sun.layers.mask;
+  splitSuns.delete(light);
+  showLight(light);
   light.remove(sun);
   sun.dispose();
 }
@@ -87,6 +92,9 @@ export function followDeclaredLight(
   sun.intensity = light.intensity;
   sun.shadow.intensity = light.shadow.intensity;
   sun.shadow.radius = light.shadow.radius;
-  const towardsLight = lightPosition.clone().sub(targetPosition);
-  sun.matrixWorld.makeTranslation(towardsLight.x, towardsLight.y, towardsLight.z);
+  sun.matrixWorld.makeTranslation(
+    lightPosition.x - targetPosition.x,
+    lightPosition.y - targetPosition.y,
+    lightPosition.z - targetPosition.z
+  );
 }

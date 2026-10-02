@@ -22,7 +22,7 @@ import { directionalShadowBias } from '../shared/shadowBias';
 import type { DirectionalLight3DProperties } from './types';
 
 /** The properties a DirectionalLight3D's shadow reads. */
-export type DirectionalShadowProperties = Pick<
+type DirectionalShadowProperties = Pick<
   DirectionalLight3DProperties,
   | 'shadow_enabled'
   | 'shadow_bias'

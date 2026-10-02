@@ -5,9 +5,9 @@
  * box, and the fitted box reaches past that end.
  */
 
-import * as THREE from 'three';
 import type { DirectionalShadowFade } from '../../godot/directionalShadow.js';
-import { warn } from '../../logger';
+import { installChunkPatch, type Chunks } from '../shaderPatch/chunkPatch.js';
+import { installLitUniform, installedUniformValue } from '../shaderPatch/litUniform.js';
 
 /** The uniform every lit material reads its fades from. */
 export const DIRECTIONAL_SHADOW_FADE_UNIFORM = 'directionalShadowFade';
@@ -19,30 +19,24 @@ export const DIRECTIONAL_SHADOW_FADE_UNIFORM = 'directionalShadowFade';
  */
 const MAX_FADED_SHADOWS = 32;
 
+const installedFades = installedUniformValue(DIRECTIONAL_SHADOW_FADE_UNIFORM);
+
 /**
  * `[from, to]` per shadow: every directional shadow, then every sun shadow, each in three's order.
  * Written only by `writeDirectionalShadowFades`, before each render. A typed array, not an `Array`:
  * `cloneUniforms` copies an `Array` per material and keeps any other value by reference (three
- * r186 `UniformsUtils.js:43-65`). So every material reads this one buffer.
+ * r186 `UniformsUtils.js:43-65`). So every material reads this one buffer. After a dev server
+ * reloads this module, it is the buffer the earlier evaluation installed, which every compiled
+ * program reads.
  */
-const fades = installedFades() ?? new Float32Array(MAX_FADED_SHADOWS * 2);
-
-/**
- * The buffer an earlier evaluation of this module gave `ShaderLib`, as after a dev server reloads
- * it. Every program compiled since keeps that buffer, so this evaluation writes it too.
- */
-function installedFades(): Float32Array | null {
-  const installed: unknown = THREE.ShaderLib.standard.uniforms[DIRECTIONAL_SHADOW_FADE_UNIFORM]?.value;
-  return installed instanceof Float32Array ? installed : null;
-}
-
-const PARS_CHUNK = 'shadowmap_pars_fragment';
-const LIGHTS_CHUNK = 'lights_fragment_begin';
+const fades =
+  installedFades instanceof Float32Array ? installedFades : new Float32Array(MAX_FADED_SHADOWS * 2);
 
 /**
  * The fade goes in ahead of three's own shadow declarations, outside both the directional and
  * the sun block, so it is declared once whichever of the two a program compiles.
- * `splitShadowChunk.ts` rewrites the sun block only, so the two patches compose in either order.
+ * `splitShadowChunk.ts` rewrites the sun block only, and `softShadowFilter.ts` goes in after the
+ * fade, ahead of that block, so the patches compose in any order.
  */
 const PARS_ANCHOR = '#ifdef USE_SHADOWMAP\n';
 
@@ -74,19 +68,17 @@ function fadedShadow(shadow: string, fadeIndex: string): string {
   return `mix( ${shadow}, 1.0, directionalShadowFadeOut( ${DIRECTIONAL_SHADOW_FADE_UNIFORM}[ ${fadeIndex} ], - geometryPosition.z ) )`;
 }
 
-export interface ShadowFadeChunks {
-  pars: string;
-  lights: string;
-}
+export type ShadowFadeChunks = Chunks<'shadowmap_pars_fragment' | 'lights_fragment_begin'>;
 
 /** Both chunks with the fade in, or null when either lacks a line the fade hooks onto. */
-export function shadowFadeChunks(pars: string, lights: string): ShadowFadeChunks | null {
+export function shadowFadeChunks(chunks: ShadowFadeChunks): ShadowFadeChunks | null {
+  const { shadowmap_pars_fragment: pars, lights_fragment_begin: lights } = chunks;
   if (!pars.includes(PARS_ANCHOR) || !lights.includes(DIRECTIONAL_SHADOW) || !SUN_SHADOW.test(lights)) {
     return null;
   }
   return {
-    pars: pars.replace(PARS_ANCHOR, PARS_FADE),
-    lights: lights
+    shadowmap_pars_fragment: pars.replace(PARS_ANCHOR, PARS_FADE),
+    lights_fragment_begin: lights
       .replace(DIRECTIONAL_SHADOW, fadedShadow(DIRECTIONAL_SHADOW, 'i'))
       .replace(SUN_SHADOW, (sunShadow) =>
         fadedShadow(sunShadow, 'NUM_DIR_LIGHT_SHADOWS + UNROLLED_LOOP_INDEX')
@@ -95,24 +87,19 @@ export function shadowFadeChunks(pars: string, lights: string): ShadowFadeChunks
 }
 
 /**
- * Patches three's chunks and gives every built-in lit material the fade uniform, for every
- * program compiled after the call. A three release that rewrites any hooked line keeps its own
- * chunks, and `shadowFade.test.ts` fails on that release. A second call changes nothing.
+ * Patches three's chunks and gives every built-in lit material and `UniformsLib.lights` the fade
+ * uniform, for every program compiled after the call. A three release that rewrites any hooked line
+ * keeps its own chunks, and `shadowFade.test.ts` fails on that release. A second call leaves the
+ * chunks as they are.
  */
 export function installDirectionalShadowFade(): void {
-  if (THREE.ShaderChunk[PARS_CHUNK].includes(DIRECTIONAL_SHADOW_FADE_UNIFORM)) return;
-  const patched = shadowFadeChunks(THREE.ShaderChunk[PARS_CHUNK], THREE.ShaderChunk[LIGHTS_CHUNK]);
-  if (patched === null) {
-    warn(`[Shading] three's ${PARS_CHUNK} or ${LIGHTS_CHUNK} has no directional shadow line to fade`);
-    return;
-  }
-  THREE.ShaderChunk[PARS_CHUNK] = patched.pars;
-  THREE.ShaderChunk[LIGHTS_CHUNK] = patched.lights;
-  for (const shader of Object.values(THREE.ShaderLib)) {
-    if (shader.fragmentShader.includes(`#include <${LIGHTS_CHUNK}>`)) {
-      shader.uniforms[DIRECTIONAL_SHADOW_FADE_UNIFORM] = { value: fades };
-    }
-  }
+  const isPatched = installChunkPatch({
+    names: ['shadowmap_pars_fragment', 'lights_fragment_begin'],
+    isApplied: (chunks) => chunks.shadowmap_pars_fragment.includes(DIRECTIONAL_SHADOW_FADE_UNIFORM),
+    apply: shadowFadeChunks,
+    missing: 'shadowmap_pars_fragment or lights_fragment_begin has no directional shadow line to fade',
+  });
+  if (isPatched) installLitUniform(DIRECTIONAL_SHADOW_FADE_UNIFORM, fades);
 }
 
 /**
@@ -128,7 +115,14 @@ export interface ShadowFades {
 /** Sets the buffer from `shadowFades`. Every entry past the lists fades nothing. */
 export function writeDirectionalShadowFades(shadowFades: ShadowFades): void {
   fades.fill(0);
-  [...shadowFades.directional, ...shadowFades.sun].slice(0, fades.length / 2).forEach((fade, index) => {
-    if (fade) fades.set([fade.from, fade.to], index * 2);
-  });
+  const { directional, sun } = shadowFades;
+  for (let index = 0; index < directional.length; index++) writeFade(index, directional[index] ?? null);
+  for (let index = 0; index < sun.length; index++) writeFade(directional.length + index, sun[index] ?? null);
+}
+
+/** Writes one shadow's fade at its index. A shadow past the buffer has no entry, and fades nothing. */
+function writeFade(index: number, fade: DirectionalShadowFade | null): void {
+  if (!fade || index * 2 >= fades.length) return;
+  fades[index * 2] = fade.from;
+  fades[index * 2 + 1] = fade.to;
 }

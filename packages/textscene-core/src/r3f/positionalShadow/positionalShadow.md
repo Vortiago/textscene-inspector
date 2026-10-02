@@ -11,13 +11,14 @@ one sampler. It ports Godot 4.6.3's positional shadow atlas: the slot allocation
 
 - A light declares its shadow on `userData` through `positionalShadowUserData` (`declaration.ts`).
   OmniLight3D and SpotLight3D do this.
-- `<PositionalShadowFitter>` and `usePositionalShadowFit` hook each render of a scene, as the
-  directional fitter does (`../directionalShadow/directionalShadow.md`). Each render asks the atlas
-  of the viewport that renders for slots, in Godot's order (`fitScenePositionalShadows.ts`).
+- `<SceneShadowFitter>` and `useSceneShadowFit` (`../SceneShadowFitter.tsx`) hook each render of a
+  scene. One walk of the scene's lights serves the directional fit
+  (`../directionalShadow/directionalShadow.md`) and then this one. Each render asks the atlas of the
+  viewport that renders for slots, in Godot's order (`fitScenePositionalShadows.ts`).
 - The first fit gives the light the shadow that draws into the atlas (`adoptAtlasShadow.ts`): an
   `AtlasSpotShadow` or an `AtlasOmniShadow`. The new shadow copies what the light's component set
   on the old one.
-- `<PositionalShadowFitter>` also wraps the canvas renderer's shadow pass
+- `<SceneShadowFitter>` also wraps the canvas renderer's shadow pass
   (`positionalShadowPass.ts`), which copies each omni cube into the atlas.
 - `positionalShadowChunk.ts` replaces three's omni and spot lookups with Godot's
   (`positionalShadowLookup.ts`). It installs once at import of `TscnCanvas.tsx`, before any program
@@ -107,7 +108,8 @@ writes it after the copy. three hands each light's own matrix to the lit program
   takes the same turn as in Godot.
 
 The kernel, its turn and the spot PCF are one GLSL block in `../shadowFilter/softShadowFilter.ts`,
-which the directional lookup shares (`../directionalShadow/directionalShadow.md`).
+which the directional lookup shares (`../directionalShadow/directionalShadow.md`). The positional
+install puts it in `shadowmap_pars_fragment` first, once, ahead of every shadow block.
 
 ## Texture units
 

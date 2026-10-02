@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { ATLAS_SAMPLING, OMNI_LOOKUP, SPOT_LOOKUP } from './positionalShadowLookup';
-import { SOFT_SHADOW_FILTER } from '../shadowFilter/softShadowFilter';
 import { POSITIONAL_SHADOW_ATLAS_UNIFORM } from './shadowAtlasTarget';
 
 describe('the positional shadow lookups', () => {
-  it('declare the atlas beside Godot’s soft shadow filter', () => {
+  it('declare the atlas, and leave Godot’s soft shadow filter to its own install', () => {
     expect(ATLAS_SAMPLING).toContain(`uniform sampler2DShadow ${POSITIONAL_SHADOW_ATLAS_UNIFORM};`);
-    expect(ATLAS_SAMPLING).toContain(SOFT_SHADOW_FILTER);
+    expect(ATLAS_SAMPLING).not.toContain('float godotPcf(');
   });
 
   it('sample the spot shadow through the filter, over soft_shadow_scale atlas texels', () => {

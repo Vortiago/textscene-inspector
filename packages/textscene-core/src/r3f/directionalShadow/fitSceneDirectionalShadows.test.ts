@@ -64,6 +64,11 @@ function sceneWithSun(options: { declared: boolean; casts: boolean; splitCount?:
 /** A shadow camera as three constructs it, before anything fits it. */
 const UNFITTED = new THREE.DirectionalLight().shadow.camera;
 
+/** One render's fit, handed the scene walk the fitter makes before it. */
+function fitRender(scene: THREE.Scene, camera: THREE.Camera): void {
+  fitSceneDirectionalShadows(scene, camera, sceneLights(scene));
+}
+
 /** The left edge of the first split's box, or null for a light that drew no splits. */
 function firstSplitLeft(light: THREE.DirectionalLight): number | null {
   return splitSunOf(light)?.shadow.getCamera(0).left ?? null;
@@ -72,7 +77,7 @@ function firstSplitLeft(light: THREE.DirectionalLight): number | null {
 describe('fitSceneDirectionalShadows', () => {
   it('fits a declared, casting orthogonal light to the camera, through a sun with one split', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: true });
-    fitSceneDirectionalShadows(scene, viewingCamera());
+    fitRender(scene, viewingCamera());
     const shadow = splitSunOf(light)!.shadow;
     const shadowCamera = shadow.getCamera(0);
     expect(shadow.splitCount).toBe(1);
@@ -85,13 +90,13 @@ describe('fitSceneDirectionalShadows', () => {
   it('filters with the declared kernel radius', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: true });
     light.userData = directionalShadowUserData({ ...DECLARATION, splitCount: 1, filterRadius: 3.5 });
-    fitSceneDirectionalShadows(scene, viewingCamera());
+    fitRender(scene, viewingCamera());
     expect(splitSunOf(light)?.shadow.radius).toBe(3.5);
   });
 
   it('leaves a light without a declaration alone', () => {
     const { scene, light } = sceneWithSun({ declared: false, casts: true });
-    fitSceneDirectionalShadows(scene, viewingCamera());
+    fitRender(scene, viewingCamera());
     expect(light.shadow.camera.left).toBe(UNFITTED.left);
     expect(light.shadow.camera.far).toBe(UNFITTED.far);
     expect(light.shadow.bias).toBe(0);
@@ -100,14 +105,14 @@ describe('fitSceneDirectionalShadows', () => {
 
   it('leaves a declared light that casts no shadow alone (edge case)', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: false, splitCount: 4 });
-    fitSceneDirectionalShadows(scene, viewingCamera());
+    fitRender(scene, viewingCamera());
     expect(light.shadow.camera.left).toBe(UNFITTED.left);
     expect(splitSunOf(light)).toBeNull();
   });
 
   it('fits nothing for a camera without a depth range (error case)', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: true });
-    fitSceneDirectionalShadows(scene, new THREE.Camera());
+    fitRender(scene, new THREE.Camera());
     expect(light.shadow.camera.left).toBe(UNFITTED.left);
     expect(splitSunOf(light)).toBeNull();
   });
@@ -115,11 +120,11 @@ describe('fitSceneDirectionalShadows', () => {
   it('follows the camera when it moves', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: true });
     const camera = viewingCamera();
-    fitSceneDirectionalShadows(scene, camera);
+    fitRender(scene, camera);
     const before = firstSplitLeft(light)!;
     camera.position.x += 500;
     camera.updateMatrixWorld();
-    fitSceneDirectionalShadows(scene, camera);
+    fitRender(scene, camera);
     expect(firstSplitLeft(light)).not.toBeCloseTo(before, 3);
   });
 });
@@ -127,7 +132,7 @@ describe('fitSceneDirectionalShadows', () => {
 describe('fitSceneDirectionalShadows with splits', () => {
   it('shades a split light through a sun that takes its colour and intensity', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: true, splitCount: 4 });
-    fitSceneDirectionalShadows(scene, viewingCamera());
+    fitRender(scene, viewingCamera());
     const sun = splitSunOf(light);
     expect(sun?.color.getHex()).toBe(0xff8000);
     expect(sun?.intensity).toBe(3);
@@ -137,28 +142,28 @@ describe('fitSceneDirectionalShadows with splits', () => {
   it('filters the split sun with the declared kernel radius', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: true, splitCount: 4 });
     light.userData = directionalShadowUserData({ ...DECLARATION, splitCount: 4, filterRadius: 0 });
-    fitSceneDirectionalShadows(scene, viewingCamera());
+    fitRender(scene, viewingCamera());
     expect(splitSunOf(light)?.shadow.radius).toBe(0);
   });
 
   it('hides the declared light from the render and keeps its layers on the sun', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: true, splitCount: 4 });
     const camera = viewingCamera();
-    fitSceneDirectionalShadows(scene, camera);
+    fitRender(scene, camera);
     expect(light.layers.test(camera.layers)).toBe(false);
     expect(splitSunOf(light)?.layers.test(camera.layers)).toBe(true);
   });
 
   it('points the sun from the light’s target towards the light, as three points the light', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: true, splitCount: 2 });
-    fitSceneDirectionalShadows(scene, viewingCamera());
+    fitRender(scene, viewingCamera());
     const direction = new THREE.Vector3().setFromMatrixPosition(splitSunOf(light)!.matrixWorld);
     expect(direction.toArray()).toEqual([10, 20, 5]);
   });
 
   it('keeps the sun’s direction through a scene update (edge case)', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: true, splitCount: 4 });
-    fitSceneDirectionalShadows(scene, viewingCamera());
+    fitRender(scene, viewingCamera());
     scene.updateMatrixWorld(true);
     const direction = new THREE.Vector3().setFromMatrixPosition(splitSunOf(light)!.matrixWorld);
     expect(direction.toArray()).toEqual([10, 20, 5]);
@@ -166,14 +171,14 @@ describe('fitSceneDirectionalShadows with splits', () => {
 
   it('attaches one sun however often it fits', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: true, splitCount: 4 });
-    fitSceneDirectionalShadows(scene, viewingCamera());
-    fitSceneDirectionalShadows(scene, viewingCamera());
+    fitRender(scene, viewingCamera());
+    fitRender(scene, viewingCamera());
     expect(light.children).toHaveLength(1);
   });
 
   it('fits one camera per split, nearest the narrowest', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: true, splitCount: 4 });
-    fitSceneDirectionalShadows(scene, viewingCamera());
+    fitRender(scene, viewingCamera());
     const shadow = splitSunOf(light)!.shadow;
     const widths = [0, 1, 2, 3].map((split) => shadow.getCamera(split).right - shadow.getCamera(split).left);
     expect([...widths].sort((a, b) => a - b)).toEqual(widths);
@@ -181,7 +186,7 @@ describe('fitSceneDirectionalShadows with splits', () => {
 
   it('writes each split’s far end into its slot', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: true, splitCount: 4 });
-    fitSceneDirectionalShadows(scene, viewingCamera());
+    fitRender(scene, viewingCamera());
     const ends = splitSunOf(light)!.shadow._cascadeData.map((slot) => slot.x);
     [8.045, 16.04, 40.025, 80].forEach((end, i) => expect(ends[i]).toBeCloseTo(end, 9));
   });
@@ -189,10 +194,10 @@ describe('fitSceneDirectionalShadows with splits', () => {
   it('keeps the sun, with one split, when the light goes orthogonal', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: true, splitCount: 4 });
     const camera = viewingCamera();
-    fitSceneDirectionalShadows(scene, camera);
+    fitRender(scene, camera);
     const sun = splitSunOf(light);
     light.userData = directionalShadowUserData(DECLARATION);
-    fitSceneDirectionalShadows(scene, camera);
+    fitRender(scene, camera);
     expect(splitSunOf(light)).toBe(sun);
     expect(sun!.shadow.splitCount).toBe(1);
     expect(light.layers.test(camera.layers)).toBe(false);
@@ -202,7 +207,7 @@ describe('fitSceneDirectionalShadows with splits', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: true, splitCount: 4 });
     const camera = viewingCamera();
     camera.projectionMatrixInverse.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    fitSceneDirectionalShadows(scene, camera);
+    fitRender(scene, camera);
     expect(splitSunOf(light)).toBeNull();
     expect(light.layers.test(camera.layers)).toBe(true);
   });
@@ -210,18 +215,18 @@ describe('fitSceneDirectionalShadows with splits', () => {
   it('keeps the last fitted splits through a fit that fails (edge case)', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: true, splitCount: 4 });
     const camera = viewingCamera();
-    fitSceneDirectionalShadows(scene, camera);
+    fitRender(scene, camera);
     const fitted = splitSunOf(light)!.shadow.getCamera(0).left;
     camera.projectionMatrixInverse.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    fitSceneDirectionalShadows(scene, camera);
+    fitRender(scene, camera);
     expect(splitSunOf(light)!.shadow.getCamera(0).left).toBe(fitted);
   });
 
   it('hands the light its own shading back when it stops casting (edge case)', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: true, splitCount: 4 });
-    fitSceneDirectionalShadows(scene, viewingCamera());
+    fitRender(scene, viewingCamera());
     light.castShadow = false;
-    fitSceneDirectionalShadows(scene, viewingCamera());
+    fitRender(scene, viewingCamera());
     expect(splitSunOf(light)).toBeNull();
   });
 });
@@ -229,7 +234,7 @@ describe('fitSceneDirectionalShadows with splits', () => {
 describe('releaseSceneLights', () => {
   it('releases every split sun in the scene', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: true, splitCount: 4 });
-    fitSceneDirectionalShadows(scene, viewingCamera());
+    fitRender(scene, viewingCamera());
     releaseSceneLights(scene);
     expect(splitSunOf(light)).toBeNull();
     expect(light.layers.isEnabled(0)).toBe(true);
@@ -267,7 +272,7 @@ describe('fitSceneDirectionalShadows fades', () => {
 
   it('fades an orthogonal light through its sun, over the far end of its slice', () => {
     const { scene } = sceneWithSun({ declared: true, casts: true });
-    fitSceneDirectionalShadows(scene, viewingCamera());
+    fitRender(scene, viewingCamera());
     const [fade] = lastFades().sun;
     expect(fade!.from).toBeCloseTo(DECLARATION.maxDistance * DECLARATION.fadeStart, 12);
     expect(fade!.to).toBe(DECLARATION.maxDistance);
@@ -276,7 +281,7 @@ describe('fitSceneDirectionalShadows fades', () => {
 
   it('fades a split light through its sun, over the far end of its last split', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: true, splitCount: 4 });
-    fitSceneDirectionalShadows(scene, viewingCamera());
+    fitRender(scene, viewingCamera());
     const lastSplitEnd = splitSunOf(light)!.shadow._cascadeData[3]!.x;
     expect(lastFades().directional).toEqual([]);
     expect(lastFades().sun).toEqual([
@@ -288,9 +293,9 @@ describe('fitSceneDirectionalShadows fades', () => {
   it('keeps fading a split light that goes orthogonal through its sun (edge case)', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: true, splitCount: 2 });
     const camera = viewingCamera();
-    fitSceneDirectionalShadows(scene, camera);
+    fitRender(scene, camera);
     light.userData = directionalShadowUserData(DECLARATION);
-    fitSceneDirectionalShadows(scene, camera);
+    fitRender(scene, camera);
     expect(lastFades().directional).toEqual([]);
     expect(lastFades().sun).toHaveLength(1);
   });
@@ -300,7 +305,7 @@ describe('fitSceneDirectionalShadows fades', () => {
     const undeclared = new THREE.DirectionalLight();
     undeclared.castShadow = true;
     scene.children.unshift(undeclared);
-    fitSceneDirectionalShadows(scene, viewingCamera());
+    fitRender(scene, viewingCamera());
     const { directional, sun } = lastFades();
     expect(directional).toEqual([null]);
     expect(sun).toHaveLength(1);
@@ -311,20 +316,20 @@ describe('fitSceneDirectionalShadows fades', () => {
     const { scene } = sceneWithSun({ declared: true, casts: true, splitCount: 4 });
     const camera = viewingCamera();
     camera.projectionMatrixInverse.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    fitSceneDirectionalShadows(scene, camera);
+    fitRender(scene, camera);
     // No sun attaches, so the declared light casts its own unfitted, unfaded shadow.
     expect(lastFades()).toEqual({ directional: [null], sun: [] });
   });
 
   it('clears every fade for a camera without a depth range (error case)', () => {
     const { scene } = sceneWithSun({ declared: true, casts: true });
-    fitSceneDirectionalShadows(scene, new THREE.Camera());
+    fitRender(scene, new THREE.Camera());
     expect(writtenFades).toHaveBeenLastCalledWith({ directional: [], sun: [] });
   });
 
   it('writes empty lists for a scene with no caster (edge case)', () => {
     const { scene } = sceneWithSun({ declared: true, casts: false });
-    fitSceneDirectionalShadows(scene, viewingCamera());
+    fitRender(scene, viewingCamera());
     expect(writtenFades).toHaveBeenLastCalledWith({ directional: [], sun: [] });
   });
 });
@@ -363,7 +368,7 @@ describe('fitSceneDirectionalShadows fade order against three', () => {
     scene.add(unlit, spot, split, split.target, orthogonal, orthogonal.target);
     scene.updateMatrixWorld();
     const camera = viewingCamera();
-    fitSceneDirectionalShadows(scene, camera);
+    fitRender(scene, camera);
 
     const three = new WebGLLights({ has: () => false } as unknown as WebGLExtensions);
     three.setup(threeRenderLights(scene, camera));
@@ -393,7 +398,7 @@ describe('fitSceneDirectionalShadows fade order against three', () => {
     scene.add(new THREE.DirectionalLight(), lights[0]!, group, lights[2]!);
     scene.updateMatrixWorld();
     const camera = viewingCamera();
-    fitSceneDirectionalShadows(scene, camera);
+    fitRender(scene, camera);
 
     const three = new WebGLLights({ has: () => false } as unknown as WebGLExtensions);
     three.setup(threeRenderLights(scene, camera));
@@ -493,7 +498,7 @@ function addDeclaredLight(
 
 function fitted(scene: THREE.Scene): void {
   scene.updateMatrixWorld();
-  fitSceneDirectionalShadows(scene, viewingCamera());
+  fitRender(scene, viewingCamera());
 }
 
 /** The shadow of the sun that shades for `light`. */
@@ -682,10 +687,10 @@ describe('fitSceneDirectionalShadows past Godot’s eighth light', () => {
     scene.updateMatrixWorld();
     const otherLayer = viewingCamera();
     otherLayer.layers.set(5);
-    fitSceneDirectionalShadows(scene, viewingCamera());
+    fitRender(scene, viewingCamera());
     const suns = lights.map(splitSunOf);
-    fitSceneDirectionalShadows(scene, otherLayer);
-    fitSceneDirectionalShadows(scene, viewingCamera());
+    fitRender(scene, otherLayer);
+    fitRender(scene, viewingCamera());
     expect(lights.map(splitSunOf)).toEqual(suns);
     expect(lights.map(isDropped)).toEqual([...Array<boolean>(8).fill(false), true]);
   });
@@ -711,7 +716,7 @@ describe('fitSceneDirectionalShadows past Godot’s eighth light', () => {
 describe('fitSceneDirectionalShadows without a declared light', () => {
   it('clears every fade, as no caster has one to write (edge case)', () => {
     const { scene } = sceneWithSun({ declared: false, casts: true });
-    fitSceneDirectionalShadows(scene, viewingCamera());
+    fitRender(scene, viewingCamera());
     expect(writtenFades).toHaveBeenLastCalledWith({ directional: [], sun: [] });
   });
 });
@@ -722,7 +727,7 @@ describe('fitSceneDirectionalShadows orthogonal fade', () => {
     const camera = viewingCamera();
     camera.far = 50;
     camera.updateProjectionMatrix();
-    fitSceneDirectionalShadows(scene, camera);
+    fitRender(scene, camera);
     const [fade] = writtenFades.mock.lastCall![0].sun;
     expect(fade!.to).toBe(50);
     expect(fade!.from).toBeCloseTo(50 * DECLARATION.fadeStart, 12);

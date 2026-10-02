@@ -1,6 +1,6 @@
 /**
  * <DirectionalLight3D>: a parallel light in a transform group, aimed at a target at local -Z. It
- * declares its shadow to the scene's `<DirectionalShadowFitter>` and its sun to the sky, by
+ * declares its shadow to the scene's `<SceneShadowFitter>` and its sun to the sky, by
  * `sky_mode` (`r3f/directionalShadow/directionalShadow.md`).
  */
 

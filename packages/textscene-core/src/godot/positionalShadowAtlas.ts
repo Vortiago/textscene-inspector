@@ -131,25 +131,31 @@ interface Quadrant<Owner> {
   slots: Slot<Owner>[];
 }
 
-/** Where a light's shadow lies in its viewport's atlas, in texels. */
+/** Where a light's shadow lies in its viewport's atlas, in texels. The atlas shares it unchanged. */
 export interface PositionalShadowSlot {
   /** The slot's corner nearest the atlas's origin. */
-  x: number;
-  y: number;
+  readonly x: number;
+  readonly y: number;
   /** The slot's side. */
-  size: number;
+  readonly size: number;
   /**
    * For an omni light, the step in slots from the slot of its first paraboloid to that of its
    * second: the next slot, or the first of the next row after a row's last slot
    * (`light_storage.h:683-691`). Null for a spot light.
    */
-  paraboloidStep: readonly [number, number] | null;
+  readonly paraboloidStep: readonly [number, number] | null;
 }
 
-interface Ownership {
+/** The slots a light claims: the first one's quadrant and index, and its neighbour for an omni light. */
+interface Claim {
   quadrant: number;
   slot: number;
   isOmni: boolean;
+}
+
+/** A claim and where it lies, laid out once when the light claims it and dropped when it is freed. */
+interface Ownership extends Claim {
+  layout: PositionalShadowSlot;
 }
 
 /** The quadrant and first slot a search found. */
@@ -192,37 +198,37 @@ export class PositionalShadowAtlas<Owner> {
     for (const request of requests) this.updateLight(request, tickMsec);
   }
 
-  /**
-   * The slot `owner` holds, or null when it holds none: `light_instance_get_shadow_atlas_rect`
-   * (`light_storage.h:663-697`) in texels.
-   */
+  /** The slot `owner` holds, or null when it holds none. */
   slot(owner: Owner): PositionalShadowSlot | null {
-    const ownership = this.owners.get(owner);
-    if (!ownership) return null;
-    const { subdivision } = this.quadrants[ownership.quadrant]!;
-    const quadSize = this.quadSize();
-    const size = Math.trunc(quadSize / subdivision);
-    const isRowEnd = (ownership.slot + 1) % subdivision === 0;
-    return {
-      x: (ownership.quadrant & 1) * quadSize + (ownership.slot % subdivision) * size,
-      y: (ownership.quadrant >> 1) * quadSize + Math.trunc(ownership.slot / subdivision) * size,
-      size,
-      paraboloidStep: ownership.isOmni ? (isRowEnd ? [1 - subdivision, 1] : [1, 0]) : null,
-    };
+    return this.owners.get(owner)?.layout ?? null;
   }
 
   /** Frees a light's slots, as freeing the light instance does. */
   release(owner: Owner): void {
-    const ownership = this.owners.get(owner);
     this.lastScenePass.delete(owner);
-    if (!ownership) return;
-    this.freeSlots(ownership);
-    this.owners.delete(owner);
+    this.evict(owner);
   }
 
-  /** Every light that holds a slot. */
-  ownersHoldingSlots(): Owner[] {
-    return [...this.owners.keys()];
+  /**
+   * Every light that holds a slot, read live from the atlas. A `Map` iterator survives the deletion
+   * of the entry it stands on, so the caller may release each light it visits.
+   */
+  ownersHoldingSlots(): IterableIterator<Owner> {
+    return this.owners.keys();
+  }
+
+  /** `light_instance_get_shadow_atlas_rect` (`light_storage.h:663-697`) in texels. */
+  private layoutOf({ quadrant, slot, isOmni }: Claim): PositionalShadowSlot {
+    const { subdivision } = this.quadrants[quadrant]!;
+    const quadSize = this.quadSize();
+    const size = Math.trunc(quadSize / subdivision);
+    const isRowEnd = (slot + 1) % subdivision === 0;
+    return {
+      x: (quadrant & 1) * quadSize + (slot % subdivision) * size,
+      y: (quadrant >> 1) * quadSize + Math.trunc(slot / subdivision) * size,
+      size,
+      paraboloidStep: isOmni ? (isRowEnd ? [1 - subdivision, 1] : [1, 0]) : null,
+    };
   }
 
   /** `shadow_atlas->size >> 1` (`light_storage.cpp:2382`): integer division, as every slot size. */
@@ -392,15 +398,15 @@ export class PositionalShadowAtlas<Owner> {
   }
 
   /** Takes the slot, and its neighbour for an omni light, from whichever light held them. */
-  private claim(owner: Owner, ownership: Ownership, tick: number): void {
-    const count = ownership.isOmni ? 2 : 1;
+  private claim(owner: Owner, claim: Claim, tick: number): void {
+    const count = claim.isOmni ? 2 : 1;
     for (let k = 0; k < count; k++) {
-      const slot = this.quadrants[ownership.quadrant]!.slots[ownership.slot + k]!;
+      const slot = this.quadrants[claim.quadrant]!.slots[claim.slot + k]!;
       if (slot.owner !== null) this.evict(slot.owner);
       slot.owner = owner;
       slot.allocTick = tick;
     }
-    this.owners.set(owner, ownership);
+    this.owners.set(owner, { ...claim, layout: this.layoutOf(claim) });
   }
 
   /** `_shadow_atlas_invalidate_shadow` (`light_storage.cpp:2501-2522`): the old light loses every slot. */
@@ -411,7 +417,7 @@ export class PositionalShadowAtlas<Owner> {
     this.owners.delete(owner);
   }
 
-  private freeSlots({ quadrant, slot, isOmni }: Ownership): void {
+  private freeSlots({ quadrant, slot, isOmni }: Claim): void {
     const count = isOmni ? 2 : 1;
     for (let k = 0; k < count; k++) this.quadrants[quadrant]!.slots[slot + k]!.owner = null;
   }

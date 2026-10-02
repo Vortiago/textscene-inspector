@@ -198,7 +198,7 @@ describe('PositionalShadowAtlas, reallocation', () => {
     atlas.release('spot0');
     atlas.allocate(lights.slice(1), 0);
     expect(slotSizeOf(atlas, 'spot8')).toBe(1024);
-    expect(atlas.ownersHoldingSlots()).not.toContain('spot0');
+    expect([...atlas.ownersHoldingSlots()]).not.toContain('spot0');
   });
 
   it('takes nothing from a light seen in the same render, however old its slot (error case)', () => {
@@ -244,5 +244,29 @@ describe('PositionalShadowAtlas.slot', () => {
 
   it('is null for a light without a slot (error case)', () => {
     expect(rootAfter([]).slot('lamp')).toBeNull();
+  });
+
+  it('answers with the same slot on every render while the light keeps it', () => {
+    const atlas = rootAfter([spot('lamp')]);
+    const held = atlas.slot('lamp');
+    atlas.allocate([spot('lamp')], 1);
+    expect(atlas.slot('lamp')).toBe(held);
+  });
+
+  it('lays the slot out again once the light moves (edge case)', () => {
+    const atlas = rootAfter([spot('lamp', 1)]);
+    const held = atlas.slot('lamp');
+    atlas.allocate([spot('lamp', 0.1)], POSITIONAL_SHADOW_REALLOC_TOLERANCE_MSEC + 1);
+    expect(atlas.slot('lamp')).not.toBe(held);
+    expect(atlas.slot('lamp')?.size).toBe(256);
+  });
+});
+
+describe('PositionalShadowAtlas.ownersHoldingSlots', () => {
+  it('lets the caller release each light it visits', () => {
+    const atlas = rootAfter(names('spot', 3).map((name) => spot(name)));
+    for (const owner of atlas.ownersHoldingSlots()) atlas.release(owner);
+    expect([...atlas.ownersHoldingSlots()]).toEqual([]);
+    expect(atlas.slot('spot2')).toBeNull();
   });
 });

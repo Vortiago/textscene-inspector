@@ -27,15 +27,6 @@ export function positionalShadowNormalBias(normalBias: number, slotSize: number)
 }
 
 /**
- * An omni light's depth bias in world units: Godot sends `shadow_bias` unscaled
- * (`light_storage.cpp:973`), and the lookup subtracts it from the distance to the light
- * (`scene_forward_lights_inc.glsl:594`).
- */
-export function omniShadowDepthBias(shadowBias: number): number {
-  return shadowBias;
-}
-
-/**
  * A spot light's depth bias: `shadow_bias / 100` (`light_storage.cpp:971`) times
  * `soft_shadow_scale`, which only the spot branch applies (`:1024`). The lookup adds it to the
  * reversed clip depth before the perspective divide (`scene_forward_lights_inc.glsl:786-787`).
@@ -45,7 +36,7 @@ export function spotShadowDepthBias(shadowBias: number, softShadowScale: number)
 }
 
 /** The box a light's volume fills in its own space, its corners at `min` and `max`. */
-export interface LightBounds {
+interface LightBounds {
   min: readonly [number, number, number];
   max: readonly [number, number, number];
 }

@@ -211,7 +211,7 @@ orchestrator, which runs them in dependency order from a single `useFrame`
 
 **Directional shadows.** As in Godot, the renderer owns a directional light's shadow box, and
 the light does not. A light only declares its shadow parameters on `userData`.
-`<DirectionalShadowFitter>` hooks each render of the scene (`scene.onBeforeRender`) and fits
+`<SceneShadowFitter>` hooks each render of the scene (`scene.onBeforeRender`) and fits
 each declared light's shadow to that render's camera. The shadowed lights share Godot's
 one directional shadow atlas: one texture, which every lit program samples through one sampler.
 
@@ -222,8 +222,8 @@ chunk applies the fade from one shared buffer, which the fitter writes before ea
 SubViewport with its own portal scene hooks that scene the same way
 (`r3f/directionalShadow/directionalShadow.md`).
 
-**Positional shadows.** An omni or spot light hooks each render of its scene the same way, through
-`usePositionalShadowFit`. Godot gives the light a slot in its positional shadow atlas by how much
+**Positional shadows.** The same hook fits an omni or spot light in each render of its scene, after
+the directional fit and from the same walk of the scene's lights. Godot gives the light a slot in its positional shadow atlas by how much
 of the view the light's range covers. Every omni and spot shadow lies in one atlas texture, which
 every lit program samples through one sampler. A spot light draws straight into its slot. An omni
 light renders a cube, and the renderer's shadow pass copies it into two paraboloids in neighbouring

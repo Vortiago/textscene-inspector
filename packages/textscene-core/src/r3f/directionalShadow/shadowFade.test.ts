@@ -12,12 +12,14 @@ import {
   writeDirectionalShadowFades,
 } from './shadowFade';
 import { godotSplitShadowChunk, installGodotSplitShadow } from './splitShadowChunk';
+import { FRAMEBUFFER_HEIGHT_UNIFORM } from '../shadowFilter/framebufferRows';
+import { softShadowFilterChunk } from '../shadowFilter/softShadowFilter';
 
 const PARS = 'shadowmap_pars_fragment';
 const LIGHTS = 'lights_fragment_begin';
 const threePars = THREE.ShaderChunk[PARS];
 const threeLights = THREE.ShaderChunk[LIGHTS];
-const LIT_SHADERS = ['lambert', 'phong', 'standard', 'physical', 'toon'] as const;
+const LIT_SHADERS = ['lambert', 'phong', 'standard', 'physical', 'toon', 'shadow'] as const;
 
 const occurrences = (text: string, part: string) => text.split(part).length - 1;
 
@@ -30,7 +32,11 @@ afterEach(() => {
   THREE.ShaderChunk[LIGHTS] = threeLights;
   for (const shader of Object.values(THREE.ShaderLib)) {
     delete shader.uniforms[DIRECTIONAL_SHADOW_FADE_UNIFORM];
+    delete shader.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM];
   }
+  const lights = THREE.UniformsLib.lights as Record<string, THREE.IUniform>;
+  delete lights[DIRECTIONAL_SHADOW_FADE_UNIFORM];
+  delete lights[FRAMEBUFFER_HEIGHT_UNIFORM];
 });
 
 describe('shadowFadeChunks', () => {
@@ -38,11 +44,11 @@ describe('shadowFadeChunks', () => {
     expect(occurrences(threePars, '#ifdef USE_SHADOWMAP\n')).toBe(1);
     expect(occurrences(threeLights, 'getShadow( directionalShadowMap[ i ]')).toBe(1);
     expect(occurrences(threeLights, 'getSunShadow( sunShadowMap[ i ]')).toBe(1);
-    expect(shadowFadeChunks(threePars, threeLights)).not.toBeNull();
+    expect(shadowFadeChunks({ [PARS]: threePars, [LIGHTS]: threeLights })).not.toBeNull();
   });
 
   it('declares one fade per directional and sun shadow, outside both shadow blocks', () => {
-    const { pars } = shadowFadeChunks(threePars, threeLights)!;
+    const { [PARS]: pars } = shadowFadeChunks({ [PARS]: threePars, [LIGHTS]: threeLights })!;
     const declaration = `uniform vec2 ${DIRECTIONAL_SHADOW_FADE_UNIFORM}[ NUM_DIR_LIGHT_SHADOWS + NUM_SUN_LIGHT_SHADOWS ];`;
     expect(occurrences(pars, declaration)).toBe(1);
     expect(pars.indexOf(declaration)).toBeLessThan(pars.indexOf('#if NUM_SUN_LIGHT_SHADOWS > 0'));
@@ -50,14 +56,14 @@ describe('shadowFadeChunks', () => {
   });
 
   it('mixes the directional shadow towards unshadowed by the view depth', () => {
-    const { lights } = shadowFadeChunks(threePars, threeLights)!;
+    const { [LIGHTS]: lights } = shadowFadeChunks({ [PARS]: threePars, [LIGHTS]: threeLights })!;
     expect(lights).toContain(
       `1.0, directionalShadowFadeOut( ${DIRECTIONAL_SHADOW_FADE_UNIFORM}[ i ], - geometryPosition.z ) )`
     );
   });
 
   it('mixes the sun shadow by the fade after every directional one', () => {
-    const { lights } = shadowFadeChunks(threePars, threeLights)!;
+    const { [LIGHTS]: lights } = shadowFadeChunks({ [PARS]: threePars, [LIGHTS]: threeLights })!;
     expect(lights).toContain(
       `mix( getSunShadow( sunShadowMap[ i ], sunLightShadow, UNROLLED_LOOP_INDEX ), 1.0, directionalShadowFadeOut( ${DIRECTIONAL_SHADOW_FADE_UNIFORM}[ NUM_DIR_LIGHT_SHADOWS + UNROLLED_LOOP_INDEX ], - geometryPosition.z ) )`
     );
@@ -68,26 +74,26 @@ describe('shadowFadeChunks', () => {
       'getSunShadow( sunShadowMap[ i ],',
       'getSunShadow( directionalShadowAtlas,'
     );
-    const { lights } = shadowFadeChunks(threePars, atlasSampled)!;
+    const { [LIGHTS]: lights } = shadowFadeChunks({ [PARS]: threePars, [LIGHTS]: atlasSampled })!;
     expect(lights).toContain(
       'mix( getSunShadow( directionalShadowAtlas, sunLightShadow, UNROLLED_LOOP_INDEX ), 1.0,'
     );
   });
 
   it('leaves the spot shadow unfaded (edge case)', () => {
-    const { lights } = shadowFadeChunks(threePars, threeLights)!;
+    const { [LIGHTS]: lights } = shadowFadeChunks({ [PARS]: threePars, [LIGHTS]: threeLights })!;
     expect(occurrences(lights, 'directionalShadowFadeOut')).toBe(2);
     expect(lights).toContain('getShadow( spotShadowMap[ i ]');
   });
 
   it('is null for chunks without the lines (error case)', () => {
-    expect(shadowFadeChunks('void main() {}', threeLights)).toBeNull();
-    expect(shadowFadeChunks(threePars, 'void main() {}')).toBeNull();
+    expect(shadowFadeChunks({ [PARS]: 'void main() {}', [LIGHTS]: threeLights })).toBeNull();
+    expect(shadowFadeChunks({ [PARS]: threePars, [LIGHTS]: 'void main() {}' })).toBeNull();
     const withoutSun = threeLights.replace(
       'getSunShadow( sunShadowMap[ i ]',
       'getSunLightShadow( sunShadowMap[ i ]'
     );
-    expect(shadowFadeChunks(threePars, withoutSun)).toBeNull();
+    expect(shadowFadeChunks({ [PARS]: threePars, [LIGHTS]: withoutSun })).toBeNull();
   });
 });
 
@@ -97,6 +103,12 @@ describe('installDirectionalShadowFade', () => {
     for (const name of LIT_SHADERS) {
       expect(THREE.ShaderLib[name]!.uniforms[DIRECTIONAL_SHADOW_FADE_UNIFORM]).toBeDefined();
     }
+  });
+
+  it('shares the buffer with a ShaderMaterial that merges three’s light uniforms', () => {
+    installDirectionalShadowFade();
+    const merged = THREE.UniformsUtils.merge([THREE.UniformsLib.lights]);
+    expect(merged[DIRECTIONAL_SHADOW_FADE_UNIFORM]!.value).toBe(fadeBuffer());
   });
 
   it('leaves an unlit material without it (edge case)', () => {
@@ -212,9 +224,9 @@ describe('the fade with Godot’s split lookup', () => {
     expect(installBoth('fade first')).toBe(splitsFirst);
   });
 
-  it('equals the split patch of the faded chunk', () => {
-    const { pars } = shadowFadeChunks(threePars, threeLights)!;
-    expect(installBoth('fade first')).toBe(godotSplitShadowChunk(pars));
+  it('equals the split patch of the faded chunk with the soft shadow filter in', () => {
+    const { [PARS]: pars } = shadowFadeChunks({ [PARS]: threePars, [LIGHTS]: threeLights })!;
+    expect(installBoth('fade first')).toBe(godotSplitShadowChunk(softShadowFilterChunk(pars)!));
   });
 
   it('patches each part once when both install twice (edge case)', () => {

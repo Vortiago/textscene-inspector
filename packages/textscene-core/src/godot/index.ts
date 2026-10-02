@@ -118,7 +118,6 @@ export {
   type DirectionalShadowSlice,
   blendsSplits,
   directionalLightsDrawn,
-  directionalLightsWithShadow,
   directionalShadowBlendStart,
   directionalShadowFade,
   directionalShadowLightRect,
@@ -155,12 +154,10 @@ export {
 } from './positionalShadowAtlas.js';
 export {
   POSITIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
-  omniShadowDepthBias,
   positionalLightBounds,
   positionalShadowNear,
   positionalShadowNormalBias,
   spotShadowDepthBias,
-  type LightBounds,
 } from './positionalShadow.js';
 export { GRADIENT_TEXTURE_MAX_SIZE, IMAGE_MAX_PIXELS } from './texture.js';
 export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX, CLIP_CHILDREN_MODES } from './canvasItem.js';

@@ -13,6 +13,8 @@ import {
 } from './positionalShadowChunk';
 import { POSITIONAL_SHADOW_ATLAS_UNIFORM, positionalShadowAtlasDepth } from './shadowAtlasTarget';
 import { warningsOf } from '../testing/logWarnings';
+import { FRAMEBUFFER_HEIGHT_UNIFORM } from '../shadowFilter/framebufferRows';
+import { SOFT_SHADOW_FILTER, softShadowFilterChunk } from '../shadowFilter/softShadowFilter';
 import { installGodotSplitShadow } from '../directionalShadow/splitShadowChunk';
 import { installDirectionalShadowFade } from '../directionalShadow/shadowFade';
 import { installDirectionalShadowAtlas } from '../directionalShadow/shadowAtlasChunk';
@@ -29,9 +31,13 @@ const occurrences = (text: string, part: string) => text.split(part).length - 1;
 
 afterEach(() => {
   Object.assign(THREE.ShaderChunk, threeChunks);
-  for (const shader of Object.values(THREE.ShaderLib))
-    delete shader.uniforms[POSITIONAL_SHADOW_ATLAS_UNIFORM];
-  delete (THREE.UniformsLib.lights as Record<string, THREE.IUniform>)[POSITIONAL_SHADOW_ATLAS_UNIFORM];
+  const installed = [POSITIONAL_SHADOW_ATLAS_UNIFORM, FRAMEBUFFER_HEIGHT_UNIFORM];
+  for (const uniforms of [
+    ...Object.values(THREE.ShaderLib).map((shader) => shader.uniforms),
+    THREE.UniformsLib.lights as Record<string, THREE.IUniform>,
+  ]) {
+    for (const name of installed) delete uniforms[name];
+  }
 });
 
 describe('positionalShadowChunks', () => {
@@ -95,9 +101,10 @@ describe('positionalShadowChunks', () => {
 });
 
 describe('installGodotPositionalShadow', () => {
-  it('replaces three’s chunks with the patched ones', () => {
+  it('replaces three’s chunks with the filtered, patched ones', () => {
     installGodotPositionalShadow();
-    const patched = positionalShadowChunks(threeChunks)!;
+    const filtered = softShadowFilterChunk(threeChunks.shadowmap_pars_fragment)!;
+    const patched = positionalShadowChunks({ ...threeChunks, shadowmap_pars_fragment: filtered })!;
     for (const [name, chunk] of Object.entries(patched)) {
       expect(THREE.ShaderChunk[name as keyof PositionalShadowChunks]).toBe(chunk);
     }
@@ -113,6 +120,25 @@ describe('installGodotPositionalShadow', () => {
     const merged = THREE.UniformsUtils.merge([THREE.UniformsLib.lights]);
     expect(merged[POSITIONAL_SHADOW_ATLAS_UNIFORM]!.value).toBe(positionalShadowAtlasDepth());
     expect(THREE.ShaderLib.basic.uniforms[POSITIONAL_SHADOW_ATLAS_UNIFORM]).toBeUndefined();
+  });
+
+  it('follows Godot’s soft shadow filter, which the install puts in first', () => {
+    installGodotPositionalShadow();
+    const pars = THREE.ShaderChunk.shadowmap_pars_fragment;
+    expect(occurrences(pars, SOFT_SHADOW_FILTER)).toBe(1);
+    expect(pars.indexOf(SOFT_SHADOW_FILTER)).toBeLessThan(pars.indexOf('float godotSpotShadow('));
+    expect(pars.indexOf(SOFT_SHADOW_FILTER)).toBeLessThan(pars.indexOf('float godotOmniPcf('));
+  });
+
+  it('declares the filter once beside the directional patches, in either install order', () => {
+    installGodotPositionalShadow();
+    installGodotSplitShadow();
+    const positionalFirst = THREE.ShaderChunk.shadowmap_pars_fragment;
+    Object.assign(THREE.ShaderChunk, threeChunks);
+    installGodotSplitShadow();
+    installGodotPositionalShadow();
+    expect(THREE.ShaderChunk.shadowmap_pars_fragment).toBe(positionalFirst);
+    expect(occurrences(positionalFirst, SOFT_SHADOW_FILTER)).toBe(1);
   });
 
   it('composes with the directional patches, which `TscnCanvas` installs first', () => {

@@ -35,6 +35,14 @@ describe('AtlasSpotShadow.place', () => {
     expect(shadow.getViewport(0).toArray()).toEqual([2, 1, 1, 1]);
   });
 
+  it('leaves the shadow as it is for a null slot (edge case)', () => {
+    const shadow = new AtlasSpotShadow();
+    shadow.place({ x: 2048, y: 1024, size: 1024, paraboloidStep: null });
+    shadow.place(null);
+    expect(shadow.mapSize.toArray()).toEqual([1024, 1024]);
+    expect(shadow.getViewport(0).toArray()).toEqual([2, 1, 1, 1]);
+  });
+
   it('takes the atlas again after a dispose let it go (edge case)', () => {
     const shadow = new AtlasSpotShadow();
     shadow.dispose();

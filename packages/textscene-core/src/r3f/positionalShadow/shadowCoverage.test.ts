@@ -36,6 +36,17 @@ describe('omniShadowCoverage', () => {
   it('is NaN for a non-finite range (error case)', () => {
     expect(omniShadowCoverage(new THREE.Vector3(0, 0, -10), Number.NaN, squareCamera())).toBeNaN();
   });
+
+  it('leaves the caller’s position where it was (edge case)', () => {
+    const position = new THREE.Vector3(0, 0, 0);
+    omniShadowCoverage(position, 1, squareCamera());
+    expect(position.toArray()).toEqual([0, 0, 0]);
+  });
+
+  it('measures each call alone, whatever the call before it measured', () => {
+    omniShadowCoverage(new THREE.Vector3(0, 0, 0), 1, squareCamera());
+    expect(omniShadowCoverage(new THREE.Vector3(0, 0, -10), 2, squareCamera())).toBeCloseTo(0.2, 9);
+  });
 });
 
 describe('spotShadowCoverage', () => {

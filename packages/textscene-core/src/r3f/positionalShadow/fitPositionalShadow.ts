@@ -3,10 +3,9 @@
  * where it draws, its normal bias and its PCF kernel.
  */
 
-import { omniShadowCubeSize, type PositionalShadowSlot } from '../../godot/positionalShadowAtlas.js';
+import type { PositionalShadowSlot } from '../../godot/positionalShadowAtlas.js';
 import { positionalShadowNormalBias } from '../../godot/positionalShadow.js';
 import type { AtlasLight } from './adoptAtlasShadow.js';
-import { AtlasSpotShadow } from './atlasSpotShadow.js';
 import type { PositionalShadowDeclaration } from './declaration.js';
 
 /** three's own shadow intensity, which a light with a slot keeps. */
@@ -24,13 +23,11 @@ export function fitPositionalShadow(
   const { shadow } = light;
   shadow.intensity = slot === null ? 0 : FULL_SHADOW;
   shadow.autoUpdate = slot !== null;
-  if (!(shadow instanceof AtlasSpotShadow)) shadow.slot = slot;
+  shadow.place(slot);
   if (slot === null) return;
   shadow.normalBias = positionalShadowNormalBias(declaration.normalBias, slot.size);
   // Godot's `soft_shadow_scale`, which both lookups spread in their own units (`positionalShadowLookup.ts`).
   shadow.radius = declaration.softShadowScale;
-  if (shadow instanceof AtlasSpotShadow) shadow.place(slot);
-  else shadow.fitCube(omniShadowCubeSize(slot.size));
   // three builds the projection only with a map it builds itself, or when the far plane moves
   // (`WebGLShadowMap.js:277`, `:304-309`), and the atlas gives every shadow its map.
   shadow.camera.updateProjectionMatrix();

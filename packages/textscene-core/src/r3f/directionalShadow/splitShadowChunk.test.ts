@@ -7,7 +7,7 @@ import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { SOFT_SHADOW_FILTER } from '../shadowFilter/softShadowFilter';
+import { SOFT_SHADOW_FILTER, softShadowFilterChunk } from '../shadowFilter/softShadowFilter';
 import { FRAMEBUFFER_HEIGHT_UNIFORM, framebufferHeight } from '../shadowFilter/framebufferRows';
 import { godotSplitShadowChunk, installGodotSplitShadow } from './splitShadowChunk';
 import { NO_BLEND, type SplitSlot } from './fitDirectionalShadowSplits';
@@ -133,8 +133,9 @@ describe('godotSplitShadowChunk', () => {
 });
 
 describe('the patched split PCF', () => {
-  it('declares Godot’s soft shadow filter before the lookup that calls it', () => {
-    const patched = godotSplitShadowChunk(threeChunk)!;
+  it('follows Godot’s soft shadow filter, which the install puts in first', () => {
+    installGodotSplitShadow();
+    const patched = THREE.ShaderChunk[CHUNK];
     const filter = patched.indexOf(SOFT_SHADOW_FILTER);
     expect(filter).toBeGreaterThan(0);
     expect(filter).toBeLessThan(patched.indexOf('float godotSunShadow('));
@@ -269,10 +270,15 @@ describe('the patched split lookup', () => {
   });
 });
 
+/** three's chunk with the soft shadow filter and the split lookup in. */
+function installedChunk(): string | null {
+  return godotSplitShadowChunk(softShadowFilterChunk(threeChunk)!);
+}
+
 describe('installGodotSplitShadow', () => {
-  it('replaces three’s chunk with the patched one', () => {
+  it('replaces three’s chunk with the filtered, patched one', () => {
     installGodotSplitShadow();
-    expect(THREE.ShaderChunk[CHUNK]).toBe(godotSplitShadowChunk(threeChunk));
+    expect(THREE.ShaderChunk[CHUNK]).toBe(installedChunk());
   });
 
   it('gives every lit built-in material the framebuffer height the filter reads', () => {
@@ -283,7 +289,7 @@ describe('installGodotSplitShadow', () => {
   it('patches the chunk once, and warns nothing, when called twice (edge case)', () => {
     installGodotSplitShadow();
     expect(warningsOf(installGodotSplitShadow)).toEqual([]);
-    expect(THREE.ShaderChunk[CHUNK]).toBe(godotSplitShadowChunk(threeChunk));
+    expect(THREE.ShaderChunk[CHUNK]).toBe(installedChunk());
   });
 
   it('leaves a chunk it cannot patch alone (error case)', () => {

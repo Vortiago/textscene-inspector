@@ -15,8 +15,7 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { CanvasWorkspaceProvider, useCanvasWorkspace } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
-import { useDirectionalShadowFit } from '../../../r3f/directionalShadow/DirectionalShadowFitter';
-import { usePositionalShadowFit } from '../../../r3f/positionalShadow/PositionalShadowFitter';
+import { useSceneShadowFit } from '../../../r3f/SceneShadowFitter';
 import {
   renderWithShadowAtlas,
   ViewportShadowAtlas,
@@ -126,8 +125,8 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
   useEffect(() => () => target.dispose(), [target]);
   // A 3D portal renders its lights only through this pass, so it fits them itself. An inline pass
   // renders the parent scene, which its own fitter fits, and a 2D portal holds no 3D light.
-  useDirectionalShadowFit(kind === '3d' && !rendersInline ? portalScene : null);
-  usePositionalShadowFit(kind === '3d' && !rendersInline ? portalScene : null);
+  const portalLightScene = kind === '3d' && !rendersInline ? portalScene : null;
+  useSceneShadowFit(portalLightScene);
   const shadowAtlas = useViewportShadowAtlas(properties);
 
   // A persistent camera for 2D-world content. Godot draws a viewport's canvas

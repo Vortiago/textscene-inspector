@@ -4,43 +4,55 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { installDirectionalShadowAtlas, shadowAtlasChunks, type ShadowAtlasChunks } from './shadowAtlasChunk';
+import {
+  SHADOW_ATLAS_EDITS,
+  installDirectionalShadowAtlas,
+  shadowAtlasChunks,
+  type ShadowAtlasChunks,
+} from './shadowAtlasChunk';
 import { DIRECTIONAL_SHADOW_ATLAS_UNIFORM, directionalShadowAtlasDepth } from './shadowAtlas';
 import { godotSplitShadowChunk } from './splitShadowChunk';
-import { shadowFadeChunks } from './shadowFade';
+import { shadowFadeChunks, type ShadowFadeChunks } from './shadowFade';
 import { warningsOf } from '../testing/logWarnings';
 
 const PARS = 'shadowmap_pars_fragment';
 const LIGHTS = 'lights_fragment_begin';
 const SHADOW_MASK = 'shadowmask_pars_fragment';
 const threeChunks: ShadowAtlasChunks = {
-  pars: THREE.ShaderChunk[PARS],
-  lights: THREE.ShaderChunk[LIGHTS],
-  shadowMask: THREE.ShaderChunk[SHADOW_MASK],
+  [PARS]: THREE.ShaderChunk[PARS],
+  [LIGHTS]: THREE.ShaderChunk[LIGHTS],
+  [SHADOW_MASK]: THREE.ShaderChunk[SHADOW_MASK],
 };
 const LIT_SHADERS = ['lambert', 'phong', 'standard', 'physical', 'toon', 'shadow'] as const;
 
 const occurrences = (text: string, part: string) => text.split(part).length - 1;
 
+/** The split lookup and the fade on `chunks`. */
+function splitAndFade(chunks: ShadowAtlasChunks): ShadowFadeChunks {
+  return shadowFadeChunks({ [PARS]: godotSplitShadowChunk(chunks[PARS])!, [LIGHTS]: chunks[LIGHTS] })!;
+}
+
 afterEach(() => {
-  THREE.ShaderChunk[PARS] = threeChunks.pars;
-  THREE.ShaderChunk[LIGHTS] = threeChunks.lights;
-  THREE.ShaderChunk[SHADOW_MASK] = threeChunks.shadowMask;
+  Object.assign(THREE.ShaderChunk, threeChunks);
   for (const shader of Object.values(THREE.ShaderLib))
     delete shader.uniforms[DIRECTIONAL_SHADOW_ATLAS_UNIFORM];
   delete (THREE.UniformsLib.lights as Record<string, THREE.IUniform>)[DIRECTIONAL_SHADOW_ATLAS_UNIFORM];
 });
 
 describe('shadowAtlasChunks', () => {
+  it('finds each replaced text exactly once in the installed three', () => {
+    for (const { chunk, three } of SHADOW_ATLAS_EDITS) expect(occurrences(threeChunks[chunk], three)).toBe(1);
+  });
+
   it('replaces both of three’s per-shadow sun samplers with one atlas sampler', () => {
-    const { pars } = shadowAtlasChunks(threeChunks)!;
+    const { [PARS]: pars } = shadowAtlasChunks(threeChunks)!;
     expect(pars).not.toContain('sunShadowMap');
     expect(pars).toContain(`uniform sampler2DShadow ${DIRECTIONAL_SHADOW_ATLAS_UNIFORM};`);
     expect(pars).toContain(`uniform sampler2D ${DIRECTIONAL_SHADOW_ATLAS_UNIFORM};`);
   });
 
   it('samples the atlas for every sun, in the lit materials and in ShadowMaterial', () => {
-    const { lights, shadowMask } = shadowAtlasChunks(threeChunks)!;
+    const { [LIGHTS]: lights, [SHADOW_MASK]: shadowMask } = shadowAtlasChunks(threeChunks)!;
     for (const chunk of [lights, shadowMask]) {
       expect(chunk).not.toContain('sunShadowMap');
       expect(occurrences(chunk, `getSunShadow( ${DIRECTIONAL_SHADOW_ATLAS_UNIFORM},`)).toBe(1);
@@ -48,7 +60,7 @@ describe('shadowAtlasChunks', () => {
   });
 
   it('leaves every other shadow its own sampler (edge case)', () => {
-    const { pars, lights } = shadowAtlasChunks(threeChunks)!;
+    const { [PARS]: pars, [LIGHTS]: lights } = shadowAtlasChunks(threeChunks)!;
     expect(pars).toContain('uniform sampler2DShadow directionalShadowMap[ NUM_DIR_LIGHT_SHADOWS ];');
     expect(lights).toContain('getShadow( directionalShadowMap[ i ]');
     expect(lights).toContain('getShadow( spotShadowMap[ i ]');
@@ -56,18 +68,18 @@ describe('shadowAtlasChunks', () => {
 
   it('composes with the split lookup and the fade in any order', () => {
     const atlasFirst = shadowAtlasChunks(threeChunks)!;
-    const splitAndFadeFirst = shadowFadeChunks(godotSplitShadowChunk(threeChunks.pars)!, threeChunks.lights)!;
+    const splitAndFadeFirst = splitAndFade(threeChunks);
     const atlasLast = shadowAtlasChunks({ ...threeChunks, ...splitAndFadeFirst })!;
-    const fadeLast = shadowFadeChunks(godotSplitShadowChunk(atlasFirst.pars)!, atlasFirst.lights)!;
-    expect(atlasLast.pars).toBe(fadeLast.pars);
-    expect(atlasLast.lights).toBe(fadeLast.lights);
-    expect(occurrences(atlasLast.lights, `mix( getSunShadow( ${DIRECTIONAL_SHADOW_ATLAS_UNIFORM},`)).toBe(1);
+    const fadeLast = splitAndFade(atlasFirst);
+    expect(atlasLast[PARS]).toBe(fadeLast[PARS]);
+    expect(atlasLast[LIGHTS]).toBe(fadeLast[LIGHTS]);
+    expect(occurrences(atlasLast[LIGHTS], `mix( getSunShadow( ${DIRECTIONAL_SHADOW_ATLAS_UNIFORM},`)).toBe(1);
   });
 
   it('is null for chunks without three’s sun samplers (error case)', () => {
-    expect(shadowAtlasChunks({ ...threeChunks, pars: 'void main() {}' })).toBeNull();
-    expect(shadowAtlasChunks({ ...threeChunks, lights: 'void main() {}' })).toBeNull();
-    expect(shadowAtlasChunks({ ...threeChunks, shadowMask: 'void main() {}' })).toBeNull();
+    expect(shadowAtlasChunks({ ...threeChunks, [PARS]: 'void main() {}' })).toBeNull();
+    expect(shadowAtlasChunks({ ...threeChunks, [LIGHTS]: 'void main() {}' })).toBeNull();
+    expect(shadowAtlasChunks({ ...threeChunks, [SHADOW_MASK]: 'void main() {}' })).toBeNull();
   });
 });
 
@@ -104,8 +116,8 @@ describe('installDirectionalShadowAtlas', () => {
   it('leaves every chunk and material alone, and warns, when three lacks a sampler (error case)', () => {
     THREE.ShaderChunk[SHADOW_MASK] = 'void main() {}';
     expect(warningsOf(installDirectionalShadowAtlas)).toHaveLength(1);
-    expect(THREE.ShaderChunk[PARS]).toBe(threeChunks.pars);
-    expect(THREE.ShaderChunk[LIGHTS]).toBe(threeChunks.lights);
+    expect(THREE.ShaderChunk[PARS]).toBe(threeChunks[PARS]);
+    expect(THREE.ShaderChunk[LIGHTS]).toBe(threeChunks[LIGHTS]);
     expect(THREE.ShaderLib.standard.uniforms[DIRECTIONAL_SHADOW_ATLAS_UNIFORM]).toBeUndefined();
   });
 });

@@ -18,6 +18,12 @@ interface OmniLight extends THREE.PointLight {
   shadow: AtlasOmniShadow;
 }
 
+/**
+ * A shared empty answer, so a pass with nothing to copy allocates nothing. A pass that copies builds
+ * its own list, not a shared one: each copy is a render, which runs this pass again inside it.
+ */
+const NO_LIGHTS: readonly OmniLight[] = [];
+
 /** Wraps `renderer`'s shadow pass once. A second call changes nothing. */
 export function installPositionalShadowPass(renderer: THREE.WebGLRenderer): void {
   const shadowMap = renderer.shadowMap as THREE.WebGLShadowMap & { [WRAPPED]?: true };
@@ -55,12 +61,18 @@ function copyOmniShadows(
  * The omni lights with a slot whose cube three's pass is about to draw, read before the pass, which
  * clears `needsUpdate` (`WebGLShadowMap.js:95`, `:170`, `:370`).
  */
-function lightsToCopy(shadowMap: THREE.WebGLShadowMap, lights: readonly THREE.Light[]): OmniLight[] {
-  if (!shadowMap.enabled || (!shadowMap.autoUpdate && !shadowMap.needsUpdate)) return [];
-  return lights.filter((light): light is OmniLight => {
-    const { shadow } = light as THREE.Light & { shadow?: unknown };
-    return (
-      shadow instanceof AtlasOmniShadow && shadow.slot !== null && (shadow.autoUpdate || shadow.needsUpdate)
-    );
-  });
+function lightsToCopy(shadowMap: THREE.WebGLShadowMap, lights: readonly THREE.Light[]): readonly OmniLight[] {
+  if (!shadowMap.enabled || (!shadowMap.autoUpdate && !shadowMap.needsUpdate)) return NO_LIGHTS;
+  let copied: OmniLight[] | null = null;
+  for (const light of lights) {
+    if (needsCopy(light)) (copied ??= []).push(light);
+  }
+  return copied ?? NO_LIGHTS;
+}
+
+function needsCopy(light: THREE.Light): light is OmniLight {
+  const { shadow } = light as THREE.Light & { shadow?: unknown };
+  return (
+    shadow instanceof AtlasOmniShadow && shadow.slot !== null && (shadow.autoUpdate || shadow.needsUpdate)
+  );
 }

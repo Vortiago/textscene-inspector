@@ -4,7 +4,7 @@
  */
 
 import { softShadowScale } from '../../../../godot/softShadowScale';
-import { omniShadowDepthBias, spotShadowDepthBias } from '../../../../godot/positionalShadow';
+import { spotShadowDepthBias } from '../../../../godot/positionalShadow';
 
 /** `scene/3d/light_3d.cpp:490` (Light3D) and `:681` (SpotLight3D). */
 const GODOT_SHADOW_BIAS_DEFAULT = { DIRECTIONAL: 0.1, OMNI: 0.1, SPOT: 0.03 } as const;
@@ -24,11 +24,12 @@ export function directionalShadowBias(
 }
 
 /**
- * In world units, for the omni lookup Godot's shader runs (`positionalShadowLookup.ts`). No
- * `soft_shadow_scale`: `light_storage.cpp:1024` sits in the spot branch alone.
+ * In world units: Godot sends `shadow_bias` unscaled (`light_storage.cpp:973`), and scales it by
+ * `soft_shadow_scale` in the spot branch alone (`:1024`). The omni lookup subtracts it from the
+ * distance to the light (`scene_forward_lights_inc.glsl:594`, `positionalShadowLookup.ts`).
  */
 export function omniShadowBias(shadowBias: number | undefined): number {
-  return omniShadowDepthBias(shadowBias ?? GODOT_SHADOW_BIAS_DEFAULT.OMNI);
+  return shadowBias ?? GODOT_SHADOW_BIAS_DEFAULT.OMNI;
 }
 
 /** In Godot's reversed clip depth, for the spot lookup Godot's shader runs (`positionalShadowLookup.ts`). */

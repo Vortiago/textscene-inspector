@@ -1,27 +1,27 @@
 /**
- * The fitter as the hosts mount it: inside `<TscnSceneContents>`, fitting each omni and spot light
- * before every render. The test renderer draws nothing, so `renderThrough` plays the part of
+ * The fitter's positional fit as the hosts mount it: inside `<TscnSceneContents>`, fitting each omni
+ * and spot light before every render. The test renderer draws nothing, so `renderThrough` plays the part of
  * `WebGLRenderer.render`, which calls `scene.onBeforeRender` first.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useThree } from '@react-three/fiber';
-import { AtlasSpotShadow } from './atlasSpotShadow';
-import { PositionalShadowFitter } from './PositionalShadowFitter';
-import { positionalShadowAtlas } from './shadowAtlasTarget';
-import { positionalShadowUserData } from './declaration';
-import { renderWithShadowAtlas, ViewportShadowAtlas } from './viewportShadowAtlas';
-import { ROOT_POSITIONAL_SHADOW_ATLAS } from '../../godot/positionalShadowAtlas';
-import { TscnSceneContents } from '../TscnCanvas';
-import { EDITOR_CAMERA_FOV, editorCameraPosition } from '../godotEditorCamera';
-import { HierarchyProvider } from '../contexts/HierarchyContext';
-import { SelectionProvider } from '../contexts/SelectionContext';
-import { ViewportModeProvider } from '../contexts/ViewportModeContext';
-import { createSceneGraphFromTscnScene } from '../../core/SceneGraph';
-import { TscnParser } from '../../parser/TscnParser';
+import { AtlasSpotShadow } from './positionalShadow/atlasSpotShadow';
+import { SceneShadowFitter } from './SceneShadowFitter';
+import { positionalShadowAtlas } from './positionalShadow/shadowAtlasTarget';
+import { positionalShadowUserData } from './positionalShadow/declaration';
+import { renderWithShadowAtlas, ViewportShadowAtlas } from './positionalShadow/viewportShadowAtlas';
+import { ROOT_POSITIONAL_SHADOW_ATLAS } from '../godot/positionalShadowAtlas';
+import { TscnSceneContents } from './TscnCanvas';
+import { EDITOR_CAMERA_FOV, editorCameraPosition } from './godotEditorCamera';
+import { HierarchyProvider } from './contexts/HierarchyContext';
+import { SelectionProvider } from './contexts/SelectionContext';
+import { ViewportModeProvider } from './contexts/ViewportModeContext';
+import { createSceneGraphFromTscnScene } from '../core/SceneGraph';
+import { TscnParser } from '../parser/TscnParser';
 
-import '../nodes/index';
+import './nodes/index';
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
@@ -77,7 +77,7 @@ function spotLights(renderer: Renderer): THREE.SpotLight[] {
   return renderer.scene.findAllByType('SpotLight').map((node) => node.instance as THREE.SpotLight);
 }
 
-describe('<PositionalShadowFitter> in the scene contents', () => {
+describe('<SceneShadowFitter> positional fit in the scene contents', () => {
   it('gives the lights first in the tree the smaller slots once the 1024 slots run out', async () => {
     // Measured in Godot 4.6.3: of nine or ten such lights, the first in the file draws the
     // softer shadow of a 512 slot, and the second of nine keeps 1024.
@@ -126,14 +126,14 @@ function cameraAt(depth: number): THREE.PerspectiveCamera {
   return camera;
 }
 
-describe('<PositionalShadowFitter> on its own', () => {
+describe('<SceneShadowFitter> positional fit on its own', () => {
   async function mountWithLight(): Promise<{ renderer: Renderer; light: THREE.SpotLight }> {
     const light = declaredSpot();
     const renderer = await ReactThreeTestRenderer.create(
       <>
         <primitive object={light} />
         <primitive object={light.target} />
-        <PositionalShadowFitter />
+        <SceneShadowFitter />
       </>
     );
     return { renderer, light };
@@ -150,7 +150,7 @@ describe('<PositionalShadowFitter> on its own', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <>
         <primitive object={light} />
-        <PositionalShadowFitter />
+        <SceneShadowFitter />
       </>
     );
     const subViewport = new ViewportShadowAtlas({ size: 2048, quadrantShadows: [4, 4, 16, 64] });
@@ -186,7 +186,7 @@ describe('<PositionalShadowFitter> on its own', () => {
     await ReactThreeTestRenderer.create(
       <>
         <CaptureRenderer />
-        <PositionalShadowFitter />
+        <SceneShadowFitter />
       </>
     );
     expect(Symbol.for('textscene.positionalShadowPass') in gl!.shadowMap).toBe(true);

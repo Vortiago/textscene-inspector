@@ -4,21 +4,19 @@
  * a sampler per shadow. The lookups move the receiver as Godot's do (`positionalShadowLookup.ts`).
  */
 
-import * as THREE from 'three';
-import { warn } from '../../logger.js';
+import {
+  applyChunkEdits,
+  installChunkPatch,
+  type ChunkEdit,
+  type Chunks,
+} from '../shaderPatch/chunkPatch.js';
+import { installLitUniform } from '../shaderPatch/litUniform.js';
+import { installSoftShadowFilter } from '../shadowFilter/softShadowFilter.js';
 import { ATLAS_SAMPLING, OMNI_LOOKUP, SPOT_LOOKUP } from './positionalShadowLookup.js';
-import { installFramebufferHeightUniform } from '../shadowFilter/framebufferRows.js';
 import { POSITIONAL_SHADOW_ATLAS_UNIFORM, positionalShadowAtlasDepth } from './shadowAtlasTarget.js';
 
-type ChunkName =
+type PositionalChunkName =
   'shadowmap_vertex' | 'shadowmap_pars_fragment' | 'lights_fragment_begin' | 'shadowmask_pars_fragment';
-
-/** One replacement: the chunk, three's text in it, and the text that takes its place. */
-interface ChunkEdit {
-  chunk: ChunkName;
-  three: string;
-  godot: string;
-}
 
 /** The omni lookup of a lit fragment, `i` the light's index. */
 const OMNI_SHADOW = (shadow: string, localNormal: string) =>
@@ -28,7 +26,7 @@ const OMNI_SHADOW = (shadow: string, localNormal: string) =>
  * Each edit, in the order the chunks are read. Each `three` text occurs once in its chunk, as three's
  * build holds it: without blank lines or comments.
  */
-export const POSITIONAL_SHADOW_EDITS: readonly ChunkEdit[] = [
+export const POSITIONAL_SHADOW_EDITS: readonly ChunkEdit<PositionalChunkName>[] = [
   {
     chunk: 'shadowmap_vertex',
     three: `			shadowWorldPosition = worldPosition + vec4( shadowWorldNormal * pointLightShadows[ i ].shadowNormalBias, 0 );
@@ -117,46 +115,34 @@ ${OMNI_LOOKUP}`,
   },
 ];
 
-export type PositionalShadowChunks = Record<ChunkName, string>;
+export type PositionalShadowChunks = Chunks<PositionalChunkName>;
 
 /**
  * The chunks with every edit applied, or null when an edit's text is missing from its chunk or
  * occurs more than once.
  */
 export function positionalShadowChunks(chunks: PositionalShadowChunks): PositionalShadowChunks | null {
-  const patched = { ...chunks };
-  for (const { chunk, three, godot } of POSITIONAL_SHADOW_EDITS) {
-    if (patched[chunk].split(three).length !== 2) return null;
-    patched[chunk] = patched[chunk].replace(three, () => godot);
-  }
-  return patched;
+  return applyChunkEdits(chunks, POSITIONAL_SHADOW_EDITS);
 }
 
 /**
- * Replaces three's chunks and gives the atlas and framebuffer height uniforms to every built-in lit
- * material and to `UniformsLib.lights`, for every program compiled after the call. A three release
- * that rewrites any edited text keeps all its own chunks, and `positionalShadowChunk.test.ts` fails
- * on that release. A second call changes nothing.
+ * Installs the soft shadow filter, then replaces three's chunks and gives the atlas uniform to every
+ * built-in lit material and to `UniformsLib.lights`, for every program compiled after the call. A
+ * three release that rewrites any edited text keeps all its own chunks, and
+ * `positionalShadowChunk.test.ts` fails on that release. A second call changes nothing.
  */
 export function installGodotPositionalShadow(): void {
-  const current: PositionalShadowChunks = {
-    shadowmap_vertex: THREE.ShaderChunk.shadowmap_vertex,
-    shadowmap_pars_fragment: THREE.ShaderChunk.shadowmap_pars_fragment,
-    lights_fragment_begin: THREE.ShaderChunk.lights_fragment_begin,
-    shadowmask_pars_fragment: THREE.ShaderChunk.shadowmask_pars_fragment,
-  };
-  if (current.lights_fragment_begin.includes('godotOmniShadow(')) return;
-  const patched = positionalShadowChunks(current);
-  if (patched === null) {
-    warn("[Shading] three's omni and spot shadow lookups lack a line the Godot lookups replace");
-    return;
-  }
-  Object.assign(THREE.ShaderChunk, patched);
-  const lit = Object.values(THREE.ShaderLib)
-    .map((shader) => shader.uniforms)
-    .filter((uniforms) => 'pointLightShadows' in uniforms);
-  for (const uniforms of [...lit, THREE.UniformsLib.lights as Record<string, THREE.IUniform>]) {
-    uniforms[POSITIONAL_SHADOW_ATLAS_UNIFORM] = { value: positionalShadowAtlasDepth() };
-  }
-  installFramebufferHeightUniform();
+  if (!installSoftShadowFilter()) return;
+  const isPatched = installChunkPatch({
+    names: [
+      'shadowmap_vertex',
+      'shadowmap_pars_fragment',
+      'lights_fragment_begin',
+      'shadowmask_pars_fragment',
+    ],
+    isApplied: (chunks) => chunks.lights_fragment_begin.includes('godotOmniShadow('),
+    apply: positionalShadowChunks,
+    missing: 'omni and spot shadow lookups lack a line the Godot lookups replace',
+  });
+  if (isPatched) installLitUniform(POSITIONAL_SHADOW_ATLAS_UNIFORM, positionalShadowAtlasDepth());
 }

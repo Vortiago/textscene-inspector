@@ -4,15 +4,16 @@
  * `positionalShadowChunk.ts` puts each where three's own lookup stood.
  */
 
-import { SOFT_SHADOW_FILTER } from '../shadowFilter/softShadowFilter.js';
 import { POSITIONAL_SHADOW_ATLAS_UNIFORM } from './shadowAtlasTarget.js';
 
 const ATLAS = POSITIONAL_SHADOW_ATLAS_UNIFORM;
 
-/** The atlas and Godot's soft shadow filter, shared by both lookups. */
+/**
+ * The atlas and its texel, shared by both lookups. Both call Godot's soft shadow filter, which
+ * `installSoftShadowFilter` puts ahead of every shadow block (`../shadowFilter/softShadowFilter.ts`).
+ */
 export const ATLAS_SAMPLING = `
 		uniform sampler2DShadow ${ATLAS};
-${SOFT_SHADOW_FILTER}
 		vec2 godotAtlasTexel() {
 			return 1.0 / vec2( textureSize( ${ATLAS}, 0 ) );
 		}

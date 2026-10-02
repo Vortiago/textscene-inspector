@@ -6,7 +6,7 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SpotLight3DProperties } from './types';
 import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
-import { PositionalShadowFitter } from '../../../../r3f/positionalShadow/PositionalShadowFitter';
+import { SceneShadowFitter } from '../../../../r3f/SceneShadowFitter';
 
 function makeNode(overrides: Partial<SpotLight3DProperties> = {}): TscnNode {
   const props: SpotLight3DProperties = {
@@ -99,7 +99,7 @@ function withFitter(node: TscnNode) {
   return (
     <>
       <SpotLight3D node={node} />
-      <PositionalShadowFitter />
+      <SceneShadowFitter />
     </>
   );
 }

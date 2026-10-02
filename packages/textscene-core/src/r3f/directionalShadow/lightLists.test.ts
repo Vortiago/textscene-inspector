@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { directionalShadowUserData, type DirectionalShadowDeclaration } from './declaration';
-import { declaredLights, directionalLightLists, sceneLights } from './lightLists';
+import { declaredDirectionalLights, declaredLights, directionalLightLists, sceneLights } from './lightLists';
 
 const DECLARATION: DirectionalShadowDeclaration = {
   maxDistance: 80,
@@ -29,7 +29,7 @@ function addDeclaredLight(
 }
 
 function listsOf(scene: THREE.Scene) {
-  return directionalLightLists(declaredLights(sceneLights(scene)));
+  return directionalLightLists(declaredDirectionalLights(sceneLights(scene)));
 }
 
 describe('sceneLights', () => {
@@ -67,11 +67,11 @@ describe('sceneLights', () => {
   });
 });
 
-describe('declaredLights', () => {
+describe('declaredDirectionalLights', () => {
   it('keeps the declared directional lights with their declarations', () => {
     const scene = new THREE.Scene();
     const light = addDeclaredLight(scene);
-    expect(declaredLights(sceneLights(scene))).toEqual([
+    expect(declaredDirectionalLights(sceneLights(scene))).toEqual([
       { light, declaration: DECLARATION, isVisible: true },
     ]);
   });
@@ -80,7 +80,7 @@ describe('declaredLights', () => {
     const scene = new THREE.Scene();
     const light = addDeclaredLight(scene);
     light.visible = false;
-    expect(declaredLights(sceneLights(scene)).map(({ isVisible }) => isVisible)).toEqual([false]);
+    expect(declaredDirectionalLights(sceneLights(scene)).map(({ isVisible }) => isVisible)).toEqual([false]);
   });
 
   it('leaves out an undeclared light and a light of another kind (error case)', () => {
@@ -88,7 +88,44 @@ describe('declaredLights', () => {
     const spot = new THREE.SpotLight();
     spot.userData = directionalShadowUserData(DECLARATION);
     scene.add(new THREE.DirectionalLight(), spot);
-    expect(declaredLights(sceneLights(scene))).toEqual([]);
+    expect(declaredDirectionalLights(sceneLights(scene))).toEqual([]);
+  });
+});
+
+describe('declaredLights', () => {
+  const isSpotLight = (light: THREE.Light): light is THREE.SpotLight =>
+    (light as THREE.SpotLight).isSpotLight === true;
+  const readName = (light: THREE.SpotLight) => (light.name === '' ? null : light.name);
+
+  it('keeps the lights of the kind that made a declaration, in order', () => {
+    const scene = new THREE.Scene();
+    const [first, second] = [new THREE.SpotLight(), new THREE.SpotLight()];
+    first.name = 'first';
+    second.name = 'second';
+    scene.add(first, second);
+    expect(declaredLights(sceneLights(scene), isSpotLight, readName)).toEqual([
+      { light: first, declaration: 'first', isVisible: true },
+      { light: second, declaration: 'second', isVisible: true },
+    ]);
+  });
+
+  it('keeps a hidden light with its visibility (edge case)', () => {
+    const scene = new THREE.Scene();
+    const light = new THREE.SpotLight();
+    light.name = 'hidden';
+    light.visible = false;
+    scene.add(light);
+    expect(declaredLights(sceneLights(scene), isSpotLight, readName)).toEqual([
+      { light, declaration: 'hidden', isVisible: false },
+    ]);
+  });
+
+  it('leaves out a light of another kind and a light the reader declines (error case)', () => {
+    const scene = new THREE.Scene();
+    const point = new THREE.PointLight();
+    point.name = 'point';
+    scene.add(point, new THREE.SpotLight());
+    expect(declaredLights(sceneLights(scene), isSpotLight, readName)).toEqual([]);
   });
 });
 

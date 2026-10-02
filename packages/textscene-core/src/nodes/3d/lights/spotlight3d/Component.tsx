@@ -10,13 +10,9 @@ import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
 import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
-import { positionalShadowUserData } from '../../../../r3f/positionalShadow/declaration';
-import { softShadowScale } from '../../../../godot/softShadowScale';
-import {
-  POSITIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
-  positionalShadowNear,
-} from '../../../../godot/positionalShadow';
+import { positionalShadowNear } from '../../../../godot/positionalShadow';
 import { spotShadowBias } from '../shared/shadowBias';
+import { usePositionalShadowUserData } from '../shared/positionalShadowDeclaration';
 import { LightWithTarget } from '../shared/lightShared';
 import { SpotLightGizmo } from '../shared/lightHelpers';
 
@@ -37,14 +33,7 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
   const decay = properties.spot_attenuation ?? 1;
   const penumbra =
     properties.penumbra ?? Math.max(0, Math.min(1, 1 / ((properties.spot_angle_attenuation ?? 1) + 1)));
-  const userData = useMemo(
-    () =>
-      positionalShadowUserData({
-        normalBias: properties.shadow_normal_bias ?? POSITIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
-        softShadowScale: softShadowScale(properties.shadow_blur),
-      }),
-    [properties.shadow_normal_bias, properties.shadow_blur]
-  );
+  const userData = usePositionalShadowUserData(properties);
 
   return (
     <LightWithTarget

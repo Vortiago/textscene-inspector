@@ -12,6 +12,7 @@ import {
   directionalShadowSplitAtlasRect,
   type DirectionalShadowAtlasRect,
 } from '../../godot/directionalShadow.js';
+import { confineShadowScissor, type LightShadowInternals } from '../sharedAtlasShadow.js';
 import { holdDirectionalShadowAtlas, releaseDirectionalShadowAtlas } from './shadowAtlas.js';
 
 /**
@@ -42,7 +43,12 @@ class UndrawnFrustum extends THREE.Frustum {
   }
 }
 
-export class DirectionalSplitShadow extends THREE.LightShadow<THREE.OrthographicCamera> {
+/** three's `LightShadow`, typed with the members its types leave out. */
+const ThreeLightShadow = THREE.LightShadow as unknown as new (
+  camera: THREE.OrthographicCamera
+) => THREE.LightShadow<THREE.OrthographicCamera> & LightShadowInternals;
+
+export class DirectionalSplitShadow extends ThreeLightShadow {
   /** How many slots draw a split: 1, 2 or 4. */
   splitCount = SPLIT_SLOTS;
 
@@ -52,18 +58,6 @@ export class DirectionalSplitShadow extends THREE.LightShadow<THREE.Orthographic
    * first render.
    */
   readonly _cascadeData: THREE.Vector4[] = [];
-
-  // three r186's own `LightShadow` members, which its types leave out (`LightShadow.js:161-169`,
-  // `:235`). `declare` types them without a class field, which would reset the base's values.
-  declare _frameExtents: THREE.Vector2;
-  declare _viewports: THREE.Vector4[];
-  declare _viewportCount: number;
-  declare _updateMatrix: (
-    shadowCamera: THREE.Camera,
-    shadowMatrix: THREE.Matrix4,
-    frustum: THREE.Frustum,
-    viewport: THREE.Vector4
-  ) => void;
 
   /** One camera per slot. The fitter places each drawn one before every render. */
   private readonly splitCameras: THREE.OrthographicCamera[] = [];
@@ -76,6 +70,12 @@ export class DirectionalSplitShadow extends THREE.LightShadow<THREE.Orthographic
    * viewport (`WebGLShadowMap.js:345-350`).
    */
   private readonly share = new THREE.Vector4();
+
+  /** The split count and light rectangle the layout was last built for. Written only by `layOut`. */
+  private laidOutSplitCount = -1;
+  private readonly laidOutRect: DirectionalShadowAtlasRect = { x: NaN, y: NaN, width: NaN, height: NaN };
+  /** One split's rectangle in texels, as `layOut` last set `mapSize`. */
+  private readonly splitSize = new THREE.Vector2();
 
   constructor() {
     super(new THREE.OrthographicCamera());
@@ -97,12 +97,36 @@ export class DirectionalSplitShadow extends THREE.LightShadow<THREE.Orthographic
    * Lays out `splitCount` splits inside the light's rectangle of Godot's atlas. `mapSize` is one
    * split's rectangle. three multiplies it by the frame extents to size the atlas
    * (`WebGLShadowMap.js:170-176`), so every shadow asks for the same size and none resizes it
-   * (`:281-285`).
+   * (`:281-285`). The fitter calls this on every render, so an unchanged layout is kept. three
+   * shrinks `mapSize` on a GPU whose textures are smaller than the atlas (`:180-198`), so a kept
+   * layout still writes it again.
    */
   setSplits(splitCount: number, lightRect: DirectionalShadowAtlasRect): void {
     this.splitCount = splitCount;
+    if (this.isLaidOutFor(splitCount, lightRect)) this.mapSize.copy(this.splitSize);
+    else this.layOut(splitCount, lightRect);
+  }
+
+  private isLaidOutFor(splitCount: number, lightRect: DirectionalShadowAtlasRect): boolean {
+    const rect = this.laidOutRect;
+    return (
+      this.laidOutSplitCount === splitCount &&
+      rect.x === lightRect.x &&
+      rect.y === lightRect.y &&
+      rect.width === lightRect.width &&
+      rect.height === lightRect.height
+    );
+  }
+
+  private layOut(splitCount: number, lightRect: DirectionalShadowAtlasRect): void {
+    this.laidOutSplitCount = splitCount;
+    this.laidOutRect.x = lightRect.x;
+    this.laidOutRect.y = lightRect.y;
+    this.laidOutRect.width = lightRect.width;
+    this.laidOutRect.height = lightRect.height;
     const first = directionalShadowSplitAtlasRect(splitCount, 0, lightRect);
     this.mapSize.set(first.width, first.height);
+    this.splitSize.copy(this.mapSize);
     this._frameExtents.set(
       DIRECTIONAL_SHADOW_SIZE_DEFAULT / first.width,
       DIRECTIONAL_SHADOW_SIZE_DEFAULT / first.height
@@ -143,25 +167,14 @@ export class DirectionalSplitShadow extends THREE.LightShadow<THREE.Orthographic
    * as its vec4 repeats that split's far end. With no split drawn, every slot keeps its matrix.
    */
   override updateMatrices(_light: THREE.Light): void {
-    this.confineToShare();
+    // three clears the whole target before it draws a light (`WebGLShadowMap.js:338-339`), so the
+    // scissor keeps the clear inside this light's share.
+    confineShadowScissor(this, this.share);
     const lastSplit = Math.max(this.splitCount - 1, 0);
     for (let slot = 0; slot < SPLIT_SLOTS; slot++) {
       if (slot < this.splitCount) this.updateSplitMatrix(slot);
       else this.splitMatrices[slot]!.copy(this.splitMatrices[lastSplit]!);
     }
-  }
-
-  /**
-   * three clears the whole target before it draws a light (`WebGLShadowMap.js:338-339`), and binds a
-   * target with its own scissor (`WebGLRenderer.js:3040-3043`), so the scissor keeps the clear inside
-   * this light's share. It scales by `mapSize`, which three shrinks on a GPU whose textures are
-   * smaller than the atlas (`WebGLShadowMap.js:180-198`).
-   */
-  private confineToShare(): void {
-    if (!this.map) return;
-    const { x, y } = this.mapSize;
-    this.map.scissor.set(this.share.x * x, this.share.y * y, this.share.z * x, this.share.w * y);
-    this.map.scissorTest = true;
   }
 
   /** Lets go of the atlas. Other shadows share it, so it frees itself only once none holds it. */

@@ -7,11 +7,9 @@
 
 import * as THREE from 'three';
 import type { PointLightShadow } from 'three/src/lights/PointLightShadow.js';
-import type { PositionalShadowSlot } from '../../godot/positionalShadowAtlas.js';
+import { omniShadowCubeSize, type PositionalShadowSlot } from '../../godot/positionalShadowAtlas.js';
+import { lightPoseMatrix } from './lightPose.js';
 import { positionalShadowAtlas } from './shadowAtlasTarget.js';
-
-/** A light's scale counts for nothing in Godot's shadow (`renderer_scene_cull.cpp:2358-2359`). */
-const UNIT_SCALE = new THREE.Vector3(1, 1, 1);
 
 /** three exports no `PointLightShadow` class, so it comes from a point light's own shadow. */
 const ThreePointLightShadow = new THREE.PointLight().shadow.constructor as new () => PointLightShadow;
@@ -19,6 +17,15 @@ const ThreePointLightShadow = new THREE.PointLight().shadow.constructor as new (
 export class AtlasOmniShadow extends ThreePointLightShadow {
   /** The light's slot in the atlas of the viewport that renders now, or null for none. */
   slot: PositionalShadowSlot | null = null;
+
+  /**
+   * Takes `slot`, which the shadow pass copies the cube into, and renders the cube at the side the
+   * slot asks for. A null slot keeps the cube.
+   */
+  place(slot: PositionalShadowSlot | null): void {
+    this.slot = slot;
+    if (slot !== null) this.fitCube(omniShadowCubeSize(slot.size));
+  }
 
   /**
    * Gives the shadow a cube of `faceSize` texels a side. The copy reads its depth at each texel,
@@ -56,10 +63,7 @@ export class AtlasOmniShadow extends ThreePointLightShadow {
    */
   writeLookupMatrix(light: THREE.Object3D): void {
     const atlasSize = positionalShadowAtlas().width;
-    const position = new THREE.Vector3();
-    const rotation = new THREE.Quaternion();
-    light.matrixWorld.decompose(position, rotation, new THREE.Vector3());
-    this.matrix.compose(position, rotation, UNIT_SCALE).invert();
+    lightPoseMatrix(light, this.matrix).invert();
     const slot = this.slot;
     if (!slot?.paraboloidStep) return;
     const e = this.matrix.elements;

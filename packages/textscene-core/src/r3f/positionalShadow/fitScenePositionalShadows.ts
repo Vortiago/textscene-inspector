@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { positionalLightBounds } from '../../godot/positionalShadow.js';
 import type { PositionalShadowRequest } from '../../godot/positionalShadowAtlas.js';
 import { isViewingCamera, type ViewingCamera } from '../directionalShadow/fitDirectionalShadowBox.js';
-import { sceneLights, type SceneLight } from '../directionalShadow/lightLists.js';
+import { declaredLights, type DeclaredLight, type SceneLight } from '../directionalShadow/lightLists.js';
 import { readPositionalShadowDeclaration, type PositionalShadowDeclaration } from './declaration.js';
 import { adoptAtlasShadow } from './adoptAtlasShadow.js';
 import { fitPositionalShadow } from './fitPositionalShadow.js';
@@ -15,24 +15,32 @@ import { omniShadowCoverage, spotShadowCoverage } from './shadowCoverage.js';
 import type { PositionalLight, ViewportShadowAtlas } from './viewportShadowAtlas.js';
 
 /** An omni or spot light that declared its shadow. */
-interface DeclaredLight extends SceneLight {
-  light: PositionalLight;
-  declaration: PositionalShadowDeclaration;
-}
+type DeclaredPositionalLight = DeclaredLight<PositionalLight, PositionalShadowDeclaration>;
 
 /**
- * Allocates and fits every declared light of `scene` for the render through `camera`. A camera
- * without a depth range fits nothing. `tickMsec` is the render's clock.
+ * The fit runs on every render, so it works in these. Each belongs to the one function that writes
+ * it, and is valid until that function runs again.
+ */
+const declaredSet = new Set<PositionalLight>();
+const scratchViewProjection = new THREE.Matrix4();
+const scratchFrustum = new THREE.Frustum();
+const scratchVolume = new THREE.Box3();
+const scratchPosition = new THREE.Vector3();
+const scratchDirection = new THREE.Vector3();
+
+/**
+ * Allocates and fits every declared light among `lights`, the scene's lights, for the render
+ * through `camera`. A camera without a depth range fits nothing. `tickMsec` is the render's clock.
  */
 export function fitScenePositionalShadows(
-  scene: THREE.Object3D,
+  lights: readonly SceneLight[],
   camera: THREE.Camera,
   atlas: ViewportShadowAtlas,
   tickMsec: number
 ): void {
   if (!isViewingCamera(camera)) return;
-  const declared = declaredLights(sceneLights(scene));
-  atlas.retain(new Set(declared.map(({ light }) => light)));
+  const declared = declaredLights(lights, isPositionalLight, readPositionalShadowDeclaration);
+  retainDeclared(atlas, declared);
   atlas.allocate(slotRequests(declared, camera), tickMsec);
   for (const { light, declaration } of declared) {
     const atlasLight = adoptAtlasShadow(light);
@@ -41,14 +49,11 @@ export function fitScenePositionalShadows(
   }
 }
 
-function declaredLights(lights: readonly SceneLight[]): DeclaredLight[] {
-  const declared: DeclaredLight[] = [];
-  for (const { light, isVisible } of lights) {
-    if (!isPositionalLight(light)) continue;
-    const declaration = readPositionalShadowDeclaration(light);
-    if (declaration) declared.push({ light, declaration, isVisible });
-  }
-  return declared;
+/** Frees what the atlas holds for a light that left. The set empties again, so it keeps no light. */
+function retainDeclared(atlas: ViewportShadowAtlas, declared: readonly DeclaredPositionalLight[]): void {
+  for (const { light } of declared) declaredSet.add(light);
+  atlas.retain(declaredSet);
+  declaredSet.clear();
 }
 
 /**
@@ -58,7 +63,7 @@ function declaredLights(lights: readonly SceneLight[]): DeclaredLight[] {
  * `renderer_scene_cull.cpp:531`), so the cull meets them in reverse tree order.
  */
 function slotRequests(
-  declared: readonly DeclaredLight[],
+  declared: readonly DeclaredPositionalLight[],
   camera: ViewingCamera
 ): PositionalShadowRequest<PositionalLight>[] {
   const frustum = cameraFrustum(camera);
@@ -76,24 +81,26 @@ function slotRequests(
 
 /** three updates the camera's matrices before `onBeforeRender` (r186 `WebGLRenderer.js:1663-1678`). */
 function cameraFrustum(camera: ViewingCamera): THREE.Frustum {
-  const viewProjection = new THREE.Matrix4().multiplyMatrices(
+  const viewProjection = scratchViewProjection.multiplyMatrices(
     camera.projectionMatrix,
     camera.matrixWorldInverse
   );
-  return new THREE.Frustum().setFromProjectionMatrix(viewProjection, camera.coordinateSystem);
+  return scratchFrustum.setFromProjectionMatrix(viewProjection, camera.coordinateSystem);
 }
 
 /** The light's volume in world space: Godot's local box, transformed and boxed again. */
 function lightVolume(light: PositionalLight): THREE.Box3 {
   const spotAngle = isSpotLight(light) ? THREE.MathUtils.radToDeg(light.angle) : null;
   const { min, max } = positionalLightBounds(light.distance, spotAngle);
-  return new THREE.Box3(new THREE.Vector3(...min), new THREE.Vector3(...max)).applyMatrix4(light.matrixWorld);
+  scratchVolume.min.set(min[0], min[1], min[2]);
+  scratchVolume.max.set(max[0], max[1], max[2]);
+  return scratchVolume.applyMatrix4(light.matrixWorld);
 }
 
 function lightCoverage(light: PositionalLight, camera: ViewingCamera): number {
-  const position = light.getWorldPosition(new THREE.Vector3());
+  const position = light.getWorldPosition(scratchPosition);
   if (!isSpotLight(light)) return omniShadowCoverage(position, light.distance, camera);
-  const direction = light.target.getWorldPosition(new THREE.Vector3()).sub(position).normalize();
+  const direction = light.target.getWorldPosition(scratchDirection).sub(position).normalize();
   return spotShadowCoverage(position, direction, light.distance, light.angle, camera);
 }
 

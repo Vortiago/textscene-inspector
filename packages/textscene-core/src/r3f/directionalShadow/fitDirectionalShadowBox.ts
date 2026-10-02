@@ -7,7 +7,6 @@
 
 import * as THREE from 'three';
 import { snapped } from '../../godot/math.js';
-import { allFinite } from '../../godot/number.js';
 import {
   directionalShadowSlice,
   directionalShadowSnapStep,
@@ -82,6 +81,19 @@ const NDC_CORNERS: readonly (readonly [number, number])[] = [
   [1, 1],
 ];
 
+const CORNER_COUNT = 2 * NDC_CORNERS.length;
+
+/**
+ * Scratch for the fit, which runs on every render, so it allocates no vector per box. Each value
+ * lasts until the next box or reach is fitted. No fitted box keeps one.
+ */
+const scratchCorners = Array.from({ length: CORNER_COUNT }, () => new THREE.Vector3());
+const scratchOnNearPlane = new THREE.Vector3();
+const scratchOnFarPlane = new THREE.Vector3();
+const scratchMean = new THREE.Vector3();
+const scratchSphere = new THREE.Sphere();
+const scratchBasis = new THREE.Matrix4();
+
 /** The camera depths the light's shadow covers (`renderer_scene_cull.cpp:2143-2149`). */
 export function viewSlice(
   input: Pick<DirectionalShadowFitInput, 'camera' | 'declaration'>
@@ -96,7 +108,7 @@ export function viewSlice(
 }
 
 /** A box over a depth range of the view, or null when the inputs give no finite box. */
-export type DirectionalShadowBoxFit = (depths: DirectionalShadowSlice) => DirectionalShadowBox | null;
+type DirectionalShadowBoxFit = (depths: DirectionalShadowSlice) => DirectionalShadowBox | null;
 
 /**
  * Fits boxes for one light and one render. The light's axes and its caster reach hold for every
@@ -107,7 +119,8 @@ export type DirectionalShadowBoxFit = (depths: DirectionalShadowSlice) => Direct
 export function directionalShadowBoxFitter(input: DirectionalShadowFitInput): DirectionalShadowBoxFit {
   const axes = lightAxes(input.lightPosition, input.targetPosition, input.up);
   const reach = pancakesCasters(input.declaration.pancakeSize) ? casterReach(input, axes) : null;
-  return (depths) => fitBox({ input, axes, reach }, depths);
+  const frame: LightFrame = { input, axes, reach };
+  return (depths) => fitBox(frame, depths);
 }
 
 /** What every box of one light and one render shares. Null `reach` keeps three's near clip. */
@@ -122,7 +135,10 @@ function fitBox(
   depths: DirectionalShadowSlice
 ): DirectionalShadowBox | null {
   const { camera, declaration, shadowMapSize } = input;
-  const { centre, radius } = paddedSphere(cameraSliceCorners(camera, depths.near, depths.far), shadowMapSize);
+  const { center: centre, radius } = paddedSphere(
+    writeCameraSliceCorners(camera, depths.near, depths.far, scratchCorners),
+    shadowMapSize
+  );
 
   const centreX = axes.x.dot(centre);
   const centreY = axes.y.dot(centre);
@@ -154,16 +170,31 @@ function fitBox(
     bias: declaration.depthBias * ((zNear - zFar) / (far - near)),
     normalBias: declaration.normalBias * directionalShadowTexelSize(radius, shadowMapSize),
   };
-  return allFinite(Object.values(box)) ? box : null;
+  return isFiniteBox(box) ? box : null;
 }
 
-/** The slice corners' sphere (`renderer_scene_cull.cpp:2268-2282`), padded by one texel. */
-function paddedSphere(
-  corners: THREE.Vector3[],
-  shadowMapSize: number
-): { centre: THREE.Vector3; radius: number } {
-  const { center, radius } = meanCentredSphere(corners);
-  return { centre: center, radius: texelPaddedRadius(radius, shadowMapSize) };
+/** Field by field, so the check builds no array on every render. */
+function isFiniteBox(box: DirectionalShadowBox): boolean {
+  return (
+    Number.isFinite(box.left) &&
+    Number.isFinite(box.right) &&
+    Number.isFinite(box.top) &&
+    Number.isFinite(box.bottom) &&
+    Number.isFinite(box.near) &&
+    Number.isFinite(box.far) &&
+    Number.isFinite(box.bias) &&
+    Number.isFinite(box.normalBias)
+  );
+}
+
+/**
+ * The slice corners' sphere (`renderer_scene_cull.cpp:2268-2282`), padded by one texel. It is
+ * the shared scratch sphere, valid until the next call.
+ */
+function paddedSphere(corners: THREE.Vector3[], shadowMapSize: number): THREE.Sphere {
+  const sphere = meanCentredSphere(corners);
+  sphere.radius = texelPaddedRadius(sphere.radius, shadowMapSize);
+  return sphere;
 }
 
 /**
@@ -172,8 +203,8 @@ function paddedSphere(
  */
 function casterReach(input: DirectionalShadowFitInput, axes: LightAxes): number {
   const slice = viewSlice(input);
-  const { centre, radius } = paddedSphere(
-    cameraSliceCorners(input.camera, slice.near, slice.far),
+  const { center: centre, radius } = paddedSphere(
+    writeCameraSliceCorners(input.camera, slice.near, slice.far, scratchCorners),
     input.shadowMapSize
   );
   const sliceNearFace = axes.z.dot(centre) + radius + input.declaration.pancakeSize;
@@ -182,53 +213,79 @@ function casterReach(input: DirectionalShadowFitInput, axes: LightAxes): number 
 
 /**
  * The eight world-space corners of the camera's view between two depths
- * (`Projection::get_endpoints`, called at `renderer_scene_cull.cpp:2206`). Each corner ray is
- * unprojected once and cut at a depth, which holds for a perspective and an orthogonal camera.
+ * (`Projection::get_endpoints`, called at `renderer_scene_cull.cpp:2206`), as fresh vectors.
  */
 export function cameraSliceCorners(
   camera: THREE.Camera,
   nearDepth: number,
   farDepth: number
 ): THREE.Vector3[] {
-  const corners: THREE.Vector3[] = [];
-  for (const [x, y] of NDC_CORNERS) {
-    const onNearPlane = new THREE.Vector3(x, y, -1).applyMatrix4(camera.projectionMatrixInverse);
-    const onFarPlane = new THREE.Vector3(x, y, 1).applyMatrix4(camera.projectionMatrixInverse);
-    for (const depth of [nearDepth, farDepth]) {
-      corners.push(pointAtDepth(onNearPlane, onFarPlane, depth).applyMatrix4(camera.matrixWorld));
-    }
-  }
+  const corners = Array.from({ length: CORNER_COUNT }, () => new THREE.Vector3());
+  return writeCameraSliceCorners(camera, nearDepth, farDepth, corners);
+}
+
+/**
+ * Writes the corners into `corners`, near then far for each corner ray, and returns it. Each ray is
+ * unprojected once and cut at a depth, which holds for a perspective and an orthogonal camera.
+ */
+function writeCameraSliceCorners(
+  camera: THREE.Camera,
+  nearDepth: number,
+  farDepth: number,
+  corners: THREE.Vector3[]
+): THREE.Vector3[] {
+  NDC_CORNERS.forEach(([x, y], ray) => {
+    scratchOnNearPlane.set(x, y, -1).applyMatrix4(camera.projectionMatrixInverse);
+    scratchOnFarPlane.set(x, y, 1).applyMatrix4(camera.projectionMatrixInverse);
+    writeCornerAtDepth(camera, nearDepth, corners[2 * ray]!);
+    writeCornerAtDepth(camera, farDepth, corners[2 * ray + 1]!);
+  });
   return corners;
+}
+
+/** Cuts the ray through the two scratch plane points at `depth`, in world space. */
+function writeCornerAtDepth(camera: THREE.Camera, depth: number, corner: THREE.Vector3): void {
+  pointAtDepth(scratchOnNearPlane, scratchOnFarPlane, depth, corner).applyMatrix4(camera.matrixWorld);
 }
 
 /**
  * The sphere round the points' mean (`renderer_scene_cull.cpp:2268-2280`). Without a centre,
- * `Sphere.setFromPoints` centres on the bounding box and so fits a different radius.
+ * `Sphere.setFromPoints` centres on the bounding box and so fits a different radius. It is the
+ * shared scratch sphere, valid until the next call.
  */
 function meanCentredSphere(points: THREE.Vector3[]): THREE.Sphere {
-  const mean = new THREE.Vector3();
-  for (const point of points) mean.add(point);
-  return new THREE.Sphere().setFromPoints(points, mean.divideScalar(points.length));
+  scratchMean.set(0, 0, 0);
+  for (const point of points) scratchMean.add(point);
+  return scratchSphere.setFromPoints(points, scratchMean.divideScalar(points.length));
 }
 
-/** The point on the view-space line through `a` and `b` whose depth, along -Z, is `depth`. */
-function pointAtDepth(a: THREE.Vector3, b: THREE.Vector3, depth: number): THREE.Vector3 {
+/**
+ * Writes into `target` the point on the view-space line through `a` and `b` whose depth, along -Z,
+ * is `depth`, and returns it.
+ */
+function pointAtDepth(
+  a: THREE.Vector3,
+  b: THREE.Vector3,
+  depth: number,
+  target: THREE.Vector3
+): THREE.Vector3 {
   const t = (-depth - a.z) / (b.z - a.z);
-  return a.clone().lerp(b, t);
+  return target.copy(a).lerp(b, t);
 }
 
 /**
  * Built by the same `Matrix4.lookAt` three's `LightShadow.updateMatrices` runs through
  * `Object3D.lookAt`, so a box fitted on these axes is the box three draws. A direction parallel
- * to `up` takes three's own nudge, and the box stays square to it.
+ * to `up` takes three's own nudge, and the box stays square to it. The fitter keeps them for
+ * every split, so they are its own vectors.
  */
 function lightAxes(
   lightPosition: THREE.Vector3,
   targetPosition: THREE.Vector3,
   up: THREE.Vector3
 ): LightAxes {
-  const basis = new THREE.Matrix4().lookAt(lightPosition, targetPosition, up);
   const axes: LightAxes = { x: new THREE.Vector3(), y: new THREE.Vector3(), z: new THREE.Vector3() };
-  basis.extractBasis(axes.x, axes.y, axes.z);
+  scratchBasis.lookAt(lightPosition, targetPosition, up);
+  scratchBasis.extractBasis(axes.x, axes.y, axes.z);
   return axes;
 }

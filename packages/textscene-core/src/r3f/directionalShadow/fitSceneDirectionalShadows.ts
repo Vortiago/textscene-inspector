@@ -13,10 +13,10 @@ import { dropLight, isDropped, restoreDroppedLight } from './droppedLight.js';
 import { isViewingCamera, type DirectionalShadowBox, type ViewingCamera } from './fitDirectionalShadowBox.js';
 import { fitDirectionalShadowSplits, type DirectionalShadowSplits } from './fitDirectionalShadowSplits.js';
 import {
-  declaredLights,
+  declaredDirectionalLights,
   directionalLightLists,
   sceneLights,
-  type DeclaredLight,
+  type DeclaredDirectionalLight,
   type DirectionalLightLists,
   type SceneLight,
 } from './lightLists.js';
@@ -52,14 +52,18 @@ const NO_FADES: ShadowFades = { directional: [], sun: [] };
  * A camera without a depth range (a bare `THREE.Camera`) fits nothing and fades nothing. A light
  * without a declaration keeps its shadow camera untouched and casts unfaded. A declared light casts
  * only from Godot's list of shadowed lights, and a light past Godot's eighth leaves the render.
+ * `lights` is `sceneLights(scene)` from before the fit.
  */
-export function fitSceneDirectionalShadows(scene: THREE.Object3D, camera: THREE.Camera): void {
+export function fitSceneDirectionalShadows(
+  scene: THREE.Object3D,
+  camera: THREE.Camera,
+  lights: readonly SceneLight[]
+): void {
   if (!isViewingCamera(camera)) {
     writeDirectionalShadowFades(NO_FADES);
     return;
   }
-  const lights = sceneLights(scene);
-  const declared = declaredLights(lights);
+  const declared = declaredDirectionalLights(lights);
   // Every render shares the fade buffer, so a scene with nothing to fade still clears it.
   if (declared.length === 0) {
     writeDirectionalShadowFades(NO_FADES);
@@ -83,7 +87,7 @@ export function fitSceneDirectionalShadows(scene: THREE.Object3D, camera: THREE.
 
 /** Hands every declared light back its own shading and layers, for a fitter that stops fitting. */
 export function releaseSceneLights(scene: THREE.Object3D): void {
-  for (const { light } of declaredLights(sceneLights(scene))) {
+  for (const { light } of declaredDirectionalLights(sceneLights(scene))) {
     releaseSplitSun(light);
     restoreDroppedLight(light);
   }
@@ -128,7 +132,7 @@ export function directionalShadowCasters(
  * declared light gets no fit and no split sun, and its declaration leaves its `castShadow` off.
  */
 function fitDeclaredLight(
-  { light, declaration, isVisible }: DeclaredLight,
+  { light, declaration, isVisible }: DeclaredDirectionalLight,
   lists: DirectionalLightLists,
   camera: ViewingCamera,
   fades: CasterFades
@@ -148,11 +152,19 @@ function fitDeclaredLight(
   fitSplitLight({ light, declaration, lightRect }, camera, fades);
 }
 
+/**
+ * The placement of the light in its fit. Written only by `placementOf`, and valid until the next
+ * light's fit, so no fit keeps it: this runs on every render.
+ */
+const scratchPlacement: LightPlacement = {
+  lightPosition: new THREE.Vector3(),
+  targetPosition: new THREE.Vector3(),
+};
+
 function placementOf(light: THREE.DirectionalLight): LightPlacement {
-  return {
-    lightPosition: light.getWorldPosition(new THREE.Vector3()),
-    targetPosition: light.target.getWorldPosition(new THREE.Vector3()),
-  };
+  light.getWorldPosition(scratchPlacement.lightPosition);
+  light.target.getWorldPosition(scratchPlacement.targetPosition);
+  return scratchPlacement;
 }
 
 /**

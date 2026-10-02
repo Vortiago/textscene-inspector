@@ -1,6 +1,24 @@
-import { describe, expect, it } from 'vitest';
+/**
+ * The filter is checked against the installed three's shadow chunk, so a release that rewrites the
+ * sun block it precedes fails here and not in a golden.
+ */
+import { afterEach, describe, expect, it } from 'vitest';
+import * as THREE from 'three';
 import { SOFT_LOW_SHADOW_SAMPLES, vogelDisk } from '../../godot/softShadowKernel';
-import { SOFT_SHADOW_FILTER, glslFloat } from './softShadowFilter';
+import { FRAMEBUFFER_HEIGHT_UNIFORM, framebufferHeight } from './framebufferRows';
+import { SOFT_SHADOW_FILTER, installSoftShadowFilter, softShadowFilterChunk } from './softShadowFilter';
+import { warningsOf } from '../testing/logWarnings';
+
+const CHUNK = 'shadowmap_pars_fragment';
+const threeChunk = THREE.ShaderChunk[CHUNK];
+
+const occurrences = (text: string, part: string) => text.split(part).length - 1;
+
+afterEach(() => {
+  THREE.ShaderChunk[CHUNK] = threeChunk;
+  for (const shader of Object.values(THREE.ShaderLib)) delete shader.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM];
+  delete (THREE.UniformsLib.lights as Record<string, THREE.IUniform>)[FRAMEBUFFER_HEIGHT_UNIFORM];
+});
 
 /** The float literals of the kernel the GLSL declares. */
 function kernelLiterals(): number[] {
@@ -32,27 +50,57 @@ describe('the soft shadow filter', () => {
     expect(SOFT_SHADOW_FILTER).toContain('return mat2( vec2( cr, - sr ), vec2( sr, cr ) );');
   });
 
-  it('declares itself once in a program that holds it twice (edge case)', () => {
-    const lines = SOFT_SHADOW_FILTER.trim().split('\n');
-    expect(lines[0]!.trim()).toBe('#ifndef GODOT_SOFT_SHADOW_FILTER');
-    expect(lines[1]!.trim()).toBe('#define GODOT_SOFT_SHADOW_FILTER');
-    expect(lines.at(-1)!.trim()).toBe('#endif');
-  });
-
   it('writes every kernel value as a float GLSL accepts (edge case)', () => {
     const kernel = /vec2\[\]\((.*)\);/.exec(SOFT_SHADOW_FILTER)![1]!;
     expect(kernel).not.toMatch(/[(, ]-?\d+ [,)]/);
   });
 });
 
-describe('glslFloat', () => {
-  it('keeps a literal with a point or an exponent', () => {
-    expect(glslFloat(0.25)).toBe('0.25');
-    expect(glslFloat(1e-7)).toBe('1e-7');
+describe('softShadowFilterChunk', () => {
+  it('declares the filter once, inside the shadow block and ahead of every shadow type', () => {
+    const patched = softShadowFilterChunk(threeChunk)!;
+    const filter = patched.indexOf(SOFT_SHADOW_FILTER);
+    expect(occurrences(patched, SOFT_SHADOW_FILTER)).toBe(1);
+    expect(filter).toBeGreaterThan(patched.indexOf('#ifdef USE_SHADOWMAP'));
+    expect(filter).toBeLessThan(patched.indexOf('#if NUM_SUN_LIGHT_SHADOWS > 0'));
   });
 
-  it('gives an integer a point, which GLSL needs for a float (edge case)', () => {
-    expect(glslFloat(4)).toBe('4.0');
-    expect(glslFloat(-1)).toBe('-1.0');
+  it('changes nothing but the filter', () => {
+    expect(softShadowFilterChunk(threeChunk)!.replace(SOFT_SHADOW_FILTER, '')).toBe(threeChunk);
+  });
+
+  it('is null for a chunk without the sun block (error case)', () => {
+    expect(softShadowFilterChunk('void main() {}')).toBeNull();
+  });
+});
+
+describe('installSoftShadowFilter', () => {
+  it('puts the filter in three’s chunk and is true', () => {
+    expect(installSoftShadowFilter()).toBe(true);
+    expect(THREE.ShaderChunk[CHUNK]).toBe(softShadowFilterChunk(threeChunk));
+  });
+
+  it('gives every lit built-in material the framebuffer height the filter reads', () => {
+    installSoftShadowFilter();
+    expect(THREE.ShaderLib.standard.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM]!.value).toBe(framebufferHeight);
+    expect(THREE.ShaderLib.basic.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM]).toBeUndefined();
+  });
+
+  it('declares the filter once, and warns nothing, when called twice (edge case)', () => {
+    installSoftShadowFilter();
+    expect(warningsOf(installSoftShadowFilter)).toEqual([]);
+    expect(occurrences(THREE.ShaderChunk[CHUNK], SOFT_SHADOW_FILTER)).toBe(1);
+  });
+
+  it('leaves a chunk it cannot patch alone, and is false (error case)', () => {
+    THREE.ShaderChunk[CHUNK] = 'void main() {}';
+    let installed = true;
+    const warnings = warningsOf(() => {
+      installed = installSoftShadowFilter();
+    });
+    expect(installed).toBe(false);
+    expect(warnings).toHaveLength(1);
+    expect(THREE.ShaderChunk[CHUNK]).toBe('void main() {}');
+    expect(THREE.ShaderLib.standard.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM]).toBeUndefined();
   });
 });

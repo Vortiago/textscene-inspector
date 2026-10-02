@@ -4,7 +4,7 @@
  * normal bias, as Godot's atlas owns the slot.
  */
 
-import type * as THREE from 'three';
+import { userDataDeclaration } from '../userDataDeclaration.js';
 
 export interface PositionalShadowDeclaration {
   /** `shadow_normal_bias`, in ten texels of the light's slot. */
@@ -13,22 +13,13 @@ export interface PositionalShadowDeclaration {
   softShadowScale: number;
 }
 
-/** The `userData` key. One key, so a light carries one declaration. */
-const DECLARATION_KEY = 'positionalShadow';
+const declaration = userDataDeclaration<PositionalShadowDeclaration>(
+  'positionalShadow',
+  ({ normalBias, softShadowScale }) => typeof normalBias === 'number' && typeof softShadowScale === 'number'
+);
 
-/** The `userData` entry that declares `declaration`. R3F assigns a `userData` prop whole. */
-export function positionalShadowUserData(declaration: PositionalShadowDeclaration): Record<string, unknown> {
-  return { [DECLARATION_KEY]: declaration };
-}
+/** The `userData` entry that declares a light's shadow, to merge into the light's `userData`. */
+export const positionalShadowUserData = declaration.userData;
 
 /** The light's declaration, or null for a light that made none, which the fitter leaves alone. */
-export function readPositionalShadowDeclaration(light: THREE.Object3D): PositionalShadowDeclaration | null {
-  const declaration = (light.userData as Record<string, unknown>)[DECLARATION_KEY];
-  return isDeclaration(declaration) ? declaration : null;
-}
-
-function isDeclaration(value: unknown): value is PositionalShadowDeclaration {
-  if (typeof value !== 'object' || value === null) return false;
-  const { normalBias, softShadowScale } = value as Record<string, unknown>;
-  return typeof normalBias === 'number' && typeof softShadowScale === 'number';
-}
+export const readPositionalShadowDeclaration = declaration.read;

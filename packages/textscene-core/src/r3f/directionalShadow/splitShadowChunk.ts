@@ -7,10 +7,8 @@
  * out the per-slot values the lookup reads.
  */
 
-import * as THREE from 'three';
-import { warn } from '../../logger.js';
-import { installFramebufferHeightUniform } from '../shadowFilter/framebufferRows.js';
-import { SOFT_SHADOW_FILTER } from '../shadowFilter/softShadowFilter.js';
+import { installChunkPatch, onChunk } from '../shaderPatch/chunkPatch.js';
+import { installSoftShadowFilter } from '../shadowFilter/softShadowFilter.js';
 import { SPLIT_SLOTS } from './splitShadow.js';
 import { NO_BLEND } from './fitDirectionalShadowSplits.js';
 
@@ -35,9 +33,10 @@ const BLENDS_ABOVE = (NO_BLEND / 2).toExponential();
  * Godot's PCF of one split (`:2443`). Its pixel size is the atlas texel times `soft_shadow_scale`
  * times the split's blur factor, and `shadowMapSize` is the whole atlas
  * (`WebGLLights.js:305`, `splitShadow.ts`). It keeps three's test that leaves a receiver outside
- * the atlas or past its far plane unshadowed (`getShadow`).
+ * the atlas or past its far plane unshadowed (`getShadow`). `godotPcf` is the soft shadow filter,
+ * which `installSoftShadowFilter` puts ahead of the sun block.
  */
-const GODOT_SUN_PCF = `${SOFT_SHADOW_FILTER}
+const GODOT_SUN_PCF = `
 \t\tfloat godotSunShadow( sampler2DShadow atlas, vec2 atlasSize, float shadowIntensity, float shadowBias, float softShadowScale, vec4 shadowCoord ) {
 
 \t\t\tvec3 coord = shadowCoord.xyz / shadowCoord.w;
@@ -135,19 +134,17 @@ export function godotSplitShadowChunk(chunk: string): string | null {
 }
 
 /**
- * Replaces three's chunk, and gives the framebuffer height uniform the filter reads to every built-in
- * lit material, for every program compiled after the call. A three release that rewrites
- * the lookup keeps its own chunk, and `splitShadowChunk.test.ts` fails on that release. A second
- * call changes nothing. The patch touches only the sun block, so it composes with the fade in
- * `shadowFade.ts` in either install order.
+ * Installs the soft shadow filter, then replaces three's chunk, for every program compiled after the
+ * call. A three release that rewrites the lookup keeps its own chunk, and `splitShadowChunk.test.ts`
+ * fails on that release. A second call changes nothing. The patch touches only the sun block, so it
+ * composes with the fade in `shadowFade.ts` in either install order.
  */
 export function installGodotSplitShadow(): void {
-  if (THREE.ShaderChunk[CHUNK].includes(SPLIT_LOOKUP)) return;
-  const patched = godotSplitShadowChunk(THREE.ShaderChunk[CHUNK]);
-  if (patched === null) {
-    warn(`[Shading] three's ${CHUNK} has no sun shadow lookup to replace`);
-    return;
-  }
-  THREE.ShaderChunk[CHUNK] = patched;
-  installFramebufferHeightUniform();
+  if (!installSoftShadowFilter()) return;
+  installChunkPatch({
+    names: [CHUNK],
+    isApplied: (chunks) => chunks[CHUNK].includes(SPLIT_LOOKUP),
+    apply: onChunk(CHUNK, godotSplitShadowChunk),
+    missing: `${CHUNK} has no sun shadow lookup to replace`,
+  });
 }

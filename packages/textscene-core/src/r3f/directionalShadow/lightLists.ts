@@ -8,7 +8,6 @@ import type * as THREE from 'three';
 import {
   DIRECTIONAL_SHADOW_SIZE_DEFAULT,
   directionalLightsDrawn,
-  directionalLightsWithShadow,
   directionalShadowLightRect,
   type DirectionalShadowAtlasRect,
 } from '../../godot/directionalShadow.js';
@@ -20,11 +19,14 @@ export interface SceneLight {
   isVisible: boolean;
 }
 
-/** A directional light that declared its shadow. */
-export interface DeclaredLight extends SceneLight {
-  light: THREE.DirectionalLight;
-  declaration: DirectionalShadowDeclaration;
+/** A light of one kind that made one kind of declaration. */
+export interface DeclaredLight<Light extends THREE.Light, Declaration> extends SceneLight {
+  light: Light;
+  declaration: Declaration;
 }
+
+/** A directional light that declared its shadow. */
+export type DeclaredDirectionalLight = DeclaredLight<THREE.DirectionalLight, DirectionalShadowDeclaration>;
 
 /**
  * Every light in the scene, in the pre-order three's `projectObject` visits them (r186
@@ -42,16 +44,28 @@ function collectLights(object: THREE.Object3D, isParentVisible: boolean, lights:
   for (const child of object.children) collectLights(child, isVisible, lights);
 }
 
-/** The declared directional lights among `lights`, hidden ones included. */
-export function declaredLights(lights: readonly SceneLight[]): DeclaredLight[] {
-  const declared: DeclaredLight[] = [];
+/** The lights of one kind among `lights` that made a declaration, hidden ones included. */
+export function declaredLights<Light extends THREE.Light, Declaration>(
+  lights: readonly SceneLight[],
+  isKind: (light: THREE.Light) => light is Light,
+  read: (light: Light) => Declaration | null
+): DeclaredLight<Light, Declaration>[] {
+  const declared: DeclaredLight<Light, Declaration>[] = [];
   for (const { light, isVisible } of lights) {
-    const directional = light as THREE.DirectionalLight;
-    if (!directional.isDirectionalLight) continue;
-    const declaration = readDirectionalShadowDeclaration(directional);
-    if (declaration) declared.push({ light: directional, declaration, isVisible });
+    if (!isKind(light)) continue;
+    const declaration = read(light);
+    if (declaration) declared.push({ light, declaration, isVisible });
   }
   return declared;
+}
+
+/** The declared directional lights among `lights`, hidden ones included. */
+export function declaredDirectionalLights(lights: readonly SceneLight[]): DeclaredDirectionalLight[] {
+  return declaredLights(lights, isDirectionalLight, readDirectionalShadowDeclaration);
+}
+
+function isDirectionalLight(light: THREE.Light): light is THREE.DirectionalLight {
+  return (light as THREE.DirectionalLight).isDirectionalLight === true;
 }
 
 /** Godot's lists for a scene: the lights it draws, and each shadowed light's share of the atlas. */
@@ -66,12 +80,14 @@ export interface DirectionalLightLists {
  * nor `layers` to three, so the lists ignore layers. Lists per camera would cost two cameras that
  * differ a sun attached and released, its map reallocated and every program switched on each render.
  */
-export function directionalLightLists(declared: readonly DeclaredLight[]): DirectionalLightLists {
-  const visible = declared.filter(({ isVisible }) => isVisible);
-  const shadowed = directionalLightsWithShadow(visible, ({ declaration }) => declaration.sharesAtlas);
+export function directionalLightLists(declared: readonly DeclaredDirectionalLight[]): DirectionalLightLists {
+  const drawn = directionalLightsDrawn(declared.filter(({ isVisible }) => isVisible));
+  // `renderer_scene_cull.cpp:3257-3277`: the drawn lights that share the atlas take their shares
+  // in drawn order.
+  const shadowed = drawn.filter(({ declaration }) => declaration.sharesAtlas);
   const shares = new Map<THREE.DirectionalLight, DirectionalShadowAtlasRect>();
   shadowed.forEach(({ light }, index) => {
     shares.set(light, directionalShadowLightRect(DIRECTIONAL_SHADOW_SIZE_DEFAULT, shadowed.length, index));
   });
-  return { drawn: new Set(directionalLightsDrawn(visible).map(({ light }) => light)), shares };
+  return { drawn: new Set(drawn.map(({ light }) => light)), shares };
 }
