@@ -366,13 +366,14 @@ describe('VSCodeResourceProvider', () => {
   });
 
   describe('hasProjectRootMoved', () => {
-    /** Answers `stat` for `project.godot` in exactly these directories. */
+    /** Finds `project.godot` in exactly these directories. Every other file exists. */
     function projectFilesIn(...dirs: string[]): void {
-      vscode.workspace.fs.stat.mockImplementation((uri: ReturnType<typeof createMockUri>) =>
-        dirs.some((dir) => uri.fsPath === `${dir}/project.godot`)
+      vscode.workspace.fs.stat.mockImplementation((uri: ReturnType<typeof createMockUri>) => {
+        const isProjectFile = uri.fsPath.endsWith('/project.godot');
+        return !isProjectFile || dirs.some((dir) => uri.fsPath === `${dir}/project.godot`)
           ? Promise.resolve({ type: 1, ctime: 0, mtime: 0, size: 100 })
-          : Promise.reject(new Error('Not found'))
-      );
+          : Promise.reject(new Error('Not found'));
+      });
     }
 
     async function serveOneResource(): Promise<void> {
