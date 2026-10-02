@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /**
- * The pre-push hook: runs the checks `planChecks` picks for the pushed commits. Git writes one
- * line per pushed ref on stdin: `<local ref> <local sha> <remote ref> <remote sha>`.
- * `FULL_VALIDATE=1 git push` runs the full `pnpm validate` instead.
+ * The pre-push hook: runs the static checks `planChecks` picks for the pushed commits. Git writes
+ * one line per pushed ref on stdin: `<local ref> <local sha> <remote ref> <remote sha>`.
+ * `FULL_VALIDATE=1 git push` runs the full `pnpm validate` instead, tests and packaging included.
  */
 
 import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import process from 'node:process';
 import { isNegativeFixture } from './negativeFixtures.mjs';
-import { planChecks } from './prePushPlan.mjs';
+import { planChecks, STATIC_GATE } from './prePushPlan.mjs';
 
 /** Git writes this sha for a ref that does not exist on one side of the push. */
 const NO_SHA = /^0+$/;
@@ -34,7 +34,7 @@ function baseOf(localSha, remoteSha) {
   try {
     return git('merge-base', localSha, 'origin/main');
   } catch {
-    // No origin/main in this clone: the caller runs the full gate.
+    // No origin/main in this clone: the caller runs the static checks over the whole repository.
     return undefined;
   }
 }
@@ -63,9 +63,14 @@ function run(command) {
   return result.status ?? 1;
 }
 
+function planPush() {
+  if (process.env.FULL_VALIDATE === '1') return [['pnpm', 'validate']];
+  const files = pushedFiles(readFileSync(0, 'utf8'));
+  return files === undefined ? STATIC_GATE : planChecks({ ...files, isNegativeFixture });
+}
+
 function main() {
-  const files = process.env.FULL_VALIDATE === '1' ? undefined : pushedFiles(readFileSync(0, 'utf8'));
-  const plan = files === undefined ? [['pnpm', 'validate']] : planChecks({ ...files, isNegativeFixture });
+  const plan = planPush();
   if (plan.length === 0) console.log('pre-push: no check applies to these files. CI runs the full gate.');
   for (const command of plan) {
     const status = run(command);

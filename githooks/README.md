@@ -8,11 +8,15 @@ printed order.
 | --- | --- | --- |
 | `pre-commit` | `pnpm exec lint-staged` | The staged files, as [`lint-staged.config.mjs`](../lint-staged.config.mjs) sets |
 | `commit-msg` | `.claude/skills/conventional-commits/commit-msg.sh` | The commit header: a [Conventional Commit](https://www.conventionalcommits.org/) |
-| `pre-push` | `scripts/githooks/prePush.mjs` | The checks that match the pushed files, from `scripts/githooks/prePushPlan.mjs` |
+| `pre-push` | `scripts/githooks/prePush.mjs` | The static checks that match the pushed files, from `scripts/githooks/prePushPlan.mjs` |
 
-A change to the toolchain (`package.json`, the lockfile, a `tsconfig`, a vitest, eslint or Prettier config, a
-workflow or a hook) runs the full `pnpm validate`. A push that changes only files no check reads
-runs nothing. `FULL_VALIDATE=1 git push` runs the full gate. CI runs the full gate on each pull request and on `main`.
+The pre-push hook runs no tests, no build and no packaging. CI runs them on each pull request and
+on `main`, and the pre-commit hook has already run the tests related to each staged file.
+
+A change to the toolchain (`package.json`, the lockfile, a `tsconfig`, a vitest, eslint or
+Prettier config, or a hook) runs the static checks over the whole repository: `format:check`,
+`lint`, `type-check:all` and `type-check:tests`. A push that changes only files no check reads
+runs nothing. `FULL_VALIDATE=1 git push` runs the full `pnpm validate`.
 
 ## Skip the hooks
 

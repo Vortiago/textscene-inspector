@@ -1,17 +1,18 @@
 /**
- * The checks a push needs, from the files it changes. CI runs the full gate on each pull request,
- * so the pre-push hook runs only what the change can break. A change to the toolchain runs the full gate.
+ * The checks a push needs, from the files it changes. The push runs only the static checks: CI
+ * runs the tests, the builds and the packaging on each pull request, and the pre-commit hook has
+ * already run the tests related to each staged file.
  */
 
 /**
- * A file whose change can break any check, so the push runs the full `pnpm validate`. A workflow
- * file is not one: locally only the format check reads it, and CI runs it on the pull request. The
- * negative-fixture loader is one: both hooks read it to decide which scenes they skip.
+ * A file whose change can break any static check, so the push runs them over the whole
+ * repository. A workflow file is not one: locally only the format check reads it, and CI runs it
+ * on the pull request. The negative-fixture loader is one: both hooks read it to decide which
+ * scenes they skip.
  */
 const TOOLCHAIN =
   /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|eslint\.config\.js|prettier\.config\.mjs|\.prettierignore|lint-staged\.config\.mjs|vitest\.(?:config|shared)\.ts|githooks\/.*|scripts\/githooks\/negativeFixtures\.mjs)$|(?:^|\/)(?:package\.json|tsconfig[^/]*\.json|vitest\.config\.ts)$/;
 
-const CODE = /\.(?:ts|tsx|js|mjs|cjs|css)$/;
 const TYPED = /\.(?:ts|tsx)$/;
 const LINTED_CODE = /\.(?:ts|tsx|js|mjs|cjs)$/;
 /** What Prettier formats here. Markdown is not: `.prettierignore` leaves it to the STE rules. */
@@ -22,16 +23,26 @@ const GENERATED_DOCS_INPUT = /(?:^|\/)comparison\.md$|^docs\/comparison\//;
 const VENDORED = /^\.claude\/(?:skills\/conventional-commits\/|rules\/|agents\/ste-review\.md$)/;
 
 /**
+ * The repository-wide static checks, in the order of the CI `static` job: fastest first.
+ * `type-check:all` builds the packages, which `type-check:tests` and the docs checks read.
+ */
+export const STATIC_GATE = [
+  ['pnpm', 'format:check'],
+  ['pnpm', 'lint'],
+  ['pnpm', 'type-check:all'],
+  ['pnpm', 'type-check:tests'],
+];
+
+/**
  * The commands, in order, for a push that changes `changed` (paths that still exist) and deletes
  * `deleted`. Each command is an argv array. An empty list means the push needs no check.
  * `isNegativeFixture` tells a scene that exists to error, which the plan does not lint.
  */
 export function planChecks({ changed, deleted, isNegativeFixture }) {
   const all = [...changed, ...deleted];
-  if (all.some((path) => TOOLCHAIN.test(path))) return [['pnpm', 'validate']];
+  if (all.some((path) => TOOLCHAIN.test(path))) return STATIC_GATE;
 
   const plan = [];
-  const code = changed.filter((path) => CODE.test(path));
   // `type-check:all` builds the packages first, which the generated-docs checks also need.
   const typeChecks = all.some((path) => TYPED.test(path));
   if (typeChecks) plan.push(['pnpm', 'type-check:all'], ['pnpm', 'type-check:tests']);
@@ -39,7 +50,6 @@ export function planChecks({ changed, deleted, isNegativeFixture }) {
   if (linted.length > 0) plan.push(['npx', 'eslint', ...linted]);
   const formatted = changed.filter((path) => FORMATTED.test(path));
   if (formatted.length > 0) plan.push(['pnpm', 'exec', 'prettier', '--check', ...formatted]);
-  if (code.length > 0) plan.push(['pnpm', 'exec', 'vitest', 'related', '--run', ...code]);
 
   const scenes = changed.filter((path) => SCENE.test(path) && !isNegativeFixture(path));
   if (scenes.length > 0) plan.push(['pnpm', 'build:linter'], ['pnpm', 'lint:tscn', ...scenes]);

@@ -7,6 +7,8 @@ const plan = (changed, deleted = [], isNegativeFixture = () => false) =>
 /** A negative-fixture predicate over the one fixture `edge-a.tscn`, wherever it sits. */
 const isEdgeA = (path) => path.split('/').at(-1) === 'edge-a.tscn';
 
+const STATIC_GATE = ['pnpm format:check', 'pnpm lint', 'pnpm type-check:all', 'pnpm type-check:tests'];
+
 describe('planChecks', () => {
   it('runs nothing for files no check reads', () => {
     expect(plan(['README.md', '.claude/skills/other/SKILL.md', 'docs/adr/0001-x.md'])).toEqual([]);
@@ -18,7 +20,7 @@ describe('planChecks', () => {
     ]);
   });
 
-  it('runs the full gate when the toolchain changes', () => {
+  it('runs the static checks over the whole repository when the toolchain changes', () => {
     for (const path of [
       'package.json',
       'apps/textscene-web/package.json',
@@ -30,29 +32,27 @@ describe('planChecks', () => {
       '.prettierignore',
       'lint-staged.config.mjs',
     ]) {
-      expect(plan([path])).toEqual(['pnpm validate']);
+      expect(plan([path])).toEqual(STATIC_GATE);
     }
   });
 
-  it('runs the full gate when the negative-fixture loader both hooks read changes', () => {
-    expect(plan(['scripts/githooks/negativeFixtures.mjs'])).toEqual(['pnpm validate']);
+  it('runs the static checks over the whole repository when the negative-fixture loader changes', () => {
+    expect(plan(['scripts/githooks/negativeFixtures.mjs'])).toEqual(STATIC_GATE);
   });
 
-  it('type-checks, lints and runs the related tests for a TypeScript change', () => {
+  it('type-checks and lints a TypeScript change without running its tests', () => {
     expect(plan(['packages/textscene-core/src/a.ts'])).toEqual([
       'pnpm type-check:all',
       'pnpm type-check:tests',
       'npx eslint packages/textscene-core/src/a.ts',
       'pnpm exec prettier --check packages/textscene-core/src/a.ts',
-      'pnpm exec vitest related --run packages/textscene-core/src/a.ts',
     ]);
   });
 
-  it('lints and tests a script change without the type checks', () => {
+  it('lints a script change without the type checks', () => {
     expect(plan(['scripts/x.mjs'])).toEqual([
       'npx eslint scripts/x.mjs',
       'pnpm exec prettier --check scripts/x.mjs',
-      'pnpm exec vitest related --run scripts/x.mjs',
     ]);
   });
 

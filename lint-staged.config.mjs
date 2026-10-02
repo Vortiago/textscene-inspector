@@ -1,6 +1,6 @@
 /**
- * The pre-commit hook's checks, over the staged files only. The full `pnpm validate` gate runs in
- * the pre-push hook and in CI, so nothing reaches a shared branch unvalidated.
+ * The pre-commit hook's checks, over the staged files only. This is the only hook that runs tests:
+ * the pre-push hook runs static checks, and CI runs the full gate on each pull request.
  */
 
 import { readFileSync } from 'node:fs';
