@@ -17,7 +17,7 @@ import {
   storedNotWritten,
   unrepresentableInt,
 } from '../../../linter/validators/intSlot.js';
-import { CELLS_FIELD_RE } from './cellData.js';
+import { readCellsField } from './cellData.js';
 
 const DICT_LITERAL_RE = /^\{[\s\S]*\}$/;
 
@@ -37,11 +37,11 @@ const dataValidator: PropertyValidator = accepts((key, value, line) => {
       'INVALID_DATA_FORMAT'
     );
   }
-  const cellsMatch = CELLS_FIELD_RE.exec(trimmed);
+  const cellsBody = readCellsField(trimmed);
   // `d.has("cells")` (grid_map.cpp:67) guards the branch, so a Dictionary without
   // the key loads untouched. GridMap's writer always includes it.
-  if (!cellsMatch) return null;
-  const body = cellsMatch[1]!.trim();
+  if (cellsBody === null) return null;
+  const body = cellsBody.trim();
   const cells = body === '' ? [] : splitTopLevel(body);
   const bad = badIntElement('data', key, line, cells, {
     format: 'INVALID_DATA_CELLS_FORMAT',

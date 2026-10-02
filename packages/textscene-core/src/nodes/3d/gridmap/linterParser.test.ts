@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import './linterParser';
 import { expectWarning } from '../../../linter/testing/validatorCheck.js';
+import { LINEAR_SCAN_CEILING_MS, msToRead, unclosedCalls } from '../../../godot/testing/unclosedCalls';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
@@ -23,6 +24,12 @@ describe('GridMap strict validators', () => {
 
     it('accepts a Dictionary with no "cells" key (grid_map.cpp:67 skips it entirely)', () => {
       expect(check('data', '{\n"unrelated": 1\n}')).toBeNull();
+    });
+
+    it('checks a crafted value of unclosed cells calls in linear time (edge case)', () => {
+      const data = unclosedCalls('"cells":PackedInt32Array(');
+      expect(check('data', data)).toBeNull();
+      expect(msToRead((value) => check('data', value), data)).toBeLessThan(LINEAR_SCAN_CEILING_MS);
     });
 
     it('accepts a cells count that is a multiple of 3', () => {

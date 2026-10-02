@@ -34,7 +34,7 @@ const arms = {
 
 // "tilts" converts through the Variant (curve.cpp:2291), so it takes the three
 // spellings `packedArrayForms` lists.
-const TILTS_RE = dictPackedField('tilts', 'PackedFloat32Array');
+const readTiltsField = dictPackedField('tilts', 'PackedFloat32Array');
 const TILTS_FORMS = packedArrayForms('PackedFloat32Array');
 
 function checkPath3D(context: RuleContext): Diagnostic[] {
@@ -90,8 +90,8 @@ function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] 
  * while a long one leaves its extra values untouched and loads.
  */
 function shortTiltsProblem(data: string, { controlPoints }: BezierDataPoints): string | null {
-  const tiltsLiteral = TILTS_RE.exec(data)?.[1];
-  if (tiltsLiteral === undefined) return null;
+  const tiltsLiteral = readTiltsField(data);
+  if (tiltsLiteral === null) return null;
   const tilts = packedFloatCount(TILTS_FORMS, tiltsLiteral, 1);
   if (tilts >= controlPoints) return null;
   return (
