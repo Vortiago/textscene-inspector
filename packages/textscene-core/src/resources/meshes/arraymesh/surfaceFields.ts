@@ -52,12 +52,12 @@ export function readInt(block: string, key: string): number {
  * than decoding against a partly-read scale.
  */
 function readFloatTuple(block: string, key: string, type: string, count: number): number[] | undefined {
-  const match = dictCallField(key, type).exec(block);
-  if (!match) return undefined;
+  const body = dictCallField(key, type)(block);
+  if (body === null) return undefined;
   // `parseGodotFloat`, not `Number`: the latter reads `0x10` as 16 and an empty
   // component as 0, neither of which Godot's tokenizer accepts, so a malformed
   // scale decoded as a plausible one instead of degrading.
-  const values = match[1]!.split(',').map((v) => parseGodotFloat(v));
+  const values = body.split(',').map((v) => parseGodotFloat(v));
   if (values.length < count || values.some((v) => v === null || !Number.isFinite(v))) {
     return undefined;
   }

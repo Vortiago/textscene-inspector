@@ -15,8 +15,8 @@ export interface BezierDataFormat {
   readonly refusedAt: string;
   /** Floats per control point: the in handle, the out handle and the position. */
   readonly floatsPerPoint: number;
-  /** `"points"` in `_data`, with its value text in `[1]`. */
-  readonly pointsField: RegExp;
+  /** The value text of `"points"` in `_data`, or null when it holds none. */
+  readonly readPointsField: (data: string) => string | null;
   readonly pointsForms: readonly RegExp[];
   readonly vectorSize: number;
   /** The keys besides `"points"` that `_set_data` refuses the dictionary without. */
@@ -34,7 +34,7 @@ function bezierDataFormat(
     className,
     refusedAt,
     floatsPerPoint: vectorSize * 3,
-    pointsField: dictPackedField('points', pointsType),
+    readPointsField: dictPackedField('points', pointsType),
     pointsForms: packedArrayForms(pointsType),
     vectorSize,
     otherRequiredKeys: otherRequiredKeys.map((key) => ({
@@ -70,8 +70,8 @@ export function readBezierData(
   data: string,
   format: BezierDataFormat
 ): { readonly refusal: BezierDataRefusal } | { readonly refusal: null; readonly loaded: BezierDataPoints } {
-  const points = format.pointsField.exec(data)?.[1];
-  if (points === undefined) return { refusal: { kind: 'missing-key', key: 'points' } };
+  const points = format.readPointsField(data);
+  if (points === null) return { refusal: { kind: 'missing-key', key: 'points' } };
   const missing = format.otherRequiredKeys.find(({ present }) => !present.test(data));
   if (missing !== undefined) return { refusal: { kind: 'missing-key', key: missing.key } };
 

@@ -18,6 +18,7 @@ import {
   stringArrayBodies,
   variantShape,
 } from './variantParser.js';
+import { LINEAR_SCAN_CEILING_MS, msToRead, unclosedCalls } from './testing/unclosedCalls.js';
 
 describe('nodePathLiteral', () => {
   it('reads the tight form Godot writes', () => {
@@ -119,35 +120,74 @@ describe('the NIL literal', () => {
 
 describe('dictCallField', () => {
   it('reads the body of the call a Dictionary key holds, as Godot writes it', () => {
-    const cells = dictCallField('cells', 'PackedInt32Array');
-    expect(cells.exec('{ "cells": PackedInt32Array(0, 0, 1) }')?.[1]).toBe('0, 0, 1');
-    expect(dictCallField('aabb', 'AABB').exec('{ "aabb": AABB(-1, -1, 1, 2, 2, 0) }')?.[1]).toBe(
-      '-1, -1, 1, 2, 2, 0'
-    );
+    const readCells = dictCallField('cells', 'PackedInt32Array');
+    expect(readCells('{ "cells": PackedInt32Array(0, 0, 1) }')).toBe('0, 0, 1');
+    expect(dictCallField('aabb', 'AABB')('{ "aabb": AABB(-1, -1, 1, 2, 2, 0) }')).toBe('-1, -1, 1, 2, 2, 0');
   });
 
   it('tolerates the padding the tokenizer discards around the colon and the paren', () => {
     // get_token discards any character <= 32 before a token (variant_parser.cpp:415-417).
-    const times = dictCallField('times', 'PackedFloat32Array');
-    expect(times.exec('"times" :\tPackedFloat32Array ( 0, 1 )')?.[1]).toBe(' 0, 1 ');
+    const readTimes = dictCallField('times', 'PackedFloat32Array');
+    expect(readTimes('"times" :\tPackedFloat32Array ( 0, 1 )')).toBe(' 0, 1 ');
   });
 
-  it('matches nothing for another key, another type or another value kind', () => {
-    const cells = dictCallField('cells', 'PackedInt32Array');
-    expect(cells.exec('{ "octants": PackedInt32Array(1) }')).toBeNull();
-    expect(cells.exec('{ "cells": PackedFloat32Array(1) }')).toBeNull();
-    expect(cells.exec('{ "cells": [1, 2, 3] }')).toBeNull();
+  it('reads nothing for another key, another type or another value kind', () => {
+    const readCells = dictCallField('cells', 'PackedInt32Array');
+    expect(readCells('{ "octants": PackedInt32Array(1) }')).toBeNull();
+    expect(readCells('{ "cells": PackedFloat32Array(1) }')).toBeNull();
+    expect(readCells('{ "cells": [1, 2, 3] }')).toBeNull();
+  });
+
+  it('reads nothing for a call that never closes (edge case)', () => {
+    expect(dictCallField('cells', 'PackedInt32Array')('{ "cells": PackedInt32Array(0, 0, 1 }')).toBeNull();
   });
 
   it('keeps an empty call as an empty body, not as no match', () => {
-    expect(dictCallField('cells', 'PackedInt32Array').exec('{ "cells": PackedInt32Array() }')?.[1]).toBe('');
+    expect(dictCallField('cells', 'PackedInt32Array')('{ "cells": PackedInt32Array() }')).toBe('');
+  });
+
+  it('reads a crafted value of unclosed calls in linear time (edge case)', () => {
+    const value = unclosedCalls('"cells":PackedInt32Array(');
+    const readCells = dictCallField('cells', 'PackedInt32Array');
+    expect(readCells(value)).toBeNull();
+    expect(msToRead(readCells, value)).toBeLessThan(LINEAR_SCAN_CEILING_MS);
   });
 
   it('reads the same call body as packedArrayCallAnywhere, so the two cannot drift', () => {
     const value = '{ "times": PackedFloat32Array ( 0.5, 1 ), "transitions": PackedFloat32Array(1, 1) }';
-    expect(dictCallField('times', 'PackedFloat32Array').exec(value)?.[1]).toBe(
-      packedArrayCallAnywhere('PackedFloat32Array').exec(value)?.[1]
+    expect(dictCallField('times', 'PackedFloat32Array')(value)).toBe(
+      packedArrayCallAnywhere('PackedFloat32Array').first(value)
     );
+  });
+});
+
+describe('packedArrayCallAnywhere', () => {
+  const calls = packedArrayCallAnywhere('PackedInt32Array');
+
+  it('reads the first body and every body, in order', () => {
+    const value = '[PackedInt32Array(2, 1, 3), PackedInt32Array ( 3, 1, 0 ), PackedInt32Array()]';
+    expect(calls.first(value)).toBe('2, 1, 3');
+    expect(calls.all(value)).toEqual(['2, 1, 3', ' 3, 1, 0 ', '']);
+  });
+
+  it('reads nothing for another type or a value with no call', () => {
+    expect(calls.first('[PackedFloat32Array(1)]')).toBeNull();
+    expect(calls.all('[[0, 1, 2]]')).toEqual([]);
+  });
+
+  it('stops at the first call that never closes (edge case)', () => {
+    expect(calls.all('[PackedInt32Array(1), PackedInt32Array(2]')).toEqual(['1']);
+    expect(calls.first('PackedInt32Array(1')).toBeNull();
+  });
+
+  it('ends a body at its first `)`, an inner opener included (edge case)', () => {
+    expect(calls.all('[PackedInt32Array(2, PackedInt32Array(3), 4)]')).toEqual(['2, PackedInt32Array(3']);
+  });
+
+  it('reads a crafted value of unclosed calls in linear time (edge case)', () => {
+    const value = unclosedCalls('PackedInt32Array(');
+    expect(calls.all(value)).toEqual([]);
+    expect(msToRead(calls.all, value)).toBeLessThan(LINEAR_SCAN_CEILING_MS);
   });
 });
 
@@ -175,7 +215,7 @@ describe('dictBase64Field', () => {
     }
   });
 
-  it('lets the first call of the key decide, as dictCallField does', () => {
+  it('lets the first call of the key decide', () => {
     const block = '{ "vertex_data": PackedByteArray(1), "vertex_data": PackedByteArray("AQID") }';
     expect(dictBase64Field('vertex_data').exec(block)?.[1]).toBeUndefined();
   });
