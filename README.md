@@ -52,6 +52,7 @@ Install a `.vsix` with **Extensions: Install from VSIX…**.
 | `pnpm test:vscode:csp` | Text in the real VS Code webview, under its CSP |
 | `pnpm --filter textscene-inspector test:integration` | VS Code integration tests |
 | `TEXTSCENE_VSCODE_VERSION=min pnpm --filter textscene-inspector test:integration` | The same tests on the oldest VS Code that `engines.vscode` accepts |
+| `pnpm vsc:package && pnpm --filter textscene-inspector test:installed` | The packaged `.vsix` in a clean VS Code: activation, commands, lint and preview |
 | `pnpm lint` | ESLint |
 | `pnpm format` | Prettier |
 | `pnpm format:check` | Prettier check, as in CI |

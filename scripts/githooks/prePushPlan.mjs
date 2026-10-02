@@ -23,10 +23,10 @@ const SCENE = /\.(?:tscn|tres)$/;
 const GENERATED_DOCS_INPUT = /(?:^|\/)comparison\.md$|^docs\/comparison\//;
 const VENDORED = /^\.claude\/(?:skills\/conventional-commits\/|rules\/|agents\/ste-review\.md$)/;
 /**
- * The mocha suite that runs inside a VS Code window. Vitest excludes it and finds no test file in
- * it, which fails the run. CI runs it in its integration job.
+ * The mocha suites that run inside a VS Code window. Vitest excludes them and finds no test file
+ * in them, which fails the run. CI runs them in its integration and installed-package jobs.
  */
-const EXTENSION_HOST_SUITE = /^apps\/textscene-vscode\/src\/test\/integration\//;
+const EXTENSION_HOST_SUITE = /^apps\/textscene-vscode\/src\/test\//;
 
 /**
  * The repository-wide static checks, in the order of the CI `static` job: fastest first.

@@ -21,13 +21,41 @@ export interface JsonFinding {
 }
 
 /**
+ * The control characters a terminal acts on: C0, DEL and C1 (`\p{Cc}`), less tab. A scene
+ * controls its node names, the property values a message quotes, and its own file name, so
+ * an ESC or a C1 CSI from it could retitle the terminal, clear it or write the clipboard.
+ */
+const TERMINAL_CONTROL = /(?!\t)\p{Cc}/gu;
+
+/** The workflow-command data keeps CR and LF for `escapeGithubData` to percent-encode. */
+const GITHUB_CONTROL = /(?![\t\r\n])\p{Cc}/gu;
+
+/** DEL and C1, the controls `JSON.stringify` writes raw. */
+const JSON_RAW_CONTROL = /[\u007f-\u009f]/gu;
+
+/** A control character as the JavaScript escape that names it, such as `\u001b` for ESC. */
+function visibleEscape(control: string): string {
+  return `\\u${control.charCodeAt(0).toString(16).padStart(4, '0')}`;
+}
+
+/**
+ * Writes each control character in untrusted text as a visible `\u` escape, so the text
+ * reaches a terminal as characters, never as a command. Tab stays, since it only moves the
+ * cursor right.
+ */
+export function escapeControlCharacters(text: string): string {
+  return text.replace(TERMINAL_CONTROL, visibleEscape);
+}
+
+/**
  * Format lint results for one file as stdout lines.
  * Clean files produce a single success line; files with diagnostics produce
  * a file-path header, one line per diagnostic, and a trailing blank line.
+ * The path and each diagnostic's node and message reach the terminal escaped.
  */
 export function formatDiagnostics(filePath: string, diagnostics: Diagnostic[], hasColor: boolean): string[] {
   if (diagnostics.length === 0) {
-    return [formatSuccess(`✓ ${filePath}`, hasColor)];
+    return [formatSuccess(`✓ ${escapeControlCharacters(filePath)}`, hasColor)];
   }
 
   const lines: string[] = [formatFilePath(filePath, hasColor)];
@@ -35,10 +63,12 @@ export function formatDiagnostics(filePath: string, diagnostics: Diagnostic[], h
   for (const diagnostic of diagnostics) {
     const icon = getSeverityIcon(diagnostic.severity);
     const severityText = formatSeverity(diagnostic.severity, hasColor);
-    const nodeInfo = formatDim(`[${diagnostic.nodeType}:${diagnostic.nodeName}]`, hasColor);
+    const node = escapeControlCharacters(`[${diagnostic.nodeType}:${diagnostic.nodeName}]`);
+    const nodeInfo = formatDim(node, hasColor);
     const ruleInfo = formatDim(`(${diagnostic.ruleName})`, hasColor);
+    const message = escapeControlCharacters(diagnostic.message);
 
-    lines.push(`  ${icon} ${severityText} ${nodeInfo} ${diagnostic.message} ${ruleInfo}`);
+    lines.push(`  ${icon} ${severityText} ${nodeInfo} ${message} ${ruleInfo}`);
   }
 
   lines.push('');
@@ -93,9 +123,11 @@ export function toJsonFindings(files: FileDiagnostics[]): JsonFinding[] {
 /**
  * Format lint results for a whole run as a single pretty-printed JSON array
  * of findings (`--format json`), suitable for CI tooling to parse.
+ * `JSON.stringify` escapes C0 but writes DEL and C1 raw. Their `\u` escape is
+ * the same JSON string, and only a string can hold one.
  */
 export function formatJson(files: FileDiagnostics[]): string {
-  return JSON.stringify(toJsonFindings(files), null, 2);
+  return JSON.stringify(toJsonFindings(files), null, 2).replace(JSON_RAW_CONTROL, visibleEscape);
 }
 
 /**
@@ -125,10 +157,18 @@ function displayFor(severity: string): (typeof SEVERITY_DISPLAY)[Severity] {
 
 /**
  * Escapes workflow-command *data* (the `::command ...::<data>` payload) per
- * the GitHub Actions toolkit's escaping rules.
+ * the GitHub Actions toolkit's escaping rules. The runner reads the first `::`
+ * as the end of the properties, so a later `::` stays data. CR and LF would
+ * start a new command, so they are percent-encoded. The toolkit names no
+ * encoding for any other control, so each one is a visible `\u` escape, as in
+ * the text output.
  */
 function escapeGithubData(value: string): string {
-  return value.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+  return value
+    .replace(GITHUB_CONTROL, visibleEscape)
+    .replace(/%/g, '%25')
+    .replace(/\r/g, '%0D')
+    .replace(/\n/g, '%0A');
 }
 
 /**
@@ -176,8 +216,10 @@ export function formatSeverity(severity: string, hasColor: boolean): string {
   return hasColor ? `\x1b[${SEVERITY_DISPLAY[floored].color}m${floored}\x1b[0m` : floored;
 }
 
+/** The file-path header, bold with colour on, its control characters escaped. */
 export function formatFilePath(path: string, hasColor: boolean): string {
-  return hasColor ? `\x1b[1m${path}\x1b[0m` : path; // Bold
+  const visiblePath = escapeControlCharacters(path);
+  return hasColor ? `\x1b[1m${visiblePath}\x1b[0m` : visiblePath;
 }
 
 export function formatSuccess(message: string, hasColor: boolean): string {
