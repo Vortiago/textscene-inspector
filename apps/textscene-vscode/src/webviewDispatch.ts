@@ -30,7 +30,7 @@ export function dispatchWebviewMessage(msg: unknown, handlers: WebviewMessageHan
   if (!Object.prototype.hasOwnProperty.call(handlers, msg.type)) {
     return;
   }
-  // Then the payload, which the handlers read (`args.map`, `resource.path`), so a
+  // Then the payload, which the handlers read (`args.map`, `nodeName`), so a
   // malformed body is dropped as an unknown type is. The cast: a union key narrows
   // the per-type table's parameter to `never`, and key and value share one `msg`.
   const carriesPayload = CARRIES_ITS_PAYLOAD[msg.type] as (m: unknown) => boolean;
@@ -53,7 +53,6 @@ const CARRIES_ITS_PAYLOAD: {
   [K in WebviewToHostMessage['type']]: (msg: Record<string, unknown>) => boolean;
 } = {
   webviewReady: () => true,
-  error: (m) => isString(m.message),
   // `path` and `parent` are both checked only when present: a legacy webview
   // sends `nodeName` alone, and the handler's documented fallback is to take the
   // first name match. `nodeName` is the one field it cannot work without.
@@ -64,6 +63,5 @@ const CARRIES_ITS_PAYLOAD: {
   // `resourceType` only when present: the byte layer requests a file it knows no type for.
   loadResource: (m) =>
     isString(m.path) && (m.resourceType === undefined || isString(m.resourceType)) && isString(m.requestId),
-  resourceNeeded: (m) => typeof m.resource === 'object' && m.resource !== null,
   log: (m) => isString(m.level) && isString(m.message) && Array.isArray(m.args),
 };
