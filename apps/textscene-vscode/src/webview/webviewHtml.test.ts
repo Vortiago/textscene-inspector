@@ -4,6 +4,7 @@
  * renders `<TscnPreviewShell>`.
  */
 
+import { webcrypto } from 'node:crypto';
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import { generateNonce, generateWebviewHtml } from './webviewHtml';
 
@@ -94,7 +95,7 @@ describe('generateNonce', () => {
 
   it('draws on crypto.getRandomValues, never Math.random', () => {
     const mathRandom = vi.spyOn(Math, 'random');
-    const getRandomValues = vi.spyOn(globalThis.crypto, 'getRandomValues');
+    const getRandomValues = vi.spyOn(webcrypto, 'getRandomValues');
 
     generateNonce();
 

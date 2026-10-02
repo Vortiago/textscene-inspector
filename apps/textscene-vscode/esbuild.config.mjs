@@ -52,6 +52,8 @@ const extensionWebOptions = {
   ...extensionOptions,
   outfile: 'dist/extension.web.js',
   platform: 'browser',
+  // The one Node builtin the host graph imports: a web host has the same API on the global.
+  alias: { 'node:crypto': './src/webCrypto.browser.ts' },
   target: 'es2020',
 };
 
