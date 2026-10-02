@@ -37,5 +37,5 @@ The lenient parser never rejects. An unreadable Sky property falls back to Godot
 
 ## Known limitations
 
-- **Resource gap** A `ShaderMaterial` sky or a `CompressedCubemap` panorama is not resolved. The background falls back to a mid-blue solid and metals reflect near-black.
+- **Resource gap** A `ShaderMaterial` sky or a `CompressedCubemap` panorama is not resolved, so the background falls back to a mid-blue solid and metals reflect near-black.
 - **Approximated** A dielectric's faint sky specular is scaled by `ambient_light_sky_contribution` along with its diffuse, where Godot keeps it at full strength.

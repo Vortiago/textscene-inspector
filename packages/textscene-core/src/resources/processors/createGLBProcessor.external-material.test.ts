@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import { FileEventBus } from '../FileEventBus';
 import { ResourceEventBus } from '../ResourceEventBus';
 import { createGLBProcessor } from './createGLBProcessor';
+import { DependencyGraph } from '../dependencyGraph';
 import { importMaterialPath, initGlbModules } from '../formats/glb/glbProcessing';
 import { triangleGlb } from '../formats/glb/testing/triangleGlb';
 import { isMesh } from '../../r3f/testing/threeNarrow';
@@ -54,7 +55,7 @@ async function loadWith(
     loadResource: vi.fn(async (path: string) => (path === GLTF_PATH ? asset : (files[path] ?? null))),
   });
   const eventBus = new ResourceEventBus();
-  const processor = createGLBProcessor(fileEventBus, eventBus);
+  const processor = createGLBProcessor(fileEventBus, eventBus, new DependencyGraph());
 
   const loaded = eventBus.once<THREE.Object3D>('glb', 'loaded', GLTF_PATH, 5000);
   processor.request(GLTF_PATH);

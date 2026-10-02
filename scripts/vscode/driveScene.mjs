@@ -19,14 +19,28 @@ import { THROWAWAY_USER_SETTINGS } from './userSettings.mjs';
 import { TEXTURE_WORK_STATUS_TESTID } from '../visual/preview/appContract.mjs';
 import { textureWorkCleared } from '../visual/preview/capture.mjs';
 import { isSizedCanvas } from './canvasSize.mjs';
+import {
+  readCanvasDataUrl,
+  sleep,
+  stabilizeCanvas,
+  waitForCanvasChange,
+  writeCanvasPng,
+} from './canvasReadback.mjs';
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 export const EXTENSION_DIR = path.join(REPO_ROOT, 'apps/textscene-vscode');
 const VSCODE_TEST_DIR = path.join(EXTENSION_DIR, '.vscode-test');
 
-const PNG_DATA_URL_PREFIX = 'data:image/png;base64,';
+export { sleep };
 
-export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+/**
+ * How long a canvas may take to settle, polled at an interval long enough for a
+ * resource to arrive over the host channel between two readbacks.
+ */
+const SETTLE_POLL = { timeoutMs: 60_000, intervalMs: 500 };
+
+/** How long a watched edit may take to reach the canvas: the watcher, the host and a reload. */
+const EDIT_POLL = { timeoutMs: 30_000, intervalMs: 250 };
 
 /**
  * The VS Code build a previous `test:integration` run left behind, or `null`.
@@ -313,43 +327,6 @@ async function waitForSizedCanvas(frame, timeoutMs) {
   return false;
 }
 
-/** Reads the viewport canvas back as a PNG data URL, or an `error:`/`null` marker. */
-function readCanvasDataUrl(frame) {
-  return frame.evaluate(() => {
-    // The viewport canvas is the biggest one: offscreen passes mount their
-    // own small canvases in the same document.
-    const canvas = [...document.querySelectorAll('canvas')].sort(
-      (a, b) => b.width * b.height - a.width * a.height
-    )[0];
-    if (!canvas) return null;
-    try {
-      return canvas.toDataURL('image/png');
-    } catch (error) {
-      return `error:${String(error)}`;
-    }
-  });
-}
-
-/**
- * Waits until two consecutive readbacks are byte-identical, as the golden
- * harness does. Resources arrive over the host channel and the atlas decodes
- * asynchronously, so an early read sees a sized, unpainted canvas with zero
- * ink. Returns the last data URL and whether it stabilised in time.
- */
-async function stabilizeCanvas(frame, { timeoutMs, intervalMs }) {
-  const deadline = Date.now() + timeoutMs;
-  let current = await readCanvasDataUrl(frame).catch(() => null);
-  while (Date.now() < deadline) {
-    await sleep(intervalMs);
-    const previous = current;
-    current = await readCanvasDataUrl(frame).catch(() => null);
-    if (current && current === previous && current.startsWith(PNG_DATA_URL_PREFIX)) {
-      return { dataUrl: current, stable: true };
-    }
-  }
-  return { dataUrl: current, stable: false };
-}
-
 /**
  * @typedef {object} DriveSceneOptions
  * @property {string} scene            absolute path to the `.tscn` to preview
@@ -372,6 +349,9 @@ async function stabilizeCanvas(frame, { timeoutMs, intervalMs }) {
  * @property {[Function, unknown][]} [initScripts] `[script, argument]` pairs installed
  *   before the webview exists, so each runs in the preview frame ahead of the app
  * @property {boolean} verbose         stream VS Code stdout/stderr
+ * @property {{ file: string, contents: string }} [edit] a file to overwrite once the
+ *   canvas settles, for a **Dependency hot-reload**. The run then waits for the canvas
+ *   to change and settle again, and writes that frame to `canvas-edited.png`.
  * @property {Record<string, unknown>} [settings] extra user settings to seed
  *   the throwaway profile with, for callers that need a layout the palette
  *   commands would otherwise have to click their way to
@@ -400,6 +380,7 @@ export async function driveScene(options) {
     keepOpen,
     evalFile,
     initScripts = [],
+    edit,
     verbose,
     settings,
     log: emit = () => {},
@@ -552,7 +533,7 @@ export async function driveScene(options) {
     emit(`texture work ${report.textureWorkCleared ? 'cleared' : 'NEVER cleared'}`);
 
     if (preserveBuffer) {
-      const settled = await stabilizeCanvas(frame, { timeoutMs: 60_000, intervalMs: 500 });
+      const settled = await stabilizeCanvas(frame, SETTLE_POLL);
       report.canvasStable = settled.stable;
       emit(`canvas ${settled.stable ? 'stabilized' : 'NEVER stabilized'}`);
     } else {
@@ -585,13 +566,12 @@ export async function driveScene(options) {
       ...(report.frameProbe.cspViolations ?? []).map((entry) => ({ ...entry, origin: 'webview' }))
     );
 
-    if (dataUrl && dataUrl.startsWith(PNG_DATA_URL_PREFIX)) {
-      const buffer = Buffer.from(dataUrl.slice(PNG_DATA_URL_PREFIX.length), 'base64');
-      writeFileSync(path.join(outDir, 'canvas.png'), buffer);
-      report.canvasReadback = inkStats(buffer);
-    } else {
-      report.canvasReadback = { error: dataUrl ?? 'no canvas' };
-    }
+    const canvasPath = path.join(outDir, 'canvas.png');
+    const readback = writeCanvasPng(dataUrl, canvasPath);
+    report.canvasReadback = readback ?? { error: dataUrl ?? 'no canvas' };
+    if (readback) report.canvasPath = canvasPath;
+
+    if (edit) report.edit = await applyEdit(frame, edit, dataUrl, outDir, emit);
 
     if (screenshots) {
       const workbenchShot = await page.screenshot();
@@ -629,6 +609,22 @@ export async function driveScene(options) {
   }
 
   return report;
+}
+
+/**
+ * Overwrites `edit.file` and waits for the preview to redraw from it: first a frame
+ * that differs from `baseline`, then two identical readbacks. Writes the settled
+ * frame to `canvas-edited.png`.
+ */
+async function applyEdit(frame, edit, baseline, outDir, emit) {
+  writeFileSync(edit.file, edit.contents);
+  emit(`edited ${path.basename(edit.file)}`);
+  const changed = await waitForCanvasChange(frame, baseline, EDIT_POLL);
+  emit(`canvas ${changed ? 'changed' : 'NEVER changed'} after the edit`);
+  const settled = await stabilizeCanvas(frame, SETTLE_POLL);
+  const canvasPath = path.join(outDir, 'canvas-edited.png');
+  const canvasReadback = writeCanvasPng(settled.dataUrl, canvasPath);
+  return { changed, stable: settled.stable, ...(canvasReadback && { canvasPath, canvasReadback }) };
 }
 
 /**

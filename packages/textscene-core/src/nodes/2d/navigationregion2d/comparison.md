@@ -43,4 +43,4 @@ mesh.
 ## Known limitations
 
 - **Editor only** Godot's game render draws no navigation mesh, so the green overlay
-  appears only here. Turning `showNavigation` off matches Godot.
+  appears only here, and turning `showNavigation` off matches Godot.

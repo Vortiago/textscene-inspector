@@ -30,4 +30,4 @@ The lenient parser reuses `parseNode3D`, which reads only `transform` and `visib
 
 ## Known limitations
 
-- **Needs runtime** Godot bends a live particle cloud around the sphere. Here there is no cloud to bend.
+- **Needs runtime** Godot bends a live particle cloud around the sphere, but here there is no cloud to bend.

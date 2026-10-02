@@ -12,7 +12,7 @@ describe('meshlibrary slice registration', () => {
     const registration = resourceSliceRegistry.byTypeName('MeshLibrary');
     expect(registration?.slice).toBe('meshlibrary');
     expect(registration?.kind).toBe('godot-text');
-    expect(resourceSliceRegistry.busTypeFor('MeshLibrary')).toBe('resource');
+    expect(resourceSliceRegistry.byTypeName('MeshLibrary')?.busType ?? null).toBe('resource');
     expect(registration?.failureLabel).toBe('Resource');
   });
 

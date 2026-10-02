@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { FileEventBus } from '../FileEventBus';
 import { ResourceEventBus } from '../ResourceEventBus';
 import { createGLBProcessor } from './createGLBProcessor';
+import { DependencyGraph } from '../dependencyGraph';
 import { initGlbModules } from '../formats/glb/glbProcessing';
 
 const GLTF_PATH = 'res://town/tree/scene.gltf';
@@ -38,7 +39,7 @@ async function loadWith(files: Record<string, string>): Promise<THREE.Object3D> 
     ),
   });
   const eventBus = new ResourceEventBus();
-  const processor = createGLBProcessor(fileEventBus, eventBus);
+  const processor = createGLBProcessor(fileEventBus, eventBus, new DependencyGraph());
 
   const loaded = eventBus.once<THREE.Object3D>('glb', 'loaded', GLTF_PATH, 5000);
   processor.request(GLTF_PATH);
@@ -95,7 +96,7 @@ describe('createGLBProcessor — import sidecar', () => {
     });
     fileEventBus.on('failed', failed);
     const eventBus = new ResourceEventBus();
-    const processor = createGLBProcessor(fileEventBus, eventBus);
+    const processor = createGLBProcessor(fileEventBus, eventBus, new DependencyGraph());
 
     const loaded = eventBus.once<THREE.Object3D>('glb', 'loaded', GLTF_PATH, 5000);
     processor.request(GLTF_PATH);

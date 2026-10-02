@@ -18,12 +18,12 @@ describe('sky slice registration', () => {
     // The material processor builds THREE materials and cannot decode a sky, so
     // an external `ProceduralSkyMaterial.tres` must reach `useSubOrExtResource`.
     for (const typeName of ['ProceduralSkyMaterial', 'PanoramaSkyMaterial', 'PhysicalSkyMaterial']) {
-      expect(resourceSliceRegistry.busTypeFor(typeName), typeName).toBe('resource');
+      expect(resourceSliceRegistry.byTypeName(typeName)?.busType ?? null, typeName).toBe('resource');
     }
   });
 
   it('routes `Sky` to the resource slot with the Resource failure label', () => {
-    expect(resourceSliceRegistry.busTypeFor('Sky')).toBe('resource');
+    expect(resourceSliceRegistry.byTypeName('Sky')?.busType ?? null).toBe('resource');
     expect(resourceSliceRegistry.byTypeName('Sky')?.failureLabel).toBe('Resource');
   });
 

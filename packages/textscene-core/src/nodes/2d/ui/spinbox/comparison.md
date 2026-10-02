@@ -50,14 +50,9 @@ keys `value`/`min_value`/`max_value`/`step`/`page`/`exp_edit`/`rounded`/`allow_g
 
 - **Not drawn** Hover, pressed and drag draw states for either arrow button: a static
   preview reaches none of them.
-- **Not drawn** `up_down_buttons_separator`. Its rect's height is always the
-  `buttons_vertical_separation` theme constant (`default_theme.cpp:646`, 0), and this
-  codebase models no per-node override for it, so the rect always has zero area.
-  `field_and_buttons_separator` is drawn, from this node's `theme_override_styles/*`.
-- **Approximated** The internal field is never a scene node: Godot creates it at
-  construction (`spin_box.cpp:723-731`). A project Theme entry for its
-  `"SpinBoxInnerLineEdit"` type variation reaches the field's font, because this
-  previewer walks that scope directly. But its StyleBox always draws the plain
-  default-theme LineEdit box. No per-node `theme_override_styles` reaches a node the file
-  never serialises, and this codebase resolves a StyleBox override only from a node's own
-  `theme_override_styles`, never from an ancestor Theme resource by class name.
+- **Not drawn** `up_down_buttons_separator`, whose rect takes the zero
+  `buttons_vertical_separation` theme constant (`default_theme.cpp:646`) because no
+  per-node override for it is modelled.
+- **Approximated** The internal field draws the default-theme LineEdit StyleBox even where
+  a project Theme styles its `"SpinBoxInnerLineEdit"` type variation, which still sets its
+  font.

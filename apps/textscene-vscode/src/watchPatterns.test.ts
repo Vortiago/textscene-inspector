@@ -15,6 +15,7 @@ import {
   RESOURCE_FILES_PATTERN,
   SCAN_STOP_FILES_PATTERN,
 } from './watchPatterns';
+import { LOADED_FILE_EXTENSIONS } from '@textscene/core/resources/resourceProviderUtils';
 
 let root: string;
 
@@ -53,6 +54,25 @@ describe('RESOURCE_FILES_PATTERN', () => {
 
   it('matches no file of another extension', () => {
     expect(matched(RESOURCE_FILES_PATTERN, ['models/tree.glbx', 'notes.txt'])).toEqual([]);
+  });
+
+  it('matches a file of every extension a scene can load, in any case', () => {
+    const files = LOADED_FILE_EXTENSIONS.flatMap((extension) => [
+      `a/lower${extension}`,
+      `a/UPPER${extension.toUpperCase()}`,
+    ]);
+
+    expect(matched(RESOURCE_FILES_PATTERN, files)).toEqual([...files].sort());
+  });
+
+  it('matches the import sidecar, a font and a glTF buffer', () => {
+    const files = ['models/ship.glb.import', 'fonts/body.ttf', 'fonts/body.woff2', 'models/ship.bin'];
+
+    expect(matched(RESOURCE_FILES_PATTERN, files)).toEqual([...files].sort());
+  });
+
+  it('leaves the project file to its own watcher', () => {
+    expect(matched(RESOURCE_FILES_PATTERN, ['project.godot'])).toEqual([]);
   });
 });
 

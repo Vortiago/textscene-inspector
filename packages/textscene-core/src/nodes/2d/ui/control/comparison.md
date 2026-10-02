@@ -11,13 +11,14 @@ renders_as: a full-rect layout region
 
 Control is the base UI node. It draws nothing of its own. A Control directly under it
 anchors against its rect. One separated from it by another node anchors against that
-node instead. Where that node is not a canvas item the Control is a canvas root: it
-anchors against the viewport, and draws after everything under the root it hangs in.
-`top_level` makes it a canvas root wherever it sits, and nothing above it composes onto
-it: no transform, no tint, no z, no rect to anchor against, and no container layout.
-Visibility is the exception: it follows the scene tree rather than the canvas parenting,
-so a hidden ancestor still hides a `top_level` Control, while a non-canvas-item ancestor
-between them releases it again.
+node instead. Where that node is not a canvas item, the Control is a canvas root. It
+anchors against the viewport and draws after everything under the root it hangs in.
+
+`top_level` makes it a canvas root wherever it sits. Nothing above it then composes onto
+it: no transform, no tint, no z, no rect to anchor against and no container layout.
+Visibility is the exception, since it follows the scene tree rather than the canvas
+parenting. A hidden ancestor still hides a `top_level` Control, while a
+non-canvas-item ancestor between them releases it again.
 
 `layout_direction` resolves to one answer per node. An explicit LTR or RTL answers from
 the value alone. INHERITED climbs to the nearest ancestor Control or Window and steps
@@ -105,27 +106,18 @@ renderer applies its own default. `theme_override_styles/*` is stored unparsed.
 
 ## Known limitations
 
-- **Approximated** A Control set to SYSTEM_LOCALE, or to APPLICATION_LOCALE in a project
-  that states no `internationalization/locale/test`, draws left-to-right: the answer is
-  the machine's own locale, which the scene files do not contain.
-- **Approximated** A right-to-left Control inside a SubViewport starts a fresh direction
-  climb instead of continuing past the viewport to the Control above it, so it draws
-  left-to-right unless it states a direction itself.
-- **Approximated** A `Window` ends the climb in Godot and answers from its own
-  `layout_direction`. No Window type is drawn here, so a Control below one inherits from
-  whatever Control sits above the Window instead.
-- **Approximated** Text is always shaped left-to-right. Every widget places its runs on
-  the resolved direction, but the runs themselves are never reordered, so a `Label`,
-  `Button` title or `ItemList` row holding right-to-left script draws its characters in
-  code-point order. The bundled atlas carries no right-to-left script, and neither does
-  Godot's: its default theme ships the same `OpenSans_SemiBold.woff2` this repo vendors,
-  and reaches right-to-left glyphs through the host machine's fonts
-  (`Font.allow_system_fallback`, default true, `scene/resources/font.h`). An atlas baked
-  at build time has no equivalent, so the gap is a platform difference, not a bundling
-  shortcut.
-- **Approximated** A widget's per-node `text_direction` is not read. It defaults to AUTO,
-  not INHERITED (`label.h:70`, `line_edit.h:144`, `text_edit.h:327`,
-  `rich_text_label.h:615`), so every engine branch that reads the paragraph direction
-  rather than the layout direction is dead at the default, and is deliberately not ported.
-- **Needs runtime** The direction reaches hit-testing, keyboard and drag arms in TabBar,
-  Tree, ItemList, the sliders and the text controls. A frozen frame has none of those.
+- **Approximated** A Control set to SYSTEM_LOCALE, or to APPLICATION_LOCALE with no
+  `internationalization/locale/test`, draws left-to-right, since the scene files hold no
+  machine locale.
+- **Approximated** A Control inside a SubViewport does not inherit a right-to-left
+  direction from the Control above the viewport, so it draws left-to-right unless it
+  states one.
+- **Approximated** A Control below a `Window` inherits its direction from the Control
+  above that Window, where Godot takes the Window's own `layout_direction`.
+- **Approximated** Text is always shaped left-to-right, so a `Label`, `Button` title or
+  `ItemList` row in a right-to-left script draws its characters in code-point order.
+- **Approximated** A widget's per-node `text_direction` is not read, so a value other than
+  its AUTO default (`label.h:70`, `line_edit.h:144`, `text_edit.h:327`,
+  `rich_text_label.h:615`) has no effect.
+- **Needs runtime** The direction also drives hit-testing, keyboard and drag in TabBar,
+  Tree, ItemList, the sliders and the text controls, which a frozen frame never exercises.

@@ -144,9 +144,9 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
       if (eventPath !== path) return;
       applyFailure(error?.message ?? 'Unknown error');
     };
-    // A full cache clear (a corpus switch) dropped this path, so it is requested again and the old
-    // value stays on screen meanwhile. A path absent from the new corpus fails to unavailable: one
-    // burst of doomed refetches per switch, bounded by the mounted working set.
+    // A clear dropped this path (a corpus switch, or a **Dependency hot-reload** of its file), so
+    // it is requested again and the old value stays on screen meanwhile. A path that is gone now
+    // fails to unavailable: one burst of doomed refetches, bounded by the mounted working set.
     const onInvalidated = (eventPath: string) => {
       if (eventPath !== path) return;
       if (!isCurrent()) return;

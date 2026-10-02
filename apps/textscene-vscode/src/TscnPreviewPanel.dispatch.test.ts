@@ -267,6 +267,21 @@ describe('a message whose type is known but whose body is not', () => {
     expect(h.jumpToNode).toHaveBeenCalledTimes(1);
   });
 
+  it('routes a loadResource with no resourceType, as the byte layer sends every processor load', () => {
+    const h = handlers();
+    dispatchWebviewMessage({ type: 'loadResource', path: 'res://quad.tres', requestId: 'r1' }, h);
+    expect(h.loadResource).toHaveBeenCalledTimes(1);
+  });
+
+  it('drops a loadResource whose resourceType is not a string', () => {
+    const h = handlers();
+    dispatchWebviewMessage(
+      { type: 'loadResource', path: 'res://quad.tres', resourceType: 7, requestId: 'r1' },
+      h
+    );
+    expect(h.loadResource).not.toHaveBeenCalled();
+  });
+
   it('still routes a well-formed log', () => {
     const h = handlers();
     dispatchWebviewMessage({ type: 'log', level: 'warn', message: 'x', args: [] }, h);

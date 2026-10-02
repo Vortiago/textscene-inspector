@@ -18,7 +18,7 @@ describe('spriteframes slice registration', () => {
   });
 
   it('routes SpriteFrames to the resource bus slot', () => {
-    expect(resourceSliceRegistry.busTypeFor('SpriteFrames')).toBe('resource');
+    expect(resourceSliceRegistry.byTypeName('SpriteFrames')?.busType ?? null).toBe('resource');
   });
 
   it('claims no file extension — a SpriteFrames arrives as a .tres like any resource', () => {

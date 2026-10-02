@@ -15,8 +15,8 @@ icon and title text) and, only while unfolded, a content panel behind the childr
 their solved rects below (or above) it. Sorting writes each direct child's own
 `visible`, so folding hides the children and unfolding shows them whatever the file
 authored. A right-to-left `layout_direction` moves the arrow to the right
-of the title bar, puts the title text at the left margin with its `title_alignment`
-swapped, and insets the content from the panel style's right margin.
+of the title bar and puts the title text at the left margin, with `title_alignment`
+swapped. It also insets the content from the panel style's right margin.
 
 ## Linting
 
@@ -52,5 +52,5 @@ default (LEFT / TOP / no trimming) applies.
 
 ## Known limitations
 
-- **Approximated** A right-to-left title keeps its glyphs in the written order. The
-  previewer shapes no bidirectional text, so `title_text_direction` changes nothing.
+- **Approximated** A right-to-left title keeps its glyphs in the written order, and
+  `title_text_direction` changes nothing.

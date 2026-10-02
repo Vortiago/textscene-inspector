@@ -16,6 +16,7 @@ export {
   lerp,
   sign,
   smoothstep,
+  snapped,
 } from './math.js';
 export {
   TRANSFORM2D_IDENTITY,
@@ -94,6 +95,70 @@ export {
   isScannedDirectoryName,
   isScannedPath,
 } from './editorScan.js';
+export {
+  DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT,
+  DirectionalLightSkyMode,
+  directionalLightDrawsInSky,
+  directionalLightLightsSurfaces,
+} from './directionalLightSkyMode.js';
+export {
+  DIRECTIONAL_SHADOW_BLEND_SPLITS_DEFAULT,
+  DIRECTIONAL_SHADOW_FADE_START_DEFAULT,
+  DIRECTIONAL_SHADOW_MAX_DISTANCE_DEFAULT,
+  DIRECTIONAL_SHADOW_MAX_SPLITS,
+  DIRECTIONAL_SHADOW_MODE_DEFAULT,
+  DIRECTIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
+  DIRECTIONAL_SHADOW_PANCAKE_SIZE_DEFAULT,
+  DIRECTIONAL_SHADOW_SIZE_DEFAULT,
+  DIRECTIONAL_SHADOW_SPLIT_OFFSETS_DEFAULT,
+  MAX_DIRECTIONAL_LIGHTS,
+  type DirectionalShadowAtlasRect,
+  type DirectionalShadowFade,
+  DirectionalShadowMode,
+  type DirectionalShadowSlice,
+  blendsSplits,
+  directionalLightsDrawn,
+  directionalShadowBlendStart,
+  directionalShadowFade,
+  directionalShadowLightRect,
+  directionalShadowSlice,
+  directionalShadowSnapStep,
+  directionalShadowSplitAtlasRect,
+  directionalShadowSplitCount,
+  directionalShadowSplitDistances,
+  directionalShadowSplitEnds,
+  directionalShadowSplitRange,
+  directionalShadowSplitTextureSize,
+  directionalShadowTexelSize,
+  pancakesCasters,
+  sharesDirectionalShadowAtlas,
+  texelPaddedRadius,
+} from './directionalShadow.js';
+export { SHADOW_BLUR_DEFAULT, SOFT_LOW_QUALITY_RADIUS, softShadowScale } from './softShadowScale.js';
+export { SOFT_LOW_SHADOW_SAMPLES, vogelDisk } from './softShadowKernel.js';
+export {
+  POSITIONAL_SHADOW_ATLAS_DEPTH_BITS,
+  POSITIONAL_SHADOW_ATLAS_SIZE_DEFAULT,
+  POSITIONAL_SHADOW_QUADRANT_SUBDIV_DEFAULT,
+  POSITIONAL_SHADOW_QUADRANT_SUBDIV_SHADOWS,
+  POSITIONAL_SHADOW_REALLOC_TOLERANCE_MSEC,
+  PositionalShadowAtlas,
+  ROOT_POSITIONAL_SHADOW_ATLAS,
+  VIEWPORT_POSITIONAL_SHADOW_ATLAS_SIZE_DEFAULT,
+  omniShadowCubeSize,
+  positionalShadowQuadrantSubdivision,
+  viewportPositionalShadowAtlas,
+  type PositionalShadowAtlasSettings,
+  type PositionalShadowRequest,
+  type PositionalShadowSlot,
+} from './positionalShadowAtlas.js';
+export {
+  POSITIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
+  positionalLightBounds,
+  positionalShadowNear,
+  positionalShadowNormalBias,
+  spotShadowDepthBias,
+} from './positionalShadow.js';
 export { GRADIENT_TEXTURE_MAX_SIZE, IMAGE_MAX_PIXELS } from './texture.js';
 export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX, CLIP_CHILDREN_MODES } from './canvasItem.js';
 export {
@@ -176,7 +241,12 @@ export {
 export { CLASS_BASE_TYPES, descendsFromClass } from './classBaseTypes.js';
 export { INSTANCE_PLACEHOLDER_TYPE } from './packedScene.js';
 export { nodePathNames } from './nodePath.js';
-export { GODOT_TEXT_RESOURCE_EXTENSIONS, isGodotTextResourcePath } from './resourceFormats.js';
+export {
+  GODOT_TEXT_RESOURCE_EXTENSIONS,
+  IMPORT_SIDECAR_SUFFIX,
+  importSidecarPath,
+  isGodotTextResourcePath,
+} from './resourceFormats.js';
 export { boolSlotValue, boolLiteralAsNumber } from './variantBool.js';
 export {
   packedArrayBody,

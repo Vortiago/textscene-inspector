@@ -1,7 +1,7 @@
 /**
  * The Theme resource processor, on the shared `createResourceProcessor` loop.
- * Like the material processor it fetches through `FileEventBus`, addresses a
- * **Sub-resource path** (`res://file.tres::SubId`) and loads other resources.
+ * It fetches through `FileEventBus`, addresses a **Sub-resource path**
+ * (`res://file.tres::SubId`) and loads its fonts through the font processor.
  */
 
 import type { FileEventBus, FileData } from '../FileEventBus';
@@ -14,7 +14,8 @@ import type { FontLoaderFn } from '../fonts/font/types';
 export function createThemeProcessor(
   fileEventBus: FileEventBus | undefined,
   eventBus: ResourceEventBus,
-  loadFont: FontLoaderFn
+  /** The font loader for the Theme at `themeKey`, so each font it reads is recorded against it. */
+  loadFontFor: (themeKey: string) => FontLoaderFn
 ): ResourceProcessor<ThemeResource> {
   return createResourceProcessor<ThemeResource>({
     fileEventBus,
@@ -26,7 +27,7 @@ export function createThemeProcessor(
     shouldProcess: (_path: string, data: FileData) => typeof data === 'string',
     addressesSubResources: true,
     // Fonts load through a different processor (`loader.fonts`), so `ResourceLoader`
-    // injects `loadFont` rather than this closing over itself as `createFontProcessor` does.
-    process: (path, data) => buildThemeResource(path, data as string, loadFont),
+    // injects the loader rather than this closing over itself as `createFontProcessor` does.
+    process: (path, data) => buildThemeResource(path, data as string, loadFontFor(path)),
   });
 }

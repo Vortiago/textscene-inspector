@@ -3,18 +3,19 @@
 import * as THREE from 'three';
 import { readImagePixels, type ImagePixels } from '../../../r3f/controls/withImageCanvas';
 import { everyTransparentTexelHasASource, fixAlphaEdges } from '../../processing/fixAlphaEdges';
+import { IMAGE_EXTENSIONS } from './extensions';
+import { fileExtension } from '../../fileExtension';
 
 export function getMimeType(path: string): string {
-  const ext = path.split('.').pop()?.toLowerCase();
-  switch (ext) {
-    case 'png':
+  switch (fileExtension(path)) {
+    case '.png':
       return 'image/png';
-    case 'jpg':
-    case 'jpeg':
+    case '.jpg':
+    case '.jpeg':
       return 'image/jpeg';
-    case 'svg':
+    case '.svg':
       return 'image/svg+xml';
-    case 'webp':
+    case '.webp':
       return 'image/webp';
     default:
       return 'application/octet-stream';
@@ -22,8 +23,8 @@ export function getMimeType(path: string): string {
 }
 
 export function isTexturePath(path: string): boolean {
-  const ext = path.split('.').pop()?.toLowerCase();
-  return ext === 'png' || ext === 'jpg' || ext === 'jpeg' || ext === 'svg' || ext === 'webp';
+  const extension = fileExtension(path);
+  return extension !== null && IMAGE_EXTENSIONS.includes(extension);
 }
 
 /** Create a THREE.Texture from binary data through a blob URL, which it revokes. */

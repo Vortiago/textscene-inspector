@@ -62,7 +62,7 @@ export function createResourceProcessor<T>(config: ResourceProcessorConfig<T>): 
     dispose,
   });
 
-  const clearCache = createClearCache<T>({ cache, inflight, eventBus, resourceType });
+  const clearCache = createClearCache({ cache, inflight, eventBus, resourceType });
 
   if (fileEventBus) {
     fileEventBus.on('loaded', handleFileLoaded);

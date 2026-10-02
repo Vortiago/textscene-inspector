@@ -30,10 +30,12 @@ Strict parsing format-checks these `OmniLight3D` properties, plus 27 inherited f
 | `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |
 <!-- lint:end -->
 
-The lenient parser falls back silently when `omni_range` or `omni_attenuation` is absent, and warns then falls back to `5.0` and `1.0` when one is present but unparseable. `omni_shadow_mode` goes through `parseOptionalInt`, so an absent or invalid value quietly becomes `undefined`.
+The lenient parser falls back silently when `omni_range` or `omni_attenuation` is absent. When one is unparseable, it warns and falls back to `5.0` and `1.0`. `omni_shadow_mode` goes through `parseOptionalInt`, so an absent or invalid value quietly becomes `undefined`.
+
+Godot's positional shadow atlas gives the light two slots for the camera. As in Godot's default Cube mode, each slot holds one paraboloid of the shadow. A light that covers less of the view gets smaller slots and a coarser, softer shadow. When other lights fill the larger slots, a light earlier in the scene tree takes smaller slots, as in Godot. A sub-viewport gives its lights slots in its own atlas. Every omni and spot shadow lies in one atlas texture, so many shadowed lights fit beside a material with many textures. The soft edge takes the four taps of Godot's default Soft Low filter, with the same dither as Godot. The filter spans `shadow_blur` times two texels of the paraboloid. `shadow_bias` and `shadow_normal_bias` move the receiver as Godot's lookup does, so the shadow edge sits where Godot puts it.
 
 ## Known limitations
 
 - **Approximated** Distance falloff follows three's inverse-square curve rather than Godot's, so the mid-range brightness differs.
-- **Approximated** The cube's shadow edge is stepped and jagged here, where Godot filters its omni shadow to a soft edge.
-- **Editor only** The wireframe sphere gizmo appears only in Godot's editor. Here it is selection-gated.
+- **Approximated** `omni_shadow_mode` Dual Paraboloid draws as Cube mode does, so the edge of a coarse caster's shadow can sit apart from Godot's.
+- **Editor only** The wireframe sphere gizmo appears only in Godot's editor, but here it is selection-gated.

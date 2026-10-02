@@ -28,8 +28,8 @@ export class VSCodeResourceProvider implements ResourceProvider {
     private documentUri: vscode.Uri
   ) {}
 
-  async loadResource(resourcePath: string, type: string): Promise<string | ArrayBuffer> {
-    info(`[VSCodeResourceProvider] Loading ${type}: ${resourcePath}`);
+  async loadResource(resourcePath: string, type?: string): Promise<string | ArrayBuffer> {
+    info(`[VSCodeResourceProvider] Loading ${type ?? 'file'}: ${resourcePath}`);
     info(`[VSCodeResourceProvider] Workspace root: ${this.workspaceRoot.fsPath}`);
     info(`[VSCodeResourceProvider] Document URI: ${this.documentUri.fsPath}`);
 
@@ -67,7 +67,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
   private async readContent(
     fsPath: vscode.Uri,
     resourcePath: string,
-    type: string
+    type: string | undefined
   ): Promise<string | ArrayBuffer> {
     const fileData = await vscode.workspace.fs.readFile(fsPath);
     info(`[VSCodeResourceProvider] Read ${fileData.byteLength} bytes`);

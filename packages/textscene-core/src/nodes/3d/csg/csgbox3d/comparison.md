@@ -9,7 +9,7 @@ renders_as: a solid box mesh
 
 # CSGBox3D
 
-Godot's constructive-solid-geometry box. The previewer draws it as a box carrying its `StandardMaterial3D` and evaluates the boolean `operation` (ADR-0027), so a box inside a CSG root contributes to that root's result instead of drawing itself.
+Godot's constructive-solid-geometry box. The previewer draws it as a box with its `StandardMaterial3D` and evaluates the boolean `operation` (ADR-0027). A box inside a CSG root adds to that root's result instead of drawing itself.
 
 ## Linting
 
@@ -32,4 +32,4 @@ Strict parsing format-checks these `CSGBox3D` properties, plus 1 inherited from 
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-The lenient parser keeps the default `size` of `(1, 1, 1)` when the key is absent, and warns and keeps that default when it is present but unparseable. `operation` is read with `parseOptionalInt`, so it warns neither way, and `material` is copied through unvalidated.
+The lenient parser keeps the default `size` of `(1, 1, 1)` when the key is absent. It warns and keeps that default when the value is unparseable. `operation` is read with `parseOptionalInt`, so it warns neither way, and `material` is copied through unvalidated.

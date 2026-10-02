@@ -10,7 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # XRNode3D
 
-The base for XR-tracked nodes. A tracker drives its transform at runtime and it draws nothing itself, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
+The base for XR-tracked nodes. A tracker drives its transform at runtime, and it draws nothing itself. The previewer renders it as a transform-only group (ADR-0008), and its children still show.
 
 ## Linting
 

@@ -48,9 +48,8 @@ no substitution.
 ## Known limitations
 
 - **Approximated** A `theme_override_fonts/font` scene font takes its underline position
-  and thickness from the vendored Open Sans metrics, because no scene font carries its
-  own baked underline data.
-- **Approximated** The label's paragraph direction is not applied, so under
-  `layout_direction = 3` or `text_direction = 2` a right-to-left script, or a label
-  ending in punctuation, keeps left-to-right glyph order. Which edge the label and its
-  underline hug does follow the layout direction.
+  and thickness from the vendored Open Sans metrics, because no scene font carries baked
+  underline data.
+- **Approximated** Under `layout_direction = 3` or `text_direction = 2`, the label's glyphs
+  keep left-to-right order for a right-to-left script or trailing punctuation, while the
+  label and its underline swap edges.

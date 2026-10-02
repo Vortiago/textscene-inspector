@@ -9,9 +9,9 @@ export type ResourceEventType =
   | 'loaded'
   | 'failed'
   /**
-   * A cached path was dropped by a full cache clear (corpus switch) with no
-   * replacement on the way, so mounted consumers re-request. A per-path clear
-   * (hot-reload) does not emit this: its caller re-requests itself.
+   * A cached or loading path was dropped with no replacement on the way, so a
+   * mounted consumer requests it again. A full clear (corpus switch) and a
+   * per-path clear (**Dependency hot-reload**) both emit it.
    */
   | 'invalidated';
 // One bus-tag union repo-wide: the slice claim table (ADR-0031) is the
@@ -26,6 +26,16 @@ export interface ProgressData {
 }
 
 export type EventHandler<T = unknown> = (id: string, data?: T) => void;
+
+/** The events that change what a cache holds for a key. */
+const CHANGE_EVENTS = ['loaded', 'failed', 'invalidated'] as const;
+
+/** One change to what a bus's cache holds for `key`. */
+export interface ResourceChange {
+  busType: ResourceType;
+  event: (typeof CHANGE_EVENTS)[number];
+  key: string;
+}
 
 export class ResourceEventBus {
   private handlers = new Map<string, Set<EventHandler<unknown>>>();
@@ -55,6 +65,21 @@ export class ResourceEventBus {
   off<T = unknown>(resourceType: ResourceType, eventType: ResourceEventType, handler: EventHandler<T>): void {
     const key = `${resourceType}:${eventType}`;
     this.handlers.get(key)?.delete(handler as EventHandler<unknown>);
+  }
+
+  /**
+   * One subscription to every change on `busTypes`, for a reader of the caches
+   * that is not a `useResource` consumer. Returns the unsubscribe.
+   */
+  onChange(busTypes: readonly ResourceType[], listener: (change: ResourceChange) => void): () => void {
+    const subscriptions = busTypes.flatMap((busType) =>
+      CHANGE_EVENTS.map((event) => {
+        const handler: EventHandler = (key) => listener({ busType, event, key });
+        this.on(busType, event, handler);
+        return () => this.off(busType, event, handler);
+      })
+    );
+    return () => subscriptions.forEach((unsubscribe) => unsubscribe());
   }
 
   emit<T = unknown>(resourceType: ResourceType, eventType: ResourceEventType, id: string, data?: T): void {

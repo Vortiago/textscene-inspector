@@ -43,5 +43,5 @@ through raw and never rendered.
 
 ## Known limitations
 
-- **Not drawn** Godot draws the button's texture. The previewer draws nothing for this
-  node.
+- **Not drawn** Godot draws the button's texture, but the previewer draws nothing for
+  this node.

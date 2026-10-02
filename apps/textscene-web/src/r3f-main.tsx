@@ -198,8 +198,8 @@ export function R3FApp() {
   }
 
   function handleResourceRemove(path: string) {
-    // provideFile() re-requests, so dependents flip back to `missing` and the panel row
-    // reappears. Without it `useResource` keeps its cached `loaded` value.
+    // provideFile() announces the path, so its consumers load it again, flip back to
+    // `missing`, and the panel row reappears. Without it `useResource` keeps its `loaded` value.
     provider.removeUploadedFile(path);
     loader.provideFile(path);
     bumpUploadRevision();

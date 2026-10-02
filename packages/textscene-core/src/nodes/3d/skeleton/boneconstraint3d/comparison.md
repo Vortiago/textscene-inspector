@@ -28,4 +28,4 @@ Strict parsing format-checks these `BoneConstraint3D` properties, plus 2 inherit
 | `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`, so every `settings/<i>/` leaf is dropped rather than substituted and only strict reports a bad one.
+The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`. Every `settings/<i>/` leaf is dropped rather than substituted, and only strict reports a bad one.

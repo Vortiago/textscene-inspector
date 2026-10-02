@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PNG } from 'pngjs';
-import { diffMask, inkStats } from './pixels.mjs';
+import { diffMask, inkStats, missingPlaceholderPixels } from './pixels.mjs';
 
 /** Builds a PNG buffer from a `paint(x, y) -> [r,g,b,a]` callback. */
 function png(width, height, paint) {
@@ -87,5 +87,26 @@ describe('diffMask', () => {
         png(4, 5, () => DARK)
       )
     ).toThrow(/Size mismatch/);
+  });
+});
+
+describe('missingPlaceholderPixels', () => {
+  it('counts the magenta of the missing-resource placeholder', () => {
+    const buffer = png(10, 10, (x, y) => (y === 0 && x < 3 ? [255, 0, 255, 255] : DARK));
+    expect(missingPlaceholderPixels(buffer)).toBe(3);
+  });
+
+  it('counts no ordinary reds, purples or pinks', () => {
+    const buffer = png(
+      3,
+      1,
+      (x) =>
+        [
+          [230, 30, 30, 255],
+          [120, 40, 160, 255],
+          [240, 150, 200, 255],
+        ][x]
+    );
+    expect(missingPlaceholderPixels(buffer)).toBe(0);
   });
 });

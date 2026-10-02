@@ -1,0 +1,57 @@
+[gd_scene load_steps=4 format=3 uid="uid://unitdirshadowfade"]
+
+; Moves the distance fade. A short `directional_shadow_max_distance` ends the sun's shadow part-way
+; along seven posts: the near posts cast, the fade thins the next and the far ones cast nothing. The
+; sun is orthogonal, so no split selection shapes the row. Every other shadow golden keeps its
+; casters well inside its shadow range, where the fade never reaches.
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(4, 16)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_post"]
+size = Vector3(0.3, 1, 0.3)
+
+[node name="DirectionalShadowFadeRoot" type="Node3D"]
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("StandardMaterial3D_ground")
+
+[node name="Post1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, -6)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, -4)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, -2)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post5" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 2)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post6" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 4)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Post7" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 6)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0, -0.5, 0.866025, 0, 0.866025, 0.5, -1, 0, 0, 0, 4, 0)
+light_energy = 1.5
+shadow_enabled = true
+directional_shadow_mode = 0
+directional_shadow_max_distance = 24.0

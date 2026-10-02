@@ -10,7 +10,7 @@ renders_as: three composited texture layers, the middle one ratio-windowed
 # TextureProgressBar
 
 TextureProgressBar draws `texture_under`, `texture_progress` and `texture_over` in that
-order. `texture_progress` windows to the current ratio: a crop for a linear `fill_mode`,
+order. `texture_progress` windows to the current ratio. It is a crop for a linear `fill_mode`,
 a triangle fan for a radial one, or a 9-patch grid once `nine_patch_stretch` is set (which
 also windows `texture_under`/`texture_over` at full size). Each layer multiplies its own
 `tint_*` onto the node's tint.

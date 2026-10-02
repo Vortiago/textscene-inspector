@@ -38,5 +38,5 @@ malformed `offset_right` or `modulate` silently, since `parseOptionalFloat` and
 
 ## Known limitations
 
-- **Editor only** Godot builds this panel only inside the editor. The previewer draws
+- **Editor only** Godot builds this panel only inside the editor, and the previewer draws
   nothing for it.

@@ -111,4 +111,4 @@ The lenient parser reuses `parseNode3D`, which reads only `transform` and `visib
 
 ## Known limitations
 
-- **Not drawn** Godot draws the live particle cloud. Here nothing appears.
+- **Not drawn** Godot draws the live particle cloud, but here nothing appears.

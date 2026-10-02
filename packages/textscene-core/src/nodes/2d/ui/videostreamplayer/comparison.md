@@ -42,7 +42,5 @@ The lenient parser reads VideoStreamPlayer through `parseControl`. It keeps the 
 
 ## Known limitations
 
-- **Not drawn** There is no video decoder in this codebase, so `texture` never
-  resolves and `NOTIFICATION_DRAW` never reaches its `draw_texture_rect` call.
-  The node registers a painter that draws nothing, rather than falling back to
-  the debug outline Godot never draws.
+- **Not drawn** The previewer has no video decoder, so `texture` never resolves and the
+  node draws nothing, not even a debug outline.

@@ -35,5 +35,5 @@ The lenient parser reuses `parseNode2D`, which has no field for `height` or
 
 ## Known limitations
 
-- **Not drawn** Godot lights the canvas from this node. The previewer applies no light
-  for it.
+- **Not drawn** Godot lights the canvas from this node, but the previewer applies no
+  light for it.

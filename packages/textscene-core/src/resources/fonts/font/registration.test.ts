@@ -25,7 +25,7 @@ describe('font slice registration', () => {
       const registration = resourceSliceRegistry.byTypeName(typeName);
       expect(registration?.slice).toBe('font');
       expect(registration?.kind).toBe('godot-text');
-      expect(resourceSliceRegistry.busTypeFor(typeName)).toBe('font');
+      expect(resourceSliceRegistry.byTypeName(typeName)?.busType ?? null).toBe('font');
       expect(registration?.failureLabel).toBe('Node using font');
     }
   });

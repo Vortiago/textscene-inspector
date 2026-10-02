@@ -40,7 +40,7 @@ Strict parsing format-checks these `GridMap` properties, plus 17 inherited from 
 | `valid-gridmap-resources` | `gridmap-requires-mesh-library` | info |
 <!-- lint:end -->
 
-`cell_size` falls back silently to Godot's default `Vector3(2, 2, 2)` on a malformed value. `mesh_library` is copied straight through when present, with no check that it resolves. `cell_center_x`, `_y` and `_z` default to `true` when all three are absent, and otherwise each warns and falls back to `true` on its own through `boolOr`.
+`cell_size` falls back silently to Godot's default `Vector3(2, 2, 2)` on a malformed value. `mesh_library` is copied straight through when present, with no check that it resolves. `cell_center_x`, `_y` and `_z` default to `true` when all three are absent. Otherwise each warns and falls back to `true` on its own through `boolOr`.
 
 ## Known limitations
 

@@ -25,6 +25,26 @@ export const GEOMETRY_SCENES = [
   // do it: three skips an invisible object in the shadow pass and its subtree.
   // Soft-shadow edges are GPU-sensitive.
   { name: 'shadows-only', file: 'unit-shadows-only.tscn' },
+  // Bars under one texel of a single shadow map and about three of the first
+  // of Godot's default four splits. Crisp stripes need the near split to draw.
+  { name: 'directional-shadow-splits', file: 'unit-directional-shadow-splits.tscn' },
+  // Posts running away from the view past a short shadow max distance. The near
+  // posts cast, the fade thins the next and the far ones cast nothing.
+  { name: 'directional-shadow-fade', file: 'unit-directional-shadow-fade.tscn' },
+  // Two orthogonal suns, so each map is half the atlas wide. The posts' shadows,
+  // which lie across that width, spread into faint smudges. The bars cast as under one sun.
+  { name: 'directional-shadow-shared-atlas', file: 'unit-directional-shadow-shared-atlas.tscn' },
+  // An omni light and a spot light, each with `shadow_blur = 4` and alone under a
+  // dark sun. A board's straight shadow edge fades over the width of the light's
+  // PCF kernel.
+  { name: 'omni-light-shadow-blur', file: 'unit-omni-light-shadow-blur.tscn' },
+  { name: 'spot-light-shadow-blur', file: 'unit-spot-light-shadow-blur.tscn' },
+  // A Sky Only sun and a Light Only sun, both in view. Only the first draws in
+  // the sky, and only the second lights the box and ground.
+  { name: 'directional-light-sky-mode', file: 'unit-directional-light-sky-mode.tscn' },
+  // Nine shadowed suns, and only the ninth has energy. Godot draws eight directional
+  // lights and stops, so the ground and the post hold only the ambient light.
+  { name: 'directional-light-limit', file: 'unit-directional-light-limit.tscn' },
   // CSG `material` as an ExtResource .tres beside an inline SubResource one. A
   // resolver of the inline form alone draws the external one white, and the
   // other CSG fixtures declare theirs inline. The left box is green, the right red.
@@ -48,6 +68,10 @@ export const GEOMETRY_SCENES = [
   { name: 'area-light-normalize', file: 'unit-area-light-normalize.tscn' },
   // External ArrayMesh .tres: a decoded quad with Godot's packed normals.
   { name: 'arraymesh', file: 'unit-arraymesh.tscn' },
+  // A text .gltf whose buffer and base colour image are separate files, which
+  // no .glb scene has. A missed buffer draws the placeholder, a missed image an
+  // untextured quad, so the checker shows both arrived.
+  { name: 'gltf-external', file: 'unit-gltf-external.tscn' },
   // The same quad with a four-band atlas pins V orientation, which the
   // material-less `arraymesh` cannot see. Godot's V origin is the image top and
   // textures load with flipY=true, so a pass-through V samples upside down.

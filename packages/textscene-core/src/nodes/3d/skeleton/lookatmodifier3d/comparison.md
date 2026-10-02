@@ -58,4 +58,4 @@ Strict parsing format-checks these `LookAtModifier3D` properties, plus 2 inherit
 | `valid-lookatmodifier3d-rotation-axes` | `lookatmodifier3d-parallel-rotation-axes` | warning |
 <!-- lint:end -->
 
-The lenient parser reads LookAtModifier3D through `parseNode3D`, so every property above is dropped with no fallback. Strict warns on a `primary_limit_angle` above TAU, since the `.tscn` stores radians while the inspector shows degrees, and `linter.ts` warns when `forward_axis` resolves to the same axis as `primary_rotation_axis`.
+The lenient parser reads LookAtModifier3D through `parseNode3D`, so every property above is dropped with no fallback. Strict warns on a `primary_limit_angle` above TAU, since the `.tscn` stores radians while the inspector shows degrees. `linter.ts` warns when `forward_axis` resolves to the same axis as `primary_rotation_axis`.

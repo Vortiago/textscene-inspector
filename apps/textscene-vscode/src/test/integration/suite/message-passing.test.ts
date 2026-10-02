@@ -42,7 +42,7 @@ suite('Message Passing Tests', () => {
     assertFullReloadSent(sentMessages);
   });
 
-  test('webviewReady handshake: loadTscn posted before ready is replayed', async function () {
+  test('webviewReady handshake: the scene text arrives once, and only after ready', async function () {
     this.timeout(10000);
 
     const fixturePath = getFixturePath('unit-empty-scene.tscn');
@@ -50,7 +50,7 @@ suite('Message Passing Tests', () => {
 
     const { sentMessages, triggerMessage } = createTestPanel(extensionUri, fixturePath);
 
-    // Let the async _loadTscnContent finish: the payload is pending, not sent.
+    // Give the read time to post, so a post that skips the ready gate shows here.
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     const loadsBefore = sentMessages.filter((m) => m.type === 'loadTscn');
@@ -58,8 +58,14 @@ suite('Message Passing Tests', () => {
 
     triggerMessage({ type: 'webviewReady' });
 
-    const loadsAfter = sentMessages.filter((m) => m.type === 'loadTscn');
+    // A real disk read can finish before ready (the replay posts) or after it (the
+    // read posts). Either way the first loadTscn marks the end of the read, so no
+    // second one can follow it.
+    await waitForMessage(sentMessages, 'loadTscn');
+    const loadsAfter = sentMessages.filter((m): m is LoadTscnMessage => m.type === 'loadTscn');
     assert.strictEqual(loadsAfter.length, 1, 'Exactly one loadTscn must fire after webviewReady');
+    const fixtureText = new TextDecoder().decode(await vscode.workspace.fs.readFile(fixturePath));
+    assert.strictEqual(loadsAfter[0]!.content, fixtureText);
   });
 
   test('Should handle jumpToNode message from webview', async function () {

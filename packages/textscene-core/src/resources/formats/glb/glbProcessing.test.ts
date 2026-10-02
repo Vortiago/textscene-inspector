@@ -7,13 +7,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import {
-  cloneWithMaterials,
-  createGLBMesh,
-  disposeClonedMaterials,
-  gltfResourceDir,
-  initGlbModules,
-} from './glbProcessing';
+import { cloneWithMaterials, createGLBMesh, disposeClonedMaterials, initGlbModules } from './glbProcessing';
 // Statically, so the identity check below is immune to the `vi.resetModules()` calls in
 // this file: a dynamic import after a reset yields a fresh instance.
 import * as processingShim from '../../processing/glbProcessing';
@@ -98,17 +92,6 @@ describe('createGLBMesh', () => {
     const names = object.animations.map((c) => c.name);
 
     expect(names).toEqual(expect.arrayContaining(['idle', 'run', 'jump', 'walk', 'falling']));
-  });
-});
-
-describe('gltfResourceDir', () => {
-  it("yields the glTF's own res:// directory for relative buffer/image resolution", () => {
-    expect(gltfResourceDir('res://stage/model.gltf')).toBe('res://stage/');
-    expect(gltfResourceDir('res://town/lamp/scene.gltf')).toBe('res://town/lamp/');
-  });
-
-  it('yields empty for a bare filename', () => {
-    expect(gltfResourceDir('model.glb')).toBe('');
   });
 });
 

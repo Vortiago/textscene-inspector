@@ -10,7 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { ControlColor, ControlProperties } from '../../../nodes/2d/ui/control/types';
@@ -29,6 +29,8 @@ import {
   unwrapCanvasTextureRef,
 } from '../../../resources/SubResourceResolver';
 import { useResourceLoader } from '../../../resources/useResource';
+import { useCacheVersion } from '../../../resources/useCacheVersion';
+import type { ResourceType } from '../../../resources/ResourceEventBus';
 import { extResourceAtlasTextureSize, inlineTexture2DSize } from '../../../resources/useTexture2D';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import type { ParsedResource } from '../../../parser/parsedResource';
@@ -227,6 +229,8 @@ interface ForestResult {
   pendingResourceFiles: string[];
   pendingThemes: string[];
   pendingFonts: string[];
+  /** Every cache key the walk read, cached or not: the keys a reload must request again. */
+  readKeys: ReadonlySet<string>;
 }
 
 /**
@@ -292,6 +296,13 @@ function childParentVisibleInTree(
 
 /** No provider (a headless or raster walk) hides nothing. */
 const NO_HIDDEN: ReadonlySet<string> = new Set();
+const NO_KEYS: ReadonlySet<string> = new Set();
+
+/**
+ * The buses whose caches the walk reads. An `ExtResource(AtlasTexture)` `.tres`
+ * completes on the resource bus, not the texture one.
+ */
+const SOLVE_TREE_BUSES: readonly ResourceType[] = ['scene', 'texture', 'resource', 'theme', 'font'];
 
 /** The SolveNode forest for one nodes and resource-scope pair. Not a hook: `useBuildSolveTree` is. */
 function buildForest(
@@ -309,17 +320,26 @@ function buildForest(
   const pendingResourceFiles = new Set<string>();
   const pendingThemes = new Set<string>();
   const pendingFonts = new Set<string>();
+  const readKeys = new Set<string>();
+  const reading =
+    <T>(read: (path: string) => T) =>
+    (path: string): T => {
+      readKeys.add(path);
+      return read(path);
+    };
 
   const sceneCache: CachedSceneSource = loader
-    ? { getCached: (p: string) => loader.scenes.getCached(p) }
+    ? { getCached: reading((p) => loader.scenes.getCached(p)) }
     : EMPTY_SCENE_CACHE;
-  const textureCache = loader ? { getCached: (p: string) => loader.textures.getCached(p) } : NO_TEXTURE_CACHE;
+  const textureCache = loader
+    ? { getCached: reading((p) => loader.textures.getCached(p)) }
+    : NO_TEXTURE_CACHE;
   const resourceCache = loader
-    ? { getCached: (p: string) => loader.resources.getCached(p) }
+    ? { getCached: reading((p) => loader.resources.getCached(p)) }
     : NO_RESOURCE_CACHE;
-  const themeCache = loader ? { getCached: (p: string) => loader.themes.getCached(p) } : NO_THEME_CACHE;
+  const themeCache = loader ? { getCached: reading((p) => loader.themes.getCached(p)) } : NO_THEME_CACHE;
   const fontCache: FontCacheReader = loader
-    ? { getCached: (p: string) => loader.fonts.getCached(p) }
+    ? { getCached: reading((p) => loader.fonts.getCached(p)) }
     : NO_FONT_CACHE;
 
   /**
@@ -770,6 +790,7 @@ function buildForest(
     pendingResourceFiles: [...pendingResourceFiles],
     pendingThemes: [...pendingThemes],
     pendingFonts: [...pendingFonts],
+    readKeys,
   };
 }
 
@@ -786,7 +807,7 @@ export function useBuildSolveTree(
 ): UseBuildSolveTreeResult {
   const loader = useResourceLoader();
   const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_HIDDEN;
-  const [generation, setGeneration] = useState(0);
+  const [fontMetricsVersion, setFontMetricsVersion] = useState(0);
   // `gui/theme/custom`, the last rung before the built-in default. `undefined`
   // without a provider, like every unset project setting.
   const projectSettings = useProjectSettings().settings;
@@ -794,40 +815,15 @@ export function useBuildSolveTree(
   // `internationalization/*`, reduced to the booleans `is_layout_rtl` branches on.
   const layoutDirectionEnv = useMemo(() => projectLayoutDirectionEnv(projectSettings), [projectSettings]);
 
-  useEffect(() => {
-    const bump = () => setGeneration((g) => g + 1);
-    // Not gated on `loader`: `peekSceneFontMetrics` starts font loads from the
-    // solve itself and answers with the bundled fallback until the metrics settle.
-    const offSceneFontMetrics = onSceneFontMetricsSettled(bump);
-    if (!loader) return offSceneFontMetrics;
-    loader.eventBus.on('scene', 'loaded', bump);
-    loader.eventBus.on('scene', 'failed', bump);
-    loader.eventBus.on('texture', 'loaded', bump);
-    loader.eventBus.on('texture', 'failed', bump);
-    // An `ExtResource(AtlasTexture)` `.tres` completes on the resource bus, not
-    // the texture one.
-    loader.eventBus.on('resource', 'loaded', bump);
-    loader.eventBus.on('resource', 'failed', bump);
-    loader.eventBus.on('theme', 'loaded', bump);
-    loader.eventBus.on('theme', 'failed', bump);
-    loader.eventBus.on('font', 'loaded', bump);
-    loader.eventBus.on('font', 'failed', bump);
-    return () => {
-      offSceneFontMetrics();
-      loader.eventBus.off('scene', 'loaded', bump);
-      loader.eventBus.off('scene', 'failed', bump);
-      loader.eventBus.off('texture', 'loaded', bump);
-      loader.eventBus.off('texture', 'failed', bump);
-      loader.eventBus.off('resource', 'loaded', bump);
-      loader.eventBus.off('resource', 'failed', bump);
-      loader.eventBus.off('theme', 'loaded', bump);
-      loader.eventBus.off('theme', 'failed', bump);
-      loader.eventBus.off('font', 'loaded', bump);
-      loader.eventBus.off('font', 'failed', bump);
-    };
-  }, [loader]);
+  // With or without a loader: `peekSceneFontMetrics` starts font loads from the
+  // solve itself and answers with the bundled fallback until the metrics settle.
+  useEffect(() => onSceneFontMetricsSettled(() => setFontMetricsVersion((v) => v + 1)), []);
+  const readKeys = useRef<ReadonlySet<string>>(NO_KEYS);
+  const cacheVersion = useCacheVersion(loader, SOLVE_TREE_BUSES, readKeys);
+  // Both counters only grow, so their sum moves whenever either does.
+  const generation = fontMetricsVersion + cacheVersion;
 
-  const { tree, pendingScenes, pendingTextures, pendingResourceFiles, pendingThemes, pendingFonts } = useMemo(
+  const forest = useMemo(
     () =>
       buildForest(
         nodes,
@@ -854,6 +850,10 @@ export function useBuildSolveTree(
       generation,
     ]
   );
+  const { tree, pendingScenes, pendingTextures, pendingResourceFiles, pendingThemes, pendingFonts } = forest;
+  useEffect(() => {
+    readKeys.current = forest.readKeys;
+  }, [forest]);
 
   // Requests what the walk found uncached after render, not during it, as
   // `useResource` does.

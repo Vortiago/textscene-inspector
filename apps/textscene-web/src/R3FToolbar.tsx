@@ -10,6 +10,9 @@ import { FixtureTreeView } from './FixtureTree';
 import { NO_FIXTURE } from './sceneSelection';
 import { IS_PUBLIC_SITE } from './siteEdition';
 import styles from './r3f-main.module.css';
+import { PROVIDED_FILE_EXTENSIONS } from '@textscene/core/resources/resourceProviderUtils';
+
+const ACCEPTED_FILES = PROVIDED_FILE_EXTENSIONS.join(',');
 
 export interface ToolbarProps {
   options: readonly ViewportSelectorOption[];
@@ -201,10 +204,8 @@ export function Toolbar({
         ref={tscnInputRef}
         type="file"
         // Multi-select, so a .tscn and its resources arrive in one gesture. `accept`
-        // lists what handleFilesUpload's basename matching resolves: the binary
-        // extensions (resourceProviderUtils.isBinaryResourceType) and .tres, which a
-        // missing row often is and drag-and-drop accepts.
-        accept=".tscn,.tres,.glb,.gltf,.png,.jpg,.jpeg,.webp,.svg,.wav,.ogg,.mp3"
+        // lists every file a provider may be asked for, as drag-and-drop accepts.
+        accept={ACCEPTED_FILES}
         multiple
         onChange={handleTscnFileChange}
         className={styles.srOnly}

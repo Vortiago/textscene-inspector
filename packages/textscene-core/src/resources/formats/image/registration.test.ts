@@ -13,7 +13,7 @@ describe('image slice registration', () => {
       const registration = resourceSliceRegistry.byTypeName(typeName);
       expect(registration?.slice).toBe('image');
       expect(registration?.kind).toBe('foreign-format');
-      expect(resourceSliceRegistry.busTypeFor(typeName)).toBe('texture');
+      expect(resourceSliceRegistry.byTypeName(typeName)?.busType ?? null).toBe('texture');
     }
   });
 

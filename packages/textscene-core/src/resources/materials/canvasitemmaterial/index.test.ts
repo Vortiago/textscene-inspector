@@ -19,7 +19,7 @@ describe('canvasitemmaterial slice registration', () => {
   });
 
   it('routes CanvasItemMaterial to the resource processor, never the material one', () => {
-    expect(resourceSliceRegistry.busTypeFor('CanvasItemMaterial')).toBe('resource');
+    expect(resourceSliceRegistry.byTypeName('CanvasItemMaterial')?.busType ?? null).toBe('resource');
   });
 
   it('claims no file extension of its own — a .tres arrives as a ParsedResource', () => {

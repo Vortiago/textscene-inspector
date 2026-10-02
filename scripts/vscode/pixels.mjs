@@ -120,3 +120,18 @@ export function diffMask(aBuffer, bBuffer, threshold = 24) {
     mask,
   };
 }
+
+/**
+ * Pixels of the missing-resource placeholder's magenta (`MissingResourcePlaceholder`): a
+ * mesh that failed to load draws it, so a scene that loaded draws none.
+ *
+ * @param {Buffer} buffer PNG bytes
+ */
+export function missingPlaceholderPixels(buffer) {
+  const png = PNG.sync.read(buffer);
+  let count = 0;
+  for (let i = 0; i < png.data.length; i += 4) {
+    if (png.data[i] > 200 && png.data[i + 1] < 80 && png.data[i + 2] > 200) count++;
+  }
+  return count;
+}

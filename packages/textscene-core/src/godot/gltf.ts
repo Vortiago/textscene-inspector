@@ -49,6 +49,8 @@ export function requiredGltfExtensions(json: unknown): string[] {
 export const GLB_MAGIC = 0x46546c67;
 /** `JSON` as a chunk type, which the first chunk of a GLB must carry (`gltf_document.cpp:283`). */
 export const GLB_JSON_CHUNK = 0x4e4f534a;
+/** `BIN\0` as a chunk type, which the second chunk of a GLB must carry (`gltf_document.cpp:306`). */
+export const GLB_BIN_CHUNK = 0x004e4942;
 
 /**
  * Byte offsets in a GLB: the 12-byte file header (magic, version, total length), then the first chunk's length, its

@@ -126,6 +126,32 @@ describe('parseSubViewport', () => {
     });
   });
 
+  describe('positional shadow atlas', () => {
+    it('parses the atlas size and each quadrant subdivision', () => {
+      const result = parseSubViewport(heading('SubViewport', { name: 'V' }), {
+        positional_shadow_atlas_size: '4096',
+        positional_shadow_atlas_quad_0: '1',
+        positional_shadow_atlas_quad_3: '6',
+      });
+      expect(result.positional_shadow_atlas_size).toBe(4096);
+      expect(result.positional_shadow_atlas_quad_0).toBe(1);
+      expect(result.positional_shadow_atlas_quad_3).toBe(6);
+    });
+
+    it('leaves absent keys unset, so the Viewport defaults apply (edge case)', () => {
+      const result = parseSubViewport(heading('SubViewport', { name: 'V' }), {});
+      expect(result.positional_shadow_atlas_size).toBeUndefined();
+      expect(result.positional_shadow_atlas_quad_1).toBeUndefined();
+    });
+
+    it('leaves an unreadable size unset (error case)', () => {
+      const result = parseSubViewport(heading('SubViewport', { name: 'V' }), {
+        positional_shadow_atlas_size: 'large',
+      });
+      expect(result.positional_shadow_atlas_size).toBeUndefined();
+    });
+  });
+
   it('handles a heading with no attributes at all (edge case)', () => {
     const result = parseSubViewport({ type: 'node', attributes: {} }, {});
     expect(result.name).toBe('');

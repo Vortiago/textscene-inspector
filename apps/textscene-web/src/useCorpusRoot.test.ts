@@ -1,6 +1,6 @@
 /**
- * Tests for `applyCorpusRoot`, the module's only export: setResourceRoot, the THREE URL
- * modifier, and clearCaches on a change.
+ * Tests for `applyCorpusRoot`, the module's only export: setResourceRoot, and clearCaches on
+ * a change.
  */
 // @vitest-environment happy-dom
 
@@ -12,18 +12,12 @@ import type { WebResourceProvider } from './providers/WebResourceProvider';
 
 function makePipeline() {
   const setResourceRoot = vi.fn<(root: string) => void>();
-  const setURLModifier = vi.fn<(modify: (url: string) => string) => void>();
   const clearCaches = vi.fn<() => void>();
   const pipeline: ResourcePipeline<WebResourceProvider> = {
     provider: { setResourceRoot } as unknown as WebResourceProvider,
-    loader: {
-      clearCaches,
-      eventBus: {
-        getThreeManager: () => ({ setURLModifier }),
-      },
-    } as unknown as ResourcePipeline<WebResourceProvider>['loader'],
+    loader: { clearCaches } as unknown as ResourcePipeline<WebResourceProvider>['loader'],
   };
-  return { pipeline, setResourceRoot, setURLModifier, clearCaches };
+  return { pipeline, setResourceRoot, clearCaches };
 }
 
 /** Mounts the hook and hands back its `applyCorpusRoot` plus the spies. */
@@ -35,10 +29,9 @@ function mountHook() {
 
 describe('useCorpusRoot', () => {
   it('installs the base ("") routing on mount, before anything renders', () => {
-    const { setResourceRoot, setURLModifier } = mountHook();
+    const { setResourceRoot } = mountHook();
 
     expect(setResourceRoot).toHaveBeenCalledWith('');
-    expect(setURLModifier).toHaveBeenCalledWith(expect.any(Function));
   });
 
   it('does NOT clear caches on the initial mount', () => {
@@ -95,31 +88,5 @@ describe('useCorpusRoot', () => {
 
     expect(setResourceRoot).not.toHaveBeenCalled();
     expect(clearCaches).not.toHaveBeenCalled();
-  });
-
-  it('maps res:// URLs to /fixtures/ via the URL modifier using the applied root', () => {
-    const { applyCorpusRoot, setURLModifier } = mountHook();
-
-    applyCorpusRoot('demos/2d/platformer');
-
-    const modifier = setURLModifier.mock.lastCall![0];
-    expect(modifier('res://textures/player.png')).toBe('/fixtures/demos/2d/platformer/textures/player.png');
-  });
-
-  it('remaps res:// URLs with the new root after a root change', () => {
-    const { applyCorpusRoot, setURLModifier } = mountHook();
-
-    applyCorpusRoot('demos/2d/platformer');
-    applyCorpusRoot('demos/3d/fps');
-
-    const modifier = setURLModifier.mock.lastCall![0];
-    expect(modifier('res://textures/player.png')).toBe('/fixtures/demos/3d/fps/textures/player.png');
-  });
-
-  it('passes non-res:// URLs through the URL modifier unchanged', () => {
-    const { setURLModifier } = mountHook();
-
-    const modifier = setURLModifier.mock.lastCall![0];
-    expect(modifier('blob:http://localhost/abc')).toBe('blob:http://localhost/abc');
   });
 });

@@ -15,7 +15,7 @@ describe('navigationpolygon slice registration', () => {
   it('routes it to the generic resource slot with the Resource failure label', () => {
     // Matches the label `useSubOrExtResource` passes to `useResource`, so a
     // failed .tres aggregates under the same missing-resources row.
-    expect(resourceSliceRegistry.busTypeFor('NavigationPolygon')).toBe('resource');
+    expect(resourceSliceRegistry.byTypeName('NavigationPolygon')?.busType ?? null).toBe('resource');
     expect(resourceSliceRegistry.byTypeName('NavigationPolygon')?.failureLabel).toBe('Resource');
   });
 

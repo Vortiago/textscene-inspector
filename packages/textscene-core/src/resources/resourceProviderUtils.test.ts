@@ -150,3 +150,14 @@ describe('resourceContent', () => {
     expect(resourceContent(new Uint8Array(), '', 'res://project.godot')).toBe('');
   });
 });
+
+describe('isBinaryResourceType with no type', () => {
+  it('answers from the extension, as for a load the byte layer makes', () => {
+    expect(isBinaryResourceType(undefined, 'res://art/tile.png')).toBe(true);
+    expect(isBinaryResourceType(undefined, 'res://fonts/body.ttf')).toBe(true);
+  });
+
+  it('reads a text resource as text', () => {
+    expect(isBinaryResourceType(undefined, 'res://meshes/quad.tres')).toBe(false);
+  });
+});

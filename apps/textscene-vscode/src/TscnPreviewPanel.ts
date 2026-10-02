@@ -223,7 +223,7 @@ export class TscnPreviewPanel {
 
   private async _handleLoadResource(
     resourcePath: string,
-    resourceType: string,
+    resourceType: string | undefined,
     requestId: string
   ): Promise<void> {
     try {

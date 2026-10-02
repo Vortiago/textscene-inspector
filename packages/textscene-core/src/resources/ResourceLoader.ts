@@ -18,7 +18,7 @@ import { createArrayMeshProcessor, type ArrayMeshResource } from './processors/c
 import { createFontProcessor } from './processors/createFontProcessor';
 import { createThemeProcessor } from './processors/createThemeProcessor';
 import { runClearCachesSequence } from './clearCachesSequence';
-import { resourceFilePath } from './subResourcePath';
+import { runProvideFileSequence } from './provideFileSequence';
 import type { FontResource } from './fonts/font/types';
 import type { GltfExtensionRules } from './formats/glb/types';
 import type { ThemeResource } from './styles/theme/types';
@@ -26,19 +26,9 @@ import { resourceSliceRegistry } from './sliceRegistration';
 import './sliceRegistrations.js';
 import type { ParsedResource } from '../parser/parsedResource';
 import { PEER_LOAD_TIMEOUT_MS, type ResourceProcessor } from './createResourceProcessor';
+import { DependencyGraph, type Dependent } from './dependencyGraph';
 import * as logger from '../logger';
 import { WorkerJobRunner, type CreateJobWorker } from '../workers/WorkerJobRunner';
-
-/**
- * The bus tag a TSCN resource type routes to, from the slice claim table (ADR-0031),
- * never by name sniffing. Null means an unclaimed type, or a claimed one the loader
- * never serves (ViewportTexture resolves by NodePath): `provideFile` tells them apart
- * with `byTypeName`. Exported so the test fake mirrors the same routing.
- */
-export function busTypeFor(resourceType: string | undefined): ResourceType | null {
-  if (!resourceType) return null;
-  return resourceSliceRegistry.busTypeFor(resourceType);
-}
 
 export interface ResourceLoaderOptions {
   /** Which glTF extensions a GLB loads with. Absent means `createGLBMesh`'s default. */
@@ -49,6 +39,8 @@ export interface ResourceLoaderOptions {
 
 export class ResourceLoader {
   readonly metadata: MetadataStore;
+  /** Which cached resources read which files, so a **Dependency hot-reload** reaches them. */
+  private readonly dependencies = new DependencyGraph();
   /** Runs procedural texture builds, in the host's worker where it has one. */
   readonly jobRunner: WorkerJobRunner;
   readonly eventBus: ResourceEventBus;
@@ -108,16 +100,19 @@ export class ResourceLoader {
   }
 
   /**
-   * Await a peer processor's resource: answer from cache, else request it and wait on
-   * that processor's bus slot. Bounded, because a processor whose `shouldProcess` refuses
-   * the bytes settles nothing, and an unbounded await would wedge the caller (a GLB would
-   * never appear nor report missing). The ceiling is far above any real fetch.
+   * Await a peer processor's resource for `dependent`: answer from cache, else request
+   * it and wait on that processor's bus slot. Bounded, far above any real fetch: a
+   * processor whose `shouldProcess` refuses the bytes settles nothing, and an unbounded
+   * await would leave a GLB that never appears nor reports missing.
    */
   private async peerLoad<T>(
+    dependent: Dependent,
     processor: ResourceProcessor<T>,
     busType: ResourceType,
     path: string
   ): Promise<T | null> {
+    // First, so a change to `path` reloads `dependent` whether this read hits, fails or waits.
+    this.dependencies.record(dependent, path);
     const cached = processor.getCached(path);
     if (cached !== undefined) return cached;
     processor.request(path);
@@ -138,7 +133,12 @@ export class ResourceLoader {
 
     // A GLB's **Import sidecar** can repoint a glTF material at an external `.tres`. The
     // processor tags the surface, and the scene root draws that `.tres` like any material.
-    this.glbMeshes = createGLBProcessor(fileEventBus, this.eventBus, options.gltfExtensions);
+    this.glbMeshes = createGLBProcessor(
+      fileEventBus,
+      this.eventBus,
+      this.dependencies,
+      options.gltfExtensions
+    );
 
     // PackedScene loads directly (`loadDirectly`). The id-to-path translation reads the
     // shared MetadataStore.
@@ -156,12 +156,15 @@ export class ResourceLoader {
 
     this.resources = createTresResourceProcessor(fileEventBus, this.eventBus);
     this.arrayMeshes = createArrayMeshProcessor(fileEventBus, this.eventBus);
-    this.fonts = createFontProcessor(fileEventBus, this.eventBus);
+    this.fonts = createFontProcessor(fileEventBus, this.eventBus, this.dependencies);
 
     // A Theme's font refs resolve through the FONT processor (a different peer, unlike a
     // Font's own self-recursion).
-    this.themes = createThemeProcessor(fileEventBus, this.eventBus, (address) =>
-      this.peerLoad(this.fonts, 'font', address)
+    this.themes = createThemeProcessor(
+      fileEventBus,
+      this.eventBus,
+      (themeKey) => (address) =>
+        this.peerLoad({ busType: 'theme', key: themeKey }, this.fonts, 'font', address)
     );
 
     this.processors = new Map<ResourceType, ResourceProcessor<unknown>>([
@@ -280,6 +283,7 @@ export class ResourceLoader {
    */
   clear(): void {
     this.metadata.clear();
+    this.dependencies.clear();
     for (const proc of this.processors.values()) {
       proc.clearCache();
     }
@@ -295,6 +299,7 @@ export class ResourceLoader {
    * torn down: announced consumers refetch at once under the current provider.
    */
   clearCaches(): void {
+    this.dependencies.clear();
     runClearCachesSequence({
       processors: this.processors,
       eventBus: this.eventBus,
@@ -304,53 +309,18 @@ export class ResourceLoader {
     });
   }
 
-  /** Clear one path across all processors (hot-reload). `provideFile` also drops the FileEventBus cache. */
-  clearCache(path: string): void {
-    for (const proc of this.processors.values()) {
-      proc.clearCache(path);
-    }
-    logger.info(`[ResourceLoader] Cleared cache for: ${path}`);
-  }
-
   /**
-   * Signal that a missing file is now available: clear its cached failure and
-   * re-request it, so `useResource` moves from `'missing'` to `'loaded'`. The
-   * registered metadata type picks the processor. An unregistered path fans out
-   * to every processor that could claim it.
+   * A file changed, appeared or went away (a **Dependency hot-reload**, a **Resource
+   * upload** or its removal): drop and announce every resource built from it or that
+   * read it. A mounted consumer requests each again. An address names its whole file.
    */
-  provideFile(rawPath: string): void {
-    // Bytes belong to a file, so normalise first: clearing the file announces
-    // `invalidated` to every address inside it, while an address would miss the
-    // metadata. This backstops an out-of-tree host that passes a sub-resource address.
-    const path = resourceFilePath(rawPath);
-    this._fileEventBus?.clearCache(path);
-    this.clearCache(path);
-
-    const metadata = this.metadata.get(path);
-    const registration = metadata?.type ? resourceSliceRegistry.byTypeName(metadata.type) : null;
-    const busType = registration?.busType ?? null;
-
-    logger.info(
-      `[ResourceLoader] provideFile: ${path}` +
-        (metadata?.type ? ` (type: ${metadata.type})` : ' (no metadata; fanning out)')
-    );
-
-    if (busType) {
-      this.request(busType, path);
-    } else if (registration) {
-      // A claimed type the loader never serves (ViewportTexture): fanning out would
-      // ask processors that must refuse it.
-      logger.info(`[ResourceLoader] provideFile: ${metadata?.type} is not loader-served; skipping`);
-    } else if (path.endsWith('.tres')) {
-      // Unregistered .tres, such as a raw `tile_set` path: every .tres processor gets
-      // the re-request, and each subscriber hears only its own bus slot.
-      this.resources.request(path);
-      this.fonts.request(path);
-      this.themes.request(path);
-    } else {
-      // Unknown type: only the processor that can read the content produces a result.
-      // The other fails silently into its cache, unseen by subscribers of its bus slot.
-      this.textures.request(path);
-    }
+  provideFile(path: string): void {
+    logger.info(`[ResourceLoader] provideFile: ${path}`);
+    runProvideFileSequence({
+      path,
+      processors: this.processors,
+      fileBus: this._fileEventBus ?? undefined,
+      dependencies: this.dependencies,
+    });
   }
 }

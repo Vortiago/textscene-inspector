@@ -131,3 +131,11 @@ export function basisDeterminant(
 ): number {
   return a * (e * i - h * f) - d * (b * i - h * c) + g * (b * f - e * c);
 }
+
+/**
+ * `Math::snapped` (`core/math/math_funcs.cpp:121-126`): the nearest multiple of `step`, a tie
+ * rounding up through `floor(value / step + 0.5)`. A zero step returns the value unchanged.
+ */
+export function snapped(value: number, step: number): number {
+  return step !== 0 ? Math.floor(value / step + 0.5) * step : value;
+}

@@ -36,4 +36,4 @@ The lenient parser registers the plain `Node` reader, which reads only the headi
 
 ## Known limitations
 
-- **Not drawn** Godot displays the dialog once popped up. The previewer draws nothing for it.
+- **Not drawn** Godot displays the dialog once popped up, but the previewer draws nothing for it.

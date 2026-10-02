@@ -17,6 +17,6 @@ describe('fastnoiselite slice registration', () => {
   });
 
   it('routes FastNoiseLite to the resource bus slot', () => {
-    expect(resourceSliceRegistry.busTypeFor('FastNoiseLite')).toBe('resource');
+    expect(resourceSliceRegistry.byTypeName('FastNoiseLite')?.busType ?? null).toBe('resource');
   });
 });

@@ -42,7 +42,7 @@ describe('collision-shape slice registrations', () => {
   });
 
   it.each(CLAIMS)('%s routes to the generic resource processor slot', (typeName) => {
-    expect(resourceSliceRegistry.busTypeFor(typeName)).toBe('resource');
+    expect(resourceSliceRegistry.byTypeName(typeName)?.busType ?? null).toBe('resource');
   });
 
   it('claims no file extension — `.tres` is the shared Godot-text container', () => {

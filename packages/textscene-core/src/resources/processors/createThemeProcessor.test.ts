@@ -34,7 +34,7 @@ class MapProvider implements ResourceProvider {
 function setup(files: Record<string, string | ArrayBuffer>, loadFont: FontLoaderFn = async () => null) {
   const provider = new MapProvider(new Map(Object.entries(files)));
   const eventBus = new ResourceEventBus();
-  const processor = createThemeProcessor(new FileEventBus(provider), eventBus, loadFont);
+  const processor = createThemeProcessor(new FileEventBus(provider), eventBus, () => loadFont);
   return { provider, eventBus, processor };
 }
 

@@ -10,7 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # FABRIK3D
 
-The position-based IK solver: each frame it drags a bone chain onto its target with a backward reaching pass and a forward one, writing the result into the parent Skeleton3D's poses. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
+The position-based IK solver. Each frame, a backward reaching pass and a forward one drag a bone chain onto its target. It writes the result into the parent Skeleton3D's poses. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
 
 ## Linting
 

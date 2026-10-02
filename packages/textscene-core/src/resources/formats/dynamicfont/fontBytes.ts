@@ -5,6 +5,7 @@
  */
 
 import type { FontFileResource } from '../../fonts/font/types';
+import { fileExtension } from '../../fileExtension';
 
 /**
  * Dot-prefixed and lowercase, as the extension claim and a provider's `fileExtension`
@@ -20,17 +21,15 @@ const FONT_MIME_TYPES: Record<string, string> = {
   '.woff2': 'font/woff2',
 };
 
-function extensionOf(path: string): string {
-  return `.${path.split('.').pop()?.toLowerCase() ?? ''}`;
-}
-
 /** A raw binary font file, the shape a `FontFile` `ExtResource` usually takes. */
 export function isFontContainerPath(path: string): boolean {
-  return (FONT_CONTAINER_EXTENSIONS as readonly string[]).includes(extensionOf(path));
+  const extension = fileExtension(path);
+  return extension !== null && (FONT_CONTAINER_EXTENSIONS as readonly string[]).includes(extension);
 }
 
 export function fontContainerMimeType(path: string): string | undefined {
-  return FONT_MIME_TYPES[extensionOf(path)];
+  const extension = fileExtension(path);
+  return extension === null ? undefined : FONT_MIME_TYPES[extension];
 }
 
 /** A raw font file's bytes need no parsing: they are the resource. */

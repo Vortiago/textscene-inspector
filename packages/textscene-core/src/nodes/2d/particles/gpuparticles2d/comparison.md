@@ -61,5 +61,5 @@ since its setter takes any int and only the inspector hint bounds it.
 
 ## Known limitations
 
-- **Not drawn** Godot draws the particle cloud. The previewer draws nothing for this
+- **Not drawn** Godot draws the particle cloud, but the previewer draws nothing for this
   node.

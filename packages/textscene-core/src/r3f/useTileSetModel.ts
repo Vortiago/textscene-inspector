@@ -5,13 +5,15 @@
  * handling. The sync branches pass `''`, so the hook-call count is constant.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { warn } from '../logger';
 import type { ParsedResource } from '../parser/parsedResource';
 import { parseResourceReference, resolveExtResourcePath } from '../resources/SubResourceResolver';
 import { tileSetFromScene, tileSetFromTres } from '../resources/tileset/decode';
 import type { TileSetModel } from '../resources/tileset/types';
 import { useResource, useResourceLoader } from '../resources/useResource';
+import { useCacheVersion } from '../resources/useCacheVersion';
+import type { ResourceType } from '../resources/ResourceEventBus';
 import { useSceneResources } from './SceneResourcesContext';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 
@@ -72,19 +74,8 @@ export function useTileSetModels(
 ): (ref: string | undefined) => TileSetModelResult {
   const { internalResources, externalResources } = useSceneResources();
   const loader = useResourceLoader();
-  const [generation, setGeneration] = useState(0);
-
-  useEffect(() => {
-    const bus = loader?.eventBus;
-    if (!bus) return undefined;
-    const bump = () => setGeneration((g) => g + 1);
-    bus.on('resource', 'loaded', bump);
-    bus.on('resource', 'failed', bump);
-    return () => {
-      bus.off('resource', 'loaded', bump);
-      bus.off('resource', 'failed', bump);
-    };
-  }, [loader]);
+  const tresPaths = useRef<ReadonlySet<string>>(NO_PATHS);
+  const generation = useCacheVersion(loader, TILESET_BUSES, tresPaths);
 
   const distinct = useMemo(
     () => [...new Set(refs.filter((ref): ref is string => !!ref))].sort(),
@@ -93,14 +84,22 @@ export function useTileSetModels(
     [refs.filter(Boolean).join('\u0000')]
   );
 
-  const pending = useMemo(() => {
-    const paths: string[] = [];
+  const paths = useMemo(() => {
+    const out = new Set<string>();
     for (const ref of distinct) {
       const path = externalTresPath(ref, externalResources);
-      if (path && loader && loader.resources.getCached(path) === undefined) paths.push(path);
+      if (path) out.add(path);
     }
-    return paths;
-  }, [distinct, externalResources, loader]);
+    return out;
+  }, [distinct, externalResources]);
+  useEffect(() => {
+    tresPaths.current = paths;
+  }, [paths]);
+
+  const pending = useMemo(
+    () => (loader ? [...paths].filter((path) => loader.resources.getCached(path) === undefined) : []),
+    [paths, loader]
+  );
 
   // After render, not during it: `useResource`'s own convention.
   useEffect(() => {
@@ -123,6 +122,10 @@ export function useTileSetModels(
 }
 
 const UNAVAILABLE: TileSetModelResult = { model: null, status: 'unavailable' };
+const NO_PATHS: ReadonlySet<string> = new Set();
+
+/** A TileSet `.tres` loads on the generic resource bus. */
+const TILESET_BUSES: readonly ResourceType[] = ['resource'];
 
 /** The `.tres` an external ref names, or null for a SubResource or a non-text one. */
 function externalTresPath(ref: string, externalResources: readonly TscnExternalResource[]): string | null {

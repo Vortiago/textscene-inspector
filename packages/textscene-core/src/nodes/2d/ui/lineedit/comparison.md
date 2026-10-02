@@ -10,8 +10,8 @@ renders_as: a single-line text box
 # LineEdit
 
 LineEdit is a single-line text field. The previewer draws its stylebox, its `right_icon`
-or clear button, its caret while `caret_force_displayed` is set, and one clipped run of
-text (the string, or the placeholder) in the colour its state calls for. `max_length`
+or clear button, and its caret while `caret_force_displayed` is set. It draws one clipped
+run of text (the string, or the placeholder) in the colour its state calls for. `max_length`
 truncates an over-long `text` the same way Godot does.
 
 ## Linting
@@ -74,10 +74,9 @@ An empty `secret_character` falls back to the bullet, as Godot does.
 
 ## Known limitations
 
-- **Not drawn** `_is_over_clear_button`'s RTL hit region (line_edit.cpp:1175) and
-  the direction-aware caret markers (:1590-1601): both need pointer or focus state.
-  The alignment swap, the clear button's side, the text's floor past it and
-  `ofs_max` (:1397-1421,1455-1483) all draw.
+- **Not drawn** The right-to-left hit region of `_is_over_clear_button`
+  (line_edit.cpp:1175) and the direction-aware caret markers (:1590-1601), which need
+  pointer or focus state.
 - **Not drawn** `shaped_text_set_direction` at :3104: it takes `is_layout_rtl()`
   only while `text_direction` is INHERITED, and the default is
   `TEXT_DIRECTION_AUTO` (line_edit.h:144).

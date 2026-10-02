@@ -34,4 +34,4 @@ The lenient parser reuses `parseNode3D`, which reads only `transform` and `visib
 
 ## Known limitations
 
-- **Not drawn** Godot lights dynamic objects from the baked probe. The previewer applies no indirect light from it.
+- **Not drawn** Godot lights dynamic objects from the baked probe, but the previewer applies no indirect light from it.

@@ -9,9 +9,9 @@ renders_as: a composed settings/HUD panel — 23 Control types in one tree
 
 # Complex 2D GUI
 
-A mission settings panel built from 23 Control types: a header card, a scrolling column of
-controls, a briefing, an action row, a sector map, a status readout and an alert strip over
-everything.
+A mission settings panel built from 23 Control types. It holds a header card, a scrolling
+column of controls, a briefing, an action row, a sector map and a status readout. An alert
+strip sits over everything.
 
 The scene moves many variables at once, so it shows how Controls interact, not which one
 broke. Find a regression here, then pin it in the `unit-*` fixture of the type that owns it.
@@ -33,5 +33,5 @@ broke. Find a regression here, then pin it in the `unit-*` fixture of the type t
 ## Known limitations
 
 - **Approximated** Text edges differ slightly from Godot's, because glyphs come from an MSDF
-  atlas. Layout, wrap points and every non-text surface match.
+  atlas, while layout, wrap points and every non-text surface match.
 - **Approximated** A `[u]` underline sits two pixels higher and softer than Godot's.

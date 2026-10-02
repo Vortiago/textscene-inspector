@@ -7,6 +7,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { SkyEnvironmentInput } from '../../resources/sky/build';
 import type { PanoramaSkyProperties } from '../../resources/sky/types';
 import { SkyLayer } from './SkyLayer';
+import { skyLightUserData } from './skyLight';
 
 const bakes = vi.hoisted((): SkyEnvironmentInput[] => []);
 
@@ -71,5 +72,45 @@ describe('SkyLayer', () => {
     await advance(renderer, 3);
 
     expect(bakes).toHaveLength(1);
+  });
+
+  it('leaves out a light that declares it draws nothing in the sky', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <>
+        <SkyLayer sky={SKY} />
+        <directionalLight position={[1, 2, 3]} />
+        <directionalLight
+          position={[3, 2, 1]}
+          userData={skyLightUserData({ drawsInSky: false, energy: 1 })}
+        />
+      </>
+    );
+    await advance(renderer, 1);
+
+    expect(lastBake()?.lights).toHaveLength(1);
+  });
+
+  it('draws a light at its declared energy, though it lights no surface (edge case)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <>
+        <SkyLayer sky={SKY} />
+        <directionalLight intensity={0} userData={skyLightUserData({ drawsInSky: true, energy: 2 })} />
+      </>
+    );
+    await advance(renderer, 1);
+
+    expect(lastBake()?.lights[0]?.energy).toBe(2);
+  });
+
+  it('draws a light that declares nothing at its intensity over the scale (error case)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <>
+        <SkyLayer sky={SKY} />
+        <directionalLight intensity={Math.PI * 3} />
+      </>
+    );
+    await advance(renderer, 1);
+
+    expect(lastBake()?.lights[0]?.energy).toBeCloseTo(3);
   });
 });

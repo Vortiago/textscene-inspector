@@ -12,7 +12,7 @@ describe('curve2d slice registration', () => {
   });
 
   it('routes `Curve2D` to the generic resource slot with the Resource failure label', () => {
-    expect(resourceSliceRegistry.busTypeFor('Curve2D')).toBe('resource');
+    expect(resourceSliceRegistry.byTypeName('Curve2D')?.busType ?? null).toBe('resource');
     expect(resourceSliceRegistry.byTypeName('Curve2D')?.failureLabel).toBe('Resource');
   });
 

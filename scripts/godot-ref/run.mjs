@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 /**
  * Renders a `.tscn` through the real Godot engine, so a parity question is answered by
- * measurement. It needs a local Godot 4.6 (`godot`) and `xvfb-run`, which CI does not have, so
- * it is a developer tool, not a gate. Each flag's reason stands beside its case in `parseArgs`.
+ * measurement. It needs a local Godot 4.6 (`godot`), `xvfb-run` and a Vulkan driver (lavapipe,
+ * `mesa-vulkan-drivers`, on a host without a GPU), which CI does not have, so it is a developer
+ * tool, not a gate. Without Vulkan, Godot falls back to the Compatibility renderer, and the tool
+ * refuses that render. Each flag's reason stands beside its case in `parseArgs`.
  *
  * @example
  *   pnpm ref:godot scenes/fixtures/unit-plane-mesh.tscn --out /tmp/ref.png
@@ -71,6 +73,12 @@ export const RENDER_MODES = ['auto', '2d', '3d', '2d-root'];
  */
 export const DRIVER_NAMES = ['vulkan', 'd3d12', 'metal', 'opengl3', 'opengl3_angle', 'opengl3_es'];
 
+/**
+ * The method a project that names none asks for, and the one the editor renders a 3D scene with.
+ * main.cpp:2582 pairs it with the vulkan driver.
+ */
+export const DEFAULT_RENDERING_METHOD = 'forward_plus';
+
 export const RENDERING_DRIVERS = {
   vulkan: 'forward_plus',
   d3d12: 'forward_plus',
@@ -79,6 +87,34 @@ export const RENDERING_DRIVERS = {
   opengl3_angle: 'gl_compatibility',
   opengl3_es: 'gl_compatibility',
 };
+
+/**
+ * The method this render asks for: the driver's when `--rendering-driver` names one, else the
+ * source project's `renderer/rendering_method` (which `projectConfig` carries forward), else the
+ * default.
+ */
+export function requestedRenderingMethod(sourceIni, renderingDriver) {
+  if (renderingDriver) return RENDERING_DRIVERS[renderingDriver];
+  const match = /^\s*renderer\/rendering_method\s*=\s*"([^"]+)"/m.exec(sourceIni ?? '');
+  return match ? match[1] : DEFAULT_RENDERING_METHOD;
+}
+
+/**
+ * The refusal for a render drawn by another method than the one asked for, or null. Godot falls
+ * back to OpenGL 3 when Vulkan does not start (its log names `display_server_x11.cpp:7046`), and
+ * the Compatibility renderer answers parity questions differently: two equal suns, one shadowed,
+ * light a grey ground to 186 there and to 129 under Forward+. Null `rendered` means the bootstrap
+ * wrote no report, so there is nothing to compare.
+ */
+export function renderingMethodFallbackMessage(requested, rendered) {
+  if (!rendered || rendered.method === requested) return null;
+  return (
+    `Refusing to answer: this reference asks for ${requested}, but Godot rendered with ` +
+    `${rendered.method} (${rendered.driver}), so it fell back. Install a driver for the asked ` +
+    'method (lavapipe, `mesa-vulkan-drivers`, for vulkan), or pass --rendering-driver to measure ' +
+    'the other method on purpose.'
+  );
+}
 
 /**
  * Draws the project-viewport rectangle as the root window, for the settings Godot hands only to
@@ -557,6 +593,7 @@ export function bootstrapScript({
   boundsOut,
   modeOut,
   driftOut = null,
+  rendererOut = '',
   fov,
   fovExplicit,
   canvas2DSize,
@@ -587,6 +624,7 @@ const MODE_OUT := ${gdString(modeOut)}
 # Empty on the root-window arm: there is nothing nested there to compare the
 # root window against, so a report would be the capture measured against itself.
 const DRIFT_OUT := ${gdString(rootWindow ? '' : (driftOut ?? ''))}
+const RENDERER_OUT := ${gdString(rendererOut)}
 const ROOT_WINDOW := ${rootWindow ? 'true' : 'false'}
 const ROOT_ONLY_PROPERTIES := [
 ${ROOT_ONLY_VIEWPORT_PROPERTIES.map(({ property }) => `\t"${property}",`).join('\n')}
@@ -623,6 +661,7 @@ func _ready() -> void:
 	# body is supposed to fall there.
 	if PREVIEWS:
 		get_tree().paused = true
+	_write_renderer()
 	var target: Node = load(SCENE_PATH).instantiate()
 	# Before ANY add_child: entering the tree is what fires _ready.
 	if PREVIEWS:
@@ -887,6 +926,20 @@ func _converge() -> void:
 	for _i in 6:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
+
+# The method and driver that drew this frame, which the caller compares with
+# the ones it asked for: a fallback renders without failing.
+func _write_renderer() -> void:
+	if RENDERER_OUT == "":
+		return
+	var file := FileAccess.open(RENDERER_OUT, FileAccess.WRITE)
+	if file == null:
+		return
+	file.store_string(JSON.stringify({
+		"method": RenderingServer.get_current_rendering_method(),
+		"driver": RenderingServer.get_current_rendering_driver_name(),
+	}))
+	file.close()
 
 func _write_mode(two_d: bool) -> void:
 	if MODE_OUT == "":
@@ -1281,6 +1334,7 @@ async function renderInto(
   // not kept.
   const modeOut = join(work, '__ref_mode.txt');
   const driftOut = join(work, '__ref_root_only.json');
+  const rendererOut = join(work, '__ref_renderer.json');
   const rootWindow = mode === ROOT_WINDOW_MODE;
 
   const sourceIni = existsSync(join(root, 'project.godot'))
@@ -1316,6 +1370,7 @@ async function renderInto(
       boundsOut: boundsOut ? resolve(boundsOut) : null,
       modeOut,
       driftOut,
+      rendererOut,
       fov,
       particles,
       canvas2DSize,
@@ -1369,6 +1424,13 @@ async function renderInto(
       );
     }
   }
+
+  const rendererReport = existsSync(rendererOut) ? JSON.parse(await readFile(rendererOut, 'utf8')) : null;
+  const fallback = renderingMethodFallbackMessage(
+    requestedRenderingMethod(sourceIni, renderingDriver),
+    rendererReport
+  );
+  if (fallback) await refuse(fallback, { renderingMethodFallback: true });
 
   const drift = existsSync(driftOut)
     ? rootOnlyDriftMessage(JSON.parse(await readFile(driftOut, 'utf8')))
