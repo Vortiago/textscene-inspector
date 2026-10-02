@@ -5,6 +5,7 @@
  */
 
 import * as vscode from 'vscode';
+import { PROJECT_FILE_NAME } from '@textscene/core/godot';
 import type { HostToWebviewMessage } from './protocol';
 import { VSCodeResourceProvider } from './providers/VSCodeResourceProvider';
 import { buildPanelHtml } from './panelHtml';
@@ -46,7 +47,8 @@ export class TscnPreviewPanel {
   /**
    * Cached per panel, so `findProjectRoot`'s walk and the served `fsPath -> res://`
    * map (`VSCodeResourceProvider.getServedResPath`) survive across requests and
-   * dependency changes. `update()` discards it only when the document changes.
+   * dependency changes. `update()` discards it when the document changes, and
+   * `handleDependencyChange` when a `project.godot` change moves the project root.
    */
   private _resourceProvider: VSCodeResourceProvider | null = null;
 
@@ -170,6 +172,7 @@ export class TscnPreviewPanel {
    * Tells the webview to re-fetch a watched dependency that changed on disk, since
    * the unchanged scene text makes `_loadTscnContent` no-op. A path missing from
    * the served-resources map was never requested, so it has nothing to invalidate.
+   * A `project.godot` that moves the project root re-fetches every served path.
    */
   public async handleDependencyChange(fileUri: vscode.Uri): Promise<void> {
     // A webview that is not ready yet loads everything fresh on mount.
@@ -180,8 +183,28 @@ export class TscnPreviewPanel {
     if (!provider) {
       return;
     }
+    if (isProjectFile(fileUri) && (await provider.hasProjectRootMoved())) {
+      this._reloadUnderMovedRoot(provider);
+      return;
+    }
     const resPath = provider.getServedResPath(fileUri);
     if (resPath) {
+      this.invalidateResource(resPath);
+    }
+  }
+
+  /**
+   * Drops a provider whose project root moved, and asks the webview to re-fetch every
+   * path it served: each `res://` path now names a file under the new root.
+   */
+  private _reloadUnderMovedRoot(provider: VSCodeResourceProvider): void {
+    // `update()` can replace the provider during the walk, and its successor
+    // resolves against the current root already.
+    if (this._resourceProvider !== provider) {
+      return;
+    }
+    this._resourceProvider = null;
+    for (const resPath of provider.getServedResPaths()) {
       this.invalidateResource(resPath);
     }
   }
@@ -261,4 +284,9 @@ export class TscnPreviewPanel {
     if (this._disposed) return;
     this._panel.webview.postMessage(message);
   }
+}
+
+/** Whether `fileUri` names a `project.godot`, whose directory is the `res://` root. */
+function isProjectFile(fileUri: vscode.Uri): boolean {
+  return fileUri.path.split('/').pop() === PROJECT_FILE_NAME;
 }
