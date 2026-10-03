@@ -2,9 +2,9 @@
  * Reads the preview's viewport canvas back over CDP, and waits for it to settle or
  * to change. `driveScene.mjs` uses these on the webview frame.
  */
-/* global document */
-// `document` appears only inside `evaluate` callbacks, which are serialised and
-// run in the browser, never in this Node process.
+/* global document, HTMLCanvasElement */
+// Those globals appear only inside `evaluate` callbacks and init scripts, which are
+// serialised and run in the browser, never in this Node process.
 import { writeFileSync } from 'node:fs';
 import { inkStats } from './pixels.mjs';
 
@@ -27,6 +27,22 @@ export function readCanvasDataUrl(frame) {
       return `error:${String(error)}`;
     }
   });
+}
+
+/**
+ * An init script that keeps each WebGL canvas's drawing buffer between frames. three.js
+ * leaves `preserveDrawingBuffer` off, so a canvas reads back blank outside the app's own
+ * render call. It only preserves what was drawn: it cannot create ink. CDP injects it
+ * into every frame, exempt from the webview's CSP, so the app carries no test branch.
+ */
+export function preserveWebglDrawingBuffer() {
+  const original = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function patched(type, attributes) {
+    if (typeof type === 'string' && type.startsWith('webgl')) {
+      return original.call(this, type, { ...(attributes ?? {}), preserveDrawingBuffer: true });
+    }
+    return original.call(this, type, attributes);
+  };
 }
 
 const isPng = (dataUrl) => typeof dataUrl === 'string' && dataUrl.startsWith(PNG_DATA_URL_PREFIX);

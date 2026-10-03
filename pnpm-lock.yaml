@@ -48,6 +48,9 @@ catalogs:
     '@vscode/test-electron':
       specifier: ^3.1.0
       version: 3.1.0
+    '@vscode/test-web':
+      specifier: ^0.0.81
+      version: 0.0.81
     commander:
       specifier: ^15.0.0
       version: 15.0.0
@@ -137,6 +140,9 @@ importers:
       '@vscode/test-electron':
         specifier: 'catalog:'
         version: 3.1.0
+      '@vscode/test-web':
+        specifier: 'catalog:'
+        version: 0.0.81
       eslint:
         specifier: ^10.11.0
         version: 10.11.0
@@ -248,7 +254,7 @@ importers:
         specifier: 'catalog:'
         version: 3.1.0
       '@vscode/test-web':
-        specifier: ^0.0.81
+        specifier: 'catalog:'
         version: 0.0.81
       '@vscode/vsce':
         specifier: ^4.0.0
