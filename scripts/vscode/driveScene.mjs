@@ -3,7 +3,7 @@
  * reports what the preview webview painted. Two callers: `drive-vscode.mjs`,
  * the CLI, and `webview-csp-gate.mjs`, the automated gate.
  */
-/* global document, HTMLCanvasElement, addEventListener */
+/* global document, addEventListener */
 // Those globals appear only inside `evaluate`/`addInitScript` callbacks, which
 // are serialised and run in the browser, never in this Node process.
 import { execSync, spawn } from 'node:child_process';
@@ -33,6 +33,7 @@ import {
   vscodeTestVersion,
 } from '../../apps/textscene-vscode/src/test/integration/integrationLaunch.ts';
 import {
+  preserveWebglDrawingBuffer,
   readCanvasDataUrl,
   sleep,
   stabilizeCanvas,
@@ -527,22 +528,8 @@ export async function driveScene(options) {
     // Injected before the webview iframe exists, so it lands in that frame too.
     // CDP injection is exempt from the page's CSP, so it instruments a webview
     // whose CSP is `default-src 'none'` with no test-only branch in the app.
-    await page.addInitScript((patchBuffer) => {
-      // three.js does not set `preserveDrawingBuffer`, so a WebGL canvas reads
-      // back blank outside the app's own render call. Forcing it on only
-      // preserves what was drawn: it cannot create ink.
-      if (patchBuffer) {
-        const original = HTMLCanvasElement.prototype.getContext;
-        HTMLCanvasElement.prototype.getContext = function patched(type, attributes) {
-          if (typeof type === 'string' && type.startsWith('webgl')) {
-            return original.call(this, type, {
-              ...(attributes ?? {}),
-              preserveDrawingBuffer: true,
-            });
-          }
-          return original.call(this, type, attributes);
-        };
-      }
+    if (preserveBuffer) await page.addInitScript(preserveWebglDrawingBuffer);
+    await page.addInitScript(() => {
       // A blocked resource does not always reach the console channel CDP exposes.
       globalThis.__textsceneCspViolations = [];
       addEventListener('securitypolicyviolation', (event) => {
@@ -553,7 +540,7 @@ export async function driveScene(options) {
         });
         console.error(`[csp-violation] ${event.effectiveDirective} blocked ${event.blockedURI}`);
       });
-    }, preserveBuffer);
+    });
     report.preserveDrawingBuffer = preserveBuffer;
     for (const [script, argument] of initScripts) await page.addInitScript(script, argument);
 

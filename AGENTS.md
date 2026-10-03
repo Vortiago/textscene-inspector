@@ -55,6 +55,8 @@ Run these when the change touches the named area:
 - Rendering: `pnpm test:visual`.
 - The webview CSP, its bundle, asset loading, the text pipeline or the **Dependency hot-reload**:
   `pnpm test:vscode:csp`.
+- The browser build, or how the preview starts: `pnpm --filter textscene-inspector test:web`, then
+  `pnpm test:vscode:web-preview`.
 - The web previewer's outliner, inspector, mode switching, or camera and selection wiring:
   `SHOWCASE_CHANNEL=bundled pnpm test:e2e:web`. Without the variable, it fails to find system
   Chrome. Never add a test hook for it to a production file.

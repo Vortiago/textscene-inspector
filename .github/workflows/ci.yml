@@ -306,6 +306,14 @@ jobs:
 
       - run: pnpm --filter textscene-inspector test:web
 
+      # On the build test:web made: a local folder, the preview button, and a painted viewport.
+      - run: pnpm test:vscode:web-preview
+      - if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: web-preview-gate
+          path: scripts/vscode/output/web-preview-gate/
+
   # The one check that branch protection requires, so a new or renamed job needs no settings change.
   # Turns a skip that visualScope asked for into a pass, so ci-ok can keep failing on any
   # skipped job.
