@@ -16,7 +16,7 @@ export const RUNTIME_EFFECT_NODE_TYPES = [
     effect: 'drives',
     cite: 'bone_twist_disperser_3d.cpp `_process_modification`',
   },
-  { type: 'CCDIK3D', effect: 'drives', cite: 'ccdik_3d.cpp `_process` solves each frame' },
+  { type: 'CCDIK3D', effect: 'drives', cite: 'ccdik_3d.cpp `_process_modification` solves each frame' },
   {
     type: 'ConvertTransformModifier3D',
     effect: 'drives',
@@ -27,8 +27,12 @@ export const RUNTIME_EFFECT_NODE_TYPES = [
     effect: 'drives',
     cite: 'copy_transform_modifier_3d.cpp `_process_modification`',
   },
-  { type: 'FABRIK3D', effect: 'drives', cite: 'fabrik_3d.cpp `_process` solves each frame' },
-  { type: 'JacobianIK3D', effect: 'drives', cite: 'jacobianik_3d.cpp `_process` solves each frame' },
+  { type: 'FABRIK3D', effect: 'drives', cite: 'fabrik_3d.cpp `_process_modification` solves each frame' },
+  {
+    type: 'JacobianIK3D',
+    effect: 'drives',
+    cite: 'jacobianik_3d.cpp `_process_modification` solves each frame',
+  },
   {
     type: 'LimitAngularVelocityModifier3D',
     effect: 'drives',
@@ -38,7 +42,7 @@ export const RUNTIME_EFFECT_NODE_TYPES = [
   {
     type: 'ModifierBoneTarget3D',
     effect: 'drives',
-    cite: 'modifier_bone_target_3d.cpp `_process` mirrors its bone onto the node',
+    cite: 'modifier_bone_target_3d.cpp `_process_modification` mirrors its bone onto the node',
   },
   {
     type: 'PhysicalBoneSimulator3D',
@@ -46,9 +50,17 @@ export const RUNTIME_EFFECT_NODE_TYPES = [
     cite: 'physical_bone_simulator_3d.cpp `_process_modification`',
   },
   { type: 'RetargetModifier3D', effect: 'drives', cite: 'retarget_modifier_3d.cpp `_process_modification`' },
-  { type: 'SkeletonIK3D', effect: 'drives', cite: 'skeleton_ik_3d.cpp `_process` solves each frame' },
+  {
+    type: 'SkeletonIK3D',
+    effect: 'drives',
+    cite: 'skeleton_ik_3d.cpp `_process_modification` solves each frame',
+  },
   { type: 'SkeletonModifier3D', effect: 'drives', cite: 'skeleton_modifier_3d.cpp `_process_modification`' },
-  { type: 'SplineIK3D', effect: 'drives', cite: 'spline_ik_3d.cpp `_process` solves each frame' },
+  {
+    type: 'SplineIK3D',
+    effect: 'drives',
+    cite: 'spline_ik_3d.cpp `_process_modification` solves each frame',
+  },
   {
     type: 'SpringBoneCollision3D',
     effect: 'drives',
@@ -77,7 +89,11 @@ export const RUNTIME_EFFECT_NODE_TYPES = [
   { type: 'TwoBoneIK3D', effect: 'drives', cite: 'twoboneik_3d.cpp `_process_modification`' },
   { type: 'XRBodyModifier3D', effect: 'drives', cite: 'xr_body_modifier_3d.cpp `_process_modification`' },
   { type: 'XRHandModifier3D', effect: 'drives', cite: 'xr_hand_modifier_3d.cpp `_process_modification`' },
-  { type: 'XRFaceModifier3D', effect: 'drives', cite: 'xr_face_modifier_3d.cpp `_process_modification`' },
+  {
+    type: 'XRFaceModifier3D',
+    effect: 'drives',
+    cite: 'xr_face_modifier_3d.cpp `_process` writes blend shapes on its target',
+  },
   {
     type: 'OpenXRHand',
     effect: 'drives',

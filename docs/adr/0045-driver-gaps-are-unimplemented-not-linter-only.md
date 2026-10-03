@@ -9,9 +9,9 @@
 
 `linter-only` on a comparison sheet claims the node's runtime effect is nil: it
 draws nothing and moves nothing, so there is no render to assess. Skeleton
-modifiers, IK solvers, the XR skeleton pose writers (`XRBodyModifier3D`,
-`XRHandModifier3D`, `XRFaceModifier3D`, `OpenXRHand`), the XR render-model nodes
-and RemoteTransform all claimed it.
+modifiers, IK solvers, the XR pose writers (`XRBodyModifier3D`,
+`XRHandModifier3D`, `OpenXRHand`), the blend-shape writer `XRFaceModifier3D`,
+the XR render-model nodes and RemoteTransform all claimed it.
 Each has a real Godot runtime effect: a `SkeletonModifier3D` feeds bone poses
 through `Skeleton3D::_process_modifiers` (`skeleton_3d.cpp:1166`), a
 `RemoteTransform3D` relays its transform every frame

@@ -465,6 +465,23 @@ describe('comparison sheets', () => {
         .map((s) => `${s.label}: registers a scene pass but claims linter-only`);
       expect(bad.sort()).toEqual([]);
     });
+
+    it('grounds each runtime-effect cite in the hook its class actually runs on', () => {
+      // The catalog's ancestry is the independent check on the cite text: a
+      // SkeletonModifier3D descendant runs through the modification hook and
+      // must cite it; nothing else may claim it. A wrong method name is a
+      // wrong engine fact (ADR-0045).
+      const chains = new Map(
+        JSON.parse(readFileSync(join(HERE, 'node-catalog.json'), 'utf8')).nodes.map((n) => [n.name, n.chain])
+      );
+      const unchecked = RUNTIME_EFFECT_NODE_TYPES.filter(({ type }) => !chains.has(type)).map((e) => e.type);
+      expect(unchecked.sort()).toEqual([]);
+      const bad = RUNTIME_EFFECT_NODE_TYPES.filter(({ type, cite }) => {
+        const isModifier = type === 'SkeletonModifier3D' || chains.get(type).includes('SkeletonModifier3D');
+        return isModifier ? !cite.includes('modification') : cite.includes('_process_modification');
+      }).map(({ type, cite }) => `${type}: ${cite}`);
+      expect(bad.sort()).toEqual([]);
+    });
   });
 });
 
