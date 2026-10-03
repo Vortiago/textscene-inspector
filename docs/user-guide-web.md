@@ -10,7 +10,7 @@ The web previewer renders a Godot `.tscn` scene in the browser.
 ## Open a scene
 
 - Click **Open .tscn** and pick a file.
-- Drag files onto the page. Drop a scene and its textures together.
+- Drag files onto the page. Drop a scene and its textures together. Add `project.godot` for the project's settings, and a model's `.import` file for its import settings.
 - Press <kbd>Ctrl/Cmd+K</kbd> to open the scene palette. The dev edition also lists the built-in scenes.
 
 The app reopens your last scene on the next visit.

@@ -5,7 +5,12 @@
  */
 
 import type { GLTFLoader, GLTFLoaderPlugin, GLTFParser } from 'three/addons/loaders/GLTFLoader.js';
-import { GODOT_GLTF_EXTENSIONS, unsupportedRequiredGltfExtensions } from '../../../godot/gltf';
+import {
+  GODOT_GLTF_EXTENSIONS,
+  gltfRefusalMessage,
+  requiredGltfExtensions,
+  unsupportedRequiredGltfExtensions,
+} from '../../../godot/gltf';
 import type { GltfExtensionRules } from './types';
 
 type JsonRecord = Record<string, unknown>;
@@ -43,12 +48,9 @@ function godotImporter(parser: GLTFParser): GLTFLoaderPlugin {
   return {
     name: 'GODOT_importer_extensions',
     beforeRoot: async () => {
-      const json = parser.json as { extensionsRequired?: string[] };
-      const [unsupported] = unsupportedRequiredGltfExtensions(json.extensionsRequired ?? []);
-      if (unsupported !== undefined) {
-        throw new Error(`glTF: required extension '${unsupported}' is not supported by Godot's importer`);
-      }
-      dropUnimportedExtensions(json);
+      const unsupported = unsupportedRequiredGltfExtensions(requiredGltfExtensions(parser.json));
+      if (unsupported.length > 0) throw new Error(`glTF: ${gltfRefusalMessage(unsupported)}`);
+      dropUnimportedExtensions(parser.json);
     },
   };
 }

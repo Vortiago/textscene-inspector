@@ -142,5 +142,5 @@ The lenient parser never rejects. Every scalar goes through the shared `floatOr`
 
 ## Known limitations
 
-- **Not drawn** Volumetric fog (`volumetric_fog_*`) has no three.js equivalent. Screen-space `fog_enabled` maps to `THREE.FogExp2` and is drawn.
+- **Not drawn** Volumetric fog (`volumetric_fog_*`) has no three.js equivalent, while screen-space `fog_enabled` maps to `THREE.FogExp2` and is drawn.
 - **Approximated** `tonemap_exposure` under the default LINEAR tonemapper is ignored, because three applies exposure only while a tone curve is active.

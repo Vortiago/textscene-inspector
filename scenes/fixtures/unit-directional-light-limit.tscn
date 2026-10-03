@@ -1,0 +1,66 @@
+[gd_scene format=3 uid="uid://unitdirlightlimit"]
+
+; Moves the directional light limit. Nine shadowed suns with four splits each, and only the ninth
+; has energy. Godot draws the first eight visible directional lights and stops
+; (renderer_scene_cull.cpp:3262), so the ninth neither lights nor casts, and the ground and the post
+; hold only the ambient light. Every other golden has at most two directional lights, so a light
+; past the eighth is invisible there.
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(4, 4)
+
+[sub_resource type="BoxMesh" id="BoxMesh_post"]
+size = Vector3(0.3, 1.2, 0.3)
+
+[node name="DirectionalLightLimitRoot" type="Node3D"]
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_ground")
+
+[node name="Post" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Dark1" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 2, 0)
+light_energy = 0.0
+shadow_enabled = true
+
+[node name="Dark2" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 2, 0)
+light_energy = 0.0
+shadow_enabled = true
+
+[node name="Dark3" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 2, 0)
+light_energy = 0.0
+shadow_enabled = true
+
+[node name="Dark4" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 2, 0)
+light_energy = 0.0
+shadow_enabled = true
+
+[node name="Dark5" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 2, 0)
+light_energy = 0.0
+shadow_enabled = true
+
+[node name="Dark6" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 2, 0)
+light_energy = 0.0
+shadow_enabled = true
+
+[node name="Dark7" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 2, 0)
+light_energy = 0.0
+shadow_enabled = true
+
+[node name="Dark8" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 2, 0)
+light_energy = 0.0
+shadow_enabled = true
+
+[node name="Ninth" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.353553, 0.353553, 0, 0.707107, 0.707107, -0.5, -0.612372, 0.612372, 0, 2, 0)
+shadow_enabled = true

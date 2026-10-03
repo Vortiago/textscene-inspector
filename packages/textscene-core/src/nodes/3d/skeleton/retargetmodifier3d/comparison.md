@@ -35,4 +35,4 @@ The `retargetmodifier3d-no-child-skeleton` rule stays silent when a child's clas
 elsewhere. An `instance=` node, or a class the pinned catalog does not list, may be a
 Skeleton3D.
 
-RetargetModifier3D registers `parseNode3D` directly, so `profile`, `use_global_pose` and `enable` are never read by the lenient parser. A malformed value is dropped rather than substituted, and an `enable` bit past the three the inspector lists is only a warning on the strict side.
+RetargetModifier3D registers `parseNode3D` directly, so `profile`, `use_global_pose` and `enable` are never read by the lenient parser. A malformed value is dropped rather than substituted. On the strict side, an `enable` bit past the three the inspector lists is only a warning.

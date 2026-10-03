@@ -33,5 +33,5 @@ malformed `offset_left` becomes `undefined` and is dropped silently.
 
 ## Known limitations
 
-- **Editor only** Godot builds this panel only inside the editor. The previewer draws
+- **Editor only** Godot builds this panel only inside the editor, and the previewer draws
   nothing for it.

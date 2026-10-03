@@ -10,6 +10,7 @@ import { TscnDocumentLinkProvider } from './TscnDocumentLinkProvider';
 import { TscnDiagnostics } from './TscnDiagnostics';
 import { initLogger, dispose as disposeLogger } from './logger';
 import { isUri } from './uriArgument';
+import { PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN } from './watchPatterns';
 
 export function activate(context: vscode.ExtensionContext) {
   initLogger('TextScene Inspector');
@@ -74,8 +75,15 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.languages.registerDocumentLinkProvider({ language: 'tscn' }, new TscnDocumentLinkProvider())
   );
 
-  // Linter diagnostics in the Problems panel.
-  context.subscriptions.push(new TscnDiagnostics());
+  // External changes to every file a scene can load, and to the project file. Each watcher
+  // serves the previews and the linter diagnostics in the Problems panel.
+  const resourceWatcher = vscode.workspace.createFileSystemWatcher(RESOURCE_FILES_PATTERN);
+  const projectFileWatcher = vscode.workspace.createFileSystemWatcher(PROJECT_FILE_PATTERN);
+  context.subscriptions.push(
+    resourceWatcher,
+    projectFileWatcher,
+    new TscnDiagnostics(resourceWatcher, projectFileWatcher)
+  );
 
   context.subscriptions.push(
     vscode.workspace.onDidSaveTextDocument((document) => {
@@ -87,17 +95,6 @@ export function activate(context: vscode.ExtensionContext) {
       }
     })
   );
-
-  // Watch for external resource file changes: materials (.tres), textures
-  // (png/jpg/webp/svg), GLB/glTF meshes, and instanced sub-scenes (.tscn).
-  const resourceWatcher = vscode.workspace.createFileSystemWatcher(
-    '**/*.{tres,png,jpg,jpeg,webp,svg,glb,gltf,tscn}',
-    false, // ignoreCreateEvents
-    false, // ignoreChangeEvents
-    false // ignoreDeleteEvents
-  );
-
-  context.subscriptions.push(resourceWatcher);
 
   // The panel whose own main scene changed re-reads it, which catches an external
   // edit (git pull, branch switch) that fires no save event. The content-diff guard
@@ -121,11 +118,13 @@ export function activate(context: vscode.ExtensionContext) {
     );
   };
 
-  context.subscriptions.push(
-    resourceWatcher.onDidChange(handleResourceChange),
-    resourceWatcher.onDidCreate(handleResourceChange),
-    resourceWatcher.onDidDelete((uri) => handleResourceChange(uri, true))
-  );
+  for (const watcher of [resourceWatcher, projectFileWatcher]) {
+    context.subscriptions.push(
+      watcher.onDidChange(handleResourceChange),
+      watcher.onDidCreate(handleResourceChange),
+      watcher.onDidDelete((uri) => handleResourceChange(uri, true))
+    );
+  }
 }
 
 export function deactivate() {

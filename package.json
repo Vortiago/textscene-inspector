@@ -85,9 +85,9 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "catalog:",
-    "@typescript-eslint/eslint-plugin": "^8.70.1",
-    "@typescript-eslint/parser": "^8.70.1",
-    "@vitest/coverage-v8": "^5.0",
+    "@typescript-eslint/eslint-plugin": "^8.71.0",
+    "@typescript-eslint/parser": "^8.71.0",
+    "@vitest/coverage-v8": "^5.0.3",
     "@vitest/ui": "catalog:",
     "@vscode/test-electron": "catalog:",
     "eslint": "^10.11.0",
@@ -95,16 +95,22 @@
     "fontkit": "catalog:",
     "globals": "^17.12.0",
     "happy-dom": "catalog:",
-    "lint-staged": "^17.5.1",
+    "lint-staged": "^17.6.0",
     "msdf-bmfont-xml": "catalog:",
     "playwright": "^1.63.0",
-    "prettier": "catalog:",
     "pngjs": "^7.0.0",
+    "prettier": "catalog:",
     "publint": "^0.3.24",
     "rimraf": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",
-    "wawoff2": "catalog:"
+    "wawoff2": "catalog:",
+    "ws": "^8.21.1"
+  },
+  "pnpm": {
+    "overrides": {
+      "@vscode/test-web>playwright": "$playwright"
+    }
   },
   "packageManager": "pnpm@9.15.4",
   "engines": {

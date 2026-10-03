@@ -37,4 +37,4 @@ The lenient parser reads BoneAttachment3D through `parseNode3D`, so `bone_name`,
 
 ## Known limitations
 
-- **Approximated** The attachment sits at its authored `transform`. Godot replaces that with the bone's pose each update, so a child sits where the bone puts it there.
+- **Approximated** The attachment and its children sit at the authored `transform`, where Godot moves them to the bone's pose each update.

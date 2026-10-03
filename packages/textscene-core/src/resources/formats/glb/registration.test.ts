@@ -13,7 +13,7 @@ describe('glb slice registration', () => {
       const registration = resourceSliceRegistry.byTypeName(typeName);
       expect(registration?.slice).toBe('glb');
       expect(registration?.kind).toBe('foreign-format');
-      expect(resourceSliceRegistry.busTypeFor(typeName)).toBe('glb');
+      expect(resourceSliceRegistry.byTypeName(typeName)?.busType ?? null).toBe('glb');
     }
   });
 
@@ -37,7 +37,7 @@ describe('glb slice registration', () => {
 
   it('leaves a type no slice claims unrouted', () => {
     expect(resourceSliceRegistry.byTypeName('PackedScene')).toBeNull();
-    expect(resourceSliceRegistry.busTypeFor('PackedScene')).toBeNull();
+    expect(resourceSliceRegistry.byTypeName('PackedScene')?.busType ?? null).toBeNull();
   });
 
   it('rejects a second slice claiming GLB', () => {

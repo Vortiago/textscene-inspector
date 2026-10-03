@@ -1,6 +1,6 @@
 /** Unit tests for lintFile/runLint exit-code logic and error handling. */
 
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'fs';
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -72,16 +72,16 @@ afterAll(() => {
 });
 
 describe('lintFile', () => {
-  it('reports a clean file with a success line and no errors', () => {
-    const result = lintFile(cleanPath, false);
+  it('reports a clean file with a success line and no errors', async () => {
+    const result = await lintFile(cleanPath, false);
 
     expect(result.hasErrors).toBe(false);
     expect(result.stdoutLines).toEqual([`✓ ${cleanPath}`]);
     expect(result.stderrLines).toEqual([]);
   });
 
-  it('reports error diagnostics on stdout and flags hasErrors', () => {
-    const result = lintFile(errorPath, false);
+  it('reports error diagnostics on stdout and flags hasErrors', async () => {
+    const result = await lintFile(errorPath, false);
 
     expect(result.hasErrors).toBe(true);
     expect(result.stdoutLines[0]).toBe(errorPath);
@@ -91,16 +91,16 @@ describe('lintFile', () => {
     expect(result.stderrLines).toEqual([]);
   });
 
-  it('does not flag hasErrors for warning-only diagnostics', () => {
-    const result = lintFile(warningPath, false);
+  it('does not flag hasErrors for warning-only diagnostics', async () => {
+    const result = await lintFile(warningPath, false);
 
     expect(result.hasErrors).toBe(false);
     expect(result.stdoutLines.join('\n')).toContain('warning');
     expect(result.stdoutLines.join('\n')).toContain('collisionshape2d-requires-shape');
   });
 
-  it('handles a missing file gracefully: stderr names the path, hasErrors set', () => {
-    const result = lintFile(missingPath, false);
+  it('handles a missing file gracefully: stderr names the path, hasErrors set', async () => {
+    const result = await lintFile(missingPath, false);
 
     expect(result.hasErrors).toBe(true);
     expect(result.stdoutLines).toEqual([]);
@@ -110,67 +110,77 @@ describe('lintFile', () => {
     expect(result.stderrLines[1]).toContain('ENOENT');
   });
 
-  it('applies color codes to the error output when color is enabled', () => {
-    const result = lintFile(missingPath, true);
+  it('escapes control characters in the path and the read error on stderr', async () => {
+    const hostilePath = `${missingPath}\x1b]0;pwned\x07`;
+
+    const result = await lintFile(hostilePath, false);
+
+    expect(result.stderrLines.join('\n')).not.toContain('\x1b');
+    expect(result.stderrLines[0]).toBe(`Failed to lint ${missingPath}\\u001b]0;pwned\\u0007:`);
+    expect(result.stderrLines[1]).toContain(`${missingPath}\\u001b]0;pwned\\u0007`);
+  });
+
+  it('applies color codes to the error output when color is enabled', async () => {
+    const result = await lintFile(missingPath, true);
 
     expect(result.stderrLines[0]).toBe(`\x1b[31mFailed to lint ${missingPath}:\x1b[0m`);
   });
 });
 
 describe('runLint', () => {
-  it('returns exit code 0 for clean files', () => {
-    const { exitCode, results } = runLint([cleanPath], false);
+  it('returns exit code 0 for clean files', async () => {
+    const { exitCode, results } = await runLint([cleanPath], false);
 
     expect(exitCode).toBe(0);
     expect(results).toHaveLength(1);
   });
 
-  it('returns exit code 1 when a file has error diagnostics', () => {
-    expect(runLint([errorPath], false).exitCode).toBe(1);
+  it('returns exit code 1 when a file has error diagnostics', async () => {
+    expect((await runLint([errorPath], false)).exitCode).toBe(1);
   });
 
   // Warning/info diagnostics print but do not fail the run. Only an error-severity
   // diagnostic or an unreadable file gives a nonzero exit code.
-  it('returns exit code 0 for warnings-only files (established contract)', () => {
-    const { exitCode, results } = runLint([warningPath], false);
+  it('returns exit code 0 for warnings-only files (established contract)', async () => {
+    const { exitCode, results } = await runLint([warningPath], false);
 
     expect(exitCode).toBe(0);
     expect(results[0]?.stdoutLines.join('\n')).toContain('warning');
   });
 
-  it('returns exit code 1 when a file is missing', () => {
-    expect(runLint([missingPath], false).exitCode).toBe(1);
+  it('returns exit code 1 when a file is missing', async () => {
+    expect((await runLint([missingPath], false)).exitCode).toBe(1);
   });
 
-  it('lints every file even when an early file fails', () => {
-    const { exitCode, results } = runLint([missingPath, cleanPath, errorPath], false);
+  it('lints every file even when an early file fails', async () => {
+    const { exitCode, results } = await runLint([missingPath, cleanPath, errorPath], false);
 
     expect(exitCode).toBe(1);
     expect(results.map((r) => r.filePath)).toEqual([missingPath, cleanPath, errorPath]);
     expect(results[1]?.hasErrors).toBe(false);
   });
 
-  it('returns exit code 0 for an empty file list', () => {
-    expect(runLint([], false)).toEqual({ exitCode: 0, results: [] });
+  it('returns exit code 0 for an empty file list', async () => {
+    expect(await runLint([], false)).toEqual({ exitCode: 0, results: [] });
   });
 
-  it('invokes onResult once per file, in order, with the file result', () => {
+  it('invokes onResult once per file, in order, with the file result', async () => {
     const seen: string[] = [];
-    runLint([cleanPath, errorPath], false, (result) => seen.push(result.filePath));
+    await runLint([cleanPath, errorPath], false, (result) => seen.push(result.filePath));
 
     expect(seen).toEqual([cleanPath, errorPath]);
   });
 });
 
 describe('lintFileDiagnostics', () => {
-  it('returns an empty diagnostics array and no readError for a clean file', () => {
-    const result = lintFileDiagnostics(cleanPath);
+  it('returns an empty diagnostics array and no readError for a clean file', async () => {
+    const result = await lintFileDiagnostics(cleanPath);
 
     expect(result).toEqual({ filePath: cleanPath, diagnostics: [] });
   });
 
-  it('returns raw error-severity diagnostics for an invalid file (no formatting)', () => {
-    const result = lintFileDiagnostics(errorPath);
+  it('returns raw error-severity diagnostics for an invalid file (no formatting)', async () => {
+    const result = await lintFileDiagnostics(errorPath);
 
     expect(result.readError).toBeUndefined();
     expect(result.diagnostics.some((d) => d.severity === 'error' && d.ruleName === 'strict-parser')).toBe(
@@ -178,8 +188,8 @@ describe('lintFileDiagnostics', () => {
     );
   });
 
-  it('returns raw warning-severity diagnostics for a warnings-only file', () => {
-    const result = lintFileDiagnostics(warningPath);
+  it('returns raw warning-severity diagnostics for a warnings-only file', async () => {
+    const result = await lintFileDiagnostics(warningPath);
 
     expect(result.readError).toBeUndefined();
     expect(
@@ -189,18 +199,18 @@ describe('lintFileDiagnostics', () => {
     ).toBe(true);
   });
 
-  it('returns raw info-severity diagnostics, which never count as errors', () => {
-    const result = lintFileDiagnostics(infoPath);
+  it('returns raw info-severity diagnostics, which never count as errors', async () => {
+    const result = await lintFileDiagnostics(infoPath);
 
     expect(result.readError).toBeUndefined();
     expect(
       result.diagnostics.some((d) => d.severity === 'info' && d.ruleName === 'csgmesh3d-requires-mesh')
     ).toBe(true);
-    expect(collectFileDiagnostics([infoPath]).exitCode).toBe(0);
+    expect((await collectFileDiagnostics([infoPath])).exitCode).toBe(0);
   });
 
-  it('sets readError (and an empty diagnostics array) for a missing file', () => {
-    const result = lintFileDiagnostics(missingPath);
+  it('sets readError (and an empty diagnostics array) for a missing file', async () => {
+    const result = await lintFileDiagnostics(missingPath);
 
     expect(result.diagnostics).toEqual([]);
     expect(result.readError).toContain('ENOENT');
@@ -208,37 +218,135 @@ describe('lintFileDiagnostics', () => {
 });
 
 describe('collectFileDiagnostics', () => {
-  it('returns exit code 0 and per-file diagnostics for clean files', () => {
-    const { exitCode, files } = collectFileDiagnostics([cleanPath]);
+  it('returns exit code 0 and per-file diagnostics for clean files', async () => {
+    const { exitCode, files } = await collectFileDiagnostics([cleanPath]);
 
     expect(exitCode).toBe(0);
     expect(files).toEqual([{ filePath: cleanPath, diagnostics: [] }]);
   });
 
-  it('returns exit code 1 when a file has error diagnostics', () => {
-    expect(collectFileDiagnostics([errorPath]).exitCode).toBe(1);
+  it('returns exit code 1 when a file has error diagnostics', async () => {
+    expect((await collectFileDiagnostics([errorPath])).exitCode).toBe(1);
   });
 
-  it('returns exit code 0 for warnings-only files (matches runLint contract)', () => {
-    expect(collectFileDiagnostics([warningPath]).exitCode).toBe(0);
+  it('returns exit code 0 for warnings-only files (matches runLint contract)', async () => {
+    expect((await collectFileDiagnostics([warningPath])).exitCode).toBe(0);
   });
 
-  it('returns exit code 1 when a file is missing, and records its readError', () => {
-    const { exitCode, files } = collectFileDiagnostics([missingPath]);
+  it('returns exit code 1 when a file is missing, and records its readError', async () => {
+    const { exitCode, files } = await collectFileDiagnostics([missingPath]);
 
     expect(exitCode).toBe(1);
     expect(files[0]?.readError).toContain('ENOENT');
   });
 
-  it('collects every file even when an early file fails, preserving order', () => {
-    const { exitCode, files } = collectFileDiagnostics([missingPath, cleanPath, errorPath]);
+  it('collects every file even when an early file fails, preserving order', async () => {
+    const { exitCode, files } = await collectFileDiagnostics([missingPath, cleanPath, errorPath]);
 
     expect(exitCode).toBe(1);
     expect(files.map((f) => f.filePath)).toEqual([missingPath, cleanPath, errorPath]);
   });
 
-  it('returns exit code 0 and no files for an empty file list', () => {
-    expect(collectFileDiagnostics([])).toEqual({ exitCode: 0, files: [] });
+  it('returns exit code 0 and no files for an empty file list', async () => {
+    expect(await collectFileDiagnostics([])).toEqual({ exitCode: 0, files: [] });
+  });
+});
+
+/** The committed GLB that requires EXT_mesh_gpu_instancing, which Godot's glTF importer refuses. */
+const INSTANCED_TREE = join(
+  import.meta.dirname,
+  '../../../scenes/fixtures/gltf-unsupported-required-extension/instanced-tree.glb'
+);
+
+const USES_TREE_GLB = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://tree.glb" id="1_tree"]
+
+[node name="Tree" instance=ExtResource("1_tree")]
+`;
+
+describe('cross-file rules', () => {
+  let projectDir: string;
+
+  beforeAll(() => {
+    projectDir = mkdtempSync(join(tmpdir(), 'tscn-lint-gltf-'));
+    mkdirSync(join(projectDir, 'game', 'scenes'), { recursive: true });
+    writeFileSync(join(projectDir, 'game', 'project.godot'), 'config_version=5\n');
+    copyFileSync(INSTANCED_TREE, join(projectDir, 'game', 'tree.glb'));
+    writeFileSync(join(projectDir, 'game', 'scenes', 'level.tscn'), USES_TREE_GLB);
+    copyFileSync(INSTANCED_TREE, join(projectDir, 'tree.glb'));
+    writeFileSync(join(projectDir, 'loose.tscn'), USES_TREE_GLB);
+  });
+
+  afterAll(() => {
+    rmSync(projectDir, { recursive: true, force: true });
+  });
+
+  it("reads a scene's dependencies under its project.godot and fails the run on a refused glTF", async () => {
+    const scene = join(projectDir, 'game', 'scenes', 'level.tscn');
+    const { exitCode, files } = await collectFileDiagnostics([scene]);
+
+    expect(exitCode).toBe(1);
+    expect(files[0]!.diagnostics.map((d) => d.ruleName)).toContain('gltf-required-extension-unsupported');
+  });
+
+  it('warns, and passes the run, where the project enables an editor plugin that may support the extension', async () => {
+    const pluginProject = join(projectDir, 'plugged');
+    mkdirSync(pluginProject);
+    writeFileSync(
+      join(pluginProject, 'project.godot'),
+      '[editor_plugins]\n\nenabled=PackedStringArray("res://addons/gltf/plugin.cfg")\n'
+    );
+    copyFileSync(INSTANCED_TREE, join(pluginProject, 'tree.glb'));
+    writeFileSync(join(pluginProject, 'level.tscn'), USES_TREE_GLB);
+
+    const { exitCode, files } = await collectFileDiagnostics([join(pluginProject, 'level.tscn')]);
+
+    expect(exitCode).toBe(0);
+    expect(files[0]!.diagnostics.map((d) => [d.severity, d.ruleName])).toEqual([
+      ['warning', 'gltf-required-extension-maybe-unsupported'],
+    ]);
+  });
+
+  it('warns, and passes the run, in a fresh checkout whose GDExtension has no .godot list yet', async () => {
+    const extendedProject = join(projectDir, 'extended');
+    mkdirSync(join(extendedProject, 'addons', 'gltf'), { recursive: true });
+    writeFileSync(join(extendedProject, 'project.godot'), 'config_version=5\n');
+    writeFileSync(join(extendedProject, 'addons', 'gltf', 'gltf.gdextension'), '[configuration]\n');
+    copyFileSync(INSTANCED_TREE, join(extendedProject, 'tree.glb'));
+    writeFileSync(join(extendedProject, 'level.tscn'), USES_TREE_GLB);
+
+    const { exitCode, files } = await collectFileDiagnostics([join(extendedProject, 'level.tscn')]);
+
+    expect(exitCode).toBe(0);
+    expect(files[0]!.diagnostics.map((d) => [d.severity, d.ruleName])).toEqual([
+      ['warning', 'gltf-required-extension-maybe-unsupported'],
+    ]);
+  });
+
+  it('warns, and passes the run, where only a child node instances the refused glTF, since the scene still loads', async () => {
+    const scene = join(projectDir, 'game', 'scenes', 'child.tscn');
+    writeFileSync(
+      scene,
+      USES_TREE_GLB.replace(
+        '[node name="Tree" instance=ExtResource("1_tree")]',
+        '[node name="Root" type="Node3D"]\n\n[node name="Tree" parent="." instance=ExtResource("1_tree")]'
+      )
+    );
+
+    const { exitCode, files } = await collectFileDiagnostics([scene]);
+
+    expect(exitCode).toBe(0);
+    expect(files[0]!.diagnostics.map((d) => [d.severity, d.ruleName])).toEqual([
+      ['warning', 'gltf-required-extension-unsupported-in-node'],
+    ]);
+  });
+
+  it('reads no dependency for a scene outside any Godot project', async () => {
+    const { exitCode, files } = await collectFileDiagnostics([join(projectDir, 'loose.tscn')]);
+
+    expect(exitCode).toBe(0);
+    expect(files[0]!.diagnostics).toEqual([]);
   });
 });
 

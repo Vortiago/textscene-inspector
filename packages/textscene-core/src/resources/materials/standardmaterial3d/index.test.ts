@@ -33,8 +33,8 @@ describe('standardmaterial3d slice registration', () => {
   });
 
   it('routes both claimed types to the resource bus, so a reload reaches every material slot', () => {
-    expect(resourceSliceRegistry.busTypeFor('StandardMaterial3D')).toBe('resource');
-    expect(resourceSliceRegistry.busTypeFor('ShaderMaterial')).toBe('resource');
+    expect(resourceSliceRegistry.byTypeName('StandardMaterial3D')?.busType ?? null).toBe('resource');
+    expect(resourceSliceRegistry.byTypeName('ShaderMaterial')?.busType ?? null).toBe('resource');
   });
 
   it('claims no file extension', () => {

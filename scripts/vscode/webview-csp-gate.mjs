@@ -1,15 +1,20 @@
 #!/usr/bin/env node
 /**
- * End-to-end gate (`pnpm test:vscode:csp`): Control text and a worker-built noise
- * texture paint inside the real VS Code webview, under the production CSP, with
- * nothing fetched. Linux/Xvfb
- * only: see the CI notes in `.github/workflows/ci.yml`.
+ * End-to-end gate (`pnpm test:vscode:csp`): a lit 3D mesh draws in its material's
+ * colour, Control text and a worker-built noise texture paint inside the real VS Code
+ * webview, under the production CSP, with nothing fetched, an ArrayMesh edited on disk
+ * redraws through the real file watcher, host and loader, and a text glTF draws its
+ * external buffer and texture. `TEXTSCENE_VSCODE_VERSION` picks the VS Code build, as
+ * in the extension's own suites. Linux/Xvfb only: see the CI notes in
+ * `.github/workflows/ci.yml`.
  */
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { copyFileSync, cpSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { assertExtensionBuilt, driveScene, REPO_ROOT, resolveVscodeBinary } from './driveScene.mjs';
-import { blankSceneText } from './sceneText.mjs';
+import { blankSceneText, hideSceneNode } from './sceneText.mjs';
+import { withSurfaceAlbedo } from './meshEdit.mjs';
+import { diffMask, meanColourUnderMask, missingPlaceholderPixels } from './pixels.mjs';
 import { installTextureWorkProbe } from '../e2e/textureWorkProbe.mjs';
 import { TEXTURE_WORK_STATUS_TESTID } from '../visual/preview/appContract.mjs';
 
@@ -51,6 +56,44 @@ const NOISE_INK_FLOOR = 1000;
 /** Reads back, in the noise frame, the workers and replies `installTextureWorkProbe` counted. */
 const TEXTURE_WORK_READOUT = path.join(REPO_ROOT, 'scripts/vscode/probes/textureWorkReadout.mjs');
 
+/**
+ * The **Dependency hot-reload** scene: one ArrayMesh quad from its own `.tres`. The run
+ * recolours the quad on disk while the preview is open, so only the watcher, the host
+ * and `provideFile` can bring the new colour to the canvas.
+ */
+const HOT_RELOAD_FIXTURE = 'scenes/fixtures/unit-arraymesh.tscn';
+const HOT_RELOAD_MESH = 'scenes/fixtures/unit-arraymesh-quad.tres';
+const HOT_RELOAD_ALBEDO = 'Color(0.9, 0.2, 0.1, 1)';
+
+/**
+ * A text glTF with an external `.bin` and an external texture, from the truck town demo.
+ * The webview's CSP refuses every fetch, so both must arrive through the provider. Kept
+ * at its `res://town/lamp/` path, which the scene names.
+ */
+const GLTF_EXTERNAL_DIR = 'scenes/demos/3d/truck_town/town/lamp';
+const GLTF_EXTERNAL_SCENE = 'lamp_scene.tscn';
+
+/**
+ * A box with an orange `StandardMaterial3D` (albedo 0.8, 0.6, 0.2) in the default
+ * environment, so it draws only if the mesh, the material, the lights and the camera
+ * all work. Its twin hides the box, and the pixels the two do not share are the box.
+ */
+const BOX_FIXTURE = 'scenes/fixtures/unit-box-mesh.tscn';
+const BOX_NODE = 'Box';
+
+/**
+ * Pixel floor for the box, far below its share of the smallest canvas the gate has
+ * measured. A box that never drew leaves the scene and its twin identical.
+ */
+const BOX_PIXEL_FLOOR = 2000;
+
+/**
+ * Ceiling on the box's mean blue over its mean red. The albedo's own ratio is 0.25,
+ * and a material that lost its colour draws grey or white near 1, so the midpoint
+ * tells the two apart under any light the default environment gives.
+ */
+const BOX_BLUE_TO_RED_CEILING = 0.5;
+
 const OUT_ROOT = path.join(REPO_ROOT, 'scripts/vscode/output/csp-gate');
 const BASE_PORT = 9464;
 
@@ -76,8 +119,10 @@ function parseArgs(argv) {
 
 /**
  * Lays out the throwaway workspace the runs open: the label fixture verbatim, its
- * text-free twin and the noise fixture, side by side so all resolve `res://`
- * against the same folder.
+ * text-free twin, the noise fixture, the ArrayMesh scene with its `.tres`, and the
+ * box with its box-free twin, side by side so all resolve `res://` against the same
+ * folder. The mesh's edit is built
+ * here and written by the hot-reload run.
  */
 function prepareScenes() {
   const workspace = path.join(OUT_ROOT, 'workspace');
@@ -101,7 +146,35 @@ function prepareScenes() {
   const noise = path.join(workspace, path.basename(NOISE_FIXTURE));
   copyFileSync(path.join(REPO_ROOT, NOISE_FIXTURE), noise);
 
-  return { workspace, withText, withoutText, noise, replacements };
+  const hotReload = path.join(workspace, path.basename(HOT_RELOAD_FIXTURE));
+  copyFileSync(path.join(REPO_ROOT, HOT_RELOAD_FIXTURE), hotReload);
+  const mesh = path.join(workspace, path.basename(HOT_RELOAD_MESH));
+  const meshSource = readFileSync(path.join(REPO_ROOT, HOT_RELOAD_MESH), 'utf8');
+  writeFileSync(mesh, meshSource);
+  const meshEdit = { file: mesh, contents: withSurfaceAlbedo(meshSource, HOT_RELOAD_ALBEDO) };
+
+  const boxSource = readFileSync(path.join(REPO_ROOT, BOX_FIXTURE), 'utf8');
+  const box = path.join(workspace, path.basename(BOX_FIXTURE));
+  writeFileSync(box, boxSource);
+  const boxHidden = path.join(workspace, 'box-hidden.tscn');
+  writeFileSync(boxHidden, hideSceneNode(boxSource, BOX_NODE));
+
+  const lampDir = path.join(workspace, 'town', 'lamp');
+  cpSync(path.join(REPO_ROOT, GLTF_EXTERNAL_DIR), lampDir, { recursive: true });
+  const gltfExternal = path.join(lampDir, GLTF_EXTERNAL_SCENE);
+
+  return {
+    workspace,
+    withText,
+    withoutText,
+    noise,
+    hotReload,
+    meshEdit,
+    box,
+    boxHidden,
+    gltfExternal,
+    replacements,
+  };
 }
 
 class GateFailures {
@@ -180,6 +253,92 @@ function checkRun(gate, label, report) {
   );
 }
 
+/**
+ * The edited mesh redrew in place: the canvas changed after the edit, settled, and
+ * equals, pixel for pixel, a cold render of the edited scene.
+ */
+function checkHotReload(gate, hotReload, fresh) {
+  const edit = hotReload.edit;
+  gate.check(
+    edit?.changed === true,
+    '[hot-reload] the canvas never changed after the mesh was edited on disk'
+  );
+  gate.check(edit?.stable === true, '[hot-reload] the canvas never settled after the edit');
+  if (!edit?.canvasPath || !hotReload.canvasPath || !fresh.canvasPath) {
+    gate.check(false, '[hot-reload] no before, edited or fresh canvas to compare');
+    return;
+  }
+  const freshPng = readFileSync(fresh.canvasPath);
+  let diff;
+  let before;
+  try {
+    diff = diffMask(readFileSync(edit.canvasPath), freshPng, 0);
+    before = diffMask(readFileSync(hotReload.canvasPath), freshPng, 0);
+  } catch (error) {
+    gate.check(false, `[hot-reload] ${error.message}`);
+    return;
+  }
+  // A mesh that never drew leaves the first canvas and the cold render of the
+  // recoloured edit identical, which the comparison below would pass.
+  gate.check(
+    before.diffPixels > 0,
+    '[hot-reload] the canvas before the edit equals the cold render of the recoloured mesh, so the mesh never drew'
+  );
+  gate.check(
+    diff.diffPixels === 0,
+    `[hot-reload] the hot-reloaded canvas differs from a cold render of the edit in ${diff.diffPixels} ` +
+      `pixel(s), within ${JSON.stringify(diff.bbox)}`
+  );
+}
+
+/**
+ * The box drew, in its material's colour: the pixels its box-free twin does not
+ * share are many enough to be the box, and their mean is orange, not grey.
+ */
+function checkBox(gate, box, hidden) {
+  if (!box.canvasPath || !hidden.canvasPath) {
+    gate.check(false, '[box] no canvas from the box or its box-free twin to compare');
+    return null;
+  }
+  const boxPng = readFileSync(box.canvasPath);
+  let diff;
+  try {
+    diff = diffMask(boxPng, readFileSync(hidden.canvasPath));
+  } catch (error) {
+    gate.check(false, `[box] ${error.message}`);
+    return null;
+  }
+  gate.check(
+    diff.diffPixels >= BOX_PIXEL_FLOOR,
+    `[box] only ${diff.diffPixels} pixel(s) differ from the box-free twin, floor is ` +
+      `${BOX_PIXEL_FLOOR}: the box did not draw`
+  );
+  const colour = meanColourUnderMask(boxPng, diff.mask);
+  const blueToRed = colour ? colour.b / Math.max(colour.r, 1) : null;
+  gate.check(
+    blueToRed !== null && blueToRed <= BOX_BLUE_TO_RED_CEILING,
+    `[box] the box's mean colour is ${JSON.stringify(colour)}, blue over red ${blueToRed}, ` +
+      `ceiling ${BOX_BLUE_TO_RED_CEILING}: the box did not draw in its orange material`
+  );
+  return { diffPixels: diff.diffPixels, colour, blueToRed };
+}
+
+/**
+ * The text glTF loaded: its buffer and texture arrived with no fetch, which `checkRun`'s
+ * CSP and console checks prove, and no missing-resource placeholder drew in its place.
+ */
+function checkGltfExternal(gate, report) {
+  if (!report.canvasPath) {
+    gate.check(false, '[gltf-external] no canvas to read');
+    return;
+  }
+  const placeholder = missingPlaceholderPixels(readFileSync(report.canvasPath));
+  gate.check(
+    placeholder === 0,
+    `[gltf-external] ${placeholder} missing-placeholder pixel(s): the glTF or its buffer never loaded`
+  );
+}
+
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
 
@@ -201,7 +360,18 @@ async function main() {
   // A build between the two runs gives them different code, which the pair
   // cannot survive, so the bundle's mtime must stay unchanged.
   const bundleStamp = statSync(bundle).mtimeMs;
-  const { workspace, withText, withoutText, noise, replacements } = prepareScenes();
+  const {
+    workspace,
+    withText,
+    withoutText,
+    noise,
+    hotReload,
+    meshEdit,
+    box,
+    boxHidden,
+    gltfExternal,
+    replacements,
+  } = prepareScenes();
   console.log(`[gate] VS Code:   ${binary}`);
   console.log(`[gate] workspace: ${workspace}`);
   console.log(`[gate] control:   blanked ${replacements} text assignment(s)`);
@@ -220,6 +390,14 @@ async function main() {
       evalFile: TEXTURE_WORK_READOUT,
       initScripts: [[installTextureWorkProbe, TEXTURE_WORK_STATUS_TESTID]],
     },
+    // The edit run recolours the mesh on disk mid-run. The fresh run, after it, opens
+    // the edited scene cold. The two canvases must match exactly: the edit changes no
+    // bounds, so the camera fit agrees, and a reload that drew anything else differs.
+    { label: 'hot-reload', scene: hotReload, edit: meshEdit },
+    { label: 'hot-reload-fresh', scene: hotReload },
+    { label: 'box', scene: box },
+    { label: 'box-hidden', scene: boxHidden },
+    { label: 'gltf-external', scene: gltfExternal },
   ];
 
   const reports = {};
@@ -254,6 +432,7 @@ async function main() {
       keepOpen: 0,
       evalFile: run.evalFile,
       initScripts: run.initScripts,
+      edit: run.edit,
       verbose: opts.verbose,
       log: (message) => console.log(`[gate:${run.label}] ${message}`),
     });
@@ -304,6 +483,10 @@ async function main() {
       `canvas, floor is ${NOISE_INK_FLOOR}: the noise texture did not draw`
   );
 
+  checkHotReload(gate, reports['hot-reload'], reports['hot-reload-fresh']);
+  const boxResult = checkBox(gate, reports.box, reports['box-hidden']);
+  checkGltfExternal(gate, reports['gltf-external']);
+
   console.log('\n[gate] canvas readback');
   console.log(
     `  with-text     ${withInk.width}x${withInk.height}  ink=${withInk.inkPixels}` +
@@ -316,6 +499,15 @@ async function main() {
   console.log(
     `  noise         ${noiseInk.width}x${noiseInk.height}  ink=${noiseInk.inkPixels}` +
       `  workers=${textureWork?.workers}  replies=${textureWork?.replies}`
+  );
+  const editedInk = reports['hot-reload'].edit?.canvasReadback;
+  console.log(
+    `  hot-reload    ink before=${reports['hot-reload'].canvasReadback.inkPixels}` +
+      `  after=${editedInk?.inkPixels}  fresh=${reports['hot-reload-fresh'].canvasReadback.inkPixels}`
+  );
+  console.log(
+    `  box           ${boxResult?.diffPixels} px differ from the twin` +
+      `  mean=${JSON.stringify(boxResult?.colour)}  blue/red=${boxResult?.blueToRed}`
   );
   for (const run of runs) {
     const webview = reports[run.label].webview;
@@ -335,8 +527,8 @@ async function main() {
     return;
   }
   console.log(
-    '\n[gate] PASSED — glyphs and a worker-built texture paint in the real webview, offline, ' +
-      'under the real CSP'
+    '\n[gate] PASSED — a lit box draws in its material colour, glyphs and a worker-built texture paint in the real webview, offline, ' +
+      'under the real CSP, a mesh edited on disk redraws in place, and a text glTF loads its files'
   );
 }
 

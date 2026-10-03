@@ -10,7 +10,7 @@ renders_as: nothing yet, Godot rotates a bone toward its target, the previewer d
 
 # AimModifier3D
 
-Rotates a bone of its parent skeleton to point at a reference bone or node, a simplified LookAtModifier3D without angle limits or interpolation. Godot runs that drive each frame, and the previewer does not yet (ADR-0045): it mounts the Node3D base, so children still show and the bones hold their rest pose.
+Rotates a bone of its parent skeleton to point at a reference bone or node. It is a simplified LookAtModifier3D without angle limits or interpolation. Godot runs that drive each frame, and the previewer does not yet (ADR-0045). It mounts the Node3D base, so children still show and the bones hold their rest pose.
 
 ## Linting
 

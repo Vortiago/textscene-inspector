@@ -34,4 +34,4 @@ SpringArm3D registers `parseNode3D` directly, so `collision_mask`, `shape`, `spr
 
 ## Known limitations
 
-- **Needs runtime** Godot moves each child to `spring_length` along the arm, or to the hit point minus `margin`. Here the children hold their authored transforms.
+- **Needs runtime** Godot moves each child to `spring_length` along the arm or to the hit point minus `margin`, but here the children hold their authored transforms.

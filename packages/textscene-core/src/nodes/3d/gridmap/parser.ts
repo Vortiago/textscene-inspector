@@ -8,7 +8,7 @@ import { parseNode3D } from '../../base/node3d/parser';
 import { parseVector3, type Vector3 } from '../../../parser/vectors';
 import { boolOr } from '../../../parser/valueParsers';
 import type { GridMapProperties } from './types';
-import { CELLS_FIELD_RE } from './cellData.js';
+import { readCellsField } from './cellData.js';
 
 const DEFAULT_CELL_SIZE: Vector3 = { x: 2, y: 2, z: 2 };
 
@@ -22,8 +22,7 @@ const DEFAULT_CELL_CENTER = Object.freeze({ x: true, y: true, z: true });
 /** Pull the int body out of `... "cells": PackedInt32Array( <body> ) ...`. */
 function extractCells(dataProperty: string | undefined): string {
   if (!dataProperty) return '';
-  const match = CELLS_FIELD_RE.exec(dataProperty);
-  return match ? match[1]!.trim() : '';
+  return readCellsField(dataProperty)?.trim() ?? '';
 }
 
 /**

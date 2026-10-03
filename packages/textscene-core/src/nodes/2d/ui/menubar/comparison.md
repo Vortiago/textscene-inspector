@@ -51,8 +51,8 @@ with no serialised property, so a `.tscn` cannot author them.
 
 ## Known limitations
 
-- **Approximated** A menu title's paragraph direction is not applied, so under
-  `layout_direction = 3` a right-to-left script keeps left-to-right glyph order.
-  Which end of the bar the titles start from does follow the layout direction.
+- **Approximated** Under `layout_direction = 3`, a menu title in a right-to-left script
+  keeps left-to-right glyph order, while the titles still start from the mirrored end of
+  the bar.
 - **Not drawn** Opening a menu, hovering a title and the `*_mirrored` hover and
   pressed StyleBoxes all need a pointer, so none of them appears.

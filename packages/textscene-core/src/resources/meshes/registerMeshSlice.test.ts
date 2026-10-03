@@ -39,7 +39,7 @@ describe('primitive-mesh slice registrations', () => {
   });
 
   it.each(CLAIMS)('%s routes to the generic resource processor slot', (typeName) => {
-    expect(resourceSliceRegistry.busTypeFor(typeName)).toBe('resource');
+    expect(resourceSliceRegistry.byTypeName(typeName)?.busType ?? null).toBe('resource');
   });
 
   it('claims no file extension — `.tres` is the shared Godot-text container', () => {
@@ -49,6 +49,6 @@ describe('primitive-mesh slice registrations', () => {
   });
 
   it('keeps ArrayMesh on its own bus slot rather than the primitives one', () => {
-    expect(resourceSliceRegistry.busTypeFor('ArrayMesh')).not.toBe('resource');
+    expect(resourceSliceRegistry.byTypeName('ArrayMesh')?.busType ?? null).not.toBe('resource');
   });
 });

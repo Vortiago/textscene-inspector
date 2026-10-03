@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { heading } from '../../../parser/testing/parserKit';
 import { parseGridMap } from './parser';
+import { LINEAR_SCAN_CEILING_MS, msToRead, unclosedCalls } from '../../../godot/testing/unclosedCalls';
 
 describe('parseGridMap', () => {
   it('parses name, parent, and transform (happy path)', () => {
@@ -66,5 +67,12 @@ describe('parseGridMap', () => {
     });
     // y is absent, so it keeps Godot's default.
     expect(result.cellCenter).toEqual({ x: false, y: true, z: false });
+  });
+
+  it('reads a crafted data value of unclosed cells calls in linear time (edge case)', () => {
+    const data = unclosedCalls('"cells":PackedInt32Array(');
+    const read = (value: string) => parseGridMap(heading('GridMap', { name: 'G' }), { data: value });
+    expect(read(data).cells).toBe('');
+    expect(msToRead(read, data)).toBeLessThan(LINEAR_SCAN_CEILING_MS);
   });
 });

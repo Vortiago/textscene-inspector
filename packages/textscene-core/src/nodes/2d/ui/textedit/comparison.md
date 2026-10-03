@@ -81,7 +81,7 @@ Strict parsing format-checks these `TextEdit` properties, plus 53 inherited from
 <!-- lint:end -->
 
 `linterParser.ts` format-checks all of TextEdit's own members. The registered lenient
-parser reads only the subset a static frame's picture depends on: `text`,
+parser reads what a static frame shows: `text`,
 `placeholder_text`, `editable`, `wrap_mode`, `autowrap_mode`, `draw_tabs`,
 `draw_spaces`, `highlight_current_line`, `scroll_fit_content_width`,
 `scroll_fit_content_height`, `minimap_draw`, `minimap_width` and `syntax_highlighter`.
@@ -106,19 +106,14 @@ always shapes at the class default of 4.
 
 ## Known limitations
 
-- **Not drawn** No selection, IME composition, brace-match underline,
-  word-highlight box, search-result box, minimap or scrollbars. Each needs
-  interaction state a static `.tscn` cannot carry or, for the scrollbars, a Control
-  type that cannot itself appear in a `.tscn`. The caret draws only under
-  `caret_draw_when_editable_disabled`, the one path that survives an unfocused frame.
+- **Not drawn** The selection, IME composition, brace-match underline, word-highlight box,
+  search-result box, minimap and scrollbars, which need state a `.tscn` cannot carry.
 - **Approximated** `draw_tabs`/`draw_spaces` overlay the `tab`/`space` theme icons
   at an unscaled size and a row-centred vertical offset, not Godot's own
   ascent-relative one (`Component.tsx`'s own doc).
-- **Not drawn** The RTL branches that need pointer, caret or selection state: the
-  mouse mirror (text_edit.cpp:2241,2516,4956), the hit tests (:5024,8213-8215), the
-  empty-line caret (:1781) and the end-of-line selection rect (:1517). Each row's
-  own trailing-edge origin (:1490-1494) and the current-line highlight's side
-  (:1404-1409) draw.
+- **Not drawn** The right-to-left mouse mirror (text_edit.cpp:2241,2516,4956), hit tests
+  (:5024,8213-8215), empty-line caret (:1781) and end-of-line selection rect (:1517),
+  which need pointer, caret or selection state.
 - **Not drawn** The minimap's RTL side (:1161-1165,1226-1235,1284-1286) and the
   per-line background rect's (:1396-1400): neither feature is drawn at all.
 - **Not drawn** `shaped_text_set_direction` at :3340,3396,3732,3761: it takes

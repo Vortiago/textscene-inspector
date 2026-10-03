@@ -33,5 +33,5 @@ SpringBoneCollisionSphere3D registers `parseNode3D` directly, so neither `radius
 
 ## Known limitations
 
-- **Needs runtime** Godot's SpringBoneSimulator3D resolves its bones against this sphere each frame. Here the bones hold their rest pose, so the sphere guards nothing.
-- **Editor only** The sphere gizmo appears only in Godot's editor. Here it is absent.
+- **Needs runtime** Godot's SpringBoneSimulator3D resolves its bones against this sphere each frame, but here the bones hold their rest pose.
+- **Editor only** The sphere gizmo appears only in Godot's editor, but here it is absent.

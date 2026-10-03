@@ -31,8 +31,8 @@ Strict parsing format-checks these `RemoteTransform3D` properties, plus 17 inher
 | `valid-remotetransform3d-remote-path` | `remotetransform3d-invalid-remote-path` | warning |
 <!-- lint:end -->
 
-`remote_path` is copied verbatim when present, with no NodePath validation, so a malformed literal strict rejects still parses through and drives whatever target string was written. The `update_*` and `use_global_coordinates` flags use `parseOptionalBool`, so anything but the literal `"true"` becomes `false` silently.
+`remote_path` is copied verbatim when present, with no NodePath validation. A malformed literal that strict rejects still parses and drives whatever target string was written. The `update_*` and `use_global_coordinates` flags use `parseOptionalBool`, so anything but the literal `"true"` becomes `false` silently.
 
 ## Known limitations
 
-- **Approximated** The relay copies its transform onto the target once at load, so a static `use_global_coordinates`, a cross-instance path or a relay chain is not fully reproduced.
+- **Approximated** The relay copies the transform once at load, so a static `use_global_coordinates`, a cross-instance path or a relay chain is not fully reproduced.

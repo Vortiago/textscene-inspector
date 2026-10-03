@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PNG } from 'pngjs';
-import { diffMask, inkStats } from './pixels.mjs';
+import { diffMask, inkStats, meanColourUnderMask, missingPlaceholderPixels } from './pixels.mjs';
 
 /** Builds a PNG buffer from a `paint(x, y) -> [r,g,b,a]` callback. */
 function png(width, height, paint) {
@@ -87,5 +87,58 @@ describe('diffMask', () => {
         png(4, 5, () => DARK)
       )
     ).toThrow(/Size mismatch/);
+  });
+});
+
+describe('missingPlaceholderPixels', () => {
+  it('counts the magenta of the missing-resource placeholder', () => {
+    const buffer = png(10, 10, (x, y) => (y === 0 && x < 3 ? [255, 0, 255, 255] : DARK));
+    expect(missingPlaceholderPixels(buffer)).toBe(3);
+  });
+
+  it('counts no ordinary reds, purples or pinks', () => {
+    const buffer = png(
+      3,
+      1,
+      (x) =>
+        [
+          [230, 30, 30, 255],
+          [120, 40, 160, 255],
+          [240, 150, 200, 255],
+        ][x]
+    );
+    expect(missingPlaceholderPixels(buffer)).toBe(0);
+  });
+});
+
+describe('meanColourUnderMask', () => {
+  it('averages only the pixels under the white of the mask', () => {
+    const orange = [200, 150, 50, 255];
+    const scene = png(4, 1, (x) => (x < 2 ? orange : DARK));
+    const twin = png(4, 1, () => DARK);
+
+    const { mask } = diffMask(scene, twin);
+
+    expect(meanColourUnderMask(scene, mask)).toEqual({ r: 200, g: 150, b: 50 });
+  });
+
+  it('returns null for an all-black mask', () => {
+    const scene = png(2, 2, () => DARK);
+
+    expect(meanColourUnderMask(scene, diffMask(scene, scene).mask)).toBeNull();
+  });
+
+  it('throws when the mask is another size', () => {
+    const { mask } = diffMask(
+      png(2, 2, () => DARK),
+      png(2, 2, () => DARK)
+    );
+
+    expect(() =>
+      meanColourUnderMask(
+        png(3, 2, () => DARK),
+        mask
+      )
+    ).toThrow('expected a 3x2 mask, got 2x2');
   });
 });

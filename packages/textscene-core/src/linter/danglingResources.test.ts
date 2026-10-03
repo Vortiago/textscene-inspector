@@ -158,6 +158,47 @@ describe('dangling-resource-reference', () => {
   });
 });
 
+describe("a .tres file's [resource] body", () => {
+  // The body's values parse at `:774` with the ext and sub callbacks set at `:1191-1192`, so a missing id fails the
+  // load there as in any other section.
+  it('reports an ExtResource or SubResource id the file never declares, typed by the header', () => {
+    const diagnostics = dangling(`[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+albedo_texture = ExtResource("nope")
+normal_texture = SubResource("gone")
+`);
+    expect(diagnostics.map((d) => [d.nodeType, d.location?.line])).toEqual([
+      ['StandardMaterial3D', 4],
+      ['StandardMaterial3D', 5],
+    ]);
+  });
+
+  it('names the file, not a scene, as what fails to load', () => {
+    const [found] = dangling(`[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+albedo_texture = ExtResource("nope")
+`);
+    expect(found?.message).toContain('Godot fails to load the file.');
+  });
+
+  it('reports nothing for ids the file declares', () => {
+    expect(
+      dangling(`[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://t.png" id="1_tex"]
+
+[sub_resource type="GradientTexture2D" id="tex_2"]
+
+[resource]
+albedo_texture = ExtResource("1_tex")
+normal_texture = SubResource("tex_2")
+`)
+    ).toEqual([]);
+  });
+});
+
 describe('where a dangling reference is reported', () => {
   it("on the line of the node's property that holds it", () => {
     const [found] = dangling(`[gd_scene format=3]

@@ -34,12 +34,12 @@ Strict parsing format-checks these `ReferenceRect` properties, plus 53 inherited
 <!-- lint:end -->
 
 `border_color` and `editor_only` carry no bound, so any format-valid literal passes both
-parsers. `border_width` is clamped to `0` by both: the strict parser flags a negative
+parsers. `border_width` is clamped to `0` by both. The strict parser flags a negative
 literal as an error, and the render-facing parser stores Godot's own floor
-(`MAX(0, width)`), matching the setter.
+(`MAX(0, width)`), as the setter does.
 
 ## Known limitations
 
-- **Editor only** Godot's own editor draws every ReferenceRect in the open scene at
-  once. Here `editor_only = true` (the default) is selection-gated instead, to avoid
-  the same clutter ADR-0018 already avoids for Marker2D/Path2D.
+- **Editor only** Godot's editor draws every ReferenceRect in the open scene at once,
+  where here `editor_only = true` (the default) is selection-gated, as ADR-0018 does for
+  Marker2D/Path2D.

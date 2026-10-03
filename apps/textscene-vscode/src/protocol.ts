@@ -5,7 +5,6 @@
  * stay assignable to the integration hooks' loose `{ type: string; … }` records.
  */
 
-import type { MissingResource } from '@textscene/core/parser';
 import type { WireResourcePayload } from './wireCodec';
 
 // Host -> Webview
@@ -14,18 +13,6 @@ import type { WireResourcePayload } from './wireCodec';
 export type LoadTscnMessage = {
   type: 'loadTscn';
   content: string;
-};
-
-/**
- * Incremental update payload. The webview treats it as a full reload of
- * `data.sceneData.rawText` when present, since React reconciliation does the diff.
- */
-export type IncrementalUpdateMessage = {
-  type: 'incrementalUpdate';
-  data: {
-    changes: unknown[];
-    sceneData: { rawText?: string };
-  };
 };
 
 /** Successful response to a webview `loadResource` request. */
@@ -52,11 +39,7 @@ export type ResourceChangedMessage = {
 };
 
 export type HostToWebviewMessage =
-  | LoadTscnMessage
-  | IncrementalUpdateMessage
-  | ResourceLoadedMessage
-  | ResourceLoadErrorMessage
-  | ResourceChangedMessage;
+  LoadTscnMessage | ResourceLoadedMessage | ResourceLoadErrorMessage | ResourceChangedMessage;
 
 /**
  * Anything can post to a webview, so a listener narrows before it reads: a
@@ -72,12 +55,6 @@ export function isHostToWebviewMessage(data: unknown): data is HostToWebviewMess
 /** Handshake: the React tree installed its `message` listener. */
 export type WebviewReadyMessage = {
   type: 'webviewReady';
-};
-
-/** Surfaces an error to the user through `showErrorMessage`. */
-export type ErrorMessage = {
-  type: 'error';
-  message: string;
 };
 
 /** Double-click in the scene tree: jump the editor to the node line. */
@@ -102,14 +79,9 @@ export type JumpToNodeMessage = {
 export type LoadResourceMessage = {
   type: 'loadResource';
   path: string;
-  resourceType: string;
+  /** Absent for a processor load: the byte layer reads a file without knowing its type. */
+  resourceType?: string;
   requestId: string;
-};
-
-/** Report a resource the renderer needed but could not resolve. */
-export type ResourceNeededMessage = {
-  type: 'resourceNeeded';
-  resource: MissingResource;
 };
 
 export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error';
@@ -122,13 +94,7 @@ export type LogMessage = {
   args: unknown[];
 };
 
-export type WebviewToHostMessage =
-  | WebviewReadyMessage
-  | ErrorMessage
-  | JumpToNodeMessage
-  | LoadResourceMessage
-  | ResourceNeededMessage
-  | LogMessage;
+export type WebviewToHostMessage = WebviewReadyMessage | JumpToNodeMessage | LoadResourceMessage | LogMessage;
 
 /**
  * The host listener's guard, since a webview can post anything. Like

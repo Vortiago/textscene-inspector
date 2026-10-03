@@ -624,7 +624,7 @@ describe('createResourceProcessor', () => {
   });
 
   describe('full-clear invalidation (corpus switch)', () => {
-    it("clearCache never emits invalidated itself — announcing is the loader's job — and cachedPaths snapshots keys", async () => {
+    it("a full clear emits no invalidated, since announcing is the loader's job, and cachedPaths snapshots keys", async () => {
       const processor = createResourceProcessor<string>({
         eventBus,
         resourceType: 'resource',
@@ -638,11 +638,80 @@ describe('createResourceProcessor', () => {
       await flush();
       expect(processor.cachedPaths()).toEqual(['res://a', 'res://b']);
 
-      processor.clearCache('res://a'); // per-path (hot-reload): silent
-      processor.clearCache(); // full clear: also silent at this layer
+      processor.clearCache();
       expect(invalidated).toEqual([]);
       expect(processor.getCacheSize()).toBe(0);
       expect(processor.cachedPaths()).toEqual([]);
+    });
+  });
+
+  describe('per-path clear (Dependency hot-reload)', () => {
+    const createDirect = () =>
+      createResourceProcessor<string>({
+        eventBus,
+        resourceType: 'resource',
+        addressesSubResources: true,
+        loadDirectly: async (path) => `v:${path}`,
+      });
+
+    it('announces the cleared file key, so its mounted consumer requests it again', async () => {
+      const processor = createDirect();
+      const invalidated: string[] = [];
+      eventBus.on('resource', 'invalidated', (id) => invalidated.push(id));
+      processor.request('res://a');
+      processor.request('res://b');
+      await flush();
+
+      processor.clearCache('res://a');
+
+      expect(invalidated).toEqual(['res://a']);
+      expect(processor.getCached('res://a')).toBeUndefined();
+      expect(processor.getCached('res://b')).toBe('v:res://b');
+    });
+
+    it('announces an in-flight file key and disowns its flight', async () => {
+      let release!: (value: string) => void;
+      const processor = createResourceProcessor<string>({
+        eventBus,
+        resourceType: 'resource',
+        loadDirectly: () => new Promise<string>((r) => (release = r)),
+      });
+      const invalidated: string[] = [];
+      eventBus.on('resource', 'invalidated', (id) => invalidated.push(id));
+      processor.request('res://a');
+
+      processor.clearCache('res://a');
+      release('stale');
+      await flush();
+
+      expect(invalidated).toEqual(['res://a']);
+      expect(processor.getCached('res://a')).toBeUndefined();
+    });
+
+    it('clears and announces only the one key when given an address', async () => {
+      const processor = createDirect();
+      const invalidated: string[] = [];
+      eventBus.on('resource', 'invalidated', (id) => invalidated.push(id));
+      processor.request('res://t.tres');
+      processor.request('res://t.tres::Font_1');
+      processor.request('res://t.tres::Font_2');
+      await flush();
+
+      processor.clearCache('res://t.tres::Font_1');
+
+      expect(invalidated).toEqual(['res://t.tres::Font_1']);
+      expect(processor.getCached('res://t.tres')).toBe('v:res://t.tres');
+      expect(processor.getCached('res://t.tres::Font_2')).toBe('v:res://t.tres::Font_2');
+    });
+
+    it('announces the path even when it no longer holds it, since an unpinned failure may have been evicted', () => {
+      const processor = createDirect();
+      const invalidated: string[] = [];
+      eventBus.on('resource', 'invalidated', (id) => invalidated.push(id));
+
+      processor.clearCache('res://evicted.tres');
+
+      expect(invalidated).toEqual(['res://evicted.tres']);
     });
 
     it('a direct load resolving after a full clear is dropped: not cached, not announced, disposed', async () => {

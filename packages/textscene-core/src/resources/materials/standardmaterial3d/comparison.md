@@ -69,7 +69,7 @@ Godot's `heightmap_*` is texture-space parallax, so the silhouette stays a smoot
 ## Texture filter
 <!-- compare: image=unit-material-texture-filter status=done fixture=unit-material-texture-filter.tscn -->
 
-`texture_filter` picks the sampler every texture slot reads through, and `texture_repeat` rides the same helper. Godot's repeat default is on while three's is clamp, so the applier states Repeat at bind time: an unauthored material tiles a clamped arrival on a source-shared clone.
+`texture_filter` picks the sampler every texture slot reads through, and `texture_repeat` rides the same helper. Godot's repeat default is on while three's is clamp, so the applier states Repeat at bind time. An unauthored material tiles a clamped arrival on a source-shared clone.
 
 - **Approximated** Nearest sampling with anisotropy takes the property but not the anisotropy, since three skips it under `NearestFilter`.
 - **Approximated** `texture_mipmap_bias` is not applied. WebGL2 has no per-texture LOD bias.
@@ -89,12 +89,12 @@ The lenient parser never rejects. Each field falls back to Godot's default throu
 
 ## Known limitations
 
-- **Approximated** `ALPHA_HASH` is alpha-blended rather than dithered, so it joins the transparent pass. The depth write still follows Godot's.
+- **Approximated** `ALPHA_HASH` is alpha-blended rather than dithered, so it joins the transparent pass while its depth write follows Godot's.
 - **Shader missing** `alpha_antialiasing_mode` is read for the pass decision, but the cutout edge reads hard rather than coverage-blended.
 - **Shader missing** `proximity_fade_*` and `distance_fade_*` decide the pass but are not rendered, so the surface stays at full opacity.
 - **Shader missing** `diffuse_mode` is always Lambert where Godot defaults to Burley, so a rough sphere is slightly darker at the silhouette.
-- **Shader missing** `metallic_specular` has no effect. three fixes dielectric F0 at 0.04.
+- **Shader missing** `metallic_specular` has no effect, since three fixes dielectric F0 at 0.04.
 - **Approximated** Godot measures V from the image top and three from the bottom, so a non-integer `uv1_scale.y` or a non-zero `uv1_offset.y` shifts V differently.
 - **Approximated** Under `uv1_world_triplanar`, `uv1_offset` is in world units and is not converted.
-- **Approximated** Triplanar tiling density is exact on planar meshes only. Curved and GLB geometry fall back to their own UVs, and a `.tres` material tiles by UV.
+- **Approximated** Triplanar tiling density is exact on planar meshes only, since curved and GLB geometry and a `.tres` material tile by their own UVs.
 - **Approximated** A patterned texture on a SphereMesh lands rotated, because Godot winds sphere UVs at a different phase than three.

@@ -34,4 +34,4 @@ XRBodyModifier3D registers `parseNode3D` directly, so `body_tracker`, `body_upda
 
 ## Known limitations
 
-- **Needs runtime** Godot poses the skeleton from a live XR body tracker. Here nothing moves.
+- **Needs runtime** Godot poses the skeleton from a live XR body tracker, but here nothing moves.

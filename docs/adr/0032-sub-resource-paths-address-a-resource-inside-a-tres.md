@@ -103,11 +103,10 @@ ones.
   `[resource]` has no `_surfaces`). Wrong or blank, and never diagnosed. An address that
   names an id the file does not declare, or one that is not a mesh, warns and does not
   decode silently to nothing.
-- A per-path `clearCache` also drops, and announces `invalidated` for, the addresses into
-  that file. A **Dependency hot-reload** re-requests only the file it knows about, so
-  without the announcement a mounted consumer keeps a stale material after the owning
-  `.tres` changes on disk. `useResource` answers `invalidated` by re-requesting, so no
-  new mechanism is needed.
+- A per-path `clearCache` drops, and announces `invalidated` for, the file and every
+  address into it. Without the announcement a mounted consumer keeps a stale material
+  after the owning `.tres` changes on disk. `useResource` answers `invalidated` by
+  re-requesting, so a **Dependency hot-reload** re-requests nothing itself.
 - Cost: nothing resolves a `uid://…::id` reference. An address whose sub-resource id is
   absent from the file fails like a missing file (cached null, then the slot's neutral
   default). That is the intended lenient behaviour, but it puts the `::` form in front of

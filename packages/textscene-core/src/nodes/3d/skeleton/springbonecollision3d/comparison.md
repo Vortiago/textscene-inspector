@@ -35,5 +35,5 @@ SpringBoneCollision3D registers `parseNode3D` directly, so `bone_name`, `bone`, 
 
 ## Known limitations
 
-- **Needs runtime** Godot's SpringBoneSimulator3D resolves its bones against this collider each frame. Here the bones hold their rest pose, so the collider guards nothing.
-- **Editor only** The collider gizmo appears only in Godot's editor. Here it is absent.
+- **Needs runtime** Godot's SpringBoneSimulator3D resolves its bones against this collider each frame, but here the bones hold their rest pose.
+- **Editor only** The collider gizmo appears only in Godot's editor, but here it is absent.

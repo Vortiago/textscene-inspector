@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { isBinaryResourceType, stripResPrefix } from './resourceProviderUtils';
+import { isBinaryResourceType, resourceContent, stripResPrefix } from './resourceProviderUtils';
 import { resourceSliceRegistry } from './sliceRegistration';
 
 /** The binary type names a provider must fetch as bytes. */
@@ -113,5 +113,51 @@ describe('stripResPrefix', () => {
   it('leaves a path that has no prefix alone', () => {
     expect(stripResPrefix('scenes/Door.tscn')).toBe('scenes/Door.tscn');
     expect(stripResPrefix('')).toBe('');
+  });
+});
+
+describe('resourceContent', () => {
+  it('decodes a text resource as UTF-8', () => {
+    const bytes = new TextEncoder().encode('[gd_scene format=3]\n');
+    expect(resourceContent(bytes, 'PackedScene', 'res://level.tscn')).toBe('[gd_scene format=3]\n');
+  });
+
+  it('hands a binary resource back as an ArrayBuffer holding exactly its bytes', () => {
+    const content = resourceContent(
+      new Uint8Array([0x67, 0x6c, 0x54, 0x46]),
+      'PackedScene',
+      'res://tree.glb'
+    );
+
+    expect(content).toBeInstanceOf(ArrayBuffer);
+    expect([...new Uint8Array(content as ArrayBuffer)]).toEqual([0x67, 0x6c, 0x54, 0x46]);
+  });
+
+  it('hands over the buffer of a view that spans it whole, with no copy', () => {
+    const bytes = new Uint8Array([0x67, 0x6c, 0x54, 0x46]);
+    expect(resourceContent(bytes, 'PackedScene', 'res://tree.glb')).toBe(bytes.buffer);
+  });
+
+  it('copies a view out of a larger buffer, so the other bytes stay behind', () => {
+    const pool = new Uint8Array([1, 2, 3, 4, 5, 6]);
+    const content = resourceContent(pool.subarray(2, 4), 'Texture2D', 'res://icon.png');
+
+    expect((content as ArrayBuffer).byteLength).toBe(2);
+    expect([...new Uint8Array(content as ArrayBuffer)]).toEqual([3, 4]);
+  });
+
+  it('gives an empty string for an empty text file', () => {
+    expect(resourceContent(new Uint8Array(), '', 'res://project.godot')).toBe('');
+  });
+});
+
+describe('isBinaryResourceType with no type', () => {
+  it('answers from the extension, as for a load the byte layer makes', () => {
+    expect(isBinaryResourceType(undefined, 'res://art/tile.png')).toBe(true);
+    expect(isBinaryResourceType(undefined, 'res://fonts/body.ttf')).toBe(true);
+  });
+
+  it('reads a text resource as text', () => {
+    expect(isBinaryResourceType(undefined, 'res://meshes/quad.tres')).toBe(false);
   });
 });

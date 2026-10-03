@@ -9,9 +9,9 @@ renders_as: a background and ratio-filled StyleBox pair, with a percentage label
 
 # ProgressBar
 
-ProgressBar draws its `background` StyleBox across the whole control, its `fill`
-StyleBox windowed to the current value's ratio in the direction `fill_mode` names, and,
-unless `indeterminate`, a centred percentage label with an optional outline.
+ProgressBar draws its `background` StyleBox across the whole control and its `fill`
+StyleBox windowed to the current value's ratio, in the direction `fill_mode` names.
+Unless `indeterminate` is set, it adds a centred percentage label with an optional outline.
 
 ## Linting
 
@@ -43,6 +43,6 @@ the out-of-range write, so the node keeps its class-default mode.
 
 ## Known limitations
 
-- **Approximated** `indeterminate` never animates. The previewer always draws the one
-  frame Godot itself treats as static (the bar centred in the control), regardless of
-  `editor_preview_indeterminate`.
+- **Approximated** `indeterminate` never animates, so the previewer always draws Godot's
+  static frame (the bar centred in the control), whatever `editor_preview_indeterminate`
+  says.

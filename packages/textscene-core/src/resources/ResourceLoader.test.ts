@@ -1,7 +1,7 @@
 /**
- * The loader-level surface: `register()` idempotence, the `provideFile()` late
- * arrival (both caches cleared, then re-requested), the metadata-less fan-out,
- * failed loads caching null, and the unknown-type guard. Hooks and processors have their own tests.
+ * The loader-level surface: `register()` idempotence, failed loads caching null,
+ * corpus switches and the unknown-type guard. `provideFile` has its own table in
+ * `provideFile.integration.test.tsx`, and hooks and processors have their own tests.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ResourceLoader } from './ResourceLoader';
@@ -92,94 +92,6 @@ describe('ResourceLoader (loader-level gaps)', () => {
       expect(loader.scenes.getCached(SCENE_PATH)).toBeNull();
       expect(loader.scenes.isCached(SCENE_PATH)).toBe(true);
     });
-  });
-
-  describe('provideFile() — the late-arrival flow at the loader level', () => {
-    it('clears file + processor caches and re-requests through the typed processor', async () => {
-      loader.register(SCENE_META);
-
-      // Phase 1: the file is missing; the failure is cached as null.
-      const firstAttempt = loader.eventBus.once<TscnScene>('scene', 'loaded', SCENE_PATH);
-      loader.request('scene', SCENE_PATH);
-      await expect(firstAttempt).rejects.toThrow('must be text content');
-      expect(loader.getCached('scene', SCENE_PATH)).toBeNull();
-      expect(provider.loadResource).toHaveBeenCalledTimes(1);
-
-      // Phase 2: the host now has the file; provideFile must drop the stale
-      // failure (file cache AND processor cache) and re-request fresh.
-      provider.files.set(SCENE_PATH, VALID_TSCN);
-      const fileCacheSpy = vi.spyOn(fileEventBus, 'clearCache');
-      const reloaded = loader.eventBus.once<TscnScene>('scene', 'loaded', SCENE_PATH);
-
-      loader.provideFile(SCENE_PATH);
-
-      expect(fileCacheSpy).toHaveBeenCalledWith(SCENE_PATH);
-      const scene = await reloaded;
-      expect(scene.nodes).toHaveLength(1);
-      expect(scene.nodes[0]!.name).toBe('Root');
-      expect(provider.loadResource).toHaveBeenCalledTimes(2);
-      expect(loader.getCached<TscnScene>('scene', SCENE_PATH)).toBe(scene);
-    });
-
-    it('treats a sub-resource path as its owning file', () => {
-      // Bytes belong to a file, so a **Sub-resource path** names its owning file.
-      // Routing the address would miss the metadata, fan out to the wrong processors,
-      // and skip the file-level clear that announces `invalidated` to its addresses.
-      const resSpy = vi.spyOn(loader.resources, 'request');
-      const fileCacheSpy = vi.spyOn(fileEventBus, 'clearCache');
-
-      loader.provideFile('res://meshes/wheel.tres::StandardMaterial3D_x');
-
-      expect(fileCacheSpy).toHaveBeenCalledWith('res://meshes/wheel.tres');
-      expect(resSpy).toHaveBeenCalledWith('res://meshes/wheel.tres');
-    });
-
-    it('re-requests through the texture processor when the path has no registered metadata', () => {
-      const texSpy = vi.spyOn(loader.textures, 'request');
-      const sceneSpy = vi.spyOn(loader.scenes, 'request');
-      const glbSpy = vi.spyOn(loader.glbMeshes, 'request');
-
-      loader.provideFile('res://mystery.png');
-
-      expect(texSpy).toHaveBeenCalledWith('res://mystery.png');
-      expect(sceneSpy).not.toHaveBeenCalled();
-      expect(glbSpy).not.toHaveBeenCalled();
-    });
-
-    it('fans an unregistered .tres out to every .tres processor (generic resource + font)', () => {
-      // A raw `res://…tres` reference, such as an undeclared tile_set path, must reach
-      // every .tres-capable processor, or a late upload of the wrong kind never resolves.
-      const resSpy = vi.spyOn(loader.resources, 'request');
-      const fontSpy = vi.spyOn(loader.fonts, 'request');
-      const texSpy = vi.spyOn(loader.textures, 'request');
-
-      loader.provideFile('res://tileset/tiles.tres');
-
-      expect(resSpy).toHaveBeenCalledWith('res://tileset/tiles.tres');
-      expect(fontSpy).toHaveBeenCalledWith('res://tileset/tiles.tres');
-      expect(texSpy).not.toHaveBeenCalled();
-    });
-
-    it('routes a registered TileSet .tres through the generic resource processor', () => {
-      loader.register({ id: '1_ts', path: 'res://tiles.tres', type: 'TileSet' });
-      const resSpy = vi.spyOn(loader.resources, 'request');
-
-      loader.provideFile('res://tiles.tres');
-
-      expect(resSpy).toHaveBeenCalledWith('res://tiles.tres');
-    });
-
-    it.each(['FontFile', 'SystemFont', 'FontVariation'])(
-      'routes a registered %s through the font processor',
-      (type) => {
-        loader.register({ id: '1_font', path: 'res://fonts/x.tres', type });
-        const fontSpy = vi.spyOn(loader.fonts, 'request');
-
-        loader.provideFile('res://fonts/x.tres');
-
-        expect(fontSpy).toHaveBeenCalledWith('res://fonts/x.tres');
-      }
-    );
   });
 
   describe('clearCaches() — corpus switches', () => {

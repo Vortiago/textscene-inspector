@@ -60,13 +60,21 @@ export type ParentLookup =
   | { kind: 'unknowable' };
 
 /**
- * `node`'s parent, or the reason no rule may reason about it: the only way out of this
- * module to a parent whose type may be read. `findParentNode` hands back the raw heading,
+ * `node`'s parent, or the reason no rule may reason about it. With {@link parentLookup}, it
+ * is the only way out of this module to a parent whose type may be read. `findParentNode` hands back the raw heading,
  * where a forgotten check is invisible. {@link parentIdentity} is the second door, for a
  * caller that reads no type.
  */
 export function knownParent(scene: TscnScene, node: TscnNode): ParentLookup {
-  const parent = findParentNode(scene.nodes, node);
+  return parentLookup(findParentNode(scene.nodes, node));
+}
+
+/**
+ * The {@link ParentLookup} for a parent some tree already found, or for none at the root.
+ * A tree other than this file's, such as the previewer's live tree, finds its own parent
+ * and asks the same knowability question here.
+ */
+export function parentLookup(parent: TscnNode | null | undefined): ParentLookup {
   if (!parent) return { kind: 'root' };
   // A type goes unread two ways: declared in another scene, or outside the catalog. Godot's
   // check is a runtime `cast_to` against a ClassDB with every extension registered
@@ -115,12 +123,24 @@ export function searchAncestors<T>(
   node: TscnNode,
   visit: (ancestor: TscnNode) => T | undefined
 ): AncestorSearch<T> {
+  return climbAncestors(node, (child) => knownParent(scene, child), visit);
+}
+
+/**
+ * {@link searchAncestors} over any tree: `parentOf` takes each step, so a walk shared with
+ * the previewer climbs the live tree with the same rules.
+ */
+export function climbAncestors<T>(
+  node: TscnNode,
+  parentOf: (child: TscnNode) => ParentLookup,
+  visit: (ancestor: TscnNode) => T | undefined
+): AncestorSearch<T> {
   // `undefined` climbs on, anything else stops, and a caller that declines returns its
   // own sentinel. Godot's walks differ too much to fold in (`Bone2D` stops at the first
   // non-Bone2D, the `clip_children` checks read to the root), so that varies in `visit`.
   let current = node;
   for (;;) {
-    const step = knownParent(scene, current);
+    const step = parentOf(current);
     if (step.kind === 'root') return { kind: 'exhausted' };
     if (step.kind === 'unknowable') return { kind: 'unknowable' };
     const value = visit(step.parent);

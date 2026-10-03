@@ -52,6 +52,29 @@ export interface TscnScene {
    * fields above: such a heading has no `node.parent`, so it is seated, not stranded.
    */
   emptyParentHeadings?: readonly NodeOrigin[];
+  /**
+   * A `.tres` file's `[gd_resource type=]`, the class the loader builds its `[resource]` body as
+   * (`resource_format_text.cpp:1166`, `:741`). Absent in a `.tscn`, and where the header names no type.
+   */
+  resourceType?: string;
+  /**
+   * A `.tres` file's own `[resource]` body. Absent in a `.tscn`, where the loader refuses the tag
+   * (`resource_format_text.cpp:723-728`).
+   */
+  mainResource?: TscnMainResource;
+  /**
+   * The `binds=` value of each `[connection]` heading, as written. The loader parses a heading's fields with the
+   * resource parser a property value goes through (`resource_format_text.cpp:286`, `:379`, `variant_parser.cpp:1862`),
+   * so an `ExtResource` in it is a use. Absent rather than empty when no heading binds anything.
+   */
+  connectionBinds?: readonly string[];
+  /**
+   * The `instance=` value of each `[node]` heading that follows no other `[node]`: the first, or one after a
+   * `[connection]` or `[editable]`. Only a node body's read of the next heading skips a failed `ExtResource`
+   * (`resource_format_text.cpp:288-289`). Every other read ends the load (`:533-536`, `:647-650`, `:381-384`,
+   * `:404-407`). Absent rather than empty when no such heading instances anything.
+   */
+  instancesOutsideNodeBody?: readonly string[];
   /** Event-based resource loader, used by SceneGraph helpers. */
   resourceLoader?: ResourceLoader;
 }
@@ -118,7 +141,8 @@ export interface TscnExternalResource {
 }
 
 /**
- * The resource scope a subtree resolves its ids against: both pools, always together.
+ * The resource scope a subtree resolves its ids against: both pools, always together,
+ * and the instanced scenes that enclose it.
  * Ids are per file and per kind, and one property block can name `ExtResource("2")` and
  * `SubResource("1")`. One type makes it impossible to pass one pool and forget the
  * other, which resolves half the ids against nothing.
@@ -126,6 +150,12 @@ export interface TscnExternalResource {
 export interface SceneScope {
   readonly externalResources: readonly TscnExternalResource[];
   readonly internalResources: readonly TscnInternalResource[];
+  /**
+   * The `res://` paths of the PackedScenes whose instances enclose this subtree,
+   * outermost first. Absent means none. An instance of a path already here is cyclic
+   * instancing: Godot's loader returns null for it (`resource_loader.cpp:838-845`).
+   */
+  readonly instancedScenePaths?: readonly string[];
 }
 
 export interface TscnInternalResource {
@@ -133,6 +163,17 @@ export interface TscnInternalResource {
   type: string;
   data: Record<string, unknown>;
 }
+
+/**
+ * A `.tres` file's `[resource]` body. It has no id and no `type=`: its class is the header's,
+ * {@link TscnScene.resourceType}. `data` holds the raw values, keyed as the scan stores them.
+ */
+export interface TscnMainResource {
+  data: Record<string, string>;
+}
+
+/** What the scan builds from one section: the object a strict consumer files the section's lines under. */
+export type BuiltSection = TscnNode | TscnInternalResource | TscnExternalResource | TscnMainResource;
 
 /** Alias used by the immutable SceneGraph and dependency-tracking helpers. */
 export type ExtResource = TscnExternalResource;

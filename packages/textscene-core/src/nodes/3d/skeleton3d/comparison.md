@@ -10,7 +10,7 @@ renders_as: nothing yet, Godot poses its bones and deforms bound meshes, the pre
 
 # Skeleton3D
 
-Holds the bone hierarchy that deforms attached meshes. Godot poses its bones and runs its modifiers each frame, deforming any mesh bound to it, and the previewer does not yet (ADR-0045): the bones hold the rest pose.
+Holds the bone hierarchy that deforms attached meshes. Godot poses its bones and runs its modifiers each frame, deforming any mesh bound to it. The previewer does not yet (ADR-0045), so the bones hold the rest pose.
 
 ## Linting
 
@@ -40,5 +40,5 @@ Skeleton3D registers `parseNode3D` directly, so `motion_scale`, `show_rest_only`
 
 ## Known limitations
 
-- **Needs runtime** Godot poses its bones each frame and deforms any mesh bound to it. Here the bones hold the rest pose.
-- **Editor only** The bone gizmo appears only in Godot's editor. Here it is absent.
+- **Needs runtime** Godot poses its bones each frame and deforms any mesh bound to it, but here the bones hold the rest pose.
+- **Editor only** The bone gizmo appears only in Godot's editor, but here it is absent.

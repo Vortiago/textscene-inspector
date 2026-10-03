@@ -76,4 +76,4 @@ The lenient parser registers the plain `Node` reader, which reads only the headi
 
 ## Known limitations
 
-- **Not drawn** Godot displays the window and its Control children at runtime. The previewer draws nothing for it.
+- **Not drawn** Godot displays the window and its Control children at runtime, but the previewer draws nothing for it.

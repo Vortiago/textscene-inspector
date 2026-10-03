@@ -10,7 +10,7 @@ renders_as: nothing yet, Godot solves its deprecated chain onto the target, the 
 
 # SkeletonIK3D
 
-A deprecated FABRIK chain solver, still saved and reloaded by stock 4.x builds, that walks the bones from `root_bone` to `tip_bone` and drags the tip onto a target over up to `max_iterations` passes. Godot runs the solver each frame, and the previewer does not yet (ADR-0045): the bones hold their rest pose.
+A deprecated FABRIK chain solver that stock 4.x builds still save and reload. It walks the bones from `root_bone` to `tip_bone` and drags the tip onto a target over up to `max_iterations` passes. Godot runs the solver each frame, and the previewer does not yet (ADR-0045). The bones hold their rest pose.
 
 ## Linting
 
@@ -36,4 +36,4 @@ Strict parsing format-checks these `SkeletonIK3D` properties, plus 2 inherited f
 | `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode3D`, so every key above is dropped rather than substituted, with no fallback to name. Strict checks only their format, since every setter in `skeleton_ik_3d.cpp` is a bare assignment, so a negative `max_iterations` or a bone name matching no bone passes.
+The lenient parser reuses `parseNode3D`, so every key above is dropped rather than substituted, with no fallback to name. Strict checks only their format, since every setter in `skeleton_ik_3d.cpp` is a bare assignment. A negative `max_iterations` or a bone name that matches no bone passes.

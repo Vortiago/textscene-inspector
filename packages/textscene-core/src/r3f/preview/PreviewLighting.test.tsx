@@ -5,7 +5,10 @@
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import type * as THREE from 'three';
 import { TscnSceneContents } from '../TscnCanvas';
+import { readDirectionalShadowDeclaration } from '../directionalShadow/declaration';
+import { directionalShadowBias } from '../../nodes/3d/lights/shared/shadowBias';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
 import { SelectionProvider } from '../contexts/SelectionContext';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
@@ -103,4 +106,34 @@ describe('preview environment yielding', () => {
   // The preview environment applies itself through a GPU render the headless
   // renderer cannot run. godotPreviewLighting.test.ts covers the decision, and
   // the `preview-lighting` visual golden the pixels.
+});
+
+describe('preview sun shadow', () => {
+  const previewSunDeclaration = async () => {
+    const renderer = await render(scene(MESH), { environment: false });
+    const sun = renderer.scene.findByType('DirectionalLight').instance as THREE.DirectionalLight;
+    return readDirectionalShadowDeclaration(sun);
+  };
+
+  it('draws the editor’s four splits', async () => {
+    // `node_3d_editor_plugin.cpp:10383`.
+    expect((await previewSunDeclaration())?.splitCount).toBe(4);
+  });
+
+  it('keeps the class defaults for the split offsets and blending', async () => {
+    expect(await previewSunDeclaration()).toMatchObject({
+      splitOffsets: [0.1, 0.2, 0.5],
+      blendSplits: false,
+    });
+  });
+
+  it('keeps the class default fade start', async () => {
+    // The editor never sets `PARAM_SHADOW_FADE_START` on its sun (`node_3d_editor_plugin.cpp:9475-9477`).
+    expect((await previewSunDeclaration())?.fadeStart).toBe(0.8);
+  });
+
+  it('keeps the class default depth bias an authored sun gets', async () => {
+    // The editor never sets `PARAM_SHADOW_BIAS` or `PARAM_SHADOW_BLUR` on its sun.
+    expect((await previewSunDeclaration())?.depthBias).toBe(directionalShadowBias(undefined, undefined));
+  });
 });

@@ -1,6 +1,6 @@
 /**
  * Unit tests for dependency hot-reload. A changed dependency (texture, `.tres`,
- * instanced sub-scene) leaves the main `.tscn` unchanged, so the panel posts
+ * instanced sub-scene, sidecar, font, `project.godot`) leaves the main `.tscn` unchanged, so the panel posts
  * `resourceChanged` and the webview re-fetches only that resource.
  */
 import { describe, expect, it, type Mock } from 'vitest';
@@ -79,6 +79,29 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
     ]);
   });
 
+  it.each([
+    [
+      'an import sidecar',
+      'res://models/ship.glb.import',
+      '/workspace/models/ship.glb.import',
+      'ImportSidecar',
+    ],
+    ['project.godot', 'res://project.godot', '/workspace/project.godot', 'ProjectSettings'],
+    ['a font file', 'res://fonts/body.ttf', '/workspace/fonts/body.ttf', 'FontFile'],
+  ])('posts resourceChanged for %s the webview read', async (_kind, resPath, fsPath, resourceType) => {
+    const { webview, triggerMessage } = setupMockPanel();
+    const panel = await createReadyPanel(triggerMessage);
+    (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
+      uri: createMockUri('/workspace'),
+    });
+    triggerMessage({ type: 'loadResource', path: resPath, resourceType, requestId: 'r1' });
+    await new Promise<void>((r) => setTimeout(r, 10));
+
+    await panel.handleDependencyChange(createMockUri(fsPath));
+
+    expect(resourceChangedCalls(webview)).toEqual([{ type: 'resourceChanged', path: resPath }]);
+  });
+
   it('does not post resourceChanged for a file the scene never requested (relevance gate)', async () => {
     const { webview, triggerMessage } = setupMockPanel();
     const panel = await createReadyPanel(triggerMessage);
@@ -100,6 +123,9 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
     });
     const stat = vscode.workspace.fs.stat as Mock;
     stat.mockClear();
+    // Each read also stats the file it reads, so only the walk's stats of project.godot count.
+    const projectFileStats = () =>
+      stat.mock.calls.filter(([uri]) => (uri as vscode.Uri).fsPath.endsWith('project.godot')).length;
 
     triggerMessage({
       type: 'loadResource',
@@ -108,7 +134,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
       requestId: 'r1',
     });
     await new Promise<void>((r) => setTimeout(r, 10));
-    const callsAfterFirst = stat.mock.calls.length;
+    const callsAfterFirst = projectFileStats();
     expect(callsAfterFirst).toBeGreaterThan(0);
 
     triggerMessage({
@@ -121,7 +147,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
 
     // The second resource request reuses the panel's cached provider/project
     // root instead of re-walking the filesystem for it.
-    expect(stat).toHaveBeenCalledTimes(callsAfterFirst);
+    expect(projectFileStats()).toBe(callsAfterFirst);
   });
 
   it('clears the cached resource provider when update() receives a different document', async () => {

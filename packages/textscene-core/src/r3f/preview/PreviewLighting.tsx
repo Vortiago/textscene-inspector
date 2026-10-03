@@ -9,14 +9,10 @@ import * as THREE from 'three';
 import { useViewportMode } from '../contexts/ViewportModeContext';
 import { useLiveSceneNodes } from '../useLiveSceneTree';
 import { EnvironmentLayer } from '../environment/EnvironmentLayer';
-import {
-  LIGHT_INTENSITY_SCALE,
-  DEFAULT_SHADOW_BIAS,
-  DIRECTIONAL_SHADOW_FRUSTUM_HALF,
-  DIRECTIONAL_SHADOW_NEAR,
-  SHADOW_MAP_SIZE,
-  SHADOW_NORMAL_BIAS,
-} from '../lightConstants';
+import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
+import { DirectionalShadowMode } from '../../godot/directionalShadow';
+import { directionalShadowUserData } from '../directionalShadow/declaration';
+import { directionalShadowDeclaration } from '../../nodes/3d/lights/directionallight3d/shadowDeclaration';
 import {
   PREVIEW_SUN_COLOR,
   PREVIEW_SUN_ENERGY,
@@ -28,11 +24,23 @@ import {
 } from './godotPreviewLighting';
 
 /**
- * Where the preview sun stands. It has no scene node, so unlike an authored
- * light nothing is anchored to its transform and the distance is free; the
- * direction it lights from is what this encodes.
+ * Where the preview sun stands. It has no scene node, so nothing is anchored to
+ * its transform and the distance is free. Only the direction it lights from
+ * counts, since the scene's shadow fitter places the shadow box.
  */
 const PREVIEW_SUN_DISTANCE = 30;
+
+/**
+ * The preview sun's declaration: an authored DirectionalLight3D's, with the editor's max distance
+ * (`node_3d_editor_plugin.cpp:9476`), its shadow on (`:10382`) and four splits (`:10383`).
+ */
+const PREVIEW_SUN_SHADOW = directionalShadowUserData(
+  directionalShadowDeclaration({
+    shadow_enabled: true,
+    directional_shadow_mode: DirectionalShadowMode.PARALLEL_4_SPLITS,
+    directional_shadow_max_distance: PREVIEW_SUN_SHADOW_MAX_DISTANCE,
+  })
+);
 
 export function PreviewLighting() {
   const { showPreviewSun, showPreviewEnvironment } = useViewportMode();
@@ -57,8 +65,8 @@ export function PreviewLighting() {
 
 /**
  * Godot's preview sun: a white, energy-1.0 DirectionalLight3D with shadows on.
- * Built from the same constants an authored `<DirectionalLight3D>` uses, so a
- * scene does not visibly change character the moment it gains its own sun.
+ * It declares its shadow as an authored `<DirectionalLight3D>` does, and the same fitter fits it.
+ * So a scene does not visibly change character the moment it gains its own sun.
  */
 function PreviewSun() {
   const target = useMemo(() => new THREE.Object3D(), []);
@@ -78,16 +86,7 @@ function PreviewSun() {
         color={PREVIEW_SUN_COLOR}
         intensity={PREVIEW_SUN_ENERGY * LIGHT_INTENSITY_SCALE}
         castShadow
-        shadow-mapSize-width={SHADOW_MAP_SIZE}
-        shadow-mapSize-height={SHADOW_MAP_SIZE}
-        shadow-bias={DEFAULT_SHADOW_BIAS.DIRECTIONAL}
-        shadow-normalBias={SHADOW_NORMAL_BIAS}
-        shadow-camera-near={DIRECTIONAL_SHADOW_NEAR}
-        shadow-camera-far={PREVIEW_SUN_SHADOW_MAX_DISTANCE}
-        shadow-camera-left={-DIRECTIONAL_SHADOW_FRUSTUM_HALF}
-        shadow-camera-right={DIRECTIONAL_SHADOW_FRUSTUM_HALF}
-        shadow-camera-top={DIRECTIONAL_SHADOW_FRUSTUM_HALF}
-        shadow-camera-bottom={-DIRECTIONAL_SHADOW_FRUSTUM_HALF}
+        userData={PREVIEW_SUN_SHADOW}
       />
     </>
   );

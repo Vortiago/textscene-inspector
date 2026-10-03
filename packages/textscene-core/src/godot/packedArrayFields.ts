@@ -11,17 +11,37 @@ import { packedArrayBody, packedElementType } from './variantParser.js';
 const WS = '\\s*';
 
 /**
- * `"key": <value>` for a `Packed…Array(…)` call, an `Array[T]([…])` wrapper or a bare `[…]`, with the
- * whole value text in `[1]`. Each body stops at its first closing delimiter, as the elements carry
- * parentheses, never brackets. Pass `global` for a repeated scan: a `g`-flagged RegExp carries
- * `lastIndex`, so each caller needs its own instance.
+ * The text of the first `"key": <value>` whose value is a `Packed…Array(…)` call, an `Array[T]([…])`
+ * wrapper or a bare `[…]`, or null when the text holds none. Each body stops at its first closing
+ * delimiter, as the elements carry parentheses, never brackets.
  */
-export function dictPackedField(key: string, packedTypeName: string, global = false): RegExp {
+export function dictPackedField(key: string, packedTypeName: string): (text: string) => string | null {
   const element = packedElementType(packedTypeName);
-  const packed = `${packedTypeName}${WS}\\([^)]*\\)`;
-  const typed = `Array${WS}\\[${WS}${element}${WS}\\]${WS}\\(${WS}\\[[^[\\]]*\\]${WS}\\)`;
-  const bare = `\\[[^[\\]]*\\]`;
-  return new RegExp(`"${key}"${WS}:${WS}((?:${packed}|${typed}|${bare}))`, global ? 'g' : '');
+  const field = new RegExp(`"${key}"${WS}:${WS}`, 'g');
+  // Sticky, so each tests one key's value alone. A read sets `lastIndex` first and never yields.
+  const packedOpener = new RegExp(`${packedTypeName}${WS}\\(`, 'y');
+  const bracketed = new RegExp(
+    `Array${WS}\\[${WS}${element}${WS}\\]${WS}\\(${WS}\\[[^[\\]]*\\]${WS}\\)|\\[[^[\\]]*\\]`,
+    'y'
+  );
+  return (text) => {
+    // A packed body runs to the first `)`, so a call that opens past the last `)` never closes. A
+    // `[^)]*` search would rescan to the end from each such call, in quadratic time.
+    const lastClose = text.lastIndexOf(')');
+    for (const match of text.matchAll(field)) {
+      const valueStart = match.index + match[0].length;
+      packedOpener.lastIndex = valueStart;
+      if (packedOpener.test(text)) {
+        const bodyStart = packedOpener.lastIndex;
+        if (bodyStart <= lastClose) return text.slice(valueStart, text.indexOf(')', bodyStart) + 1);
+        continue;
+      }
+      bracketed.lastIndex = valueStart;
+      const value = bracketed.exec(text);
+      if (value !== null) return value[0];
+    }
+    return null;
+  };
 }
 
 /**

@@ -4,7 +4,8 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { Linter, type Diagnostic } from '@textscene/core/linter';
+import { Linter, type Diagnostic, type ResourceProvider } from '@textscene/core/linter';
+import { error as logError } from '@textscene/core/logger';
 import {
   groupDiagnostics,
   summarizeDiagnostics,
@@ -15,10 +16,17 @@ import {
 import { DEBOUNCE_MS } from './useSceneSource';
 
 /**
- * One instance for the app's lifetime: `Linter` carries no per-call state, and
- * `linter/index.ts` fills its registries once, at import.
+ * One instance for the app's lifetime, so every pane's session shares what it reads per
+ * provider. `linter/index.ts` fills its registries once, at import.
  */
 const linter = new Linter();
+
+const NO_DIAGNOSTICS: Diagnostic[] = [];
+
+/** Whether `complete` holds exactly the objects of `shown`, in order, so showing it changes nothing. */
+function isSameList(complete: readonly Diagnostic[], shown: readonly Diagnostic[]): boolean {
+  return complete.length === shown.length && complete.every((diagnostic, i) => diagnostic === shown[i]);
+}
 
 export interface SourceDiagnostics {
   diagnosticsByLine: Map<number, DiagnosticGroup>;
@@ -29,16 +37,38 @@ export interface SourceDiagnostics {
   lineCount: number;
 }
 
-export function useSourceDiagnostics(buffer: string): SourceDiagnostics {
+/**
+ * @param provider - The scene's resources, read for the diagnostics its dependencies add.
+ * @param filesRevision - Changes whenever a file the provider holds changes, such as an upload,
+ *   so the unchanged buffer is linted again against it.
+ */
+export function useSourceDiagnostics(
+  buffer: string,
+  provider: ResourceProvider,
+  filesRevision: number
+): SourceDiagnostics {
   // Debounced like the render forward but outside its gate: a buffer that fails to render is
-  // still linted, and the gutter tells the user why.
-  const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([]);
+  // still linted, and the gutter tells the user why. The session shows the buffer's own
+  // diagnostics at once, beside the cross-file ones of its last read, and the full list only
+  // while the buffer it read is the pane's.
+  const [session] = useState(() => linter.session());
+  const [diagnostics, setDiagnostics] = useState<Diagnostic[]>(NO_DIAGNOSTICS);
   useEffect(() => {
+    let isCurrent = true;
     const timer = setTimeout(() => {
-      setDiagnostics(linter.lint(buffer));
+      const { now, later } = session.lint(buffer, provider);
+      setDiagnostics(now);
+      later
+        ?.then((complete) => {
+          if (isCurrent && complete && !isSameList(complete, now)) setDiagnostics(complete);
+        })
+        .catch((reason: unknown) => logError('[SourceDiagnostics] Cross-file lint failed:', reason));
     }, DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [buffer]);
+    return () => {
+      isCurrent = false;
+      clearTimeout(timer);
+    };
+  }, [session, buffer, provider, filesRevision]);
 
   // Counts newlines rather than `buffer.split('\n').length`, which builds an array of every
   // line on each keystroke.

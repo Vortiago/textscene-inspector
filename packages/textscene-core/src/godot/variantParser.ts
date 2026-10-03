@@ -7,7 +7,7 @@
  * Every pattern below derives from one body string per literal, so no copy can diverge on padding.
  */
 import { TSCN_FLOAT_PATTERN_SOURCE, TSCN_FLOAT_RE } from './number.js';
-import { STRING_LITERAL_SOURCE } from './string.js';
+import { STRING_LITERAL_SOURCE, stringLiteralBodies } from './string.js';
 import { boolLiteralAsNumber } from './variantBool.js';
 
 const WS = '\\s*';
@@ -23,6 +23,12 @@ const NODE_PATH_BODY = `NodePath${WS}\\(${WS}"([^"]*)"${WS}\\)`;
  * the shape uses `v.arrayLiteral` instead of re-deriving this.
  */
 export const ARRAY_LITERAL_RE = /^\[([\s\S]*)\]$/;
+
+/**
+ * {@link ARRAY_LITERAL_RE} with the padding the other packed spellings take. A multi-line value keeps its last raw
+ * line, so `]` can arrive with trailing blanks the tokenizer skips.
+ */
+const PADDED_ARRAY_LITERAL_RE = new RegExp(`^${WS}\\[([\\s\\S]*)\\]${WS}$`);
 
 /**
  * A bare `[…]` or a typed `Array[Type]([…])` literal. The writer wraps elements in `Array[Type](…)` when `Array::is_typed()`
@@ -65,41 +71,82 @@ export function compositeCallPrefix(...typeNames: readonly string[]): RegExp {
   return new RegExp(`^${WS}(?:${typeNames.join('|')})${WS}\\(`);
 }
 
-/** A `TypeName(…)` call inside a larger value, the body captured up to the first `)`. */
-function callBody(typeName: string): string {
-  return `${typeName}${WS}\\(([^)]*)\\)`;
+/** Reads the `TypeName(…)` calls inside a larger value, each body up to its first `)`. */
+export interface CallBodyReader {
+  /** The first body, or null when the value holds no closed call. */
+  first(text: string): string | null;
+  /** Every body, in order. */
+  all(text: string): string[];
+}
+
+/** One call body, and the index just past its `)`. */
+interface CallBody {
+  body: string;
+  end: number;
 }
 
 /**
- * The same call anywhere in a larger value. `[1]` is the body, which stops at the first `)`. Pass `global` for a
- * repeated scan: a `g`-flagged RegExp carries `lastIndex`, so each caller needs its own instance.
+ * The first call `opener` starts at or after `from`, its body up to the first `)`, or null when none closes.
+ * `opener` is a `g` pattern that ends at the `(`. A call with no `)` after it ends the scan: no later call can find
+ * one either, where an unanchored `\(([^)]*)\)` search rescans to the end from every opener, in quadratic time.
  */
-export function packedArrayCallAnywhere(typeName: string, global = false): RegExp {
-  return new RegExp(callBody(typeName), global ? 'g' : '');
+function nextCallBody(opener: RegExp, text: string, from: number): CallBody | null {
+  opener.lastIndex = from;
+  if (!opener.test(text)) return null;
+  const bodyStart = opener.lastIndex;
+  const close = text.indexOf(')', bodyStart);
+  return close === -1 ? null : { body: text.slice(bodyStart, close), end: close + 1 };
+}
+
+/** A {@link CallBodyReader} over the calls `openerSource` opens, the pattern ending at the `(`. */
+function callBodyReader(openerSource: string): CallBodyReader {
+  // One `g` instance per reader: each scan sets `lastIndex` before every read and runs to its end synchronously.
+  const opener = new RegExp(openerSource, 'g');
+  return {
+    first: (text) => nextCallBody(opener, text, 0)?.body ?? null,
+    all: (text) => {
+      const bodies: string[] = [];
+      for (
+        let call = nextCallBody(opener, text, 0);
+        call !== null;
+        call = nextCallBody(opener, text, call.end)
+      ) {
+        bodies.push(call.body);
+      }
+      return bodies;
+    },
+  };
+}
+
+/** The `TypeName(…)` calls anywhere in a larger value. Linear in the value's length, as {@link nextCallBody} says. */
+export function packedArrayCallAnywhere(typeName: string): CallBodyReader {
+  return callBodyReader(`${typeName}${WS}\\(`);
 }
 
 /**
- * A Dictionary field whose value is one `TypeName(…)` call, `[1]` the body up to the first `)`:
+ * The body of the first `TypeName(…)` call a Dictionary key holds, up to the first `)`, or null when it holds none:
  * the constructor spelling the writer emits. A packed read such as `d["cells"]` (grid_map.cpp:67)
- * also converts `[…]` and `Array[T]([…])` (variant.cpp:2094-2098), which this does not match:
+ * also converts `[…]` and `Array[T]([…])` (variant.cpp:2094-2098), which this does not read:
  * `dictPackedField` (`packedArrayFields.ts`) reads all three.
  */
-export function dictCallField(key: string, typeName: string): RegExp {
-  return new RegExp(`"${key}"${WS}:${WS}${callBody(typeName)}`);
+export function dictCallField(key: string, typeName: string): (text: string) => string | null {
+  return callBodyReader(`"${key}"${WS}:${WS}${typeName}${WS}\\(`).first;
 }
 
 /**
  * A Dictionary field whose value is a `PackedByteArray(…)` call, `[1]` the base64 text the writer
  * quotes for a non-empty array (variant_parser.cpp:2410-2413). The quoted body is optional, so the
- * key's first call decides, as in {@link dictCallField}: `[1]` is undefined for an empty call and
- * for the compat list of bytes. Base64 holds no `"` or `)`, so the body ends where that one does.
+ * key's first call decides: `[1]` is undefined for an empty call and for the compat list of bytes.
+ * Base64 holds no `"` or `)`, so the body ends where that one does, and the optional body keeps the
+ * search linear: the first call matches whether or not its body does.
  */
 export function dictBase64Field(key: string): RegExp {
   return new RegExp(`"${key}"${WS}:${WS}PackedByteArray${WS}\\((?:${WS}"([^")]*)"${WS}\\))?`);
 }
 
 /**
- * A field of a serialised Dictionary whose value is a number, `[1]` the literal (`global` as for {@link packedArrayCallAnywhere}).
+ * A field of a serialised Dictionary whose value is a number, `[1]` the literal. Pass `global` for a repeated scan: a
+ * `g`-flagged RegExp carries `lastIndex`, so each caller needs its own instance.
  * The value runs to its `,`/`}`, so `1.2.3` matches nothing instead of reading `1.2`. The grammar is the writer's, `inf` included:
  * a caller that cannot use `inf` rejects it, but one that stopped matching there would pair later values with the wrong keys.
  * It lives here because `godotLiteralGrammar.guard.test.ts` forbids a second reader of the scalar grammar.
@@ -181,7 +228,7 @@ export function packedArrayForms(packedTypeName: string): readonly RegExp[] {
   return [
     packedArrayLiteral(packedTypeName),
     new RegExp(`^${WS}Array${WS}\\[${WS}${element}${WS}\\]${WS}\\(${WS}\\[([\\s\\S]*)\\]${WS}\\)${WS}$`),
-    ARRAY_LITERAL_RE,
+    PADDED_ARRAY_LITERAL_RE,
   ];
 }
 
@@ -211,6 +258,19 @@ export function packedArrayBody(forms: readonly RegExp[], value: string): Packed
     if (match) return { flat: i === 0, body: match[1]!.trim() };
   }
   return null;
+}
+
+/** {@link packedArrayForms} for `PackedStringArray`, built once for every reader of a string-array slot. */
+export const STRING_ARRAY_FORMS = packedArrayForms('PackedStringArray');
+
+/**
+ * The body of each `"…"` element of a `PackedStringArray(…)`, `Array[String]([…])` or bare `[…]`, escapes still as
+ * written, or null when the value is none of the three or an element is not one string literal. Each element must be
+ * one TK_STRING (variant_parser.cpp:1526-1529), and one trailing comma loads ({@link stringLiteralBodies}).
+ */
+export function stringArrayBodies(value: string): string[] | null {
+  const parsed = packedArrayBody(STRING_ARRAY_FORMS, value);
+  return parsed === null ? null : stringLiteralBodies(parsed.body);
 }
 
 /** What {@link variantShape} names. `call` is any `Name(…)` constructor or reference. */

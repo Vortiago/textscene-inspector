@@ -32,6 +32,10 @@ import { useCanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 import { TWO_D_UI_TYPES } from './controls/has2DUIContent.js';
 import { isViewportBoundary, isViewportSurface } from '../nodes/viewport/subviewport/viewportBoundary.js';
 import { NodePathProvider } from './contexts/NodePathContext.js';
+import {
+  InstancedScenePathsProvider,
+  useInstancedScenePaths,
+} from './contexts/InstancedScenePathsContext.js';
 import { useResource, useResourceLoader } from '../resources/useResource.js';
 import { collapseLiveNode, singleSceneCache } from './liveSceneTree.js';
 import {
@@ -58,6 +62,7 @@ import {
 import { spaceFamilyOf } from '../godot/parentSpace.js';
 import { GlbOverridesProvider } from './internal/glb-scene-root/GlbOverridesContext.js';
 import { prefetchCsgModule } from './csg/csgModule.js';
+import { warn } from '../logger.js';
 
 /** Does this subtree contain anything that needs boolean evaluation? */
 function containsCsgShape(node: TscnNode): boolean {
@@ -147,16 +152,22 @@ export function DispatchedNode({ node, path }: DispatchedNodeProps): ReactNode {
  * Restores both resource pools a grafted node was authored against. Under the
  * other scene's provider its `ExtResource("3")` and `SubResource("1")` name a
  * different resource or none. The provider prepends onto the ambient pool, so
- * the authoring scene wins an id both scenes hold.
+ * the authoring scene wins an id both scenes hold. The scenes that enclose the
+ * authoring scene come back too, so the node may instance the scene it sits in.
  */
 function AuthoredResourceScope({ scope, children }: { scope: SceneScope; children: ReactNode }): ReactNode {
-  return (
+  const resources = (
     <SceneResourcesProvider
       externalResources={scope.externalResources}
       internalResources={scope.internalResources}
     >
       {children}
     </SceneResourcesProvider>
+  );
+  return scope.instancedScenePaths ? (
+    <InstancedScenePathsProvider paths={scope.instancedScenePaths}>{resources}</InstancedScenePathsProvider>
+  ) : (
+    resources
   );
 }
 
@@ -324,21 +335,26 @@ function PlainNode({ node, path, children: extraChildren }: PlainNodeProps): Rea
  * Loads the PackedScene a node's `instance` ref names and composes it into the
  * tree. A single-root `.tscn` merges into the instance node at the same path
  * (ADR-0013). A `.glb` or multi-root scene injects its roots as children. Either
- * way the loaded scene's resources are scoped to the subtree.
+ * way the loaded scene's resources are scoped to the subtree. An instance of a
+ * scene that already encloses it (cyclic instancing) renders as a failed load.
  */
 function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   const ambientScope = useSceneResources();
   const { externalResources } = ambientScope;
+  const enclosingScenePaths = useInstancedScenePaths();
   const loader = useResourceLoader();
   const paintRange = usePaintRange();
   const instanceRef = node.instance ?? '';
   const scenePath = resolveInstancePath(instanceRef, externalResources);
+  const isCyclic = scenePath !== null && enclosingScenePaths.includes(scenePath);
+  // Null for a scene this node never loads: an unresolvable ref or a cycle.
+  const loadPath = isCyclic ? null : scenePath;
 
   // Registered here, not in a parent: `loadSceneFromProvider` throws "Scene
   // metadata not found" without it, and React runs a parent's effect after this
   // component's `useResource` effect. An effect keeps the render pure. Idempotent.
   useEffect(() => {
-    if (!loader || !scenePath) return;
+    if (!loader || !loadPath) return;
     const parsed = parseResourceReference(instanceRef);
     if (parsed && parsed.type === 'ExtResource') {
       const ext = findExtResource(externalResources, parsed.id);
@@ -346,20 +362,37 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
         loader.register({ id: ext.id, path: ext.path, type: ext.type });
       }
     }
-  }, [loader, scenePath, instanceRef, externalResources]);
+  }, [loader, loadPath, instanceRef, externalResources]);
 
-  const result = useResource<TscnScene>(scenePath ?? '', 'scene');
+  useEffect(() => {
+    if (!isCyclic) return;
+    warn(
+      `[NodeDispatcher] "${path}" instances ${scenePath}, which already encloses it: Godot refuses cyclic instancing`
+    );
+  }, [isCyclic, path, scenePath]);
+
+  const result = useResource<TscnScene>(loadPath ?? '', 'scene');
   const loadedScene = result.status === 'loaded' ? (result.value ?? null) : null;
+
+  // The scenes that enclose this instance's content. A stable identity, since it
+  // keys the merge memo and the provider below.
+  const contentScenePaths = useMemo(
+    () => (loadPath ? [...enclosingScenePaths, loadPath] : enclosingScenePaths),
+    [enclosingScenePaths, loadPath]
+  );
 
   // The same merge the tree, inspector and panels make. `effective !== node`
   // means a single root merged in. A `.glb` or multi-root scene returns `node`.
   // Memoized ahead of the early returns, so a hover elsewhere does not re-merge
   // this subtree every frame.
-  const effective = useMemo(
-    () =>
-      loadedScene ? collapseLiveNode(node, ambientScope, singleSceneCache(scenePath, loadedScene)) : node,
-    [node, ambientScope, scenePath, loadedScene]
-  );
+  const effective = useMemo(() => {
+    if (!loadedScene) return node;
+    // The enclosing scenes ride on the scope the merge stamps onto the host
+    // children it grafts, which `AuthoredResourceScope` restores.
+    const scope: SceneScope = { ...ambientScope, instancedScenePaths: enclosingScenePaths };
+    const merged = collapseLiveNode(node, scope, singleSceneCache(loadPath, loadedScene));
+    return merged === node ? node : withContentScenePaths(merged, contentScenePaths);
+  }, [node, ambientScope, enclosingScenePaths, loadPath, loadedScene, contentScenePaths]);
 
   // Memoized: `PlainNode` memoizes a subtree scan on node identity, and a
   // stripped node is a new object.
@@ -372,9 +405,9 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
     [paintRange, shallow, loadedScene?.nodes]
   );
 
-  // Unresolvable ref or failed load: keep the node visible with a magenta
-  // placeholder child, matching the missing-texture UX.
-  if (!scenePath || result.status === 'unavailable') {
+  // Unresolvable ref, cycle or failed load: keep the node visible with a
+  // magenta placeholder child, matching the missing-texture UX.
+  if (!loadPath || result.status === 'unavailable') {
     return (
       <PlainNode node={shallow} path={path}>
         <MissingResourcePlaceholder shape="box" />
@@ -393,7 +426,9 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
         internalResources={loadedScene.internalResources}
         externalResources={loadedScene.externalResources}
       >
-        <DispatchedNode node={effective} path={path} />
+        <InstancedScenePathsProvider paths={contentScenePaths}>
+          <DispatchedNode node={effective} path={path} />
+        </InstancedScenePathsProvider>
       </SceneResourcesProvider>
     );
   }
@@ -406,13 +441,25 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
           internalResources={loadedScene.internalResources}
           externalResources={loadedScene.externalResources}
         >
-          {loadedScene.nodes.map((child, i) => (
-            <PaintRangeProvider key={child.name} value={injectedRanges[i]!}>
-              <DispatchedNode node={child} path={joinPath(path, child.name)} />
-            </PaintRangeProvider>
-          ))}
+          <InstancedScenePathsProvider paths={contentScenePaths}>
+            {loadedScene.nodes.map((child, i) => (
+              <PaintRangeProvider key={child.name} value={injectedRanges[i]!}>
+                <DispatchedNode node={child} path={joinPath(path, child.name)} />
+              </PaintRangeProvider>
+            ))}
+          </InstancedScenePathsProvider>
         </SceneResourcesProvider>
       </PlainNode>
     </GlbOverridesProvider>
   );
+}
+
+/**
+ * A merged node keeps the instance node's `authoredScope`, whose enclosing scenes
+ * stop above the scene it merged. Its sub-scene content sits inside that scene,
+ * so `AuthoredResourceScope` must restore `contentScenePaths` for it.
+ */
+function withContentScenePaths(merged: TscnNode, contentScenePaths: readonly string[]): TscnNode {
+  if (!merged.authoredScope) return merged;
+  return { ...merged, authoredScope: { ...merged.authoredScope, instancedScenePaths: contentScenePaths } };
 }

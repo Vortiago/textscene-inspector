@@ -12,8 +12,8 @@ describe('gradient slice registration', () => {
   });
 
   it('routes both claims to the generic resource slot with the Resource label', () => {
-    expect(resourceSliceRegistry.busTypeFor('Gradient')).toBe('resource');
-    expect(resourceSliceRegistry.busTypeFor('GradientTexture2D')).toBe('resource');
+    expect(resourceSliceRegistry.byTypeName('Gradient')?.busType ?? null).toBe('resource');
+    expect(resourceSliceRegistry.byTypeName('GradientTexture2D')?.busType ?? null).toBe('resource');
     expect(resourceSliceRegistry.byTypeName('GradientTexture2D')?.failureLabel).toBe('Resource');
   });
 

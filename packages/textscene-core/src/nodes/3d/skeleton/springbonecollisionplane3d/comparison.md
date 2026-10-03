@@ -24,9 +24,9 @@ Strict parsing format-checks the inherited set (4 inherited from SpringBoneColli
 | `valid-springbonecollision3d-parent` (type-family match) | `springbonecollision3d-outside-springbonesimulator3d` | warning |
 <!-- lint:end -->
 
-SpringBoneCollisionPlane3D binds no property of its own and registers `parseNode3D` directly, so the inherited `bone_name`, `bone`, `position_offset` and `rotation_offset` are never read by the lenient side. A malformed one is dropped silently, while strict reports it through SpringBoneCollision3D's validators.
+SpringBoneCollisionPlane3D binds no property of its own and registers `parseNode3D` directly. The lenient side never reads the inherited `bone_name`, `bone`, `position_offset` and `rotation_offset`. A malformed one is dropped silently, while strict reports it through SpringBoneCollision3D's validators.
 
 ## Known limitations
 
-- **Needs runtime** Godot's SpringBoneSimulator3D pushes its bones off this plane each frame. Here the bones hold their rest pose, so the plane pushes nothing.
-- **Editor only** The plane gizmo appears only in Godot's editor. Here it is absent.
+- **Needs runtime** Godot's SpringBoneSimulator3D pushes its bones off this plane each frame, but here the bones hold their rest pose.
+- **Editor only** The plane gizmo appears only in Godot's editor, but here it is absent.

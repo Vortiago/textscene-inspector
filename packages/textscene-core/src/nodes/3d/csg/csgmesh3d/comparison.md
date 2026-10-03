@@ -32,4 +32,4 @@ Strict parsing format-checks these `CSGMesh3D` properties, plus 1 inherited from
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-The lenient parser copies `mesh` through only when present, so an absent one leaves the node with no solid, which is Godot's empty brush and not an error. `flip_faces` warns then falls back to `false` when unparseable. Neither side rejects a non-manifold `mesh` such as PlaneMesh, since Godot excludes those only in its property hint.
+The lenient parser copies `mesh` through only when present. An absent one leaves the node with no solid, which is Godot's empty brush and not an error. `flip_faces` warns then falls back to `false` when unparseable. Neither side rejects a non-manifold `mesh` such as PlaneMesh, since Godot excludes those only in its property hint.

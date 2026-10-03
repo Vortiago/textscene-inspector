@@ -10,7 +10,7 @@ renders_as: nothing yet, Godot disperses one bone's twist up its chain, the prev
 
 # BoneTwistDisperser3D
 
-Spreads one bone's twist back up its parent chain, so a wrist rotation becomes a smooth spiral through the forearm. Godot runs that pass each frame, and the previewer does not yet (ADR-0045): the bones hold their rest pose.
+Spreads one bone's twist back up its parent chain, so a wrist rotation becomes a smooth spiral through the forearm. It changes only the twist about each joint's axis. Godot runs it each frame, and the previewer does not yet (ADR-0045). The bones hold their rest pose.
 
 ## Linting
 

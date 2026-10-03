@@ -8,6 +8,7 @@ import { FileEventBus } from '../FileEventBus';
 import { ResourceEventBus } from '../ResourceEventBus';
 import type { ResourceProvider } from '../ResourceProvider';
 import { createFontProcessor } from './createFontProcessor';
+import { DependencyGraph } from '../dependencyGraph';
 import type { FontResource, FontFileResource, FontVariationResource } from '../fonts/font/types';
 
 /** Shaped like scenes/demos/2d/role_playing_game/theme/fonts/montserrat_extra_bold_16.tres. */
@@ -51,7 +52,7 @@ class MapProvider implements ResourceProvider {
 function setup(files: Record<string, string | ArrayBuffer>) {
   const provider = new MapProvider(new Map(Object.entries(files)));
   const eventBus = new ResourceEventBus();
-  const processor = createFontProcessor(new FileEventBus(provider), eventBus);
+  const processor = createFontProcessor(new FileEventBus(provider), eventBus, new DependencyGraph());
   return { provider, eventBus, processor };
 }
 
@@ -310,7 +311,7 @@ describe('createFontProcessor', () => {
         return null;
       }),
     };
-    const processor = createFontProcessor(new FileEventBus(provider), eventBus);
+    const processor = createFontProcessor(new FileEventBus(provider), eventBus, new DependencyGraph());
     const flush = async (): Promise<void> => {
       for (let i = 0; i < 4; i++) await new Promise((resolve) => setTimeout(resolve, 0));
     };
@@ -370,7 +371,7 @@ describe('createFontProcessor', () => {
         return null;
       }),
     };
-    const processor = createFontProcessor(new FileEventBus(provider), eventBus);
+    const processor = createFontProcessor(new FileEventBus(provider), eventBus, new DependencyGraph());
     const flush = async (): Promise<void> => {
       for (let i = 0; i < 6; i++) await new Promise((resolve) => setTimeout(resolve, 0));
     };
@@ -383,8 +384,9 @@ describe('createFontProcessor', () => {
     expect(processor.isLoading('res://hub.tres')).toBe(true);
 
     // Reload the leaf. Hub does not wait on it now, so this wait settles.
-    const reloaded = eventBus.once<FontResource>('font', 'loaded', 'res://leaf.tres', 2000);
+    // Armed after the clear, whose `invalidated` would reject a wait armed before it.
     processor.clearCache('res://leaf.tres');
+    const reloaded = eventBus.once<FontResource>('font', 'loaded', 'res://leaf.tres', 2000);
     processor.request('res://leaf.tres');
     await flush();
     releaseSlow(new ArrayBuffer(4));

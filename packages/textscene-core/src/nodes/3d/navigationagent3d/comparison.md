@@ -10,7 +10,7 @@ renders_as: nothing (non-visual navigation helper)
 
 # NavigationAgent3D
 
-A pathfinding and avoidance helper that steers its parent body toward a target. It has no runtime visual, only an editor path debug draw, so the previewer draws nothing for it and both images show the empty preview scene.
+A pathfinding and avoidance helper that steers its parent body toward a target. It has no runtime visual, only an editor path debug draw. The previewer draws nothing for it, and both images show the empty preview scene.
 
 ## Linting
 
@@ -63,4 +63,4 @@ The lenient parser reads eleven keys: `radius`, `height`, `avoidance_enabled`, `
 
 ## Known limitations
 
-- **Editor only** The path debug draw appears only in Godot's editor. Here it is absent.
+- **Editor only** The path debug draw appears only in Godot's editor, but here it is absent.

@@ -9,6 +9,7 @@ import * as logger from '../logger.js';
 export type FileData = ArrayBuffer | string;
 export type FileLoadedHandler = (path: string, data: FileData) => void;
 export type FileFailedHandler = (path: string, error: Error) => void;
+export type FileInvalidatedHandler = (path: string) => void;
 
 export class FileEventBus {
   private cache = new Map<string, FileData>();
@@ -18,8 +19,15 @@ export class FileEventBus {
    * drops silently. A later request fetches fresh instead of deduping into it.
    */
   private inflight = new Map<string, symbol>();
+  /**
+   * `tryLoad`'s own flight tokens. Kept apart from `inflight`, or a `request` for
+   * the same path would dedupe into a `tryLoad`, which fires no handler, and its
+   * processor would wait out the peer-load timeout.
+   */
+  private optionalInflight = new Map<string, symbol>();
   private loadedHandlers = new Set<FileLoadedHandler>();
   private failedHandlers = new Set<FileFailedHandler>();
+  private invalidatedHandlers = new Set<FileInvalidatedHandler>();
 
   constructor(private provider: ResourceProvider) {}
 
@@ -105,22 +113,28 @@ export class FileEventBus {
 
   on(event: 'loaded', handler: FileLoadedHandler): void;
   on(event: 'failed', handler: FileFailedHandler): void;
-  on(event: 'loaded' | 'failed', handler: FileLoadedHandler | FileFailedHandler): void {
-    if (event === 'loaded') {
-      this.loadedHandlers.add(handler as FileLoadedHandler);
-    } else if (event === 'failed') {
-      this.failedHandlers.add(handler as FileFailedHandler);
-    }
+  on(event: 'invalidated', handler: FileInvalidatedHandler): void;
+  on(
+    event: 'loaded' | 'failed' | 'invalidated',
+    handler: FileLoadedHandler | FileFailedHandler | FileInvalidatedHandler
+  ): void {
+    this.handlersFor(event).add(handler);
   }
 
   off(event: 'loaded', handler: FileLoadedHandler): void;
   off(event: 'failed', handler: FileFailedHandler): void;
-  off(event: 'loaded' | 'failed', handler: FileLoadedHandler | FileFailedHandler): void {
-    if (event === 'loaded') {
-      this.loadedHandlers.delete(handler as FileLoadedHandler);
-    } else if (event === 'failed') {
-      this.failedHandlers.delete(handler as FileFailedHandler);
-    }
+  off(event: 'invalidated', handler: FileInvalidatedHandler): void;
+  off(
+    event: 'loaded' | 'failed' | 'invalidated',
+    handler: FileLoadedHandler | FileFailedHandler | FileInvalidatedHandler
+  ): void {
+    this.handlersFor(event).delete(handler);
+  }
+
+  private handlersFor(event: 'loaded' | 'failed' | 'invalidated'): Set<unknown> {
+    if (event === 'loaded') return this.loadedHandlers;
+    if (event === 'failed') return this.failedHandlers;
+    return this.invalidatedHandlers;
   }
 
   /**
@@ -133,14 +147,35 @@ export class FileEventBus {
     const cached = this.cache.get(path);
     if (cached !== undefined) return cached;
 
+    const flight = Symbol(path);
+    this.optionalInflight.set(path, flight);
     try {
       const data = await this.provider.loadResource(path, type);
       if (data === null) return null;
-      this.cache.set(path, data);
+      // A read that a change overtook answers its caller but caches nothing.
+      if (this.optionalInflight.get(path) === flight) this.cache.set(path, data);
       return data;
     } catch {
       // Absence and unreachability are the same answer to the caller: no sidecar.
       return null;
+    } finally {
+      if (this.optionalInflight.get(path) === flight) this.optionalInflight.delete(path);
+    }
+  }
+
+  /**
+   * A file changed under the bus: drop its bytes and flights, then tell the
+   * `invalidated` handlers, which read it again. `clearCache` is the silent
+   * memory drop a processor makes after every load.
+   */
+  invalidate(path: string): void {
+    this.clearCache(path);
+    for (const handler of this.invalidatedHandlers) {
+      try {
+        handler(path);
+      } catch (err) {
+        logger.error(`[FileEventBus] Handler error for invalidated:`, err);
+      }
     }
   }
 
@@ -154,10 +189,12 @@ export class FileEventBus {
     if (path !== undefined) {
       this.cache.delete(path);
       this.inflight.delete(path);
+      this.optionalInflight.delete(path);
       logger.info(`[FileEventBus] Cleared cache: ${path}`);
     } else {
       this.cache.clear();
       this.inflight.clear();
+      this.optionalInflight.clear();
       logger.info(`[FileEventBus] Cleared all cache`);
     }
   }
@@ -173,20 +210,6 @@ export class FileEventBus {
   /** For debugging and tests. */
   getCacheSize(): number {
     return this.cache.size;
-  }
-
-  /** For debugging and tests. */
-  getHandlerCounts(): { loaded: number; failed: number } {
-    return {
-      loaded: this.loadedHandlers.size,
-      failed: this.failedHandlers.size,
-    };
-  }
-
-  /** For cleanup and tests. */
-  clearHandlers(): void {
-    this.loadedHandlers.clear();
-    this.failedHandlers.clear();
   }
 
   getProvider(): ResourceProvider {

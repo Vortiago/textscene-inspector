@@ -1,51 +1,60 @@
 /**
- * Walks up from a document's directory for `project.godot`, and falls back to the
- * workspace root, since Godot's `res://` is always project-root-relative. The
- * preview's `VSCodeResourceProvider` and `TscnDocumentLinkProvider` share it, so
- * both agree on where a `res://` path points.
+ * Walks up from a document's directory for `project.godot` (core's `findProjectRoot`), since `res://` is relative to
+ * the project root. It stops at the workspace folder: the plain-glob watchers report events inside workspace folders
+ * only, so the extension cannot keep a project above the folder current. The CLI climbs to the filesystem root. The
+ * preview falls back to the workspace root, and the linter takes no fallback.
  */
 
 import * as vscode from 'vscode';
+import { PROJECT_FILE_NAME } from '@textscene/core/godot';
+import { comparablePath, findProjectRoot, isWithinRoot } from '@textscene/core/resources/resPath';
+import { HOST_PATH_CASE } from './hostPathCase';
 
-function normalizeFsPath(fsPath: string): string {
-  return fsPath.replace(/\\/g, '/').toLowerCase();
+/**
+ * The directory above `dir`, or null at the top. Through `joinPath`, never
+ * `Uri.file`, so a virtual workspace keeps its scheme.
+ */
+function parentUri(dir: vscode.Uri): vscode.Uri | null {
+  const parent = vscode.Uri.joinPath(dir, '..');
+  return parent.path === dir.path ? null : parent;
+}
+
+/** Whether the walk ends at a directory: the workspace root itself, or one outside it. */
+function stopsAt(workspaceRoot: vscode.Uri): (dir: vscode.Uri) => boolean {
+  const rootKey = comparablePath(workspaceRoot.fsPath);
+  return (dir) =>
+    comparablePath(dir.fsPath) === rootKey || !isWithinRoot(workspaceRoot.fsPath, dir.fsPath, HOST_PATH_CASE);
+}
+
+/** Whether `dir` holds `project.godot`, one `stat`. */
+export async function hasProjectFile(dir: vscode.Uri): Promise<boolean> {
+  try {
+    await vscode.workspace.fs.stat(vscode.Uri.joinPath(dir, PROJECT_FILE_NAME));
+    return true;
+  } catch {
+    // `stat` rejects for a missing file, which is the answer.
+    return false;
+  }
 }
 
 /**
- * Whether a normalized path sits strictly under the root. The separator makes it
- * a boundary: a bare `startsWith` walks `/home/u/proj-other` as if it were inside
- * `/home/u/proj`. A root that already ends in one gains no second.
+ * The nearest directory, from the document's own up to the workspace root, that
+ * holds `project.godot`, or null when none does. `holdsProjectFile` answers for one
+ * directory, so a caller can share its answers across documents.
  */
-function isUnderRoot(rootNormalized: string, candidateNormalized: string): boolean {
-  const prefix = rootNormalized.endsWith('/') ? rootNormalized : `${rootNormalized}/`;
-  return candidateNormalized.startsWith(prefix);
+export function findEnclosingGodotProject(
+  workspaceRoot: vscode.Uri,
+  documentUri: vscode.Uri,
+  holdsProjectFile: (dir: vscode.Uri) => Promise<boolean> = hasProjectFile
+): Promise<vscode.Uri | null> {
+  const documentDir = vscode.Uri.joinPath(documentUri, '..');
+  return findProjectRoot(documentDir, parentUri, stopsAt(workspaceRoot), holdsProjectFile);
 }
 
+/** `findEnclosingGodotProject`, or the workspace root when no directory holds `project.godot`. */
 export async function findGodotProjectRoot(
   workspaceRoot: vscode.Uri,
   documentUri: vscode.Uri
 ): Promise<vscode.Uri> {
-  const workspaceRootNormalized = normalizeFsPath(workspaceRoot.fsPath);
-  let currentDir = vscode.Uri.joinPath(documentUri, '..');
-
-  while (true) {
-    const currentPathNormalized = normalizeFsPath(currentDir.fsPath);
-    const projectFile = vscode.Uri.joinPath(currentDir, 'project.godot');
-
-    try {
-      await vscode.workspace.fs.stat(projectFile);
-      return currentDir;
-    } catch {
-      // Not found here: keep searching upward.
-    }
-
-    if (
-      currentPathNormalized === workspaceRootNormalized ||
-      !isUnderRoot(workspaceRootNormalized, currentPathNormalized)
-    ) {
-      return workspaceRoot;
-    }
-
-    currentDir = vscode.Uri.joinPath(currentDir, '..');
-  }
+  return (await findEnclosingGodotProject(workspaceRoot, documentUri)) ?? workspaceRoot;
 }

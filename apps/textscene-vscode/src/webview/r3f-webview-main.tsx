@@ -74,16 +74,9 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
       if (!isHostToWebviewMessage(message)) return;
       if (message.type === 'loadTscn') {
         setContent(message.content);
-      } else if (message.type === 'incrementalUpdate') {
-        // A full reload, since React reconciliation does the diff. Without a
-        // `sceneData.rawText` this is a no-op, and the next loadTscn wins.
-        const raw = message.data.sceneData?.rawText;
-        if (typeof raw === 'string' && raw.length > 0) {
-          setContent(raw);
-        }
       } else if (message.type === 'resourceChanged') {
-        // A dependency (texture, .tres, sub-scene) changed on disk. Re-fetching it
-        // moves its useResource subscribers to loaded with no remount.
+        // A dependency (texture, .tres, sub-scene, sidecar, project.godot) changed on
+        // disk. Its consumers load it again, with no remount.
         loader.provideFile(message.path);
       }
     }

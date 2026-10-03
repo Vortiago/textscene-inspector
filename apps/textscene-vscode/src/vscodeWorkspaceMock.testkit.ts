@@ -25,6 +25,9 @@ export const mockWorkspace: any = {
 
   workspaceFolders: [],
 
+  /** A test arranges the files it finds. */
+  findFiles: vi.fn().mockResolvedValue([]),
+
   openTextDocument: vi.fn(),
 
   getWorkspaceFolder: vi.fn(),
@@ -51,4 +54,6 @@ export const mockWorkspace: any = {
   }),
 
   onDidChangeConfiguration: vi.fn(() => ({ dispose: vi.fn() })),
+
+  onDidChangeWorkspaceFolders: vi.fn(() => ({ dispose: vi.fn() })),
 };

@@ -1,349 +1,187 @@
 # TextScene Inspector
 
-Godot `.tscn` parser, linter and renderer (react-three-fiber over three.js). pnpm monorepo:
-`packages/textscene-core` (parser, linter, r3f components), `apps/textscene-web`
-(web previewer), `apps/textscene-vscode` (VS Code extension), `apps/textscene-linter`
-(CLI linter, React- and THREE-free).
+TextScene Inspector parses, lints and renders Godot `.tscn` files with react-three-fiber. The
+pnpm monorepo holds `packages/textscene-core` (parser, linter, r3f components),
+`apps/textscene-web` (web previewer), `apps/textscene-vscode` (VS Code extension) and
+`apps/textscene-linter` (CLI linter, free of React and THREE).
 
 ## Docs
 
-- README.md: status, install, scripts.
-- ARCHITECTURE.md: two-parser design, resource pipeline, linter bundle isolation,
-  project structure. Read it before structural work.
+- ARCHITECTURE.md: design and structure. Read it before structural work.
 - GLOSSARY.md: the domain terms. Use them exactly.
-- REFERENCES.md: doc links, Context7 library IDs.
-- RELEASING.md: how to release a package.
-- REVIEW.md: the bar for the Claude review of a pull request (`claude-review.yml`).
 - docs/adr/: decisions. Respect them in the areas they govern.
+- docs/agents/: the issue tracker and the domain docs.
+- README.md, REFERENCES.md, RELEASING.md, REVIEW.md: scripts, doc links, releases, review bar.
 
-## Work items = GitHub issues
+## Issues
 
-- `gh issue list` lists them. Old `WI-*` ids stay in some titles.
+Work items are GitHub issues. `gh issue view <n>` gives the implementation notes and testing
+strategy.
+
 - Do one issue at a time. The user picks it.
-- `gh issue view <n>` has the implementation notes and testing strategy.
+- Never start the next issue on your own.
 - Reference the issue from the PR with `Closes #<n>`.
-- Never start the next item on your own.
-
-## Agent skills
-
-### Issue tracker
-
-Issues live in this repo's GitHub Issues, through the `gh` CLI. See
-`docs/agents/issue-tracker.md`.
-
-### Domain docs
-
-Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See
-`docs/agents/domain.md`.
 
 ## Policies
 
-- Full scope at full quality: never trim, skip tests, or defer for perceived
-  time, token or context pressure. Never mention such limits.
-- No time estimates. Report complexity only (simple / moderate / complex).
-- Claude Code: `.claude/hooks/check-no-verify.mjs` blocks `git commit --no-verify` and `-n`,
-  so the pre-commit checks always run.
+- Do the full scope at full quality. Never trim, skip tests or defer for time, token or
+  context pressure, and never mention such limits.
+- Implement completely: no stubs, placeholders or TODOs. Do every numbered item.
+- Give no time estimates. Report complexity only (simple / moderate / complex).
+- Never run `git commit --no-verify` or `-n`. A hook blocks them.
+- Write conventional, technical commits. Hooks enforce the format.
+- Never edit `.claude/skills/conventional-commits/`, `.claude/rules/` or
+  `.claude/agents/ste-review.md`. Run `pnpm vendor:verktoykasse --from <checkout>` instead.
 
-## Gates (repo root)
+## Gates
 
-- `pnpm type-check:all` builds `@textscene/core` first. Run it once in a fresh worktree
-  before any per-package check. It does not cover test files.
-- `pnpm type-check:tests` runs one tsc project per package over the `*.test.ts(x)` files,
-  which most packages' build tsconfigs exclude. (`apps/textscene-linter` includes them in
-  its single project, so its script is the same command.) vitest transpiles without
-  checking, so a test can be green and untyped. `pnpm -r` silently skips a package that
-  does not define the script, so every package that ships tests must define it.
-  `scripts/typeCheckTestsCoverage.test.mjs` keeps that true. `pnpm type-check:tests` is
-  part of `validate` (so `release.yml`) and is its own CI step. Run
-  it locally with the other gates, not only at push time.
-- `pnpm test:unit` is the full vitest suite and takes minutes. On a shell-tool timeout,
-  re-run the same command with a larger `timeout` (ms). A subset never proves the gate.
-- Per package: `pnpm --filter @textscene/web-previewer type-check` / `test`.
-- `npx eslint <changed files>`. CI runs `eslint .`. Unused imports and variables pass
-  vitest and tsc but fail CI.
-- `pnpm format:check` runs Prettier over the repository, in `validate` and in CI. `pnpm format`
-  fixes a failure, and the pre-commit hook formats the staged files. `.prettierignore` names what
-  Prettier skips: markdown, vendored files and generated output.
-- Changed `.tscn` fixtures: `pnpm build:linter && pnpm lint:tscn <files>`.
-- Changed a linter rule or validator: `pnpm lint:scenes`, in `validate` and in CI. It
-  sweeps `scenes/demos` and `scenes/isometric` and fails on any error. The directory
-  list lives in `lint:scenes:only`, which CI runs too. It never lives inside the linter
-  or the core package: the tool takes paths, the caller chooses them.
-  `scenes/demos` and `scenes/isometric` are vendored from Godot's own demo projects, so an
-  error there is a false positive in a rule, not a broken scene. Warnings there are
-  expected and do not fail. `fixtureLint.test.ts` covers `scenes/fixtures`, this
-  package's own corpus, including the negative `edge-*` files that must error.
-- Changed rendering: `pnpm test:visual` (golden images). A capture must decode to its
-  baseline's pixels exactly. There is no per-scene tolerance, and a new one is never the
-  answer to a failure. `pnpm test:visual:update` rewrites baselines: inspect them, then
-  commit. A new golden moves one variable. Its `.tscn` header names that variable and
-  says why a regression in it is invisible in every other scene, because a fixture that
-  moves two cannot show which one broke. A 2D-UI scene sets `mode: '2d'`
-  (`scripts/visual/scenes.mjs`). That routes it through the **2D parity capture** (the
-  project-viewport rectangle at zoom 1, chrome hidden, Godot's own clear colour) instead
-  of the default 3D one, so a Control's golden and its `comparison.md` describe the same
-  picture.
-  CI skips the golden run on a pull request whose every changed file matches
-  `scripts/ci/visualScope.mjs`. A file the harness or the web build reads never goes on
-  that list.
-- Changed the webview CSP, its bundle or asset loading, or the text pipeline:
-  `pnpm test:vscode:csp`. It drives a real desktop VS Code, opens a Control fixture
-  through the extension's own preview command and reads the canvas back over CDP. It
-  requires ink with text, exactly 0 ink with every label emptied, and zero CSP violations
-  or network attempts inside the preview frame. A third run opens a NoiseTexture2D and
-  requires that a job worker replied and that the texture drew. Linux/Xvfb. CI runs it
-  there.
-- Changed the web previewer's outliner, inspector, mode switching, or camera/selection
-  wiring: `pnpm test:e2e:web`. It drives the real built app in a headless browser
-  (`scripts/e2e/webAppGate.mjs`) and asserts:
-  - the viewport camera's GL-uploaded `viewMatrix` is byte-identical across two different
-    tree selections (the camera never moves on selection: auto-fit is load-time only);
-  - the outliner's node paths and the inspector's displayed property values;
-  - a 2D/3D fixture opens in the matching workspace with a correctly sized canvas,
-    checked separately from its ink count;
-  - zero console errors, pageerrors or failed requests on load;
-  - a capture waits for a procedural texture still building. A control delays the build
-    and shows the capture would differ without the wait;
-  - a 4096x4096 NoiseTexture2D builds and uploads with no main-thread task over 50 ms. A
-    control blocks the worker and must see one (ADR-0042).
+Run each gate from the repo root. Run these for every change:
 
-  It observes entirely from outside the app (`context.addInitScript` patching
-  `WebGL(2)RenderingContext.prototype`, the same mechanism `scripts/vscode/driveScene.mjs`
-  uses). No production file carries a test hook for it.
-  **Run it as `SHOWCASE_CHANNEL=bundled pnpm test:e2e:web`.** Everything that goes through
-  `scripts/showcase/browser.mjs` (this gate, `showcase/record.mjs`, `showcase/_verify.mjs`)
-  defaults to system Chrome. Where only Playwright's bundled browser is installed, it dies
-  at launch with "Chromium distribution 'chrome' is not found". That looks like a missing
-  dependency, not a missing variable. CI sets `bundled`, so that is the configuration the
-  gate is verified under.
-- Parity questions: `pnpm ref:godot <scene.tscn> [--camera x,y,z] [--probe x,y]` renders
-  through real Godot 4.6 and prints exact pixels. Measure, never derive. A measurement
-  goes in the pull request, never in a comparison sheet. It needs local
-  `godot` and `xvfb-run`, so it is a tool, not a gate. It injects the editor preview
-  sun/environment per Godot's yield rule (ADR-0025). `--no-previews` gives runtime
-  semantics.
-  - Particles: the editor animates particles, which a paused reference cannot show.
-    `--particles <seconds>` advances every CPUParticles emitter that much further through
-    Godot's own settle loop. It adds to any authored `preprocess` and does not replace
-    it, so the caller names the instant and both sides can be measured at it. Default 0.
-    Never derive it from the scene. It is one number for the whole scene, while the
-    previewer's substituted window is per emitter.
-  - Root-only settings: a 2D scene renders inside a SubViewport, which owns its rectangle
-    whatever the window does. Godot applies some viewport settings to `SceneTree`'s root
-    Window and to nothing else (`gui/common/snap_controls_to_pixels`, the
-    `rendering/2d/snap/*` pair, the canvas-texture filter/repeat defaults, `msaa_2d`, and
-    so on), so nothing nested can observe them. `--mode 2d-root` draws the same rectangle
-    as the root window for those. The SubViewport arm stays the default and refuses such
-    a setting, naming it and both values, instead of answering from the class default.
-    `ROOT_ONLY_VIEWPORT_PROPERTIES` in `scripts/godot-ref/run.mjs` is the list, and each
-    entry cites the Godot line that applies it. Extend it there when you find a new one.
-  - Rounding floor: the tool has a **±1/255 floor on any channel whose value × 255 is
-    fractional**. The rasterizer's ROP rounds a blend into an 8-bit attachment, and
-    GL/Vulkan require only that the source is clamped before the blend equation, never
-    converted to fixed point. The tie-break is therefore implementation-defined.
-    `--rendering-driver opengl3` against the default vulkan moves the bytes on this
-    machine, the clear colour included (0.3 × 255 = 76.5 lands 76 under one and 77 under
-    the other). A one-step gap on a fractional channel is not a parity defect and has no
-    source-derivable expected value. Reproducing it would pin us to one software
-    rasterizer. Measure such a channel on both backends before you believe it, and spend
-    the effort on a divergence that survives the swap.
+- `pnpm type-check:all`. Run it once in a fresh worktree before any per-package check.
+- `pnpm type-check:tests`. Every package that ships tests must define the script.
+- `pnpm test:unit`. On a shell-tool timeout, re-run it with a larger `timeout`. A subset never
+  proves the gate.
+- `npx eslint <changed files>`.
+- `pnpm format:check`. `pnpm format` fixes a failure.
+
+Per package: `pnpm --filter @textscene/web-previewer type-check` / `test`.
+
+Run these when the change touches the named area:
+
+- `.tscn` fixtures: `pnpm build:linter && pnpm lint:tscn <files>`. The negative `edge-*` fixtures
+  must error, and `fixtureLint.test.ts` checks them.
+- A linter rule or validator: `pnpm lint:scenes`. An error in its vendored Godot demos is a
+  false positive in the rule. Keep its directory list in `lint:scenes:only`.
+- Rendering: `pnpm test:visual`.
+- The webview CSP, its bundle, asset loading, the text pipeline or the **Dependency hot-reload**:
+  `pnpm test:vscode:csp`.
+- The web previewer's outliner, inspector, mode switching, or camera and selection wiring:
+  `SHOWCASE_CHANNEL=bundled pnpm test:e2e:web`. Without the variable, it fails to find system
+  Chrome. Never add a test hook for it to a production file.
+
+### Visual goldens
+
+- A capture must match its baseline's pixels exactly. Never add a tolerance.
+- `pnpm test:visual:update` rewrites baselines. Inspect them, then commit.
+- A new golden moves one variable. Its `.tscn` header names that variable and says why no
+  other scene shows a regression in it.
+- A 2D-UI scene sets `mode: '2d'` in `scripts/visual/scenes.mjs`.
+- Never list a file that the harness or the web build reads in `scripts/ci/visualScope.mjs`.
+
+### Godot reference
+
+`pnpm ref:godot <scene.tscn> [--camera x,y,z] [--probe x,y]` renders through real Godot 4.6
+and prints exact pixels. It is a tool, not a gate.
+
+- Measure, never derive. Put a measurement in the pull request, never in a comparison sheet.
+- `--particles <seconds>` advances every CPUParticles emitter. Choose the instant. Never
+  derive it from the scene.
+- `--mode 2d-root` measures a root-only setting. Add a new one to
+  `ROOT_ONLY_VIEWPORT_PROPERTIES` in `scripts/godot-ref/run.mjs`.
+- A 1/255 gap on a channel whose value × 255 is fractional is not a parity defect. Compare
+  `--rendering-driver opengl3` with the default vulkan before you believe one.
 
 ## Vertical slices
 
-Node types: `packages/textscene-core/src/nodes/<category>/<type>/` holds `parser.ts`,
-`linterParser.ts` and `linter.ts`, `propertyFormatter.ts` (optional), `Component.tsx`,
-`types.ts`, `comparison.md` (the Godot-parity sheet, format in
-`scripts/compare-docs/SHEET-STANDARD.md`), co-located `*.test.ts(x)`, and three entry
-points:
+A node type lives in `packages/textscene-core/src/nodes/<category>/<type>/`: `parser.ts`,
+`linterParser.ts`, `linter.ts`, `propertyFormatter.ts` (optional), `Component.tsx`,
+`types.ts`, `comparison.md` (format in `scripts/compare-docs/SHEET-STANDARD.md`) and
+co-located `*.test.ts(x)`. It has three entry points:
 
-- `index.ts`: parser and formatter. Wire into `src/parser/TscnParser.ts`.
-- `index.linter.ts`: validators and rules. Imports `.ts` only, never `Component.tsx`.
-  Wire into `src/linter/index.ts`.
-- `index.r3f.ts`: render component, the only importer of `./Component`. Wire into
-  `src/r3f/nodes/index.ts`.
+- `index.ts`: parser and formatter, wired into `src/parser/TscnParser.ts`.
+- `index.linter.ts`: validators and rules, wired into `src/linter/index.ts`. It never
+  imports `Component.tsx`.
+- `index.r3f.ts`: the only importer of `./Component`, wired into `src/r3f/nodes/index.ts`.
 
-Scaffold: `pnpm new:node <TypeName> <category-dir> --intent <draws|transform-only|pending>
-[--base node3d|node2d|node|control] [--linter]`. It creates the `unit-*.tscn` fixture
-and the aggregation imports.
+Slices register themselves on import. Never edit a central file beyond its aggregation
+imports.
 
-`--intent` sets the slice shape, the render registration and the sheet status together,
-because `scripts/compare-docs/sheets.test.mjs` asserts they agree:
+Scaffold a node type with `pnpm new:node <TypeName> <category-dir> --intent
+<draws|transform-only|pending> [--base node3d|node2d|node|control] [--linter]`. It creates the
+`unit-*.tscn` fixture. `--intent` sets the slice shape, the render registration and the sheet status:
 
-- `draws` gets its own types, parser and Component, and the sheet status `unreviewed`.
-- `transform-only` reuses the base, registers `renderIntent: 'transform-only'`, and gets
-  `linter-only` (ADR-0008).
-- `pending` means its Godot effect, own visual or driving, is missing (ADR-0045). It
-  registers the base under `renderIntent: 'pending'` (except `--base control`) and
-  gets `unimplemented`.
+- `draws`: its own types, parser and Component. Status `unreviewed`.
+- `transform-only`: the base under `renderIntent: 'transform-only'`. Status `linter-only`.
+- `pending`: the base under `renderIntent: 'pending'`, except `--base control`. Status
+  `unimplemented`. Its Godot effect, an own visual or a drive of other nodes, is missing
+  (ADR-0045).
 
-The badge reads the declared intent, never the absence of a registration. Dropping the
-registration also drops `visible` and puts the type in both workspaces.
+Never drop a registration to mark a type undrawn.
 
-The Godot parent comes from ClassDB and is never typed by hand. `NODE_BASE_TYPES` comes
-from the node catalog's ancestry (`pnpm nodes:base-types` writes
-`godot/nodeBaseTypes.generated.ts`). A type name Godot does not know gets no base and
-silently receives zero inherited validation, so the scaffold refuses a name absent from
-the catalog. A class the pinned 4.6.3 ClassDB does not enumerate gets its one hop
-written by hand, in the `UNCATALOGUED` table in `godot/nodeBaseTypes.ts`, with the
-reason beside it. `baseChainCompleteness.test.ts` rejects a registered type that is in
-neither, and an entry the catalog could have answered. The conformance guards
-(barrelCompleteness, parserBarrelCompleteness, reactFree, ruleCoverage,
-baseChainCompleteness) fail on a mis-wired slice.
+The Godot parent comes from ClassDB (`pnpm nodes:base-types`), never by hand. A class the
+pinned ClassDB lacks goes in the `UNCATALOGUED` table of `godot/nodeBaseTypes.ts`, with the
+reason.
 
-Coverage: `node scripts/coverage-report.mjs [--json]` reports node registration and
-validator coverage against the pinned catalog.
+A **Resource slice** (ADR-0031) lives in `packages/textscene-core/src/resources/<category>/<type>/`:
 
-Resource types: `packages/textscene-core/src/resources/<category>/<type>/`
-(**Resource slice**, ADR-0031) holds:
+- `index.ts`: THREE-free registration through `registerResourceSlice`, wired into
+  `resources/sliceRegistrations.ts`.
+- `decode.ts`: a pure `decode<Type>` from property bag to typed Data.
+- `build.ts`: only where THREE construction exists.
+- `types.ts` and co-located tests, a registration test included.
 
-- `index.ts`: registration through `registerResourceSlice`, THREE-free, wired into
-  `resources/sliceRegistrations.ts`;
-- `decode.ts`: pure, property bag to typed Data, named `decode<Type>`;
-- `build.ts`, only where THREE construction exists;
-- `types.ts`;
-- co-located tests, including a registration test.
+## Linter
 
-Foreign formats (`resources/formats/`) declare their real parser instead of the
-decode/build split. Conformance: `resourceSliceConformance` and `resourceSliceIsolation`
-fail on a mis-shaped slice.
+The linter's subject is every valid current-format `.tscn`, not the subset this previewer
+renders. A property earns a validator because Godot serialises it.
+
+### Bound tiers
+
+Ground every bound in the engine source and cite its `file:line` beside it. GLOSSARY.md
+(**Severity**) and ADR-0032 define the tiers.
+
+- **error**: the setter refuses or alters the value.
+- **warning**: the value is outside the property's UI hint. An open end (`,or_greater`,
+  `,or_less`) never warns.
+- **nothing**: `PROPERTY_HINT_NONE`, both ends open, or a bound only in the class reference.
+
+Also:
+
+- A `p_flags & MASK` setter uses `maskedBitField`, not a min/max.
+- Every float validator accepts `inf`, `-inf`, `inf_neg` and `nan`, unless the setter
+  refuses them. Declare that as `{ finite: 'file:line' }`.
+- An advisory condition is a warning, not an error.
+
+### Validator markers
+
+Every validator carries one marker. The `v` DSL sets it. A hand-rolled validator declares it.
+
+- `formatOnly`: it rejects only values that never reach the property.
+  `formatOnlyCorpus.ledger.test.mjs` runs it over Godot's stored literals. Add a missing literal to
+  `formatOnlyCorpus.data.mjs` with its `variant_parser.cpp` cite.
+- `grounding`: it rejects a value the setter receives and names the `file:line`.
+- `intSlot`: it reads an INT slot. It cites `variant.h:360-377` and records the slot's `width`.
+
+Every `RangeThreshold` carries a `cite`.
+
+### Properties
+
+- Before you call a class empty, grep `ADD_PROPERTY`, `PropertyListHelper`/`register_property`,
+  `ADD_ARRAY_COUNT`, any `_set`/`_get`/property-list override and the literal key prefix.
+- Read the getter of every array or dictionary property. A `TypedArray<T>` getter serialises
+  as `Array[T]([…])`.
+
+### Rule arms
+
+A rule declares each diagnostic it reports as a **Rule arm** (`linter/ruleArms.ts`). `check`
+reports only through `reportArm` or `armDiagnostic`, and `emits` is `armEmits(arms)`. Declare
+an arm with `groundedArm(ruleName, grounding)`. Only an `engine` arm writes its tier.
 
 ## Conventions
 
-- Two parsers, one scanning loop (`TscnParserCore`, `ParseObserver` seam). The lenient
-  `TscnParser` renders what it can. `StrictTscnParser` lints and reports everything.
-  ARCHITECTURE.md has the detail.
-- **The linter's subject is every valid current-format `.tscn`, not the subset this
-  previewer renders.** Its job is to help someone author a sound, valid scene file. A
-  property earns a validator because Godot serialises it, never because something here
-  reads it. `Viewport.vrs_mode` is as much the linter's business as `Line2D.points`. The
-  `renderGap`/`linterOnly` split in the parity allowlist answers a different question
-  (should the renderer read this key) and never decides whether a validator is worth
-  writing. The vendored corpus is a false-positive detector. "No scene sets this" sizes
-  the blast radius of a change and never justifies skipping one.
-  The one scope limit is the file's own header. `format <= 2` predates the string ext-
-  and sub-resource ids that version 3 introduced, so those files get a single
-  `legacy-format-version` info and no other diagnostic (ADR-0032). Formats 3 and 4 are
-  both current (one 4.6.3 saver writes either, per file), and a header that declares no
-  format is current too, so none of them is bounded.
-- Every property bound is grounded in the engine source, in one of three bound tiers
-  (ADR-0032, defined under **Severity** in GLOSSARY.md). Cite the `file:line` beside each
-  bound. A constant named `EXTREME_*`, `LARGE_*` or `*_RECOMMENDED` without one is a
-  defect.
-  - **error**: the setter refuses or alters the value (`ERR_FAIL*`, a clamp, a mask that
-    drops bits).
-  - **warning**: outside what the property's own UI-control hint permits,
-    `PROPERTY_HINT_RANGE`, `LAYERS_*` and `FLAGS` alike. `,or_greater` opens the max end,
-    `,or_less` opens the min end, and an open end never warns. A hint constrains the
-    inspector widget, not the engine, so it warns and never errors.
-  - **nothing**: `PROPERTY_HINT_NONE`, both ends open, or a bound that exists only in the
-    class-reference prose.
-
-  A `p_flags & MASK` setter is both tiers and needs `maskedBitField`, not a min/max. A
-  bit outside the mask is dropped (error). A bit inside it but missing from the `FLAGS`
-  hint is kept yet unreachable from the inspector (warning).
-  A literal that an INT slot stores differently is a fourth case and also a warning.
-  `_to_int` truncates `5.5` and maps `true` to 1 before the setter runs, so
-  `set_hframes` never sees either. The stored value differs from the written one, but
-  not by the setter's doing. The shared `storedNotWritten` handles it, applied to every
-  int slot after its bounds. No slice declares it.
-  `inf`, `-inf`, `inf_neg` and `nan` are legal float literals that Godot writes and
-  reloads (`variant_parser.cpp:150-155`), so every float validator accepts them. Only a
-  setter that opens with `ERR_FAIL_COND(!is_finite(...))` refuses one, and it says so
-  with `{ finite: 'file:line' }`. A range bound cannot stand in, since every comparison
-  against `nan` is false.
-  A semantic rule's tier is derived, not chosen. `severityFixedBy` reads the rule's
-  `EmitGrounding` kind:
-  - a ported `get_configuration_warnings()` row warns;
-  - an `engine-inert` value (the engine reads it and leaves it inert) and a
-    `previewer-limitation` are both info;
-  - a `linter-failure` errors;
-  - the three scopes that describe the file rather than the engine
-    (`dangling-reference`, `unresolvable-path`, `file-integrity`) warn;
-  - only the `engine` kind is left to its cite.
-- A rule declares each diagnostic it reports as a **Rule arm** (`linter/ruleArms.ts`), with
-  its tier and grounding. `check` reports only through `reportArm` or `armDiagnostic`, and
-  `emits` is `armEmits(arms)`, so `emits` lists exactly what `check` reports. The ESLint
-  rule-arm guard refuses a diagnostic object written by hand. Declare an arm whose grounding
-  fixes its tier with `groundedArm(ruleName, grounding)`. Only an `engine` arm writes its tier.
-- **`ADD_PROPERTY` is one of four ways a property reaches a `.tscn`.** The others are
-  `PropertyListHelper`/`register_property`, `ADD_ARRAY_COUNT` (a real serialised INT,
-  `class_db.cpp:1492`, whose floor is often an `ERR_FAIL_COND` in a template in the
-  base header), and a hand-rolled `_set`/`_get`/property-list override. That override
-  is not always underscore-prefixed. `ChainIK3D::get_property_list` has none, and that
-  class serialises a whole nested `settings/<i>/joints/<j>/` family while it declares
-  zero `ADD_PROPERTY` and zero XML `<member>`. Grep all four, both spellings, plus the
-  family's literal key prefix, before you call a class empty.
-- **`ADD_PROPERTY` gives the declared type. The getter decides the serialised form.**
-  A `TypedArray<T>` getter behind a `PropertyInfo(Variant::PACKED_*, …)` serialises as
-  `Array[T]([…])`, not `PackedTArray(…)`. All five of CodeEdit's array properties do
-  this. Read the getter signature for every array or dictionary property, or you ship a
-  validator that rejects what Godot itself wrote.
-- That grounding is declared, not inferred. Every validator carries one of three
-  markers:
-  - `formatOnly`: it rejects only values that never reach the property (unreadable text,
-    or a whole value of a type `can_convert_strict` refuses), so no per-property
-    citation exists. A refusal of a value the setter receives is a `grounding`, and
-    that includes an element inside a container.
-  - `grounding`: it rejects a real value, and names the `file:line`.
-  - `intSlot`: it reads an INT slot, so `_to_int` itself is the authority and the
-    citation is always `variant.h:360-377`. `intSlot` also records the slot's `width`,
-    since `4294967296` is unstorable in an int32 slot and exact in an int64 one.
-
-  The `v` DSL sets one. A hand-rolled validator must say which. `boundGrounding` fails
-  on one that says none, or that claims both `formatOnly` and `grounding`. `intSlot`
-  counts only for a validator that carries no bounds of its own. Every `RangeThreshold`
-  carries a required `cite`, checked by `rangeAdvisoryGrounding`. Both guards exist
-  because a check that sees only the DSL misses a hand-rolled validator that rejects
-  legal scenes.
-  A validator that cites no `grounding` is measured, not trusted.
-  `scripts/compare-docs/formatOnlyCorpus.ledger.test.mjs` runs it over the literals Godot
-  stores in its slot's Variant type, and it may not error on one. The literals are a
-  hand-cited corpus (`formatOnlyCorpus.data.mjs`), keyed by the ClassDB capture's type,
-  or by the setter's own type where `SETTER_TYPES` names one. When you find a spelling
-  Godot loads that the corpus lacks, add it there with its `variant_parser.cpp` cite.
-- Advisory linter conditions are warnings, not errors. An error rule on a condition that
-  an existing positive fixture carries breaks fixtureLint.
-- Web tests run under happy-dom: no CSS cascade and no layout, so never assert rendered
-  geometry. Pin load-bearing CSS by reading the `.module.css` source through
-  `import.meta.dirname`, never `process.cwd()` (hooks and CI run from the repo root).
-- `THREE.Object3D` has one parent, so cached Object3D resources are cloned per consumer
-  (`src/resources/useResource.ts`). Assert identity equality only for textures and
-  materials. The exception is a consumer that needs its own colour space: it clones and
-  retags, so assert `.source` identity there. That is `r3f/undecodedTexture.ts` for the
-  2D canvas and the theme icons, and
-  `resources/materials/standardmaterial3d/textureBinding.ts` for a 3D material, where
-  the slot decides it (Godot's `source_color` samplers) and both arrival paths cross the
-  same seam.
-- Tests: happy + error + edge per public method, co-located. Prefix intentionally-unused
-  params with `_`.
-- Assert a diagnostic's tier with `toBeAtTier`, `toBeAllAtTier`, or a test-kit or
-  `tierLists.ts` helper. Each records the tier it asserts, and the core setup file fails a
-  test whose title names a tier its test does not assert. ESLint refuses `expect(d.severity)`
-  in a core test, since it records nothing.
-- Self-registration on import: never edit central files beyond the aggregation imports.
-  Keep the web previewer and the VS Code extension at parity through the shared core.
-- **Engine facts live in `packages/textscene-core/src/godot/`, which imports
-  nothing.** It is the one module every domain (linter, parser, resources, nodes, r3f)
-  may import freely, because as a leaf it can never carry one domain's weight into
-  another's bundle. A constant or pure function that describes Godot rather than this
-  codebase, and that a second domain could want, belongs there. Examples: `CMP_EPSILON`
-  and `isZeroApprox` (`math.ts`), `IS_VALID_INT_RE` (`string.ts`). **Before you declare
-  a magic number, threshold, tolerance or engine-grammar regex in a slice, look there
-  first.** A copy in a slice drifts: a wrong `CMP_EPSILON` rejects values Godot calls
-  zero. Use one file per engine area, named for it (`math.ts`, `string.ts`), never one
-  bag of constants, so the reasoning beside each fact stays readable. Anything typed in
-  this repo's own vocabulary (`ParseError`, `PropertyValidator`, THREE, React) is a
-  domain concept and must not go there. `noDependencies.test.ts` enforces it.
-- Shared deps: pnpm catalog (`pnpm-workspace.yaml`), referenced as `"catalog:"`.
-- Logging: verbose `logger.info` with `[Category]` prefixes in core. Host apps filter.
-  `error` and `warn` are for real problems.
-- Comments: non-obvious information only. No issue or work-item references in code.
-  A fact that needs more room than a comment goes in a `.md` beside the code. Generated
-  files and `lint:begin` sections keep their generator's text: change the generator.
-- Implement completely: no stubs, placeholders or TODOs. Do every numbered item,
-  including doc-only edits.
-- Commits: conventional, technical. The `commit-msg` hook and the PR-title Claude hook
-  enforce the format.
-- `.claude/skills/conventional-commits/`, `.claude/rules/` and `.claude/agents/ste-review.md`
-  are vendored from Verktøykasse. Never edit them here: run
-  `pnpm vendor:verktoykasse --from <checkout>`. A test fails on a local edit.
+- `packages/textscene-core/src/godot/` holds engine facts and imports nothing. Look there
+  before you declare an engine constant or regex in a slice. Put a new one there.
+- Web tests run under happy-dom, so never assert rendered geometry. Read a `.module.css`
+  source through `import.meta.dirname`, never `process.cwd()`.
+- `useResource.ts` clones a cached Object3D per consumer. Assert identity only for textures
+  and materials, or `.source` identity where a consumer clones to retag the colour space.
+- Write a happy, an error and an edge test per public method, co-located. Prefix an unused
+  parameter with `_`.
+- Assert a diagnostic's tier with `toBeAtTier` or a `tierLists.ts` helper, never
+  `expect(d.severity)`.
+- Keep the web previewer and the VS Code extension at parity through the shared core.
+- Reference a shared dependency from the pnpm catalog as `"catalog:"`.
+- Log with `logger.info` and a `[Category]` prefix in core. Keep `error` and `warn` for real
+  problems.
+- Write a comment only for non-obvious information, with no issue or work-item reference.
+- Change the generator, never the text of a generated file or a `lint:begin` section.

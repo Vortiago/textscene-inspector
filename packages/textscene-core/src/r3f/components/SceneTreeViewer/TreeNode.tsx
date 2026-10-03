@@ -1,6 +1,6 @@
 /** One tree row and its recursive children, internal to `<SceneTreeViewer>`. */
 import { memo, useMemo, type MouseEvent } from 'react';
-import type { TscnNode, TscnExternalResource } from '../../../parser/types.js';
+import type { SceneScope, TscnNode, TscnExternalResource } from '../../../parser/types.js';
 import { joinPath } from '../../../utils/nodePath.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
@@ -70,6 +70,12 @@ export interface TreeNodeProps {
    */
   externalResources: readonly TscnExternalResource[];
   /**
+   * The scenes whose instances enclose this row, outermost first
+   * (`SceneScope.instancedScenePaths`), so a cyclic instance shows no content. A
+   * root row has none.
+   */
+  instancedScenePaths?: readonly string[];
+  /**
    * True only for the first root row while no selected row renders.
    * `<SceneTreeViewer>` computes it, and a child row never sets it.
    */
@@ -86,6 +92,7 @@ function TreeNodeImpl({
   onOpenSubScene,
   matches,
   externalResources,
+  instancedScenePaths,
   isDefaultFocusable = false,
 }: TreeNodeProps) {
   const nodePath = joinPath(parentPath, node.name);
@@ -105,12 +112,12 @@ function TreeNodeImpl({
   const groups: readonly LiveChildGroup[] = useMemo(() => {
     // The tree renders rows and resolves instance refs. It never reads a
     // SubResource id, so it declares an empty pool explicitly.
-    const scope = { externalResources, internalResources: [] };
+    const scope: SceneScope = { externalResources, internalResources: [], instancedScenePaths };
     if (node.type === GLB_SCENE_ROOT_TYPE && glbChildren) {
       return [{ origin: 'glb' as const, children: glbChildren, scope }];
     }
     return liveChildGroups(node, scope, singleSceneCache(scenePath, subScene));
-  }, [node, externalResources, scenePath, subScene, glbChildren]);
+  }, [node, externalResources, instancedScenePaths, scenePath, subScene, glbChildren]);
 
   // Instance root merge (ADR-0013), the same decision the viewport and inspector
   // make, for the row header. It reads the `merged` group, so the merge runs once
@@ -123,9 +130,9 @@ function TreeNodeImpl({
   const hasChildren = groups.some((g) => g.children.length > 0);
 
   // `keyPrefix` is the group's origin, so an inline child that shares a name with
-  // a sub-scene root does not trip React's duplicate-key warning. `childRes` is
+  // a sub-scene root does not trip React's duplicate-key warning. `childScope` is
   // the scope the child resolves its own instance ref against.
-  const renderChildRow = (child: TscnNode, keyPrefix: string, childRes: readonly TscnExternalResource[]) => (
+  const renderChildRow = (child: TscnNode, keyPrefix: string, childScope: SceneScope) => (
     <TreeNode
       key={`${keyPrefix}:${child.name}`}
       node={child}
@@ -136,7 +143,8 @@ function TreeNodeImpl({
       onNodeReveal={onNodeReveal}
       onOpenSubScene={onOpenSubScene}
       matches={matches}
-      externalResources={childRes}
+      externalResources={childScope.externalResources}
+      instancedScenePaths={childScope.instancedScenePaths}
     />
   );
 
@@ -271,7 +279,7 @@ function TreeNodeImpl({
           {groups.flatMap((group) =>
             group.children
               .filter((child) => matches(joinPath(nodePath, child.name)))
-              .map((child) => renderChildRow(child, group.origin, group.scope.externalResources))
+              .map((child) => renderChildRow(child, group.origin, group.scope))
           )}
         </div>
       )}

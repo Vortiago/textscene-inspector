@@ -11,7 +11,7 @@ renders_as: nothing yet, Godot runs its modification stack on the bones each fra
 # Skeleton2D
 
 Skeleton2D is the root of a Bone2D chain. Godot runs its `modification_stack` on the
-bones each frame, and the previewer does not yet (ADR-0045): the bones hold their authored
+bones each frame, and the previewer does not yet (ADR-0045). The bones hold their authored
 transforms, and everything visible belongs to its children.
 
 ## Linting

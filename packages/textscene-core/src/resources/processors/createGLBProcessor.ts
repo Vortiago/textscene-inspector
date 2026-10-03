@@ -8,13 +8,9 @@ import * as THREE from 'three';
 import type { FileEventBus } from '../FileEventBus';
 import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
-import {
-  createGLBMesh,
-  forEachSurfaceMaterial,
-  tagImportMaterial,
-  gltfResourceDir,
-  isGLBPath,
-} from '../formats/glb/glbProcessing';
+import { createGLBMesh, forEachSurfaceMaterial, tagImportMaterial } from '../formats/glb/glbProcessing';
+import { isGltfPath } from '../../godot/gltf';
+import { gltfResourcePath, selfContainedGlb } from '../formats/glb/gltfResources';
 import { applyRootScale } from '../formats/glb/rootScale';
 import type { GltfExtensionRules } from '../formats/glb/types';
 import { stampVisualLayers } from '../../r3f/visualLayers';
@@ -27,6 +23,8 @@ import {
   parseImportFile,
   type ParsedImportFile,
 } from '../../parser/importParser';
+import { importSidecarPath } from '../../godot/index.js';
+import type { DependencyGraph } from '../dependencyGraph';
 import * as logger from '../../logger';
 
 /**
@@ -44,6 +42,32 @@ function disposeGLBMesh(mesh: THREE.Object3D): void {
 }
 
 /**
+ * The glTF at `path` as a GLB that carries its external buffers and images: each is read
+ * through the byte layer and recorded, so editing it reloads the glTF.
+ */
+function glbBytes(
+  path: string,
+  data: ArrayBuffer,
+  fileEventBus: FileEventBus | undefined,
+  dependencies: DependencyGraph
+): Promise<ArrayBuffer> {
+  return selfContainedGlb(data, async (uri) => {
+    const resourcePath = gltfResourcePath(path, uri);
+    if (resourcePath === null) {
+      throw new Error(`glTF ${path} needs ${uri}, which climbs above res://`);
+    }
+    dependencies.record({ busType: 'glb', key: path }, resourcePath);
+    const bytes = await fileEventBus?.tryLoad(resourcePath, 'GltfResource');
+    if (!(bytes instanceof ArrayBuffer)) {
+      throw new Error(`glTF ${path} needs ${resourcePath}, which did not load as bytes`);
+    }
+    // The packed GLB holds the bytes now. A file a processor is also loading keeps them.
+    if (!fileEventBus!.isLoading(resourcePath)) fileEventBus!.clearCache(resourcePath);
+    return bytes;
+  });
+}
+
+/**
  * Correct a loaded asset by its **Import sidecar** (ADR-0028), once per path on the
  * cached template, so render, bounds, selection and the tree see one object. Godot's
  * importer too writes both corrections into the asset. A sidecar is found by convention
@@ -52,11 +76,15 @@ function disposeGLBMesh(mesh: THREE.Object3D): void {
 async function applyImportSidecar(
   object: THREE.Object3D,
   path: string,
-  fileEventBus: FileEventBus | undefined
+  fileEventBus: FileEventBus | undefined,
+  dependencies: DependencyGraph
 ): Promise<void> {
   if (!fileEventBus) return;
 
-  const raw = await fileEventBus.tryLoad(`${path}.import`, 'ImportSidecar');
+  const sidecar = importSidecarPath(path);
+  // Recorded before the read, so a sidecar created, edited or deleted later reloads the asset.
+  dependencies.record({ busType: 'glb', key: path }, sidecar);
+  const raw = await fileEventBus.tryLoad(sidecar, 'ImportSidecar');
   if (typeof raw !== 'string') return;
 
   const parsed = parseImportFile(raw);
@@ -131,22 +159,23 @@ function tagSidecarMaterials(object: THREE.Object3D, path: string, parsed: Parse
 export function createGLBProcessor(
   fileEventBus: FileEventBus | undefined,
   eventBus: ResourceEventBus,
+  /** Records the asset's read of its sidecar, so a sidecar edit reloads the asset. */
+  dependencies: DependencyGraph,
   extensionRules?: GltfExtensionRules
 ): ResourceProcessor<THREE.Object3D> {
   return createResourceProcessor({
     fileEventBus,
     eventBus,
     resourceType: 'glb',
-    shouldProcess: (path, data) => isGLBPath(path) && data instanceof ArrayBuffer,
+    shouldProcess: (path, data) => isGltfPath(path) && data instanceof ArrayBuffer,
     process: async (path, data) => {
-      // Text .gltf resolves external buffers/images against its own res://
-      // directory through the bus's LoadingManager (host-mapped URLs).
-      const object = await createGLBMesh(data as ArrayBuffer, {
-        resourcePath: gltfResourceDir(path),
-        manager: eventBus.getThreeManager(),
-        extensionRules,
-      });
-      await applyImportSidecar(object, path, fileEventBus);
+      const object = await createGLBMesh(
+        await glbBytes(path, data as ArrayBuffer, fileEventBus, dependencies),
+        {
+          extensionRules,
+        }
+      );
+      await applyImportSidecar(object, path, fileEventBus, dependencies);
       return object;
     },
     dispose: disposeGLBMesh,

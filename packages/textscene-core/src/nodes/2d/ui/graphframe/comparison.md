@@ -13,9 +13,8 @@ GraphFrame is a GraphElement that groups and auto-resizes around other elements 
 GraphEdit. The previewer draws its panel/titlebar StyleBoxes (tint-substituted when
 `tint_color_enabled`), the title text, and the resize handle when `resizable` is set and
 `autoshrink_enabled` is not. It draws the frame at its authored `size`/`position_offset`.
-That is the rect a freshly loaded scene shows: `attach_graph_element_to_frame` is a
-runtime call with no `.tscn` surface, so no attached-node auto-resize runs before a
-script calls it.
+That is the rect a freshly loaded scene shows. `attach_graph_element_to_frame` is a
+runtime call with no `.tscn` surface, so no auto-resize runs before a script calls it.
 
 ## Linting
 

@@ -1,10 +1,12 @@
 /** File linting and exit-code logic for the TSCN linter CLI. */
 
-import { readdirSync, readFileSync, statSync } from 'fs';
+import { readdirSync, statSync } from 'fs';
+import { readFile } from 'fs/promises';
 import { join, resolve } from 'path';
 import { Linter, type Diagnostic } from '@textscene/core/linter';
 import { isGodotTextResourcePath } from '@textscene/core/godot';
-import { formatDiagnostics, formatError } from './format';
+import { escapeControlCharacters, formatDiagnostics, formatError } from './format';
+import { projectProviderFor } from './projectProvider';
 
 /** Lint outcome for a single file, with output split by target stream. */
 export interface FileLintResult {
@@ -97,18 +99,23 @@ function collectTscnFiles(dir: string, found: string[] = []): string[] {
 }
 
 /**
- * Reads and lints a single TSCN file, returning raw diagnostics with no
- * presentation applied. Read failures (missing file, permissions) are
- * captured as `readError` rather than thrown.
+ * One linter for the process, so what it reads per provider, the glTF verdicts and the plugin answer, serves every
+ * scene of a run. It carries no other state between calls.
  */
-export function lintFileDiagnostics(filePath: string): FileDiagnostics {
+const linter = new Linter();
+
+/**
+ * Reads and lints a single TSCN file, returning raw diagnostics with no
+ * presentation applied. For a file inside a Godot project, it also reads the
+ * files the scene uses from that project. Read failures (missing file,
+ * permissions) are captured as `readError` rather than thrown.
+ */
+export async function lintFileDiagnostics(filePath: string): Promise<FileDiagnostics> {
   try {
     const absolutePath = resolve(filePath);
-    const content = readFileSync(absolutePath, 'utf-8');
-
-    // Two phases: strict parsing, then semantic rules.
-    const linter = new Linter();
-    return { filePath, diagnostics: linter.lint(content) };
+    const content = await readFile(absolutePath, 'utf-8');
+    const provider = await projectProviderFor(absolutePath);
+    return { filePath, diagnostics: await linter.lintComplete(content, provider) };
   } catch (error) {
     return {
       filePath,
@@ -129,18 +136,19 @@ function hasErrorSeverity(result: FileDiagnostics): boolean {
 /**
  * Lint a single TSCN file for the default (ANSI/plain text) CLI output.
  * Read failures are reported as stderr lines rather than thrown, and count
- * as errors.
+ * as errors. The path and the read error reach stderr with their control
+ * characters escaped.
  */
-export function lintFile(filePath: string, hasColor: boolean): FileLintResult {
-  const result = lintFileDiagnostics(filePath);
+export async function lintFile(filePath: string, hasColor: boolean): Promise<FileLintResult> {
+  const result = await lintFileDiagnostics(filePath);
 
   if (result.readError !== undefined) {
     return {
       filePath,
       stdoutLines: [],
       stderrLines: [
-        formatError(`Failed to lint ${filePath}:`, hasColor),
-        formatError(`  ${result.readError}`, hasColor),
+        formatError(`Failed to lint ${escapeControlCharacters(filePath)}:`, hasColor),
+        formatError(`  ${escapeControlCharacters(result.readError)}`, hasColor),
       ],
       hasErrors: true,
     };
@@ -165,20 +173,21 @@ export function printFileResult(result: FileLintResult): void {
 }
 
 /**
- * Lints files in order. The exit code is 1 when any file has an error-severity
- * diagnostic or fails to read. Warning/info-only diagnostics exit 0.
- * `onResult` fires after each file, so a caller streams output as files finish.
+ * Lints files in order, one at a time, so output keeps the argument order.
+ * The exit code is 1 when any file has an error-severity diagnostic or fails
+ * to read. Warning/info-only diagnostics exit 0. `onResult` fires after each
+ * file, so a caller streams output as files finish.
  */
-export function runLint(
+export async function runLint(
   filePaths: string[],
   hasColor: boolean,
   onResult?: (result: FileLintResult) => void
-): LintRunResult {
+): Promise<LintRunResult> {
   const results: FileLintResult[] = [];
   let hasErrors = false;
 
   for (const filePath of filePaths) {
-    const result = lintFile(filePath, hasColor);
+    const result = await lintFile(filePath, hasColor);
     results.push(result);
     if (result.hasErrors) {
       hasErrors = true;
@@ -190,11 +199,14 @@ export function runLint(
 }
 
 /**
- * Lints files in order and returns raw per-file diagnostics, the data source for
- * the `json` and `github` formats. The exit code follows `runLint`.
+ * Lints files one at a time and returns raw per-file diagnostics, the data source
+ * for the `json` and `github` formats. Sequential, not parallel: parallel reads of
+ * a large tree, each file with its dependencies, can exhaust the process's file
+ * handles. The exit code follows `runLint`.
  */
-export function collectFileDiagnostics(filePaths: string[]): CollectDiagnosticsResult {
-  const files = filePaths.map(lintFileDiagnostics);
+export async function collectFileDiagnostics(filePaths: string[]): Promise<CollectDiagnosticsResult> {
+  const files: FileDiagnostics[] = [];
+  for (const filePath of filePaths) files.push(await lintFileDiagnostics(filePath));
   const exitCode = files.some(hasErrorSeverity) ? 1 : 0;
 
   return { exitCode, files };

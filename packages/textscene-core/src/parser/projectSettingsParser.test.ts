@@ -9,7 +9,10 @@ import {
   DEFAULT_THEME_SCALE,
   DEFAULT_VIEWPORT_HEIGHT,
   DEFAULT_VIEWPORT_WIDTH,
+  declaredAutoloads,
+  enabledEditorPlugins,
   parseProjectSettings,
+  projectExtensionListPath,
   projectLayoutDirectionEnv,
   projectThemeScale,
   projectViewportSize,
@@ -96,6 +99,18 @@ describe('parseProjectSettings', () => {
     expect(Object.keys(settings ?? {})).not.toContain(
       'as well as forwarding mouse and keyboard input to the GUI."'
     );
+  });
+
+  it('reads a quoted key, which Godot writes for a name with a character outside printable ASCII', () => {
+    const settings = parseProjectSettings(
+      '[autoload]\n\n"Données"="*res://donnees.gd"\n"a\\"b"="*res://ab.gd"\n'
+    );
+    expect(settings).toEqual({ 'autoload/Données': '*res://donnees.gd', 'autoload/a"b': '*res://ab.gd' });
+  });
+
+  it('reads a key with blanks before its =, and a heading with a comment after it', () => {
+    const settings = parseProjectSettings('[autoload] ; the game singletons\n\nGame = "*res://game.gd"\n');
+    expect(settings).toEqual({ 'autoload/Game': '*res://game.gd' });
   });
 
   it('ignores comments and blank lines', () => {
@@ -289,5 +304,82 @@ describe('projectLayoutDirectionEnv — the settings are engine slots, not text'
         'internationalization/rendering/root_node_layout_direction': 'nonsense',
       }).rootRtl
     ).toBe(false);
+  });
+});
+
+describe('declaredAutoloads', () => {
+  it('names each entry of the [autoload] section, a singleton or not', () => {
+    const settings = parseProjectSettings(
+      '[autoload]\n\nGlobals="*res://globals.gd"\nImporter="res://importer.tscn"\n'
+    );
+    expect(declaredAutoloads(settings)).toEqual(['Globals', 'Importer']);
+  });
+
+  it('is empty for a project without an [autoload] section, and for none at all', () => {
+    expect(declaredAutoloads(parseProjectSettings('[application]\nconfig/name="A"\n'))).toEqual([]);
+    expect(declaredAutoloads(null)).toEqual([]);
+  });
+
+  it('names an entry whose name Godot writes as a quoted key', () => {
+    expect(declaredAutoloads(parseProjectSettings('[autoload]\n\n"Größe"="*res://groesse.gd"\n'))).toEqual([
+      'Größe',
+    ]);
+  });
+
+  it('ignores a key that only starts like the section, such as one in [autoload_prepend]', () => {
+    expect(declaredAutoloads(parseProjectSettings('[autoload_prepend]\nFirst="*res://first.gd"\n'))).toEqual(
+      []
+    );
+  });
+});
+
+describe('enabledEditorPlugins', () => {
+  it('lists each plugin the [editor_plugins] section enables', () => {
+    const settings = parseProjectSettings(
+      '[editor_plugins]\n\nenabled=PackedStringArray("res://addons/a/plugin.cfg", "res://addons/b/plugin.cfg")\n'
+    );
+    expect(enabledEditorPlugins(settings)).toEqual([
+      'res://addons/a/plugin.cfg',
+      'res://addons/b/plugin.cfg',
+    ]);
+  });
+
+  it('reads a bare array, which the setting converts to its PackedStringArray', () => {
+    const settings = parseProjectSettings('[editor_plugins]\nenabled=["res://addons/a/plugin.cfg"]\n');
+    expect(enabledEditorPlugins(settings)).toEqual(['res://addons/a/plugin.cfg']);
+  });
+
+  it('is empty for an empty list', () => {
+    expect(
+      enabledEditorPlugins(parseProjectSettings('[editor_plugins]\nenabled=PackedStringArray()\n'))
+    ).toEqual([]);
+  });
+
+  it('is empty for a project that enables none, and for no project file', () => {
+    expect(enabledEditorPlugins(parseProjectSettings('config_version=5\n'))).toEqual([]);
+    expect(enabledEditorPlugins(null)).toEqual([]);
+  });
+
+  it('is empty for a value that is not an array, which converts to no entry', () => {
+    expect(enabledEditorPlugins(parseProjectSettings('[editor_plugins]\nenabled=42\n'))).toEqual([]);
+  });
+
+  it('keeps an element that is no string literal, since the conversion stringifies each element', () => {
+    const settings = parseProjectSettings('[editor_plugins]\nenabled=[&"res://addons/a/plugin.cfg", 0]\n');
+    expect(enabledEditorPlugins(settings)).toEqual(['&"res://addons/a/plugin.cfg"', '0']);
+  });
+});
+
+describe('projectExtensionListPath', () => {
+  it('is under res://.godot by default', () => {
+    expect(projectExtensionListPath(null)).toBe('res://.godot/extension_list.cfg');
+    expect(projectExtensionListPath(parseProjectSettings('config_version=5\n'))).toBe(
+      'res://.godot/extension_list.cfg'
+    );
+  });
+
+  it('is under res://godot when the project turns the hidden data directory off', () => {
+    const settings = parseProjectSettings('[application]\nconfig/use_hidden_project_data_directory=false\n');
+    expect(projectExtensionListPath(settings)).toBe('res://godot/extension_list.cfg');
   });
 });

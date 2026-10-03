@@ -143,6 +143,36 @@ describe('extResourcePaths', () => {
   });
 });
 
+describe('matchResourceFiles, for the files a scene reads by convention', () => {
+  it('matches an import sidecar to the sidecar of a resource the scene references', () => {
+    const file = makeFile('player.png.import');
+    const result = matchResourceFiles(extResourcePaths(SCENE_WITH_RESOURCES), [file], new Set());
+    expect(result.matches).toEqual([{ path: 'res://textures/player.png.import', file }]);
+  });
+
+  it('matches an import sidecar to the sidecar of a missing path', () => {
+    const file = makeFile('child.png.import');
+    const result = matchResourceFiles([], [file], new Set(['res://textures/child.png']));
+    expect(result.matches).toEqual([{ path: 'res://textures/child.png.import', file }]);
+  });
+
+  it('matches project.godot to the project settings path, with or without a scene', () => {
+    const file = makeFile('project.godot');
+    expect(matchResourceFiles([], [file], new Set()).matches).toEqual([
+      { path: 'res://project.godot', file },
+    ]);
+    expect(matchResourceFiles(extResourcePaths(SCENE_WITH_RESOURCES), [file], new Set()).matches).toEqual([
+      { path: 'res://project.godot', file },
+    ]);
+  });
+
+  it('leaves a sidecar for an asset nothing references unmatched', () => {
+    const file = makeFile('stranger.glb.import');
+    const result = matchResourceFiles(extResourcePaths(SCENE_WITH_RESOURCES), [file], new Set());
+    expect(result.unmatched).toEqual([file]);
+  });
+});
+
 describe('matchResourceFiles', () => {
   it('matches a file to its res:// path by basename', () => {
     const file = makeFile('player.png');

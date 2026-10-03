@@ -11,6 +11,13 @@ const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = resolve(packageDir, '../..');
 const cliPath = join(packageDir, 'dist', 'cli.js');
 const cleanFixture = join(repoRoot, 'scenes', 'fixtures', 'unit-box-mesh.tscn');
+const gltfFixture = join(
+  repoRoot,
+  'scenes',
+  'fixtures',
+  'gltf-unsupported-required-extension',
+  'edge-gltf-unsupported-required-extension.tscn'
+);
 
 const BAD_TSCN = `[gd_scene format=3]
 
@@ -42,10 +49,19 @@ const INFO_TSCN = `[gd_scene format=3]
 [node name="Shape" type="CSGMesh3D" parent="."]
 `;
 
+// A node name and a quoted property value that carry an OSC title, a clear screen, an OSC 52
+// clipboard write and a C1 CSI: the `scale` diagnostic quotes the value back.
+const HOSTILE_TSCN = `[gd_scene format=3]
+
+[node name="R\x1b]0;pwned\x07\x1b[2J" type="Node3D"]
+scale = "\x1b]52;c;aGVsbG8=\x07\x9b2J"
+`;
+
 let tempDir: string;
 let badPath: string;
 let warningPath: string;
 let infoPath: string;
+let hostilePath: string;
 let scenesDir: string;
 let nestedCleanPath: string;
 let nestedBadPath: string;
@@ -71,6 +87,8 @@ beforeAll(() => {
   writeFileSync(warningPath, WARNING_TSCN);
   infoPath = join(tempDir, 'info.tscn');
   writeFileSync(infoPath, INFO_TSCN);
+  hostilePath = join(tempDir, 'hostile.tscn');
+  writeFileSync(hostilePath, HOSTILE_TSCN);
 
   scenesDir = join(tempDir, 'scenes');
   const nestedDir = join(scenesDir, 'nested');
@@ -138,12 +156,33 @@ describe('CLI end-to-end', () => {
     expect(result.stdout).toContain('(strict-parser)');
   });
 
+  it("reads a scene's glTF dependency under its project.godot and exits 1 on one Godot refuses", () => {
+    const result = runCli(['--no-color', gltfFixture]);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain('(gltf-required-extension-unsupported)');
+    expect(result.stdout).toContain('EXT_mesh_gpu_instancing');
+  });
+
   it('emits ANSI colors by default', () => {
     const result = runCli([cleanFixture]);
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('\x1b[32m'); // Green success line
   });
+});
+
+describe('CLI output from a hostile scene', () => {
+  it.each([['text'], ['json'], ['github']])(
+    '--format %s writes no ESC, BEL or C1 control to stdout',
+    (format) => {
+      const result = runCli(['--no-color', '--format', format, hostilePath]);
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain('aGVsbG8=');
+      expect(result.stdout).not.toMatch(/(?!\n)\p{Cc}/u);
+    }
+  );
 });
 
 describe('CLI --format output modes', () => {

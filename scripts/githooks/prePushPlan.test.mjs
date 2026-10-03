@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { planChecks } from './prePushPlan.mjs';
 
-const plan = (changed, deleted = []) => planChecks({ changed, deleted }).map((command) => command.join(' '));
+const plan = (changed, deleted = [], isNegativeFixture = () => false, testsBeside = () => []) =>
+  planChecks({ changed, deleted, isNegativeFixture, testsBeside }).map((command) => command.join(' '));
+
+/** A negative-fixture predicate over the one fixture `edge-a.tscn`, wherever it sits. */
+const isEdgeA = (path) => path.split('/').at(-1) === 'edge-a.tscn';
+
+const STATIC_GATE = ['pnpm format:check', 'pnpm lint', 'pnpm type-check:all', 'pnpm type-check:tests'];
 
 describe('planChecks', () => {
   it('runs nothing for files no check reads', () => {
@@ -14,7 +20,7 @@ describe('planChecks', () => {
     ]);
   });
 
-  it('runs the full gate when the toolchain changes', () => {
+  it('runs the static checks over the whole repository when the toolchain changes', () => {
     for (const path of [
       'package.json',
       'apps/textscene-web/package.json',
@@ -24,26 +30,63 @@ describe('planChecks', () => {
       'eslint.config.js',
       'prettier.config.mjs',
       '.prettierignore',
+      'lint-staged.config.mjs',
     ]) {
-      expect(plan([path])).toEqual(['pnpm validate']);
+      expect(plan([path])).toEqual(STATIC_GATE);
     }
   });
 
-  it('type-checks, lints and runs the related tests for a TypeScript change', () => {
+  it('runs the static checks over the whole repository when the negative-fixture loader changes', () => {
+    expect(plan(['scripts/githooks/negativeFixtures.mjs'])).toEqual(STATIC_GATE);
+  });
+
+  it('runs the tests beside a toolchain change after the static checks', () => {
+    const testsBeside = () => ['scripts/githooks/prePushPlan.test.mjs'];
+    expect(
+      plan(['githooks/pre-push', 'scripts/githooks/prePushPlan.mjs'], [], undefined, testsBeside)
+    ).toEqual([...STATIC_GATE, 'pnpm exec vitest run scripts/githooks/prePushPlan.test.mjs']);
+  });
+
+  it('type-checks and lints a TypeScript change', () => {
     expect(plan(['packages/textscene-core/src/a.ts'])).toEqual([
       'pnpm type-check:all',
       'pnpm type-check:tests',
       'npx eslint packages/textscene-core/src/a.ts',
       'pnpm exec prettier --check packages/textscene-core/src/a.ts',
-      'pnpm exec vitest related --run packages/textscene-core/src/a.ts',
     ]);
   });
 
-  it('lints and tests a script change without the type checks', () => {
+  it('runs the tests beside each changed file once', () => {
+    const testsBeside = (path) => (path.endsWith('.test.mjs') ? [path] : [path.replace('.mjs', '.test.mjs')]);
+    expect(plan(['scripts/x.mjs', 'scripts/x.test.mjs'], [], undefined, testsBeside)).toEqual([
+      'npx eslint scripts/x.mjs scripts/x.test.mjs',
+      'pnpm exec prettier --check scripts/x.mjs scripts/x.test.mjs',
+      'pnpm exec vitest run scripts/x.test.mjs',
+    ]);
+  });
+
+  it.each([
+    'apps/textscene-vscode/src/test/integration/suite/a.test.ts',
+    'apps/textscene-vscode/src/test/installed/suite/a.test.ts',
+  ])('leaves the extension host suite %s to CI, since vitest excludes it', (suite) => {
+    expect(plan([suite], [], undefined, (path) => [path])).toEqual([
+      'pnpm type-check:all',
+      'pnpm type-check:tests',
+      `npx eslint ${suite}`,
+      `pnpm exec prettier --check ${suite}`,
+    ]);
+  });
+
+  it('runs no tests for a stylesheet', () => {
+    expect(plan(['packages/textscene-core/src/a.css'], [], undefined, () => ['never.test.ts'])).toEqual([
+      'pnpm exec prettier --check packages/textscene-core/src/a.css',
+    ]);
+  });
+
+  it('lints a script change without the type checks', () => {
     expect(plan(['scripts/x.mjs'])).toEqual([
       'npx eslint scripts/x.mjs',
       'pnpm exec prettier --check scripts/x.mjs',
-      'pnpm exec vitest related --run scripts/x.mjs',
     ]);
   });
 
@@ -56,6 +99,17 @@ describe('planChecks', () => {
 
   it('lints a changed scene with the built linter', () => {
     expect(plan(['scenes/fixtures/unit-a.tscn'])).toEqual([
+      'pnpm build:linter',
+      'pnpm lint:tscn scenes/fixtures/unit-a.tscn',
+    ]);
+  });
+
+  it('skips a negative fixture, which exists to error', () => {
+    expect(plan(['scenes/fixtures/nested/edge-a.tscn'], [], isEdgeA)).toEqual([]);
+  });
+
+  it('lints the other scenes of a push that also changes a negative fixture', () => {
+    expect(plan(['scenes/fixtures/edge-a.tscn', 'scenes/fixtures/unit-a.tscn'], [], isEdgeA)).toEqual([
       'pnpm build:linter',
       'pnpm lint:tscn scenes/fixtures/unit-a.tscn',
     ]);

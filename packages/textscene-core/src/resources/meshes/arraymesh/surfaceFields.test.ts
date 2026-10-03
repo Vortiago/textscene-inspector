@@ -6,6 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as logger from '../../../logger';
 import { readAabb, readName, readPackedBytes, readUvScale } from './surfaceFields';
+import { LINEAR_SCAN_CEILING_MS, msToRead, unclosedCalls } from '../../../godot/testing/unclosedCalls';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
@@ -35,6 +36,12 @@ describe('readAabb', () => {
     expect(readAabb('{ "aabb": AABB(0, 0, 0, 1, 1) }')).toBeUndefined();
     expect(readAabb('{ "aabb": AABB(0, 0, 0, 1, 1, inf) }')).toBeUndefined();
     expect(readAabb('{ "format": 1 }')).toBeUndefined();
+  });
+
+  it('reads a crafted block of unclosed aabb calls in linear time (edge case)', () => {
+    const block = unclosedCalls('"aabb":AABB(');
+    expect(readAabb(block)).toBeUndefined();
+    expect(msToRead(readAabb, block)).toBeLessThan(LINEAR_SCAN_CEILING_MS);
   });
 });
 

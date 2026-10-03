@@ -1,23 +1,19 @@
 /**
- * The corpus-root switch: it routes res:// lookups and the text-glTF URL modifier into a
- * subtree, and clears the loader caches so two corpora never share bytes for one path. A
- * mounted consumer re-requests on `clearCaches`, from the incoming corpus, so callers tear the
- * scene down first and switch at the swap (`onBeforeSwap`, the upload handler).
+ * The corpus-root switch: it routes res:// lookups into a subtree, and clears the loader
+ * caches so two corpora never share bytes for one path. A mounted consumer re-requests on
+ * `clearCaches`, from the incoming corpus, so callers tear the scene down first and switch at
+ * the swap (`onBeforeSwap`, the upload handler).
  */
 import { useCallback, useEffect, useRef } from 'react';
 import type { ResourcePipeline } from '@textscene/core';
 import type { WebResourceProvider } from './providers/WebResourceProvider';
-import { fixtureUrlForGltfUri } from './corpusRoot';
 
 /**
- * Route the provider's res:// lookups and the THREE LoadingManager URL modifier into the
- * subtree. Module-private: without the cache clear `applyCorpusRoot` pairs it with, the caches
- * would hold the corpus being left.
+ * Route the provider's res:// lookups into the subtree. Module-private: without the cache
+ * clear `applyCorpusRoot` pairs it with, the caches would hold the corpus being left.
  */
 function switchCorpusRoot(pipeline: ResourcePipeline<WebResourceProvider>, resourceRoot: string): void {
-  const { provider, loader } = pipeline;
-  provider.setResourceRoot(resourceRoot);
-  loader.eventBus.getThreeManager().setURLModifier((url: string) => fixtureUrlForGltfUri(url, resourceRoot));
+  pipeline.provider.setResourceRoot(resourceRoot);
 }
 
 /**
@@ -40,7 +36,7 @@ export function useCorpusRoot(pipeline: ResourcePipeline<WebResourceProvider>): 
     [pipeline]
   );
 
-  // Base ('') routing on mount, so the URL modifier is live before anything renders. Not
+  // Base ('') routing on mount, so it is live before anything renders. Not
   // `applyCorpusRoot`, so the first real swap routes without a cache clear.
   useEffect(() => {
     switchCorpusRoot(pipeline, '');

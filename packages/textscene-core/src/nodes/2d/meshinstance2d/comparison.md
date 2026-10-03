@@ -35,5 +35,5 @@ no warning. Nothing reads it back, since no render component exists.
 
 ## Known limitations
 
-- **Not drawn** Godot draws the textured mesh. The previewer draws nothing for this
+- **Not drawn** Godot draws the textured mesh, but the previewer draws nothing for this
   node.

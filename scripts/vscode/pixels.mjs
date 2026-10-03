@@ -120,3 +120,44 @@ export function diffMask(aBuffer, bBuffer, threshold = 24) {
     mask,
   };
 }
+
+/**
+ * Pixels of the missing-resource placeholder's magenta (`MissingResourcePlaceholder`): a
+ * mesh that failed to load draws it, so a scene that loaded draws none.
+ *
+ * @param {Buffer} buffer PNG bytes
+ */
+export function missingPlaceholderPixels(buffer) {
+  const png = PNG.sync.read(buffer);
+  let count = 0;
+  for (let i = 0; i < png.data.length; i += 4) {
+    if (png.data[i] > 200 && png.data[i + 1] < 80 && png.data[i + 2] > 200) count++;
+  }
+  return count;
+}
+
+/**
+ * The mean RGB of the pixels of `buffer` under the white of `mask`, the mask
+ * `diffMask` returns. `null` when the mask is all black.
+ *
+ * @param {Buffer} buffer PNG bytes
+ * @param {PNG} mask same size as `buffer`
+ * @returns {{ r: number, g: number, b: number } | null}
+ */
+export function meanColourUnderMask(buffer, mask) {
+  const png = PNG.sync.read(buffer);
+  if (png.width !== mask.width || png.height !== mask.height) {
+    throw new Error(`expected a ${png.width}x${png.height} mask, got ${mask.width}x${mask.height}`);
+  }
+  const sum = { r: 0, g: 0, b: 0 };
+  let count = 0;
+  for (let i = 0; i < png.data.length; i += 4) {
+    if (mask.data[i] === 0) continue;
+    sum.r += png.data[i];
+    sum.g += png.data[i + 1];
+    sum.b += png.data[i + 2];
+    count++;
+  }
+  if (count === 0) return null;
+  return { r: sum.r / count, g: sum.g / count, b: sum.b / count };
+}

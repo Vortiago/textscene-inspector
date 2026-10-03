@@ -10,7 +10,7 @@ renders_as: nothing yet, Godot remaps a reference value onto an apply bone, the 
 
 # ConvertTransformModifier3D
 
-Reads one scalar off a reference bone or node, remaps it from the reference range onto the apply range, and writes it back as a different kind of transform on the apply bone. Godot runs that write each frame, and the previewer does not yet (ADR-0045): the bones hold their rest pose.
+Reads one scalar off a reference bone or node: a position, a roll or a scale. It remaps that value from the reference range onto the apply range, and writes it as another kind of transform on the apply bone. Godot runs it each frame, and the previewer does not yet (ADR-0045). The bones hold their rest pose.
 
 ## Linting
 

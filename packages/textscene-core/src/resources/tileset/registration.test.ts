@@ -12,7 +12,7 @@ describe('tileset slice registration', () => {
     const registration = resourceSliceRegistry.byTypeName('TileSet');
     expect(registration?.slice).toBe('tileset');
     expect(registration?.kind).toBe('godot-text');
-    expect(resourceSliceRegistry.busTypeFor('TileSet')).toBe('resource');
+    expect(resourceSliceRegistry.byTypeName('TileSet')?.busType ?? null).toBe('resource');
     expect(registration?.failureLabel).toBe('Resource');
   });
 

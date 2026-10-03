@@ -15,10 +15,8 @@ const MINIMAL_TSCN = '[gd_scene format=3]\n[node name="Root" type="Node3D"]';
 function makeHandlers() {
   return {
     webviewReady: vi.fn(),
-    error: vi.fn(),
     jumpToNode: vi.fn(),
     loadResource: vi.fn(),
-    resourceNeeded: vi.fn(),
     log: vi.fn(),
   };
 }
@@ -26,13 +24,8 @@ function makeHandlers() {
 describe('dispatchWebviewMessage', () => {
   const ROUTING_CASES: WebviewToHostMessage[] = [
     { type: 'webviewReady' },
-    { type: 'error', message: 'boom' },
     { type: 'jumpToNode', nodeName: 'Leaf', path: 'Root/Leaf', parent: '.' },
     { type: 'loadResource', path: 'res://tex.png', resourceType: 'Texture2D', requestId: 'r1' },
-    {
-      type: 'resourceNeeded',
-      resource: { path: 'res://x.png', type: 'Texture2D', referencedBy: 'Node', error: 'miss' },
-    },
     { type: 'log', level: 'info', message: 'hello', args: [] },
   ];
 
@@ -142,15 +135,6 @@ describe('TscnPreviewPanel — all message types through fake onDidReceiveMessag
     return panel;
   }
 
-  it('error: surfaces the message via showErrorMessage', async () => {
-    const { triggerMessage } = setupMockPanel();
-    await makeReadyPanel(triggerMessage);
-
-    triggerMessage({ type: 'error', message: 'renderer exploded' });
-
-    expect(vscode.window.showErrorMessage as Mock).toHaveBeenCalledWith('renderer exploded');
-  });
-
   it('jumpToNode: opens the text document and positions the editor', async () => {
     const { triggerMessage } = setupMockPanel();
     await makeReadyPanel(triggerMessage);
@@ -192,23 +176,6 @@ describe('TscnPreviewPanel — all message types through fake onDidReceiveMessag
     expect((loaded as { requestId: string }).requestId).toBe('rq1');
   });
 
-  it('resourceNeeded: logs to the output channel without throwing', async () => {
-    const { triggerMessage } = setupMockPanel();
-    await makeReadyPanel(triggerMessage);
-
-    expect(() =>
-      triggerMessage({
-        type: 'resourceNeeded',
-        resource: {
-          path: 'res://missing.png',
-          type: 'Texture2D',
-          referencedBy: 'TestNode',
-          error: 'not found',
-        },
-      })
-    ).not.toThrow();
-  });
-
   it('log: does not throw even when no output channel is initialised', async () => {
     const { triggerMessage } = setupMockPanel();
     await makeReadyPanel(triggerMessage);
@@ -234,41 +201,41 @@ describe('TscnPreviewPanel — all message types through fake onDidReceiveMessag
 });
 
 describe('a message whose type is known but whose body is not', () => {
-  const handlers = () => ({
-    webviewReady: vi.fn(),
-    error: vi.fn(),
-    jumpToNode: vi.fn(),
-    loadResource: vi.fn(),
-    resourceNeeded: vi.fn(),
-    log: vi.fn(),
-  });
-
   it('drops a log with no args array, which the relay would call .map on', () => {
-    const h = handlers();
+    const h = makeHandlers();
     dispatchWebviewMessage({ type: 'log', level: 'warn', message: 'x' }, h);
     expect(h.log).not.toHaveBeenCalled();
   });
 
-  it('drops a resourceNeeded with no resource, whose fields the relay reads', () => {
-    const h = handlers();
-    dispatchWebviewMessage({ type: 'resourceNeeded' }, h);
-    expect(h.resourceNeeded).not.toHaveBeenCalled();
-  });
-
   it('drops a jumpToNode whose path is not a string', () => {
-    const h = handlers();
+    const h = makeHandlers();
     dispatchWebviewMessage({ type: 'jumpToNode', nodeName: 'N', path: 7 }, h);
     expect(h.jumpToNode).not.toHaveBeenCalled();
   });
 
   it('still routes a root jumpToNode, whose optional parent is absent', () => {
-    const h = handlers();
+    const h = makeHandlers();
     dispatchWebviewMessage({ type: 'jumpToNode', nodeName: 'Root', path: 'Root' }, h);
     expect(h.jumpToNode).toHaveBeenCalledTimes(1);
   });
 
+  it('routes a loadResource with no resourceType, as the byte layer sends every processor load', () => {
+    const h = makeHandlers();
+    dispatchWebviewMessage({ type: 'loadResource', path: 'res://quad.tres', requestId: 'r1' }, h);
+    expect(h.loadResource).toHaveBeenCalledTimes(1);
+  });
+
+  it('drops a loadResource whose resourceType is not a string', () => {
+    const h = makeHandlers();
+    dispatchWebviewMessage(
+      { type: 'loadResource', path: 'res://quad.tres', resourceType: 7, requestId: 'r1' },
+      h
+    );
+    expect(h.loadResource).not.toHaveBeenCalled();
+  });
+
   it('still routes a well-formed log', () => {
-    const h = handlers();
+    const h = makeHandlers();
     dispatchWebviewMessage({ type: 'log', level: 'warn', message: 'x', args: [] }, h);
     expect(h.log).toHaveBeenCalledTimes(1);
   });

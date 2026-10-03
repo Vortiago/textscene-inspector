@@ -53,6 +53,6 @@ empty, which is Godot's own size-mismatch branch.
 ## Known limitations
 
 - **Approximated** `vertex_colors` interpolate in linear space where Godot interpolates
-  the authored sRGB values, so the middle of a gradient reads slightly differently. The
+  the authored sRGB values, so a gradient's middle reads slightly differently while the
   corners are exact.
 - **Approximated** `antialiased` is ignored, so edges are marginally harder.

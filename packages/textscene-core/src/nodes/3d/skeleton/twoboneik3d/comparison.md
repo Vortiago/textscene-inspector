@@ -10,7 +10,7 @@ renders_as: nothing yet, Godot poses its two-bone chain onto the target, the pre
 
 # TwoBoneIK3D
 
-A rotation-based two-bone IK solver: it builds a plane from the root, middle and end joints plus a pole target, then poses the skeleton so the end bone reaches the target. Godot runs the solver each frame, and the previewer does not yet (ADR-0045): the bones hold their rest pose.
+A rotation-based two-bone IK solver. It builds a plane from the root, middle and end joints and a pole target. It then poses the skeleton so the end bone reaches the target. Godot runs it each frame, and the previewer does not yet (ADR-0045). The bones hold their rest pose.
 
 ## Linting
 

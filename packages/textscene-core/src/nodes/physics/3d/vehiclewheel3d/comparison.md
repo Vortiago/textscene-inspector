@@ -9,7 +9,7 @@ renders_as: a transform group with a selection-gated wheel gizmo
 
 # VehicleWheel3D
 
-VehicleWheel3D positions one wheel of a VehicleBody3D. It draws no geometry at runtime in either engine, so the previewer mounts it as a transform group (ADR-0008) whose child mesh is the visible wheel. Each wheel lands at the same point in both frames.
+VehicleWheel3D positions one wheel of a VehicleBody3D. It draws no geometry at runtime in either engine. The previewer mounts it as a transform group (ADR-0008) whose child mesh is the visible wheel. Each wheel lands at the same point in both frames.
 
 ## Linting
 
@@ -40,8 +40,8 @@ Strict parsing format-checks these `VehicleWheel3D` properties, plus 17 inherite
 | `valid-vehiclewheel3d` | `vehiclewheel3d-not-under-vehicle-body` | warning |
 <!-- lint:end -->
 
-The lenient parser reads every strict-validated property, and an unauthored key stays `undefined` rather than taking Godot's default at parse time. The defaults are substituted where the value is consumed: the gizmo falls back to `wheel_radius = 0.5` and `wheel_rest_length = 0.15`, and the damping-pair rule compares against `damping_compression = 0.83` and `damping_relaxation = 0.88`.
+The lenient parser reads every strict-validated property, and an unauthored key stays `undefined` rather than taking Godot's default at parse time. The defaults are substituted where the value is consumed. The gizmo falls back to `wheel_radius = 0.5` and `wheel_rest_length = 0.15`. The damping-pair rule compares against `damping_compression = 0.83` and `damping_relaxation = 0.88`.
 
 ## Known limitations
 
-- **Editor only** Godot's editor draws the wheel gizmo for every wheel. Here it draws only for the selected node (ADR-0018).
+- **Editor only** Godot's editor draws the wheel gizmo for every wheel, but here it draws only for the selected node (ADR-0018).

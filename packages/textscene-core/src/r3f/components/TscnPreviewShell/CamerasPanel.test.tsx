@@ -42,8 +42,8 @@ function Probe() {
   );
 }
 
-function renderPanel() {
-  const parsed = new TscnParser().parse(SCENE);
+function renderPanel(scene = SCENE) {
+  const parsed = new TscnParser().parse(scene);
   const sceneGraph = createSceneGraphFromTscnScene(parsed, 'res://test.tscn');
   return render(
     <HierarchyProvider value={{ sceneGraph, panelId: 'cams-test' }}>
@@ -71,6 +71,35 @@ describe('<CamerasPanel> with 2D cameras', () => {
     // World position (120, 60), DRAG_CENTER default, zoom 2.
     expect(probe.getAttribute('data-frame')).toBe('120,60@2');
     expect(probe.getAttribute('data-mode')).toBe('2D');
+  });
+
+  it('frames a top_level Camera2D under a translated Node2D at its own position', () => {
+    renderPanel(`[gd_scene format=3]
+
+[node name="World" type="Node2D"]
+position = Vector2(100, 50)
+
+[node name="Cam" type="Camera2D" parent="."]
+top_level = true
+position = Vector2(20, 10)
+`);
+    fireEvent.click(screen.getByRole('button', { name: /Cam/ }));
+    expect(screen.getByTestId('probe').getAttribute('data-frame')).toBe('20,10@1');
+  });
+
+  it('frames a Camera2D under a Node under a translated Node2D at its own position', () => {
+    renderPanel(`[gd_scene format=3]
+
+[node name="World" type="Node2D"]
+position = Vector2(100, 50)
+
+[node name="Group" type="Node" parent="."]
+
+[node name="Cam" type="Camera2D" parent="Group"]
+position = Vector2(20, 10)
+`);
+    fireEvent.click(screen.getByRole('button', { name: /Cam/ }));
+    expect(screen.getByTestId('probe').getAttribute('data-frame')).toBe('20,10@1');
   });
 });
 

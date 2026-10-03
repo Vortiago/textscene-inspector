@@ -13,7 +13,7 @@ describe('theme slice registration', () => {
     const registration = resourceSliceRegistry.byTypeName('Theme');
     expect(registration?.slice).toBe('theme');
     expect(registration?.kind).toBe('godot-text');
-    expect(resourceSliceRegistry.busTypeFor('Theme')).toBe('theme');
+    expect(resourceSliceRegistry.byTypeName('Theme')?.busType ?? null).toBe('theme');
     expect(registration?.failureLabel).toBe('Node using theme');
   });
 

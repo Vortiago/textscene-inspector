@@ -16,11 +16,10 @@ import {
   type ProjectSettings,
   type ProjectViewportSize,
 } from '../../parser/projectSettingsParser.js';
+import { PROJECT_FILE_PATH } from '../../godot/project.js';
+import type { FileEventBus } from '../../resources/FileEventBus.js';
 import { useResourceLoader } from '../../resources/useResource.js';
 import * as logger from '../../logger.js';
-
-/** Where Godot keeps a project's settings, relative to its `res://` root. */
-export const PROJECT_SETTINGS_PATH = 'res://project.godot';
 
 export interface ProjectSettingsValue {
   /** Raw settings by full name, such as `gui/theme/default_theme_scale`, or null. */
@@ -53,6 +52,17 @@ export interface ProjectSettingsProviderProps {
   sceneKey?: string;
 }
 
+/** The project's settings, or null when the file is absent or is not a `project.godot`. */
+async function readProjectSettings(bus: FileEventBus): Promise<ProjectSettings | null> {
+  const content = await bus.tryLoad(PROJECT_FILE_PATH, 'ProjectSettings');
+  if (typeof content !== 'string') return null;
+  const parsed = parseProjectSettings(content);
+  if (parsed) {
+    logger.info(`[ProjectSettings] Loaded ${Object.keys(parsed).length} settings from ${PROJECT_FILE_PATH}`);
+  }
+  return parsed;
+}
+
 export function ProjectSettingsProvider({ children, sceneKey }: ProjectSettingsProviderProps) {
   const loader = useResourceLoader();
   const [settings, setSettings] = useState<ProjectSettings | null>(null);
@@ -64,26 +74,30 @@ export function ProjectSettingsProvider({ children, sceneKey }: ProjectSettingsP
       return undefined;
     }
 
-    let cancelled = false;
-    // Cleared before the fetch, or one frame renders the scene at the previous
-    // project's theme scale.
-    setSettings(null);
+    // Each read takes a number, and only the latest may land: a read that a change
+    // overtook could otherwise resolve last and restore the old settings. The
+    // cleanup takes a number too, so no read lands after it.
+    let latestRead = 0;
+    const read = async (): Promise<void> => {
+      const thisRead = ++latestRead;
+      const parsed = await readProjectSettings(bus);
+      if (thisRead === latestRead) setSettings(parsed);
+    };
 
-    void (async () => {
-      const content = await bus.tryLoad(PROJECT_SETTINGS_PATH, 'ProjectSettings');
-      if (cancelled) return;
-      if (typeof content !== 'string') return;
-      const parsed = parseProjectSettings(content);
-      if (parsed) {
-        logger.info(
-          `[ProjectSettings] Loaded ${Object.keys(parsed).length} settings from ${PROJECT_SETTINGS_PATH}`
-        );
-      }
-      setSettings(parsed);
-    })();
+    // Cleared before the fetch, or one frame renders the scene at the previous
+    // project's theme scale. A change to the file is not cleared first: the old
+    // settings stay until the new ones arrive, so the theme scale never flashes.
+    setSettings(null);
+    void read();
+
+    const onInvalidated = (path: string) => {
+      if (path === PROJECT_FILE_PATH) void read();
+    };
+    bus.on('invalidated', onInvalidated);
 
     return () => {
-      cancelled = true;
+      latestRead++;
+      bus.off('invalidated', onInvalidated);
     };
   }, [loader, sceneKey]);
 

@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { ReactNode } from 'react';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { parseTresFile } from '../parser/parsedResource';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
@@ -64,5 +64,47 @@ describe('useTileSetModels', () => {
     const { result } = renderHook(() => useTileSetModels(['ExtResource("1_floor")']), { wrapper });
     expect(result.current(undefined).model).toBeNull();
     expect(result.current('ExtResource("9_nope")').status).toBe('unavailable');
+  });
+
+  it('requests its TileSet when the file arrives, though the cache no longer holds its failure', () => {
+    const fake = createFakeResourceLoader();
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider internalResources={[]} externalResources={EXTERNALS}>
+          {children}
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    renderHook(() => useTileSetModels(['ExtResource("1_floor")']), { wrapper });
+    const requested: string[] = [];
+    fake.resources.setRequestImpl((path) => requested.push(path));
+
+    act(() => fake.loader.provideFile(FLOOR_PATH));
+
+    expect(requested).toEqual([FLOOR_PATH]);
+  });
+
+  it('requests its TileSet again when the file changes, and keeps the old model until the new one arrives', async () => {
+    const fake = createFakeResourceLoader();
+    fake.resources.seed(FLOOR_PATH, parseTresFile(tilesetTres(16)));
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider internalResources={[]} externalResources={EXTERNALS}>
+          {children}
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    const { result } = renderHook(() => useTileSetModels(['ExtResource("1_floor")']), { wrapper });
+    const requested: string[] = [];
+    fake.resources.setRequestImpl((path) => requested.push(path));
+
+    act(() => fake.loader.provideFile(FLOOR_PATH));
+
+    expect(requested).toContain(FLOOR_PATH);
+    expect(result.current('ExtResource("1_floor")').model?.tileSize).toEqual({ x: 16, y: 16 });
+
+    act(() => fake.resources._resolve(FLOOR_PATH, parseTresFile(tilesetTres(64))));
+
+    expect(result.current('ExtResource("1_floor")').model?.tileSize).toEqual({ x: 64, y: 64 });
   });
 });

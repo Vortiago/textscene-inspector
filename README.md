@@ -3,9 +3,7 @@
 [![CI](https://github.com/Vortiago/textscene-inspector/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/Vortiago/textscene-inspector/actions/workflows/ci.yml?query=branch%3Amain+event%3Apush)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-Renders Godot `.tscn` scenes in 3D and 2D, without Godot.
-
-It reads the `.tscn` text and draws it with react-three-fiber over three.js. There is no Godot install, editor cache or import step.
+TextScene Inspector renders Godot `.tscn` scenes in 3D and 2D from the text alone, without Godot.
 
 **Try it:** [vortiago.github.io/textscene-inspector](https://vortiago.github.io/textscene-inspector/)
 
@@ -19,17 +17,15 @@ It reads the `.tscn` text and draws it with react-three-fiber over three.js. The
 | Web previewer | [Open in the browser](https://vortiago.github.io/textscene-inspector/) | [Web guide](./docs/user-guide-web.md) |
 | CLI linter for `.tscn` and `.tres` | `npm install --global @textscene/linter` | [Linter README](./apps/textscene-linter/README.md) |
 
-The dev edition of the web previewer adds the built-in test scenes: [textscene-inspector.pages.dev](https://textscene-inspector.pages.dev/).
+Dev edition, with the test scenes: [textscene-inspector.pages.dev](https://textscene-inspector.pages.dev/).
 
 ## What it renders
 
-All 240 of Godot 4.6.3's instantiable node types are parsed and linted. Most of them also render: meshes, CSG, lights, materials, 2D, Control UI, viewports and animation.
-
-The [parity gallery](https://textscene-inspector.pages.dev/parity/index.html) compares each node type with real Godot. It is the one list of what renders and where the output differs.
+All 240 of Godot 4.6.3's instantiable node types are parsed and linted, and most render. The [parity gallery](https://textscene-inspector.pages.dev/parity/index.html) lists what renders and where it differs from Godot.
 
 ## Build from source
 
-Requires Node.js 24 or later and pnpm 9 or later. On Windows, `winget configure scripts/winget-dev-setup.yaml` installs both.
+Requires Node.js 24+ and pnpm 9+ (on Windows: `winget configure scripts/winget-dev-setup.yaml`).
 
 ```bash
 pnpm install
@@ -46,30 +42,31 @@ Install a `.vsix` with **Extensions: Install from VSIX…**.
 | Command | Does |
 |---|---|
 | `pnpm build` | Build all packages |
-| `pnpm build:site` | Build the dev edition of the web previewer |
-| `pnpm build:pages` | Build the public edition, and check it holds no dev content |
+| `pnpm build:site` | Build the dev edition |
+| `pnpm build:pages` | Build the public edition, without dev content |
 | `pnpm build:linter` | Build the CLI linter |
-| `pnpm lint:tscn <paths>` | Lint `.tscn` and `.tres` files or directories |
+| `pnpm lint:tscn <paths>` | Lint `.tscn` and `.tres` paths |
 | `pnpm test` | Unit tests |
 | `pnpm test:visual` | Golden images, exact pixel match |
-| `pnpm test:visual:update` | Rewrite the golden images. Check them before you commit. |
-| `pnpm test:vscode:csp` | Text renders in the real VS Code webview, offline, under its CSP |
+| `pnpm test:visual:update` | Rewrite the golden images |
+| `pnpm test:vscode:csp` | The preview draws in the real VS Code webview, under its CSP |
 | `pnpm --filter textscene-inspector test:integration` | VS Code integration tests |
+| `TEXTSCENE_VSCODE_VERSION=min pnpm --filter textscene-inspector test:integration` | The same tests on the oldest VS Code that `engines.vscode` accepts |
+| `pnpm vsc:package && pnpm --filter textscene-inspector test:installed` | The packaged `.vsix` in a clean VS Code: activation, commands, lint and preview |
+| `pnpm --filter textscene-inspector test:web` | The browser build in VS Code for the Web, as vscode.dev runs it: activation, commands, lint, Outline and preview |
 | `pnpm lint` | ESLint |
-| `pnpm format` | Format the code with Prettier |
-| `pnpm format:check` | Check the formatting, as CI does |
+| `pnpm format` | Prettier |
+| `pnpm format:check` | Prettier check, as in CI |
 | `pnpm type-check` | Type check |
 | `pnpm clean` | Remove build output |
 
-[CONTRIBUTING.md](./CONTRIBUTING.md) says how to check a change before a pull request.
-
 ## Documentation
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md): design and project structure
-- [CONTRIBUTING.md](./CONTRIBUTING.md): issues, checks and pull requests
+- [ARCHITECTURE.md](./ARCHITECTURE.md): design
+- [CONTRIBUTING.md](./CONTRIBUTING.md): how to contribute
 - [RELEASING.md](./RELEASING.md): how to release
-- [REFERENCES.md](./REFERENCES.md): Godot and three.js links
-- [docs/user-flows.md](./docs/user-flows.md): manual verification flows
+- [REFERENCES.md](./REFERENCES.md): external docs
+- [docs/user-flows.md](./docs/user-flows.md): manual checks
 - [GitHub issues](https://github.com/Vortiago/textscene-inspector/issues): open work
 
 ## License

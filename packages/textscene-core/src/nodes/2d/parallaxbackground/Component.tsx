@@ -22,7 +22,7 @@ import {
   parallaxViewFraming,
   type ParallaxViewFraming,
 } from './parallaxScroll';
-import { observeSceneCamera } from './sceneRenderCamera';
+import { observeSceneCamera } from '../../../r3f/sceneRenderCamera';
 import { ParallaxScrollProvider, type RegisteredParallaxLayer } from './scrollContext';
 import type { ParallaxBackgroundProperties } from './types';
 

@@ -47,9 +47,6 @@ export interface ControlRasterViewport extends SceneScope {
 /** Godot's `SubViewport.size` default, `Vector2i(512, 512)`. */
 const DEFAULT_SIZE = 512;
 
-/** Guards a pathological cyclic scene cache; real scenes nest a handful deep. */
-const MAX_DEPTH = 100;
-
 /**
  * Every Control-only sub-viewport in `roots`, depth-first, with its path and the
  * scope its Controls resolve in. A found sub-viewport is still descended into: a
@@ -67,11 +64,9 @@ export function collectControlRasterViewports(
     nodes: readonly TscnNode[],
     parentPath: string,
     current: SceneScope,
-    depth: number,
     /** What the rtl climb would find above `nodes` (`ControlRasterViewport.inheritedRtl`). */
     inheritedRtl: boolean | null
   ): void => {
-    if (depth > MAX_DEPTH) return;
     for (const node of nodes) {
       const path = joinPath(parentPath, node.name);
 
@@ -125,11 +120,11 @@ export function collectControlRasterViewports(
       // Every group descends in its own scope: the sub-scene's for
       // `merged`/`subscene`, the outer one for `inline`/`glb`.
       for (const group of groups) {
-        walk(group.children, path, group.scope, depth + 1, childRtl);
+        walk(group.children, path, group.scope, childRtl);
       }
     }
   };
 
-  walk(roots, '', scope, 0, null);
+  walk(roots, '', scope, null);
   return found;
 }

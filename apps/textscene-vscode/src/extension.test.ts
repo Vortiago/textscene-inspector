@@ -5,6 +5,8 @@ import { activate, deactivate } from './extension';
 import { createMockUri, vscode } from './test-setup';
 import { TscnPreviewPanel } from './TscnPreviewPanel';
 import * as logger from './logger';
+import { TscnDiagnostics } from './TscnDiagnostics';
+import { PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN } from './watchPatterns';
 
 vi.mock('./TscnPreviewPanel', () => ({
   TscnPreviewPanel: {
@@ -24,21 +26,27 @@ vi.mock('./logger', () => ({
   dispose: vi.fn(),
 }));
 
+type UriHandler = (uri: unknown) => unknown;
+
+interface WatcherHandlers {
+  change: UriHandler[];
+  delete: UriHandler[];
+}
+
 describe('Extension', () => {
   let mockContext: any;
   let mockPanel: any;
   let commandHandlers: Map<string, (...args: unknown[]) => unknown>;
   let saveDocumentHandlers: Array<(...args: unknown[]) => unknown>;
-  let resourceChangeHandlers: Array<(uri: unknown) => unknown>;
-  let resourceDeleteHandlers: Array<(uri: unknown) => unknown>;
+  /** The change and delete handlers each watcher received, keyed by its glob. */
+  let watcherHandlers: Map<string, WatcherHandlers>;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
     commandHandlers = new Map();
     saveDocumentHandlers = [];
-    resourceChangeHandlers = [];
-    resourceDeleteHandlers = [];
+    watcherHandlers = new Map();
 
     mockContext = {
       extensionUri: createMockUri('/extension'),
@@ -71,23 +79,31 @@ describe('Extension', () => {
       return { dispose: vi.fn() };
     });
 
-    // A watcher mock, so the test captures the change handler.
-    (vscode.workspace.createFileSystemWatcher as Mock) = vi.fn(() => ({
-      onDidChange: vi.fn((handler: (uri: unknown) => unknown) => {
-        resourceChangeHandlers.push(handler);
-        return { dispose: vi.fn() };
-      }),
-      onDidCreate: vi.fn((handler: (uri: unknown) => unknown) => {
-        resourceChangeHandlers.push(handler);
-        return { dispose: vi.fn() };
-      }),
-      onDidDelete: vi.fn((handler: (uri: unknown) => unknown) => {
-        resourceDeleteHandlers.push(handler);
-        return { dispose: vi.fn() };
-      }),
-      dispose: vi.fn(),
-    }));
+    // A watcher mock, so the test captures each glob's change handlers.
+    (vscode.workspace.createFileSystemWatcher as Mock) = vi.fn((pattern: string) => {
+      const handlers: WatcherHandlers = { change: [], delete: [] };
+      watcherHandlers.set(pattern, handlers);
+      const capture = (into: UriHandler[]) =>
+        vi.fn((handler: UriHandler) => {
+          into.push(handler);
+          return { dispose: vi.fn() };
+        });
+      return {
+        onDidChange: capture(handlers.change),
+        onDidCreate: capture(handlers.change),
+        onDidDelete: capture(handlers.delete),
+        dispose: vi.fn(),
+      };
+    });
   });
+
+  async function fireChange(pattern: string, uri: unknown): Promise<void> {
+    await Promise.all(watcherHandlers.get(pattern)!.change.map((handler) => handler(uri)));
+  }
+
+  async function fireDelete(pattern: string, uri: unknown): Promise<void> {
+    await Promise.all(watcherHandlers.get(pattern)!.delete.map((handler) => handler(uri)));
+  }
 
   function openPanelFor(fsPath: string): void {
     (vscode.window.activeTextEditor as any) = {
@@ -121,7 +137,9 @@ describe('Extension', () => {
     it('should add disposables to context subscriptions', () => {
       activate(mockContext);
 
-      expect(mockContext.subscriptions.length).toBe(10); // command + symbol provider + definition provider + document link provider + diagnostics + save listener + resource watcher + 3 watcher handlers (onChange + onCreate + onDelete)
+      // command, symbol, definition and document link providers, diagnostics, save
+      // listener, and for each of the two watchers itself plus its three handlers.
+      expect(mockContext.subscriptions.length).toBe(14);
     });
 
     it('should register a document link provider for res:// references', () => {
@@ -410,12 +428,41 @@ describe('Extension', () => {
   });
 
   describe('Resource Watcher', () => {
+    it('creates the resource and project-file watchers once each and hands both to the diagnostics', () => {
+      activate(mockContext);
+
+      const createWatcher = vscode.workspace.createFileSystemWatcher as Mock;
+      expect(createWatcher.mock.calls).toEqual([[RESOURCE_FILES_PATTERN], [PROJECT_FILE_PATTERN]]);
+      const [resourceWatcher, projectFileWatcher] = createWatcher.mock.results.map((result) => result.value);
+      expect(TscnDiagnostics).toHaveBeenCalledWith(resourceWatcher, projectFileWatcher);
+    });
+
+    it('routes a changed project file to the panel for re-fetch', async () => {
+      activate(mockContext);
+      openPanelFor('/workspace/scene.tscn');
+
+      const projectUri = createMockUri('/workspace/project.godot');
+      await fireChange(PROJECT_FILE_PATTERN, projectUri);
+
+      expect(mockPanel.handleDependencyChange).toHaveBeenCalledWith(projectUri);
+    });
+
+    it('routes a deleted project file to the panel', async () => {
+      activate(mockContext);
+      openPanelFor('/workspace/scene.tscn');
+
+      const projectUri = createMockUri('/workspace/project.godot');
+      await fireDelete(PROJECT_FILE_PATTERN, projectUri);
+
+      expect(mockPanel.handleDependencyChange).toHaveBeenCalledWith(projectUri);
+    });
+
     it('routes a changed dependency to the panel for re-fetch', async () => {
       activate(mockContext);
       openPanelFor('/workspace/scene.tscn');
 
       const depUri = createMockUri('/workspace/textures/wood.png');
-      await Promise.all(resourceChangeHandlers.map((handler) => handler(depUri)));
+      await fireChange(RESOURCE_FILES_PATTERN, depUri);
 
       expect(mockPanel.handleDependencyChange).toHaveBeenCalledWith(depUri);
     });
@@ -425,7 +472,7 @@ describe('Extension', () => {
       openPanelFor('/workspace/scene.tscn');
 
       const mainUri = createMockUri('/workspace/scene.tscn');
-      await Promise.all(resourceChangeHandlers.map((handler) => handler(mainUri)));
+      await fireChange(RESOURCE_FILES_PATTERN, mainUri);
 
       // An external edit to the main scene fires no save event, so the watcher
       // refreshes it through update(), never as a dependency.
@@ -438,7 +485,7 @@ describe('Extension', () => {
       openPanelFor('/workspace/scene.tscn');
 
       const depUri = createMockUri('/workspace/textures/wood.png');
-      await Promise.all(resourceDeleteHandlers.map((handler) => handler(depUri)));
+      await fireDelete(RESOURCE_FILES_PATTERN, depUri);
 
       expect(mockPanel.handleDependencyChange).toHaveBeenCalledWith(depUri);
     });
@@ -448,7 +495,7 @@ describe('Extension', () => {
       openPanelFor('/workspace/scene.tscn');
 
       const mainUri = createMockUri('/workspace/scene.tscn');
-      await Promise.all(resourceDeleteHandlers.map((handler) => handler(mainUri)));
+      await fireDelete(RESOURCE_FILES_PATTERN, mainUri);
 
       // A deleted main scene cannot be re-read, so update() only raises a false
       // load-error toast (a branch switch or rename deletes for a moment). The
@@ -462,7 +509,7 @@ describe('Extension', () => {
       // No panel opened.
 
       const irrelevantUri = createMockUri('/workspace/other.png');
-      await Promise.all(resourceDeleteHandlers.map((handler) => handler(irrelevantUri)));
+      await fireDelete(RESOURCE_FILES_PATTERN, irrelevantUri);
 
       expect(mockPanel.handleDependencyChange).not.toHaveBeenCalled();
       expect(mockPanel.update).not.toHaveBeenCalled();

@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { CATALOG } from './build-node-base-types.mjs';
 import { isDivider, splitRow } from './markdownTable.mjs';
 import { RUNTIME_EFFECT_NODE_TYPES } from './runtimeEffectNodes.data.mjs';
+import { findProseViolations, formatViolation, proseBlocks } from './sheetProse.mjs';
 import {
   LINT_EXEMPT_CATEGORIES as LINT_EXEMPT,
   collectSheetFiles,
@@ -275,6 +276,13 @@ describe('comparison sheets', () => {
     const bad = sheets
       .flatMap((s) => MEASUREMENT.filter((re) => re.test(s.body)).map((re) => `${s.label}: ${re.source}`))
       .sort();
+    expect(bad).toEqual([]);
+  });
+
+  it('writes its prose in Simplified Technical English', () => {
+    // A sheet with no prose block would pass vacuously, so each must yield one.
+    expect(sheets.filter((s) => proseBlocks(s.text).length === 0).map((s) => s.label)).toEqual([]);
+    const bad = sheets.flatMap((s) => findProseViolations(s.text).map((v) => formatViolation(s.label, v)));
     expect(bad).toEqual([]);
   });
 

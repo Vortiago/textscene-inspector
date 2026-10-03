@@ -19,14 +19,24 @@ export class WebResourceProvider implements ResourceProvider {
     this.hasFixturesMirror = hasFixturesMirror;
   }
 
-  /** Uploaded files, keyed per corpus root by {@link uploadKey}. */
-  private uploadedFiles: Map<string, File> = new Map();
+  /**
+   * Uploaded files, keyed per corpus root by {@link uploadKey}, each with its upload's serial
+   * from `uploadCount`. A serial, not the file's `lastModified` and `size`: two different files
+   * can share both.
+   */
+  private uploadedFiles: Map<string, { file: File; serial: number }> = new Map();
+  private uploadCount = 0;
   /**
    * Public-fixtures subtree the active scene's res:// namespace maps onto: '' for
    * the fixtures root (unit fixtures, examples, the flattened isometric corpus),
    * or a demo project's own root, such as 'demos/2d/platformer', so paths never collide.
    */
   private resourceRoot = '';
+  /**
+   * The mirror files a fetch has delivered, keyed by {@link uploadKey}. Written by `loadResource` after each
+   * successful fetch and never cleared, since the mirror is the static site and never changes under a running page.
+   */
+  private readonly deliveredMirrorFiles = new Set<string>();
 
   setResourceRoot(root: string): void {
     this.resourceRoot = root;
@@ -48,7 +58,7 @@ export class WebResourceProvider implements ResourceProvider {
    * @param file - The uploaded File object
    */
   addUploadedFile(path: string, file: File): void {
-    this.uploadedFiles.set(this.uploadKey(path), file);
+    this.uploadedFiles.set(this.uploadKey(path), { file, serial: ++this.uploadCount });
   }
 
   /**
@@ -69,17 +79,31 @@ export class WebResourceProvider implements ResourceProvider {
     return removed;
   }
 
-  async loadResource(path: string, type: string): Promise<string | ArrayBuffer> {
+  /**
+   * Which file `loadResource` would read, with no read: an upload by its serial, else the
+   * mirror's file under the active corpus root. Null for a mirror file no fetch has delivered
+   * yet, so the linter keeps nothing a failed fetch answered and reads the file again.
+   */
+  async stamp(path: string): Promise<string | null> {
+    const key = this.uploadKey(path);
+    const upload = this.uploadedFiles.get(key);
+    if (upload !== undefined) return `upload:${upload.serial}`;
+    return this.deliveredMirrorFiles.has(key) ? `mirror:${this.resourceRoot}` : null;
+  }
+
+  async loadResource(path: string, type?: string): Promise<string | ArrayBuffer> {
     // Uploaded files of the active corpus root first.
-    const uploadedFile = this.uploadedFiles.get(this.uploadKey(path));
-    if (uploadedFile) {
-      return isBinaryResourceType(type, path) ? uploadedFile.arrayBuffer() : uploadedFile.text();
+    const upload = this.uploadedFiles.get(this.uploadKey(path));
+    if (upload) {
+      return isBinaryResourceType(type, path) ? upload.file.arrayBuffer() : upload.file.text();
     }
 
     if (this.hasFixturesMirror && path.startsWith('res://')) {
       try {
-        // Convert Godot path to fixture path under the active corpus root.
+        // Convert Godot path to fixture path under the active corpus root. Both are taken before the
+        // fetch, since a corpus switch while it runs changes the root.
         const fixtureUrl = fixtureUrlForRes(path, this.resourceRoot);
+        const mirrorKey = this.uploadKey(path);
 
         info(`[WebResourceProvider] Attempting to fetch ${type}: ${fixtureUrl}`);
         const response = await fetch(fixtureUrl);
@@ -92,15 +116,12 @@ export class WebResourceProvider implements ResourceProvider {
             throw new Error(`Resource not found: ${path}`);
           }
 
-          if (isBinaryResourceType(type, path)) {
-            const content = await response.arrayBuffer();
-            info(`[WebResourceProvider] Successfully loaded ${type}: ${path}`);
-            return content;
-          } else {
-            const content = await response.text();
-            info(`[WebResourceProvider] Successfully loaded ${type}: ${path}`);
-            return content;
-          }
+          const content = isBinaryResourceType(type, path)
+            ? await response.arrayBuffer()
+            : await response.text();
+          this.deliveredMirrorFiles.add(mirrorKey);
+          info(`[WebResourceProvider] Successfully loaded ${type}: ${path}`);
+          return content;
         }
       } catch (error) {
         warn(`[WebResourceProvider] Failed to fetch ${type} from fixtures: ${path}`, error);

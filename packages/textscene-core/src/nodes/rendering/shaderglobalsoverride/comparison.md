@@ -10,7 +10,7 @@ renders_as: nothing yet, Godot re-shades every material that reads the overridde
 
 # ShaderGlobalsOverride
 
-Overrides the project's global shader parameters while it stays in the tree. Godot applies the override to every material that reads those globals, and the previewer does not yet (ADR-0045): its children still show, and no material sees the override.
+Overrides the project's global shader parameters while it stays in the tree. Godot applies the override to every material that reads those globals, and the previewer does not yet (ADR-0045). Its children still show, and no material sees the override.
 
 ## Linting
 
@@ -31,4 +31,4 @@ Strict parsing format-checks these `ShaderGlobalsOverride` properties, plus 10 i
 
 ## Known limitations
 
-- **Needs runtime** Godot overrides the global shader parameters each `params/*` key names, so every material that reads one changes. Here no material sees the override.
+- **Needs runtime** Godot changes every material that reads a global a `params/*` key names, but here no material sees the override.

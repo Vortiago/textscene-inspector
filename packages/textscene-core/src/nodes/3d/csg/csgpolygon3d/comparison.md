@@ -25,7 +25,7 @@ The profile is carried along the `Path3D` named by `path_node`, resolved as a si
 
 - **Approximated** `path_rotation = 2` (PATH_FOLLOW) renders as PATH, so the profile does not tilt where the path banks.
 - **Approximated** `path_rotation_accurate = true` renders as `false`.
-- **Approximated** The curve is sampled at a fixed 16 segments per span rather than at `bake_interval`, so the extrusion count can differ by one on a tight span.
+- **Approximated** The curve takes a fixed 16 segments per span, not `bake_interval`, so the extrusion count can differ by one on a tight span.
 
 ## Linting
 

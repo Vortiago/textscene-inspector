@@ -25,6 +25,23 @@ tscn-lint scenes/                     # every .tscn and .tres file underneath
 tscn-lint --no-color scenes/          # no ANSI colours
 ```
 
+## Project files
+
+When the scene's own directory, or a directory above it, holds
+`project.godot`, `tscn-lint` resolves `res://` paths from there. It then also
+reads each `.glb` and `.gltf` file the scene uses, and reports one that requires
+a glTF extension Godot's importer does not support. Where a sub-resource, a
+`.tres` `[resource]` body, a connection or the scene's root node uses the glTF
+file, Godot fails to load the scene or resource that uses it. The report is then
+an error when `project.godot` enables no editor plugin and declares no autoload,
+and no directory Godot's editor scans holds a `.gdextension` file. Otherwise it
+is a warning, because an editor plugin, an autoload or a GDExtension can add
+support for the extension. Where only other nodes use the glTF file, the scene
+loads without it, and the report is always a warning. `tscn-lint` reads the
+`.gdextension` files themselves, so a fresh checkout without `.godot/` gets the
+same answer as the editor. `tscn-lint` checks a scene outside every Godot
+project alone.
+
 ## Output formats (`--format`)
 
 - `text` (default): coloured, streamed per file.
@@ -47,6 +64,9 @@ tscn-lint --no-color scenes/          # no ANSI colours
   `file-read-error`.
 - `github`: GitHub Actions annotations on the diff. It is the default when
   `$GITHUB_ACTIONS=true`.
+
+Every format writes a control character from a scene, such as ESC, as a
+visible escape (`\u001b`), so a scene cannot send a command to your terminal.
 
 ## Exit codes
 

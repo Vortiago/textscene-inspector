@@ -7,7 +7,15 @@
 // Those globals appear only inside `evaluate`/`addInitScript` callbacks, which
 // are serialised and run in the browser, never in this Node process.
 import { execSync, spawn } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,46 +27,103 @@ import { THROWAWAY_USER_SETTINGS } from './userSettings.mjs';
 import { TEXTURE_WORK_STATUS_TESTID } from '../visual/preview/appContract.mjs';
 import { textureWorkCleared } from '../visual/preview/capture.mjs';
 import { isSizedCanvas } from './canvasSize.mjs';
+import { isRefusedAttachCall, startCdpRelay } from './cdpRelay.mjs';
+import {
+  VSCODE_VERSION_ENV,
+  vscodeTestVersion,
+} from '../../apps/textscene-vscode/src/test/integration/integrationLaunch.ts';
+import {
+  readCanvasDataUrl,
+  sleep,
+  stabilizeCanvas,
+  waitForCanvasChange,
+  writeCanvasPng,
+} from './canvasReadback.mjs';
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 export const EXTENSION_DIR = path.join(REPO_ROOT, 'apps/textscene-vscode');
 const VSCODE_TEST_DIR = path.join(EXTENSION_DIR, '.vscode-test');
 
-const PNG_DATA_URL_PREFIX = 'data:image/png;base64,';
-
-export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+export { sleep };
 
 /**
- * The VS Code build a previous `test:integration` run left behind, or `null`.
- * Nothing else in the repo ships a VS Code binary.
+ * How long a canvas may take to settle, polled at an interval long enough for a
+ * resource to arrive over the host channel between two readbacks.
  */
-function cachedVscodeBinary() {
-  if (!existsSync(VSCODE_TEST_DIR)) return null;
-  const candidates = readdirSync(VSCODE_TEST_DIR)
-    .filter((entry) => entry.startsWith('vscode-'))
-    .map((entry) => path.join(VSCODE_TEST_DIR, entry, 'code'))
-    .filter((candidate) => existsSync(candidate));
-  return candidates.sort().pop() ?? null;
+const SETTLE_POLL = { timeoutMs: 60_000, intervalMs: 500 };
+
+/** How long a watched edit may take to reach the canvas: the watcher, the host and a reload. */
+const EDIT_POLL = { timeoutMs: 30_000, intervalMs: 250 };
+
+/**
+ * The VS Code build `TEXTSCENE_VSCODE_VERSION` asks for, resolved as the extension's
+ * own suites resolve it: `stable` when unset, the `engines.vscode` floor for `min`.
+ */
+function requestedVscodeVersion() {
+  const manifest = JSON.parse(readFileSync(path.join(EXTENSION_DIR, 'package.json'), 'utf8'));
+  return vscodeTestVersion(process.env[VSCODE_VERSION_ENV], manifest.engines.vscode);
+}
+
+/** Orders `1.85.0` before `1.140.0`, which a string sort reverses. */
+function compareVersions(a, b) {
+  const [pa, pb] = [a, b].map((version) => version.split('.').map(Number));
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const order = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (order !== 0) return order;
+  }
+  return 0;
 }
 
 /**
- * Resolves a VS Code executable, downloading one if this worktree has never run
- * the integration suite. `cachePath` is the extension's own `.vscode-test`, so
- * the two suites share a single download rather than racing two of them.
+ * Picks from the cached build directories (`vscode-linux-x64-1.85.0`) the one for
+ * `version`: that exact build, or the newest for `stable`. `null` when none fits.
  *
- * @param {{ download?: boolean }} [options] `download: false` fails instead of
- *   fetching, so the CLI does not stall for minutes on a typo.
+ * @param {string[]} entries directory names under `.vscode-test`
+ * @param {string} version an exact version or `stable`
+ */
+export function pickCachedBuild(entries, version) {
+  const builds = entries
+    .map((entry) => ({ entry, version: /^vscode-.+-(\d+\.\d+\.\d+)$/.exec(entry)?.[1] }))
+    .filter((build) => build.version);
+  if (version !== 'stable') return builds.find((build) => build.version === version)?.entry ?? null;
+  return builds.sort((a, b) => compareVersions(a.version, b.version)).pop()?.entry ?? null;
+}
+
+/**
+ * The cached build of `version` a previous `test:integration` run left behind, or
+ * `null`. Nothing else in the repo ships a VS Code binary.
+ */
+function cachedVscodeBinary(version) {
+  if (!existsSync(VSCODE_TEST_DIR)) return null;
+  const entries = readdirSync(VSCODE_TEST_DIR).filter((entry) =>
+    existsSync(path.join(VSCODE_TEST_DIR, entry, 'code'))
+  );
+  const build = pickCachedBuild(entries, version);
+  return build && path.join(VSCODE_TEST_DIR, build, 'code');
+}
+
+/**
+ * Resolves the VS Code executable `requestedVscodeVersion` names, downloading it if
+ * this worktree has none. `cachePath` is the extension's own `.vscode-test`, so the
+ * two suites share a single download rather than racing two of them.
+ *
+ * @param {{ download?: boolean }} [options] `download: false` takes the cached build
+ *   and fails when there is none, so the CLI does not stall for minutes on a typo.
  */
 export async function resolveVscodeBinary(options = {}) {
-  const cached = cachedVscodeBinary();
-  if (cached) return cached;
+  const version = requestedVscodeVersion();
   if (options.download === false) {
+    const cached = cachedVscodeBinary(version);
+    if (cached) return cached;
     throw new Error(
-      `No VS Code build under ${VSCODE_TEST_DIR}. Run ` +
-        `\`pnpm --filter textscene-inspector test:integration\` once — it downloads one.`
+      `No VS Code ${version} build under ${VSCODE_TEST_DIR}. Run ` +
+        `\`pnpm --filter textscene-inspector test:integration\` once with the same ` +
+        `${VSCODE_VERSION_ENV}: it downloads one.`
     );
   }
-  return downloadAndUnzipVSCode({ cachePath: VSCODE_TEST_DIR });
+  // A cached build answers at once. For `stable` the library first asks which build
+  // is current, so a new release replaces a stale cache.
+  return downloadAndUnzipVSCode({ version, cachePath: VSCODE_TEST_DIR });
 }
 
 /** The built artifacts `--extensionDevelopmentPath` loads. */
@@ -173,6 +238,27 @@ async function waitForCdp(port, timeoutMs) {
     await sleep(400);
   }
   throw new Error(`CDP never came up on port ${port}: ${lastError?.message ?? 'timeout'}`);
+}
+
+/**
+ * Attaches Playwright to the CDP endpoint on `port`. A build that refuses one of
+ * Playwright's attach calls, as VS Code 1.85 does, is attached through a relay
+ * that answers the call, so the driver also measures the `engines.vscode` floor.
+ */
+async function connectOverCdp(port, emit) {
+  try {
+    return { browser: await chromium.connectOverCDP(`http://127.0.0.1:${port}`) };
+  } catch (error) {
+    if (!isRefusedAttachCall(error)) throw error;
+  }
+  const relay = await startCdpRelay(port);
+  emit(`CDP attach refused a call, so attaching through a relay on port ${relay.port}`);
+  try {
+    return { browser: await chromium.connectOverCDP(`http://127.0.0.1:${relay.port}`), relay };
+  } catch (error) {
+    await relay.close();
+    throw error;
+  }
 }
 
 /**
@@ -313,43 +399,6 @@ async function waitForSizedCanvas(frame, timeoutMs) {
   return false;
 }
 
-/** Reads the viewport canvas back as a PNG data URL, or an `error:`/`null` marker. */
-function readCanvasDataUrl(frame) {
-  return frame.evaluate(() => {
-    // The viewport canvas is the biggest one: offscreen passes mount their
-    // own small canvases in the same document.
-    const canvas = [...document.querySelectorAll('canvas')].sort(
-      (a, b) => b.width * b.height - a.width * a.height
-    )[0];
-    if (!canvas) return null;
-    try {
-      return canvas.toDataURL('image/png');
-    } catch (error) {
-      return `error:${String(error)}`;
-    }
-  });
-}
-
-/**
- * Waits until two consecutive readbacks are byte-identical, as the golden
- * harness does. Resources arrive over the host channel and the atlas decodes
- * asynchronously, so an early read sees a sized, unpainted canvas with zero
- * ink. Returns the last data URL and whether it stabilised in time.
- */
-async function stabilizeCanvas(frame, { timeoutMs, intervalMs }) {
-  const deadline = Date.now() + timeoutMs;
-  let current = await readCanvasDataUrl(frame).catch(() => null);
-  while (Date.now() < deadline) {
-    await sleep(intervalMs);
-    const previous = current;
-    current = await readCanvasDataUrl(frame).catch(() => null);
-    if (current && current === previous && current.startsWith(PNG_DATA_URL_PREFIX)) {
-      return { dataUrl: current, stable: true };
-    }
-  }
-  return { dataUrl: current, stable: false };
-}
-
 /**
  * @typedef {object} DriveSceneOptions
  * @property {string} scene            absolute path to the `.tscn` to preview
@@ -372,6 +421,9 @@ async function stabilizeCanvas(frame, { timeoutMs, intervalMs }) {
  * @property {[Function, unknown][]} [initScripts] `[script, argument]` pairs installed
  *   before the webview exists, so each runs in the preview frame ahead of the app
  * @property {boolean} verbose         stream VS Code stdout/stderr
+ * @property {{ file: string, contents: string }} [edit] a file to overwrite once the
+ *   canvas settles, for a **Dependency hot-reload**. The run then waits for the canvas
+ *   to change and settle again, and writes that frame to `canvas-edited.png`.
  * @property {Record<string, unknown>} [settings] extra user settings to seed
  *   the throwaway profile with, for callers that need a layout the palette
  *   commands would otherwise have to click their way to
@@ -400,6 +452,7 @@ export async function driveScene(options) {
     keepOpen,
     evalFile,
     initScripts = [],
+    edit,
     verbose,
     settings,
     log: emit = () => {},
@@ -423,12 +476,13 @@ export async function driveScene(options) {
 
   const { child, log } = launchVscode({ binary, scene, workspace, userDataDir, port, headed, verbose });
   let browser;
+  let relay;
   try {
     const version = await waitForCdp(port, 90_000);
     report.browser = version.Browser;
     emit(`CDP up: ${version.Browser}`);
 
-    browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`);
+    ({ browser, relay } = await connectOverCdp(port, emit));
     const page = await findWorkbenchPage(browser, 60_000);
     emit(`workbench page: ${page.url().slice(0, 80)}…`);
     // Listeners first, so nothing logged during workbench startup is missed.
@@ -552,7 +606,7 @@ export async function driveScene(options) {
     emit(`texture work ${report.textureWorkCleared ? 'cleared' : 'NEVER cleared'}`);
 
     if (preserveBuffer) {
-      const settled = await stabilizeCanvas(frame, { timeoutMs: 60_000, intervalMs: 500 });
+      const settled = await stabilizeCanvas(frame, SETTLE_POLL);
       report.canvasStable = settled.stable;
       emit(`canvas ${settled.stable ? 'stabilized' : 'NEVER stabilized'}`);
     } else {
@@ -585,13 +639,12 @@ export async function driveScene(options) {
       ...(report.frameProbe.cspViolations ?? []).map((entry) => ({ ...entry, origin: 'webview' }))
     );
 
-    if (dataUrl && dataUrl.startsWith(PNG_DATA_URL_PREFIX)) {
-      const buffer = Buffer.from(dataUrl.slice(PNG_DATA_URL_PREFIX.length), 'base64');
-      writeFileSync(path.join(outDir, 'canvas.png'), buffer);
-      report.canvasReadback = inkStats(buffer);
-    } else {
-      report.canvasReadback = { error: dataUrl ?? 'no canvas' };
-    }
+    const canvasPath = path.join(outDir, 'canvas.png');
+    const readback = writeCanvasPng(dataUrl, canvasPath);
+    report.canvasReadback = readback ?? { error: dataUrl ?? 'no canvas' };
+    if (readback) report.canvasPath = canvasPath;
+
+    if (edit) report.edit = await applyEdit(frame, edit, dataUrl, outDir, emit);
 
     if (screenshots) {
       const workbenchShot = await page.screenshot();
@@ -624,11 +677,28 @@ export async function driveScene(options) {
     // Close the CDP connection before killing VS Code: Playwright treats a
     // vanished target as a crash and throws over the top of the real error.
     if (browser) await browser.close().catch(() => {});
+    await relay?.close();
     await stopVscode(child, userDataDir);
     rmSync(userDataDir, { recursive: true, force: true });
   }
 
   return report;
+}
+
+/**
+ * Overwrites `edit.file` and waits for the preview to redraw from it: first a frame
+ * that differs from `baseline`, then two identical readbacks. Writes the settled
+ * frame to `canvas-edited.png`.
+ */
+async function applyEdit(frame, edit, baseline, outDir, emit) {
+  writeFileSync(edit.file, edit.contents);
+  emit(`edited ${path.basename(edit.file)}`);
+  const changed = await waitForCanvasChange(frame, baseline, EDIT_POLL);
+  emit(`canvas ${changed ? 'changed' : 'NEVER changed'} after the edit`);
+  const settled = await stabilizeCanvas(frame, SETTLE_POLL);
+  const canvasPath = path.join(outDir, 'canvas-edited.png');
+  const canvasReadback = writeCanvasPng(settled.dataUrl, canvasPath);
+  return { changed, stable: settled.stable, ...(canvasReadback && { canvasPath, canvasReadback }) };
 }
 
 /**

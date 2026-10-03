@@ -46,4 +46,4 @@ The lenient parser reuses `parseNode3D`, which reads only `transform` and `visib
 
 ## Known limitations
 
-- **Not drawn** Godot applies the probe's reflection to surfaces inside its box. Here they get none.
+- **Not drawn** Godot applies the probe's reflection to surfaces inside its box, but here they get none.

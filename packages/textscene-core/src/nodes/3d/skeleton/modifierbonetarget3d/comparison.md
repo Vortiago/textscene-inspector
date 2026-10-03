@@ -10,7 +10,7 @@ renders_as: nothing yet, Godot mirrors its bone onto its transform, the previewe
 
 # ModifierBoneTarget3D
 
-Attaches itself to one bone of its parent Skeleton3D and copies that bone's global pose onto its own transform each pass, so another modifier can aim at it. Godot runs that copy each frame, and the previewer does not yet (ADR-0045): the node sits at the transform the scene file states.
+Attaches itself to one bone of its parent Skeleton3D and copies that bone's global pose onto its own transform each pass. Another modifier can then aim at it. Godot runs that copy each frame, and the previewer does not yet (ADR-0045). The node sits at the transform the scene file states.
 
 ## Linting
 

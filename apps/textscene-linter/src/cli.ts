@@ -61,7 +61,7 @@ program
     '--format <format>',
     `Output format: ${OUTPUT_FORMATS.join(', ')} (auto-detects "github" when $GITHUB_ACTIONS is set)`
   )
-  .action((files: string[], options: { color?: boolean; format?: string }) => {
+  .action(async (files: string[], options: { color?: boolean; format?: string }) => {
     let format: OutputFormat;
     try {
       format = resolveFormat(options.format);
@@ -75,12 +75,12 @@ program
 
     if (format === 'text') {
       const hasColor = options.color !== false;
-      const { exitCode } = runLint(expandedFiles, hasColor, printFileResult);
+      const { exitCode } = await runLint(expandedFiles, hasColor, printFileResult);
       process.exit(exitCode);
       return;
     }
 
-    const { exitCode, files: fileResults } = collectFileDiagnostics(expandedFiles);
+    const { exitCode, files: fileResults } = await collectFileDiagnostics(expandedFiles);
 
     if (format === 'json') {
       console.log(formatJson(fileResults));
@@ -93,4 +93,4 @@ program
     process.exit(exitCode);
   });
 
-program.parse();
+await program.parseAsync();

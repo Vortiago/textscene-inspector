@@ -10,7 +10,7 @@ renders_as: nothing yet, Godot solves its chain onto the target each frame, the 
 
 # CCDIK3D
 
-Cyclic coordinate descent inverse kinematics: it rotates a bone chain joint by joint, from the far end back to the root, until the tip reaches the target. Godot runs the solver each frame, and the previewer does not yet (ADR-0045): the bones hold their rest pose.
+Cyclic coordinate descent inverse kinematics. It rotates a bone chain joint by joint, from the far end back to the root, until the tip reaches the target. Godot runs it each frame, and the previewer does not yet (ADR-0045). The bones hold their rest pose.
 
 ## Linting
 

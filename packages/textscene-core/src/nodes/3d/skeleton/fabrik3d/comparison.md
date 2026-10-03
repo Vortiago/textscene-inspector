@@ -10,7 +10,7 @@ renders_as: nothing yet, Godot drags its chain onto the target each frame, the p
 
 # FABRIK3D
 
-The position-based IK solver: each frame it drags a bone chain onto its target with a backward reaching pass and a forward one, writing the result into the parent Skeleton3D's poses. Godot runs the solver, and the previewer does not yet (ADR-0045): the bones hold their rest pose.
+The position-based IK solver. Each frame, a backward reaching pass and a forward one drag a bone chain onto its target. It writes the result into the parent Skeleton3D's poses. Godot runs it each frame, and the previewer does not yet (ADR-0045). The bones hold their rest pose.
 
 ## Linting
 

@@ -52,6 +52,8 @@ const extensionWebOptions = {
   ...extensionOptions,
   outfile: 'dist/extension.web.js',
   platform: 'browser',
+  // The one Node builtin the host graph imports: a web host has the same API on the global.
+  alias: { 'node:crypto': './src/webCrypto.browser.ts' },
   target: 'es2020',
 };
 
@@ -97,10 +99,14 @@ const webviewOptions = {
 };
 
 /**
- * Integration-test build. The extension host loads suite/index by path, and it
- * globs `**\/*.test.js` beside itself, so each runtime-loaded file is its own
- * entry and the suites are globbed. Their imports, core included, are bundled:
- * core's dist is bundler-only ESM (extensionless imports), which Node cannot load.
+ * Build of the extension host suites, integration and installed, and of the web suite's
+ * Node runner. The extension host
+ * loads each suite/index by path, and it globs `**\/*.test.js` beside itself, so each
+ * runtime-loaded file is its own entry and the suites are globbed. Their imports, core
+ * included, are bundled: core's dist is bundler-only ESM (extensionless imports), which
+ * Node cannot load.
+ * Mocha and glob are bundled too: mocha 12 is ESM-only at its entry, and the Node 18
+ * inside VS Code 1.85, the `engines.vscode` floor, cannot `require` it.
  *
  * @type {esbuild.BuildOptions}
  */
@@ -109,17 +115,51 @@ const testOptions = {
     'src/test/integration/runTests.ts',
     'src/test/integration/suite/index.ts',
     ...globSync('src/test/integration/suite/*.test.ts'),
+    'src/test/installed/runInstalledTests.ts',
+    'src/test/installed/suite/index.ts',
+    ...globSync('src/test/installed/suite/*.test.ts'),
+    'src/test/web/runWebTests.ts',
   ],
   bundle: true,
   outdir: 'dist',
-  external: ['vscode', 'mocha', 'glob'],
+  // The web runner requires @vscode/test-web from node_modules: its Playwright resolves
+  // optional modules at runtime, which a bundle cannot.
+  external: ['vscode', '@vscode/test-web'],
   format: 'cjs',
   platform: 'node',
   target: 'node16',
   sourcemap: true,
   minify: false,
   logLevel: 'info',
+  // Mocha resolves its parallel-mode worker by path. The suite runs serially, so
+  // the worker is never loaded.
+  logOverride: { 'require-resolve-not-external': 'silent' },
   outbase: 'src',
+};
+
+/**
+ * Build of the web suite. The web extension host loads one file in a browser worker, so
+ * the suite, its tests and mocha's browser build go into one bundle, as the extension's
+ * own browser build does.
+ *
+ * @type {esbuild.BuildOptions}
+ */
+const webTestOptions = {
+  entryPoints: ['src/test/web/suite/index.ts'],
+  bundle: true,
+  outfile: 'dist/test/web/suite/index.js',
+  external: ['vscode'],
+  // An IIFE, not CommonJS, with the exports set last: mocha.js is a UMD module that sees
+  // the host's `module` and replaces its exports with mocha, so the host would call
+  // mocha's run() in place of the suite's.
+  format: 'iife',
+  globalName: 'webSuite',
+  footer: { js: 'module.exports = webSuite;' },
+  platform: 'browser',
+  target: 'es2020',
+  sourcemap: true,
+  minify: false,
+  logLevel: 'info',
 };
 
 if (watch) {
@@ -136,7 +176,7 @@ if (watch) {
   ];
 
   if (!skipTests) {
-    builds.push(esbuild.build(testOptions));
+    builds.push(esbuild.build(testOptions), esbuild.build(webTestOptions));
   }
 
   const [extensionResult, extensionWebResult] = await Promise.all(builds);
