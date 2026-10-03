@@ -122,8 +122,10 @@ async function main() {
     });
     const page = await context.newPage();
     const consoleErrors = collectConsoleErrors(page);
-    await openSceneAndPreview(page);
-    failures = await previewFailures(page);
+    // A step that times out is a failure too, so it still leaves the screenshot below.
+    failures = await openSceneAndPreview(page)
+      .then(() => previewFailures(page))
+      .catch((error) => [`a workbench step failed: ${error.message}`]);
     await page.screenshot({ path: path.join(OUT_ROOT, 'workbench.png') });
     writeFileSync(path.join(OUT_ROOT, 'console-errors.txt'), consoleErrors.join('\n'));
     if (failures.length > 0 && consoleErrors.length > 0) {
