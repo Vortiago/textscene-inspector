@@ -38,9 +38,12 @@ export interface NodeComponentRegistration {
   csgShape?: CsgShapeRegistration;
   /**
    * Whether this type draws anything of its own. Defaults to `'draws'`.
-   * `'transform-only'`: complete while drawing nothing, like a Timer or a joint
-   * (ADR-0008), with sheet status `linter-only`. `'pending'`: Godot draws it and this
-   * does not yet, so the badge and the sheet show a gap.
+   * `'transform-only'`: its runtime effect is nil or already implemented (ADR-0008).
+   * A nil effect takes sheet status `linter-only`; an implemented driver (a
+   * RemoteTransform relay, an AnimationPlayer's tracks) compares on `done` or
+   * `limitation`.
+   * `'pending'`: Godot draws or drives with it and this does not yet (ADR-0045), so
+   * the badge and the sheet show a gap and the sheet is `unimplemented`.
    */
   // A pending type keeps its base component. An unregistered type would also lose
   // `visible` (`GenericNodeFallback`) and sit in both canvases (`drawsInWorkspace`),

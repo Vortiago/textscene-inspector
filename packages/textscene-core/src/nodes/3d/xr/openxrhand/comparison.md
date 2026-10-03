@@ -1,16 +1,16 @@
 ---
 type: OpenXRHand
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-open-xr-hand.tscn
 # image: unit-open-xr-hand
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: nothing yet, Godot poses hand bones from tracking, the previewer does not
 ---
 
 # OpenXRHand
 
-Drives a Skeleton3D's bone poses from OpenXR hand tracking. It draws nothing of its own, so the previewer renders it as a transform-only group (ADR-0008). Its children show at the pose the scene file states.
+Drives a Skeleton3D's bone poses from OpenXR hand tracking. Only a live XR session feeds it, and the previewer runs no session, so the drive is a gap (ADR-0045). Its children show at the pose the scene file states.
 
 ## Linting
 

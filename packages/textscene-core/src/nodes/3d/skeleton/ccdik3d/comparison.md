@@ -1,16 +1,16 @@
 ---
 type: CCDIK3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-ccdik-3d.tscn
 # image: unit-ccdik-3d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: nothing yet, Godot solves its chain onto the target each frame, the previewer does not
 ---
 
 # CCDIK3D
 
-Cyclic coordinate descent inverse kinematics. It rotates a bone chain joint by joint, from the far end back to the root, until the tip reaches the target. It is a solver and draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008).
+Cyclic coordinate descent inverse kinematics. It rotates a bone chain joint by joint, from the far end back to the root, until the tip reaches the target. Godot runs it each frame, and the previewer does not yet (ADR-0045). The bones hold their rest pose.
 
 ## Linting
 

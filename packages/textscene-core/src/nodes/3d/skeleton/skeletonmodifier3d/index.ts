@@ -1,6 +1,6 @@
 /**
- * SkeletonModifier3D registration: the parser. A non-visual node renders as a transform-only group
- * (ADR-0008), so both this parse and index.r3f.ts reuse Node3D's.
+ * SkeletonModifier3D registration: the parser. Its Godot effect is not implemented here yet
+ * (ADR-0045), so both this parse and index.r3f.ts reuse Node3D's, the registration `pending`.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

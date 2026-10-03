@@ -1,16 +1,16 @@
 ---
 type: BoneConstraint3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-bone-constraint-3d.tscn
 # image: unit-bone-constraint-3d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: nothing yet, Godot applies its bone constraints each frame, the previewer does not
 ---
 
 # BoneConstraint3D
 
-The base class of the bone constraint modifiers, holding the `settings/<i>/` entries that name an apply bone and a reference bone or node. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
+The base class of the bone constraint modifiers, holding the `settings/<i>/` entries that name an apply bone and a reference bone or node. Godot applies those constraints to its Skeleton3D each frame, and the previewer does not yet (ADR-0045): the bones hold their rest pose.
 
 ## Linting
 

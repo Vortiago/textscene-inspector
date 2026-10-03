@@ -1,16 +1,16 @@
 ---
 type: LimitAngularVelocityModifier3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-limit-angular-velocity-modifier-3d.tscn
 # image: unit-limit-angular-velocity-modifier-3d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: nothing yet, Godot caps how fast its bones may turn, the previewer does not
 ---
 
 # LimitAngularVelocityModifier3D
 
-Caps how fast a bone may rotate, slerping only as far as `max_angular_velocity * delta` allows each frame. It post-processes another modifier's pose and draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008).
+Caps how fast a bone may rotate, slerping only as far as `max_angular_velocity * delta` allows each frame. It post-processes another modifier's pose. Godot runs that pass, and the previewer does not yet (ADR-0045): nothing moves here to be limited.
 
 ## Linting
 

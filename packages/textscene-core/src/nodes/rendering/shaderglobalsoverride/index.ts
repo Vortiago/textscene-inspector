@@ -1,6 +1,7 @@
 /**
  * ShaderGlobalsOverride parser registration: reuses the Node parse. Property knowledge
- * lives in linterParser.ts. It draws nothing by design (ADR-0008).
+ * lives in linterParser.ts. Its Godot effect is not implemented here yet
+ * (ADR-0045), so index.r3f.ts registers Node as `pending`.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

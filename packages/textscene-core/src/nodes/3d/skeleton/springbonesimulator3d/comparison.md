@@ -1,16 +1,16 @@
 ---
 type: SpringBoneSimulator3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-spring-bone-simulator-3d.tscn
 # image: unit-spring-bone-simulator-3d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: nothing yet, Godot wobbles its bone chains each frame, the previewer does not
 ---
 
 # SpringBoneSimulator3D
 
-A SkeletonModifier3D that gives bone chains inertial wobble for hair, cloth and tails. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
+A SkeletonModifier3D that gives bone chains inertial wobble for hair, cloth and tails. Godot settles the springs each frame, and the previewer runs no solver (ADR-0045): the bones hold their rest pose.
 
 ## Linting
 

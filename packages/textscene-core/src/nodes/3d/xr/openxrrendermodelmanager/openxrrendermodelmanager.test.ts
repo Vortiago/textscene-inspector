@@ -1,6 +1,7 @@
 /**
- * OpenXRRenderModelManager registration: it is parsed, and it draws nothing on purpose (ADR-0008), not for want
- * of an implementation.
+ * OpenXRRenderModelManager registration: it is parsed, and its spawning of an OpenXRRenderModel
+ * child per tracked render model is a gap (ADR-0045), not a nil effect. It registers `pending`
+ * on the Node3D component, so children keep their transform space while the badge reads a gap.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -22,7 +23,7 @@ describe('OpenXRRenderModelManager registration', () => {
     expect(nodeComponentRegistry.get('OpenXRRenderModelManager')).toBe(Node3D);
   });
 
-  it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('OpenXRRenderModelManager')).toBe(true);
+  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
+    expect(nodeComponentRegistry.renderIntentOf('OpenXRRenderModelManager')).toBe('pending');
   });
 });

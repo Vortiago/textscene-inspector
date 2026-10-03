@@ -1,16 +1,16 @@
 ---
 type: XRBodyModifier3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-xr-body-modifier-3d.tscn
 # image: unit-xr-body-modifier-3d
 visual: false
-renders_as: a transform-only group
+renders_as: nothing yet, Godot poses bones from an XR body tracker, the previewer does not
 ---
 
 # XRBodyModifier3D
 
-Poses the bones of its parent Skeleton3D from an XRBodyTracker registered with XRServer. With no headset there is no tracker to read. It draws nothing of its own, so the previewer renders it as a transform-only group (ADR-0008).
+Poses the bones of its parent Skeleton3D from an XRBodyTracker registered with XRServer. With no headset there is no tracker to read, so the drive is a gap here (ADR-0045).
 
 ## Linting
 

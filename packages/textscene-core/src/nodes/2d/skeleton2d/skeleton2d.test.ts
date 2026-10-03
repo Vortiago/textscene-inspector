@@ -1,6 +1,6 @@
 /**
- * Skeleton2D is parsed, and draws nothing on purpose (ADR-0008) rather than
- * for want of an implementation.
+ * Skeleton2D is parsed, and its modification stack is a gap (ADR-0045), not a
+ * nil effect: it registers `pending` on the Node2D component.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -25,8 +25,8 @@ describe('Skeleton2D registration', () => {
     expect(nodeComponentRegistry.get('Skeleton2D')).toBe(Node2D);
   });
 
-  it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('Skeleton2D')).toBe(true);
+  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
+    expect(nodeComponentRegistry.renderIntentOf('Skeleton2D')).toBe('pending');
   });
 
   it('reads its own fixture through the lenient parser, stack sub-resource and all', () => {

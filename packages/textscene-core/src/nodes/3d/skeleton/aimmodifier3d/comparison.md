@@ -1,16 +1,16 @@
 ---
 type: AimModifier3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-aim-modifier-3d.tscn
 # image: unit-aim-modifier-3d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: nothing yet, Godot rotates a bone toward its target, the previewer does not
 ---
 
 # AimModifier3D
 
-Rotates a bone of its parent skeleton to point at a reference bone or node, a simplified LookAtModifier3D without angle limits or interpolation. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
+Rotates a bone of its parent skeleton to point at a reference bone or node. It is a simplified LookAtModifier3D without angle limits or interpolation. Godot runs that drive each frame, and the previewer does not yet (ADR-0045). It mounts the Node3D base, so children still show and the bones hold their rest pose.
 
 ## Linting
 

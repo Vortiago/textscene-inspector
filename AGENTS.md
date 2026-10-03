@@ -103,7 +103,8 @@ Scaffold a node type with `pnpm new:node <TypeName> <category-dir> --intent
 - `draws`: its own types, parser and Component. Status `unreviewed`.
 - `transform-only`: the base under `renderIntent: 'transform-only'`. Status `linter-only`.
 - `pending`: the base under `renderIntent: 'pending'`, except `--base control`. Status
-  `unimplemented`.
+  `unimplemented`. Its Godot effect, an own visual or a drive of other nodes, is missing
+  (ADR-0045).
 
 Never drop a registration to mark a type undrawn.
 

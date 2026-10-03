@@ -1,16 +1,16 @@
 ---
 type: JacobianIK3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-jacobian-ik-3d.tscn
 # image: unit-jacobian-ik-3d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: nothing yet, Godot converges its chain onto the target each frame, the previewer does not
 ---
 
 # JacobianIK3D
 
-A Jacobian-transpose IK solver that turns every joint in the chain at once toward the target, converging slowly but moving smoothly. It drives a parent Skeleton3D's poses and draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008).
+A Jacobian-transpose IK solver that turns every joint in the chain at once toward the target, converging slowly but moving smoothly. Godot runs the solver each frame, and the previewer does not yet (ADR-0045): the bones hold their rest pose.
 
 ## Linting
 

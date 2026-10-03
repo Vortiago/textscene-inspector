@@ -1,6 +1,7 @@
 /**
  * BoneAttachment3D registration: the parser. It reuses the Node3D parse, and property knowledge
- * lives in linterParser.ts. It draws nothing by design (ADR-0008), so index.r3f.ts registers Node3D.
+ * lives in linterParser.ts. Its Godot runtime effect is not implemented here yet (ADR-0045), so
+ * index.r3f.ts registers Node3D as `pending`.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

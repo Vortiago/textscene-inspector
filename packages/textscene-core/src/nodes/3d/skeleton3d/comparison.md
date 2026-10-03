@@ -1,16 +1,16 @@
 ---
 type: Skeleton3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-skeleton3d.tscn
 image: unit-skeleton3d
 visual: false
-renders_as: a transform-only group
+renders_as: nothing yet, Godot poses its bones and deforms bound meshes, the previewer does not
 ---
 
 # Skeleton3D
 
-Holds the bone hierarchy that deforms attached meshes. The bones themselves are an editor gizmo, so the previewer reuses the Node3D component (ADR-0008) and the node contributes only its transform.
+Holds the bone hierarchy that deforms attached meshes. Godot poses its bones and runs its modifiers each frame, deforming any mesh bound to it. The previewer does not yet (ADR-0045), so the bones hold the rest pose.
 
 ## Linting
 
@@ -40,4 +40,5 @@ Skeleton3D registers `parseNode3D` directly, so `motion_scale`, `show_rest_only`
 
 ## Known limitations
 
+- **Needs runtime** Godot poses its bones each frame and deforms any mesh bound to it, but here the bones hold the rest pose.
 - **Editor only** The bone gizmo appears only in Godot's editor, but here it is absent.

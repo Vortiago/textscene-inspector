@@ -1,16 +1,16 @@
 ---
 type: XRFaceModifier3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-xr-face-modifier-3d.tscn
 # image: unit-xr-face-modifier-3d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: nothing yet, Godot writes tracked face poses into blend shapes, the previewer does not
 ---
 
 # XRFaceModifier3D
 
-Drives a MeshInstance3D's blend shapes from a live XRFaceTracker. It draws nothing of its own, so the previewer renders it as a transform-only group (ADR-0008). The target mesh shows at the blend-shape values the scene file states.
+Drives a MeshInstance3D's blend shapes from a live XRFaceTracker. Only a live XR session feeds it, and the previewer runs no session, so the drive is a gap (ADR-0045). The target mesh shows at the blend-shape values the scene file states.
 
 ## Linting
 

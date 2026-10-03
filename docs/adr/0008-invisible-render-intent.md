@@ -1,7 +1,7 @@
 # Non-visual nodes render as invisible transform-only groups; no viewport placeholder
 
 - Status: Accepted. Partly amended by ADR-0018, by the Label3D parity amendment, by the
-  render-intent split amendment and by the parent-space amendment (all below).
+  render-intent split amendment, by the parent-space amendment and by ADR-0045 (all below).
 - Generalises ADR-0005 (physics bodies as transform-only groups).
 - Related: ADR-0006 (viewport-mode seam, `showCollisions` toggle).
 - Supersedes the visible grey-box placeholder of `GenericNodeFallback`.
@@ -111,3 +111,15 @@ omission.
 >   The editor and a loaded game agree, since Godot sets the flag before the node enters the tree
 >   (`node_3d.cpp:1044-1058`).
 > - `globalMatrix3D` applies the same rule for the passes that run before anything mounts.
+
+> **Amendment (ADR-0045):** The first group is **nil or already implemented**. A driver whose Godot
+> effect moves or deforms *other* nodes is a gap while that drive is missing, so `Skeleton3D`,
+> `BoneAttachment3D`, the `SkeletonModifier3D` family (modifiers, targets, constraints, simulators),
+> the IK solvers (`SkeletonIK3D`, `FABRIK3D`, `CCDIK3D`, `SplineIK3D`, `JacobianIK3D`, `TwoBoneIK3D`)
+> and the XR pose writers (`XRBodyModifier3D`, `XRHandModifier3D`, `XRFaceModifier3D`, `OpenXRHand`,
+> `OpenXRRenderModel`, `OpenXRRenderModelManager`) register `renderIntent: 'pending'`, sheet status
+> `unimplemented`. The render-intent-split sentence "The physics bodies and `Skeleton3D` stay in the
+> first" holds only for the physics bodies. Their runtime output is nil in a previewer. A driver's is
+> not, it is only absent here. The self-transform trackers (`XRNode3D`, `XRController3D`,
+> `XROrigin3D`, `XRAnchor3D`) stay in the first: a session updates only their own transform, and
+> children ride the rendered hierarchy.

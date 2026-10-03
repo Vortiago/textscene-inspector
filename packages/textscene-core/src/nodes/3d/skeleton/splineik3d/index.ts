@@ -1,7 +1,7 @@
 /**
  * SplineIK3D registration: the parser. It reuses the Node3D parse, and linterParser.ts holds the
- * property knowledge. SplineIK3D draws nothing (ADR-0008), so index.r3f.ts registers Node3D to keep
- * its children in the right transform space.
+ * property knowledge. SplineIK3D's Godot effect is not implemented here yet (ADR-0045), so
+ * index.r3f.ts registers Node3D as `pending` to keep its children in the right transform space.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

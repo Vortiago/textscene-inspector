@@ -1,18 +1,18 @@
 ---
 type: Skeleton2D
 category: 2D
-status: linter-only
+status: unimplemented
 fixture: unit-skeleton-2d.tscn
 # image: unit-skeleton-2d
 visual: false
-renders_as: nothing of its own, a transform-only group whose Bone2D children keep their space
+renders_as: nothing yet, Godot runs its modification stack on the bones each frame, the previewer does not
 ---
 
 # Skeleton2D
 
-Skeleton2D is the root of a Bone2D chain. Its only drawing is an editor gizmo, so the
-previewer renders it as a transform-only group (ADR-0008) and everything visible belongs
-to its children.
+Skeleton2D is the root of a Bone2D chain. Godot runs its `modification_stack` on the
+bones each frame, and the previewer does not yet (ADR-0045). The bones hold their authored
+transforms, and everything visible belongs to its children.
 
 ## Linting
 

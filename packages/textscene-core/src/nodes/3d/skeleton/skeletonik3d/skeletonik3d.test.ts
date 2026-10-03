@@ -1,4 +1,8 @@
-/** SkeletonIK3D registration: it is parsed, and it draws nothing on purpose (ADR-0008). */
+/**
+ * SkeletonIK3D registration: it is parsed, and its FABRIK solve of the `root_bone` to `tip_bone`
+ * chain toward its target is a gap (ADR-0045), not a nil effect. It registers `pending` on the
+ * Node3D component, so children keep their transform space while the badge reads a gap.
+ */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry';
@@ -19,7 +23,7 @@ describe('SkeletonIK3D registration', () => {
     expect(nodeComponentRegistry.get('SkeletonIK3D')).toBe(Node3D);
   });
 
-  it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('SkeletonIK3D')).toBe(true);
+  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
+    expect(nodeComponentRegistry.renderIntentOf('SkeletonIK3D')).toBe('pending');
   });
 });

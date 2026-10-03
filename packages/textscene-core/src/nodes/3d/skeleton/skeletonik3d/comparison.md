@@ -1,16 +1,16 @@
 ---
 type: SkeletonIK3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-skeleton-ik-3d.tscn
 # image: unit-skeleton-ik-3d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: nothing yet, Godot solves its deprecated chain onto the target, the previewer does not
 ---
 
 # SkeletonIK3D
 
-A deprecated FABRIK chain solver that walks the bones from `root_bone` to `tip_bone` and drags the tip onto a target over up to `max_iterations` passes. A stock 4.x build still saves and reloads it. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008).
+A deprecated FABRIK chain solver that stock 4.x builds still save and reload. It walks the bones from `root_bone` to `tip_bone` and drags the tip onto a target over up to `max_iterations` passes. Godot runs the solver each frame, and the previewer does not yet (ADR-0045). The bones hold their rest pose.
 
 ## Linting
 

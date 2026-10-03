@@ -1,16 +1,16 @@
 ---
 type: TwoBoneIK3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-two-bone-ik-3d.tscn
 # image: unit-two-bone-ik-3d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: nothing yet, Godot poses its two-bone chain onto the target, the previewer does not
 ---
 
 # TwoBoneIK3D
 
-A rotation-based two-bone IK solver. It builds a plane from the root, middle and end joints and a pole target. It then poses the skeleton so the end bone reaches the target. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
+A rotation-based two-bone IK solver. It builds a plane from the root, middle and end joints and a pole target. It then poses the skeleton so the end bone reaches the target. Godot runs it each frame, and the previewer does not yet (ADR-0045). The bones hold their rest pose.
 
 ## Linting
 

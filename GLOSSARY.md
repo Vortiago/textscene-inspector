@@ -276,7 +276,7 @@ The degraded fallback when boolean evaluation fails: each CSG node draws its own
 _Avoid_: this term for intended behaviour.
 
 **Transform-only group**:
-A node rendered as an invisible `<group>` that positions its children and draws nothing, the render intent for every non-visual type (ADR-0005, ADR-0008).
+A node rendered as an invisible `<group>` that positions its children and draws nothing, the render intent for a non-visual type whose Godot effect is nil or already implemented (ADR-0005, ADR-0008).
 _Avoid_: "physics body" implying simulation. "transform container". "placeholder".
 
 **Render intent**:
@@ -285,8 +285,13 @@ The **AnimationPlayer**, a **geometry contributor** and a **sub-viewport** are t
 _Avoid_: "placeholder", "not implemented". "inert" for those three roles.
 
 **Pending** (render intent):
-A node type that is parsed and linted but not drawn yet, registered under its base with `renderIntent: 'pending'` and the sheet status `unimplemented`.
+A node type whose Godot effect, an own visual or the drive of a **Driver**, is not implemented yet, registered under its base with `renderIntent: 'pending'` and the sheet status `unimplemented` (ADR-0045).
 _Avoid_: bare "pending" for a resource load (say "load pending").
+
+**Driver**:
+A node with no geometry of its own that moves, deforms or animates other nodes, such as AnimationPlayer, RemoteTransform3D and a SkeletonModifier3D.
+A drive the previewer does not run registers **Pending** and is `unimplemented`, never `linter-only` (ADR-0045).
+_Avoid_: "controller" (collides with `XRController3D`). "inert".
 
 **Editor cursor** (`r3f/godotEditorCursor.ts`):
 Godot's `Cursor`, an orbit focus point plus the pitch, yaw and radius of the eye, from which every 3D gesture rebuilds the camera.

@@ -1,6 +1,6 @@
 /**
- * SpringArm3D registration: it is parsed, and it draws nothing by design
- * (ADR-0008), not for want of an implementation.
+ * SpringArm3D registration: it is parsed, and its placement of its children is
+ * a gap (ADR-0045), not a nil effect.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -22,7 +22,7 @@ describe('SpringArm3D registration', () => {
     expect(nodeComponentRegistry.get('SpringArm3D')).toBe(Node3D);
   });
 
-  it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('SpringArm3D')).toBe(true);
+  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
+    expect(nodeComponentRegistry.renderIntentOf('SpringArm3D')).toBe('pending');
   });
 });
