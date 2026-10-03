@@ -11,11 +11,12 @@
 draws nothing and moves nothing, so there is no render to assess. Skeleton
 modifiers, IK solvers, the XR pose writers (`XRBodyModifier3D`,
 `XRHandModifier3D`, `OpenXRHand`), the blend-shape writer `XRFaceModifier3D`,
-the XR render-model nodes and RemoteTransform all claimed it.
+the XR render-model nodes, `Skeleton2D`, `SpringArm3D`, `ShaderGlobalsOverride`
+and RemoteTransform all claimed it.
 Each has a real Godot runtime effect: a `SkeletonModifier3D` feeds bone poses
 through `Skeleton3D::_process_modifiers` (`skeleton_3d.cpp:1166`), a
-`RemoteTransform3D` relays its transform every frame
-(`remote_transform_3d.cpp`, `_update_transform`), and an `OpenXRRenderModel`
+`RemoteTransform3D` relays its transform on each transform change
+(`remote_transform_3d.cpp`, `_update_remote`), and an `OpenXRRenderModel`
 mounts a child scene (`openxr_render_model.cpp:72`, `add_child`). Calling those
 nil-effect was a false claim, and the taxonomy forced it: a gap had no legal
 combination, because `transform-only` plus `unimplemented` is refused, so a
@@ -37,10 +38,14 @@ Geometry decides only the finished nil case.
 driving, and the previewer does not implement it yet". `linter-only` keeps
 "runtime effect genuinely nil". A driver gap registers `pending` on its base
 component, so `visible`, the workspace split and every golden are unchanged; only
-the badge moves to the gap. Two guards in `sheets.test.mjs` hold the line: a type
+the badge moves to the gap. Guards in `sheets.test.mjs` hold the line. A type
 in `runtimeEffectNodes.data.mjs` (every driver and self-drawing type, each with
-its engine cite) may not claim `linter-only`, and a registration carrying a
-`scenePass` may not either.
+its engine cite) must meet its sheet and may not claim `linter-only`. It may
+register `transform-only` only with an implemented drive: a `scenePass`, or a
+driver component of its own (AnimationPlayer, AnimationTree). A registration
+carrying a `scenePass` may not claim `linter-only` either. Every
+`SkeletonModifier3D` and `SpringBoneCollision3D` type in `node-catalog.json`
+must be in the ledger, so a new subclass cannot drop out of it.
 
 ## Considered Options
 
@@ -64,11 +69,12 @@ from it claims a nil effect. Deliberate exclusions keep `linter-only`, because
 the previewer's contract says their effect is nil here, not missing: physics
 bodies and joints, `PhysicalBone2D`/`PhysicalBone3D` ragdoll physics (ADR-0005
 settled these as transform-only by design), navigation nodes, `BackBufferCopy`,
-`VisibleOnScreenNotifier`/`Enabler`, `SpringArm3D`, `OccluderInstance3D`, and
-`Skeleton2D`/`Bone2D` (no 2D IK slice exists, so Skeleton2D drives nothing
-here). The XR trackers (`XRNode3D`, `XRController3D`, `XROrigin3D`,
-`XRAnchor3D`) stay too: a session updates only their own transform, their
-children ride the normal hierarchy the previewer renders, and they drive no
-other node.
+`VisibleOnScreenNotifier`/`Enabler`, `OccluderInstance3D`, and `Bone2D` (the
+bone `Skeleton2D` moves, not a driver itself). The XR trackers (`XRNode3D`,
+`XRController3D`, `XROrigin3D`, `XRAnchor3D`) stay too: a session updates only
+their own transform, their children ride the normal hierarchy the previewer
+renders, and they drive no other node. `BoneAttachment3D` also writes only its
+own transform, but from a bone pose the scene file already holds, with no
+session, so following that pose is a drive the previewer can run and has not.
 `RemoteTransform2D`/`3D` are the middle row: the relay is implemented once at
 load, so their sheets move to `limitation`, not to a gap.

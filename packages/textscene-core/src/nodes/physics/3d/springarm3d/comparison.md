@@ -1,16 +1,16 @@
 ---
 type: SpringArm3D
 category: 3D
-status: linter-only
+status: unimplemented
 fixture: unit-spring-arm-3d.tscn
 # image: unit-spring-arm-3d
 visual: false
-renders_as: a transform-only group
+renders_as: nothing yet, Godot places its children along the arm each physics frame, the previewer does not
 ---
 
 # SpringArm3D
 
-Casts along its local Z axis each physics frame and moves its children to the hit point minus a margin. It draws nothing itself, so the previewer renders it as a transform-only group (ADR-0008).
+Casts along its local Z axis each physics frame and moves its children to the hit point minus a margin. Godot runs that placement each physics frame, and the previewer does not yet (ADR-0045): the children hold their authored transforms.
 
 ## Linting
 
@@ -31,3 +31,7 @@ Strict parsing format-checks these `SpringArm3D` properties, plus 17 inherited f
 <!-- lint:end -->
 
 SpringArm3D registers `parseNode3D` directly, so `collision_mask`, `shape`, `spring_length` and `margin` are never read. An out-of-range `collision_mask` or a non-numeric `spring_length` is dropped rather than substituted or warned on.
+
+## Known limitations
+
+- **Needs runtime** Godot moves each child to `spring_length` along the arm, or to the hit point minus `margin`. Here the children hold their authored transforms.

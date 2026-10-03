@@ -1,16 +1,16 @@
 ---
 type: ShaderGlobalsOverride
 category: Other
-status: linter-only
+status: unimplemented
 fixture: unit-shader-globals-override.tscn
 # image: unit-shader-globals-override
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: nothing yet, Godot re-shades every material that reads the overridden globals, the previewer does not
 ---
 
 # ShaderGlobalsOverride
 
-Overrides the project's global shader parameters while it stays in the tree. It has no geometry to draw, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
+Overrides the project's global shader parameters while it stays in the tree. Godot applies the override to every material that reads those globals, and the previewer does not yet (ADR-0045): its children still show, and no material sees the override.
 
 ## Linting
 
@@ -28,3 +28,7 @@ Strict parsing format-checks these `ShaderGlobalsOverride` properties, plus 10 i
 <!-- lint:end -->
 
 `index.ts` registers the plain `parseNode` reader, which never looks at a `params/*` key. Every value is carried as inert text, since nothing here propagates global shader parameters into a THREE material.
+
+## Known limitations
+
+- **Needs runtime** Godot overrides the global shader parameters each `params/*` key names, so every material that reads one changes. Here no material sees the override.

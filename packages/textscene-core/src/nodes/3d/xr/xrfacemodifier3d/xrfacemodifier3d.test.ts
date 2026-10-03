@@ -1,7 +1,8 @@
 /**
  * XRFaceModifier3D registration: it is parsed, and its writing of tracked face poses into the
- * parent Skeleton3D's bones is a gap (ADR-0045), not a nil effect. It registers `pending` on the
- * Node3D component, so children keep their transform space while the badge reads a gap.
+ * blend shapes of its `target` MeshInstance3D is a gap (ADR-0045), not a nil effect. It registers
+ * `pending` on the Node3D component, so children keep their transform space while the badge reads
+ * a gap.
  */
 
 import { describe, expect, it } from 'vitest';

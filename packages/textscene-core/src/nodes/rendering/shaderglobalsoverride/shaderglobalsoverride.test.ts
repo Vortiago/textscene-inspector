@@ -1,6 +1,6 @@
 /**
- * ShaderGlobalsOverride registration: it is parsed, and it draws nothing by design
- * (ADR-0008), not for want of an implementation.
+ * ShaderGlobalsOverride registration: it is parsed, and its override of global
+ * shader parameters is a gap (ADR-0045), not a nil effect.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -22,7 +22,7 @@ describe('ShaderGlobalsOverride registration', () => {
     expect(nodeComponentRegistry.get('ShaderGlobalsOverride')).toBe(Node);
   });
 
-  it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('ShaderGlobalsOverride')).toBe(true);
+  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
+    expect(nodeComponentRegistry.renderIntentOf('ShaderGlobalsOverride')).toBe('pending');
   });
 });

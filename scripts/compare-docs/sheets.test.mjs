@@ -12,6 +12,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { CATALOG } from './build-node-base-types.mjs';
 import { isDivider, splitRow } from './markdownTable.mjs';
 import { RUNTIME_EFFECT_NODE_TYPES } from './runtimeEffectNodes.data.mjs';
 import {
@@ -27,6 +28,8 @@ import {
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const NODES_ROOT = join(HERE, '../../packages/textscene-core/src/nodes');
+/** The ClassDB capture: each node with its ancestry, nearest parent first. */
+const catalogNodes = JSON.parse(readFileSync(CATALOG, 'utf8')).nodes;
 
 const KNOWN_KEYS = new Set([
   'type',
@@ -326,8 +329,7 @@ describe('comparison sheets', () => {
    * literals, and a family's loop over a constant its React-free sibling
    * `index.ts` exports.
    */
-  function typesRegisteredBy(r3fFile) {
-    const source = readFileSync(r3fFile, 'utf8');
+  function typesRegisteredBy(r3fFile, source = readFileSync(r3fFile, 'utf8')) {
     const inline = [...source.matchAll(/typeName:\s*'([A-Za-z0-9_]+)'/g)].map((m) => m[1]);
     if (inline.length > 0) return inline;
     const looped = /import \{\s*([A-Z0-9_]+)\s*\} from '\.\/index'/.exec(source);
@@ -346,8 +348,8 @@ describe('comparison sheets', () => {
     for (let dir = sliceDir; dir.includes(`${sep}nodes`); dir = dirname(dir)) {
       const candidate = join(dir, 'index.r3f.ts');
       if (!existsSync(candidate)) continue;
-      if (!typesRegisteredBy(candidate).includes(type)) continue;
       const source = readFileSync(candidate, 'utf8');
+      if (!typesRegisteredBy(candidate, source).includes(type)) continue;
       const intent = /renderIntent:\s*'([a-z-]+)'/.exec(source);
       return {
         file: candidate,
@@ -377,6 +379,17 @@ describe('comparison sheets', () => {
           scenePass: registration?.scenePass === true,
         };
       });
+    const sliceSheetByType = new Map(sliceSheets.map((s) => [s.meta.type, s]));
+
+    const chains = new Map(catalogNodes.map((n) => [n.name, n.chain]));
+    /** Whether the catalog names `type` as `root` or one of its descendants. */
+    const isOrDescendsFrom = (type, root) => type === root || (chains.get(type) ?? []).includes(root);
+    /** Every descendant of these, and the root itself, drives bones in Godot. */
+    const DRIVER_FAMILY_ROOTS = ['SkeletonModifier3D', 'SpringBoneCollision3D'];
+    /** Drivers whose own component runs the drive, with no scene pass. */
+    const DRIVER_COMPONENT_TYPES = new Set(['AnimationPlayer', 'AnimationTree']);
+    /** The backticked hook a SkeletonModifier3D runs on, and only it. */
+    const MODIFICATION_HOOK = '`_process_modification`';
 
     it('finds slice-backed sheets, so a bad filter cannot vacuously pass', () => {
       expect(sliceSheets.length).toBeGreaterThan(50);
@@ -440,21 +453,40 @@ describe('comparison sheets', () => {
       // `linter-only` claims the runtime effect is nil (ADR-0045). A node that
       // draws or drives in Godot has one, so its sheet belongs on the assessment
       // scale, not on the nil claim, whether or not the previewer implements it.
-      const byType = new Map(sheets.filter((s) => s.meta.type).map((s) => [s.meta.type, s]));
-      const matched = [];
-      const bad = [];
-      for (const { type, effect } of RUNTIME_EFFECT_NODE_TYPES) {
-        const sheet = byType.get(type);
-        if (!sheet) continue;
-        matched.push(type);
-        if (sheet.meta.status === 'linter-only') {
-          bad.push(`${sheet.label}: ${effect} in Godot but claims linter-only`);
-        }
-      }
-      // Non-vacuity floor: the list must actually meet the corpus, or renamed
-      // types would empty the check silently.
-      expect(matched.length).toBeGreaterThan(20);
+      // Every ledger type must meet its sheet, or a renamed one drops out unseen.
+      const unmatched = RUNTIME_EFFECT_NODE_TYPES.filter(({ type }) => !sliceSheetByType.has(type)).map(
+        (e) => e.type
+      );
+      expect(unmatched.sort()).toEqual([]);
+      const bad = RUNTIME_EFFECT_NODE_TYPES.map(({ type, effect }) => ({
+        effect,
+        sheet: sliceSheetByType.get(type),
+      }))
+        .filter(({ sheet }) => sheet.meta.status === 'linter-only')
+        .map(({ effect, sheet }) => `${sheet.label}: ${effect} in Godot but claims linter-only`);
       expect(bad.sort()).toEqual([]);
+    });
+
+    it('registers every unimplemented runtime effect `pending`, not `transform-only`', () => {
+      // A `transform-only` registration says "complete while invisible"
+      // (ADR-0008). A ledger type earns it only with an implemented drive: a
+      // scene pass, or a driver component of its own.
+      const bad = RUNTIME_EFFECT_NODE_TYPES.map(({ type }) => sliceSheetByType.get(type))
+        .filter((s) => s.transformOnly && !s.scenePass && !DRIVER_COMPONENT_TYPES.has(s.meta.type))
+        .map((s) => `${s.label}: registers transform-only with no implemented drive`);
+      expect(bad.sort()).toEqual([]);
+    });
+
+    it('lists every skeleton-modifier and spring-bone-collider type in the runtime-effect ledger', () => {
+      // A type absent from the ledger claims a nil effect (ADR-0045), so the
+      // families the catalog can name are closed against it: a subclass a new
+      // Godot capture adds cannot keep `linter-only` unseen.
+      const ledger = new Set(RUNTIME_EFFECT_NODE_TYPES.map((e) => e.type));
+      const missing = catalogNodes
+        .map(({ name }) => name)
+        .filter((name) => DRIVER_FAMILY_ROOTS.some((root) => isOrDescendsFrom(name, root)))
+        .filter((name) => !ledger.has(name));
+      expect(missing.sort()).toEqual([]);
     });
 
     it('never calls a registration with a scene pass `linter-only`', () => {
@@ -469,16 +501,13 @@ describe('comparison sheets', () => {
     it('grounds each runtime-effect cite in the hook its class actually runs on', () => {
       // The catalog's ancestry is the independent check on the cite text: a
       // SkeletonModifier3D descendant runs through the modification hook and
-      // must cite it; nothing else may claim it. A wrong method name is a
-      // wrong engine fact (ADR-0045).
-      const chains = new Map(
-        JSON.parse(readFileSync(join(HERE, 'node-catalog.json'), 'utf8')).nodes.map((n) => [n.name, n.chain])
-      );
+      // must cite it by its exact name; nothing else may claim it. A wrong
+      // method name is a wrong engine fact (ADR-0045).
       const unchecked = RUNTIME_EFFECT_NODE_TYPES.filter(({ type }) => !chains.has(type)).map((e) => e.type);
       expect(unchecked.sort()).toEqual([]);
       const bad = RUNTIME_EFFECT_NODE_TYPES.filter(({ type, cite }) => {
-        const isModifier = type === 'SkeletonModifier3D' || chains.get(type).includes('SkeletonModifier3D');
-        return isModifier ? !cite.includes('modification') : cite.includes('_process_modification');
+        const isModifier = isOrDescendsFrom(type, 'SkeletonModifier3D');
+        return isModifier !== cite.includes(MODIFICATION_HOOK);
       }).map(({ type, cite }) => `${type}: ${cite}`);
       expect(bad.sort()).toEqual([]);
     });
@@ -520,9 +549,7 @@ describe('hand-maintained docs stay in step with the sheets', () => {
     if (exact) {
       // Counted against ClassDB, not the sheet directory: `AreaLight3D` has a
       // sheet but is absent from 4.6.3's ClassDB.
-      const catalogued = new Set(
-        JSON.parse(readFileSync(join(HERE, 'node-catalog.json'), 'utf8')).nodes.map((n) => n.name)
-      );
+      const catalogued = new Set(catalogNodes.map((n) => n.name));
       const instantiable = [...sheetTypes].filter((t) => catalogued.has(t));
       expect(Number(exact[1])).toBe(instantiable.length);
       return;

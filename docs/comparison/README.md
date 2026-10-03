@@ -142,7 +142,7 @@ reproduced:
 - [SoftBody3D](../../packages/textscene-core/src/nodes/physics/3d/softbody3d/comparison.md): nothing yet, Godot draws a deformable mesh, the previewer does not
 - [SplineIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/splineik3d/comparison.md): nothing yet, Godot lays its bone chain along the path, the previewer does not
 - [SpotLight3D](../../packages/textscene-core/src/nodes/3d/lights/spotlight3d/comparison.md): a THREE.SpotLight
-- [SpringArm3D](../../packages/textscene-core/src/nodes/physics/3d/springarm3d/comparison.md): a transform-only group
+- [SpringArm3D](../../packages/textscene-core/src/nodes/physics/3d/springarm3d/comparison.md): nothing yet, Godot places its children along the arm each physics frame, the previewer does not
 - [SpringBoneCollision3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollision3d/comparison.md): nothing yet, Godot's spring solver collides bones with it, the previewer does not
 - [SpringBoneCollisionCapsule3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollisioncapsule3d/comparison.md): nothing yet, Godot's spring solver collides bones with it, the previewer does not
 - [SpringBoneCollisionPlane3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollisionplane3d/comparison.md): nothing yet, Godot's spring solver pushes bones off its plane, the previewer does not
@@ -256,7 +256,7 @@ reproduced:
 - [RigidBody2D](../../packages/textscene-core/src/nodes/physics/2d/rigidbody2d/comparison.md): a transform-only group
 - [ScrollContainer](../../packages/textscene-core/src/nodes/2d/ui/scrollcontainer/comparison.md): a clipped content rect with themed scrollbars
 - [ShapeCast2D](../../packages/textscene-core/src/nodes/physics/2d/shapecast2d/comparison.md): nothing (a transform-only group)
-- [Skeleton2D](../../packages/textscene-core/src/nodes/2d/skeleton2d/comparison.md): nothing of its own, a transform-only group whose Bone2D children keep their space
+- [Skeleton2D](../../packages/textscene-core/src/nodes/2d/skeleton2d/comparison.md): nothing yet, Godot runs its modification stack on the bones each frame, the previewer does not
 - [SpinBox](../../packages/textscene-core/src/nodes/2d/ui/spinbox/comparison.md): a LineEdit-style field plus two arrow stepper icons
 - [SplitContainer](../../packages/textscene-core/src/nodes/2d/ui/splitcontainer/comparison.md): two children split at a computed offset, along the `vertical`-chosen axis
 - [Sprite2D](../../packages/textscene-core/src/nodes/2d/sprite2d/comparison.md): an unlit textured quad
@@ -297,7 +297,7 @@ reproduced:
 - [PopupPanel](../../packages/textscene-core/src/nodes/windows/popuppanel/comparison.md): nothing yet, not implemented
 - [ResourcePreloader](../../packages/textscene-core/src/nodes/resources/resourcepreloader/comparison.md): nothing (a transform-only group)
 - [ScriptCreateDialog](../../packages/textscene-core/src/nodes/windows/scriptcreatedialog/comparison.md): invisible transform-only fallback
-- [ShaderGlobalsOverride](../../packages/textscene-core/src/nodes/rendering/shaderglobalsoverride/comparison.md): nothing (a transform-only group)
+- [ShaderGlobalsOverride](../../packages/textscene-core/src/nodes/rendering/shaderglobalsoverride/comparison.md): nothing yet, Godot re-shades every material that reads the overridden globals, the previewer does not
 - [StatusIndicator](../../packages/textscene-core/src/nodes/os/statusindicator/comparison.md): nothing (a transform-only group)
 - [Timer](../../packages/textscene-core/src/nodes/timers/timer/comparison.md): nothing (a countdown timer node)
 - [Window](../../packages/textscene-core/src/nodes/windows/window/comparison.md): nothing yet, not implemented

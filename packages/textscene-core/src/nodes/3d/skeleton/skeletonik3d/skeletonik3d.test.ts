@@ -1,7 +1,7 @@
 /**
- * SkeletonIK3D registration: it is parsed, and its solve of a two-bone chain toward its target is
- * a gap (ADR-0045), not a nil effect. It registers `pending` on the Node3D component, so children
- * keep their transform space while the badge reads a gap.
+ * SkeletonIK3D registration: it is parsed, and its FABRIK solve of the `root_bone` to `tip_bone`
+ * chain toward its target is a gap (ADR-0045), not a nil effect. It registers `pending` on the
+ * Node3D component, so children keep their transform space while the badge reads a gap.
  */
 
 import { describe, expect, it } from 'vitest';
