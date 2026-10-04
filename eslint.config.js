@@ -68,6 +68,7 @@ export default [
     files: [
       'apps/textscene-vscode/src/**/*.ts',
       'apps/textscene-linter/src/**/*.ts',
+      'apps/textscene-lsp/src/**/*.ts',
       'packages/textscene-dev-kit/src/**/*.ts',
       '**/*.config.ts',
       'vitest.shared.ts',
@@ -296,6 +297,15 @@ export default [
     files: ['packages/textscene-core/src/**/*.test.{ts,tsx}'],
     rules: {
       'no-restricted-syntax': ['error', RAW_SEVERITY_ASSERTION],
+    },
+  },
+
+  // An ambient `.d.ts` names types a syntax-only rule cannot resolve, so `no-undef`
+  // reports each one.
+  {
+    files: ['**/*.d.ts'],
+    rules: {
+      'no-undef': 'off',
     },
   },
 

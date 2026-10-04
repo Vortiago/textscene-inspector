@@ -100,6 +100,108 @@
         "when": "resourceExtname == .tscn"
       }
     ],
+    "languageModelTools": [
+      {
+        "name": "textscene_lint",
+        "displayName": "Lint a Godot .tscn scene",
+        "toolReferenceName": "lintTscn",
+        "modelDescription": "Lint a Godot .tscn scene and return its findings, each with a line, a tier, a message and a rule. Use after editing a scene, to check it without a Godot install.",
+        "tags": [
+          "godot",
+          "tscn",
+          "lint"
+        ],
+        "canBeReferencedInPrompt": true,
+        "icon": "$(checklist)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "The .tscn file: a workspace-relative path, or an absolute one."
+            }
+          },
+          "required": [
+            "path"
+          ]
+        }
+      },
+      {
+        "name": "textscene_scene_tree",
+        "displayName": "Read a Godot .tscn scene tree",
+        "toolReferenceName": "tscnSceneTree",
+        "modelDescription": "Return a Godot .tscn scene's node hierarchy as indented text, each node with its type. Use to understand a scene's structure without reading the raw file.",
+        "tags": [
+          "godot",
+          "tscn",
+          "scene tree"
+        ],
+        "canBeReferencedInPrompt": true,
+        "icon": "$(list-tree)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "The .tscn file: a workspace-relative path, or an absolute one."
+            }
+          },
+          "required": [
+            "path"
+          ]
+        }
+      },
+      {
+        "name": "textscene_open_preview",
+        "displayName": "Open the Godot .tscn preview",
+        "toolReferenceName": "openTscnPreview",
+        "modelDescription": "Open the TextScene 3D/2D preview for a Godot .tscn scene beside the editor, so the user sees the scene render.",
+        "tags": [
+          "godot",
+          "tscn",
+          "preview"
+        ],
+        "canBeReferencedInPrompt": true,
+        "icon": "$(open-preview)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "The .tscn file: a workspace-relative path, or an absolute one."
+            }
+          },
+          "required": [
+            "path"
+          ]
+        }
+      },
+      {
+        "name": "textscene_missing_resources",
+        "displayName": "List a Godot .tscn scene's missing resources",
+        "toolReferenceName": "tscnMissingResources",
+        "modelDescription": "List the res:// resources a Godot .tscn scene references that the project does not hold.",
+        "tags": [
+          "godot",
+          "tscn",
+          "resources"
+        ],
+        "canBeReferencedInPrompt": true,
+        "icon": "$(warning)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "The .tscn file: a workspace-relative path, or an absolute one."
+            }
+          },
+          "required": [
+            "path"
+          ]
+        }
+      }
+    ],
     "configuration": {
       "title": "TextScene Inspector",
       "properties": {
@@ -128,6 +230,11 @@
           "default": 300,
           "minimum": 0,
           "description": "Milliseconds to wait after the last edit before re-linting a .tscn document."
+        },
+        "textscene.agentTools.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Register tools a coding agent in chat can call: lint a scene, read its node tree, open its preview, and list its missing resources. Turn off to keep the extension out of agent tool lists."
         }
       }
     }

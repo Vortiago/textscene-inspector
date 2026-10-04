@@ -8,7 +8,14 @@
  */
 
 import { vi, afterEach } from 'vitest';
-import { mockCommands, mockLanguages, mockUri, mockWindow, mockWorkspace } from './vscodeMocks.testkit';
+import {
+  mockCommands,
+  mockLanguages,
+  mockLm,
+  mockUri,
+  mockWindow,
+  mockWorkspace,
+} from './vscodeMocks.testkit';
 import {
   MockCodeAction,
   MockCodeActionKind,
@@ -26,6 +33,8 @@ import {
   MockFoldingRange,
   MockFoldingRangeKind,
   MockHover,
+  MockLanguageModelTextPart,
+  MockLanguageModelToolResult,
   MockLocation,
   MockMarkdownString,
   MockPosition,
@@ -57,6 +66,8 @@ export {
   MockFoldingRange,
   MockFoldingRangeKind,
   MockHover,
+  MockLanguageModelTextPart,
+  MockLanguageModelToolResult,
   MockLocation,
   MockMarkdownString,
   MockPosition,
@@ -72,6 +83,7 @@ vi.mock('vscode', () => ({
   window: mockWindow,
   commands: mockCommands,
   languages: mockLanguages,
+  lm: mockLm,
   Range: MockRange,
   Position: MockPosition,
   Selection: MockSelection,
@@ -92,6 +104,8 @@ vi.mock('vscode', () => ({
   FoldingRangeKind: MockFoldingRangeKind,
   DocumentHighlight: MockDocumentHighlight,
   DocumentHighlightKind: MockDocumentHighlightKind,
+  LanguageModelTextPart: MockLanguageModelTextPart,
+  LanguageModelToolResult: MockLanguageModelToolResult,
 
   DiagnosticSeverity: MockDiagnosticSeverity,
   TabInputText: MockTabInputText,
@@ -116,6 +130,7 @@ export const vscode: {
   window: typeof mockWindow;
   commands: typeof mockCommands;
   languages: typeof mockLanguages;
+  lm: typeof mockLm;
   Range: typeof MockRange;
   Position: typeof MockPosition;
   Selection: typeof MockSelection;
@@ -136,6 +151,8 @@ export const vscode: {
   FoldingRangeKind: typeof MockFoldingRangeKind;
   DocumentHighlight: typeof MockDocumentHighlight;
   DocumentHighlightKind: typeof MockDocumentHighlightKind;
+  LanguageModelTextPart: typeof MockLanguageModelTextPart;
+  LanguageModelToolResult: typeof MockLanguageModelToolResult;
   DiagnosticSeverity: typeof MockDiagnosticSeverity;
   ViewColumn: { One: number; Two: number; Three: number; Active: number; Beside: number };
   TextEditorRevealType: {
@@ -151,6 +168,7 @@ export const vscode: {
   window: mockWindow,
   commands: mockCommands,
   languages: mockLanguages,
+  lm: mockLm,
   Range: MockRange,
   Position: MockPosition,
   Selection: MockSelection,
@@ -171,6 +189,8 @@ export const vscode: {
   FoldingRangeKind: MockFoldingRangeKind,
   DocumentHighlight: MockDocumentHighlight,
   DocumentHighlightKind: MockDocumentHighlightKind,
+  LanguageModelTextPart: MockLanguageModelTextPart,
+  LanguageModelToolResult: MockLanguageModelToolResult,
   DiagnosticSeverity: MockDiagnosticSeverity,
   ViewColumn: MockViewColumn,
   TextEditorRevealType: MockTextEditorRevealType,

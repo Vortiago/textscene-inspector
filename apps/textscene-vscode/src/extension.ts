@@ -13,6 +13,7 @@ import { TscnCodeActionProvider } from './TscnCodeActionProvider';
 import { TscnFoldingRangeProvider } from './TscnFoldingRangeProvider';
 import { TscnDocumentHighlightProvider } from './TscnDocumentHighlightProvider';
 import { TscnResPathListing } from './TscnResPathListing';
+import { registerTscnTools } from './tools/registerTscnTools';
 import { TscnDiagnostics } from './TscnDiagnostics';
 import { initLogger, dispose as disposeLogger } from './logger';
 import { isUri } from './uriArgument';
@@ -100,6 +101,9 @@ export function activate(context: vscode.ExtensionContext) {
       new TscnDocumentHighlightProvider()
     )
   );
+
+  // Tools a coding agent in chat may call, so it can check a scene it edited.
+  registerTscnTools(context, { openPreview: (uri) => void getOrCreatePanel(uri) });
 
   // External changes to every file a scene can load, and to the project file. Each watcher
   // serves the previews and the linter diagnostics in the Problems panel.

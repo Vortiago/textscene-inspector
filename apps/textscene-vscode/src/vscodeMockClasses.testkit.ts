@@ -307,3 +307,13 @@ export const MockDocumentHighlightKind = {
   Read: 1,
   Write: 2,
 };
+
+/** `vscode.LanguageModelTextPart`: one text part of a tool result. */
+export class MockLanguageModelTextPart {
+  constructor(public value: string) {}
+}
+
+/** `vscode.LanguageModelToolResult`: the parts a tool returns. */
+export class MockLanguageModelToolResult {
+  constructor(public content: any[]) {}
+}

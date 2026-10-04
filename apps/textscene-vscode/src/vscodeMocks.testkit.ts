@@ -79,6 +79,11 @@ export const mockCommands: any = {
   registerCommand: vi.fn(),
 };
 
+/** `vscode.lm`: `registerTool` only, which the tools feature-detect. */
+export const mockLm: any = {
+  registerTool: vi.fn(() => ({ dispose: vi.fn() })),
+};
+
 export const mockLanguages: any = {
   registerDocumentSymbolProvider: vi.fn(),
   registerDefinitionProvider: vi.fn(),
