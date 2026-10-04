@@ -1,7 +1,7 @@
 /**
  * The host-neutral result types a language feature returns. Positions and ranges are
  * zero-based, the convention LSP and the VS Code API share, so a host adapts nothing.
- * The {@link LanguageDocument} model keeps the parser's one-based line numbers; the
+ * The {@link LanguageDocument} model keeps the parser's one-based line numbers. The
  * boundary converts, so only this file decides which side a range lives on.
  */
 

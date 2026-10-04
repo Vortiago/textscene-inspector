@@ -128,6 +128,17 @@ The nearest Viewport ancestor of a node, or null for the scene's own viewport, w
 An ancestor of unknown type puts the node in no scope.
 _Avoid_: a per-viewport rule scoped to the whole scene.
 
+### Language features
+
+**Language-feature engine** (`languageFeatures/`):
+The React- and THREE-free core area that answers hover, completion, quick fixes, folding and document highlights for one `.tscn`, over the parser and the `godot/` captures.
+Every result is host-neutral with zero-based ranges, so the VS Code extension and the `tscn-lsp` server share it (ADR-0046).
+_Avoid_: "LSP" for the engine, which names the protocol and its server host. "Language service".
+
+**Agent tool**:
+A tool the VS Code extension registers through `vscode.lm`, so a coding agent in chat can lint a scene, read its node tree, open its preview or list its missing resources.
+_Avoid_: "action" for an agent tool.
+
 ### Code organisation
 
 **Vertical slice**:

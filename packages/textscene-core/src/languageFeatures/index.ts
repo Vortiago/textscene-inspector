@@ -1,8 +1,9 @@
 /**
  * The language-feature engine: hover, completion, quick fixes, folding and document
  * highlights for a `.tscn`, over the same parser and ClassDB captures the linter reads.
- * It is React- and THREE-free, so the VS Code extension host and the `tscn-lsp` server
- * both import it; every result is host-neutral, with zero-based ranges (`types.ts`).
+ * It is React- and THREE-free, so the `tscn-lsp` server and the VS Code extension host
+ * process both import it. Every result is host-neutral, with zero-based ranges
+ * (`types.ts`).
  */
 
 export { LanguageDocument } from './document.js';

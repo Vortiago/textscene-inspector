@@ -20,7 +20,7 @@ import { declaredResourceIds } from './resourceRefs.js';
 import { headingAttribute, propertyKeySpan } from './ranges.js';
 import type { CompletionItem } from './types.js';
 
-/** The seam a completion host supplies: it lists the workspace's `res://` paths. */
+/** The seam an editor host supplies: it lists the workspace's `res://` paths. */
 export interface CompletionContext {
   readonly listPaths?: () => readonly string[];
 }

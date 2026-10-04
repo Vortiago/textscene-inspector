@@ -4,7 +4,7 @@
  * linter share, through a `ParseObserver`, so no second `.tscn` grammar exists here.
  *
  * Section and property lines are one-based, the parser's and `Diagnostic.location`'s
- * convention. Every range a feature returns is zero-based; see `types.ts`.
+ * convention. Every range a feature returns is zero-based. See `types.ts`.
  */
 
 import { TscnParserCore, type ParseObserver, type SectionType } from '../parser/TscnParserCore.js';
@@ -13,7 +13,7 @@ import type { ParsedHeading } from '../parser/utils.js';
 /** The four section tags a feature reads, and `other` for the rest (`gd_scene`, `connection`). */
 export type SectionKind = 'node' | 'sub_resource' | 'ext_resource' | 'resource' | 'other';
 
-/** One property line, as written, with the engine's resolution beside it. */
+/** One property line, as written, with Godot's resolution beside it. */
 export interface PropertySlot {
   readonly key: string;
   /** The key the engine stores it under, a deprecated spelling resolved. */
@@ -110,7 +110,7 @@ function scanSections(lines: readonly string[]): DocumentSection[] {
 
 /**
  * A parsed `.tscn` the language features query by line. The scan runs once at
- * construction; the lookups are maps, so a hover or completion costs no second parse.
+ * construction. The lookups are maps, so a hover or completion costs no second parse.
  */
 export class LanguageDocument {
   readonly lines: readonly string[];

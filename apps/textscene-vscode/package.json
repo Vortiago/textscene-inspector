@@ -105,7 +105,7 @@
         "name": "textscene_lint",
         "displayName": "Lint a Godot .tscn scene",
         "toolReferenceName": "lintTscn",
-        "modelDescription": "Lint a Godot .tscn scene and return its findings, each with a line, a tier, a message and a rule. Use after editing a scene, to check it without a Godot install.",
+        "modelDescription": "Lint a Godot .tscn scene and return its findings, each with a line, a severity, a message and a rule. Use after editing a scene, to check it without a Godot install.",
         "tags": [
           "godot",
           "tscn",

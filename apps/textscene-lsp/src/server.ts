@@ -2,7 +2,7 @@
  * The tscn-lsp language server: LSP over stdio, with the core language features and linter
  * behind it. It serves any client (Neovim, Helix, Zed, Emacs, Sublime) the same hover,
  * completion, quick fixes, folding, symbols, navigation and diagnostics the VS Code extension
- * provides. It imports no React and no THREE, since both bundles are plain Node.
+ * host process provides. It imports no React and no THREE, since both bundles are plain Node.
  */
 
 import { fileURLToPath, pathToFileURL } from 'node:url';

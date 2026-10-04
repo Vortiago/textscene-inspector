@@ -1,6 +1,6 @@
 /**
  * Completions for `.tscn` files: class names, property keys, enum values, resource
- * ids and `res://` paths. The engine computes them; this maps the host-neutral items
+ * ids and `res://` paths. The engine computes them. This maps the host-neutral items
  * to VS Code's, and supplies the workspace's path listing through the engine's seam.
  */
 

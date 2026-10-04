@@ -1,6 +1,6 @@
 /**
  * The translation of the core language-feature results into LSP protocol shapes. Both sides
- * count positions from zero, so a range passes through unchanged; only the kind, the severity
+ * count positions from zero, so a range passes through unchanged. Only the kind, the severity
  * and the edit container need a host-side spelling.
  */
 
@@ -98,7 +98,7 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 /**
- * The squiggle for a diagnostic. Core lines are one-based and clamped into the document; one
+ * The squiggle for a diagnostic. Core lines are one-based and clamped into the document. One
  * that names no line gets a zero-width range at the start, so a client lists it once without a
  * squiggle under line one's text.
  */

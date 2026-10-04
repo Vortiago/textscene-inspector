@@ -1,9 +1,9 @@
 # @textscene/lsp
 
 `tscn-lsp` is a language server for Godot `.tscn` scenes and `.tres` resources. It gives
-any LSP client the features the TextScene Inspector VS Code extension provides: hover,
-completion, quick fixes, folding, document symbols, go to definition, document highlights
-and diagnostics. Every check is grounded in Godot's own source.
+any LSP client the features the TextScene Inspector VS Code extension provides. They are
+hover, completion, quick fixes, folding, document symbols, go to definition, document
+highlights and diagnostics. Every check is grounded in Godot's own source.
 
 The server reads each document's own directory to find `project.godot`, and resolves
 `res://` from the nearest project root. A scene outside every Godot project still gets
@@ -22,8 +22,8 @@ client starts it as a child process and talks to it on the standard streams.
 
 ## Client setup
 
-Map the `tscn` language to the `.tscn` and `.tres` extensions, then start `tscn-lsp` for
-it. Most clients run the server over stdio.
+Map the `tscn` language to the `.tscn` and `.tres` extensions. Start `tscn-lsp` for it.
+Most clients run the server over stdio.
 
 ### Neovim
 
@@ -42,8 +42,8 @@ vim.api.nvim_create_autocmd('FileType', {
 })
 ```
 
-A file outside a Godot project has no `project.godot` above it. Pass the document's own
-directory as `root_dir` when `find` returns nothing.
+A file outside a Godot project has no `project.godot` above it. When `find` returns
+nothing, pass the document's own directory as `root_dir`.
 
 ### Helix
 

@@ -1,8 +1,8 @@
 /**
  * Quick fixes computed from a document alone, so a host needs no diagnostic to offer
  * them: a deprecated property spelling renamed to the engine's, a property key or a
- * class name repaired to its nearest catalogued spelling. A fix never invents a name;
- * every target comes from the deprecated table or the ClassDB captures.
+ * class name repaired to its nearest catalogued spelling. A fix never invents a name.
+ * Every target comes from the deprecated table or the ClassDB captures.
  */
 
 import { canonicalPropertyName, isDeprecatedPropertyName } from '../godot/deprecated.js';

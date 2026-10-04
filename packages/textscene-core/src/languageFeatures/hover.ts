@@ -2,7 +2,7 @@
  * Hover for the three places a reader asks about: a node or resource class on a
  * heading, a property key, and a value that names a resource or an enum label. Each
  * answer comes from the committed ClassDB rows, the deprecated-alias table or the
- * file's own headings, so it states what the engine does rather than a guess.
+ * file's own headings, so it states what Godot does rather than a guess.
  */
 
 import { canonicalPropertyName, isDeprecatedPropertyName } from '../godot/deprecated.js';
@@ -75,7 +75,7 @@ function propertyHover(section: DocumentSection, property: PropertySlot, range: 
   if (className && isDeprecatedPropertyName(className, property.key)) {
     const canonical = canonicalPropertyName(className, property.key, property.value);
     if (canonical !== property.key) {
-      lines.push('', `Deprecated spelling: the engine applies it as ${codeSpan(canonical)}.`);
+      lines.push('', `Deprecated spelling: Godot applies it as ${codeSpan(canonical)}.`);
     }
   }
   if (resolved) lines.push('', `[Reference](${propertyDocsUrl(resolved.declaredBy, resolved.name)})`);
@@ -117,7 +117,7 @@ function valueHover(
 
 /**
  * Hover at a zero-based position, or undefined where the position names nothing.
- * The position's line is one-based inside the document model; see `document.ts`.
+ * The position's line is one-based inside the document model. See `document.ts`.
  */
 export function hoverAt(
   document: LanguageDocument,

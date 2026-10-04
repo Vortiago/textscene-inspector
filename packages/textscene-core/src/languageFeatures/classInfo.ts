@@ -1,7 +1,7 @@
 /**
- * Resolves a class's serialised properties through the same base chain the engine's
+ * Resolves a class's serialised properties through the same base chain Godot's
  * `_get_property_list` walks, so hover and completion name a property on the class that
- * declares it. The rows come from the committed ClassDB captures; the chain comes from
+ * declares it. The rows come from the committed ClassDB captures. The chain comes from
  * the generated base-type tables, never by hand.
  */
 

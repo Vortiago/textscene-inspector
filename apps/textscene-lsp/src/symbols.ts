@@ -19,8 +19,8 @@ interface PendingSymbol {
 }
 
 /**
- * Build the tree: the root is stored under `"."`, the value its direct children give in `parent=`;
- * a deeper node is stored under its own path. A node whose parent is missing (a malformed file)
+ * Build the tree: the tree stores the root under `"."`, the value its direct children give in
+ * `parent=`. It stores a deeper node under its own path. A node whose parent is missing (a malformed file)
  * becomes a second root, so no symbol is lost.
  */
 function buildTree(document: LanguageDocument): PendingSymbol[] {

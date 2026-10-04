@@ -1,7 +1,7 @@
 /**
  * Quick fixes for `.tscn` files: a deprecated property spelling renamed to the
  * engine's, an unknown property key or class repaired to its nearest catalogued
- * spelling. The engine computes the edits; this puts them in a `WorkspaceEdit`.
+ * spelling. The engine computes the edits. This puts them in a `WorkspaceEdit`.
  */
 
 import * as vscode from 'vscode';

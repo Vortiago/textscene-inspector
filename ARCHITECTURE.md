@@ -1,7 +1,8 @@
 # Architecture
 
-TextScene Inspector is one core library, `@textscene/core`, with three thin hosts. The core
-parses, lints and renders `.tscn` text. A host supplies files and a place to draw.
+TextScene Inspector is one core library, `@textscene/core`, with four thin hosts. The core
+parses, lints and renders `.tscn` text, and answers language-feature questions about it. A host
+supplies files and a place to draw or edit.
 
 - [GLOSSARY.md](./GLOSSARY.md) defines the terms. Use them exactly.
 - [docs/adr/](./docs/adr/) records each decision. ADR-0001 and ADR-0002 set the slice and
@@ -15,6 +16,7 @@ parses, lints and renders `.tscn` text. A host supplies files and a place to dra
 | `packages/textscene-core` | Parser, linter, renderer, preview shell | tsc |
 | `apps/textscene-web` | Web previewer and the Source pane (ADR-0020) | Vite |
 | `apps/textscene-vscode` | VS Code extension: preview webview and language features | esbuild |
+| `apps/textscene-lsp` | `tscn-lsp` language server for any LSP client | esbuild |
 | `apps/textscene-linter` | `tscn-lint` CLI | esbuild |
 
 Stack: TypeScript (strict), React, react-three-fiber and drei over three.js, Vitest. The
@@ -26,11 +28,12 @@ Stack: TypeScript (strict), React, react-three-fiber and drei over three.js, Vit
 | `linter/` | The strict parser, the rule and validator registries, the `Linter` |
 | `core/` | `SceneGraph`, `NodeRegistry` and the registry factory |
 | `godot/` | Engine facts: constants and pure functions. It imports nothing. |
+| `languageFeatures/` | Hover, completion, quick fixes, folding and highlights over the parser |
 | `nodes/` | One vertical slice per Godot node type |
 | `resources/` | The resource loader, and one slice per resource type |
 | `r3f/` | The renderer, the 2D canvas, the Control canvas, the preview shell |
 
-## The two pipelines
+## The pipelines
 
 ```mermaid
 flowchart LR
@@ -45,6 +48,9 @@ flowchart LR
   TSCN --> SP["Strict parser"]
   SP --> LINT["Linter"]
   LINT --> DIAG["Diagnostics"]
+
+  TSCN --> LANG["Language-feature engine"]
+  LANG --> HOVER["Hover · completion · fixes · folds"]
 ```
 
 **Render.** `NodeDispatcher` walks the lenient parser's `SceneGraph` and renders each node's
@@ -53,6 +59,12 @@ registered component.
 **Lint.** The strict parser reports each syntax and format error with its line, and the
 `Linter` runs the semantic rules. This path imports no React and no three.js, so the CLI and
 the VS Code extension host bundle it alone.
+
+**Language features.** `languageFeatures/` (`createLanguageDocument`) parses the text through
+the same scanning loop with a `ParseObserver`, then answers hover, completion, quick fixes,
+folding and document highlights. It reads the same `godot/` ClassDB captures and the same
+deprecated-alias table as the linter, so no editor states an engine fact twice. It is
+React- and THREE-free, and every result is host-neutral with zero-based ranges (ADR-0046).
 
 **Cross-file lint.** `Linter.lint` reads only the scene. A `LintSession` (`Linter.session()`)
 also reads the used `.glb` and `.gltf` files through the host's `ResourceProvider`. It reports
@@ -173,8 +185,11 @@ the selected node (ADR-0012). Playback starts stopped.
 
 ## Hosts
 
-- **VS Code.** The extension host runs the language features. The webview refreshes on save
-  and keeps its camera (ADR-0021).
+- **VS Code.** The extension host runs the language features as native providers, so they work
+  in vscode.dev as well as on the desktop. It also registers agent tools through `vscode.lm`.
+  The webview refreshes on save and keeps its camera (ADR-0021).
+- **LSP.** `apps/textscene-lsp` serves the same language features to any editor over stdio
+  (`tscn-lsp`), with no VS Code API. It reads the project from the nearest `project.godot`.
 - **Web.** The Source pane renders only a buffer the lenient parser accepts, and lints every
   buffer (ADR-0020).
 - **Job workers.** Each host starts one script built from `@textscene/core/worker`. VS Code
@@ -187,6 +202,7 @@ A test or a script fails when one of these rules breaks.
 | Rule | Enforced by |
 | --- | --- |
 | The linter and the lenient parser import no React or three.js | `linter/reactFree.test.ts`, an ESLint `no-restricted-imports` rule |
+| The language-feature engine and the LSP server import no React or three.js | `languageFeatures/reactFree.test.ts`, an ESLint `no-restricted-imports` rule, `apps/textscene-lsp/src/reactFree.test.ts` |
 | `godot/` imports nothing | `noDependencies.test.ts` |
 | Every slice is wired into its barrels | `barrelCompleteness`, `parserBarrelCompleteness` |
 | Every registered type has a Godot base chain | `baseChainCompleteness.test.ts` |
@@ -201,8 +217,9 @@ A test or a script fails when one of these rules breaks.
 ## Bundle size
 
 The VS Code extension host imports only the React-free core subpaths
-(`@textscene/core/parser`, `/linter`, `/logger`, `/godot`). The root barrel has React and CSS
-side effects, and grows the host bundle about four times.
+(`@textscene/core/parser`, `/linter`, `/godot`, `/languageFeatures`). The root barrel has React
+and CSS side effects, and grows the host bundle about four times. The `languageFeatures` subpath
+carries the generated ClassDB property tables, which the webview never loads.
 
 The webview builds ESM with code splitting (`apps/textscene-vscode/esbuild.config.mjs`), and
 loads the dock panels, the Control canvas, drei's `<Text>` and the GLB loader on demand.

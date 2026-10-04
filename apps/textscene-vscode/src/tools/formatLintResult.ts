@@ -1,6 +1,6 @@
 /**
  * Formats a lint result as the text a language model reads: one line per finding,
- * with its line, tier, message and rule. The same `Diagnostic` rows the Problems
+ * with its line, severity, message and rule. The same `Diagnostic` rows the Problems
  * panel shows, so an agent and the user see one verdict.
  */
 

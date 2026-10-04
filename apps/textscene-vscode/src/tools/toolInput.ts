@@ -1,6 +1,6 @@
 /**
  * Resolves the file a tool's `path` input names and reads it. A path is absolute or
- * workspace-relative; the relative form needs an open workspace folder. No `node:path`,
+ * workspace-relative. The relative form needs an open workspace folder. No `node:path`,
  * since the browser extension host has no Node built-ins.
  */
 

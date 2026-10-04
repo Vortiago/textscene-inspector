@@ -1,6 +1,6 @@
 /**
  * Navigation targets: a resource id resolves to its declaration heading, and a `res://` path
- * names a project file. The path half returns what and where it is; the server resolves the
+ * names a project file. The path half returns what and where it is. The server resolves the
  * file against the project root, since that needs the filesystem.
  */
 
