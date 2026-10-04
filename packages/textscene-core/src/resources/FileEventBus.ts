@@ -141,7 +141,7 @@ export class FileEventBus {
    * Read a file that may not exist, answering only the caller. An absent **Import
    * sidecar** means Godot's import defaults (ADR-0028), not a **Missing resource**.
    * It shares `request()`'s cache but fires no handler, which could re-enter a load.
-   * `type` names the fetch in the host's miss log, not "Failed to fetch undefined".
+   * `type` names the fetch in the host's log, not "Attempting to fetch undefined".
    */
   async tryLoad(path: string, type = 'OptionalFile'): Promise<FileData | null> {
     const cached = this.cache.get(path);
