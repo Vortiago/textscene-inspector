@@ -1,0 +1,63 @@
+{
+  "name": "@textscene/lsp",
+  "version": "1.0.0",
+  "description": "Language server for Godot .tscn scenes, with hover, completion, quick fixes, folding, symbols, navigation and diagnostics for any LSP client.",
+  "type": "module",
+  "bin": {
+    "tscn-lsp": "./bin/tscn-lsp.js"
+  },
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prebuild": "pnpm --filter @textscene/core build",
+    "build": "esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.js --external:vscode-languageserver --external:vscode-languageserver-textdocument",
+    "dev": "esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.js --external:vscode-languageserver --external:vscode-languageserver-textdocument --watch",
+    "clean": "rimraf dist",
+    "test": "vitest run",
+    "test:watch": "vitest --watch",
+    "pretype-check": "pnpm --filter @textscene/core build && pnpm --filter @textscene/dev-kit build",
+    "type-check": "tsc --noEmit",
+    "type-check:tests": "tsc --noEmit"
+  },
+  "keywords": [
+    "godot",
+    "tscn",
+    "lsp",
+    "language-server",
+    "neovim",
+    "helix",
+    "zed"
+  ],
+  "author": "Vortiago",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Vortiago/textscene-inspector.git",
+    "directory": "apps/textscene-lsp"
+  },
+  "homepage": "https://github.com/Vortiago/textscene-inspector#readme",
+  "bugs": {
+    "url": "https://github.com/Vortiago/textscene-inspector/issues"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "vscode-languageserver": "catalog:",
+    "vscode-languageserver-textdocument": "catalog:"
+  },
+  "devDependencies": {
+    "@textscene/core": "workspace:*",
+    "@textscene/dev-kit": "workspace:*",
+    "@types/node": "catalog:",
+    "esbuild": "catalog:",
+    "rimraf": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
