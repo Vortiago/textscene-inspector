@@ -5,6 +5,9 @@ import { attachDiagnostics, checkDiagnostics, unexpectedWarnings } from './diagn
 const CLOCK_DEPRECATION = 'THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.';
 const REMOVED_TYPE_WARNING =
   'THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.';
+const GL_DRIVER_STALL =
+  '[.WebGL-0x9a40016ce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): ' +
+  'GPU stall due to ReadPixels';
 
 /** A Playwright page's `on`, with handlers the test drives. */
 function fakePage() {
@@ -39,6 +42,15 @@ describe('unexpectedWarnings', () => {
 
   it('reports a message that only contains an accepted prefix (edge case)', () => {
     expect(unexpectedWarnings([`prefix ${CLOCK_DEPRECATION}`])).toEqual([`prefix ${CLOCK_DEPRECATION}`]);
+  });
+
+  it('accepts the headless GL driver stall, whatever the context id', () => {
+    expect(unexpectedWarnings([GL_DRIVER_STALL.replace('0x9a40016ce00', '0x7f00abcd')])).toEqual([]);
+  });
+
+  it('reports a GL driver message that is not the known stall', () => {
+    const otherDriverMessage = GL_DRIVER_STALL.replace('GPU stall due to ReadPixels', 'unknown error');
+    expect(unexpectedWarnings([otherDriverMessage])).toEqual([otherDriverMessage]);
   });
 
   it('reports nothing for a page that logged no warning', () => {

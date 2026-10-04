@@ -4,17 +4,21 @@
  */
 
 /**
- * Warnings a healthy load logs, matched by prefix. Every other warning fails the scenario, so a
- * library that warns about a removed feature or a lost WebGL context stops the gate.
+ * Patterns for the warnings a healthy load logs. Every other warning fails the scenario, so a
+ * library that warns about a removed feature or a lost WebGL context stops the gate. A pattern,
+ * not a prefix, since the GL driver message carries a per-context id before its text.
  */
 const EXPECTED_WARNINGS = [
   // A dependency still constructs a THREE.Clock; the app cannot retire the class.
-  'THREE.Clock: This module has been deprecated.',
+  /^THREE\.Clock: This module has been deprecated\./,
+  // Headless Chrome's SwiftShader stalls on the read-back of a 3D scenario. The driver says
+  // this, not the app, and the function name after the severity varies with the driver.
+  /\]GL Driver Message \(OpenGL, Performance[^)]*\): GPU stall due to ReadPixels/,
 ];
 
 /** The console warnings that no entry in `EXPECTED_WARNINGS` accepts. */
 export function unexpectedWarnings(warnings) {
-  return warnings.filter((text) => !EXPECTED_WARNINGS.some((prefix) => text.startsWith(prefix)));
+  return warnings.filter((text) => !EXPECTED_WARNINGS.some((pattern) => pattern.test(text)));
 }
 
 /** Collects a page's console messages, uncaught errors and failed requests. */
