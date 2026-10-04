@@ -27,6 +27,11 @@
       "types": "./dist/godot/index.d.ts",
       "import": "./dist/godot/index.js"
     },
+    "./languageFeatures": {
+      "@textscene/source": "./src/languageFeatures/index.ts",
+      "types": "./dist/languageFeatures/index.d.ts",
+      "import": "./dist/languageFeatures/index.js"
+    },
     "./worker": {
       "@textscene/source": "./src/worker.ts",
       "types": "./dist/worker.d.ts",

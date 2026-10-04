@@ -1,0 +1,97 @@
+/**
+ * Godot's `Variant::Type` (`variant.h:96-145`), the numbers `node-properties.json` and
+ * `resource-properties.json` record in each row's `type`. The names are the engine's,
+ * so hover and the editor's value completion speak the vocabulary a `.tscn` reader knows.
+ */
+
+export const VARIANT_TYPE = {
+  NIL: 0,
+  BOOL: 1,
+  INT: 2,
+  FLOAT: 3,
+  STRING: 4,
+  VECTOR2: 5,
+  VECTOR2I: 6,
+  RECT2: 7,
+  RECT2I: 8,
+  VECTOR3: 9,
+  VECTOR3I: 10,
+  TRANSFORM2D: 11,
+  VECTOR4: 12,
+  VECTOR4I: 13,
+  PLANE: 14,
+  QUATERNION: 15,
+  AABB: 16,
+  BASIS: 17,
+  TRANSFORM3D: 18,
+  PROJECTION: 19,
+  COLOR: 20,
+  STRING_NAME: 21,
+  NODE_PATH: 22,
+  RID: 23,
+  OBJECT: 24,
+  CALLABLE: 25,
+  SIGNAL: 26,
+  DICTIONARY: 27,
+  ARRAY: 28,
+  PACKED_BYTE_ARRAY: 29,
+  PACKED_INT32_ARRAY: 30,
+  PACKED_INT64_ARRAY: 31,
+  PACKED_FLOAT32_ARRAY: 32,
+  PACKED_FLOAT64_ARRAY: 33,
+  PACKED_STRING_ARRAY: 34,
+  PACKED_VECTOR2_ARRAY: 35,
+  PACKED_VECTOR3_ARRAY: 36,
+  PACKED_COLOR_ARRAY: 37,
+  PACKED_VECTOR4_ARRAY: 38,
+} as const;
+
+const NAMES: Readonly<Record<number, string>> = Object.freeze({
+  0: 'Nil',
+  1: 'bool',
+  2: 'int',
+  3: 'float',
+  4: 'String',
+  5: 'Vector2',
+  6: 'Vector2i',
+  7: 'Rect2',
+  8: 'Rect2i',
+  9: 'Vector3',
+  10: 'Vector3i',
+  11: 'Transform2D',
+  12: 'Vector4',
+  13: 'Vector4i',
+  14: 'Plane',
+  15: 'Quaternion',
+  16: 'AABB',
+  17: 'Basis',
+  18: 'Transform3D',
+  19: 'Projection',
+  20: 'Color',
+  21: 'StringName',
+  22: 'NodePath',
+  23: 'RID',
+  24: 'Object',
+  25: 'Callable',
+  26: 'Signal',
+  27: 'Dictionary',
+  28: 'Array',
+  29: 'PackedByteArray',
+  30: 'PackedInt32Array',
+  31: 'PackedInt64Array',
+  32: 'PackedFloat32Array',
+  33: 'PackedFloat64Array',
+  34: 'PackedStringArray',
+  35: 'PackedVector2Array',
+  36: 'PackedVector3Array',
+  37: 'PackedColorArray',
+  38: 'PackedVector4Array',
+});
+
+/**
+ * The engine name of a `Variant::Type` number, or `undefined` for a number the union does
+ * not hold. A host shows the number itself there rather than inventing a name.
+ */
+export function variantTypeName(type: number): string | undefined {
+  return NAMES[type];
+}

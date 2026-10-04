@@ -172,6 +172,40 @@ export default [
     },
   },
 
+  // The language-feature engine runs in the VS Code extension host and the `tscn-lsp`
+  // server, both plain Node bundles, so it stays React- and THREE-free.
+  // `languageFeatures/reactFree.test.ts` checks the whole module graph.
+  {
+    files: ['packages/textscene-core/src/languageFeatures/**/*.ts'],
+    ignores: ['**/*.test.ts', '**/*.testkit.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                'three',
+                'three/*',
+                'react',
+                'react-dom',
+                '@react-three/*',
+                '*.tsx',
+                '**/*.tsx',
+                '**/Component',
+                '**/Component.js',
+                '**/index.r3f',
+                '**/index.r3f.js',
+              ],
+              message:
+                'The language-feature engine must stay React/THREE-free, so the extension host and the tscn-lsp server can import it.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   // Test files are exempt: a registry test spreads a shared group on purpose.
   {
     files: ['packages/textscene-core/src/**/*.{ts,tsx}'],
