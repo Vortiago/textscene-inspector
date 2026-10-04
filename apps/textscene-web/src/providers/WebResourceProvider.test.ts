@@ -104,43 +104,39 @@ describe('WebResourceProvider', () => {
       expect(global.fetch).toHaveBeenCalledWith('/fixtures/scenes/Door.tscn');
     });
 
-    // Error path: Fetch returns 404
-    it('should throw when fetch returns 404', async () => {
+    // Miss path: Fetch returns 404
+    it('answers null when the mirror answers 404', async () => {
       (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: false,
         status: 404,
         statusText: 'Not Found',
       } as Response);
 
-      await expect(provider.loadResource('res://missing.tscn', 'PackedScene')).rejects.toThrow(
-        'Resource not found: res://missing.tscn'
-      );
+      await expect(provider.loadResource('res://missing.tscn', 'PackedScene')).resolves.toBeNull();
     });
 
-    // Error path: Fetch returns 500
-    it('should throw when fetch returns 500', async () => {
+    // Miss path: Fetch returns 500
+    it('answers null when the mirror refuses the file', async () => {
       (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
       } as Response);
 
-      await expect(provider.loadResource('res://error.tscn', 'PackedScene')).rejects.toThrow(
-        'Resource not found'
-      );
+      await expect(provider.loadResource('res://error.tscn', 'PackedScene')).resolves.toBeNull();
     });
 
-    // Error path: Network error
-    it('should throw when fetch fails with network error', async () => {
+    // Failure path: Network error, which is not a miss
+    it('propagates a fetch that fails', async () => {
       (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Network error'));
 
       await expect(provider.loadResource('res://network-fail.tscn', 'PackedScene')).rejects.toThrow(
-        'Resource not found'
+        'Network error'
       );
     });
 
-    // Edge case: Fetch returns HTML fallback (SPA behavior for missing files)
-    it('should detect HTML fallback and throw error', async () => {
+    // Miss path: Fetch returns HTML fallback (SPA behavior for missing files)
+    it('treats the HTML fallback as a miss', async () => {
       const htmlError = '<html><body>404 Not Found</body></html>';
       (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: true,
@@ -150,9 +146,7 @@ describe('WebResourceProvider', () => {
         text: async () => htmlError,
       } as Response);
 
-      await expect(provider.loadResource('res://fake.tscn', 'PackedScene')).rejects.toThrow(
-        'Resource not found'
-      );
+      await expect(provider.loadResource('res://fake.tscn', 'PackedScene')).resolves.toBeNull();
     });
 
     // Integration: Uploaded files prioritized over fixture fetch
@@ -182,17 +176,13 @@ describe('WebResourceProvider', () => {
       await expect(provider.loadResource('res://door.tscn', 'PackedScene')).resolves.toBe('[gd_scene]');
     });
 
-    it('rejects a missing res:// path without a request', async () => {
-      await expect(provider.loadResource('res://door.tscn', 'PackedScene')).rejects.toThrow(
-        'Resource not found: res://door.tscn'
-      );
+    it('answers null for a missing res:// path without a request', async () => {
+      await expect(provider.loadResource('res://door.tscn', 'PackedScene')).resolves.toBeNull();
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
-    it('rejects a path without the res:// prefix', async () => {
-      await expect(provider.loadResource('door.tscn', 'PackedScene')).rejects.toThrow(
-        'Resource not found: door.tscn'
-      );
+    it('answers null for a path without the res:// prefix', async () => {
+      await expect(provider.loadResource('door.tscn', 'PackedScene')).resolves.toBeNull();
       expect(global.fetch).not.toHaveBeenCalled();
     });
   });
@@ -239,27 +229,25 @@ describe('WebResourceProvider', () => {
   });
 
   describe('error handling', () => {
-    // Error path: Resource not found anywhere
-    it('should throw when resource not in uploaded files and not in fixtures', async () => {
+    // Miss path: neither uploaded nor in the fixtures
+    it('answers null when the resource is neither uploaded nor in the fixtures', async () => {
       (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: false,
+        status: 404,
       } as Response);
 
-      await expect(provider.loadResource('res://nowhere.tscn', 'PackedScene')).rejects.toThrow(
-        'Resource not found'
-      );
+      await expect(provider.loadResource('res://nowhere.tscn', 'PackedScene')).resolves.toBeNull();
     });
 
-    // Error path: All resource types attempt fetch from fixtures
+    // Miss path: All resource types attempt fetch from fixtures
     it('should attempt fetch for all resource types from fixtures', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,
+        status: 404,
         statusText: 'Not Found',
       } as Response);
 
-      await expect(provider.loadResource('res://texture.png', 'Texture2D')).rejects.toThrow(
-        'Resource not found'
-      );
+      await expect(provider.loadResource('res://texture.png', 'Texture2D')).resolves.toBeNull();
 
       expect(global.fetch).toHaveBeenCalledWith('/fixtures/texture.png');
     });
@@ -299,7 +287,7 @@ describe('WebResourceProvider', () => {
       (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
         mirrorResponse('<html></html>', 'text/html')
       );
-      await expect(provider.loadResource('res://tree.glb', 'PackedScene')).rejects.toThrow();
+      await expect(provider.loadResource('res://tree.glb', 'PackedScene')).resolves.toBeNull();
 
       expect(await provider.stamp('res://tree.glb')).toBeNull();
     });
