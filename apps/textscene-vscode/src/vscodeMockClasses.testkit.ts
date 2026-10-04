@@ -313,6 +313,18 @@ export class MockLanguageModelTextPart {
   constructor(public value: string) {}
 }
 
+/** `vscode.LanguageModelDataPart`: a binary tool-result part, such as a PNG. */
+export class MockLanguageModelDataPart {
+  static image(data: Uint8Array, mimeType: string): MockLanguageModelDataPart {
+    return new MockLanguageModelDataPart(data, mimeType);
+  }
+
+  constructor(
+    public data: Uint8Array,
+    public mimeType: string
+  ) {}
+}
+
 /** `vscode.LanguageModelToolResult`: the parts a tool returns. */
 export class MockLanguageModelToolResult {
   constructor(public content: any[]) {}

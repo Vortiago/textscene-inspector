@@ -18,6 +18,8 @@ function makeHandlers() {
     jumpToNode: vi.fn(),
     loadResource: vi.fn(),
     log: vi.fn(),
+    previewCaptured: vi.fn(),
+    previewCaptureError: vi.fn(),
   };
 }
 
@@ -27,6 +29,8 @@ describe('dispatchWebviewMessage', () => {
     { type: 'jumpToNode', nodeName: 'Leaf', path: 'Root/Leaf', parent: '.' },
     { type: 'loadResource', path: 'res://tex.png', resourceType: 'Texture2D', requestId: 'r1' },
     { type: 'log', level: 'info', message: 'hello', args: [] },
+    { type: 'previewCaptured', requestId: 'c1', dataUrl: 'data:image/png;base64,AA==' },
+    { type: 'previewCaptureError', requestId: 'c2', error: 'not ready' },
   ];
 
   it.each(ROUTING_CASES)('routes a $type message to its handler only', (msg) => {
@@ -174,6 +178,40 @@ describe('TscnPreviewPanel — all message types through fake onDidReceiveMessag
       .find((m) => (m as { type: string }).type === 'resourceLoaded');
     expect(loaded).toBeDefined();
     expect((loaded as { requestId: string }).requestId).toBe('rq1');
+  });
+
+  it('capture: posts capturePreview and resolves with the webview image', async () => {
+    const { webview, triggerMessage } = setupMockPanel();
+    const panel = await makeReadyPanel(triggerMessage);
+
+    const captured = panel.capture();
+    await new Promise<void>((r) => setTimeout(r, 0));
+    const request = webview.postMessage.mock.calls
+      .map((c) => c[0])
+      .find((m) => (m as { type: string }).type === 'capturePreview') as { requestId: string };
+    expect(request).toBeDefined();
+
+    triggerMessage({
+      type: 'previewCaptured',
+      requestId: request.requestId,
+      dataUrl: 'data:image/png;base64,AA==',
+    });
+
+    await expect(captured).resolves.toBe('data:image/png;base64,AA==');
+  });
+
+  it('capture: resolves null when the webview reports an error', async () => {
+    const { webview, triggerMessage } = setupMockPanel();
+    const panel = await makeReadyPanel(triggerMessage);
+
+    const captured = panel.capture();
+    await new Promise<void>((r) => setTimeout(r, 0));
+    const request = webview.postMessage.mock.calls
+      .map((c) => c[0])
+      .find((m) => (m as { type: string }).type === 'capturePreview') as { requestId: string };
+    triggerMessage({ type: 'previewCaptureError', requestId: request.requestId, error: 'not ready' });
+
+    await expect(captured).resolves.toBeNull();
   });
 
   it('log: does not throw even when no output channel is initialised', async () => {

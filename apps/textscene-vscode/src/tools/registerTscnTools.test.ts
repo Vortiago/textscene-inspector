@@ -1,20 +1,30 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as vscode from 'vscode';
+import type { TscnToolHost } from './registerTscnTools';
 import { registerTscnTools, TOOL_IDS } from './registerTscnTools';
-import { createMockFileData, createMockUri, vscode as vscodeMocks } from '../test-setup';
+import {
+  createMockFileData,
+  createMockUri,
+  MockLanguageModelDataPart,
+  vscode as vscodeMocks,
+} from '../test-setup';
 
 function context(): vscode.ExtensionContext {
   return { subscriptions: [] } as unknown as vscode.ExtensionContext;
 }
 
+/** A host whose capture answers null unless a case overrides it. */
+function host(overrides: Partial<TscnToolHost> = {}): TscnToolHost {
+  return {
+    openPreview: vi.fn(),
+    capturePreview: vi.fn().mockResolvedValue(null),
+    ...overrides,
+  };
+}
+
 const TOKEN = {} as vscode.CancellationToken;
 
-function registeredTool(id: string): {
-  invoke: (
-    options: { input: unknown },
-    token: vscode.CancellationToken
-  ) => Promise<{ content: Array<{ value: string }> }>;
-} {
+function registeredTool(id: string): any {
   return vscodeMocks.lm.registerTool.mock.calls.find((call: unknown[]) => call[0] === id)![1];
 }
 
@@ -27,28 +37,40 @@ describe('registerTscnTools', () => {
     });
   });
 
-  it('registers the four tools when the API is present', () => {
+  it('registers the five tools when the API is present', () => {
     const ctx = context();
-    registerTscnTools(ctx, { openPreview: vi.fn() });
+    registerTscnTools(ctx, host());
     expect(vscodeMocks.lm.registerTool.mock.calls.map((call: unknown[]) => call[0])).toEqual([
       TOOL_IDS.lint,
       TOOL_IDS.sceneTree,
       TOOL_IDS.openPreview,
       TOOL_IDS.missingResources,
+      TOOL_IDS.capture,
     ]);
-    expect(ctx.subscriptions).toHaveLength(4);
+    expect(ctx.subscriptions).toHaveLength(5);
+  });
+
+  it('registers no capture tool on a VS Code without the image part', () => {
+    // The module mock and this export share the one class, so its static method is the
+    // same object `registerTscnTools` sees.
+    const image = MockLanguageModelDataPart.image;
+    (MockLanguageModelDataPart as { image?: unknown }).image = undefined;
+    registerTscnTools(context(), host());
+    const ids = vscodeMocks.lm.registerTool.mock.calls.map((call: unknown[]) => call[0]);
+    expect(ids).not.toContain(TOOL_IDS.capture);
+    (MockLanguageModelDataPart as { image?: unknown }).image = image;
   });
 
   it('registers nothing when the user turned the tools off', () => {
     vscodeMocks.workspace.getConfiguration.mockReturnValue({ get: () => false });
-    registerTscnTools(context(), { openPreview: vi.fn() });
+    registerTscnTools(context(), host());
     expect(vscodeMocks.lm.registerTool).not.toHaveBeenCalled();
   });
 
   it('registers nothing on a VS Code without the API', () => {
     const original = vscodeMocks.lm.registerTool;
     vscodeMocks.lm.registerTool = undefined;
-    registerTscnTools(context(), { openPreview: vi.fn() });
+    registerTscnTools(context(), host());
     expect(original).not.toHaveBeenCalled();
     vscodeMocks.lm.registerTool = original;
   });
@@ -58,7 +80,7 @@ describe('registerTscnTools', () => {
     vscodeMocks.workspace.fs.readFile.mockResolvedValue(
       createMockFileData('[node name="Root" type="Node3D"]')
     );
-    registerTscnTools(context(), { openPreview: vi.fn() });
+    registerTscnTools(context(), host());
     const result = await registeredTool(TOOL_IDS.sceneTree).invoke(
       { input: { path: 'scenes/Main.tscn' } },
       TOKEN
@@ -71,7 +93,7 @@ describe('registerTscnTools', () => {
     vscodeMocks.workspace.fs.readFile.mockResolvedValue(
       createMockFileData('[node name="Root" type="Node3D"]')
     );
-    registerTscnTools(context(), { openPreview: vi.fn() });
+    registerTscnTools(context(), host());
     const result = await registeredTool(TOOL_IDS.lint).invoke({ input: { path: 'scenes/Main.tscn' } }, TOKEN);
     expect(result.content[0]!.value).toContain('no findings');
   });
@@ -81,7 +103,7 @@ describe('registerTscnTools', () => {
     vscodeMocks.workspace.fs.readFile.mockResolvedValue(
       createMockFileData('[ext_resource type="PackedScene" path="res://door.tscn" id="1"]')
     );
-    registerTscnTools(context(), { openPreview: vi.fn() });
+    registerTscnTools(context(), host());
     const result = await registeredTool(TOOL_IDS.missingResources).invoke(
       { input: { path: 'scenes/Main.tscn' } },
       TOKEN
@@ -89,9 +111,33 @@ describe('registerTscnTools', () => {
     expect(result.content[0]!.value).toContain('every referenced resource is present');
   });
 
+  it('the capture tool returns the PNG as an image part', async () => {
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+    const capturePreview = vi.fn().mockResolvedValue(`data:image/png;base64,${png.toString('base64')}`);
+    registerTscnTools(context(), host({ capturePreview }));
+    const result = await registeredTool(TOOL_IDS.capture).invoke(
+      { input: { path: 'scenes/Main.tscn' } },
+      TOKEN
+    );
+
+    expect(capturePreview).toHaveBeenCalled();
+    const image = result.content[1] as { mimeType: string; data: Uint8Array };
+    expect(image.mimeType).toBe('image/png');
+    expect([...image.data]).toEqual([...png]);
+  });
+
+  it('the capture tool says so when the preview answers no image', async () => {
+    registerTscnTools(context(), host({ capturePreview: vi.fn().mockResolvedValue(null) }));
+    const result = await registeredTool(TOOL_IDS.capture).invoke(
+      { input: { path: 'scenes/Main.tscn' } },
+      TOKEN
+    );
+    expect(result.content[0]!.value).toContain('did not return an image');
+  });
+
   it('rejects a path that is not a .tscn scene', async () => {
     vscodeMocks.workspace.workspaceFolders = [{ uri: createMockUri('/game') }];
-    registerTscnTools(context(), { openPreview: vi.fn() });
+    registerTscnTools(context(), host());
     await expect(
       registeredTool(TOOL_IDS.lint).invoke({ input: { path: 'notes.txt' } }, TOKEN)
     ).rejects.toThrow('Expected a .tscn scene');

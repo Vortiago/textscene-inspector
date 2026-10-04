@@ -103,7 +103,10 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   // Tools a coding agent in chat may call, so it can check a scene it edited.
-  registerTscnTools(context, { openPreview: (uri) => void getOrCreatePanel(uri) });
+  registerTscnTools(context, {
+    openPreview: (uri) => void getOrCreatePanel(uri),
+    capturePreview: (uri) => getOrCreatePanel(uri).capture(),
+  });
 
   // External changes to every file a scene can load, and to the project file. Each watcher
   // serves the previews and the linter diagnostics in the Problems panel.

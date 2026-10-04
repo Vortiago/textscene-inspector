@@ -17,6 +17,9 @@ import { encodeResourceResponse } from './wireCodec';
 export { dispatchWebviewMessage } from './webviewDispatch';
 export type { WebviewMessageHandlers } from './webviewDispatch';
 
+/** How long a capture waits for the webview before answering null. */
+const CAPTURE_TIMEOUT_MS = 10000;
+
 export class TscnPreviewPanel {
   public static readonly viewType = 'tscnPreview';
 
@@ -51,6 +54,12 @@ export class TscnPreviewPanel {
    * `handleDependencyChange` when a `project.godot` change moves the project root.
    */
   private _resourceProvider: VSCodeResourceProvider | null = null;
+
+  /** Resolved when the webview-ready handshake arrives, so a capture does not post early. */
+  private _readyWaiters: Array<() => void> = [];
+  /** Each pending capture's request id, answered by the webview or a timeout. */
+  private readonly _captures = new Map<string, (dataUrl: string | null) => void>();
+  private _captureSeq = 0;
 
   public static create(extensionUri: vscode.Uri, resource: vscode.Uri): TscnPreviewPanel {
     const column = vscode.window.activeTextEditor
@@ -90,6 +99,7 @@ export class TscnPreviewPanel {
     const handlers: WebviewMessageHandlers = {
       webviewReady: (_msg) => {
         this._webviewReady = true;
+        for (const resolve of this._readyWaiters.splice(0)) resolve();
         // Every remount, such as a move to another editor group, posts ready with
         // an empty tree. Replay always, so a ready webview holds the current text:
         // the `_previousContent` diff swallows a later re-read, which leaves the
@@ -106,6 +116,12 @@ export class TscnPreviewPanel {
       },
       log: (msg) => {
         relayWebviewLog(msg.level, msg.message, msg.args);
+      },
+      previewCaptured: (msg) => {
+        this._resolveCapture(msg.requestId, msg.dataUrl);
+      },
+      previewCaptureError: (msg) => {
+        this._resolveCapture(msg.requestId, null);
       },
     };
 
@@ -125,6 +141,9 @@ export class TscnPreviewPanel {
     // disposed`. `_handleLoadResource`'s catch re-posts and throws out of its
     // `void`ed call as an unhandled rejection.
     this._disposed = true;
+    for (const resolve of this._captures.values()) resolve(null);
+    this._captures.clear();
+    for (const resolve of this._readyWaiters.splice(0)) resolve();
     this._onDidDispose.fire();
 
     this._panel.dispose();
@@ -153,6 +172,42 @@ export class TscnPreviewPanel {
     this._currentResource = resource;
     this._panel.title = `Preview: ${resource.fsPath.split(/[\\/]/).pop()}`;
     this._loadTscnContent(resource);
+  }
+
+  /**
+   * Captures the viewport as a `data:image/png;base64,…` URL, or null when the preview
+   * cannot answer within {@link CAPTURE_TIMEOUT_MS}. It waits for the webview-ready
+   * handshake, since a post sent before the listener installs is dropped.
+   */
+  public capture(): Promise<string | null> {
+    if (this._disposed) return Promise.resolve(null);
+    return this._whenReady().then(
+      () =>
+        new Promise<string | null>((resolve) => {
+          const requestId = `capture-${++this._captureSeq}`;
+          const timer = setTimeout(() => {
+            if (this._captures.delete(requestId)) resolve(null);
+          }, CAPTURE_TIMEOUT_MS);
+          this._captures.set(requestId, (dataUrl) => {
+            clearTimeout(timer);
+            resolve(dataUrl);
+          });
+          this._postMessageToWebview({ type: 'capturePreview', requestId });
+        })
+    );
+  }
+
+  private _whenReady(): Promise<void> {
+    if (this._webviewReady) return Promise.resolve();
+    return new Promise((resolve) => this._readyWaiters.push(resolve));
+  }
+
+  private _resolveCapture(requestId: string, dataUrl: string | null): void {
+    const resolve = this._captures.get(requestId);
+    if (resolve) {
+      this._captures.delete(requestId);
+      resolve(dataUrl);
+    }
   }
 
   /** Lazily creates this panel's `VSCodeResourceProvider`, then reuses it. */

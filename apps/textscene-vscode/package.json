@@ -200,6 +200,32 @@
             "path"
           ]
         }
+      },
+      {
+        "name": "textscene_capture",
+        "displayName": "Capture the Godot .tscn preview",
+        "toolReferenceName": "captureTscnPreview",
+        "modelDescription": "Render a Godot .tscn scene's preview and return it as a PNG image, so you can look at what a change produced. Needs VS Code 1.106 or later.",
+        "tags": [
+          "godot",
+          "tscn",
+          "preview",
+          "screenshot"
+        ],
+        "canBeReferencedInPrompt": true,
+        "icon": "$(device-camera)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "The .tscn file: a workspace-relative path, or an absolute one."
+            }
+          },
+          "required": [
+            "path"
+          ]
+        }
       }
     ],
     "configuration": {

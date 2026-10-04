@@ -38,8 +38,18 @@ export type ResourceChangedMessage = {
   path: string;
 };
 
+/** Ask the webview to capture the viewport as a PNG data URL, for a save or a tool. */
+export type CapturePreviewMessage = {
+  type: 'capturePreview';
+  requestId: string;
+};
+
 export type HostToWebviewMessage =
-  LoadTscnMessage | ResourceLoadedMessage | ResourceLoadErrorMessage | ResourceChangedMessage;
+  | LoadTscnMessage
+  | ResourceLoadedMessage
+  | ResourceLoadErrorMessage
+  | ResourceChangedMessage
+  | CapturePreviewMessage;
 
 /**
  * Anything can post to a webview, so a listener narrows before it reads: a
@@ -94,7 +104,27 @@ export type LogMessage = {
   args: unknown[];
 };
 
-export type WebviewToHostMessage = WebviewReadyMessage | JumpToNodeMessage | LoadResourceMessage | LogMessage;
+/** The answer to a `capturePreview`: a `data:image/png;base64,…` URL. */
+export type PreviewCapturedMessage = {
+  type: 'previewCaptured';
+  requestId: string;
+  dataUrl: string;
+};
+
+/** A `capturePreview` the webview could not answer, such as one before the canvas mounted. */
+export type PreviewCaptureErrorMessage = {
+  type: 'previewCaptureError';
+  requestId: string;
+  error: string;
+};
+
+export type WebviewToHostMessage =
+  | WebviewReadyMessage
+  | JumpToNodeMessage
+  | LoadResourceMessage
+  | LogMessage
+  | PreviewCapturedMessage
+  | PreviewCaptureErrorMessage;
 
 /**
  * The host listener's guard, since a webview can post anything. Like

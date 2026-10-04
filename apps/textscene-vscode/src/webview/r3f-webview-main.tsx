@@ -3,7 +3,7 @@
  * and posts `jumpToNode` when the user double-clicks a scene-tree node. Each panel
  * has its own webview and `<TscnPreviewShell>`, so panels share no state.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   createResourcePipeline,
@@ -57,6 +57,12 @@ class WebviewLogAdapter implements LogAdapter {
 function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
   const [content, setContent] = useState<string>('');
 
+  // Set by `<ScreenshotRequestBridge>` inside the shell; read by a `capturePreview`.
+  const captureRef = useRef<(() => string | null) | null>(null);
+  const handleScreenshotReady = useCallback((capture: () => string | null) => {
+    captureRef.current = capture;
+  }, []);
+
   // The host answers the provider's `loadResource` posts with the file bytes.
   // FileEventBus and ResourceLoader sit between it and `useResource`. Procedural
   // textures build in the blob-URL job worker (ADR-0042).
@@ -78,7 +84,33 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
         // A dependency (texture, .tres, sub-scene, sidecar, project.godot) changed on
         // disk. Its consumers load it again, with no remount.
         loader.provideFile(message.path);
+      } else if (message.type === 'capturePreview') {
+        captureWhenReady(message.requestId);
       }
+    }
+
+    // Render and read back once the canvas has a screenshot handler, as the toolbar's
+    // Screenshot does: the WebGL buffer survives only the task, before the browser
+    // composites. The handler appears a frame or two after mount, so wait for it.
+    function captureWhenReady(requestId: string): void {
+      const deadline = performance.now() + 4000;
+      const attempt = (): void => {
+        const dataUrl = captureRef.current?.() ?? null;
+        if (dataUrl !== null) {
+          vscode.postMessage({ type: 'previewCaptured', requestId, dataUrl } satisfies WebviewToHostMessage);
+          return;
+        }
+        if (performance.now() < deadline) {
+          requestAnimationFrame(attempt);
+          return;
+        }
+        vscode.postMessage({
+          type: 'previewCaptureError',
+          requestId,
+          error: 'The preview canvas is not ready.',
+        } satisfies WebviewToHostMessage);
+      };
+      attempt();
     }
 
     window.addEventListener('message', onMessage);
@@ -111,6 +143,7 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
         content={content}
         onNodeReveal={handleNodeReveal}
         initialViewportMode={INITIAL_VIEWPORT_MODE}
+        onScreenshotReady={handleScreenshotReady}
       />
     </ResourceLoaderProvider>
   );

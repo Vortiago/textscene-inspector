@@ -42,4 +42,10 @@ export interface TscnPreviewShellProps {
    * previewer's `?camera=` parameter. Without it the view opens in free orbit.
    */
   initialActiveCameraPath?: string | null;
+  /**
+   * Fired with a function that captures the current viewport as a PNG data URL, and
+   * again with a function that returns `null` when the canvas unmounts. The host saves
+   * the image, or hands it to an agent tool.
+   */
+  onScreenshotReady?: (capture: () => string | null) => void;
 }

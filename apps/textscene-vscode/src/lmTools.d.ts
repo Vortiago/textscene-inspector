@@ -42,8 +42,20 @@ declare module 'vscode' {
     constructor(value: string);
   }
 
+  /**
+   * A binary part of a tool result, such as a PNG the agent can look at. `image` builds
+   * the one this extension returns; it is stable from VS Code 1.106, so a tool that
+   * returns one guards on {@link LanguageModelDataPart}'s presence.
+   */
+  export class LanguageModelDataPart {
+    static image(data: Uint8Array, mime: string): LanguageModelDataPart;
+    mimeType: string;
+    data: Uint8Array;
+    constructor(data: Uint8Array, mimeType: string);
+  }
+
   export class LanguageModelToolResult {
-    content: Array<LanguageModelTextPart | unknown>;
-    constructor(content: Array<LanguageModelTextPart>);
+    content: Array<LanguageModelTextPart | LanguageModelDataPart | unknown>;
+    constructor(content: Array<LanguageModelTextPart | LanguageModelDataPart>);
   }
 }

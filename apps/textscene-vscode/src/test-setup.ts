@@ -33,6 +33,7 @@ import {
   MockFoldingRange,
   MockFoldingRangeKind,
   MockHover,
+  MockLanguageModelDataPart,
   MockLanguageModelTextPart,
   MockLanguageModelToolResult,
   MockLocation,
@@ -66,6 +67,7 @@ export {
   MockFoldingRange,
   MockFoldingRangeKind,
   MockHover,
+  MockLanguageModelDataPart,
   MockLanguageModelTextPart,
   MockLanguageModelToolResult,
   MockLocation,
@@ -106,6 +108,7 @@ vi.mock('vscode', () => ({
   DocumentHighlightKind: MockDocumentHighlightKind,
   LanguageModelTextPart: MockLanguageModelTextPart,
   LanguageModelToolResult: MockLanguageModelToolResult,
+  LanguageModelDataPart: MockLanguageModelDataPart,
 
   DiagnosticSeverity: MockDiagnosticSeverity,
   TabInputText: MockTabInputText,
@@ -153,6 +156,7 @@ export const vscode: {
   DocumentHighlightKind: typeof MockDocumentHighlightKind;
   LanguageModelTextPart: typeof MockLanguageModelTextPart;
   LanguageModelToolResult: typeof MockLanguageModelToolResult;
+  LanguageModelDataPart: typeof MockLanguageModelDataPart;
   DiagnosticSeverity: typeof MockDiagnosticSeverity;
   ViewColumn: { One: number; Two: number; Three: number; Active: number; Beside: number };
   TextEditorRevealType: {
@@ -191,6 +195,7 @@ export const vscode: {
   DocumentHighlightKind: MockDocumentHighlightKind,
   LanguageModelTextPart: MockLanguageModelTextPart,
   LanguageModelToolResult: MockLanguageModelToolResult,
+  LanguageModelDataPart: MockLanguageModelDataPart,
   DiagnosticSeverity: MockDiagnosticSeverity,
   ViewColumn: MockViewColumn,
   TextEditorRevealType: MockTextEditorRevealType,
