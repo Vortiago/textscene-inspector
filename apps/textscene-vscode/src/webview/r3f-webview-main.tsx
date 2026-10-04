@@ -14,6 +14,7 @@ import {
 } from '@textscene/core';
 import type { TscnNode } from '@textscene/core';
 import { isHostToWebviewMessage, type WebviewToHostMessage } from '../protocol';
+import { captureWhenReady } from './captureWhenReady';
 import { WebviewResourceProvider } from './WebviewResourceProvider';
 import { textureWorkerFactory } from './createTextureWorker';
 import { readInitialConfig, resolveInitialViewportMode } from './initialConfig';
@@ -85,32 +86,25 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
         // disk. Its consumers load it again, with no remount.
         loader.provideFile(message.path);
       } else if (message.type === 'capturePreview') {
-        captureWhenReady(message.requestId);
+        const { requestId } = message;
+        captureWhenReady({
+          capture: () => captureRef.current,
+          post: (dataUrl) =>
+            vscode.postMessage({
+              type: 'previewCaptured',
+              requestId,
+              dataUrl,
+            } satisfies WebviewToHostMessage),
+          fail: () =>
+            vscode.postMessage({
+              type: 'previewCaptureError',
+              requestId,
+              error: 'The preview canvas is not ready.',
+            } satisfies WebviewToHostMessage),
+          now: () => performance.now(),
+          schedule: (run) => setTimeout(run, 50),
+        });
       }
-    }
-
-    // Render and read back once the canvas has a screenshot handler, as the toolbar's
-    // Screenshot does: the WebGL buffer survives only the task, before the browser
-    // composites. The handler appears a frame or two after mount, so wait for it.
-    function captureWhenReady(requestId: string): void {
-      const deadline = performance.now() + 4000;
-      const attempt = (): void => {
-        const dataUrl = captureRef.current?.() ?? null;
-        if (dataUrl !== null) {
-          vscode.postMessage({ type: 'previewCaptured', requestId, dataUrl } satisfies WebviewToHostMessage);
-          return;
-        }
-        if (performance.now() < deadline) {
-          requestAnimationFrame(attempt);
-          return;
-        }
-        vscode.postMessage({
-          type: 'previewCaptureError',
-          requestId,
-          error: 'The preview canvas is not ready.',
-        } satisfies WebviewToHostMessage);
-      };
-      attempt();
     }
 
     window.addEventListener('message', onMessage);
