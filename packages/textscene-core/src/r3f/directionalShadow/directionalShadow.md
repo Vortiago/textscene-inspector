@@ -228,8 +228,8 @@ binding (`light_storage.cpp:2572-2621`, `scene_forward_clustered_inc.glsl:374`).
 - A shadow lets go of the atlas when its sun is removed. The last holder frees the atlas's GPU
   memory, and three builds it again at the next shadow pass that draws into it.
 - The atlas holds three's PCF map: a 24-bit depth texture that compares less-or-equal
-  with linear filtering (`WebGLShadowMap.js:253-266`). `TscnCanvas` asks for soft shadows, which
-  three r186 draws as PCF (`:99-102`), and it never reverses the depth buffer.
+  with linear filtering (`WebGLShadowMap.js:253-266`). `TscnCanvas` asks for that type with
+  `shadows="percentage"`, and it never reverses the depth buffer.
 - `splitShadow.test.ts` reads three's shadow pass and `setRenderTarget`, and fails on a release
   that changes what the atlas relies on.
 
