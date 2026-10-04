@@ -83,4 +83,31 @@ suite('Installed package', () => {
       () => `expected a preview of ${CLEAN_SCENE}, found the tabs ${JSON.stringify(previewTabLabels())}`
     );
   });
+
+  test('the packaged extension contributes and registers the agent tools', async () => {
+    await openSceneAndActivate(CLEAN_SCENE);
+
+    const contributes = extensionUnderTest().packageJSON.contributes as
+      { languageModelTools?: Array<{ name: string }> } | undefined;
+    const contributed = (contributes?.languageModelTools ?? []).map((tool) => tool.name);
+    const expected = [
+      'textscene_lint',
+      'textscene_scene_tree',
+      'textscene_open_preview',
+      'textscene_missing_resources',
+      'textscene_capture',
+    ];
+
+    for (const name of expected) {
+      assert.ok(contributed.includes(name), `${name} is contributed`);
+    }
+
+    // The tools API is newer than the extension's engines floor; below it, none registers.
+    if (vscode.lm?.tools) {
+      const registered = vscode.lm.tools.map((tool) => tool.name);
+      for (const name of expected) {
+        assert.ok(registered.includes(name), `${name} is registered`);
+      }
+    }
+  });
 });

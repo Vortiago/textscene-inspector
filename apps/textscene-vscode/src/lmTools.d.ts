@@ -12,6 +12,20 @@ declare module 'vscode' {
      * extension's `languageModelTools` contribution.
      */
     export function registerTool<T>(name: string, tool: LanguageModelTool<T>): Disposable;
+
+    /** Every tool registered by every extension, so a host can list them. */
+    export const tools: readonly LanguageModelToolInformation[];
+
+    /** Invokes a registered tool, as an integration test does to prove one end to end. */
+    export function invokeTool<T>(
+      name: string,
+      options: LanguageModelToolInvocationOptions<T>,
+      token?: CancellationToken
+    ): Thenable<LanguageModelToolResult>;
+  }
+
+  export interface LanguageModelToolInformation {
+    readonly name: string;
   }
 
   export interface LanguageModelToolInvocationOptions<T> {
