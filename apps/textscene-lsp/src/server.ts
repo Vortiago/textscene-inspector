@@ -80,7 +80,10 @@ function filePathOf(uri: string): string | null {
 }
 
 function workspaceRootOf(params: InitializeParams): string | null {
-  const uri = params.rootUri ?? params.workspaceFolders?.[0]?.uri ?? null;
+  const uri =
+    params.rootUri ??
+    params.workspaceFolders?.[0]?.uri ??
+    (params.rootPath ? pathToFileURL(params.rootPath).toString() : null);
   return uri === null ? null : filePathOf(uri);
 }
 
@@ -227,10 +230,16 @@ connection.onDocumentLinks(async (params): Promise<DocumentLink[]> => {
   const found = modelOf(params.textDocument.uri);
   if (!found) return [];
   const root = await rootForUri(params.textDocument.uri);
-  return resourceLinks(found.model).map(({ path, range }) => {
+  const links: DocumentLink[] = [];
+  for (const { path, range } of resourceLinks(found.model)) {
     const file = root === null ? null : projectFileOf(root, path);
-    return file === null ? { range } : { range, target: pathToFileURL(file).toString() };
-  });
+    links.push(
+      file !== null && (await fileExists(file))
+        ? { range, target: pathToFileURL(file).toString() }
+        : { range }
+    );
+  }
+  return links;
 });
 
 documents.onDidChangeContent((event) => {

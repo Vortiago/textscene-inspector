@@ -9,12 +9,12 @@ import type { Dirent } from 'node:fs';
 import { access, readFile, readdir, realpath, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { ResourceProvider } from '@textscene/core/linter';
+import { SCAN_STOP_FILES, isScannedDirectoryName } from '@textscene/core/godot';
 import { listScannedFiles, type DirectoryEntry } from '@textscene/core/resources/projectListing';
 import { findProjectRoot, parentDir, projectFileIn, resolveResPath } from '@textscene/core/resources/resPath';
 import { resourceContent } from '@textscene/core/resources/resourceProviderUtils';
 
 const ROOT = 'res://';
-const GODOT_DATA_DIRECTORY = '.godot';
 
 async function probeProjectFile(dir: string): Promise<boolean> {
   try {
@@ -170,10 +170,25 @@ async function isFileEntry(fullPath: string, entry: Dirent): Promise<boolean> {
   }
 }
 
+/** Whether `dir` holds a file the scan stops at: another project, or a `.gdignore`. */
+async function holdsScanStopFile(dir: string): Promise<boolean> {
+  for (const name of SCAN_STOP_FILES) {
+    try {
+      await access(resolve(dir, name));
+      return true;
+    } catch {
+      // Absent, so it does not stop the scan.
+    }
+  }
+  return false;
+}
+
 /**
- * Every file under `root` as a `res://` path, sorted, for path completion. It skips the `.godot`
- * data directory, which Godot generates and no scene references. A symlinked directory is not
- * followed, so a link up the tree ends the walk.
+ * Every file under `root` as a `res://` path, sorted, for path completion. It follows the
+ * editor's own scan rules (`godot/editorScan.ts`): a dot-named directory and a directory
+ * holding `project.godot` or `.gdignore` are not entered, so no `.godot` cache or nested
+ * project is offered. A symlinked directory is not followed, so a link up the tree ends
+ * the walk.
  */
 async function collectResPaths(root: string): Promise<readonly string[]> {
   const found: string[] = [];
@@ -185,9 +200,10 @@ async function collectResPaths(root: string): Promise<readonly string[]> {
       return;
     }
     for (const entry of entries) {
-      if (entry.name === GODOT_DATA_DIRECTORY) continue;
       const fullPath = resolve(dir, entry.name);
       if (entry.isDirectory()) {
+        if (!isScannedDirectoryName(entry.name)) continue;
+        if (await holdsScanStopFile(fullPath)) continue;
         await walk(fullPath);
       } else if (await isFileEntry(fullPath, entry)) {
         found.push(resPathOf(root, fullPath));

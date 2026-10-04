@@ -9,6 +9,15 @@ function context(): vscode.ExtensionContext {
 
 const TOKEN = {} as vscode.CancellationToken;
 
+function registeredTool(id: string): {
+  invoke: (
+    options: { input: unknown },
+    token: vscode.CancellationToken
+  ) => Promise<{ content: Array<{ value: string }> }>;
+} {
+  return vscodeMocks.lm.registerTool.mock.calls.find((call: unknown[]) => call[0] === id)![1];
+}
+
 describe('registerTscnTools', () => {
   beforeEach(() => {
     // `clearAllMocks` clears calls, not implementations, so a case that turns the
@@ -49,12 +58,42 @@ describe('registerTscnTools', () => {
     vscodeMocks.workspace.fs.readFile.mockResolvedValue(
       createMockFileData('[node name="Root" type="Node3D"]')
     );
-    const ctx = context();
-    registerTscnTools(ctx, { openPreview: vi.fn() });
-    const tool = vscodeMocks.lm.registerTool.mock.calls.find(
-      (call: unknown[]) => call[0] === TOOL_IDS.sceneTree
-    )![1];
-    const result = await tool.invoke({ input: { path: 'scenes/Main.tscn' } }, TOKEN);
-    expect(result.content[0].value).toContain('Root (Node3D)');
+    registerTscnTools(context(), { openPreview: vi.fn() });
+    const result = await registeredTool(TOOL_IDS.sceneTree).invoke(
+      { input: { path: 'scenes/Main.tscn' } },
+      TOKEN
+    );
+    expect(result.content[0]!.value).toContain('Root (Node3D)');
+  });
+
+  it('the lint tool reports a clean scene with no project', async () => {
+    vscodeMocks.workspace.workspaceFolders = [{ uri: createMockUri('/game') }];
+    vscodeMocks.workspace.fs.readFile.mockResolvedValue(
+      createMockFileData('[node name="Root" type="Node3D"]')
+    );
+    registerTscnTools(context(), { openPreview: vi.fn() });
+    const result = await registeredTool(TOOL_IDS.lint).invoke({ input: { path: 'scenes/Main.tscn' } }, TOKEN);
+    expect(result.content[0]!.value).toContain('no findings');
+  });
+
+  it('the missing-resources tool reports a scene outside a project', async () => {
+    vscodeMocks.workspace.workspaceFolders = [{ uri: createMockUri('/game') }];
+    vscodeMocks.workspace.fs.readFile.mockResolvedValue(
+      createMockFileData('[ext_resource type="PackedScene" path="res://door.tscn" id="1"]')
+    );
+    registerTscnTools(context(), { openPreview: vi.fn() });
+    const result = await registeredTool(TOOL_IDS.missingResources).invoke(
+      { input: { path: 'scenes/Main.tscn' } },
+      TOKEN
+    );
+    expect(result.content[0]!.value).toContain('every referenced resource is present');
+  });
+
+  it('rejects a path that is not a .tscn scene', async () => {
+    vscodeMocks.workspace.workspaceFolders = [{ uri: createMockUri('/game') }];
+    registerTscnTools(context(), { openPreview: vi.fn() });
+    await expect(
+      registeredTool(TOOL_IDS.lint).invoke({ input: { path: 'notes.txt' } }, TOKEN)
+    ).rejects.toThrow('Expected a .tscn scene');
   });
 });

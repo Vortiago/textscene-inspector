@@ -25,9 +25,13 @@ beforeAll(() => {
   mkdirSync(join(projectDir, 'scenes', 'deep'), { recursive: true });
   mkdirSync(join(projectDir, 'models'));
   mkdirSync(join(projectDir, '.godot', 'imported'), { recursive: true });
+  // A nested project: the editor's scan does not enter it, and neither does the listing.
+  mkdirSync(join(projectDir, 'vendor', 'other'), { recursive: true });
   writeFileSync(join(projectDir, 'project.godot'), 'config_version=5\n');
   writeFileSync(join(projectDir, 'models', 'tree.glb'), new Uint8Array([0x67, 0x6c, 0x54, 0x46]));
   writeFileSync(join(projectDir, 'scenes', 'level.tscn'), '[gd_scene format=3]\n');
+  writeFileSync(join(projectDir, 'vendor', 'other', 'project.godot'), 'config_version=5\n');
+  writeFileSync(join(projectDir, 'vendor', 'other', 'nested.tscn'), '[gd_scene format=3]\n');
   writeFileSync(join(projectDir, '.godot', 'imported', 'cache.ctex'), 'generated');
   writeFileSync(join(tempDir, 'secret.txt'), 'outside the project');
   scenePath = join(projectDir, 'scenes', 'deep', 'level.tscn');
@@ -50,6 +54,8 @@ describe('projectRootForFile', () => {
   it('walks from the file its own directory, not from a sibling', async () => {
     writeFileSync(join(projectDir, 'scenes', 'project.godot'), 'config_version=5\n');
     expect(await projectRootForDir(join(projectDir, 'scenes'))).toBe(projectDir.replace(/\\/g, '/'));
+    // Remove the nested marker, so the listing tests see the project as authored.
+    rmSync(join(projectDir, 'scenes', 'project.godot'));
   });
 });
 
@@ -104,6 +110,8 @@ describe('listResPaths', () => {
     expect(paths).toContain('res://models/tree.glb');
     expect(paths).toContain('res://scenes/level.tscn');
     expect(paths.some((path) => path.startsWith('res://.godot/'))).toBe(false);
+    // A nested project and its files are not entered, as the editor's scan does.
+    expect(paths.some((path) => path.startsWith('res://vendor/'))).toBe(false);
   });
 
   it('lists a root once, so a later file is not seen', async () => {

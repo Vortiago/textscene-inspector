@@ -18,7 +18,8 @@ npm install --global @textscene/lsp
 ```
 
 The package installs one command, `tscn-lsp`. The server speaks LSP over stdio, so a
-client starts it as a child process and talks to it on the standard streams.
+client starts it as a child process and talks to it on the standard streams. It reads the
+standard streams always, so a `--stdio` argument is accepted and ignored.
 
 ## Client setup
 

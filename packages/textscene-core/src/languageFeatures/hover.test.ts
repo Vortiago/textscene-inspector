@@ -52,4 +52,9 @@ describe('hoverAt', () => {
     const custom = new LanguageDocument('[node name="R" type="MyScriptClass"]');
     expect(hoverAt(custom, { line: 0, character: 22 })).toBeUndefined();
   });
+
+  it('does not read a multiline value continuation as a property key', () => {
+    const text = ['[node name="R" type="Node3D"]', 'metadata = {', '\t"a=b": 1', '}'].join('\n');
+    expect(hoverAt(new LanguageDocument(text), { line: 2, character: 2 })).toBeUndefined();
+  });
 });

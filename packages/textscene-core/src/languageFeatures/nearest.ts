@@ -5,7 +5,7 @@
  */
 
 /** The edit distance between two strings: insertions, deletions and substitutions. */
-export function editDistance(a: string, b: string): number {
+function editDistance(a: string, b: string): number {
   if (a === b) return 0;
   if (a.length === 0) return b.length;
   if (b.length === 0) return a.length;
@@ -23,7 +23,7 @@ export function editDistance(a: string, b: string): number {
 
 /**
  * The candidate within `maxDistance` of `name`, nearest first, or undefined. Ties keep
- * the first in `candidates`, which callers pass sorted, so the answer is stable.
+ * the first in `candidates`, so the answer is stable.
  */
 export function nearestName(
   name: string,

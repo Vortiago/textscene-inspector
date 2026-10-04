@@ -10,7 +10,14 @@ function titles(text: string): string[] {
 describe('codeActions', () => {
   it('renames a deprecated property spelling to the engine name', () => {
     const text = ['[node name="S" type="AnimatedSprite2D"]', 'frames = ExtResource("1")'].join('\n');
-    expect(titles(text)).toEqual(["Rename deprecated 'frames' to 'sprite_frames'"]);
+    const action = codeActions(new LanguageDocument(text))[0]!;
+    expect(action.title).toBe("Rename deprecated 'frames' to 'sprite_frames'");
+    expect(action.edit).toEqual([
+      {
+        range: { start: { line: 1, character: 0 }, end: { line: 1, character: 6 } },
+        newText: 'sprite_frames',
+      },
+    ]);
   });
 
   it('repairs a property key to its nearest catalogued spelling', () => {

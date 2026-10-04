@@ -34,6 +34,11 @@ export interface DocumentSection {
   readonly headingLine: number;
   readonly endLine: number;
   readonly attributes: Readonly<Record<string, string>>;
+  /**
+   * The class the body's properties belong to. A node's or sub-resource's `type=`, and
+   * for a `.tres` `[resource]` body the class its `[gd_resource]` header names.
+   */
+  readonly ownerType?: string;
   readonly properties: readonly PropertySlot[];
 }
 
@@ -51,6 +56,7 @@ interface RawHeading {
   readonly line: number;
   readonly tag: string;
   readonly kind: SectionKind;
+  readonly ownerType?: string;
   readonly attributes: Record<string, string>;
 }
 
@@ -65,13 +71,18 @@ function scanSections(lines: readonly string[]): DocumentSection[] {
   const headings: RawHeading[] = [];
   const slotsByHeading: PropertySlot[][] = [];
   let current = -1;
+  // The class a `.tres` header names, which its later `[resource]` body belongs to.
+  let resourceHeaderType: string | undefined;
 
   const observer: ParseObserver = {
     onSectionStart(heading: ParsedHeading, section: SectionType, line: number) {
+      if (heading.type === 'gd_resource') resourceHeaderType = heading.attributes.type;
       headings.push({
         line,
         tag: heading.type,
         kind: toKind(section),
+        // The observer's owner type: a heading's own `type=`, or the header's for a body.
+        ownerType: heading.attributes.type ?? (heading.type === 'resource' ? resourceHeaderType : undefined),
         attributes: { ...heading.attributes },
       });
       slotsByHeading.push([]);
@@ -92,7 +103,8 @@ function scanSections(lines: readonly string[]): DocumentSection[] {
   };
 
   // A null node creator: the scan only needs the observer's headings and properties.
-  new TscnParserCore().parse(lines.join('\n'), () => null, observer);
+  // `silent`, since a host scans on each keystroke.
+  new TscnParserCore().parse(lines.join('\n'), () => null, observer, { silent: true });
 
   return headings.map((heading, index) => {
     const next = headings[index + 1];
@@ -103,6 +115,7 @@ function scanSections(lines: readonly string[]): DocumentSection[] {
       headingLine: heading.line,
       endLine: trimTrailingBlanks(lines, heading.line, rawEnd),
       attributes: heading.attributes,
+      ...(heading.ownerType !== undefined ? { ownerType: heading.ownerType } : {}),
       properties: slotsByHeading[index] ?? [],
     };
   });

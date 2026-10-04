@@ -1,6 +1,6 @@
 /**
- * Folding ranges for `.tscn` files: one fold per node and resource body, nested by
- * the sections' own line spans.
+ * Folding ranges for `.tscn` files: one fold per node and resource body, from the
+ * heading to the last content line.
  */
 
 import * as vscode from 'vscode';

@@ -29,7 +29,7 @@ function kindOfTag(tag: string): ResourceRefKind | undefined {
 }
 
 /** The id the declaration heading of an `ext_resource` or `sub_resource` names. */
-export function declaredId(section: DocumentSection): ResourceReference | undefined {
+function declaredId(section: DocumentSection): ResourceReference | undefined {
   const kind = kindOfTag(section.tag);
   if (!kind) return undefined;
   const id = section.attributes.id;

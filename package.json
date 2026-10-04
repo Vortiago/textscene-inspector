@@ -29,7 +29,7 @@
     "validate": "pnpm format:check && pnpm build && pnpm type-check && pnpm type-check:tests && pnpm lint && pnpm test:unit && pnpm lint:scenes && pnpm docs:lint-sections --check && pnpm docs:index --check && pnpm docs:gallery --check && pnpm fonts:bake --check && pnpm vsc:package && pnpm check:bundle-size && pnpm check:package",
     "check:bundle-size": "node scripts/check-bundle-size.mjs --enforce",
     "fonts:bake": "node scripts/fonts/bake-metrics.mjs",
-    "check:package": "publint packages/textscene-core && publint apps/textscene-linter",
+    "check:package": "publint packages/textscene-core && publint apps/textscene-linter && publint apps/textscene-lsp",
     "generate:fixtures": "node scripts/generate-fixtures.js",
     "vendor:games": "node scripts/vendor-godot-games.mjs && node scripts/generate-fixtures.js",
     "vendor:verktoykasse": "node scripts/vendor/verktoykasse.mjs",

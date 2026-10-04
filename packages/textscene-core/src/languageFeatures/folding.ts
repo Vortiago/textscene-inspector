@@ -1,6 +1,6 @@
 /**
- * Foldable blocks: one per heading whose body reaches past its heading line. A node's
- * children are sections too, so their folds nest inside it without a second traversal.
+ * Foldable blocks: one per heading whose body reaches past its heading line. Each ends
+ * at the next heading, so the ranges are adjacent rather than nested.
  */
 
 import type { LanguageDocument } from './document.js';

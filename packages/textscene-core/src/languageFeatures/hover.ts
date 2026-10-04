@@ -60,7 +60,7 @@ function acceptedText(type: number, hint: number, hintString: string): string | 
 
 /** The answer for a property key: its type, declaring class, hint and reference page. */
 function propertyHover(section: DocumentSection, property: PropertySlot, range: Range): Hover | undefined {
-  const className = section.attributes.type;
+  const className = section.ownerType;
   const resolved = className
     ? (findClassProperty(className, property.key) ?? findClassProperty(className, property.storedKey))
     : undefined;
@@ -89,7 +89,7 @@ function valueHover(
   property: PropertySlot,
   range: Range
 ): Hover | undefined {
-  const className = section.attributes.type;
+  const className = section.ownerType;
   const declared = className ? findClassProperty(className, property.storedKey) : undefined;
 
   const reference = parseResourceReference(property.value);
@@ -139,8 +139,11 @@ export function hoverAt(
   const location = document.propertyAt(position.line + 1);
   if (!location) return undefined;
 
+  // A property's key sits on its first line, so a continuation line of a multiline value
+  // must not read as a new property.
+  const onFirstLine = location.property.startLine === position.line + 1;
   const key = propertyKeySpan(line);
-  if (key && within(key.span, position.character)) {
+  if (onFirstLine && key && within(key.span, position.character)) {
     return propertyHover(location.section, location.property, lineRange(position.line, key.span));
   }
   if (!location.property.isMultiline) {

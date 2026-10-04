@@ -26,7 +26,7 @@ function renameAction(title: string, edit: TextEdit): CodeAction {
 
 /** Fixes for one section's property keys. */
 function propertyActions(document: LanguageDocument, section: DocumentSection): CodeAction[] {
-  const className = section.attributes.type;
+  const className = section.ownerType;
   if (!className || !isKnownClass(className)) return [];
   const known = classProperties(className).map((property) => property.name);
   const knownSet = new Set(known);

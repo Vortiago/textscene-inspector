@@ -16,13 +16,15 @@ const SCENE_URI = 'file:///scene.tscn';
 
 const SCENE = `[gd_scene format=3]
 
-[node name="Root" type="Node3D"]
+[node name="Root" type="MeshInstance3D"]
 visible = true
+mesh = SubResource("missing")
 `;
 
 interface RpcMessage {
   id?: number;
   method?: string;
+  params?: unknown;
   result?: unknown;
   error?: unknown;
 }
@@ -38,11 +40,29 @@ class LspClient {
   private buffer = Buffer.alloc(0);
   private nextId = 1;
   private readonly pending = new Map<number, Pending>();
+  private readonly notifications: Array<{ method: string; params: unknown }> = [];
+  private readonly waiters: Array<{ method: string; resolve: (params: unknown) => void }> = [];
 
   constructor(private readonly child: ChildProcessWithoutNullStreams) {
     child.stdout.on('data', (chunk: Buffer) => this.read(chunk));
     child.on('exit', (code) => this.failAll(new Error(`server exited with code ${code}`)));
     child.on('error', (error) => this.failAll(error));
+  }
+
+  /** Resolves with the next `method` notification, or one already received. */
+  waitForNotification(method: string, timeoutMs = 5000): Promise<unknown> {
+    const existing = this.notifications.find((notification) => notification.method === method);
+    if (existing) return Promise.resolve(existing.params);
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(`no ${method} within ${timeoutMs}ms`)), timeoutMs);
+      this.waiters.push({
+        method,
+        resolve: (params) => {
+          clearTimeout(timer);
+          resolve(params);
+        },
+      });
+    });
   }
 
   request(method: string, params: unknown, timeoutMs = 10_000): Promise<RpcMessage> {
@@ -87,12 +107,24 @@ class LspClient {
   }
 
   private deliver(message: RpcMessage): void {
-    if (typeof message.id !== 'number') return;
+    if (typeof message.id !== 'number') {
+      if (typeof message.method === 'string') this.onNotification(message.method, message.params);
+      return;
+    }
     const pending = this.pending.get(message.id);
     if (pending === undefined) return;
     clearTimeout(pending.timer);
     this.pending.delete(message.id);
     pending.resolve(message);
+  }
+
+  private onNotification(method: string, params: unknown): void {
+    const index = this.waiters.findIndex((waiter) => waiter.method === method);
+    if (index === -1) {
+      this.notifications.push({ method, params });
+      return;
+    }
+    this.waiters.splice(index, 1)[0]!.resolve(params);
   }
 
   private failAll(error: Error): void {
@@ -131,6 +163,12 @@ describe('tscn-lsp end-to-end', () => {
         textDocument: { uri: SCENE_URI, languageId: 'tscn', version: 1, text: SCENE },
       });
 
+      // The debounced lint pushes diagnostics; the scene's `SubResource("missing")` is one.
+      const published = (await client.waitForNotification('textDocument/publishDiagnostics')) as {
+        diagnostics: Array<{ message: string }>;
+      };
+      expect(published.diagnostics.length).toBeGreaterThan(0);
+
       const hover = await client.request('textDocument/hover', {
         textDocument: { uri: SCENE_URI },
         position: { line: 2, character: 26 },
@@ -145,7 +183,7 @@ describe('tscn-lsp end-to-end', () => {
       const tree = symbols.result as Array<{ name: string; detail: string }>;
 
       expect(tree.map((symbol) => symbol.name)).toEqual(['Root']);
-      expect(tree[0]!.detail).toBe('Node3D');
+      expect(tree[0]!.detail).toBe('MeshInstance3D');
 
       await client.request('shutdown', null);
       client.notify('exit', null);

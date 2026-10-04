@@ -35,12 +35,25 @@ interface PreparedScene {
   readonly text: string;
 }
 
-async function prepare(input: ScenePathToolInput): Promise<PreparedScene> {
-  const uri = resolveToolUri(input.path);
+async function prepare(input: ScenePathToolInput | undefined): Promise<PreparedScene> {
+  const path = scenePathOf(input);
+  const uri = resolveToolUri(path);
   if (!uri) {
-    throw new Error(`No workspace folder is open, so the relative path '${input.path}' names no file.`);
+    throw new Error(`No workspace folder is open, so the relative path '${path}' names no file.`);
   }
   return { uri, text: await readSceneText(uri) };
+}
+
+/** The `.tscn` path an input names, or a clear error for a missing or non-scene one. */
+function scenePathOf(input: ScenePathToolInput | undefined): string {
+  const path = input?.path;
+  if (typeof path !== 'string' || path.length === 0) {
+    throw new Error('The tool needs a `path` to a .tscn scene.');
+  }
+  if (!path.endsWith('.tscn')) {
+    throw new Error(`Expected a .tscn scene, got '${path}'.`);
+  }
+  return path;
 }
 
 function textResult(value: string): vscode.LanguageModelToolResult {
@@ -83,11 +96,10 @@ class TscnOpenPreviewTool implements vscode.LanguageModelTool<ScenePathToolInput
   async invoke(
     options: vscode.LanguageModelToolInvocationOptions<ScenePathToolInput>
   ): Promise<vscode.LanguageModelToolResult> {
-    const uri = resolveToolUri(options.input.path);
+    const path = scenePathOf(options.input);
+    const uri = resolveToolUri(path);
     if (!uri) {
-      throw new Error(
-        `No workspace folder is open, so the relative path '${options.input.path}' names no file.`
-      );
+      throw new Error(`No workspace folder is open, so the relative path '${path}' names no file.`);
     }
     this.host.openPreview(uri);
     return textResult(`Opened the TextScene preview for ${uri.fsPath}.`);

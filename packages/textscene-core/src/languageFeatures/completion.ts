@@ -124,7 +124,7 @@ function valueItems(
     const prefix = reference[2] ?? '';
     return resourceIdItems(document, reference[1] === 'Ext' ? 'ext' : 'sub', prefix);
   }
-  const className = section.attributes.type;
+  const className = section.ownerType;
   if (className) {
     const enums = enumItems(className, property);
     if (enums.length > 0) return enums;
@@ -165,7 +165,7 @@ export function completionsAt(
   const location = document.propertyAt(position.line + 1);
   if (!location) return [];
   const property = location.property;
-  const className = location.section.attributes.type;
+  const className = location.section.ownerType;
 
   const onFirstLine = property.startLine === position.line + 1;
   const key = propertyKeySpan(line);

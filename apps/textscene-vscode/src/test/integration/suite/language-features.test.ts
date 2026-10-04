@@ -40,11 +40,17 @@ const MAIN_SCENE = [
 
 const MATERIAL = ['[gd_resource type="StandardMaterial3D" format=3]', '', '[resource]', ''].join('\n');
 
+const TYPO_SCENE = ['[node name="S" type="MeshInstance3D"]', 'mash = null', ''].join('\n');
+
 suite('Language Features', () => {
   let main: vscode.TextDocument;
 
   suiteSetup(async () => {
-    writeGodotProject(PROJECT, { 'main.tscn': MAIN_SCENE, 'material.tres': MATERIAL });
+    writeGodotProject(PROJECT, {
+      'main.tscn': MAIN_SCENE,
+      'material.tres': MATERIAL,
+      'typo.tscn': TYPO_SCENE,
+    });
     main = await openProjectDocument(PROJECT, 'main.tscn');
     await vscode.extensions.getExtension('vortiago.textscene-inspector')?.activate();
   });
@@ -121,7 +127,52 @@ suite('Language Features', () => {
       path.join('textures', 'grid.png')
     );
   });
+
+  test('Hover on a node type names the class and its reference page', async () => {
+    const hovers = await vscode.commands.executeCommand<vscode.Hover[]>(
+      'vscode.executeHoverProvider',
+      main.uri,
+      positionInside(main, '[node name="Box" type="', 'MeshInstance3D')
+    );
+
+    assert.ok(hoverText(hovers).includes('MeshInstance3D'), 'the hover names the class');
+  });
+
+  test('Completion on a property line offers a property the node does not set', async () => {
+    const list = await vscode.commands.executeCommand<vscode.CompletionList>(
+      'vscode.executeCompletionItemProvider',
+      main.uri,
+      new vscode.Position(lineStartingWith(main, 'mesh = '), 0)
+    );
+    const labels = list.items.map((item) => (typeof item.label === 'string' ? item.label : item.label.label));
+
+    assert.ok(labels.includes('visible'), 'a catalogue property is offered');
+    assert.ok(!labels.includes('mesh'), 'a property already set is not offered');
+  });
+
+  test('a quick fix repairs a property-name typo', async () => {
+    const typo = await openProjectDocument(PROJECT, 'typo.tscn');
+    const line = lineStartingWith(typo, 'mash =');
+    const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
+      'vscode.executeCodeActionProvider',
+      typo.uri,
+      new vscode.Range(line, 0, line, 4)
+    );
+
+    const fix = actions.find((action) => action.title.includes('mesh'));
+    assert.ok(fix?.edit, 'a quick fix carries an edit');
+  });
 });
+
+/** The plain text of a hover's contents, whichever shape the provider returned. */
+function hoverText(hovers: readonly vscode.Hover[]): string {
+  const parts = hovers.flatMap((hover) =>
+    Array.isArray(hover.contents) ? hover.contents : [hover.contents]
+  );
+  return parts
+    .map((part) => (typeof part === 'string' ? part : 'value' in part ? part.value : ''))
+    .join('\n');
+}
 
 /** Each symbol as `name: detail`, indented two spaces per level of nesting. */
 function outlineOf(symbols: readonly vscode.DocumentSymbol[], depth = 0): string[] {

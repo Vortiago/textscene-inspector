@@ -60,4 +60,19 @@ describe('LanguageDocument', () => {
     expect(document.sectionAt(LINE.rootNode)?.endLine).toBe(LINE.rootProperty);
     expect(document.sectionAt(LINE.meshNode)?.endLine).toBe(LINE.skeletonProperty);
   });
+
+  it('names the class each body belongs to', () => {
+    const document = new LanguageDocument(SCENE);
+    expect(document.sectionAt(LINE.meshNode)?.ownerType).toBe('MeshInstance3D');
+    expect(document.sectionAt(LINE.subMesh)?.ownerType).toBe('BoxMesh');
+  });
+
+  it('carries the header class onto a .tres resource body', () => {
+    const text = ['[gd_resource type="Environment" format=3]', '', '[resource]', 'background_mode = 1'].join(
+      '\n'
+    );
+    const document = new LanguageDocument(text);
+    expect(document.sectionAt(3)?.tag).toBe('resource');
+    expect(document.sectionAt(3)?.ownerType).toBe('Environment');
+  });
 });
