@@ -87,7 +87,7 @@ describe('ResourceLoader (loader-level gaps)', () => {
       loader.request('scene', SCENE_PATH);
 
       // Provider returns null -> scene processor rejects -> once() rejects.
-      await expect(pending).rejects.toThrow('TSCN scene must be text content');
+      await expect(pending).rejects.toThrow(`Resource not found: ${SCENE_PATH}`);
       expect(loader.getCached('scene', SCENE_PATH)).toBeNull();
       expect(loader.scenes.getCached(SCENE_PATH)).toBeNull();
       expect(loader.scenes.isCached(SCENE_PATH)).toBe(true);

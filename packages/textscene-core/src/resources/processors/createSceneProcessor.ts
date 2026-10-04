@@ -66,6 +66,9 @@ export function createSceneProcessor({
       // A HINT about what to fetch, not the claim the guard settled: the
       // channel it was asked through is what it is being asked for.
       const content = await provider.loadResource(metadata.path, metadata.type || 'PackedScene');
+      if (content === null) {
+        throw new Error(`Resource not found: ${metadata.path}`);
+      }
 
       // A PackedScene can be a `.tscn` text file or a `.glb` / `.gltf` binary, and
       // one scene can reference both. The provider returns text or an ArrayBuffer,
