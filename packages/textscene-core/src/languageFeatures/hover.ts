@@ -106,11 +106,11 @@ function valueHover(
   }
 
   if (declared && isEnumHint(declared.hint) && declared.type === VARIANT_TYPE.INT) {
-    const value = Number.parseInt(property.value.trim(), 10);
-    const entry = enumEntries(declared.hintString).find(
-      (candidate) => Number.parseInt(candidate.value, 10) === value
-    );
-    if (entry) return { markdown: `**${entry.label}** = ${codeSpan(property.value.trim())}`, range };
+    const written = property.value.trim();
+    // The label lookup is a string compare: the hint's value is the literal to write,
+    // so no second Variant number reader is introduced.
+    const entry = enumEntries(declared.hintString).find((candidate) => candidate.value === written);
+    if (entry) return { markdown: `**${entry.label}** = ${codeSpan(written)}`, range };
   }
   return undefined;
 }
