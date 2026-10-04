@@ -136,7 +136,7 @@ Every result is host-neutral with zero-based ranges, so the VS Code extension an
 _Avoid_: "LSP" for the engine, which names the protocol and its server host. "Language service".
 
 **Agent tool**:
-A tool the VS Code extension registers through `vscode.lm`, so a coding agent in chat can lint a scene, read its node tree, open its preview or list its missing resources.
+A tool the VS Code extension registers through `vscode.lm`, so a coding agent in chat can lint a scene, read its node tree, open its preview, list its missing resources or capture its preview as a PNG.
 _Avoid_: "action" for an agent tool.
 
 ### Code organisation

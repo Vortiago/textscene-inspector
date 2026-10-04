@@ -31,7 +31,9 @@ tables, hints and deprecated aliases twice, and drift.
 - `apps/textscene-lsp` (`@textscene/lsp`, `tscn-lsp`) serves the same engine to any LSP client
   over stdio, reading the project from the nearest `project.godot`. It imports no VS Code API.
 - The extension's **agent tools** (`vscode.lm`) are extension-only: lint a scene, read its node
-  tree, open its preview, list its missing resources. They call the same linter and parsers.
+  tree, open its preview, list its missing resources, and capture the preview as a PNG. They
+  call the same linter, parsers and viewport capture. The capture tool needs the image part of a
+  tool result, stable from VS Code 1.106, so it registers on its own guard.
 
 A path-completion seam takes a `listPaths` callback, so the extension lists the workspace and the
 server lists the filesystem without the engine knowing either.

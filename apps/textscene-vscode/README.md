@@ -30,7 +30,7 @@ Each `.tscn` file can have its own preview.
 - **Completion:** node and resource classes, property names, with a deprecated spelling marked, enum values, resource ids and `res://` paths.
 - **Quick fixes:** rename a deprecated property spelling, or repair a property-key or class-name typo.
 - **Folding and highlights:** fold each node and resource body, and highlight every use of a resource id.
-- **Agent tools:** a coding agent in chat can lint a scene, read its node tree, open its preview and list its missing resources. Turn them off with `textscene.agentTools.enabled`.
+- **Agent tools:** a coding agent in chat can lint a scene, read its node tree, open its preview, list its missing resources, and capture its preview as a PNG (VS Code 1.106 or later). Turn them off with `textscene.agentTools.enabled`.
 
 To change the settings, search for `textscene` in the Settings editor.
 
