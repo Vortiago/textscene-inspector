@@ -7,6 +7,12 @@ import { TscnPreviewPanel } from './TscnPreviewPanel';
 import { TscnDocumentSymbolProvider } from './TscnDocumentSymbolProvider';
 import { TscnDefinitionProvider } from './TscnDefinitionProvider';
 import { TscnDocumentLinkProvider } from './TscnDocumentLinkProvider';
+import { TscnHoverProvider } from './TscnHoverProvider';
+import { COMPLETION_TRIGGER_CHARACTERS, TscnCompletionItemProvider } from './TscnCompletionItemProvider';
+import { TscnCodeActionProvider } from './TscnCodeActionProvider';
+import { TscnFoldingRangeProvider } from './TscnFoldingRangeProvider';
+import { TscnDocumentHighlightProvider } from './TscnDocumentHighlightProvider';
+import { TscnResPathListing } from './TscnResPathListing';
 import { TscnDiagnostics } from './TscnDiagnostics';
 import { initLogger, dispose as disposeLogger } from './logger';
 import { isUri } from './uriArgument';
@@ -75,6 +81,26 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.languages.registerDocumentLinkProvider({ language: 'tscn' }, new TscnDocumentLinkProvider())
   );
 
+  // Language features over `@textscene/core/languageFeatures`, the same engine the
+  // standalone `tscn-lsp` server uses, so both hosts describe the engine identically.
+  const resPathListing = new TscnResPathListing();
+  context.subscriptions.push(
+    vscode.languages.registerHoverProvider({ language: 'tscn' }, new TscnHoverProvider()),
+    vscode.languages.registerCompletionItemProvider(
+      { language: 'tscn' },
+      new TscnCompletionItemProvider(resPathListing),
+      ...COMPLETION_TRIGGER_CHARACTERS
+    ),
+    vscode.languages.registerCodeActionsProvider({ language: 'tscn' }, new TscnCodeActionProvider(), {
+      providedCodeActionKinds: TscnCodeActionProvider.prototype.providedCodeActionKinds,
+    }),
+    vscode.languages.registerFoldingRangeProvider({ language: 'tscn' }, new TscnFoldingRangeProvider()),
+    vscode.languages.registerDocumentHighlightProvider(
+      { language: 'tscn' },
+      new TscnDocumentHighlightProvider()
+    )
+  );
+
   // External changes to every file a scene can load, and to the project file. Each watcher
   // serves the previews and the linter diagnostics in the Problems panel.
   const resourceWatcher = vscode.workspace.createFileSystemWatcher(RESOURCE_FILES_PATTERN);
@@ -102,6 +128,8 @@ export function activate(context: vscode.ExtensionContext) {
   // handled. Every other panel re-fetches the file as a dependency or sub-scene.
   const handleResourceChange = async (uri: vscode.Uri, deleted = false): Promise<void> => {
     const changedKey = uri.toString();
+    // A created or deleted file changes what `res://` completion may offer.
+    resPathListing.clear();
     await Promise.all(
       [...panels].map(([panelKey, panel]) => {
         if (panelKey === changedKey) {

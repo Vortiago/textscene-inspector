@@ -9,10 +9,21 @@
 import { vi } from 'vitest';
 
 export class MockRange {
-  constructor(
-    public start: any,
-    public end: any
-  ) {}
+  start: any;
+  end: any;
+
+  // The real `vscode.Range` has two overloads: `(start, end)` and
+  // `(startLine, startChar, endLine, endChar)`. The four-argument form is the one
+  // `lineAt().range` and most tests use, so the mock builds the positions.
+  constructor(startOrLine: any, endOrChar: any, endLine?: number, endChar?: number) {
+    if (endLine !== undefined) {
+      this.start = new MockPosition(startOrLine, endOrChar);
+      this.end = new MockPosition(endLine, endChar ?? 0);
+    } else {
+      this.start = startOrLine;
+      this.end = endOrChar;
+    }
+  }
 }
 
 export class MockPosition {
@@ -172,4 +183,127 @@ export const MockSymbolKind: Record<string, number> = {
   Event: 23,
   Operator: 24,
   TypeParameter: 25,
+};
+
+/** `vscode.MarkdownString`: hover and documentation content. */
+export class MockMarkdownString {
+  isTrusted = false;
+
+  constructor(public value: string) {}
+}
+
+/** `vscode.Hover`: markdown content and the range it applies to. */
+export class MockHover {
+  constructor(
+    public contents: any,
+    public range?: any
+  ) {}
+}
+
+/** `vscode.CompletionItem`: the fields the providers set. */
+export class MockCompletionItem {
+  detail?: any;
+  documentation?: any;
+  insertText?: any;
+  tags?: number[];
+  range?: any;
+
+  constructor(
+    public label: string,
+    public kind?: number
+  ) {}
+}
+
+export const MockCompletionItemTag = {
+  Deprecated: 1,
+};
+
+export const MockCompletionItemKind = {
+  Text: 0,
+  Method: 1,
+  Function: 2,
+  Constructor: 3,
+  Field: 4,
+  Variable: 5,
+  Class: 6,
+  Interface: 7,
+  Module: 8,
+  Property: 9,
+  Unit: 10,
+  Value: 11,
+  Enum: 12,
+  Keyword: 13,
+  Snippet: 14,
+  Color: 15,
+  File: 16,
+  Reference: 17,
+  Folder: 18,
+  EnumMember: 19,
+  Constant: 20,
+  Struct: 21,
+  Event: 22,
+  Operator: 23,
+  TypeParameter: 24,
+};
+
+/** `vscode.CodeAction`: a title, a kind and the edit it applies. */
+export class MockCodeAction {
+  edit?: MockWorkspaceEdit;
+  diagnostics?: any;
+  isPreferred?: boolean;
+
+  constructor(
+    public title: string,
+    public kind?: any
+  ) {}
+}
+
+export const MockCodeActionKind = {
+  Empty: '',
+  QuickFix: 'quickfix',
+  Refactor: 'refactor',
+  RefactorExtract: 'refactor.extract',
+  RefactorInline: 'refactor.inline',
+  RefactorRewrite: 'refactor.rewrite',
+  Source: 'source',
+  SourceOrganizeImports: 'source.organizeImports',
+};
+
+/** `vscode.WorkspaceEdit`: enough to record the replaces a code action applies. */
+export class MockWorkspaceEdit {
+  readonly replaces: Array<{ uri: any; range: any; newText: string }> = [];
+
+  replace(uri: any, range: any, newText: string): boolean {
+    this.replaces.push({ uri, range, newText });
+    return true;
+  }
+}
+
+/** `vscode.FoldingRange`: a pair of zero-based lines. */
+export class MockFoldingRange {
+  constructor(
+    public start: number,
+    public end: number,
+    public kind?: any
+  ) {}
+}
+
+export const MockFoldingRangeKind = {
+  Comment: 1,
+  Imports: 2,
+  Region: 3,
+};
+
+/** `vscode.DocumentHighlight`: a range and its read/write kind. */
+export class MockDocumentHighlight {
+  constructor(
+    public range: any,
+    public kind?: number
+  ) {}
+}
+
+export const MockDocumentHighlightKind = {
+  Text: 0,
+  Read: 1,
+  Write: 2,
 };

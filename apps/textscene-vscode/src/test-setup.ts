@@ -10,13 +10,24 @@
 import { vi, afterEach } from 'vitest';
 import { mockCommands, mockLanguages, mockUri, mockWindow, mockWorkspace } from './vscodeMocks.testkit';
 import {
+  MockCodeAction,
+  MockCodeActionKind,
+  MockCompletionItem,
+  MockCompletionItemKind,
+  MockCompletionItemTag,
   MockDiagnostic,
   MockDiagnosticSeverity,
+  MockDocumentHighlight,
+  MockDocumentHighlightKind,
   MockDocumentLink,
   MockDocumentSymbol,
   MockEventEmitter,
   MockFileType,
+  MockFoldingRange,
+  MockFoldingRangeKind,
+  MockHover,
   MockLocation,
+  MockMarkdownString,
   MockPosition,
   MockRange,
   MockRelativePattern,
@@ -25,21 +36,34 @@ import {
   MockTabInputText,
   MockTextEditorRevealType,
   MockViewColumn,
+  MockWorkspaceEdit,
 } from './vscodeMockClasses.testkit';
 
 export { createMockUri, createMockFileData, createMockDiagnosticCollection } from './vscodeMocks.testkit';
 export { setupMockPanel, type MockPanel, type MockWebview } from './mockPanel.testkit';
 export {
+  MockCodeAction,
+  MockCodeActionKind,
+  MockCompletionItem,
+  MockCompletionItemKind,
+  MockCompletionItemTag,
   MockDiagnostic,
   MockDiagnosticSeverity,
+  MockDocumentHighlight,
+  MockDocumentHighlightKind,
   MockDocumentLink,
   MockDocumentSymbol,
   MockEventEmitter,
+  MockFoldingRange,
+  MockFoldingRangeKind,
+  MockHover,
   MockLocation,
+  MockMarkdownString,
   MockPosition,
   MockRange,
   MockSelection,
   MockTabInputText,
+  MockWorkspaceEdit,
 } from './vscodeMockClasses.testkit';
 
 vi.mock('vscode', () => ({
@@ -56,6 +80,18 @@ vi.mock('vscode', () => ({
   DocumentLink: MockDocumentLink,
   Location: MockLocation,
   Diagnostic: MockDiagnostic,
+  MarkdownString: MockMarkdownString,
+  Hover: MockHover,
+  CompletionItem: MockCompletionItem,
+  CompletionItemKind: MockCompletionItemKind,
+  CompletionItemTag: MockCompletionItemTag,
+  CodeAction: MockCodeAction,
+  CodeActionKind: MockCodeActionKind,
+  WorkspaceEdit: MockWorkspaceEdit,
+  FoldingRange: MockFoldingRange,
+  FoldingRangeKind: MockFoldingRangeKind,
+  DocumentHighlight: MockDocumentHighlight,
+  DocumentHighlightKind: MockDocumentHighlightKind,
 
   DiagnosticSeverity: MockDiagnosticSeverity,
   TabInputText: MockTabInputText,
@@ -88,6 +124,18 @@ export const vscode: {
   DocumentLink: typeof MockDocumentLink;
   Location: typeof MockLocation;
   Diagnostic: typeof MockDiagnostic;
+  MarkdownString: typeof MockMarkdownString;
+  Hover: typeof MockHover;
+  CompletionItem: typeof MockCompletionItem;
+  CompletionItemKind: typeof MockCompletionItemKind;
+  CompletionItemTag: typeof MockCompletionItemTag;
+  CodeAction: typeof MockCodeAction;
+  CodeActionKind: typeof MockCodeActionKind;
+  WorkspaceEdit: typeof MockWorkspaceEdit;
+  FoldingRange: typeof MockFoldingRange;
+  FoldingRangeKind: typeof MockFoldingRangeKind;
+  DocumentHighlight: typeof MockDocumentHighlight;
+  DocumentHighlightKind: typeof MockDocumentHighlightKind;
   DiagnosticSeverity: typeof MockDiagnosticSeverity;
   ViewColumn: { One: number; Two: number; Three: number; Active: number; Beside: number };
   TextEditorRevealType: {
@@ -111,6 +159,18 @@ export const vscode: {
   DocumentLink: MockDocumentLink,
   Location: MockLocation,
   Diagnostic: MockDiagnostic,
+  MarkdownString: MockMarkdownString,
+  Hover: MockHover,
+  CompletionItem: MockCompletionItem,
+  CompletionItemKind: MockCompletionItemKind,
+  CompletionItemTag: MockCompletionItemTag,
+  CodeAction: MockCodeAction,
+  CodeActionKind: MockCodeActionKind,
+  WorkspaceEdit: MockWorkspaceEdit,
+  FoldingRange: MockFoldingRange,
+  FoldingRangeKind: MockFoldingRangeKind,
+  DocumentHighlight: MockDocumentHighlight,
+  DocumentHighlightKind: MockDocumentHighlightKind,
   DiagnosticSeverity: MockDiagnosticSeverity,
   ViewColumn: MockViewColumn,
   TextEditorRevealType: MockTextEditorRevealType,

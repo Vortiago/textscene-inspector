@@ -137,9 +137,10 @@ describe('Extension', () => {
     it('should add disposables to context subscriptions', () => {
       activate(mockContext);
 
-      // command, symbol, definition and document link providers, diagnostics, save
-      // listener, and for each of the two watchers itself plus its three handlers.
-      expect(mockContext.subscriptions.length).toBe(14);
+      // command, symbol, definition, document link, hover, completion, code action,
+      // folding and highlight providers, diagnostics, save listener, and for each of
+      // the two watchers itself plus its three handlers.
+      expect(mockContext.subscriptions.length).toBe(19);
     });
 
     it('should register a document link provider for res:// references', () => {

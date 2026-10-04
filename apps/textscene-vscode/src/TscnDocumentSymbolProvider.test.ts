@@ -230,8 +230,8 @@ visible = true
       const ab = symbols[0]!.children.find((c) => c.name === 'AB')!;
       const b = symbols[0]!.children.find((c) => c.name === 'B')!;
 
-      expect(ab.children[0]!.selectionRange.start).toBe(4);
-      expect(b.children[0]!.selectionRange.start).toBe(5);
+      expect(ab.children[0]!.selectionRange.start.line).toBe(4);
+      expect(b.children[0]!.selectionRange.start.line).toBe(5);
     });
 
     it('resolves a nested duplicate name using the full ancestor path, not just the immediate parent', () => {
@@ -259,8 +259,8 @@ visible = true
       const targetUnderFoo = foo.children[0]!.children[0]!;
       const targetUnderBar = bar.children[0]!.children[0]!;
 
-      expect(targetUnderFoo.selectionRange.start).toBe(6);
-      expect(targetUnderBar.selectionRange.start).toBe(7);
+      expect(targetUnderFoo.selectionRange.start.line).toBe(6);
+      expect(targetUnderBar.selectionRange.start.line).toBe(7);
     });
   });
 
