@@ -67,11 +67,12 @@ export function TscnPreviewShell({
   onMissingPathsChange,
   initialViewportMode,
   initialActiveCameraPath,
-  onScreenshotReady,
+  onCaptureStateChange,
 }: TscnPreviewShellProps) {
   const { sceneGraph, error } = useParsedScene(content, rootScenePath);
 
   const hierarchyValue = useMemo(() => ({ sceneGraph, panelId }), [sceneGraph, panelId]);
+  const [viewportError, setViewportError] = useState<Error | null>(null);
 
   // `treeShare` is the tree's fraction of the dock height (0..1). The dock
   // layout persists across sessions, a VS Code webview being a browser too.
@@ -117,7 +118,7 @@ export function TscnPreviewShell({
       {initialViewportMode === undefined && <WorkspaceAutoSelect sceneGraph={sceneGraph} />}
       <SceneChangeResetter sceneGraph={sceneGraph} />
       <AnimationTabWatcher onVisibleChange={setAnimationTabVisible} />
-      <ScreenshotRequestBridge onScreenshotReady={onScreenshotReady} />
+      <ScreenshotRequestBridge onCaptureStateChange={onCaptureStateChange} viewportError={viewportError} />
       <EscapeDeselect />
       <div className={styles.shell} data-panel-id={panelId}>
         <header className={styles.topBar}>
@@ -140,7 +141,7 @@ export function TscnPreviewShell({
             <div className={styles.viewportToolbarOverlay} data-testid="viewport-toolbar-overlay">
               <ViewportToolbar />
             </div>
-            <PreviewErrorBoundary sceneGraph={sceneGraph}>
+            <PreviewErrorBoundary sceneGraph={sceneGraph} onViewportErrorChange={setViewportError}>
               <ViewportArea sceneGraph={sceneGraph} scenePath={rootScenePath} />
             </PreviewErrorBoundary>
           </main>

@@ -6,7 +6,12 @@
  */
 
 import * as path from 'path';
-import { SUITE_STARTED_MARKER_ENV, type IntegrationLaunchOptions } from '../integration/integrationLaunch';
+import {
+  DISABLE_GPU_ENV,
+  gpuLaunch,
+  SUITE_STARTED_MARKER_ENV,
+  type IntegrationLaunchOptions,
+} from '../integration/integrationLaunch';
 
 /** The variable that names the extensions directory to the suite inside the extension host. */
 export const INSTALLED_EXTENSIONS_DIR_ENV = 'TEXTSCENE_INSTALLED_EXTENSIONS_DIR';
@@ -93,13 +98,16 @@ export function installArgs(paths: InstalledLaunchPaths, vsixPath: string): stri
 }
 
 /**
- * The options VS Code launches the suite with. `platform` is the host's own unless a
- * test names another. No `--disable-extensions`: it would disable the package under test.
+ * The options VS Code launches the suite with. `platform` and `requestedGpuOff` are the
+ * host's own unless a test names others. No `--disable-extensions`: it would disable the
+ * package under test.
  */
 export function installedLaunchOptions(
   paths: InstalledLaunchPaths,
-  platform: string = process.platform
+  platform: string = process.platform,
+  requestedGpuOff: string | undefined = process.env[DISABLE_GPU_ENV]
 ): IntegrationLaunchOptions {
+  const gpu = gpuLaunch(platform, requestedGpuOff);
   return {
     extensionDevelopmentPath: paths.suiteHostPath,
     extensionTestsPath: paths.extensionTestsPath,
@@ -107,12 +115,12 @@ export function installedLaunchOptions(
       paths.workspaceRoot,
       `--extensions-dir=${paths.extensionsDir}`,
       `--user-data-dir=${paths.userDataDir}`,
-      // The same software-GL stall as in integrationLaunchOptions.
-      ...(platform === 'linux' ? ['--disable-gpu'] : []),
+      ...gpu.launchArgs,
     ],
     extensionTestsEnv: {
       [SUITE_STARTED_MARKER_ENV]: paths.suiteStartedMarker,
       [INSTALLED_EXTENSIONS_DIR_ENV]: paths.extensionsDir,
+      ...gpu.extensionTestsEnv,
     },
   };
 }

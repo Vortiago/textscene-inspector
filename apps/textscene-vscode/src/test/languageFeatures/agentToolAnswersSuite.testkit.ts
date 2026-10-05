@@ -9,6 +9,8 @@ import * as assert from 'assert';
 import type { Context } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { CAPTURE_DEADLINE_MS } from '../../previewCaptureQueue';
+import { DISABLE_GPU_ENV } from '../integration/integrationLaunch';
 import { EXTENSION_ID, previewTabLabels } from '../smokeProject/sceneEditor';
 import { waitFor } from '../waitFor';
 import { copyFixtureProject, removeFixtureProject } from './answers';
@@ -16,17 +18,18 @@ import { copyFixtureProject, removeFixtureProject } from './answers';
 /** A lint or a tab update reaches the extension host well inside this on a loaded runner. */
 const SETTLE_TIMEOUT_MS = 10000;
 
-/**
- * The webview gives a cold canvas 4s to mount before it answers no image, and a loaded
- * runner can need longer, so the test asks again until this passes.
- */
-const CAPTURE_DEADLINE_MS = 30000;
-
-/** The host answers a capture the webview never answers after 10s. */
-const CAPTURE_TIMEOUT_MS = 10000;
-
 /** The first bytes of every PNG file. */
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+/** The IHDR chunk follows the signature, and holds the width and height at these offsets. */
+const PNG_WIDTH_OFFSET = 16;
+const PNG_HEIGHT_OFFSET = 20;
+
+/**
+ * Three's error for a canvas with no WebGL 2 context (`WebGLRenderer.js`, three 0.186), which
+ * R3F rethrows in render for the viewport's boundary to catch.
+ */
+const NO_WEBGL_REASON = 'The viewport crashed: THREE.WebGLRenderer: Error creating WebGL context.';
 
 const NO_TOOLS_API = 'this VS Code predates vscode.lm.invokeTool, so no agent tool registers';
 
@@ -36,13 +39,26 @@ export function skipBecause(context: Context, reason: string): never {
   context.skip();
 }
 
-/** The plain text of a tool result, whichever parts it carries. */
+/** Whether the launcher started the window with `--disable-gpu`, which leaves no WebGL context. */
+function launchedWithoutGpu(): boolean {
+  const value = process.env[DISABLE_GPU_ENV];
+  if (value !== '0' && value !== '1') {
+    throw new Error(`expected the launcher to set ${DISABLE_GPU_ENV} to 0 or 1, got ${String(value)}`);
+  }
+  return value === '1';
+}
+
+/** The width and height a PNG's IHDR chunk records. */
+function pngSize(data: Uint8Array): { width: number; height: number } {
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  return { width: view.getUint32(PNG_WIDTH_OFFSET), height: view.getUint32(PNG_HEIGHT_OFFSET) };
+}
+
+/** The text parts of a tool result, one per line, whichever other parts it carries. */
 export function textOf(result: vscode.LanguageModelToolResult): string {
   return result.content
-    .map((part) => {
-      const value = (part as { value?: unknown }).value;
-      return typeof value === 'string' ? value : '';
-    })
+    .map((part) => (part as { value?: unknown }).value)
+    .filter((value): value is string => typeof value === 'string')
     .join('\n');
 }
 
@@ -63,16 +79,6 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
   const scene = (file: string) => vscode.Uri.file(path.join(projectDir, file)).fsPath;
   const invoke = async (tool: string, scenePath: string) =>
     vscode.lm.invokeTool(tool, { input: { path: scenePath } });
-
-  /** The capture tool's result, asked again until it carries an image or the deadline passes. */
-  const captureWithinDeadline = async (scenePath: string) => {
-    const deadline = Date.now() + CAPTURE_DEADLINE_MS;
-    let result = await invoke('textscene_capture', scenePath);
-    while (!imageOf(result) && Date.now() < deadline) {
-      result = await invoke('textscene_capture', scenePath);
-    }
-    return result;
-  };
 
   suite('Agent tool answers', function () {
     suiteSetup(async function () {
@@ -108,18 +114,19 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
           .getDiagnostics(uri)
           .filter((diagnostic) => diagnostic.source === 'tscn-lint')
           .map((diagnostic) => `${diagnostic.range.start.line + 1}:${String(diagnostic.code)}`);
-      await waitFor(
-        () => problems().length > 0,
-        SETTLE_TIMEOUT_MS,
-        () => 'no lint reached the Problems panel'
-      );
-
       const text = textOf(await invoke('textscene_lint', uri.fsPath));
       const toolFindings = [...text.matchAll(/^ {2}line (\d+): \[\w+\] .* \(([a-z0-9-]+)\)/gm)].map(
         (match) => `${match[1]}:${match[2]}`
       );
+      assert.ok(toolFindings.length > 0, `expected the tool to report a finding, found ${text}`);
 
-      assert.deepStrictEqual(toolFindings, problems());
+      // The panel shows the file-local lint before the cross-file one, so wait for the full verdict.
+      await waitFor(
+        () => JSON.stringify(problems()) === JSON.stringify(toolFindings),
+        SETTLE_TIMEOUT_MS,
+        () =>
+          `expected the Problems panel to show ${JSON.stringify(toolFindings)}, found ${JSON.stringify(problems())}`
+      );
     });
 
     test('the lint tool reports no findings for a clean scene', async () => {
@@ -194,44 +201,41 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
       if (typeof vscode.LanguageModelDataPart?.image !== 'function') {
         skipBecause(this, 'this VS Code predates the image part, so the capture tool does not register');
       }
-      if (process.platform === 'linux') {
-        skipBecause(
-          this,
-          'both launchers pass --disable-gpu on Linux, so no WebGL context exists to capture'
-        );
+      if (launchedWithoutGpu()) {
+        skipBecause(this, 'the window launched with --disable-gpu, so the next test asserts the answer');
       }
-
+      // The host's deadline ends only a hung webview, so a failure here still prints its answer.
       this.timeout(CAPTURE_DEADLINE_MS + SETTLE_TIMEOUT_MS);
-      const result = await captureWithinDeadline(scene('main.tscn'));
-      const image = imageOf(result);
-
-      assert.ok(image, `expected an image part, found the text ${JSON.stringify(textOf(result))}`);
-      assert.strictEqual(image.mimeType, 'image/png');
-      assert.deepStrictEqual([...image.data.slice(0, PNG_SIGNATURE.length)], PNG_SIGNATURE);
-    });
-
-    // Runs on Linux too, where no WebGL context exists, so CI sees the failure answer.
-    test('the capture tool answers a PNG, or names the scene and why it has no image', async function () {
-      if (typeof vscode.LanguageModelDataPart?.image !== 'function') {
-        skipBecause(this, 'this VS Code predates the image part, so the capture tool does not register');
-      }
-      this.timeout(CAPTURE_TIMEOUT_MS + SETTLE_TIMEOUT_MS);
       const main = scene('main.tscn');
 
       const result = await invoke('textscene_capture', main);
       const image = imageOf(result);
 
-      if (image) {
-        assert.deepStrictEqual([...image.data.slice(0, PNG_SIGNATURE.length)], PNG_SIGNATURE);
-        return;
+      assert.ok(image, `expected an image part, found the text ${JSON.stringify(textOf(result))}`);
+      assert.strictEqual(textOf(result), `Rendered preview of ${main}.`);
+      assert.strictEqual(image.mimeType, 'image/png');
+      assert.deepStrictEqual([...image.data.slice(0, PNG_SIGNATURE.length)], PNG_SIGNATURE);
+      const { width, height } = pngSize(image.data);
+      assert.ok(width > 0 && height > 0, `expected a non-empty image, found ${width}x${height}`);
+    });
+
+    test('the capture tool names the missing WebGL context in a window launched without a GPU', async function () {
+      if (typeof vscode.LanguageModelDataPart?.image !== 'function') {
+        skipBecause(this, 'this VS Code predates the image part, so the capture tool does not register');
       }
-      const prefix = `The preview for ${main} did not return an image: `;
-      const text = textOf(result);
-      assert.ok(
-        text.startsWith(prefix),
-        `expected the text to start ${JSON.stringify(prefix)}, found ${text}`
+      if (!launchedWithoutGpu()) {
+        skipBecause(this, 'the window has a GPU, so the previous test asserts the image');
+      }
+      this.timeout(CAPTURE_DEADLINE_MS + SETTLE_TIMEOUT_MS);
+      const main = scene('main.tscn');
+
+      const result = await invoke('textscene_capture', main);
+
+      assert.strictEqual(imageOf(result), undefined);
+      assert.strictEqual(
+        textOf(result),
+        `The preview for ${main} did not return an image: ${NO_WEBGL_REASON}`
       );
-      assert.ok(text.length > prefix.length, 'the answer names a reason');
     });
   });
 }

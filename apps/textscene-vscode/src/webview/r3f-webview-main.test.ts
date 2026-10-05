@@ -7,15 +7,16 @@
 // @vitest-environment happy-dom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createElement, type ReactNode } from 'react';
+import { createElement, useEffect, type ReactNode } from 'react';
 import type { HostToWebviewMessage, WebviewToHostMessage } from '../protocol';
-import type { TscnNode } from '@textscene/core';
+import type { PreviewCaptureState, TscnNode } from '@textscene/core';
 
 interface CapturedShellProps {
   panelId?: string;
   content?: string;
   initialViewportMode?: '2D' | '3D' | undefined;
   onNodeReveal?: (path: string, node: TscnNode) => void;
+  onCaptureStateChange?: (state: PreviewCaptureState) => void;
 }
 
 interface CapturedLogAdapter {
@@ -33,6 +34,8 @@ const captured: {
   provideFile?: ReturnType<typeof vi.fn>;
   pipelineProvider?: unknown;
   pipelineOptions?: { createWorker?: unknown };
+  /** The state the fake shell reports from its mount effect, as the real bridge does. */
+  mountCaptureState?: PreviewCaptureState;
 } = {};
 
 // A synthetic mock, no `importActual`: the real `<TscnPreviewShell>` pulls in
@@ -45,8 +48,12 @@ vi.mock('@textscene/core', () => ({
     return { loader: { provideFile: captured.provideFile } };
   }),
   ResourceLoaderProvider: ({ children }: { children: ReactNode }) => children,
-  TscnPreviewShell: (props: CapturedShellProps) => {
+  TscnPreviewShell: function FakeShell(props: CapturedShellProps) {
     captured.shellProps = props;
+    const { onCaptureStateChange } = props;
+    useEffect(() => {
+      if (captured.mountCaptureState) onCaptureStateChange?.(captured.mountCaptureState);
+    }, [onCaptureStateChange]);
     return createElement('div', { 'data-testid': 'fake-shell' }, props.content);
   },
   setLogAdapter: vi.fn((adapter: CapturedLogAdapter) => {
@@ -135,6 +142,7 @@ afterEach(() => {
   delete (globalThis as { acquireVsCodeApi?: unknown }).acquireVsCodeApi;
   delete (globalThis as { __TEXTSCENE_CONFIG__?: unknown }).__TEXTSCENE_CONFIG__;
   document.body.innerHTML = '';
+  captured.mountCaptureState = undefined;
 });
 
 describe('mountR3FWebview', () => {
@@ -243,5 +251,62 @@ describe('initial viewport mode threading (__TEXTSCENE_CONFIG__)', () => {
     await mountFresh({ viewportMode: '2D' });
 
     expect(captured.shellProps?.initialViewportMode).toBe('2D');
+  });
+});
+
+describe('capture state reporting', () => {
+  const READY: PreviewCaptureState = { status: 'ready', capture: () => 'data:image/png;base64,AA==' };
+  const isCaptureState = (m: WebviewToHostMessage) =>
+    m.type === 'previewCaptureReady' ||
+    m.type === 'previewCapturePending' ||
+    m.type === 'previewCaptureUnavailable';
+
+  it('posts the state the shell reported on mount only after webviewReady', async () => {
+    captured.mountCaptureState = READY;
+
+    const { vscodeApi } = await mountFresh();
+    const types = postedMessages(vscodeApi).map((m) => m.type);
+
+    expect(types.indexOf('webviewReady')).toBeLessThan(types.indexOf('previewCaptureReady'));
+    expect(postedMessages(vscodeApi).filter(isCaptureState)).toEqual([{ type: 'previewCaptureReady' }]);
+  });
+
+  it('posts pending after webviewReady while the shell has reported no other state', async () => {
+    const { vscodeApi } = await mountFresh();
+
+    expect(postedMessages(vscodeApi).filter(isCaptureState)).toEqual([{ type: 'previewCapturePending' }]);
+  });
+
+  it('posts each later state with its reason', async () => {
+    const { vscodeApi } = await mountFresh();
+
+    captured.shellProps?.onCaptureStateChange?.({ status: 'unavailable', reason: 'no WebGL' });
+
+    expect(postedMessages(vscodeApi).filter(isCaptureState).pop()).toEqual({
+      type: 'previewCaptureUnavailable',
+      reason: 'no WebGL',
+    });
+  });
+
+  it('answers a capturePreview with the image of the ready capture', async () => {
+    captured.mountCaptureState = READY;
+    const { vscodeApi } = await mountFresh();
+
+    dispatch({ type: 'capturePreview', requestId: 'c1' });
+
+    expect(postedMessages(vscodeApi).filter((m) => m.type === 'previewCaptured')).toEqual([
+      { type: 'previewCaptured', requestId: 'c1', dataUrl: 'data:image/png;base64,AA==' },
+    ]);
+  });
+
+  it('answers a capturePreview that crossed a change to unavailable with the reason', async () => {
+    const { vscodeApi } = await mountFresh();
+    captured.shellProps?.onCaptureStateChange?.({ status: 'unavailable', reason: 'no WebGL' });
+
+    dispatch({ type: 'capturePreview', requestId: 'c2' });
+
+    expect(postedMessages(vscodeApi).filter((m) => m.type === 'previewCaptureError')).toEqual([
+      { type: 'previewCaptureError', requestId: 'c2', error: 'no WebGL' },
+    ]);
   });
 });

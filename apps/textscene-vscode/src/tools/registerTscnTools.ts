@@ -9,7 +9,7 @@
 
 import * as vscode from 'vscode';
 import { Linter, type ResourceProvider } from '@textscene/core/linter';
-import type { PreviewCapture } from '../TscnPreviewPanel';
+import type { PreviewCapture } from '../previewCaptureQueue';
 import { formatLintResult } from './formatLintResult';
 import { formatMissingResources, missingResourcePaths } from './missingResources';
 import { formatSceneTree } from './sceneTree';

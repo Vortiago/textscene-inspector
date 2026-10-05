@@ -16,6 +16,8 @@ export interface ErrorBoundaryProps {
   fallback: (error: Error, reset: () => void) => ReactNode;
   /** Fired once per catch, for example to show the error elsewhere in the UI. */
   onError?: (error: Error, info: ErrorInfo) => void;
+  /** Fired when a caught error clears, by `reset()` or a changed reset key. */
+  onReset?: () => void;
   /**
    * When any entry changes (`Object.is`) while an error is caught, clear it: a
    * props update, not a `key` remount, which would rebuild the wrapped tree and
@@ -51,6 +53,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   private reset = (): void => {
     this.setState({ error: null });
+    this.props.onReset?.();
   };
 
   override render(): ReactNode {

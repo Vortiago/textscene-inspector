@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { SUITE_STARTED_MARKER_ENV } from './test/integration/integrationLaunch';
+import { DISABLE_GPU_ENV, SUITE_STARTED_MARKER_ENV } from './test/integration/integrationLaunch';
 import {
   INSTALLED_EXTENSIONS_DIR_ENV,
   installArgs,
@@ -104,15 +104,17 @@ describe('installedLaunchOptions', () => {
     expect(installedLaunchOptions(paths).extensionDevelopmentPath).toBe(paths.suiteHostPath);
   });
 
-  it('launches without the GPU on Linux only', () => {
-    expect(installedLaunchOptions(paths, 'linux').launchArgs).toContain('--disable-gpu');
-    expect(installedLaunchOptions(paths, 'darwin').launchArgs).not.toContain('--disable-gpu');
+  it('launches without the GPU on Linux, and elsewhere only on request', () => {
+    expect(installedLaunchOptions(paths, 'linux', undefined).launchArgs).toContain('--disable-gpu');
+    expect(installedLaunchOptions(paths, 'darwin', undefined).launchArgs).not.toContain('--disable-gpu');
+    expect(installedLaunchOptions(paths, 'darwin', '1').launchArgs).toContain('--disable-gpu');
   });
 
-  it('names the start marker and the extensions directory to the suite', () => {
-    expect(installedLaunchOptions(paths).extensionTestsEnv).toEqual({
+  it('names the start marker, the extensions directory and the GPU launch to the suite', () => {
+    expect(installedLaunchOptions(paths, 'linux', undefined).extensionTestsEnv).toEqual({
       [SUITE_STARTED_MARKER_ENV]: paths.suiteStartedMarker,
       [INSTALLED_EXTENSIONS_DIR_ENV]: paths.extensionsDir,
+      [DISABLE_GPU_ENV]: '1',
     });
   });
 });

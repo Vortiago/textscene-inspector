@@ -11,10 +11,10 @@ import {
   TscnPreviewShell,
   setLogAdapter,
   type LogAdapter,
+  type PreviewCaptureState,
 } from '@textscene/core';
 import type { TscnNode } from '@textscene/core';
 import { isHostToWebviewMessage, type WebviewToHostMessage } from '../protocol';
-import { captureWhenReady } from './captureWhenReady';
 import { WebviewResourceProvider } from './WebviewResourceProvider';
 import { textureWorkerFactory } from './createTextureWorker';
 import { readInitialConfig, resolveInitialViewportMode } from './initialConfig';
@@ -58,11 +58,18 @@ class WebviewLogAdapter implements LogAdapter {
 function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
   const [content, setContent] = useState<string>('');
 
-  // Set by `<ScreenshotRequestBridge>` inside the shell; read by a `capturePreview`.
-  const captureRef = useRef<(() => string | null) | null>(null);
-  const handleScreenshotReady = useCallback((capture: () => string | null) => {
-    captureRef.current = capture;
-  }, []);
+  // Child effects run before this component's, so the shell reports its first state
+  // before the listener exists. The ref holds the latest, and the host hears it only
+  // after `webviewReady`, which resets the host's copy.
+  const captureStateRef = useRef<PreviewCaptureState>({ status: 'pending' });
+  const listenerInstalledRef = useRef(false);
+  const handleCaptureStateChange = useCallback(
+    (state: PreviewCaptureState) => {
+      captureStateRef.current = state;
+      if (listenerInstalledRef.current) vscode.postMessage(captureStateMessage(state));
+    },
+    [vscode]
+  );
 
   // The host answers the provider's `loadResource` posts with the file bytes.
   // FileEventBus and ResourceLoader sit between it and `useResource`. Procedural
@@ -86,24 +93,7 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
         // disk. Its consumers load it again, with no remount.
         loader.provideFile(message.path);
       } else if (message.type === 'capturePreview') {
-        const { requestId } = message;
-        captureWhenReady({
-          capture: () => captureRef.current?.() ?? null,
-          post: (dataUrl) =>
-            vscode.postMessage({
-              type: 'previewCaptured',
-              requestId,
-              dataUrl,
-            } satisfies WebviewToHostMessage),
-          fail: () =>
-            vscode.postMessage({
-              type: 'previewCaptureError',
-              requestId,
-              error: 'The preview canvas is not ready.',
-            } satisfies WebviewToHostMessage),
-          now: () => performance.now(),
-          schedule: (run) => setTimeout(run, 50),
-        });
+        vscode.postMessage(captureAnswer(message.requestId, captureStateRef.current));
       }
     }
 
@@ -113,8 +103,11 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
     // replays the scene text on every ready, so a remount with empty `content` is
     // refilled too.
     vscode.postMessage({ type: 'webviewReady' } satisfies WebviewToHostMessage);
+    listenerInstalledRef.current = true;
+    vscode.postMessage(captureStateMessage(captureStateRef.current));
 
     return () => {
+      listenerInstalledRef.current = false;
       window.removeEventListener('message', onMessage);
     };
   }, [vscode, loader]);
@@ -137,10 +130,28 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
         content={content}
         onNodeReveal={handleNodeReveal}
         initialViewportMode={INITIAL_VIEWPORT_MODE}
-        onScreenshotReady={handleScreenshotReady}
+        onCaptureStateChange={handleCaptureStateChange}
       />
     </ResourceLoaderProvider>
   );
+}
+
+function captureStateMessage(state: PreviewCaptureState): WebviewToHostMessage {
+  if (state.status === 'ready') return { type: 'previewCaptureReady' };
+  if (state.status === 'unavailable') return { type: 'previewCaptureUnavailable', reason: state.reason };
+  return { type: 'previewCapturePending' };
+}
+
+/**
+ * The host posts a request only in the `ready` state, so a request in another state
+ * crossed a change on the wire. The webview then names the state it is in.
+ */
+function captureAnswer(requestId: string, state: PreviewCaptureState): WebviewToHostMessage {
+  const dataUrl = state.status === 'ready' ? state.capture() : null;
+  if (dataUrl !== null) return { type: 'previewCaptured', requestId, dataUrl };
+  const error =
+    state.status === 'unavailable' ? state.reason : 'The preview canvas closed before the capture.';
+  return { type: 'previewCaptureError', requestId, error };
 }
 
 export function mountR3FWebview(): void {

@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import type { TscnNode } from '../../../parser/types.js';
 import type { ViewportMode } from '../../contexts/ViewportModeContext.js';
+import type { PreviewCaptureState } from './previewCaptureState.js';
 
 export interface TscnPreviewShellProps {
   /** A stable panel identifier for logs and context coordination. */
@@ -43,9 +44,9 @@ export interface TscnPreviewShellProps {
    */
   initialActiveCameraPath?: string | null;
   /**
-   * Fired with a function that captures the current viewport as a PNG data URL, and
-   * again with a function that returns `null` when the canvas unmounts. The host saves
-   * the image, or hands it to an agent tool.
+   * Fired on mount and on each change of whether the viewport can capture a PNG. The
+   * `ready` state carries the capture, which the host saves or hands to an agent tool.
+   * The shell reports `pending` as it unmounts.
    */
-  onScreenshotReady?: (capture: () => string | null) => void;
+  onCaptureStateChange?: (state: PreviewCaptureState) => void;
 }

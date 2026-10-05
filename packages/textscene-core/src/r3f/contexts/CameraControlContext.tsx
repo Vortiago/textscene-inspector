@@ -54,6 +54,10 @@ export interface CameraControlContextValue {
   takeScreenshot: () => string | null;
   /** `<TscnCanvas>` registers the frame capture of its WebGLRenderer here. */
   registerScreenshotHandler: (handler: () => string | null) => () => void;
+  /** Whether a canvas has registered a screenshot handler now. */
+  hasScreenshotHandler: () => boolean;
+  /** Calls `listener` each time a handler registers or leaves. Returns the unsubscribe. */
+  subscribeScreenshotHandler: (listener: () => void) => () => void;
 }
 
 const CameraControlContext = createContext<CameraControlContextValue | null>(null);
@@ -62,22 +66,39 @@ CameraControlContext.displayName = 'CameraControlContext';
 /**
  * A handler slot in a ref, so a registration re-renders no consumer. The
  * cleanup clears the slot only while it holds that handler, since a newer
- * canvas may replace it before the old one unmounts.
+ * canvas may replace it before the old one unmounts. A consumer that must know
+ * when the slot fills subscribes, as `useSyncExternalStore` does.
  */
 function useHandlerSlot<T>(): {
   ref: MutableRefObject<T | null>;
   register: (handler: T) => () => void;
+  subscribe: (listener: () => void) => () => void;
 } {
   const ref = useRef<T | null>(null);
-  const register = useCallback((handler: T) => {
-    ref.current = handler;
+  const listeners = useRef(new Set<() => void>());
+  const notify = useCallback(() => {
+    for (const listener of listeners.current) listener();
+  }, []);
+  const register = useCallback(
+    (handler: T) => {
+      ref.current = handler;
+      notify();
+      return () => {
+        if (ref.current === handler) {
+          ref.current = null;
+          notify();
+        }
+      };
+    },
+    [notify]
+  );
+  const subscribe = useCallback((listener: () => void) => {
+    listeners.current.add(listener);
     return () => {
-      if (ref.current === handler) {
-        ref.current = null;
-      }
+      listeners.current.delete(listener);
     };
   }, []);
-  return { ref, register };
+  return { ref, register, subscribe };
 }
 
 export interface CameraControlProviderProps {
@@ -123,11 +144,18 @@ export function CameraControlProvider({
     resetHandlerRef.current?.();
   }, [resetHandlerRef]);
 
-  const { ref: screenshotHandlerRef, register: registerScreenshotHandler } =
-    useHandlerSlot<() => string | null>();
+  const {
+    ref: screenshotHandlerRef,
+    register: registerScreenshotHandler,
+    subscribe: subscribeScreenshotHandler,
+  } = useHandlerSlot<() => string | null>();
   const takeScreenshot = useCallback(() => {
     return screenshotHandlerRef.current?.() ?? null;
   }, [screenshotHandlerRef]);
+  const hasScreenshotHandler = useCallback(
+    () => screenshotHandlerRef.current !== null,
+    [screenshotHandlerRef]
+  );
 
   const value = useMemo<CameraControlContextValue>(
     () => ({
@@ -141,6 +169,8 @@ export function CameraControlProvider({
       registerResetHandler,
       takeScreenshot,
       registerScreenshotHandler,
+      hasScreenshotHandler,
+      subscribeScreenshotHandler,
     }),
     [
       activeCameraPath,
@@ -153,6 +183,8 @@ export function CameraControlProvider({
       registerResetHandler,
       takeScreenshot,
       registerScreenshotHandler,
+      hasScreenshotHandler,
+      subscribeScreenshotHandler,
     ]
   );
 

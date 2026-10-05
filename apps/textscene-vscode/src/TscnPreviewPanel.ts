@@ -13,18 +13,10 @@ import { dispatchWebviewMessage, type WebviewMessageHandlers } from './webviewDi
 import { jumpToNodeDefinition } from './jumpToNodeDefinition';
 import { relayWebviewLog } from './hostLogRelay';
 import { encodeResourceResponse } from './wireCodec';
+import { PreviewCaptureQueue, type PreviewCapture } from './previewCaptureQueue';
 
 export { dispatchWebviewMessage } from './webviewDispatch';
 export type { WebviewMessageHandlers } from './webviewDispatch';
-
-/** How long a capture waits for the webview before it answers that the preview gave no image. */
-const CAPTURE_TIMEOUT_MS = 10000;
-
-/** A capture's answer: the viewport as a `data:image/png;base64,…` URL, or why there is none. */
-export type PreviewCapture = { readonly dataUrl: string } | { readonly error: string };
-
-/** The answer to a capture that a closed preview cannot take. */
-const PREVIEW_CLOSED: PreviewCapture = { error: 'The preview was closed.' };
 
 export class TscnPreviewPanel {
   public static readonly viewType = 'tscnPreview';
@@ -61,11 +53,9 @@ export class TscnPreviewPanel {
    */
   private _resourceProvider: VSCodeResourceProvider | null = null;
 
-  /** Resolved when the webview-ready handshake arrives, so a capture does not post early. */
-  private _readyWaiters: Array<() => void> = [];
-  /** Each pending capture's request id, answered by the webview or a timeout. */
-  private readonly _captures = new Map<string, (capture: PreviewCapture) => void>();
-  private _captureSeq = 0;
+  private readonly _captures = new PreviewCaptureQueue((requestId) =>
+    this._postMessageToWebview({ type: 'capturePreview', requestId })
+  );
 
   public static create(extensionUri: vscode.Uri, resource: vscode.Uri): TscnPreviewPanel {
     const column = vscode.window.activeTextEditor
@@ -105,7 +95,7 @@ export class TscnPreviewPanel {
     const handlers: WebviewMessageHandlers = {
       webviewReady: (_msg) => {
         this._webviewReady = true;
-        for (const resolve of this._readyWaiters.splice(0)) resolve();
+        this._captures.webviewLoaded();
         // Every remount, such as a move to another editor group, posts ready with
         // an empty tree. Replay always, so a ready webview holds the current text:
         // the `_previousContent` diff swallows a later re-read, which leaves the
@@ -124,10 +114,19 @@ export class TscnPreviewPanel {
         relayWebviewLog(msg.level, msg.message, msg.args);
       },
       previewCaptured: (msg) => {
-        this._resolveCapture(msg.requestId, { dataUrl: msg.dataUrl });
+        this._captures.answer(msg.requestId, { dataUrl: msg.dataUrl });
       },
       previewCaptureError: (msg) => {
-        this._resolveCapture(msg.requestId, { error: msg.error });
+        this._captures.answer(msg.requestId, { error: msg.error });
+      },
+      previewCaptureReady: () => {
+        this._captures.setState({ kind: 'ready' });
+      },
+      previewCapturePending: () => {
+        this._captures.setState({ kind: 'pending' });
+      },
+      previewCaptureUnavailable: (msg) => {
+        this._captures.setState({ kind: 'unavailable', reason: msg.reason });
       },
     };
 
@@ -147,9 +146,7 @@ export class TscnPreviewPanel {
     // disposed`. `_handleLoadResource`'s catch re-posts and throws out of its
     // `void`ed call as an unhandled rejection.
     this._disposed = true;
-    for (const resolve of this._captures.values()) resolve(PREVIEW_CLOSED);
-    this._captures.clear();
-    for (const resolve of this._readyWaiters.splice(0)) resolve();
+    this._captures.close();
     this._onDidDispose.fire();
 
     this._panel.dispose();
@@ -181,41 +178,11 @@ export class TscnPreviewPanel {
   }
 
   /**
-   * Captures the viewport, or says why it could not: the webview's own reason, a closed
-   * preview, or no answer within {@link CAPTURE_TIMEOUT_MS}. It waits for the webview-ready
-   * handshake, since a post sent before the listener installs is dropped.
+   * Captures the viewport, or says why it could not. A request waits for the webview to
+   * report its capture state, so one made while the canvas mounts gets the image.
    */
-  public async capture(): Promise<PreviewCapture> {
-    if (this._disposed) return PREVIEW_CLOSED;
-    await this._whenReady();
-    // `dispose` ends the ready wait too, and a closed webview never answers a post.
-    if (this._disposed) return PREVIEW_CLOSED;
-    return new Promise<PreviewCapture>((resolve) => {
-      const requestId = `capture-${++this._captureSeq}`;
-      const timer = setTimeout(() => {
-        if (this._captures.delete(requestId)) {
-          resolve({ error: `The preview did not answer within ${CAPTURE_TIMEOUT_MS / 1000} s.` });
-        }
-      }, CAPTURE_TIMEOUT_MS);
-      this._captures.set(requestId, (capture) => {
-        clearTimeout(timer);
-        resolve(capture);
-      });
-      this._postMessageToWebview({ type: 'capturePreview', requestId });
-    });
-  }
-
-  private _whenReady(): Promise<void> {
-    if (this._webviewReady) return Promise.resolve();
-    return new Promise((resolve) => this._readyWaiters.push(resolve));
-  }
-
-  private _resolveCapture(requestId: string, capture: PreviewCapture): void {
-    const resolve = this._captures.get(requestId);
-    if (resolve) {
-      this._captures.delete(requestId);
-      resolve(capture);
-    }
+  public capture(): Promise<PreviewCapture> {
+    return this._captures.request();
   }
 
   /** Lazily creates this panel's `VSCodeResourceProvider`, then reuses it. */

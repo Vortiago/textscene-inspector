@@ -157,13 +157,19 @@ describe('registerTscnTools', () => {
   it('the capture tool says so, with the reason, when the preview answers no image', async () => {
     registerTscnTools(
       context(),
-      host({ capturePreview: vi.fn().mockResolvedValue({ error: 'The preview canvas is not ready.' }) })
+      host({
+        capturePreview: vi
+          .fn()
+          .mockResolvedValue({ error: 'The preview shows the 2D view, and only the 3D view can capture.' }),
+      })
     );
     const result = await registeredTool(TOOL_IDS.capture).invoke(
       { input: { path: 'scenes/Main.tscn' } },
       TOKEN
     );
-    expect(result.content[0]!.value).toContain('did not return an image: The preview canvas is not ready.');
+    expect(result.content[0]!.value).toContain(
+      'did not return an image: The preview shows the 2D view, and only the 3D view can capture.'
+    );
   });
 
   it('rejects a path that is not a .tscn scene', async () => {

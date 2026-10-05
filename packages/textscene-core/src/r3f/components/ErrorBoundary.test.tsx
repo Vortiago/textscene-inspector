@@ -127,6 +127,25 @@ describe('ErrorBoundary', () => {
     consoleSpy.mockRestore();
   });
 
+  it('calls onReset when a changed resetKey clears the caught error', () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const onReset = vi.fn();
+    function Harness({ resetKey, shouldThrow }: { resetKey: string; shouldThrow: boolean }) {
+      return (
+        <ErrorBoundary fallback={() => <div>fallback</div>} resetKeys={[resetKey]} onReset={onReset}>
+          <Bomb shouldThrow={shouldThrow} />
+        </ErrorBoundary>
+      );
+    }
+
+    const { rerender } = render(<Harness resetKey="v1" shouldThrow={true} />);
+    expect(onReset).not.toHaveBeenCalled();
+    rerender(<Harness resetKey="v2" shouldThrow={false} />);
+
+    expect(onReset).toHaveBeenCalledTimes(1);
+    consoleSpy.mockRestore();
+  });
+
   it('isolates a crash to its own boundary — a sibling boundary is unaffected', () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 

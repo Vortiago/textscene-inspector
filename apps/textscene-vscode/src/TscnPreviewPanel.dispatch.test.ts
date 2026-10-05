@@ -20,6 +20,9 @@ function makeHandlers() {
     log: vi.fn(),
     previewCaptured: vi.fn(),
     previewCaptureError: vi.fn(),
+    previewCaptureReady: vi.fn(),
+    previewCapturePending: vi.fn(),
+    previewCaptureUnavailable: vi.fn(),
   };
 }
 
@@ -31,6 +34,9 @@ describe('dispatchWebviewMessage', () => {
     { type: 'log', level: 'info', message: 'hello', args: [] },
     { type: 'previewCaptured', requestId: 'c1', dataUrl: 'data:image/png;base64,AA==' },
     { type: 'previewCaptureError', requestId: 'c2', error: 'not ready' },
+    { type: 'previewCaptureReady' },
+    { type: 'previewCapturePending' },
+    { type: 'previewCaptureUnavailable', reason: 'no WebGL' },
   ];
 
   it.each(ROUTING_CASES)('routes a $type message to its handler only', (msg) => {
@@ -180,57 +186,6 @@ describe('TscnPreviewPanel — all message types through fake onDidReceiveMessag
     expect((loaded as { requestId: string }).requestId).toBe('rq1');
   });
 
-  it('capture: posts capturePreview and resolves with the webview image', async () => {
-    const { webview, triggerMessage } = setupMockPanel();
-    const panel = await makeReadyPanel(triggerMessage);
-
-    const captured = panel.capture();
-    await new Promise<void>((r) => setTimeout(r, 0));
-    const request = webview.postMessage.mock.calls
-      .map((c) => c[0])
-      .find((m) => (m as { type: string }).type === 'capturePreview') as { requestId: string };
-    expect(request).toBeDefined();
-
-    triggerMessage({
-      type: 'previewCaptured',
-      requestId: request.requestId,
-      dataUrl: 'data:image/png;base64,AA==',
-    });
-
-    await expect(captured).resolves.toEqual({ dataUrl: 'data:image/png;base64,AA==' });
-  });
-
-  it('capture: resolves with the reason the webview reports', async () => {
-    const { webview, triggerMessage } = setupMockPanel();
-    const panel = await makeReadyPanel(triggerMessage);
-
-    const captured = panel.capture();
-    await new Promise<void>((r) => setTimeout(r, 0));
-    const request = webview.postMessage.mock.calls
-      .map((c) => c[0])
-      .find((m) => (m as { type: string }).type === 'capturePreview') as { requestId: string };
-    triggerMessage({ type: 'previewCaptureError', requestId: request.requestId, error: 'not ready' });
-
-    await expect(captured).resolves.toEqual({ error: 'not ready' });
-  });
-
-  it('capture: says the preview closed when it closes before the webview is ready', async () => {
-    const { webview } = setupMockPanel();
-    (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
-    const panel = TscnPreviewPanel.create(
-      createMockUri('/extension'),
-      createMockUri('/workspace/scene.tscn')
-    );
-
-    const captured = panel.capture();
-    panel.dispose();
-
-    await expect(captured).resolves.toEqual({ error: 'The preview was closed.' });
-    expect(
-      webview.postMessage.mock.calls.some((c) => (c[0] as { type: string }).type === 'capturePreview')
-    ).toBe(false);
-  });
-
   it('log: does not throw even when no output channel is initialised', async () => {
     const { triggerMessage } = setupMockPanel();
     await makeReadyPanel(triggerMessage);
@@ -287,6 +242,12 @@ describe('a message whose type is known but whose body is not', () => {
       h
     );
     expect(h.loadResource).not.toHaveBeenCalled();
+  });
+
+  it('drops a previewCaptureUnavailable with no reason, which the tool would print', () => {
+    const h = makeHandlers();
+    dispatchWebviewMessage({ type: 'previewCaptureUnavailable' }, h);
+    expect(h.previewCaptureUnavailable).not.toHaveBeenCalled();
   });
 
   it('still routes a well-formed log', () => {

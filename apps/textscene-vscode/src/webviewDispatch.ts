@@ -66,4 +66,7 @@ const CARRIES_ITS_PAYLOAD: {
   log: (m) => isString(m.level) && isString(m.message) && Array.isArray(m.args),
   previewCaptured: (m) => isString(m.requestId) && isString(m.dataUrl),
   previewCaptureError: (m) => isString(m.requestId) && isString(m.error),
+  previewCaptureReady: () => true,
+  previewCapturePending: () => true,
+  previewCaptureUnavailable: (m) => isString(m.reason),
 };

@@ -287,4 +287,50 @@ describe('CameraControlContext — screenshot (#224)', () => {
     });
     expect(handler).toHaveBeenCalledTimes(1);
   });
+
+  it('tells a subscriber when a handler registers and when it leaves', () => {
+    function ScreenshotHandlerRegistrar() {
+      const { registerScreenshotHandler } = useCameraControl();
+      useEffect(
+        () => registerScreenshotHandler(() => 'data:image/png;base64,AAA'),
+        [registerScreenshotHandler]
+      );
+      return null;
+    }
+    let control: ReturnType<typeof useCameraControl> | null = null;
+    function Probe() {
+      control = useCameraControl();
+      return null;
+    }
+    function App({ showRegistrar }: { showRegistrar: boolean }) {
+      return (
+        <CameraControlProvider>
+          <Probe />
+          {showRegistrar && <ScreenshotHandlerRegistrar />}
+        </CameraControlProvider>
+      );
+    }
+    const { rerender } = render(<App showRegistrar={false} />);
+    const seen: boolean[] = [];
+    control!.subscribeScreenshotHandler(() => seen.push(control!.hasScreenshotHandler()));
+    expect(control!.hasScreenshotHandler()).toBe(false);
+
+    rerender(<App showRegistrar={true} />);
+    rerender(<App showRegistrar={false} />);
+
+    expect(seen).toEqual([true, false]);
+  });
+
+  it('stops telling a subscriber once it unsubscribes', () => {
+    const { result } = renderHook(() => useCameraControl(), { wrapper });
+    const listener = vi.fn();
+    const unsubscribe = result.current.subscribeScreenshotHandler(listener);
+
+    unsubscribe();
+    act(() => {
+      result.current.registerScreenshotHandler(() => null);
+    });
+
+    expect(listener).not.toHaveBeenCalled();
+  });
 });
