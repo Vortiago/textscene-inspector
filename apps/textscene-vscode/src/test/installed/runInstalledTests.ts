@@ -1,7 +1,8 @@
 /**
  * Entry point for the installed-package suite: it installs the packaged .vsix into a
- * clean VS Code and runs the suite against that copy. `pnpm vsc:package` writes the
- * .vsix, and CI downloads the one its build job packaged.
+ * clean VS Code and runs the suite against that copy. A second launch runs the `toolsOff`
+ * suite on the same copy, with the agent tools turned off in the user settings.
+ * `pnpm vsc:package` writes the .vsix, and CI downloads the one its build job packaged.
  */
 import * as fs from 'fs';
 import * as os from 'os';
@@ -17,6 +18,9 @@ import {
   installedLaunchOptions,
   installedLaunchPaths,
   SUITE_HOST_MANIFEST,
+  toolsOffLaunchPaths,
+  TOOLS_OFF_SETTINGS,
+  userSettingsFile,
   vsixFileName,
   type InstalledLaunchPaths,
 } from './installedLaunch';
@@ -41,9 +45,38 @@ async function main() {
   const install = await runVSCodeCommand(installArgs(paths, vsixPath), { version });
   console.log(install.stdout.trim());
 
-  await relaunchIfHostExitsEarly(paths.suiteStartedMarker, () =>
-    runTests({ ...installedLaunchOptions(paths), vscodeExecutablePath })
+  // The second launch runs after a failed first one too, so one CI run reports both.
+  const firstLaunch = await settled(
+    relaunchIfHostExitsEarly(paths.suiteStartedMarker, () =>
+      runTests({ ...installedLaunchOptions(paths), vscodeExecutablePath })
+    )
   );
+
+  const toolsOff = toolsOffLaunchPaths(paths, __dirname);
+  writeUserSettings(toolsOff.userDataDir, TOOLS_OFF_SETTINGS);
+  console.log('Second launch: the agent tools turned off in the user settings');
+  await relaunchIfHostExitsEarly(toolsOff.suiteStartedMarker, () =>
+    runTests({ ...installedLaunchOptions(toolsOff), vscodeExecutablePath })
+  );
+
+  if (firstLaunch !== undefined) throw firstLaunch;
+}
+
+/** The error `run` rejects with, or undefined when it resolves. */
+async function settled(run: Promise<unknown>): Promise<unknown> {
+  try {
+    await run;
+    return undefined;
+  } catch (err) {
+    return err ?? new Error('the first launch failed with no error');
+  }
+}
+
+/** Writes the user settings VS Code reads at start, before the window opens. */
+function writeUserSettings(userDataDir: string, settings: object): void {
+  const file = userSettingsFile(userDataDir);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify(settings, null, 2));
 }
 
 /** Empties every directory VS Code reads, and writes the suite host and the workspace. */

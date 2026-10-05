@@ -1,17 +1,34 @@
 /**
- * One end-to-end JSON-RPC smoke test: build the server bundle, spawn it, and speak LSP over
- * its stdio. It initializes, opens a scene, then asks for a hover and the scene's symbols,
- * which proves the framing, the capability wiring and the feature handlers all connect.
+ * End-to-end tests over JSON-RPC: build the server bundle, spawn it, and speak LSP over its
+ * stdio. A smoke test proves the framing and the capability wiring. The answer tests open the
+ * shared fixture project and check every feature against `answers.json`, which the VS Code
+ * suites check too, so both hosts give one answer for one position (ADR-0046).
  */
 
-import { execSync, spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { execSync } from 'node:child_process';
+import { cpSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, relative, sep } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { CompletionItemKind, SymbolKind } from 'vscode-languageserver/node';
 import { beforeAll, describe, expect, it } from 'vitest';
+import {
+  cursorIn,
+  loadAnswers,
+  PROJECT_DIR,
+  projectText,
+  rangeTuple,
+  sortedRanges,
+  type CursorSpec,
+} from './languageFeatureAnswers.testkit';
+import {
+  BUILD_SERVER_COMMAND,
+  repoRoot,
+  spawnServer,
+  withInitializedServer,
+  type LspClient,
+} from './lspClient.testkit';
 
-const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const repoRoot = resolve(packageDir, '../..');
-const serverPath = join(packageDir, 'dist', 'server.js');
 const SCENE_URI = 'file:///scene.tscn';
 
 const SCENE = `[gd_scene format=3]
@@ -21,174 +38,389 @@ visible = true
 mesh = SubResource("missing")
 `;
 
-interface RpcMessage {
-  id?: number;
-  method?: string;
-  params?: unknown;
-  result?: unknown;
-  error?: unknown;
+/** A server answer for a whole-file request reaches the test well inside this on a loaded runner. */
+const SERVER_TIMEOUT_MS = 60_000;
+
+interface LspRange {
+  start: { line: number; character: number };
+  end: { line: number; character: number };
 }
 
-interface Pending {
-  resolve: (message: RpcMessage) => void;
-  reject: (error: Error) => void;
-  timer: ReturnType<typeof setTimeout>;
+interface LspTextEdit {
+  range: LspRange;
+  newText: string;
 }
 
-/** A minimal LSP client: Content-Length framing, request/response by id, notifications one way. */
-class LspClient {
-  private buffer = Buffer.alloc(0);
-  private nextId = 1;
-  private readonly pending = new Map<number, Pending>();
-  private readonly notifications: Array<{ method: string; params: unknown }> = [];
-  private readonly waiters: Array<{ method: string; resolve: (params: unknown) => void }> = [];
-
-  constructor(private readonly child: ChildProcessWithoutNullStreams) {
-    child.stdout.on('data', (chunk: Buffer) => this.read(chunk));
-    child.on('exit', (code) => this.failAll(new Error(`server exited with code ${code}`)));
-    child.on('error', (error) => this.failAll(error));
-  }
-
-  /** Resolves with the next `method` notification, or one already received. */
-  waitForNotification(method: string, timeoutMs = 5000): Promise<unknown> {
-    const existing = this.notifications.find((notification) => notification.method === method);
-    if (existing) return Promise.resolve(existing.params);
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error(`no ${method} within ${timeoutMs}ms`)), timeoutMs);
-      this.waiters.push({
-        method,
-        resolve: (params) => {
-          clearTimeout(timer);
-          resolve(params);
-        },
-      });
-    });
-  }
-
-  request(method: string, params: unknown, timeoutMs = 10_000): Promise<RpcMessage> {
-    const id = this.nextId++;
-    this.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }));
-    return new Promise<RpcMessage>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.pending.delete(id);
-        reject(new Error(`no response to ${method} within ${timeoutMs}ms`));
-      }, timeoutMs);
-      this.pending.set(id, { resolve, reject, timer });
-    });
-  }
-
-  notify(method: string, params: unknown): void {
-    this.write(JSON.stringify({ jsonrpc: '2.0', method, params }));
-  }
-
-  private write(payload: string): void {
-    const body = Buffer.from(payload, 'utf8');
-    this.child.stdin.write(`Content-Length: ${body.length}\r\n\r\n`);
-    this.child.stdin.write(body);
-  }
-
-  private read(chunk: Buffer): void {
-    this.buffer = Buffer.concat([this.buffer, chunk]);
-    for (;;) {
-      const headerEnd = this.buffer.indexOf('\r\n\r\n');
-      if (headerEnd === -1) return;
-      const header = this.buffer.subarray(0, headerEnd).toString('ascii');
-      const length = Number(/Content-Length:\s*(\d+)/i.exec(header)?.[1] ?? NaN);
-      if (Number.isNaN(length)) {
-        this.buffer = this.buffer.subarray(headerEnd + 4);
-        continue;
-      }
-      const bodyStart = headerEnd + 4;
-      if (this.buffer.length < bodyStart + length) return;
-      const body = this.buffer.subarray(bodyStart, bodyStart + length).toString('utf8');
-      this.buffer = this.buffer.subarray(bodyStart + length);
-      this.deliver(JSON.parse(body) as RpcMessage);
-    }
-  }
-
-  private deliver(message: RpcMessage): void {
-    if (typeof message.id !== 'number') {
-      if (typeof message.method === 'string') this.onNotification(message.method, message.params);
-      return;
-    }
-    const pending = this.pending.get(message.id);
-    if (pending === undefined) return;
-    clearTimeout(pending.timer);
-    this.pending.delete(message.id);
-    pending.resolve(message);
-  }
-
-  private onNotification(method: string, params: unknown): void {
-    const index = this.waiters.findIndex((waiter) => waiter.method === method);
-    if (index === -1) {
-      this.notifications.push({ method, params });
-      return;
-    }
-    this.waiters.splice(index, 1)[0]!.resolve(params);
-  }
-
-  private failAll(error: Error): void {
-    for (const pending of this.pending.values()) {
-      clearTimeout(pending.timer);
-      pending.reject(error);
-    }
-    this.pending.clear();
-  }
+interface LspSymbol {
+  name: string;
+  detail: string;
+  kind: number;
+  range: LspRange;
+  selectionRange: LspRange;
+  children?: LspSymbol[];
 }
+
+const answers = loadAnswers();
 
 beforeAll(() => {
-  execSync('pnpm --filter @textscene/lsp build', { cwd: repoRoot, stdio: 'pipe' });
+  execSync(BUILD_SERVER_COMMAND, { cwd: repoRoot, stdio: 'pipe' });
 }, 120_000);
 
 describe('tscn-lsp end-to-end', () => {
-  it('initializes, hovers a class and returns the scene tree over stdio', async () => {
-    const child = spawn(process.execPath, [serverPath], { stdio: ['pipe', 'pipe', 'pipe'] });
-    const client = new LspClient(child);
-    try {
-      const initialize = await client.request('initialize', {
-        processId: process.pid,
-        rootUri: null,
-        capabilities: {},
+  it(
+    'initializes, hovers a class and returns the scene tree over stdio',
+    async () => {
+      await withInitializedServer(null, async (client) => {
+        client.notify('textDocument/didOpen', {
+          textDocument: { uri: SCENE_URI, languageId: 'tscn', version: 1, text: SCENE },
+        });
+
+        // The debounced lint pushes diagnostics; the scene's `SubResource("missing")` is one.
+        const published = (await client.waitForNotification('textDocument/publishDiagnostics')) as {
+          diagnostics: Array<{ message: string }>;
+        };
+        expect(published.diagnostics.length).toBeGreaterThan(0);
+
+        const hover = await client.result<{ contents: { value: string } }>('textDocument/hover', {
+          textDocument: { uri: SCENE_URI },
+          position: { line: 2, character: 26 },
+        });
+        expect(hover.contents.value).toContain('Node3D');
+
+        const tree = await client.result<LspSymbol[]>('textDocument/documentSymbol', {
+          textDocument: { uri: SCENE_URI },
+        });
+        expect(tree.map((symbol) => symbol.name)).toEqual(['Root']);
+        expect(tree[0]!.detail).toBe('MeshInstance3D');
       });
-      const capabilities = (initialize.result as { capabilities: Record<string, unknown> }).capabilities;
+    },
+    SERVER_TIMEOUT_MS
+  );
 
-      expect(capabilities.hoverProvider).toBe(true);
-      expect(capabilities.completionProvider).toMatchObject({
-        triggerCharacters: ['"', '=', '.', '/', '('],
-      });
-      expect(capabilities.codeActionProvider).toMatchObject({ codeActionKinds: ['quickfix'] });
+  it(
+    'announces every language feature in its capabilities',
+    async () => {
+      const { child, client } = spawnServer();
+      try {
+        const { capabilities } = await client.result<{ capabilities: Record<string, unknown> }>(
+          'initialize',
+          {
+            processId: process.pid,
+            rootUri: null,
+            capabilities: {},
+          }
+        );
+        expect(capabilities).toMatchObject({
+          hoverProvider: true,
+          completionProvider: { triggerCharacters: ['"', '=', '.', '/', '('] },
+          codeActionProvider: { codeActionKinds: ['quickfix'] },
+          foldingRangeProvider: true,
+          documentSymbolProvider: true,
+          definitionProvider: true,
+          documentHighlightProvider: true,
+          documentLinkProvider: { resolveProvider: false },
+        });
+      } finally {
+        child.kill();
+      }
+    },
+    SERVER_TIMEOUT_MS
+  );
+});
 
-      client.notify('initialized', {});
-      client.notify('textDocument/didOpen', {
-        textDocument: { uri: SCENE_URI, languageId: 'tscn', version: 1, text: SCENE },
-      });
+/** The URI of a file in a project directory, as a client sends it. */
+function fileUri(projectDir: string, file: string): string {
+  return pathToFileURL(join(projectDir, file)).toString();
+}
 
-      // The debounced lint pushes diagnostics; the scene's `SubResource("missing")` is one.
-      const published = (await client.waitForNotification('textDocument/publishDiagnostics')) as {
-        diagnostics: Array<{ message: string }>;
-      };
-      expect(published.diagnostics.length).toBeGreaterThan(0);
+/** A project-relative path with forward slashes, so an answer reads the same on Windows. */
+function projectPath(projectDir: string, uri: string): string {
+  return relative(projectDir, fileURLToPath(uri)).split(sep).join('/');
+}
 
-      const hover = await client.request('textDocument/hover', {
-        textDocument: { uri: SCENE_URI },
-        position: { line: 2, character: 26 },
-      });
-      const contents = (hover.result as { contents: { value: string } }).contents;
+/** Opens a committed project file in the server and returns its URI. */
+function open(client: LspClient, projectDir: string, file: string, text = projectText(file)): string {
+  const uri = fileUri(projectDir, file);
+  client.notify('textDocument/didOpen', { textDocument: { uri, languageId: 'tscn', version: 1, text } });
+  return uri;
+}
 
-      expect(contents.value).toContain('Node3D');
+/** Opens the file a cursor names and returns the request params for that cursor. */
+function openAt(client: LspClient, at: CursorSpec, projectDir = PROJECT_DIR) {
+  const uri = open(client, projectDir, at.file);
+  return { textDocument: { uri }, position: cursorIn(projectText(at.file), at) };
+}
 
-      const symbols = await client.request('textDocument/documentSymbol', {
-        textDocument: { uri: SCENE_URI },
-      });
-      const tree = symbols.result as Array<{ name: string; detail: string }>;
+/** Runs `use` against a fresh server rooted at the committed fixture project. */
+function inProject(use: (client: LspClient) => Promise<void>): Promise<void> {
+  return withInitializedServer(pathToFileURL(PROJECT_DIR).toString(), use);
+}
 
-      expect(tree.map((symbol) => symbol.name)).toEqual(['Root']);
-      expect(tree[0]!.detail).toBe('MeshInstance3D');
+function labelsOf(items: ReadonlyArray<{ label: string }> | null): string[] {
+  return (items ?? []).map((item) => item.label);
+}
 
-      await client.request('shutdown', null);
-      client.notify('exit', null);
-    } finally {
-      child.kill();
-    }
-  }, 60_000);
+/** `text` with each edit applied, the last first, so an earlier edit keeps its offsets. */
+function applyEdits(text: string, edits: readonly LspTextEdit[]): string {
+  const lines = text.split('\n');
+  const offsetOf = (position: { line: number; character: number }) =>
+    lines.slice(0, position.line).reduce((sum, line) => sum + line.length + 1, 0) + position.character;
+  const ordered = [...edits].sort((a, b) => offsetOf(b.range.start) - offsetOf(a.range.start));
+  return ordered.reduce(
+    (current, edit) =>
+      current.slice(0, offsetOf(edit.range.start)) + edit.newText + current.slice(offsetOf(edit.range.end)),
+    text
+  );
+}
+
+/** Every symbol of the tree, each before its children, as the outline lists them. */
+function flatten(symbols: readonly LspSymbol[]): LspSymbol[] {
+  return symbols.flatMap((symbol) => [symbol, ...flatten(symbol.children ?? [])]);
+}
+
+/** An enum member's value by the name `answers.json` gives it. */
+function kindNamed(kinds: Record<string, number>, name: string): number {
+  const value = kinds[name];
+  if (value === undefined) throw new Error(`expected a kind named ${name}, found none`);
+  return value;
+}
+
+function outlineOf(symbols: readonly LspSymbol[], depth = 0): string[] {
+  return symbols.flatMap((symbol) => [
+    `${'  '.repeat(depth)}${symbol.name}: ${symbol.detail}`,
+    ...outlineOf(symbol.children ?? [], depth + 1),
+  ]);
+}
+
+describe('tscn-lsp gives the shared answers for the fixture project', () => {
+  for (const answer of answers.hover) {
+    it(
+      `hover: ${answer.name}`,
+      () =>
+        inProject(async (client) => {
+          const hover = await client.result<{ contents: { value: string }; range: LspRange } | null>(
+            'textDocument/hover',
+            openAt(client, answer.at)
+          );
+          if (answer.markdown === null) {
+            expect(hover).toBeNull();
+            return;
+          }
+          expect(hover?.contents.value).toBe(answer.markdown);
+          expect(hover && rangeTuple(hover.range)).toEqual(answer.range);
+        }),
+      SERVER_TIMEOUT_MS
+    );
+  }
+
+  for (const answer of answers.completion) {
+    it(
+      `completion: ${answer.name}`,
+      () =>
+        inProject(async (client) => {
+          const items = await client.result<Array<{ label: string; kind?: number }>>(
+            'textDocument/completion',
+            openAt(client, answer.at)
+          );
+          const labels = labelsOf(items);
+          if (answer.kind) {
+            const kind = kindNamed(CompletionItemKind as unknown as Record<string, number>, answer.kind);
+            expect(items.filter((item) => item.kind !== kind).map((item) => item.label)).toEqual([]);
+          }
+          if (answer.exactly) expect([...labels].sort()).toEqual([...answer.exactly].sort());
+          for (const label of answer.includes ?? []) expect(labels).toContain(label);
+          for (const label of answer.excludes ?? []) expect(labels).not.toContain(label);
+        }),
+      SERVER_TIMEOUT_MS
+    );
+  }
+
+  for (const answer of answers.definition) {
+    it(
+      `definition: ${answer.name}`,
+      () =>
+        inProject(async (client) => {
+          const location = await client.result<{ uri: string; range: LspRange } | null>(
+            'textDocument/definition',
+            openAt(client, answer.at)
+          );
+          const targets =
+            location === null
+              ? []
+              : [{ file: projectPath(PROJECT_DIR, location.uri), range: rangeTuple(location.range) }];
+          expect(targets).toEqual(answer.targets);
+        }),
+      SERVER_TIMEOUT_MS
+    );
+  }
+
+  for (const answer of answers.highlights) {
+    it(
+      `highlights: ${answer.name}`,
+      () =>
+        inProject(async (client) => {
+          const highlights = await client.result<Array<{ range: LspRange }>>(
+            'textDocument/documentHighlight',
+            openAt(client, answer.at)
+          );
+          expect(sortedRanges(highlights.map((highlight) => rangeTuple(highlight.range)))).toEqual(
+            sortedRanges(answer.ranges)
+          );
+        }),
+      SERVER_TIMEOUT_MS
+    );
+  }
+
+  it(
+    'folding: one fold per node and resource body',
+    () =>
+      inProject(async (client) => {
+        const uri = open(client, PROJECT_DIR, answers.folding.file);
+        const ranges = await client.result<Array<{ startLine: number; endLine: number }>>(
+          'textDocument/foldingRange',
+          { textDocument: { uri } }
+        );
+        expect(ranges.map((range) => [range.startLine, range.endLine])).toEqual(answers.folding.ranges);
+      }),
+    SERVER_TIMEOUT_MS
+  );
+
+  it(
+    'links: every res:// path links to its file under the project root',
+    () =>
+      inProject(async (client) => {
+        const uri = open(client, PROJECT_DIR, answers.links.file);
+        const links = await client.result<Array<{ range: LspRange; target?: string }>>(
+          'textDocument/documentLink',
+          { textDocument: { uri } }
+        );
+        expect(
+          links.map((link) => ({
+            range: rangeTuple(link.range),
+            target: link.target === undefined ? null : projectPath(PROJECT_DIR, link.target),
+          }))
+        ).toEqual(answers.links.links);
+      }),
+    SERVER_TIMEOUT_MS
+  );
+
+  it(
+    'symbols: the outline nests each node under its parent',
+    () =>
+      inProject(async (client) => {
+        const uri = open(client, PROJECT_DIR, answers.symbols.file);
+        const symbols = await client.result<LspSymbol[]>('textDocument/documentSymbol', {
+          textDocument: { uri },
+        });
+        expect(outlineOf(symbols)).toEqual(answers.symbols.outline);
+      }),
+    SERVER_TIMEOUT_MS
+  );
+
+  it(
+    "symbols: each node's range covers its subtree, and its selection is its heading",
+    () =>
+      inProject(async (client) => {
+        const uri = open(client, PROJECT_DIR, answers.symbols.file);
+        const symbols = await client.result<LspSymbol[]>('textDocument/documentSymbol', {
+          textDocument: { uri },
+        });
+        expect(
+          flatten(symbols).map((symbol) => ({
+            name: symbol.name,
+            kind: symbol.kind,
+            range: rangeTuple(symbol.range),
+            selectionRange: rangeTuple(symbol.selectionRange),
+          }))
+        ).toEqual(
+          answers.symbols.symbols.map((symbol) => ({
+            ...symbol,
+            kind: kindNamed(SymbolKind as unknown as Record<string, number>, symbol.kind),
+          }))
+        );
+      }),
+    SERVER_TIMEOUT_MS
+  );
+
+  it(
+    `quick fix: ${answers.quickFix.name}, and its edit writes the engine spelling`,
+    () =>
+      inProject(async (client) => {
+        const { at, title, fixedLine } = answers.quickFix;
+        const { textDocument, position } = openAt(client, at);
+        const actions = await client.result<
+          Array<{ title: string; edit: { changes: Record<string, LspTextEdit[]> } }>
+        >('textDocument/codeAction', {
+          textDocument,
+          range: { start: position, end: position },
+          context: { diagnostics: [] },
+        });
+        const fix = actions.find((action) => action.title === title);
+        expect(fix, `expected "${title}" among ${JSON.stringify(actions.map((a) => a.title))}`).toBeDefined();
+
+        const fixed = applyEdits(projectText(at.file), fix!.edit.changes[textDocument.uri] ?? []);
+        expect(fixed.split('\n')[position.line]).toBe(fixedLine);
+      }),
+    SERVER_TIMEOUT_MS
+  );
+
+  for (const answer of answers.diagnostics) {
+    it(
+      `diagnostics: ${answer.file} reports ${answer.codes.length === 0 ? 'nothing' : answer.codes.join(', ')}`,
+      () =>
+        inProject(async (client) => {
+          const uri = open(client, PROJECT_DIR, answer.file);
+          const published = (await client.waitFor(
+            'textDocument/publishDiagnostics',
+            (params) => (params as { uri: string }).uri === uri
+          )) as { diagnostics: Array<{ code: string }> };
+          expect(published.diagnostics.map((diagnostic) => diagnostic.code).sort()).toEqual(
+            [...answer.codes].sort()
+          );
+        }),
+      SERVER_TIMEOUT_MS
+    );
+  }
+});
+
+describe('tscn-lsp path completion through a symlinked directory', () => {
+  /**
+   * A copy of the project with `props/` linked to a directory outside it, and `props/back`
+   * linked to the project root. A junction on Windows, which needs no administrator right.
+   */
+  function linkedProject(): { root: string; projectDir: string } {
+    const root = mkdtempSync(join(tmpdir(), 'tscn-lsp-links-'));
+    const projectDir = join(root, 'project');
+    cpSync(PROJECT_DIR, projectDir, { recursive: true });
+    const outside = join(root, 'outside', 'props');
+    mkdirSync(outside, { recursive: true });
+    writeFileSync(join(outside, 'crate.tres'), '[gd_resource type="BoxMesh" format=3]\n\n[resource]\n');
+    const linkType = process.platform === 'win32' ? 'junction' : 'dir';
+    symlinkSync(outside, join(projectDir, 'props'), linkType);
+    symlinkSync(projectDir, join(outside, 'back'), linkType);
+    return { root, projectDir };
+  }
+
+  it(
+    'offers a file behind the link, and a link back up the tree ends the walk',
+    async () => {
+      const { root, projectDir } = linkedProject();
+      try {
+        await withInitializedServer(pathToFileURL(projectDir).toString(), async (client) => {
+          const at = answers.completion.find((answer) => answer.at.after === '"res://')!.at;
+          const labels = labelsOf(
+            await client.result<Array<{ label: string }>>(
+              'textDocument/completion',
+              openAt(client, at, projectDir)
+            )
+          );
+          expect(labels).toContain('res://props/crate.tres');
+          expect(labels.filter((label) => label.startsWith('res://props/back/'))).toEqual([]);
+        });
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+    SERVER_TIMEOUT_MS
+  );
 });

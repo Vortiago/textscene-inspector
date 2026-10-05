@@ -14,6 +14,8 @@ import {
   installedLaunchOptions,
   installedLaunchPaths,
   SUITE_HOST_MANIFEST,
+  toolsOffLaunchPaths,
+  userSettingsFile,
   vsixFileName,
 } from './test/installed/installedLaunch';
 
@@ -29,6 +31,34 @@ describe('installedLaunchPaths', () => {
   it('loads the suite from beside the runner', () => {
     expect(paths.extensionTestsPath).toBe(
       join('/repo/apps/textscene-vscode/dist/test/installed', 'suite', 'index')
+    );
+  });
+});
+
+describe('toolsOffLaunchPaths', () => {
+  const runnerDir = '/repo/apps/textscene-vscode/dist/test/installed';
+  const toolsOff = toolsOffLaunchPaths(paths, runnerDir);
+
+  it('reuses the installed copy and the workspace of the first launch', () => {
+    expect(toolsOff.extensionsDir).toBe(paths.extensionsDir);
+    expect(toolsOff.workspaceRoot).toBe(paths.workspaceRoot);
+  });
+
+  it('gives the second launch its own settings, so the first launch keeps the tools on', () => {
+    expect(toolsOff.userDataDir).not.toBe(paths.userDataDir);
+    expect(relative('/tmp/tsi-installed', toolsOff.userDataDir)).not.toMatch(/^\.\./);
+  });
+
+  it('loads the toolsOff suite from beside the runner, with its own start marker', () => {
+    expect(toolsOff.extensionTestsPath).toBe(join(runnerDir, 'toolsOff', 'index'));
+    expect(toolsOff.suiteStartedMarker).not.toBe(paths.suiteStartedMarker);
+  });
+});
+
+describe('userSettingsFile', () => {
+  it('names the file VS Code reads the user settings from', () => {
+    expect(userSettingsFile('/tmp/tsi-installed/user-data')).toBe(
+      join('/tmp/tsi-installed/user-data', 'User', 'settings.json')
     );
   });
 });

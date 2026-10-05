@@ -260,8 +260,9 @@ jobs:
           fi
 
   # Installs the package the build job made into a clean VS Code, with no development path, and
-  # checks that it activates, registers its commands, lints and opens a preview. The `vsix` job
-  # above checks only the names of the packaged files.
+  # checks that it activates, registers its commands, lints and opens a preview. It checks the
+  # language features and the agent tools against `scenes/language-features/answers.json`, then
+  # launches again with the agent tools turned off. The `vsix` job checks only the file names.
   installed:
     name: Installed package (VS Code ${{ matrix.vscode }})
     runs-on: ubuntu-latest

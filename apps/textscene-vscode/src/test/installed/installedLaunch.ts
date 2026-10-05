@@ -54,6 +54,28 @@ export function installedLaunchPaths(runnerDir: string, root: string): Installed
   };
 }
 
+/** The user settings of the second launch, in which a user has turned the agent tools off. */
+export const TOOLS_OFF_SETTINGS = { 'textscene.agentTools.enabled': false } as const;
+
+/**
+ * The paths of the second launch: the same extensions directory and workspace, a user data
+ * directory of its own that holds {@link TOOLS_OFF_SETTINGS}, and the suite in `toolsOff/`.
+ * The extension reads the setting once at activation, so only a fresh window proves it.
+ */
+export function toolsOffLaunchPaths(paths: InstalledLaunchPaths, runnerDir: string): InstalledLaunchPaths {
+  return {
+    ...paths,
+    userDataDir: path.join(paths.root, 'user-data-tools-off'),
+    extensionTestsPath: path.resolve(runnerDir, './toolsOff/index'),
+    suiteStartedMarker: path.join(paths.root, 'suite-started-tools-off'),
+  };
+}
+
+/** The settings file VS Code reads from a user data directory. */
+export function userSettingsFile(userDataDir: string): string {
+  return path.join(userDataDir, 'User', 'settings.json');
+}
+
 /** The file name `vsce package` gives the package of `manifest`. */
 export function vsixFileName(manifest: { name: string; version: string }): string {
   return `${manifest.name}-${manifest.version}.vsix`;

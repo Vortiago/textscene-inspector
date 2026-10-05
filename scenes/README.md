@@ -5,6 +5,7 @@ The `.tscn` corpora the tests and the previewers use.
 | Directory | Holds |
 | --- | --- |
 | `fixtures/` | This project's scenes and their resources. It is a `res://` root. |
+| `language-features/` | A Godot project in `project/` and the editor answers for it in `answers.json`. The VS Code suites and the `tscn-lsp` end-to-end test check both editor hosts against them. `missing.tscn` draws a lint warning on purpose. |
 | `upload-payloads/` | Files the `test-missing-*` fixtures cannot find, on purpose |
 | `isometric/` | A vendored dungeon corpus, with its own root (`scripts/corpusRoots.mjs`) |
 | `demos/<top>/<project>/` | Vendored Godot demo projects, each with its own `project.godot` |

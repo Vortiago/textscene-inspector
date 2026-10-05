@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://textscene_lf_deprecated"]
+
+[sub_resource type="SpriteFrames" id="Frames_1"]
+
+[node name="Sprite" type="AnimatedSprite2D"]
+frames = SubResource("Frames_1")

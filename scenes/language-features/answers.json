@@ -1,0 +1,395 @@
+{
+  "hover": [
+    {
+      "name": "a node heading's type names the class and its chain",
+      "at": {
+        "file": "main.tscn",
+        "line": "[node name=\"Box\"",
+        "inside": "MeshInstance3D"
+      },
+      "markdown": "**MeshInstance3D**\n\nGodot class, extends `GeometryInstance3D` → `VisualInstance3D` → `Node3D` → `Node`.\n\n[Class reference](https://docs.godotengine.org/en/stable/classes/class_meshinstance3d.html)",
+      "range": [12, 23, 12, 37]
+    },
+    {
+      "name": "a property key names its type, declaring class and accepted resource",
+      "at": {
+        "file": "main.tscn",
+        "line": "mesh = SubResource(\"BoxMesh_1\")",
+        "inside": "mesh"
+      },
+      "markdown": "**mesh** `Object`\n\nDeclared by `MeshInstance3D`.\n\nA resource of `Mesh`.\n\n[Reference](https://docs.godotengine.org/en/stable/classes/class_meshinstance3d.html#class-meshinstance3d-property-mesh)",
+      "range": [13, 0, 13, 4]
+    },
+    {
+      "name": "an ExtResource value names its declaration",
+      "at": {
+        "file": "main.tscn",
+        "line": "albedo_texture = ",
+        "inside": "ExtResource"
+      },
+      "markdown": "External resource `1_grid`: `Texture2D`\n\n`res://textures/grid.png`",
+      "range": [8, 17, 8, 38]
+    },
+    {
+      "name": "an integer ExtResource id names its declaration",
+      "at": {
+        "file": "legacy_ids.tscn",
+        "line": "albedo_texture = ",
+        "inside": "ExtResource"
+      },
+      "markdown": "External resource `1`: `Texture`\n\n`res://textures/grid.png`",
+      "range": [5, 17, 5, 33]
+    },
+    {
+      "name": "a repeated id names its first declaration",
+      "at": {
+        "file": "ids.tscn",
+        "line": "mesh = SubResource(\"Mesh_1\")",
+        "inside": "SubResource"
+      },
+      "markdown": "Sub-resource `Mesh_1`: `BoxMesh`",
+      "range": [11, 7, 11, 28]
+    },
+    {
+      "name": "a single-quoted id is no reference, so it has no hover",
+      "at": {
+        "file": "ids.tscn",
+        "line": "metadata/mesh_ref = ",
+        "inside": "SubResource"
+      },
+      "markdown": null
+    }
+  ],
+  "completion": [
+    {
+      "name": "a node heading's type= offers node classes, not resource classes",
+      "at": {
+        "file": "main.tscn",
+        "line": "[node name=\"Box\"",
+        "after": "type=\""
+      },
+      "includes": ["Node3D", "MeshInstance3D", "OmniLight3D"],
+      "excludes": ["BoxMesh", "StandardMaterial3D"]
+    },
+    {
+      "name": "a sub_resource heading's type= offers resource classes, not node classes",
+      "at": {
+        "file": "main.tscn",
+        "line": "[sub_resource type=\"BoxMesh\"",
+        "after": "type=\""
+      },
+      "includes": ["BoxMesh", "StandardMaterial3D"],
+      "excludes": ["Node3D", "MeshInstance3D"]
+    },
+    {
+      "name": "a property key offers a property the node does not set yet",
+      "at": {
+        "file": "main.tscn",
+        "line": "mesh = SubResource(\"BoxMesh_1\")",
+        "after": ""
+      },
+      "includes": ["visible", "cast_shadow", "skeleton"],
+      "excludes": ["mesh"]
+    },
+    {
+      "name": "parent= offers the scene root and every node name",
+      "at": {
+        "file": "main.tscn",
+        "line": "[node name=\"Lamp\"",
+        "after": "parent=\""
+      },
+      "exactly": [".", "Box", "Floor", "Lamp", "Scene"],
+      "kind": "Reference"
+    },
+    {
+      "name": "an ExtResource id offers the ids the file declares",
+      "at": {
+        "file": "main.tscn",
+        "line": "albedo_texture = ",
+        "after": "ExtResource(\""
+      },
+      "exactly": ["1_grid"]
+    },
+    {
+      "name": "a res:// value offers project files, but not .godot, a nested project or a .gdignore directory",
+      "at": {
+        "file": "main.tscn",
+        "line": "metadata/texture_path = ",
+        "after": "\"res://"
+      },
+      "exactly": [
+        "res://deprecated.tscn",
+        "res://ids.tscn",
+        "res://legacy_ids.tscn",
+        "res://main.tscn",
+        "res://missing.tscn",
+        "res://project.godot",
+        "res://textures/grid.png"
+      ]
+    }
+  ],
+  "definition": [
+    {
+      "name": "an ExtResource reference lands on its ext_resource heading",
+      "at": {
+        "file": "main.tscn",
+        "line": "albedo_texture = ",
+        "inside": "ExtResource"
+      },
+      "targets": [
+        {
+          "file": "main.tscn",
+          "range": [2, 0, 2, 74]
+        }
+      ]
+    },
+    {
+      "name": "a SubResource reference lands on its sub_resource heading",
+      "at": {
+        "file": "main.tscn",
+        "line": "[node name=\"Floor\"",
+        "below": 1,
+        "inside": "SubResource"
+      },
+      "targets": [
+        {
+          "file": "main.tscn",
+          "range": [4, 0, 4, 44]
+        }
+      ]
+    },
+    {
+      "name": "the id on an ext_resource heading lands on that heading",
+      "at": {
+        "file": "main.tscn",
+        "line": "[ext_resource",
+        "inside": "1_grid\"]"
+      },
+      "targets": [
+        {
+          "file": "main.tscn",
+          "range": [2, 0, 2, 74]
+        }
+      ]
+    },
+    {
+      "name": "the id on a sub_resource heading lands on that heading",
+      "at": {
+        "file": "main.tscn",
+        "line": "[sub_resource type=\"BoxMesh\"",
+        "inside": "BoxMesh_1"
+      },
+      "targets": [
+        {
+          "file": "main.tscn",
+          "range": [4, 0, 4, 44]
+        }
+      ]
+    },
+    {
+      "name": "a node name is no reference, so it has no definition",
+      "at": {
+        "file": "main.tscn",
+        "line": "[node name=\"Scene\"",
+        "inside": "Scene"
+      },
+      "targets": []
+    },
+    {
+      "name": "an integer ExtResource id lands on its ext_resource heading",
+      "at": {
+        "file": "legacy_ids.tscn",
+        "line": "albedo_texture = ",
+        "inside": "ExtResource"
+      },
+      "targets": [
+        {
+          "file": "legacy_ids.tscn",
+          "range": [2, 0, 2, 65]
+        }
+      ]
+    },
+    {
+      "name": "an integer SubResource id lands on its sub_resource heading",
+      "at": {
+        "file": "legacy_ids.tscn",
+        "line": "material_override = ",
+        "inside": "SubResource"
+      },
+      "targets": [
+        {
+          "file": "legacy_ids.tscn",
+          "range": [4, 0, 4, 42]
+        }
+      ]
+    },
+    {
+      "name": "a repeated id lands on its first declaration",
+      "at": {
+        "file": "ids.tscn",
+        "line": "mesh = SubResource(\"Mesh_1\")",
+        "inside": "SubResource"
+      },
+      "targets": [
+        {
+          "file": "ids.tscn",
+          "range": [2, 0, 2, 41]
+        }
+      ]
+    },
+    {
+      "name": "a single-quoted id resolves nowhere, since Godot reads only double-quoted strings",
+      "at": {
+        "file": "ids.tscn",
+        "line": "metadata/mesh_ref = ",
+        "inside": "SubResource"
+      },
+      "targets": []
+    },
+    {
+      "name": "a res:// path to a project file opens that file",
+      "at": {
+        "file": "main.tscn",
+        "line": "[ext_resource",
+        "inside": "res://"
+      },
+      "targets": [
+        {
+          "file": "textures/grid.png",
+          "range": [0, 0, 0, 0]
+        }
+      ]
+    },
+    {
+      "name": "a res:// path to a missing file has no definition",
+      "at": {
+        "file": "missing.tscn",
+        "line": "[ext_resource type=\"Texture2D\" path=\"res://textures/missing.png\"",
+        "inside": "res://"
+      },
+      "targets": []
+    }
+  ],
+  "highlights": [
+    {
+      "name": "a SubResource id highlights every use and the declaration's id",
+      "at": {
+        "file": "main.tscn",
+        "line": "[node name=\"Floor\"",
+        "below": 1,
+        "inside": "BoxMesh_1"
+      },
+      "ranges": [
+        [4, 33, 4, 42],
+        [13, 7, 13, 31],
+        [18, 7, 18, 31]
+      ]
+    },
+    {
+      "name": "an integer SubResource id highlights its use and the bare id= of its declaration",
+      "at": {
+        "file": "legacy_ids.tscn",
+        "line": "material_override = ",
+        "inside": "SubResource"
+      },
+      "ranges": [
+        [4, 40, 4, 41],
+        [10, 20, 10, 36]
+      ]
+    },
+    {
+      "name": "a repeated id highlights its use and the first declaration's id",
+      "at": {
+        "file": "ids.tscn",
+        "line": "mesh = SubResource(\"Mesh_1\")",
+        "inside": "SubResource"
+      },
+      "ranges": [
+        [2, 33, 2, 39],
+        [11, 7, 11, 28]
+      ]
+    },
+    {
+      "name": "a single-quoted id highlights nothing",
+      "at": {
+        "file": "ids.tscn",
+        "line": "metadata/mesh_ref = ",
+        "inside": "SubResource"
+      },
+      "ranges": []
+    }
+  ],
+  "folding": {
+    "file": "main.tscn",
+    "ranges": [
+      [4, 5],
+      [7, 8],
+      [12, 15],
+      [17, 18],
+      [20, 21]
+    ]
+  },
+  "links": {
+    "file": "main.tscn",
+    "links": [
+      {
+        "range": [2, 37, 2, 60],
+        "target": "textures/grid.png"
+      },
+      {
+        "range": [15, 25, 15, 48],
+        "target": "textures/grid.png"
+      }
+    ]
+  },
+  "symbols": {
+    "file": "main.tscn",
+    "outline": ["Scene: Node3D", "  Box: MeshInstance3D", "    Lamp: OmniLight3D", "  Floor: MeshInstance3D"],
+    "symbols": [
+      {
+        "name": "Scene",
+        "kind": "Module",
+        "range": [10, 0, 21, 16],
+        "selectionRange": [10, 0, 10, 33]
+      },
+      {
+        "name": "Box",
+        "kind": "Class",
+        "range": [12, 0, 21, 16],
+        "selectionRange": [12, 0, 12, 50]
+      },
+      {
+        "name": "Lamp",
+        "kind": "Object",
+        "range": [20, 0, 21, 16],
+        "selectionRange": [20, 0, 20, 50]
+      },
+      {
+        "name": "Floor",
+        "kind": "Class",
+        "range": [17, 0, 18, 31],
+        "selectionRange": [17, 0, 17, 52]
+      }
+    ]
+  },
+  "quickFix": {
+    "name": "a deprecated property gets a rename to the engine spelling",
+    "at": {
+      "file": "deprecated.tscn",
+      "line": "frames = ",
+      "inside": "frames"
+    },
+    "title": "Rename deprecated 'frames' to 'sprite_frames'",
+    "fixedLine": "sprite_frames = SubResource(\"Frames_1\")"
+  },
+  "diagnostics": [
+    {
+      "file": "main.tscn",
+      "codes": []
+    },
+    {
+      "file": "missing.tscn",
+      "codes": ["collisionshape3d-requires-shape"]
+    }
+  ]
+}

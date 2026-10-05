@@ -7,6 +7,7 @@
  */
 
 import * as assert from 'assert';
+import type { Context } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { godotProjectDir, removeGodotProject, writeGodotProject } from '../helpers/godotProjectHelpers';
@@ -35,6 +36,12 @@ const TOOL_NAMES = [
   'textscene_missing_resources',
   'textscene_capture',
 ] as const;
+
+/** Skips a test on a VS Code below the tools API, and prints why, since mocha reports a skip with no reason. */
+function skipWithoutToolsApi(context: Context): never {
+  console.log('    skipped: this VS Code predates the vscode.lm tools API');
+  context.skip();
+}
 
 /** The plain text of a tool result, whichever parts it carries. */
 function textOf(result: vscode.LanguageModelToolResult): string {
@@ -69,9 +76,9 @@ suite('Agent tools', () => {
     }
   });
 
-  test('VS Code lists the registered agent tools', () => {
-    // The tools API is newer than the extension's engines floor; below it, none registers.
-    if (!vscode.lm?.tools) return;
+  test('VS Code lists the registered agent tools', function () {
+    // The tools API is newer than the extension's engines floor. Below it, none registers.
+    if (!vscode.lm?.tools) skipWithoutToolsApi(this);
     const names = vscode.lm.tools.map((tool) => tool.name);
 
     for (const name of TOOL_NAMES) {
@@ -79,32 +86,32 @@ suite('Agent tools', () => {
     }
   });
 
-  test('the scene-tree tool returns the node hierarchy', async () => {
-    if (typeof vscode.lm?.invokeTool !== 'function') return;
+  test('the scene-tree tool returns the node hierarchy', async function () {
+    if (typeof vscode.lm?.invokeTool !== 'function') skipWithoutToolsApi(this);
 
     const result = await vscode.lm.invokeTool('textscene_scene_tree', { input: { path: scenePath } });
 
     assert.ok(textOf(result).includes('Box (MeshInstance3D)'), `scene tree: ${textOf(result)}`);
   });
 
-  test('the lint tool returns a finding for a dangling reference', async () => {
-    if (typeof vscode.lm?.invokeTool !== 'function') return;
+  test('the lint tool returns a finding for a dangling reference', async function () {
+    if (typeof vscode.lm?.invokeTool !== 'function') skipWithoutToolsApi(this);
 
     const result = await vscode.lm.invokeTool('textscene_lint', { input: { path: scenePath } });
 
     assert.ok(/\[(error|warning|info)\]/.test(textOf(result)), `lint: ${textOf(result)}`);
   });
 
-  test('the missing-resources tool answers for the scene', async () => {
-    if (typeof vscode.lm?.invokeTool !== 'function') return;
+  test('the missing-resources tool answers for the scene', async function () {
+    if (typeof vscode.lm?.invokeTool !== 'function') skipWithoutToolsApi(this);
 
     const result = await vscode.lm.invokeTool('textscene_missing_resources', { input: { path: scenePath } });
 
     assert.ok(textOf(result).includes('scene.tscn'), `missing resources: ${textOf(result)}`);
   });
 
-  test('the open-preview tool opens the preview', async () => {
-    if (typeof vscode.lm?.invokeTool !== 'function') return;
+  test('the open-preview tool opens the preview', async function () {
+    if (typeof vscode.lm?.invokeTool !== 'function') skipWithoutToolsApi(this);
 
     const result = await vscode.lm.invokeTool('textscene_open_preview', { input: { path: scenePath } });
 
