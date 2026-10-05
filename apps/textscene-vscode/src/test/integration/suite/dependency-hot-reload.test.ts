@@ -36,9 +36,7 @@ suite('Dependency Hot-Reload E2E', () => {
     setupDepChainWorkspace();
   });
 
-  suiteTeardown(() => {
-    teardownDepChainWorkspace();
-  });
+  suiteTeardown(() => teardownDepChainWorkspace());
 
   teardown(async () => {
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');

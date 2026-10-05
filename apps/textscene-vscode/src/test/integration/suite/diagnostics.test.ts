@@ -61,7 +61,7 @@ suite('Diagnostics', () => {
     await vscode.workspace
       .getConfiguration('textscene')
       .update('diagnostics.enabled', undefined, vscode.ConfigurationTarget.Global);
-    removeGodotProject(PROJECT);
+    await removeGodotProject(PROJECT);
   });
 
   test('a dangling SubResource reference is an error on its line', async function () {

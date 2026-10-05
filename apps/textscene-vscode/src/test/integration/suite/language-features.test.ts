@@ -59,7 +59,7 @@ suite('Language Features', () => {
 
   suiteTeardown(async () => {
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-    removeGodotProject(PROJECT);
+    await removeGodotProject(PROJECT);
   });
 
   test('a .tscn and a .tres document open in the tscn language', async () => {

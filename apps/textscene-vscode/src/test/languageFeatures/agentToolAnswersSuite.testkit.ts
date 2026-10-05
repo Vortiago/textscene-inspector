@@ -83,13 +83,13 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
   suite('Agent tool answers', function () {
     suiteSetup(async function () {
       if (typeof vscode.lm?.invokeTool !== 'function') skipBecause(this, NO_TOOLS_API);
-      copyFixtureProject(projectDir);
+      await copyFixtureProject(projectDir);
       await vscode.extensions.getExtension(EXTENSION_ID)?.activate();
     });
 
     suiteTeardown(async () => {
       await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-      removeFixtureProject(projectDir);
+      await removeFixtureProject(projectDir);
     });
 
     test('the lint tool reports a finding with its line, severity, message, rule and node', async () => {

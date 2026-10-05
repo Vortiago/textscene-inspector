@@ -52,9 +52,7 @@ suite('Agent tools', () => {
     await vscode.extensions.getExtension('vortiago.textscene-inspector')?.activate();
   });
 
-  suiteTeardown(() => {
-    removeGodotProject(PROJECT);
-  });
+  suiteTeardown(() => removeGodotProject(PROJECT));
 
   test('the manifest contributes every agent tool', () => {
     const contributes = vscode.extensions.getExtension('vortiago.textscene-inspector')?.packageJSON

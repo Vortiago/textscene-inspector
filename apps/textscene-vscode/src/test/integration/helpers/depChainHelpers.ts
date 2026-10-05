@@ -7,6 +7,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import { waitFor } from '../../waitFor';
+import { removeTestDirectory } from '../../removeTestDirectory';
 import type { HostToWebviewMessage } from '../../../protocol';
 
 /**
@@ -194,12 +195,9 @@ export function setupDepChainWorkspace(): void {
   );
 }
 
-/** Call in `suiteTeardown`. */
-export function teardownDepChainWorkspace(): void {
-  const dir = depChainDir();
-  if (fs.existsSync(dir)) {
-    fs.rmSync(dir, { recursive: true, force: true });
-  }
+/** Call in `suiteTeardown`. Async, so a Windows retry can yield to the event loop. */
+export async function teardownDepChainWorkspace(): Promise<void> {
+  await removeTestDirectory(depChainDir());
 }
 
 /**

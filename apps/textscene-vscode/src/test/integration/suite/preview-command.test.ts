@@ -49,9 +49,7 @@ suite('Preview Command', () => {
     );
   });
 
-  suiteTeardown(() => {
-    removeGodotProject(PROJECT);
-  });
+  suiteTeardown(() => removeGodotProject(PROJECT));
 
   test('every command the manifest contributes is registered', async () => {
     const extension = vscode.extensions.getExtension(EXTENSION_ID);

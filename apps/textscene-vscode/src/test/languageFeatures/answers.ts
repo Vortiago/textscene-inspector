@@ -7,6 +7,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { removeTestDirectory } from '../removeTestDirectory';
 import {
   answersFixtureDir,
   cursorIn as sharedCursorIn,
@@ -30,14 +31,14 @@ export function loadAnswers(): LanguageFeatureAnswers {
  * Recreates `destination` as a copy of the fixture project. `cpSync` keeps the PNG bytes and
  * the dot-named `.godot` and `.gdignore` entries, which the path-completion answer depends on.
  */
-export function copyFixtureProject(destination: string): void {
-  removeFixtureProject(destination);
+export async function copyFixtureProject(destination: string): Promise<void> {
+  await removeFixtureProject(destination);
   fs.cpSync(path.join(fixtureDir(), 'project'), destination, { recursive: true });
 }
 
-/** Removes a copy that `copyFixtureProject` made. */
-export function removeFixtureProject(destination: string): void {
-  fs.rmSync(destination, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+/** Removes a copy that `copyFixtureProject` made. Async, so a Windows retry can yield. */
+export async function removeFixtureProject(destination: string): Promise<void> {
+  await removeTestDirectory(destination);
 }
 
 /** The zero-based position a cursor spec names in `document`. Throws when the spec matches nothing. */

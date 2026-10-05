@@ -96,14 +96,14 @@ export function defineSharedAnswersSuite(projectDir: string): void {
       diagnosticsListener = vscode.languages.onDidChangeDiagnostics((event) => {
         for (const uri of event.uris) linted.add(uri.toString());
       });
-      copyFixtureProject(projectDir);
+      await copyFixtureProject(projectDir);
       await vscode.extensions.getExtension(EXTENSION_ID)?.activate();
     });
 
     suiteTeardown(async () => {
       diagnosticsListener?.dispose();
       await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-      removeFixtureProject(projectDir);
+      await removeFixtureProject(projectDir);
     });
 
     for (const answer of answers.hover) {
