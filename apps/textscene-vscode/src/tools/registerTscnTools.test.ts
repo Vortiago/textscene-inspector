@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as vscode from 'vscode';
 import type { TscnToolHost } from './registerTscnTools';
@@ -8,6 +10,10 @@ import {
   MockLanguageModelDataPart,
   vscode as vscodeMocks,
 } from '../test-setup';
+
+const manifest = JSON.parse(readFileSync(join(import.meta.dirname, '..', '..', 'package.json'), 'utf8')) as {
+  contributes: { languageModelTools: { when?: string }[] };
+};
 
 function context(): vscode.ExtensionContext {
   return { subscriptions: [] } as unknown as vscode.ExtensionContext;
@@ -62,10 +68,17 @@ describe('registerTscnTools', () => {
     (MockLanguageModelDataPart as { image?: unknown }).image = image;
   });
 
-  it('registers nothing when the user turned the tools off', () => {
-    vscodeMocks.workspace.getConfiguration.mockReturnValue({ get: () => false });
+  it('refuses a call while the user has the tools off, so the setting applies with no reload', async () => {
     registerTscnTools(context(), host());
-    expect(vscodeMocks.lm.registerTool).not.toHaveBeenCalled();
+    vscodeMocks.workspace.getConfiguration.mockReturnValue({ get: () => false });
+    await expect(
+      registeredTool(TOOL_IDS.sceneTree).invoke({ input: { path: 'scenes/Main.tscn' } }, TOKEN)
+    ).rejects.toThrow('textscene.agentTools.enabled');
+  });
+
+  it('hides every contributed tool behind the setting', () => {
+    const tools = manifest.contributes.languageModelTools;
+    expect(tools.map((tool) => tool.when)).toEqual(tools.map(() => 'config.textscene.agentTools.enabled'));
   });
 
   it('registers nothing on a VS Code without the API', () => {

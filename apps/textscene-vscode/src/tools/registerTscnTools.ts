@@ -3,8 +3,8 @@
  * tree, open its preview, list the resources it cannot load, and capture the preview as
  * a PNG. A coding agent in chat calls them so it can check a `.tscn` it edited without a
  * Godot install. Registration is guarded: the API is newer than the extension's
- * `engines.vscode` floor, the image part is newer still, and a user can turn the tools
- * off.
+ * `engines.vscode` floor, and the image part is newer still. The user's setting hides and
+ * refuses the tools at once, with no reload.
  */
 
 import * as vscode from 'vscode';
@@ -134,25 +134,40 @@ function agentToolsEnabled(): boolean {
 }
 
 /**
- * Registers the agent tools when VS Code has the API and the user has left them on. The
- * capture tool needs the image part of a tool result, stable from VS Code 1.106, so it
- * registers on its own guard.
+ * `tool`, refusing every call while the setting is off. The contribution's `when` clause
+ * hides the tool from agents then, but another extension may still invoke it.
+ */
+function whileEnabled<T>(tool: vscode.LanguageModelTool<T>): vscode.LanguageModelTool<T> {
+  return {
+    async invoke(options, token) {
+      if (!agentToolsEnabled()) {
+        throw new Error(`The TextScene agent tools are turned off (textscene.${ENABLED_SETTING}).`);
+      }
+      return await tool.invoke(options, token);
+    },
+  };
+}
+
+/**
+ * Registers the agent tools when VS Code has the API. The capture tool needs the image part
+ * of a tool result, stable from VS Code 1.106, so it registers on its own guard.
  */
 export function registerTscnTools(context: vscode.ExtensionContext, host: TscnToolHost): void {
-  if (!agentToolsEnabled()) return;
   if (typeof vscode.lm?.registerTool !== 'function') return;
 
+  const register = <T>(id: string, tool: vscode.LanguageModelTool<T>) =>
+    vscode.lm.registerTool(id, whileEnabled(tool));
   const tools = [
-    vscode.lm.registerTool(TOOL_IDS.lint, sceneTextTool(lintAnswer(host))),
-    vscode.lm.registerTool(
+    register(TOOL_IDS.lint, sceneTextTool(lintAnswer(host))),
+    register(
       TOOL_IDS.sceneTree,
       sceneTextTool((uri, text) => formatSceneTree(uri.fsPath, text))
     ),
-    vscode.lm.registerTool(TOOL_IDS.openPreview, new TscnOpenPreviewTool(host)),
-    vscode.lm.registerTool(TOOL_IDS.missingResources, sceneTextTool(missingResourcesAnswer)),
+    register(TOOL_IDS.openPreview, new TscnOpenPreviewTool(host)),
+    register(TOOL_IDS.missingResources, sceneTextTool(missingResourcesAnswer)),
   ];
   if (typeof vscode.LanguageModelDataPart?.image === 'function') {
-    tools.push(vscode.lm.registerTool(TOOL_IDS.capture, new TscnCaptureTool(host)));
+    tools.push(register(TOOL_IDS.capture, new TscnCaptureTool(host)));
   }
   context.subscriptions.push(...tools);
 }

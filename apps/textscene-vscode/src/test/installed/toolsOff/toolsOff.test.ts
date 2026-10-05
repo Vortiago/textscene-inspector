@@ -1,13 +1,13 @@
 /**
  * The installed package with `textscene.agentTools.enabled` set to false before the window
- * opens. The setting promises to keep the extension out of agent tool lists, and it must
- * turn off only the tools: the editor features still answer.
+ * opens. The setting hides the tools from chat and refuses every call, and it turns off only
+ * the tools: the editor features still answer.
  */
 
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { CLEAN_SCENE } from '../../smokeProject/scenes';
-import { openSceneAndActivate } from '../../smokeProject/sceneEditor';
+import { EXTENSION_ID, openSceneAndActivate } from '../../smokeProject/sceneEditor';
 import { hoverText } from '../../languageFeatures/sharedAnswersSuite.testkit';
 import { TOOLS_OFF_SETTINGS } from '../installedLaunch';
 
@@ -28,18 +28,20 @@ suite('Installed package with the agent tools off', function () {
     assert.strictEqual(vscode.workspace.getConfiguration().get(key), value);
   });
 
-  test('VS Code lists none of the extension tools', function () {
-    if (!vscode.lm?.tools) {
-      console.log('    skipped: this VS Code predates vscode.lm.tools');
-      this.skip();
-    }
+  // `vscode.lm.tools` lists a tool whose `when` is false too (`getAllToolsIncludingDisabled`
+  // in `MainThreadLanguageModelTools`). Chat's own list drops it, and no API exposes that list,
+  // so the test checks the clause the installed manifest gives chat.
+  test("every installed tool hides from chat behind the setting's when clause", () => {
+    const manifest = vscode.extensions.getExtension(EXTENSION_ID)!.packageJSON as {
+      contributes: { languageModelTools: { name: string; when?: string }[] };
+    };
+    const tools = manifest.contributes.languageModelTools.filter((tool) => tool.name.startsWith(TOOL_PREFIX));
 
-    const listed = vscode.lm.tools.map((tool) => tool.name).filter((name) => name.startsWith(TOOL_PREFIX));
-
-    assert.deepStrictEqual(listed, []);
+    assert.ok(tools.length > 0, 'expected the manifest to contribute the agent tools');
+    for (const tool of tools) assert.strictEqual(tool.when, 'config.textscene.agentTools.enabled', tool.name);
   });
 
-  test('invoking a tool fails, because the extension registered none', async function () {
+  test('invoking a tool fails while the setting is off', async function () {
     if (typeof vscode.lm?.invokeTool !== 'function') {
       console.log('    skipped: this VS Code predates vscode.lm.invokeTool');
       this.skip();

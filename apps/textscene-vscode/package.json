@@ -103,6 +103,7 @@
     "languageModelTools": [
       {
         "name": "textscene_lint",
+        "when": "config.textscene.agentTools.enabled",
         "displayName": "Lint a Godot .tscn scene",
         "toolReferenceName": "lintTscn",
         "modelDescription": "Lint a Godot .tscn scene and return its findings, each with a line, a severity, a message and a rule. Use after editing a scene, to check it without a Godot install.",
@@ -128,6 +129,7 @@
       },
       {
         "name": "textscene_scene_tree",
+        "when": "config.textscene.agentTools.enabled",
         "displayName": "Read a Godot .tscn scene tree",
         "toolReferenceName": "tscnSceneTree",
         "modelDescription": "Return a Godot .tscn scene's node hierarchy as indented text, each node with its type. Use to understand a scene's structure without reading the raw file.",
@@ -153,6 +155,7 @@
       },
       {
         "name": "textscene_open_preview",
+        "when": "config.textscene.agentTools.enabled",
         "displayName": "Open the Godot .tscn preview",
         "toolReferenceName": "openTscnPreview",
         "modelDescription": "Open the TextScene 3D/2D preview for a Godot .tscn scene beside the editor, so the user sees the scene render.",
@@ -178,6 +181,7 @@
       },
       {
         "name": "textscene_missing_resources",
+        "when": "config.textscene.agentTools.enabled",
         "displayName": "List a Godot .tscn scene's missing resources",
         "toolReferenceName": "tscnMissingResources",
         "modelDescription": "List the res:// resources a Godot .tscn scene references that the project does not hold.",
@@ -203,6 +207,7 @@
       },
       {
         "name": "textscene_capture",
+        "when": "config.textscene.agentTools.enabled",
         "displayName": "Capture the Godot .tscn preview",
         "toolReferenceName": "captureTscnPreview",
         "modelDescription": "Render a Godot .tscn scene's preview and return it as a PNG image, so you can look at what a change produced. Needs VS Code 1.106 or later.",
@@ -260,7 +265,7 @@
         "textscene.agentTools.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Register tools a coding agent in chat can call: lint a scene, read its node tree, open its preview, and list its missing resources. Turn off to keep the extension out of agent tool lists."
+          "description": "Offer tools a coding agent in chat can call: lint a scene, read its node tree, open its preview, list its missing resources, and capture its preview. Turn off to hide them from agent tool lists. The change applies at once."
         }
       }
     }
