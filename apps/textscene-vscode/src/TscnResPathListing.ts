@@ -5,50 +5,83 @@
  */
 
 import * as vscode from 'vscode';
-import { isScannedDirectoryName } from '@textscene/core/godot';
+import { isScannedPath } from '@textscene/core/godot';
 import { findGodotProjectRoot } from './findGodotProjectRoot';
+import { SCAN_STOP_FILES_PATTERN } from './watchPatterns';
 
 /** A cap on the listing, so a huge project does not stall a completion. */
 const MAX_LISTED_FILES = 5000;
 
+/**
+ * The search skips a dot-named directory itself, so a `.godot` import cache spends none of
+ * the cap. `node_modules` holds no Godot resource worth offering.
+ */
+const EXCLUDED_DIRECTORIES = '**/{node_modules,.*}/**';
+
 export class TscnResPathListing {
-  private readonly _cache = new Map<string, Promise<readonly string[]>>();
+  /** Each project root's listing, written by `pathsFor` and dropped by `clear`. */
+  private readonly _listingByRoot = new Map<string, Promise<readonly string[]>>();
+  /** Each document's project root, written by `pathsFor` and dropped by `clear`. */
+  private readonly _rootByDocument = new Map<string, Promise<vscode.Uri>>();
 
   async pathsFor(document: vscode.TextDocument): Promise<readonly string[]> {
     const folder = vscode.workspace.getWorkspaceFolder(document.uri);
     if (!folder) return [];
 
-    const root = await findGodotProjectRoot(folder.uri, document.uri);
+    const root = await this._rootOf(folder, document.uri);
     const key = root.toString();
     // The promise is cached, not its value: two completions before the walk ends share it.
-    const cached = this._cache.get(key);
+    const cached = this._listingByRoot.get(key);
     if (cached) return cached;
 
     const listing = this._collect(root);
-    this._cache.set(key, listing);
+    this._listingByRoot.set(key, listing);
     return listing;
   }
 
-  private async _collect(root: vscode.Uri): Promise<readonly string[]> {
-    const files = await vscode.workspace.findFiles(
-      new vscode.RelativePattern(root, '**/*'),
-      '**/{node_modules,.git}/**',
-      MAX_LISTED_FILES
-    );
-    const rootPath = root.path.endsWith('/') ? root.path : `${root.path}/`;
-    const paths: string[] = [];
-    for (const file of files) {
-      if (!file.path.startsWith(rootPath)) continue;
-      const relative = file.path.slice(rootPath.length);
-      // The editor's scan rules: a dot-named directory, such as `.godot`, is not entered.
-      if (!relative.split('/').slice(0, -1).every(isScannedDirectoryName)) continue;
-      paths.push(`res://${relative}`);
+  private _rootOf(folder: vscode.WorkspaceFolder, document: vscode.Uri): Promise<vscode.Uri> {
+    const key = document.toString();
+    let root = this._rootByDocument.get(key);
+    if (!root) {
+      root = findGodotProjectRoot(folder.uri, document);
+      this._rootByDocument.set(key, root);
     }
-    return paths.sort((a, b) => a.localeCompare(b));
+    return root;
   }
 
-  /** Drops every listing, so a created or deleted file is offered on the next completion. */
+  /**
+   * The editor's scan rules, as the linter reads them: no dot-named directory, no nested
+   * project and no `.gdignore` directory.
+   */
+  private async _collect(root: vscode.Uri): Promise<readonly string[]> {
+    const [files, stopFiles] = await Promise.all([
+      vscode.workspace.findFiles(
+        new vscode.RelativePattern(root, '**/*'),
+        EXCLUDED_DIRECTORIES,
+        MAX_LISTED_FILES
+      ),
+      // No exclude, as the linter's own search does: `.gdignore` is itself dot-named.
+      vscode.workspace.findFiles(new vscode.RelativePattern(root, SCAN_STOP_FILES_PATTERN), null),
+    ]);
+    const rootPath = root.path.endsWith('/') ? root.path : `${root.path}/`;
+    const resPathOf = (file: vscode.Uri) => `res://${file.path.slice(rootPath.length)}`;
+    const underRoot = (file: vscode.Uri) => file.path.startsWith(rootPath);
+    const skipped = new Set(
+      stopFiles
+        .filter(underRoot)
+        .map((file) => resPathOf(file).replace(/\/[^/]*$/, ''))
+        .filter((directory) => directory !== 'res:/')
+    );
+    return files
+      .filter(underRoot)
+      .map(resPathOf)
+      .filter((path) => isScannedPath(path, skipped))
+      .sort((a, b) => a.localeCompare(b));
+  }
+
+  /** Drops every listing and root, so a created or deleted file is offered on the next completion. */
   clear(): void {
-    this._cache.clear();
+    this._listingByRoot.clear();
+    this._rootByDocument.clear();
   }
 }

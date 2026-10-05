@@ -12,6 +12,8 @@ function makeDocument(content: string, fsPath = '/workspace/scenes/Door.tscn'): 
   const lines = content.split('\n');
   return {
     uri: createMockUri(fsPath),
+    version: 1,
+    getText: () => content,
     lineCount: lines.length,
     lineAt: (line: number) => ({ text: lines[line] ?? '' }),
   } as unknown as vscode.TextDocument;

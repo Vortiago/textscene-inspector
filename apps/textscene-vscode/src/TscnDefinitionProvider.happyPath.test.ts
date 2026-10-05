@@ -19,7 +19,7 @@ describe('TscnDefinitionProvider', () => {
   });
 
   describe('SubResource - Happy Path', () => {
-    it('should find SubResource definition with double quotes', () => {
+    it('should find SubResource definition with double quotes', async () => {
       const content = `[node name="Player" type="MeshInstance3D"]
 mesh = SubResource("BoxMesh_1")
 
@@ -29,11 +29,11 @@ size = Vector3(1, 2, 1)`;
       const document = createMockDocument(content);
       const position = new vscode.Position(1, 15); // Inside "SubResource"
 
-      const definition = provider.provideDefinition(
+      const definition = (await provider.provideDefinition(
         document,
         position,
         mockCancellationToken
-      ) as vscode.Location;
+      )) as vscode.Location;
 
       expect(definition).toBeDefined();
       expect(definition).toBeInstanceOf(vscode.Location);
@@ -41,7 +41,8 @@ size = Vector3(1, 2, 1)`;
       expect(definition.uri.toString()).toBe(document.uri.toString());
     });
 
-    it('should find SubResource definition with single quotes', () => {
+    // Godot's tokeniser reads only a double-quoted string, so a single-quoted id names nothing.
+    it('finds no definition for a single-quoted reference', async () => {
       const content = `mesh = SubResource('Material_xyz')
 
 [sub_resource type="StandardMaterial3D" id="Material_xyz"]
@@ -50,17 +51,12 @@ albedo_color = Color(1, 0, 0, 1)`;
       const document = createMockDocument(content);
       const position = new vscode.Position(0, 20);
 
-      const definition = provider.provideDefinition(
-        document,
-        position,
-        mockCancellationToken
-      ) as vscode.Location;
+      const definition = await provider.provideDefinition(document, position, mockCancellationToken);
 
-      expect(definition).toBeDefined();
-      expect(definition.range.start.line).toBe(2);
+      expect(definition).toBeNull();
     });
 
-    it('should find SubResource definition with spaces around quotes', () => {
+    it('should find SubResource definition with spaces around quotes', async () => {
       const content = `shape = SubResource( "Shape_123" )
 
 [sub_resource type="Shape" id="Shape_123"]`;
@@ -68,11 +64,11 @@ albedo_color = Color(1, 0, 0, 1)`;
       const document = createMockDocument(content);
       const position = new vscode.Position(0, 18);
 
-      const definition = provider.provideDefinition(
+      const definition = (await provider.provideDefinition(
         document,
         position,
         mockCancellationToken
-      ) as vscode.Location;
+      )) as vscode.Location;
 
       expect(definition).toBeDefined();
       expect(definition.range.start.line).toBe(2);
@@ -80,7 +76,7 @@ albedo_color = Color(1, 0, 0, 1)`;
   });
 
   describe('ExtResource - Happy Path', () => {
-    it('should find ExtResource definition', () => {
+    it('should find ExtResource definition', async () => {
       const content = `[ext_resource type="PackedScene" path="res://scenes/Door.tscn" id="Door_scene"]
 
 [node name="Door1" instance=ExtResource("Door_scene")]`;
@@ -88,17 +84,17 @@ albedo_color = Color(1, 0, 0, 1)`;
       const document = createMockDocument(content);
       const position = new vscode.Position(2, 35);
 
-      const definition = provider.provideDefinition(
+      const definition = (await provider.provideDefinition(
         document,
         position,
         mockCancellationToken
-      ) as vscode.Location;
+      )) as vscode.Location;
 
       expect(definition).toBeDefined();
       expect(definition.range.start.line).toBe(0);
     });
 
-    it('should find ExtResource with texture type', () => {
+    it('should find ExtResource with texture type', async () => {
       const content = `[ext_resource type="Texture2D" path="res://textures/wood.png" id="wood_texture"]
 
 [node name="Sprite" type="Sprite2D"]
@@ -107,11 +103,11 @@ texture = ExtResource("wood_texture")`;
       const document = createMockDocument(content);
       const position = new vscode.Position(3, 25);
 
-      const definition = provider.provideDefinition(
+      const definition = (await provider.provideDefinition(
         document,
         position,
         mockCancellationToken
-      ) as vscode.Location;
+      )) as vscode.Location;
 
       expect(definition).toBeDefined();
       expect(definition.range.start.line).toBe(0);

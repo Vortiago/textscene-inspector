@@ -7,18 +7,19 @@
 
 import { isDeprecatedPropertyName } from '../godot/deprecated.js';
 import { VARIANT_TYPE, variantTypeName } from '../godot/variantType.js';
-import {
-  classChain,
-  classProperties,
-  findClassProperty,
-  nodeClassNames,
-  resourceClassNames,
-} from './classInfo.js';
+import { classBaseChain } from '../godot/classBaseTypes.js';
+import { classProperties, findClassProperty, nodeClassNames, resourceClassNames } from './classInfo.js';
 import type { DocumentSection, LanguageDocument, PropertySlot } from './document.js';
-import { enumEntries, isEnumHint } from './hints.js';
-import { declaredResourceIds } from './resourceRefs.js';
+import { enumEntriesOf } from './hints.js';
+import { declaredResources, openReferenceAt, type ResourceRefKind } from './resourceRefs.js';
 import { headingAttribute, propertyKeySpan } from './ranges.js';
-import type { CompletionItem } from './types.js';
+import type { CompletionItem, Position } from './types.js';
+
+/**
+ * The characters a host asks for completion on: a quote opens a class or a path, `=` a
+ * value, the rest a key or an id.
+ */
+export const COMPLETION_TRIGGER_CHARACTERS: readonly string[] = ['"', '=', '.', '/', '('];
 
 /** The seam an editor host supplies: it lists the workspace's `res://` paths. */
 export interface CompletionContext {
@@ -26,7 +27,7 @@ export interface CompletionContext {
 }
 
 function extendsDetail(className: string): string {
-  const chain = classChain(className);
+  const chain = classBaseChain(className);
   return chain.length > 0 ? `extends ${chain[0]}` : 'Godot class';
 }
 
@@ -47,8 +48,8 @@ function propertyItems(className: string, present: ReadonlySet<string>): readonl
 
 function enumItems(className: string, property: PropertySlot): readonly CompletionItem[] {
   const resolved = findClassProperty(className, property.storedKey);
-  if (!resolved || !isEnumHint(resolved.hint) || resolved.type !== VARIANT_TYPE.INT) return [];
-  return enumEntries(resolved.hintString).map((entry) => ({
+  if (!resolved) return [];
+  return enumEntriesOf(resolved).map((entry) => ({
     label: entry.label,
     kind: 'value',
     detail: `= ${entry.value}`,
@@ -68,12 +69,11 @@ function booleanItems(className: string, property: PropertySlot): readonly Compl
 /** Ids of the references' own kind, offered inside `ExtResource("…")` or `SubResource("…")`. */
 function resourceIdItems(
   document: LanguageDocument,
-  kind: 'ext' | 'sub',
+  kind: ResourceRefKind,
   prefix: string
 ): readonly CompletionItem[] {
   const items: CompletionItem[] = [];
-  for (const [key, section] of declaredResourceIds(document)) {
-    const [declaredKind, id] = key.split(':', 2) as [string, string];
+  for (const { kind: declaredKind, id, section } of declaredResources(document).values()) {
     if (declaredKind !== kind || !id.startsWith(prefix)) continue;
     const type = section.attributes.type ?? 'Resource';
     const path = section.attributes.path;
@@ -89,12 +89,9 @@ function pathItems(listPaths: () => readonly string[], prefix: string): readonly
     .map((path) => ({ label: path, kind: 'path', insertText: path }));
 }
 
-function headingItems(section: DocumentSection, attribute: string): readonly CompletionItem[] {
-  if (attribute === 'type') {
-    if (section.tag === 'node') return typeItems(nodeClassNames(), 'nodeType');
-    return typeItems(resourceClassNames(), 'resourceType');
-  }
-  return [];
+function classNameItems(section: DocumentSection): readonly CompletionItem[] {
+  if (section.tag === 'node') return typeItems(nodeClassNames(), 'nodeType');
+  return typeItems(resourceClassNames(), 'resourceType');
 }
 
 function parentItems(document: LanguageDocument): readonly CompletionItem[] {
@@ -119,11 +116,8 @@ function valueItems(
   context: CompletionContext | undefined
 ): readonly CompletionItem[] {
   const before = cursorLine.slice(0, character);
-  const reference = /(Ext|Sub)Resource\(\s*"([^"]*)$/.exec(before);
-  if (reference) {
-    const prefix = reference[2] ?? '';
-    return resourceIdItems(document, reference[1] === 'Ext' ? 'ext' : 'sub', prefix);
-  }
+  const reference = openReferenceAt(before);
+  if (reference) return resourceIdItems(document, reference.kind, reference.id);
   const className = section.ownerType;
   if (className) {
     const enums = enumItems(className, property);
@@ -131,11 +125,25 @@ function valueItems(
     const booleans = booleanItems(className, property);
     if (booleans.length > 0) return booleans;
   }
-  if (context?.listPaths) {
-    const path = /res:\/\/[^"]*$/.exec(before);
-    if (path) return pathItems(context.listPaths, path[0]);
-  }
+  const prefix = resPathPrefix(before);
+  if (context?.listPaths && prefix !== undefined) return pathItems(context.listPaths, prefix);
   return [];
+}
+
+/** The `res://` path a value has typed up to the cursor, or undefined outside one. */
+function resPathPrefix(textBeforeCursor: string): string | undefined {
+  return /res:\/\/[^"]*$/.exec(textBeforeCursor)?.[0];
+}
+
+/**
+ * Whether a completion at a zero-based position would read the host's path listing, so a
+ * host lists the project only for a cursor inside a `res://` value.
+ */
+export function needsPathListing(document: LanguageDocument, position: Position): boolean {
+  const line = document.lines[position.line];
+  const location = document.propertyAt(position.line + 1);
+  if (line === undefined || !location) return false;
+  return resPathPrefix(line.slice(0, position.character)) !== undefined;
 }
 
 /**
@@ -144,7 +152,7 @@ function valueItems(
  */
 export function completionsAt(
   document: LanguageDocument,
-  position: { line: number; character: number },
+  position: Position,
   context?: CompletionContext
 ): readonly CompletionItem[] {
   const line = document.lines[position.line];
@@ -153,12 +161,14 @@ export function completionsAt(
   if (!section) return [];
 
   if (section.headingLine === position.line + 1) {
-    for (const attribute of ['type', 'parent'] as const) {
+    const within = (attribute: string): boolean => {
       const found = headingAttribute(line, attribute);
-      if (!found || position.character < found.span.start || position.character > found.span.end) continue;
-      if (attribute === 'parent') return parentItems(document);
-      return headingItems(section, attribute);
-    }
+      return (
+        found !== undefined && position.character >= found.span.start && position.character <= found.span.end
+      );
+    };
+    if (within('type')) return classNameItems(section);
+    if (within('parent')) return parentItems(document);
     return [];
   }
 

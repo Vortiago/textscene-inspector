@@ -6,6 +6,7 @@
  */
 
 import { PROPERTY_HINT } from '../godot/propertyHint.js';
+import { VARIANT_TYPE } from '../godot/variantType.js';
 
 /** One `PROPERTY_HINT_ENUM` label, with the integer the engine stores for it. */
 export interface EnumEntry {
@@ -32,6 +33,19 @@ export function enumEntries(hintString: string): readonly EnumEntry[] {
     const value = raw.slice(colon + 1);
     return { label: raw.slice(0, colon), value: value.length > 0 ? value : String(index) };
   });
+}
+
+/** The hint fields of a property, as a ClassDB row spells them. */
+interface HintedProperty {
+  readonly type: number;
+  readonly hint: number;
+  readonly hintString: string;
+}
+
+/** The labels an integer enum property offers, or none for any other property. */
+export function enumEntriesOf(property: HintedProperty): readonly EnumEntry[] {
+  if (!isEnumHint(property.hint) || property.type !== VARIANT_TYPE.INT) return [];
+  return enumEntries(property.hintString);
 }
 
 /** The labels of a flags hint, whose value is a bitmask rather than one choice. */

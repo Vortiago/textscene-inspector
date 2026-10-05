@@ -9,9 +9,9 @@ describe('foldingRanges', () => {
     // The sub-resource and the two nodes have a body; the resource headings and the
     // connection do not.
     expect(ranges).toEqual([
-      { startLine: 5, endLine: 6, kind: 'region' },
-      { startLine: 8, endLine: 9, kind: 'region' },
-      { startLine: 11, endLine: 13, kind: 'region' },
+      { startLine: 5, endLine: 6 },
+      { startLine: 8, endLine: 9 },
+      { startLine: 11, endLine: 13 },
     ]);
   });
 

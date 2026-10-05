@@ -2,8 +2,10 @@
  * `ExtResource("…")` and `SubResource("…")` references, as an editor sees them: the
  * declaration each id names, every use of it, and the span a cursor can land on. The
  * ids are per file and per kind, so an `ext` id and a `sub` id may share a spelling.
+ * The grammar is `godot/resourceRef.ts`, the one the linter and the renderer read.
  */
 
+import { openResourceRef, resourceRef, resourceRefSpans, type ResourceRef } from '../godot/resourceRef.js';
 import type { LanguageDocument, DocumentSection } from './document.js';
 import { headingAttribute, lineRange } from './ranges.js';
 import type { Range } from './types.js';
@@ -20,7 +22,9 @@ export interface ResourceReferenceSpan extends ResourceReference {
   readonly range: Range;
 }
 
-const REFERENCE_RE = /(Ext|Sub)Resource\(\s*"([^"]*)"\s*\)/g;
+function toReference({ kind, id }: ResourceRef): ResourceReference {
+  return { kind: kind === 'ExtResource' ? 'ext' : 'sub', id };
+}
 
 function kindOfTag(tag: string): ResourceRefKind | undefined {
   if (tag === 'ext_resource') return 'ext';
@@ -36,37 +40,61 @@ function declaredId(section: DocumentSection): ResourceReference | undefined {
   return id === undefined ? undefined : { kind, id };
 }
 
-/** The reference a literal spells, for a whole single-line value. */
-export function parseResourceReference(literal: string): ResourceReference | undefined {
-  const match = /^\s*(Ext|Sub)Resource\(\s*"([^"]*)"\s*\)\s*$/.exec(literal);
-  if (!match) return undefined;
-  return { kind: match[1] === 'Ext' ? 'ext' : 'sub', id: match[2] ?? '' };
+/** The reference a whole single-line value spells, padding aside. */
+export function referenceInValue(literal: string): ResourceReference | undefined {
+  const reference = resourceRef(literal.trim());
+  return reference ? toReference(reference) : undefined;
+}
+
+/** The reference a line ends inside, with the id typed so far, for id completion. */
+export function openReferenceAt(textBeforeCursor: string): ResourceReference | undefined {
+  const reference = openResourceRef(textBeforeCursor);
+  return reference ? toReference(reference) : undefined;
+}
+
+/** The reference occurrences on one zero-based line. */
+function referencesOnLine(line: string, index: number): ResourceReferenceSpan[] {
+  return resourceRefSpans(line).map((span) => ({
+    ...toReference(span),
+    range: lineRange(index, { start: span.start, end: span.end }),
+  }));
 }
 
 /** Every reference occurrence in the file, declaration headings' `instance=` included. */
 export function resourceReferences(document: LanguageDocument): readonly ResourceReferenceSpan[] {
-  const found: ResourceReferenceSpan[] = [];
-  for (const [index, line] of document.lines.entries()) {
-    REFERENCE_RE.lastIndex = 0;
-    for (let match = REFERENCE_RE.exec(line); match !== null; match = REFERENCE_RE.exec(line)) {
-      found.push({
-        kind: match[1] === 'Ext' ? 'ext' : 'sub',
-        id: match[2] ?? '',
-        range: lineRange(index, { start: match.index, end: match.index + match[0].length }),
-      });
-    }
-  }
-  return found;
+  return [...document.lines.entries()].flatMap(([index, line]) => referencesOnLine(line, index));
 }
 
-/** The ids declared by every `ext_resource` and `sub_resource` heading, keyed by kind and id. */
-export function declaredResourceIds(document: LanguageDocument): ReadonlyMap<string, DocumentSection> {
-  const declared = new Map<string, DocumentSection>();
+/** A declared resource id and the heading that declares it. */
+export interface ResourceDeclaration extends ResourceReference {
+  readonly section: DocumentSection;
+}
+
+function declarationKey(reference: ResourceReference): string {
+  return `${reference.kind}:${reference.id}`;
+}
+
+/**
+ * Every id an `ext_resource` or `sub_resource` heading declares, one entry per kind and id. A
+ * repeated id keeps its first heading, as the renderer's `SubResourceResolver` resolves it.
+ */
+export function declaredResources(document: LanguageDocument): ReadonlyMap<string, ResourceDeclaration> {
+  const declared = new Map<string, ResourceDeclaration>();
   for (const section of document.sections) {
     const id = declaredId(section);
-    if (id) declared.set(`${id.kind}:${id.id}`, section);
+    if (!id) continue;
+    const key = declarationKey(id);
+    if (!declared.has(key)) declared.set(key, { ...id, section });
   }
   return declared;
+}
+
+/** The heading that declares `reference`, or undefined for an id the file never declares. */
+export function declarationOf(
+  document: LanguageDocument,
+  reference: ResourceReference
+): DocumentSection | undefined {
+  return declaredResources(document).get(declarationKey(reference))?.section;
 }
 
 /** The reference or declaration the cursor touches, or undefined. */
@@ -75,22 +103,17 @@ export function referenceAt(
   line: number,
   character: number
 ): ResourceReference | undefined {
+  const text = document.lines[line] ?? '';
   const section = document.sectionAt(line + 1);
   if (section && section.headingLine === line + 1) {
     const id = declaredId(section);
     if (id) {
-      const attribute = headingAttribute(document.lines[line] ?? '', 'id');
+      const attribute = headingAttribute(text, 'id');
       if (attribute && character >= attribute.span.start && character <= attribute.span.end) return id;
     }
   }
-  for (const span of resourceReferences(document)) {
-    if (
-      span.range.start.line === line &&
-      character >= span.range.start.character &&
-      character <= span.range.end.character
-    ) {
-      return { kind: span.kind, id: span.id };
-    }
-  }
-  return undefined;
+  const span = referencesOnLine(text, line).find(
+    ({ range }) => character >= range.start.character && character <= range.end.character
+  );
+  return span && { kind: span.kind, id: span.id };
 }

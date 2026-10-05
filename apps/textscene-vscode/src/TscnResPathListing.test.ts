@@ -12,10 +12,21 @@ function arrangeProject(): void {
       ? Promise.resolve({ type: 1, size: 1, ctime: 0, mtime: 0 })
       : Promise.reject(new Error('Not found'))
   );
-  vscodeMocks.workspace.findFiles.mockResolvedValue([
-    createMockUri('/game/scenes/Door.tscn'),
-    createMockUri('/game/icon.svg'),
-  ]);
+  arrangeFiles(['/game/scenes/Door.tscn', '/game/icon.svg'], []);
+}
+
+/** Answers the listing search with `files` and the stop-file search with `stopFiles`. */
+function arrangeFiles(files: readonly string[], stopFiles: readonly string[]): void {
+  vscodeMocks.workspace.findFiles.mockImplementation((pattern: { pattern: string }) =>
+    Promise.resolve((pattern.pattern === '**/*' ? files : stopFiles).map(createMockUri))
+  );
+}
+
+/** The listing searches made so far, the stop-file searches left out. */
+function listingSearches(): number {
+  return vscodeMocks.workspace.findFiles.mock.calls.filter(
+    ([pattern]: [{ pattern: string }]) => pattern.pattern === '**/*'
+  ).length;
 }
 
 describe('TscnResPathListing', () => {
@@ -31,7 +42,7 @@ describe('TscnResPathListing', () => {
     const document = createMockDocument('[node name="R" type="Node"]');
     await listing.pathsFor(document);
     await listing.pathsFor(document);
-    expect(vscodeMocks.workspace.findFiles).toHaveBeenCalledTimes(1);
+    expect(listingSearches()).toBe(1);
   });
 
   it('lists again after clear(), so a created file is offered', async () => {
@@ -41,7 +52,17 @@ describe('TscnResPathListing', () => {
     await listing.pathsFor(document);
     listing.clear();
     await listing.pathsFor(document);
-    expect(vscodeMocks.workspace.findFiles).toHaveBeenCalledTimes(2);
+    expect(listingSearches()).toBe(2);
+  });
+
+  it('leaves out a nested project and a .gdignore directory, as the editor scan does', async () => {
+    arrangeProject();
+    arrangeFiles(
+      ['/game/a.tscn', '/game/vendor/other/b.tscn', '/game/raw/c.png'],
+      ['/game/project.godot', '/game/vendor/other/project.godot', '/game/raw/.gdignore']
+    );
+    const paths = await new TscnResPathListing().pathsFor(createMockDocument('[node name="R" type="Node"]'));
+    expect(paths).toEqual(['res://a.tscn']);
   });
 
   it('returns nothing outside a workspace folder', async () => {

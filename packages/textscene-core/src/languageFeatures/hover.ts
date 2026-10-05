@@ -6,14 +6,15 @@
  */
 
 import { canonicalPropertyName, isDeprecatedPropertyName } from '../godot/deprecated.js';
-import { VARIANT_TYPE, variantTypeName } from '../godot/variantType.js';
-import { classChain, findClassProperty, isKnownClass } from './classInfo.js';
+import { variantTypeName } from '../godot/variantType.js';
+import { classBaseChain } from '../godot/classBaseTypes.js';
+import { findClassProperty, isKnownClass, type ClassProperty } from './classInfo.js';
 import { classDocsUrl, propertyDocsUrl } from './docs.js';
 import type { DocumentSection, LanguageDocument, PropertySlot } from './document.js';
-import { enumEntries, flagLabels, isEnumHint, rangeHint, rangeSuffix, resourceTypeHint } from './hints.js';
+import { enumEntriesOf, flagLabels, rangeHint, rangeSuffix, resourceTypeHint } from './hints.js';
 import { headingAttribute, lineRange, propertyKeySpan, propertyValueSpan, type LineSpan } from './ranges.js';
-import { declaredResourceIds, parseResourceReference } from './resourceRefs.js';
-import type { Hover, Range } from './types.js';
+import { declarationOf, referenceInValue } from './resourceRefs.js';
+import type { Hover, Position, Range } from './types.js';
 
 function within(span: LineSpan, character: number): boolean {
   return character >= span.start && character <= span.end;
@@ -26,7 +27,7 @@ function codeSpan(text: string): string {
 /** The answer for a heading's `type=`: the class, its chain and its reference page. */
 function classHover(className: string, range: Range): Hover | undefined {
   if (!isKnownClass(className)) return undefined;
-  const chain = classChain(className);
+  const chain = classBaseChain(className);
   const lines = [
     `**${className}**`,
     '',
@@ -37,12 +38,11 @@ function classHover(className: string, range: Range): Hover | undefined {
 }
 
 /** What a property accepts, from its hint. */
-function acceptedText(type: number, hint: number, hintString: string): string | undefined {
-  if (isEnumHint(hint) && type === VARIANT_TYPE.INT) {
-    const entries = enumEntries(hintString);
-    if (entries.length > 0)
-      return `One of ${entries.map((entry) => `${codeSpan(entry.label)} (${entry.value})`).join(', ')}.`;
-  }
+function acceptedText(property: ClassProperty): string | undefined {
+  const { hint, hintString } = property;
+  const entries = enumEntriesOf(property);
+  if (entries.length > 0)
+    return `One of ${entries.map((entry) => `${codeSpan(entry.label)} (${entry.value})`).join(', ')}.`;
   const resources = resourceTypeHint(hint, hintString);
   if (resources) return `A resource of ${resources.map(codeSpan).join(' or ')}.`;
   const flags = flagLabels(hint, hintString);
@@ -69,7 +69,7 @@ function propertyHover(section: DocumentSection, property: PropertySlot, range: 
   lines.push(`**${property.key}**${typeName ? ` ${codeSpan(typeName)}` : ''}`);
   if (resolved) {
     lines.push('', `Declared by ${codeSpan(resolved.declaredBy)}.`);
-    const accepted = acceptedText(resolved.type, resolved.hint, resolved.hintString);
+    const accepted = acceptedText(resolved);
     if (accepted) lines.push('', accepted);
   }
   if (className && isDeprecatedPropertyName(className, property.key)) {
@@ -92,9 +92,9 @@ function valueHover(
   const className = section.ownerType;
   const declared = className ? findClassProperty(className, property.storedKey) : undefined;
 
-  const reference = parseResourceReference(property.value);
+  const reference = referenceInValue(property.value);
   if (reference) {
-    const declaration = declaredResourceIds(document).get(`${reference.kind}:${reference.id}`);
+    const declaration = declarationOf(document, reference);
     const noun = reference.kind === 'ext' ? 'External resource' : 'Sub-resource';
     if (!declaration)
       return { markdown: `${noun} ${codeSpan(reference.id)} is not declared in this file.`, range };
@@ -105,24 +105,19 @@ function valueHover(
     return { markdown: lines.join('\n'), range };
   }
 
-  if (declared && isEnumHint(declared.hint) && declared.type === VARIANT_TYPE.INT) {
-    const written = property.value.trim();
-    // The label lookup is a string compare: the hint's value is the literal to write,
-    // so no second Variant number reader is introduced.
-    const entry = enumEntries(declared.hintString).find((candidate) => candidate.value === written);
-    if (entry) return { markdown: `**${entry.label}** = ${codeSpan(written)}`, range };
-  }
-  return undefined;
+  if (!declared) return undefined;
+  const written = property.value.trim();
+  // The label lookup is a string compare: the hint's value is the literal to write,
+  // so no second Variant number reader is introduced.
+  const entry = enumEntriesOf(declared).find((candidate) => candidate.value === written);
+  return entry && { markdown: `**${entry.label}** = ${codeSpan(written)}`, range };
 }
 
 /**
  * Hover at a zero-based position, or undefined where the position names nothing.
  * The position's line is one-based inside the document model. See `document.ts`.
  */
-export function hoverAt(
-  document: LanguageDocument,
-  position: { line: number; character: number }
-): Hover | undefined {
+export function hoverAt(document: LanguageDocument, position: Position): Hover | undefined {
   const line = document.lines[position.line];
   if (line === undefined) return undefined;
   const section = document.sectionAt(position.line + 1);

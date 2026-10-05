@@ -4,8 +4,9 @@
  */
 
 import * as vscode from 'vscode';
-import { createLanguageDocument, documentHighlights } from '@textscene/core/languageFeatures';
-import { toEnginePosition, toVscodeRange } from './languageFeatureRanges';
+import { documentHighlights } from '@textscene/core/languageFeatures';
+import { languageDocumentOf } from './languageDocumentOf';
+import { toVscodeRange } from './languageFeatureRanges';
 
 export class TscnDocumentHighlightProvider implements vscode.DocumentHighlightProvider {
   provideDocumentHighlights(
@@ -13,8 +14,7 @@ export class TscnDocumentHighlightProvider implements vscode.DocumentHighlightPr
     position: vscode.Position,
     _token: vscode.CancellationToken
   ): vscode.DocumentHighlight[] {
-    const engine = createLanguageDocument(document.getText());
-    return documentHighlights(engine, toEnginePosition(position)).map(
+    return documentHighlights(languageDocumentOf(document), position).map(
       (highlight) =>
         new vscode.DocumentHighlight(toVscodeRange(highlight.range), vscode.DocumentHighlightKind.Text)
     );

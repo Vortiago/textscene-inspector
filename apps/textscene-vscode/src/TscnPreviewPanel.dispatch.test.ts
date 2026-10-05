@@ -197,10 +197,10 @@ describe('TscnPreviewPanel — all message types through fake onDidReceiveMessag
       dataUrl: 'data:image/png;base64,AA==',
     });
 
-    await expect(captured).resolves.toBe('data:image/png;base64,AA==');
+    await expect(captured).resolves.toEqual({ dataUrl: 'data:image/png;base64,AA==' });
   });
 
-  it('capture: resolves null when the webview reports an error', async () => {
+  it('capture: resolves with the reason the webview reports', async () => {
     const { webview, triggerMessage } = setupMockPanel();
     const panel = await makeReadyPanel(triggerMessage);
 
@@ -211,7 +211,7 @@ describe('TscnPreviewPanel — all message types through fake onDidReceiveMessag
       .find((m) => (m as { type: string }).type === 'capturePreview') as { requestId: string };
     triggerMessage({ type: 'previewCaptureError', requestId: request.requestId, error: 'not ready' });
 
-    await expect(captured).resolves.toBeNull();
+    await expect(captured).resolves.toEqual({ error: 'not ready' });
   });
 
   it('log: does not throw even when no output channel is initialised', async () => {

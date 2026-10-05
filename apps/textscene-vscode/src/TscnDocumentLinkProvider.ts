@@ -4,11 +4,11 @@
  */
 
 import * as vscode from 'vscode';
+import { resPathOccurrences } from '@textscene/core/languageFeatures';
 import { resRelativePath } from '@textscene/core/resources/resPath';
 import { findGodotProjectRoot } from './findGodotProjectRoot';
-
-/** Matches a `res://` reference up to the next quote, whitespace, or closing paren. */
-const RES_PATH_PATTERN = /res:\/\/[^"'\s)]+/g;
+import { languageDocumentOf } from './languageDocumentOf';
+import { toVscodeRange } from './languageFeatureRanges';
 
 export class TscnResourceDocumentLink extends vscode.DocumentLink {
   constructor(
@@ -42,30 +42,14 @@ export class TscnDocumentLinkProvider implements vscode.DocumentLinkProvider<Tsc
     return root;
   }
 
-  /** Computes ranges only: a synchronous regex scan with no IO. */
+  /** Computes ranges only, from the engine's scan, with no IO. */
   provideDocumentLinks(
     document: vscode.TextDocument,
     _token: vscode.CancellationToken
-  ): vscode.ProviderResult<TscnResourceDocumentLink[]> {
-    const links: TscnResourceDocumentLink[] = [];
-    const pattern = new RegExp(RES_PATH_PATTERN);
-
-    for (let lineIndex = 0; lineIndex < document.lineCount; lineIndex++) {
-      const lineText = document.lineAt(lineIndex).text;
-      pattern.lastIndex = 0;
-
-      let match: RegExpExecArray | null;
-      while ((match = pattern.exec(lineText)) !== null) {
-        const resourcePath = match[0];
-        const range = new vscode.Range(
-          new vscode.Position(lineIndex, match.index),
-          new vscode.Position(lineIndex, match.index + resourcePath.length)
-        );
-        links.push(new TscnResourceDocumentLink(range, resourcePath, document.uri));
-      }
-    }
-
-    return links;
+  ): TscnResourceDocumentLink[] {
+    return resPathOccurrences(languageDocumentOf(document)).map(
+      ({ path, range }) => new TscnResourceDocumentLink(toVscodeRange(range), path, document.uri)
+    );
   }
 
   /**

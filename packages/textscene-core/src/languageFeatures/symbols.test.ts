@@ -1,9 +1,9 @@
-/** Tests for the scene tree built as hierarchical document symbols. */
+/** The scene tree as hierarchical document symbols. */
 
 import { describe, it, expect } from 'vitest';
-import { SymbolKind, type DocumentSymbol } from 'vscode-languageserver/node';
-import { createLanguageDocument } from '@textscene/core/languageFeatures';
+import { LanguageDocument } from './document';
 import { documentSymbols } from './symbols';
+import type { DocumentSymbol } from './types';
 
 const SCENE = `[gd_scene format=3]
 
@@ -17,8 +17,8 @@ speed = 5.0
 [node name="Mesh" type="MeshInstance3D" parent="Player/Hand"]
 `;
 
-function childrenOf(symbol: DocumentSymbol): DocumentSymbol[] {
-  return symbol.children ?? [];
+function childrenOf(symbol: DocumentSymbol): readonly DocumentSymbol[] {
+  return symbol.children;
 }
 
 function only(symbols: readonly DocumentSymbol[]): DocumentSymbol {
@@ -29,15 +29,16 @@ function only(symbols: readonly DocumentSymbol[]): DocumentSymbol {
 
 describe('documentSymbols', () => {
   it('nests each node under the parent its parent= names', () => {
-    const root = only(documentSymbols(createLanguageDocument(SCENE)));
+    const root = only(documentSymbols(new LanguageDocument(SCENE)));
 
     expect(root.name).toBe('Root');
     expect(root.detail).toBe('Node3D');
-    expect(root.kind).toBe(SymbolKind.Object);
+    expect(root.kind).toBe('module');
 
     const player = only(childrenOf(root));
     expect(player.name).toBe('Player');
     expect(player.detail).toBe('CharacterBody3D');
+    expect(player.kind).toBe('object');
 
     const hand = only(childrenOf(player));
     expect(hand.name).toBe('Hand');
@@ -45,7 +46,7 @@ describe('documentSymbols', () => {
   });
 
   it('reaches a node range through its deepest descendant', () => {
-    const root = only(documentSymbols(createLanguageDocument(SCENE)));
+    const root = only(documentSymbols(new LanguageDocument(SCENE)));
 
     // The last line is the deepest heading, so the root folds the whole tree.
     expect(root.range).toEqual({
@@ -59,7 +60,7 @@ describe('documentSymbols', () => {
   });
 
   it('gives a leaf a range that ends on its own last line', () => {
-    const root = only(documentSymbols(createLanguageDocument(SCENE)));
+    const root = only(documentSymbols(new LanguageDocument(SCENE)));
     const player = only(childrenOf(root));
     const hand = only(childrenOf(player));
     const mesh = only(childrenOf(hand));
@@ -70,7 +71,7 @@ describe('documentSymbols', () => {
   });
 
   it('gives an empty document no symbols', () => {
-    expect(documentSymbols(createLanguageDocument(''))).toEqual([]);
+    expect(documentSymbols(new LanguageDocument(''))).toEqual([]);
   });
 
   it('keeps a node whose parent heading is missing as a second root', () => {
@@ -79,7 +80,7 @@ describe('documentSymbols', () => {
 [node name="Loose" type="Node3D" parent="Gone"]
 `;
 
-    const symbols = documentSymbols(createLanguageDocument(orphan));
+    const symbols = documentSymbols(new LanguageDocument(orphan));
 
     expect(symbols.map((symbol) => symbol.name)).toEqual(['Loose']);
   });

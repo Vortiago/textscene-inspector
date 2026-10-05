@@ -6,13 +6,13 @@
 
 import type { LanguageDocument } from './document.js';
 import { lineRange, headingAttribute } from './ranges.js';
-import { declaredResourceIds, referenceAt, resourceReferences } from './resourceRefs.js';
-import type { DocumentHighlight } from './types.js';
+import { declarationOf, referenceAt, resourceReferences } from './resourceRefs.js';
+import type { DocumentHighlight, Position } from './types.js';
 
 /** Every span naming the id at a zero-based position, the declaration included. */
 export function documentHighlights(
   document: LanguageDocument,
-  position: { line: number; character: number }
+  position: Position
 ): readonly DocumentHighlight[] {
   const reference = referenceAt(document, position.line, position.character);
   if (!reference) return [];
@@ -22,7 +22,7 @@ export function documentHighlights(
     if (span.kind === reference.kind && span.id === reference.id) highlights.push({ range: span.range });
   }
 
-  const declaration = declaredResourceIds(document).get(`${reference.kind}:${reference.id}`);
+  const declaration = declarationOf(document, reference);
   if (declaration) {
     const line = document.lines[declaration.headingLine - 1] ?? '';
     const attribute = headingAttribute(line, 'id');

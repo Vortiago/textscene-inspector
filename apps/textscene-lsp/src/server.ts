@@ -24,12 +24,19 @@ import {
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { Linter } from '@textscene/core/linter';
 import {
+  COMPLETION_TRIGGER_CHARACTERS,
   codeActions,
   completionsAt,
   createLanguageDocument,
+  declarationRangeAt,
   documentHighlights,
+  documentSymbols,
   foldingRanges,
   hoverAt,
+  needsPathListing,
+  resPathAt,
+  resPathOccurrences,
+  type LanguageDocument,
 } from '@textscene/core/languageFeatures';
 import {
   toLspCodeAction,
@@ -38,25 +45,22 @@ import {
   toLspFoldingRange,
   toLspHighlight,
   toLspHover,
+  toLspSymbol,
 } from './lspConvert';
-import { resourceIdLocation, resourceLinks, resPathAt } from './navigation';
 import {
   fileExists,
-  listResPaths,
-  projectFileOf,
+  listProjectPaths,
   projectRootForDir,
   projectRootForFile,
   providerForRoot,
-} from './project';
-import { documentSymbols } from './symbols';
+} from '@textscene/core/resources/diskProject';
+import { resolveResPath } from '@textscene/core/resources/resPath';
 
 /** Wait after the last edit before a lint, so a burst of keystrokes lints once. */
 const LINT_DEBOUNCE_MS = 300;
 
-const ZERO_RANGE: Range = {
-  start: { line: 0, character: 0 },
-  end: { line: 0, character: 0 },
-};
+/** Where a definition in another file lands: its first character. */
+const FILE_START: Range = { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } };
 
 const connection = createConnection(ProposedFeatures.all, process.stdin, process.stdout);
 const documents = new TextDocuments(TextDocument);
@@ -67,6 +71,11 @@ let workspaceRoot: string | null = null;
 
 /** Each open document's project root, so a request does not walk the tree again. */
 const rootByUri = new Map<string, Promise<string | null>>();
+/**
+ * Each open document's model at its latest version, written by `modelOf` and cleared on
+ * close. A client sends several requests per edit, and they share one parse.
+ */
+const modelByUri = new Map<string, { readonly version: number; readonly model: LanguageDocument }>();
 /** Each document's pending debounced lint. */
 const lintTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -103,9 +112,20 @@ function rootForUri(uri: string): Promise<string | null> {
 }
 
 /** The model a request reads, or undefined for a document the client never opened. */
-function modelOf(uri: string) {
+function modelOf(uri: string): LanguageDocument | undefined {
   const document = documents.get(uri);
-  return document === undefined ? undefined : { document, model: createLanguageDocument(document.getText()) };
+  if (document === undefined) return undefined;
+  const cached = modelByUri.get(uri);
+  if (cached !== undefined && cached.version === document.version) return cached.model;
+  const model = createLanguageDocument(document.getText());
+  modelByUri.set(uri, { version: document.version, model });
+  return model;
+}
+
+/** The file URL a `res://` link opens, or undefined for a path with no file in the project. */
+async function linkTarget(root: string | null, path: string): Promise<string | undefined> {
+  const file = root === null ? null : resolveResPath(root, path);
+  return file !== null && (await fileExists(file)) ? pathToFileURL(file).toString() : undefined;
 }
 
 function scheduleLint(document: TextDocument): void {
@@ -142,7 +162,7 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
     capabilities: {
       textDocumentSync: TextDocumentSyncKind.Full,
       completionProvider: {
-        triggerCharacters: ['"', '=', '.', '/', '('],
+        triggerCharacters: [...COMPLETION_TRIGGER_CHARACTERS],
         resolveProvider: false,
       },
       hoverProvider: true,
@@ -169,77 +189,75 @@ connection.onExit(() => {
 });
 
 connection.onCompletion(async (params): Promise<CompletionItem[] | null> => {
-  const found = modelOf(params.textDocument.uri);
-  if (!found) return null;
-  const root = await rootForUri(params.textDocument.uri);
+  const model = modelOf(params.textDocument.uri);
+  if (!model) return null;
   let listPaths: (() => readonly string[]) | undefined;
+  const root = needsPathListing(model, params.position) ? await rootForUri(params.textDocument.uri) : null;
   if (root !== null) {
-    const paths = await listResPaths(root);
+    const paths = await listProjectPaths(root);
     listPaths = () => paths;
   }
-  return completionsAt(found.model, params.position, { listPaths }).map(toLspCompletion);
+  return completionsAt(model, params.position, { listPaths }).map(toLspCompletion);
 });
 
 connection.onHover((params): Hover | null => {
-  const found = modelOf(params.textDocument.uri);
-  if (!found) return null;
-  const hover = hoverAt(found.model, params.position);
+  const model = modelOf(params.textDocument.uri);
+  if (!model) return null;
+  const hover = hoverAt(model, params.position);
   return hover === undefined ? null : toLspHover(hover);
 });
 
 connection.onCodeAction((params): CodeAction[] | null => {
-  const found = modelOf(params.textDocument.uri);
-  if (!found) return null;
-  return codeActions(found.model, params.range).map((action) =>
-    toLspCodeAction(action, params.textDocument.uri)
-  );
+  const model = modelOf(params.textDocument.uri);
+  if (!model) return null;
+  return codeActions(model, params.range).map((action) => toLspCodeAction(action, params.textDocument.uri));
 });
 
 connection.onFoldingRanges((params) => {
-  const found = modelOf(params.textDocument.uri);
-  return found === undefined ? null : foldingRanges(found.model).map(toLspFoldingRange);
+  const model = modelOf(params.textDocument.uri);
+  return model === undefined ? null : foldingRanges(model).map(toLspFoldingRange);
 });
 
 connection.onDocumentSymbol((params): DocumentSymbol[] | null => {
-  const found = modelOf(params.textDocument.uri);
-  return found === undefined ? null : documentSymbols(found.model);
+  const model = modelOf(params.textDocument.uri);
+  return model === undefined ? null : documentSymbols(model).map(toLspSymbol);
 });
 
 connection.onDefinition(async (params): Promise<Location | null> => {
-  const found = modelOf(params.textDocument.uri);
-  if (!found) return null;
+  const model = modelOf(params.textDocument.uri);
+  if (!model) return null;
 
-  const idLocation = resourceIdLocation(found.model, params.position, params.textDocument.uri);
-  if (idLocation !== undefined) return idLocation;
+  const declaration = declarationRangeAt(model, params.position);
+  if (declaration !== undefined) return { uri: params.textDocument.uri, range: declaration };
 
-  const occurrence = resPathAt(found.model, params.position);
+  const occurrence = resPathAt(model, params.position);
   if (occurrence === undefined) return null;
   const root = await rootForUri(params.textDocument.uri);
   if (root === null) return null;
-  const file = projectFileOf(root, occurrence.path);
+  const file = resolveResPath(root, occurrence.path);
   if (file === null || !(await fileExists(file))) return null;
-  return { uri: pathToFileURL(file).toString(), range: ZERO_RANGE };
+  return { uri: pathToFileURL(file).toString(), range: FILE_START };
 });
 
 connection.onDocumentHighlight((params) => {
-  const found = modelOf(params.textDocument.uri);
-  return found === undefined ? null : documentHighlights(found.model, params.position).map(toLspHighlight);
+  const model = modelOf(params.textDocument.uri);
+  return model === undefined ? null : documentHighlights(model, params.position).map(toLspHighlight);
 });
 
 connection.onDocumentLinks(async (params): Promise<DocumentLink[]> => {
-  const found = modelOf(params.textDocument.uri);
-  if (!found) return [];
+  const model = modelOf(params.textDocument.uri);
+  if (!model) return [];
   const root = await rootForUri(params.textDocument.uri);
-  const links: DocumentLink[] = [];
-  for (const { path, range } of resourceLinks(found.model)) {
-    const file = root === null ? null : projectFileOf(root, path);
-    links.push(
-      file !== null && (await fileExists(file))
-        ? { range, target: pathToFileURL(file).toString() }
-        : { range }
-    );
-  }
-  return links;
+  const links = resPathOccurrences(model);
+  // One check per distinct path, all at once: a scene often names one file many times.
+  const paths = [...new Set(links.map((link) => link.path))];
+  const targetByPath = new Map(
+    await Promise.all(paths.map(async (path) => [path, await linkTarget(root, path)] as const))
+  );
+  return links.map(({ path, range }) => {
+    const target = targetByPath.get(path);
+    return target === undefined ? { range } : { range, target };
+  });
 });
 
 documents.onDidChangeContent((event) => {
@@ -253,6 +271,7 @@ documents.onDidClose((event) => {
     lintTimers.delete(event.document.uri);
   }
   rootByUri.delete(event.document.uri);
+  modelByUri.delete(event.document.uri);
   connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
 });
 

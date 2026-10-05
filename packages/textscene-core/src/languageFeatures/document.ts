@@ -67,7 +67,7 @@ function trimTrailingBlanks(lines: readonly string[], from: number, to: number):
   return end;
 }
 
-function scanSections(lines: readonly string[]): DocumentSection[] {
+function scanSections(text: string, lines: readonly string[]): DocumentSection[] {
   const headings: RawHeading[] = [];
   const slotsByHeading: PropertySlot[][] = [];
   let current = -1;
@@ -103,8 +103,7 @@ function scanSections(lines: readonly string[]): DocumentSection[] {
   };
 
   // A null node creator: the scan only needs the observer's headings and properties.
-  // `silent`, since a host scans on each keystroke.
-  new TscnParserCore().parse(lines.join('\n'), () => null, observer, { silent: true });
+  new TscnParserCore().parse(text, () => null, observer);
 
   return headings.map((heading, index) => {
     const next = headings[index + 1];
@@ -133,7 +132,7 @@ export class LanguageDocument {
 
   constructor(readonly text: string) {
     this.lines = text.split(/\r?\n/);
-    this.sections = scanSections(this.lines);
+    this.sections = scanSections(text, this.lines);
     this.sectionByLine = new Map();
     this.propertyByLine = new Map();
     for (const section of this.sections) {

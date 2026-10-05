@@ -25,7 +25,7 @@ Each `.tscn` file can have its own preview.
 - **Problems panel (re-check):** a change on disk to a glTF file or `.godot/extension_list.cfg` checks again each open scene that reads it. A `.gdextension` file, a `.gdignore` or a `project.godot` created or deleted, or a change to `project.godot`, checks again the open scenes of that project. A folder deleted or moved away checks again each open scene that read a file inside it, or whose project listed a `.gdextension` file inside it.
 - **Outline:** the scene tree of the file. Click an entry to jump to its line.
 - **`res://` links:** Ctrl-click (Cmd-click on macOS) a path to open the file.
-- **Go to Definition** on `SubResource("id")` and `ExtResource("id")`.
+- **Go to Definition** on `SubResource("id")` and `ExtResource("id")`, which goes to the heading that declares the id, and on a `res://` path, which opens the file.
 - **Hover:** a class, its base chain and its reference page. It also shows a property's type, declaring class and accepted values, and the declaration a resource id names.
 - **Completion:** node and resource classes, property names, with a deprecated spelling marked, enum values, resource ids and `res://` paths.
 - **Quick fixes:** rename a deprecated property spelling, or repair a property-key or class-name typo.

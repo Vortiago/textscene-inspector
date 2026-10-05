@@ -8,7 +8,8 @@ import { TscnDocumentSymbolProvider } from './TscnDocumentSymbolProvider';
 import { TscnDefinitionProvider } from './TscnDefinitionProvider';
 import { TscnDocumentLinkProvider } from './TscnDocumentLinkProvider';
 import { TscnHoverProvider } from './TscnHoverProvider';
-import { COMPLETION_TRIGGER_CHARACTERS, TscnCompletionItemProvider } from './TscnCompletionItemProvider';
+import { COMPLETION_TRIGGER_CHARACTERS } from '@textscene/core/languageFeatures';
+import { TscnCompletionItemProvider } from './TscnCompletionItemProvider';
 import { TscnCodeActionProvider } from './TscnCodeActionProvider';
 import { TscnFoldingRangeProvider } from './TscnFoldingRangeProvider';
 import { TscnDocumentHighlightProvider } from './TscnDocumentHighlightProvider';
@@ -103,20 +104,20 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   // Tools a coding agent in chat may call, so it can check a scene it edited.
-  registerTscnTools(context, {
-    openPreview: (uri) => void getOrCreatePanel(uri),
-    capturePreview: (uri) => getOrCreatePanel(uri).capture(),
-  });
-
   // External changes to every file a scene can load, and to the project file. Each watcher
   // serves the previews and the linter diagnostics in the Problems panel.
   const resourceWatcher = vscode.workspace.createFileSystemWatcher(RESOURCE_FILES_PATTERN);
   const projectFileWatcher = vscode.workspace.createFileSystemWatcher(PROJECT_FILE_PATTERN);
-  context.subscriptions.push(
-    resourceWatcher,
-    projectFileWatcher,
-    new TscnDiagnostics(resourceWatcher, projectFileWatcher)
-  );
+  const diagnostics = new TscnDiagnostics(resourceWatcher, projectFileWatcher);
+
+  // Tools a coding agent in chat may call, so it can check a scene it edited.
+  registerTscnTools(context, {
+    openPreview: (uri) => void getOrCreatePanel(uri),
+    capturePreview: (uri) => getOrCreatePanel(uri).capture(),
+    lintProviderFor: (uri) => diagnostics.providerFor(uri),
+  });
+
+  context.subscriptions.push(resourceWatcher, projectFileWatcher, diagnostics);
 
   context.subscriptions.push(
     vscode.workspace.onDidSaveTextDocument((document) => {
@@ -135,8 +136,6 @@ export function activate(context: vscode.ExtensionContext) {
   // handled. Every other panel re-fetches the file as a dependency or sub-scene.
   const handleResourceChange = async (uri: vscode.Uri, deleted = false): Promise<void> => {
     const changedKey = uri.toString();
-    // A created or deleted file changes what `res://` completion may offer.
-    resPathListing.clear();
     await Promise.all(
       [...panels].map(([panelKey, panel]) => {
         if (panelKey === changedKey) {
@@ -156,8 +155,15 @@ export function activate(context: vscode.ExtensionContext) {
   for (const watcher of [resourceWatcher, projectFileWatcher]) {
     context.subscriptions.push(
       watcher.onDidChange(handleResourceChange),
-      watcher.onDidCreate(handleResourceChange),
-      watcher.onDidDelete((uri) => handleResourceChange(uri, true))
+      // A created or deleted file changes what `res://` completion may offer. An edit does not.
+      watcher.onDidCreate((uri) => {
+        resPathListing.clear();
+        return handleResourceChange(uri);
+      }),
+      watcher.onDidDelete((uri) => {
+        resPathListing.clear();
+        return handleResourceChange(uri, true);
+      })
     );
   }
 }

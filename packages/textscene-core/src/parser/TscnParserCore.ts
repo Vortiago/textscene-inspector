@@ -92,16 +92,11 @@ export class TscnParserCore {
    * @param content - Raw TSCN file content
    * @param nodeCreator - Callback to create nodes (renderer-specific or linter-specific)
    * @param observer - Optional hooks for strict consumers (errors, sections, properties)
-   * @param options - `silent` skips the per-parse info lines, for a scan on each keystroke
    * @returns Parsed scene structure
    */
-  parse(
-    content: string,
-    nodeCreator: NodeCreator,
-    observer?: ParseObserver,
-    options?: { readonly silent?: boolean }
-  ): TscnScene {
-    if (!options?.silent) logger.info('[Parser] Starting TSCN parsing');
+  parse(content: string, nodeCreator: NodeCreator, observer?: ParseObserver): TscnScene {
+    // Debug, not info: an editor host parses on each keystroke.
+    logger.debug('[Parser] Starting TSCN parsing');
     // Split on CRLF or LF: a trailing \r on each line of a Windows-authored file
     // would corrupt accumulated multi-line string values.
     const lines = content.split(/\r?\n/);
@@ -329,11 +324,9 @@ export class TscnParserCore {
       );
     }
 
-    if (!options?.silent) {
-      logger.info(
-        `[Parser] Parsing complete: ${origins.length} nodes, ${externalResources.length} external resources, ${internalResources.length} internal resources`
-      );
-    }
+    logger.debug(
+      `[Parser] Parsing complete: ${origins.length} nodes, ${externalResources.length} external resources, ${internalResources.length} internal resources`
+    );
 
     return {
       nodes: sceneTree,

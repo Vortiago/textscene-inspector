@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { captureWhenReady, type Capture } from './captureWhenReady';
+import { captureWhenReady } from './captureWhenReady';
 
 /** A clock the test advances by hand, so no timer actually runs. */
 function makeClock(): { now: () => number; advance: (ms: number) => void } {
@@ -19,7 +19,7 @@ describe('captureWhenReady', () => {
     const fail = vi.fn();
 
     captureWhenReady({
-      capture: () => () => 'data:image/png;base64,AA==',
+      capture: () => 'data:image/png;base64,AA==',
       post,
       fail,
       now: clock.now,
@@ -39,7 +39,7 @@ describe('captureWhenReady', () => {
     let ready = false;
 
     captureWhenReady({
-      capture: () => (ready ? () => 'data:image/png;base64,AA==' : null),
+      capture: () => (ready ? 'data:image/png;base64,AA==' : null),
       post,
       fail,
       now: clock.now,
@@ -66,7 +66,7 @@ describe('captureWhenReady', () => {
     const fail = vi.fn();
 
     captureWhenReady({
-      capture: () => null as unknown as Capture,
+      capture: () => null,
       post,
       fail,
       now: clock.now,

@@ -6,16 +6,13 @@
  * and its frames are paused.
  */
 
-/** Captures the viewport as a PNG data URL, or null while no handler is registered. */
-export type Capture = () => string | null;
-
 export interface CaptureWhenReadyDeps {
-  /** The handler now, which may be null before the canvas mounts. */
-  readonly capture: () => Capture | null;
+  /** The viewport as a PNG data URL, or null while the canvas has no screenshot handler. */
+  readonly capture: () => string | null;
   readonly post: (dataUrl: string) => void;
   readonly fail: () => void;
   readonly now: () => number;
-  /** Schedules one retry; the caller chooses the delay, since it owns the timer. */
+  /** Schedules one retry. The caller chooses the delay, since it owns the timer. */
   readonly schedule: (run: () => void) => void;
   readonly deadlineMs?: number;
 }
@@ -27,7 +24,7 @@ export function captureWhenReady(deps: CaptureWhenReadyDeps): void {
   const deadline = deps.now() + (deps.deadlineMs ?? DEFAULT_DEADLINE_MS);
 
   const attempt = (): void => {
-    const dataUrl = deps.capture()?.() ?? null;
+    const dataUrl = deps.capture();
     if (dataUrl !== null) {
       deps.post(dataUrl);
       return;

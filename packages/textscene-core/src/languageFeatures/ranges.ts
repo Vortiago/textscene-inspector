@@ -18,22 +18,24 @@ function escapeRegExp(text: string): string {
 }
 
 /**
- * The span of a heading attribute's quoted value, and the value itself. `key` is matched
- * whole, so `type` never matches `instance_type`. Godot quotes every scalar heading
- * attribute, so an unquoted `key=` yields nothing.
+ * The span of a heading attribute's value, inside its quotes when it has them, and the
+ * value itself. `key` is matched whole, so `type` never matches `instance_type`. Godot
+ * quotes every string attribute, and a pre-4.0 scene writes an integer `id=1` bare.
  */
 export function headingAttribute(
   line: string,
   key: string
 ): { readonly span: LineSpan; readonly value: string } | undefined {
-  const match = new RegExp(`(?:^|\\s|\\[)${escapeRegExp(key)}\\s*=\\s*"([^"]*)"`).exec(line);
-  if (!match || match.index === undefined) return undefined;
-  const value = match[1] ?? '';
-  // The content starts after the opening quote, which is the last `"` before the value.
-  const valueStart = line.indexOf(`"${value}"`, match.index);
-  if (valueStart === -1) return undefined;
-  const start = valueStart + 1;
-  return { span: { start, end: start + value.length }, value };
+  // `[1]` a quoted value, or `[2]` a bare one, as an old-style integer `id=1` is written.
+  const match = new RegExp(`(?:^|\\s|\\[)${escapeRegExp(key)}\\s*=\\s*(?:"([^"]*)"|([^\\s\\]"]+))`).exec(
+    line
+  );
+  if (!match) return undefined;
+  const quoted = match[1];
+  const value = quoted ?? match[2] ?? '';
+  // The value ends the match, before its closing quote when it has one.
+  const end = match.index + match[0].length - (quoted === undefined ? 0 : 1);
+  return { span: { start: end - value.length, end }, value };
 }
 
 /** Where the first `=` sits, or -1. A property's key is left of it, its value right. */

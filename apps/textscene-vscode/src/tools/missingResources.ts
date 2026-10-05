@@ -6,30 +6,20 @@
 
 import * as vscode from 'vscode';
 import { TscnParser } from '@textscene/core/parser';
-import { resRelativePath } from '@textscene/core/resources/resPath';
 import { findGodotProjectRoot } from '../findGodotProjectRoot';
+import { LintResourceProvider } from '../LintResourceProvider';
 
 /** Every `res://` path the scene names that no file answers. Empty when all are present. */
 export async function missingResourcePaths(uri: vscode.Uri, content: string): Promise<readonly string[]> {
   const folder = vscode.workspace.getWorkspaceFolder(uri);
   if (!folder) return [];
 
-  const root = await findGodotProjectRoot(folder.uri, uri);
-  const scene = new TscnParser().parse(content);
-  const missing: string[] = [];
-  for (const resource of scene.externalResources) {
-    const relative = resRelativePath(resource.path);
-    if (relative === null) {
-      missing.push(resource.path);
-      continue;
-    }
-    try {
-      await vscode.workspace.fs.stat(vscode.Uri.joinPath(root, ...relative.split(/[\\/]/)));
-    } catch {
-      missing.push(resource.path);
-    }
-  }
-  return missing;
+  // The preview's root, not the linter's: it falls back to the workspace root outside a project.
+  const provider = new LintResourceProvider(await findGodotProjectRoot(folder.uri, uri));
+  const paths = new TscnParser().parse(content).externalResources.map((resource) => resource.path);
+  // A stamp is one `stat`, and null for a missing file or a path outside the root.
+  const stamps = await Promise.all(paths.map((path) => provider.stamp(path)));
+  return paths.filter((_, index) => stamps[index] === null);
 }
 
 /** The missing-resource answer as plain text. */

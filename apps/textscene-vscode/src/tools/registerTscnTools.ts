@@ -8,9 +8,8 @@
  */
 
 import * as vscode from 'vscode';
-import { Linter } from '@textscene/core/linter';
-import { findGodotProjectRoot } from '../findGodotProjectRoot';
-import { LintResourceProvider } from '../LintResourceProvider';
+import { Linter, type ResourceProvider } from '@textscene/core/linter';
+import type { PreviewCapture } from '../TscnPreviewPanel';
 import { formatLintResult } from './formatLintResult';
 import { formatMissingResources, missingResourcePaths } from './missingResources';
 import { formatSceneTree } from './sceneTree';
@@ -30,8 +29,10 @@ export const TOOL_IDS = {
 /** What the extension hands a tool that needs to act on the editor. */
 export interface TscnToolHost {
   openPreview(uri: vscode.Uri): void;
-  /** The viewport as a `data:image/png;base64,…` URL, or null when the preview cannot answer. */
-  capturePreview(uri: vscode.Uri): Promise<string | null>;
+  /** The viewport as a `data:image/png;base64,…` URL, or why the preview could not answer. */
+  capturePreview(uri: vscode.Uri): Promise<PreviewCapture>;
+  /** The Problems panel's provider for the project `uri` belongs to, or null outside one. */
+  lintProviderFor(uri: vscode.Uri): Promise<ResourceProvider | null>;
 }
 
 interface PreparedScene {
@@ -70,34 +71,26 @@ function textResult(value: string): vscode.LanguageModelToolResult {
   return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(value)]);
 }
 
-class TscnLintTool implements vscode.LanguageModelTool<ScenePathToolInput> {
-  async invoke(
-    options: vscode.LanguageModelToolInvocationOptions<ScenePathToolInput>
-  ): Promise<vscode.LanguageModelToolResult> {
-    const { uri, text } = await prepare(options.input);
-    const folder = vscode.workspace.getWorkspaceFolder(uri);
-    const provider = folder ? new LintResourceProvider(await findGodotProjectRoot(folder.uri, uri)) : null;
-    const diagnostics = await new Linter().lintComplete(text, provider);
-    return textResult(formatLintResult(uri.fsPath, diagnostics));
-  }
+/** A tool that reads the scene an input names and answers with text about it. */
+function sceneTextTool(
+  answer: (uri: vscode.Uri, text: string) => Promise<string> | string
+): vscode.LanguageModelTool<ScenePathToolInput> {
+  return {
+    async invoke(options) {
+      const { uri, text } = await prepare(options.input);
+      return textResult(await answer(uri, text));
+    },
+  };
 }
 
-class TscnSceneTreeTool implements vscode.LanguageModelTool<ScenePathToolInput> {
-  async invoke(
-    options: vscode.LanguageModelToolInvocationOptions<ScenePathToolInput>
-  ): Promise<vscode.LanguageModelToolResult> {
-    const { uri, text } = await prepare(options.input);
-    return textResult(formatSceneTree(uri.fsPath, text));
-  }
+/** The lint answer, over the Problems panel's provider, so an agent and the user see one verdict. */
+function lintAnswer(host: TscnToolHost): (uri: vscode.Uri, text: string) => Promise<string> {
+  return async (uri, text) =>
+    formatLintResult(uri.fsPath, await new Linter().lintComplete(text, await host.lintProviderFor(uri)));
 }
 
-class TscnMissingResourcesTool implements vscode.LanguageModelTool<ScenePathToolInput> {
-  async invoke(
-    options: vscode.LanguageModelToolInvocationOptions<ScenePathToolInput>
-  ): Promise<vscode.LanguageModelToolResult> {
-    const { uri, text } = await prepare(options.input);
-    return textResult(formatMissingResources(uri.fsPath, await missingResourcePaths(uri, text)));
-  }
+async function missingResourcesAnswer(uri: vscode.Uri, text: string): Promise<string> {
+  return formatMissingResources(uri.fsPath, await missingResourcePaths(uri, text));
 }
 
 class TscnOpenPreviewTool implements vscode.LanguageModelTool<ScenePathToolInput> {
@@ -119,13 +112,13 @@ class TscnCaptureTool implements vscode.LanguageModelTool<ScenePathToolInput> {
     options: vscode.LanguageModelToolInvocationOptions<ScenePathToolInput>
   ): Promise<vscode.LanguageModelToolResult> {
     const uri = sceneUriOf(options.input);
-    const dataUrl = await this.host.capturePreview(uri);
-    if (dataUrl === null) {
-      return textResult(`The preview for ${uri.fsPath} did not return an image.`);
+    const capture = await this.host.capturePreview(uri);
+    if ('error' in capture) {
+      return textResult(`The preview for ${uri.fsPath} did not return an image: ${capture.error}`);
     }
     return new vscode.LanguageModelToolResult([
       new vscode.LanguageModelTextPart(`Rendered preview of ${uri.fsPath}.`),
-      vscode.LanguageModelDataPart.image(pngBytesOf(dataUrl), 'image/png'),
+      vscode.LanguageModelDataPart.image(pngBytesOf(capture.dataUrl), 'image/png'),
     ]);
   }
 }
@@ -150,10 +143,13 @@ export function registerTscnTools(context: vscode.ExtensionContext, host: TscnTo
   if (typeof vscode.lm?.registerTool !== 'function') return;
 
   const tools = [
-    vscode.lm.registerTool(TOOL_IDS.lint, new TscnLintTool()),
-    vscode.lm.registerTool(TOOL_IDS.sceneTree, new TscnSceneTreeTool()),
+    vscode.lm.registerTool(TOOL_IDS.lint, sceneTextTool(lintAnswer(host))),
+    vscode.lm.registerTool(
+      TOOL_IDS.sceneTree,
+      sceneTextTool((uri, text) => formatSceneTree(uri.fsPath, text))
+    ),
     vscode.lm.registerTool(TOOL_IDS.openPreview, new TscnOpenPreviewTool(host)),
-    vscode.lm.registerTool(TOOL_IDS.missingResources, new TscnMissingResourcesTool()),
+    vscode.lm.registerTool(TOOL_IDS.missingResources, sceneTextTool(missingResourcesAnswer)),
   ];
   if (typeof vscode.LanguageModelDataPart?.image === 'function') {
     tools.push(vscode.lm.registerTool(TOOL_IDS.capture, new TscnCaptureTool(host)));

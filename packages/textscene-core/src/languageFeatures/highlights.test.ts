@@ -32,6 +32,18 @@ describe('documentHighlights', () => {
     expect(highlights).toHaveLength(2);
   });
 
+  it('marks an old-style integer id and its declaration, as the loader resolves it', () => {
+    const text = [
+      '[ext_resource type="Texture2D" path="res://a.png" id=1]',
+      '',
+      '[node name="A" type="Sprite2D"]',
+      'texture = ExtResource(1)',
+    ].join('\n');
+    const document = new LanguageDocument(text);
+    const highlights = documentHighlights(document, { line: 3, character: 12 });
+    expect(highlights.map((highlight) => highlight.range.start.line).sort((a, b) => a - b)).toEqual([0, 3]);
+  });
+
   it('highlights nothing away from a reference', () => {
     const document = new LanguageDocument(SCENE);
     expect(documentHighlights(document, { line: 1, character: 0 })).toEqual([]);

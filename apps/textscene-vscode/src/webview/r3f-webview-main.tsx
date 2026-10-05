@@ -88,7 +88,7 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
       } else if (message.type === 'capturePreview') {
         const { requestId } = message;
         captureWhenReady({
-          capture: () => captureRef.current,
+          capture: () => captureRef.current?.() ?? null,
           post: (dataUrl) =>
             vscode.postMessage({
               type: 'previewCaptured',

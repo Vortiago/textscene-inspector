@@ -20,6 +20,9 @@ export type { WebviewMessageHandlers } from './webviewDispatch';
 /** How long a capture waits for the webview before answering null. */
 const CAPTURE_TIMEOUT_MS = 10000;
 
+/** A capture's answer: the viewport as a `data:image/png;base64,…` URL, or why there is none. */
+export type PreviewCapture = { readonly dataUrl: string } | { readonly error: string };
+
 export class TscnPreviewPanel {
   public static readonly viewType = 'tscnPreview';
 
@@ -58,7 +61,7 @@ export class TscnPreviewPanel {
   /** Resolved when the webview-ready handshake arrives, so a capture does not post early. */
   private _readyWaiters: Array<() => void> = [];
   /** Each pending capture's request id, answered by the webview or a timeout. */
-  private readonly _captures = new Map<string, (dataUrl: string | null) => void>();
+  private readonly _captures = new Map<string, (capture: PreviewCapture) => void>();
   private _captureSeq = 0;
 
   public static create(extensionUri: vscode.Uri, resource: vscode.Uri): TscnPreviewPanel {
@@ -118,10 +121,10 @@ export class TscnPreviewPanel {
         relayWebviewLog(msg.level, msg.message, msg.args);
       },
       previewCaptured: (msg) => {
-        this._resolveCapture(msg.requestId, msg.dataUrl);
+        this._resolveCapture(msg.requestId, { dataUrl: msg.dataUrl });
       },
       previewCaptureError: (msg) => {
-        this._resolveCapture(msg.requestId, null);
+        this._resolveCapture(msg.requestId, { error: msg.error });
       },
     };
 
@@ -141,7 +144,7 @@ export class TscnPreviewPanel {
     // disposed`. `_handleLoadResource`'s catch re-posts and throws out of its
     // `void`ed call as an unhandled rejection.
     this._disposed = true;
-    for (const resolve of this._captures.values()) resolve(null);
+    for (const resolve of this._captures.values()) resolve({ error: 'The preview was closed.' });
     this._captures.clear();
     for (const resolve of this._readyWaiters.splice(0)) resolve();
     this._onDidDispose.fire();
@@ -175,22 +178,24 @@ export class TscnPreviewPanel {
   }
 
   /**
-   * Captures the viewport as a `data:image/png;base64,…` URL, or null when the preview
-   * cannot answer within {@link CAPTURE_TIMEOUT_MS}. It waits for the webview-ready
+   * Captures the viewport, or says why it could not: the webview's own reason, a closed
+   * preview, or no answer within {@link CAPTURE_TIMEOUT_MS}. It waits for the webview-ready
    * handshake, since a post sent before the listener installs is dropped.
    */
-  public capture(): Promise<string | null> {
-    if (this._disposed) return Promise.resolve(null);
+  public capture(): Promise<PreviewCapture> {
+    if (this._disposed) return Promise.resolve({ error: 'The preview was closed.' });
     return this._whenReady().then(
       () =>
-        new Promise<string | null>((resolve) => {
+        new Promise<PreviewCapture>((resolve) => {
           const requestId = `capture-${++this._captureSeq}`;
           const timer = setTimeout(() => {
-            if (this._captures.delete(requestId)) resolve(null);
+            if (this._captures.delete(requestId)) {
+              resolve({ error: `The preview did not answer within ${CAPTURE_TIMEOUT_MS / 1000} s.` });
+            }
           }, CAPTURE_TIMEOUT_MS);
-          this._captures.set(requestId, (dataUrl) => {
+          this._captures.set(requestId, (capture) => {
             clearTimeout(timer);
-            resolve(dataUrl);
+            resolve(capture);
           });
           this._postMessageToWebview({ type: 'capturePreview', requestId });
         })
@@ -202,11 +207,11 @@ export class TscnPreviewPanel {
     return new Promise((resolve) => this._readyWaiters.push(resolve));
   }
 
-  private _resolveCapture(requestId: string, dataUrl: string | null): void {
+  private _resolveCapture(requestId: string, capture: PreviewCapture): void {
     const resolve = this._captures.get(requestId);
     if (resolve) {
       this._captures.delete(requestId);
-      resolve(dataUrl);
+      resolve(capture);
     }
   }
 

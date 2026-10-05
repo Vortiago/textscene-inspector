@@ -6,9 +6,10 @@ import {
   DiagnosticSeverity,
   DocumentHighlightKind,
   MarkupKind,
+  SymbolKind,
 } from 'vscode-languageserver/node';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import type { CodeAction, Hover, Range } from '@textscene/core/languageFeatures';
+import type { CodeAction, DocumentSymbol, Hover, Range } from '@textscene/core/languageFeatures';
 import type { Diagnostic } from '@textscene/core/linter';
 import {
   toLspCodeAction,
@@ -17,6 +18,7 @@ import {
   toLspFoldingRange,
   toLspHighlight,
   toLspHover,
+  toLspSymbol,
 } from './lspConvert';
 
 const TEXT = 'alpha\nsecond line\n';
@@ -63,7 +65,7 @@ describe('toLspCompletion', () => {
     expect(toLspCompletion({ label: 'a', kind: 'property' }).kind).toBe(CompletionItemKind.Property);
     expect(toLspCompletion({ label: 'a', kind: 'resourceId' }).kind).toBe(CompletionItemKind.Reference);
     expect(toLspCompletion({ label: 'a', kind: 'path' }).kind).toBe(CompletionItemKind.File);
-    expect(toLspCompletion({ label: 'a', kind: 'nodeName' }).kind).toBe(CompletionItemKind.Variable);
+    expect(toLspCompletion({ label: 'a', kind: 'nodeName' }).kind).toBe(CompletionItemKind.Reference);
   });
 });
 
@@ -90,7 +92,6 @@ describe('toLspCodeAction', () => {
     const range: Range = { start: { line: 1, character: 0 }, end: { line: 1, character: 3 } };
     const action: CodeAction = {
       title: "Change 'visable' to 'visible'",
-      kind: 'quickfix',
       edit: [{ range, newText: 'visible' }],
     };
 
@@ -104,7 +105,6 @@ describe('toLspCodeAction', () => {
   it('keeps every edit of one action', () => {
     const action: CodeAction = {
       title: 'two',
-      kind: 'quickfix',
       edit: [
         { range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } }, newText: 'a' },
         { range: { start: { line: 1, character: 0 }, end: { line: 1, character: 1 } }, newText: 'b' },
@@ -116,16 +116,53 @@ describe('toLspCodeAction', () => {
 });
 
 describe('toLspFoldingRange', () => {
-  it('keeps the region kind', () => {
-    expect(toLspFoldingRange({ startLine: 2, endLine: 6, kind: 'region' })).toEqual({
+  it('marks every fold a region', () => {
+    expect(toLspFoldingRange({ startLine: 2, endLine: 6 })).toEqual({
       startLine: 2,
       endLine: 6,
       kind: 'region',
     });
   });
+});
 
-  it('omits an absent kind', () => {
-    expect(toLspFoldingRange({ startLine: 2, endLine: 6 })).toEqual({ startLine: 2, endLine: 6 });
+describe('toLspSymbol', () => {
+  it('maps the kind and keeps the ranges and the subtree', () => {
+    const range: Range = { start: { line: 2, character: 0 }, end: { line: 9, character: 4 } };
+    const heading: Range = { start: { line: 2, character: 0 }, end: { line: 2, character: 4 } };
+    const leaf: DocumentSymbol = {
+      name: 'Mesh',
+      detail: 'MeshInstance3D',
+      kind: 'class',
+      range: heading,
+      selectionRange: heading,
+      children: [],
+    };
+    const root: DocumentSymbol = {
+      name: 'Root',
+      detail: 'Node3D',
+      kind: 'module',
+      range,
+      selectionRange: heading,
+      children: [leaf],
+    };
+
+    expect(toLspSymbol(root)).toEqual({
+      name: 'Root',
+      detail: 'Node3D',
+      kind: SymbolKind.Module,
+      range,
+      selectionRange: heading,
+      children: [
+        {
+          name: 'Mesh',
+          detail: 'MeshInstance3D',
+          kind: SymbolKind.Class,
+          range: heading,
+          selectionRange: heading,
+          children: [],
+        },
+      ],
+    });
   });
 });
 

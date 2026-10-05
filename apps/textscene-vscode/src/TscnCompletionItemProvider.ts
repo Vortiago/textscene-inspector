@@ -6,37 +6,27 @@
 
 import * as vscode from 'vscode';
 import {
+  COMPLETION_TRIGGER_CHARACTERS,
   completionsAt,
-  createLanguageDocument,
+  needsPathListing,
   type CompletionItem as EngineCompletionItem,
   type CompletionKind,
 } from '@textscene/core/languageFeatures';
-import { toEnginePosition } from './languageFeatureRanges';
+import { languageDocumentOf } from './languageDocumentOf';
 
-/** The trigger characters: a quote opens a class or a path, `=` a value, the rest a key or an id. */
-export const COMPLETION_TRIGGER_CHARACTERS = ['"', '=', '.', '/', '('];
-
-function vscodeKind(kind: CompletionKind): vscode.CompletionItemKind {
-  switch (kind) {
-    case 'nodeType':
-      return vscode.CompletionItemKind.Class;
-    case 'resourceType':
-      return vscode.CompletionItemKind.Struct;
-    case 'property':
-      return vscode.CompletionItemKind.Property;
-    case 'value':
-      return vscode.CompletionItemKind.Value;
-    case 'resourceId':
-      return vscode.CompletionItemKind.Reference;
-    case 'path':
-      return vscode.CompletionItemKind.File;
-    case 'nodeName':
-      return vscode.CompletionItemKind.Reference;
-  }
-}
+/** The icon for each engine completion kind. A `Record`, so a new kind does not compile until it has one. */
+const COMPLETION_KIND: Record<CompletionKind, vscode.CompletionItemKind> = {
+  nodeType: vscode.CompletionItemKind.Class,
+  resourceType: vscode.CompletionItemKind.Struct,
+  property: vscode.CompletionItemKind.Property,
+  value: vscode.CompletionItemKind.Value,
+  resourceId: vscode.CompletionItemKind.Reference,
+  path: vscode.CompletionItemKind.File,
+  nodeName: vscode.CompletionItemKind.Reference,
+};
 
 function toCompletionItem(item: EngineCompletionItem): vscode.CompletionItem {
-  const completion = new vscode.CompletionItem(item.label, vscodeKind(item.kind));
+  const completion = new vscode.CompletionItem(item.label, COMPLETION_KIND[item.kind]);
   if (item.detail) completion.detail = item.detail;
   if (item.documentation) completion.documentation = new vscode.MarkdownString(item.documentation);
   if (item.insertText) completion.insertText = item.insertText;
@@ -60,13 +50,9 @@ export class TscnCompletionItemProvider implements vscode.CompletionItemProvider
     _token: vscode.CancellationToken,
     _context: vscode.CompletionContext
   ): Promise<vscode.CompletionItem[]> {
-    const engine = createLanguageDocument(document.getText());
-    const paths = await this.pathListing?.pathsFor(document);
-    const items = completionsAt(
-      engine,
-      toEnginePosition(position),
-      paths ? { listPaths: () => paths } : undefined
-    );
+    const model = languageDocumentOf(document);
+    const paths = needsPathListing(model, position) ? await this.pathListing?.pathsFor(document) : undefined;
+    const items = completionsAt(model, position, paths ? { listPaths: () => paths } : undefined);
     return items.map(toCompletionItem);
   }
 }

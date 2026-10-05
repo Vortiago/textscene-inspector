@@ -3,14 +3,24 @@ import { codeActions } from './codeActions';
 import { LanguageDocument } from './document';
 import { SCENE } from './fixtures.testkit';
 
+/** Every fix in the file: a range over all of its lines. */
+function allFixes(text: string) {
+  const document = new LanguageDocument(text);
+  const lastLine = document.lines.length - 1;
+  return codeActions(document, {
+    start: { line: 0, character: 0 },
+    end: { line: lastLine, character: document.lines[lastLine]?.length ?? 0 },
+  });
+}
+
 function titles(text: string): string[] {
-  return codeActions(new LanguageDocument(text)).map((action) => action.title);
+  return allFixes(text).map((action) => action.title);
 }
 
 describe('codeActions', () => {
   it('renames a deprecated property spelling to the engine name', () => {
     const text = ['[node name="S" type="AnimatedSprite2D"]', 'frames = ExtResource("1")'].join('\n');
-    const action = codeActions(new LanguageDocument(text))[0]!;
+    const action = allFixes(text)[0]!;
     expect(action.title).toBe("Rename deprecated 'frames' to 'sprite_frames'");
     expect(action.edit).toEqual([
       {
@@ -31,7 +41,7 @@ describe('codeActions', () => {
   });
 
   it('offers nothing for a scene whose names are all catalogued', () => {
-    expect(codeActions(new LanguageDocument(SCENE))).toEqual([]);
+    expect(allFixes(SCENE)).toEqual([]);
   });
 
   it('narrows to the sections a range overlaps', () => {

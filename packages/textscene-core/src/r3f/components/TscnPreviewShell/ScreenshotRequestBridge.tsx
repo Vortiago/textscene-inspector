@@ -1,8 +1,8 @@
 /**
  * Hands the host a function that captures the current viewport as a PNG data URL,
  * through the camera control the toolbar's Screenshot button already uses. The host
- * calls it when it saves an image or answers an agent tool. `null` clears it, so a
- * capture posted after unmount answers nothing.
+ * calls it when it saves an image or answers an agent tool. On unmount it hands over a
+ * capture that answers null, so a capture posted after unmount gets no image.
  */
 
 import { useEffect } from 'react';

@@ -8,14 +8,16 @@ import {
   CompletionItemKind,
   DiagnosticSeverity,
   DocumentHighlightKind,
+  FoldingRangeKind,
   MarkupKind,
+  SymbolKind as LspSymbolKind,
   type CodeAction as LspCodeAction,
   type CompletionItem as LspCompletionItem,
   type Diagnostic as LspDiagnostic,
   type DocumentHighlight as LspDocumentHighlight,
+  type DocumentSymbol as LspDocumentSymbol,
   type FoldingRange as LspFoldingRange,
   type Hover as LspHover,
-  type Range as LspRange,
   type TextEdit as LspTextEdit,
 } from 'vscode-languageserver/node';
 import type { TextDocument } from 'vscode-languageserver-textdocument';
@@ -24,11 +26,13 @@ import type {
   CompletionItem,
   CompletionKind,
   DocumentHighlight,
+  DocumentSymbol,
   FoldingRange,
   Hover,
+  SymbolKind,
   TextEdit,
 } from '@textscene/core/languageFeatures';
-import { diagnosticLine, flooredSeverity, type Diagnostic, type Severity } from '@textscene/core/linter';
+import { diagnosticRange, flooredSeverity, type Diagnostic, type Severity } from '@textscene/core/linter';
 
 const COMPLETION_KIND: Record<CompletionKind, CompletionItemKind> = {
   nodeType: CompletionItemKind.Class,
@@ -37,18 +41,20 @@ const COMPLETION_KIND: Record<CompletionKind, CompletionItemKind> = {
   value: CompletionItemKind.Value,
   resourceId: CompletionItemKind.Reference,
   path: CompletionItemKind.File,
-  nodeName: CompletionItemKind.Variable,
+  nodeName: CompletionItemKind.Reference,
+};
+
+const SYMBOL_KIND: Record<SymbolKind, LspSymbolKind> = {
+  object: LspSymbolKind.Object,
+  class: LspSymbolKind.Class,
+  struct: LspSymbolKind.Struct,
+  module: LspSymbolKind.Module,
 };
 
 const DIAGNOSTIC_SEVERITY: Record<Severity, DiagnosticSeverity> = {
   error: DiagnosticSeverity.Error,
   warning: DiagnosticSeverity.Warning,
   info: DiagnosticSeverity.Information,
-};
-
-const ZERO_RANGE: LspRange = {
-  start: { line: 0, character: 0 },
-  end: { line: 0, character: 0 },
 };
 
 /** One core completion, with its kind mapped and its label as the default insert text. */
@@ -84,8 +90,19 @@ export function toLspCodeAction(action: CodeAction, uri: string): LspCodeAction 
 
 /** Core folding range, as an LSP region. */
 export function toLspFoldingRange(range: FoldingRange): LspFoldingRange {
-  const lspRange = { startLine: range.startLine, endLine: range.endLine };
-  return range.kind === undefined ? lspRange : { ...lspRange, kind: range.kind };
+  return { startLine: range.startLine, endLine: range.endLine, kind: FoldingRangeKind.Region };
+}
+
+/** Core outline symbol and its subtree. */
+export function toLspSymbol(symbol: DocumentSymbol): LspDocumentSymbol {
+  return {
+    name: symbol.name,
+    detail: symbol.detail,
+    kind: SYMBOL_KIND[symbol.kind],
+    range: symbol.range,
+    selectionRange: symbol.selectionRange,
+    children: symbol.children.map(toLspSymbol),
+  };
 }
 
 /** Core highlight, as a text occurrence. */
@@ -93,33 +110,13 @@ export function toLspHighlight(highlight: DocumentHighlight): LspDocumentHighlig
   return { range: highlight.range, kind: DocumentHighlightKind.Text };
 }
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
-
-/**
- * The squiggle for a diagnostic. Core lines are one-based and clamped into the document. One
- * that names no line gets a zero-width range at the start, so a client lists it once without a
- * squiggle under line one's text.
- */
-function diagnosticRange(diagnostic: Diagnostic, document: TextDocument): LspRange {
-  const line = diagnosticLine(diagnostic);
-  if (line === undefined) return ZERO_RANGE;
-
-  const lineIndex = clamp(line - 1, 0, Math.max(document.lineCount - 1, 0));
-  const lineLength = document.getLineRange(lineIndex).end.character;
-  const column = diagnostic.location?.column;
-  const start = typeof column === 'number' ? clamp(column - 1, 0, lineLength) : 0;
-  return {
-    start: { line: lineIndex, character: start },
-    end: { line: lineIndex, character: Math.max(lineLength, start) },
-  };
-}
-
-/** One core diagnostic, with a floored severity and its line clamped into the open document. */
+/** One core diagnostic, with a floored severity and its squiggle placed by core's `diagnosticRange`. */
 export function toLspDiagnostic(diagnostic: Diagnostic, document: TextDocument): LspDiagnostic {
   return {
-    range: diagnosticRange(diagnostic, document),
+    range: diagnosticRange(diagnostic, {
+      lineCount: document.lineCount,
+      lineLength: (line) => document.getLineRange(line).end.character,
+    }),
     severity: DIAGNOSTIC_SEVERITY[flooredSeverity(diagnostic.severity)],
     code: diagnostic.ruleName,
     source: 'tscn-lsp',

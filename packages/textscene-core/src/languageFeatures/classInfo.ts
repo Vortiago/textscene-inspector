@@ -5,8 +5,8 @@
  * the generated base-type tables, never by hand.
  */
 
-import { CLASS_BASE_TYPES } from '../godot/classBaseTypes.js';
-import { MAX_BASE_CHAIN_HOPS, NODE_BASE_TYPES, isCatalogedType } from '../godot/nodeBaseTypes.js';
+import { classBaseChain } from '../godot/classBaseTypes.js';
+import { NODE_BASE_TYPES, isCatalogedType } from '../godot/nodeBaseTypes.js';
 import { RESOURCE_BASE_TYPES_GENERATED } from '../godot/resourceBaseTypes.generated.js';
 import {
   NODE_CLASS_PROPERTIES,
@@ -31,24 +31,6 @@ function ownRows(className: string): readonly ClassPropertyRow[] | undefined {
   return undefined;
 }
 
-function baseTypeOf(className: string): string | undefined {
-  return Object.hasOwn(CLASS_BASE_TYPES, className) ? CLASS_BASE_TYPES[className] : undefined;
-}
-
-/** Every ancestor of a class, nearest first, cycle-safe and bounded. */
-export function classChain(className: string): readonly string[] {
-  const chain: string[] = [];
-  const seen = new Set([className]);
-  let current = baseTypeOf(className);
-  for (let hops = 0; current !== undefined && hops < MAX_BASE_CHAIN_HOPS; hops++) {
-    if (seen.has(current)) break;
-    seen.add(current);
-    chain.push(current);
-    current = baseTypeOf(current);
-  }
-  return chain;
-}
-
 /**
  * Every property a class serialises, its own and its ancestors', nearest declaration
  * first. A name declared twice keeps the nearest class, as `_set` resolves it.
@@ -56,7 +38,7 @@ export function classChain(className: string): readonly string[] {
 export function classProperties(className: string): readonly ClassProperty[] {
   const properties: ClassProperty[] = [];
   const seen = new Set<string>();
-  for (const cls of [className, ...classChain(className)]) {
+  for (const cls of [className, ...classBaseChain(className)]) {
     const rows = ownRows(cls);
     if (!rows) continue;
     for (const [name, type, hint, hintString] of rows) {
@@ -70,7 +52,7 @@ export function classProperties(className: string): readonly ClassProperty[] {
 
 /** The property `className` serialises under `name`, or undefined when it has none. */
 export function findClassProperty(className: string, name: string): ClassProperty | undefined {
-  for (const cls of [className, ...classChain(className)]) {
+  for (const cls of [className, ...classBaseChain(className)]) {
     const rows = ownRows(cls);
     if (!rows) continue;
     const row = rows.find(([rowName]) => rowName === name);

@@ -24,10 +24,14 @@ function childPath(directory: string, name: string): string {
 
 /**
  * The `res://` path of every file under `res://` whose extension is `extension`, in any case, in the directories the
- * scan enters. A sub-directory that holds a {@link SCAN_STOP_FILES} file is skipped whole.
+ * scan enters. No extension lists every file. A sub-directory that holds a {@link SCAN_STOP_FILES} file is skipped
+ * whole.
  */
-export async function listScannedFiles(readDirectory: DirectoryReader, extension: string): Promise<string[]> {
-  const suffix = `.${extension.toLowerCase()}`;
+export async function listScannedFiles(
+  readDirectory: DirectoryReader,
+  extension?: string
+): Promise<string[]> {
+  const suffix = extension === undefined ? '' : `.${extension.toLowerCase()}`;
   const found: string[] = [];
   const walk = async (directory: string, entries: readonly DirectoryEntry[]): Promise<void> => {
     for (const { name, isDirectory } of entries) {

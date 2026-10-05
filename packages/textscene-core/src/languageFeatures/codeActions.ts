@@ -15,13 +15,12 @@ import type { CodeAction, Range, TextEdit } from './types.js';
 /** How far a typo may sit from a catalogued name before a fix leaves it alone. */
 const MAX_TYPO_DISTANCE = 2;
 
-function overlaps(range: Range | undefined, startLine: number, endLine: number): boolean {
-  if (!range) return true;
+function overlaps(range: Range, startLine: number, endLine: number): boolean {
   return range.start.line <= endLine - 1 && range.end.line >= startLine - 1;
 }
 
 function renameAction(title: string, edit: TextEdit): CodeAction {
-  return { title, kind: 'quickfix', edit: [edit] };
+  return { title, edit: [edit] };
 }
 
 /** Fixes for one section's property keys. */
@@ -83,12 +82,8 @@ function typeAction(document: LanguageDocument, section: DocumentSection): CodeA
   });
 }
 
-/**
- * Every quick fix for the document, or for the sections a zero-based range overlaps.
- * An omitted range returns every fix in the file, which the CLI surfaces and a host
- * narrows with the cursor.
- */
-export function codeActions(document: LanguageDocument, range?: Range): readonly CodeAction[] {
+/** Every quick fix for the sections a zero-based range overlaps. */
+export function codeActions(document: LanguageDocument, range: Range): readonly CodeAction[] {
   const actions: CodeAction[] = [];
   for (const section of document.sections) {
     if (section.kind === 'other') continue;

@@ -4,7 +4,8 @@
  */
 
 import * as vscode from 'vscode';
-import { createLanguageDocument, foldingRanges } from '@textscene/core/languageFeatures';
+import { foldingRanges } from '@textscene/core/languageFeatures';
+import { languageDocumentOf } from './languageDocumentOf';
 
 export class TscnFoldingRangeProvider implements vscode.FoldingRangeProvider {
   provideFoldingRanges(
@@ -12,8 +13,7 @@ export class TscnFoldingRangeProvider implements vscode.FoldingRangeProvider {
     _context: vscode.FoldingContext,
     _token: vscode.CancellationToken
   ): vscode.FoldingRange[] {
-    const engine = createLanguageDocument(document.getText());
-    return foldingRanges(engine).map(
+    return foldingRanges(languageDocumentOf(document)).map(
       (range) => new vscode.FoldingRange(range.startLine, range.endLine, vscode.FoldingRangeKind.Region)
     );
   }

@@ -13,11 +13,12 @@ function context(): vscode.ExtensionContext {
   return { subscriptions: [] } as unknown as vscode.ExtensionContext;
 }
 
-/** A host whose capture answers null unless a case overrides it. */
+/** A host whose capture answers no image unless a case overrides it. */
 function host(overrides: Partial<TscnToolHost> = {}): TscnToolHost {
   return {
     openPreview: vi.fn(),
-    capturePreview: vi.fn().mockResolvedValue(null),
+    capturePreview: vi.fn().mockResolvedValue({ error: 'not ready' }),
+    lintProviderFor: vi.fn().mockResolvedValue(null),
     ...overrides,
   };
 }
@@ -98,6 +99,18 @@ describe('registerTscnTools', () => {
     expect(result.content[0]!.value).toContain('no findings');
   });
 
+  it("the lint tool lints over the Problems panel's provider for the scene", async () => {
+    vscodeMocks.workspace.workspaceFolders = [{ uri: createMockUri('/game') }];
+    vscodeMocks.workspace.fs.readFile.mockResolvedValue(
+      createMockFileData('[node name="Root" type="Node3D"]')
+    );
+    const lintProviderFor = vi.fn().mockResolvedValue(null);
+    registerTscnTools(context(), host({ lintProviderFor }));
+    await registeredTool(TOOL_IDS.lint).invoke({ input: { path: 'scenes/Main.tscn' } }, TOKEN);
+    expect(lintProviderFor).toHaveBeenCalledTimes(1);
+    expect(lintProviderFor.mock.calls[0]![0].path).toMatch(/\/game\/scenes\/Main\.tscn$/);
+  });
+
   it('the missing-resources tool reports a scene outside a project', async () => {
     vscodeMocks.workspace.workspaceFolders = [{ uri: createMockUri('/game') }];
     vscodeMocks.workspace.fs.readFile.mockResolvedValue(
@@ -113,7 +126,9 @@ describe('registerTscnTools', () => {
 
   it('the capture tool returns the PNG as an image part', async () => {
     const png = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
-    const capturePreview = vi.fn().mockResolvedValue(`data:image/png;base64,${png.toString('base64')}`);
+    const capturePreview = vi
+      .fn()
+      .mockResolvedValue({ dataUrl: `data:image/png;base64,${png.toString('base64')}` });
     registerTscnTools(context(), host({ capturePreview }));
     const result = await registeredTool(TOOL_IDS.capture).invoke(
       { input: { path: 'scenes/Main.tscn' } },
@@ -126,13 +141,16 @@ describe('registerTscnTools', () => {
     expect([...image.data]).toEqual([...png]);
   });
 
-  it('the capture tool says so when the preview answers no image', async () => {
-    registerTscnTools(context(), host({ capturePreview: vi.fn().mockResolvedValue(null) }));
+  it('the capture tool says so, with the reason, when the preview answers no image', async () => {
+    registerTscnTools(
+      context(),
+      host({ capturePreview: vi.fn().mockResolvedValue({ error: 'The preview canvas is not ready.' }) })
+    );
     const result = await registeredTool(TOOL_IDS.capture).invoke(
       { input: { path: 'scenes/Main.tscn' } },
       TOKEN
     );
-    expect(result.content[0]!.value).toContain('did not return an image');
+    expect(result.content[0]!.value).toContain('did not return an image: The preview canvas is not ready.');
   });
 
   it('rejects a path that is not a .tscn scene', async () => {

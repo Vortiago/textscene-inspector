@@ -12,7 +12,7 @@ export function foldingRanges(document: LanguageDocument): readonly FoldingRange
   for (const section of document.sections) {
     if (section.kind === 'other') continue;
     if (section.endLine <= section.headingLine) continue;
-    ranges.push({ startLine: section.headingLine - 1, endLine: section.endLine - 1, kind: 'region' });
+    ranges.push({ startLine: section.headingLine - 1, endLine: section.endLine - 1 });
   }
   return ranges;
 }

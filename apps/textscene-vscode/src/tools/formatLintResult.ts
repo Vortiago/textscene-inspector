@@ -4,7 +4,7 @@
  * panel shows, so an agent and the user see one verdict.
  */
 
-import type { Diagnostic } from '@textscene/core/linter';
+import { diagnosticLine, type Diagnostic } from '@textscene/core/linter';
 
 /** The lint outcome for one file, as plain text. */
 export function formatLintResult(fileName: string, diagnostics: readonly Diagnostic[]): string {
@@ -12,7 +12,8 @@ export function formatLintResult(fileName: string, diagnostics: readonly Diagnos
   const count = diagnostics.length === 1 ? '1 finding' : `${diagnostics.length} findings`;
   const lines = [`${fileName}: ${count}.`];
   for (const diagnostic of diagnostics) {
-    const where = diagnostic.location?.line !== undefined ? `line ${diagnostic.location.line}` : 'the file';
+    const line = diagnosticLine(diagnostic);
+    const where = line !== undefined ? `line ${line}` : 'the file';
     const subject = diagnostic.nodeName ? ` ${diagnostic.nodeName} (${diagnostic.nodeType})` : '';
     lines.push(
       `  ${where}: [${diagnostic.severity}] ${diagnostic.message} (${diagnostic.ruleName})${subject}`

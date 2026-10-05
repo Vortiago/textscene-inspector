@@ -5,8 +5,9 @@
  */
 
 import * as vscode from 'vscode';
-import { createLanguageDocument, hoverAt } from '@textscene/core/languageFeatures';
-import { toEnginePosition, toVscodeRange } from './languageFeatureRanges';
+import { hoverAt } from '@textscene/core/languageFeatures';
+import { languageDocumentOf } from './languageDocumentOf';
+import { toVscodeRange } from './languageFeatureRanges';
 
 export class TscnHoverProvider implements vscode.HoverProvider {
   provideHover(
@@ -14,8 +15,7 @@ export class TscnHoverProvider implements vscode.HoverProvider {
     position: vscode.Position,
     _token: vscode.CancellationToken
   ): vscode.Hover | undefined {
-    const engine = createLanguageDocument(document.getText());
-    const hover = hoverAt(engine, toEnginePosition(position));
+    const hover = hoverAt(languageDocumentOf(document), position);
     if (!hover) return undefined;
     const contents = new vscode.MarkdownString(hover.markdown);
     return new vscode.Hover(contents, hover.range ? toVscodeRange(hover.range) : undefined);

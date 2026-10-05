@@ -61,6 +61,11 @@
       "@textscene/source": "./src/resources/projectListing.ts",
       "types": "./dist/resources/projectListing.d.ts",
       "import": "./dist/resources/projectListing.js"
+    },
+    "./resources/diskProject": {
+      "@textscene/source": "./src/resources/diskProject.ts",
+      "types": "./dist/resources/diskProject.d.ts",
+      "import": "./dist/resources/diskProject.js"
     }
   },
   "files": [

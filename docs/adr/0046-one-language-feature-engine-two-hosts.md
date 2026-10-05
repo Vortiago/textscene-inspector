@@ -21,22 +21,30 @@ tables, hints and deprecated aliases twice, and drift.
 **One React- and THREE-free engine, `@textscene/core/languageFeatures`, over two hosts.**
 
 - The engine parses the text through the scanning loop with a `ParseObserver` and answers
-  `hoverAt`, `completionsAt`, `codeActions`, `foldingRanges` and `documentHighlights`. Every
-  result is host-neutral with zero-based ranges, the convention LSP and the VS Code API share, so
-  a host adapts no position.
+  `hoverAt`, `completionsAt`, `codeActions`, `foldingRanges`, `documentHighlights`,
+  `documentSymbols`, `declarationRangeAt`, `resPathAt` and `resPathOccurrences`. Every result is
+  host-neutral with zero-based ranges, the convention LSP and the VS Code API share, so a host
+  adapts no position. A host maps each result to its own types and adds no feature logic.
+- A resource reference is read through `godot/resourceRef.ts`, the grammar the linter and the
+  renderer read, so the old integer form `ExtResource(1)` resolves in every host.
 - It reads the same `godot/` ClassDB captures, base-type tables and deprecated-alias table as the
   linter. `pnpm nodes:base-types` generates the per-class property tables beside the base types.
 - The VS Code extension registers **native providers** over the engine. This keeps the desktop
   and vscode.dev paths identical, and needs no server process.
 - `apps/textscene-lsp` (`@textscene/lsp`, `tscn-lsp`) serves the same engine to any LSP client
   over stdio, reading the project from the nearest `project.godot`. It imports no VS Code API.
+  It reads the disk through `@textscene/core/resources/diskProject`, the provider the
+  `tscn-lint` CLI uses. An eslint rule keeps that Node-only module out of every browser bundle.
 - The extension's **agent tools** (`vscode.lm`) are extension-only: lint a scene, read its node
   tree, open its preview, list its missing resources, and capture the preview as a PNG. They
   call the same linter, parsers and viewport capture. The capture tool needs the image part of a
   tool result, stable from VS Code 1.106, so it registers on its own guard.
 
 A path-completion seam takes a `listPaths` callback, so the extension lists the workspace and the
-server lists the filesystem without the engine knowing either.
+server lists the filesystem without the engine knowing either. `needsPathListing` tells a host
+whether the cursor sits in a `res://` value, so a host lists the project only then. Both
+listings follow the editor's scan rules: no dot-named directory, nested project or `.gdignore`
+directory.
 
 ## Considered Options
 

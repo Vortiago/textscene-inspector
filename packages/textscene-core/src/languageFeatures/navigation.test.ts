@@ -1,8 +1,8 @@
-/** Tests for resource-id and res:// navigation targets. */
+/** Navigation targets: a resource id's declaration heading and every res:// path. */
 
 import { describe, it, expect } from 'vitest';
-import { createLanguageDocument } from '@textscene/core/languageFeatures';
-import { resourceIdLocation, resourceLinks, resPathAt } from './navigation';
+import { LanguageDocument } from './document';
+import { declarationRangeAt, resPathAt, resPathOccurrences } from './navigation';
 
 const SCENE = `[gd_scene format=3]
 
@@ -16,39 +16,38 @@ anim = SubResource("Anim_1")
 paths = ["res://a.png", "res://b.png"]
 `;
 
-const document = createLanguageDocument(SCENE);
+const document = new LanguageDocument(SCENE);
 
-describe('resourceIdLocation', () => {
+describe('declarationRangeAt', () => {
   it('resolves an ExtResource reference to its declaration heading', () => {
-    const location = resourceIdLocation(document, { line: 7, character: 15 }, 'file:///s.tscn');
-
-    expect(location).toEqual({
-      uri: 'file:///s.tscn',
-      range: {
-        start: { line: 2, character: 0 },
-        end: {
-          line: 2,
-          character: '[ext_resource type="Texture2D" uid="uid://abc" path="res://icon.png" id="1_abc"]'
-            .length,
-        },
+    expect(declarationRangeAt(document, { line: 7, character: 15 })).toEqual({
+      start: { line: 2, character: 0 },
+      end: {
+        line: 2,
+        character: '[ext_resource type="Texture2D" uid="uid://abc" path="res://icon.png" id="1_abc"]'.length,
       },
     });
   });
 
   it('resolves a SubResource reference to its declaration heading', () => {
-    const location = resourceIdLocation(document, { line: 8, character: 10 }, 'file:///s.tscn');
+    expect(declarationRangeAt(document, { line: 8, character: 10 })?.start.line).toBe(4);
+  });
 
-    expect(location?.range.start.line).toBe(4);
+  it("resolves a declaration's own id= to its heading", () => {
+    const line = document.lines[4]!;
+    expect(declarationRangeAt(document, { line: 4, character: line.indexOf('Anim_1') + 1 })?.start.line).toBe(
+      4
+    );
   });
 
   it('gives nothing off every reference', () => {
-    expect(resourceIdLocation(document, { line: 9, character: 0 }, 'file:///s.tscn')).toBeUndefined();
+    expect(declarationRangeAt(document, { line: 9, character: 0 })).toBeUndefined();
   });
 
   it('gives nothing for a reference whose declaration is absent', () => {
-    const dangling = createLanguageDocument('texture = ExtResource("missing")\n');
+    const dangling = new LanguageDocument('texture = ExtResource("missing")\n');
 
-    expect(resourceIdLocation(dangling, { line: 0, character: 12 }, 'file:///s.tscn')).toBeUndefined();
+    expect(declarationRangeAt(dangling, { line: 0, character: 12 })).toBeUndefined();
   });
 });
 
@@ -71,9 +70,9 @@ describe('resPathAt', () => {
   });
 });
 
-describe('resourceLinks', () => {
+describe('resPathOccurrences', () => {
   it('finds every res:// occurrence, two on one line included', () => {
-    const links = resourceLinks(document);
+    const links = resPathOccurrences(document);
 
     expect(links.map((link) => link.path)).toEqual(['res://icon.png', 'res://a.png', 'res://b.png']);
     expect(links[1]!.range.start.line).toBe(9);
@@ -81,6 +80,6 @@ describe('resourceLinks', () => {
   });
 
   it('gives an empty list for a document with no res:// path', () => {
-    expect(resourceLinks(createLanguageDocument('[gd_scene format=3]\n'))).toEqual([]);
+    expect(resPathOccurrences(new LanguageDocument('[gd_scene format=3]\n'))).toEqual([]);
   });
 });

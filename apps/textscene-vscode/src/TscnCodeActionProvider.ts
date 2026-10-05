@@ -5,8 +5,9 @@
  */
 
 import * as vscode from 'vscode';
-import { codeActions, createLanguageDocument } from '@textscene/core/languageFeatures';
-import { toEngineRange, toVscodeRange } from './languageFeatureRanges';
+import { codeActions } from '@textscene/core/languageFeatures';
+import { languageDocumentOf } from './languageDocumentOf';
+import { toVscodeRange } from './languageFeatureRanges';
 
 export class TscnCodeActionProvider implements vscode.CodeActionProvider {
   readonly providedCodeActionKinds = [vscode.CodeActionKind.QuickFix];
@@ -17,8 +18,7 @@ export class TscnCodeActionProvider implements vscode.CodeActionProvider {
     _context: vscode.CodeActionContext,
     _token: vscode.CancellationToken
   ): vscode.CodeAction[] {
-    const engine = createLanguageDocument(document.getText());
-    return codeActions(engine, toEngineRange(range)).map((action) => {
+    return codeActions(languageDocumentOf(document), range).map((action) => {
       const fix = new vscode.CodeAction(action.title, vscode.CodeActionKind.QuickFix);
       const edit = new vscode.WorkspaceEdit();
       for (const textEdit of action.edit) {

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  classChain,
   classProperties,
   findClassProperty,
   isKnownClass,
@@ -24,11 +23,6 @@ describe('classInfo', () => {
 
   it('returns undefined for a property no class in the chain declares', () => {
     expect(findClassProperty('MeshInstance3D', 'not_a_property')).toBeUndefined();
-  });
-
-  it('walks a node chain and a resource chain alike', () => {
-    expect(classChain('MeshInstance3D')[0]).toBe('GeometryInstance3D');
-    expect(classChain('BoxMesh')[0]).toBe('PrimitiveMesh');
   });
 
   it('knows a node class, a resource class and neither for an invented name', () => {

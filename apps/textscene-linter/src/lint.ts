@@ -5,8 +5,8 @@ import { readFile } from 'fs/promises';
 import { join, resolve } from 'path';
 import { Linter, type Diagnostic } from '@textscene/core/linter';
 import { isGodotTextResourcePath } from '@textscene/core/godot';
+import { projectProviderFor } from '@textscene/core/resources/diskProject';
 import { escapeControlCharacters, formatDiagnostics, formatError } from './format';
-import { projectProviderFor } from './projectProvider';
 
 /** Lint outcome for a single file, with output split by target stream. */
 export interface FileLintResult {

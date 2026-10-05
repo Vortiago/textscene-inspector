@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { completionsAt } from './completion';
+import { completionsAt, needsPathListing } from './completion';
 import { LanguageDocument } from './document';
 import { LINE, SCENE } from './fixtures.testkit';
 
@@ -79,5 +79,23 @@ describe('completionsAt', () => {
   it('offers nothing on a blank line', () => {
     const document = new LanguageDocument(SCENE);
     expect(completionsAt(document, { line: 1, character: 0 })).toEqual([]);
+  });
+});
+
+describe('needsPathListing', () => {
+  const document = new LanguageDocument(
+    ['[node name="S" type="Sprite2D"]', 'texture = "res://art/', 'visible = true'].join('\n')
+  );
+
+  it('is true for a cursor inside a res:// value', () => {
+    expect(needsPathListing(document, { line: 1, character: document.lines[1]!.length })).toBe(true);
+  });
+
+  it('is false for a value with no res:// before the cursor', () => {
+    expect(needsPathListing(document, { line: 2, character: document.lines[2]!.length })).toBe(false);
+  });
+
+  it('is false on a heading line', () => {
+    expect(needsPathListing(document, { line: 0, character: 5 })).toBe(false);
   });
 });
