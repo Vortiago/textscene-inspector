@@ -38,7 +38,10 @@ visible = true
 mesh = SubResource("missing")
 `;
 
-/** A server answer for a whole-file request reaches the test well inside this on a loaded runner. */
+/**
+ * One test: a server spawned, its handshake, and its answers, which a loaded runner finishes well
+ * inside this. Each request and each awaited notification keeps the client's own shorter timeout.
+ */
 const SERVER_TIMEOUT_MS = 60_000;
 
 interface LspRange {

@@ -60,7 +60,8 @@ export const TOOLS_OFF_SETTINGS = { 'textscene.agentTools.enabled': false } as c
 /**
  * The paths of the second launch: the same extensions directory and workspace, a user data
  * directory of its own that holds {@link TOOLS_OFF_SETTINGS}, and the suite in `toolsOff/`.
- * The extension reads the setting once at activation, so only a fresh window proves it.
+ * The setting is off before the window opens, so the suite checks the tools as a user who
+ * never turned them on meets them.
  */
 export function toolsOffLaunchPaths(paths: InstalledLaunchPaths, runnerDir: string): InstalledLaunchPaths {
   return {

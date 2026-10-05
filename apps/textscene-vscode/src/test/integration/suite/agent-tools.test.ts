@@ -11,6 +11,7 @@ import type { Context } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { godotProjectDir, removeGodotProject, writeGodotProject } from '../helpers/godotProjectHelpers';
+import { skipBecause, textOf } from '../../languageFeatures/agentToolAnswersSuite.testkit';
 
 const PROJECT = 'agent-tools';
 
@@ -37,20 +38,9 @@ const TOOL_NAMES = [
   'textscene_capture',
 ] as const;
 
-/** Skips a test on a VS Code below the tools API, and prints why, since mocha reports a skip with no reason. */
+/** Skips a test on a VS Code below the tools API. */
 function skipWithoutToolsApi(context: Context): never {
-  console.log('    skipped: this VS Code predates the vscode.lm tools API');
-  context.skip();
-}
-
-/** The plain text of a tool result, whichever parts it carries. */
-function textOf(result: vscode.LanguageModelToolResult): string {
-  return result.content
-    .map((part) => {
-      const value = (part as { value?: unknown }).value;
-      return typeof value === 'string' ? value : '';
-    })
-    .join('\n');
+  skipBecause(context, 'this VS Code predates the vscode.lm tools API');
 }
 
 suite('Agent tools', () => {

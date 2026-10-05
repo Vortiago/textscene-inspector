@@ -5,8 +5,8 @@
  */
 
 import * as vscode from 'vscode';
-import { isScannedPath } from '@textscene/core/godot';
 import { findGodotProjectRoot } from './findGodotProjectRoot';
+import { scannedResPaths } from './scannedResPaths';
 import { SCAN_STOP_FILES_PATTERN } from './watchPatterns';
 
 /** A cap on the listing, so a huge project does not stall a completion. */
@@ -63,20 +63,7 @@ export class TscnResPathListing {
       // No exclude, as the linter's own search does: `.gdignore` is itself dot-named.
       vscode.workspace.findFiles(new vscode.RelativePattern(root, SCAN_STOP_FILES_PATTERN), null),
     ]);
-    const rootPath = root.path.endsWith('/') ? root.path : `${root.path}/`;
-    const resPathOf = (file: vscode.Uri) => `res://${file.path.slice(rootPath.length)}`;
-    const underRoot = (file: vscode.Uri) => file.path.startsWith(rootPath);
-    const skipped = new Set(
-      stopFiles
-        .filter(underRoot)
-        .map((file) => resPathOf(file).replace(/\/[^/]*$/, ''))
-        .filter((directory) => directory !== 'res:/')
-    );
-    return files
-      .filter(underRoot)
-      .map(resPathOf)
-      .filter((path) => isScannedPath(path, skipped))
-      .sort((a, b) => a.localeCompare(b));
+    return scannedResPaths(root, files, stopFiles).sort((a, b) => a.localeCompare(b));
   }
 
   /** Drops every listing and root, so a created or deleted file is offered on the next completion. */

@@ -9,11 +9,22 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
+/** The fixture directory, from the repository root. */
+const FIXTURE_PATH = path.join('scenes', 'language-features');
+
 /**
- * The fixture directory. `__dirname` is the bundle's output directory,
- * `<repo>/apps/textscene-vscode/dist/test/<suite>/suite`, six levels below the repository root.
+ * The fixture directory, found by walking up from `__dirname`, the output directory of the
+ * bundle that inlines this module. Each suite's bundle sits at its own depth under `dist/test/`.
  */
-const FIXTURE_DIR = path.resolve(__dirname, '../../../../../../scenes/language-features');
+function fixtureDir(): string {
+  for (let dir = __dirname; ; dir = path.dirname(dir)) {
+    const candidate = path.join(dir, FIXTURE_PATH);
+    if (fs.existsSync(path.join(candidate, 'answers.json'))) return candidate;
+    if (path.dirname(dir) === dir) {
+      throw new Error(`expected ${FIXTURE_PATH} above ${__dirname}, found none`);
+    }
+  }
+}
 
 /** `[startLine, startCharacter, endLine, endCharacter]`, zero-based. */
 export type RangeTuple = [number, number, number, number];
@@ -73,7 +84,7 @@ export interface LanguageFeatureAnswers {
 
 export function loadAnswers(): LanguageFeatureAnswers {
   return JSON.parse(
-    fs.readFileSync(path.join(FIXTURE_DIR, 'answers.json'), 'utf8')
+    fs.readFileSync(path.join(fixtureDir(), 'answers.json'), 'utf8')
   ) as LanguageFeatureAnswers;
 }
 
@@ -83,7 +94,7 @@ export function loadAnswers(): LanguageFeatureAnswers {
  */
 export function copyFixtureProject(destination: string): void {
   removeFixtureProject(destination);
-  fs.cpSync(path.join(FIXTURE_DIR, 'project'), destination, { recursive: true });
+  fs.cpSync(path.join(fixtureDir(), 'project'), destination, { recursive: true });
 }
 
 /** Removes a copy that `copyFixtureProject` made. */

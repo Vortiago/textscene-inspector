@@ -214,6 +214,23 @@ describe('TscnPreviewPanel — all message types through fake onDidReceiveMessag
     await expect(captured).resolves.toEqual({ error: 'not ready' });
   });
 
+  it('capture: says the preview closed when it closes before the webview is ready', async () => {
+    const { webview } = setupMockPanel();
+    (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
+    const panel = TscnPreviewPanel.create(
+      createMockUri('/extension'),
+      createMockUri('/workspace/scene.tscn')
+    );
+
+    const captured = panel.capture();
+    panel.dispose();
+
+    await expect(captured).resolves.toEqual({ error: 'The preview was closed.' });
+    expect(
+      webview.postMessage.mock.calls.some((c) => (c[0] as { type: string }).type === 'capturePreview')
+    ).toBe(false);
+  });
+
   it('log: does not throw even when no output channel is initialised', async () => {
     const { triggerMessage } = setupMockPanel();
     await makeReadyPanel(triggerMessage);

@@ -363,7 +363,6 @@ export class TscnDiagnostics implements vscode.Disposable {
       .catch((reason: unknown) => logError('[TscnDiagnostics] Project lookup failed:', reason));
   }
 
-  /** The provider of the project `document` sits in, or null outside every workspace folder and every project. */
   /**
    * The provider of the Godot project `uri` belongs to, shared with every document of that project,
    * or null outside one. The agent lint tool reads it too, so it gives the Problems panel's verdict.

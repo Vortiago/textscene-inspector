@@ -9,6 +9,7 @@ import * as assert from 'assert';
 import type { Context } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { EXTENSION_ID, previewTabLabels } from '../smokeProject/sceneEditor';
 import { waitFor } from '../waitFor';
 import { copyFixtureProject, removeFixtureProject } from './answers';
 
@@ -30,13 +31,13 @@ const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 const NO_TOOLS_API = 'this VS Code predates vscode.lm.invokeTool, so no agent tool registers';
 
 /** Skips the test or the suite, and prints why, since mocha reports a skip with no reason. */
-function skipBecause(context: Context, reason: string): never {
+export function skipBecause(context: Context, reason: string): never {
   console.log(`    skipped: ${reason}`);
   context.skip();
 }
 
 /** The plain text of a tool result, whichever parts it carries. */
-function textOf(result: vscode.LanguageModelToolResult): string {
+export function textOf(result: vscode.LanguageModelToolResult): string {
   return result.content
     .map((part) => {
       const value = (part as { value?: unknown }).value;
@@ -51,15 +52,6 @@ function imageOf(result: vscode.LanguageModelToolResult): { mimeType: string; da
     (part): part is { mimeType: string; data: Uint8Array } =>
       typeof (part as { mimeType?: unknown }).mimeType === 'string'
   );
-}
-
-function previewTabLabels(): string[] {
-  return vscode.window.tabGroups.all
-    .flatMap((group) => group.tabs)
-    .filter(
-      (tab) => tab.input instanceof vscode.TabInputWebview && tab.input.viewType.endsWith('tscnPreview')
-    )
-    .map((tab) => tab.label);
 }
 
 /**
@@ -86,7 +78,7 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
     suiteSetup(async function () {
       if (typeof vscode.lm?.invokeTool !== 'function') skipBecause(this, NO_TOOLS_API);
       copyFixtureProject(projectDir);
-      await vscode.extensions.getExtension('vortiago.textscene-inspector')?.activate();
+      await vscode.extensions.getExtension(EXTENSION_ID)?.activate();
     });
 
     suiteTeardown(async () => {

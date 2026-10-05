@@ -8,6 +8,7 @@
 import * as assert from 'assert';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { EXTENSION_ID } from '../smokeProject/sceneEditor';
 import { waitFor } from '../waitFor';
 import {
   copyFixtureProject,
@@ -96,7 +97,7 @@ export function defineSharedAnswersSuite(projectDir: string): void {
         for (const uri of event.uris) linted.add(uri.toString());
       });
       copyFixtureProject(projectDir);
-      await vscode.extensions.getExtension('vortiago.textscene-inspector')?.activate();
+      await vscode.extensions.getExtension(EXTENSION_ID)?.activate();
     });
 
     suiteTeardown(async () => {

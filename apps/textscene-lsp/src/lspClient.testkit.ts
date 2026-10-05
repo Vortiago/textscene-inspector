@@ -37,6 +37,7 @@ interface Notification {
 interface Waiter {
   readonly matches: (notification: Notification) => boolean;
   readonly resolve: (params: unknown) => void;
+  readonly reject: (error: Error) => void;
 }
 
 export class LspClient {
@@ -64,17 +65,23 @@ export class LspClient {
     const existing = this.notifications.find(matches);
     if (existing) return Promise.resolve(existing.params);
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(
-        () => reject(new Error(`no matching ${method} within ${timeoutMs}ms`)),
-        timeoutMs
-      );
-      this.waiters.push({
+      const waiter: Waiter = {
         matches,
         resolve: (params) => {
           clearTimeout(timer);
           resolve(params);
         },
-      });
+        reject: (error) => {
+          clearTimeout(timer);
+          reject(error);
+        },
+      };
+      // A waiter that timed out leaves the list, so a later notification reaches a live one.
+      const timer = setTimeout(() => {
+        this.waiters.splice(this.waiters.indexOf(waiter), 1);
+        reject(new Error(`no matching ${method} within ${timeoutMs}ms`));
+      }, timeoutMs);
+      this.waiters.push(waiter);
     });
   }
 
@@ -153,6 +160,7 @@ export class LspClient {
       pending.reject(error);
     }
     this.pending.clear();
+    for (const waiter of this.waiters.splice(0)) waiter.reject(error);
   }
 }
 

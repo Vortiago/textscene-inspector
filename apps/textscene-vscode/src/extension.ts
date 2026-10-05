@@ -18,7 +18,7 @@ import { registerTscnTools } from './tools/registerTscnTools';
 import { TscnDiagnostics } from './TscnDiagnostics';
 import { initLogger, dispose as disposeLogger } from './logger';
 import { isUri } from './uriArgument';
-import { PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN } from './watchPatterns';
+import { PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN, SCAN_STOP_FILES_PATTERN } from './watchPatterns';
 
 export function activate(context: vscode.ExtensionContext) {
   initLogger('TextScene Inspector');
@@ -103,7 +103,6 @@ export function activate(context: vscode.ExtensionContext) {
     )
   );
 
-  // Tools a coding agent in chat may call, so it can check a scene it edited.
   // External changes to every file a scene can load, and to the project file. Each watcher
   // serves the previews and the linter diagnostics in the Problems panel.
   const resourceWatcher = vscode.workspace.createFileSystemWatcher(RESOURCE_FILES_PATTERN);
@@ -166,6 +165,14 @@ export function activate(context: vscode.ExtensionContext) {
       })
     );
   }
+
+  // A `.gdignore` created or deleted moves a directory into or out of the scan the listing follows.
+  const scanStopFileWatcher = vscode.workspace.createFileSystemWatcher(SCAN_STOP_FILES_PATTERN, false, true);
+  context.subscriptions.push(
+    scanStopFileWatcher,
+    scanStopFileWatcher.onDidCreate(() => resPathListing.clear()),
+    scanStopFileWatcher.onDidDelete(() => resPathListing.clear())
+  );
 }
 
 export function deactivate() {

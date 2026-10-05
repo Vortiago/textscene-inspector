@@ -17,6 +17,13 @@ function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/** Whether `index` lies inside a quoted value of `line`: an odd number of quotes comes before it. */
+function isInsideQuotes(line: string, index: number): boolean {
+  let quotes = 0;
+  for (let i = 0; i < index; i++) if (line[i] === '"') quotes++;
+  return quotes % 2 === 1;
+}
+
 /**
  * The span of a heading attribute's value, inside its quotes when it has them, and the
  * value itself. `key` is matched whole, so `type` never matches `instance_type`. Godot
@@ -27,9 +34,9 @@ export function headingAttribute(
   key: string
 ): { readonly span: LineSpan; readonly value: string } | undefined {
   // `[1]` a quoted value, or `[2]` a bare one, as an old-style integer `id=1` is written.
-  const match = new RegExp(`(?:^|\\s|\\[)${escapeRegExp(key)}\\s*=\\s*(?:"([^"]*)"|([^\\s\\]"]+))`).exec(
-    line
-  );
+  const pattern = new RegExp(`(?:^|\\s|\\[)${escapeRegExp(key)}\\s*=\\s*(?:"([^"]*)"|([^\\s\\]"]+))`, 'g');
+  // `type=B` inside `name="A type=B"` is text of the name, not an attribute.
+  const match = [...line.matchAll(pattern)].find((candidate) => !isInsideQuotes(line, candidate.index));
   if (!match) return undefined;
   const quoted = match[1];
   const value = quoted ?? match[2] ?? '';
