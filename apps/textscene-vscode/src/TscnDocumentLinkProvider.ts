@@ -5,7 +5,7 @@
 
 import * as vscode from 'vscode';
 import { resPathOccurrences } from '@textscene/core/languageFeatures';
-import { resRelativePath } from '@textscene/core/resources/resPath';
+import { existingResFile } from './existingResFile';
 import { findGodotProjectRoot } from './findGodotProjectRoot';
 import { languageDocumentOf } from './languageDocumentOf';
 import { toVscodeRange } from './languageFeatureRanges';
@@ -55,8 +55,8 @@ export class TscnDocumentLinkProvider implements vscode.DocumentLinkProvider<Tsc
   /**
    * Resolves the link the user hovers or clicks through the `findGodotProjectRoot`
    * walk the preview panel shares. A document outside every workspace folder has no
-   * project root, and a path that climbs out of the root names no project file, so
-   * neither gets a target.
+   * project root, and a path that climbs out of the root, a missing file or a directory
+   * names no file to open, so none gets a target. The `tscn-lsp` server answers the same.
    */
   async resolveDocumentLink(
     link: TscnResourceDocumentLink,
@@ -66,13 +66,10 @@ export class TscnDocumentLinkProvider implements vscode.DocumentLinkProvider<Tsc
     if (!workspaceFolder) {
       return undefined;
     }
-    const relativePath = resRelativePath(link.resourcePath);
-    if (relativePath === null) {
-      return undefined;
-    }
-
     const projectRoot = await this._resolveProjectRoot(workspaceFolder, link.documentUri);
-    link.target = vscode.Uri.joinPath(projectRoot, relativePath);
+    const target = await existingResFile(projectRoot, link.resourcePath);
+    if (!target) return undefined;
+    link.target = target;
     return link;
   }
 }

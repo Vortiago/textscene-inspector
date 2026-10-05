@@ -40,11 +40,10 @@ tables, hints and deprecated aliases twice, and drift.
   call the same linter, parsers and viewport capture. The capture tool needs the image part of a
   tool result, stable from VS Code 1.106, so it registers on its own guard.
 
-A path-completion seam takes a `listPaths` callback, so the extension lists the workspace and the
-server lists the filesystem without the engine knowing either. `needsPathListing` tells a host
-whether the cursor sits in a `res://` value, so a host lists the project only then. Both
-listings follow the editor's scan rules: no dot-named directory, nested project or `.gdignore`
-directory.
+A path-completion seam takes an async `listPaths` callback, so the extension lists the workspace
+and the server lists the filesystem without the engine knowing either. The engine calls it only
+for a cursor inside a `res://` value, so a host lists the project only then. Both listings
+follow the editor's scan rules: no dot-named directory, nested project or `.gdignore` directory.
 
 ## Considered Options
 

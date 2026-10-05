@@ -33,7 +33,6 @@ import {
   documentSymbols,
   foldingRanges,
   hoverAt,
-  needsPathListing,
   resPathAt,
   resPathOccurrences,
   type LanguageDocument,
@@ -48,7 +47,7 @@ import {
   toLspSymbol,
 } from './lspConvert';
 import {
-  fileExists,
+  isFile,
   listProjectPaths,
   projectRootForDir,
   projectRootForFile,
@@ -125,7 +124,7 @@ function modelOf(uri: string): LanguageDocument | undefined {
 /** The file URL a `res://` link opens, or undefined for a path with no file in the project. */
 async function linkTarget(root: string | null, path: string): Promise<string | undefined> {
   const file = root === null ? null : resolveResPath(root, path);
-  return file !== null && (await fileExists(file)) ? pathToFileURL(file).toString() : undefined;
+  return file !== null && (await isFile(file)) ? pathToFileURL(file).toString() : undefined;
 }
 
 function scheduleLint(document: TextDocument): void {
@@ -191,13 +190,11 @@ connection.onExit(() => {
 connection.onCompletion(async (params): Promise<CompletionItem[] | null> => {
   const model = modelOf(params.textDocument.uri);
   if (!model) return null;
-  let listPaths: (() => readonly string[]) | undefined;
-  const root = needsPathListing(model, params.position) ? await rootForUri(params.textDocument.uri) : null;
-  if (root !== null) {
-    const paths = await listProjectPaths(root);
-    listPaths = () => paths;
-  }
-  return completionsAt(model, params.position, { listPaths }).map(toLspCompletion);
+  const listPaths = async (): Promise<readonly string[]> => {
+    const root = await rootForUri(params.textDocument.uri);
+    return root === null ? [] : listProjectPaths(root);
+  };
+  return (await completionsAt(model, params.position, { listPaths })).map(toLspCompletion);
 });
 
 connection.onHover((params): Hover | null => {
@@ -235,7 +232,7 @@ connection.onDefinition(async (params): Promise<Location | null> => {
   const root = await rootForUri(params.textDocument.uri);
   if (root === null) return null;
   const file = resolveResPath(root, occurrence.path);
-  if (file === null || !(await fileExists(file))) return null;
+  if (file === null || !(await isFile(file))) return null;
   return { uri: pathToFileURL(file).toString(), range: FILE_START };
 });
 

@@ -1,53 +1,59 @@
-import { describe, expect, it } from 'vitest';
-import { completionsAt, needsPathListing } from './completion';
+import { describe, expect, it, vi } from 'vitest';
+import { completionsAt } from './completion';
 import { LanguageDocument } from './document';
 import { LINE, SCENE } from './fixtures.testkit';
 
-function labelsAt(
+async function labelsAt(
   document: LanguageDocument,
   line: number,
   character: number,
   paths?: readonly string[]
-): string[] {
-  const items = completionsAt(
+): Promise<string[]> {
+  const items = await completionsAt(
     document,
     { line: line - 1, character },
-    paths ? { listPaths: () => paths } : undefined
+    paths ? { listPaths: async () => paths } : undefined
   );
   return items.map((item) => item.label);
 }
 
 describe('completionsAt', () => {
-  it('offers every node class inside a node heading type=', () => {
+  it('offers every node class inside a node heading type=', async () => {
     const document = new LanguageDocument(SCENE);
     const text = document.lines[LINE.rootNode - 1]!;
-    const items = completionsAt(document, { line: LINE.rootNode - 1, character: text.indexOf('Node3D') + 1 });
+    const items = await completionsAt(document, {
+      line: LINE.rootNode - 1,
+      character: text.indexOf('Node3D') + 1,
+    });
     expect(items.every((item) => item.kind === 'nodeType')).toBe(true);
     expect(items.map((item) => item.label)).toContain('MeshInstance3D');
   });
 
-  it('offers a resource class inside a sub_resource heading type=', () => {
+  it('offers a resource class inside a sub_resource heading type=', async () => {
     const document = new LanguageDocument(SCENE);
-    const items = completionsAt(document, { line: LINE.subMesh - 1, character: 20 });
+    const items = await completionsAt(document, { line: LINE.subMesh - 1, character: 20 });
     expect(items.map((item) => item.label)).toContain('BoxMesh');
   });
 
-  it('offers the class properties a node does not already set', () => {
+  it('offers the class properties a node does not already set', async () => {
     const document = new LanguageDocument(SCENE);
-    const labels = labelsAt(document, LINE.meshProperty, 0);
+    const labels = await labelsAt(document, LINE.meshProperty, 0);
     expect(labels).toContain('visible');
     expect(labels).not.toContain('mesh');
     expect(labels).not.toContain('skeleton');
   });
 
-  it('offers an enum property the integers the engine stores', () => {
+  it('offers an enum property the integers the engine stores', async () => {
     const document = new LanguageDocument(SCENE);
     const text = document.lines[LINE.rootProperty - 1]!;
-    const items = completionsAt(document, { line: LINE.rootProperty - 1, character: text.indexOf('=') + 2 });
+    const items = await completionsAt(document, {
+      line: LINE.rootProperty - 1,
+      character: text.indexOf('=') + 2,
+    });
     expect(items.map((item) => item.insertText)).toEqual(['0', '1', '2']);
   });
 
-  it('offers the external resource ids for an ExtResource reference', () => {
+  it('offers the external resource ids for an ExtResource reference', async () => {
     const doc = new LanguageDocument(
       [
         '[ext_resource type="PackedScene" path="res://door.tscn" id="1_door"]',
@@ -56,46 +62,47 @@ describe('completionsAt', () => {
       ].join('\n')
     );
     // The cursor sits after the `1_` the writer typed, before the rest of the id.
-    const items = completionsAt(doc, { line: 2, character: 'mesh = ExtResource("1_'.length });
+    const items = await completionsAt(doc, { line: 2, character: 'mesh = ExtResource("1_'.length });
     expect(items.map((item) => item.label)).toEqual(['1_door']);
     expect(items[0]?.detail).toBe('PackedScene');
   });
 
-  it('offers res:// paths through the host listing', () => {
+  it('offers res:// paths through the host listing', async () => {
     const document = new LanguageDocument(
       ['[node name="R" type="Node"]', 'scene_file_path = "res://do'].join('\n')
     );
-    const labels = labelsAt(document, 2, document.lines[1]!.length, ['res://door.tscn', 'res://icon.svg']);
+    const labels = await labelsAt(document, 2, document.lines[1]!.length, [
+      'res://door.tscn',
+      'res://icon.svg',
+    ]);
     expect(labels).toEqual(['res://door.tscn']);
   });
 
-  it('offers node names for a parent= attribute', () => {
+  it('offers node names for a parent= attribute', async () => {
     const document = new LanguageDocument(SCENE);
     const text = document.lines[LINE.meshNode - 1]!;
-    const items = completionsAt(document, { line: LINE.meshNode - 1, character: text.indexOf('.') + 0 });
+    const items = await completionsAt(document, {
+      line: LINE.meshNode - 1,
+      character: text.indexOf('.') + 0,
+    });
     expect(items.map((item) => item.label)).toContain('Root');
   });
 
-  it('offers nothing on a blank line', () => {
+  it('offers nothing on a blank line', async () => {
     const document = new LanguageDocument(SCENE);
-    expect(completionsAt(document, { line: 1, character: 0 })).toEqual([]);
-  });
-});
-
-describe('needsPathListing', () => {
-  const document = new LanguageDocument(
-    ['[node name="S" type="Sprite2D"]', 'texture = "res://art/', 'visible = true'].join('\n')
-  );
-
-  it('is true for a cursor inside a res:// value', () => {
-    expect(needsPathListing(document, { line: 1, character: document.lines[1]!.length })).toBe(true);
+    expect(await completionsAt(document, { line: 1, character: 0 })).toEqual([]);
   });
 
-  it('is false for a value with no res:// before the cursor', () => {
-    expect(needsPathListing(document, { line: 2, character: document.lines[2]!.length })).toBe(false);
-  });
+  it('asks the host for its listing only inside a res:// value', async () => {
+    const document = new LanguageDocument(
+      ['[node name="R" type="Node"]', 'visible = true', 'scene_file_path = "res://'].join('\n')
+    );
+    const listPaths = vi.fn(async () => ['res://door.tscn']);
 
-  it('is false on a heading line', () => {
-    expect(needsPathListing(document, { line: 0, character: 5 })).toBe(false);
+    await completionsAt(document, { line: 1, character: document.lines[1]!.length }, { listPaths });
+    expect(listPaths).not.toHaveBeenCalled();
+
+    await completionsAt(document, { line: 2, character: document.lines[2]!.length }, { listPaths });
+    expect(listPaths).toHaveBeenCalledTimes(1);
   });
 });

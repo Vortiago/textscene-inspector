@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
-  fileExists,
+  isFile,
   listProjectPaths,
   projectProviderFor,
   projectRootForDir,
@@ -210,12 +210,16 @@ describe('listProjectPaths', () => {
   });
 });
 
-describe('fileExists', () => {
+describe('isFile', () => {
   it('is true for a file that exists', async () => {
-    expect(await fileExists(join(projectDir, 'project.godot'))).toBe(true);
+    expect(await isFile(join(projectDir, 'project.godot'))).toBe(true);
   });
 
   it('is false for a file that is absent', async () => {
-    expect(await fileExists(join(tempDir, 'nope.tscn'))).toBe(false);
+    expect(await isFile(join(tempDir, 'nope.tscn'))).toBe(false);
+  });
+
+  it('is false for a directory, which no editor opens as a document', async () => {
+    expect(await isFile(join(projectDir, 'models'))).toBe(false);
   });
 });

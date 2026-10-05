@@ -9,7 +9,7 @@
  */
 
 import type { Dirent } from 'node:fs';
-import { access, readFile, readdir, realpath, stat } from 'node:fs/promises';
+import { readFile, readdir, realpath, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { ResourceProvider } from './ResourceProvider.js';
 import { listScannedFiles, type DirectoryEntry } from './projectListing.js';
@@ -26,11 +26,10 @@ function memo<V>(map: Map<string, V>, key: string, make: (key: string) => V): V 
   return value;
 }
 
-/** Whether a file exists at `path`. An unreadable one counts as absent, since nothing can open it. */
-export async function fileExists(path: string): Promise<boolean> {
+/** Whether `path` names a file, not a directory. One that cannot be read counts as absent, since nothing can open it. */
+export async function isFile(path: string): Promise<boolean> {
   try {
-    await access(path);
-    return true;
+    return (await stat(path)).isFile();
   } catch {
     // Absent or unreadable: either way there is no file to open.
     return false;
@@ -45,7 +44,7 @@ const projectFileByDir = new Map<string, Promise<boolean>>();
 
 /** Whether `dir` holds a `project.godot`. An unreadable one is no root Godot could open. */
 function hasProjectFile(dir: string): Promise<boolean> {
-  return memo(projectFileByDir, dir, (key) => fileExists(projectFileIn(key)));
+  return memo(projectFileByDir, dir, (key) => isFile(projectFileIn(key)));
 }
 
 /** Whether `entry`, a directory entry of `directory`, is a directory or a link to one, which the scan follows too. */

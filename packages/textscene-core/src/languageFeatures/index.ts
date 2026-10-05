@@ -8,12 +8,7 @@
 
 export type { LanguageDocument } from './document.js';
 export { hoverAt } from './hover.js';
-export {
-  COMPLETION_TRIGGER_CHARACTERS,
-  completionsAt,
-  needsPathListing,
-  type CompletionContext,
-} from './completion.js';
+export { COMPLETION_TRIGGER_CHARACTERS, completionsAt, type CompletionContext } from './completion.js';
 export { codeActions } from './codeActions.js';
 export { foldingRanges } from './folding.js';
 export { documentHighlights } from './highlights.js';

@@ -21,9 +21,12 @@ import type { CompletionItem, Position } from './types.js';
  */
 export const COMPLETION_TRIGGER_CHARACTERS: readonly string[] = ['"', '=', '.', '/', '('];
 
-/** The seam an editor host supplies: it lists the workspace's `res://` paths. */
+/**
+ * The seam an editor host supplies: it lists the project's `res://` paths. The engine calls it
+ * only for a cursor inside a `res://` value, so a host lists the project only when one is asked for.
+ */
 export interface CompletionContext {
-  readonly listPaths?: () => readonly string[];
+  readonly listPaths?: () => Promise<readonly string[]>;
 }
 
 function extendsDetail(className: string): string {
@@ -83,8 +86,11 @@ function resourceIdItems(
 }
 
 /** Paths under `res://` that start with the prefix already typed. */
-function pathItems(listPaths: () => readonly string[], prefix: string): readonly CompletionItem[] {
-  return listPaths()
+async function pathItems(
+  listPaths: () => Promise<readonly string[]>,
+  prefix: string
+): Promise<readonly CompletionItem[]> {
+  return (await listPaths())
     .filter((path) => path.startsWith(prefix))
     .map((path) => ({ label: path, kind: 'path', insertText: path }));
 }
@@ -107,14 +113,14 @@ function parentItems(document: LanguageDocument): readonly CompletionItem[] {
     }));
 }
 
-function valueItems(
+async function valueItems(
   document: LanguageDocument,
   section: DocumentSection,
   property: PropertySlot,
   cursorLine: string,
   character: number,
   context: CompletionContext | undefined
-): readonly CompletionItem[] {
+): Promise<readonly CompletionItem[]> {
   const before = cursorLine.slice(0, character);
   const reference = openReferenceAt(before);
   if (reference) return resourceIdItems(document, reference.kind, reference.id);
@@ -125,36 +131,20 @@ function valueItems(
     const booleans = booleanItems(className, property);
     if (booleans.length > 0) return booleans;
   }
-  const prefix = resPathPrefix(before);
+  const prefix = /res:\/\/[^"]*$/.exec(before)?.[0];
   if (context?.listPaths && prefix !== undefined) return pathItems(context.listPaths, prefix);
   return [];
-}
-
-/** The `res://` path a value has typed up to the cursor, or undefined outside one. */
-function resPathPrefix(textBeforeCursor: string): string | undefined {
-  return /res:\/\/[^"]*$/.exec(textBeforeCursor)?.[0];
-}
-
-/**
- * Whether a completion at a zero-based position would read the host's path listing, so a
- * host lists the project only for a cursor inside a `res://` value.
- */
-export function needsPathListing(document: LanguageDocument, position: Position): boolean {
-  const line = document.lines[position.line];
-  const location = document.propertyAt(position.line + 1);
-  if (line === undefined || !location) return false;
-  return resPathPrefix(line.slice(0, position.character)) !== undefined;
 }
 
 /**
  * Completions at a zero-based position. An empty result means the position offers
  * nothing, which a host shows as no popup.
  */
-export function completionsAt(
+export async function completionsAt(
   document: LanguageDocument,
   position: Position,
   context?: CompletionContext
-): readonly CompletionItem[] {
+): Promise<readonly CompletionItem[]> {
   const line = document.lines[position.line];
   if (line === undefined) return [];
   const section = document.sectionAt(position.line + 1);

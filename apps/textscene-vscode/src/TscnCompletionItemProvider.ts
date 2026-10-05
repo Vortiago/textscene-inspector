@@ -8,7 +8,6 @@ import * as vscode from 'vscode';
 import {
   COMPLETION_TRIGGER_CHARACTERS,
   completionsAt,
-  needsPathListing,
   type CompletionItem as EngineCompletionItem,
   type CompletionKind,
 } from '@textscene/core/languageFeatures';
@@ -50,9 +49,12 @@ export class TscnCompletionItemProvider implements vscode.CompletionItemProvider
     _token: vscode.CancellationToken,
     _context: vscode.CompletionContext
   ): Promise<vscode.CompletionItem[]> {
-    const model = languageDocumentOf(document);
-    const paths = needsPathListing(model, position) ? await this.pathListing?.pathsFor(document) : undefined;
-    const items = completionsAt(model, position, paths ? { listPaths: () => paths } : undefined);
+    const listing = this.pathListing;
+    const items = await completionsAt(
+      languageDocumentOf(document),
+      position,
+      listing ? { listPaths: () => listing.pathsFor(document) } : undefined
+    );
     return items.map(toCompletionItem);
   }
 }

@@ -12,15 +12,8 @@ import { join, relative, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { CompletionItemKind, SymbolKind } from 'vscode-languageserver/node';
 import { beforeAll, describe, expect, it } from 'vitest';
-import {
-  cursorIn,
-  loadAnswers,
-  PROJECT_DIR,
-  projectText,
-  rangeTuple,
-  sortedRanges,
-  type CursorSpec,
-} from './languageFeatureAnswers.testkit';
+import { cursorIn, loadAnswers, rangeTuple, sortedRanges, type CursorSpec } from '@textscene/dev-kit';
+import { FIXTURE_DIR, PROJECT_DIR, projectText } from './languageFeatureAnswers.testkit';
 import {
   BUILD_SERVER_COMMAND,
   repoRoot,
@@ -63,7 +56,7 @@ interface LspSymbol {
   children?: LspSymbol[];
 }
 
-const answers = loadAnswers();
+const answers = loadAnswers(FIXTURE_DIR);
 
 beforeAll(() => {
   execSync(BUILD_SERVER_COMMAND, { cwd: repoRoot, stdio: 'pipe' });
@@ -151,7 +144,7 @@ function open(client: LspClient, projectDir: string, file: string, text = projec
 /** Opens the file a cursor names and returns the request params for that cursor. */
 function openAt(client: LspClient, at: CursorSpec, projectDir = PROJECT_DIR) {
   const uri = open(client, projectDir, at.file);
-  return { textDocument: { uri }, position: cursorIn(projectText(at.file), at) };
+  return { textDocument: { uri }, position: cursorIn(projectText(at.file).split('\n'), at) };
 }
 
 /** Runs `use` against a fresh server rooted at the committed fixture project. */
