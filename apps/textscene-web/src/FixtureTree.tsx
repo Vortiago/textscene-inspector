@@ -6,7 +6,7 @@
 
 import { useMemo, useState } from 'react';
 import type { Fixture } from './fixtures';
-import { buildFixtureTree, filterFixtureTree, type TreeBranch } from './fixtureTree';
+import { buildFixtureTree, filterFixtureTree, type TreeBranch } from './fixtureTreeModel';
 import styles from './FixtureTree.module.css';
 
 interface FixtureTreeViewProps {

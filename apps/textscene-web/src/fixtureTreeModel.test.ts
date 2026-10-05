@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import type { Fixture } from './fixtures';
-import { buildFixtureTree, filterFixtureTree, type TreeBranch } from './fixtureTree';
+import { buildFixtureTree, filterFixtureTree, type TreeBranch } from './fixtureTreeModel';
 
 function branch(tree: TreeBranch[], label: string): TreeBranch {
   const found = tree.find((b) => b.label === label);

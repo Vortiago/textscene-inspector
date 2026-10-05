@@ -15,8 +15,8 @@ import { ResourceLoader } from '@textscene/core';
 import { R3FApp } from './r3f-main';
 import { WebResourceProvider } from './providers/WebResourceProvider';
 import { fixtures } from './fixturesAll';
-import { buildFixtureTree } from './fixtureTree';
-import { flattenLeaves, type Leaf } from './fixtureTree.testkit';
+import { buildFixtureTree } from './fixtureTreeModel';
+import { flattenLeaves, type Leaf } from './fixtureTreeModel.testkit';
 
 /** A vendored demo fixture, whose corpus root differs from the base ('') one. */
 const DEMO = fixtures.find((f) => f.root) as (typeof fixtures)[number];

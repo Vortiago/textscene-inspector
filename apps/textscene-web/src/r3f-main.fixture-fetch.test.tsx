@@ -15,8 +15,8 @@ vi.mock('@textscene/core', async () => {
 
 import { R3FApp } from './r3f-main';
 import { fixtures } from './fixturesAll';
-import { buildFixtureTree } from './fixtureTree';
-import { flattenLeaves, type Leaf } from './fixtureTree.testkit';
+import { buildFixtureTree } from './fixtureTreeModel';
+import { flattenLeaves, type Leaf } from './fixtureTreeModel.testkit';
 import { DEBOUNCE_MS } from './useSceneSource';
 
 const STUB_TSCN = `[gd_scene load_steps=1 format=3]

@@ -2,7 +2,7 @@
  * Test-only helpers over the fixture tree for the r3f-main.*.test.tsx suites.
  * Only test files import it, so it stays out of the app bundle.
  */
-import type { SceneLeaf, TreeBranch } from './fixtureTree';
+import type { SceneLeaf, TreeBranch } from './fixtureTreeModel';
 
 /** The tree's own leaf shape, aliased rather than re-declared. */
 export type Leaf = SceneLeaf;

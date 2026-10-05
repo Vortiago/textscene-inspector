@@ -41,13 +41,8 @@ function matched(pattern: string, files: readonly string[], { dot = false } = {}
 
 describe('RESOURCE_FILES_PATTERN', () => {
   it('matches a glTF file in any case, mixed case included', () => {
-    const files = [
-      'models/Tree.Glb',
-      'models/tree.glb',
-      'models/TREE.GLB',
-      'models/Rock.glTF',
-      'models/rock.gltf',
-    ];
+    // One base name per spelling: a case-insensitive disk (macOS, Windows) keeps `tree.glb` and `TREE.GLB` as one file.
+    const files = ['models/a.Glb', 'models/b.glb', 'models/c.GLB', 'models/d.glTF', 'models/e.gltf'];
 
     expect(matched(RESOURCE_FILES_PATTERN, files)).toEqual([...files].sort());
   });
