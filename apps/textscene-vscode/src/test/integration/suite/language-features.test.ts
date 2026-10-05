@@ -50,6 +50,8 @@ suite('Language Features', () => {
       'main.tscn': MAIN_SCENE,
       'material.tres': MATERIAL,
       'typo.tscn': TYPO_SCENE,
+      // The file `main.tscn` links to. A link to a missing file has no target.
+      'textures/grid.png': '',
     });
     main = await openProjectDocument(PROJECT, 'main.tscn');
     await vscode.extensions.getExtension('vortiago.textscene-inspector')?.activate();
