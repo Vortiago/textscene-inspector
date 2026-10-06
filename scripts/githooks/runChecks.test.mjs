@@ -78,6 +78,17 @@ describe('runChecks', () => {
     expect(error.mock.calls[0][0]).toContain('t: FAILED check 1 of 2');
   });
 
+  it('passes a path with a space and an ampersand as one argument', () => {
+    silence();
+    const command = [
+      process.execPath,
+      '-e',
+      'process.exit(process.argv[1] === "a&b c.md" ? 0 : 5)',
+      'a&b c.md',
+    ];
+    expect(runChecks('t', [command])).toBe(0);
+  });
+
   it('reports a command that cannot start', () => {
     const error = silence();
     expect(runChecks('t', [['textscene-no-such-command']])).toBe(1);

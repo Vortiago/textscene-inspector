@@ -4,7 +4,6 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import process from 'node:process';
 
 /** The arguments that only start a tool: `pnpm exec eslint` runs the check `eslint`. */
 const LAUNCHERS = new Set(['pnpm', 'npx', 'node', 'exec']);
@@ -51,11 +50,8 @@ export function runChecks(tag, plan) {
   if (plan.length === 0) console.log(`${tag}: no check applies to these files. CI runs the full gate.`);
   for (const [index, command] of plan.entries()) {
     console.log(`${tag}: ${command.join(' ')}`);
-    // A shell on Windows, where `npx` and a Corepack `pnpm` are `.cmd` files that spawn cannot start.
-    const result = spawnSync(command[0], command.slice(1), {
-      stdio: 'inherit',
-      shell: process.platform === 'win32',
-    });
+    // No shell: a changed path is an argument, and a shell would read its `&` or space as syntax.
+    const result = spawnSync(command[0], command.slice(1), { stdio: 'inherit' });
     if (result.status === 0) continue;
     const outcome = outcomeOf(result);
     console.error(failureSummary(tag, { command, position: index + 1, total: plan.length, outcome }));
