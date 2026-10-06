@@ -142,6 +142,16 @@ function declaredValueItems(location: PropertyLocation): readonly CompletionItem
   return enums.length > 0 ? enums : booleanItems(declared);
 }
 
+/** The project paths that start with the `res://` text the cursor ends, or none. */
+async function resPathItemsAt(
+  textBeforeCursor: string,
+  context: CompletionContext | undefined
+): Promise<readonly CompletionItem[]> {
+  const prefix = /res:\/\/[^"]*$/.exec(textBeforeCursor)?.[0];
+  if (!context?.listPaths || prefix === undefined) return [];
+  return pathItems(context.listPaths, prefix);
+}
+
 async function valueItems(
   document: LanguageDocument,
   location: PropertyLocation,
@@ -152,9 +162,7 @@ async function valueItems(
   if (reference) return resourceIdItems(document, reference.kind, reference.id);
   const declaredValues = declaredValueItems(location);
   if (declaredValues.length > 0) return declaredValues;
-  const prefix = /res:\/\/[^"]*$/.exec(textBeforeCursor)?.[0];
-  if (context?.listPaths && prefix !== undefined) return pathItems(context.listPaths, prefix);
-  return [];
+  return resPathItemsAt(textBeforeCursor, context);
 }
 
 function isOnHeadingAttribute(line: string, key: string, character: number): boolean {
@@ -162,16 +170,23 @@ function isOnHeadingAttribute(line: string, key: string, character: number): boo
   return attribute !== undefined && spanContains(attribute.span, character);
 }
 
-/** The classes a heading's `type=` may name, or the node names its `parent=` may name. */
-function headingItems(
+/**
+ * The classes a heading's `type=` may name, the nodes its `parent=` may name, the ids an
+ * `instance=ExtResource("…")` may name, or the files its `path="res://…"` may name.
+ */
+async function headingItems(
   document: LanguageDocument,
   section: DocumentSection,
   line: string,
-  character: number
-): readonly CompletionItem[] {
+  character: number,
+  context: CompletionContext | undefined
+): Promise<readonly CompletionItem[]> {
   if (isOnHeadingAttribute(line, 'type', character)) return classNameItems(section);
   if (isOnHeadingAttribute(line, 'parent', character)) return parentItems(document, section.headingLine);
-  return [];
+  const textBeforeCursor = line.slice(0, character);
+  const reference = openReferenceAt(textBeforeCursor);
+  if (reference) return resourceIdItems(document, reference.kind, reference.id);
+  return resPathItemsAt(textBeforeCursor, context);
 }
 
 /**
@@ -188,7 +203,9 @@ export async function completionsAt(
   const documentLine = position.line + 1;
   const section = document.sectionAt(documentLine);
   if (!section) return [];
-  if (section.headingLine === documentLine) return headingItems(document, section, line, position.character);
+  if (section.headingLine === documentLine) {
+    return headingItems(document, section, line, position.character, context);
+  }
 
   const location = document.propertyAt(documentLine);
   if (!location) return PARTIAL_KEY_RE.test(line) ? keyItems(section) : [];

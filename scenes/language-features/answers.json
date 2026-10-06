@@ -102,6 +102,15 @@
       "kind": "Reference"
     },
     {
+      "name": "an ext_resource heading's path= offers project files",
+      "at": {
+        "file": "main.tscn",
+        "line": "[ext_resource",
+        "after": "path=\"res://"
+      },
+      "includes": ["res://textures/grid.png", "res://main.tscn"]
+    },
+    {
       "name": "an ExtResource id offers the ids the file declares",
       "at": {
         "file": "main.tscn",

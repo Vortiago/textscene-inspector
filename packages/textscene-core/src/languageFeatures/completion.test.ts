@@ -99,6 +99,28 @@ describe('completionsAt', () => {
     expect(await labelsAt(document, 2, '[node name="Body" type="Node3D" parent="'.length)).toEqual(['.']);
   });
 
+  it('offers res:// paths in an ext_resource heading path=', async () => {
+    const heading = '[ext_resource type="Texture2D" path="res://art/" id="1"]';
+    const document = new LanguageDocument(heading);
+    const labels = await labelsAt(document, 1, heading.indexOf('art/') + 'art/'.length, [
+      'res://art/a.png',
+      'res://main.tscn',
+    ]);
+    expect(labels).toEqual(['res://art/a.png']);
+  });
+
+  it('offers the external resource ids in a node heading instance=', async () => {
+    const heading = '[node name="Door" parent="." instance=ExtResource("")]';
+    const document = new LanguageDocument(
+      [
+        '[ext_resource type="PackedScene" path="res://door.tscn" id="1_door"]',
+        '[node name="Root" type="Node3D"]',
+        heading,
+      ].join('\n')
+    );
+    expect(await labelsAt(document, 3, heading.indexOf('("') + 2)).toEqual(['1_door']);
+  });
+
   it('offers the class properties for a key typed before its =', async () => {
     const document = new LanguageDocument(
       ['[node name="Lamp" type="OmniLight3D"]', 'omni_range = 4.0', 'omni_'].join('\n')
