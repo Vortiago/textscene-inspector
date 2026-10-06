@@ -112,12 +112,12 @@ function rootForUri(uri: string): Promise<string | null> {
 }
 
 /**
- * The `res://` root of the document's file: its project, or its own directory outside every project. A document
+ * The `res://` root of the document's file: its project, or its own directory inside the workspace. A document
  * with no file path has no directory, so it takes the workspace's project, or none.
  */
 function findResRoot(uri: string): Promise<string | null> {
   const path = filePathOf(uri);
-  if (path !== null) return resRootForFile(path);
+  if (path !== null) return resRootForFile(path, workspaceRoot);
   if (workspaceRoot !== null) return projectRootForDir(workspaceRoot);
   return Promise.resolve(null);
 }

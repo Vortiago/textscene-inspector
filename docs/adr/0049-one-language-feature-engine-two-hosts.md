@@ -38,7 +38,8 @@ property tables, hints and deprecated aliases, and the copies would drift.
 - Both hosts take a document's `res://` root from core's `findResRoot`: the nearest
   `project.godot` directory, or the scene's own directory outside every project. Godot has no
   `res://` there, but a loose scene, such as one from a vendored demo, names its files from its
-  own directory. So links, definitions, path completion and cross-file lints work for it. It reads the disk through
+  own directory. So links, definitions, path completion and cross-file lints work for it. The
+  fallback holds only inside the workspace, so no listing walks `/tmp` or a home directory. It reads the disk through
   `@textscene/core/resources/diskProject`, the provider the `tscn-lint` CLI uses. An ESLint rule
   keeps that Node-only module out of every browser bundle.
 - The extension's **agent tools** (`vscode.lm`) are extension-only: lint a scene, read its node

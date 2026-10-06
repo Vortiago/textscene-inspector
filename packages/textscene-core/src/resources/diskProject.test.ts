@@ -57,16 +57,25 @@ describe('projectRootForFile', () => {
 
 describe('resRootForFile', () => {
   it('gives the project root for a scene inside a project', async () => {
-    expect(await resRootForFile(scenePath)).toBe(root);
+    expect(await resRootForFile(scenePath, null)).toBe(root);
   });
 
-  it("gives the scene's own directory for a scene with no project.godot above it", async () => {
+  it("gives the scene's own directory for a loose scene inside the workspace", async () => {
     const loose = join(tempDir, 'loose', 'dungeon');
-    expect(await resRootForFile(join(loose, 'dungeon.tscn'))).toBe(loose.replace(/\\/g, '/'));
+    expect(await resRootForFile(join(loose, 'dungeon.tscn'), tempDir)).toBe(loose.replace(/\\/g, '/'));
+  });
+
+  it('gives null for a loose scene outside the workspace, so no listing reads its whole directory', async () => {
+    const loose = join(tempDir, 'loose', 'dungeon');
+    expect(await resRootForFile(join(loose, 'dungeon.tscn'), join(tempDir, 'game'))).toBeNull();
+  });
+
+  it('gives null for a loose scene with no workspace', async () => {
+    expect(await resRootForFile(join(tempDir, 'loose', 'dungeon.tscn'), null)).toBeNull();
   });
 
   it('gives null for a filesystem root, which no directory holds', async () => {
-    expect(await resRootForFile('/')).toBeNull();
+    expect(await resRootForFile('/', '/')).toBeNull();
   });
 });
 

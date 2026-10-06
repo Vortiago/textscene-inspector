@@ -677,6 +677,33 @@ describe("tscn-lsp roots res:// at a loose scene's own directory", () => {
   );
 
   it(
+    'offers no res:// paths for a loose scene outside the workspace, so no listing reads its whole directory',
+    async () => {
+      const root = mkdtempSync(join(tmpdir(), 'tscn-lsp-loose-outside-'));
+      const sceneDir = join(root, 'dungeon');
+      const workspace = join(root, 'workspace');
+      cpSync(PROJECT_DIR, sceneDir, { recursive: true });
+      rmSync(join(sceneDir, 'project.godot'));
+      mkdirSync(workspace);
+      try {
+        await withInitializedServer(pathToFileURL(workspace).toString(), async (client) => {
+          const labels = labelsOf(
+            await client.result<Array<{ label: string }>>(
+              'textDocument/completion',
+              openAt(client, pathsAt, sceneDir)
+            )
+          );
+
+          expect(labels).not.toContain('res://textures/grid.png');
+        });
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+    SERVER_TIMEOUT_MS
+  );
+
+  it(
     "gives no definition for a path the scene's own directory does not hold",
     () =>
       withLooseCopy(async (client, sceneDir) => {

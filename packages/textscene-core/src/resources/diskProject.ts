@@ -4,7 +4,7 @@
  * A scene's Godot project read from disk, for the Node hosts: the `tscn-lint` CLI and the
  * `tscn-lsp` server. The project is the files under the nearest directory holding
  * `project.godot`. For a scene with none, the CLI gives no provider, so the cross-file rules
- * stay silent, and the server roots `res://` at the scene's own directory (`resRootForFile`).
+ * stay silent, and the server roots `res://` at the scene's own directory inside its workspace (`resRootForFile`).
  * Only a Node bundle imports this module, since it reads `node:fs`. An eslint rule keeps every
  * browser bundle away from it.
  */
@@ -14,7 +14,14 @@ import { readFile, readdir, realpath, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { ResourceProvider } from './ResourceProvider.js';
 import { listScannedFiles, type DirectoryEntry } from './projectListing.js';
-import { findProjectRoot, findResRoot, parentDir, projectFileIn, resolveResPath } from './resPath.js';
+import {
+  findProjectRoot,
+  isWithinRoot,
+  parentDir,
+  pathCaseOf,
+  projectFileIn,
+  resolveResPath,
+} from './resPath.js';
 import { resourceContent } from './resourceProviderUtils.js';
 
 /** `map`'s value for `key`, made by `make` and kept the first time `key` is asked for. */
@@ -162,11 +169,17 @@ export function projectRootForFile(file: string): Promise<string | null> {
 
 /**
  * The directory the `res://` paths of the scene at `file` resolve under: its project root, or the scene's own
- * directory outside every project. Null only for a filesystem root, which holds no scene.
+ * directory when no project holds it and it lies inside `workspace`. Null outside both, since a listing from a loose
+ * scene in `/tmp` or the home directory would read every file under it.
  */
-export function resRootForFile(file: string): Promise<string | null> {
+export async function resRootForFile(file: string, workspace: string | null): Promise<string | null> {
   const dir = directoryOf(file);
-  return dir === null ? Promise.resolve(null) : findResRoot(dir, parentDir, () => false, hasProjectFile);
+  if (dir === null) return null;
+  const project = await projectRootForDir(dir);
+  if (project !== null) return project;
+  return workspace !== null && isWithinRoot(resolve(workspace), dir, pathCaseOf(process.platform))
+    ? dir
+    : null;
 }
 
 /** The provider for the project `scenePath` belongs to, or null when no ancestor directory holds `project.godot`. */
