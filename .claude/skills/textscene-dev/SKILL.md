@@ -5,7 +5,7 @@ description: Full-stack development for TextScene Inspector monorepo. Use for al
 
 # TextScene Inspector development
 
-This skill orients you in the monorepo. AGENTS.md holds the gates and conventions, and the `implement-feature` skill holds the per-feature checklist.
+This skill orients you in the monorepo. AGENTS.md holds the conventions, and the `implement-feature` skill holds the per-feature checklist.
 
 - `packages/textscene-core`: the core library (`@textscene/core`): TSCN parsing, linting and react-three-fiber rendering.
 - `apps/textscene-vscode`: the VS Code preview extension.
@@ -94,7 +94,7 @@ The **`implement-feature`** skill has the complete layer checklist: the scaffold
    - The component, with `@react-three/test-renderer`.
    - Edge cases and defaults.
 
-7. **Run the gates** listed in AGENTS.md.
+7. **Push the change.** The git hooks and CI run the checks.
 
 ### Common patterns
 
@@ -262,8 +262,6 @@ pnpm lint:fix        # Auto-fix linting issues
 pnpm test            # Run all unit tests (Vitest)
 pnpm build           # Build all packages in dependency order
 ```
-
-AGENTS.md lists the full gates.
 
 For browser tests, use the `e2e-testing` skill:
 - Web previewer: file upload to rendering.

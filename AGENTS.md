@@ -33,43 +33,17 @@ strategy.
 - Never edit `.claude/skills/conventional-commits/`, `.claude/rules/` or
   `.claude/agents/ste-review.md`. Run `pnpm vendor:verktoykasse --from <checkout>` instead.
 
-## Gates
+## Checks
 
-Run each gate from the repo root. CI runs the full suite, the builds and the packaging on each
-pull request, so the local gate checks only what the change touches.
+The git hooks and CI run the checks. `githooks/README.md` lists what each hook runs. CI runs the
+full suite, the builds, the packaging and the area tests on each pull request. When a hook or a
+CI job fails, fix the cause.
 
-The pre-push hook is the gate for every change. `githooks/README.md` lists what it runs: the type
-checks of each changed package and its dependents, eslint and Prettier on the changed files, and
-the tests beside each changed file. Every package that ships tests must define
-`type-check:tests`.
-
-1. Commit the change.
-2. Run `git fetch origin main`. The hook compares a new branch with `origin/main`, so a stale
-   copy adds the commits of others to the checks.
-3. Run `git push --dry-run origin HEAD`. It runs the hook and sends nothing.
-4. If a check fails, fix the cause and run the hook again. `pnpm format` fixes a format failure.
-
-Run the full gate with `FULL_VALIDATE=1 git push --dry-run origin HEAD` when the change touches
-the toolchain or a core module that many slices import: `godot/`, `core/`, `parser/` or
-`linter/` in `packages/textscene-core/src/`, outside a slice. On a shell-tool timeout, re-run it
-with a larger `timeout`.
-
-Per package: `pnpm --filter @textscene/web-previewer type-check` / `test`.
-
-Run these when the change touches the named area:
-
-- `.tscn` fixtures: `pnpm build:linter && pnpm lint:tscn <files>`. The negative `edge-*` fixtures
-  must error, and `fixtureLint.test.ts` checks them.
-- A linter rule or validator: `pnpm lint:scenes`. An error in its vendored Godot demos is a
-  false positive in the rule. Keep its directory list in `lint:scenes:only`.
-- Rendering: `pnpm test:visual`.
-- The webview CSP, its bundle, asset loading, the text pipeline, the **Dependency hot-reload**, the
-  Scene Tree view or the document symbols: `pnpm test:vscode:csp`.
-- The browser build, or how the preview starts: `pnpm --filter textscene-inspector test:web`, then
-  `pnpm test:vscode:web-preview`.
-- The web previewer's outliner, inspector, mode switching, or camera and selection wiring:
-  `SHOWCASE_CHANNEL=bundled pnpm test:e2e:web`. Without the variable, it fails to find system
-  Chrome. Never add a test hook for it to a production file.
+- Every package that ships tests defines `type-check:tests`.
+- A negative `edge-*` fixture must error. `fixtureLint.test.ts` checks it.
+- An error from `lint:scenes` in a vendored Godot demo is a false positive in the rule. Keep its
+  directory list in `lint:scenes:only`.
+- Never add a test hook for the web previewer's e2e tests to a production file.
 
 ### Visual goldens
 
