@@ -11,13 +11,14 @@ Follow [Build from source](README.md#build-from-source). `pnpm install` also ena
 
 ## Make the change
 
-- Follow the gates and conventions in [AGENTS.md](AGENTS.md). [ARCHITECTURE.md](ARCHITECTURE.md) has the structure.
+- Follow the conventions in [AGENTS.md](AGENTS.md). [ARCHITECTURE.md](ARCHITECTURE.md) has the structure.
 - Put each test next to the file it tests.
 - Write code and docs to the rules in [.claude/rules/](.claude/rules/).
 
 ## Check it
 
-Run the AGENTS.md gates for your change. `pnpm validate` runs the full gate, as CI does.
+The git hooks check each commit and push. CI runs the full gate on the pull request.
+`pnpm validate` runs the full gate locally.
 
 ## Open the pull request
 
