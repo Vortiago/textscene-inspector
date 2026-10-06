@@ -99,7 +99,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   registerTscnTools(context, {
     openPreview: (uri) => void getOrCreatePanel(uri),
-    capturePreview: (uri) => getOrCreatePanel(uri).capture(),
+    capturePreview: (uri, signal) => getOrCreatePanel(uri).capture(signal),
     lintProviderFor: (uri) => diagnostics.providerFor(uri),
   });
 

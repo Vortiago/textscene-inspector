@@ -23,6 +23,7 @@ function makeHandlers() {
     previewCaptureReady: vi.fn(),
     previewCapturePending: vi.fn(),
     previewCaptureUnavailable: vi.fn(),
+    capturePong: vi.fn(),
   };
 }
 
@@ -37,6 +38,7 @@ describe('dispatchWebviewMessage', () => {
     { type: 'previewCaptureReady' },
     { type: 'previewCapturePending' },
     { type: 'previewCaptureUnavailable', reason: 'no WebGL' },
+    { type: 'capturePong', pingId: 'p1' },
   ];
 
   it.each(ROUTING_CASES)('routes a $type message to its handler only', (msg) => {
@@ -248,6 +250,12 @@ describe('a message whose type is known but whose body is not', () => {
     const h = makeHandlers();
     dispatchWebviewMessage({ type: 'previewCaptureUnavailable' }, h);
     expect(h.previewCaptureUnavailable).not.toHaveBeenCalled();
+  });
+
+  it('drops a capturePong with no pingId, which could answer no ping', () => {
+    const h = makeHandlers();
+    dispatchWebviewMessage({ type: 'capturePong' }, h);
+    expect(h.capturePong).not.toHaveBeenCalled();
   });
 
   it('still routes a well-formed log', () => {

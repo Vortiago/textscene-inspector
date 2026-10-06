@@ -47,12 +47,19 @@ export type CapturePreviewMessage = {
   requestId: string;
 };
 
+/** Asks a webview that holds a capture request whether it still runs. It answers `capturePong`. */
+export type CapturePingMessage = {
+  type: 'capturePing';
+  pingId: string;
+};
+
 export type HostToWebviewMessage =
   | LoadTscnMessage
   | ResourceLoadedMessage
   | ResourceLoadErrorMessage
   | ResourceChangedMessage
-  | CapturePreviewMessage;
+  | CapturePreviewMessage
+  | CapturePingMessage;
 
 /**
  * Anything can post to a webview, so a listener narrows before it reads: a
@@ -140,6 +147,12 @@ export type PreviewCaptureUnavailableMessage = {
   reason: string;
 };
 
+/** The answer to a `capturePing`, posted at once whatever the capture state. */
+export type CapturePongMessage = {
+  type: 'capturePong';
+  pingId: string;
+};
+
 export type WebviewToHostMessage =
   | WebviewReadyMessage
   | JumpToNodeMessage
@@ -149,7 +162,8 @@ export type WebviewToHostMessage =
   | PreviewCaptureErrorMessage
   | PreviewCaptureReadyMessage
   | PreviewCapturePendingMessage
-  | PreviewCaptureUnavailableMessage;
+  | PreviewCaptureUnavailableMessage
+  | CapturePongMessage;
 
 /**
  * The host listener's guard, since a webview can post anything. Like

@@ -69,4 +69,5 @@ const CARRIES_ITS_PAYLOAD: {
   previewCaptureReady: () => true,
   previewCapturePending: () => true,
   previewCaptureUnavailable: (m) => isString(m.reason),
+  capturePong: (m) => isString(m.pingId),
 };

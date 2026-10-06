@@ -9,7 +9,7 @@ import * as assert from 'assert';
 import type { Context } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { CAPTURE_DEADLINE_MS } from '../../previewCaptureQueue';
+import { PING_INTERVAL_MS, WEBVIEW_LOAD_DEADLINE_MS } from '../../previewCaptureQueue';
 import { DISABLE_GPU_ENV } from '../integration/integrationLaunch';
 import { EXTENSION_ID, previewTabLabels } from '../smokeProject/sceneEditor';
 import { waitFor } from '../waitFor';
@@ -17,6 +17,13 @@ import { copyFixtureProject, removeFixtureProject } from './answers';
 
 /** A lint or a tab update reaches the extension host well inside this on a loaded runner. */
 const SETTLE_TIMEOUT_MS = 10000;
+
+/**
+ * The host ends the capture of a broken preview within this: the webview loads within the load
+ * deadline, and an unanswered ping ends the request within two ping intervals. A failure then
+ * prints the host's answer, not a test timeout.
+ */
+export const CAPTURE_TEST_TIMEOUT_MS = WEBVIEW_LOAD_DEADLINE_MS + 2 * PING_INTERVAL_MS + SETTLE_TIMEOUT_MS;
 
 /** The first bytes of every PNG file. */
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
@@ -228,8 +235,7 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
       if (launchedWithoutGpu()) {
         skipBecause(this, 'the window launched with --disable-gpu, so the next test asserts the answer');
       }
-      // The host's deadline ends only a hung webview, so a failure here still prints its answer.
-      this.timeout(CAPTURE_DEADLINE_MS + SETTLE_TIMEOUT_MS);
+      this.timeout(CAPTURE_TEST_TIMEOUT_MS);
       const main = scene('main.tscn');
 
       const result = await invoke('textscene_capture', main);
@@ -250,7 +256,7 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
       if (!launchedWithoutGpu()) {
         skipBecause(this, 'the window has a GPU, so the previous test asserts the image');
       }
-      this.timeout(CAPTURE_DEADLINE_MS + SETTLE_TIMEOUT_MS);
+      this.timeout(CAPTURE_TEST_TIMEOUT_MS);
       const main = scene('main.tscn');
 
       const result = await invoke('textscene_capture', main);

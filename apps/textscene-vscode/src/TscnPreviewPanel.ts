@@ -53,9 +53,10 @@ export class TscnPreviewPanel {
    */
   private _resourceProvider: VSCodeResourceProvider | null = null;
 
-  private readonly _captures = new PreviewCaptureQueue((requestId) =>
-    this._postMessageToWebview({ type: 'capturePreview', requestId })
-  );
+  private readonly _captures = new PreviewCaptureQueue({
+    postRequest: (requestId) => this._postMessageToWebview({ type: 'capturePreview', requestId }),
+    postPing: (pingId) => this._postMessageToWebview({ type: 'capturePing', pingId }),
+  });
 
   public static create(extensionUri: vscode.Uri, resource: vscode.Uri): TscnPreviewPanel {
     const column = vscode.window.activeTextEditor
@@ -128,6 +129,9 @@ export class TscnPreviewPanel {
       previewCaptureUnavailable: (msg) => {
         this._captures.setState({ kind: 'unavailable', reason: msg.reason });
       },
+      capturePong: (msg) => {
+        this._captures.pong(msg.pingId);
+      },
     };
 
     this._panel.webview.onDidReceiveMessage(
@@ -193,10 +197,11 @@ export class TscnPreviewPanel {
 
   /**
    * Captures the viewport, or says why it could not. A request waits for the webview to
-   * report its capture state, so one made while the canvas mounts gets the image.
+   * report its capture state, so one made while the canvas mounts gets the image. An abort
+   * of `signal` ends the request.
    */
-  public capture(): Promise<PreviewCapture> {
-    return this._captures.request();
+  public capture(signal?: AbortSignal): Promise<PreviewCapture> {
+    return this._captures.request(signal);
   }
 
   /** Lazily creates this panel's `VSCodeResourceProvider`, then reuses it. */

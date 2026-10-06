@@ -8,10 +8,10 @@ import * as assert from 'assert';
 import * as path from 'path';
 import { PNG } from 'pngjs';
 import * as vscode from 'vscode';
-import { CAPTURE_DEADLINE_MS } from '../../../previewCaptureQueue';
 import { godotProjectDir, removeGodotProject, writeGodotProject } from '../helpers/godotProjectHelpers';
 import { EXTENSION_ID } from '../../smokeProject/sceneEditor';
 import {
+  CAPTURE_TEST_TIMEOUT_MS,
   imageOf,
   launchedWithoutGpu,
   skipBecause,
@@ -23,8 +23,8 @@ const PROJECT = 'capture-readiness';
 const SCENE_FILE = 'noise-plane.tscn';
 
 /**
- * The side of the noise texture, in pixels. The build outlasts the canvas's first draw, and a
- * 4096 texture outlasts the 30 s capture deadline on a Windows CI runner.
+ * The side of the noise texture, in pixels. Its build outlasts the canvas's first draw, and
+ * stays well inside the test timeout on a CI runner. A 4096 texture takes 17 s with software WebGL.
  */
 const NOISE_SIZE = 1024;
 
@@ -56,9 +56,6 @@ const SCENE = [
   'mesh = SubResource("PlaneMesh_p")',
   '',
 ].join('\n');
-
-/** The time past the capture deadline the answer takes to reach the test. */
-const ANSWER_MARGIN_MS = 10000;
 
 /**
  * The noise texture changes the luma from pixel to pixel: about 4.1 levels on average in this
@@ -99,8 +96,7 @@ suite('Capture readiness', () => {
   });
 
   test('a capture of a preview it has just opened shows the procedural texture', async function () {
-    // The host's deadline ends the call first, so a failure still prints the tool's answer.
-    this.timeout(CAPTURE_DEADLINE_MS + ANSWER_MARGIN_MS);
+    this.timeout(CAPTURE_TEST_TIMEOUT_MS);
     const scenePath = path.join(godotProjectDir(PROJECT), SCENE_FILE);
 
     const result = await vscode.lm.invokeTool('textscene_capture', { input: { path: scenePath } });

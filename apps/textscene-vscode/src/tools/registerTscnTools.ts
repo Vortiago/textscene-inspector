@@ -26,8 +26,11 @@ export const TOOL_IDS = {
 /** What the extension hands a tool that needs to act on the editor. */
 export interface TscnToolHost {
   openPreview(uri: vscode.Uri): void;
-  /** The viewport as a `data:image/png;base64,…` URL, or why the preview could not answer. */
-  capturePreview(uri: vscode.Uri): Promise<PreviewCapture>;
+  /**
+   * The viewport as a `data:image/png;base64,…` URL, or why the preview could not answer. An
+   * abort of `signal` ends the capture.
+   */
+  capturePreview(uri: vscode.Uri, signal: AbortSignal): Promise<PreviewCapture>;
   /** The Problems panel's provider for the project `uri` belongs to, or null outside one. */
   lintProviderFor(uri: vscode.Uri): Promise<ResourceProvider | null>;
 }
@@ -110,10 +113,11 @@ class TscnCaptureTool implements vscode.LanguageModelTool<ScenePathToolInput> {
   constructor(private readonly host: TscnToolHost) {}
 
   async invoke(
-    options: vscode.LanguageModelToolInvocationOptions<ScenePathToolInput>
+    options: vscode.LanguageModelToolInvocationOptions<ScenePathToolInput>,
+    token: vscode.CancellationToken
   ): Promise<vscode.LanguageModelToolResult> {
     const uri = sceneUriOf(options.input);
-    const capture = await this.host.capturePreview(uri);
+    const capture = await withAbortSignal(token, (signal) => this.host.capturePreview(uri, signal));
     if ('error' in capture) {
       return textResult(`The preview for ${uri.fsPath} did not return an image: ${capture.error}`);
     }
@@ -121,6 +125,21 @@ class TscnCaptureTool implements vscode.LanguageModelTool<ScenePathToolInput> {
       new vscode.LanguageModelTextPart(`Rendered preview of ${uri.fsPath}.`),
       vscode.LanguageModelDataPart.image(pngBytesOf(capture.dataUrl), 'image/png'),
     ]);
+  }
+}
+
+/** Runs `work` with a signal that aborts when `token` is cancelled, and stops listening after. */
+async function withAbortSignal<T>(
+  token: vscode.CancellationToken,
+  work: (signal: AbortSignal) => Promise<T>
+): Promise<T> {
+  const controller = new AbortController();
+  if (token.isCancellationRequested) controller.abort();
+  const subscription = token.onCancellationRequested(() => controller.abort());
+  try {
+    return await work(controller.signal);
+  } finally {
+    subscription.dispose();
   }
 }
 

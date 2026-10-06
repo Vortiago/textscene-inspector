@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as vscode from 'vscode';
+import type { PreviewCapture } from '../previewCaptureQueue';
 import type { TscnToolHost } from './registerTscnTools';
 import { registerTscnTools, TOOL_IDS } from './registerTscnTools';
 import {
@@ -29,7 +30,28 @@ function host(overrides: Partial<TscnToolHost> = {}): TscnToolHost {
   };
 }
 
-const TOKEN = {} as vscode.CancellationToken;
+/** A token no case cancels. */
+const TOKEN = {
+  isCancellationRequested: false,
+  onCancellationRequested: () => ({ dispose: () => undefined }),
+} as unknown as vscode.CancellationToken;
+
+/** A cancellation token the test cancels, which counts the listeners still subscribed. */
+function cancellableToken() {
+  const listeners = new Set<() => void>();
+  return {
+    isCancellationRequested: false,
+    onCancellationRequested(listener: () => void) {
+      listeners.add(listener);
+      return { dispose: () => listeners.delete(listener) };
+    },
+    cancel() {
+      this.isCancellationRequested = true;
+      for (const listener of [...listeners]) listener();
+    },
+    listenerCount: () => listeners.size,
+  };
+}
 
 function registeredTool(id: string): any {
   return vscodeMocks.lm.registerTool.mock.calls.find((call: unknown[]) => call[0] === id)![1];
@@ -173,6 +195,24 @@ describe('registerTscnTools', () => {
     expect(result.content[0]!.value).toContain(
       'did not return an image: The preview shows the 2D view, and only the 3D view can capture.'
     );
+  });
+
+  it('the capture tool ends the capture when the call is cancelled, and stops listening', async () => {
+    const token = cancellableToken();
+    const capturePreview = vi.fn(
+      (_uri: vscode.Uri, signal: AbortSignal) =>
+        new Promise<PreviewCapture>((resolve) =>
+          signal.addEventListener('abort', () => resolve({ error: 'The capture was cancelled.' }))
+        )
+    );
+    registerTscnTools(context(), host({ capturePreview }));
+    const invoked = registeredTool(TOOL_IDS.capture).invoke({ input: { path: 'scenes/Main.tscn' } }, token);
+
+    token.cancel();
+    const result = await invoked;
+
+    expect(result.content[0]!.value).toContain('did not return an image: The capture was cancelled.');
+    expect(token.listenerCount()).toBe(0);
   });
 
   it('rejects a path that is not a .tscn scene', async () => {

@@ -333,6 +333,16 @@ describe('capture state reporting', () => {
     expect(postedMessages(vscodeApi).filter(isCaptureState).pop()).toEqual({ type: 'previewCapturePending' });
   });
 
+  it('answers a capturePing at once while the shell is still pending', async () => {
+    const { vscodeApi } = await mountFresh();
+
+    dispatch({ type: 'capturePing', pingId: 'p1' });
+
+    expect(postedMessages(vscodeApi).filter((m) => m.type === 'capturePong')).toEqual([
+      { type: 'capturePong', pingId: 'p1' },
+    ]);
+  });
+
   it('stays ready when the host replays the scene text it already sent', async () => {
     captured.mountCaptureState = READY;
     const { vscodeApi } = await mountFresh();
