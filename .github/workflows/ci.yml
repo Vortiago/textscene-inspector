@@ -126,7 +126,8 @@ jobs:
     if: needs.changes.outputs.visual == 'true'
     timeout-minutes: 20
     # The harness captures one scene at a time with software GL, and the whole set takes more
-    # than an hour on one runner. Runners are free for a public repository.
+    # than an hour on one runner. Runners are free for a public repository. Each shard gets an
+    # equal share of the seconds in scripts/visual/shards/sceneSeconds.json.
     strategy:
       fail-fast: false
       matrix:
@@ -315,27 +316,23 @@ jobs:
           path: scripts/vscode/output/web-preview-gate/
 
   # The one check that branch protection requires, so a new or renamed job needs no settings change.
-  # Turns a skip that visualScope asked for into a pass, so ci-ok can keep failing on any
-  # skipped job.
-  visual:
-    name: Visual regression passed or not needed
-    if: always()
-    needs: [changes, visual-regression]
-    runs-on: ubuntu-latest
-    timeout-minutes: 2
-    steps:
-      - if: >-
-          needs.changes.result != 'success' ||
-          (needs.visual-regression.result != 'success' &&
-           !(needs.visual-regression.result == 'skipped' && needs.changes.outputs.visual == 'false'))
-        run: exit 1
-
+  # Every job it needs must succeed. The one allowed skip is the golden run that visualScope ruled
+  # out, which this job checks itself, so the gate costs no queued job of its own.
   ci-ok:
     name: CI passed
     if: always()
-    needs: [static, unit, build, visual, e2e-web, integration, vsix, installed, web]
+    needs: [changes, static, unit, build, visual-regression, e2e-web, integration, vsix, installed, web]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
-        run: exit 1
+      - env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          failed=$(jq -r '.changes.outputs.visual as $scope | to_entries
+            | map(select(.value.result != "success"
+                and (.key != "visual-regression" or .value.result != "skipped" or $scope != "false")))
+            | map("\(.key) (\(.value.result))") | join(", ")' <<< "$NEEDS")
+          if [ -n "$failed" ]; then
+            echo "::error::these jobs did not pass: $failed"
+            exit 1
+          fi

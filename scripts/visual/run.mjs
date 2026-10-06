@@ -9,7 +9,7 @@
  *   pnpm test:visual                 # compare every scene against its baseline
  *   pnpm test:visual:update          # rewrite the baselines, then eyeball and commit them
  *   node scripts/visual/run.mjs --scene label3d [--update]
- *   node scripts/visual/run.mjs --shard 2/4      # every 4th scene from the 2nd, as CI runs it
+ *   node scripts/visual/run.mjs --shard 2/4      # the 2nd of 4 shards of equal seconds, as CI runs it
  */
 
 import { resolve } from 'node:path';
@@ -75,6 +75,9 @@ async function main() {
       pages.canvas2D = { page: page2D, errors: attachConsoleGate(page2D) };
     }
 
+    // shards/measure.mjs starts the first scene's clock here, so the browser launch stays out of
+    // the scene's seconds.
+    console.log('[visual] browser ready');
     for (const scene of scenes) {
       const result = await checkScene(pages, baseUrl, scene, opts);
       results.push(result);

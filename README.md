@@ -49,6 +49,7 @@ Install a `.vsix` with **Extensions: Install from VSIX…**.
 | `pnpm test` | Unit tests |
 | `pnpm test:visual` | Golden images, exact pixel match |
 | `pnpm test:visual:update` | Rewrite the golden images |
+| `pnpm test:visual:measure <logs>` | Refresh the scene seconds that balance the CI shards, from `gh run view --log` output |
 | `pnpm test:vscode:csp` | The preview draws in the real VS Code webview, under its CSP |
 | `pnpm --filter textscene-inspector test:integration` | VS Code integration tests |
 | `TEXTSCENE_VSCODE_VERSION=min pnpm --filter textscene-inspector test:integration` | The same tests on the oldest VS Code that `engines.vscode` accepts |

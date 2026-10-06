@@ -4,6 +4,7 @@
  */
 
 import { GOLDEN_SCENES } from '../scenes.mjs';
+import { shardOf } from '../shards/balance.mjs';
 
 /**
  * Parses `--update`, `--scene <name>` and `--shard <index>/<count>`. Anything else, and `--scene`
@@ -74,14 +75,6 @@ export function selectScenes(opts) {
     process.exit(2);
   }
   return scenes;
-}
-
-/**
- * Every `count`-th scene from `index`, so each shard gets a share of every chapter and its slow
- * scenes. The shards of one count cover each scene exactly once.
- */
-export function shardOf(scenes, { index, count }) {
-  return scenes.filter((_, k) => k % count === index - 1);
 }
 
 /** Column-aligned result lines plus the count that decides the exit code. */

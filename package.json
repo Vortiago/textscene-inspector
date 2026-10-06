@@ -40,6 +40,7 @@
     "new:node": "node scripts/new-node-slice.mjs",
     "test:visual": "node scripts/visual/run.mjs",
     "test:visual:update": "node scripts/visual/run.mjs --update",
+    "test:visual:measure": "node scripts/visual/shards/measure.mjs",
     "ref:godot": "node scripts/godot-ref/run.mjs",
     "ref:ours": "node scripts/godot-ref/capture-ours.mjs",
     "ref:diff": "node scripts/godot-ref/diff.mjs",
