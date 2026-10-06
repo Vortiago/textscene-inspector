@@ -44,8 +44,10 @@ the tests beside each changed file. Every package that ships tests must define
 `type-check:tests`.
 
 1. Commit the change.
-2. Run `git push --dry-run origin HEAD`. It runs the hook and sends nothing.
-3. If a check fails, fix the cause and run the hook again. `pnpm format` fixes a format failure.
+2. Run `git fetch origin main`. The hook compares a new branch with `origin/main`, so a stale
+   copy adds the commits of others to the checks.
+3. Run `git push --dry-run origin HEAD`. It runs the hook and sends nothing.
+4. If a check fails, fix the cause and run the hook again. `pnpm format` fixes a format failure.
 
 Run the full gate with `FULL_VALIDATE=1 git push --dry-run origin HEAD` when the change touches
 the toolchain or a core module that many slices import: `godot/`, `core/`, `parser/` or

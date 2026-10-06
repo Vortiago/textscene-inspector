@@ -102,8 +102,9 @@ The Clean Code rules say: fix a problem you find now, in this change. So:
 Run every gate in AGENTS.md that the change triggers. Always run the pre-push hook:
 
 1. Commit the change.
-2. Run `git push --dry-run origin HEAD`.
-3. If a check fails, fix the cause and run the hook again.
+2. Run `git fetch origin main`.
+3. Run `git push --dry-run origin HEAD`.
+4. If a check fails, fix the cause and run the hook again.
 
 The hook type-checks each changed package and its dependents, and runs the tests beside each
 changed file. AGENTS.md says when the change needs the full gate.
