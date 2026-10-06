@@ -4,6 +4,7 @@
  * project root, since that needs a filesystem.
  */
 
+import { RES_PATH_BODY_SOURCE } from '../godot/string.js';
 import type { LanguageDocument } from './document.js';
 import { lineRange, lineRangeContains } from './ranges.js';
 import { declarationOf, referenceAt } from './resourceRefs.js';
@@ -15,19 +16,23 @@ export interface ResPathOccurrence {
   readonly range: Range;
 }
 
-/**
- * A `res://` path that opens a string runs to the closing quote, since a Godot file name can hold
- * a space or a parenthesis. A backslash ends it too, before the escaped quote of an inner string.
- * A path inside prose ends at the first space, quote or closing parenthesis.
- */
-const RES_PATH_RE = /(?<=")res:\/\/[^"\\]+|(?<!")res:\/\/[^"'\s)\\]+/g;
+const RES_PATH_RE = new RegExp(`res://${RES_PATH_BODY_SOURCE}`, 'g');
+
+/** Where a path inside prose ends, since a path that opens no string has no closing quote. */
+const PROSE_PATH_END_RE = /[\s')]/;
+
+/** A path that opens a string runs as far as a file name may. One inside prose ends sooner. */
+function pathText(line: string, match: RegExpExecArray): string {
+  if (line[match.index - 1] === '"') return match[0];
+  return match[0].split(PROSE_PATH_END_RE, 1)[0]!;
+}
 
 /** The `res://` occurrences on one zero-based line. */
 function resPathsOnLine(line: string, lineIndex: number): ResPathOccurrence[] {
-  return [...line.matchAll(RES_PATH_RE)].map((match) => ({
-    path: match[0],
-    range: lineRange(lineIndex, { start: match.index, end: match.index + match[0].length }),
-  }));
+  return [...line.matchAll(RES_PATH_RE)].map((match) => {
+    const path = pathText(line, match);
+    return { path, range: lineRange(lineIndex, { start: match.index, end: match.index + path.length }) };
+  });
 }
 
 /** Every `res://` occurrence in the document, in line order. */

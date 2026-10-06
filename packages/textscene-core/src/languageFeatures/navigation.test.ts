@@ -107,6 +107,12 @@ describe('resPathOccurrences', () => {
     expect(resPathOccurrences(scene).map((link) => link.path)).toEqual(['res://a.png']);
   });
 
+  it('ends a sub-resource address at the file it names', () => {
+    const scene = new LanguageDocument('[ext_resource type="Mesh" path="res://lib.tres::Mesh_1" id="1"]\n');
+
+    expect(resPathOccurrences(scene).map((link) => link.path)).toEqual(['res://lib.tres']);
+  });
+
   it('gives an empty list for a document with no res:// path', () => {
     expect(resPathOccurrences(new LanguageDocument('[gd_scene format=3]\n'))).toEqual([]);
   });

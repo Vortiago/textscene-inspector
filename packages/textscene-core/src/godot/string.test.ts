@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  RES_PATH_BODY_SOURCE,
   IS_VALID_INT_RE,
   literalText,
   simplifyResPath,
@@ -395,5 +396,23 @@ describe('stripEdges', () => {
 
   it('is empty for a string of only stripped characters', () => {
     expect(stripEdges(' \t\u0000 ')).toBe('');
+  });
+});
+
+describe('RES_PATH_BODY_SOURCE', () => {
+  const body = new RegExp(`^${RES_PATH_BODY_SOURCE}`);
+
+  it('takes a space, a parenthesis and an apostrophe, which a file name may hold', () => {
+    expect(body.exec("art/House (1) it's.ogg")?.[0]).toBe("art/House (1) it's.ogg");
+  });
+
+  it('stops at each character String::is_valid_filename refuses, keeping / as the separator', () => {
+    for (const refused of [':', '\\', '?', '*', '"', '|', '%', '<', '>']) {
+      expect(body.exec(`a/b${refused}c`)?.[0]).toBe('a/b');
+    }
+  });
+
+  it('matches nothing when the path opens with a refused character', () => {
+    expect(body.exec('"a.png')).toBeNull();
   });
 });
