@@ -71,7 +71,7 @@ describe('tscn-lsp end-to-end', () => {
           textDocument: { uri: SCENE_URI, languageId: 'tscn', version: 1, text: SCENE },
         });
 
-        // The debounced lint pushes diagnostics; the scene's `SubResource("missing")` is one.
+        // The debounced lint pushes diagnostics. The scene's `SubResource("missing")` is one.
         const published = (await client.waitForNotification('textDocument/publishDiagnostics')) as {
           diagnostics: Array<{ message: string }>;
         };
@@ -135,9 +135,11 @@ function projectPath(projectDir: string, uri: string): string {
 }
 
 /** Opens a committed project file in the server and returns its URI. */
-function open(client: LspClient, projectDir: string, file: string, text = projectText(file)): string {
+function open(client: LspClient, projectDir: string, file: string): string {
   const uri = fileUri(projectDir, file);
-  client.notify('textDocument/didOpen', { textDocument: { uri, languageId: 'tscn', version: 1, text } });
+  client.notify('textDocument/didOpen', {
+    textDocument: { uri, languageId: 'tscn', version: 1, text: projectText(file) },
+  });
   return uri;
 }
 

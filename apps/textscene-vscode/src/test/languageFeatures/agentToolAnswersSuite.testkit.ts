@@ -33,6 +33,28 @@ const NO_WEBGL_REASON = 'The viewport crashed: THREE.WebGLRenderer: Error creati
 
 const NO_TOOLS_API = 'this VS Code predates vscode.lm.invokeTool, so no agent tool registers';
 
+/** Every agent tool the extension contributes and registers. */
+export const AGENT_TOOL_NAMES = [
+  'textscene_lint',
+  'textscene_scene_tree',
+  'textscene_open_preview',
+  'textscene_missing_resources',
+  'textscene_capture',
+] as const;
+
+/** A language-model tool as an extension's manifest contributes it. */
+export interface ContributedTool {
+  readonly name: string;
+  readonly when?: string;
+}
+
+/** The language-model tools the manifest of `extension` contributes, or none when it lists none. */
+export function contributedTools(extension: vscode.Extension<unknown>): readonly ContributedTool[] {
+  const contributes = extension.packageJSON.contributes as
+    { languageModelTools?: ContributedTool[] } | undefined;
+  return contributes?.languageModelTools ?? [];
+}
+
 /** Skips the test or the suite, and prints why, since mocha reports a skip with no reason. */
 export function skipBecause(context: Context, reason: string): never {
   console.log(`    skipped: ${reason}`);

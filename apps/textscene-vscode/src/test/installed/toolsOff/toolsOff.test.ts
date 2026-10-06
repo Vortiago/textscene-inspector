@@ -7,7 +7,8 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { CLEAN_SCENE } from '../../smokeProject/scenes';
-import { EXTENSION_ID, openSceneAndActivate } from '../../smokeProject/sceneEditor';
+import { extensionUnderTest, openSceneAndActivate } from '../../smokeProject/sceneEditor';
+import { contributedTools, skipBecause } from '../../languageFeatures/agentToolAnswersSuite.testkit';
 import { hoverText } from '../../languageFeatures/sharedAnswersSuite.testkit';
 import { TOOLS_OFF_SETTINGS } from '../installedLaunch';
 
@@ -32,10 +33,7 @@ suite('Installed package with the agent tools off', function () {
   // in `MainThreadLanguageModelTools`). Chat's own list drops it, and no API exposes that list,
   // so the test checks the clause the installed manifest gives chat.
   test("every installed tool hides from chat behind the setting's when clause", () => {
-    const manifest = vscode.extensions.getExtension(EXTENSION_ID)!.packageJSON as {
-      contributes: { languageModelTools: { name: string; when?: string }[] };
-    };
-    const tools = manifest.contributes.languageModelTools.filter((tool) => tool.name.startsWith(TOOL_PREFIX));
+    const tools = contributedTools(extensionUnderTest()).filter((tool) => tool.name.startsWith(TOOL_PREFIX));
 
     assert.ok(tools.length > 0, 'expected the manifest to contribute the agent tools');
     for (const tool of tools) assert.strictEqual(tool.when, 'config.textscene.agentTools.enabled', tool.name);
@@ -43,8 +41,7 @@ suite('Installed package with the agent tools off', function () {
 
   test('invoking a tool fails while the setting is off', async function () {
     if (typeof vscode.lm?.invokeTool !== 'function') {
-      console.log('    skipped: this VS Code predates vscode.lm.invokeTool');
-      this.skip();
+      skipBecause(this, 'this VS Code predates vscode.lm.invokeTool');
     }
 
     const scene = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0]!.uri, CLEAN_SCENE).fsPath;

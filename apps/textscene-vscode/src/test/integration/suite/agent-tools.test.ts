@@ -1,9 +1,9 @@
 /**
  * The agent tools in the real VS Code extension host: the manifest contributes them,
  * VS Code lists the registered ones, and each answers when invoked. The unit tests
- * cover the handlers against mocks; this proves the tools exist and run after install.
- * The capture tool is absent here on purpose: this host launches with `--disable-gpu`
- * on Linux, so no WebGL context exists to capture.
+ * cover the handlers against mocks. This file proves the tools exist and run after install.
+ * No test here invokes the capture tool: the agent-tool answers suite covers it, with and
+ * without a GPU.
  */
 
 import * as assert from 'assert';
@@ -11,7 +11,13 @@ import type { Context } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { godotProjectDir, removeGodotProject, writeGodotProject } from '../helpers/godotProjectHelpers';
-import { skipBecause, textOf } from '../../languageFeatures/agentToolAnswersSuite.testkit';
+import { extensionUnderTest, EXTENSION_ID } from '../../smokeProject/sceneEditor';
+import {
+  AGENT_TOOL_NAMES,
+  contributedTools,
+  skipBecause,
+  textOf,
+} from '../../languageFeatures/agentToolAnswersSuite.testkit';
 
 const PROJECT = 'agent-tools';
 
@@ -30,14 +36,6 @@ const SCENE = [
   '',
 ].join('\n');
 
-const TOOL_NAMES = [
-  'textscene_lint',
-  'textscene_scene_tree',
-  'textscene_open_preview',
-  'textscene_missing_resources',
-  'textscene_capture',
-] as const;
-
 /** Skips a test on a VS Code below the tools API. */
 function skipWithoutToolsApi(context: Context): never {
   skipBecause(context, 'this VS Code predates the vscode.lm tools API');
@@ -49,17 +47,15 @@ suite('Agent tools', () => {
   suiteSetup(async () => {
     writeGodotProject(PROJECT, { 'scene.tscn': SCENE });
     scenePath = path.join(godotProjectDir(PROJECT), 'scene.tscn');
-    await vscode.extensions.getExtension('vortiago.textscene-inspector')?.activate();
+    await vscode.extensions.getExtension(EXTENSION_ID)?.activate();
   });
 
   suiteTeardown(() => removeGodotProject(PROJECT));
 
   test('the manifest contributes every agent tool', () => {
-    const contributes = vscode.extensions.getExtension('vortiago.textscene-inspector')?.packageJSON
-      .contributes as { languageModelTools?: Array<{ name: string }> } | undefined;
-    const names = (contributes?.languageModelTools ?? []).map((tool) => tool.name);
+    const names = contributedTools(extensionUnderTest()).map((tool) => tool.name);
 
-    for (const name of TOOL_NAMES) {
+    for (const name of AGENT_TOOL_NAMES) {
       assert.ok(names.includes(name), `${name} is contributed`);
     }
   });
@@ -69,7 +65,7 @@ suite('Agent tools', () => {
     if (!vscode.lm?.tools) skipWithoutToolsApi(this);
     const names = vscode.lm.tools.map((tool) => tool.name);
 
-    for (const name of TOOL_NAMES) {
+    for (const name of AGENT_TOOL_NAMES) {
       assert.ok(names.includes(name), `${name} is registered`);
     }
   });

@@ -15,7 +15,7 @@ export const SUITE_STARTED_MARKER_ENV = 'TEXTSCENE_SUITE_STARTED_MARKER';
 /**
  * The variable that says whether the window launches with `--disable-gpu`. A developer sets
  * it to `1` to launch any platform that way. The launcher always passes the suite `1` or
- * `0`, so a test that needs WebGL reads the launch, never a race.
+ * `0`, so a test that needs WebGL reads the launch from it and does not guess.
  */
 export const DISABLE_GPU_ENV = 'TEXTSCENE_DISABLE_GPU';
 
@@ -84,10 +84,10 @@ export interface GpuLaunch {
 /**
  * Xvfb has no GPU, so Chromium emulates one in software. On the Ubuntu runner the window
  * stalls before the workbench opens, so Linux always launches with `--disable-gpu`.
- * `requested` is the value of {@link DISABLE_GPU_ENV} in the launcher's environment.
+ * `requestedGpuOff` is the value of {@link DISABLE_GPU_ENV} in the launcher's environment.
  */
-export function gpuLaunch(platform: string, requested: string | undefined): GpuLaunch {
-  const disablesGpu = platform === 'linux' || requested === '1';
+export function gpuLaunch(platform: string, requestedGpuOff: string | undefined): GpuLaunch {
+  const disablesGpu = platform === 'linux' || requestedGpuOff === '1';
   return {
     launchArgs: disablesGpu ? ['--disable-gpu'] : [],
     extensionTestsEnv: { [DISABLE_GPU_ENV]: disablesGpu ? '1' : '0' },
@@ -95,8 +95,8 @@ export function gpuLaunch(platform: string, requested: string | undefined): GpuL
 }
 
 /**
- * Build the argument list VS Code is launched with. `platform` and `requestedGpuOff` are
- * the host's own unless a test names others.
+ * The options VS Code launches the suite with. `platform` and `requestedGpuOff` are the
+ * host's own unless a test names others.
  */
 export function integrationLaunchOptions(
   paths: IntegrationLaunchPaths,

@@ -79,7 +79,7 @@ export function defineSharedAnswersSuite(projectDir: string): void {
   const answers = loadAnswers();
   const uriOf = (file: string) => vscode.Uri.file(path.join(projectDir, file));
   const documentOf = (file: string) => vscode.workspace.openTextDocument(uriOf(file));
-  const cursor = async (at: CursorSpec) => {
+  const openAt = async (at: CursorSpec) => {
     const document = await documentOf(at.file);
     return { document, position: cursorIn(document, at) };
   };
@@ -108,7 +108,7 @@ export function defineSharedAnswersSuite(projectDir: string): void {
 
     for (const answer of answers.hover) {
       test(`hover: ${answer.name}`, async () => {
-        const { document, position } = await cursor(answer.at);
+        const { document, position } = await openAt(answer.at);
         const hovers = await vscode.commands.executeCommand<vscode.Hover[]>(
           'vscode.executeHoverProvider',
           document.uri,
@@ -126,7 +126,7 @@ export function defineSharedAnswersSuite(projectDir: string): void {
 
     for (const answer of answers.completion) {
       test(`completion: ${answer.name}`, async () => {
-        const { document, position } = await cursor(answer.at);
+        const { document, position } = await openAt(answer.at);
         const list = await vscode.commands.executeCommand<vscode.CompletionList>(
           'vscode.executeCompletionItemProvider',
           document.uri,
@@ -147,7 +147,7 @@ export function defineSharedAnswersSuite(projectDir: string): void {
 
     for (const answer of answers.definition) {
       test(`definition: ${answer.name}`, async () => {
-        const { document, position } = await cursor(answer.at);
+        const { document, position } = await openAt(answer.at);
         const found = await vscode.commands.executeCommand<Array<vscode.Location | vscode.LocationLink>>(
           'vscode.executeDefinitionProvider',
           document.uri,
@@ -163,7 +163,7 @@ export function defineSharedAnswersSuite(projectDir: string): void {
 
     for (const answer of answers.highlights) {
       test(`highlights: ${answer.name}`, async () => {
-        const { document, position } = await cursor(answer.at);
+        const { document, position } = await openAt(answer.at);
         // VS Code 1.85 answers undefined, not an empty list, when no provider highlights anything.
         const highlights =
           (await vscode.commands.executeCommand<vscode.DocumentHighlight[] | undefined>(

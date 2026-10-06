@@ -19,7 +19,11 @@ import {
   previewTabLabels,
   unregisteredCommands,
 } from '../../smokeProject/sceneEditor';
-import { defineAgentToolAnswersSuite } from '../../languageFeatures/agentToolAnswersSuite.testkit';
+import {
+  AGENT_TOOL_NAMES,
+  contributedTools,
+  defineAgentToolAnswersSuite,
+} from '../../languageFeatures/agentToolAnswersSuite.testkit';
 import { defineSharedAnswersSuite } from '../../languageFeatures/sharedAnswersSuite.testkit';
 
 /** Activation, a lint and a tab update each reach the extension host well inside this on a loaded runner. */
@@ -89,25 +93,16 @@ suite('Installed package', () => {
   test('the packaged extension contributes and registers the agent tools', async () => {
     await openSceneAndActivate(CLEAN_SCENE);
 
-    const contributes = extensionUnderTest().packageJSON.contributes as
-      { languageModelTools?: Array<{ name: string }> } | undefined;
-    const contributed = (contributes?.languageModelTools ?? []).map((tool) => tool.name);
-    const expected = [
-      'textscene_lint',
-      'textscene_scene_tree',
-      'textscene_open_preview',
-      'textscene_missing_resources',
-      'textscene_capture',
-    ];
+    const contributed = contributedTools(extensionUnderTest()).map((tool) => tool.name);
 
-    for (const name of expected) {
+    for (const name of AGENT_TOOL_NAMES) {
       assert.ok(contributed.includes(name), `${name} is contributed`);
     }
 
-    // The tools API is newer than the extension's engines floor; below it, none registers.
+    // The tools API is newer than the extension's engines floor. Below it, none registers.
     if (vscode.lm?.tools) {
       const registered = vscode.lm.tools.map((tool) => tool.name);
-      for (const name of expected) {
+      for (const name of AGENT_TOOL_NAMES) {
         assert.ok(registered.includes(name), `${name} is registered`);
       }
     }

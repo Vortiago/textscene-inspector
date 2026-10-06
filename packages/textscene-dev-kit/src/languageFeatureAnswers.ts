@@ -2,7 +2,7 @@
  * The answers both editor hosts must give for the shared Godot fixture project in
  * `scenes/language-features/`: the VS Code suites and the `tscn-lsp` end-to-end test read one
  * `answers.json` through this module, so a pass in both proves the two hosts agree (ADR-0049).
- * The JSON lies outside every package's `rootDir`, so it is read from disk, not imported.
+ * The JSON lies outside every package's `rootDir`, so this module reads it from disk.
  */
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -16,7 +16,7 @@ export type RangeTuple = [number, number, number, number];
 
 /**
  * A cursor in a project file: the line that starts with `line`, moved down `below` lines,
- * at one character inside `inside`, or just past `after`.
+ * at one character inside `inside`, or at the end of `after`.
  */
 export interface CursorSpec {
   readonly file: string;

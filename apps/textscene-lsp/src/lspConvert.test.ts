@@ -5,6 +5,7 @@ import {
   CompletionItemKind,
   DiagnosticSeverity,
   DocumentHighlightKind,
+  FoldingRangeKind,
   MarkupKind,
   SymbolKind,
 } from 'vscode-languageserver/node';
@@ -60,7 +61,7 @@ describe('toLspCompletion', () => {
     expect(item.deprecated).toBe(true);
   });
 
-  it('maps every remaining kind to a distinct icon', () => {
+  it('maps every remaining kind to its icon', () => {
     expect(toLspCompletion({ label: 'a', kind: 'resourceType' }).kind).toBe(CompletionItemKind.Struct);
     expect(toLspCompletion({ label: 'a', kind: 'property' }).kind).toBe(CompletionItemKind.Property);
     expect(toLspCompletion({ label: 'a', kind: 'resourceId' }).kind).toBe(CompletionItemKind.Reference);
@@ -120,7 +121,7 @@ describe('toLspFoldingRange', () => {
     expect(toLspFoldingRange({ startLine: 2, endLine: 6 })).toEqual({
       startLine: 2,
       endLine: 6,
-      kind: 'region',
+      kind: FoldingRangeKind.Region,
     });
   });
 });

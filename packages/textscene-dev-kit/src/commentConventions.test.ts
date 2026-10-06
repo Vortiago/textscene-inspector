@@ -20,8 +20,8 @@ const TRACKER_REF = [
 
 /**
  * The guard reads every source file in the repository, about 5000 files and 20 MB, so its time
- * is disk time and grows with the repository. Vitest's 5 s default suits a unit test, and a
- * loaded runner reading in parallel with every other suite went past it.
+ * is disk time and grows with the repository. Vitest's 5 s default suits a unit test, not a
+ * scan that shares the disk with every other suite on a loaded runner.
  */
 const REPO_SCAN_TIMEOUT_MS = 60_000;
 

@@ -110,7 +110,7 @@ export function toLspHighlight(highlight: DocumentHighlight): LspDocumentHighlig
   return { range: highlight.range, kind: DocumentHighlightKind.Text };
 }
 
-/** One core diagnostic, with a floored severity and its squiggle placed by core's `diagnosticRange`. */
+/** One core diagnostic, with a floored severity, and its squiggle where core's `diagnosticRange` puts it. */
 export function toLspDiagnostic(diagnostic: Diagnostic, document: TextDocument): LspDiagnostic {
   return {
     range: diagnosticRange(diagnostic, {

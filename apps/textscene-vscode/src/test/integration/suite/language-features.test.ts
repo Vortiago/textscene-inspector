@@ -15,6 +15,7 @@ import {
   removeGodotProject,
   writeGodotProject,
 } from '../helpers/godotProjectHelpers';
+import { hoverText } from '../../languageFeatures/sharedAnswersSuite.testkit';
 
 const PROJECT = 'language-features';
 
@@ -130,7 +131,7 @@ suite('Language Features', () => {
     );
   });
 
-  test('Hover on a node type names the class and its reference page', async () => {
+  test('Hover on a node type names the class', async () => {
     const hovers = await vscode.commands.executeCommand<vscode.Hover[]>(
       'vscode.executeHoverProvider',
       main.uri,
@@ -152,7 +153,7 @@ suite('Language Features', () => {
     assert.ok(!labels.includes('mesh'), 'a property already set is not offered');
   });
 
-  test('a quick fix repairs a property-name typo', async () => {
+  test('a property-name typo offers a quick fix with an edit', async () => {
     const typo = await openProjectDocument(PROJECT, 'typo.tscn');
     const line = lineStartingWith(typo, 'mash =');
     const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
@@ -165,16 +166,6 @@ suite('Language Features', () => {
     assert.ok(fix?.edit, 'a quick fix carries an edit');
   });
 });
-
-/** The plain text of a hover's contents, whichever shape the provider returned. */
-function hoverText(hovers: readonly vscode.Hover[]): string {
-  const parts = hovers.flatMap((hover) =>
-    Array.isArray(hover.contents) ? hover.contents : [hover.contents]
-  );
-  return parts
-    .map((part) => (typeof part === 'string' ? part : 'value' in part ? part.value : ''))
-    .join('\n');
-}
 
 /** Each symbol as `name: detail`, indented two spaces per level of nesting. */
 function outlineOf(symbols: readonly vscode.DocumentSymbol[], depth = 0): string[] {

@@ -46,7 +46,7 @@ async function main() {
   console.log(install.stdout.trim());
 
   // The second launch runs after a failed first one too, so one CI run reports both.
-  const firstLaunch = await settled(
+  const firstLaunch = await rejectionOf(
     relaunchIfHostExitsEarly(paths.suiteStartedMarker, () =>
       runTests({ ...installedLaunchOptions(paths), vscodeExecutablePath })
     )
@@ -63,7 +63,7 @@ async function main() {
 }
 
 /** The error `run` rejects with, or undefined when it resolves. */
-async function settled(run: Promise<unknown>): Promise<unknown> {
+async function rejectionOf(run: Promise<unknown>): Promise<unknown> {
   try {
     await run;
     return undefined;

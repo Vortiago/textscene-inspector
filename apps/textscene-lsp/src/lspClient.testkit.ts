@@ -8,12 +8,15 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const repoRoot = resolve(packageDir, '../..');
-export const serverPath = join(packageDir, 'dist', 'server.js');
+const serverPath = join(packageDir, 'dist', 'server.js');
 
 /** The command that builds `serverPath`, which each end-to-end file runs once in `beforeAll`. */
 export const BUILD_SERVER_COMMAND = 'pnpm --filter @textscene/lsp build';
+
+/** The blank line that ends a JSON-RPC header. */
+const HEADER_END = '\r\n\r\n';
 
 export interface RpcMessage {
   id?: number;
@@ -119,15 +122,15 @@ export class LspClient {
   private read(chunk: Buffer): void {
     this.buffer = Buffer.concat([this.buffer, chunk]);
     for (;;) {
-      const headerEnd = this.buffer.indexOf('\r\n\r\n');
+      const headerEnd = this.buffer.indexOf(HEADER_END);
       if (headerEnd === -1) return;
       const header = this.buffer.subarray(0, headerEnd).toString('ascii');
       const length = Number(/Content-Length:\s*(\d+)/i.exec(header)?.[1] ?? NaN);
+      const bodyStart = headerEnd + HEADER_END.length;
       if (Number.isNaN(length)) {
-        this.buffer = this.buffer.subarray(headerEnd + 4);
+        this.buffer = this.buffer.subarray(bodyStart);
         continue;
       }
-      const bodyStart = headerEnd + 4;
       if (this.buffer.length < bodyStart + length) return;
       const body = this.buffer.subarray(bodyStart, bodyStart + length).toString('utf8');
       this.buffer = this.buffer.subarray(bodyStart + length);

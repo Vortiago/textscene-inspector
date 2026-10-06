@@ -2,7 +2,7 @@
  * The tscn-lsp language server: LSP over stdio, with the core language features and linter
  * behind it. It serves any client (Neovim, Helix, Zed, Emacs, Sublime) the same hover,
  * completion, quick fixes, folding, symbols, navigation and diagnostics the VS Code extension
- * host process provides. It imports no React and no THREE, since both bundles are plain Node.
+ * host process provides. It imports no React and no THREE: the bundle runs in plain Node.
  */
 
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -68,14 +68,17 @@ const linter = new Linter();
 /** The client's root URI, the fallback project for a document with no file path. */
 let workspaceRoot: string | null = null;
 
-/** Each open document's project root, so a request does not walk the tree again. */
+/**
+ * Each open document's project root, so a request does not walk the tree again. Written by
+ * `rootForUri` and cleared on close.
+ */
 const rootByUri = new Map<string, Promise<string | null>>();
 /**
  * Each open document's model at its latest version, written by `modelOf` and cleared on
  * close. A client sends several requests per edit, and they share one parse.
  */
 const modelByUri = new Map<string, { readonly version: number; readonly model: LanguageDocument }>();
-/** Each document's pending debounced lint. */
+/** Written by `scheduleLint`, and cleared when the lint starts or the document closes. */
 const lintTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 function filePathOf(uri: string): string | null {
@@ -96,18 +99,19 @@ function workspaceRootOf(params: InitializeParams): string | null {
 }
 
 function rootForUri(uri: string): Promise<string | null> {
-  let root = rootByUri.get(uri);
-  if (root === undefined) {
-    const path = filePathOf(uri);
-    root =
-      path !== null
-        ? projectRootForFile(path)
-        : workspaceRoot !== null
-          ? projectRootForDir(workspaceRoot)
-          : Promise.resolve(null);
-    rootByUri.set(uri, root);
-  }
+  const cached = rootByUri.get(uri);
+  if (cached !== undefined) return cached;
+  const root = findProjectRoot(uri);
+  rootByUri.set(uri, root);
   return root;
+}
+
+/** The project of the document's file, or of the workspace for a document with no file path. */
+function findProjectRoot(uri: string): Promise<string | null> {
+  const path = filePathOf(uri);
+  if (path !== null) return projectRootForFile(path);
+  if (workspaceRoot !== null) return projectRootForDir(workspaceRoot);
+  return Promise.resolve(null);
 }
 
 /** The model a request reads, or undefined for a document the client never opened. */
@@ -121,15 +125,14 @@ function modelOf(uri: string): LanguageDocument | undefined {
   return model;
 }
 
-/** The file URL a `res://` link opens, or undefined for a path with no file in the project. */
-async function linkTarget(root: string | null, path: string): Promise<string | undefined> {
+/** The file URL a `res://` path names, or undefined for a path with no file in the project. */
+async function resPathFileUrl(root: string | null, path: string): Promise<string | undefined> {
   const file = root === null ? null : resolveResPath(root, path);
   return file !== null && (await isFile(file)) ? pathToFileURL(file).toString() : undefined;
 }
 
 function scheduleLint(document: TextDocument): void {
-  const existing = lintTimers.get(document.uri);
-  if (existing !== undefined) clearTimeout(existing);
+  cancelLint(document.uri);
   lintTimers.set(
     document.uri,
     setTimeout(() => {
@@ -137,6 +140,13 @@ function scheduleLint(document: TextDocument): void {
       void lintDocument(document);
     }, LINT_DEBOUNCE_MS)
   );
+}
+
+function cancelLint(uri: string): void {
+  const timer = lintTimers.get(uri);
+  if (timer === undefined) return;
+  clearTimeout(timer);
+  lintTimers.delete(uri);
 }
 
 /** Lint the document and push its diagnostics, unless a newer edit landed while the read ran. */
@@ -175,21 +185,13 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
   };
 });
 
-connection.onInitialized(() => {
-  // No dynamic registration: every capability is static.
-});
-
-connection.onShutdown(() => {
-  // Nothing to release: the linter keeps no handles.
-});
-
 connection.onExit(() => {
   process.exit(0);
 });
 
 connection.onCompletion(async (params): Promise<CompletionItem[] | null> => {
   const model = modelOf(params.textDocument.uri);
-  if (!model) return null;
+  if (model === undefined) return null;
   const listPaths = async (): Promise<readonly string[]> => {
     const root = await rootForUri(params.textDocument.uri);
     return root === null ? [] : listProjectPaths(root);
@@ -199,14 +201,14 @@ connection.onCompletion(async (params): Promise<CompletionItem[] | null> => {
 
 connection.onHover((params): Hover | null => {
   const model = modelOf(params.textDocument.uri);
-  if (!model) return null;
+  if (model === undefined) return null;
   const hover = hoverAt(model, params.position);
   return hover === undefined ? null : toLspHover(hover);
 });
 
 connection.onCodeAction((params): CodeAction[] | null => {
   const model = modelOf(params.textDocument.uri);
-  if (!model) return null;
+  if (model === undefined) return null;
   return codeActions(model, params.range).map((action) => toLspCodeAction(action, params.textDocument.uri));
 });
 
@@ -222,18 +224,15 @@ connection.onDocumentSymbol((params): DocumentSymbol[] | null => {
 
 connection.onDefinition(async (params): Promise<Location | null> => {
   const model = modelOf(params.textDocument.uri);
-  if (!model) return null;
+  if (model === undefined) return null;
 
   const declaration = declarationRangeAt(model, params.position);
   if (declaration !== undefined) return { uri: params.textDocument.uri, range: declaration };
 
   const occurrence = resPathAt(model, params.position);
   if (occurrence === undefined) return null;
-  const root = await rootForUri(params.textDocument.uri);
-  if (root === null) return null;
-  const file = resolveResPath(root, occurrence.path);
-  if (file === null || !(await isFile(file))) return null;
-  return { uri: pathToFileURL(file).toString(), range: FILE_START };
+  const target = await resPathFileUrl(await rootForUri(params.textDocument.uri), occurrence.path);
+  return target === undefined ? null : { uri: target, range: FILE_START };
 });
 
 connection.onDocumentHighlight((params) => {
@@ -243,13 +242,13 @@ connection.onDocumentHighlight((params) => {
 
 connection.onDocumentLinks(async (params): Promise<DocumentLink[]> => {
   const model = modelOf(params.textDocument.uri);
-  if (!model) return [];
+  if (model === undefined) return [];
   const root = await rootForUri(params.textDocument.uri);
   const links = resPathOccurrences(model);
   // One check per distinct path, all at once: a scene often names one file many times.
   const paths = [...new Set(links.map((link) => link.path))];
   const targetByPath = new Map(
-    await Promise.all(paths.map(async (path) => [path, await linkTarget(root, path)] as const))
+    await Promise.all(paths.map(async (path) => [path, await resPathFileUrl(root, path)] as const))
   );
   return links.map(({ path, range }) => {
     const target = targetByPath.get(path);
@@ -262,11 +261,7 @@ documents.onDidChangeContent((event) => {
 });
 
 documents.onDidClose((event) => {
-  const timer = lintTimers.get(event.document.uri);
-  if (timer !== undefined) {
-    clearTimeout(timer);
-    lintTimers.delete(event.document.uri);
-  }
+  cancelLint(event.document.uri);
   rootByUri.delete(event.document.uri);
   modelByUri.delete(event.document.uri);
   connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
