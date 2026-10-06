@@ -17,7 +17,8 @@ Follow [Build from source](README.md#build-from-source). `pnpm install` also ena
 
 ## Check it
 
-Run the AGENTS.md gates for your change. `pnpm validate` runs the full gate, as CI does.
+Run the AGENTS.md gates for your change. `pnpm check` runs the checks that the pre-push hook runs.
+`pnpm validate` runs the full gate, as CI does.
 
 ## Open the pull request
 

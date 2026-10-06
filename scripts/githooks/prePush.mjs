@@ -5,19 +5,15 @@
  * `FULL_VALIDATE=1 git push` runs the full `pnpm validate` instead, tests and packaging included.
  */
 
-import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import process from 'node:process';
-import { readTestsBeside } from './colocatedTests.mjs';
-import { isNegativeFixture } from './negativeFixtures.mjs';
-import { planChecks, STATIC_GATE } from './prePushPlan.mjs';
+import { parseNameStatus } from './changedFiles.mjs';
+import { git } from './git.mjs';
+import { planForFiles } from './planForFiles.mjs';
+import { runChecks } from './runChecks.mjs';
 
 /** Git writes this sha for a ref that does not exist on one side of the push. */
 const NO_SHA = /^0+$/;
-
-function git(...args) {
-  return execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-}
 
 function hasCommit(sha) {
   try {
@@ -49,39 +45,16 @@ function pushedFiles(stdin) {
     if (NO_SHA.test(localSha)) continue;
     const base = baseOf(localSha, remoteSha);
     if (base === undefined) return undefined;
-    for (const entry of git('diff', '--name-status', '--no-renames', base, localSha).split('\n')) {
-      const [status, path] = entry.split('\t');
-      if (!path) continue;
-      (status === 'D' ? deleted : changed).add(path);
-    }
+    const files = parseNameStatus(git('diff', '--name-status', '--no-renames', base, localSha));
+    files.changed.forEach((path) => changed.add(path));
+    files.deleted.forEach((path) => deleted.add(path));
   }
   return { changed: [...changed], deleted: [...deleted] };
 }
 
-function run(command) {
-  console.log(`pre-push: ${command.join(' ')}`);
-  const result = spawnSync(command[0], command.slice(1), { stdio: 'inherit' });
-  return result.status ?? 1;
-}
-
 function planPush() {
   if (process.env.FULL_VALIDATE === '1') return [['pnpm', 'validate']];
-  const files = pushedFiles(readFileSync(0, 'utf8'));
-  return files === undefined
-    ? STATIC_GATE
-    : planChecks({ ...files, isNegativeFixture, testsBeside: readTestsBeside });
+  return planForFiles(pushedFiles(readFileSync(0, 'utf8')));
 }
 
-function main() {
-  const plan = planPush();
-  if (plan.length === 0) console.log('pre-push: no check applies to these files. CI runs the full gate.');
-  for (const command of plan) {
-    const status = run(command);
-    if (status !== 0) {
-      process.exitCode = status;
-      return;
-    }
-  }
-}
-
-main();
+process.exitCode = runChecks('pre-push', planPush());
