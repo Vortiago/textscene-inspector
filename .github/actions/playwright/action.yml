@@ -1,0 +1,15 @@
+name: Set up Playwright's Chromium
+description: Restore or download the Chromium build of the locked Playwright, with no system packages.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+    # No --with-deps: ubuntu-latest already has every library Chromium loads. The flag adds only
+    # fonts and a Mesa upgrade, which no golden reads, for 15-24 s of apt in each job.
+    - run: npx playwright install chromium
+      shell: bash
