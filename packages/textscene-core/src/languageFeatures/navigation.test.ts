@@ -79,6 +79,22 @@ describe('resPathOccurrences', () => {
     expect(links[1]!.range.end.character).toBeGreaterThan(links[1]!.range.start.character);
   });
 
+  it('keeps a space in a path to its closing quote', () => {
+    const scene = new LanguageDocument(
+      '[ext_resource type="AudioStream" path="res://art/House In a Forest Loop.ogg" id="1"]\n'
+    );
+
+    expect(resPathOccurrences(scene).map((link) => link.path)).toEqual([
+      'res://art/House In a Forest Loop.ogg',
+    ]);
+  });
+
+  it('keeps a parenthesis in a path to its closing quote', () => {
+    const scene = new LanguageDocument('[ext_resource type="Texture2D" path="res://icon (1).png" id="1"]\n');
+
+    expect(resPathOccurrences(scene).map((link) => link.path)).toEqual(['res://icon (1).png']);
+  });
+
   it('gives an empty list for a document with no res:// path', () => {
     expect(resPathOccurrences(new LanguageDocument('[gd_scene format=3]\n'))).toEqual([]);
   });
