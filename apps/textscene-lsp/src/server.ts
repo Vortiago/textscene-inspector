@@ -148,7 +148,10 @@ function scheduleLint(document: TextDocument): void {
     document.uri,
     setTimeout(() => {
       lintTimers.delete(document.uri);
-      void lintDocument(document);
+      lintDocument(document).catch((error: unknown) => {
+        // Node ends the process on an unhandled rejection, which would end every open document's features.
+        connection.console.error(`[Lint] ${document.uri}: ${String(error)}`);
+      });
     }, LINT_DEBOUNCE_MS)
   );
 }
