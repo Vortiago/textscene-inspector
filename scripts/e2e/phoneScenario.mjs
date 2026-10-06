@@ -1,5 +1,5 @@
 /**
- * The phone scenario of the web-app E2E gate (ADR-0042). A portrait touch screen opens a 3D
+ * The phone scenario of the web-app E2E gate (ADR-0048). A portrait touch screen opens a 3D
  * fixture with no stored layout, and the gate reads the layout back from outside: the
  * viewport over a bottom sheet, one half of the sheet at a time, and no sideways scroll.
  */

@@ -9,7 +9,7 @@ renders_as: an offscreen render target, plus a boundary that scopes its canvas s
 
 # SubViewport
 
-A Viewport that renders its subtree into an offscreen target for a `ViewportTexture` to sample (ADR-0030). It draws nothing itself. Its Node3D descendants still draw in the parent's 3D view unless `own_world_3d` is set, and its CanvasItem descendants draw only in the target. A Control-only subtree renders through its own WebGL pass. Each target keeps its own positional shadow atlas, sized by `positional_shadow_atlas_size` and the four `positional_shadow_atlas_quad_*` keys, as each Godot viewport does.
+A Viewport that renders its subtree into an offscreen target for a `ViewportTexture` to sample (ADR-0033). It draws nothing itself. Its Node3D descendants still draw in the parent's 3D view unless `own_world_3d` is set, and its CanvasItem descendants draw only in the target. A Control-only subtree renders through its own WebGL pass. Each target keeps its own positional shadow atlas, sized by `positional_shadow_atlas_size` and the four `positional_shadow_atlas_quad_*` keys, as each Godot viewport does.
 
 ## Linting
 

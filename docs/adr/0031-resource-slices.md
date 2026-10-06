@@ -1,7 +1,7 @@
 # Resource decoding is organized as resource slices over one parsed form
 
 - Status: Accepted
-- Related: ADR-0001 (unified slice, React-free linter), ADR-0032 (sub-resource paths),
+- Related: ADR-0001 (unified slice, React-free linter), ADR-0046 (sub-resource paths),
   ADR-0028 (import sidecars), issue #110 (binary `.scn`/`.res`).
 
 ## Context

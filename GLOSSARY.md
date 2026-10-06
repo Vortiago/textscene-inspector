@@ -47,7 +47,7 @@ An embedded resource, written `SubResource("id")` and declared by a `[sub_resour
 _Avoid_: "asset", "inline resource".
 
 **Sub-resource path** (`resources/subResourcePath.ts`):
-`res://file.tres::SubId`: Godot's notation for a **SubResource** of a `.tres` other than the previewed scene (ADR-0032).
+`res://file.tres::SubId`: Godot's notation for a **SubResource** of a `.tres` other than the previewed scene (ADR-0046).
 The whole address is the resource identity, and only its `filePath` half reaches the byte layer, because only real files can be fetched.
 _Avoid_: "composite path", "synthetic path". A `fetch` of the whole address.
 
@@ -464,7 +464,7 @@ _Avoid_: this lifecycle for the **AnimationTree driver**.
 ## Relationships
 
 - A **SceneGraph** holds **Node**s, and its roots feed the **NodeDispatcher**. In 2D **viewport mode**, the **ControlCanvasWalker** draws Control subtrees in the same canvas.
-- A **Node** references **ExtResource**s and **SubResource**s by id, and the **resource event bus** resolves a `.tres`'s own SubResources under a **Sub-resource path** (ADR-0032).
+- A **Node** references **ExtResource**s and **SubResource**s by id, and the **resource event bus** resolves a `.tres`'s own SubResources under a **Sub-resource path** (ADR-0046).
 - A **CollisionShape3D** Node references one **collision-shape resource**, which the **collision gizmo** draws.
 - The three registries (**NodeRegistry**, **NodeComponentRegistry**, **ControlComponentRegistry**) share `typeName` keys but stay separate to keep the **React-free linter boundary**.
 - A **vertical slice** exposes its behaviour through three **slice entry points**, one per registry domain.
