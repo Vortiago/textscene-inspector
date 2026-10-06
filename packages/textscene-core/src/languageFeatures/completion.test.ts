@@ -189,4 +189,83 @@ describe('completionsAt', () => {
     await completionsAt(document, { line: 2, character: document.lines[2]!.length }, { listPaths });
     expect(listPaths).toHaveBeenCalledTimes(1);
   });
+
+  describe('the typed text each item replaces', () => {
+    function rangeAt(line: number, start: number, end: number) {
+      return { start: { line, character: start }, end: { line, character: end } };
+    }
+
+    it('replaces the res:// text typed so far, which a word boundary would split at / and :', async () => {
+      const line = 'metadata/path = "res://art/"';
+      const document = new LanguageDocument(['[node name="R" type="Node"]', line].join('\n'));
+      const cursor = line.indexOf('art/') + 'art/'.length;
+      const [item] = await completionsAt(
+        document,
+        { line: 1, character: cursor },
+        { listPaths: async () => ['res://art/a.png'] }
+      );
+      expect(item?.replaces).toEqual(rangeAt(1, line.indexOf('res://'), cursor));
+    });
+
+    it('replaces the parent path typed so far', async () => {
+      const heading = '[node name="Hand" type="Node3D" parent="Body/A"]';
+      const document = new LanguageDocument(
+        ['[node name="Root" type="Node3D"]', '[node name="Body" type="Node3D" parent="."]', heading].join(
+          '\n'
+        )
+      );
+      const cursor = heading.indexOf('Body/A') + 'Body/A'.length;
+      const items = await completionsAt(document, { line: 2, character: cursor });
+      expect(items.map((item) => item.replaces)).toEqual(
+        items.map(() => rangeAt(2, heading.indexOf('Body/A'), cursor))
+      );
+    });
+
+    it('replaces the resource id typed so far', async () => {
+      const line = 'mesh = SubResource("Bo")';
+      const document = new LanguageDocument(
+        ['[sub_resource type="BoxMesh" id="Box_1"]', '[node name="R" type="MeshInstance3D"]', line].join('\n')
+      );
+      const cursor = line.indexOf('Bo') + 2;
+      const [item] = await completionsAt(document, { line: 2, character: cursor });
+      expect(item?.replaces).toEqual(rangeAt(2, line.indexOf('Bo'), cursor));
+    });
+
+    it('replaces the key typed so far, a slash in it included', async () => {
+      const line = 'surface_material_override/';
+      const document = new LanguageDocument(
+        ['[node name="R" type="MeshInstance3D"]', 'mesh = null', line].join('\n')
+      );
+      const [item] = await completionsAt(document, { line: 2, character: line.length });
+      expect(item?.replaces).toEqual(rangeAt(2, 0, line.length));
+    });
+
+    it('replaces the start of a key on a line that already has its =', async () => {
+      const document = new LanguageDocument(
+        ['[node name="R" type="MeshInstance3D"]', 'mesh = null'].join('\n')
+      );
+      const [item] = await completionsAt(document, { line: 1, character: 2 });
+      expect(item?.replaces).toEqual(rangeAt(1, 0, 2));
+    });
+
+    it('keeps the indent before a key being typed', async () => {
+      const line = '  surface_';
+      const document = new LanguageDocument(
+        ['[node name="R" type="MeshInstance3D"]', 'mesh = null', line].join('\n')
+      );
+      const [item] = await completionsAt(document, { line: 2, character: line.length });
+      expect(item?.replaces).toEqual(rangeAt(2, 2, line.length));
+    });
+
+    it('leaves an enum value without a range, since its insert text is not its label', async () => {
+      const document = new LanguageDocument(SCENE);
+      const text = document.lines[LINE.rootProperty - 1]!;
+      const items = await completionsAt(document, {
+        line: LINE.rootProperty - 1,
+        character: text.indexOf('=') + 2,
+      });
+      expect(items.length).toBeGreaterThan(0);
+      expect(items.every((item) => item.replaces === undefined)).toBe(true);
+    });
+  });
 });

@@ -10,7 +10,7 @@ import { cpSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } fr
 import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { CompletionItemKind, SymbolKind } from 'vscode-languageserver/node';
+import { CompletionItemKind, SymbolKind, type Range } from 'vscode-languageserver/node';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { cursorIn, loadAnswers, rangeTuple, sortedRanges, type CursorSpec } from '@textscene/dev-kit';
 import { FIXTURE_DIR, PROJECT_DIR, projectText } from './languageFeatureAnswers.testkit';
@@ -216,10 +216,9 @@ describe('tscn-lsp gives the shared answers for the fixture project', () => {
       `completion: ${answer.name}`,
       () =>
         inProject(async (client) => {
-          const items = await client.result<Array<{ label: string; kind?: number }>>(
-            'textDocument/completion',
-            openAt(client, answer.at)
-          );
+          const items = await client.result<
+            Array<{ label: string; kind?: number; textEdit?: { range: Range } }>
+          >('textDocument/completion', openAt(client, answer.at));
           const labels = labelsOf(items);
           if (answer.kind) {
             const kind = kindNamed(CompletionItemKind as unknown as Record<string, number>, answer.kind);
@@ -228,6 +227,11 @@ describe('tscn-lsp gives the shared answers for the fixture project', () => {
           if (answer.exactly) expect([...labels].sort()).toEqual([...answer.exactly].sort());
           for (const label of answer.includes ?? []) expect(labels).toContain(label);
           for (const label of answer.excludes ?? []) expect(labels).not.toContain(label);
+          if (answer.replaces) {
+            expect(items.map((item) => item.textEdit && rangeTuple(item.textEdit.range))).toEqual(
+              items.map(() => answer.replaces)
+            );
+          }
         }),
       SERVER_TIMEOUT_MS
     );

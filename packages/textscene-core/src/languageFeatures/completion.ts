@@ -142,32 +142,62 @@ function declaredValueItems(location: PropertyLocation): readonly CompletionItem
   return enums.length > 0 ? enums : booleanItems(declared);
 }
 
+/**
+ * The items, each marked to replace the text from `start` to the cursor. A host that guesses the
+ * word to replace splits it at `/` or `:`, so a path, a node path or a key would double.
+ */
+function replacing(
+  items: readonly CompletionItem[],
+  position: Position,
+  start: number
+): readonly CompletionItem[] {
+  const replaces = { start: { line: position.line, character: start }, end: position };
+  return items.map((item) => ({ ...item, replaces }));
+}
+
 /** The project paths that start with the `res://` text the cursor ends, or none. */
 async function resPathItemsAt(
   textBeforeCursor: string,
+  position: Position,
   context: CompletionContext | undefined
 ): Promise<readonly CompletionItem[]> {
   const prefix = /res:\/\/[^"]*$/.exec(textBeforeCursor)?.[0];
   if (!context?.listPaths || prefix === undefined) return [];
-  return pathItems(context.listPaths, prefix);
+  return replacing(await pathItems(context.listPaths, prefix), position, position.character - prefix.length);
+}
+
+/** The ids an open `ExtResource("…")` or `SubResource("…")` before the cursor may name, or undefined. */
+function referenceItemsAt(
+  document: LanguageDocument,
+  textBeforeCursor: string,
+  position: Position
+): readonly CompletionItem[] | undefined {
+  const reference = openReferenceAt(textBeforeCursor);
+  if (!reference) return undefined;
+  const items = resourceIdItems(document, reference.kind, reference.id);
+  return replacing(items, position, position.character - reference.id.length);
 }
 
 async function valueItems(
   document: LanguageDocument,
   location: PropertyLocation,
   textBeforeCursor: string,
+  position: Position,
   context: CompletionContext | undefined
 ): Promise<readonly CompletionItem[]> {
-  const reference = openReferenceAt(textBeforeCursor);
-  if (reference) return resourceIdItems(document, reference.kind, reference.id);
+  const ids = referenceItemsAt(document, textBeforeCursor, position);
+  if (ids) return ids;
   const declaredValues = declaredValueItems(location);
   if (declaredValues.length > 0) return declaredValues;
-  return resPathItemsAt(textBeforeCursor, context);
+  return resPathItemsAt(textBeforeCursor, position, context);
 }
 
-function isOnHeadingAttribute(line: string, key: string, character: number): boolean {
+/** Where the value of the heading attribute under the cursor starts, or undefined off it. */
+function headingValueStartAt(line: string, key: string, character: number): number | undefined {
   const attribute = headingAttribute(line, key);
-  return attribute !== undefined && spanContains(attribute.span, character);
+  return attribute !== undefined && spanContains(attribute.span, character)
+    ? attribute.span.start
+    : undefined;
 }
 
 /**
@@ -178,15 +208,30 @@ async function headingItems(
   document: LanguageDocument,
   section: DocumentSection,
   line: string,
-  character: number,
+  position: Position,
   context: CompletionContext | undefined
 ): Promise<readonly CompletionItem[]> {
-  if (isOnHeadingAttribute(line, 'type', character)) return classNameItems(section);
-  if (isOnHeadingAttribute(line, 'parent', character)) return parentItems(document, section.headingLine);
-  const textBeforeCursor = line.slice(0, character);
-  const reference = openReferenceAt(textBeforeCursor);
-  if (reference) return resourceIdItems(document, reference.kind, reference.id);
-  return resPathItemsAt(textBeforeCursor, context);
+  const typeStart = headingValueStartAt(line, 'type', position.character);
+  if (typeStart !== undefined) return replacing(classNameItems(section), position, typeStart);
+  const parentStart = headingValueStartAt(line, 'parent', position.character);
+  if (parentStart !== undefined) {
+    return replacing(parentItems(document, section.headingLine), position, parentStart);
+  }
+  const textBeforeCursor = line.slice(0, position.character);
+  return (
+    referenceItemsAt(document, textBeforeCursor, position) ??
+    resPathItemsAt(textBeforeCursor, position, context)
+  );
+}
+
+/** The keys for a line that holds only a key being typed, replacing it from its first character. */
+function partialKeyItems(
+  section: DocumentSection,
+  line: string,
+  position: Position
+): readonly CompletionItem[] {
+  if (!PARTIAL_KEY_RE.test(line)) return [];
+  return replacing(keyItems(section), position, line.length - line.trimStart().length);
 }
 
 /**
@@ -203,15 +248,15 @@ export async function completionsAt(
   const documentLine = position.line + 1;
   const section = document.sectionAt(documentLine);
   if (!section) return [];
-  if (section.headingLine === documentLine) {
-    return headingItems(document, section, line, position.character, context);
-  }
+  if (section.headingLine === documentLine) return headingItems(document, section, line, position, context);
 
   const location = document.propertyAt(documentLine);
-  if (!location) return PARTIAL_KEY_RE.test(line) ? keyItems(section) : [];
+  if (!location) return partialKeyItems(section, line, position);
 
   const isOnFirstLine = location.property.startLine === documentLine;
   const key = propertyKeySpan(line);
-  if (isOnFirstLine && key && position.character <= key.span.end) return keyItems(location.section);
-  return valueItems(document, location, line.slice(0, position.character), context);
+  if (isOnFirstLine && key && position.character <= key.span.end) {
+    return replacing(keyItems(location.section), position, key.span.start);
+  }
+  return valueItems(document, location, line.slice(0, position.character), position, context);
 }

@@ -48,6 +48,22 @@ describe('toLspCompletion', () => {
     });
   });
 
+  it('turns the range an item replaces into a text edit', () => {
+    const replaces = { start: { line: 1, character: 8 }, end: { line: 1, character: 18 } };
+    const item = toLspCompletion({
+      label: 'res://art/a.png',
+      kind: 'path',
+      insertText: 'res://art/a.png',
+      replaces,
+    });
+
+    expect(item.textEdit).toEqual({ range: replaces, newText: 'res://art/a.png' });
+  });
+
+  it('gives an item with no range no text edit', () => {
+    expect(toLspCompletion({ label: 'true', kind: 'value' }).textEdit).toBeUndefined();
+  });
+
   it('keeps an explicit insertText and carries the deprecated mark', () => {
     const item = toLspCompletion({
       label: 'true',

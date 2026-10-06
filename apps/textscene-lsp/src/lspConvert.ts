@@ -57,15 +57,20 @@ const DIAGNOSTIC_SEVERITY: Record<Severity, DiagnosticSeverity> = {
   info: DiagnosticSeverity.Information,
 };
 
-/** One core completion, with its kind mapped and its label as the default insert text. */
+/**
+ * One core completion, with its kind mapped and its label as the default insert text. A range the
+ * item replaces becomes a text edit, which a client applies in place of its own guess at the word.
+ */
 export function toLspCompletion(item: CompletionItem): LspCompletionItem {
+  const newText = item.insertText ?? item.label;
   return {
     label: item.label,
     kind: COMPLETION_KIND[item.kind],
     detail: item.detail,
     documentation: item.documentation,
-    insertText: item.insertText ?? item.label,
+    insertText: newText,
     deprecated: item.deprecated,
+    ...(item.replaces ? { textEdit: { range: item.replaces, newText } } : {}),
   };
 }
 

@@ -117,7 +117,8 @@
         "line": "albedo_texture = ",
         "after": "ExtResource(\""
       },
-      "exactly": ["1_grid"]
+      "exactly": ["1_grid"],
+      "replaces": [8, 30, 8, 30]
     },
     {
       "name": "a res:// value offers project files, but not .godot, a nested project or a .gdignore directory",
@@ -134,7 +135,8 @@
         "res://missing.tscn",
         "res://project.godot",
         "res://textures/grid.png"
-      ]
+      ],
+      "replaces": [15, 25, 15, 31]
     }
   ],
   "definition": [

@@ -42,4 +42,17 @@ describe('TscnCompletionItemProvider', () => {
     );
     expect(items.map((item) => item.label)).toEqual(['res://scenes/Door.tscn']);
   });
+
+  it('replaces the res:// text typed so far, not the word VS Code would pick', async () => {
+    const listing = { pathsFor: async () => ['res://art/a.png'] };
+    const line = 'mesh = "res://art/"';
+    const cursor = line.indexOf('art/') + 'art/'.length;
+    const items = await new TscnCompletionItemProvider(listing).provideCompletionItems(
+      createMockDocument(['[node name="M" type="MeshInstance3D"]', line].join('\n')),
+      new vscode.Position(1, cursor),
+      TOKEN,
+      CONTEXT
+    );
+    expect(items[0]?.range).toEqual(new vscode.Range(1, line.indexOf('res://'), 1, cursor));
+  });
 });

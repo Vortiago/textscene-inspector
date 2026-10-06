@@ -226,6 +226,7 @@ export class MockCompletionItem {
   documentation?: any;
   insertText?: any;
   tags?: number[];
+  range?: any;
 
   constructor(
     public label: string,

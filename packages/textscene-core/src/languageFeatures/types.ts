@@ -31,6 +31,8 @@ export interface CompletionItem {
   readonly insertText?: string;
   /** A deprecated property spelling, shown struck through. */
   readonly deprecated?: boolean;
+  /** The typed text the item replaces, up to the cursor. Absent, the host picks the word at the cursor. */
+  readonly replaces?: Range;
 }
 
 /** Hover content and the range it applies to. */

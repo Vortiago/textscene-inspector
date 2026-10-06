@@ -12,6 +12,7 @@ import {
   type CompletionKind,
 } from '@textscene/core/languageFeatures';
 import { languageDocumentOf } from './languageDocumentOf';
+import { toVscodeRange } from './languageFeatureRanges';
 
 /** The icon for each engine completion kind. A `Record`, so a new kind does not compile until it has one. */
 const COMPLETION_KIND: Record<CompletionKind, vscode.CompletionItemKind> = {
@@ -30,6 +31,7 @@ function toCompletionItem(item: EngineCompletionItem): vscode.CompletionItem {
   if (item.documentation) completion.documentation = new vscode.MarkdownString(item.documentation);
   if (item.insertText) completion.insertText = item.insertText;
   if (item.deprecated) completion.tags = [vscode.CompletionItemTag.Deprecated];
+  if (item.replaces) completion.range = toVscodeRange(item.replaces);
   return completion;
 }
 

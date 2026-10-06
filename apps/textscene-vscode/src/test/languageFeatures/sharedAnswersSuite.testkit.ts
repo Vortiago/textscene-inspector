@@ -142,6 +142,12 @@ export function defineSharedAnswersSuite(projectDir: string): void {
         for (const label of answer.includes ?? []) assert.ok(labels.includes(label), `${label} is offered`);
         for (const label of answer.excludes ?? [])
           assert.ok(!labels.includes(label), `${label} is not offered`);
+        if (answer.replaces) {
+          assert.deepStrictEqual(
+            list.items.map((item) => item.range instanceof vscode.Range && rangeTuple(item.range)),
+            list.items.map(() => answer.replaces)
+          );
+        }
       });
     }
 

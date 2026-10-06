@@ -41,6 +41,8 @@ export interface LanguageFeatureAnswers {
       readonly exactly?: readonly string[];
       /** The completion item kind of every item, by its name in either host's enum. */
       readonly kind?: string;
+      /** The range every item replaces: the typed text up to the cursor. */
+      readonly replaces?: RangeTuple;
     }
   >;
   readonly definition: ReadonlyArray<
