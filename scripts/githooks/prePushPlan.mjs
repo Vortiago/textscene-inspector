@@ -43,6 +43,18 @@ const REPOSITORY_TYPE_CHECKS = [
 export const STATIC_GATE = [['pnpm', 'format:check'], ['pnpm', 'lint'], ...REPOSITORY_TYPE_CHECKS];
 
 /**
+ * The packages whose `type-check:tests` project holds every file of their `type-check` project,
+ * with options no looser, so the push runs only the tests one. CI runs both. The web previewer is
+ * not one: its tests project widens `rootDir`. The extension is not one: its unit-tests project
+ * leaves out `src/test/`.
+ */
+const TESTS_PROJECT_COVERS_SOURCES = [
+  'packages/textscene-core',
+  'packages/textscene-dev-kit',
+  'apps/textscene-linter',
+];
+
+/**
  * The type checks for the typed files `typed`: those of each package that holds one, and of every
  * package that depends on it. A typed file outside a package type-checks the whole repository.
  * The packages build first, because each dependent reads the declarations a build emits.
@@ -51,9 +63,10 @@ function typeChecksFor(typed) {
   const packageDirs = typed.map((path) => WORKSPACE_PACKAGE.exec(path)?.[0]);
   if (packageDirs.includes(undefined)) return REPOSITORY_TYPE_CHECKS;
   const filters = [...new Set(packageDirs)].flatMap((dir) => ['--filter', `...{./${dir}}`]);
+  const coveredByTests = TESTS_PROJECT_COVERS_SOURCES.flatMap((dir) => ['--filter', `!./${dir}`]);
   return [
     ['pnpm', '--filter', './packages/*', 'build'],
-    ['pnpm', ...filters, 'type-check'],
+    ['pnpm', ...filters, ...coveredByTests, 'type-check'],
     ['pnpm', ...filters, 'type-check:tests'],
   ];
 }
