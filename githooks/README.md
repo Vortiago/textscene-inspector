@@ -25,8 +25,8 @@ Prettier config, or a hook) runs the static checks over the whole repository: `f
 files. A push that changes only files no check reads runs nothing. `FULL_VALIDATE=1 git push` runs
 the full `pnpm validate`.
 
-The hook stops at the first check that fails. Below the tool's output, it prints the name of the
-check, the command that reruns that check, and `pnpm check`.
+The hook stops at the first check that fails. Below the tool's output, it prints the command that
+reruns that check, and `pnpm check`, which reruns every check.
 
 eslint and Prettier check only the files that changed since their last run. eslint keeps its cache
 in `.eslintcache`, and Prettier keeps its cache in `node_modules/.cache/prettier/`. Each tool

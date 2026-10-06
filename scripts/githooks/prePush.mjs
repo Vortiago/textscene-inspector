@@ -7,9 +7,7 @@
 
 import { readFileSync } from 'node:fs';
 import process from 'node:process';
-import { parseNameStatus } from './changedFiles.mjs';
-import { git } from './git.mjs';
-import { planForFiles } from './planForFiles.mjs';
+import { git, mergeBaseWithMain, parseNameStatus, planForFiles } from './changes.mjs';
 import { runChecks } from './runChecks.mjs';
 
 /** Git writes this sha for a ref that does not exist on one side of the push. */
@@ -28,12 +26,7 @@ function hasCommit(sha) {
 /** The commit a pushed ref is compared against, or undefined when none is known. */
 function baseOf(localSha, remoteSha) {
   if (!NO_SHA.test(remoteSha) && hasCommit(remoteSha)) return remoteSha;
-  try {
-    return git('merge-base', localSha, 'origin/main');
-  } catch {
-    // No origin/main in this clone: the caller runs the static checks over the whole repository.
-    return undefined;
-  }
+  return mergeBaseWithMain(localSha);
 }
 
 /** The changed and deleted paths of the push, or undefined when a base is missing. */
@@ -52,9 +45,9 @@ function pushedFiles(stdin) {
   return { changed: [...changed], deleted: [...deleted] };
 }
 
-function planPush() {
-  if (process.env.FULL_VALIDATE === '1') return [['pnpm', 'validate']];
-  return planForFiles(pushedFiles(readFileSync(0, 'utf8')));
+if (process.env.FULL_VALIDATE === '1') {
+  process.exitCode = runChecks('pre-push', [['pnpm', 'validate']]);
+} else {
+  const plan = planForFiles(pushedFiles(readFileSync(0, 'utf8')));
+  process.exitCode = runChecks('pre-push', plan, 'pnpm check');
 }
-
-process.exitCode = runChecks('pre-push', planPush());

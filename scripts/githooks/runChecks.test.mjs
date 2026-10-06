@@ -1,24 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { checkName, commandLine, failureSummary, runChecks } from './runChecks.mjs';
-
-describe('checkName', () => {
-  it('names a pnpm script', () => {
-    expect(checkName(['pnpm', 'type-check:all'])).toBe('type-check:all');
-  });
-
-  it('names the tool behind a launcher', () => {
-    expect(checkName(['npx', 'eslint', '--cache', 'a.ts'])).toBe('eslint');
-    expect(checkName(['pnpm', 'exec', 'prettier', '--cache', '--check', 'a.ts'])).toBe('prettier');
-  });
-
-  it('skips a filter and its value', () => {
-    expect(checkName(['pnpm', '--filter', '...{./apps/web}', 'type-check'])).toBe('type-check');
-  });
-
-  it('falls back to the whole command when every argument is a launcher', () => {
-    expect(checkName(['pnpm', 'exec'])).toBe('pnpm exec');
-  });
-});
+import { commandLine, runChecks } from './runChecks.mjs';
 
 describe('commandLine', () => {
   it('leaves plain arguments bare', () => {
@@ -36,23 +17,6 @@ describe('commandLine', () => {
   });
 });
 
-describe('failureSummary', () => {
-  it('names the failed check, its rerun command and pnpm check', () => {
-    const summary = failureSummary('pre-push', {
-      command: ['npx', 'eslint', '--cache', 'a.ts'],
-      position: 2,
-      total: 5,
-      outcome: 'exit status 1',
-    });
-    expect(summary.split('\n')).toEqual([
-      '',
-      'pre-push: FAILED check 2 of 5: eslint (exit status 1)',
-      'pre-push: rerun this check with: npx eslint --cache a.ts',
-      'pre-push: rerun every push check on your working tree with: pnpm check',
-    ]);
-  });
-});
-
 describe('runChecks', () => {
   afterEach(() => vi.restoreAllMocks());
 
@@ -60,22 +24,29 @@ describe('runChecks', () => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
     return vi.spyOn(console, 'error').mockImplementation(() => {});
   };
+  const exitWith = (status) => [process.execPath, '-e', `process.exit(${status})`];
 
   it('returns 0 when every check passes', () => {
     const error = silence();
-    expect(runChecks('t', [[process.execPath, '-e', '']])).toBe(0);
+    expect(runChecks('t', [exitWith(0)])).toBe(0);
     expect(error).not.toHaveBeenCalled();
   });
 
-  it('stops at the first failed check and returns its status', () => {
+  it('stops at the first failed check and prints the command that reruns it', () => {
     const error = silence();
-    const plan = [
-      [process.execPath, '-e', 'process.exit(3)'],
-      [process.execPath, '-e', 'process.exit(4)'],
-    ];
-    expect(runChecks('t', plan)).toBe(3);
+    expect(runChecks('t', [exitWith(3), exitWith(4)])).toBe(3);
     expect(error).toHaveBeenCalledOnce();
-    expect(error.mock.calls[0][0]).toContain('t: FAILED check 1 of 2');
+    expect(error.mock.calls[0][0].split('\n')).toEqual([
+      '',
+      't: FAILED check 1 of 2 (exit status 3). Rerun it with:',
+      `  ${commandLine(exitWith(3))}`,
+    ]);
+  });
+
+  it('offers the command that reruns every check when the caller gives one', () => {
+    const error = silence();
+    runChecks('t', [exitWith(1)], 'pnpm check');
+    expect(error.mock.calls[0][0]).toContain('t: rerun every check with: pnpm check');
   });
 
   it('passes a path with a space and an ampersand as one argument', () => {
@@ -92,8 +63,6 @@ describe('runChecks', () => {
   it('reports a command that cannot start', () => {
     const error = silence();
     expect(runChecks('t', [['textscene-no-such-command']])).toBe(1);
-    expect(error.mock.calls[0][0]).toMatch(
-      /FAILED check 1 of 1: textscene-no-such-command \((did not start|exit status)/
-    );
+    expect(error.mock.calls[0][0]).toContain('FAILED check 1 of 1 (did not start');
   });
 });

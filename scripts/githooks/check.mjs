@@ -6,19 +6,8 @@
  */
 
 import process from 'node:process';
-import { parseNameStatus } from './changedFiles.mjs';
-import { git } from './git.mjs';
-import { planForFiles } from './planForFiles.mjs';
+import { git, mergeBaseWithMain, parseNameStatus, planForFiles } from './changes.mjs';
 import { runChecks } from './runChecks.mjs';
-
-function mergeBase() {
-  try {
-    return git('merge-base', 'HEAD', 'origin/main');
-  } catch {
-    console.log('check: no origin/main in this clone, so the static checks run over the whole repository.');
-    return undefined;
-  }
-}
 
 /** The changed and deleted paths of the working tree against `base`. Untracked files count as changed. */
 function workingTreeFiles(base) {
@@ -27,5 +16,8 @@ function workingTreeFiles(base) {
   return { changed: [...changed, ...untracked.filter((path) => path !== '')], deleted };
 }
 
-const base = mergeBase();
+const base = mergeBaseWithMain('HEAD');
+if (base === undefined) {
+  console.log('check: no origin/main in this clone, so the static checks run over the whole repository.');
+}
 process.exitCode = runChecks('check', planForFiles(base && workingTreeFiles(base)));
