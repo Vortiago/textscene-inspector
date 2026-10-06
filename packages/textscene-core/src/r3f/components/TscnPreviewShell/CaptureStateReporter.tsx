@@ -13,7 +13,7 @@ import { PENDING_CAPTURE, previewCaptureStateOf, type PreviewCaptureState } from
 const NO_SUBSCRIPTION = () => () => {};
 const NO_HANDLER = () => false;
 
-export function ScreenshotRequestBridge({
+export function CaptureStateReporter({
   onCaptureStateChange,
   viewportError,
 }: {

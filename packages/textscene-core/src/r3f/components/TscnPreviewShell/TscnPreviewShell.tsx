@@ -36,7 +36,7 @@ import { AnimationTabWatcher } from './AnimationTabWatcher.js';
 import { DetailTabs, type DetailTab } from './DetailTabs.js';
 import { SceneTreePane } from './SceneTreePane.js';
 import { previewShellProviders } from './previewShellProviders.js';
-import { ScreenshotRequestBridge } from './ScreenshotRequestBridge.js';
+import { CaptureStateReporter } from './CaptureStateReporter.js';
 import type { TscnPreviewShellProps } from './previewShellProps.js';
 import styles from './TscnPreviewShell.module.css';
 
@@ -118,7 +118,7 @@ export function TscnPreviewShell({
       {initialViewportMode === undefined && <WorkspaceAutoSelect sceneGraph={sceneGraph} />}
       <SceneChangeResetter sceneGraph={sceneGraph} />
       <AnimationTabWatcher onVisibleChange={setAnimationTabVisible} />
-      <ScreenshotRequestBridge onCaptureStateChange={onCaptureStateChange} viewportError={viewportError} />
+      <CaptureStateReporter onCaptureStateChange={onCaptureStateChange} viewportError={viewportError} />
       <EscapeDeselect />
       <div className={styles.shell} data-panel-id={panelId}>
         <header className={styles.topBar}>

@@ -21,8 +21,7 @@ const REACT_AND_THREE_IMPORTS = [
 
 /**
  * Core feeds browser bundles (the web previewer, the webview, the vscode.dev extension), so only
- * `resources/diskProject.ts` may read the disk. The `tscn-lint` CLI and the `tscn-lsp` server
- * are the only modules that import it.
+ * `resources/diskProject.ts` may read the disk.
  */
 const NODE_ONLY_MESSAGE =
   'Core ships to the browser: only resources/diskProject.ts may use Node built-ins, and only the tscn-lint CLI and the tscn-lsp server may import it.';

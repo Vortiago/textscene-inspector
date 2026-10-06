@@ -1,6 +1,6 @@
 /**
- * A project's files by extension, for a host that reads its directories itself: the walk Godot's editor scan makes
- * (`godot/editorScan.ts`), over a directory reader the host supplies.
+ * A project's files, all of them or by extension, for a host that reads its directories itself: the walk Godot's
+ * editor scan makes (`godot/editorScan.ts`), over a directory reader the host supplies.
  */
 
 import { SCAN_STOP_FILES, isScannedDirectoryName } from '../godot/index.js';
@@ -24,8 +24,8 @@ function childPath(directory: string, name: string): string {
 
 /**
  * The `res://` path of every file under `res://` whose extension is `extension`, in any case, in the directories the
- * scan enters. No extension lists every file. A sub-directory that holds a {@link SCAN_STOP_FILES} file is skipped
- * whole.
+ * scan enters, or of every file when `extension` is absent. The scan skips a sub-directory that holds a
+ * {@link SCAN_STOP_FILES} file.
  */
 export async function listScannedFiles(
   readDirectory: DirectoryReader,

@@ -15,8 +15,8 @@ import { ResourceLoader } from '@textscene/core';
 import { R3FApp } from './r3f-main';
 import { WebResourceProvider } from './providers/WebResourceProvider';
 import { fixtures } from './fixturesAll';
-import { buildFixtureTree } from './fixtureTreeModel';
-import { flattenLeaves, type Leaf } from './fixtureTreeModel.testkit';
+import { buildFixtureTree, type SceneLeaf } from './fixtureTreeModel';
+import { flattenLeaves } from './fixtureTreeModel.testkit';
 
 /** A vendored demo fixture, whose corpus root differs from the base ('') one. */
 const DEMO = fixtures.find((f) => f.root) as (typeof fixtures)[number];
@@ -27,7 +27,7 @@ const [BASE, BASE_OTHER] = fixtures.filter((f) => !f.root) as [
 ];
 
 const leaves = flattenLeaves(buildFixtureTree(fixtures));
-const leafFor = (file: string) => leaves.find((l) => l.file === file) as Leaf;
+const leafFor = (file: string) => leaves.find((l) => l.file === file) as SceneLeaf;
 
 const sceneWithRoot = (name: string) => `[gd_scene load_steps=1 format=3]
 

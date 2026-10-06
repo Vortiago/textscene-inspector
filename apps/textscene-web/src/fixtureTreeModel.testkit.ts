@@ -4,18 +4,15 @@
  */
 import type { SceneLeaf, TreeBranch } from './fixtureTreeModel';
 
-/** The tree's own leaf shape, aliased rather than re-declared. */
-export type Leaf = SceneLeaf;
-
-/** Depth-first leaf collection: "any switchable scene" for palette-driving tests. */
-export function flattenLeaves(branches: readonly TreeBranch[]): Leaf[] {
-  const out: Leaf[] = [];
-  const walk = (b: TreeBranch) => {
-    for (const child of b.children) {
+/** Every scene leaf under `branches`, depth first: the scenes a test can switch to. */
+export function flattenLeaves(branches: readonly TreeBranch[]): SceneLeaf[] {
+  const leaves: SceneLeaf[] = [];
+  const walk = (branch: TreeBranch) => {
+    for (const child of branch.children) {
       if (child.kind === 'branch') walk(child);
-      else out.push(child);
+      else leaves.push(child);
     }
   };
   branches.forEach(walk);
-  return out;
+  return leaves;
 }

@@ -17,14 +17,14 @@ export type PreviewCaptureState =
 export const PENDING_CAPTURE: PreviewCaptureState = { status: 'pending' };
 
 /** Only the 3D canvas registers a screenshot handler, as the toolbar's Screenshot button shows. */
-export const TWO_D_VIEW_REASON = 'The preview shows the 2D view, and only the 3D view can capture.';
+const TWO_D_VIEW_REASON = 'The preview shows the 2D view, and only the 3D view can capture.';
 
 /** The reason for a viewport whose render threw, such as a renderer with no WebGL context. */
-export function viewportCrashReason(error: Error): string {
+function viewportCrashReason(error: Error): string {
   return `The viewport crashed: ${error.message}`;
 }
 
-export interface CaptureInputs {
+interface CaptureInputs {
   /** The registered screenshot handler, or null before the canvas registers one. */
   readonly capture: (() => string | null) | null;
   /** The error the viewport's boundary caught, or null while the viewport renders. */
@@ -33,7 +33,7 @@ export interface CaptureInputs {
 }
 
 /**
- * A registered handler wins: it exists only once a renderer does. A crash comes before the
+ * The state the shell reports. A registered handler wins: it exists only once a renderer does. A crash comes before the
  * 2D reason, since the crash also stops a later switch to 3D from capturing.
  */
 export function previewCaptureStateOf({ capture, viewportError, mode }: CaptureInputs): PreviewCaptureState {

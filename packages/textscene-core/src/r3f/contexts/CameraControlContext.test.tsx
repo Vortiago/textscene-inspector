@@ -210,7 +210,7 @@ describe('CameraControlContext', () => {
   });
 });
 
-describe('CameraControlContext — screenshot (#224)', () => {
+describe('CameraControlContext screenshot', () => {
   it("takeScreenshot() returns the registered handler's result", () => {
     const handler = vi.fn(() => 'data:image/png;base64,AAA');
 

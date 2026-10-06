@@ -14,8 +14,8 @@ vi.mock('@textscene/core', async () => {
 import { R3FApp } from './r3f-main';
 import { WebResourceProvider } from './providers/WebResourceProvider';
 import { fixtures } from './fixturesAll';
-import { buildFixtureTree } from './fixtureTreeModel';
-import { flattenLeaves, type Leaf } from './fixtureTreeModel.testkit';
+import { buildFixtureTree, type SceneLeaf } from './fixtureTreeModel';
+import { flattenLeaves } from './fixtureTreeModel.testkit';
 
 const STUB_TSCN = `[gd_scene load_steps=1 format=3]
 
@@ -37,7 +37,7 @@ const SCENE_WITH_TEXTURE = `[gd_scene load_steps=2 format=3]
 /** A vendored demo fixture, whose corpus root differs from the base ('') one. */
 const DEMO = fixtures.find((f) => f.root) as (typeof fixtures)[number];
 
-const DEMO_LEAF = flattenLeaves(buildFixtureTree(fixtures)).find((l) => l.file === DEMO.file) as Leaf;
+const DEMO_LEAF = flattenLeaves(buildFixtureTree(fixtures)).find((l) => l.file === DEMO.file) as SceneLeaf;
 
 function resetPersistence(path = '/') {
   try {

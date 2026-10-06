@@ -16,8 +16,8 @@ vi.mock('@textscene/core', async () => {
 import { PROVIDED_FILE_EXTENSIONS } from '@textscene/core/resources/resourceProviderUtils';
 import { R3FApp } from './r3f-main';
 import { fixtures } from './fixturesAll';
-import { buildFixtureTree } from './fixtureTreeModel';
-import { flattenLeaves, type Leaf } from './fixtureTreeModel.testkit';
+import { buildFixtureTree, type SceneLeaf } from './fixtureTreeModel';
+import { flattenLeaves } from './fixtureTreeModel.testkit';
 
 const STUB_TSCN = `[gd_scene load_steps=1 format=3]
 
@@ -37,8 +37,8 @@ const PICKED_TSCN = `[gd_scene load_steps=1 format=3]
 const DEFAULT_FILE = 'unit-plane-mesh.tscn';
 const NON_DEFAULT_LEAVES = flattenLeaves(buildFixtureTree(fixtures)).filter((l) => l.file !== DEFAULT_FILE);
 /** Two leaves far apart in the flattened list, so no label overlaps by accident. */
-const TARGET_A = NON_DEFAULT_LEAVES[0] as Leaf;
-const TARGET_B = NON_DEFAULT_LEAVES[NON_DEFAULT_LEAVES.length - 1] as Leaf;
+const TARGET_A = NON_DEFAULT_LEAVES[0] as SceneLeaf;
+const TARGET_B = NON_DEFAULT_LEAVES[NON_DEFAULT_LEAVES.length - 1] as SceneLeaf;
 
 function mockFetch() {
   globalThis.fetch = vi.fn().mockImplementation((url: unknown) => {

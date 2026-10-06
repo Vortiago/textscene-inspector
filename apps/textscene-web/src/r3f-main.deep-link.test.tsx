@@ -12,8 +12,8 @@ vi.mock('@textscene/core', async () => {
 
 import { R3FApp } from './r3f-main';
 import { fixtures } from './fixturesAll';
-import { buildFixtureTree } from './fixtureTreeModel';
-import { flattenLeaves, type Leaf } from './fixtureTreeModel.testkit';
+import { buildFixtureTree, type SceneLeaf } from './fixtureTreeModel';
+import { flattenLeaves } from './fixtureTreeModel.testkit';
 
 const STUB_TSCN = `[gd_scene load_steps=1 format=3]
 
@@ -26,7 +26,9 @@ const SWITCHED_TSCN = `[gd_scene load_steps=1 format=3]
 `;
 
 const DEFAULT_FILE = 'unit-plane-mesh.tscn';
-const SWITCH_TARGET = flattenLeaves(buildFixtureTree(fixtures)).find((l) => l.file !== DEFAULT_FILE) as Leaf;
+const SWITCH_TARGET = flattenLeaves(buildFixtureTree(fixtures)).find(
+  (l) => l.file !== DEFAULT_FILE
+) as SceneLeaf;
 
 function mockFetch() {
   globalThis.fetch = vi.fn().mockImplementation((url: unknown) => {

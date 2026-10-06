@@ -26,7 +26,7 @@ function memo<V>(map: Map<string, V>, key: string, make: (key: string) => V): V 
   return value;
 }
 
-/** Whether `path` names a file, not a directory. One that cannot be read counts as absent, since nothing can open it. */
+/** Whether `path` names a file, not a directory. A file that cannot be read counts as absent. */
 export async function isFile(path: string): Promise<boolean> {
   try {
     return (await stat(path)).isFile();
@@ -47,7 +47,7 @@ function hasProjectFile(dir: string): Promise<boolean> {
   return memo(projectFileByDir, dir, (key) => isFile(projectFileIn(key)));
 }
 
-/** Whether `entry`, a directory entry of `directory`, is a directory or a link to one, which the scan follows too. */
+/** Whether `entry` of `directory` is a directory or a link to one, since the scan follows a link too. */
 async function isDirectoryEntry(directory: string, entry: Dirent): Promise<boolean> {
   if (!entry.isSymbolicLink()) return entry.isDirectory();
   try {
@@ -56,6 +56,17 @@ async function isDirectoryEntry(directory: string, entry: Dirent): Promise<boole
     // A dangling link is no directory, as the scan's own `stat` finds (`dir_access_unix.cpp:167-175`).
     return false;
   }
+}
+
+/** The entries of `directory`, each link resolved to what it names. */
+async function readEntries(directory: string): Promise<DirectoryEntry[]> {
+  const entries = await readdir(directory, { withFileTypes: true });
+  return Promise.all(
+    entries.map(async (entry) => ({
+      name: entry.name,
+      isDirectory: await isDirectoryEntry(directory, entry),
+    }))
+  );
 }
 
 /**
@@ -71,13 +82,7 @@ function directoryReader(root: string): (resDirectory: string) => Promise<Direct
       const real = await realpath(directory);
       if (readRealPaths.has(real)) return [];
       readRealPaths.add(real);
-      const entries = await readdir(directory, { withFileTypes: true });
-      return Promise.all(
-        entries.map(async (entry) => ({
-          name: entry.name,
-          isDirectory: await isDirectoryEntry(directory, entry),
-        }))
-      );
+      return await readEntries(directory);
     } catch {
       // The scan skips a directory it cannot enter (`editor_file_system.cpp:1201-1202`).
       return [];

@@ -14,8 +14,8 @@ vi.mock('@textscene/core', async () => {
 
 import { R3FApp } from './r3f-main';
 import { fixtures } from './fixturesAll';
-import { buildFixtureTree } from './fixtureTreeModel';
-import { flattenLeaves, type Leaf } from './fixtureTreeModel.testkit';
+import { buildFixtureTree, type SceneLeaf } from './fixtureTreeModel';
+import { flattenLeaves } from './fixtureTreeModel.testkit';
 
 const STUB_TSCN = `[gd_scene load_steps=1 format=3]
 
@@ -38,7 +38,9 @@ const SWITCHED_TSCN = `[gd_scene load_steps=1 format=3]
 `;
 
 const DEFAULT_FILE = 'unit-plane-mesh.tscn';
-const SWITCH_TARGET = flattenLeaves(buildFixtureTree(fixtures)).find((l) => l.file !== DEFAULT_FILE) as Leaf;
+const SWITCH_TARGET = flattenLeaves(buildFixtureTree(fixtures)).find(
+  (l) => l.file !== DEFAULT_FILE
+) as SceneLeaf;
 
 function resetPersistence() {
   try {
@@ -196,7 +198,7 @@ describe('Source-pane edit-discard guard', () => {
     const palette = await screen.findByRole('dialog', { name: 'Open or switch scene' });
     const currentLeaf = flattenLeaves(buildFixtureTree(fixtures)).find(
       (l) => l.file === DEFAULT_FILE
-    ) as Leaf;
+    ) as SceneLeaf;
     fireEvent.change(within(palette).getByLabelText('Filter built-in scenes'), {
       target: { value: currentLeaf.label },
     });

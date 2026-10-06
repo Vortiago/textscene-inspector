@@ -1,9 +1,8 @@
 /**
- * A render error in `<ViewportArea>` shows a recoverable message. It misses
- * errors inside `<Canvas>`, a separate reconciler root that `NodeDispatcher`'s
- * per-node `<ErrorBoundary>` covers. It does catch a renderer that `<Canvas>`
- * cannot create, such as one with no WebGL context, since R3F rethrows that in render. `resetKeys`, not a `key` remount, clears
- * it on a new `SceneGraph`, so a reparse keeps the viewport camera state.
+ * A render error in `<ViewportArea>`, such as a renderer with no WebGL context that R3F rethrows in render, shows a
+ * recoverable message. An error inside `<Canvas>`, a separate reconciler root, reaches `NodeDispatcher`'s per-node
+ * `<ErrorBoundary>` instead. `resetKeys`, not a `key` remount, clears the error on a new `SceneGraph`, so a reparse
+ * keeps the viewport camera state.
  */
 import type { ReactNode } from 'react';
 import type { SceneGraph } from '../../../core/SceneGraph.js';
