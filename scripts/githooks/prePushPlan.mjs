@@ -58,9 +58,9 @@ export function planChecks({ changed, deleted, isNegativeFixture, testsBeside })
   const typeChecks = all.some((path) => TYPED.test(path));
   if (typeChecks) plan.push(['pnpm', 'type-check:all'], ['pnpm', 'type-check:tests']);
   const linted = changed.filter((path) => LINTED_CODE.test(path));
-  if (linted.length > 0) plan.push(['npx', 'eslint', ...linted]);
+  if (linted.length > 0) plan.push(['npx', 'eslint', '--cache', ...linted]);
   const formatted = changed.filter((path) => FORMATTED.test(path));
-  if (formatted.length > 0) plan.push(['pnpm', 'exec', 'prettier', '--check', ...formatted]);
+  if (formatted.length > 0) plan.push(['pnpm', 'exec', 'prettier', '--cache', '--check', ...formatted]);
   plan.push(...runTests);
 
   const scenes = changed.filter((path) => SCENE.test(path) && !isNegativeFixture(path));
