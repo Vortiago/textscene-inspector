@@ -2,7 +2,7 @@
  * Walks up from a document's directory for `project.godot` (core's `findProjectRoot`), since `res://` is relative to
  * the project root. It stops at the workspace folder: the plain-glob watchers report events inside workspace folders
  * only, so the extension cannot keep a project above the folder current. The CLI climbs to the filesystem root. The
- * preview falls back to the workspace root, and the linter takes no fallback.
+ * preview falls back to the workspace root. The linter and the language features take no fallback, as Godot has none.
  */
 
 import * as vscode from 'vscode';
@@ -57,4 +57,13 @@ export async function findGodotProjectRoot(
   documentUri: vscode.Uri
 ): Promise<vscode.Uri> {
   return (await findEnclosingGodotProject(workspaceRoot, documentUri)) ?? workspaceRoot;
+}
+
+/**
+ * The Godot project a document belongs to, for the language features. Null outside a workspace folder or outside
+ * every project, since Godot defines `res://` only by a `project.godot`.
+ */
+export function enclosingProjectOf(documentUri: vscode.Uri): Promise<vscode.Uri | null> {
+  const folder = vscode.workspace.getWorkspaceFolder(documentUri);
+  return folder ? findEnclosingGodotProject(folder.uri, documentUri) : Promise.resolve(null);
 }

@@ -7,15 +7,14 @@
 import * as vscode from 'vscode';
 import { declarationRangeAt, resPathAt } from '@textscene/core/languageFeatures';
 import { existingResFile } from './existingResFile';
-import { findGodotProjectRoot } from './findGodotProjectRoot';
+import { enclosingProjectOf } from './findGodotProjectRoot';
 import { languageDocumentOf } from './languageDocumentOf';
 import { toVscodeRange } from './languageFeatureRanges';
 
-/** The project file a `res://` path names, or null outside a workspace folder or for no file. */
+/** The project file a `res://` path names, or null outside every project or for no file. */
 async function projectFileOf(document: vscode.TextDocument, path: string): Promise<vscode.Uri | null> {
-  const folder = vscode.workspace.getWorkspaceFolder(document.uri);
-  if (!folder) return null;
-  return existingResFile(await findGodotProjectRoot(folder.uri, document.uri), path);
+  const root = await enclosingProjectOf(document.uri);
+  return root ? existingResFile(root, path) : null;
 }
 
 export class TscnDefinitionProvider implements vscode.DefinitionProvider {

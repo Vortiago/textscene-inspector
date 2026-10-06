@@ -5,7 +5,7 @@
  */
 
 import * as vscode from 'vscode';
-import { findGodotProjectRoot } from './findGodotProjectRoot';
+import { enclosingProjectOf } from './findGodotProjectRoot';
 import { scannedResPaths } from './scannedResPaths';
 import { SCAN_STOP_FILES_PATTERN } from './watchPatterns';
 
@@ -21,14 +21,13 @@ const EXCLUDED_DIRECTORIES = '**/{node_modules,.*}/**';
 export class TscnResPathListing {
   /** Each project root's listing, written by `pathsFor` and dropped by `clear`. */
   private readonly _listingByRoot = new Map<string, Promise<readonly string[]>>();
-  /** Each document's project root, written by `pathsFor` and dropped by `clear`. */
-  private readonly _rootByDocument = new Map<string, Promise<vscode.Uri>>();
+  /** Each document's project root, null outside every project, written by `pathsFor` and dropped by `clear`. */
+  private readonly _rootByDocument = new Map<string, Promise<vscode.Uri | null>>();
 
+  /** The project's files as `res://` paths, or none for a document outside every project. */
   async pathsFor(document: vscode.TextDocument): Promise<readonly string[]> {
-    const folder = vscode.workspace.getWorkspaceFolder(document.uri);
-    if (!folder) return [];
-
-    const root = await this._rootOf(folder, document.uri);
+    const root = await this._rootOf(document.uri);
+    if (!root) return [];
     const key = root.toString();
     // The promise is cached, not its value: two completions before the walk ends share it.
     const cached = this._listingByRoot.get(key);
@@ -39,11 +38,11 @@ export class TscnResPathListing {
     return listing;
   }
 
-  private _rootOf(folder: vscode.WorkspaceFolder, documentUri: vscode.Uri): Promise<vscode.Uri> {
+  private _rootOf(documentUri: vscode.Uri): Promise<vscode.Uri | null> {
     const key = documentUri.toString();
     let root = this._rootByDocument.get(key);
     if (!root) {
-      root = findGodotProjectRoot(folder.uri, documentUri);
+      root = enclosingProjectOf(documentUri);
       this._rootByDocument.set(key, root);
     }
     return root;

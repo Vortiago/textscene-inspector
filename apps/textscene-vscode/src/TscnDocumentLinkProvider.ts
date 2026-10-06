@@ -6,7 +6,7 @@
 import * as vscode from 'vscode';
 import { resPathOccurrences } from '@textscene/core/languageFeatures';
 import { existingResFile } from './existingResFile';
-import { findGodotProjectRoot } from './findGodotProjectRoot';
+import { enclosingProjectOf } from './findGodotProjectRoot';
 import { languageDocumentOf } from './languageDocumentOf';
 import { toVscodeRange } from './languageFeatureRanges';
 
@@ -21,27 +21,6 @@ export class TscnResourceDocumentLink extends vscode.DocumentLink {
 }
 
 export class TscnDocumentLinkProvider implements vscode.DocumentLinkProvider<TscnResourceDocumentLink> {
-  /**
-   * `findGodotProjectRoot` result, keyed by the document's own directory, so one
-   * walk serves every link and re-hover. Not keyed by workspace folder: one folder
-   * can hold several Godot projects, and each must get its own root.
-   * `VSCodeResourceProvider` caches per panel instead, one document each.
-   */
-  private readonly _projectRootCache = new Map<string, vscode.Uri>();
-
-  private async _resolveProjectRoot(
-    workspaceFolder: vscode.WorkspaceFolder,
-    documentUri: vscode.Uri
-  ): Promise<vscode.Uri> {
-    const key = vscode.Uri.joinPath(documentUri, '..').toString();
-    const cached = this._projectRootCache.get(key);
-    if (cached) return cached;
-
-    const root = await findGodotProjectRoot(workspaceFolder.uri, documentUri);
-    this._projectRootCache.set(key, root);
-    return root;
-  }
-
   /** Computes ranges only, from the engine's scan, with no IO. */
   provideDocumentLinks(
     document: vscode.TextDocument,
@@ -53,20 +32,17 @@ export class TscnDocumentLinkProvider implements vscode.DocumentLinkProvider<Tsc
   }
 
   /**
-   * Resolves the link the user hovers or clicks through the `findGodotProjectRoot`
-   * walk the preview panel shares. A document outside every workspace folder gets no
-   * target. Nor does a path that climbs out of the root, a missing file or a directory,
-   * since none names a file to open. The `tscn-lsp` server answers the same.
+   * Resolves the link the user hovers or clicks against the document's Godot project. A document outside every
+   * project gets no target. Nor does a path that climbs out of the root, a missing file or a directory, since none
+   * names a file to open. The `tscn-lsp` server answers the same. The walk runs on each resolve, a few `stat`s, so a
+   * `project.godot` created later counts at once.
    */
   async resolveDocumentLink(
     link: TscnResourceDocumentLink,
     _token: vscode.CancellationToken
   ): Promise<TscnResourceDocumentLink | undefined> {
-    const workspaceFolder = vscode.workspace.getWorkspaceFolder(link.documentUri);
-    if (!workspaceFolder) {
-      return undefined;
-    }
-    const projectRoot = await this._resolveProjectRoot(workspaceFolder, link.documentUri);
+    const projectRoot = await enclosingProjectOf(link.documentUri);
+    if (!projectRoot) return undefined;
     const target = await existingResFile(projectRoot, link.resourcePath);
     if (!target) return undefined;
     link.target = target;
