@@ -15,10 +15,11 @@ const LEVEL = '/workspace/level.tscn';
 
 interface Harness {
   provider: SceneTreeProvider;
-  view: { description: string | undefined };
+  view: { description: string | undefined; dispose: Mock };
   activeEditorChanged: MockEventEmitter;
   documentChanged: MockEventEmitter;
   commands: Map<string, (...args: unknown[]) => unknown>;
+  commandDisposed: Mock;
 }
 
 let harness: Harness;
@@ -29,7 +30,8 @@ beforeEach(() => {
   const activeEditorChanged = new MockEventEmitter();
   const documentChanged = new MockEventEmitter();
   const commands = new Map<string, (...args: unknown[]) => unknown>();
-  harness = { provider: undefined!, view, activeEditorChanged, documentChanged, commands };
+  const commandDisposed = vi.fn();
+  harness = { provider: undefined!, view, activeEditorChanged, documentChanged, commands, commandDisposed };
 
   (vscode.window.createTreeView as Mock).mockImplementation(
     (_id: string, options: { treeDataProvider: SceneTreeProvider }) => {
@@ -42,7 +44,7 @@ beforeEach(() => {
   (vscode.commands.registerCommand as Mock).mockImplementation(
     (command: string, handler: (...args: unknown[]) => unknown) => {
       commands.set(command, handler);
-      return { dispose: vi.fn() };
+      return { dispose: commandDisposed };
     }
   );
   (vscode.workspace.openTextDocument as Mock).mockImplementation((uri: vscode.Uri) =>
@@ -225,6 +227,54 @@ describe('SceneTreeView', () => {
     harness.documentChanged.fire({ document: sceneDocument(MAIN), contentChanges: [] });
 
     expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('re-reads a shown scene whose document has closed', async () => {
+    const view = createView();
+    openPreview(MAIN, true);
+    view.refresh();
+    await settle();
+    const closed = harness.provider.document as { isClosed: boolean };
+    closed.isClosed = true;
+    (vscode.workspace.openTextDocument as Mock).mockResolvedValueOnce(
+      sceneDocument(MAIN, '[gd_scene format=3]\n\n[node name="Changed" type="Node3D"]\n')
+    );
+
+    view.refresh();
+    await settle();
+
+    expect(rootNames()).toEqual(['Changed']);
+  });
+
+  it('takes an edit to a reopened copy of a scene whose shown document has closed', async () => {
+    createView();
+    focusEditor(MAIN);
+    await settle();
+    (harness.provider.document as { isClosed: boolean }).isClosed = true;
+
+    const reopened = sceneDocument(MAIN, '[gd_scene format=3]\n\n[node name="Renamed" type="Node3D"]\n');
+    harness.documentChanged.fire({ document: reopened, contentChanges: [{}] });
+
+    expect(rootNames()).toEqual(['Renamed']);
+  });
+
+  it('disposes its tree view and its command', () => {
+    const view = createView();
+
+    view.dispose();
+
+    expect(harness.view.dispose).toHaveBeenCalled();
+    expect(harness.commandDisposed).toHaveBeenCalled();
+  });
+
+  it('follows no focus change after it is disposed', async () => {
+    const view = createView();
+
+    view.dispose();
+    focusEditor(MAIN);
+    await settle();
+
+    expect(shownScene()).toBeUndefined();
   });
 
   it('reveals a clicked node beside the preview of its scene', async () => {

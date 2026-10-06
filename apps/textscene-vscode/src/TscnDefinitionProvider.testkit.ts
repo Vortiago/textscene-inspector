@@ -1,6 +1,7 @@
 /**
- * A `vscode.TextDocument` over a string of TSCN, for the `TscnDefinitionProvider.*.test.ts`
- * and Scene Tree suites. Not a `.test.ts`, so vitest does not collect it.
+ * A `vscode.TextDocument` over a string of TSCN, for the `TscnDefinitionProvider.*.test.ts`,
+ * `TscnDocumentSymbolProvider` and Scene Tree suites. Not a `.test.ts`, so vitest does not
+ * collect it.
  */
 
 import * as vscode from 'vscode';

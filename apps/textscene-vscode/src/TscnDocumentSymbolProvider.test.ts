@@ -3,19 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import * as vscode from 'vscode';
 import { TscnDocumentSymbolProvider } from './TscnDocumentSymbolProvider';
-
-function createMockDocument(content: string): vscode.TextDocument {
-  const lines = content.split('\n');
-  return {
-    getText: () => content,
-    lineAt: (line: number) => ({
-      text: lines[line] || '',
-      lineNumber: line,
-    }),
-    lineCount: lines.length,
-    uri: vscode.Uri.file('/test.tscn'),
-  } as unknown as vscode.TextDocument;
-}
+import { createMockDocument } from './TscnDefinitionProvider.testkit';
 
 describe('TscnDocumentSymbolProvider', () => {
   describe('Symbol Extraction', () => {

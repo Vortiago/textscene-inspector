@@ -527,6 +527,27 @@ describe('Extension', () => {
       expect(mockPanel.handleDependencyChange).not.toHaveBeenCalled();
     });
 
+    it("refreshes the Scene Tree view when a panel's own main scene changes on disk", async () => {
+      activate(mockContext);
+      openPanelFor('/workspace/scene.tscn');
+      const sceneTree = (SceneTreeView as unknown as Mock).mock.instances[0] as { refresh: Mock };
+
+      await fireChange(RESOURCE_FILES_PATTERN, createMockUri('/workspace/scene.tscn'));
+
+      // A closed document fires no edit, so only this refresh re-reads the scene.
+      expect(sceneTree.refresh).toHaveBeenCalled();
+    });
+
+    it('leaves the Scene Tree view alone when a dependency changes on disk', async () => {
+      activate(mockContext);
+      openPanelFor('/workspace/scene.tscn');
+      const sceneTree = (SceneTreeView as unknown as Mock).mock.instances[0] as { refresh: Mock };
+
+      await fireChange(RESOURCE_FILES_PATTERN, createMockUri('/workspace/textures/wood.png'));
+
+      expect(sceneTree.refresh).not.toHaveBeenCalled();
+    });
+
     it('routes a deleted dependency through handleDependencyChange (missing placeholder path)', async () => {
       activate(mockContext);
       openPanelFor('/workspace/scene.tscn');

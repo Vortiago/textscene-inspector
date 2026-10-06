@@ -5,6 +5,9 @@
 
 import type * as vscode from 'vscode';
 
+/** Any case, as Godot compares an extension with `nocasecmp_to` (resource_loader.cpp:73). */
+const SCENE_EXTENSION = /\.tscn$/i;
+
 /** What the view reads from a preview. `TscnPreviewPanel` satisfies it. */
 export interface ScenePreview {
   readonly resource: vscode.Uri;
@@ -25,5 +28,5 @@ export function activeScene(
     if (preview.isActive) return preview.resource;
   }
   const uri = editor?.document.uri;
-  return uri?.path.endsWith('.tscn') ? uri : undefined;
+  return uri && SCENE_EXTENSION.test(uri.path) ? uri : undefined;
 }

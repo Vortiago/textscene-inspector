@@ -104,7 +104,8 @@ export function activate(context: vscode.ExtensionContext) {
   // The panel whose own main scene changed re-reads it, which catches an external
   // edit (git pull, branch switch) that fires no save event. The content-diff guard
   // in update() drops the in-editor save that onDidSaveTextDocument already
-  // handled. Every other panel re-fetches the file as a dependency or sub-scene.
+  // handled. The Scene Tree view re-reads it too, as a closed document fires no edit.
+  // Every other panel re-fetches the file as a dependency or sub-scene.
   const handleResourceChange = async (uri: vscode.Uri, deleted = false): Promise<void> => {
     const changedKey = uri.toString();
     await Promise.all(
@@ -115,6 +116,7 @@ export function activate(context: vscode.ExtensionContext) {
           // last render. Other panels flip the file to its missing placeholder.
           if (!deleted) {
             panel.update(uri);
+            sceneTree.refresh();
           }
           return Promise.resolve();
         }

@@ -17,6 +17,12 @@ describe('activeScene', () => {
     expect(activeScene([], editor)?.path).toBe('/workspace/level.tscn');
   });
 
+  it('follows a .TSCN text editor, as Godot reads the extension in any case', () => {
+    const editor = textEditor(sceneDocument('/workspace/Level.TSCN'));
+
+    expect(activeScene([], editor)?.path).toBe('/workspace/Level.TSCN');
+  });
+
   it('skips a preview that is open but not active', () => {
     const editor = textEditor(sceneDocument('/workspace/level.tscn'));
 

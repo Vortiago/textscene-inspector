@@ -40,7 +40,10 @@ export class SceneTreeView implements vscode.Disposable {
     this.refresh();
   }
 
-  /** Shows the active scene. The extension calls it when a preview gains or loses the active slot, or closes. */
+  /**
+   * Shows the active scene. The extension calls it when a preview gains or loses the active
+   * slot, closes, or its scene changes on disk.
+   */
   public refresh(): void {
     void this._showActiveScene();
   }
@@ -65,14 +68,24 @@ export class SceneTreeView implements vscode.Disposable {
    * fires with no content change, and the tree stays.
    */
   private _showEdit({ document, contentChanges }: vscode.TextDocumentChangeEvent): void {
-    if (contentChanges.length > 0 && this._isShown(document.uri)) {
+    if (contentChanges.length > 0 && isSameScene(document.uri, this._provider.document)) {
       this._provider.show(document);
     }
   }
 
+  /**
+   * A closed document keeps the text it had when it closed and fires no edit after, so it
+   * counts as not shown. VS Code closes a scene that no editor holds three minutes after it
+   * opens.
+   */
   private _isShown(scene: vscode.Uri | undefined): boolean {
-    return scene?.toString() === this._provider.document?.uri.toString();
+    const shown = this._provider.document;
+    return !shown?.isClosed && isSameScene(scene, shown);
   }
+}
+
+function isSameScene(scene: vscode.Uri | undefined, document: vscode.TextDocument | undefined): boolean {
+  return scene?.toString() === document?.uri.toString();
 }
 
 async function openScene(scene: vscode.Uri): Promise<vscode.TextDocument | undefined> {
