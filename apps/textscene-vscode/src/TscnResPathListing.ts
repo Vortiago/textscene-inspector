@@ -1,7 +1,7 @@
 /**
  * Lists a Godot project's files as `res://` paths, the seam the engine's path
- * completion reads. The listing runs once per project root and is cached. A completion
- * must not walk the workspace on every keystroke.
+ * completion reads. It caches one listing per project root, so a completion does not
+ * walk the workspace on every keystroke.
  */
 
 import * as vscode from 'vscode';
@@ -34,16 +34,16 @@ export class TscnResPathListing {
     const cached = this._listingByRoot.get(key);
     if (cached) return cached;
 
-    const listing = this._collect(root);
+    const listing = this._list(root);
     this._listingByRoot.set(key, listing);
     return listing;
   }
 
-  private _rootOf(folder: vscode.WorkspaceFolder, document: vscode.Uri): Promise<vscode.Uri> {
-    const key = document.toString();
+  private _rootOf(folder: vscode.WorkspaceFolder, documentUri: vscode.Uri): Promise<vscode.Uri> {
+    const key = documentUri.toString();
     let root = this._rootByDocument.get(key);
     if (!root) {
-      root = findGodotProjectRoot(folder.uri, document);
+      root = findGodotProjectRoot(folder.uri, documentUri);
       this._rootByDocument.set(key, root);
     }
     return root;
@@ -53,7 +53,7 @@ export class TscnResPathListing {
    * The editor's scan rules, as the linter reads them: no dot-named directory, no nested
    * project and no `.gdignore` directory.
    */
-  private async _collect(root: vscode.Uri): Promise<readonly string[]> {
+  private async _list(root: vscode.Uri): Promise<readonly string[]> {
     const [files, stopFiles] = await Promise.all([
       vscode.workspace.findFiles(
         new vscode.RelativePattern(root, '**/*'),

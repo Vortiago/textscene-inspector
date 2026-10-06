@@ -88,25 +88,8 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.languages.registerDocumentLinkProvider({ language: 'tscn' }, new TscnDocumentLinkProvider())
   );
 
-  // Language features over `@textscene/core/languageFeatures`, the same engine the
-  // standalone `tscn-lsp` server uses, so both hosts describe the engine identically.
   const resPathListing = new TscnResPathListing();
-  context.subscriptions.push(
-    vscode.languages.registerHoverProvider({ language: 'tscn' }, new TscnHoverProvider()),
-    vscode.languages.registerCompletionItemProvider(
-      { language: 'tscn' },
-      new TscnCompletionItemProvider(resPathListing),
-      ...COMPLETION_TRIGGER_CHARACTERS
-    ),
-    vscode.languages.registerCodeActionsProvider({ language: 'tscn' }, new TscnCodeActionProvider(), {
-      providedCodeActionKinds: TscnCodeActionProvider.prototype.providedCodeActionKinds,
-    }),
-    vscode.languages.registerFoldingRangeProvider({ language: 'tscn' }, new TscnFoldingRangeProvider()),
-    vscode.languages.registerDocumentHighlightProvider(
-      { language: 'tscn' },
-      new TscnDocumentHighlightProvider()
-    )
-  );
+  context.subscriptions.push(...registerLanguageFeatureProviders(resPathListing));
 
   // External changes to every file a scene can load, and to the project file. Each watcher
   // serves the previews and the linter diagnostics in the Problems panel.
@@ -114,7 +97,6 @@ export function activate(context: vscode.ExtensionContext) {
   const projectFileWatcher = vscode.workspace.createFileSystemWatcher(PROJECT_FILE_PATTERN);
   const diagnostics = new TscnDiagnostics(resourceWatcher, projectFileWatcher);
 
-  // Tools a coding agent in chat may call, so it can check a scene it edited.
   registerTscnTools(context, {
     openPreview: (uri) => void getOrCreatePanel(uri),
     capturePreview: (uri) => getOrCreatePanel(uri).capture(),
@@ -173,13 +155,40 @@ export function activate(context: vscode.ExtensionContext) {
     );
   }
 
-  // A `.gdignore` created or deleted moves a directory into or out of the scan the listing follows.
-  const scanStopFileWatcher = vscode.workspace.createFileSystemWatcher(SCAN_STOP_FILES_PATTERN, false, true);
-  context.subscriptions.push(
-    scanStopFileWatcher,
-    scanStopFileWatcher.onDidCreate(() => resPathListing.clear()),
-    scanStopFileWatcher.onDidDelete(() => resPathListing.clear())
-  );
+  context.subscriptions.push(...watchScanStopFiles(resPathListing));
+}
+
+/**
+ * The providers over `@textscene/core/languageFeatures`, the engine the standalone
+ * `tscn-lsp` server uses too, so both hosts give the same answers.
+ */
+function registerLanguageFeatureProviders(resPathListing: TscnResPathListing): vscode.Disposable[] {
+  return [
+    vscode.languages.registerHoverProvider({ language: 'tscn' }, new TscnHoverProvider()),
+    vscode.languages.registerCompletionItemProvider(
+      { language: 'tscn' },
+      new TscnCompletionItemProvider(resPathListing),
+      ...COMPLETION_TRIGGER_CHARACTERS
+    ),
+    vscode.languages.registerCodeActionsProvider({ language: 'tscn' }, new TscnCodeActionProvider(), {
+      providedCodeActionKinds: TscnCodeActionProvider.prototype.providedCodeActionKinds,
+    }),
+    vscode.languages.registerFoldingRangeProvider({ language: 'tscn' }, new TscnFoldingRangeProvider()),
+    vscode.languages.registerDocumentHighlightProvider(
+      { language: 'tscn' },
+      new TscnDocumentHighlightProvider()
+    ),
+  ];
+}
+
+/** A `.gdignore` created or deleted moves a directory into or out of the scan the listing follows. */
+function watchScanStopFiles(resPathListing: TscnResPathListing): vscode.Disposable[] {
+  const watcher = vscode.workspace.createFileSystemWatcher(SCAN_STOP_FILES_PATTERN, false, true);
+  return [
+    watcher,
+    watcher.onDidCreate(() => resPathListing.clear()),
+    watcher.onDidDelete(() => resPathListing.clear()),
+  ];
 }
 
 export function deactivate() {

@@ -42,6 +42,7 @@ describe('registerTscnTools', () => {
     vscodeMocks.workspace.getConfiguration.mockReturnValue({
       get: (_key: string, defaultValue?: unknown) => defaultValue,
     });
+    vscodeMocks.workspace.workspaceFolders = [{ uri: createMockUri('/game') }];
   });
 
   it('registers the five tools when the API is present', () => {
@@ -62,10 +63,13 @@ describe('registerTscnTools', () => {
     // same object `registerTscnTools` sees.
     const image = MockLanguageModelDataPart.image;
     (MockLanguageModelDataPart as { image?: unknown }).image = undefined;
-    registerTscnTools(context(), host());
-    const ids = vscodeMocks.lm.registerTool.mock.calls.map((call: unknown[]) => call[0]);
-    expect(ids).not.toContain(TOOL_IDS.capture);
-    (MockLanguageModelDataPart as { image?: unknown }).image = image;
+    try {
+      registerTscnTools(context(), host());
+      const ids = vscodeMocks.lm.registerTool.mock.calls.map((call: unknown[]) => call[0]);
+      expect(ids).not.toContain(TOOL_IDS.capture);
+    } finally {
+      (MockLanguageModelDataPart as { image?: unknown }).image = image;
+    }
   });
 
   it('refuses a call while the user has the tools off, so the setting applies with no reload', async () => {
@@ -84,13 +88,15 @@ describe('registerTscnTools', () => {
   it('registers nothing on a VS Code without the API', () => {
     const original = vscodeMocks.lm.registerTool;
     vscodeMocks.lm.registerTool = undefined;
-    registerTscnTools(context(), host());
-    expect(original).not.toHaveBeenCalled();
-    vscodeMocks.lm.registerTool = original;
+    try {
+      registerTscnTools(context(), host());
+      expect(original).not.toHaveBeenCalled();
+    } finally {
+      vscodeMocks.lm.registerTool = original;
+    }
   });
 
   it('the scene tree tool returns the parsed hierarchy', async () => {
-    vscodeMocks.workspace.workspaceFolders = [{ uri: createMockUri('/game') }];
     vscodeMocks.workspace.fs.readFile.mockResolvedValue(
       createMockFileData('[node name="Root" type="Node3D"]')
     );
@@ -103,7 +109,6 @@ describe('registerTscnTools', () => {
   });
 
   it('the lint tool reports a clean scene with no project', async () => {
-    vscodeMocks.workspace.workspaceFolders = [{ uri: createMockUri('/game') }];
     vscodeMocks.workspace.fs.readFile.mockResolvedValue(
       createMockFileData('[node name="Root" type="Node3D"]')
     );
@@ -113,7 +118,6 @@ describe('registerTscnTools', () => {
   });
 
   it("the lint tool lints over the Problems panel's provider for the scene", async () => {
-    vscodeMocks.workspace.workspaceFolders = [{ uri: createMockUri('/game') }];
     vscodeMocks.workspace.fs.readFile.mockResolvedValue(
       createMockFileData('[node name="Root" type="Node3D"]')
     );
@@ -125,7 +129,6 @@ describe('registerTscnTools', () => {
   });
 
   it('the missing-resources tool reports a scene outside a project', async () => {
-    vscodeMocks.workspace.workspaceFolders = [{ uri: createMockUri('/game') }];
     vscodeMocks.workspace.fs.readFile.mockResolvedValue(
       createMockFileData('[ext_resource type="PackedScene" path="res://door.tscn" id="1"]')
     );
@@ -173,7 +176,6 @@ describe('registerTscnTools', () => {
   });
 
   it('rejects a path that is not a .tscn scene', async () => {
-    vscodeMocks.workspace.workspaceFolders = [{ uri: createMockUri('/game') }];
     registerTscnTools(context(), host());
     await expect(
       registeredTool(TOOL_IDS.lint).invoke({ input: { path: 'notes.txt' } }, TOKEN)

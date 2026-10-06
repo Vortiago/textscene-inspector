@@ -1,30 +1,30 @@
 # @textscene/lsp
 
-`tscn-lsp` is a language server for Godot `.tscn` scenes and `.tres` resources. It gives
-any LSP client the features the TextScene Inspector VS Code extension provides. They are
-hover, completion, quick fixes, folding, document symbols, go to definition, document
-highlights and diagnostics. Every check is grounded in Godot's own source.
+`tscn-lsp` is a language server for Godot `.tscn` scenes and `.tres` resources. It gives any
+Language Server Protocol (LSP) client the features of the TextScene Inspector VS Code
+extension: hover, completion, quick fixes, folding, document symbols, go to definition,
+document highlights and diagnostics. Each lint check cites the line of Godot source that
+grounds it.
 
-The server reads each document's own directory to find `project.godot`, and resolves
-`res://` from the nearest project root. A scene outside every Godot project still gets
-hover, completion and the file-local diagnostics.
+For each document, the server finds the nearest `project.godot` in the document's directory or above
+it, and resolves `res://` from that directory. A scene outside every Godot project still gets hover,
+completion and the file-local diagnostics.
 
 ## Install
 
-Requires Node.js 24 or later.
+The server needs Node.js 24 or later.
 
 ```bash
 npm install --global @textscene/lsp
 ```
 
-The package installs one command, `tscn-lsp`. The server speaks LSP over stdio, so a
-client starts it as a child process and talks to it on the standard streams. It reads the
-standard streams always, so a `--stdio` argument is accepted and ignored.
+The package installs one command, `tscn-lsp`. A client starts it as a child process and
+speaks LSP to it over standard input and output (stdio). The server always uses stdio, so it
+accepts a `--stdio` argument and ignores it.
 
 ## Client setup
 
 Map the `tscn` language to the `.tscn` and `.tres` extensions. Start `tscn-lsp` for it.
-Most clients run the server over stdio.
 
 ### Neovim
 
@@ -84,8 +84,7 @@ add this to `settings.json`:
 
 ### Any stdio client
 
-A client that starts a server over the standard streams runs `tscn-lsp --stdio` and
-speaks LSP on the process's stdin and stdout.
+Run `tscn-lsp --stdio` as a child process, and speak LSP to it over stdio.
 
 ## Build from source
 
@@ -93,7 +92,7 @@ From the repository root:
 
 ```bash
 pnpm install
-pnpm --filter @textscene/lsp build
+pnpm build:lsp
 ```
 
 The bundle has no React and no three.js. `ARCHITECTURE.md` in the repository describes how

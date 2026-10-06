@@ -1,10 +1,10 @@
 /// <reference types="vitest/globals" />
 
 /**
- * The five `vi.fn()` namespaces of the `vscode` module mock, and the factories tests
+ * The six `vi.fn()` namespaces of the `vscode` module mock, and the factories tests
  * build arguments with. It re-exports `vscodeWorkspaceMock.testkit` and
- * `vscodeWindowMock.testkit` as one surface. `test-setup.ts` assembles the mock and
- * clears every spy after each test.
+ * `vscodeWindowMock.testkit` as one surface. `vscodeModuleMock.testkit.ts` assembles
+ * the mock, and `test-setup.ts` clears every spy after each test.
  */
 
 import { vi } from 'vitest';

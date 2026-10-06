@@ -62,11 +62,11 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
   // before the listener exists. The ref holds the latest, and the host hears it only
   // after `webviewReady`, which resets the host's copy.
   const captureStateRef = useRef<PreviewCaptureState>({ status: 'pending' });
-  const listenerInstalledRef = useRef(false);
+  const isListeningRef = useRef(false);
   const handleCaptureStateChange = useCallback(
     (state: PreviewCaptureState) => {
       captureStateRef.current = state;
-      if (listenerInstalledRef.current) vscode.postMessage(captureStateMessage(state));
+      if (isListeningRef.current) vscode.postMessage(captureStateMessage(state));
     },
     [vscode]
   );
@@ -103,11 +103,11 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
     // replays the scene text on every ready, so a remount with empty `content` is
     // refilled too.
     vscode.postMessage({ type: 'webviewReady' } satisfies WebviewToHostMessage);
-    listenerInstalledRef.current = true;
+    isListeningRef.current = true;
     vscode.postMessage(captureStateMessage(captureStateRef.current));
 
     return () => {
-      listenerInstalledRef.current = false;
+      isListeningRef.current = false;
       window.removeEventListener('message', onMessage);
     };
   }, [vscode, loader]);

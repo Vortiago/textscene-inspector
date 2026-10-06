@@ -1,7 +1,7 @@
 {
   "name": "@textscene/lsp",
   "version": "1.0.0",
-  "description": "Language server for Godot .tscn scenes, with hover, completion, quick fixes, folding, symbols, navigation and diagnostics for any LSP client.",
+  "description": "Language server for Godot .tscn scenes and .tres resources: hover, completion, quick fixes, folding, document symbols, go to definition, document highlights and diagnostics, for any LSP client.",
   "type": "module",
   "bin": {
     "tscn-lsp": "./bin/tscn-lsp.js"

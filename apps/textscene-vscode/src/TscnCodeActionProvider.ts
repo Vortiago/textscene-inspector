@@ -5,9 +5,19 @@
  */
 
 import * as vscode from 'vscode';
-import { codeActions } from '@textscene/core/languageFeatures';
+import { codeActions, type CodeAction as EngineCodeAction } from '@textscene/core/languageFeatures';
 import { languageDocumentOf } from './languageDocumentOf';
 import { toVscodeRange } from './languageFeatureRanges';
+
+function toVscodeCodeAction(action: EngineCodeAction, uri: vscode.Uri): vscode.CodeAction {
+  const fix = new vscode.CodeAction(action.title, vscode.CodeActionKind.QuickFix);
+  const edit = new vscode.WorkspaceEdit();
+  for (const textEdit of action.edit) {
+    edit.replace(uri, toVscodeRange(textEdit.range), textEdit.newText);
+  }
+  fix.edit = edit;
+  return fix;
+}
 
 export class TscnCodeActionProvider implements vscode.CodeActionProvider {
   readonly providedCodeActionKinds = [vscode.CodeActionKind.QuickFix];
@@ -18,14 +28,8 @@ export class TscnCodeActionProvider implements vscode.CodeActionProvider {
     _context: vscode.CodeActionContext,
     _token: vscode.CancellationToken
   ): vscode.CodeAction[] {
-    return codeActions(languageDocumentOf(document), range).map((action) => {
-      const fix = new vscode.CodeAction(action.title, vscode.CodeActionKind.QuickFix);
-      const edit = new vscode.WorkspaceEdit();
-      for (const textEdit of action.edit) {
-        edit.replace(document.uri, toVscodeRange(textEdit.range), textEdit.newText);
-      }
-      fix.edit = edit;
-      return fix;
-    });
+    return codeActions(languageDocumentOf(document), range).map((action) =>
+      toVscodeCodeAction(action, document.uri)
+    );
   }
 }

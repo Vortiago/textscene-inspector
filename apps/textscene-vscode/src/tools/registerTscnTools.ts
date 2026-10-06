@@ -1,10 +1,7 @@
 /**
  * The agent tools the extension registers with `vscode.lm`: lint a scene, read its node
  * tree, open its preview, list the resources it cannot load, and capture the preview as
- * a PNG. A coding agent in chat calls them so it can check a `.tscn` it edited without a
- * Godot install. Registration is guarded: the API is newer than the extension's
- * `engines.vscode` floor, and the image part is newer still. The user's setting hides and
- * refuses the tools at once, with no reload.
+ * a PNG. A coding agent in chat calls them to check a `.tscn` it edited without Godot.
  */
 
 import * as vscode from 'vscode';
@@ -35,27 +32,12 @@ export interface TscnToolHost {
   lintProviderFor(uri: vscode.Uri): Promise<ResourceProvider | null>;
 }
 
-interface PreparedScene {
+interface SceneFile {
   readonly uri: vscode.Uri;
   readonly text: string;
 }
 
-/** The file a scene tool input names, or a clear error for a missing or non-scene one. */
-function sceneUriOf(input: ScenePathToolInput | undefined): vscode.Uri {
-  const path = scenePathOf(input);
-  const uri = resolveToolUri(path);
-  if (!uri) {
-    throw new Error(`No workspace folder is open, so the relative path '${path}' names no file.`);
-  }
-  return uri;
-}
-
-async function prepare(input: ScenePathToolInput | undefined): Promise<PreparedScene> {
-  const uri = sceneUriOf(input);
-  return { uri, text: await readSceneText(uri) };
-}
-
-/** The `.tscn` path an input names, or a clear error for a missing or non-scene one. */
+/** The `.tscn` path an input names. Throws for a missing path or one that names no scene. */
 function scenePathOf(input: ScenePathToolInput | undefined): string {
   const path = input?.path;
   if (typeof path !== 'string' || path.length === 0) {
@@ -65,6 +47,21 @@ function scenePathOf(input: ScenePathToolInput | undefined): string {
     throw new Error(`Expected a .tscn scene, got '${path}'.`);
   }
   return path;
+}
+
+/** The file a scene tool input names. Throws for a relative path with no workspace folder open. */
+function sceneUriOf(input: ScenePathToolInput | undefined): vscode.Uri {
+  const path = scenePathOf(input);
+  const uri = resolveToolUri(path);
+  if (!uri) {
+    throw new Error(`No workspace folder is open, so the relative path '${path}' names no file.`);
+  }
+  return uri;
+}
+
+async function readSceneFile(input: ScenePathToolInput | undefined): Promise<SceneFile> {
+  const uri = sceneUriOf(input);
+  return { uri, text: await readSceneText(uri) };
 }
 
 function textResult(value: string): vscode.LanguageModelToolResult {
@@ -77,7 +74,7 @@ function sceneTextTool(
 ): vscode.LanguageModelTool<ScenePathToolInput> {
   return {
     async invoke(options) {
-      const { uri, text } = await prepare(options.input);
+      const { uri, text } = await readSceneFile(options.input);
       return textResult(await answer(uri, text));
     },
   };
@@ -87,6 +84,10 @@ function sceneTextTool(
 function lintAnswer(host: TscnToolHost): (uri: vscode.Uri, text: string) => Promise<string> {
   return async (uri, text) =>
     formatLintResult(uri.fsPath, await new Linter().lintComplete(text, await host.lintProviderFor(uri)));
+}
+
+function sceneTreeAnswer(uri: vscode.Uri, text: string): string {
+  return formatSceneTree(uri.fsPath, text);
 }
 
 async function missingResourcesAnswer(uri: vscode.Uri, text: string): Promise<string> {
@@ -129,7 +130,7 @@ function pngBytesOf(dataUrl: string): Uint8Array {
   return Uint8Array.from(atob(comma === -1 ? '' : dataUrl.slice(comma + 1)), (char) => char.charCodeAt(0));
 }
 
-function agentToolsEnabled(): boolean {
+function areAgentToolsEnabled(): boolean {
   return vscode.workspace.getConfiguration('textscene').get<boolean>(ENABLED_SETTING, true);
 }
 
@@ -140,7 +141,7 @@ function agentToolsEnabled(): boolean {
 function whileEnabled<T>(tool: vscode.LanguageModelTool<T>): vscode.LanguageModelTool<T> {
   return {
     async invoke(options, token) {
-      if (!agentToolsEnabled()) {
+      if (!areAgentToolsEnabled()) {
         throw new Error(`The TextScene agent tools are turned off (textscene.${ENABLED_SETTING}).`);
       }
       return await tool.invoke(options, token);
@@ -149,8 +150,9 @@ function whileEnabled<T>(tool: vscode.LanguageModelTool<T>): vscode.LanguageMode
 }
 
 /**
- * Registers the agent tools when VS Code has the API. The capture tool needs the image part
- * of a tool result, stable from VS Code 1.106, so it registers on its own guard.
+ * Registers the agent tools when VS Code has the API, which is newer than the extension's
+ * `engines.vscode` floor. The capture tool needs the image part of a tool result, stable
+ * from VS Code 1.106, so it registers on its own guard.
  */
 export function registerTscnTools(context: vscode.ExtensionContext, host: TscnToolHost): void {
   if (typeof vscode.lm?.registerTool !== 'function') return;
@@ -159,10 +161,7 @@ export function registerTscnTools(context: vscode.ExtensionContext, host: TscnTo
     vscode.lm.registerTool(id, whileEnabled(tool));
   const tools = [
     register(TOOL_IDS.lint, sceneTextTool(lintAnswer(host))),
-    register(
-      TOOL_IDS.sceneTree,
-      sceneTextTool((uri, text) => formatSceneTree(uri.fsPath, text))
-    ),
+    register(TOOL_IDS.sceneTree, sceneTextTool(sceneTreeAnswer)),
     register(TOOL_IDS.openPreview, new TscnOpenPreviewTool(host)),
     register(TOOL_IDS.missingResources, sceneTextTool(missingResourcesAnswer)),
   ];

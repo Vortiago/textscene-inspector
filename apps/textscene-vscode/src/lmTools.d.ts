@@ -1,8 +1,8 @@
 /**
  * The Language Model Tools API (`vscode.lm.registerTool`, `LanguageModelToolResult`),
- * which the pinned `@types/vscode` 1.85 predates. Only the members these tools use are
- * declared, so the extension compiles against 1.85 while registering tools on a VS Code
- * that has the API. `registerTscnTools` guards the call at runtime.
+ * which the pinned `@types/vscode` 1.85 predates. This declares only the members the
+ * extension and its tests use, so the extension compiles against 1.85 and registers its
+ * tools on a VS Code that has the API. `registerTscnTools` guards the call at runtime.
  */
 
 declare module 'vscode' {
@@ -32,23 +32,11 @@ declare module 'vscode' {
     readonly input: T;
   }
 
-  export interface LanguageModelToolInvocationPrepareOptions<T> {
-    readonly input: T;
-  }
-
-  export interface PreparedToolInvocation {
-    invocationMessage?: string | MarkdownString;
-  }
-
   export interface LanguageModelTool<T> {
     invoke(
       options: LanguageModelToolInvocationOptions<T>,
       token: CancellationToken
     ): ProviderResult<LanguageModelToolResult>;
-    prepareInvocation?(
-      options: LanguageModelToolInvocationPrepareOptions<T>,
-      token: CancellationToken
-    ): ProviderResult<PreparedToolInvocation>;
   }
 
   export class LanguageModelTextPart {
@@ -58,7 +46,7 @@ declare module 'vscode' {
 
   /**
    * A binary part of a tool result, such as a PNG the agent can look at. `image` builds
-   * the one this extension returns; it is stable from VS Code 1.106, so a tool that
+   * the one this extension returns. It is stable from VS Code 1.106, so a tool that
    * returns one guards on {@link LanguageModelDataPart}'s presence.
    */
   export class LanguageModelDataPart {

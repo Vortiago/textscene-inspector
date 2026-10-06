@@ -54,9 +54,9 @@ export class TscnDocumentLinkProvider implements vscode.DocumentLinkProvider<Tsc
 
   /**
    * Resolves the link the user hovers or clicks through the `findGodotProjectRoot`
-   * walk the preview panel shares. A document outside every workspace folder has no
-   * project root, and a path that climbs out of the root, a missing file or a directory
-   * names no file to open, so none gets a target. The `tscn-lsp` server answers the same.
+   * walk the preview panel shares. A document outside every workspace folder gets no
+   * target. Nor does a path that climbs out of the root, a missing file or a directory,
+   * since none names a file to open. The `tscn-lsp` server answers the same.
    */
   async resolveDocumentLink(
     link: TscnResourceDocumentLink,

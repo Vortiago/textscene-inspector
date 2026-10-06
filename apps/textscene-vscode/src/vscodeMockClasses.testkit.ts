@@ -3,7 +3,7 @@
 /**
  * The constructible classes and enums of the `vscode` module mock. Nothing here
  * holds a spy: the namespaces `afterEach` clears live in `vscodeMocks.testkit.ts`,
- * and `test-setup.ts` assembles both.
+ * and `vscodeModuleMock.testkit.ts` assembles both.
  */
 
 import { vi } from 'vitest';
@@ -206,8 +206,6 @@ export const MockTreeItemCollapsibleState = {
 
 /** `vscode.MarkdownString`: hover and documentation content. */
 export class MockMarkdownString {
-  isTrusted = false;
-
   constructor(public value: string) {}
 }
 
@@ -225,7 +223,6 @@ export class MockCompletionItem {
   documentation?: any;
   insertText?: any;
   tags?: number[];
-  range?: any;
 
   constructor(
     public label: string,
@@ -268,8 +265,6 @@ export const MockCompletionItemKind = {
 /** `vscode.CodeAction`: a title, a kind and the edit it applies. */
 export class MockCodeAction {
   edit?: MockWorkspaceEdit;
-  diagnostics?: any;
-  isPreferred?: boolean;
 
   constructor(
     public title: string,

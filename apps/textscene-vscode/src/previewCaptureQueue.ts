@@ -34,7 +34,7 @@ interface CaptureRequest {
 
 export class PreviewCaptureQueue {
   private _state: CaptureState = LOADING;
-  private _closed = false;
+  private _isClosed = false;
   private _waiting: CaptureRequest[] = [];
   private readonly _inFlight = new Map<string, CaptureRequest>();
   private _requestSeq = 0;
@@ -43,7 +43,7 @@ export class PreviewCaptureQueue {
   public constructor(private readonly _postRequest: (requestId: string) => void) {}
 
   public request(): Promise<PreviewCapture> {
-    if (this._closed) return Promise.resolve(CLOSED);
+    if (this._isClosed) return Promise.resolve(CLOSED);
     return new Promise((resolve) => {
       const request: CaptureRequest = { resolve };
       request.timer = setTimeout(() => this._expire(request), CAPTURE_DEADLINE_MS);
@@ -80,7 +80,7 @@ export class PreviewCaptureQueue {
 
   /** Answers every request with the closed preview, and each later request too. */
   public close(): void {
-    this._closed = true;
+    this._isClosed = true;
     for (const request of [...this._waiting, ...this._inFlight.values()]) settle(request, CLOSED);
     this._waiting = [];
     this._inFlight.clear();

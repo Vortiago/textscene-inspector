@@ -22,8 +22,8 @@ function parentResPath(path: string): string {
 }
 
 /**
- * The `res://` paths of `files` the scan reaches. A directory below the root that holds one of
- * `stopFiles`, a nested `project.godot` or a `.gdignore`, is skipped whole.
+ * The `res://` paths of `files` the scan reaches. The scan skips the whole of a directory
+ * below the root that holds one of `stopFiles`: a nested `project.godot` or a `.gdignore`.
  */
 export function scannedResPaths(
   root: vscode.Uri,

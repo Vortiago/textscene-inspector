@@ -121,7 +121,7 @@
         "when": "config.textscene.agentTools.enabled",
         "displayName": "Lint a Godot .tscn scene",
         "toolReferenceName": "lintTscn",
-        "modelDescription": "Lint a Godot .tscn scene and return its findings, each with a line, a severity, a message and a rule. Use after editing a scene, to check it without a Godot install.",
+        "modelDescription": "Lint a Godot .tscn scene and return its diagnostics, each with a line, a severity, a message and a rule. Use after editing a scene, to check it without a Godot install.",
         "tags": [
           "godot",
           "tscn",
@@ -145,9 +145,9 @@
       {
         "name": "textscene_scene_tree",
         "when": "config.textscene.agentTools.enabled",
-        "displayName": "Read a Godot .tscn scene tree",
+        "displayName": "Read a Godot .tscn node tree",
         "toolReferenceName": "tscnSceneTree",
-        "modelDescription": "Return a Godot .tscn scene's node hierarchy as indented text, each node with its type. Use to understand a scene's structure without reading the raw file.",
+        "modelDescription": "Return a Godot .tscn scene's node tree as indented text, each node with its type. Use to understand a scene's structure without reading the raw file.",
         "tags": [
           "godot",
           "tscn",
