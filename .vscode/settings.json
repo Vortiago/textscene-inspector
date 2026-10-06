@@ -5,7 +5,5 @@
     "source.fixAll.eslint": "explicit"
   },
   "prettier.requireConfig": true,
-  "eslint.validate": ["typescript", "typescriptreact", "javascript", "javascriptreact"],
-  "typescript.tsdk": "node_modules/typescript/lib",
-  "npm.packageManager": "pnpm"
+  "typescript.tsdk": "node_modules/typescript/lib"
 }
