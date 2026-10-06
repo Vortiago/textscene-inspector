@@ -123,7 +123,8 @@ export async function findProjectRoot<Dir>(
 /**
  * The directory a scene's `res://` paths resolve under: its Godot project root, or `sceneDir` itself when no
  * directory holds `project.godot`. Godot has no `res://` outside a project, but a loose scene, such as one copied out
- * of a demo, names its files relative to its own directory. Every host's editor features take this one answer.
+ * of a demo, names its files relative to its own directory. The VS Code extension, the `tscn-lsp` server and the
+ * `tscn-lint` CLI take this one answer.
  */
 export async function findResRoot<Dir>(
   sceneDir: Dir,

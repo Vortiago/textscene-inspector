@@ -274,8 +274,6 @@ describe('cross-file rules', () => {
     writeFileSync(join(projectDir, 'game', 'project.godot'), 'config_version=5\n');
     copyFileSync(INSTANCED_TREE, join(projectDir, 'game', 'tree.glb'));
     writeFileSync(join(projectDir, 'game', 'scenes', 'level.tscn'), USES_TREE_GLB);
-    copyFileSync(INSTANCED_TREE, join(projectDir, 'tree.glb'));
-    writeFileSync(join(projectDir, 'loose.tscn'), USES_TREE_GLB);
   });
 
   afterAll(() => {
@@ -341,9 +339,58 @@ describe('cross-file rules', () => {
       ['warning', 'gltf-required-extension-unsupported-in-node'],
     ]);
   });
+});
 
-  it('reads no dependency for a scene outside any Godot project', async () => {
-    const { exitCode, files } = await collectFileDiagnostics([join(projectDir, 'loose.tscn')]);
+describe('cross-file rules for a scene outside every Godot project', () => {
+  let workspaceDir: string;
+
+  beforeAll(() => {
+    workspaceDir = mkdtempSync(join(tmpdir(), 'tscn-lint-loose-'));
+    mkdirSync(join(workspaceDir, 'dungeon'));
+    copyFileSync(INSTANCED_TREE, join(workspaceDir, 'dungeon', 'tree.glb'));
+    writeFileSync(join(workspaceDir, 'dungeon', 'level.tscn'), USES_TREE_GLB);
+    copyFileSync(INSTANCED_TREE, join(workspaceDir, 'tree.glb'));
+    writeFileSync(join(workspaceDir, 'level.tscn'), USES_TREE_GLB);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  afterAll(() => {
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  /** A loose scene has no `project.godot` to rule out a plugin that supports the extension, so the verdict is a warning. */
+  const NO_PROJECT_GLTF_WARNING = [['warning', 'gltf-required-extension-maybe-unsupported']];
+
+  /** Runs the CLI as if it were started in `dir`, its workspace. */
+  function runFrom(dir: string): void {
+    vi.spyOn(process, 'cwd').mockReturnValue(dir);
+  }
+
+  it("reads the dependencies under the scene's own directory inside the working directory", async () => {
+    runFrom(workspaceDir);
+
+    const { exitCode, files } = await collectFileDiagnostics([join(workspaceDir, 'dungeon', 'level.tscn')]);
+
+    expect(exitCode).toBe(0);
+    expect(files[0]!.diagnostics.map((d) => [d.severity, d.ruleName])).toEqual(NO_PROJECT_GLTF_WARNING);
+  });
+
+  it('reads the dependencies of a scene that lies in the working directory itself', async () => {
+    runFrom(workspaceDir);
+
+    const { exitCode, files } = await collectFileDiagnostics([join(workspaceDir, 'level.tscn')]);
+
+    expect(exitCode).toBe(0);
+    expect(files[0]!.diagnostics.map((d) => [d.severity, d.ruleName])).toEqual(NO_PROJECT_GLTF_WARNING);
+  });
+
+  it('reads no dependency for a scene outside the working directory, so a run reads no unrelated tree', async () => {
+    runFrom(join(workspaceDir, 'dungeon'));
+
+    const { exitCode, files } = await collectFileDiagnostics([join(workspaceDir, 'level.tscn')]);
 
     expect(exitCode).toBe(0);
     expect(files[0]!.diagnostics).toEqual([]);

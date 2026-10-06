@@ -1,7 +1,7 @@
 /**
- * `res://` in a real VS Code: it resolves under the nearest `project.godot`, or under the scene's
- * own directory outside every project, never under the workspace folder. A `project.godot`
- * created later gives the scene its root, with no reload.
+ * `res://` in a real VS Code, for the editor features and the preview alike: it resolves under the
+ * nearest `project.godot`, or under the scene's own directory outside every project, never under
+ * the workspace folder. A `project.godot` created later gives the scene its root, with no reload.
  */
 
 import * as assert from 'assert';
@@ -9,6 +9,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { godotProjectDir, lineStartingWith, removeGodotProject } from '../helpers/godotProjectHelpers';
+import { createTestPanel, getExtensionUri, waitForMessage } from '../helpers/panelHelpers';
+import { waitFor } from '../../waitFor';
 import { EXTENSION_ID } from '../../smokeProject/sceneEditor';
 
 const FOLDER = 'project-roots';
@@ -123,6 +125,21 @@ function offeredPaths(scene: vscode.TextDocument, resPath: string): Thenable<str
     );
 }
 
+/** The type of the preview's answer when its webview asks for `resPath`: `resourceLoaded` or `resourceLoadError`. */
+async function previewAnswer(scene: string, resPath: string): Promise<string> {
+  const { panel, sentMessages, triggerMessage } = createTestPanel(getExtensionUri(), vscode.Uri.file(scene));
+  try {
+    triggerMessage({ type: 'webviewReady' });
+    await waitForMessage(sentMessages, 'loadTscn', 8000);
+    triggerMessage({ type: 'loadResource', path: resPath, resourceType: 'Texture2D', requestId: 'grid' });
+    const isAnswer = (type: string) => type === 'resourceLoaded' || type === 'resourceLoadError';
+    await waitFor(() => sentMessages.some((m) => isAnswer(m.type)), 5000);
+    return sentMessages.find((m) => isAnswer(m.type))!.type;
+  } finally {
+    panel.dispose();
+  }
+}
+
 suite('Project roots', () => {
   let dir: string;
   let grid: string;
@@ -168,6 +185,14 @@ suite('Project roots', () => {
     assert.deepStrictEqual(await definitionTargets(scene, WORKSPACE_PATH), []);
     const paths = await offeredPaths(scene, WORKSPACE_PATH);
     assert.ok(!paths.includes(WORKSPACE_PATH), `offered: ${paths.join(', ')}`);
+  });
+
+  test("the preview resolves a loose scene's res:// under its own directory, never the workspace folder", async () => {
+    assert.strictEqual(await previewAnswer(path.join(dir, 'loose.tscn'), PROJECT_PATH), 'resourceLoaded');
+    assert.strictEqual(
+      await previewAnswer(path.join(dir, 'workspace-path.tscn'), WORKSPACE_PATH),
+      'resourceLoadError'
+    );
   });
 
   test('a project.godot created later gives the scene its root, with no reload', async () => {

@@ -70,7 +70,7 @@ export class Linter {
    * answer. A file the provider cannot deliver adds no diagnostic.
    *
    * @param content - Raw TSCN file content
-   * @param provider - Loads a `res://` path of the file's project, or null for a file in no project
+   * @param provider - Loads a `res://` path under the file's `res://` root, or null for a file with no root
    */
   async lintComplete(content: string, provider: ResourceProvider | null): Promise<Diagnostic[]> {
     const { now, later } = this.session().lint(content, provider);

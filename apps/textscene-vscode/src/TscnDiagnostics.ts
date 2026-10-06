@@ -17,7 +17,7 @@ import { error as logError } from '@textscene/core/logger';
 import { comparablePath, isWithinRoot } from '@textscene/core/resources/resPath';
 import { HOST_PATH_CASE } from './hostPathCase';
 import { LintResourceProvider } from './LintResourceProvider';
-import { findResRootIn, hasProjectFile } from './findGodotProjectRoot';
+import { findResRootIn, hasProjectFile } from './resRoot';
 import {
   ANY_PATH_PATTERN,
   EXTENSION_LIST_PATTERN,

@@ -79,10 +79,12 @@ a glTF extension that Godot's importer does not support:
 `session.lint` returns `now`, from the reads it keeps, and `later`, the full list after new
 reads. `later` is null when no read is necessary, and resolves to null when a newer lint
 overtakes it. `Linter.lintComplete` gives the full list in one answer. The `Linter` keeps
-each read under the provider's `stamp` (`linter/stampedReads.ts`). The CLI and VS Code root their providers at the nearest
-`project.godot` (`resources/resPath.ts`), and the web previewer at its corpus root. For a scene
-outside every project, the CLI lints with no provider, and VS Code and the `tscn-lsp` server root
-the provider at the scene's own directory (`findResRoot`) when the scene lies inside the workspace.
+each read under the provider's `stamp` (`linter/stampedReads.ts`). The CLI, VS Code (the preview
+and the editor features) and the `tscn-lsp` server root their providers at the scene's `res://`
+root (`findResRoot` in `resources/resPath.ts`): the nearest `project.godot`, or the scene's own
+directory when the scene lies inside the workspace. The CLI's workspace is the directory it runs
+from. Outside every project and the workspace, a scene has no root and lints with no provider. The
+web previewer roots its provider at its corpus root.
 
 ## Vertical slices and registries
 

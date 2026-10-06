@@ -1,5 +1,5 @@
 // @vitest-environment node
-/** A scene's Godot project read from disk: the files under the nearest `project.godot`. */
+/** A scene's `res://` root read from disk: the files under the nearest `project.godot`, or a loose scene's own directory. */
 
 import { mkdirSync, mkdtempSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -9,10 +9,9 @@ import {
   forgetDiskState,
   isFile,
   listProjectPaths,
-  projectProviderFor,
   projectRootForDir,
-  projectRootForFile,
   providerForRoot,
+  resProviderForFile,
   resRootForFile,
 } from './diskProject';
 
@@ -43,16 +42,6 @@ beforeAll(() => {
 
 afterAll(() => {
   rmSync(tempDir, { recursive: true, force: true });
-});
-
-describe('projectRootForFile', () => {
-  it('finds the nearest ancestor directory that holds project.godot', async () => {
-    expect(await projectRootForFile(scenePath)).toBe(root);
-  });
-
-  it('gives null for a scene with no project.godot above it', async () => {
-    expect(await projectRootForFile(join(tempDir, 'loose', 'scene.tscn'))).toBeNull();
-  });
 });
 
 describe('resRootForFile', () => {
@@ -89,13 +78,28 @@ describe('projectRootForDir', () => {
   });
 });
 
-describe('projectProviderFor', () => {
-  it('gives no provider for a scene with no project.godot above it', async () => {
-    expect(await projectProviderFor(join(tempDir, 'loose', 'scene.tscn'))).toBeNull();
+describe('resProviderForFile', () => {
+  it("reads a loose scene's res:// path under its own directory inside the workspace", async () => {
+    const loose = join(tempDir, 'loose-read');
+    mkdirSync(loose);
+    writeFileSync(join(loose, 'floor.png'), new Uint8Array([0x89, 0x50]));
+    const provider = await resProviderForFile(join(loose, 'dungeon.tscn'), tempDir);
+
+    expect([
+      ...new Uint8Array((await provider!.loadResource('res://floor.png', 'Texture2D')) as ArrayBuffer),
+    ]).toEqual([0x89, 0x50]);
+  });
+
+  it('gives no provider for a loose scene outside the workspace', async () => {
+    expect(await resProviderForFile(join(tempDir, 'loose', 'scene.tscn'), projectDir)).toBeNull();
+  });
+
+  it('gives no provider for a loose scene with no workspace', async () => {
+    expect(await resProviderForFile(join(tempDir, 'loose', 'scene.tscn'), null)).toBeNull();
   });
 
   it('reads a res:// path under the nearest project.godot as bytes', async () => {
-    const provider = await projectProviderFor(scenePath);
+    const provider = await resProviderForFile(scenePath, null);
     const data = await provider!.loadResource('res://models/tree.glb', 'PackedScene');
 
     expect(data).toBeInstanceOf(ArrayBuffer);
@@ -103,36 +107,36 @@ describe('projectProviderFor', () => {
   });
 
   it('reads a text resource as a string', async () => {
-    const provider = await projectProviderFor(scenePath);
+    const provider = await resProviderForFile(scenePath, null);
     expect(await provider!.loadResource('res://scenes/level.tscn', 'PackedScene')).toBe(
       '[gd_scene format=3]\n'
     );
   });
 
   it('gives null for a file the project does not hold', async () => {
-    const provider = await projectProviderFor(scenePath);
+    const provider = await resProviderForFile(scenePath, null);
     expect(await provider!.loadResource('res://models/missing.glb', 'PackedScene')).toBeNull();
   });
 
   it('refuses a path that escapes the project root', async () => {
-    const provider = await projectProviderFor(scenePath);
+    const provider = await resProviderForFile(scenePath, null);
     expect(await provider!.loadResource('res://../secret.txt', 'TextFile')).toBeNull();
   });
 
   it('refuses a path that is not res://', async () => {
-    const provider = await projectProviderFor(scenePath);
+    const provider = await resProviderForFile(scenePath, null);
     expect(await provider!.loadResource(join(tempDir, 'secret.txt'), 'TextFile')).toBeNull();
   });
 
   it('hands back one provider for every scene of a project, so its verdicts serve the whole run', async () => {
     const other = join(projectDir, 'scenes', 'level.tscn');
-    expect(await projectProviderFor(other)).toBe(await projectProviderFor(scenePath));
+    expect(await resProviderForFile(other, null)).toBe(await resProviderForFile(scenePath, null));
   });
 });
 
-describe('projectProviderFor stamp', () => {
+describe('resProviderForFile stamp', () => {
   it('stamps a file with its modification time and size', async () => {
-    const provider = await projectProviderFor(scenePath);
+    const provider = await resProviderForFile(scenePath, null);
     const file = join(projectDir, 'models', 'tree.glb');
     const { mtimeMs, size } = statSync(file);
 
@@ -140,7 +144,7 @@ describe('projectProviderFor stamp', () => {
   });
 
   it('changes when the file is rewritten', async () => {
-    const provider = await projectProviderFor(scenePath);
+    const provider = await resProviderForFile(scenePath, null);
     const file = join(projectDir, 'models', 'stamped.glb');
     writeFileSync(file, new Uint8Array([1]));
     const before = await provider!.stamp!('res://models/stamped.glb');
@@ -150,17 +154,17 @@ describe('projectProviderFor stamp', () => {
   });
 
   it('gives null for a file the project does not hold', async () => {
-    const provider = await projectProviderFor(scenePath);
+    const provider = await resProviderForFile(scenePath, null);
     expect(await provider!.stamp!('res://models/missing.glb')).toBeNull();
   });
 
   it('gives null for a path that escapes the project root', async () => {
-    const provider = await projectProviderFor(scenePath);
+    const provider = await resProviderForFile(scenePath, null);
     expect(await provider!.stamp!('res://../secret.txt')).toBeNull();
   });
 });
 
-describe('projectProviderFor listFiles', () => {
+describe('resProviderForFile listFiles', () => {
   let listedDir: string;
 
   beforeAll(() => {
@@ -185,7 +189,7 @@ describe('projectProviderFor listFiles', () => {
   });
 
   it("lists each GDExtension the editor's scan finds, in any case, and none it skips", async () => {
-    const provider = await projectProviderFor(join(listedDir, 'scenes', 'level.tscn'));
+    const provider = await resProviderForFile(join(listedDir, 'scenes', 'level.tscn'), null);
     const listed = await provider!.listFiles!('gdextension');
 
     expect(listed).toContain('res://bin/a.gdextension');
@@ -197,7 +201,7 @@ describe('projectProviderFor listFiles', () => {
   });
 
   it('lists the project once per run, since a run sees one state of it', async () => {
-    const provider = await projectProviderFor(join(listedDir, 'scenes', 'level.tscn'));
+    const provider = await resProviderForFile(join(listedDir, 'scenes', 'level.tscn'), null);
     const first = await provider!.listFiles!('gdextension');
     writeFileSync(join(listedDir, 'bin', 'late.gdextension'), '');
 

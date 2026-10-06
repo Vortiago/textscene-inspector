@@ -5,7 +5,7 @@
  */
 
 import * as vscode from 'vscode';
-import { resRootOf } from './findGodotProjectRoot';
+import { resRootOf } from './resRoot';
 import { scannedResPaths } from './scannedResPaths';
 import { SCAN_STOP_FILES_PATTERN } from './watchPatterns';
 

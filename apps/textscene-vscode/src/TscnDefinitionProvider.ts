@@ -7,7 +7,7 @@
 import * as vscode from 'vscode';
 import { declarationRangeAt, resPathAt } from '@textscene/core/languageFeatures';
 import { existingResFile } from './existingResFile';
-import { resRootOf } from './findGodotProjectRoot';
+import { resRootOf } from './resRoot';
 import { languageDocumentOf } from './languageDocumentOf';
 import { toVscodeRange } from './languageFeatureRanges';
 

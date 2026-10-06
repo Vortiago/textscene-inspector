@@ -6,7 +6,7 @@
 
 import * as vscode from 'vscode';
 import { TscnParser } from '@textscene/core/parser';
-import { resRootOf } from '../findGodotProjectRoot';
+import { resRootOf } from '../resRoot';
 import { LintResourceProvider } from '../LintResourceProvider';
 
 /**

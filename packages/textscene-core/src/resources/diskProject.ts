@@ -1,12 +1,10 @@
 /// <reference types="node" />
 
 /**
- * A scene's Godot project read from disk, for the Node hosts: the `tscn-lint` CLI and the
- * `tscn-lsp` server. The project is the files under the nearest directory holding
- * `project.godot`. For a scene with none, the CLI gives no provider, so the cross-file rules
- * stay silent, and the server roots `res://` at the scene's own directory inside its workspace (`resRootForFile`).
- * Only a Node bundle imports this module, since it reads `node:fs`. An eslint rule keeps every
- * browser bundle away from it.
+ * A scene's `res://` root read from disk, for the Node hosts: the `tscn-lint` CLI and the `tscn-lsp` server. The root
+ * is the nearest directory holding `project.godot`, or the scene's own directory when none does and the scene lies
+ * inside the host's workspace (`resRootForFile`). Only a Node bundle imports this module, since it reads `node:fs`.
+ * An eslint rule keeps every browser bundle away from it.
  */
 
 import type { Dirent } from 'node:fs';
@@ -161,12 +159,6 @@ function directoryOf(file: string): string | null {
   return parentDir(resolve(file));
 }
 
-/** The project root of the file at `file`, or null when no ancestor directory holds `project.godot`. */
-export function projectRootForFile(file: string): Promise<string | null> {
-  const dir = directoryOf(file);
-  return dir === null ? Promise.resolve(null) : projectRootForDir(dir);
-}
-
 /**
  * The directory the `res://` paths of the scene at `file` resolve under: its project root, or the scene's own
  * directory when no project holds it and it lies inside `workspace`. Null outside both, since a listing from a loose
@@ -182,9 +174,12 @@ export async function resRootForFile(file: string, workspace: string | null): Pr
     : null;
 }
 
-/** The provider for the project `scenePath` belongs to, or null when no ancestor directory holds `project.godot`. */
-export async function projectProviderFor(scenePath: string): Promise<ResourceProvider | null> {
-  const root = await projectRootForFile(scenePath);
+/** The provider for the `res://` root of the scene at `file`, as `resRootForFile` finds it, or null for no root. */
+export async function resProviderForFile(
+  file: string,
+  workspace: string | null
+): Promise<ResourceProvider | null> {
+  const root = await resRootForFile(file, workspace);
   return root === null ? null : providerForRoot(root);
 }
 
