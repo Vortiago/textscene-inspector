@@ -6,6 +6,7 @@
  */
 
 import type { LanguageDocument } from './document.js';
+import { nodePathOf } from './nodePath.js';
 import type { DocumentSymbol, Range, SymbolKind } from './types.js';
 
 /** The icon a few common node types show. Every other node is an `object`. */
@@ -39,24 +40,19 @@ function buildTree(document: LanguageDocument): PendingSymbol[] {
   const byPath = new Map<string, PendingSymbol>();
   for (const section of document.sections) {
     if (section.kind !== 'node') continue;
-    const name = section.attributes.name;
+    const path = nodePathOf(section);
     // VS Code refuses a symbol with an empty name, and a heading being typed has one.
-    if (!name) continue;
+    if (path === undefined) continue;
     const symbol: PendingSymbol = {
-      name,
+      name: section.attributes.name!,
       type: section.attributes.type ?? '',
       headingLine: section.headingLine,
       endLine: section.endLine,
       children: [],
     };
     const parent = section.attributes.parent;
-    if (parent === undefined) {
-      byPath.set('.', symbol);
-      roots.push(symbol);
-      continue;
-    }
-    const parentSymbol = byPath.get(parent);
-    byPath.set(parent === '.' ? name : `${parent}/${name}`, symbol);
+    const parentSymbol = parent === undefined ? undefined : byPath.get(parent);
+    byPath.set(path, symbol);
     if (parentSymbol) parentSymbol.children.push(symbol);
     else roots.push(symbol);
   }

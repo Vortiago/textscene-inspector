@@ -78,14 +78,25 @@ describe('completionsAt', () => {
     expect(labels).toEqual(['res://door.tscn']);
   });
 
-  it('offers node names for a parent= attribute', async () => {
-    const document = new LanguageDocument(SCENE);
-    const text = document.lines[LINE.meshNode - 1]!;
-    const items = await completionsAt(document, {
-      line: LINE.meshNode - 1,
-      character: text.indexOf('.'),
-    });
-    expect(items.map((item) => item.label)).toContain('Root');
+  it('offers parent= the path from the root of each node declared above', async () => {
+    const document = new LanguageDocument(
+      [
+        '[node name="Root" type="Node3D"]',
+        '[node name="Body" type="Node3D" parent="."]',
+        '[node name="Arm" type="Node3D" parent="Body"]',
+        '[node name="Hand" type="Node3D" parent=""]',
+        '[node name="Later" type="Node3D" parent="."]',
+      ].join('\n')
+    );
+    const labels = await labelsAt(document, 4, '[node name="Hand" type="Node3D" parent="'.length);
+    expect(labels).toEqual(['.', 'Body', 'Body/Arm']);
+  });
+
+  it('offers parent= only the root for the first child', async () => {
+    const document = new LanguageDocument(
+      ['[node name="Root" type="Node3D"]', '[node name="Body" type="Node3D" parent=""]'].join('\n')
+    );
+    expect(await labelsAt(document, 2, '[node name="Body" type="Node3D" parent="'.length)).toEqual(['.']);
   });
 
   it('offers the class properties for a key typed before its =', async () => {

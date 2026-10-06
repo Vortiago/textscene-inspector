@@ -18,6 +18,7 @@ import {
 import type { DocumentSection, LanguageDocument, PropertyLocation } from './document.js';
 import { enumEntriesOf } from './hints.js';
 import { declaredResources, openReferenceAt, type ResourceRefKind } from './resourceRefs.js';
+import { nodePathOf, ROOT_PATH } from './nodePath.js';
 import { headingAttribute, propertyKeySpan, spanContains } from './ranges.js';
 import type { CompletionItem, Position } from './types.js';
 
@@ -116,17 +117,21 @@ function classNameItems(section: DocumentSection): readonly CompletionItem[] {
   return typeItems(resourceClassNames(), 'resourceType');
 }
 
-function parentItems(document: LanguageDocument): readonly CompletionItem[] {
-  const names = document.sections
-    .filter((section) => section.kind === 'node' && section.attributes.name)
-    .map((section) => section.attributes.name as string);
-  return [...new Set(['.', ...names])]
-    .sort((a, b) => a.localeCompare(b))
-    .map((name) => ({
-      label: name,
-      kind: 'nodeName' as const,
-      detail: name === '.' ? 'scene root' : 'node',
-    }));
+/**
+ * What a heading's `parent=` may name: the path of a node declared above it. Godot creates the
+ * nodes in file order and resolves each parent then (`packed_scene.cpp:157-160, 205-213`), so the
+ * node itself and every node below it are no parent yet.
+ */
+function parentItems(document: LanguageDocument, headingLine: number): readonly CompletionItem[] {
+  const paths = document.sections
+    .filter((section) => section.kind === 'node' && section.headingLine < headingLine)
+    .map(nodePathOf)
+    .filter((path) => path !== undefined);
+  return [...new Set(paths)].map((path) => ({
+    label: path,
+    kind: 'nodeName' as const,
+    detail: path === ROOT_PATH ? 'scene root' : 'node',
+  }));
 }
 
 /** The values a property's ClassDB row offers: its enum labels, or `true` and `false`. */
@@ -165,7 +170,7 @@ function headingItems(
   character: number
 ): readonly CompletionItem[] {
   if (isOnHeadingAttribute(line, 'type', character)) return classNameItems(section);
-  if (isOnHeadingAttribute(line, 'parent', character)) return parentItems(document);
+  if (isOnHeadingAttribute(line, 'parent', character)) return parentItems(document, section.headingLine);
   return [];
 }
 

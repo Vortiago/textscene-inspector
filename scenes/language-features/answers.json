@@ -92,13 +92,13 @@
       "excludes": ["mesh"]
     },
     {
-      "name": "parent= offers the scene root and every node name",
+      "name": "parent= offers the root and the path of each node declared above, as Godot instantiates in file order",
       "at": {
         "file": "main.tscn",
         "line": "[node name=\"Lamp\"",
         "after": "parent=\""
       },
-      "exactly": [".", "Box", "Floor", "Lamp", "Scene"],
+      "exactly": [".", "Box", "Floor"],
       "kind": "Reference"
     },
     {
