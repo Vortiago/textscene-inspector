@@ -1,11 +1,10 @@
 /**
- * The capture tool in a real VS Code, on a scene whose texture takes seconds to build. One
- * call opens the preview and captures it, so the image shows the texture only when the
- * preview reports ready after the texture lands, not when the canvas first draws.
+ * The capture tool in a real VS Code, on a scene with a procedural texture. One call opens the
+ * preview and captures it, so the image shows the texture only when the preview reports ready
+ * after the texture lands, not when the canvas first draws.
  */
 
 import * as assert from 'assert';
-import * as fs from 'fs';
 import * as path from 'path';
 import { PNG } from 'pngjs';
 import * as vscode from 'vscode';
@@ -21,16 +20,48 @@ import {
 
 const PROJECT = 'capture-readiness';
 
-/** A 4096 by 4096 noise texture on a plane: the slowest texture build among the fixtures. */
-const FIXTURES = path.resolve(__dirname, '../../../../../../scenes/fixtures');
-const SCENE = 'unit-noisetexture2d-4096-tres.tscn';
-const MATERIAL = 'unit-noisetexture2d-4096-material.tres';
+const SCENE_FILE = 'noise-plane.tscn';
+
+/**
+ * The side of the noise texture, in pixels. The build outlasts the canvas's first draw, and a
+ * 4096 texture outlasts the 30 s capture deadline on a Windows CI runner.
+ */
+const NOISE_SIZE = 1024;
+
+/** A plane with a procedural noise texture, which the webview builds after the canvas first draws. */
+const SCENE = [
+  '[gd_scene load_steps=4 format=3]',
+  '',
+  '[sub_resource type="FastNoiseLite" id="FastNoiseLite_n"]',
+  'seed = 7',
+  'frequency = 0.016',
+  'fractal_type = 2',
+  '',
+  '[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_t"]',
+  `width = ${NOISE_SIZE}`,
+  `height = ${NOISE_SIZE}`,
+  'seamless = true',
+  'noise = SubResource("FastNoiseLite_n")',
+  '',
+  '[sub_resource type="StandardMaterial3D" id="Material_m"]',
+  'albedo_texture = SubResource("NoiseTexture2D_t")',
+  '',
+  '[sub_resource type="PlaneMesh" id="PlaneMesh_p"]',
+  'size = Vector2(4, 4)',
+  'material = SubResource("Material_m")',
+  '',
+  '[node name="World" type="Node3D"]',
+  '',
+  '[node name="Ground" type="MeshInstance3D" parent="."]',
+  'mesh = SubResource("PlaneMesh_p")',
+  '',
+].join('\n');
 
 /** The time past the capture deadline the answer takes to reach the test. */
 const ANSWER_MARGIN_MS = 10000;
 
 /**
- * The noise texture changes the luma from pixel to pixel: about 4.4 levels on average in this
+ * The noise texture changes the luma from pixel to pixel: about 4.1 levels on average in this
  * capture. The untextured plane and the sky change it by about 0.2, almost all at their edges.
  */
 const MIN_TEXTURED_LUMA_STEP = 1;
@@ -58,10 +89,7 @@ suite('Capture readiness', () => {
     if (launchedWithoutGpu()) {
       skipBecause(this, 'the window launched with --disable-gpu, so the preview has no WebGL to capture');
     }
-    writeGodotProject(PROJECT, {
-      [SCENE]: fs.readFileSync(path.join(FIXTURES, SCENE), 'utf8'),
-      [MATERIAL]: fs.readFileSync(path.join(FIXTURES, MATERIAL), 'utf8'),
-    });
+    writeGodotProject(PROJECT, { [SCENE_FILE]: SCENE });
     await vscode.extensions.getExtension(EXTENSION_ID)?.activate();
   });
 
@@ -73,7 +101,7 @@ suite('Capture readiness', () => {
   test('a capture of a preview it has just opened shows the procedural texture', async function () {
     // The host's deadline ends the call first, so a failure still prints the tool's answer.
     this.timeout(CAPTURE_DEADLINE_MS + ANSWER_MARGIN_MS);
-    const scenePath = path.join(godotProjectDir(PROJECT), SCENE);
+    const scenePath = path.join(godotProjectDir(PROJECT), SCENE_FILE);
 
     const result = await vscode.lm.invokeTool('textscene_capture', { input: { path: scenePath } });
     const image = imageOf(result);

@@ -121,5 +121,5 @@ function expiryReason(request: CaptureRequest, state: CaptureState): string {
   const seconds = CAPTURE_DEADLINE_MS / 1000;
   if (request.requestId !== undefined) return `The preview did not answer the capture within ${seconds} s.`;
   if (state.kind === 'loading') return `The preview webview did not load within ${seconds} s.`;
-  return `The preview canvas did not create its renderer within ${seconds} s.`;
+  return `The preview did not render its scene, with every resource and texture loaded, within ${seconds} s.`;
 }

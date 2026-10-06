@@ -139,7 +139,7 @@ describe('TscnPreviewPanel.capture', () => {
     await expect(panel.capture()).resolves.toEqual({ error: 'The preview was closed.' });
   });
 
-  it('names the canvas when no state answers a request before the deadline', async () => {
+  it('names the unrendered scene when no state answers a request before the deadline', async () => {
     const { panel, triggerMessage } = await openPanel();
     vi.useFakeTimers();
     triggerMessage({ type: 'webviewReady' });
@@ -148,7 +148,7 @@ describe('TscnPreviewPanel.capture', () => {
     vi.advanceTimersByTime(CAPTURE_DEADLINE_MS);
 
     await expect(captured).resolves.toEqual({
-      error: 'The preview canvas did not create its renderer within 30 s.',
+      error: 'The preview did not render its scene, with every resource and texture loaded, within 30 s.',
     });
   });
 
