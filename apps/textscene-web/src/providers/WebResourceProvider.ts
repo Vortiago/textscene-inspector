@@ -1,6 +1,6 @@
 /** The browser ResourceProvider: uploaded files in memory, then the fixtures mirror. */
 
-import { isBinaryResourceType, info, warn } from '@textscene/core';
+import { isBinaryResourceType, info } from '@textscene/core';
 import type { ResourceProvider } from '@textscene/core';
 import { fixtureUrlForRes } from '../corpusRoot';
 
@@ -91,44 +91,34 @@ export class WebResourceProvider implements ResourceProvider {
     return this.deliveredMirrorFiles.has(key) ? `mirror:${this.resourceRoot}` : null;
   }
 
-  async loadResource(path: string, type?: string): Promise<string | ArrayBuffer> {
+  async loadResource(path: string, type?: string): Promise<string | ArrayBuffer | null> {
     // Uploaded files of the active corpus root first.
     const upload = this.uploadedFiles.get(this.uploadKey(path));
     if (upload) {
       return isBinaryResourceType(type, path) ? upload.file.arrayBuffer() : upload.file.text();
     }
 
-    if (this.hasFixturesMirror && path.startsWith('res://')) {
-      try {
-        // Convert Godot path to fixture path under the active corpus root. Both are taken before the
-        // fetch, since a corpus switch while it runs changes the root.
-        const fixtureUrl = fixtureUrlForRes(path, this.resourceRoot);
-        const mirrorKey = this.uploadKey(path);
+    // A path the mirror cannot hold, or a host without the mirror, holds no file.
+    if (!this.hasFixturesMirror || !path.startsWith('res://')) return null;
 
-        info(`[WebResourceProvider] Attempting to fetch ${type}: ${fixtureUrl}`);
-        const response = await fetch(fixtureUrl);
+    // Convert Godot path to fixture path under the active corpus root. Both are taken before the
+    // fetch, since a corpus switch while it runs changes the root.
+    const fixtureUrl = fixtureUrlForRes(path, this.resourceRoot);
+    const mirrorKey = this.uploadKey(path);
 
-        if (response.ok) {
-          // A missing file comes back as the SPA's HTML fallback.
-          const contentType = response.headers.get('content-type') || '';
-          if (contentType.includes('text/html')) {
-            warn(`[WebResourceProvider] File not found (got HTML fallback): ${path}`);
-            throw new Error(`Resource not found: ${path}`);
-          }
+    info(`[WebResourceProvider] Attempting to fetch ${type}: ${fixtureUrl}`);
+    const response = await fetch(fixtureUrl);
 
-          const content = isBinaryResourceType(type, path)
-            ? await response.arrayBuffer()
-            : await response.text();
-          this.deliveredMirrorFiles.add(mirrorKey);
-          info(`[WebResourceProvider] Successfully loaded ${type}: ${path}`);
-          return content;
-        }
-      } catch (error) {
-        warn(`[WebResourceProvider] Failed to fetch ${type} from fixtures: ${path}`, error);
-      }
-    }
+    // Null, per the provider contract: a refusal carries no file, and the static host answers an
+    // unknown path with the SPA's HTML fallback. Each caller answers for itself: a scene load
+    // fails as `Resource not found`, `request` marks a failed event, and `tryLoad` says nothing.
+    if (!response.ok) return null;
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('text/html')) return null;
 
-    // The throw triggers the onResourceNeeded callback.
-    throw new Error(`Resource not found: ${path}`);
+    const content = isBinaryResourceType(type, path) ? await response.arrayBuffer() : await response.text();
+    this.deliveredMirrorFiles.add(mirrorKey);
+    info(`[WebResourceProvider] Successfully loaded ${type}: ${path}`);
+    return content;
   }
 }

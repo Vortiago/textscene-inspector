@@ -48,13 +48,16 @@ function resetPersistence(path = '/') {
   window.history.replaceState(null, '', path);
 }
 
-/** Scene fetches succeed. Resource fetches lack headers and fall through to "Resource not
- *  found", so loadResource resolves only through an upload. */
+/** Scene fetches succeed. Every other res:// path is absent, so loadResource answers null. */
 function mockFetch() {
   globalThis.fetch = vi.fn().mockImplementation((url: unknown) => {
+    if (!String(url).endsWith('.tscn')) {
+      return Promise.resolve({ ok: false, status: 404 } as Response);
+    }
     const text = String(url).endsWith(`/${DEMO.file}`) ? DEMO_TSCN : STUB_TSCN;
     return Promise.resolve({
       ok: true,
+      headers: { get: (name: string) => (name === 'content-type' ? 'text/plain' : null) },
       text: () => Promise.resolve(text),
     } as unknown as Response);
   }) as unknown as typeof fetch;
@@ -127,9 +130,7 @@ describe('Corpus-scoped uploads — app-shell wiring', () => {
     await waitForScene('DemoRoot');
 
     // The base-corpus upload must not bleed into the demo corpus.
-    await expect(provider.loadResource('res://textures/player.png', 'Texture2D')).rejects.toThrow(
-      'Resource not found'
-    );
+    await expect(provider.loadResource('res://textures/player.png', 'Texture2D')).resolves.toBeNull();
   });
 
   // The active **Corpus root** decides which file `res://project.godot` maps onto, so the

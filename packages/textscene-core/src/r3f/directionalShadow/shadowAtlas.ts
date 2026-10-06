@@ -13,8 +13,8 @@ import { installedUniformValue } from '../shaderPatch/litUniform.js';
 export const DIRECTIONAL_SHADOW_ATLAS_UNIFORM = 'directionalShadowAtlas';
 
 /**
- * The target as three builds a PCF shadow map (r186 `WebGLShadowMap.js:253-266`), which three draws
- * for `TscnCanvas`'s soft shadows (`:99-102`).
+ * The target as three builds a PCF shadow map (r186 `WebGLShadowMap.js:253-266`), the type
+ * `TscnCanvas` asks for.
  */
 function createAtlas(): THREE.WebGLRenderTarget {
   const atlas = new THREE.WebGLRenderTarget(DIRECTIONAL_SHADOW_SIZE_DEFAULT, DIRECTIONAL_SHADOW_SIZE_DEFAULT);

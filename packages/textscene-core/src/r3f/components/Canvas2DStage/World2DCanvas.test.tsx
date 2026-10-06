@@ -21,9 +21,10 @@ import { TiledUploadQueue } from '../../tiledUpload/TiledUploadQueue';
 
 const SOURCE = readFileSync(join(import.meta.dirname, 'World2DCanvas.tsx'), 'utf8');
 
-// `<Canvas\s`, not `<Canvas\b`: a doc comment naming `<Canvas>` would match
-// first. Line comments go, since a `>` inside one ends the match early.
-const CANVAS_TAG = /<Canvas\s[\s\S]*?>/.exec(SOURCE.replace(/\/\/.*$/gm, ''))?.[0] ?? '';
+// Both comment forms go: a `<Canvas …>` quoted inside one would otherwise be read as the
+// element. `<Canvas\s`, not `<Canvas\b`, so a bare mention of the name does not match.
+const CANVAS_TAG =
+  /<Canvas\s[\s\S]*?>/.exec(SOURCE.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, ''))?.[0] ?? '';
 
 describe('World2DCanvas tone mapping', () => {
   it('passes `flat` to <Canvas> so R3F selects NoToneMapping', () => {

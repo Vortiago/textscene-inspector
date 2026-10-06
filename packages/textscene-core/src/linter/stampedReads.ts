@@ -15,8 +15,8 @@ export function stampOf(provider: ResourceProvider, path: string): Promise<strin
 }
 
 /**
- * The content of `path`, or null for a file the provider does not hold. A rejection counts as a miss, since the web
- * provider throws for a missing file where the contract says null. A synchronous throw propagates.
+ * The content of `path`, or null for a file the provider does not hold. A rejection counts as a miss, since a provider
+ * may fail a read rather than answer null. A synchronous throw propagates.
  */
 export function loadOrNull(
   provider: ResourceProvider,

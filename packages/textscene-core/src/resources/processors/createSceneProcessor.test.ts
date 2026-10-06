@@ -371,6 +371,21 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
       const [, error] = handler.mock.calls[0]!;
       expect(error.message).toContain('must be text content');
     });
+
+    it('fails a null load as Resource not found, naming the path', async () => {
+      // The provider contract answers null for a file it does not hold, so the
+      // processor turns a miss into the failed load.
+      const handler = vi.fn();
+      eventBus.on<Error>('scene', 'failed', handler);
+      mockProvider.loadResource = vi.fn().mockResolvedValue(null);
+      registerMetadata('scene1', { id: 'scene1', path: 'res://scenes/room.tscn', type: 'PackedScene' });
+
+      processor.request('scene1');
+      await new Promise((r) => setTimeout(r, 20));
+
+      const [, error] = handler.mock.calls[0]!;
+      expect(error.message).toBe('Resource not found: res://scenes/room.tscn');
+    });
   });
 
   describe('getCached()', () => {
