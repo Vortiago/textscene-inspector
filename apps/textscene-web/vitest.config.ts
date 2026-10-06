@@ -17,6 +17,8 @@ export default defineConfig({
     maxWorkers: Math.min(16, Math.max(1, availableParallelism() - 1)),
     fileParallelism: true,
     maxConcurrency: 15,
+    // Matches vitest.shared.ts: keeps each module's transform between runs.
+    fsModuleCache: true,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
