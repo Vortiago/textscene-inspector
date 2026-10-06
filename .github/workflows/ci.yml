@@ -87,7 +87,6 @@ jobs:
       - uses: ./.github/actions/setup
 
       # The prebuild hook builds @textscene/core.
-      - run: pnpm --filter @textscene/web-previewer build
       - run: pnpm build:linter
 
       # Lints with the binary this run built. The vendored demos are scenes Godot itself
@@ -102,11 +101,6 @@ jobs:
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: web-previewer
-          path: apps/textscene-web/dist/
-
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
           name: vscode-extension
           path: apps/textscene-vscode/*.vsix
 
@@ -115,14 +109,31 @@ jobs:
           name: tscn-linter-cli
           path: apps/textscene-linter/dist/cli.js
 
-      # After the uploads: the public edition builds into the same dist/ the dev-edition
-      # artifact above comes from, then checks it for dev-edition content.
+      # Builds the public edition and checks it for dev-edition content.
       - run: pnpm build:pages
+
+  # Only the dev edition of the web previewer, which the golden and E2E runs serve. A job of its
+  # own, so they start as soon as it is built rather than after the whole build job.
+  web-previewer:
+    name: Build the web previewer
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+
+      # The prebuild hook builds @textscene/core.
+      - run: pnpm --filter @textscene/web-previewer build
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: web-previewer
+          path: apps/textscene-web/dist/
 
   visual-regression:
     name: Visual regression (${{ matrix.shard }}/12)
     runs-on: ubuntu-latest
-    needs: [build, changes]
+    needs: [web-previewer, changes]
     if: needs.changes.outputs.visual == 'true'
     timeout-minutes: 20
     # The harness captures one scene at a time with software GL, and the whole set takes more
@@ -136,22 +147,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
 
-      # assertWebBuildFresh compares core's src with core's own dist before it captures from
-      # a downloaded bundle, so the dist must exist here.
-      - run: pnpm --filter @textscene/core build
-
       # The artifact is this commit's build. VISUAL_SKIP_BUILD=1 keeps it, and a rebuild
-      # would empty the downloaded dist.
+      # would empty the downloaded dist. The download postdates the checkout, so the
+      # freshness check reads the bundle as newer than every source.
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: web-previewer
           path: apps/textscene-web/dist/
 
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      - run: npx playwright install chromium --with-deps
+      - uses: ./.github/actions/playwright
 
       - run: pnpm test:visual --shard ${{ matrix.shard }}/12
         env:
@@ -166,24 +170,19 @@ jobs:
   e2e-web:
     name: E2E (web previewer)
     runs-on: ubuntu-latest
-    needs: build
+    needs: web-previewer
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
 
       # The same build reuse as in visual-regression.
-      - run: pnpm --filter @textscene/core build
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: web-previewer
           path: apps/textscene-web/dist/
 
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      - run: npx playwright install chromium --with-deps
+      - uses: ./.github/actions/playwright
 
       - run: pnpm test:e2e:web
         env:
@@ -297,13 +296,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
 
-      # The root package pins the Playwright that @vscode/test-web launches, so this cache is
-      # the one the other browser jobs use.
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      - run: npx playwright install chromium --with-deps
+      # The root package pins the Playwright that @vscode/test-web launches.
+      - uses: ./.github/actions/playwright
 
       - run: pnpm --filter textscene-inspector test:web
 
@@ -321,7 +315,20 @@ jobs:
   ci-ok:
     name: CI passed
     if: always()
-    needs: [changes, static, unit, build, visual-regression, e2e-web, integration, vsix, installed, web]
+    needs:
+      [
+        changes,
+        static,
+        unit,
+        build,
+        web-previewer,
+        visual-regression,
+        e2e-web,
+        integration,
+        vsix,
+        installed,
+        web,
+      ]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
