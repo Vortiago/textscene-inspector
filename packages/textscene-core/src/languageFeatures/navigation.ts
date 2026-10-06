@@ -16,10 +16,11 @@ export interface ResPathOccurrence {
 }
 
 /**
- * A `res://` path in a string literal, up to the closing quote. Godot file names can hold a
- * space or a parenthesis, so only the quote ends the path.
+ * A `res://` path that opens a string runs to the closing quote, since a Godot file name can hold
+ * a space or a parenthesis. A backslash ends it too, before the escaped quote of an inner string.
+ * A path inside prose ends at the first space, quote or closing parenthesis.
  */
-const RES_PATH_RE = /(?<=")res:\/\/[^"]+/g;
+const RES_PATH_RE = /(?<=")res:\/\/[^"\\]+|(?<!")res:\/\/[^"'\s)\\]+/g;
 
 /** The `res://` occurrences on one zero-based line. */
 function resPathsOnLine(line: string, lineIndex: number): ResPathOccurrence[] {

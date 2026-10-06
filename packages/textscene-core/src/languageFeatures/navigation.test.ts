@@ -95,6 +95,18 @@ describe('resPathOccurrences', () => {
     expect(resPathOccurrences(scene).map((link) => link.path)).toEqual(['res://icon (1).png']);
   });
 
+  it('ends a path in an escaped string before its escaped closing quote', () => {
+    const scene = new LanguageDocument('script/source = "var t = preload(\\"res://a.png\\")"\n');
+
+    expect(resPathOccurrences(scene).map((link) => link.path)).toEqual(['res://a.png']);
+  });
+
+  it('ends a path with no quote before it at the next space', () => {
+    const scene = new LanguageDocument('editor_description = "uses res://a.png for the floor"\n');
+
+    expect(resPathOccurrences(scene).map((link) => link.path)).toEqual(['res://a.png']);
+  });
+
   it('gives an empty list for a document with no res:// path', () => {
     expect(resPathOccurrences(new LanguageDocument('[gd_scene format=3]\n'))).toEqual([]);
   });
