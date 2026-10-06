@@ -9,6 +9,16 @@ const isEdgeA = (path) => path.split('/').at(-1) === 'edge-a.tscn';
 
 const STATIC_GATE = ['pnpm format:check', 'pnpm lint', 'pnpm type-check:all', 'pnpm type-check:tests'];
 
+/** The type checks of the packages in `dirs` and of their dependents. */
+const typeChecks = (...dirs) => {
+  const filters = dirs.map((dir) => `--filter ...{./${dir}}`).join(' ');
+  return [
+    'pnpm --filter ./packages/* build',
+    `pnpm ${filters} type-check`,
+    `pnpm ${filters} type-check:tests`,
+  ];
+};
+
 describe('planChecks', () => {
   it('runs nothing for files no check reads', () => {
     expect(plan(['README.md', '.claude/skills/other/SKILL.md', 'docs/adr/0001-x.md'])).toEqual([]);
@@ -49,8 +59,7 @@ describe('planChecks', () => {
 
   it('type-checks and lints a TypeScript change', () => {
     expect(plan(['packages/textscene-core/src/a.ts'])).toEqual([
-      'pnpm type-check:all',
-      'pnpm type-check:tests',
+      ...typeChecks('packages/textscene-core'),
       'npx eslint packages/textscene-core/src/a.ts',
       'pnpm exec prettier --check packages/textscene-core/src/a.ts',
     ]);
@@ -70,8 +79,7 @@ describe('planChecks', () => {
     'apps/textscene-vscode/src/test/installed/suite/a.test.ts',
   ])('leaves the extension host suite %s to CI, since vitest excludes it', (suite) => {
     expect(plan([suite], [], undefined, (path) => [path])).toEqual([
-      'pnpm type-check:all',
-      'pnpm type-check:tests',
+      ...typeChecks('apps/textscene-vscode'),
       `npx eslint ${suite}`,
       `pnpm exec prettier --check ${suite}`,
     ]);
@@ -91,10 +99,20 @@ describe('planChecks', () => {
   });
 
   it('type-checks a deleted TypeScript file, since its importers break', () => {
-    expect(plan([], ['packages/textscene-core/src/gone.ts'])).toEqual([
-      'pnpm type-check:all',
-      'pnpm type-check:tests',
-    ]);
+    expect(plan([], ['packages/textscene-core/src/gone.ts'])).toEqual(typeChecks('packages/textscene-core'));
+  });
+
+  it('type-checks each package with a TypeScript change once', () => {
+    expect(
+      plan(
+        [],
+        ['apps/textscene-web/src/a.ts', 'apps/textscene-linter/src/b.ts', 'apps/textscene-web/src/c.tsx']
+      )
+    ).toEqual(typeChecks('apps/textscene-web', 'apps/textscene-linter'));
+  });
+
+  it('type-checks the whole repository for a TypeScript file outside a package', () => {
+    expect(plan([], ['tools/a.ts'])).toEqual(['pnpm type-check:all', 'pnpm type-check:tests']);
   });
 
   it('lints a changed scene with the built linter', () => {

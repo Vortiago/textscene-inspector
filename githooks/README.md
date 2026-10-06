@@ -15,10 +15,14 @@ beside `Name.ts`, and each pushed test file. CI runs the whole suite, the builds
 on each pull request and on `main`. To run every test that imports a file, run
 `pnpm exec vitest related --run <files>`.
 
+A pushed TypeScript file type-checks its package and every package that depends on it. A change
+in `apps/textscene-web` checks only the web previewer. A change in `packages/textscene-core`
+checks core and each app.
+
 A change to the toolchain (`package.json`, the lockfile, a `tsconfig`, a vitest, eslint or
 Prettier config, or a hook) runs the static checks over the whole repository: `format:check`,
-`lint`, `type-check:all` and `type-check:tests`. It still runs the tests beside the pushed files. A push that changes only files no check reads
-runs nothing. `FULL_VALIDATE=1 git push` runs the full `pnpm validate`.
+`lint`, `type-check:all` and `type-check:tests`. It still runs the tests beside the pushed
+files. A push that changes only files no check reads runs nothing. `FULL_VALIDATE=1 git push` runs the full `pnpm validate`.
 
 ## Skip the hooks
 
