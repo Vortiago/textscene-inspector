@@ -17,7 +17,7 @@ import { error as logError } from '@textscene/core/logger';
 import { comparablePath, isWithinRoot } from '@textscene/core/resources/resPath';
 import { HOST_PATH_CASE } from './hostPathCase';
 import { LintResourceProvider } from './LintResourceProvider';
-import { findEnclosingGodotProject, hasProjectFile } from './findGodotProjectRoot';
+import { findResRootIn, hasProjectFile } from './findGodotProjectRoot';
 import {
   ANY_PATH_PATTERN,
   EXTENSION_LIST_PATTERN,
@@ -111,7 +111,7 @@ interface DocumentLint {
   readonly session: LintSession;
   /** The pending debounced lint. */
   timer?: ReturnType<typeof setTimeout>;
-  /** The project view, once the walk has answered: null for a document in no project. */
+  /** The view of its `res://` root, once the walk has answered: null for a document outside every workspace folder. */
   provider?: LintResourceProvider | null;
   /** The walk in flight. A newer walk replaces it, and only the newest one lands. */
   walk?: symbol;
@@ -152,7 +152,7 @@ export class TscnDiagnostics implements vscode.Disposable {
   /** Each linted open document, by URI. Written by `_recordOf`, deleted on close, cleared by `_clearAll`. */
   private readonly _documents = new Map<string, DocumentLint>();
   /**
-   * One provider per project root, so the documents of a project share its verdicts. Written by `providerFor`,
+   * One provider per `res://` root, so the documents under a root share its verdicts. Written by `providerFor`,
    * deleted when its root is deleted, cleared by `_clearAll`.
    */
   private readonly _providers = new Map<string, LintResourceProvider>();
@@ -349,7 +349,10 @@ export class TscnDiagnostics implements vscode.Disposable {
     }
   }
 
-  /** Finds `document`'s project, then lints it with that project's provider, unless the record is gone or walked again. */
+  /**
+   * Finds `document`'s `res://` root, then lints it with that root's provider, unless the record is gone or walked
+   * again.
+   */
   private _walk(document: vscode.TextDocument, record: DocumentLint): void {
     const walk = Symbol('walk');
     record.walk = walk;
@@ -364,14 +367,14 @@ export class TscnDiagnostics implements vscode.Disposable {
   }
 
   /**
-   * The provider of the Godot project `uri` belongs to, shared with every document of that project,
-   * or null outside one. The agent lint tool reads it too, so it gives the Problems panel's verdict.
+   * The provider of the `res://` root `uri` belongs to, its Godot project or its own directory, shared with every
+   * document under that root. Null outside every workspace folder. The agent lint tool reads it too, so it gives the
+   * Problems panel's verdict.
    */
   async providerFor(uri: vscode.Uri): Promise<LintResourceProvider | null> {
     const folder = vscode.workspace.getWorkspaceFolder(uri);
     if (!folder) return null;
-    const root = await findEnclosingGodotProject(folder.uri, uri, (dir) => this._holdsProjectFile(dir));
-    if (root === null) return null;
+    const root = await findResRootIn(folder.uri, uri, (dir) => this._holdsProjectFile(dir));
     const key = root.toString();
     let provider = this._providers.get(key);
     if (!provider) {

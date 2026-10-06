@@ -4,7 +4,7 @@ Shows a live 3D or 2D preview of a Godot `.tscn` file beside its text, without G
 
 ## Open the preview
 
-1. Open the folder that holds `project.godot`. The extension resolves `res://` paths from there.
+1. Open the folder that holds `project.godot`. The extension resolves `res://` paths from there. For a scene with no `project.godot` above it, the extension resolves them from the scene's own folder.
 2. Open a `.tscn` file.
 3. Run **TextScene: Open Preview to the Side**, or press <kbd>Ctrl+K V</kbd> (<kbd>Cmd+K V</kbd> on macOS).
 
@@ -21,7 +21,7 @@ Each `.tscn` file can have its own preview.
 
 ## Editor features
 
-- **Problems panel:** the linter checks each open `.tscn` file. For a scene inside a Godot project in a workspace folder, it also reports a `.glb` or `.gltf` file the scene uses that Godot's importer refuses. Godot fails to load the scene or resource when a sub-resource, a `.tres` `[resource]` body, a connection or the root node uses the glTF file. The report is then an error when `project.godot` enables no editor plugin, declares no autoload, and the project holds no `.gdextension` file. Otherwise it is a warning, because one of them can add support. Where only other nodes use the glTF file, the scene loads without it, and the report is always a warning.
+- **Problems panel:** the linter checks each open `.tscn` file. For a scene in a workspace folder, it also reports a `.glb` or `.gltf` file the scene uses that Godot's importer refuses. Godot fails to load the scene or resource when a sub-resource, a `.tres` `[resource]` body, a connection or the root node uses the glTF file. The report is then an error when the scene has a `project.godot` that enables no editor plugin, declares no autoload, and the project holds no `.gdextension` file. Otherwise it is a warning, because one of them can add support. Where only other nodes use the glTF file, the scene loads without it, and the report is always a warning.
 - **Problems panel (after a file change):** when a glTF file or `.godot/extension_list.cfg` changes on disk, the linter checks each open scene that reads it again. When someone creates or deletes a `.gdextension` file, a `.gdignore` or a `project.godot`, or changes `project.godot`, the linter checks the open scenes of that project again. When someone deletes or moves a folder, the linter checks again each open scene that read a file inside it, or whose project listed a `.gdextension` file inside it.
 - **Outline:** the scene tree of the file. Click an entry to jump to its line.
 - **`res://` links:** Ctrl-click (Cmd-click on macOS) a path to open the file.

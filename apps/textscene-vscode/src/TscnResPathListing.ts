@@ -1,11 +1,11 @@
 /**
- * Lists a Godot project's files as `res://` paths, the seam the engine's path
- * completion reads. It caches one listing per project root, so a completion does not
- * walk the workspace on every keystroke.
+ * Lists the files under a document's `res://` root as `res://` paths, the seam the engine's
+ * path completion reads. It caches one listing per root, so a completion does not walk the
+ * workspace on every keystroke.
  */
 
 import * as vscode from 'vscode';
-import { enclosingProjectOf } from './findGodotProjectRoot';
+import { resRootOf } from './findGodotProjectRoot';
 import { scannedResPaths } from './scannedResPaths';
 import { SCAN_STOP_FILES_PATTERN } from './watchPatterns';
 
@@ -16,12 +16,14 @@ import { SCAN_STOP_FILES_PATTERN } from './watchPatterns';
 const DOT_DIRECTORIES = '**/.*/**';
 
 export class TscnResPathListing {
-  /** Each project root's listing, written by `pathsFor` and dropped by `clear`. */
+  /** Each `res://` root's listing, written by `pathsFor` and dropped by `clear`. */
   private readonly _listingByRoot = new Map<string, Promise<readonly string[]>>();
-  /** Each document's project root, null outside every project, written by `pathsFor` and dropped by `clear`. */
+  /**
+   * Each document's `res://` root, null outside every workspace folder, written by `pathsFor` and dropped by `clear`.
+   */
   private readonly _rootByDocument = new Map<string, Promise<vscode.Uri | null>>();
 
-  /** The project's files as `res://` paths, or none for a document outside every project. */
+  /** The files under the document's `res://` root as `res://` paths, or none outside every workspace folder. */
   async pathsFor(document: vscode.TextDocument): Promise<readonly string[]> {
     const root = await this._rootOf(document.uri);
     if (!root) return [];
@@ -39,7 +41,7 @@ export class TscnResPathListing {
     const key = documentUri.toString();
     let root = this._rootByDocument.get(key);
     if (!root) {
-      root = enclosingProjectOf(documentUri);
+      root = resRootOf(documentUri);
       this._rootByDocument.set(key, root);
     }
     return root;

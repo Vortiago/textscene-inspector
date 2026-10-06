@@ -13,6 +13,7 @@ import {
   projectRootForDir,
   projectRootForFile,
   providerForRoot,
+  resRootForFile,
 } from './diskProject';
 
 let tempDir: string;
@@ -51,6 +52,21 @@ describe('projectRootForFile', () => {
 
   it('gives null for a scene with no project.godot above it', async () => {
     expect(await projectRootForFile(join(tempDir, 'loose', 'scene.tscn'))).toBeNull();
+  });
+});
+
+describe('resRootForFile', () => {
+  it('gives the project root for a scene inside a project', async () => {
+    expect(await resRootForFile(scenePath)).toBe(root);
+  });
+
+  it("gives the scene's own directory for a scene with no project.godot above it", async () => {
+    const loose = join(tempDir, 'loose', 'dungeon');
+    expect(await resRootForFile(join(loose, 'dungeon.tscn'))).toBe(loose.replace(/\\/g, '/'));
+  });
+
+  it('gives null for a filesystem root, which no directory holds', async () => {
+    expect(await resRootForFile('/')).toBeNull();
   });
 });
 

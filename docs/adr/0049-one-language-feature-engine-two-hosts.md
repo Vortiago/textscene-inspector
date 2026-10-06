@@ -34,7 +34,11 @@ property tables, hints and deprecated aliases, and the copies would drift.
   the desktop and vscode.dev paths identical, and needs no server process.
 - The `tscn-lsp` server (`apps/textscene-lsp`, package `@textscene/lsp`) serves the same
   language-feature engine to any LSP client over stdio. It reads the project from the nearest
-  `project.godot`, and it imports no VS Code API. It reads the disk through
+  `project.godot`, and it imports no VS Code API.
+- Both hosts take a document's `res://` root from core's `findResRoot`: the nearest
+  `project.godot` directory, or the scene's own directory outside every project. Godot has no
+  `res://` there, but a loose scene, such as one from a vendored demo, names its files from its
+  own directory. So links, definitions, path completion and cross-file lints work for it. It reads the disk through
   `@textscene/core/resources/diskProject`, the provider the `tscn-lint` CLI uses. An ESLint rule
   keeps that Node-only module out of every browser bundle.
 - The extension's **agent tools** (`vscode.lm`) are extension-only: lint a scene, read its node

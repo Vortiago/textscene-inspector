@@ -1,13 +1,17 @@
 /**
- * Walks up from a document's directory for `project.godot` (core's `findProjectRoot`), since `res://` is relative to
- * the project root. It stops at the workspace folder: the plain-glob watchers report events inside workspace folders
- * only, so the extension cannot keep a project above the folder current. The CLI climbs to the filesystem root. The
- * preview falls back to the workspace root. The linter and the language features take no fallback, as Godot has none.
+ * Finds a document's `res://` root: the nearest directory with `project.godot`, from the document's own up to the
+ * workspace folder, the furthest the watchers see. Outside every project, the editor features root `res://` at the
+ * document's directory (core's `findResRoot`). The preview tries the workspace root, then the document's directory.
  */
 
 import * as vscode from 'vscode';
 import { PROJECT_FILE_NAME } from '@textscene/core/godot';
-import { comparablePath, findProjectRoot, isWithinRoot } from '@textscene/core/resources/resPath';
+import {
+  comparablePath,
+  findProjectRoot,
+  findResRoot,
+  isWithinRoot,
+} from '@textscene/core/resources/resPath';
 import { HOST_PATH_CASE } from './hostPathCase';
 
 /**
@@ -17,6 +21,10 @@ import { HOST_PATH_CASE } from './hostPathCase';
 function parentUri(dir: vscode.Uri): vscode.Uri | null {
   const parent = vscode.Uri.joinPath(dir, '..');
   return parent.path === dir.path ? null : parent;
+}
+
+function directoryOf(documentUri: vscode.Uri): vscode.Uri {
+  return vscode.Uri.joinPath(documentUri, '..');
 }
 
 /** Whether the walk ends at a directory: the workspace root itself, or one outside it. */
@@ -47,11 +55,10 @@ export function findEnclosingGodotProject(
   documentUri: vscode.Uri,
   holdsProjectFile: (dir: vscode.Uri) => Promise<boolean> = hasProjectFile
 ): Promise<vscode.Uri | null> {
-  const documentDir = vscode.Uri.joinPath(documentUri, '..');
-  return findProjectRoot(documentDir, parentUri, stopsAt(workspaceRoot), holdsProjectFile);
+  return findProjectRoot(directoryOf(documentUri), parentUri, stopsAt(workspaceRoot), holdsProjectFile);
 }
 
-/** `findEnclosingGodotProject`, or the workspace root when no directory holds `project.godot`. */
+/** `findEnclosingGodotProject`, or the workspace root when no directory holds `project.godot`. For the preview. */
 export async function findGodotProjectRoot(
   workspaceRoot: vscode.Uri,
   documentUri: vscode.Uri
@@ -60,10 +67,22 @@ export async function findGodotProjectRoot(
 }
 
 /**
- * The Godot project a document belongs to, for the language features. Null outside a workspace folder or outside
- * every project, since Godot defines `res://` only by a `project.godot`.
+ * The directory the document's `res://` paths resolve under: `findEnclosingGodotProject`, or the
+ * document's own directory when no directory up to the workspace root holds `project.godot`.
  */
-export function enclosingProjectOf(documentUri: vscode.Uri): Promise<vscode.Uri | null> {
+export function findResRootIn(
+  workspaceRoot: vscode.Uri,
+  documentUri: vscode.Uri,
+  holdsProjectFile: (dir: vscode.Uri) => Promise<boolean> = hasProjectFile
+): Promise<vscode.Uri> {
+  return findResRoot(directoryOf(documentUri), parentUri, stopsAt(workspaceRoot), holdsProjectFile);
+}
+
+/**
+ * The `res://` root of a document, for the language features and the agent tools: its Godot project, or its own
+ * directory outside every project. Null outside every workspace folder, where no watcher keeps an answer current.
+ */
+export function resRootOf(documentUri: vscode.Uri): Promise<vscode.Uri | null> {
   const folder = vscode.workspace.getWorkspaceFolder(documentUri);
-  return folder ? findEnclosingGodotProject(folder.uri, documentUri) : Promise.resolve(null);
+  return folder ? findResRootIn(folder.uri, documentUri) : Promise.resolve(null);
 }

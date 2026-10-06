@@ -1,5 +1,5 @@
 /**
- * The files a workspace search found under a project root, as the `res://` paths the editor's
+ * The files a workspace search found under a `res://` root, as the `res://` paths the editor's
  * scan reaches. The linter's listing and `res://` completion both filter through it, so both
  * offer the files Godot's scan finds.
  */

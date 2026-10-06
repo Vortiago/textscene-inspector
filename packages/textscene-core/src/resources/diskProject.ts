@@ -3,9 +3,10 @@
 /**
  * A scene's Godot project read from disk, for the Node hosts: the `tscn-lint` CLI and the
  * `tscn-lsp` server. The project is the files under the nearest directory holding
- * `project.godot`. A scene with none has no `res://` root, so it gets no provider and the
- * cross-file rules stay silent. Only a Node bundle imports this module, since it reads
- * `node:fs`. An eslint rule keeps every browser bundle away from it.
+ * `project.godot`. For a scene with none, the CLI gives no provider, so the cross-file rules
+ * stay silent, and the server roots `res://` at the scene's own directory (`resRootForFile`).
+ * Only a Node bundle imports this module, since it reads `node:fs`. An eslint rule keeps every
+ * browser bundle away from it.
  */
 
 import type { Dirent } from 'node:fs';
@@ -13,7 +14,7 @@ import { readFile, readdir, realpath, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { ResourceProvider } from './ResourceProvider.js';
 import { listScannedFiles, type DirectoryEntry } from './projectListing.js';
-import { findProjectRoot, parentDir, projectFileIn, resolveResPath } from './resPath.js';
+import { findProjectRoot, findResRoot, parentDir, projectFileIn, resolveResPath } from './resPath.js';
 import { resourceContent } from './resourceProviderUtils.js';
 
 /** `map`'s value for `key`, made by `make` and kept the first time `key` is asked for. */
@@ -144,12 +145,28 @@ export function projectRootForDir(dir: string): Promise<string | null> {
   return findProjectRoot(dir, parentDir, () => false, hasProjectFile);
 }
 
+/**
+ * The directory that holds the file at `file`, or null for a filesystem root. `parentDir`, not `dirname`: every
+ * directory of a walk is then spelled with forward slashes, so a Windows root found at the first step and at a later
+ * one is one key, and one provider.
+ */
+function directoryOf(file: string): string | null {
+  return parentDir(resolve(file));
+}
+
 /** The project root of the file at `file`, or null when no ancestor directory holds `project.godot`. */
 export function projectRootForFile(file: string): Promise<string | null> {
-  // `parentDir`, not `dirname`, for the first step too: every directory of the walk is then spelled with forward
-  // slashes, so a Windows root found at the first step and at a later one is one key, and one provider.
-  const dir = parentDir(resolve(file));
+  const dir = directoryOf(file);
   return dir === null ? Promise.resolve(null) : projectRootForDir(dir);
+}
+
+/**
+ * The directory the `res://` paths of the scene at `file` resolve under: its project root, or the scene's own
+ * directory outside every project. Null only for a filesystem root, which holds no scene.
+ */
+export function resRootForFile(file: string): Promise<string | null> {
+  const dir = directoryOf(file);
+  return dir === null ? Promise.resolve(null) : findResRoot(dir, parentDir, () => false, hasProjectFile);
 }
 
 /** The provider for the project `scenePath` belongs to, or null when no ancestor directory holds `project.godot`. */

@@ -80,7 +80,9 @@ a glTF extension that Godot's importer does not support:
 reads. `later` is null when no read is necessary, and resolves to null when a newer lint
 overtakes it. `Linter.lintComplete` gives the full list in one answer. The `Linter` keeps
 each read under the provider's `stamp` (`linter/stampedReads.ts`). The CLI and VS Code root their providers at the nearest
-`project.godot` (`resources/resPath.ts`), and the web previewer at its corpus root.
+`project.godot` (`resources/resPath.ts`), and the web previewer at its corpus root. For a scene
+outside every project, the CLI lints with no provider, and VS Code and the `tscn-lsp` server root
+the provider at the scene's own directory (`findResRoot`).
 
 ## Vertical slices and registries
 
@@ -191,7 +193,7 @@ the selected node (ADR-0012). Playback starts stopped.
   The webview refreshes on save and keeps its camera (ADR-0021).
 - **LSP.** The `tscn-lsp` server (`apps/textscene-lsp`) serves the same language features to any
   LSP client over stdio. It uses no VS Code API, and it reads the project from the nearest
-  `project.godot`.
+  `project.godot`, or from a loose scene's own directory.
 - **Web.** The Source pane renders only a buffer the lenient parser accepts, and lints every
   buffer (ADR-0020).
 - **Job workers.** Each host starts one script built from `@textscene/core/worker`. VS Code

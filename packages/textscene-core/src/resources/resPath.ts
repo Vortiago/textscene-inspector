@@ -1,7 +1,8 @@
 /**
  * Where a `res://` path lives on a host: under the Godot project root, the nearest directory, from a file's own
- * upward, that holds `project.godot`. No `node:path`, since the VS Code host runs in a web worker. String paths come
- * back with forward slashes, which every host's filesystem API accepts.
+ * upward, that holds `project.godot`, or under the file's own directory when none does. No `node:path`, since the
+ * VS Code host runs in a web worker. String paths come back with forward slashes, which every host's filesystem API
+ * accepts.
  */
 
 import { PROJECT_FILE_NAME } from '../godot/project.js';
@@ -117,6 +118,20 @@ export async function findProjectRoot<Dir>(
     if (isStop(dir)) return null;
   }
   return null;
+}
+
+/**
+ * The directory a scene's `res://` paths resolve under: its Godot project root, or `sceneDir` itself when no
+ * directory holds `project.godot`. Godot has no `res://` outside a project, but a loose scene, such as one copied out
+ * of a demo, names its files relative to its own directory. Every host's editor features take this one answer.
+ */
+export async function findResRoot<Dir>(
+  sceneDir: Dir,
+  parent: (dir: Dir) => Dir | null,
+  isStop: (dir: Dir) => boolean,
+  hasProjectFile: (dir: Dir) => Promise<boolean>
+): Promise<Dir> {
+  return (await findProjectRoot(sceneDir, parent, isStop, hasProjectFile)) ?? sceneDir;
 }
 
 /** The `project.godot` a directory holds, for a host's `hasProjectFile`. */

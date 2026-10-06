@@ -1,6 +1,6 @@
 /**
  * Tests for TscnDocumentLinkProvider. `provideDocumentLinks` computes ranges only,
- * and `resolveDocumentLink` fills in the target through `findGodotProjectRoot`.
+ * and `resolveDocumentLink` fills in the target through `resRootOf`.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -95,14 +95,51 @@ describe('TscnDocumentLinkProvider', () => {
   });
 
   describe('resolveDocumentLink', () => {
-    it('gives no target when no directory holds project.godot, since Godot then has no res://', async () => {
+    it("resolves the target against the document's own directory when no directory holds project.godot", async () => {
       (vscodeMocks.workspace.getWorkspaceFolder as ReturnType<typeof vi.fn>).mockReturnValue({
         uri: createMockUri('/workspace'),
       });
-      arrangeDisk(['/workspace/scenes/door.tscn']);
+      arrangeDisk(['/workspace/isometric/decorations/banner.png']);
 
       const provider = new TscnDocumentLinkProvider();
-      const [link] = provider.provideDocumentLinks(makeDocument('path="res://scenes/Door.tscn"'), TOKEN);
+      const document = makeDocument(
+        'path="res://decorations/banner.png"',
+        '/workspace/isometric/dungeon.tscn'
+      );
+      const [link] = provider.provideDocumentLinks(document, TOKEN);
+
+      const resolved = await provider.resolveDocumentLink!(link!, TOKEN);
+
+      expect((resolved?.target as unknown as { fsPath: string } | undefined)?.fsPath).toBe(
+        '/workspace/isometric/decorations/banner.png'
+      );
+    });
+
+    it('gives no target outside every project for a file only the workspace root holds', async () => {
+      (vscodeMocks.workspace.getWorkspaceFolder as ReturnType<typeof vi.fn>).mockReturnValue({
+        uri: createMockUri('/workspace'),
+      });
+      arrangeDisk(['/workspace/decorations/banner.png']);
+
+      const provider = new TscnDocumentLinkProvider();
+      const document = makeDocument(
+        'path="res://decorations/banner.png"',
+        '/workspace/isometric/dungeon.tscn'
+      );
+      const [link] = provider.provideDocumentLinks(document, TOKEN);
+
+      expect(await provider.resolveDocumentLink!(link!, TOKEN)).toBeUndefined();
+    });
+
+    it("gives no link outside every project for a path that climbs out of the document's directory", async () => {
+      (vscodeMocks.workspace.getWorkspaceFolder as ReturnType<typeof vi.fn>).mockReturnValue({
+        uri: createMockUri('/workspace'),
+      });
+      arrangeDisk(['/workspace/secret.txt']);
+
+      const provider = new TscnDocumentLinkProvider();
+      const document = makeDocument('path="res://../secret.txt"', '/workspace/isometric/dungeon.tscn');
+      const [link] = provider.provideDocumentLinks(document, TOKEN);
 
       expect(await provider.resolveDocumentLink!(link!, TOKEN)).toBeUndefined();
     });

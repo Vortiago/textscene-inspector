@@ -623,6 +623,71 @@ describe('TscnDiagnostics', () => {
       diagnostics.dispose();
     });
 
+    it("reads a glTF under the document's own directory for a scene outside every project", async () => {
+      (vscode.workspace.fs.stat as Mock).mockImplementation((uri: vscode.Uri) =>
+        uri.fsPath === '/workspace/isometric/tree.glb'
+          ? Promise.resolve({ type: 1, ctime: 0, mtime: 0, size: INSTANCED_TREE.length })
+          : Promise.reject(new Error('Not found'))
+      );
+      (vscode.workspace.fs.readFile as Mock).mockImplementation((uri: vscode.Uri) =>
+        uri.fsPath === '/workspace/isometric/tree.glb'
+          ? Promise.resolve(INSTANCED_TREE)
+          : Promise.reject(new Error(`Not found: ${uri.fsPath}`))
+      );
+      const diagnostics = newDiagnostics();
+
+      diagnostics.lintDocument(makeTscnDocument(SCENE_USING_TREE, '/workspace/isometric/dungeon.tscn'));
+      await vi.waitFor(() => expect(collection.set).toHaveBeenCalledTimes(2));
+
+      // No project.godot to read, so a plugin may add the extension, and the refusal is only likely.
+      expect(publishedCodes(1)).toContain('gltf-required-extension-maybe-unsupported');
+      diagnostics.dispose();
+    });
+
+    it("roots the provider of a scene outside every project at the scene's own directory", async () => {
+      (vscode.workspace.fs.stat as Mock).mockRejectedValue(new Error('Not found'));
+      const diagnostics = newDiagnostics();
+
+      const provider = await diagnostics.providerFor(createMockUri('/workspace/isometric/dungeon.tscn'));
+
+      expect(provider?.fileOf('res://tree.glb')?.fsPath).toBe('/workspace/isometric/tree.glb');
+      diagnostics.dispose();
+    });
+
+    it('roots the provider of a scene inside a project at the project, not the scene directory', async () => {
+      const diagnostics = newDiagnostics();
+
+      const provider = await diagnostics.providerFor(createMockUri('/workspace/scenes/level.tscn'));
+
+      expect(provider?.fileOf('res://tree.glb')?.fsPath).toBe('/workspace/tree.glb');
+      diagnostics.dispose();
+    });
+
+    it('shares a provider between the loose scenes of one directory, and only those', async () => {
+      (vscode.workspace.fs.stat as Mock).mockRejectedValue(new Error('Not found'));
+      const diagnostics = newDiagnostics();
+
+      const [dungeon, player, elsewhere] = await Promise.all(
+        [
+          '/workspace/isometric/dungeon.tscn',
+          '/workspace/isometric/player.tscn',
+          '/workspace/other/a.tscn',
+        ].map((path) => diagnostics.providerFor(createMockUri(path)))
+      );
+
+      expect(player).toBe(dungeon);
+      expect(elsewhere).not.toBe(dungeon);
+      diagnostics.dispose();
+    });
+
+    it('gives no provider outside every workspace folder', async () => {
+      (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue(undefined);
+      const diagnostics = newDiagnostics();
+
+      expect(await diagnostics.providerFor(createMockUri('/elsewhere/dungeon.tscn'))).toBeNull();
+      diagnostics.dispose();
+    });
+
     it('publishes nothing again while an edit leaves the list as it is shown', async () => {
       const diagnostics = newDiagnostics();
       const document = makeTscnDocument(SCENE_USING_TREE, '/workspace/scenes/level.tscn');

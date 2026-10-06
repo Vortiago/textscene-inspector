@@ -134,18 +134,18 @@ function projectPath(projectDir: string, uri: string): string {
   return relative(projectDir, fileURLToPath(uri)).split(sep).join('/');
 }
 
-/** Opens a committed project file in the server and returns its URI. */
-function open(client: LspClient, projectDir: string, file: string): string {
-  const uri = fileUri(projectDir, file);
+/** Opens a committed project file in the server, at `directory` under `projectDir`, and returns its URI. */
+function open(client: LspClient, projectDir: string, file: string, directory = '.'): string {
+  const uri = fileUri(projectDir, join(directory, file));
   client.notify('textDocument/didOpen', {
     textDocument: { uri, languageId: 'tscn', version: 1, text: projectText(file) },
   });
   return uri;
 }
 
-/** Opens the file a cursor names and returns the request params for that cursor. */
-function openAt(client: LspClient, at: CursorSpec, projectDir = PROJECT_DIR) {
-  const uri = open(client, projectDir, at.file);
+/** Opens the file a cursor names, at `directory` under `projectDir`, and returns the request params for that cursor. */
+function openAt(client: LspClient, at: CursorSpec, projectDir = PROJECT_DIR, directory = '.') {
+  const uri = open(client, projectDir, at.file, directory);
   return { textDocument: { uri }, position: cursorIn(projectText(at.file).split('\n'), at) };
 }
 
@@ -474,14 +474,15 @@ describe('tscn-lsp reads the project again after a change on disk', () => {
     async () => {
       const projectDir = projectCopy();
       const projectFile = join(projectDir, 'project.godot');
-      const projectText = readFileSync(projectFile, 'utf8');
+      const projectFileText = readFileSync(projectFile, 'utf8');
       rmSync(projectFile);
       try {
         await withInitializedServer(pathToFileURL(projectDir).toString(), async (client) => {
-          // One open, so only the change report can refresh the project root.
-          const params = openAt(client, linkAt!.at, projectDir);
+          // One open, so only the change report can refresh the project root. One level down, so the scene's
+          // own directory does not hold the target, and only a project.godot links it.
+          const params = openAt(client, linkAt!.at, projectDir, 'scenes');
           expect(await client.result('textDocument/definition', params)).toBeNull();
-          writeFileSync(projectFile, projectText);
+          writeFileSync(projectFile, projectFileText);
           reportCreated(client, projectDir, 'project.godot');
 
           const target = await client.result<{ uri: string } | null>('textDocument/definition', params);
@@ -600,6 +601,122 @@ describe("tscn-lsp lists what Godot's scan sees", () => {
           );
 
           expect(labels).toContain('res://node_modules/pkg/icon.png');
+        });
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+    SERVER_TIMEOUT_MS
+  );
+});
+
+describe("tscn-lsp roots res:// at a loose scene's own directory", () => {
+  const linkAt = answers.definition.find(
+    (answer) => answer.at.file === 'main.tscn' && answer.at.inside?.startsWith('res://')
+  )!;
+  const pathsAt = answers.completion.find((answer) => answer.at.after === '"res://')!.at;
+
+  /** Runs `use` against a copy of the fixture project with no `project.godot`, then removes the copy. */
+  async function withLooseCopy(use: (client: LspClient, sceneDir: string) => Promise<void>): Promise<void> {
+    const root = mkdtempSync(join(tmpdir(), 'tscn-lsp-loose-'));
+    const sceneDir = join(root, 'dungeon');
+    cpSync(PROJECT_DIR, sceneDir, { recursive: true });
+    rmSync(join(sceneDir, 'project.godot'));
+    try {
+      await withInitializedServer(pathToFileURL(root).toString(), (client) => use(client, sceneDir));
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }
+
+  it(
+    "opens the definition of a res:// path under the scene's own directory",
+    () =>
+      withLooseCopy(async (client, sceneDir) => {
+        const target = await client.result<{ uri: string } | null>(
+          'textDocument/definition',
+          openAt(client, linkAt.at, sceneDir)
+        );
+
+        expect(target && projectPath(sceneDir, target.uri)).toBe(linkAt.targets[0]!.file);
+      }),
+    SERVER_TIMEOUT_MS
+  );
+
+  it(
+    "links each res:// path to its file under the scene's own directory",
+    () =>
+      withLooseCopy(async (client, sceneDir) => {
+        const uri = open(client, sceneDir, linkAt.at.file);
+        const links = await client.result<Array<{ target?: string }>>('textDocument/documentLink', {
+          textDocument: { uri },
+        });
+
+        expect(links.length).toBeGreaterThan(0);
+        expect(links.map((link) => link.target && projectPath(sceneDir, link.target))).toContain(
+          linkAt.targets[0]!.file
+        );
+      }),
+    SERVER_TIMEOUT_MS
+  );
+
+  it(
+    "offers the files under the scene's own directory as res:// paths",
+    () =>
+      withLooseCopy(async (client, sceneDir) => {
+        const labels = labelsOf(
+          await client.result<Array<{ label: string }>>(
+            'textDocument/completion',
+            openAt(client, pathsAt, sceneDir)
+          )
+        );
+
+        expect(labels).toContain('res://textures/grid.png');
+      }),
+    SERVER_TIMEOUT_MS
+  );
+
+  it(
+    "gives no definition for a path the scene's own directory does not hold",
+    () =>
+      withLooseCopy(async (client, sceneDir) => {
+        const params = openAt(client, linkAt.at, sceneDir, 'scenes');
+
+        expect(await client.result('textDocument/definition', params)).toBeNull();
+      }),
+    SERVER_TIMEOUT_MS
+  );
+
+  it(
+    'lints a loose scene against the glTF file in its own directory',
+    async () => {
+      const root = mkdtempSync(join(tmpdir(), 'tscn-lsp-loose-lint-'));
+      const sceneDir = join(root, 'demo');
+      cpSync(join(repoRoot, 'scenes', 'fixtures', 'gltf-unsupported-required-extension'), sceneDir, {
+        recursive: true,
+      });
+      rmSync(join(sceneDir, 'project.godot'));
+      const scene = 'edge-gltf-unsupported-required-extension.tscn';
+      const uri = fileUri(sceneDir, scene);
+      try {
+        await withInitializedServer(pathToFileURL(root).toString(), async (client) => {
+          client.notify('textDocument/didOpen', {
+            textDocument: {
+              uri,
+              languageId: 'tscn',
+              version: 1,
+              text: readFileSync(join(sceneDir, scene), 'utf8'),
+            },
+          });
+
+          // No project.godot to read, so a plugin may add the extension, and the refusal is only likely.
+          const published = (await client.waitFor(
+            'textDocument/publishDiagnostics',
+            (params) => (params as { uri: string }).uri === uri
+          )) as { diagnostics: Array<{ code: string }> };
+          expect(published.diagnostics.map((diagnostic) => diagnostic.code)).toContain(
+            'gltf-required-extension-maybe-unsupported'
+          );
         });
       } finally {
         rmSync(root, { recursive: true, force: true });

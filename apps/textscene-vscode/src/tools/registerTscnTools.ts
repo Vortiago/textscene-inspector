@@ -31,7 +31,7 @@ export interface TscnToolHost {
    * abort of `signal` ends the capture.
    */
   capturePreview(uri: vscode.Uri, signal: AbortSignal): Promise<PreviewCapture>;
-  /** The Problems panel's provider for the project `uri` belongs to, or null outside one. */
+  /** The Problems panel's provider for the `res://` root of `uri`, or null outside every workspace folder. */
   lintProviderFor(uri: vscode.Uri): Promise<ResourceProvider | null>;
 }
 

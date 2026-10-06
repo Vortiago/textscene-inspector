@@ -1,4 +1,7 @@
-/** Go to definition on a `res://` path, which opens the file the nearest project.godot's root names. */
+/**
+ * Go to definition on a `res://` path, which opens the file under the nearest project.godot's
+ * root, or under the document's own directory outside every project.
+ */
 
 import { describe, expect, it, vi } from 'vitest';
 import * as vscode from 'vscode';
@@ -39,9 +42,27 @@ describe('TscnDefinitionProvider on a res:// path', () => {
     expect((location?.uri as unknown as { fsPath: string } | undefined)?.fsPath).toBe('/workspace/art/a.png');
   });
 
-  it('gives nothing when no directory holds project.godot, since Godot then has no res://', async () => {
+  it("opens the file under the document's own directory when no directory holds project.godot", async () => {
+    arrangeWorkspace(['/workspace/scenes/art/a.png']);
+
+    const location = await definitionOnPath();
+
+    expect((location?.uri as unknown as { fsPath: string } | undefined)?.fsPath).toBe(
+      '/workspace/scenes/art/a.png'
+    );
+  });
+
+  it('gives nothing outside every project for a file only the workspace root holds', async () => {
     arrangeWorkspace(['/workspace/art/a.png']);
 
     expect(await definitionOnPath()).toBeNull();
+  });
+
+  it("prefers the project root to the document's own directory when both hold the file", async () => {
+    arrangeWorkspace(['/workspace/project.godot', '/workspace/art/a.png', '/workspace/scenes/art/a.png']);
+
+    const location = await definitionOnPath();
+
+    expect((location?.uri as unknown as { fsPath: string } | undefined)?.fsPath).toBe('/workspace/art/a.png');
   });
 });

@@ -21,6 +21,18 @@ function arrangeProject(): void {
   });
 }
 
+/** A workspace at /game with no project.godot, whose `stat` finds each of `files`. */
+function arrangeLooseScene(files: readonly string[]): void {
+  (vscodeMocks.workspace.getWorkspaceFolder as ReturnType<typeof vi.fn>).mockReturnValue({
+    uri: createMockUri('/game'),
+  });
+  vscodeMocks.workspace.fs.stat.mockImplementation((uri: { fsPath: string }) =>
+    files.includes(uri.fsPath.replace(/\\/g, '/'))
+      ? Promise.resolve({ type: 1, size: 1, ctime: 0, mtime: 0 })
+      : Promise.reject(new Error('Not found'))
+  );
+}
+
 describe('missingResourcePaths', () => {
   it('names the res:// paths no file answers', async () => {
     arrangeProject();
@@ -34,6 +46,21 @@ describe('missingResourcePaths', () => {
     const text =
       '[ext_resource type="PackedScene" path="res://scenes/Door.tscn" id="1"]\n[node name="R" type="Node"]';
     expect(await missingResourcePaths(createMockUri('/game/scenes/Main.tscn'), text)).toEqual([]);
+  });
+
+  it("checks a scene outside every project under the scene's own directory", async () => {
+    arrangeLooseScene(['/game/isometric/scenes/Door.tscn']);
+    expect(await missingResourcePaths(createMockUri('/game/isometric/dungeon.tscn'), SCENE)).toEqual([
+      'res://missing.png',
+    ]);
+  });
+
+  it('names a file only the workspace root holds as missing for a scene outside every project', async () => {
+    arrangeLooseScene(['/game/scenes/Door.tscn', '/game/missing.png']);
+    expect(await missingResourcePaths(createMockUri('/game/isometric/dungeon.tscn'), SCENE)).toEqual([
+      'res://scenes/Door.tscn',
+      'res://missing.png',
+    ]);
   });
 
   it('returns nothing outside a workspace folder', async () => {

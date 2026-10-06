@@ -1,12 +1,12 @@
 /**
  * Turns `res://` references in a `.tscn` document into links, resolved against the
- * project root as Godot does, never against the current file.
+ * project root as Godot does, or against the document's directory outside every project.
  */
 
 import * as vscode from 'vscode';
 import { resPathOccurrences } from '@textscene/core/languageFeatures';
 import { existingResFile } from './existingResFile';
-import { enclosingProjectOf } from './findGodotProjectRoot';
+import { resRootOf } from './findGodotProjectRoot';
 import { languageDocumentOf } from './languageDocumentOf';
 import { toVscodeRange } from './languageFeatureRanges';
 
@@ -32,18 +32,18 @@ export class TscnDocumentLinkProvider implements vscode.DocumentLinkProvider<Tsc
   }
 
   /**
-   * Resolves the link the user hovers or clicks against the document's Godot project. A document outside every
-   * project gets no target. Nor does a path that climbs out of the root, a missing file or a directory, since none
-   * names a file to open. The `tscn-lsp` server answers the same. The walk runs on each resolve, a few `stat`s, so a
-   * `project.godot` created later counts at once.
+   * Resolves the link the user hovers or clicks against the document's `res://` root. A document outside every
+   * workspace folder gets no target. Nor does a path that climbs out of the root, a missing file or a directory, since
+   * none names a file to open. The `tscn-lsp` server answers the same. The walk runs on each resolve, a few `stat`s,
+   * so a `project.godot` created later counts at once.
    */
   async resolveDocumentLink(
     link: TscnResourceDocumentLink,
     _token: vscode.CancellationToken
   ): Promise<TscnResourceDocumentLink | undefined> {
-    const projectRoot = await enclosingProjectOf(link.documentUri);
-    if (!projectRoot) return undefined;
-    const target = await existingResFile(projectRoot, link.resourcePath);
+    const resRoot = await resRootOf(link.documentUri);
+    if (!resRoot) return undefined;
+    const target = await existingResFile(resRoot, link.resourcePath);
     if (!target) return undefined;
     link.target = target;
     return link;
