@@ -64,4 +64,10 @@ const CARRIES_ITS_PAYLOAD: {
   loadResource: (m) =>
     isString(m.path) && (m.resourceType === undefined || isString(m.resourceType)) && isString(m.requestId),
   log: (m) => isString(m.level) && isString(m.message) && Array.isArray(m.args),
+  previewCaptured: (m) => isString(m.requestId) && isString(m.dataUrl),
+  previewCaptureError: (m) => isString(m.requestId) && isString(m.error),
+  previewCaptureReady: () => true,
+  previewCapturePending: () => true,
+  previewCaptureUnavailable: (m) => isString(m.reason),
+  capturePong: (m) => isString(m.pingId),
 };

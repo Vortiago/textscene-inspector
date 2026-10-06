@@ -1,10 +1,11 @@
 name: Release
 
-# A tag releases one package: `vscode-v1.2.3` the extension, `linter-v1.2.3` the linter.
-# The tag is the version: the release jobs write it into the package's manifest.
+# A tag releases one package: `vscode-v1.2.3` the extension, `linter-v1.2.3` the linter and
+# `lsp-v1.2.3` the language server. The tag is the version: the release jobs write it into
+# the package's manifest.
 on:
   push:
-    tags: ['vscode-v*', 'linter-v*']
+    tags: ['vscode-v*', 'linter-v*', 'lsp-v*']
 
 permissions:
   contents: read
@@ -93,14 +94,18 @@ jobs:
             apps/textscene-vscode/*.vsix
             web-dist.tar.gz
 
-  release-linter:
-    name: Release the linter on GitHub
+  # The linter and the language server ship the same way: a tarball on GitHub and on npm.
+  release-npm-package:
+    name: Release ${{ needs.validate.outputs.package }} on GitHub
     needs: validate
-    if: needs.validate.outputs.package == 'linter'
+    if: needs.validate.outputs.package == 'linter' || needs.validate.outputs.package == 'lsp'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: write
+    env:
+      VERSION: ${{ needs.validate.outputs.version }}
+      DIRECTORY: ${{ needs.validate.outputs.directory }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -110,21 +115,18 @@ jobs:
 
       - name: Set the version from the tag
         run: npm pkg set version="$VERSION" --prefix "$DIRECTORY"
-        env:
-          VERSION: ${{ needs.validate.outputs.version }}
-          DIRECTORY: ${{ needs.validate.outputs.directory }}
 
-      - name: Build Linter CLI
-        run: pnpm --filter @textscene/linter build
+      - name: Build the package
+        run: pnpm --filter "./$DIRECTORY" build
 
       # pnpm pack, not npm: it rewrites the catalog: and workspace: specifiers.
-      - name: Pack Linter Tarball
-        run: cd apps/textscene-linter && pnpm pack
+      - name: Pack the tarball
+        run: cd "$DIRECTORY" && pnpm pack
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: linter-tarball
-          path: apps/textscene-linter/*.tgz
+          name: npm-tarball
+          path: ${{ needs.validate.outputs.directory }}/*.tgz
           if-no-files-found: error
 
       - name: Create GitHub Release
@@ -135,20 +137,21 @@ jobs:
           body: ${{ needs.validate.outputs.previous_tag == '' && 'First public release.' || '' }}
           previous_tag: ${{ needs.validate.outputs.previous_tag }}
           make_latest: false
-          files: apps/textscene-linter/*.tgz
+          files: ${{ needs.validate.outputs.directory }}/*.tgz
 
   # One job per registry, so a re-run retries only the failed one. No workspace install
   # here: an install script would run beside the OIDC token.
 
   npm:
-    name: Publish the linter to npm
-    needs: [validate, release-linter]
+    name: Publish ${{ needs.validate.outputs.package }} to npm
+    needs: [validate, release-npm-package]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: release
     permissions:
       id-token: write
     env:
+      PACKAGE: ${{ needs.validate.outputs.package }}
       VERSION: ${{ needs.validate.outputs.version }}
     steps:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -161,17 +164,17 @@ jobs:
 
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: linter-tarball
+          name: npm-tarball
 
-      # npm authenticates through the trusted publisher (OIDC) and attaches provenance.
+      # npm authenticates through the package's trusted publisher (OIDC) and attaches provenance.
       # `npm view` prints nothing, and exits 0, for a version the registry does not hold.
-      - name: Publish @textscene/linter
+      - name: Publish @textscene/${{ needs.validate.outputs.package }}
         run: |
-          if [ -n "$(npm view "@textscene/linter@$VERSION" version 2>/dev/null)" ]; then
-            echo "@textscene/linter@$VERSION is already on npm: skipping"
+          if [ -n "$(npm view "@textscene/$PACKAGE@$VERSION" version 2>/dev/null)" ]; then
+            echo "@textscene/$PACKAGE@$VERSION is already on npm: skipping"
             exit 0
           fi
-          npm publish "textscene-linter-$VERSION.tgz"
+          npm publish "textscene-$PACKAGE-$VERSION.tgz"
 
   vscode-marketplace:
     name: Publish the extension to the VS Code Marketplace

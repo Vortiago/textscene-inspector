@@ -95,7 +95,8 @@ export class TscnParserCore {
    * @returns Parsed scene structure
    */
   parse(content: string, nodeCreator: NodeCreator, observer?: ParseObserver): TscnScene {
-    logger.info('[Parser] Starting TSCN parsing');
+    // Debug, not info: an editor host parses on each keystroke.
+    logger.debug('[Parser] Starting TSCN parsing');
     // Split on CRLF or LF: a trailing \r on each line of a Windows-authored file
     // would corrupt accumulated multi-line string values.
     const lines = content.split(/\r?\n/);
@@ -323,7 +324,7 @@ export class TscnParserCore {
       );
     }
 
-    logger.info(
+    logger.debug(
       `[Parser] Parsing complete: ${origins.length} nodes, ${externalResources.length} external resources, ${internalResources.length} internal resources`
     );
 

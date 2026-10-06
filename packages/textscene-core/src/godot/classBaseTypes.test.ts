@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { CLASS_BASE_TYPES, descendsFromClass } from './classBaseTypes.js';
+import { CLASS_BASE_TYPES, classBaseChain, descendsFromClass } from './classBaseTypes.js';
 import { NODE_BASE_TYPES } from './nodeBaseTypes.js';
 import { RESOURCE_BASE_TYPES_GENERATED } from './resourceBaseTypes.generated.js';
 
@@ -48,5 +48,16 @@ describe('CLASS_BASE_TYPES', () => {
   it('reads no key off Object.prototype for a type name a .tscn chose', () => {
     expect(descendsFromClass('constructor', 'Material')).toBe(false);
     expect(descendsFromClass('__proto__', 'Material')).toBe(false);
+  });
+});
+
+describe('classBaseChain', () => {
+  it('walks a node chain and a resource chain alike, nearest first', () => {
+    expect(classBaseChain('MeshInstance3D')[0]).toBe('GeometryInstance3D');
+    expect(classBaseChain('BoxMesh')[0]).toBe('PrimitiveMesh');
+  });
+
+  it('gives an unknown class no ancestors', () => {
+    expect(classBaseChain('NotAClass')).toEqual([]);
   });
 });

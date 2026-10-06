@@ -13,6 +13,7 @@ import { dispatchWebviewMessage, type WebviewMessageHandlers } from './webviewDi
 import { jumpToNodeDefinition } from './jumpToNodeDefinition';
 import { relayWebviewLog } from './hostLogRelay';
 import { encodeResourceResponse } from './wireCodec';
+import { PreviewCaptureQueue, type PreviewCapture } from './previewCaptureQueue';
 
 export { dispatchWebviewMessage } from './webviewDispatch';
 export type { WebviewMessageHandlers } from './webviewDispatch';
@@ -52,6 +53,11 @@ export class TscnPreviewPanel {
    */
   private _resourceProvider: VSCodeResourceProvider | null = null;
 
+  private readonly _captures = new PreviewCaptureQueue({
+    postRequest: (requestId) => this._postMessageToWebview({ type: 'capturePreview', requestId }),
+    postPing: (pingId) => this._postMessageToWebview({ type: 'capturePing', pingId }),
+  });
+
   public static create(extensionUri: vscode.Uri, resource: vscode.Uri): TscnPreviewPanel {
     const column = vscode.window.activeTextEditor
       ? vscode.window.activeTextEditor.viewColumn! + 1
@@ -90,6 +96,7 @@ export class TscnPreviewPanel {
     const handlers: WebviewMessageHandlers = {
       webviewReady: (_msg) => {
         this._webviewReady = true;
+        this._captures.webviewLoaded();
         // Every remount, such as a move to another editor group, posts ready with
         // an empty tree. Replay always, so a ready webview holds the current text:
         // the `_previousContent` diff swallows a later re-read, which leaves the
@@ -106,6 +113,24 @@ export class TscnPreviewPanel {
       },
       log: (msg) => {
         relayWebviewLog(msg.level, msg.message, msg.args);
+      },
+      previewCaptured: (msg) => {
+        this._captures.answer(msg.requestId, { dataUrl: msg.dataUrl });
+      },
+      previewCaptureError: (msg) => {
+        this._captures.answer(msg.requestId, { error: msg.error });
+      },
+      previewCaptureReady: () => {
+        this._captures.setState({ kind: 'ready' });
+      },
+      previewCapturePending: () => {
+        this._captures.setState({ kind: 'pending' });
+      },
+      previewCaptureUnavailable: (msg) => {
+        this._captures.setState({ kind: 'unavailable', reason: msg.reason });
+      },
+      capturePong: (msg) => {
+        this._captures.pong(msg.pingId);
       },
     };
 
@@ -125,6 +150,7 @@ export class TscnPreviewPanel {
     // disposed`. `_handleLoadResource`'s catch re-posts and throws out of its
     // `void`ed call as an unhandled rejection.
     this._disposed = true;
+    this._captures.close();
     this._onDidDispose.fire();
 
     this._panel.dispose();
@@ -167,6 +193,15 @@ export class TscnPreviewPanel {
     this._currentResource = resource;
     this._panel.title = `Preview: ${resource.fsPath.split(/[\\/]/).pop()}`;
     this._loadTscnContent(resource);
+  }
+
+  /**
+   * Captures the viewport, or says why it could not. A request waits for the webview to
+   * report its capture state, so one made while the canvas mounts gets the image. An abort
+   * of `signal` ends the request.
+   */
+  public capture(signal?: AbortSignal): Promise<PreviewCapture> {
+    return this._captures.request(signal);
   }
 
   /** Lazily creates this panel's `VSCodeResourceProvider`, then reuses it. */

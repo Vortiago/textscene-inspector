@@ -10,6 +10,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import {
+  DISABLE_GPU_ENV,
+  gpuLaunch,
   integrationLaunchOptions,
   integrationLaunchPaths,
   launchIntegrationTests,
@@ -49,14 +51,39 @@ describe('integrationLaunchPaths', () => {
   });
 
   it('keeps the GPU on macOS and Windows, which run on a real display', () => {
-    expect(integrationLaunchOptions(paths, 'darwin').launchArgs).not.toContain('--disable-gpu');
-    expect(integrationLaunchOptions(paths, 'win32').launchArgs).not.toContain('--disable-gpu');
+    expect(integrationLaunchOptions(paths, 'darwin', undefined).launchArgs).not.toContain('--disable-gpu');
+    expect(integrationLaunchOptions(paths, 'win32', undefined).launchArgs).not.toContain('--disable-gpu');
   });
 
-  it('names the start marker to the suite through the extension host environment', () => {
-    expect(integrationLaunchOptions(paths).extensionTestsEnv).toEqual({
+  it('launches macOS without the GPU when the launcher asks for it', () => {
+    expect(integrationLaunchOptions(paths, 'darwin', '1').launchArgs).toContain('--disable-gpu');
+  });
+
+  it('names the start marker and the GPU launch to the suite through the extension host environment', () => {
+    expect(integrationLaunchOptions(paths, 'darwin', undefined).extensionTestsEnv).toEqual({
       [SUITE_STARTED_MARKER_ENV]: paths.suiteStartedMarker,
+      [DISABLE_GPU_ENV]: '0',
     });
+  });
+});
+
+describe('gpuLaunch', () => {
+  it('tells the suite the GPU is off whenever it passes --disable-gpu', () => {
+    expect(gpuLaunch('linux', undefined)).toEqual({
+      launchArgs: ['--disable-gpu'],
+      extensionTestsEnv: { [DISABLE_GPU_ENV]: '1' },
+    });
+  });
+
+  it('keeps the GPU on, and says so, for any request but 1 off Linux', () => {
+    expect(gpuLaunch('win32', '0')).toEqual({
+      launchArgs: [],
+      extensionTestsEnv: { [DISABLE_GPU_ENV]: '0' },
+    });
+  });
+
+  it('keeps Linux off the GPU even when the request says 0', () => {
+    expect(gpuLaunch('linux', '0').launchArgs).toEqual(['--disable-gpu']);
   });
 });
 

@@ -18,8 +18,15 @@ const TRACKER_REF = [
   /(?<![\w#&])#\d{1,4}(?![\dA-Fa-f])/, // #<n>, but not a hex colour
 ];
 
+/**
+ * The guard reads every source file in the repository, about 5000 files and 20 MB, so its time
+ * is disk time and grows with the repository. Vitest's 5 s default suits a unit test, not a
+ * scan that shares the disk with every other suite on a loaded runner.
+ */
+const REPO_SCAN_TIMEOUT_MS = 60_000;
+
 describe('code-comment conventions (AGENTS.md)', () => {
-  it('no comment references an issue/WI tracker item', () => {
+  it('no comment references an issue/WI tracker item', { timeout: REPO_SCAN_TIMEOUT_MS }, () => {
     const offenders: string[] = [];
     let spans = 0;
 

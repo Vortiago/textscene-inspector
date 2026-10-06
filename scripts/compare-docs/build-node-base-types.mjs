@@ -1,8 +1,9 @@
 /**
- * Derives the linter's Node and Resource class → base-type tables from the committed engine
- * captures (`pnpm nodes:base-types` writes
- * packages/textscene-core/src/godot/{node,resource}BaseTypes.generated.ts). It never runs Godot:
- * CI has no engine, and the test beside it re-derives both outputs to prove them current.
+ * Derives the Node and Resource class → base-type tables and the ClassDB property tables from
+ * the committed engine captures (`pnpm nodes:base-types` writes
+ * packages/textscene-core/src/godot/{node,resource}BaseTypes.generated.ts and
+ * classProperties.generated.ts). It never runs Godot: CI has no engine, and the test beside it
+ * re-derives every output to prove it current.
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -12,6 +13,8 @@ import { pathToFileURL } from 'node:url';
 const here = import.meta.dirname;
 export const CATALOG = join(here, 'node-catalog.json');
 export const RESOURCE_BASES = join(here, 'resource-bases.json');
+export const NODE_PROPERTIES = join(here, 'node-properties.json');
+export const RESOURCE_PROPERTIES = join(here, 'resource-properties.json');
 
 /** `src/godot/<name>` in the core package. */
 function godotModule(name) {
@@ -20,6 +23,7 @@ function godotModule(name) {
 
 export const OUT = godotModule('nodeBaseTypes.generated.ts');
 export const RESOURCE_OUT = godotModule('resourceBaseTypes.generated.ts');
+export const PROPERTIES_OUT = godotModule('classProperties.generated.ts');
 
 /**
  * Refuses to write a table a walk cannot leave. Every consumer (`descendsFrom`, `baseChain`,
@@ -135,6 +139,66 @@ ${renderEntries(table)}
 `;
 }
 
+/**
+ * One class's property rows, each a `[name, type, hint, hint_string]` tuple in the
+ * capture's own order. The tuple keeps the generated file near the two captures' size,
+ * since every row ships to the VS Code host bundle for hover and completion.
+ */
+function renderPropertyRows(rows) {
+  return rows
+    .map(
+      (row) =>
+        `    [${JSON.stringify(row.name)}, ${row.type}, ${row.hint}, ${JSON.stringify(row.hint_string)}],`
+    )
+    .join('\n');
+}
+
+/** One frozen `class → rows` constant, its classes sorted so the output diff is stable. */
+function renderPropertyTable(name, properties) {
+  const classes = Object.entries(properties)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([className, rows]) => `  ${JSON.stringify(className)}: [\n${renderPropertyRows(rows)}\n  ],`)
+    .join('\n');
+  return (
+    `export const ${name}: Readonly<Record<string, readonly ClassPropertyRow[]>> = Object.freeze({\n` +
+    `${classes}\n});\n`
+  );
+}
+
+/**
+ * The module source for the ClassDB property tables. A class gets rows only where it declares a
+ * property of its own. A reader finds an inherited property by walking the base chain, as the
+ * engine's `_get_property_list` does.
+ *
+ * @param nodeProperties - `node-properties.json`, class → own rows.
+ * @param resourceProperties - `resource-properties.json`, class → own rows.
+ * @param version - the catalog's Godot version.
+ */
+export function renderPropertiesModule(nodeProperties, resourceProperties, version) {
+  return `/**
+ * ClassDB property rows, derived from Godot ${version}'s ClassDB captures.
+ * AUTO-GENERATED - Do not edit manually. Run: pnpm nodes:base-types
+ *
+ * Each row is \`[name, Variant::Type, PropertyHint, hint_string]\`, the numbers
+ * \`node-properties.json\` and \`resource-properties.json\` record. A class appears only
+ * where it declares a property of its own: a reader finds an inherited property by walking
+ * the base chain in \`nodeBaseTypes\` or \`classBaseTypes\`.
+ */
+
+export type ClassPropertyRow = readonly [name: string, type: number, hint: number, hintString: string];
+
+${renderPropertyTable('NODE_CLASS_PROPERTIES', nodeProperties)}
+${renderPropertyTable('RESOURCE_CLASS_PROPERTIES', resourceProperties)}`;
+}
+
+/** The property module the committed artifact must equal. */
+export function renderFromPropertyCaptures() {
+  const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
+  const nodeProperties = JSON.parse(readFileSync(NODE_PROPERTIES, 'utf8'));
+  const resourceProperties = JSON.parse(readFileSync(RESOURCE_PROPERTIES, 'utf8'));
+  return renderPropertiesModule(nodeProperties, resourceProperties, catalog.godotVersion ?? 'unknown');
+}
+
 /** The module source the committed artifact must equal. */
 export function renderFromCatalog() {
   const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
@@ -156,12 +220,15 @@ export function renderFromResourceBases() {
 
 // Only write when run as a CLI, so the test can import the derivation.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  for (const [path, source] of [
-    [OUT, renderFromCatalog()],
-    [RESOURCE_OUT, renderFromResourceBases()],
-  ]) {
+  const describeBaseTypes = (source) => `${source.match(/^ {2}\w+: '/gm)?.length ?? 0} base-type entries`;
+  const describeProperties = (source) => `${source.match(/^\s*\["/gm)?.length ?? 0} property rows`;
+  const artifacts = [
+    [OUT, renderFromCatalog(), describeBaseTypes],
+    [RESOURCE_OUT, renderFromResourceBases(), describeBaseTypes],
+    [PROPERTIES_OUT, renderFromPropertyCaptures(), describeProperties],
+  ];
+  for (const [path, source, describe] of artifacts) {
     writeFileSync(path, source);
-    const count = source.match(/^ {2}\w+: '/gm)?.length ?? 0;
-    console.log(`Wrote ${path} — ${count} base-type entries.`);
+    console.log(`Wrote ${path} — ${describe(source)}.`);
   }
 }

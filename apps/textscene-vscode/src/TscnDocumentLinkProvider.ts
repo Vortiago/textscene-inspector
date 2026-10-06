@@ -4,11 +4,11 @@
  */
 
 import * as vscode from 'vscode';
-import { resRelativePath } from '@textscene/core/resources/resPath';
-import { findGodotProjectRoot } from './findGodotProjectRoot';
-
-/** Matches a `res://` reference up to the next quote, whitespace, or closing paren. */
-const RES_PATH_PATTERN = /res:\/\/[^"'\s)]+/g;
+import { resPathOccurrences } from '@textscene/core/languageFeatures';
+import { existingResFile } from './existingResFile';
+import { enclosingProjectOf } from './findGodotProjectRoot';
+import { languageDocumentOf } from './languageDocumentOf';
+import { toVscodeRange } from './languageFeatureRanges';
 
 export class TscnResourceDocumentLink extends vscode.DocumentLink {
   constructor(
@@ -21,74 +21,31 @@ export class TscnResourceDocumentLink extends vscode.DocumentLink {
 }
 
 export class TscnDocumentLinkProvider implements vscode.DocumentLinkProvider<TscnResourceDocumentLink> {
-  /**
-   * `findGodotProjectRoot` result, keyed by the document's own directory, so one
-   * walk serves every link and re-hover. Not keyed by workspace folder: one folder
-   * can hold several Godot projects, and each must get its own root.
-   * `VSCodeResourceProvider` caches per panel instead, one document each.
-   */
-  private readonly _projectRootCache = new Map<string, vscode.Uri>();
-
-  private async _resolveProjectRoot(
-    workspaceFolder: vscode.WorkspaceFolder,
-    documentUri: vscode.Uri
-  ): Promise<vscode.Uri> {
-    const key = vscode.Uri.joinPath(documentUri, '..').toString();
-    const cached = this._projectRootCache.get(key);
-    if (cached) return cached;
-
-    const root = await findGodotProjectRoot(workspaceFolder.uri, documentUri);
-    this._projectRootCache.set(key, root);
-    return root;
-  }
-
-  /** Computes ranges only: a synchronous regex scan with no IO. */
+  /** Computes ranges only, from the engine's scan, with no IO. */
   provideDocumentLinks(
     document: vscode.TextDocument,
     _token: vscode.CancellationToken
-  ): vscode.ProviderResult<TscnResourceDocumentLink[]> {
-    const links: TscnResourceDocumentLink[] = [];
-    const pattern = new RegExp(RES_PATH_PATTERN);
-
-    for (let lineIndex = 0; lineIndex < document.lineCount; lineIndex++) {
-      const lineText = document.lineAt(lineIndex).text;
-      pattern.lastIndex = 0;
-
-      let match: RegExpExecArray | null;
-      while ((match = pattern.exec(lineText)) !== null) {
-        const resourcePath = match[0];
-        const range = new vscode.Range(
-          new vscode.Position(lineIndex, match.index),
-          new vscode.Position(lineIndex, match.index + resourcePath.length)
-        );
-        links.push(new TscnResourceDocumentLink(range, resourcePath, document.uri));
-      }
-    }
-
-    return links;
+  ): TscnResourceDocumentLink[] {
+    return resPathOccurrences(languageDocumentOf(document)).map(
+      ({ path, range }) => new TscnResourceDocumentLink(toVscodeRange(range), path, document.uri)
+    );
   }
 
   /**
-   * Resolves the link the user hovers or clicks through the `findGodotProjectRoot`
-   * walk the preview panel shares. A document outside every workspace folder has no
-   * project root, and a path that climbs out of the root names no project file, so
-   * neither gets a target.
+   * Resolves the link the user hovers or clicks against the document's Godot project. A document outside every
+   * project gets no target. Nor does a path that climbs out of the root, a missing file or a directory, since none
+   * names a file to open. The `tscn-lsp` server answers the same. The walk runs on each resolve, a few `stat`s, so a
+   * `project.godot` created later counts at once.
    */
   async resolveDocumentLink(
     link: TscnResourceDocumentLink,
     _token: vscode.CancellationToken
   ): Promise<TscnResourceDocumentLink | undefined> {
-    const workspaceFolder = vscode.workspace.getWorkspaceFolder(link.documentUri);
-    if (!workspaceFolder) {
-      return undefined;
-    }
-    const relativePath = resRelativePath(link.resourcePath);
-    if (relativePath === null) {
-      return undefined;
-    }
-
-    const projectRoot = await this._resolveProjectRoot(workspaceFolder, link.documentUri);
-    link.target = vscode.Uri.joinPath(projectRoot, relativePath);
+    const projectRoot = await enclosingProjectOf(link.documentUri);
+    if (!projectRoot) return undefined;
+    const target = await existingResFile(projectRoot, link.resourcePath);
+    if (!target) return undefined;
+    link.target = target;
     return link;
   }
 }

@@ -3,7 +3,7 @@
 /**
  * The constructible classes and enums of the `vscode` module mock. Nothing here
  * holds a spy: the namespaces `afterEach` clears live in `vscodeMocks.testkit.ts`,
- * and `test-setup.ts` assembles both.
+ * and `vscodeModuleMock.testkit.ts` assembles both.
  */
 
 import { vi } from 'vitest';
@@ -69,6 +69,7 @@ export class MockEventEmitter {
   }
 }
 
+/** Refuses an empty name, as the real constructor's `validate` does. */
 export class MockDocumentSymbol {
   children: MockDocumentSymbol[] = [];
 
@@ -78,7 +79,9 @@ export class MockDocumentSymbol {
     public kind: number,
     public range: any,
     public selectionRange: any
-  ) {}
+  ) {
+    if (!name) throw new Error('name must not be falsy');
+  }
 }
 
 export class MockLocation {
@@ -203,3 +206,144 @@ export const MockTreeItemCollapsibleState = {
   Collapsed: 1,
   Expanded: 2,
 };
+
+/** `vscode.MarkdownString`: hover and documentation content. */
+export class MockMarkdownString {
+  constructor(public value: string) {}
+}
+
+/** `vscode.Hover`: markdown content and the range it applies to. */
+export class MockHover {
+  constructor(
+    public contents: any,
+    public range?: any
+  ) {}
+}
+
+/** `vscode.CompletionItem`: the fields the providers set. */
+export class MockCompletionItem {
+  detail?: any;
+  documentation?: any;
+  insertText?: any;
+  tags?: number[];
+  range?: any;
+
+  constructor(
+    public label: string,
+    public kind?: number
+  ) {}
+}
+
+export const MockCompletionItemTag = {
+  Deprecated: 1,
+};
+
+export const MockCompletionItemKind = {
+  Text: 0,
+  Method: 1,
+  Function: 2,
+  Constructor: 3,
+  Field: 4,
+  Variable: 5,
+  Class: 6,
+  Interface: 7,
+  Module: 8,
+  Property: 9,
+  Unit: 10,
+  Value: 11,
+  Enum: 12,
+  Keyword: 13,
+  Snippet: 14,
+  Color: 15,
+  File: 16,
+  Reference: 17,
+  Folder: 18,
+  EnumMember: 19,
+  Constant: 20,
+  Struct: 21,
+  Event: 22,
+  Operator: 23,
+  TypeParameter: 24,
+};
+
+/** `vscode.CodeAction`: a title, a kind and the edit it applies. */
+export class MockCodeAction {
+  edit?: MockWorkspaceEdit;
+
+  constructor(
+    public title: string,
+    public kind?: any
+  ) {}
+}
+
+export const MockCodeActionKind = {
+  Empty: '',
+  QuickFix: 'quickfix',
+  Refactor: 'refactor',
+  RefactorExtract: 'refactor.extract',
+  RefactorInline: 'refactor.inline',
+  RefactorRewrite: 'refactor.rewrite',
+  Source: 'source',
+  SourceOrganizeImports: 'source.organizeImports',
+};
+
+/** `vscode.WorkspaceEdit`: enough to record the replaces a code action applies. */
+export class MockWorkspaceEdit {
+  readonly replaces: Array<{ uri: any; range: any; newText: string }> = [];
+
+  replace(uri: any, range: any, newText: string): boolean {
+    this.replaces.push({ uri, range, newText });
+    return true;
+  }
+}
+
+/** `vscode.FoldingRange`: a pair of zero-based lines. */
+export class MockFoldingRange {
+  constructor(
+    public start: number,
+    public end: number,
+    public kind?: any
+  ) {}
+}
+
+export const MockFoldingRangeKind = {
+  Comment: 1,
+  Imports: 2,
+  Region: 3,
+};
+
+/** `vscode.DocumentHighlight`: a range and its read/write kind. */
+export class MockDocumentHighlight {
+  constructor(
+    public range: any,
+    public kind?: number
+  ) {}
+}
+
+export const MockDocumentHighlightKind = {
+  Text: 0,
+  Read: 1,
+  Write: 2,
+};
+
+/** `vscode.LanguageModelTextPart`: one text part of a tool result. */
+export class MockLanguageModelTextPart {
+  constructor(public value: string) {}
+}
+
+/** `vscode.LanguageModelDataPart`: a binary tool-result part, such as a PNG. */
+export class MockLanguageModelDataPart {
+  static image(data: Uint8Array, mimeType: string): MockLanguageModelDataPart {
+    return new MockLanguageModelDataPart(data, mimeType);
+  }
+
+  constructor(
+    public data: Uint8Array,
+    public mimeType: string
+  ) {}
+}
+
+/** `vscode.LanguageModelToolResult`: the parts a tool returns. */
+export class MockLanguageModelToolResult {
+  constructor(public content: any[]) {}
+}

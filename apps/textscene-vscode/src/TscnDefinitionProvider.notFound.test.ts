@@ -19,19 +19,19 @@ describe('TscnDefinitionProvider', () => {
   });
 
   describe('Error Conditions - Not Found', () => {
-    it('should return null when resource definition not found', () => {
+    it('should return null when resource definition not found', async () => {
       const content = `[node name="Player" type="MeshInstance3D"]
 mesh = SubResource("NonExistent")`;
 
       const document = createMockDocument(content);
       const position = new vscode.Position(1, 15);
 
-      const definition = provider.provideDefinition(document, position, mockCancellationToken);
+      const definition = await provider.provideDefinition(document, position, mockCancellationToken);
 
       expect(definition).toBeNull();
     });
 
-    it('should return null when cursor not on resource reference', () => {
+    it('should return null when cursor not on resource reference', async () => {
       const content = `[node name="Player" type="MeshInstance3D"]
 mesh = SubResource("BoxMesh_1")
 
@@ -40,12 +40,12 @@ mesh = SubResource("BoxMesh_1")
       const document = createMockDocument(content);
       const position = new vscode.Position(1, 0); // Start of line, not on resource
 
-      const definition = provider.provideDefinition(document, position, mockCancellationToken);
+      const definition = await provider.provideDefinition(document, position, mockCancellationToken);
 
       expect(definition).toBeNull();
     });
 
-    it('should return null when cursor is just after resource reference', () => {
+    it('should return null when cursor is just after resource reference', async () => {
       const content = `mesh = SubResource("BoxMesh_1")
 
 [sub_resource type="BoxMesh" id="BoxMesh_1"]`;
@@ -53,36 +53,36 @@ mesh = SubResource("BoxMesh_1")
       const document = createMockDocument(content);
       const position = new vscode.Position(0, 32); // Right after closing paren
 
-      const definition = provider.provideDefinition(document, position, mockCancellationToken);
+      const definition = await provider.provideDefinition(document, position, mockCancellationToken);
 
       expect(definition).toBeNull();
     });
 
-    it('should return null for empty document', () => {
+    it('should return null for empty document', async () => {
       const content = '';
       const document = createMockDocument(content);
       const position = new vscode.Position(0, 0);
 
-      const definition = provider.provideDefinition(document, position, mockCancellationToken);
+      const definition = await provider.provideDefinition(document, position, mockCancellationToken);
 
       expect(definition).toBeNull();
     });
 
-    it('should return null when document has no resource definitions', () => {
+    it('should return null when document has no resource definitions', async () => {
       const content = `[node name="Player" type="MeshInstance3D"]
 mesh = SubResource("BoxMesh_1")`;
 
       const document = createMockDocument(content);
       const position = new vscode.Position(1, 15);
 
-      const definition = provider.provideDefinition(document, position, mockCancellationToken);
+      const definition = await provider.provideDefinition(document, position, mockCancellationToken);
 
       expect(definition).toBeNull();
     });
   });
 
   describe('Boundary Conditions - Cursor Position', () => {
-    it('should find definition when cursor is at start of SubResource keyword', () => {
+    it('should find definition when cursor is at start of SubResource keyword', async () => {
       const content = `mesh = SubResource("BoxMesh_1")
 
 [sub_resource type="BoxMesh" id="BoxMesh_1"]`;
@@ -90,17 +90,17 @@ mesh = SubResource("BoxMesh_1")`;
       const document = createMockDocument(content);
       const position = new vscode.Position(0, 7); // Start of "SubResource"
 
-      const definition = provider.provideDefinition(
+      const definition = (await provider.provideDefinition(
         document,
         position,
         mockCancellationToken
-      ) as vscode.Location;
+      )) as vscode.Location;
 
       expect(definition).toBeDefined();
       expect(definition.range.start.line).toBe(2);
     });
 
-    it('should find definition when cursor is at end of closing parenthesis', () => {
+    it('should find definition when cursor is at end of closing parenthesis', async () => {
       const content = `mesh = SubResource("BoxMesh_1")
 
 [sub_resource type="BoxMesh" id="BoxMesh_1"]`;
@@ -108,17 +108,17 @@ mesh = SubResource("BoxMesh_1")`;
       const document = createMockDocument(content);
       const position = new vscode.Position(0, 31); // On closing paren
 
-      const definition = provider.provideDefinition(
+      const definition = (await provider.provideDefinition(
         document,
         position,
         mockCancellationToken
-      ) as vscode.Location;
+      )) as vscode.Location;
 
       expect(definition).toBeDefined();
       expect(definition.range.start.line).toBe(2);
     });
 
-    it('should find definition when cursor is on the ID string', () => {
+    it('should find definition when cursor is on the ID string', async () => {
       const content = `mesh = SubResource("BoxMesh_1")
 
 [sub_resource type="BoxMesh" id="BoxMesh_1"]`;
@@ -126,17 +126,17 @@ mesh = SubResource("BoxMesh_1")`;
       const document = createMockDocument(content);
       const position = new vscode.Position(0, 22); // Inside "BoxMesh_1"
 
-      const definition = provider.provideDefinition(
+      const definition = (await provider.provideDefinition(
         document,
         position,
         mockCancellationToken
-      ) as vscode.Location;
+      )) as vscode.Location;
 
       expect(definition).toBeDefined();
       expect(definition.range.start.line).toBe(2);
     });
 
-    it('should return null when cursor is one character before SubResource', () => {
+    it('should return null when cursor is one character before SubResource', async () => {
       const content = `mesh = SubResource("BoxMesh_1")
 
 [sub_resource type="BoxMesh" id="BoxMesh_1"]`;
@@ -144,7 +144,7 @@ mesh = SubResource("BoxMesh_1")`;
       const document = createMockDocument(content);
       const position = new vscode.Position(0, 6); // Before "SubResource"
 
-      const definition = provider.provideDefinition(document, position, mockCancellationToken);
+      const definition = await provider.provideDefinition(document, position, mockCancellationToken);
 
       expect(definition).toBeNull();
     });

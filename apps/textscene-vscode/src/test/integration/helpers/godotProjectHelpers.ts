@@ -6,12 +6,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-
-/**
- * On Windows, VS Code can still hold a file of a project whose editors just closed, and
- * the removal fails with ENOTEMPTY. Node retries that error, and EBUSY and EPERM, with these.
- */
-const REMOVE_OPTIONS: fs.RmOptions = { recursive: true, force: true, maxRetries: 10, retryDelay: 100 };
+import { removeTestDirectory } from '../../removeTestDirectory';
 
 /**
  * The absolute fsPath of the project named `name` in the test workspace. `__dirname`
@@ -29,7 +24,9 @@ export function godotProjectDir(name: string): string {
  */
 export function writeGodotProject(name: string, files: Record<string, string>): void {
   const dir = godotProjectDir(name);
-  fs.rmSync(dir, REMOVE_OPTIONS);
+  // At setup nothing holds the directory: the launcher wiped the workspace, and this
+  // suite alone owns `.test-workspace/<name>`. A plain sync remove is enough here.
+  fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(
     path.join(dir, 'project.godot'),
@@ -42,9 +39,12 @@ export function writeGodotProject(name: string, files: Record<string, string>): 
   }
 }
 
-/** Call in `suiteTeardown`. */
-export function removeGodotProject(name: string): void {
-  fs.rmSync(godotProjectDir(name), REMOVE_OPTIONS);
+/**
+ * Call in `suiteTeardown`. Async, and awaited: the removal retries while the event loop
+ * runs, so VS Code can release the files it still holds on Windows.
+ */
+export async function removeGodotProject(name: string): Promise<void> {
+  await removeTestDirectory(godotProjectDir(name));
 }
 
 /** Opens a file of the project as a text document, which activates the extension on `onLanguage:tscn`. */

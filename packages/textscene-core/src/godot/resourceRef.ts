@@ -99,6 +99,34 @@ export function resourceRef(raw: string): ResourceRef | null {
   return { kind: match[1] as ResourceRef['kind'], id: refId(match[2], match[3]) };
 }
 
+/** Every reference in a text, for {@link resourceRefSpans}. Shared `g` instance: only `matchAll` reads it, which clones it. */
+const RESOURCE_REF_ANYWHERE_RE = new RegExp(RESOURCE_REF_BODY, 'g');
+
+/** A reference and the span it fills in the text it was read from, `end` exclusive. */
+export interface ResourceRefSpan extends ResourceRef {
+  start: number;
+  end: number;
+}
+
+/** Every reference in `text`, in order, with where each one sits. */
+export function resourceRefSpans(text: string): ResourceRefSpan[] {
+  return [...text.matchAll(RESOURCE_REF_ANYWHERE_RE)].map((match) => ({
+    kind: match[1] as ResourceRef['kind'],
+    id: refId(match[2], match[3]),
+    start: match.index,
+    end: match.index + match[0].length,
+  }));
+}
+
+/** An open reference at the end of a text, `[1]` its kind and `[2]` the id typed so far. */
+const OPEN_RESOURCE_REF_RE = new RegExp(`(SubResource|ExtResource)${WS}\\(${WS}"([^"]*)$`);
+
+/** The reference a text ends inside, with the quoted id typed so far, or null. An editor completes the id. */
+export function openResourceRef(text: string): ResourceRef | null {
+  const match = OPEN_RESOURCE_REF_RE.exec(text);
+  return match ? { kind: match[1] as ResourceRef['kind'], id: match[2]! } : null;
+}
+
 /** `Resource("…")` with one quoted argument, or two: `[1]` and `[2]`. */
 const PATH_RESOURCE_RE = new RegExp(`^Resource${WS}\\(${WS}"([^"]*)"(?:${WS},${WS}"([^"]*)")?${WS}\\)$`);
 

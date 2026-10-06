@@ -47,6 +47,7 @@ export {
 export {
   IS_VALID_INT_RE,
   literalText,
+  RES_PATH_BODY_SOURCE,
   STRING_LITERAL_RE,
   STRING_LITERAL_SOURCE,
   dropTrailingComma,

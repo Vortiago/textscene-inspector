@@ -15,6 +15,7 @@ import {
   removeGodotProject,
   writeGodotProject,
 } from '../helpers/godotProjectHelpers';
+import { hoverText } from '../../languageFeatures/sharedAnswersSuite.testkit';
 
 const PROJECT = 'language-features';
 
@@ -40,18 +41,28 @@ const MAIN_SCENE = [
 
 const MATERIAL = ['[gd_resource type="StandardMaterial3D" format=3]', '', '[resource]', ''].join('\n');
 
+const TYPO_SCENE = ['[node name="S" type="MeshInstance3D"]', 'mash = null', ''].join('\n');
+
 suite('Language Features', () => {
   let main: vscode.TextDocument;
 
   suiteSetup(async () => {
-    writeGodotProject(PROJECT, { 'main.tscn': MAIN_SCENE, 'material.tres': MATERIAL });
+    writeGodotProject(PROJECT, {
+      'main.tscn': MAIN_SCENE,
+      'material.tres': MATERIAL,
+      'typo.tscn': TYPO_SCENE,
+      // The file `main.tscn` links to. A link to a missing file has no target.
+      'textures/grid.png': '',
+      // Godot's scan enters `node_modules`, so path completion offers its files.
+      'node_modules/pkg/icon.png': '',
+    });
     main = await openProjectDocument(PROJECT, 'main.tscn');
     await vscode.extensions.getExtension('vortiago.textscene-inspector')?.activate();
   });
 
   suiteTeardown(async () => {
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-    removeGodotProject(PROJECT);
+    await removeGodotProject(PROJECT);
   });
 
   test('a .tscn and a .tres document open in the tscn language', async () => {
@@ -120,6 +131,54 @@ suite('Language Features', () => {
       path.relative(godotProjectDir(PROJECT), target.fsPath),
       path.join('textures', 'grid.png')
     );
+  });
+
+  test('Hover on a node type names the class', async () => {
+    const hovers = await vscode.commands.executeCommand<vscode.Hover[]>(
+      'vscode.executeHoverProvider',
+      main.uri,
+      positionInside(main, '[node name="Box" type="', 'MeshInstance3D')
+    );
+
+    assert.ok(hoverText(hovers).includes('MeshInstance3D'), 'the hover names the class');
+  });
+
+  test('Completion on a property line offers a property the node does not set', async () => {
+    const list = await vscode.commands.executeCommand<vscode.CompletionList>(
+      'vscode.executeCompletionItemProvider',
+      main.uri,
+      new vscode.Position(lineStartingWith(main, 'mesh = '), 0)
+    );
+    const labels = list.items.map((item) => (typeof item.label === 'string' ? item.label : item.label.label));
+
+    assert.ok(labels.includes('visible'), 'a catalogue property is offered');
+    assert.ok(!labels.includes('mesh'), 'a property already set is not offered');
+  });
+
+  test("Completion after res:// offers a file under node_modules, as Godot's scan enters it", async () => {
+    const line = lineStartingWith(main, '[ext_resource');
+    const character = main.lineAt(line).text.indexOf('res://') + 'res://'.length;
+    const list = await vscode.commands.executeCommand<vscode.CompletionList>(
+      'vscode.executeCompletionItemProvider',
+      main.uri,
+      new vscode.Position(line, character)
+    );
+    const labels = list.items.map((item) => (typeof item.label === 'string' ? item.label : item.label.label));
+
+    assert.ok(labels.includes('res://node_modules/pkg/icon.png'), `offered: ${labels.join(', ')}`);
+  });
+
+  test('a property-name typo offers a quick fix with an edit', async () => {
+    const typo = await openProjectDocument(PROJECT, 'typo.tscn');
+    const line = lineStartingWith(typo, 'mash =');
+    const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
+      'vscode.executeCodeActionProvider',
+      typo.uri,
+      new vscode.Range(line, 0, line, 4)
+    );
+
+    const fix = actions.find((action) => action.title.includes('mesh'));
+    assert.ok(fix?.edit, 'a quick fix carries an edit');
   });
 });
 

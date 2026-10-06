@@ -4,6 +4,40 @@ import tsparser from '@typescript-eslint/parser';
 import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 
+/** The imports that pull React or THREE into a module, for a file that must stay free of both. */
+const REACT_AND_THREE_IMPORTS = [
+  'three',
+  'three/*',
+  'react',
+  'react-dom',
+  '@react-three/*',
+  '*.tsx',
+  '**/*.tsx',
+  '**/Component',
+  '**/Component.js',
+  '**/index.r3f',
+  '**/index.r3f.js',
+];
+
+/**
+ * Core feeds browser bundles (the web previewer, the webview, the vscode.dev extension), so only
+ * `resources/diskProject.ts` may read the disk.
+ */
+const NODE_ONLY_MESSAGE =
+  'Core ships to the browser: only resources/diskProject.ts may use Node built-ins, and only the tscn-lint CLI and the tscn-lsp server may import it.';
+const NODE_BUILTIN_PATHS = ['fs', 'fs/promises', 'path', 'os', 'url', 'child_process'].map((name) => ({
+  name,
+  message: NODE_ONLY_MESSAGE,
+}));
+const NODE_ONLY_PATTERNS = [
+  { group: ['node:*', '**/diskProject', '**/diskProject.js'], message: NODE_ONLY_MESSAGE },
+];
+
+/** One `no-restricted-imports` setting: a later block's setting replaces an earlier one, so each block lists every group it needs. */
+function restrictedImports(patterns, paths = []) {
+  return ['error', { paths, patterns }];
+}
+
 /**
  * `registerAll` takes a validator table's parts as separate arguments and throws on a key two of
  * them share. A spread merges the parts first, last-wins, so the earlier validator is gone before
@@ -76,6 +110,7 @@ export default [
     files: [
       'apps/textscene-vscode/src/**/*.ts',
       'apps/textscene-linter/src/**/*.ts',
+      'apps/textscene-lsp/src/**/*.ts',
       'packages/textscene-dev-kit/src/**/*.ts',
       '**/*.config.ts',
       'vitest.shared.ts',
@@ -142,6 +177,23 @@ export default [
     },
   },
 
+  // Core's production code reads no disk outside `resources/diskProject.ts`. The two blocks below
+  // replace this setting for their files, so they repeat the Node groups.
+  {
+    files: ['packages/textscene-core/src/**/*.{ts,tsx}'],
+    ignores: [
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      '**/*.testkit.ts',
+      '**/*.testkit.tsx',
+      'packages/textscene-core/src/**/testing/**',
+      'packages/textscene-core/src/resources/diskProject.ts',
+    ],
+    rules: {
+      'no-restricted-imports': restrictedImports(NODE_ONLY_PATTERNS, NODE_BUILTIN_PATHS),
+    },
+  },
+
   // A node type's parser and linter entry points stay React- and THREE-free (ADR-0001): only
   // `index.r3f.ts` imports the render component. This is the fast editor-time guard against the
   // obvious leak. `linter/reactFree.test.ts` checks the whole module graph.
@@ -151,30 +203,38 @@ export default [
       'packages/textscene-core/src/nodes/**/index.linter.ts',
     ],
     rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: [
-                'three',
-                'three/*',
-                'react',
-                'react-dom',
-                '@react-three/*',
-                '*.tsx',
-                '**/*.tsx',
-                '**/Component',
-                '**/Component.js',
-                '**/index.r3f',
-                '**/index.r3f.js',
-              ],
-              message:
-                'Parser/linter slice entry points must stay React/THREE-free (ADR-0001). Register the render component in index.r3f.ts instead.',
-            },
-          ],
-        },
-      ],
+      'no-restricted-imports': restrictedImports(
+        [
+          {
+            group: REACT_AND_THREE_IMPORTS,
+            message:
+              'Parser/linter slice entry points must stay React/THREE-free (ADR-0001). Register the render component in index.r3f.ts instead.',
+          },
+          ...NODE_ONLY_PATTERNS,
+        ],
+        NODE_BUILTIN_PATHS
+      ),
+    },
+  },
+
+  // The language-feature engine runs in the VS Code extension host and the `tscn-lsp`
+  // server, both plain Node bundles, so it stays React- and THREE-free.
+  // `languageFeatures/reactFree.test.ts` checks the whole module graph.
+  {
+    files: ['packages/textscene-core/src/languageFeatures/**/*.ts'],
+    ignores: ['**/*.test.ts', '**/*.testkit.ts'],
+    rules: {
+      'no-restricted-imports': restrictedImports(
+        [
+          {
+            group: REACT_AND_THREE_IMPORTS,
+            message:
+              'The language-feature engine must stay React/THREE-free, so the extension host and the tscn-lsp server can import it.',
+          },
+          ...NODE_ONLY_PATTERNS,
+        ],
+        NODE_BUILTIN_PATHS
+      ),
     },
   },
 
@@ -211,6 +271,17 @@ export default [
             'Report a rule diagnostic through a declared arm: reportArm or armDiagnostic with a RuleArms entry, and emits: armEmits(arms).',
         },
       ],
+    },
+  },
+
+  // The extension and the web previewer read a project through `vscode.workspace.fs` or fetch,
+  // never through Node's disk provider, which a vscode.dev or browser bundle cannot load.
+  {
+    files: ['apps/textscene-vscode/src/**/*.{ts,tsx}', 'apps/textscene-web/src/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': restrictedImports([
+        { group: ['@textscene/core/resources/diskProject'], message: NODE_ONLY_MESSAGE },
+      ]),
     },
   },
 
@@ -267,6 +338,15 @@ export default [
     files: ['packages/textscene-core/src/**/*.test.{ts,tsx}'],
     rules: {
       'no-restricted-syntax': ['error', RAW_SEVERITY_ASSERTION],
+    },
+  },
+
+  // An ambient `.d.ts` names types a syntax-only rule cannot resolve, so `no-undef`
+  // reports each one.
+  {
+    files: ['**/*.d.ts'],
+    rules: {
+      'no-undef': 'off',
     },
   },
 

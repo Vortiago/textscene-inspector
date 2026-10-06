@@ -1,8 +1,8 @@
 /**
- * A render error in `<ViewportArea>` shows a recoverable message. It misses
- * errors inside `<Canvas>`, a separate reconciler root that `NodeDispatcher`'s
- * per-node `<ErrorBoundary>` covers. `resetKeys`, not a `key` remount, clears
- * it on a new `SceneGraph`, so a reparse keeps the viewport camera state.
+ * A render error in `<ViewportArea>`, such as a renderer with no WebGL context that R3F rethrows in render, shows a
+ * recoverable message. An error inside `<Canvas>`, a separate reconciler root, reaches `NodeDispatcher`'s per-node
+ * `<ErrorBoundary>` instead. `resetKeys`, not a `key` remount, clears the error on a new `SceneGraph`, so a reparse
+ * keeps the viewport camera state.
  */
 import type { ReactNode } from 'react';
 import type { SceneGraph } from '../../../core/SceneGraph.js';
@@ -12,12 +12,20 @@ import styles from './TscnPreviewShell.module.css';
 export interface PreviewErrorBoundaryProps {
   sceneGraph: SceneGraph | null;
   children: ReactNode;
+  /** Fired with each caught error, and with null when the viewport renders again. */
+  onViewportErrorChange?: (error: Error | null) => void;
 }
 
-export function PreviewErrorBoundary({ sceneGraph, children }: PreviewErrorBoundaryProps) {
+export function PreviewErrorBoundary({
+  sceneGraph,
+  children,
+  onViewportErrorChange,
+}: PreviewErrorBoundaryProps) {
   return (
     <ErrorBoundary
       resetKeys={[sceneGraph]}
+      onError={(error) => onViewportErrorChange?.(error)}
+      onReset={() => onViewportErrorChange?.(null)}
       fallback={(error, reset) => (
         <div className={styles.viewportCrashed} role="alert">
           <p>

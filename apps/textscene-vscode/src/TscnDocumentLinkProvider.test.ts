@@ -12,12 +12,24 @@ function makeDocument(content: string, fsPath = '/workspace/scenes/Door.tscn'): 
   const lines = content.split('\n');
   return {
     uri: createMockUri(fsPath),
+    version: 1,
+    getText: () => content,
     lineCount: lines.length,
     lineAt: (line: number) => ({ text: lines[line] ?? '' }),
   } as unknown as vscode.TextDocument;
 }
 
 const TOKEN = {} as vscode.CancellationToken;
+
+/** `stat` answers each of `files` as a file and each of `directories` as a directory. Anything else is missing. */
+function arrangeDisk(files: readonly string[], directories: readonly string[] = []): void {
+  vscodeMocks.workspace.fs.stat.mockImplementation((uri: ReturnType<typeof createMockUri>) => {
+    const path = uri.fsPath.toLowerCase().replace(/\\/g, '/');
+    if (files.includes(path)) return Promise.resolve({ type: 1, ctime: 0, mtime: 0, size: 1 });
+    if (directories.includes(path)) return Promise.resolve({ type: 2, ctime: 0, mtime: 0, size: 0 });
+    return Promise.reject(new Error('Not found'));
+  });
+}
 
 describe('TscnDocumentLinkProvider', () => {
   describe('provideDocumentLinks', () => {
@@ -83,24 +95,37 @@ describe('TscnDocumentLinkProvider', () => {
   });
 
   describe('resolveDocumentLink', () => {
-    it('resolves the target relative to the workspace root when no project.godot exists', async () => {
-      const workspaceRoot = createMockUri('/workspace');
+    it('gives no target when no directory holds project.godot, since Godot then has no res://', async () => {
       (vscodeMocks.workspace.getWorkspaceFolder as ReturnType<typeof vi.fn>).mockReturnValue({
-        uri: workspaceRoot,
+        uri: createMockUri('/workspace'),
       });
-      vscodeMocks.workspace.fs.stat.mockRejectedValue(new Error('Not found'));
+      arrangeDisk(['/workspace/scenes/door.tscn']);
 
       const provider = new TscnDocumentLinkProvider();
-      const line = 'path="res://scenes/Door.tscn"';
-      const document = makeDocument(line);
-      const [link] = provider.provideDocumentLinks(document, TOKEN) as unknown as Array<
-        Parameters<NonNullable<TscnDocumentLinkProvider['resolveDocumentLink']>>[0]
-      >;
+      const [link] = provider.provideDocumentLinks(makeDocument('path="res://scenes/Door.tscn"'), TOKEN);
 
-      const resolved = await provider.resolveDocumentLink!(link!, TOKEN);
+      expect(await provider.resolveDocumentLink!(link!, TOKEN)).toBeUndefined();
+    });
 
-      expect(resolved).toBeDefined();
-      expect((resolved!.target as unknown as { fsPath: string }).fsPath).toBe('/workspace/scenes/Door.tscn');
+    it('finds a project.godot created after an earlier link found none', async () => {
+      (vscodeMocks.workspace.getWorkspaceFolder as ReturnType<typeof vi.fn>).mockReturnValue({
+        uri: createMockUri('/workspace'),
+      });
+      const provider = new TscnDocumentLinkProvider();
+      // The project sits below the workspace folder, so a root kept from the first lookup is the wrong one.
+      const document = makeDocument('path="res://scenes/Door.tscn"', '/workspace/game/scenes/Door.tscn');
+      arrangeDisk(['/workspace/game/scenes/door.tscn']);
+      await provider.resolveDocumentLink!(provider.provideDocumentLinks(document, TOKEN)[0]!, TOKEN);
+
+      arrangeDisk(['/workspace/game/project.godot', '/workspace/game/scenes/door.tscn']);
+      const resolved = await provider.resolveDocumentLink!(
+        provider.provideDocumentLinks(document, TOKEN)[0]!,
+        TOKEN
+      );
+
+      expect((resolved?.target as unknown as { fsPath: string } | undefined)?.fsPath).toBe(
+        '/workspace/game/scenes/Door.tscn'
+      );
     });
 
     it('resolves the target relative to a project.godot found above the document', async () => {
@@ -108,13 +133,7 @@ describe('TscnDocumentLinkProvider', () => {
       (vscodeMocks.workspace.getWorkspaceFolder as ReturnType<typeof vi.fn>).mockReturnValue({
         uri: workspaceRoot,
       });
-      vscodeMocks.workspace.fs.stat.mockImplementation((uri: ReturnType<typeof createMockUri>) => {
-        const path = uri.fsPath.toLowerCase().replace(/\\/g, '/');
-        if (path === '/workspace/game/project.godot') {
-          return Promise.resolve({ type: 1, ctime: 0, mtime: 0, size: 1 });
-        }
-        return Promise.reject(new Error('Not found'));
-      });
+      arrangeDisk(['/workspace/game/project.godot', '/workspace/game/scenes/door.tscn']);
 
       const provider = new TscnDocumentLinkProvider();
       const line = 'path="res://scenes/Door.tscn"';
@@ -130,23 +149,20 @@ describe('TscnDocumentLinkProvider', () => {
       );
     });
 
-    it('resolves two sibling Godot projects in the same workspace folder independently (cache is per-directory, not per-workspace-folder)', async () => {
+    it('resolves two sibling Godot projects in one workspace folder against their own roots', async () => {
       // /workspace holds two Godot projects, game1/ and game2/, under one workspace
       // folder, so a cache keyed by the folder alone reuses game1's root for game2.
       const workspaceRoot = createMockUri('/workspace');
       (vscodeMocks.workspace.getWorkspaceFolder as ReturnType<typeof vi.fn>).mockReturnValue({
         uri: workspaceRoot,
       });
-      vscodeMocks.workspace.fs.stat.mockImplementation((uri: ReturnType<typeof createMockUri>) => {
-        const path = uri.fsPath.toLowerCase().replace(/\\/g, '/');
-        if (path === '/workspace/game1/project.godot' || path === '/workspace/game2/project.godot') {
-          return Promise.resolve({ type: 1, ctime: 0, mtime: 0, size: 1 });
-        }
-        return Promise.reject(new Error('Not found'));
-      });
+      arrangeDisk([
+        '/workspace/game1/project.godot',
+        '/workspace/game2/project.godot',
+        '/workspace/game1/props/crate.png',
+        '/workspace/game2/props/crate.png',
+      ]);
 
-      // One provider resolves both documents in order, so the second reads what the
-      // first cached.
       const provider = new TscnDocumentLinkProvider();
 
       const line = 'path="res://props/crate.png"';
@@ -164,7 +180,7 @@ describe('TscnDocumentLinkProvider', () => {
         Parameters<NonNullable<TscnDocumentLinkProvider['resolveDocumentLink']>>[0]
       >;
       const resolved2 = await provider.resolveDocumentLink!(link2!, TOKEN);
-      // game2's own project.godot, not game1's cached root.
+      // game2's own project.godot, not game1's.
       expect((resolved2!.target as unknown as { fsPath: string }).fsPath).toBe(
         '/workspace/game2/props/crate.png'
       );
@@ -174,7 +190,7 @@ describe('TscnDocumentLinkProvider', () => {
       (vscodeMocks.workspace.getWorkspaceFolder as ReturnType<typeof vi.fn>).mockReturnValue({
         uri: createMockUri('/workspace'),
       });
-      vscodeMocks.workspace.fs.stat.mockRejectedValue(new Error('Not found'));
+      arrangeDisk(['/workspace/project.godot', '/home/user/.ssh/id_rsa']);
 
       const provider = new TscnDocumentLinkProvider();
       const document = makeDocument('path="res://../../../../home/user/.ssh/id_rsa"');
@@ -191,7 +207,7 @@ describe('TscnDocumentLinkProvider', () => {
       (vscodeMocks.workspace.getWorkspaceFolder as ReturnType<typeof vi.fn>).mockReturnValue({
         uri: createMockUri('/workspace'),
       });
-      vscodeMocks.workspace.fs.stat.mockRejectedValue(new Error('Not found'));
+      arrangeDisk(['/workspace/project.godot', '/workspace/props/crate.png']);
 
       const provider = new TscnDocumentLinkProvider();
       const document = makeDocument('path="res://scenes/../props/crate.png"');
@@ -202,6 +218,36 @@ describe('TscnDocumentLinkProvider', () => {
       const resolved = await provider.resolveDocumentLink!(link!, TOKEN);
 
       expect((resolved!.target as unknown as { fsPath: string }).fsPath).toBe('/workspace/props/crate.png');
+    });
+
+    it('gives no target for a missing file, as the tscn-lsp server does', async () => {
+      (vscodeMocks.workspace.getWorkspaceFolder as ReturnType<typeof vi.fn>).mockReturnValue({
+        uri: createMockUri('/workspace'),
+      });
+      arrangeDisk(['/workspace/project.godot']);
+
+      const provider = new TscnDocumentLinkProvider();
+      const [link] = provider.provideDocumentLinks(
+        makeDocument('path="res://textures/missing.png"'),
+        TOKEN
+      ) as unknown as Array<Parameters<NonNullable<TscnDocumentLinkProvider['resolveDocumentLink']>>[0]>;
+
+      expect(await provider.resolveDocumentLink!(link!, TOKEN)).toBeUndefined();
+    });
+
+    it('gives no target for a directory, which cannot open as a document', async () => {
+      (vscodeMocks.workspace.getWorkspaceFolder as ReturnType<typeof vi.fn>).mockReturnValue({
+        uri: createMockUri('/workspace'),
+      });
+      arrangeDisk(['/workspace/project.godot'], ['/workspace/textures']);
+
+      const provider = new TscnDocumentLinkProvider();
+      const [link] = provider.provideDocumentLinks(
+        makeDocument('path="res://textures"'),
+        TOKEN
+      ) as unknown as Array<Parameters<NonNullable<TscnDocumentLinkProvider['resolveDocumentLink']>>[0]>;
+
+      expect(await provider.resolveDocumentLink!(link!, TOKEN)).toBeUndefined();
     });
 
     it('leaves the target unresolved when the document has no workspace folder', async () => {

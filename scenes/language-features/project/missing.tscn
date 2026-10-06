@@ -1,0 +1,14 @@
+[gd_scene load_steps=4 format=3 uid="uid://textscene_lf_missing"]
+
+[ext_resource type="Texture2D" path="res://textures/grid.png" id="1_grid"]
+[ext_resource type="Texture2D" path="res://textures/missing.png" id="2_missing"]
+
+[sub_resource type="StandardMaterial3D" id="Material_1"]
+albedo_texture = ExtResource("1_grid")
+normal_texture = ExtResource("2_missing")
+
+[node name="Scene" type="Node3D"]
+
+[node name="Body" type="StaticBody3D" parent="."]
+
+[node name="Shape" type="CollisionShape3D" parent="Body"]

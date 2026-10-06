@@ -19,6 +19,12 @@ import {
   previewTabLabels,
   unregisteredCommands,
 } from '../../smokeProject/sceneEditor';
+import {
+  AGENT_TOOL_NAMES,
+  contributedTools,
+  defineAgentToolAnswersSuite,
+} from '../../languageFeatures/agentToolAnswersSuite.testkit';
+import { defineSharedAnswersSuite } from '../../languageFeatures/sharedAnswersSuite.testkit';
 
 /** Activation, a lint and a tab update each reach the extension host well inside this on a loaded runner. */
 const SETTLE_TIMEOUT_MS = 10000;
@@ -83,4 +89,29 @@ suite('Installed package', () => {
       () => `expected a preview of ${CLEAN_SCENE}, found the tabs ${JSON.stringify(previewTabLabels())}`
     );
   });
+
+  test('the packaged extension contributes and registers the agent tools', async () => {
+    await openSceneAndActivate(CLEAN_SCENE);
+
+    const contributed = contributedTools(extensionUnderTest()).map((tool) => tool.name);
+
+    for (const name of AGENT_TOOL_NAMES) {
+      assert.ok(contributed.includes(name), `${name} is contributed`);
+    }
+
+    // The tools API is newer than the extension's engines floor. Below it, none registers.
+    if (vscode.lm?.tools) {
+      const registered = vscode.lm.tools.map((tool) => tool.name);
+      for (const name of AGENT_TOOL_NAMES) {
+        assert.ok(registered.includes(name), `${name} is registered`);
+      }
+    }
+  });
 });
+
+// Defined after 'Installed package' in this file, so they run after its first test, which needs
+// an extension that no scene has activated yet. Mocha runs suites in the order a file defines them.
+const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+if (!workspaceRoot) throw new Error('expected the launcher to open the workspace folder, found none');
+defineSharedAnswersSuite(path.join(workspaceRoot, 'shared-answers'));
+defineAgentToolAnswersSuite(path.join(workspaceRoot, 'shared-agent-tools'));

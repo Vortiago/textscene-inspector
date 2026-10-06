@@ -22,4 +22,13 @@ describe('isNegativeFixture', () => {
   it('matches the whole basename, not a directory of that name', () => {
     expect(isNegativeFixture('scenes/edge-invalid-transform.tscn/unit-a.tscn')).toBe(false);
   });
+
+  it('names an unfinished edit of the language-features project by its path', () => {
+    expect(isNegativeFixture('/repo/scenes/language-features/project/typing.tscn')).toBe(true);
+    expect(isNegativeFixture('scenes\\language-features\\project\\typing.tres')).toBe(true);
+  });
+
+  it("passes a file that shares an unfinished edit's name elsewhere", () => {
+    expect(isNegativeFixture('scenes/fixtures/typing.tscn')).toBe(false);
+  });
 });

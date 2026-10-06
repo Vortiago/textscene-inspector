@@ -118,6 +118,8 @@ const testOptions = {
     'src/test/installed/runInstalledTests.ts',
     'src/test/installed/suite/index.ts',
     ...globSync('src/test/installed/suite/*.test.ts'),
+    'src/test/installed/toolsOff/index.ts',
+    ...globSync('src/test/installed/toolsOff/*.test.ts'),
     'src/test/web/runWebTests.ts',
   ],
   bundle: true,

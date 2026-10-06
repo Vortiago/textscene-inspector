@@ -13,16 +13,34 @@ export const CLASS_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze(
   ...RESOURCE_BASE_TYPES_GENERATED,
 });
 
+/** The direct base of `className`, over both hierarchies. `Object.hasOwn`, as the `.tscn` chooses the key. */
+function classBaseOf(className: string): string | undefined {
+  return Object.hasOwn(CLASS_BASE_TYPES, className) ? CLASS_BASE_TYPES[className] : undefined;
+}
+
 /**
  * Whether `className` descends from or equals `ancestor`, over both hierarchies. `descendsFrom`
- * answers false for every resource, so an `[ext_resource type="…"]` heading needs this.
- * `Object.hasOwn`, as the `.tscn` chooses the key, and a hop bound against a malformed table.
+ * answers false for every resource, so an `[ext_resource type="…"]` heading needs this. A hop
+ * bound guards against a malformed table.
  */
 export function descendsFromClass(className: string, ancestor: string): boolean {
   let current: string | undefined = className;
   for (let hops = 0; current !== undefined && hops < MAX_BASE_CHAIN_HOPS; hops++) {
     if (current === ancestor) return true;
-    current = Object.hasOwn(CLASS_BASE_TYPES, current) ? CLASS_BASE_TYPES[current] : undefined;
+    current = classBaseOf(current);
   }
   return false;
+}
+
+/** Every ancestor of `className`, nearest first, over both hierarchies. Cycle-safe and hop-bounded. */
+export function classBaseChain(className: string): readonly string[] {
+  const chain: string[] = [];
+  const seen = new Set([className]);
+  let current = classBaseOf(className);
+  for (let hops = 0; current !== undefined && hops < MAX_BASE_CHAIN_HOPS && !seen.has(current); hops++) {
+    seen.add(current);
+    chain.push(current);
+    current = classBaseOf(current);
+  }
+  return chain;
 }

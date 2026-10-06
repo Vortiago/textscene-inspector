@@ -8,19 +8,11 @@ import * as vscode from 'vscode';
 import type { ResourceProvider } from '@textscene/core/resources/ResourceProvider';
 import { isWithinRoot, resRelativePath } from '@textscene/core/resources/resPath';
 import { resourceContent } from '@textscene/core/resources/resourceProviderUtils';
-import { isScannedPath } from '@textscene/core/godot';
 import { anyCase } from './anyCaseGlob';
 import { SCAN_STOP_FILES_PATTERN } from './watchPatterns';
 import { HOST_PATH_CASE } from './hostPathCase';
 import { readWorkspaceFile } from './readWorkspaceFile';
-
-const ROOT = 'res://';
-
-/** The `res://` path of the directory holding the file at `path`. */
-function parentResPath(path: string): string {
-  const slash = path.lastIndexOf('/');
-  return slash < ROOT.length ? ROOT : path.slice(0, slash);
-}
+import { scannedResPaths } from './scannedResPaths';
 
 export class LintResourceProvider implements ResourceProvider {
   /** The `res://` paths the last listing that answered found. Written only by `listFiles`. */
@@ -73,23 +65,12 @@ export class LintResourceProvider implements ResourceProvider {
       const candidates = await search(`**/*.${anyCase(extension)}`);
       // A stop file only removes a candidate, so the second whole-project search runs only when there is one.
       const stopFiles = candidates.length === 0 ? [] : await search(SCAN_STOP_FILES_PATTERN);
-      const skipped = new Set(
-        stopFiles.map((file) => parentResPath(this.resPathOf(file))).filter((dir) => dir !== ROOT)
-      );
-      this._listed = candidates
-        .map((file) => this.resPathOf(file))
-        .filter((path) => isScannedPath(path, skipped));
+      this._listed = scannedResPaths(this.projectRoot, candidates, stopFiles);
       return [...this._listed];
     } catch {
       // A search that fails proves nothing, which the linter reads as "may hold one".
       return null;
     }
-  }
-
-  /** The `res://` path of `file`, a file the search found under the project root. */
-  private resPathOf(file: vscode.Uri): string {
-    const rootPath = this.projectRoot.path.replace(/\/+$/, '');
-    return `${ROOT}${file.path.slice(rootPath.length + 1)}`;
   }
 
   /** Whether `file` lies under the project root. */

@@ -7,7 +7,7 @@
 import * as vscode from 'vscode';
 import {
   Linter,
-  diagnosticLine,
+  diagnosticRange,
   flooredSeverity,
   type Diagnostic as TscnLintDiagnostic,
   type LintSession,
@@ -63,15 +63,9 @@ export interface DocumentLineSource {
   lineAt(line: number): { text: string };
 }
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
-
 /**
- * A core diagnostic as a `vscode.Diagnostic`. Core lines are 1-based and clamped into the
- * document. One that names no line (`diagnosticLine`) is about the whole file, so it gets a
- * zero-width range at the document start: the Problems panel lists it at Ln 1, Col 1, and the
- * editor draws a collapsed marker there, not a squiggle under line 1's text.
+ * A core diagnostic as a `vscode.Diagnostic`, its squiggle placed by core's `diagnosticRange`.
+ * One about the whole file gets a collapsed marker at Ln 1, Col 1 of the Problems panel.
  */
 export function toVsCodeDiagnostic(
   diagnostic: TscnLintDiagnostic,
@@ -88,21 +82,13 @@ export function toVsCodeDiagnostic(
 }
 
 function rangeForDiagnostic(diagnostic: TscnLintDiagnostic, document: DocumentLineSource): vscode.Range {
-  const line = diagnosticLine(diagnostic);
-  if (line === undefined) {
-    return new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0));
-  }
-
-  const lastLine = Math.max(document.lineCount - 1, 0);
-  const lineIndex = clamp(line - 1, 0, lastLine);
-  const lineLength = document.lineAt(lineIndex).text.length;
-
-  const column = diagnostic.location?.column;
-  const startCharacter = typeof column === 'number' ? clamp(column - 1, 0, lineLength) : 0;
-
+  const { start, end } = diagnosticRange(diagnostic, {
+    lineCount: document.lineCount,
+    lineLength: (line) => document.lineAt(line).text.length,
+  });
   return new vscode.Range(
-    new vscode.Position(lineIndex, startCharacter),
-    new vscode.Position(lineIndex, Math.max(lineLength, startCharacter))
+    new vscode.Position(start.line, start.character),
+    new vscode.Position(end.line, end.character)
   );
 }
 
@@ -166,7 +152,7 @@ export class TscnDiagnostics implements vscode.Disposable {
   /** Each linted open document, by URI. Written by `_recordOf`, deleted on close, cleared by `_clearAll`. */
   private readonly _documents = new Map<string, DocumentLint>();
   /**
-   * One provider per project root, so the documents of a project share its verdicts. Written by `_providerFor`,
+   * One provider per project root, so the documents of a project share its verdicts. Written by `providerFor`,
    * deleted when its root is deleted, cleared by `_clearAll`.
    */
   private readonly _providers = new Map<string, LintResourceProvider>();
@@ -367,7 +353,7 @@ export class TscnDiagnostics implements vscode.Disposable {
   private _walk(document: vscode.TextDocument, record: DocumentLint): void {
     const walk = Symbol('walk');
     record.walk = walk;
-    this._providerFor(document)
+    this.providerFor(document.uri)
       .then((provider) => {
         if (record.walk !== walk || this._documents.get(document.uri.toString()) !== record) return;
         record.walk = undefined;
@@ -377,13 +363,14 @@ export class TscnDiagnostics implements vscode.Disposable {
       .catch((reason: unknown) => logError('[TscnDiagnostics] Project lookup failed:', reason));
   }
 
-  /** The provider of the project `document` sits in, or null outside every workspace folder and every project. */
-  private async _providerFor(document: vscode.TextDocument): Promise<LintResourceProvider | null> {
-    const folder = vscode.workspace.getWorkspaceFolder(document.uri);
+  /**
+   * The provider of the Godot project `uri` belongs to, shared with every document of that project,
+   * or null outside one. The agent lint tool reads it too, so it gives the Problems panel's verdict.
+   */
+  async providerFor(uri: vscode.Uri): Promise<LintResourceProvider | null> {
+    const folder = vscode.workspace.getWorkspaceFolder(uri);
     if (!folder) return null;
-    const root = await findEnclosingGodotProject(folder.uri, document.uri, (dir) =>
-      this._holdsProjectFile(dir)
-    );
+    const root = await findEnclosingGodotProject(folder.uri, uri, (dir) => this._holdsProjectFile(dir));
     if (root === null) return null;
     const key = root.toString();
     let provider = this._providers.get(key);

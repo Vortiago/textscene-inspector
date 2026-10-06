@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3 uid="uid://textscene_lf_typing"]
+
+[ext_resource type="Texture2D" path="res://textures/grid.png" id="1_grid"]
+load
+
+[node name="Root" type="Node3D"]
+
+[node name="" type="Node3D" parent="."]
+
+[node name="Lamp" type="OmniLight3D" parent="."]
+omni_range = 4.0
+omni_

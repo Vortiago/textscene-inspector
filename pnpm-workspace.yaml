@@ -27,6 +27,11 @@ catalog:
   # CLI dependencies
   commander: ^15.0.0
 
+  # Language Server Protocol (tscn-lsp). The VS Code extension uses the editor's
+  # own API, so only the standalone server depends on these.
+  vscode-languageserver: ^10.1.2
+  vscode-languageserver-textdocument: ^1.0.15
+
   # R3F migration (Phase 14, WI-R3F-1) — spike-validated pins
   react: ^19.3
   react-dom: ^19.3
@@ -49,6 +54,11 @@ catalog:
   # `thirdparty/misc/FastNoiseLite.h`, so its enum values and generators are the
   # engine's own rather than a hand-port that would drift from them. MIT.
   fastnoise-lite: 1.1.1
+
+  # PNG decoding: the visual and Godot-reference scripts, and the capture checks in the
+  # VS Code integration suite.
+  pngjs: ^7.0.0
+  '@types/pngjs': ^6.0.5
 
   # Real CSG boolean evaluation (ADR-0026). three-bvh-csg is used DIRECTLY rather
   # than via @react-three/csg, whose latest release hard-pins three-bvh-csg ^0.0.16

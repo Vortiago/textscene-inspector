@@ -1,94 +1,34 @@
-import * as vscode from 'vscode';
-
 /**
- * Provides "Go to Definition" for SubResource and ExtResource references in TSCN files.
+ * Go to Definition for `.tscn` files: a resource id goes to the heading that declares it, and a
+ * `res://` path to the project file it names. The engine finds both, so the answer matches the
+ * `tscn-lsp` server's.
  */
+
+import * as vscode from 'vscode';
+import { declarationRangeAt, resPathAt } from '@textscene/core/languageFeatures';
+import { existingResFile } from './existingResFile';
+import { enclosingProjectOf } from './findGodotProjectRoot';
+import { languageDocumentOf } from './languageDocumentOf';
+import { toVscodeRange } from './languageFeatureRanges';
+
+/** The project file a `res://` path names, or null outside every project or for no file. */
+async function projectFileOf(document: vscode.TextDocument, path: string): Promise<vscode.Uri | null> {
+  const root = await enclosingProjectOf(document.uri);
+  return root ? existingResFile(root, path) : null;
+}
+
 export class TscnDefinitionProvider implements vscode.DefinitionProvider {
-  provideDefinition(
+  async provideDefinition(
     document: vscode.TextDocument,
     position: vscode.Position,
     _token: vscode.CancellationToken
-  ): vscode.ProviderResult<vscode.Definition | vscode.LocationLink[]> {
-    const resource = this.getResourceIdAtPosition(document, position);
+  ): Promise<vscode.Location | null> {
+    const model = languageDocumentOf(document);
+    const declaration = declarationRangeAt(model, position);
+    if (declaration) return new vscode.Location(document.uri, toVscodeRange(declaration));
 
-    if (!resource) {
-      return null;
-    }
-
-    const definition = this.findResourceDefinition(document, resource.type, resource.id);
-
-    return definition;
-  }
-
-  private getResourceIdAtPosition(
-    document: vscode.TextDocument,
-    position: vscode.Position
-  ): { type: 'SubResource' | 'ExtResource'; id: string } | null {
-    const line = document.lineAt(position).text;
-    const cursorOffset = position.character;
-
-    // Either quote, with optional spaces inside the parentheses.
-    const subResourceRegex = /SubResource\s*\(\s*["']([^"']+)["']\s*\)/g;
-    const extResourceRegex = /ExtResource\s*\(\s*["']([^"']+)["']\s*\)/g;
-
-    let match;
-    subResourceRegex.lastIndex = 0;
-    while ((match = subResourceRegex.exec(line)) !== null) {
-      const startIndex = match.index;
-      const endIndex = match.index + match[0].length;
-
-      if (cursorOffset >= startIndex && cursorOffset <= endIndex) {
-        return { type: 'SubResource', id: match[1]! };
-      }
-    }
-
-    extResourceRegex.lastIndex = 0;
-    while ((match = extResourceRegex.exec(line)) !== null) {
-      const startIndex = match.index;
-      const endIndex = match.index + match[0].length;
-
-      if (cursorOffset >= startIndex && cursorOffset <= endIndex) {
-        return { type: 'ExtResource', id: match[1]! };
-      }
-    }
-
-    return null;
-  }
-
-  private findResourceDefinition(
-    document: vscode.TextDocument,
-    resourceType: 'SubResource' | 'ExtResource',
-    resourceId: string
-  ): vscode.Location | null {
-    const text = document.getText();
-    const lines = text.split('\n');
-
-    const headingPrefix = resourceType === 'SubResource' ? '[sub_resource' : '[ext_resource';
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]!;
-
-      if (!line.startsWith(headingPrefix)) {
-        continue;
-      }
-
-      // Anchored on a non-attribute-name character because `uid` ends in `id`:
-      // unanchored, an earlier `uid="uid://b18l6iy"` matches instead.
-      const idMatch = line.match(/(?:^|[^\w-])id\s*=\s*["']([^"']+)["']/);
-
-      if (!idMatch) {
-        continue;
-      }
-
-      const definitionId = idMatch[1];
-
-      if (definitionId === resourceId) {
-        const range = new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length));
-
-        return new vscode.Location(document.uri, range);
-      }
-    }
-
-    return null;
+    const occurrence = resPathAt(model, position);
+    const file = occurrence && (await projectFileOf(document, occurrence.path));
+    return file ? new vscode.Location(file, new vscode.Position(0, 0)) : null;
   }
 }

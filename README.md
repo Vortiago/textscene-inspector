@@ -16,6 +16,7 @@ TextScene Inspector renders Godot `.tscn` scenes in 3D and 2D from the text alon
 | VS Code extension (desktop and vscode.dev) | [Marketplace](https://marketplace.visualstudio.com/items?itemName=vortiago.textscene-inspector) | [Extension README](./apps/textscene-vscode/README.md) |
 | Web previewer | [Open in the browser](https://vortiago.github.io/textscene-inspector/) | [Web guide](./docs/user-guide-web.md) |
 | CLI linter for `.tscn` and `.tres` | `npm install --global @textscene/linter` | [Linter README](./apps/textscene-linter/README.md) |
+| Language server for any editor | `npm install --global @textscene/lsp` | [Language server README](./apps/textscene-lsp/README.md) |
 
 Dev edition, with the test scenes: [textscene-inspector.pages.dev](https://textscene-inspector.pages.dev/).
 
@@ -45,6 +46,7 @@ Install a `.vsix` with **Extensions: Install from VSIX…**.
 | `pnpm build:site` | Build the dev edition |
 | `pnpm build:pages` | Build the public edition, without dev content |
 | `pnpm build:linter` | Build the CLI linter |
+| `pnpm build:lsp` | Build the `tscn-lsp` language server |
 | `pnpm lint:tscn <paths>` | Lint `.tscn` and `.tres` paths |
 | `pnpm test` | Unit tests |
 | `pnpm test:visual` | Golden images, exact pixel match |

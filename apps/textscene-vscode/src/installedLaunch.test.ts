@@ -7,13 +7,15 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { SUITE_STARTED_MARKER_ENV } from './test/integration/integrationLaunch';
+import { DISABLE_GPU_ENV, SUITE_STARTED_MARKER_ENV } from './test/integration/integrationLaunch';
 import {
   INSTALLED_EXTENSIONS_DIR_ENV,
   installArgs,
   installedLaunchOptions,
   installedLaunchPaths,
   SUITE_HOST_MANIFEST,
+  toolsOffLaunchPaths,
+  userSettingsFile,
   vsixFileName,
 } from './test/installed/installedLaunch';
 
@@ -29,6 +31,34 @@ describe('installedLaunchPaths', () => {
   it('loads the suite from beside the runner', () => {
     expect(paths.extensionTestsPath).toBe(
       join('/repo/apps/textscene-vscode/dist/test/installed', 'suite', 'index')
+    );
+  });
+});
+
+describe('toolsOffLaunchPaths', () => {
+  const runnerDir = '/repo/apps/textscene-vscode/dist/test/installed';
+  const toolsOff = toolsOffLaunchPaths(paths, runnerDir);
+
+  it('reuses the installed copy and the workspace of the first launch', () => {
+    expect(toolsOff.extensionsDir).toBe(paths.extensionsDir);
+    expect(toolsOff.workspaceRoot).toBe(paths.workspaceRoot);
+  });
+
+  it('gives the second launch its own settings, so the first launch keeps the tools on', () => {
+    expect(toolsOff.userDataDir).not.toBe(paths.userDataDir);
+    expect(relative('/tmp/tsi-installed', toolsOff.userDataDir)).not.toMatch(/^\.\./);
+  });
+
+  it('loads the toolsOff suite from beside the runner, with its own start marker', () => {
+    expect(toolsOff.extensionTestsPath).toBe(join(runnerDir, 'toolsOff', 'index'));
+    expect(toolsOff.suiteStartedMarker).not.toBe(paths.suiteStartedMarker);
+  });
+});
+
+describe('userSettingsFile', () => {
+  it('names the file VS Code reads the user settings from', () => {
+    expect(userSettingsFile('/tmp/tsi-installed/user-data')).toBe(
+      join('/tmp/tsi-installed/user-data', 'User', 'settings.json')
     );
   });
 });
@@ -74,15 +104,17 @@ describe('installedLaunchOptions', () => {
     expect(installedLaunchOptions(paths).extensionDevelopmentPath).toBe(paths.suiteHostPath);
   });
 
-  it('launches without the GPU on Linux only', () => {
-    expect(installedLaunchOptions(paths, 'linux').launchArgs).toContain('--disable-gpu');
-    expect(installedLaunchOptions(paths, 'darwin').launchArgs).not.toContain('--disable-gpu');
+  it('launches without the GPU on Linux, and elsewhere only on request', () => {
+    expect(installedLaunchOptions(paths, 'linux', undefined).launchArgs).toContain('--disable-gpu');
+    expect(installedLaunchOptions(paths, 'darwin', undefined).launchArgs).not.toContain('--disable-gpu');
+    expect(installedLaunchOptions(paths, 'darwin', '1').launchArgs).toContain('--disable-gpu');
   });
 
-  it('names the start marker and the extensions directory to the suite', () => {
-    expect(installedLaunchOptions(paths).extensionTestsEnv).toEqual({
+  it('names the start marker, the extensions directory and the GPU launch to the suite', () => {
+    expect(installedLaunchOptions(paths, 'linux', undefined).extensionTestsEnv).toEqual({
       [SUITE_STARTED_MARKER_ENV]: paths.suiteStartedMarker,
       [INSTALLED_EXTENSIONS_DIR_ENV]: paths.extensionsDir,
+      [DISABLE_GPU_ENV]: '1',
     });
   });
 });

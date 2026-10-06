@@ -1,7 +1,7 @@
 {
   "name": "textscene-inspector",
   "displayName": "TextScene Inspector: Godot .tscn Preview",
-  "description": "Preview Godot .tscn scenes in 3D and 2D inside VS Code, without a Godot install. Renders meshes, PBR materials, lights and cameras with three.js, and adds a scene tree, an inspector and a .tscn linter.",
+  "description": "Preview Godot .tscn scenes in 3D and 2D inside VS Code, without a Godot install. Adds a scene tree, an inspector and a .tscn linter, with hover, completion, quick fixes, go to definition and an outline. Agent tools let a chat agent lint, inspect and capture a scene.",
   "version": "1.0.0",
   "publisher": "vortiago",
   "keywords": [
@@ -14,7 +14,11 @@
     "preview",
     "gamedev",
     "linter",
-    "three.js"
+    "three.js",
+    "tres",
+    "intellisense",
+    "autocomplete",
+    "language server"
   ],
   "icon": "images/icon.png",
   "galleryBanner": {
@@ -27,6 +31,8 @@
   "categories": [
     "Visualization",
     "Programming Languages",
+    "Linters",
+    "AI",
     "Other"
   ],
   "activationEvents": [
@@ -115,6 +121,139 @@
         "when": "resourceExtname == .tscn"
       }
     ],
+    "languageModelTools": [
+      {
+        "name": "textscene_lint",
+        "when": "config.textscene.agentTools.enabled",
+        "displayName": "Lint a Godot .tscn scene",
+        "toolReferenceName": "lintTscn",
+        "modelDescription": "Lint a Godot .tscn scene and return its diagnostics, each with a line, a severity, a message and a rule. Use after editing a scene, to check it without a Godot install. It reads an open editor's text, unsaved edits included.",
+        "tags": [
+          "godot",
+          "tscn",
+          "lint"
+        ],
+        "canBeReferencedInPrompt": true,
+        "icon": "$(checklist)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "The .tscn file: a workspace-relative path, or an absolute one."
+            }
+          },
+          "required": [
+            "path"
+          ]
+        }
+      },
+      {
+        "name": "textscene_scene_tree",
+        "when": "config.textscene.agentTools.enabled",
+        "displayName": "Read a Godot .tscn node tree",
+        "toolReferenceName": "tscnSceneTree",
+        "modelDescription": "Return a Godot .tscn scene's node tree as indented text, each node with its type. Use to understand a scene's structure without reading the raw file.",
+        "tags": [
+          "godot",
+          "tscn",
+          "scene tree"
+        ],
+        "canBeReferencedInPrompt": true,
+        "icon": "$(list-tree)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "The .tscn file: a workspace-relative path, or an absolute one."
+            }
+          },
+          "required": [
+            "path"
+          ]
+        }
+      },
+      {
+        "name": "textscene_open_preview",
+        "when": "config.textscene.agentTools.enabled",
+        "displayName": "Open the Godot .tscn preview",
+        "toolReferenceName": "openTscnPreview",
+        "modelDescription": "Open the TextScene 3D/2D preview for a Godot .tscn scene beside the editor, so the user sees the scene render.",
+        "tags": [
+          "godot",
+          "tscn",
+          "preview"
+        ],
+        "canBeReferencedInPrompt": true,
+        "icon": "$(open-preview)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "The .tscn file: a workspace-relative path, or an absolute one."
+            }
+          },
+          "required": [
+            "path"
+          ]
+        }
+      },
+      {
+        "name": "textscene_missing_resources",
+        "when": "config.textscene.agentTools.enabled",
+        "displayName": "List a Godot .tscn scene's missing resources",
+        "toolReferenceName": "tscnMissingResources",
+        "modelDescription": "List the res:// resources a Godot .tscn scene references that the project does not hold.",
+        "tags": [
+          "godot",
+          "tscn",
+          "resources"
+        ],
+        "canBeReferencedInPrompt": true,
+        "icon": "$(warning)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "The .tscn file: a workspace-relative path, or an absolute one."
+            }
+          },
+          "required": [
+            "path"
+          ]
+        }
+      },
+      {
+        "name": "textscene_capture",
+        "when": "config.textscene.agentTools.enabled",
+        "displayName": "Capture the Godot .tscn preview",
+        "toolReferenceName": "captureTscnPreview",
+        "modelDescription": "Render a Godot .tscn scene's preview and return it as a PNG image, so you can look at what a change produced. Needs VS Code 1.106 or later.",
+        "tags": [
+          "godot",
+          "tscn",
+          "preview",
+          "screenshot"
+        ],
+        "canBeReferencedInPrompt": true,
+        "icon": "$(device-camera)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "The .tscn file: a workspace-relative path, or an absolute one."
+            }
+          },
+          "required": [
+            "path"
+          ]
+        }
+      }
+    ],
     "configuration": {
       "title": "TextScene Inspector",
       "properties": {
@@ -143,29 +282,34 @@
           "default": 300,
           "minimum": 0,
           "description": "Milliseconds to wait after the last edit before re-linting a .tscn document."
+        },
+        "textscene.agentTools.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Offer tools a coding agent in chat can call: lint a scene, read its node tree, open its preview, list its missing resources, and capture its preview. Turn off to hide them from agent tool lists. The change applies at once."
         }
       }
     }
   },
   "scripts": {
-    "vscode:prepublish": "pnpm --filter @textscene/core build && pnpm build -- --skip-tests",
-    "prebuild": "pnpm --filter @textscene/core build",
+    "vscode:prepublish": "pnpm --filter @textscene/core build && pnpm --filter @textscene/dev-kit build && pnpm build -- --skip-tests",
+    "prebuild": "pnpm --filter @textscene/core build && pnpm --filter @textscene/dev-kit build",
     "build": "node esbuild.config.mjs --production --skip-tests",
     "build:dev": "node esbuild.config.mjs",
-    "predev": "pnpm --filter @textscene/core build",
+    "predev": "pnpm --filter @textscene/core build && pnpm --filter @textscene/dev-kit build",
     "dev": "node esbuild.config.mjs --watch",
     "test": "pnpm test:unit && pnpm test:integration",
     "test:unit": "vitest run",
-    "pretest:integration": "pnpm --filter @textscene/core build && node esbuild.config.mjs && tsc -p tsconfig.test.json",
+    "pretest:integration": "pnpm --filter @textscene/core build && pnpm --filter @textscene/dev-kit build && node esbuild.config.mjs && tsc -p tsconfig.test.json",
     "test:integration": "node ./dist/test/integration/runTests.js",
     "test:integration:debug": "node --inspect-brk ./dist/test/integration/runTests.js",
-    "pretest:installed": "pnpm --filter @textscene/core build && node esbuild.config.mjs && tsc -p tsconfig.test.json",
+    "pretest:installed": "pnpm --filter @textscene/core build && pnpm --filter @textscene/dev-kit build && node esbuild.config.mjs && tsc -p tsconfig.test.json",
     "test:installed": "node ./dist/test/installed/runInstalledTests.js",
-    "pretest:web": "pnpm --filter @textscene/core build && node esbuild.config.mjs && tsc -p tsconfig.test.json",
+    "pretest:web": "pnpm --filter @textscene/core build && pnpm --filter @textscene/dev-kit build && node esbuild.config.mjs && tsc -p tsconfig.test.json",
     "test:web": "node ./dist/test/web/runWebTests.js",
-    "pretype-check": "pnpm --filter @textscene/core build",
+    "pretype-check": "pnpm --filter @textscene/core build && pnpm --filter @textscene/dev-kit build",
     "type-check": "tsc --noEmit",
-    "pretype-check:tests": "pnpm --filter @textscene/core build",
+    "pretype-check:tests": "pnpm --filter @textscene/core build && pnpm --filter @textscene/dev-kit build",
     "type-check:tests": "tsc --noEmit -p tsconfig.unit-tests.json",
     "package": "npx @vscode/vsce package --no-dependencies",
     "publish": "npx @vscode/vsce publish --no-dependencies",
@@ -191,6 +335,7 @@
     "@textscene/dev-kit": "workspace:*",
     "@types/mocha": "^10.0.10",
     "@types/node": "catalog:",
+    "@types/pngjs": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@types/vscode": "~1.85.0",
@@ -202,6 +347,7 @@
     "glob": "^13.0.6",
     "happy-dom": "catalog:",
     "mocha": "^12.0.2",
+    "pngjs": "catalog:",
     "rimraf": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

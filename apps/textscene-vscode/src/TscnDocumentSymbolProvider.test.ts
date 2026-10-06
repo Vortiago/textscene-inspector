@@ -151,10 +151,11 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
       const provider = new TscnDocumentSymbolProvider();
       const symbols = provider.provideDocumentSymbols(document);
 
-      expect(symbols).toHaveLength(1);
-      expect(symbols[0]!.name).toBe('Root');
-      expect(symbols[0]!.range).toBeDefined();
-      expect(symbols[0]!.selectionRange).toBeDefined();
+      const root = symbols[0]!;
+      expect(root.name).toBe('Root');
+      // The heading line is the selection. The range runs through the child's heading, the subtree's end.
+      expect([root.selectionRange.start.line, root.selectionRange.end.line]).toEqual([2, 2]);
+      expect([root.range.start.line, root.range.end.line]).toEqual([2, 5]);
     });
 
     it('should assign ranges for nested nodes', () => {
@@ -171,9 +172,13 @@ visible = true
       const provider = new TscnDocumentSymbolProvider();
       const symbols = provider.provideDocumentSymbols(document);
 
-      expect(symbols[0]!.children).toHaveLength(1);
-      expect(symbols[0]!.children[0]!.range).toBeDefined();
-      expect(symbols[0]!.children[0]!.selectionRange).toBeDefined();
+      const root = symbols[0]!;
+      const child = root.children[0]!;
+      expect(root.children).toHaveLength(1);
+      // A child's range sits inside its parent's, which breadcrumbs and sticky scroll rely on.
+      expect(child.range.start.line).toBeGreaterThanOrEqual(root.range.start.line);
+      expect(child.range.end.line).toBeLessThanOrEqual(root.range.end.line);
+      expect([child.range.start.line, child.range.end.line]).toEqual([6, 6]);
     });
   });
 
@@ -253,5 +258,18 @@ visible = true
       expect(symbols[0]!.children[1]!.kind).toBe(vscode.SymbolKind.Object); // DirectionalLight3D
       expect(symbols[0]!.children[2]!.kind).toBe(vscode.SymbolKind.Object); // OmniLight3D
     });
+  });
+
+  it('gives the outline of a scene whose new heading has no name yet', () => {
+    const typing = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="" type="Node3D" parent="."]
+`;
+
+    const symbols = new TscnDocumentSymbolProvider().provideDocumentSymbols(createMockDocument(typing));
+
+    expect(symbols.map((symbol) => symbol.name)).toEqual(['Root']);
   });
 });

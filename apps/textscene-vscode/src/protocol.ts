@@ -38,8 +38,28 @@ export type ResourceChangedMessage = {
   path: string;
 };
 
+/**
+ * Ask the webview to capture the viewport as a PNG data URL, for a save or a tool. The host
+ * posts it only after `previewCaptureReady`, so the webview has a screenshot handler.
+ */
+export type CapturePreviewMessage = {
+  type: 'capturePreview';
+  requestId: string;
+};
+
+/** Asks a webview that holds a capture request whether it still runs. It answers `capturePong`. */
+export type CapturePingMessage = {
+  type: 'capturePing';
+  pingId: string;
+};
+
 export type HostToWebviewMessage =
-  LoadTscnMessage | ResourceLoadedMessage | ResourceLoadErrorMessage | ResourceChangedMessage;
+  | LoadTscnMessage
+  | ResourceLoadedMessage
+  | ResourceLoadErrorMessage
+  | ResourceChangedMessage
+  | CapturePreviewMessage
+  | CapturePingMessage;
 
 /**
  * Anything can post to a webview, so a listener narrows before it reads: a
@@ -94,7 +114,56 @@ export type LogMessage = {
   args: unknown[];
 };
 
-export type WebviewToHostMessage = WebviewReadyMessage | JumpToNodeMessage | LoadResourceMessage | LogMessage;
+/** The answer to a `capturePreview`: a `data:image/png;base64,…` URL. */
+export type PreviewCapturedMessage = {
+  type: 'previewCaptured';
+  requestId: string;
+  dataUrl: string;
+};
+
+/** A `capturePreview` that crossed a change of capture state on the wire, with that state's reason. */
+export type PreviewCaptureErrorMessage = {
+  type: 'previewCaptureError';
+  requestId: string;
+  error: string;
+};
+
+/**
+ * The canvas has a screenshot handler, so a `capturePreview` gets an image. The webview
+ * posts each capture state after `webviewReady`, and again on every change.
+ */
+export type PreviewCaptureReadyMessage = {
+  type: 'previewCaptureReady';
+};
+
+/** The canvas has no screenshot handler yet, such as while it creates its renderer. */
+export type PreviewCapturePendingMessage = {
+  type: 'previewCapturePending';
+};
+
+/** No canvas can capture until `reason` changes, such as a window with no WebGL context. */
+export type PreviewCaptureUnavailableMessage = {
+  type: 'previewCaptureUnavailable';
+  reason: string;
+};
+
+/** The answer to a `capturePing`, posted at once whatever the capture state. */
+export type CapturePongMessage = {
+  type: 'capturePong';
+  pingId: string;
+};
+
+export type WebviewToHostMessage =
+  | WebviewReadyMessage
+  | JumpToNodeMessage
+  | LoadResourceMessage
+  | LogMessage
+  | PreviewCapturedMessage
+  | PreviewCaptureErrorMessage
+  | PreviewCaptureReadyMessage
+  | PreviewCapturePendingMessage
+  | PreviewCaptureUnavailableMessage
+  | CapturePongMessage;
 
 /**
  * The host listener's guard, since a webview can post anything. Like

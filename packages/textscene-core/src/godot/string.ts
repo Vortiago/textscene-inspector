@@ -178,6 +178,13 @@ export function stringToInt(text: string, width: 'int32' | 'uint32' = 'int32'): 
 }
 
 /**
+ * The body of a `res://` path: every character `String::is_valid_filename` allows in a file name,
+ * with `/` kept as the separator (`core/string/ustring.cpp:4927`). A space and a parenthesis stay in.
+ * A source without anchors, so a caller embeds it.
+ */
+export const RES_PATH_BODY_SOURCE = String.raw`[^:\\?*"|%<>]+`;
+
+/**
  * `String::simplify_path()` (`core/string/ustring.cpp:4152-4210`) for the `scheme://` form of every `.tscn` resource address.
  * Godot splits the drive (ASCII alphanumerics then `://`) off the front and rebuilds the rest from its non-empty parts, so a
  * run of slashes collapses to one and `res:///addons/...` resolves. It leaves `.`/`..` alone: removing `..` without the

@@ -8,6 +8,6 @@
     "module": "commonjs",
     "types": ["node", "mocha", "vscode"]
   },
-  "include": ["src/test/**/*.ts"],
+  "include": ["src/test/**/*.ts", "src/lmTools.d.ts"],
   "exclude": ["node_modules"]
 }

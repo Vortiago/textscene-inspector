@@ -1,0 +1,81 @@
+/**
+ * The host-neutral result types a language feature returns. Positions and ranges are
+ * zero-based, the convention LSP and the VS Code API share, so a host adapts nothing.
+ * The {@link LanguageDocument} model keeps the parser's one-based line numbers. The
+ * boundary converts, so only this file decides which side a range lives on.
+ */
+
+/** A zero-based line and character, as LSP and VS Code count them. */
+export interface Position {
+  readonly line: number;
+  readonly character: number;
+}
+
+/** A zero-based range. */
+export interface Range {
+  readonly start: Position;
+  readonly end: Position;
+}
+
+/** What a completion offers, so a host picks an icon. */
+export type CompletionKind =
+  'nodeType' | 'resourceType' | 'property' | 'value' | 'resourceId' | 'path' | 'nodeName';
+
+/** One completion. `insertText` defaults to `label`. */
+export interface CompletionItem {
+  readonly label: string;
+  readonly kind: CompletionKind;
+  /** A short right-hand annotation, such as a variant type or a declaring class. */
+  readonly detail?: string;
+  readonly documentation?: string;
+  readonly insertText?: string;
+  /** A deprecated property spelling, shown struck through. */
+  readonly deprecated?: boolean;
+  /** The typed text the item replaces, up to the cursor. Absent, the host picks the word at the cursor. */
+  readonly replaces?: Range;
+}
+
+/** Hover content and the range it applies to. */
+export interface Hover {
+  readonly markdown: string;
+  readonly range?: Range;
+}
+
+/** One edit, with the range replaced by `newText`. */
+export interface TextEdit {
+  readonly range: Range;
+  readonly newText: string;
+}
+
+/** A quick fix that applies one set of edits. */
+export interface CodeAction {
+  readonly title: string;
+  readonly edit: readonly TextEdit[];
+}
+
+/** A foldable region. LSP and VS Code count these lines from zero. */
+export interface FoldingRange {
+  readonly startLine: number;
+  readonly endLine: number;
+}
+
+/** A highlighted span, for one id under the cursor. */
+export interface DocumentHighlight {
+  readonly range: Range;
+}
+
+/** The icon an outline shows for a symbol. */
+export type SymbolKind = 'object' | 'class' | 'struct' | 'module';
+
+/** One node of the scene tree in an outline. */
+export interface DocumentSymbol {
+  readonly name: string;
+  /** The node's type. */
+  readonly detail: string;
+  readonly kind: SymbolKind;
+  /** The node's heading through the last line of its subtree. */
+  readonly range: Range;
+  /** The node's heading line. */
+  readonly selectionRange: Range;
+  readonly children: readonly DocumentSymbol[];
+}

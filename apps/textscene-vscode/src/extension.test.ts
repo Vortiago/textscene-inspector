@@ -7,7 +7,8 @@ import { TscnPreviewPanel } from './TscnPreviewPanel';
 import * as logger from './logger';
 import { TscnDiagnostics } from './TscnDiagnostics';
 import { SceneTreeView } from './sceneTree/SceneTreeView';
-import { PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN } from './watchPatterns';
+import { TscnResPathListing } from './TscnResPathListing';
+import { PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN, SCAN_STOP_FILES_PATTERN } from './watchPatterns';
 
 vi.mock('./TscnPreviewPanel', () => ({
   TscnPreviewPanel: {
@@ -153,10 +154,11 @@ describe('Extension', () => {
     it('should add disposables to context subscriptions', () => {
       activate(mockContext);
 
-      // scene tree view, command, symbol, definition and document link providers,
-      // diagnostics, save listener, and for each of the two watchers itself plus its
-      // three handlers.
-      expect(mockContext.subscriptions.length).toBe(15);
+      // scene tree view, command, symbol, definition, document link, hover, completion, code action,
+      // folding and highlight providers, five agent tools, diagnostics, save listener,
+      // each of the two watchers itself plus its three handlers, and the stop-file
+      // watcher itself plus its two handlers.
+      expect(mockContext.subscriptions.length).toBe(28);
     });
 
     it('hands the Scene Tree view the live map of previews', () => {
@@ -479,9 +481,28 @@ describe('Extension', () => {
       activate(mockContext);
 
       const createWatcher = vscode.workspace.createFileSystemWatcher as Mock;
-      expect(createWatcher.mock.calls).toEqual([[RESOURCE_FILES_PATTERN], [PROJECT_FILE_PATTERN]]);
+      expect(createWatcher.mock.calls).toEqual([
+        [RESOURCE_FILES_PATTERN],
+        [PROJECT_FILE_PATTERN],
+        [SCAN_STOP_FILES_PATTERN, false, true],
+      ]);
       const [resourceWatcher, projectFileWatcher] = createWatcher.mock.results.map((result) => result.value);
       expect(TscnDiagnostics).toHaveBeenCalledWith(resourceWatcher, projectFileWatcher);
+    });
+
+    it('lists the res:// paths again once a .gdignore is created or deleted', async () => {
+      const clear = vi.spyOn(TscnResPathListing.prototype, 'clear');
+      try {
+        activate(mockContext);
+        const gdignore = createMockUri('/workspace/raw/.gdignore');
+
+        await fireChange(SCAN_STOP_FILES_PATTERN, gdignore);
+        await fireDelete(SCAN_STOP_FILES_PATTERN, gdignore);
+
+        expect(clear).toHaveBeenCalledTimes(2);
+      } finally {
+        clear.mockRestore();
+      }
     });
 
     it('routes a changed project file to the panel for re-fetch', async () => {

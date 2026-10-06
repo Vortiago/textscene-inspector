@@ -27,6 +27,11 @@
       "types": "./dist/godot/index.d.ts",
       "import": "./dist/godot/index.js"
     },
+    "./languageFeatures": {
+      "@textscene/source": "./src/languageFeatures/index.ts",
+      "types": "./dist/languageFeatures/index.d.ts",
+      "import": "./dist/languageFeatures/index.js"
+    },
     "./worker": {
       "@textscene/source": "./src/worker.ts",
       "types": "./dist/worker.d.ts",
@@ -56,6 +61,11 @@
       "@textscene/source": "./src/resources/projectListing.ts",
       "types": "./dist/resources/projectListing.d.ts",
       "import": "./dist/resources/projectListing.js"
+    },
+    "./resources/diskProject": {
+      "@textscene/source": "./src/resources/diskProject.ts",
+      "types": "./dist/resources/diskProject.d.ts",
+      "import": "./dist/resources/diskProject.js"
     }
   },
   "files": [

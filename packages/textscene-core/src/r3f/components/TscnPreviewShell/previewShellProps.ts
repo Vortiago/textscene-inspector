@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import type { TscnNode } from '../../../parser/types.js';
 import type { ViewportMode } from '../../contexts/ViewportModeContext.js';
+import type { PreviewCaptureState } from './previewCaptureState.js';
 
 export interface TscnPreviewShellProps {
   /** A stable panel identifier for logs and context coordination. */
@@ -42,4 +43,10 @@ export interface TscnPreviewShellProps {
    * previewer's `?camera=` parameter. Without it the view opens in free orbit.
    */
   initialActiveCameraPath?: string | null;
+  /**
+   * Fired on mount and on each change of whether the viewport can capture a PNG. The
+   * `ready` state carries the capture, which the host saves or hands to an agent tool.
+   * The shell reports `pending` as it unmounts.
+   */
+  onCaptureStateChange?: (state: PreviewCaptureState) => void;
 }

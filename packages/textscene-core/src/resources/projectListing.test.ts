@@ -58,4 +58,10 @@ describe('listScannedFiles', () => {
   it('matches the whole extension, not a longer one that ends with it', async () => {
     expect(await list(['res://a.gdextension.import', 'res://b.notgdextension'])).toEqual([]);
   });
+
+  it('lists every scanned file when no extension is given', async () => {
+    const { readDirectory } = tree(['res://a.tscn', 'res://art/b.png', 'res://.godot/c.import']);
+
+    expect((await listScannedFiles(readDirectory)).sort()).toEqual(['res://a.tscn', 'res://art/b.png']);
+  });
 });

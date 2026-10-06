@@ -11,9 +11,8 @@ import { fileURLToPath } from 'node:url';
 import { Linter } from './Linter.js';
 import { isGodotTextResourcePath } from '../godot/index.js';
 import { parseHeading } from '../parser/utils.js';
-import { findProjectRoot, parentDir, projectFileIn, resolveResPath } from '../resources/resPath.js';
-import { resourceContent } from '../resources/resourceProviderUtils.js';
-import { listScannedFiles, type DirectoryEntry } from '../resources/projectListing.js';
+import { providerForRoot } from '../resources/diskProject.js';
+import { findProjectRoot, parentDir, projectFileIn } from '../resources/resPath.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { FILE_DIAGNOSTIC_NAMES } from './fileDiagnostics.js';
 import type { Diagnostic } from './types.js';
@@ -131,32 +130,6 @@ function projectRootOf(path: string): Promise<string | null> {
   );
 }
 
-/** The entries of the directory a `res://` path names under `root`, as the CLI's walk reads them. */
-function readDirectoryUnder(root: string, resDirectory: string): DirectoryEntry[] {
-  const directory = resolveResPath(root, resDirectory);
-  if (directory === null || !existsSync(directory)) return [];
-  return readdirSync(directory, { withFileTypes: true }).map((entry) => ({
-    name: entry.name,
-    isDirectory: entry.isDirectory(),
-  }));
-}
-
-/**
- * A provider over the project at `root`, as the CLI's provider reads it from disk: text or bytes by the type, and a
- * listing walked as the editor's scan walks it.
- */
-function projectProvider(root: string): ResourceProvider {
-  return {
-    loadResource: async (resPath, type = '') => {
-      const file = resolveResPath(root, resPath);
-      if (file === null || !existsSync(file)) return null;
-      return resourceContent(readFileSync(file), type, resPath);
-    },
-    listFiles: (extension) =>
-      listScannedFiles(async (directory) => readDirectoryUnder(root, directory), extension),
-  };
-}
-
 /** One fixture: where it lies, its name relative to `scenes/fixtures`, and the project it is linted in. */
 interface Fixture {
   readonly path: string;
@@ -166,7 +139,7 @@ interface Fixture {
 
 async function fixture(path: string): Promise<Fixture> {
   const root = await projectRootOf(path);
-  return { path, name: relative(fixturesDir, path), provider: root === null ? null : projectProvider(root) };
+  return { path, name: relative(fixturesDir, path), provider: root === null ? null : providerForRoot(root) };
 }
 
 function lintFixture({ path, provider }: Fixture): Promise<Diagnostic[]> {

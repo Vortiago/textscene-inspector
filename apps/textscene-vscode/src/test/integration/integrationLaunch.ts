@@ -12,6 +12,13 @@ import * as path from 'path';
 /** The variable that names the suite's start marker inside the extension host. */
 export const SUITE_STARTED_MARKER_ENV = 'TEXTSCENE_SUITE_STARTED_MARKER';
 
+/**
+ * The variable that says whether the window launches with `--disable-gpu`. A developer sets
+ * it to `1` to launch any platform that way. The launcher always passes the suite `1` or
+ * `0`, so a test that needs WebGL reads the launch from it and does not guess.
+ */
+export const DISABLE_GPU_ENV = 'TEXTSCENE_DISABLE_GPU';
+
 /** The variable that picks the VS Code build the suite runs on. */
 export const VSCODE_VERSION_ENV = 'TEXTSCENE_VSCODE_VERSION';
 
@@ -68,14 +75,35 @@ export function integrationLaunchPaths(runnerDir: string): IntegrationLaunchPath
   };
 }
 
+/** The window's GPU launch: the argument VS Code gets, and the variable the suite reads. */
+export interface GpuLaunch {
+  launchArgs: string[];
+  extensionTestsEnv: Record<string, string>;
+}
+
 /**
- * Build the argument list VS Code is launched with. `platform` is the host's own
- * unless a test names another.
+ * Xvfb has no GPU, so Chromium emulates one in software. On the Ubuntu runner the window
+ * stalls before the workbench opens, so Linux always launches with `--disable-gpu`.
+ * `requestedGpuOff` is the value of {@link DISABLE_GPU_ENV} in the launcher's environment.
+ */
+export function gpuLaunch(platform: string, requestedGpuOff: string | undefined): GpuLaunch {
+  const disablesGpu = platform === 'linux' || requestedGpuOff === '1';
+  return {
+    launchArgs: disablesGpu ? ['--disable-gpu'] : [],
+    extensionTestsEnv: { [DISABLE_GPU_ENV]: disablesGpu ? '1' : '0' },
+  };
+}
+
+/**
+ * The options VS Code launches the suite with. `platform` and `requestedGpuOff` are the
+ * host's own unless a test names others.
  */
 export function integrationLaunchOptions(
   paths: IntegrationLaunchPaths,
-  platform: string = process.platform
+  platform: string = process.platform,
+  requestedGpuOff: string | undefined = process.env[DISABLE_GPU_ENV]
 ): IntegrationLaunchOptions {
+  const gpu = gpuLaunch(platform, requestedGpuOff);
   return {
     extensionDevelopmentPath: paths.extensionDevelopmentPath,
     extensionTestsPath: paths.extensionTestsPath,
@@ -84,11 +112,9 @@ export function integrationLaunchOptions(
       // Keep other installed extensions out of the run.
       '--disable-extensions',
       `--user-data-dir=${paths.userDataDir}`,
-      // Xvfb has no GPU, so Chromium emulates one in software. On the Ubuntu runner
-      // the window stalls before the workbench opens, and only Linux runs this way.
-      ...(platform === 'linux' ? ['--disable-gpu'] : []),
+      ...gpu.launchArgs,
     ],
-    extensionTestsEnv: { [SUITE_STARTED_MARKER_ENV]: paths.suiteStartedMarker },
+    extensionTestsEnv: { [SUITE_STARTED_MARKER_ENV]: paths.suiteStartedMarker, ...gpu.extensionTestsEnv },
   };
 }
 

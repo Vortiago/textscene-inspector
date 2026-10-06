@@ -19,7 +19,7 @@ describe('TscnDefinitionProvider', () => {
   });
 
   describe('Multiple References', () => {
-    it('should handle multiple references to the same resource', () => {
+    it('should handle multiple references to the same resource', async () => {
       const content = `mesh = SubResource("BoxMesh_1")
 collision_mesh = SubResource("BoxMesh_1")
 
@@ -28,27 +28,27 @@ collision_mesh = SubResource("BoxMesh_1")
       const document = createMockDocument(content);
 
       // First reference
-      const def1 = provider.provideDefinition(
+      const def1 = (await provider.provideDefinition(
         document,
         new vscode.Position(0, 15),
         mockCancellationToken
-      ) as vscode.Location;
+      )) as vscode.Location;
 
       expect(def1).toBeDefined();
       expect(def1.range.start.line).toBe(3);
 
       // Second reference
-      const def2 = provider.provideDefinition(
+      const def2 = (await provider.provideDefinition(
         document,
         new vscode.Position(1, 25),
         mockCancellationToken
-      ) as vscode.Location;
+      )) as vscode.Location;
 
       expect(def2).toBeDefined();
       expect(def2.range.start.line).toBe(3);
     });
 
-    it('should handle multiple resources on the same line', () => {
+    it('should handle multiple resources on the same line', async () => {
       const content = `mesh = SubResource("Mesh_1") material = SubResource("Mat_1")
 
 [sub_resource type="BoxMesh" id="Mesh_1"]
@@ -57,27 +57,27 @@ collision_mesh = SubResource("BoxMesh_1")
       const document = createMockDocument(content);
 
       // First resource
-      const def1 = provider.provideDefinition(
+      const def1 = (await provider.provideDefinition(
         document,
         new vscode.Position(0, 15),
         mockCancellationToken
-      ) as vscode.Location;
+      )) as vscode.Location;
 
       expect(def1).toBeDefined();
       expect(def1.range.start.line).toBe(2);
 
       // Second resource
-      const def2 = provider.provideDefinition(
+      const def2 = (await provider.provideDefinition(
         document,
         new vscode.Position(0, 45),
         mockCancellationToken
-      ) as vscode.Location;
+      )) as vscode.Location;
 
       expect(def2).toBeDefined();
       expect(def2.range.start.line).toBe(3);
     });
 
-    it('should return first match when duplicate resource IDs exist', () => {
+    it('should return first match when duplicate resource IDs exist', async () => {
       const content = `mesh = SubResource("Duplicate")
 
 [sub_resource type="BoxMesh" id="Duplicate"]
@@ -86,11 +86,11 @@ collision_mesh = SubResource("BoxMesh_1")
       const document = createMockDocument(content);
       const position = new vscode.Position(0, 15);
 
-      const definition = provider.provideDefinition(
+      const definition = (await provider.provideDefinition(
         document,
         position,
         mockCancellationToken
-      ) as vscode.Location;
+      )) as vscode.Location;
 
       expect(definition).toBeDefined();
       expect(definition.range.start.line).toBe(2); // First match
@@ -99,7 +99,7 @@ collision_mesh = SubResource("BoxMesh_1")
 
   describe('Mixed SubResource and ExtResource', () => {
     // Same id in both namespaces: the only shape where a kind-blind lookup is catchable.
-    it('should not confuse SubResource and ExtResource with same ID', () => {
+    it('should not confuse SubResource and ExtResource with same ID', async () => {
       const content = `[ext_resource type="PackedScene" path="res://Scene.tscn" id="Resource_1"]
 
 mesh = SubResource("Resource_1")
@@ -110,21 +110,21 @@ instance = ExtResource("Resource_1")
       const document = createMockDocument(content);
 
       // SubResource should find sub_resource heading
-      const subDef = provider.provideDefinition(
+      const subDef = (await provider.provideDefinition(
         document,
         new vscode.Position(2, 15),
         mockCancellationToken
-      ) as vscode.Location;
+      )) as vscode.Location;
 
       expect(subDef).toBeDefined();
       expect(subDef.range.start.line).toBe(5);
 
       // ExtResource should find ext_resource heading
-      const extDef = provider.provideDefinition(
+      const extDef = (await provider.provideDefinition(
         document,
         new vscode.Position(3, 20),
         mockCancellationToken
-      ) as vscode.Location;
+      )) as vscode.Location;
 
       expect(extDef).toBeDefined();
       expect(extDef.range.start.line).toBe(0);

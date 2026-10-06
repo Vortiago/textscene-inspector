@@ -12,7 +12,9 @@ import {
   extResourceIdsIn,
   isPathResourceLiteral,
   keyedResourceRefReader,
+  openResourceRef,
   resourceRef,
+  resourceRefSpans,
   subResourceRefAnywhere,
 } from './resourceRef.js';
 
@@ -57,7 +59,7 @@ describe('resourceRef', () => {
   });
 
   it('takes only the unsigned integer index, not the other number spellings', () => {
-    // The old-style index is a non-negative int; a quoted id is the spelling
+    // The old-style index is a non-negative int. A quoted id is the spelling
     // for anything else.
     expect(resourceRef('SubResource(-1)')).toBeNull();
     expect(resourceRef('SubResource(1.5)')).toBeNull();
@@ -232,5 +234,35 @@ describe('extResourceIdsIn', () => {
 
   it('gives an empty list for a value with no reference', () => {
     expect(extResourceIdsIn('Vector3(1, 2, 3)')).toEqual([]);
+  });
+});
+
+describe('resourceRefSpans', () => {
+  it('finds every reference in a text with its span, padded and integer forms included', () => {
+    const text = 'a = [ExtResource("1_a"), SubResource ( "b" ), ExtResource(3)]';
+
+    expect(resourceRefSpans(text)).toEqual([
+      { kind: 'ExtResource', id: '1_a', start: 5, end: 23 },
+      { kind: 'SubResource', id: 'b', start: 25, end: 44 },
+      { kind: 'ExtResource', id: '3', start: 46, end: 60 },
+    ]);
+  });
+
+  it('finds nothing in a text with no reference', () => {
+    expect(resourceRefSpans('Vector3(1, 2, 3)')).toEqual([]);
+  });
+});
+
+describe('openResourceRef', () => {
+  it('reads the kind and the id typed so far inside an open quote', () => {
+    expect(openResourceRef('mesh = SubResource( "Box')).toEqual({ kind: 'SubResource', id: 'Box' });
+  });
+
+  it('reads an empty id right after the opening quote', () => {
+    expect(openResourceRef('texture = ExtResource("')).toEqual({ kind: 'ExtResource', id: '' });
+  });
+
+  it('answers null once the quote is closed', () => {
+    expect(openResourceRef('texture = ExtResource("1")')).toBeNull();
   });
 });

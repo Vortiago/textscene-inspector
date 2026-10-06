@@ -30,7 +30,10 @@
     "tres",
     "linter",
     "validator",
-    "cli"
+    "cli",
+    "godot4",
+    "gamedev",
+    "lint"
   ],
   "author": "Vortiago",
   "license": "MIT",

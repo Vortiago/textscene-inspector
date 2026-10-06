@@ -6,7 +6,19 @@
 import { useEffect, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { act, render, renderHook } from '@testing-library/react';
+import { buildSceneGraph, type SceneGraph } from '../../core/SceneGraph';
 import { CameraControlProvider, useCameraControl, useOptionalCameraControl } from './CameraControlContext';
+
+/** A scene graph with no nodes. The context compares graphs by identity only. */
+function emptySceneGraph(): SceneGraph {
+  return buildSceneGraph({
+    path: 'res://main.tscn',
+    nodes: [],
+    externalScenes: [],
+    internalResources: [],
+    externalResources: [],
+  });
+}
 
 function wrapper({ children }: { children: ReactNode }) {
   return <CameraControlProvider>{children}</CameraControlProvider>;
@@ -210,7 +222,7 @@ describe('CameraControlContext', () => {
   });
 });
 
-describe('CameraControlContext — screenshot (#224)', () => {
+describe('CameraControlContext screenshot', () => {
   it("takeScreenshot() returns the registered handler's result", () => {
     const handler = vi.fn(() => 'data:image/png;base64,AAA');
 
@@ -286,5 +298,84 @@ describe('CameraControlContext — screenshot (#224)', () => {
       getByTestId('trigger').click();
     });
     expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it('tells a subscriber when a handler registers and when it leaves', () => {
+    function ScreenshotHandlerRegistrar() {
+      const { registerScreenshotHandler } = useCameraControl();
+      useEffect(
+        () => registerScreenshotHandler(() => 'data:image/png;base64,AAA'),
+        [registerScreenshotHandler]
+      );
+      return null;
+    }
+    let control: ReturnType<typeof useCameraControl> | null = null;
+    function Probe() {
+      control = useCameraControl();
+      return null;
+    }
+    function App({ showRegistrar }: { showRegistrar: boolean }) {
+      return (
+        <CameraControlProvider>
+          <Probe />
+          {showRegistrar && <ScreenshotHandlerRegistrar />}
+        </CameraControlProvider>
+      );
+    }
+    const { rerender } = render(<App showRegistrar={false} />);
+    const seen: boolean[] = [];
+    control!.subscribeScreenshotHandler(() => seen.push(control!.hasScreenshotHandler()));
+    expect(control!.hasScreenshotHandler()).toBe(false);
+
+    rerender(<App showRegistrar={true} />);
+    rerender(<App showRegistrar={false} />);
+
+    expect(seen).toEqual([true, false]);
+  });
+
+  it('stops telling a subscriber once it unsubscribes', () => {
+    const { result } = renderHook(() => useCameraControl(), { wrapper });
+    const listener = vi.fn();
+    const unsubscribe = result.current.subscribeScreenshotHandler(listener);
+
+    unsubscribe();
+    act(() => {
+      result.current.registerScreenshotHandler(() => null);
+    });
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('names the scene graph the registered handler has rendered', () => {
+    const { result } = renderHook(() => useCameraControl(), { wrapper });
+    const renderedScene = emptySceneGraph();
+
+    act(() => {
+      result.current.registerScreenshotHandler(() => null, renderedScene);
+    });
+
+    expect(result.current.screenshotScene()).toBe(renderedScene);
+  });
+
+  it('names no scene once the handler leaves', () => {
+    const { result } = renderHook(() => useCameraControl(), { wrapper });
+    let unregister = () => {};
+    act(() => {
+      unregister = result.current.registerScreenshotHandler(() => null, emptySceneGraph());
+    });
+
+    act(() => unregister());
+
+    expect(result.current.screenshotScene()).toBeNull();
+  });
+
+  it('names no scene for a handler registered without one', () => {
+    const { result } = renderHook(() => useCameraControl(), { wrapper });
+
+    act(() => {
+      result.current.registerScreenshotHandler(() => null);
+    });
+
+    expect(result.current.screenshotScene()).toBeNull();
   });
 });

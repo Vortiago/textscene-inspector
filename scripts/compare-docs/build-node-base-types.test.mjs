@@ -9,10 +9,14 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
   deriveBaseTypes,
+  NODE_PROPERTIES,
   OUT,
+  PROPERTIES_OUT,
   RESOURCE_BASES,
   RESOURCE_OUT,
+  RESOURCE_PROPERTIES,
   renderFromCatalog,
+  renderFromPropertyCaptures,
   renderFromResourceBases,
 } from './build-node-base-types.mjs';
 import { RESOURCE_CLASSES } from './build-node-catalog/extraClasses.mjs';
@@ -81,6 +85,19 @@ describe('deriveBaseTypes', () => {
 
   it('the committed resourceBaseTypes.generated.ts matches the captured bases', () => {
     expect(readFileSync(RESOURCE_OUT, 'utf8')).toBe(renderFromResourceBases());
+  });
+
+  it('the committed classProperties.generated.ts matches the captures', () => {
+    // The property rows ship to the editor for hover and completion, so a capture that
+    // gains a property without a re-run would leave the host describing an older ClassDB.
+    expect(readFileSync(PROPERTIES_OUT, 'utf8')).toBe(renderFromPropertyCaptures());
+  });
+
+  it('renders one row per captured property, so no class is dropped', () => {
+    const total = [NODE_PROPERTIES, RESOURCE_PROPERTIES]
+      .map((path) => JSON.parse(readFileSync(path, 'utf8')))
+      .reduce((sum, table) => sum + Object.values(table).reduce((rows, list) => rows + list.length, 0), 0);
+    expect(renderFromPropertyCaptures().match(/^\s*\["/gm)?.length).toBe(total);
   });
 
   it('the gallery hand-writes no resource chain the capture disagrees with', () => {
