@@ -55,6 +55,11 @@ catalog:
   # engine's own rather than a hand-port that would drift from them. MIT.
   fastnoise-lite: 1.1.1
 
+  # PNG decoding: the visual and Godot-reference scripts, and the capture checks in the
+  # VS Code integration suite.
+  pngjs: ^7.0.0
+  '@types/pngjs': ^6.0.5
+
   # Real CSG boolean evaluation (ADR-0026). three-bvh-csg is used DIRECTLY rather
   # than via @react-three/csg, whose latest release hard-pins three-bvh-csg ^0.0.16
   # and three-mesh-bvh ^0.6.8, both below what 0.0.18 requires against three 0.185.

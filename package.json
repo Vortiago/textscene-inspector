@@ -103,7 +103,7 @@
     "lint-staged": "^17.6.0",
     "msdf-bmfont-xml": "catalog:",
     "playwright": "^1.63.0",
-    "pngjs": "^7.0.0",
+    "pngjs": "catalog:",
     "prettier": "catalog:",
     "publint": "^0.3.24",
     "rimraf": "catalog:",

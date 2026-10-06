@@ -62,7 +62,7 @@ export function skipBecause(context: Context, reason: string): never {
 }
 
 /** Whether the launcher started the window with `--disable-gpu`, which leaves no WebGL context. */
-function launchedWithoutGpu(): boolean {
+export function launchedWithoutGpu(): boolean {
   const value = process.env[DISABLE_GPU_ENV];
   if (value !== '0' && value !== '1') {
     throw new Error(`expected the launcher to set ${DISABLE_GPU_ENV} to 0 or 1, got ${String(value)}`);
@@ -85,7 +85,9 @@ export function textOf(result: vscode.LanguageModelToolResult): string {
 }
 
 /** The image part of a tool result, or undefined when it carries none. */
-function imageOf(result: vscode.LanguageModelToolResult): { mimeType: string; data: Uint8Array } | undefined {
+export function imageOf(
+  result: vscode.LanguageModelToolResult
+): { mimeType: string; data: Uint8Array } | undefined {
   return result.content.find(
     (part): part is { mimeType: string; data: Uint8Array } =>
       typeof (part as { mimeType?: unknown }).mimeType === 'string'
