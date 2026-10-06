@@ -1,7 +1,7 @@
 /** The Scene Tree view's data: a scene document's node tree as tree items. */
 
 import { describe, expect, it, vi } from 'vitest';
-import type * as vscode from 'vscode';
+import * as vscode from 'vscode';
 import { REVEAL_SCENE_NODE_COMMAND, SceneTreeProvider } from './SceneTreeProvider';
 import { sceneDocument } from './sceneTree.testkit';
 
@@ -46,8 +46,10 @@ describe('SceneTreeProvider', () => {
     provider.show(sceneDocument('/workspace/main.tscn'));
     const box = boxOf(provider);
 
-    expect(provider.getTreeItem(box).collapsibleState).toBe(2);
-    expect(provider.getTreeItem(box.children[0]!).collapsibleState).toBe(0);
+    expect(provider.getTreeItem(box).collapsibleState).toBe(vscode.TreeItemCollapsibleState.Expanded);
+    expect(provider.getTreeItem(box.children[0]!).collapsibleState).toBe(
+      vscode.TreeItemCollapsibleState.None
+    );
   });
 
   it('draws each node with the Outline icon of its symbol kind', () => {

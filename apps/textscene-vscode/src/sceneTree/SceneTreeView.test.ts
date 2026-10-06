@@ -5,7 +5,6 @@
 
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import * as vscode from 'vscode';
-import type { TscnPreviewPanel } from '../TscnPreviewPanel';
 import { SCENE_TREE_ENABLED_CONTEXT, SCENE_TREE_VIEW_ID, SceneTreeView } from './SceneTreeView';
 import { REVEAL_SCENE_NODE_COMMAND, type SceneTreeProvider } from './SceneTreeProvider';
 import { fakePreview, sceneDocument, textEditor, type FakePreview } from './sceneTree.testkit';
@@ -54,13 +53,12 @@ beforeEach(() => {
 });
 
 function createView(): SceneTreeView {
-  return new SceneTreeView(previews as unknown as ReadonlyMap<string, TscnPreviewPanel>);
+  return new SceneTreeView(previews);
 }
 
-function openPreview(view: SceneTreeView, fsPath: string, isActive: boolean): FakePreview {
+function openPreview(fsPath: string, isActive: boolean): FakePreview {
   const preview = fakePreview(fsPath, isActive);
   previews.set(preview.resource.toString(), preview);
-  view.follow(preview as unknown as TscnPreviewPanel);
   return preview;
 }
 
@@ -99,12 +97,12 @@ describe('SceneTreeView', () => {
     const view = createView();
     focusEditor(MAIN);
     await settle();
-    const preview = openPreview(view, MAIN, false);
+    const preview = openPreview(MAIN, false);
 
     // Focusing the preview takes the text editor away, the step that empties the Outline.
     focusEditor(undefined);
     preview.isActive = true;
-    preview.viewState.fire();
+    view.refresh();
     await settle();
 
     expect(shownScene()).toBe(MAIN);
@@ -114,7 +112,8 @@ describe('SceneTreeView', () => {
   it('shows the scene of a preview opened with no text editor behind it', async () => {
     const view = createView();
 
-    openPreview(view, MAIN, true).viewState.fire();
+    openPreview(MAIN, true);
+    view.refresh();
     await settle();
 
     expect(shownScene()).toBe(MAIN);
@@ -123,8 +122,8 @@ describe('SceneTreeView', () => {
 
   it('switches to the scene of the text editor that takes over from a preview', async () => {
     const view = createView();
-    const preview = openPreview(view, MAIN, true);
-    preview.viewState.fire();
+    const preview = openPreview(MAIN, true);
+    view.refresh();
     await settle();
 
     preview.isActive = false;
@@ -149,12 +148,12 @@ describe('SceneTreeView', () => {
 
   it('empties when the active preview closes', async () => {
     const view = createView();
-    const preview = openPreview(view, MAIN, true);
-    preview.viewState.fire();
+    const preview = openPreview(MAIN, true);
+    view.refresh();
     await settle();
 
     previews.delete(preview.resource.toString());
-    preview.disposed.fire();
+    view.refresh();
     await settle();
 
     expect(shownScene()).toBeUndefined();
@@ -164,7 +163,8 @@ describe('SceneTreeView', () => {
     const view = createView();
     (vscode.workspace.openTextDocument as Mock).mockRejectedValue(new Error('file not found'));
 
-    openPreview(view, MAIN, true).viewState.fire();
+    openPreview(MAIN, true);
+    view.refresh();
     await settle();
 
     expect(shownScene()).toBeUndefined();
@@ -197,7 +197,7 @@ describe('SceneTreeView', () => {
     harness.provider.onDidChangeTreeData(listener);
 
     const edited = sceneDocument(MAIN, '[gd_scene format=3]\n\n[node name="Renamed" type="Node3D"]\n');
-    harness.documentChanged.fire({ document: edited });
+    harness.documentChanged.fire({ document: edited, contentChanges: [{}] });
 
     expect(listener).toHaveBeenCalledTimes(1);
     expect(rootNames()).toEqual(['Renamed']);
@@ -210,14 +210,26 @@ describe('SceneTreeView', () => {
     const listener = vi.fn();
     harness.provider.onDidChangeTreeData(listener);
 
-    harness.documentChanged.fire({ document: sceneDocument(LEVEL) });
+    harness.documentChanged.fire({ document: sceneDocument(LEVEL), contentChanges: [{}] });
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('keeps the tree through a save, which changes no content', async () => {
+    createView();
+    focusEditor(MAIN);
+    await settle();
+    const listener = vi.fn();
+    harness.provider.onDidChangeTreeData(listener);
+
+    harness.documentChanged.fire({ document: sceneDocument(MAIN), contentChanges: [] });
 
     expect(listener).not.toHaveBeenCalled();
   });
 
   it('reveals a clicked node beside the preview of its scene', async () => {
-    const view = createView();
-    const preview = openPreview(view, MAIN, true);
+    createView();
+    const preview = openPreview(MAIN, true);
     (vscode.window.showTextDocument as Mock).mockResolvedValue({ revealRange: vi.fn() });
 
     await harness.commands.get(REVEAL_SCENE_NODE_COMMAND)!(preview.resource, 4);

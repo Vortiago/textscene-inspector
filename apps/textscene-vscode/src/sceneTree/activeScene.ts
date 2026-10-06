@@ -9,6 +9,8 @@ import type * as vscode from 'vscode';
 export interface ScenePreview {
   readonly resource: vscode.Uri;
   readonly isActive: boolean;
+  /** Where a clicked node's text opens beside, never over. */
+  readonly viewColumn: vscode.ViewColumn | undefined;
 }
 
 /**

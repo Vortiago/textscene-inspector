@@ -8,11 +8,16 @@
  */
 
 /**
- * A `text = "…"` assignment, anchored per line so a `text` substring inside another
- * value is never touched. `\` takes the next character, a raw newline too
+ * A quoted string literal. `\` takes the next character, a raw newline too
  * (`variant_parser.cpp:276-290`): core's `STRING_LITERAL_SOURCE`, copied since this runs unbuilt.
  */
-const TEXT_ASSIGNMENT = /^(\s*text = )"(?:[^"\\]|\\[\s\S])*"/gm;
+const STRING_LITERAL_SOURCE = String.raw`"(?:[^"\\]|\\[\s\S])*"`;
+
+/**
+ * A `text = "…"` assignment, anchored per line so a `text` substring inside another
+ * value is never touched.
+ */
+const TEXT_ASSIGNMENT = new RegExp(String.raw`^(\s*text = )${STRING_LITERAL_SOURCE}`, 'gm');
 
 /**
  * Empties every `text = "…"` assignment.
@@ -46,8 +51,8 @@ export function hideSceneNode(source, name) {
   return `${source.slice(0, end)}\nvisible = false${source.slice(end)}`;
 }
 
-/** A `[node …]` heading's `name`. Godot writes the name first. */
-const NODE_NAME = /^\[node name="((?:[^"\\]|\\.)*)"/gm;
+/** A `[node …]` heading's `name`, quotes included. Godot writes the name first. */
+const NODE_NAME = new RegExp(String.raw`^\[node name=(${STRING_LITERAL_SOURCE})`, 'gm');
 
 /**
  * The name of every node, in heading order. Godot writes a parent before its
@@ -57,5 +62,5 @@ const NODE_NAME = /^\[node name="((?:[^"\\]|\\.)*)"/gm;
  * @returns {string[]}
  */
 export function sceneNodeNames(source) {
-  return [...source.matchAll(NODE_NAME)].map((match) => match[1]);
+  return [...source.matchAll(NODE_NAME)].map((match) => match[1].slice(1, -1));
 }

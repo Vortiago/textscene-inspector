@@ -32,11 +32,11 @@ export function activate(context: vscode.ExtensionContext) {
     panel = TscnPreviewPanel.create(context.extensionUri, resource);
     panels.set(key, panel);
 
+    panel.onDidChangeViewState(() => sceneTree.refresh());
     panel.onDidDispose(() => {
       panels.delete(key);
+      sceneTree.refresh();
     });
-    // After the delete above, so a closed preview is gone from the map the view reads.
-    sceneTree.follow(panel);
 
     return panel;
   };

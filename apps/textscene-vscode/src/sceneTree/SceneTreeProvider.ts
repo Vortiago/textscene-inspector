@@ -9,13 +9,6 @@ import { TscnDocumentSymbolProvider } from '../TscnDocumentSymbolProvider';
 /** Opens the scene's text with the cursor on a node's heading. Takes the scene `Uri` and a 0-based line. */
 export const REVEAL_SCENE_NODE_COMMAND = 'textscene.revealSceneNode';
 
-/** The codicon for each kind `TscnDocumentSymbolProvider` hands out, as the Outline draws it. */
-const SYMBOL_ICONS: ReadonlyMap<vscode.SymbolKind, string> = new Map([
-  [vscode.SymbolKind.Class, 'symbol-class'],
-  [vscode.SymbolKind.Struct, 'symbol-struct'],
-  [vscode.SymbolKind.Module, 'symbol-module'],
-]);
-
 export class SceneTreeProvider implements vscode.TreeDataProvider<vscode.DocumentSymbol> {
   private readonly _onDidChangeTreeData = new vscode.EventEmitter<void>();
   public readonly onDidChangeTreeData: vscode.Event<void> = this._onDidChangeTreeData.event;
@@ -35,7 +28,7 @@ export class SceneTreeProvider implements vscode.TreeDataProvider<vscode.Documen
 
   public getChildren(symbol?: vscode.DocumentSymbol): vscode.DocumentSymbol[] {
     if (symbol) return symbol.children;
-    return this._document ? this._symbols.symbolsOf(this._document) : [];
+    return this._document ? this._symbols.provideDocumentSymbols(this._document) : [];
   }
 
   public getTreeItem(symbol: vscode.DocumentSymbol): vscode.TreeItem {
@@ -46,7 +39,8 @@ export class SceneTreeProvider implements vscode.TreeDataProvider<vscode.Documen
         : vscode.TreeItemCollapsibleState.None
     );
     item.description = symbol.detail;
-    item.iconPath = new vscode.ThemeIcon(SYMBOL_ICONS.get(symbol.kind) ?? 'symbol-object');
+    // The Outline's own codicon for the kind: `SymbolKind` is a numeric enum, so it maps back to its name.
+    item.iconPath = new vscode.ThemeIcon(`symbol-${vscode.SymbolKind[symbol.kind].toLowerCase()}`);
     if (this._document) {
       item.command = {
         command: REVEAL_SCENE_NODE_COMMAND,

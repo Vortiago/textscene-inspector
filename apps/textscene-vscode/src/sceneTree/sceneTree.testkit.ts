@@ -5,7 +5,8 @@
  */
 
 import * as vscode from 'vscode';
-import { createMockUri, MockEventEmitter } from '../test-setup';
+import { createMockDocument } from '../TscnDefinitionProvider.testkit';
+import type { ScenePreview } from './activeScene';
 
 export const SCENE = [
   '[gd_scene format=3]',
@@ -19,34 +20,16 @@ export const SCENE = [
 ].join('\n');
 
 export function sceneDocument(fsPath: string, text = SCENE): vscode.TextDocument {
-  return { uri: createMockUri(fsPath), getText: () => text } as unknown as vscode.TextDocument;
+  return createMockDocument(text, fsPath);
 }
 
 export function textEditor(document: vscode.TextDocument): vscode.TextEditor {
   return { document } as unknown as vscode.TextEditor;
 }
 
-/** A preview as the view reads it, with the view-state and dispose events it follows. */
-export interface FakePreview {
-  resource: vscode.Uri;
-  isActive: boolean;
-  viewColumn: vscode.ViewColumn | undefined;
-  viewState: MockEventEmitter;
-  disposed: MockEventEmitter;
-  onDidChangeViewState: MockEventEmitter['event'];
-  onDidDispose: MockEventEmitter['event'];
-}
+/** A preview whose active state a test flips. */
+export type FakePreview = { -readonly [K in keyof ScenePreview]: ScenePreview[K] };
 
 export function fakePreview(fsPath: string, isActive: boolean): FakePreview {
-  const viewState = new MockEventEmitter();
-  const disposed = new MockEventEmitter();
-  return {
-    resource: createMockUri(fsPath),
-    isActive,
-    viewColumn: vscode.ViewColumn.Two,
-    viewState,
-    disposed,
-    onDidChangeViewState: viewState.event,
-    onDidDispose: disposed.event,
-  };
+  return { resource: vscode.Uri.file(fsPath), isActive, viewColumn: vscode.ViewColumn.Two };
 }

@@ -25,10 +25,10 @@ vi.mock('./TscnDiagnostics', () => ({
 // SceneTreeView has its own unit tests.
 vi.mock('./sceneTree/SceneTreeView', () => ({
   SceneTreeView: vi.fn(function (this: {
-    follow: ReturnType<typeof vi.fn>;
+    refresh: ReturnType<typeof vi.fn>;
     dispose: ReturnType<typeof vi.fn>;
   }) {
-    this.follow = vi.fn();
+    this.refresh = vi.fn();
     this.dispose = vi.fn();
   }),
 }));
@@ -71,6 +71,10 @@ describe('Extension', () => {
       dispose: vi.fn(),
       onDidDispose: vi.fn((callback: () => void) => {
         mockPanel._disposeCallback = callback;
+        return { dispose: vi.fn() };
+      }),
+      onDidChangeViewState: vi.fn((callback: () => void) => {
+        mockPanel._viewStateCallback = callback;
         return { dispose: vi.fn() };
       }),
       handleDependencyChange: vi.fn().mockResolvedValue(undefined),
@@ -337,12 +341,26 @@ describe('Extension', () => {
   });
 
   describe('Panel Lifecycle', () => {
-    it('has the Scene Tree view follow each preview it opens', () => {
+    it('refreshes the Scene Tree view when a preview gains or loses the active slot', () => {
       activate(mockContext);
       openPanelFor('/workspace/test.tscn');
+      const sceneTree = (SceneTreeView as unknown as Mock).mock.instances[0] as { refresh: Mock };
 
-      const sceneTree = (SceneTreeView as unknown as Mock).mock.instances[0] as { follow: Mock };
-      expect(sceneTree.follow).toHaveBeenCalledWith(mockPanel);
+      mockPanel._viewStateCallback();
+
+      expect(sceneTree.refresh).toHaveBeenCalledTimes(1);
+    });
+
+    it('refreshes the Scene Tree view after a closed preview leaves the map', () => {
+      activate(mockContext);
+      openPanelFor('/workspace/test.tscn');
+      const [previews] = (SceneTreeView as unknown as Mock).mock.calls[0]! as [Map<string, unknown>];
+      const sceneTree = (SceneTreeView as unknown as Mock).mock.instances[0] as { refresh: Mock };
+      sceneTree.refresh.mockImplementation(() => expect(previews.size).toBe(0));
+
+      mockPanel._disposeCallback();
+
+      expect(sceneTree.refresh).toHaveBeenCalledTimes(1);
     });
 
     it('should remove panel from tracking when disposed', () => {

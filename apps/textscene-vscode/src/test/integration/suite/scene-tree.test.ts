@@ -79,13 +79,13 @@ suite('Scene Tree', () => {
 
   test('a text editor that takes over from the preview takes the view with it', async () => {
     preview = TscnPreviewPanel.create(getExtensionUri(), main.uri);
-    await waitForActiveScene(() => [preview!], main.uri);
+    await waitForActiveScene(preview, main.uri);
     let viewStateChanges = 0;
     preview.onDidChangeViewState(() => viewStateChanges++);
 
     await vscode.window.showTextDocument(level, vscode.ViewColumn.One);
 
-    await waitForActiveScene(() => [preview!], level.uri);
+    await waitForActiveScene(preview, level.uri);
     assert.ok(viewStateChanges > 0, 'the preview reported no change of its active state');
   });
 
@@ -101,10 +101,24 @@ suite('Scene Tree', () => {
     assert.deepStrictEqual(namesOf(provider.getChildren()), namesOf(outline));
     provider.dispose();
   });
+
+  test("each node carries the Outline's codicon for its symbol kind", () => {
+    const provider = new SceneTreeProvider();
+    provider.show(main);
+    const [scene] = provider.getChildren();
+
+    // Real `SymbolKind` maps a kind back to its name, which the codicon id is built from.
+    assert.deepStrictEqual(provider.getTreeItem(scene!).iconPath, new vscode.ThemeIcon('symbol-module'));
+    assert.deepStrictEqual(
+      provider.getTreeItem(scene!.children[0]!).iconPath,
+      new vscode.ThemeIcon('symbol-class')
+    );
+    provider.dispose();
+  });
 });
 
-async function waitForActiveScene(previews: () => TscnPreviewPanel[], expected: vscode.Uri): Promise<void> {
-  const current = () => activeScene(previews(), vscode.window.activeTextEditor)?.toString();
+async function waitForActiveScene(preview: TscnPreviewPanel, expected: vscode.Uri): Promise<void> {
+  const current = () => activeScene([preview], vscode.window.activeTextEditor)?.toString();
   await waitFor(
     () => current() === expected.toString(),
     FOCUS_TIMEOUT_MS,

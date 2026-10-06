@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * End-to-end gate (`pnpm test:vscode:csp`): a lit 3D mesh draws in its material's
- * colour, the Scene Tree view lists its nodes while its preview is the active editor, Control text and a worker-built noise texture paint inside the real VS Code
+ * colour, the Scene Tree view lists its nodes while its preview is the active editor,
+ * Control text and a worker-built noise texture paint inside the real VS Code
  * webview, under the production CSP, with nothing fetched, an ArrayMesh edited on disk
  * redraws through the real file watcher, host and loader, and a text glTF draws its
  * external buffer and texture. `TEXTSCENE_VSCODE_VERSION` picks the VS Code build, as

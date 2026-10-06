@@ -18,32 +18,27 @@ export class TscnDocumentSymbolProvider implements vscode.DocumentSymbolProvider
     Node3D: vscode.SymbolKind.Module,
   };
 
-  provideDocumentSymbols(
-    document: vscode.TextDocument,
-    _token: vscode.CancellationToken
-  ): vscode.ProviderResult<vscode.DocumentSymbol[]> {
-    return this.symbolsOf(document);
-  }
-
   /** The node tree under the root node. Empty for a scene with no nodes or one that fails to parse. */
-  symbolsOf(document: vscode.TextDocument): vscode.DocumentSymbol[] {
+  provideDocumentSymbols(document: vscode.TextDocument): vscode.DocumentSymbol[] {
     try {
-      const parser = new TscnParser();
-      const parsed = parser.parse(document.getText());
+      const text = document.getText();
+      const parsed = new TscnParser().parse(text);
 
       if (!parsed.nodes || parsed.nodes.length === 0) {
         return [];
       }
 
-      return parsed.nodes.map((node) => this.convertNodeToSymbol(node, document));
+      // Split once: every node's range lookup scans the same lines.
+      const lines = text.split('\n');
+      return parsed.nodes.map((node) => this.convertNodeToSymbol(node, lines));
     } catch (err) {
       error('Error providing document symbols:', err);
       return [];
     }
   }
 
-  private convertNodeToSymbol(node: TscnNode, document: vscode.TextDocument): vscode.DocumentSymbol {
-    const { range, selectionRange } = this.findNodeRange(document, node.name, node.parent);
+  private convertNodeToSymbol(node: TscnNode, lines: string[]): vscode.DocumentSymbol {
+    const { range, selectionRange } = this.findNodeRange(lines, node.name, node.parent);
 
     const symbolKind = this.getSymbolKind(node.type);
 
@@ -56,7 +51,7 @@ export class TscnDocumentSymbolProvider implements vscode.DocumentSymbolProvider
     );
 
     if (node.children && node.children.length > 0) {
-      symbol.children = node.children.map((child) => this.convertNodeToSymbol(child, document));
+      symbol.children = node.children.map((child) => this.convertNodeToSymbol(child, lines));
     }
 
     return symbol;
@@ -67,16 +62,13 @@ export class TscnDocumentSymbolProvider implements vscode.DocumentSymbolProvider
   }
 
   private findNodeRange(
-    document: vscode.TextDocument,
+    lines: string[],
     nodeName: string,
     nodeParent: string | undefined
   ): {
     range: vscode.Range;
     selectionRange: vscode.Range;
   } {
-    const text = document.getText();
-    const lines = text.split('\n');
-
     // Match by name and the exact `parent=` value, which tells duplicate sibling
     // names apart. The root's heading omits `parent`, so it compares as ''.
     const startLine = findNodeHeadingLine(lines, nodeName, nodeParent ?? '');

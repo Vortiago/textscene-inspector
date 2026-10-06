@@ -53,8 +53,8 @@ Run these when the change touches the named area:
 - A linter rule or validator: `pnpm lint:scenes`. An error in its vendored Godot demos is a
   false positive in the rule. Keep its directory list in `lint:scenes:only`.
 - Rendering: `pnpm test:visual`.
-- The webview CSP, its bundle, asset loading, the text pipeline or the **Dependency hot-reload**:
-  `pnpm test:vscode:csp`.
+- The webview CSP, its bundle, asset loading, the text pipeline, the **Dependency hot-reload**, the
+  Scene Tree view or the document symbols: `pnpm test:vscode:csp`.
 - The browser build, or how the preview starts: `pnpm --filter textscene-inspector test:web`, then
   `pnpm test:vscode:web-preview`.
 - The web previewer's outliner, inspector, mode switching, or camera and selection wiring:
