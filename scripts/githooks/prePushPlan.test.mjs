@@ -26,7 +26,7 @@ describe('planChecks', () => {
 
   it('only checks the formatting of a workflow change, since CI runs the workflow', () => {
     expect(plan(['.github/workflows/release.yml'], ['.github/workflows/old.yml'])).toEqual([
-      'pnpm exec prettier --check .github/workflows/release.yml',
+      'pnpm exec prettier --cache --check .github/workflows/release.yml',
     ]);
   });
 
@@ -60,16 +60,16 @@ describe('planChecks', () => {
   it('type-checks and lints a TypeScript change', () => {
     expect(plan(['packages/textscene-core/src/a.ts'])).toEqual([
       ...typeChecks('packages/textscene-core'),
-      'npx eslint packages/textscene-core/src/a.ts',
-      'pnpm exec prettier --check packages/textscene-core/src/a.ts',
+      'npx eslint --cache packages/textscene-core/src/a.ts',
+      'pnpm exec prettier --cache --check packages/textscene-core/src/a.ts',
     ]);
   });
 
   it('runs the tests beside each changed file once', () => {
     const testsBeside = (path) => (path.endsWith('.test.mjs') ? [path] : [path.replace('.mjs', '.test.mjs')]);
     expect(plan(['scripts/x.mjs', 'scripts/x.test.mjs'], [], undefined, testsBeside)).toEqual([
-      'npx eslint scripts/x.mjs scripts/x.test.mjs',
-      'pnpm exec prettier --check scripts/x.mjs scripts/x.test.mjs',
+      'npx eslint --cache scripts/x.mjs scripts/x.test.mjs',
+      'pnpm exec prettier --cache --check scripts/x.mjs scripts/x.test.mjs',
       'pnpm exec vitest run scripts/x.test.mjs',
     ]);
   });
@@ -80,21 +80,21 @@ describe('planChecks', () => {
   ])('leaves the extension host suite %s to CI, since vitest excludes it', (suite) => {
     expect(plan([suite], [], undefined, (path) => [path])).toEqual([
       ...typeChecks('apps/textscene-vscode'),
-      `npx eslint ${suite}`,
-      `pnpm exec prettier --check ${suite}`,
+      `npx eslint --cache ${suite}`,
+      `pnpm exec prettier --cache --check ${suite}`,
     ]);
   });
 
   it('runs no tests for a stylesheet', () => {
     expect(plan(['packages/textscene-core/src/a.css'], [], undefined, () => ['never.test.ts'])).toEqual([
-      'pnpm exec prettier --check packages/textscene-core/src/a.css',
+      'pnpm exec prettier --cache --check packages/textscene-core/src/a.css',
     ]);
   });
 
   it('lints a script change without the type checks', () => {
     expect(plan(['scripts/x.mjs'])).toEqual([
-      'npx eslint scripts/x.mjs',
-      'pnpm exec prettier --check scripts/x.mjs',
+      'npx eslint --cache scripts/x.mjs',
+      'pnpm exec prettier --cache --check scripts/x.mjs',
     ]);
   });
 
