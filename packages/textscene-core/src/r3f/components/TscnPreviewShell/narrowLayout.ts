@@ -1,5 +1,5 @@
 /**
- * The media queries of the narrow layout (ADR-0042). A VS Code webview is an iframe, so a
+ * The media queries of the narrow layout (ADR-0048). A VS Code webview is an iframe, so a
  * query measures the editor tab there and the window in the web app. The CSS modules repeat
  * this text, since a stylesheet cannot import it, and a test holds the two copies equal.
  */

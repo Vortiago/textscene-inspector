@@ -14,6 +14,8 @@ const TOOLCHAIN =
   /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|eslint\.config\.js|prettier\.config\.mjs|\.prettierignore|lint-staged\.config\.mjs|vitest\.(?:config|shared)\.ts|githooks\/.*|scripts\/githooks\/negativeFixtures\.mjs)$|(?:^|\/)(?:package\.json|tsconfig[^/]*\.json|vitest\.config\.ts)$/;
 
 const TYPED = /\.(?:ts|tsx)$/;
+/** The workspace package a path sits in, from the `packages` globs of `pnpm-workspace.yaml`. */
+const WORKSPACE_PACKAGE = /^(?:packages|apps)\/[^/]+(?=\/)/;
 const TESTABLE = /\.(?:ts|tsx|js|mjs|cjs)$/;
 const LINTED_CODE = /\.(?:ts|tsx|js|mjs|cjs)$/;
 /** What Prettier formats here. Markdown is not: `.prettierignore` leaves it to the STE rules. */
@@ -29,15 +31,32 @@ const VENDORED = /^\.claude\/(?:skills\/conventional-commits\/|rules\/|agents\/s
 const EXTENSION_HOST_SUITE = /^apps\/textscene-vscode\/src\/test\//;
 
 /**
- * The repository-wide static checks, in the order of the CI `static` job: fastest first.
- * `type-check:all` builds the packages, which `type-check:tests` and the docs checks read.
+ * The type checks of every package. `type-check:all` builds the packages, which
+ * `type-check:tests` and the docs checks read.
  */
-export const STATIC_GATE = [
-  ['pnpm', 'format:check'],
-  ['pnpm', 'lint'],
+const REPOSITORY_TYPE_CHECKS = [
   ['pnpm', 'type-check:all'],
   ['pnpm', 'type-check:tests'],
 ];
+
+/** The repository-wide static checks, in the order of the CI `static` job: fastest first. */
+export const STATIC_GATE = [['pnpm', 'format:check'], ['pnpm', 'lint'], ...REPOSITORY_TYPE_CHECKS];
+
+/**
+ * The type checks for the typed files `typed`: those of each package that holds one, and of every
+ * package that depends on it. A typed file outside a package type-checks the whole repository.
+ * The packages build first, because each dependent reads the declarations a build emits.
+ */
+function typeChecksFor(typed) {
+  const packageDirs = typed.map((path) => WORKSPACE_PACKAGE.exec(path)?.[0]);
+  if (packageDirs.includes(undefined)) return REPOSITORY_TYPE_CHECKS;
+  const filters = [...new Set(packageDirs)].flatMap((dir) => ['--filter', `...{./${dir}}`]);
+  return [
+    ['pnpm', '--filter', './packages/*', 'build'],
+    ['pnpm', ...filters, 'type-check'],
+    ['pnpm', ...filters, 'type-check:tests'],
+  ];
+}
 
 /**
  * The commands, in order, for a push that changes `changed` (paths that still exist) and deletes
@@ -54,13 +73,14 @@ export function planChecks({ changed, deleted, isNegativeFixture, testsBeside })
   if (all.some((path) => TOOLCHAIN.test(path))) return [...STATIC_GATE, ...runTests];
 
   const plan = [];
-  // `type-check:all` builds the packages first, which the generated-docs checks also need.
-  const typeChecks = all.some((path) => TYPED.test(path));
-  if (typeChecks) plan.push(['pnpm', 'type-check:all'], ['pnpm', 'type-check:tests']);
+  // The type checks build the packages first, which the generated-docs checks also need.
+  const typed = all.filter((path) => TYPED.test(path));
+  const typeChecks = typed.length > 0;
+  if (typeChecks) plan.push(...typeChecksFor(typed));
   const linted = changed.filter((path) => LINTED_CODE.test(path));
-  if (linted.length > 0) plan.push(['npx', 'eslint', ...linted]);
+  if (linted.length > 0) plan.push(['npx', 'eslint', '--cache', ...linted]);
   const formatted = changed.filter((path) => FORMATTED.test(path));
-  if (formatted.length > 0) plan.push(['pnpm', 'exec', 'prettier', '--check', ...formatted]);
+  if (formatted.length > 0) plan.push(['pnpm', 'exec', 'prettier', '--cache', '--check', ...formatted]);
   plan.push(...runTests);
 
   const scenes = changed.filter((path) => SCENE.test(path) && !isNegativeFixture(path));

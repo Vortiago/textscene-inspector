@@ -1,5 +1,5 @@
 /**
- * The narrow layout (ADR-0042), pinned at the CSS source, since happy-dom computes no
+ * The narrow layout (ADR-0048), pinned at the CSS source, since happy-dom computes no
  * `@media` style and `matchMedia` answers `false`. A narrow, tall panel stacks the viewport
  * over a bottom sheet that shows the tree or the details, and a compact panel scrolls its
  * top bar.

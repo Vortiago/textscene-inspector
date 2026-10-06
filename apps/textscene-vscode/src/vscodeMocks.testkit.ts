@@ -77,6 +77,8 @@ export const mockUri = {
 
 export const mockCommands: any = {
   registerCommand: vi.fn(),
+
+  executeCommand: vi.fn().mockResolvedValue(undefined),
 };
 
 /** `vscode.lm`: `registerTool` only, which the tools feature-detect. */

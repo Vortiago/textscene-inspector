@@ -63,6 +63,21 @@
         "icon": "$(open-preview)"
       }
     ],
+    "views": {
+      "explorer": [
+        {
+          "id": "textscene.sceneTree",
+          "name": "Scene Tree",
+          "when": "textscene.sceneTreeEnabled"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "textscene.sceneTree",
+        "contents": "Open a .tscn scene or its preview to see its node tree."
+      }
+    ],
     "menus": {
       "editor/title": [
         {

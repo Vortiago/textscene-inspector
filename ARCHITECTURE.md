@@ -64,7 +64,7 @@ the VS Code extension host bundle it alone.
 the same scanning loop with a `ParseObserver`, then answers hover, completion, quick fixes,
 folding and document highlights. It reads the same `godot/` ClassDB captures and the same
 deprecated-alias table as the linter, so no editor states an engine fact twice. It is
-React- and THREE-free, and every result is host-neutral with zero-based ranges (ADR-0046).
+React- and THREE-free, and every result is host-neutral with zero-based ranges (ADR-0049).
 
 **Cross-file lint.** `Linter.lint` reads only the scene. A `LintSession` (`Linter.session()`)
 also reads the used `.glb` and `.gltf` files through the host's `ResourceProvider`. It reports

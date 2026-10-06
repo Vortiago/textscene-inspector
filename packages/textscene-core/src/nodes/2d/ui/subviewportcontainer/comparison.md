@@ -10,7 +10,7 @@ renders_as: a clipped surface showing its SubViewport children's targets
 # SubViewportContainer
 
 SubViewportContainer shows its SubViewport children's render targets, drawn as a
-surface in the canvas (ADR-0030).
+surface in the canvas (ADR-0033).
 
 ## Linting
 

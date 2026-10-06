@@ -8,20 +8,17 @@
 
 import { vi } from 'vitest';
 
+/** Takes two positions, or four numbers as the real `Range` does, and holds two positions. */
 export class MockRange {
-  start: any;
-  end: any;
+  public start: any;
+  public end: any;
 
-  // The real `vscode.Range` has two overloads: `(start, end)` and
-  // `(startLine, startChar, endLine, endChar)`. The four-argument form is the one
-  // `lineAt().range` and most tests use, so the mock builds the positions.
-  constructor(startOrLine: any, endOrChar: any, endLine?: number, endChar?: number) {
-    if (endLine !== undefined) {
-      this.start = new MockPosition(startOrLine, endOrChar);
-      this.end = new MockPosition(endLine, endChar ?? 0);
+  constructor(...args: any[]) {
+    if (args.length === 4) {
+      this.start = new MockPosition(args[0], args[1]);
+      this.end = new MockPosition(args[2], args[3]);
     } else {
-      this.start = startOrLine;
-      this.end = endOrChar;
+      [this.start, this.end] = args;
     }
   }
 }
@@ -156,33 +153,55 @@ export const MockTextEditorRevealType = {
   AtTop: 3,
 };
 
-export const MockSymbolKind: Record<string, number> = {
-  File: 0,
-  Module: 1,
-  Namespace: 2,
-  Package: 3,
-  Class: 4,
-  Method: 5,
-  Property: 6,
-  Field: 7,
-  Constructor: 8,
-  Enum: 9,
-  Interface: 10,
-  Function: 11,
-  Variable: 12,
-  Constant: 13,
-  String: 14,
-  Number: 15,
-  Boolean: 16,
-  Array: 17,
-  Object: 18,
-  Key: 19,
-  Null: 20,
-  EnumMember: 21,
-  Struct: 22,
-  Event: 23,
-  Operator: 24,
-  TypeParameter: 25,
+/** A numeric enum, as the real one is, so it maps a kind back to its name. */
+export enum MockSymbolKind {
+  File = 0,
+  Module = 1,
+  Namespace = 2,
+  Package = 3,
+  Class = 4,
+  Method = 5,
+  Property = 6,
+  Field = 7,
+  Constructor = 8,
+  Enum = 9,
+  Interface = 10,
+  Function = 11,
+  Variable = 12,
+  Constant = 13,
+  String = 14,
+  Number = 15,
+  Boolean = 16,
+  Array = 17,
+  Object = 18,
+  Key = 19,
+  Null = 20,
+  EnumMember = 21,
+  Struct = 22,
+  Event = 23,
+  Operator = 24,
+  TypeParameter = 25,
+}
+
+export class MockTreeItem {
+  description?: string;
+  iconPath?: unknown;
+  command?: { command: string; title: string; arguments?: unknown[] };
+
+  constructor(
+    public label: string,
+    public collapsibleState: number
+  ) {}
+}
+
+export class MockThemeIcon {
+  constructor(public id: string) {}
+}
+
+export const MockTreeItemCollapsibleState = {
+  None: 0,
+  Collapsed: 1,
+  Expanded: 2,
 };
 
 /** `vscode.MarkdownString`: hover and documentation content. */

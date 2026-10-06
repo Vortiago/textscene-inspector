@@ -580,7 +580,7 @@
 }
 
 /*
- * The compact chrome (ADR-0042). The Source pane covers the preview below the shell's top
+ * The compact chrome (ADR-0048). The Source pane covers the preview below the shell's top
  * bar, where its toggle stays reachable. The palette is fixed, since the top bar's toolbar
  * scrolls and would clip it. The query text is COMPACT_LAYOUT_QUERY in @textscene/core.
  */

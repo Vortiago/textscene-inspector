@@ -1,7 +1,7 @@
 /**
  * The answers both editor hosts must give for the shared Godot fixture project in
  * `scenes/language-features/`: the VS Code suites and the `tscn-lsp` end-to-end test read one
- * `answers.json` through this module, so a pass in both proves the two hosts agree (ADR-0046).
+ * `answers.json` through this module, so a pass in both proves the two hosts agree (ADR-0049).
  * The JSON lies outside every package's `rootDir`, so it is read from disk, not imported.
  */
 

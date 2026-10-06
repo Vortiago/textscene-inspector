@@ -11,6 +11,9 @@ export default mergeConfig(
     test: {
       name: 'textscene-core',
       environment: 'happy-dom',
+      // vmThreads builds happy-dom once per worker and keeps each file in its own VM context.
+      // The default forks pool builds it once per file, which took 42% of the core run.
+      pool: 'vmThreads',
       setupFiles: ['./test-setup.ts'],
     },
   })

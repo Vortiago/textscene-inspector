@@ -67,8 +67,8 @@ const RAW_SEVERITY_ASSERTION = {
 };
 
 /**
- * ESLint flat configuration (ESLint 9+)
- * Provides TypeScript linting for the entire monorepo.
+ * The ESLint configuration for the monorepo. The TypeScript parser runs without type information:
+ * no rule here reads types, and a type-aware parse costs a whole TypeScript program per run.
  */
 export default [
   // Global ignores - must be first
@@ -95,8 +95,16 @@ export default [
     ],
   },
 
-  // Base recommended config
   eslint.configs.recommended,
+
+  // TypeScript checks every identifier, so `no-undef` only adds false reports on its global types,
+  // such as `Transferable`. typescript-eslint advises turning it off for TypeScript files.
+  {
+    files: ['**/*.{ts,tsx}'],
+    rules: {
+      'no-undef': 'off',
+    },
+  },
 
   // TypeScript files - Node.js environment (extension main code, linter CLI, TS config files)
   {
@@ -114,7 +122,6 @@ export default [
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
-        project: './tsconfig.base.json',
       },
       globals: {
         ...globals.node,
@@ -145,7 +152,6 @@ export default [
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
-        project: './tsconfig.base.json',
       },
       globals: {
         ...globals.browser,
@@ -304,7 +310,6 @@ export default [
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
-        project: './tsconfig.base.json',
       },
       globals: {
         ...globals.browser,
@@ -364,7 +369,6 @@ export default [
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
-        project: './tsconfig.base.json',
       },
       globals: {
         ...globals.node,

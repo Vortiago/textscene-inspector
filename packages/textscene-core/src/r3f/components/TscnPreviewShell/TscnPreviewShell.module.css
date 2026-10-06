@@ -528,7 +528,7 @@
 }
 
 /*
- * A narrow, tall panel stacks the viewport over a bottom sheet (ADR-0042). The sheet's
+ * A narrow, tall panel stacks the viewport over a bottom sheet (ADR-0048). The sheet's
  * basis is a definite percentage: `auto` resolves to 8px, since the dock's panes are
  * `flex-basis: 0` and the viewport's flex-grow takes the column. The query text is
  * NARROW_LAYOUT_QUERY in narrowLayout.ts.

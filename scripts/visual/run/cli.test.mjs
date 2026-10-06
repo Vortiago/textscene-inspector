@@ -1,7 +1,8 @@
-/** Tests the harness's scene selection: `--shard` parsing and the split of the scene list. */
+/** Tests the harness's scene selection: `--shard` parsing and which scenes a shard selects. */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GOLDEN_SCENES } from '../scenes.mjs';
-import { parseArgs, selectScenes, shardOf } from './cli.mjs';
+import { shardOf } from '../shards/balance.mjs';
+import { parseArgs, selectScenes } from './cli.mjs';
 
 /** Makes `process.exit` throw, so a usage error stops the parse and the test can assert it. */
 function exitThrows() {
@@ -27,22 +28,6 @@ describe('parseArgs --shard', () => {
   it('refuses --scene together with --shard', () => {
     exitThrows();
     expect(() => parseArgs(['--scene', 'label3d', '--shard', '1/2'])).toThrow('exit 2');
-  });
-});
-
-describe('shardOf', () => {
-  it('covers each scene exactly once across the shards of one count', () => {
-    const scenes = GOLDEN_SCENES;
-    const shards = [1, 2, 3, 4].map((index) => shardOf(scenes, { index, count: 4 }));
-    const covered = shards
-      .flat()
-      .map((s) => s.name)
-      .sort();
-    expect(covered).toEqual(scenes.map((s) => s.name).sort());
-  });
-
-  it('takes every count-th scene from index', () => {
-    expect(shardOf(['a', 'b', 'c', 'd', 'e'], { index: 2, count: 2 })).toEqual(['b', 'd']);
   });
 });
 

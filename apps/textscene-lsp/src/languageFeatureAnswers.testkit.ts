@@ -1,6 +1,6 @@
 /**
  * Where the `tscn-lsp` end-to-end test finds the shared Godot fixture project. The answers and
- * their readers live in `@textscene/dev-kit`, which the VS Code suites read too (ADR-0046).
+ * their readers live in `@textscene/dev-kit`, which the VS Code suites read too (ADR-0049).
  */
 
 import { readFileSync } from 'node:fs';

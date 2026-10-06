@@ -15,7 +15,7 @@ const DEFAULT_SOURCE_PANE_WIDTH = 320;
 
 /**
  * Shown on a first visit, except in the compact layout, where the pane covers the preview
- * (ADR-0042). A stored choice wins either way.
+ * (ADR-0048). A stored choice wins either way.
  */
 function defaultSourcePaneState(): SourcePaneState {
   return { visible: !isCompactLayout(), width: DEFAULT_SOURCE_PANE_WIDTH };

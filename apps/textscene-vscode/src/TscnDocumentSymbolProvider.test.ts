@@ -1,42 +1,9 @@
 /** Tests for TscnDocumentSymbolProvider, the symbols of the Outline view. */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import * as vscode from 'vscode';
 import { TscnDocumentSymbolProvider } from './TscnDocumentSymbolProvider';
-
-function createMockDocument(content: string): vscode.TextDocument {
-  const lines = content.split('\n');
-  return {
-    getText: () => content,
-    lineAt: (line: number) => ({
-      text: lines[line] || '',
-      lineNumber: line,
-    }),
-    lineCount: lines.length,
-    uri: vscode.Uri.file('/test.tscn'),
-  } as unknown as vscode.TextDocument;
-}
-
-const mockCancellationToken: vscode.CancellationToken = {
-  isCancellationRequested: false,
-  onCancellationRequested: vi.fn(),
-};
-
-/**
- * The provider's return type is the API's `ProviderResult`, but its body is
- * synchronous and always returns an array. Narrowing once here keeps every
- * assertion below reading a `DocumentSymbol[]`.
- */
-function symbolsOf(
-  provider: TscnDocumentSymbolProvider,
-  document: vscode.TextDocument
-): vscode.DocumentSymbol[] {
-  const result = provider.provideDocumentSymbols(document, mockCancellationToken);
-  if (!Array.isArray(result)) {
-    throw new Error('provideDocumentSymbols returned a thenable, not an array');
-  }
-  return result;
-}
+import { createMockDocument } from './TscnDefinitionProvider.testkit';
 
 describe('TscnDocumentSymbolProvider', () => {
   describe('Symbol Extraction', () => {
@@ -54,7 +21,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
 
       const document = createMockDocument(tscnContent);
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = symbolsOf(provider, document);
+      const symbols = provider.provideDocumentSymbols(document);
 
       expect(symbols).toHaveLength(1); // Root
       expect(symbols[0]!.name).toBe('Root');
@@ -81,7 +48,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
 
       const document = createMockDocument(tscnContent);
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = symbolsOf(provider, document);
+      const symbols = provider.provideDocumentSymbols(document);
 
       expect(symbols).toHaveLength(1);
       expect(symbols[0]!.kind).toBe(vscode.SymbolKind.Module); // Node3D
@@ -104,7 +71,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
 
       const document = createMockDocument(tscnContent);
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = symbolsOf(provider, document);
+      const symbols = provider.provideDocumentSymbols(document);
 
       expect(symbols[0]!.kind).toBe(vscode.SymbolKind.Object); // Default fallback
     });
@@ -114,7 +81,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
     it('should handle empty files', () => {
       const document = createMockDocument('[gd_scene format=3]\n');
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = symbolsOf(provider, document);
+      const symbols = provider.provideDocumentSymbols(document);
 
       expect(symbols).toEqual([]);
     });
@@ -122,7 +89,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
     it('should handle parse errors gracefully', () => {
       const document = createMockDocument('invalid tscn content @#$%');
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = symbolsOf(provider, document);
+      const symbols = provider.provideDocumentSymbols(document);
 
       // Should return empty array, not throw
       expect(symbols).toEqual([]);
@@ -138,7 +105,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
 
       const document = createMockDocument(tscnContent);
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = symbolsOf(provider, document);
+      const symbols = provider.provideDocumentSymbols(document);
 
       expect(symbols).toHaveLength(1);
       expect(symbols[0]!.name).toBe('Root');
@@ -160,7 +127,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
 
       const document = createMockDocument(tscnContent);
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = symbolsOf(provider, document);
+      const symbols = provider.provideDocumentSymbols(document);
 
       expect(symbols).toHaveLength(1);
       expect(symbols[0]!.children).toHaveLength(1); // Level1
@@ -182,7 +149,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 
       const document = createMockDocument(tscnContent);
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = symbolsOf(provider, document);
+      const symbols = provider.provideDocumentSymbols(document);
 
       const root = symbols[0]!;
       expect(root.name).toBe('Root');
@@ -203,7 +170,7 @@ visible = true
 
       const document = createMockDocument(tscnContent);
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = symbolsOf(provider, document);
+      const symbols = provider.provideDocumentSymbols(document);
 
       const root = symbols[0]!;
       const child = root.children[0]!;
@@ -230,7 +197,7 @@ visible = true
 
       const document = createMockDocument(tscnContent);
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = symbolsOf(provider, document);
+      const symbols = provider.provideDocumentSymbols(document);
 
       const ab = symbols[0]!.children.find((c) => c.name === 'AB')!;
       const b = symbols[0]!.children.find((c) => c.name === 'B')!;
@@ -257,7 +224,7 @@ visible = true
 
       const document = createMockDocument(tscnContent);
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = symbolsOf(provider, document);
+      const symbols = provider.provideDocumentSymbols(document);
 
       const foo = symbols[0]!.children.find((c) => c.name === 'Foo')!;
       const bar = symbols[0]!.children.find((c) => c.name === 'Bar')!;
@@ -284,7 +251,7 @@ visible = true
 
       const document = createMockDocument(tscnContent);
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = symbolsOf(provider, document);
+      const symbols = provider.provideDocumentSymbols(document);
 
       expect(symbols[0]!.children).toHaveLength(3);
       expect(symbols[0]!.children[0]!.kind).toBe(vscode.SymbolKind.Object); // SpotLight3D

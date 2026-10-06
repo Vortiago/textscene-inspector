@@ -2,7 +2,7 @@
  * End-to-end tests over JSON-RPC: build the server bundle, spawn it, and speak LSP over its
  * stdio. A smoke test proves the framing and the capability wiring. The answer tests open the
  * shared fixture project and check every feature against `answers.json`, which the VS Code
- * suites check too, so both hosts give one answer for one position (ADR-0046).
+ * suites check too, so both hosts give one answer for one position (ADR-0049).
  */
 
 import { execSync } from 'node:child_process';

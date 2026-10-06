@@ -1,6 +1,6 @@
 /**
- * The Outline view and breadcrumbs for `.tscn` files: the scene tree from the language-feature
- * engine, so the outline matches the `tscn-lsp` server's.
+ * The Outline view, the breadcrumbs and the Scene Tree view for `.tscn` files: the scene
+ * tree from the language-feature engine, so each matches the `tscn-lsp` server's outline.
  */
 
 import * as vscode from 'vscode';
@@ -28,10 +28,7 @@ function toVscodeSymbol(symbol: DocumentSymbol): vscode.DocumentSymbol {
 }
 
 export class TscnDocumentSymbolProvider implements vscode.DocumentSymbolProvider {
-  provideDocumentSymbols(
-    document: vscode.TextDocument,
-    _token: vscode.CancellationToken
-  ): vscode.DocumentSymbol[] {
+  provideDocumentSymbols(document: vscode.TextDocument): vscode.DocumentSymbol[] {
     return documentSymbols(languageDocumentOf(document)).map(toVscodeSymbol);
   }
 }
