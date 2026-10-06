@@ -30,22 +30,42 @@ function sceneWith(resPath: string): string {
   ].join('\n');
 }
 
-/** How long a `project.godot` created or deleted on disk may take to reach the extension's file watcher. */
-const WATCHER_DELIVERY_MS = 10000;
-
-/** Polls `read` every 100ms until `accept` holds for its value, and returns the last value. */
-async function readUntil<T>(
-  read: () => Thenable<T>,
-  accept: (value: T) => boolean,
-  timeoutMs: number
-): Promise<T> {
-  const deadline = Date.now() + timeoutMs;
-  let value = await read();
-  while (!accept(value) && Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    value = await read();
+/**
+ * Runs `change` and resolves once VS Code reports it through `subscribe` on a watcher for
+ * `file`. VS Code calls the watchers in the order they were created, so the extension's own
+ * watcher has handled the event by then.
+ */
+async function afterWatcherReports(
+  file: string,
+  subscribe: (watcher: vscode.FileSystemWatcher) => (listener: () => void) => vscode.Disposable,
+  change: () => void
+): Promise<void> {
+  const watcher = vscode.workspace.createFileSystemWatcher(
+    new vscode.RelativePattern(path.dirname(file), path.basename(file))
+  );
+  try {
+    const reported = new Promise<void>((resolve) => subscribe(watcher)(() => resolve()));
+    change();
+    await reported;
+  } finally {
+    watcher.dispose();
   }
-  return value;
+}
+
+function writeProjectFile(file: string): Promise<void> {
+  return afterWatcherReports(
+    file,
+    (watcher) => (listener) => watcher.onDidCreate(listener),
+    () => fs.writeFileSync(file, 'config_version=5\n')
+  );
+}
+
+function removeProjectFile(file: string): Promise<void> {
+  return afterWatcherReports(
+    file,
+    (watcher) => (listener) => watcher.onDidDelete(listener),
+    () => fs.rmSync(file)
+  );
 }
 
 /** Shows the scene in an editor, since VS Code drops the model of a document no editor shows. */
@@ -123,32 +143,29 @@ suite('Project roots', () => {
     await removeGodotProject(FOLDER);
   });
 
+  /** Each test starts outside every project, with the extension's caches cleared by the delete. */
+  teardown(async () => {
+    const projectFile = path.join(dir, 'project.godot');
+    if (fs.existsSync(projectFile)) await removeProjectFile(projectFile);
+  });
+
   test('a scene outside every project gets no link target, no definition and no res:// path', async () => {
-    fs.rmSync(path.join(dir, 'project.godot'), { force: true });
     const scene = await shown(path.join(dir, 'workspace-path.tscn'));
 
     assert.strictEqual(await linkTarget(scene), null);
     assert.deepStrictEqual(await definitionTargets(scene, WORKSPACE_PATH), []);
-    const paths = await readUntil(
-      () => offeredPaths(scene, WORKSPACE_PATH),
-      (offered) => offered.length === 0,
-      WATCHER_DELIVERY_MS
-    );
-    assert.deepStrictEqual(paths, []);
+    assert.deepStrictEqual(await offeredPaths(scene, WORKSPACE_PATH), []);
   });
 
   test('a project.godot created later gives the scene its root, with no reload', async () => {
-    fs.writeFileSync(path.join(dir, 'project.godot'), 'config_version=5\n');
     const scene = await shown(path.join(dir, 'project-path.tscn'));
+    assert.deepStrictEqual(await offeredPaths(scene, PROJECT_PATH), []);
+
+    await writeProjectFile(path.join(dir, 'project.godot'));
 
     assert.strictEqual(await linkTarget(scene), grid);
     assert.deepStrictEqual(await definitionTargets(scene, PROJECT_PATH), [grid]);
-    // The path listing refreshes when the file watcher reports the new project.godot.
-    const paths = await readUntil(
-      () => offeredPaths(scene, PROJECT_PATH),
-      (offered) => offered.includes(PROJECT_PATH),
-      WATCHER_DELIVERY_MS
-    );
+    const paths = await offeredPaths(scene, PROJECT_PATH);
     assert.ok(paths.includes(PROJECT_PATH), `offered: ${paths.join(', ')}`);
   });
 });
