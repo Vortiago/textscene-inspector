@@ -43,54 +43,28 @@ export async function jumpToNodeDefinition(
 ): Promise<void> {
   try {
     const document = await vscode.workspace.openTextDocument(resource);
-    const targetLine = findNodeHeadingLine(document.getText().split('\n'), nodeName, expectedParent);
+    const text = document.getText();
+    const lines = text.split('\n');
+
+    const targetLine = findNodeHeadingLine(lines, nodeName, expectedParent);
 
     if (targetLine === -1) {
       vscode.window.showWarningMessage(`Could not find node "${nodeName}" in file`);
       return;
     }
 
-    await showLine(resource, document, targetLine, previewColumn);
+    const editor = await vscode.window.showTextDocument(document, {
+      viewColumn: columnHolding(resource, previewColumn) ?? freshColumn(previewColumn),
+      preserveFocus: false,
+    });
+
+    const position = new vscode.Position(targetLine, 0);
+    const range = new vscode.Range(position, position);
+    editor.selection = new vscode.Selection(range.start, range.end);
+    editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
   } catch (error) {
-    showJumpFailure(error);
+    vscode.window.showErrorMessage(
+      `Failed to jump to node: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
-}
-
-/**
- * Open `resource` with the cursor on `line`, placed as `jumpToNodeDefinition` places it.
- * The Scene Tree view calls it with the line its entry was built from.
- */
-export async function revealSceneLine(
-  resource: vscode.Uri,
-  line: number,
-  previewColumn: vscode.ViewColumn | undefined
-): Promise<void> {
-  try {
-    await showLine(resource, await vscode.workspace.openTextDocument(resource), line, previewColumn);
-  } catch (error) {
-    showJumpFailure(error);
-  }
-}
-
-async function showLine(
-  resource: vscode.Uri,
-  document: vscode.TextDocument,
-  line: number,
-  previewColumn: vscode.ViewColumn | undefined
-): Promise<void> {
-  const editor = await vscode.window.showTextDocument(document, {
-    viewColumn: columnHolding(resource, previewColumn) ?? freshColumn(previewColumn),
-    preserveFocus: false,
-  });
-
-  const position = new vscode.Position(line, 0);
-  const range = new vscode.Range(position, position);
-  editor.selection = new vscode.Selection(range.start, range.end);
-  editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
-}
-
-function showJumpFailure(error: unknown): void {
-  vscode.window.showErrorMessage(
-    `Failed to jump to node: ${error instanceof Error ? error.message : 'Unknown error'}`
-  );
 }
