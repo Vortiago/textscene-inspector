@@ -17,7 +17,12 @@ on each pull request and on `main`. To run every test that imports a file, run
 
 A pushed TypeScript file type-checks its package and every package that depends on it. A change
 in `apps/textscene-web` checks only the web previewer. A change in `packages/textscene-core`
-checks core and each app.
+checks core and each app. Core, the dev kit and the CLI linter run only `type-check:tests`, because
+their tests project already holds every source file. CI runs `type-check` for them too.
+
+Core's `type-check:tests` keeps its last result in `tsconfig.tests.tsbuildinfo`, so a later run
+checks only the changed files and the files they affect. Delete the file to check every file
+again.
 
 A change to the toolchain (`package.json`, the lockfile, a `tsconfig`, a vitest, eslint or
 Prettier config, or a hook) runs the static checks over the whole repository: `format:check`,
