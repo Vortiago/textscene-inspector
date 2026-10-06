@@ -1,8 +1,8 @@
 /**
- * The Scene Tree view's signals in real VS Code. While a preview is the active editor,
- * VS Code has no active text editor, so its Outline is empty. The view follows the
- * preview's own active state instead, which only a real `WebviewPanel` reports. The
- * webview-CSP gate reads the drawn view in the workbench.
+ * The Scene Tree view's signals in real VS Code. The Outline reads only a text editor,
+ * so it is empty while a preview is the active editor. The view follows the preview's
+ * own active state instead, which only a real `WebviewPanel` reports. The webview-CSP
+ * gate reads the drawn view in the workbench.
  */
 
 import * as assert from 'assert';
@@ -60,15 +60,17 @@ suite('Scene Tree', () => {
     assert.ok(explorerViews.includes(SCENE_TREE_VIEW_ID), `explorer views: ${explorerViews.join(', ')}`);
   });
 
-  test('the active preview leaves no text editor, and the view follows the preview', async () => {
-    await vscode.window.showTextDocument(main);
+  test('the active preview wins over the text editor of another scene', async () => {
+    await vscode.window.showTextDocument(level);
     preview = TscnPreviewPanel.create(getExtensionUri(), main.uri);
 
     await waitFor(
-      () => vscode.window.activeTextEditor === undefined,
+      () => preview!.isActive,
       FOCUS_TIMEOUT_MS,
-      () => `the Outline still has a text editor to read: ${vscode.window.activeTextEditor?.document.uri}`
+      () => 'the new preview never became active'
     );
+    // In a window without focus, as on macOS CI, VS Code still reports the last text editor
+    // as active, so the view must ask the preview first.
     assert.strictEqual(
       activeScene([preview], vscode.window.activeTextEditor)?.toString(),
       main.uri.toString()
