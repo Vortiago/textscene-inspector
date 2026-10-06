@@ -17,8 +17,8 @@ Follow [Build from source](README.md#build-from-source). `pnpm install` also ena
 
 ## Check it
 
-The git hooks check each commit and push. CI runs the full gate on the pull request.
-`pnpm validate` runs the full gate locally.
+The git hooks check each commit and push. `pnpm check` runs the push checks before a commit. CI
+runs the full gate on the pull request. `pnpm validate` runs the full gate locally.
 
 ## Open the pull request
 
