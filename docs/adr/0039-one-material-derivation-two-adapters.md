@@ -4,7 +4,7 @@
 - Related: ADR-0031 (resource slices: a slice's `decode.ts` owns Godot semantics and no
   consumer decodes. This ADR extends that rule one layer outward, from decoding to
   deriving). ADR-0038 (one owner for each program input: it owns the merged bag's React
-  key, so the derivation below carries no `key`). ADR-0032 (sub-resource paths: the
+  key, so the derivation below carries no `key`). ADR-0046 (sub-resource paths: the
   producer-side gate that decides which material types are worth addressing, and so what
   `ORMMaterial3D` does).
 
@@ -244,7 +244,7 @@ roughness/metallic/AO properties hidden from the inspector (`:2694-2696`).
 
 It is not decoded. `BUILDABLE_MATERIAL_TYPES` holds `StandardMaterial3D` and
 `ShaderMaterial` only, so `createMaterialFromContent` throws `Unsupported material type:
-ORMMaterial3D`. A producer reads that same set before it mints an address (ADR-0032),
+ORMMaterial3D`. A producer reads that same set before it mints an address (ADR-0046),
 which keeps the throw from becoming a permanent missing-resources row for a file that is
 present and correct. Two corpus files reach it:
 `scenes/demos/3d/procedural_materials/materials/wet_concrete.tres` (its own

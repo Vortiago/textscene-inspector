@@ -70,7 +70,7 @@ export function previewShellProviders({
     (children) => <AnimationDriverProvider>{children}</AnimationDriverProvider>,
     // A `<SubViewport>` publishes its target here and a `ViewportTexture` resolves
     // it by NodePath. It wraps both canvases and the DOM overlay, since consumers
-    // live on both sides (ADR-0030).
+    // live on both sides (ADR-0033).
     (children) => <ViewportTextureProvider>{children}</ViewportTextureProvider>,
     // Inside the texture registry: a pass registers its ordering edge and
     // publishes the target it rendered, so the two are read together.

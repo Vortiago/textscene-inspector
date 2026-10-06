@@ -3,7 +3,7 @@
  * Split Dock (ADR-0007), the scene tree over a tabbed detail pane. There is no
  * left rail, since the VS Code webview already sits right of the activity bar.
  * A narrow panel turns the dock into a bottom sheet that shows one half at a time
- * (ADR-0042).
+ * (ADR-0048).
  */
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import {
