@@ -13,6 +13,7 @@ import { REPO_ROOT } from '../repoRoot.mjs';
 export const RELEASE_PACKAGES = {
   vscode: 'apps/textscene-vscode',
   linter: 'apps/textscene-linter',
+  lsp: 'apps/textscene-lsp',
 };
 
 /**
@@ -59,7 +60,9 @@ function sameSeries(release, tags) {
 export function checkReleaseTag(tag, tags) {
   const release = parseReleaseTag(tag);
   if (!release) {
-    return { error: `expected a tag like vscode-v1.2.3 or linter-v1.2.3, got ${JSON.stringify(tag)}` };
+    return {
+      error: `expected a tag like vscode-v1.2.3, linter-v1.2.3 or lsp-v1.2.3, got ${JSON.stringify(tag)}`,
+    };
   }
   const directory = RELEASE_PACKAGES[release.package];
   if (!directory) {
