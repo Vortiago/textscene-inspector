@@ -77,6 +77,8 @@ export const mockUri = {
 
 export const mockCommands: any = {
   registerCommand: vi.fn(),
+
+  executeCommand: vi.fn().mockResolvedValue(undefined),
 };
 
 export const mockLanguages: any = {

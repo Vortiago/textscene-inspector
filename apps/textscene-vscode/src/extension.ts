@@ -8,6 +8,7 @@ import { TscnDocumentSymbolProvider } from './TscnDocumentSymbolProvider';
 import { TscnDefinitionProvider } from './TscnDefinitionProvider';
 import { TscnDocumentLinkProvider } from './TscnDocumentLinkProvider';
 import { TscnDiagnostics } from './TscnDiagnostics';
+import { SceneTreeView } from './sceneTree/SceneTreeView';
 import { initLogger, dispose as disposeLogger } from './logger';
 import { isUri } from './uriArgument';
 import { PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN } from './watchPatterns';
@@ -16,6 +17,8 @@ export function activate(context: vscode.ExtensionContext) {
   initLogger('TextScene Inspector');
 
   const panels = new Map<string, TscnPreviewPanel>();
+  const sceneTree = new SceneTreeView(panels);
+  context.subscriptions.push(sceneTree);
 
   const getOrCreatePanel = (resource: vscode.Uri): TscnPreviewPanel => {
     const key = resource.toString();
@@ -32,6 +35,8 @@ export function activate(context: vscode.ExtensionContext) {
     panel.onDidDispose(() => {
       panels.delete(key);
     });
+    // After the delete above, so a closed preview is gone from the map the view reads.
+    sceneTree.follow(panel);
 
     return panel;
   };

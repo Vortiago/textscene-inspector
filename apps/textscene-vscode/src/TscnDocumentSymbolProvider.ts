@@ -1,5 +1,6 @@
 /**
- * Provides document symbols for TSCN files, enabling Outline view and breadcrumbs.
+ * Provides document symbols for TSCN files: the Outline view, the breadcrumbs and the
+ * Scene Tree view.
  */
 
 import * as vscode from 'vscode';
@@ -21,6 +22,11 @@ export class TscnDocumentSymbolProvider implements vscode.DocumentSymbolProvider
     document: vscode.TextDocument,
     _token: vscode.CancellationToken
   ): vscode.ProviderResult<vscode.DocumentSymbol[]> {
+    return this.symbolsOf(document);
+  }
+
+  /** The node tree under the root node. Empty for a scene with no nodes or one that fails to parse. */
+  symbolsOf(document: vscode.TextDocument): vscode.DocumentSymbol[] {
     try {
       const parser = new TscnParser();
       const parsed = parser.parse(document.getText());

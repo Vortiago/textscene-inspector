@@ -34,6 +34,9 @@ export class TscnPreviewPanel {
   private _latestLoad = 0;
   private _onDidDispose: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidDispose: vscode.Event<void> = this._onDidDispose.event;
+  /** Fires when the panel gains or loses the active editor slot, or moves. */
+  private _onDidChangeViewState: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
+  public readonly onDidChangeViewState: vscode.Event<void> = this._onDidChangeViewState.event;
 
   /**
    * Webview-ready handshake. The `useEffect` that installs the webview's `message`
@@ -86,6 +89,7 @@ export class TscnPreviewPanel {
     this._loadTscnContent(resource);
 
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+    this._panel.onDidChangeViewState(() => this._onDidChangeViewState.fire(), null, this._disposables);
 
     const handlers: WebviewMessageHandlers = {
       webviewReady: (_msg) => {
@@ -137,10 +141,20 @@ export class TscnPreviewPanel {
     }
 
     this._onDidDispose.dispose();
+    this._onDidChangeViewState.dispose();
   }
 
   public get resource(): vscode.Uri {
     return this._currentResource;
+  }
+
+  /** Whether the preview is the active editor, the one VS Code's own views follow. */
+  public get isActive(): boolean {
+    return this._panel.active;
+  }
+
+  public get viewColumn(): vscode.ViewColumn | undefined {
+    return this._panel.viewColumn;
   }
 
   public update(resource: vscode.Uri) {

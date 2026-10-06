@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * End-to-end gate (`pnpm test:vscode:csp`): a lit 3D mesh draws in its material's
- * colour, Control text and a worker-built noise texture paint inside the real VS Code
+ * colour, the Scene Tree view lists its nodes while its preview is the active editor, Control text and a worker-built noise texture paint inside the real VS Code
  * webview, under the production CSP, with nothing fetched, an ArrayMesh edited on disk
  * redraws through the real file watcher, host and loader, and a text glTF draws its
  * external buffer and texture. `TEXTSCENE_VSCODE_VERSION` picks the VS Code build, as
@@ -12,7 +12,8 @@ import { spawnSync } from 'node:child_process';
 import { copyFileSync, cpSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { assertExtensionBuilt, driveScene, REPO_ROOT, resolveVscodeBinary } from './driveScene.mjs';
-import { blankSceneText, hideSceneNode } from './sceneText.mjs';
+import { blankSceneText, hideSceneNode, sceneNodeNames } from './sceneText.mjs';
+import { readSceneTreePane } from './sceneTreePane.mjs';
 import { withSurfaceAlbedo } from './meshEdit.mjs';
 import { diffMask, meanColourUnderMask, missingPlaceholderPixels } from './pixels.mjs';
 import { installTextureWorkProbe } from '../e2e/textureWorkProbe.mjs';
@@ -158,6 +159,7 @@ function prepareScenes() {
   writeFileSync(box, boxSource);
   const boxHidden = path.join(workspace, 'box-hidden.tscn');
   writeFileSync(boxHidden, hideSceneNode(boxSource, BOX_NODE));
+  const boxNodes = sceneNodeNames(boxSource);
 
   const lampDir = path.join(workspace, 'town', 'lamp');
   cpSync(path.join(REPO_ROOT, GLTF_EXTERNAL_DIR), lampDir, { recursive: true });
@@ -172,6 +174,7 @@ function prepareScenes() {
     meshEdit,
     box,
     boxHidden,
+    boxNodes,
     gltfExternal,
     replacements,
   };
@@ -324,6 +327,24 @@ function checkBox(gate, box, hidden) {
 }
 
 /**
+ * The Scene Tree view listed the box scene's nodes while the preview was the active
+ * editor, the state in which VS Code's own Outline has nothing to show.
+ */
+function checkSceneTree(gate, report, expectedNodes) {
+  const pane = report.workbenchProbe;
+  gate.check(pane?.header === true, '[box] the Explorer shows no Scene Tree view');
+  gate.check(
+    pane?.activeTab?.startsWith('Preview:') === true,
+    `[box] the preview was not the active editor while the Scene Tree view was read: ${pane?.activeTab}`
+  );
+  gate.check(
+    JSON.stringify(pane?.rows) === JSON.stringify(expectedNodes),
+    `[box] the Scene Tree view lists ${JSON.stringify(pane?.rows)} with the preview active, ` +
+      `expected ${JSON.stringify(expectedNodes)}`
+  );
+}
+
+/**
  * The text glTF loaded: its buffer and texture arrived with no fetch, which `checkRun`'s
  * CSP and console checks prove, and no missing-resource placeholder drew in its place.
  */
@@ -369,6 +390,7 @@ async function main() {
     meshEdit,
     box,
     boxHidden,
+    boxNodes,
     gltfExternal,
     replacements,
   } = prepareScenes();
@@ -395,7 +417,7 @@ async function main() {
     // bounds, so the camera fit agrees, and a reload that drew anything else differs.
     { label: 'hot-reload', scene: hotReload, edit: meshEdit },
     { label: 'hot-reload-fresh', scene: hotReload },
-    { label: 'box', scene: box },
+    { label: 'box', scene: box, workbenchProbe: readSceneTreePane },
     { label: 'box-hidden', scene: boxHidden },
     { label: 'gltf-external', scene: gltfExternal },
   ];
@@ -431,6 +453,7 @@ async function main() {
       headed: opts.headed,
       keepOpen: 0,
       evalFile: run.evalFile,
+      workbenchProbe: run.workbenchProbe,
       initScripts: run.initScripts,
       edit: run.edit,
       verbose: opts.verbose,
@@ -485,6 +508,7 @@ async function main() {
 
   checkHotReload(gate, reports['hot-reload'], reports['hot-reload-fresh']);
   const boxResult = checkBox(gate, reports.box, reports['box-hidden']);
+  checkSceneTree(gate, reports.box, boxNodes);
   checkGltfExternal(gate, reports['gltf-external']);
 
   console.log('\n[gate] canvas readback');
@@ -509,6 +533,10 @@ async function main() {
     `  box           ${boxResult?.diffPixels} px differ from the twin` +
       `  mean=${JSON.stringify(boxResult?.colour)}  blue/red=${boxResult?.blueToRed}`
   );
+  console.log(
+    `  scene tree    ${JSON.stringify(reports.box.workbenchProbe?.rows)}` +
+      `  active=${JSON.stringify(reports.box.workbenchProbe?.activeTab)}`
+  );
   for (const run of runs) {
     const webview = reports[run.label].webview;
     console.log(
@@ -527,7 +555,7 @@ async function main() {
     return;
   }
   console.log(
-    '\n[gate] PASSED — a lit box draws in its material colour, glyphs and a worker-built texture paint in the real webview, offline, ' +
+    '\n[gate] PASSED — a lit box draws in its material colour, the Scene Tree view follows its preview, glyphs and a worker-built texture paint in the real webview, offline, ' +
       'under the real CSP, a mesh edited on disk redraws in place, and a text glTF loads its files'
   );
 }

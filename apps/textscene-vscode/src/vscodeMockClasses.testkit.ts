@@ -8,11 +8,19 @@
 
 import { vi } from 'vitest';
 
+/** Takes two positions, or four numbers as the real `Range` does, and holds two positions. */
 export class MockRange {
-  constructor(
-    public start: any,
-    public end: any
-  ) {}
+  public start: any;
+  public end: any;
+
+  constructor(...args: any[]) {
+    if (args.length === 4) {
+      this.start = new MockPosition(args[0], args[1]);
+      this.end = new MockPosition(args[2], args[3]);
+    } else {
+      [this.start, this.end] = args;
+    }
+  }
 }
 
 export class MockPosition {
@@ -172,4 +180,25 @@ export const MockSymbolKind: Record<string, number> = {
   Event: 23,
   Operator: 24,
   TypeParameter: 25,
+};
+
+export class MockTreeItem {
+  description?: string;
+  iconPath?: unknown;
+  command?: { command: string; title: string; arguments?: unknown[] };
+
+  constructor(
+    public label: string,
+    public collapsibleState: number
+  ) {}
+}
+
+export class MockThemeIcon {
+  constructor(public id: string) {}
+}
+
+export const MockTreeItemCollapsibleState = {
+  None: 0,
+  Collapsed: 1,
+  Expanded: 2,
 };

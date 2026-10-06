@@ -3,7 +3,8 @@
  * against: one with every text emptied, one with a node hidden. They are derived
  * at run time, since a committed copy drifts when the fixture changes. A twin
  * differs from its scene in one thing, so a pixel the two do not share is a
- * pixel that one thing painted.
+ * pixel that one thing painted. It also lists the node names the gate expects in
+ * the Scene Tree view.
  */
 
 /**
@@ -43,4 +44,18 @@ export function hideSceneNode(source, name) {
   if (!match) throw new Error(`expected a [node name="${name}"] header, found none`);
   const end = match.index + match[0].length;
   return `${source.slice(0, end)}\nvisible = false${source.slice(end)}`;
+}
+
+/** A `[node …]` heading's `name`. Godot writes the name first. */
+const NODE_NAME = /^\[node name="((?:[^"\\]|\\.)*)"/gm;
+
+/**
+ * The name of every node, in heading order. Godot writes a parent before its
+ * children, so this is the order a tree lists them in, fully expanded.
+ *
+ * @param {string} source `.tscn` text
+ * @returns {string[]}
+ */
+export function sceneNodeNames(source) {
+  return [...source.matchAll(NODE_NAME)].map((match) => match[1]);
 }

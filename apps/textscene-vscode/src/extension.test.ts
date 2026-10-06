@@ -6,6 +6,7 @@ import { createMockUri, vscode } from './test-setup';
 import { TscnPreviewPanel } from './TscnPreviewPanel';
 import * as logger from './logger';
 import { TscnDiagnostics } from './TscnDiagnostics';
+import { SceneTreeView } from './sceneTree/SceneTreeView';
 import { PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN } from './watchPatterns';
 
 vi.mock('./TscnPreviewPanel', () => ({
@@ -17,6 +18,17 @@ vi.mock('./TscnPreviewPanel', () => ({
 // TscnDiagnostics has its own unit tests.
 vi.mock('./TscnDiagnostics', () => ({
   TscnDiagnostics: vi.fn(function (this: { dispose: ReturnType<typeof vi.fn> }) {
+    this.dispose = vi.fn();
+  }),
+}));
+
+// SceneTreeView has its own unit tests.
+vi.mock('./sceneTree/SceneTreeView', () => ({
+  SceneTreeView: vi.fn(function (this: {
+    follow: ReturnType<typeof vi.fn>;
+    dispose: ReturnType<typeof vi.fn>;
+  }) {
+    this.follow = vi.fn();
     this.dispose = vi.fn();
   }),
 }));
@@ -137,9 +149,18 @@ describe('Extension', () => {
     it('should add disposables to context subscriptions', () => {
       activate(mockContext);
 
-      // command, symbol, definition and document link providers, diagnostics, save
-      // listener, and for each of the two watchers itself plus its three handlers.
-      expect(mockContext.subscriptions.length).toBe(14);
+      // scene tree view, command, symbol, definition and document link providers,
+      // diagnostics, save listener, and for each of the two watchers itself plus its
+      // three handlers.
+      expect(mockContext.subscriptions.length).toBe(15);
+    });
+
+    it('hands the Scene Tree view the live map of previews', () => {
+      activate(mockContext);
+      openPanelFor('/workspace/test.tscn');
+
+      const [previews] = (SceneTreeView as unknown as Mock).mock.calls[0]! as [Map<string, unknown>];
+      expect([...previews.values()]).toEqual([mockPanel]);
     });
 
     it('should register a document link provider for res:// references', () => {
@@ -316,6 +337,14 @@ describe('Extension', () => {
   });
 
   describe('Panel Lifecycle', () => {
+    it('has the Scene Tree view follow each preview it opens', () => {
+      activate(mockContext);
+      openPanelFor('/workspace/test.tscn');
+
+      const sceneTree = (SceneTreeView as unknown as Mock).mock.instances[0] as { follow: Mock };
+      expect(sceneTree.follow).toHaveBeenCalledWith(mockPanel);
+    });
+
     it('should remove panel from tracking when disposed', () => {
       const mockDocument = {
         uri: createMockUri('/workspace/scene.tscn'),

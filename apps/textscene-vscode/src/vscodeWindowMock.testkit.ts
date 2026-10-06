@@ -2,7 +2,7 @@
 
 /**
  * `vscode.window`: the message dialogs, the editor, the tab groups, the webview
- * panel factory and the output channel.
+ * panel and tree view factories, and the output channel.
  */
 
 import { vi } from 'vitest';
@@ -19,6 +19,10 @@ export const mockWindow: any = {
   showTextDocument: vi.fn(),
 
   activeTextEditor: undefined,
+
+  onDidChangeActiveTextEditor: vi.fn(() => ({ dispose: vi.fn() })),
+
+  createTreeView: vi.fn(() => ({ description: undefined, dispose: vi.fn() })),
 
   /** No editor tabs open. A test that needs some assigns its own `all`. */
   tabGroups: { all: [] },
