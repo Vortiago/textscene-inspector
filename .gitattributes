@@ -6,4 +6,5 @@ scenes/isometric/** linguist-vendored
 # answers.json gives each expected position as a line and a character, so a CRLF checkout would move them.
 scenes/language-features/**/*.tscn text eol=lf
 scenes/language-features/**/*.godot text eol=lf
+scenes/language-features/**/*.tres text eol=lf
 scenes/language-features/**/*.json text eol=lf

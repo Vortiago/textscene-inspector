@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3 uid="uid://textscene_lf_links"]
+
+[sub_resource type="GDScript" id="Script_1"]
+script/source = "extends Node3D
+var grid := preload(\"res://textures/grid.png\")
+"
+
+[node name="Links" type="Node3D"]
+script = SubResource("Script_1")
+editor_description = "uses res://textures/grid.png for the floor"
+metadata/frame = "res://textures/grid.png::Image_1"

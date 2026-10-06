@@ -7,8 +7,13 @@
         "line": "[node name=\"Box\"",
         "inside": "MeshInstance3D"
       },
-      "markdown": "**MeshInstance3D**\n\nGodot class, extends `GeometryInstance3D` → `VisualInstance3D` → `Node3D` → `Node`.\n\n[Class reference](https://docs.godotengine.org/en/stable/classes/class_meshinstance3d.html)",
-      "range": [12, 23, 12, 37]
+      "markdown": "**MeshInstance3D**\n\nGodot class, extends `GeometryInstance3D` \u2192 `VisualInstance3D` \u2192 `Node3D` \u2192 `Node`.\n\n[Class reference](https://docs.godotengine.org/en/stable/classes/class_meshinstance3d.html)",
+      "range": [
+        12,
+        23,
+        12,
+        37
+      ]
     },
     {
       "name": "a property key names its type, declaring class and accepted resource",
@@ -18,7 +23,12 @@
         "inside": "mesh"
       },
       "markdown": "**mesh** `Object`\n\nDeclared by `MeshInstance3D`.\n\nA resource of `Mesh`.\n\n[Reference](https://docs.godotengine.org/en/stable/classes/class_meshinstance3d.html#class-meshinstance3d-property-mesh)",
-      "range": [13, 0, 13, 4]
+      "range": [
+        13,
+        0,
+        13,
+        4
+      ]
     },
     {
       "name": "an ExtResource value names its declaration",
@@ -28,7 +38,12 @@
         "inside": "ExtResource"
       },
       "markdown": "External resource `1_grid`: `Texture2D`\n\n`res://textures/grid.png`",
-      "range": [8, 17, 8, 38]
+      "range": [
+        8,
+        17,
+        8,
+        38
+      ]
     },
     {
       "name": "an integer ExtResource id names its declaration",
@@ -38,7 +53,12 @@
         "inside": "ExtResource"
       },
       "markdown": "External resource `1`: `Texture`\n\n`res://textures/grid.png`",
-      "range": [5, 17, 5, 33]
+      "range": [
+        5,
+        17,
+        5,
+        33
+      ]
     },
     {
       "name": "a repeated id names its first declaration",
@@ -48,7 +68,12 @@
         "inside": "SubResource"
       },
       "markdown": "Sub-resource `Mesh_1`: `BoxMesh`",
-      "range": [11, 7, 11, 28]
+      "range": [
+        11,
+        7,
+        11,
+        28
+      ]
     },
     {
       "name": "a single-quoted id is no reference, so it has no hover",
@@ -68,8 +93,15 @@
         "line": "[node name=\"Box\"",
         "after": "type=\""
       },
-      "includes": ["Node3D", "MeshInstance3D", "OmniLight3D"],
-      "excludes": ["BoxMesh", "StandardMaterial3D"]
+      "includes": [
+        "Node3D",
+        "MeshInstance3D",
+        "OmniLight3D"
+      ],
+      "excludes": [
+        "BoxMesh",
+        "StandardMaterial3D"
+      ]
     },
     {
       "name": "a sub_resource heading's type= offers resource classes, not node classes",
@@ -78,8 +110,14 @@
         "line": "[sub_resource type=\"BoxMesh\"",
         "after": "type=\""
       },
-      "includes": ["BoxMesh", "StandardMaterial3D"],
-      "excludes": ["Node3D", "MeshInstance3D"]
+      "includes": [
+        "BoxMesh",
+        "StandardMaterial3D"
+      ],
+      "excludes": [
+        "Node3D",
+        "MeshInstance3D"
+      ]
     },
     {
       "name": "a property key offers a property the node does not set yet",
@@ -88,8 +126,14 @@
         "line": "mesh = SubResource(\"BoxMesh_1\")",
         "after": ""
       },
-      "includes": ["visible", "cast_shadow", "skeleton"],
-      "excludes": ["mesh"]
+      "includes": [
+        "visible",
+        "cast_shadow",
+        "skeleton"
+      ],
+      "excludes": [
+        "mesh"
+      ]
     },
     {
       "name": "parent= offers the root and the path of each node declared above, as Godot instantiates in file order",
@@ -98,7 +142,11 @@
         "line": "[node name=\"Lamp\"",
         "after": "parent=\""
       },
-      "exactly": [".", "Box", "Floor"],
+      "exactly": [
+        ".",
+        "Box",
+        "Floor"
+      ],
       "kind": "Reference"
     },
     {
@@ -108,7 +156,10 @@
         "line": "[ext_resource",
         "after": "path=\"res://"
       },
-      "includes": ["res://textures/grid.png", "res://main.tscn"]
+      "includes": [
+        "res://textures/grid.png",
+        "res://main.tscn"
+      ]
     },
     {
       "name": "an ExtResource id offers the ids the file declares",
@@ -117,8 +168,15 @@
         "line": "albedo_texture = ",
         "after": "ExtResource(\""
       },
-      "exactly": ["1_grid"],
-      "replaces": [8, 30, 8, 30]
+      "exactly": [
+        "1_grid"
+      ],
+      "replaces": [
+        8,
+        30,
+        8,
+        30
+      ]
     },
     {
       "name": "a res:// value offers project files, but not .godot, a nested project or a .gdignore directory",
@@ -129,14 +187,76 @@
       },
       "exactly": [
         "res://deprecated.tscn",
+        "res://fixes.tscn",
         "res://ids.tscn",
         "res://legacy_ids.tscn",
+        "res://links.tscn",
         "res://main.tscn",
         "res://missing.tscn",
+        "res://mover.gd",
         "res://project.godot",
-        "res://textures/grid.png"
+        "res://textures/grid.png",
+        "res://typing.tres",
+        "res://typing.tscn"
       ],
-      "replaces": [15, 25, 15, 31]
+      "replaces": [
+        15,
+        25,
+        15,
+        31
+      ]
+    },
+    {
+      "name": "a word typed under an ext_resource heading offers no key, since that heading holds no properties",
+      "at": {
+        "file": "typing.tscn",
+        "line": "load",
+        "after": "load"
+      },
+      "exactly": []
+    },
+    {
+      "name": "a key typed in a node body offers the class's keys it does not set, replacing the typed text",
+      "at": {
+        "file": "typing.tscn",
+        "line": "omni_range",
+        "below": 1,
+        "after": "omni_"
+      },
+      "includes": [
+        "omni_attenuation",
+        "omni_shadow_mode"
+      ],
+      "excludes": [
+        "omni_range"
+      ],
+      "replaces": [
+        11,
+        0,
+        11,
+        5
+      ]
+    },
+    {
+      "name": "a word typed under a gd_resource header offers no key, since the header holds no properties",
+      "at": {
+        "file": "typing.tres",
+        "line": "albedo",
+        "after": "albedo"
+      },
+      "exactly": []
+    },
+    {
+      "name": "a key typed in a [resource] body offers the header class's keys",
+      "at": {
+        "file": "typing.tres",
+        "line": "albedo_",
+        "after": "albedo_"
+      },
+      "includes": [
+        "albedo_color",
+        "albedo_texture"
+      ]
     }
   ],
   "definition": [
@@ -150,7 +270,12 @@
       "targets": [
         {
           "file": "main.tscn",
-          "range": [2, 0, 2, 74]
+          "range": [
+            2,
+            0,
+            2,
+            74
+          ]
         }
       ]
     },
@@ -165,7 +290,12 @@
       "targets": [
         {
           "file": "main.tscn",
-          "range": [4, 0, 4, 44]
+          "range": [
+            4,
+            0,
+            4,
+            44
+          ]
         }
       ]
     },
@@ -179,7 +309,12 @@
       "targets": [
         {
           "file": "main.tscn",
-          "range": [2, 0, 2, 74]
+          "range": [
+            2,
+            0,
+            2,
+            74
+          ]
         }
       ]
     },
@@ -193,7 +328,12 @@
       "targets": [
         {
           "file": "main.tscn",
-          "range": [4, 0, 4, 44]
+          "range": [
+            4,
+            0,
+            4,
+            44
+          ]
         }
       ]
     },
@@ -216,7 +356,12 @@
       "targets": [
         {
           "file": "legacy_ids.tscn",
-          "range": [2, 0, 2, 65]
+          "range": [
+            2,
+            0,
+            2,
+            65
+          ]
         }
       ]
     },
@@ -230,7 +375,12 @@
       "targets": [
         {
           "file": "legacy_ids.tscn",
-          "range": [4, 0, 4, 42]
+          "range": [
+            4,
+            0,
+            4,
+            42
+          ]
         }
       ]
     },
@@ -244,7 +394,12 @@
       "targets": [
         {
           "file": "ids.tscn",
-          "range": [2, 0, 2, 41]
+          "range": [
+            2,
+            0,
+            2,
+            41
+          ]
         }
       ]
     },
@@ -267,7 +422,12 @@
       "targets": [
         {
           "file": "textures/grid.png",
-          "range": [0, 0, 0, 0]
+          "range": [
+            0,
+            0,
+            0,
+            0
+          ]
         }
       ]
     },
@@ -291,9 +451,24 @@
         "inside": "BoxMesh_1"
       },
       "ranges": [
-        [4, 33, 4, 42],
-        [13, 7, 13, 31],
-        [18, 7, 18, 31]
+        [
+          4,
+          33,
+          4,
+          42
+        ],
+        [
+          13,
+          7,
+          13,
+          31
+        ],
+        [
+          18,
+          7,
+          18,
+          31
+        ]
       ]
     },
     {
@@ -304,8 +479,18 @@
         "inside": "SubResource"
       },
       "ranges": [
-        [4, 40, 4, 41],
-        [10, 20, 10, 36]
+        [
+          4,
+          40,
+          4,
+          41
+        ],
+        [
+          10,
+          20,
+          10,
+          36
+        ]
       ]
     },
     {
@@ -316,8 +501,18 @@
         "inside": "SubResource"
       },
       "ranges": [
-        [2, 33, 2, 39],
-        [11, 7, 11, 28]
+        [
+          2,
+          33,
+          2,
+          39
+        ],
+        [
+          11,
+          7,
+          11,
+          28
+        ]
       ]
     },
     {
@@ -333,66 +528,207 @@
   "folding": {
     "file": "main.tscn",
     "ranges": [
-      [4, 5],
-      [7, 8],
-      [12, 15],
-      [17, 18],
-      [20, 21]
+      [
+        4,
+        5
+      ],
+      [
+        7,
+        8
+      ],
+      [
+        12,
+        15
+      ],
+      [
+        17,
+        18
+      ],
+      [
+        20,
+        21
+      ]
     ]
   },
-  "links": {
-    "file": "main.tscn",
-    "links": [
-      {
-        "range": [2, 37, 2, 60],
-        "target": "textures/grid.png"
-      },
-      {
-        "range": [15, 25, 15, 48],
-        "target": "textures/grid.png"
-      }
-    ]
-  },
-  "symbols": {
-    "file": "main.tscn",
-    "outline": ["Scene: Node3D", "  Box: MeshInstance3D", "    Lamp: OmniLight3D", "  Floor: MeshInstance3D"],
-    "symbols": [
-      {
-        "name": "Scene",
-        "kind": "Module",
-        "range": [10, 0, 21, 16],
-        "selectionRange": [10, 0, 10, 33]
-      },
-      {
-        "name": "Box",
-        "kind": "Class",
-        "range": [12, 0, 21, 16],
-        "selectionRange": [12, 0, 12, 50]
-      },
-      {
-        "name": "Lamp",
-        "kind": "Object",
-        "range": [20, 0, 21, 16],
-        "selectionRange": [20, 0, 20, 50]
-      },
-      {
-        "name": "Floor",
-        "kind": "Class",
-        "range": [17, 0, 18, 31],
-        "selectionRange": [17, 0, 17, 52]
-      }
-    ]
-  },
-  "quickFix": {
-    "name": "a deprecated property gets a rename to the engine spelling",
-    "at": {
-      "file": "deprecated.tscn",
-      "line": "frames = ",
-      "inside": "frames"
+  "links": [
+    {
+      "name": "main.tscn: every res:// path links to its file under the project root",
+      "file": "main.tscn",
+      "links": [
+        {
+          "range": [
+            2,
+            37,
+            2,
+            60
+          ],
+          "target": "textures/grid.png"
+        },
+        {
+          "range": [
+            15,
+            25,
+            15,
+            48
+          ],
+          "target": "textures/grid.png"
+        }
+      ]
     },
-    "title": "Rename deprecated 'frames' to 'sprite_frames'",
-    "fixedLine": "sprite_frames = SubResource(\"Frames_1\")"
-  },
+    {
+      "name": "links.tscn: a path in an escaped string, in prose and before ::, each links the file it names",
+      "file": "links.tscn",
+      "links": [
+        {
+          "range": [
+            4,
+            22,
+            4,
+            45
+          ],
+          "target": "textures/grid.png"
+        },
+        {
+          "range": [
+            9,
+            27,
+            9,
+            50
+          ],
+          "target": "textures/grid.png"
+        },
+        {
+          "range": [
+            10,
+            18,
+            10,
+            41
+          ],
+          "target": "textures/grid.png"
+        }
+      ]
+    }
+  ],
+  "symbols": [
+    {
+      "name": "main.tscn: the outline nests each node under its parent",
+      "file": "main.tscn",
+      "outline": [
+        "Scene: Node3D",
+        "  Box: MeshInstance3D",
+        "    Lamp: OmniLight3D",
+        "  Floor: MeshInstance3D"
+      ],
+      "symbols": [
+        {
+          "name": "Scene",
+          "kind": "Module",
+          "range": [
+            10,
+            0,
+            21,
+            16
+          ],
+          "selectionRange": [
+            10,
+            0,
+            10,
+            33
+          ]
+        },
+        {
+          "name": "Box",
+          "kind": "Class",
+          "range": [
+            12,
+            0,
+            21,
+            16
+          ],
+          "selectionRange": [
+            12,
+            0,
+            12,
+            50
+          ]
+        },
+        {
+          "name": "Lamp",
+          "kind": "Object",
+          "range": [
+            20,
+            0,
+            21,
+            16
+          ],
+          "selectionRange": [
+            20,
+            0,
+            20,
+            50
+          ]
+        },
+        {
+          "name": "Floor",
+          "kind": "Class",
+          "range": [
+            17,
+            0,
+            18,
+            31
+          ],
+          "selectionRange": [
+            17,
+            0,
+            17,
+            52
+          ]
+        }
+      ]
+    },
+    {
+      "name": "typing.tscn: a heading whose name is still empty stays out of the outline",
+      "file": "typing.tscn",
+      "outline": [
+        "Root: Node3D",
+        "  Lamp: OmniLight3D"
+      ]
+    }
+  ],
+  "quickFix": [
+    {
+      "name": "a deprecated property gets a rename to the engine spelling",
+      "at": {
+        "file": "deprecated.tscn",
+        "line": "frames = ",
+        "inside": "frames"
+      },
+      "titles": [
+        "Rename deprecated 'frames' to 'sprite_frames'"
+      ],
+      "fixedLine": "sprite_frames = SubResource(\"Frames_1\")"
+    },
+    {
+      "name": "an unknown key on a node with a script gets no typo repair, since the script may export it",
+      "at": {
+        "file": "fixes.tscn",
+        "line": "mass = ",
+        "inside": "mass"
+      },
+      "titles": []
+    },
+    {
+      "name": "a fix request covers its own line, not the other typos of the node",
+      "at": {
+        "file": "fixes.tscn",
+        "line": "mash = ",
+        "inside": "mash"
+      },
+      "titles": [
+        "Change 'mash' to 'mesh'"
+      ]
+    }
+  ],
   "diagnostics": [
     {
       "file": "main.tscn",
@@ -400,7 +736,24 @@
     },
     {
       "file": "missing.tscn",
-      "codes": ["collisionshape3d-requires-shape"]
+      "codes": [
+        "collisionshape3d-requires-shape"
+      ]
+    },
+    {
+      "file": "typing.tscn",
+      "codes": [
+        "strict-parser",
+        "strict-parser",
+        "strict-parser"
+      ]
+    },
+    {
+      "file": "typing.tres",
+      "codes": [
+        "strict-parser",
+        "strict-parser"
+      ]
     }
   ]
 }

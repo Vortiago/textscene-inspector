@@ -1,0 +1,4 @@
+{
+  "comment": "Files of the fixture project that freeze an edit halfway, as a user types it, so they MUST produce lint errors. answers.json asserts their diagnostics in both editor hosts. scripts/githooks/negativeFixtures.mjs reads this list, and the pre-commit and pre-push hooks skip these files, so a commit or a push does not fail on them.",
+  "files": ["typing.tscn", "typing.tres"]
+}

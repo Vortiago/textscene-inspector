@@ -132,10 +132,13 @@ export function defineSharedAnswersSuite(projectDir: string): void {
           document.uri,
           position
         );
-        const labels = list.items.map(labelOf);
+        // When no provider answers, VS Code adds its word-based suggestions, of kind Text. The
+        // extension offers no Text item, so the rest are the extension's own.
+        const items = list.items.filter((item) => item.kind !== vscode.CompletionItemKind.Text);
+        const labels = items.map(labelOf);
         if (answer.kind) {
           const kind = kindNamed(vscode.CompletionItemKind, answer.kind);
-          assert.deepStrictEqual(list.items.filter((item) => item.kind !== kind).map(labelOf), []);
+          assert.deepStrictEqual(items.filter((item) => item.kind !== kind).map(labelOf), []);
         }
 
         if (answer.exactly) assert.deepStrictEqual([...labels].sort(), [...answer.exactly].sort());
@@ -144,8 +147,8 @@ export function defineSharedAnswersSuite(projectDir: string): void {
           assert.ok(!labels.includes(label), `${label} is not offered`);
         if (answer.replaces) {
           assert.deepStrictEqual(
-            list.items.map((item) => item.range instanceof vscode.Range && rangeTuple(item.range)),
-            list.items.map(() => answer.replaces)
+            items.map((item) => item.range instanceof vscode.Range && rangeTuple(item.range)),
+            items.map(() => answer.replaces)
           );
         }
       });
@@ -198,79 +201,78 @@ export function defineSharedAnswersSuite(projectDir: string): void {
       );
     });
 
-    test('links: every res:// path links to its file under the project root', async () => {
-      const document = await documentOf(answers.links.file);
-      const links = await vscode.commands.executeCommand<vscode.DocumentLink[]>(
-        'vscode.executeLinkProvider',
-        document.uri,
-        // Resolve every link, as a hover or a click does.
-        Number.MAX_SAFE_INTEGER
-      );
+    for (const answer of answers.links) {
+      test(`links: ${answer.name}`, async () => {
+        const document = await documentOf(answer.file);
+        const links = await vscode.commands.executeCommand<vscode.DocumentLink[]>(
+          'vscode.executeLinkProvider',
+          document.uri,
+          // Resolve every link, as a hover or a click does.
+          Number.MAX_SAFE_INTEGER
+        );
 
-      assert.deepStrictEqual(
-        links.map((link) => ({
-          range: rangeTuple(link.range),
-          target: link.target ? projectPath(projectDir, link.target.fsPath) : null,
-        })),
-        answers.links.links
-      );
-    });
-
-    test('symbols: the Outline nests each node under its parent', async () => {
-      const document = await documentOf(answers.symbols.file);
-      const symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>(
-        'vscode.executeDocumentSymbolProvider',
-        document.uri
-      );
-
-      assert.deepStrictEqual(outlineOf(symbols), answers.symbols.outline);
-    });
-
-    test("symbols: each node's range covers its subtree, and its selection is its heading", async () => {
-      const document = await documentOf(answers.symbols.file);
-      const symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>(
-        'vscode.executeDocumentSymbolProvider',
-        document.uri
-      );
-
-      assert.deepStrictEqual(
-        flatten(symbols).map((symbol) => ({
-          name: symbol.name,
-          kind: symbol.kind,
-          range: rangeTuple(symbol.range),
-          selectionRange: rangeTuple(symbol.selectionRange),
-        })),
-        answers.symbols.symbols.map((symbol) => ({
-          ...symbol,
-          kind: kindNamed(vscode.SymbolKind, symbol.kind),
-        }))
-      );
-    });
-
-    test(`quick fix: ${answers.quickFix.name}, and applying it writes the engine spelling`, async () => {
-      const { at, title, fixedLine } = answers.quickFix;
-      const committed = await documentOf(at.file);
-      // An untitled copy, so applying the edit leaves the project file as the other tests read it.
-      const document = await vscode.workspace.openTextDocument({
-        language: 'tscn',
-        content: committed.getText(),
+        assert.deepStrictEqual(
+          links.map((link) => ({
+            range: rangeTuple(link.range),
+            target: link.target ? projectPath(projectDir, link.target.fsPath) : null,
+          })),
+          answer.links
+        );
       });
-      const position = cursorIn(document, at);
-      const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
-        'vscode.executeCodeActionProvider',
-        document.uri,
-        new vscode.Range(position, position)
-      );
-      const fix = actions.find((action) => action.title === title);
-      assert.ok(
-        fix?.edit,
-        `expected "${title}" with an edit, found ${JSON.stringify(actions.map((a) => a.title))}`
-      );
+    }
 
-      assert.ok(await vscode.workspace.applyEdit(fix.edit), 'VS Code applies the edit');
+    for (const answer of answers.symbols) {
+      test(`symbols: ${answer.name}`, async () => {
+        const document = await documentOf(answer.file);
+        const symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>(
+          'vscode.executeDocumentSymbolProvider',
+          document.uri
+        );
 
-      assert.strictEqual(document.lineAt(position.line).text, fixedLine);
-    });
+        assert.deepStrictEqual(outlineOf(symbols), answer.outline);
+        if (!answer.symbols) return;
+        // Each node's range covers its subtree, and its selection is its heading.
+        assert.deepStrictEqual(
+          flatten(symbols).map((symbol) => ({
+            name: symbol.name,
+            kind: symbol.kind,
+            range: rangeTuple(symbol.range),
+            selectionRange: rangeTuple(symbol.selectionRange),
+          })),
+          answer.symbols.map((symbol) => ({
+            ...symbol,
+            kind: kindNamed(vscode.SymbolKind, symbol.kind),
+          }))
+        );
+      });
+    }
+
+    for (const answer of answers.quickFix) {
+      test(`quick fix: ${answer.name}`, async () => {
+        const committed = await documentOf(answer.at.file);
+        // An untitled copy, so applying an edit leaves the project file as the other tests read it.
+        const document = await vscode.workspace.openTextDocument({
+          language: 'tscn',
+          content: committed.getText(),
+        });
+        const position = cursorIn(document, answer.at);
+        const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
+          'vscode.executeCodeActionProvider',
+          document.uri,
+          new vscode.Range(position, position)
+        );
+
+        assert.deepStrictEqual(
+          actions.map((action) => action.title),
+          answer.titles
+        );
+        if (answer.fixedLine === undefined) return;
+        const fix = actions[0]!;
+        assert.ok(fix.edit, `"${fix.title}" carries an edit`);
+        assert.ok(await vscode.workspace.applyEdit(fix.edit), 'VS Code applies the edit');
+        assert.strictEqual(document.lineAt(position.line).text, answer.fixedLine);
+      });
+    }
 
     for (const answer of answers.diagnostics) {
       const reports = answer.codes.length === 0 ? 'nothing' : answer.codes.join(', ');

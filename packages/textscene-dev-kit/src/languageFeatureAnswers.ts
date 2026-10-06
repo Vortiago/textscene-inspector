@@ -50,22 +50,31 @@ export interface LanguageFeatureAnswers {
   >;
   readonly highlights: ReadonlyArray<Named & { readonly ranges: readonly RangeTuple[] }>;
   readonly folding: { readonly file: string; readonly ranges: ReadonlyArray<[number, number]> };
-  readonly links: {
+  /** Every link of a file, in order. A null `target` is a link with no file to open. */
+  readonly links: ReadonlyArray<{
+    readonly name: string;
     readonly file: string;
-    readonly links: ReadonlyArray<{ readonly range: RangeTuple; readonly target: string }>;
-  };
-  readonly symbols: {
+    readonly links: ReadonlyArray<{ readonly range: RangeTuple; readonly target: string | null }>;
+  }>;
+  readonly symbols: ReadonlyArray<{
+    readonly name: string;
     readonly file: string;
     readonly outline: readonly string[];
     /** Every symbol in outline order, with its symbol kind by its name in either host's enum. */
-    readonly symbols: ReadonlyArray<{
+    readonly symbols?: ReadonlyArray<{
       readonly name: string;
       readonly kind: string;
       readonly range: RangeTuple;
       readonly selectionRange: RangeTuple;
     }>;
-  };
-  readonly quickFix: Named & { readonly title: string; readonly fixedLine: string };
+  }>;
+  /**
+   * The titles of every quick fix at the cursor, in order. With `fixedLine`, applying the first
+   * fix leaves the cursor's line reading it.
+   */
+  readonly quickFix: ReadonlyArray<
+    Named & { readonly titles: readonly string[]; readonly fixedLine?: string }
+  >;
   readonly diagnostics: ReadonlyArray<{ readonly file: string; readonly codes: readonly string[] }>;
 }
 

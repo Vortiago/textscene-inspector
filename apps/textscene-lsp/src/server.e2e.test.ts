@@ -287,84 +287,82 @@ describe('tscn-lsp gives the shared answers for the fixture project', () => {
     SERVER_TIMEOUT_MS
   );
 
-  it(
-    'links: every res:// path links to its file under the project root',
-    () =>
-      inProject(async (client) => {
-        const uri = open(client, PROJECT_DIR, answers.links.file);
-        const links = await client.result<Array<{ range: LspRange; target?: string }>>(
-          'textDocument/documentLink',
-          { textDocument: { uri } }
-        );
-        expect(
-          links.map((link) => ({
-            range: rangeTuple(link.range),
-            target: link.target === undefined ? null : projectPath(PROJECT_DIR, link.target),
-          }))
-        ).toEqual(answers.links.links);
-      }),
-    SERVER_TIMEOUT_MS
-  );
+  for (const answer of answers.links) {
+    it(
+      `links: ${answer.name}`,
+      () =>
+        inProject(async (client) => {
+          const uri = open(client, PROJECT_DIR, answer.file);
+          const links = await client.result<Array<{ range: LspRange; target?: string }>>(
+            'textDocument/documentLink',
+            { textDocument: { uri } }
+          );
+          expect(
+            links.map((link) => ({
+              range: rangeTuple(link.range),
+              target: link.target === undefined ? null : projectPath(PROJECT_DIR, link.target),
+            }))
+          ).toEqual(answer.links);
+        }),
+      SERVER_TIMEOUT_MS
+    );
+  }
 
-  it(
-    'symbols: the outline nests each node under its parent',
-    () =>
-      inProject(async (client) => {
-        const uri = open(client, PROJECT_DIR, answers.symbols.file);
-        const symbols = await client.result<LspSymbol[]>('textDocument/documentSymbol', {
-          textDocument: { uri },
-        });
-        expect(outlineOf(symbols)).toEqual(answers.symbols.outline);
-      }),
-    SERVER_TIMEOUT_MS
-  );
+  for (const answer of answers.symbols) {
+    it(
+      `symbols: ${answer.name}`,
+      () =>
+        inProject(async (client) => {
+          const uri = open(client, PROJECT_DIR, answer.file);
+          const symbols = await client.result<LspSymbol[]>('textDocument/documentSymbol', {
+            textDocument: { uri },
+          });
+          expect(outlineOf(symbols)).toEqual(answer.outline);
+          if (!answer.symbols) return;
+          // Each node's range covers its subtree, and its selection is its heading.
+          expect(
+            flatten(symbols).map((symbol) => ({
+              name: symbol.name,
+              kind: symbol.kind,
+              range: rangeTuple(symbol.range),
+              selectionRange: rangeTuple(symbol.selectionRange),
+            }))
+          ).toEqual(
+            answer.symbols.map((symbol) => ({
+              ...symbol,
+              kind: kindNamed(SymbolKind as unknown as Record<string, number>, symbol.kind),
+            }))
+          );
+        }),
+      SERVER_TIMEOUT_MS
+    );
+  }
 
-  it(
-    "symbols: each node's range covers its subtree, and its selection is its heading",
-    () =>
-      inProject(async (client) => {
-        const uri = open(client, PROJECT_DIR, answers.symbols.file);
-        const symbols = await client.result<LspSymbol[]>('textDocument/documentSymbol', {
-          textDocument: { uri },
-        });
-        expect(
-          flatten(symbols).map((symbol) => ({
-            name: symbol.name,
-            kind: symbol.kind,
-            range: rangeTuple(symbol.range),
-            selectionRange: rangeTuple(symbol.selectionRange),
-          }))
-        ).toEqual(
-          answers.symbols.symbols.map((symbol) => ({
-            ...symbol,
-            kind: kindNamed(SymbolKind as unknown as Record<string, number>, symbol.kind),
-          }))
-        );
-      }),
-    SERVER_TIMEOUT_MS
-  );
+  for (const answer of answers.quickFix) {
+    it(
+      `quick fix: ${answer.name}`,
+      () =>
+        inProject(async (client) => {
+          const { textDocument, position } = openAt(client, answer.at);
+          const actions = await client.result<
+            Array<{ title: string; edit: { changes: Record<string, LspTextEdit[]> } }>
+          >('textDocument/codeAction', {
+            textDocument,
+            range: { start: position, end: position },
+            context: { diagnostics: [] },
+          });
+          expect(actions.map((action) => action.title)).toEqual(answer.titles);
+          if (answer.fixedLine === undefined) return;
 
-  it(
-    `quick fix: ${answers.quickFix.name}, and its edit writes the engine spelling`,
-    () =>
-      inProject(async (client) => {
-        const { at, title, fixedLine } = answers.quickFix;
-        const { textDocument, position } = openAt(client, at);
-        const actions = await client.result<
-          Array<{ title: string; edit: { changes: Record<string, LspTextEdit[]> } }>
-        >('textDocument/codeAction', {
-          textDocument,
-          range: { start: position, end: position },
-          context: { diagnostics: [] },
-        });
-        const fix = actions.find((action) => action.title === title);
-        expect(fix, `expected "${title}" among ${JSON.stringify(actions.map((a) => a.title))}`).toBeDefined();
-
-        const fixed = applyEdits(projectText(at.file), fix!.edit.changes[textDocument.uri] ?? []);
-        expect(fixed.split('\n')[position.line]).toBe(fixedLine);
-      }),
-    SERVER_TIMEOUT_MS
-  );
+          const fixed = applyEdits(
+            projectText(answer.at.file),
+            actions[0]!.edit.changes[textDocument.uri] ?? []
+          );
+          expect(fixed.split('\n')[position.line]).toBe(answer.fixedLine);
+        }),
+      SERVER_TIMEOUT_MS
+    );
+  }
 
   for (const answer of answers.diagnostics) {
     it(

@@ -1,0 +1,13 @@
+[gd_scene load_steps=2 format=3 uid="uid://textscene_lf_fixes"]
+
+[ext_resource type="Script" path="res://mover.gd" id="1_mover"]
+
+[node name="Fixes" type="Node3D"]
+
+[node name="Scripted" type="MeshInstance3D" parent="."]
+script = ExtResource("1_mover")
+mass = 2.0
+
+[node name="Typos" type="MeshInstance3D" parent="."]
+mash = null
+lod_biaz = 1.0
