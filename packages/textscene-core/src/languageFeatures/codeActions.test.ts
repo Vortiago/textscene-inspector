@@ -57,4 +57,38 @@ describe('codeActions', () => {
     });
     expect(actions.map((action) => action.title)).toEqual(["Change 'mash' to 'mesh'"]);
   });
+
+  it('leaves an unknown key alone on a node with a script, which may export it', () => {
+    const text = ['[node name="P" type="MeshInstance3D"]', 'script = ExtResource("1")', 'mass = 2.0'].join(
+      '\n'
+    );
+    expect(titles(text)).toEqual([]);
+  });
+
+  it('still renames a deprecated key on a node with a script', () => {
+    const text = [
+      '[node name="S" type="AnimatedSprite2D"]',
+      'script = ExtResource("1")',
+      'frames = null',
+    ].join('\n');
+    expect(titles(text)).toEqual(["Rename deprecated 'frames' to 'sprite_frames'"]);
+  });
+
+  it('fixes only the property lines the range covers', () => {
+    const text = ['[node name="M" type="MeshInstance3D"]', 'mash = null', 'lod_biaz = 1.0'].join('\n');
+    const actions = codeActions(new LanguageDocument(text), {
+      start: { line: 1, character: 0 },
+      end: { line: 1, character: 4 },
+    });
+    expect(actions.map((action) => action.title)).toEqual(["Change 'mash' to 'mesh'"]);
+  });
+
+  it('fixes a heading type only when the range covers the heading line', () => {
+    const text = ['[node name="M" type="MeshInstnce3D"]', 'visible = true'].join('\n');
+    const actions = codeActions(new LanguageDocument(text), {
+      start: { line: 1, character: 0 },
+      end: { line: 1, character: 4 },
+    });
+    expect(actions).toEqual([]);
+  });
 });

@@ -20,6 +20,16 @@ function overlaps(range: Range, section: DocumentSection): boolean {
   return range.start.line <= section.endLine - 1 && range.end.line >= section.headingLine - 1;
 }
 
+/** Whether a zero-based range covers a line the document model counts from one. */
+function coversLine(range: Range, documentLine: number): boolean {
+  return range.start.line <= documentLine - 1 && documentLine - 1 <= range.end.line;
+}
+
+/** Whether a section sets `script`, whose exported properties a ClassDB row does not list. */
+function hasScript(section: DocumentSection): boolean {
+  return section.properties.some((property) => property.storedKey === 'script');
+}
+
 function renameAction(title: string, range: Range, newText: string): CodeAction {
   return { title, edit: [{ range, newText }] };
 }
@@ -41,15 +51,20 @@ function typoKeyAction(key: string, known: readonly string[], keyRange: Range): 
   return nearest ? renameAction(`Change '${key}' to '${nearest}'`, keyRange, nearest) : undefined;
 }
 
-/** Fixes for one section's property keys. */
-function propertyActions(document: LanguageDocument, section: DocumentSection): CodeAction[] {
+/**
+ * Fixes for the property keys a range covers in one section. A key the class does not declare
+ * may be a script's exported property, so a section with a script gets no typo repair.
+ */
+function propertyActions(document: LanguageDocument, section: DocumentSection, range: Range): CodeAction[] {
   const className = section.ownerType;
   if (!className || !isKnownClass(className)) return [];
   const known = classProperties(className).map((property) => property.name);
   const knownSet = new Set(known);
+  const canRepairTypos = !hasScript(section);
   const actions: CodeAction[] = [];
 
   for (const property of section.properties) {
+    if (!coversLine(range, property.startLine)) continue;
     const line = document.lines[property.startLine - 1];
     const key = line === undefined ? undefined : propertyKeySpan(line);
     if (!key) continue;
@@ -60,17 +75,21 @@ function propertyActions(document: LanguageDocument, section: DocumentSection): 
       if (rename) actions.push(rename);
       continue;
     }
-    if (knownSet.has(property.storedKey)) continue;
+    if (!canRepairTypos || knownSet.has(property.storedKey)) continue;
     const repair = typoKeyAction(property.key, known, keyRange);
     if (repair) actions.push(repair);
   }
   return actions;
 }
 
-/** A fix for a heading's unknown `type=`, against the names that class of heading may use. */
-function typeAction(document: LanguageDocument, section: DocumentSection): CodeAction | undefined {
+/** A fix for a heading's unknown `type=`, when the range covers the heading line. */
+function typeAction(
+  document: LanguageDocument,
+  section: DocumentSection,
+  range: Range
+): CodeAction | undefined {
   const className = section.attributes.type;
-  if (!className || isKnownClass(className)) return undefined;
+  if (!className || isKnownClass(className) || !coversLine(range, section.headingLine)) return undefined;
   const line = document.lines[section.headingLine - 1];
   if (line === undefined) return undefined;
   const attribute = headingAttribute(line, 'type');
@@ -85,14 +104,14 @@ function typeAction(document: LanguageDocument, section: DocumentSection): CodeA
   );
 }
 
-/** Every quick fix for the sections a zero-based range overlaps. */
+/** Every quick fix for the lines a zero-based range covers. */
 export function codeActions(document: LanguageDocument, range: Range): readonly CodeAction[] {
   const actions: CodeAction[] = [];
   for (const section of document.sections) {
     if (section.kind === 'other' || !overlaps(range, section)) continue;
-    const type = typeAction(document, section);
+    const type = typeAction(document, section, range);
     if (type) actions.push(type);
-    actions.push(...propertyActions(document, section));
+    actions.push(...propertyActions(document, section, range));
   }
   return actions;
 }
