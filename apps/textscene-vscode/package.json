@@ -1,7 +1,7 @@
 {
   "name": "textscene-inspector",
   "displayName": "TextScene Inspector: Godot .tscn Preview",
-  "description": "Preview Godot .tscn scenes in 3D and 2D inside VS Code, without a Godot install. Renders meshes, PBR materials, lights and cameras with three.js, and adds a scene tree, an inspector and a .tscn linter.",
+  "description": "Preview Godot .tscn scenes in 3D and 2D inside VS Code, without a Godot install. Adds a scene tree, an inspector and a .tscn linter, with hover, completion, quick fixes, go to definition and an outline. Agent tools let a chat agent lint, inspect and capture a scene.",
   "version": "1.0.0",
   "publisher": "vortiago",
   "keywords": [
@@ -14,7 +14,11 @@
     "preview",
     "gamedev",
     "linter",
-    "three.js"
+    "three.js",
+    "tres",
+    "intellisense",
+    "autocomplete",
+    "language server"
   ],
   "icon": "images/icon.png",
   "galleryBanner": {
@@ -27,6 +31,8 @@
   "categories": [
     "Visualization",
     "Programming Languages",
+    "Linters",
+    "AI",
     "Other"
   ],
   "activationEvents": [

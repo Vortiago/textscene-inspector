@@ -1,7 +1,7 @@
 {
   "name": "@textscene/lsp",
   "version": "1.0.0",
-  "description": "Language server for Godot .tscn scenes and .tres resources: hover, completion, quick fixes, folding, document symbols, go to definition, document highlights and diagnostics, for any LSP client.",
+  "description": "Language server for Godot .tscn scenes and .tres resources: diagnostics, hover, completion, quick fixes, go to definition, res:// links, document symbols, highlights and folding. Works in any LSP client, such as Neovim, Helix, Zed, Emacs and Sublime Text.",
   "type": "module",
   "bin": {
     "tscn-lsp": "./bin/tscn-lsp.js"
@@ -31,7 +31,16 @@
     "language-server",
     "neovim",
     "helix",
-    "zed"
+    "zed",
+    "tres",
+    "godot4",
+    "gamedev",
+    "language-server-protocol",
+    "vim",
+    "emacs",
+    "sublime-text",
+    "diagnostics",
+    "autocomplete"
   ],
   "author": "Vortiago",
   "license": "MIT",
