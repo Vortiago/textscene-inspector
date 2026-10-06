@@ -1,6 +1,6 @@
 {
   "name": "TextScene Inspector Development",
-  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-24-bookworm",
 
   "features": {
     "ghcr.io/devcontainers-extra/features/pnpm:2": {
@@ -15,17 +15,20 @@
   "customizations": {
     "vscode": {
       "extensions": [
+        "esbenp.prettier-vscode",
         "dbaeumer.vscode-eslint",
         "vitest.explorer",
         "ms-vscode.vscode-typescript-next",
         "usernamehw.errorlens"
       ],
       "settings": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
         "editor.formatOnSave": true,
+        "prettier.requireConfig": true,
         "editor.codeActionsOnSave": {
           "source.fixAll.eslint": "explicit"
         },
-        "eslint.validate": ["typescript", "javascript"],
+        "eslint.validate": ["typescript", "typescriptreact", "javascript", "javascriptreact"],
         "typescript.tsdk": "node_modules/typescript/lib",
         "npm.packageManager": "pnpm"
       }

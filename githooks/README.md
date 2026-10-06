@@ -32,7 +32,7 @@ again.
 ## Skip the hooks
 
 `HUSKY=0` skips every hook, and `HUSKY=0 pnpm install` installs none. The name stays because
-existing tools already set it. `git commit --no-verify` skips only the pre-commit hook.
+existing tools already set it. `git commit --no-verify` skips the pre-commit and commit-msg hooks.
 
 Skip a hook only for a work-in-progress commit on your own branch. CI still runs the full gate. Claude Code cannot use `--no-verify`:
 `.claude/hooks/check-no-verify.mjs` blocks it.
