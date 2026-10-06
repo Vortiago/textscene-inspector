@@ -68,7 +68,7 @@ const HOT_RELOAD_ALBEDO = 'Color(0.9, 0.2, 0.1, 1)';
 /**
  * A text glTF with an external `.bin` and an external texture, from the truck town demo.
  * The webview's CSP refuses every fetch, so both must arrive through the provider. Kept
- * at its `res://town/lamp/` path, which the scene names.
+ * at its `res://town/lamp/` path, which the scene names, under a `project.godot`.
  */
 const GLTF_EXTERNAL_DIR = 'scenes/demos/3d/truck_town/town/lamp';
 const GLTF_EXTERNAL_SCENE = 'lamp_scene.tscn';
@@ -121,8 +121,7 @@ function parseArgs(argv) {
  * Lays out the throwaway workspace the runs open: the label fixture verbatim, its
  * text-free twin, the noise fixture, the ArrayMesh scene with its `.tres`, and the
  * box with its box-free twin, side by side so all resolve `res://` against the same
- * folder. The mesh's edit is built
- * here and written by the hot-reload run.
+ * folder. The mesh's edit is built here and written by the hot-reload run.
  */
 function prepareScenes() {
   const workspace = path.join(OUT_ROOT, 'workspace');
@@ -159,6 +158,9 @@ function prepareScenes() {
   const boxHidden = path.join(workspace, 'box-hidden.tscn');
   writeFileSync(boxHidden, hideSceneNode(boxSource, BOX_NODE));
 
+  // A bare project file, not the demo's own: its settings would reach the other scenes. The
+  // lamp scene sits in a subfolder, so only a project root resolves its `res://town/lamp/`.
+  writeFileSync(path.join(workspace, 'project.godot'), 'config_version=5\n');
   const lampDir = path.join(workspace, 'town', 'lamp');
   cpSync(path.join(REPO_ROOT, GLTF_EXTERNAL_DIR), lampDir, { recursive: true });
   const gltfExternal = path.join(lampDir, GLTF_EXTERNAL_SCENE);
