@@ -86,10 +86,11 @@ describe('createGLBMesh', () => {
     // This GLB carries Blender-exported clips, which a Godot import exposes on the
     // model's AnimationPlayer.
     const glbPath = findRepoAsset('scenes/demos/3d/platformer/player/player.glb');
-    const buffer = readFileSync(glbPath);
-    const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+    // A copy into this realm's Uint8Array, since a Node Buffer fails GLTFLoader's
+    // `instanceof ArrayBuffer` under the vmThreads pool.
+    const arrayBuffer = new Uint8Array(readFileSync(glbPath)).buffer;
 
-    const object = await createGLBMesh(arrayBuffer as ArrayBuffer);
+    const object = await createGLBMesh(arrayBuffer);
     const names = object.animations.map((c) => c.name);
 
     expect(names).toEqual(expect.arrayContaining(['idle', 'run', 'jump', 'walk', 'falling']));
