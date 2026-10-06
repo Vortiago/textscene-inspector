@@ -47,9 +47,10 @@ jobs:
         id: notes
         run: |
           delimiter="notes_$(openssl rand -hex 16)"
-          notes=$(node scripts/ci/releaseNotes.mjs "$GITHUB_REF_NAME" "$PREVIOUS_TAG")
+          notes=$(node scripts/ci/releaseNotes.mjs "$GITHUB_REF_NAME" "$PACKAGE" "$PREVIOUS_TAG")
           printf 'notes<<%s\n%s\n%s\n' "$delimiter" "$notes" "$delimiter" >> "$GITHUB_OUTPUT"
         env:
+          PACKAGE: ${{ steps.tag.outputs.package }}
           PREVIOUS_TAG: ${{ steps.tag.outputs.previous_tag }}
 
       - uses: ./.github/actions/setup

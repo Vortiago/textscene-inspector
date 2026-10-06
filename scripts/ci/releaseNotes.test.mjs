@@ -1,16 +1,6 @@
 /** Which commits a release's notes list, and how the notes read. */
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { REPO_ROOT } from '../repoRoot.mjs';
-import {
-  RELEASE_INPUTS,
-  parseCommitLog,
-  parseTagMessage,
-  releaseSources,
-  renderReleaseNotes,
-} from './releaseNotes.mjs';
-import { RELEASE_PACKAGES } from './releaseVersion.mjs';
+import { parseCommitLog, parseTagMessage, releaseSources, renderReleaseNotes } from './releaseNotes.mjs';
 
 /** One record as `git log --format=%s%x1f%b%x1e` prints it. */
 const logRecord = (subject, body = '') => `${subject}\x1f${body}\x1e\n`;
@@ -20,27 +10,11 @@ const fix = { type: 'fix', description: 'stop at a scene that instances itself (
 
 describe('releaseSources', () => {
   it('lists the package directory first, then the packages it bundles', () => {
-    expect(releaseSources('linter-v1.1.1')).toEqual(['apps/textscene-linter', 'packages/textscene-core']);
+    expect(releaseSources('linter')).toEqual(['apps/textscene-linter', 'packages/textscene-core']);
   });
 
   it('includes the web previewer in the extension release, which ships its build', () => {
-    expect(releaseSources('vscode-v1.2.0')).toContain('apps/textscene-web');
-  });
-
-  it('refuses a tag that names no released package', () => {
-    expect(() => releaseSources('web-v1.0.0')).toThrow(
-      'expected a release tag like vscode-v1.2.3, got "web-v1.0.0"'
-    );
-  });
-});
-
-describe('RELEASE_INPUTS', () => {
-  it('names the inputs of every released package', () => {
-    expect(Object.keys(RELEASE_INPUTS)).toEqual(Object.keys(RELEASE_PACKAGES));
-  });
-
-  it.each(Object.values(RELEASE_INPUTS).flat())('%s holds a package manifest', (directory) => {
-    expect(existsSync(join(REPO_ROOT, directory, 'package.json'))).toBe(true);
+    expect(releaseSources('vscode')).toContain('apps/textscene-web');
   });
 });
 
@@ -86,14 +60,14 @@ describe('parseCommitLog', () => {
 });
 
 describe('parseTagMessage', () => {
-  it('joins the subject and the body of an annotated tag', () => {
-    expect(parseTagMessage('tag\x1fScene Tree release\x1fThe tree follows the preview.\n\n')).toBe(
+  it('reads the message of an annotated tag', () => {
+    expect(parseTagMessage('tag\x1fScene Tree release\n\nThe tree follows the preview.\n\n\n')).toBe(
       'Scene Tree release\n\nThe tree follows the preview.'
     );
   });
 
   it('reads a lightweight tag as no message', () => {
-    expect(parseTagMessage('commit\x1fa commit subject\x1f\n')).toBe('');
+    expect(parseTagMessage('commit\x1fa commit subject\n\n\n')).toBe('');
   });
 
   it('reads a missing tag as no message', () => {
@@ -102,7 +76,7 @@ describe('parseTagMessage', () => {
 });
 
 describe('renderReleaseNotes', () => {
-  const release = { highlights: '', commits: [fix, feat], previousTag: 'vscode-v1.1.0', compareUrl: '' };
+  const release = { highlights: '', commits: [fix, feat], compareUrl: '' };
 
   it('groups the commits under their sections, in section order', () => {
     expect(renderReleaseNotes(release)).toBe(
@@ -128,13 +102,5 @@ describe('renderReleaseNotes', () => {
 
   it('says so when no commit is user-facing', () => {
     expect(renderReleaseNotes({ ...release, commits: [] })).toBe('No user-facing changes.');
-  });
-
-  it('lists no commits on a first release, only the highlights', () => {
-    expect(renderReleaseNotes({ ...release, previousTag: '', highlights: 'Hello.' })).toBe('Hello.');
-  });
-
-  it('falls back to a fixed line on a first release without highlights', () => {
-    expect(renderReleaseNotes({ ...release, previousTag: '' })).toBe('First public release.');
   });
 });

@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { REPO_ROOT } from '../repoRoot.mjs';
-import { RELEASE_PACKAGES, checkReleaseTag } from './releaseVersion.mjs';
+import { RELEASE_INPUTS, RELEASE_PACKAGES, checkReleaseTag } from './releaseVersion.mjs';
 
 describe('checkReleaseTag', () => {
   it('releases the extension alone on a vscode tag, at the tag version', () => {
@@ -73,6 +73,16 @@ describe('checkReleaseTag', () => {
 
 describe('RELEASE_PACKAGES', () => {
   it.each(Object.values(RELEASE_PACKAGES))('%s holds a package manifest', (directory) => {
+    expect(existsSync(join(REPO_ROOT, directory, 'package.json'))).toBe(true);
+  });
+});
+
+describe('RELEASE_INPUTS', () => {
+  it('names the inputs of every released package', () => {
+    expect(Object.keys(RELEASE_INPUTS)).toEqual(Object.keys(RELEASE_PACKAGES));
+  });
+
+  it.each(Object.values(RELEASE_INPUTS).flat())('%s holds a package manifest', (directory) => {
     expect(existsSync(join(REPO_ROOT, directory, 'package.json'))).toBe(true);
   });
 });

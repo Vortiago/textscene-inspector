@@ -8,14 +8,7 @@
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { REPO_ROOT } from '../repoRoot.mjs';
-import { RELEASE_PACKAGES, parseReleaseTag } from './releaseVersion.mjs';
-
-/** The workspace packages each release bundles, besides its own directory. */
-export const RELEASE_INPUTS = {
-  vscode: ['packages/textscene-core', 'apps/textscene-web'],
-  linter: ['packages/textscene-core'],
-  lsp: ['packages/textscene-core'],
-};
+import { RELEASE_INPUTS, RELEASE_PACKAGES } from './releaseVersion.mjs';
 
 /** The sections of the notes, in order. A commit of any other type is not user-facing. */
 const SECTIONS = [
@@ -31,6 +24,7 @@ const SECTIONS = [
  */
 const TOOLING_SCOPES = new Set(['ci', 'devcontainer', 'githooks', 'lint', 'visual']);
 
+/** A looser copy of the grammar that the commit-msg hook enforces in conventional-commits/validate.sh. */
 const HEADER_RE = /^(\w+)(?:\(([^)]*)\))?(!)?: (.+)$/;
 const BREAKING_FOOTER_RE = /^BREAKING[ -]CHANGE: /m;
 
@@ -39,14 +33,11 @@ const FIELD_SEPARATOR = '\x1f';
 const RECORD_SEPARATOR = '\x1e';
 
 /**
- * @param {string} tag
- * @returns {string[]} the repo-relative directories whose commits belong in `tag`'s notes.
+ * @param {string} releasePackage - a key of `RELEASE_PACKAGES`, already checked by releaseVersion.mjs.
+ * @returns {string[]} the repo-relative directories whose commits belong in its notes.
  */
-export function releaseSources(tag) {
-  const release = parseReleaseTag(tag);
-  const directory = release && RELEASE_PACKAGES[release.package];
-  if (!directory) throw new Error(`expected a release tag like vscode-v1.2.3, got ${JSON.stringify(tag)}`);
-  return [directory, ...RELEASE_INPUTS[release.package]];
+export function releaseSources(releasePackage) {
+  return [RELEASE_PACKAGES[releasePackage], ...RELEASE_INPUTS[releasePackage]];
 }
 
 /**
@@ -57,11 +48,11 @@ export function releaseSources(tag) {
 export function parseCommitLog(log) {
   return log
     .split(RECORD_SEPARATOR)
-    .map((record) => record.replace(/^\n/, ''))
+    .map((record) => record.trim())
     .filter(Boolean)
     .flatMap((record) => {
       const [subject, body = ''] = record.split(FIELD_SEPARATOR);
-      const header = HEADER_RE.exec(subject.trim());
+      const header = HEADER_RE.exec(subject);
       if (!header) return [];
       const [, type, scope, bang, description] = header;
       if (TOOLING_SCOPES.has(scope)) return [];
@@ -74,12 +65,8 @@ export function parseCommitLog(log) {
  * @returns {string} the tag message, or '' for a lightweight tag.
  */
 export function parseTagMessage(ref) {
-  const [objectType, subject = '', body = ''] = ref.split(FIELD_SEPARATOR);
-  if (objectType !== 'tag') return '';
-  return [subject, body]
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .join('\n\n');
+  const [objectType, message = ''] = ref.split(FIELD_SEPARATOR);
+  return objectType === 'tag' ? message.trim() : '';
 }
 
 function renderSections(commits) {
@@ -91,13 +78,11 @@ function renderSections(commits) {
 }
 
 /**
- * @param {{ highlights: string, commits: ReturnType<typeof parseCommitLog>, previousTag: string,
- *   compareUrl: string }} release - `previousTag` is '' on a package's first release, which
- *   lists no commits. `compareUrl` is '' when the repository URL is unknown.
- * @returns {string} the Markdown notes.
+ * @param {{ highlights: string, commits: ReturnType<typeof parseCommitLog>, compareUrl: string }}
+ *   release - `compareUrl` is '' when the repository URL is unknown.
+ * @returns {string} the Markdown notes of a release that follows an earlier tag.
  */
-export function renderReleaseNotes({ highlights, commits, previousTag, compareUrl }) {
-  if (!previousTag) return highlights || 'First public release.';
+export function renderReleaseNotes({ highlights, commits, compareUrl }) {
   const changelog = compareUrl && `**Full changelog**: ${compareUrl}`;
   return [highlights, renderSections(commits), changelog].filter(Boolean).join('\n\n');
 }
@@ -106,13 +91,15 @@ function git(args) {
   return execFileSync('git', args, { cwd: REPO_ROOT, encoding: 'utf8' });
 }
 
-function readCommits(previousTag, tag) {
+function readCommits(previousTag, tag, releasePackage) {
   const format = `--format=%s${FIELD_SEPARATOR}%b${RECORD_SEPARATOR}`;
-  return git(['log', '--no-merges', format, `${previousTag}..${tag}`, '--', ...releaseSources(tag)]);
+  const range = `${previousTag}..${tag}`;
+  return git(['log', '--no-merges', format, range, '--', ...releaseSources(releasePackage)]);
 }
 
+/** The subject and the body, not `%(contents)`, which also holds a signed tag's signature. */
 function readHighlights(tag) {
-  const format = `--format=%(objecttype)${FIELD_SEPARATOR}%(contents:subject)${FIELD_SEPARATOR}%(contents:body)`;
+  const format = `--format=%(objecttype)${FIELD_SEPARATOR}%(contents:subject)%0a%0a%(contents:body)`;
   return git(['for-each-ref', format, `refs/tags/${tag}`]);
 }
 
@@ -122,16 +109,21 @@ function compareUrl(previousTag, tag) {
   return `${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/compare/${previousTag}...${tag}`;
 }
 
+/** A first release lists no commits: the whole history would be its changelog. */
+function writeNotes(tag, releasePackage, previousTag) {
+  const highlights = parseTagMessage(readHighlights(tag));
+  if (!previousTag) return highlights || 'First public release.';
+  return renderReleaseNotes({
+    highlights,
+    commits: parseCommitLog(readCommits(previousTag, tag, releasePackage)),
+    compareUrl: compareUrl(previousTag, tag),
+  });
+}
+
 function main() {
-  const [tag = '', previousTag = ''] = process.argv.slice(2);
+  const [tag = '', releasePackage = '', previousTag = ''] = process.argv.slice(2);
   try {
-    const notes = renderReleaseNotes({
-      highlights: parseTagMessage(readHighlights(tag)),
-      commits: previousTag ? parseCommitLog(readCommits(previousTag, tag)) : [],
-      previousTag,
-      compareUrl: compareUrl(previousTag, tag),
-    });
-    console.log(notes);
+    console.log(writeNotes(tag, releasePackage, previousTag));
   } catch (error) {
     console.error(`[releaseNotes] ${error.message}`);
     process.exit(1);

@@ -9,7 +9,8 @@ git fetch origin && git tag vscode-v1.2.3 origin/main && git push origin vscode-
 
 The release notes list the breaking changes and the `feat`, `fix` and `perf` commits since the
 package's previous tag that touch the package or a package it bundles.
-`scripts/ci/releaseNotes.mjs` writes them, and `RELEASE_INPUTS` names what each package bundles.
+`scripts/ci/releaseNotes.mjs` writes them. `RELEASE_INPUTS` in `scripts/ci/releaseVersion.mjs`
+names what each package bundles.
 A commit in a tooling scope (`ci`, `devcontainer`, `githooks`, `lint`, `visual`) is left out.
 
 To put highlights above that list, push an annotated tag. Its message goes first:
