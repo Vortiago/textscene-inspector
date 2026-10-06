@@ -130,7 +130,10 @@ AnimationPlayer).
 
 ## Gate
 
-Local `core` gate: `pnpm type-check && pnpm type-check:tests && pnpm lint && pnpm test:unit`. CI (all required, PR to
-main): `build` (lint, type-check, test:unit, build, bundle-size, package), `visual-regression` (a
-separate job: a new golden with no baseline fails here, not in the core gate),
-`integration-tests` (VS Code end-to-end, see the `e2e-testing` skill), `vsix-verification`.
+Local gate: the pre-push hook, as the Gates section of AGENTS.md says. A slice wired into a
+central file under `parser/` or `linter/` needs the full gate.
+
+CI (all required, PR to main): `build` (lint, type-check, test:unit, build, bundle-size,
+package), `visual-regression` (a separate job: a new golden with no baseline fails here, not in
+the local gate), `integration-tests` (VS Code end-to-end, see the `e2e-testing` skill),
+`vsix-verification`.

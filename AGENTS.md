@@ -35,14 +35,22 @@ strategy.
 
 ## Gates
 
-Run each gate from the repo root. Run these for every change:
+Run each gate from the repo root. CI runs the full suite, the builds and the packaging on each
+pull request, so the local gate checks only what the change touches.
 
-- `pnpm type-check:all`. Run it once in a fresh worktree before any per-package check.
-- `pnpm type-check:tests`. Every package that ships tests must define the script.
-- `pnpm test:unit`. On a shell-tool timeout, re-run it with a larger `timeout`. A subset never
-  proves the gate.
-- `npx eslint <changed files>`.
-- `pnpm format:check`. `pnpm format` fixes a failure.
+The pre-push hook is the gate for every change. `githooks/README.md` lists what it runs: the type
+checks of each changed package and its dependents, eslint and Prettier on the changed files, and
+the tests beside each changed file. Every package that ships tests must define
+`type-check:tests`.
+
+1. Commit the change.
+2. Run `git push --dry-run origin HEAD`. It runs the hook and sends nothing.
+3. If a check fails, fix the cause and run the hook again. `pnpm format` fixes a format failure.
+
+Run the full gate with `FULL_VALIDATE=1 git push --dry-run origin HEAD` when the change touches
+the toolchain or a core module that many slices import: `godot/`, `core/`, `parser/` or
+`linter/` in `packages/textscene-core/src/`, outside a slice. On a shell-tool timeout, re-run it
+with a larger `timeout`.
 
 Per package: `pnpm --filter @textscene/web-previewer type-check` / `test`.
 
