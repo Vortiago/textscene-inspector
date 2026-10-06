@@ -39,8 +39,7 @@ Resolve these before any code:
 
 - the behaviour that is wrong now, and the behaviour that is right, with its engine
   source (`file:line`) or a `pnpm ref:godot` measurement;
-- the test that proves it, and where it lives;
-- the gates in AGENTS.md that the change triggers.
+- the test that proves it, and where it lives.
 
 ## 4. Make the task list
 
@@ -49,7 +48,7 @@ Create one task for each item below, and keep the list current:
 1. One task for each red-green cycle (one behaviour each).
 2. Clean Code pass.
 3. STE pass.
-4. Gates.
+4. Checks.
 5. Commit, push and pull request.
 
 ## 5. Red, green, refactor
@@ -97,16 +96,10 @@ The Clean Code rules say: fix a problem you find now, in this change. So:
 - If a problem is truly outside the issue's scope, ask the user. Open an issue only when
   the user agrees.
 
-## 9. Gates
+## 9. Checks
 
-Run every gate in AGENTS.md that the change triggers. Always run these:
-
-- `pnpm type-check:all`
-- `pnpm type-check:tests`
-- `npx eslint <changed files>`
-- the tests of each changed package
-
-A subset of a gate never proves the gate. If a gate fails, fix the cause and run it again.
+The git hooks run the checks on each commit and push, and CI runs the rest on the pull
+request. If a hook or a CI job fails, fix the cause and push again.
 
 ## 10. Ship
 

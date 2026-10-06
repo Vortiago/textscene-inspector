@@ -9,12 +9,16 @@ const isEdgeA = (path) => path.split('/').at(-1) === 'edge-a.tscn';
 
 const STATIC_GATE = ['pnpm format:check', 'pnpm lint', 'pnpm type-check:all', 'pnpm type-check:tests'];
 
+/** The packages whose tests project already type-checks every source file. */
+const COVERED_BY_TESTS =
+  '--filter !./packages/textscene-core --filter !./packages/textscene-dev-kit --filter !./apps/textscene-linter';
+
 /** The type checks of the packages in `dirs` and of their dependents. */
 const typeChecks = (...dirs) => {
   const filters = dirs.map((dir) => `--filter ...{./${dir}}`).join(' ');
   return [
     'pnpm --filter ./packages/* build',
-    `pnpm ${filters} type-check`,
+    `pnpm ${filters} ${COVERED_BY_TESTS} type-check`,
     `pnpm ${filters} type-check:tests`,
   ];
 };
@@ -96,6 +100,12 @@ describe('planChecks', () => {
       'npx eslint --cache scripts/x.mjs',
       'pnpm exec prettier --cache --check scripts/x.mjs',
     ]);
+  });
+
+  it('runs only the tests type check of a package whose tests project covers its sources', () => {
+    const [, sources, tests] = plan([], ['packages/textscene-core/src/gone.ts']);
+    expect(sources).toContain('--filter !./packages/textscene-core');
+    expect(tests).not.toContain('!./packages/textscene-core');
   });
 
   it('type-checks a deleted TypeScript file, since its importers break', () => {

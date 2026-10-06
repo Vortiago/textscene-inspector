@@ -58,6 +58,7 @@ Install a `.vsix` with **Extensions: Install from VSIX…**.
 | `pnpm vsc:package && pnpm --filter textscene-inspector test:installed` | The packaged `.vsix` in a clean VS Code: activation, commands, lint and preview |
 | `pnpm --filter textscene-inspector test:web` | The browser build in VS Code for the Web, as vscode.dev runs it: activation, commands, lint, Outline and the preview tab |
 | `pnpm test:vscode:web-preview` | In VS Code for the Web, a local folder's scene previews from the editor title button: the tree lists the root and the viewport paints. Run it after `test:web`, which builds the web bundle |
+| `pnpm check` | The pre-push checks, for every change since `origin/main`, uncommitted files included |
 | `pnpm lint` | ESLint |
 | `pnpm format` | Prettier |
 | `pnpm format:check` | Prettier check, as in CI |

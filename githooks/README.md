@@ -17,22 +17,38 @@ on each pull request and on `main`. To run every test that imports a file, run
 
 A pushed TypeScript file type-checks its package and every package that depends on it. A change
 in `apps/textscene-web` checks only the web previewer. A change in `packages/textscene-core`
-checks core and each app.
+checks core and each app. Core, the dev kit and the CLI linter run only `type-check:tests`, because
+their tests project already holds every source file. CI runs `type-check` for them too.
+
+Core's `type-check:tests` keeps its last result in `tsconfig.tests.tsbuildinfo`, so a later run
+checks only the changed files and the files they affect. Delete the file to check every file
+again.
 
 A change to the toolchain (`package.json`, the lockfile, a `tsconfig`, a vitest, eslint or
 Prettier config, or a hook) runs the static checks over the whole repository: `format:check`,
 `lint`, `type-check:all` and `type-check:tests`. It still runs the tests beside the pushed
-files. A push that changes only files no check reads runs nothing. `FULL_VALIDATE=1 git push` runs the full `pnpm validate`.
+files. A push that changes only files no check reads runs nothing. `FULL_VALIDATE=1 git push` runs
+the full `pnpm validate`.
+
+The hook stops at the first check that fails. Below the tool's output, it prints the command that
+reruns that check, and `pnpm check`, which reruns every check.
 
 eslint and Prettier check only the files that changed since their last run. eslint keeps its cache
 in `.eslintcache`, and Prettier keeps its cache in `node_modules/.cache/prettier/`. Each tool
 discards its cache when its configuration or version changes. Delete a cache to check every file
 again.
 
+## Run the push checks before a commit
+
+`pnpm check` runs the checks that the pre-push hook picks, for every change since the branch left
+`origin/main`. Commits, staged and unstaged edits and untracked files all count. Run it before a
+commit to fix what the push would refuse. Without `origin/main`, it runs the static checks over the
+whole repository.
+
 ## Skip the hooks
 
 `HUSKY=0` skips every hook, and `HUSKY=0 pnpm install` installs none. The name stays because
-existing tools already set it. `git commit --no-verify` skips only the pre-commit hook.
+existing tools already set it. `git commit --no-verify` skips the pre-commit and commit-msg hooks.
 
 Skip a hook only for a work-in-progress commit on your own branch. CI still runs the full gate. Claude Code cannot use `--no-verify`:
 `.claude/hooks/check-no-verify.mjs` blocks it.
@@ -47,4 +63,5 @@ Skip a hook only for a work-in-progress commit on your own branch. CI still runs
 1. Run `git config --show-origin core.hooksPath`.
 2. If the value is not `githooks`, run `pnpm prepare`.
 
-To run the checks without a commit or a push, run `pnpm exec lint-staged` or `pnpm validate`.
+To run the checks without a commit or a push, run `pnpm exec lint-staged`, `pnpm check` or
+`pnpm validate`.
