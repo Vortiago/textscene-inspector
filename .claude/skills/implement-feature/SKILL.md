@@ -128,9 +128,11 @@ byte-identical frames (policy in `scripts/visual/scenes.mjs`). Add a `GOLDEN_SCE
 scalars piggyback on the `material-features` golden. Skip non-deterministic nodes (Label3D,
 AnimationPlayer).
 
-## Gate
+## Checks
 
-Local `core` gate: `pnpm type-check && pnpm type-check:tests && pnpm lint && pnpm test:unit`. CI (all required, PR to
-main): `build` (lint, type-check, test:unit, build, bundle-size, package), `visual-regression` (a
-separate job: a new golden with no baseline fails here, not in the core gate),
-`integration-tests` (VS Code end-to-end, see the `e2e-testing` skill), `vsix-verification`.
+The git hooks run the local checks on each commit and push.
+
+CI (all required, PR to main): `build` (lint, type-check, test:unit, build, bundle-size,
+package), `visual-regression` (a separate job: a new golden with no baseline fails here, not in
+the hooks), `integration-tests` (VS Code end-to-end, see the `e2e-testing` skill),
+`vsix-verification`.
