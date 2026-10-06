@@ -6,6 +6,7 @@
 
 import * as vscode from 'vscode';
 import { revealSceneLine } from '../jumpToNodeDefinition';
+import { DEFAULT_LINT_DEBOUNCE_MS } from '../TscnDiagnostics';
 import { activeScene, type ScenePreview } from './activeScene';
 import { REVEAL_SCENE_NODE_COMMAND, SceneTreeProvider } from './SceneTreeProvider';
 
@@ -13,6 +14,12 @@ export const SCENE_TREE_VIEW_ID = 'textscene.sceneTree';
 
 /** The `when` clause of the view's contribution: the view stays hidden until a scene activates the extension. */
 export const SCENE_TREE_ENABLED_CONTEXT = 'textscene.sceneTreeEnabled';
+
+/**
+ * The pause in typing before an edit re-parses the scene. A parse per keystroke costs a full
+ * read of a large scene, and the lint's default pause keeps the tree and Problems in step.
+ */
+export const SCENE_TREE_EDIT_DELAY_MS = DEFAULT_LINT_DEBOUNCE_MS;
 
 export class SceneTreeView implements vscode.Disposable {
   private readonly _provider = new SceneTreeProvider();
@@ -23,6 +30,8 @@ export class SceneTreeView implements vscode.Disposable {
    * asynchronous, so an open that finishes after a later one must not show its scene.
    */
   private _latestShow = 0;
+  /** Written only by `_showEdit`. Cleared when it fires and on dispose. */
+  private _pendingEdit: ReturnType<typeof setTimeout> | undefined;
 
   /** `_previews` is the extension's live map of open previews, keyed by scene `Uri`. */
   public constructor(private readonly _previews: ReadonlyMap<string, ScenePreview>) {
@@ -49,6 +58,7 @@ export class SceneTreeView implements vscode.Disposable {
   }
 
   public dispose(): void {
+    clearTimeout(this._pendingEdit);
     for (const disposable of this._disposables) disposable.dispose();
   }
 
@@ -64,13 +74,19 @@ export class SceneTreeView implements vscode.Disposable {
   }
 
   /**
-   * An edit to the shown scene, unsaved or from disk, redraws the tree. A save or a revert
-   * fires with no content change, and the tree stays.
+   * An edit to the shown scene, unsaved or from disk, redraws the tree after a pause in typing.
+   * A save or a revert fires with no content change, and the tree stays.
    */
   private _showEdit({ document, contentChanges }: vscode.TextDocumentChangeEvent): void {
-    if (contentChanges.length > 0 && isSameScene(document.uri, this._provider.document)) {
-      this._provider.show(document);
-    }
+    if (contentChanges.length === 0 || !isSameScene(document.uri, this._provider.document)) return;
+    clearTimeout(this._pendingEdit);
+    this._pendingEdit = setTimeout(() => this._showEdited(document), SCENE_TREE_EDIT_DELAY_MS);
+  }
+
+  /** The focus can move to another scene during the pause, and the tree then stays on it. */
+  private _showEdited(document: vscode.TextDocument): void {
+    this._pendingEdit = undefined;
+    if (isSameScene(document.uri, this._provider.document)) this._provider.show(document);
   }
 
   /**

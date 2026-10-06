@@ -3,15 +3,21 @@
  * VS Code's Outline goes empty while a preview is the active editor, and this view must not.
  */
 
-import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import * as vscode from 'vscode';
-import { SCENE_TREE_ENABLED_CONTEXT, SCENE_TREE_VIEW_ID, SceneTreeView } from './SceneTreeView';
+import {
+  SCENE_TREE_EDIT_DELAY_MS,
+  SCENE_TREE_ENABLED_CONTEXT,
+  SCENE_TREE_VIEW_ID,
+  SceneTreeView,
+} from './SceneTreeView';
 import { REVEAL_SCENE_NODE_COMMAND, type SceneTreeProvider } from './SceneTreeProvider';
 import { fakePreview, sceneDocument, textEditor, type FakePreview } from './sceneTree.testkit';
 import { MockEventEmitter } from '../test-setup';
 
 const MAIN = '/workspace/main.tscn';
 const LEVEL = '/workspace/level.tscn';
+const RENAMED = '[gd_scene format=3]\n\n[node name="Renamed" type="Node3D"]\n';
 
 interface Harness {
   provider: SceneTreeProvider;
@@ -54,6 +60,10 @@ beforeEach(() => {
   previews = new Map();
 });
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 function createView(): SceneTreeView {
   return new SceneTreeView(previews);
 }
@@ -73,6 +83,21 @@ function focusEditor(fsPath: string | undefined): void {
 /** Lets every pending scene open settle. */
 async function settle(): Promise<void> {
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
+}
+
+/** Shows MAIN through its text editor, then counts every redraw on fake timers. */
+async function showMain(): Promise<{ view: SceneTreeView; redraws: Mock }> {
+  const view = createView();
+  focusEditor(MAIN);
+  await settle();
+  const redraws = vi.fn();
+  harness.provider.onDidChangeTreeData(redraws);
+  vi.useFakeTimers();
+  return { view, redraws };
+}
+
+function edit(document: vscode.TextDocument): void {
+  harness.documentChanged.fire({ document, contentChanges: [{}] });
 }
 
 function shownScene(): string | undefined {
@@ -191,42 +216,57 @@ describe('SceneTreeView', () => {
     expect(shownScene()).toBe(LEVEL);
   });
 
-  it('redraws the tree when the shown scene is edited', async () => {
-    createView();
-    focusEditor(MAIN);
-    await settle();
-    const listener = vi.fn();
-    harness.provider.onDidChangeTreeData(listener);
+  it('redraws the tree when the shown scene is edited, after a pause in typing', async () => {
+    const { redraws } = await showMain();
 
-    const edited = sceneDocument(MAIN, '[gd_scene format=3]\n\n[node name="Renamed" type="Node3D"]\n');
-    harness.documentChanged.fire({ document: edited, contentChanges: [{}] });
+    edit(sceneDocument(MAIN, RENAMED));
+    vi.advanceTimersByTime(SCENE_TREE_EDIT_DELAY_MS - 1);
+    expect(redraws).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
 
-    expect(listener).toHaveBeenCalledTimes(1);
+    expect(redraws).toHaveBeenCalledTimes(1);
+    expect(rootNames()).toEqual(['Renamed']);
+  });
+
+  it('redraws once for a burst of edits, with the last text', async () => {
+    const { redraws } = await showMain();
+
+    edit(sceneDocument(MAIN));
+    vi.advanceTimersByTime(SCENE_TREE_EDIT_DELAY_MS - 1);
+    edit(sceneDocument(MAIN, RENAMED));
+    vi.advanceTimersByTime(SCENE_TREE_EDIT_DELAY_MS);
+
+    expect(redraws).toHaveBeenCalledTimes(1);
     expect(rootNames()).toEqual(['Renamed']);
   });
 
   it('ignores an edit to a scene it does not show', async () => {
-    createView();
-    focusEditor(MAIN);
-    await settle();
-    const listener = vi.fn();
-    harness.provider.onDidChangeTreeData(listener);
+    const { redraws } = await showMain();
 
-    harness.documentChanged.fire({ document: sceneDocument(LEVEL), contentChanges: [{}] });
+    edit(sceneDocument(LEVEL));
+    vi.advanceTimersByTime(SCENE_TREE_EDIT_DELAY_MS);
 
-    expect(listener).not.toHaveBeenCalled();
+    expect(redraws).not.toHaveBeenCalled();
   });
 
   it('keeps the tree through a save, which changes no content', async () => {
-    createView();
-    focusEditor(MAIN);
-    await settle();
-    const listener = vi.fn();
-    harness.provider.onDidChangeTreeData(listener);
+    const { redraws } = await showMain();
 
     harness.documentChanged.fire({ document: sceneDocument(MAIN), contentChanges: [] });
+    vi.advanceTimersByTime(SCENE_TREE_EDIT_DELAY_MS);
 
-    expect(listener).not.toHaveBeenCalled();
+    expect(redraws).not.toHaveBeenCalled();
+  });
+
+  it('drops an edit whose scene loses the view during the pause', async () => {
+    await showMain();
+    edit(sceneDocument(MAIN, RENAMED));
+
+    focusEditor(LEVEL);
+    await vi.advanceTimersByTimeAsync(SCENE_TREE_EDIT_DELAY_MS);
+
+    expect(shownScene()).toBe(LEVEL);
+    expect(rootNames()).toEqual(['Scene']);
   });
 
   it('re-reads a shown scene whose document has closed', async () => {
@@ -236,24 +276,20 @@ describe('SceneTreeView', () => {
     await settle();
     const closed = harness.provider.document as { isClosed: boolean };
     closed.isClosed = true;
-    (vscode.workspace.openTextDocument as Mock).mockResolvedValueOnce(
-      sceneDocument(MAIN, '[gd_scene format=3]\n\n[node name="Changed" type="Node3D"]\n')
-    );
+    (vscode.workspace.openTextDocument as Mock).mockResolvedValueOnce(sceneDocument(MAIN, RENAMED));
 
     view.refresh();
     await settle();
 
-    expect(rootNames()).toEqual(['Changed']);
+    expect(rootNames()).toEqual(['Renamed']);
   });
 
   it('takes an edit to a reopened copy of a scene whose shown document has closed', async () => {
-    createView();
-    focusEditor(MAIN);
-    await settle();
+    await showMain();
     (harness.provider.document as { isClosed: boolean }).isClosed = true;
 
-    const reopened = sceneDocument(MAIN, '[gd_scene format=3]\n\n[node name="Renamed" type="Node3D"]\n');
-    harness.documentChanged.fire({ document: reopened, contentChanges: [{}] });
+    edit(sceneDocument(MAIN, RENAMED));
+    vi.advanceTimersByTime(SCENE_TREE_EDIT_DELAY_MS);
 
     expect(rootNames()).toEqual(['Renamed']);
   });
@@ -265,6 +301,16 @@ describe('SceneTreeView', () => {
 
     expect(harness.view.dispose).toHaveBeenCalled();
     expect(harness.commandDisposed).toHaveBeenCalled();
+  });
+
+  it('drops a pending edit when it is disposed', async () => {
+    const { view, redraws } = await showMain();
+    edit(sceneDocument(MAIN, RENAMED));
+
+    view.dispose();
+    vi.advanceTimersByTime(SCENE_TREE_EDIT_DELAY_MS);
+
+    expect(redraws).not.toHaveBeenCalled();
   });
 
   it('follows no focus change after it is disposed', async () => {
