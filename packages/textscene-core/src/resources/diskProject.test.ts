@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
+  forgetDiskState,
   isFile,
   listProjectPaths,
   projectProviderFor,
@@ -221,5 +222,56 @@ describe('isFile', () => {
 
   it('is false for a directory, which no editor opens as a document', async () => {
     expect(await isFile(join(projectDir, 'models'))).toBe(false);
+  });
+});
+
+describe('forgetDiskState', () => {
+  /** A fresh directory per test, since each one changes the disk after a first read. */
+  function freshDir(): string {
+    return mkdtempSync(join(tmpdir(), 'tscn-disk-forget-'));
+  }
+
+  it('lets the listing see a file created after the first listing', async () => {
+    const dir = freshDir();
+    writeFileSync(join(dir, 'project.godot'), 'config_version=5\n');
+    const forwardRoot = dir.replace(/\\/g, '/');
+    try {
+      await listProjectPaths(forwardRoot);
+      writeFileSync(join(dir, 'late.png'), '');
+      forgetDiskState();
+
+      expect(await listProjectPaths(forwardRoot)).toContain('res://late.png');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('lets the walk find a project.godot created after a walk found none', async () => {
+    const dir = freshDir();
+    mkdirSync(join(dir, 'scenes'));
+    try {
+      await projectRootForDir(join(dir, 'scenes'));
+      writeFileSync(join(dir, 'project.godot'), 'config_version=5\n');
+      forgetDiskState();
+
+      expect(await projectRootForDir(join(dir, 'scenes'))).toBe(dir.replace(/\\/g, '/'));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("lets a provider's file listing see a file created after the first listing", async () => {
+    const dir = freshDir();
+    writeFileSync(join(dir, 'project.godot'), 'config_version=5\n');
+    const forwardRoot = dir.replace(/\\/g, '/');
+    try {
+      await providerForRoot(forwardRoot).listFiles!('glb');
+      writeFileSync(join(dir, 'late.glb'), new Uint8Array([1]));
+      forgetDiskState();
+
+      expect(await providerForRoot(forwardRoot).listFiles!('glb')).toContain('res://late.glb');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

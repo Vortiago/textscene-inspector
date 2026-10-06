@@ -37,8 +37,8 @@ export async function isFile(path: string): Promise<boolean> {
 }
 
 /**
- * Each directory's answer, written by `hasProjectFile` and never cleared: the scenes of one
- * run or one server session share their ancestors, so each directory is probed once.
+ * Each directory's answer, written by `hasProjectFile` and cleared by `forgetDiskState`: the
+ * scenes of one run share their ancestors, so each directory is probed once.
  */
 const projectFileByDir = new Map<string, Promise<boolean>>();
 
@@ -95,7 +95,7 @@ function directoryReader(root: string): (resDirectory: string) => Promise<Direct
  * the file's modification time and size, one `stat`, so the linter reads an unchanged file once.
  */
 function fileProvider(root: string): ResourceProvider {
-  /** Each extension's listing, written by `listFiles` and never cleared: one host run sees one state of the project. */
+  /** Each extension's listing, written by `listFiles`. It goes with its provider, which `forgetDiskState` drops. */
   const listings = new Map<string, Promise<string[]>>();
   return {
     listFiles(extension: string) {
@@ -128,8 +128,8 @@ function fileProvider(root: string): ResourceProvider {
 }
 
 /**
- * Each project root's provider, written by `providerForRoot` and never cleared: the linter keeps its glTF verdicts per
- * provider, so one provider per root lets every scene share them.
+ * Each project root's provider, written by `providerForRoot` and cleared by `forgetDiskState`: the linter keeps its
+ * glTF verdicts per provider, so one provider per root lets every scene share them.
  */
 const providerByRoot = new Map<string, ResourceProvider>();
 
@@ -158,7 +158,7 @@ export async function projectProviderFor(scenePath: string): Promise<ResourcePro
   return root === null ? null : providerForRoot(root);
 }
 
-/** Each root's listing, written by `listProjectPaths` and never cleared: one host run sees one state of the project. */
+/** Each root's listing, written by `listProjectPaths` and cleared by `forgetDiskState`. */
 const pathsByRoot = new Map<string, Promise<readonly string[]>>();
 
 /**
@@ -167,4 +167,14 @@ const pathsByRoot = new Map<string, Promise<readonly string[]>>();
  */
 export function listProjectPaths(root: string): Promise<readonly string[]> {
   return memo(pathsByRoot, root, async (key) => (await listScannedFiles(directoryReader(key))).sort());
+}
+
+/**
+ * Drops every answer read from the disk, so the next request reads the project again. A
+ * long-running host calls it when a file changes. A single run never needs it.
+ */
+export function forgetDiskState(): void {
+  projectFileByDir.clear();
+  providerByRoot.clear();
+  pathsByRoot.clear();
 }

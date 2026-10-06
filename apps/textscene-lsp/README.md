@@ -10,6 +10,9 @@ For each document, the server finds the nearest `project.godot` in the document'
 it, and resolves `res://` from that directory. A scene outside every Godot project still gets hover,
 completion and the file-local diagnostics.
 
+The server reads the project again when the client reports a changed file, and each time a
+document opens. A client that supports it is asked to watch every file in the workspace.
+
 ## Install
 
 The server needs Node.js 24 or later.

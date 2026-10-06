@@ -6,7 +6,7 @@
  */
 
 import { execSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -418,6 +418,161 @@ describe('tscn-lsp path completion through a symlinked directory', () => {
           );
           expect(labels).toContain('res://props/crate.tres');
           expect(labels.filter((label) => label.startsWith('res://props/back/'))).toEqual([]);
+        });
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+    SERVER_TIMEOUT_MS
+  );
+});
+
+describe('tscn-lsp reads the project again after a change on disk', () => {
+  const pathsAnswer = answers.completion.find((answer) => answer.at.after === '"res://')!;
+  const linkAt = answers.definition.find(
+    (answer) => answer.at.file === 'main.tscn' && answer.at.inside?.startsWith('res://')
+  );
+
+  /** A copy of the fixture project in a temporary directory, which the test may change. */
+  function projectCopy(): string {
+    const projectDir = join(mkdtempSync(join(tmpdir(), 'tscn-lsp-refresh-')), 'project');
+    cpSync(PROJECT_DIR, projectDir, { recursive: true });
+    return projectDir;
+  }
+
+  async function pathLabels(client: LspClient, params: ReturnType<typeof openAt>): Promise<string[]> {
+    return labelsOf(await client.result<Array<{ label: string }>>('textDocument/completion', params));
+  }
+
+  function reportCreated(client: LspClient, projectDir: string, file: string): void {
+    client.notify('workspace/didChangeWatchedFiles', {
+      changes: [{ uri: fileUri(projectDir, file), type: 1 }],
+    });
+  }
+
+  it(
+    'offers a file created after the first completion, once the client reports it',
+    async () => {
+      const projectDir = projectCopy();
+      try {
+        await withInitializedServer(pathToFileURL(projectDir).toString(), async (client) => {
+          // One open, so only the change report can refresh the listing.
+          const params = openAt(client, pathsAnswer.at, projectDir);
+          expect(await pathLabels(client, params)).not.toContain('res://textures/new.png');
+          writeFileSync(join(projectDir, 'textures', 'new.png'), '');
+          reportCreated(client, projectDir, 'textures/new.png');
+
+          expect(await pathLabels(client, params)).toContain('res://textures/new.png');
+        });
+      } finally {
+        rmSync(join(projectDir, '..'), { recursive: true, force: true });
+      }
+    },
+    SERVER_TIMEOUT_MS
+  );
+
+  it(
+    'finds a project.godot created after the scene opened, once the client reports it',
+    async () => {
+      const projectDir = projectCopy();
+      const projectFile = join(projectDir, 'project.godot');
+      const projectText = readFileSync(projectFile, 'utf8');
+      rmSync(projectFile);
+      try {
+        await withInitializedServer(pathToFileURL(projectDir).toString(), async (client) => {
+          // One open, so only the change report can refresh the project root.
+          const params = openAt(client, linkAt!.at, projectDir);
+          expect(await client.result('textDocument/definition', params)).toBeNull();
+          writeFileSync(projectFile, projectText);
+          reportCreated(client, projectDir, 'project.godot');
+
+          const target = await client.result<{ uri: string } | null>('textDocument/definition', params);
+          expect(target && projectPath(projectDir, target.uri)).toBe(linkAt!.targets[0]!.file);
+        });
+      } finally {
+        rmSync(join(projectDir, '..'), { recursive: true, force: true });
+      }
+    },
+    SERVER_TIMEOUT_MS
+  );
+
+  it(
+    'asks a client that registers watchers to watch the project files',
+    async () => {
+      await withInitializedServer(
+        pathToFileURL(PROJECT_DIR).toString(),
+        async (client) => {
+          const registration = (await client.waitForNotification('client/registerCapability')) as {
+            registrations: Array<{ method: string }>;
+          };
+          expect(registration.registrations.map((entry) => entry.method)).toEqual([
+            'workspace/didChangeWatchedFiles',
+          ]);
+        },
+        { workspace: { didChangeWatchedFiles: { dynamicRegistration: true } } }
+      );
+    },
+    SERVER_TIMEOUT_MS
+  );
+
+  it(
+    'reads the project again when a document opens again, for a client that watches nothing',
+    async () => {
+      const projectDir = projectCopy();
+      try {
+        await withInitializedServer(pathToFileURL(projectDir).toString(), async (client) => {
+          await pathLabels(client, openAt(client, pathsAnswer.at, projectDir));
+          writeFileSync(join(projectDir, 'textures', 'new.png'), '');
+          client.notify('textDocument/didClose', {
+            textDocument: { uri: fileUri(projectDir, pathsAnswer.at.file) },
+          });
+
+          expect(await pathLabels(client, openAt(client, pathsAnswer.at, projectDir))).toContain(
+            'res://textures/new.png'
+          );
+        });
+      } finally {
+        rmSync(join(projectDir, '..'), { recursive: true, force: true });
+      }
+    },
+    SERVER_TIMEOUT_MS
+  );
+
+  it(
+    'lints an open scene again once the client reports a change, here a new .gdextension file',
+    async () => {
+      const root = mkdtempSync(join(tmpdir(), 'tscn-lsp-relint-'));
+      const projectDir = join(root, 'project');
+      cpSync(join(repoRoot, 'scenes', 'fixtures', 'gltf-unsupported-required-extension'), projectDir, {
+        recursive: true,
+      });
+      const scene = 'edge-gltf-unsupported-required-extension.tscn';
+      const uri = fileUri(projectDir, scene);
+      const codesOf = (params: unknown) =>
+        (params as { uri: string; diagnostics: Array<{ code: string }> }).diagnostics.map((d) => d.code);
+      const isFor = (params: unknown) => (params as { uri: string }).uri === uri;
+      try {
+        await withInitializedServer(pathToFileURL(projectDir).toString(), async (client) => {
+          client.notify('textDocument/didOpen', {
+            textDocument: {
+              uri,
+              languageId: 'tscn',
+              version: 1,
+              text: readFileSync(join(projectDir, scene), 'utf8'),
+            },
+          });
+          await client.waitFor(
+            'textDocument/publishDiagnostics',
+            (params) => isFor(params) && codesOf(params).includes('gltf-required-extension-unsupported')
+          );
+          writeFileSync(join(projectDir, 'support.gdextension'), '');
+          reportCreated(client, projectDir, 'support.gdextension');
+
+          const relinted = await client.waitFor(
+            'textDocument/publishDiagnostics',
+            (params) => isFor(params) && codesOf(params).includes('gltf-required-extension-maybe-unsupported')
+          );
+          expect(codesOf(relinted)).not.toContain('gltf-required-extension-unsupported');
         });
       } finally {
         rmSync(root, { recursive: true, force: true });

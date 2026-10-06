@@ -8,6 +8,7 @@
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   createConnection,
+  DidChangeWatchedFilesNotification,
   ProposedFeatures,
   TextDocumentSyncKind,
   TextDocuments,
@@ -47,6 +48,7 @@ import {
   toLspSymbol,
 } from './lspConvert';
 import {
+  forgetDiskState,
   isFile,
   listProjectPaths,
   projectRootForDir,
@@ -68,9 +70,12 @@ const linter = new Linter();
 /** The client's root URI, the fallback project for a document with no file path. */
 let workspaceRoot: string | null = null;
 
+/** Whether the client registers a file watcher at the server's request. Written once, by `onInitialize`. */
+let canWatchFiles = false;
+
 /**
  * Each open document's project root, so a request does not walk the tree again. Written by
- * `rootForUri` and cleared on close.
+ * `rootForUri`, and cleared on close and by `forgetProjects`.
  */
 const rootByUri = new Map<string, Promise<string | null>>();
 /**
@@ -112,6 +117,12 @@ function findProjectRoot(uri: string): Promise<string | null> {
   if (path !== null) return projectRootForFile(path);
   if (workspaceRoot !== null) return projectRootForDir(workspaceRoot);
   return Promise.resolve(null);
+}
+
+/** Drops every project answer, from the disk and per document, so the next request reads the project again. */
+function forgetProjects(): void {
+  forgetDiskState();
+  rootByUri.clear();
 }
 
 /** The model a request reads, or undefined for a document the client never opened. */
@@ -167,6 +178,7 @@ async function lintDocument(document: TextDocument): Promise<void> {
 
 connection.onInitialize((params: InitializeParams): InitializeResult => {
   workspaceRoot = workspaceRootOf(params);
+  canWatchFiles = params.capabilities.workspace?.didChangeWatchedFiles?.dynamicRegistration === true;
   return {
     capabilities: {
       textDocumentSync: TextDocumentSyncKind.Full,
@@ -183,6 +195,22 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
       documentLinkProvider: { resolveProvider: false },
     },
   };
+});
+
+connection.onInitialized(() => {
+  if (!canWatchFiles) return;
+  // Every file: a new texture changes path completion, and a new project.godot moves a root.
+  connection.client
+    .register(DidChangeWatchedFilesNotification.type, { watchers: [{ globPattern: '**/*' }] })
+    .catch((error: unknown) => {
+      // A client that refuses still refreshes the project each time a document opens.
+      connection.console.warn(`[Watch] the client refused a file watcher: ${String(error)}`);
+    });
+});
+
+connection.onDidChangeWatchedFiles(() => {
+  forgetProjects();
+  for (const document of documents.all()) scheduleLint(document);
 });
 
 connection.onExit(() => {
@@ -254,6 +282,11 @@ connection.onDocumentLinks(async (params): Promise<DocumentLink[]> => {
     const target = targetByPath.get(path);
     return target === undefined ? { range } : { range, target };
   });
+});
+
+// A client that watches no files still sees a change on disk once it opens a document again.
+documents.onDidOpen(() => {
+  forgetProjects();
 });
 
 documents.onDidChangeContent((event) => {

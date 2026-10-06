@@ -139,6 +139,13 @@ export class LspClient {
   }
 
   private deliver(message: RpcMessage): void {
+    // A request from the server, such as `client/registerCapability`, gets an empty result, and a
+    // test waits for it as for a notification.
+    if (typeof message.method === 'string' && message.id !== undefined) {
+      this.write(JSON.stringify({ jsonrpc: '2.0', id: message.id, result: null }));
+      this.onNotification({ method: message.method, params: message.params });
+      return;
+    }
     if (typeof message.id !== 'number') {
       if (typeof message.method === 'string')
         this.onNotification({ method: message.method, params: message.params });
@@ -175,16 +182,17 @@ export function spawnServer(): { child: ChildProcessWithoutNullStreams; client: 
 
 /**
  * Runs `use` against a fresh server that has completed the initialize handshake with
- * `rootUri`, then shuts it down. A fresh server per test keeps the server's per-root
+ * `rootUri` and the client `capabilities`, then shuts it down. A fresh server per test keeps the server's per-root
  * listing cache from leaking between tests.
  */
 export async function withInitializedServer(
   rootUri: string | null,
-  use: (client: LspClient) => Promise<void>
+  use: (client: LspClient) => Promise<void>,
+  capabilities: Record<string, unknown> = {}
 ): Promise<void> {
   const { child, client } = spawnServer();
   try {
-    await client.result('initialize', { processId: process.pid, rootUri, capabilities: {} });
+    await client.result('initialize', { processId: process.pid, rootUri, capabilities });
     client.notify('initialized', {});
     await use(client);
     await client.request('shutdown', null);
