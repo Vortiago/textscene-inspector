@@ -33,33 +33,17 @@ strategy.
 - Never edit `.claude/skills/conventional-commits/`, `.claude/rules/` or
   `.claude/agents/ste-review.md`. Run `pnpm vendor:verktoykasse --from <checkout>` instead.
 
-## Gates
+## Checks
 
-Run each gate from the repo root. Run these for every change:
+The git hooks and CI run the checks. `githooks/README.md` lists what each hook runs. CI runs the
+full suite, the builds, the packaging and the area tests on each pull request. When a hook or a
+CI job fails, fix the cause.
 
-- `pnpm type-check:all`. Run it once in a fresh worktree before any per-package check.
-- `pnpm type-check:tests`. Every package that ships tests must define the script.
-- `pnpm test:unit`. On a shell-tool timeout, re-run it with a larger `timeout`. A subset never
-  proves the gate.
-- `npx eslint <changed files>`.
-- `pnpm format:check`. `pnpm format` fixes a failure.
-
-Per package: `pnpm --filter @textscene/web-previewer type-check` / `test`.
-
-Run these when the change touches the named area:
-
-- `.tscn` fixtures: `pnpm build:linter && pnpm lint:tscn <files>`. The negative `edge-*` fixtures
-  must error, and `fixtureLint.test.ts` checks them.
-- A linter rule or validator: `pnpm lint:scenes`. An error in its vendored Godot demos is a
-  false positive in the rule. Keep its directory list in `lint:scenes:only`.
-- Rendering: `pnpm test:visual`.
-- The webview CSP, its bundle, asset loading, the text pipeline, the **Dependency hot-reload**, the
-  Scene Tree view or the document symbols: `pnpm test:vscode:csp`.
-- The browser build, or how the preview starts: `pnpm --filter textscene-inspector test:web`, then
-  `pnpm test:vscode:web-preview`.
-- The web previewer's outliner, inspector, mode switching, or camera and selection wiring:
-  `SHOWCASE_CHANNEL=bundled pnpm test:e2e:web`. Without the variable, it fails to find system
-  Chrome. Never add a test hook for it to a production file.
+- Every package that ships tests defines `type-check:tests`.
+- A negative `edge-*` fixture must error. `fixtureLint.test.ts` checks it.
+- An error from `lint:scenes` in a vendored Godot demo is a false positive in the rule. Keep its
+  directory list in `lint:scenes:only`.
+- Never add a test hook for the web previewer's e2e tests to a production file.
 
 ### Visual goldens
 
