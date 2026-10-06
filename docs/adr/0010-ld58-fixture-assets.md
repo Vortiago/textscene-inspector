@@ -1,6 +1,6 @@
 # Commit the ld-58 fixture closure in the private repo; strip it before going public
 
-**Superseded by ADR-0033: the corpus is deployed, never committed.** ADR-0033 states what holds now. This record keeps the reasoning behind the `res://`-mirrored layout and the script-strip. Its two amendments below invert its own decision.
+**Superseded by ADR-0047: the corpus is deployed, never committed.** ADR-0047 states what holds now. This record keeps the reasoning behind the `res://`-mirrored layout and the script-strip. Its two amendments below invert its own decision.
 
 A curated subset of ld-58 scenes plus their transitive `res://` resource closure was committed under `scenes/ld58/`, mirroring the `res://` tree so paths resolve, as visual-regression fixtures and showcase clips for both apps. The repository was private, and the step that made it public had to strip `scenes/ld58/`, the ld-58 showcase clips and any ld-58-specific fixtures. Asset licensing was therefore no blocker, and texture downscaling was a repo-size choice, not a licensing requirement. The music track is omitted: the visual previewer does not need it.
 

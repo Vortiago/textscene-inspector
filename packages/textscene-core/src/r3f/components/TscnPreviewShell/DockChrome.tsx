@@ -1,5 +1,5 @@
 /**
- * The Split Dock's handles, collapsed strip and narrow pane switcher (ADR-0007, ADR-0042).
+ * The Split Dock's handles, collapsed strip and narrow pane switcher (ADR-0007, ADR-0048).
  * The narrow-only parts render in every layout and the stylesheet hides them on a wide one,
  * so the layout switch needs no `matchMedia` listener.
  */

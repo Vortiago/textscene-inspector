@@ -1,8 +1,6 @@
 # A sub-resource path addresses a resource inside a `.tres`
 
 - Status: Accepted
-- Numbered ADR-0032 because ADR-0029 is the viewport navigation bindings. Pull-request
-  descriptions outside the tree call this decision ADR-0029.
 - Related: the `resource event bus` / `useResource` seam (ARCHITECTURE.md "Resource
   Loading"), ADR-0022 (uploads are frontend-only), ADR-0028 (import sidecars).
 

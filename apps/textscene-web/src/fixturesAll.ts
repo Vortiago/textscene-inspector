@@ -1,7 +1,7 @@
 /**
  * The fixture set the previewer renders: the generated ./fixtures and the gitignored
  * corpora, such as ./fixtures.games (`pnpm vendor:games`) and ./fixtures.ld58
- * (ADR-0033). Runtime code imports from here, since ./fixtures stays base-only and
+ * (ADR-0047). Runtime code imports from here, since ./fixtures stays base-only and
  * JSON-parseable for the showcase tooling.
  */
 import { warn } from '@textscene/core';
