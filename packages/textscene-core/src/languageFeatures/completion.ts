@@ -16,6 +16,12 @@ import { headingAttribute, propertyKeySpan } from './ranges.js';
 import type { CompletionItem, Position } from './types.js';
 
 /**
+ * A line outside every property that holds one word and no `=` yet: a key being typed. A
+ * blank line does not match, so it offers nothing.
+ */
+const PARTIAL_KEY_RE = /^\s*[A-Za-z_][\w/]*$/;
+
+/**
  * The characters a host asks for completion on: a quote opens a class or a path, `=` a
  * value, the rest a key or an id.
  */
@@ -47,6 +53,13 @@ function propertyItems(className: string, present: ReadonlySet<string>): readonl
       detail: variantTypeName(property.type),
       deprecated: isDeprecatedPropertyName(className, property.name),
     }));
+}
+
+/** The properties a section's class declares and the section does not set yet. */
+function keyItems(section: DocumentSection): readonly CompletionItem[] {
+  if (!section.ownerType) return [];
+  const present = new Set(section.properties.map((slot) => slot.storedKey));
+  return propertyItems(section.ownerType, present);
 }
 
 function enumItems(className: string, property: PropertySlot): readonly CompletionItem[] {
@@ -163,16 +176,11 @@ export async function completionsAt(
   }
 
   const location = document.propertyAt(position.line + 1);
-  if (!location) return [];
+  if (!location) return PARTIAL_KEY_RE.test(line) ? keyItems(section) : [];
   const property = location.property;
-  const className = location.section.ownerType;
 
   const onFirstLine = property.startLine === position.line + 1;
   const key = propertyKeySpan(line);
-  if (onFirstLine && key && position.character <= key.span.end) {
-    if (!className) return [];
-    const present = new Set(location.section.properties.map((slot) => slot.storedKey));
-    return propertyItems(className, present);
-  }
+  if (onFirstLine && key && position.character <= key.span.end) return keyItems(location.section);
   return valueItems(document, location.section, property, line, position.character, context);
 }

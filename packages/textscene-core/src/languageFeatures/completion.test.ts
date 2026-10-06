@@ -88,6 +88,27 @@ describe('completionsAt', () => {
     expect(items.map((item) => item.label)).toContain('Root');
   });
 
+  it('offers the class properties for a key typed before its =', async () => {
+    const document = new LanguageDocument(
+      ['[node name="Lamp" type="OmniLight3D"]', 'omni_range = 4.0', 'omni_'].join('\n')
+    );
+    const labels = await labelsAt(document, 3, 'omni_'.length);
+    expect(labels).toContain('omni_attenuation');
+    expect(labels).not.toContain('omni_range');
+  });
+
+  it('offers no key inside the continuation of a multi-line value', async () => {
+    const document = new LanguageDocument(
+      ['[node name="Lamp" type="OmniLight3D"]', 'editor_description = "first', 'second'].join('\n')
+    );
+    expect(await labelsAt(document, 3, 'second'.length)).toEqual([]);
+  });
+
+  it('offers no key for a typed word under a heading with no class', async () => {
+    const document = new LanguageDocument(['[gd_scene format=3]', 'omni_'].join('\n'));
+    expect(await labelsAt(document, 2, 'omni_'.length)).toEqual([]);
+  });
+
   it('offers nothing on a blank line', async () => {
     const document = new LanguageDocument(SCENE);
     expect(await completionsAt(document, { line: 1, character: 0 })).toEqual([]);
