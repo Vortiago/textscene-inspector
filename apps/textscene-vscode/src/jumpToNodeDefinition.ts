@@ -43,10 +43,7 @@ export async function jumpToNodeDefinition(
 ): Promise<void> {
   try {
     const document = await vscode.workspace.openTextDocument(resource);
-    const text = document.getText();
-    const lines = text.split('\n');
-
-    const targetLine = findNodeHeadingLine(lines, nodeName, expectedParent);
+    const targetLine = findNodeHeadingLine(document.getText().split('\n'), nodeName, expectedParent);
 
     if (targetLine === -1) {
       vscode.window.showWarningMessage(`Could not find node "${nodeName}" in file`);

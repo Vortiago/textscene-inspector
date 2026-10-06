@@ -9,13 +9,16 @@ import { resourceContent } from '@textscene/core/resources/resourceProviderUtils
 import { info, error } from '@textscene/core/logger';
 import type { ResourceProvider } from '@textscene/core/resources/ResourceProvider';
 import { comparablePath, isWithinRoot, RES_SCHEME, resRelativePath } from '@textscene/core/resources/resPath';
-import { findResRootIn } from '../resRoot';
+import { directoryOf, findResRootIn } from '../resRoot';
 import { HOST_PATH_CASE } from '../hostPathCase';
 import { readWorkspaceFile } from '../readWorkspaceFile';
 
 export class VSCodeResourceProvider implements ResourceProvider {
-  /** Written by the first `resRoot` call, and kept for this provider's lifetime. */
-  private cachedResRoot: vscode.Uri | null = null;
+  /**
+   * Written by the first `resRoot` call, and kept for this provider's lifetime. A promise, so the loads a scene starts
+   * at once share one walk.
+   */
+  private resRootLookup: Promise<vscode.Uri | null> | null = null;
 
   /**
    * Comparable fsPath -> the exact `res://` string a `loadResource` call resolved
@@ -65,17 +68,26 @@ export class VSCodeResourceProvider implements ResourceProvider {
    * root, since no resource was then resolved against one.
    */
   async hasResRootMoved(): Promise<boolean> {
-    if (!this.cachedResRoot) {
+    if (!this.resRootLookup) {
       return false;
     }
-    const currentRoot = await findResRootIn(this.workspaceRoot, this.documentUri);
-    return comparablePath(currentRoot.fsPath) !== comparablePath(this.cachedResRoot.fsPath);
+    const [cachedRoot, currentRoot] = await Promise.all([
+      this.resRootLookup,
+      findResRootIn(this.workspaceRoot, this.documentUri),
+    ]);
+    return rootKey(currentRoot) !== rootKey(cachedRoot);
   }
 
   /** The scene's `res://` root, cached for this provider's lifetime. `hasResRootMoved` tells the owner when to replace it. */
   private async resRoot(): Promise<vscode.Uri> {
-    this.cachedResRoot ??= await findResRootIn(this.workspaceRoot, this.documentUri);
-    return this.cachedResRoot;
+    this.resRootLookup ??= findResRootIn(this.workspaceRoot, this.documentUri);
+    const root = await this.resRootLookup;
+    if (root === null) {
+      throw new Error(
+        `expected ${this.documentUri.fsPath} inside the workspace ${this.workspaceRoot.fsPath}`
+      );
+    }
+    return root;
   }
 
   /**
@@ -86,7 +98,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
   private async resolve(resourcePath: string): Promise<vscode.Uri> {
     const resolvedUri = resourcePath.startsWith(RES_SCHEME)
       ? vscode.Uri.joinPath(await this.resRoot(), resRootRelativePath(resourcePath))
-      : vscode.Uri.joinPath(vscode.Uri.joinPath(this.documentUri, '..'), resourcePath);
+      : vscode.Uri.joinPath(directoryOf(this.documentUri), resourcePath);
     if (!isWithinRoot(this.workspaceRoot.fsPath, resolvedUri.fsPath, HOST_PATH_CASE)) {
       throw new Error(`Path traversal detected: ${resourcePath} resolves outside workspace bounds`);
     }
@@ -101,4 +113,9 @@ function resRootRelativePath(resPath: string): string {
     throw new Error(`Path traversal detected: ${resPath} climbs out of the res:// root`);
   }
   return relativePath;
+}
+
+/** A root as two host paths compare, or null for no root. */
+function rootKey(root: vscode.Uri | null): string | null {
+  return root && comparablePath(root.fsPath);
 }

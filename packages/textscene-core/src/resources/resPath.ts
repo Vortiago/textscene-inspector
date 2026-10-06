@@ -122,17 +122,20 @@ export async function findProjectRoot<Dir>(
 
 /**
  * The directory a scene's `res://` paths resolve under: its Godot project root, or `sceneDir` itself when no
- * directory holds `project.godot`. Godot has no `res://` outside a project, but a loose scene, such as one copied out
- * of a demo, names its files relative to its own directory. The VS Code extension, the `tscn-lsp` server and the
- * `tscn-lint` CLI take this one answer.
+ * directory holds `project.godot` and `isInWorkspace(sceneDir)`. Null otherwise: a listing from a loose scene in
+ * `/tmp` or a home directory would read every file under it. Godot has no `res://` outside a project, but a loose
+ * scene, such as one copied out of a demo, names its files from its own directory. Every host takes this one answer.
  */
 export async function findResRoot<Dir>(
   sceneDir: Dir,
   parent: (dir: Dir) => Dir | null,
   isStop: (dir: Dir) => boolean,
-  hasProjectFile: (dir: Dir) => Promise<boolean>
-): Promise<Dir> {
-  return (await findProjectRoot(sceneDir, parent, isStop, hasProjectFile)) ?? sceneDir;
+  hasProjectFile: (dir: Dir) => Promise<boolean>,
+  isInWorkspace: (dir: Dir) => boolean
+): Promise<Dir | null> {
+  const project = await findProjectRoot(sceneDir, parent, isStop, hasProjectFile);
+  if (project !== null) return project;
+  return isInWorkspace(sceneDir) ? sceneDir : null;
 }
 
 /** The `project.godot` a directory holds, for a host's `hasProjectFile`. */

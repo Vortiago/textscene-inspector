@@ -106,7 +106,7 @@ function workspaceRootOf(params: InitializeParams): string | null {
 function rootForUri(uri: string): Promise<string | null> {
   const cached = rootByUri.get(uri);
   if (cached !== undefined) return cached;
-  const root = findResRoot(uri);
+  const root = uncachedResRootOf(uri);
   rootByUri.set(uri, root);
   return root;
 }
@@ -115,7 +115,7 @@ function rootForUri(uri: string): Promise<string | null> {
  * The `res://` root of the document's file: its project, or its own directory inside the workspace. A document
  * with no file path has no directory, so it takes the workspace's project, or none.
  */
-function findResRoot(uri: string): Promise<string | null> {
+function uncachedResRootOf(uri: string): Promise<string | null> {
   const path = filePathOf(uri);
   if (path !== null) return resRootForFile(path, workspaceRoot);
   if (workspaceRoot !== null) return projectRootForDir(workspaceRoot);

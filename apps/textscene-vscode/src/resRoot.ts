@@ -1,7 +1,6 @@
 /**
- * Finds a document's `res://` root, for the preview, the language features and the agent tools: the nearest directory
- * with `project.godot`, from the document's own up to the workspace folder, the furthest the watchers see. Outside
- * every project, it is the document's own directory (core's `findResRoot`).
+ * Finds a document's `res://` root by core's `findResRoot`, for the preview, the language features and the agent
+ * tools. The walk stops at the workspace folder, the furthest the watchers see.
  */
 
 import * as vscode from 'vscode';
@@ -18,7 +17,8 @@ function parentUri(dir: vscode.Uri): vscode.Uri | null {
   return parent.path === dir.path ? null : parent;
 }
 
-function directoryOf(documentUri: vscode.Uri): vscode.Uri {
+/** The directory that holds the document. */
+export function directoryOf(documentUri: vscode.Uri): vscode.Uri {
   return vscode.Uri.joinPath(documentUri, '..');
 }
 
@@ -41,23 +41,29 @@ export async function hasProjectFile(dir: vscode.Uri): Promise<boolean> {
 }
 
 /**
- * The directory the document's `res://` paths resolve under: the nearest directory, from the document's own up to the
- * workspace root, that holds `project.godot`, or the document's own directory when none does. `holdsProjectFile`
+ * The document's `res://` root under `workspaceRoot`, or null when the document lies outside it. `holdsProjectFile`
  * answers for one directory, so a caller can share its answers across documents.
  */
 export function findResRootIn(
   workspaceRoot: vscode.Uri,
   documentUri: vscode.Uri,
   holdsProjectFile: (dir: vscode.Uri) => Promise<boolean> = hasProjectFile
-): Promise<vscode.Uri> {
-  return findResRoot(directoryOf(documentUri), parentUri, stopsAt(workspaceRoot), holdsProjectFile);
+): Promise<vscode.Uri | null> {
+  const isInWorkspace = (dir: vscode.Uri) => isWithinRoot(workspaceRoot.fsPath, dir.fsPath, HOST_PATH_CASE);
+  return findResRoot(
+    directoryOf(documentUri),
+    parentUri,
+    stopsAt(workspaceRoot),
+    holdsProjectFile,
+    isInWorkspace
+  );
 }
 
-/**
- * The `res://` root of a document: its Godot project, or its own directory outside every project. Null outside every
- * workspace folder, where no watcher keeps an answer current.
- */
-export function resRootOf(documentUri: vscode.Uri): Promise<vscode.Uri | null> {
+/** The `res://` root of a document. Null outside every workspace folder, where no watcher keeps an answer current. */
+export function resRootOf(
+  documentUri: vscode.Uri,
+  holdsProjectFile: (dir: vscode.Uri) => Promise<boolean> = hasProjectFile
+): Promise<vscode.Uri | null> {
   const folder = vscode.workspace.getWorkspaceFolder(documentUri);
-  return folder ? findResRootIn(folder.uri, documentUri) : Promise.resolve(null);
+  return folder ? findResRootIn(folder.uri, documentUri, holdsProjectFile) : Promise.resolve(null);
 }

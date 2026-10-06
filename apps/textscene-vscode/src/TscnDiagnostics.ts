@@ -17,7 +17,7 @@ import { error as logError } from '@textscene/core/logger';
 import { comparablePath, isWithinRoot } from '@textscene/core/resources/resPath';
 import { HOST_PATH_CASE } from './hostPathCase';
 import { LintResourceProvider } from './LintResourceProvider';
-import { findResRootIn, hasProjectFile } from './resRoot';
+import { hasProjectFile, resRootOf } from './resRoot';
 import {
   ANY_PATH_PATTERN,
   EXTENSION_LIST_PATTERN,
@@ -372,9 +372,8 @@ export class TscnDiagnostics implements vscode.Disposable {
    * Problems panel's verdict.
    */
   async providerFor(uri: vscode.Uri): Promise<LintResourceProvider | null> {
-    const folder = vscode.workspace.getWorkspaceFolder(uri);
-    if (!folder) return null;
-    const root = await findResRootIn(folder.uri, uri, (dir) => this._holdsProjectFile(dir));
+    const root = await resRootOf(uri, (dir) => this._holdsProjectFile(dir));
+    if (!root) return null;
     const key = root.toString();
     let provider = this._providers.get(key);
     if (!provider) {

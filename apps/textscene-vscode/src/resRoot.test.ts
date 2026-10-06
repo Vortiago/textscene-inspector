@@ -19,7 +19,7 @@ describe('findResRootIn', () => {
       holds
     );
 
-    expect(result.fsPath).toBe('/workspace/game');
+    expect(result?.fsPath).toBe('/workspace/game');
   });
 
   it("gives the document's own directory when no directory holds project.godot", async () => {
@@ -29,7 +29,7 @@ describe('findResRootIn', () => {
       async () => false
     );
 
-    expect(result.fsPath).toBe('/workspace/isometric');
+    expect(result?.fsPath).toBe('/workspace/isometric');
   });
 
   it("gives the document's own directory when the only project.godot lies above the workspace root", async () => {
@@ -37,7 +37,17 @@ describe('findResRootIn', () => {
 
     const result = await findResRootIn(workspaceRoot, createMockUri('/workspace/scenes/Door.tscn'), holds);
 
-    expect(result.fsPath).toBe('/workspace/scenes');
+    expect(result?.fsPath).toBe('/workspace/scenes');
+  });
+
+  it('gives null for a document outside the workspace root', async () => {
+    const result = await findResRootIn(
+      workspaceRoot,
+      createMockUri('/elsewhere/dungeon.tscn'),
+      async () => false
+    );
+
+    expect(result).toBeNull();
   });
 
   it('walks upward to the project.godot an ancestor directory holds, through stat', async () => {
@@ -52,7 +62,7 @@ describe('findResRootIn', () => {
       createMockUri('/workspace/scenes/nested/deep/Door.tscn')
     );
 
-    expect(result.fsPath).toBe('/workspace');
+    expect(result?.fsPath).toBe('/workspace');
   });
 
   it('asks about each directory from the document up to the workspace root, and none above it', async () => {

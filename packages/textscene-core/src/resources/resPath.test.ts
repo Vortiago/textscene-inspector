@@ -194,17 +194,30 @@ describe('findProjectRoot', () => {
 });
 
 describe('findResRoot', () => {
+  const inWorkspace = () => true;
+  const outsideWorkspace = () => false;
+
   it('gives the project root when an ancestor holds project.godot', async () => {
-    expect(await findResRoot('/proj/scenes', parentDir, () => false, projectsAt('/proj'))).toBe('/proj');
+    expect(
+      await findResRoot('/proj/scenes', parentDir, () => false, projectsAt('/proj'), outsideWorkspace)
+    ).toBe('/proj');
   });
 
   it("gives the scene's own directory when no ancestor holds project.godot", async () => {
-    expect(await findResRoot('/demo/dungeon', parentDir, () => false, projectsAt())).toBe('/demo/dungeon');
+    expect(await findResRoot('/demo/dungeon', parentDir, () => false, projectsAt(), inWorkspace)).toBe(
+      '/demo/dungeon'
+    );
   });
 
   it("gives the scene's own directory when the only project.godot lies above the stop directory", async () => {
     const isStop = (dir: string) => dir === '/ws';
-    expect(await findResRoot('/ws/scenes', parentDir, isStop, projectsAt('/'))).toBe('/ws/scenes');
+    expect(await findResRoot('/ws/scenes', parentDir, isStop, projectsAt('/'), inWorkspace)).toBe(
+      '/ws/scenes'
+    );
+  });
+
+  it('gives null for a loose scene outside the workspace', async () => {
+    expect(await findResRoot('/tmp', parentDir, () => false, projectsAt(), outsideWorkspace)).toBeNull();
   });
 });
 
