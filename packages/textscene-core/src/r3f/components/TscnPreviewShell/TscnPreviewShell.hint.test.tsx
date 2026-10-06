@@ -36,6 +36,8 @@ function makeLoader(scenes: Record<string, TscnScene>): ResourceLoader {
     scenes: proc<TscnScene>(scenes),
     glbMeshes: proc<never>({}),
     register: () => {},
+    pendingResourceCount: 0,
+    subscribePending: () => () => {},
   } as unknown as ResourceLoader;
 }
 

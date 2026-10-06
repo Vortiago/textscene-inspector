@@ -7,7 +7,7 @@
 import type { ViewportMode } from '../../contexts/ViewportModeContext.js';
 
 export type PreviewCaptureState =
-  /** The canvas has not created its renderer yet. */
+  /** The canvas has no renderer yet, has yet to render the current scene, or the scene still loads. */
   | { readonly status: 'pending' }
   /** `capture` renders a frame and returns it as a PNG data URL. */
   | { readonly status: 'ready'; readonly capture: () => string | null }
@@ -27,17 +27,25 @@ function viewportCrashReason(error: Error): string {
 interface CaptureInputs {
   /** The registered screenshot handler, or null before the canvas registers one. */
   readonly capture: (() => string | null) | null;
+  /** Whether a frame now shows the current scene whole, every resource and texture it uses landed. */
+  readonly isSceneComplete: boolean;
   /** The error the viewport's boundary caught, or null while the viewport renders. */
   readonly viewportError: Error | null;
   readonly mode: ViewportMode;
 }
 
 /**
- * The state the shell reports. A registered handler wins: it exists only once a renderer does. A crash comes before the
- * 2D reason, since the crash also stops a later switch to 3D from capturing.
+ * The state the shell reports. A registered handler wins, since it exists only once a renderer does, but it waits until
+ * the scene is complete. A crash comes before the 2D reason, since the crash also stops a later switch to 3D from
+ * capturing.
  */
-export function previewCaptureStateOf({ capture, viewportError, mode }: CaptureInputs): PreviewCaptureState {
-  if (capture) return { status: 'ready', capture };
+export function previewCaptureStateOf({
+  capture,
+  isSceneComplete,
+  viewportError,
+  mode,
+}: CaptureInputs): PreviewCaptureState {
+  if (capture) return isSceneComplete ? { status: 'ready', capture } : PENDING_CAPTURE;
   if (viewportError) return { status: 'unavailable', reason: viewportCrashReason(viewportError) };
   if (mode === '2D') return { status: 'unavailable', reason: TWO_D_VIEW_REASON };
   return PENDING_CAPTURE;

@@ -4,6 +4,7 @@
  * Camera3D there. It also carries the handlers the toolbar's buttons call.
  */
 
+import type { SceneGraph } from '../../core/SceneGraph.js';
 import {
   createContext,
   useCallback,
@@ -52,12 +53,23 @@ export interface CameraControlContextValue {
    * handler, as in 2D mode.
    */
   takeScreenshot: () => string | null;
-  /** `<TscnCanvas>` registers the frame capture of its WebGLRenderer here. */
-  registerScreenshotHandler: (handler: () => string | null) => () => void;
+  /**
+   * `<TscnCanvas>` registers the frame capture of its WebGLRenderer here, with the scene graph it has rendered, so a
+   * host can tell a frame of the current scene from one of the scene before.
+   */
+  registerScreenshotHandler: (handler: () => string | null, renderedScene?: SceneGraph | null) => () => void;
   /** Whether a canvas has registered a screenshot handler now. */
   hasScreenshotHandler: () => boolean;
+  /** The scene graph the registered handler has rendered, or null with no handler or none given. */
+  screenshotScene: () => SceneGraph | null;
   /** Calls `listener` each time a handler registers or leaves. Returns the unsubscribe. */
   subscribeScreenshotHandler: (listener: () => void) => () => void;
+}
+
+/** What a canvas registers for a screenshot: the capture, and the scene graph it has rendered. */
+interface ScreenshotSource {
+  readonly capture: () => string | null;
+  readonly renderedScene: SceneGraph | null;
 }
 
 const CameraControlContext = createContext<CameraControlContextValue | null>(null);
@@ -145,16 +157,22 @@ export function CameraControlProvider({
   }, [resetHandlerRef]);
 
   const {
-    ref: screenshotHandlerRef,
-    register: registerScreenshotHandler,
+    ref: screenshotSourceRef,
+    register: registerScreenshotSource,
     subscribe: subscribeScreenshotHandler,
-  } = useHandlerSlot<() => string | null>();
+  } = useHandlerSlot<ScreenshotSource>();
+  const registerScreenshotHandler = useCallback(
+    (capture: () => string | null, renderedScene: SceneGraph | null = null) =>
+      registerScreenshotSource({ capture, renderedScene }),
+    [registerScreenshotSource]
+  );
   const takeScreenshot = useCallback(() => {
-    return screenshotHandlerRef.current?.() ?? null;
-  }, [screenshotHandlerRef]);
-  const hasScreenshotHandler = useCallback(
-    () => screenshotHandlerRef.current !== null,
-    [screenshotHandlerRef]
+    return screenshotSourceRef.current?.capture() ?? null;
+  }, [screenshotSourceRef]);
+  const hasScreenshotHandler = useCallback(() => screenshotSourceRef.current !== null, [screenshotSourceRef]);
+  const screenshotScene = useCallback(
+    () => screenshotSourceRef.current?.renderedScene ?? null,
+    [screenshotSourceRef]
   );
 
   const value = useMemo<CameraControlContextValue>(
@@ -170,6 +188,7 @@ export function CameraControlProvider({
       takeScreenshot,
       registerScreenshotHandler,
       hasScreenshotHandler,
+      screenshotScene,
       subscribeScreenshotHandler,
     }),
     [
@@ -184,6 +203,7 @@ export function CameraControlProvider({
       takeScreenshot,
       registerScreenshotHandler,
       hasScreenshotHandler,
+      screenshotScene,
       subscribeScreenshotHandler,
     ]
   );

@@ -55,18 +55,28 @@ class WebviewLogAdapter implements LogAdapter {
   }
 }
 
+const PENDING_CAPTURE: PreviewCaptureState = { status: 'pending' };
+
 function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
   const [content, setContent] = useState<string>('');
+  /** The scene text last handed to the shell. Written only by the `loadTscn` handler. */
+  const contentRef = useRef('');
 
   // Child effects run before this component's, so the shell reports its first state
   // before the listener exists. The ref holds the latest, and the host hears it only
   // after `webviewReady`, which resets the host's copy.
-  const captureStateRef = useRef<PreviewCaptureState>({ status: 'pending' });
+  const captureStateRef = useRef<PreviewCaptureState>(PENDING_CAPTURE);
   const isListeningRef = useRef(false);
+  /** Capture requests that arrived while pending. Answered and cleared by the next settled state. */
+  const heldRequestsRef = useRef<string[]>([]);
   const handleCaptureStateChange = useCallback(
     (state: PreviewCaptureState) => {
       captureStateRef.current = state;
       if (isListeningRef.current) vscode.postMessage(captureStateMessage(state));
+      if (state.status === 'pending') return;
+      for (const requestId of heldRequestsRef.current.splice(0)) {
+        vscode.postMessage(captureAnswer(requestId, state));
+      }
     },
     [vscode]
   );
@@ -87,13 +97,20 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
       const message: unknown = event.data;
       if (!isHostToWebviewMessage(message)) return;
       if (message.type === 'loadTscn') {
+        // React renders the new text on a later task, so until the shell reports on it, a
+        // capture would show the scene before. The same text again changes nothing.
+        if (message.content !== contentRef.current) {
+          contentRef.current = message.content;
+          handleCaptureStateChange(PENDING_CAPTURE);
+        }
         setContent(message.content);
       } else if (message.type === 'resourceChanged') {
         // A dependency (texture, .tres, sub-scene, sidecar, project.godot) changed on
         // disk. Its consumers load it again, with no remount.
         loader.provideFile(message.path);
       } else if (message.type === 'capturePreview') {
-        vscode.postMessage(captureAnswer(message.requestId, captureStateRef.current));
+        if (captureStateRef.current.status === 'pending') heldRequestsRef.current.push(message.requestId);
+        else vscode.postMessage(captureAnswer(message.requestId, captureStateRef.current));
       }
     }
 
@@ -110,7 +127,7 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
       isListeningRef.current = false;
       window.removeEventListener('message', onMessage);
     };
-  }, [vscode, loader]);
+  }, [vscode, loader, handleCaptureStateChange]);
 
   const panelId = useMemo(() => `vscode-${Math.random().toString(36).slice(2, 10)}`, []);
 

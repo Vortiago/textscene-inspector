@@ -1,31 +1,69 @@
 /**
- * `onCaptureStateChange` reports `ready` only once a canvas registers its screenshot
- * handler, `unavailable` with the reason when the viewport cannot capture, and `pending`
- * in between. A host waits on these states instead of polling the canvas.
+ * `onCaptureStateChange` reports `ready` only once the canvas has rendered the current scene
+ * and its resources and textures have landed, `unavailable` with the reason when the viewport
+ * cannot capture, and `pending` in between. A host waits on these states instead of polling.
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useCameraControl } from '../../contexts/CameraControlContext';
+import { useOptionalHierarchy } from '../../contexts/HierarchyContext';
+import { useResourceLoader } from '../../../resources/useResource';
+import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { beginTextureWork } from '../../../resources/textures/textureWork';
 import type { PreviewCaptureState } from './previewCaptureState';
 
 const DATA_URL = 'data:image/png;base64,AAA';
 
-/** Written by each test before it renders. The stub canvas reads it as it mounts. */
-const canvasStub: { registersHandler: boolean; error: Error | null } = {
+interface CanvasStub {
+  /** Whether the stub registers a screenshot handler, as a canvas with a renderer does. */
+  registersHandler: boolean;
+  /** The error the stub throws as it renders, as a canvas with no WebGL context does. */
+  error: Error | null;
+  /** Whether the stub holds one resource pending through the shell's loader, as `useResource` does. */
+  holdsResource: boolean;
+  /** Whether the stub keeps showing the first scene it rendered after the shell gets another. */
+  lagsScene: boolean;
+  /** Ends the held resource. Written by the stub as it mounts. */
+  releaseResource: () => void;
+}
+
+/** Written by `arrangeCanvas` before each render. The stub canvas reads it as it mounts. */
+const canvasStub: CanvasStub = {
   registersHandler: false,
   error: null,
+  holdsResource: false,
+  lagsScene: false,
+  releaseResource: () => {},
 };
+
+function arrangeCanvas(overrides: Partial<Omit<CanvasStub, 'releaseResource'>>): void {
+  Object.assign(
+    canvasStub,
+    { registersHandler: true, error: null, holdsResource: false, lagsScene: false },
+    overrides
+  );
+}
 
 // happy-dom has no WebGL, so the R3F canvas is a stub that registers or throws on demand.
 vi.mock('../../TscnCanvas', () => ({
   TscnCanvas: function StubCanvas() {
     const { registerScreenshotHandler } = useCameraControl();
+    const loader = useResourceLoader();
+    const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
+    const firstScene = useRef(sceneGraph);
+    const shownScene = canvasStub.lagsScene ? firstScene.current : sceneGraph;
+    useEffect(() => {
+      if (!canvasStub.holdsResource || !loader) return undefined;
+      canvasStub.releaseResource = loader.beginPending();
+      return canvasStub.releaseResource;
+    }, [loader]);
     useEffect(() => {
       if (!canvasStub.registersHandler) return undefined;
-      return registerScreenshotHandler(() => DATA_URL);
-    }, [registerScreenshotHandler]);
+      return registerScreenshotHandler(() => DATA_URL, shownScene);
+    }, [registerScreenshotHandler, shownScene]);
     if (canvasStub.error) throw canvasStub.error;
     return <div data-testid="canvas-stub" />;
   },
@@ -42,17 +80,33 @@ const SCENE_3D = `[gd_scene format=3]
 [node name="Root" type="Node3D"]
 `;
 
-function renderShell(): { states: PreviewCaptureState[]; unmount: () => void } {
+const OTHER_SCENE_3D = `[gd_scene format=3]
+
+[node name="Other" type="Node3D"]
+`;
+
+interface RenderedShell {
+  readonly states: PreviewCaptureState[];
+  readonly showScene: (content: string) => void;
+  readonly unmount: () => void;
+}
+
+function renderShell(content = SCENE_3D): RenderedShell {
   const states: PreviewCaptureState[] = [];
-  const { unmount } = render(
-    <TscnPreviewShell
-      panelId="capture"
-      content={SCENE_3D}
-      initialViewportMode="3D"
-      onCaptureStateChange={(state) => states.push(state)}
-    />
+  const loader = createFakeResourceLoader().loader;
+  // A host wraps the shell in its resource loader, as the extension's webview does.
+  const shellWith = (content: string) => (
+    <ResourceLoaderProvider loader={loader}>
+      <TscnPreviewShell
+        panelId="capture"
+        content={content}
+        initialViewportMode="3D"
+        onCaptureStateChange={(state) => states.push(state)}
+      />
+    </ResourceLoaderProvider>
   );
-  return { states, unmount };
+  const { rerender, unmount } = render(shellWith(content));
+  return { states, showScene: (content) => rerender(shellWith(content)), unmount };
 }
 
 function latest(states: PreviewCaptureState[]): PreviewCaptureState | undefined {
@@ -61,8 +115,7 @@ function latest(states: PreviewCaptureState[]): PreviewCaptureState | undefined 
 
 describe('<TscnPreviewShell> capture state', () => {
   it('reports pending while the canvas has no screenshot handler', () => {
-    canvasStub.registersHandler = false;
-    canvasStub.error = null;
+    arrangeCanvas({ registersHandler: false });
 
     const { states } = renderShell();
 
@@ -70,8 +123,7 @@ describe('<TscnPreviewShell> capture state', () => {
   });
 
   it('reports ready with a working capture once the canvas registers its handler', () => {
-    canvasStub.registersHandler = true;
-    canvasStub.error = null;
+    arrangeCanvas({});
 
     const { states } = renderShell();
     const state = latest(states);
@@ -81,8 +133,10 @@ describe('<TscnPreviewShell> capture state', () => {
   });
 
   it('reports the renderer error when the canvas cannot create a WebGL context', () => {
-    canvasStub.registersHandler = false;
-    canvasStub.error = new Error('THREE.WebGLRenderer: Error creating WebGL context.');
+    arrangeCanvas({
+      registersHandler: false,
+      error: new Error('THREE.WebGLRenderer: Error creating WebGL context.'),
+    });
     // The boundary logs the caught error, which is the case under test.
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -96,8 +150,7 @@ describe('<TscnPreviewShell> capture state', () => {
   });
 
   it('reports unavailable in the 2D view, which registers no screenshot handler', async () => {
-    canvasStub.registersHandler = true;
-    canvasStub.error = null;
+    arrangeCanvas({});
     const { states } = renderShell();
 
     await userEvent.click(screen.getByRole('button', { name: '2D' }));
@@ -109,11 +162,53 @@ describe('<TscnPreviewShell> capture state', () => {
   });
 
   it('reports pending as the shell unmounts', () => {
-    canvasStub.registersHandler = true;
-    canvasStub.error = null;
+    arrangeCanvas({});
     const { states, unmount } = renderShell();
 
     act(() => unmount());
+
+    expect(latest(states)).toEqual({ status: 'pending' });
+  });
+
+  it('reports pending while a resource the scene uses is loading, and ready once it lands', () => {
+    arrangeCanvas({ holdsResource: true });
+    const { states } = renderShell();
+    expect(latest(states)).toEqual({ status: 'pending' });
+
+    act(() => canvasStub.releaseResource());
+
+    expect(latest(states)?.status).toBe('ready');
+  });
+
+  it('reports pending while a texture is building, and ready once it is done', () => {
+    arrangeCanvas({});
+    const endTextureWork = beginTextureWork();
+    try {
+      const { states } = renderShell();
+      expect(latest(states)).toEqual({ status: 'pending' });
+
+      act(() => endTextureWork());
+
+      expect(latest(states)?.status).toBe('ready');
+    } finally {
+      endTextureWork();
+    }
+  });
+
+  it('reports pending while the canvas still shows the previous scene', () => {
+    arrangeCanvas({ lagsScene: true });
+    const { states, showScene } = renderShell();
+    expect(latest(states)?.status).toBe('ready');
+
+    showScene(OTHER_SCENE_3D);
+
+    expect(latest(states)).toEqual({ status: 'pending' });
+  });
+
+  it('reports pending before the host has sent a scene, so a capture never shows an empty view', () => {
+    arrangeCanvas({});
+
+    const { states } = renderShell('');
 
     expect(latest(states)).toEqual({ status: 'pending' });
   });

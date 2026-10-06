@@ -309,4 +309,41 @@ describe('capture state reporting', () => {
       { type: 'previewCaptureError', requestId: 'c2', error: 'no WebGL' },
     ]);
   });
+
+  it('holds a capturePreview that arrives while pending, and answers it once the shell is ready', async () => {
+    const { vscodeApi } = await mountFresh();
+
+    dispatch({ type: 'capturePreview', requestId: 'c3' });
+    expect(postedMessages(vscodeApi).filter((m) => m.type === 'previewCaptured')).toEqual([]);
+    captured.shellProps?.onCaptureStateChange?.(READY);
+
+    expect(postedMessages(vscodeApi).filter((m) => m.type === 'previewCaptured')).toEqual([
+      { type: 'previewCaptured', requestId: 'c3', dataUrl: 'data:image/png;base64,AA==' },
+    ]);
+  });
+
+  it('holds a capturePreview that follows new scene text until the shell is ready for it', async () => {
+    captured.mountCaptureState = READY;
+    const { vscodeApi } = await mountFresh();
+
+    dispatch({ type: 'loadTscn', content: 'a new scene' });
+    dispatch({ type: 'capturePreview', requestId: 'c4' });
+
+    expect(postedMessages(vscodeApi).filter((m) => m.type === 'previewCaptured')).toEqual([]);
+    expect(postedMessages(vscodeApi).filter(isCaptureState).pop()).toEqual({ type: 'previewCapturePending' });
+  });
+
+  it('stays ready when the host replays the scene text it already sent', async () => {
+    captured.mountCaptureState = READY;
+    const { vscodeApi } = await mountFresh();
+    dispatch({ type: 'loadTscn', content: 'the scene' });
+    captured.shellProps?.onCaptureStateChange?.(READY);
+
+    dispatch({ type: 'loadTscn', content: 'the scene' });
+    dispatch({ type: 'capturePreview', requestId: 'c5' });
+
+    expect(postedMessages(vscodeApi).filter((m) => m.type === 'previewCaptured')).toEqual([
+      { type: 'previewCaptured', requestId: 'c5', dataUrl: 'data:image/png;base64,AA==' },
+    ]);
+  });
 });

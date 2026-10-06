@@ -6,7 +6,19 @@
 import { useEffect, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { act, render, renderHook } from '@testing-library/react';
+import { buildSceneGraph, type SceneGraph } from '../../core/SceneGraph';
 import { CameraControlProvider, useCameraControl, useOptionalCameraControl } from './CameraControlContext';
+
+/** A scene graph with no nodes. The context compares graphs by identity only. */
+function emptySceneGraph(): SceneGraph {
+  return buildSceneGraph({
+    path: 'res://main.tscn',
+    nodes: [],
+    externalScenes: [],
+    internalResources: [],
+    externalResources: [],
+  });
+}
 
 function wrapper({ children }: { children: ReactNode }) {
   return <CameraControlProvider>{children}</CameraControlProvider>;
@@ -332,5 +344,38 @@ describe('CameraControlContext screenshot', () => {
     });
 
     expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('names the scene graph the registered handler has rendered', () => {
+    const { result } = renderHook(() => useCameraControl(), { wrapper });
+    const renderedScene = emptySceneGraph();
+
+    act(() => {
+      result.current.registerScreenshotHandler(() => null, renderedScene);
+    });
+
+    expect(result.current.screenshotScene()).toBe(renderedScene);
+  });
+
+  it('names no scene once the handler leaves', () => {
+    const { result } = renderHook(() => useCameraControl(), { wrapper });
+    let unregister = () => {};
+    act(() => {
+      unregister = result.current.registerScreenshotHandler(() => null, emptySceneGraph());
+    });
+
+    act(() => unregister());
+
+    expect(result.current.screenshotScene()).toBeNull();
+  });
+
+  it('names no scene for a handler registered without one', () => {
+    const { result } = renderHook(() => useCameraControl(), { wrapper });
+
+    act(() => {
+      result.current.registerScreenshotHandler(() => null);
+    });
+
+    expect(result.current.screenshotScene()).toBeNull();
   });
 });
