@@ -72,6 +72,19 @@ describe('documentSymbols', () => {
     expect(documentSymbols(new LanguageDocument(''))).toEqual([]);
   });
 
+  it('leaves out a node whose name is still empty, as while a heading is typed', () => {
+    const typing = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="" type="Node3D" parent="."]
+`;
+
+    const root = only(documentSymbols(new LanguageDocument(typing)));
+
+    expect(root.children).toEqual([]);
+  });
+
   it('keeps a node whose parent heading is missing as a second root', () => {
     const orphan = `[gd_scene format=3]
 

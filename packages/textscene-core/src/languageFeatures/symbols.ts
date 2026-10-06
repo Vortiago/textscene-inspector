@@ -40,7 +40,8 @@ function buildTree(document: LanguageDocument): PendingSymbol[] {
   for (const section of document.sections) {
     if (section.kind !== 'node') continue;
     const name = section.attributes.name;
-    if (name === undefined) continue;
+    // VS Code refuses a symbol with an empty name, and a heading being typed has one.
+    if (!name) continue;
     const symbol: PendingSymbol = {
       name,
       type: section.attributes.type ?? '',

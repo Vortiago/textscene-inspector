@@ -69,6 +69,7 @@ export class MockEventEmitter {
   }
 }
 
+/** Refuses an empty name, as the real constructor's `validate` does. */
 export class MockDocumentSymbol {
   children: MockDocumentSymbol[] = [];
 
@@ -78,7 +79,9 @@ export class MockDocumentSymbol {
     public kind: number,
     public range: any,
     public selectionRange: any
-  ) {}
+  ) {
+    if (!name) throw new Error('name must not be falsy');
+  }
 }
 
 export class MockLocation {

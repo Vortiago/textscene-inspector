@@ -259,4 +259,17 @@ visible = true
       expect(symbols[0]!.children[2]!.kind).toBe(vscode.SymbolKind.Object); // OmniLight3D
     });
   });
+
+  it('gives the outline of a scene whose new heading has no name yet', () => {
+    const typing = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="" type="Node3D" parent="."]
+`;
+
+    const symbols = new TscnDocumentSymbolProvider().provideDocumentSymbols(createMockDocument(typing));
+
+    expect(symbols.map((symbol) => symbol.name)).toEqual(['Root']);
+  });
 });
