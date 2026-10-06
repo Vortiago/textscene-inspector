@@ -20,6 +20,11 @@ Prettier config, or a hook) runs the static checks over the whole repository: `f
 `lint`, `type-check:all` and `type-check:tests`. It still runs the tests beside the pushed files. A push that changes only files no check reads
 runs nothing. `FULL_VALIDATE=1 git push` runs the full `pnpm validate`.
 
+eslint and Prettier check only the files that changed since their last run. eslint keeps its cache
+in `.eslintcache`, and Prettier keeps its cache in `node_modules/.cache/prettier/`. Each tool
+discards its cache when its configuration or version changes. Delete a cache to check every file
+again.
+
 ## Skip the hooks
 
 `HUSKY=0` skips every hook, and `HUSKY=0 pnpm install` installs none. The name stays because

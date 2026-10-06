@@ -13,6 +13,9 @@ build/
 coverage/
 .vitest/
 
+# The ESLint cache. Prettier keeps its cache in node_modules/.cache/.
+.eslintcache
+
 # IDE
 .vscode/
 .idea/
