@@ -53,6 +53,8 @@ suite('Language Features', () => {
       'typo.tscn': TYPO_SCENE,
       // The file `main.tscn` links to. A link to a missing file has no target.
       'textures/grid.png': '',
+      // Godot's scan enters `node_modules`, so path completion offers its files.
+      'node_modules/pkg/icon.png': '',
     });
     main = await openProjectDocument(PROJECT, 'main.tscn');
     await vscode.extensions.getExtension('vortiago.textscene-inspector')?.activate();
@@ -151,6 +153,19 @@ suite('Language Features', () => {
 
     assert.ok(labels.includes('visible'), 'a catalogue property is offered');
     assert.ok(!labels.includes('mesh'), 'a property already set is not offered');
+  });
+
+  test("Completion after res:// offers a file under node_modules, as Godot's scan enters it", async () => {
+    const line = lineStartingWith(main, '[ext_resource');
+    const character = main.lineAt(line).text.indexOf('res://') + 'res://'.length;
+    const list = await vscode.commands.executeCommand<vscode.CompletionList>(
+      'vscode.executeCompletionItemProvider',
+      main.uri,
+      new vscode.Position(line, character)
+    );
+    const labels = list.items.map((item) => (typeof item.label === 'string' ? item.label : item.label.label));
+
+    assert.ok(labels.includes('res://node_modules/pkg/icon.png'), `offered: ${labels.join(', ')}`);
   });
 
   test('a property-name typo offers a quick fix with an edit', async () => {

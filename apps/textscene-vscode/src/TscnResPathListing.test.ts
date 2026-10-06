@@ -15,10 +15,24 @@ function arrangeProject(): void {
   arrangeFiles(['/game/scenes/Door.tscn', '/game/icon.svg'], []);
 }
 
-/** Answers the listing search with `files` and the stop-file search with `stopFiles`. */
+/** Whether the search's exclude glob drops `file`, for the two directory kinds the listing names. */
+function isExcluded(file: string, exclude: string | null | undefined): boolean {
+  const directories = file.split('/').slice(1, -1);
+  if (exclude?.includes('node_modules') && directories.includes('node_modules')) return true;
+  return Boolean(exclude?.includes('.*') && directories.some((name) => name.startsWith('.')));
+}
+
+/**
+ * Answers the listing search with `files` and the stop-file search with `stopFiles`. The listing
+ * search honours its exclude glob and its result limit, as `findFiles` does.
+ */
 function arrangeFiles(files: readonly string[], stopFiles: readonly string[]): void {
-  vscodeMocks.workspace.findFiles.mockImplementation((pattern: { pattern: string }) =>
-    Promise.resolve((pattern.pattern === '**/*' ? files : stopFiles).map(createMockUri))
+  vscodeMocks.workspace.findFiles.mockImplementation(
+    (pattern: { pattern: string }, exclude?: string | null, maxResults?: number) => {
+      if (pattern.pattern !== '**/*') return Promise.resolve(stopFiles.map(createMockUri));
+      const found = files.filter((file) => !isExcluded(file, exclude)).slice(0, maxResults);
+      return Promise.resolve(found.map(createMockUri));
+    }
   );
 }
 
@@ -68,6 +82,30 @@ describe('TscnResPathListing', () => {
     );
     const paths = await new TscnResPathListing().pathsFor(sceneInProject());
     expect(paths).toEqual(['res://a.tscn']);
+  });
+
+  it("offers a file under node_modules, since Godot's scan enters it", async () => {
+    arrangeProject();
+    arrangeFiles(['/game/a.tscn', '/game/node_modules/pkg/icon.png'], ['/game/project.godot']);
+
+    const paths = await new TscnResPathListing().pathsFor(sceneInProject());
+
+    expect(paths).toEqual(['res://a.tscn', 'res://node_modules/pkg/icon.png']);
+  });
+
+  it('leaves out a dot-named directory, which the scan skips', async () => {
+    arrangeProject();
+    arrangeFiles(['/game/a.tscn', '/game/.godot/imported/a.ctex'], ['/game/project.godot']);
+
+    expect(await new TscnResPathListing().pathsFor(sceneInProject())).toEqual(['res://a.tscn']);
+  });
+
+  it('lists every file of a large project, with no cap', async () => {
+    arrangeProject();
+    const files = Array.from({ length: 6000 }, (_, index) => `/game/tiles/tile_${index}.png`);
+    arrangeFiles(files, ['/game/project.godot']);
+
+    expect(await new TscnResPathListing().pathsFor(sceneInProject())).toHaveLength(6000);
   });
 
   it('lists nothing, and searches nothing, when no directory holds project.godot', async () => {

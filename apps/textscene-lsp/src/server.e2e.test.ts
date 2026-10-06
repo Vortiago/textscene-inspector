@@ -581,3 +581,32 @@ describe('tscn-lsp reads the project again after a change on disk', () => {
     SERVER_TIMEOUT_MS
   );
 });
+
+describe("tscn-lsp lists what Godot's scan sees", () => {
+  it(
+    "offers a file under node_modules, since Godot's scan enters it, as the VS Code extension does",
+    async () => {
+      const root = mkdtempSync(join(tmpdir(), 'tscn-lsp-scan-'));
+      const projectDir = join(root, 'project');
+      cpSync(PROJECT_DIR, projectDir, { recursive: true });
+      mkdirSync(join(projectDir, 'node_modules', 'pkg'), { recursive: true });
+      writeFileSync(join(projectDir, 'node_modules', 'pkg', 'icon.png'), '');
+      try {
+        await withInitializedServer(pathToFileURL(projectDir).toString(), async (client) => {
+          const at = answers.completion.find((answer) => answer.at.after === '"res://')!.at;
+          const labels = labelsOf(
+            await client.result<Array<{ label: string }>>(
+              'textDocument/completion',
+              openAt(client, at, projectDir)
+            )
+          );
+
+          expect(labels).toContain('res://node_modules/pkg/icon.png');
+        });
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+    SERVER_TIMEOUT_MS
+  );
+});

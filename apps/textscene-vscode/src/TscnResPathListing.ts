@@ -9,14 +9,11 @@ import { enclosingProjectOf } from './findGodotProjectRoot';
 import { scannedResPaths } from './scannedResPaths';
 import { SCAN_STOP_FILES_PATTERN } from './watchPatterns';
 
-/** A cap on the listing, so a huge project does not stall a completion. */
-const MAX_LISTED_FILES = 5000;
-
 /**
- * The search skips a dot-named directory itself, so a `.godot` import cache spends none of
- * the cap. `node_modules` holds no Godot resource worth offering.
+ * Godot's scan skips a dot-named directory, so the search skips it too, and never walks the
+ * large `.godot` import cache. It skips nothing else: Godot enters `node_modules` as well.
  */
-const EXCLUDED_DIRECTORIES = '**/{node_modules,.*}/**';
+const DOT_DIRECTORIES = '**/.*/**';
 
 export class TscnResPathListing {
   /** Each project root's listing, written by `pathsFor` and dropped by `clear`. */
@@ -49,16 +46,12 @@ export class TscnResPathListing {
   }
 
   /**
-   * The editor's scan rules, as the linter reads them: no dot-named directory, no nested
-   * project and no `.gdignore` directory.
+   * Every file Godot's editor scan reaches, as the `tscn-lsp` server lists them: no dot-named
+   * directory, no nested project and no `.gdignore` directory.
    */
   private async _list(root: vscode.Uri): Promise<readonly string[]> {
     const [files, stopFiles] = await Promise.all([
-      vscode.workspace.findFiles(
-        new vscode.RelativePattern(root, '**/*'),
-        EXCLUDED_DIRECTORIES,
-        MAX_LISTED_FILES
-      ),
+      vscode.workspace.findFiles(new vscode.RelativePattern(root, '**/*'), DOT_DIRECTORIES),
       // No exclude, as the linter's own search does: `.gdignore` is itself dot-named.
       vscode.workspace.findFiles(new vscode.RelativePattern(root, SCAN_STOP_FILES_PATTERN), null),
     ]);
