@@ -16,9 +16,9 @@ const quote = (f) => `"${f}"`;
 export default {
   // One key, with the steps in an array, so they run in sequence: eslint fixes first, and Prettier
   // then formats the fixer's rewrite. lint-staged runs glob keys concurrently.
-  '*.{ts,tsx,js,jsx,mjs}': ['eslint --fix', 'prettier --write'],
+  '*.{ts,tsx,js,jsx,mjs}': ['eslint --cache --fix', 'prettier --cache --write'],
   // Disjoint from the key above, so running the two keys at once never writes one file twice.
-  '*.{css,json,yaml,yml,html}': 'prettier --write',
+  '*.{css,json,yaml,yml,html}': 'prettier --cache --write',
   // Function form, so the staged paths reach only the lint CLI: lint-staged appends them to every
   // string command, and the esbuild build behind `build:linter` would read them as entry points.
   '*.{tscn,tres}': (files) => {
