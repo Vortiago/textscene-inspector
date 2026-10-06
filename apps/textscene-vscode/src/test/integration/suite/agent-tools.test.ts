@@ -78,6 +78,27 @@ suite('Agent tools', () => {
     assert.ok(textOf(result).includes('Box (MeshInstance3D)'), `scene tree: ${textOf(result)}`);
   });
 
+  test("the scene-tree tool reads an open editor's unsaved edits, as the Problems panel does", async function () {
+    if (typeof vscode.lm?.invokeTool !== 'function') skipWithoutToolsApi(this);
+    const document = await vscode.workspace.openTextDocument(scenePath);
+    const editor = await vscode.window.showTextDocument(document);
+    try {
+      await editor.edit((edit) =>
+        edit.insert(
+          document.lineAt(document.lineCount - 1).range.end,
+          '[node name="Unsaved" type="Node3D" parent="."]\n'
+        )
+      );
+
+      const result = await vscode.lm.invokeTool('textscene_scene_tree', { input: { path: scenePath } });
+
+      assert.ok(document.isDirty, 'the edit is unsaved');
+      assert.ok(textOf(result).includes('Unsaved (Node3D)'), `scene tree: ${textOf(result)}`);
+    } finally {
+      await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+    }
+  });
+
   test('the lint tool returns a finding for a dangling reference', async function () {
     if (typeof vscode.lm?.invokeTool !== 'function') skipWithoutToolsApi(this);
 

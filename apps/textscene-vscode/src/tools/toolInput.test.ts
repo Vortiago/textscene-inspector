@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { createMockFileData, createMockUri, vscode as vscodeMocks } from '../test-setup';
 import { readSceneText, resolveToolUri } from './toolInput';
 
@@ -20,6 +20,32 @@ describe('resolveToolUri', () => {
 });
 
 describe('readSceneText', () => {
+  beforeEach(() => {
+    vscodeMocks.workspace.textDocuments = [];
+  });
+
+  it('reads the editor text of an open document, its unsaved edits included', async () => {
+    vscodeMocks.workspace.textDocuments = [
+      { uri: createMockUri('/game/Main.tscn'), getText: () => '[node name="Edited" type="Node"]' },
+    ];
+    vscodeMocks.workspace.fs.readFile.mockResolvedValue(
+      createMockFileData('[node name="Saved" type="Node"]')
+    );
+
+    expect(await readSceneText(createMockUri('/game/Main.tscn'))).toContain('name="Edited"');
+  });
+
+  it('reads the disk for a scene no editor holds, though another document is open', async () => {
+    vscodeMocks.workspace.textDocuments = [
+      { uri: createMockUri('/game/Other.tscn'), getText: () => '[node name="Other" type="Node"]' },
+    ];
+    vscodeMocks.workspace.fs.readFile.mockResolvedValue(
+      createMockFileData('[node name="Saved" type="Node"]')
+    );
+
+    expect(await readSceneText(createMockUri('/game/Main.tscn'))).toContain('name="Saved"');
+  });
+
   it('decodes the file bytes as text', async () => {
     vscodeMocks.workspace.fs.readFile.mockResolvedValue(createMockFileData('[node name="R" type="Node"]'));
     expect(await readSceneText(createMockUri('/game/Main.tscn'))).toContain('name="R"');

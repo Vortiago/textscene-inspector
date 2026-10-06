@@ -24,8 +24,14 @@ export function resolveToolUri(inputPath: string): vscode.Uri | undefined {
   return vscode.Uri.joinPath(folder.uri, ...inputPath.split(/[\\/]/));
 }
 
-/** Reads a file the tool resolved, as text. */
+/**
+ * The text of a scene the tool resolved: an open editor's text, unsaved edits included, as the
+ * Problems panel lints it, else the file on disk. It opens no document, so it starts no lint.
+ */
 export async function readSceneText(uri: vscode.Uri): Promise<string> {
+  const key = uri.toString();
+  const open = vscode.workspace.textDocuments.find((document) => document.uri.toString() === key);
+  if (open) return open.getText();
   const bytes = await vscode.workspace.fs.readFile(uri);
   return new TextDecoder().decode(bytes);
 }
