@@ -27,7 +27,7 @@ const RELEASE_TAG_RE = /^([a-z]+)-v(\d+)\.(\d+)\.(\d+)$/;
  * @returns {{ package: string, version: string, parts: number[] } | null} null for a tag
  *   that is not a release tag.
  */
-function parseReleaseTag(tag) {
+export function parseReleaseTag(tag) {
   const match = RELEASE_TAG_RE.exec(tag);
   if (!match) return null;
   const parts = match.slice(2).map(Number);
