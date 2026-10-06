@@ -419,6 +419,9 @@ async function waitForSizedCanvas(frame, timeoutMs) {
  * @property {boolean} headed          use the ambient DISPLAY instead of xvfb-run
  * @property {number} keepOpen         hold VS Code open after capture (debugging)
  * @property {string} [evalFile]       ES module whose default export runs in-frame
+ * @property {(page: import('playwright').Page) => Promise<unknown>} [workbenchProbe] runs
+ *   against the workbench page while the preview is the active editor. Its result lands
+ *   in `report.workbenchProbe`.
  * @property {[Function, unknown][]} [initScripts] `[script, argument]` pairs installed
  *   before the webview exists, so each runs in the preview frame ahead of the app
  * @property {boolean} verbose         stream VS Code stdout/stderr
@@ -452,6 +455,7 @@ export async function driveScene(options) {
     headed,
     keepOpen,
     evalFile,
+    workbenchProbe,
     initScripts = [],
     edit,
     verbose,
@@ -648,6 +652,8 @@ export async function driveScene(options) {
       const source = await import(path.resolve(evalFile));
       report.evalResult = await frame.evaluate(source.default);
     }
+
+    if (workbenchProbe) report.workbenchProbe = await workbenchProbe(page);
 
     if (keepOpen > 0) {
       emit(`holding VS Code open for ${keepOpen}ms…`);

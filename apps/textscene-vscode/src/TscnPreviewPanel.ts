@@ -143,6 +143,20 @@ export class TscnPreviewPanel {
     return this._currentResource;
   }
 
+  /** Whether the preview is the active editor, the one VS Code's own views follow. */
+  public get isActive(): boolean {
+    return this._panel.active;
+  }
+
+  public get viewColumn(): vscode.ViewColumn | undefined {
+    return this._panel.viewColumn;
+  }
+
+  /** Fires when the panel gains or loses the active editor slot, or moves. */
+  public get onDidChangeViewState(): vscode.Event<vscode.WebviewPanelOnDidChangeViewStateEvent> {
+    return this._panel.onDidChangeViewState;
+  }
+
   public update(resource: vscode.Uri) {
     // Only a new document invalidates the cached provider. A same-document refresh
     // keeps it: the webview's cache re-requests no unchanged path, so clearing the

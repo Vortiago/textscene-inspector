@@ -24,6 +24,9 @@ import {
   MockSymbolKind,
   MockTabInputText,
   MockTextEditorRevealType,
+  MockThemeIcon,
+  MockTreeItem,
+  MockTreeItemCollapsibleState,
   MockViewColumn,
 } from './vscodeMockClasses.testkit';
 
@@ -64,6 +67,9 @@ vi.mock('vscode', () => ({
   FileType: MockFileType,
   TextEditorRevealType: MockTextEditorRevealType,
   SymbolKind: MockSymbolKind,
+  TreeItem: MockTreeItem,
+  ThemeIcon: MockThemeIcon,
+  TreeItemCollapsibleState: MockTreeItemCollapsibleState,
 }));
 
 afterEach(() => {
@@ -96,7 +102,7 @@ export const vscode: {
     InCenterIfOutsideViewport: number;
     AtTop: number;
   };
-  SymbolKind: Record<string, number>;
+  SymbolKind: typeof MockSymbolKind;
 } = {
   Uri: mockUri,
   workspace: mockWorkspace,

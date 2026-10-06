@@ -1,12 +1,12 @@
 /**
- * A `vscode.TextDocument` over a string of TSCN, for the
- * `TscnDefinitionProvider.*.test.ts` suites. Not a `.test.ts`, so vitest does not
+ * A `vscode.TextDocument` over a string of TSCN, for the `TscnDefinitionProvider.*.test.ts`,
+ * `TscnDocumentSymbolProvider` and Scene Tree suites. Not a `.test.ts`, so vitest does not
  * collect it.
  */
 
 import * as vscode from 'vscode';
 
-export function createMockDocument(content: string): vscode.TextDocument {
+export function createMockDocument(content: string, fsPath = '/test.tscn'): vscode.TextDocument {
   const lines = content.split('\n');
   return {
     getText: () => content,
@@ -28,6 +28,6 @@ export function createMockDocument(content: string): vscode.TextDocument {
       };
     },
     lineCount: lines.length,
-    uri: vscode.Uri.file('/test.tscn'),
+    uri: vscode.Uri.file(fsPath),
   } as vscode.TextDocument;
 }

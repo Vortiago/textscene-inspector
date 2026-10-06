@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { blankSceneText, hideSceneNode } from './sceneText.mjs';
+import { blankSceneText, hideSceneNode, sceneNodeNames } from './sceneText.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -108,5 +108,34 @@ describe('hideSceneNode', () => {
     const fixture = readFileSync(path.join(REPO_ROOT, 'scenes/fixtures/unit-box-mesh.tscn'), 'utf8');
 
     expect(hideSceneNode(fixture, 'Box')).toMatch(/\[node name="Box"[^\n]*\]\nvisible = false\n/);
+  });
+});
+
+describe('sceneNodeNames', () => {
+  it('lists every node name in heading order', () => {
+    const source = [
+      '[gd_scene format=3]',
+      '[node name="Root" type="Node3D"]',
+      '[node name="Box" type="MeshInstance3D" parent="."]',
+      '[node name="Lamp" type="OmniLight3D" parent="Box"]',
+    ].join('\n');
+
+    expect(sceneNodeNames(source)).toEqual(['Root', 'Box', 'Lamp']);
+  });
+
+  it('lists nothing for a resource with no nodes', () => {
+    expect(sceneNodeNames('[gd_resource type="BoxMesh" format=3]\n\n[resource]\n')).toEqual([]);
+  });
+
+  it('skips a name that only appears inside a value', () => {
+    const source = ['[node name="Root" type="Node3D"]', 'text = "[node name=\\"Fake\\"]"'].join('\n');
+
+    expect(sceneNodeNames(source)).toEqual(['Root']);
+  });
+
+  it('lists the committed box fixture the gate reads', () => {
+    const source = readFileSync(path.join(REPO_ROOT, 'scenes/fixtures/unit-box-mesh.tscn'), 'utf8');
+
+    expect(sceneNodeNames(source)).toEqual(['Root', 'Box', 'Title', 'Description']);
   });
 });
