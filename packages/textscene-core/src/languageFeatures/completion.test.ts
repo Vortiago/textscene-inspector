@@ -109,9 +109,39 @@ describe('completionsAt', () => {
     expect(await labelsAt(document, 2, 'omni_'.length)).toEqual([]);
   });
 
-  it('offers nothing on a blank line', async () => {
-    const document = new LanguageDocument(SCENE);
-    expect(await completionsAt(document, { line: 1, character: 0 })).toEqual([]);
+  it('offers nothing on a blank line between the properties of a node with a class', async () => {
+    const document = new LanguageDocument(
+      ['[node name="Lamp" type="OmniLight3D"]', 'omni_range = 4.0', '', 'light_energy = 2.0'].join('\n')
+    );
+    expect(await labelsAt(document, 3, 0)).toEqual([]);
+  });
+
+  it('offers no key on a comment line between the properties of a node', async () => {
+    const document = new LanguageDocument(
+      ['[node name="Lamp" type="OmniLight3D"]', 'omni_range = 4.0', '; omni', 'light_energy = 2.0'].join('\n')
+    );
+    expect(await labelsAt(document, 3, '; omni'.length)).toEqual([]);
+  });
+
+  it('offers no key for a typed word under an ext_resource heading', async () => {
+    const document = new LanguageDocument(
+      ['[ext_resource type="Texture2D" path="res://a.png" id="1"]', 'load'].join('\n')
+    );
+    expect(await labelsAt(document, 2, 'load'.length)).toEqual([]);
+  });
+
+  it('offers no key for a typed word under a gd_resource header', async () => {
+    const document = new LanguageDocument(
+      ['[gd_resource type="StandardMaterial3D" format=3]', 'albedo', '', '[resource]'].join('\n')
+    );
+    expect(await labelsAt(document, 2, 'albedo'.length)).toEqual([]);
+  });
+
+  it("offers the header class's keys for a word typed in a [resource] body", async () => {
+    const document = new LanguageDocument(
+      ['[gd_resource type="StandardMaterial3D" format=3]', '', '[resource]', 'albedo_'].join('\n')
+    );
+    expect(await labelsAt(document, 4, 'albedo_'.length)).toContain('albedo_color');
   });
 
   it('asks the host for its listing only inside a res:// value', async () => {

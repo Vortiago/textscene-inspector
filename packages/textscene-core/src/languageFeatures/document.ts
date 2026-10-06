@@ -52,6 +52,16 @@ function toKind(section: SectionType): SectionKind {
   return section === 'none' ? 'other' : section;
 }
 
+/**
+ * The class a heading's body properties belong to. An `ext_resource` or a file header holds no
+ * properties, so its `type=` owns none.
+ */
+function ownerTypeOf(heading: ParsedHeading, resourceHeaderType: string | undefined): string | undefined {
+  if (heading.type === 'node' || heading.type === 'sub_resource') return heading.attributes.type;
+  if (heading.type === 'resource') return heading.attributes.type ?? resourceHeaderType;
+  return undefined;
+}
+
 /** A heading as the scan meets it, before the next heading fixes where its body ends. */
 interface ScannedHeading {
   readonly line: number;
@@ -84,7 +94,7 @@ function scanHeadings(text: string): ScannedHeading[] {
         line,
         tag: heading.type,
         kind: toKind(section),
-        ownerType: heading.attributes.type ?? (heading.type === 'resource' ? resourceHeaderType : undefined),
+        ownerType: ownerTypeOf(heading, resourceHeaderType),
         attributes: { ...heading.attributes },
         properties: [],
       });
