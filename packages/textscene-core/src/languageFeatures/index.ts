@@ -6,6 +6,8 @@
  * exports only what a host calls.
  */
 
+import { LanguageDocument } from './document.js';
+
 export type { LanguageDocument } from './document.js';
 export { hoverAt } from './hover.js';
 export { COMPLETION_TRIGGER_CHARACTERS, completionsAt, type CompletionContext } from './completion.js';
@@ -27,8 +29,6 @@ export type {
   SymbolKind,
   TextEdit,
 } from './types.js';
-
-import { LanguageDocument } from './document.js';
 
 /** Parses `text` once into the model every feature reads. */
 export function createLanguageDocument(text: string): LanguageDocument {

@@ -8,11 +8,17 @@
 import { isDeprecatedPropertyName } from '../godot/deprecated.js';
 import { VARIANT_TYPE, variantTypeName } from '../godot/variantType.js';
 import { classBaseChain } from '../godot/classBaseTypes.js';
-import { classProperties, findClassProperty, nodeClassNames, resourceClassNames } from './classInfo.js';
-import type { DocumentSection, LanguageDocument, PropertySlot } from './document.js';
+import {
+  classProperties,
+  nodeClassNames,
+  resourceClassNames,
+  slotProperty,
+  type ClassProperty,
+} from './classInfo.js';
+import type { DocumentSection, LanguageDocument, PropertyLocation } from './document.js';
 import { enumEntriesOf } from './hints.js';
 import { declaredResources, openReferenceAt, type ResourceRefKind } from './resourceRefs.js';
-import { headingAttribute, propertyKeySpan } from './ranges.js';
+import { headingAttribute, propertyKeySpan, spanContains } from './ranges.js';
 import type { CompletionItem, Position } from './types.js';
 
 /**
@@ -62,10 +68,8 @@ function keyItems(section: DocumentSection): readonly CompletionItem[] {
   return propertyItems(section.ownerType, present);
 }
 
-function enumItems(className: string, property: PropertySlot): readonly CompletionItem[] {
-  const resolved = findClassProperty(className, property.storedKey);
-  if (!resolved) return [];
-  return enumEntriesOf(resolved).map((entry) => ({
+function enumItems(property: ClassProperty): readonly CompletionItem[] {
+  return enumEntriesOf(property).map((entry) => ({
     label: entry.label,
     kind: 'value',
     detail: `= ${entry.value}`,
@@ -73,9 +77,8 @@ function enumItems(className: string, property: PropertySlot): readonly Completi
   }));
 }
 
-function booleanItems(className: string, property: PropertySlot): readonly CompletionItem[] {
-  const resolved = findClassProperty(className, property.storedKey);
-  if (!resolved || resolved.type !== VARIANT_TYPE.BOOL) return [];
+function booleanItems(property: ClassProperty): readonly CompletionItem[] {
+  if (property.type !== VARIANT_TYPE.BOOL) return [];
   return [
     { label: 'true', kind: 'value' },
     { label: 'false', kind: 'value' },
@@ -126,26 +129,43 @@ function parentItems(document: LanguageDocument): readonly CompletionItem[] {
     }));
 }
 
+/** The values a property's ClassDB row offers: its enum labels, or `true` and `false`. */
+function declaredValueItems(location: PropertyLocation): readonly CompletionItem[] {
+  const declared = slotProperty(location);
+  if (!declared) return [];
+  const enums = enumItems(declared);
+  return enums.length > 0 ? enums : booleanItems(declared);
+}
+
 async function valueItems(
   document: LanguageDocument,
-  section: DocumentSection,
-  property: PropertySlot,
-  cursorLine: string,
-  character: number,
+  location: PropertyLocation,
+  textBeforeCursor: string,
   context: CompletionContext | undefined
 ): Promise<readonly CompletionItem[]> {
-  const before = cursorLine.slice(0, character);
-  const reference = openReferenceAt(before);
+  const reference = openReferenceAt(textBeforeCursor);
   if (reference) return resourceIdItems(document, reference.kind, reference.id);
-  const className = section.ownerType;
-  if (className) {
-    const enums = enumItems(className, property);
-    if (enums.length > 0) return enums;
-    const booleans = booleanItems(className, property);
-    if (booleans.length > 0) return booleans;
-  }
-  const prefix = /res:\/\/[^"]*$/.exec(before)?.[0];
+  const declaredValues = declaredValueItems(location);
+  if (declaredValues.length > 0) return declaredValues;
+  const prefix = /res:\/\/[^"]*$/.exec(textBeforeCursor)?.[0];
   if (context?.listPaths && prefix !== undefined) return pathItems(context.listPaths, prefix);
+  return [];
+}
+
+function isOnHeadingAttribute(line: string, key: string, character: number): boolean {
+  const attribute = headingAttribute(line, key);
+  return attribute !== undefined && spanContains(attribute.span, character);
+}
+
+/** The classes a heading's `type=` may name, or the node names its `parent=` may name. */
+function headingItems(
+  document: LanguageDocument,
+  section: DocumentSection,
+  line: string,
+  character: number
+): readonly CompletionItem[] {
+  if (isOnHeadingAttribute(line, 'type', character)) return classNameItems(section);
+  if (isOnHeadingAttribute(line, 'parent', character)) return parentItems(document);
   return [];
 }
 
@@ -160,27 +180,16 @@ export async function completionsAt(
 ): Promise<readonly CompletionItem[]> {
   const line = document.lines[position.line];
   if (line === undefined) return [];
-  const section = document.sectionAt(position.line + 1);
+  const documentLine = position.line + 1;
+  const section = document.sectionAt(documentLine);
   if (!section) return [];
+  if (section.headingLine === documentLine) return headingItems(document, section, line, position.character);
 
-  if (section.headingLine === position.line + 1) {
-    const within = (attribute: string): boolean => {
-      const found = headingAttribute(line, attribute);
-      return (
-        found !== undefined && position.character >= found.span.start && position.character <= found.span.end
-      );
-    };
-    if (within('type')) return classNameItems(section);
-    if (within('parent')) return parentItems(document);
-    return [];
-  }
-
-  const location = document.propertyAt(position.line + 1);
+  const location = document.propertyAt(documentLine);
   if (!location) return PARTIAL_KEY_RE.test(line) ? keyItems(section) : [];
-  const property = location.property;
 
-  const onFirstLine = property.startLine === position.line + 1;
+  const isOnFirstLine = location.property.startLine === documentLine;
   const key = propertyKeySpan(line);
-  if (onFirstLine && key && position.character <= key.span.end) return keyItems(location.section);
-  return valueItems(document, location.section, property, line, position.character, context);
+  if (isOnFirstLine && key && position.character <= key.span.end) return keyItems(location.section);
+  return valueItems(document, location, line.slice(0, position.character), context);
 }

@@ -5,6 +5,7 @@
  */
 
 import type { LanguageDocument } from './document.js';
+import { lineRange, lineRangeContains } from './ranges.js';
 import { declarationOf, referenceAt } from './resourceRefs.js';
 import type { Position, Range } from './types.js';
 
@@ -24,10 +25,7 @@ const RES_PATH_RE = /(?<=")res:\/\/[^"]+/g;
 function resPathsOnLine(line: string, lineIndex: number): ResPathOccurrence[] {
   return [...line.matchAll(RES_PATH_RE)].map((match) => ({
     path: match[0],
-    range: {
-      start: { line: lineIndex, character: match.index },
-      end: { line: lineIndex, character: match.index + match[0].length },
-    },
+    range: lineRange(lineIndex, { start: match.index, end: match.index + match[0].length }),
   }));
 }
 
@@ -40,8 +38,8 @@ export function resPathOccurrences(document: LanguageDocument): readonly ResPath
 export function resPathAt(document: LanguageDocument, position: Position): ResPathOccurrence | undefined {
   const line = document.lines[position.line];
   if (line === undefined) return undefined;
-  return resPathsOnLine(line, position.line).find(
-    ({ range }) => position.character >= range.start.character && position.character <= range.end.character
+  return resPathsOnLine(line, position.line).find(({ range }) =>
+    lineRangeContains(range, position.character)
   );
 }
 
@@ -50,7 +48,7 @@ export function resPathAt(document: LanguageDocument, position: Position): ResPa
  * on a declaration's own `id=` resolves to that heading.
  */
 export function declarationRangeAt(document: LanguageDocument, position: Position): Range | undefined {
-  const reference = referenceAt(document, position.line, position.character);
+  const reference = referenceAt(document, position);
   const declaration = reference && declarationOf(document, reference);
   if (!declaration) return undefined;
   const line = declaration.headingLine - 1;

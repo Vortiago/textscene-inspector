@@ -7,8 +7,8 @@
 
 import { openResourceRef, resourceRef, resourceRefSpans, type ResourceRef } from '../godot/resourceRef.js';
 import type { LanguageDocument, DocumentSection } from './document.js';
-import { headingAttribute, lineRange } from './ranges.js';
-import type { Range } from './types.js';
+import { headingAttribute, lineRange, lineRangeContains, spanContains } from './ranges.js';
+import type { Position, Range } from './types.js';
 
 export type ResourceRefKind = 'ext' | 'sub';
 
@@ -33,7 +33,7 @@ function kindOfTag(tag: string): ResourceRefKind | undefined {
 }
 
 /** The id the declaration heading of an `ext_resource` or `sub_resource` names. */
-function declaredId(section: DocumentSection): ResourceReference | undefined {
+function declaredReference(section: DocumentSection): ResourceReference | undefined {
   const kind = kindOfTag(section.tag);
   if (!kind) return undefined;
   const id = section.attributes.id;
@@ -53,10 +53,10 @@ export function openReferenceAt(textBeforeCursor: string): ResourceReference | u
 }
 
 /** The reference occurrences on one zero-based line. */
-function referencesOnLine(line: string, index: number): ResourceReferenceSpan[] {
+function referencesOnLine(line: string, lineIndex: number): ResourceReferenceSpan[] {
   return resourceRefSpans(line).map((span) => ({
     ...toReference(span),
-    range: lineRange(index, { start: span.start, end: span.end }),
+    range: lineRange(lineIndex, { start: span.start, end: span.end }),
   }));
 }
 
@@ -81,10 +81,10 @@ function declarationKey(reference: ResourceReference): string {
 export function declaredResources(document: LanguageDocument): ReadonlyMap<string, ResourceDeclaration> {
   const declared = new Map<string, ResourceDeclaration>();
   for (const section of document.sections) {
-    const id = declaredId(section);
-    if (!id) continue;
-    const key = declarationKey(id);
-    if (!declared.has(key)) declared.set(key, { ...id, section });
+    const reference = declaredReference(section);
+    if (!reference) continue;
+    const key = declarationKey(reference);
+    if (!declared.has(key)) declared.set(key, { ...reference, section });
   }
   return declared;
 }
@@ -97,23 +97,28 @@ export function declarationOf(
   return declaredResources(document).get(declarationKey(reference))?.section;
 }
 
-/** The reference or declaration the cursor touches, or undefined. */
-export function referenceAt(
-  document: LanguageDocument,
-  line: number,
+/** The id a declaration heading names, when the cursor is on its `id=` value. */
+function declarationIdAt(
+  section: DocumentSection,
+  lineText: string,
   character: number
 ): ResourceReference | undefined {
-  const text = document.lines[line] ?? '';
-  const section = document.sectionAt(line + 1);
-  if (section && section.headingLine === line + 1) {
-    const id = declaredId(section);
-    if (id) {
-      const attribute = headingAttribute(text, 'id');
-      if (attribute && character >= attribute.span.start && character <= attribute.span.end) return id;
-    }
+  const reference = declaredReference(section);
+  if (!reference) return undefined;
+  const attribute = headingAttribute(lineText, 'id');
+  return attribute && spanContains(attribute.span, character) ? reference : undefined;
+}
+
+/** The reference or declaration a zero-based position touches, or undefined. */
+export function referenceAt(document: LanguageDocument, position: Position): ResourceReference | undefined {
+  const lineText = document.lines[position.line] ?? '';
+  const section = document.sectionAt(position.line + 1);
+  if (section && section.headingLine === position.line + 1) {
+    const declared = declarationIdAt(section, lineText, position.character);
+    if (declared) return declared;
   }
-  const span = referencesOnLine(text, line).find(
-    ({ range }) => character >= range.start.character && character <= range.end.character
+  const span = referencesOnLine(lineText, position.line).find(({ range }) =>
+    lineRangeContains(range, position.character)
   );
   return span && { kind: span.kind, id: span.id };
 }

@@ -17,13 +17,11 @@ speed = 5.0
 [node name="Mesh" type="MeshInstance3D" parent="Player/Hand"]
 `;
 
-function childrenOf(symbol: DocumentSymbol): readonly DocumentSymbol[] {
-  return symbol.children;
-}
-
 function only(symbols: readonly DocumentSymbol[]): DocumentSymbol {
-  const first = symbols[0];
-  if (first === undefined) throw new Error('expected a symbol');
+  const [first] = symbols;
+  if (symbols.length !== 1 || first === undefined) {
+    throw new Error(`expected one symbol, got ${symbols.length}`);
+  }
   return first;
 }
 
@@ -35,14 +33,14 @@ describe('documentSymbols', () => {
     expect(root.detail).toBe('Node3D');
     expect(root.kind).toBe('module');
 
-    const player = only(childrenOf(root));
+    const player = only(root.children);
     expect(player.name).toBe('Player');
     expect(player.detail).toBe('CharacterBody3D');
     expect(player.kind).toBe('object');
 
-    const hand = only(childrenOf(player));
+    const hand = only(player.children);
     expect(hand.name).toBe('Hand');
-    expect(only(childrenOf(hand)).name).toBe('Mesh');
+    expect(only(hand.children).name).toBe('Mesh');
   });
 
   it('reaches a node range through its deepest descendant', () => {
@@ -61,13 +59,13 @@ describe('documentSymbols', () => {
 
   it('gives a leaf a range that ends on its own last line', () => {
     const root = only(documentSymbols(new LanguageDocument(SCENE)));
-    const player = only(childrenOf(root));
-    const hand = only(childrenOf(player));
-    const mesh = only(childrenOf(hand));
+    const player = only(root.children);
+    const hand = only(player.children);
+    const mesh = only(hand.children);
 
     expect(mesh.range.start.line).toBe(9);
     expect(mesh.range.end.line).toBe(9);
-    expect(childrenOf(mesh)).toEqual([]);
+    expect(mesh.children).toEqual([]);
   });
 
   it('gives an empty document no symbols', () => {

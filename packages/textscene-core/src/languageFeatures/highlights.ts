@@ -5,7 +5,7 @@
  */
 
 import type { LanguageDocument } from './document.js';
-import { lineRange, headingAttribute } from './ranges.js';
+import { headingAttribute, lineRange } from './ranges.js';
 import { declarationOf, referenceAt, resourceReferences } from './resourceRefs.js';
 import type { DocumentHighlight, Position } from './types.js';
 
@@ -14,7 +14,7 @@ export function documentHighlights(
   document: LanguageDocument,
   position: Position
 ): readonly DocumentHighlight[] {
-  const reference = referenceAt(document, position.line, position.character);
+  const reference = referenceAt(document, position);
   if (!reference) return [];
 
   const highlights: DocumentHighlight[] = [];

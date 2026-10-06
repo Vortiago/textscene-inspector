@@ -52,25 +52,28 @@ function toKind(section: SectionType): SectionKind {
   return section === 'none' ? 'other' : section;
 }
 
-interface RawHeading {
+/** A heading as the scan meets it, before the next heading fixes where its body ends. */
+interface ScannedHeading {
   readonly line: number;
   readonly tag: string;
   readonly kind: SectionKind;
   readonly ownerType?: string;
   readonly attributes: Record<string, string>;
+  readonly properties: PropertySlot[];
 }
 
-/** Trailing blank lines belong to no heading, so a fold ends on the last content line. */
-function trimTrailingBlanks(lines: readonly string[], from: number, to: number): number {
-  let end = to;
-  while (end > from && lines[end - 1]!.trim().length === 0) end--;
+/**
+ * The last line of a body that holds content. Trailing blank lines belong to no heading,
+ * so a fold ends on the last content line.
+ */
+function lastContentLine(lines: readonly string[], headingLine: number, lastLine: number): number {
+  let end = lastLine;
+  while (end > headingLine && lines[end - 1]!.trim().length === 0) end--;
   return end;
 }
 
-function scanSections(text: string, lines: readonly string[]): DocumentSection[] {
-  const headings: RawHeading[] = [];
-  const slotsByHeading: PropertySlot[][] = [];
-  let current = -1;
+function scanHeadings(text: string): ScannedHeading[] {
+  const headings: ScannedHeading[] = [];
   // The class a `.tres` header names, which its later `[resource]` body belongs to.
   let resourceHeaderType: string | undefined;
 
@@ -81,17 +84,14 @@ function scanSections(text: string, lines: readonly string[]): DocumentSection[]
         line,
         tag: heading.type,
         kind: toKind(section),
-        // The observer's owner type: a heading's own `type=`, or the header's for a body.
         ownerType: heading.attributes.type ?? (heading.type === 'resource' ? resourceHeaderType : undefined),
         attributes: { ...heading.attributes },
+        properties: [],
       });
-      slotsByHeading.push([]);
-      current = headings.length - 1;
     },
     onProperty(property) {
-      if (current < 0) return;
       const continuations = property.value.split('\n').length - 1;
-      slotsByHeading[current]!.push({
+      headings.at(-1)?.properties.push({
         key: property.key,
         storedKey: property.stored.key,
         value: property.value,
@@ -104,18 +104,22 @@ function scanSections(text: string, lines: readonly string[]): DocumentSection[]
 
   // A null node creator: the scan only needs the observer's headings and properties.
   new TscnParserCore().parse(text, () => null, observer);
+  return headings;
+}
 
+function scanSections(text: string, lines: readonly string[]): DocumentSection[] {
+  const headings = scanHeadings(text);
   return headings.map((heading, index) => {
     const next = headings[index + 1];
-    const rawEnd = next ? next.line - 1 : lines.length;
+    const lastLine = next ? next.line - 1 : lines.length;
     return {
       kind: heading.kind,
       tag: heading.tag,
       headingLine: heading.line,
-      endLine: trimTrailingBlanks(lines, heading.line, rawEnd),
+      endLine: lastContentLine(lines, heading.line, lastLine),
       attributes: heading.attributes,
       ...(heading.ownerType !== undefined ? { ownerType: heading.ownerType } : {}),
-      properties: slotsByHeading[index] ?? [],
+      properties: heading.properties,
     };
   });
 }

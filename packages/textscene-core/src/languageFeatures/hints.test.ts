@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { enumEntries, flagLabels, isEnumHint, rangeHint, rangeSuffix, resourceTypeHint } from './hints';
+import { acceptedResourceTypes, enumEntries, flagLabels, isEnumHint, rangeHint, rangeSuffix } from './hints';
 
 describe('hints', () => {
   it('numbers an enum label by its index when the label carries no value', () => {
@@ -29,12 +29,12 @@ describe('hints', () => {
   });
 
   it('names the resource classes a slot accepts, dropping an excluded subclass', () => {
-    expect(resourceTypeHint(17, 'NoiseTexture,GradientTexture2D')).toEqual([
+    expect(acceptedResourceTypes(17, 'NoiseTexture,GradientTexture2D')).toEqual([
       'NoiseTexture',
       'GradientTexture2D',
     ]);
-    expect(resourceTypeHint(17, 'Texture2D,-MeshTexture')).toEqual(['Texture2D']);
-    expect(resourceTypeHint(0, 'Mesh')).toBeUndefined();
+    expect(acceptedResourceTypes(17, 'Texture2D,-MeshTexture')).toEqual(['Texture2D']);
+    expect(acceptedResourceTypes(0, 'Mesh')).toBeUndefined();
   });
 
   it('opens a range end that or_greater or or_less leaves open', () => {

@@ -12,9 +12,6 @@ import type { DocumentSymbol, Range, SymbolKind } from './types.js';
 const SYMBOL_KIND_BY_TYPE: Readonly<Record<string, SymbolKind>> = {
   MeshInstance3D: 'class',
   Camera3D: 'struct',
-  SpotLight3D: 'object',
-  DirectionalLight3D: 'object',
-  OmniLight3D: 'object',
   Node3D: 'module',
 };
 

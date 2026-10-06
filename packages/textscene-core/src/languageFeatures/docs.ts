@@ -6,6 +6,9 @@
 
 const BASE = 'https://docs.godotengine.org/en/stable/classes/';
 
+/** A plain property name, which the class page anchors. */
+const ANCHORED_NAME_RE = /^[A-Za-z0-9_]+$/;
+
 /** The class-reference page for a Godot class. */
 export function classDocsUrl(className: string): string {
   return `${BASE}class_${className.toLowerCase()}.html`;
@@ -17,7 +20,6 @@ export function classDocsUrl(className: string): string {
  */
 export function propertyDocsUrl(declaredBy: string, name: string): string {
   const page = classDocsUrl(declaredBy);
-  if (!/^[A-Za-z0-9_]+$/.test(name)) return page;
-  const cls = declaredBy.toLowerCase();
-  return `${page}#class-${cls}-property-${name.toLowerCase()}`;
+  if (!ANCHORED_NAME_RE.test(name)) return page;
+  return `${page}#class-${declaredBy.toLowerCase()}-property-${name.toLowerCase()}`;
 }

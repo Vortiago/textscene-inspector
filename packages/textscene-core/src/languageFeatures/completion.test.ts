@@ -54,7 +54,7 @@ describe('completionsAt', () => {
   });
 
   it('offers the external resource ids for an ExtResource reference', async () => {
-    const doc = new LanguageDocument(
+    const document = new LanguageDocument(
       [
         '[ext_resource type="PackedScene" path="res://door.tscn" id="1_door"]',
         '[node name="Extra" type="MeshInstance3D"]',
@@ -62,7 +62,7 @@ describe('completionsAt', () => {
       ].join('\n')
     );
     // The cursor sits after the `1_` the writer typed, before the rest of the id.
-    const items = await completionsAt(doc, { line: 2, character: 'mesh = ExtResource("1_'.length });
+    const items = await completionsAt(document, { line: 2, character: 'mesh = ExtResource("1_'.length });
     expect(items.map((item) => item.label)).toEqual(['1_door']);
     expect(items[0]?.detail).toBe('PackedScene');
   });
@@ -83,7 +83,7 @@ describe('completionsAt', () => {
     const text = document.lines[LINE.meshNode - 1]!;
     const items = await completionsAt(document, {
       line: LINE.meshNode - 1,
-      character: text.indexOf('.') + 0,
+      character: text.indexOf('.'),
     });
     expect(items.map((item) => item.label)).toContain('Root');
   });

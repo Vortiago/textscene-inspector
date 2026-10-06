@@ -13,6 +13,7 @@ import {
   RESOURCE_CLASS_PROPERTIES,
   type ClassPropertyRow,
 } from '../godot/classProperties.generated.js';
+import type { PropertyLocation } from './document.js';
 
 /** One serialised property, with the class nearest the queried type that declares it. */
 export interface ClassProperty {
@@ -31,6 +32,18 @@ function ownRows(className: string): readonly ClassPropertyRow[] | undefined {
   return undefined;
 }
 
+/** The class itself, then each ancestor, nearest first. */
+function selfAndAncestors(className: string): readonly string[] {
+  return [className, ...classBaseChain(className)];
+}
+
+function toClassProperty(
+  [name, type, hint, hintString]: ClassPropertyRow,
+  declaredBy: string
+): ClassProperty {
+  return { name, type, hint, hintString, declaredBy };
+}
+
 /**
  * Every property a class serialises, its own and its ancestors', nearest declaration
  * first. A name declared twice keeps the nearest class, as `_set` resolves it.
@@ -38,13 +51,12 @@ function ownRows(className: string): readonly ClassPropertyRow[] | undefined {
 export function classProperties(className: string): readonly ClassProperty[] {
   const properties: ClassProperty[] = [];
   const seen = new Set<string>();
-  for (const cls of [className, ...classBaseChain(className)]) {
-    const rows = ownRows(cls);
-    if (!rows) continue;
-    for (const [name, type, hint, hintString] of rows) {
+  for (const declaredBy of selfAndAncestors(className)) {
+    for (const row of ownRows(declaredBy) ?? []) {
+      const name = row[0];
       if (seen.has(name)) continue;
       seen.add(name);
-      properties.push({ name, type, hint, hintString, declaredBy: cls });
+      properties.push(toClassProperty(row, declaredBy));
     }
   }
   return properties;
@@ -52,13 +64,16 @@ export function classProperties(className: string): readonly ClassProperty[] {
 
 /** The property `className` serialises under `name`, or undefined when it has none. */
 export function findClassProperty(className: string, name: string): ClassProperty | undefined {
-  for (const cls of [className, ...classBaseChain(className)]) {
-    const rows = ownRows(cls);
-    if (!rows) continue;
-    const row = rows.find(([rowName]) => rowName === name);
-    if (row) return { name: row[0], type: row[1], hint: row[2], hintString: row[3], declaredBy: cls };
+  for (const declaredBy of selfAndAncestors(className)) {
+    const row = ownRows(declaredBy)?.find(([rowName]) => rowName === name);
+    if (row) return toClassProperty(row, declaredBy);
   }
   return undefined;
+}
+
+/** The property a slot fills, found by the key the engine stores it under, or undefined. */
+export function slotProperty({ section, property }: PropertyLocation): ClassProperty | undefined {
+  return section.ownerType ? findClassProperty(section.ownerType, property.storedKey) : undefined;
 }
 
 /** Whether Godot's ClassDB knows the class as a node or a resource. */
@@ -70,18 +85,21 @@ export function isKnownClass(className: string): boolean {
   );
 }
 
+/** A base-type table's classes and its terminal class, which has no entry, sorted. */
+function classNamesOf(baseTypes: Readonly<Record<string, string>>, terminal: string): readonly string[] {
+  return [...new Set([...Object.keys(baseTypes), terminal])].sort((a, b) => a.localeCompare(b));
+}
+
 /**
  * Every node class a scene may name, `Node` included. The table holds a class per
  * ancestry hop, so abstract bases such as `GeometryInstance3D` are offered too: a scene
  * names them as readily as a leaf, and the engine instantiates them.
  */
 export function nodeClassNames(): readonly string[] {
-  return [...new Set([...Object.keys(NODE_BASE_TYPES), 'Node'])].sort((a, b) => a.localeCompare(b));
+  return classNamesOf(NODE_BASE_TYPES, 'Node');
 }
 
 /** Every Resource class a `[sub_resource type="…"]` may name. */
 export function resourceClassNames(): readonly string[] {
-  return [...new Set([...Object.keys(RESOURCE_BASE_TYPES_GENERATED), 'Resource'])].sort((a, b) =>
-    a.localeCompare(b)
-  );
+  return classNamesOf(RESOURCE_BASE_TYPES_GENERATED, 'Resource');
 }

@@ -54,8 +54,11 @@ export function flagLabels(hint: number, hintString: string): readonly string[] 
   return hintString.split(',');
 }
 
-/** Whether the hint names the resource classes a slot accepts (`PROPERTY_HINT_RESOURCE_TYPE`). */
-export function resourceTypeHint(hint: number, hintString: string): readonly string[] | undefined {
+/**
+ * The resource classes a `PROPERTY_HINT_RESOURCE_TYPE` slot accepts, or undefined for
+ * another hint. A `-` prefix excludes a subclass, so it names no accepted class.
+ */
+export function acceptedResourceTypes(hint: number, hintString: string): readonly string[] | undefined {
   if (hint !== PROPERTY_HINT.RESOURCE_TYPE || hintString.length === 0) return undefined;
   return hintString
     .split(',')
@@ -77,22 +80,24 @@ export function rangeHint(hint: number, hintString: string): RangeHint | undefin
   const parts = hintString.split(',');
   const min = (parts[0] ?? '').trim();
   const max = (parts[1] ?? '').trim();
-  const greater = parts.some((part) => part.trim() === 'or_greater');
-  const less = parts.some((part) => part.trim() === 'or_less');
+  const isOpenAbove = parts.some((part) => part.trim() === 'or_greater');
+  const isOpenBelow = parts.some((part) => part.trim() === 'or_less');
   return {
     min,
     max,
-    hasMin: min.length > 0 && !less,
-    hasMax: max.length > 0 && !greater,
+    hasMin: min.length > 0 && !isOpenBelow,
+    hasMax: max.length > 0 && !isOpenAbove,
   };
 }
 
-/** The suffix a range hint appends to its unit, such as `dB` or `px`, when it names one. */
+const SUFFIX_PREFIX = 'suffix:';
+
+/** The unit a range hint appends to its values, such as `dB` or `px`, when it names one. */
 export function rangeSuffix(hint: number, hintString: string): string | undefined {
   if (hint !== PROPERTY_HINT.RANGE) return undefined;
   for (const part of hintString.split(',')) {
     const trimmed = part.trim();
-    if (trimmed.startsWith('suffix:')) return trimmed.slice('suffix:'.length);
+    if (trimmed.startsWith(SUFFIX_PREFIX)) return trimmed.slice(SUFFIX_PREFIX.length);
   }
   return undefined;
 }

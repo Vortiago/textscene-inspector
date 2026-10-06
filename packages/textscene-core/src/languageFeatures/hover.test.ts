@@ -46,9 +46,12 @@ describe('hoverAt', () => {
     expect(hover?.markdown).toContain('**Euler**');
   });
 
-  it('answers nothing on a blank line and on an unknown class', () => {
+  it('answers nothing on a blank line', () => {
     const document = new LanguageDocument(SCENE);
     expect(hoverAt(document, { line: 1, character: 0 })).toBeUndefined();
+  });
+
+  it('answers nothing on a class ClassDB does not know', () => {
     const custom = new LanguageDocument('[node name="R" type="MyScriptClass"]');
     expect(hoverAt(custom, { line: 0, character: 22 })).toBeUndefined();
   });

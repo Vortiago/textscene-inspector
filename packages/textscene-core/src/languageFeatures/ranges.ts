@@ -1,7 +1,7 @@
 /**
  * Line and character arithmetic shared by the language features: where a heading
- * attribute value sits, where a property's key and value sit, and which word a cursor
- * is on. All offsets are zero-based characters within one line, the unit the parser's
+ * attribute value sits, where a property's key and value sit, and whether a cursor is on
+ * a span. All offsets are zero-based characters within one line, the unit the parser's
  * one-based line numbers combine with at the boundary.
  */
 
@@ -71,6 +71,16 @@ export function propertyValueSpan(
   const value = rawValue.trim();
   const start = equals + 1 + (rawValue.length - rawValue.trimStart().length);
   return { span: { start, end: start + value.length }, value };
+}
+
+/** Whether `character` lies on `span`, both ends included, so a cursor just past the end counts. */
+export function spanContains(span: LineSpan, character: number): boolean {
+  return character >= span.start && character <= span.end;
+}
+
+/** Whether `character` lies on a one-line range, both ends included. */
+export function lineRangeContains(range: Range, character: number): boolean {
+  return character >= range.start.character && character <= range.end.character;
 }
 
 /** A one-line {@link Range} at `line`. */

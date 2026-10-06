@@ -59,7 +59,7 @@ describe('resourceRef', () => {
   });
 
   it('takes only the unsigned integer index, not the other number spellings', () => {
-    // The old-style index is a non-negative int; a quoted id is the spelling
+    // The old-style index is a non-negative int. A quoted id is the spelling
     // for anything else.
     expect(resourceRef('SubResource(-1)')).toBeNull();
     expect(resourceRef('SubResource(1.5)')).toBeNull();

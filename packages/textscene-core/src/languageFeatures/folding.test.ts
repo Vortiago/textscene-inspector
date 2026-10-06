@@ -6,7 +6,7 @@ import { foldingRanges } from './folding';
 describe('foldingRanges', () => {
   it('folds each section that reaches past its heading', () => {
     const ranges = foldingRanges(new LanguageDocument(SCENE));
-    // The sub-resource and the two nodes have a body; the resource headings and the
+    // The sub-resource and the two nodes have a body. The resource headings and the
     // connection do not.
     expect(ranges).toEqual([
       { startLine: 5, endLine: 6 },
