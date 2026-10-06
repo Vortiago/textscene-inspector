@@ -9,6 +9,16 @@ const isEdgeA = (path) => path.split('/').at(-1) === 'edge-a.tscn';
 
 const STATIC_GATE = ['pnpm format:check', 'pnpm lint', 'pnpm type-check:all', 'pnpm type-check:tests'];
 
+/** The type checks of the packages in `dirs` and of their dependents. */
+const typeChecks = (...dirs) => {
+  const filters = dirs.map((dir) => `--filter ...{./${dir}}`).join(' ');
+  return [
+    'pnpm --filter ./packages/* build',
+    `pnpm ${filters} type-check`,
+    `pnpm ${filters} type-check:tests`,
+  ];
+};
+
 describe('planChecks', () => {
   it('runs nothing for files no check reads', () => {
     expect(plan(['README.md', '.claude/skills/other/SKILL.md', 'docs/adr/0001-x.md'])).toEqual([]);
@@ -16,7 +26,7 @@ describe('planChecks', () => {
 
   it('only checks the formatting of a workflow change, since CI runs the workflow', () => {
     expect(plan(['.github/workflows/release.yml'], ['.github/workflows/old.yml'])).toEqual([
-      'pnpm exec prettier --check .github/workflows/release.yml',
+      'pnpm exec prettier --cache --check .github/workflows/release.yml',
     ]);
   });
 
@@ -49,18 +59,17 @@ describe('planChecks', () => {
 
   it('type-checks and lints a TypeScript change', () => {
     expect(plan(['packages/textscene-core/src/a.ts'])).toEqual([
-      'pnpm type-check:all',
-      'pnpm type-check:tests',
-      'npx eslint packages/textscene-core/src/a.ts',
-      'pnpm exec prettier --check packages/textscene-core/src/a.ts',
+      ...typeChecks('packages/textscene-core'),
+      'npx eslint --cache packages/textscene-core/src/a.ts',
+      'pnpm exec prettier --cache --check packages/textscene-core/src/a.ts',
     ]);
   });
 
   it('runs the tests beside each changed file once', () => {
     const testsBeside = (path) => (path.endsWith('.test.mjs') ? [path] : [path.replace('.mjs', '.test.mjs')]);
     expect(plan(['scripts/x.mjs', 'scripts/x.test.mjs'], [], undefined, testsBeside)).toEqual([
-      'npx eslint scripts/x.mjs scripts/x.test.mjs',
-      'pnpm exec prettier --check scripts/x.mjs scripts/x.test.mjs',
+      'npx eslint --cache scripts/x.mjs scripts/x.test.mjs',
+      'pnpm exec prettier --cache --check scripts/x.mjs scripts/x.test.mjs',
       'pnpm exec vitest run scripts/x.test.mjs',
     ]);
   });
@@ -70,31 +79,40 @@ describe('planChecks', () => {
     'apps/textscene-vscode/src/test/installed/suite/a.test.ts',
   ])('leaves the extension host suite %s to CI, since vitest excludes it', (suite) => {
     expect(plan([suite], [], undefined, (path) => [path])).toEqual([
-      'pnpm type-check:all',
-      'pnpm type-check:tests',
-      `npx eslint ${suite}`,
-      `pnpm exec prettier --check ${suite}`,
+      ...typeChecks('apps/textscene-vscode'),
+      `npx eslint --cache ${suite}`,
+      `pnpm exec prettier --cache --check ${suite}`,
     ]);
   });
 
   it('runs no tests for a stylesheet', () => {
     expect(plan(['packages/textscene-core/src/a.css'], [], undefined, () => ['never.test.ts'])).toEqual([
-      'pnpm exec prettier --check packages/textscene-core/src/a.css',
+      'pnpm exec prettier --cache --check packages/textscene-core/src/a.css',
     ]);
   });
 
   it('lints a script change without the type checks', () => {
     expect(plan(['scripts/x.mjs'])).toEqual([
-      'npx eslint scripts/x.mjs',
-      'pnpm exec prettier --check scripts/x.mjs',
+      'npx eslint --cache scripts/x.mjs',
+      'pnpm exec prettier --cache --check scripts/x.mjs',
     ]);
   });
 
   it('type-checks a deleted TypeScript file, since its importers break', () => {
-    expect(plan([], ['packages/textscene-core/src/gone.ts'])).toEqual([
-      'pnpm type-check:all',
-      'pnpm type-check:tests',
-    ]);
+    expect(plan([], ['packages/textscene-core/src/gone.ts'])).toEqual(typeChecks('packages/textscene-core'));
+  });
+
+  it('type-checks each package with a TypeScript change once', () => {
+    expect(
+      plan(
+        [],
+        ['apps/textscene-web/src/a.ts', 'apps/textscene-linter/src/b.ts', 'apps/textscene-web/src/c.tsx']
+      )
+    ).toEqual(typeChecks('apps/textscene-web', 'apps/textscene-linter'));
+  });
+
+  it('type-checks the whole repository for a TypeScript file outside a package', () => {
+    expect(plan([], ['tools/a.ts'])).toEqual(['pnpm type-check:all', 'pnpm type-check:tests']);
   });
 
   it('lints a changed scene with the built linter', () => {

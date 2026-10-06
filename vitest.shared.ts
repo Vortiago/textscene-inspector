@@ -64,5 +64,7 @@ export default defineConfig({
     maxWorkers: Math.min(16, Math.max(1, availableParallelism() - 1)),
     fileParallelism: true,
     maxConcurrency: 15,
+    // Keeps each module's transform in node_modules/.vitest-cache, so the next run skips it.
+    fsModuleCache: true,
   },
 });
