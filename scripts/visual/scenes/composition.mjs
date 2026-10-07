@@ -56,4 +56,7 @@ export const SCENE_COMPOSITION_SCENES = [
   { name: 'node3d-plain-node-transform', file: 'unit-node3d-plain-node-transform.tscn' },
   { name: 'node3d-plain-node-visibility', file: 'unit-node3d-plain-node-visibility.tscn' },
   { name: 'node3d-top-level', file: 'unit-node3d-top-level.tscn' },
+  // A hidden AudioListener3D over an orange box: a type that draws nothing of
+  // its own still hides its subtree, so only the grey reference draws.
+  { name: 'transform-only-3d-hidden', file: 'unit-transform-only-3d-hidden.tscn' },
 ];
