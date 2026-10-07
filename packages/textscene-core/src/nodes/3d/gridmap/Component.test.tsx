@@ -10,22 +10,9 @@ import type { TscnNode } from '../../../parser/types';
 import { parseGridMap } from './parser';
 import { GridMap } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../index';
-import type { ResourceProvider } from '../../../resources/ResourceProvider';
+import { ResourceLoaderProvider } from '../../../index';
 import { instanceAs } from '../testing/reactThreeTestInstance';
-
-class NoopProvider implements ResourceProvider {
-  async loadResource(): Promise<string | ArrayBuffer | null> {
-    return null;
-  }
-}
-
-function makeLoader(): ResourceLoader {
-  const provider = new NoopProvider();
-  const loader = new ResourceLoader(new FileEventBus(provider));
-  loader.setProvider(provider);
-  return loader;
-}
+import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 
 function gridMapNode(properties: Record<string, string>): TscnNode {
   return {
@@ -48,7 +35,7 @@ function placeholderCells(renderer: Awaited<ReturnType<typeof render>>) {
 
 function render(node: TscnNode, children?: ReactNode) {
   return ReactThreeTestRenderer.create(
-    <ResourceLoaderProvider loader={makeLoader()}>
+    <ResourceLoaderProvider loader={loaderServing()}>
       <SceneResourcesProvider internalResources={[]} externalResources={[]}>
         <GridMap node={node}>{children}</GridMap>
       </SceneResourcesProvider>

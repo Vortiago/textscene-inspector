@@ -9,26 +9,11 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../index';
-import type { ResourceProvider } from '../../../resources/ResourceProvider';
+import { ResourceLoaderProvider, ResourceLoader } from '../../../index';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { materialInstanceAs } from '../testing/reactThreeTestInstance';
-
-/** Provider that never loads anything: textures are pre-cached directly. */
-class NoopProvider implements ResourceProvider {
-  async loadResource(): Promise<string | ArrayBuffer | null> {
-    return null;
-  }
-}
-
-function makeLoader(): ResourceLoader {
-  const provider = new NoopProvider();
-  const bus = new FileEventBus(provider);
-  const loader = new ResourceLoader(bus);
-  loader.setProvider(provider);
-  return loader;
-}
+import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 
 /**
  * Inject a texture into the loader's cache as if the file pipeline had loaded
@@ -86,7 +71,7 @@ function tree(
 
 describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
   it('renders a positive anisotropy as MeshPhysicalMaterial with strength and no rotation', async () => {
-    const loader = makeLoader();
+    const loader = loaderServing();
     const internal: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
       {
@@ -107,7 +92,7 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
   });
 
   it('renders a negative anisotropy with a 90° perpendicular rotation', async () => {
-    const loader = makeLoader();
+    const loader = loaderServing();
     const internal: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
       {
@@ -130,7 +115,7 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
   it('keeps a material with no anisotropy on the standard (non-physical) material', async () => {
     // The common path stays MeshStandardMaterial, the type every other test
     // asserts on. Only an enabled anisotropy upgrades to physical.
-    const loader = makeLoader();
+    const loader = loaderServing();
     const internal: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
       {
@@ -152,7 +137,7 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
    * `texture`, and hand back the physical material it produced.
    */
   async function renderWithFlowmap(texture: THREE.Texture): Promise<THREE.MeshPhysicalMaterial> {
-    const loader = makeLoader();
+    const loader = loaderServing();
     const path = 'res://textures/aniso_flow.png';
     preloadTexture(loader, path, texture);
 
@@ -218,7 +203,7 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     // three keys the GPU texture on the sampler parameters the clone changes, so
     // only the clone is uploaded. The texture on the material is the one to
     // release on unmount.
-    const loader = makeLoader();
+    const loader = loaderServing();
     const path = 'res://textures/aniso_flow.png';
     const flow = new THREE.DataTexture(new Uint8Array([128, 128, 0, 200]), 1, 1, THREE.RGBAFormat);
     flow.needsUpdate = true;

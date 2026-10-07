@@ -13,15 +13,9 @@ import { NavigationRegion3D } from './Component';
 import { NAV_OVERLAY_COLOR } from '../../../r3f/navigationOverlay';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
-import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../index';
-import type { ResourceProvider } from '../../../resources/ResourceProvider';
+import { ResourceLoaderProvider, ResourceLoader } from '../../../index';
 import { instanceAs } from '../testing/reactThreeTestInstance';
-
-class NoopProvider implements ResourceProvider {
-  async loadResource(): Promise<string | ArrayBuffer | null> {
-    return null;
-  }
-}
+import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 
 const NAVMESH_TRES: ParsedResource = {
   resourceType: 'NavigationMesh',
@@ -36,9 +30,7 @@ const NAVMESH_TRES: ParsedResource = {
 const EXT: TscnExternalResource[] = [{ id: '2_nav', path: 'res://navmesh.tres', type: 'NavigationMesh' }];
 
 function makeLoaderWith(path: string, tres: ParsedResource): ResourceLoader {
-  const provider = new NoopProvider();
-  const loader = new ResourceLoader(new FileEventBus(provider));
-  loader.setProvider(provider);
+  const loader = loaderServing();
   const origGet = loader.resources.getCached.bind(loader.resources);
   const origReq = loader.resources.request.bind(loader.resources);
   loader.resources.getCached = (p: string) => (p === path ? tres : origGet(p));

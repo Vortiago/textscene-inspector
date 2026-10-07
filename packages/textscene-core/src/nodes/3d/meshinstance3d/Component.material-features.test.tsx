@@ -9,26 +9,11 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../index';
-import type { ResourceProvider } from '../../../resources/ResourceProvider';
+import { ResourceLoaderProvider, ResourceLoader } from '../../../index';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { materialInstanceAs } from '../testing/reactThreeTestInstance';
-
-/** Provider that always returns null: these tests pre-cache textures. */
-class NoopProvider implements ResourceProvider {
-  async loadResource(): Promise<string | ArrayBuffer | null> {
-    return null;
-  }
-}
-
-function makeLoader(): ResourceLoader {
-  const provider = new NoopProvider();
-  const bus = new FileEventBus(provider);
-  const loader = new ResourceLoader(bus);
-  loader.setProvider(provider);
-  return loader;
-}
+import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 
 /**
  * Inject a texture as if the file pipeline had loaded it, by patching `request()`
@@ -99,7 +84,7 @@ async function renderWith(
 
 describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
   it('applies uv1_scale to the loaded albedo texture via texture.repeat', async () => {
-    const loader = makeLoader();
+    const loader = loaderServing();
     const tex = new THREE.Texture();
     preloadTexture(loader, 'res://textures/checker.png', tex);
 
@@ -141,7 +126,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
   });
 
   it('wires the loaded normal texture onto material.normalMap', async () => {
-    const loader = makeLoader();
+    const loader = loaderServing();
     const albedo = new THREE.Texture();
     const normal = new THREE.Texture();
     // As the loader hands them out: every decoded image is tagged sRGB before
@@ -192,7 +177,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
   });
 
   it('forces emissive to 0x000000 when emission_enabled is false', async () => {
-    const loader = makeLoader();
+    const loader = loaderServing();
     const internalResources: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
       {
@@ -217,7 +202,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
   });
 
   it('respects emission color + energy when emission_enabled is true', async () => {
-    const loader = makeLoader();
+    const loader = loaderServing();
     const internalResources: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
       {
@@ -242,7 +227,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
   });
 
   it('clones the shared texture per consumer so different uv_scale values do not clobber each other', async () => {
-    const loader = makeLoader();
+    const loader = loaderServing();
     const tex = new THREE.Texture();
     preloadTexture(loader, 'res://textures/shared.png', tex);
 
@@ -306,7 +291,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
   });
 
   it('renders a clearcoat material as MeshPhysicalMaterial carrying the coat scalars', async () => {
-    const loader = makeLoader();
+    const loader = loaderServing();
     const internalResources: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
       {
@@ -336,7 +321,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
   it('keeps a material with no clearcoat on the standard (non-physical) material', async () => {
     // The common path stays MeshStandardMaterial, the type every other test
     // asserts on. Only an enabled coat upgrades to MeshPhysicalMaterial.
-    const loader = makeLoader();
+    const loader = loaderServing();
     const internalResources: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
       {
@@ -354,7 +339,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
   });
 
   it('renders a rim material as MeshPhysicalMaterial with rim mapped to sheen', async () => {
-    const loader = makeLoader();
+    const loader = loaderServing();
     const internalResources: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
       {
@@ -381,7 +366,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
   });
 
   it('applies heightmap_scale to the rendered material.displacementScale', async () => {
-    const loader = makeLoader();
+    const loader = loaderServing();
     const internalResources: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
       {
@@ -404,7 +389,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
   });
 
   it('leaves displacementScale at 0 (no displacement) for a non-heightmap material', async () => {
-    const loader = makeLoader();
+    const loader = loaderServing();
     const internalResources: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
       {

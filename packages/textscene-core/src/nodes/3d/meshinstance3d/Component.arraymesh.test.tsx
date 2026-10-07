@@ -9,15 +9,15 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../index';
+import { ResourceLoaderProvider, ResourceLoader } from '../../../index';
 import { decodeArrayMesh } from '../../../resources/meshes/arraymesh/decode';
 import { buildArrayMeshGeometry } from '../../../resources/meshes/arraymesh/build';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
-import type { ResourceProvider } from '../../../resources/ResourceProvider';
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { materialInstanceAs } from '../testing/reactThreeTestInstance';
 import { headlightsSurface, wallQuadSurfaces } from '../../../resources/testing/arrayMeshSurfaces';
+import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 
 const WALL_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://bett1yahcwe25"]
 
@@ -51,20 +51,6 @@ function inlineMeshNode(subResourceId: string): TscnNode {
       surfaceMaterialOverrides: new Map(),
     } as MeshInstance3DProperties,
   };
-}
-
-class NoopProvider implements ResourceProvider {
-  async loadResource(): Promise<string | ArrayBuffer | null> {
-    return null;
-  }
-}
-
-function makeLoader(): ResourceLoader {
-  const provider = new NoopProvider();
-  const bus = new FileEventBus(provider);
-  const loader = new ResourceLoader(bus);
-  loader.setProvider(provider);
-  return loader;
 }
 
 /** Inject a decoded ArrayMesh resource as if the arraymesh processor loaded it. */
@@ -115,7 +101,7 @@ function firstMeshGeometry(
 
 describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
   it('renders the decoded ArrayMesh geometry (4 verts), not the placeholder box', async () => {
-    const loader = makeLoader();
+    const loader = loaderServing();
     const mesh = decodeArrayMesh(WALL_TRES, 'res://stage/meshes/wall.tres');
     const resource: ArrayMeshResource = {
       geometry: buildArrayMeshGeometry(mesh),
@@ -141,7 +127,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
   });
 
   it('renders a compressed-attribute ArrayMesh with finite bounds, not the placeholder', async () => {
-    const loader = makeLoader();
+    const loader = loaderServing();
     const mesh = decodeArrayMesh(COMPRESSED_TRES, 'res://stage/meshes/wall.tres');
     const resource: ArrayMeshResource = {
       geometry: buildArrayMeshGeometry(mesh),
@@ -176,7 +162,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
     // A scene can inline baked surfaces instead of pointing at a `.tres`. No file
     // is fetched, and `resolveMeshSubResource` finds the sub-resource, so the
     // unresolved-mesh placeholder does not fire either.
-    const loader = makeLoader();
+    const loader = loaderServing();
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={loader}>
         <SceneResourcesProvider
@@ -206,7 +192,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
     // The scene's materials are in `internalResources`, which this component
     // holds, but no resource path can address them. A scene that inlines a mesh
     // names its materials this way.
-    const loader = makeLoader();
+    const loader = loaderServing();
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={loader}>
         <SceneResourcesProvider
@@ -249,7 +235,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
   it('shows the placeholder when a scene ArrayMesh sub_resource carries no surfaces', async () => {
     // `buildPrimitiveMeshGeometry` has no ArrayMesh case, so falling through would
     // draw nothing and report nothing.
-    const loader = makeLoader();
+    const loader = loaderServing();
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={loader}>
         <SceneResourcesProvider
@@ -269,8 +255,8 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
   });
 
   it('shows the magenta wireframe placeholder when the ArrayMesh is unavailable', async () => {
-    const loader = makeLoader();
-    // No preload: NoopProvider → the path fails to load → status unavailable.
+    const loader = loaderServing();
+    // No preload: the loader serves no file, so the status turns unavailable.
 
     const renderer = await render(loader);
     await new Promise<void>((r) => setTimeout(r, 10));
@@ -314,24 +300,11 @@ _surfaces = ${wallQuadSurfaces(
 blend_shape_mode = 0
 `;
 
-class SingleFileProvider implements ResourceProvider {
-  constructor(
-    private path: string,
-    private content: string
-  ) {}
-  async loadResource(path: string): Promise<string | ArrayBuffer | null> {
-    return path === this.path ? this.content : null;
-  }
-}
-
 describe('<MeshInstance3D> ArrayMesh with its own surface materials', () => {
   const MESH_PATH = 'res://stage/meshes/wall.tres';
 
   it('builds each surface material out of the mesh’s own .tres', async () => {
-    const provider = new SingleFileProvider(MESH_PATH, OWN_MATERIALS_TRES);
-    const bus = new FileEventBus(provider);
-    const loader = new ResourceLoader(bus);
-    loader.setProvider(provider);
+    const loader = loaderServing({ [MESH_PATH]: OWN_MATERIALS_TRES });
 
     const renderer = await render(loader);
     // Two chained loads (mesh bytes → decode → material bytes → build), each

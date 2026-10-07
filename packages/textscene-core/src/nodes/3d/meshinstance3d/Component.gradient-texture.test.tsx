@@ -9,10 +9,10 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../index';
-import type { ResourceProvider } from '../../../resources/ResourceProvider';
+import { ResourceLoaderProvider } from '../../../index';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 
 /** Pin traffic is invisible from outside the cache, so both entry points are
  *  wrapped, still calling through to the real implementation. */
@@ -37,19 +37,6 @@ beforeEach(() => {
   traffic.pinned.length = 0;
   traffic.unpinned.length = 0;
 });
-
-class NoopProvider implements ResourceProvider {
-  async loadResource(): Promise<string | ArrayBuffer | null> {
-    return null;
-  }
-}
-
-function makeLoader(): ResourceLoader {
-  const provider = new NoopProvider();
-  const loader = new ResourceLoader(new FileEventBus(provider));
-  loader.setProvider(provider);
-  return loader;
-}
 
 // The GlowSprite chain of scenes/demos/3d/platformer/coin/coin.tscn.
 const coinResources: TscnInternalResource[] = [
@@ -106,7 +93,7 @@ function coinNode(): TscnNode {
 describe('<MeshInstance3D> GradientTexture2D albedo (coin glow)', () => {
   it('rasterises the inline gradient synchronously onto the unshaded material map', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ResourceLoaderProvider loader={makeLoader()}>
+      <ResourceLoaderProvider loader={loaderServing()}>
         <SceneResourcesProvider internalResources={coinResources} externalResources={[]}>
           <MeshInstance3D node={coinNode()} />
         </SceneResourcesProvider>
@@ -166,7 +153,7 @@ describe('<MeshInstance3D> procedural texture pins', () => {
 
   async function renderMixed() {
     return ReactThreeTestRenderer.create(
-      <ResourceLoaderProvider loader={makeLoader()}>
+      <ResourceLoaderProvider loader={loaderServing()}>
         <SceneResourcesProvider internalResources={mixedSlotResources} externalResources={[]}>
           <MeshInstance3D node={mixedNode()} />
         </SceneResourcesProvider>
