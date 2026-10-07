@@ -6,10 +6,17 @@
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { REPO_ROOT, readViewportMode, settleCanvas } from '../visual/previewServer.mjs';
+import {
+  installStyle,
+  paintedOutChromeCss,
+  REPO_ROOT,
+  readViewportMode,
+  settleCanvas,
+} from '../visual/previewServer.mjs';
 import { inkStats } from '../vscode/pixels.mjs';
+import { checkInk, checkStage, INK_FLOOR_2D } from './canvasChecks.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
-import { arraysEqual, describeNodePathMismatch, expandAllTreeRows, readOutlinerPaths } from './outliner.mjs';
+import { checkNodePaths, expandAllTreeRows, readOutlinerPaths } from './outliner.mjs';
 import { openFixture } from './openFixture.mjs';
 
 /* global DataTransfer */
@@ -45,22 +52,31 @@ const TEXTURE_FILE = {
   buffer: readFileSync(join(REPO_ROOT, 'scenes/fixtures/textures/sprite2d-marker.png')),
 };
 
-// Far below a passing run (~21k ink px for the two textured sprites, ~16k for their missing
-// texture placeholders), as `INK_FLOOR_2D` in `webAppGate.mjs`: the floor only clears noise.
-export const INK_FLOOR = 4000;
-
 // The provider's own report of the texture a scene-only drop lacks. It is the behaviour under
 // test, so the repeated drop accepts it, and only it.
-const MISSING_TEXTURE_WARNING = `File not found: ${TEXTURE_PATH}`;
+const MISSING_TEXTURE_WARNING = new RegExp(
+  `^\\[FileEventBus\\] .* File not found: ${TEXTURE_PATH.replaceAll('.', '\\.')}$`
+);
 
 const APP_ROOT = '[data-testid="app-root"]';
 const DROP_HINT = 'drop-zone-hint';
 
-/** Opens `startFixture` in a fresh context, with its canvas settled before any upload. */
-async function openStartFixture(browser, baseUrl, startFixture, label) {
-  const opened = await openFixture(browser, baseUrl, { fixture: startFixture, label });
-  await settleCanvas(opened.page, opened.canvas);
-  return opened;
+/**
+ * Opens `startFixture` in a fresh context, runs `upload` on its page and closes the context,
+ * even when a step throws. The toolbar floats over the canvas, and its rounded corners
+ * rasterise one step apart between runs, so the frames compare the scene only.
+ */
+async function withStartFixture(browser, baseUrl, startFixture, label, upload) {
+  const { context, page, canvas, diagnostics } = await openFixture(browser, baseUrl, {
+    fixture: startFixture,
+    label,
+    initScripts: [[installStyle, paintedOutChromeCss({ canvas2D: false })]],
+  });
+  try {
+    return { ...(await upload(page, canvas)), diagnostics };
+  } finally {
+    await context.close();
+  }
 }
 
 /**
@@ -108,42 +124,35 @@ async function readUploadedScene(page, canvas) {
   return {
     label: await label.textContent(),
     stage: await readViewportMode(page),
-    settleReason: settled.reason,
     frame: settled.buffer,
-    inkPixels: settled.buffer ? inkStats(settled.buffer).inkPixels : null,
+    ink: settled.buffer ? inkStats(settled.buffer) : null,
     paths: await readOutlinerPaths(page),
     resources: await readResourceRows(page),
   };
 }
 
-export async function runFileInputUpload(browser, baseUrl, { startFixture }) {
-  const opened = await openStartFixture(browser, baseUrl, startFixture, 'upload');
-  const { context, page, canvas, diagnostics } = opened;
-  await page.getByTestId('upload-tscn-input').setInputFiles([SCENE_FILE, TEXTURE_FILE]);
-  const scene = await readUploadedScene(page, canvas);
-  await context.close();
-  return { ...scene, diagnostics };
+export function runFileInputUpload(browser, baseUrl, startFixture) {
+  return withStartFixture(browser, baseUrl, startFixture, 'upload', async (page, canvas) => {
+    await page.getByTestId('upload-tscn-input').setInputFiles([SCENE_FILE, TEXTURE_FILE]);
+    return readUploadedScene(page, canvas);
+  });
 }
 
-export async function runDropUpload(browser, baseUrl, { startFixture }) {
-  const opened = await openStartFixture(browser, baseUrl, startFixture, 'drop');
-  const { context, page, canvas, diagnostics } = opened;
-  const hintShown = await dropFiles(page, [SCENE_FILE, TEXTURE_FILE]);
-  const hintAfterDrop = await page.getByTestId(DROP_HINT).isVisible();
-  const scene = await readUploadedScene(page, canvas);
-  await context.close();
-  return { ...scene, hintShown, hintAfterDrop, diagnostics };
+export function runDropUpload(browser, baseUrl, startFixture) {
+  return withStartFixture(browser, baseUrl, startFixture, 'drop', async (page, canvas) => {
+    const hintShown = await dropFiles(page, [SCENE_FILE, TEXTURE_FILE]);
+    const hintAfterDrop = await page.getByTestId(DROP_HINT).isVisible();
+    return { ...(await readUploadedScene(page, canvas)), hintShown, hintAfterDrop };
+  });
 }
 
-export async function runRepeatedDrop(browser, baseUrl, { startFixture }) {
-  const opened = await openStartFixture(browser, baseUrl, startFixture, 'repeated drop');
-  const { context, page, canvas, diagnostics } = opened;
-  await dropFiles(page, [SCENE_FILE]);
-  const sceneOnly = await readUploadedScene(page, canvas);
-  await dropFiles(page, [TEXTURE_FILE]);
-  const filled = await readUploadedScene(page, canvas);
-  await context.close();
-  return { sceneOnly, filled, diagnostics };
+export function runRepeatedDrop(browser, baseUrl, startFixture) {
+  return withStartFixture(browser, baseUrl, startFixture, 'repeated drop', async (page, canvas) => {
+    await dropFiles(page, [SCENE_FILE]);
+    const sceneOnly = await readUploadedScene(page, canvas);
+    await dropFiles(page, [TEXTURE_FILE]);
+    return { sceneOnly, filled: await readUploadedScene(page, canvas) };
+  });
 }
 
 function formatRows(rows) {
@@ -159,41 +168,32 @@ function checkUploadedScene(gate, label, scene, expectedRows) {
     scene.label === UPLOADED_SCENE_NAME,
     `${label} the toolbar names "${scene.label}", expected "${UPLOADED_SCENE_NAME}"`
   );
-  gate.check(scene.stage === '2d', `${label} opened in the "${scene.stage}" workspace, expected "2d"`);
-  if (scene.settleReason) {
-    gate.check(false, `${label} the canvas never settled: ${scene.settleReason}`);
-  } else {
-    gate.check(
-      scene.inkPixels >= INK_FLOOR,
-      `${label} only ${scene.inkPixels} ink pixels, floor is ${INK_FLOOR}, so nothing rendered`
-    );
-  }
-  if (!arraysEqual(UPLOADED_PATHS, scene.paths)) {
-    const { missing, extra } = describeNodePathMismatch(UPLOADED_PATHS, scene.paths);
-    gate.check(
-      false,
-      `${label} the outliner lists [${scene.paths.join(', ')}], expected [${UPLOADED_PATHS.join(', ')}] ` +
-        `(missing: [${missing.join(', ')}], extra: [${extra.join(', ')}])`
-    );
-  }
+  checkStage(gate, label, scene.stage, '2d');
+  checkInk(gate, label, scene.ink, INK_FLOOR_2D);
+  checkNodePaths(gate, `${label} the outliner`, UPLOADED_PATHS, scene.paths);
   gate.check(
     formatRows(scene.resources) === formatRows(expectedRows),
     `${label} the Resources tab lists ${formatRows(scene.resources)}, expected ${formatRows(expectedRows)}`
   );
 }
 
-/** Byte-equal settled frames: the same files must draw the same scene, whichever way they arrived. */
+/** Whether two settled frames are byte-equal, or `null` when either never settled. */
+function sameFrame(scene, reference) {
+  return scene.frame && reference.frame ? scene.frame.equals(reference.frame) : null;
+}
+
+// The same files must draw the same scene, whichever way they arrived.
 function checkSameFrame(gate, label, scene, reference) {
-  if (!scene.frame || !reference.frame) return;
   gate.check(
-    scene.frame.equals(reference.frame),
+    sameFrame(scene, reference) !== false,
     `${label} draws a different frame from the same files picked in the file input`
   );
 }
 
 function checkFileInputUpload(gate, fileInput) {
-  checkUploadedScene(gate, '[upload]', fileInput, []);
-  checkDiagnostics(gate, '[upload]', fileInput.diagnostics);
+  const label = '[upload]';
+  checkUploadedScene(gate, label, fileInput, []);
+  checkDiagnostics(gate, label, fileInput.diagnostics);
 }
 
 function checkDropUpload(gate, drop, fileInput) {
@@ -206,22 +206,16 @@ function checkDropUpload(gate, drop, fileInput) {
 }
 
 function checkRepeatedDrop(gate, { sceneOnly, filled, diagnostics }, fileInput) {
-  checkUploadedScene(gate, '[repeated drop, scene only]', sceneOnly, [
-    { state: 'missing', path: TEXTURE_PATH },
-  ]);
-  if (sceneOnly.frame && fileInput.frame) {
-    gate.check(
-      !sceneOnly.frame.equals(fileInput.frame),
-      '[repeated drop, scene only] draws the textured frame without the texture, so the texture came from elsewhere'
-    );
-  }
+  const sceneOnlyLabel = '[repeated drop, scene only]';
+  checkUploadedScene(gate, sceneOnlyLabel, sceneOnly, [{ state: 'missing', path: TEXTURE_PATH }]);
+  gate.check(
+    sameFrame(sceneOnly, fileInput) !== true,
+    `${sceneOnlyLabel} draws the textured frame without the texture, so the texture came from elsewhere`
+  );
   const filledLabel = '[repeated drop, texture]';
   checkUploadedScene(gate, filledLabel, filled, [{ state: 'uploaded', path: TEXTURE_PATH }]);
   checkSameFrame(gate, filledLabel, filled, fileInput);
-  const consoleWarnings = diagnostics.consoleWarnings.filter(
-    (text) => !text.endsWith(MISSING_TEXTURE_WARNING)
-  );
-  checkDiagnostics(gate, '[repeated drop]', { ...diagnostics, consoleWarnings });
+  checkDiagnostics(gate, '[repeated drop]', diagnostics, { expectedWarnings: [MISSING_TEXTURE_WARNING] });
 }
 
 export function checkUploadScenarios(gate, { fileInput, drop, repeatedDrop }) {

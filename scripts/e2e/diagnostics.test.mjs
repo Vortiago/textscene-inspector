@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { describe, expect, it } from 'vitest';
 import { attachDiagnostics, checkDiagnostics, unexpectedWarnings } from './diagnostics.mjs';
+import { CLEAN_LOAD, fakeGate } from './gate.testkit.mjs';
 
 const CLOCK_DEPRECATION = 'THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.';
 const REMOVED_TYPE_WARNING =
@@ -18,14 +19,6 @@ function fakePage() {
 function emitConsole(page, type, text) {
   page.emit('console', { type: () => type, text: () => text });
 }
-
-/** The gate shape `checkDiagnostics` writes to. */
-function fakeGate() {
-  const failures = [];
-  return { failures, check: (condition, message) => !condition && failures.push(message) };
-}
-
-const CLEAN_LOAD = { consoleErrors: [], consoleWarnings: [], pageErrors: [], failedRequests: [] };
 
 describe('unexpectedWarnings', () => {
   it('accepts a warning a healthy load logs', () => {
@@ -51,6 +44,10 @@ describe('unexpectedWarnings', () => {
   it('reports a GL driver message that is not the known stall', () => {
     const otherDriverMessage = GL_DRIVER_STALL.replace('GPU stall due to ReadPixels', 'unknown error');
     expect(unexpectedWarnings([otherDriverMessage])).toEqual([otherDriverMessage]);
+  });
+
+  it('accepts a warning that a scenario expects', () => {
+    expect(unexpectedWarnings([REMOVED_TYPE_WARNING], [/PCFSoftShadowMap has been removed/])).toEqual([]);
   });
 
   it('reports nothing for a page that logged no warning', () => {
@@ -81,6 +78,17 @@ describe('checkDiagnostics', () => {
   it('records nothing for an accepted warning', () => {
     const gate = fakeGate();
     checkDiagnostics(gate, '[3D]', { ...CLEAN_LOAD, consoleWarnings: [CLOCK_DEPRECATION] });
+    expect(gate.failures).toEqual([]);
+  });
+
+  it('records nothing for a warning the scenario expects', () => {
+    const gate = fakeGate();
+    checkDiagnostics(
+      gate,
+      '[3D]',
+      { ...CLEAN_LOAD, consoleWarnings: [REMOVED_TYPE_WARNING] },
+      { expectedWarnings: [/PCFSoftShadowMap has been removed/] }
+    );
     expect(gate.failures).toEqual([]);
   });
 

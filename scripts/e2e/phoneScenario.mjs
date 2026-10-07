@@ -5,13 +5,7 @@
  */
 import { findCanvas, gotoFixture, settleCanvas } from '../visual/previewServer.mjs';
 import { attachDiagnostics, checkDiagnostics } from './diagnostics.mjs';
-import {
-  arraysEqual,
-  describeNodePathMismatch,
-  expandAllTreeRows,
-  readOutlinerPaths,
-  selectOutlinerNode,
-} from './outliner.mjs';
+import { checkNodePaths, expandAllTreeRows, readOutlinerPaths, selectOutlinerNode } from './outliner.mjs';
 import { readInspectorPanel } from './inspector.mjs';
 
 /* global document */
@@ -128,14 +122,7 @@ export function checkPhoneLayout(gate, phone, { expectedPaths, selectName }) {
     );
   }
 
-  if (!arraysEqual(expectedPaths, phone.paths)) {
-    const { missing, extra } = describeNodePathMismatch(expectedPaths, phone.paths);
-    gate.check(
-      false,
-      `${label} the Scene half lists [${phone.paths.join(', ')}], expected [${expectedPaths.join(', ')}] ` +
-        `(missing: [${missing.join(', ')}], extra: [${extra.join(', ')}])`
-    );
-  }
+  checkNodePaths(gate, `${label} the Scene half`, expectedPaths, phone.paths);
   gate.check(
     phone.sceneHalf.tree && !phone.sceneHalf.inspector,
     `${label} the Scene half shows tree=${phone.sceneHalf.tree} inspector=${phone.sceneHalf.inspector}, ` +

@@ -1,55 +1,45 @@
 import { describe, expect, it } from 'vitest';
-import { arraysEqual, describeNodePathMismatch } from './outliner.mjs';
+import { fakeGate } from './gate.testkit.mjs';
+import { checkNodePaths } from './outliner.mjs';
 
-describe('arraysEqual', () => {
-  it('is true for two identical path lists in the same order', () => {
-    expect(arraysEqual(['Root', 'Root/Box'], ['Root', 'Root/Box'])).toBe(true);
+function failuresOf(expected, actual) {
+  const gate = fakeGate();
+  checkNodePaths(gate, '[tree]', expected, actual);
+  return gate.failures;
+}
+
+describe('checkNodePaths', () => {
+  it('records nothing for two identical path lists in the same order', () => {
+    expect(failuresOf(['Root', 'Root/Box'], ['Root', 'Root/Box'])).toEqual([]);
   });
 
-  it('is false when a row is missing', () => {
-    expect(arraysEqual(['Root', 'Root/Box', 'Root/Title'], ['Root', 'Root/Box'])).toBe(false);
+  it('records a dropped row as missing', () => {
+    expect(failuresOf(['Root', 'Root/Box', 'Root/Title'], ['Root', 'Root/Box'])).toEqual([
+      '[tree] lists [Root, Root/Box], expected [Root, Root/Box, Root/Title] (missing: [Root/Title], extra: [])',
+    ]);
   });
 
-  it('is false when an extra row appears', () => {
-    expect(arraysEqual(['Root', 'Root/Box'], ['Root', 'Root/Box', 'Root/Extra'])).toBe(false);
+  it('records an unexpected row as extra', () => {
+    expect(failuresOf(['Root', 'Root/Box'], ['Root', 'Root/Box', 'Root/Ghost'])).toEqual([
+      '[tree] lists [Root, Root/Box, Root/Ghost], expected [Root, Root/Box] (missing: [], extra: [Root/Ghost])',
+    ]);
   });
 
-  it('is false when the same rows appear in a different order', () => {
-    expect(arraysEqual(['Root', 'Root/Box', 'Root/Title'], ['Root', 'Root/Title', 'Root/Box'])).toBe(false);
+  it('records a renamed row on both sides', () => {
+    expect(failuresOf(['Root', 'Root/Box'], ['Root', 'Root/Renamed'])).toEqual([
+      '[tree] lists [Root, Root/Renamed], expected [Root, Root/Box] (missing: [Root/Box], extra: [Root/Renamed])',
+    ]);
   });
 
-  it('is false for non-array input', () => {
-    expect(arraysEqual(null, ['Root'])).toBe(false);
-    expect(arraysEqual(['Root'], undefined)).toBe(false);
-  });
-});
-
-describe('describeNodePathMismatch', () => {
-  it('reports nothing missing/extra for identical sets', () => {
-    expect(describeNodePathMismatch(['Root', 'Root/Box'], ['Root', 'Root/Box'])).toEqual({
-      missing: [],
-      extra: [],
-    });
+  it('records the same rows in a different order, with nothing missing or extra', () => {
+    expect(failuresOf(['Root', 'Root/Box', 'Root/Title'], ['Root', 'Root/Title', 'Root/Box'])).toEqual([
+      '[tree] lists [Root, Root/Title, Root/Box], expected [Root, Root/Box, Root/Title] (missing: [], extra: [])',
+    ]);
   });
 
-  it('reports a dropped row as missing', () => {
-    expect(describeNodePathMismatch(['Root', 'Root/Box', 'Root/Title'], ['Root', 'Root/Box'])).toEqual({
-      missing: ['Root/Title'],
-      extra: [],
-    });
-  });
-
-  it('reports an unexpected row as extra', () => {
-    expect(describeNodePathMismatch(['Root', 'Root/Box'], ['Root', 'Root/Box', 'Root/Ghost'])).toEqual({
-      missing: [],
-      extra: ['Root/Ghost'],
-    });
-  });
-
-  it('reports both sides of a reordering-free swap', () => {
-    expect(describeNodePathMismatch(['Root', 'Root/Box'], ['Root', 'Root/Renamed'])).toEqual({
-      missing: ['Root/Box'],
-      extra: ['Root/Renamed'],
-    });
+  it('records a tree that was never read (edge case)', () => {
+    expect(failuresOf(['Root'], undefined)).toEqual([
+      '[tree] lists [], expected [Root] (missing: [Root], extra: [])',
+    ]);
   });
 });

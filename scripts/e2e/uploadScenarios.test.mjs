@@ -1,19 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { INK_FLOOR_2D } from './canvasChecks.mjs';
+import { CLEAN_LOAD, fakeGate } from './gate.testkit.mjs';
 import {
   checkUploadScenarios,
-  INK_FLOOR,
   TEXTURE_PATH,
   UPLOADED_PATHS,
   UPLOADED_SCENE_NAME,
 } from './uploadScenarios.mjs';
-
-/** The gate shape the checks write to. */
-function fakeGate() {
-  const failures = [];
-  return { failures, check: (condition, message) => !condition && failures.push(message) };
-}
-
-const CLEAN_LOAD = { consoleErrors: [], consoleWarnings: [], pageErrors: [], failedRequests: [] };
 const TEXTURED_FRAME = Buffer.from('textured');
 const PLACEHOLDER_FRAME = Buffer.from('placeholder');
 const MISSING_TEXTURE_WARNING = `[FileEventBus] ❌ Failed: ${TEXTURE_PATH} (47.30ms) - File not found: ${TEXTURE_PATH}`;
@@ -22,9 +15,8 @@ function uploadedScene(overrides = {}) {
   return {
     label: UPLOADED_SCENE_NAME,
     stage: '2d',
-    settleReason: null,
     frame: TEXTURED_FRAME,
-    inkPixels: 21032,
+    ink: { inkPixels: 21032, width: 631, height: 756 },
     paths: UPLOADED_PATHS,
     resources: [],
     ...overrides,
@@ -69,9 +61,9 @@ describe('checkUploadScenarios', () => {
 
   it('records an upload that drew nothing', () => {
     const run = passingRun();
-    run.fileInput = { ...run.fileInput, inkPixels: 12 };
+    run.fileInput = { ...run.fileInput, ink: { inkPixels: 12, width: 631, height: 756 } };
     expect(failuresOf(run)).toEqual([
-      `[upload] only 12 ink pixels, floor is ${INK_FLOOR}, so nothing rendered`,
+      `[upload] only 12 ink pixels on a 631x756 canvas, floor is ${INK_FLOOR_2D}, so nothing rendered`,
     ]);
   });
 
@@ -80,8 +72,10 @@ describe('checkUploadScenarios', () => {
     run.drop = { ...run.drop, paths: ['Uploaded', 'Uploaded/Left'] };
     const failures = failuresOf(run);
     expect(failures).toHaveLength(1);
-    expect(failures[0]).toContain('[drop]');
-    expect(failures[0]).toContain('missing: [Uploaded/Right]');
+    expect(failures[0]).toBe(
+      '[drop] the outliner lists [Uploaded, Uploaded/Left], expected [Uploaded, Uploaded/Left, Uploaded/Right] ' +
+        '(missing: [Uploaded/Right], extra: [])'
+    );
   });
 
   it('records a drop that never showed its hint, or kept it after the drop', () => {
@@ -102,9 +96,10 @@ describe('checkUploadScenarios', () => {
 
   it('records a scene that never settled', () => {
     const run = passingRun();
-    run.drop = { ...run.drop, settleReason: 'never settled', frame: null, inkPixels: null };
-    const failures = failuresOf(run);
-    expect(failures.some((f) => f === '[drop] the canvas never settled: never settled')).toBe(true);
+    run.drop = { ...run.drop, frame: null, ink: null };
+    expect(failuresOf(run)).toEqual([
+      '[drop] canvas never settled, so it was never screenshotted for an ink count',
+    ]);
   });
 
   it('records a drop frame that differs from the file input frame', () => {

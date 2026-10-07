@@ -16,9 +16,13 @@ const EXPECTED_WARNINGS = [
   /\]GL Driver Message \(OpenGL, Performance[^)]*\): GPU stall due to ReadPixels/,
 ];
 
-/** The console warnings that no entry in `EXPECTED_WARNINGS` accepts. */
-export function unexpectedWarnings(warnings) {
-  return warnings.filter((text) => !EXPECTED_WARNINGS.some((pattern) => pattern.test(text)));
+/**
+ * The console warnings that neither `EXPECTED_WARNINGS` nor `scenarioWarnings` accepts. A
+ * scenario passes the patterns for the warnings its own behaviour under test logs.
+ */
+export function unexpectedWarnings(warnings, scenarioWarnings = []) {
+  const accepted = [...EXPECTED_WARNINGS, ...scenarioWarnings];
+  return warnings.filter((text) => !accepted.some((pattern) => pattern.test(text)));
 }
 
 /** Collects a page's console messages, uncaught errors and failed requests. */
@@ -39,12 +43,12 @@ export function attachDiagnostics(page) {
   return { consoleErrors, consoleWarnings, pageErrors, failedRequests };
 }
 
-export function checkDiagnostics(gate, label, diagnostics) {
+export function checkDiagnostics(gate, label, diagnostics, { expectedWarnings = [] } = {}) {
   gate.check(
     diagnostics.consoleErrors.length === 0,
     `${label} ${diagnostics.consoleErrors.length} console error(s): ${diagnostics.consoleErrors.slice(0, 3).join(' | ')}`
   );
-  const warnings = unexpectedWarnings(diagnostics.consoleWarnings);
+  const warnings = unexpectedWarnings(diagnostics.consoleWarnings, expectedWarnings);
   gate.check(
     warnings.length === 0,
     `${label} ${warnings.length} unexpected console warning(s): ${warnings.slice(0, 3).join(' | ')}`
