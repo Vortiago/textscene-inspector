@@ -23,10 +23,10 @@ export interface ResourceProcessorConfig<T> {
   /** Raw data into the final resource (file-event-bus mode). */
   process?: (path: string, data: FileData) => Promise<T>;
   /**
-   * Whether `process` reads a **Sub-resource path**'s `subResourceId` and builds
-   * that resource rather than the owning file's `[resource]` body. Opt-in, and the
-   * default refuses loudly: a `process` that ignores its path would cache the whole
-   * file's resource under the address, a wrong resource under a right-looking name.
+   * Whether `process` or `loadDirectly` reads a **Sub-resource path**'s `subResourceId`
+   * and builds that resource rather than the owning file's `[resource]` body. Opt-in, and
+   * the default refuses loudly: a load that ignores its path would cache the whole file's
+   * resource under the address, a wrong resource under a right-looking name.
    */
   addressesSubResources?: boolean;
   /**

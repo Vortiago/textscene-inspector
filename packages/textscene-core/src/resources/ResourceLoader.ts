@@ -135,14 +135,14 @@ export class ResourceLoader {
   }
 
   /**
-   * A file's bytes for a processor that routes by path before it fetches. No handler
-   * hears the read, and the byte cache lets its copy go: the caller keeps what it builds.
+   * A file's bytes for a processor that routes by path before it fetches, read from the
+   * byte layer's provider. Not `tryLoad`: it answers every failure as absence and drops
+   * the provider's reason, and clearing its cached copy would drop a peer's flight too.
    */
   private async readFile(path: string, type: string): Promise<FileData> {
     const fileBus = this._fileEventBus;
     if (!fileBus) throw new Error(`No file bus to read ${path}`);
-    const data = await fileBus.tryLoad(path, type);
-    fileBus.clearCache(path);
+    const data = await fileBus.getProvider().loadResource(path, type);
     if (data === null) throw new Error(`File not found: ${path}`);
     return data;
   }

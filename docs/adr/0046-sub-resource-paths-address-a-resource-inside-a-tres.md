@@ -94,13 +94,13 @@ ones.
 - A sub-resource's own texture `ExtResource`s resolve against the **owning `.tres`'s**
   table. The wrong table silently samples the scene's texture of the same id, so its own
   test pins this.
-- `decodeArrayMesh` honours an address too, so a `[sub_resource type="ArrayMesh"]` (a
-  `shadow_mesh`, a MeshLibrary's embedded item mesh) reads its own `_surfaces`. Without
-  that it falls through to the file's `[resource]` body: a different mesh under the
-  right-looking name for a `shadow_mesh`, and an empty one for a MeshLibrary (whose
-  `[resource]` has no `_surfaces`). Wrong or blank, and never diagnosed. An address that
-  names an id the file does not declare, or one that is not a mesh, warns and does not
-  decode silently to nothing.
+- The ArrayMesh processor honours an address too, through `resources/resourceSection.ts`,
+  so a `[sub_resource type="ArrayMesh"]` (a `shadow_mesh`, a MeshLibrary's embedded item
+  mesh) reads its own `_surfaces`. Without that it falls through to the file's
+  `[resource]` body: a different mesh under the right-looking name for a `shadow_mesh`,
+  and an empty one for a MeshLibrary (whose `[resource]` has no `_surfaces`). Wrong or
+  blank, and never diagnosed. An address that names an id the file does not declare, or
+  a section that is not an ArrayMesh, fails the load and does not decode to nothing.
 - A per-path `clearCache` drops, and announces `invalidated` for, the file and every
   address into it. Without the announcement a mounted consumer keeps a stale material
   after the owning `.tres` changes on disk. `useResource` answers `invalidated` by
