@@ -3,7 +3,6 @@
  */
 
 import type { Node3DProperties } from '../nodes/base/node3d/types';
-import type { ResourceLoader } from '../resources/ResourceLoader';
 
 /**
  * One `[node]` heading as the scan saw it, before `buildSceneTree` placed it. Kept off
@@ -75,8 +74,6 @@ export interface TscnScene {
    * `:404-407`). Absent rather than empty when no such heading instances anything.
    */
   instancesOutsideNodeBody?: readonly string[];
-  /** Event-based resource loader, used by SceneGraph helpers. */
-  resourceLoader?: ResourceLoader;
 }
 
 export interface TscnNode {

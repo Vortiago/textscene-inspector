@@ -10,7 +10,8 @@ import type { ParsedResource } from '../../parser/parsedResource';
 import type { TscnInternalResource } from '../../parser/types';
 import { findResourceSection } from '../../resources/resourceSection';
 import { resourceFilePath } from '../../resources/subResourcePath';
-import { useResource } from '../../resources/useResource';
+import { useResourceLoad, type ResourceStatus } from '../../resources/useResource';
+import { useMissingReport } from '../contexts/MissingResourcesContext';
 import type { MaterialResource, MaterialSource } from './materialSource';
 
 /** What a material source loads to. */
@@ -31,9 +32,13 @@ export function readyMaterial(loaded: LoadedMaterial): MaterialResource | null {
 
 /** What `source` loads to. A ShaderMaterial is declined with a warning (ADR-0041). */
 export function useMaterial(source: MaterialSource | undefined): LoadedMaterial {
-  const path = source?.kind === 'file' ? source.path : '';
-  // Called with '' for an inline source, to keep the hook count stable.
-  const file = useResource<ParsedResource>(resourceFilePath(path), 'resource').value;
+  const address = source?.kind === 'file' ? source.path : '';
+  // Called with '' for an inline source, to keep the hook count stable. The `resource` bus
+  // parses whole files, so the hook loads the file and reports under the address itself.
+  const fileResult = useResourceLoad<ParsedResource>(resourceFilePath(address), 'resource');
+  const file = fileResult.value;
+  const body = useMemo(() => (file ? materialBody(file, address) : undefined), [file, address]);
+  useMissingReport(address, addressStatus(fileResult.status, body));
 
   // Keyed on what the source holds, not the source object: a caller may build a new
   // source each render, and a new material would rebind every texture.
@@ -49,11 +54,13 @@ export function useMaterial(source: MaterialSource | undefined): LoadedMaterial 
         externalResources: inlineExternal,
       });
     }
-    if (!path || !file) return ABSENT;
-    const resource = materialBody(file, path);
-    if (!resource) return ABSENT;
-    return ready({ resource, internalResources: file.subResources, externalResources: file.extResources });
-  }, [inlineResource, inlineInternal, inlineExternal, file, path]);
+    if (!file || !body) return ABSENT;
+    return ready({
+      resource: body,
+      internalResources: file.subResources,
+      externalResources: file.extResources,
+    });
+  }, [inlineResource, inlineInternal, inlineExternal, file, body]);
 
   useEffect(() => {
     if (loaded.status === 'declined' && loaded.type === 'ShaderMaterial') {
@@ -64,14 +71,20 @@ export function useMaterial(source: MaterialSource | undefined): LoadedMaterial 
   return loaded;
 }
 
+/** A loaded file without the named `[sub_resource]` fails the address, as Godot's load does. */
+function addressStatus(fileStatus: ResourceStatus, body: TscnInternalResource | undefined): ResourceStatus {
+  if (fileStatus !== 'loaded') return fileStatus;
+  return body ? 'loaded' : 'unavailable';
+}
+
 /** Ready for a StandardMaterial3D, declined for any other type. */
 function ready(material: MaterialResource): LoadedMaterial {
   const { type } = material.resource;
   return type === 'StandardMaterial3D' ? { status: 'ready', material } : { status: 'declined', type };
 }
 
-/** The section `path` addresses in its parsed `.tres`, or undefined for an id the file does not declare. */
-function materialBody(file: ParsedResource, path: string): TscnInternalResource | undefined {
-  const section = findResourceSection(file, path);
-  return section && { id: path, type: section.type, data: section.properties };
+/** The section `address` names in its parsed `.tres`, or undefined for an id the file does not declare. */
+function materialBody(file: ParsedResource, address: string): TscnInternalResource | undefined {
+  const section = findResourceSection(file, address);
+  return section && { id: address, type: section.type, data: section.properties };
 }

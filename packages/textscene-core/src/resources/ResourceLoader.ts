@@ -271,10 +271,6 @@ export class ResourceLoader {
     this.provider = provider;
   }
 
-  getProvider(): ResourceProvider | null {
-    return this.provider;
-  }
-
   /** The processor serving `type`, for a consumer that reads, requests and pins by path. */
   processor<T>(type: ResourceType): ResourceProcessor<T> | undefined {
     return this.processors.get(type) as ResourceProcessor<T> | undefined;
@@ -295,10 +291,6 @@ export class ResourceLoader {
     const proc = this.processors.get(type);
     if (!proc) return undefined;
     return proc.getCached(path) as T | null | undefined;
-  }
-
-  getMetadata(idOrPath: string): ExtResource | undefined {
-    return this.metadata.get(idOrPath);
   }
 
   /**

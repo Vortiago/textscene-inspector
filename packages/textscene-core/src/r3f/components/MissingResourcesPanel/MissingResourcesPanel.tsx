@@ -1,5 +1,5 @@
 /**
- * Lists every missing-resource path that `useResource` reported and every
+ * Lists every missing-resource path that `useMissingReport` reported and every
  * path the user uploaded a file for, one row per path, uploaded rows first.
  * It knows only paths: the host supplies `onUpload` and `onRemove`. An
  * uploaded row is already a file, since `markUploaded` keys by file.

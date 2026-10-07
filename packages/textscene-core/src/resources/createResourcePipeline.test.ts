@@ -12,12 +12,20 @@ const fakeProvider: ResourceProvider = {
 };
 
 describe('createResourcePipeline', () => {
-  it('returns a ResourceLoader wired to the given provider', () => {
+  it('returns the given provider and a ResourceLoader', () => {
     const { provider, loader } = createResourcePipeline(fakeProvider);
 
     expect(provider).toBe(fakeProvider);
     expect(loader).toBeInstanceOf(ResourceLoader);
-    expect(loader.getProvider()).toBe(fakeProvider);
+  });
+
+  it('loads a scene through the given provider', async () => {
+    const loadResource = vi.fn(async () => null);
+    const { loader } = createResourcePipeline({ loadResource });
+
+    loader.scenes.request('res://level.tscn');
+
+    await vi.waitFor(() => expect(loadResource).toHaveBeenCalledWith('res://level.tscn', 'PackedScene'));
   });
 
   it('builds a loader with its processor accessors ready', () => {

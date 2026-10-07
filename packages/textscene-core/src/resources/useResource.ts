@@ -1,17 +1,15 @@
 /**
- * useResource(path, type) loads an external resource for an R3F node component as a status machine:
- * pending, then loaded or unavailable, and a late arrival turns unavailable loaded. It never
- * suspends. A texture or material keeps its identity across calls, and an Object3D is cloned per
- * consumer, since THREE.Object3D allows one parent.
+ * useResource(path, type) loads an external resource for an R3F node component as a status
+ * machine: pending, then loaded or unavailable, and a late arrival turns unavailable loaded. It
+ * never suspends, and a failed path shows as a **Missing resource** row. A texture or material keeps its identity across calls, and an Object3D is
+ * cloned per consumer, since THREE.Object3D allows one parent.
  */
 import { useContext, useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
-import type { TscnScene } from '../parser/types';
 import type { ResourceEventBus } from './ResourceEventBus';
 import { cloneWithMaterials, disposeClonedMaterials } from './processing/glbProcessing';
 import { ResourceLoaderContext } from './ResourceLoaderContext';
-import { useMissingResources } from '../r3f/contexts/MissingResourcesContext';
-import { resourceRef, simplifyResPath } from '../godot/index.js';
+import { useMissingReport } from '../r3f/contexts/MissingResourcesContext';
 import { resourceSliceRegistry, type ResourceBusType } from './sliceRegistration';
 
 /**
@@ -28,18 +26,31 @@ export interface ResourceResult<T> {
   error?: string;
 }
 
+const PENDING: ResourceResult<never> = { value: undefined, status: 'pending' };
+
 /** The loader from context, or null outside the provider. */
 export function useResourceLoader() {
   return useContext(ResourceLoaderContext);
 }
 
 export function useResource<T>(path: string, type: ResourceBusType): ResourceResult<T> {
+  const result = useResourceLoad<T>(path, type);
+  useMissingReport(path, result.status);
+  return result;
+}
+
+/**
+ * `useResource` without the **Missing resource** report, for a caller that reads a
+ * **Sub-resource path** out of a whole file and reports the address itself.
+ */
+export function useResourceLoad<T>(path: string, type: ResourceBusType): ResourceResult<T> {
   const loader = useResourceLoader();
-  const missingResources = useMissingResources();
-  const [result, setResult] = useState<ResourceResult<T>>(() => ({
-    value: undefined,
-    status: 'pending',
-  }));
+  // The request a result belongs to: the render that swaps the path or the bus still holds the
+  // old request's result, whose value may be a disposed clone, so that render answers pending.
+  const [settled, setSettled] = useState<{ path: string; type: ResourceBusType; result: ResourceResult<T> }>(
+    () => ({ path, type, result: PENDING })
+  );
+  const result = settled.path === path && settled.type === type ? settled.result : PENDING;
 
   // A ref, not the effect's closure: a closure outlives its render, so a stale event for an
   // earlier (path, type) would overwrite the state.
@@ -51,6 +62,8 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
   const clonedRef = useRef<THREE.Object3D | null>(null);
 
   useEffect(() => {
+    const setResult = (next: ResourceResult<T>) => setSettled({ path, type, result: next });
+
     // An empty path means no request: a caller keeps its hook count stable for an empty slot.
     // It stays `pending` with no subscription.
     if (path === '') {
@@ -171,33 +184,6 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
     };
   }, [loader, path, type]);
 
-  // The callbacks, not the context object: the object changes with every missing-path update, so
-  // depending on it loops the render. Outside a provider the context is a no-op.
-  const reportMissing = missingResources.report;
-  const clearMissing = missingResources.clear;
-  const markUploaded = missingResources.markUploaded;
-
-  // A path that loads after this hook reported it missing was uploaded, so its row stays, marked
-  // uploaded. A path that loads on first request never shows a row.
-  const reportedMissingForPathRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!path) return;
-    if (result.status === 'unavailable') {
-      reportMissing(path);
-      reportedMissingForPathRef.current = path;
-      return () => clearMissing(path);
-    }
-    // A `clear` withdraws only this hook's own report, which the cleanup above
-    // already withdrew, so a path that loads clears nothing here.
-    if (result.status === 'loaded' && reportedMissingForPathRef.current === path) {
-      // The row stays, so its Remove control stays reachable.
-      markUploaded(path);
-      reportedMissingForPathRef.current = null;
-    }
-    return undefined;
-  }, [path, result.status, reportMissing, clearMissing, markUploaded]);
-
   // The loader counts pending consumers, so a caller knows when loading has finished without a
   // timer. Keyed on `path` too: a path swap re-enters `pending`.
   useEffect(() => {
@@ -206,20 +192,4 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
   }, [loader, path, result.status]);
 
   return result;
-}
-
-/**
- * The simplified `res://` path for a raw property string: a `res://` path, or the path of an
- * `ExtResource("id")`. Null for an unknown id or any other form.
- */
-export function resolveResourcePath(scene: TscnScene, idOrPath: string): string | null {
-  if (idOrPath.startsWith('res://')) {
-    return simplifyResPath(idOrPath);
-  }
-  const parsed = resourceRef(idOrPath);
-  if (parsed?.kind !== 'ExtResource') {
-    return null;
-  }
-  const metadata = scene.resourceLoader?.getMetadata(parsed.id);
-  return metadata?.path ?? null;
 }
