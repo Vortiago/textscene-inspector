@@ -14,7 +14,7 @@ import {
 } from '../../../r3f/controls/native/text/sceneFontLoader';
 import type { CanvasTextTransparency } from '../../../r3f/controls/native/text/canvasTextPainter';
 import { alphaCutSurface, NO_TRANSPARENT_FLAG } from '../../../r3f/godotAlphaCut';
-import { instanceSurfaceAlpha } from '../../../r3f/materials/instanceTransparency';
+import { cutSurfaceAlpha } from '../../../r3f/materials/instanceTransparency';
 import type { Color } from '../../../utils/colorParser';
 import { usePendingWhile } from '../../../resources/usePendingWhile';
 import { layoutLabel3DLines, outlineStrokeWidthPx } from './glyphLayout';
@@ -96,18 +96,7 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
   // `label_3d.cpp:386` never gates on modulate alpha: whatever reaches the
   // blended pass is transparent. The instance's `transparency` can move both
   // surfaces there, and scales each surface's alpha by one instance alpha.
-  const { opacity: instanceAlpha, ...surfaceAlpha } = instanceSurfaceAlpha(
-    {
-      opacity: 1,
-      transparent: cut.blended,
-      depthWrite: cut.depthWrite,
-      blending: THREE.NormalBlending,
-      // `get_material_for_2d` keeps DEPTH_DRAW_OPAQUE_ONLY, so the alpha pass writes no depth.
-      alphaPassDepthWrite: false,
-      opaqueAfterCut: cut.opaqueAfterCut,
-    },
-    properties.transparency
-  );
+  const { opacity: instanceAlpha, ...surfaceAlpha } = cutSurfaceAlpha(cut, 1, properties.transparency);
   const transparency: CanvasTextTransparency = {
     ...surfaceAlpha,
     alphaTest: cut.alphaTest,

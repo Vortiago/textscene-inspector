@@ -121,7 +121,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const combining = plan !== null && plan.geometryCount > 1;
   const shadow = shadowCastingEffects(properties.castShadow);
   // A root's own: a contributor's solid, and its transparency with it, belong to the root's mesh.
-  const instanceTransparency = properties.transparency ?? 0;
+  const instanceTransparency = properties.transparency;
 
   const transform = { name: node.name, position, rotation, scale, visible } as const;
 

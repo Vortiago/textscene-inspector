@@ -116,7 +116,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   const shadow = shadowCastingEffects(properties.castShadow);
   const visible = properties.visible !== false;
   // GeometryInstance3D's, so it reaches every surface this node draws, the overlay's too.
-  const instanceTransparency = properties.transparency ?? 0;
+  const instanceTransparency = properties.transparency;
 
   const shellProps = {
     name: node.name,
@@ -239,7 +239,7 @@ function MaterialOverlayMesh({
    * mounts: its own material decides its billboard, and SHADOWS_ONLY skips its draw too.
    */
   shadow: ShadowCastingEffects;
-  instanceTransparency: number;
+  instanceTransparency: number | undefined;
 }) {
   // Read back off the base mesh rather than built again, so all four geometry branches
   // share one component and the two meshes share one geometry.
@@ -364,7 +364,7 @@ function ArrayMeshSurfaces({
 }: {
   mesh: SurfacedMesh;
   overrides: MeshOverrides;
-  instanceTransparency: number;
+  instanceTransparency: number | undefined;
 }) {
   const groupCount = Math.max(mesh.surfaceIndices.length, 1);
   const sources = Array.from({ length: groupCount }, (_unused, i) =>

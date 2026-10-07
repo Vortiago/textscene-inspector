@@ -4,18 +4,18 @@
  * Compatibility ignore it (`visual_instance_3d.cpp:524`).
  */
 
+import { clamp } from './math.js';
+import { unitByte } from './unitByte.js';
+
 /**
  * `FADE_ALPHA_PASS_THRESHOLD` (`render_forward_clustered.cpp:47`): an instance whose fade alpha
  * is below it draws every surface in the alpha pass (`:1128`), never the opaque or depth pass.
  */
 const FADE_ALPHA_PASS_THRESHOLD = 0.999;
 
-/** The instance packs its fade alpha into 8 bits of its flags (`render_forward_clustered.cpp:981`). */
-const FADE_ALPHA_STEPS = 255;
-
 /** `force_alpha = CLAMP(1.0 - p_transparency, 0, 1)` (`renderer_geometry_instance.cpp:110`), in float. */
 function fadeAlpha(transparency: number): number {
-  return Math.min(Math.max(Math.fround(1 - Math.fround(transparency)), 0), 1);
+  return clamp(Math.fround(1 - Math.fround(transparency)), 0, 1);
 }
 
 /**
@@ -23,7 +23,7 @@ function fadeAlpha(transparency: number): number {
  * (`scene_forward_clustered.glsl:1251,1357`): the fade alpha as the 8-bit flags field holds it.
  */
 export function instanceAlpha(transparency: number): number {
-  return Math.trunc(fadeAlpha(transparency) * FADE_ALPHA_STEPS) / FADE_ALPHA_STEPS;
+  return unitByte(fadeAlpha(transparency));
 }
 
 /** Whether every surface of the instance draws in the alpha pass. */

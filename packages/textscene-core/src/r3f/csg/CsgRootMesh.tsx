@@ -24,7 +24,7 @@ export interface CsgRootMeshProps {
   /** The ROOT's `cast_shadow`; a contributor's own is absorbed with its solid. */
   shadow: ShadowCastingEffects;
   /** The ROOT's `transparency`; a contributor's own is absorbed with its solid. */
-  instanceTransparency: number;
+  instanceTransparency: number | undefined;
   /**
    * The root's own solid, drawn while the library loads or after it failed. Passed in
    * because building it needs the slice's material resolution, which lives in

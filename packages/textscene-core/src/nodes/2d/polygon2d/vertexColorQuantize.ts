@@ -5,6 +5,8 @@
  * precedes shading, lighting and blending.
  */
 
+import { unitByte } from '../../../godot/unitByte';
+
 export interface QuantizableColor {
   r: number;
   g: number;
@@ -12,17 +14,9 @@ export interface QuantizableColor {
   a: number;
 }
 
-/**
- * Snaps one sRGB channel (0..1) to the byte Godot's upload stores, as a 0..1
- * float. `Math.fround` first: Godot's float32 `Color` channel widens to double
- * only for the `* 255.0`, so a value near a boundary truncates as Godot's does.
- */
+/** Snaps one sRGB channel (0..1) to the byte Godot's upload stores, as a 0..1 float. */
 export function quantizeVertexColorChannel(value: number): number {
-  const asFloat32 = Math.fround(value);
-  const scaled = asFloat32 * 255.0;
-  const clamped = Math.min(255, Math.max(0, scaled));
-  const truncated = Math.trunc(clamped);
-  return truncated / 255;
+  return unitByte(value);
 }
 
 /**

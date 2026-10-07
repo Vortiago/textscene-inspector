@@ -16,7 +16,7 @@ import { useUvWindow } from '../../../r3f/useUvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { alphaCutSurface } from '../../../r3f/godotAlphaCut';
-import { instanceSurfaceAlpha } from '../../../r3f/materials/instanceTransparency';
+import { cutSurfaceAlpha } from '../../../r3f/materials/instanceTransparency';
 import { useSpriteBase3DColorAccum } from '../../../r3f/spriteBase3DColorAccum';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import {
@@ -111,17 +111,10 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   });
   // `transparency` is a per-instance GeometryInstance3D property outside the accumulation: only
   // `modulate` accumulates. It can move the quad to the alpha pass, which no cut arm reaches.
-  const surfaceAlpha = instanceSurfaceAlpha(
-    {
-      // TRANSPARENCY_DISABLED never multiplies the modulate alpha into ALPHA (`material.cpp:1836`).
-      opacity: properties.transparent ? clamp01(accum.a) : 1,
-      transparent: cut.blended,
-      depthWrite: cut.depthWrite,
-      blending: THREE.NormalBlending,
-      // `get_material_for_2d` keeps DEPTH_DRAW_OPAQUE_ONLY, so the alpha pass writes no depth.
-      alphaPassDepthWrite: false,
-      opaqueAfterCut: cut.opaqueAfterCut,
-    },
+  // TRANSPARENCY_DISABLED never multiplies the modulate alpha into ALPHA (`material.cpp:1836`).
+  const surfaceAlpha = cutSurfaceAlpha(
+    cut,
+    properties.transparent ? clamp01(accum.a) : 1,
     properties.transparency
   );
 

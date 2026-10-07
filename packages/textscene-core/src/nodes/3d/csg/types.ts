@@ -10,3 +10,6 @@ export interface CSGShape3DProperties extends Node3DProperties {
   /** `transparency`: GeometryInstance3D state, which only a root draws. */
   transparency?: number;
 }
+
+/** The fields `finishCsgShapeParse` writes onto any CSG parse result. */
+export type CSGShapeFields = Pick<CSGShape3DProperties, 'operation' | 'castShadow' | 'transparency'>;

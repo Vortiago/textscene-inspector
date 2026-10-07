@@ -103,6 +103,7 @@ export {
   directionalLightLightsSurfaces,
 } from './directionalLightSkyMode.js';
 export { forcesAlphaPass, instanceAlpha } from './instanceTransparency.js';
+export { unitByte } from './unitByte.js';
 export {
   DIRECTIONAL_SHADOW_BLEND_SPLITS_DEFAULT,
   DIRECTIONAL_SHADOW_FADE_START_DEFAULT,

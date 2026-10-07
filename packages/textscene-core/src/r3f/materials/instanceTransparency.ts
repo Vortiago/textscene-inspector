@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { forcesAlphaPass, instanceAlpha } from '../../godot/instanceTransparency';
 import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
 import type { StandardMaterialBag } from '../../resources/materials/standardmaterial3d/materialBag';
+import type { AlphaCutSurface } from '../godotAlphaCut';
 
 /** The material state an instance's `transparency` changes. */
 export interface SurfaceAlpha {
@@ -44,6 +45,24 @@ export function instanceSurfaceAlpha(surface: AlphaPassSurface, transparency: nu
 }
 
 /**
+ * The alpha state of a Sprite3D or Label3D surface, whose `get_material_for_2d` material keeps
+ * DEPTH_DRAW_OPAQUE_ONLY, so the alpha pass writes no depth. `opacity` is the alpha its shader reads.
+ */
+export function cutSurfaceAlpha(cut: AlphaCutSurface, opacity: number, transparency: number): SurfaceAlpha {
+  return instanceSurfaceAlpha(
+    {
+      opacity,
+      transparent: cut.blended,
+      depthWrite: cut.depthWrite,
+      blending: THREE.NormalBlending,
+      alphaPassDepthWrite: false,
+      opaqueAfterCut: cut.opaqueAfterCut,
+    },
+    transparency
+  );
+}
+
+/**
  * The bag of a surface drawn under its instance's `transparency`. Null `scalars` is Godot's
  * default surface: opaque, under DEPTH_DRAW_OPAQUE_ONLY, so the alpha pass writes no depth.
  */
@@ -65,5 +84,5 @@ export function withInstanceTransparency(
     },
     transparency
   );
-  return { ...bag, props: { ...bag.props, ...alpha } } as StandardMaterialBag;
+  return { ...bag, props: { ...bag.props, ...alpha } };
 }

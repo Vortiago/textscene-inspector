@@ -5,13 +5,13 @@
  */
 
 import { finishCsgShapeParse } from './shapeParser';
-import type { CSGShape3DProperties } from './types';
+import type { CSGShapeFields } from './types';
 
 export { finishCsgShapeParse };
 
 /** `finishCsgShapeParse` plus `material` (a path string), which only a `CSGPrimitive3D` has. */
 export function finishCsgParse(
-  result: Pick<CSGShape3DProperties, 'operation' | 'castShadow' | 'transparency'> & { materialPath?: string },
+  result: CSGShapeFields & { materialPath?: string },
   properties: Record<string, string>
 ): void {
   if (properties.material) {
