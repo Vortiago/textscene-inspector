@@ -10,6 +10,7 @@ import { act } from 'react';
 import { fakeTiledUploads } from '../../../r3f/tiledUpload/fakeTiledUploads.testkit';
 import { GODOT_DEFAULT_ROUGHNESS } from '../../../r3f/materials/godotDefaultMaterial';
 import { pendingMapStandIn } from '../../../r3f/materials/pendingMapStandIn';
+import { isInstancedMesh } from '../../../r3f/testing/threeNarrow';
 import {
   drawnMaterials,
   mountGridMap,
@@ -68,8 +69,7 @@ describe('<GridMap> tile material textures', () => {
       wrapper: uploads.wrapper,
     });
     const tileMaterial = () =>
-      gridMap.tiles().find((o): o is THREE.InstancedMesh => o instanceof THREE.InstancedMesh)?.material as
-        THREE.MeshStandardMaterial | undefined;
+      gridMap.tiles().find(isInstancedMesh)?.material as THREE.MeshStandardMaterial | undefined;
 
     expect(tileMaterial()?.map).toBe(pendingMapStandIn('albedo_texture'));
     expect(uploads.pending).toHaveLength(1);

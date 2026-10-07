@@ -167,12 +167,12 @@ export function materialConstructorLines(source: string): number[] {
 const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/nodes/3d/decal/Component.tsx':
     'rebuilt by the effect that rebuilds the projection meshes; the only later write is `opacity`, which no program parameter reads',
-  'packages/textscene-core/src/nodes/3d/gridmap/Component.tsx':
-    'one invisible stand-in that hides the draw groups another surface draw owns; three skips an invisible group material, so it is never rendered, so never compiled',
   'packages/textscene-core/src/r3f/controls/native/text/canvasTextPainter.ts':
     'one material per built text run, replaced and disposed together with its geometry; its single `defines` write happens before the material has ever been rendered',
   'packages/textscene-core/src/r3f/controls/native/text/msdfMaterial.ts':
     'one material per built text run; the glyph atlas travels as a uniform, so re-laying-out a run moves no program input',
+  'packages/textscene-core/src/r3f/materials/otherDrawsSurface.ts':
+    'one invisible stand-in that hides the draw groups another surface draw owns; three skips an invisible group material, so it is never rendered, so never compiled',
   'packages/textscene-core/src/r3f/csg/evaluateCsgPlan.ts':
     'per-surface sentinels handed to the CSG library so it can group faces — never rendered, so never compiled',
   'packages/textscene-core/src/r3f/environment/GodotToneMapEffect.ts':

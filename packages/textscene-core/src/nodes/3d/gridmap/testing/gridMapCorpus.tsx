@@ -12,6 +12,7 @@ import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../index';
 import { loaderServing } from '../../../../resources/testing/servingResourceLoader';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
+import { isInstancedMesh } from '../../../../r3f/testing/threeNarrow';
 import { wallQuadSurfaces, type SurfaceKeys } from '../../../../resources/testing/arrayMeshSurfaces';
 
 const LIBRARY_PATH = 'res://stage/tiles.tres';
@@ -153,7 +154,7 @@ export async function renderGridMapTiles(corpus: GridMapCorpus = {}): Promise<TH
 
 /** Every InstancedMesh the GridMap batches into: one per surface that does not billboard. */
 export async function renderInstancedTiles(corpus: GridMapCorpus = {}): Promise<THREE.InstancedMesh[]> {
-  return (await renderGridMapTiles(corpus)).filter(isInstanced);
+  return (await renderGridMapTiles(corpus)).filter(isInstancedMesh);
 }
 
 /** The one InstancedMesh a one-surface, non-billboarded item batches into, or a thrown error. */
@@ -163,10 +164,6 @@ export async function renderInstancedTile(corpus: GridMapCorpus = {}): Promise<T
     throw new Error(`expected one instanced tile batch, got ${instanced.length}`);
   }
   return instanced[0]!;
-}
-
-export function isInstanced(tile: THREE.Mesh): tile is THREE.InstancedMesh {
-  return tile instanceof THREE.InstancedMesh;
 }
 
 /** The materials a tile draws: three skips a draw group whose material is invisible. */

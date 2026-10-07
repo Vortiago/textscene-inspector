@@ -13,6 +13,8 @@ import type { ArrayMeshResource } from '../../../resources/processors/createArra
 import { useMeshLibraryModel } from '../../../r3f/useMeshLibraryModel';
 import { fileMaterialSources, type MaterialSource } from '../../../r3f/materials/materialSource';
 import { SurfaceMaterialSlot, useMaterialScalars } from '../../../r3f/materials/SurfaceMaterialSlot';
+import { surfaceAttach, surfaceSources } from '../../../r3f/materials/SurfaceMaterialSlots';
+import { useOneSurfaceStartingMaterial } from '../../../r3f/materials/otherDrawsSurface';
 import { readyMaterial, useMaterial } from '../../../r3f/materials/useMaterial';
 import { surfaceBillboard } from '../../../resources/materials/standardmaterial3d/materialBag';
 import type { MeshLibraryItem } from '../../../resources/meshlibrary/types';
@@ -23,13 +25,6 @@ import { decodeGridMapCells, ORTHO_BASES, type GridMapCell } from './cellData';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
 import { drawsAsOneBatch } from '../../../r3f/surfaceDrawHooks';
-
-/**
- * The material of a surface another draw owns. three skips a draw group whose material is
- * invisible, in the colour pass (`WebGLRenderer.js:1948`) and the shadow pass
- * (`WebGLShadowMap.js:542`). Shared by every draw and never disposed.
- */
-const OTHER_DRAWS_SURFACE = new THREE.MeshBasicMaterial({ visible: false });
 
 /** Literal-only, so the key is constant and a placeholder cell never remounts. */
 const PLACEHOLDER_CELL_MATERIAL = wireGizmoProgram(0x4488cc);
@@ -167,8 +162,7 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
       </>
     );
   }
-  // A mesh that declares no surface material still draws Godot's default surface.
-  const surfaces = materials.length > 0 ? materials : [undefined];
+  const surfaces = surfaceSources(materials);
   return (
     <>
       {surfaces.map((source, surface) => (
@@ -210,22 +204,6 @@ function GridMapSurface({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE
 }
 
 /**
- * The material a draw starts with: its own surface's slot attaches over one entry, and every
- * other entry hides its draw group. A one-surface mesh has no groups and takes one material.
- */
-function useStartingMaterial(surfaceCount: number): THREE.Material[] | undefined {
-  return useMemo(
-    () => (surfaceCount > 1 ? Array.from({ length: surfaceCount }, () => OTHER_DRAWS_SURFACE) : undefined),
-    [surfaceCount]
-  );
-}
-
-function SurfaceSlot({ draw }: { draw: SurfaceDraw }) {
-  const attach = draw.surfaceCount > 1 ? `material-${draw.surface}` : 'material';
-  return <SurfaceMaterialSlot source={draw.source} attach={attach} />;
-}
-
-/**
  * Every cell as one InstancedMesh, keyed on the count: three sizes the instance buffer at
  * construction. The resource pipeline owns the geometry, which R3F leaves alone since it
  * arrives through `args`. The shadow hooks carry DOUBLE_SIDED and SHADOWS_ONLY per draw
@@ -233,7 +211,7 @@ function SurfaceSlot({ draw }: { draw: SurfaceDraw }) {
  */
 function BatchedTiles({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.Matrix4[] }) {
   const { geometry, shadow } = draw;
-  const startingMaterial = useStartingMaterial(draw.surfaceCount);
+  const startingMaterial = useOneSurfaceStartingMaterial(draw.surfaceCount);
   const meshRef = useRef<THREE.InstancedMesh>(null);
   useLayoutEffect(() => {
     const mesh = meshRef.current;
@@ -254,7 +232,7 @@ function BatchedTiles({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.M
       onBeforeShadow={shadow.onBeforeShadow}
       onAfterShadow={shadow.onAfterShadow}
     >
-      <SurfaceSlot draw={draw} />
+      <SurfaceMaterialSlot source={draw.source} attach={surfaceAttach(draw.surface, draw.surfaceCount)} />
     </instancedMesh>
   );
 }
@@ -266,7 +244,7 @@ function BatchedTiles({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.M
  */
 function CellTile({ draw, matrix }: { draw: SurfaceDraw; matrix: THREE.Matrix4 }) {
   const { geometry, shadow } = draw;
-  const startingMaterial = useStartingMaterial(draw.surfaceCount);
+  const startingMaterial = useOneSurfaceStartingMaterial(draw.surfaceCount);
   return (
     <mesh
       args={[geometry, startingMaterial]}
@@ -279,7 +257,7 @@ function CellTile({ draw, matrix }: { draw: SurfaceDraw; matrix: THREE.Matrix4 }
       onBeforeShadow={shadow.onBeforeShadow}
       onAfterShadow={shadow.onAfterShadow}
     >
-      <SurfaceSlot draw={draw} />
+      <SurfaceMaterialSlot source={draw.source} attach={surfaceAttach(draw.surface, draw.surfaceCount)} />
     </mesh>
   );
 }

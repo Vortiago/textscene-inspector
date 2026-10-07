@@ -13,7 +13,8 @@ import {
   expectSameRotation,
   TEST_CAMERA,
 } from '../../../r3f/testing/threePasses';
-import { drawnMaterials, isInstanced, renderGridMapTiles } from './testing/gridMapCorpus';
+import { isInstancedMesh } from '../../../r3f/testing/threeNarrow';
+import { drawnMaterials, renderGridMapTiles } from './testing/gridMapCorpus';
 
 /** Cells (0, 0, 0) and (3, 0, 0): centred at (1, 1, 1) and (7, 1, 1) at the default 2 m cell. */
 const TWO_CELLS = '0, 0, 0, 3, 0, 0';
@@ -25,6 +26,8 @@ const PLAIN_THEN_BILLBOARD = {
   cells: TWO_CELLS,
 };
 const DOUBLED = 'item/0/mesh_transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)';
+
+const cellTiles = (tiles: THREE.Mesh[]) => tiles.filter((tile) => !isInstancedMesh(tile));
 
 const drawnMatrix = (tile: THREE.Mesh) => drawColourGroup(tile, TEST_CAMERA, 0, (s) => s.matrixWorld);
 
@@ -87,13 +90,13 @@ describe('<GridMap> tile material billboard_mode', () => {
 
   it('batches the surface that does not billboard and draws the billboarding one per cell', async () => {
     const tiles = await renderGridMapTiles(PLAIN_THEN_BILLBOARD);
-    expect(tiles.filter(isInstanced)).toHaveLength(1);
-    expect(tiles.filter((tile) => !isInstanced(tile))).toHaveLength(2);
+    expect(tiles.filter(isInstancedMesh)).toHaveLength(1);
+    expect(cellTiles(tiles)).toHaveLength(2);
   });
 
   it('turns the billboarding surface of each cell to face the camera', async () => {
-    const cellTiles = (await renderGridMapTiles(PLAIN_THEN_BILLBOARD)).filter((tile) => !isInstanced(tile));
-    for (const tile of cellTiles) {
+    const cells = cellTiles(await renderGridMapTiles(PLAIN_THEN_BILLBOARD));
+    for (const tile of cells) {
       expectSameRotation(
         drawColourGroup(tile, TEST_CAMERA, 1, (s) => s.matrixWorld),
         TEST_CAMERA.matrixWorld
