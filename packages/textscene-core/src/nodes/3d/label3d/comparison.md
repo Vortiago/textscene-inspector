@@ -61,7 +61,7 @@ Strict parsing format-checks these `Label3D` properties, plus 18 inherited from 
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-`pixel_size`, `outline_size`, `font_size` and `line_spacing` warn and fall back through `floatOr` to `0.005`, `12`, `32` and `0`. A present `billboard` other than `0` or `2` silently resolves to `ENABLED`. `no_depth_test` is a raw `=== 'true'` comparison, so any other value renders false without a warning. `modulate` and `outline_modulate` fall back silently to opaque white and opaque black on a malformed `Color`.
+`pixel_size`, `outline_size`, `font_size`, `line_spacing` and `transparency` warn and fall back through `floatOr` to `0.005`, `12`, `32`, `0` and `0`. A present `billboard` other than `0` or `2` silently resolves to `ENABLED`. `no_depth_test` is a raw `=== 'true'` comparison, so any other value renders false without a warning. `modulate` and `outline_modulate` fall back silently to opaque white and opaque black on a malformed `Color`.
 
 ## Known limitations
 

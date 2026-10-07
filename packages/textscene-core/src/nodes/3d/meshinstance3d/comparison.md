@@ -40,6 +40,5 @@ The enum and range keys (`cast_shadow`, `gi_mode`, `layers`, `transparency`, the
 - **Approximated** A transparent material renders darker than Godot's on a brightly lit
   face, while an opaque one agrees.
 - **Approximated** Under `transparency`, an opaque material blends with the alpha of its albedo
-  texture and its vertex colours. Godot's opaque shader reads neither, so it blends at the
-  instance alpha alone.
+  texture and its vertex colours, which Godot's opaque shader never reads.
 - **Approximated** three removes both cylinder caps or neither, so a `CylinderMesh` with exactly one of `cap_top` and `cap_bottom` disabled renders with both.
