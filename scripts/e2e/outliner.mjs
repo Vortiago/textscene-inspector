@@ -31,16 +31,27 @@ export async function selectOutlinerNode(page, nodePath) {
  * Exact-order equality of two node-path lists: the order is the tree's authored
  * child order, so a swap is a regression.
  */
-export function arraysEqual(a, b) {
+function arraysEqual(a, b) {
   return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((v, i) => v === b[i]);
 }
 
 /** Missing and extra node paths for a failure message, ignoring order. */
-export function describeNodePathMismatch(expected, actual) {
+function describeNodePathMismatch(expected, actual) {
   const expectedSet = new Set(expected);
   const actualSet = new Set(actual);
   return {
     missing: expected.filter((path) => !actualSet.has(path)),
     extra: actual.filter((path) => !expectedSet.has(path)),
   };
+}
+
+/** Fails `gate` unless `actual` lists `expected` in order, naming the missing and extra paths. */
+export function checkNodePaths(gate, label, expected, actual) {
+  if (arraysEqual(expected, actual)) return;
+  const { missing, extra } = describeNodePathMismatch(expected, actual ?? []);
+  gate.check(
+    false,
+    `${label} lists [${(actual ?? []).join(', ')}], expected [${expected.join(', ')}] ` +
+      `(missing: [${missing.join(', ')}], extra: [${extra.join(', ')}])`
+  );
 }
