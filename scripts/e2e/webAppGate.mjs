@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 /**
- * `pnpm test:e2e:web`: the gate for the web app's outliner, inspector, mode
- * switching, phone layout and load health, through `?fixture=` in the real running app. It
- * observes from outside (`cameraProbe.mjs`, DOM shape), so no production file
- * carries a test hook.
+ * `pnpm test:e2e:web`: the gate for the web app's outliner, inspector, mode switching, phone
+ * layout, file upload and drop, and load health, through `?fixture=` in the real running app. It
+ * observes from outside (`cameraProbe.mjs`, DOM shape), so no production file carries a test hook.
  */
 import { launchShowcaseBrowser } from '../showcase/browser.mjs';
 import { inkStats } from '../vscode/pixels.mjs';
@@ -40,6 +39,12 @@ import {
 } from './textureWorkScenarios.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
 import { checkPhoneLayout, runPhoneScenario } from './phoneScenario.mjs';
+import {
+  checkUploadScenarios,
+  runDropUpload,
+  runFileInputUpload,
+  runRepeatedDrop,
+} from './uploadScenarios.mjs';
 
 /* global window */
 // `window` exists only in the browser that runs the `page.evaluate` calls.
@@ -205,6 +210,13 @@ async function main() {
     console.log(`[gate] phone scenario: ${FIXTURE_3D}`);
     const phone = await runPhoneScenario(browser, baseUrl, { fixture: FIXTURE_3D, selectPath: SELECT_A });
 
+    console.log(`[gate] upload scenarios: file input, drop and repeated drop over ${FIXTURE_3D}`);
+    const uploads = {
+      fileInput: await runFileInputUpload(browser, baseUrl, { startFixture: FIXTURE_3D }),
+      drop: await runDropUpload(browser, baseUrl, { startFixture: FIXTURE_3D }),
+      repeatedDrop: await runRepeatedDrop(browser, baseUrl, { startFixture: FIXTURE_3D }),
+    };
+
     checkSizedCanvas(gate, '[3D]', threeD.dims);
     checkInk(gate, '[3D]', threeD.ink, INK_FLOOR_3D);
     checkStage(gate, '[3D]', threeD.stage, '3d');
@@ -272,6 +284,7 @@ async function main() {
     checkDiagnostics(gate, '[long tasks]', withWorker.diagnostics);
     checkDiagnostics(gate, '[long tasks, .tres material]', fromTres.diagnostics);
     checkPhoneLayout(gate, phone, { expectedPaths: EXPECTED_3D_PATHS, selectName: 'Title' });
+    checkUploadScenarios(gate, uploads);
 
     console.log('\n[gate] measurements');
     console.log(
@@ -299,6 +312,11 @@ async function main() {
       `  phone  canvas=${phone.canvasBox?.width}x${phone.canvasBox?.height} ` +
         `sheet=${phone.dockBox?.width}x${phone.dockBox?.height} ` +
         `collapsed-canvas=${phone.collapsedCanvasBox?.width}x${phone.collapsedCanvasBox?.height}`
+    );
+    console.log(
+      `  uploads  file-input ink=${uploads.fileInput.inkPixels} drop ink=${uploads.drop.inkPixels} ` +
+        `scene-only drop ink=${uploads.repeatedDrop.sceneOnly.inkPixels} ` +
+        `texture drop ink=${uploads.repeatedDrop.filled.inkPixels}`
     );
   } finally {
     if (browser) await browser.close().catch(() => {});
