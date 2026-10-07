@@ -29,6 +29,22 @@ const UNREADABLE_THEN_GOOD_TRES = WALL_TRES.replace(
   `_surfaces = [${truncatedSurface({ name: 'truncated' })}, {`
 );
 
+/** A `shadow_mesh` sub-resource whose surface carries a material declared in the same file. */
+const SHADOW_MESH_TRES = [
+  '[gd_resource type="ArrayMesh" load_steps=3 format=4]',
+  '',
+  '[sub_resource type="StandardMaterial3D" id="Mat_a"]',
+  'roughness = 0.8',
+  '',
+  '[sub_resource type="ArrayMesh" id="ArrayMesh_shadow"]',
+  `_surfaces = ${wallQuadSurfaces({ material: 'SubResource("Mat_a")' })}`,
+  '',
+  '[resource]',
+  `_surfaces = ${wallQuadSurfaces({})}`,
+  'shadow_mesh = SubResource("ArrayMesh_shadow")',
+  '',
+].join('\n');
+
 function processorServing(files: Record<string, string>) {
   const eventBus = new ResourceEventBus();
   const processor = createArrayMeshProcessor(eventBus, sectionLoaderServing(files));
@@ -90,5 +106,15 @@ describe('createArrayMeshProcessor', () => {
 
     expect((await failed).message).toBe('res://box.tres has type BoxMesh, expected ArrayMesh');
     expect(processor.getCached('res://box.tres')).toBeNull();
+  });
+
+  it("addresses a sub-resource mesh's material against the owning file", async () => {
+    const { eventBus, processor } = processorServing({ 'res://wheel.tres': SHADOW_MESH_TRES });
+    const address = 'res://wheel.tres::ArrayMesh_shadow';
+
+    const loaded = eventBus.once<ArrayMeshResource>('arraymesh', 'loaded', address, 1000);
+    processor.request(address);
+
+    expect((await loaded).materialPaths).toEqual(['res://wheel.tres::Mat_a']);
   });
 });

@@ -27,12 +27,12 @@ export function createFontProcessor(
   /** Records each font a font reads, so a change to that file reloads the reader. */
   dependencies: DependencyGraph
 ): ResourceProcessor<FontResource> {
-  // Assigned once `createResourceProcessor` returns, below. `process()` only
+  // Assigned once `createResourceProcessor` returns, below. `loadDirectly` only
   // ever runs after a `.request()` call, always after this function has
   // returned, so the closure over the not-yet-assigned binding is safe.
   let processor: ResourceProcessor<FontResource>;
 
-  // Address → the addresses its `process` is parked on. Two files can name each
+  // Address → the addresses its load is parked on. Two files can name each
   // other, and the leg closing that ring would park on a `once` only its own
   // waiter settles. An edge, not a "loading" flag, which cannot tell a ring from
   // two overlapping loads and would null an ordinary shared base font.

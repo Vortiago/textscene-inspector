@@ -120,11 +120,6 @@ describe('decodeArrayMesh', () => {
     const mesh = decodeArrayMeshTres(INDEXED_MATERIAL_TRES, 'res://vehicles/meshes/wheel.tres');
     expect(mesh.surfaces[0]!.materialPath).toBe('res://vehicles/meshes/wheel.tres::3');
   });
-
-  it('addresses a sub-resource material against the owning file when selfPath carries a ::SubId', () => {
-    const mesh = decodeArrayMeshTres(OWN_MATERIAL_TRES, 'res://vehicles/meshes/wheel.tres::ArrayMesh_shadow');
-    expect(mesh.surfaces[0]!.materialPath).toBe('res://vehicles/meshes/wheel.tres::StandardMaterial3D_shvqh');
-  });
 });
 
 /** wheel.tres's shape: the surface's material is a `[sub_resource]` of the same file. */

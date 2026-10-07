@@ -11,8 +11,8 @@ import type { ThemeAddresses, ThemeResource } from './types';
 
 /**
  * Resolves `ThemeAddresses` into a `ThemeResource` by awaiting `loadFont` for each
- * address, inside an async `process()` step. Font refs resolve through another
- * processor, so the loader is injected.
+ * address, inside the Theme processor's async `loadDirectly`. Font refs resolve
+ * through another processor, so the loader is injected.
  */
 export async function resolveThemeResource(
   addresses: ThemeAddresses,
