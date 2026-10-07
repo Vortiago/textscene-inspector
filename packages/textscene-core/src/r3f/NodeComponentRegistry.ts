@@ -121,6 +121,12 @@ class NodeComponentRegistryImpl {
     return this.registry.get(typeName)?.container === true;
   }
 
+  /** True for an unregistered type or a container: the dispatcher mounts it in either workspace. */
+  passesThrough(typeName: string): boolean {
+    const registration = this.registry.get(typeName);
+    return registration === undefined || registration.container === true;
+  }
+
   /** True when the type takes part in CSG boolean evaluation. */
   isCsgShape(typeName: string): boolean {
     return this.registry.get(typeName)?.csgShape !== undefined;

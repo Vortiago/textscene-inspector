@@ -11,6 +11,7 @@ import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import type { ResourceLoader } from './ResourceLoader';
 import { createFakeResourceLoader, type FakeProcessor } from './testing/createFakeResourceLoader';
 import { initGlbModules } from './processing/glbProcessing';
+import { parseTresFile } from '../parser/parsedResource';
 
 /**
  * A fake ResourceLoader from `createFakeResourceLoader`, whose processor handles `MockLoader`
@@ -262,6 +263,46 @@ describe('useResource', () => {
 
     expect(materialASpy).toHaveBeenCalledTimes(1);
     expect(result.current.value).not.toBe(cloneA);
+  });
+
+  it("never hands the old path's value to the render that swaps the path", () => {
+    loader.textures.cache.set('res://a.png', textureA);
+    loader.textures.cache.set('res://b.png', textureB);
+    const seen: (THREE.Texture | undefined)[] = [];
+    const { rerender } = renderHook(
+      ({ path }: { path: string }) => {
+        const loaded = useResource<THREE.Texture>(path, 'texture');
+        if (path === 'res://b.png') seen.push(loaded.value);
+        return loaded;
+      },
+      { wrapper: withLoader(loader), initialProps: { path: 'res://a.png' } }
+    );
+
+    rerender({ path: 'res://b.png' });
+
+    expect(seen).not.toContain(textureA);
+    expect(seen.at(-1)).toBe(textureB);
+  });
+
+  it("never hands the old bus's value to the render that swaps the bus", () => {
+    const fake = createFakeResourceLoader();
+    const parsed = parseTresFile('[gd_resource type="Resource" format=3]\n\n[resource]\n');
+    fake.textures.seed('res://shared', textureA);
+    fake.resources.seed('res://shared', parsed);
+    const seen: unknown[] = [];
+    const { rerender } = renderHook(
+      ({ type }: { type: 'texture' | 'resource' }) => {
+        const loaded = useResource<unknown>('res://shared', type);
+        if (type === 'resource') seen.push(loaded.value);
+        return loaded;
+      },
+      { wrapper: withLoader(fake.loader), initialProps: { type: 'texture' as 'texture' | 'resource' } }
+    );
+
+    rerender({ type: 'resource' });
+
+    expect(seen).not.toContain(textureA);
+    expect(seen.at(-1)).toBe(parsed);
   });
 
   it('cache hit: re-rendering with the same path does not refire the loader request', () => {

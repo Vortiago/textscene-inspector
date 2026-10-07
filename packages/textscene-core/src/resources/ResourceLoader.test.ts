@@ -41,7 +41,7 @@ describe('ResourceLoader (loader-level gaps)', () => {
       loader.register(SCENE_META);
 
       expect(loader.metadata.getAll()).toHaveLength(1);
-      expect(loader.getMetadata('1_sub')).toBe(SCENE_META);
+      expect(loader.metadata.get('1_sub')).toBe(SCENE_META);
     });
   });
 
