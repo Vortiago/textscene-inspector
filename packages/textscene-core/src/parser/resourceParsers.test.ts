@@ -134,6 +134,18 @@ describe('parseInternalResource', () => {
     expect(result!.data.size).toBe('Vector3(1, 1, 1)');
   });
 
+  it('keeps the heading id out of data, since Godot stores no id property', () => {
+    const heading: ParsedHeading = {
+      type: 'sub_resource',
+      attributes: { id: 'Mat_1', type: 'StandardMaterial3D' },
+    };
+
+    const result = parseInternalResource(heading, { roughness: '0.8' });
+
+    expect(result!.id).toBe('Mat_1');
+    expect(result!.data).toEqual({ roughness: '0.8' });
+  });
+
   it('should return null for null heading', () => {
     const result = parseInternalResource(null, {});
     expect(result).toBeNull();

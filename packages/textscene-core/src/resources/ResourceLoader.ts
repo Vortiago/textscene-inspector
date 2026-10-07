@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import type { ExtResource, TscnScene } from '../parser/types';
 import type { FileData, FileEventBus } from './FileEventBus';
 import type { ResourceProvider } from './ResourceProvider';
-import { ResourceEventBus, type ResourceType } from './ResourceEventBus';
+import { ResourceEventBus, type ResourceChange, type ResourceType } from './ResourceEventBus';
 import { MetadataStore } from './MetadataStore';
 import { createTextureProcessor } from './processors/createTextureProcessor';
 import { createGLBProcessor } from './processors/createGLBProcessor';
@@ -42,8 +42,15 @@ export class ResourceLoader {
   readonly metadata: MetadataStore;
   /** Which cached resources read which files, so a **Dependency hot-reload** reaches them. */
   private readonly dependencies = new DependencyGraph();
-  /** File path → the addresses still building from its parse. Written only by `holdParse` and `dropParseHold`. */
-  private readonly parseHolds = new Map<string, number>();
+  /**
+   * File path → the `busType:address` builds still reading its parse. Written only by
+   * `holdParse` and `settleHold`. Cleared by `clear`, which drops the settle listener.
+   */
+  private readonly parseHolds = new Map<string, Set<string>>();
+  /** The bus types whose builds read a section. Written only by `sectionLoaderFor`. */
+  private readonly sectionBusTypes: ResourceType[] = [];
+  /** The one settle listener for every hold, subscribed by the first hold after a `clear`. */
+  private unsubscribeHolds: (() => void) | null = null;
   /** Runs procedural texture builds, in the host's worker where it has one. */
   readonly jobRunner: WorkerJobRunner;
   readonly eventBus: ResourceEventBus;
@@ -151,6 +158,7 @@ export class ResourceLoader {
 
   /** The section behind each address `busType` loads, from the `resource` slot's cached parse. */
   private sectionLoaderFor(busType: ResourceType): SectionLoaderFn {
+    this.sectionBusTypes.push(busType);
     return sectionLoader((path) => {
       this.holdParse(busType, path);
       return this.peerRequire({ busType, key: path }, this.resources, 'resource', resourceFilePath(path));
@@ -164,21 +172,22 @@ export class ResourceLoader {
    */
   private holdParse(busType: ResourceType, address: string): void {
     const filePath = resourceFilePath(address);
-    this.parseHolds.set(filePath, (this.parseHolds.get(filePath) ?? 0) + 1);
+    const holders = this.parseHolds.get(filePath) ?? new Set<string>();
+    this.parseHolds.set(filePath, holders.add(`${busType}:${address}`));
+    // One listener, not one per build: each emit would otherwise call every pending build's.
     // Synchronous, not `once`: a reader woken by the settle event already sees the parse gone.
-    const unsubscribe = this.eventBus.onChange([busType], ({ key }) => {
-      if (key !== address) return;
-      unsubscribe();
-      this.dropParseHold(filePath);
-    });
+    this.unsubscribeHolds ??= this.eventBus.onChange(this.sectionBusTypes, (change) =>
+      this.settleHold(change)
+    );
   }
 
-  private dropParseHold(filePath: string): void {
-    const holds = (this.parseHolds.get(filePath) ?? 1) - 1;
-    if (holds > 0) {
-      this.parseHolds.set(filePath, holds);
-      return;
-    }
+  private settleHold({ busType, key }: ResourceChange): void {
+    const filePath = resourceFilePath(key);
+    const holders = this.parseHolds.get(filePath);
+    // Still loading after the event: a consumer re-requested on `invalidated`, so the build goes on.
+    if (!holders || this.processors.get(busType)?.isLoading(key)) return;
+    holders.delete(`${busType}:${key}`);
+    if (holders.size > 0) return;
     this.parseHolds.delete(filePath);
     this.resources.release(filePath);
   }
@@ -299,6 +308,8 @@ export class ResourceLoader {
   clear(): void {
     this.metadata.clear();
     this.dependencies.clear();
+    this.parseHolds.clear();
+    this.unsubscribeHolds = null;
     for (const proc of this.processors.values()) {
       proc.clearCache();
     }

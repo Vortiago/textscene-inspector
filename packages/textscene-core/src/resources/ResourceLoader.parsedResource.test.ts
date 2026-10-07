@@ -169,3 +169,48 @@ describe('ResourceLoader: a parse lives until every section built from it settle
     expect(loader.resources.isCached(THEME_PATH)).toBe(false);
   });
 });
+
+describe('ResourceLoader: a parse hold survives a rebuild and a clear', () => {
+  /** Re-request `address` on `invalidated` at once, as a mounted `useResource` consumer does. */
+  function reRequestOnInvalidated(loader: ResourceLoader, address: string): void {
+    loader.eventBus.on('arraymesh', 'invalidated', (key) => {
+      if (key === address) loader.arrayMeshes.request(address);
+    });
+  }
+
+  /** The next `loaded` for `address`, through any `invalidated` before it, which `once` would reject on. */
+  function nextLoaded(loader: ResourceLoader, address: string): Promise<void> {
+    return new Promise((resolve) => {
+      const onLoaded = (key: string) => {
+        if (key !== address) return;
+        loader.eventBus.off('arraymesh', 'loaded', onLoaded);
+        resolve();
+      };
+      loader.eventBus.on('arraymesh', 'loaded', onLoaded);
+    });
+  }
+
+  it('drops the parse once a mesh rebuilt by a hot-reload settles', async () => {
+    const { loader } = loaderOverBus();
+    const address = `${TWO_MESH_PATH}::ArrayMesh_a`;
+    reRequestOnInvalidated(loader, address);
+    await loadMesh(loader, address);
+
+    const rebuilt = nextLoaded(loader, address);
+    loader.provideFile(TWO_MESH_PATH);
+    await rebuilt;
+
+    expect(loader.resources.isCached(TWO_MESH_PATH)).toBe(false);
+  });
+
+  it('drops the parse of a mesh built after a clear that interrupted a build', async () => {
+    const { loader } = loaderOverBus();
+    const address = `${TWO_MESH_PATH}::ArrayMesh_a`;
+    loader.arrayMeshes.request(address);
+    loader.clear();
+
+    await loadMesh(loader, address);
+
+    expect(loader.resources.isCached(TWO_MESH_PATH)).toBe(false);
+  });
+});
