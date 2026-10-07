@@ -9,7 +9,7 @@ import type { ViewportMode } from './contexts/ViewportModeContext';
 // The classification lives on the slice registrations, loaded here so the rule
 // works whichever canvas, if any, imported them first.
 import './nodes/index.js';
-import { drawsInWorkspace, isClaimedByCanvasItemEditor } from './nodeWorkspaceVisibility.js';
+import { isClaimedByCanvasItemEditor, isClaimedByNode3DEditor } from './nodeWorkspaceVisibility.js';
 
 /**
  * The workspace the scene's root node claims, or null for a plain Node or an
@@ -18,9 +18,6 @@ import { drawsInWorkspace, isClaimedByCanvasItemEditor } from './nodeWorkspaceVi
 export function workspaceForRoot(root: TscnNode | undefined): ViewportMode | null {
   if (!root) return null;
   if (isClaimedByCanvasItemEditor(root.type)) return '2D';
-  // Node3DEditor claims exactly what the 2D canvas refuses: registered 3D content.
-  // A plain Node, an unknown type and a viewport pass through the 2D canvas, so
-  // neither editor claims them.
-  if (!drawsInWorkspace(root.type, '2d')) return '3D';
+  if (isClaimedByNode3DEditor(root.type)) return '3D';
   return null;
 }

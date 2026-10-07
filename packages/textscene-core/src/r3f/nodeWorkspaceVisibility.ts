@@ -23,16 +23,23 @@ function drawsAsCanvasItem(type: string): boolean {
   return !isViewportSurface(type) && isClaimedByCanvasItemEditor(type);
 }
 
-export function drawsInWorkspace(type: string, workspace: CanvasWorkspace): boolean {
-  const canvasItem = drawsAsCanvasItem(type);
-  if (workspace === '3d') return !canvasItem;
-  // A sub-viewport renders offscreen, and a `ViewportTexture` consumer here needs
-  // its target, so it mounts in both. The component portals its subtree into a
-  // detached scene, so it never reaches this canvas (ADR-0033).
+/**
+ * A type Godot's Node3DEditor would claim: registered 3D content. A plain Node, an
+ * unknown type and a viewport are claimed by neither editor (ADR-0033).
+ */
+export function isClaimedByNode3DEditor(type: string): boolean {
   return (
-    canvasItem ||
-    isViewportBoundary(type) ||
-    !nodeComponentRegistry.get(type) ||
-    nodeComponentRegistry.isContainer(type)
+    !isClaimedByCanvasItemEditor(type) &&
+    !isViewportBoundary(type) &&
+    nodeComponentRegistry.get(type) !== undefined &&
+    !nodeComponentRegistry.isContainer(type)
   );
+}
+
+export function drawsInWorkspace(type: string, workspace: CanvasWorkspace): boolean {
+  if (workspace === '3d') return !drawsAsCanvasItem(type);
+  // The 2D canvas mounts all but 3D content. A sub-viewport mounts in both: a
+  // `ViewportTexture` consumer here needs its target, and its component portals its
+  // subtree into a detached scene, so it never reaches this canvas (ADR-0033).
+  return !isClaimedByNode3DEditor(type);
 }
