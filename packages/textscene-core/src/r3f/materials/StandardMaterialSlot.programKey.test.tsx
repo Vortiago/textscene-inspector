@@ -136,3 +136,9 @@ describe('<StandardMaterialSlot> keeps the compiled material for a plain uniform
     expect(await rebuilds({}, {}, first, second)).toBe(false);
   });
 });
+
+describe('<StandardMaterialSlot> rebinds when its attach target moves', () => {
+  it('remounts the material when `attach` changes, which fiber reads only at mount', async () => {
+    expect(await rebuilds({}, {}, { attach: 'material' }, { attach: 'material-0' })).toBe(true);
+  });
+});

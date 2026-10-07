@@ -360,9 +360,7 @@ function ArrayMeshSurfaces({
         const own: MaterialSource | undefined =
           sceneMaterials?.[i] ?? (materialPath ? { kind: 'file', path: materialPath } : undefined);
         const source = effectiveMaterialSource(overrides, mesh.surfaceIndices[i] ?? i, own);
-        // Keyed on `attach`: fiber applies it only at mount (`RESERVED_PROPS`,
-        // `@react-three/fiber` 9.8.0), so slot 0 remounts when the mesh gains a surface.
-        return <SurfaceMaterialSlot key={attach} source={source} attach={attach} />;
+        return <SurfaceMaterialSlot key={`surf-${i}`} source={source} attach={attach} />;
       })}
     </>
   );
