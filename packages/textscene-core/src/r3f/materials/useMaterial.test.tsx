@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import * as logger from '../../logger';
-import { parseTresFile } from '../../parser/parsedResource';
+import { parseTresFile, type ParsedResource } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
@@ -50,6 +50,29 @@ function renderMaterial(source: MaterialSource | undefined, seeded: Record<strin
     <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
   );
   return { fake, ...renderHook(() => useMaterial(source), { wrapper }) };
+}
+
+function MaterialReader({ path }: { path: string }) {
+  useMaterial({ kind: 'file', path });
+  return null;
+}
+
+/** The missing-resources rows while one `useMaterial` reads each of `paths` from `TRES_PATH`. */
+function missingRows(seeded: ParsedResource | null, paths: string[]): string[] {
+  const fake = createFakeResourceLoader();
+  fake.resources.seed(TRES_PATH, seeded);
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <MissingResourcesProvider>
+      <ResourceLoaderProvider loader={fake.loader}>
+        {paths.map((path) => (
+          <MaterialReader key={path} path={path} />
+        ))}
+        {children}
+      </ResourceLoaderProvider>
+    </MissingResourcesProvider>
+  );
+  const { result } = renderHook(() => useMissingResources().missingPaths, { wrapper });
+  return [...result.current];
 }
 
 afterEach(() => {
@@ -121,23 +144,15 @@ describe('useMaterial', () => {
   });
 
   it('reports each sub-resource address of a failed file as its own missing row', () => {
-    const fake = createFakeResourceLoader();
-    fake.resources.seed(TRES_PATH, null);
-    const wrapper = ({ children }: { children: ReactNode }) => (
-      <MissingResourcesProvider>
-        <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
-      </MissingResourcesProvider>
-    );
-    const { result } = renderHook(
-      () => {
-        useMaterial({ kind: 'file', path: `${TRES_PATH}::Inner_a` });
-        useMaterial({ kind: 'file', path: `${TRES_PATH}::Inner_b` });
-        return useMissingResources().missingPaths;
-      },
-      { wrapper }
-    );
+    const rows = missingRows(null, [`${TRES_PATH}::Inner_a`, `${TRES_PATH}::Inner_b`]);
 
-    expect([...result.current].sort()).toEqual([`${TRES_PATH}::Inner_a`, `${TRES_PATH}::Inner_b`]);
+    expect(rows.sort()).toEqual([`${TRES_PATH}::Inner_a`, `${TRES_PATH}::Inner_b`]);
+  });
+
+  it('reports a sub-resource the loaded file does not declare as a missing row', () => {
+    const rows = missingRows(parseTresFile(PAINT_TRES), [`${TRES_PATH}::Missing`]);
+
+    expect(rows).toEqual([`${TRES_PATH}::Missing`]);
   });
 
   it('answers absent for a sub-resource the file does not declare', () => {

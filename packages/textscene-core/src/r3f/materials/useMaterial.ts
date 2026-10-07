@@ -11,6 +11,7 @@ import type { TscnInternalResource } from '../../parser/types';
 import { findSubResource } from '../../resources/SubResourceResolver';
 import { parseSubResourcePath } from '../../resources/subResourcePath';
 import { useResource } from '../../resources/useResource';
+import { useMissingResources } from '../contexts/MissingResourcesContext';
 import type { MaterialResource, MaterialSource } from './materialSource';
 
 /** What a material source loads to. */
@@ -37,6 +38,13 @@ export function useMaterial(source: MaterialSource | undefined): LoadedMaterial 
   // parses whole files, so the hook loads the file and reports a failure under the address.
   const file = useResource<ParsedResource>(filePath, 'resource', address).value;
 
+  // A loaded file without the named `[sub_resource]` fails the address, as Godot's load does.
+  const body = useMemo(
+    () => (file ? materialBody(file, filePath, subResourceId) : undefined),
+    [file, filePath, subResourceId]
+  );
+  useUndeclaredReport(address, !!file && !body);
+
   // Keyed on what the source holds, not the source object: a caller may build a new
   // source each render, and a new material would rebind every texture.
   const inline = source?.kind === 'inline' ? source.material : null;
@@ -51,11 +59,13 @@ export function useMaterial(source: MaterialSource | undefined): LoadedMaterial 
         externalResources: inlineExternal,
       });
     }
-    if (!filePath || !file) return ABSENT;
-    const resource = materialBody(file, filePath, subResourceId);
-    if (!resource) return ABSENT;
-    return ready({ resource, internalResources: file.subResources, externalResources: file.extResources });
-  }, [inlineResource, inlineInternal, inlineExternal, file, filePath, subResourceId]);
+    if (!file || !body) return ABSENT;
+    return ready({
+      resource: body,
+      internalResources: file.subResources,
+      externalResources: file.extResources,
+    });
+  }, [inlineResource, inlineInternal, inlineExternal, file, body]);
 
   useEffect(() => {
     if (loaded.status === 'declined' && loaded.type === 'ShaderMaterial') {
@@ -64,6 +74,16 @@ export function useMaterial(source: MaterialSource | undefined): LoadedMaterial 
   }, [loaded]);
 
   return loaded;
+}
+
+/** Keeps `address` in the missing-resources panel while `isUndeclared` holds. */
+function useUndeclaredReport(address: string, isUndeclared: boolean): void {
+  const { report, clear } = useMissingResources();
+  useEffect(() => {
+    if (!isUndeclared) return undefined;
+    report(address);
+    return () => clear(address);
+  }, [address, isUndeclared, report, clear]);
 }
 
 /** Ready for a StandardMaterial3D, declined for any other type. */
