@@ -9,7 +9,7 @@ import type * as THREE from 'three';
 import type { ResourceEventBus } from './ResourceEventBus';
 import { cloneWithMaterials, disposeClonedMaterials } from './processing/glbProcessing';
 import { ResourceLoaderContext } from './ResourceLoaderContext';
-import { useMissingResources } from '../r3f/contexts/MissingResourcesContext';
+import { useMissingReport } from '../r3f/contexts/MissingResourcesContext';
 import { resourceSliceRegistry, type ResourceBusType } from './sliceRegistration';
 
 /**
@@ -26,6 +26,8 @@ export interface ResourceResult<T> {
   error?: string;
 }
 
+const PENDING: ResourceResult<never> = { value: undefined, status: 'pending' };
+
 /** The loader from context, or null outside the provider. */
 export function useResourceLoader() {
   return useContext(ResourceLoaderContext);
@@ -37,14 +39,13 @@ export function useResourceLoader() {
  */
 export function useResource<T>(path: string, type: ResourceBusType, address = path): ResourceResult<T> {
   const loader = useResourceLoader();
-  const missingResources = useMissingResources();
-  // The path a result belongs to: after a path swap, the render before the load effect still holds
-  // the old path's result, and reporting that status would charge it to the new path.
+  // The path a result belongs to: the render that swaps the path still holds the old path's
+  // result, whose value may be a disposed clone, so that render answers pending.
   const [settled, setSettled] = useState<{ path: string; result: ResourceResult<T> }>(() => ({
     path,
-    result: { value: undefined, status: 'pending' },
+    result: PENDING,
   }));
-  const result = settled.result;
+  const result = settled.path === path ? settled.result : PENDING;
 
   // A ref, not the effect's closure: a closure outlives its render, so a stale event for an
   // earlier (path, type) would overwrite the state.
@@ -178,34 +179,7 @@ export function useResource<T>(path: string, type: ResourceBusType, address = pa
     };
   }, [loader, path, type]);
 
-  // The callbacks, not the context object: the object changes with every missing-path update, so
-  // depending on it loops the render. Outside a provider the context is a no-op.
-  const reportMissing = missingResources.report;
-  const clearMissing = missingResources.clear;
-  const markUploaded = missingResources.markUploaded;
-
-  // A path that loads after this hook reported it missing was uploaded, so its row stays, marked
-  // uploaded. A path that loads on first request never shows a row.
-  const reportedMissingAddressRef = useRef<string | null>(null);
-
-  const isSettledForPath = settled.path === path;
-
-  useEffect(() => {
-    if (!path || !isSettledForPath) return;
-    if (result.status === 'unavailable') {
-      reportMissing(address);
-      reportedMissingAddressRef.current = address;
-      return () => clearMissing(address);
-    }
-    // A `clear` withdraws only this hook's own report, which the cleanup above
-    // already withdrew, so a path that loads clears nothing here.
-    if (result.status === 'loaded' && reportedMissingAddressRef.current === address) {
-      // The row stays, so its Remove control stays reachable.
-      markUploaded(address);
-      reportedMissingAddressRef.current = null;
-    }
-    return undefined;
-  }, [path, address, isSettledForPath, result.status, reportMissing, clearMissing, markUploaded]);
+  useMissingReport(address, result.status);
 
   // The loader counts pending consumers, so a caller knows when loading has finished without a
   // timer. Keyed on `path` too: a path swap re-enters `pending`.

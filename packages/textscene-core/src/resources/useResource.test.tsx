@@ -264,6 +264,25 @@ describe('useResource', () => {
     expect(result.current.value).not.toBe(cloneA);
   });
 
+  it("never hands the old path's value to the render that swaps the path", () => {
+    loader.textures.cache.set('res://a.png', textureA);
+    loader.textures.cache.set('res://b.png', textureB);
+    const seen: (THREE.Texture | undefined)[] = [];
+    const { rerender } = renderHook(
+      ({ path }: { path: string }) => {
+        const loaded = useResource<THREE.Texture>(path, 'texture');
+        if (path === 'res://b.png') seen.push(loaded.value);
+        return loaded;
+      },
+      { wrapper: withLoader(loader), initialProps: { path: 'res://a.png' } }
+    );
+
+    rerender({ path: 'res://b.png' });
+
+    expect(seen).not.toContain(textureA);
+    expect(seen.at(-1)).toBe(textureB);
+  });
+
   it('cache hit: re-rendering with the same path does not refire the loader request', () => {
     const requestSpy = vi.fn(() => {});
     loader.textures.setRequestImpl(requestSpy);

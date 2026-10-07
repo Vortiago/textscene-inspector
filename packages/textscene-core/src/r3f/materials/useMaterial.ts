@@ -11,7 +11,7 @@ import type { TscnInternalResource } from '../../parser/types';
 import { findSubResource } from '../../resources/SubResourceResolver';
 import { parseSubResourcePath } from '../../resources/subResourcePath';
 import { useResource } from '../../resources/useResource';
-import { useMissingResources } from '../contexts/MissingResourcesContext';
+import { useMissingReport } from '../contexts/MissingResourcesContext';
 import type { MaterialResource, MaterialSource } from './materialSource';
 
 /** What a material source loads to. */
@@ -43,7 +43,7 @@ export function useMaterial(source: MaterialSource | undefined): LoadedMaterial 
     () => (file ? materialBody(file, filePath, subResourceId) : undefined),
     [file, filePath, subResourceId]
   );
-  useUndeclaredReport(address, !!file && !body);
+  useMissingReport(address, !file ? 'pending' : body ? 'loaded' : 'unavailable');
 
   // Keyed on what the source holds, not the source object: a caller may build a new
   // source each render, and a new material would rebind every texture.
@@ -74,16 +74,6 @@ export function useMaterial(source: MaterialSource | undefined): LoadedMaterial 
   }, [loaded]);
 
   return loaded;
-}
-
-/** Keeps `address` in the missing-resources panel while `isUndeclared` holds. */
-function useUndeclaredReport(address: string, isUndeclared: boolean): void {
-  const { report, clear } = useMissingResources();
-  useEffect(() => {
-    if (!isUndeclared) return undefined;
-    report(address);
-    return () => clear(address);
-  }, [address, isUndeclared, report, clear]);
 }
 
 /** Ready for a StandardMaterial3D, declined for any other type. */

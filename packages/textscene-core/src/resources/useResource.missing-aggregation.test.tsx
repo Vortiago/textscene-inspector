@@ -2,13 +2,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import * as THREE from 'three';
-import type { ReactNode } from 'react';
 import { useResource } from './useResource';
-import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import type { ResourceLoader } from './ResourceLoader';
 import type { ParsedResource } from '../parser/parsedResource';
 import { createFakeResourceLoader, type FakeProcessor } from './testing/createFakeResourceLoader';
-import { MissingResourcesProvider, useMissingResources } from '../r3f/contexts/MissingResourcesContext';
+import { useMissingResources } from '../r3f/contexts/MissingResourcesContext';
+import { missingResourcesWrapper } from './testing/missingResourcesWrapper';
 
 function makeMockLoader(): {
   loader: ResourceLoader;
@@ -21,16 +20,6 @@ function makeMockLoader(): {
   return { loader: fake.loader, textures: fake.textures };
 }
 
-function makeWrappers(loader: ResourceLoader) {
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <MissingResourcesProvider>
-        <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>
-      </MissingResourcesProvider>
-    );
-  };
-}
-
 describe('useResource → MissingResourcesContext aggregation', () => {
   let loader: ResourceLoader;
   let textures: FakeProcessor<THREE.Texture>;
@@ -40,7 +29,7 @@ describe('useResource → MissingResourcesContext aggregation', () => {
   });
 
   it('reports the path to MissingResourcesContext when the resource resolves to missing', () => {
-    const Wrapper = makeWrappers(loader);
+    const Wrapper = missingResourcesWrapper(loader);
     const { result } = renderHook(
       () => {
         const res = useResource<THREE.Texture>('res://textures/missing.png', 'texture');
@@ -55,7 +44,7 @@ describe('useResource → MissingResourcesContext aggregation', () => {
   });
 
   it('does not report when the path is empty (no-request short-circuit)', () => {
-    const Wrapper = makeWrappers(loader);
+    const Wrapper = missingResourcesWrapper(loader);
     const { result } = renderHook(
       () => {
         const res = useResource<THREE.Texture>('', 'texture');
@@ -70,7 +59,7 @@ describe('useResource → MissingResourcesContext aggregation', () => {
   });
 
   it('clears the path from the missing set when the consuming hook unmounts', () => {
-    const Wrapper = makeWrappers(loader);
+    const Wrapper = missingResourcesWrapper(loader);
 
     // A swap to the empty path models an unmount: it returns pending and runs the cleanup of the
     // missing report.
@@ -94,7 +83,7 @@ describe('useResource → MissingResourcesContext aggregation', () => {
   });
 
   it('keeps the path missing while another consumer of it stays mounted', () => {
-    const Wrapper = makeWrappers(loader);
+    const Wrapper = missingResourcesWrapper(loader);
     const { result, rerender } = renderHook(
       ({ secondPath }: { secondPath: string }) => {
         useResource<THREE.Texture>('res://textures/missing.png', 'texture');
@@ -115,7 +104,7 @@ describe('useResource → MissingResourcesContext aggregation', () => {
   it('reports a failure under the address it is given, not the file it loads', () => {
     const fake = createFakeResourceLoader();
     fake.resources.seed('res://materials/paint.tres', null);
-    const Wrapper = makeWrappers(fake.loader);
+    const Wrapper = missingResourcesWrapper(fake.loader);
     const { result } = renderHook(
       () => {
         useResource<ParsedResource>(
@@ -132,7 +121,7 @@ describe('useResource → MissingResourcesContext aggregation', () => {
   });
 
   it('promotes a previously missing path to uploadedPaths when it turns loaded', () => {
-    const Wrapper = makeWrappers(loader);
+    const Wrapper = missingResourcesWrapper(loader);
 
     const { result } = renderHook(
       () => {
@@ -160,7 +149,7 @@ describe('useResource → MissingResourcesContext aggregation', () => {
 
   it('marks nothing uploaded when a missing path swaps to one that loads', () => {
     textures.seed('res://textures/present.png', new THREE.Texture());
-    const Wrapper = makeWrappers(loader);
+    const Wrapper = missingResourcesWrapper(loader);
     const { result, rerender } = renderHook(
       ({ path }) => {
         useResource<THREE.Texture>(path, 'texture');
@@ -181,7 +170,7 @@ describe('useResource → MissingResourcesContext aggregation', () => {
     // request path and the subscription waits for the loaded event.
     textures.cache.delete('res://textures/missing.png');
 
-    const Wrapper = makeWrappers(loader);
+    const Wrapper = missingResourcesWrapper(loader);
 
     const { result } = renderHook(
       () => {
