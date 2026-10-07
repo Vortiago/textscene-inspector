@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { act } from 'react';
 import { fakeTiledUploads } from '../../../r3f/tiledUpload/fakeTiledUploads.testkit';
+import { GODOT_DEFAULT_ROUGHNESS } from '../../../r3f/materials/godotDefaultMaterial';
 import { pendingMapStandIn } from '../../../r3f/materials/pendingMapStandIn';
 import { mountGridMap, renderInstancedTile } from './testing/gridMapCorpus';
 
@@ -31,6 +32,13 @@ describe('<GridMap> tile of two surfaces', () => {
     });
     const materials = tile.material as THREE.MeshStandardMaterial[];
     expect(materials.map((m) => m.color.getHex())).toEqual([0xff0000, 0x0000ff]);
+  });
+
+  it("draws Godot's default material on a surface that names none, beside one that does", async () => {
+    const tile = await renderInstancedTile({ secondMaterialLines: 'albedo_color = Color(0, 0, 1, 1)' });
+    const [unset, blue] = tile.material as THREE.MeshStandardMaterial[];
+    expect(unset!.roughness).toBeCloseTo(GODOT_DEFAULT_ROUGHNESS, 5);
+    expect(blue!.color.getHex()).toBe(0x0000ff);
   });
 });
 

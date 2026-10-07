@@ -12,7 +12,7 @@ import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../index';
 import { loaderServing } from '../../../../resources/testing/servingResourceLoader';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
-import { wallQuadSurfaces } from '../../../../resources/testing/arrayMeshSurfaces';
+import { wallQuadSurfaces, type SurfaceKeys } from '../../../../resources/testing/arrayMeshSurfaces';
 
 const LIBRARY_PATH = 'res://stage/tiles.tres';
 const TILE_MESH_PATH = 'res://stage/meshes/tile.tres';
@@ -31,38 +31,41 @@ ${itemLines}
 }
 
 /**
- * The wall quad as the tile mesh. Its first surface declares a `[sub_resource]`
- * StandardMaterial3D with `materialLines` as its body, or no `"material"` key
- * when that is null. A `secondMaterialLines` adds a second surface with its own material.
- * `subResources` goes before them, for a material that names them.
+ * The wall quad as the tile mesh: a `tile` surface, plus a `second` surface when
+ * `secondMaterialLines` is not null. `subResources` goes before their materials, for a
+ * material that names them.
  */
-function tileMesh(
-  materialLines: string | null,
-  secondMaterialLines: string | null,
-  subResources: string
-): string {
-  const first = {
-    material: materialLines === null ? null : 'SubResource("StandardMaterial3D_tile")',
-    name: 'tile',
-  };
-  const second =
-    secondMaterialLines === null
-      ? { text: '', surfaces: [] }
-      : {
-          text: surfaceMaterial('StandardMaterial3D_second', secondMaterialLines),
-          surfaces: [{ material: 'SubResource("StandardMaterial3D_second")', name: 'second' }],
-        };
-  const firstText = materialLines === null ? '' : surfaceMaterial('StandardMaterial3D_tile', materialLines);
+function tileMesh({
+  materialLines,
+  secondMaterialLines,
+  subResources,
+}: Required<Pick<GridMapCorpus, 'materialLines' | 'secondMaterialLines' | 'subResources'>>): string {
+  const surfaces = [
+    tileSurface('tile', materialLines),
+    ...(secondMaterialLines === null ? [] : [tileSurface('second', secondMaterialLines)]),
+  ];
   return `[gd_resource type="ArrayMesh" format=4]
 
-${subResources}${firstText}${second.text}[resource]
-_surfaces = ${wallQuadSurfaces(first, ...second.surfaces)}
+${subResources}${surfaces.map((s) => s.materialText).join('')}[resource]
+_surfaces = ${wallQuadSurfaces(...surfaces.map((s) => s.keys))}
 blend_shape_mode = 0
 `;
 }
 
-function surfaceMaterial(id: string, lines: string): string {
-  return `[sub_resource type="StandardMaterial3D" id="${id}"]\n${lines}\n\n`;
+/**
+ * One surface called `name`. It declares a `[sub_resource]` StandardMaterial3D with `materialLines`
+ * as its body, or no `"material"` key when that is null.
+ */
+function tileSurface(
+  name: string,
+  materialLines: string | null
+): { materialText: string; keys: SurfaceKeys } {
+  if (materialLines === null) return { materialText: '', keys: { material: null, name } };
+  const id = `StandardMaterial3D_${name}`;
+  return {
+    materialText: `[sub_resource type="StandardMaterial3D" id="${id}"]\n${materialLines}\n\n`,
+    keys: { material: `SubResource("${id}")`, name },
+  };
 }
 
 export interface GridMapCorpus {
@@ -114,7 +117,7 @@ export async function mountGridMap({
 }: GridMapCorpus = {}): Promise<MountedGridMap> {
   const loader = loaderServing({
     [LIBRARY_PATH]: meshLibrary(itemLines),
-    [TILE_MESH_PATH]: tileMesh(materialLines, secondMaterialLines, subResources),
+    [TILE_MESH_PATH]: tileMesh({ materialLines, secondMaterialLines, subResources }),
   });
 
   const gridMap = <GridMap node={gridMapNode(cells)} />;

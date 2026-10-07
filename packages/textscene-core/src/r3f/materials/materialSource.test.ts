@@ -4,7 +4,7 @@
  * materialBag and meshinstance3d material tests cover what the material looks like.
  */
 import { describe, expect, it } from 'vitest';
-import { resolveMaterialSource } from './materialSource';
+import { fileMaterialSources, resolveMaterialSource } from './materialSource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 
 const INTERNAL: TscnInternalResource[] = [
@@ -92,5 +92,25 @@ describe('resolveMaterialSource', () => {
       metallic_specular: 'garbage-not-a-number',
       some_future_key: 'x',
     });
+  });
+});
+
+describe('fileMaterialSources', () => {
+  it('turns each material path into a file source, in order', () => {
+    expect(fileMaterialSources(['res://a.tres', 'res://mesh.tres::Mat'])).toEqual([
+      { kind: 'file', path: 'res://a.tres' },
+      { kind: 'file', path: 'res://mesh.tres::Mat' },
+    ]);
+  });
+
+  it('keeps a surface with no material as undefined, so its slot draws the default', () => {
+    expect(fileMaterialSources([null, 'res://a.tres'])).toEqual([
+      undefined,
+      { kind: 'file', path: 'res://a.tres' },
+    ]);
+  });
+
+  it('returns no sources for a mesh with no surfaces', () => {
+    expect(fileMaterialSources([])).toEqual([]);
   });
 });

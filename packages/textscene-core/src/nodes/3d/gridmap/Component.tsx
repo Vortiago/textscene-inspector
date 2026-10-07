@@ -128,7 +128,7 @@ interface GridMapItemProps {
   cellCenter: GridMapProperties['cellCenter'];
 }
 
-/** All cells sharing one MeshLibrary item: one batch, or one tile per cell when it billboards. */
+/** All cells sharing one MeshLibrary item: one batch, or one tile per cell when a surface billboards. */
 function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
   const meshResult = useResource<ArrayMeshResource>(item?.meshPath ?? '', 'arraymesh');
   // The surface material addresses only become known once the ArrayMesh resolves.
