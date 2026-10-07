@@ -13,11 +13,17 @@ import {
   expectSameRotation,
   TEST_CAMERA,
 } from '../../../r3f/testing/threePasses';
-import { renderGridMapTiles } from './testing/gridMapCorpus';
+import { drawnMaterials, isInstanced, renderGridMapTiles } from './testing/gridMapCorpus';
 
 /** Cells (0, 0, 0) and (3, 0, 0): centred at (1, 1, 1) and (7, 1, 1) at the default 2 m cell. */
 const TWO_CELLS = '0, 0, 0, 3, 0, 0';
 const BILLBOARD = 'billboard_mode = 1';
+/** A plain first surface beside a billboarding second one, over two cells. */
+const PLAIN_THEN_BILLBOARD = {
+  materialLines: 'roughness = 0.5',
+  secondMaterialLines: `${BILLBOARD}\nroughness = 0.25`,
+  cells: TWO_CELLS,
+};
 const DOUBLED = 'item/0/mesh_transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)';
 
 const drawnMatrix = (tile: THREE.Mesh) => drawColourGroup(tile, TEST_CAMERA, 0, (s) => s.matrixWorld);
@@ -79,19 +85,26 @@ describe('<GridMap> tile material billboard_mode', () => {
     ]);
   });
 
-  it('draws each cell on its own when only the second surface billboards', async () => {
-    const tiles = await renderGridMapTiles({
-      materialLines: 'roughness = 0.5',
-      secondMaterialLines: BILLBOARD,
-      cells: TWO_CELLS,
-    });
-    expect(tiles).toHaveLength(2);
-    for (const tile of tiles) {
+  it('batches the surface that does not billboard and draws the billboarding one per cell', async () => {
+    const tiles = await renderGridMapTiles(PLAIN_THEN_BILLBOARD);
+    expect(tiles.filter(isInstanced)).toHaveLength(1);
+    expect(tiles.filter((tile) => !isInstanced(tile))).toHaveLength(2);
+  });
+
+  it('turns the billboarding surface of each cell to face the camera', async () => {
+    const cellTiles = (await renderGridMapTiles(PLAIN_THEN_BILLBOARD)).filter((tile) => !isInstanced(tile));
+    for (const tile of cellTiles) {
       expectSameRotation(
         drawColourGroup(tile, TEST_CAMERA, 1, (s) => s.matrixWorld),
         TEST_CAMERA.matrixWorld
       );
     }
+  });
+
+  it('draws each surface in one draw only', async () => {
+    const tiles = await renderGridMapTiles(PLAIN_THEN_BILLBOARD);
+    const roughness = tiles.map((tile) => drawnMaterials(tile).map((m) => m.roughness));
+    expect(roughness).toEqual([[0.5], [0.25], [0.25]]);
   });
 
   it('still batches a tile whose material does not billboard', async () => {

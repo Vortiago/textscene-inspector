@@ -1,7 +1,7 @@
 /**
  * <GridMap> tiles whose ArrayMesh `.tres` carries its own surface materials as
- * `[sub_resource]`s. GridMap feeds each of `ArrayMeshResource.materialPaths` into a
- * `SurfaceMaterialSlot`, which loads it as any material, so the **Sub-resource path**
+ * `[sub_resource]`s. GridMap feeds each of `ArrayMeshResource.materialPaths` into its
+ * surface's `SurfaceMaterialSlot`, which loads it as any material, so the **Sub-resource path**
  * seam needs no per-consumer case.
  */
 import { describe, expect, it } from 'vitest';
@@ -10,7 +10,12 @@ import { act } from 'react';
 import { fakeTiledUploads } from '../../../r3f/tiledUpload/fakeTiledUploads.testkit';
 import { GODOT_DEFAULT_ROUGHNESS } from '../../../r3f/materials/godotDefaultMaterial';
 import { pendingMapStandIn } from '../../../r3f/materials/pendingMapStandIn';
-import { mountGridMap, renderInstancedTile } from './testing/gridMapCorpus';
+import {
+  drawnMaterials,
+  mountGridMap,
+  renderInstancedTile,
+  renderInstancedTiles,
+} from './testing/gridMapCorpus';
 
 describe('<GridMap> tile with the ArrayMesh’s own surface material', () => {
   it('tints the instanced tile with the material inside the tile mesh’s .tres', async () => {
@@ -25,18 +30,19 @@ describe('<GridMap> tile with the ArrayMesh’s own surface material', () => {
 });
 
 describe('<GridMap> tile of two surfaces', () => {
-  it('binds each surface its own material in the batch', async () => {
-    const tile = await renderInstancedTile({
+  it('draws each surface in its own batch, with its own material', async () => {
+    const batches = await renderInstancedTiles({
       materialLines: 'albedo_color = Color(1, 0, 0, 1)',
       secondMaterialLines: 'albedo_color = Color(0, 0, 1, 1)',
     });
-    const materials = tile.material as THREE.MeshStandardMaterial[];
-    expect(materials.map((m) => m.color.getHex())).toEqual([0xff0000, 0x0000ff]);
+    const colours = batches.map((batch) => drawnMaterials(batch).map((m) => m.color.getHex()));
+    expect(colours).toEqual([[0xff0000], [0x0000ff]]);
   });
 
   it("draws Godot's default material on a surface that names none, beside one that does", async () => {
-    const tile = await renderInstancedTile({ secondMaterialLines: 'albedo_color = Color(0, 0, 1, 1)' });
-    const [unset, blue] = tile.material as THREE.MeshStandardMaterial[];
+    const [unset, blue] = (
+      await renderInstancedTiles({ secondMaterialLines: 'albedo_color = Color(0, 0, 1, 1)' })
+    ).map((batch) => drawnMaterials(batch)[0]!);
     expect(unset!.roughness).toBeCloseTo(GODOT_DEFAULT_ROUGHNESS, 5);
     expect(blue!.color.getHex()).toBe(0x0000ff);
   });

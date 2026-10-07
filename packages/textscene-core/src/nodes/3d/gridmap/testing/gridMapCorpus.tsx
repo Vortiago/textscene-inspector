@@ -151,13 +151,26 @@ export async function renderGridMapTiles(corpus: GridMapCorpus = {}): Promise<TH
   return (await mountGridMap(corpus)).tiles();
 }
 
-/** The one InstancedMesh a non-billboarded item batches into, or a thrown error. */
+/** Every InstancedMesh the GridMap batches into: one per surface that does not billboard. */
+export async function renderInstancedTiles(corpus: GridMapCorpus = {}): Promise<THREE.InstancedMesh[]> {
+  return (await renderGridMapTiles(corpus)).filter(isInstanced);
+}
+
+/** The one InstancedMesh a one-surface, non-billboarded item batches into, or a thrown error. */
 export async function renderInstancedTile(corpus: GridMapCorpus = {}): Promise<THREE.InstancedMesh> {
-  const instanced = (await renderGridMapTiles(corpus)).filter(
-    (o): o is THREE.InstancedMesh => o instanceof THREE.InstancedMesh
-  );
+  const instanced = await renderInstancedTiles(corpus);
   if (instanced.length !== 1) {
     throw new Error(`expected one instanced tile batch, got ${instanced.length}`);
   }
   return instanced[0]!;
+}
+
+export function isInstanced(tile: THREE.Mesh): tile is THREE.InstancedMesh {
+  return tile instanceof THREE.InstancedMesh;
+}
+
+/** The materials a tile draws: three skips a draw group whose material is invisible. */
+export function drawnMaterials(tile: THREE.Mesh): THREE.MeshStandardMaterial[] {
+  const materials = Array.isArray(tile.material) ? tile.material : [tile.material];
+  return materials.filter((m) => m.visible) as THREE.MeshStandardMaterial[];
 }
