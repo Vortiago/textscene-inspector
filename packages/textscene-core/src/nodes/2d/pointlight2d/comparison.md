@@ -104,7 +104,7 @@ white silently. `texture` is stored with no reference check.
   takes the light head-on with no specular response.
 - **Approximated** A MIX light in one cull-mask class over a light in another class
   reaching the same item is summed rather than applied in Godot's order.
-- **Approximated** Past four light classes on one canvas the extra lights are dropped
-  with a warning. A light that `shadow_item_cull_mask` splits takes two classes.
+- **Approximated** Past four light classes on one canvas, where a light split by
+  `shadow_item_cull_mask` takes two, the extra lights are dropped with a warning.
 - **Approximated** A CanvasLayer takes the layer window but still follows the 2D camera,
   where Godot draws it through its own canvas transform.

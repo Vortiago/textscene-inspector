@@ -15,7 +15,7 @@ import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../godot/rendering.js';
 /**
  * Everything a light contributes to the cull test, and so the identity of an accumulation class. A
  * buffer sums its lights and nothing downstream subtracts one back out, so two lights share a
- * buffer only when no item can tell them apart: when all seven values agree.
+ * buffer only when no item can tell them apart: when every field agrees.
  */
 export interface LightCullKey {
   /**
@@ -37,13 +37,16 @@ export interface LightCullKey {
   readonly layerMin: number;
   /** `Light2D.range_layer_max`: the highest, inclusive. */
   readonly layerMax: number;
-  /**
-   * `Light2D.shadow_item_cull_mask` on the shadowed half of a split light (`splitByShadowReceivers`):
-   * the item's `light_mask` must meet it too. Null on a light that is not split.
-   */
-  readonly shadowedItemMask: number | null;
-  /** The same mask on the unshadowed half: the item's `light_mask` must miss it. */
-  readonly unshadowedItemMask: number | null;
+  /** Which half of a light split by `splitByShadowReceivers` this is. Null on a whole light. */
+  readonly shadowHalf: ShadowHalf | null;
+}
+
+/** One half of a light split by its `shadow_item_cull_mask`. */
+export interface ShadowHalf {
+  /** `Light2D.shadow_item_cull_mask`. */
+  readonly mask: number;
+  /** True for the shadowed half, whose items' `light_mask` meets `mask`; false for the rest. */
+  readonly receives: boolean;
 }
 
 /**
@@ -51,11 +54,7 @@ export interface LightCullKey {
  * still a window. The layer pair is narrow, which is why a default light never lights a default
  * CanvasLayer.
  */
-export const DEFAULT_LIGHT_CULL_KEY: LightCullKey = {
-  ...LIGHT_2D_RANGE_DEFAULTS,
-  shadowedItemMask: null,
-  unshadowedItemMask: null,
-};
+export const DEFAULT_LIGHT_CULL_KEY: LightCullKey = { ...LIGHT_2D_RANGE_DEFAULTS, shadowHalf: null };
 
 /**
  * The key of a DirectionalLight2D: every item, at any z, on a canvas in its layer window. The
@@ -65,43 +64,38 @@ export const DEFAULT_LIGHT_CULL_KEY: LightCullKey = {
  */
 export function directionalLightCullKey(layerMin: number, layerMax: number): LightCullKey {
   return {
+    ...DEFAULT_LIGHT_CULL_KEY,
     itemCullMask: null,
     zMin: CANVAS_ITEM_Z_MIN,
     zMax: CANVAS_ITEM_Z_MAX,
     layerMin,
     layerMax,
-    shadowedItemMask: null,
-    unshadowedItemMask: null,
   };
 }
 
-/** The keys a positional light registers: one, or two halves when its shadow misses some item. */
+/** The keys a positional light registers: one, or two halves when its shadow can miss an item. */
 export interface ShadowReceiverSplit {
   /** The key the light's shadowed quad draws under. */
   readonly shadowed: LightCullKey;
-  /** The key of its shadowless quad, or null while no item escapes the shadow. */
+  /** The key of its shadowless quad, or null while every item it reaches takes the shadow. */
   readonly unshadowed: LightCullKey | null;
 }
 
 /**
  * `canvas.glsl:806` shadows an item only where its `light_mask` meets `shadow_item_cull_mask`
- * (`renderer_canvas_render_rd.cpp:2374`). Once a reached item misses it, the light splits into a
- * shadowed half and an unshadowed half. Unsplit, it shares a class with a shadowless light.
- * `shadowItemCullMask` is null for a light that casts nothing.
+ * (`renderer_canvas_render_rd.cpp:2374`). While a cull-mask bit misses the shadow mask, an item can
+ * take the light unshadowed, so the light splits into a shadowed and an unshadowed half. Whole, it
+ * shares a class with a shadowless light. `shadowItemCullMask` is null for a light that casts nothing.
  */
 export function splitByShadowReceivers(
   key: LightCullKey,
-  shadowItemCullMask: number | null,
-  itemLightMasks: Iterable<number>
+  shadowItemCullMask: number | null
 ): ShadowReceiverSplit {
-  if (shadowItemCullMask === null) return { shadowed: key, unshadowed: null };
-  const escapes = (itemMask: number) =>
-    (key.itemCullMask === null || (key.itemCullMask & itemMask) !== 0) &&
-    (shadowItemCullMask & itemMask) === 0;
-  if (!Array.from(itemLightMasks).some(escapes)) return { shadowed: key, unshadowed: null };
+  if (shadowItemCullMask === null || key.itemCullMask === null) return { shadowed: key, unshadowed: null };
+  if ((key.itemCullMask & ~shadowItemCullMask) === 0) return { shadowed: key, unshadowed: null };
   return {
-    shadowed: { ...key, shadowedItemMask: shadowItemCullMask },
-    unshadowed: { ...key, unshadowedItemMask: shadowItemCullMask },
+    shadowed: { ...key, shadowHalf: { mask: shadowItemCullMask, receives: true } },
+    unshadowed: { ...key, shadowHalf: { mask: shadowItemCullMask, receives: false } },
   };
 }
 
@@ -123,8 +117,7 @@ export function lightReachesItem(
     itemZ <= key.zMax &&
     itemLayer >= key.layerMin &&
     itemLayer <= key.layerMax &&
-    (key.shadowedItemMask === null || (key.shadowedItemMask & itemLightMask) !== 0) &&
-    (key.unshadowedItemMask === null || (key.unshadowedItemMask & itemLightMask) === 0)
+    (key.shadowHalf === null || ((key.shadowHalf.mask & itemLightMask) !== 0) === key.shadowHalf.receives)
   );
 }
 
@@ -135,8 +128,14 @@ export function lightReachesItem(
 export function lightCullKeyId(key: LightCullKey): string {
   return (
     `${key.itemCullMask}|${key.zMin}|${key.zMax}|${key.layerMin}|${key.layerMax}` +
-    `|${key.shadowedItemMask}|${key.unshadowedItemMask}`
+    `|${shadowHalfId(key.shadowHalf)}`
   );
+}
+
+/** `-` for a whole light, else the mask behind `r` for the shadowed half or `e` for the rest. */
+function shadowHalfId(half: ShadowHalf | null): string {
+  if (half === null) return '-';
+  return `${half.receives ? 'r' : 'e'}${half.mask}`;
 }
 
 export function sameLightCullKey(a: LightCullKey, b: LightCullKey): boolean {
@@ -146,14 +145,19 @@ export function sameLightCullKey(a: LightCullKey, b: LightCullKey): boolean {
     a.zMax === b.zMax &&
     a.layerMin === b.layerMin &&
     a.layerMax === b.layerMax &&
-    a.shadowedItemMask === b.shadowedItemMask &&
-    a.unshadowedItemMask === b.unshadowedItemMask
+    shadowHalfId(a.shadowHalf) === shadowHalfId(b.shadowHalf)
   );
 }
 
 /** Null ahead of every mask, then ascending. */
 function compareOptionalMasks(a: number | null, b: number | null): number {
   return Number(b === null) - Number(a === null) || (a ?? 0) - (b ?? 0);
+}
+
+/** A whole light first, then the shadowed half ahead of the unshadowed one, then by mask. */
+function compareShadowHalves(a: ShadowHalf | null, b: ShadowHalf | null): number {
+  if (a === null || b === null) return Number(b === null) - Number(a === null);
+  return Number(b.receives) - Number(a.receives) || a.mask - b.mask;
 }
 
 /**
@@ -168,7 +172,6 @@ export function compareLightCullKeys(a: LightCullKey, b: LightCullKey): number {
     a.zMax - b.zMax ||
     a.layerMin - b.layerMin ||
     a.layerMax - b.layerMax ||
-    compareOptionalMasks(a.unshadowedItemMask, b.unshadowedItemMask) ||
-    compareOptionalMasks(a.shadowedItemMask, b.shadowedItemMask)
+    compareShadowHalves(a.shadowHalf, b.shadowHalf)
   );
 }

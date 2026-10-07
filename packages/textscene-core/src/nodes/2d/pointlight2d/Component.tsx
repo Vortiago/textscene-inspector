@@ -28,13 +28,11 @@ import { buildShadowPolarMap, shadowMapZFarInv } from '../../../r3f/lighting2d/s
 import { useLightSequence } from '../../../r3f/lighting2d/useLightSequence';
 import {
   useLightClassLayer,
+  useRegisterShadowSplitLight,
   useRegisterShadowTint,
-  useShadowReceiverSplit,
   useShadowTintLayer,
-  useRegisterCanvasLight2D,
-  useUnshadowedHalfLayer,
 } from '../../../r3f/lighting2d/CanvasLighting2D';
-import type { LightCullKey } from '../../../r3f/lighting2d/lightCullKey';
+import { DEFAULT_LIGHT_CULL_KEY, type LightCullKey } from '../../../r3f/lighting2d/lightCullKey';
 import { useLightShadowCasters } from '../../../r3f/lighting2d/ShadowCasterStage';
 import { useShadowLightPose } from '../../../r3f/lighting2d/shadowLightPose';
 import {
@@ -65,20 +63,22 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   // Not memoised: every consumer compares it by value, so a stable identity buys
   // nothing.
   const rangeKey: LightCullKey = {
+    ...DEFAULT_LIGHT_CULL_KEY,
     itemCullMask: props.range_item_cull_mask,
     zMin: props.range_z_min,
     zMax: props.range_z_max,
     layerMin: props.range_layer_min,
     layerMax: props.range_layer_max,
-    shadowedItemMask: null,
-    unshadowedItemMask: null,
   };
-  const { shadowed: cullKey, unshadowed: unshadowedKey } = useShadowReceiverSplit(
+  const {
+    key: cullKey,
+    ordinal,
+    unshadowedLayer,
+  } = useRegisterShadowSplitLight(
+    lights > 0,
     rangeKey,
     casters.length > 0 ? props.shadow_item_cull_mask : null
   );
-  const ordinal = useRegisterCanvasLight2D(lights > 0, cullKey);
-  const unshadowedLayer = useUnshadowedHalfLayer(lights > 0, unshadowedKey);
   // Two different jobs, deliberately two different numbers: `ordinal` keeps the
   // shadow stencil stamps of one pass apart (dense, reused on unmount), while
   // `sequence` is this light's position in the canvas light list, which is what
@@ -131,14 +131,21 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
  * complementary stencil tests keep them off each other's pixels.
  */
 function LightQuad({
-  meshRef,
+  layer,
+  onMesh,
   material,
   offset,
   width,
   height,
   sequence,
 }: {
-  meshRef: (mesh: THREE.Mesh | null) => void;
+  /**
+   * The class layer that keeps this quad out of the visible pass: each class's accumulation
+   * pre-pass renders its own layer alone, and the main pass renders none of them.
+   */
+  layer: number;
+  /** Receives the mounted mesh, and null on unmount. */
+  onMesh?: (mesh: THREE.Mesh | null) => void;
   material: THREE.Material;
   offset: { x: number; y: number };
   width: number;
@@ -146,9 +153,17 @@ function LightQuad({
   /** The render-order slot: the light's place in the canvas light list. */
   sequence: number;
 }) {
+  const toLayer = useCallback(
+    (mesh: THREE.Mesh | null) => {
+      mesh?.layers.set(layer);
+      onMesh?.(mesh);
+    },
+    [layer, onMesh]
+  );
+
   return (
     <mesh
-      ref={meshRef}
+      ref={toLayer}
       position={[offset.x, -offset.y, 0]}
       material={material}
       // Explicit rather than left to three's depth sort, because the volume mask
@@ -289,10 +304,10 @@ function QuadMesh({
   );
   useEffect(() => () => material.dispose(), [material]);
 
+  const isSplit = unshadowedLayer !== undefined;
   const unshadowedMaterial = useMemo(
-    () =>
-      unshadowedLayer === undefined ? null : createLightQuadMaterial({ cookie, color, energy, blendMode }),
-    [unshadowedLayer, cookie, color, energy, blendMode]
+    () => (isSplit ? createLightQuadMaterial({ cookie, color, energy, blendMode }) : null),
+    [isSplit, cookie, color, energy, blendMode]
   );
   useEffect(() => () => unshadowedMaterial?.dispose(), [unshadowedMaterial]);
 
@@ -316,37 +331,7 @@ function QuadMesh({
   }, [tintsShadow, cookie, shadowColor, blendMode, ordinal, sampling]);
   useEffect(() => () => shadowMaterial?.dispose(), [shadowMaterial]);
 
-  // The light layer is what keeps this quad out of the visible pass and what
-  // sorts it into its cull-mask class: each class's accumulation pre-pass
-  // renders its own layer alone, and the main pass renders none of them.
-  const toLightLayer = useCallback(
-    (mesh: THREE.Mesh | null) => {
-      mesh?.layers.set(layer);
-    },
-    [layer]
-  );
-
-  const toShadowTintLayer = useCallback(
-    (mesh: THREE.Mesh | null) => {
-      if (shadowTintLayer !== undefined) mesh?.layers.set(shadowTintLayer);
-    },
-    [shadowTintLayer]
-  );
-
-  const toUnshadowedLayer = useCallback(
-    (mesh: THREE.Mesh | null) => {
-      if (unshadowedLayer !== undefined) mesh?.layers.set(unshadowedLayer);
-    },
-    [unshadowedLayer]
-  );
-
-  const toLightQuad = useCallback(
-    (mesh: THREE.Mesh | null) => {
-      toLightLayer(mesh);
-      setQuad(mesh);
-    },
-    [toLightLayer]
-  );
+  const shape = { offset, width: width * scale, height: height * scale, sequence };
 
   return (
     <>
@@ -360,33 +345,12 @@ function QuadMesh({
           tintLayer={shadowTintLayer}
         />
       )}
-      <LightQuad
-        meshRef={toLightQuad}
-        material={material}
-        offset={offset}
-        width={width * scale}
-        height={height * scale}
-        sequence={sequence}
-      />
-      {unshadowedMaterial && (
-        <LightQuad
-          meshRef={toUnshadowedLayer}
-          material={unshadowedMaterial}
-          offset={offset}
-          width={width * scale}
-          height={height * scale}
-          sequence={sequence}
-        />
+      <LightQuad layer={layer} onMesh={setQuad} material={material} {...shape} />
+      {unshadowedMaterial && unshadowedLayer !== undefined && (
+        <LightQuad layer={unshadowedLayer} material={unshadowedMaterial} {...shape} />
       )}
-      {shadowMaterial && (
-        <LightQuad
-          meshRef={toShadowTintLayer}
-          material={shadowMaterial}
-          offset={offset}
-          width={width * scale}
-          height={height * scale}
-          sequence={sequence}
-        />
+      {shadowMaterial && shadowTintLayer !== undefined && (
+        <LightQuad layer={shadowTintLayer} material={shadowMaterial} {...shape} />
       )}
     </>
   );

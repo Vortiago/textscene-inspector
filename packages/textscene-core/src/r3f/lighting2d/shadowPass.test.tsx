@@ -273,6 +273,8 @@ describe('two shadowed lights in one pass', () => {
  *     light_color = mix(light_color, shadow_color, shadow);
  */
 describe('shadow_color', () => {
+  const TINT = 'shadow_color = Color(0.15, 0.35, 1, 1)\n';
+
   it('adds a second quad covering exactly what the cookie quad skips', async () => {
     // The `mix` runs after `light_color.rgb *= base_color.rgb`, so shadow_color
     // lands without the item's albedo. Measured: surfaces 0.25 and 0.75 in one
@@ -302,8 +304,8 @@ describe('shadow_color', () => {
     const renderer = await render(
       scene(
         `${lamp('Plain', 300, 'range_item_cull_mask = 1\n')}` +
-          `${lamp('Tinting', 700, 'range_item_cull_mask = 2\nshadow_color = Color(0.15, 0.35, 1, 1)\n')}` +
-          `${caster('Caster', 500)}`
+          `${lamp('Tinting', 700, `range_item_cull_mask = 2\nshadow_item_cull_mask = 2\n${TINT}`)}` +
+          `${caster('Caster', 500, 'occluder_light_mask = 3\n')}`
       )
     );
 
@@ -328,8 +330,8 @@ describe('shadow_color', () => {
     const classes = await renderClasses(
       scene(
         `${lamp('Plain', 300, 'range_item_cull_mask = 1\n')}` +
-          `${lamp('Tinting', 700, 'range_item_cull_mask = 2\nshadow_color = Color(0.15, 0.35, 1, 1)\n')}` +
-          `${caster('Caster', 500)}`
+          `${lamp('Tinting', 700, `range_item_cull_mask = 2\nshadow_item_cull_mask = 2\n${TINT}`)}` +
+          `${caster('Caster', 500, 'occluder_light_mask = 3\n')}`
       )
     );
 
@@ -466,9 +468,9 @@ describe('shadow_item_cull_mask picks the items that take the shadow', () => {
 
   it('splits the light into a shadowed and an unshadowed class', async () => {
     const classes = await renderClasses(ESCAPING);
-    expect(classes.map((c) => [c.key.shadowedItemMask, c.key.unshadowedItemMask])).toEqual([
-      [2, null],
-      [null, 2],
+    expect(classes.map((c) => c.key.shadowHalf)).toEqual([
+      { mask: 2, receives: true },
+      { mask: 2, receives: false },
     ]);
   });
 
@@ -482,19 +484,15 @@ describe('shadow_item_cull_mask picks the items that take the shadow', () => {
     expect(plain.layers.test(onClassOne)).toBe(true);
   });
 
-  it('keeps one class while every item takes the shadow', async () => {
+  it('keeps one class while every item the light reaches takes the shadow', async () => {
     const classes = await renderClasses(
       scene(
-        `[node name="Marked" type="Polygon2D" parent="."]
-light_mask = 3
-polygon = PackedVector2Array(0, 0, 10, 0, 10, 10)
-` +
-          `${lamp('Lamp', 400, 'range_item_cull_mask = 2\nshadow_item_cull_mask = 2\n')}` +
+        `${lamp('Lamp', 400, 'range_item_cull_mask = 2\nshadow_item_cull_mask = 2\n')}` +
           `${caster('Caster', 576, 'occluder_light_mask = 2\n')}`
       )
     );
     expect(classes).toHaveLength(1);
-    expect(classes[0]!.key.shadowedItemMask).toBeNull();
+    expect(classes[0]!.key.shadowHalf).toBeNull();
   });
 
   it('keeps one class while the light has no occluder to cast from', async () => {

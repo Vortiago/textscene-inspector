@@ -45,18 +45,11 @@ export {
 export {
   useLightClassLayer,
   useRegisterCanvasLight2D,
-  useRegisterItemLightMask,
   useRegisterLightOnlyItem,
   useRegisterShadowTint,
-  useShadowReceiverSplit,
+  useRegisterShadowSplitLight,
   useShadowTintLayer,
-  useUnshadowedHalfLayer,
 } from './lightPassDeclarations.js';
-
-/** A light mask is its own id. Module-level, as `useKeyedDeclarationCount` asks. */
-function maskId(lightMask: number): number {
-  return lightMask;
-}
 
 export interface CanvasLighting2DProviderProps {
   /**
@@ -78,8 +71,7 @@ export function CanvasLighting2DProvider({ canvasModulate, children }: CanvasLig
   // lights sharing a pass stay apart.
   const [cullKeys, register] = useLightClassRegistry();
   const [lightOnlyCount, registerLightOnly] = useDeclarationCount();
-  const [shadowTintKeys, registerShadowTint] = useKeyedDeclarationCount(lightCullKeyId);
-  const [itemLightMasks, registerItemLightMask] = useKeyedDeclarationCount(maskId);
+  const [shadowTintKeys, registerShadowTint] = useKeyedDeclarationCount();
 
   const classCount = Math.min(cullKeys.length, MAX_LIGHT_CLASSES);
   const lit = classCount > 0;
@@ -137,10 +129,8 @@ export function CanvasLighting2DProvider({ canvasModulate, children }: CanvasLig
         shadowTintLayer: shadowTintTargets[index] ? SHADOW_TINT_LAYER + index : undefined,
       })),
       resolution,
-      itemLightMasks,
       register,
       registerLightOnly,
-      registerItemLightMask,
       registerShadowTint,
     }),
     [
@@ -149,10 +139,8 @@ export function CanvasLighting2DProvider({ canvasModulate, children }: CanvasLig
       shadowTintTargets,
       cullKeys,
       resolution,
-      itemLightMasks,
       register,
       registerLightOnly,
-      registerItemLightMask,
       registerShadowTint,
     ]
   );

@@ -34,8 +34,7 @@ describe('DEFAULT_LIGHT_CULL_KEY', () => {
       zMax: 1024,
       layerMin: 0,
       layerMax: 0,
-      shadowedItemMask: null,
-      unshadowedItemMask: null,
+      shadowHalf: null,
     });
   });
 });
@@ -138,8 +137,8 @@ describe('lightCullKeyId', () => {
       key({ zMax: 1023 }),
       key({ layerMin: 1 }),
       key({ layerMax: 1 }),
-      key({ shadowedItemMask: 2 }),
-      key({ unshadowedItemMask: 2 }),
+      key({ shadowHalf: { mask: 2, receives: true } }),
+      key({ shadowHalf: { mask: 2, receives: false } }),
     ]) {
       expect(lightCullKeyId(differing)).not.toBe(base);
     }
@@ -188,11 +187,15 @@ describe('compareLightCullKeys', () => {
   });
 
   it('orders the unsplit key, then the shadowed half, then the unshadowed half', () => {
-    const halves = [key({ unshadowedItemMask: 2 }), key({ shadowedItemMask: 2 }), key()];
+    const halves = [
+      key({ shadowHalf: { mask: 2, receives: false } }),
+      key({ shadowHalf: { mask: 2, receives: true } }),
+      key(),
+    ];
     expect(halves.sort(compareLightCullKeys).map(lightCullKeyId)).toEqual([
       lightCullKeyId(key()),
-      lightCullKeyId(key({ shadowedItemMask: 2 })),
-      lightCullKeyId(key({ unshadowedItemMask: 2 })),
+      lightCullKeyId(key({ shadowHalf: { mask: 2, receives: true } })),
+      lightCullKeyId(key({ shadowHalf: { mask: 2, receives: false } })),
     ]);
   });
 });
@@ -204,47 +207,60 @@ describe('compareLightCullKeys', () => {
  */
 describe('lightReachesItem: the shadow halves', () => {
   it('reaches with the shadowed half only an item whose light_mask meets the mask', () => {
-    expect(lightReachesItem(key({ itemCullMask: 3, shadowedItemMask: 2 }), 2, 0, 0)).toBe(true);
-    expect(lightReachesItem(key({ itemCullMask: 3, shadowedItemMask: 2 }), 1, 0, 0)).toBe(false);
+    expect(lightReachesItem(key({ itemCullMask: 3, shadowHalf: { mask: 2, receives: true } }), 2, 0, 0)).toBe(
+      true
+    );
+    expect(lightReachesItem(key({ itemCullMask: 3, shadowHalf: { mask: 2, receives: true } }), 1, 0, 0)).toBe(
+      false
+    );
   });
 
   it('reaches with the unshadowed half only an item whose light_mask misses the mask', () => {
-    expect(lightReachesItem(key({ itemCullMask: 3, unshadowedItemMask: 2 }), 1, 0, 0)).toBe(true);
-    expect(lightReachesItem(key({ itemCullMask: 3, unshadowedItemMask: 2 }), 2, 0, 0)).toBe(false);
+    expect(
+      lightReachesItem(key({ itemCullMask: 3, shadowHalf: { mask: 2, receives: false } }), 1, 0, 0)
+    ).toBe(true);
+    expect(
+      lightReachesItem(key({ itemCullMask: 3, shadowHalf: { mask: 2, receives: false } }), 2, 0, 0)
+    ).toBe(false);
   });
 
   it('keeps the cull mask in both halves', () => {
-    expect(lightReachesItem(key({ itemCullMask: 1, unshadowedItemMask: 2 }), 4, 0, 0)).toBe(false);
+    expect(
+      lightReachesItem(key({ itemCullMask: 1, shadowHalf: { mask: 2, receives: false } }), 4, 0, 0)
+    ).toBe(false);
   });
 });
 
 describe('splitByShadowReceivers', () => {
   it('keeps one key, unchanged, for a light that casts no shadow', () => {
-    expect(splitByShadowReceivers(key(), null, [2])).toEqual({ shadowed: key(), unshadowed: null });
+    expect(splitByShadowReceivers(key({ itemCullMask: 3 }), null)).toEqual({
+      shadowed: key({ itemCullMask: 3 }),
+      unshadowed: null,
+    });
   });
 
-  it('keeps one key, unchanged, while every item it reaches takes the shadow', () => {
-    // The default case: shadow_item_cull_mask 1 over items at light_mask 1. Unchanged, the light
-    // shares its class with a shadowless light of the same window.
-    expect(splitByShadowReceivers(key(), 1, [1, 3])).toEqual({ shadowed: key(), unshadowed: null });
+  it('keeps one key, unchanged, while every cull-mask bit meets the shadow mask', () => {
+    // The default case, both masks at 1. Unchanged, the light shares its class with a shadowless
+    // light of the same window.
+    expect(splitByShadowReceivers(key(), 1)).toEqual({ shadowed: key(), unshadowed: null });
+    expect(splitByShadowReceivers(key({ itemCullMask: 2 }), 3)).toEqual({
+      shadowed: key({ itemCullMask: 2 }),
+      unshadowed: null,
+    });
   });
 
-  it('splits in two once an item it reaches escapes the shadow', () => {
-    const { shadowed, unshadowed } = splitByShadowReceivers(key({ itemCullMask: 3 }), 2, [1, 2]);
-    expect(shadowed).toEqual(key({ itemCullMask: 3, shadowedItemMask: 2 }));
-    expect(unshadowed).toEqual(key({ itemCullMask: 3, unshadowedItemMask: 2 }));
+  it('splits in two once a cull-mask bit misses the shadow mask', () => {
+    const { shadowed, unshadowed } = splitByShadowReceivers(key({ itemCullMask: 3 }), 2);
+    expect(shadowed).toEqual(key({ itemCullMask: 3, shadowHalf: { mask: 2, receives: true } }));
+    expect(unshadowed).toEqual(key({ itemCullMask: 3, shadowHalf: { mask: 2, receives: false } }));
   });
 
   it('lights every item it reaches through exactly one half', () => {
-    const { shadowed, unshadowed } = splitByShadowReceivers(key({ itemCullMask: 7 }), 2, [1]);
+    const { shadowed, unshadowed } = splitByShadowReceivers(key({ itemCullMask: 7 }), 2);
     for (const itemMask of [1, 2, 3, 4, 6]) {
       const halves = [shadowed, unshadowed!].filter((half) => lightReachesItem(half, itemMask, 0, 0));
       expect(halves, `light_mask ${itemMask}`).toHaveLength(1);
     }
-  });
-
-  it('ignores an item the cull mask already excludes', () => {
-    expect(splitByShadowReceivers(key(), 1, [2]).unshadowed).toBeNull();
   });
 });
 

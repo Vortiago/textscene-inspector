@@ -64,15 +64,8 @@ export interface CanvasLighting2D {
    * class's pass.
    */
   register(key: LightCullKey): CanvasLightSlot;
-  /**
-   * The `light_mask` of every lit item on the canvas. A shadowed light splits its class once one of
-   * them escapes its `shadow_item_cull_mask` (`splitByShadowReceivers`).
-   */
-  readonly itemLightMasks: ReadonlySet<number>;
   /** Declares an item that needs the unmodulated accumulation. */
   registerLightOnly(): () => void;
-  /** Declares a lit item's `light_mask`. */
-  registerItemLightMask(lightMask: number): () => void;
   /**
    * Declares a light that tints its shadow, so its class allocates the extra
    * pass. Keyed, unlike `registerLightOnly`: an item can read any class, but a
@@ -86,9 +79,7 @@ export const INERT_CANVAS_LIGHTING: CanvasLighting2D = {
   classes: [],
   resolution: new THREE.Vector2(1, 1),
   register: (_key: LightCullKey) => ({ ordinal: 0, release: () => {} }),
-  itemLightMasks: new Set(),
   registerLightOnly: () => () => {},
-  registerItemLightMask: (_lightMask: number) => () => {},
   registerShadowTint: (_key: LightCullKey) => () => {},
 };
 

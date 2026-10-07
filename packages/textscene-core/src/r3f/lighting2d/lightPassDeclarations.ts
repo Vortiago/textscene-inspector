@@ -6,13 +6,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { LIGHT_UNCLASSED_LAYER } from './lightPassLayers.js';
-import {
-  DEFAULT_LIGHT_CULL_KEY,
-  sameLightCullKey,
-  splitByShadowReceivers,
-  type LightCullKey,
-  type ShadowReceiverSplit,
-} from './lightCullKey.js';
+import { sameLightCullKey, splitByShadowReceivers, type LightCullKey } from './lightCullKey.js';
 import { useCanvasLighting2D, type CanvasLightClass } from './lightPassContext.js';
 
 /**
@@ -26,11 +20,14 @@ function useCullDeclaration(
   key: LightCullKey,
   declare: (key: LightCullKey) => () => void
 ): void {
-  const { itemCullMask, zMin, zMax, layerMin, layerMax, shadowedItemMask, unshadowedItemMask } = key;
+  const { itemCullMask, zMin, zMax, layerMin, layerMax, shadowHalf } = key;
+  const shadowMask = shadowHalf?.mask;
+  const receivesShadow = shadowHalf?.receives;
   useEffect(() => {
     if (!enabled) return undefined;
-    return declare({ itemCullMask, zMin, zMax, layerMin, layerMax, shadowedItemMask, unshadowedItemMask });
-  }, [enabled, itemCullMask, zMin, zMax, layerMin, layerMax, shadowedItemMask, unshadowedItemMask, declare]);
+    const half = shadowMask === undefined ? null : { mask: shadowMask, receives: receivesShadow === true };
+    return declare({ itemCullMask, zMin, zMax, layerMin, layerMax, shadowHalf: half });
+  }, [enabled, itemCullMask, zMin, zMax, layerMin, layerMax, shadowMask, receivesShadow, declare]);
 }
 
 /**
@@ -71,32 +68,31 @@ export function useRegisterLightOnlyItem(enabled: boolean): void {
   }, [enabled, registerLightOnly]);
 }
 
-/** Declares a lit item's `light_mask`, which decides whether a shadowed light splits. */
-export function useRegisterItemLightMask(lightMask: number): void {
-  const { registerItemLightMask } = useCanvasLighting2D();
-  useEffect(() => registerItemLightMask(lightMask), [lightMask, registerItemLightMask]);
+/** A positional light's place in the pass, once split by `splitByShadowReceivers`. */
+export interface ShadowSplitLight {
+  /** The key of the shadowed quad: the whole light's, or its shadowed half's. */
+  readonly key: LightCullKey;
+  /** The shadowed quad's ordinal in its class. */
+  readonly ordinal: number;
+  /** The layer of the shadowless quad for the items the shadow misses, or undefined while whole. */
+  readonly unshadowedLayer: number | undefined;
 }
 
 /**
- * The keys a positional light registers under, split by its `shadow_item_cull_mask` against the
- * items on the canvas. `shadowItemCullMask` is null for a light that casts nothing.
+ * Declares a positional light, split by its `shadow_item_cull_mask` when its shadow can miss an
+ * item it reaches. `shadowItemCullMask` is null for a light that casts nothing.
  */
-export function useShadowReceiverSplit(
-  key: LightCullKey,
+export function useRegisterShadowSplitLight(
+  enabled: boolean,
+  rangeKey: LightCullKey,
   shadowItemCullMask: number | null
-): ShadowReceiverSplit {
-  const { itemLightMasks } = useCanvasLighting2D();
-  return splitByShadowReceivers(key, shadowItemCullMask, itemLightMasks);
-}
-
-/**
- * Declares the unshadowed half of a split light and returns the layer its shadowless quad draws on,
- * or undefined while the light is whole.
- */
-export function useUnshadowedHalfLayer(enabled: boolean, key: LightCullKey | null): number | undefined {
-  useRegisterCanvasLight2D(enabled && key !== null, key ?? DEFAULT_LIGHT_CULL_KEY);
-  const layer = useLightClassLayer(key ?? DEFAULT_LIGHT_CULL_KEY);
-  return key ? layer : undefined;
+): ShadowSplitLight {
+  const { shadowed, unshadowed } = splitByShadowReceivers(rangeKey, shadowItemCullMask);
+  const ordinal = useRegisterCanvasLight2D(enabled, shadowed);
+  // Hooks run unconditionally, so a whole light holds its own key here, undeclared.
+  useRegisterCanvasLight2D(enabled && unshadowed !== null, unshadowed ?? shadowed);
+  const unshadowedLayer = useLightClassLayer(unshadowed ?? shadowed);
+  return { key: shadowed, ordinal, unshadowedLayer: unshadowed ? unshadowedLayer : undefined };
 }
 
 /** The class accumulating this cull tuple, or undefined while it has none. */
