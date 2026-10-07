@@ -9,13 +9,18 @@ import { is2DUIType } from './controls/has2DUIContent.js';
 import { isViewportBoundary, isViewportSurface } from '../nodes/viewport/subviewport/viewportBoundary.js';
 import type { CanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 
+/** A type Godot's CanvasItemEditor would claim: 2D world content or Control and CanvasLayer UI. */
+export function isClaimedByCanvasItemEditor(type: string): boolean {
+  return is2DUIType(type) || nodeComponentRegistry.isCanvasItem(type);
+}
+
 /**
  * A SubViewportContainer is a Control, but not a CanvasItem here: its
  * sub-viewport's 3D content draws in Godot's 3D view, sharing World3D unless
  * `own_world_3d` (ADR-0033).
  */
 function drawsAsCanvasItem(type: string): boolean {
-  return !isViewportSurface(type) && (nodeComponentRegistry.isCanvasItem(type) || is2DUIType(type));
+  return !isViewportSurface(type) && isClaimedByCanvasItemEditor(type);
 }
 
 export function drawsInWorkspace(type: string, workspace: CanvasWorkspace): boolean {
