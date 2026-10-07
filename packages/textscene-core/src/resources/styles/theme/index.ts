@@ -5,11 +5,12 @@
  */
 
 import { registerResourceSlice } from '../../sliceRegistration';
+import { THEME_TYPES } from './decode';
 
 registerResourceSlice({
   slice: 'theme',
   kind: 'godot-text',
-  typeNames: ['Theme'],
+  typeNames: [...THEME_TYPES],
   busType: 'theme',
 });
 

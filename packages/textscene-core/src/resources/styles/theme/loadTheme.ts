@@ -7,7 +7,7 @@ import type { ParsedResource } from '../../../parser/parsedResource';
 import type { FontLoaderFn, FontResource } from '../../fonts/font/types';
 import { resourceSectionOfType } from '../../resourceSection';
 import { resourceFilePath } from '../../subResourcePath';
-import { decodeThemeAddresses } from './decode';
+import { decodeThemeAddresses, THEME_TYPES } from './decode';
 import type { ThemeAddresses, ThemeResource } from './types';
 
 /**
@@ -52,9 +52,6 @@ export async function resolveThemeResource(
     resources: addresses.resources,
   };
 }
-
-/** Godot's Theme class: the one type a Theme address may name. */
-const THEME_TYPES: ReadonlySet<string> = new Set(['Theme']);
 
 /**
  * The `ThemeResource` that `path` addresses inside `file`: its `[resource]` body, or the

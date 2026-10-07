@@ -5,11 +5,12 @@
  */
 
 import { registerResourceSlice } from '../../sliceRegistration.js';
+import { ARRAY_MESH_TYPES } from './decode.js';
 
 registerResourceSlice({
   slice: 'arraymesh',
   kind: 'godot-text',
-  typeNames: ['ArrayMesh'],
+  typeNames: [...ARRAY_MESH_TYPES],
   busType: 'arraymesh',
 });
 

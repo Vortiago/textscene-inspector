@@ -23,7 +23,7 @@ import { PRIMITIVE_TRIANGLES, surfaceLayout } from './surfaceFormat.js';
 import type { ArrayMeshData, ArrayMeshSurface } from './types.js';
 import { decodeIndices, decodeNormals, decodePositions, decodeUVs } from './vertexBuffers.js';
 
-/** Godot's ArrayMesh class: the one type whose `_surfaces` this decodes. */
+/** The type names this slice claims: Godot's ArrayMesh class alone, whose `_surfaces` this decodes. */
 export const ARRAY_MESH_TYPES: ReadonlySet<string> = new Set(['ArrayMesh']);
 
 /**
