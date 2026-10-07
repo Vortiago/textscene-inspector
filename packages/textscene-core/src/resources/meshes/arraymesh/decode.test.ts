@@ -5,8 +5,8 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as logger from '../../../logger';
-import { decodeArrayMesh } from './decode';
 import { headlightsSurface, truncatedSurface, wallQuadSurfaces } from '../../testing/arrayMeshSurfaces';
+import { decodeArrayMeshTres } from '../../testing/decodeArrayMeshTres';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
@@ -33,7 +33,7 @@ blend_shape_mode = 0
 
 describe('decodeArrayMesh', () => {
   it('parses surface metadata (count, format, vertex/index counts)', () => {
-    const mesh = decodeArrayMesh(WALL_TRES, 'res://mesh.tres');
+    const mesh = decodeArrayMeshTres(WALL_TRES, 'res://mesh.tres');
 
     expect(mesh.surfaces).toHaveLength(1);
     const surface = mesh.surfaces[0]!;
@@ -43,7 +43,7 @@ describe('decodeArrayMesh', () => {
   });
 
   it('decodes vertex positions (3×float32, first in the vertex stride)', () => {
-    const surface = decodeArrayMesh(WALL_TRES, 'res://mesh.tres').surfaces[0]!;
+    const surface = decodeArrayMeshTres(WALL_TRES, 'res://mesh.tres').surfaces[0]!;
 
     expect(surface.positions).toHaveLength(4 * 3);
     // Vertex 0 = (-1, -1, 1) per the surface AABB(-1,-1,1, 2,2,~0).
@@ -59,14 +59,14 @@ describe('decodeArrayMesh', () => {
   });
 
   it('decodes indices with byte-width auto-detection (uint16 here)', () => {
-    const surface = decodeArrayMesh(WALL_TRES, 'res://mesh.tres').surfaces[0]!;
+    const surface = decodeArrayMeshTres(WALL_TRES, 'res://mesh.tres').surfaces[0]!;
 
     expect(surface.indices).toBeInstanceOf(Uint16Array);
     expect(Array.from(surface.indices)).toEqual([2, 0, 3, 2, 1, 0]);
   });
 
   it('decodes UV1 from attribute_data when TEX_UV is present (2×float32)', () => {
-    const surface = decodeArrayMesh(WALL_TRES, 'res://mesh.tres').surfaces[0]!;
+    const surface = decodeArrayMeshTres(WALL_TRES, 'res://mesh.tres').surfaces[0]!;
 
     expect(surface.uvs).toBeDefined();
     expect(surface.uvs).toHaveLength(4 * 2);
@@ -74,7 +74,7 @@ describe('decodeArrayMesh', () => {
   });
 
   it('decodes Godot packed octahedral normals (wall quad faces +Z)', () => {
-    const surface = decodeArrayMesh(WALL_TRES, 'res://mesh.tres').surfaces[0]!;
+    const surface = decodeArrayMeshTres(WALL_TRES, 'res://mesh.tres').surfaces[0]!;
 
     expect(surface.normals).toBeDefined();
     expect(surface.normals).toHaveLength(4 * 3);
@@ -92,13 +92,13 @@ describe('decodeArrayMesh', () => {
   });
 
   it("resolves each surface's material to its res:// path via the file's ext_resources", () => {
-    const surface = decodeArrayMesh(WALL_TRES, 'res://mesh.tres').surfaces[0]!;
+    const surface = decodeArrayMeshTres(WALL_TRES, 'res://mesh.tres').surfaces[0]!;
     // "material": ExtResource("1_a5mma") → the [ext_resource] with that id.
     expect(surface.materialPath).toBe('res://stage/tile_material.tres');
   });
 
   it('decodes multiple surfaces with per-surface groups-worth of data and materials', () => {
-    const mesh = decodeArrayMesh(TWO_SURFACE_TRES, 'res://mesh.tres');
+    const mesh = decodeArrayMeshTres(TWO_SURFACE_TRES, 'res://mesh.tres');
     expect(mesh.surfaces).toHaveLength(2);
     expect(mesh.surfaces[0]!.materialPath).toBe('res://a.tres');
     expect(mesh.surfaces[1]!.materialPath).toBe('res://b.tres');
@@ -110,71 +110,22 @@ describe('decodeArrayMesh', () => {
     // Godot writes this form when the mesh carries its own materials. The
     // material lives in a different document from the previewed scene, so only
     // its owning file plus its id can find it.
-    const mesh = decodeArrayMesh(OWN_MATERIAL_TRES, 'res://vehicles/meshes/wheel.tres');
+    const mesh = decodeArrayMeshTres(OWN_MATERIAL_TRES, 'res://vehicles/meshes/wheel.tres');
     expect(mesh.surfaces[0]!.materialPath).toBe('res://vehicles/meshes/wheel.tres::StandardMaterial3D_shvqh');
   });
 
   it("resolves a surface's material named by the old-style integer index", () => {
     // `_parse_sub_resource` takes TK_NUMBER (`resource_format_text.cpp:107`), and
     // the header's `id=3` is read as the string "3" (`:1048`).
-    const mesh = decodeArrayMesh(INDEXED_MATERIAL_TRES, 'res://vehicles/meshes/wheel.tres');
+    const mesh = decodeArrayMeshTres(INDEXED_MATERIAL_TRES, 'res://vehicles/meshes/wheel.tres');
     expect(mesh.surfaces[0]!.materialPath).toBe('res://vehicles/meshes/wheel.tres::3');
   });
 
-  it('decodes the [sub_resource] ArrayMesh a sub-resource path names, not the file body', () => {
-    // A `.tres` can hold several ArrayMeshes: the `[resource]` one plus, for
-    // example, its `shadow_mesh` as a `[sub_resource]`. Addressed by id, the
-    // sub-resource's `_surfaces` is read, not the file body's other mesh.
-    const mesh = decodeArrayMesh(NESTED_MESH_TRES, 'res://vehicles/meshes/wheel.tres::ArrayMesh_shadow');
-    expect(mesh.surfaces).toHaveLength(1);
-    // Only the sub-resource surface carries no material at all.
-    expect(mesh.surfaces[0]!.materialPath).toBeUndefined();
-    expect(mesh.surfaces[0]!.indexCount).toBe(3);
-  });
-
-  it('throws when a sub-resource path names an id the file does not declare', () => {
-    // Returning an empty mesh would be cached as a SUCCESS: an invisible node
-    // with no placeholder and no missing-resources row. Unreadable is not empty,
-    // so it fails like a missing file and the consumer gets its placeholder.
-    expect(() =>
-      decodeArrayMesh(NESTED_MESH_TRES, 'res://vehicles/meshes/wheel.tres::ArrayMesh_absent')
-    ).toThrow();
-
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    const message = String(warnSpy.mock.calls[0]![0]);
-    expect(message).toContain('[ArrayMesh]');
-    expect(message).toContain('ArrayMesh_absent');
-    // The owning file, not the whole address: the address is not a file.
-    expect(message).toContain('res://vehicles/meshes/wheel.tres');
-    expect(message).not.toContain('::');
-  });
-
-  it('throws when a sub-resource path names something that is not a mesh', () => {
-    expect(() =>
-      decodeArrayMesh(OWN_MATERIAL_TRES, 'res://vehicles/meshes/wheel.tres::StandardMaterial3D_shvqh')
-    ).toThrow();
-
-    expect(String(warnSpy.mock.calls[0]![0])).toContain('StandardMaterial3D');
+  it('addresses a sub-resource material against the owning file when the mesh is itself a sub-resource', () => {
+    const mesh = decodeArrayMeshTres(OWN_MATERIAL_TRES, 'res://vehicles/meshes/wheel.tres::ArrayMesh_shadow');
+    expect(mesh.surfaces[0]!.materialPath).toBe('res://vehicles/meshes/wheel.tres::StandardMaterial3D_shvqh');
   });
 });
-
-/** The `[resource]` mesh (materialised, 6 indices) plus a bare `shadow_mesh` (3). */
-const NESTED_MESH_TRES = WALL_TRES.replace(
-  '[resource]',
-  `[sub_resource type="ArrayMesh" id="ArrayMesh_shadow"]
-_surfaces = [{
-"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
-"format": 4097,
-"index_count": 3,
-"index_data": PackedByteArray("AgAAAAEA"),
-"name": "shadow",
-"primitive": 3,
-"vertex_count": 4,
-"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA/")
-}]
-
-[resource]`
-);
 
 /** wheel.tres's shape: the surface's material is a `[sub_resource]` of the same file. */
 const OWN_MATERIAL_TRES = WALL_TRES.replace(
@@ -260,7 +211,7 @@ blend_shape_mode = 0
 
 describe('compressed attribute layout', () => {
   it('decodes compressed positions as uint16 normalised into the surface aabb', () => {
-    const surface = decodeArrayMesh(COMPRESSED_TRES, 'res://mesh.tres').surfaces[0]!;
+    const surface = decodeArrayMeshTres(COMPRESSED_TRES, 'res://mesh.tres').surfaces[0]!;
 
     expect(surface.positions).toHaveLength(4 * 3);
     expect(Array.from(surface.positions).map((p) => Number(p.toFixed(6)))).toEqual([
@@ -273,7 +224,7 @@ describe('compressed attribute layout', () => {
     // Compressed surfaces do not store the normal. The octahedral pair in the
     // normal region is a rotation axis, and the angle is the 4th uint16 of the
     // 8-byte position record, the slot a VERTEX-only surface leaves zeroed.
-    const surface = decodeArrayMesh(COMPRESSED_TRES, 'res://mesh.tres').surfaces[0]!;
+    const surface = decodeArrayMeshTres(COMPRESSED_TRES, 'res://mesh.tres').surfaces[0]!;
 
     expect(surface.normals).toHaveLength(4 * 3);
     for (let v = 0; v < 4; v++) {
@@ -288,7 +239,7 @@ describe('compressed attribute layout', () => {
     // rotation's direction, so Godot takes its absolute value. Read signed, it
     // flips the normal's x and y below the midpoint, which a fixture storing the
     // midpoint exactly cannot show.
-    const surface = decodeArrayMesh(COMPRESSED_LOW_ANGLE_TRES, 'res://q.tres').surfaces[0]!;
+    const surface = decodeArrayMeshTres(COMPRESSED_LOW_ANGLE_TRES, 'res://q.tres').surfaces[0]!;
 
     for (let v = 0; v < 4; v++) {
       expect(surface.normals![v * 3 + 0]).toBeCloseTo(0.113141, 5);
@@ -298,7 +249,7 @@ describe('compressed attribute layout', () => {
   });
 
   it('reads a compressed NORMAL-without-TANGENT pair as the normal, not an axis-angle frame', () => {
-    const surface = decodeArrayMesh(COMPRESSED_NO_TANGENT_TRES, 'res://n.tres').surfaces[0]!;
+    const surface = decodeArrayMeshTres(COMPRESSED_NO_TANGENT_TRES, 'res://n.tres').surfaces[0]!;
     const n = surface.normals!;
     // Tolerance 4: a "zero" component is stored as 32768, which decodes to
     // 1.5e-5 rather than 0. That is the uint16 grid, not a decode error.
@@ -316,12 +267,12 @@ describe('compressed attribute layout', () => {
       ''
     );
 
-    expect(() => decodeArrayMesh(noAabb, 'res://mesh.tres')).toThrow();
+    expect(() => decodeArrayMeshTres(noAabb, 'res://mesh.tres')).toThrow();
     expect(String(warnSpy.mock.calls[0]![0])).toContain('no decodable positions');
   });
 
   it('decodes compressed UVs as unorm16 when uv_scale is zero', () => {
-    const surface = decodeArrayMesh(COMPRESSED_UV_TRES, 'res://mesh.tres').surfaces[0]!;
+    const surface = decodeArrayMeshTres(COMPRESSED_UV_TRES, 'res://mesh.tres').surfaces[0]!;
 
     expect(surface.uvs).toHaveLength(24 * 2);
     expect(Array.from(surface.uvs!.slice(0, 8)).map((v) => Number(v.toFixed(7)))).toEqual([
@@ -332,7 +283,7 @@ describe('compressed attribute layout', () => {
   it('reads compressed UV1 past the vertex colour', () => {
     // The attribute record is COLOR then UV1. Compression halves UV1 to 4 bytes
     // but leaves RGBA8 at 4, so the colour offset does not move.
-    const surface = decodeArrayMesh(COMPRESSED_COLOR_UV_TRES, 'res://mesh.tres').surfaces[0]!;
+    const surface = decodeArrayMeshTres(COMPRESSED_COLOR_UV_TRES, 'res://mesh.tres').surfaces[0]!;
 
     expect(Array.from(surface.uvs!)).toEqual([0, 1, 1, 1, 1, 0, 0, 0]);
   });
@@ -341,7 +292,7 @@ describe('compressed attribute layout', () => {
     // Godot normalises UVs that leave [-1,1] into the uint16 range and records
     // the divisor in uv_scale. A zero uv_scale means the stored value is the UV.
     // This quad's UVs run 0..4, which Godot stored against uv_scale 8.
-    const surface = decodeArrayMesh(COMPRESSED_UVSCALE_TRES, 'res://mesh.tres').surfaces[0]!;
+    const surface = decodeArrayMeshTres(COMPRESSED_UVSCALE_TRES, 'res://mesh.tres').surfaces[0]!;
 
     expect(Array.from(surface.uvs!).map((v) => Number(v.toFixed(6)))).toEqual([
       -0.000061, 4, 4, 4, 4, -0.000061, -0.000061, -0.000061,
@@ -355,7 +306,7 @@ describe('compressed attribute layout', () => {
       /"attribute_data": PackedByteArray\("[^"]*"\)/,
       '"attribute_data": PackedByteArray("vAAbqRD/NCEQ/xupvAA0IQ==")'
     );
-    const surface = decodeArrayMesh(truncated, 'res://mesh.tres').surfaces[0]!;
+    const surface = decodeArrayMeshTres(truncated, 'res://mesh.tres').surfaces[0]!;
 
     expect(surface.uvs).toBeUndefined();
     for (const p of surface.positions) expect(Number.isFinite(p)).toBe(true);
@@ -492,13 +443,13 @@ describe('undecodable surfaces', () => {
     // With no readable surface left there is no mesh, and the failure earns the
     // consumer its magenta placeholder and a missing-resources row. An empty mesh
     // would cache as a success and render invisibly.
-    expect(() => decodeArrayMesh(TRUNCATED_TRES, 'res://mesh.tres')).toThrow();
+    expect(() => decodeArrayMeshTres(TRUNCATED_TRES, 'res://mesh.tres')).toThrow();
   });
 
   it('fails a mesh whose ONLY surface decodes to non-finite positions', () => {
     // A single NaN reaches THREE.BufferGeometry and NaNs the merged bounding
     // sphere for every surface above it, which also breaks camera framing.
-    expect(() => decodeArrayMesh(NON_FINITE_TRES, 'res://mesh.tres')).toThrow();
+    expect(() => decodeArrayMeshTres(NON_FINITE_TRES, 'res://mesh.tres')).toThrow();
   });
 
   it('fails a mesh whose ONLY surface has index_data shorter than its index_count', () => {
@@ -508,12 +459,12 @@ describe('undecodable surfaces', () => {
       '"index_data": PackedByteArray("AgAA"),'
     );
 
-    expect(() => decodeArrayMesh(shortIndices, 'res://mesh.tres')).toThrow();
+    expect(() => decodeArrayMeshTres(shortIndices, 'res://mesh.tres')).toThrow();
     expect(warnSpy.mock.calls.some((c: unknown[]) => String(c[0]).includes('index_data'))).toBe(true);
   });
 
   it('warns with the surface name and format when it drops a surface', () => {
-    expect(() => decodeArrayMesh(TRUNCATED_TRES, 'res://mesh.tres')).toThrow();
+    expect(() => decodeArrayMeshTres(TRUNCATED_TRES, 'res://mesh.tres')).toThrow();
 
     expect(warnSpy).toHaveBeenCalledTimes(1);
     const message = String(warnSpy.mock.calls[0]![0]);
@@ -523,7 +474,7 @@ describe('undecodable surfaces', () => {
   });
 
   it('keeps the surfaces it can read when a sibling surface is dropped', () => {
-    const mesh = decodeArrayMesh(GOOD_THEN_BAD_TRES, 'res://mesh.tres');
+    const mesh = decodeArrayMeshTres(GOOD_THEN_BAD_TRES, 'res://mesh.tres');
 
     expect(mesh.surfaces).toHaveLength(1);
     expect(mesh.surfaces[0]!.materialPath).toBe('res://stage/tile_material.tres');
@@ -533,14 +484,14 @@ describe('undecodable surfaces', () => {
   it('reports each surface\u2019s ORIGINAL index, which a drop above it does not shift', () => {
     // `surface_material_override/N` names the index in `_surfaces`, so a survivor
     // that moved down the compacted list has to keep saying where it came from.
-    const mesh = decodeArrayMesh(BAD_THEN_GOOD_TRES, 'res://mesh.tres');
+    const mesh = decodeArrayMeshTres(BAD_THEN_GOOD_TRES, 'res://mesh.tres');
 
     expect(mesh.surfaces).toHaveLength(1);
     expect(mesh.surfaces[0]!.surfaceIndex).toBe(1);
   });
 
   it('numbers surfaces from zero when nothing is dropped', () => {
-    const mesh = decodeArrayMesh(TWO_SURFACE_TRES, 'res://mesh.tres');
+    const mesh = decodeArrayMeshTres(TWO_SURFACE_TRES, 'res://mesh.tres');
 
     expect(mesh.surfaces.map((s) => s.surfaceIndex)).toEqual([0, 1]);
   });
@@ -565,7 +516,7 @@ describe('attribute_data layout', () => {
     // Godot orders the attribute record COLOR, UV1, UV2: vertex colours put 4
     // RGBA8 bytes ahead of UV1, so reading from offset 0 decodes the colour as
     // `u`. godot_ball.tres has such a surface (12-byte record).
-    const surface = decodeArrayMesh(COLOR_UV_TRES, 'res://mesh.tres').surfaces[0]!;
+    const surface = decodeArrayMeshTres(COLOR_UV_TRES, 'res://mesh.tres').surfaces[0]!;
 
     expect(Array.from(surface.uvs!)).toEqual([0.25, 0.5, 0.75, 1]);
   });
@@ -618,7 +569,7 @@ describe('one quad in both layouts', () => {
   const INDEX = [2, 0, 3, 2, 1, 0];
 
   it('decodes the uncompressed layout to Godot’s own arrays', () => {
-    const surface = decodeArrayMesh(SAME_QUAD_UNCOMPRESSED_TRES, 'res://q.tres').surfaces[0]!;
+    const surface = decodeArrayMeshTres(SAME_QUAD_UNCOMPRESSED_TRES, 'res://q.tres').surfaces[0]!;
 
     expect(Array.from(surface.positions)).toEqual(VERTEX);
     expect(Array.from(surface.uvs!)).toEqual(TEX_UV);
@@ -633,7 +584,7 @@ describe('one quad in both layouts', () => {
   });
 
   it('decodes the compressed layout to Godot’s own arrays', () => {
-    const surface = decodeArrayMesh(SAME_QUAD_COMPRESSED_TRES, 'res://q.tres').surfaces[0]!;
+    const surface = decodeArrayMeshTres(SAME_QUAD_COMPRESSED_TRES, 'res://q.tres').surfaces[0]!;
 
     // Quantised positions land on the uint16 grid spanning the aabb, which for
     // this aabb reproduces the corners exactly.
@@ -657,8 +608,8 @@ describe('one quad in both layouts', () => {
     // aabb differ by up to half a grid step, and the normals in the 5th decimal.
     // A flipped sign, an unnormalised vector or a wrong stride is orders of
     // magnitude larger.
-    const plain = decodeArrayMesh(SAME_QUAD_UNCOMPRESSED_TRES, 'res://q.tres').surfaces[0]!;
-    const packed = decodeArrayMesh(SAME_QUAD_COMPRESSED_TRES, 'res://q.tres').surfaces[0]!;
+    const plain = decodeArrayMeshTres(SAME_QUAD_UNCOMPRESSED_TRES, 'res://q.tres').surfaces[0]!;
+    const packed = decodeArrayMeshTres(SAME_QUAD_COMPRESSED_TRES, 'res://q.tres').surfaces[0]!;
 
     expect(packed.vertexCount).toBe(plain.vertexCount);
     for (let i = 0; i < plain.positions.length; i++) {
@@ -689,7 +640,7 @@ describe('non-triangle primitives', () => {
   it('skips a non-triangle surface and keeps the triangle ones', () => {
     // A LINES surface's indices are vertex pairs. Read as triangles they
     // fabricate faces that were never authored, so the surface is dropped.
-    const mesh = decodeArrayMesh(LINES_SECOND_SURFACE_TRES, 'res://mesh.tres');
+    const mesh = decodeArrayMeshTres(LINES_SECOND_SURFACE_TRES, 'res://mesh.tres');
 
     expect(mesh.surfaces).toHaveLength(1);
     expect(mesh.surfaces[0]!.materialPath).toBe('res://a.tres');
@@ -699,12 +650,12 @@ describe('non-triangle primitives', () => {
   it('fails loudly when every surface is a non-triangle primitive', () => {
     // Nothing renderable came out, so this must not cache an empty geometry as a
     // success. The message names the primitive as the reason, not a byte defect.
-    expect(() => decodeArrayMesh(LINE_STRIP_ONLY_TRES, 'res://mesh.tres')).toThrow(/non-triangle/);
+    expect(() => decodeArrayMeshTres(LINE_STRIP_ONLY_TRES, 'res://mesh.tres')).toThrow(/non-triangle/);
   });
 
   it('keeps decoding a surface that omits `primitive` (Godot writes 3 for triangles)', () => {
     const noPrimitive = WALL_TRES.replace('"primitive": 3,\n', '');
 
-    expect(decodeArrayMesh(noPrimitive, 'res://mesh.tres').surfaces).toHaveLength(1);
+    expect(decodeArrayMeshTres(noPrimitive, 'res://mesh.tres').surfaces).toHaveLength(1);
   });
 });

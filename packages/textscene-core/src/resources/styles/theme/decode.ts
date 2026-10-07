@@ -166,7 +166,7 @@ export function decodeThemeAddresses(
 /**
  * A scene's inline `[sub_resource type="Theme"]` to a `ThemeResource`,
  * synchronously, since the solve walk cannot `await`. A font ref names a sibling
- * sub-resource, read directly: the font processor's `parseTresFile` throws on a
+ * sub-resource, read directly: the `resource` slot's `parseTresFile` throws on a
  * `[gd_scene]` header.
  */
 export function resolveInlineThemeResource(

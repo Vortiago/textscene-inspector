@@ -65,13 +65,29 @@ describe('createTresResourceProcessor', () => {
     expect(processor.getCached('res://bad.tres')).toBeNull();
   });
 
-  it('ignores non-.tres paths and binary data', () => {
+  it('emits resource:failed for text that is not a .tres, such as a .tscn', async () => {
     const file = mockFileBus();
     const eventBus = new ResourceEventBus();
     const processor = createTresResourceProcessor(file.bus, eventBus);
 
-    processor.request('res://image.png');
-    file.emitLoaded('res://image.png', new ArrayBuffer(4));
-    expect(processor.getCached('res://image.png')).toBeUndefined();
+    const failed = eventBus.once<Error>('resource', 'failed', 'res://scene.tscn', 1000);
+    processor.request('res://scene.tscn');
+    file.emitLoaded('res://scene.tscn', '[gd_scene format=3]\n\n[node name="Root" type="Node"]\n');
+
+    expect((await failed).message).toContain('missing [gd_resource] header type');
+    expect(processor.isLoading('res://scene.tscn')).toBe(false);
+  });
+
+  it('emits resource:failed for binary data, which no text parse reads', async () => {
+    const file = mockFileBus();
+    const eventBus = new ResourceEventBus();
+    const processor = createTresResourceProcessor(file.bus, eventBus);
+
+    const failed = eventBus.once<Error>('resource', 'failed', 'res://theme.res', 1000);
+    processor.request('res://theme.res');
+    file.emitLoaded('res://theme.res', new ArrayBuffer(4));
+
+    expect((await failed).message).toBe('res://theme.res is binary: only a text resource parses');
+    expect(processor.getCached('res://theme.res')).toBeNull();
   });
 });

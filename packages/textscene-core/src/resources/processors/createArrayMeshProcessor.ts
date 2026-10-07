@@ -1,16 +1,19 @@
 /**
- * The ArrayMesh processor: a `.tres` (format=4) through the FileEventBus into
- * geometry and material paths on the 'arraymesh' slot. Unlike a GLB Object3D, a
+ * The ArrayMesh processor: the section a path addresses in a cached `.tres` parse
+ * (format=4) into geometry and material paths on the 'arraymesh' slot. Unlike a GLB Object3D, a
  * BufferGeometry is shared by identity: each consumer wraps it in its own <mesh>
  * and resolves the material paths through the StandardMaterial3D pipeline.
  */
 
 import * as THREE from 'three';
-import type { FileEventBus } from '../FileEventBus';
 import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
 import { decodeArrayMesh } from '../meshes/arraymesh/decode';
 import { buildArrayMeshGeometry } from '../meshes/arraymesh/build';
+import { resourceSectionOfType, type ParsedFileLoaderFn } from '../resourceSection';
+
+/** Godot's ArrayMesh class: the one type an ArrayMesh address may name. */
+const ARRAY_MESH_TYPES: ReadonlySet<string> = new Set(['ArrayMesh']);
 
 /** Decoded ArrayMesh: merged geometry plus one material path per surface (group). */
 export interface ArrayMeshResource {
@@ -26,17 +29,17 @@ export interface ArrayMeshResource {
 }
 
 export function createArrayMeshProcessor(
-  fileEventBus: FileEventBus | undefined,
-  eventBus: ResourceEventBus
+  eventBus: ResourceEventBus,
+  loadParsedFile: ParsedFileLoaderFn
 ): ResourceProcessor<ArrayMeshResource> {
   return createResourceProcessor({
-    fileEventBus,
     eventBus,
     resourceType: 'arraymesh',
-    shouldProcess: (path, data) => path.endsWith('.tres') && typeof data === 'string',
     addressesSubResources: true,
-    process: async (path, data) => {
-      const mesh = decodeArrayMesh(data as string, path);
+    loadDirectly: async (path) => {
+      const file = await loadParsedFile(path);
+      const { properties } = resourceSectionOfType(file, path, ARRAY_MESH_TYPES);
+      const mesh = decodeArrayMesh(properties, file, path);
       return {
         geometry: buildArrayMeshGeometry(mesh),
         materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),

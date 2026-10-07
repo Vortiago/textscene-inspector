@@ -1,12 +1,12 @@
 /**
  * The theme processor on the corpus shapes: a Theme .tres carrying a
  * `default_font`, and a font ref into a separate file resolved through the
- * injected `loadFont`.
+ * injected `loadFont`. The owning file arrives parsed, through `loadParsedFile`.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { FileEventBus } from '../FileEventBus';
+import { parseTresFile } from '../../parser/parsedResource';
 import { ResourceEventBus } from '../ResourceEventBus';
-import type { ResourceProvider } from '../ResourceProvider';
+import { resourceFilePath } from '../subResourcePath';
 import { createThemeProcessor } from './createThemeProcessor';
 import type { ThemeResource } from '../styles/theme/types';
 import type { FontLoaderFn, FontResource } from '../fonts/font/types';
@@ -24,18 +24,16 @@ const THEME_TRES = [
   '',
 ].join('\n');
 
-class MapProvider implements ResourceProvider {
-  constructor(private files: Map<string, string | ArrayBuffer>) {}
-  loadResource = vi.fn(async (path: string): Promise<string | ArrayBuffer | null> => {
-    return this.files.get(path) ?? null;
-  });
-}
-
-function setup(files: Record<string, string | ArrayBuffer>, loadFont: FontLoaderFn = async () => null) {
-  const provider = new MapProvider(new Map(Object.entries(files)));
+/** Parses each file once per read, as the `resource` slot would; an absent file rejects. */
+function setup(files: Record<string, string>, loadFont: FontLoaderFn = async () => null) {
+  const loadParsedFile = async (path: string) => {
+    const content = files[resourceFilePath(path)];
+    if (content === undefined) throw new Error(`File not found: ${resourceFilePath(path)}`);
+    return parseTresFile(content);
+  };
   const eventBus = new ResourceEventBus();
-  const processor = createThemeProcessor(new FileEventBus(provider), eventBus, () => loadFont);
-  return { provider, eventBus, processor };
+  const processor = createThemeProcessor(eventBus, loadParsedFile, () => loadFont);
+  return { eventBus, processor };
 }
 
 describe('createThemeProcessor', () => {
@@ -95,30 +93,14 @@ describe('createThemeProcessor', () => {
     expect(processor.getCached('res://materials/green.tres')).toBeNull();
   });
 
-  it('fails loudly for a sub-resource address into a .tscn — the owning file is not a .tres', async () => {
-    const tscn = '[gd_scene load_steps=1 format=3]\n\n[node name="Root" type="Node"]\n';
-    const { processor, eventBus } = setup({ 'res://scene.tscn': tscn });
+  it('emits theme:failed and caches null when the owning file fails to load', async () => {
+    const { processor, eventBus } = setup({});
 
-    const address = 'res://scene.tscn::Theme_1';
-    const failed = eventBus.once<Error>('theme', 'failed', address, 2000);
-    processor.request(address);
+    const failed = eventBus.once<Error>('theme', 'failed', 'res://absent.tres', 2000);
+    processor.request('res://absent.tres');
 
-    await expect(failed).resolves.toBeInstanceOf(Error);
-    expect(processor.getCached(address)).toBeNull();
-    expect(processor.isLoading(address)).toBe(false);
-  });
-
-  it('declines an ArrayBuffer — a Theme is never raw bytes, unlike a Font', async () => {
-    const { processor, eventBus } = setup({ 'res://images/x.png': new ArrayBuffer(4) });
-
-    // shouldProcess declines (not a string), so process() never runs and the
-    // request stays inflight for this processor rather than failing, like the
-    // material processor's extension gate and unlike the font processor.
-    const failed = eventBus.once<Error>('theme', 'failed', 'res://images/x.png', 500).catch(() => null);
-    processor.request('res://images/x.png');
-
-    expect(await failed).toBeNull();
-    expect(processor.isLoading('res://images/x.png')).toBe(true);
+    expect((await failed).message).toBe('File not found: res://absent.tres');
+    expect(processor.getCached('res://absent.tres')).toBeNull();
   });
 
   it('shares one resource by identity across two requests for the same path', async () => {

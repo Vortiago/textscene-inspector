@@ -1,9 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { buildFontResource, createFontResourceFromContent } from './loadFont';
+import { parseTresFile } from '../../../parser/parsedResource';
+import { buildFontResource, fontResourceFromContainer } from './loadFont';
 import type { FontLoaderFn, FontResource } from './types';
-
-/** A loader that resolves nothing, for cases with no Font-valued property to recurse into. */
-const NO_OP_LOADER: FontLoaderFn = async () => null;
 
 const MONTSERRAT_TRES = [
   '[gd_resource type="FontFile" load_steps=2 format=3]',
@@ -16,24 +14,8 @@ const MONTSERRAT_TRES = [
   '',
 ].join('\n');
 
-// A `.tres` carrying more than one Font as named sub-resources, the only shape
-// `res://file.tres::SubId` addresses. A scene's inline sub-resource never comes this
-// way: `parseTresFile` rejects a `.tscn`'s `[gd_scene]` header.
-const MULTI_FONT_TRES = [
-  '[gd_resource type="Resource" load_steps=2 format=3]',
-  '',
-  '[ext_resource type="FontFile" path="res://theme/fonts/montserrat_extra_bold.otf" id="1"]',
-  '',
-  '[sub_resource type="FontFile" id="1"]',
-  'fallbacks = Array[Font]([ExtResource("1")])',
-  'msdf_size = 128',
-  '',
-  '[resource]',
-  '',
-].join('\n');
-
-describe('createFontResourceFromContent', () => {
-  it('resolves the whole file when no subResourceId is given', async () => {
+describe('buildFontResource', () => {
+  it('decodes the addressed section and resolves its fallbacks', async () => {
     const base: FontResource = {
       kind: 'file',
       bytes: new ArrayBuffer(1),
@@ -44,85 +26,32 @@ describe('createFontResourceFromContent', () => {
     const loadFont: FontLoaderFn = async (address) =>
       address === 'res://theme/fonts/montserrat_extra_bold.otf' ? base : null;
 
-    const resource = await createFontResourceFromContent(
+    const resource = await buildFontResource(
       'res://theme/fonts/montserrat_16.tres',
-      MONTSERRAT_TRES,
+      parseTresFile(MONTSERRAT_TRES),
       loadFont
     );
 
     expect(resource.kind).toBe('file');
     expect((resource as { fallbacks: FontResource[] }).fallbacks).toEqual([base]);
   });
-
-  it('resolves a named FontFile sub-resource inside a shared fonts-library .tres', async () => {
-    const base: FontResource = {
-      kind: 'file',
-      bytes: new ArrayBuffer(1),
-      mimeType: 'font/otf',
-      fallbacks: [],
-      properties: {},
-    };
-    const loadFont: FontLoaderFn = async (address) =>
-      address === 'res://theme/fonts/montserrat_extra_bold.otf' ? base : null;
-
-    const resource = await createFontResourceFromContent(
-      'res://fonts/multi.tres',
-      MULTI_FONT_TRES,
-      loadFont,
-      '1'
-    );
-
-    expect(resource).toEqual({
-      kind: 'file',
-      bytes: undefined,
-      mimeType: undefined,
-      fallbacks: [base],
-      properties: { msdf_size: '128' },
-    });
-  });
-
-  it('throws for an unknown sub-resource id', async () => {
-    await expect(
-      createFontResourceFromContent('res://fonts/multi.tres', MULTI_FONT_TRES, NO_OP_LOADER, 'DoesNotExist')
-    ).rejects.toThrow('Sub-resource "DoesNotExist" is not declared');
-  });
-
-  it('throws when parsing content with no [gd_resource] header — a .tscn is never addressed this way', async () => {
-    const tscn = '[gd_scene load_steps=1 format=3]\n\n[node name="Root" type="Node"]\n';
-    await expect(createFontResourceFromContent('res://scene.tscn', tscn, NO_OP_LOADER)).rejects.toThrow(
-      'missing [gd_resource] header type'
-    );
-  });
-
-  it('throws when the whole file is not a font resource type', async () => {
-    const tres = '[gd_resource type="StyleBoxFlat" format=3]\n\n[resource]\nbg_color = Color(1, 1, 1, 1)\n';
-    await expect(createFontResourceFromContent('res://x.tres', tres, NO_OP_LOADER)).rejects.toThrow(
-      'Not a font resource type: StyleBoxFlat'
-    );
-  });
 });
 
-describe('buildFontResource', () => {
-  it('routes raw ArrayBuffer data to fontResourceFromBytes', async () => {
+describe('fontResourceFromContainer', () => {
+  it('wraps the bytes of a raw font file', () => {
     const bytes = new ArrayBuffer(2);
-    const resource = await buildFontResource('res://fonts/Xolonium-Regular.ttf', bytes, NO_OP_LOADER);
+    const resource = fontResourceFromContainer('res://fonts/Xolonium-Regular.ttf', bytes);
     expect(resource).toEqual({ kind: 'file', bytes, mimeType: 'font/ttf', fallbacks: [], properties: {} });
   });
 
-  it('routes text data through createFontResourceFromContent, honouring a ::SubId address', async () => {
-    const resource = await buildFontResource('res://fonts/multi.tres::1', MULTI_FONT_TRES, NO_OP_LOADER);
-    expect(resource.kind).toBe('file');
-  });
-
-  it('throws for a sub-resource id nonsensically addressed on a raw font file — no named resources live inside one', async () => {
-    const bytes = new ArrayBuffer(2);
-    await expect(buildFontResource('res://fonts/x.ttf::SomeId', bytes, NO_OP_LOADER)).rejects.toThrow(
+  it('throws for a sub-resource id on a raw font file, which holds no named resources', () => {
+    expect(() => fontResourceFromContainer('res://fonts/x.ttf::SomeId', new ArrayBuffer(2))).toThrow(
       'Not a recognised font file extension'
     );
   });
 
-  it('throws for an ArrayBuffer whose path has no recognised font extension', async () => {
-    await expect(buildFontResource('res://images/x.png', new ArrayBuffer(2), NO_OP_LOADER)).rejects.toThrow(
+  it('throws for bytes whose path has no recognised font extension', () => {
+    expect(() => fontResourceFromContainer('res://images/x.png', new ArrayBuffer(2))).toThrow(
       'Not a recognised font file extension: res://images/x.png'
     );
   });

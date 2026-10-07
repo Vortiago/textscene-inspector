@@ -8,12 +8,10 @@ import { useEffect, useMemo } from 'react';
 import { warn } from '../../logger';
 import type { ParsedResource } from '../../parser/parsedResource';
 import type { TscnInternalResource } from '../../parser/types';
-import { findSubResource } from '../../resources/SubResourceResolver';
-import { parseSubResourcePath } from '../../resources/subResourcePath';
+import { resourceSection } from '../../resources/resourceSection';
+import { resourceFilePath } from '../../resources/subResourcePath';
 import { useResource } from '../../resources/useResource';
 import type { MaterialResource, MaterialSource } from './materialSource';
-
-const NO_FILE: { filePath: string; subResourceId?: string } = { filePath: '' };
 
 /** What a material source loads to. */
 export type LoadedMaterial =
@@ -33,9 +31,9 @@ export function readyMaterial(loaded: LoadedMaterial): MaterialResource | null {
 
 /** What `source` loads to. A ShaderMaterial is declined with a warning (ADR-0041). */
 export function useMaterial(source: MaterialSource | undefined): LoadedMaterial {
-  const { filePath, subResourceId } = source?.kind === 'file' ? parseSubResourcePath(source.path) : NO_FILE;
+  const path = source?.kind === 'file' ? source.path : '';
   // Called with '' for an inline source, to keep the hook count stable.
-  const file = useResource<ParsedResource>(filePath, 'resource').value;
+  const file = useResource<ParsedResource>(resourceFilePath(path), 'resource').value;
 
   // Keyed on what the source holds, not the source object: a caller may build a new
   // source each render, and a new material would rebind every texture.
@@ -51,11 +49,11 @@ export function useMaterial(source: MaterialSource | undefined): LoadedMaterial 
         externalResources: inlineExternal,
       });
     }
-    if (!filePath || !file) return ABSENT;
-    const resource = materialBody(file, filePath, subResourceId);
+    if (!path || !file) return ABSENT;
+    const resource = materialBody(file, path);
     if (!resource) return ABSENT;
     return ready({ resource, internalResources: file.subResources, externalResources: file.extResources });
-  }, [inlineResource, inlineInternal, inlineExternal, file, filePath, subResourceId]);
+  }, [inlineResource, inlineInternal, inlineExternal, file, path]);
 
   useEffect(() => {
     if (loaded.status === 'declined' && loaded.type === 'ShaderMaterial') {
@@ -72,12 +70,14 @@ function ready(material: MaterialResource): LoadedMaterial {
   return type === 'StandardMaterial3D' ? { status: 'ready', material } : { status: 'declined', type };
 }
 
-/** The `[resource]` body, or the named `[sub_resource]`, of a parsed `.tres`. */
-function materialBody(
-  file: ParsedResource,
-  filePath: string,
-  subResourceId: string | undefined
-): TscnInternalResource | undefined {
-  if (subResourceId !== undefined) return findSubResource(file.subResources, subResourceId);
-  return { id: filePath, type: file.resourceType, data: file.properties };
+/** The section `path` addresses in its parsed `.tres`, or undefined for an id the file does not declare. */
+function materialBody(file: ParsedResource, path: string): TscnInternalResource | undefined {
+  try {
+    const { type, properties } = resourceSection(file, path);
+    return { id: path, type, data: properties };
+  } catch {
+    // The lookup's one failure, an undeclared id. No producer mints one past
+    // `subResourceTypeGate`, so the file changed under a mounted slot.
+    return undefined;
+  }
 }

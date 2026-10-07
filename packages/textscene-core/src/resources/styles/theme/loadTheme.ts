@@ -1,13 +1,12 @@
 /**
- * The Theme slice's whole-file loader, between a fetched `.tres` and `decode.ts`,
- * called by `processors/createThemeProcessor.ts`. It owns `parseTresFile` and
- * sub-resource addressing, like `loadFont.ts`.
+ * The Theme slice's loader, between a parsed `.tres` and `decode.ts`, called by
+ * `processors/createThemeProcessor.ts`. It resolves the decoded font addresses.
  */
 
-import { parseTresFile, type ParsedResource } from '../../../parser/parsedResource';
+import type { ParsedResource } from '../../../parser/parsedResource';
 import type { FontLoaderFn, FontResource } from '../../fonts/font/types';
-import { findSubResource } from '../../SubResourceResolver';
-import { parseSubResourcePath } from '../../subResourcePath';
+import { resourceSectionOfType } from '../../resourceSection';
+import { resourceFilePath } from '../../subResourcePath';
 import { decodeThemeAddresses } from './decode';
 import type { ThemeAddresses, ThemeResource } from './types';
 
@@ -54,54 +53,24 @@ export async function resolveThemeResource(
   };
 }
 
-/**
- * A `ThemeResource` from a `.tres`'s `[resource]` body, or from a named
- * `[sub_resource]` when `subResourceId` is set. `content` must carry a
- * `[gd_resource]` header (`parseTresFile`'s requirement).
- */
-export async function createThemeResourceFromContent(
-  filePath: string,
-  content: string,
-  loadFont: FontLoaderFn,
-  subResourceId?: string
-): Promise<ThemeResource> {
-  const parsed: ParsedResource = parseTresFile(content);
-
-  let properties: Record<string, string>;
-
-  if (subResourceId !== undefined) {
-    const sub = findSubResource(parsed.subResources, subResourceId);
-    if (!sub) {
-      throw new Error(`Sub-resource "${subResourceId}" is not declared in ${filePath}`);
-    }
-    if (sub.type !== 'Theme') {
-      throw new Error(`Not a Theme resource: ${sub.type} (${filePath})`);
-    }
-    // `parseInternalResource` echoes the heading's `id` into `data`. Strip it, or
-    // it leaks into `properties` as a fake declared property.
-    const { id: _id, ...rest } = sub.data as Record<string, string>;
-    properties = rest;
-  } else {
-    if (parsed.resourceType !== 'Theme') {
-      throw new Error(`Not a Theme resource: ${parsed.resourceType} (${filePath})`);
-    }
-    properties = parsed.properties;
-  }
-
-  const addresses = decodeThemeAddresses(filePath, properties, parsed.extResources, parsed.subResources);
-  return resolveThemeResource(addresses, loadFont);
-}
+/** Godot's Theme class: the one type a Theme address may name. */
+const THEME_TYPES: ReadonlySet<string> = new Set(['Theme']);
 
 /**
- * A Theme is always `.tres` text, so there is no ArrayBuffer branch:
- * `shouldProcess` gates on that upstream. `path` is the full requested address,
- * which may carry a `::SubId`.
+ * The `ThemeResource` that `path` addresses inside `file`: its `[resource]` body, or the
+ * `[sub_resource]` a **Sub-resource path** names.
  */
 export async function buildThemeResource(
   path: string,
-  content: string,
+  file: ParsedResource,
   loadFont: FontLoaderFn
 ): Promise<ThemeResource> {
-  const { filePath, subResourceId } = parseSubResourcePath(path);
-  return createThemeResourceFromContent(filePath, content, loadFont, subResourceId);
+  const { properties } = resourceSectionOfType(file, path, THEME_TYPES);
+  const addresses = decodeThemeAddresses(
+    resourceFilePath(path),
+    properties,
+    file.extResources,
+    file.subResources
+  );
+  return resolveThemeResource(addresses, loadFont);
 }

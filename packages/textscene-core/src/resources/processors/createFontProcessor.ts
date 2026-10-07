@@ -1,6 +1,7 @@
 /**
- * The font resource processor, on the shared `createResourceProcessor` loop.
- * It fetches through `FileEventBus`, addresses a **Sub-resource path**
+ * The font resource processor, on the shared `createResourceProcessor` loop. It
+ * fetches through `FileEventBus`, since a raw font container arrives as bytes, and reads a
+ * `.tres` from the owning file's cached parse. It addresses a **Sub-resource path**
  * (`res://file.tres::SubId`) and loads other fonts: a font's `base_font`/`fallbacks`.
  */
 
@@ -12,12 +13,14 @@ import {
   type ResourceProcessor,
 } from '../createResourceProcessor';
 import type { DependencyGraph } from '../dependencyGraph';
-import { buildFontResource } from '../fonts/font/loadFont';
+import { buildFontResource, fontResourceFromContainer } from '../fonts/font/loadFont';
 import type { FontResource } from '../fonts/font/types';
+import type { ParsedFileLoaderFn } from '../resourceSection';
 
 export function createFontProcessor(
   fileEventBus: FileEventBus | undefined,
   eventBus: ResourceEventBus,
+  loadParsedFile: ParsedFileLoaderFn,
   /** Records each font a font reads, so a change to that file reloads the reader. */
   dependencies: DependencyGraph
 ): ResourceProcessor<FontResource> {
@@ -90,14 +93,16 @@ export function createFontProcessor(
     resourceType: 'font',
     // Every loaded file: the bus hands over only the bare file path, so an
     // extension gate would leave a `::SubId` address into a `.tscn` in `inflight`
-    // forever. `buildFontResource` throws on content that is not a font, which
-    // turns such an address into a prompt `failed` event.
-    shouldProcess: (_path, data) => data instanceof ArrayBuffer || typeof data === 'string',
+    // forever. The parse rejects text that is not a `.tres`, which turns such an
+    // address into a prompt `failed` event.
     addressesSubResources: true,
     // The peer loader is bound to the address being built, so every wait it
     // parks on is recorded against its own requester rather than against the
     // processor as a whole.
-    process: (path, data) => buildFontResource(path, data, (address) => loadFont(path, address)),
+    process: async (path, data) =>
+      data instanceof ArrayBuffer
+        ? fontResourceFromContainer(path, data)
+        : buildFontResource(path, await loadParsedFile(path), (address) => loadFont(path, address)),
   });
 
   return processor;

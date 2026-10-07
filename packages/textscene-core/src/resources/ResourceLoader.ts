@@ -26,6 +26,8 @@ import './sliceRegistrations.js';
 import type { ParsedResource } from '../parser/parsedResource';
 import { PEER_LOAD_TIMEOUT_MS, type ResourceProcessor } from './createResourceProcessor';
 import { DependencyGraph, type Dependent } from './dependencyGraph';
+import type { ParsedFileLoaderFn } from './resourceSection';
+import { resourceFilePath } from './subResourcePath';
 import * as logger from '../logger';
 import { WorkerJobRunner, type CreateJobWorker } from '../workers/WorkerJobRunner';
 
@@ -46,7 +48,7 @@ export class ResourceLoader {
   readonly textures: ResourceProcessor<THREE.Texture>;
   readonly glbMeshes: ResourceProcessor<THREE.Object3D>;
   readonly scenes: ResourceProcessor<TscnScene>;
-  /** Generic .tres files (TileSet) parsed as ParsedResource. */
+  /** Each `.tres` parsed once: the parse every slice that decodes Godot text reads. */
   readonly resources: ResourceProcessor<ParsedResource>;
   /** ArrayMesh .tres decoded into geometry + per-surface material paths. */
   readonly arrayMeshes: ResourceProcessor<ArrayMeshResource>;
@@ -99,26 +101,43 @@ export class ResourceLoader {
 
   /**
    * Await a peer processor's resource for `dependent`: answer from cache, else request
-   * it and wait on that processor's bus slot. Bounded, far above any real fetch: a
-   * processor whose `shouldProcess` refuses the bytes settles nothing, and an unbounded
-   * await would leave a GLB that never appears nor reports missing.
+   * it and wait on that processor's bus slot. Rejects with the peer's failure. Bounded,
+   * far above any real fetch: a processor whose `shouldProcess` refuses the bytes settles
+   * nothing, and an unbounded await would leave a GLB that never appears nor reports missing.
    */
+  private async peerRequire<T>(
+    dependent: Dependent,
+    processor: ResourceProcessor<T>,
+    busType: ResourceType,
+    path: string
+  ): Promise<T> {
+    // First, so a change to `path` reloads `dependent` whether this read hits, fails or waits.
+    this.dependencies.record(dependent, path);
+    const cached = processor.getCached(path);
+    if (cached === null) throw new Error(`${busType} ${path} previously failed to load`);
+    if (cached !== undefined) return cached;
+    processor.request(path);
+    return this.eventBus.once<T>(busType, 'loaded', path, PEER_LOAD_TIMEOUT_MS);
+  }
+
+  /** {@link peerRequire}, with null for a peer that failed or never answered. */
   private async peerLoad<T>(
     dependent: Dependent,
     processor: ResourceProcessor<T>,
     busType: ResourceType,
     path: string
   ): Promise<T | null> {
-    // First, so a change to `path` reloads `dependent` whether this read hits, fails or waits.
-    this.dependencies.record(dependent, path);
-    const cached = processor.getCached(path);
-    if (cached !== undefined) return cached;
-    processor.request(path);
     try {
-      return await this.eventBus.once<T>(busType, 'loaded', path, PEER_LOAD_TIMEOUT_MS);
+      return await this.peerRequire(dependent, processor, busType, path);
     } catch {
       return null;
     }
+  }
+
+  /** The parsed file behind each address `busType` loads, from the `resource` slot's cache. */
+  private parsedFileLoaderFor(busType: ResourceType): ParsedFileLoaderFn {
+    return (path) =>
+      this.peerRequire({ busType, key: path }, this.resources, 'resource', resourceFilePath(path));
   }
 
   constructor(fileEventBus?: FileEventBus, options: ResourceLoaderOptions = {}) {
@@ -154,14 +173,19 @@ export class ResourceLoader {
     });
 
     this.resources = createTresResourceProcessor(fileEventBus, this.eventBus);
-    this.arrayMeshes = createArrayMeshProcessor(fileEventBus, this.eventBus);
-    this.fonts = createFontProcessor(fileEventBus, this.eventBus, this.dependencies);
+    this.arrayMeshes = createArrayMeshProcessor(this.eventBus, this.parsedFileLoaderFor('arraymesh'));
+    this.fonts = createFontProcessor(
+      fileEventBus,
+      this.eventBus,
+      this.parsedFileLoaderFor('font'),
+      this.dependencies
+    );
 
     // A Theme's font refs resolve through the FONT processor (a different peer, unlike a
     // Font's own self-recursion).
     this.themes = createThemeProcessor(
-      fileEventBus,
       this.eventBus,
+      this.parsedFileLoaderFor('theme'),
       (themeKey) => (address) =>
         this.peerLoad({ busType: 'theme', key: themeKey }, this.fonts, 'font', address)
     );

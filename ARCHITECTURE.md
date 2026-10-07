@@ -173,6 +173,9 @@ flowchart TD
   the file as `invalidated`, and each hook loads it again with no remount.
 - **Sub-resource paths.** `res://file.tres::SubId` addresses a resource inside a `.tres`.
   Only `resources/subResourcePath.ts` writes `::`.
+- **One parse per file.** The `resource` processor parses each `.tres` once. Every other
+  processor of Godot text reads that cached `ParsedResource`, and `resources/resourceSection.ts`
+  finds the section an address names.
 - **Imports.** `.import` sidecars and `project.godot` load through `tryLoad` (ADR-0028).
 - **Clones.** A cached Object3D is cloned per consumer. Textures and materials are shared.
 - **Materials.** `resolveMaterialSource`, `useMaterial` and `SurfaceMaterialSlot` give every

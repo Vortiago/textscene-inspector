@@ -1,8 +1,8 @@
 /**
  * The generic `.tres` processor: a resource file's text through the FileEventBus
  * into a `ParsedResource` (header type, ext/sub resources, raw `[resource]` body)
- * on the 'resource' bus slot, for consumers such as the TileSet resolver. It shares
- * .tres paths with the material processor, since each handles only its own flights.
+ * on the 'resource' bus slot. It is the one parse of a file: every slice that
+ * decodes Godot text reads this slot's cache.
  */
 
 import type { FileEventBus } from '../FileEventBus';
@@ -18,7 +18,11 @@ export function createTresResourceProcessor(
     fileEventBus,
     eventBus,
     resourceType: 'resource',
-    shouldProcess: (path, data) => path.endsWith('.tres') && typeof data === 'string',
-    process: async (_path, data) => parseTresFile(data as string),
+    // Every arrival, not `.tres` alone: a request this declines stays in flight, and a
+    // peer waiting on it waits out its timeout. The parse fails other text at once.
+    process: async (path, data) => {
+      if (typeof data !== 'string') throw new Error(`${path} is binary: only a text resource parses`);
+      return parseTresFile(data);
+    },
   });
 }

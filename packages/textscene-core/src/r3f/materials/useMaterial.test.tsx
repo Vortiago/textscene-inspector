@@ -94,13 +94,15 @@ describe('useMaterial', () => {
   });
 
   it("reads a sub-resource address as that [sub_resource], with its file's tables", () => {
-    const { result, fake } = renderMaterial(
-      { kind: 'file', path: `${TRES_PATH}::Inner_mat` },
-      { [TRES_PATH]: PAINT_TRES }
-    );
+    const address = `${TRES_PATH}::Inner_mat`;
+    const { result, fake } = renderMaterial({ kind: 'file', path: address }, { [TRES_PATH]: PAINT_TRES });
     const parsed = fake.resources.getCached(TRES_PATH)!;
 
-    expect(readyMaterial(result.current)?.resource).toBe(parsed.subResources[0]);
+    expect(readyMaterial(result.current)?.resource).toEqual({
+      id: address,
+      type: 'StandardMaterial3D',
+      data: { albedo_color: 'Color(0, 0, 1, 1)' },
+    });
     expect(readyMaterial(result.current)?.internalResources).toBe(parsed.subResources);
   });
 

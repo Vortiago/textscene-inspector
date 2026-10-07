@@ -6,15 +6,10 @@
  */
 
 import { warn } from '../../../logger.js';
-import { parseTresFile, type ParsedResource } from '../../../parser/parsedResource.js';
+import type { ParsedResource } from '../../../parser/parsedResource.js';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types.js';
 import { BUILDABLE_MATERIAL_TYPES } from '../../materials/buildableMaterialTypes.js';
-import { findSubResource } from '../../SubResourceResolver.js';
-import {
-  parseSubResourcePath,
-  resolveRefToResourcePath,
-  subResourceTypeGate,
-} from '../../subResourcePath.js';
+import { resolveRefToResourcePath, resourceFilePath, subResourceTypeGate } from '../../subResourcePath.js';
 import {
   iterateSurfaceBlocks,
   readAabb,
@@ -30,87 +25,46 @@ import { decodeIndices, decodeNormals, decodePositions, decodeUVs } from './vert
 
 /**
  * Resolve a surface's `"material"` to one path string: an `ExtResource` to its
- * shared file, a `SubResource` to a **Sub-resource path** (`selfPath::id`) in
+ * shared file, a `SubResource` to a **Sub-resource path** (`filePath::id`) in
  * this file.
  */
 function readMaterialPath(
   block: string,
-  parsed: ParsedResource,
+  file: ParsedResource,
   extById: ReadonlyMap<string, string>,
-  selfPath: string
+  filePath: string
 ): string | undefined {
   return (
     resolveRefToResourcePath(
       readMaterialRef(block),
       extById,
-      selfPath,
-      subResourceTypeGate(parsed.subResources, BUILDABLE_MATERIAL_TYPES)
+      filePath,
+      subResourceTypeGate(file.subResources, BUILDABLE_MATERIAL_TYPES)
     ) ?? undefined
   );
 }
 
 /**
- * The `_surfaces` of the mesh this path addresses: the file's `[resource]` body,
- * or a `[sub_resource type="ArrayMesh"]` inside it. An addressed sub-resource
- * that is absent or has no surfaces throws, rather than decode to an empty mesh
- * that renders nothing without a word.
- */
-function readSurfacesRaw(
-  parsed: ParsedResource,
-  filePath: string,
-  subResourceId: string | undefined
-): string | undefined {
-  if (subResourceId === undefined) return parsed.properties['_surfaces'];
-
-  const sub = findSubResource(parsed.subResources, subResourceId);
-  if (!sub) {
-    warn(
-      `[ArrayMesh] ${filePath} declares no sub-resource "${subResourceId}" — ` +
-        `the mesh addressing it renders nothing`
-    );
-    return undefined;
-  }
-  const raw = sub.data['_surfaces'];
-  if (typeof raw !== 'string') {
-    warn(
-      `[ArrayMesh] sub-resource "${subResourceId}" in ${filePath} is a ${sub.type} ` +
-        `and carries no surfaces — the mesh addressing it renders nothing`
-    );
-    return undefined;
-  }
-  return raw;
-}
-
-/**
+ * Decode the ArrayMesh section `selfPath` addresses inside `file`. Godot writes
+ * `_surfaces` only for a mesh that has surfaces, so a section without it is
+ * legitimately empty, as in Godot.
+ * @param properties - the addressed section's own properties (`resourceSectionOfType`).
  * @param selfPath - the resource path this mesh was requested under. A material
  *   declared as a `[sub_resource]` here can only be addressed relative to its
- *   own file, so this is an input, not a convenience. May itself be a
- *   **Sub-resource path**, which selects a `[sub_resource type="ArrayMesh"]`
- *   inside the file (a `shadow_mesh`, or a MeshLibrary's embedded item mesh)
- *   rather than the file's own `[resource]` body.
+ *   own file, so this is an input, not a convenience.
  */
-export function decodeArrayMesh(content: string, selfPath: string): ArrayMeshData {
-  const parsed = parseTresFile(content);
-  const { filePath, subResourceId } = parseSubResourcePath(selfPath);
-  const surfacesRaw = readSurfacesRaw(parsed, filePath, subResourceId);
-  if (!surfacesRaw) {
-    // Godot writes `_surfaces` only for a mesh that has surfaces, so the type
-    // decides: an ArrayMesh without it is legitimately empty, as in Godot. Any
-    // other type (a BoxMesh `.tres`, a MeshLibrary) fails, rather than cache an
-    // empty geometry that renders an invisible node with no diagnostic.
-    const addressed =
-      subResourceId === undefined
-        ? parsed.resourceType
-        : findSubResource(parsed.subResources, subResourceId)?.type;
-    if (addressed !== 'ArrayMesh') {
-      throw new Error(`${selfPath} is a ${addressed ?? 'missing resource'}, not an ArrayMesh`);
-    }
-    return { surfaces: [] };
-  }
+export function decodeArrayMesh(
+  properties: Readonly<Record<string, string>>,
+  file: ParsedResource,
+  selfPath: string
+): ArrayMeshData {
+  const surfacesRaw = properties['_surfaces'];
+  if (!surfacesRaw) return { surfaces: [] };
 
-  const extById = extResourcePathsById(parsed.extResources);
+  const filePath = resourceFilePath(selfPath);
+  const extById = extResourcePathsById(file.extResources);
   return decodeSurfaces(surfacesRaw, selfPath, (block) => ({
-    materialPath: readMaterialPath(block, parsed, extById, filePath),
+    materialPath: readMaterialPath(block, file, extById, filePath),
   }));
 }
 

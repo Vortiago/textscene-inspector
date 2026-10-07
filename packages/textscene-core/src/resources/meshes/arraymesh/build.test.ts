@@ -4,7 +4,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { decodeArrayMesh } from './decode';
+import { decodeArrayMeshTres } from '../../testing/decodeArrayMeshTres';
 import type { ArrayMeshData } from './types';
 import { buildArrayMeshGeometry } from './build';
 import { headlightsSurface, wallQuadSurfaces } from '../../testing/arrayMeshSurfaces';
@@ -48,7 +48,7 @@ function triangle(overrides: Partial<ArrayMeshData['surfaces'][number]> = {}) {
 
 describe('buildArrayMeshGeometry', () => {
   it('builds a BufferGeometry with position, uv, index and Godot normals', () => {
-    const geo = buildArrayMeshGeometry(decodeArrayMesh(WALL_TRES, 'res://mesh.tres'));
+    const geo = buildArrayMeshGeometry(decodeArrayMeshTres(WALL_TRES, 'res://mesh.tres'));
 
     expect(geo).toBeInstanceOf(THREE.BufferGeometry);
     expect(geo.getAttribute('position').count).toBe(4);
@@ -108,7 +108,7 @@ describe('buildArrayMeshGeometry', () => {
   });
 
   it('adds one draw group per surface for per-surface materials', () => {
-    const geo = buildArrayMeshGeometry(decodeArrayMesh(WALL_TRES, 'res://mesh.tres'));
+    const geo = buildArrayMeshGeometry(decodeArrayMeshTres(WALL_TRES, 'res://mesh.tres'));
 
     expect(geo.groups).toHaveLength(1);
     expect(geo.groups[0]).toMatchObject({ start: 0, count: 6, materialIndex: 0 });
@@ -117,7 +117,7 @@ describe('buildArrayMeshGeometry', () => {
   it('computes a finite bounding sphere for a mesh mixing compressed and uncompressed surfaces', () => {
     // A compressed surface read at the uncompressed stride gives NaN positions,
     // a NaN bounding sphere for the whole geometry, and a camera that cannot frame it.
-    const geo = buildArrayMeshGeometry(decodeArrayMesh(MIXED_LAYOUT_TRES, 'res://mesh.tres'));
+    const geo = buildArrayMeshGeometry(decodeArrayMeshTres(MIXED_LAYOUT_TRES, 'res://mesh.tres'));
 
     geo.computeBoundingSphere();
     geo.computeBoundingBox();

@@ -8,6 +8,9 @@ import { FileEventBus } from '../FileEventBus';
 import { ResourceEventBus } from '../ResourceEventBus';
 import type { ResourceProvider } from '../ResourceProvider';
 import { createFontProcessor } from './createFontProcessor';
+import { createTresResourceProcessor } from './createTresResourceProcessor';
+import { resourceFilePath } from '../subResourcePath';
+import type { ParsedResource } from '../../parser/parsedResource';
 import { DependencyGraph } from '../dependencyGraph';
 import type { FontResource, FontFileResource, FontVariationResource } from '../fonts/font/types';
 
@@ -49,10 +52,23 @@ class MapProvider implements ResourceProvider {
   });
 }
 
+/** The font processor over `provider`, reading each `.tres` from a `resource` slot beside it. */
+function fontProcessorOver(provider: ResourceProvider, eventBus: ResourceEventBus) {
+  const fileEventBus = new FileEventBus(provider);
+  const resources = createTresResourceProcessor(fileEventBus, eventBus);
+  const loadParsedFile = (path: string): Promise<ParsedResource> => {
+    const filePath = resourceFilePath(path);
+    const parsed = eventBus.once<ParsedResource>('resource', 'loaded', filePath, 2000);
+    resources.request(filePath);
+    return parsed;
+  };
+  return createFontProcessor(fileEventBus, eventBus, loadParsedFile, new DependencyGraph());
+}
+
 function setup(files: Record<string, string | ArrayBuffer>) {
   const provider = new MapProvider(new Map(Object.entries(files)));
   const eventBus = new ResourceEventBus();
-  const processor = createFontProcessor(new FileEventBus(provider), eventBus, new DependencyGraph());
+  const processor = fontProcessorOver(provider, eventBus);
   return { provider, eventBus, processor };
 }
 
@@ -311,7 +327,7 @@ describe('createFontProcessor', () => {
         return null;
       }),
     };
-    const processor = createFontProcessor(new FileEventBus(provider), eventBus, new DependencyGraph());
+    const processor = fontProcessorOver(provider, eventBus);
     const flush = async (): Promise<void> => {
       for (let i = 0; i < 4; i++) await new Promise((resolve) => setTimeout(resolve, 0));
     };
@@ -371,7 +387,7 @@ describe('createFontProcessor', () => {
         return null;
       }),
     };
-    const processor = createFontProcessor(new FileEventBus(provider), eventBus, new DependencyGraph());
+    const processor = fontProcessorOver(provider, eventBus);
     const flush = async (): Promise<void> => {
       for (let i = 0; i < 6; i++) await new Promise((resolve) => setTimeout(resolve, 0));
     };

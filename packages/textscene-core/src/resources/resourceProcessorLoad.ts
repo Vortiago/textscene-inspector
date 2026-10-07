@@ -49,9 +49,17 @@ export function createLoadLane<T>(ctx: LoadLaneContext<T>): LoadLane<T> {
   const awaitingFile = (filePath: string): string[] =>
     [...inflight.keys()].filter((key) => resourceFilePath(key) === filePath);
 
+  /**
+   * The flights whose `finishLoad` is running. A peer that reads the same file, such as
+   * the font processor's parse from the `resource` slot, makes the byte bus re-broadcast
+   * it, and the flight already holds those bytes. Written only by `finishLoad`.
+   */
+  const running = new Set<symbol>();
+
   const finishLoad = async (path: string, work: () => Promise<T>): Promise<void> => {
     const startTime = performance.now();
     const flight = inflight.get(path);
+    if (flight) running.add(flight);
     eventBus.emit(resourceType, 'loading', path);
 
     try {
@@ -80,6 +88,7 @@ export function createLoadLane<T>(ctx: LoadLaneContext<T>): LoadLane<T> {
       logger.error(`[${resourceType}Processor] Failed: ${path} (${elapsed.toFixed(2)}ms)`, err);
       eventBus.emit<Error>(resourceType, 'failed', path, err);
     } finally {
+      if (flight) running.delete(flight);
       // The bytes are now materialised or cached as a `null` failure, so the byte
       // bus's copy would hold a large GLB twice (a no-op in `loadDirectly` mode).
       // Only once no other address awaits the file: `clearCache` drops its in-flight
@@ -110,6 +119,7 @@ export function createLoadLane<T>(ctx: LoadLaneContext<T>): LoadLane<T> {
           inflight.delete(path);
           return;
         }
+        if (running.has(inflight.get(path)!)) return;
 
         if (!process) {
           // File-event-bus mode requires a `process` function. Without it
