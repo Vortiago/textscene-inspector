@@ -31,12 +31,13 @@ export class MetadataStore {
     logger.info(`[MetadataStore] Registered: ${resource.type} id="${resource.id}" at ${resource.path}`);
   }
 
+  /** An id never holds `://`, so simplifying the key leaves an id alone. */
   get(idOrPath: string): ExtResource | undefined {
     return this.resources.get(simplifyResPath(idOrPath));
   }
 
   has(idOrPath: string): boolean {
-    return this.resources.has(simplifyResPath(idOrPath));
+    return this.get(idOrPath) !== undefined;
   }
 
   getAll(): ExtResource[] {
@@ -65,8 +66,7 @@ export class MetadataStore {
 
 /**
  * Keyed by the simplified path, the address every load requests: Godot runs each
- * resource address through `String::simplify_path`, and a scene may write
- * `res:///…`. An id never holds `://`, so simplifying a lookup key leaves it alone.
+ * resource address through `String::simplify_path`, and a scene may write `res:///…`.
  */
 function withSimplifiedPath(resource: ExtResource): ExtResource {
   const path = simplifyResPath(resource.path);

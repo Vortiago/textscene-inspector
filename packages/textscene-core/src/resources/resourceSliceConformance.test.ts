@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import './sliceRegistrations.js';
 import { resourceSliceRegistry } from './sliceRegistration';
@@ -13,7 +13,7 @@ import { resourceSliceRegistry } from './sliceRegistration';
 const here = dirname(fileURLToPath(import.meta.url)); // .../src/resources
 const barrelPath = resolve(here, 'sliceRegistrations.ts');
 
-const REGISTER_RE = /\bregister(ResourceSlice|GenericResourceSlice)\s*\(/;
+const REGISTER_RE = /\bregister(Generic)?ResourceSlice\s*\(/;
 
 function findRegisteringIndexes(dir: string): string[] {
   const out: string[] = [];
@@ -94,10 +94,12 @@ describe('resource-slice claim coverage', () => {
       }
       const indexSource = readFileSync(join(dir, 'index.ts'), 'utf8');
       const familyDir = dirname(dir);
-      const hasTest = indexSource.includes('registerGenericResourceSlice')
-        ? existsSync(join(familyDir, `${familyDir.split('/').pop()}.test.ts`))
-        : existsSync(join(dir, 'registration.test.ts')) || existsSync(join(dir, 'index.test.ts'));
-      if (!hasTest) failures.push(`${reg.slice}: no registration.test.ts / index.test.ts`);
+      const expectedTests = indexSource.includes('registerGenericResourceSlice')
+        ? [join(familyDir, `${basename(familyDir)}.test.ts`)]
+        : [join(dir, 'registration.test.ts'), join(dir, 'index.test.ts')];
+      if (!expectedTests.some((test) => existsSync(test))) {
+        failures.push(`${reg.slice}: no ${expectedTests.map((test) => basename(test)).join(' / ')}`);
+      }
     }
     expect(failures).toEqual([]);
   });

@@ -37,6 +37,13 @@ describe('MetadataStore', () => {
     expect(store.get('res:///scenes//door.tscn')).toBe(SCENE);
   });
 
+  it('keeps one entry when an id is re-registered under the redundant-slash form of its path', () => {
+    store.register(SCENE);
+    store.register({ ...SCENE, path: 'res:///scenes//door.tscn' });
+
+    expect(store.getAll()).toHaveLength(1);
+  });
+
   it('returns undefined / false for unknown lookups', () => {
     store.register(TEX);
 
