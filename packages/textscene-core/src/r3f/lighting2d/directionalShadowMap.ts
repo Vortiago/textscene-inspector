@@ -36,6 +36,12 @@ export interface DirectionalShadowView {
   readonly maxDistance: number;
 }
 
+/** An occluder's casting edges, with its local bounds carried into the world for the cull. */
+export interface DirectionalShadowCaster extends ShadowCasterEdges {
+  /** The occluder polygon's local AABB, Godot's `aabb_cache`, through the occluder's transform. */
+  readonly bounds: Quad2;
+}
+
 export interface DirectionalShadowMap {
   /** `SHADOW_MAP_BINS` depths over `z_far`, `SHADOW_MAP_FAR` where nothing casts. */
   readonly bins: Float32Array;
@@ -135,13 +141,25 @@ function project(points: ArrayLike<number>, axis: Vector2): [number, number] {
   return [min, max];
 }
 
+/** A quad's two edge normals, unnormalised: enough to separate it, as its opposite edges are parallel. */
+function edgeNormals([a, b, c]: Quad2): Vector2[] {
+  return [
+    { x: a.y - b.y, y: b.x - a.x },
+    { x: b.y - c.y, y: c.x - b.x },
+  ];
+}
+
+function quadPoints(quad: Quad2): number[] {
+  return quad.flatMap(({ x, y }) => [x, y]);
+}
+
 /**
- * Godot's occluder cull (`renderer_viewport.cpp:567-640`): keep an occluder whose bounds meet the
- * viewport swept `max_distance` upstream, toward the light. Both shapes are convex, so a separating
- * axis among the viewport's edges, the sweep's sides and the bounds' own axes decides it. The
- * sweep's intervals depend on the light alone, so they are projected once per map.
+ * Godot's occluder cull (`renderer_viewport.cpp:567-631`): keep an occluder whose local bounds meet
+ * the viewport swept `max_distance` upstream, toward the light. Godot maps the sweep into the
+ * occluder's local space, which an affine map leaves equivalent to testing the bounds' world
+ * parallelogram. Both shapes are convex, so a separating axis among their edge normals decides it.
  */
-function sweptViewTest(view: DirectionalShadowView): (segments: ArrayLike<number>) => boolean {
+function sweptViewTest(view: DirectionalShadowView): (bounds: Quad2) => boolean {
   const { clip: corners, direction, maxDistance } = view;
   const swept: number[] = [];
   for (const corner of corners) {
@@ -152,26 +170,20 @@ function sweptViewTest(view: DirectionalShadowView): (segments: ArrayLike<number
       corner.y - direction.y * maxDistance
     );
   }
-  const axes: Vector2[] = [
-    { x: 1, y: 0 },
-    { x: 0, y: 1 },
-    { x: -direction.y, y: direction.x },
-    { x: corners[0].y - corners[1].y, y: corners[1].x - corners[0].x },
-    { x: corners[1].y - corners[2].y, y: corners[2].x - corners[1].x },
-  ];
-  const sweptIntervals = axes.map((axis) => project(swept, axis));
+  const sweptAxes: Vector2[] = [...edgeNormals(corners), { x: -direction.y, y: direction.x }];
+  const sweptIntervals = sweptAxes.map((axis) => project(swept, axis));
 
-  return (segments) => {
-    if (segments.length < 4) return false;
-    const [xMin, xMax] = project(segments, axes[0]!);
-    const [yMin, yMax] = project(segments, axes[1]!);
-    if (!Number.isFinite(xMin + xMax + yMin + yMax)) return false;
-    const bounds = [xMin, yMin, xMax, yMin, xMax, yMax, xMin, yMax];
-    return axes.every((axis, index) => {
-      const [boundsMin, boundsMax] = project(bounds, axis);
-      const [sweptMin, sweptMax] = sweptIntervals[index]!;
-      return boundsMin <= sweptMax && boundsMax >= sweptMin;
-    });
+  return (bounds) => {
+    const boundsPoints = quadPoints(bounds);
+    if (!boundsPoints.every(Number.isFinite)) return false;
+    const overlapsAlong = (axis: Vector2, sweptInterval = project(swept, axis)) => {
+      const [boundsMin, boundsMax] = project(boundsPoints, axis);
+      return boundsMin <= sweptInterval[1] && boundsMax >= sweptInterval[0];
+    };
+    return (
+      sweptAxes.every((axis, index) => overlapsAlong(axis, sweptIntervals[index])) &&
+      edgeNormals(bounds).every((axis) => overlapsAlong(axis))
+    );
   };
 }
 
@@ -182,15 +194,15 @@ function sweptViewTest(view: DirectionalShadowView): (segments: ArrayLike<number
  */
 export function buildDirectionalShadowMap(
   view: DirectionalShadowView,
-  casters: readonly ShadowCasterEdges[]
+  casters: readonly DirectionalShadowCaster[]
 ): DirectionalShadowMap {
   const worldToShadow = directionalShadowTransform(view);
   const casterInSweptView = sweptViewTest(view);
   const bins = new Float32Array(SHADOW_MAP_BINS).fill(SHADOW_MAP_FAR);
   const [m00, m01, m02, m10, m11, m12] = worldToShadow;
 
-  for (const { segments, cullMode } of casters) {
-    if (!casterInSweptView(segments)) continue;
+  for (const { segments, cullMode, bounds } of casters) {
+    if (!casterInSweptView(bounds)) continue;
     for (let i = 0; i + 3 < segments.length; i += 4) {
       const ax = segments[i]!;
       const ay = segments[i + 1]!;

@@ -9,6 +9,7 @@ import { SHADOW_MAP_BINS, SHADOW_MAP_FAR } from './shadowPolarMap';
 import {
   buildDirectionalShadowMap,
   ndcToShadowTransform,
+  type DirectionalShadowCaster,
   type DirectionalShadowView,
   type Quad2,
 } from './directionalShadowMap';
@@ -17,7 +18,6 @@ import {
   OCCLUDER_CULL_CLOCKWISE,
   OCCLUDER_CULL_COUNTER_CLOCKWISE,
   type OccluderCullMode,
-  type ShadowCasterEdges,
 } from './shadowVolumes';
 
 /**
@@ -42,8 +42,18 @@ function segment(
   bx: number,
   by: number,
   cullMode: OccluderCullMode = OCCLUDER_CULL_DISABLED
-): ShadowCasterEdges {
-  return { segments: [ax, ay, bx, by], cullMode };
+): DirectionalShadowCaster {
+  return { segments: [ax, ay, bx, by], cullMode, bounds: segmentBounds(ax, ay, bx, by) };
+}
+
+/** The local bounds of a one-edge occluder whose local X axis runs along the edge: the edge itself. */
+function segmentBounds(ax: number, ay: number, bx: number, by: number): Quad2 {
+  return [
+    { x: ax, y: ay },
+    { x: bx, y: by },
+    { x: bx, y: by },
+    { x: ax, y: ay },
+  ];
 }
 
 /** The bin whose centre the across coordinate `x` of `squareView` lands in. */
@@ -150,6 +160,18 @@ describe('buildDirectionalShadowMap: the occluder cull', () => {
     // from = (500, 1600), z_far 1600: depth 400 / 1600.
     const { bins } = buildDirectionalShadowMap(squareView(600), [segment(400, 1200, 600, 1200)]);
     expect(bins[binAt(500)]).toBeCloseTo(0.25, 6);
+  });
+
+  it("tests the occluder's local bounds, so a turned edge clear of the view's corner casts nothing", () => {
+    // `renderer_viewport.cpp:621-631` maps the swept view into the occluder's local space. This
+    // edge runs along x + y = 2010, past the corner (1000, 1000), yet its world AABB overlaps it.
+    const { bins } = buildDirectionalShadowMap(squareView(), [segment(960, 1050, 1050, 960)]);
+    expect(bins.every((depth) => depth === SHADOW_MAP_FAR)).toBe(true);
+  });
+
+  it('keeps a turned occluder whose local bounds meet the view', () => {
+    const { bins } = buildDirectionalShadowMap(squareView(), [segment(900, 1050, 1050, 900)]);
+    expect(bins.some((depth) => depth < SHADOW_MAP_FAR)).toBe(true);
   });
 
   it('drops an occluder beside the view, outside the swept band', () => {

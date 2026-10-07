@@ -6,7 +6,8 @@
 
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import * as THREE from 'three';
-import type { OccluderCullMode, ShadowCasterEdges } from './shadowVolumes';
+import type { OccluderCullMode } from './shadowVolumes';
+import type { DirectionalShadowCaster, Quad2 } from './directionalShadowMap';
 
 export interface ShadowCaster {
   /** Local-space `[ax,ay,0, bx,by,0, …]`: `polygonToSegments`' output verbatim. */
@@ -108,7 +109,7 @@ export function visibleInTree(object: THREE.Object3D): boolean {
   return true;
 }
 
-export interface WorldShadowCaster extends ShadowCasterEdges {
+export interface WorldShadowCaster extends DirectionalShadowCaster {
   /** Kept alongside the geometry so one flatten can serve every light. */
   occluderLightMask: number;
 }
@@ -149,8 +150,28 @@ export function worldShadowCasters(
       segments: world,
       cullMode: caster.cullMode,
       occluderLightMask: caster.occluderLightMask,
+      bounds: worldBounds(segments, caster.object.matrixWorld),
     });
   }
 
   return out;
+}
+
+/** The local AABB of xyz `segments`, its corners carried through `matrixWorld`. */
+function worldBounds(segments: Float32Array, matrixWorld: THREE.Matrix4): Quad2 {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (let i = 0; i + 2 < segments.length; i += 3) {
+    minX = Math.min(minX, segments[i]!);
+    maxX = Math.max(maxX, segments[i]!);
+    minY = Math.min(minY, segments[i + 1]!);
+    maxY = Math.max(maxY, segments[i + 1]!);
+  }
+  const corner = (x: number, y: number) => {
+    const point = new THREE.Vector3(x, y, 0).applyMatrix4(matrixWorld);
+    return { x: point.x, y: point.y };
+  };
+  return [corner(minX, minY), corner(maxX, minY), corner(maxX, maxY), corner(minX, maxY)];
 }

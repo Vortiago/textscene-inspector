@@ -19,8 +19,13 @@ take one warm light, and the clear colour below them takes none.
 
 A square occluder under a light turned 0.5 rad casts a band down and to the left. Godot
 measures depth along the light across the project viewport's diagonal. The previewer
-builds the same 1D map and the same occluder cull, so the band covers the occluder's
-inside too.
+builds the same 1D map, so the band covers the occluder's inside too. It culls an occluder
+on its local bounds, as Godot does.
+
+The map spans the project viewport at the canvas origin. In Godot's editor no Camera2D
+becomes current (`camera_2d.cpp:354`), and the previewer draws the canvas as the editor
+does. Every occluder casts on every lit item: the directional pass reads no
+`shadow_item_cull_mask` on the item (`canvas.glsl:747`).
 
 ## Soft shadows: shadow_filter and shadow_filter_smooth
 <!-- compare: image=unit-directionallight2d-shadow-pcf5 status=done fixture=unit-directionallight2d-shadow-pcf5.tscn -->
@@ -54,9 +59,3 @@ white silently.
 
 - **Shader missing** A `CanvasTexture.normal_texture` is not read, so `height` has no effect
   and every surface takes the light head-on.
-- **Approximated** The shadow map spans the project viewport at the canvas origin, where
-  Godot follows the current Camera2D.
-- **Approximated** The occluder cull tests world bounds, looser than Godot's local bounds, so a
-  turned occluder far upstream can still cast.
-- **Approximated** `shadow_item_cull_mask` selects which occluders cast, but not which items
-  receive the shadow.

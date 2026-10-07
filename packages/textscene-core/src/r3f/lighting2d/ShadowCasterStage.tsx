@@ -62,7 +62,10 @@ export function useLightShadowCasters(
   );
 }
 
-/** Exact equality, coordinate by coordinate. */
+/**
+ * Exact equality, coordinate by coordinate. The bounds are left out: the same world segments put the
+ * same local polygon in the same place, so its bounds match too.
+ */
 export function sameWorldCasters(a: readonly WorldShadowCaster[], b: readonly WorldShadowCaster[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i += 1) {

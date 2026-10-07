@@ -1915,7 +1915,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>A square occluder under a light turned 0.5 rad casts a band down and to the left. Godot measures depth along the light across the project viewport's diagonal. The previewer builds the same 1D map and the same occluder cull, so the band covers the occluder's inside too.</p></div>
+        <div class="prose"><p>A square occluder under a light turned 0.5 rad casts a band down and to the left. Godot measures depth along the light across the project viewport's diagonal. The previewer builds the same 1D map and the same occluder cull on each occluder's local bounds, so the band covers the occluder's inside too. The map spans the project viewport at the canvas origin: in Godot's editor no Camera2D becomes current (<code>camera_2d.cpp:354</code> skips a camera in the edited scene), and the previewer draws the canvas as the editor does. Every occluder casts on every lit item, since the directional pass reads no <code>shadow_item_cull_mask</code> on the item (<code>canvas.glsl:747</code>).</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Soft shadows: shadow_filter and shadow_filter_smooth</h3><span class="status st-done">Done</span></div>
@@ -1939,7 +1939,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-canvasitem-clip-ancestry</code> (type-family match)</td><td><code>canvasitem-ancestor-clips-children</code></td><td>warning</td></tr><tr><td></td><td><code>canvasitem-ancestor-is-canvasgroup</code></td><td>warning</td></tr><tr><td><code>valid-directionallight2d-ranges</code></td><td><code>directionallight2d-inverted-layer-range</code></td><td>info</td></tr></tbody></table></div>
 <p><code>enabled</code> falls back to <code>true</code>, <code>energy</code> to <code>1.0</code>, <code>height</code> to <code>0</code>, <code>max_distance</code> to <code>10000</code> and <code>blend_mode</code> to <code>0</code> (ADD), each with a warning. <code>color</code> falls back to opaque white silently.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Shader missing</strong> A <code>CanvasTexture.normal_texture</code> is not read, so <code>height</code> has no effect and every surface takes the light head-on.</li><li><strong>Approximated</strong> The shadow map spans the project viewport at the canvas origin, where Godot follows the current Camera2D.</li><li><strong>Approximated</strong> The occluder cull tests world bounds, looser than Godot's local bounds, so a turned occluder far upstream can still cast.</li><li><strong>Approximated</strong> <code>shadow_item_cull_mask</code> selects which occluders cast, but not which items receive the shadow.</li></ul></div>
+<ul><li><strong>Shader missing</strong> A <code>CanvasTexture.normal_texture</code> is not read, so <code>height</code> has no effect and every surface takes the light head-on.</li></ul></div>
     </article>
     <article class="sheet" data-type="DirectionalLight3D" hidden>
       <header class="sheet-head">

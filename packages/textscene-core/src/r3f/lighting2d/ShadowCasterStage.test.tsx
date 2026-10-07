@@ -12,11 +12,19 @@ import { useShadowCaster } from './shadowCasterRegistry';
 import { OCCLUDER_CULL_CLOCKWISE, OCCLUDER_CULL_DISABLED } from './shadowVolumes';
 import type { WorldShadowCaster } from './shadowCasterRegistry';
 
+const UNIT_BOUNDS = [
+  { x: 0, y: 0 },
+  { x: 1, y: 0 },
+  { x: 1, y: 1 },
+  { x: 0, y: 1 },
+] as const;
+
 function world(segments: number[], overrides: Partial<WorldShadowCaster> = {}): WorldShadowCaster {
   return {
     segments: new Float32Array(segments),
     cullMode: OCCLUDER_CULL_DISABLED,
     occluderLightMask: 1,
+    bounds: UNIT_BOUNDS,
     ...overrides,
   };
 }

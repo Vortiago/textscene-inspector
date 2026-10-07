@@ -31,7 +31,7 @@ Out of scope: viewport picking inside the 2D world canvas. The drag-to-pan of th
 
 `Camera2D`-driven framing has **one** consumer. The 2D pass of a **sub-viewport** frames through the current Camera2D in its own subtree (`selectViewportCamera2D` / `orthoFrameForCamera2D`, reusing `camera2DView`). The **stage** frames fit-to-content. There the pan/zoom pose belongs to the user, and a Camera2D must yield to a manual pan, which is a UX decision this ADR has not taken. So `userData.camera2d` is a live contract for the offscreen pass and a deferral for `Canvas2DStage`.
 
-Which camera is current is the inverse of the 3D rule: `camera_2d.cpp`'s `NOTIFICATION_ENTER_TREE` claims the viewport only `if (!_is_editing_in_editor() && enabled && !viewport->get_camera_2d())`, so the first enabled Camera2D in tree order wins. `Viewport::_camera_3d_set` overwrites, so the last current Camera3D wins.
+Which camera is current is the inverse of the 3D rule: `camera_2d.cpp`'s `NOTIFICATION_ENTER_TREE` claims the viewport only `if (!is_part_of_edited_scene() && enabled && !viewport->get_camera_2d())` (`camera_2d.cpp:354`), so the first enabled Camera2D in tree order wins. `Viewport::_camera_3d_set` overwrites, so the last current Camera3D wins.
 
 ## Consequence of ADR-0037: the UI layer of the 2D workspace is inside the canvas
 

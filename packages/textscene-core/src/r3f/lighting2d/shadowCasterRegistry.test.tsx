@@ -151,6 +151,23 @@ describe('worldShadowCasters', () => {
     expect(Array.from(entry!.segments)).toEqual([6, 0, 26, 0]);
   });
 
+  it("carries the occluder's local bounds into the world, turned with it", () => {
+    const registry = createShadowCasterRegistry();
+    const group = new THREE.Group();
+    group.position.set(100, 0, 0);
+    group.rotation.z = Math.PI / 2;
+    registry.add(caster(group, { segments: new Float32Array([0, 0, 0, 10, 0, 0, 10, 4, 0, 0, 0, 0]) }));
+
+    const [entry] = worldShadowCasters(registry, 1);
+    // Local bounds (0, 0)-(10, 4), turned a quarter: corners in local order min, +x, max, +y.
+    expect(entry!.bounds.map(({ x, y }) => [Math.round(x), Math.round(y)])).toEqual([
+      [100, 0],
+      [100, 10],
+      [96, 10],
+      [96, 0],
+    ]);
+  });
+
   it('carries the cull mode through', () => {
     const registry = createShadowCasterRegistry();
     registry.add(caster(new THREE.Group(), { cullMode: OCCLUDER_CULL_CLOCKWISE }));
