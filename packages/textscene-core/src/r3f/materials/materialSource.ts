@@ -9,6 +9,7 @@
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { findExtResource, parseResourceReference } from '../../resources/SubResourceResolver';
 import { BUILDABLE_MATERIAL_TYPES } from '../../resources/materials/buildableMaterialTypes';
+import { resourceFilePath } from '../../resources/subResourcePath';
 import { findSubResource } from '../SceneResourcesContext';
 
 /** A material body and the resource tables its references resolve in: its owning file's. */
@@ -46,15 +47,20 @@ export function resolveMaterialSource(
   }
 
   const ext = findExtResource(externalResources, parsed.id);
-  // Only a `.tres` is a material document. Minting an address the loader must refuse
-  // buys a guaranteed-failed load and the same default surface this returns.
-  if (!ext?.path || !ext.path.endsWith('.tres')) return undefined;
-  return { kind: 'file', path: ext.path };
+  return ext?.path ? fileMaterialSource(ext.path) : undefined;
 }
 
 /** One source per entry of an ArrayMesh's `materialPaths`. A null path is Godot's default surface. */
 export function fileMaterialSources(
   materialPaths: readonly (string | null)[]
 ): (MaterialSource | undefined)[] {
-  return materialPaths.map((path) => (path ? { kind: 'file', path } : undefined));
+  return materialPaths.map((path) => (path ? fileMaterialSource(path) : undefined));
+}
+
+/**
+ * The source for a material file, or undefined for one that is no `.tres` document.
+ * Minting an address the loader must refuse buys a failed load and the same default surface.
+ */
+function fileMaterialSource(path: string): MaterialSource | undefined {
+  return resourceFilePath(path).endsWith('.tres') ? { kind: 'file', path } : undefined;
 }
