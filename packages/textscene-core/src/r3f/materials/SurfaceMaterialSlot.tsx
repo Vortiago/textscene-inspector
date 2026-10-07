@@ -28,6 +28,7 @@ import type { MaterialTextureState } from '../../resources/textures/applyTexture
 import { repackAnisotropyFlowmap } from '../../resources/textures/repackFlowmap';
 import { triplanarPlaneScale } from '../../nodes/3d/meshinstance3d/triplanarScale';
 import { StandardMaterialSlot } from './StandardMaterialSlot';
+import { materialProgramInputs } from '../materialProgramInputs';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import type { MaterialResource, MaterialSource } from './materialSource';
 import { readyMaterial, useMaterial } from './useMaterial';
@@ -37,12 +38,7 @@ export type { MaterialTextureMaps };
 
 export interface ResolvedMaterialTextures {
   maps: MaterialTextureMaps;
-  /**
-   * The first slot whose file could not load: more would bury the user in text.
-   * The node decides whether that diverts the mesh to a placeholder, then mounts
-   * `<StandardMaterialSlot>` with this hook's maps, since a second hook call
-   * would bind and dispose every slot twice.
-   */
+  /** The first slot whose file could not load: more would bury the user in text. */
   firstMissingPath: string | null;
   /**
    * The albedo slot names a ViewportTexture whose pass is cyclic: it never
@@ -55,6 +51,9 @@ export interface ResolvedMaterialTextures {
 export type MaterialTables = Pick<MaterialResource, 'internalResources' | 'externalResources'>;
 
 const NO_TABLES: MaterialTables = { internalResources: [], externalResources: [] };
+
+/** Literal-only, so its key is constant and the placeholder never remounts. */
+const MISSING_TEXTURE_MATERIAL = materialProgramInputs({ props: { color: 'magenta' } });
 
 /**
  * Resolve every texture slot of one StandardMaterial3D, from gated references through
@@ -331,12 +330,22 @@ export interface SurfaceMaterialSlotProps {
 /**
  * One surface's material slot, textures and all, whichever file the material came from.
  * A surface with no usable material draws Godot's default one, which
- * `<StandardMaterialSlot>` builds from null scalars (ADR-0041).
+ * `<StandardMaterialSlot>` builds from null scalars (ADR-0041). A surface whose texture
+ * cannot load, or whose ViewportTexture albedo is cyclic, draws the magenta placeholder.
  */
 export function SurfaceMaterialSlot({ source, attach, triplanarMesh }: SurfaceMaterialSlotProps) {
   const material = readyMaterial(useMaterial(source));
   const scalars = useMaterialScalars(material);
-  const { maps } = useMaterialTextures(scalars, material, triplanarMesh);
+  const { maps, firstMissingPath, viewportCyclic } = useMaterialTextures(scalars, material, triplanarMesh);
+  if (firstMissingPath !== null || viewportCyclic) {
+    return (
+      <meshStandardMaterial
+        key={MISSING_TEXTURE_MATERIAL.key}
+        attach={attach}
+        {...MISSING_TEXTURE_MATERIAL.props}
+      />
+    );
+  }
   return <StandardMaterialSlot scalars={scalars} attach={attach} {...maps} />;
 }
 

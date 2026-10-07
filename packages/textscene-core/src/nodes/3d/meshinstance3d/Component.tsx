@@ -1,8 +1,8 @@
 /**
  * Renders a Godot MeshInstance3D as an R3F <mesh>: a primitive or ArrayMesh
  * geometry, or a magenta wireframe placeholder for a GLB or unresolvable mesh.
- * When the primary material's texture is missing, or its ViewportTexture albedo
- * is cyclic, the whole mesh takes a magenta placeholder material.
+ * Each surface draws through `<SurfaceMaterialSlot>`, which owns the magenta
+ * missing-texture placeholder.
  */
 
 import * as THREE from 'three';
@@ -19,21 +19,13 @@ import { MeshGeometry } from './meshGeometry';
 import { warn } from '../../../logger';
 import { decodeSceneArrayMesh } from '../../../resources/meshes/arraymesh/decode';
 import { buildArrayMeshGeometry } from '../../../resources/meshes/arraymesh/build';
-import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
-import { readyMaterial, useMaterial } from '../../../r3f/materials/useMaterial';
 import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
-import {
-  SurfaceMaterialSlot,
-  useMaterialScalars,
-  useMaterialTextures,
-} from '../../../r3f/materials/SurfaceMaterialSlot';
-import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
+import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
 import { shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
 
-/** Literal-only, so each key is constant and none of these ever remounts. */
-const PLACEHOLDER_MATERIAL = materialProgramInputs({ props: { color: 'magenta' } });
+/** Literal-only, so its key is constant and it never remounts. */
 const UNRESOLVED_MESH_MATERIAL = wireGizmoProgram(0xff00ff);
 
 export function MeshInstance3D({ node, children }: NodeComponentProps) {
@@ -69,9 +61,6 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     () => resolvePrimitiveMaterialSource(properties, internalResources, externalResources),
     [properties, internalResources, externalResources]
   );
-  // Surface 0's material, whichever file it lives in: this component resolves its scalars
-  // and textures itself, for the placeholder, billboard and shadow decisions below.
-  const primaryMaterial = readyMaterial(useMaterial(primarySource));
 
   // The same two overrides for an ArrayMesh. Its surfaces are draw groups indexed by the
   // mesh's own surface numbering, so they cannot use the per-slot collapse above, but
@@ -87,21 +76,6 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     () => resolveMaterialSource(properties.materialOverlay, internalResources, externalResources),
     [properties.materialOverlay, internalResources, externalResources]
   );
-
-  const materialScalars = useMaterialScalars(primaryMaterial);
-
-  // The per-surface texture chain, called as a hook rather than mounted as
-  // `<SurfaceMaterialSlot>`: an unresolvable texture diverts the whole mesh below, and
-  // mounting the component as well would bind and dispose every slot twice.
-  const { maps, firstMissingPath, viewportCyclic } = useMaterialTextures(
-    materialScalars,
-    primaryMaterial,
-    meshResource
-  );
-
-  // A ViewportTexture albedo whose target pass is cyclic never renders, so it takes the
-  // missing-file placeholder rather than sampling the unwritten target.
-  const materialUnresolved = firstMissingPath !== null || viewportCyclic;
 
   // The ref lands on whichever `<mesh>` MeshShell renders, for the overlay to share.
   const meshRef = useRef<THREE.Mesh | null>(null);
@@ -173,23 +147,12 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     );
   }
 
-  const geometryElement = <MeshGeometry resource={meshResource!} />;
-
-  if (materialUnresolved) {
-    return (
-      <MeshShell {...shellProps} overlay={null}>
-        {geometryElement}
-        <meshStandardMaterial key={PLACEHOLDER_MATERIAL.key} {...PLACEHOLDER_MATERIAL.props} />
-      </MeshShell>
-    );
-  }
-
   // No `attach`: `mesh.material` stays one Material for one surface. An array would make
   // three skip every draw group past the last entry, and a BoxGeometry declares six.
   return (
     <MeshShell {...shellProps}>
-      {geometryElement}
-      <StandardMaterialSlot scalars={materialScalars} {...maps} />
+      <MeshGeometry resource={meshResource!} />
+      <SurfaceMaterialSlot source={primarySource} triplanarMesh={meshResource} />
     </MeshShell>
   );
 }
