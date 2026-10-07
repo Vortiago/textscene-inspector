@@ -13,20 +13,21 @@ type Layered = Pick<TscnNode, 'properties' | 'rawProperties' | 'rawPropertiesOrd
 
 /**
  * `base`'s raw map with `overrideRaw` layered on, parsed with `base`'s type under the
- * heading of `seat`, the node that wrote the override.
+ * heading of `seat`, the node whose place the result takes in the tree.
  */
 export function layerRawOverride(
   seat: TscnNode,
-  base: Pick<TscnNode, 'type' | 'rawProperties'>,
+  base: Pick<TscnNode, 'type' | 'rawProperties' | 'rawPropertiesOrderReliable'>,
   overrideRaw: Record<string, string>
 ): Layered {
   const rawProperties = layerRaw(base.type, base.rawProperties, overrideRaw);
   return {
     rawProperties,
     properties: parserRegistrationOf(base.type).parser(headingOf(seat, base.type), rawProperties),
-    // The layered key order is neither file's order, so a file-order-sensitive
-    // resolver must fall back to editor save order (ADR-0035).
-    rawPropertiesOrderReliable: false,
+    // An override that writes keys leaves neither file's order, so a file-order-sensitive
+    // resolver falls back to editor save order (ADR-0035). One that writes none keeps the base's.
+    rawPropertiesOrderReliable:
+      Object.keys(overrideRaw).length === 0 ? base.rawPropertiesOrderReliable : false,
   };
 }
 

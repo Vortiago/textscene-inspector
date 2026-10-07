@@ -14,6 +14,8 @@ import * as logger from '../logger';
 import { NO_SCOPES } from './testing/noScopes';
 // The Node parser, which a fold parses an unregistered type with, as in every host.
 import '../nodes/node/index';
+import '../nodes/base/node3d/index';
+import type { Node3DProperties } from '../nodes/base/node3d/types';
 
 const node = (name: string, extra: Partial<TscnNode> = {}): TscnNode => ({
   rawProperties: {},
@@ -91,6 +93,12 @@ describe('graftInstanceChildren', () => {
     const pivot = grafted[0]!.children[0]!;
     expect(grafted[0]!.children).toHaveLength(1);
     expect(pivot.rawProperties.texture).toBe('ExtResource("3")');
+  });
+
+  it('re-parses the folded node, so its typed properties take the override', () => {
+    const grafted = graftInstanceChildren(subScene(), [pivotOverride({ visible: 'false' })], NO_SCOPES);
+
+    expect((grafted[0]!.children[0]!.properties as Node3DProperties).visible).toBe(false);
   });
 
   it('folds an override of a sub-scene root child onto it instead of adding a sibling', () => {

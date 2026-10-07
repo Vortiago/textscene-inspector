@@ -42,6 +42,12 @@ describe('layerRawOverride', () => {
     expect(layerRawOverride(base, base, { current: 'true' }).rawPropertiesOrderReliable).toBe(false);
   });
 
+  it("keeps the base's key order when the override writes no keys", () => {
+    const base = parsedNode({ name: 'Cam', type: 'Camera3D' }, { fov: '70.0' });
+
+    expect(layerRawOverride(base, base, {}).rawPropertiesOrderReliable).toBe(true);
+  });
+
   it('canonicalises a pre-4.0 alias in the override so it wins over the canonical base key', () => {
     // The override comes from an `instance=` heading with no `type=`, so the scanner kept the alias.
     const base = parsedNode({ name: 'Mesh', type: 'MeshInstance3D' }, { gi_mode: '2' });

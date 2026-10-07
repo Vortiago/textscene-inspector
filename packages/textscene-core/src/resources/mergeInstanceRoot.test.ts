@@ -267,13 +267,28 @@ describe('mergeInstanceRoot — rawPropertiesOrderReliable (ADR-0035)', () => {
       name: 'Coin1',
       type: 'Node',
       instance: 'ExtResource("2_chew2")',
+      rawProperties: { transform: translated(5, 0, 0) },
       rawPropertiesOrderReliable: true,
     });
-    const root = node({ name: 'Coin', type: 'UnregisteredCustomType3D' });
+    const root = node({ name: 'Coin', type: 'UnregisteredCustomType3D', rawPropertiesOrderReliable: true });
 
     const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES);
 
     expect(merged!.rawPropertiesOrderReliable).toBe(false);
+  });
+
+  it("keeps the root's file order when the instance node writes no keys", () => {
+    const instanceNode = node({ name: 'Cam', type: 'Node', instance: 'ExtResource("cam_scene")' });
+    const root = node({
+      name: 'Camera',
+      type: 'Camera3D',
+      rawProperties: { current: 'true', fov: '70.0' },
+      rawPropertiesOrderReliable: true,
+    });
+
+    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES);
+
+    expect(merged!.rawPropertiesOrderReliable).toBe(true);
   });
 });
 

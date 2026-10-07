@@ -320,8 +320,8 @@ function offsetValue(p: ControlProperties, side: number): number | undefined {
 /**
  * Replays a Control's raw `.tscn` keys in file order through the setters (ADR-0035,
  * Option B), so each new interaction is one more event, not a pairwise rule. With
- * `orderedKeys` undefined (a merged instance root, or a hand-built node) it falls
- * back to the editor-save-order resolvers.
+ * `orderedKeys` undefined (a node with an override layered on, or a hand-built node) it
+ * falls back to the editor-save-order resolvers.
  */
 export function resolveControlLayout(
   p: ControlProperties,
