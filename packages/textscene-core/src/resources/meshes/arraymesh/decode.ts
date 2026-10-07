@@ -23,6 +23,9 @@ import { PRIMITIVE_TRIANGLES, surfaceLayout } from './surfaceFormat.js';
 import type { ArrayMeshData, ArrayMeshSurface } from './types.js';
 import { decodeIndices, decodeNormals, decodePositions, decodeUVs } from './vertexBuffers.js';
 
+/** Godot's ArrayMesh class: the one type whose `_surfaces` this decodes. */
+export const ARRAY_MESH_TYPES: ReadonlySet<string> = new Set(['ArrayMesh']);
+
 /**
  * Resolve a surface's `"material"` to one path string: an `ExtResource` to its
  * shared file, a `SubResource` to a **Sub-resource path** (`filePath::id`) in

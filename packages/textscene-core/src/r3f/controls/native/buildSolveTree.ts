@@ -29,6 +29,7 @@ import {
   unwrapCanvasTextureRef,
 } from '../../../resources/SubResourceResolver';
 import { useResourceLoader } from '../../../resources/useResource';
+import { subResourceProperties } from '../../../resources/resourceSection';
 import { useCacheVersion } from '../../../resources/useCacheVersion';
 import type { ResourceType } from '../../../resources/ResourceEventBus';
 import { extResourceAtlasTextureSize, inlineTexture2DSize } from '../../../resources/useTexture2D';
@@ -370,10 +371,7 @@ function buildForest(
 
     const sub = findSubResource(int, parsed.id);
     if (!sub || sub.type !== 'Theme') return null;
-    // `parseInternalResource` echoes the heading's `id` into `data`, which would
-    // leak into `properties` as a fake declared one.
-    const { id: _id, ...properties } = sub.data as Record<string, string>;
-    return resolveInlineThemeResource(properties, ext, int, fontCache, pendingFonts);
+    return resolveInlineThemeResource(subResourceProperties(sub), ext, int, fontCache, pendingFonts);
   }
 
   /**

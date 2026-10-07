@@ -5,13 +5,8 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { FileEventBus } from '../FileEventBus';
-import { ResourceEventBus } from '../ResourceEventBus';
 import type { ResourceProvider } from '../ResourceProvider';
-import { createFontProcessor } from './createFontProcessor';
-import { createTresResourceProcessor } from './createTresResourceProcessor';
-import { resourceFilePath } from '../subResourcePath';
-import type { ParsedResource } from '../../parser/parsedResource';
-import { DependencyGraph } from '../dependencyGraph';
+import { ResourceLoader } from '../ResourceLoader';
 import type { FontResource, FontFileResource, FontVariationResource } from '../fonts/font/types';
 
 /** Shaped like scenes/demos/2d/role_playing_game/theme/fonts/montserrat_extra_bold_16.tres. */
@@ -52,24 +47,15 @@ class MapProvider implements ResourceProvider {
   });
 }
 
-/** The font processor over `provider`, reading each `.tres` from a `resource` slot beside it. */
-function fontProcessorOver(provider: ResourceProvider, eventBus: ResourceEventBus) {
-  const fileEventBus = new FileEventBus(provider);
-  const resources = createTresResourceProcessor(fileEventBus, eventBus);
-  const loadParsedFile = (path: string): Promise<ParsedResource> => {
-    const filePath = resourceFilePath(path);
-    const parsed = eventBus.once<ParsedResource>('resource', 'loaded', filePath, 2000);
-    resources.request(filePath);
-    return parsed;
-  };
-  return createFontProcessor(fileEventBus, eventBus, loadParsedFile, new DependencyGraph());
+/** The font processor of a real loader over `provider`, so a `.tres` reads the `resource` slot's parse. */
+function fontProcessorOver(provider: ResourceProvider) {
+  const loader = new ResourceLoader(new FileEventBus(provider));
+  return { eventBus: loader.eventBus, processor: loader.fonts };
 }
 
 function setup(files: Record<string, string | ArrayBuffer>) {
   const provider = new MapProvider(new Map(Object.entries(files)));
-  const eventBus = new ResourceEventBus();
-  const processor = fontProcessorOver(provider, eventBus);
-  return { provider, eventBus, processor };
+  return { provider, ...fontProcessorOver(provider) };
 }
 
 describe('createFontProcessor', () => {
@@ -318,7 +304,6 @@ describe('createFontProcessor', () => {
       'base_font = ExtResource("1")',
       '',
     ].join('\n');
-    const eventBus = new ResourceEventBus();
     const provider: ResourceProvider = {
       loadResource: vi.fn(async (path: string) => {
         if (path === 'res://slow.otf') return slow;
@@ -327,7 +312,7 @@ describe('createFontProcessor', () => {
         return null;
       }),
     };
-    const processor = fontProcessorOver(provider, eventBus);
+    const { eventBus, processor } = fontProcessorOver(provider);
     const flush = async (): Promise<void> => {
       for (let i = 0; i < 4; i++) await new Promise((resolve) => setTimeout(resolve, 0));
     };
@@ -378,7 +363,6 @@ describe('createFontProcessor', () => {
       'base_font = ExtResource("1")',
       '',
     ].join('\n');
-    const eventBus = new ResourceEventBus();
     const provider: ResourceProvider = {
       loadResource: vi.fn(async (path: string) => {
         if (path === 'res://slow.otf') return slow;
@@ -387,7 +371,7 @@ describe('createFontProcessor', () => {
         return null;
       }),
     };
-    const processor = fontProcessorOver(provider, eventBus);
+    const { eventBus, processor } = fontProcessorOver(provider);
     const flush = async (): Promise<void> => {
       for (let i = 0; i < 6; i++) await new Promise((resolve) => setTimeout(resolve, 0));
     };

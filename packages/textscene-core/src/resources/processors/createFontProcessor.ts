@@ -1,11 +1,11 @@
 /**
- * The font resource processor, on the shared `createResourceProcessor` loop. It
- * fetches through `FileEventBus`, since a raw font container arrives as bytes, and reads a
- * `.tres` from the owning file's cached parse. It addresses a **Sub-resource path**
- * (`res://file.tres::SubId`) and loads other fonts: a font's `base_font`/`fallbacks`.
+ * The font resource processor, on the shared `createResourceProcessor` loop. It routes
+ * by path: a raw font container loads as bytes, and anything else reads the owning
+ * file's cached parse. It addresses a **Sub-resource path** (`res://file.tres::SubId`)
+ * and loads other fonts: a font's `base_font`/`fallbacks`.
  */
 
-import type { FileEventBus } from '../FileEventBus';
+import type { FileData } from '../FileEventBus';
 import type { ResourceEventBus } from '../ResourceEventBus';
 import {
   createResourceProcessor,
@@ -14,13 +14,15 @@ import {
 } from '../createResourceProcessor';
 import type { DependencyGraph } from '../dependencyGraph';
 import { buildFontResource, fontResourceFromContainer } from '../fonts/font/loadFont';
+import { isFontContainerPath } from '../formats/dynamicfont/fontBytes';
 import type { FontResource } from '../fonts/font/types';
 import type { ParsedFileLoaderFn } from '../resourceSection';
 
 export function createFontProcessor(
-  fileEventBus: FileEventBus | undefined,
   eventBus: ResourceEventBus,
   loadParsedFile: ParsedFileLoaderFn,
+  /** A raw font container's bytes. Rejects when the file is missing. */
+  readFile: (path: string) => Promise<FileData>,
   /** Records each font a font reads, so a change to that file reloads the reader. */
   dependencies: DependencyGraph
 ): ResourceProcessor<FontResource> {
@@ -66,9 +68,8 @@ export function createFontProcessor(
       edges = new Map<string, number>();
       waitingFor.set(parent, edges);
     }
-    // Counted, not a set: the byte bus re-broadcasts a cached file to every
-    // address in flight for it, so two waits can park on one address, and the
-    // first to settle must not sever the other's edge.
+    // Counted, not a set: `fallbacks` can name one font twice, and its waits run
+    // at once, so the first to settle must not sever the other's edge.
     edges.set(address, (edges.get(address) ?? 0) + 1);
     processor.request(address);
     try {
@@ -88,20 +89,16 @@ export function createFontProcessor(
   };
 
   processor = createResourceProcessor<FontResource>({
-    fileEventBus,
     eventBus,
     resourceType: 'font',
-    // Every loaded file: the bus hands over only the bare file path, so an
-    // extension gate would leave a `::SubId` address into a `.tscn` in `inflight`
-    // forever. The parse rejects text that is not a `.tres`, which turns such an
-    // address into a prompt `failed` event.
     addressesSubResources: true,
-    // The peer loader is bound to the address being built, so every wait it
-    // parks on is recorded against its own requester rather than against the
-    // processor as a whole.
-    process: async (path, data) =>
-      data instanceof ArrayBuffer
-        ? fontResourceFromContainer(path, data)
+    // The extension is the binary signal (ADR-0031). A `::SubId` breaks it, so such an
+    // address goes to the parse, which fails a `.ttf` or a `.tscn` at once. The peer
+    // loader is bound to the address being built, so every wait it parks on is
+    // recorded against its own requester.
+    loadDirectly: async (path) =>
+      isFontContainerPath(path)
+        ? fontResourceFromContainer(path, await readFile(path))
         : buildFontResource(path, await loadParsedFile(path), (address) => loadFont(path, address)),
   });
 

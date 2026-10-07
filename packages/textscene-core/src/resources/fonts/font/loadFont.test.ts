@@ -44,15 +44,9 @@ describe('fontResourceFromContainer', () => {
     expect(resource).toEqual({ kind: 'file', bytes, mimeType: 'font/ttf', fallbacks: [], properties: {} });
   });
 
-  it('throws for a sub-resource id on a raw font file, which holds no named resources', () => {
-    expect(() => fontResourceFromContainer('res://fonts/x.ttf::SomeId', new ArrayBuffer(2))).toThrow(
-      'Not a recognised font file extension'
-    );
-  });
-
-  it('throws for bytes whose path has no recognised font extension', () => {
-    expect(() => fontResourceFromContainer('res://images/x.png', new ArrayBuffer(2))).toThrow(
-      'Not a recognised font file extension: res://images/x.png'
+  it('throws for text at a container path, which holds no font bytes', () => {
+    expect(() => fontResourceFromContainer('res://fonts/x.ttf', 'not a font')).toThrow(
+      'res://fonts/x.ttf is text, not font bytes'
     );
   });
 });

@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 import type { ExtResource, TscnScene } from '../parser/types';
-import type { FileEventBus } from './FileEventBus';
+import type { FileData, FileEventBus } from './FileEventBus';
 import type { ResourceProvider } from './ResourceProvider';
 import { ResourceEventBus, type ResourceType } from './ResourceEventBus';
 import { MetadataStore } from './MetadataStore';
@@ -134,6 +134,19 @@ export class ResourceLoader {
     }
   }
 
+  /**
+   * A file's bytes for a processor that routes by path before it fetches. No handler
+   * hears the read, and the byte cache lets its copy go: the caller keeps what it builds.
+   */
+  private async readFile(path: string, type: string): Promise<FileData> {
+    const fileBus = this._fileEventBus;
+    if (!fileBus) throw new Error(`No file bus to read ${path}`);
+    const data = await fileBus.tryLoad(path, type);
+    fileBus.clearCache(path);
+    if (data === null) throw new Error(`File not found: ${path}`);
+    return data;
+  }
+
   /** The parsed file behind each address `busType` loads, from the `resource` slot's cache. */
   private parsedFileLoaderFor(busType: ResourceType): ParsedFileLoaderFn {
     return (path) =>
@@ -175,9 +188,9 @@ export class ResourceLoader {
     this.resources = createTresResourceProcessor(fileEventBus, this.eventBus);
     this.arrayMeshes = createArrayMeshProcessor(this.eventBus, this.parsedFileLoaderFor('arraymesh'));
     this.fonts = createFontProcessor(
-      fileEventBus,
       this.eventBus,
       this.parsedFileLoaderFor('font'),
+      (path) => this.readFile(path, 'FontFile'),
       this.dependencies
     );
 

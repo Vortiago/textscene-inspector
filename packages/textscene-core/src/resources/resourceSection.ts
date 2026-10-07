@@ -4,6 +4,7 @@
  */
 
 import type { ParsedResource } from '../parser/parsedResource.js';
+import type { TscnInternalResource } from '../parser/types.js';
 import { findSubResource } from './SubResourceResolver.js';
 import { parseSubResourcePath } from './subResourcePath.js';
 
@@ -13,6 +14,15 @@ import { parseSubResourcePath } from './subResourcePath.js';
  */
 export type ParsedFileLoaderFn = (path: string) => Promise<ParsedResource>;
 
+/**
+ * A `[sub_resource]`'s own properties. The parser echoes the heading's `id` into `data`
+ * for `findSubResource`, and Godot stores no such property.
+ */
+export function subResourceProperties(sub: TscnInternalResource): Record<string, string> {
+  const { id: _id, ...properties } = sub.data as Record<string, string>;
+  return properties;
+}
+
 /** One resource inside a parsed file: its `[resource]` body or one `[sub_resource]`. */
 export interface ResourceSection {
   type: string;
@@ -20,21 +30,24 @@ export interface ResourceSection {
   properties: Record<string, string>;
 }
 
+/** The section `path` addresses inside `file`, or undefined for an id `file` does not declare. */
+export function findResourceSection(file: ParsedResource, path: string): ResourceSection | undefined {
+  const { subResourceId } = parseSubResourcePath(path);
+  if (subResourceId === undefined) return { type: file.resourceType, properties: file.properties };
+  const sub = findSubResource(file.subResources, subResourceId);
+  return sub && { type: sub.type, properties: subResourceProperties(sub) };
+}
+
 /**
- * The section `path` addresses inside `file`: the `[resource]` body for a plain path, the
- * named `[sub_resource]` for a **Sub-resource path**. Throws for an id `file` does not
+ * {@link findResourceSection}: the `[resource]` body for a plain path, the named
+ * `[sub_resource]` for a **Sub-resource path**. Throws for an id `file` does not
  * declare, which fails the address like a missing file (ADR-0046).
  */
 export function resourceSection(file: ParsedResource, path: string): ResourceSection {
+  const section = findResourceSection(file, path);
+  if (section) return section;
   const { filePath, subResourceId } = parseSubResourcePath(path);
-  if (subResourceId === undefined) return { type: file.resourceType, properties: file.properties };
-
-  const sub = findSubResource(file.subResources, subResourceId);
-  if (!sub) throw new Error(`${filePath} declares no sub-resource "${subResourceId}"`);
-  // The parser echoes the heading's `id` into `data` for `findSubResource`. Godot
-  // stores no such property, so it is not one of the section's.
-  const { id: _id, ...properties } = sub.data as Record<string, string>;
-  return { type: sub.type, properties };
+  throw new Error(`${filePath} declares no sub-resource "${subResourceId}"`);
 }
 
 /** {@link resourceSection}, and throws when the section's type is not one of `types`. */

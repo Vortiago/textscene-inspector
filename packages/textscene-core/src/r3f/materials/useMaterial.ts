@@ -8,7 +8,7 @@ import { useEffect, useMemo } from 'react';
 import { warn } from '../../logger';
 import type { ParsedResource } from '../../parser/parsedResource';
 import type { TscnInternalResource } from '../../parser/types';
-import { resourceSection } from '../../resources/resourceSection';
+import { findResourceSection } from '../../resources/resourceSection';
 import { resourceFilePath } from '../../resources/subResourcePath';
 import { useResource } from '../../resources/useResource';
 import type { MaterialResource, MaterialSource } from './materialSource';
@@ -72,12 +72,6 @@ function ready(material: MaterialResource): LoadedMaterial {
 
 /** The section `path` addresses in its parsed `.tres`, or undefined for an id the file does not declare. */
 function materialBody(file: ParsedResource, path: string): TscnInternalResource | undefined {
-  try {
-    const { type, properties } = resourceSection(file, path);
-    return { id: path, type, data: properties };
-  } catch {
-    // The lookup's one failure, an undeclared id. No producer mints one past
-    // `subResourceTypeGate`, so the file changed under a mounted slot.
-    return undefined;
-  }
+  const section = findResourceSection(file, path);
+  return section && { id: path, type: section.type, data: section.properties };
 }

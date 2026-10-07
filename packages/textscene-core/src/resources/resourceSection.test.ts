@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { parseTresFile } from '../parser/parsedResource';
-import { resourceSection, resourceSectionOfType } from './resourceSection';
+import { findResourceSection, resourceSection, resourceSectionOfType } from './resourceSection';
 
 const SHARED_TRES = [
   '[gd_resource type="Theme" load_steps=2 format=3]',
@@ -41,6 +41,12 @@ describe('resourceSection', () => {
     expect(() => resourceSection(FILE, 'res://shared.tres::Missing_1')).toThrow(
       'res://shared.tres declares no sub-resource "Missing_1"'
     );
+  });
+});
+
+describe('findResourceSection', () => {
+  it('answers undefined for a sub-resource the file does not declare', () => {
+    expect(findResourceSection(FILE, 'res://shared.tres::Missing_1')).toBeUndefined();
   });
 });
 

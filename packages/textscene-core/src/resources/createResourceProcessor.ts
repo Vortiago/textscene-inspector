@@ -16,7 +16,7 @@ import * as logger from '../logger';
 /**
  * Ceiling on waiting for a peer processor's address (a material's texture, a font's
  * `base_font`), far above any real fetch: a dependency that never arrives fails the
- * dependent instead of parking it. Shared so `ResourceLoader.peerLoad` and the font
+ * dependent instead of parking it. Shared so `ResourceLoader.peerRequire` and the font
  * processor's loader cannot drift apart.
  */
 export const PEER_LOAD_TIMEOUT_MS = 30_000;
@@ -26,9 +26,9 @@ export type { ResourceProcessor, ResourceProcessorConfig } from './resourceProce
 
 /**
  * Create a resource processor with caching, deduplication and event emission.
- * Configure exactly one fetch mode: `fileEventBus` with `shouldProcess` and
- * `process` (bytes, then process), or `loadDirectly` for a load that needs the
- * path and content together, such as a scene.
+ * Configure exactly one fetch mode: `fileEventBus` with `process` (bytes, then
+ * process) and an optional `shouldProcess`, or `loadDirectly` for a load that
+ * fetches for itself, such as a scene or a resource read from a peer's cache.
  */
 export function createResourceProcessor<T>(config: ResourceProcessorConfig<T>): ResourceProcessor<T> {
   const {

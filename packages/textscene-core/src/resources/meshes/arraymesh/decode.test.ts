@@ -121,7 +121,7 @@ describe('decodeArrayMesh', () => {
     expect(mesh.surfaces[0]!.materialPath).toBe('res://vehicles/meshes/wheel.tres::3');
   });
 
-  it('addresses a sub-resource material against the owning file when the mesh is itself a sub-resource', () => {
+  it('addresses a sub-resource material against the owning file when selfPath carries a ::SubId', () => {
     const mesh = decodeArrayMeshTres(OWN_MATERIAL_TRES, 'res://vehicles/meshes/wheel.tres::ArrayMesh_shadow');
     expect(mesh.surfaces[0]!.materialPath).toBe('res://vehicles/meshes/wheel.tres::StandardMaterial3D_shvqh');
   });

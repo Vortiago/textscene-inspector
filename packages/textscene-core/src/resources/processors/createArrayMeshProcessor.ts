@@ -8,12 +8,9 @@
 import * as THREE from 'three';
 import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
-import { decodeArrayMesh } from '../meshes/arraymesh/decode';
+import { ARRAY_MESH_TYPES, decodeArrayMesh } from '../meshes/arraymesh/decode';
 import { buildArrayMeshGeometry } from '../meshes/arraymesh/build';
 import { resourceSectionOfType, type ParsedFileLoaderFn } from '../resourceSection';
-
-/** Godot's ArrayMesh class: the one type an ArrayMesh address may name. */
-const ARRAY_MESH_TYPES: ReadonlySet<string> = new Set(['ArrayMesh']);
 
 /** Decoded ArrayMesh: merged geometry plus one material path per surface (group). */
 export interface ArrayMeshResource {

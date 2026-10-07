@@ -5,7 +5,8 @@
  */
 
 import type { ParsedResource } from '../../../parser/parsedResource';
-import { fontResourceFromBytes, isFontContainerPath } from '../../formats/dynamicfont/fontBytes';
+import type { FileData } from '../../FileEventBus';
+import { fontResourceFromBytes } from '../../formats/dynamicfont/fontBytes';
 import { resourceSectionOfType } from '../../resourceSection';
 import { resourceFilePath } from '../../subResourcePath';
 import { decodeFont, FONT_SUB_RESOURCE_TYPES } from './decode';
@@ -26,12 +27,8 @@ export async function buildFontResource(
   return decodeFont(resourceFilePath(path), type, properties, file.extResources, file.subResources, loadFont);
 }
 
-/**
- * A raw font container's bytes. Raw bytes have no parse to validate them, so a non-font
- * path throws. A `::SubId` suffix breaks the extension match too, as a raw font has no
- * sub-resources.
- */
-export function fontResourceFromContainer(path: string, bytes: ArrayBuffer): FontFileResource {
-  if (!isFontContainerPath(path)) throw new Error(`Not a recognised font file extension: ${path}`);
-  return fontResourceFromBytes(path, bytes);
+/** A raw font container's bytes. Text at a container path is no font, so it throws. */
+export function fontResourceFromContainer(path: string, data: FileData): FontFileResource {
+  if (typeof data === 'string') throw new Error(`${path} is text, not font bytes`);
+  return fontResourceFromBytes(path, data);
 }

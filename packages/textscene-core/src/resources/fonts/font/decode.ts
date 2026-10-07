@@ -7,6 +7,7 @@ import type { TscnExternalResource, TscnInternalResource } from '../../../parser
 import { unquoteString } from '../../../parser/utils';
 import { stringArrayBodies } from '../../../godot/index.js';
 import { findExtResource, findSubResource, parseResourceReference } from '../../SubResourceResolver';
+import { subResourceProperties } from '../../resourceSection';
 import { resolveRefToResourcePath, subResourceTypeGate } from '../../subResourcePath';
 import type { FontCacheReader, FontLoaderFn, FontResource } from './types';
 
@@ -133,9 +134,7 @@ export function resolveInlineFontResource(
   const sub = findSubResource(internalResources, parsed.id);
   if (!sub) return null;
   const nowVisiting = new Set(visiting).add(parsed.id);
-  // `parseInternalResource` echoes the heading's own `id` into `data`. Strip it, or
-  // it leaks into `properties` as a fake declared property.
-  const { id: _id, ...properties } = sub.data as Record<string, string>;
+  const properties = subResourceProperties(sub);
   const resolveNested = (nestedRef: string | undefined): FontResource | null =>
     resolveInlineFontResource(
       nestedRef,

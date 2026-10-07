@@ -127,23 +127,6 @@ describe('createResourceProcessor', () => {
       expect(fileEventBus.isCached('res://a.bin')).toBe(true);
     });
 
-    it('runs process() once when a peer re-reads the file while the process runs', async () => {
-      // A peer read of the file (the font processor's parse, from the `resource` slot)
-      // re-broadcasts the cached bytes to every handler, this one's included.
-      provider.files.set('res://a.txt', 'raw');
-      processSpy.mockImplementationOnce(async (path: string) => {
-        fileEventBus.request(path);
-        await flush(5);
-        return 'processed';
-      });
-
-      processor.request('res://a.txt');
-      await flush();
-
-      expect(processSpy).toHaveBeenCalledTimes(1);
-      expect(processor.getCached('res://a.txt')).toBe('processed');
-    });
-
     it('failure is cached as null and a repeat request re-emits failed WITHOUT re-hitting the provider', async () => {
       // Provider has no file -> FileEventBus emits failed -> processor caches null.
       const failedHandler = vi.fn();
