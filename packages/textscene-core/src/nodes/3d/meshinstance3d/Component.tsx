@@ -360,7 +360,7 @@ function ArrayMeshSurfaces({
         const own: MaterialSource | undefined =
           sceneMaterials?.[i] ?? (materialPath ? { kind: 'file', path: materialPath } : undefined);
         const source = effectiveMaterialSource(overrides, mesh.surfaceIndices[i] ?? i, own);
-        return <SurfaceMaterialSlot key={`surf-${i}`} source={source} attach={attach} />;
+        return <SurfaceMaterialSlot key={i} source={source} attach={attach} />;
       })}
     </>
   );
