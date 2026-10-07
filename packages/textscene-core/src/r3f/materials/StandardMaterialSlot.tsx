@@ -49,17 +49,16 @@ export function StandardMaterialSlot({
     })
   );
 
-  // `attach` first: it is the mount's own prop and must never shadow a derived one.
-  // The key remounts for what only a mount applies: a late program input (ADR-0038),
-  // and `attach` (`RESERVED_PROPS` in `@react-three/fiber` 9.8.0).
+  // `attach` first: it is the mount's own prop and must never shadow a derived
+  // one. The key comes from the same merged bag it travels with (ADR-0038): a
+  // program input arriving late, or a moved `attach`, reaches three only through a remount.
   const program = materialProgramInputs({ props: { attach, ...bag.props } });
-  const key = `${attach ?? ''}|${program.key}`;
   switch (bag.materialClass) {
     case 'basic':
-      return <meshBasicMaterial key={key} {...program.props} />;
+      return <meshBasicMaterial key={program.key} {...program.props} />;
     case 'physical':
-      return <meshPhysicalMaterial key={key} {...program.props} />;
+      return <meshPhysicalMaterial key={program.key} {...program.props} />;
     default:
-      return <meshStandardMaterial key={key} {...program.props} />;
+      return <meshStandardMaterial key={program.key} {...program.props} />;
   }
 }
