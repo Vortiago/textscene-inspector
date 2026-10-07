@@ -5,7 +5,10 @@
  * and the imperative `build.ts` reads it too. A scalar-only caller passes `scalars`.
  */
 
-import { standardMaterialBag } from '../../resources/materials/standardmaterial3d/materialBag';
+import {
+  standardMaterialBag,
+  type StandardMaterialBag,
+} from '../../resources/materials/standardmaterial3d/materialBag';
 import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
 import { materialProgramInputs } from '../materialProgramInputs';
 import { textureSlotsFromMaps, type MaterialTextureMaps } from './materialTextureMaps';
@@ -57,6 +60,11 @@ export function StandardMaterialSlot({
     instanceTransparency
   );
 
+  return materialBagElement(bag, attach);
+}
+
+/** A derived bag as its class's JSX tag. The missing-texture placeholder mounts through it too. */
+export function materialBagElement(bag: StandardMaterialBag, attach: string | undefined) {
   // `attach` first: it is the mount's own prop and must never shadow a derived
   // one. The key comes from the same merged bag it travels with (ADR-0038): a
   // program input arriving late, or a moved `attach`, reaches three only through a remount.
