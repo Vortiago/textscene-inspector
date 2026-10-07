@@ -3,7 +3,7 @@
 import type { PropertySection } from '../../../core/NodeRegistry';
 import type { MeshInstance3DProperties } from './types';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
-import { ShadowCastingSetting } from '../../../godot/rendering';
+import { SHADOW_CASTING_SETTING_NAMES } from '../../../godot/rendering';
 
 export function formatMeshInstance3DProperties(properties: MeshInstance3DProperties): PropertySection[] {
   const sections: PropertySection[] = [];
@@ -15,7 +15,7 @@ export function formatMeshInstance3DProperties(properties: MeshInstance3DPropert
 
   meshItems.push({
     label: 'Cast Shadow',
-    value: ShadowCastingSetting[properties.castShadow] ?? `Unknown (${properties.castShadow})`,
+    value: SHADOW_CASTING_SETTING_NAMES[properties.castShadow] ?? `Unknown (${properties.castShadow})`,
   });
 
   if (properties.skeleton) {
