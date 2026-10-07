@@ -21,9 +21,9 @@ export interface MissingResourcesContextValue {
   missingPaths: ReadonlySet<string>;
   /** Paths the user uploaded a file for through `addUploadedFile`. */
   uploadedPaths: ReadonlySet<string>;
-  /** `useResource` calls it when the status becomes `'missing'`. */
+  /** `useResource` calls it when the status becomes `'missing'`. Each call needs its own `clear`. */
   report: (path: string) => void;
-  /** `useResource` calls it when the status becomes `'loaded'`, and on unmount. */
+  /** Withdraws one `report`. The path leaves `missingPaths` when its last report is withdrawn. */
   clear: (path: string) => void;
   /** Marks a path uploaded and removes it from `missingPaths`. */
   markUploaded: (path: string) => void;
@@ -56,27 +56,32 @@ export function MissingResourcesProvider({ children, onMissingPathsChange }: Mis
   const [missingPaths, setMissingPaths] = useState<ReadonlySet<string>>(() => new Set<string>());
   const [uploadedPaths, setUploadedPaths] = useState<ReadonlySet<string>>(() => new Set<string>());
 
+  /**
+   * Open reports per path, written only by the actions below. Several slots can
+   * consume one path, so the first to unmount must not retire the row while the
+   * others still render it unresolved.
+   */
+  const reportCounts = useRef(new Map<string, number>());
+
   // The actions have empty deps, so an effect that depends on one does not
   // re-run on each state change. An effect on the whole context object loops,
   // so a consumer takes the actions by name.
   const report = useCallback((path: string) => {
     if (!path) return;
-    setMissingPaths((prev) => {
-      if (prev.has(path)) return prev;
-      const next = new Set(prev);
-      next.add(path);
-      return next;
-    });
+    const count = (reportCounts.current.get(path) ?? 0) + 1;
+    reportCounts.current.set(path, count);
+    if (count === 1) setMissingPaths((prev) => withPath(prev, path));
   }, []);
 
   const clear = useCallback((path: string) => {
-    if (!path) return;
-    setMissingPaths((prev) => {
-      if (!prev.has(path)) return prev;
-      const next = new Set(prev);
-      next.delete(path);
-      return next;
-    });
+    const count = reportCounts.current.get(path);
+    if (count === undefined) return;
+    if (count > 1) {
+      reportCounts.current.set(path, count - 1);
+      return;
+    }
+    reportCounts.current.delete(path);
+    setMissingPaths((prev) => withoutPath(prev, path));
   }, []);
 
   const markUploaded = useCallback((path: string) => {
@@ -85,30 +90,16 @@ export function MissingResourcesProvider({ children, onMissingPathsChange }: Mis
     // a **Sub-resource path** included. `uploadedPaths` holds files, what the user
     // supplied. One `.tres` behind three materials clears three missing rows and
     // shows one uploaded row.
-    setUploadedPaths((prev) => {
-      const file = resourceFilePath(path);
-      if (prev.has(file)) return prev;
-      const next = new Set(prev);
-      next.add(file);
-      return next;
-    });
-    setMissingPaths((prev) => {
-      if (!prev.has(path)) return prev;
-      const next = new Set(prev);
-      next.delete(path);
-      return next;
-    });
+    setUploadedPaths((prev) => withPath(prev, resourceFilePath(path)));
+    // An upload heals every consumer of the path at once, so all its reports go.
+    reportCounts.current.delete(path);
+    setMissingPaths((prev) => withoutPath(prev, path));
   }, []);
 
   /** Takes a file, the key `markUploaded` stored. */
   const removeUploaded = useCallback((path: string) => {
     if (!path) return;
-    setUploadedPaths((prev) => {
-      if (!prev.has(path)) return prev;
-      const next = new Set(prev);
-      next.delete(path);
-      return next;
-    });
+    setUploadedPaths((prev) => withoutPath(prev, path));
   }, []);
 
   // A ref, so notification keys only on the set's identity. A host callback in
@@ -134,6 +125,22 @@ export function MissingResourcesProvider({ children, onMissingPathsChange }: Mis
   );
 
   return <MissingResourcesContext.Provider value={value}>{children}</MissingResourcesContext.Provider>;
+}
+
+/** `paths` with `path` added. The same set when it is already there, so no consumer re-renders. */
+function withPath(paths: ReadonlySet<string>, path: string): ReadonlySet<string> {
+  if (paths.has(path)) return paths;
+  const next = new Set(paths);
+  next.add(path);
+  return next;
+}
+
+/** `paths` without `path`. The same set when it is not there, so no consumer re-renders. */
+function withoutPath(paths: ReadonlySet<string>, path: string): ReadonlySet<string> {
+  if (!paths.has(path)) return paths;
+  const next = new Set(paths);
+  next.delete(path);
+  return next;
 }
 
 export function useMissingResources(): MissingResourcesContextValue {

@@ -57,6 +57,19 @@ describe('MissingResourcesContext', () => {
     expect(result.current.missingPaths).toBe(before);
   });
 
+  it('keeps a path missing until every consumer that reported it clears it', () => {
+    const { result } = renderHook(() => useMissingResources(), { wrapper: wrap });
+    act(() => {
+      result.current.report('res://shared.tres');
+      result.current.report('res://shared.tres');
+    });
+    act(() => result.current.clear('res://shared.tres'));
+    expect(result.current.missingPaths.has('res://shared.tres')).toBe(true);
+
+    act(() => result.current.clear('res://shared.tres'));
+    expect(result.current.missingPaths.has('res://shared.tres')).toBe(false);
+  });
+
   it('markUploaded moves a path from missingPaths into uploadedPaths', () => {
     const { result } = renderHook(() => useMissingResources(), { wrapper: wrap });
     act(() => result.current.report('res://tex.png'));

@@ -59,19 +59,14 @@ export function StandardMaterialSlot({
 export function materialBagElement(bag: StandardMaterialBag, attach: string | undefined) {
   // `attach` first: it is the mount's own prop and must never shadow a derived
   // one. The key comes from the same merged bag it travels with (ADR-0038): a
-  // program input arriving late reaches the shader only through a remount.
+  // program input arriving late, or a moved `attach`, reaches three only through a remount.
+  const program = materialProgramInputs({ props: { attach, ...bag.props } });
   switch (bag.materialClass) {
-    case 'basic': {
-      const basic = materialProgramInputs({ props: { attach, ...bag.props } });
-      return <meshBasicMaterial key={basic.key} {...basic.props} />;
-    }
-    case 'physical': {
-      const physical = materialProgramInputs({ props: { attach, ...bag.props } });
-      return <meshPhysicalMaterial key={physical.key} {...physical.props} />;
-    }
-    default: {
-      const standard = materialProgramInputs({ props: { attach, ...bag.props } });
-      return <meshStandardMaterial key={standard.key} {...standard.props} />;
-    }
+    case 'basic':
+      return <meshBasicMaterial key={program.key} {...program.props} />;
+    case 'physical':
+      return <meshPhysicalMaterial key={program.key} {...program.props} />;
+    default:
+      return <meshStandardMaterial key={program.key} {...program.props} />;
   }
 }

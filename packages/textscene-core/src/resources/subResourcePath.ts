@@ -102,6 +102,3 @@ export function subResourceTypeGate(
 ): SubResourceGate {
   return { declared, accepts: (sub) => sub !== undefined && types.has(sub.type) };
 }
-
-/** Accept nothing: a document whose sub-resources no resource path can address. */
-export const REJECT_SUB_RESOURCES: SubResourceGate = { declared: [], accepts: () => false };

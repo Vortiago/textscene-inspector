@@ -136,3 +136,15 @@ describe('<StandardMaterialSlot> keeps the compiled material for a plain uniform
     expect(await rebuilds({}, {}, first, second)).toBe(false);
   });
 });
+
+describe('<StandardMaterialSlot> rebinds when its attach target moves', () => {
+  it('binds a new material at the new target when `attach` changes, which fiber reads only at mount', async () => {
+    const renderer = await ReactThreeTestRenderer.create(slot({}, { attach: 'material' }));
+    const mesh = renderer.scene.findByType('Mesh').instance as unknown as THREE.Mesh;
+    const first = mesh.material;
+    await renderer.update(slot({}, { attach: 'material-0' }));
+    const [bound] = mesh.material as THREE.Material[];
+    expect(bound).toBeInstanceOf(THREE.MeshStandardMaterial);
+    expect(bound).not.toBe(first);
+  });
+});
