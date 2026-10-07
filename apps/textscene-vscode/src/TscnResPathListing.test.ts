@@ -108,14 +108,37 @@ describe('TscnResPathListing', () => {
     expect(await new TscnResPathListing().pathsFor(sceneInProject())).toHaveLength(6000);
   });
 
-  it('lists nothing, and searches nothing, when no directory holds project.godot', async () => {
+  it("lists the files under the document's own directory when no directory holds project.godot", async () => {
     arrangeProject();
     vscodeMocks.workspace.fs.stat.mockRejectedValue(new Error('Not found'));
+    arrangeFiles(['/game/scenes/decorations/banner.png', '/game/scenes/main.tscn'], []);
 
     const paths = await new TscnResPathListing().pathsFor(sceneInProject());
 
-    expect(paths).toEqual([]);
-    expect(listingSearches()).toBe(0);
+    expect(paths).toEqual(['res://decorations/banner.png', 'res://main.tscn']);
+  });
+
+  it("searches only under the document's own directory when no directory holds project.godot", async () => {
+    arrangeProject();
+    vscodeMocks.workspace.fs.stat.mockRejectedValue(new Error('Not found'));
+
+    await new TscnResPathListing().pathsFor(sceneInProject());
+
+    const bases = vscodeMocks.workspace.findFiles.mock.calls.map(
+      ([pattern]: [{ baseUri: { fsPath: string } }]) => pattern.baseUri.fsPath.replace(/\\/g, '/')
+    );
+    expect(new Set(bases)).toEqual(new Set(['/game/scenes']));
+  });
+
+  it('shares one listing between the loose scenes of one directory', async () => {
+    arrangeProject();
+    vscodeMocks.workspace.fs.stat.mockRejectedValue(new Error('Not found'));
+    const listing = new TscnResPathListing();
+
+    await listing.pathsFor(sceneInProject());
+    await listing.pathsFor(createMockDocument('[node name="R" type="Node"]', '/game/scenes/other.tscn'));
+
+    expect(listingSearches()).toBe(1);
   });
 
   it('returns nothing outside a workspace folder', async () => {

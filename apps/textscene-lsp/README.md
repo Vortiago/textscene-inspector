@@ -7,8 +7,9 @@ document highlights and diagnostics. Each lint check cites the line of Godot sou
 grounds it.
 
 For each document, the server finds the nearest `project.godot` in the document's directory or above
-it, and resolves `res://` from that directory. A scene outside every Godot project still gets hover,
-completion and the file-local diagnostics.
+it, and resolves `res://` from that directory. For a scene outside every Godot project but inside
+the workspace, the server resolves `res://` from the scene's own directory. A loose scene outside
+the workspace gets no `res://` root, so no path listing reads a large directory such as `/tmp`.
 
 The server reads the project again when the client reports a changed file, and each time a
 document opens. A client that supports it is asked to watch every file in the workspace.

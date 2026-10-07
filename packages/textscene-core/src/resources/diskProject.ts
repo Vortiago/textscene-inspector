@@ -1,11 +1,10 @@
 /// <reference types="node" />
 
 /**
- * A scene's Godot project read from disk, for the Node hosts: the `tscn-lint` CLI and the
- * `tscn-lsp` server. The project is the files under the nearest directory holding
- * `project.godot`. A scene with none has no `res://` root, so it gets no provider and the
- * cross-file rules stay silent. Only a Node bundle imports this module, since it reads
- * `node:fs`. An eslint rule keeps every browser bundle away from it.
+ * A scene's `res://` root read from disk, for the Node hosts: the `tscn-lint` CLI and the `tscn-lsp` server. The root
+ * is the nearest directory holding `project.godot`, or the scene's own directory when none does and the scene lies
+ * inside the host's workspace (`resRootForFile`). Only a Node bundle imports this module, since it reads `node:fs`.
+ * An eslint rule keeps every browser bundle away from it.
  */
 
 import type { Dirent } from 'node:fs';
@@ -13,7 +12,14 @@ import { readFile, readdir, realpath, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { ResourceProvider } from './ResourceProvider.js';
 import { listScannedFiles, type DirectoryEntry } from './projectListing.js';
-import { findProjectRoot, parentDir, projectFileIn, resolveResPath } from './resPath.js';
+import {
+  findResRoot,
+  isWithinRoot,
+  parentDir,
+  pathCaseOf,
+  projectFileIn,
+  resolveResPath,
+} from './resPath.js';
 import { resourceContent } from './resourceProviderUtils.js';
 
 /** `map`'s value for `key`, made by `make` and kept the first time `key` is asked for. */
@@ -138,23 +144,30 @@ export function providerForRoot(root: string): ResourceProvider {
   return memo(providerByRoot, root, fileProvider);
 }
 
-/** The nearest directory at or above `dir` that holds `project.godot`, or null. */
-export function projectRootForDir(dir: string): Promise<string | null> {
-  // No stop directory: a Node host has no workspace to bound the walk, so it climbs to the filesystem root.
-  return findProjectRoot(dir, parentDir, () => false, hasProjectFile);
+/**
+ * The `res://` root of a scene in `dir`, by core's `findResRoot`, with `workspace` bounding the fallback. A null
+ * workspace allows no fallback. The walk has no stop directory: a Node host's watchers see past the workspace.
+ */
+export function resRootForDir(dir: string, workspace: string | null): Promise<string | null> {
+  const isInWorkspace = (candidate: string) =>
+    workspace !== null && isWithinRoot(resolve(workspace), candidate, pathCaseOf(process.platform));
+  return findResRoot(dir, parentDir, () => false, hasProjectFile, isInWorkspace);
 }
 
-/** The project root of the file at `file`, or null when no ancestor directory holds `project.godot`. */
-export function projectRootForFile(file: string): Promise<string | null> {
-  // `parentDir`, not `dirname`, for the first step too: every directory of the walk is then spelled with forward
-  // slashes, so a Windows root found at the first step and at a later one is one key, and one provider.
+/** The `res://` root of the scene at `file`, as `resRootForDir` finds it for the file's directory. */
+export function resRootForFile(file: string, workspace: string | null): Promise<string | null> {
+  // `parentDir`, not `dirname`: every directory of the walk is then spelled with forward slashes, so a Windows root
+  // found at the first step and at a later one is one key, and one provider.
   const dir = parentDir(resolve(file));
-  return dir === null ? Promise.resolve(null) : projectRootForDir(dir);
+  return dir === null ? Promise.resolve(null) : resRootForDir(dir, workspace);
 }
 
-/** The provider for the project `scenePath` belongs to, or null when no ancestor directory holds `project.godot`. */
-export async function projectProviderFor(scenePath: string): Promise<ResourceProvider | null> {
-  const root = await projectRootForFile(scenePath);
+/** The provider for the `res://` root of the scene at `file`, as `resRootForFile` finds it, or null for no root. */
+export async function resProviderForFile(
+  file: string,
+  workspace: string | null
+): Promise<ResourceProvider | null> {
+  const root = await resRootForFile(file, workspace);
   return root === null ? null : providerForRoot(root);
 }
 

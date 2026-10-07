@@ -1,7 +1,8 @@
 /**
- * Unit tests for a `project.godot` that is created, moved or deleted while a preview
- * is open. Its directory is the `res://` root, so when the root moves the panel
- * drops its cached provider and has the webview re-fetch every resource it served.
+ * Unit tests for the preview's `res://` root: the nearest `project.godot`, or the scene's own
+ * directory outside every project, as the editor features resolve it. When a `project.godot`
+ * created, moved or deleted while a preview is open moves the root, the panel drops its cached
+ * provider and has the webview re-fetch every resource it served.
  */
 import { describe, expect, it, type Mock } from 'vitest';
 import * as vscode from 'vscode';
@@ -56,32 +57,42 @@ async function fsPathOfNextLoad(triggerMessage: (msg: unknown) => void, resPath:
   return (readFile.mock.calls[0]?.[0] as vscode.Uri).fsPath;
 }
 
-describe('TscnPreviewPanel project root move', () => {
-  it('re-fetches every served resource under a project.godot created after the preview opened', async () => {
+describe('TscnPreviewPanel res:// root', () => {
+  it("reads a loose scene's res:// path under the scene's own directory, not the workspace root", async () => {
     projectFilesIn();
-    const { webview, triggerMessage } = setupMockPanel();
-    const panel = await createPanelServingTexture(triggerMessage);
-    projectFilesIn('/workspace/game');
+    const { triggerMessage } = setupMockPanel();
+    await createPanelServingTexture(triggerMessage);
 
-    await panel.handleDependencyChange(createMockUri('/workspace/game/project.godot'));
-
-    expect(changedPaths(webview)).toEqual(['res://textures/wood.png']);
     expect(await fsPathOfNextLoad(triggerMessage, 'res://textures/wood.png')).toBe(
       '/workspace/game/textures/wood.png'
     );
   });
 
-  it('falls back to the workspace root once the project.godot is deleted', async () => {
-    projectFilesIn('/workspace/game');
+  it('re-fetches every served resource under a project.godot created above a loose scene', async () => {
+    projectFilesIn();
     const { webview, triggerMessage } = setupMockPanel();
     const panel = await createPanelServingTexture(triggerMessage);
-    projectFilesIn();
+    projectFilesIn('/workspace');
 
-    await panel.handleDependencyChange(createMockUri('/workspace/game/project.godot'));
+    await panel.handleDependencyChange(createMockUri('/workspace/project.godot'));
 
     expect(changedPaths(webview)).toEqual(['res://textures/wood.png']);
     expect(await fsPathOfNextLoad(triggerMessage, 'res://textures/wood.png')).toBe(
       '/workspace/textures/wood.png'
+    );
+  });
+
+  it("falls back to the scene's own directory once the project.godot is deleted", async () => {
+    projectFilesIn('/workspace');
+    const { webview, triggerMessage } = setupMockPanel();
+    const panel = await createPanelServingTexture(triggerMessage);
+    projectFilesIn();
+
+    await panel.handleDependencyChange(createMockUri('/workspace/project.godot'));
+
+    expect(changedPaths(webview)).toEqual(['res://textures/wood.png']);
+    expect(await fsPathOfNextLoad(triggerMessage, 'res://textures/wood.png')).toBe(
+      '/workspace/game/textures/wood.png'
     );
   });
 

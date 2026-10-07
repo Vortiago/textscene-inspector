@@ -83,7 +83,6 @@ export function createTestPanel(
     webview: fakeWebview,
     title: '',
     viewColumn: vscode.ViewColumn.Two,
-    active: visible,
     visible,
     options: {} as vscode.WebviewPanelOptions,
     viewType: TscnPreviewPanel.viewType,
@@ -95,11 +94,6 @@ export function createTestPanel(
         },
       };
     },
-    onDidChangeViewState: (_listener: unknown) => ({
-      dispose: () => {
-        /* no-op */
-      },
-    }),
     reveal: (_column?: vscode.ViewColumn, _preserveFocus?: boolean) => {
       /* no-op */
     },

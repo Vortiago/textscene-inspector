@@ -195,7 +195,7 @@ describe('TscnPreviewPanel loadResource — error paths', () => {
     expect(loadedMessages(webview)).toHaveLength(0);
   });
 
-  it('posts resourceLoadError when both the primary and fallback reads fail', async () => {
+  it('posts resourceLoadError when the read fails', async () => {
     const { webview, triggerMessage } = setupMockPanel();
     await createReadyPanel(triggerMessage);
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({

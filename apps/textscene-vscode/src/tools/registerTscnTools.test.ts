@@ -150,6 +150,22 @@ describe('registerTscnTools', () => {
     expect(lintProviderFor.mock.calls[0]![0].path).toMatch(/\/game\/scenes\/Main\.tscn$/);
   });
 
+  it("the missing-resources tool checks over the Problems panel's provider for the scene", async () => {
+    vscodeMocks.workspace.fs.readFile.mockResolvedValue(
+      createMockFileData('[ext_resource type="PackedScene" path="res://door.tscn" id="1"]')
+    );
+    const stamp = vi.fn().mockResolvedValue(null);
+    const lintProviderFor = vi.fn().mockResolvedValue({ stamp });
+    registerTscnTools(context(), host({ lintProviderFor }));
+    const result = await registeredTool(TOOL_IDS.missingResources).invoke(
+      { input: { path: 'scenes/Main.tscn' } },
+      TOKEN
+    );
+    expect(lintProviderFor.mock.calls[0]![0].path).toMatch(/\/game\/scenes\/Main\.tscn$/);
+    expect(stamp).toHaveBeenCalledWith('res://door.tscn');
+    expect(result.content[0]!.value).toContain('res://door.tscn');
+  });
+
   it('the missing-resources tool reports a scene outside a project', async () => {
     vscodeMocks.workspace.fs.readFile.mockResolvedValue(
       createMockFileData('[ext_resource type="PackedScene" path="res://door.tscn" id="1"]')

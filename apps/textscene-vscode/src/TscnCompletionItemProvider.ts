@@ -35,7 +35,7 @@ function toCompletionItem(item: EngineCompletionItem): vscode.CompletionItem {
   return completion;
 }
 
-/** Lists the Godot project's `res://` paths, the seam the engine's path completion reads. */
+/** Lists the `res://` paths under the document's root, the seam the engine's path completion reads. */
 export interface ResPathListing {
   pathsFor(document: vscode.TextDocument): Promise<readonly string[]>;
 }
