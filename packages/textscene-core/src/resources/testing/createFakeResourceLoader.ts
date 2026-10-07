@@ -232,3 +232,13 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     registerCalls,
   };
 }
+
+/**
+ * Records each path the scene processor is asked for, with whether its metadata
+ * was registered at that moment.
+ */
+export function recordSceneRequests(fake: FakeResourceLoader): Map<string, boolean> {
+  const isRegisteredAtRequest = new Map<string, boolean>();
+  fake.scenes.setRequestImpl((path) => isRegisteredAtRequest.set(path, fake.metadata.has(path)));
+  return isRegisteredAtRequest;
+}

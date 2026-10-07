@@ -10,7 +10,7 @@ import type { TscnNode, TscnScene, TscnInternalResource } from '../parser/types'
 import { NodeDispatcher } from './NodeDispatcher';
 import * as mergeInstanceRootModule from '../resources/mergeInstanceRoot';
 import { SceneStack } from './testing/SceneStack';
-import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
+import { createFakeResourceLoader, recordSceneRequests } from '../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../resources/ResourceLoader';
 
 // The barrel registers every node-type component.
@@ -549,8 +549,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
 
   it('registers the instanced ExtResource before the scene load requests it', async () => {
     const fake = createFakeResourceLoader();
-    const metadataAtRequest = new Map<string, boolean>();
-    fake.scenes.setRequestImpl((path) => metadataAtRequest.set(path, fake.metadata.has(path)));
+    const metadataAtRequest = recordSceneRequests(fake);
 
     const instancingNode: TscnNode = {
       name: 'LeftCube',

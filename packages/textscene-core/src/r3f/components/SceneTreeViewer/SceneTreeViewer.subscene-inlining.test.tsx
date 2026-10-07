@@ -11,7 +11,10 @@ import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { SelectionProvider } from '../../contexts/SelectionContext';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import {
+  createFakeResourceLoader,
+  recordSceneRequests,
+} from '../../../resources/testing/createFakeResourceLoader';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import type { TscnNode, TscnScene, TscnExternalResource } from '../../../parser/types';
@@ -128,8 +131,7 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
 
   it("registers the sub-scene's ExtResource before the scene load requests it", () => {
     const fake = createFakeResourceLoader();
-    const metadataAtRequest = new Map<string, boolean>();
-    fake.scenes.setRequestImpl((path) => metadataAtRequest.set(path, fake.metadata.has(path)));
+    const metadataAtRequest = recordSceneRequests(fake);
     const graph = createSceneGraphFromTscnScene({
       nodes: [makeNode('PhotoFrame1', 'Node3D', { instance: 'ExtResource("frame_1")' })],
       externalResources: [makeExtResource('frame_1', 'res://photo_frame.tscn')],

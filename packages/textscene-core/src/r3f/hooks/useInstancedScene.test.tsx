@@ -10,6 +10,7 @@ import { useInstancedScene } from './useInstancedScene';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import {
   createFakeResourceLoader,
+  recordSceneRequests,
   type FakeResourceLoader,
 } from '../../resources/testing/createFakeResourceLoader';
 import type { TscnExternalResource, TscnScene } from '../../parser/types';
@@ -25,13 +26,6 @@ function wrapper(fake: FakeResourceLoader) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>;
   };
-}
-
-/** The paths the scene processor was asked for, each with whether its metadata existed then. */
-function recordSceneRequests(fake: FakeResourceLoader): Map<string, boolean> {
-  const metadataAtRequest = new Map<string, boolean>();
-  fake.scenes.setRequestImpl((path) => metadataAtRequest.set(path, fake.metadata.has(path)));
-  return metadataAtRequest;
 }
 
 describe('useInstancedScene', () => {

@@ -18,14 +18,15 @@ export function useInstancedScene(
 ): ResourceResult<TscnScene> {
   const loader = useResourceLoader();
 
-  // Ahead of `useResource`: a component runs its effects in order, and the scene
-  // load throws "Scene metadata not found" without the registration. Idempotent.
+  // Ahead of `useResource`: a component runs its effects in order. The load checks
+  // the registered type, and the loader reports a failed load only for a
+  // registered path. Idempotent.
   useEffect(() => {
     if (!loader || !loadPath) return;
     const parsed = parseResourceReference(instanceRef);
     if (parsed?.type !== 'ExtResource') return;
     const ext = findExtResource(externalResources, parsed.id);
-    if (ext) loader.register({ id: ext.id, path: ext.path, type: ext.type });
+    if (ext) loader.register(ext);
   }, [loader, loadPath, instanceRef, externalResources]);
 
   // `useResource` requests nothing for '', so the hook count stays stable.

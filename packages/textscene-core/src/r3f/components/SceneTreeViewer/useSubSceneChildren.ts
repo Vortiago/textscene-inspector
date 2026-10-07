@@ -28,9 +28,7 @@ export function useSubSceneChildren(
 
   // A stable identity, since callers feed it into useMemo deps.
   return useMemo(() => {
-    if (!scenePath || result.status !== 'loaded' || !result.value) {
-      return null;
-    }
+    if (result.status !== 'loaded' || !result.value) return null;
     return { nodes: result.value.nodes, externalResources: result.value.externalResources };
-  }, [scenePath, result.status, result.value]);
+  }, [result.status, result.value]);
 }
