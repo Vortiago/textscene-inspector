@@ -12,7 +12,7 @@ import { TscnParser } from '../parser/TscnParser';
 import { extResourcePathOf } from '../resources/testing/extResourcePathOf';
 import { findSubResource } from '../resources/SubResourceResolver';
 import { resourceRef } from '../godot/resourceRef';
-import { liveChildGroups, type LiveChildGroup, type LiveTreeContext } from './liveSceneTree';
+import { liveChildGroups, rootScope, type LiveChildGroup, type LiveTreeContext } from './liveSceneTree';
 import type { SceneScope } from '../parser/types';
 import { scopeOf, type LiveNode } from '../resources/liveNode';
 
@@ -34,7 +34,9 @@ const ctx: LiveTreeContext = {
 
 /** The collapsed live node at `path` and the scope its own refs resolve against, by the walk `liveChildGroups` makes. */
 function liveNodeAt(path: string): { node: LiveNode; scope: SceneScope } {
-  let groups: readonly LiveChildGroup[] = [{ origin: 'inline', children: opponent.nodes, scope: ctx }];
+  let groups: readonly LiveChildGroup[] = [
+    { origin: 'inline', children: opponent.nodes, scope: rootScope(ctx) },
+  ];
   let found: { node: LiveNode; scope: SceneScope } | undefined;
   for (const segment of path.split('/')) {
     const group = groups.find((g) => g.children.some((n) => n.name === segment))!;
@@ -98,7 +100,7 @@ material_override = SubResource("2")
       internalResources: host.internalResources,
       sceneCache: { getCached: (path) => (path === 'res://sub.tscn' ? sub : undefined) },
     };
-    const [group] = liveChildGroups(host.nodes[0]!, hostCtx, hostCtx.sceneCache);
+    const [group] = liveChildGroups(host.nodes[0]!, rootScope(hostCtx), hostCtx.sceneCache);
     const merged = group!.mergedNode!;
     const id = resourceRef(merged.rawProperties!.material_override!)!.id;
 

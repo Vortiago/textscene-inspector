@@ -129,7 +129,7 @@ export interface TscnExternalResource {
   id: string;
   path: string;
   type: string;
-  /** The id its own file wrote, on a copy that override re-homing renamed. The parser never sets it. */
+  /** The id its own file wrote, on a copy that override re-homing made. The parser never sets it. */
   authoredId?: string;
 }
 
@@ -155,7 +155,7 @@ export interface TscnInternalResource {
   id: string;
   type: string;
   data: Record<string, string>;
-  /** The id its own file wrote, on a copy that override re-homing renamed. The parser never sets it. */
+  /** The id its own file wrote, on a copy that override re-homing made. The parser never sets it. */
   authoredId?: string;
 }
 

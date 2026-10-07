@@ -17,3 +17,10 @@ export function authoredSpelling(text: string, scope: SceneScope): string {
     return resource?.authoredId ?? ref.id;
   });
 }
+
+/** Whether `scope` holds a copy that re-homing renamed, so a value can read differently. */
+export function holdsRenamedCopy(scope: SceneScope): boolean {
+  const isRenamed = (r: { id: string; authoredId?: string }) =>
+    r.authoredId !== undefined && r.authoredId !== r.id;
+  return scope.externalResources.some(isRenamed) || scope.internalResources.some(isRenamed);
+}

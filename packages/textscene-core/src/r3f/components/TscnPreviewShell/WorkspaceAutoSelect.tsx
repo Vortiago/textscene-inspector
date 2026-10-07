@@ -10,7 +10,7 @@ import { useViewportMode } from '../../contexts/ViewportModeContext.js';
 import { useResourceLoader } from '../../../resources/useResource.js';
 import { workspaceForRoot } from '../../workspaceForScene.js';
 import { liveTreeContext, useLiveTreeVersion } from '../../useLiveSceneTree.js';
-import { collapseLiveNode } from '../../liveSceneTree.js';
+import { collapseLiveNode, rootScope } from '../../liveSceneTree.js';
 
 export function WorkspaceAutoSelect({ sceneGraph }: { sceneGraph: SceneGraph | null }) {
   const { setMode } = useViewportMode();
@@ -21,7 +21,7 @@ export function WorkspaceAutoSelect({ sceneGraph }: { sceneGraph: SceneGraph | n
     const lt = liveTreeContext(sceneGraph, loader);
     const root = lt?.roots[0];
     if (!lt || !root) return null;
-    return workspaceForRoot(collapseLiveNode(root, lt.ctx, lt.ctx.sceneCache));
+    return workspaceForRoot(collapseLiveNode(root, rootScope(lt.ctx), lt.ctx.sceneCache));
     // `version` is a cache-buster: it increments when a resource loads.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sceneGraph, loader, version]);

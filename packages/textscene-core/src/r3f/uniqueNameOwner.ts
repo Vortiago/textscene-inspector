@@ -15,7 +15,7 @@ import {
   cachedUniqueNameOwnership,
   type UniqueNameClaim,
 } from '../utils/uniqueNames.js';
-import { liveChildGroups, type LiveChildGroup, type LiveTreeContext } from './liveSceneTree.js';
+import { liveChildGroups, rootScope, type LiveChildGroup, type LiveTreeContext } from './liveSceneTree.js';
 import { scopeOf, type LiveNode } from '../resources/liveNode.js';
 
 export interface ClaimOwner {
@@ -69,7 +69,9 @@ interface Walk {
 
 function walkTo(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext): Walk {
   const outer: ClaimOwner = { path: roots[0]?.name ?? '', roots, ctx };
-  let candidates: Candidate[] = [{ group: { origin: 'inline', children: roots, scope: ctx }, owner: outer }];
+  let candidates: Candidate[] = [
+    { group: { origin: 'inline', children: roots, scope: rootScope(ctx) }, owner: outer },
+  ];
   let owner = outer;
   let into = outer;
   let parentPath = '';

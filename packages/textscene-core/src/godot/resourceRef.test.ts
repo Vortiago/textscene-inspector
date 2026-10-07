@@ -294,6 +294,12 @@ describe('renameResourceRefs', () => {
     expect(renameResourceRefs(text, tagged)).toBe(text);
   });
 
+  it('keeps a reference whose id stays as written', () => {
+    expect(renameResourceRefs('[ExtResource ( 1 ), SubResource(2)]', (ref) => ref.id)).toBe(
+      '[ExtResource ( 1 ), SubResource(2)]'
+    );
+  });
+
   it('returns a value with no reference unchanged', () => {
     expect(renameResourceRefs('Vector3(1, 2, 3)', tagged)).toBe('Vector3(1, 2, 3)');
   });

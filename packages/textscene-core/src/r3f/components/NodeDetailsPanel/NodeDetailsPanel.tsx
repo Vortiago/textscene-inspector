@@ -11,7 +11,7 @@ import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js
 import { useLiveNode } from '../../useLiveSceneTree.js';
 import { PropertySection } from './PropertySection.js';
 import type { PropertySection as PropertySectionData } from '../../../core/NodeRegistry.js';
-import { authoredSpelling } from '../../../resources/authoredSpelling.js';
+import { authoredSpelling, holdsRenamedCopy } from '../../../resources/authoredSpelling.js';
 import type { SceneScope } from '../../../parser/types.js';
 import styles from './NodeDetailsPanel.module.css';
 
@@ -120,7 +120,7 @@ function authoredSections(
   sections: PropertySectionData[],
   scope: SceneScope | undefined
 ): PropertySectionData[] {
-  if (!scope) return sections;
+  if (!scope || !holdsRenamedCopy(scope)) return sections;
   return sections.map((section) => ({
     ...section,
     items: section.items.map((item) => ({ ...item, value: authoredSpelling(item.value, scope) })),

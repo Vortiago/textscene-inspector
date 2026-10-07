@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { rehomeOverride } from './rehomeOverride';
 import { findExtResource, findSubResource } from './SubResourceResolver';
 import { extResourcePathOf } from './testing/extResourcePathOf';
+import { resourceRef } from '../godot/resourceRef';
 import type { SceneScope } from '../parser/types';
 
 const outer: SceneScope = {
@@ -16,8 +17,6 @@ const outer: SceneScope = {
     { id: 'mat', type: 'StandardMaterial3D', data: { albedo_texture: 'ExtResource("1")' } },
   ],
 };
-
-const idOf = (ref: string): string => /Resource\("([^"]+)"\)/.exec(ref)![1]!;
 
 const inner: SceneScope = {
   externalResources: [{ id: '1', type: 'Texture2D', path: 'res://inner.png' }],
@@ -79,7 +78,7 @@ describe('rehomeOverride', () => {
   it('marks a renamed copy with the id the outer file wrote', () => {
     const { raw, scope } = rehomeOverride({ texture: 'ExtResource("1")' }, outer, inner);
 
-    expect(findExtResource(scope.externalResources, idOf(raw.texture!))?.authoredId).toBe('1');
+    expect(findExtResource(scope.externalResources, resourceRef(raw.texture!)!.id)?.authoredId).toBe('1');
   });
 
   it('keeps the first file id through a second re-homing', () => {
@@ -94,6 +93,6 @@ describe('rehomeOverride', () => {
 
     const { raw, scope } = rehomeOverride(once.raw, once.scope, deeper);
 
-    expect(findExtResource(scope.externalResources, idOf(raw.texture!))?.authoredId).toBe('1');
+    expect(findExtResource(scope.externalResources, resourceRef(raw.texture!)!.id)?.authoredId).toBe('1');
   });
 });
