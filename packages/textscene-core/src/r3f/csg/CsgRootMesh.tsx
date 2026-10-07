@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
-import { SurfaceMaterialSlot } from '../materials/SurfaceMaterialSlot';
+import { SurfaceMaterialSlots } from '../materials/SurfaceMaterialSlots';
 import { resolveMaterialSource, type MaterialSource } from '../materials/materialSource';
 import { useSceneResources } from '../SceneResourcesContext';
 import { CsgSubtreeProvider, type CsgSubtreeStatus } from '../contexts/CsgSubtreeContext';
@@ -111,12 +111,7 @@ export function CsgRootMesh({ plan, shadow, fallback, children }: CsgRootMeshPro
           receiveShadow
           geometry={evaluation!.geometry as THREE.BufferGeometry}
         >
-          {surfaces.map((surface, index) => {
-            // A single-surface mesh keeps the singular attach key, so `mesh.material`
-            // stays one material rather than a length-1 array.
-            const attach = surfaces.length > 1 ? `material-${index}` : 'material';
-            return <SurfaceMaterialSlot key={index} source={surface} attach={attach} />;
-          })}
+          <SurfaceMaterialSlots sources={surfaces} />
         </mesh>
       )}
       {/*

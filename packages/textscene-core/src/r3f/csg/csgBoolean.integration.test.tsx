@@ -8,63 +8,32 @@ import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
-import { NodePathProvider } from '../contexts/NodePathContext';
 import { TscnParser } from '../../parser/TscnParser';
-import type { TscnNode } from '../../parser/types';
-import { nodeComponentRegistry } from '../NodeComponentRegistry';
 import { clearEvaluationCache } from './csgEvaluationCache';
-import { loadCsgModule } from './csgModule';
+import { resetCsgModuleForTests } from './csgModule';
 import '../nodes/index';
-
-/** Mount a node with its CSG children, giving each the node path the dispatcher would. */
-function Tree({ node, path }: { node: TscnNode; path: string }) {
-  const Component = nodeComponentRegistry.get(node.type)!;
-  return (
-    <NodePathProvider path={path}>
-      <Component node={node}>
-        {node.children.map((child) => (
-          <Tree key={child.name} node={child} path={`${path}/${child.name}`} />
-        ))}
-      </Component>
-    </NodePathProvider>
-  );
-}
+import { NodeTree } from '../testing/NodeTree';
+import { settleCsgEvaluation } from './testing/settleCsgEvaluation';
 
 function parse(body: string) {
   return new TscnParser().parse(`[gd_scene format=3]\n\n${body}\n`);
 }
 
-/**
- * Renders, then waits until the evaluated result lands. The library arrives through a dynamic
- * import and the status publishes from a `.then`, so one macrotask tick races the evaluation
- * under load. An observable condition, not a fixed delay, ends the wait.
- */
-async function render(body: string, expectSettled = true) {
+function mount(body: string) {
   clearEvaluationCache();
   const scene = parse(body);
   const root = scene.nodes[0]!.children[0]!;
-  const renderer = await ReactThreeTestRenderer.create(
+  return ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={scene.internalResources}>
-      <Tree node={root} path={`Root/${root.name}`} />
+      <NodeTree node={root} path={`Root/${root.name}`} />
     </SceneResourcesProvider>
   );
+}
 
-  // Await the same memoized promise the component awaits, so the module is resident
-  // before we start flushing its state update.
-  await loadCsgModule().catch(() => undefined);
-
-  for (let attempt = 0; attempt < 20; attempt++) {
-    await ReactThreeTestRenderer.act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
-    if (!expectSettled) break;
-    // Settled once a bounds proxy exists (contributors pruned) or there is nothing to
-    // prune in the first place.
-    const hasProxy = renderer.scene
-      .findAllByType('Mesh')
-      .some((m) => (m.instance as THREE.Mesh).userData?.tscnBoundsProxy === true);
-    if (hasProxy || attempt > 2) break;
-  }
+/** Mounts, then waits until the evaluated result lands. */
+async function render(body: string) {
+  const renderer = await mount(body);
+  await settleCsgEvaluation(renderer);
   return renderer;
 }
 
@@ -197,19 +166,19 @@ radius = 0.5
   it('degrades to base primitives when the CSG library cannot load', async () => {
     // The terminal rung of the degradation ladder: every contributor un-prunes and draws
     // itself, which is exactly the retired CSG-as-primitive behaviour.
-    vi.resetModules();
-    const { resetCsgModuleForTests } = await import('./csgModule');
+    // Reset the instance the mounted components import: a reset after `vi.resetModules`
+    // reaches a fresh copy, and the components keep the loaded library.
     resetCsgModuleForTests();
     vi.doMock('three-bvh-csg', () => {
       throw new Error('chunk failed to load');
     });
 
-    const renderer = await render(SUBTRACTION, false);
+    const renderer = await render(SUBTRACTION);
     // Both solids drawn again rather than one merged result, or nothing at all.
-    expect(drawnMeshes(renderer).length).toBeGreaterThanOrEqual(1);
+    expect(drawnMeshes(renderer)).toHaveLength(2);
 
     vi.doUnmock('three-bvh-csg');
-    vi.resetModules();
+    resetCsgModuleForTests();
   });
 
   it("applies a nested combiner's own operation to its whole fold", async () => {

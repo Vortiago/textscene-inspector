@@ -9,13 +9,11 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../../../parser/TscnParser';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { frameSceneBounds } from '../../../r3f/frameSceneBounds';
-import type { TscnNode } from '../../../parser/types';
 import './csgbox3d/index.r3f';
 import './csgcombiner3d/index.r3f';
 import './csgsphere3d/index.r3f';
+import { NodeTree } from '../../../r3f/testing/NodeTree';
 
 const SCENE = `[gd_scene format=3]
 
@@ -29,19 +27,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 0)
 visible = false
 size = Vector3(4, 4, 4)
 `;
-
-function Tree({ node, path }: { node: TscnNode; path: string }) {
-  const Component = nodeComponentRegistry.get(node.type)!;
-  return (
-    <NodePathProvider path={path}>
-      <Component node={node}>
-        {node.children.map((child) => (
-          <Tree key={child.name} node={child} path={`${path}/${child.name}`} />
-        ))}
-      </Component>
-    </NodePathProvider>
-  );
-}
 
 /**
  * Two visible contributions, so the root evaluates a boolean and publishes the skipped set
@@ -70,7 +55,7 @@ async function renderScene(source: string = SCENE): Promise<THREE.Object3D> {
   const root = scene.nodes[0]!;
   const renderer = await ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={scene.internalResources}>
-      <Tree node={root} path={root.name} />
+      <NodeTree node={root} path={root.name} />
     </SceneResourcesProvider>
   );
   return renderer.scene.instance;

@@ -12,10 +12,7 @@ import './csgsphere3d/index.r3f';
 import { parseCSGBox3D } from './csgbox3d/parser';
 import { heading } from '../../../parser/testing/parserKit';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { clearEvaluationCache } from '../../../r3f/csg/csgEvaluationCache';
-import { loadCsgModule } from '../../../r3f/csg/csgModule';
 import { TscnParser } from '../../../parser/TscnParser';
 import type { TscnNode } from '../../../parser/types';
 import type { CSGBox3DProperties } from './csgbox3d/types';
@@ -25,6 +22,8 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import { parseTresFile } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { castsFrom, depthSideOf, drawsColour } from '../../../r3f/testing/threePasses';
+import { NodeTree } from '../../../r3f/testing/NodeTree';
+import { settleCsgEvaluation } from '../../../r3f/csg/testing/settleCsgEvaluation';
 
 function parseBox(properties: Record<string, string>): CSGBox3DProperties {
   return parseCSGBox3D(heading('CSGBox3D', { name: 'Box' }), properties);
@@ -45,19 +44,6 @@ async function renderLoneBox(
   return findMesh(renderer.scene) as unknown as THREE.Mesh;
 }
 
-function Tree({ node, path }: { node: TscnNode; path: string }) {
-  const Component = nodeComponentRegistry.get(node.type)!;
-  return (
-    <NodePathProvider path={path}>
-      <Component node={node}>
-        {node.children.map((child) => (
-          <Tree key={child.name} node={child} path={`${path}/${child.name}`} />
-        ))}
-      </Component>
-    </NodePathProvider>
-  );
-}
-
 /** The combining-root case: the drawn mesh is the evaluated boolean, not the own solid. */
 async function renderSubtraction(rootProperties: string): Promise<THREE.Mesh> {
   clearEvaluationCache();
@@ -70,19 +56,10 @@ async function renderSubtraction(rootProperties: string): Promise<THREE.Mesh> {
   const root = scene.nodes[0]!.children[0]!;
   const renderer = await ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={scene.internalResources}>
-      <Tree node={root} path={`Root/${root.name}`} />
+      <NodeTree node={root} path={`Root/${root.name}`} />
     </SceneResourcesProvider>
   );
-  await loadCsgModule().catch(() => undefined);
-  for (let attempt = 0; attempt < 20; attempt++) {
-    await ReactThreeTestRenderer.act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
-    const hasProxy = renderer.scene
-      .findAllByType('Mesh')
-      .some((m) => (m.instance as THREE.Mesh).userData?.tscnBoundsProxy === true);
-    if (hasProxy || attempt > 2) break;
-  }
+  await settleCsgEvaluation(renderer);
   const evaluated = renderer.scene
     .findAllByType('Mesh')
     .map((m) => m.instance as THREE.Mesh)

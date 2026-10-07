@@ -13,14 +13,9 @@ import { NavigationRegion2D } from './Component';
 import { NAV_OVERLAY_COLOR } from '../../../r3f/navigationOverlay';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
-import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../index';
-import type { ResourceProvider } from '../../../resources/ResourceProvider';
-
-class NoopProvider implements ResourceProvider {
-  async loadResource(): Promise<string | ArrayBuffer | null> {
-    return null;
-  }
-}
+import { ResourceLoaderProvider, ResourceLoader } from '../../../index';
+import { loaderServing } from '../../../resources/testing/servingResourceLoader';
+import { preloadResource } from '../../../resources/testing/preloadResource';
 
 const NAVPOLY_TRES: ParsedResource = {
   resourceType: 'NavigationPolygon',
@@ -37,16 +32,8 @@ const EXT: TscnExternalResource[] = [
 ];
 
 function makeLoaderWith(path: string, tres: ParsedResource): ResourceLoader {
-  const provider = new NoopProvider();
-  const loader = new ResourceLoader(new FileEventBus(provider));
-  loader.setProvider(provider);
-  const origGet = loader.resources.getCached.bind(loader.resources);
-  const origReq = loader.resources.request.bind(loader.resources);
-  loader.resources.getCached = (p: string) => (p === path ? tres : origGet(p));
-  loader.resources.request = (p: string) => {
-    if (p === path) loader.eventBus.emit<ParsedResource>('resource', 'loaded', p, tres);
-    else origReq(p);
-  };
+  const loader = loaderServing();
+  preloadResource(loader, 'resource', path, tres);
   return loader;
 }
 

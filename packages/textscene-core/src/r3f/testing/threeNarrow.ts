@@ -14,3 +14,7 @@ export function isMesh(o: THREE.Object3D): o is THREE.Mesh {
 export function isBasicMaterial(m: THREE.Material): m is THREE.MeshBasicMaterial {
   return (m as Partial<THREE.MeshBasicMaterial>).isMeshBasicMaterial === true;
 }
+
+export function isInstancedMesh(o: THREE.Object3D): o is THREE.InstancedMesh {
+  return (o as Partial<THREE.InstancedMesh>).isInstancedMesh === true;
+}

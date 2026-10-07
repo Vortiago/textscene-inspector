@@ -6,14 +6,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
-import { NodePathProvider } from '../contexts/NodePathContext';
 import { TscnParser } from '../../parser/TscnParser';
-import type { TscnNode } from '../../parser/types';
 import { ResourceLoader } from '../../resources/ResourceLoader';
 import { ResourceLoaderContext } from '../../resources/ResourceLoaderContext';
-import { nodeComponentRegistry } from '../NodeComponentRegistry';
 import type { CsgModule } from './csgModule';
 import '../nodes/index';
+import { NodeTree } from '../testing/NodeTree';
 
 /** The library load, held open until a test lets it land. */
 const libraryLoad = vi.hoisted(() => {
@@ -47,26 +45,13 @@ operation = 2
 radius = 1.25
 `;
 
-function Tree({ node, path }: { node: TscnNode; path: string }) {
-  const Component = nodeComponentRegistry.get(node.type)!;
-  return (
-    <NodePathProvider path={path}>
-      <Component node={node}>
-        {node.children.map((child) => (
-          <Tree key={child.name} node={child} path={`${path}/${child.name}`} />
-        ))}
-      </Component>
-    </NodePathProvider>
-  );
-}
-
 async function mountSubtraction(loader: ResourceLoader) {
   const scene = new TscnParser().parse(SUBTRACTION);
   const block = scene.nodes[0]!.children[0]!;
   await ReactThreeTestRenderer.create(
     <ResourceLoaderContext.Provider value={loader}>
       <SceneResourcesProvider internalResources={scene.internalResources}>
-        <Tree node={block} path="Root/Block" />
+        <NodeTree node={block} path="Root/Block" />
       </SceneResourcesProvider>
     </ResourceLoaderContext.Provider>
   );

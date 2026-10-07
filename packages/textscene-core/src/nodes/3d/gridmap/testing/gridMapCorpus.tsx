@@ -1,6 +1,6 @@
 /**
  * A GridMap over an in-memory MeshLibrary corpus: one item whose mesh is a
- * one-surface quad `.tres`, rendered until the chained loads settle.
+ * quad `.tres` of one or two surfaces, rendered until the chained loads settle.
  */
 import type { ComponentType, ReactNode } from 'react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -9,10 +9,11 @@ import type { TscnExternalResource, TscnNode } from '../../../../parser/types';
 import { parseGridMap } from '../parser';
 import { GridMap } from '../Component';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../../index';
-import type { ResourceProvider } from '../../../../resources/ResourceProvider';
+import { ResourceLoaderProvider } from '../../../../index';
+import { loaderServing } from '../../../../resources/testing/servingResourceLoader';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
-import { wallQuadSurfaces } from '../../../../resources/testing/arrayMeshSurfaces';
+import { isInstancedMesh } from '../../../../r3f/testing/threeNarrow';
+import { wallQuadSurfaces, type SurfaceKeys } from '../../../../resources/testing/arrayMeshSurfaces';
 
 const LIBRARY_PATH = 'res://stage/tiles.tres';
 const TILE_MESH_PATH = 'res://stage/meshes/tile.tres';
@@ -31,26 +32,41 @@ ${itemLines}
 }
 
 /**
- * The wall quad as the tile mesh. Its surface declares a `[sub_resource]`
- * StandardMaterial3D with `materialLines` as its body, or no `"material"` key
- * when that is null.
- * `subResources` goes before it, for a material that names them.
+ * The wall quad as the tile mesh: a `tile` surface, plus a `second` surface when
+ * `secondMaterialLines` is not null. `subResources` goes before their materials, for a
+ * material that names them.
  */
-function tileMesh(materialLines: string | null, subResources: string): string {
-  const material =
-    materialLines === null
-      ? ''
-      : `${subResources}[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tile"]\n${materialLines}\n\n`;
-  const surfaces = wallQuadSurfaces({
-    material: materialLines === null ? null : 'SubResource("StandardMaterial3D_tile")',
-    name: 'tile',
-  });
+function tileMesh({
+  materialLines,
+  secondMaterialLines,
+  subResources,
+}: Required<Pick<GridMapCorpus, 'materialLines' | 'secondMaterialLines' | 'subResources'>>): string {
+  const surfaces = [
+    tileSurface('tile', materialLines),
+    ...(secondMaterialLines === null ? [] : [tileSurface('second', secondMaterialLines)]),
+  ];
   return `[gd_resource type="ArrayMesh" format=4]
 
-${material}[resource]
-_surfaces = ${surfaces}
+${subResources}${surfaces.map((s) => s.materialText).join('')}[resource]
+_surfaces = ${wallQuadSurfaces(...surfaces.map((s) => s.keys))}
 blend_shape_mode = 0
 `;
+}
+
+/**
+ * One surface called `name`. It declares a `[sub_resource]` StandardMaterial3D with `materialLines`
+ * as its body, or no `"material"` key when that is null.
+ */
+function tileSurface(
+  name: string,
+  materialLines: string | null
+): { materialText: string; keys: SurfaceKeys } {
+  if (materialLines === null) return { materialText: '', keys: { material: null, name } };
+  const id = `StandardMaterial3D_${name}`;
+  return {
+    materialText: `[sub_resource type="StandardMaterial3D" id="${id}"]\n${materialLines}\n\n`,
+    keys: { material: `SubResource("${id}")`, name },
+  };
 }
 
 export interface GridMapCorpus {
@@ -58,6 +74,8 @@ export interface GridMapCorpus {
   itemLines?: string;
   /** The tile material's body, or null for a surface with no material. */
   materialLines?: string | null;
+  /** The body of a second surface's material, or null for a one-surface tile. */
+  secondMaterialLines?: string | null;
   /** The body of the `cells` PackedInt32Array: three ints per cell. */
   cells?: string;
   /** `[sub_resource]` blocks the material names, such as a texture, written before it. */
@@ -93,21 +111,15 @@ function gridMapNode(cells: string): TscnNode {
 export async function mountGridMap({
   itemLines = '',
   materialLines = null,
+  secondMaterialLines = null,
   cells = '0, 0, 0',
   subResources = '',
   wrapper: Wrapper,
 }: GridMapCorpus = {}): Promise<MountedGridMap> {
-  const files = new Map([
-    [LIBRARY_PATH, meshLibrary(itemLines)],
-    [TILE_MESH_PATH, tileMesh(materialLines, subResources)],
-  ]);
-  const provider: ResourceProvider = {
-    async loadResource(path: string) {
-      return files.get(path) ?? null;
-    },
-  };
-  const loader = new ResourceLoader(new FileEventBus(provider));
-  loader.setProvider(provider);
+  const loader = loaderServing({
+    [LIBRARY_PATH]: meshLibrary(itemLines),
+    [TILE_MESH_PATH]: tileMesh({ materialLines, secondMaterialLines, subResources }),
+  });
 
   const gridMap = <GridMap node={gridMapNode(cells)} />;
   const tree = (
@@ -140,13 +152,22 @@ export async function renderGridMapTiles(corpus: GridMapCorpus = {}): Promise<TH
   return (await mountGridMap(corpus)).tiles();
 }
 
-/** The one InstancedMesh a non-billboarded item batches into, or a thrown error. */
+/** Every InstancedMesh the GridMap batches into: one per surface that does not billboard. */
+export async function renderInstancedTiles(corpus: GridMapCorpus = {}): Promise<THREE.InstancedMesh[]> {
+  return (await renderGridMapTiles(corpus)).filter(isInstancedMesh);
+}
+
+/** The one InstancedMesh a one-surface, non-billboarded item batches into, or a thrown error. */
 export async function renderInstancedTile(corpus: GridMapCorpus = {}): Promise<THREE.InstancedMesh> {
-  const instanced = (await renderGridMapTiles(corpus)).filter(
-    (o): o is THREE.InstancedMesh => o instanceof THREE.InstancedMesh
-  );
+  const instanced = await renderInstancedTiles(corpus);
   if (instanced.length !== 1) {
     throw new Error(`expected one instanced tile batch, got ${instanced.length}`);
   }
   return instanced[0]!;
+}
+
+/** The materials a tile draws: three skips a draw group whose material is invisible. */
+export function drawnMaterials(tile: THREE.Mesh): THREE.MeshStandardMaterial[] {
+  const materials = Array.isArray(tile.material) ? tile.material : [tile.material];
+  return materials.filter((m) => m.visible) as THREE.MeshStandardMaterial[];
 }

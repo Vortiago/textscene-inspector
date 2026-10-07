@@ -9,26 +9,11 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../index';
-import type { ResourceProvider } from '../../../resources/ResourceProvider';
+import { ResourceLoaderProvider, ResourceLoader } from '../../../index';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { materialInstanceAs } from '../testing/reactThreeTestInstance';
-
-/** A provider that never loads anything: these materials carry no textures. */
-class NoopProvider implements ResourceProvider {
-  async loadResource(): Promise<string | ArrayBuffer | null> {
-    return null;
-  }
-}
-
-function makeLoader(): ResourceLoader {
-  const provider = new NoopProvider();
-  const bus = new FileEventBus(provider);
-  const loader = new ResourceLoader(bus);
-  loader.setProvider(provider);
-  return loader;
-}
+import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 
 function makeNode(materialId: string, name = 'Mesh'): TscnNode {
   return {
@@ -56,7 +41,7 @@ async function renderWith(node: TscnNode, internalResources: TscnInternalResourc
 
 describe('<MeshInstance3D> refraction material (WI-69)', () => {
   it('renders a refraction material as MeshPhysicalMaterial carrying transmission + thickness', async () => {
-    const loader = makeLoader();
+    const loader = loaderServing();
     const internal: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
       {
@@ -81,7 +66,7 @@ describe('<MeshInstance3D> refraction material (WI-69)', () => {
   it('keeps a material with no refraction on the standard (non-physical) material', async () => {
     // Only an enabled refraction upgrades to physical. The common path stays the
     // MeshStandardMaterial every other test asserts on.
-    const loader = makeLoader();
+    const loader = loaderServing();
     const internal: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
       {
