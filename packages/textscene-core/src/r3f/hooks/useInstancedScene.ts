@@ -20,13 +20,14 @@ export function useInstancedScene(
 
   // Ahead of `useResource`: a component runs its effects in order. The load checks
   // the registered type, and the loader reports a failed load only for a
-  // registered path. Idempotent.
+  // registered path. It registers `loadPath`, the simplified path the load
+  // requests, not the raw ExtResource path.
   useEffect(() => {
     if (!loader || !loadPath) return;
     const parsed = parseResourceReference(instanceRef);
     if (parsed?.type !== 'ExtResource') return;
     const ext = findExtResource(externalResources, parsed.id);
-    if (ext) loader.register(ext);
+    if (ext) loader.register({ ...ext, path: loadPath });
   }, [loader, loadPath, instanceRef, externalResources]);
 
   // `useResource` requests nothing for '', so the hook count stays stable.

@@ -40,6 +40,16 @@ describe('useInstancedScene', () => {
     expect(metadataAtRequest.get(SCENE_PATH)).toBe(true);
   });
 
+  it('registers a path with redundant slashes under the simplified path the load requests', () => {
+    const fake = createFakeResourceLoader();
+    const metadataAtRequest = recordSceneRequests(fake);
+    const unsimplified = [{ id: '1_child', path: 'res:///child.tscn', type: 'PackedScene' }];
+
+    renderHook(() => useInstancedScene(INSTANCE_REF, unsimplified, SCENE_PATH), { wrapper: wrapper(fake) });
+
+    expect(metadataAtRequest.get(SCENE_PATH)).toBe(true);
+  });
+
   it('returns the scene once its load resolves', () => {
     const fake = createFakeResourceLoader();
     const { result } = renderHook(() => useInstancedScene(INSTANCE_REF, EXTERNAL_RESOURCES, SCENE_PATH), {

@@ -28,7 +28,9 @@ export function useSubSceneChildren(
 
   // A stable identity, since callers feed it into useMemo deps.
   return useMemo(() => {
-    if (result.status !== 'loaded' || !result.value) return null;
+    // `result` keeps its last load until the effect resets it, so a row that
+    // loses its instance ref returns null here.
+    if (!scenePath || result.status !== 'loaded' || !result.value) return null;
     return { nodes: result.value.nodes, externalResources: result.value.externalResources };
-  }, [result.status, result.value]);
+  }, [scenePath, result.status, result.value]);
 }

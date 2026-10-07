@@ -238,7 +238,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
  * was registered at that moment.
  */
 export function recordSceneRequests(fake: FakeResourceLoader): Map<string, boolean> {
-  const isRegisteredAtRequest = new Map<string, boolean>();
-  fake.scenes.setRequestImpl((path) => isRegisteredAtRequest.set(path, fake.metadata.has(path)));
-  return isRegisteredAtRequest;
+  const metadataAtRequest = new Map<string, boolean>();
+  fake.scenes.setRequestImpl((path) => metadataAtRequest.set(path, fake.metadata.has(path)));
+  return metadataAtRequest;
 }

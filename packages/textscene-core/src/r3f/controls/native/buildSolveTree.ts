@@ -577,9 +577,9 @@ function buildForest(
 
       const scenePath = node.instance ? resolveInstancePath(node.instance, ext) : null;
       if (scenePath && sceneCache.getCached(scenePath) === undefined) {
-        // The ExtResource too: `createSceneProcessor` throws "Scene metadata not
-        // found" for an unregistered address and caches the failure. A raw `res://`
-        // instance has none to register, and is still requested.
+        // The ExtResource too: the load checks its type, and the loader reports a
+        // failed load only for a registered path. A raw `res://` instance has none
+        // to register, and is still requested.
         const parsed = node.instance ? parseResourceReference(node.instance) : null;
         const entry = parsed?.type === 'ExtResource' ? findExtResource(ext, parsed.id) : undefined;
         // One path can be reached both ways in a single walk; an ExtResource already
@@ -860,7 +860,8 @@ export function useBuildSolveTree(
   useEffect(() => {
     if (!loader) return;
     for (const pending of pendingScenes) {
-      if (pending.ext) loader.register(pending.ext);
+      // Under the simplified path the request names, not the raw ExtResource path.
+      if (pending.ext) loader.register({ ...pending.ext, path: pending.path });
       loader.scenes.request(pending.path);
     }
     for (const path of pendingTextures) loader.textures.request(path);
