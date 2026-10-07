@@ -110,8 +110,8 @@ describe('ResourceLoader (loader-level gaps)', () => {
       expect(loader.scenes.isCached(SCENE_PATH)).toBe(false);
       expect(loader.metadata.getAll()).toHaveLength(0);
 
-      // A caller subscriber registered before the clear still receives events,
-      // unlike `clear()`, which re-registers only the loader's own callbacks.
+      // A subscriber registered before the clear still receives events, unlike
+      // `clear()`, which drops every subscriber.
       loader.register(SCENE_META);
       const second = loader.eventBus.once<TscnScene>('scene', 'loaded', SCENE_PATH);
       loader.request('scene', SCENE_PATH);
@@ -129,14 +129,20 @@ describe('ResourceLoader (loader-level gaps)', () => {
   });
 
   describe('clear()', () => {
-    it('drops caches and metadata', () => {
+    it('drops caches and metadata', async () => {
       loader.register(SCENE_META);
       provider.files.set(SCENE_PATH, VALID_TSCN);
+      const loaded = loader.eventBus.once<TscnScene>('scene', 'loaded', SCENE_PATH);
+      loader.request('scene', SCENE_PATH);
+      await loaded;
+      expect(loader.scenes.isCached(SCENE_PATH)).toBe(true);
+
       loader.clear();
       expect(loader.metadata.getAll()).toHaveLength(0);
       expect(loader.scenes.isCached(SCENE_PATH)).toBe(false);
     });
   });
+
   // The signal CameraFit uses to know loading has finished. A timer can only guess,
   // and frames whatever has decoded when large external .tres meshes are still loading.
   describe('pending-resource activity', () => {
