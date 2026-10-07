@@ -16,6 +16,13 @@ export const RELEASE_PACKAGES = {
   lsp: 'apps/textscene-lsp',
 };
 
+/** The workspace directories each package bundles, besides its own. Its release notes cover them. */
+export const RELEASE_INPUTS = {
+  vscode: ['packages/textscene-core', 'apps/textscene-web'],
+  linter: ['packages/textscene-core'],
+  lsp: ['packages/textscene-core'],
+};
+
 /**
  * `<package>-v<major>.<minor>.<patch>` only. The VS Marketplace refuses a semver pre-release
  * suffix, so a pre-release tag would fail at the last step.
