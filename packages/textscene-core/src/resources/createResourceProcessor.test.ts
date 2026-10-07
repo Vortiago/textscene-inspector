@@ -798,3 +798,55 @@ describe('createResourceProcessor', () => {
     });
   });
 });
+
+describe('release', () => {
+  function loadedProcessor(load: () => Promise<string>) {
+    const eventBus = new ResourceEventBus();
+    const processor = createResourceProcessor<string>({
+      eventBus,
+      resourceType: 'resource',
+      loadDirectly: load,
+    });
+    const invalidated = vi.fn();
+    eventBus.on('resource', 'invalidated', invalidated);
+    return { eventBus, processor, invalidated };
+  }
+
+  /** Request `path` and wait until it loads or fails. A failure rejects `once`, which is the settling. */
+  async function settle(eventBus: ResourceEventBus, processor: ResourceProcessor<string>, path: string) {
+    const loaded = eventBus.once('resource', 'loaded', path, 1000);
+    processor.request(path);
+    await loaded.catch(() => undefined);
+  }
+
+  it('drops an unpinned value and announces nothing', async () => {
+    const { eventBus, processor, invalidated } = loadedProcessor(async () => 'parsed');
+    await settle(eventBus, processor, 'res://a.tres');
+
+    processor.release('res://a.tres');
+
+    expect(processor.isCached('res://a.tres')).toBe(false);
+    expect(invalidated).not.toHaveBeenCalled();
+  });
+
+  it('keeps a value a reader pins', async () => {
+    const { eventBus, processor } = loadedProcessor(async () => 'parsed');
+    processor.pin('res://a.tres');
+    await settle(eventBus, processor, 'res://a.tres');
+
+    processor.release('res://a.tres');
+
+    expect(processor.getCached('res://a.tres')).toBe('parsed');
+  });
+
+  it('keeps a failure, so the path is not retried', async () => {
+    const { eventBus, processor } = loadedProcessor(async () => {
+      throw new Error('missing [gd_resource] header');
+    });
+    await settle(eventBus, processor, 'res://a.tres');
+
+    processor.release('res://a.tres');
+
+    expect(processor.failure('res://a.tres')?.message).toBe('missing [gd_resource] header');
+  });
+});

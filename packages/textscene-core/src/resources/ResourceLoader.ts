@@ -155,6 +155,21 @@ export class ResourceLoader {
     );
   }
 
+  /**
+   * A built ArrayMesh no longer needs its file's parse, whose `_surfaces` text would
+   * sit beside the geometry. The parse goes once no address into that file is still
+   * building, so meshes requested together share one parse, and a pinned parse stays.
+   */
+  private releaseParseOnceBuilt(): void {
+    const release = (address: string): void => {
+      const filePath = resourceFilePath(address);
+      const building = this.arrayMeshes.inflightPaths().some((p) => resourceFilePath(p) === filePath);
+      if (!building) this.resources.release(filePath);
+    };
+    this.eventBus.on('arraymesh', 'loaded', release);
+    this.eventBus.on('arraymesh', 'failed', release);
+  }
+
   constructor(fileEventBus?: FileEventBus, options: ResourceLoaderOptions = {}) {
     this._fileEventBus = fileEventBus || null;
     this.jobRunner = new WorkerJobRunner({ createWorker: options.createWorker });
@@ -189,6 +204,7 @@ export class ResourceLoader {
 
     this.resources = createTresResourceProcessor(fileEventBus, this.eventBus);
     this.arrayMeshes = createArrayMeshProcessor(this.eventBus, this.sectionLoaderFor('arraymesh'));
+    this.releaseParseOnceBuilt();
     this.fonts = createFontProcessor(
       this.eventBus,
       this.sectionLoaderFor('font'),

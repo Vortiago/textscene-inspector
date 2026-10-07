@@ -62,6 +62,11 @@ export interface ResourceProcessor<T> {
   isLoading(path: string): boolean;
   /** One path, or all of them when none is given. */
   clearCache(path?: string): void;
+  /**
+   * Drop `path`'s cached value unless a reader pins it or it is a failure, and announce
+   * nothing. For a value only its loaders needed: a later request loads it fresh.
+   */
+  release(path: string): void;
   /** For debugging. */
   getCacheSize(): number;
   /** Snapshot of the currently-cached paths (for the loader's full-clear announcement). */

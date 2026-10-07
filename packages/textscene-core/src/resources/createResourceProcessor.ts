@@ -143,6 +143,12 @@ export function createResourceProcessor<T>(config: ResourceProcessorConfig<T>): 
 
     clearCache,
 
+    release(path: string): void {
+      // A failure stays: it is small, and it is what stops a retry.
+      if (cache.isPinned(path) || cache.get(path) instanceof CachedFailure) return;
+      cache.delete(path);
+    },
+
     getCacheSize(): number {
       return cache.size;
     },

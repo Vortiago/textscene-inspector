@@ -104,7 +104,7 @@ export class LRUCache<V> {
     }
   }
 
-  private isPinned(key: string): boolean {
+  isPinned(key: string): boolean {
     return (this.pins.get(key) ?? 0) > 0;
   }
 

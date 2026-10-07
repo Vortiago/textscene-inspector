@@ -10,6 +10,8 @@ import type { FontResource } from './fonts/font/types';
 import type { ThemeResource } from './styles/theme/types';
 import { preloadResource } from './testing/preloadResource';
 import { loaderServing } from './testing/servingResourceLoader';
+import { busServing } from './testing/servingFileBus';
+import { ResourceLoader } from './ResourceLoader';
 import { wallQuadSurfaces } from './testing/arrayMeshSurfaces';
 
 const SHARED_PATH = 'res://shared.tres';
@@ -81,5 +83,63 @@ describe('ResourceLoader: processors read the cached ParsedResource', () => {
     loader.themes.request('res://scene.tscn');
 
     expect((await themeFailed).message).toBe(reason);
+  });
+});
+
+/** Two ArrayMesh sub-resources in one file, as a MeshLibrary's item meshes are. */
+const TWO_MESH_PATH = 'res://meshes.tres';
+const TWO_MESH_TRES = [
+  '[gd_resource type="Resource" load_steps=3 format=3]',
+  '',
+  '[sub_resource type="ArrayMesh" id="ArrayMesh_a"]',
+  `_surfaces = ${wallQuadSurfaces({})}`,
+  '',
+  '[sub_resource type="ArrayMesh" id="ArrayMesh_b"]',
+  `_surfaces = ${wallQuadSurfaces({})}`,
+  '',
+  '[resource]',
+  '',
+].join('\n');
+
+function meshLoader() {
+  const { bus, provider, loads } = busServing({ [TWO_MESH_PATH]: TWO_MESH_TRES });
+  const loader = new ResourceLoader(bus);
+  loader.setProvider(provider);
+  return { loader, loads };
+}
+
+function loadMesh(loader: ResourceLoader, address: string): Promise<ArrayMeshResource> {
+  const loaded = loader.eventBus.once<ArrayMeshResource>('arraymesh', 'loaded', address, 2000);
+  loader.arrayMeshes.request(address);
+  return loaded;
+}
+
+describe('ResourceLoader: an ArrayMesh releases the parse it read', () => {
+  it('drops the parse once the mesh is built, so its `_surfaces` text is not held twice', async () => {
+    const { loader } = meshLoader();
+
+    await loadMesh(loader, `${TWO_MESH_PATH}::ArrayMesh_a`);
+
+    expect(loader.resources.isCached(TWO_MESH_PATH)).toBe(false);
+  });
+
+  it('keeps the parse a mounted reader pins', async () => {
+    const { loader } = meshLoader();
+    loader.resources.pin(TWO_MESH_PATH);
+
+    await loadMesh(loader, `${TWO_MESH_PATH}::ArrayMesh_a`);
+
+    expect(loader.resources.isCached(TWO_MESH_PATH)).toBe(true);
+  });
+
+  it('reads the file once for meshes requested together from it', async () => {
+    const { loader, loads } = meshLoader();
+
+    await Promise.all([
+      loadMesh(loader, `${TWO_MESH_PATH}::ArrayMesh_a`),
+      loadMesh(loader, `${TWO_MESH_PATH}::ArrayMesh_b`),
+    ]);
+
+    expect(loads).toEqual([TWO_MESH_PATH]);
   });
 });
