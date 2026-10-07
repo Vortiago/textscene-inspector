@@ -859,8 +859,7 @@ export function useBuildSolveTree(
   useEffect(() => {
     if (!loader) return;
     for (const pending of pendingScenes) {
-      // Under the simplified path the request names, not the raw ExtResource path.
-      if (pending.ext) loader.register({ ...pending.ext, path: pending.path });
+      if (pending.ext) loader.register(pending.ext);
       loader.scenes.request(pending.path);
     }
     for (const path of pendingTextures) loader.textures.request(path);

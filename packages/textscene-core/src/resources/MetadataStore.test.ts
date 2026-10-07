@@ -25,6 +25,18 @@ describe('MetadataStore', () => {
     expect(store.has('res://textures/wall.png')).toBe(true);
   });
 
+  it('registers a path with redundant slashes under its simplified path', () => {
+    store.register({ ...SCENE, path: 'res:///scenes//door.tscn' });
+
+    expect(store.get('res://scenes/door.tscn')?.id).toBe('2_scn');
+  });
+
+  it('looks up a path with redundant slashes by its simplified path', () => {
+    store.register(SCENE);
+
+    expect(store.get('res:///scenes//door.tscn')).toBe(SCENE);
+  });
+
   it('returns undefined / false for unknown lookups', () => {
     store.register(TEX);
 
