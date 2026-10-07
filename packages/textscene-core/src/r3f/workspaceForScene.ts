@@ -16,9 +16,9 @@ import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBounda
 /**
  * A node Godot's CanvasItemEditor would claim: 2D world content or Control and
  * CanvasLayer UI. A caller that must see inside instanced sub-scenes feeds it nodes
- * from the **live scene tree** (`useLiveSceneNodes(isCanvasItemNode)`).
+ * from the **live scene tree** (`useLiveSceneNodes(isClaimedByCanvasItemEditor)`).
  */
-export function isCanvasItemNode(node: TscnNode): boolean {
+export function isClaimedByCanvasItemEditor(node: TscnNode): boolean {
   return is2DUIType(node.type) || nodeComponentRegistry.isCanvasItem(node.type);
 }
 
@@ -28,7 +28,7 @@ export function isCanvasItemNode(node: TscnNode): boolean {
  */
 export function workspaceForRoot(root: TscnNode | undefined): ViewportMode | null {
   if (!root) return null;
-  if (isCanvasItemNode(root)) {
+  if (isClaimedByCanvasItemEditor(root)) {
     return '2D';
   }
   // A viewport is a plain `Node` that neither editor plugin handles, but it is

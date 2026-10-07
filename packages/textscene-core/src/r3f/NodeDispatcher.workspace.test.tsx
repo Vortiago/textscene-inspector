@@ -8,20 +8,39 @@ import { NodeDispatcher } from './NodeDispatcher';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../parser/TscnParser';
 import { SceneStack } from './testing/SceneStack';
+import type { CanvasWorkspace } from './contexts/CanvasWorkspaceContext';
 
 import './nodes/index';
 
-const SCENE = `[gd_scene format=3]
+interface WorkspaceRow {
+  type: string;
+  mountsIn: readonly CanvasWorkspace[];
+}
+
+const MOUNTS_PER_WORKSPACE: readonly WorkspaceRow[] = [
+  { type: 'Node', mountsIn: ['3d', '2d'] },
+  { type: 'Node3D', mountsIn: ['3d'] },
+  { type: 'MeshInstance3D', mountsIn: ['3d'] },
+  { type: 'Sprite2D', mountsIn: ['2d'] },
+  { type: 'Label', mountsIn: ['2d'] },
+  // ClassDB puts it under Control, and this previewer has no painter for it.
+  { type: 'OpenXRInteractionProfileEditor', mountsIn: ['2d'] },
+  { type: 'CanvasLayer', mountsIn: ['2d'] },
+  { type: 'SubViewportContainer', mountsIn: ['3d', '2d'] },
+  { type: 'SubViewport', mountsIn: ['3d', '2d'] },
+];
+
+function sceneWithChild(type: string): string {
+  return `[gd_scene format=3]
 
 [node name="Root" type="Node"]
 
-[node name="Spatial" type="Node3D" parent="."]
-
-[node name="Sprite" type="Sprite2D" parent="."]
+[node name="Probe" type="${type}" parent="."]
 `;
+}
 
-async function render(workspace?: '2d' | '3d') {
-  const scene = new TscnParser().parse(SCENE);
+async function render(source: string, workspace: CanvasWorkspace) {
+  const scene = new TscnParser().parse(source);
   const fake = createFakeResourceLoader();
   return ReactThreeTestRenderer.create(
     <SceneStack workspace={workspace} loader={fake.loader} scene={scene}>
@@ -30,16 +49,13 @@ async function render(workspace?: '2d' | '3d') {
   );
 }
 
-describe('NodeDispatcher workspace split', () => {
-  it('3D (default): renders Node3D content, drops CanvasItem subtrees', async () => {
-    const r = await render();
-    expect(r.scene.findAllByProps({ name: 'Spatial' })).toHaveLength(1);
-    expect(r.scene.findAllByProps({ name: 'Sprite' })).toHaveLength(0);
-  });
+const CASES = MOUNTS_PER_WORKSPACE.flatMap(({ type, mountsIn }) =>
+  (['3d', '2d'] as const).map((workspace) => ({ type, workspace, mounts: mountsIn.includes(workspace) }))
+);
 
-  it('2D world canvas: renders CanvasItems, drops 3D subtrees, passes plain Node through', async () => {
-    const r = await render('2d');
-    expect(r.scene.findAllByProps({ name: 'Sprite' }).length).toBeGreaterThan(0);
-    expect(r.scene.findAllByProps({ name: 'Spatial' })).toHaveLength(0);
+describe('NodeDispatcher workspace split', () => {
+  it.each(CASES)('$type in the $workspace workspace mounts: $mounts', async ({ type, workspace, mounts }) => {
+    const renderer = await render(sceneWithChild(type), workspace);
+    expect(renderer.scene.findAllByProps({ name: 'Probe' }).length > 0).toBe(mounts);
   });
 });

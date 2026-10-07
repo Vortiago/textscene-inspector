@@ -4,7 +4,7 @@
  * plain `Node` root is claimed by neither, so the editor stays where it was.
  */
 import { describe, expect, it } from 'vitest';
-import { isCanvasItemNode, workspaceForRoot } from './workspaceForScene';
+import { isClaimedByCanvasItemEditor, workspaceForRoot } from './workspaceForScene';
 import type { TscnNode } from '../parser/types';
 
 import './nodes/index';
@@ -47,13 +47,13 @@ describe('workspaceForRoot', () => {
   });
 });
 
-describe('isCanvasItemNode', () => {
+describe('isClaimedByCanvasItemEditor', () => {
   it('is true for 2D world content and Control UI, false for 3D and viewports', () => {
-    expect(isCanvasItemNode(root('Sprite2D'))).toBe(true);
-    expect(isCanvasItemNode(root('Label'))).toBe(true);
-    expect(isCanvasItemNode(root('MeshInstance3D'))).toBe(false);
+    expect(isClaimedByCanvasItemEditor(root('Sprite2D'))).toBe(true);
+    expect(isClaimedByCanvasItemEditor(root('Label'))).toBe(true);
+    expect(isClaimedByCanvasItemEditor(root('MeshInstance3D'))).toBe(false);
     // A sub-viewport is not a CanvasItem: in the 3D workspace it must pass its
     // 3D subtree through rather than be dropped as 2D content.
-    expect(isCanvasItemNode(root('SubViewport'))).toBe(false);
+    expect(isClaimedByCanvasItemEditor(root('SubViewport'))).toBe(false);
   });
 });

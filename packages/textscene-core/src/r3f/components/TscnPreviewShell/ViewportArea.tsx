@@ -6,7 +6,7 @@
  */
 import type { SceneGraph } from '../../../core/SceneGraph.js';
 import { useViewportMode } from '../../contexts/ViewportModeContext.js';
-import { isCanvasItemNode } from '../../workspaceForScene.js';
+import { isClaimedByCanvasItemEditor } from '../../workspaceForScene.js';
 import { useLiveSceneNodes } from '../../useLiveSceneTree.js';
 import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary.js';
 import type { TscnNode } from '../../../parser/types.js';
@@ -31,7 +31,7 @@ export function ViewportArea({
   // The live tree finds 2D content inside a sub-scene too. The walk stops at a
   // sub-viewport, whose Controls show only through a viewport surface. A
   // SubViewportContainer still counts, since it draws in 2D (ADR-0033).
-  const has2DContent = useLiveSceneNodes(isCanvasItemNode, NOT_A_VIEWPORT).length > 0;
+  const has2DContent = useLiveSceneNodes(isClaimedByCanvasItemEditor, NOT_A_VIEWPORT).length > 0;
 
   if (mode === '2D') {
     return (
