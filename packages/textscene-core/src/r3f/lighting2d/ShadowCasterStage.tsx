@@ -42,6 +42,25 @@ export function useWorldShadowCasters(): readonly WorldShadowCaster[] {
   return useContext(WorldShadowCasterContext);
 }
 
+/**
+ * The occluders a shadowed light sees: every caster whose `light_mask` meets the light's
+ * `shadow_item_cull_mask`, the one test both `light_update_shadow` and
+ * `light_update_directional_shadow` apply per occluder. Empty while the light casts no shadow.
+ */
+export function useLightShadowCasters(
+  shadowEnabled: boolean,
+  shadowItemCullMask: number
+): readonly WorldShadowCaster[] {
+  const allCasters = useWorldShadowCasters();
+  return useMemo(
+    () =>
+      shadowEnabled
+        ? allCasters.filter((caster) => (caster.occluderLightMask & shadowItemCullMask) !== 0)
+        : NO_CASTERS,
+    [shadowEnabled, allCasters, shadowItemCullMask]
+  );
+}
+
 /** Exact equality, coordinate by coordinate. */
 export function sameWorldCasters(a: readonly WorldShadowCaster[], b: readonly WorldShadowCaster[]): boolean {
   if (a.length !== b.length) return false;

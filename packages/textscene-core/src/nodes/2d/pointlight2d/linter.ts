@@ -6,9 +6,8 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { POINT_LIGHT_2D_RANGE_DEFAULTS } from './types.js';
+import { invertedRangeWindowMessage, LAYER_WINDOW, Z_WINDOW } from '../lights/shared/invertedRangeWindow.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
-import { ruleInt } from '../../../linter/validators/commonValidators.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
@@ -25,28 +24,9 @@ const arms = {
   }),
 } as const satisfies RuleArms<string>;
 
-/**
- * Godot tests both windows inclusively (`_record_item_commands` in rasterizer_canvas_gles3.cpp
- * for z, `_draw_viewport` in renderer_viewport.cpp for the layer), and Light2D's setters only
- * assign, so an inverted window reaches nothing but still costs its pass: an advisory.
- */
 const WINDOWS = [
-  {
-    min: 'range_z_min',
-    max: 'range_z_max',
-    minDefault: POINT_LIGHT_2D_RANGE_DEFAULTS.zMin,
-    maxDefault: POINT_LIGHT_2D_RANGE_DEFAULTS.zMax,
-    arm: arms.invertedZRange,
-    reaches: 'no item at any z_index',
-  },
-  {
-    min: 'range_layer_min',
-    max: 'range_layer_max',
-    minDefault: POINT_LIGHT_2D_RANGE_DEFAULTS.layerMin,
-    maxDefault: POINT_LIGHT_2D_RANGE_DEFAULTS.layerMax,
-    arm: arms.invertedLayerRange,
-    reaches: 'no canvas at any layer',
-  },
+  { window: Z_WINDOW, arm: arms.invertedZRange },
+  { window: LAYER_WINDOW, arm: arms.invertedLayerRange },
 ] as const;
 
 function checkPointLight2D(context: RuleContext): Diagnostic[] {
@@ -70,20 +50,9 @@ function checkPointLight2D(context: RuleContext): Diagnostic[] {
     );
   }
 
-  // An absent half takes Godot's default: `range_z_max = -2000` alone is already
-  // empty against the default `range_z_min` of -1024.
-  for (const window of WINDOWS) {
-    const min = ruleInt(props[window.min], window.minDefault);
-    const max = ruleInt(props[window.max], window.maxDefault);
-    if (min === null || max === null || min <= max) continue;
-    reportArm(
-      diagnostics,
-      window.arm,
-      node,
-      `PointLight2D '${window.min}' (${min}) is above '${window.max}' (${max}). ` +
-        `Godot tests the window inclusively and does not swap the bounds, so this ` +
-        `light reaches ${window.reaches}.`
-    );
+  for (const { window, arm } of WINDOWS) {
+    const message = invertedRangeWindowMessage('PointLight2D', props, window);
+    if (message) reportArm(diagnostics, arm, node, message);
   }
   return diagnostics;
 }

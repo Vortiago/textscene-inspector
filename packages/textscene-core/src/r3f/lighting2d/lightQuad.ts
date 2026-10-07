@@ -48,7 +48,7 @@ export const SHADOW_FILTER_PCF13 = 2;
  * One/One: Godot 4.6.3 sums `light_only_alpha`, so one, two and three 0.3 cookies mask to 0.3, 0.6
  * and 0.9, not a screen blend's 0.51 and 0.657.
  */
-function accumulationBlend(blendMode: number): Partial<THREE.ShaderMaterialParameters> {
+export function accumulationBlend(blendMode: number): Partial<THREE.ShaderMaterialParameters> {
   return {
     // The transparent list sorts farthest-first, replaying canvas draw order. The opaque list
     // sorts nearest-first and would reverse MIX, whose result depends on light order.

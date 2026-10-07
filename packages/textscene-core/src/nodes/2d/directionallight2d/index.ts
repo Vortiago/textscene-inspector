@@ -1,16 +1,18 @@
-/**
- * DirectionalLight2D registration: the parser, which reuses the Node2D parse.
- * linterParser.ts holds the property validators.
- */
+/** Registers the DirectionalLight2D parser and property formatter. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
-import { parseNode2D } from '../../base/node2d/parser';
+import { parseDirectionalLight2D } from './parser';
+import { formatDirectionalLight2DProperties } from './propertyFormatter';
 
 const directionalLight2DRegistration: NodeTypeRegistration = {
   typeName: 'DirectionalLight2D',
-  parser: parseNode2D,
+  parser: parseDirectionalLight2D,
+  propertyFormatter: formatDirectionalLight2DProperties,
 };
 
 nodeRegistry.register(directionalLight2DRegistration);
 
 export { directionalLight2DRegistration };
+export * from './parser';
+export * from './propertyFormatter';
+export * from './types';

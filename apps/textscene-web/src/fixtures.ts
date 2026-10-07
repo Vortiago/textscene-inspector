@@ -448,6 +448,21 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Directionallight2d Shadow Pcf5",
+    "file": "unit-directionallight2d-shadow-pcf5.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Directionallight2d Shadow",
+    "file": "unit-directionallight2d-shadow.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Directionallight2d",
+    "file": "unit-directionallight2d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Environment Sky Tonemap",
     "file": "unit-environment-sky-tonemap.tscn",
     "category": "Other"

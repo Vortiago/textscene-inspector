@@ -136,9 +136,26 @@ describe('PointLight2D Component', () => {
     expect(lightMaterial(await render(node({ blend_mode: '2' }))).transparent).toBe(true);
   });
 
-  it('returns null (no mesh) when enabled=false', async () => {
+  it('draws no quad when enabled=false', async () => {
     const r = await render(node({ enabled: 'false' }));
     expect(r.scene.findAllByType('Mesh').length).toBe(0);
+  });
+
+  it('still draws its children when enabled=false, since `enabled` switches the light alone', async () => {
+    const light = node({ enabled: 'false' });
+    const fake = createFakeResourceLoader();
+    const r = await ReactThreeTestRenderer.create(
+      <CanvasWorkspaceProvider workspace="2d">
+        <ResourceLoaderProvider loader={fake.loader}>
+          <SceneResourcesProvider internalResources={[]} externalResources={[]}>
+            <PointLight2D node={light}>
+              <group name="Blob" />
+            </PointLight2D>
+          </SceneResourcesProvider>
+        </ResourceLoaderProvider>
+      </CanvasWorkspaceProvider>
+    );
+    expect(r.scene.findAll((o) => o.props.name === 'Blob')).not.toHaveLength(0);
   });
 
   it('applies texture_scale to quad dimensions', async () => {

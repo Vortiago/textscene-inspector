@@ -33,6 +33,12 @@ export const CANVAS_LAYER_MIN = -2147483648;
 export const CANVAS_LAYER_MAX = 2147483647;
 
 /**
+ * `RenderingServer::MAX_2D_DIRECTIONAL_LIGHTS` (`servers/rendering/rendering_server.h:109`): the
+ * DirectionalLight2Ds one viewport applies. `renderer_viewport.cpp:511` stops the list there.
+ */
+export const MAX_2D_DIRECTIONAL_LIGHTS = 8;
+
+/**
  * `RS::ShadowCastingSetting` (`servers/rendering/rendering_server.h:1494-1499`), the integers a
  * `.tscn` stores for `GeometryInstance3D.cast_shadow` and a MeshLibrary item's `mesh_cast_shadow`.
  */

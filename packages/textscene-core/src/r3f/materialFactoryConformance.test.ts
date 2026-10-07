@@ -122,6 +122,8 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     'spreads the shared Node2D transform bag onto a `<group>`, which has no material slot',
   'packages/textscene-core/src/nodes/2d/pathfollow2d/Component.tsx':
     'spreads the sampled curve transform onto a `<group>`, which has no material slot',
+  'packages/textscene-core/src/nodes/2d/directionallight2d/Component.tsx':
+    'the light quad: one material per light per parameter set, memoised on every input and disposed on replacement, so a changed input arrives as a new material',
   'packages/textscene-core/src/nodes/2d/pointlight2d/Component.tsx':
     'the light quad: one material per light per parameter set, memoised on every input and disposed on replacement, so a changed input arrives as a new material',
   'packages/textscene-core/src/nodes/3d/camera3d/Component.tsx':
@@ -183,6 +185,8 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the cube-to-paraboloid copy: shaders fixed at construction, only uniforms move, one instance per renderer',
   'packages/textscene-core/src/r3f/testing/threePasses.ts':
     "a test stand-in for three's shared `_depthMaterial`, read by a probe and never rendered, so never compiled",
+  'packages/textscene-core/src/r3f/lighting2d/directionalLightQuad.ts':
+    'one material per light per parameter set, memoised on every input including the shadow `defines` and disposed on replacement',
   'packages/textscene-core/src/r3f/lighting2d/lightQuad.ts':
     'one material per light per parameter set, memoised on every input including the shadow `defines` and disposed on replacement',
   'packages/textscene-core/src/resources/sky/build.ts':

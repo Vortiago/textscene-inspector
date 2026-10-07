@@ -199,7 +199,7 @@ reproduced:
 - [Control](../../packages/textscene-core/src/nodes/2d/ui/control/comparison.md): a full-rect layout region
 - [CPUParticles2D](../../packages/textscene-core/src/nodes/2d/cpuparticles2d/comparison.md): one merged quad mesh holding a frozen particle pose
 - [DampedSpringJoint2D](../../packages/textscene-core/src/nodes/physics/2d/dampedspringjoint2d/comparison.md): nothing (a transform-only group)
-- [DirectionalLight2D](../../packages/textscene-core/src/nodes/2d/directionallight2d/comparison.md): an invisible transform-only fallback
+- [DirectionalLight2D](../../packages/textscene-core/src/nodes/2d/directionallight2d/comparison.md): one term over the whole light buffer that every lit CanvasItem multiplies in
 - [FlowContainer](../../packages/textscene-core/src/nodes/2d/ui/flowcontainer/comparison.md): children flowed along one axis and wrapped into lines
 - [FoldableContainer](../../packages/textscene-core/src/nodes/2d/ui/foldablecontainer/comparison.md): a collapsible titled panel (accordion)
 - [GPUParticles2D](../../packages/textscene-core/src/nodes/2d/particles/gpuparticles2d/comparison.md): nothing yet, Godot draws a particle cloud, the previewer does not

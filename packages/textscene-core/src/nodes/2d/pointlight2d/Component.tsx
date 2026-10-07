@@ -33,7 +33,7 @@ import {
   useRegisterCanvasLight2D,
 } from '../../../r3f/lighting2d/CanvasLighting2D';
 import type { LightCullKey } from '../../../r3f/lighting2d/lightCullKey';
-import { useWorldShadowCasters } from '../../../r3f/lighting2d/ShadowCasterStage';
+import { useLightShadowCasters } from '../../../r3f/lighting2d/ShadowCasterStage';
 import { useShadowLightPose } from '../../../r3f/lighting2d/shadowLightPose';
 import {
   litQuadRenderOrder,
@@ -42,8 +42,6 @@ import {
   ShadowVolumeMask,
 } from '../../../r3f/lighting2d/ShadowVolumeMask';
 import type { WorldShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
-
-const NO_CASTERS: readonly WorldShadowCaster[] = [];
 
 export function PointLight2D({ node, children }: NodeComponentProps) {
   const props = node.properties as PointLight2DProperties;
@@ -83,26 +81,15 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   useRegisterShadowTint(lights > 0 && tintsShadow, cullKey);
   const shadowTintLayer = useShadowTintLayer(cullKey);
 
-  // Every occluder on the canvas, narrowed to the ones Godot lets this light
-  // see. The flatten is shared; only the mask test is per light.
-  const allCasters = useWorldShadowCasters();
-  const shadowItemCullMask = props.shadow_item_cull_mask;
-  const casters = useMemo(
-    () =>
-      props.shadow_enabled
-        ? allCasters.filter((caster) => (caster.occluderLightMask & shadowItemCullMask) !== 0)
-        : NO_CASTERS,
-    [props.shadow_enabled, allCasters, shadowItemCullMask]
-  );
+  const casters = useLightShadowCasters(props.shadow_enabled, props.shadow_item_cull_mask);
 
-  if (!props.enabled) return null;
-
+  // A disabled light still draws its children: `enabled` switches the light alone.
   return (
     <CanvasItem2D
       node={node}
       props={props}
       body={() =>
-        showPlaceholder ? (
+        !props.enabled ? null : showPlaceholder ? (
           <MissingResourcePlaceholder shape="plane" name={node.name} />
         ) : displayedTexture ? (
           <QuadMesh

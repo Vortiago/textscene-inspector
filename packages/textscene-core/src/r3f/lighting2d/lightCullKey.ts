@@ -1,7 +1,7 @@
 /**
  * Which items a 2D light reaches, and the class key that forces on the accumulator. The per-item
  * test is `_record_item_commands` in `drivers/gles3/rasterizer_canvas_gles3.cpp` (line 1347 on
- * master): the light mask, the `z_final` window and the rects.
+ * master): the light mask, the `z_final` window and the rects. A directional light skips it.
  */
 /*
  * Portions ported from Godot Engine (MIT).
@@ -9,7 +9,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
 
-import { POINT_LIGHT_2D_RANGE_DEFAULTS } from '../../nodes/2d/pointlight2d/types.js';
+import { LIGHT_2D_RANGE_DEFAULTS } from '../../nodes/2d/lights/shared/types.js';
 
 /**
  * Everything a light contributes to the cull test, and so the identity of an accumulation class. A
@@ -20,8 +20,9 @@ export interface LightCullKey {
   /**
    * `Light2D.range_item_cull_mask`, ANDed against each CanvasItem's own `light_mask`. Not the
    * light node's `light_mask`, which is its CanvasItem mask and says nothing about what it lights.
+   * Null for a directional light, which reaches every item whatever its `light_mask`.
    */
-  readonly itemCullMask: number;
+  readonly itemCullMask: number | null;
   /** `Light2D.range_z_min`: the lowest accumulated `z_index` this light reaches. */
   readonly zMin: number;
   /** `Light2D.range_z_max`: the highest, inclusive. */
@@ -37,11 +38,20 @@ export interface LightCullKey {
 }
 
 /**
- * An untouched `Light2D`'s window, from `POINT_LIGHT_2D_RANGE_DEFAULTS`. The z pair is wide but
+ * An untouched `Light2D`'s window, from `LIGHT_2D_RANGE_DEFAULTS`. The z pair is wide but
  * still a window. The layer pair is narrow, which is why a default light never lights a default
  * CanvasLayer.
  */
-export const DEFAULT_LIGHT_CULL_KEY: LightCullKey = POINT_LIGHT_2D_RANGE_DEFAULTS;
+export const DEFAULT_LIGHT_CULL_KEY: LightCullKey = LIGHT_2D_RANGE_DEFAULTS;
+
+/**
+ * The key of a DirectionalLight2D: every item, at any z, on a canvas in its layer window. The
+ * renderer_rd `canvas.glsl:727-760` loop runs each directional light over every lit item, and
+ * `renderer_viewport.cpp:678-684` filters the list per canvas by layer alone.
+ */
+export function directionalLightCullKey(layerMin: number, layerMax: number): LightCullKey {
+  return { itemCullMask: null, zMin: -Infinity, zMax: Infinity, layerMin, layerMax };
+}
 
 /**
  * `itemZ` is Godot's accumulated, clamped `z_final` (`canvasItemPlacement`), and `itemLayer` is the
@@ -56,7 +66,7 @@ export function lightReachesItem(
   itemLayer: number
 ): boolean {
   return (
-    (key.itemCullMask & itemLightMask) !== 0 &&
+    (key.itemCullMask === null || (key.itemCullMask & itemLightMask) !== 0) &&
     itemZ >= key.zMin &&
     itemZ <= key.zMax &&
     itemLayer >= key.layerMin &&
@@ -83,11 +93,17 @@ export function sameLightCullKey(a: LightCullKey, b: LightCullKey): boolean {
 }
 
 /**
- * A total order over cull keys, cull mask first. Sorted, not mount-ordered, so a class's index,
- * camera layer and uniform slot depend only on which keys are present. With no range window
- * authored, the order is the mask order.
+ * A total order over cull keys, cull mask first and directional keys ahead of every mask. Sorted,
+ * not mount-ordered, so a class's index, camera layer and uniform slot depend only on which keys
+ * are present. With no range window authored, the order is the mask order.
  */
 export function compareLightCullKeys(a: LightCullKey, b: LightCullKey): number {
+  if (a.itemCullMask === null || b.itemCullMask === null) {
+    if (a.itemCullMask !== b.itemCullMask) return a.itemCullMask === null ? -1 : 1;
+    // Two directional keys differ only in their layer window: their z pair is the same infinity,
+    // whose difference is NaN.
+    return a.layerMin - b.layerMin || a.layerMax - b.layerMax;
+  }
   return (
     a.itemCullMask - b.itemCullMask ||
     a.zMin - b.zMin ||

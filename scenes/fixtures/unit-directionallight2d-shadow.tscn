@@ -1,0 +1,23 @@
+; Moves one variable: the parallel shadow a DirectionalLight2D casts under `shadow_filter = NONE`.
+; One square occluder, the light turned 0.5 rad, so the shadow runs down and to the left from the
+; occluder's far corners and covers its inside. Every other shadow scene radiates from a point,
+; so a wrong extrusion direction, cull or near-edge depth shows only here.
+
+[gd_scene format=3]
+
+[sub_resource type="OccluderPolygon2D" id="1"]
+polygon = PackedVector2Array(-60, -60, 60, -60, 60, 60, -60, 60)
+
+[node name="Root" type="Node2D"]
+
+[node name="Surface" type="Polygon2D" parent="."]
+color = Color(0.25, 0.25, 0.25, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
+
+[node name="Sun" type="DirectionalLight2D" parent="."]
+rotation = 0.5
+shadow_enabled = true
+
+[node name="Caster" type="LightOccluder2D" parent="."]
+position = Vector2(576, 200)
+occluder = SubResource("1")

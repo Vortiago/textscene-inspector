@@ -1,0 +1,70 @@
+/** The Light2D property shape PointLight2D and DirectionalLight2D share. */
+
+import type { Node2DProperties, Color } from '../../../base/node2d/types';
+
+/** `Light2D.BlendMode`: ADD, SUB, MIX. */
+export type Light2DBlendMode = 0 | 1 | 2;
+
+/** `Light2D.ShadowFilter`: NONE, PCF5, PCF13. */
+export type Light2DShadowFilter = 0 | 1 | 2;
+
+export interface Light2DProperties extends Node2DProperties {
+  enabled: boolean;
+  color: Color;
+  energy: number;
+  blend_mode: Light2DBlendMode;
+  /**
+   * `Light2D.range_item_cull_mask`: the mask ANDed against each CanvasItem's
+   * `light_mask` to decide whether this light reaches it. Not the light's own
+   * `light_mask`, which is the light node's CanvasItem mask and says nothing
+   * about what it lights.
+   */
+  range_item_cull_mask: number;
+  /**
+   * `Light2D.shadow_item_cull_mask`: the same test for occluders, deciding
+   * which `LightOccluder2D`s cast a shadow from this light.
+   */
+  shadow_item_cull_mask: number;
+  /**
+   * `Light2D.range_z_min` / `range_z_max`: the window of accumulated `z_index`
+   * (Godot's `z_final`, clamped to +/-4096) this light reaches, tested per item,
+   * inclusive. `z_index`'s -4096..4096 is only a hint, so an item can sit outside.
+   */
+  range_z_min: number;
+  range_z_max: number;
+  /**
+   * `Light2D.range_layer_min` / `range_layer_max`: the window of canvas layers,
+   * tested per canvas. The world canvas is layer 0 and a `CanvasLayer` defaults
+   * to 1, so a default light reaches the world and no HUD.
+   */
+  range_layer_min: number;
+  range_layer_max: number;
+  /** `Light2D.shadow_enabled`: whether occluders in range carve this light. */
+  shadow_enabled: boolean;
+  /**
+   * `Light2D.shadow_color`, default transparent black, so a shadowed pixel reads
+   * back the unlit surface exactly rather than darkened.
+   */
+  shadow_color: Color;
+  /**
+   * `Light2D.shadow_filter`: how the shadow boundary is sampled. NONE is a hard
+   * `step()`. PCF5 and PCF13 spread it over `shadow_filter_smooth` texels.
+   */
+  shadow_filter: Light2DShadowFilter;
+  /** `Light2D.shadow_filter_smooth`: the PCF kernel's width, in shadow-map texels. */
+  shadow_filter_smooth: number;
+}
+
+/**
+ * The cull window an untouched `Light2D` carries (`scene/2d/light_2d.h:50-55`).
+ * One record, because the parser's fallbacks, the linter's inverted-window test
+ * and the renderer's default cull key must agree: a copy that drifts leaves the
+ * linter silent on the scenes the renderer culls to black.
+ */
+export const LIGHT_2D_RANGE_DEFAULTS = {
+  itemCullMask: 1,
+  zMin: -1024,
+  zMax: 1024,
+  layerMin: 0,
+  layerMax: 0,
+} as const;

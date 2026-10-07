@@ -9,6 +9,7 @@ import { describe, it, expect } from 'vitest';
 import {
   DEFAULT_LIGHT_CULL_KEY,
   compareLightCullKeys,
+  directionalLightCullKey,
   lightCullKeyId,
   lightReachesItem,
   sameLightCullKey,
@@ -178,5 +179,48 @@ describe('compareLightCullKeys', () => {
 
   it('reports 0 for equal keys', () => {
     expect(compareLightCullKeys(key(), key())).toBe(0);
+  });
+});
+
+/**
+ * `canvas.glsl:727-760` (renderer_rd) runs every directional light over every lit item, with no
+ * per-item test, and `renderer_viewport.cpp:678-684` filters the list per canvas by layer alone.
+ * Measured on Godot 4.6.3: items at `light_mask` 2 and 0, one at `z_index` 2000, all take the light.
+ */
+describe('directionalLightCullKey', () => {
+  const directional = directionalLightCullKey(0, 0);
+
+  it('reaches an item whatever its light_mask, 0 included', () => {
+    expect(lightReachesItem(directional, 2, 0, 0)).toBe(true);
+    expect(lightReachesItem(directional, 0, 0, 0)).toBe(true);
+  });
+
+  it('reaches an item at any z, even one past the z_index clamp', () => {
+    expect(lightReachesItem(directional, 1, 2000, 0)).toBe(true);
+    expect(lightReachesItem(directional, 1, -10000, 0)).toBe(true);
+  });
+
+  it('still tests the canvas layer window', () => {
+    expect(lightReachesItem(directional, 1, 0, 1)).toBe(false);
+    expect(lightReachesItem(directionalLightCullKey(0, 1), 1, 0, 1)).toBe(true);
+  });
+
+  it('is a class apart from every positional key', () => {
+    expect(lightCullKeyId(directional)).not.toBe(lightCullKeyId(key()));
+    expect(sameLightCullKey(directional, key({ itemCullMask: 0xffffffff }))).toBe(false);
+  });
+
+  it('is one class for two directional lights on one layer window', () => {
+    expect(sameLightCullKey(directional, directionalLightCullKey(0, 0))).toBe(true);
+    expect(compareLightCullKeys(directional, directionalLightCullKey(0, 0))).toBe(0);
+  });
+
+  it('sorts ahead of the positional keys and by its layer window', () => {
+    const sorted = [key(), directionalLightCullKey(0, 1), directional].sort(compareLightCullKeys);
+    expect(sorted.map(lightCullKeyId)).toEqual([
+      lightCullKeyId(directional),
+      lightCullKeyId(directionalLightCullKey(0, 1)),
+      lightCullKeyId(key()),
+    ]);
   });
 });

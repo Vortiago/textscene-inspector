@@ -62,6 +62,11 @@ export const CANVAS_2D_SCENES = [
   { name: 'pointlight2d-shadow-pcf13', file: 'unit-pointlight2d-shadow-pcf13.tscn', mode: '2d' },
   // The colour fixture pins the fractional tint the two accumulators split.
   { name: 'pointlight2d-shadow-pcf-color', file: 'unit-pointlight2d-shadow-pcf-color.tscn', mode: '2d' },
+  // DirectionalLight2D reaches every lit item whatever its light_mask or z, and its shadow is a
+  // parallel map across the project viewport's diagonal, so its PCF taps keep one width.
+  { name: 'directionallight2d', file: 'unit-directionallight2d.tscn', mode: '2d' },
+  { name: 'directionallight2d-shadow', file: 'unit-directionallight2d-shadow.tscn', mode: '2d' },
+  { name: 'directionallight2d-shadow-pcf5', file: 'unit-directionallight2d-shadow-pcf5.tscn', mode: '2d' },
   // CPUParticles2D renders a frozen pose: a live emitter never gives two
   // identical frames, so the harness fails it as unstable, not as changed. Each
   // fixture pins `use_fixed_seed`/`seed`/`fixed_fps`/`preprocess` so the pose

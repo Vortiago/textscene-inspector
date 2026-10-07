@@ -15,7 +15,7 @@ import { createFakeResourceLoader } from '../../resources/testing/createFakeReso
 import { CanvasLighting2DProvider } from './CanvasLighting2D';
 import { litQuadRenderOrder } from './ShadowVolumeMask';
 import { isPositionalCanvasLight } from './lightSequence';
-import { CanvasLightSequenceProvider, useLightSequence } from './useLightSequence';
+import { CanvasLightSequenceProvider, useDirectionalLightSlot, useLightSequence } from './useLightSequence';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
 import { NodePathProvider } from '../contexts/NodePathContext';
 import { createSceneGraphFromTscnScene } from '../../core/SceneGraph';
@@ -76,7 +76,7 @@ describe('isPositionalCanvasLight', () => {
     expect(isPositionalCanvasLight({ type: 'PointLight2D' } as never)).toBe(true);
   });
 
-  it('claims none for a DirectionalLight2D, which has no cookie quad in this pass', () => {
+  it('claims none for a DirectionalLight2D, which sits on a list of its own', () => {
     // Numbering it would leave a hole the 2n / 2n+1 pairing spends for nothing.
     expect(isPositionalCanvasLight({ type: 'DirectionalLight2D' } as never)).toBe(false);
   });
@@ -179,5 +179,73 @@ ${lamp('B')}`
 
   it('gives a lone light slot zero rather than an arbitrary offset', async () => {
     expect(quadOrders(await render(lamp('Only')))).toEqual([litQuadRenderOrder(0)]);
+  });
+});
+
+/**
+ * Godot keeps directional lights on their own list (`renderer_viewport.cpp:491-514`): it holds only
+ * lights `canvas_light_set_enabled` left on, which `Light2D::_update_light_visibility`
+ * (`light_2d.cpp:59`) ties to `enabled` and visibility in the tree, and it stops at eight.
+ */
+describe('useDirectionalLightSlot', () => {
+  function Read({ seen }: { seen: (number | null)[] }) {
+    seen.push(useDirectionalLightSlot());
+    return null;
+  }
+
+  async function slots(scene: string, paths: readonly string[]): Promise<(number | null)[]> {
+    const seen: (number | null)[] = [];
+    const sceneGraph = createSceneGraphFromTscnScene(new TscnParser().parse(scene));
+    await ReactThreeTestRenderer.create(
+      <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
+        <CanvasLightSequenceProvider>
+          {paths.map((path) => (
+            <NodePathProvider key={path} path={path}>
+              <Read seen={seen} />
+            </NodePathProvider>
+          ))}
+        </CanvasLightSequenceProvider>
+      </HierarchyProvider>
+    );
+    return seen;
+  }
+
+  function sun(name: string, parent = '.', extra = ''): string {
+    return `[node name="${name}" type="DirectionalLight2D" parent="${parent}"]\n${extra}\n`;
+  }
+
+  const ROOT = '[gd_scene format=3]\n[node name="Root" type="Node2D"]\n';
+
+  it('numbers directional lights in preorder, apart from the positional list', async () => {
+    const scene = `${ROOT}[node name="Lamp" type="PointLight2D" parent="."]\n${sun('A')}${sun('B')}`;
+    expect(await slots(scene, ['Root/A', 'Root/B'])).toEqual([0, 1]);
+  });
+
+  it('skips a disabled light, which never reaches the list', async () => {
+    const scene = `${ROOT}${sun('Off', '.', 'enabled = false')}${sun('On')}`;
+    expect(await slots(scene, ['Root/Off', 'Root/On'])).toEqual([null, 0]);
+  });
+
+  it('skips a hidden light and a light under a hidden parent', async () => {
+    const scene = `${ROOT}${sun('Hidden', '.', 'visible = false')}[node name="Group" type="Node2D" parent="."]
+visible = false
+${sun('Inner', 'Group')}${sun('Shown')}`;
+    expect(await slots(scene, ['Root/Hidden', 'Root/Group/Inner', 'Root/Shown'])).toEqual([null, null, 0]);
+  });
+
+  it('stops at MAX_2D_DIRECTIONAL_LIGHTS, so a ninth light takes no slot', async () => {
+    const names = Array.from({ length: 9 }, (_unused, index) => `S${index}`);
+    const scene = ROOT + names.map((name) => sun(name)).join('');
+    const seen = await slots(
+      scene,
+      names.map((name) => `Root/${name}`)
+    );
+    expect(seen).toEqual([0, 1, 2, 3, 4, 5, 6, 7, null]);
+  });
+
+  it('gives slot 0 to a light outside any scene hierarchy', async () => {
+    const seen: (number | null)[] = [];
+    await ReactThreeTestRenderer.create(<Read seen={seen} />);
+    expect(seen).toEqual([0]);
   });
 });
