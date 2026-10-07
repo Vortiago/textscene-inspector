@@ -4,26 +4,23 @@
  * decode stays pure over a property bag.
  */
 
-import type { ParsedResource } from '../../../parser/parsedResource';
 import type { FileData } from '../../FileEventBus';
 import { fontResourceFromBytes } from '../../formats/dynamicfont/fontBytes';
-import { resourceSectionOfType } from '../../resourceSection';
+import type { LoadedSection } from '../../resourceSection';
 import { resourceFilePath } from '../../subResourcePath';
-import { decodeFont, FONT_SUB_RESOURCE_TYPES } from './decode';
+import { decodeFont } from './decode';
 import type { FontFileResource, FontLoaderFn, FontResource } from './types';
 
 /**
- * The `FontResource` that `path` addresses inside `file`: its `[resource]` body, or the
- * `[sub_resource]` a **Sub-resource path** names. A scene's own inline Font never comes
- * here: `resolveInlineFontResource` resolves it synchronously, never through the resource
- * event bus.
+ * The `FontResource` that `section`, loaded from `path`, decodes to. A scene's own inline
+ * Font never comes here: `resolveInlineFontResource` resolves it synchronously, never
+ * through the resource event bus.
  */
 export async function buildFontResource(
   path: string,
-  file: ParsedResource,
+  { file, type, properties }: LoadedSection,
   loadFont: FontLoaderFn
 ): Promise<FontResource> {
-  const { type, properties } = resourceSectionOfType(file, path, FONT_SUB_RESOURCE_TYPES);
   return decodeFont(resourceFilePath(path), type, properties, file.extResources, file.subResources, loadFont);
 }
 

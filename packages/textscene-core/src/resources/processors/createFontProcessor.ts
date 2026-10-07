@@ -16,11 +16,12 @@ import type { DependencyGraph } from '../dependencyGraph';
 import { buildFontResource, fontResourceFromContainer } from '../fonts/font/loadFont';
 import { isFontContainerPath } from '../formats/dynamicfont/fontBytes';
 import type { FontResource } from '../fonts/font/types';
-import type { ParsedFileLoaderFn } from '../resourceSection';
+import type { SectionLoaderFn } from '../resourceSection';
+import { FONT_SUB_RESOURCE_TYPES } from '../fonts/font/decode';
 
 export function createFontProcessor(
   eventBus: ResourceEventBus,
-  loadParsedFile: ParsedFileLoaderFn,
+  loadSection: SectionLoaderFn,
   /** A raw font container's bytes. Rejects when the file is missing. */
   readFile: (path: string) => Promise<FileData>,
   /** Records each font a font reads, so a change to that file reloads the reader. */
@@ -99,7 +100,9 @@ export function createFontProcessor(
     loadDirectly: async (path) =>
       isFontContainerPath(path)
         ? fontResourceFromContainer(path, await readFile(path))
-        : buildFontResource(path, await loadParsedFile(path), (address) => loadFont(path, address)),
+        : buildFontResource(path, await loadSection(path, FONT_SUB_RESOURCE_TYPES), (address) =>
+            loadFont(path, address)
+          ),
   });
 
   return processor;

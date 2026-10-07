@@ -26,7 +26,7 @@ import './sliceRegistrations.js';
 import type { ParsedResource } from '../parser/parsedResource';
 import { PEER_LOAD_TIMEOUT_MS, type ResourceProcessor } from './createResourceProcessor';
 import { DependencyGraph, type Dependent } from './dependencyGraph';
-import type { ParsedFileLoaderFn } from './resourceSection';
+import { sectionLoader, type SectionLoaderFn } from './resourceSection';
 import { resourceFilePath } from './subResourcePath';
 import * as logger from '../logger';
 import { WorkerJobRunner, type CreateJobWorker } from '../workers/WorkerJobRunner';
@@ -147,10 +147,11 @@ export class ResourceLoader {
     return data;
   }
 
-  /** The parsed file behind each address `busType` loads, from the `resource` slot's cache. */
-  private parsedFileLoaderFor(busType: ResourceType): ParsedFileLoaderFn {
-    return (path) =>
-      this.peerRequire({ busType, key: path }, this.resources, 'resource', resourceFilePath(path));
+  /** The section behind each address `busType` loads, from the `resource` slot's cached parse. */
+  private sectionLoaderFor(busType: ResourceType): SectionLoaderFn {
+    return sectionLoader((path) =>
+      this.peerRequire({ busType, key: path }, this.resources, 'resource', resourceFilePath(path))
+    );
   }
 
   constructor(fileEventBus?: FileEventBus, options: ResourceLoaderOptions = {}) {
@@ -186,10 +187,10 @@ export class ResourceLoader {
     });
 
     this.resources = createTresResourceProcessor(fileEventBus, this.eventBus);
-    this.arrayMeshes = createArrayMeshProcessor(this.eventBus, this.parsedFileLoaderFor('arraymesh'));
+    this.arrayMeshes = createArrayMeshProcessor(this.eventBus, this.sectionLoaderFor('arraymesh'));
     this.fonts = createFontProcessor(
       this.eventBus,
-      this.parsedFileLoaderFor('font'),
+      this.sectionLoaderFor('font'),
       (path) => this.readFile(path, 'FontFile'),
       this.dependencies
     );
@@ -198,7 +199,7 @@ export class ResourceLoader {
     // Font's own self-recursion).
     this.themes = createThemeProcessor(
       this.eventBus,
-      this.parsedFileLoaderFor('theme'),
+      this.sectionLoaderFor('theme'),
       (themeKey) => (address) =>
         this.peerLoad({ busType: 'theme', key: themeKey }, this.fonts, 'font', address)
     );

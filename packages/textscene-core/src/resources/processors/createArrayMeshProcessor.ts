@@ -10,7 +10,7 @@ import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
 import { ARRAY_MESH_TYPES, decodeArrayMesh } from '../meshes/arraymesh/decode';
 import { buildArrayMeshGeometry } from '../meshes/arraymesh/build';
-import { resourceSectionOfType, type ParsedFileLoaderFn } from '../resourceSection';
+import type { SectionLoaderFn } from '../resourceSection';
 
 /** Decoded ArrayMesh: merged geometry plus one material path per surface (group). */
 export interface ArrayMeshResource {
@@ -27,15 +27,14 @@ export interface ArrayMeshResource {
 
 export function createArrayMeshProcessor(
   eventBus: ResourceEventBus,
-  loadParsedFile: ParsedFileLoaderFn
+  loadSection: SectionLoaderFn
 ): ResourceProcessor<ArrayMeshResource> {
   return createResourceProcessor({
     eventBus,
     resourceType: 'arraymesh',
     addressesSubResources: true,
     loadDirectly: async (path) => {
-      const file = await loadParsedFile(path);
-      const { properties } = resourceSectionOfType(file, path, ARRAY_MESH_TYPES);
+      const { file, properties } = await loadSection(path, ARRAY_MESH_TYPES);
       const mesh = decodeArrayMesh(properties, file, path);
       return {
         geometry: buildArrayMeshGeometry(mesh),

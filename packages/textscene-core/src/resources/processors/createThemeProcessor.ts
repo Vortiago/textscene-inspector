@@ -6,14 +6,15 @@
 
 import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
-import type { ParsedFileLoaderFn } from '../resourceSection';
+import type { SectionLoaderFn } from '../resourceSection';
+import { THEME_TYPES } from '../styles/theme/decode';
 import { buildThemeResource } from '../styles/theme/loadTheme';
 import type { ThemeResource } from '../styles/theme/types';
 import type { FontLoaderFn } from '../fonts/font/types';
 
 export function createThemeProcessor(
   eventBus: ResourceEventBus,
-  loadParsedFile: ParsedFileLoaderFn,
+  loadSection: SectionLoaderFn,
   /** The font loader for the Theme at `themeKey`, so each font it reads is recorded against it. */
   loadFontFor: (themeKey: string) => FontLoaderFn
 ): ResourceProcessor<ThemeResource> {
@@ -23,6 +24,7 @@ export function createThemeProcessor(
     addressesSubResources: true,
     // Fonts load through a different processor (`loader.fonts`), so `ResourceLoader`
     // injects the loader rather than this closing over itself as `createFontProcessor` does.
-    loadDirectly: async (path) => buildThemeResource(path, await loadParsedFile(path), loadFontFor(path)),
+    loadDirectly: async (path) =>
+      buildThemeResource(path, await loadSection(path, THEME_TYPES), loadFontFor(path)),
   });
 }

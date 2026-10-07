@@ -51,7 +51,7 @@ function readMaterialPath(
  * Decode the ArrayMesh section `selfPath` addresses inside `file`. Godot writes
  * `_surfaces` only for a mesh that has surfaces, so a section without it is
  * legitimately empty, as in Godot.
- * @param properties - the addressed section's own properties (`resourceSectionOfType`).
+ * @param properties - the addressed section's own properties (`SectionLoaderFn`).
  * @param selfPath - the resource path this mesh was requested under. A material
  *   declared as a `[sub_resource]` here can only be addressed relative to its
  *   own file, so this is an input, not a convenience.

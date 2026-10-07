@@ -1,11 +1,12 @@
 /**
  * The theme processor on the corpus shapes: a Theme .tres carrying a
  * `default_font`, and a font ref into a separate file resolved through the
- * injected `loadFont`. The owning file arrives parsed, through `loadParsedFile`.
+ * injected `loadFont`. The owning file arrives parsed, through `sectionLoader`.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { parseTresFile } from '../../parser/parsedResource';
 import { ResourceEventBus } from '../ResourceEventBus';
+import { sectionLoader } from '../resourceSection';
 import { resourceFilePath } from '../subResourcePath';
 import { createThemeProcessor } from './createThemeProcessor';
 import type { ThemeResource } from '../styles/theme/types';
@@ -32,7 +33,7 @@ function setup(files: Record<string, string>, loadFont: FontLoaderFn = async () 
     return parseTresFile(content);
   };
   const eventBus = new ResourceEventBus();
-  const processor = createThemeProcessor(eventBus, loadParsedFile, () => loadFont);
+  const processor = createThemeProcessor(eventBus, sectionLoader(loadParsedFile), () => loadFont);
   return { eventBus, processor };
 }
 

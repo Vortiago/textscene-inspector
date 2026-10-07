@@ -116,7 +116,9 @@ describe('resolveThemeResource', () => {
 describe('buildThemeResource', () => {
   it('decodes the addressed section and resolves its fonts', async () => {
     const loadFont: FontLoaderFn = async (address) => (address === 'res://fonts/base.ttf' ? FONT_A : null);
-    const resource = await buildThemeResource('res://theme.tres', parseTresFile(THEME_TRES), loadFont);
+    const file = parseTresFile(THEME_TRES);
+    const section = { file, type: file.resourceType, properties: file.properties };
+    const resource = await buildThemeResource('res://theme.tres', section, loadFont);
     expect(resource.defaultFont).toBe(FONT_A);
     expect(resource.defaultFontSize).toBe(20);
     expect(resource.fonts.Label?.font).toBe(FONT_A);

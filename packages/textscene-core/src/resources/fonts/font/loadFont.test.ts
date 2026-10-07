@@ -26,11 +26,9 @@ describe('buildFontResource', () => {
     const loadFont: FontLoaderFn = async (address) =>
       address === 'res://theme/fonts/montserrat_extra_bold.otf' ? base : null;
 
-    const resource = await buildFontResource(
-      'res://theme/fonts/montserrat_16.tres',
-      parseTresFile(MONTSERRAT_TRES),
-      loadFont
-    );
+    const file = parseTresFile(MONTSERRAT_TRES);
+    const section = { file, type: file.resourceType, properties: file.properties };
+    const resource = await buildFontResource('res://theme/fonts/montserrat_16.tres', section, loadFont);
 
     expect(resource.kind).toBe('file');
     expect((resource as { fallbacks: FontResource[] }).fallbacks).toEqual([base]);

@@ -3,11 +3,10 @@
  * `processors/createThemeProcessor.ts`. It resolves the decoded font addresses.
  */
 
-import type { ParsedResource } from '../../../parser/parsedResource';
 import type { FontLoaderFn, FontResource } from '../../fonts/font/types';
-import { resourceSectionOfType } from '../../resourceSection';
+import type { LoadedSection } from '../../resourceSection';
 import { resourceFilePath } from '../../subResourcePath';
-import { decodeThemeAddresses, THEME_TYPES } from './decode';
+import { decodeThemeAddresses } from './decode';
 import type { ThemeAddresses, ThemeResource } from './types';
 
 /**
@@ -53,16 +52,12 @@ export async function resolveThemeResource(
   };
 }
 
-/**
- * The `ThemeResource` that `path` addresses inside `file`: its `[resource]` body, or the
- * `[sub_resource]` a **Sub-resource path** names.
- */
+/** The `ThemeResource` that `section`, loaded from `path`, decodes to. */
 export async function buildThemeResource(
   path: string,
-  file: ParsedResource,
+  { file, properties }: LoadedSection,
   loadFont: FontLoaderFn
 ): Promise<ThemeResource> {
-  const { properties } = resourceSectionOfType(file, path, THEME_TYPES);
   const addresses = decodeThemeAddresses(
     resourceFilePath(path),
     properties,

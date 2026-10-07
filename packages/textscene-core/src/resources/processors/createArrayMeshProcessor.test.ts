@@ -6,6 +6,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { parseTresFile } from '../../parser/parsedResource';
 import { ResourceEventBus } from '../ResourceEventBus';
+import { sectionLoader } from '../resourceSection';
 import { createArrayMeshProcessor, type ArrayMeshResource } from './createArrayMeshProcessor';
 import { truncatedSurface, wallQuadSurfaces } from '../testing/arrayMeshSurfaces';
 
@@ -29,10 +30,13 @@ const UNREADABLE_THEN_GOOD_TRES = WALL_TRES.replace(
   `_surfaces = [${truncatedSurface({ name: 'truncated' })}, {`
 );
 
-/** A processor whose `loadParsedFile` parses `tres` for every path. */
+/** A processor whose section loader parses `tres` for every path. */
 function processorServing(tres: string) {
   const eventBus = new ResourceEventBus();
-  const processor = createArrayMeshProcessor(eventBus, async () => parseTresFile(tres));
+  const processor = createArrayMeshProcessor(
+    eventBus,
+    sectionLoader(async () => parseTresFile(tres))
+  );
   return { eventBus, processor };
 }
 
