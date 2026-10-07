@@ -55,6 +55,12 @@ describe('rehomeOverride', () => {
     expect(extResourcePathOf(raw.texture, scope)).toBeUndefined();
   });
 
+  it('returns the inner scope itself when the outer scope lacks every id the override names', () => {
+    const { scope } = rehomeOverride({ texture: 'ExtResource("9")' }, outer, inner);
+
+    expect(scope).toBe(inner);
+  });
+
   it('keeps the inner scene paths, since the node sits inside the inner scene', () => {
     const { scope } = rehomeOverride({ texture: 'ExtResource("1")' }, outer, inner);
 

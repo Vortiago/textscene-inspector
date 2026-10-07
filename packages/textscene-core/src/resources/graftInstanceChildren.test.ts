@@ -180,6 +180,32 @@ describe('graftInstanceChildren', () => {
     expect(sprite.children[0]!.instanceSubPath).toBe('Pivot');
   });
 
+  it('keeps a host node seated under an override, in the outer scope', () => {
+    // The host's parser seats `[node name="Body" parent="Inst/Sprite2D/Pivot"]` under the override.
+    const body = node('Body', { type: 'Sprite2D', rawProperties: { texture: 'ExtResource("1")' } });
+    const override = { ...pivotOverride({ visible: 'false' }), children: [body] };
+
+    const pivot = graftInstanceChildren(subScene(), [override], { outer, content: inner })[0]!.children[0]!;
+
+    expect(pivot.children.map((c) => c.name)).toEqual(['Body']);
+    expect(texturePath(pivot.children[0]!, scopeOf(pivot, inner))).toBe('res://outer.png');
+  });
+
+  it('folds an override of a nested instance child when that instance collapses', () => {
+    const loaded = [node('Sprite2D', { instance: 'ExtResource("3")' })];
+    const override = node('Pivot', {
+      instanceSubPath: 'Sprite2D',
+      overridesExistingNode: true,
+      rawProperties: { visible: 'false' },
+    });
+
+    const reanchored = graftInstanceChildren(loaded, [override], NO_SCOPES)[0]!.children[0]!;
+    const grafted = graftInstanceChildren([node('Pivot', { rawProperties: {} })], [reanchored], NO_SCOPES);
+
+    expect(grafted.map((c) => c.name)).toEqual(['Pivot']);
+    expect(grafted[0]!.rawProperties).toEqual({ visible: 'false' });
+  });
+
   it('appends at the root and warns when the sub-path names nothing', () => {
     const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const child = node('Body', { instanceSubPath: 'NoSuch/Path' });

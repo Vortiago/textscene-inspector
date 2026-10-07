@@ -82,19 +82,14 @@ function graftAt(
   const targetScope = scopeOf(target, siblingScope);
   let replacement: LiveNode | null;
 
-  if (rest.length > 0) {
-    if (target.instance) {
-      // The path continues into another instance, whose sub-scene is not merged
-      // yet. Re-anchor here with the remaining path: when that node collapses, it
-      // runs this same graft and resolves the rest.
-      replacement = {
-        ...target,
-        children: [...target.children, { ...child, instanceSubPath: rest.join('/') }],
-      };
-    } else {
-      const deeper = graftAt(target.children, rest, child, targetScope);
-      replacement = deeper ? { ...target, children: deeper } : null;
-    }
+  if (target.instance) {
+    // The path reaches another instance, whose sub-scene is not merged yet. Re-anchor
+    // here with the remaining path, or as a direct child where none remains: when that
+    // node collapses, it runs this same graft and resolves the rest.
+    replacement = { ...target, children: [...target.children, reanchored(child, rest)] };
+  } else if (rest.length > 0) {
+    const deeper = graftAt(target.children, rest, child, targetScope);
+    replacement = deeper ? { ...target, children: deeper } : null;
   } else {
     replacement = { ...target, children: attach(target.children, child, targetScope) };
   }
@@ -103,6 +98,12 @@ function graftAt(
   const copy = [...siblings];
   copy[index] = replacement;
   return copy;
+}
+
+/** `child` with `rest` as its sub-path below the instance it re-anchors at, or none when `rest` is empty. */
+function reanchored(child: LiveNode, rest: readonly string[]): LiveNode {
+  const { instanceSubPath: _authored, ...direct } = child;
+  return rest.length > 0 ? { ...direct, instanceSubPath: rest.join('/') } : direct;
 }
 
 /**
@@ -135,8 +136,9 @@ function foldOrWarn(
 
 /**
  * `siblings` with the override's raw properties layered onto the node of its name,
- * or `null` when none has it. Each reference resolves in the scene that wrote it:
- * the override's in its own scope, the node's own and its children's in theirs.
+ * and the override's children attached under it, or `null` when none has the name.
+ * Each reference resolves in the scene that wrote it: the override's and its
+ * children's in the override's scope, the node's own and its children's in theirs.
  */
 function foldOverride(
   siblings: readonly LiveNode[],
@@ -148,11 +150,31 @@ function foldOverride(
 
   const existing = siblings[index]!;
   const existingScope = scopeOf(existing, siblingScope);
+  const overrideScope = scopeOf(override, existingScope);
   const { raw, scope } = override.rawProperties
-    ? rehomeOverride(override.rawProperties, scopeOf(override, existingScope), existingScope)
+    ? rehomeOverride(override.rawProperties, overrideScope, existingScope)
     : { raw: undefined, scope: existingScope };
   const layered = layerRawOverride(existing, raw);
+  const children = attachAll(layered.children, override.children, overrideScope, scope);
   const copy = [...siblings];
-  copy[index] = scope === siblingScope ? layered : { ...layered, scope };
+  copy[index] = scope === siblingScope ? { ...layered, children } : { ...layered, children, scope };
   return copy;
+}
+
+/**
+ * `siblings` with each of `children` attached. The host's parser seats a node whose
+ * `parent=` names an override under that override, so it arrives as the override's child,
+ * written in `childScope`.
+ */
+function attachAll(
+  siblings: readonly LiveNode[],
+  children: readonly LiveNode[],
+  childScope: SceneScope,
+  siblingScope: SceneScope
+): LiveNode[] {
+  let attached = [...siblings];
+  for (const child of children) {
+    attached = attach(attached, child.scope ? child : { ...child, scope: childScope }, siblingScope);
+  }
+  return attached;
 }

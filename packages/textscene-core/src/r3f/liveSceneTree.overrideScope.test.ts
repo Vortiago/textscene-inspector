@@ -10,6 +10,8 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { TscnParser } from '../parser/TscnParser';
 import { extResourcePathOf } from '../resources/testing/extResourcePathOf';
+import { findSubResource } from '../resources/SubResourceResolver';
+import { resourceRef } from '../godot/resourceRef';
 import { liveChildGroups, rootScope, type LiveChildGroup, type LiveTreeContext } from './liveSceneTree';
 import type { SceneScope } from '../parser/types';
 import { scopeOf, type LiveNode } from '../resources/liveNode';
@@ -67,6 +69,42 @@ describe('overrides in the live scene tree', () => {
   it('keeps a sibling of the overridden node in its own scene', () => {
     expect(resolvedPath('Opponent/Sprite2D/Pivot/Shadow', 'texture')).toBe(
       'res://combat/combatants/sprites/shadow.png'
+    );
+  });
+});
+
+describe('an instance override that names a SubResource of the root scene', () => {
+  const host = new TscnParser().parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://sub.tscn" id="sub"]
+
+[sub_resource type="StandardMaterial3D" id="2"]
+albedo_color = Color(1, 0, 0, 1)
+
+[node name="Instanced" instance=ExtResource("sub")]
+material_override = SubResource("2")
+`);
+  const sub = new TscnParser().parse(`[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="2"]
+albedo_color = Color(0, 0, 1, 1)
+
+[node name="SubRoot" type="MeshInstance3D"]
+material_override = SubResource("2")
+`);
+
+  it('resolves it to the root scene’s resource, as the viewport does', () => {
+    const hostCtx: LiveTreeContext = {
+      externalResources: host.externalResources,
+      internalResources: host.internalResources,
+      sceneCache: { getCached: (path) => (path === 'res://sub.tscn' ? sub : undefined) },
+    };
+    const [group] = liveChildGroups(host.nodes[0]!, rootScope(hostCtx), hostCtx.sceneCache);
+    const merged = group!.mergedNode!;
+    const id = resourceRef(merged.rawProperties!.material_override!)!.id;
+
+    expect(findSubResource(scopeOf(merged, group!.scope).internalResources, id)?.data.albedo_color).toBe(
+      'Color(1, 0, 0, 1)'
     );
   });
 });

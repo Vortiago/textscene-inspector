@@ -44,7 +44,7 @@ export function rehomeOverride(
       if (resource) addedExternal.push({ ...resource, id });
     } else {
       const resource = findSubResource(from.internalResources, ref.id);
-      // Pushed before its data is rehomed: a SubResource it reaches takes its own id first.
+      // Claimed before its data is re-homed, so a reference back to it reuses the claimed id.
       if (resource) addedInternal.push({ ...resource, id, data: mapValues(resource.data, rehomeValue) });
     }
     return id;
@@ -53,6 +53,8 @@ export function rehomeOverride(
 
   const rehomedRaw = mapValues(raw, rehomeValue);
   if (external.renamed.size === 0 && internal.renamed.size === 0) return { raw, scope: into };
+  // `into` itself when nothing joins it: a caller compares scopes by identity.
+  if (addedExternal.length === 0 && addedInternal.length === 0) return { raw: rehomedRaw, scope: into };
   return {
     raw: rehomedRaw,
     scope: {

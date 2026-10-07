@@ -34,6 +34,11 @@ export interface CachedGlbSource {
 export interface LiveTreeContext {
   /** The root scene's ExtResources, which its top-level instance refs resolve against. */
   externalResources: readonly TscnExternalResource[];
+  /**
+   * The root scene's SubResources, which an instance's own overrides name. Absent reads as
+   * empty, for a consumer that never reads an override's SubResource.
+   */
+  internalResources?: readonly TscnInternalResource[];
   sceneCache: CachedSceneSource;
   glbCache?: CachedGlbSource;
 }
@@ -102,14 +107,13 @@ function contentScopeOf(cached: Partial<SceneScope>, instancedScenePaths: readon
   };
 }
 
-/**
- * The root {@link SceneScope} for a path or tree walk. These walkers never read
- * a SubResource id, so the pool is empty. A consumer that needs SubResources
- * calls `liveChildGroups` with a real scope of its own.
- */
+/** The root {@link SceneScope} for a path or tree walk: the root scene's own pools. */
 const NO_INTERNAL_RESOURCES: readonly TscnInternalResource[] = [];
 export function rootScope(ctx: LiveTreeContext): SceneScope {
-  return { externalResources: ctx.externalResources, internalResources: NO_INTERNAL_RESOURCES };
+  return {
+    externalResources: ctx.externalResources,
+    internalResources: ctx.internalResources ?? NO_INTERNAL_RESOURCES,
+  };
 }
 
 /**
