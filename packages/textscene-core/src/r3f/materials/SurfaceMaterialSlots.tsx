@@ -25,11 +25,11 @@ export function surfaceAttach(index: number, surfaceCount: number): string {
 export interface SurfaceMaterialSlotsProps {
   /** `sources[i]` is the material of draw group `i`. */
   sources: readonly (MaterialSource | undefined)[];
-  /** The drawing GeometryInstance3D's `transparency`. Omitted is opaque. */
-  instanceTransparency?: number;
+  /** The drawing GeometryInstance3D's `transparency`. */
+  transparency: number;
 }
 
-export function SurfaceMaterialSlots({ sources, instanceTransparency }: SurfaceMaterialSlotsProps) {
+export function SurfaceMaterialSlots({ sources, transparency }: SurfaceMaterialSlotsProps) {
   const slotSources = surfaceSources(sources);
   return (
     <>
@@ -38,7 +38,7 @@ export function SurfaceMaterialSlots({ sources, instanceTransparency }: SurfaceM
           key={i}
           source={source}
           attach={surfaceAttach(i, slotSources.length)}
-          instanceTransparency={instanceTransparency}
+          transparency={transparency}
         />
       ))}
     </>

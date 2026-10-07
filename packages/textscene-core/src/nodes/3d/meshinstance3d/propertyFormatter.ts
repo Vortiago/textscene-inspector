@@ -3,6 +3,7 @@
 import type { PropertySection } from '../../../core/NodeRegistry';
 import type { MeshInstance3DProperties } from './types';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
+import { ShadowCastingSetting } from '../../../godot/rendering';
 
 export function formatMeshInstance3DProperties(properties: MeshInstance3DProperties): PropertySection[] {
   const sections: PropertySection[] = [];
@@ -12,10 +13,9 @@ export function formatMeshInstance3DProperties(properties: MeshInstance3DPropert
     meshItems.push({ label: 'Mesh', value: properties.mesh });
   }
 
-  const shadowLabels = ['OFF', 'ON', 'DOUBLE_SIDED', 'SHADOWS_ONLY'];
   meshItems.push({
     label: 'Cast Shadow',
-    value: shadowLabels[properties.castShadow] || `Unknown (${properties.castShadow})`,
+    value: ShadowCastingSetting[properties.castShadow] ?? `Unknown (${properties.castShadow})`,
   });
 
   if (properties.skeleton) {
@@ -26,12 +26,7 @@ export function formatMeshInstance3DProperties(properties: MeshInstance3DPropert
     meshItems.push({ label: 'Skin', value: properties.skin });
   }
 
-  if (meshItems.length > 0) {
-    sections.push({
-      title: 'Mesh',
-      items: meshItems,
-    });
-  }
+  sections.push({ title: 'Mesh', items: meshItems });
 
   if (properties.surfaceMaterialOverrides.size > 0) {
     const materialItems = Array.from(properties.surfaceMaterialOverrides.entries()).map(

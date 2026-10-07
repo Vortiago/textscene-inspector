@@ -23,7 +23,7 @@ export interface StandardMaterialSlotProps extends MaterialTextureMaps {
   /** R3F attach key: `material-0` for multi-surface meshes. */
   attach?: string;
   /** The drawing GeometryInstance3D's `transparency`. Omitted for any other drawer. */
-  instanceTransparency?: number;
+  transparency?: number;
 }
 
 export function StandardMaterialSlot({
@@ -37,7 +37,7 @@ export function StandardMaterialSlot({
   displacementMap,
   anisotropyMap,
   attach,
-  instanceTransparency = 0,
+  transparency = 0,
 }: StandardMaterialSlotProps) {
   // A null `scalars` is the derivation's "no material" case: Godot's default 3D
   // surface, not a default-constructed StandardMaterial3D.
@@ -53,7 +53,7 @@ export function StandardMaterialSlot({
       displacementMap,
       anisotropyMap,
     }),
-    instanceTransparency
+    transparency
   );
 
   return materialBagElement(bag, attach);
@@ -64,10 +64,7 @@ export function materialBagElement(bag: StandardMaterialBag, attach: string | un
   // `attach` first: it is the mount's own prop and must never shadow a derived
   // one. The key comes from the same merged bag it travels with (ADR-0038): a
   // program input arriving late, or a moved `attach`, reaches three only through a remount.
-  const program = materialProgramInputs({
-    props: { attach, ...bag.props },
-    merge: [bag.injection && { injection: bag.injection }],
-  });
+  const program = materialProgramInputs({ props: { attach, ...bag.props, injection: bag.injection } });
   switch (bag.materialClass) {
     case 'basic':
       return <meshBasicMaterial key={program.key} {...program.props} />;

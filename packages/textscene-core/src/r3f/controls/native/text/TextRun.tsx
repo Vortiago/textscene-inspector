@@ -345,7 +345,9 @@ export function TextRun({
         outlineColor,
         outlineWidthPx
       ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `tint`/`outlineColor` are compared by their own r/g/b/a fields, not object identity (a caller re-creating an equal-valued object every render, as several already do, must not rebuild the mesh) -- the SAME per-field contract the pre-dispatch code already had for the material-only memo, now covering geometry/texture too since the canvas branch rasterises `tint` into the texture itself, and `blend` for the same reason.
+    // `tint`, `outlineColor` and `blend` are compared by their fields, not by identity: a caller
+    // that re-creates an equal object every render must not rebuild the mesh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- per-field comparison, as above.
     [
       layout,
       fontSizePx,

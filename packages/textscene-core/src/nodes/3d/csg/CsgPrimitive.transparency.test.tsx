@@ -19,9 +19,7 @@ import type { CSGBox3DProperties } from './csgbox3d/types';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { NodeTree } from '../../../r3f/testing/NodeTree';
 import { settleCsgEvaluation } from '../../../r3f/csg/testing/settleCsgEvaluation';
-
-/** `fadeAlpha(0.5)`: 0.5 × 255 truncated to 127. */
-const HALF_TRANSPARENT_ALPHA = 127 / 255;
+import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
 
 function parseBox(properties: Record<string, string>): CSGBox3DProperties {
   return parseCSGBox3D(heading('CSGBox3D', { name: 'Box' }), properties);
@@ -63,12 +61,12 @@ async function subtractionMaterial(rootProperties: string, holeProperties = ''):
 describe('CSG transparency', () => {
   it('blends a lone root at the fade alpha', async () => {
     const material = await loneBoxMaterial({ transparency: '0.5' });
-    expect(material).toMatchObject({ transparent: true, depthWrite: false, opacity: HALF_TRANSPARENT_ALPHA });
+    expect(material).toMatchObject({ transparent: true, depthWrite: false, opacity: HALF_FADE_ALPHA });
   });
 
   it("blends a boolean's evaluated mesh at the root's fade alpha", async () => {
     const material = await subtractionMaterial('transparency = 0.5');
-    expect(material).toMatchObject({ transparent: true, opacity: HALF_TRANSPARENT_ALPHA });
+    expect(material).toMatchObject({ transparent: true, opacity: HALF_FADE_ALPHA });
   });
 
   it("ignores a contributor's own transparency", async () => {

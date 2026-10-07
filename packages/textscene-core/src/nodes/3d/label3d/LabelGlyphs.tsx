@@ -12,7 +12,6 @@ import {
   onSceneFontMetricsSettled,
   peekBundledCanvasFontMetrics,
 } from '../../../r3f/controls/native/text/sceneFontLoader';
-import type { CanvasTextBlend } from '../../../r3f/controls/native/text/canvasTextPainter';
 import { alphaCutSurface, NO_TRANSPARENT_FLAG } from '../../../r3f/godotAlphaCut';
 import { cutSurfaceAlpha } from '../../../r3f/materials/fadedSurfaceAlpha';
 import type { Color } from '../../../utils/colorParser';
@@ -96,12 +95,7 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
   // `label_3d.cpp:386` never gates on modulate alpha: whatever reaches the
   // blended pass is transparent. The geometry instance's `transparency` can move both
   // surfaces there, and scales each surface's alpha by one fade alpha.
-  const { opacity: fadeAlpha, ...surfaceAlpha } = cutSurfaceAlpha(cut, 1, properties.transparency);
-  const blend: CanvasTextBlend = {
-    ...surfaceAlpha,
-    alphaTest: cut.alphaTest,
-    alphaHash: cut.alphaHash,
-  };
+  const { opacity: fadeAlpha, ...blend } = cutSurfaceAlpha(cut, 1, properties.transparency);
   const fillTint = withAlphaScaled(properties.modulate, fadeAlpha);
   const outlineTint = withAlphaScaled(properties.outline_modulate, fadeAlpha);
 

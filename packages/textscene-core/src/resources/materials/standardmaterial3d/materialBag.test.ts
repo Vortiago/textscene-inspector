@@ -11,7 +11,12 @@ import { standardMaterial } from './testing/standardMaterial';
 import { BillboardMode } from '../../../godot/billboard';
 import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextureSlots } from './types';
-import { DROPS_ALBEDO_ALPHA, OPAQUE_AFTER_CUT, patchedFragment } from '../../../r3f/testing/patchedFragment';
+import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
+import {
+  DROPS_ALBEDO_ALPHA,
+  WRITES_OPAQUE_AFTER_CUT,
+  patchedFragment,
+} from '../../../r3f/testing/patchedFragment';
 
 function bag(properties: Record<string, string>, textures?: ResolvedTextureSlots) {
   return standardMaterialBag(parseStandardMaterial3DScalars(properties), textures);
@@ -21,9 +26,6 @@ function bag(properties: Record<string, string>, textures?: ResolvedTextureSlots
 function fadedBag(properties: Record<string, string> | null) {
   return standardMaterialBag(properties && parseStandardMaterial3DScalars(properties), {}, 0.5);
 }
-
-/** `fadeAlpha(0.5)`: 0.5 × 255 truncated to 127. */
-const HALF_FADE_ALPHA = 127 / 255;
 
 describe('standardMaterialBag — the material class', () => {
   it('derives a standard material for a plain PBR surface', () => {
@@ -163,7 +165,7 @@ describe('standardMaterialBag — fragment alpha', () => {
 
   it('writes alpha 1 past the scissor cut of an additive surface', () => {
     expect(patchedFragment(materialFromBag(bag({ blend_mode: '1', transparency: '2' })))).toContain(
-      OPAQUE_AFTER_CUT
+      WRITES_OPAQUE_AFTER_CUT
     );
   });
 });

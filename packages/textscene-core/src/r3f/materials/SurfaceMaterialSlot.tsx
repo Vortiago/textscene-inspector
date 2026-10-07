@@ -314,8 +314,8 @@ export interface SurfaceMaterialSlotProps {
   attach?: string;
   /** The mesh sub-resource a triplanar material folds into its tiling, if any. */
   triplanarMesh?: TscnInternalResource;
-  /** The drawing GeometryInstance3D's `transparency`. Omitted is opaque. */
-  instanceTransparency?: number;
+  /** The drawing GeometryInstance3D's `transparency`. Omitted for any other drawer. */
+  transparency?: number;
 }
 
 /**
@@ -328,20 +328,13 @@ export function SurfaceMaterialSlot({
   source,
   attach,
   triplanarMesh,
-  instanceTransparency,
+  transparency,
 }: SurfaceMaterialSlotProps) {
   const material = readyMaterial(useMaterial(source));
   const scalars = useMaterialScalars(material);
   const { maps, isUnresolved } = useMaterialTextures(scalars, material, triplanarMesh);
   if (isUnresolved) return materialBagElement(MISSING_TEXTURE_MATERIAL, attach);
-  return (
-    <StandardMaterialSlot
-      scalars={scalars}
-      attach={attach}
-      instanceTransparency={instanceTransparency}
-      {...maps}
-    />
-  );
+  return <StandardMaterialSlot scalars={scalars} attach={attach} transparency={transparency} {...maps} />;
 }
 
 /** The decoded scalars of `material`, or null for Godot's default surface. */

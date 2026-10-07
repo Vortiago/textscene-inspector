@@ -8,8 +8,8 @@ import { clamp } from './math.js';
 import { unitByte } from './unitByte.js';
 
 /**
- * `FADE_ALPHA_PASS_THRESHOLD` (`render_forward_clustered.cpp:47`): an instance whose `force_alpha`
- * is below it draws every surface in the alpha pass (`:1128`), never the opaque or depth pass.
+ * `FADE_ALPHA_PASS_THRESHOLD` (`render_forward_clustered.cpp:47`): a geometry instance whose
+ * `force_alpha` is below it draws every surface in the alpha pass (`:1128`), never the opaque or depth pass.
  */
 const FADE_ALPHA_PASS_THRESHOLD = 0.999;
 

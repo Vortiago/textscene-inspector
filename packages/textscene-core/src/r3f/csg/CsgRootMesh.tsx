@@ -24,7 +24,7 @@ export interface CsgRootMeshProps {
   /** The ROOT's `cast_shadow`; a contributor's own is absorbed with its solid. */
   shadow: ShadowCastingEffects;
   /** The ROOT's `transparency`; a contributor's own is absorbed with its solid. */
-  instanceTransparency: number;
+  transparency: number;
   /**
    * The root's own solid, drawn while the library loads or after it failed. Passed in
    * because building it needs the slice's material resolution, which lives in
@@ -35,7 +35,7 @@ export interface CsgRootMeshProps {
   children?: ReactNode;
 }
 
-export function CsgRootMesh({ plan, shadow, instanceTransparency, fallback, children }: CsgRootMeshProps) {
+export function CsgRootMesh({ plan, shadow, transparency, fallback, children }: CsgRootMeshProps) {
   const { internalResources, externalResources } = useSceneResources();
   const [csg, setCsg] = useState<CsgModule | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -113,7 +113,7 @@ export function CsgRootMesh({ plan, shadow, instanceTransparency, fallback, chil
           receiveShadow
           geometry={evaluation!.geometry as THREE.BufferGeometry}
         >
-          <SurfaceMaterialSlots sources={surfaces} instanceTransparency={instanceTransparency} />
+          <SurfaceMaterialSlots sources={surfaces} transparency={transparency} />
         </mesh>
       )}
       {/*

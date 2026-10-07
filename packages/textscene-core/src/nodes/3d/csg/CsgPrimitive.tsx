@@ -121,7 +121,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const combining = plan !== null && plan.geometryCount > 1;
   const shadow = shadowCastingEffects(properties.castShadow);
   // A root's own: a contributor's solid, and its transparency with it, belong to the root's mesh.
-  const instanceTransparency = properties.transparency;
+  const { transparency } = properties;
 
   const transform = { name: node.name, position, rotation, scale, visible } as const;
 
@@ -162,7 +162,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
       receiveShadow
     >
       {geometry}
-      <SurfaceMaterialSlot source={materialSource} instanceTransparency={instanceTransparency} />
+      <SurfaceMaterialSlot source={materialSource} transparency={transparency} />
     </mesh>
   );
 
@@ -171,12 +171,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   if (combining) {
     return (
       <group {...transform}>
-        <CsgRootMesh
-          plan={plan}
-          shadow={shadow}
-          instanceTransparency={instanceTransparency}
-          fallback={ownSolid}
-        >
+        <CsgRootMesh plan={plan} shadow={shadow} transparency={transparency} fallback={ownSolid}>
           {children}
         </CsgRootMesh>
       </group>

@@ -16,6 +16,7 @@ import LabelGlyphs from './LabelGlyphs';
 import type { Label3DProperties } from './types';
 import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
+import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
 
 // happy-dom has neither `FontFace` nor `document.fonts`, so the real bundled
 // registration can only ever answer `undefined` here (`sceneFontLoader.ts`'s
@@ -345,8 +346,7 @@ describe('<LabelGlyphs>', () => {
       const renderer = await render(
         props({ outline_size: 12, outline_modulate: { r: 0, g: 0, b: 0, a: 0.5 }, transparency: 0.5 })
       );
-      // 1 - 0.5 in the 8-bit steps of the fade alpha: 127 / 255.
-      expect(materials(renderer).map((m) => m.opacity)).toEqual([0.5 * (127 / 255), 127 / 255]);
+      expect(materials(renderer).map((m) => m.opacity)).toEqual([0.5 * HALF_FADE_ALPHA, HALF_FADE_ALPHA]);
     });
 
     it('writes a discard-cut label unblended in the alpha pass', async () => {

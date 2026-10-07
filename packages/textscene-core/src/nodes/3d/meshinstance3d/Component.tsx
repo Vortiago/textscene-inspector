@@ -90,7 +90,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   const shadow = shadowCastingEffects(properties.castShadow);
   const visible = properties.visible !== false;
   // GeometryInstance3D's, so it reaches every surface this node draws, the overlay's too.
-  const instanceTransparency = properties.transparency;
+  const { transparency } = properties;
 
   const shellProps = {
     name: node.name,
@@ -107,7 +107,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
         meshRef={meshRef}
         source={overlaySource}
         shadow={shadow}
-        instanceTransparency={instanceTransparency}
+        transparency={transparency}
       />
     ) : null,
   };
@@ -139,7 +139,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
         <ArrayMeshSurfaces
           mesh={withFileMaterials(arrayMeshResult.value)}
           overrides={meshOverrides}
-          instanceTransparency={instanceTransparency}
+          transparency={transparency}
         />
       </MeshShell>
     );
@@ -151,11 +151,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     return (
       <MeshShell {...shellProps}>
         {sceneArrayMesh ? (
-          <ArrayMeshSurfaces
-            mesh={sceneArrayMesh}
-            overrides={meshOverrides}
-            instanceTransparency={instanceTransparency}
-          />
+          <ArrayMeshSurfaces mesh={sceneArrayMesh} overrides={meshOverrides} transparency={transparency} />
         ) : (
           UNRESOLVED_MESH
         )}
@@ -168,11 +164,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   return (
     <MeshShell {...shellProps}>
       <MeshGeometry resource={meshResource!} />
-      <SurfaceMaterialSlot
-        source={primarySource}
-        triplanarMesh={meshResource}
-        instanceTransparency={instanceTransparency}
-      />
+      <SurfaceMaterialSlot source={primarySource} triplanarMesh={meshResource} transparency={transparency} />
     </MeshShell>
   );
 }
@@ -197,7 +189,7 @@ function MaterialOverlayMesh({
   meshRef,
   source,
   shadow,
-  instanceTransparency,
+  transparency,
 }: {
   meshRef: RefObject<THREE.Mesh | null>;
   source: MaterialSource;
@@ -206,7 +198,7 @@ function MaterialOverlayMesh({
    * mounts: its own material decides its billboard, and SHADOWS_ONLY skips its draw too.
    */
   shadow: ShadowCastingEffects;
-  instanceTransparency: number;
+  transparency: number;
 }) {
   // Read back off the base mesh rather than built again, so all four geometry branches
   // share one component and the two meshes share one geometry.
@@ -234,7 +226,7 @@ function MaterialOverlayMesh({
       onBeforeRender={shadow.onBeforeRender}
       onAfterRender={shadow.onAfterRender}
     >
-      <SurfaceMaterialSlot source={source} instanceTransparency={instanceTransparency} />
+      <SurfaceMaterialSlot source={source} transparency={transparency} />
     </mesh>
   );
 }
@@ -327,11 +319,11 @@ const UNRESOLVED_MESH = (
 function ArrayMeshSurfaces({
   mesh,
   overrides,
-  instanceTransparency,
+  transparency,
 }: {
   mesh: SurfacedMesh;
   overrides: MeshOverrides;
-  instanceTransparency: number;
+  transparency: number;
 }) {
   const groupCount = Math.max(mesh.surfaceIndices.length, 1);
   const sources = Array.from({ length: groupCount }, (_unused, i) =>
@@ -340,7 +332,7 @@ function ArrayMeshSurfaces({
   return (
     <>
       <primitive object={mesh.geometry} attach="geometry" />
-      <SurfaceMaterialSlots sources={sources} instanceTransparency={instanceTransparency} />
+      <SurfaceMaterialSlots sources={sources} transparency={transparency} />
     </>
   );
 }

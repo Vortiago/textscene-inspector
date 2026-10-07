@@ -200,8 +200,6 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
       map: displayedTexture,
       color,
       ...surfaceAlpha,
-      alphaTest: cut.alphaTest,
-      alphaHash: cut.alphaHash,
       // FLAG_DISABLE_DEPTH_TEST → `render_mode depth_test_disabled` (`material.cpp:863`).
       depthTest: !properties.no_depth_test,
       // DoubleSide by default: Godot's runtime shows a sprite quad from behind too.

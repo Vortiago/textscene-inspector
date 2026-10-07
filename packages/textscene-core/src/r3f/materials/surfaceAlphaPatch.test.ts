@@ -1,25 +1,16 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import type { ProgramInjection } from '../materialProgramInputs';
 import { isBlended, surfaceAlphaProps, type SurfaceAlphaSource } from './surfaceAlphaPatch';
-import { DROPS_ALBEDO_ALPHA, OPAQUE_AFTER_CUT } from '../testing/patchedFragment';
+import {
+  DROPS_ALBEDO_ALPHA,
+  FRAGMENT_SHADER_OF_TYPE,
+  WRITES_OPAQUE_AFTER_CUT,
+  patchedShader,
+} from '../testing/patchedFragment';
 
 const READS_ALBEDO: SurfaceAlphaSource = { readsAlbedoAlpha: true, opaqueAfterCut: false };
 const IGNORES_ALBEDO: SurfaceAlphaSource = { readsAlbedoAlpha: false, opaqueAfterCut: false };
 const CUT: SurfaceAlphaSource = { readsAlbedoAlpha: true, opaqueAfterCut: true };
-
-/** The fragment shader of each three class a Godot surface draws with. */
-const FRAGMENT_SHADERS = [
-  ['basic', THREE.ShaderLib.basic.fragmentShader],
-  ['standard', THREE.ShaderLib.standard.fragmentShader],
-  ['physical', THREE.ShaderLib.physical.fragmentShader],
-] as const;
-
-function patched(injection: ProgramInjection | undefined, fragmentShader: string): string {
-  const shader = { vertexShader: '', fragmentShader, uniforms: {} };
-  injection?.onBeforeCompile(shader);
-  return shader.fragmentShader;
-}
 
 const ADDITIVE = { transparent: false, blending: THREE.AdditiveBlending };
 describe('isBlended', () => {
@@ -54,18 +45,18 @@ describe('surfaceAlphaProps', () => {
   });
 });
 
-describe.each(FRAGMENT_SHADERS)('the %s fragment shader', (_name, fragmentShader) => {
+describe.each(Object.entries(FRAGMENT_SHADER_OF_TYPE))('the %s fragment shader', (_type, fragmentShader) => {
   it('takes the alpha from the opacity before the cut, where the shader never reads the albedo alpha', () => {
     const { injection } = surfaceAlphaProps(IGNORES_ALBEDO, { transparent: true });
-    expect(patched(injection, fragmentShader)).toContain(
+    expect(patchedShader(injection!.onBeforeCompile, fragmentShader)).toContain(
       `${DROPS_ALBEDO_ALPHA}\n\t#include <alphatest_fragment>`
     );
   });
 
   it('writes alpha 1 after the cut of a surface blended other than MIX', () => {
     const { injection } = surfaceAlphaProps(CUT, ADDITIVE);
-    expect(patched(injection, fragmentShader)).toContain(
-      `#include <alphahash_fragment>\n\t${OPAQUE_AFTER_CUT}`
+    expect(patchedShader(injection!.onBeforeCompile, fragmentShader)).toContain(
+      `#include <alphahash_fragment>\n\t${WRITES_OPAQUE_AFTER_CUT}`
     );
   });
 });

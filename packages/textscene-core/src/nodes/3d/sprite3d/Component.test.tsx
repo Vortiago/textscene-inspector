@@ -17,6 +17,7 @@ import { AlphaCutMode, AxisMode, BillboardMode, AlphaAntiAliasing, TextureFilter
 import { findMesh, instanceAs } from '../testing/reactThreeTestInstance';
 import { DROPS_ALBEDO_ALPHA, patchedFragment } from '../../../r3f/testing/patchedFragment';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
+import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
 
 const TEXTURE_PATH = 'res://textures/sprite.png';
 
@@ -179,8 +180,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
     const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
-    // The fade alpha is 1 - 0.5 in 8-bit steps: 127 / 255.
-    expect(mat.opacity).toBe(0.8 * (127 / 255));
+    expect(mat.opacity).toBe(0.8 * HALF_FADE_ALPHA);
     expect(mat.transparent).toBe(true);
   });
 
@@ -198,7 +198,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     });
     const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
     // TRANSPARENCY_DISABLED never multiplies the modulate alpha into ALPHA.
-    expect(mat).toMatchObject({ transparent: true, depthWrite: false, opacity: 127 / 255 });
+    expect(mat).toMatchObject({ transparent: true, depthWrite: false, opacity: HALF_FADE_ALPHA });
   });
 
   it('drops the texture alpha of an opaque sprite when transparency is set', async () => {

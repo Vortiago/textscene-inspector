@@ -13,9 +13,7 @@ import type { MeshInstance3DProperties } from './types';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
 import { DROPS_ALBEDO_ALPHA, patchedFragment } from '../../../r3f/testing/patchedFragment';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
-
-/** `fadeAlpha(0.5)`: 0.5 × 255 truncated to 127. */
-const HALF_TRANSPARENT_ALPHA = 127 / 255;
+import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
 
 const INTERNALS: TscnInternalResource[] = [
   { id: 'Box_1', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)' } },
@@ -53,7 +51,7 @@ describe('MeshInstance3D — transparency', () => {
 
   it('blends a primitive mesh surface at the fade alpha', async () => {
     const [material] = await drawnMaterials({ transparency: 0.5 });
-    expect(material).toMatchObject({ transparent: true, depthWrite: false, opacity: HALF_TRANSPARENT_ALPHA });
+    expect(material).toMatchObject({ transparent: true, depthWrite: false, opacity: HALF_FADE_ALPHA });
   });
 
   it('drops the texture and vertex alpha of an opaque material', async () => {
@@ -76,7 +74,7 @@ describe('MeshInstance3D — transparency', () => {
     const materials = await drawnMaterials({ mesh: 'SubResource("Array_1")', transparency: 0.5 });
     expect(materials).toHaveLength(2);
     for (const material of materials) {
-      expect(material).toMatchObject({ transparent: true, opacity: HALF_TRANSPARENT_ALPHA });
+      expect(material).toMatchObject({ transparent: true, opacity: HALF_FADE_ALPHA });
     }
   });
 
@@ -85,6 +83,6 @@ describe('MeshInstance3D — transparency', () => {
       materialOverlay: 'SubResource("Mat_overlay")',
       transparency: 0.5,
     });
-    expect(overlay).toMatchObject({ transparent: true, opacity: HALF_TRANSPARENT_ALPHA });
+    expect(overlay).toMatchObject({ transparent: true, opacity: HALF_FADE_ALPHA });
   });
 });

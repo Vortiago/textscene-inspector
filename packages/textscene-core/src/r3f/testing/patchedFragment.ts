@@ -1,12 +1,13 @@
 /**
- * A material's fragment shader as its `onBeforeCompile` leaves it, without a GL context, and the
+ * A fragment shader as a material's `onBeforeCompile` leaves it, without a GL context, and the
  * fragment-alpha patches a test reads off it.
  */
 
 import * as THREE from 'three';
 import type { ProgramShader } from '../materialProgramInputs';
 
-const FRAGMENT_SHADER_OF_TYPE: Readonly<Record<string, string>> = {
+/** The fragment shader of each three class a Godot surface draws with, by material type. */
+export const FRAGMENT_SHADER_OF_TYPE: Readonly<Record<string, string>> = {
   MeshBasicMaterial: THREE.ShaderLib.basic.fragmentShader,
   MeshStandardMaterial: THREE.ShaderLib.standard.fragmentShader,
   MeshPhysicalMaterial: THREE.ShaderLib.physical.fragmentShader,
@@ -16,14 +17,26 @@ const FRAGMENT_SHADER_OF_TYPE: Readonly<Record<string, string>> = {
 export const DROPS_ALBEDO_ALPHA = 'diffuseColor.a = opacity;';
 
 /** The shader writes alpha 1 for each fragment the cut keeps. */
-export const OPAQUE_AFTER_CUT = 'diffuseColor.a = 1.0;';
+export const WRITES_OPAQUE_AFTER_CUT = 'diffuseColor.a = 1.0;';
+
+/** `fragmentShader` after `onBeforeCompile`, which reads only the shader, so no renderer is needed. */
+export function patchedShader(
+  onBeforeCompile: (shader: ProgramShader) => void,
+  fragmentShader: string
+): string {
+  const shader: ProgramShader = { vertexShader: '', fragmentShader, uniforms: {} };
+  onBeforeCompile(shader);
+  return shader.fragmentShader;
+}
 
 export function patchedFragment(material: THREE.Material): string {
   const fragmentShader = FRAGMENT_SHADER_OF_TYPE[material.type];
-  if (fragmentShader === undefined)
+  if (fragmentShader === undefined) {
     throw new Error(`expected a mesh basic, standard or physical material, got ${material.type}`);
-  const shader: ProgramShader = { vertexShader: '', fragmentShader, uniforms: {} };
-  // The patches read only the shader, so no renderer is needed.
-  material.onBeforeCompile(shader as THREE.WebGLProgramParametersWithUniforms, undefined as never);
-  return shader.fragmentShader;
+  }
+  return patchedShader(
+    (shader) =>
+      material.onBeforeCompile(shader as THREE.WebGLProgramParametersWithUniforms, undefined as never),
+    fragmentShader
+  );
 }

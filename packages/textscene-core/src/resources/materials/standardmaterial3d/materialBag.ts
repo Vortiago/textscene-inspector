@@ -12,8 +12,6 @@ import {
   GODOT_DEFAULT_ROUGHNESS,
 } from '../../../r3f/materials/godotDefaultMaterial';
 import { BillboardMode } from '../../../godot/billboard';
-import { fadeAlpha } from '../../../godot/fadeAlpha';
-import { surfaceAlphaProps } from '../../../r3f/materials/surfaceAlphaPatch';
 import { fadedSurfaceAlpha } from '../../../r3f/materials/fadedSurfaceAlpha';
 import type { ProgramInjection } from '../../../r3f/materialProgramInputs';
 import { resolveEmission } from './emission';
@@ -60,6 +58,9 @@ const NO_MATERIAL: StandardMaterialBag = {
     side: THREE.FrontSide,
   },
 };
+
+/** Godot's default surface reads no texture or vertex alpha, and writes depth in the opaque pass only. */
+const NO_MATERIAL_ALPHA = { readsAlbedoAlpha: true, opaqueAfterCut: false, alphaPassDepthWrite: false };
 
 /**
  * The previewer's marker for a surface whose texture never draws: a file that cannot load,
@@ -193,35 +194,17 @@ export function standardMaterialBag(
   textures: ResolvedTextureSlots = {},
   transparency = 0
 ): StandardMaterialBag {
-  // Godot's default surface reads no texture or vertex alpha, so it needs no alpha patch.
-  if (!scalars) return fadedBag(NO_MATERIAL, false, transparency);
-  const bag = fadedBag(classBag(scalars, textures), scalars.alphaPassDepthWrite, transparency);
-  const { injection, ...alphaProps } = surfaceAlphaProps(scalars, bag.props);
-  const props = { ...bag.props, ...alphaProps };
-  return injection ? { ...bag, props, injection } : { ...bag, props };
-}
-
-/**
- * The bag under its geometry instance's `transparency`, which moves the surface to the alpha pass.
- * There it writes depth only as `alphaPassDepthWrite` says.
- */
-function fadedBag(
-  bag: StandardMaterialBag,
-  alphaPassDepthWrite: boolean,
-  transparency: number
-): StandardMaterialBag {
-  // A full fade alpha never forces the alpha pass either.
-  if (fadeAlpha(transparency) === 1) return bag;
-  const alpha = fadedSurfaceAlpha(
-    {
-      opacity: bag.props.opacity ?? 1,
-      transparent: bag.props.transparent ?? false,
-      depthWrite: bag.props.depthWrite ?? true,
-      alphaPassDepthWrite,
-    },
-    transparency
-  );
-  return { ...bag, props: { ...bag.props, ...alpha } };
+  const bag = scalars ? classBag(scalars, textures) : NO_MATERIAL;
+  const source = scalars ?? NO_MATERIAL_ALPHA;
+  const surface = {
+    opacity: bag.props.opacity ?? 1,
+    transparent: bag.props.transparent ?? false,
+    depthWrite: bag.props.depthWrite ?? true,
+    alphaPassDepthWrite: source.alphaPassDepthWrite,
+    blending: bag.props.blending,
+  };
+  const { injection, ...alpha } = fadedSurfaceAlpha(source, surface, transparency);
+  return { ...bag, props: { ...bag.props, ...alpha }, injection };
 }
 
 /** The class `scalars` need, and its props. */
