@@ -7,12 +7,12 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../index';
-import type { ResourceProvider } from '../../../resources/ResourceProvider';
+import { ResourceLoaderProvider, ResourceLoader } from '../../../index';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { wallQuadSurfaces } from '../../../resources/testing/arrayMeshSurfaces';
+import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 
 const MESH_ID = 'ArrayMesh_inline';
 
@@ -26,19 +26,6 @@ const NODE: TscnNode = {
     surfaceMaterialOverrides: new Map(),
   } as MeshInstance3DProperties,
 };
-
-class NoopProvider implements ResourceProvider {
-  async loadResource(): Promise<string | ArrayBuffer | null> {
-    return null;
-  }
-}
-
-function makeLoader(): ResourceLoader {
-  const provider = new NoopProvider();
-  const loader = new ResourceLoader(new FileEventBus(provider));
-  loader.setProvider(provider);
-  return loader;
-}
 
 function scene(loader: ResourceLoader, internalResources: TscnInternalResource[]) {
   return (
@@ -64,7 +51,7 @@ async function settle(): Promise<void> {
 
 describe('<MeshInstance3D> scene ArrayMesh edited while mounted', () => {
   it("follows an edit to a surface material's body that leaves the surface bytes alone", async () => {
-    const loader = makeLoader();
+    const loader = loaderServing();
     const surfaces = wallQuadSurfaces({ material: 'SubResource("Mat")', name: 'wall' });
     const renderer = await ReactThreeTestRenderer.create(
       scene(loader, [inlineMesh(surfaces), albedoMaterial('Mat', 'Color(1, 0, 0, 1)')])
@@ -79,7 +66,7 @@ describe('<MeshInstance3D> scene ArrayMesh edited while mounted', () => {
   });
 
   it('binds every surface material when a one-surface mesh gains a second surface', async () => {
-    const loader = makeLoader();
+    const loader = loaderServing();
     const red = albedoMaterial('Red', 'Color(1, 0, 0, 1)');
     const blue = albedoMaterial('Blue', 'Color(0, 0, 1, 1)');
     const oneSurface = wallQuadSurfaces({ material: 'SubResource("Red")', name: 'a' });

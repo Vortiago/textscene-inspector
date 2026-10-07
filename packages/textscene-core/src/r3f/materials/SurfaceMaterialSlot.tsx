@@ -310,7 +310,7 @@ export function useMaterialTextures(
 export interface SurfaceMaterialSlotProps {
   /** The material this surface renders with; undefined = the renderer's default. */
   source: MaterialSource | undefined;
-  /** R3F attach key: `material` for a single surface, `material-N` for many. */
+  /** R3F attach key: `material` for a single surface, `material-N` for many (`surfaceAttach`). */
   attach?: string;
   /** The mesh sub-resource a triplanar material folds into its tiling, if any. */
   triplanarMesh?: TscnInternalResource;

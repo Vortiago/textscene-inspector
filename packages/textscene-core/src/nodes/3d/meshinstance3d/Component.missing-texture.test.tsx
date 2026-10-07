@@ -8,17 +8,11 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../index';
-import type { ResourceProvider } from '../../../resources/ResourceProvider';
+import { ResourceLoaderProvider, ResourceLoader } from '../../../index';
+import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { materialInstanceAs } from '../testing/reactThreeTestInstance';
-
-class MissingFileProvider implements ResourceProvider {
-  async loadResource(): Promise<string | ArrayBuffer | null> {
-    return null;
-  }
-}
 
 function makeFixture(): {
   node: TscnNode;
@@ -74,10 +68,7 @@ async function renderInLoader(
 describe('<MeshInstance3D> missing-texture chain (WI-R3F-7 / WEB-03/04/05)', () => {
   it('renders a magenta placeholder when the albedo texture is missing', async () => {
     const { node, internalResources, externalResources } = makeFixture();
-    const provider = new MissingFileProvider();
-    const bus = new FileEventBus(provider);
-    const loader = new ResourceLoader(bus);
-    loader.setProvider(provider);
+    const loader = loaderServing();
 
     const renderer = await renderInLoader(node, internalResources, externalResources, loader);
 
@@ -103,10 +94,7 @@ describe('<MeshInstance3D> missing-texture chain (WI-R3F-7 / WEB-03/04/05)', () 
 
   it('walks ExtResource references in the material via externalResources to find the texture path', async () => {
     const { node, internalResources, externalResources } = makeFixture();
-    const provider = new MissingFileProvider();
-    const bus = new FileEventBus(provider);
-    const loader = new ResourceLoader(bus);
-    loader.setProvider(provider);
+    const loader = loaderServing();
 
     // The spy confirms the hook resolved the ExtResource("1") chain to the path.
     let requestedPath: string | undefined;

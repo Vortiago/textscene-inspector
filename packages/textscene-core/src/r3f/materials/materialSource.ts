@@ -51,3 +51,10 @@ export function resolveMaterialSource(
   if (!ext?.path || !ext.path.endsWith('.tres')) return undefined;
   return { kind: 'file', path: ext.path };
 }
+
+/** One source per entry of an ArrayMesh's `materialPaths`. A null path is Godot's default surface. */
+export function fileMaterialSources(
+  materialPaths: readonly (string | null)[]
+): (MaterialSource | undefined)[] {
+  return materialPaths.map((path) => (path ? { kind: 'file', path } : undefined));
+}

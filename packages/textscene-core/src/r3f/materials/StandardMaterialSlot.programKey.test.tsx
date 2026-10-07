@@ -148,3 +148,19 @@ describe('<StandardMaterialSlot> rebinds when its attach target moves', () => {
     expect(bound).not.toBe(first);
   });
 });
+
+describe('<StandardMaterialSlot> remounts leave the bound textures alone', () => {
+  // The texture hooks own each map. Fiber disposes only the unmounted material, and
+  // `Material.dispose()` frees no texture, so a remount re-uploads nothing.
+  it('disposes no texture when a moved `attach` and a program input remount the material', async () => {
+    const albedoMap = new THREE.Texture();
+    let disposals = 0;
+    albedoMap.addEventListener('dispose', () => disposals++);
+
+    const renderer = await ReactThreeTestRenderer.create(slot({}, { albedoMap, attach: 'material' }));
+    await renderer.update(slot({}, { albedoMap, attach: 'material-0' }));
+    await renderer.update(slot(ALPHA, { albedoMap, attach: 'material-0' }));
+
+    expect(disposals).toBe(0);
+  });
+});

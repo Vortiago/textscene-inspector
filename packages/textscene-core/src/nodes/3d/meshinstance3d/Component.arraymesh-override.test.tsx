@@ -7,8 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type * as THREE from 'three';
-import { ResourceLoader, FileEventBus } from '../../../index';
-import type { ResourceProvider } from '../../../resources/ResourceProvider';
+import type { ResourceLoader } from '../../../index';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import { wallQuadSurface } from '../../../resources/testing/arrayMeshSurfaces';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
@@ -19,6 +18,7 @@ import {
   surfaceMaterials,
 } from './testing/renderMeshInstance';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import { MAGENTA } from './testing/magenta';
 
 const MESH_PATH = 'res://stage/meshes/wheel.tres';
@@ -62,21 +62,6 @@ const OVERRIDE_MATERIAL_TRES = `[gd_resource type="StandardMaterial3D" format=3]
 albedo_color = Color(0, 1, 0, 1)
 `;
 
-class MapProvider implements ResourceProvider {
-  constructor(private files: Record<string, string>) {}
-  async loadResource(path: string): Promise<string | ArrayBuffer | null> {
-    return this.files[path] ?? null;
-  }
-}
-
-function makeLoader(files: Record<string, string>): ResourceLoader {
-  const provider = new MapProvider(files);
-  const bus = new FileEventBus(provider);
-  const loader = new ResourceLoader(bus);
-  loader.setProvider(provider);
-  return loader;
-}
-
 const MESH_EXT: TscnExternalResource[] = [
   { id: '1', path: MESH_PATH, type: 'ArrayMesh' },
   { id: '9', path: OVERRIDE_MATERIAL_PATH, type: 'Material' },
@@ -115,7 +100,7 @@ const SCENE_MATERIALS: TscnInternalResource[] = [
 
 describe('<MeshInstance3D> ArrayMesh material overrides', () => {
   it('applies surface_material_override/1 to that surface only', async () => {
-    const loader = makeLoader({ [MESH_PATH]: twoSurfaceTres() });
+    const loader = loaderServing({ [MESH_PATH]: twoSurfaceTres() });
     const materials = await renderSettled(
       loader,
       meshInstanceNode({
@@ -133,7 +118,7 @@ describe('<MeshInstance3D> ArrayMesh material overrides', () => {
   });
 
   it('lets material_override outrank a per-surface override on every surface', async () => {
-    const loader = makeLoader({ [MESH_PATH]: twoSurfaceTres() });
+    const loader = loaderServing({ [MESH_PATH]: twoSurfaceTres() });
     const materials = await renderSettled(
       loader,
       meshInstanceNode({
@@ -150,7 +135,7 @@ describe('<MeshInstance3D> ArrayMesh material overrides', () => {
   });
 
   it('resolves an ExtResource override through the material pipeline', async () => {
-    const loader = makeLoader({
+    const loader = loaderServing({
       [MESH_PATH]: twoSurfaceTres(),
       [OVERRIDE_MATERIAL_PATH]: OVERRIDE_MATERIAL_TRES,
     });
@@ -168,7 +153,7 @@ describe('<MeshInstance3D> ArrayMesh material overrides', () => {
   it('indexes overrides by the original surface index when a surface is dropped', async () => {
     // Surface 0 is undecodable, so the one draw group is Godot's surface 1. The
     // override index is Godot's original surface index, not the compacted group.
-    const loader = makeLoader({ [MESH_PATH]: twoSurfaceTres(BROKEN_RED_SURFACE) });
+    const loader = loaderServing({ [MESH_PATH]: twoSurfaceTres(BROKEN_RED_SURFACE) });
     const materials = await renderSettled(
       loader,
       meshInstanceNode({
@@ -186,7 +171,7 @@ describe('<MeshInstance3D> ArrayMesh material overrides', () => {
     // `MeshInstance3D::_set` (`scene/3d/mesh_instance_3d.cpp:65`) refuses an index
     // past the surface count `_mesh_changed` (`:407`) sizes the array to, so the
     // mesh keeps exactly its own surfaces.
-    const loader = makeLoader({ [MESH_PATH]: twoSurfaceTres() });
+    const loader = loaderServing({ [MESH_PATH]: twoSurfaceTres() });
     const materials = await renderSettled(
       loader,
       meshInstanceNode({
@@ -202,7 +187,7 @@ describe('<MeshInstance3D> ArrayMesh material overrides', () => {
   });
 
   it('applies an override to an ArrayMesh the scene declares inline', async () => {
-    const loader = makeLoader({});
+    const loader = loaderServing();
     const materials = await renderSettled(
       loader,
       meshInstanceNode({

@@ -171,6 +171,8 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'one material per built text run, replaced and disposed together with its geometry; its single `defines` write happens before the material has ever been rendered',
   'packages/textscene-core/src/r3f/controls/native/text/msdfMaterial.ts':
     'one material per built text run; the glyph atlas travels as a uniform, so re-laying-out a run moves no program input',
+  'packages/textscene-core/src/r3f/materials/useOneSurfaceStartingMaterial.ts':
+    'one invisible stand-in that hides the draw groups another surface draw owns; three skips an invisible group material, so it is never rendered, so never compiled',
   'packages/textscene-core/src/r3f/csg/evaluateCsgPlan.ts':
     'per-surface sentinels handed to the CSG library so it can group faces — never rendered, so never compiled',
   'packages/textscene-core/src/r3f/environment/GodotToneMapEffect.ts':
