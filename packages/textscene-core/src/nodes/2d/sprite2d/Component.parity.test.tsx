@@ -18,6 +18,7 @@ const TEX = 'res://sprite.png';
 
 function node(raw: Record<string, string> = {}, children: TscnNode[] = []): TscnNode {
   return {
+    rawProperties: {},
     name: 'S',
     type: 'Sprite2D',
     children,

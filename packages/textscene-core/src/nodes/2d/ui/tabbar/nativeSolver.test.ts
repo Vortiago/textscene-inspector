@@ -291,7 +291,7 @@ describe('tabBarMinimumSize — a themed "close" icon widens both axes (tab_bar.
     return {
       ...solveNode(),
       path: 'T',
-      node: { name: 'T', type: 'TabBar', children: [], properties: props },
+      node: { rawProperties: {}, name: 'T', type: 'TabBar', children: [], properties: props },
       ...overrides,
     };
   }
@@ -318,7 +318,13 @@ describe('tabBarFontSizePx', () => {
   const bar = (): SolveNode => ({
     ...solveNode(),
     path: 'T',
-    node: { name: 'T', type: 'TabBar', children: [], properties: { name: 'T' } as TabBarProperties },
+    node: {
+      rawProperties: {},
+      name: 'T',
+      type: 'TabBar',
+      children: [],
+      properties: { name: 'T' } as TabBarProperties,
+    },
   });
 
   it('answers the theme default when the node overrides nothing', () => {
@@ -357,7 +363,11 @@ describe('tabBarMinimumSize — the tab buffer is shaped at theme_cache.font_siz
       tabs: [{ title: 'Map', tooltip: '', disabled: false }],
       ...props,
     };
-    return { ...solveNode(), path: 'T', node: { name: 'T', type: 'TabBar', children: [], properties } };
+    return {
+      ...solveNode(),
+      path: 'T',
+      node: { rawProperties: {}, name: 'T', type: 'TabBar', children: [], properties },
+    };
   }
 
   function sizeOf(n: SolveNode) {

@@ -9,6 +9,7 @@ import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderCont
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 
 const baseNode: TscnNode = {
+  rawProperties: {},
   name: 'MyTileMap',
   type: 'TileMap',
   children: [],
@@ -49,6 +50,7 @@ describe('TileMap degradation (ADR-0008)', () => {
 
   function makeMapNode(raw: Record<string, string>): TscnNode {
     return {
+      rawProperties: {},
       name: 'Map',
       type: 'TileMap',
       children: [],

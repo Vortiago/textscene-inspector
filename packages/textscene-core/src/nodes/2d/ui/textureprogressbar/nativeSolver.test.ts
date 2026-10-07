@@ -24,6 +24,7 @@ function node(
     ...base,
     path: 'T',
     node: {
+      rawProperties: {},
       name: 'T',
       type: 'TextureProgressBar',
       children: [],

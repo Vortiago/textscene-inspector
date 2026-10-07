@@ -55,7 +55,7 @@ function popupChildren(n: ShareNode): readonly RawChild[] {
  * `title` comes from `rawProperties`, which both parsers publish (`TscnNode.rawProperties`).
  */
 function menuTitleText(child: RawChild): string {
-  const rawTitle = child.rawProperties?.title;
+  const rawTitle = child.rawProperties.title;
   const title = rawTitle !== undefined ? unquoteString(rawTitle) : '';
   return title.length > 0 ? title : child.name;
 }

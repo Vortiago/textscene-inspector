@@ -9,6 +9,7 @@ import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function boxContainerSolveNode(): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'Row',
     type: 'BoxContainer',
     children: [],

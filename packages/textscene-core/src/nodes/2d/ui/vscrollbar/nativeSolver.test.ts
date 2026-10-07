@@ -16,7 +16,13 @@ function node(): SolveNode {
   return {
     ...solveNode(),
     path: 'S',
-    node: { name: 'S', type: 'VScrollBar', children: [], properties: { name: 'S' } as ControlProperties },
+    node: {
+      rawProperties: {},
+      name: 'S',
+      type: 'VScrollBar',
+      children: [],
+      properties: { name: 'S' } as ControlProperties,
+    },
   };
 }
 

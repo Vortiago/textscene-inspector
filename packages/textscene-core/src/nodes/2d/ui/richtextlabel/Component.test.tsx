@@ -38,6 +38,7 @@ function solveNode(
 ): SolveNode {
   const name = path.split('/').pop()!;
   const tscnNode: TscnNode = {
+    rawProperties: {},
     name,
     type: 'RichTextLabel',
     children: [],

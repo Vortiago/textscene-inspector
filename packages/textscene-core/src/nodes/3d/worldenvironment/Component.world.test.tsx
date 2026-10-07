@@ -12,7 +12,7 @@ import { subResource } from '../../../testing/subResource';
 
 function makeNode(envRef = 'SubResource("Env")'): TscnNode {
   const properties: WorldEnvironmentProperties = { name: 'WE', environment: envRef };
-  return { name: 'WE', type: 'WorldEnvironment', children: [], properties };
+  return { rawProperties: {}, name: 'WE', type: 'WorldEnvironment', children: [], properties };
 }
 
 async function render(node: TscnNode, resources: TscnInternalResource[]) {

@@ -19,7 +19,7 @@ import '../nodes/index';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../../nodes/3d/geometryinstance3d/types';
 
 function makeNode(name: string, type: string, children: TscnNode[] = []): TscnNode {
-  return { name, type, children, properties: {} };
+  return { rawProperties: {}, name, type, children, properties: {} };
 }
 
 function makeMeshInstance(name: string): TscnNode {
@@ -28,7 +28,7 @@ function makeMeshInstance(name: string): TscnNode {
     name,
     surfaceMaterialOverrides: new Map(),
   };
-  return { name, type: 'MeshInstance3D', children: [], properties: props };
+  return { rawProperties: {}, name, type: 'MeshInstance3D', children: [], properties: props };
 }
 
 function findHelpers(scene: THREE.Scene): THREE.BoxHelper[] {

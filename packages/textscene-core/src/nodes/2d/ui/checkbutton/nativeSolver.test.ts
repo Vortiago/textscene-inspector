@@ -34,6 +34,7 @@ function node(props: Partial<CheckButtonProperties>): SolveNode {
     ...solveNode(),
     path: 'CB',
     node: {
+      rawProperties: {},
       name: 'CB',
       type: 'CheckButton',
       children: [],

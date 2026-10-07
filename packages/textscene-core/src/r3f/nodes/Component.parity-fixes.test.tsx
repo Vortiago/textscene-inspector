@@ -30,6 +30,7 @@ import { GEOMETRY_INSTANCE_DEFAULTS } from '../../nodes/3d/geometryinstance3d/ty
 
 function makeMeshNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode {
   return {
+    rawProperties: {},
     name: properties.name ?? 'M',
     type: 'MeshInstance3D',
     children: [],
@@ -210,6 +211,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
 
   it('audit slot 66a — Camera3D h_offset shifts position along local X', async () => {
     const node: TscnNode = {
+      rawProperties: {},
       name: 'Cam',
       type: 'Camera3D',
       children: [],
@@ -245,6 +247,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
 
   it('audit slot 66b — Camera3D v_offset shifts position along local Y', async () => {
     const node: TscnNode = {
+      rawProperties: {},
       name: 'Cam',
       type: 'Camera3D',
       children: [],
@@ -282,6 +285,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     // h_offset=2, the camera should move +2 along world -Z; with v_offset=1
     // it moves +1 along world Y. Origin stays at (0, 0, 5).
     const node: TscnNode = {
+      rawProperties: {},
       name: 'Cam',
       type: 'Camera3D',
       children: [],
@@ -373,7 +377,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       fixed_size: false,
       texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
     };
-    const node: TscnNode = { name: 'L', type: 'Label3D', children: [], properties: props };
+    const node: TscnNode = { rawProperties: {}, name: 'L', type: 'Label3D', children: [], properties: props };
 
     const renderer = await ReactThreeTestRenderer.create(
       <ViewportModeProvider initialShowLabels>
@@ -431,7 +435,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
         origin: { x: 0, y: 0, z: 0 },
       },
     };
-    const node: TscnNode = { name: 'L', type: 'Label3D', children: [], properties: props };
+    const node: TscnNode = { rawProperties: {}, name: 'L', type: 'Label3D', children: [], properties: props };
 
     const renderer = await ReactThreeTestRenderer.create(
       <ViewportModeProvider initialShowLabels>

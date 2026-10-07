@@ -16,7 +16,7 @@ function node(overrides: Partial<SolveNode> = {}): SolveNode {
   return {
     ...emptySolveNode(),
     path: 'L',
-    node: { name: 'L', type: 'Label', children: [], properties: { name: 'L' } },
+    node: { rawProperties: {}, name: 'L', type: 'Label', children: [], properties: { name: 'L' } },
     ...overrides,
   };
 }

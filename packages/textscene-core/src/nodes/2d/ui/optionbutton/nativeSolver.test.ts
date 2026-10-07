@@ -38,6 +38,7 @@ function node(props: Partial<OptionButtonProperties>): SolveNode {
     ...solveNode(),
     path: 'O',
     node: {
+      rawProperties: {},
       name: 'O',
       type: 'OptionButton',
       children: [],

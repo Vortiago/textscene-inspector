@@ -42,6 +42,7 @@ function node(
     ...solveNode(),
     path: 'L',
     node: {
+      rawProperties: {},
       name: 'L',
       type: 'LineEdit',
       children: [],
@@ -384,12 +385,13 @@ describe('lineEditTextureSlots — right_icon (own scope) + the themed "clear" i
       type: 'LineEdit',
       children: [],
       properties: { name: 'L', rightIcon: 'ExtResource("1_icon")' },
+      rawProperties: {},
     });
     expect(requests).toContainEqual({ key: 'right_icon', ref: 'ExtResource("1_icon")' });
   });
 
   it('requests the "clear" theme icon only when the theme walk resolved one', () => {
-    const node = { name: 'L', type: 'LineEdit', children: [], properties: { name: 'L' } };
+    const node = { name: 'L', type: 'LineEdit', children: [], properties: { name: 'L' }, rawProperties: {} };
     expect(lineEditTextureSlots(node, {})).toEqual([]);
     const themed = {
       clear: { ref: 'ExtResource("1_clear")', resources: { externalResources: [], internalResources: [] } },
@@ -402,7 +404,7 @@ describe('lineEditTextureSlots — right_icon (own scope) + the themed "clear" i
   });
 
   it('requests neither when nothing is authored/themed', () => {
-    const node = { name: 'L', type: 'LineEdit', children: [], properties: { name: 'L' } };
+    const node = { name: 'L', type: 'LineEdit', children: [], properties: { name: 'L' }, rawProperties: {} };
     expect(lineEditTextureSlots(node)).toEqual([]);
   });
 });

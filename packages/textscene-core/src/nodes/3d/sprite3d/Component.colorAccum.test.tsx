@@ -26,6 +26,7 @@ function srgbToLinear(c: number): number {
 
 function sprite(name: string, raw: Record<string, string>, children: TscnNode[] = []): TscnNode {
   return {
+    rawProperties: {},
     name,
     type: 'Sprite3D',
     children,
@@ -38,6 +39,7 @@ function sprite(name: string, raw: Record<string, string>, children: TscnNode[] 
 
 function plainNode3D(name: string, children: TscnNode[]): TscnNode {
   return {
+    rawProperties: {},
     name,
     type: 'Node3D',
     children,
@@ -47,6 +49,7 @@ function plainNode3D(name: string, children: TscnNode[]): TscnNode {
 
 function label(name: string, children: TscnNode[]): TscnNode {
   return {
+    rawProperties: {},
     name,
     type: 'Label3D',
     children,

@@ -17,12 +17,7 @@ function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode 
     surfaceMaterialOverrides: properties.surfaceMaterialOverrides ?? new Map(),
     ...properties,
   };
-  return {
-    name: props.name,
-    type: 'MeshInstance3D',
-    children: [],
-    properties: props,
-  };
+  return { rawProperties: {}, name: props.name, type: 'MeshInstance3D', children: [], properties: props };
 }
 
 async function render(node: TscnNode, internalResources: TscnInternalResource[] = []) {

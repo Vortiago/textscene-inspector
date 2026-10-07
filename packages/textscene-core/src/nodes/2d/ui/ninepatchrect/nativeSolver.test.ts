@@ -20,7 +20,13 @@ function node(props: Partial<NinePatchRectProperties>): SolveNode {
   return {
     ...solveNode(),
     path: 'Panel',
-    node: { name: 'Panel', type: 'NinePatchRect', children: [], properties: { name: 'Panel', ...props } },
+    node: {
+      rawProperties: {},
+      name: 'Panel',
+      type: 'NinePatchRect',
+      children: [],
+      properties: { name: 'Panel', ...props },
+    },
   };
 }
 

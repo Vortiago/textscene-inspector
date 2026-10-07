@@ -12,6 +12,7 @@ import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function hboxSolveNode(): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'Row',
     type: 'HBoxContainer',
     children: [],

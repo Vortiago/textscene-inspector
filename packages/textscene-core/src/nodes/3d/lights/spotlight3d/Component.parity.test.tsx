@@ -14,6 +14,7 @@ import { instanceAs } from '../../testing/reactThreeTestInstance';
 function makeNode(raw: Record<string, string> = {}): TscnNode {
   const heading = { type: 'node', attributes: { type: 'SpotLight3D', name: 'Spot' } };
   return {
+    rawProperties: {},
     name: 'Spot',
     type: 'SpotLight3D',
     children: [],

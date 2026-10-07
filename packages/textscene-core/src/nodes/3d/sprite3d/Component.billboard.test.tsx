@@ -14,7 +14,13 @@ import type { TscnNode } from '../../../parser/types';
 const heading = { type: 'node', attributes: { name: 'Sprite', type: 'Sprite3D' } };
 
 function node(raw: Record<string, string> = {}): TscnNode {
-  return { name: 'Sprite', type: 'Sprite3D', children: [], properties: parseSprite3D(heading, raw) };
+  return {
+    rawProperties: {},
+    name: 'Sprite',
+    type: 'Sprite3D',
+    children: [],
+    properties: parseSprite3D(heading, raw),
+  };
 }
 
 /**

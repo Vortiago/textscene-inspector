@@ -56,6 +56,7 @@ function node(props: Partial<LabelProperties>, overrides: Partial<SolveNode> = {
     ...emptySolveNode(),
     path: 'L',
     node: {
+      rawProperties: {},
       name: 'L',
       type: 'Label',
       children: [],
@@ -239,12 +240,19 @@ describe('labelMinimumSize wired through the registry + full solve — the wrapp
     const label = (name: string, props: Partial<LabelProperties>): SolveNode => ({
       ...emptySolveNode(),
       path: `Card/Column/${name}`,
-      node: { name, type: 'Label', children: [], properties: { name, ...props } as ControlProperties },
+      node: {
+        rawProperties: {},
+        name,
+        type: 'Label',
+        children: [],
+        properties: { name, ...props } as ControlProperties,
+      },
     });
     const column: SolveNode = {
       ...emptySolveNode(),
       path: 'Card/Column',
       node: {
+        rawProperties: {},
         name: 'Column',
         type: 'VBoxContainer',
         children: [],
@@ -259,6 +267,7 @@ describe('labelMinimumSize wired through the registry + full solve — the wrapp
       ...emptySolveNode(),
       path: 'Card',
       node: {
+        rawProperties: {},
         name: 'Card',
         type: 'PanelContainer',
         children: [],

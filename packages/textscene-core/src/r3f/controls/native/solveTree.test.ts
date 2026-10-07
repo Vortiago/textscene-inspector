@@ -12,7 +12,7 @@ import type { SolveNode } from './solveTree';
 import { solveNode } from './testing/solveNode';
 
 function controlNode(properties: Record<string, unknown>): TscnNode {
-  return { name: 'C', type: 'Control', children: [], properties };
+  return { rawProperties: {}, name: 'C', type: 'Control', children: [], properties };
 }
 
 function nodeWith(properties: Record<string, unknown>): SolveNode {

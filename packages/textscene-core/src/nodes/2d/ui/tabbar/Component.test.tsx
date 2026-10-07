@@ -21,6 +21,7 @@ type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function solveNode(properties: Partial<TabBarProperties> = {}): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'Tabs',
     type: 'TabBar',
     children: [],

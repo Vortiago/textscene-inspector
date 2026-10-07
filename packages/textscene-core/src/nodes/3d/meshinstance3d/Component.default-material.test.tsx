@@ -32,7 +32,7 @@ function makeNode(): TscnNode {
     ]),
     materialOverride: undefined,
   };
-  return { name: 'M', type: 'MeshInstance3D', children: [], properties };
+  return { rawProperties: {}, name: 'M', type: 'MeshInstance3D', children: [], properties };
 }
 
 describe('<MeshInstance3D> unpopulated secondary surface slot', () => {

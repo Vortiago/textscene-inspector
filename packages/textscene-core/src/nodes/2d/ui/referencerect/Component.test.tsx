@@ -19,6 +19,7 @@ const RECT = { x: 0, y: 0, w: 100, h: 50 };
 
 function refRectNode(properties: Partial<ReferenceRectProperties> = {}, path = 'MyRect'): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'MyRect',
     type: 'ReferenceRect',
     children: [],

@@ -16,7 +16,7 @@ function makeNode(overrides: Record<string, string> = {}, resolvedPath?: CSGPoly
     overrides
   ) as CSGPolygon3DProperties;
   if (resolvedPath) properties.resolvedPath = resolvedPath;
-  return { name: 'Poly', type: 'CSGPolygon3D', children: [], properties };
+  return { rawProperties: {}, name: 'Poly', type: 'CSGPolygon3D', children: [], properties };
 }
 
 async function render(node: TscnNode, internalResources: TscnInternalResource[] = []) {

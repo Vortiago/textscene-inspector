@@ -43,6 +43,7 @@ function solveNode(
   styleBoxes: Record<string, StyleBoxFlatData> = {}
 ): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'MySpinBox',
     type: 'SpinBox',
     children: [],

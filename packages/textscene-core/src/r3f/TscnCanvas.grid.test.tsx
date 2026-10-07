@@ -22,7 +22,7 @@ function makeMeshInstance(name: string): TscnNode {
     name,
     surfaceMaterialOverrides: new Map(),
   };
-  return { name, type: 'MeshInstance3D', children: [], properties: props };
+  return { rawProperties: {}, name, type: 'MeshInstance3D', children: [], properties: props };
 }
 
 function countGrids(renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>): number {

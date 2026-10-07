@@ -21,7 +21,7 @@ function makeNode(props: Partial<CSGSphere3DProperties>, children: TscnNode[] = 
     flipFaces: false,
     ...props,
   };
-  return { name: properties.name, type: 'CSGSphere3D', children, properties };
+  return { rawProperties: {}, name: properties.name, type: 'CSGSphere3D', children, properties };
 }
 
 async function render(node: TscnNode, internalResources: TscnInternalResource[] = []) {

@@ -40,6 +40,7 @@ function node(props: Partial<CheckBoxProperties>): SolveNode {
     ...solveNode(),
     path: 'C',
     node: {
+      rawProperties: {},
       name: 'C',
       type: 'CheckBox',
       children: [],

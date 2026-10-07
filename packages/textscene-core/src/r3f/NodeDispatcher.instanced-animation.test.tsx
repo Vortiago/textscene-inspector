@@ -18,6 +18,8 @@ import { createFakeResourceLoader } from '../resources/testing/createFakeResourc
 import { AnimationProcessMode, MethodCallMode } from '../nodes/animation/animationplayer/types';
 
 import './nodes/index';
+// The Instance root merge parses a sub-scene root with the Node parser when its type has none.
+import '../nodes/node/index';
 
 // AnimationLibrary with one "slide" clip moving a sibling Target.
 const INTERNAL: TscnInternalResource[] = [
@@ -37,6 +39,7 @@ const INTERNAL: TscnInternalResource[] = [
 
 function makeAnimationPlayerNode(): TscnNode {
   return {
+    rawProperties: {},
     name: 'Animation',
     type: 'AnimationPlayer',
     children: [],
@@ -62,12 +65,14 @@ function makeCoinScene(): TscnScene {
   return {
     nodes: [
       {
+        rawProperties: {},
         name: 'Coin',
         type: 'Area3D',
         instance: undefined,
         children: [
           makeAnimationPlayerNode(),
           {
+            rawProperties: {},
             name: 'Target',
             type: 'MeshInstance3D',
             children: [],
@@ -110,10 +115,12 @@ describe('instanced AnimationPlayer — selection-driven tab via the collapsed p
     // Area3D root, so the AnimationPlayer sits at 'Coins/Coin1/Animation'.
     const nodes: TscnNode[] = [
       {
+        rawProperties: {},
         name: 'Coins',
         type: 'Node3D',
         children: [
           {
+            rawProperties: {},
             name: 'Coin1',
             type: 'Node3D',
             instance: 'ExtResource("coin")',

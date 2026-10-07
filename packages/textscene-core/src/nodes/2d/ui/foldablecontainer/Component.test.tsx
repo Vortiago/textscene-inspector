@@ -20,6 +20,7 @@ const RECT: Rect2 = { x: 0, y: 0, w: 120, h: 80 };
 
 function solveNode(properties: Partial<FoldableContainerProperties> = {}): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'MyFoldableContainer',
     type: 'FoldableContainer',
     children: [],

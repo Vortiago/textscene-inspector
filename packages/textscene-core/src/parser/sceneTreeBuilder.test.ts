@@ -15,12 +15,7 @@ describe('buildSceneTree', () => {
 
     it('should handle single root node without children', () => {
       const nodes: TscnNode[] = [
-        {
-          type: 'Node3D',
-          name: 'Root',
-          properties: {},
-          children: [],
-        },
+        { rawProperties: {}, type: 'Node3D', name: 'Root', properties: {}, children: [] },
       ];
 
       const result = buildSceneTree(nodes);
@@ -32,12 +27,7 @@ describe('buildSceneTree', () => {
 
     it('should handle single root node without parent attribute', () => {
       const nodes: TscnNode[] = [
-        {
-          type: 'Node3D',
-          name: 'Root',
-          properties: {},
-          children: [],
-        },
+        { rawProperties: {}, type: 'Node3D', name: 'Root', properties: {}, children: [] },
       ];
 
       const result = buildSceneTree(nodes);
@@ -50,19 +40,8 @@ describe('buildSceneTree', () => {
   describe('parent="." references', () => {
     it('should attach child with parent="." to root node', () => {
       const nodes: TscnNode[] = [
-        {
-          type: 'Node3D',
-          name: 'Root',
-          properties: {},
-          children: [],
-        },
-        {
-          type: 'Node3D',
-          name: 'Child',
-          parent: '.',
-          properties: {},
-          children: [],
-        },
+        { rawProperties: {}, type: 'Node3D', name: 'Root', properties: {}, children: [] },
+        { rawProperties: {}, type: 'Node3D', name: 'Child', parent: '.', properties: {}, children: [] },
       ];
 
       const result = buildSceneTree(nodes);
@@ -75,26 +54,9 @@ describe('buildSceneTree', () => {
 
     it('should attach multiple children with parent="." to root', () => {
       const nodes: TscnNode[] = [
-        {
-          type: 'Node3D',
-          name: 'Root',
-          properties: {},
-          children: [],
-        },
-        {
-          type: 'Node3D',
-          name: 'Child1',
-          parent: '.',
-          properties: {},
-          children: [],
-        },
-        {
-          type: 'Node3D',
-          name: 'Child2',
-          parent: '.',
-          properties: {},
-          children: [],
-        },
+        { rawProperties: {}, type: 'Node3D', name: 'Root', properties: {}, children: [] },
+        { rawProperties: {}, type: 'Node3D', name: 'Child1', parent: '.', properties: {}, children: [] },
+        { rawProperties: {}, type: 'Node3D', name: 'Child2', parent: '.', properties: {}, children: [] },
       ];
 
       const result = buildSceneTree(nodes);
@@ -109,20 +71,10 @@ describe('buildSceneTree', () => {
   describe('named parent references', () => {
     it('should attach child to named parent', () => {
       const nodes: TscnNode[] = [
+        { rawProperties: {}, type: 'Node3D', name: 'Root', properties: {}, children: [] },
+        { rawProperties: {}, type: 'Node3D', name: 'Child', parent: '.', properties: {}, children: [] },
         {
-          type: 'Node3D',
-          name: 'Root',
-          properties: {},
-          children: [],
-        },
-        {
-          type: 'Node3D',
-          name: 'Child',
-          parent: '.',
-          properties: {},
-          children: [],
-        },
-        {
+          rawProperties: {},
           type: 'Node3D',
           name: 'GrandChild',
           parent: 'Child',
@@ -143,27 +95,11 @@ describe('buildSceneTree', () => {
 
     it('should build complex multi-level hierarchy', () => {
       const nodes: TscnNode[] = [
+        { rawProperties: {}, type: 'Node3D', name: 'Root', properties: {}, children: [] },
+        { rawProperties: {}, type: 'Node3D', name: 'Child1', parent: '.', properties: {}, children: [] },
+        { rawProperties: {}, type: 'Node3D', name: 'Child2', parent: '.', properties: {}, children: [] },
         {
-          type: 'Node3D',
-          name: 'Root',
-          properties: {},
-          children: [],
-        },
-        {
-          type: 'Node3D',
-          name: 'Child1',
-          parent: '.',
-          properties: {},
-          children: [],
-        },
-        {
-          type: 'Node3D',
-          name: 'Child2',
-          parent: '.',
-          properties: {},
-          children: [],
-        },
-        {
+          rawProperties: {},
           type: 'Node3D',
           name: 'GrandChild1',
           parent: 'Child1',
@@ -171,6 +107,7 @@ describe('buildSceneTree', () => {
           children: [],
         },
         {
+          rawProperties: {},
           type: 'Node3D',
           name: 'GrandChild2',
           parent: 'Child2',
@@ -200,12 +137,7 @@ describe('buildSceneTree', () => {
   describe('deep hierarchies', () => {
     it('should handle deep hierarchy (10 levels)', () => {
       const nodes: TscnNode[] = [
-        {
-          type: 'Node3D',
-          name: 'Level0',
-          properties: {},
-          children: [],
-        },
+        { rawProperties: {}, type: 'Node3D', name: 'Level0', properties: {}, children: [] },
       ];
 
       // Build 10 levels deep
@@ -220,6 +152,7 @@ describe('buildSceneTree', () => {
           parentPath = pathParts.join('/');
         }
         nodes.push({
+          rawProperties: {},
           type: 'Node3D',
           name: `Level${i}`,
           parent: parentPath,
@@ -245,6 +178,7 @@ describe('buildSceneTree', () => {
   describe('parents inside instanced content', () => {
     /** A node, with only the fields these tests care about. */
     const node = (name: string, extra: Partial<TscnNode> = {}): TscnNode => ({
+      rawProperties: {},
       type: 'Node3D',
       name,
       properties: {},
@@ -447,13 +381,9 @@ describe('buildSceneTree', () => {
   describe('error handling', () => {
     it('drops a node whose parent is not found, and reports it', () => {
       const nodes: TscnNode[] = [
+        { rawProperties: {}, type: 'Node3D', name: 'Root', properties: {}, children: [] },
         {
-          type: 'Node3D',
-          name: 'Root',
-          properties: {},
-          children: [],
-        },
-        {
+          rawProperties: {},
           type: 'Node3D',
           name: 'Orphan',
           parent: 'NonExistentParent',
@@ -475,6 +405,7 @@ describe('buildSceneTree', () => {
     it('roots at heading 0 when no heading declares itself parentless', () => {
       const nodes: TscnNode[] = [
         {
+          rawProperties: {},
           type: 'Node3D',
           name: 'Node1',
           parent: 'NonExistent',
@@ -482,6 +413,7 @@ describe('buildSceneTree', () => {
           children: [],
         },
         {
+          rawProperties: {},
           type: 'Node3D',
           name: 'Node2',
           parent: 'NonExistent',
@@ -510,8 +442,8 @@ describe('buildSceneTree', () => {
       // heading wherever it sits, while Godot's root is `i == 0` and nothing
       // else. Only the positional one still names the heading that is refused.
       const nodes: TscnNode[] = [
-        { type: 'Node3D', name: 'A', parent: '.', properties: {}, children: [] },
-        { type: 'Node3D', name: 'Root', properties: {}, children: [] },
+        { rawProperties: {}, type: 'Node3D', name: 'A', parent: '.', properties: {}, children: [] },
+        { rawProperties: {}, type: 'Node3D', name: 'Root', properties: {}, children: [] },
       ];
       const origins = nodes.map((node, i) => ({
         node,
@@ -530,26 +462,9 @@ describe('buildSceneTree', () => {
   describe('mixed scenarios', () => {
     it('should handle root with children having parent attribute', () => {
       const nodes: TscnNode[] = [
-        {
-          type: 'Node3D',
-          name: 'Root',
-          properties: {},
-          children: [],
-        },
-        {
-          type: 'Node3D',
-          name: 'Child1',
-          parent: '.',
-          properties: {},
-          children: [],
-        },
-        {
-          type: 'Node3D',
-          name: 'Child2',
-          parent: 'Child1',
-          properties: {},
-          children: [],
-        },
+        { rawProperties: {}, type: 'Node3D', name: 'Root', properties: {}, children: [] },
+        { rawProperties: {}, type: 'Node3D', name: 'Child1', parent: '.', properties: {}, children: [] },
+        { rawProperties: {}, type: 'Node3D', name: 'Child2', parent: 'Child1', properties: {}, children: [] },
       ];
 
       const result = buildSceneTree(nodes);
@@ -565,12 +480,14 @@ describe('buildSceneTree', () => {
     it('should preserve node properties during tree building', () => {
       const nodes: TscnNode[] = [
         {
+          rawProperties: {},
           type: 'Node3D',
           name: 'Root',
           properties: { customProp: 'value' },
           children: [],
         },
         {
+          rawProperties: {},
           type: 'Node3D',
           name: 'Child',
           parent: '.',
@@ -587,13 +504,9 @@ describe('buildSceneTree', () => {
 
     it('should preserve node type during tree building', () => {
       const nodes: TscnNode[] = [
+        { rawProperties: {}, type: 'Node3D', name: 'Root', properties: {}, children: [] },
         {
-          type: 'Node3D',
-          name: 'Root',
-          properties: {},
-          children: [],
-        },
-        {
+          rawProperties: {},
           type: 'MeshInstance3D',
           name: 'Mesh',
           parent: '.',

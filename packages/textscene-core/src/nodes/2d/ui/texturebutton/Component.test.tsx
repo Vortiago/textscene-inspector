@@ -41,6 +41,7 @@ function fakeTexture(width: number, height: number): THREE.Texture {
 
 function solveNode(properties: Partial<TextureButtonProperties> = {}): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'MyTextureButton',
     type: 'TextureButton',
     children: [],

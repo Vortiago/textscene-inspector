@@ -28,6 +28,7 @@ type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function graphEdit(properties: Partial<GraphEditProperties> = {}, children: SolveNode[] = []): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'G',
     type: 'GraphEdit',
     children: [],
@@ -62,6 +63,7 @@ function leafControl(name: string, minHeight: number): SolveNode {
     ...emptySolveNode(),
     path: name,
     node: {
+      rawProperties: {},
       name,
       type: 'Control',
       children: [],
@@ -75,6 +77,7 @@ function graphNode(name: string, slots: Map<number, GraphNodeSlot>, children: So
     ...emptySolveNode(),
     path: name,
     node: {
+      rawProperties: {},
       name,
       type: 'GraphNode',
       children: [],

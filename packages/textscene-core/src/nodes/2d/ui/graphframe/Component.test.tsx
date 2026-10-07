@@ -20,6 +20,7 @@ type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function graphFrame(properties: Partial<GraphFrameProperties> = {}): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'F',
     type: 'GraphFrame',
     children: [],

@@ -20,6 +20,7 @@ function makeFixture(): {
   externalResources: TscnExternalResource[];
 } {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'Mesh1',
     type: 'MeshInstance3D',
     children: [],

@@ -43,7 +43,13 @@ function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
     ...solveNode(),
     path: name,
-    node: { name, type: 'Control', children: [], properties: { name, ...props } as ControlProperties },
+    node: {
+      rawProperties: {},
+      name,
+      type: 'Control',
+      children: [],
+      properties: { name, ...props } as ControlProperties,
+    },
   };
 }
 
@@ -52,6 +58,7 @@ function scrollContainer(props: Partial<ScrollContainerProperties>, children: So
     ...solveNode(),
     path: 'Scroll',
     node: {
+      rawProperties: {},
       name: 'Scroll',
       type: 'ScrollContainer',
       children: [],
@@ -313,6 +320,7 @@ describe('wired through the registry + full solve, against the real fixture numb
         ...solveNode(),
         path: 'Root/ScrollContainer/Content',
         node: {
+          rawProperties: {},
           name: 'Content',
           type: 'VBoxContainer',
           children: [],
@@ -323,6 +331,7 @@ describe('wired through the registry + full solve, against the real fixture numb
         ...solveNode(),
         path: 'Root/ScrollContainer',
         node: {
+          rawProperties: {},
           name: 'ScrollContainer',
           type: TYPE,
           children: [],
@@ -343,6 +352,7 @@ describe('wired through the registry + full solve, against the real fixture numb
         ...solveNode(),
         path: 'Root',
         node: {
+          rawProperties: {},
           name: 'Root',
           type: 'Control',
           children: [],

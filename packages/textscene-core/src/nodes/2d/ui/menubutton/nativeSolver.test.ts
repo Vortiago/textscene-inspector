@@ -26,6 +26,7 @@ function node(props: Partial<MenuButtonProperties>): SolveNode {
     ...solveNode(),
     path: 'M',
     node: {
+      rawProperties: {},
       name: 'M',
       type: 'MenuButton',
       children: [],

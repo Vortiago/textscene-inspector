@@ -91,7 +91,7 @@ export interface TscnNode {
    * render path share. `properties` differs by parser. It also lets a type-less
    * instance node's overrides be re-parsed against the instanced root's type.
    */
-  rawProperties?: Record<string, string>;
+  rawProperties: Record<string, string>;
   /**
    * Whether `rawProperties`' key order is one file's scan order (ADR-0035).
    * `core/NodeRegistry.ts`'s `parseNodeWithRegistry` sets `true`. The raw merge in

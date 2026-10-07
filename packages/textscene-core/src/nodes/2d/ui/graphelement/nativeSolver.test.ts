@@ -19,7 +19,13 @@ function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
     ...solveNode(),
     path: name,
-    node: { name, type: 'Control', children: [], properties: { name, ...props } as ControlProperties },
+    node: {
+      rawProperties: {},
+      name,
+      type: 'Control',
+      children: [],
+      properties: { name, ...props } as ControlProperties,
+    },
   };
 }
 
@@ -39,7 +45,13 @@ describe('graphElementMinimumSize', () => {
     const n = {
       ...solveNode(),
       path: 'G',
-      node: { name: 'G', type: 'GraphElement', children: [], properties: {} as ControlProperties },
+      node: {
+        name: 'G',
+        type: 'GraphElement',
+        children: [],
+        properties: {} as ControlProperties,
+        rawProperties: {},
+      },
       children: [a, b],
     };
     expect(graphElementMinimumSize(n, ctx())).toEqual({ x: 40, y: 30 });
@@ -49,7 +61,13 @@ describe('graphElementMinimumSize', () => {
     const n = {
       ...solveNode(),
       path: 'G',
-      node: { name: 'G', type: 'GraphElement', children: [], properties: {} as ControlProperties },
+      node: {
+        name: 'G',
+        type: 'GraphElement',
+        children: [],
+        properties: {} as ControlProperties,
+        rawProperties: {},
+      },
     };
     expect(graphElementMinimumSize(n, ctx())).toEqual({ x: 0, y: 0 });
   });
@@ -59,7 +77,13 @@ describe('graphElementMinimumSize', () => {
     const n = {
       ...solveNode(),
       path: 'G',
-      node: { name: 'G', type: 'GraphElement', children: [], properties: {} as ControlProperties },
+      node: {
+        name: 'G',
+        type: 'GraphElement',
+        children: [],
+        properties: {} as ControlProperties,
+        rawProperties: {},
+      },
       children: [hiddenChild],
     };
     expect(graphElementMinimumSize(n, ctx())).toEqual({ x: 100, y: 5 });
@@ -74,7 +98,13 @@ describe('graphElementLayout', () => {
     const n = {
       ...solveNode(),
       path: 'G',
-      node: { name: 'G', type: 'GraphElement', children: [], properties: {} as ControlProperties },
+      node: {
+        name: 'G',
+        type: 'GraphElement',
+        children: [],
+        properties: {} as ControlProperties,
+        rawProperties: {},
+      },
       children: [a],
     };
     const rects = asMap(graphElementLayout(n, [{ node: a, minSize: { x: 10, y: 10 } }], contentRect, ctx()));
@@ -88,7 +118,13 @@ describe('graphElementLayout', () => {
     const n = {
       ...solveNode(),
       path: 'G',
-      node: { name: 'G', type: 'GraphElement', children: [], properties: {} as ControlProperties },
+      node: {
+        name: 'G',
+        type: 'GraphElement',
+        children: [],
+        properties: {} as ControlProperties,
+        rawProperties: {},
+      },
       children: [hiddenChild],
     };
     const rects = asMap(
@@ -107,7 +143,13 @@ describe('graphElementLayout', () => {
     const n = {
       ...solveNode(),
       path: 'G',
-      node: { name: 'G', type: 'GraphElement', children: [], properties: {} as ControlProperties },
+      node: {
+        name: 'G',
+        type: 'GraphElement',
+        children: [],
+        properties: {} as ControlProperties,
+        rawProperties: {},
+      },
       children: [a],
     };
     const rects = asMap(graphElementLayout(n, [{ node: a, minSize: { x: 10, y: 10 } }], contentRect, ctx()));
@@ -123,7 +165,13 @@ describe('graphElementLayout under RTL', () => {
     const n = {
       ...solveNode(),
       path: 'G',
-      node: { name: 'G', type: 'GraphElement', children: [], properties: {} as ControlProperties },
+      node: {
+        name: 'G',
+        type: 'GraphElement',
+        children: [],
+        properties: {} as ControlProperties,
+        rawProperties: {},
+      },
       children: [child],
       rtl: true,
     };

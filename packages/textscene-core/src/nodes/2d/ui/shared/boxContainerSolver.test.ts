@@ -257,7 +257,13 @@ function solveNode(
   children: SolveNode[] = []
 ): SolveNode {
   const name = path.split('/').pop()!;
-  const tscnNode: TscnNode = { name, type, children: [], properties: { name, ...properties } };
+  const tscnNode: TscnNode = {
+    rawProperties: {},
+    name,
+    type,
+    children: [],
+    properties: { name, ...properties },
+  };
   // A local theme_override_constants/* reaches a solver through
   // `n.constants` (the walker folds it in unconditionally), not `node.properties`.
   const constants =

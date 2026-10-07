@@ -13,6 +13,7 @@ import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function vboxSolveNode(): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'Column',
     type: 'VBoxContainer',
     children: [],

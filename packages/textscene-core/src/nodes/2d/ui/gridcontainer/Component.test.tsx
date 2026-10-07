@@ -12,6 +12,7 @@ import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function gridSolveNode(): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'Grid',
     type: 'GridContainer',
     children: [],

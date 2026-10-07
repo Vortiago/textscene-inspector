@@ -18,6 +18,7 @@ const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 200 };
 
 function solveNode(properties: Partial<TreeProperties> = {}, rtl = false): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'MyTree',
     type: 'Tree',
     children: [],

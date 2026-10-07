@@ -59,7 +59,7 @@ function makeNode(overrides: Partial<Sprite3DProperties>): TscnNode {
     transparent: true,
     ...overrides,
   };
-  return { name: 'Sprite', type: 'Sprite3D', children: [], properties: props };
+  return { rawProperties: {}, name: 'Sprite', type: 'Sprite3D', children: [], properties: props };
 }
 
 /** Whether the sprite handed the mesh a different THREE.Material after the edit. */

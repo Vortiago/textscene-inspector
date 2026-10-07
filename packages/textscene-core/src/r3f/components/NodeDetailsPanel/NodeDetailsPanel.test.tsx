@@ -10,7 +10,7 @@ import { nodeRegistry } from '../../../core/NodeRegistry';
 import type { TscnNode } from '../../../parser/types';
 
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
-  return { name, type, children: [], properties: {}, ...extras };
+  return { rawProperties: {}, name, type, children: [], properties: {}, ...extras };
 }
 
 function panelWrap(graph = createSceneGraphFromTscnScene({ nodes: [] })) {

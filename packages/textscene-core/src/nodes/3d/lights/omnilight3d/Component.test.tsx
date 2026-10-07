@@ -18,7 +18,13 @@ function makeNode(overrides: Partial<OmniLight3DProperties> = {}): TscnNode {
     omni_attenuation: 2,
     ...overrides,
   };
-  return { name: props.name ?? 'Lamp', type: 'OmniLight3D', children: [], properties: props };
+  return {
+    rawProperties: {},
+    name: props.name ?? 'Lamp',
+    type: 'OmniLight3D',
+    children: [],
+    properties: props,
+  };
 }
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;

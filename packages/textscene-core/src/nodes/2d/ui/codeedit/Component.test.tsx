@@ -19,6 +19,7 @@ type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function solveNode(properties: Partial<CodeEditProperties> = {}): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'MyCodeEdit',
     type: 'CodeEdit',
     children: [],

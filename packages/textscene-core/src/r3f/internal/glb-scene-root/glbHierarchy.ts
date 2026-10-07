@@ -101,6 +101,8 @@ export function glbInternalNodeType(displayType: string): string {
  */
 export function glbHierarchyToTscnNodes(nodes: readonly GlbHierarchyNode[]): TscnNode[] {
   return nodes.map((n) => ({
+    // No file wrote a synthetic node, so it has no raw properties.
+    rawProperties: {},
     name: n.relPath.split('/').pop() ?? n.name,
     type: glbInternalNodeType(n.displayType),
     children: glbHierarchyToTscnNodes(n.children),
@@ -124,6 +126,7 @@ export function glbSceneRootChildren(root: THREE.Object3D): TscnNode[] {
   const clips = root.animations;
   if (clips.length > 0) {
     nodes.push({
+      rawProperties: {},
       name: GLB_ANIMATION_PLAYER_NAME,
       type: GLB_ANIMATION_PLAYER_TYPE,
       children: [],

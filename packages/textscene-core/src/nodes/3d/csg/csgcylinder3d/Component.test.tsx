@@ -22,7 +22,7 @@ function makeNode(props: Partial<CSGCylinder3DProperties>, children: TscnNode[] 
     flipFaces: false,
     ...props,
   };
-  return { name: properties.name, type: 'CSGCylinder3D', children, properties };
+  return { rawProperties: {}, name: properties.name, type: 'CSGCylinder3D', children, properties };
 }
 
 async function render(node: TscnNode, internalResources: TscnInternalResource[] = []) {

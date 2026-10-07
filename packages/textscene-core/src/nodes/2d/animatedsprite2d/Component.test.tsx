@@ -31,6 +31,7 @@ const ANIMATIONS =
 
 function makeNode(raw: Record<string, string> = {}, children: TscnNode[] = []): TscnNode {
   return {
+    rawProperties: {},
     name: 'A',
     type: 'AnimatedSprite2D',
     children,
@@ -114,6 +115,7 @@ describe('AnimatedSprite2D playback (transport-driven)', () => {
     fake.textures.seed('res://f0.png', tex0);
     fake.textures.seed('res://f1.png', tex1);
     const node: TscnNode = {
+      rawProperties: {},
       name: 'A',
       type: 'AnimatedSprite2D',
       children: [],
@@ -280,6 +282,7 @@ describe('AnimatedSprite2D authored-frame reactivity', () => {
 
   function tree(fake: ReturnType<typeof createFakeResourceLoader>, frame: string) {
     const node: TscnNode = {
+      rawProperties: {},
       name: 'A',
       type: 'AnimatedSprite2D',
       children: [],
@@ -363,6 +366,7 @@ describe('AnimatedSprite2D AtlasTexture frames (sprite-sheet packing)', () => {
     (atlas as unknown as { image: { width: number; height: number } }).image = { width: 64, height: 64 };
     fake.textures.seed('res://atlas.png', atlas);
     const node: TscnNode = {
+      rawProperties: {},
       name: 'A',
       type: 'AnimatedSprite2D',
       children: [],
@@ -465,6 +469,7 @@ animations = [{
     fake.textures.seed('res://idle.png', idle);
     fake.resources.seed('res://anim_player.tres', parseTresFile(TRES));
     const node: TscnNode = {
+      rawProperties: {},
       name: 'A',
       type: 'AnimatedSprite2D',
       children: [],
@@ -545,6 +550,7 @@ animations = [{
     fake.textures.seed('res://sheet.png', sheetTexture);
     fake.resources.seed('res://anim_player.tres', parseTresFile(ATLAS_TRES));
     const node: TscnNode = {
+      rawProperties: {},
       name: 'A',
       type: 'AnimatedSprite2D',
       children: [],
@@ -574,6 +580,7 @@ animations = [{
     // loading .tres must not flash the magenta missing-resource placeholder.
     const fake = createFakeResourceLoader();
     const node: TscnNode = {
+      rawProperties: {},
       name: 'A',
       type: 'AnimatedSprite2D',
       children: [],

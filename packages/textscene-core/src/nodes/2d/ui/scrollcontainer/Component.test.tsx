@@ -38,6 +38,7 @@ function leaf(name: string, props: Partial<ScrollContainerProperties> = {}): Sol
     ...solveNode(),
     path: name,
     node: {
+      rawProperties: {},
       name,
       type: 'Control',
       children: [],
@@ -48,6 +49,7 @@ function leaf(name: string, props: Partial<ScrollContainerProperties> = {}): Sol
 
 function scrollNode(props: Partial<ScrollContainerProperties> = {}, children: SolveNode[] = []): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'Scroll',
     type: 'ScrollContainer',
     children: [],

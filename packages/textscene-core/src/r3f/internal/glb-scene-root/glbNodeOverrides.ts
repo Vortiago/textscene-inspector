@@ -57,8 +57,8 @@ export function applyGlbNodeOverrides(
   for (const override of overrides) {
     if (!isApplicableGlbOverride(override)) continue;
 
-    const layers = parseOptionalInt(override.rawProperties?.layers, 'uint32');
-    const visible = override.rawProperties?.visible;
+    const layers = parseOptionalInt(override.rawProperties.layers, 'uint32');
+    const visible = override.rawProperties.visible;
     const transform = (override.properties as Node3DProperties).transform;
     // Nothing to write means nothing to resolve: an override with only
     // `surface_material_override/0` skips the path match.

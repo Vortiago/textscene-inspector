@@ -12,7 +12,13 @@ import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/tes
 import { ColorPickerButton } from './Component';
 
 function node(properties: Record<string, unknown>): SolveNode {
-  const tscnNode: TscnNode = { name: 'C', type: 'ColorPickerButton', children: [], properties };
+  const tscnNode: TscnNode = {
+    rawProperties: {},
+    name: 'C',
+    type: 'ColorPickerButton',
+    children: [],
+    properties,
+  };
   return { ...emptySolveNode(), path: 'C', node: tscnNode };
 }
 

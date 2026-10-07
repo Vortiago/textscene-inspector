@@ -9,6 +9,7 @@ import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../..
 
 function node(overrides: Record<string, string>): TscnNode {
   return {
+    rawProperties: {},
     name: 'N',
     type: 'Panel',
     children: [],
@@ -36,7 +37,7 @@ const externalResources: TscnExternalResource[] = [
 
 describe('resolveStyleBoxes', () => {
   it('returns an empty map when the node declares no theme_override_styles', () => {
-    const n: TscnNode = { name: 'N', type: 'Panel', children: [], properties: {} };
+    const n: TscnNode = { rawProperties: {}, name: 'N', type: 'Panel', children: [], properties: {} };
     expect(resolveStyleBoxes(n, { externalResources: [], internalResources })).toEqual({});
   });
 

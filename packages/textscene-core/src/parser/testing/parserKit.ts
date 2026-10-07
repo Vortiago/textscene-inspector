@@ -1,6 +1,7 @@
 /**
- * Shared test kit for parser slice tests: the node `heading()` factory, the formatter
- * `valueOf()` lookup, the repo-root and fixture resolvers and the scene `flatten()`.
+ * Shared test kit for parser slice tests: the node `heading()`, `parsedNode()` and
+ * `translated()` factories, the formatter `valueOf()` lookup, the repo-root and fixture
+ * resolvers and the scene `flatten()`.
  * Build-excluded through the `src/**\/testing/**` tsconfig rule, like the linter test kit.
  */
 
@@ -9,7 +10,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ParsedHeading } from '../utils';
 import type { TscnNode, TscnScene } from '../types';
-import type { PropertySection } from '../../core/NodeRegistry';
+import { parseNodeWithRegistry, type PropertySection } from '../../core/NodeRegistry';
 import type { Node3DProperties, Transform3D } from '../../nodes/base/node3d/types';
 
 /**
@@ -19,6 +20,21 @@ import type { Node3DProperties, Transform3D } from '../../nodes/base/node3d/type
  */
 export function heading(type: string, attributes: Record<string, string> = {}): ParsedHeading {
   return { type: 'node', attributes: { name: type, type, ...attributes } };
+}
+
+/**
+ * A node as the scene parser builds it from its heading attributes and raw property
+ * lines, so `properties` and `rawProperties` agree. The type's slice must be imported.
+ */
+export function parsedNode(attributes: Record<string, string>, raw: Record<string, string> = {}): TscnNode {
+  const node = parseNodeWithRegistry({ type: 'node', attributes }, raw);
+  if (!node) throw new Error(`expected a parsed node for ${JSON.stringify(attributes)}, got null`);
+  return node;
+}
+
+/** The `Transform3D(...)` text Godot writes for an identity basis at this origin. */
+export function translated(x: number, y: number, z: number): string {
+  return `Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, ${x}, ${y}, ${z})`;
 }
 
 /**

@@ -21,6 +21,7 @@ type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function solveNode(properties: Partial<LinkButtonProperties> = {}): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'MyLinkButton',
     type: 'LinkButton',
     children: [],

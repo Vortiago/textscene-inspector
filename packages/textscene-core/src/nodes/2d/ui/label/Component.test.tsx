@@ -21,7 +21,13 @@ const THEME = nativeTheme(1);
 
 function solveNode(path: string, properties: Record<string, unknown>): SolveNode {
   const name = path.split('/').pop()!;
-  const tscnNode: TscnNode = { name, type: 'Label', children: [], properties: { name, ...properties } };
+  const tscnNode: TscnNode = {
+    rawProperties: {},
+    name,
+    type: 'Label',
+    children: [],
+    properties: { name, ...properties },
+  };
   // A local theme_override_colors/theme_override_constants reaches the
   // painter through `n.colors`/`n.constants` (the walker folds both in
   // unconditionally), not properties.

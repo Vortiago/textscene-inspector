@@ -21,6 +21,7 @@ type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function solveNode(properties: Partial<CheckButtonProperties> = {}): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'MyCheckButton',
     type: 'CheckButton',
     children: [],

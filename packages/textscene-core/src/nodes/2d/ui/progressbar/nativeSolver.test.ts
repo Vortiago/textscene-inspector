@@ -26,6 +26,7 @@ function node(
     ...emptySolveNode(),
     path: 'P',
     node: {
+      rawProperties: {},
       name: 'P',
       type: 'ProgressBar',
       children: [],

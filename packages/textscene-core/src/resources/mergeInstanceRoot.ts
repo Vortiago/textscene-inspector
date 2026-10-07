@@ -21,41 +21,14 @@ import type { ParsedHeading } from '../parser/utils.js';
 const GLB_SCENE_ROOT_TYPE = 'GLBSceneRoot';
 
 /**
- * The base `Node` parser emits `transform` and other keys as `undefined` for a
- * node with no such line, so stripping `undefined` lets an absent instance
- * property fall back to the root's, as in Godot. A defined falsy value
- * (`false`, `0`, `""`) still overrides.
- */
-function definedProperties(props: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const key of Object.keys(props)) {
-    if (props[key] !== undefined) out[key] = props[key];
-  }
-  return out;
-}
-
-/** What a merge builds: the merged raw map when both nodes have one, the typed properties and their scope. */
-interface MergedProperties {
-  raw: Record<string, string> | undefined;
-  properties: TscnNode['properties'];
-  scope: SceneScope;
-}
-
-/**
  * The instance node's keys were written against the outer scope, the root's against the
- * sub-scene's, so the instance's are re-homed into the sub-scene's before they merge. A
- * hand-built node with no raw map holds its references in its parsed string values.
+ * sub-scene's, so the instance's are re-homed into the sub-scene's before they merge.
  */
-function mergeProperties(instanceNode: LiveNode, root: LiveNode, scopes: InstanceScopes): MergedProperties {
-  if (!root.rawProperties || !instanceNode.rawProperties) {
-    const instanceProperties = definedProperties(instanceNode.properties as Record<string, unknown>);
-    const rehomed = rehomeOverride(stringValues(instanceProperties), scopes.outer, scopes.content);
-    return {
-      raw: undefined,
-      properties: { ...root.properties, ...instanceProperties, ...rehomed.raw },
-      scope: rehomed.scope,
-    };
-  }
+function mergeProperties(
+  instanceNode: LiveNode,
+  root: LiveNode,
+  scopes: InstanceScopes
+): { raw: Record<string, string>; properties: TscnNode['properties']; scope: SceneScope } {
   const rehomed = rehomeOverride(instanceNode.rawProperties, scopes.outer, scopes.content);
   const raw = layerRaw(root.type, root.rawProperties, rehomed.raw);
   return {
@@ -101,14 +74,6 @@ function parseMerged(
     },
   };
   return registration.parser(heading, raw);
-}
-
-function stringValues(props: Record<string, unknown>): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [key, value] of Object.entries(props)) {
-    if (typeof value === 'string') out[key] = value;
-  }
-  return out;
 }
 
 /** A type the registry lacks parses as a Node, as `parseNodeWithRegistry` parses it. */

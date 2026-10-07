@@ -45,6 +45,7 @@ function makeSrgbTexture(wrap: THREE.Wrapping, width = 64, height = 64): THREE.T
 
 function makeNode(props: Record<string, string> = {}, name = NODE_NAME): TscnNode {
   return {
+    rawProperties: {},
     name,
     type: 'Decal',
     children: [],

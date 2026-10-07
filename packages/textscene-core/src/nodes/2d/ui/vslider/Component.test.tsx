@@ -17,7 +17,13 @@ function solveNode(properties: Record<string, unknown>): SolveNode {
   return {
     ...emptySolveNode(),
     path: 'S',
-    node: { name: 'S', type: 'VSlider', children: [], properties: { name: 'S', ...properties } } as TscnNode,
+    node: {
+      rawProperties: {},
+      name: 'S',
+      type: 'VSlider',
+      children: [],
+      properties: { name: 'S', ...properties },
+    } as TscnNode,
   };
 }
 

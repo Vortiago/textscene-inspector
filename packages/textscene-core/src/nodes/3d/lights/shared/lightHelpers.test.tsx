@@ -32,7 +32,7 @@ function dirNode(name: string, overrides: Partial<DirectionalLight3DProperties> 
     shadow_enabled: false,
     ...overrides,
   };
-  return { name, type: 'DirectionalLight3D', children: [], properties: props };
+  return { rawProperties: {}, name, type: 'DirectionalLight3D', children: [], properties: props };
 }
 
 function omniNode(name: string, overrides: Partial<OmniLight3DProperties> = {}): TscnNode {
@@ -45,7 +45,7 @@ function omniNode(name: string, overrides: Partial<OmniLight3DProperties> = {}):
     omni_attenuation: 2,
     ...overrides,
   };
-  return { name, type: 'OmniLight3D', children: [], properties: props };
+  return { rawProperties: {}, name, type: 'OmniLight3D', children: [], properties: props };
 }
 
 function spotNode(name: string, overrides: Partial<SpotLight3DProperties> = {}): TscnNode {
@@ -60,7 +60,7 @@ function spotNode(name: string, overrides: Partial<SpotLight3DProperties> = {}):
     spot_angle_attenuation: 1.0,
     ...overrides,
   };
-  return { name, type: 'SpotLight3D', children: [], properties: props };
+  return { rawProperties: {}, name, type: 'SpotLight3D', children: [], properties: props };
 }
 
 function findHelpersOfType<T extends THREE.Object3D>(
@@ -239,6 +239,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
     // light in its transform group, so without `correctHelperForParentGroup` the
     // group's matrixWorld composes on top and doubles the translation.
     const node: TscnNode = {
+      rawProperties: {},
       name: 'Sun',
       type: 'DirectionalLight3D',
       children: [],
@@ -299,6 +300,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
     // THREE.PointLightHelper has DirectionalLightHelper's constructor aliasing,
     // and the same correction (see the previous test).
     const node: TscnNode = {
+      rawProperties: {},
       name: 'Lamp',
       type: 'OmniLight3D',
       children: [],
@@ -370,7 +372,7 @@ function cameraNode(name: string, overrides: Partial<Camera3DProperties> = {}): 
     current: false,
     ...overrides,
   };
-  return { name, type: 'Camera3D', children: [], properties: props };
+  return { rawProperties: {}, name, type: 'Camera3D', children: [], properties: props };
 }
 
 describe('Camera3D gizmo — selection gating (WI-UX-14 scope expansion)', () => {
@@ -447,6 +449,7 @@ describe('Camera3D gizmo — selection gating (WI-UX-14 scope expansion)', () =>
     // group of its own, so only a transformed ancestor, whose group holds both
     // the camera and its sibling helper, reproduces the doubling.
     const parentNode: TscnNode = {
+      rawProperties: {},
       name: 'Rig',
       type: 'Node3D',
       children: [cameraNode('RigCam')],
@@ -524,7 +527,7 @@ function audioNode(name: string, overrides: Partial<AudioStreamPlayer3DPropertie
     max_polyphony: 1,
     ...overrides,
   };
-  return { name, type: 'AudioStreamPlayer3D', children: [], properties: props };
+  return { rawProperties: {}, name, type: 'AudioStreamPlayer3D', children: [], properties: props };
 }
 
 /**

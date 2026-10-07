@@ -64,12 +64,7 @@ async function renderMaterial(): Promise<THREE.MeshStandardMaterial> {
     materialOverride: 'SubResource("Mat")',
     surfaceMaterialOverrides: new Map(),
   };
-  const node: TscnNode = {
-    name: 'M',
-    type: 'MeshInstance3D',
-    children: [],
-    properties,
-  };
+  const node: TscnNode = { rawProperties: {}, name: 'M', type: 'MeshInstance3D', children: [], properties };
 
   const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>

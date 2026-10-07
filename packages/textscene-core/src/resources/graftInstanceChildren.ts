@@ -151,9 +151,7 @@ function foldOverride(
   const existing = siblings[index]!;
   const existingScope = scopeOf(existing, siblingScope);
   const overrideScope = scopeOf(override, existingScope);
-  const { raw, scope } = override.rawProperties
-    ? rehomeOverride(override.rawProperties, overrideScope, existingScope)
-    : { raw: undefined, scope: existingScope };
+  const { raw, scope } = rehomeOverride(override.rawProperties, overrideScope, existingScope);
   const layered = layerRawOverride(existing, raw);
   const children = attachAll(layered.children, override.children, overrideScope, scope);
   const copy = [...siblings];

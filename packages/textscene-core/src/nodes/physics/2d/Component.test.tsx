@@ -12,6 +12,7 @@ const bodyHeading = (attributes: Record<string, string> = {}) => ({
 
 function makeBody(raw: Record<string, string> = {}): TscnNode {
   return {
+    rawProperties: {},
     name: raw.name || 'StaticBody2D',
     type: 'StaticBody2D',
     children: [],

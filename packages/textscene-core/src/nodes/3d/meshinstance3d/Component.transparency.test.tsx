@@ -31,7 +31,7 @@ function makeNode(properties: Partial<MeshInstance3DProperties>): TscnNode {
     surfaceMaterialOverrides: new Map(),
     ...properties,
   };
-  return { name: 'M', type: 'MeshInstance3D', children: [], properties: full };
+  return { rawProperties: {}, name: 'M', type: 'MeshInstance3D', children: [], properties: full };
 }
 
 async function drawnMaterials(properties: Partial<MeshInstance3DProperties>): Promise<THREE.Material[]> {

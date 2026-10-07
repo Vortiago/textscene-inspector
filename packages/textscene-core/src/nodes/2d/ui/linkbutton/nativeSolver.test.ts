@@ -29,6 +29,7 @@ function node(props: Partial<LinkButtonProperties>): SolveNode {
     ...solveNode(),
     path: 'L',
     node: {
+      rawProperties: {},
       name: 'L',
       type: 'LinkButton',
       children: [],

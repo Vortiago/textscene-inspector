@@ -13,6 +13,7 @@ import { parseNavigationAgent3D } from './parser';
 import type { TscnNode } from '../../../parser/types';
 
 const agentNode: TscnNode = {
+  rawProperties: {},
   name: 'Movement',
   type: 'NavigationAgent3D',
   children: [],

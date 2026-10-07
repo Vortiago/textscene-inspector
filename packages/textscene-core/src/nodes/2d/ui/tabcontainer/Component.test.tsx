@@ -24,6 +24,7 @@ type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function page(name: string, properties: Partial<ControlProperties> = {}): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name,
     type: 'Control',
     children: [],
@@ -34,6 +35,7 @@ function page(name: string, properties: Partial<ControlProperties> = {}): SolveN
 
 function solveNode(properties: Partial<TabContainerProperties> = {}, children: SolveNode[] = []): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'Tabs',
     type: 'TabContainer',
     children: children.map((c) => c.node),

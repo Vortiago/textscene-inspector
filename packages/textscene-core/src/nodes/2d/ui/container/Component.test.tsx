@@ -15,6 +15,7 @@ import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function containerSolveNode(): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'Wrapper',
     type: 'Container',
     children: [],
@@ -48,6 +49,7 @@ describe('a bare Container imposes no layout on its children', () => {
   it('leaves a child at its own free/anchored rect, unlike a registered container', () => {
     // Full-rect preset (anchors 0,0,1,1, offsets 0): the Container takes the whole 200x100 viewport.
     const containerNode: TscnNode = {
+      rawProperties: {},
       name: 'Wrapper',
       type: 'Container',
       children: [],
@@ -60,6 +62,7 @@ describe('a bare Container imposes no layout on its children', () => {
       },
     };
     const childNode: TscnNode = {
+      rawProperties: {},
       name: 'Child',
       type: 'Control',
       children: [],

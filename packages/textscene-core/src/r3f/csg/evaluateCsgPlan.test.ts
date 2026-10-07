@@ -14,7 +14,13 @@ import type { TscnNode } from '../../parser/types';
 
 const csg = csgLibrary as unknown as CsgModule;
 
-const dummyNode: TscnNode = { name: 'n', type: 'CSGBox3D', children: [], properties: {} as never };
+const dummyNode: TscnNode = {
+  rawProperties: {},
+  name: 'n',
+  type: 'CSGBox3D',
+  children: [],
+  properties: {} as never,
+};
 
 function contribution(
   path: string,

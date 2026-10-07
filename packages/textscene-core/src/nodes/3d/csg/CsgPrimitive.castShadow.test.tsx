@@ -35,7 +35,13 @@ async function renderLoneBox(
   internalResources: TscnInternalResource[] = []
 ): Promise<THREE.Mesh> {
   const parsed = parseBox(properties);
-  const node: TscnNode = { name: 'Box', type: 'CSGBox3D', children: [], properties: parsed };
+  const node: TscnNode = {
+    rawProperties: {},
+    name: 'Box',
+    type: 'CSGBox3D',
+    children: [],
+    properties: parsed,
+  };
   const renderer = await ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={internalResources}>
       <CsgPrimitive node={node} properties={parsed} />
@@ -123,7 +129,13 @@ describe('CSG cast_shadow', () => {
     // An external `.tres` slot remounts when the file lands. SHADOWS_ONLY lives in the draw
     // hooks, not in the material, so the arrived material draws no colour either.
     const parsed = parseBox({ cast_shadow: '3', material: 'ExtResource("1_mat")' });
-    const node: TscnNode = { name: 'Box', type: 'CSGBox3D', children: [], properties: parsed };
+    const node: TscnNode = {
+      rawProperties: {},
+      name: 'Box',
+      type: 'CSGBox3D',
+      children: [],
+      properties: parsed,
+    };
     const fake = createFakeResourceLoader();
     const tree = (
       <ResourceLoaderProvider loader={fake.loader}>

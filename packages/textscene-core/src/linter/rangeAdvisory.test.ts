@@ -15,7 +15,7 @@ const arm: WarningArm = {
 };
 
 function nodeWith(properties: Record<string, string>): TscnNode {
-  return { name: 'Test', type: 'TestNode', children: [], properties };
+  return { rawProperties: {}, name: 'Test', type: 'TestNode', children: [], properties };
 }
 
 describe('rangeAdvisories', () => {
@@ -25,6 +25,7 @@ describe('rangeAdvisories', () => {
       type: 'T',
       children: [],
       properties: null as unknown as Record<string, string>,
+      rawProperties: {},
     };
     expect(
       rangeAdvisories(node, { x: [{ over: 10, message: () => 'm', cite: 'light_3d.cpp:389' }] }, arm)

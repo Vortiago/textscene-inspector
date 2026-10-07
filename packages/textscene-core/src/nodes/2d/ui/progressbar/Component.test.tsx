@@ -17,6 +17,7 @@ function solveNode(properties: Record<string, unknown>): SolveNode {
     ...emptySolveNode(),
     path: 'P',
     node: {
+      rawProperties: {},
       name: 'P',
       type: 'ProgressBar',
       children: [],

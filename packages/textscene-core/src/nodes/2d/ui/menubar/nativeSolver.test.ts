@@ -39,6 +39,7 @@ function node(children: TscnNode[]): SolveNode {
     ...solveNode(),
     path: 'Bar',
     node: {
+      rawProperties: {},
       name: 'Bar',
       type: 'MenuBar',
       children,
@@ -75,7 +76,7 @@ describe('menuBarMinimumSize', () => {
   });
 
   it('ignores a non-PopupMenu child entirely', () => {
-    const stray: TscnNode = { name: 'X', type: 'Label', children: [], properties: {} };
+    const stray: TscnNode = { rawProperties: {}, name: 'X', type: 'Label', children: [], properties: {} };
     expect(minSize(node([stray]), ctx())).toEqual({ x: 0, y: 0 });
   });
 

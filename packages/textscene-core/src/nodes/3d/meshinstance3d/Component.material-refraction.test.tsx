@@ -17,6 +17,7 @@ import { loaderServing } from '../../../resources/testing/servingResourceLoader'
 
 function makeNode(materialId: string, name = 'Mesh'): TscnNode {
   return {
+    rawProperties: {},
     name,
     type: 'MeshInstance3D',
     children: [],

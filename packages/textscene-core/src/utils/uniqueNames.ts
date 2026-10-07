@@ -27,7 +27,7 @@ export interface UniqueNameClaim {
  * (`parser/rawPropertyParity.test.ts`). No slice models the flag, so typed `properties` lacks it.
  */
 export function isUniqueNameInOwner(node: TscnNode): boolean {
-  return boolSlotValue(node.rawProperties?.unique_name_in_owner) === true;
+  return boolSlotValue(node.rawProperties.unique_name_in_owner) === true;
 }
 
 /**

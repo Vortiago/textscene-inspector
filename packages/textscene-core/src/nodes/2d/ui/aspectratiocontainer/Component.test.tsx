@@ -12,6 +12,7 @@ import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function aspectSolveNode(): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'Aspect',
     type: 'AspectRatioContainer',
     children: [],

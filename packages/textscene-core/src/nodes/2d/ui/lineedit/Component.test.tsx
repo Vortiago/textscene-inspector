@@ -38,6 +38,7 @@ function solveNode(
   styleBoxes: Record<string, StyleBoxFlatData> = {}
 ): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'MyLineEdit',
     type: 'LineEdit',
     children: [],
@@ -476,6 +477,7 @@ describe('<LineEdit> — right_icon', () => {
     const fake = createFakeResourceLoader();
     fake.textures.seed(TEX, fakeIconTexture(iconSize.x, iconSize.y));
     const node: TscnNode = {
+      rawProperties: {},
       name: 'MyLineEdit',
       type: 'LineEdit',
       children: [],

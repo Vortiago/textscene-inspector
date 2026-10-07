@@ -39,6 +39,7 @@ function node(
     ...solveNode(),
     path,
     node: {
+      rawProperties: {},
       name: path,
       type: 'FoldableContainer',
       children: [] as TscnNode[],

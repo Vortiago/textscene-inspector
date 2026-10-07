@@ -13,6 +13,7 @@ import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
 
 function markerNode(name = 'MyMarker', props: Record<string, string> = {}): TscnNode {
   return {
+    rawProperties: {},
     name,
     type: 'Marker3D',
     children: [],

@@ -20,9 +20,11 @@ import {
 } from './liveSceneTree';
 import type { TscnNode, TscnScene, TscnExternalResource, TscnInternalResource } from '../parser/types';
 import { subResource } from '../testing/subResource';
+// The Instance root merge parses a sub-scene root with the Node parser when its type has none.
+import '../nodes/node/index';
 
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
-  return { name, type, children: [], properties: {}, ...extras };
+  return { rawProperties: {}, name, type, children: [], properties: {}, ...extras };
 }
 
 function ctxOf(

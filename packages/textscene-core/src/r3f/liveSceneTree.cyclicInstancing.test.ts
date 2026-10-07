@@ -14,9 +14,11 @@ import {
   type SceneScope,
 } from './liveSceneTree';
 import type { TscnExternalResource, TscnNode, TscnScene } from '../parser/types';
+// The Instance root merge parses a sub-scene root with the Node parser when its type has none.
+import '../nodes/node/index';
 
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
-  return { name, type, children: [], properties: {}, ...extras };
+  return { rawProperties: {}, name, type, children: [], properties: {}, ...extras };
 }
 
 function ext(id: string, path: string): TscnExternalResource {

@@ -27,7 +27,13 @@ function parseBox(properties: Record<string, string>): CSGBox3DProperties {
 
 async function loneBoxMaterial(properties: Record<string, string>): Promise<THREE.Material> {
   const parsed = parseBox(properties);
-  const node: TscnNode = { name: 'Box', type: 'CSGBox3D', children: [], properties: parsed };
+  const node: TscnNode = {
+    rawProperties: {},
+    name: 'Box',
+    type: 'CSGBox3D',
+    children: [],
+    properties: parsed,
+  };
   const renderer = await ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={[]}>
       <CsgPrimitive node={node} properties={parsed} />

@@ -14,6 +14,7 @@ import { instanceAs } from '../testing/reactThreeTestInstance';
 
 function makeNode(props: Record<string, unknown> = {}): TscnNode {
   return {
+    rawProperties: {},
     name: 'Cam',
     type: 'Camera3D',
     children: [],

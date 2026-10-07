@@ -31,6 +31,7 @@ type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function solveNode(properties: Partial<ItemListProperties>, rtl = false, iconSlots = {}): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'MyItemList',
     type: 'ItemList',
     children: [],

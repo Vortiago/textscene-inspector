@@ -13,9 +13,18 @@ import { createFakeResourceLoader } from '../resources/testing/createFakeResourc
 import { setLogAdapter, type LogAdapter } from '../logger';
 
 import './nodes/index';
+// The Instance root merge parses a sub-scene root with the Node parser when its type has none.
+import '../nodes/node/index';
 
 function makeNode(name: string, type: string, overrides: Partial<TscnNode> = {}): TscnNode {
-  return { name, type, children: [], properties: { name } as Record<string, unknown>, ...overrides };
+  return {
+    rawProperties: {},
+    name,
+    type,
+    children: [],
+    properties: { name } as Record<string, unknown>,
+    ...overrides,
+  };
 }
 
 function ext(id: string, path: string): TscnExternalResource {

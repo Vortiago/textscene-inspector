@@ -32,7 +32,7 @@ vi.mock('../../contexts/ProjectSettingsContext', () => ({
 }));
 
 function node(name: string, type: string, properties: Record<string, unknown> = {}): TscnNode {
-  return { name, type, children: [], properties: { name, ...properties } };
+  return { rawProperties: {}, name, type, children: [], properties: { name, ...properties } };
 }
 
 function namedGroup(

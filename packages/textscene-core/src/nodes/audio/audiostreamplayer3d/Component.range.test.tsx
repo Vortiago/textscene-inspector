@@ -18,6 +18,7 @@ const heading = { type: 'node', attributes: { name: 'Audio', type: 'AudioStreamP
 
 function node(raw: Record<string, string> = {}): TscnNode {
   return {
+    rawProperties: {},
     name: 'Audio',
     type: 'AudioStreamPlayer3D',
     children: [],

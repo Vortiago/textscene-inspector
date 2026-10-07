@@ -30,6 +30,7 @@ function leaf(name: string, minHeight: number): SolveNode {
     ...solveNode(),
     path: name,
     node: {
+      rawProperties: {},
       name,
       type: 'Control',
       children: [],
@@ -48,6 +49,7 @@ function graphNode(
     ...solveNode(),
     path: name,
     node: {
+      rawProperties: {},
       name,
       type: 'GraphNode',
       children: [],
@@ -74,7 +76,13 @@ describe('resolveGraphEditConnections (graph_edit.cpp:1614-1660 _update_connecti
     const graphEdit: SolveNode = {
       ...solveNode(),
       path: 'G',
-      node: { name: 'G', type: 'GraphEdit', children: [], properties: { name: 'G' } as ControlProperties },
+      node: {
+        rawProperties: {},
+        name: 'G',
+        type: 'GraphEdit',
+        children: [],
+        properties: { name: 'G' } as ControlProperties,
+      },
       children: [source, sink],
     };
 
@@ -118,7 +126,13 @@ describe('resolveGraphEditConnections (graph_edit.cpp:1614-1660 _update_connecti
     const graphEdit: SolveNode = {
       ...solveNode(),
       path: 'G',
-      node: { name: 'G', type: 'GraphEdit', children: [], properties: { name: 'G' } as ControlProperties },
+      node: {
+        rawProperties: {},
+        name: 'G',
+        type: 'GraphEdit',
+        children: [],
+        properties: { name: 'G' } as ControlProperties,
+      },
       children: [source],
     };
     const childRects: ReadonlyMap<string, Rect2> = new Map([['Source', { x: 0, y: 0, w: 120, h: 80 }]]);
@@ -147,7 +161,13 @@ describe('resolveGraphEditConnections (graph_edit.cpp:1614-1660 _update_connecti
     const graphEdit: SolveNode = {
       ...solveNode(),
       path: 'G',
-      node: { name: 'G', type: 'GraphEdit', children: [], properties: { name: 'G' } as ControlProperties },
+      node: {
+        rawProperties: {},
+        name: 'G',
+        type: 'GraphEdit',
+        children: [],
+        properties: { name: 'G' } as ControlProperties,
+      },
       children: [source, sink],
     };
     const childRects: ReadonlyMap<string, Rect2> = new Map([

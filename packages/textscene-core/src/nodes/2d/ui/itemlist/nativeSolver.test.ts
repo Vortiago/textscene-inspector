@@ -46,6 +46,7 @@ function node(props: Partial<ItemListProperties> = {}): SolveNode {
     ...solveNode(),
     path: 'IL',
     node: {
+      rawProperties: {},
       name: 'IL',
       type: 'ItemList',
       children: [],

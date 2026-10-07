@@ -11,7 +11,13 @@ import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function solveNode(): SolveNode {
-  const node: TscnNode = { name: 'C', type: 'CenterContainer', children: [], properties: { name: 'C' } };
+  const node: TscnNode = {
+    rawProperties: {},
+    name: 'C',
+    type: 'CenterContainer',
+    children: [],
+    properties: { name: 'C' },
+  };
   return { ...emptySolveNode(), path: 'C', node };
 }
 

@@ -31,6 +31,7 @@ function theme(icons: Record<string, Record<string, string>>): ThemeResource {
 
 function node(overrides?: Record<string, string>): TscnNode {
   return {
+    rawProperties: {},
     name: 'N',
     type: 'CheckBox',
     children: [],

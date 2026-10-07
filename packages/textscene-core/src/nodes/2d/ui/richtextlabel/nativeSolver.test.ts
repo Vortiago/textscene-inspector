@@ -54,6 +54,7 @@ function node(props: Partial<RichTextLabelProperties>, overrides: Partial<SolveN
     ...solveNode(),
     path: 'RTL',
     node: {
+      rawProperties: {},
       name: 'RTL',
       type: 'RichTextLabel',
       children: [],

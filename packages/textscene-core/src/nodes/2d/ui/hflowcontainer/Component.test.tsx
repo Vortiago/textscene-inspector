@@ -12,6 +12,7 @@ import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function flowSolveNode(): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'HFlow',
     type: 'HFlowContainer',
     children: [],

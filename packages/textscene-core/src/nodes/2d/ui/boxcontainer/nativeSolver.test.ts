@@ -20,6 +20,7 @@ const THEME = nativeTheme(1);
 
 function child(path: string, minSize: { x: number; y: number }): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: path,
     type: 'Control',
     children: [],
@@ -37,7 +38,7 @@ function boxRoot(type: string, vertical: boolean | undefined, children: SolveNod
     anchorBottom: 1,
   };
   if (vertical !== undefined) properties.vertical = vertical;
-  const node: TscnNode = { name: 'Box', type, children: [], properties };
+  const node: TscnNode = { rawProperties: {}, name: 'Box', type, children: [], properties };
   return { ...solveNode(), path: 'Box', node, children };
 }
 

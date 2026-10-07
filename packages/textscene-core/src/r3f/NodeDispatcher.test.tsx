@@ -17,12 +17,7 @@ import { CanvasWorkspaceProvider } from './contexts/CanvasWorkspaceContext';
 import './nodes/index';
 
 function makeNode(name: string, type: string, children: TscnNode[] = []): TscnNode {
-  return {
-    name,
-    type,
-    children,
-    properties: {},
-  };
+  return { rawProperties: {}, name, type, children, properties: {} };
 }
 
 function renderWithProviders(content: React.ReactElement) {
@@ -141,6 +136,7 @@ describe('<NodeDispatcher> per-node error boundary (#216)', () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const node: TscnNode = {
+      rawProperties: {},
       name: 'BadNode2D',
       type: 'Bomb2D',
       children: [],
@@ -190,7 +186,13 @@ describe('<NodeDispatcher> per-node error boundary (#216)', () => {
     });
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    const node: TscnNode = { name: 'Bad', type: 'BombNoPosition', children: [], properties: {} };
+    const node: TscnNode = {
+      rawProperties: {},
+      name: 'Bad',
+      type: 'BombNoPosition',
+      children: [],
+      properties: {},
+    };
     const renderer = await renderWithProviders(
       <CanvasWorkspaceProvider workspace="2d">
         <NodeDispatcher nodes={[node]} />

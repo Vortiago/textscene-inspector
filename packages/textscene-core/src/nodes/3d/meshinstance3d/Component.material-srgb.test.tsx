@@ -33,6 +33,7 @@ async function renderWithMaterial(materialProps: Record<string, string>) {
     surfaceMaterialOverrides: new Map([[0, 'SubResource("mat_1")']]),
   };
   const node: TscnNode = {
+    rawProperties: {},
     name: 'TestMesh',
     type: 'MeshInstance3D',
     children: [],

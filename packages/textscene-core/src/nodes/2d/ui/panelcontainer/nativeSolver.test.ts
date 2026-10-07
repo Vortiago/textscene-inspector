@@ -55,6 +55,7 @@ function solveNode(
 ): SolveNode {
   const name = path.split('/').pop()!;
   const node: TscnNode = {
+    rawProperties: {},
     name,
     type: 'Control',
     children: [],
@@ -180,6 +181,7 @@ describe('panelContainerLayout wired through the registry + full solve', () => {
       ...emptySolveNode(),
       path: 'Panel/Child',
       node: {
+        rawProperties: {},
         name: 'Child',
         type: 'Control',
         children: [],
@@ -190,6 +192,7 @@ describe('panelContainerLayout wired through the registry + full solve', () => {
       ...emptySolveNode(),
       path: 'Panel',
       node: {
+        rawProperties: {},
         name: 'Panel',
         type: TYPE,
         children: [],

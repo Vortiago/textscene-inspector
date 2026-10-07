@@ -22,7 +22,13 @@ function graphNodeChild(name: string, props: Partial<GraphElementProperties> = {
   return {
     ...solveNode(),
     path: name,
-    node: { name, type: 'GraphNode', children: [], properties: { name, ...props } as GraphElementProperties },
+    node: {
+      rawProperties: {},
+      name,
+      type: 'GraphNode',
+      children: [],
+      properties: { name, ...props } as GraphElementProperties,
+    },
   };
 }
 
@@ -30,7 +36,13 @@ function controlChild(name: string, props: Partial<ControlProperties> = {}): Sol
   return {
     ...solveNode(),
     path: name,
-    node: { name, type: 'Control', children: [], properties: { name, ...props } as ControlProperties },
+    node: {
+      rawProperties: {},
+      name,
+      type: 'Control',
+      children: [],
+      properties: { name, ...props } as ControlProperties,
+    },
   };
 }
 
@@ -38,7 +50,13 @@ function graphEdit(name: string, props: Partial<GraphEditProperties>, children: 
   return {
     ...solveNode(),
     path: name,
-    node: { name, type: 'GraphEdit', children: [], properties: { name, ...props } as GraphEditProperties },
+    node: {
+      rawProperties: {},
+      name,
+      type: 'GraphEdit',
+      children: [],
+      properties: { name, ...props } as GraphEditProperties,
+    },
     children,
   };
 }

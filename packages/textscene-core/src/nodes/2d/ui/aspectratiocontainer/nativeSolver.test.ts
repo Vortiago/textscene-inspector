@@ -22,7 +22,13 @@ function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
     ...solveNode(),
     path: name,
-    node: { name, type: 'Control', children: [], properties: { name, ...props } as ControlProperties },
+    node: {
+      rawProperties: {},
+      name,
+      type: 'Control',
+      children: [],
+      properties: { name, ...props } as ControlProperties,
+    },
   };
 }
 
@@ -31,6 +37,7 @@ function textureRect(name: string, expandMode: number): SolveNode {
     ...solveNode(),
     path: name,
     node: {
+      rawProperties: {},
       name,
       type: 'TextureRect',
       children: [],
@@ -44,6 +51,7 @@ function aspect(props: Partial<AspectRatioContainerProperties>, children: SolveN
     ...solveNode(),
     path: 'A',
     node: {
+      rawProperties: {},
       name: 'A',
       type: 'AspectRatioContainer',
       children: [],

@@ -34,6 +34,7 @@ function node(
     path: 'TB',
     textureSlots,
     node: {
+      rawProperties: {},
       name: 'TB',
       type: 'TextureButton',
       children: [],

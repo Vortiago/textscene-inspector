@@ -25,7 +25,13 @@ const TEX_H = 128;
 
 function node(rawProps: Record<string, string>): TscnNode {
   const heading: ParsedHeading = { type: 'node', attributes: { name: 'Poly', type: 'Polygon2D' } };
-  return { name: 'Poly', type: 'Polygon2D', children: [], properties: parsePolygon2D(heading, rawProps) };
+  return {
+    rawProperties: {},
+    name: 'Poly',
+    type: 'Polygon2D',
+    children: [],
+    properties: parsePolygon2D(heading, rawProps),
+  };
 }
 
 function loadedTexture(): THREE.Texture {

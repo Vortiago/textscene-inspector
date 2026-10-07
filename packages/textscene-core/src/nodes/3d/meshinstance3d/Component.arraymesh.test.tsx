@@ -43,6 +43,7 @@ const INLINE_SURFACES = wallQuadSurfaces({ name: 'inline' });
 
 function inlineMeshNode(subResourceId: string): TscnNode {
   return {
+    rawProperties: {},
     name: 'Trailer',
     type: 'MeshInstance3D',
     children: [],
@@ -56,6 +57,7 @@ function inlineMeshNode(subResourceId: string): TscnNode {
 
 function makeNode(): TscnNode {
   return {
+    rawProperties: {},
     name: 'Mesh',
     type: 'MeshInstance3D',
     children: [],

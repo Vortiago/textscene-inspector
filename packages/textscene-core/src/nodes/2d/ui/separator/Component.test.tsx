@@ -23,6 +23,7 @@ function sepNode(
   internalResources: readonly TscnInternalResource[] = []
 ): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'Sep',
     type,
     children: [],

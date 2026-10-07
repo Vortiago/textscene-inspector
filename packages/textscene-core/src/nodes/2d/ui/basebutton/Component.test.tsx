@@ -9,6 +9,7 @@ import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function baseButtonSolveNode(properties: Record<string, unknown> = {}): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'Clicky',
     type: 'BaseButton',
     children: [],

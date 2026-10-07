@@ -25,7 +25,7 @@ function solveNode(
   return {
     ...emptySolveNode(),
     path: name,
-    node: { name, type, children: [], properties: { name, ...properties } } as TscnNode,
+    node: { rawProperties: {}, name, type, children: [], properties: { name, ...properties } } as TscnNode,
     children,
     constants,
   };

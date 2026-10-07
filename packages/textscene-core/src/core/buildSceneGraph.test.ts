@@ -8,6 +8,7 @@ import type { ParsedScene, SceneNode } from './SceneGraph';
 import type { TscnNode, ExtResource } from '../parser/types';
 
 const node = (name: string, overrides: Partial<TscnNode> = {}): TscnNode => ({
+  rawProperties: {},
   name,
   type: 'Node3D',
   children: [],

@@ -19,6 +19,7 @@ import './nodes/index';
 
 function makeNode(name: string, type: string, overrides: Partial<TscnNode> = {}): TscnNode {
   return {
+    rawProperties: {},
     name,
     type,
     children: [],

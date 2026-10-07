@@ -16,7 +16,7 @@ import { ColorPicker } from './Component';
 const THEME = nativeTheme(1);
 
 function node(properties: Record<string, unknown>): SolveNode {
-  const tscnNode: TscnNode = { name: 'P', type: 'ColorPicker', children: [], properties };
+  const tscnNode: TscnNode = { rawProperties: {}, name: 'P', type: 'ColorPicker', children: [], properties };
   return { ...emptySolveNode(), path: 'P', node: tscnNode };
 }
 

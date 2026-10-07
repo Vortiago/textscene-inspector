@@ -5,7 +5,13 @@ import type { Node3DProperties, Transform3D } from '../../base/node3d/types';
 import type { TscnNode } from '../../../parser/types';
 
 function makeNode(properties: Node3DProperties): TscnNode {
-  return { name: properties.name ?? 'Skeleton3D', type: 'Skeleton3D', children: [], properties };
+  return {
+    rawProperties: {},
+    name: properties.name ?? 'Skeleton3D',
+    type: 'Skeleton3D',
+    children: [],
+    properties,
+  };
 }
 
 function skeletonNode(): TscnNode {

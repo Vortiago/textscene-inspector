@@ -11,16 +11,10 @@ import type { ParsedHeading } from '../parser/utils.js';
 import { nodeRegistry } from '../core/NodeRegistry.js';
 
 /**
- * `existing` with `overrideRaw` layered on. Returns `existing` untouched when
- * there is nothing to layer; falls back to the raw merge alone when the target
- * type has no registered parser (a hand-built node, or an unsupported type).
+ * `existing` with `overrideRaw` layered on. It falls back to the raw merge alone when the
+ * target type has no registered parser (a hand-built node, or an unsupported type).
  */
-export function layerRawOverride(
-  existing: TscnNode,
-  overrideRaw: Record<string, string> | undefined
-): TscnNode {
-  if (!overrideRaw) return existing;
-
+export function layerRawOverride(existing: TscnNode, overrideRaw: Record<string, string>): TscnNode {
   // Canonicalised against the type the scanner did not have: an `instance=`
   // heading has no `type=`, so a pre-4.0 alias in the override is still spelled
   // as the file wrote it.

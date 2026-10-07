@@ -18,7 +18,13 @@ import type { TscnNode } from '../../../../parser/types';
 const heading = { type: 'node' as const, attributes: { type: 'Area2D', name: 'Trigger' } };
 
 function areaNode(raw: Record<string, string> = {}): TscnNode {
-  return { name: 'Trigger', type: 'Area2D', children: [], properties: parseArea2D(heading, raw) };
+  return {
+    rawProperties: {},
+    name: 'Trigger',
+    type: 'Area2D',
+    children: [],
+    properties: parseArea2D(heading, raw),
+  };
 }
 
 describe('Area2D parser registration', () => {

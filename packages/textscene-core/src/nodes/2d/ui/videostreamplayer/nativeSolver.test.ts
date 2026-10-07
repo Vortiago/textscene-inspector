@@ -18,7 +18,13 @@ const CTX: SolveContext = {
 };
 
 function node(properties: Record<string, unknown>): SolveNode {
-  const tscnNode: TscnNode = { name: 'V', type: 'VideoStreamPlayer', children: [], properties };
+  const tscnNode: TscnNode = {
+    rawProperties: {},
+    name: 'V',
+    type: 'VideoStreamPlayer',
+    children: [],
+    properties,
+  };
   return { ...emptySolveNode(), path: 'V', node: tscnNode };
 }
 

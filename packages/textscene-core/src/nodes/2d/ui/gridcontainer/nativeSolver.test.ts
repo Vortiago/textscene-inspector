@@ -24,7 +24,13 @@ function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
     ...solveNode(),
     path: name,
-    node: { name, type: 'Control', children: [], properties: { name, ...props } as ControlProperties },
+    node: {
+      rawProperties: {},
+      name,
+      type: 'Control',
+      children: [],
+      properties: { name, ...props } as ControlProperties,
+    },
   };
 }
 
@@ -33,6 +39,7 @@ function grid(name: string, props: Partial<GridContainerProperties>, children: S
     ...solveNode(),
     path: name,
     node: {
+      rawProperties: {},
       name,
       type: 'GridContainer',
       children: [],

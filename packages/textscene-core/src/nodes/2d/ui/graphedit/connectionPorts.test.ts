@@ -28,6 +28,7 @@ function leaf(name: string, minHeight: number): SolveNode {
     ...solveNode(),
     path: name,
     node: {
+      rawProperties: {},
       name,
       type: 'Control',
       children: [],
@@ -41,6 +42,7 @@ function graphNode(name: string, slots: Map<number, GraphNodeSlot>, children: So
     ...solveNode(),
     path: name,
     node: {
+      rawProperties: {},
       name,
       type: 'GraphNode',
       children: [],

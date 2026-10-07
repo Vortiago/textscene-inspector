@@ -59,6 +59,7 @@ function solveNode(
   styleBoxes: Record<string, StyleBoxFlatData> = {}
 ): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'MyButton',
     type: 'Button',
     children: [],

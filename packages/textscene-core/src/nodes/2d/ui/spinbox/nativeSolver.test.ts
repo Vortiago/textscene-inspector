@@ -38,6 +38,7 @@ function node(props: Partial<SpinBoxProperties> = {}): SolveNode {
     ...solveNode(),
     path: 'S',
     node: {
+      rawProperties: {},
       name: 'S',
       type: 'SpinBox',
       children: [],

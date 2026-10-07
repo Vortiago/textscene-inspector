@@ -20,11 +20,12 @@ type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 32 };
 
 function popup(name: string): TscnNode {
-  return { name, type: 'PopupMenu', children: [], properties: {} };
+  return { rawProperties: {}, name, type: 'PopupMenu', children: [], properties: {} };
 }
 
 function solveNode(properties: Partial<MenuBarProperties> = {}, children: TscnNode[] = []): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'Bar',
     type: 'MenuBar',
     children,
@@ -114,7 +115,13 @@ describe('<MenuBar> (isolated painter contract)', () => {
   });
 
   it('ignores a stray non-PopupMenu child instead of drawing a title for it', async () => {
-    const stray: TscnNode = { name: 'NotAMenu', type: 'Label', children: [], properties: {} };
+    const stray: TscnNode = {
+      rawProperties: {},
+      name: 'NotAMenu',
+      type: 'Label',
+      children: [],
+      properties: {},
+    };
     const renderer = await ReactThreeTestRenderer.create(
       <MenuBar
         {...painterEnv()}

@@ -23,6 +23,7 @@ type Props = Record<string, unknown>;
 function node(path: string, type: string, properties: Props, children: SolveNode[] = []): SolveNode {
   const name = path.split('/').pop()!;
   const tscnNode: TscnNode = {
+    rawProperties: {},
     name,
     type,
     children: [],

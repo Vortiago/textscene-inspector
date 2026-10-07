@@ -113,7 +113,13 @@ async function renderAo(matData: Record<string, string>): Promise<THREE.MeshStan
     mesh: 'SubResource("Box")',
     materialOverride: 'SubResource("Mat")',
   };
-  const node: TscnNode = { name: 'M', type: 'MeshInstance3D', children: [], properties: props };
+  const node: TscnNode = {
+    rawProperties: {},
+    name: 'M',
+    type: 'MeshInstance3D',
+    children: [],
+    properties: props,
+  };
   const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider

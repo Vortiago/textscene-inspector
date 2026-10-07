@@ -41,6 +41,7 @@ const SCOPE = {
 
 function node(properties: Partial<TextureProgressBarProperties>): TscnNode {
   return {
+    rawProperties: {},
     name: 'Bar',
     type: 'TextureProgressBar',
     children: [],

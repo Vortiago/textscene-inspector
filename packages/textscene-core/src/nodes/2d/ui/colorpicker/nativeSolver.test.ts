@@ -33,7 +33,7 @@ const THEME = nativeTheme(1);
 const CTX: SolveContext = { theme: THEME, measureText: null, combinedMinimumSize: () => ({ x: 0, y: 0 }) };
 
 function node(properties: Record<string, unknown>): SolveNode {
-  const tscnNode: TscnNode = { name: 'P', type: 'ColorPicker', children: [], properties };
+  const tscnNode: TscnNode = { rawProperties: {}, name: 'P', type: 'ColorPicker', children: [], properties };
   return { ...emptySolveNode(), path: 'P', node: tscnNode };
 }
 

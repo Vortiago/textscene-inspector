@@ -4,12 +4,7 @@ import { Node } from './Component';
 import type { TscnNode } from '../../parser/types';
 import type { Transform3D } from '../base/node3d/types';
 
-const baseNode: TscnNode = {
-  name: 'Root',
-  type: 'Node',
-  children: [],
-  properties: {},
-};
+const baseNode: TscnNode = { rawProperties: {}, name: 'Root', type: 'Node', children: [], properties: {} };
 
 describe('<Node>', () => {
   it('renders a group', async () => {
@@ -55,6 +50,7 @@ describe('<Node>', () => {
       origin: { x: 9.659, y: 0.059, z: 6.018 },
     };
     const node: TscnNode = {
+      rawProperties: {},
       name: 'Crate',
       type: 'Node',
       children: [],

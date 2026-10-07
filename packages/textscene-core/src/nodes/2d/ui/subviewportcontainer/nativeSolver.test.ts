@@ -34,12 +34,7 @@ import '../../../../r3f/controls/index';
  * an unreachable branch.
  */
 function subViewport(name: string, size: { x: number; y: number } = { x: 512, y: 512 }): TscnNode {
-  return {
-    name,
-    type: 'SubViewport',
-    children: [],
-    properties: { name, size },
-  };
+  return { rawProperties: {}, name, type: 'SubViewport', children: [], properties: { name, size } };
 }
 
 // The sub-viewports go on the raw `node.children`, the only place they exist: `buildSolveTree`
@@ -47,6 +42,7 @@ function subViewport(name: string, size: { x: number; y: number } = { x: 512, y:
 // implementation that reads the wrong list pass.
 function container(properties: Partial<SubViewportContainerProperties>, children: TscnNode[]): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'Booth',
     type: 'SubViewportContainer',
     children,
@@ -98,6 +94,7 @@ describe('subViewportContainerMinimumSize (scene/gui/subviewport_container.cpp::
 
   it('skips children that are not SubViewports (`Object::cast_to<SubViewport>` returning null)', () => {
     const decoy: TscnNode = {
+      rawProperties: {},
       name: 'Decoy',
       type: 'ColorRect',
       children: [],

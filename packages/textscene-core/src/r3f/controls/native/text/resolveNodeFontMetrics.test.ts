@@ -35,7 +35,13 @@ function labelNode(overrides: Partial<SolveNode> = {}): SolveNode {
   return {
     ...solveNode(),
     path: 'Root/MyLabel',
-    node: { name: 'MyLabel', type: 'Label', children: [], properties: { name: 'MyLabel' } },
+    node: {
+      rawProperties: {},
+      name: 'MyLabel',
+      type: 'Label',
+      children: [],
+      properties: { name: 'MyLabel' },
+    },
     ...overrides,
   };
 }

@@ -14,7 +14,7 @@ import type { SolveNode } from './solveTree';
 import { solveNode } from './testing/solveNode';
 
 function control(properties: Record<string, unknown>): SolveNode {
-  const node: TscnNode = { name: 'C', type: 'Control', children: [], properties };
+  const node: TscnNode = { rawProperties: {}, name: 'C', type: 'Control', children: [], properties };
   return { ...solveNode(), path: 'C', node };
 }
 

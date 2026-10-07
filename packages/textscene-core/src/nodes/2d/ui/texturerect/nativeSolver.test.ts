@@ -35,6 +35,7 @@ function node(
     ...solveNode(),
     path: 'Portrait',
     node: {
+      rawProperties: {},
       name: 'Portrait',
       type: 'TextureRect',
       children: [],
@@ -187,6 +188,7 @@ describe('solveControlTree — the real two-pass solve closes the self-reference
       ...solveNode(),
       path: 'Plain',
       node: {
+        rawProperties: {},
         name: 'Plain',
         type: 'Control',
         children: [],

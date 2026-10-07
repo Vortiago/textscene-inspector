@@ -24,6 +24,7 @@ function solveNode(
   internalResources: readonly TscnInternalResource[] = []
 ): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'MyTextEdit',
     type: 'TextEdit',
     children: [],

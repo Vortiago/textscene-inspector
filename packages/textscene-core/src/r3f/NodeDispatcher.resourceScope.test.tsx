@@ -28,9 +28,12 @@ function subScene(): TscnScene {
   return {
     nodes: [
       {
+        rawProperties: {},
         name: 'SubRoot',
         type: 'Node3D',
-        children: [{ name: 'Anchor', type: 'Node3D', children: [], properties: { name: 'Anchor' } }],
+        children: [
+          { rawProperties: {}, name: 'Anchor', type: 'Node3D', children: [], properties: { name: 'Anchor' } },
+        ],
         properties: { name: 'SubRoot' },
       },
     ],
@@ -45,6 +48,7 @@ function subScene(): TscnScene {
 /** The host's deep child, parented INSIDE the instance at `Anchor`. */
 function hostGraftedMesh(): TscnNode {
   return {
+    rawProperties: {},
     name: 'Painted',
     type: 'MeshInstance3D',
     children: [],
@@ -64,6 +68,7 @@ async function render() {
   fake.scenes.seed(SUB_SCENE, subScene());
 
   const instancing: TscnNode = {
+    rawProperties: {},
     name: 'Instanced',
     type: 'Node3D',
     instance: 'ExtResource("sub")',

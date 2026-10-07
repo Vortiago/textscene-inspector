@@ -25,6 +25,7 @@ const CURVE: TscnInternalResource = {
 
 function pathNode(name = 'MyPath', props: Record<string, string> = {}): TscnNode {
   return {
+    rawProperties: {},
     name,
     type: 'Path2D',
     children: [],

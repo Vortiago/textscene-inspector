@@ -17,6 +17,7 @@ function solveNode(properties: Record<string, unknown>): SolveNode {
     ...emptySolveNode(),
     path: 'S',
     node: {
+      rawProperties: {},
       name: 'S',
       type: 'HScrollBar',
       children: [],

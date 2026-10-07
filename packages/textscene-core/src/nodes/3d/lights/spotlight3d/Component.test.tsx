@@ -20,7 +20,13 @@ function makeNode(overrides: Partial<SpotLight3DProperties> = {}): TscnNode {
     spot_angle_attenuation: 1.0,
     ...overrides,
   };
-  return { name: props.name ?? 'Torch', type: 'SpotLight3D', children: [], properties: props };
+  return {
+    rawProperties: {},
+    name: props.name ?? 'Torch',
+    type: 'SpotLight3D',
+    children: [],
+    properties: props,
+  };
 }
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;

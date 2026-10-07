@@ -29,6 +29,7 @@ function makeFakeGlb(): THREE.Object3D {
 }
 
 const NODE: TscnNode = {
+  rawProperties: {},
   name: 'Glb',
   type: GLB_SCENE_ROOT_TYPE,
   children: [],

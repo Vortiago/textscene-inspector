@@ -21,7 +21,13 @@ function dirNode(overrides: Partial<DirectionalLight3DProperties> = {}): TscnNod
     shadow_enabled: false,
     ...overrides,
   };
-  return { name: props.name ?? 'Sun', type: 'DirectionalLight3D', children: [], properties: props };
+  return {
+    rawProperties: {},
+    name: props.name ?? 'Sun',
+    type: 'DirectionalLight3D',
+    children: [],
+    properties: props,
+  };
 }
 
 function omniNode(overrides: Partial<OmniLight3DProperties> = {}): TscnNode {
@@ -34,7 +40,13 @@ function omniNode(overrides: Partial<OmniLight3DProperties> = {}): TscnNode {
     omni_attenuation: 2,
     ...overrides,
   };
-  return { name: props.name ?? 'Lamp', type: 'OmniLight3D', children: [], properties: props };
+  return {
+    rawProperties: {},
+    name: props.name ?? 'Lamp',
+    type: 'OmniLight3D',
+    children: [],
+    properties: props,
+  };
 }
 
 function spotNode(overrides: Partial<SpotLight3DProperties> = {}): TscnNode {
@@ -49,7 +61,13 @@ function spotNode(overrides: Partial<SpotLight3DProperties> = {}): TscnNode {
     spot_angle_attenuation: 1.0,
     ...overrides,
   };
-  return { name: props.name ?? 'Torch', type: 'SpotLight3D', children: [], properties: props };
+  return {
+    rawProperties: {},
+    name: props.name ?? 'Torch',
+    type: 'SpotLight3D',
+    children: [],
+    properties: props,
+  };
 }
 
 describe('Lights — properties (assertions 67–80)', () => {
@@ -136,6 +154,7 @@ describe('Lights — properties (assertions 67–80)', () => {
     const r = await ReactThreeTestRenderer.create(
       <SpotLight3D
         node={{
+          rawProperties: {},
           name: 'T',
           type: 'SpotLight3D',
           children: [],

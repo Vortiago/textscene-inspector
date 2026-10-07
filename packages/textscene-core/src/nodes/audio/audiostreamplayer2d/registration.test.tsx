@@ -23,6 +23,7 @@ const heading = {
 
 function audioNode(raw: Record<string, string> = {}): TscnNode {
   return {
+    rawProperties: {},
     name: 'Music',
     type: 'AudioStreamPlayer2D',
     children: [],

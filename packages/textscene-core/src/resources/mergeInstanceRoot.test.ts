@@ -14,7 +14,7 @@ import { extResourcePathOf } from './testing/extResourcePathOf';
 import { authoredSpelling } from './authoredSpelling';
 
 function node(partial: Partial<TscnNode> & { name: string; type: string }): TscnNode {
-  return { children: [], properties: {}, ...partial };
+  return { rawProperties: {}, children: [], properties: {}, ...partial };
 }
 
 describe('mergeInstanceRoot', () => {
@@ -38,66 +38,49 @@ describe('mergeInstanceRoot', () => {
     expect(merged!.children.map((c) => c.name)).toEqual(['Circle']);
   });
 
-  it('lets the instance transform replace the root transform while preserving other root props', () => {
+  it('lets the instance transform replace the root transform while keeping the other root keys', () => {
     const instanceNode = node({
       name: 'Coin1',
       type: 'Node',
       instance: 'ExtResource("2_chew2")',
-      properties: { transform: 'INSTANCE_XFORM' },
+      rawProperties: { transform: 'INSTANCE_XFORM' },
     });
     const root = node({
       name: 'Coin',
       type: 'Area3D',
-      properties: { transform: 'ROOT_XFORM', monitoring: true },
+      rawProperties: { transform: 'ROOT_XFORM', monitoring: 'true' },
     });
 
     const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES);
 
-    expect(merged!.properties.transform).toBe('INSTANCE_XFORM');
-    expect((merged!.properties as Record<string, unknown>).monitoring).toBe(true);
+    expect(merged!.rawProperties).toEqual({ transform: 'INSTANCE_XFORM', monitoring: 'true' });
   });
 
-  it('does not let an undefined instance property clobber the root value', () => {
-    // The base Node parser emits a `transform` key for every node, undefined when
-    // the .tscn has no transform line. A raw spread would let that undefined
-    // erase the root's real transform and draw the level at the origin.
-    const instanceNode = node({
-      name: 'GridMap',
-      type: 'Node',
-      instance: 'ExtResource("1_t0f53")',
-      properties: { transform: undefined, visible: undefined },
-    });
+  it('keeps a root value the instance node does not write', () => {
+    const instanceNode = node({ name: 'GridMap', type: 'Node', instance: 'ExtResource("1_t0f53")' });
     const root = node({
       name: 'GridMap',
       type: 'GridMap',
-      properties: { transform: 'ROOT_XFORM', cells: 'ROOT_CELLS', visible: false },
+      rawProperties: { transform: 'ROOT_XFORM', visible: 'false' },
     });
 
     const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES);
 
-    expect(merged!.properties.transform).toBe('ROOT_XFORM');
-    expect((merged!.properties as Record<string, unknown>).cells).toBe('ROOT_CELLS');
-    expect((merged!.properties as Record<string, unknown>).visible).toBe(false);
+    expect(merged!.rawProperties).toEqual({ transform: 'ROOT_XFORM', visible: 'false' });
   });
 
-  it('still lets a DEFINED instance property override the root value', () => {
-    // Defined values win, falsy 0/false/"" included.
+  it('lets a falsy instance value override the root value', () => {
     const instanceNode = node({
       name: 'Coin1',
       type: 'Node',
       instance: 'ExtResource("2_chew2")',
-      properties: { transform: 'INSTANCE_XFORM', visible: false },
+      rawProperties: { visible: 'false' },
     });
-    const root = node({
-      name: 'Coin',
-      type: 'Area3D',
-      properties: { transform: 'ROOT_XFORM', visible: true },
-    });
+    const root = node({ name: 'Coin', type: 'Area3D', rawProperties: { visible: 'true' } });
 
     const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES);
 
-    expect(merged!.properties.transform).toBe('INSTANCE_XFORM');
-    expect((merged!.properties as Record<string, unknown>).visible).toBe(false);
+    expect(merged!.rawProperties.visible).toBe('false');
   });
 
   it('renders the root children first, then any children the host added under the instance', () => {
@@ -265,7 +248,7 @@ describe('mergeInstanceRoot — rawPropertiesOrderReliable (ADR-0035)', () => {
     expect(merged!.rawPropertiesOrderReliable).toBe(false);
   });
 
-  it('is false even on the fallback (no raw props / unregistered root) merge path', () => {
+  it('is false on the merge of an unregistered root type', () => {
     const instanceNode = node({
       name: 'Coin1',
       type: 'Node',
@@ -291,16 +274,6 @@ describe("re-homes the instance node's references into the sub-scene scope", () 
       internalResources: [],
     },
   };
-
-  it('on parsed properties when the nodes carry no raw properties', () => {
-    const instanceNode = node({ name: 'Coin1', type: 'Node', properties: { texture: 'ExtResource("1")' } });
-    const root = node({ name: 'Coin', type: 'Sprite2D', properties: { texture: 'ExtResource("1")' } });
-
-    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, scopes)!;
-
-    const texture = (merged.properties as { texture: string }).texture;
-    expect(extResourcePathOf(texture, merged.scope!)).toBe('res://outer.png');
-  });
 
   it('on the raw properties of an unregistered root type', () => {
     const instanceNode = node({

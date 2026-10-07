@@ -44,6 +44,7 @@ function node(
     ...solveNode(),
     path: 'B',
     node: {
+      rawProperties: {},
       name: 'B',
       type: 'Button',
       children: [],

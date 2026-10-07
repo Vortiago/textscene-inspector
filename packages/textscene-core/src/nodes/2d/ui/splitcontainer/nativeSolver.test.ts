@@ -21,6 +21,7 @@ const EXPAND_FILL = 3;
 
 function expandChild(path: string, axisFlag: 'sizeFlagsHorizontal' | 'sizeFlagsVertical'): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: path,
     type: 'Control',
     children: [],
@@ -38,7 +39,7 @@ function splitRoot(type: string, vertical: boolean | undefined, children: SolveN
     anchorBottom: 1,
   };
   if (vertical !== undefined) properties.vertical = vertical;
-  const node: TscnNode = { name: 'Split', type, children: [], properties };
+  const node: TscnNode = { rawProperties: {}, name: 'Split', type, children: [], properties };
   return { ...solveNode(), path: 'Split', node, children };
 }
 

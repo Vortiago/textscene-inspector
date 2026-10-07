@@ -30,6 +30,7 @@ const heading = { type: 'node', attributes: { type: 'TextureRect', name: 'Portra
 
 function textureRectNode(raw: Record<string, string> = {}): TscnNode {
   return {
+    rawProperties: {},
     name: 'Portrait',
     type: 'TextureRect',
     children: [],
@@ -321,7 +322,13 @@ describe('<TextureRect> registered through <ControlCanvasWalker> (end-to-end wal
       children: SolveNode[]
     ): SolveNode {
       const name = path.split('/').pop()!;
-      const tscnNode: TscnNode = { name, type, children: [], properties: { name, ...properties } };
+      const tscnNode: TscnNode = {
+        rawProperties: {},
+        name,
+        type,
+        children: [],
+        properties: { name, ...properties },
+      };
       return { ...emptySolveNode(), path, node: tscnNode, children };
     }
     function leafSolveNode(path: string): SolveNode {

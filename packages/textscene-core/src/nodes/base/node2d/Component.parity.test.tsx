@@ -26,7 +26,13 @@ const WORLD_RANK = layerRankOf(layerRanks([]), 0);
 const heading = { type: 'node', attributes: { type: 'Node2D', name: 'N' } };
 
 function node(raw: Record<string, string> = {}): TscnNode {
-  return { name: 'N', type: 'Node2D', children: [], properties: parseNode2D(heading, raw) };
+  return {
+    rawProperties: {},
+    name: 'N',
+    type: 'Node2D',
+    children: [],
+    properties: parseNode2D(heading, raw),
+  };
 }
 
 describe('Node2D show_behind_parent parity (#36)', () => {

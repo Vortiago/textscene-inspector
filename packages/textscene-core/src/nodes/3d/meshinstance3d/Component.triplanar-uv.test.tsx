@@ -25,7 +25,7 @@ function makeNode(): TscnNode {
     mesh: 'SubResource("Plane")',
     materialOverride: 'SubResource("Mat")',
   };
-  return { name: 'Floor', type: 'MeshInstance3D', children: [], properties: props };
+  return { rawProperties: {}, name: 'Floor', type: 'MeshInstance3D', children: [], properties: props };
 }
 
 async function renderFloor(

@@ -14,6 +14,7 @@ import * as logger from '../logger';
 import { NO_SCOPES } from './testing/noScopes';
 
 const node = (name: string, extra: Partial<TscnNode> = {}): TscnNode => ({
+  rawProperties: {},
   type: 'Node3D',
   name,
   properties: {},

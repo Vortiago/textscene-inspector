@@ -29,7 +29,13 @@ function solveNode(
   children: SolveNode[] = []
 ): SolveNode {
   const name = path.split('/').pop()!;
-  const tscnNode: TscnNode = { name, type, children: [], properties: { name, ...properties } };
+  const tscnNode: TscnNode = {
+    rawProperties: {},
+    name,
+    type,
+    children: [],
+    properties: { name, ...properties },
+  };
   return { ...emptySolveNode(), path, node: tscnNode, children };
 }
 

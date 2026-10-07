@@ -43,6 +43,7 @@ function node(props: Partial<TextEditProperties>): SolveNode {
     ...solveNode(),
     path: 'T',
     node: {
+      rawProperties: {},
       name: 'T',
       type: 'TextEdit',
       children: [],

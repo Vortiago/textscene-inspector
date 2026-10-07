@@ -14,6 +14,7 @@ import type { TscnNode } from '../../../parser/types';
 
 function node(raw: Record<string, string>): TscnNode {
   return {
+    rawProperties: {},
     name: 'Label',
     type: 'Label3D',
     children: [],

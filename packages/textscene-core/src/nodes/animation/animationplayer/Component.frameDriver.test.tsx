@@ -65,7 +65,13 @@ function makeAP(): TscnNode {
     root_node: 'NodePath("..")',
     libraries: [{ name: '', subResourceId: 'Lib' }],
   };
-  return { name: 'AnimationPlayer', type: 'AnimationPlayer', children: [], properties: props };
+  return {
+    rawProperties: {},
+    name: 'AnimationPlayer',
+    type: 'AnimationPlayer',
+    children: [],
+    properties: props,
+  };
 }
 
 let transport: AnimationTransport;
@@ -82,6 +88,7 @@ async function mount() {
   (tex as unknown as { image: { width: number; height: number } }).image = { width: 16, height: 16 };
   fake.textures.seed(TEX, tex);
   const sprite: TscnNode = {
+    rawProperties: {},
     name: 'Sprite2D',
     type: 'Sprite2D',
     children: [],

@@ -23,6 +23,7 @@ const heading = { type: 'node', attributes: { type: 'NinePatchRect', name: 'Pane
 
 function ninePatchNode(raw: Record<string, string> = {}): TscnNode {
   return {
+    rawProperties: {},
     name: 'Panel',
     type: 'NinePatchRect',
     children: [],

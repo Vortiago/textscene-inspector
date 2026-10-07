@@ -239,5 +239,5 @@ export function painterView<T extends ControlProperties>(n: SolveNode): PainterV
  */
 export function controlLayoutOrder(n: SolveNode): readonly string[] | undefined {
   const { node } = n;
-  return node.rawPropertiesOrderReliable && node.rawProperties ? Object.keys(node.rawProperties) : undefined;
+  return node.rawPropertiesOrderReliable ? Object.keys(node.rawProperties) : undefined;
 }

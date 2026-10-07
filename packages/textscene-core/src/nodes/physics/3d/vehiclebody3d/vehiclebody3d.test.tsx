@@ -36,9 +36,10 @@ describe('VehicleBody3D registration', () => {
 /** A VehicleBody3D with one Node3D child, rendered through the real dispatcher. */
 function vehicleNode(properties: Record<string, unknown>): TscnNode {
   return {
+    rawProperties: {},
     name: 'Vehicle',
     type: 'VehicleBody3D',
-    children: [{ name: 'Kid', type: 'Node3D', children: [], properties: { name: 'Kid' } }],
+    children: [{ name: 'Kid', type: 'Node3D', children: [], properties: { name: 'Kid' }, rawProperties: {} }],
     properties: { name: 'Vehicle', ...properties },
   } as TscnNode;
 }

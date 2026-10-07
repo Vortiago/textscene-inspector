@@ -18,6 +18,7 @@ import '../../../../r3f/nodes/index';
 
 function makeNode(properties: Node3DProperties): TscnNode {
   return {
+    rawProperties: {},
     name: properties.name ?? 'GPUParticles3D',
     type: 'GPUParticles3D' as const,
     children: [],

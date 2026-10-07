@@ -88,7 +88,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
     const hidden = new Set<THREE.Object3D>();
     if (!object) return hidden;
     for (const override of overrides) {
-      if (boolSlotValue(override.rawProperties?.visible) !== false) continue;
+      if (boolSlotValue(override.rawProperties.visible) !== false) continue;
       if (!isApplicableGlbOverride(override)) continue;
       const target = resolveGlbOverrideTarget(object, entries, override);
       if (target) hidden.add(target);
@@ -235,7 +235,7 @@ function useGlbMaterialOverrides(
 
     const slots: ReactNode[] = [];
     for (const override of overrides) {
-      const ref = override.rawProperties?.['surface_material_override/0'];
+      const ref = override.rawProperties['surface_material_override/0'];
       if (!ref || !isApplicableGlbOverride(override)) continue;
 
       // A grafted override's ids belong to the outer scene that authored it, not the sub-scene it

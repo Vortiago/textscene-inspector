@@ -93,7 +93,7 @@ function placeholderCount(renderer: Awaited<ReturnType<typeof provide>>): number
 }
 
 function node(type: string, properties: TscnNode['properties']): TscnNode {
-  return { name: 'N', type, children: [], properties };
+  return { rawProperties: {}, name: 'N', type, children: [], properties };
 }
 
 function solveNodeFor(n: TscnNode): SolveNode {

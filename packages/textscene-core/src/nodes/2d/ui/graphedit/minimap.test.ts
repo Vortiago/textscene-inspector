@@ -161,7 +161,7 @@ describe('graphEditElements', () => {
     return {
       ...emptySolveNode(),
       path: name,
-      node: { name, type, children: [], properties: { name, ...props } as never },
+      node: { rawProperties: {}, name, type, children: [], properties: { name, ...props } as never },
     };
   }
 
@@ -170,6 +170,7 @@ describe('graphEditElements', () => {
       ...emptySolveNode(),
       path: 'G',
       node: {
+        rawProperties: {},
         name: 'G',
         type: 'GraphEdit',
         children: [],

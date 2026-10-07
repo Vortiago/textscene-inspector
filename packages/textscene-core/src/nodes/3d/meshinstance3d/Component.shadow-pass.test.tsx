@@ -45,7 +45,7 @@ function makeNode(properties: Partial<MeshInstance3DProperties>): TscnNode {
     castShadow: 1,
     ...properties,
   };
-  return { name: 'Glow', type: 'MeshInstance3D', children: [], properties: full };
+  return { rawProperties: {}, name: 'Glow', type: 'MeshInstance3D', children: [], properties: full };
 }
 
 async function renderMesh(node: TscnNode): Promise<THREE.Mesh> {

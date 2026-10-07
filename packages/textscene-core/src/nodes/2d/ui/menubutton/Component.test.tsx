@@ -21,6 +21,7 @@ const RECT: Rect2 = { x: 0, y: 0, w: 120, h: 32 };
 
 function solveNode(properties: Partial<MenuButtonProperties> = {}): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'MyMenuButton',
     type: 'MenuButton',
     children: [],

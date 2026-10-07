@@ -391,7 +391,13 @@ function solveNode(
   children: SolveNode[] = []
 ): SolveNode {
   const name = path.split('/').pop()!;
-  const tscnNode: TscnNode = { name, type, children: [], properties: { name, ...properties } };
+  const tscnNode: TscnNode = {
+    rawProperties: {},
+    name,
+    type,
+    children: [],
+    properties: { name, ...properties },
+  };
   // A local theme_override_constants/* reaches a solver through
   // `n.constants` (the walker folds it in unconditionally), not `node.properties`.
   const constants =
@@ -431,7 +437,13 @@ describe('splitGrabberIconSize', () => {
 
 describe('splitContainerTextureSlots', () => {
   it('requests "grabber" for HSplitContainer/VSplitContainer when themed, ignoring any authored `vertical`', () => {
-    const node: TscnNode = { name: 'S', type: 'HSplitContainer', children: [], properties: {} };
+    const node: TscnNode = {
+      rawProperties: {},
+      name: 'S',
+      type: 'HSplitContainer',
+      children: [],
+      properties: {},
+    };
     const themed = {
       grabber: { ref: 'ExtResource("1")', resources: { externalResources: [], internalResources: [] } },
     };
@@ -442,6 +454,7 @@ describe('splitContainerTextureSlots', () => {
 
   it('requests "v_grabber" for a base SplitContainer authored vertical=true', () => {
     const node: TscnNode = {
+      rawProperties: {},
       name: 'S',
       type: 'SplitContainer',
       children: [],
@@ -456,7 +469,13 @@ describe('splitContainerTextureSlots', () => {
   });
 
   it('requests nothing when the type-appropriate slot has no themed answer', () => {
-    const node: TscnNode = { name: 'S', type: 'HSplitContainer', children: [], properties: {} };
+    const node: TscnNode = {
+      rawProperties: {},
+      name: 'S',
+      type: 'HSplitContainer',
+      children: [],
+      properties: {},
+    };
     expect(splitContainerTextureSlots(node, {})).toEqual([]);
   });
 });

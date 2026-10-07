@@ -8,7 +8,7 @@ import { resolveGlobalTransform2D } from './globalTransform2D';
 import type { ParentLookup } from '../../../linter/parentType';
 import type { TscnNode } from '../../../parser/types';
 
-function node(type: string, rawProperties?: Record<string, string>): TscnNode {
+function node(type: string, rawProperties: Record<string, string> = {}): TscnNode {
   return { name: type, type, children: [], properties: {}, rawProperties };
 }
 

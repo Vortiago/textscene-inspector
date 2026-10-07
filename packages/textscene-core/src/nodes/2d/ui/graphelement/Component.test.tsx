@@ -12,6 +12,7 @@ import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function graphElementSolveNode(): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'GE',
     type: 'GraphElement',
     children: [],

@@ -36,7 +36,13 @@ function page(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
     ...solveNode(),
     path: name,
-    node: { name, type: 'Control', children: [], properties: { name, ...props } as ControlProperties },
+    node: {
+      rawProperties: {},
+      name,
+      type: 'Control',
+      children: [],
+      properties: { name, ...props } as ControlProperties,
+    },
   };
 }
 
@@ -56,6 +62,7 @@ function tabContainer(
     ...(styleBoxes ? { styleBoxes } : {}),
     path: name,
     node: {
+      rawProperties: {},
       name,
       type: 'TabContainer',
       children: [],
@@ -472,6 +479,7 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
       ...solveNode(),
       path: 'Tabs',
       node: {
+        rawProperties: {},
         name: 'Tabs',
         type: 'TabContainer',
         children: [],

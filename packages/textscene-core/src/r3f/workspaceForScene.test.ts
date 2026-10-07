@@ -10,6 +10,7 @@ import type { TscnNode } from '../parser/types';
 import './nodes/index';
 
 const root = (type: string): TscnNode => ({
+  rawProperties: {},
   name: 'Root',
   type,
   children: [],
