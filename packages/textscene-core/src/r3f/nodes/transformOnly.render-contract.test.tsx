@@ -1,7 +1,7 @@
 /**
  * ADR-0008's rendered contract for every non-visual 3D type: a plain Group with no
- * mesh of its own, whose children inherit its Transform3D. Registry identity is
- * pinned in nodes/physics/3d/transformBodies.test.tsx.
+ * mesh of its own, whose children inherit its Transform3D and its `visible`.
+ * Registry identity is pinned in r3f/drawlessBase.guard.test.ts.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -11,19 +11,19 @@ import type { Transform3D } from '../../nodes/base/node3d/types';
 import { NodeDispatcher } from '../NodeDispatcher';
 import { SelectionProvider } from '../contexts/SelectionContext';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
-import { Node3D } from '../../nodes/base/node3d/Component';
+import { descendsFrom } from '../../godot/nodeBaseTypes.js';
 
 // Side-effect import: registers every node component (same barrel the apps use).
 import './index';
 
 /**
- * Derived from `renderIntent: 'transform-only'`, so a new slice joins on
- * registration. Only the Node3D-backed types: Node and Node2D ones carry no
- * Transform3D, and ADR-0018 gave Path3D and PathFollow3D gizmo components.
+ * Derived from `renderIntent: 'transform-only'` and the Godot base chain, so a
+ * new slice joins on registration and a misrouted one fails rather than drops
+ * out. Node and Node2D types carry no Transform3D.
  */
 const TRANSFORM_ONLY_3D_TYPES = nodeComponentRegistry
   .getAllTypeNames()
-  .filter((type) => nodeComponentRegistry.isTransformOnly(type) && nodeComponentRegistry.get(type) === Node3D)
+  .filter((type) => nodeComponentRegistry.isTransformOnly(type) && descendsFrom(type, 'Node3D'))
   .sort();
 
 // Identity basis translated to (2, 3, 4).
@@ -42,6 +42,18 @@ function subjectNode(type: string, children: TscnNode[] = []): TscnNode {
     properties: { name: 'Subject', transform: translated },
   };
 }
+
+function hiddenSubjectNode(type: string, children: TscnNode[]): TscnNode {
+  const subject = subjectNode(type, children);
+  return { ...subject, properties: { ...subject.properties, visible: false } };
+}
+
+const kid: TscnNode = {
+  name: 'Kid',
+  type: 'Node3D',
+  children: [],
+  properties: { name: 'Kid' }, // identity transform of its own
+};
 
 async function renderScene(nodes: TscnNode[]) {
   return ReactThreeTestRenderer.create(
@@ -82,24 +94,28 @@ describe('transform-only 3D types: rendered contract (ADR-0008)', () => {
   );
 
   it.each([...TRANSFORM_ONLY_3D_TYPES])('%s positions its children by the node transform', async (type) => {
-    const child: TscnNode = {
-      name: 'Kid',
-      type: 'Node3D',
-      children: [],
-      properties: { name: 'Kid' }, // identity transform of its own
-    };
-    const renderer = await renderScene([subjectNode(type, [child])]);
-    const kid = renderer.scene.findByProps({ name: 'Kid' });
+    const renderer = await renderScene([subjectNode(type, [kid])]);
+    const rendered = renderer.scene.findByProps({ name: 'Kid' });
 
     // The child renders inside the subject's transform group. The dispatcher
     // inserts an unnamed pickable <group> per node, so walk the ancestors.
     const ancestorNames: string[] = [];
-    for (let p = kid.instance.parent; p; p = p.parent) ancestorNames.push(p.name);
+    for (let p = rendered.instance.parent; p; p = p.parent) ancestorNames.push(p.name);
     expect(ancestorNames).toContain('Subject');
 
     // World position = the parent's Transform3D origin: the transform is
     // applied by the group and inherited, not re-applied per child.
-    const world = kid.instance.getWorldPosition(new THREE.Vector3());
+    const world = rendered.instance.getWorldPosition(new THREE.Vector3());
     expect(world.toArray()).toEqual([2, 3, 4]);
+  });
+
+  // Godot hides a subtree under any hidden Node3D (node_3d.cpp:1132-1143).
+  it.each([...TRANSFORM_ONLY_3D_TYPES])('%s hides its children when not visible', async (type) => {
+    const renderer = await renderScene([hiddenSubjectNode(type, [kid])]);
+    const rendered = renderer.scene.findByProps({ name: 'Kid' });
+
+    let isShown = rendered.instance.visible;
+    for (let p = rendered.instance.parent; p; p = p.parent) isShown &&= p.visible;
+    expect(isShown).toBe(false);
   });
 });
