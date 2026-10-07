@@ -31,8 +31,8 @@ Two shapes were weighed:
 (B). `rehomeOverride` (`resources/rehomeOverride.ts`) rewrites an override's raw properties
 against the scope of the node it reaches. `graftInstanceChildren` applies it to a host
 override of a sub-scene node, and `mergeInstanceRoot` to the instance node's own properties.
-The merged node carries the result as `LiveNode.scope` (`r3f/liveNode.ts`). The viewport's
-`DispatchedNode` provides it, and the live scene tree's `scopeOf` reads it, so both resolve
+The merged node carries the result as `LiveNode.scope` (`resources/liveNode.ts`). The viewport's
+`DispatchedNode` provides it, and `scopeOf` reads it for the live scene tree, so both resolve
 the node alike. A node the host adds inside the sub-scene carries the host's scope.
 
 ## Consequences

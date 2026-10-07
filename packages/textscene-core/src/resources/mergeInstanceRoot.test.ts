@@ -7,6 +7,7 @@ import '../nodes/3d/gridmap/index';
 import '../nodes/3d/camera3d/index';
 import type { GridMapProperties } from '../nodes/3d/gridmap/types';
 import type { Camera3DProperties } from '../nodes/3d/camera3d/types';
+import { NO_SCOPES } from './testing/noScopes';
 
 function node(partial: Partial<TscnNode> & { name: string; type: string }): TscnNode {
   return { children: [], properties: {}, ...partial };
@@ -25,7 +26,7 @@ describe('mergeInstanceRoot', () => {
       children: [node({ name: 'Circle', type: 'MeshInstance3D' })],
     });
 
-    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] });
+    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES);
 
     expect(merged).not.toBeNull();
     expect(merged!.name).toBe('Coin1');
@@ -46,7 +47,7 @@ describe('mergeInstanceRoot', () => {
       properties: { transform: 'ROOT_XFORM', monitoring: true },
     });
 
-    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] });
+    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES);
 
     expect(merged!.properties.transform).toBe('INSTANCE_XFORM');
     expect((merged!.properties as Record<string, unknown>).monitoring).toBe(true);
@@ -68,7 +69,7 @@ describe('mergeInstanceRoot', () => {
       properties: { transform: 'ROOT_XFORM', cells: 'ROOT_CELLS', visible: false },
     });
 
-    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] });
+    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES);
 
     expect(merged!.properties.transform).toBe('ROOT_XFORM');
     expect((merged!.properties as Record<string, unknown>).cells).toBe('ROOT_CELLS');
@@ -89,7 +90,7 @@ describe('mergeInstanceRoot', () => {
       properties: { transform: 'ROOT_XFORM', visible: true },
     });
 
-    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] });
+    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES);
 
     expect(merged!.properties.transform).toBe('INSTANCE_XFORM');
     expect((merged!.properties as Record<string, unknown>).visible).toBe(false);
@@ -108,7 +109,7 @@ describe('mergeInstanceRoot', () => {
       children: [node({ name: 'Circle', type: 'MeshInstance3D' })],
     });
 
-    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] });
+    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES);
 
     expect(merged!.children.map((c) => c.name)).toEqual(['Circle', 'AddedMarker']);
   });
@@ -121,7 +122,7 @@ describe('mergeInstanceRoot', () => {
     });
     const root = node({ name: 'Coin', type: 'Area3D' });
 
-    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] });
+    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES);
 
     // The instance node's own ref is consumed by the merge. A plain root
     // leaves the merged node with no instance ref, so it dispatches as an
@@ -142,7 +143,7 @@ describe('mergeInstanceRoot', () => {
       instance: 'ExtResource("leaf_ref")',
     });
 
-    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] });
+    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES);
 
     // Re-dispatch must continue collapsing the next level, so the merged node
     // carries the root's own instance ref, not the consumed top-level one.
@@ -159,7 +160,7 @@ describe('mergeInstanceRoot', () => {
       nodes: [node({ name: 'RootA', type: 'Node3D' }), node({ name: 'RootB', type: 'Node3D' })],
     };
 
-    expect(mergeInstanceRoot(instanceNode, scene)).toBeNull();
+    expect(mergeInstanceRoot(instanceNode, scene, NO_SCOPES)).toBeNull();
   });
 
   // Type-specific overrides on a type-less instance node. The base Node parser
@@ -188,7 +189,7 @@ describe('mergeInstanceRoot', () => {
       },
     });
 
-    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] });
+    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES);
 
     expect(merged!.type).toBe('GridMap');
     const props = merged!.properties as GridMapProperties;
@@ -211,7 +212,7 @@ describe('mergeInstanceRoot', () => {
       rawProperties: { fov: '70.0', current: 'true' },
     });
 
-    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] });
+    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES);
 
     expect(merged!.type).toBe('Camera3D');
     const props = merged!.properties as Camera3DProperties;
@@ -229,7 +230,7 @@ describe('mergeInstanceRoot', () => {
       nodes: [node({ name: 'lamp', type: 'GLBSceneRoot', properties: { glbPath: 'res://lamp.glb' } })],
     };
 
-    expect(mergeInstanceRoot(instanceNode, scene)).toBeNull();
+    expect(mergeInstanceRoot(instanceNode, scene, NO_SCOPES)).toBeNull();
   });
 });
 
@@ -255,7 +256,7 @@ describe('mergeInstanceRoot — rawPropertiesOrderReliable (ADR-0035)', () => {
       rawPropertiesOrderReliable: true,
     });
 
-    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] });
+    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES);
 
     expect(merged!.rawPropertiesOrderReliable).toBe(false);
   });
@@ -269,7 +270,7 @@ describe('mergeInstanceRoot — rawPropertiesOrderReliable (ADR-0035)', () => {
     });
     const root = node({ name: 'Coin', type: 'UnregisteredCustomType3D' });
 
-    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] });
+    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES);
 
     expect(merged!.rawPropertiesOrderReliable).toBe(false);
   });

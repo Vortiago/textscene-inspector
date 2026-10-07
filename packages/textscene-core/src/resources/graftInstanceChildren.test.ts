@@ -7,9 +7,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { graftInstanceChildren } from './graftInstanceChildren';
 import type { SceneScope, TscnNode } from '../parser/types';
-import type { LiveNode } from '../r3f/liveNode';
-import { findExtResource } from './SubResourceResolver';
+import { scopeOf, type LiveNode } from './liveNode';
+import { extResourcePathOf } from './testing/extResourcePathOf';
 import * as logger from '../logger';
+import { NO_SCOPES } from './testing/noScopes';
 
 const node = (name: string, extra: Partial<TscnNode> = {}): TscnNode => ({
   type: 'Node3D',
@@ -31,9 +32,7 @@ const inner: SceneScope = {
 
 /** The path a node's raw `texture` resolves to, in its own scope or else `groupScope`. */
 function texturePath(n: LiveNode, groupScope: SceneScope = inner): string | undefined {
-  const id = /ExtResource\("([^"]+)"\)/.exec(n.rawProperties?.texture ?? '')?.[1];
-  const scope = n.scope ?? groupScope;
-  return id === undefined ? undefined : findExtResource(scope.externalResources, id)?.path;
+  return extResourcePathOf(n.rawProperties?.texture, scopeOf(n, groupScope));
 }
 
 /** A loaded sub-scene: Root > Sprite2D > Pivot. */
@@ -59,7 +58,7 @@ function pivotOverride(raw: Record<string, string>): TscnNode {
 
 describe('graftInstanceChildren', () => {
   it('appends a direct child at the root, as before', () => {
-    const grafted = graftInstanceChildren(subScene(), [node('Extra')]);
+    const grafted = graftInstanceChildren(subScene(), [node('Extra')], NO_SCOPES);
 
     expect(grafted.map((c) => c.name)).toEqual(['Sprite2D', 'Extra']);
   });
@@ -67,7 +66,7 @@ describe('graftInstanceChildren', () => {
   it('grafts a typed deep child at its sub-path', () => {
     const child = node('Body', { instanceSubPath: 'Sprite2D/Pivot' });
 
-    const grafted = graftInstanceChildren(subScene(), [child]);
+    const grafted = graftInstanceChildren(subScene(), [child], NO_SCOPES);
 
     const pivot = grafted[0]!.children[0]!;
     expect(pivot.name).toBe('Pivot');
@@ -83,7 +82,7 @@ describe('graftInstanceChildren', () => {
       rawProperties: { texture: 'ExtResource("3")' },
     });
 
-    const grafted = graftInstanceChildren(subScene(), [override]);
+    const grafted = graftInstanceChildren(subScene(), [override], NO_SCOPES);
 
     const pivot = grafted[0]!.children[0]!;
     expect(grafted[0]!.children).toHaveLength(1);
@@ -94,7 +93,7 @@ describe('graftInstanceChildren', () => {
     // `[node name="Health" parent="."]` under an instance root names the root's own child.
     const override = node('Sprite2D', { overridesExistingNode: true, rawProperties: { visible: 'false' } });
 
-    const grafted = graftInstanceChildren(subScene(), [override]);
+    const grafted = graftInstanceChildren(subScene(), [override], NO_SCOPES);
 
     expect(grafted.map((c) => c.name)).toEqual(['Sprite2D']);
     expect(grafted[0]!.rawProperties?.visible).toBe('false');
@@ -108,7 +107,7 @@ describe('graftInstanceChildren', () => {
     const frozen = deepFreeze(loaded);
 
     expect(() =>
-      graftInstanceChildren(frozen, [node('Body', { instanceSubPath: 'Sprite2D/Pivot' })])
+      graftInstanceChildren(frozen, [node('Body', { instanceSubPath: 'Sprite2D/Pivot' })], NO_SCOPES)
     ).not.toThrow();
     expect(frozen[0]!.children[0]!.children).toEqual([]);
   });
@@ -150,7 +149,7 @@ describe('graftInstanceChildren', () => {
     const pivot = graftInstanceChildren(texturedSubScene(), [override], { outer, content: inner })[0]!
       .children[0]!;
 
-    expect(texturePath(pivot.children[0]!, pivot.scope)).toBe('res://inner.png');
+    expect(texturePath(pivot.children[0]!, scopeOf(pivot, inner))).toBe('res://inner.png');
   });
 
   it('keeps the outer scope of a re-anchored child through the nested graft', () => {
@@ -174,7 +173,7 @@ describe('graftInstanceChildren', () => {
     const loaded = [node('Sprite2D', { instance: 'ExtResource("3")' })];
     const child = node('Body', { instanceSubPath: 'Sprite2D/Pivot' });
 
-    const grafted = graftInstanceChildren(loaded, [child]);
+    const grafted = graftInstanceChildren(loaded, [child], NO_SCOPES);
 
     const sprite = grafted[0]!;
     expect(sprite.children.map((c) => c.name)).toEqual(['Body']);
@@ -185,7 +184,7 @@ describe('graftInstanceChildren', () => {
     const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const child = node('Body', { instanceSubPath: 'NoSuch/Path' });
 
-    const grafted = graftInstanceChildren(subScene(), [child]);
+    const grafted = graftInstanceChildren(subScene(), [child], NO_SCOPES);
 
     // Visible-but-misplaced beats invisible.
     expect(grafted.map((c) => c.name)).toEqual(['Sprite2D', 'Body']);
@@ -195,7 +194,7 @@ describe('graftInstanceChildren', () => {
 
   it('is a no-op with no host children', () => {
     const loaded = subScene();
-    expect(graftInstanceChildren(loaded, [])).toEqual(loaded);
+    expect(graftInstanceChildren(loaded, [], NO_SCOPES)).toEqual(loaded);
   });
 });
 

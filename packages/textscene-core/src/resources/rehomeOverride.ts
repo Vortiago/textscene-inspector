@@ -52,7 +52,7 @@ export function rehomeOverride(
   const rehomeValue = (value: string): string => renameResourceRefs(value, rehomeRef);
 
   const rehomedRaw = mapValues(raw, rehomeValue);
-  if (external.renamed.size === 0 && internal.renamed.size === 0) return { raw: rehomedRaw, scope: into };
+  if (external.renamed.size === 0 && internal.renamed.size === 0) return { raw, scope: into };
   return {
     raw: rehomedRaw,
     scope: {
@@ -65,16 +65,16 @@ export function rehomeOverride(
 
 /** The ids one kind of resource holds in the target scope, and the ones the override claimed. */
 class IdPool {
-  private readonly taken: Set<string>;
+  /** Built on the first claim: most overrides name no resource. */
+  private taken: Set<string> | undefined;
   /** Each id the override named, mapped to the id it holds in the target scope. */
   readonly renamed = new Map<string, string>();
 
-  constructor(resources: readonly { id: string }[]) {
-    this.taken = new Set(resources.map((r) => r.id));
-  }
+  constructor(private readonly resources: readonly { id: string }[]) {}
 
   /** A free id for `id`: `id` itself unless the target scope holds it. */
   claim(id: string): string {
+    this.taken ??= new Set(this.resources.map((r) => r.id));
     let free = id;
     while (this.taken.has(free)) free += COLLISION_SUFFIX;
     this.taken.add(free);

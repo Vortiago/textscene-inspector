@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { rehomeOverride } from './rehomeOverride';
 import { findExtResource, findSubResource } from './SubResourceResolver';
+import { extResourcePathOf } from './testing/extResourcePathOf';
 import type { SceneScope } from '../parser/types';
 
 const outer: SceneScope = {
@@ -22,17 +23,11 @@ const inner: SceneScope = {
   instancedScenePaths: ['res://inner.tscn'],
 };
 
-/** The texture path `value` resolves to in `scope`. */
-function extPath(value: string, scope: SceneScope): string | undefined {
-  const id = /ExtResource\("([^"]+)"\)/.exec(value)?.[1];
-  return id === undefined ? undefined : findExtResource(scope.externalResources, id)?.path;
-}
-
 describe('rehomeOverride', () => {
   it('resolves a colliding ExtResource to the outer resource and keeps the inner one', () => {
     const { raw, scope } = rehomeOverride({ texture: 'ExtResource("1")' }, outer, inner);
 
-    expect(extPath(raw.texture!, scope)).toBe('res://outer.png');
+    expect(extResourcePathOf(raw.texture, scope)).toBe('res://outer.png');
     expect(findExtResource(scope.externalResources, '1')?.path).toBe('res://inner.png');
   });
 
@@ -47,7 +42,7 @@ describe('rehomeOverride', () => {
 
     const id = /SubResource\("([^"]+)"\)/.exec(raw.material!)![1]!;
     const material = findSubResource(scope.internalResources, id)!;
-    expect(extPath(material.data.albedo_texture!, scope)).toBe('res://outer.png');
+    expect(extResourcePathOf(material.data.albedo_texture, scope)).toBe('res://outer.png');
   });
 
   it('resolves an id the outer scope lacks to nothing, not to the inner resource', () => {
@@ -57,7 +52,7 @@ describe('rehomeOverride', () => {
       inner
     );
 
-    expect(extPath(raw.texture!, scope)).toBeUndefined();
+    expect(extResourcePathOf(raw.texture, scope)).toBeUndefined();
   });
 
   it('keeps the inner scene paths, since the node sits inside the inner scene', () => {

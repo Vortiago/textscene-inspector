@@ -9,10 +9,10 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { TscnParser } from '../parser/TscnParser';
-import { findExtResource } from '../resources/SubResourceResolver';
-import { collapseLiveNode, liveChildGroups, rootScope, scopeOf, type LiveTreeContext } from './liveSceneTree';
+import { extResourcePathOf } from '../resources/testing/extResourcePathOf';
+import { liveChildGroups, rootScope, type LiveChildGroup, type LiveTreeContext } from './liveSceneTree';
 import type { SceneScope } from '../parser/types';
-import type { LiveNode } from './liveNode';
+import { scopeOf, type LiveNode } from '../resources/liveNode';
 
 const DEMO = resolve(import.meta.dirname, '../../../../scenes/demos/2d/role_playing_game');
 const parse = (rel: string) => new TscnParser().parse(readFileSync(join(DEMO, rel), 'utf8'));
@@ -28,17 +28,19 @@ const ctx: LiveTreeContext = {
       })[path],
   },
 };
+
 /** The collapsed live node at `path` and the scope its own refs resolve against, by the walk `liveChildGroups` makes. */
 function liveNodeAt(path: string): { node: LiveNode; scope: SceneScope } {
-  let groups = [{ children: opponent.nodes as readonly LiveNode[], scope: rootScope(ctx) }];
+  let groups: readonly LiveChildGroup[] = [
+    { origin: 'inline', children: opponent.nodes, scope: rootScope(ctx) },
+  ];
   let found: { node: LiveNode; scope: SceneScope } | undefined;
   for (const segment of path.split('/')) {
     const group = groups.find((g) => g.children.some((n) => n.name === segment))!;
     const node = group.children.find((n) => n.name === segment)!;
-    const scope = scopeOf(node, group.scope);
-    const collapsed = collapseLiveNode(node, scope, ctx.sceneCache);
-    found = { node: collapsed, scope: scopeOf(collapsed, scope) };
-    groups = liveChildGroups(node, scope, ctx.sceneCache);
+    groups = liveChildGroups(node, group.scope, ctx.sceneCache);
+    const collapsed = groups[0]?.mergedNode ?? node;
+    found = { node: collapsed, scope: scopeOf(collapsed, group.scope) };
   }
   return found!;
 }
@@ -46,8 +48,7 @@ function liveNodeAt(path: string): { node: LiveNode; scope: SceneScope } {
 /** The path the raw `key` of the live node at `path` resolves to. */
 function resolvedPath(path: string, key: string): string | undefined {
   const { node, scope } = liveNodeAt(path);
-  const id = /ExtResource\("([^"]+)"\)/.exec(node.rawProperties?.[key] ?? '')?.[1];
-  return id === undefined ? undefined : findExtResource(scope.externalResources, id)?.path;
+  return extResourcePathOf(node.rawProperties?.[key], scope);
 }
 
 describe('overrides in the live scene tree', () => {

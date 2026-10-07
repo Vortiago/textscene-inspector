@@ -26,7 +26,7 @@ import {
 import { useAnimationDriverMount } from '../../animation/useAnimationDriverMount';
 import { joinPath } from '../../../utils/nodePath';
 import type { ReactNode } from 'react';
-import type { LiveNode } from '../../liveNode';
+import type { LiveNode } from '../../../resources/liveNode';
 import { useSceneResources } from '../../SceneResourcesContext';
 import { resolveMaterialSource } from '../../materials/materialSource';
 import { GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
@@ -239,13 +239,9 @@ function useGlbMaterialOverrides(
       if (!ref || !isApplicableGlbOverride(override)) continue;
 
       // A grafted override's ids belong to the outer scene that authored it, not the sub-scene it
-      // renders under. Both pools travel together (`LiveNode.scope`), so a SubResource
-      // override resolves there too.
-      const source = resolveMaterialSource(
-        ref,
-        override.scope?.internalResources ?? internalResources,
-        override.scope?.externalResources ?? externalResources
-      );
+      // renders under, and its scope carries both pools.
+      const scope = override.scope ?? { internalResources, externalResources };
+      const source = resolveMaterialSource(ref, scope.internalResources, scope.externalResources);
       if (!source) continue;
 
       const target = resolveGlbOverrideTarget(object, entries, override);

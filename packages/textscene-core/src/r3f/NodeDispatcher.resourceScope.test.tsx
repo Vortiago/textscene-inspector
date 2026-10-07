@@ -1,6 +1,7 @@
 /**
- * A node grafted into an instanced sub-scene resolves both kinds of id against the scene
- * that authored it. Ids are per file, and a hand-written scene numbers from 1, so they
+ * Each property of an instanced sub-scene resolves both kinds of id against the scene that
+ * wrote it: a grafted node's and an override's in the host, the sub-scene's own in the
+ * sub-scene. Ids are per file, and a hand-written scene numbers from 1, so they
  * collide readily. Only a collision tells the scopes apart: the provider inherits the
  * ambient pool, and the wrong `1` still parses and draws.
  */

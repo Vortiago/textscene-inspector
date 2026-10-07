@@ -6,7 +6,7 @@
  */
 
 import type { SceneScope } from '../parser/types';
-import type { LiveNode } from '../r3f/liveNode';
+import { scopeOf, type LiveNode } from './liveNode';
 import { layerRawOverride } from './layerRawOverride';
 import { rehomeOverride } from './rehomeOverride';
 import { warn } from '../logger';
@@ -20,9 +20,9 @@ export interface InstanceScopes {
 }
 
 /**
- * The sub-scene root's children with the host's overrides folded in. With `scopes`, a
- * grafted node carries the outer scope, and a node an override reached carries its own
- * scope plus the resources the override names (`rehomeOverride`).
+ * The sub-scene root's children with the host's overrides folded in. A grafted node
+ * carries the outer scope, and a node an override reached carries its own scope plus
+ * the resources the override names (`rehomeOverride`).
  *
  * @param rootChildren the loaded sub-scene root's children (never mutated)
  * @param hostChildren the instancing node's children, deep and direct alike
@@ -30,7 +30,7 @@ export interface InstanceScopes {
 export function graftInstanceChildren(
   rootChildren: readonly LiveNode[],
   hostChildren: readonly LiveNode[],
-  scopes?: InstanceScopes
+  scopes: InstanceScopes
 ): LiveNode[] {
   if (hostChildren.length === 0) return [...rootChildren];
 
@@ -39,15 +39,15 @@ export function graftInstanceChildren(
 
   for (const child of hostChildren) {
     // A child re-anchored at a nested instance keeps the scene it was authored in.
-    const stamped = scopes && !child.scope ? { ...child, scope: scopes.outer } : child;
+    const stamped = child.scope ? child : { ...child, scope: scopes.outer };
     if (!child.instanceSubPath) {
-      const folded = child.overridesExistingNode ? foldOverride(grafted, stamped, scopes?.content) : null;
+      const folded = child.overridesExistingNode ? foldOrWarn(grafted, stamped, scopes.content) : null;
       if (folded) grafted = folded;
       else appendedAtRoot.push(stamped);
       continue;
     }
 
-    const next = graftAt(grafted, child.instanceSubPath.split('/'), stamped, scopes?.content);
+    const next = graftAt(grafted, child.instanceSubPath.split('/'), stamped, scopes.content);
     if (next) {
       grafted = next;
     } else {
@@ -72,14 +72,14 @@ function graftAt(
   siblings: readonly LiveNode[],
   segments: readonly string[],
   child: LiveNode,
-  siblingScope: SceneScope | undefined
+  siblingScope: SceneScope
 ): LiveNode[] | null {
   const [head, ...rest] = segments;
   const index = siblings.findIndex((n) => n.name === head);
   if (index === -1) return null;
 
   const target = siblings[index]!;
-  const targetScope = target.scope ?? siblingScope;
+  const targetScope = scopeOf(target, siblingScope);
   let replacement: LiveNode | null;
 
   if (rest.length > 0) {
@@ -110,21 +110,27 @@ function graftAt(
  * the node already there. Appending an override would leave two nodes of one name
  * where Godot has one, with the properties on a duplicate nothing references.
  */
-function attach(
-  siblings: readonly LiveNode[],
-  child: LiveNode,
-  siblingScope: SceneScope | undefined
-): LiveNode[] {
-  if (!child.overridesExistingNode) return [...siblings, child];
+function attach(siblings: readonly LiveNode[], child: LiveNode, siblingScope: SceneScope): LiveNode[] {
+  const folded = child.overridesExistingNode ? foldOrWarn(siblings, child, siblingScope) : null;
+  return folded ?? [...siblings, child];
+}
 
-  const folded = foldOverride(siblings, child, siblingScope);
-  if (folded) return folded;
-  // An override naming a node the sub-scene does not have. Keep it visible
-  // rather than dropping it silently.
-  warn(
-    `[graftInstanceChildren] override "${child.name}" matches no node inside the instanced scene — adding it instead`
-  );
-  return [...siblings, child];
+/**
+ * {@link foldOverride}, warning when no sibling has the override's name. The caller
+ * then adds the override as a node: visible beats silently dropped.
+ */
+function foldOrWarn(
+  siblings: readonly LiveNode[],
+  override: LiveNode,
+  siblingScope: SceneScope
+): LiveNode[] | null {
+  const folded = foldOverride(siblings, override, siblingScope);
+  if (!folded) {
+    warn(
+      `[graftInstanceChildren] override "${override.name}" matches no node inside the instanced scene — adding it instead`
+    );
+  }
+  return folded;
 }
 
 /**
@@ -135,20 +141,18 @@ function attach(
 function foldOverride(
   siblings: readonly LiveNode[],
   override: LiveNode,
-  siblingScope: SceneScope | undefined
+  siblingScope: SceneScope
 ): LiveNode[] | null {
   const index = siblings.findIndex((n) => n.name === override.name);
   if (index === -1) return null;
 
   const existing = siblings[index]!;
-  const existingScope = existing.scope ?? siblingScope;
-  const copy = [...siblings];
-  if (!override.rawProperties || !override.scope || !existingScope) {
-    copy[index] = layerRawOverride(existing, override.rawProperties);
-    return copy;
-  }
-  const { raw, scope } = rehomeOverride(override.rawProperties, override.scope, existingScope);
+  const existingScope = scopeOf(existing, siblingScope);
+  const { raw, scope } = override.rawProperties
+    ? rehomeOverride(override.rawProperties, scopeOf(override, existingScope), existingScope)
+    : { raw: undefined, scope: existingScope };
   const layered = layerRawOverride(existing, raw);
+  const copy = [...siblings];
   copy[index] = scope === siblingScope ? layered : { ...layered, scope };
   return copy;
 }

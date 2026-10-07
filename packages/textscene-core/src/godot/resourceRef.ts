@@ -41,7 +41,10 @@ export const EXT_RESOURCE_CALL_ANYWHERE_RE = new RegExp(`ExtResource${WS}\\(`);
 /** The token every `ExtResource(…)` call spells, so a value without it names no id. */
 const EXT_RESOURCE_TOKEN = 'ExtResource';
 
-/** One reference, read in place by {@link codeRefSpans}. Sticky, so it matches only where it is set. */
+/** The token both reference kinds spell, so a value without it names no resource. */
+const RESOURCE_TOKEN = 'Resource';
+
+/** One reference, read in place by {@link loadedRefSpans}. Sticky, so it matches only where it is set. */
 const RESOURCE_REF_AT_RE = new RegExp(RESOURCE_REF_BODY, 'y');
 
 /** A character that continues an identifier, so `MyExtResource(` is not the `ExtResource` token. */
@@ -52,7 +55,7 @@ const IDENTIFIER_CHAR_RE = /[A-Za-z0-9_]/;
  * the value (`resource_format_text.cpp:125-151`), but never text inside a string or a `StringName`,
  * whose quotes `get_token` reads with `\` escapes (`variant_parser.cpp:265-289`).
  */
-function codeRefSpans(text: string): ResourceRefSpan[] {
+function loadedRefSpans(text: string): ResourceRefSpan[] {
   const spans: ResourceRefSpan[] = [];
   let inString = false;
   for (let i = 0; i < text.length; i++) {
@@ -77,23 +80,24 @@ function codeRefSpans(text: string): ResourceRefSpan[] {
   return spans;
 }
 
-/** The id of every `ExtResource(…)` in a value, in order, as {@link codeRefSpans} reads them. */
+/** The id of every `ExtResource(…)` in a value, in order, as {@link loadedRefSpans} reads them. */
 export function extResourceIdsIn(text: string): string[] {
   // Most values name no resource, and the walk reads every character of a multi-megabyte array.
   if (!text.includes(EXT_RESOURCE_TOKEN)) return [];
-  return codeRefSpans(text)
+  return loadedRefSpans(text)
     .filter((span) => span.kind === 'ExtResource')
     .map((span) => span.id);
 }
 
 /**
  * `text` with the id of every reference the loader resolves replaced by `newId`'s answer, each
- * written in the tight form. Text inside a string stays as written, as {@link codeRefSpans} reads it.
+ * written in the tight form. Text inside a string stays as written, as {@link loadedRefSpans} reads it.
  */
 export function renameResourceRefs(text: string, newId: (ref: ResourceRef) => string): string {
+  if (!text.includes(RESOURCE_TOKEN)) return text;
   let renamed = '';
   let copiedTo = 0;
-  for (const span of codeRefSpans(text)) {
+  for (const span of loadedRefSpans(text)) {
     renamed += `${text.slice(copiedTo, span.start)}${span.kind}("${newId(span)}")`;
     copiedTo = span.end;
   }
@@ -130,7 +134,10 @@ export interface ResourceRefSpan extends ResourceRef {
   end: number;
 }
 
-/** Every reference in `text`, in order, with where each one sits. */
+/**
+ * Every reference in `text`, in order, with where each one sits, text inside a string included.
+ * An editor reads one line, which has no string state, so it cannot skip as {@link loadedRefSpans} does.
+ */
 export function resourceRefSpans(text: string): ResourceRefSpan[] {
   return [...text.matchAll(RESOURCE_REF_ANYWHERE_RE)].map((match) => ({
     kind: match[1] as ResourceRef['kind'],

@@ -6,7 +6,7 @@
  */
 import { canonicalisePropertyBag } from '../godot/deprecated.js';
 import type { TscnNode } from '../parser/types.js';
-import type { LiveNode } from '../r3f/liveNode.js';
+import type { LiveNode } from './liveNode.js';
 import { graftInstanceChildren, type InstanceScopes } from './graftInstanceChildren.js';
 import { rehomeOverride } from './rehomeOverride.js';
 import { nodeRegistry } from '../core/NodeRegistry.js';
@@ -43,7 +43,7 @@ function definedProperties(props: Record<string, unknown>): Record<string, unkno
 export function mergeInstanceRoot(
   instanceNode: LiveNode,
   loadedScene: { nodes: readonly LiveNode[] },
-  scopes?: InstanceScopes
+  scopes: InstanceScopes
 ): LiveNode | null {
   if (loadedScene.nodes.length !== 1) return null;
   const root = loadedScene.nodes[0]!;
@@ -51,11 +51,9 @@ export function mergeInstanceRoot(
 
   // The instance node's keys were written against the outer scope, the root's against
   // the sub-scene's, and the merged node resolves them all in one.
-  const rehomed =
-    scopes && instanceNode.rawProperties
-      ? rehomeOverride(instanceNode.rawProperties, scopes.outer, scopes.content)
-      : undefined;
-  const instanceRaw = rehomed?.raw ?? instanceNode.rawProperties;
+  const { raw: instanceRaw, scope } = instanceNode.rawProperties
+    ? rehomeOverride(instanceNode.rawProperties, scopes.outer, scopes.content)
+    : { raw: undefined, scope: scopes.content };
 
   const registration = nodeRegistry.getRegistration(root.type);
   // Instance keys win, so a type-specific override and its `transform` survive,
@@ -87,7 +85,8 @@ export function mergeInstanceRoot(
     mergedProperties = registration.parser(heading, mergedRaw);
   } else {
     // A node without raw props (hand-built) or an unregistered root type
-    // spreads the already-parsed properties, instance winning per key.
+    // spreads the already-parsed properties, instance winning per key. Its refs
+    // are not re-homed: only the raw path carries an override's references.
     mergedProperties = {
       ...root.properties,
       ...definedProperties(instanceNode.properties as Record<string, unknown>),
@@ -111,6 +110,6 @@ export function mergeInstanceRoot(
     // the sub-path it names (`graftInstanceChildren`). Direct children append.
     children: graftInstanceChildren(root.children, instanceNode.children, scopes),
     // The sub-scene's scope replaces the instance node's own: the merged node sits inside it.
-    ...(scopes ? { scope: rehomed?.scope ?? scopes.content } : {}),
+    scope,
   };
 }

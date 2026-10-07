@@ -8,7 +8,7 @@ import { Fragment, useCallback, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type * as THREE from 'three';
 import type { SceneScope, TscnNode } from '../parser/types.js';
-import type { LiveNode } from './liveNode.js';
+import type { LiveNode } from '../resources/liveNode.js';
 import { joinPath } from '../utils/nodePath.js';
 import {
   allocateNodePaintRange,

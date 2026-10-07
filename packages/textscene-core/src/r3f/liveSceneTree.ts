@@ -6,7 +6,7 @@
  */
 import type * as THREE from 'three';
 import type { SceneScope, TscnNode, TscnExternalResource, TscnInternalResource } from '../parser/types.js';
-import type { LiveNode } from './liveNode.js';
+import { scopeOf, type LiveNode } from '../resources/liveNode.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
 // Re-exported here, where every walker already reaches for it.
@@ -52,61 +52,42 @@ export interface LiveTreeEntry {
  */
 export function singleSceneCache(
   path: string | null | undefined,
-  scene:
-    { nodes: readonly TscnNode[]; externalResources?: readonly TscnExternalResource[] } | null | undefined
+  scene: (Partial<SceneScope> & { nodes: readonly TscnNode[] }) | null | undefined
 ): CachedSceneSource {
   return { getCached: (p) => (p === path ? (scene ?? undefined) : undefined) };
 }
 
 /**
  * The node as the tree and viewport render it: a single-root `.tscn` instance
- * collapses into its sub-scene root (Instance root merge, ADR-0013). A `.glb` or
- * multi-root instance, a non-instance, a scene not yet cached and a scene already
- * in `scope.instancedScenePaths` (cyclic instancing) return unchanged.
+ * collapses into its sub-scene root (Instance root merge, ADR-0013), carrying the
+ * sub-scene's scope. A `.glb` or multi-root instance, a non-instance, a scene not
+ * yet cached and a scene already in `scope.instancedScenePaths` (cyclic
+ * instancing) return unchanged.
+ *
+ * It collapses an instance chain to a fixed point, not one level. A host override
+ * such as `visible = false` on a heading with no `type=` stays in `rawProperties`
+ * until a level with a real type re-parses it, so one level loses it. The chain
+ * stops at a scene that already encloses the node, so a scene that instances
+ * itself ends.
  */
 export function collapseLiveNode(node: LiveNode, scope: SceneScope, sceneCache: CachedSceneSource): LiveNode {
-  return collapseToFixedPoint(node, scope, sceneCache).node;
-}
-
-/** What {@link collapseToFixedPoint} reached. */
-interface Collapse {
-  node: LiveNode;
-  /**
-   * The scope the collapsed node's sub-scene content resolves against: the pools of
-   * the last scene merged, and every merged scene appended to the enclosing ones.
-   * The caller's scope when nothing merged.
-   */
-  contentScope: SceneScope;
-}
-
-/**
- * Collapse an instance chain to a fixed point, not one level. A host override
- * such as `visible = false` on a heading with no `type=` stays in
- * `rawProperties` until a level with a real type re-parses it, so one level
- * loses it. The chain stops at a scene that already encloses the node or that it
- * merged already, so a scene that instances itself ends.
- */
-function collapseToFixedPoint(node: LiveNode, scope: SceneScope, sceneCache: CachedSceneSource): Collapse {
   let current = node;
   // Advances with the chain: after a merge the `instance` ref is the sub-scene
-  // root's own and names an id in that file's pool. The host's scope finds
-  // nothing and stops the collapse one level early.
-  let currentScope = scopeOf(node, scope);
-  let instancedScenePaths = currentScope.instancedScenePaths ?? [];
+  // root's own and names an id in that file's pool, which the merged node carries.
+  let outer = scopeOf(node, scope);
   while (current.instance) {
-    const outer = scopeOf(current, currentScope);
     const scenePath = resolveInstancePath(current.instance, outer.externalResources);
-    if (!scenePath || instancedScenePaths.includes(scenePath)) break;
+    const enclosingScenePaths = outer.instancedScenePaths ?? [];
+    if (!scenePath || enclosingScenePaths.includes(scenePath)) break;
     const cached = sceneCache.getCached(scenePath);
     if (!cached) break;
-    const content = contentScopeOf(cached, [...instancedScenePaths, scenePath]);
+    const content = contentScopeOf(cached, [...enclosingScenePaths, scenePath]);
     const merged = mergeInstanceRoot(current, cached, { outer, content });
     if (!merged) break;
-    instancedScenePaths = content.instancedScenePaths!;
     current = merged;
-    currentScope = content;
+    outer = scopeOf(merged, content);
   }
-  return { node: current, contentScope: currentScope };
+  return current;
 }
 
 /**
@@ -119,20 +100,6 @@ function contentScopeOf(cached: Partial<SceneScope>, instancedScenePaths: readon
     internalResources: cached.internalResources ?? [],
     instancedScenePaths,
   };
-}
-
-/**
- * The scope a node's refs and its children's resolve against: its own where the merge
- * set one (a grafted node, or a node an override reached), else its group's.
- */
-export function scopeOf(node: LiveNode, groupScope: SceneScope): SceneScope {
-  return node.scope ?? groupScope;
-}
-
-/** A node's live children, paired with the scope those children resolve against. */
-interface ChildScope {
-  children: readonly LiveNode[];
-  scope: SceneScope;
 }
 
 /**
@@ -202,16 +169,9 @@ export function liveChildGroups(
   const cached = sceneCache.getCached(scenePath);
   if (!cached) return inlineOnly();
 
-  const collapse = collapseToFixedPoint(node, own, sceneCache);
-  if (collapse.node !== node) {
-    return [
-      {
-        origin: 'merged',
-        children: collapse.node.children,
-        scope: collapse.contentScope,
-        mergedNode: collapse.node,
-      },
-    ];
+  const merged = collapseLiveNode(node, own, sceneCache);
+  if (merged !== node) {
+    return [{ origin: 'merged', children: merged.children, scope: scopeOf(merged, own), mergedNode: merged }];
   }
 
   // Inline children are authored in the host scene, so they keep the outer scope.
@@ -225,6 +185,11 @@ export function liveChildGroups(
     scope: contentScopeOf(cached, [...enclosingScenePaths, scenePath]),
   });
   return groups;
+}
+
+/** The collapsed node a `merged` group carries, so a walker merges each instance once. */
+function mergedNodeOf(groups: readonly LiveChildGroup[]): LiveNode | undefined {
+  return groups[0]?.mergedNode;
 }
 
 /**
@@ -253,7 +218,9 @@ function liveChainLinks(
   if (segments.length === 0) return null;
 
   const links: LiveChainLink[] = [];
-  let candidateGroups: ChildScope[] = [{ children: roots, scope: rootScope(ctx) }];
+  let candidateGroups: readonly LiveChildGroup[] = [
+    { origin: 'inline', children: roots, scope: rootScope(ctx) },
+  ];
 
   for (const segment of segments) {
     let match: LiveNode | undefined;
@@ -267,11 +234,8 @@ function liveChainLinks(
       }
     }
     if (!match) return null;
-    links.push({
-      raw: match,
-      collapsed: collapseLiveNode(match, matchScope, ctx.sceneCache),
-    });
     candidateGroups = liveChildGroups(match, matchScope, ctx.sceneCache, ctx.glbCache);
+    links.push({ raw: match, collapsed: mergedNodeOf(candidateGroups) ?? match });
   }
 
   return links;
@@ -286,14 +250,14 @@ export function liveNodeChain(
   path: string,
   roots: readonly TscnNode[],
   ctx: LiveTreeContext
-): TscnNode[] | null {
+): LiveNode[] | null {
   const links = liveChainLinks(path, roots, ctx);
   return links ? links.map((l) => l.collapsed) : null;
 }
 
 export interface ResolvedLiveNode {
   /** The collapsed node, the identity the tree and viewport render. */
-  node: TscnNode;
+  node: LiveNode;
   /**
    * The node's own pre-collapse `instance` ref, or `undefined` for a
    * non-instance node. The inspector's 📦 indicator reads it, since the
@@ -326,7 +290,7 @@ export function resolveLiveNode(
   path: string,
   roots: readonly TscnNode[],
   ctx: LiveTreeContext
-): TscnNode | null {
+): LiveNode | null {
   return resolveLiveEntry(path, roots, ctx)?.node ?? null;
 }
 
@@ -335,17 +299,17 @@ export function walkLiveTree(
   roots: readonly TscnNode[],
   ctx: LiveTreeContext,
   visit: (entry: LiveTreeEntry) => void,
-  descend?: (node: TscnNode) => boolean
+  descend?: (node: LiveNode) => boolean
 ): void {
   const walk = (nodes: readonly LiveNode[], scope: SceneScope, parentPath: string): void => {
     for (const node of nodes) {
       const path = joinPath(parentPath, node.name);
-      const effective = collapseLiveNode(node, scope, ctx.sceneCache);
+      const groups = liveChildGroups(node, scope, ctx.sceneCache, ctx.glbCache);
+      const effective = mergedNodeOf(groups) ?? node;
       visit({ node: effective, path });
       // `descend` prunes only the children, so a consumer can count a boundary
       // without counting what is behind it.
       if (descend && !descend(effective)) continue;
-      const groups = liveChildGroups(node, scope, ctx.sceneCache, ctx.glbCache);
       for (const group of groups) {
         walk(group.children, group.scope, path);
       }
@@ -363,8 +327,8 @@ export function walkLiveTree(
 export function collectLiveNodes(
   roots: readonly TscnNode[],
   ctx: LiveTreeContext,
-  predicate: (node: TscnNode) => boolean,
-  descend?: (node: TscnNode) => boolean
+  predicate: (node: LiveNode) => boolean,
+  descend?: (node: LiveNode) => boolean
 ): LiveTreeEntry[] {
   const out: LiveTreeEntry[] = [];
   walkLiveTree(

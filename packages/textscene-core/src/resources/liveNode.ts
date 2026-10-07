@@ -1,7 +1,7 @@
 /**
  * A node of the live scene tree: a parsed node, or one the Instance root merge built
- * from two files (ADR-0013). Only the merge writes `scope`, so the parse tree
- * the linter reads never carries it.
+ * from two files (ADR-0013). Only the merge writes `scope`, so the parse tree the
+ * linter reads never carries it.
  */
 import type { SceneScope, TscnNode } from '../parser/types.js';
 
@@ -13,4 +13,9 @@ export interface LiveNode extends TscnNode {
    */
   readonly scope?: SceneScope;
   children: LiveNode[];
+}
+
+/** The scope a node's refs and its children's resolve against: its own, else its group's. */
+export function scopeOf(node: LiveNode, groupScope: SceneScope): SceneScope {
+  return node.scope ?? groupScope;
 }

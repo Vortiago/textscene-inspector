@@ -4,7 +4,7 @@
  * cannot see them. The default is an empty list, which renders the GLB unchanged.
  */
 import { createContext, useContext, type ReactNode } from 'react';
-import type { LiveNode } from '../../liveNode';
+import type { LiveNode } from '../../../resources/liveNode';
 
 const GlbOverridesContext = createContext<readonly LiveNode[]>([]);
 GlbOverridesContext.displayName = 'GlbOverridesContext';
