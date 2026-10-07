@@ -12,6 +12,8 @@ import { authoredSpelling } from './authoredSpelling';
 import { extResourcePathOf } from './testing/extResourcePathOf';
 import * as logger from '../logger';
 import { NO_SCOPES } from './testing/noScopes';
+// The Node parser, which a fold parses an unregistered type with, as in every host.
+import '../nodes/node/index';
 
 const node = (name: string, extra: Partial<TscnNode> = {}): TscnNode => ({
   rawProperties: {},
@@ -34,7 +36,7 @@ const inner: SceneScope = {
 
 /** The path a node's raw `texture` resolves to, in its own scope or else `groupScope`. */
 function texturePath(n: LiveNode, groupScope: SceneScope = inner): string | undefined {
-  return extResourcePathOf(n.rawProperties?.texture, scopeOf(n, groupScope));
+  return extResourcePathOf(n.rawProperties.texture, scopeOf(n, groupScope));
 }
 
 /** A loaded sub-scene: Root > Sprite2D > Pivot. */
@@ -88,7 +90,7 @@ describe('graftInstanceChildren', () => {
 
     const pivot = grafted[0]!.children[0]!;
     expect(grafted[0]!.children).toHaveLength(1);
-    expect(pivot.rawProperties?.texture).toBe('ExtResource("3")');
+    expect(pivot.rawProperties.texture).toBe('ExtResource("3")');
   });
 
   it('folds an override of a sub-scene root child onto it instead of adding a sibling', () => {
@@ -98,7 +100,7 @@ describe('graftInstanceChildren', () => {
     const grafted = graftInstanceChildren(subScene(), [override], NO_SCOPES);
 
     expect(grafted.map((c) => c.name)).toEqual(['Sprite2D']);
-    expect(grafted[0]!.rawProperties?.visible).toBe('false');
+    expect(grafted[0]!.rawProperties.visible).toBe('false');
     expect(grafted[0]!.children.map((c) => c.name)).toEqual(['Pivot']);
   });
 
@@ -151,7 +153,7 @@ describe('graftInstanceChildren', () => {
     const pivot = graftInstanceChildren(texturedSubScene(), [override], { outer, content: inner })[0]!
       .children[0]!;
 
-    expect(authoredSpelling(pivot.rawProperties!.texture!, scopeOf(pivot, inner))).toBe('ExtResource("1")');
+    expect(authoredSpelling(pivot.rawProperties.texture!, scopeOf(pivot, inner))).toBe('ExtResource("1")');
   });
 
   it('keeps the sub-scene children of an overridden node in the sub-scene', () => {

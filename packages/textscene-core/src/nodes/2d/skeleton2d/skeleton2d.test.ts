@@ -42,7 +42,7 @@ describe('Skeleton2D registration', () => {
     // `properties` is what parseNode2D produced, so it holds the Node2D
     // transform and nothing else: `modification_stack` survives only in the raw
     // bag, which is exactly the divergence the sheet records.
-    expect(skeleton?.rawProperties?.modification_stack).toBe(
+    expect(skeleton?.rawProperties.modification_stack).toBe(
       'SubResource("SkeletonModificationStack2D_stack")'
     );
     expect(skeleton?.properties).toMatchObject({ position: { x: 10, y: 20 } });

@@ -62,10 +62,10 @@ describe('deep overrides through mergeInstanceRoot', () => {
     // One Body carrying the host's authored texture, not two of the same name.
     const bodies = pivot.children.filter((c) => c.name === 'Body');
     expect(bodies).toHaveLength(1);
-    expect(bodies[0]!.rawProperties?.texture).toBe(body.rawProperties?.texture);
+    expect(bodies[0]!.rawProperties.texture).toBe(body.rawProperties.texture);
     // And the typed properties, which components read: merging the raw map alone
     // renders as if the override never existed.
-    expect((bodies[0]!.properties as { texture?: string }).texture).toBe(body.rawProperties?.texture);
+    expect((bodies[0]!.properties as { texture?: string }).texture).toBe(body.rawProperties.texture);
   });
 
   it('stamps the host resource table onto a grafted node', () => {
@@ -89,6 +89,6 @@ describe('deep overrides through mergeInstanceRoot', () => {
     const merged = mergeInstanceRoot(host.nodes[0]!, sub, NO_SCOPES)!;
 
     expect(merged.children.filter((c) => c.name === 'Health')).toHaveLength(1);
-    expect(merged.children.find((c) => c.name === 'Health')!.rawProperties?.life).toBe('7');
+    expect(merged.children.find((c) => c.name === 'Health')!.rawProperties.life).toBe('7');
   });
 });

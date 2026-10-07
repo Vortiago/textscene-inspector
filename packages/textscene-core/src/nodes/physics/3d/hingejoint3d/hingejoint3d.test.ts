@@ -38,7 +38,7 @@ describe('HingeJoint3D registration', () => {
     const node = scene.nodes[0]?.children[0];
     expect(node?.properties).not.toHaveProperty('angular_limit/upper');
     expect(node?.properties).not.toHaveProperty('motor/enable');
-    expect(node?.rawProperties?.['angular_limit/upper']).toBe('999.0');
-    expect(node?.rawProperties?.['motor/enable']).toBe('"not-a-bool"');
+    expect(node?.rawProperties['angular_limit/upper']).toBe('999.0');
+    expect(node?.rawProperties['motor/enable']).toBe('"not-a-bool"');
   });
 });

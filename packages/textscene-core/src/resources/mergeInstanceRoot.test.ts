@@ -7,6 +7,9 @@ import '../nodes/3d/gridmap/index';
 import '../nodes/3d/camera3d/index';
 // The Node parser, which an unregistered root type parses with, as in every host.
 import '../nodes/node/index';
+import '../nodes/base/node3d/index';
+import type { Node3DProperties } from '../nodes/base/node3d/types';
+import { parsedNode, translated } from '../parser/testing/parserKit';
 import type { GridMapProperties } from '../nodes/3d/gridmap/types';
 import type { Camera3DProperties } from '../nodes/3d/camera3d/types';
 import { NO_SCOPES } from './testing/noScopes';
@@ -43,30 +46,32 @@ describe('mergeInstanceRoot', () => {
       name: 'Coin1',
       type: 'Node',
       instance: 'ExtResource("2_chew2")',
-      rawProperties: { transform: 'INSTANCE_XFORM' },
+      rawProperties: { transform: translated(5, 0, 0) },
     });
     const root = node({
       name: 'Coin',
-      type: 'Area3D',
-      rawProperties: { transform: 'ROOT_XFORM', monitoring: 'true' },
+      type: 'Node3D',
+      rawProperties: { transform: translated(1, 0, 0), visible: 'false' },
     });
 
-    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES);
+    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES)!;
 
-    expect(merged!.rawProperties).toEqual({ transform: 'INSTANCE_XFORM', monitoring: 'true' });
+    const properties = merged.properties as Node3DProperties;
+    expect(properties.transform?.origin).toEqual({ x: 5, y: 0, z: 0 });
+    expect(properties.visible).toBe(false);
   });
 
   it('keeps a root value the instance node does not write', () => {
-    const instanceNode = node({ name: 'GridMap', type: 'Node', instance: 'ExtResource("1_t0f53")' });
+    const instanceNode = node({ name: 'Coin1', type: 'Node', instance: 'ExtResource("2_chew2")' });
     const root = node({
-      name: 'GridMap',
-      type: 'GridMap',
-      rawProperties: { transform: 'ROOT_XFORM', visible: 'false' },
+      name: 'Coin',
+      type: 'Node3D',
+      rawProperties: { transform: translated(1, 0, 0) },
     });
 
-    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES);
+    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES)!;
 
-    expect(merged!.rawProperties).toEqual({ transform: 'ROOT_XFORM', visible: 'false' });
+    expect((merged.properties as Node3DProperties).transform?.origin).toEqual({ x: 1, y: 0, z: 0 });
   });
 
   it('lets a falsy instance value override the root value', () => {
@@ -76,11 +81,20 @@ describe('mergeInstanceRoot', () => {
       instance: 'ExtResource("2_chew2")',
       rawProperties: { visible: 'false' },
     });
-    const root = node({ name: 'Coin', type: 'Area3D', rawProperties: { visible: 'true' } });
+    const root = node({ name: 'Coin', type: 'Node3D', rawProperties: { visible: 'true' } });
 
-    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES);
+    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES)!;
 
-    expect(merged!.rawProperties.visible).toBe('false');
+    expect((merged.properties as Node3DProperties).visible).toBe(false);
+  });
+
+  it("keeps the instance node's heading index on the merged node", () => {
+    const instanceNode = parsedNode({ name: 'Coin1', instance: 'ExtResource("2_chew2")', index: '3' });
+    const root = node({ name: 'Coin', type: 'Node3D' });
+
+    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES)!;
+
+    expect((merged.properties as Node3DProperties).index).toBe(3);
   });
 
   it('renders the root children first, then any children the host added under the instance', () => {
@@ -151,9 +165,9 @@ describe('mergeInstanceRoot', () => {
   });
 
   // Type-specific overrides on a type-less instance node. The base Node parser
-  // extracts only name, parent, transform and index, so the merge re-parses
-  // `{ ...root.rawProperties, ...instanceNode.rawProperties }` with the root
-  // type's parser to keep an override such as GridMap `data` or Camera3D `fov`.
+  // extracts only name, parent, instance, transform and index, so the merge re-parses
+  // the layered raw map with the root type's parser to keep an override such as
+  // GridMap `data` or Camera3D `fov`.
 
   it('re-parses a type-specific GridMap `data` override against the root GridMap type', () => {
     // stage.tscn instances grid_map.tscn and overrides its cell layout.
@@ -285,7 +299,7 @@ describe("re-homes the instance node's references into the sub-scene scope", () 
 
     const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, scopes)!;
 
-    expect(extResourcePathOf(merged.rawProperties!.texture, merged.scope!)).toBe('res://outer.png');
+    expect(extResourcePathOf(merged.rawProperties.texture, merged.scope!)).toBe('res://outer.png');
   });
 
   it('spells a renamed reference with the id the outer file wrote', () => {
@@ -298,6 +312,6 @@ describe("re-homes the instance node's references into the sub-scene scope", () 
 
     const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, scopes)!;
 
-    expect(authoredSpelling(merged.rawProperties!.texture!, merged.scope!)).toBe('ExtResource("1")');
+    expect(authoredSpelling(merged.rawProperties.texture!, merged.scope!)).toBe('ExtResource("1")');
   });
 });

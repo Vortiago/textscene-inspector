@@ -11,7 +11,6 @@
  */
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
@@ -25,6 +24,7 @@ import {
 import { resolveTextTheme, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { unquoteString } from '../../../../parser/utils';
+import type { TscnNode } from '../../../../parser/types';
 import { BUTTON_DEFAULT_FONT_COLOR } from '../button/nativeSolver';
 import type { MenuBarProperties } from './types';
 
@@ -42,19 +42,17 @@ export interface MenuBarTitle {
   size: Vec2;
 }
 
-type RawChild = SolveNode['node']['children'][number];
-
 /** `MenuBar::_get_popups` (`menu_bar.cpp:585-594`): direct `PopupMenu` children, in scene order. */
-function popupChildren(n: ShareNode): readonly RawChild[] {
+function popupChildren(n: ShareNode): readonly TscnNode[] {
   return n.node.children.filter((child) => child.type === 'PopupMenu');
 }
 
 /**
  * `popups[i]->get_title().is_empty() ? String(popups[i]->get_name()) : popups[i]->get_title()`
  * (`MenuBar::_refresh_menu_names`, `menu_bar.cpp:534`). PopupMenu is a `Window` with no parser here, so
- * `title` comes from `rawProperties`, which both parsers publish (`TscnNode.rawProperties`).
+ * `title` comes from `rawProperties`.
  */
-function menuTitleText(child: RawChild): string {
+function menuTitleText(child: TscnNode): string {
   const rawTitle = child.rawProperties.title;
   const title = rawTitle !== undefined ? unquoteString(rawTitle) : '';
   return title.length > 0 ? title : child.name;

@@ -117,6 +117,6 @@ describe('parseNodeWithRegistry — rawPropertiesOrderReliable (ADR-0035)', () =
     const raw = { zebra: '1', apple: '2', mango: '3' };
     const result = parseNodeWithRegistry(heading, raw);
 
-    expect(Object.keys(result!.rawProperties!)).toEqual(['zebra', 'apple', 'mango']);
+    expect(Object.keys(result!.rawProperties)).toEqual(['zebra', 'apple', 'mango']);
   });
 });

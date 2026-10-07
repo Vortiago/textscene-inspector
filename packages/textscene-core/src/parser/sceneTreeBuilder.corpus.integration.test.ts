@@ -67,7 +67,7 @@ describe('buildSceneTree over the whole corpus', () => {
 
     const robot = player.children.find((c) => c.name === 'Robot')!;
     expect(robot.instanceSubPath).toBe('Skeleton/Skeleton3D');
-    expect(robot.rawProperties?.layers).toBe('2');
+    expect(robot.rawProperties.layers).toBe('2');
 
     // The four Parallax labels hang off CoinCount by ordinary resolution.
     const coinCount = player.children.find((c) => c.name === 'CoinCount')!;

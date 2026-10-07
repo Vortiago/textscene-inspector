@@ -37,8 +37,6 @@ import type { Rect2 } from './rect';
 // rects come from.
 import '../../nodes/index';
 import '../index';
-// The Instance root merge parses a sub-scene root with the Node parser when its type has none.
-import '../../../nodes/node/index';
 
 const LAYER_PATH = 'res://hud-layer.tscn';
 const BADGE_PATH = 'res://hud-badge.tscn';

@@ -1,6 +1,6 @@
 /**
- * Shared test kit for parser slice tests: the node `heading()`, `parsedNode()` and
- * `translated()` factories, the formatter `valueOf()` lookup, the repo-root and fixture
+ * Shared test kit for parser slice tests: the node `heading()`, `parsedNode()`, `makeNode()`
+ * and `translated()` factories, the formatter `valueOf()` lookup, the repo-root and fixture
  * resolvers and the scene `flatten()`.
  * Build-excluded through the `src/**\/testing/**` tsconfig rule, like the linter test kit.
  */
@@ -30,6 +30,15 @@ export function parsedNode(attributes: Record<string, string>, raw: Record<strin
   const node = parseNodeWithRegistry({ type: 'node', attributes }, raw);
   if (!node) throw new Error(`expected a parsed node for ${JSON.stringify(attributes)}, got null`);
   return node;
+}
+
+/**
+ * `parsedNode` of `name` and `type`, its `instance` and `rawProperties` parsed in, with the
+ * other `fields` laid over the result.
+ */
+export function makeNode(name: string, type: string, fields: Partial<TscnNode> = {}): TscnNode {
+  const { rawProperties, instance, ...rest } = fields;
+  return { ...parsedNode({ name, type, ...(instance ? { instance } : {}) }, rawProperties), ...rest };
 }
 
 /** The `Transform3D(...)` text Godot writes for an identity basis at this origin. */

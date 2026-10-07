@@ -8,23 +8,18 @@
 import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import type { TscnNode, TscnScene } from '../parser/types';
+import type { TscnScene } from '../parser/types';
 import { NodeDispatcher } from './NodeDispatcher';
 import { SceneStack } from './testing/SceneStack';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../resources/ResourceLoader';
-import { parsedNode, translated } from '../parser/testing/parserKit';
+import { makeNode, translated } from '../parser/testing/parserKit';
 
 import './nodes/index';
-// The parsers `parsedNode` and the Instance root merge build node properties with.
+// The parsers `makeNode` and the Instance root merge build node properties with.
 import '../nodes/node/index';
 import '../nodes/base/node3d/index';
 import '../nodes/3d/meshinstance3d/index';
-
-function makeNode(name: string, type: string, overrides: Partial<TscnNode> = {}): TscnNode {
-  const { rawProperties, instance, ...rest } = overrides;
-  return { ...parsedNode({ name, type, ...(instance ? { instance } : {}) }, rawProperties), ...rest };
-}
 
 // Level 3 (leaf): an orange sphere with no dependencies.
 function makeLeafScene(): TscnScene {

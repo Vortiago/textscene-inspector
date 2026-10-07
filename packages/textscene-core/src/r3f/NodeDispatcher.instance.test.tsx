@@ -12,19 +12,14 @@ import * as mergeInstanceRootModule from '../resources/mergeInstanceRoot';
 import { SceneStack } from './testing/SceneStack';
 import { createFakeResourceLoader, recordSceneRequests } from '../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../resources/ResourceLoader';
-import { parsedNode, translated } from '../parser/testing/parserKit';
+import { makeNode, translated } from '../parser/testing/parserKit';
 
 // The barrel registers every node-type component.
 import './nodes/index';
-// The parsers `parsedNode` and the Instance root merge build node properties with.
+// The parsers `makeNode` and the Instance root merge build node properties with.
 import '../nodes/node/index';
 import '../nodes/base/node3d/index';
 import '../nodes/3d/meshinstance3d/index';
-
-function makeNode(name: string, type: string, overrides: Partial<TscnNode> = {}): TscnNode {
-  const { rawProperties, instance, ...rest } = overrides;
-  return { ...parsedNode({ name, type, ...(instance ? { instance } : {}) }, rawProperties), ...rest };
-}
 
 function makeBoxScene(meshName = 'TheBox'): TscnScene {
   const internalResources: TscnInternalResource[] = [
