@@ -1,11 +1,12 @@
 /**
- * The `CSGShape3D` half of every CSG parse, `operation` and `cast_shadow`, shared by CSGCombiner3D
+ * The `CSGShape3D` half of every CSG parse, `operation`, `cast_shadow` and `transparency`, shared by CSGCombiner3D
  * and the primitives, whose render scaffold is CsgPrimitive.tsx. A React-free module of its own,
  * not beside `finishCsgParse`: the parity guard scrapes property reads per file, and would credit a
  * combiner, not a CSGPrimitive3D (`csg_shape.h:194-202`), with `material`.
  */
 
-import { parseOptionalInt } from '../../../parser/valueParsers';
+import { parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParsers';
+import type { CSGShape3DProperties } from './types';
 
 /**
  * Copy every `CSGShape3D` property onto a CSG parse result, so a type without `material` takes
@@ -13,7 +14,7 @@ import { parseOptionalInt } from '../../../parser/valueParsers';
  * a warning would fire on every correctly rendered subtraction.
  */
 export function finishCsgShapeParse(
-  result: { operation?: number; castShadow?: number },
+  result: Pick<CSGShape3DProperties, 'operation' | 'castShadow' | 'transparency'>,
   properties: Record<string, string>
 ): void {
   const operation = parseOptionalInt(properties.operation);
@@ -25,5 +26,10 @@ export function finishCsgShapeParse(
   const castShadow = parseOptionalInt(properties.cast_shadow);
   if (castShadow !== undefined) {
     result.castShadow = castShadow;
+  }
+
+  const transparency = parseOptionalFloat(properties.transparency);
+  if (transparency !== undefined) {
+    result.transparency = transparency;
   }
 }
