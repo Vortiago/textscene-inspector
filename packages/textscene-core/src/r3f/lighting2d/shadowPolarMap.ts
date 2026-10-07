@@ -11,7 +11,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
 
-import { casterInLightRect, edgeCastsShadow, type LightRect, type ShadowCasterEdges } from './shadowVolumes';
+import { edgeCastsShadow, lightRectTest, type LightRect, type ShadowCasterEdges } from './shadowVolumes';
 
 /**
  * Texels in one light's map: the `rendering/2d/shadow_atlas/size` row (project
@@ -126,7 +126,7 @@ function binRay(index: number, out: { x: number; y: number }): void {
 /**
  * The map for one light: `SHADOW_MAP_BINS` normalised axis distances, and
  * `SHADOW_MAP_FAR` where nothing casts. `casters` are world-space occluders
- * narrowed by `shadow_item_cull_mask`, and the shared `casterInLightRect` cull
+ * narrowed by `shadow_item_cull_mask`, and the shared `lightRectTest` cull
  * keeps this map and `buildShadowVolumes` on one occluder set.
  */
 export function buildShadowPolarMap(
@@ -151,9 +151,10 @@ export function buildShadowPolarMap(
   const m12 = m[5]!;
 
   const ray = { x: 0, y: 0 };
+  const inLightRect = lightRectTest(light.rect);
 
   for (const { segments, cullMode, bounds } of casters) {
-    if (!casterInLightRect(bounds, light.rect)) continue;
+    if (!inLightRect(bounds)) continue;
     for (let i = 0; i + 3 < segments.length; i += 4) {
       const wax = segments[i]!;
       const way = segments[i + 1]!;

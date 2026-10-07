@@ -18,7 +18,7 @@ import type { Rect2 } from '../controls/native/rect';
 const scratch = new THREE.Vector3();
 
 /** The game viewport rect, at the canvas origin, in the Y-up world and NDC corner order. */
-function viewportQuad({ w, h }: Rect2): Quad2 {
+function viewportQuad({ w, h }: Pick<Rect2, 'w' | 'h'>): Quad2 {
   return [
     { x: 0, y: -h },
     { x: w, y: -h },

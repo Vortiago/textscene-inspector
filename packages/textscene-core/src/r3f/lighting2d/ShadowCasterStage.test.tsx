@@ -59,6 +59,16 @@ describe('sameWorldCasters', () => {
     );
   });
 
+  it('breaks on moved bounds under unchanged segments, which changes the cull', () => {
+    const turned = [
+      { x: 0, y: 0 },
+      { x: 1, y: 1 },
+      { x: 0, y: 2 },
+      { x: -1, y: 1 },
+    ] as const;
+    expect(sameWorldCasters([world([0, 0, 10, 0])], [world([0, 0, 10, 0], { bounds: turned })])).toBe(false);
+  });
+
   it('breaks when the polygon gains a point', () => {
     expect(sameWorldCasters([world([0, 0, 10, 0])], [world([0, 0, 10, 0, 10, 5])])).toBe(false);
   });

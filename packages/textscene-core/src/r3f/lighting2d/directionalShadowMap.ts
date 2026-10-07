@@ -13,7 +13,7 @@
 
 import { SHADOW_MAP_BINS, SHADOW_MAP_FAR } from './shadowPolarMap';
 import {
-  boundsMeetConvex,
+  convexBoundsTest,
   edgeNormals,
   OCCLUDER_CULL_CLOCKWISE,
   OCCLUDER_CULL_COUNTER_CLOCKWISE,
@@ -140,8 +140,7 @@ function sweptViewTest(view: DirectionalShadowView): (bounds: Quad2) => boolean 
       corner.y - direction.y * maxDistance
     );
   }
-  const sweptAxes: Vector2[] = [...edgeNormals(corners), { x: -direction.y, y: direction.x }];
-  return (bounds) => boundsMeetConvex(bounds, swept, sweptAxes);
+  return convexBoundsTest(swept, [...edgeNormals(corners), { x: -direction.y, y: direction.x }]);
 }
 
 /**

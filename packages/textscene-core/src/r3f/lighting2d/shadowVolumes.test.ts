@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildShadowVolumes,
-  casterInLightRect,
   edgeCastsShadow,
   edgeShadowRing,
   lightReach,
+  lightRectTest,
   OCCLUDER_CULL_CLOCKWISE,
   OCCLUDER_CULL_COUNTER_CLOCKWISE,
   OCCLUDER_CULL_DISABLED,
@@ -164,8 +164,9 @@ describe('edgeShadowRing', () => {
   });
 });
 
-describe('casterInLightRect', () => {
+describe('lightRectTest', () => {
   const rect: LightRect = { minX: -10, minY: -10, maxX: 10, maxY: 10 };
+  const inRect = lightRectTest(rect);
 
   /** The local bounds (0, 0)-(size, size) turned 45° about `origin`. */
   function turnedSquare(origin: { x: number; y: number }, size: number): Quad2 {
@@ -179,29 +180,29 @@ describe('casterInLightRect', () => {
   }
 
   it('keeps an occluder whose bounds overlap the rect', () => {
-    expect(casterInLightRect(axisAlignedBounds([5, 5, 40, 40]), rect)).toBe(true);
+    expect(inRect(axisAlignedBounds([5, 5, 40, 40]))).toBe(true);
   });
 
   it('keeps an occluder whose bounds merely touch the rect edge', () => {
-    expect(casterInLightRect(axisAlignedBounds([10, 0, 40, 0]), rect)).toBe(true);
+    expect(inRect(axisAlignedBounds([10, 0, 40, 0]))).toBe(true);
   });
 
   it('drops an occluder whose bounds lie outside the rect', () => {
-    expect(casterInLightRect(axisAlignedBounds([20, 20, 40, 40]), rect)).toBe(false);
+    expect(inRect(axisAlignedBounds([20, 20, 40, 40]))).toBe(false);
   });
 
   it("tests the turned bounds, as Godot's `intersects_transformed` does, not their world box", () => {
     // `renderer_canvas_render_rd.cpp:1056`: this diamond's world box overlaps the rect's corner
     // (10, 10), but the diamond itself stays clear of it.
-    expect(casterInLightRect(turnedSquare({ x: 18, y: 2.5 }, 12), rect)).toBe(false);
+    expect(inRect(turnedSquare({ x: 18, y: 2.5 }, 12))).toBe(false);
   });
 
   it('keeps an occluder whose turned bounds overlap the rect', () => {
-    expect(casterInLightRect(turnedSquare({ x: 12, y: 0 }, 12), rect)).toBe(true);
+    expect(inRect(turnedSquare({ x: 12, y: 0 }, 12))).toBe(true);
   });
 
   it('drops an occluder with no points, whose bounds are not finite', () => {
-    expect(casterInLightRect(axisAlignedBounds([]), rect)).toBe(false);
+    expect(inRect(axisAlignedBounds([]))).toBe(false);
   });
 });
 

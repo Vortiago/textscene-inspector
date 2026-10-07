@@ -53,7 +53,7 @@ export interface ShadowCasterEdges {
 export type Quad2 = readonly [Vector2, Vector2, Vector2, Vector2];
 
 /** The interval `points` cover along `axis`. */
-export function project(points: ArrayLike<number>, axis: Vector2): [number, number] {
+function project(points: ArrayLike<number>, axis: Vector2): [number, number] {
   let min = Infinity;
   let max = -Infinity;
   for (let i = 0; i + 1 < points.length; i += 2) {
@@ -62,6 +62,10 @@ export function project(points: ArrayLike<number>, axis: Vector2): [number, numb
     if (along > max) max = along;
   }
   return [min, max];
+}
+
+function overlaps([aMin, aMax]: [number, number], [bMin, bMax]: [number, number]): boolean {
+  return aMin <= bMax && aMax >= bMin;
 }
 
 /** A quad's two edge normals, unnormalised: enough to separate it, as its opposite edges are parallel. */
@@ -73,22 +77,25 @@ export function edgeNormals([a, b, c]: Quad2): Vector2[] {
 }
 
 /**
- * Do `bounds` meet the convex `polygon` (`[x,y, …]`), whose edge normals are `polygonAxes`? Both
+ * A test of whether bounds meet the convex `polygon` (`[x,y, …]`), whose edge normals are `polygonAxes`. Both
  * are convex, so a separating axis among the two shapes' edge normals decides it, as Godot's
- * `Rect2::intersects_transformed` does. Bounds that are not finite meet nothing.
+ * `Rect2::intersects_transformed` does. The polygon's own intervals are projected once, for every
+ * bounds the test meets. Bounds that are not finite meet nothing.
  */
-export function boundsMeetConvex(
-  bounds: Quad2,
+export function convexBoundsTest(
   polygon: ArrayLike<number>,
   polygonAxes: readonly Vector2[]
-): boolean {
-  const corners = bounds.flatMap(({ x, y }) => [x, y]);
-  if (!corners.every(Number.isFinite)) return false;
-  return [...polygonAxes, ...edgeNormals(bounds)].every((axis) => {
-    const [boundsMin, boundsMax] = project(corners, axis);
-    const [polygonMin, polygonMax] = project(polygon, axis);
-    return boundsMin <= polygonMax && boundsMax >= polygonMin;
-  });
+): (bounds: Quad2) => boolean {
+  const polygonIntervals = polygonAxes.map((axis) => project(polygon, axis));
+  return (bounds) => {
+    const [a, b, c, d] = bounds;
+    const corners = [a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y];
+    if (!corners.every(Number.isFinite)) return false;
+    return (
+      polygonAxes.every((axis, index) => overlaps(project(corners, axis), polygonIntervals[index]!)) &&
+      edgeNormals(bounds).every((axis) => overlaps(project(corners, axis), project(polygon, axis)))
+    );
+  };
 }
 
 /**
@@ -207,11 +214,11 @@ const RECT_AXES: readonly Vector2[] = [
 ];
 
 /**
- * Godot's occluder cull: keep an occluder only while its bounds overlap the light's rect
- * (`renderer_canvas_render_rd.cpp:1056`, `p_light_rect.intersects_transformed`).
+ * Godot's occluder cull for one light: the test that keeps an occluder only while its bounds overlap
+ * the light's rect (`renderer_canvas_render_rd.cpp:1056`, `p_light_rect.intersects_transformed`).
  */
-export function casterInLightRect(bounds: Quad2, { minX, minY, maxX, maxY }: LightRect): boolean {
-  return boundsMeetConvex(bounds, [minX, minY, maxX, minY, maxX, maxY, minX, maxY], RECT_AXES);
+export function lightRectTest({ minX, minY, maxX, maxY }: LightRect): (bounds: Quad2) => boolean {
+  return convexBoundsTest([minX, minY, maxX, minY, maxX, maxY, minX, maxY], RECT_AXES);
 }
 
 /**
@@ -226,10 +233,11 @@ export function buildShadowVolumes(
 ): Float32Array | null {
   const reach = lightReach(light);
   const rings: Float32Array[] = [];
+  const inLightRect = lightRectTest(light.rect);
 
   for (const caster of casters) {
     const { segments, cullMode, bounds } = caster;
-    if (!casterInLightRect(bounds, light.rect)) continue;
+    if (!inLightRect(bounds)) continue;
     for (let i = 0; i + 3 < segments.length; i += 4) {
       const ax = segments[i]!;
       const ay = segments[i + 1]!;

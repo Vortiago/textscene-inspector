@@ -24,6 +24,7 @@ import {
   type WorldShadowCaster,
 } from './shadowCasterRegistry';
 import { createCasterMotionWatch } from './shadowCasterMotion';
+import type { Quad2 } from './shadowVolumes';
 
 /**
  * Runs ahead of the light accumulation pre-pass (-1), so a frame that both
@@ -63,8 +64,8 @@ export function useLightShadowCasters(
 }
 
 /**
- * Exact equality, coordinate by coordinate. The bounds are left out: the same world segments put the
- * same local polygon in the same place, so its bounds match too.
+ * Exact equality, coordinate by coordinate. The bounds count too: a turned local polygon under a
+ * counter-turned transform keeps its world segments but moves its bounds.
  */
 export function sameWorldCasters(a: readonly WorldShadowCaster[], b: readonly WorldShadowCaster[]): boolean {
   if (a.length !== b.length) return false;
@@ -73,6 +74,7 @@ export function sameWorldCasters(a: readonly WorldShadowCaster[], b: readonly Wo
     const other = b[i]!;
     if (one.cullMode !== other.cullMode) return false;
     if (one.occluderLightMask !== other.occluderLightMask) return false;
+    if (!sameQuad(one.bounds, other.bounds)) return false;
     const left = one.segments;
     const right = other.segments;
     if (left.length !== right.length) return false;
@@ -81,6 +83,10 @@ export function sameWorldCasters(a: readonly WorldShadowCaster[], b: readonly Wo
     }
   }
   return true;
+}
+
+function sameQuad(a: Quad2, b: Quad2): boolean {
+  return a.every((corner, i) => corner.x === b[i]!.x && corner.y === b[i]!.y);
 }
 
 export function ShadowCasterStage({ children }: { children: ReactNode }) {
