@@ -41,14 +41,7 @@ describe('ResourceLoader (loader-level gaps)', () => {
       loader.register(SCENE_META);
 
       expect(loader.metadata.getAll()).toHaveLength(1);
-      expect(loader.resolvePath('1_sub')).toBe(SCENE_PATH);
-      expect(loader.resolvePath(SCENE_PATH)).toBe(SCENE_PATH);
-      expect(loader.hasResource('1_sub')).toBe(true);
       expect(loader.getMetadata('1_sub')).toBe(SCENE_META);
-    });
-
-    it('resolvePath falls through to the input for unregistered ids', () => {
-      expect(loader.resolvePath('res://unregistered.png')).toBe('res://unregistered.png');
     });
   });
 

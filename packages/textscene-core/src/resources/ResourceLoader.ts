@@ -220,17 +220,8 @@ export class ResourceLoader {
     return proc.getCached(path) as T | null | undefined;
   }
 
-  resolvePath(idOrPath: string): string {
-    const resource = this.metadata.get(idOrPath);
-    return resource?.path || idOrPath;
-  }
-
   getMetadata(idOrPath: string): ExtResource | undefined {
     return this.metadata.get(idOrPath);
-  }
-
-  hasResource(idOrPath: string): boolean {
-    return this.metadata.has(idOrPath);
   }
 
   /**
