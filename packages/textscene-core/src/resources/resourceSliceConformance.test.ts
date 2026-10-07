@@ -4,28 +4,15 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { findRegisteringIndexes } from './testing/sliceIndexes';
 import './sliceRegistrations.js';
 import { resourceSliceRegistry } from './sliceRegistration';
 
 const here = dirname(fileURLToPath(import.meta.url)); // .../src/resources
 const barrelPath = resolve(here, 'sliceRegistrations.ts');
-
-const REGISTER_RE = /\bregister(Generic)?ResourceSlice\s*\(/;
-
-function findRegisteringIndexes(dir: string): string[] {
-  const out: string[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) out.push(...findRegisteringIndexes(full));
-    else if (entry.name === 'index.ts' && REGISTER_RE.test(readFileSync(full, 'utf8'))) {
-      out.push(full);
-    }
-  }
-  return out;
-}
 
 function barrelSpecifiers(): string[] {
   const source = readFileSync(barrelPath, 'utf8');

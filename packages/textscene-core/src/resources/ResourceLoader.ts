@@ -27,6 +27,7 @@ import type { ParsedResource } from '../parser/parsedResource';
 import { PEER_LOAD_TIMEOUT_MS, type ResourceProcessor } from './createResourceProcessor';
 import { DependencyGraph, type Dependent } from './dependencyGraph';
 import * as logger from '../logger';
+import { simplifyResPath } from '../godot/index.js';
 import { WorkerJobRunner, type CreateJobWorker } from '../workers/WorkerJobRunner';
 
 export interface ResourceLoaderOptions {
@@ -146,8 +147,8 @@ export class ResourceLoader {
         const meta = this.metadata.get(idOrPath);
         if (meta) return { path: meta.path, type: meta.type };
         // A raw `res://` `instance` names no ExtResource, so nothing registers
-        // it: the address is its own path, and its type is unknown.
-        return idOrPath.startsWith('res://') ? { path: idOrPath, type: null } : null;
+        // it: the simplified address is its path, and its type is unknown.
+        return idOrPath.startsWith('res://') ? { path: simplifyResPath(idOrPath), type: null } : null;
       },
       getProvider: () => this.provider,
     });

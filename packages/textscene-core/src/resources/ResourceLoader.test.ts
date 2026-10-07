@@ -62,6 +62,16 @@ describe('ResourceLoader (loader-level gaps)', () => {
       expect(provider.loadResource).toHaveBeenCalledWith(rawPath, 'PackedScene');
     });
 
+    it('fetches a raw `res://` scene path with redundant slashes under its simplified path', async () => {
+      provider.files.set('res://scenes/raw.tscn', VALID_TSCN);
+      const loaded = loader.eventBus.once<TscnScene>('scene', 'loaded', 'res:///scenes//raw.tscn');
+
+      loader.request('scene', 'res:///scenes//raw.tscn');
+
+      await loaded;
+      expect(provider.loadResource).toHaveBeenCalledWith('res://scenes/raw.tscn', 'PackedScene');
+    });
+
     it('still refuses an id that is not a path', async () => {
       const pending = loader.eventBus.once<TscnScene>('scene', 'loaded', '9_unknown');
 

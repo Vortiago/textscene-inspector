@@ -7,24 +7,11 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { findRegisteringIndexes } from './testing/sliceIndexes';
 import { bareSpecifiers, tsxFiles, walkImportClosure } from '@textscene/dev-kit';
 
 const here = dirname(fileURLToPath(import.meta.url)); // .../src/resources
 const srcRoot = resolve(here, '..');
-
-const REGISTER_RE = /\bregister(Generic)?ResourceSlice\s*\(/;
-
-function findRegisteringIndexes(dir: string): string[] {
-  const out: string[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) out.push(...findRegisteringIndexes(full));
-    else if (entry.name === 'index.ts' && REGISTER_RE.test(readFileSync(full, 'utf8'))) {
-      out.push(full);
-    }
-  }
-  return out;
-}
 
 function allSourceFiles(dir: string): string[] {
   const out: string[] = [];
