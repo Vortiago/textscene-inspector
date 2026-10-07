@@ -5,10 +5,8 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { FileEventBus } from '../FileEventBus';
-import { ResourceEventBus } from '../ResourceEventBus';
 import type { ResourceProvider } from '../ResourceProvider';
-import { createFontProcessor } from './createFontProcessor';
-import { DependencyGraph } from '../dependencyGraph';
+import { ResourceLoader } from '../ResourceLoader';
 import type { FontResource, FontFileResource, FontVariationResource } from '../fonts/font/types';
 
 /** Shaped like scenes/demos/2d/role_playing_game/theme/fonts/montserrat_extra_bold_16.tres. */
@@ -49,11 +47,15 @@ class MapProvider implements ResourceProvider {
   });
 }
 
+/** The font processor of a real loader over `provider`, so a `.tres` reads the `resource` slot's parse. */
+function fontProcessorOver(provider: ResourceProvider) {
+  const loader = new ResourceLoader(new FileEventBus(provider));
+  return { eventBus: loader.eventBus, processor: loader.fonts };
+}
+
 function setup(files: Record<string, string | ArrayBuffer>) {
   const provider = new MapProvider(new Map(Object.entries(files)));
-  const eventBus = new ResourceEventBus();
-  const processor = createFontProcessor(new FileEventBus(provider), eventBus, new DependencyGraph());
-  return { provider, eventBus, processor };
+  return { provider, ...fontProcessorOver(provider) };
 }
 
 describe('createFontProcessor', () => {
@@ -70,6 +72,42 @@ describe('createFontProcessor', () => {
     expect(resource.mimeType).toBe('font/ttf');
     expect(resource.fallbacks).toEqual([]);
     expect(processor.getCached('res://fonts/Xolonium-Regular.ttf')).toBe(resource);
+  });
+
+  it("fails a raw font with the provider's reason, not a bare not-found", async () => {
+    const provider: ResourceProvider = {
+      loadResource: vi.fn(async () => {
+        throw new Error('Resource load timeout: res://fonts/slow.ttf');
+      }),
+    };
+    const { eventBus, processor } = fontProcessorOver(provider);
+
+    const failed = eventBus.once<Error>('font', 'failed', 'res://fonts/slow.ttf', 2000);
+    processor.request('res://fonts/slow.ttf');
+
+    expect((await failed).message).toBe('Resource load timeout: res://fonts/slow.ttf');
+  });
+
+  it("leaves the byte bus's flight for the same file to finish", async () => {
+    const bytes = new ArrayBuffer(8);
+    let finishBusFetch = (): void => {};
+    const busFetch = new Promise<ArrayBuffer>((resolve) => (finishBusFetch = () => resolve(bytes)));
+    const loadResource = vi.fn<ResourceProvider['loadResource']>().mockReturnValueOnce(busFetch);
+    loadResource.mockResolvedValue(bytes);
+    const fileBus = new FileEventBus({ loadResource });
+    const loader = new ResourceLoader(fileBus);
+    const arrived = vi.fn();
+    fileBus.on('loaded', arrived);
+
+    fileBus.request('res://fonts/x.ttf');
+    const loaded = loader.eventBus.once<FontResource>('font', 'loaded', 'res://fonts/x.ttf', 2000);
+    loader.fonts.request('res://fonts/x.ttf');
+    await loaded;
+    finishBusFetch();
+    await busFetch;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(arrived).toHaveBeenCalledWith('res://fonts/x.ttf', bytes);
   });
 
   it('resolves a FontFile .tres wrapper by loading its fallback across files', async () => {
@@ -169,11 +207,10 @@ describe('createFontProcessor', () => {
     expect(processor.getCached('res://materials/green.tres')).toBeNull();
   });
 
-  it('fails loudly (never hangs pending) for a sub-resource address into a .tscn — the owning file is not a .tres', async () => {
+  it('fails loudly (never hangs pending) for a sub-resource address into a .tscn, whose owning file is not a .tres', async () => {
     // A scene's own inline FontVariation/FontFile resolves in useSceneResources,
-    // but a caller can still build this address, and `shouldProcess` sees only
-    // the bare file path. Unless `buildFontResource` throws on a non-`.tres`
-    // file, the address sits `inflight` and a `useResource` consumer `pending`.
+    // but a caller can still build this address. The `resource` slot's parse
+    // refuses the `[gd_scene]` header, so the address fails rather than waits.
     const tscn = '[gd_scene load_steps=1 format=3]\n\n[node name="Root" type="Node"]\n';
     const { processor, eventBus } = setup({ 'res://scene.tscn': tscn });
 
@@ -211,10 +248,9 @@ describe('createFontProcessor', () => {
   });
 
   it('fails loudly (never silently ignores) a non-font, non-.tres text file requested through it', async () => {
-    // shouldProcess accepts every loaded file, so a `.gd` script gets the same
-    // treatment as a sub-resource address into a `.tscn`: `buildFontResource`
-    // decides by parsing and throwing, never by declining and leaving the
-    // address `inflight` forever.
+    // Every path that is not a font container goes to the `resource` slot's
+    // parse, which throws on a `.gd` script as on a `.tscn`, never declining and
+    // leaving the address `inflight`.
     const { processor, eventBus } = setup({ 'res://scripts/thing.gd': 'extends Node\n' });
 
     const failed = eventBus.once<Error>('font', 'failed', 'res://scripts/thing.gd', 2000);
@@ -302,7 +338,6 @@ describe('createFontProcessor', () => {
       'base_font = ExtResource("1")',
       '',
     ].join('\n');
-    const eventBus = new ResourceEventBus();
     const provider: ResourceProvider = {
       loadResource: vi.fn(async (path: string) => {
         if (path === 'res://slow.otf') return slow;
@@ -311,7 +346,7 @@ describe('createFontProcessor', () => {
         return null;
       }),
     };
-    const processor = createFontProcessor(new FileEventBus(provider), eventBus, new DependencyGraph());
+    const { eventBus, processor } = fontProcessorOver(provider);
     const flush = async (): Promise<void> => {
       for (let i = 0; i < 4; i++) await new Promise((resolve) => setTimeout(resolve, 0));
     };
@@ -362,7 +397,6 @@ describe('createFontProcessor', () => {
       'base_font = ExtResource("1")',
       '',
     ].join('\n');
-    const eventBus = new ResourceEventBus();
     const provider: ResourceProvider = {
       loadResource: vi.fn(async (path: string) => {
         if (path === 'res://slow.otf') return slow;
@@ -371,7 +405,7 @@ describe('createFontProcessor', () => {
         return null;
       }),
     };
-    const processor = createFontProcessor(new FileEventBus(provider), eventBus, new DependencyGraph());
+    const { eventBus, processor } = fontProcessorOver(provider);
     const flush = async (): Promise<void> => {
       for (let i = 0; i < 6; i++) await new Promise((resolve) => setTimeout(resolve, 0));
     };

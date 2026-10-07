@@ -16,14 +16,12 @@ const ZERO_RECT: AtlasRect = { x: 0, y: 0, width: 0, height: 0 };
  * own member initialisers install (`atlas_texture.h:42-45`): a zero `region`, a
  * zero `margin`, `filter_clip = false`.
  */
-export function decodeAtlasTexture(properties: Record<string, unknown>): AtlasTextureData {
+export function decodeAtlasTexture(properties: Record<string, string>): AtlasTextureData {
   return {
-    atlas: typeof properties.atlas === 'string' ? properties.atlas : null,
+    atlas: properties.atlas ?? null,
     region: rect(properties.region, 'AtlasTexture region'),
     margin: rect(properties.margin, 'AtlasTexture margin'),
-    filterClip:
-      boolSlotValue(typeof properties.filter_clip === 'string' ? properties.filter_clip : undefined) ===
-        true || properties.filter_clip === true,
+    filterClip: boolSlotValue(properties.filter_clip) === true,
   };
 }
 
@@ -67,7 +65,7 @@ export function atlasTextureLayout(
   };
 }
 
-function rect(value: unknown, context: string): AtlasRect {
-  if (typeof value !== 'string') return ZERO_RECT;
+function rect(value: string | undefined, context: string): AtlasRect {
+  if (value === undefined) return ZERO_RECT;
   return parseOptionalRect2(value, context) ?? ZERO_RECT;
 }

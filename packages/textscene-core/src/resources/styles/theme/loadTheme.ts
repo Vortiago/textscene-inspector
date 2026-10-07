@@ -1,20 +1,18 @@
 /**
- * The Theme slice's whole-file loader, between a fetched `.tres` and `decode.ts`,
- * called by `processors/createThemeProcessor.ts`. It owns `parseTresFile` and
- * sub-resource addressing, like `loadFont.ts`.
+ * The Theme slice's loader, between a parsed `.tres` and `decode.ts`, called by
+ * `processors/createThemeProcessor.ts`. It resolves the decoded font addresses.
  */
 
-import { parseTresFile, type ParsedResource } from '../../../parser/parsedResource';
 import type { FontLoaderFn, FontResource } from '../../fonts/font/types';
-import { findSubResource } from '../../SubResourceResolver';
-import { parseSubResourcePath } from '../../subResourcePath';
+import type { LoadedSection } from '../../resourceSection';
+import { resourceFilePath } from '../../subResourcePath';
 import { decodeThemeAddresses } from './decode';
 import type { ThemeAddresses, ThemeResource } from './types';
 
 /**
  * Resolves `ThemeAddresses` into a `ThemeResource` by awaiting `loadFont` for each
- * address, inside an async `process()` step. Font refs resolve through another
- * processor, so the loader is injected.
+ * address, inside the Theme processor's async `loadDirectly`. Font refs resolve
+ * through another processor, so the loader is injected.
  */
 export async function resolveThemeResource(
   addresses: ThemeAddresses,
@@ -54,54 +52,17 @@ export async function resolveThemeResource(
   };
 }
 
-/**
- * A `ThemeResource` from a `.tres`'s `[resource]` body, or from a named
- * `[sub_resource]` when `subResourceId` is set. `content` must carry a
- * `[gd_resource]` header (`parseTresFile`'s requirement).
- */
-export async function createThemeResourceFromContent(
-  filePath: string,
-  content: string,
-  loadFont: FontLoaderFn,
-  subResourceId?: string
-): Promise<ThemeResource> {
-  const parsed: ParsedResource = parseTresFile(content);
-
-  let properties: Record<string, string>;
-
-  if (subResourceId !== undefined) {
-    const sub = findSubResource(parsed.subResources, subResourceId);
-    if (!sub) {
-      throw new Error(`Sub-resource "${subResourceId}" is not declared in ${filePath}`);
-    }
-    if (sub.type !== 'Theme') {
-      throw new Error(`Not a Theme resource: ${sub.type} (${filePath})`);
-    }
-    // `parseInternalResource` echoes the heading's `id` into `data`. Strip it, or
-    // it leaks into `properties` as a fake declared property.
-    const { id: _id, ...rest } = sub.data as Record<string, string>;
-    properties = rest;
-  } else {
-    if (parsed.resourceType !== 'Theme') {
-      throw new Error(`Not a Theme resource: ${parsed.resourceType} (${filePath})`);
-    }
-    properties = parsed.properties;
-  }
-
-  const addresses = decodeThemeAddresses(filePath, properties, parsed.extResources, parsed.subResources);
-  return resolveThemeResource(addresses, loadFont);
-}
-
-/**
- * A Theme is always `.tres` text, so there is no ArrayBuffer branch:
- * `shouldProcess` gates on that upstream. `path` is the full requested address,
- * which may carry a `::SubId`.
- */
+/** The `ThemeResource` that `section`, loaded from `path`, decodes to. */
 export async function buildThemeResource(
   path: string,
-  content: string,
+  { file, properties }: LoadedSection,
   loadFont: FontLoaderFn
 ): Promise<ThemeResource> {
-  const { filePath, subResourceId } = parseSubResourcePath(path);
-  return createThemeResourceFromContent(filePath, content, loadFont, subResourceId);
+  const addresses = decodeThemeAddresses(
+    resourceFilePath(path),
+    properties,
+    file.extResources,
+    file.subResources
+  );
+  return resolveThemeResource(addresses, loadFont);
 }

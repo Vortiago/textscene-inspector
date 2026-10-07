@@ -40,7 +40,7 @@ export function resolveProceduralSubResource<T extends THREE.Texture>(
   // type, so whatever it holds under this key came out of this same rasterize.
   const texture = proceduralTexture(internalResources, resource.id, () =>
     unlessAllocationFails(allocationLabel(typeName, resource.id), () =>
-      rasterize(resource.data as Record<string, string>, internalResources)
+      rasterize(resource.data, internalResources)
     )
   ) as T | null;
   if (!texture) return null;

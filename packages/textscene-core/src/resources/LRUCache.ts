@@ -35,6 +35,11 @@ export class LRUCache<V> {
     return value;
   }
 
+  /** The value for `key` without touching its recency. */
+  peek(key: string): V | undefined {
+    return this.map.get(key);
+  }
+
   set(key: string, value: V): void {
     const existing = this.map.get(key);
     if (!this.map.has(key) && this.isPinned(key)) this.pinnedInMap++;
@@ -104,7 +109,7 @@ export class LRUCache<V> {
     }
   }
 
-  private isPinned(key: string): boolean {
+  isPinned(key: string): boolean {
     return (this.pins.get(key) ?? 0) > 0;
   }
 

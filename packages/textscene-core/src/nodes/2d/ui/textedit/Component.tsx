@@ -169,7 +169,7 @@ export function TextEditBody({
   const highlighter = useMemo(
     () =>
       highlighterResource?.type === 'CodeHighlighter'
-        ? decodeCodeHighlighter(highlighterResource.data as Record<string, string>)
+        ? decodeCodeHighlighter(highlighterResource.data)
         : null,
     [highlighterResource]
   );

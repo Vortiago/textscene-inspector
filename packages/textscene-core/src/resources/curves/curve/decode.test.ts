@@ -243,8 +243,8 @@ describe('`point_count` resizes the decoded point list', () => {
 
 const CURVE_RESOURCE: TscnInternalResource = {
   type: 'Curve',
-  id: '1',
-  data: { id: '4', ...CANDLE_SPARKLE },
+  id: '4',
+  data: { ...CANDLE_SPARKLE },
 };
 
 describe('resolveCurve', () => {
@@ -254,7 +254,7 @@ describe('resolveCurve', () => {
   });
 
   it('returns null when the reference names a different resource type (error path)', () => {
-    const gradient: TscnInternalResource = { type: 'Gradient', id: '2', data: { id: '4' } };
+    const gradient: TscnInternalResource = { type: 'Gradient', id: '4', data: {} };
     expect(resolveCurve('SubResource("4")', [gradient])).toBeNull();
   });
 

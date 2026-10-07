@@ -41,9 +41,9 @@ export const SPRITE_FRAME_MINIMUM_DURATION = 0.01;
  * A `SpriteFrames` section's animations, or null when it declares none: to every
  * consumer, no animations and not a SpriteFrames both mean nothing to display.
  */
-export function decodeSpriteFrames(properties: Record<string, unknown>): SpriteFramesData | null {
+export function decodeSpriteFrames(properties: Record<string, string>): SpriteFramesData | null {
   const value = properties.animations;
-  if (typeof value !== 'string') return null;
+  if (value === undefined) return null;
   const animations = parseSpriteFramesAnimations(value);
   return animations.size > 0 ? { animations } : null;
 }

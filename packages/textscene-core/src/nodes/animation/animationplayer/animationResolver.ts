@@ -70,7 +70,7 @@ export function resolveAnimations(
     const libResource = findSubResource(internalResources, lib.subResourceId);
     if (!libResource || libResource.type !== 'AnimationLibrary') continue;
 
-    const dataStr = asString(libResource.data['_data']);
+    const dataStr = libResource.data['_data'];
     if (!dataStr) continue;
 
     for (const [name, animId] of parseLibraryData(dataStr)) {
@@ -97,7 +97,7 @@ export function resolveAudioTrackPaths(
     const libResource = findSubResource(internalResources, lib.subResourceId);
     if (!libResource || libResource.type !== 'AnimationLibrary') continue;
 
-    const dataStr = asString(libResource.data['_data']);
+    const dataStr = libResource.data['_data'];
     if (!dataStr) continue;
 
     for (const [, animId] of parseLibraryData(dataStr)) {
@@ -114,18 +114,18 @@ export function resolveAudioTrackPaths(
  * `tracks/N/enabled` sets it (animation.cpp:156-157), and `_update_caches` skips a disabled track
  * of every type (animation_mixer.cpp:689).
  */
-function trackEnabled(data: Record<string, unknown>, i: number): boolean {
-  return boolSlotValue(asString(data[`tracks/${i}/enabled`])) !== false;
+function trackEnabled(data: Readonly<Record<string, string>>, i: number): boolean {
+  return boolSlotValue(data[`tracks/${i}/enabled`]) !== false;
 }
 
 /** Every enabled audio track's raw NodePath inner string within one Animation resource's data. */
-function audioTrackPaths(data: Record<string, unknown>): string[] {
+function audioTrackPaths(data: Readonly<Record<string, string>>): string[] {
   const paths: string[] = [];
   for (let i = 0; data[`tracks/${i}/type`] !== undefined; i++) {
     if (!trackEnabled(data, i)) continue;
-    const type = literalText(asString(data[`tracks/${i}/type`]) ?? '');
+    const type = literalText(data[`tracks/${i}/type`] ?? '');
     if (type !== 'audio') continue;
-    const inner = extractNodePathInner(asString(data[`tracks/${i}/path`]) ?? '');
+    const inner = extractNodePathInner(data[`tracks/${i}/path`] ?? '');
     if (inner !== null) paths.push(inner);
   }
   return paths;
@@ -143,7 +143,7 @@ export function hasUnresolvableClips(
   return libraries.some((lib) => {
     const libResource = findSubResource(internalResources, lib.subResourceId);
     if (!libResource || libResource.type !== 'AnimationLibrary') return false;
-    const dataStr = asString(libResource.data['_data']);
+    const dataStr = libResource.data['_data'];
     return dataStr !== undefined && EXT_RESOURCE_CALL_ANYWHERE_RE.test(dataStr);
   });
 }
@@ -182,13 +182,13 @@ const TRANSFORM_3D_TRACKS: Record<string, { property: string; components: number
   rotation_3d: { property: 'quaternion', components: 4 },
 };
 
-function parseTracks(data: Record<string, unknown>): GodotTrack[] {
+function parseTracks(data: Readonly<Record<string, string>>): GodotTrack[] {
   const tracks: GodotTrack[] = [];
   for (let i = 0; data[`tracks/${i}/type`] !== undefined; i++) {
     if (!trackEnabled(data, i)) continue;
-    const type = literalText(asString(data[`tracks/${i}/type`]) ?? '');
-    const rawPath = asString(data[`tracks/${i}/path`]) ?? '';
-    const rawKeys = asString(data[`tracks/${i}/keys`]) ?? '';
+    const type = literalText(data[`tracks/${i}/type`] ?? '');
+    const rawPath = data[`tracks/${i}/path`] ?? '';
+    const rawKeys = data[`tracks/${i}/keys`] ?? '';
     // class_animation.html / animation.h: interp defaults to 1 (LINEAR),
     // update_mode to 0 (CONTINUOUS).
     const interp = numberOr(data[`tracks/${i}/interp`], 1);
@@ -330,12 +330,8 @@ function parseFloatList(raw: string): number[] | null {
   return values;
 }
 
-function asString(value: unknown): string | undefined {
-  return typeof value === 'string' ? value : undefined;
-}
-
-function numberOr(value: unknown, fallback: number): number {
-  if (typeof value !== 'string') return fallback;
+function numberOr(value: string | undefined, fallback: number): number {
+  if (value === undefined) return fallback;
   const parsed = parseGodotFloat(value);
   // `??` catches only null. `inf` and `nan` are legal TSCN floats that `parseGodotFloat` returns as
   // Infinity/NaN, and as a clip duration or blend weight they give an infinite clip or a weight that

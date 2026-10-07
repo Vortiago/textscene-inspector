@@ -22,7 +22,7 @@ import type { AlternativeTileModel, AtlasSourceModel, AtlasTileModel, TileSetMod
 /** Context-independent view of a TileSet resource and its surroundings. */
 export interface TileSetSourceData {
   /** The TileSet resource's own properties (raw value strings). */
-  properties: Record<string, unknown>;
+  properties: Record<string, string>;
   findSubResource(id: string): TscnInternalResource | undefined;
   /** `ExtResource("id")` or a raw res:// path to a res:// path, or null. */
   resolveTexturePath(ref: string): string | null;
@@ -59,10 +59,10 @@ export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
       continue;
     }
 
-    const ref = typeof value === 'string' ? parseResourceReference(value) : null;
+    const ref = parseResourceReference(value);
     const sub = ref?.type === 'SubResource' ? data.findSubResource(ref.id) : undefined;
     if (!sub) {
-      warn(`[TileSet] source ${key}: unresolvable reference "${String(value)}" — skipped`);
+      warn(`[TileSet] source ${key}: unresolvable reference "${value}" — skipped`);
       continue;
     }
     if (sub.type !== 'TileSetAtlasSource') {
@@ -88,11 +88,11 @@ export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
   };
 }
 
-function intEnumOr(value: unknown, fallback: number, label: string): number {
-  if (value === undefined || value === null) return fallback;
-  const n = typeof value === 'string' ? ruleInt(value) : null;
+function intEnumOr(value: string | undefined, fallback: number, label: string): number {
+  if (value === undefined) return fallback;
+  const n = ruleInt(value);
   if (n === null) {
-    warn(`[TileSet] invalid ${label} "${String(value)}" — using default`);
+    warn(`[TileSet] invalid ${label} "${value}" — using default`);
     return fallback;
   }
   return n;
@@ -129,8 +129,8 @@ export function tileSetFromScene(
   });
 }
 
-function resolveAtlasSource(props: Record<string, unknown>, data: TileSetSourceData): AtlasSourceModel {
-  const textureRef = typeof props.texture === 'string' ? props.texture : null;
+function resolveAtlasSource(props: Record<string, string>, data: TileSetSourceData): AtlasSourceModel {
+  const textureRef = props.texture ?? null;
   return {
     texturePath: textureRef ? data.resolveTexturePath(textureRef) : null,
     margins: tileSetVec2i(props.margins, { x: 0, y: 0 }, 'margins'),
@@ -155,7 +155,7 @@ const TILE_KEY_RE = indexedKeyRegex('^(#):(#)/(.+)$', 'is_valid_int');
  */
 const ALT_KEY_RE = indexedKeyRegex('^(#)(?:/(.+))?$', 'is_valid_int');
 
-function resolveTiles(props: Record<string, unknown>): Map<string, AtlasTileModel> {
+function resolveTiles(props: Record<string, string>): Map<string, AtlasTileModel> {
   const tiles = new Map<string, AtlasTileModel>();
 
   const tileAt = (x: string, y: string): AtlasTileModel => {
@@ -198,21 +198,15 @@ function resolveTiles(props: Record<string, unknown>): Map<string, AtlasTileMode
     if (altId < 0) continue;
     const prop = alt[2];
     const alternative = alternativeAt(tileAt(m[1]!, m[2]!), altId);
-    if (prop === 'flip_h') alternative.flipH = typeof value === 'string' && boolSlotValue(value) === true;
-    else if (prop === 'flip_v')
-      alternative.flipV = typeof value === 'string' && boolSlotValue(value) === true;
-    else if (prop === 'transpose')
-      alternative.transpose = typeof value === 'string' && boolSlotValue(value) === true;
+    if (prop === 'flip_h') alternative.flipH = boolSlotValue(value) === true;
+    else if (prop === 'flip_v') alternative.flipV = boolSlotValue(value) === true;
+    else if (prop === 'transpose') alternative.transpose = boolSlotValue(value) === true;
     else if (prop === 'texture_origin') alternative.textureOrigin = tileSetVec2i(value, { x: 0, y: 0 }, key);
   }
 
   return tiles;
 }
 
-/**
- * The shared `vec2iOr` over this decode's `unknown`-typed bag. Both parsers store every
- * property as its text, so a value that is not a string reads as absent.
- */
-function tileSetVec2i(value: unknown, fallback: Vec2i, key: string): Vec2i {
-  return vec2iOr(typeof value === 'string' ? value : undefined, fallback, `[TileSet] ${key}`);
+function tileSetVec2i(value: string | undefined, fallback: Vec2i, key: string): Vec2i {
+  return vec2iOr(value, fallback, `[TileSet] ${key}`);
 }

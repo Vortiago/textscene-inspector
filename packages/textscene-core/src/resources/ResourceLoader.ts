@@ -6,9 +6,9 @@
 
 import * as THREE from 'three';
 import type { ExtResource, TscnScene } from '../parser/types';
-import type { FileEventBus } from './FileEventBus';
+import type { FileData, FileEventBus } from './FileEventBus';
 import type { ResourceProvider } from './ResourceProvider';
-import { ResourceEventBus, type ResourceType } from './ResourceEventBus';
+import { ResourceEventBus, type ResourceChange, type ResourceType } from './ResourceEventBus';
 import { MetadataStore } from './MetadataStore';
 import { createTextureProcessor } from './processors/createTextureProcessor';
 import { createGLBProcessor } from './processors/createGLBProcessor';
@@ -26,6 +26,8 @@ import './sliceRegistrations.js';
 import type { ParsedResource } from '../parser/parsedResource';
 import { PEER_LOAD_TIMEOUT_MS, type ResourceProcessor } from './createResourceProcessor';
 import { DependencyGraph, type Dependent } from './dependencyGraph';
+import { sectionLoader, type SectionLoaderFn } from './resourceSection';
+import { resourceFilePath } from './subResourcePath';
 import * as logger from '../logger';
 import { WorkerJobRunner, type CreateJobWorker } from '../workers/WorkerJobRunner';
 
@@ -40,13 +42,22 @@ export class ResourceLoader {
   readonly metadata: MetadataStore;
   /** Which cached resources read which files, so a **Dependency hot-reload** reaches them. */
   private readonly dependencies = new DependencyGraph();
+  /**
+   * File path → the `busType:address` builds still reading its parse. Written only by
+   * `holdParse` and `settleHold`. Cleared by `clear`, which drops the settle listener.
+   */
+  private readonly parseHolds = new Map<string, Set<string>>();
+  /** The bus types whose builds read a section. Written only by `sectionLoaderFor`. */
+  private readonly sectionBusTypes: ResourceType[] = [];
+  /** The one settle listener for every hold, subscribed by the first hold after a `clear`. */
+  private unsubscribeHolds: (() => void) | null = null;
   /** Runs procedural texture builds, in the host's worker where it has one. */
   readonly jobRunner: WorkerJobRunner;
   readonly eventBus: ResourceEventBus;
   readonly textures: ResourceProcessor<THREE.Texture>;
   readonly glbMeshes: ResourceProcessor<THREE.Object3D>;
   readonly scenes: ResourceProcessor<TscnScene>;
-  /** Generic .tres files (TileSet) parsed as ParsedResource. */
+  /** Each `.tres` parsed once: the parse every slice that decodes Godot text reads. */
   readonly resources: ResourceProcessor<ParsedResource>;
   /** ArrayMesh .tres decoded into geometry + per-surface material paths. */
   readonly arrayMeshes: ResourceProcessor<ArrayMeshResource>;
@@ -99,26 +110,86 @@ export class ResourceLoader {
 
   /**
    * Await a peer processor's resource for `dependent`: answer from cache, else request
-   * it and wait on that processor's bus slot. Bounded, far above any real fetch: a
-   * processor whose `shouldProcess` refuses the bytes settles nothing, and an unbounded
-   * await would leave a GLB that never appears nor reports missing.
+   * it and wait on that processor's bus slot. Rejects with the peer's failure. Bounded,
+   * far above any real fetch: a processor whose `shouldProcess` refuses the bytes settles
+   * nothing, and an unbounded await would leave a GLB that never appears nor reports missing.
    */
+  private async peerRequire<T>(
+    dependent: Dependent,
+    processor: ResourceProcessor<T>,
+    busType: ResourceType,
+    path: string
+  ): Promise<T> {
+    // First, so a change to `path` reloads `dependent` whether this read hits, fails or waits.
+    this.dependencies.record(dependent, path);
+    const cached = processor.getCached(path);
+    if (cached === null) throw processor.failure(path);
+    if (cached !== undefined) return cached;
+    processor.request(path);
+    return this.eventBus.once<T>(busType, 'loaded', path, PEER_LOAD_TIMEOUT_MS);
+  }
+
+  /** {@link peerRequire}, with null for a peer that failed or never answered. */
   private async peerLoad<T>(
     dependent: Dependent,
     processor: ResourceProcessor<T>,
     busType: ResourceType,
     path: string
   ): Promise<T | null> {
-    // First, so a change to `path` reloads `dependent` whether this read hits, fails or waits.
-    this.dependencies.record(dependent, path);
-    const cached = processor.getCached(path);
-    if (cached !== undefined) return cached;
-    processor.request(path);
     try {
-      return await this.eventBus.once<T>(busType, 'loaded', path, PEER_LOAD_TIMEOUT_MS);
+      return await this.peerRequire(dependent, processor, busType, path);
     } catch {
       return null;
     }
+  }
+
+  /**
+   * A file's bytes for a processor that routes by path before it fetches, read from the
+   * byte layer's provider. Not `tryLoad`: it answers every failure as absence and drops
+   * the provider's reason, and clearing its cached copy would drop a peer's flight too.
+   */
+  private async readFile(path: string, type: string): Promise<FileData> {
+    const fileBus = this._fileEventBus;
+    if (!fileBus) throw new Error(`No file bus to read ${path}`);
+    const data = await fileBus.getProvider().loadResource(path, type);
+    if (data === null) throw new Error(`File not found: ${path}`);
+    return data;
+  }
+
+  /** The section behind each address `busType` loads, from the `resource` slot's cached parse. */
+  private sectionLoaderFor(busType: ResourceType): SectionLoaderFn {
+    this.sectionBusTypes.push(busType);
+    return sectionLoader((path) => {
+      this.holdParse(busType, path);
+      return this.peerRequire({ busType, key: path }, this.resources, 'resource', resourceFilePath(path));
+    });
+  }
+
+  /**
+   * Hold the parse of `address`'s file until `address` settles, then release it with the
+   * last holder. A built resource then keeps no copy of its file's text beside it, and
+   * overlapping builds, such as a MeshLibrary's meshes or a Theme's fonts, share one parse.
+   */
+  private holdParse(busType: ResourceType, address: string): void {
+    const filePath = resourceFilePath(address);
+    const holders = this.parseHolds.get(filePath) ?? new Set<string>();
+    this.parseHolds.set(filePath, holders.add(`${busType}:${address}`));
+    // One listener, not one per build: each emit would otherwise call every pending build's.
+    // Synchronous, not `once`: a reader woken by the settle event already sees the parse gone.
+    this.unsubscribeHolds ??= this.eventBus.onChange(this.sectionBusTypes, (change) =>
+      this.settleHold(change)
+    );
+  }
+
+  private settleHold({ busType, key }: ResourceChange): void {
+    const filePath = resourceFilePath(key);
+    const holders = this.parseHolds.get(filePath);
+    // Still loading after the event: a consumer re-requested on `invalidated`, so the build goes on.
+    if (!holders || this.processors.get(busType)?.isLoading(key)) return;
+    holders.delete(`${busType}:${key}`);
+    if (holders.size > 0) return;
+    this.parseHolds.delete(filePath);
+    this.resources.release(filePath);
   }
 
   constructor(fileEventBus?: FileEventBus, options: ResourceLoaderOptions = {}) {
@@ -154,14 +225,19 @@ export class ResourceLoader {
     });
 
     this.resources = createTresResourceProcessor(fileEventBus, this.eventBus);
-    this.arrayMeshes = createArrayMeshProcessor(fileEventBus, this.eventBus);
-    this.fonts = createFontProcessor(fileEventBus, this.eventBus, this.dependencies);
+    this.arrayMeshes = createArrayMeshProcessor(this.eventBus, this.sectionLoaderFor('arraymesh'));
+    this.fonts = createFontProcessor(
+      this.eventBus,
+      this.sectionLoaderFor('font'),
+      (path) => this.readFile(path, 'FontFile'),
+      this.dependencies
+    );
 
     // A Theme's font refs resolve through the FONT processor (a different peer, unlike a
     // Font's own self-recursion).
     this.themes = createThemeProcessor(
-      fileEventBus,
       this.eventBus,
+      this.sectionLoaderFor('theme'),
       (themeKey) => (address) =>
         this.peerLoad({ busType: 'theme', key: themeKey }, this.fonts, 'font', address)
     );
@@ -224,6 +300,8 @@ export class ResourceLoader {
   clear(): void {
     this.metadata.clear();
     this.dependencies.clear();
+    this.parseHolds.clear();
+    this.unsubscribeHolds = null;
     for (const proc of this.processors.values()) {
       proc.clearCache();
     }

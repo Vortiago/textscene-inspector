@@ -15,6 +15,9 @@ import { resolveRefToResourcePath, subResourceTypeGate } from '../../subResource
 import type { ScannedTheme, ThemeAddresses, ThemeResource } from './types';
 import { indexedKeyRegex } from '../../../godot/index.js';
 
+/** The type names this slice claims: Godot's Theme class alone. */
+export const THEME_TYPES: ReadonlySet<string> = new Set(['Theme']);
+
 // `Theme::_set` reads three slices with `get_slicec('/', n)` (`theme.cpp:40-42`) and nothing below
 // them, so a tail after the item name is ignored. Its segments use the shared segment grammar
 // (`indexedKeyGrammar.guard.test.ts`): `to_int` names the segment class, and nothing here reads a
@@ -166,7 +169,7 @@ export function decodeThemeAddresses(
 /**
  * A scene's inline `[sub_resource type="Theme"]` to a `ThemeResource`,
  * synchronously, since the solve walk cannot `await`. A font ref names a sibling
- * sub-resource, read directly: the font processor's `parseTresFile` throws on a
+ * sub-resource, read directly: the `resource` slot's `parseTresFile` throws on a
  * `[gd_scene]` header.
  */
 export function resolveInlineThemeResource(

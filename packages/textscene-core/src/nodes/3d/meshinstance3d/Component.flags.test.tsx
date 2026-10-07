@@ -10,6 +10,7 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
+import { subResource } from '../../../testing/subResource';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode {
@@ -20,14 +21,6 @@ function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode 
     ...properties,
   };
   return { name: props.name, type: 'MeshInstance3D', children: [], properties: props };
-}
-
-function sub(type: string, id: string, data: Record<string, string | undefined> = {}): TscnInternalResource {
-  return {
-    id,
-    type,
-    data: Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined)),
-  };
 }
 
 async function render(node: TscnNode, internalResources: TscnInternalResource[] = []) {
@@ -41,7 +34,7 @@ async function render(node: TscnNode, internalResources: TscnInternalResource[] 
 describe('MeshInstance3D flags (assertions 11–17)', () => {
   it('#11 mesh resolves → BufferGeometry present on rendered mesh', async () => {
     const node = makeNode({ mesh: 'SubResource("Box_1")' });
-    const renderer = await render(node, [sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);
+    const renderer = await render(node, [subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);
     const mesh = findMesh(renderer.scene);
     expect(mesh.geometry).toBeDefined();
     expect(mesh.geometry.type).toBe('BoxGeometry');
@@ -53,9 +46,9 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
       materialOverride: 'SubResource("Override")',
     });
     const renderer = await render(node, [
-      sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)', material: 'SubResource("MeshOwn")' }),
-      sub('StandardMaterial3D', 'MeshOwn', { albedo_color: 'Color(0, 0, 1, 1)' }),
-      sub('StandardMaterial3D', 'Override', { albedo_color: 'Color(1, 0, 0, 1)' }),
+      subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)', material: 'SubResource("MeshOwn")' }),
+      subResource('StandardMaterial3D', 'MeshOwn', { albedo_color: 'Color(0, 0, 1, 1)' }),
+      subResource('StandardMaterial3D', 'Override', { albedo_color: 'Color(1, 0, 0, 1)' }),
     ]);
     const mat = findMesh(renderer.scene).material as unknown as { color: { r: number } };
     expect(mat.color.r).toBe(1); // override (red), not mesh-own (blue)
@@ -69,9 +62,9 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
       surfaceMaterialOverrides: surfaceMap,
     });
     const renderer = await render(node, [
-      sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
-      sub('StandardMaterial3D', 'Override', { albedo_color: 'Color(1, 0, 0, 1)' }),
-      sub('StandardMaterial3D', 'Surf0', { albedo_color: 'Color(0, 1, 0, 1)' }),
+      subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
+      subResource('StandardMaterial3D', 'Override', { albedo_color: 'Color(1, 0, 0, 1)' }),
+      subResource('StandardMaterial3D', 'Surf0', { albedo_color: 'Color(0, 1, 0, 1)' }),
     ]);
     const mat = findMesh(renderer.scene).material as unknown as {
       color: { r: number; g: number };
@@ -91,8 +84,8 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
       surfaceMaterialOverrides: surfaceMap,
     });
     const renderer = await render(node, [
-      sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
-      sub('StandardMaterial3D', 'Surf1', { albedo_color: 'Color(1, 1, 0, 1)' }),
+      subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
+      subResource('StandardMaterial3D', 'Surf1', { albedo_color: 'Color(1, 1, 0, 1)' }),
     ]);
     const mesh = findMesh(renderer.scene) as unknown as {
       material: { color: { r: number; g: number; b: number } };
@@ -106,14 +99,14 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
     const node = makeNode({ name: 'invisible', mesh: 'SubResource("Box_1")' });
     // Node3DProperties has no `visible` field, so it is set on the properties record.
     (node.properties as unknown as { visible: boolean }).visible = false;
-    const renderer = await render(node, [sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);
+    const renderer = await render(node, [subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);
     const mesh = renderer.scene.findByType('Mesh');
     expect(mesh.instance.visible).toBe(false);
   });
 
   it('#16 cast_shadow=0 (OFF) → mesh.castShadow === false', async () => {
     const node = makeNode({ mesh: 'SubResource("Box_1")', castShadow: 0 });
-    const renderer = await render(node, [sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);
+    const renderer = await render(node, [subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);
     expect(renderer.scene.findByType('Mesh').instance.castShadow).toBe(false);
   });
 
@@ -121,13 +114,13 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
     // class_geometryinstance3d.html properties table: cast_shadow default 1
     // (SHADOW_CASTING_SETTING_ON), so an absent key casts.
     const node = makeNode({ mesh: 'SubResource("Box_1")' });
-    const renderer = await render(node, [sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);
+    const renderer = await render(node, [subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);
     expect(renderer.scene.findByType('Mesh').instance.castShadow).toBe(true);
   });
 
   it('#17 cast_shadow=1 (ON) → mesh.castShadow === true', async () => {
     const node = makeNode({ mesh: 'SubResource("Box_1")', castShadow: 1 });
-    const renderer = await render(node, [sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);
+    const renderer = await render(node, [subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);
     expect(renderer.scene.findByType('Mesh').instance.castShadow).toBe(true);
   });
 });

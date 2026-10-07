@@ -51,14 +51,11 @@ describe('Godot-resource parsing stays in the loading layer', () => {
   // legal everywhere. A value import means "I parse file content myself".
   const PARSE_ALLOWED = new Set([
     'parser/parsedResource.test.ts',
+    // The one parse of a file. Every slice reads its cache through `resourceSection`.
     'resources/processors/createTresResourceProcessor.ts',
-    // The slices whose decode consumes whole-file content by design: ArrayMesh
-    // reads the byte-payload dictionaries, and fonts/themes both address a named
-    // `[sub_resource]` inside a shared `.tres` before their pure decode sees a
-    // property bag.
-    'resources/meshes/arraymesh/decode.ts',
-    'resources/fonts/font/loadFont.ts',
-    'resources/styles/theme/loadTheme.ts',
+    // A fixture's text, parsed for the suites that start from a whole `.tres`.
+    'resources/testing/decodeArrayMeshTres.ts',
+    'resources/testing/sectionLoaderServing.ts',
   ]);
   const VALUE_IMPORT_RE =
     /import\s+(?!type\b)[^;]*?from\s+'[^']*parsedResource(?:\.js)?'|import\(\s*'[^']*parsedResource(?:\.js)?'\s*\)/;
@@ -75,10 +72,9 @@ describe('Godot-resource parsing stays in the loading layer', () => {
   });
 
   it('the allowlisted call sites still exist — the scan is not vacuous', () => {
-    const live = [...PARSE_ALLOWED].filter(
-      (rel) => !rel.endsWith('.test.ts') && VALUE_IMPORT_RE.test(readFileSync(join(srcRoot, rel), 'utf8'))
-    );
-    expect(live.length).toBeGreaterThanOrEqual(3);
+    const sources = [...PARSE_ALLOWED].filter((rel) => !rel.endsWith('.test.ts'));
+    const live = sources.filter((rel) => VALUE_IMPORT_RE.test(readFileSync(join(srcRoot, rel), 'utf8')));
+    expect(live).toEqual(sources);
   });
 
   const SNIFF_RE = /\.startsWith\(\s*['"](?:Color|Vector[23]i?|Rect2)\(/;

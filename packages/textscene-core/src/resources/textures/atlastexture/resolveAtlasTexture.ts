@@ -33,7 +33,7 @@ export function resolveAtlasTextureRef(
   if (!parsed || parsed.type !== 'SubResource') return null;
   const resource = findSubResource(internalResources, parsed.id);
   if (!resource || resource.type !== 'AtlasTexture') return null;
-  return { id: parsed.id, texture: decodeAtlasTexture(resource.data as Record<string, unknown>) };
+  return { id: parsed.id, texture: decodeAtlasTexture(resource.data) };
 }
 
 /**

@@ -9,9 +9,10 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import type { TscnInternalResource, TscnNode } from '../../../parser/types';
+import type { TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
+import { subResource } from '../../../testing/subResource';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode {
@@ -26,21 +27,13 @@ function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode 
   return { name: props.name, type: 'MeshInstance3D', children: [], properties: props };
 }
 
-function sub(type: string, id: string, data: Record<string, string | undefined> = {}): TscnInternalResource {
-  return {
-    id,
-    type,
-    data: Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined)),
-  };
-}
-
 async function renderWithMaterial(matData: Record<string, string | undefined>, matId = 'Mat') {
   const node = makeNode({ materialOverride: `SubResource("${matId}")` });
   const renderer = await ReactThreeTestRenderer.create(
     <SceneResourcesProvider
       internalResources={[
-        sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
-        sub('StandardMaterial3D', matId, matData),
+        subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
+        subResource('StandardMaterial3D', matId, matData),
       ]}
     >
       <MeshInstance3D node={node} />

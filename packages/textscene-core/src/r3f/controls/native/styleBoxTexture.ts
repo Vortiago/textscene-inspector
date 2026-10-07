@@ -80,7 +80,7 @@ export function parseStyleBoxTexture(
   const resource = findSubResource(internalResources, parsed.id);
   if (!resource || resource.type !== 'StyleBoxTexture') return null;
 
-  const data = resource.data as Record<string, string>;
+  const data = resource.data;
   const margin = {
     left: floatOr(data.texture_margin_left, 0, CONTEXT),
     top: floatOr(data.texture_margin_top, 0, CONTEXT),

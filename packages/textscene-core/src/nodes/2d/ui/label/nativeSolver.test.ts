@@ -1004,7 +1004,7 @@ describe('labelMinimumSize — lines_skipped / max_lines_visible / label_setting
   });
 
   it('label_settings.font_size overrides the theme font size outright, for empty text too', () => {
-    const settings = { id: '1', type: 'LabelSettings', data: { id: '1', font_size: '32' } };
+    const settings = { id: '1', type: 'LabelSettings', data: { font_size: '32' } };
     const withSettings = node(
       { labelSettings: 'SubResource("1")' },
       { resources: { internalResources: [settings as never], externalResources: [] } }

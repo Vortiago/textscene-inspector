@@ -11,15 +11,8 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
+import { subResource } from '../../../testing/subResource';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
-
-function sub(type: string, id: string, data: Record<string, string | undefined> = {}): TscnInternalResource {
-  return {
-    id,
-    type,
-    data: Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined)),
-  };
-}
 
 function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode {
   const props: MeshInstance3DProperties = {
@@ -35,14 +28,14 @@ function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode 
 
 async function renderWithMeshAndMaterial(meshType: string, materialProps: Record<string, string> | null) {
   const internalResources: TscnInternalResource[] = [
-    sub(
+    subResource(
       meshType,
       'plane_1',
       meshType === 'PlaneMesh' ? { size: 'Vector2(1, 1)' } : { size: 'Vector3(1, 1, 1)' }
     ),
   ];
   if (materialProps) {
-    internalResources.push(sub('StandardMaterial3D', 'mat_1', materialProps));
+    internalResources.push(subResource('StandardMaterial3D', 'mat_1', materialProps));
   }
   const node = makeNode({
     mesh: `SubResource("plane_1")`,

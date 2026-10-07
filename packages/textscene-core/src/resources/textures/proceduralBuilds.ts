@@ -90,8 +90,7 @@ function plannedBuild(
 ): ProceduralBuildPlan | null {
   let plans = plansByParse.get(internalResources);
   if (!plans) plansByParse.set(internalResources, (plans = new Map()));
-  if (!plans.has(resource))
-    plans.set(resource, plan(resource.data as Record<string, string>, internalResources));
+  if (!plans.has(resource)) plans.set(resource, plan(resource.data, internalResources));
   return plans.get(resource) ?? null;
 }
 

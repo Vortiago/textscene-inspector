@@ -6,11 +6,12 @@
  */
 
 import { registerResourceSlice } from '../../sliceRegistration';
+import { FONT_SUB_RESOURCE_TYPES } from './decode';
 
 registerResourceSlice({
   slice: 'font',
   kind: 'godot-text',
-  typeNames: ['FontFile', 'SystemFont', 'FontVariation'],
+  typeNames: [...FONT_SUB_RESOURCE_TYPES],
   busType: 'font',
 });
 

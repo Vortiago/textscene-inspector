@@ -7,6 +7,7 @@ import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { subResource } from '../../../testing/subResource';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 function makeNode(meshSubResId: string): TscnNode {
@@ -17,14 +18,6 @@ function makeNode(meshSubResId: string): TscnNode {
     mesh: `SubResource("${meshSubResId}")`,
   };
   return { name: 'M', type: 'MeshInstance3D', children: [], properties: props };
-}
-
-function sub(type: string, id: string, data: Record<string, string | undefined> = {}): TscnInternalResource {
-  return {
-    id,
-    type,
-    data: Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined)),
-  };
 }
 
 async function renderGeometry(meshSubResource: TscnInternalResource): Promise<THREE.BufferGeometry> {
@@ -39,7 +32,7 @@ async function renderGeometry(meshSubResource: TscnInternalResource): Promise<TH
 describe('Mesh primitives (assertions 48–59)', () => {
   it('#48 BoxMesh.size x/y/z → BoxGeometry.parameters.width/height/depth', async () => {
     const geom = (await renderGeometry(
-      sub('BoxMesh', 'B', { size: 'Vector3(2, 3, 4)' })
+      subResource('BoxMesh', 'B', { size: 'Vector3(2, 3, 4)' })
     )) as unknown as THREE.BoxGeometry & {
       parameters: { width: number; height: number; depth: number };
     };
@@ -50,7 +43,7 @@ describe('Mesh primitives (assertions 48–59)', () => {
 
   it('#49 SphereMesh.radius → SphereGeometry.parameters.radius', async () => {
     const geom = (await renderGeometry(
-      sub('SphereMesh', 'S', { radius: '1.5' })
+      subResource('SphereMesh', 'S', { radius: '1.5' })
     )) as unknown as THREE.SphereGeometry & { parameters: { radius: number } };
     expect(geom.parameters.radius).toBe(1.5);
   });
@@ -59,7 +52,7 @@ describe('Mesh primitives (assertions 48–59)', () => {
     // SphereMesh has separate `height` and `rings`. The parser drives THREE's
     // heightSegments from `rings`.
     const geom = (await renderGeometry(
-      sub('SphereMesh', 'S', { radius: '1', rings: '24' })
+      subResource('SphereMesh', 'S', { radius: '1', rings: '24' })
     )) as unknown as THREE.SphereGeometry & {
       parameters: { heightSegments: number };
     };
@@ -68,7 +61,7 @@ describe('Mesh primitives (assertions 48–59)', () => {
 
   it('#51 SphereMesh.radial_segments → SphereGeometry.parameters.widthSegments', async () => {
     const geom = (await renderGeometry(
-      sub('SphereMesh', 'S', { radius: '1', radial_segments: '48' })
+      subResource('SphereMesh', 'S', { radius: '1', radial_segments: '48' })
     )) as unknown as THREE.SphereGeometry & {
       parameters: { widthSegments: number };
     };
@@ -77,7 +70,7 @@ describe('Mesh primitives (assertions 48–59)', () => {
 
   it('#52 PlaneMesh.size x/y → PlaneGeometry.parameters.width/height', async () => {
     const geom = (await renderGeometry(
-      sub('PlaneMesh', 'P', { size: 'Vector2(5, 7)' })
+      subResource('PlaneMesh', 'P', { size: 'Vector2(5, 7)' })
     )) as unknown as THREE.PlaneGeometry & {
       parameters: { width: number; height: number };
     };
@@ -88,7 +81,7 @@ describe('Mesh primitives (assertions 48–59)', () => {
   it('#53 PlaneMesh.center_offset → geometry translated', async () => {
     // center_offset shifts the plane's bounding box centre.
     const geom = await renderGeometry(
-      sub('PlaneMesh', 'P', { size: 'Vector2(2, 2)', center_offset: 'Vector3(1, 0, 0)' })
+      subResource('PlaneMesh', 'P', { size: 'Vector2(2, 2)', center_offset: 'Vector3(1, 0, 0)' })
     );
     geom.computeBoundingBox();
     const center = new THREE.Vector3();
@@ -99,7 +92,9 @@ describe('Mesh primitives (assertions 48–59)', () => {
   it('#54 PlaneMesh.orientation FACE_X/FACE_Y/FACE_Z → rotation applied', async () => {
     // FACE_Y (orientation=1) lays the plane in XZ with its normal up, so a (2,2) plane
     // has 2-unit extents in X and Z and none in Y.
-    const geom = await renderGeometry(sub('PlaneMesh', 'P', { size: 'Vector2(2, 2)', orientation: '1' }));
+    const geom = await renderGeometry(
+      subResource('PlaneMesh', 'P', { size: 'Vector2(2, 2)', orientation: '1' })
+    );
     geom.computeBoundingBox();
     const size = new THREE.Vector3();
     geom.boundingBox!.getSize(size);
@@ -110,7 +105,7 @@ describe('Mesh primitives (assertions 48–59)', () => {
 
   it('#55 CylinderMesh.top_radius/bottom_radius/height → CylinderGeometry.parameters', async () => {
     const geom = (await renderGeometry(
-      sub('CylinderMesh', 'C', {
+      subResource('CylinderMesh', 'C', {
         top_radius: '0.5',
         bottom_radius: '1.0',
         height: '3.0',
@@ -125,14 +120,14 @@ describe('Mesh primitives (assertions 48–59)', () => {
 
   it('#56 CapsuleMesh.radius → CapsuleGeometry.parameters.radius', async () => {
     const geom = (await renderGeometry(
-      sub('CapsuleMesh', 'C', { radius: '0.5', height: '2.0' })
+      subResource('CapsuleMesh', 'C', { radius: '0.5', height: '2.0' })
     )) as unknown as THREE.CapsuleGeometry & { parameters: { radius: number } };
     expect(geom.parameters.radius).toBe(0.5);
   });
 
   it('#57 CapsuleMesh.height → CapsuleGeometry.parameters.height (THREE 0.184: NOT .length)', async () => {
     const geom = (await renderGeometry(
-      sub('CapsuleMesh', 'C', { radius: '0.5', height: '2.0' })
+      subResource('CapsuleMesh', 'C', { radius: '0.5', height: '2.0' })
     )) as unknown as THREE.CapsuleGeometry & { parameters: { height: number } };
     // Godot 2.0 height - 2*0.5 radius = 1.0 cylinder section.
     expect(geom.parameters.height).toBe(1.0);
@@ -140,7 +135,7 @@ describe('Mesh primitives (assertions 48–59)', () => {
 
   it('#58 TorusMesh.inner_radius/outer_radius → TorusGeometry.parameters', async () => {
     const geom = (await renderGeometry(
-      sub('TorusMesh', 'T', { inner_radius: '0.5', outer_radius: '1.5' })
+      subResource('TorusMesh', 'T', { inner_radius: '0.5', outer_radius: '1.5' })
     )) as unknown as THREE.TorusGeometry & { parameters: { radius: number; tube: number } };
     // Center radius = (1.5 + 0.5) / 2 = 1; tube = (1.5 - 0.5) / 2 = 0.5.
     expect(geom.parameters.radius).toBe(1);
@@ -148,7 +143,7 @@ describe('Mesh primitives (assertions 48–59)', () => {
   });
 
   it('#59 PrismMesh.size → a triangular prism filling that box', async () => {
-    const geom = await renderGeometry(sub('PrismMesh', 'Pr', { size: 'Vector3(2, 2, 2)' }));
+    const geom = await renderGeometry(subResource('PrismMesh', 'Pr', { size: 'Vector3(2, 2, 2)' }));
 
     // Godot's prism: 8 triangles for two caps, two slanted sides and one base.
     expect(geom.getIndex()!.count).toBe(24);

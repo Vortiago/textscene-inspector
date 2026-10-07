@@ -9,14 +9,14 @@ import { LRUCache } from './LRUCache';
 import { parseSubResourcePath, resourceFilePath } from './subResourcePath';
 import { createLoadLane } from './resourceProcessorLoad';
 import { createClearCache } from './resourceProcessorClear';
-import { DEFAULT_MAX_ENTRIES } from './resourceProcessorTypes';
+import { CachedFailure, DEFAULT_MAX_ENTRIES, type CacheEntry } from './resourceProcessorTypes';
 import type { ResourceProcessor, ResourceProcessorConfig } from './resourceProcessorTypes';
 import * as logger from '../logger';
 
 /**
  * Ceiling on waiting for a peer processor's address (a material's texture, a font's
  * `base_font`), far above any real fetch: a dependency that never arrives fails the
- * dependent instead of parking it. Shared so `ResourceLoader.peerLoad` and the font
+ * dependent instead of parking it. Shared so `ResourceLoader.peerRequire` and the font
  * processor's loader cannot drift apart.
  */
 export const PEER_LOAD_TIMEOUT_MS = 30_000;
@@ -26,9 +26,9 @@ export type { ResourceProcessor, ResourceProcessorConfig } from './resourceProce
 
 /**
  * Create a resource processor with caching, deduplication and event emission.
- * Configure exactly one fetch mode: `fileEventBus` with `shouldProcess` and
- * `process` (bytes, then process), or `loadDirectly` for a load that needs the
- * path and content together, such as a scene.
+ * Configure exactly one fetch mode: `fileEventBus` with `process` (bytes, then
+ * process) and an optional `shouldProcess`, or `loadDirectly` for a load that
+ * fetches for itself, such as a scene or a resource read from a peer's cache.
  */
 export function createResourceProcessor<T>(config: ResourceProcessorConfig<T>): ResourceProcessor<T> {
   const {
@@ -42,9 +42,9 @@ export function createResourceProcessor<T>(config: ResourceProcessorConfig<T>): 
     dispose,
   } = config;
 
-  // Capacity eviction disposes like `clearCache()`, but skips a `null` failure sentinel.
-  const cache = new LRUCache<T | null>(config.maxEntries ?? DEFAULT_MAX_ENTRIES, (_path, value) => {
-    if (value && dispose) dispose(value);
+  // Capacity eviction disposes like `clearCache()`, but skips a cached failure.
+  const cache = new LRUCache<CacheEntry<T>>(config.maxEntries ?? DEFAULT_MAX_ENTRIES, (_path, value) => {
+    if (value && !(value instanceof CachedFailure) && dispose) dispose(value);
   });
   // A load owns its path's entry through a unique token. A clear removes the entry,
   // so a load that completes under the cleared provider state finds its token gone
@@ -71,19 +71,15 @@ export function createResourceProcessor<T>(config: ResourceProcessorConfig<T>): 
 
   return {
     request(path: string): void {
-      if (cache.has(path)) {
-        const cached = cache.get(path);
-        if (cached !== null) {
+      // A cache never holds `undefined`, so one read answers both "held" and "what".
+      const cached = cache.get(path);
+      if (cached !== undefined) {
+        if (cached instanceof CachedFailure) {
+          logger.info(`[${resourceType}Processor] Cache hit (failed) for: ${path}`);
+          eventBus.emit<Error>(resourceType, 'failed', path, cached.error);
+        } else {
           logger.info(`[${resourceType}Processor] Cache hit for: ${path}`);
           eventBus.emit<T>(resourceType, 'loaded', path, cached);
-        } else {
-          logger.info(`[${resourceType}Processor] Cache hit (failed) for: ${path}`);
-          eventBus.emit<Error>(
-            resourceType,
-            'failed',
-            path,
-            new Error(`${resourceType} ${path} previously failed to load`)
-          );
         }
         return;
       }
@@ -129,7 +125,13 @@ export function createResourceProcessor<T>(config: ResourceProcessorConfig<T>): 
     },
 
     getCached(path: string): T | null | undefined {
-      return cache.get(path);
+      const cached = cache.get(path);
+      return cached instanceof CachedFailure ? null : cached;
+    },
+
+    failure(path: string): Error | undefined {
+      const cached = cache.peek(path);
+      return cached instanceof CachedFailure ? cached.error : undefined;
     },
 
     isCached(path: string): boolean {
@@ -141,6 +143,12 @@ export function createResourceProcessor<T>(config: ResourceProcessorConfig<T>): 
     },
 
     clearCache,
+
+    release(path: string): void {
+      // A failure stays: it is small, and it is what stops a retry.
+      if (cache.isPinned(path) || cache.peek(path) instanceof CachedFailure) return;
+      cache.delete(path);
+    },
 
     getCacheSize(): number {
       return cache.size;

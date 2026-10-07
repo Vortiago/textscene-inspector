@@ -31,7 +31,7 @@ function makeBoxScene(meshName = 'TheBox'): TscnScene {
     {
       id: 'Box_1',
       type: 'BoxMesh',
-      data: { id: 'Box_1', size: 'Vector3(1, 1, 1)' },
+      data: { size: 'Vector3(1, 1, 1)' },
     },
   ];
   return {
@@ -139,7 +139,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
         }),
       ],
       externalResources: [],
-      internalResources: [{ id: 'S_1', type: 'SphereMesh', data: { id: 'S_1', radius: '0.5' } }],
+      internalResources: [{ id: 'S_1', type: 'SphereMesh', data: { radius: '0.5' } }],
     };
 
     // Scene B: a Node3D that instances scene C.
@@ -243,7 +243,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
         }),
       ],
       externalResources: [],
-      internalResources: [{ id: 'Box_1', type: 'BoxMesh', data: { id: 'Box_1', size: 'Vector3(1, 1, 1)' } }],
+      internalResources: [{ id: 'Box_1', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)' } }],
     };
     fake.scenes.seed('res://inner.tscn', innerScene);
 
@@ -268,9 +268,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
       <SceneStack
         loader={fake.loader}
         scene={{
-          internalResources: [
-            { id: 'Box_1', type: 'BoxMesh', data: { id: 'Box_1', size: 'Vector3(1, 1, 1)' } },
-          ],
+          internalResources: [{ id: 'Box_1', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)' } }],
           externalResources: [{ id: 'inner_ref', path: 'res://inner.tscn', type: 'PackedScene' }],
         }}
       >
@@ -316,7 +314,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
         }),
       ],
       externalResources: [],
-      internalResources: [{ id: 'Box_1', type: 'BoxMesh', data: { id: 'Box_1', size: 'Vector3(1, 1, 1)' } }],
+      internalResources: [{ id: 'Box_1', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)' } }],
     };
     fake.scenes.seed('res://multi.tscn', multiRootScene);
 
@@ -367,7 +365,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
         }),
       ],
       externalResources: [],
-      internalResources: [{ id: 'S_1', type: 'SphereMesh', data: { id: 'S_1', radius: '0.5' } }],
+      internalResources: [{ id: 'S_1', type: 'SphereMesh', data: { radius: '0.5' } }],
     };
     fake.scenes.seed('res://wrapper.tscn', wrapperScene);
     fake.scenes.seed('res://gadget.tscn', gadgetScene);
@@ -423,7 +421,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
         {
           id: 'Box_1',
           type: 'BoxMesh',
-          data: { id: 'Box_1', size: 'Vector3(1, 1, 1)' },
+          data: { size: 'Vector3(1, 1, 1)' },
         },
       ],
     };

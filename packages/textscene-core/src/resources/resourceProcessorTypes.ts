@@ -23,10 +23,10 @@ export interface ResourceProcessorConfig<T> {
   /** Raw data into the final resource (file-event-bus mode). */
   process?: (path: string, data: FileData) => Promise<T>;
   /**
-   * Whether `process` reads a **Sub-resource path**'s `subResourceId` and builds
-   * that resource rather than the owning file's `[resource]` body. Opt-in, and the
-   * default refuses loudly: a `process` that ignores its path would cache the whole
-   * file's resource under the address, a wrong resource under a right-looking name.
+   * Whether `process` or `loadDirectly` reads a **Sub-resource path**'s `subResourceId`
+   * and builds that resource rather than the owning file's `[resource]` body. Opt-in, and
+   * the default refuses loudly: a load that ignores its path would cache the whole file's
+   * resource under the address, a wrong resource under a right-looking name.
    */
   addressesSubResources?: boolean;
   /**
@@ -43,15 +43,30 @@ export interface ResourceProcessorConfig<T> {
   maxEntries?: number;
 }
 
+/** A failed load in a processor's cache. It keeps the reason, so a repeat request reports it. */
+export class CachedFailure {
+  constructor(readonly error: Error) {}
+}
+
+/** What a processor's cache holds for a path: the resource, or why it failed. */
+export type CacheEntry<T> = T | CachedFailure;
+
 export interface ResourceProcessor<T> {
   /** Non-blocking. */
   request(path: string): void;
-  /** Null when the load failed. */
+  /** Null when the load failed: {@link failure} gives the reason. */
   getCached(path: string): T | null | undefined;
+  /** The reason a cached load failed, or undefined when `path` holds no failure. */
+  failure(path: string): Error | undefined;
   isCached(path: string): boolean;
   isLoading(path: string): boolean;
   /** One path, or all of them when none is given. */
   clearCache(path?: string): void;
+  /**
+   * Drop `path`'s cached value unless a reader pins it or it is a failure, and announce
+   * nothing. For a value only its loaders needed: a later request loads it fresh.
+   */
+  release(path: string): void;
   /** For debugging. */
   getCacheSize(): number;
   /** Snapshot of the currently-cached paths (for the loader's full-clear announcement). */

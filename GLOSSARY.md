@@ -51,6 +51,10 @@ _Avoid_: "asset", "inline resource".
 The whole address is the resource identity, and only its `filePath` half reaches the byte layer, because only real files can be fetched.
 _Avoid_: "composite path", "synthetic path". A `fetch` of the whole address.
 
+**Resource section** (`resources/resourceSection.ts`):
+The part of a parsed `.tres` that a path addresses: the `[resource]` body for a plain path, or the named `[sub_resource]` for a **Sub-resource path**.
+_Avoid_: "the resource" or "the body" for a `[sub_resource]`.
+
 **ParsedResource** (`parser/parsedResource.ts`):
 The one parsed form every Godot resource serialisation normalises to: the header type, the resource tables and the `[resource]` body as raw value strings.
 The slice's `decode.ts` owns what the values mean.

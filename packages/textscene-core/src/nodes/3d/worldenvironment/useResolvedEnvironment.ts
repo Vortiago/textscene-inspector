@@ -29,10 +29,7 @@ export function useResolvedEnvironment(environmentRef: string | undefined): Reso
 
   const environment = useSubOrExtResource(environmentRef, internalResources, externalResources);
   const envProps = useMemo(
-    () =>
-      environment?.type === 'Environment'
-        ? decodeEnvironment(environment.data as Record<string, string>)
-        : null,
+    () => (environment?.type === 'Environment' ? decodeEnvironment(environment.data) : null),
     [environment]
   );
 
@@ -40,16 +37,10 @@ export function useResolvedEnvironment(environmentRef: string | undefined): Reso
   // `useSubOrExtResource` short-circuits that to "nothing", so rules of hooks holds
   // whatever shape the chain takes.
   const skyResource = useSubOrExtResource(envProps?.sky, internalResources, externalResources);
-  const materialRef = skyMaterialRef(
-    skyResource?.type,
-    skyResource?.data as Record<string, unknown> | undefined
-  );
+  const materialRef = skyMaterialRef(skyResource?.type, skyResource?.data);
   const material = useSubOrExtResource(materialRef, internalResources, externalResources);
 
-  const sky = useMemo(
-    () => (material ? decodeSkyMaterial(material.type, material.data as Record<string, string>) : null),
-    [material]
-  );
+  const sky = useMemo(() => (material ? decodeSkyMaterial(material.type, material.data) : null), [material]);
 
   return useMemo(
     () => (envProps ? { settings: createEnvironmentSettings(envProps), sky } : null),

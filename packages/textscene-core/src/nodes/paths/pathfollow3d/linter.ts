@@ -44,8 +44,7 @@ const ROTATION_ORIENTED = 4;
 function parentCurveDisablesUpVector(scene: TscnScene, parent: { properties: unknown }): boolean {
   const curveRef = (parent.properties as Record<string, string>)?.curve;
   const curve = resolveSubResourceRef(curveRef, scene.internalResources ?? []);
-  const enabled = curve?.data?.up_vector_enabled;
-  return enabled === false || (typeof enabled === 'string' && boolSlotValue(enabled) === false);
+  return boolSlotValue(curve?.data.up_vector_enabled) === false;
 }
 
 function checkPathFollow3D(context: RuleContext): Diagnostic[] {

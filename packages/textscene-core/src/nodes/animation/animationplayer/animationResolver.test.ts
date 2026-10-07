@@ -10,21 +10,18 @@ import type { GodotAnimation } from './animationResolver';
 import type { AnimationLibraryRef, AnimationPlayerProperties } from './types';
 import { TscnParser } from '../../../parser/TscnParser';
 import { LINEAR_SCAN_CEILING_MS, msToRead, unclosedCalls } from '../../../godot/testing/unclosedCalls';
-
-function res(id: string, type: string, data: Record<string, string>): TscnInternalResource {
-  return { id, type, data };
-}
+import { subResource } from '../../../testing/subResource';
 
 const DEFAULT_LIB: AnimationLibraryRef[] = [{ name: '', subResourceId: 'Lib' }];
 
 describe('resolveAnimations — library resolution (B1)', () => {
   it('resolves the AnimationLibrary._data map to its named Animations', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', {
+      subResource('AnimationLibrary', 'Lib', {
         _data: '{\n"idle": SubResource("Anim_idle"),\n"walk": SubResource("Anim_walk")\n}',
       }),
-      res('Anim_idle', 'Animation', { length: '1.0' }),
-      res('Anim_walk', 'Animation', { length: '0.8' }),
+      subResource('Animation', 'Anim_idle', { length: '1.0' }),
+      subResource('Animation', 'Anim_walk', { length: '0.8' }),
     ];
     const anims = resolveAnimations(DEFAULT_LIB, internal);
     expect(anims.map((a) => a.name).sort()).toEqual(['idle', 'walk']);
@@ -35,7 +32,9 @@ describe('resolveAnimations — library resolution (B1)', () => {
   });
 
   it('skips a clip whose Animation SubResource is missing', () => {
-    const internal = [res('Lib', 'AnimationLibrary', { _data: '{\n"idle": SubResource("Anim_idle")\n}' })];
+    const internal = [
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"idle": SubResource("Anim_idle")\n}' }),
+    ];
     expect(resolveAnimations(DEFAULT_LIB, internal)).toEqual([]);
   });
 });
@@ -43,8 +42,8 @@ describe('resolveAnimations — library resolution (B1)', () => {
 describe('resolveAnimations — animation scalars (B2)', () => {
   it('reads length, loop_mode and step with Godot defaults', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"idle": SubResource("A")\n}' }),
-      res('A', 'Animation', { length: '2.5', loop_mode: '1', step: '0.05' }),
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"idle": SubResource("A")\n}' }),
+      subResource('Animation', 'A', { length: '2.5', loop_mode: '1', step: '0.05' }),
     ];
     const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
     expect(anim).toMatchObject({ name: 'idle', length: 2.5, loopMode: 1, step: 0.05 });
@@ -52,8 +51,8 @@ describe('resolveAnimations — animation scalars (B2)', () => {
 
   it('defaults length=1, loop_mode=0, step=0.1 when absent', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"idle": SubResource("A")\n}' }),
-      res('A', 'Animation', {}),
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"idle": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {}),
     ];
     const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
     expect(anim).toMatchObject({ length: 1.0, loopMode: 0, step: 0.1 });
@@ -63,8 +62,8 @@ describe('resolveAnimations — animation scalars (B2)', () => {
 describe('resolveAnimations — value track parsing (B3)', () => {
   it('parses a value track: target node, property, interp and keyframe times', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"spin": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"spin": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         length: '1.0',
         'tracks/0/type': '"value"',
         'tracks/0/path': 'NodePath("Circle:rotation")',
@@ -88,8 +87,8 @@ describe('resolveAnimations — track path spellings', () => {
   // source for NODE_PATH, so the bare string names the same target.
   it('reads a bare quoted track path as the NodePath spelling', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"spin": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"spin": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         'tracks/0/type': '"value"',
         'tracks/0/path': '"Circle:rotation"',
         'tracks/0/keys': '{\n"times": PackedFloat32Array(0),\n"values": [Vector3(0, 0, 0)]\n}',
@@ -103,8 +102,8 @@ describe('resolveAnimations — track path spellings', () => {
 describe('resolveAnimations — keyframe values (B4)', () => {
   it('decodes Vector3 keyframe values to number triples', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         'tracks/0/type': '"value"',
         'tracks/0/path': 'NodePath("N:position")',
         'tracks/0/keys':
@@ -120,8 +119,8 @@ describe('resolveAnimations — keyframe values (B4)', () => {
 
   it('decodes Vector2 and scalar float keyframe values', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         'tracks/0/type': '"value"',
         'tracks/0/path': 'NodePath("N:position")',
         'tracks/0/keys': '{\n"times": PackedFloat32Array(0),\n"values": [Vector2(7, -8)]\n}',
@@ -140,8 +139,8 @@ describe('resolveAnimations — keyframe values (B4)', () => {
     // to `parseVector2`, which throws and takes the whole scene down. `SubViewport.size` is
     // declared `Variant::VECTOR2I` (viewport.cpp:5579), so this is what Godot writes.
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         'tracks/0/type': '"value"',
         'tracks/0/path': 'NodePath("SubViewport:size")',
         'tracks/0/keys': '{\n"times": PackedFloat32Array(0),\n"values": [Vector2i(256, 128)]\n}',
@@ -157,8 +156,8 @@ describe('resolveAnimations — keyframe values (B4)', () => {
 
   it('decodes Color keyframe values to RGBA quadruples (modulate fade — ADR-0017)', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         'tracks/0/type': '"value"',
         'tracks/0/path': 'NodePath("Decal:modulate")',
         'tracks/0/keys':
@@ -176,8 +175,8 @@ describe('resolveAnimations — keyframe values (B4)', () => {
 describe('resolveAnimations — graceful degradation (B5)', () => {
   it('skips a track with no keys but keeps the rest of the animation', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         length: '1.0',
         'tracks/0/type': '"value"',
         'tracks/0/path': 'NodePath("Broken:position")',
@@ -197,8 +196,8 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
   // rather than becoming one that samples NaN for the rest of the clip.
   it('drops a value track whose FIRST key holds a non-finite component', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         length: '1.0',
         'tracks/0/type': '"value"',
         'tracks/0/path': 'NodePath("Fading:modulate")',
@@ -217,8 +216,8 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
     // Every downstream shape check reads key 0, so a good first key is exactly
     // the case that reached a KeyframeTrack.
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         length: '1.0',
         'tracks/0/type': '"value"',
         'tracks/0/path': 'NodePath("Fading:modulate")',
@@ -237,8 +236,8 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
     // `1e999` is ordinary digits and an exponent, so no grammar refuses it:
     // only the read result is non-finite.
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         'tracks/0/type': '"value"',
         'tracks/0/path': 'NodePath("N:position")',
         'tracks/0/keys': '{\n"times": PackedFloat32Array(0),\n"values": [Vector3(0, 1e999, 0)]\n}',
@@ -252,8 +251,8 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
   // interpolant divides by the span, so every sample after it is NaN.
   it('drops a value track whose TIME is non-finite', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         length: '1.0',
         'tracks/0/type': '"value"',
         'tracks/0/path': 'NodePath("Fading:position")',
@@ -270,8 +269,8 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
 
   it('drops a value track whose TRANSITION is non-finite', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         length: '1.0',
         'tracks/0/type': '"value"',
         'tracks/0/path': 'NodePath("Fading:position")',
@@ -284,8 +283,8 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
 
   it('drops a 3D transform track whose flat array holds a non-finite component', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         length: '1.0',
         'tracks/0/type': '"position_3d"',
         'tracks/0/path': 'NodePath("N")',
@@ -297,8 +296,8 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
 
   it('drops a value track whose TIME is non-finite on a transform track too', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         length: '1.0',
         'tracks/0/type': '"rotation_3d"',
         'tracks/0/path': 'NodePath("N")',
@@ -312,8 +311,8 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
   // reach, which for a scalar property pins the node there for the whole clip.
   it('drops a value track whose keys dict carries no `values` at all', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         length: '1.0',
         'tracks/0/type': '"value"',
         'tracks/0/path': 'NodePath("N:rotation")',
@@ -325,8 +324,8 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
 
   it('drops a value track with fewer values than times', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         length: '1.0',
         'tracks/0/type': '"value"',
         'tracks/0/path': 'NodePath("N:position")',
@@ -339,8 +338,8 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
 
   it('drops a value track whose int component is unstorable, rather than keying 0', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         length: '1.0',
         'tracks/0/type': '"value"',
         'tracks/0/path': 'NodePath("N:position")',
@@ -353,8 +352,8 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
 
   it('returns the animation with no tracks when a track type is unsupported', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         length: '1.0',
         'tracks/0/type': '"method"',
         'tracks/0/path': 'NodePath(".")',
@@ -369,8 +368,8 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
     // parser understands: the method track is filtered out during
     // resolution, never becoming a GodotTrack of any type.
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"mixed": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"mixed": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         length: '1.0',
         'tracks/0/type': '"method"',
         'tracks/0/path': 'NodePath("Mesh")',
@@ -393,8 +392,8 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
   // and the property is implied by the track type, not a NodePath `:suffix`.
   it('decodes a position_3d flat key array to Vector3 values on the position property', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"move": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"move": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         length: '1.0',
         'tracks/0/type': '"position_3d"',
         'tracks/0/path': 'NodePath("Mesh")',
@@ -416,8 +415,8 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
 
   it('decodes a scale_3d flat key array to Vector3 values on the scale property', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         'tracks/0/type': '"scale_3d"',
         'tracks/0/path': 'NodePath("Mesh")',
         'tracks/0/keys': 'PackedFloat32Array(0, 1, 2, 2, 2)',
@@ -430,8 +429,8 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
 
   it('decodes a rotation_3d flat key array to quaternion (4-component) values', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         'tracks/0/type': '"rotation_3d"',
         'tracks/0/path': 'NodePath("Mesh")',
         // (time, transition, qx, qy, qz, qw)
@@ -445,8 +444,8 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
 
   it('reads the per-key transition from the flat array (second component)', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         'tracks/0/type': '"position_3d"',
         'tracks/0/path': 'NodePath("Mesh")',
         'tracks/0/keys': 'PackedFloat32Array(0, 0.25, 1, 1, 1)',
@@ -458,8 +457,8 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
 
   it('skips skeletal bone sub-path tracks (Node:bone) but keeps plain-node tracks', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         'tracks/0/type': '"position_3d"',
         'tracks/0/path': 'NodePath("Skeleton/Skeleton3D:body")',
         'tracks/0/keys': 'PackedFloat32Array(0, 1, 0, 0.66, 0)',
@@ -474,8 +473,8 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
 
   it('does not treat an Object.prototype key (e.g. "constructor") as a transform track type', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         'tracks/0/type': '"constructor"',
         'tracks/0/path': 'NodePath("Mesh")',
         'tracks/0/keys': 'PackedFloat32Array(0, 1, 1, 2, 3)',
@@ -487,8 +486,8 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
 
   it('skips a 3D transform track whose flat array is shorter than one stride', () => {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         'tracks/0/type': '"position_3d"',
         'tracks/0/path': 'NodePath("Mesh")',
         'tracks/0/keys': 'PackedFloat32Array(0, 1)', // missing the 3 components
@@ -503,8 +502,8 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
     // (`animation.cpp:163`), so the track carries no keys. Truncating to the
     // whole strides drew motion between keyframes the engine never stored.
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         'tracks/0/type': '"position_3d"',
         'tracks/0/path': 'NodePath("Mesh")',
         // 8 floats against a stride of 5: one whole keyframe and 3 strays.
@@ -595,8 +594,8 @@ describe('resolveAnimations — a scalar the tokenizer cannot read', () => {
     // `parseFloat('5abc')` is 5, so a token Godot refuses to load produced a
     // five-second clip and every keyframe time was scaled against it.
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"idle": SubResource("A")\n}' }),
-      res('A', 'Animation', { length: '5abc', step: '2abc' }),
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"idle": SubResource("A")\n}' }),
+      subResource('Animation', 'A', { length: '5abc', step: '2abc' }),
     ];
     const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
     expect(anim).toMatchObject({ length: 1.0, step: 0.1 });
@@ -609,8 +608,8 @@ describe('a fractional composite keyframe', () => {
     // arm matches `Vector3(...)` first and truncates every component, so
     // `[0, 1.5, 0]` becomes `[0, 1, 0]`.
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"spin": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"spin": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         length: '1.0',
         'tracks/0/type': '"value"',
         'tracks/0/path': 'NodePath("Pivot:rotation")',
@@ -635,7 +634,9 @@ describe('a fractional composite keyframe', () => {
  * (:1089-1093), so the padded spelling loads.
  */
 describe('hasUnresolvableClips — the padding Godot discards', () => {
-  const libAt = (data: string): TscnInternalResource[] => [res('Lib', 'AnimationLibrary', { _data: data })];
+  const libAt = (data: string): TscnInternalResource[] => [
+    subResource('AnimationLibrary', 'Lib', { _data: data }),
+  ];
 
   it('sees the tight spelling', () => {
     expect(hasUnresolvableClips(DEFAULT_LIB, libAt('{\n"walk": ExtResource("1_walk")\n}'))).toBe(true);
@@ -654,23 +655,21 @@ describe('resolveAnimations — a disabled track', () => {
   // `Track::enabled` defaults to true (animation.h:114), `tracks/N/enabled` sets it
   // (animation.cpp:156-157), and `_update_caches` skips a disabled track (animation_mixer.cpp:689).
   function withTrackEnabled(enabled: string | undefined): TscnInternalResource[] {
-    const track: Record<string, string> = {
+    const track = {
       length: '1.0',
       'tracks/0/type': '"value"',
       'tracks/0/path': 'NodePath("Circle:position")',
       'tracks/0/keys':
         '{\n"times": PackedFloat32Array(0, 1),\n"values": [Vector3(0, 0, 0), Vector3(1, 0, 0)]\n}',
+      'tracks/0/enabled': enabled,
       'tracks/1/type': '"audio"',
       'tracks/1/path': 'NodePath("Speaker")',
       'tracks/1/keys': '{\n"clips": [],\n"times": PackedFloat32Array()\n}',
+      'tracks/1/enabled': enabled,
     };
-    if (enabled !== undefined) {
-      track['tracks/0/enabled'] = enabled;
-      track['tracks/1/enabled'] = enabled;
-    }
     return [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', track),
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', track),
     ];
   }
 
@@ -695,8 +694,8 @@ describe('resolveAnimations — a crafted keys value of unclosed calls', () => {
   /** The animations one track on `path` resolves to, with `keys` as its raw keys value. */
   function resolveTrack(type: string, path: string, keys: string): GodotAnimation[] {
     const internal = [
-      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
-      res('A', 'Animation', {
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
         'tracks/0/type': `"${type}"`,
         'tracks/0/path': `NodePath("${path}")`,
         'tracks/0/keys': keys,

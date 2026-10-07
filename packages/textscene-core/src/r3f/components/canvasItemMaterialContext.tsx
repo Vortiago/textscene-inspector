@@ -43,6 +43,6 @@ export function useCanvasItemMaterial(props: Node2DProperties): CanvasItemMateri
     if (props.use_parent_material) return inherited;
     const resource = resolveSubResourceRef(props.materialPath, internalResources);
     if (resource?.type !== 'CanvasItemMaterial') return null;
-    return parseCanvasItemMaterial(resource.data as Record<string, string>);
+    return parseCanvasItemMaterial(resource.data);
   }, [props.use_parent_material, props.materialPath, inherited, internalResources]);
 }

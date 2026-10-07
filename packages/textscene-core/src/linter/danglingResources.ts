@@ -83,9 +83,12 @@ export function danglingResourceDiagnostics(scene: TscnScene, lines: SourceLines
   // the ids above it and its own, and a forward reference dangles.
   for (const resource of scene.internalResources ?? []) {
     int.add(resource.id);
-    // `id` sits in `data` beside the properties (`parseInternalResource`).
-    const { id: _id, ...properties } = resource.data;
-    const owner: Owner = { built: resource, name: resource.id, type: resource.type, properties };
+    const owner: Owner = {
+      built: resource,
+      name: resource.id,
+      type: resource.type,
+      properties: resource.data,
+    };
     sweep(owner, { ext, int }, all, lines, diagnostics);
   }
 

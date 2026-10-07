@@ -19,6 +19,7 @@ import {
   type SceneScope,
 } from './liveSceneTree';
 import type { TscnNode, TscnScene, TscnExternalResource, TscnInternalResource } from '../parser/types';
+import { subResource } from '../testing/subResource';
 
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
   return { name, type, children: [], properties: {}, ...extras };
@@ -41,10 +42,6 @@ function scopeOf(
 
 function ext(id: string, path: string): TscnExternalResource {
   return { id, path, type: 'PackedScene' };
-}
-
-function intRes(id: string, type: string, data: Record<string, unknown> = {}): TscnInternalResource {
-  return { id, type, data };
 }
 
 describe('collectLiveNodes', () => {
@@ -678,8 +675,8 @@ describe("liveChildGroups — internalResources scope (a sub-scene's own SubReso
 
   it("collapsed single-root instance → merged group carries the SUB-SCENE's own internalResources, not the host's", () => {
     const outer = [ext('1', 'res://player.tscn')];
-    const hostInternal = [intRes('1', 'StyleBoxFlat', { bg_color: 'HOST' })];
-    const subInternal = [intRes('1', 'StyleBoxFlat', { bg_color: 'SUB' })];
+    const hostInternal = [subResource('StyleBoxFlat', '1', { bg_color: 'HOST' })];
+    const subInternal = [subResource('StyleBoxFlat', '1', { bg_color: 'SUB' })];
     const sub: TscnScene = {
       nodes: [makeNode('PlayerRoot', 'CharacterBody3D', { children: [makeNode('Panel', 'Panel')] })],
       externalResources: [],
@@ -695,7 +692,7 @@ describe("liveChildGroups — internalResources scope (a sub-scene's own SubReso
 
   it('non-instance node — inline group carries the HOST-passed internalResources (host-authored children still resolve)', () => {
     const outer = [ext('1', 'res://a.tscn')];
-    const hostInternal = [intRes('1', 'StyleBoxFlat', { bg_color: 'HOST' })];
+    const hostInternal = [subResource('StyleBoxFlat', '1', { bg_color: 'HOST' })];
     const node = makeNode('Root', 'Node3D', { children: [makeNode('Panel', 'Panel')] });
     const groups = liveChildGroups(node, scopeOf(outer, hostInternal), cacheOf({}));
     expect(groups).toHaveLength(1);
@@ -711,8 +708,8 @@ describe("liveChildGroups — internalResources scope (a sub-scene's own SubReso
 
   it('fallback multi-root instance → inline group keeps OUTER internalResources, subscene group gets its OWN pool', () => {
     const outer = [ext('1', 'res://multi.tscn')];
-    const hostInternal = [intRes('1', 'StyleBoxFlat', { bg_color: 'HOST' })];
-    const subInternal = [intRes('9', 'StyleBoxFlat', { bg_color: 'SUB' })];
+    const hostInternal = [subResource('StyleBoxFlat', '1', { bg_color: 'HOST' })];
+    const subInternal = [subResource('StyleBoxFlat', '9', { bg_color: 'SUB' })];
     const multi: TscnScene = {
       nodes: [makeNode('RootA', 'Node3D'), makeNode('RootB', 'Node3D')],
       externalResources: [],
@@ -737,9 +734,9 @@ describe("liveChildGroups — internalResources scope (a sub-scene's own SubReso
     // Host instances A, and A instances B. Each level declares a different
     // StyleBoxFlat under the same SubResource id "1", so the wrong level's pool
     // gives wrong data rather than a silent miss.
-    const hostInternal = [intRes('1', 'StyleBoxFlat', { bg_color: 'HOST' })];
-    const aInternal = [intRes('1', 'StyleBoxFlat', { bg_color: 'A' })];
-    const bInternal = [intRes('1', 'StyleBoxFlat', { bg_color: 'B' })];
+    const hostInternal = [subResource('StyleBoxFlat', '1', { bg_color: 'HOST' })];
+    const aInternal = [subResource('StyleBoxFlat', '1', { bg_color: 'A' })];
+    const bInternal = [subResource('StyleBoxFlat', '1', { bg_color: 'B' })];
     const subB: TscnScene = {
       nodes: [makeNode('BRoot', 'Node3D', { children: [makeNode('Leaf', 'Panel')] })],
       externalResources: [],

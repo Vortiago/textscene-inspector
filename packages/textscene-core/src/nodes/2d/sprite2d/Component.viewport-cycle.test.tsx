@@ -40,7 +40,7 @@ const heading = { type: 'node', attributes: { type: 'Sprite2D', name: 'ViewportS
 const VIEWPORT_TEXTURE_RESOURCE: TscnInternalResource = {
   id: 'ViewportTexture_1',
   type: 'ViewportTexture',
-  data: { id: 'ViewportTexture_1', viewport_path: 'NodePath("SubViewport")' },
+  data: { viewport_path: 'NodePath("SubViewport")' },
 };
 
 function spriteNode(): TscnNode {

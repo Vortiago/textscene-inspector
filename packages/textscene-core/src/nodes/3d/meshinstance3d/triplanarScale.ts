@@ -13,6 +13,6 @@ export function triplanarPlaneScale(
   baseScale: { x: number; y: number }
 ): { x: number; y: number } {
   if (mesh.type !== 'PlaneMesh') return baseScale;
-  const { size } = decodePlaneMesh(mesh.data as Record<string, string>);
+  const { size } = decodePlaneMesh(mesh.data);
   return { x: size.x * baseScale.x, y: size.y * baseScale.y };
 }

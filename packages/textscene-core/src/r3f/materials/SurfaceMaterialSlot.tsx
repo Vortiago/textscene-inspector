@@ -340,10 +340,7 @@ export function SurfaceMaterialSlot({
 /** The decoded scalars of `material`, or null for Godot's default surface. */
 export function useMaterialScalars(material: MaterialResource | null): StandardMaterial3DScalars | null {
   const resource = material?.resource;
-  return useMemo(
-    () => (resource ? parseStandardMaterial3DScalars(resource.data as Record<string, string>) : null),
-    [resource]
-  );
+  return useMemo(() => (resource ? parseStandardMaterial3DScalars(resource.data) : null), [resource]);
 }
 
 /**

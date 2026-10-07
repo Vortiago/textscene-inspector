@@ -8,8 +8,8 @@ import { useEffect, useMemo } from 'react';
 import { warn } from '../../logger';
 import type { ParsedResource } from '../../parser/parsedResource';
 import type { TscnInternalResource } from '../../parser/types';
-import { findSubResource } from '../../resources/SubResourceResolver';
-import { parseSubResourcePath } from '../../resources/subResourcePath';
+import { findResourceSection } from '../../resources/resourceSection';
+import { resourceFilePath } from '../../resources/subResourcePath';
 import { useResourceLoad, type ResourceStatus } from '../../resources/useResource';
 import { useMissingReport } from '../contexts/MissingResourcesContext';
 import type { MaterialResource, MaterialSource } from './materialSource';
@@ -33,15 +33,11 @@ export function readyMaterial(loaded: LoadedMaterial): MaterialResource | null {
 /** What `source` loads to. A ShaderMaterial is declined with a warning (ADR-0041). */
 export function useMaterial(source: MaterialSource | undefined): LoadedMaterial {
   const address = source?.kind === 'file' ? source.path : '';
-  const { filePath, subResourceId } = parseSubResourcePath(address);
   // Called with '' for an inline source, to keep the hook count stable. The `resource` bus
   // parses whole files, so the hook loads the file and reports under the address itself.
-  const fileResult = useResourceLoad<ParsedResource>(filePath, 'resource');
+  const fileResult = useResourceLoad<ParsedResource>(resourceFilePath(address), 'resource');
   const file = fileResult.value;
-  const body = useMemo(
-    () => (file ? materialBody(file, filePath, subResourceId) : undefined),
-    [file, filePath, subResourceId]
-  );
+  const body = useMemo(() => (file ? materialBody(file, address) : undefined), [file, address]);
   useMissingReport(address, addressStatus(fileResult.status, body));
 
   // Keyed on what the source holds, not the source object: a caller may build a new
@@ -87,12 +83,8 @@ function ready(material: MaterialResource): LoadedMaterial {
   return type === 'StandardMaterial3D' ? { status: 'ready', material } : { status: 'declined', type };
 }
 
-/** The `[resource]` body, or the named `[sub_resource]`, of a parsed `.tres`. */
-function materialBody(
-  file: ParsedResource,
-  filePath: string,
-  subResourceId: string | undefined
-): TscnInternalResource | undefined {
-  if (subResourceId !== undefined) return findSubResource(file.subResources, subResourceId);
-  return { id: filePath, type: file.resourceType, data: file.properties };
+/** The section `address` names in its parsed `.tres`, or undefined for an id the file does not declare. */
+function materialBody(file: ParsedResource, address: string): TscnInternalResource | undefined {
+  const section = findResourceSection(file, address);
+  return section && { id: address, type: section.type, data: section.properties };
 }

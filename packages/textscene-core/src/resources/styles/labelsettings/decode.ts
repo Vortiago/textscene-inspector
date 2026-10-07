@@ -40,7 +40,7 @@ export function resolveLabelSettings(
 ): LabelSettingsResource | null {
   const resource = resolveSubResourceRef(ref, internalResources);
   if (resource?.type !== 'LabelSettings') return null;
-  return decodeLabelSettings(resource.data as Record<string, string>);
+  return decodeLabelSettings(resource.data);
 }
 
 /** The `LabelSettings` a standalone resource file carries, or null when the file is some other resource type. */

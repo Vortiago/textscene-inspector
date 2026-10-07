@@ -105,23 +105,21 @@ export function CollisionGizmo2D({
   /** The node's `debug_color`, already resolved to a three colour. */
   color: THREE.Color;
 }) {
-  const data = shape.data as Record<string, string>;
-
   const points = useMemo((): Point2D[] => {
     switch (shape.type) {
       case 'RectangleShape2D':
-        return rectanglePoints(decodeRectangleShape2D(data).size);
+        return rectanglePoints(decodeRectangleShape2D(shape.data).size);
       case 'CircleShape2D':
-        return circlePoints(decodeCircleShape2D(data).radius);
+        return circlePoints(decodeCircleShape2D(shape.data).radius);
       case 'CapsuleShape2D': {
-        const { radius, height } = decodeCapsuleShape2D(data);
+        const { radius, height } = decodeCapsuleShape2D(shape.data);
         return capsulePoints(radius, height);
       }
       default:
         warn(`[CollisionShape2D] Unsupported shape type "${shape.type}" — drawing a unit rectangle.`);
         return rectanglePoints({ x: 20, y: 20 });
     }
-  }, [shape.type, data]);
+  }, [shape.type, shape.data]);
 
   const positions = useMemo(() => loopToSegments(points), [points]);
 

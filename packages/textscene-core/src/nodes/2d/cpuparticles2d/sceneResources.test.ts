@@ -5,15 +5,14 @@ import type { TscnInternalResource } from '../../../parser/types';
 
 const CURVE: TscnInternalResource = {
   type: 'Curve',
-  id: '1',
-  data: { id: '4', _data: '[Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]' },
+  id: '4',
+  data: { _data: '[Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]' },
 };
 
 const GRADIENT: TscnInternalResource = {
   type: 'Gradient',
   id: '2',
   data: {
-    id: '2',
     offsets: 'PackedFloat32Array(0, 1)',
     colors: 'PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)',
   },

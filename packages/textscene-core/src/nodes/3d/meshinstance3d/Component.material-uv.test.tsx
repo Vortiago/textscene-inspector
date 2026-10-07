@@ -10,9 +10,10 @@ import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
+import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
+import { subResource } from '../../../testing/subResource';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 function makeNode(): TscnNode {
@@ -24,14 +25,6 @@ function makeNode(): TscnNode {
     materialOverride: 'SubResource("Mat")',
   };
   return { name: 'M', type: 'MeshInstance3D', children: [], properties: props };
-}
-
-function sub(type: string, id: string, data: Record<string, string | undefined>): TscnInternalResource {
-  return {
-    id,
-    type,
-    data: Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined)),
-  };
 }
 
 function ext(id: string, path: string): TscnExternalResource {
@@ -50,8 +43,8 @@ async function renderUV(opts: {
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider
         internalResources={[
-          sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
-          sub('StandardMaterial3D', 'Mat', opts.matData),
+          subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
+          subResource('StandardMaterial3D', 'Mat', opts.matData),
         ]}
         externalResources={opts.externals}
       >
@@ -183,8 +176,8 @@ describe('StandardMaterial3D UV transforms (assertions 40–47)', () => {
       <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider
           internalResources={[
-            sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
-            sub('StandardMaterial3D', 'Mat', {
+            subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
+            subResource('StandardMaterial3D', 'Mat', {
               albedo_texture: 'ExtResource("1")',
               normal_enabled: 'true',
               normal_texture: 'ExtResource("2")',

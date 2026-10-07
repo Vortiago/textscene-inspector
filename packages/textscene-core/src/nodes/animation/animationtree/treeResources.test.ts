@@ -8,14 +8,11 @@ import { describe, it, expect } from 'vitest';
 import { TscnParser } from '../../../parser/TscnParser';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveTreeRoot } from './treeResources';
-
-function res(id: string, type: string, data: Record<string, unknown>): TscnInternalResource {
-  return { id, type, data };
-}
+import { subResource } from '../../../testing/subResource';
 
 describe('resolveTreeRoot — leaves', () => {
   it('resolves an AnimationNodeAnimation reference to an animation leaf', () => {
-    const resources = [res('17', 'AnimationNodeAnimation', { animation: '&"idle"' })];
+    const resources = [subResource('AnimationNodeAnimation', '17', { animation: '&"idle"' })];
     const root = resolveTreeRoot('SubResource("17")', resources);
     expect(root).toEqual({ kind: 'animation', clip: 'idle' });
   });
@@ -24,10 +21,10 @@ describe('resolveTreeRoot — leaves', () => {
 describe('resolveTreeRoot — blend tree', () => {
   it('wires a Blend2 from output through node_connections to its two clips', () => {
     const resources = [
-      res('idle', 'AnimationNodeAnimation', { animation: '&"idle"' }),
-      res('walk', 'AnimationNodeAnimation', { animation: '&"walk"' }),
-      res('blend', 'AnimationNodeBlend2', {}),
-      res('tree', 'AnimationNodeBlendTree', {
+      subResource('AnimationNodeAnimation', 'idle', { animation: '&"idle"' }),
+      subResource('AnimationNodeAnimation', 'walk', { animation: '&"walk"' }),
+      subResource('AnimationNodeBlend2', 'blend', {}),
+      subResource('AnimationNodeBlendTree', 'tree', {
         'nodes/mix/node': 'SubResource("blend")',
         'nodes/a/node': 'SubResource("idle")',
         'nodes/b/node': 'SubResource("walk")',
@@ -48,9 +45,9 @@ describe('resolveTreeRoot — blend tree', () => {
 
   it('threads a TimeScale node through to its single input', () => {
     const resources = [
-      res('run', 'AnimationNodeAnimation', { animation: '&"run"' }),
-      res('ts', 'AnimationNodeTimeScale', {}),
-      res('tree', 'AnimationNodeBlendTree', {
+      subResource('AnimationNodeAnimation', 'run', { animation: '&"run"' }),
+      subResource('AnimationNodeTimeScale', 'ts', {}),
+      subResource('AnimationNodeBlendTree', 'tree', {
         'nodes/scale/node': 'SubResource("ts")',
         'nodes/clip/node': 'SubResource("run")',
         node_connections: '[&"output", 0, &"scale", &"scale", 0, &"clip"]',
@@ -70,9 +67,9 @@ describe('resolveTreeRoot — blend tree', () => {
 describe('resolveTreeRoot — state machine', () => {
   it('resolves states and picks the Start-transition target as the start state', () => {
     const resources = [
-      res('idle', 'AnimationNodeAnimation', { animation: '&"idle"' }),
-      res('walk', 'AnimationNodeAnimation', { animation: '&"walk"' }),
-      res('sm', 'AnimationNodeStateMachine', {
+      subResource('AnimationNodeAnimation', 'idle', { animation: '&"idle"' }),
+      subResource('AnimationNodeAnimation', 'walk', { animation: '&"walk"' }),
+      subResource('AnimationNodeStateMachine', 'sm', {
         'states/idle/node': 'SubResource("idle")',
         'states/walk/node': 'SubResource("walk")',
         transitions: '["Start", "walk", SubResource("t1")]',
@@ -153,7 +150,7 @@ node_connections = [&"output", 0, &"clip"]
 describe('resolveTreeRoot — cyclic sub-resource references', () => {
   it('yields no root for a BlendTree that holds itself', () => {
     const resources = [
-      res('A', 'AnimationNodeBlendTree', {
+      subResource('AnimationNodeBlendTree', 'A', {
         'nodes/Self/node': 'SubResource("A")',
         node_connections: '[&"output", 0, &"Self"]',
       }),
@@ -164,11 +161,11 @@ describe('resolveTreeRoot — cyclic sub-resource references', () => {
 
   it('yields no root for two BlendTrees that hold each other', () => {
     const resources = [
-      res('A', 'AnimationNodeBlendTree', {
+      subResource('AnimationNodeBlendTree', 'A', {
         'nodes/Nested/node': 'SubResource("B")',
         node_connections: '[&"output", 0, &"Nested"]',
       }),
-      res('B', 'AnimationNodeBlendTree', {
+      subResource('AnimationNodeBlendTree', 'B', {
         'nodes/Back/node': 'SubResource("A")',
         node_connections: '[&"output", 0, &"Back"]',
       }),
@@ -181,9 +178,9 @@ describe('resolveTreeRoot — cyclic sub-resource references', () => {
   // is ordinary reuse, and refusing the second would silence half the blend.
   it('still resolves one clip sub-resource wired into both Blend2 inputs', () => {
     const resources = [
-      res('idle', 'AnimationNodeAnimation', { animation: '&"idle"' }),
-      res('blend', 'AnimationNodeBlend2', {}),
-      res('tree', 'AnimationNodeBlendTree', {
+      subResource('AnimationNodeAnimation', 'idle', { animation: '&"idle"' }),
+      subResource('AnimationNodeBlend2', 'blend', {}),
+      subResource('AnimationNodeBlendTree', 'tree', {
         'nodes/mix/node': 'SubResource("blend")',
         'nodes/a/node': 'SubResource("idle")',
         'nodes/b/node': 'SubResource("idle")',

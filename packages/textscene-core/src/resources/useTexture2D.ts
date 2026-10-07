@@ -144,7 +144,7 @@ export function inlineTexture2DSize(
   if (resource?.type !== 'GradientTexture2D') return null;
   // The declared size: Godot's getters (`scene/resources/gradient_texture.cpp`) never consult
   // `gradient`, and rasterising here mints a cache entry no consumer pins, open to eviction.
-  const { width, height } = decodeGradientTexture2D(resource.data as Record<string, string>);
+  const { width, height } = decodeGradientTexture2D(resource.data);
   return { x: width, y: height };
 }
 

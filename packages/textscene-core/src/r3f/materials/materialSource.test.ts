@@ -110,6 +110,10 @@ describe('fileMaterialSources', () => {
     ]);
   });
 
+  it('leaves a material that is no .tres document undefined, as an ExtResource reference does', () => {
+    expect(fileMaterialSources(['res://materials/paint.material'])).toEqual([undefined]);
+  });
+
   it('returns no sources for a mesh with no surfaces', () => {
     expect(fileMaterialSources([])).toEqual([]);
   });

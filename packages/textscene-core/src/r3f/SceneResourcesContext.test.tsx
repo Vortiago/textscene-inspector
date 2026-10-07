@@ -91,14 +91,6 @@ describe('findSubResource', () => {
     expect(findSubResource(hostInternal, 'BoxMesh_host')).toBe(hostInternal[0]);
   });
 
-  it('matches the runtime data.id key (cross-pipeline compatibility)', () => {
-    const viaDataId: TscnInternalResource[] = [
-      { id: '3', type: 'StyleBoxFlat', data: { id: 'StyleBoxFlat_a1b2' } },
-    ];
-    expect(findSubResource(viaDataId, 'StyleBoxFlat_a1b2')).toBe(viaDataId[0]);
-    expect(findSubResource(viaDataId, '3')).toBe(viaDataId[0]);
-  });
-
   it('returns undefined for an unknown id', () => {
     expect(findSubResource(hostInternal, 'NoSuchResource')).toBeUndefined();
   });

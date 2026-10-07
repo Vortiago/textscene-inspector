@@ -13,8 +13,9 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { findMesh } from '../testing/reactThreeTestInstance';
-import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
+import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { subResource } from '../../../testing/subResource';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 /** Godot slot → the `.tres` property, the ext id, the path and the three map. */
@@ -52,10 +53,6 @@ const EXTERNALS: TscnExternalResource[] = SLOTS.map(([, id, path]) => ({
   path,
 }));
 
-function sub(type: string, id: string, data: Record<string, string>): TscnInternalResource {
-  return { id, type, data };
-}
-
 async function renderMaterial(): Promise<THREE.MeshStandardMaterial> {
   const fake = createFakeResourceLoader();
   for (const [path, texture] of SHARED) fake.textures.seed(path, texture);
@@ -78,8 +75,8 @@ async function renderMaterial(): Promise<THREE.MeshStandardMaterial> {
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider
         internalResources={[
-          sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
-          sub('StandardMaterial3D', 'Mat', MATERIAL),
+          subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
+          subResource('StandardMaterial3D', 'Mat', MATERIAL),
         ]}
         externalResources={EXTERNALS}
       >

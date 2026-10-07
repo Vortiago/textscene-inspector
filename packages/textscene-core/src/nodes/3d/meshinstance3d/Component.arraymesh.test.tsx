@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider, ResourceLoader } from '../../../index';
-import { decodeArrayMesh } from '../../../resources/meshes/arraymesh/decode';
+import { decodeArrayMeshTres } from '../../../resources/testing/decodeArrayMeshTres';
 import { buildArrayMeshGeometry } from '../../../resources/meshes/arraymesh/build';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
@@ -89,7 +89,7 @@ function firstMeshGeometry(
 describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
   it('renders the decoded ArrayMesh geometry (4 verts), not the placeholder box', async () => {
     const loader = loaderServing();
-    const mesh = decodeArrayMesh(WALL_TRES, 'res://stage/meshes/wall.tres');
+    const mesh = decodeArrayMeshTres(WALL_TRES, 'res://stage/meshes/wall.tres');
     const resource: ArrayMeshResource = {
       geometry: buildArrayMeshGeometry(mesh),
       materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
@@ -115,7 +115,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
 
   it('renders a compressed-attribute ArrayMesh with finite bounds, not the placeholder', async () => {
     const loader = loaderServing();
-    const mesh = decodeArrayMesh(COMPRESSED_TRES, 'res://stage/meshes/wall.tres');
+    const mesh = decodeArrayMeshTres(COMPRESSED_TRES, 'res://stage/meshes/wall.tres');
     const resource: ArrayMeshResource = {
       geometry: buildArrayMeshGeometry(mesh),
       materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),

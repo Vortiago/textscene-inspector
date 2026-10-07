@@ -40,12 +40,11 @@ beforeEach(() => {
 
 // The GlowSprite chain of scenes/demos/3d/platformer/coin/coin.tscn.
 const coinResources: TscnInternalResource[] = [
-  { id: 'QuadMesh_kqa4x', type: 'QuadMesh', data: { id: 'QuadMesh_kqa4x' } },
+  { id: 'QuadMesh_kqa4x', type: 'QuadMesh', data: {} },
   {
     id: 'Gradient_cd1ha',
     type: 'Gradient',
     data: {
-      id: 'Gradient_cd1ha',
       interpolation_mode: '2',
       offsets: 'PackedFloat32Array(0, 0.642276, 1)',
       colors: 'PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0.180392, 1, 1, 1, 0)',
@@ -55,7 +54,6 @@ const coinResources: TscnInternalResource[] = [
     id: 'GradientTexture2D_qhu5r',
     type: 'GradientTexture2D',
     data: {
-      id: 'GradientTexture2D_qhu5r',
       gradient: 'SubResource("Gradient_cd1ha")',
       fill: '1',
       fill_from: 'Vector2(0.5, 0.5)',
@@ -66,7 +64,6 @@ const coinResources: TscnInternalResource[] = [
     id: 'StandardMaterial3D_7q0mq',
     type: 'StandardMaterial3D',
     data: {
-      id: 'StandardMaterial3D_7q0mq',
       transparency: '1',
       blend_mode: '1',
       shading_mode: '0',
@@ -121,12 +118,11 @@ describe('<MeshInstance3D> GradientTexture2D albedo (coin glow)', () => {
 describe('<MeshInstance3D> procedural texture pins', () => {
   const mixedSlotResources: TscnInternalResource[] = [
     ...coinResources,
-    { id: 'ImageTexture_plain', type: 'ImageTexture', data: { id: 'ImageTexture_plain' } },
+    { id: 'ImageTexture_plain', type: 'ImageTexture', data: {} },
     {
       id: 'StandardMaterial3D_mixed',
       type: 'StandardMaterial3D',
       data: {
-        id: 'StandardMaterial3D_mixed',
         albedo_texture: 'SubResource("GradientTexture2D_qhu5r")',
         // Resolves to nothing procedural: the async slot handles it. Gated on,
         // or the slot is dropped before the walk and the mixed case goes untested.

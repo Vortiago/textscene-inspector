@@ -32,12 +32,11 @@ function makeFixture(): {
   };
 
   const internalResources: TscnInternalResource[] = [
-    { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+    { id: 'box', type: 'BoxMesh', data: {} },
     {
       id: '3',
       type: 'StandardMaterial3D',
       data: {
-        id: '3',
         albedo_texture: 'ExtResource("1")',
       } as Record<string, string>,
     },

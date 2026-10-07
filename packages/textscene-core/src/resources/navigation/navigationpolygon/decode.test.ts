@@ -76,12 +76,6 @@ describe('decodeNavigationPolygon', () => {
     ).toBeNull();
   });
 
-  it('returns null when a property is not a Godot-text literal at all (error path)', () => {
-    // An inline `[sub_resource]`'s data is `Record<string, unknown>`, and a non-string
-    // there decodes to nothing rather than being coerced.
-    expect(decodeNavigationPolygon({ vertices: 42, polygons: '[PackedInt32Array(0, 1, 2)]' })).toBeNull();
-  });
-
   it('returns null for empty arrays (edge case)', () => {
     expect(
       decodeNavigationPolygon({

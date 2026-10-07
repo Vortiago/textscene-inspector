@@ -17,13 +17,9 @@ const FLOATS_PER_VERTEX = 2;
  * drawable: absent, empty, unreadable, or without one surviving polygon. Never
  * throws: a malformed value degrades to null so a render pass cannot fault on it.
  */
-export function decodeNavigationPolygon(properties: Record<string, unknown>): NavigationPolygonData | null {
-  // `Record<string, unknown>` serves both arrival paths unchanged: a
-  // ParsedResource's `properties` and an inline `[sub_resource]`'s `data`. A
-  // non-string value is not a Godot-text literal, so it decodes to nothing.
+export function decodeNavigationPolygon(properties: Record<string, string>): NavigationPolygonData | null {
   const verticesLiteral = properties['vertices'];
   const polygonsLiteral = properties['polygons'];
-  if (typeof verticesLiteral !== 'string' || typeof polygonsLiteral !== 'string') return null;
   if (!verticesLiteral || !polygonsLiteral) return null;
 
   let flat: Float32Array;

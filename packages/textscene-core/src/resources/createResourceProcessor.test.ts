@@ -127,8 +127,8 @@ describe('createResourceProcessor', () => {
       expect(fileEventBus.isCached('res://a.bin')).toBe(true);
     });
 
-    it('failure is cached as null and a repeat request re-emits failed WITHOUT re-hitting the provider', async () => {
-      // Provider has no file -> FileEventBus emits failed -> processor caches null.
+    it('a failure is cached and a repeat request re-emits its reason WITHOUT re-hitting the provider', async () => {
+      // Provider has no file -> FileEventBus emits failed -> processor caches the failure.
       const failedHandler = vi.fn();
       eventBus.on<Error>('resource', 'failed', failedHandler);
 
@@ -143,7 +143,7 @@ describe('createResourceProcessor', () => {
 
       // Re-emitted synchronously from cache; the provider was not consulted again.
       expect(failedHandler).toHaveBeenCalledTimes(2);
-      expect((failedHandler.mock.calls[1]![1] as Error).message).toContain('previously failed');
+      expect(failedHandler.mock.calls[1]![1]).toBe(failedHandler.mock.calls[0]![1]);
       expect(provider.loadResource).toHaveBeenCalledTimes(1);
     });
 
@@ -207,7 +207,7 @@ describe('createResourceProcessor', () => {
       expect(processor.getCached('res://scene.tscn')).toBe('direct:res://scene.tscn');
     });
 
-    it('failure is cached as null and a repeat request re-emits failed WITHOUT re-invoking loadDirectly', async () => {
+    it('a failure is cached and a repeat request re-emits its reason WITHOUT re-invoking loadDirectly', async () => {
       const loadDirectly = vi.fn(async () => {
         throw new Error('disk on fire');
       });
@@ -231,7 +231,7 @@ describe('createResourceProcessor', () => {
 
       expect(loadDirectly).toHaveBeenCalledTimes(1);
       expect(failedHandler).toHaveBeenCalledTimes(2);
-      expect((failedHandler.mock.calls[1]![1] as Error).message).toContain('previously failed');
+      expect((failedHandler.mock.calls[1]![1] as Error).message).toBe('disk on fire');
     });
   });
 
@@ -772,7 +772,7 @@ describe('createResourceProcessor', () => {
       expect(loaded).toHaveBeenCalledWith('res://a', 'fresh');
     });
 
-    it('a stale failure after a full clear is dropped instead of caching a null sentinel', async () => {
+    it('a stale failure after a full clear is dropped instead of caching a failure', async () => {
       let reject!: (err: Error) => void;
       const gate = new Promise<string>((_r, rj) => (reject = rj));
       let calls = 0;
@@ -790,11 +790,63 @@ describe('createResourceProcessor', () => {
       await flush();
 
       expect(failed).not.toHaveBeenCalled();
-      expect(processor.isCached('res://a')).toBe(false); // no null sentinel
+      expect(processor.isCached('res://a')).toBe(false); // no cached failure
 
       processor.request('res://a');
       await flush();
       expect(processor.getCached('res://a')).toBe('fresh');
     });
+  });
+});
+
+describe('release', () => {
+  function loadedProcessor(load: () => Promise<string>) {
+    const eventBus = new ResourceEventBus();
+    const processor = createResourceProcessor<string>({
+      eventBus,
+      resourceType: 'resource',
+      loadDirectly: load,
+    });
+    const invalidated = vi.fn();
+    eventBus.on('resource', 'invalidated', invalidated);
+    return { eventBus, processor, invalidated };
+  }
+
+  /** Request `path` and wait until it loads or fails. A failure rejects `once`, which is the settling. */
+  async function settle(eventBus: ResourceEventBus, processor: ResourceProcessor<string>, path: string) {
+    const loaded = eventBus.once('resource', 'loaded', path, 1000);
+    processor.request(path);
+    await loaded.catch(() => undefined);
+  }
+
+  it('drops an unpinned value and announces nothing', async () => {
+    const { eventBus, processor, invalidated } = loadedProcessor(async () => 'parsed');
+    await settle(eventBus, processor, 'res://a.tres');
+
+    processor.release('res://a.tres');
+
+    expect(processor.isCached('res://a.tres')).toBe(false);
+    expect(invalidated).not.toHaveBeenCalled();
+  });
+
+  it('keeps a value a reader pins', async () => {
+    const { eventBus, processor } = loadedProcessor(async () => 'parsed');
+    processor.pin('res://a.tres');
+    await settle(eventBus, processor, 'res://a.tres');
+
+    processor.release('res://a.tres');
+
+    expect(processor.getCached('res://a.tres')).toBe('parsed');
+  });
+
+  it('keeps a failure, so the path is not retried', async () => {
+    const { eventBus, processor } = loadedProcessor(async () => {
+      throw new Error('missing [gd_resource] header');
+    });
+    await settle(eventBus, processor, 'res://a.tres');
+
+    processor.release('res://a.tres');
+
+    expect(processor.failure('res://a.tres')?.message).toBe('missing [gd_resource] header');
   });
 });

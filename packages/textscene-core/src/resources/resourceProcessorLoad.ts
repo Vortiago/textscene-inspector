@@ -7,11 +7,12 @@
 import type { FileEventBus, FileData } from './FileEventBus';
 import type { ResourceEventBus, ResourceType } from './ResourceEventBus';
 import type { LRUCache } from './LRUCache';
+import { CachedFailure, type CacheEntry } from './resourceProcessorTypes';
 import { resourceFilePath } from './subResourcePath';
 import * as logger from '../logger';
 
 export interface LoadLaneContext<T> {
-  cache: LRUCache<T | null>;
+  cache: LRUCache<CacheEntry<T>>;
   /**
    * Per-path flight identity, owned by the factory. See its declaration there
    * for why a completion whose token has gone is dropped.
@@ -73,14 +74,14 @@ export function createLoadLane<T>(ctx: LoadLaneContext<T>): LoadLane<T> {
         logger.info(`[${resourceType}Processor] Dropped stale failure: ${path}`);
         return;
       }
-      cache.set(path, null); // Cache failure to prevent retries
+      const err = error instanceof Error ? error : new Error(String(error));
+      cache.set(path, new CachedFailure(err)); // No retry, and a repeat request reports `err`.
       inflight.delete(path);
       const elapsed = performance.now() - startTime;
-      const err = error instanceof Error ? error : new Error(String(error));
       logger.error(`[${resourceType}Processor] Failed: ${path} (${elapsed.toFixed(2)}ms)`, err);
       eventBus.emit<Error>(resourceType, 'failed', path, err);
     } finally {
-      // The bytes are now materialised or cached as a `null` failure, so the byte
+      // The bytes are now materialised or cached as a failure, so the byte
       // bus's copy would hold a large GLB twice (a no-op in `loadDirectly` mode).
       // Only once no other address awaits the file: `clearCache` drops its in-flight
       // token too, which would strand a sibling **Sub-resource path** in `pending`.
@@ -91,7 +92,7 @@ export function createLoadLane<T>(ctx: LoadLaneContext<T>): LoadLane<T> {
 
   const fail = (path: string, error: Error): void => {
     inflight.delete(path);
-    cache.set(path, null); // Cache failure to prevent retries
+    cache.set(path, new CachedFailure(error)); // No retry, and a repeat request reports `error`.
     eventBus.emit<Error>(resourceType, 'failed', path, error);
   };
 

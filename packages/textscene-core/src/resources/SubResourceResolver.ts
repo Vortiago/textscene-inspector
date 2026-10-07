@@ -55,11 +55,8 @@ function claimExternalIds(byId: Map<string, TscnExternalResource>, resource: Tsc
   claimId(byId, resource.id, resource);
 }
 
-/** Both ids {@link findSubResource} answers to. */
 function claimInternalIds(byId: Map<string, TscnInternalResource>, resource: TscnInternalResource): void {
-  const dataId = (resource.data as { id?: unknown } | undefined)?.id;
-  if (typeof dataId === 'string') claimId(byId, dataId, resource);
-  claimId(byId, String(resource.id), resource);
+  claimId(byId, resource.id, resource);
 }
 
 /** The `[ext_resource]` declaring `id`, the first one when a file repeats an id. */
@@ -99,11 +96,7 @@ export function resolveExtResourcePath(
   return path === undefined ? null : simplifyResPath(path);
 }
 
-/**
- * Find a SubResource by id. It matches both the parser's structural `id` field and
- * the runtime `data.id` key, since both pipelines call it. The first resource in
- * declaration order that answers to `id` either way wins.
- */
+/** Find a SubResource by id. The first resource in declaration order with that id wins. */
 export function findSubResource(
   internalResources: readonly TscnInternalResource[],
   id: string
@@ -162,8 +155,7 @@ export function unwrapCanvasTextureRef(
     const sub = resolveSubResourceRef(current, internalResources);
     if (sub?.type !== 'CanvasTexture') return current;
     (peeled ??= new Set()).add(current);
-    const diffuse = (sub.data as { diffuse_texture?: unknown }).diffuse_texture;
-    current = typeof diffuse === 'string' ? diffuse : undefined;
+    current = sub.data.diffuse_texture;
   }
   return undefined;
 }

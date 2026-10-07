@@ -1,13 +1,13 @@
 /**
- * ArrayMesh processor: fetches a Godot ArrayMesh .tres through the
- * FileEventBus and emits a THREE.BufferGeometry on the 'arraymesh' bus slot.
+ * ArrayMesh processor: decodes the section a path addresses in the owning file's
+ * parse and emits a THREE.BufferGeometry on the 'arraymesh' bus slot.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { ResourceEventBus } from '../ResourceEventBus';
-import type { FileEventBus, FileData } from '../FileEventBus';
 import { createArrayMeshProcessor, type ArrayMeshResource } from './createArrayMeshProcessor';
 import { truncatedSurface, wallQuadSurfaces } from '../testing/arrayMeshSurfaces';
+import { sectionLoaderServing } from '../testing/sectionLoaderServing';
 
 const WALL_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://bett1yahcwe25"]
 
@@ -29,38 +29,34 @@ const UNREADABLE_THEN_GOOD_TRES = WALL_TRES.replace(
   `_surfaces = [${truncatedSurface({ name: 'truncated' })}, {`
 );
 
-function mockFileBus() {
-  const handlers = {
-    loaded: new Set<(p: string, d: FileData) => void>(),
-    failed: new Set<(p: string, e: Error) => void>(),
-  };
-  const request = vi.fn();
-  const bus = {
-    on: (event: 'loaded' | 'failed', h: never) => handlers[event].add(h),
-    off: (event: 'loaded' | 'failed', h: never) => handlers[event].delete(h),
-    request,
-    // createResourceProcessor drops the raw-bytes cache entry once
-    // processing settles (success or failure), so a stand-in FileEventBus
-    // must implement clearCache() too.
-    clearCache: vi.fn(),
-  } as unknown as FileEventBus;
-  return {
-    bus,
-    request,
-    emitLoaded: (path: string, data: FileData) => handlers.loaded.forEach((h) => h(path, data)),
-  };
+/** A `shadow_mesh` sub-resource whose surface carries a material declared in the same file. */
+const SHADOW_MESH_TRES = [
+  '[gd_resource type="ArrayMesh" load_steps=3 format=4]',
+  '',
+  '[sub_resource type="StandardMaterial3D" id="Mat_a"]',
+  'roughness = 0.8',
+  '',
+  '[sub_resource type="ArrayMesh" id="ArrayMesh_shadow"]',
+  `_surfaces = ${wallQuadSurfaces({ material: 'SubResource("Mat_a")' })}`,
+  '',
+  '[resource]',
+  `_surfaces = ${wallQuadSurfaces({})}`,
+  'shadow_mesh = SubResource("ArrayMesh_shadow")',
+  '',
+].join('\n');
+
+function processorServing(files: Record<string, string>) {
+  const eventBus = new ResourceEventBus();
+  const processor = createArrayMeshProcessor(eventBus, sectionLoaderServing(files));
+  return { eventBus, processor };
 }
 
 describe('createArrayMeshProcessor', () => {
   it('decodes a requested ArrayMesh .tres and emits arraymesh:loaded with geometry', async () => {
-    const file = mockFileBus();
-    const eventBus = new ResourceEventBus();
-    const processor = createArrayMeshProcessor(file.bus, eventBus);
+    const { eventBus, processor } = processorServing({ 'res://wall.tres': WALL_TRES });
 
     const loaded = eventBus.once<ArrayMeshResource>('arraymesh', 'loaded', 'res://wall.tres', 1000);
     processor.request('res://wall.tres');
-    expect(file.request).toHaveBeenCalledWith('res://wall.tres');
-    file.emitLoaded('res://wall.tres', WALL_TRES);
 
     const resource = await loaded;
     expect(resource.geometry).toBeInstanceOf(THREE.BufferGeometry);
@@ -73,13 +69,10 @@ describe('createArrayMeshProcessor', () => {
     // materialPaths comes from the decoded surfaces and each group's
     // materialIndex from the builder's loop, so they agree only while the
     // decoder's list is the source of both.
-    const file = mockFileBus();
-    const eventBus = new ResourceEventBus();
-    const processor = createArrayMeshProcessor(file.bus, eventBus);
+    const { eventBus, processor } = processorServing({ 'res://mixed.tres': GOOD_THEN_UNREADABLE_TRES });
 
     const loaded = eventBus.once<ArrayMeshResource>('arraymesh', 'loaded', 'res://mixed.tres', 1000);
     processor.request('res://mixed.tres');
-    file.emitLoaded('res://mixed.tres', GOOD_THEN_UNREADABLE_TRES);
 
     const resource = await loaded;
     expect(resource.geometry.groups).toHaveLength(1);
@@ -93,26 +86,35 @@ describe('createArrayMeshProcessor', () => {
   it("carries each draw group's ORIGINAL surface index", async () => {
     // `surface_material_override/N` names the index in `_surfaces`, not the draw
     // group, so a consumer keeps the two apart when a surface above is dropped.
-    const file = mockFileBus();
-    const eventBus = new ResourceEventBus();
-    const processor = createArrayMeshProcessor(file.bus, eventBus);
+    const { eventBus, processor } = processorServing({ 'res://shifted.tres': UNREADABLE_THEN_GOOD_TRES });
 
     const loaded = eventBus.once<ArrayMeshResource>('arraymesh', 'loaded', 'res://shifted.tres', 1000);
     processor.request('res://shifted.tres');
-    file.emitLoaded('res://shifted.tres', UNREADABLE_THEN_GOOD_TRES);
 
     const resource = await loaded;
     expect(resource.materialPaths).toHaveLength(1);
     expect(resource.surfaceIndices).toEqual([1]);
   });
 
-  it('ignores binary data (only decodes text .tres)', () => {
-    const file = mockFileBus();
-    const eventBus = new ResourceEventBus();
-    const processor = createArrayMeshProcessor(file.bus, eventBus);
+  it('emits arraymesh:failed and caches null for an address that is not an ArrayMesh', async () => {
+    const { eventBus, processor } = processorServing({
+      'res://box.tres': '[gd_resource type="BoxMesh" format=3]\n\n[resource]\n',
+    });
 
-    processor.request('res://mesh.tres');
-    file.emitLoaded('res://mesh.tres', new ArrayBuffer(8));
-    expect(processor.getCached('res://mesh.tres')).toBeUndefined();
+    const failed = eventBus.once<Error>('arraymesh', 'failed', 'res://box.tres', 1000);
+    processor.request('res://box.tres');
+
+    expect((await failed).message).toBe('res://box.tres has type BoxMesh, expected ArrayMesh');
+    expect(processor.getCached('res://box.tres')).toBeNull();
+  });
+
+  it("addresses a sub-resource mesh's material against the owning file", async () => {
+    const { eventBus, processor } = processorServing({ 'res://wheel.tres': SHADOW_MESH_TRES });
+    const address = 'res://wheel.tres::ArrayMesh_shadow';
+
+    const loaded = eventBus.once<ArrayMeshResource>('arraymesh', 'loaded', address, 1000);
+    processor.request(address);
+
+    expect((await loaded).materialPaths).toEqual(['res://wheel.tres::Mat_a']);
   });
 });

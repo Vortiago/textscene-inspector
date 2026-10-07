@@ -370,10 +370,7 @@ function buildForest(
 
     const sub = findSubResource(int, parsed.id);
     if (!sub || sub.type !== 'Theme') return null;
-    // `parseInternalResource` echoes the heading's `id` into `data`, which would
-    // leak into `properties` as a fake declared one.
-    const { id: _id, ...properties } = sub.data as Record<string, string>;
-    return resolveInlineThemeResource(properties, ext, int, fontCache, pendingFonts);
+    return resolveInlineThemeResource(sub.data, ext, int, fontCache, pendingFonts);
   }
 
   /**

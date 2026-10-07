@@ -22,7 +22,7 @@ interface CollisionGizmoProps {
 }
 
 export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
-  const data = shape.data as Record<string, string>;
+  const data = shape.data;
   const wire = wireGizmoProgram(color);
   switch (shape.type) {
     case 'BoxShape3D': {

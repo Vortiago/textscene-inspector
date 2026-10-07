@@ -27,11 +27,11 @@ export interface BezierCurveReader<P> {
  * or that does not parse, loads no points.
  */
 export function decodeBezierCurve<P>(
-  data: Readonly<Record<string, unknown>>,
+  data: Readonly<Record<string, string>>,
   reader: BezierCurveReader<P>
 ): P[] {
   const points = readControlPoints(data._data, reader);
-  const count = typeof data.point_count === 'string' ? ruleInt(data.point_count) : null;
+  const count = data.point_count === undefined ? null : ruleInt(data.point_count);
   return count === null ? points : resizeBezierPoints(points, count, reader.origin);
 }
 
@@ -51,8 +51,8 @@ export function resolveBezierCurve<P>(
   return resource ? decodeBezierCurve(resource.data, reader) : [];
 }
 
-function readControlPoints<P>(value: unknown, reader: BezierCurveReader<P>): P[] {
-  if (typeof value !== 'string') return [];
+function readControlPoints<P>(value: string | undefined, reader: BezierCurveReader<P>): P[] {
+  if (value === undefined) return [];
   const read = readBezierData(value, reader.format);
   if (read.refusal !== null) return [];
 

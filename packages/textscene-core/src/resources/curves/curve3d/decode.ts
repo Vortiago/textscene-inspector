@@ -28,7 +28,7 @@ const CURVE3D: BezierCurveReader<Curve3DControlPoint> = {
 };
 
 /** The control points of a Curve3D resource body, as Godot loads them. */
-export function decodeCurve3D(data: Readonly<Record<string, unknown>>): Curve3DControlPoint[] {
+export function decodeCurve3D(data: Readonly<Record<string, string>>): Curve3DControlPoint[] {
   return decodeBezierCurve(data, CURVE3D);
 }
 

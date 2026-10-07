@@ -33,7 +33,7 @@ export function LightOccluder2D({ node, children }: NodeComponentProps) {
 
   const positions = useMemo(() => {
     if (!occluderResource) return null;
-    const data = occluderResource.data as Record<string, string>;
+    const data = occluderResource.data;
     if (!data.polygon) return null;
     // Flat `[x0,y0,x1,y1,...]`, which polygonToSegments pairs and Y-negates. A
     // malformed literal is the linter's to report, not a throw through render.
@@ -50,9 +50,7 @@ export function LightOccluder2D({ node, children }: NodeComponentProps) {
 
   const cullMode = useMemo(
     () =>
-      occluderResource
-        ? parseOccluderCullMode((occluderResource.data as Record<string, string>).cull_mode)
-        : OCCLUDER_CULL_DISABLED,
+      occluderResource ? parseOccluderCullMode(occluderResource.data.cull_mode) : OCCLUDER_CULL_DISABLED,
     [occluderResource]
   );
 

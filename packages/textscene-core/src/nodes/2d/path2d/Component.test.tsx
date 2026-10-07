@@ -18,7 +18,6 @@ const CURVE: TscnInternalResource = {
   id: 'Curve2D_1',
   type: 'Curve2D',
   data: {
-    id: 'Curve2D_1',
     _data: '{\n"points": PackedVector2Array(0,0,0,0,0,0, 0,0,0,0,100,0, 0,0,0,0,100,100)\n}',
     point_count: '3',
   },

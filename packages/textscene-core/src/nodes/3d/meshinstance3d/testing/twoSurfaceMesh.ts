@@ -16,13 +16,7 @@ export function inlineTwoSurfaceMesh(
   id: string,
   surfaceMaterialIds: readonly (string | null)[] = [null, null]
 ): TscnInternalResource {
-  const surfaces = wallQuadSurfaces(
-    ...surfaceMaterialIds.map((materialId, i) => ({
-      material: materialId === null ? null : `SubResource("${materialId}")`,
-      name: `surface_${i}`,
-    }))
-  );
-  return { id, type: 'ArrayMesh', data: { _surfaces: surfaces } };
+  return { id, type: 'ArrayMesh', data: { _surfaces: twoSurfaces(surfaceMaterialIds) } };
 }
 
 /**
@@ -30,6 +24,14 @@ export function inlineTwoSurfaceMesh(
  * than hand-built `TscnInternalResource` literals.
  */
 export function inlineTwoSurfaceMeshTscn(id: string): string {
-  const { _surfaces } = inlineTwoSurfaceMesh(id).data as { _surfaces: string };
-  return `[sub_resource type="ArrayMesh" id="${id}"]\n_surfaces = ${_surfaces}\n`;
+  return `[sub_resource type="ArrayMesh" id="${id}"]\n_surfaces = ${twoSurfaces([null, null])}\n`;
+}
+
+function twoSurfaces(surfaceMaterialIds: readonly (string | null)[]): string {
+  return wallQuadSurfaces(
+    ...surfaceMaterialIds.map((materialId, i) => ({
+      material: materialId === null ? null : `SubResource("${materialId}")`,
+      name: `surface_${i}`,
+    }))
+  );
 }

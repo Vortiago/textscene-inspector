@@ -8,6 +8,7 @@
 import { warn } from '../../logger';
 import { indexedKeyRegex, parseGodotInt, stringToInt } from '../../godot/index.js';
 import type { ParsedResource } from '../../parser/parsedResource';
+import { ARRAY_MESH_TYPES } from '../meshes/arraymesh/decode';
 import { resolveRefToResourcePath, subResourceTypeGate } from '../subResourcePath';
 import { parseTransform3D } from '../../utils/transform';
 import { unquoteString } from '../../parser/utils';
@@ -79,7 +80,10 @@ export function meshLibraryFromTres(tres: ParsedResource, selfPath: string): Mes
         rawValue,
         extPathById,
         selfPath,
-        subResourceTypeGate(tres.subResources, ADDRESSABLE_ITEM_MESH_TYPES)
+        // A library written from a scene can embed a primitive mesh (`BoxMesh`, …) as
+        // a `[sub_resource]`, which has no `_surfaces` for the ArrayMesh processor. Left
+        // unresolved, GridMap draws its placeholder cell rather than an empty mesh.
+        subResourceTypeGate(tres.subResources, ARRAY_MESH_TYPES)
       );
     } else if (field === 'mesh_transform') {
       try {
@@ -94,10 +98,3 @@ export function meshLibraryFromTres(tres: ParsedResource, selfPath: string): Mes
 
   return items;
 }
-
-/**
- * A library written from a scene can embed a primitive mesh (`BoxMesh`, …) as a
- * `[sub_resource]`, which has no `_surfaces` for the ArrayMesh processor. Left
- * unresolved, GridMap draws its placeholder cell rather than an empty mesh.
- */
-const ADDRESSABLE_ITEM_MESH_TYPES: ReadonlySet<string> = new Set(['ArrayMesh']);
