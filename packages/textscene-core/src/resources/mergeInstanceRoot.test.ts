@@ -5,9 +5,12 @@ import type { TscnNode } from '../parser/types';
 // type-specific instance override against the instanced root's type.
 import '../nodes/3d/gridmap/index';
 import '../nodes/3d/camera3d/index';
+// The Node parser, which an unregistered root type parses with, as in every host.
+import '../nodes/node/index';
 import type { GridMapProperties } from '../nodes/3d/gridmap/types';
 import type { Camera3DProperties } from '../nodes/3d/camera3d/types';
 import { NO_SCOPES } from './testing/noScopes';
+import { extResourcePathOf } from './testing/extResourcePathOf';
 
 function node(partial: Partial<TscnNode> & { name: string; type: string }): TscnNode {
   return { children: [], properties: {}, ...partial };
@@ -273,5 +276,41 @@ describe('mergeInstanceRoot — rawPropertiesOrderReliable (ADR-0035)', () => {
     const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, NO_SCOPES);
 
     expect(merged!.rawPropertiesOrderReliable).toBe(false);
+  });
+});
+
+describe("re-homes the instance node's references into the sub-scene scope", () => {
+  const scopes = {
+    outer: {
+      externalResources: [{ id: '1', type: 'Texture2D', path: 'res://outer.png' }],
+      internalResources: [],
+    },
+    content: {
+      externalResources: [{ id: '1', type: 'Texture2D', path: 'res://inner.png' }],
+      internalResources: [],
+    },
+  };
+
+  it('on parsed properties when the nodes carry no raw properties', () => {
+    const instanceNode = node({ name: 'Coin1', type: 'Node', properties: { texture: 'ExtResource("1")' } });
+    const root = node({ name: 'Coin', type: 'Sprite2D', properties: { texture: 'ExtResource("1")' } });
+
+    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, scopes)!;
+
+    const texture = (merged.properties as { texture: string }).texture;
+    expect(extResourcePathOf(texture, merged.scope!)).toBe('res://outer.png');
+  });
+
+  it('on the raw properties of an unregistered root type', () => {
+    const instanceNode = node({
+      name: 'Coin1',
+      type: 'Node',
+      rawProperties: { texture: 'ExtResource("1")' },
+    });
+    const root = node({ name: 'Coin', type: 'UnregisteredCustomType3D', rawProperties: {} });
+
+    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, scopes)!;
+
+    expect(extResourcePathOf(merged.rawProperties!.texture, merged.scope!)).toBe('res://outer.png');
   });
 });

@@ -5,11 +5,11 @@
  * selection-driven Animation tab needs (ADR-0012).
  */
 import { canonicalisePropertyBag } from '../godot/deprecated.js';
-import type { TscnNode } from '../parser/types.js';
+import type { SceneScope, TscnNode } from '../parser/types.js';
 import type { LiveNode } from './liveNode.js';
 import { graftInstanceChildren, type InstanceScopes } from './graftInstanceChildren.js';
 import { rehomeOverride } from './rehomeOverride.js';
-import { nodeRegistry } from '../core/NodeRegistry.js';
+import { nodeRegistry, type NodeTypeRegistration } from '../core/NodeRegistry.js';
 import type { ParsedHeading } from '../parser/utils.js';
 
 /**
@@ -34,6 +34,80 @@ function definedProperties(props: Record<string, unknown>): Record<string, unkno
   return out;
 }
 
+/** The instance node's raw properties re-homed and laid over the root's, and the scope they resolve in. */
+interface MergedRaw {
+  raw: Record<string, string>;
+  scope: SceneScope;
+}
+
+/**
+ * Instance keys win, so a type-specific override and its `transform` survive, and a
+ * nested-root re-dispatch merges raw-first too. The instance node's keys were written
+ * against the outer scope, the root's against the sub-scene's, so the instance's are
+ * re-homed first. They are canonicalised here: an `instance=` heading has no `type=`, so
+ * the scanner leaves a pre-4.0 alias that would lose to the root's canonical key.
+ */
+function mergeRaw(
+  instanceRaw: Record<string, string>,
+  root: LiveNode,
+  rootRaw: Record<string, string>,
+  scopes: InstanceScopes
+): MergedRaw {
+  const { raw: rehomed, scope } = rehomeOverride(instanceRaw, scopes.outer, scopes.content);
+  return {
+    raw: {
+      ...canonicalisePropertyBag(root.type, rootRaw),
+      ...canonicalisePropertyBag(root.type, rehomed),
+    },
+    scope,
+  };
+}
+
+/** The merged raw map parsed once with the root type's parser. */
+function parseMerged(
+  instanceNode: LiveNode,
+  root: LiveNode,
+  raw: Record<string, string>,
+  registration: NodeTypeRegistration
+): TscnNode['properties'] {
+  const instanceIndex = (instanceNode.properties as { index?: number }).index;
+  const heading: ParsedHeading = {
+    type: 'node',
+    attributes: {
+      type: root.type,
+      name: instanceNode.name,
+      ...(instanceNode.parent !== undefined ? { parent: instanceNode.parent } : {}),
+      ...(instanceNode.instance ? { instance: instanceNode.instance } : {}),
+      ...(instanceIndex !== undefined ? { index: String(instanceIndex) } : {}),
+    },
+  };
+  return registration.parser(heading, raw);
+}
+
+/**
+ * The parsed properties spread, instance winning per key, for a node with no merged raw map
+ * to parse. The instance's string values are the references it can hold, re-homed from the
+ * outer scope into `into`.
+ */
+function spreadParsed(
+  instanceNode: LiveNode,
+  root: LiveNode,
+  outer: SceneScope,
+  into: SceneScope
+): { properties: TscnNode['properties']; scope: SceneScope } {
+  const instanceProperties = definedProperties(instanceNode.properties as Record<string, unknown>);
+  const { raw: rehomed, scope } = rehomeOverride(stringValues(instanceProperties), outer, into);
+  return { properties: { ...root.properties, ...instanceProperties, ...rehomed }, scope };
+}
+
+function stringValues(props: Record<string, unknown>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(props)) {
+    if (typeof value === 'string') out[key] = value;
+  }
+  return out;
+}
+
 /**
  * Fold a single-root `.tscn` sub-scene into its instance Node. Returns `null`
  * for a scene without exactly one top-level node, or a lone `GLBSceneRoot`, and
@@ -49,49 +123,17 @@ export function mergeInstanceRoot(
   const root = loadedScene.nodes[0]!;
   if (root.type === GLB_SCENE_ROOT_TYPE) return null;
 
-  // The instance node's keys were written against the outer scope, the root's against
-  // the sub-scene's, and the merged node resolves them all in one.
-  const { raw: instanceRaw, scope } = instanceNode.rawProperties
-    ? rehomeOverride(instanceNode.rawProperties, scopes.outer, scopes.content)
-    : { raw: undefined, scope: scopes.content };
-
-  const registration = nodeRegistry.getRegistration(root.type);
-  // Instance keys win, so a type-specific override and its `transform` survive,
-  // and a nested-root re-dispatch merges raw-first too. The override's keys are
-  // canonicalised here: an `instance=` heading has no `type=`, so the scanner
-  // leaves a pre-4.0 alias that would lose to the root's canonical key.
-  const mergedRaw =
-    root.rawProperties && instanceRaw
-      ? {
-          ...canonicalisePropertyBag(root.type, root.rawProperties),
-          ...canonicalisePropertyBag(root.type, instanceRaw),
-        }
+  const merged =
+    root.rawProperties && instanceNode.rawProperties
+      ? mergeRaw(instanceNode.rawProperties, root, root.rawProperties, scopes)
       : undefined;
-
-  let mergedProperties: TscnNode['properties'];
-  if (mergedRaw && registration) {
-    // Re-parse the merged raw map once with the root type's parser.
-    const instanceIndex = (instanceNode.properties as { index?: number }).index;
-    const heading: ParsedHeading = {
-      type: 'node',
-      attributes: {
-        type: root.type,
-        name: instanceNode.name,
-        ...(instanceNode.parent !== undefined ? { parent: instanceNode.parent } : {}),
-        ...(instanceNode.instance ? { instance: instanceNode.instance } : {}),
-        ...(instanceIndex !== undefined ? { index: String(instanceIndex) } : {}),
-      },
-    };
-    mergedProperties = registration.parser(heading, mergedRaw);
-  } else {
-    // A node without raw props (hand-built) or an unregistered root type
-    // spreads the already-parsed properties, instance winning per key. Its refs
-    // are not re-homed: only the raw path carries an override's references.
-    mergedProperties = {
-      ...root.properties,
-      ...definedProperties(instanceNode.properties as Record<string, unknown>),
-    };
-  }
+  // A type the registry lacks parses as a Node, as `parseNodeWithRegistry` parses it.
+  const registration = nodeRegistry.getRegistration(root.type) ?? nodeRegistry.getRegistration('Node');
+  const { properties: mergedProperties, scope } =
+    merged && registration
+      ? { properties: parseMerged(instanceNode, root, merged.raw, registration), scope: merged.scope }
+      : spreadParsed(instanceNode, root, scopes.outer, merged?.scope ?? scopes.content);
+  const mergedRaw = merged?.raw;
 
   return {
     ...instanceNode,

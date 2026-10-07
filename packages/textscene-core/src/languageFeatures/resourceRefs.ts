@@ -5,7 +5,12 @@
  * The grammar is `godot/resourceRef.ts`, the one the linter and the renderer read.
  */
 
-import { openResourceRef, resourceRef, resourceRefSpans, type ResourceRef } from '../godot/resourceRef.js';
+import {
+  openResourceRef,
+  resourceRef,
+  resourceRefSpansByLine,
+  type ResourceRef,
+} from '../godot/resourceRef.js';
 import type { LanguageDocument, DocumentSection } from './document.js';
 import { headingAttribute, lineRange, lineRangeContains, spanContains } from './ranges.js';
 import type { Position, Range } from './types.js';
@@ -52,17 +57,27 @@ export function openReferenceAt(textBeforeCursor: string): ResourceReference | u
   return reference ? toReference(reference) : undefined;
 }
 
-/** The reference occurrences on one zero-based line. */
-function referencesOnLine(line: string, lineIndex: number): ResourceReferenceSpan[] {
-  return resourceRefSpans(line).map((span) => ({
-    ...toReference(span),
-    range: lineRange(lineIndex, { start: span.start, end: span.end }),
-  }));
+/** Written only by {@link referencesByLine}. An entry lives as long as its document. */
+const referencesByDocument = new WeakMap<LanguageDocument, readonly ResourceReferenceSpan[][]>();
+
+/** The reference occurrences on each zero-based line, read once per document. */
+function referencesByLine(document: LanguageDocument): readonly ResourceReferenceSpan[][] {
+  let byLine = referencesByDocument.get(document);
+  if (!byLine) {
+    byLine = resourceRefSpansByLine(document.lines).map((spans, lineIndex) =>
+      spans.map((span) => ({
+        ...toReference(span),
+        range: lineRange(lineIndex, { start: span.start, end: span.end }),
+      }))
+    );
+    referencesByDocument.set(document, byLine);
+  }
+  return byLine;
 }
 
 /** Every reference occurrence in the file, declaration headings' `instance=` included. */
 export function resourceReferences(document: LanguageDocument): readonly ResourceReferenceSpan[] {
-  return [...document.lines.entries()].flatMap(([index, line]) => referencesOnLine(line, index));
+  return referencesByLine(document).flat();
 }
 
 /** A declared resource id and the heading that declares it. */
@@ -117,7 +132,7 @@ export function referenceAt(document: LanguageDocument, position: Position): Res
     const declared = declarationIdAt(section, lineText, position.character);
     if (declared) return declared;
   }
-  const span = referencesOnLine(lineText, position.line).find(({ range }) =>
+  const span = (referencesByLine(document)[position.line] ?? []).find(({ range }) =>
     lineRangeContains(range, position.character)
   );
   return span && { kind: span.kind, id: span.id };

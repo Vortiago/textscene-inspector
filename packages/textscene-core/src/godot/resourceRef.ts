@@ -50,14 +50,22 @@ const RESOURCE_REF_AT_RE = new RegExp(RESOURCE_REF_BODY, 'y');
 /** A character that continues an identifier, so `MyExtResource(` is not the `ExtResource` token. */
 const IDENTIFIER_CHAR_RE = /[A-Za-z0-9_]/;
 
+/** A reference and the span it fills in the text it was read from, `end` exclusive. */
+export interface ResourceRefSpan extends ResourceRef {
+  start: number;
+  end: number;
+}
+
 /**
- * Every reference the loader resolves in a value, in order. It resolves each one as it tokenises
- * the value (`resource_format_text.cpp:125-151`), but never text inside a string or a `StringName`,
- * whose quotes `get_token` reads with `\` escapes (`variant_parser.cpp:265-289`).
+ * Every reference the loader resolves in `text`, in order, pushed onto `spans`. It resolves each
+ * one as it tokenises (`resource_format_text.cpp:125-151`), but never text inside a string or a
+ * `StringName`, whose quotes `get_token` reads with `\\` escapes and across lines
+ * (`variant_parser.cpp:265-300`), nor a `;` comment to the end of its line (`:214`).
+ *
+ * @param inString whether `text` starts inside a string an earlier line opened
+ * @returns whether `text` ends inside a string
  */
-function loadedRefSpans(text: string): ResourceRefSpan[] {
-  const spans: ResourceRefSpan[] = [];
-  let inString = false;
+function scanLoadedRefs(text: string, inString: boolean, spans: ResourceRefSpan[]): boolean {
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
     if (inString) {
@@ -69,6 +77,12 @@ function loadedRefSpans(text: string): ResourceRefSpan[] {
       inString = true;
       continue;
     }
+    if (char === ';') {
+      const lineEnd = text.indexOf('\n', i);
+      if (lineEnd === -1) break;
+      i = lineEnd;
+      continue;
+    }
     if ((char !== 'E' && char !== 'S') || (i > 0 && IDENTIFIER_CHAR_RE.test(text[i - 1]!))) continue;
     RESOURCE_REF_AT_RE.lastIndex = i;
     const match = RESOURCE_REF_AT_RE.exec(text);
@@ -77,7 +91,27 @@ function loadedRefSpans(text: string): ResourceRefSpan[] {
     spans.push({ kind: match[1] as ResourceRef['kind'], id: refId(match[2], match[3]), start: i, end });
     i = end - 1;
   }
+  return inString;
+}
+
+/** Every reference the loader resolves in one value, as {@link scanLoadedRefs} reads it. */
+function loadedRefSpans(text: string): ResourceRefSpan[] {
+  const spans: ResourceRefSpan[] = [];
+  scanLoadedRefs(text, false, spans);
   return spans;
+}
+
+/**
+ * The references the loader resolves on each line of a file, as {@link scanLoadedRefs} reads them.
+ * A string carries over to the next line, so an editor reads the whole file, not one line.
+ */
+export function resourceRefSpansByLine(lines: readonly string[]): ResourceRefSpan[][] {
+  let inString = false;
+  return lines.map((line) => {
+    const spans: ResourceRefSpan[] = [];
+    inString = scanLoadedRefs(line, inString, spans);
+    return spans;
+  });
 }
 
 /** The id of every `ExtResource(…)` in a value, in order, as {@link loadedRefSpans} reads them. */
@@ -123,28 +157,6 @@ export function resourceRef(raw: string): ResourceRef | null {
   const match = RESOURCE_REF_RE.exec(raw);
   if (!match) return null;
   return { kind: match[1] as ResourceRef['kind'], id: refId(match[2], match[3]) };
-}
-
-/** Every reference in a text, for {@link resourceRefSpans}. Shared `g` instance: only `matchAll` reads it, which clones it. */
-const RESOURCE_REF_ANYWHERE_RE = new RegExp(RESOURCE_REF_BODY, 'g');
-
-/** A reference and the span it fills in the text it was read from, `end` exclusive. */
-export interface ResourceRefSpan extends ResourceRef {
-  start: number;
-  end: number;
-}
-
-/**
- * Every reference in `text`, in order, with where each one sits, text inside a string included.
- * An editor reads one line, which has no string state, so it cannot skip as {@link loadedRefSpans} does.
- */
-export function resourceRefSpans(text: string): ResourceRefSpan[] {
-  return [...text.matchAll(RESOURCE_REF_ANYWHERE_RE)].map((match) => ({
-    kind: match[1] as ResourceRef['kind'],
-    id: refId(match[2], match[3]),
-    start: match.index,
-    end: match.index + match[0].length,
-  }));
 }
 
 /** An open reference at the end of a text, `[1]` its kind and `[2]` the id typed so far. */
