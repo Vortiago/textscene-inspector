@@ -13,7 +13,6 @@ registerResourceSlice({
   kind: 'godot-text',
   typeNames: [ATLAS_TEXTURE_TYPE],
   busType: 'resource',
-  failureLabel: 'Resource',
 });
 
 export * from './decode';

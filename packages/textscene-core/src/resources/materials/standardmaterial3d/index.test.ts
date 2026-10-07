@@ -21,7 +21,6 @@ describe('standardmaterial3d slice registration', () => {
       slice: 'standardmaterial3d',
       kind: 'godot-text',
       busType: 'resource',
-      failureLabel: 'Node using material',
     });
     expect(registration!.typeNames).toContain('StandardMaterial3D');
   });

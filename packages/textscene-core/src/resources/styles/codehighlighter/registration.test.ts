@@ -14,7 +14,6 @@ describe('codehighlighter slice registration', () => {
     expect(registration?.slice).toBe('codehighlighter');
     expect(registration?.kind).toBe('godot-text');
     expect(resourceSliceRegistry.byTypeName('CodeHighlighter')?.busType ?? null).toBe('resource');
-    expect(registration?.failureLabel).toBe('Resource');
   });
 
   it('claims no extension and is never fetched as bytes', () => {
@@ -30,7 +29,6 @@ describe('codehighlighter slice registration', () => {
         kind: 'godot-text',
         typeNames: ['CodeHighlighter'],
         busType: null,
-        failureLabel: 'Impostor',
       })
     ).toThrow(/already claimed by slice "codehighlighter"/);
   });

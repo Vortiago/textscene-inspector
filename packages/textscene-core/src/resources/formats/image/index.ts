@@ -15,5 +15,4 @@ registerResourceSlice({
   extensions: IMAGE_EXTENSIONS,
   binaryBytes: true,
   busType: 'texture',
-  failureLabel: 'Material using texture',
 });

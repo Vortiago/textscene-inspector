@@ -12,7 +12,6 @@ registerResourceSlice({
   kind: 'godot-text',
   typeNames: ['NavigationMesh'],
   busType: 'resource',
-  failureLabel: 'Resource',
 });
 
 export { decodeNavigationMesh } from './decode';

@@ -13,7 +13,6 @@ describe('packedscene slice registration', () => {
     expect(registration?.slice).toBe('packedscene');
     expect(registration?.kind).toBe('foreign-format');
     expect(resourceSliceRegistry.byTypeName('PackedScene')?.busType ?? null).toBe('scene');
-    expect(registration?.failureLabel).toBe('Node instance of scene');
   });
 
   it('claims .tscn as TEXT — a claimed extension is not a binary one', () => {
@@ -35,7 +34,6 @@ describe('packedscene slice registration', () => {
         kind: 'foreign-format',
         typeNames: ['PackedScene'],
         busType: null,
-        failureLabel: 'Impostor',
       })
     ).toThrow(/already claimed by slice "packedscene"/);
   });

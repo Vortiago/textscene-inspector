@@ -7,12 +7,11 @@ import './index';
 import { resourceSliceRegistry } from '../../sliceRegistration';
 
 describe('viewporttexture slice registration', () => {
-  it('claims the ViewportTexture type name with its own failure label', () => {
+  it('claims the ViewportTexture type name', () => {
     expect(resourceSliceRegistry.byTypeName('ViewportTexture')).toMatchObject({
       slice: 'viewporttexture',
       kind: 'godot-text',
       busType: null,
-      failureLabel: 'Viewport texture',
     });
   });
 

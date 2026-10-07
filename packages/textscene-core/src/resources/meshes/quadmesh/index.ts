@@ -1,8 +1,8 @@
 /** QuadMesh resource slice: claims the type name, re-exports its decode. */
 
-import { registerMeshSlice } from '../registerMeshSlice.js';
+import { registerGenericResourceSlice } from '../../sliceRegistration.js';
 
-registerMeshSlice('quadmesh', ['QuadMesh']);
+registerGenericResourceSlice('quadmesh', ['QuadMesh']);
 
 export { decodeQuadMesh } from './decode.js';
 export type { QuadMeshProperties } from './types.js';

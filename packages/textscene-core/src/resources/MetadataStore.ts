@@ -2,6 +2,7 @@
 
 import type { ExtResource } from '../parser/types';
 import * as logger from '../logger';
+import { simplifyResPath } from '../godot/index.js';
 
 export class MetadataStore {
   private resources = new Map<string, ExtResource>();
@@ -11,7 +12,8 @@ export class MetadataStore {
    * new path (hot-reload rename) evicts the old-path entry, unless another id still
    * owns it.
    */
-  register(resource: ExtResource): void {
+  register(registered: ExtResource): void {
+    const resource = withSimplifiedPath(registered);
     if (resource.id) {
       const previous = this.resources.get(resource.id);
       if (previous && previous.path !== resource.path) {
@@ -29,12 +31,13 @@ export class MetadataStore {
     logger.info(`[MetadataStore] Registered: ${resource.type} id="${resource.id}" at ${resource.path}`);
   }
 
+  /** An id never holds `://`, so simplifying the key leaves an id alone. */
   get(idOrPath: string): ExtResource | undefined {
-    return this.resources.get(idOrPath);
+    return this.resources.get(simplifyResPath(idOrPath));
   }
 
   has(idOrPath: string): boolean {
-    return this.resources.has(idOrPath);
+    return this.get(idOrPath) !== undefined;
   }
 
   getAll(): ExtResource[] {
@@ -59,4 +62,13 @@ export class MetadataStore {
   get size(): number {
     return this.getAll().length;
   }
+}
+
+/**
+ * Keyed by the simplified path, the address every load requests: Godot runs each
+ * resource address through `String::simplify_path`, and a scene may write `res:///…`.
+ */
+function withSimplifiedPath(resource: ExtResource): ExtResource {
+  const path = simplifyResPath(resource.path);
+  return path === resource.path ? resource : { ...resource, path };
 }

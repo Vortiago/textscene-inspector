@@ -577,8 +577,7 @@ function buildForest(
 
       const scenePath = node.instance ? resolveInstancePath(node.instance, ext) : null;
       if (scenePath && sceneCache.getCached(scenePath) === undefined) {
-        // The ExtResource too: `createSceneProcessor` throws "Scene metadata not
-        // found" for an unregistered address and caches the failure. A raw `res://`
+        // The ExtResource too, since the load checks its type. A raw `res://`
         // instance has none to register, and is still requested.
         const parsed = node.instance ? parseResourceReference(node.instance) : null;
         const entry = parsed?.type === 'ExtResource' ? findExtResource(ext, parsed.id) : undefined;

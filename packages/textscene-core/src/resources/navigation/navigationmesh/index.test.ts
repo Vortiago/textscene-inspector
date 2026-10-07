@@ -12,11 +12,8 @@ describe('navigationmesh slice registration', () => {
     expect(registration?.kind).toBe('godot-text');
   });
 
-  it('routes it to the generic resource slot with the Resource failure label', () => {
-    // Matches the label `useSubOrExtResource` passes to `useResource`, so a
-    // failed .tres aggregates under the same missing-resources row.
+  it('routes it to the generic resource slot', () => {
     expect(resourceSliceRegistry.byTypeName('NavigationMesh')?.busType ?? null).toBe('resource');
-    expect(resourceSliceRegistry.byTypeName('NavigationMesh')?.failureLabel).toBe('Resource');
   });
 
   it('claims no file extension — it arrives inside a .tscn or .tres (edge case)', () => {

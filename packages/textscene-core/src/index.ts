@@ -11,7 +11,7 @@ export { setLogAdapter, trace, debug, info, warn, error } from './logger';
 export type { LogAdapter, LogLevel } from './logger';
 
 // Types
-export type { TscnScene, TscnNode, MissingResource, ResourceNeededCallback } from './parser/types';
+export type { TscnScene, TscnNode } from './parser/types';
 export type { ResourceProvider } from './resources/ResourceProvider';
 
 // Resource provider utilities

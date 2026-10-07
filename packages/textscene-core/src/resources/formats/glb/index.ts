@@ -20,7 +20,6 @@ registerResourceSlice({
   // their own, or the second mount reparents the first's.
   clonePerConsumer: true,
   busType: 'glb',
-  failureLabel: 'Node using GLB mesh',
 });
 
 export type { RootScale } from './types';

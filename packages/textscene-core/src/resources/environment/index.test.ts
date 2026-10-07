@@ -12,9 +12,8 @@ describe('environment slice registration', () => {
     expect(registration?.kind).toBe('godot-text');
   });
 
-  it('routes `Environment` to the generic resource slot with the Resource failure label', () => {
+  it('routes `Environment` to the generic resource slot', () => {
     expect(resourceSliceRegistry.byTypeName('Environment')?.busType ?? null).toBe('resource');
-    expect(resourceSliceRegistry.byTypeName('Environment')?.failureLabel).toBe('Resource');
   });
 
   it('claims no file extension — an Environment arrives inside a .tscn or .tres (edge case)', () => {
