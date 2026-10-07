@@ -6,7 +6,10 @@
 
 import { useEffect, useMemo } from 'react';
 import type * as THREE from 'three';
-import { standardMaterialBag } from '../../../resources/materials/standardmaterial3d/materialBag.js';
+import {
+  MISSING_TEXTURE_MATERIAL,
+  standardMaterialBag,
+} from '../../../resources/materials/standardmaterial3d/materialBag.js';
 import { materialFromBag } from '../../../resources/materials/standardmaterial3d/build.js';
 import { textureSlotsFromMaps } from '../../materials/materialTextureMaps.js';
 import { forEachSurfaceMaterial } from '../../../resources/formats/glb/glbProcessing.js';
@@ -29,6 +32,7 @@ export interface GlbSurfaceMaterialOverrideProps {
  * that slot's derivation, so the adapters stay two (ADR-0039). A material this previewer
  * cannot build still replaced the glTF's own, so the surface is Godot's default (ADR-0041).
  * One still loading, or one that never loads, replaces nothing, as Godot's null material does.
+ * One whose texture never draws takes the magenta placeholder, as `<SurfaceMaterialSlot>` does.
  */
 export function GlbSurfaceMaterialOverride({
   target,
@@ -40,12 +44,13 @@ export function GlbSurfaceMaterialOverride({
   const scalars = useMaterialScalars(ready);
   // No `triplanarMesh`: the geometry is the glTF's, so there is no Godot mesh
   // sub-resource whose size a triplanar material could tile against.
-  const { maps } = useMaterialTextures(scalars, ready);
+  const { maps, isUnresolved } = useMaterialTextures(scalars, ready);
   const isAbsent = loaded.status === 'absent';
-  const material = useMemo(
-    () => (isAbsent ? null : materialFromBag(standardMaterialBag(scalars, textureSlotsFromMaps(maps)))),
-    [isAbsent, scalars, maps]
-  );
+  const material = useMemo(() => {
+    if (isAbsent) return null;
+    if (isUnresolved) return materialFromBag(MISSING_TEXTURE_MATERIAL);
+    return materialFromBag(standardMaterialBag(scalars, textureSlotsFromMaps(maps)));
+  }, [isAbsent, isUnresolved, scalars, maps]);
   useEffect(() => () => material?.dispose(), [material]);
   useGlbMaterialSwap(target, material, replaces);
   return null;

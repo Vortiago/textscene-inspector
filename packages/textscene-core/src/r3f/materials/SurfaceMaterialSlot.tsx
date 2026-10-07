@@ -1,7 +1,8 @@
 /**
- * One surface's material, textures and all. Godot binds a material per surface,
- * so texture resolution lives in a component rendered once per surface, which
- * keeps `useResource` one call per component for any surface count.
+ * One surface's material, textures and all, or the magenta placeholder when a texture
+ * never draws. Godot binds a material per surface, so texture resolution lives in a
+ * component rendered once per surface, which keeps `useResource` one call per component
+ * for any surface count.
  */
 
 import * as THREE from 'three';
@@ -19,6 +20,7 @@ import type {
   TextureSlotReferences,
 } from '../../resources/materials/standardmaterial3d/types';
 import { TEXTURE_SLOTS } from '../../resources/materials/standardmaterial3d/types';
+import { MISSING_TEXTURE_MATERIAL } from '../../resources/materials/standardmaterial3d/materialBag';
 import {
   bindSlotTexture,
   materialTextureState,
@@ -38,13 +40,11 @@ export type { MaterialTextureMaps };
 
 export interface ResolvedMaterialTextures {
   maps: MaterialTextureMaps;
-  /** The first slot whose file could not load: more would bury the user in text. */
-  firstMissingPath: string | null;
   /**
-   * The albedo slot names a ViewportTexture whose pass is cyclic: it never
-   * renders, the same visible fact as a missing file.
+   * A slot's file could not load, or the albedo slot names a ViewportTexture whose pass is
+   * cyclic. Either texture never draws, so the surface takes `MISSING_TEXTURE_MATERIAL`.
    */
-  viewportCyclic: boolean;
+  isUnresolved: boolean;
 }
 
 /** The resource tables a material's references resolve in: its owning file's. */
@@ -280,14 +280,7 @@ export function useMaterialTextures(
       ? pendingMapStandIn('anisotropy_flowmap')
       : undefined);
 
-  const firstMissingPath = useMemo(() => {
-    for (const slot of TEXTURE_SLOTS) {
-      const result = textureSlots[slot];
-      const requested = textureRequests[slot];
-      if (result && result.status === 'unavailable' && requested) return requested;
-    }
-    return null;
-  }, [textureSlots, textureRequests]);
+  const isFileMissing = TEXTURE_SLOTS.some((slot) => textureSlots[slot]?.status === 'unavailable');
 
   const maps = useMemo(
     (): MaterialTextureMaps => ({
@@ -312,7 +305,7 @@ export function useMaterialTextures(
     ]
   );
 
-  return { maps, firstMissingPath, viewportCyclic };
+  return { maps, isUnresolved: isFileMissing || viewportCyclic };
 }
 
 export interface SurfaceMaterialSlotProps {
@@ -333,14 +326,9 @@ export interface SurfaceMaterialSlotProps {
 export function SurfaceMaterialSlot({ source, attach, triplanarMesh }: SurfaceMaterialSlotProps) {
   const material = readyMaterial(useMaterial(source));
   const scalars = useMaterialScalars(material);
-  const { maps, firstMissingPath, viewportCyclic } = useMaterialTextures(scalars, material, triplanarMesh);
-  if (firstMissingPath !== null || viewportCyclic) return <MissingTextureMaterial attach={attach} />;
-  return <StandardMaterialSlot scalars={scalars} attach={attach} {...maps} />;
-}
-
-/** The magenta placeholder for a surface whose texture never draws. */
-function MissingTextureMaterial({ attach }: { attach: string | undefined }) {
-  const placeholder = materialProgramInputs({ props: { attach, color: 'magenta' } });
+  const { maps, isUnresolved } = useMaterialTextures(scalars, material, triplanarMesh);
+  if (!isUnresolved) return <StandardMaterialSlot scalars={scalars} attach={attach} {...maps} />;
+  const placeholder = materialProgramInputs({ props: { attach, ...MISSING_TEXTURE_MATERIAL.props } });
   return <meshStandardMaterial key={placeholder.key} {...placeholder.props} />;
 }
 
