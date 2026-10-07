@@ -3,7 +3,7 @@ import type { TscnNode } from '../parser/types.js';
 import { nodeEscapesParent } from './nodeEscapesParent.js';
 
 function node(type: string, extra: Partial<TscnNode> = {}): TscnNode {
-  return { name: 'N', type, children: [], properties: {}, ...extra };
+  return { rawProperties: {}, name: 'N', type, children: [], properties: {}, ...extra };
 }
 
 describe('nodeEscapesParent', () => {

@@ -38,7 +38,7 @@ describe('ConeTwistJoint3D registration', () => {
     const node = scene.nodes[0]?.children[0];
     expect(node?.properties).not.toHaveProperty('swing_span');
     expect(node?.properties).not.toHaveProperty('bias');
-    expect(node?.rawProperties?.swing_span).toBe('999.0');
-    expect(node?.rawProperties?.bias).toBe('"not-a-number"');
+    expect(node?.rawProperties.swing_span).toBe('999.0');
+    expect(node?.rawProperties.bias).toBe('"not-a-number"');
   });
 });

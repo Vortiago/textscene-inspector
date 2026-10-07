@@ -17,16 +17,23 @@ const SCENE_PATH = 'res://frame.tscn';
 const EXTERNAL_RESOURCES: readonly TscnExternalResource[] = [
   { id: '1_frame', path: SCENE_PATH, type: 'PackedScene' },
 ];
-const FRAME: TscnNode = { name: 'Frame', type: 'Node3D', children: [], properties: {} };
+const FRAME: TscnNode = { rawProperties: {}, name: 'Frame', type: 'Node3D', children: [], properties: {} };
 const SUB_SCENE: TscnScene = { nodes: [FRAME], externalResources: [], internalResources: [] };
 const INSTANCE_ROW: TscnNode = {
+  rawProperties: {},
   name: 'PhotoFrame',
   type: 'Node3D',
   children: [],
   properties: {},
   instance: 'ExtResource("1_frame")',
 };
-const PLAIN_ROW: TscnNode = { name: 'PhotoFrame', type: 'Node3D', children: [], properties: {} };
+const PLAIN_ROW: TscnNode = {
+  rawProperties: {},
+  name: 'PhotoFrame',
+  type: 'Node3D',
+  children: [],
+  properties: {},
+};
 
 function wrapper(fake: FakeResourceLoader) {
   return function Wrapper({ children }: { children: ReactNode }) {

@@ -22,7 +22,7 @@ function spriteAt(frame: number) {
     hframes: String(HFRAMES),
     frame: String(frame),
   });
-  return <Sprite2D node={{ name: 'S', type: 'Sprite2D', children: [], properties }} />;
+  return <Sprite2D node={{ rawProperties: {}, name: 'S', type: 'Sprite2D', children: [], properties }} />;
 }
 
 describe('Sprite2D over a sheet that uploads in bands', () => {

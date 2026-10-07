@@ -27,6 +27,7 @@ import type { FontResource } from '../../../resources/fonts/font/types';
 import { resolveSceneFontMetrics } from './text/sceneFontLoader';
 import { useBuildSolveTree } from './buildSolveTree';
 import { TscnParser } from '../../../parser/TscnParser';
+import { parsedNode } from '../../../parser/testing/parserKit';
 import { createSolveContext, solveControlTree, type SolvedControl } from './controlRectSolver';
 import type { SolveNode } from './solveTree';
 import { nativeTheme } from './nativeTheme';
@@ -42,6 +43,7 @@ const BADGE_PATH = 'res://hud-badge.tscn';
 
 function node(name: string, type: string, extra: Partial<TscnNode> = {}): TscnNode {
   return {
+    rawProperties: {},
     name,
     type,
     children: [],
@@ -52,6 +54,11 @@ function node(name: string, type: string, extra: Partial<TscnNode> = {}): TscnNo
 
 function label(name: string, extra: Record<string, unknown> = {}): TscnNode {
   return node(name, 'Label', { properties: { name, ...extra } as Record<string, unknown> });
+}
+
+/** A Label as the parser builds it from a `.tscn`, so an Instance root merge keeps its text. */
+function parsedLabel(name: string, text: string): TscnNode {
+  return parsedNode({ name, type: 'Label' }, { text: `"${text}"` });
 }
 
 function scene(
@@ -75,7 +82,7 @@ function wrapperFor(loader: ReturnType<typeof createFakeResourceLoader>['loader'
 describe('useBuildSolveTree — instanced sub-scenes', () => {
   it('collapses a single-root instance into the sub-scene root (merged group, sub-scene scope)', () => {
     const loader = createFakeResourceLoader();
-    loader.scenes.seed(LAYER_PATH, scene([label('LayerLabel', { text: 'HUD LAYER' })]));
+    loader.scenes.seed(LAYER_PATH, scene([parsedLabel('LayerLabel', 'HUD LAYER')]));
 
     const nodes = [instanceOf('Hud', '1_layer')];
     const externalResources = [{ id: '1_layer', path: LAYER_PATH, type: 'PackedScene' }];
@@ -92,7 +99,7 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
 
   it('keeps a non-Control ancestor (Node3D) transparent, surfacing the instanced Control beneath it', () => {
     const loader = createFakeResourceLoader();
-    loader.scenes.seed(LAYER_PATH, scene([label('LayerLabel', { text: 'HUD LAYER' })]));
+    loader.scenes.seed(LAYER_PATH, scene([parsedLabel('LayerLabel', 'HUD LAYER')]));
 
     const nodes = [node('Root', 'Node3D', { children: [instanceOf('Hud', '1_layer')] })];
     const externalResources = [{ id: '1_layer', path: LAYER_PATH, type: 'PackedScene' }];
@@ -115,13 +122,13 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
       scene(
         [
           node('HudLayer', 'CanvasLayer', {
-            children: [label('LayerLabel', { text: 'HUD LAYER' }), instanceOf('Badge', '1_badge')],
+            children: [parsedLabel('LayerLabel', 'HUD LAYER'), instanceOf('Badge', '1_badge')],
           }),
         ],
         [{ id: '1_badge', path: BADGE_PATH, type: 'PackedScene' }]
       )
     );
-    loader.scenes.seed(BADGE_PATH, scene([label('BadgeLabel', { text: 'BADGE' })]));
+    loader.scenes.seed(BADGE_PATH, scene([parsedLabel('BadgeLabel', 'BADGE')]));
 
     const nodes = [node('Root', 'Node3D', { children: [instanceOf('Hud', '1_layer')] })];
     const externalResources = [{ id: '1_layer', path: LAYER_PATH, type: 'PackedScene' }];
@@ -146,7 +153,7 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
     const loader = createFakeResourceLoader();
     loader.scenes.seed(
       LAYER_PATH,
-      scene([label('First', { text: 'FIRST ROOT' }), label('Second', { text: 'SECOND ROOT' })])
+      scene([parsedLabel('First', 'FIRST ROOT'), parsedLabel('Second', 'SECOND ROOT')])
     );
 
     const hostChild = label('HostAdded', { text: 'HOST TEXT' });
@@ -175,17 +182,16 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
     loader.textures.seed(subTexturePath, { image: { width: 40, height: 20 } } as unknown as THREE.Texture);
     loader.textures.seed(hostTexturePath, { image: { width: 999, height: 999 } } as unknown as THREE.Texture);
 
-    const subScenePanel = node('Panel', 'Panel', {
-      properties: {
-        name: 'Panel',
-        themeOverrideStyles: { panel: 'SubResource("1")' },
-        texture: 'ExtResource("1")',
-      } as Record<string, unknown>,
-    });
+    // A TextureRect, not a Panel: the merge re-parses the root, and only the
+    // TextureRect parser keeps a `texture`.
+    const subSceneRect = parsedNode(
+      { name: 'Picture', type: 'TextureRect' },
+      { 'theme_override_styles/panel': 'SubResource("1")', texture: 'ExtResource("1")' }
+    );
     loader.scenes.seed(
       LAYER_PATH,
       scene(
-        [subScenePanel],
+        [subSceneRect],
         [{ id: '1', path: subTexturePath, type: 'Texture2D' }],
         [{ id: '1', type: 'StyleBoxFlat', data: { bg_color: 'Color(0.1, 0.2, 0.3, 1)' } }]
       )
@@ -218,7 +224,7 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
     loader.scenes.seed(
       LAYER_PATH,
       scene(
-        [label('FirstRoot', { text: 'FIRST ROOT' }), label('SecondRoot', { text: 'SECOND ROOT' })],
+        [parsedLabel('FirstRoot', 'FIRST ROOT'), parsedLabel('SecondRoot', 'SECOND ROOT')],
         [],
         [{ id: '1', type: 'StyleBoxFlat', data: { bg_color: 'Color(0.1, 0.2, 0.3, 1)' } }]
       )
@@ -480,7 +486,7 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
     expect(result.current.tree).toHaveLength(0);
 
     await act(async () => {
-      loader.scenes._resolve(LAYER_PATH, scene([label('LayerLabel', { text: 'HUD LAYER' })]));
+      loader.scenes._resolve(LAYER_PATH, scene([parsedLabel('LayerLabel', 'HUD LAYER')]));
     });
 
     expect(result.current.generation).toBeGreaterThan(initialGeneration);
@@ -1771,7 +1777,7 @@ describe('useBuildSolveTree — requesting an uncached sub-scene', () => {
 
   it('does not re-request a scene the loader already has', () => {
     const loader = createFakeResourceLoader();
-    loader.scenes.seed(LAYER_PATH, scene([label('LayerLabel', { text: 'HUD LAYER' })]));
+    loader.scenes.seed(LAYER_PATH, scene([parsedLabel('LayerLabel', 'HUD LAYER')]));
     const requested: string[] = [];
     loader.scenes.setRequestImpl((path) => requested.push(path));
 

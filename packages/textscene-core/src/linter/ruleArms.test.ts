@@ -11,7 +11,7 @@ import { balancedGroup, topLevelParts } from './testing/bracketScan.js';
 import type { Diagnostic } from './types.js';
 import type { TscnNode } from '../parser/types.js';
 
-const node: TscnNode = { name: 'Cast', type: 'ShapeCast2D', properties: {}, children: [] };
+const node: TscnNode = { rawProperties: {}, name: 'Cast', type: 'ShapeCast2D', properties: {}, children: [] };
 
 const present: RuleArm = {
   severity: 'warning',

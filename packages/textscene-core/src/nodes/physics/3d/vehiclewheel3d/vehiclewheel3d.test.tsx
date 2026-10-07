@@ -28,9 +28,18 @@ const wheelTransform: Transform3D = {
 
 function wheelNode(properties: Record<string, unknown> = {}): TscnNode {
   return {
+    rawProperties: {},
     name: 'Wheel1',
     type: 'VehicleWheel3D',
-    children: [{ name: 'WheelMesh', type: 'Node3D', children: [], properties: { name: 'WheelMesh' } }],
+    children: [
+      {
+        name: 'WheelMesh',
+        type: 'Node3D',
+        children: [],
+        properties: { name: 'WheelMesh' },
+        rawProperties: {},
+      },
+    ],
     properties: { name: 'Wheel1', transform: wheelTransform, ...properties },
   } as TscnNode;
 }

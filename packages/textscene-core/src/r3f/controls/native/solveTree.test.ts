@@ -5,18 +5,13 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import type { TscnNode } from '../../../parser/types';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import { painterView } from './solveTree';
 import type { SolveNode } from './solveTree';
-import { solveNode } from './testing/solveNode';
-
-function controlNode(properties: Record<string, unknown>): TscnNode {
-  return { name: 'C', type: 'Control', children: [], properties };
-}
+import { controlNode, solveNode } from './testing/solveNode';
 
 function nodeWith(properties: Record<string, unknown>): SolveNode {
-  return { ...solveNode(), path: 'C', node: controlNode(properties) };
+  return { ...solveNode(), path: 'C', node: controlNode('C', 'Control', properties) };
 }
 
 /** Both consumed fields plus a representative of everything else. */
@@ -58,8 +53,8 @@ describe('painterView', () => {
 
   it('returns the same object for two `SolveNode`s over one property bag', () => {
     const properties = fullProps();
-    const a: SolveNode = { ...solveNode(), path: 'A', node: controlNode(properties) };
-    const b: SolveNode = { ...solveNode(), path: 'B', node: controlNode(properties) };
+    const a: SolveNode = { ...solveNode(), path: 'A', node: controlNode('C', 'Control', properties) };
+    const b: SolveNode = { ...solveNode(), path: 'B', node: controlNode('C', 'Control', properties) };
     expect(painterView<ControlProperties>(a)).toBe(painterView<ControlProperties>(b));
   });
 

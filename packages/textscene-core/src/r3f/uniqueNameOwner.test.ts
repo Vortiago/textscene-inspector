@@ -76,6 +76,7 @@ const scenes = new Map<string, TscnScene>([
 ]);
 const ctx: LiveTreeContext = {
   externalResources: main.externalResources,
+  internalResources: [],
   sceneCache: { getCached: (p) => scenes.get(p) },
 };
 

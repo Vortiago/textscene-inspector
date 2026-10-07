@@ -30,6 +30,7 @@ const DETERMINISTIC = {
 
 function node(raw: Record<string, string> = {}, children: TscnNode[] = []): TscnNode {
   return {
+    rawProperties: {},
     name: 'Fx',
     type: 'CPUParticles2D',
     children,
@@ -123,7 +124,13 @@ describe('<CPUParticles2D>', () => {
   });
 
   it('still positions its children when it is not emitting', async () => {
-    const child: TscnNode = { name: 'Marker', type: 'Node2D', children: [], properties: {} };
+    const child: TscnNode = {
+      rawProperties: {},
+      name: 'Marker',
+      type: 'Node2D',
+      children: [],
+      properties: {},
+    };
     const renderer = await render(node({ emitting: 'false' }, [child]));
     // The child is passed through CanvasItem2D's children slot, not the body.
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);

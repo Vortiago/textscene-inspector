@@ -15,7 +15,7 @@ import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import type { TscnNode, TscnScene } from '../../../parser/types';
 
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
-  return { name, type, children: [], properties: {}, ...extras };
+  return { rawProperties: {}, name, type, children: [], properties: {}, ...extras };
 }
 
 function makeLoader(scenes: Record<string, TscnScene>): ResourceLoader {

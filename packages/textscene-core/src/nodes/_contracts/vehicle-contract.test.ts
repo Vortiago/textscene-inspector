@@ -31,7 +31,7 @@ describe('#352 fixtures contract — Truck Town vehicle types', () => {
     // The override is what makes this fixture exercise dangling-resource-reference
     // at all, and VehicleBody3D reuses parseNode3D, so it survives only in the
     // raw body, and only against a PhysicsMaterial the scene actually defines.
-    const override = bodies[0]!.rawProperties?.physics_material_override;
+    const override = bodies[0]!.rawProperties.physics_material_override;
     expect(override).toBe('SubResource("PhysicsMaterial_tyres")');
     expect(scene.internalResources.map((r) => `${r.type}:${r.id}`)).toContain(
       'PhysicsMaterial:PhysicsMaterial_tyres'

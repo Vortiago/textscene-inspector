@@ -17,6 +17,7 @@ import { loaderServing } from '../../../resources/testing/servingResourceLoader'
 const MESH_ID = 'ArrayMesh_inline';
 
 const NODE: TscnNode = {
+  rawProperties: {},
   name: 'Wall',
   type: 'MeshInstance3D',
   children: [],

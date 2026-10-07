@@ -6,11 +6,11 @@
 import { describe, expect, it } from 'vitest';
 import { defineChannel, defineShare, isSealedHandoff } from './solveHandoff';
 import { nativeTheme } from './nativeTheme';
-import { solveNode } from './testing/solveNode';
+import { controlNode, solveNode } from './testing/solveNode';
 import type { SolveNode } from './solveTree';
 import type { TscnNode } from '../../../parser/types';
 
-const NODE: TscnNode = { name: 'N', type: 'Label', properties: {}, children: [] };
+const NODE: TscnNode = controlNode('N', 'Label');
 
 function node(): SolveNode {
   return { ...solveNode(), path: 'N', node: NODE };

@@ -9,7 +9,7 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { AutowrapMode } from '../../../../r3f/controls/native/text/textLayout';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
@@ -45,12 +45,7 @@ function node(props: Partial<ItemListProperties> = {}): SolveNode {
   return {
     ...solveNode(),
     path: 'IL',
-    node: {
-      name: 'IL',
-      type: 'ItemList',
-      children: [],
-      properties: { name: 'IL', items: [], ...props } as ItemListProperties,
-    },
+    node: controlNode('IL', 'ItemList', { name: 'IL', items: [], ...props }),
   };
 }
 

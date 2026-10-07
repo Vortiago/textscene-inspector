@@ -8,7 +8,7 @@ import { resolveGlobalTransform2D } from './globalTransform2D';
 import type { ParentLookup } from '../../../linter/parentType';
 import type { TscnNode } from '../../../parser/types';
 
-function node(type: string, rawProperties?: Record<string, string>): TscnNode {
+function node(type: string, rawProperties: Record<string, string> = {}): TscnNode {
   return { name: type, type, children: [], properties: {}, rawProperties };
 }
 
@@ -45,7 +45,7 @@ describe('resolveGlobalTransform2D', () => {
     expect(originOf(target, chainOf(root, node('Node'), target))).toEqual({ x: 10, y: 5 });
   });
 
-  it('reads a node without raw properties as the identity', () => {
+  it('reads a node with no position as the identity', () => {
     const root = node('Node2D', { position: 'Vector2(100, 50)' });
     const target = node('Node2D');
     expect(originOf(target, chainOf(root, target))).toEqual({ x: 100, y: 50 });

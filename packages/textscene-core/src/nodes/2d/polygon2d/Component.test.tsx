@@ -8,7 +8,13 @@ import type { TscnNode } from '../../../parser/types';
 
 function node(rawProps: Record<string, string>, name = 'Poly'): TscnNode {
   const heading: ParsedHeading = { type: 'node', attributes: { name, type: 'Polygon2D' } };
-  return { name, type: 'Polygon2D', children: [], properties: parsePolygon2D(heading, rawProps) };
+  return {
+    rawProperties: {},
+    name,
+    type: 'Polygon2D',
+    children: [],
+    properties: parsePolygon2D(heading, rawProps),
+  };
 }
 
 async function render(n: TscnNode) {

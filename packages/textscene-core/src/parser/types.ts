@@ -91,12 +91,12 @@ export interface TscnNode {
    * render path share. `properties` differs by parser. It also lets a type-less
    * instance node's overrides be re-parsed against the instanced root's type.
    */
-  rawProperties?: Record<string, string>;
+  rawProperties: Record<string, string>;
   /**
    * Whether `rawProperties`' key order is one file's scan order (ADR-0035).
-   * `core/NodeRegistry.ts`'s `parseNodeWithRegistry` sets `true`. The raw merge in
-   * `resources/mergeInstanceRoot.ts` sets `false`: a shared key keeps the root's
-   * position but the instance's value.
+   * `core/NodeRegistry.ts`'s `parseNodeWithRegistry` sets `true`.
+   * `resources/layerRawOverride.ts` sets `false`: a shared key keeps the base's
+   * position but the override's value.
    */
   // A file-order-sensitive resolver (`r3f/controls/controlAnchors.ts`'s
   // `resolveControlLayout`, `nodes/2d/ui/shared/range.ts`'s `resolveRangeValue`)
@@ -129,6 +129,8 @@ export interface TscnExternalResource {
   id: string;
   path: string;
   type: string;
+  /** The id its own file wrote, on a copy that override re-homing made. The parser never sets it. */
+  authoredId?: string;
 }
 
 /**
@@ -153,6 +155,8 @@ export interface TscnInternalResource {
   id: string;
   type: string;
   data: Record<string, string>;
+  /** The id its own file wrote, on a copy that override re-homing made. The parser never sets it. */
+  authoredId?: string;
 }
 
 /**

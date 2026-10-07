@@ -36,7 +36,7 @@ function node(
   properties: Record<string, unknown> = {},
   children: TscnNode[] = []
 ): TscnNode {
-  return { name, type, children, properties: { name, ...properties } as never };
+  return { rawProperties: {}, name, type, children, properties: { name, ...properties } as never };
 }
 
 /** The fold's geometry-bearing nodes in pre-order. */

@@ -11,7 +11,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ContainerLayoutResult, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { graphNodeDrawRows, graphNodeLayout, graphNodeMinimumSize } from './nativeSolver';
 import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties } from './types';
@@ -24,7 +24,7 @@ function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
     ...solveNode(),
     path: name,
-    node: { name, type: 'Control', children: [], properties: { name, ...props } as ControlProperties },
+    node: controlNode(name, 'Control', { name, ...props }),
   };
 }
 
@@ -53,12 +53,7 @@ function graphNode(
   return {
     ...solveNode(),
     path: name,
-    node: {
-      name,
-      type: 'GraphNode',
-      children: [],
-      properties: { name, slots: new Map(), ...props } as GraphNodeProperties,
-    },
+    node: controlNode(name, 'GraphNode', { name, slots: new Map(), ...props }),
     children,
     styleBoxes,
   };

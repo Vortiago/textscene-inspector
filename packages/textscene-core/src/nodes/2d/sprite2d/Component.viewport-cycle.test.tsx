@@ -45,6 +45,7 @@ const VIEWPORT_TEXTURE_RESOURCE: TscnInternalResource = {
 
 function spriteNode(): TscnNode {
   return {
+    rawProperties: {},
     name: 'ViewportSprite',
     type: 'Sprite2D',
     children: [],

@@ -105,7 +105,7 @@ position = Vector2(20, 10)
 
 describe('<CamerasPanel> with cameras inside instanced sub-scenes', () => {
   function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
-    return { name, type, children: [], properties: {}, ...extras };
+    return { rawProperties: {}, name, type, children: [], properties: {}, ...extras };
   }
 
   function makeLoader(scenes: Record<string, TscnScene>): ResourceLoader {

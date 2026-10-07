@@ -7,12 +7,17 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene, TscnInternalResource } from '../parser/types';
+import { parsedNode, translated } from '../parser/testing/parserKit';
 import { NodeDispatcher } from './NodeDispatcher';
 import { SceneStack } from './testing/SceneStack';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../resources/ResourceLoader';
 
 import './nodes/index';
+// The parsers `parsedNode` and the Instance root merge build node properties with.
+import '../nodes/node/index';
+import '../nodes/base/node3d/index';
+import '../nodes/3d/meshinstance3d/index';
 
 /** A PhotoFrame sub-scene: root Node3D with an identity Canvas MeshInstance3D. */
 function makePhotoFrameScene(canvasName: string): TscnScene {
@@ -22,21 +27,10 @@ function makePhotoFrameScene(canvasName: string): TscnScene {
   return {
     nodes: [
       {
-        name: 'FrameRoot',
-        type: 'Node3D',
+        ...parsedNode({ name: 'FrameRoot', type: 'Node3D' }),
         children: [
-          {
-            name: canvasName,
-            type: 'MeshInstance3D',
-            children: [],
-            properties: {
-              name: canvasName,
-              mesh: 'SubResource("Plane_1")',
-              surfaceMaterialOverrides: new Map(),
-            } as Record<string, unknown>,
-          },
+          parsedNode({ name: canvasName, type: 'MeshInstance3D' }, { mesh: 'SubResource("Plane_1")' }),
         ],
-        properties: { name: 'FrameRoot' } as Record<string, unknown>,
       },
     ],
     externalResources: [],
@@ -49,22 +43,11 @@ function makePhotoFrameScene(canvasName: string): TscnScene {
  * and `renderFrame`'s `ref` argument resolves the path.
  */
 function makeFrameInstanceNode(name: string, origin: { x: number; y: number; z: number }): TscnNode {
-  return {
-    name,
-    type: 'Node',
-    instance: `ExtResource("${name}_ref")`,
-    children: [],
-    properties: {
-      name,
-      // The PhotoFrames use a Y-rotation basis. Identity is enough to pin origin inheritance.
-      transform: {
-        basis_x: { x: 1, y: 0, z: 0 },
-        basis_y: { x: 0, y: 1, z: 0 },
-        basis_z: { x: 0, y: 0, z: 1 },
-        origin,
-      },
-    } as Record<string, unknown>,
-  };
+  return parsedNode(
+    { name, type: 'Node', instance: `ExtResource("${name}_ref")` },
+    // The PhotoFrames use a Y-rotation basis. Identity is enough to pin origin inheritance.
+    { transform: translated(origin.x, origin.y, origin.z) }
+  );
 }
 
 async function renderFrame(loader: ResourceLoader, node: TscnNode, ref: { id: string; path: string }) {

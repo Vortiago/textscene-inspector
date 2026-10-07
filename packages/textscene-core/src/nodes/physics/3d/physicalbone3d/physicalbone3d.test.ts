@@ -38,7 +38,7 @@ describe('PhysicalBone3D registration', () => {
     const node = scene.nodes[0]?.children[0];
     expect(node?.properties).not.toHaveProperty('bone_name');
     expect(node?.properties).not.toHaveProperty('joint_type');
-    expect(node?.rawProperties?.bone_name).toBe('"not-a-real-bone"');
-    expect(node?.rawProperties?.joint_type).toBe('99');
+    expect(node?.rawProperties.bone_name).toBe('"not-a-real-bone"');
+    expect(node?.rawProperties.joint_type).toBe('99');
   });
 });

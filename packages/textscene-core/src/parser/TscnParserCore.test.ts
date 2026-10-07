@@ -23,6 +23,7 @@ mesh = SubResource("mesh_1")
         type: heading.attributes.type || '',
         parent: heading.attributes.parent,
         properties,
+        rawProperties: properties,
         children: [],
       }));
 
@@ -81,6 +82,7 @@ cast_shadow = 1
         name: heading.attributes.name || '',
         type: heading.attributes.type || '',
         properties,
+        rawProperties: properties,
         children: [],
       }));
 
@@ -106,6 +108,7 @@ cast_shadow = 1
         name: heading.attributes.name || '',
         type: heading.attributes.type || '',
         properties,
+        rawProperties: properties,
         children: [],
       }));
 
@@ -131,6 +134,7 @@ cast_shadow = 1
         name: heading.attributes.name || '',
         type: heading.attributes.type || '',
         properties,
+        rawProperties: properties,
         children: [],
       }));
 
@@ -187,6 +191,7 @@ item/0/mesh = ExtResource("1_tree")
 `;
 
       const mockCreator: NodeCreator = (heading, properties) => ({
+        rawProperties: {},
         name: heading.attributes.name || '',
         type: heading.attributes.type || '',
         parent: heading.attributes.parent,
@@ -237,6 +242,7 @@ item/0/mesh = ExtResource("1_tree")
         name: heading.attributes.name || '',
         type: heading.attributes.type || '',
         properties,
+        rawProperties: properties,
         children: [],
       }));
 
@@ -256,6 +262,7 @@ item/0/mesh = ExtResource("1_tree")
         name: heading.attributes.name || '',
         type: heading.attributes.type || '',
         properties,
+        rawProperties: properties,
         children: [],
       }));
 
@@ -269,6 +276,7 @@ item/0/mesh = ExtResource("1_tree")
 
   describe('observer seam', () => {
     const simpleCreator: NodeCreator = (heading, properties) => ({
+      rawProperties: {},
       name: heading.attributes.name || '',
       type: heading.attributes.type || '',
       parent: heading.attributes.parent,

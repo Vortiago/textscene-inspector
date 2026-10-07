@@ -46,6 +46,7 @@ function hiddenMovedSubject(type: string, base: Base): TscnNode {
       attributes: { type: nodeType, name },
     });
     const kid: TscnNode = {
+      rawProperties: {},
       name: 'Kid',
       type: 'Node2D',
       children: [],
@@ -56,9 +57,15 @@ function hiddenMovedSubject(type: string, base: Base): TscnNode {
       rotation: '0.5',
       visible: 'false',
     });
-    return { name: 'Subject', type, children: [kid], properties };
+    return { rawProperties: {}, name: 'Subject', type, children: [kid], properties };
   }
-  const kid: TscnNode = { name: 'Kid', type: 'Node3D', children: [], properties: { name: 'Kid' } };
+  const kid: TscnNode = {
+    rawProperties: {},
+    name: 'Kid',
+    type: 'Node3D',
+    children: [],
+    properties: { name: 'Kid' },
+  };
   const transform = {
     basis_x: { x: 0, y: 1, z: 0 },
     basis_y: { x: -1, y: 0, z: 0 },
@@ -66,6 +73,7 @@ function hiddenMovedSubject(type: string, base: Base): TscnNode {
     origin: { x: 2, y: 3, z: 4 },
   };
   return {
+    rawProperties: {},
     name: 'Subject',
     type,
     children: [kid],

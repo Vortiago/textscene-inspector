@@ -22,6 +22,7 @@ const STRAIGHT: Curve2DSampler = tessellateCurve2D(
 
 function followNode(name = 'MyFollow', props: Record<string, string> = {}): TscnNode {
   return {
+    rawProperties: {},
     name,
     type: 'PathFollow2D',
     children: [],

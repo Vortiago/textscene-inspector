@@ -11,6 +11,7 @@ import { codeEditDelimiterCollisionRule } from './linter';
 
 function makeContext(properties: Record<string, string>): RuleContext {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'MyCodeEdit',
     type: 'CodeEdit',
     children: [],

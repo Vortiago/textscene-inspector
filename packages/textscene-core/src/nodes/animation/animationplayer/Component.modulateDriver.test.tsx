@@ -60,7 +60,13 @@ function makeAP(): TscnNode {
     root_node: 'NodePath("..")',
     libraries: [{ name: '', subResourceId: 'Lib' }],
   };
-  return { name: 'AnimationPlayer', type: 'AnimationPlayer', children: [], properties: props };
+  return {
+    rawProperties: {},
+    name: 'AnimationPlayer',
+    type: 'AnimationPlayer',
+    children: [],
+    properties: props,
+  };
 }
 
 let transport: AnimationTransport;

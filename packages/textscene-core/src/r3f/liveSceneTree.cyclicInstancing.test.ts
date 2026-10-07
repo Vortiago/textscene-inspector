@@ -14,9 +14,11 @@ import {
   type SceneScope,
 } from './liveSceneTree';
 import type { TscnExternalResource, TscnNode, TscnScene } from '../parser/types';
+// The Instance root merge parses a sub-scene root with the Node parser when its type has none.
+import '../nodes/node/index';
 
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
-  return { name, type, children: [], properties: {}, ...extras };
+  return { rawProperties: {}, name, type, children: [], properties: {}, ...extras };
 }
 
 function ext(id: string, path: string): TscnExternalResource {
@@ -44,6 +46,7 @@ const SELF_ROOTS = [
 const SELF_SCENE: TscnScene = { nodes: SELF_ROOTS, externalResources: SELF_EXT, internalResources: [] };
 const SELF_CTX: LiveTreeContext = {
   externalResources: SELF_EXT,
+  internalResources: [],
   sceneCache: cacheOf({ 'res://a.tscn': SELF_SCENE }),
 };
 
@@ -62,6 +65,7 @@ const A_ROOTS = [
 const A_SCENE: TscnScene = { nodes: A_ROOTS, externalResources: A_EXT, internalResources: [] };
 const INDIRECT_CTX: LiveTreeContext = {
   externalResources: A_EXT,
+  internalResources: [],
   sceneCache: cacheOf({ 'res://a.tscn': A_SCENE, 'res://b.tscn': B_SCENE }),
 };
 
@@ -103,6 +107,7 @@ describe('walkLiveTree over cyclic instancing', () => {
     ];
     const ctx: LiveTreeContext = {
       externalResources: [ext('1', 'res://leaf.tscn')],
+      internalResources: [],
       sceneCache: cacheOf({ 'res://leaf.tscn': leaf }),
     };
 
@@ -180,6 +185,7 @@ describe('liveChildGroups and instancedScenePaths', () => {
     });
     const ctx: LiveTreeContext = {
       externalResources: [ext('1', 'res://leaf.tscn')],
+      internalResources: [],
       sceneCache: cacheOf({ 'res://leaf.tscn': leaf }),
     };
 

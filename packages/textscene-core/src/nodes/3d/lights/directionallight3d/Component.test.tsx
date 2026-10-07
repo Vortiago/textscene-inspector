@@ -17,7 +17,13 @@ function makeNode(overrides: Partial<DirectionalLight3DProperties> = {}): TscnNo
     shadow_enabled: false,
     ...overrides,
   };
-  return { name: props.name ?? 'Sun', type: 'DirectionalLight3D', children: [], properties: props };
+  return {
+    rawProperties: {},
+    name: props.name ?? 'Sun',
+    type: 'DirectionalLight3D',
+    children: [],
+    properties: props,
+  };
 }
 
 describe('<DirectionalLight3D>', () => {

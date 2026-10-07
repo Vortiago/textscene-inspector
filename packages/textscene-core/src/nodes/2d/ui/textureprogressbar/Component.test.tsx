@@ -17,7 +17,7 @@ import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderCont
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { TextureProgressBar } from './Component';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { TextureProgressBarProperties } from './types';
 
 const UNDER = 'res://under.png';
@@ -40,12 +40,7 @@ const SCOPE = {
 };
 
 function node(properties: Partial<TextureProgressBarProperties>): TscnNode {
-  return {
-    name: 'Bar',
-    type: 'TextureProgressBar',
-    children: [],
-    properties: { name: 'Bar', ...properties } as TextureProgressBarProperties,
-  };
+  return controlNode('Bar', 'TextureProgressBar', { name: 'Bar', ...properties });
 }
 
 function solveNode(n: TscnNode): SolveNode {

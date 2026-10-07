@@ -7,6 +7,7 @@ import { ParallaxLayer } from './Component';
 
 function layerNode(properties: Record<string, string> = {}): TscnNode {
   return {
+    rawProperties: {},
     name: 'MyParallaxLayer',
     type: 'ParallaxLayer',
     children: [],

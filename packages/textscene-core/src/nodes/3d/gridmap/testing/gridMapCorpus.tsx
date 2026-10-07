@@ -94,6 +94,7 @@ const EXT: TscnExternalResource[] = [{ id: '1_lib', path: LIBRARY_PATH, type: 'M
 
 function gridMapNode(cells: string): TscnNode {
   return {
+    rawProperties: {},
     name: 'MyGridMap',
     type: 'GridMap',
     children: [],

@@ -32,6 +32,7 @@ function makeNode(overrides: Partial<AnimationTreeProperties> = {}): TscnNode {
     ...overrides,
   };
   return {
+    rawProperties: {},
     name: props.name ?? 'AnimationTree',
     type: 'AnimationTree',
     children: [],

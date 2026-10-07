@@ -75,6 +75,7 @@ const coinResources: TscnInternalResource[] = [
 
 function coinNode(): TscnNode {
   return {
+    rawProperties: {},
     name: 'GlowSprite',
     type: 'MeshInstance3D',
     children: [],
@@ -135,6 +136,7 @@ describe('<MeshInstance3D> procedural texture pins', () => {
 
   function mixedNode(): TscnNode {
     return {
+      rawProperties: {},
       name: 'Mixed',
       type: 'MeshInstance3D',
       children: [],

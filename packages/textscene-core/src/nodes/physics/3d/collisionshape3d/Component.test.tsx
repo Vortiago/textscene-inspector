@@ -34,7 +34,7 @@ function makeNode(properties: Partial<CollisionShape3DProperties> = {}): TscnNod
     shape: 'SubResource("BoxShape3D_1")',
     ...properties,
   };
-  return { name: 'Col', type: 'CollisionShape3D', children: [], properties: props };
+  return { rawProperties: {}, name: 'Col', type: 'CollisionShape3D', children: [], properties: props };
 }
 
 async function render(

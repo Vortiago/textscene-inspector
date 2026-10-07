@@ -45,6 +45,7 @@ function makeSynthScene(): TscnScene {
   return {
     nodes: [
       {
+        rawProperties: {},
         name: 'player', // basename of player.glb
         type: GLB_SCENE_ROOT_TYPE,
         children: [],
@@ -66,6 +67,7 @@ function makeLoader(): ResourceLoader {
 /** Host: a Player instance node whose instance is the GLB directly. */
 function makeHostNode(): TscnNode {
   return {
+    rawProperties: {},
     name: 'Player',
     type: 'Node3D',
     instance: 'ExtResource("glb_1")',

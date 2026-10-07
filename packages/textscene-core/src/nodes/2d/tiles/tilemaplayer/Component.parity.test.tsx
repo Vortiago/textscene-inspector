@@ -45,6 +45,7 @@ const ONE_CELL = 'PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)';
 
 function makeNode(raw: Record<string, string> = {}): TscnNode {
   return {
+    rawProperties: {},
     name: 'Layer0',
     type: 'TileMapLayer',
     children: [],
@@ -263,6 +264,7 @@ sources/0 = SubResource("Atlas_a")
 
   function tresNode(): TscnNode {
     return {
+      rawProperties: {},
       name: 'Layer0',
       type: 'TileMapLayer',
       children: [],
@@ -318,6 +320,7 @@ sources/0 = SubResource("Atlas_a")
     fake.resources.setRequestImpl((path) => requested.push(path));
     fake.textures.seed(TEX, seededTexture());
     const node: TscnNode = {
+      rawProperties: {},
       name: 'Layer0',
       type: 'TileMapLayer',
       children: [],

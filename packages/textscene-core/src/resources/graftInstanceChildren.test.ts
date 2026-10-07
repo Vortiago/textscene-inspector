@@ -8,11 +8,17 @@ import { describe, expect, it, vi } from 'vitest';
 import { graftInstanceChildren } from './graftInstanceChildren';
 import type { SceneScope, TscnNode } from '../parser/types';
 import { scopeOf, type LiveNode } from './liveNode';
+import { authoredSpelling } from './authoredSpelling';
 import { extResourcePathOf } from './testing/extResourcePathOf';
 import * as logger from '../logger';
 import { NO_SCOPES } from './testing/noScopes';
+// The Node parser, which a fold parses an unregistered type with, as in every host.
+import '../nodes/node/index';
+import '../nodes/base/node3d/index';
+import type { Node3DProperties } from '../nodes/base/node3d/types';
 
 const node = (name: string, extra: Partial<TscnNode> = {}): TscnNode => ({
+  rawProperties: {},
   type: 'Node3D',
   name,
   properties: {},
@@ -32,7 +38,7 @@ const inner: SceneScope = {
 
 /** The path a node's raw `texture` resolves to, in its own scope or else `groupScope`. */
 function texturePath(n: LiveNode, groupScope: SceneScope = inner): string | undefined {
-  return extResourcePathOf(n.rawProperties?.texture, scopeOf(n, groupScope));
+  return extResourcePathOf(n.rawProperties.texture, scopeOf(n, groupScope));
 }
 
 /** A loaded sub-scene: Root > Sprite2D > Pivot. */
@@ -86,7 +92,21 @@ describe('graftInstanceChildren', () => {
 
     const pivot = grafted[0]!.children[0]!;
     expect(grafted[0]!.children).toHaveLength(1);
-    expect(pivot.rawProperties?.texture).toBe('ExtResource("3")');
+    expect(pivot.rawProperties.texture).toBe('ExtResource("3")');
+  });
+
+  it('re-parses the folded node, so its typed properties take the override', () => {
+    const grafted = graftInstanceChildren(subScene(), [pivotOverride({ visible: 'false' })], NO_SCOPES);
+
+    expect((grafted[0]!.children[0]!.properties as Node3DProperties).visible).toBe(false);
+  });
+
+  it('keeps the existing node as parsed when the override writes no properties', () => {
+    const loaded = subScene();
+
+    const grafted = graftInstanceChildren(loaded, [pivotOverride({})], NO_SCOPES);
+
+    expect(grafted[0]!.children[0]!.properties).toBe(loaded[0]!.children[0]!.properties);
   });
 
   it('folds an override of a sub-scene root child onto it instead of adding a sibling', () => {
@@ -96,7 +116,7 @@ describe('graftInstanceChildren', () => {
     const grafted = graftInstanceChildren(subScene(), [override], NO_SCOPES);
 
     expect(grafted.map((c) => c.name)).toEqual(['Sprite2D']);
-    expect(grafted[0]!.rawProperties?.visible).toBe('false');
+    expect(grafted[0]!.rawProperties.visible).toBe('false');
     expect(grafted[0]!.children.map((c) => c.name)).toEqual(['Pivot']);
   });
 
@@ -141,6 +161,15 @@ describe('graftInstanceChildren', () => {
       .children[0]!;
 
     expect(texturePath(pivot)).toBe('res://outer.png');
+  });
+
+  it('spells the override reference with the id the outer scene wrote', () => {
+    const override = pivotOverride({ texture: 'ExtResource("1")' });
+
+    const pivot = graftInstanceChildren(texturedSubScene(), [override], { outer, content: inner })[0]!
+      .children[0]!;
+
+    expect(authoredSpelling(pivot.rawProperties.texture!, scopeOf(pivot, inner))).toBe('ExtResource("1")');
   });
 
   it('keeps the sub-scene children of an overridden node in the sub-scene', () => {

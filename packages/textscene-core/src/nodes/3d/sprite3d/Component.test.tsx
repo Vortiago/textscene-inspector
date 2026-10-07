@@ -63,7 +63,13 @@ function makeNode(overrides: Partial<Sprite3DProperties> = {}): TscnNode {
     transparent: true,
     ...overrides,
   };
-  return { name: props.name ?? 'Sprite', type: 'Sprite3D', children: [], properties: props };
+  return {
+    rawProperties: {},
+    name: props.name ?? 'Sprite',
+    type: 'Sprite3D',
+    children: [],
+    properties: props,
+  };
 }
 
 function extRef(id: string, path: string): TscnExternalResource {

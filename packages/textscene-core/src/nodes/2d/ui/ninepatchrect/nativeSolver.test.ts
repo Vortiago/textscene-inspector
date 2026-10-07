@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { NinePatchRectProperties } from './types';
 import { ninePatchRectMinimumSize, resolveNinePatchFilter } from './nativeSolver';
@@ -20,7 +20,7 @@ function node(props: Partial<NinePatchRectProperties>): SolveNode {
   return {
     ...solveNode(),
     path: 'Panel',
-    node: { name: 'Panel', type: 'NinePatchRect', children: [], properties: { name: 'Panel', ...props } },
+    node: controlNode('Panel', 'NinePatchRect', { name: 'Panel', ...props }),
   };
 }
 

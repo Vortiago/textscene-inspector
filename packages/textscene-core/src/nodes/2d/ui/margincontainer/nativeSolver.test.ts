@@ -11,7 +11,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext, ContainerLayoutResult } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { marginContainerMinimumSize, marginContainerLayout } from './nativeSolver';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 /** `marginContainerLayout`'s `rects` half only (`ContainerLayoutResult` says why the union exists). */
 function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
@@ -22,7 +22,7 @@ function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
     ...solveNode(),
     path: name,
-    node: { name, type: 'Control', children: [], properties: { name, ...props } as ControlProperties },
+    node: controlNode(name, 'Control', { name, ...props }),
   };
 }
 
@@ -30,12 +30,7 @@ function container(name: string, props: Partial<ControlProperties>, children: So
   return {
     ...solveNode(),
     path: name,
-    node: {
-      name,
-      type: 'MarginContainer',
-      children: [],
-      properties: { name, ...props } as ControlProperties,
-    },
+    node: controlNode(name, 'MarginContainer', { name, ...props }),
     children,
     // A local theme_override_constants/* reaches `marginsOf` through `n.constants`, which the walker
     // fills unconditionally, not through props.

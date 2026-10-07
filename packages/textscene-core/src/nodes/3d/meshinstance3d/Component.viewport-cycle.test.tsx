@@ -44,7 +44,7 @@ function meshNode(): TscnNode {
     materialOverride: 'SubResource("mat")',
     surfaceMaterialOverrides: new Map(),
   };
-  return { name: 'Mesh1', type: 'MeshInstance3D', children: [], properties: props };
+  return { rawProperties: {}, name: 'Mesh1', type: 'MeshInstance3D', children: [], properties: props };
 }
 
 const INTERNAL_RESOURCES: TscnInternalResource[] = [

@@ -16,6 +16,7 @@ import { loaderServing } from '../../../resources/testing/servingResourceLoader'
 
 function gridMapNode(properties: Record<string, string>): TscnNode {
   return {
+    rawProperties: {},
     name: 'MyGridMap',
     type: 'GridMap',
     children: [],

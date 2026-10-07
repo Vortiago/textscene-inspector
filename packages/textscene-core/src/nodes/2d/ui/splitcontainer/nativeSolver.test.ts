@@ -11,7 +11,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { createSolveContext, solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import './nativeSolver';
 import '../hsplitcontainer/nativeSolver';
 import '../vsplitcontainer/nativeSolver';
@@ -20,12 +20,7 @@ const THEME = nativeTheme(1);
 const EXPAND_FILL = 3;
 
 function expandChild(path: string, axisFlag: 'sizeFlagsHorizontal' | 'sizeFlagsVertical'): SolveNode {
-  const node: TscnNode = {
-    name: path,
-    type: 'Control',
-    children: [],
-    properties: { name: path, [axisFlag]: EXPAND_FILL },
-  };
+  const node: TscnNode = controlNode(path, 'Control', { name: path, [axisFlag]: EXPAND_FILL });
   return { ...solveNode(), path: `Split/${path}`, node };
 }
 
@@ -38,7 +33,7 @@ function splitRoot(type: string, vertical: boolean | undefined, children: SolveN
     anchorBottom: 1,
   };
   if (vertical !== undefined) properties.vertical = vertical;
-  const node: TscnNode = { name: 'Split', type, children: [], properties };
+  const node: TscnNode = controlNode('Split', type, properties);
   return { ...solveNode(), path: 'Split', node, children };
 }
 

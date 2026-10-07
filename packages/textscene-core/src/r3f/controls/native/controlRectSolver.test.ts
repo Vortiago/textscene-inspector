@@ -13,7 +13,7 @@ import { nativeTheme } from './nativeTheme';
 import { controlSolverRegistry, type ContainerLayoutFn, type SolveContext } from './solverRegistry';
 import { combinedMinimumSize, createSolveContext, solveControlTree } from './controlRectSolver';
 import { defineChannel } from './solveHandoff';
-import { solveNode } from './testing/solveNode';
+import { controlNode, solveNode } from './testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 
@@ -22,12 +22,7 @@ type Props = Record<string, unknown>;
 
 function node(path: string, type: string, properties: Props, children: SolveNode[] = []): SolveNode {
   const name = path.split('/').pop()!;
-  const tscnNode: TscnNode = {
-    name,
-    type,
-    children: [],
-    properties: { name, ...properties },
-  };
+  const tscnNode: TscnNode = controlNode(name, type, { name, ...properties });
   return { ...solveNode(), path, node: tscnNode, children };
 }
 
@@ -872,9 +867,9 @@ describe('solveControlTree — file-order-aware Control layout (ADR-0035, Option
     expect(solved.get('Root')?.rect).toEqual({ x: 40, y: 40, w: 1352, h: 768 });
   });
 
-  it('a hand-built node with no rawProperties at all also falls back (no order to read)', () => {
-    // `node()` sets neither rawProperties nor rawPropertiesOrderReliable, the
-    // shape every other test in this file uses.
+  it('a hand-built node with no order flag also falls back (no order to read)', () => {
+    // `node()` leaves rawPropertiesOrderReliable unset, the shape every other test
+    // in this file uses.
     const root = node('Root', 'Control', {
       layoutMode: 3,
       offsetLeft: 40,

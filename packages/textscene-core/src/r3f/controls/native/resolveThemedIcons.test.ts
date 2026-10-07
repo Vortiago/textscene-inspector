@@ -9,6 +9,7 @@ import { resolveThemedIcons } from './buildSolveTree';
 import { themeResolutionScope } from '../../../resources/styles/theme/lookup';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { TscnNode } from '../../../parser/types';
+import { controlNode } from './testing/solveNode';
 
 function theme(icons: Record<string, Record<string, string>>): ThemeResource {
   return {
@@ -30,12 +31,7 @@ function theme(icons: Record<string, Record<string, string>>): ThemeResource {
 }
 
 function node(overrides?: Record<string, string>): TscnNode {
-  return {
-    name: 'N',
-    type: 'CheckBox',
-    children: [],
-    properties: (overrides ? { themeOverrideIcons: overrides } : {}) as unknown as TscnNode['properties'],
-  };
+  return controlNode('N', 'CheckBox', overrides ? { themeOverrideIcons: overrides } : {});
 }
 
 const NODE_SCOPE = { externalResources: [], internalResources: [] };

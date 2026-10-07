@@ -21,6 +21,7 @@ const RULE_NAME = 'valid-animatedsprite3d-properties';
  */
 function context(properties: Record<string, string>, declared: string[] = ['frames_1']): RuleContext {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'MyAnimatedSprite3D',
     type: 'AnimatedSprite3D',
     children: [],

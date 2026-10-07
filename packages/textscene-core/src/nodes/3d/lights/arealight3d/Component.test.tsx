@@ -16,7 +16,13 @@ function makeNode(overrides: Partial<AreaLight3DProperties> = {}): TscnNode {
     area_normalize_energy: true,
     ...overrides,
   };
-  return { name: props.name ?? 'Area', type: 'AreaLight3D', children: [], properties: props };
+  return {
+    rawProperties: {},
+    name: props.name ?? 'Area',
+    type: 'AreaLight3D',
+    children: [],
+    properties: props,
+  };
 }
 
 describe('<AreaLight3D>', () => {

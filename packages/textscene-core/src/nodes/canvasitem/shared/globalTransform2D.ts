@@ -70,7 +70,7 @@ function localTransform2D(node: TscnNode): Transform2DColumns | null {
 }
 
 function isTopLevel(node: TscnNode): boolean {
-  return boolSlotValue(node.rawProperties?.top_level) === true;
+  return boolSlotValue(node.rawProperties.top_level) === true;
 }
 
 export type GlobalTransform2DVerdict =

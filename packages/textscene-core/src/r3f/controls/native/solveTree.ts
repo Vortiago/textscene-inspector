@@ -233,11 +233,11 @@ export function painterView<T extends ControlProperties>(n: SolveNode): PainterV
 
 /**
  * This node's raw property keys in file order, or `undefined` when the order is
- * unknown: no `rawProperties`, or a merged instance root mixing two files
- * (`resources/mergeInstanceRoot.ts`, ADR-0035). Every file-order-sensitive
+ * unknown: a hand-built node, or a node whose raw map layers an override onto
+ * another file's (`resources/layerRawOverride.ts`, ADR-0035). Every file-order-sensitive
  * resolver reads this rather than checking `rawPropertiesOrderReliable` itself.
  */
 export function controlLayoutOrder(n: SolveNode): readonly string[] | undefined {
   const { node } = n;
-  return node.rawPropertiesOrderReliable && node.rawProperties ? Object.keys(node.rawProperties) : undefined;
+  return node.rawPropertiesOrderReliable ? Object.keys(node.rawProperties) : undefined;
 }

@@ -12,7 +12,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext, ContainerLayoutResult } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { aspectRatioContainerMinimumSize, aspectRatioContainerLayout } from './nativeSolver';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
   return 'rects' in result ? result.rects : result;
@@ -22,7 +22,7 @@ function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
     ...solveNode(),
     path: name,
-    node: { name, type: 'Control', children: [], properties: { name, ...props } as ControlProperties },
+    node: controlNode(name, 'Control', { name, ...props }),
   };
 }
 
@@ -30,12 +30,7 @@ function textureRect(name: string, expandMode: number): SolveNode {
   return {
     ...solveNode(),
     path: name,
-    node: {
-      name,
-      type: 'TextureRect',
-      children: [],
-      properties: { name, expandMode } as unknown as ControlProperties,
-    },
+    node: controlNode(name, 'TextureRect', { name, expandMode }),
   };
 }
 
@@ -43,12 +38,7 @@ function aspect(props: Partial<AspectRatioContainerProperties>, children: SolveN
   return {
     ...solveNode(),
     path: 'A',
-    node: {
-      name: 'A',
-      type: 'AspectRatioContainer',
-      children: [],
-      properties: { name: 'A', ...props } as AspectRatioContainerProperties,
-    },
+    node: controlNode('A', 'AspectRatioContainer', { name: 'A', ...props }),
     children,
   };
 }

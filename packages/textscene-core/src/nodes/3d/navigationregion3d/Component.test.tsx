@@ -38,6 +38,7 @@ function makeLoaderWith(path: string, tres: ParsedResource): ResourceLoader {
 
 function navNode(): TscnNode {
   return {
+    rawProperties: {},
     name: 'Nav',
     type: 'NavigationRegion3D',
     children: [],

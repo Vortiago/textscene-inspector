@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { rehomeOverride } from './rehomeOverride';
 import { findExtResource, findSubResource } from './SubResourceResolver';
 import { extResourcePathOf } from './testing/extResourcePathOf';
+import { resourceRef } from '../godot/resourceRef';
 import type { SceneScope } from '../parser/types';
 
 const outer: SceneScope = {
@@ -72,5 +73,26 @@ describe('rehomeOverride', () => {
 
     expect(raw).toEqual({ visible: 'false' });
     expect(scope).toBe(inner);
+  });
+
+  it('marks a renamed copy with the id the outer file wrote', () => {
+    const { raw, scope } = rehomeOverride({ texture: 'ExtResource("1")' }, outer, inner);
+
+    expect(findExtResource(scope.externalResources, resourceRef(raw.texture!)!.id)?.authoredId).toBe('1');
+  });
+
+  it('keeps the first file id through a second re-homing', () => {
+    const once = rehomeOverride({ texture: 'ExtResource("1")' }, outer, inner);
+    const deeper: SceneScope = {
+      ...inner,
+      externalResources: [
+        ...inner.externalResources,
+        { id: '1 (outer)', type: 'Texture2D', path: 'res://deep.png' },
+      ],
+    };
+
+    const { raw, scope } = rehomeOverride(once.raw, once.scope, deeper);
+
+    expect(findExtResource(scope.externalResources, resourceRef(raw.texture!)!.id)?.authoredId).toBe('1');
   });
 });

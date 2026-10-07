@@ -13,6 +13,7 @@ import { parseTimer } from './parser';
 import type { TscnNode } from '../../../parser/types';
 
 const timerNode: TscnNode = {
+  rawProperties: {},
   name: 'MyTimer',
   type: 'Timer',
   children: [],

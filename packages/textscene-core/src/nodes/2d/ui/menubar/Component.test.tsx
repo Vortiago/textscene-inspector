@@ -13,18 +13,19 @@ import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import type { MenuBarProperties } from './types';
 import { MenuBar } from './Component';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 32 };
 
 function popup(name: string): TscnNode {
-  return { name, type: 'PopupMenu', children: [], properties: {} };
+  return { rawProperties: {}, name, type: 'PopupMenu', children: [], properties: {} };
 }
 
 function solveNode(properties: Partial<MenuBarProperties> = {}, children: TscnNode[] = []): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'Bar',
     type: 'MenuBar',
     children,
@@ -114,7 +115,7 @@ describe('<MenuBar> (isolated painter contract)', () => {
   });
 
   it('ignores a stray non-PopupMenu child instead of drawing a title for it', async () => {
-    const stray: TscnNode = { name: 'NotAMenu', type: 'Label', children: [], properties: {} };
+    const stray: TscnNode = controlNode('NotAMenu', 'Label');
     const renderer = await ReactThreeTestRenderer.create(
       <MenuBar
         {...painterEnv()}

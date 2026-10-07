@@ -25,22 +25,12 @@ function buildWideTree(leafCount: number): TscnNode[] {
     remaining -= countInGroup;
     const leaves: TscnNode[] = [];
     for (let l = 0; l < countInGroup; l++) {
-      leaves.push({
-        name: `Leaf${g}_${l}`,
-        type: 'Node3D',
-        children: [],
-        properties: {},
-      });
+      leaves.push({ rawProperties: {}, name: `Leaf${g}_${l}`, type: 'Node3D', children: [], properties: {} });
     }
-    groups.push({
-      name: `Group${g}`,
-      type: 'Node3D',
-      children: leaves,
-      properties: {},
-    });
+    groups.push({ rawProperties: {}, name: `Group${g}`, type: 'Node3D', children: leaves, properties: {} });
   }
 
-  return [{ name: 'Root', type: 'Node3D', children: groups, properties: {} }];
+  return [{ rawProperties: {}, name: 'Root', type: 'Node3D', children: groups, properties: {} }];
 }
 
 /** Every leaf node in traversal order, for exercising one lookup per node. */

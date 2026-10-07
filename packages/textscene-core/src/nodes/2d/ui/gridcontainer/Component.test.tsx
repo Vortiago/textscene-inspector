@@ -8,15 +8,10 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { GridContainer } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function gridSolveNode(): SolveNode {
-  const node: TscnNode = {
-    name: 'Grid',
-    type: 'GridContainer',
-    children: [],
-    properties: { name: 'Grid' },
-  };
+  const node: TscnNode = controlNode('Grid', 'GridContainer', { name: 'Grid' });
   return { ...solveNode(), path: 'Grid', node };
 }
 

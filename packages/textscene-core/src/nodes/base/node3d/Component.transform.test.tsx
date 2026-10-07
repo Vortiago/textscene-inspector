@@ -18,12 +18,7 @@ function identityBasis(): Pick<Transform3D, 'basis_x' | 'basis_y' | 'basis_z'> {
 }
 
 function makeNode(properties: Node3DProperties): TscnNode {
-  return {
-    name: properties.name ?? 'TestNode',
-    type: 'Node3D',
-    children: [],
-    properties,
-  };
+  return { rawProperties: {}, name: properties.name ?? 'TestNode', type: 'Node3D', children: [], properties };
 }
 
 async function renderAt(properties: Node3DProperties) {

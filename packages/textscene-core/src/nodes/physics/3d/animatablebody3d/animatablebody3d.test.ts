@@ -36,6 +36,6 @@ describe('AnimatableBody3D registration', () => {
 
     const node = scene.nodes[0]?.children[0];
     expect(node?.properties).not.toHaveProperty('sync_to_physics');
-    expect(node?.rawProperties?.sync_to_physics).toBe('false');
+    expect(node?.rawProperties.sync_to_physics).toBe('false');
   });
 });

@@ -22,6 +22,7 @@ const parse = (rel: string) => new TscnParser().parse(readFileSync(join(DEMO, re
 const opponent = parse('combat/combatants/opponent.tscn');
 const ctx: LiveTreeContext = {
   externalResources: opponent.externalResources,
+  internalResources: [],
   sceneCache: {
     getCached: (path) =>
       ({
@@ -50,7 +51,7 @@ function liveNodeAt(path: string): { node: LiveNode; scope: SceneScope } {
 /** The path the raw `key` of the live node at `path` resolves to. */
 function resolvedPath(path: string, key: string): string | undefined {
   const { node, scope } = liveNodeAt(path);
-  return extResourcePathOf(node.rawProperties?.[key], scope);
+  return extResourcePathOf(node.rawProperties[key], scope);
 }
 
 describe('overrides in the live scene tree', () => {
@@ -101,7 +102,7 @@ material_override = SubResource("2")
     };
     const [group] = liveChildGroups(host.nodes[0]!, rootScope(hostCtx), hostCtx.sceneCache);
     const merged = group!.mergedNode!;
-    const id = resourceRef(merged.rawProperties!.material_override!)!.id;
+    const id = resourceRef(merged.rawProperties.material_override!)!.id;
 
     expect(findSubResource(scopeOf(merged, group!.scope).internalResources, id)?.data.albedo_color).toBe(
       'Color(1, 0, 0, 1)'

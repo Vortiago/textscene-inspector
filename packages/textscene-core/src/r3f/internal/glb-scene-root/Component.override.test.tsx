@@ -8,6 +8,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene } from '../../../parser/types';
+import { parsedNode, translated } from '../../../parser/testing/parserKit';
 import { NodeDispatcher } from '../../NodeDispatcher';
 import { SceneStack } from '../../testing/SceneStack';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
@@ -17,6 +18,10 @@ import { initGlbModules } from '../../../resources/processing/glbProcessing';
 
 // Register node-type components (Node3D / OmniLight3D / GLBSceneRoot / …).
 import '../../nodes/index';
+// The parsers `parsedNode` and the Instance root merge build node properties with.
+import '../../../nodes/node/index';
+import '../../../nodes/base/node3d/index';
+import '../../../nodes/3d/lights/omnilight3d/index';
 
 // GLBSceneRoot clones through cloneWithMaterials, which needs the lazy GLB module cache.
 beforeAll(async () => {
@@ -45,6 +50,7 @@ function makeSynthesisedGlbScene(): TscnScene {
   return {
     nodes: [
       {
+        rawProperties: {},
         name: 'ceiling_lamp',
         type: GLB_SCENE_ROOT_TYPE,
         children: [],
@@ -59,33 +65,14 @@ function makeSynthesisedGlbScene(): TscnScene {
 /** ceiling_lamp.tscn: root instances the GLB, with a `plafoniera` transform override + OmniLight3D. */
 function makeCeilingLampScene(): TscnScene {
   const root: TscnNode = {
-    name: 'ceiling_lamp',
-    type: 'Node',
-    instance: `ExtResource("glb_1")`,
+    ...parsedNode({ name: 'ceiling_lamp', type: 'Node', instance: 'ExtResource("glb_1")' }),
     children: [
-      {
-        name: 'plafoniera',
-        type: 'Node',
-        children: [],
-        properties: {
-          name: 'plafoniera',
-          index: 0,
-          transform: {
-            basis_x: { x: SCALE, y: 0, z: 0 },
-            basis_y: { x: 0, y: SCALE, z: 0 },
-            basis_z: { x: 0, y: 0, z: SCALE },
-            origin: { x: 0, y: 0, z: 0 },
-          },
-        } as Record<string, unknown>,
-      },
-      {
-        name: 'OmniLight3D',
-        type: 'OmniLight3D',
-        children: [],
-        properties: { name: 'OmniLight3D' } as Record<string, unknown>,
-      },
+      parsedNode(
+        { name: 'plafoniera', type: 'Node', index: '0' },
+        { transform: `Transform3D(${SCALE}, 0, 0, 0, ${SCALE}, 0, 0, 0, ${SCALE}, 0, 0, 0)` }
+      ),
+      parsedNode({ name: 'OmniLight3D', type: 'OmniLight3D' }),
     ],
-    properties: { name: 'ceiling_lamp' } as Record<string, unknown>,
   };
   return {
     nodes: [root],
@@ -96,21 +83,10 @@ function makeCeilingLampScene(): TscnScene {
 
 /** Hallway-level instancing node: ceiling_lamp at origin (8.803779, 4, 0). */
 function makeHallwayLampNode(): TscnNode {
-  return {
-    name: 'ceiling_lamp',
-    type: 'Node3D',
-    instance: `ExtResource("lamp_1")`,
-    children: [],
-    properties: {
-      name: 'ceiling_lamp',
-      transform: {
-        basis_x: { x: 1, y: 0, z: 0 },
-        basis_y: { x: 0, y: 1, z: 0 },
-        basis_z: { x: 0, y: 0, z: 1 },
-        origin: { x: 8.803779, y: 4, z: 0 },
-      },
-    } as Record<string, unknown>,
-  };
+  return parsedNode(
+    { name: 'ceiling_lamp', type: 'Node3D', instance: 'ExtResource("lamp_1")' },
+    { transform: translated(8.803779, 4, 0) }
+  );
 }
 
 async function renderHallwayLamp(loader: ResourceLoader) {
@@ -168,15 +144,7 @@ describe('GLBSceneRoot — BUG 2 instance override onto GLB-internal node', () =
     // With no override children the GLB keeps its baked transform: translations are not zeroed
     // globally.
     const noOverrideScene: TscnScene = {
-      nodes: [
-        {
-          name: 'ceiling_lamp',
-          type: 'Node',
-          instance: `ExtResource("glb_1")`,
-          children: [],
-          properties: { name: 'ceiling_lamp' } as Record<string, unknown>,
-        },
-      ],
+      nodes: [parsedNode({ name: 'ceiling_lamp', type: 'Node', instance: 'ExtResource("glb_1")' })],
       externalResources: [{ id: 'glb_1', path: GLB_PATH, type: 'PackedScene' }],
       internalResources: [],
     };

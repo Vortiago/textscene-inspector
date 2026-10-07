@@ -9,7 +9,14 @@ function translation(x: number, y: number, z: number): Transform3D {
 }
 
 function node(name: string, type: string, extra: Partial<TscnNode> = {}, transform?: Transform3D): TscnNode {
-  return { name, type, children: [], properties: transform ? { transform } : {}, ...extra };
+  return {
+    rawProperties: {},
+    name,
+    type,
+    children: [],
+    properties: transform ? { transform } : {},
+    ...extra,
+  };
 }
 
 function originOf(path: string, nodes: TscnNode[], paths: string[]): number[] {

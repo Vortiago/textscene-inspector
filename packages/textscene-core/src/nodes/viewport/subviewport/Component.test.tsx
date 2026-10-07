@@ -18,6 +18,7 @@ import { SceneStack } from '../../../r3f/testing/SceneStack';
 import '../../../r3f/nodes/index';
 
 const baseNode: TscnNode = {
+  rawProperties: {},
   name: 'MySubViewport',
   type: 'SubViewport',
   children: [],

@@ -9,7 +9,13 @@ import { painterEnv } from './testing/painterProps';
 import { solveNode as emptySolveNode } from './testing/solveNode';
 
 function solveNode(overrides: Partial<SolveNode> = {}): SolveNode {
-  const node: TscnNode = { name: 'Widget', type: 'SomeUnimplementedType', children: [], properties: {} };
+  const node: TscnNode = {
+    rawProperties: {},
+    name: 'Widget',
+    type: 'SomeUnimplementedType',
+    children: [],
+    properties: {},
+  };
   return {
     ...emptySolveNode(),
     path: 'Widget',

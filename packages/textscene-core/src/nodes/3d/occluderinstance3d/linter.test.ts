@@ -24,6 +24,7 @@ function findByType(nodes: TscnNode[], type: string): TscnNode | undefined {
 
 function makeContext(properties: Record<string, string>): RuleContext {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'MyOccluderInstance3D',
     type: 'OccluderInstance3D',
     children: [],

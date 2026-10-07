@@ -6,6 +6,7 @@ import type { Node3DProperties, Transform3D } from './types';
 
 function makeNode(properties: Node3DProperties): TscnNode {
   return {
+    rawProperties: {},
     name: properties.name ?? 'TestNode3D',
     type: 'Node3D',
     children: [],

@@ -357,6 +357,7 @@ _Avoid_: "wrapper node", "prefab flattening", "compose". A merge decision derive
 
 **Override re-homing** (`rehomeOverride`, carried as `LiveNode.scope`):
 The copy of each resource an override names into the scope of the node it reaches, under a fresh id where that id is taken, so each property resolves in the file that wrote it (ADR-0051).
+Each copy keeps the id its own file wrote as `authoredId`, and the inspector shows that id.
 _Avoid_: one scope stamped over a node two files wrote. A scope tag on `TscnNode`.
 
 **Cyclic instancing** (`SceneScope.instancedScenePaths`):

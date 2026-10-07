@@ -15,7 +15,7 @@ import { ControlClipProvider, useControlClipPlanes } from '../../../../r3f/contr
 import type { ScrollContainerProperties } from './types';
 import { ScrollContainer } from './Component';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 // Only `gui/common/snap_controls_to_pixels` comes from the project settings,
 // so no test needs the real provider's async load.
@@ -37,22 +37,12 @@ function leaf(name: string, props: Partial<ScrollContainerProperties> = {}): Sol
   return {
     ...solveNode(),
     path: name,
-    node: {
-      name,
-      type: 'Control',
-      children: [],
-      properties: { name, ...props } as ScrollContainerProperties,
-    },
+    node: controlNode(name, 'Control', { name, ...props }),
   };
 }
 
 function scrollNode(props: Partial<ScrollContainerProperties> = {}, children: SolveNode[] = []): SolveNode {
-  const node: TscnNode = {
-    name: 'Scroll',
-    type: 'ScrollContainer',
-    children: [],
-    properties: { name: 'Scroll', ...props } as ScrollContainerProperties,
-  };
+  const node: TscnNode = controlNode('Scroll', 'ScrollContainer', { name: 'Scroll', ...props });
   return { ...solveNode(), path: 'Scroll', node, children };
 }
 

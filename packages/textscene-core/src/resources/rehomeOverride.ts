@@ -41,11 +41,18 @@ export function rehomeOverride(
     const id = pool.claim(ref.id);
     if (ref.kind === 'ExtResource') {
       const resource = findExtResource(from.externalResources, ref.id);
-      if (resource) addedExternal.push({ ...resource, id });
+      if (resource) addedExternal.push({ ...resource, id, authoredId: authoredIdOf(resource) });
     } else {
       const resource = findSubResource(from.internalResources, ref.id);
       // Claimed before its data is re-homed, so a reference back to it reuses the claimed id.
-      if (resource) addedInternal.push({ ...resource, id, data: mapValues(resource.data, rehomeValue) });
+      if (resource) {
+        addedInternal.push({
+          ...resource,
+          id,
+          authoredId: authoredIdOf(resource),
+          data: mapValues(resource.data, rehomeValue),
+        });
+      }
     }
     return id;
   };
@@ -63,6 +70,11 @@ export function rehomeOverride(
       internalResources: [...into.internalResources, ...addedInternal],
     },
   };
+}
+
+/** The id the first file wrote: a resource re-homed again keeps it through every nesting level. */
+function authoredIdOf(resource: { id: string; authoredId?: string }): string {
+  return resource.authoredId ?? resource.id;
 }
 
 /** The ids one kind of resource holds in the target scope, and the ones the override claimed. */

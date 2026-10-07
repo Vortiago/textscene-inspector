@@ -12,19 +12,14 @@ import * as mergeInstanceRootModule from '../resources/mergeInstanceRoot';
 import { SceneStack } from './testing/SceneStack';
 import { createFakeResourceLoader, recordSceneRequests } from '../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../resources/ResourceLoader';
+import { makeNode, translated } from '../parser/testing/parserKit';
 
 // The barrel registers every node-type component.
 import './nodes/index';
-
-function makeNode(name: string, type: string, overrides: Partial<TscnNode> = {}): TscnNode {
-  return {
-    name,
-    type,
-    children: [],
-    properties: { name } as Record<string, unknown>,
-    ...overrides,
-  };
-}
+// The parsers `makeNode` and the Instance root merge build node properties with.
+import '../nodes/node/index';
+import '../nodes/base/node3d/index';
+import '../nodes/3d/meshinstance3d/index';
 
 function makeBoxScene(meshName = 'TheBox'): TscnScene {
   const internalResources: TscnInternalResource[] = [
@@ -35,15 +30,7 @@ function makeBoxScene(meshName = 'TheBox'): TscnScene {
     },
   ];
   return {
-    nodes: [
-      makeNode(meshName, 'MeshInstance3D', {
-        properties: {
-          name: meshName,
-          mesh: 'SubResource("Box_1")',
-          surfaceMaterialOverrides: new Map(),
-        } as Record<string, unknown>,
-      }),
-    ],
+    nodes: [makeNode(meshName, 'MeshInstance3D', { rawProperties: { mesh: 'SubResource("Box_1")' } })],
     externalResources: [],
     internalResources,
   };
@@ -66,21 +53,10 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     const fake = createFakeResourceLoader();
     fake.scenes.seed('res://child_cube.tscn', makeBoxScene('TheBox'));
 
-    const instancingNode: TscnNode = {
-      name: 'LeftCube',
-      type: 'Node3D',
+    const instancingNode = makeNode('LeftCube', 'Node3D', {
       instance: 'ExtResource("1_cube")',
-      children: [],
-      properties: {
-        name: 'LeftCube',
-        transform: {
-          basis_x: { x: 1, y: 0, z: 0 },
-          basis_y: { x: 0, y: 1, z: 0 },
-          basis_z: { x: 0, y: 0, z: 1 },
-          origin: { x: -3, y: 0, z: 0 },
-        },
-      } as Record<string, unknown>,
-    };
+      rawProperties: { transform: translated(-3, 0, 0) },
+    });
 
     const renderer = await renderTree([instancingNode], fake.loader, [
       { id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' },
@@ -99,13 +75,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     const fake = createFakeResourceLoader();
     fake.scenes.seed('res://missing_scene.tscn', null);
 
-    const instancingNode: TscnNode = {
-      name: 'BrokenInstance',
-      type: 'Node3D',
-      instance: 'ExtResource("99_missing")',
-      children: [],
-      properties: { name: 'BrokenInstance' } as Record<string, unknown>,
-    };
+    const instancingNode = makeNode('BrokenInstance', 'Node3D', { instance: 'ExtResource("99_missing")' });
 
     const renderer = await renderTree([instancingNode], fake.loader, [
       {
@@ -129,30 +99,14 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
 
     // Scene C: a single MeshInstance3D rendering a sphere.
     const sceneC: TscnScene = {
-      nodes: [
-        makeNode('Inner', 'MeshInstance3D', {
-          properties: {
-            name: 'Inner',
-            mesh: 'SubResource("S_1")',
-            surfaceMaterialOverrides: new Map(),
-          } as Record<string, unknown>,
-        }),
-      ],
+      nodes: [makeNode('Inner', 'MeshInstance3D', { rawProperties: { mesh: 'SubResource("S_1")' } })],
       externalResources: [],
       internalResources: [{ id: 'S_1', type: 'SphereMesh', data: { radius: '0.5' } }],
     };
 
     // Scene B: a Node3D that instances scene C.
     const sceneB: TscnScene = {
-      nodes: [
-        {
-          name: 'MiddleRoot',
-          type: 'Node3D',
-          instance: 'ExtResource("c_ref")',
-          children: [],
-          properties: { name: 'MiddleRoot' } as Record<string, unknown>,
-        },
-      ],
+      nodes: [makeNode('MiddleRoot', 'Node3D', { instance: 'ExtResource("c_ref")' })],
       externalResources: [{ id: 'c_ref', path: 'res://scene_c.tscn', type: 'PackedScene' }],
       internalResources: [],
     };
@@ -161,15 +115,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     fake.scenes.seed('res://scene_c.tscn', sceneC);
 
     // Scene A: instances scene B.
-    const sceneANodes: TscnNode[] = [
-      {
-        name: 'OuterRoot',
-        type: 'Node3D',
-        instance: 'ExtResource("b_ref")',
-        children: [],
-        properties: { name: 'OuterRoot' } as Record<string, unknown>,
-      },
-    ];
+    const sceneANodes = [makeNode('OuterRoot', 'Node3D', { instance: 'ExtResource("b_ref")' })];
 
     const renderer = await renderTree(sceneANodes, fake.loader, [
       { id: 'b_ref', path: 'res://scene_b.tscn', type: 'PackedScene' },
@@ -192,21 +138,12 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     fake.scenes.seed('res://cube.tscn', makeBoxScene('TheBox'));
 
     const positions = [-3, 0, 3];
-    const nodes: TscnNode[] = positions.map((x, i) => ({
-      name: `Cube_${i}`,
-      type: 'Node3D',
-      instance: 'ExtResource("1_cube")',
-      children: [],
-      properties: {
-        name: `Cube_${i}`,
-        transform: {
-          basis_x: { x: 1, y: 0, z: 0 },
-          basis_y: { x: 0, y: 1, z: 0 },
-          basis_z: { x: 0, y: 0, z: 1 },
-          origin: { x, y: 0, z: 0 },
-        },
-      } as Record<string, unknown>,
-    }));
+    const nodes = positions.map((x, i) =>
+      makeNode(`Cube_${i}`, 'Node3D', {
+        instance: 'ExtResource("1_cube")',
+        rawProperties: { transform: translated(x, 0, 0) },
+      })
+    );
 
     const renderer = await renderTree(nodes, fake.loader, [
       { id: '1_cube', path: 'res://cube.tscn', type: 'PackedScene' },
@@ -230,15 +167,8 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     const innerScene: TscnScene = {
       nodes: [
         makeNode('InnerRoot', 'Node3D', {
-          properties: { name: 'InnerRoot' } as Record<string, unknown>,
           children: [
-            makeNode('FromInstance', 'MeshInstance3D', {
-              properties: {
-                name: 'FromInstance',
-                mesh: 'SubResource("Box_1")',
-                surfaceMaterialOverrides: new Map(),
-              } as Record<string, unknown>,
-            }),
+            makeNode('FromInstance', 'MeshInstance3D', { rawProperties: { mesh: 'SubResource("Box_1")' } }),
           ],
         }),
       ],
@@ -248,21 +178,12 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     fake.scenes.seed('res://inner.tscn', innerScene);
 
     // Parent instances inner.tscn and declares an added child of its own.
-    const parentNode: TscnNode = {
-      name: 'Parent',
-      type: 'Node3D',
+    const parentNode = makeNode('Parent', 'Node3D', {
       instance: 'ExtResource("inner_ref")',
       children: [
-        makeNode('InlineMesh', 'MeshInstance3D', {
-          properties: {
-            name: 'InlineMesh',
-            mesh: 'SubResource("Box_1")',
-            surfaceMaterialOverrides: new Map(),
-          } as Record<string, unknown>,
-        }),
+        makeNode('InlineMesh', 'MeshInstance3D', { rawProperties: { mesh: 'SubResource("Box_1")' } }),
       ],
-      properties: { name: 'Parent' } as Record<string, unknown>,
-    };
+    });
 
     const renderer = await ReactThreeTestRenderer.create(
       <SceneStack
@@ -298,33 +219,15 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     // addressed under the instance path.
     const multiRootScene: TscnScene = {
       nodes: [
-        makeNode('RootA', 'MeshInstance3D', {
-          properties: {
-            name: 'RootA',
-            mesh: 'SubResource("Box_1")',
-            surfaceMaterialOverrides: new Map(),
-          } as Record<string, unknown>,
-        }),
-        makeNode('RootB', 'MeshInstance3D', {
-          properties: {
-            name: 'RootB',
-            mesh: 'SubResource("Box_1")',
-            surfaceMaterialOverrides: new Map(),
-          } as Record<string, unknown>,
-        }),
+        makeNode('RootA', 'MeshInstance3D', { rawProperties: { mesh: 'SubResource("Box_1")' } }),
+        makeNode('RootB', 'MeshInstance3D', { rawProperties: { mesh: 'SubResource("Box_1")' } }),
       ],
       externalResources: [],
       internalResources: [{ id: 'Box_1', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)' } }],
     };
     fake.scenes.seed('res://multi.tscn', multiRootScene);
 
-    const instancingNode: TscnNode = {
-      name: 'MultiHost',
-      type: 'Node3D',
-      instance: 'ExtResource("multi_ref")',
-      children: [],
-      properties: { name: 'MultiHost' } as Record<string, unknown>,
-    };
+    const instancingNode = makeNode('MultiHost', 'Node3D', { instance: 'ExtResource("multi_ref")' });
 
     const renderer = await renderTree([instancingNode], fake.loader, [
       { id: 'multi_ref', path: 'res://multi.tscn', type: 'PackedScene' },
@@ -347,45 +250,24 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
 
     // The Wrapper's sub-scene, whose own pool does not hold the gadget ref.
     const wrapperScene: TscnScene = {
-      nodes: [
-        makeNode('WrapperRoot', 'Node3D', { properties: { name: 'WrapperRoot' } as Record<string, unknown> }),
-      ],
+      nodes: [makeNode('WrapperRoot', 'Node3D')],
       externalResources: [],
       internalResources: [],
     };
     // The gadget sub-scene (a sphere), referenced only by a host ExtResource id.
     const gadgetScene: TscnScene = {
-      nodes: [
-        makeNode('GadgetRoot', 'MeshInstance3D', {
-          properties: {
-            name: 'GadgetRoot',
-            mesh: 'SubResource("S_1")',
-            surfaceMaterialOverrides: new Map(),
-          } as Record<string, unknown>,
-        }),
-      ],
+      nodes: [makeNode('GadgetRoot', 'MeshInstance3D', { rawProperties: { mesh: 'SubResource("S_1")' } })],
       externalResources: [],
       internalResources: [{ id: 'S_1', type: 'SphereMesh', data: { radius: '0.5' } }],
     };
     fake.scenes.seed('res://wrapper.tscn', wrapperScene);
     fake.scenes.seed('res://gadget.tscn', gadgetScene);
 
-    const wrapperNode: TscnNode = {
-      name: 'Wrapper',
-      type: 'Node3D',
+    const wrapperNode = makeNode('Wrapper', 'Node3D', {
       instance: 'ExtResource("wrapper_ref")',
-      children: [
-        // Host-added child that instances a host resource id.
-        {
-          name: 'Gadget',
-          type: 'Node3D',
-          instance: 'ExtResource("gadget_ref")',
-          children: [],
-          properties: { name: 'Gadget' } as Record<string, unknown>,
-        },
-      ],
-      properties: { name: 'Wrapper' } as Record<string, unknown>,
-    };
+      // Host-added child that instances a host resource id.
+      children: [makeNode('Gadget', 'Node3D', { instance: 'ExtResource("gadget_ref")' })],
+    });
 
     const renderer = await renderTree([wrapperNode], fake.loader, [
       { id: 'wrapper_ref', path: 'res://wrapper.tscn', type: 'PackedScene' },
@@ -407,15 +289,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
 
     // Level 3 (leaf): a single box mesh, no transform.
     const leafScene: TscnScene = {
-      nodes: [
-        makeNode('LeafBox', 'MeshInstance3D', {
-          properties: {
-            name: 'LeafBox',
-            mesh: 'SubResource("Box_1")',
-            surfaceMaterialOverrides: new Map(),
-          } as Record<string, unknown>,
-        }),
-      ],
+      nodes: [makeNode('LeafBox', 'MeshInstance3D', { rawProperties: { mesh: 'SubResource("Box_1")' } })],
       externalResources: [],
       internalResources: [
         {
@@ -429,21 +303,10 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     // Level 2 (middle): a Node3D wrapper translated z=3 that instances leaf.
     const middleScene: TscnScene = {
       nodes: [
-        {
-          name: 'MiddleWrapper',
-          type: 'Node3D',
+        makeNode('MiddleWrapper', 'Node3D', {
           instance: 'ExtResource("leaf_ref")',
-          children: [],
-          properties: {
-            name: 'MiddleWrapper',
-            transform: {
-              basis_x: { x: 1, y: 0, z: 0 },
-              basis_y: { x: 0, y: 1, z: 0 },
-              basis_z: { x: 0, y: 0, z: 1 },
-              origin: { x: 0, y: 0, z: 3 },
-            },
-          } as Record<string, unknown>,
-        },
+          rawProperties: { transform: translated(0, 0, 3) },
+        }),
       ],
       externalResources: [{ id: 'leaf_ref', path: 'res://leaf.tscn', type: 'PackedScene' }],
       internalResources: [],
@@ -453,22 +316,11 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     fake.scenes.seed('res://middle.tscn', middleScene);
 
     // Level 1 (top): a Node3D translated x=2 that instances middle.
-    const topNodes: TscnNode[] = [
-      {
-        name: 'TopRoot',
-        type: 'Node3D',
+    const topNodes = [
+      makeNode('TopRoot', 'Node3D', {
         instance: 'ExtResource("middle_ref")',
-        children: [],
-        properties: {
-          name: 'TopRoot',
-          transform: {
-            basis_x: { x: 1, y: 0, z: 0 },
-            basis_y: { x: 0, y: 1, z: 0 },
-            basis_z: { x: 0, y: 0, z: 1 },
-            origin: { x: 2, y: 0, z: 0 },
-          },
-        } as Record<string, unknown>,
-      },
+        rawProperties: { transform: translated(2, 0, 0) },
+      }),
     ];
 
     const renderer = await renderTree(topNodes, fake.loader, [
@@ -503,13 +355,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     const fake = createFakeResourceLoader();
     fake.scenes.seed('res://child_cube.tscn', makeBoxScene('TheBox'));
 
-    const instancingNode: TscnNode = {
-      name: 'LeftCube',
-      type: 'Node3D',
-      instance: 'ExtResource("1_cube")',
-      children: [],
-      properties: { name: 'LeftCube' } as Record<string, unknown>,
-    };
+    const instancingNode = makeNode('LeftCube', 'Node3D', { instance: 'ExtResource("1_cube")' });
 
     const mergeSpy = vi.spyOn(mergeInstanceRootModule, 'mergeInstanceRoot');
 
@@ -549,13 +395,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     const fake = createFakeResourceLoader();
     const metadataAtRequest = recordSceneRequests(fake);
 
-    const instancingNode: TscnNode = {
-      name: 'LeftCube',
-      type: 'Node3D',
-      instance: 'ExtResource("1_cube")',
-      children: [],
-      properties: { name: 'LeftCube' } as Record<string, unknown>,
-    };
+    const instancingNode = makeNode('LeftCube', 'Node3D', { instance: 'ExtResource("1_cube")' });
 
     await renderTree([instancingNode], fake.loader, [
       { id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' },

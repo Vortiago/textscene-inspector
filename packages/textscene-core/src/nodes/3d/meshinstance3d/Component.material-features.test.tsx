@@ -18,6 +18,7 @@ import { preloadResource } from '../../../resources/testing/preloadResource';
 
 function makeNode(materialId: string, name = 'Mesh'): TscnNode {
   return {
+    rawProperties: {},
     name,
     type: 'MeshInstance3D',
     children: [],

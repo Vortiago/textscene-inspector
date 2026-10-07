@@ -25,6 +25,7 @@ function makeNode(overrides: Partial<Camera3DProperties> = {}): TscnNode {
     ...overrides,
   };
   return {
+    rawProperties: {},
     name: base.name ?? 'MyCamera',
     type: 'Camera3D',
     children: [],

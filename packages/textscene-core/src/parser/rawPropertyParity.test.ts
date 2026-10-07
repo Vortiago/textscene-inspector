@@ -24,7 +24,7 @@ editor_description = "note"
 
 function rawByName(nodes: TscnNode[], out = new Map<string, Record<string, string>>()) {
   for (const node of nodes) {
-    out.set(node.name, node.rawProperties ?? {});
+    out.set(node.name, node.rawProperties);
     rawByName(node.children, out);
   }
   return out;

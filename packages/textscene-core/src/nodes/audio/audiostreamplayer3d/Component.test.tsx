@@ -54,6 +54,7 @@ function makeNode(overrides: Partial<AudioStreamPlayer3DProperties> = {}): TscnN
     ...overrides,
   };
   return {
+    rawProperties: {},
     name: props.name ?? 'Audio',
     type: 'AudioStreamPlayer3D',
     children: [],

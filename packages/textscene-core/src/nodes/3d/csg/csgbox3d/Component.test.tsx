@@ -18,7 +18,7 @@ function makeNode(props: Partial<CSGBox3DProperties>, children: TscnNode[] = [])
     flipFaces: false,
     ...props,
   };
-  return { name: properties.name, type: 'CSGBox3D', children, properties };
+  return { rawProperties: {}, name: properties.name, type: 'CSGBox3D', children, properties };
 }
 
 async function render(node: TscnNode, internalResources: TscnInternalResource[] = []) {

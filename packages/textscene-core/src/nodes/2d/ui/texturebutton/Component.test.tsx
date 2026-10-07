@@ -17,7 +17,7 @@ import { createFakeResourceLoader } from '../../../../resources/testing/createFa
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { TextureButton } from './Component';
 import type { TextureButtonProperties } from './types';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 100, h: 100 };
 const NORMAL_TEX = 'res://normal.png';
@@ -40,18 +40,13 @@ function fakeTexture(width: number, height: number): THREE.Texture {
 }
 
 function solveNode(properties: Partial<TextureButtonProperties> = {}): SolveNode {
-  const node: TscnNode = {
+  const node: TscnNode = controlNode('MyTextureButton', 'TextureButton', {
     name: 'MyTextureButton',
-    type: 'TextureButton',
-    children: [],
-    properties: {
-      name: 'MyTextureButton',
-      textureNormal: 'ExtResource("1")',
-      texturePressed: 'ExtResource("2")',
-      textureDisabled: 'ExtResource("3")',
-      ...properties,
-    } as TextureButtonProperties,
-  };
+    textureNormal: 'ExtResource("1")',
+    texturePressed: 'ExtResource("2")',
+    textureDisabled: 'ExtResource("3")',
+    ...properties,
+  });
   return { ...emptySolveNode(), path: 'MyTextureButton', node, resources: SCOPE };
 }
 
