@@ -27,7 +27,6 @@ import {
 import { buildShadowPolarMap, shadowMapZFarInv } from '../../../r3f/lighting2d/shadowPolarMap';
 import { useLightSequence } from '../../../r3f/lighting2d/useLightSequence';
 import {
-  useLightClassLayer,
   useRegisterShadowSplitLight,
   useRegisterShadowTint,
   useShadowTintLayer,
@@ -57,11 +56,15 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   const showPlaceholder = missing || !props.texture;
 
   const lights = props.enabled && !!displayedTexture ? 1 : 0;
-  const casters = useLightShadowCasters(props.shadow_enabled, props.shadow_item_cull_mask);
+  // `canvas.glsl:806` shadows only an item whose `light_mask` meets `shadow_item_cull_mask`. With
+  // no reached item meeting it, the shadow lands nowhere, so the light casts nothing and stays whole.
+  const shadowReachesItem = (props.range_item_cull_mask & props.shadow_item_cull_mask) !== 0;
+  const shadowEnabled = props.shadow_enabled && shadowReachesItem;
+  const casters = useLightShadowCasters(shadowEnabled, props.shadow_item_cull_mask);
   // The cull tuple, not the node's own `light_mask` (its CanvasItem mask), picks
-  // the items this light reaches, so it keys the registration and the quad layer.
-  // Not memoised: every consumer compares it by value, so a stable identity buys
-  // nothing.
+  // the items this light reaches. Split by the shadow mask, it keys the registration
+  // and the quad layers. Not memoised: every consumer compares it by value, so a
+  // stable identity buys nothing.
   const rangeKey: LightCullKey = {
     ...DEFAULT_LIGHT_CULL_KEY,
     itemCullMask: props.range_item_cull_mask,
@@ -73,6 +76,7 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   const {
     key: cullKey,
     ordinal,
+    layer,
     unshadowedLayer,
   } = useRegisterShadowSplitLight(
     lights > 0,
@@ -84,10 +88,9 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   // `sequence` is this light's position in the canvas light list, which is what
   // Godot applies lights in and what order-dependent MIX depends on.
   const sequence = useLightSequence(ordinal);
-  const layer = useLightClassLayer(cullKey);
   // Godot's default shadow_color is transparent, so the extra albedo-free pass
   // is allocated only for the rare light that actually tints its shadow.
-  const tintsShadow = props.shadow_enabled && shadowColorContributes(props.shadow_color);
+  const tintsShadow = shadowEnabled && shadowColorContributes(props.shadow_color);
   useRegisterShadowTint(lights > 0 && tintsShadow, cullKey);
   const shadowTintLayer = useShadowTintLayer(cullKey);
 
@@ -126,9 +129,10 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
 }
 
 /**
- * The cookie quad and the `shadow_color` quad share this component, so their
- * geometry and offset cannot drift. Only their layer and material differ, and
- * complementary stencil tests keep them off each other's pixels.
+ * The cookie quad, the unshadowed quad and the `shadow_color` quad share this
+ * component, so their geometry and offset cannot drift. Only their layer and
+ * material differ. Complementary stencil tests keep the cookie and `shadow_color`
+ * quads off each other's pixels, and the unshadowed quad draws into another class.
  */
 function LightQuad({
   layer,

@@ -13,6 +13,7 @@ import {
   directionalLightCullKey,
   lightCullKeyId,
   lightReachesItem,
+  drawnClassCount,
   sameLightCullKey,
   splitByShadowReceivers,
   type LightCullKey,
@@ -305,5 +306,30 @@ describe('directionalLightCullKey', () => {
       lightCullKeyId(directionalLightCullKey(0, 1)),
       lightCullKeyId(key()),
     ]);
+  });
+});
+
+describe('drawnClassCount', () => {
+  const receives = (itemCullMask: number) => key({ itemCullMask, shadowHalf: { mask: 1, receives: true } });
+  const escapes = (itemCullMask: number) => key({ itemCullMask, shadowHalf: { mask: 1, receives: false } });
+
+  it('draws every class up to the cap', () => {
+    expect(drawnClassCount([key(), key({ itemCullMask: 2 })], 4)).toBe(2);
+    expect(
+      drawnClassCount(
+        [1, 2, 3, 4, 5].map((itemCullMask) => key({ itemCullMask })),
+        4
+      )
+    ).toBe(4);
+  });
+
+  it('never draws one half of a split light without the other', () => {
+    // The halves of one light sort next to each other, so the cut can fall between them.
+    const keys = [key(), key({ itemCullMask: 2 }), key({ itemCullMask: 4 }), receives(3), escapes(3)];
+    expect(drawnClassCount(keys, 4)).toBe(3);
+  });
+
+  it('keeps a split light whose halves both fit', () => {
+    expect(drawnClassCount([key(), receives(3), escapes(3), key({ itemCullMask: 4 })], 3)).toBe(3);
   });
 });

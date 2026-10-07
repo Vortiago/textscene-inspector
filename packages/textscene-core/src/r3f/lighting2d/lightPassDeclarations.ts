@@ -74,6 +74,8 @@ export interface ShadowSplitLight {
   readonly key: LightCullKey;
   /** The shadowed quad's ordinal in its class. */
   readonly ordinal: number;
+  /** The camera layer of the shadowed quad's class. */
+  readonly layer: number;
   /** The layer of the shadowless quad for the items the shadow misses, or undefined while whole. */
   readonly unshadowedLayer: number | undefined;
 }
@@ -91,8 +93,9 @@ export function useRegisterShadowSplitLight(
   const ordinal = useRegisterCanvasLight2D(enabled, shadowed);
   // Hooks run unconditionally, so a whole light holds its own key here, undeclared.
   useRegisterCanvasLight2D(enabled && unshadowed !== null, unshadowed ?? shadowed);
+  const layer = useLightClassLayer(shadowed);
   const unshadowedLayer = useLightClassLayer(unshadowed ?? shadowed);
-  return { key: shadowed, ordinal, unshadowedLayer: unshadowed ? unshadowedLayer : undefined };
+  return { key: shadowed, ordinal, layer, unshadowedLayer: unshadowed ? unshadowedLayer : undefined };
 }
 
 /** The class accumulating this cull tuple, or undefined while it has none. */

@@ -17,7 +17,7 @@ import { warn } from '../../logger';
 import type { RGBA } from '../canvasItemModulate.js';
 import { ShadowCasterStage } from './ShadowCasterStage.js';
 import { CanvasLightSequenceProvider } from './useLightSequence.js';
-import { lightCullKeyId } from './lightCullKey.js';
+import { drawnClassCount, lightCullKeyId } from './lightCullKey.js';
 import { CanvasLighting2DContext, type CanvasLighting2D } from './lightPassContext.js';
 import { LIGHT_LAYER, MAX_LIGHT_CLASSES, SHADOW_TINT_LAYER } from './lightPassLayers.js';
 import {
@@ -73,7 +73,7 @@ export function CanvasLighting2DProvider({ canvasModulate, children }: CanvasLig
   const [lightOnlyCount, registerLightOnly] = useDeclarationCount();
   const [shadowTintKeys, registerShadowTint] = useKeyedDeclarationCount();
 
-  const classCount = Math.min(cullKeys.length, MAX_LIGHT_CLASSES);
+  const classCount = drawnClassCount(cullKeys, MAX_LIGHT_CLASSES);
   const lit = classCount > 0;
   const needsLightOnly = lit && lightOnlyCount > 0;
   const shadowTintClasses = cullKeys
@@ -90,16 +90,16 @@ export function CanvasLighting2DProvider({ canvasModulate, children }: CanvasLig
   const lightOnlyTargets = useAccumulationTargets(needsLightOnly ? classCount : 0);
   const shadowTintTargets = useSelectedAccumulationTargets(shadowTintClasses);
 
-  const overflow = cullKeys.length - MAX_LIGHT_CLASSES;
+  const overflow = cullKeys.length - classCount;
   useEffect(() => {
     if (overflow <= 0) return;
     warn(
-      `[CanvasLighting2D] ${overflow + MAX_LIGHT_CLASSES} distinct light cull tuples ` +
+      `[CanvasLighting2D] ${cullKeys.length} distinct light cull tuples ` +
         `(range_item_cull_mask + range_z + range_layer, and a shadow split) on one canvas; only ` +
         `${MAX_LIGHT_CLASSES} can be accumulated, so lights culling ` +
-        `${cullKeys.slice(MAX_LIGHT_CLASSES).map(lightCullKeyId).join(', ')} are not drawn`
+        `${cullKeys.slice(classCount).map(lightCullKeyId).join(', ')} are not drawn`
     );
-  }, [overflow, cullKeys]);
+  }, [overflow, cullKeys, classCount]);
 
   const seedMaterial = useMemo(createSeedMaterial, []);
   useEffect(() => () => seedMaterial.dispose(), [seedMaterial]);

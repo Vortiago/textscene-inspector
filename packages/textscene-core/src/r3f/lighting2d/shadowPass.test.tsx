@@ -207,7 +207,7 @@ describe('what does not cast', () => {
   it('casts from an occluder that shares ANY bit with the light', async () => {
     const renderer = await render(
       scene(
-        `${lamp('Lamp', 400, 'shadow_item_cull_mask = 6\n')}` +
+        `${lamp('Lamp', 400, 'range_item_cull_mask = 2\nshadow_item_cull_mask = 6\n')}` +
           `${caster('Caster', 576, 'occluder_light_mask = 12\n')}`
       )
     );
@@ -460,7 +460,7 @@ describe('shadow_filter selects the shadow mechanism', () => {
  * the light draws a second, shadowless quad into the class those items read.
  */
 describe('shadow_item_cull_mask picks the items that take the shadow', () => {
-  /** The Surface keeps light_mask 1; the light and the occluder agree on mask 2. */
+  /** The Surface keeps light_mask 1. The light and the occluder agree on mask 2. */
   const ESCAPING = scene(
     `${lamp('Lamp', 400, 'range_item_cull_mask = 3\nshadow_item_cull_mask = 2\n')}` +
       `${caster('Caster', 576, 'occluder_light_mask = 2\n')}`
@@ -493,6 +493,17 @@ describe('shadow_item_cull_mask picks the items that take the shadow', () => {
     );
     expect(classes).toHaveLength(1);
     expect(classes[0]!.key.shadowHalf).toBeNull();
+  });
+
+  it('casts nothing while no item the light reaches meets the shadow mask', async () => {
+    const renderer = await render(
+      scene(
+        `${lamp('Lamp', 400, 'range_item_cull_mask = 1\nshadow_item_cull_mask = 2\n')}` +
+          `${caster('Caster', 576, 'occluder_light_mask = 2\n')}`
+      )
+    );
+    expect(maskMeshes(renderer)).toHaveLength(0);
+    expect(litQuads(renderer)).toHaveLength(1);
   });
 
   it('keeps one class while the light has no occluder to cast from', async () => {

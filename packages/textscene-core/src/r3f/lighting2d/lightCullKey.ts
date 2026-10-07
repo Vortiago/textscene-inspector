@@ -45,7 +45,7 @@ export interface LightCullKey {
 export interface ShadowHalf {
   /** `Light2D.shadow_item_cull_mask`. */
   readonly mask: number;
-  /** True for the shadowed half, whose items' `light_mask` meets `mask`; false for the rest. */
+  /** True for the shadowed half, whose items' `light_mask` meets `mask`. False for the rest. */
   readonly receives: boolean;
 }
 
@@ -145,8 +145,24 @@ export function sameLightCullKey(a: LightCullKey, b: LightCullKey): boolean {
     a.zMax === b.zMax &&
     a.layerMin === b.layerMin &&
     a.layerMax === b.layerMax &&
-    shadowHalfId(a.shadowHalf) === shadowHalfId(b.shadowHalf)
+    sameShadowHalf(a.shadowHalf, b.shadowHalf)
   );
+}
+
+// Field by field, not through `shadowHalfId`: this runs per class per lookup on every render.
+function sameShadowHalf(a: ShadowHalf | null, b: ShadowHalf | null): boolean {
+  if (a === null || b === null) return a === b;
+  return a.mask === b.mask && a.receives === b.receives;
+}
+
+/**
+ * How many of the sorted `keys` the pass draws under `cap` classes. A split light's halves sort next
+ * to each other, and a cut between them would light only the items its shadow reaches, so the cut
+ * drops the shadowed half too.
+ */
+export function drawnClassCount(keys: readonly LightCullKey[], cap: number): number {
+  if (keys.length <= cap) return keys.length;
+  return keys[cap - 1]?.shadowHalf?.receives === true ? cap - 1 : cap;
 }
 
 /** Null ahead of every mask, then ascending. */
