@@ -414,7 +414,7 @@ The one-gesture drop or select contract: the root-most `.tscn` becomes the **Upl
 _Avoid_: "import wizard".
 
 **Missing resource**:
-A `res://` reference or **Sub-resource path** whose load failed, shown as a magenta placeholder where its consumer draws one and as one row per address in the missing-resources panel. A **Sub-resource path** into a file that loads but declares no such `[sub_resource]` is one too, since Godot's load of it fails.
+A `res://` reference or **Sub-resource path** whose load failed. Its consumer may draw a magenta placeholder, and the missing-resources panel shows one row per address. A **Sub-resource path** into a file that loads but declares no such `[sub_resource]` is one too, since Godot's load of it fails.
 _Avoid_: "broken scene", "load error".
 
 ### Animation

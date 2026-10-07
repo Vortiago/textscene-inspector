@@ -10,7 +10,7 @@ import type { ParsedResource } from '../../parser/parsedResource';
 import type { TscnInternalResource } from '../../parser/types';
 import { findSubResource } from '../../resources/SubResourceResolver';
 import { parseSubResourcePath } from '../../resources/subResourcePath';
-import { useResource } from '../../resources/useResource';
+import { useResourceLoad, type ResourceStatus } from '../../resources/useResource';
 import { useMissingReport } from '../contexts/MissingResourcesContext';
 import type { MaterialResource, MaterialSource } from './materialSource';
 
@@ -35,15 +35,14 @@ export function useMaterial(source: MaterialSource | undefined): LoadedMaterial 
   const address = source?.kind === 'file' ? source.path : '';
   const { filePath, subResourceId } = parseSubResourcePath(address);
   // Called with '' for an inline source, to keep the hook count stable. The `resource` bus
-  // parses whole files, so the hook loads the file and reports a failure under the address.
-  const file = useResource<ParsedResource>(filePath, 'resource', address).value;
-
-  // A loaded file without the named `[sub_resource]` fails the address, as Godot's load does.
+  // parses whole files, so the hook loads the file and reports under the address itself.
+  const fileResult = useResourceLoad<ParsedResource>(filePath, 'resource');
+  const file = fileResult.value;
   const body = useMemo(
     () => (file ? materialBody(file, filePath, subResourceId) : undefined),
     [file, filePath, subResourceId]
   );
-  useMissingReport(address, !file ? 'pending' : body ? 'loaded' : 'unavailable');
+  useMissingReport(address, addressStatus(fileResult.status, body));
 
   // Keyed on what the source holds, not the source object: a caller may build a new
   // source each render, and a new material would rebind every texture.
@@ -74,6 +73,12 @@ export function useMaterial(source: MaterialSource | undefined): LoadedMaterial 
   }, [loaded]);
 
   return loaded;
+}
+
+/** A loaded file without the named `[sub_resource]` fails the address, as Godot's load does. */
+function addressStatus(fileStatus: ResourceStatus, body: TscnInternalResource | undefined): ResourceStatus {
+  if (fileStatus !== 'loaded') return fileStatus;
+  return body ? 'loaded' : 'unavailable';
 }
 
 /** Ready for a StandardMaterial3D, declined for any other type. */

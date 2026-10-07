@@ -11,6 +11,7 @@ import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import type { ResourceLoader } from './ResourceLoader';
 import { createFakeResourceLoader, type FakeProcessor } from './testing/createFakeResourceLoader';
 import { initGlbModules } from './processing/glbProcessing';
+import { parseTresFile } from '../parser/parsedResource';
 
 /**
  * A fake ResourceLoader from `createFakeResourceLoader`, whose processor handles `MockLoader`
@@ -281,6 +282,27 @@ describe('useResource', () => {
 
     expect(seen).not.toContain(textureA);
     expect(seen.at(-1)).toBe(textureB);
+  });
+
+  it("never hands the old bus's value to the render that swaps the bus", () => {
+    const fake = createFakeResourceLoader();
+    const parsed = parseTresFile('[gd_resource type="Resource" format=3]\n\n[resource]\n');
+    fake.textures.seed('res://shared', textureA);
+    fake.resources.seed('res://shared', parsed);
+    const seen: unknown[] = [];
+    const { rerender } = renderHook(
+      ({ type }: { type: 'texture' | 'resource' }) => {
+        const loaded = useResource<unknown>('res://shared', type);
+        if (type === 'resource') seen.push(loaded.value);
+        return loaded;
+      },
+      { wrapper: withLoader(fake.loader), initialProps: { type: 'texture' as 'texture' | 'resource' } }
+    );
+
+    rerender({ type: 'resource' });
+
+    expect(seen).not.toContain(textureA);
+    expect(seen.at(-1)).toBe(parsed);
   });
 
   it('cache hit: re-rendering with the same path does not refire the loader request', () => {

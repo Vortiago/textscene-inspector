@@ -176,6 +176,25 @@ describe('useMaterial', () => {
     expect([...result.current.uploadedPaths]).toEqual([TRES_PATH]);
   });
 
+  it('keeps the address missing when a failed file loads without the sub-resource', () => {
+    const fake = createFakeResourceLoader();
+    fake.resources.seed(TRES_PATH, null);
+    const { result } = renderHook(
+      () => {
+        useMaterial({ kind: 'file', path: `${TRES_PATH}::Late_mat` });
+        return useMissingResources().missingPaths;
+      },
+      { wrapper: missingResourcesWrapper(fake.loader) }
+    );
+
+    act(() => {
+      fake.resources.clearCache(TRES_PATH);
+      fake.resources._resolve(TRES_PATH, parseTresFile(PAINT_TRES));
+    });
+
+    expect([...result.current]).toEqual([`${TRES_PATH}::Late_mat`]);
+  });
+
   it('answers absent for a sub-resource the file does not declare', () => {
     const { result } = renderMaterial(
       { kind: 'file', path: `${TRES_PATH}::Missing` },

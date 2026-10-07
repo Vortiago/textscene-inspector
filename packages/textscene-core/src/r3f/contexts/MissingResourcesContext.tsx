@@ -1,8 +1,9 @@
 /**
  * The missing and uploaded paths of a whole preview shell, for one panel. A
- * context, not an event subscription: each `useResource` knows its path is
- * needed and reports it. With no provider the actions do nothing and the sets
- * are empty, so a hook calls `report` without a null check.
+ * context, not an event subscription: each consumer knows its address is
+ * needed and reports it through `useMissingReport`. With no provider the
+ * actions do nothing and the sets are empty, so a hook calls `report` without
+ * a null check.
  */
 import {
   createContext,
@@ -22,7 +23,7 @@ export interface MissingResourcesContextValue {
   missingPaths: ReadonlySet<string>;
   /** Paths the user uploaded a file for through `addUploadedFile`. */
   uploadedPaths: ReadonlySet<string>;
-  /** `useResource` calls it when the status becomes `'missing'`. Each call needs its own `clear`. */
+  /** `useMissingReport` calls it when the status becomes `'unavailable'`. Each call needs its own `clear`. */
   report: (path: string) => void;
   /** Withdraws one `report`. The path leaves `missingPaths` when its last report is withdrawn. */
   clear: (path: string) => void;

@@ -6,7 +6,8 @@
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { MissingResourcesProvider, useMissingResources } from './MissingResourcesContext';
+import type { ResourceStatus } from '../../resources/useResource';
+import { MissingResourcesProvider, useMissingReport, useMissingResources } from './MissingResourcesContext';
 
 function wrap({ children }: { children: ReactNode }) {
   return <MissingResourcesProvider>{children}</MissingResourcesProvider>;
@@ -200,5 +201,48 @@ describe('MissingResourcesContext', () => {
     act(() => result.current.report('res://a.png'));
     expect(calls.length).toBe(afterMount + 1);
     expect(Array.from(calls.at(-1)!)).toEqual(['res://a.png']);
+  });
+});
+
+/** The panel state while one `useMissingReport` reports `address` at `status`. */
+function renderReport(initialProps: { address: string; status: ResourceStatus }) {
+  return renderHook(
+    ({ address, status }: { address: string; status: ResourceStatus }) => {
+      useMissingReport(address, status);
+      return useMissingResources();
+    },
+    { wrapper: wrap, initialProps }
+  );
+}
+
+describe('useMissingReport', () => {
+  it('shows an unavailable address as a missing row', () => {
+    const { result } = renderReport({ address: 'res://m.tres::Inner_a', status: 'unavailable' });
+
+    expect([...result.current.missingPaths]).toEqual(['res://m.tres::Inner_a']);
+  });
+
+  it('marks an address uploaded when it loads after its report', () => {
+    const { result, rerender } = renderReport({ address: 'res://a.png', status: 'unavailable' });
+
+    rerender({ address: 'res://a.png', status: 'loaded' });
+
+    expect(result.current.missingPaths.size).toBe(0);
+    expect([...result.current.uploadedPaths]).toEqual(['res://a.png']);
+  });
+
+  it('shows no row for an address that loads on first request', () => {
+    const { result, rerender } = renderReport({ address: 'res://a.png', status: 'pending' });
+
+    rerender({ address: 'res://a.png', status: 'loaded' });
+
+    expect(result.current.missingPaths.size).toBe(0);
+    expect(result.current.uploadedPaths.size).toBe(0);
+  });
+
+  it('reports nothing for an empty address', () => {
+    const { result } = renderReport({ address: '', status: 'unavailable' });
+
+    expect(result.current.missingPaths.size).toBe(0);
   });
 });

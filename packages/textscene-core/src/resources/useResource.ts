@@ -1,7 +1,7 @@
 /**
- * useResource(path, type, address) loads an external resource for an R3F node component as a
- * status machine: pending, then loaded or unavailable, and a late arrival turns unavailable loaded.
- * It never suspends. A texture or material keeps its identity across calls, and an Object3D is
+ * useResource(path, type) loads an external resource for an R3F node component as a status
+ * machine: pending, then loaded or unavailable, and a late arrival turns unavailable loaded. It
+ * never suspends, and a failed path shows as a **Missing resource** row. A texture or material keeps its identity across calls, and an Object3D is
  * cloned per consumer, since THREE.Object3D allows one parent.
  */
 import { useContext, useEffect, useRef, useState } from 'react';
@@ -33,19 +33,24 @@ export function useResourceLoader() {
   return useContext(ResourceLoaderContext);
 }
 
+export function useResource<T>(path: string, type: ResourceBusType): ResourceResult<T> {
+  const result = useResourceLoad<T>(path, type);
+  useMissingReport(path, result.status);
+  return result;
+}
+
 /**
- * `address` is the resource the consumer reads, when `path` is only the file that owns it: a
- * **Sub-resource path** read out of a whole parsed `.tres`. A failure reports under `address`.
+ * `useResource` without the **Missing resource** report, for a caller that reads a
+ * **Sub-resource path** out of a whole file and reports the address itself.
  */
-export function useResource<T>(path: string, type: ResourceBusType, address = path): ResourceResult<T> {
+export function useResourceLoad<T>(path: string, type: ResourceBusType): ResourceResult<T> {
   const loader = useResourceLoader();
-  // The path a result belongs to: the render that swaps the path still holds the old path's
-  // result, whose value may be a disposed clone, so that render answers pending.
-  const [settled, setSettled] = useState<{ path: string; result: ResourceResult<T> }>(() => ({
-    path,
-    result: PENDING,
-  }));
-  const result = settled.path === path ? settled.result : PENDING;
+  // The request a result belongs to: the render that swaps the path or the bus still holds the
+  // old request's result, whose value may be a disposed clone, so that render answers pending.
+  const [settled, setSettled] = useState<{ path: string; type: ResourceBusType; result: ResourceResult<T> }>(
+    () => ({ path, type, result: PENDING })
+  );
+  const result = settled.path === path && settled.type === type ? settled.result : PENDING;
 
   // A ref, not the effect's closure: a closure outlives its render, so a stale event for an
   // earlier (path, type) would overwrite the state.
@@ -57,7 +62,7 @@ export function useResource<T>(path: string, type: ResourceBusType, address = pa
   const clonedRef = useRef<THREE.Object3D | null>(null);
 
   useEffect(() => {
-    const setResult = (next: ResourceResult<T>) => setSettled({ path, result: next });
+    const setResult = (next: ResourceResult<T>) => setSettled({ path, type, result: next });
 
     // An empty path means no request: a caller keeps its hook count stable for an empty slot.
     // It stays `pending` with no subscription.
@@ -178,8 +183,6 @@ export function useResource<T>(path: string, type: ResourceBusType, address = pa
       disposePreviousClone();
     };
   }, [loader, path, type]);
-
-  useMissingReport(address, result.status);
 
   // The loader counts pending consumers, so a caller knows when loading has finished without a
   // timer. Keyed on `path` too: a path swap re-enters `pending`.

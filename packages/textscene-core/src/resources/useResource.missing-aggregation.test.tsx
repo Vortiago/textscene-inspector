@@ -2,9 +2,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import * as THREE from 'three';
-import { useResource } from './useResource';
+import { useResource, useResourceLoad } from './useResource';
 import type { ResourceLoader } from './ResourceLoader';
-import type { ParsedResource } from '../parser/parsedResource';
 import { createFakeResourceLoader, type FakeProcessor } from './testing/createFakeResourceLoader';
 import { useMissingResources } from '../r3f/contexts/MissingResourcesContext';
 import { missingResourcesWrapper } from './testing/missingResourcesWrapper';
@@ -101,23 +100,16 @@ describe('useResource → MissingResourcesContext aggregation', () => {
     expect(result.current.has('res://textures/missing.png')).toBe(true);
   });
 
-  it('reports a failure under the address it is given, not the file it loads', () => {
-    const fake = createFakeResourceLoader();
-    fake.resources.seed('res://materials/paint.tres', null);
-    const Wrapper = missingResourcesWrapper(fake.loader);
+  it('reports nothing for a failed load through useResourceLoad, which leaves reporting to its caller', () => {
     const { result } = renderHook(
       () => {
-        useResource<ParsedResource>(
-          'res://materials/paint.tres',
-          'resource',
-          'res://materials/paint.tres::Inner_a'
-        );
+        useResourceLoad<THREE.Texture>('res://textures/missing.png', 'texture');
         return useMissingResources().missingPaths;
       },
-      { wrapper: Wrapper }
+      { wrapper: missingResourcesWrapper(loader) }
     );
 
-    expect([...result.current]).toEqual(['res://materials/paint.tres::Inner_a']);
+    expect(result.current.size).toBe(0);
   });
 
   it('promotes a previously missing path to uploadedPaths when it turns loaded', () => {
