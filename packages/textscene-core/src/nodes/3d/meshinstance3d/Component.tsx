@@ -468,9 +468,7 @@ function useSceneArrayMeshGeometry(resource: TscnInternalResource | undefined): 
   return decoded;
 }
 
-interface DecodedSceneArrayMesh {
-  geometry: THREE.BufferGeometry;
-  surfaceIndices: readonly number[];
+interface DecodedSceneArrayMesh extends Omit<SurfacedMesh, 'materials'> {
   /** Per surface, its raw `"material"` reference, when it has one. */
   materialRefs: readonly (string | undefined)[];
 }

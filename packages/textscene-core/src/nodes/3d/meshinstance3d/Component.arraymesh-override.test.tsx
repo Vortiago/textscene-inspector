@@ -194,7 +194,7 @@ describe('<MeshInstance3D> ArrayMesh material overrides', () => {
   });
 
   it('applies an override to an ArrayMesh the scene declares inline', async () => {
-    const loader = loaderServing({});
+    const loader = loaderServing();
     const materials = await renderSettled(
       loader,
       makeNode({

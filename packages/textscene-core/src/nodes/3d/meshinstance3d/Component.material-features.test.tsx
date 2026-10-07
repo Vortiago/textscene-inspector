@@ -14,36 +14,7 @@ import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../..
 import type { MeshInstance3DProperties } from './types';
 import { materialInstanceAs } from '../testing/reactThreeTestInstance';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
-
-/**
- * Inject a texture as if the file pipeline had loaded it, by patching `request()`
- * and `getCached()`, since no public surface pre-caches one. `loaded` fires
- * synchronously on `request()`, so `useResource` sees a cache hit.
- */
-function preloadTexture(loader: ResourceLoader, path: string, texture: THREE.Texture): void {
-  const fakes = new Map<string, THREE.Texture>();
-  const existing = (loader.textures as unknown as { __fakes?: Map<string, THREE.Texture> }).__fakes;
-  const store = existing ?? fakes;
-  store.set(path, texture);
-  if (!existing) {
-    (loader.textures as unknown as { __fakes: Map<string, THREE.Texture> }).__fakes = store;
-    const originalGetCached = loader.textures.getCached.bind(loader.textures);
-    const originalRequest = loader.textures.request.bind(loader.textures);
-    loader.textures.getCached = (p: string) => {
-      const f = store.get(p);
-      if (f) return f;
-      return originalGetCached(p);
-    };
-    loader.textures.request = (p: string) => {
-      const f = store.get(p);
-      if (f) {
-        loader.eventBus.emit<THREE.Texture>('texture', 'loaded', p, f);
-        return;
-      }
-      originalRequest(p);
-    };
-  }
-}
+import { preloadResource } from '../../../resources/testing/preloadResource';
 
 function makeNode(materialId: string, name = 'Mesh'): TscnNode {
   return {
@@ -86,7 +57,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
   it('applies uv1_scale to the loaded albedo texture via texture.repeat', async () => {
     const loader = loaderServing();
     const tex = new THREE.Texture();
-    preloadTexture(loader, 'res://textures/checker.png', tex);
+    preloadResource(loader, 'texture', 'res://textures/checker.png', tex);
 
     const internalResources: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
@@ -133,8 +104,8 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     // any slot is known, which is exactly what the normal slot must undo.
     albedo.colorSpace = THREE.SRGBColorSpace;
     normal.colorSpace = THREE.SRGBColorSpace;
-    preloadTexture(loader, 'res://textures/albedo.png', albedo);
-    preloadTexture(loader, 'res://textures/normal.png', normal);
+    preloadResource(loader, 'texture', 'res://textures/albedo.png', albedo);
+    preloadResource(loader, 'texture', 'res://textures/normal.png', normal);
 
     const internalResources: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
@@ -229,7 +200,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
   it('clones the shared texture per consumer so different uv_scale values do not clobber each other', async () => {
     const loader = loaderServing();
     const tex = new THREE.Texture();
-    preloadTexture(loader, 'res://textures/shared.png', tex);
+    preloadResource(loader, 'texture', 'res://textures/shared.png', tex);
 
     const externalResources: TscnExternalResource[] = [
       { id: '1', path: 'res://textures/shared.png', type: 'Texture2D' },

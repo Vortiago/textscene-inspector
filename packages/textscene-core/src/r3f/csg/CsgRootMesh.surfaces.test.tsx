@@ -7,45 +7,21 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
-import { NodePathProvider } from '../contexts/NodePathContext';
 import { TscnParser } from '../../parser/TscnParser';
-import type { TscnNode } from '../../parser/types';
-import { nodeComponentRegistry } from '../NodeComponentRegistry';
 import { clearEvaluationCache } from './csgEvaluationCache';
-import { loadCsgModule } from './csgModule';
 import '../nodes/index';
-
-function Tree({ node, path }: { node: TscnNode; path: string }) {
-  const Component = nodeComponentRegistry.get(node.type)!;
-  return (
-    <NodePathProvider path={path}>
-      <Component node={node}>
-        {node.children.map((child) => (
-          <Tree key={child.name} node={child} path={`${path}/${child.name}`} />
-        ))}
-      </Component>
-    </NodePathProvider>
-  );
-}
+import { NodeTree } from '../testing/NodeTree';
+import { settleCsgEvaluation } from './testing/settleCsgEvaluation';
+import { instanceAs } from '../../nodes/3d/testing/reactThreeTestInstance';
 
 function scene(body: string) {
   const parsed = new TscnParser().parse(`[gd_scene format=3]\n\n${body}\n`);
   const root = parsed.nodes[0]!.children[0]!;
   return (
     <SceneResourcesProvider internalResources={parsed.internalResources}>
-      <Tree node={root} path={`Root/${root.name}`} />
+      <NodeTree node={root} path={`Root/${root.name}`} />
     </SceneResourcesProvider>
   );
-}
-
-/** Lets the library's dynamic import and the evaluation's state update land. */
-async function settle(): Promise<void> {
-  await loadCsgModule();
-  for (let tick = 0; tick < 5; tick++) {
-    await ReactThreeTestRenderer.act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
-  }
 }
 
 const MATERIALS = `[sub_resource type="StandardMaterial3D" id="Red"]
@@ -74,7 +50,7 @@ material = SubResource("${secondMaterial}")
 function drawnMesh(renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>): THREE.Mesh {
   return renderer.scene
     .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
+    .map((m) => instanceAs<THREE.Mesh>(m))
     .find((mesh) => mesh.visible)!;
 }
 
@@ -82,10 +58,10 @@ describe('<CsgRootMesh> surface slots', () => {
   it('binds every surface material when its contributors stop sharing one', async () => {
     clearEvaluationCache();
     const renderer = await ReactThreeTestRenderer.create(scene(MATERIALS + block('Red')));
-    await settle();
+    await settleCsgEvaluation(renderer);
 
     await renderer.update(scene(MATERIALS + block('Blue')));
-    await settle();
+    await settleCsgEvaluation(renderer);
 
     const materials = drawnMesh(renderer).material as THREE.MeshStandardMaterial[];
     const colours = materials.map((m) => m?.color.getHex());

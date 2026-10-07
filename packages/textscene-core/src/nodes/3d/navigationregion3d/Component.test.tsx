@@ -16,6 +16,7 @@ import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext'
 import { ResourceLoaderProvider, ResourceLoader } from '../../../index';
 import { instanceAs } from '../testing/reactThreeTestInstance';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
+import { preloadResource } from '../../../resources/testing/preloadResource';
 
 const NAVMESH_TRES: ParsedResource = {
   resourceType: 'NavigationMesh',
@@ -31,13 +32,7 @@ const EXT: TscnExternalResource[] = [{ id: '2_nav', path: 'res://navmesh.tres', 
 
 function makeLoaderWith(path: string, tres: ParsedResource): ResourceLoader {
   const loader = loaderServing();
-  const origGet = loader.resources.getCached.bind(loader.resources);
-  const origReq = loader.resources.request.bind(loader.resources);
-  loader.resources.getCached = (p: string) => (p === path ? tres : origGet(p));
-  loader.resources.request = (p: string) => {
-    if (p === path) loader.eventBus.emit<ParsedResource>('resource', 'loaded', p, tres);
-    else origReq(p);
-  };
+  preloadResource(loader, 'resource', path, tres);
   return loader;
 }
 

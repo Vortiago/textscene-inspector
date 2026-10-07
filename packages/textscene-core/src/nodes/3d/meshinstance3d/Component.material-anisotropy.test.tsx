@@ -14,31 +14,7 @@ import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../..
 import type { MeshInstance3DProperties } from './types';
 import { materialInstanceAs } from '../testing/reactThreeTestInstance';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
-
-/**
- * Inject a texture into the loader's cache as if the file pipeline had loaded
- * it, so `useResource` resolves it synchronously.
- */
-function preloadTexture(loader: ResourceLoader, path: string, texture: THREE.Texture): void {
-  const store = new Map<string, THREE.Texture>();
-  const existing = (loader.textures as unknown as { __fakes?: Map<string, THREE.Texture> }).__fakes;
-  const fakes = existing ?? store;
-  fakes.set(path, texture);
-  if (!existing) {
-    (loader.textures as unknown as { __fakes: Map<string, THREE.Texture> }).__fakes = fakes;
-    const originalGetCached = loader.textures.getCached.bind(loader.textures);
-    const originalRequest = loader.textures.request.bind(loader.textures);
-    loader.textures.getCached = (p: string) => fakes.get(p) ?? originalGetCached(p);
-    loader.textures.request = (p: string) => {
-      const f = fakes.get(p);
-      if (f) {
-        loader.eventBus.emit<THREE.Texture>('texture', 'loaded', p, f);
-        return;
-      }
-      originalRequest(p);
-    };
-  }
-}
+import { preloadResource } from '../../../resources/testing/preloadResource';
 
 function makeNode(materialId: string, name = 'Mesh'): TscnNode {
   return {
@@ -139,7 +115,7 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
   async function renderWithFlowmap(texture: THREE.Texture): Promise<THREE.MeshPhysicalMaterial> {
     const loader = loaderServing();
     const path = 'res://textures/aniso_flow.png';
-    preloadTexture(loader, path, texture);
+    preloadResource(loader, 'texture', path, texture);
 
     const internal: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
@@ -207,7 +183,7 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     const path = 'res://textures/aniso_flow.png';
     const flow = new THREE.DataTexture(new Uint8Array([128, 128, 0, 200]), 1, 1, THREE.RGBAFormat);
     flow.needsUpdate = true;
-    preloadTexture(loader, path, flow);
+    preloadResource(loader, 'texture', path, flow);
 
     const internal: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },

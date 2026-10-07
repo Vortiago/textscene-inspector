@@ -18,6 +18,7 @@ import type { MeshInstance3DProperties } from './types';
 import { materialInstanceAs } from '../testing/reactThreeTestInstance';
 import { headlightsSurface, wallQuadSurfaces } from '../../../resources/testing/arrayMeshSurfaces';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
+import { preloadResource } from '../../../resources/testing/preloadResource';
 
 const WALL_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://bett1yahcwe25"]
 
@@ -50,20 +51,6 @@ function inlineMeshNode(subResourceId: string): TscnNode {
       mesh: `SubResource("${subResourceId}")`,
       surfaceMaterialOverrides: new Map(),
     } as MeshInstance3DProperties,
-  };
-}
-
-/** Inject a decoded ArrayMesh resource as if the arraymesh processor loaded it. */
-function preloadArrayMesh(loader: ResourceLoader, path: string, resource: ArrayMeshResource): void {
-  const originalGetCached = loader.arrayMeshes.getCached.bind(loader.arrayMeshes);
-  const originalRequest = loader.arrayMeshes.request.bind(loader.arrayMeshes);
-  loader.arrayMeshes.getCached = (p: string) => (p === path ? resource : originalGetCached(p));
-  loader.arrayMeshes.request = (p: string) => {
-    if (p === path) {
-      loader.eventBus.emit<ArrayMeshResource>('arraymesh', 'loaded', p, resource);
-      return;
-    }
-    originalRequest(p);
   };
 }
 
@@ -108,7 +95,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
       materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
       surfaceIndices: mesh.surfaces.map((s) => s.surfaceIndex),
     };
-    preloadArrayMesh(loader, 'res://stage/meshes/wall.tres', resource);
+    preloadResource(loader, 'arraymesh', 'res://stage/meshes/wall.tres', resource);
 
     const renderer = await render(loader);
     await new Promise<void>((r) => setTimeout(r, 10));
@@ -134,7 +121,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
       materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
       surfaceIndices: mesh.surfaces.map((s) => s.surfaceIndex),
     };
-    preloadArrayMesh(loader, 'res://stage/meshes/wall.tres', resource);
+    preloadResource(loader, 'arraymesh', 'res://stage/meshes/wall.tres', resource);
 
     const renderer = await render(loader);
     await new Promise<void>((r) => setTimeout(r, 10));
